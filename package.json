@@ -1,0 +1,17 @@
+{
+  "name": "lead-radar",
+  "version": "1.0.0",
+  "description": "AI-agent lead prospecting tool for a web design business",
+  "main": "server.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "dotenv": "^16.4.5"
+  }
+}
