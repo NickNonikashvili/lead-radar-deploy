@@ -1,5 +1,5 @@
 /* ============================================================
-   M171 Study Hub — course data
+   Study Hub — M171 Calculus I course data
    Source: M171 Fall 2026 syllabus, calendar, and Exam 1 practice set.
    All math is written in TeX and rendered by MathJax.
    ============================================================ */
@@ -19,6 +19,12 @@
     textbookBase: 'https://activecalculus.org/single/',
     webwork: 'https://webwork3.math.montana.edu/webwork2/F26M171',
     canvas: 'https://ecat.montana.edu/',
+    pdf: 'active_calculus.pdf',
+    links: [
+      { eyebrow: 'Textbook', title: 'Active Calculus online', url: 'https://activecalculus.org/single/', desc: 'Active Calculus, single variable, 2nd edition (free).' },
+      { eyebrow: 'Homework', title: 'WebWork F26 M171', url: 'https://webwork3.math.montana.edu/webwork2/F26M171', desc: 'Due 8:00 pm Mon / Tue / Thu. PreQuizzes live here too.' },
+      { eyebrow: 'Course site', title: 'Canvas', url: 'https://ecat.montana.edu/', desc: 'Unit packets, preview activities, videos, Gradescope links.' }
+    ],
     helpCenter: { name: 'Math & Stat Center', where: 'Romney 220', hours: 'Mon–Thu 9–6 · Fri 9–5' },
     tutoring: 'Smarty Cats',
     disability: { where: '137 Romney Hall', url: 'https://www.montana.edu/drv/disability/student.htm' },
@@ -47,6 +53,7 @@
       { id: 'final',    name: 'Comprehensive Final Exam', weight: 20 }
     ],
     // percentage lower bounds
+    finalId: 'final',
     scale: [
       { letter: 'A',  min: 93.75, fourPt: '3.75 – 4.0' },
       { letter: 'A-', min: 91.25, fourPt: '3.65 – 3.75' },
@@ -74,7 +81,7 @@
     { id: 'exam2', n: 2, name: 'Exam 2', date: '2026-10-16', covers: 'through §2.6 (emphasis §1.7 – §2.6)', sections: ['1.7','1.8','2.1','2.2','2.3','2.4','2.5','2.6'], labs: [4,5,6,7], units: [1,2], weight: 14 },
     { id: 'exam3', n: 3, name: 'Exam 3', date: '2026-11-06', covers: 'through §3.1 and §3.5 (emphasis §2.7, §2.8, §3.1, §3.5)', sections: ['2.7','3.5','2.8','3.1'], labs: [8,9,10], units: [1,2,3], weight: 14 },
     { id: 'exam4', n: 4, name: 'Exam 4', date: '2026-12-09', covers: 'through §5.2 (emphasis §3.3 – §5.2)', sections: ['3.3','3.4','4.1','4.2','4.3','4.4','5.1','5.2'], labs: [11,12,13,14], units: [1,2,3,4], weight: 14 },
-    { id: 'final', n: 5, name: 'Final Exam', date: '2026-12-14', dateLabel: 'Finals week (Dec 14 – 18), day and time TBD', covers: 'cumulative, through §5.2', sections: [], labs: [], units: [1,2,3,4], weight: 20 }
+    { id: 'final', n: 5, name: 'Final Exam', date: '2026-12-14', endDate: '2026-12-18', dateLabel: 'Finals week (Dec 14 – 18), day and time TBD', covers: 'cumulative, through §5.2', sections: [], labs: [], units: [1,2,3,4], weight: 20, cumulative: true }
   ];
 
   /* ---------- Calendar ----------
@@ -953,5 +960,48 @@
     ]
   };
 
-  global.M171 = { COURSE, GRADING, EXAMS, CALENDAR, SEMESTER, UNITS, SECTIONS, FORMULAS, FLASHCARDS, PRACTICE_EXAM1, CHECKLISTS };
+  /* ---------- derived fields for the shared shell ---------- */
+  SECTIONS.forEach(s => { s.label = '§' + s.id; s.link = COURSE.textbookBase + s.slug; });
+  CALENDAR.forEach(e => { if (e[1] === 'lecture') { const m = e[2].match(/§(\d\.\d)/); if (m) e[3] = m[1]; } });
+  const RECURRING = [
+    { dows: [1, 2, 4], time: '8:00 pm', title: 'WebWork due', skipHolidays: true },
+    { dows: [1], time: '8:00 pm', title: 'Written homework due (Gradescope)', skipHolidays: true },
+    { afterLabDay: true, time: '8:00 pm', title: 'Lab sheet due (Gradescope)' }
+  ];
+  const PRACTICE = { exam1: PRACTICE_EXAM1 };
+  const INFO = [
+    { icon: 'info', title: 'Course facts', html: `<ul class="list-plain small">
+        <li><b>Credits:</b> ${COURSE.credits}. Plan on <b>${COURSE.weeklyHours}+ hours per week</b> including class.</li>
+        <li><b>Format:</b> ${COURSE.classDays}. Bring a laptop to lab.</li>
+        <li><b>Textbook:</b> <a href="${COURSE.textbook.url}" target="_blank" rel="noopener">${COURSE.textbook.title}</a> (free).</li>
+        <li><b>Homework:</b> <a href="${COURSE.webwork}" target="_blank" rel="noopener">WebWork</a> for online work; written work through Gradescope; everything else in Canvas.</li>
+        <li><b>Exams:</b> four unit exams in class plus a cumulative final in finals week. <b>No calculators, electronics, or phones.</b></li>
+        <li><b>Exam conflicts:</b> contact ${COURSE.successCoordinator} with your name, section, reason, and exam. Work, travel, and long weekends do not count.</li>
+        <li><b>Quizzes:</b> in-class and take-home, no make-ups, lowest score(s) dropped.</li></ul>` },
+    { icon: 'clock', title: 'Deadlines', html: `<ul class="list-plain small">${COURSE.deadlines.map(x => `<li><b>${x.name}.</b> ${x.rule}</li>`).join('')}</ul>` },
+    { icon: 'bulb', title: 'Where to get help', html: `<ul class="list-plain small">
+        <li><b>${COURSE.helpCenter.name}</b> · ${COURSE.helpCenter.where} · ${COURSE.helpCenter.hours}.</li>
+        <li><b>Office hours</b> with your instructor and lab assistants (strongly encouraged).</li>
+        <li><b>${COURSE.tutoring}</b> tutoring support.</li>
+        <li><b>Short videos</b> for each section, posted in Canvas modules.</li>
+        <li><b>Study groups:</b> work together on concepts; submit your own work.</li>
+        <li><b>Disability Services</b> · ${COURSE.disability.where} · <a href="${COURSE.disability.url}" target="_blank" rel="noopener">details</a>.</li></ul>` },
+    { icon: 'flag', title: 'Exams and weights', html: `<div class="table-wrap"><table class="table compact"><thead><tr><th>Exam</th><th>Date</th><th>Covers</th><th class="num">Weight</th></tr></thead><tbody>${EXAMS.map(e => `<tr><td><b>${e.name}</b></td><td>${e.dateLabel || e.date}</td><td class="small">${e.covers}</td><td class="num">${e.weight}%</td></tr>`).join('')}</tbody></table></div>` },
+    { icon: 'list', title: 'Written work expectations', span2: true, html: `<p class="small">Show all work and explain your reasoning in clear, precise mathematical language. Equations without explanation do not receive full credit; answers alone receive little or none. Be neat and use correct notation. Graded on the four-point rubric (see the Grade calculator page).</p>
+        <div class="divider"></div><div class="eyebrow mb-1">AI use policy (summary)</div><p class="small">Generative AI is allowed as a <em>support</em> for learning: clarifying concepts, generating practice questions, checking your work for errors, making study plans. It must not replace your own thinking or produce submitted work. Attempt problems first, ask specific questions, and verify everything: you are responsible for correctness. All submitted work must be your own.</p>
+        <div class="divider"></div><div class="eyebrow mb-1">Academic integrity</div><p class="small">Cheating and plagiarism, including copying from solution manuals or answer sites when not allowed, lead to disciplinary action up to a failing grade. When collaboration is permitted, acknowledge your collaborators and cite sources.</p>` }
+  ];
+  const NAV = [
+    { label: 'Today', items: [['dashboard', 'Dashboard', 'home'], ['calendar', 'Calendar', 'calendar']] },
+    { label: 'Learn', items: [['notes', 'Section notes', 'book'], ['formulas', 'Formula sheet', 'sigma'], ['flashcards', 'Flashcards', 'cards'], ['textbook', 'Textbook & links', 'link']] },
+    { label: 'Practice', items: [['practice', 'Quizzer', 'list'], ['exam', 'Exam prep', 'flag']] },
+    { label: 'Tools', items: [['grapher', 'Grapher', 'chart'], ['labs', 'Labs', 'flask'], ['grades', 'Grade calculator', 'calc'], ['scratchpad', 'Scratchpad', 'pen']] },
+    { label: 'Course', items: [['course', 'Syllabus & policies', 'info'], ['settings', 'Settings', 'sliders']] }
+  ];
+  global.Courses = global.Courses || {};
+  global.Courses.calc = Object.assign(global.Courses.calc || {}, {
+    id: 'calc', code: 'M171', name: 'Calculus I', short: 'Calc I', term: 'Fall 2026', tagline: 'Limits, derivatives and integrals with Active Calculus',
+    quizNote: 'You can type 3/8, -0.375 or 2pi. Answers within 0.5% count.',
+    COURSE, GRADING, EXAMS, CALENDAR, RECURRING, SEMESTER, UNITS, SECTIONS, FORMULAS, FLASHCARDS, PRACTICE, CHECKLISTS, INFO, NAV
+  });
 })(window);

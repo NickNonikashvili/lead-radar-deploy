@@ -1,5 +1,5 @@
 /* ============================================================
-   M171 Study Hub — procedural question generators
+   Study Hub — Calculus I procedural question generators
    Every generator returns:
    { topic, type:'mc'|'num', prompt, options?, answer, answerTex?, explanation, hint? }
    For 'mc', answer is the index of the correct option.
@@ -1003,5 +1003,7 @@
     return out;
   }
 
-  global.M171Quiz = { TOPICS, GENERATORS, BY_TOPIC, generateSet, topicsForUnits, helpers: { fmt, fracTex, shuffle } };
+  global.Courses = global.Courses || {};
+  global.Courses.calc = global.Courses.calc || {};
+  global.Courses.calc.quiz = { TOPICS, GENERATORS, BY_TOPIC, generateSet, topicsForUnits, helpers: { fmt, fracTex, shuffle } };
 })(window);
