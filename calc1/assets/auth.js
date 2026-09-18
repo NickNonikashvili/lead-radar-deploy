@@ -232,7 +232,7 @@
   /* ---------- settings panel ---------- */
   Auth.settingsPanel = function (root) {
     const u = Auth.user;
-    const html = u ? `<div class="panel"><div class="panel-h"><div class="panel-title">${icon('info')} Account</div><span class="chip ${Auth.mode === 'server' ? 'good' : ''}">${Auth.mode === 'server' ? 'synced across devices' : 'local browser only'}</span></div>
+    const html = u ? `<div class="panel"><div class="panel-h"><div class="panel-title">${icon('info')} Account</div><span class="row gap-sm">${u.admin ? '<a class="chip accent" href="#/forum/admin">administrator · admin panel</a>' : u.mod ? '<a class="chip accent" href="#/forum/reports">moderator · report queue</a>' : ''}<span class="chip ${Auth.mode === 'server' ? 'good' : ''}">${Auth.mode === 'server' ? 'synced across devices' : 'local browser only'}</span></span></div>
         <div class="field mb-2"><label>Email</label><div class="mono small">${esc(u.email)}</div></div>
         <div class="field mb-2"><label for="acct-name">Display name</label><div class="row gap-sm"><input class="input" id="acct-name" value="${esc(u.name || '')}" placeholder="Your name" style="max-width:260px"><button class="btn sm" data-action="save-name">Save</button></div></div>
         <div class="row gap-sm mt-2">${Auth.mode === 'server' ? `<button class="btn sm" data-action="sync-now">${icon('rotate', 13)} Sync now</button><button class="btn sm" data-action="change-pass">Change password</button>` : ''}<button class="btn sm" data-action="logout">Log out</button><button class="btn sm danger ghost" data-action="delete-acct">Delete account</button></div>

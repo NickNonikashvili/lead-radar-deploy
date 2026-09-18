@@ -47,9 +47,11 @@ Rules, Privacy Policy and Disclaimer** live at `#/policy` (`assets/policy.js`); 
 for user content on the person who posts it, prohibit illegal activity, and disclaim liability. Have a
 lawyer look them over if the site grows.
 
-**Moderators.** Add account emails to `moderators` in `api/config.php`. Moderators see real authors,
-can pin, lock, remove and restore posts and comments, ban users for a number of days, and work the
-report queue at `#/forum/reports`.
+**Moderators and administrators.** Account emails listed under `moderators` in `api/config.php` see
+real authors, can pin, lock, remove and restore posts and comments, ban users for a number of days, and
+work the report queue at `#/forum/reports`. Emails under `admins` (the site owner) can do all of that
+plus permanently delete any post or comment, and manage members at `#/forum/admin`: search, ban,
+unban, verify or delete any account. Both lists ship with nikoloz.nonikashvili@student.montana.edu.
 
 ## Preview vs. members
 

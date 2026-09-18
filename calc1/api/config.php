@@ -11,7 +11,11 @@ return [
   'extra_allowed_emails' => [],
 
   // Discussion moderators (account emails). Moderators can pin, lock, remove posts and comments, ban users and see the report queue.
-  'moderators' => [],
+  'moderators' => ['nikoloz.nonikashvili@student.montana.edu'],
+
+  // Administrators (account emails). Everything a moderator can do, plus permanently delete any post or comment,
+  // see the member list, and ban, unban or delete any account. Administrators are moderators automatically.
+  'admins' => ['nikoloz.nonikashvili@student.montana.edu'],
 
   // Sender for verification / reset emails. Must be a mailbox that exists on your domain.
   'mail_from'       => 'info@mathub.space',

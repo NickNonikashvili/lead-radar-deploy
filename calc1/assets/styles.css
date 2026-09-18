@@ -672,3 +672,7 @@ canvas.pad.grid { background-image: linear-gradient(var(--grid) 1px, transparent
 .policy .callout { margin: 12px 0; }
 .policy b { color: var(--ink); }
 @media (max-width: 640px) { .fa-post { padding: 12px; gap: 8px; } .fa-post.full { padding: 14px; } .fa-title.big { font-size: 20px; } .fa-toolbar .input { max-width: none !important; width: 100%; } }
+
+.fa-act.danger { color: var(--bad); }
+.fa-act.danger:hover { background: var(--bad-soft); color: var(--bad); }
+.chip a, a.chip { text-decoration: none; }

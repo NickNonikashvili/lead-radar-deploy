@@ -155,6 +155,6 @@ switch ($route) {
       'active_7d' => (int)$db->query('SELECT COUNT(*) FROM users WHERE last_login > ' . (time() - 7 * 86400))->fetchColumn(), 'progress_rows' => (int)$db->query('SELECT COUNT(*) FROM progress')->fetchColumn()]);
 
   default:
-    if (str_starts_with($route, 'forum_') || $route === 'terms_accept') { require_once __DIR__ . '/forum.php'; mh_forum_route($route, $in, $cfg, $ip); }
+    if (str_starts_with($route, 'forum_') || str_starts_with($route, 'admin_') || $route === 'terms_accept') { require_once __DIR__ . '/forum.php'; mh_forum_route($route, $in, $cfg, $ip); }
     mh_fail('Not found.', 404);
 }

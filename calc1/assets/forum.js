@@ -16,6 +16,7 @@
   const user = () => auth().user || null;
   const offline = () => auth().mode === 'offline';
   const isMod = () => !!(user() && user().mod);
+  const isAdmin = () => !!(user() && user().admin);
 
   async function api(route, body, method) {
     const opts = { method: method || (body ? 'POST' : 'GET'), credentials: 'same-origin', headers: { 'X-Requested-With': 'MatHub', 'Accept': 'application/json' }, cache: 'no-store' };
@@ -105,6 +106,7 @@
       const box = $('#fa-root', root);
       if (param === 'new') this.compose(box);
       else if (param === 'reports') this.reports(box);
+      else if (param === 'admin') this.admin(box);
       else if (param && /^\d+$/.test(param)) this.thread(box, +param);
       else this.list(box);
       bind(root, Object.assign({ theme: () => App.toggleTheme() }, this.actions(root)));
@@ -123,7 +125,7 @@
         ${!u ? App.lockCard('Read and join the discussions', 'Members can read every post, ask questions, answer classmates, vote and organize study groups. Visitors see titles only.', { compact: true }) : ''}
         ${offline() ? '<div class="callout small mb-2">Sample content: the discussion server is not reachable in this preview, so these posts are examples and posting is disabled.</div>' : ''}
         <div class="stack" id="fa-list"><div class="empty">Loading…</div></div><div class="row mt-2" id="fa-more" style="justify-content:center"></div>
-        ${isMod() ? `<p class="small muted mt-2">Moderator: <a href="${base()}/reports">open the report queue</a>.</p>` : ''}`;
+        ${isMod() ? `<p class="small muted mt-2">${isAdmin() ? 'Administrator' : 'Moderator'}: <a href="${base()}/reports">report queue</a>${isAdmin() ? ` · <a href="${base()}/admin">admin panel</a>` : ''}.</p>` : ''}`;
       const q = $('#fa-q', box); let t; q.addEventListener('input', () => { clearTimeout(t); t = setTimeout(() => { F.q = q.value.trim(); F.page = 0; this.loadList(box); }, 350); });
       this.loadList(box);
     },
@@ -163,7 +165,7 @@
     paintThread(el) {
       const d = F.thread; const p = d.post; const ro = offline();
       const canComment = user() && !p.locked && !p.removed && !ro;
-      const modTools = isMod() && !ro ? `<span class="fa-mod">${icon('shield', 13)} <button class="fa-act" data-action="mod" data-a="${p.pinned ? 'unpin' : 'pin'}" data-kind="p" data-id="${p.id}">${p.pinned ? 'Unpin' : 'Pin'}</button><button class="fa-act" data-action="mod" data-a="${p.locked ? 'unlock' : 'lock'}" data-kind="p" data-id="${p.id}">${p.locked ? 'Unlock' : 'Lock'}</button><button class="fa-act" data-action="mod" data-a="${p.removed === 2 ? 'restore' : 'remove'}" data-kind="p" data-id="${p.id}">${p.removed === 2 ? 'Restore' : 'Remove'}</button><button class="fa-act" data-action="ban" data-kind="p" data-id="${p.id}">Ban author</button></span>` : '';
+      const modTools = isMod() && !ro ? `<span class="fa-mod">${icon('shield', 13)} <button class="fa-act" data-action="mod" data-a="${p.pinned ? 'unpin' : 'pin'}" data-kind="p" data-id="${p.id}">${p.pinned ? 'Unpin' : 'Pin'}</button><button class="fa-act" data-action="mod" data-a="${p.locked ? 'unlock' : 'lock'}" data-kind="p" data-id="${p.id}">${p.locked ? 'Unlock' : 'Lock'}</button><button class="fa-act" data-action="mod" data-a="${p.removed === 2 ? 'restore' : 'remove'}" data-kind="p" data-id="${p.id}">${p.removed === 2 ? 'Restore' : 'Remove'}</button><button class="fa-act" data-action="ban" data-kind="p" data-id="${p.id}">Ban author</button>${isAdmin() ? `<button class="fa-act danger" data-action="purge" data-kind="p" data-id="${p.id}">Delete permanently</button>` : ''}</span>` : '';
       el.innerHTML = `<article class="fa-post full${p.pinned ? ' pinned' : ''}" id="fp-${p.id}">${voteBox('p', p, ro || p.removed)}
           <div class="fa-main"><div class="fa-meta">${courseChip(p.course)}${flairChip(p.flair)}${p.pinned ? `<span class="chip good">${icon('pin', 11)} Pinned</span>` : ''}${p.locked ? `<span class="chip warn">${icon('lock', 11)} Locked</span>` : ''}<span class="sep">·</span>${authorHtml(p)}<span class="sep">·</span><span class="muted">${timeAgo(p.created)}${p.edited ? ' · edited' : ''}</span></div>
             <h2 class="fa-title big">${esc(p.title)}</h2>
@@ -180,7 +182,7 @@
       const ro = offline(); const p = F.thread.post;
       const node = (c, depth) => {
         const kids = byParent[c.id] || [];
-        const acts = c.removed ? '' : `${!ro && !p.locked ? `<button class="fa-act" data-action="reply" data-id="${c.id}">${icon('reply', 12)} Reply</button>` : ''}${c.mine && !ro ? `<button class="fa-act" data-action="edit-comment" data-id="${c.id}">Edit</button><button class="fa-act" data-action="delete-comment" data-id="${c.id}">Delete</button>` : ''}${!c.mine && !ro ? `<button class="fa-act" data-action="report" data-kind="c" data-id="${c.id}">Report</button>` : ''}${isMod() && !ro ? `<span class="fa-mod">${icon('shield', 12)} <button class="fa-act" data-action="mod" data-a="remove" data-kind="c" data-id="${c.id}">Remove</button><button class="fa-act" data-action="ban" data-kind="c" data-id="${c.id}">Ban</button></span>` : ''}`;
+        const acts = c.removed ? '' : `${!ro && !p.locked ? `<button class="fa-act" data-action="reply" data-id="${c.id}">${icon('reply', 12)} Reply</button>` : ''}${c.mine && !ro ? `<button class="fa-act" data-action="edit-comment" data-id="${c.id}">Edit</button><button class="fa-act" data-action="delete-comment" data-id="${c.id}">Delete</button>` : ''}${!c.mine && !ro ? `<button class="fa-act" data-action="report" data-kind="c" data-id="${c.id}">Report</button>` : ''}${isMod() && !ro ? `<span class="fa-mod">${icon('shield', 12)} <button class="fa-act" data-action="mod" data-a="remove" data-kind="c" data-id="${c.id}">Remove</button><button class="fa-act" data-action="ban" data-kind="c" data-id="${c.id}">Ban</button>${isAdmin() ? `<button class="fa-act danger" data-action="purge" data-kind="c" data-id="${c.id}">Delete permanently</button>` : ''}</span>` : ''}`;
         return `<div class="fa-comment${c.removed ? ' removed' : ''}" id="fc-${c.id}" style="--depth:${Math.min(depth, 8)}">
           <div class="fa-c-head"><button class="fa-collapse" data-action="collapse" data-id="${c.id}" aria-label="Collapse">[−]</button>${authorHtml(c, true)}<span class="sep">·</span><span class="muted">${timeAgo(c.created)}${c.edited ? ' · edited' : ''}</span>${isMod() && c.removed === 2 ? `<button class="fa-act" data-action="mod" data-a="restore" data-kind="c" data-id="${c.id}">Restore</button>` : ''}</div>
           <div class="fa-c-body" id="fcb-${c.id}">${c.removed ? `<i class="muted">${esc(c.body)}</i>${isMod() && c.body_real ? `<div class="fa-real-body mt-1">${renderBody(c.body_real)}</div>` : ''}` : renderBody(c.body)}</div>
@@ -219,8 +221,25 @@
       try {
         const r = await api('forum_reports');
         el.innerHTML = `<div class="panel"><div class="panel-h"><div class="panel-title">${icon('flag')} Open reports</div><span class="chip">${r.reports.length}</span></div>
-          ${r.reports.length ? `<div class="table-wrap"><table class="table compact"><thead><tr><th>Item</th><th>Reason</th><th>Author</th><th></th></tr></thead><tbody>${r.reports.map(x => `<tr><td><span class="chip">${x.kind === 'p' ? 'post' : 'comment'}</span> <a href="${threadLink(x.post_id)}">${esc(x.snippet.slice(0, 110))}${x.snippet.length > 110 ? '…' : ''}</a>${x.removed ? ' <span class="chip bad">removed</span>' : ''}</td><td class="small">${esc(x.reason)}<div class="muted">by ${esc(x.reporter)} · ${timeAgo(x.created)}</div></td><td class="small mono">${esc(x.author)}</td><td><div class="row gap-sm" style="flex-wrap:nowrap">${x.removed ? '' : `<button class="btn xs danger" data-action="mod" data-a="remove" data-kind="${x.kind}" data-id="${x.item_id}" data-refresh="reports">Remove</button>`}<button class="btn xs" data-action="ban" data-kind="${x.kind}" data-id="${x.item_id}" data-refresh="reports">Ban</button><button class="btn xs ghost" data-action="mod" data-a="resolve" data-report="${x.id}" data-refresh="reports">Dismiss</button></div></td></tr>`).join('')}</tbody></table></div>` : '<div class="empty">Nothing reported. Nice community.</div>'}</div>
+          ${r.reports.length ? `<div class="table-wrap"><table class="table compact"><thead><tr><th>Item</th><th>Reason</th><th>Author</th><th></th></tr></thead><tbody>${r.reports.map(x => `<tr><td><span class="chip">${x.kind === 'p' ? 'post' : 'comment'}</span> <a href="${threadLink(x.post_id)}">${esc(x.snippet.slice(0, 110))}${x.snippet.length > 110 ? '…' : ''}</a>${x.removed ? ' <span class="chip bad">removed</span>' : ''}</td><td class="small">${esc(x.reason)}<div class="muted">by ${esc(x.reporter)} · ${timeAgo(x.created)}</div></td><td class="small mono">${esc(x.author)}</td><td><div class="row gap-sm" style="flex-wrap:nowrap">${x.removed ? '' : `<button class="btn xs danger" data-action="mod" data-a="remove" data-kind="${x.kind}" data-id="${x.item_id}" data-refresh="reports">Remove</button>`}<button class="btn xs" data-action="ban" data-kind="${x.kind}" data-id="${x.item_id}" data-refresh="reports">Ban</button>${isAdmin() ? `<button class="btn xs danger ghost" data-action="purge" data-kind="${x.kind}" data-id="${x.item_id}" data-refresh="reports">Delete</button>` : ''}<button class="btn xs ghost" data-action="mod" data-a="resolve" data-report="${x.id}" data-refresh="reports">Dismiss</button></div></td></tr>`).join('')}</tbody></table></div>` : '<div class="empty">Nothing reported. Nice community.</div>'}</div>
           <div class="panel mt-2"><div class="panel-h"><div class="panel-title">${icon('lock')} Active bans</div></div>${r.bans.length ? `<div class="table-wrap"><table class="table compact"><tbody>${r.bans.map(b => `<tr><td class="mono small">${esc(b.email)}</td><td class="small">until ${new Date(b.until * 1000).toLocaleDateString()}${b.reason ? ' · ' + esc(b.reason) : ''}</td><td><button class="btn xs" data-action="mod" data-a="unban" data-user="${b.user_id}" data-refresh="reports">Unban</button></td></tr>`).join('')}</tbody></table></div>` : '<div class="empty">No active bans.</div>'}</div>`;
+      } catch (e) { el.innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
+    },
+
+    /* --- administrator panel --- */
+    async admin(box, q, page) {
+      box.innerHTML = `<div class="fa-back"><a href="${base()}">${icon('left', 14)} All discussions</a> <span class="sep muted">·</span> <a href="${base()}/reports">Report queue</a></div>${pageHead('Admin panel', 'Site overview and member management. You can ban, unban or delete any account, and permanently delete any post or comment from its thread.')}<div id="fa-admin"><div class="empty">Loading…</div></div>`;
+      const el = $('#fa-admin', box);
+      if (!isAdmin()) { el.innerHTML = '<div class="empty">Administrators only.</div>'; return; }
+      try {
+        const [st, us] = await Promise.all([api('admin_stats'), api('admin_users&q=' + encodeURIComponent(q || '') + '&page=' + (page || 0))]);
+        const stat = (n, l) => `<div class="stat"><div class="stat-num">${n}</div><div class="stat-label">${l}</div></div>`;
+        el.innerHTML = `<div class="grid cols-4 mb-2">${stat(st.users, 'members')}${stat(st.active_7d, 'active this week')}${stat(st.posts, 'posts')}${stat(st.comments, 'comments')}${stat(st.reports, 'open reports')}${stat(st.bans, 'active bans')}${stat(st.removed, 'removed items')}${stat(st.pending, 'unverified sign-ups')}</div>
+          <div class="panel mb-2"><div class="panel-h"><div class="panel-title">${icon('shield')} Staff</div><span class="small muted">edit <code>moderators</code> / <code>admins</code> in api/config.php</span></div><div class="row gap-sm">${st.moderators.map(m => `<span class="chip ${st.admins.includes(m) ? 'accent' : ''}">${esc(m)}${st.admins.includes(m) ? ' · admin' : ''}</span>`).join('')}</div></div>
+          <div class="panel"><div class="panel-h"><div class="panel-title">${icon('info')} Members</div><input class="input" id="fa-admin-q" placeholder="Search email or name…" value="${esc(q || '')}" style="max-width:260px"></div>
+            <div class="table-wrap"><table class="table compact"><thead><tr><th>Member</th><th>Joined</th><th class="num">Posts</th><th class="num">Comments</th><th>Status</th><th></th></tr></thead><tbody>${us.users.map(x => `<tr><td><div><b>${esc(x.name || x.email.split('@')[0])}</b>${x.admin ? ' <span class="chip accent">admin</span>' : x.mod ? ' <span class="chip">mod</span>' : ''}</div><div class="mono small muted">${esc(x.email)}</div></td><td class="small">${new Date(x.created * 1000).toLocaleDateString()}<div class="muted">last login ${x.last_login ? timeAgo(x.last_login) : 'never'}</div></td><td class="num">${x.posts}</td><td class="num">${x.comments}</td><td class="small">${!x.verified ? '<span class="chip warn">unverified</span>' : x.banned_until ? `<span class="chip bad">banned until ${new Date(x.banned_until * 1000).toLocaleDateString()}</span>` : '<span class="chip good">active</span>'}${x.terms ? '' : ' <span class="chip">no rules yet</span>'}</td><td><div class="row gap-sm" style="flex-wrap:nowrap;justify-content:flex-end">${x.admin ? '' : `${x.banned_until ? `<button class="btn xs" data-action="admin-user" data-a="unban" data-u="${x.id}">Unban</button>` : `<button class="btn xs" data-action="admin-user" data-a="ban" data-u="${x.id}">Ban</button>`}${!x.verified ? `<button class="btn xs" data-action="admin-user" data-a="verify" data-u="${x.id}">Verify</button>` : ''}<button class="btn xs danger ghost" data-action="admin-user" data-a="delete" data-u="${x.id}" data-e="${esc(x.email)}">Delete</button>`}</div></td></tr>`).join('') || '<tr><td colspan="6"><div class="empty">No members match.</div></td></tr>'}</tbody></table></div>
+            ${us.more ? `<div class="row mt-2" style="justify-content:center"><button class="btn" data-action="admin-page" data-p="${(page || 0) + 1}" data-q="${esc(q || '')}">Next page</button></div>` : ''}</div>`;
+        const inp = $('#fa-admin-q', el); let t; inp.addEventListener('input', () => { clearTimeout(t); t = setTimeout(() => this.admin(box, inp.value.trim(), 0), 350); });
       } catch (e) { el.innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
     },
 
@@ -269,6 +288,18 @@
           if (a === 'remove' && !confirm('Remove this ' + (el.dataset.kind === 'p' ? 'post' : 'comment') + '? Members will see "[removed by a moderator]".')) return;
           try { await api('forum_mod', body); toast('Done'); if (el.dataset.refresh === 'reports') self.reports(V()); else await refreshThread(); } catch (e) { toast(e.message, 3000); }
         },
+        purge: async el => {
+          const what = el.dataset.kind === 'p' ? 'post (with all its comments)' : 'comment';
+          if (!confirm('Permanently delete this ' + what + '? This cannot be undone.')) return;
+          try { await api('admin_purge', { kind: el.dataset.kind, id: +el.dataset.id }); toast('Deleted permanently'); if (el.dataset.refresh === 'reports') self.reports(V()); else if (el.dataset.kind === 'p') location.hash = base(); else await refreshThread(); } catch (e) { toast(e.message, 3000); }
+        },
+        'admin-user': async el => {
+          const a = el.dataset.a, body = { action: a, user_id: +el.dataset.u };
+          if (a === 'delete' && !confirm('Delete the account ' + el.dataset.e + ' and everything they posted? This cannot be undone.')) return;
+          if (a === 'ban') { const days = prompt('Ban for how many days?', '30'); if (!days) return; body.days = +days; body.reason = prompt('Reason (shown to the user):', 'Breaking the community rules') || ''; }
+          try { await api('admin_user', body); toast('Done'); self.admin(V(), $('#fa-admin-q', root) ? $('#fa-admin-q', root).value.trim() : ''); } catch (e) { toast(e.message, 3500); }
+        },
+        'admin-page': el => self.admin(V(), el.dataset.q, +el.dataset.p),
         ban: async el => {
           const days = prompt('Ban the author of this item for how many days?', '7'); if (!days) return; const reason = prompt('Reason (shown to the user):', 'Breaking the community rules') || '';
           try { await api('forum_mod', { action: 'ban', kind: el.dataset.kind, id: +el.dataset.id, days: +days, reason }); toast('User banned'); if (el.dataset.refresh === 'reports') self.reports(V()); else await refreshThread(); } catch (e) { toast(e.message, 3000); }

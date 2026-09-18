@@ -105,9 +105,10 @@ function mh_email_check(string $email): array {
 function mh_user_by_email(string $email): ?array {
   $st = mh_db()->prepare('SELECT * FROM users WHERE email = ?'); $st->execute([$email]); $u = $st->fetch(); return $u ?: null;
 }
-function mh_is_mod(?array $u): bool { return $u ? in_array(strtolower($u['email']), array_map('strtolower', mh_config()['moderators'] ?? []), true) : false; }
+function mh_is_admin(?array $u): bool { return $u ? in_array(strtolower($u['email']), array_map('strtolower', mh_config()['admins'] ?? []), true) : false; }
+function mh_is_mod(?array $u): bool { return $u ? (mh_is_admin($u) || in_array(strtolower($u['email']), array_map('strtolower', mh_config()['moderators'] ?? []), true)) : false; }
 function mh_user_public(array $u): array {
-  return ['id' => (int)$u['id'], 'email' => $u['email'], 'name' => $u['name'], 'verified' => (bool)$u['verified'], 'created' => (int)$u['created'], 'mod' => mh_is_mod($u), 'terms' => (int)($u['terms_accepted'] ?? 0) > 0];
+  return ['id' => (int)$u['id'], 'email' => $u['email'], 'name' => $u['name'], 'verified' => (bool)$u['verified'], 'created' => (int)$u['created'], 'mod' => mh_is_mod($u), 'admin' => mh_is_admin($u), 'terms' => (int)($u['terms_accepted'] ?? 0) > 0];
 }
 
 /* ---------- one-time codes ---------- */

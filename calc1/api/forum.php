@@ -190,6 +190,47 @@ function mh_forum_route(string $route, array $in, array $cfg, string $ip): void 
       if (in_array($action, ['remove', 'restore'], true) || ($action === 'ban' && $item)) $db->prepare('UPDATE reports SET status = "closed" WHERE kind = ? AND item_id = ?')->execute([$kind, $id]);
       mh_json(['ok' => true]);
 
+    /* ---------- administrator ---------- */
+    case 'admin_stats':
+      mh_method('GET'); $u = mh_require_user(); if (!mh_is_admin($u)) mh_fail('Administrators only.', 403);
+      $n = fn($sql) => (int)$db->query($sql)->fetchColumn();
+      mh_json(['ok' => true, 'users' => $n('SELECT COUNT(*) FROM users WHERE verified = 1'), 'pending' => $n('SELECT COUNT(*) FROM users WHERE verified = 0'), 'active_7d' => $n('SELECT COUNT(*) FROM users WHERE last_login > ' . ($now - 7 * 86400)),
+        'posts' => $n('SELECT COUNT(*) FROM posts WHERE removed = 0'), 'comments' => $n('SELECT COUNT(*) FROM comments WHERE removed = 0'), 'removed' => $n('SELECT COUNT(*) FROM posts WHERE removed > 0') + $n('SELECT COUNT(*) FROM comments WHERE removed > 0'),
+        'reports' => $n('SELECT COUNT(*) FROM reports WHERE status = "open"'), 'bans' => $n('SELECT COUNT(*) FROM bans WHERE until > ' . $now), 'moderators' => array_values(array_unique(array_merge($cfg['admins'] ?? [], $cfg['moderators'] ?? []))), 'admins' => $cfg['admins'] ?? []]);
+
+    case 'admin_users':
+      mh_method('GET'); $u = mh_require_user(); if (!mh_is_admin($u)) mh_fail('Administrators only.', 403);
+      $q = trim((string)($_GET['q'] ?? '')); $page = max(0, (int)($_GET['page'] ?? 0)); $args = [];
+      $where = '1=1'; if ($q !== '') { $where = '(u.email LIKE ? OR u.name LIKE ?)'; $like = '%' . str_replace(['%', '_'], ['\\%', '\\_'], mb_substr($q, 0, 80)) . '%'; $args = [$like, $like]; }
+      $st = $db->prepare("SELECT u.id, u.email, u.name, u.verified, u.created, u.last_login, u.terms_accepted,
+          (SELECT COUNT(*) FROM posts p WHERE p.user_id = u.id AND p.removed = 0) AS nposts, (SELECT COUNT(*) FROM comments c WHERE c.user_id = u.id AND c.removed = 0) AS ncomments,
+          (SELECT until FROM bans b WHERE b.user_id = u.id AND b.until > $now) AS banned_until
+        FROM users u WHERE $where ORDER BY u.created DESC LIMIT 51 OFFSET " . ($page * 50)); $st->execute($args); $rows = $st->fetchAll();
+      $more = count($rows) > 50; $rows = array_slice($rows, 0, 50);
+      mh_json(['ok' => true, 'more' => $more, 'users' => array_map(fn($r) => ['id' => (int)$r['id'], 'email' => $r['email'], 'name' => $r['name'], 'verified' => (int)$r['verified'] === 1, 'created' => (int)$r['created'], 'last_login' => (int)$r['last_login'], 'terms' => (int)$r['terms_accepted'] > 0,
+        'posts' => (int)$r['nposts'], 'comments' => (int)$r['ncomments'], 'banned_until' => $r['banned_until'] ? (int)$r['banned_until'] : 0, 'mod' => mh_is_mod(['email' => $r['email']]), 'admin' => mh_is_admin(['email' => $r['email']])], $rows)]);
+
+    case 'admin_user':
+      mh_method('POST'); $u = mh_require_user(); if (!mh_is_admin($u)) mh_fail('Administrators only.', 403);
+      $target = (int)($in['user_id'] ?? 0); $action = (string)($in['action'] ?? '');
+      $st = $db->prepare('SELECT * FROM users WHERE id = ?'); $st->execute([$target]); $t = $st->fetch(); if (!$t) mh_fail('User not found.', 404);
+      if ($target === (int)$u['id'] && in_array($action, ['delete', 'ban'], true)) mh_fail('You cannot ' . $action . ' your own account here. Use Settings.');
+      if (mh_is_admin($t) && $action !== 'unban') mh_fail('Other administrators can only be changed in api/config.php.');
+      if ($action === 'delete') { $db->prepare('DELETE FROM users WHERE id = ?')->execute([$target]); $db->prepare('DELETE FROM votes WHERE user_id = ?')->execute([$target]); $db->prepare('DELETE FROM reports WHERE user_id = ?')->execute([$target]); $db->prepare('DELETE FROM bans WHERE user_id = ?')->execute([$target]); }
+      elseif ($action === 'ban') { $days = max(1, min(3650, (int)($in['days'] ?? 30))); $db->prepare('INSERT OR REPLACE INTO bans (user_id, until, reason, created) VALUES (?, ?, ?, ?)')->execute([$target, $now + $days * 86400, mh_str($in, 'reason', 200), $now]); }
+      elseif ($action === 'unban') { $db->prepare('DELETE FROM bans WHERE user_id = ?')->execute([$target]); }
+      elseif ($action === 'verify') { $db->prepare('UPDATE users SET verified = 1 WHERE id = ?')->execute([$target]); }
+      elseif ($action === 'logout_all') { $db->prepare('DELETE FROM tokens WHERE user_id = ?')->execute([$target]); }
+      else mh_fail('Unknown action.');
+      mh_json(['ok' => true]);
+
+    case 'admin_purge':
+      mh_method('POST'); $u = mh_require_user(); if (!mh_is_admin($u)) mh_fail('Administrators only.', 403);
+      $kind = ($in['kind'] ?? '') === 'c' ? 'c' : 'p'; $id = (int)($in['id'] ?? 0);
+      if ($kind === 'p') { if (!mh_get_post($id)) mh_fail('Post not found.', 404); $db->prepare('DELETE FROM votes WHERE kind = "c" AND item_id IN (SELECT id FROM comments WHERE post_id = ?)')->execute([$id]); $db->prepare('DELETE FROM reports WHERE kind = "c" AND item_id IN (SELECT id FROM comments WHERE post_id = ?)')->execute([$id]); $db->prepare('DELETE FROM comments WHERE post_id = ?')->execute([$id]); $db->prepare('DELETE FROM votes WHERE kind = "p" AND item_id = ?')->execute([$id]); $db->prepare('DELETE FROM reports WHERE kind = "p" AND item_id = ?')->execute([$id]); $db->prepare('DELETE FROM posts WHERE id = ?')->execute([$id]); }
+      else { $c = mh_get_comment($id); if (!$c) mh_fail('Comment not found.', 404); $db->prepare('UPDATE comments SET parent_id = ? WHERE parent_id = ?')->execute([$c['parent_id'], $id]); $db->prepare('DELETE FROM votes WHERE kind = "c" AND item_id = ?')->execute([$id]); $db->prepare('DELETE FROM reports WHERE kind = "c" AND item_id = ?')->execute([$id]); $db->prepare('DELETE FROM comments WHERE id = ?')->execute([$id]); $db->prepare('UPDATE posts SET ncomments = (SELECT COUNT(*) FROM comments WHERE post_id = ? AND removed = 0) WHERE id = ?')->execute([$c['post_id'], $c['post_id']]); }
+      mh_json(['ok' => true]);
+
     default:
       mh_fail('Not found.', 404);
   }
