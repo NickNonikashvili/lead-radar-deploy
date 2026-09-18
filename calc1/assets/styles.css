@@ -1,5 +1,5 @@
 /* ============================================================
-   M171 Study Hub — stylesheet
+   MatHub — stylesheet
    Tokens first (light), then dark overrides, then components.
    ============================================================ */
 :root {
@@ -37,9 +37,11 @@
   --sidebar-w: 248px;
   --phys-accent: #0E7C86; --phys-accent-ink: #FFFFFF; --phys-accent-soft: #DDF3F5; --phys-accent-line: #86CBD2;
   --calc-accent: #2B55B8; --calc-accent-ink: #FFFFFF; --calc-accent-soft: #E4EBFA; --calc-accent-line: #9DB4EA;
+  --precalc-accent: #B5451B; --precalc-accent-ink: #FFFFFF; --precalc-accent-soft: #FBE7DD; --precalc-accent-line: #E8A98D;
   color-scheme: light;
 }
 :root[data-course="physics"] { --accent: var(--phys-accent); --accent-ink: var(--phys-accent-ink); --accent-soft: var(--phys-accent-soft); --accent-line: var(--phys-accent-line); }
+:root[data-course="precalc"] { --accent: var(--precalc-accent); --accent-ink: var(--precalc-accent-ink); --accent-soft: var(--precalc-accent-soft); --accent-line: var(--precalc-accent-line); }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --bg: #0E1420; --grid: rgba(124, 163, 255, 0.06);
@@ -53,6 +55,7 @@
     --warn: #E5A44A; --warn-soft: #3B2A10;
     --lab: #B08CE8; --lab-soft: #2B2140;
     --phys-accent: #5FD3DE; --phys-accent-ink: #061B1F; --phys-accent-soft: #10343A; --phys-accent-line: #2A6B73;
+    --precalc-accent: #F0946A; --precalc-accent-ink: #2A1008; --precalc-accent-soft: #3B2016; --precalc-accent-line: #8A4A2E;
     --calc-accent: #7CA3FF; --calc-accent-ink: #0B1424; --calc-accent-soft: #1B2C4F; --calc-accent-line: #3D5A9A;
     --shadow: 0 10px 30px rgba(0, 0, 0, 0.45); --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
     color-scheme: dark;
@@ -70,6 +73,7 @@
   --warn: #E5A44A; --warn-soft: #3B2A10;
   --lab: #B08CE8; --lab-soft: #2B2140;
   --phys-accent: #5FD3DE; --phys-accent-ink: #061B1F; --phys-accent-soft: #10343A; --phys-accent-line: #2A6B73;
+  --precalc-accent: #F0946A; --precalc-accent-ink: #2A1008; --precalc-accent-soft: #3B2016; --precalc-accent-line: #8A4A2E;
   --calc-accent: #7CA3FF; --calc-accent-ink: #0B1424; --calc-accent-soft: #1B2C4F; --calc-accent-line: #3D5A9A;
   --shadow: 0 10px 30px rgba(0, 0, 0, 0.45); --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
   color-scheme: dark;
@@ -482,6 +486,7 @@ canvas.pad.grid { background-image: linear-gradient(var(--grid) 1px, transparent
 .course-card::before { content: ''; position: absolute; inset: 0 0 auto 0; height: 6px; background: var(--accent); }
 .course-card.physics { --accent: var(--phys-accent); --accent-ink: var(--phys-accent-ink); --accent-soft: var(--phys-accent-soft); --accent-line: var(--phys-accent-line); }
 .course-card.calc { --accent: var(--calc-accent); --accent-ink: var(--calc-accent-ink); --accent-soft: var(--calc-accent-soft); --accent-line: var(--calc-accent-line); }
+.course-card.precalc { --accent: var(--precalc-accent); --accent-ink: var(--precalc-accent-ink); --accent-soft: var(--precalc-accent-soft); --accent-line: var(--precalc-accent-line); }
 .course-card:hover { transform: translateY(-2px); border-color: var(--accent-line); box-shadow: var(--shadow); text-decoration: none; }
 .course-card-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .course-code { font-family: var(--font-display); font-style: italic; font-size: 30px; font-weight: 600; color: var(--accent); letter-spacing: -0.5px; }
@@ -490,3 +495,64 @@ canvas.pad.grid { background-image: linear-gradient(var(--grid) 1px, transparent
 .course-meta .eyebrow { display: block; margin-bottom: 2px; }
 .course-open { align-self: flex-start; margin-top: 8px; }
 @media (max-width: 760px) { .course-grid { grid-template-columns: 1fr; } .landing-title { font-size: 34px; } .course-meta { grid-template-columns: 1fr; } .landing-wrap { padding-top: 20px; } }
+
+/* ---------- course chips (landing merged list) ---------- */
+.chip.course-calc { background: var(--calc-accent-soft); color: var(--calc-accent); }
+.chip.course-physics { background: var(--phys-accent-soft); color: var(--phys-accent); }
+.chip.course-precalc { background: var(--precalc-accent-soft); color: var(--precalc-accent); }
+
+/* ---------- brand / logo ---------- */
+.brand-logo { display: flex; align-items: center; gap: 9px; padding: 2px 8px 10px; color: var(--ink); text-decoration: none; }
+.brand-logo:hover { text-decoration: none; }
+.brand-logo svg { flex: none; border-radius: 8px; box-shadow: var(--shadow-sm); }
+.brand-logo b { font-family: var(--font-display); font-size: 19px; letter-spacing: -0.2px; }
+.brand-logo b i { font-style: normal; color: var(--accent); }
+.brand-logo small { display: block; font-size: 10.5px; color: var(--muted); letter-spacing: 0.06em; text-transform: uppercase; }
+.logo-mark { display: inline-flex; vertical-align: middle; }
+.landing-title .logo-mark { margin-right: 12px; vertical-align: -6px; }
+.landing-title .logo-mark svg { border-radius: 11px; box-shadow: var(--shadow-sm); }
+.landing-features .card-link .eyebrow { color: var(--accent); }
+
+/* ---------- account box (sidebar) ---------- */
+.account-box { padding: 4px 0 8px; }
+.acct { display: flex; align-items: center; gap: 10px; padding: 8px 6px; border-radius: var(--radius-sm); }
+.acct.guest { flex-direction: column; align-items: stretch; gap: 8px; background: var(--surface-2); border: 1px dashed var(--border-strong); padding: 10px; }
+.acct .avatar { width: 32px; height: 32px; border-radius: 50%; background: var(--accent); color: var(--accent-ink); display: grid; place-items: center; font-weight: 600; font-size: 14px; flex: none; }
+.acct-body { min-width: 0; flex: 1; }
+.acct-name { font-size: 13.5px; font-weight: 600; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.acct-sub { font-size: 11.5px; color: var(--muted); }
+.acct .row { flex-wrap: nowrap; }
+.acct .btn { flex: 1; justify-content: center; }
+
+/* ---------- preview banner ---------- */
+.preview-banner { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding: 8px 24px; background: var(--gold-soft); color: var(--ink-2); border-bottom: 1px solid color-mix(in srgb, var(--gold) 35%, transparent); font-size: 13.5px; }
+.preview-banner > span:first-child { display: inline-flex; align-items: center; gap: 6px; }
+.preview-banner svg { color: var(--gold); flex: none; }
+.preview-banner .btn.ghost { background: transparent; }
+.app.landing .preview-banner { display: none; }
+
+/* ---------- lock cards ---------- */
+.lock-card { display: flex; gap: 18px; align-items: flex-start; padding: 22px 24px; border-radius: var(--radius); border: 1px dashed var(--border-strong); background: linear-gradient(135deg, var(--accent-soft), var(--surface)); }
+.lock-card.compact { padding: 14px 16px; gap: 12px; }
+.lock-card h3 { font-size: 19px; margin-bottom: 4px; }
+.lock-card.compact h3 { font-size: 16px; }
+.lock-card .lock-icon { width: 44px; height: 44px; border-radius: 12px; background: var(--accent); color: var(--accent-ink); display: grid; place-items: center; flex: none; }
+.lock-card.compact .lock-icon { width: 36px; height: 36px; }
+.sec-link.locked { opacity: 0.62; }
+.sec-link.locked .num::after { content: '·'; margin-left: 4px; color: var(--gold); }
+
+/* ---------- auth modal ---------- */
+.auth-modal { max-width: 440px; padding: 22px 24px 20px; }
+.auth-head { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+.auth-head > div { flex: 1; }
+.auth-head b { font-family: var(--font-display); font-size: 20px; }
+.auth-head .logo-mark svg { border-radius: 7px; }
+.auth-tabs { margin-bottom: 14px; }
+.auth-tabs .tab { flex: 1; text-align: center; }
+.auth-modal .field { margin-bottom: 10px; }
+.auth-msg { min-height: 18px; font-size: 13px; margin-top: 10px; color: var(--muted); }
+.auth-msg.bad { color: var(--bad); }
+.auth-msg.good { color: var(--good); }
+.auth-msg.warn { color: var(--warn); }
+.exam-chip.asof { background: var(--warn-soft); color: var(--warn); border-color: color-mix(in srgb, var(--warn) 35%, transparent); }
+@media (max-width: 640px) { .preview-banner { padding: 8px 14px; font-size: 12.5px; } .lock-card { flex-direction: column; gap: 10px; } .landing-title .logo-mark svg { width: 34px; height: 34px; } }

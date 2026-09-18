@@ -1,15 +1,23 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-build="2026.09.18.1">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Study Hub</title>
-  <meta name="description" content="Study companion for Calculus I (M171) and Physics I with Calculus, Fall 2026: calendars, topic notes, formula sheets, flashcards, endless quizzers, exam prep, simulators, grade calculators and scratchpads.">
+  <title>MatHub</title>
+  <meta name="description" content="MatHub: a free study hub for Montana State students in Precalculus (M151Q), Calculus I (M171) and Physics I (PHSX 220). Calendars, topic notes, formula sheets, flashcards, endless quizzers, exam prep, simulators, grade calculators and scratchpads.">
+  <meta name="theme-color" content="#2B55B8">
+  <meta name="apple-mobile-web-app-title" content="MatHub">
+  <meta name="mobile-web-app-capable" content="yes">
+  <link rel="icon" type="image/svg+xml" href="assets/icon.svg?v=2026.09.18.1">
+  <link rel="icon" type="image/png" sizes="32x32" href="assets/icon-32.png?v=2026.09.18.1">
+  <link rel="apple-touch-icon" sizes="180x180" href="assets/icon-180.png?v=2026.09.18.1">
+  <link rel="manifest" href="assets/manifest.webmanifest?v=2026.09.18.1">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=STIX+Two+Text:ital,wght@0,400;0,600;1,400;1,600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/styles.css">
+  <link rel="stylesheet" href="assets/styles.css?v=2026.09.18.1">
   <script>
+    window.MATHUB_BUILD = '2026.09.18.1';
     window.Courses = {};
     window.MathJax = {
       tex: { inlineMath: [['$', '$'], ['\\(', '\\)']], displayMath: [['$$', '$$'], ['\\[', '\\]']], processEscapes: true },
@@ -23,10 +31,12 @@
 <body>
   <div class="app">
     <aside class="sidebar" id="sidebar" aria-label="Navigation">
-      <div class="brand"><span class="brand-code" id="brand-code">M171</span><span class="brand-name" id="brand-name">Calculus I<small>Fall 2026 · Study Hub</small></span></div>
+      <a class="brand-logo" href="#/" title="All classes"><svg width="30" height="30" viewBox="0 0 64 64" aria-hidden="true"><defs><linearGradient id="mh-g-side" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#2B55B8"/><stop offset="1" stop-color="#0E7C86"/></linearGradient></defs><rect width="64" height="64" rx="15" fill="url(#mh-g-side)"/><path d="M15 46V21l17 17 17-17v25" fill="none" stroke="#fff" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/><circle cx="32" cy="38" r="4.2" fill="#F2C14E"/><circle cx="15" cy="21" r="3.4" fill="#F2C14E"/><circle cx="49" cy="21" r="3.4" fill="#F2C14E"/></svg><span><b>Mat<i>Hub</i></b><small>Montana State · Fall 2026</small></span></a>
+      <div class="brand"><span class="brand-code" id="brand-code">M171</span><span class="brand-name" id="brand-name">Calculus I<small>Fall 2026</small></span></div>
       <div class="course-switch" id="course-switch"></div>
       <nav id="sidebar-nav"></nav>
       <div class="sidebar-foot">
+        <div class="account-box" id="account-box"></div>
         <div class="pomo">
           <div><div class="pomo-time" id="pomo-time">25:00</div><div class="pomo-mode" id="pomo-mode">Focus</div></div>
           <div class="pomo-btns">
@@ -51,13 +61,17 @@
       <main class="page" id="view"></main>
     </div>
   </div>
-  <script src="assets/calc-data.js"></script>
-  <script src="assets/calc-quiz.js"></script>
-  <script src="assets/physics-data.js"></script>
-  <script src="assets/physics-quiz.js"></script>
-  <script src="assets/app.js"></script>
-  <script src="assets/tools.js"></script>
-  <script src="assets/calc-tools.js"></script>
-  <script src="assets/physics-tools.js"></script>
+  <script src="assets/calc-data.js?v=2026.09.18.1"></script>
+  <script src="assets/calc-quiz.js?v=2026.09.18.1"></script>
+  <script src="assets/physics-data.js?v=2026.09.18.1"></script>
+  <script src="assets/physics-quiz.js?v=2026.09.18.1"></script>
+  <script src="assets/precalc-data.js?v=2026.09.18.1"></script>
+  <script src="assets/precalc-quiz.js?v=2026.09.18.1"></script>
+  <script src="assets/app.js?v=2026.09.18.1"></script>
+  <script src="assets/tools.js?v=2026.09.18.1"></script>
+  <script src="assets/calc-tools.js?v=2026.09.18.1"></script>
+  <script src="assets/physics-tools.js?v=2026.09.18.1"></script>
+  <script src="assets/precalc-tools.js?v=2026.09.18.1"></script>
+  <script src="assets/auth.js?v=2026.09.18.1"></script>
 </body>
 </html>

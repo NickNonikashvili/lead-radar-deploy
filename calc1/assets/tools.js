@@ -1,5 +1,5 @@
 /* ============================================================
-   Study Hub — shared interactive tools (both courses)
+   MatHub — shared interactive tools (every course)
    Quizzer, exam prep, scratchpad. Course data comes from App.D / App.Q.
    ============================================================ */
 (function (global) {
@@ -19,7 +19,7 @@
   }
   App.onCourse(C => { D = C; QZ = C.quiz; PQ.units = [1]; PQ.topics = new Set(); PQ.session = null; });
   App.views.practice = {
-    title: 'Quizzer',
+    title: 'Quizzer', hasSession: () => !!(PQ.session && Object.keys(PQ.session.answers).length),
     render(root, param, query) {
       if (query.exam) { const ex = D.EXAMS.find(e => e.id === query.exam); if (ex) { PQ.units = ex.units.slice(); PQ.topics = new Set(topicsForExam(ex)); PQ.session = null; } }
       else if (query.topics) { const ts = query.topics.split(',').filter(t => QZ.TOPICS[t]); if (ts.length) { PQ.units = [...new Set(ts.map(t => QZ.TOPICS[t].unit))]; PQ.topics = new Set(ts); PQ.session = null; } }
@@ -77,8 +77,8 @@
     },
     start(root, questions) {
       if (PQ.session && PQ.session.timer) clearInterval(PQ.session.timer);
-      const qs = questions || QZ.generateSet([...PQ.topics], PQ.count);
-      PQ.session = { questions: qs, answers: {}, mode: PQ.mode, submitted: false, left: PQ.minutes * 60, timer: null };
+      const cap = App.limit('questions'); let qs = questions || QZ.generateSet([...PQ.topics], PQ.count); const capped = qs.length > cap; if (capped) qs = qs.slice(0, cap);
+      PQ.session = { questions: qs, answers: {}, mode: PQ.mode, submitted: false, left: PQ.minutes * 60, timer: null, capped };
       if (PQ.mode === 'exam') {
         PQ.session.timer = setInterval(() => { const s = PQ.session; if (!s || s.submitted) return; s.left--; const el = $('#pq-timer', root); if (el) { el.textContent = fmtClock(s.left); el.classList.toggle('low', s.left < 300); } if (s.left <= 0) { this.submit(root); toast('Time is up. Exam submitted.', 3000); } }, 1000);
       }
@@ -99,8 +99,8 @@
         ? `<div class="score-bar"><span class="stat"><span class="stat-num">${correct}<span class="muted" style="font-size:15px">/${answered}</span></span><span class="stat-label">correct so far · ${s.questions.length} questions</span></span><div class="bar" style="flex:1;min-width:120px"><div class="bar-fill ${answered && correct / answered < 0.6 ? 'bad' : answered && correct / answered < 0.8 ? 'warn' : 'good'}" style="width:${s.questions.length ? 100 * answered / s.questions.length : 0}%"></div></div><button class="btn" data-action="retry-missed">${icon('target', 14)} Retry missed topics</button><button class="btn primary" data-action="new-set">${icon('rotate', 14)} New set</button></div>`
         : s.submitted ? this.summaryHtml(s)
         : `<div class="score-bar"><span class="timer" id="pq-timer">${fmtClock(s.left)}</span><span class="muted small">${answered} / ${s.questions.length} answered · no feedback until you submit</span><button class="btn primary" style="margin-left:auto" data-action="submit">${icon('check', 14)} Submit exam</button></div>`;
-      box.innerHTML = `<div class="panel mb-2">${bar}</div><div class="stack">${s.questions.map((q, i) => this.qHtml(q, i)).join('')}</div>${s.mode === 'exam' && !s.submitted ? `<div class="row mt-2" style="justify-content:flex-end"><button class="btn primary" data-action="submit">${icon('check', 14)} Submit exam</button></div>` : ''}`;
-      typeset(box);
+      box.innerHTML = `<div class="panel mb-2">${bar}</div><div class="stack">${s.questions.map((q, i) => this.qHtml(q, i)).join('')}</div>${s.mode === 'exam' && !s.submitted ? `<div class="row mt-2" style="justify-content:flex-end"><button class="btn primary" data-action="submit">${icon('check', 14)} Submit exam</button></div>` : ''}${s.capped ? `<div class="mt-2">${App.lockCard('That is the preview: ' + s.questions.length + ' questions per set', `Members get sets of up to 30 questions, timed exam mode, retry-missed drills and per-topic accuracy that follows you across devices.`)}</div>` : ''}`;
+      typeset(box); if (App.auth) App.auth.bindLocks(root);
     },
     qHtml(q, i) {
       const s = PQ.session; const a = s.answers[i]; const graded = s.mode === 'practice' ? !!a : s.submitted;
@@ -181,7 +181,7 @@
             <div class="panel-h"><div><div class="panel-title">${icon('flag')} ${esc(SET.title)}</div><p class="small muted">${esc(SET.subtitle)}</p></div>
               <div class="row"><span class="chip">${doneCount}/${SET.problems.length} done</span>${hasGraph ? `<div class="tabs" style="margin:0;border:0">${[['all', 'All ' + SET.problems.length], ['calc', 'Computational'], ['graph', 'Graph-based']].map(([k, l]) => `<button class="tab${filter === k ? ' active' : ''}" data-action="filter" data-f="${k}">${l}</button>`).join('')}</div>` : ''}<button class="btn sm" data-action="print">${icon('print', 13)} Print</button></div></div>
             <div class="callout mb-2 small">${hasGraph ? 'Graph-based problems refer to figures in the PDF; for those the solution here describes exactly what to read off the graph and how to justify it. ' : ''}Work each problem on paper first, then reveal.</div>
-            <div class="stack">${probs.map(p => `<div class="q-card" id="pe-${p.n}"><div class="q-top"><label class="check" style="padding:0"><input type="checkbox" data-done="${p.n}" ${done[p.n] ? 'checked' : ''}><span class="q-num">Problem ${p.n}</span></label><span class="chip accent">${esc(App.secLabel(p.sec))}</span>${p.tags.map(tg => QZ.TOPICS[tg] ? `<span class="chip">${esc(QZ.TOPICS[tg].label)}</span>` : '').join('')}${p.graph ? '<span class="chip warn">graph in PDF</span>' : ''}<button class="btn xs" data-action="sol" data-n="${p.n}" style="margin-left:auto">${icon('eye', 12)} Solution</button></div><div class="q-prompt">${p.q}</div><div class="reveal q-feedback ok" id="pes-${p.n}" style="background:var(--surface-2);border-color:var(--border)"><b class="res">Solution</b><div>${p.s}</div></div></div>`).join('')}</div>`
+            <div class="stack">${probs.map((p, pi) => { const locked = App.guest() && pi >= 2; return `<div class="q-card" id="pe-${p.n}"><div class="q-top"><label class="check" style="padding:0"><input type="checkbox" data-done="${p.n}" ${done[p.n] ? 'checked' : ''}><span class="q-num">Problem ${p.n}</span></label><span class="chip accent">${esc(App.secLabel(p.sec))}</span>${p.tags.map(tg => QZ.TOPICS[tg] ? `<span class="chip">${esc(QZ.TOPICS[tg].label)}</span>` : '').join('')}${p.graph ? '<span class="chip warn">graph in PDF</span>' : ''}${locked ? `<button class="btn xs" data-action="auth-signup" style="margin-left:auto">${icon('flag', 12)} Solution (members)</button>` : `<button class="btn xs" data-action="sol" data-n="${p.n}" style="margin-left:auto">${icon('eye', 12)} Solution</button>`}</div><div class="q-prompt">${p.q}</div>${locked ? '' : `<div class="reveal q-feedback ok" id="pes-${p.n}" style="background:var(--surface-2);border-color:var(--border)"><b class="res">Solution</b><div>${p.s}</div></div>`}</div>`; }).join('')}</div>${App.guest() && probs.length > 2 ? `<div class="mt-2">${App.lockCard('Worked solutions are for members', `The preview shows solutions for the first two problems. Sign up free for all ${SET.problems.length} worked solutions and a checklist that syncs across devices.`)}</div>` : ''}`
             : `<div class="panel-h"><div class="panel-title">${icon('flag')} ${esc(ex.name)} practice</div></div><div class="empty">No practice set is loaded for ${esc(ex.name)} yet. Use the checklist, drill the exam’s topics in the Quizzer, and redo the homework listed in the syllabus. When a practice set is posted, it can be added here.</div>
               <div class="mt-2"><div class="eyebrow mb-1">Topics on this exam</div><div class="link-grid">${ex.sections.map(id => { const s = App.secById(id); return s ? `<a class="card-link" href="${L('notes', s.id)}" style="padding:10px 12px"><h4 style="font-size:14px">${esc(s.label)} ${esc(s.title)}</h4></a>` : ''; }).join('')}</div></div>`}
           </div>

@@ -1,5 +1,5 @@
 /* ============================================================
-   Study Hub — Physics I procedural question generators
+   MatHub — Physics I procedural question generators
    Same contract as the calculus module:
    { topic, type:'mc'|'num', prompt, options?, answer, answerTex?, explanation, hint?, tol? }
    ============================================================ */

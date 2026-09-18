@@ -1,5 +1,5 @@
 /* ============================================================
-   Study Hub — Physics I (w/ Calculus) course data
+   MatHub — Physics I (w/ Calculus) course data
    Source: course syllabus (Craig Ogilvie, Fall 2026) and OpenStax
    University Physics Volume 1. Week-by-week topics are estimated from the
    syllabus topic order and exam weeks; Canvas modules are authoritative.

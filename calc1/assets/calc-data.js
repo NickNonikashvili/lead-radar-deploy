@@ -1,5 +1,5 @@
 /* ============================================================
-   Study Hub — M171 Calculus I course data
+   MatHub — M171 Calculus I course data
    Source: M171 Fall 2026 syllabus, calendar, and Exam 1 practice set.
    All math is written in TeX and rendered by MathJax.
    ============================================================ */

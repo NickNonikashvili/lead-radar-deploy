@@ -1,0 +1,12 @@
+# MatHub account server: only index.php is reachable from the web.
+Options -Indexes
+<FilesMatch "^(config(\.local)?|lib|mailer)\.php$">
+  Require all denied
+</FilesMatch>
+<FilesMatch "\.(sqlite|sqlite3|db|log|json)$">
+  Require all denied
+</FilesMatch>
+<IfModule mod_headers.c>
+  Header set Cache-Control "no-store"
+  Header set X-Content-Type-Options "nosniff"
+</IfModule>
