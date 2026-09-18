@@ -50,6 +50,16 @@ function mh_db(): PDO {
   $db->exec('CREATE TABLE IF NOT EXISTS tokens (hash TEXT PRIMARY KEY, user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE, expires INTEGER NOT NULL, created INTEGER NOT NULL, ua TEXT NOT NULL DEFAULT "")');
   $db->exec('CREATE TABLE IF NOT EXISTS progress (user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE, course TEXT NOT NULL, json TEXT NOT NULL, updated INTEGER NOT NULL, PRIMARY KEY (user_id, course))');
   $db->exec('CREATE TABLE IF NOT EXISTS rate (key TEXT PRIMARY KEY, window_start INTEGER NOT NULL, count INTEGER NOT NULL)');
+  // discussions
+  $cols = array_column($db->query('PRAGMA table_info(users)')->fetchAll(), 'name');
+  if (!in_array('terms_accepted', $cols, true)) $db->exec('ALTER TABLE users ADD COLUMN terms_accepted INTEGER NOT NULL DEFAULT 0');
+  $db->exec('CREATE TABLE IF NOT EXISTS posts (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE, course TEXT NOT NULL, flair TEXT NOT NULL DEFAULT "question", title TEXT NOT NULL, body TEXT NOT NULL, anon INTEGER NOT NULL DEFAULT 0, created INTEGER NOT NULL, edited INTEGER, score INTEGER NOT NULL DEFAULT 0, ncomments INTEGER NOT NULL DEFAULT 0, pinned INTEGER NOT NULL DEFAULT 0, locked INTEGER NOT NULL DEFAULT 0, removed INTEGER NOT NULL DEFAULT 0, ip TEXT NOT NULL DEFAULT "")');
+  $db->exec('CREATE INDEX IF NOT EXISTS posts_course ON posts(course, removed, created)');
+  $db->exec('CREATE TABLE IF NOT EXISTS comments (id INTEGER PRIMARY KEY AUTOINCREMENT, post_id INTEGER NOT NULL REFERENCES posts(id) ON DELETE CASCADE, user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE, parent_id INTEGER, body TEXT NOT NULL, anon INTEGER NOT NULL DEFAULT 0, created INTEGER NOT NULL, edited INTEGER, score INTEGER NOT NULL DEFAULT 0, removed INTEGER NOT NULL DEFAULT 0, ip TEXT NOT NULL DEFAULT "")');
+  $db->exec('CREATE INDEX IF NOT EXISTS comments_post ON comments(post_id)');
+  $db->exec('CREATE TABLE IF NOT EXISTS votes (user_id INTEGER NOT NULL, kind TEXT NOT NULL, item_id INTEGER NOT NULL, value INTEGER NOT NULL, PRIMARY KEY (user_id, kind, item_id))');
+  $db->exec('CREATE TABLE IF NOT EXISTS reports (id INTEGER PRIMARY KEY AUTOINCREMENT, kind TEXT NOT NULL, item_id INTEGER NOT NULL, user_id INTEGER NOT NULL, reason TEXT NOT NULL, created INTEGER NOT NULL, status TEXT NOT NULL DEFAULT "open")');
+  $db->exec('CREATE TABLE IF NOT EXISTS bans (user_id INTEGER PRIMARY KEY, until INTEGER NOT NULL, reason TEXT NOT NULL DEFAULT "", created INTEGER NOT NULL)');
   return $db;
 }
 
@@ -86,7 +96,7 @@ function mh_email_check(string $email): array {
   $email = strtolower(trim($email));
   if ($email === '' || strlen($email) > 254 || !filter_var($email, FILTER_VALIDATE_EMAIL)) return [null, 'Enter a valid email address.'];
   $domain = substr($email, strrpos($email, '@') + 1);
-  $ok = false;
+  $ok = in_array($email, array_map('strtolower', mh_config()['extra_allowed_emails'] ?? []), true);
   foreach (mh_config()['allowed_domains'] as $d) { $d = strtolower($d); if ($domain === $d || str_ends_with($domain, '.' . $d)) { $ok = true; break; } }
   if (!$ok) return [null, 'MatHub is for Montana State students: sign up with your @montana.edu address.'];
   return [$email, null];
@@ -95,8 +105,9 @@ function mh_email_check(string $email): array {
 function mh_user_by_email(string $email): ?array {
   $st = mh_db()->prepare('SELECT * FROM users WHERE email = ?'); $st->execute([$email]); $u = $st->fetch(); return $u ?: null;
 }
+function mh_is_mod(?array $u): bool { return $u ? in_array(strtolower($u['email']), array_map('strtolower', mh_config()['moderators'] ?? []), true) : false; }
 function mh_user_public(array $u): array {
-  return ['id' => (int)$u['id'], 'email' => $u['email'], 'name' => $u['name'], 'verified' => (bool)$u['verified'], 'created' => (int)$u['created']];
+  return ['id' => (int)$u['id'], 'email' => $u['email'], 'name' => $u['name'], 'verified' => (bool)$u['verified'], 'created' => (int)$u['created'], 'mod' => mh_is_mod($u), 'terms' => (int)($u['terms_accepted'] ?? 0) > 0];
 }
 
 /* ---------- one-time codes ---------- */

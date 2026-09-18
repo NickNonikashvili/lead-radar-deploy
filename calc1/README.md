@@ -26,11 +26,30 @@ keep their progress in sync across devices.
 | Scratchpad | Handwriting canvas with colors, eraser, undo, grid, PNG export |
 | Syllabus & policies | Deadlines, help, exam rules |
 
+Every class also has **Discussions** (see below).
+
 Class-specific tools:
 
 - **Precalculus:** Function explorer (parent functions with a·f(b(x − h)) + k sliders, domain/range/description), Unit circle & triangles (draggable unit circle with exact values, right-triangle solver, Law of Sines / Cosines solver with the ambiguous case), Grapher.
 - **Calculus:** Grapher (tangent/secant, f′, f″), Labs (limit tables, difference quotients, Riemann sums, derivative from data, average rate of change).
 - **Physics:** Projectile simulator, motion graphs x(t) → v(t) → a(t), kinematics solver, vector calculator, incline & friction solver, unit converter and constants.
+
+## Discussions
+
+A members-only board (Reddit style) at `#/forum` and inside every class under **Community → Discussions**:
+posts with a class and a type (question, discussion, resource, study group, exam, other), threaded
+comments, up/down votes, hot / new / top sorting, search, anonymous posting (moderators still see the
+author), reports, and a language filter that censors curse words and slurs (server side, in
+`api/filter.php`, with a matching preview in `assets/forum.js`). Math renders with `$…$`.
+
+Before the first post every member accepts the Community Rules. The full **Terms of Use, Community
+Rules, Privacy Policy and Disclaimer** live at `#/policy` (`assets/policy.js`); they put responsibility
+for user content on the person who posts it, prohibit illegal activity, and disclaim liability. Have a
+lawyer look them over if the site grows.
+
+**Moderators.** Add account emails to `moderators` in `api/config.php`. Moderators see real authors,
+can pin, lock, remove and restore posts and comments, ban users for a number of days, and work the
+report queue at `#/forum/reports`.
 
 ## Preview vs. members
 
@@ -61,6 +80,7 @@ public_html/
   api/
     index.php               account endpoints (sign-up, verify, login, reset, progress sync)
     lib.php, mailer.php     helpers (blocked from the web by api/.htaccess)
+    forum.php, filter.php   discussion board endpoints and the language filter
     config.php              <-- edit this one
     data/                   SQLite database is created here automatically (blocked from the web)
 ```

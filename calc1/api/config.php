@@ -7,6 +7,11 @@
 return [
   // Who may sign up. Exact domain or any subdomain (student.montana.edu, msu.montana.edu…).
   'allowed_domains' => ['montana.edu'],
+  // Individual addresses allowed in addition to the domains above (for example your own non-MSU address).
+  'extra_allowed_emails' => [],
+
+  // Discussion moderators (account emails). Moderators can pin, lock, remove posts and comments, ban users and see the report queue.
+  'moderators' => [],
 
   // Sender for verification / reset emails. Must be a mailbox that exists on your domain.
   'mail_from'       => 'info@mathub.space',

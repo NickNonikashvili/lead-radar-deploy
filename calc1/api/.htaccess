@@ -1,6 +1,6 @@
 # MatHub account server: only index.php is reachable from the web.
 Options -Indexes
-<FilesMatch "^(config(\.local)?|lib|mailer)\.php$">
+<FilesMatch "^(config(\.local)?|lib|mailer|filter|forum)\.php$">
   Require all denied
 </FilesMatch>
 <FilesMatch "\.(sqlite|sqlite3|db|log|json)$">
