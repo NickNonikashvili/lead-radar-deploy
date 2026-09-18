@@ -12,6 +12,7 @@
   const BUILD = global.MATHUB_BUILD || 'dev';
   const Courses = global.Courses || (global.Courses = {});
   const COURSE_ORDER = ['calc', 'physics', 'precalc'];
+  const GLOBAL_VIEWS = ['contact'];   // pages that work without a course, e.g. #/contact
   const SITE = 'MatHub';
   let D = null, QZ = null;        // current course data and quiz module
   const courseHooks = [];
@@ -219,7 +220,7 @@
   function route() {
     const raw = location.hash.replace(/^#\/?/, ''); const [path, qs] = raw.split('?'); const parts = path.split('/').filter(Boolean);
     const query = Object.fromEntries(new URLSearchParams(qs || ''));
-    if (!parts.length || !Courses[parts[0]]) return { course: null, view: 'home', param: null, query };
+    if (!parts.length || !Courses[parts[0]]) return { course: null, view: GLOBAL_VIEWS.includes(parts[0]) ? parts[0] : 'home', param: parts.slice(1).join('/') || null, query };
     const view = parts[1] || 'dashboard';
     return { course: parts[0], view: App.views[view] ? view : 'dashboard', param: parts.slice(2).join('/') || null, query };
   }
@@ -229,8 +230,10 @@
     const app = $('.app'); const stale = $('#view'); const root = stale.cloneNode(false); stale.replaceWith(root); window.scrollTo(0, 0);
     if (query.asof !== undefined) { setSetting('asof', /^\d{4}-\d{2}-\d{2}$/.test(query.asof) ? query.asof : ''); }
     if (!course) {
-      app.classList.add('landing'); document.documentElement.removeAttribute('data-course'); App.current = Landing; document.title = `${SITE} · Fall 2026`;
-      Landing.render(root); typeset(root); if (App.auth) App.auth.bindLocks(root); return;
+      app.classList.add('landing'); document.documentElement.removeAttribute('data-course');
+      if (view !== 'home') { const V = App.views[view]; App.current = V; document.title = `${V.title} · ${SITE}`; V.render(root, param, query, true); }
+      else { App.current = Landing; document.title = `${SITE} · Fall 2026`; Landing.render(root); }
+      typeset(root); if (App.auth) App.auth.bindLocks(root); return;
     }
     app.classList.remove('landing'); setCourse(course);
     const V = App.views[view]; App.current = V;
@@ -295,6 +298,7 @@
       const strip = s => String(s).replace(/<[^>]+>/g, '').replace(/\$[^$]*\$/g, m => m.replace(/\\[a-zA-Z]+|[{}$^_\\]/g, ' '));
       const ix = [];
       D.NAV.forEach(gp => gp.items.forEach(([id, label]) => ix.push({ type: 'page', t: label, s: gp.label, go: () => App.go(id), key: label.toLowerCase() })));
+      ix.push({ type: 'page', t: 'Contact', s: SITE, go: () => App.go('contact'), key: 'contact creator nikoloz nonikashvili phone email help feedback' });
       D.SECTIONS.forEach(s => ix.push({ type: 'notes', t: `${s.label} ${s.title}`, s: `Unit ${s.unit}`, go: () => App.go('notes', s.id), key: (`${s.label} ${s.title} ` + s.ideas.map(strip).join(' ') + ' ' + s.pitfalls.map(strip).join(' ')).toLowerCase() }));
       D.FORMULAS.forEach(gp => gp.items.forEach(f => ix.push({ type: 'formula', t: f.n, s: gp.group, go: () => App.go('formulas', null, { q: f.n }), key: (f.n + ' ' + gp.group + ' ' + strip('$' + f.t + '$')).toLowerCase() })));
       D.FLASHCARDS.forEach(c => ix.push({ type: 'card', t: strip(c.f), s: secLabel(c.sec), go: () => App.go('flashcards', c.id), key: (strip(c.f) + ' ' + strip(c.b)).toLowerCase() }));
@@ -565,6 +569,35 @@
     render(root) {
       const C = D.COURSE;
       root.innerHTML = pageHead('Syllabus & policies', `${esc(C.code)} ${esc(C.name)} · ${esc(C.term)} · ${esc(C.school)}. The essentials from the syllabus, in one place.`) + `<div class="grid cols-2">${D.INFO.map(p => `<div class="panel${p.span2 ? ' span-2' : ''}"><div class="panel-h"><div class="panel-title">${icon(p.icon || 'info')} ${esc(p.title)}</div></div>${p.html}</div>`).join('')}</div>`;
+    }
+  };
+
+  /* ======================================================
+     VIEW: Contact (works with or without a course: #/contact or #/calc/contact)
+     ====================================================== */
+  const CREATOR = { name: 'Nikoloz Nonikashvili', phone: '6465448765', phoneLabel: '(646) 544-8765', email: 'nonikashvilinikolozi@gmail.com' };
+  App.CREATOR = CREATOR;
+  App.views.contact = {
+    title: 'Contact',
+    render(root, param, query, standalone) {
+      const wrap = standalone ? '<div class="landing-wrap contact-wrap">' : '';
+      root.innerHTML = `${wrap}${standalone ? `<header class="landing-top"><div><div class="eyebrow">${SITE}</div><h1 class="landing-title"><span class="logo-mark">${App.logoSvg(44)}</span>Contact</h1><p class="muted">Questions, a wrong date, a broken problem, or an idea for the site? Get in touch.</p></div><div class="row gap-sm"><a class="btn" href="#/">${icon('left', 14)} All classes</a><button class="icon-btn theme-btn" data-action="theme" aria-label="Toggle theme"></button></div></header>` : pageHead('Contact', 'Questions, a wrong date, a broken problem, or an idea for the site? Get in touch.')}
+        <div class="grid cols-3">
+          <div class="panel span-2 contact-card">
+            <div class="contact-head"><div class="avatar big">${esc(CREATOR.name.split(' ').map(w => w[0]).join(''))}</div><div><div class="eyebrow">Created by</div><h2>${esc(CREATOR.name)}</h2><p class="muted">Montana State University student. Built ${SITE} to make studying for math and physics classes easier.</p></div></div>
+            <div class="divider"></div>
+            <div class="contact-rows">
+              <div class="contact-row"><span class="contact-ic">${icon('clock', 18)}</span><div><div class="eyebrow">Phone</div><a class="contact-val mono" href="tel:+1${CREATOR.phone}">${esc(CREATOR.phoneLabel)}</a></div><div class="row gap-sm"><a class="btn sm" href="sms:+1${CREATOR.phone}">Text</a><button class="btn sm" data-action="copy" data-v="${CREATOR.phone}">Copy</button></div></div>
+              <div class="contact-row"><span class="contact-ic">${icon('link', 18)}</span><div><div class="eyebrow">Email</div><a class="contact-val" href="mailto:${CREATOR.email}?subject=${encodeURIComponent(SITE + ' question')}">${esc(CREATOR.email)}</a></div><div class="row gap-sm"><a class="btn sm primary" href="mailto:${CREATOR.email}?subject=${encodeURIComponent(SITE + ' question')}">Email</a><button class="btn sm" data-action="copy" data-v="${CREATOR.email}">Copy</button></div></div>
+            </div>
+          </div>
+          <div class="stack">
+            <div class="panel"><div class="panel-h"><div class="panel-title">${icon('bulb')} Reporting a problem</div></div><p class="small">The more specific, the faster the fix. Include:</p><ul class="list small mt-1"><li>the class and the page (for example “Precalc · Quizzer”)</li><li>the topic or problem number</li><li>what you expected and what you saw</li></ul></div>
+            <div class="panel"><div class="panel-h"><div class="panel-title">${icon('info')} About the content</div></div><p class="small muted">Dates and rules come from each course's Fall 2026 syllabus; weekly lecture topics for physics and precalculus are estimates. Canvas and your instructor always win. ${SITE} is a student project and is not affiliated with Montana State University.</p></div>
+          </div>
+        </div>${standalone ? '</div>' : ''}`;
+      bind(root, { copy: el => { const v = el.dataset.v; const done = () => { el.textContent = 'Copied'; setTimeout(() => el.textContent = 'Copy', 1500); }; if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(v).then(done, () => toast(v, 3000)); else toast(v, 3000); }, theme: toggleTheme });
+      if (standalone) applyTheme();
     }
   };
 
