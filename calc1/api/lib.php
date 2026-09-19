@@ -60,6 +60,11 @@ function mh_db(): PDO {
   $db->exec('CREATE TABLE IF NOT EXISTS votes (user_id INTEGER NOT NULL, kind TEXT NOT NULL, item_id INTEGER NOT NULL, value INTEGER NOT NULL, PRIMARY KEY (user_id, kind, item_id))');
   $db->exec('CREATE TABLE IF NOT EXISTS reports (id INTEGER PRIMARY KEY AUTOINCREMENT, kind TEXT NOT NULL, item_id INTEGER NOT NULL, user_id INTEGER NOT NULL, reason TEXT NOT NULL, created INTEGER NOT NULL, status TEXT NOT NULL DEFAULT "open")');
   $db->exec('CREATE TABLE IF NOT EXISTS bans (user_id INTEGER PRIMARY KEY, until INTEGER NOT NULL, reason TEXT NOT NULL DEFAULT "", created INTEGER NOT NULL)');
+  // notifications, site settings (all additive: existing rows are never touched)
+  if (!in_array('notify_email', $cols, true)) $db->exec('ALTER TABLE users ADD COLUMN notify_email INTEGER NOT NULL DEFAULT 1');
+  $db->exec('CREATE TABLE IF NOT EXISTS notifications (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE, kind TEXT NOT NULL, post_id INTEGER NOT NULL, comment_id INTEGER, actor_id INTEGER, actor TEXT NOT NULL DEFAULT "", title TEXT NOT NULL DEFAULT "", snippet TEXT NOT NULL DEFAULT "", created INTEGER NOT NULL, read INTEGER NOT NULL DEFAULT 0)');
+  $db->exec('CREATE INDEX IF NOT EXISTS notif_user ON notifications(user_id, read, created)');
+  $db->exec('CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT NOT NULL, updated INTEGER NOT NULL)');
   return $db;
 }
 
@@ -108,7 +113,8 @@ function mh_user_by_email(string $email): ?array {
 function mh_is_admin(?array $u): bool { return $u ? in_array(strtolower($u['email']), array_map('strtolower', mh_config()['admins'] ?? []), true) : false; }
 function mh_is_mod(?array $u): bool { return $u ? (mh_is_admin($u) || in_array(strtolower($u['email']), array_map('strtolower', mh_config()['moderators'] ?? []), true)) : false; }
 function mh_user_public(array $u): array {
-  return ['id' => (int)$u['id'], 'email' => $u['email'], 'name' => $u['name'], 'verified' => (bool)$u['verified'], 'created' => (int)$u['created'], 'mod' => mh_is_mod($u), 'admin' => mh_is_admin($u), 'terms' => (int)($u['terms_accepted'] ?? 0) > 0];
+  $unread = 0; try { $st = mh_db()->prepare('SELECT COUNT(*) FROM notifications WHERE user_id = ? AND read = 0'); $st->execute([$u['id']]); $unread = (int)$st->fetchColumn(); } catch (Throwable $e) {}
+  return ['id' => (int)$u['id'], 'email' => $u['email'], 'name' => $u['name'], 'verified' => (bool)$u['verified'], 'created' => (int)$u['created'], 'mod' => mh_is_mod($u), 'admin' => mh_is_admin($u), 'terms' => (int)($u['terms_accepted'] ?? 0) > 0, 'notify_email' => (int)($u['notify_email'] ?? 1) === 1, 'unread' => $unread];
 }
 
 /* ---------- one-time codes ---------- */

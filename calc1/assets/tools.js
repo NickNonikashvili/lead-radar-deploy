@@ -17,23 +17,42 @@
     if (ex.cumulative) return Object.keys(QZ.TOPICS).filter(t => t !== 'substitution');
     return Object.keys(QZ.TOPICS).filter(t => ex.sections.includes(QZ.TOPICS[t].sec));
   }
-  App.onCourse(C => { D = C; QZ = C.quiz; PQ.units = [1]; PQ.topics = new Set(); PQ.session = null; });
+  App.onCourse(C => { D = C; QZ = C.quiz; PQ.units = [1]; PQ.topics = new Set(); PQ.session = null; PQ.smart = null; });
+  /* Smart review: rank topics by weakness, staleness and coverage; returns a weighted topic list plus reasons. */
+  App.smartReview = function (max = 8) {
+    const t = App.todayISO(); const prog = App.progress(); const hist = store.get('history', []);
+    const cur = App.currentSection(); const curIdx = D.SECTIONS.indexOf(cur);
+    const covered = new Set(D.SECTIONS.slice(0, curIdx + 1).map(s => s.id));
+    const last = {}; hist.forEach(h => { if (!last[h.t] || h.d > last[h.t]) last[h.t] = h.d; });
+    const rows = Object.keys(QZ.TOPICS).filter(k => covered.has(QZ.TOPICS[k].sec) || prog[k]).map(k => {
+      const p = prog[k] || { a: 0, c: 0 }; const acc = p.a ? p.c / p.a : null; const days = last[k] ? App.daysBetween(last[k], t) : null;
+      let w = 0; const why = [];
+      if (acc === null) { w += 3; why.push('never practiced'); } else { w += (1 - acc) * 4; why.push(`${Math.round(acc * 100)}% accuracy`); if (p.a < 5) { w += 1; why.push('only ' + p.a + ' tried'); } }
+      if (days !== null) { w += Math.min(days, 14) / 14 * 2; if (days >= 3) why.push(`last practiced ${days} day${days === 1 ? '' : 's'} ago`); }
+      if (QZ.TOPICS[k].sec === cur.id) { w += 0.5; }
+      return { topic: k, label: QZ.TOPICS[k].label, sec: QZ.TOPICS[k].sec, unit: QZ.TOPICS[k].unit, w, acc, days, why: why.join(', ') };
+    }).sort((a, b) => b.w - a.w);
+    const picked = rows.slice(0, max); const weighted = []; picked.forEach(r => { const n = Math.max(1, Math.round(r.w)); for (let i = 0; i < n; i++) weighted.push(r.topic); });
+    return { picked, weighted };
+  };
   App.views.practice = {
     title: 'Quizzer', hasSession: () => !!(PQ.session && Object.keys(PQ.session.answers).length),
     render(root, param, query) {
       if (query.exam) { const ex = D.EXAMS.find(e => e.id === query.exam); if (ex) { PQ.units = ex.units.slice(); PQ.topics = new Set(topicsForExam(ex)); PQ.session = null; } }
       else if (query.topics) { const ts = query.topics.split(',').filter(t => QZ.TOPICS[t]); if (ts.length) { PQ.units = [...new Set(ts.map(t => QZ.TOPICS[t].unit))]; PQ.topics = new Set(ts); PQ.session = null; } }
       else if (query.unit) { PQ.units = [+query.unit]; PQ.topics = new Set(QZ.topicsForUnits(PQ.units)); PQ.session = null; }
+      if (query.smart) { const sr = App.smartReview(); if (sr.picked.length) { PQ.smart = sr; PQ.topics = new Set(sr.picked.map(r => r.topic)); PQ.units = [...new Set(sr.picked.map(r => r.unit))].sort(); PQ.session = null; PQ.mode = 'practice'; } }
       if (!PQ.topics.size) PQ.topics = new Set(QZ.topicsForUnits(PQ.units));
       if (Object.keys(query).length) App.replaceHash(L('practice'));
       root.innerHTML = pageHead('Quizzer', 'Endless procedurally generated problems with worked explanations. Practice mode grades as you go; exam mode hides feedback until you submit.' + (D.quizNote ? ' ' + esc(D.quizNote) : '')) + `<div id="pq-setup"></div><div id="pq-session" class="mt-2"></div>`;
       this.paintSetup(root);
       if (PQ.session) this.paintSession(root); else this.start(root);
       bind(root, {
-        unit: el => { const u = +el.dataset.u; const i = PQ.units.indexOf(u); if (i >= 0) { if (PQ.units.length > 1) PQ.units.splice(i, 1); } else PQ.units.push(u); PQ.units.sort(); PQ.topics = new Set(QZ.topicsForUnits(PQ.units)); this.paintSetup(root); },
-        topic: el => { const t = el.dataset.t; if (PQ.topics.has(t)) { if (PQ.topics.size > 1) PQ.topics.delete(t); } else PQ.topics.add(t); this.paintSetup(root); },
+        unit: el => { const u = +el.dataset.u; const i = PQ.units.indexOf(u); if (i >= 0) { if (PQ.units.length > 1) PQ.units.splice(i, 1); } else PQ.units.push(u); PQ.units.sort(); PQ.topics = new Set(QZ.topicsForUnits(PQ.units)); PQ.smart = null; this.paintSetup(root); },
+        topic: el => { const t = el.dataset.t; if (PQ.topics.has(t)) { if (PQ.topics.size > 1) PQ.topics.delete(t); } else PQ.topics.add(t); PQ.smart = null; this.paintSetup(root); },
         'all-topics': () => { PQ.topics = new Set(QZ.topicsForUnits(PQ.units)); this.paintSetup(root); },
-        'exam-preset': el => { const ex = D.EXAMS.find(e => e.id === el.dataset.ex); PQ.units = ex.units.slice(); PQ.topics = new Set(topicsForExam(ex)); this.paintSetup(root); },
+        'exam-preset': el => { const ex = D.EXAMS.find(e => e.id === el.dataset.ex); PQ.units = ex.units.slice(); PQ.topics = new Set(topicsForExam(ex)); PQ.smart = null; this.paintSetup(root); },
+        smart: () => { const sr = App.smartReview(); if (!sr.picked.length) { toast('Nothing to review yet: work through a topic first.'); return; } PQ.smart = sr; PQ.topics = new Set(sr.picked.map(r => r.topic)); PQ.units = [...new Set(sr.picked.map(r => r.unit))].sort(); PQ.mode = 'practice'; this.start(root); },
         start: () => this.start(root),
         'new-set': () => this.start(root),
         'retry-missed': () => this.retryMissed(root),
@@ -59,7 +78,8 @@
       const topicList = QZ.topicsForUnits(PQ.units);
       const collapsed = !!PQ.session;
       $('#pq-setup', root).innerHTML = `<div class="panel">
-        <div class="panel-h"><div><div class="panel-title">${icon('sliders')} Set up a practice set</div>${collapsed ? `<p class="small muted">Current set: Unit${PQ.units.length > 1 ? 's' : ''} ${PQ.units.join(', ')} · ${PQ.topics.size} topic${PQ.topics.size === 1 ? '' : 's'} · ${PQ.session.questions.length} questions · ${PQ.session.mode === 'exam' ? 'timed exam' : 'practice'} mode</p>` : ''}</div><div class="row">${D.EXAMS.map(e => `<button class="btn xs" data-action="exam-preset" data-ex="${e.id}">${esc(e.name)} topics</button>`).join('')}<button class="btn xs ghost" data-action="toggle-setup">${collapsed ? 'Show' : 'Hide'}</button></div></div>
+        <div class="panel-h"><div><div class="panel-title">${icon('sliders')} Set up a practice set</div>${collapsed ? `<p class="small muted">Current set: Unit${PQ.units.length > 1 ? 's' : ''} ${PQ.units.join(', ')} · ${PQ.topics.size} topic${PQ.topics.size === 1 ? '' : 's'} · ${PQ.session.questions.length} questions · ${PQ.session.mode === 'exam' ? 'timed exam' : 'practice'} mode</p>` : ''}</div><div class="row"><button class="btn xs primary" data-action="smart" title="Builds a set from your weakest and least-recent topics">${icon('target', 12)} Review for me</button>${D.EXAMS.map(e => `<button class="btn xs" data-action="exam-preset" data-ex="${e.id}">${esc(e.name)} topics</button>`).join('')}<button class="btn xs ghost" data-action="toggle-setup">${collapsed ? 'Show' : 'Hide'}</button></div></div>
+        ${PQ.smart ? `<div class="callout smart mb-2"><div class="eyebrow">${icon('target', 12)} Smart review · why these topics</div><div class="chips mt-1">${PQ.smart.picked.map(r => `<span class="chip ${r.acc !== null && r.acc < 0.6 ? 'bad' : r.acc === null ? 'warn' : 'accent'}" title="${esc(r.why)}">${esc(r.label)} <span style="opacity:.7">· ${esc(r.why)}</span></span>`).join('')}</div><p class="small muted mt-1">Weak, stale and never-tried topics get more questions. Answer a set and the mix updates.</p></div>` : ''}
         <div id="pq-setup-body" class="${collapsed ? 'hidden' : ''}">
           <div class="grid cols-4" style="gap:12px">
             <div class="field"><label>Units</label><div class="chips">${D.UNITS.map(u => `<span class="chip toggle${PQ.units.includes(u.n) ? ' on' : ''}" data-action="unit" data-u="${u.n}">Unit ${u.n}</span>`).join('')}</div></div>
@@ -77,7 +97,7 @@
     },
     start(root, questions) {
       if (PQ.session && PQ.session.timer) clearInterval(PQ.session.timer);
-      const cap = App.limit('questions'); let qs = questions || QZ.generateSet([...PQ.topics], PQ.count); const capped = qs.length > cap; if (capped) qs = qs.slice(0, cap);
+      const cap = App.limit('questions'); let qs = questions || QZ.generateSet(PQ.smart ? PQ.smart.weighted : [...PQ.topics], PQ.count); const capped = qs.length > cap; if (capped) qs = qs.slice(0, cap);
       PQ.session = { questions: qs, answers: {}, mode: PQ.mode, submitted: false, left: PQ.minutes * 60, timer: null, capped };
       if (PQ.mode === 'exam') {
         PQ.session.timer = setInterval(() => { const s = PQ.session; if (!s || s.submitted) return; s.left--; const el = $('#pq-timer', root); if (el) { el.textContent = fmtClock(s.left); el.classList.toggle('low', s.left < 300); } if (s.left <= 0) { this.submit(root); toast('Time is up. Exam submitted.', 3000); } }, 1000);

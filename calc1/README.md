@@ -53,6 +53,25 @@ work the report queue at `#/forum/reports`. Emails under `admins` (the site owne
 plus permanently delete any post or comment, and manage members at `#/forum/admin`: search, ban,
 unban, verify or delete any account. Both lists ship with nikoloz.nonikashvili@student.montana.edu.
 
+## Canvas sync, notifications, planner, offline
+
+- **Canvas calendar feed.** In Canvas open Calendar → *Calendar Feed* and copy the link. Paste it in the admin
+  panel (`#/forum/admin` → Site settings). The server (`api/canvas.php`) downloads the feed at most once an hour,
+  keeps only events whose course name matches a MatHub class (`canvas_course_match` in `config.php`), and the
+  site shows them as "From Canvas" on the landing page, each dashboard and the calendar. Real Canvas due dates
+  replace the estimated standing rules in the due-soon lists. The admin panel also has an announcement banner.
+- **Reply notifications.** Members get an inbox (bell in the top bar, `#/forum/inbox`) whenever someone comments on
+  their post or replies to their comment, and an email at most once per post every six hours. The email can be
+  turned off in Settings → Account.
+- **Smart review.** "Review for me" in the Quizzer (and the dashboard card) builds a set weighted toward weak,
+  stale and never-tried topics from the sections covered so far.
+- **Study planner.** Practice → Study planner: pick an exam and study days; the plan spreads notes, drills,
+  flashcards, the practice set and a final review across those days as a synced checklist. Today's tasks also
+  show on the dashboard.
+- **Offline.** `sw.js` caches the site so notes, formula sheets, flashcards and tools open without a connection,
+  and the site can be installed to a phone's home screen. A logged-in member stays logged in while offline;
+  progress syncs when the connection returns. The account server itself is never cached.
+
 ## Preview vs. members
 
 Without an account a visitor can browse the dashboards, calendars, syllabus pages, the first three
@@ -83,6 +102,8 @@ public_html/
     index.php               account endpoints (sign-up, verify, login, reset, progress sync)
     lib.php, mailer.php     helpers (blocked from the web by api/.htaccess)
     forum.php, filter.php   discussion board endpoints and the language filter
+    canvas.php              Canvas calendar feed sync
+  sw.js                     service worker for offline use
     config.php              <-- edit this one
     data/                   SQLite database is created here automatically (blocked from the web)
 ```
@@ -100,6 +121,13 @@ Then in **hPanel**:
 5. If a device still shows an old version, purge the cache in hPanel (Websites → Advanced → Cache
    Manager) and hard-refresh once. From then on the page is served with no-cache headers and a
    stale copy repairs itself automatically.
+
+**Updating without losing users.** Accounts, posts and progress live only in `api/data/` (the SQLite
+database and `secret.key`). Those files are never in the zip. Upload a new zip over the old files and
+choose "overwrite"; never delete `public_html` or `api/data` first. The PHP files may be overwritten
+freely; new tables and columns are added on first request and existing rows are untouched. Put your
+own settings (SMTP password, moderators, admins, Canvas feed) in `api/config.local.php`, which is also
+never in the zip, so uploads cannot erase them.
 
 Optional: set `admin_key` in `config.php` and call `api/index.php?r=stats` with the header
 `X-Admin-Key: <key>` to see how many students have signed up.

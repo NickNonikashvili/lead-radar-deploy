@@ -108,9 +108,17 @@ switch ($route) {
 
   case 'profile':
     mh_method('POST');
-    $u = mh_require_user(); $name = mh_str($in, 'name', 60);
-    mh_db()->prepare('UPDATE users SET name = ? WHERE id = ?')->execute([$name, $u['id']]); $u['name'] = $name;
+    $u = mh_require_user(); $name = array_key_exists('name', $in) ? mh_str($in, 'name', 60) : $u['name'];
+    $notify = array_key_exists('notify_email', $in) ? (!empty($in['notify_email']) ? 1 : 0) : (int)($u['notify_email'] ?? 1);
+    mh_db()->prepare('UPDATE users SET name = ?, notify_email = ? WHERE id = ?')->execute([$name, $notify, $u['id']]); $u['name'] = $name; $u['notify_email'] = $notify;
     mh_json(['ok' => true, 'user' => mh_user_public($u)]);
+
+  case 'canvas':
+    mh_method('GET');
+    require_once __DIR__ . '/canvas.php';
+    $r = mh_canvas_events(!empty($_GET['refresh']) && mh_is_admin(mh_current_user()));
+    header('Cache-Control: private, max-age=300');
+    mh_json(['ok' => true, 'configured' => $r['configured'], 'fetched' => $r['fetched'], 'error' => $r['error'], 'events' => $r['events'], 'announcement' => (string)mh_setting('announcement', '')]);
 
   case 'data':
     mh_method('GET', 'POST', 'PUT');
@@ -155,6 +163,6 @@ switch ($route) {
       'active_7d' => (int)$db->query('SELECT COUNT(*) FROM users WHERE last_login > ' . (time() - 7 * 86400))->fetchColumn(), 'progress_rows' => (int)$db->query('SELECT COUNT(*) FROM progress')->fetchColumn()]);
 
   default:
-    if (str_starts_with($route, 'forum_') || str_starts_with($route, 'admin_') || $route === 'terms_accept') { require_once __DIR__ . '/forum.php'; mh_forum_route($route, $in, $cfg, $ip); }
+    if (str_starts_with($route, 'forum_') || str_starts_with($route, 'admin_') || str_starts_with($route, 'notif_') || $route === 'terms_accept') { require_once __DIR__ . '/forum.php'; mh_forum_route($route, $in, $cfg, $ip); }
     mh_fail('Not found.', 404);
 }

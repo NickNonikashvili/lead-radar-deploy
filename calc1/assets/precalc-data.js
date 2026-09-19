@@ -708,7 +708,7 @@
   const NAV = [
     { label: 'Today', items: [['dashboard', 'Dashboard', 'home'], ['calendar', 'Calendar', 'calendar']] },
     { label: 'Learn', items: [['notes', 'Topic notes', 'book'], ['formulas', 'Formula sheet', 'sigma'], ['flashcards', 'Flashcards', 'cards'], ['textbook', 'Textbooks & links', 'link']] },
-    { label: 'Practice', items: [['practice', 'Quizzer', 'list'], ['exam', 'Exam prep', 'flag']] },
+    { label: 'Practice', items: [['practice', 'Quizzer', 'list'], ['exam', 'Exam prep', 'flag'], ['planner', 'Study planner', 'calendar']] },
     { label: 'Tools', items: [['explorer', 'Function explorer', 'chart'], ['unitcircle', 'Unit circle & triangles', 'target'], ['grapher', 'Grapher', 'flask'], ['grades', 'Grade calculator', 'calc'], ['scratchpad', 'Scratchpad', 'pen']] },
     { label: 'Community', items: [['forum', 'Discussions', 'chat']] },
     { label: 'Course', items: [['course', 'Syllabus & policies', 'info'], ['settings', 'Settings', 'sliders']] }

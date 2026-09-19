@@ -107,6 +107,7 @@
       if (param === 'new') this.compose(box);
       else if (param === 'reports') this.reports(box);
       else if (param === 'admin') this.admin(box);
+      else if (param === 'inbox') this.inbox(box);
       else if (param && /^\d+$/.test(param)) this.thread(box, +param);
       else this.list(box);
       bind(root, Object.assign({ theme: () => App.toggleTheme() }, this.actions(root)));
@@ -161,6 +162,7 @@
       if (offline()) { const p = DEMO.posts.find(x => x.id === id); if (!p) { el.innerHTML = '<div class="empty">Sample post not found.</div>'; return; } data = { post: p, comments: DEMO.comments[id] || [], mod: false, banned: 0, terms: true }; }
       else { try { data = await api('forum_post&id=' + id); } catch (e) { el.innerHTML = `<div class="empty">${esc(e.message)}</div>`; return; } }
       F.thread = data; this.paintThread(el);
+      if (!offline() && user() && user().unread) api('notif_read', { post_id: id }).then(r => { if (auth().setUnread) auth().setUnread(r.unread); }).catch(() => {});
     },
     paintThread(el) {
       const d = F.thread; const p = d.post; const ro = offline();
@@ -226,6 +228,18 @@
       } catch (e) { el.innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
     },
 
+    /* --- inbox --- */
+    async inbox(box) {
+      box.innerHTML = `<div class="fa-back"><a href="${base()}">${icon('left', 14)} All discussions</a></div>${pageHead('Inbox', 'Replies to your posts and comments.', `<button class="btn sm" data-action="read-all">${icon('check', 13)} Mark all read</button>`)}<div id="fa-inbox"><div class="empty">Loading…</div></div>`;
+      const el = $('#fa-inbox', box);
+      if (!user()) { el.innerHTML = App.lockCard('Sign in to see your inbox', 'Members get a notification whenever someone answers their post or replies to their comment.'); return; }
+      if (offline()) { el.innerHTML = '<div class="empty">The inbox needs the discussion server, which is not reachable right now.</div>'; return; }
+      try {
+        const r = await api('notif_list'); if (auth().setUnread) auth().setUnread(r.unread);
+        el.innerHTML = r.notifications.length ? `<div class="panel" style="padding:6px 8px">${r.notifications.map(n => `<a class="inbox-row${n.read ? '' : ' unread'}" href="${threadLink(n.post_id)}" data-action="open-notif" data-id="${n.id}"><span class="inbox-dot"></span><div class="inbox-body"><div><b>${esc(n.actor)}</b> ${n.kind === 'reply' ? 'replied to your comment on' : 'commented on your post'} <b>${esc(n.title)}</b></div><div class="small muted">${esc(n.snippet)}</div></div><span class="small muted">${timeAgo(n.created)}</span></a>`).join('')}</div>` : '<div class="empty">Nothing yet. When someone answers one of your posts, it shows up here.</div>';
+      } catch (e) { el.innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
+    },
+
     /* --- administrator panel --- */
     async admin(box, q, page) {
       box.innerHTML = `<div class="fa-back"><a href="${base()}">${icon('left', 14)} All discussions</a> <span class="sep muted">·</span> <a href="${base()}/reports">Report queue</a></div>${pageHead('Admin panel', 'Site overview and member management. You can ban, unban or delete any account, and permanently delete any post or comment from its thread.')}<div id="fa-admin"><div class="empty">Loading…</div></div>`;
@@ -235,6 +249,9 @@
         const [st, us] = await Promise.all([api('admin_stats'), api('admin_users&q=' + encodeURIComponent(q || '') + '&page=' + (page || 0))]);
         const stat = (n, l) => `<div class="stat"><div class="stat-num">${n}</div><div class="stat-label">${l}</div></div>`;
         el.innerHTML = `<div class="grid cols-4 mb-2">${stat(st.users, 'members')}${stat(st.active_7d, 'active this week')}${stat(st.posts, 'posts')}${stat(st.comments, 'comments')}${stat(st.reports, 'open reports')}${stat(st.bans, 'active bans')}${stat(st.removed, 'removed items')}${stat(st.pending, 'unverified sign-ups')}</div>
+          <div class="panel mb-2"><div class="panel-h"><div class="panel-title">${icon('canvas')} Site settings</div></div>
+            <div class="field"><label for="adm-canvas">Canvas calendar feed URL</label><div class="row gap-sm"><input class="input mono" id="adm-canvas" placeholder="https://montana.instructure.com/feeds/calendars/user_….ics" value="${esc(st.settings.canvas_feed || '')}" ${st.settings.canvas_from_config ? 'disabled' : ''} style="flex:1;min-width:240px"><button class="btn sm primary" data-action="save-setting" data-k="canvas_feed" data-i="adm-canvas" ${st.settings.canvas_from_config ? 'disabled' : ''}>Save &amp; sync</button></div><span class="help">${st.settings.canvas_from_config ? 'Set in api/config.php, so it cannot be changed here.' : 'In Canvas: Calendar → “Calendar Feed” → copy the link. Due dates for the mapped classes then show on every dashboard, refreshed hourly.'} ${st.settings.canvas.configured ? `Last sync: ${st.settings.canvas.fetched ? timeAgo(st.settings.canvas.fetched) : 'never'} · ${st.settings.canvas.count} events${st.settings.canvas.error ? ` · <span style="color:var(--bad)">${esc(st.settings.canvas.error)}</span>` : ''}` : ''}</span></div>
+            <div class="field mt-2"><label for="adm-ann">Announcement banner (shown on the landing page and dashboards; leave empty to hide)</label><div class="row gap-sm"><input class="input" id="adm-ann" maxlength="240" value="${esc(st.settings.announcement || '')}" style="flex:1;min-width:240px"><button class="btn sm" data-action="save-setting" data-k="announcement" data-i="adm-ann">Save</button></div></div></div>
           <div class="panel mb-2"><div class="panel-h"><div class="panel-title">${icon('shield')} Staff</div><span class="small muted">edit <code>moderators</code> / <code>admins</code> in api/config.php</span></div><div class="row gap-sm">${st.moderators.map(m => `<span class="chip ${st.admins.includes(m) ? 'accent' : ''}">${esc(m)}${st.admins.includes(m) ? ' · admin' : ''}</span>`).join('')}</div></div>
           <div class="panel"><div class="panel-h"><div class="panel-title">${icon('info')} Members</div><input class="input" id="fa-admin-q" placeholder="Search email or name…" value="${esc(q || '')}" style="max-width:260px"></div>
             <div class="table-wrap"><table class="table compact"><thead><tr><th>Member</th><th>Joined</th><th class="num">Posts</th><th class="num">Comments</th><th>Status</th><th></th></tr></thead><tbody>${us.users.map(x => `<tr><td><div><b>${esc(x.name || x.email.split('@')[0])}</b>${x.admin ? ' <span class="chip accent">admin</span>' : x.mod ? ' <span class="chip">mod</span>' : ''}</div><div class="mono small muted">${esc(x.email)}</div></td><td class="small">${new Date(x.created * 1000).toLocaleDateString()}<div class="muted">last login ${x.last_login ? timeAgo(x.last_login) : 'never'}</div></td><td class="num">${x.posts}</td><td class="num">${x.comments}</td><td class="small">${!x.verified ? '<span class="chip warn">unverified</span>' : x.banned_until ? `<span class="chip bad">banned until ${new Date(x.banned_until * 1000).toLocaleDateString()}</span>` : '<span class="chip good">active</span>'}${x.terms ? '' : ' <span class="chip">no rules yet</span>'}</td><td><div class="row gap-sm" style="flex-wrap:nowrap;justify-content:flex-end">${x.admin ? '' : `${x.banned_until ? `<button class="btn xs" data-action="admin-user" data-a="unban" data-u="${x.id}">Unban</button>` : `<button class="btn xs" data-action="admin-user" data-a="ban" data-u="${x.id}">Ban</button>`}${!x.verified ? `<button class="btn xs" data-action="admin-user" data-a="verify" data-u="${x.id}">Verify</button>` : ''}<button class="btn xs danger ghost" data-action="admin-user" data-a="delete" data-u="${x.id}" data-e="${esc(x.email)}">Delete</button>`}</div></td></tr>`).join('') || '<tr><td colspan="6"><div class="empty">No members match.</div></td></tr>'}</tbody></table></div>
@@ -300,6 +317,9 @@
           try { await api('admin_user', body); toast('Done'); self.admin(V(), $('#fa-admin-q', root) ? $('#fa-admin-q', root).value.trim() : ''); } catch (e) { toast(e.message, 3500); }
         },
         'admin-page': el => self.admin(V(), el.dataset.q, +el.dataset.p),
+        'save-setting': async el => { const value = $('#' + el.dataset.i, root).value.trim(); el.disabled = true; try { const r = await api('admin_setting', { key: el.dataset.k, value }); if (App.Canvas) { App.Canvas.data = null; App.Canvas.at = 0; } toast(r.canvas ? (r.canvas.error ? r.canvas.error : `Synced ${r.canvas.count} Canvas events`) : 'Saved', 4000); self.admin(V()); } catch (e) { el.disabled = false; toast(e.message, 4000); } },
+        'read-all': async () => { try { const r = await api('notif_read', { all: true }); if (auth().setUnread) auth().setUnread(r.unread); self.inbox(V()); } catch (e) { toast(e.message); } },
+        'open-notif': el => { api('notif_read', { id: +el.dataset.id }).then(r => { if (auth().setUnread) auth().setUnread(r.unread); }).catch(() => {}); },
         ban: async el => {
           const days = prompt('Ban the author of this item for how many days?', '7'); if (!days) return; const reason = prompt('Reason (shown to the user):', 'Breaking the community rules') || '';
           try { await api('forum_mod', { action: 'ban', kind: el.dataset.kind, id: +el.dataset.id, days: +days, reason }); toast('User banned'); if (el.dataset.refresh === 'reports') self.reports(V()); else await refreshThread(); } catch (e) { toast(e.message, 3000); }

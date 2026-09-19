@@ -33,6 +33,15 @@ return [
   'smtp_user'       => 'info@mathub.space',
   'smtp_pass'       => '',
 
+  // Public address of the site, used in notification emails. Leave blank to use the current host.
+  'site_url'        => '',
+
+  // Canvas calendar feed (Calendar → Calendar Feed in Canvas). Easiest is to paste it in the admin panel (#/forum/admin);
+  // setting it here instead overrides the admin panel. Events are matched to classes by the course name in [brackets].
+  'canvas_feed'     => '',
+  'canvas_course_match' => ['calc' => ['M 171', 'M171', 'Calculus I'], 'physics' => ['PHSX 220', 'PHSX220', 'Physics I'], 'precalc' => ['M 151', 'M151', 'Precalc']],
+  'timezone'        => 'America/Denver',
+
   // Optional. If set, GET api/index.php?r=stats with header X-Admin-Key: <this value> returns sign-up counts.
   'admin_key'       => '',
 

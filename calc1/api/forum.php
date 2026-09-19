@@ -54,6 +54,29 @@ function mh_get_comment(int $id): ?array {
   $st = mh_db()->prepare('SELECT c.*, u.name AS u_name, u.email AS u_email FROM comments c JOIN users u ON u.id = c.user_id WHERE c.id = ?'); $st->execute([$id]); $c = $st->fetch(); return $c ?: null;
 }
 
+/** Tells the post author (new comment) and the parent comment's author (reply). Never notifies the actor. Emails at most once per post per 6 hours when the recipient opted in. */
+function mh_notify_reply(array $post, ?array $parent, array $actor, int $commentId, string $body, int $anon): void {
+  $db = mh_db(); $now = time(); $actorName = $anon ? 'Someone' : mh_display_name($actor); $snippet = mb_substr(mh_censor($body), 0, 140);
+  $targets = [];
+  if ((int)$post['user_id'] !== (int)$actor['id']) $targets[(int)$post['user_id']] = 'comment';
+  if ($parent && (int)$parent['user_id'] !== (int)$actor['id']) $targets[(int)$parent['user_id']] = 'reply';
+  foreach ($targets as $uid => $kind) {
+    $db->prepare('INSERT INTO notifications (user_id, kind, post_id, comment_id, actor_id, actor, title, snippet, created) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)')->execute([$uid, $kind, $post['id'], $commentId, $actor['id'], $actorName, mb_substr($post['title'], 0, 120), $snippet, $now]);
+    $st = $db->prepare('SELECT * FROM users WHERE id = ?'); $st->execute([$uid]); $to = $st->fetch();
+    if ($to && (int)($to['notify_email'] ?? 1) === 1 && (int)$to['verified'] === 1 && mh_rate("notifmail:{$uid}:{$post['id']}", 1, 6 * 3600)) {
+      try {
+        require_once __DIR__ . '/mailer.php'; $cfg = mh_config(); $site = $cfg['site_name'] ?? 'MatHub';
+        $link = rtrim((string)($cfg['site_url'] ?? ('https://' . ($_SERVER['HTTP_HOST'] ?? 'mathub.space'))), '/') . '/#/forum/' . (int)$post['id'];
+        $what = $kind === 'reply' ? 'replied to your comment on' : 'commented on your post';
+        $subject = $actorName . ' ' . $what . ' "' . mb_substr($post['title'], 0, 60) . '"';
+        $text = $actorName . ' ' . $what . " \"{$post['title']}\":\n\n$snippet\n\nOpen it: $link\n\nYou can turn these emails off in Settings → Account on $site.";
+        $html = '<div style="font-family:Segoe UI,Helvetica,Arial,sans-serif;max-width:520px;margin:0 auto;padding:24px;color:#131C2E"><p style="margin:0 0 10px"><b>' . htmlspecialchars($actorName) . '</b> ' . $what . ' <b>' . htmlspecialchars($post['title']) . '</b></p><blockquote style="margin:0 0 14px;padding:10px 14px;border-left:3px solid #9DB4EA;background:#F6F8FB;border-radius:0 6px 6px 0">' . nl2br(htmlspecialchars($snippet)) . '</blockquote><p><a href="' . htmlspecialchars($link) . '" style="display:inline-block;background:#2B55B8;color:#fff;text-decoration:none;padding:9px 14px;border-radius:8px">Open the discussion</a></p><p style="font-size:12px;color:#64718A">You can turn these emails off in Settings → Account on ' . htmlspecialchars($site) . '.</p></div>';
+        mh_send_mail($cfg, $to['email'], $subject, $text, $html);
+      } catch (Throwable $e) { /* email is best-effort */ }
+    }
+  }
+}
+
 function mh_forum_route(string $route, array $in, array $cfg, string $ip): void {
   $db = mh_db(); $me = mh_current_user(); $mod = mh_is_mod($me); $now = time();
   switch ($route) {
@@ -128,6 +151,7 @@ function mh_forum_route(string $route, array $in, array $cfg, string $ip): void 
       $id = (int)$db->lastInsertId();
       $db->prepare('INSERT OR REPLACE INTO votes (user_id, kind, item_id, value) VALUES (?, "c", ?, 1)')->execute([$u['id'], $id]); mh_recount('c', $id);
       $db->prepare('UPDATE posts SET ncomments = (SELECT COUNT(*) FROM comments WHERE post_id = ? AND removed = 0) WHERE id = ?')->execute([$p['id'], $p['id']]);
+      mh_notify_reply($p, $parent ? mh_get_comment($parent) : null, $u, $id, $body, $anon);
       mh_json(['ok' => true, 'comment' => mh_comment_row(mh_get_comment($id), $u, $mod, (int)$p['user_id'], ['c' . $id => 1])]);
 
     case 'forum_comment_edit':
@@ -190,13 +214,41 @@ function mh_forum_route(string $route, array $in, array $cfg, string $ip): void 
       if (in_array($action, ['remove', 'restore'], true) || ($action === 'ban' && $item)) $db->prepare('UPDATE reports SET status = "closed" WHERE kind = ? AND item_id = ?')->execute([$kind, $id]);
       mh_json(['ok' => true]);
 
+    /* ---------- notifications ---------- */
+    case 'notif_list':
+      mh_method('GET'); $u = mh_require_user();
+      $st = $db->prepare('SELECT * FROM notifications WHERE user_id = ? ORDER BY created DESC LIMIT 60'); $st->execute([$u['id']]);
+      $rows = array_map(fn($n) => ['id' => (int)$n['id'], 'kind' => $n['kind'], 'post_id' => (int)$n['post_id'], 'comment_id' => $n['comment_id'] ? (int)$n['comment_id'] : null, 'actor' => $n['actor'], 'title' => $n['title'], 'snippet' => $n['snippet'], 'created' => (int)$n['created'], 'read' => (int)$n['read'] === 1], $st->fetchAll());
+      $st = $db->prepare('SELECT COUNT(*) FROM notifications WHERE user_id = ? AND read = 0'); $st->execute([$u['id']]);
+      mh_json(['ok' => true, 'notifications' => $rows, 'unread' => (int)$st->fetchColumn()]);
+
+    case 'notif_read':
+      mh_method('POST'); $u = mh_require_user();
+      if (!empty($in['all'])) $db->prepare('UPDATE notifications SET read = 1 WHERE user_id = ?')->execute([$u['id']]);
+      elseif (!empty($in['id'])) $db->prepare('UPDATE notifications SET read = 1 WHERE user_id = ? AND id = ?')->execute([$u['id'], (int)$in['id']]);
+      elseif (!empty($in['post_id'])) $db->prepare('UPDATE notifications SET read = 1 WHERE user_id = ? AND post_id = ?')->execute([$u['id'], (int)$in['post_id']]);
+      $st = $db->prepare('SELECT COUNT(*) FROM notifications WHERE user_id = ? AND read = 0'); $st->execute([$u['id']]);
+      mh_json(['ok' => true, 'unread' => (int)$st->fetchColumn()]);
+
+    case 'admin_setting':
+      mh_method('POST'); $u = mh_require_user(); if (!mh_is_admin($u)) mh_fail('Administrators only.', 403);
+      require_once __DIR__ . '/canvas.php';
+      $key = (string)($in['key'] ?? ''); if (!in_array($key, ['canvas_feed', 'announcement'], true)) mh_fail('Unknown setting.');
+      $value = trim((string)($in['value'] ?? ''));
+      if ($key === 'canvas_feed' && $value !== '' && !preg_match('#^https://[a-z0-9.-]+/feeds/calendars/[A-Za-z0-9_.-]+\.ics$#i', $value)) mh_fail('That does not look like a Canvas calendar feed URL (…/feeds/calendars/user_….ics).');
+      mh_setting_set($key, $value);
+      $out = ['ok' => true];
+      if ($key === 'canvas_feed') { $r = mh_canvas_events(true); $out['canvas'] = ['configured' => $r['configured'], 'fetched' => $r['fetched'], 'error' => $r['error'], 'count' => count($r['events'])]; }
+      mh_json($out);
+
     /* ---------- administrator ---------- */
     case 'admin_stats':
       mh_method('GET'); $u = mh_require_user(); if (!mh_is_admin($u)) mh_fail('Administrators only.', 403);
       $n = fn($sql) => (int)$db->query($sql)->fetchColumn();
       mh_json(['ok' => true, 'users' => $n('SELECT COUNT(*) FROM users WHERE verified = 1'), 'pending' => $n('SELECT COUNT(*) FROM users WHERE verified = 0'), 'active_7d' => $n('SELECT COUNT(*) FROM users WHERE last_login > ' . ($now - 7 * 86400)),
         'posts' => $n('SELECT COUNT(*) FROM posts WHERE removed = 0'), 'comments' => $n('SELECT COUNT(*) FROM comments WHERE removed = 0'), 'removed' => $n('SELECT COUNT(*) FROM posts WHERE removed > 0') + $n('SELECT COUNT(*) FROM comments WHERE removed > 0'),
-        'reports' => $n('SELECT COUNT(*) FROM reports WHERE status = "open"'), 'bans' => $n('SELECT COUNT(*) FROM bans WHERE until > ' . $now), 'moderators' => array_values(array_unique(array_merge($cfg['admins'] ?? [], $cfg['moderators'] ?? []))), 'admins' => $cfg['admins'] ?? []]);
+        'reports' => $n('SELECT COUNT(*) FROM reports WHERE status = "open"'), 'bans' => $n('SELECT COUNT(*) FROM bans WHERE until > ' . $now), 'moderators' => array_values(array_unique(array_merge($cfg['admins'] ?? [], $cfg['moderators'] ?? []))), 'admins' => $cfg['admins'] ?? [],
+        'settings' => (function () use ($cfg) { require_once __DIR__ . '/canvas.php'; $r = mh_canvas_events(false); return ['canvas_feed' => mh_canvas_feed_url(), 'canvas_from_config' => trim((string)($cfg['canvas_feed'] ?? '')) !== '', 'canvas' => ['configured' => $r['configured'], 'fetched' => $r['fetched'], 'error' => $r['error'], 'count' => count($r['events'])], 'announcement' => (string)mh_setting('announcement', '')]; })()]);
 
     case 'admin_users':
       mh_method('GET'); $u = mh_require_user(); if (!mh_is_admin($u)) mh_fail('Administrators only.', 403);
