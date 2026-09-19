@@ -116,6 +116,15 @@ unban, verify or delete any account. Both lists ship with nikoloz.nonikashvili@s
 - **Focus time.** Completed pomodoro minutes are logged per day and synced; the dashboard shows hours this
   week next to the class median (from `stats_week`), and the digest includes it.
 
+## Hint ladders
+
+Every generated quiz problem has a "Walk me through it" ladder in practice mode: three progressive hints
+(a way to think about it, the procedure, the nearly-there nudge; the problem's own hint is used when it has
+one), then the first step of the worked solution, then the full solution. Answering after revealing the full
+solution is marked *assisted* and does not count toward accuracy. The hints per topic live in
+`assets/ladders.js`; the first step is the first sentence of the explanation (`App.splitSteps`). Exam-prep
+solutions reveal step by step, and the daily challenge offers the three hints without the solution.
+
 ## Admin panel
 
 `#/admin` (also in the sidebar for staff): Overview with stats and the activity feed, Members (search, ban,

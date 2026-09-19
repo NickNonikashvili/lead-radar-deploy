@@ -92,7 +92,7 @@
     }
   };
   function mulberry(seed) { let s = (seed >>> 0) || 1; return () => { s += 0x6D2B79F5; let t = s; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
-  const CH = { started: {}, answered: {} };
+  const CH = { started: {}, answered: {}, hint: 0 };
   App.views.challenge = {
     title: 'Daily challenge', blurb: 'One problem per class per day, the same for everyone. Solve it fast for bonus points and climb the weekly board.',
     render(root, param, query, standalone) {
@@ -118,9 +118,9 @@
           ${done || answered ? `<div class="q-feedback ${(done ? done.ok : answered.ok) ? 'ok' : 'no'}"><b class="res">${(done ? done.ok : answered.ok) ? '✓ Correct' : '✕ Not quite'}${done ? ` · ${done.points} points · ${fmtMs(done.ms)}` : ''}${q.type === 'num' ? ` · the answer is $${q.answerTex}$` : ` · the answer is ${'ABCD'[q.answer]}`}</b><div>${q.explanation}</div><p class="small muted mt-1">Come back tomorrow for a new one.</p></div>`
           : q.type === 'mc' ? `<div class="q-opts">${q.options.map((o, k) => `<button class="q-opt" data-action="ch-mc" data-i="${k}"><span class="letter">${'ABCD'[k]}</span><span>${o}</span></button>`).join('')}</div>`
           : `<div class="q-numrow"><input class="input mono" id="ch-num" placeholder="e.g. 3/8, -0.375, 2pi"><button class="btn primary" data-action="ch-num">${icon('check', 14)} Submit</button></div>`}
-          ${!(done || answered) ? `<div class="row mt-2 between"><span class="small muted" id="ch-timer">${user() ? 'Timer starts when you answer the first time. Faster correct answers earn up to 5 bonus points.' : 'Sign in to record your answer and earn points.'}</span>${q.hint ? `<button class="btn xs ghost" data-action="ch-hint">${icon('bulb', 12)} Hint</button>` : ''}</div>${q.hint ? `<div class="q-hint hidden" id="ch-hint">${q.hint}</div>` : ''}` : ''}
+          ${!(done || answered) ? `<div class="row mt-2 between"><span class="small muted" id="ch-timer">${user() ? 'Timer starts when you answer the first time. Faster correct answers earn up to 5 bonus points.' : 'Sign in to record your answer and earn points.'}</span><button class="btn xs ghost" data-action="ch-hint">${icon('bulb', 12)} Hint</button></div><div id="ch-hints" class="ladder"></div>` : ''}
         </div>`;
-      typeset(box); if (!CH.started[key]) CH.started[key] = Date.now();
+      typeset(box); if (!CH.started[key]) CH.started[key] = Date.now(); CH.hint = 0;
       const submit = async (ok, raw) => {
         if (!user()) { auth().open('signup'); return; }
         const ms = Math.max(1000, Date.now() - (CH.started[key] || Date.now())); CH.answered[key] = { ok, raw };
@@ -131,7 +131,7 @@
       bind(box, {
         'ch-mc': el => { if (CH.answered[key]) return; submit(+el.dataset.i === q.answer); },
         'ch-num': () => { if (CH.answered[key]) return; const raw = $('#ch-num', box).value.trim(); const v = App.parseNumber(raw); if (isNaN(v)) { toast('Enter a number, fraction or expression like 2pi'); return; } const tol = q.tol ? Math.max(q.tol * Math.abs(q.answer), 1e-9) : Math.max(0.011, 0.005 * Math.abs(q.answer)); submit(Math.abs(v - q.answer) <= tol, raw); },
-        'ch-hint': () => { $('#ch-hint', box).classList.toggle('hidden'); }
+        'ch-hint': el => { const L = (global.MatHubLadders && global.MatHubLadders[cid] || {})[q.topic] || []; const hints = L.slice(0, 3); if (q.hint) { if (hints.length >= 3) hints[2] = q.hint; else hints.push(q.hint); } const n = CH.hint = (CH.hint || 0) + 1; const h = $('#ch-hints', box); if (!h) return; h.innerHTML = hints.slice(0, n).map((x, i) => `<div class="rung hint"><span class="rung-label">${icon('bulb', 12)} Hint ${i + 1} of ${hints.length}</span><div>${x}</div></div>`).join(''); typeset(h); if (n >= hints.length) el.remove(); }
       });
       const inp = $('#ch-num', box); if (inp) inp.addEventListener('keydown', e => { if (e.key === 'Enter') $('[data-action="ch-num"]', box).click(); });
     },

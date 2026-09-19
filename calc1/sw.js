@@ -3,7 +3,7 @@
 const BUILD = new URL(self.location.href).searchParams.get('v') || 'dev';
 const CACHE = 'mathub-' + BUILD;
 const V = '?v=' + BUILD;
-const SHELL = ['./', 'index.html', 'assets/styles.css' + V, 'assets/app.js' + V, 'assets/tools.js' + V, 'assets/auth.js' + V, 'assets/forum.js' + V, 'assets/policy.js' + V, 'assets/planner.js' + V, 'assets/social.js' + V, 'assets/admin.js' + V,
+const SHELL = ['./', 'index.html', 'assets/styles.css' + V, 'assets/app.js' + V, 'assets/ladders.js' + V, 'assets/tools.js' + V, 'assets/auth.js' + V, 'assets/forum.js' + V, 'assets/policy.js' + V, 'assets/planner.js' + V, 'assets/social.js' + V, 'assets/admin.js' + V,
   'assets/calc-data.js' + V, 'assets/calc-quiz.js' + V, 'assets/calc-tools.js' + V, 'assets/physics-data.js' + V, 'assets/physics-quiz.js' + V, 'assets/physics-tools.js' + V,
   'assets/precalc-data.js' + V, 'assets/precalc-quiz.js' + V, 'assets/precalc-tools.js' + V, 'assets/icon.svg' + V, 'assets/icon-192.png' + V, 'assets/icon-512.png' + V, 'assets/manifest.webmanifest' + V];
 

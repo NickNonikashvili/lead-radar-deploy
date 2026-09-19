@@ -9,6 +9,33 @@
   const { $, $$, esc, icon, bind, on, toast, store, typeset, parseNumber, fmtNum, cssVar, fitCanvas, pageHead } = App;
   const L = App.link;
   const LETTERS = 'ABCD';
+  /* ---------- hint ladders: topic hints → problem hint → first step of the solution → full solution ---------- */
+  function splitSteps(text) {
+    const out = []; let cur = ''; let inMath = false; const s = String(text || '');
+    for (let i = 0; i < s.length; i++) {
+      const ch = s[i]; if (ch === '$') inMath = !inMath; cur += ch;
+      if (!inMath && (ch === '.' || ch === ';' || ch === '\n') && (i === s.length - 1 || /\s/.test(s[i + 1]) || ch === '\n')) { const t = cur.trim(); if (t && !/^[\d.]+$/.test(t)) { out.push(t); cur = ''; } }
+    }
+    const t = cur.trim(); if (t) out.push(t);
+    // merge tiny fragments (e.g. "e.g." or a lone symbol) into the previous step
+    const merged = []; out.forEach(x => { if (merged.length && x.length < 12) merged[merged.length - 1] += ' ' + x; else merged.push(x); });
+    return merged;
+  }
+  App.splitSteps = splitSteps;
+  App.ladder = function (q) {
+    const L = global.MatHubLadders && D ? (global.MatHubLadders[D.id] || {})[q.topic] : null; const topic = Array.isArray(L) ? L : [];
+    const hints = topic.slice(0, 3); if (q.hint) { if (hints.length >= 3) hints[2] = q.hint; else hints.push(q.hint); }
+    while (hints.length < 3 && hints.length) hints.push(hints[hints.length - 1]);
+    const steps = splitSteps(q.explanation); const rungs = hints.map((h, i) => ({ kind: 'hint', label: `Hint ${i + 1} of 3`, html: h }));
+    if (steps.length > 1) rungs.push({ kind: 'step', label: 'First step', html: steps[0] });
+    rungs.push({ kind: 'solution', label: 'Full solution', html: q.explanation });
+    return rungs;
+  };
+  App.ladderHtml = function (q, level, qi) {
+    const rungs = App.ladder(q); const shown = rungs.slice(0, level); const next = rungs[level];
+    return `<div class="ladder" id="ld-${q.id}">${shown.map(r => `<div class="rung ${r.kind}"><span class="rung-label">${icon(r.kind === 'solution' ? 'eye' : r.kind === 'step' ? 'right' : 'bulb', 12)} ${r.label}</span><div>${r.html}</div></div>`).join('')}
+      ${next ? `<button class="btn xs${next.kind === 'solution' ? ' ghost' : ''}" data-action="ladder" data-q="${qi}">${icon(next.kind === 'solution' ? 'eye' : 'bulb', 12)} ${next.kind === 'hint' ? (level === 0 ? 'Walk me through it' : 'Next hint') : next.kind === 'step' ? 'Show the first step' : 'Show the full solution'}</button>${next.kind === 'solution' ? '<span class="small muted" style="margin-left:8px">Seeing the solution first means this one won\'t count toward your accuracy.</span>' : ''}` : ''}</div>`;
+  };
   /* ======================================================
      VIEW: Quizzer
      ====================================================== */
@@ -72,7 +99,7 @@
         'retry-missed': () => this.retryMissed(root),
         mc: el => this.answerMC(root, +el.dataset.q, +el.dataset.i),
         'check-num': el => this.answerNum(root, +el.dataset.q),
-        hint: el => { const q = PQ.session.questions[+el.dataset.q]; const box = $(`#hint-${q.id}`, root); box.classList.toggle('hidden'); },
+        ladder: el => { const qi = +el.dataset.q; const s = PQ.session; s.ladder = s.ladder || {}; s.ladder[qi] = (s.ladder[qi] || 0) + 1; this.repaintQ(root, qi); const el2 = $(`#ld-${s.questions[qi].id} .rung:last-child`, root); if (el2) el2.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); },
         submit: () => this.submit(root),
         'toggle-setup': () => { $('#pq-setup-body', root).classList.toggle('hidden'); }
       });
@@ -112,7 +139,7 @@
     start(root, questions) {
       if (PQ.session && PQ.session.timer) clearInterval(PQ.session.timer);
       const cap = App.limit('questions'); let qs = questions || QZ.generateSet(PQ.smart ? PQ.smart.weighted : [...PQ.topics], PQ.count); const capped = qs.length > cap; if (capped) qs = qs.slice(0, cap);
-      PQ.session = { questions: qs, answers: {}, mode: PQ.mode, submitted: false, left: PQ.minutes * 60, timer: null, capped };
+      PQ.session = { questions: qs, answers: {}, mode: PQ.mode, submitted: false, left: PQ.minutes * 60, timer: null, capped, ladder: {} };
       if (PQ.mode === 'exam') {
         PQ.session.timer = setInterval(() => { const s = PQ.session; if (!s || s.submitted) return; s.left--; const el = $('#pq-timer', root); if (el) { el.textContent = fmtClock(s.left); el.classList.toggle('low', s.left < 300); } if (s.left <= 0) { this.submit(root); toast('Time is up. Exam submitted.', 3000); } }, 1000);
       }
@@ -127,7 +154,7 @@
     },
     paintSession(root) {
       const s = PQ.session; const box = $('#pq-session', root);
-      const answered = Object.keys(s.answers).length, correct = Object.values(s.answers).filter(a => a.ok).length;
+      const answered = Object.keys(s.answers).length, correct = Object.values(s.answers).filter(a => a.ok && !a.assisted).length;
       const done = s.mode === 'practice' ? answered : (s.submitted ? s.questions.length : answered);
       const bar = s.mode === 'practice'
         ? `<div class="score-bar"><span class="stat"><span class="stat-num">${correct}<span class="muted" style="font-size:15px">/${answered}</span></span><span class="stat-label">correct so far · ${s.questions.length} questions</span></span><div class="bar" style="flex:1;min-width:120px"><div class="bar-fill ${answered && correct / answered < 0.6 ? 'bad' : answered && correct / answered < 0.8 ? 'warn' : 'good'}" style="width:${s.questions.length ? 100 * answered / s.questions.length : 0}%"></div></div><button class="btn" data-action="retry-missed">${icon('target', 14)} Retry missed topics</button><button class="btn primary" data-action="new-set">${icon('rotate', 14)} New set</button></div>`
@@ -147,12 +174,15 @@
       }
       const fb = graded && a ? `<div class="q-feedback ${a.ok ? 'ok' : 'no'}"><b class="res">${a.ok ? '✓ Correct' : `✕ Not quite${q.type === 'num' ? ` — the answer is $${q.answerTex}$` : ` — the answer is ${LETTERS[q.answer]}`}`}</b><div>${q.explanation}</div></div>`
         : graded && !a ? `<div class="q-feedback no"><b class="res">Not answered${q.type === 'num' ? ` — the answer is $${q.answerTex}$` : ` — the answer is ${LETTERS[q.answer]}`}</b><div>${q.explanation}</div></div>` : '';
-      return `<div class="q-card${graded && a ? (a.ok ? ' correct' : ' wrong') : ''}" id="qc-${q.id}"><div class="q-top"><span class="q-num">Q${i + 1}</span><span class="chip accent">${esc(App.secLabel(T.sec))} · ${esc(T.label)}</span>${q.hint && !graded ? `<button class="btn xs ghost" data-action="hint" data-q="${i}" style="margin-left:auto">${icon('bulb', 12)} Hint</button>` : ''}</div><div class="q-prompt">${q.prompt}</div>${q.hint ? `<div class="q-hint hidden" id="hint-${q.id}">${q.hint}</div>` : ''}${body}${fb}</div>`;
+      const lvl = (s.ladder && s.ladder[i]) || 0; const assisted = a && a.assisted;
+      const ladder = s.mode === 'practice' && !graded ? App.ladderHtml(q, lvl, i) : (s.mode === 'practice' && graded && lvl > 0 ? `<div class="small muted mt-1">${assisted ? 'Solved with the full solution shown (not counted toward accuracy).' : `You used ${lvl} hint${lvl === 1 ? '' : 's'}.`}</div>` : '');
+      return `<div class="q-card${graded && a ? (a.ok ? ' correct' : ' wrong') : ''}" id="qc-${q.id}"><div class="q-top"><span class="q-num">Q${i + 1}</span><span class="chip accent">${esc(App.secLabel(T.sec))} · ${esc(T.label)}</span>${assisted ? '<span class="chip warn">assisted</span>' : ''}</div><div class="q-prompt">${q.prompt}</div>${ladder}${body}${fb}</div>`;
     },
     answerMC(root, qi, k) {
       const s = PQ.session; if (s.submitted) return; const q = s.questions[qi]; if (s.mode === 'practice' && s.answers[qi]) return;
-      s.answers[qi] = { sel: k, ok: k === q.answer };
-      if (s.mode === 'practice') { App.recordAnswer(q.topic, s.answers[qi].ok); this.repaintQ(root, qi); this.paintSession(root); this.scrollTo(root, q); }
+      const assistedMC = s.mode === 'practice' && s.ladder && (s.ladder[qi] || 0) >= App.ladder(q).length;
+      s.answers[qi] = { sel: k, ok: k === q.answer, assisted: assistedMC };
+      if (s.mode === 'practice') { if (!assistedMC) App.recordAnswer(q.topic, s.answers[qi].ok); else App.markActivity(); this.repaintQ(root, qi); this.paintSession(root); this.scrollTo(root, q); }
       else this.repaintQ(root, qi);
     },
     answerNum(root, qi) {
@@ -160,8 +190,9 @@
       const inp = $(`#num-${q.id}`, root); const raw = inp.value.trim(); const v = parseNumber(raw);
       if (isNaN(v)) { inp.classList.add('invalid'); toast('Enter a number, fraction, or expression like 2pi'); return; }
       const tol = q.tol ? Math.max(q.tol * Math.abs(q.answer), 1e-9) : Math.max(0.011, 0.005 * Math.abs(q.answer));
-      s.answers[qi] = { raw, val: v, ok: Math.abs(v - q.answer) <= tol };
-      if (s.mode === 'practice') { App.recordAnswer(q.topic, s.answers[qi].ok); this.repaintQ(root, qi); this.paintSession(root); this.scrollTo(root, q); }
+      const assistedNum = s.mode === 'practice' && s.ladder && (s.ladder[qi] || 0) >= App.ladder(q).length;
+      s.answers[qi] = { raw, val: v, ok: Math.abs(v - q.answer) <= tol, assisted: assistedNum };
+      if (s.mode === 'practice') { if (!assistedNum) App.recordAnswer(q.topic, s.answers[qi].ok); else App.markActivity(); this.repaintQ(root, qi); this.paintSession(root); this.scrollTo(root, q); }
       else this.repaintQ(root, qi);
     },
     repaintQ(root, qi) { const q = PQ.session.questions[qi]; const old = $(`#qc-${q.id}`, root); if (!old) return; const tmp = document.createElement('div'); tmp.innerHTML = this.qHtml(q, qi); old.replaceWith(tmp.firstElementChild); typeset($(`#qc-${q.id}`, root)); },
@@ -216,7 +247,7 @@
             <div class="panel-h"><div><div class="panel-title">${icon('flag')} ${esc(SET.title)}</div><p class="small muted">${esc(SET.subtitle)}</p></div>
               <div class="row"><span class="chip">${doneCount}/${SET.problems.length} done</span>${hasGraph ? `<div class="tabs" style="margin:0;border:0">${[['all', 'All ' + SET.problems.length], ['calc', 'Computational'], ['graph', 'Graph-based']].map(([k, l]) => `<button class="tab${filter === k ? ' active' : ''}" data-action="filter" data-f="${k}">${l}</button>`).join('')}</div>` : ''}<button class="btn sm" data-action="print">${icon('print', 13)} Print</button></div></div>
             <div class="callout mb-2 small">${hasGraph ? 'Graph-based problems refer to figures in the PDF; for those the solution here describes exactly what to read off the graph and how to justify it. ' : ''}Work each problem on paper first, then reveal.</div>
-            <div class="stack">${probs.map((p, pi) => { const locked = App.guest() && pi >= 2; return `<div class="q-card" id="pe-${p.n}"><div class="q-top"><label class="check" style="padding:0"><input type="checkbox" data-done="${p.n}" ${done[p.n] ? 'checked' : ''}><span class="q-num">Problem ${p.n}</span></label><span class="chip accent">${esc(App.secLabel(p.sec))}</span>${p.tags.map(tg => QZ.TOPICS[tg] ? `<span class="chip">${esc(QZ.TOPICS[tg].label)}</span>` : '').join('')}${p.graph ? '<span class="chip warn">graph in PDF</span>' : ''}${locked ? `<button class="btn xs" data-action="auth-signup" style="margin-left:auto">${icon('flag', 12)} Solution (members)</button>` : `<button class="btn xs" data-action="sol" data-n="${p.n}" style="margin-left:auto">${icon('eye', 12)} Solution</button>`}</div><div class="q-prompt">${p.q}</div>${locked ? '' : `<div class="reveal q-feedback ok" id="pes-${p.n}" style="background:var(--surface-2);border-color:var(--border)"><b class="res">Solution</b><div>${p.s}</div></div>`}</div>`; }).join('')}</div>${App.guest() && probs.length > 2 ? `<div class="mt-2">${App.lockCard('Worked solutions are for members', `The preview shows solutions for the first two problems. Sign up free for all ${SET.problems.length} worked solutions and a checklist that syncs across devices.`)}</div>` : ''}`
+            <div class="stack">${probs.map((p, pi) => { const locked = App.guest() && pi >= 2; return `<div class="q-card" id="pe-${p.n}"><div class="q-top"><label class="check" style="padding:0"><input type="checkbox" data-done="${p.n}" ${done[p.n] ? 'checked' : ''}><span class="q-num">Problem ${p.n}</span></label><span class="chip accent">${esc(App.secLabel(p.sec))}</span>${p.tags.map(tg => QZ.TOPICS[tg] ? `<span class="chip">${esc(QZ.TOPICS[tg].label)}</span>` : '').join('')}${p.graph ? '<span class="chip warn">graph in PDF</span>' : ''}${locked ? `<button class="btn xs" data-action="auth-signup" style="margin-left:auto">${icon('flag', 12)} Solution (members)</button>` : `<button class="btn xs" data-action="sol" data-n="${p.n}" style="margin-left:auto">${icon('eye', 12)} Solution</button>`}</div><div class="q-prompt">${p.q}</div>${locked ? '' : (() => { const steps = App.splitSteps(p.s); return `<div class="reveal q-feedback ok" id="pes-${p.n}" style="background:var(--surface-2);border-color:var(--border)"><b class="res">Solution${steps.length > 1 ? ` <span class="small muted" style="font-weight:400">· ${steps.length} steps</span>` : ''}</b><div class="steps">${steps.map((st, k) => `<div class="step${k === 0 ? '' : ' hidden'}" data-k="${k}">${st}</div>`).join('')}</div>${steps.length > 1 ? `<div class="row gap-sm mt-1"><button class="btn xs" data-action="step" data-n="${p.n}">${icon('right', 12)} Next step</button><button class="btn xs ghost" data-action="steps-all" data-n="${p.n}">Show all</button></div>` : ''}</div>`; })()}</div>`; }).join('')}</div>${App.guest() && probs.length > 2 ? `<div class="mt-2">${App.lockCard('Worked solutions are for members', `The preview shows solutions for the first two problems. Sign up free for all ${SET.problems.length} worked solutions and a checklist that syncs across devices.`)}</div>` : ''}`
             : `<div class="panel-h"><div class="panel-title">${icon('flag')} ${esc(ex.name)} practice</div></div><div class="empty">No practice set is loaded for ${esc(ex.name)} yet. Use the checklist, drill the exam’s topics in the Quizzer, and redo the homework listed in the syllabus. When a practice set is posted, it can be added here.</div>
               <div class="mt-2"><div class="eyebrow mb-1">Topics on this exam</div><div class="link-grid">${ex.sections.map(id => { const s = App.secById(id); return s ? `<a class="card-link" href="${L('notes', s.id)}" style="padding:10px 12px"><h4 style="font-size:14px">${esc(s.label)} ${esc(s.title)}</h4></a>` : ''; }).join('')}</div></div>`}
           </div>
@@ -225,8 +256,10 @@
       on(root, 'change', 'input[data-done]', el => { const all = store.get('practiceDone', {}); const d = all[exId] || {}; d[el.dataset.done] = el.checked; all[exId] = d; store.set('practiceDone', all); App.markActivity(); });
       bind(root, {
         sol: el => { const s = $(`#pes-${el.dataset.n}`, root); s.classList.toggle('open'); el.innerHTML = s.classList.contains('open') ? `${icon('eye', 12)} Hide` : `${icon('eye', 12)} Solution`; },
+        step: el => { const box = $(`#pes-${el.dataset.n}`, root); const nxt = $('.step.hidden', box); if (nxt) { nxt.classList.remove('hidden'); typeset(nxt); } if (!$('.step.hidden', box)) el.remove(); },
+        'steps-all': el => { const box = $(`#pes-${el.dataset.n}`, root); $$('.step.hidden', box).forEach(x => x.classList.remove('hidden')); typeset(box); el.closest('.row').remove(); },
         filter: el => { this.filter = el.dataset.f; this.render(root, exId); typeset(root); },
-        print: () => { $$('.reveal', root).forEach(r => r.classList.add('open')); window.print(); }
+        print: () => { $$('.reveal', root).forEach(r => r.classList.add('open')); $$('.step.hidden', root).forEach(x => x.classList.remove('hidden')); window.print(); }
       });
     }
   };
