@@ -74,7 +74,8 @@
   S.presencePing = presencePing;
   setInterval(() => { if (document.visibilityState === 'visible') presencePing(); }, 60000);
   window.addEventListener('hashchange', () => setTimeout(presencePing, 300));
-  if (App.auth) App.auth.onChange(() => { setTimeout(presencePing, 200); if (user()) setTimeout(() => S.refreshBadges(true), 1500); });
+  // auth.js loads after this file, so hook up once the page has finished loading scripts
+  document.addEventListener('DOMContentLoaded', () => { if (App.auth) App.auth.onChange(() => { setTimeout(presencePing, 200); if (user()) setTimeout(() => S.refreshBadges(true), 1500); }); });
 
   /* ---------- daily challenge ---------- */
   const Challenge = {
@@ -177,7 +178,6 @@
       } catch (e) { box.innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
     }
   };
-  if (App.auth) App.ensureTermsHook = null;
 
   /* ---------- community mock exams ---------- */
   App.views.mock = {
