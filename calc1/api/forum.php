@@ -5,15 +5,12 @@
    ============================================================ */
 declare(strict_types=1);
 require_once __DIR__ . '/filter.php';
+require_once __DIR__ . '/social.php';
 
 const MH_COURSES = ['calc', 'physics', 'precalc', 'general'];
 const MH_FLAIRS = ['question', 'discussion', 'resource', 'study-group', 'exam', 'other'];
 const MH_PAGE = 25;
 
-function mh_display_name(array $row, string $prefix = ''): string {
-  $name = trim((string)($row[$prefix . 'name'] ?? '')); if ($name !== '') return mb_substr($name, 0, 40);
-  $email = (string)($row[$prefix . 'email'] ?? ''); return $email !== '' ? substr($email, 0, strrpos($email, '@') ?: null) : 'student';
-}
 function mh_banned(int $userId): ?array {
   $st = mh_db()->prepare('SELECT * FROM bans WHERE user_id = ? AND until > ?'); $st->execute([$userId, time()]); $b = $st->fetch(); return $b ?: null;
 }
@@ -26,7 +23,8 @@ function mh_post_row(array $p, ?array $me, bool $mod, array $votes = []): array 
   $mine = $me && (int)$p['user_id'] === (int)$me['id']; $removed = (int)$p['removed'];
   $out = ['id' => (int)$p['id'], 'course' => $p['course'], 'flair' => $p['flair'], 'title' => $removed ? ($removed === 2 ? '[removed by a moderator]' : '[deleted]') : $p['title'], 'body' => $removed ? '' : $p['body'],
     'anon' => (int)$p['anon'], 'author' => (int)$p['anon'] ? 'Anonymous' : mh_display_name($p, 'u_'), 'mine' => $mine, 'created' => (int)$p['created'], 'edited' => $p['edited'] ? (int)$p['edited'] : null,
-    'score' => (int)$p['score'], 'ncomments' => (int)$p['ncomments'], 'pinned' => (int)$p['pinned'], 'locked' => (int)$p['locked'], 'removed' => $removed, 'vote' => $votes['p' . $p['id']] ?? 0];
+    'score' => (int)$p['score'], 'ncomments' => (int)$p['ncomments'], 'pinned' => (int)$p['pinned'], 'locked' => (int)$p['locked'], 'removed' => $removed, 'vote' => $votes['p' . $p['id']] ?? 0,
+    'accepted_id' => $p['accepted_id'] ? (int)$p['accepted_id'] : null, 'author_role' => (int)$p['anon'] ? '' : mh_role($p['u_email']), 'has_poll' => isset($p['has_poll']) ? (int)$p['has_poll'] === 1 : null, 'system' => $p['u_email'] === 'mathub@system.local'];
   if ($mod) { $out['author_real'] = mh_display_name($p, 'u_') . ' <' . $p['u_email'] . '>'; $out['user_id'] = (int)$p['user_id']; if ($removed) { $out['title_real'] = $p['title']; $out['body_real'] = $p['body']; } }
   return $out;
 }
@@ -34,7 +32,7 @@ function mh_comment_row(array $c, ?array $me, bool $mod, int $postAuthor, array 
   $mine = $me && (int)$c['user_id'] === (int)$me['id']; $removed = (int)$c['removed'];
   $out = ['id' => (int)$c['id'], 'post_id' => (int)$c['post_id'], 'parent_id' => $c['parent_id'] ? (int)$c['parent_id'] : null, 'body' => $removed ? ($removed === 2 ? '[removed by a moderator]' : '[deleted]') : $c['body'],
     'anon' => (int)$c['anon'], 'author' => (int)$c['anon'] ? 'Anonymous' : mh_display_name($c, 'u_'), 'is_op' => (int)$c['user_id'] === $postAuthor, 'mine' => $mine, 'created' => (int)$c['created'], 'edited' => $c['edited'] ? (int)$c['edited'] : null,
-    'score' => (int)$c['score'], 'removed' => $removed, 'vote' => $votes['c' . $c['id']] ?? 0];
+    'score' => (int)$c['score'], 'removed' => $removed, 'vote' => $votes['c' . $c['id']] ?? 0, 'author_role' => (int)$c['anon'] ? '' : mh_role($c['u_email']), 'accepted' => isset($c['p_accepted']) && (int)$c['p_accepted'] === (int)$c['id']];
   if ($mod) { $out['author_real'] = mh_display_name($c, 'u_') . ' <' . $c['u_email'] . '>'; $out['user_id'] = (int)$c['user_id']; if ($removed) $out['body_real'] = $c['body']; }
   return $out;
 }
@@ -66,7 +64,7 @@ function mh_notify_reply(array $post, ?array $parent, array $actor, int $comment
     if ($to && (int)($to['notify_email'] ?? 1) === 1 && (int)$to['verified'] === 1 && mh_rate("notifmail:{$uid}:{$post['id']}", 1, 6 * 3600)) {
       try {
         require_once __DIR__ . '/mailer.php'; $cfg = mh_config(); $site = $cfg['site_name'] ?? 'MatHub';
-        $link = rtrim((string)($cfg['site_url'] ?? ('https://' . ($_SERVER['HTTP_HOST'] ?? 'mathub.space'))), '/') . '/#/forum/' . (int)$post['id'];
+        $link = rtrim((string)(($cfg['site_url'] ?? '') ?: ('https://' . ($_SERVER['HTTP_HOST'] ?? 'mathub.space'))), '/') . '/#/forum/' . (int)$post['id'];
         $what = $kind === 'reply' ? 'replied to your comment on' : 'commented on your post';
         $subject = $actorName . ' ' . $what . ' "' . mb_substr($post['title'], 0, 60) . '"';
         $text = $actorName . ' ' . $what . " \"{$post['title']}\":\n\n$snippet\n\nOpen it: $link\n\nYou can turn these emails off in Settings → Account on $site.";
@@ -91,10 +89,11 @@ function mh_forum_route(string $route, array $in, array $cfg, string $ip): void 
       $course = (string)($_GET['course'] ?? ''); $sort = (string)($_GET['sort'] ?? 'hot'); $q = trim((string)($_GET['q'] ?? '')); $page = max(0, (int)($_GET['page'] ?? 0));
       $where = ['p.removed = 0']; $args = [];
       if ($course !== '' && $course !== 'all') { if (!in_array($course, MH_COURSES, true)) mh_fail('Unknown class.'); $where[] = 'p.course = ?'; $args[] = $course; }
+      $filter = (string)($_GET['filter'] ?? ''); if ($filter === 'unanswered') { $where[] = 'p.ncomments = 0'; $where[] = 'u.email <> "mathub@system.local"'; } elseif ($filter === 'solved') $where[] = 'p.accepted_id IS NOT NULL'; elseif ($filter === 'polls') $where[] = 'EXISTS (SELECT 1 FROM polls pl WHERE pl.post_id = p.id)';
       if ($q !== '') { $where[] = '(p.title LIKE ? OR p.body LIKE ?)'; $like = '%' . str_replace(['%', '_'], ['\\%', '\\_'], mb_substr($q, 0, 80)) . '%'; $args[] = $like; $args[] = $like; }
       $order = $sort === 'new' ? 'p.created DESC' : ($sort === 'top' ? 'p.score DESC, p.created DESC' : 'p.created DESC');
       $limit = $sort === 'hot' ? 400 : MH_PAGE + 1; $offset = $sort === 'hot' ? 0 : $page * MH_PAGE;
-      $st = $db->prepare('SELECT p.*, u.name AS u_name, u.email AS u_email FROM posts p JOIN users u ON u.id = p.user_id WHERE ' . implode(' AND ', $where) . " ORDER BY p.pinned DESC, $order LIMIT $limit OFFSET $offset"); $st->execute($args); $rows = $st->fetchAll();
+      $st = $db->prepare('SELECT p.*, u.name AS u_name, u.email AS u_email, EXISTS (SELECT 1 FROM polls pl WHERE pl.post_id = p.id) AS has_poll FROM posts p JOIN users u ON u.id = p.user_id WHERE ' . implode(' AND ', $where) . " ORDER BY p.pinned DESC, $order LIMIT $limit OFFSET $offset"); $st->execute($args); $rows = $st->fetchAll();
       if ($sort === 'hot') { usort($rows, fn($a, $b) => ($b['pinned'] <=> $a['pinned']) ?: (mh_hot((int)$b['score'], (int)$b['created']) <=> mh_hot((int)$a['score'], (int)$a['created']))); $rows = array_slice($rows, $page * MH_PAGE, MH_PAGE + 1); }
       $more = count($rows) > MH_PAGE; $rows = array_slice($rows, 0, MH_PAGE);
       $votes = mh_my_votes($me, 'p', array_map(fn($r) => (int)$r['id'], $rows));
@@ -104,10 +103,10 @@ function mh_forum_route(string $route, array $in, array $cfg, string $ip): void 
     case 'forum_post':
       mh_method('GET'); $u = mh_require_user();
       $p = mh_get_post((int)($_GET['id'] ?? 0)); if (!$p || ((int)$p['removed'] === 2 && !$mod && (int)$p['user_id'] !== (int)$u['id'])) mh_fail('That post is not available.', 404);
-      $st = $db->prepare('SELECT c.*, u.name AS u_name, u.email AS u_email FROM comments c JOIN users u ON u.id = c.user_id WHERE c.post_id = ? ORDER BY c.created ASC'); $st->execute([$p['id']]); $cs = $st->fetchAll();
+      $st = $db->prepare('SELECT c.*, u.name AS u_name, u.email AS u_email, ? AS p_accepted FROM comments c JOIN users u ON u.id = c.user_id WHERE c.post_id = ? ORDER BY c.created ASC'); $st->execute([(int)$p['accepted_id'], $p['id']]); $cs = $st->fetchAll();
       $votes = array_merge(mh_my_votes($u, 'p', [(int)$p['id']]), mh_my_votes($u, 'c', array_map(fn($c) => (int)$c['id'], $cs)));
       $b = mh_banned((int)$u['id']);
-      mh_json(['ok' => true, 'post' => mh_post_row($p, $u, $mod, $votes), 'comments' => array_map(fn($c) => mh_comment_row($c, $u, $mod, (int)$p['user_id'], $votes), $cs), 'mod' => $mod, 'banned' => $b ? (int)$b['until'] : 0, 'terms' => (int)$u['terms_accepted'] > 0]);
+      mh_json(['ok' => true, 'post' => mh_post_row($p, $u, $mod, $votes), 'comments' => array_map(fn($c) => mh_comment_row($c, $u, $mod, (int)$p['user_id'], $votes), $cs), 'poll' => mh_poll_view((int)$p['id'], (int)$u['id']), 'mod' => $mod, 'banned' => $b ? (int)$b['until'] : 0, 'terms' => (int)$u['terms_accepted'] > 0]);
 
     case 'forum_post_create':
       mh_method('POST'); $u = mh_require_user(); mh_can_post($u);
@@ -120,6 +119,8 @@ function mh_forum_route(string $route, array $in, array $cfg, string $ip): void 
       $db->prepare('INSERT INTO posts (user_id, course, flair, title, body, anon, created, ip) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')->execute([$u['id'], $course, $flair, $title, $body, $anon, $now, $ip]);
       $id = (int)$db->lastInsertId();
       $db->prepare('INSERT OR REPLACE INTO votes (user_id, kind, item_id, value) VALUES (?, "p", ?, 1)')->execute([$u['id'], $id]); mh_recount('p', $id);
+      if (!empty($in['poll']) && is_array($in['poll']) && !empty($in['poll']['options'])) { try { mh_poll_create($id, (array)$in['poll']['options'], (string)($in['poll']['question'] ?? ''), !empty($in['poll']['multi']) ? 1 : 0); } catch (Throwable $e) { $db->prepare('DELETE FROM posts WHERE id = ?')->execute([$id]); mh_fail($e->getMessage()); } }
+      mh_activity('post', $course, ($flair === 'question' ? 'New question: ' : 'New post: ') . $title, '#/forum/' . $id); mh_award_badges((int)$u['id'], [], $course);
       mh_json(['ok' => true, 'post' => mh_post_row(mh_get_post($id), $u, $mod, ['p' . $id => 1])]);
 
     case 'forum_post_edit':
@@ -151,7 +152,7 @@ function mh_forum_route(string $route, array $in, array $cfg, string $ip): void 
       $id = (int)$db->lastInsertId();
       $db->prepare('INSERT OR REPLACE INTO votes (user_id, kind, item_id, value) VALUES (?, "c", ?, 1)')->execute([$u['id'], $id]); mh_recount('c', $id);
       $db->prepare('UPDATE posts SET ncomments = (SELECT COUNT(*) FROM comments WHERE post_id = ? AND removed = 0) WHERE id = ?')->execute([$p['id'], $p['id']]);
-      mh_notify_reply($p, $parent ? mh_get_comment($parent) : null, $u, $id, $body, $anon);
+      mh_notify_reply($p, $parent ? mh_get_comment($parent) : null, $u, $id, $body, $anon); mh_award_badges((int)$u['id'], [], $p['course']);
       mh_json(['ok' => true, 'comment' => mh_comment_row(mh_get_comment($id), $u, $mod, (int)$p['user_id'], ['c' . $id => 1])]);
 
     case 'forum_comment_edit':
@@ -214,6 +215,29 @@ function mh_forum_route(string $route, array $in, array $cfg, string $ip): void 
       if (in_array($action, ['remove', 'restore'], true) || ($action === 'ban' && $item)) $db->prepare('UPDATE reports SET status = "closed" WHERE kind = ? AND item_id = ?')->execute([$kind, $id]);
       mh_json(['ok' => true]);
 
+    /* ---------- accepted answers ---------- */
+    case 'forum_accept':
+      mh_method('POST'); $u = mh_require_user();
+      $p = mh_get_post((int)($in['post_id'] ?? 0)); if (!$p) mh_fail('Post not found.', 404);
+      if ((int)$p['user_id'] !== (int)$u['id'] && !$mod) mh_fail('Only the person who asked can accept an answer.', 403);
+      $cid = (int)($in['comment_id'] ?? 0); $c = mh_get_comment($cid); if (!$c || (int)$c['post_id'] !== (int)$p['id']) mh_fail('Comment not found.', 404);
+      $newVal = (int)$p['accepted_id'] === $cid ? null : $cid;
+      $db->prepare('UPDATE posts SET accepted_id = ? WHERE id = ?')->execute([$newVal, $p['id']]);
+      if ($newVal) { mh_award_badges((int)$c['user_id'], [], $p['course']); mh_activity('solved', $p['course'], 'A question was solved: ' . $p['title'], '#/forum/' . $p['id']); if ((int)$c['user_id'] !== (int)$u['id']) { $db->prepare('INSERT INTO notifications (user_id, kind, post_id, comment_id, actor_id, actor, title, snippet, created) VALUES (?, "accepted", ?, ?, ?, ?, ?, ?, ?)')->execute([$c['user_id'], $p['id'], $cid, $u['id'], mh_display_name($u), mb_substr($p['title'], 0, 120), 'Your answer was accepted', time()]); } }
+      mh_json(['ok' => true, 'accepted_id' => $newVal]);
+
+    case 'admin_digest_test':
+      mh_method('POST'); $u = mh_require_user(); if (!mh_is_admin($u)) mh_fail('Administrators only.', 403);
+      require_once __DIR__ . '/mailer.php'; [$subject, $text, $html] = mh_digest_content($u, mh_digest_context()); $r = mh_send_mail($cfg, $u['email'], $subject, $text, $html);
+      if (!$r['ok']) mh_fail('Could not send: ' . ($r['error'] ?? 'unknown error'), 502);
+      mh_json(['ok' => true, 'message' => 'Test digest sent to ' . $u['email']]);
+
+    case 'admin_role':
+      mh_method('POST'); $u = mh_require_user(); if (!mh_is_admin($u)) mh_fail('Administrators only.', 403);
+      $email = strtolower(mh_str($in, 'email', 254)); $role = (string)($in['role'] ?? ''); if (!filter_var($email, FILTER_VALIDATE_EMAIL)) mh_fail('Enter a valid email.'); if (!in_array($role, ['', 'Instructor', 'TA'], true)) mh_fail('Role must be Instructor, TA or empty.');
+      if ($role === '') $db->prepare('DELETE FROM roles WHERE email = ?')->execute([$email]); else $db->prepare('INSERT INTO roles (email, role, updated) VALUES (?, ?, ?) ON CONFLICT(email) DO UPDATE SET role = excluded.role, updated = excluded.updated')->execute([$email, $role, time()]);
+      mh_json(['ok' => true]);
+
     /* ---------- notifications ---------- */
     case 'notif_list':
       mh_method('GET'); $u = mh_require_user();
@@ -248,6 +272,8 @@ function mh_forum_route(string $route, array $in, array $cfg, string $ip): void 
       mh_json(['ok' => true, 'users' => $n('SELECT COUNT(*) FROM users WHERE verified = 1'), 'pending' => $n('SELECT COUNT(*) FROM users WHERE verified = 0'), 'active_7d' => $n('SELECT COUNT(*) FROM users WHERE last_login > ' . ($now - 7 * 86400)),
         'posts' => $n('SELECT COUNT(*) FROM posts WHERE removed = 0'), 'comments' => $n('SELECT COUNT(*) FROM comments WHERE removed = 0'), 'removed' => $n('SELECT COUNT(*) FROM posts WHERE removed > 0') + $n('SELECT COUNT(*) FROM comments WHERE removed > 0'),
         'reports' => $n('SELECT COUNT(*) FROM reports WHERE status = "open"'), 'bans' => $n('SELECT COUNT(*) FROM bans WHERE until > ' . $now), 'moderators' => array_values(array_unique(array_merge($cfg['admins'] ?? [], $cfg['moderators'] ?? []))), 'admins' => $cfg['admins'] ?? [],
+        'meets' => $n('SELECT COUNT(*) FROM meets WHERE cancelled = 0 AND end > ' . $now), 'mocks' => $n('SELECT COUNT(*) FROM mocks WHERE cancelled = 0 AND start > ' . $now), 'contrib_pending' => $n('SELECT COUNT(*) FROM contributions WHERE status = "pending"'), 'challenges_today' => $n('SELECT COUNT(*) FROM challenge_attempts WHERE date = "' . mh_local_date() . '"'), 'online' => $n('SELECT COUNT(*) FROM presence WHERE seen > ' . ($now - 150)),
+        'roles' => array_map(fn($r) => ['email' => $r['email'], 'role' => $r['role']], $db->query('SELECT email, role FROM roles ORDER BY email')->fetchAll()), 'staff_config' => $cfg['staff'] ?? [], 'digest_window' => mh_digest_window_start(), 'digest_sent_week' => $n('SELECT COUNT(*) FROM users WHERE digest_sent >= ' . mh_week_start()), 'cron_configured' => (string)($cfg['cron_key'] ?? '') !== '',
         'settings' => (function () use ($cfg) { require_once __DIR__ . '/canvas.php'; $r = mh_canvas_events(false); return ['canvas_feed' => mh_canvas_feed_url(), 'canvas_from_config' => trim((string)($cfg['canvas_feed'] ?? '')) !== '', 'canvas' => ['configured' => $r['configured'], 'fetched' => $r['fetched'], 'error' => $r['error'], 'count' => count($r['events'])], 'announcement' => (string)mh_setting('announcement', '')]; })()]);
 
     case 'admin_users':

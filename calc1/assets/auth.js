@@ -54,7 +54,7 @@
     }
     window.addEventListener('online', () => { if (Auth.unreachable) Auth.init(); });
     if (Auth.mode === 'server' && !Auth.unreachable) setInterval(() => { if (document.visibilityState === 'visible' && Auth.user) call('me').then(r => { if (r.user) { Auth.user = Object.assign(Auth.user, r.user); Auth.setUnread(r.user.unread || 0); } else if (Auth.user && !Auth.user.local) { Auth.user = null; changed(); App.rerender(); } }).catch(() => {}); }, 90000);
-    Auth.ready = true; changed();
+    Auth.ready = true; changed(); if (App.rebuildNav) App.rebuildNav();
     if (App.current && !(App.current === App.views.practice && App.views.practice.hasSession && App.views.practice.hasSession())) { try { App.rerender(); } catch (e) { console.error(e); } }
     if (Auth.user && Auth.mode === 'server') Auth.pullAll().catch(() => {});
     document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && Auth.user && Auth.mode === 'server' && App.D) Auth.pullCourse(App.D.id, true).catch(() => {}); });
@@ -73,7 +73,7 @@
     try {
       const r = await call('data', { course, data, updated, force: !!force }, 'PUT');
       if (r.stale) { await Auth.pullCourse(course, true); } else setMeta(course, { synced: r.updated });
-      setSyncState('ok');
+      setSyncState('ok'); if (App.social) App.social.refreshBadges();
     } catch (e) { setSyncState(e.status === 401 ? 'out' : 'error'); if (e.status === 401) { Auth.user = null; changed(); } throw e; }
   };
   Auth.pullCourse = async function (course, quiet) {
@@ -230,25 +230,30 @@
     Auth.user = user; Auth.close(); changed();
     toast(isNew ? `Welcome to MatHub, ${user.name || user.email.split('@')[0]}!` : `Welcome back, ${user.name || user.email.split('@')[0]}.`, 2600);
     Auth.pullAll().then(() => App.rerender()).catch(() => App.rerender());
+    if (App.rebuildNav) App.rebuildNav();
   }
   Auth.logout = async function () {
     if (Auth.mode === 'server') { try { await call('logout', {}); } catch {} }
     else writeJSON(LOCAL_KEY, null);
-    Auth.user = null; writeJSON(LAST_KEY, null); changed(); toast('Logged out'); App.rerender();
+    Auth.user = null; writeJSON(LAST_KEY, null); changed(); toast('Logged out'); if (App.rebuildNav) App.rebuildNav(); App.rerender();
   };
 
   /* ---------- settings panel ---------- */
   Auth.settingsPanel = function (root) {
     const u = Auth.user;
-    const html = u ? `<div class="panel"><div class="panel-h"><div class="panel-title">${icon('info')} Account</div><span class="row gap-sm">${u.admin ? '<a class="chip accent" href="#/forum/admin">administrator · admin panel</a>' : u.mod ? '<a class="chip accent" href="#/forum/reports">moderator · report queue</a>' : ''}<span class="chip ${Auth.mode === 'server' ? 'good' : ''}">${Auth.mode === 'server' ? 'synced across devices' : 'local browser only'}</span></span></div>
+    const html = u ? `<div class="panel"><div class="panel-h"><div class="panel-title">${icon('info')} Account</div><span class="row gap-sm">${u.admin ? '<a class="chip accent" href="#/admin">administrator · admin panel</a>' : u.mod ? '<a class="chip accent" href="#/admin">moderator · admin panel</a>' : ''}${u.role ? `<span class="chip staff">${esc(u.role)}</span>` : ''}<span class="chip ${Auth.mode === 'server' ? 'good' : ''}">${Auth.mode === 'server' ? 'synced across devices' : 'local browser only'}</span></span></div>
         <div class="field mb-2"><label>Email</label><div class="mono small">${esc(u.email)}</div></div>
         <div class="field mb-2"><label for="acct-name">Display name</label><div class="row gap-sm"><input class="input" id="acct-name" value="${esc(u.name || '')}" placeholder="Your name" style="max-width:260px"><button class="btn sm" data-action="save-name">Save</button></div></div>
-        ${Auth.mode === 'server' ? `<label class="check" style="padding:0"><input type="checkbox" id="acct-notify" ${u.notify_email === false ? '' : 'checked'}><span>Email me when someone replies to my posts or comments <span class="muted small">(at most one email per post every few hours)</span></span></label>` : ''}
+        ${Auth.mode === 'server' ? `<label class="check" style="padding:0"><input type="checkbox" id="acct-notify" ${u.notify_email === false ? '' : 'checked'}><span>Email me when someone replies to my posts or comments <span class="muted small">(at most one email per post every few hours)</span></span></label>
+        <label class="check" style="padding:0"><input type="checkbox" id="acct-digest" ${u.digest_email === false ? '' : 'checked'}><span>Send me the weekly digest <span class="muted small">(Sunday evening: what is due, top posts, your stats vs. the class)</span></span></label>
+        <label class="check" style="padding:0"><input type="checkbox" id="acct-lb" ${u.show_on_leaderboard === false ? '' : 'checked'}><span>Show my name on leaderboards and helper lists <span class="muted small">(otherwise “Anonymous student”)</span></span></label>
+        <p class="small mt-1"><a href="#/badges">${icon('fire', 13)} Your badges</a></p>` : ''}
         <div class="row gap-sm mt-2">${Auth.mode === 'server' ? `<button class="btn sm" data-action="sync-now">${icon('rotate', 13)} Sync now</button><button class="btn sm" data-action="change-pass">Change password</button>` : ''}<button class="btn sm" data-action="logout">Log out</button><button class="btn sm danger ghost" data-action="delete-acct">Delete account</button></div>
         <p class="small muted mt-2">${Auth.mode === 'server' ? 'Quiz history, flashcard boxes, checklists and grades are saved to your account a moment after each change and load on any device where you log in.' : 'The account server is unreachable, so nothing leaves this browser.'}</p></div>`
       : `<div class="panel"><div class="panel-h"><div class="panel-title">${icon('info')} Account</div><span class="chip warn">preview</span></div>${Auth.lockCard('You are previewing MatHub', 'Sign up to unlock every tool and sync your progress across devices.', { compact: true })}</div>`;
     const wrap = document.createElement('div'); wrap.innerHTML = html; const panel = wrap.firstElementChild;
-    const nt = $('#acct-notify', panel); if (nt) nt.addEventListener('change', async () => { try { const r = await call('profile', { notify_email: nt.checked }); Auth.user = Object.assign(Auth.user, r.user); toast(nt.checked ? 'Reply emails on' : 'Reply emails off'); } catch (e) { toast(e.message); nt.checked = !nt.checked; } });
+    const pref = (id, key, onMsg, offMsg) => { const el = $('#' + id, panel); if (el) el.addEventListener('change', async () => { try { const r = await call('profile', { [key]: el.checked }); Auth.user = Object.assign(Auth.user, r.user); toast(el.checked ? onMsg : offMsg); } catch (e) { toast(e.message); el.checked = !el.checked; } }); };
+    pref('acct-notify', 'notify_email', 'Reply emails on', 'Reply emails off'); pref('acct-digest', 'digest_email', 'Weekly digest on', 'Weekly digest off'); pref('acct-lb', 'show_on_leaderboard', 'Your name shows on leaderboards', 'You appear as “Anonymous student”');
     bind(panel, {
       'auth-signup': () => Auth.open('signup'), 'auth-login': () => Auth.open('login'), logout: () => Auth.logout(),
       'save-name': async () => { const name = $('#acct-name', panel).value.trim(); if (Auth.mode === 'server') { try { const r = await call('profile', { name }); Auth.user = r.user; } catch (e) { toast(e.message); return; } } else { Auth.user.name = name; writeJSON(LOCAL_KEY, Auth.user); } changed(); toast('Name saved'); },

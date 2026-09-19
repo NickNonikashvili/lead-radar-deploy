@@ -72,6 +72,42 @@ unban, verify or delete any account. Both lists ship with nikoloz.nonikashvili@s
   and the site can be installed to a phone's home screen. A logged-in member stays logged in while offline;
   progress syncs when the connection returns. The account server itself is never cached.
 
+## Community
+
+- **Daily challenge** (`#/challenge`, and in every class): one problem per class per day, the same for everyone,
+  generated from a seed of the date so no question bank is stored. 10 points for a correct answer, up to 5 for
+  speed, 2 for trying; today's fastest, this week's board per class and across classes. Names can be hidden in
+  Settings.
+- **Badges** (`#/badges`): streaks, questions answered, accepted answers, challenges, mock exams, contributions,
+  founders. Computed on the server from progress and board data; a toast announces new ones.
+- **Live presence**: a heartbeat every minute shows "N studying now" in the top bar, on the landing page and
+  on open threads.
+- **Study sessions** (`#/meet`): post where and when you are studying; classmates RSVP; sessions vanish an hour
+  after they end.
+- **Polls**: any post can carry an anonymous poll. After each exam the site itself posts an anonymous
+  "How did it go?" poll with score buckets (created the first time a member opens that class's dashboard).
+- **Accepted answers and helpers**: the asker (or a moderator) marks the answer that solved it; the board
+  filters by Unanswered / Solved / Polls and shows the week's top helpers.
+- **Community mock exams** (`#/mock`): moderators schedule a timed set from the admin panel; everyone gets the
+  same seeded questions inside the Quizzer; rankings unlock when the window closes.
+- **Contributions** (Contribute in every class): students submit practice problems and flashcards, moderators
+  approve them in the admin panel, members vote; approved flashcards can be mixed into the Flashcards deck with
+  the "Community cards" button.
+- **Activity feed** on the landing page and admin overview: new posts, solved questions, challenge solves,
+  badges, sessions, mocks, polls and approved contributions (anonymized except for posts).
+- **Weekly digest**: Sunday evening email with what is due (Canvas), the top posts, the member's own stats
+  against the class average, and upcoming sessions and mocks. Sent in small batches from normal traffic, or
+  all at once by a cron call (`api/index.php?r=cron&key=<cron_key>`; see the admin panel's Digest tab).
+- **Verified staff**: emails marked Instructor or TA (admin panel → Site settings, or `staff` in config) get a
+  badge next to their posts.
+
+## Admin panel
+
+`#/admin` (also in the sidebar for staff): Overview with stats and the activity feed, Members (search, ban,
+unban, verify, delete), Reports, Contributions queue, Mock exams (schedule and cancel), Site settings
+(Canvas feed, announcement banner, Instructor/TA badges) and Digest & cron. Moderators see Reports,
+Contributions and Mock exams; administrators see everything.
+
 ## Preview vs. members
 
 Without an account a visitor can browse the dashboards, calendars, syllabus pages, the first three
@@ -103,6 +139,7 @@ public_html/
     lib.php, mailer.php     helpers (blocked from the web by api/.htaccess)
     forum.php, filter.php   discussion board endpoints and the language filter
     canvas.php              Canvas calendar feed sync
+    social.php              challenges, badges, presence, sessions, polls, mocks, contributions, digest
   sw.js                     service worker for offline use
     config.php              <-- edit this one
     data/                   SQLite database is created here automatically (blocked from the web)

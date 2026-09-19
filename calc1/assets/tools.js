@@ -17,7 +17,19 @@
     if (ex.cumulative) return Object.keys(QZ.TOPICS).filter(t => t !== 'substitution');
     return Object.keys(QZ.TOPICS).filter(t => ex.sections.includes(QZ.TOPICS[t].sec));
   }
-  App.onCourse(C => { D = C; QZ = C.quiz; PQ.units = [1]; PQ.topics = new Set(); PQ.session = null; PQ.smart = null; });
+  App.onCourse(C => { D = C; QZ = C.quiz; PQ.units = [1]; PQ.topics = new Set(); PQ.session = null; PQ.smart = null; PQ.external = null; });
+  /** Runs a supplied question set as a timed exam; opts = { questions, minutes, title, onSubmit(correct, total, seconds) }. */
+  App.runTimedSet = function (opts) {
+    PQ.external = opts; PQ.mode = 'exam'; PQ.minutes = opts.minutes || 30; PQ.count = opts.questions.length; PQ.topics = new Set(opts.questions.map(q => q.topic)); PQ.units = [...new Set(opts.questions.map(q => QZ.TOPICS[q.topic] ? QZ.TOPICS[q.topic].unit : 1))];
+    PQ.session = { questions: opts.questions, answers: {}, mode: 'exam', submitted: false, left: PQ.minutes * 60, timer: null, external: true };
+    App.go('practice');
+  };
+  /** Deterministic question set: same seed gives the same questions for everyone (daily challenge, mock exams). */
+  App.seededSet = function (topics, n, seed) {
+    let s = (seed >>> 0) || 1; const rnd = () => { s += 0x6D2B79F5; let t = s; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+    const orig = Math.random; Math.random = rnd; const realNow = Date.now; Date.now = () => 1700000000000 + Math.floor(rnd() * 1e9);
+    try { const qs = QZ.generateSet(topics, n); qs.forEach((q, i) => { q.id = 'sq' + seed.toString(36) + i; }); return qs; } finally { Math.random = orig; Date.now = realNow; }
+  };
   /* Smart review: rank topics by weakness, staleness and coverage; returns a weighted topic list plus reasons. */
   App.smartReview = function (max = 8) {
     const t = App.todayISO(); const prog = App.progress(); const hist = store.get('history', []);
@@ -42,11 +54,13 @@
       else if (query.topics) { const ts = query.topics.split(',').filter(t => QZ.TOPICS[t]); if (ts.length) { PQ.units = [...new Set(ts.map(t => QZ.TOPICS[t].unit))]; PQ.topics = new Set(ts); PQ.session = null; } }
       else if (query.unit) { PQ.units = [+query.unit]; PQ.topics = new Set(QZ.topicsForUnits(PQ.units)); PQ.session = null; }
       if (query.smart) { const sr = App.smartReview(); if (sr.picked.length) { PQ.smart = sr; PQ.topics = new Set(sr.picked.map(r => r.topic)); PQ.units = [...new Set(sr.picked.map(r => r.unit))].sort(); PQ.session = null; PQ.mode = 'practice'; } }
+      if (PQ.external && PQ.session && !PQ.session.external) PQ.external = null;
       if (!PQ.topics.size) PQ.topics = new Set(QZ.topicsForUnits(PQ.units));
       if (Object.keys(query).length) App.replaceHash(L('practice'));
-      root.innerHTML = pageHead('Quizzer', 'Endless procedurally generated problems with worked explanations. Practice mode grades as you go; exam mode hides feedback until you submit.' + (D.quizNote ? ' ' + esc(D.quizNote) : '')) + `<div id="pq-setup"></div><div id="pq-session" class="mt-2"></div>`;
+      const ext = PQ.external && PQ.session && PQ.session.external ? PQ.external : null;
+      root.innerHTML = pageHead(ext ? ext.title || 'Timed set' : 'Quizzer', ext ? `Timed set of ${PQ.session.questions.length} questions, ${PQ.minutes} minutes. Everyone gets the same questions. Feedback appears when you submit.` : 'Endless procedurally generated problems with worked explanations. Practice mode grades as you go; exam mode hides feedback until you submit.' + (D.quizNote ? ' ' + esc(D.quizNote) : '')) + `<div id="pq-setup"${ext ? ' class="hidden"' : ''}></div><div id="pq-session" class="mt-2"></div>`;
       this.paintSetup(root);
-      if (PQ.session) this.paintSession(root); else this.start(root);
+      if (PQ.session) { this.paintSession(root); if (ext && !PQ.session.timer && !PQ.session.submitted) { PQ.session.timer = setInterval(() => { const s = PQ.session; if (!s || s.submitted) return; s.left--; const el = $('#pq-timer', root); if (el) { el.textContent = fmtClock(s.left); el.classList.toggle('low', s.left < 300); } if (s.left <= 0) { this.submit(root); toast('Time is up. Set submitted.', 3000); } }, 1000); } } else this.start(root);
       bind(root, {
         unit: el => { const u = +el.dataset.u; const i = PQ.units.indexOf(u); if (i >= 0) { if (PQ.units.length > 1) PQ.units.splice(i, 1); } else PQ.units.push(u); PQ.units.sort(); PQ.topics = new Set(QZ.topicsForUnits(PQ.units)); PQ.smart = null; this.paintSetup(root); },
         topic: el => { const t = el.dataset.t; if (PQ.topics.has(t)) { if (PQ.topics.size > 1) PQ.topics.delete(t); } else PQ.topics.add(t); PQ.smart = null; this.paintSetup(root); },
@@ -155,6 +169,7 @@
     submit(root) {
       const s = PQ.session; if (!s || s.submitted) return; s.submitted = true; if (s.timer) clearInterval(s.timer);
       s.questions.forEach((q, i) => { const a = s.answers[i]; App.recordAnswer(q.topic, !!(a && a.ok)); });
+      if (s.external && PQ.external && PQ.external.onSubmit) { const correct = s.questions.filter((q, i) => s.answers[i] && s.answers[i].ok).length; try { PQ.external.onSubmit(correct, s.questions.length, PQ.minutes * 60 - s.left); } catch (e) { console.error(e); } }
       this.paintSession(root); window.scrollTo({ top: 0, behavior: 'smooth' });
     },
     summaryHtml(s) {

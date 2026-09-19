@@ -42,6 +42,15 @@ return [
   'canvas_course_match' => ['calc' => ['M 171', 'M171', 'Calculus I'], 'physics' => ['PHSX 220', 'PHSX220', 'Physics I'], 'precalc' => ['M 151', 'M151', 'Precalc']],
   'timezone'        => 'America/Denver',
 
+  // Verified staff, shown with a badge on the board: 'email' => 'Instructor' or 'TA'. Can also be managed in the admin panel.
+  'staff'           => [],
+
+  // Weekly digest emails go out on Sunday evening. They are sent a few at a time whenever the site is used, or all at once
+  // when a Hostinger cron job calls  api/index.php?r=cron&key=<cron_key>  (leave blank to rely on site traffic).
+  'cron_key'        => '',
+  'digest_day'      => 0,    // 0 = Sunday … 6 = Saturday (local time, see 'timezone')
+  'digest_hour'     => 17,   // send from 5 pm local time
+
   // Optional. If set, GET api/index.php?r=stats with header X-Admin-Key: <this value> returns sign-up counts.
   'admin_key'       => '',
 

@@ -11,7 +11,7 @@
   const API = 'api/index.php?r=';
   const COURSE_META = () => { const m = { all: { short: 'All classes' }, general: { short: 'General', name: 'General / campus' } }; for (const id of App.COURSE_ORDER) if (global.Courses[id]) m[id] = { short: global.Courses[id].short, name: global.Courses[id].name }; return m; };
   const FLAIRS = { question: 'Question', discussion: 'Discussion', resource: 'Resource', 'study-group': 'Study group', exam: 'Exam', other: 'Other' };
-  const F = { sort: 'hot', course: null, q: '', page: 0, posts: [], more: false, thread: null };
+  const F = { sort: 'hot', course: null, q: '', page: 0, posts: [], more: false, thread: null, filter: '' };
   const auth = () => App.auth || {};
   const user = () => auth().user || null;
   const offline = () => auth().mode === 'offline';
@@ -49,7 +49,7 @@
   const timeAgo = ts => { const s = Math.max(0, Date.now() / 1000 - ts); if (s < 60) return 'just now'; if (s < 3600) return `${Math.floor(s / 60)}m ago`; if (s < 86400) return `${Math.floor(s / 3600)}h ago`; if (s < 86400 * 14) return `${Math.floor(s / 86400)}d ago`; const d = new Date(ts * 1000); return `${['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][d.getMonth()]} ${d.getDate()}`; };
   const courseChip = id => `<span class="chip course-${esc(id)}">${esc((COURSE_META()[id] || { short: id }).short)}</span>`;
   const flairChip = f => `<span class="chip flair flair-${esc(f)}">${esc(FLAIRS[f] || f)}</span>`;
-  const authorHtml = (it, opBadge) => `<span class="fa-author${it.anon ? ' anon' : ''}">${it.anon ? icon('eye', 12) + ' ' : ''}${esc(it.author || 'Anonymous')}</span>${opBadge && it.is_op ? '<span class="chip op">OP</span>' : ''}${isMod() && it.author_real ? `<span class="fa-real" title="Only moderators see this">${esc(it.author_real)}</span>` : ''}`;
+  const authorHtml = (it, opBadge) => `<span class="fa-author${it.anon ? ' anon' : ''}${it.system ? ' system' : ''}">${it.anon ? icon('eye', 12) + ' ' : it.system ? icon('shield', 12) + ' ' : ''}${esc(it.author || 'Anonymous')}</span>${it.author_role ? `<span class="chip staff">${esc(it.author_role)}</span>` : ''}${opBadge && it.is_op ? '<span class="chip op">OP</span>' : ''}${isMod() && it.author_real && !it.system ? `<span class="fa-real" title="Only moderators see this">${esc(it.author_real)}</span>` : ''}`;
   const voteBox = (kind, it, disabled) => `<div class="fa-vote"><button class="fa-v up${it.vote > 0 ? ' on' : ''}" data-action="vote" data-kind="${kind}" data-id="${it.id}" data-v="${it.vote > 0 ? 0 : 1}" ${disabled ? 'disabled' : ''} aria-label="Upvote">${icon('up', 16)}</button><span class="fa-score${it.score < 0 ? ' neg' : ''}">${it.score}</span><button class="fa-v down${it.vote < 0 ? ' on' : ''}" data-action="vote" data-kind="${kind}" data-id="${it.id}" data-v="${it.vote < 0 ? 0 : -1}" ${disabled ? 'disabled' : ''} aria-label="Downvote">${icon('down', 16)}</button></div>`;
   const base = () => F.standalone ? '#/forum' : App.link('forum');
   const threadLink = id => base() + '/' + id;
@@ -90,6 +90,8 @@
     });
   }
 
+  App.ensureTerms = ensureTerms;
+
   /* ---------- the view ---------- */
   App.views.forum = {
     title: 'Discussions',
@@ -122,19 +124,22 @@
         ${F.standalone ? `<div class="row between mb-2"><div></div><a class="btn primary" href="${base()}/new" data-action="new-post">${icon('pen', 14)} New post</a></div>` : ''}
         <div class="panel fa-toolbar"><div class="tabs" style="margin:0;border:0">${[['hot', 'Hot'], ['new', 'New'], ['top', 'Top']].map(([k, l]) => `<button class="tab${F.sort === k ? ' active' : ''}" data-action="sort" data-s="${k}">${l}</button>`).join('')}</div>
           <div class="chips">${['all', ...App.COURSE_ORDER.filter(id => global.Courses[id]), 'general'].map(id => `<span class="chip toggle${F.course === id ? ' on' : ''}" data-action="course" data-c="${id}">${esc(cm[id].short)}</span>`).join('')}</div>
-          <input class="input" id="fa-q" placeholder="Search posts…" value="${esc(F.q)}" style="max-width:220px"></div>
+          <input class="input" id="fa-q" placeholder="Search posts…" value="${esc(F.q)}" style="max-width:220px">
+          <div class="chips fa-filters">${[['', 'All'], ['unanswered', 'Unanswered'], ['solved', 'Solved'], ['polls', 'Polls']].map(([k, l]) => `<span class="chip toggle${F.filter === k ? ' on' : ''}" data-action="filter" data-f="${k}">${l}</span>`).join('')}</div></div>
+        <div id="fa-helpers"></div>
         ${!u ? App.lockCard('Read and join the discussions', 'Members can read every post, ask questions, answer classmates, vote and organize study groups. Visitors see titles only.', { compact: true }) : ''}
         ${offline() ? '<div class="callout small mb-2">Sample content: the discussion server is not reachable in this preview, so these posts are examples and posting is disabled.</div>' : ''}
         <div class="stack" id="fa-list"><div class="empty">Loading…</div></div><div class="row mt-2" id="fa-more" style="justify-content:center"></div>
         ${isMod() ? `<p class="small muted mt-2">${isAdmin() ? 'Administrator' : 'Moderator'}: <a href="${base()}/reports">report queue</a>${isAdmin() ? ` · <a href="${base()}/admin">admin panel</a>` : ''}.</p>` : ''}`;
       const q = $('#fa-q', box); let t; q.addEventListener('input', () => { clearTimeout(t); t = setTimeout(() => { F.q = q.value.trim(); F.page = 0; this.loadList(box); }, 350); });
       this.loadList(box);
+      if (u && !offline()) api('helpers').then(r => { const h = $('#fa-helpers', box); if (!h) return; const rows = r.week.length ? r.week : r.all; if (!rows.length) return; h.innerHTML = `<div class="panel helpers mb-2"><div class="panel-h"><div class="panel-title">${icon('shield')} Helpers ${r.week.length ? 'this week' : 'of all time'}</div><span class="small muted">accepted answers and upvotes</span></div><div class="helper-row">${rows.slice(0, 6).map((x, i) => `<span class="helper"><span class="rank">${i + 1}</span><b>${esc(x.name)}</b>${x.role ? `<span class="chip staff">${esc(x.role)}</span>` : ''}<span class="muted small">${x.points} pts${x.accepted ? ` · ${x.accepted} accepted` : ''}</span></span>`).join('')}</div></div>`; }).catch(() => {});
     },
     async loadList(box, append) {
       const listEl = $('#fa-list', box); if (!listEl) return;
       if (offline()) { const posts = DEMO.posts.filter(p => F.course === 'all' || p.course === F.course).filter(p => !F.q || (p.title + p.body).toLowerCase().includes(F.q.toLowerCase())); F.posts = posts; F.more = false; this.paintList(box, false, !user()); return; }
       try {
-        const r = await api(`forum_posts&course=${encodeURIComponent(F.course)}&sort=${F.sort}&q=${encodeURIComponent(F.q)}&page=${F.page}`);
+        const r = await api(`forum_posts&course=${encodeURIComponent(F.course)}&sort=${F.sort}&q=${encodeURIComponent(F.q)}&page=${F.page}&filter=${F.filter}`);
         F.posts = append ? F.posts.concat(r.posts) : r.posts; F.more = r.more; this.paintList(box, false, r.guest);
       } catch (e) { listEl.innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
     },
@@ -147,7 +152,7 @@
     postCard(p, guest) {
       const link = threadLink(p.id);
       return `<article class="fa-post${p.pinned ? ' pinned' : ''}" id="fp-${p.id}">${voteBox('p', p, guest || offline())}
-        <div class="fa-main"><div class="fa-meta">${courseChip(p.course)}${flairChip(p.flair)}${p.pinned ? `<span class="chip good">${icon('pin', 11)} Pinned</span>` : ''}${p.locked ? `<span class="chip warn">${icon('lock', 11)} Locked</span>` : ''}${guest ? '' : `<span class="sep">·</span>${authorHtml(p)}`}<span class="sep">·</span><span class="muted">${timeAgo(p.created)}</span></div>
+        <div class="fa-main"><div class="fa-meta">${courseChip(p.course)}${flairChip(p.flair)}${p.accepted_id ? `<span class="chip good">${icon('check', 11)} Solved</span>` : ''}${p.has_poll ? `<span class="chip poll">${icon('list', 11)} Poll</span>` : ''}${p.pinned ? `<span class="chip good">${icon('pin', 11)} Pinned</span>` : ''}${p.locked ? `<span class="chip warn">${icon('lock', 11)} Locked</span>` : ''}${guest ? '' : `<span class="sep">·</span>${authorHtml(p)}`}<span class="sep">·</span><span class="muted">${timeAgo(p.created)}</span></div>
           <h3 class="fa-title">${guest ? `<a href="#" data-action="need-login">${esc(p.title)}</a>` : `<a href="${link}">${esc(p.title)}</a>`}</h3>
           ${guest ? '' : `<div class="fa-preview">${esc(p.body.slice(0, 260))}${p.body.length > 260 ? '…' : ''}</div>`}
           <div class="fa-actions"><a href="${guest ? '#' : link}" ${guest ? 'data-action="need-login"' : ''}>${icon('chat', 14)} ${p.ncomments} comment${p.ncomments === 1 ? '' : 's'}</a><button class="fa-act" data-action="share" data-id="${p.id}">${icon('link', 13)} Share</button>${!guest && !p.mine ? `<button class="fa-act" data-action="report" data-kind="p" data-id="${p.id}">${icon('flag', 13)} Report</button>` : ''}</div></div></article>`;
@@ -172,21 +177,28 @@
           <div class="fa-main"><div class="fa-meta">${courseChip(p.course)}${flairChip(p.flair)}${p.pinned ? `<span class="chip good">${icon('pin', 11)} Pinned</span>` : ''}${p.locked ? `<span class="chip warn">${icon('lock', 11)} Locked</span>` : ''}<span class="sep">·</span>${authorHtml(p)}<span class="sep">·</span><span class="muted">${timeAgo(p.created)}${p.edited ? ' · edited' : ''}</span></div>
             <h2 class="fa-title big">${esc(p.title)}</h2>
             <div class="fa-body" id="fa-post-body">${p.removed ? `<p class="muted"><i>${esc(p.title)}</i>${isMod() && p.body_real ? `<div class="fa-real-body mt-1"><div class="eyebrow">Original (moderators only)</div>${renderBody(p.body_real)}</div>` : ''}</p>` : renderBody(p.body)}</div>
-            <div class="fa-actions"><span>${icon('chat', 14)} ${p.ncomments} comment${p.ncomments === 1 ? '' : 's'}</span><button class="fa-act" data-action="share" data-id="${p.id}">${icon('link', 13)} Share</button>${p.mine && !p.removed && !ro ? `<button class="fa-act" data-action="edit-post">${icon('pen', 13)} Edit</button><button class="fa-act" data-action="delete-post">${icon('trash', 13)} Delete</button>` : ''}${!p.mine && !ro ? `<button class="fa-act" data-action="report" data-kind="p" data-id="${p.id}">${icon('flag', 13)} Report</button>` : ''}${modTools}</div>
+            ${d.poll ? this.pollHtml(d.poll) : ''}
+            <div class="fa-actions"><span>${icon('chat', 14)} ${p.ncomments} comment${p.ncomments === 1 ? '' : 's'}</span>${p.accepted_id ? `<span class="chip good">${icon('check', 11)} Solved</span>` : ''}<span id="fa-here" class="small muted"></span><button class="fa-act" data-action="share" data-id="${p.id}">${icon('link', 13)} Share</button>${p.mine && !p.removed && !ro ? `<button class="fa-act" data-action="edit-post">${icon('pen', 13)} Edit</button><button class="fa-act" data-action="delete-post">${icon('trash', 13)} Delete</button>` : ''}${!p.mine && !ro ? `<button class="fa-act" data-action="report" data-kind="p" data-id="${p.id}">${icon('flag', 13)} Report</button>` : ''}${modTools}</div>
             <div id="fa-edit-post"></div></div></article>
         <div class="panel fa-compose-comment">${canComment ? `<div class="eyebrow mb-1">Add a comment</div><textarea class="input" id="fa-comment" rows="3" placeholder="Be specific. $…$ works for math, **bold**, *italic*, > quote."></textarea><div class="row between mt-1"><label class="check small" style="padding:0"><input type="checkbox" id="fa-comment-anon"><span>Post anonymously</span></label><button class="btn primary sm" data-action="submit-comment">${icon('chat', 13)} Post comment</button></div>` : ro ? '<div class="small muted">Commenting is disabled in this preview.</div>' : p.locked ? `<div class="small muted">${icon('lock', 13)} This post is locked. No new comments.</div>` : '<div class="small muted">This post was removed.</div>'}${d.banned ? `<div class="callout warn small mt-2">Your posting access is paused until ${new Date(d.banned * 1000).toLocaleDateString()}.</div>` : ''}</div>
         <div class="fa-comments" id="fa-comments">${this.commentsHtml(d.comments)}</div>`;
-      typeset(el);
+      typeset(el); if (App.social && App.social.presencePing) setTimeout(App.social.presencePing, 100);
+    },
+    pollHtml(poll) {
+      const total = poll.voters; const voted = poll.mine.length > 0; const u = user();
+      return `<div class="poll" id="fa-poll" data-id="${poll.id}">${poll.question ? `<div class="poll-q">${icon('list', 14)} ${esc(poll.question)}</div>` : ''}
+        <div class="poll-opts">${poll.options.map((o, i) => { const pct = total ? Math.round(100 * o.votes / total) : 0; const mine = poll.mine.includes(i); return voted || !u || offline() ? `<div class="poll-opt${mine ? ' mine' : ''}"><div class="poll-bar" style="width:${pct}%"></div><span class="poll-label">${esc(o.text)}${mine ? ` ${icon('check', 12)}` : ''}</span><span class="poll-pct">${pct}% · ${o.votes}</span></div>` : `<button class="poll-opt choose" data-action="poll-pick" data-i="${i}"><span class="poll-label">${esc(o.text)}</span></button>`; }).join('')}</div>
+        <div class="poll-foot small muted">${total} vote${total === 1 ? '' : 's'} · anonymous${poll.multi ? ' · pick several' : ''}${voted ? ' · <button class="fa-act" data-action="poll-change">change vote</button>' : poll.multi && u ? ' · <button class="btn xs primary" data-action="poll-submit">Vote</button>' : ''}</div></div>`;
     },
     commentsHtml(list) {
       const byParent = {}; list.forEach(c => { (byParent[c.parent_id || 0] = byParent[c.parent_id || 0] || []).push(c); });
-      Object.values(byParent).forEach(arr => arr.sort((a, b) => (b.score - a.score) || (a.created - b.created)));
-      const ro = offline(); const p = F.thread.post;
+      Object.values(byParent).forEach(arr => arr.sort((a, b) => ((b.accepted ? 1 : 0) - (a.accepted ? 1 : 0)) || (b.score - a.score) || (a.created - b.created)));
+      const ro = offline(); const p = F.thread.post; const canAccept = user() && !ro && !p.removed && (p.mine || isMod());
       const node = (c, depth) => {
         const kids = byParent[c.id] || [];
         const acts = c.removed ? '' : `${!ro && !p.locked ? `<button class="fa-act" data-action="reply" data-id="${c.id}">${icon('reply', 12)} Reply</button>` : ''}${c.mine && !ro ? `<button class="fa-act" data-action="edit-comment" data-id="${c.id}">Edit</button><button class="fa-act" data-action="delete-comment" data-id="${c.id}">Delete</button>` : ''}${!c.mine && !ro ? `<button class="fa-act" data-action="report" data-kind="c" data-id="${c.id}">Report</button>` : ''}${isMod() && !ro ? `<span class="fa-mod">${icon('shield', 12)} <button class="fa-act" data-action="mod" data-a="remove" data-kind="c" data-id="${c.id}">Remove</button><button class="fa-act" data-action="ban" data-kind="c" data-id="${c.id}">Ban</button>${isAdmin() ? `<button class="fa-act danger" data-action="purge" data-kind="c" data-id="${c.id}">Delete permanently</button>` : ''}</span>` : ''}`;
-        return `<div class="fa-comment${c.removed ? ' removed' : ''}" id="fc-${c.id}" style="--depth:${Math.min(depth, 8)}">
-          <div class="fa-c-head"><button class="fa-collapse" data-action="collapse" data-id="${c.id}" aria-label="Collapse">[−]</button>${authorHtml(c, true)}<span class="sep">·</span><span class="muted">${timeAgo(c.created)}${c.edited ? ' · edited' : ''}</span>${isMod() && c.removed === 2 ? `<button class="fa-act" data-action="mod" data-a="restore" data-kind="c" data-id="${c.id}">Restore</button>` : ''}</div>
+        return `<div class="fa-comment${c.removed ? ' removed' : ''}${c.accepted ? ' accepted' : ''}" id="fc-${c.id}" style="--depth:${Math.min(depth, 8)}">
+          <div class="fa-c-head"><button class="fa-collapse" data-action="collapse" data-id="${c.id}" aria-label="Collapse">[−]</button>${authorHtml(c, true)}<span class="sep">·</span><span class="muted">${timeAgo(c.created)}${c.edited ? ' · edited' : ''}</span>${c.accepted ? `<span class="chip good">${icon('check', 11)} Accepted answer</span>` : ''}${canAccept && !c.removed && !c.parent_id ? `<button class="fa-act accept" data-action="accept" data-id="${c.id}" title="${c.accepted ? 'Un-accept' : 'Mark as the answer that solved it'}">${icon('check', 12)} ${c.accepted ? 'Un-accept' : 'Accept'}</button>` : ''}${isMod() && c.removed === 2 ? `<button class="fa-act" data-action="mod" data-a="restore" data-kind="c" data-id="${c.id}">Restore</button>` : ''}</div>
           <div class="fa-c-body" id="fcb-${c.id}">${c.removed ? `<i class="muted">${esc(c.body)}</i>${isMod() && c.body_real ? `<div class="fa-real-body mt-1">${renderBody(c.body_real)}</div>` : ''}` : renderBody(c.body)}</div>
           <div class="fa-c-actions">${c.removed ? '' : voteBox('c', c, ro)}${acts}</div>
           <div class="fa-c-reply" id="fcr-${c.id}"></div>
@@ -208,11 +220,14 @@
           <div class="grid cols-2" style="gap:12px"><div class="field"><label for="fa-course">Class</label><select class="select" id="fa-course">${[...App.COURSE_ORDER.filter(id => global.Courses[id]), 'general'].map(id => `<option value="${id}"${id === defCourse ? ' selected' : ''}>${esc(cm[id].name || cm[id].short)}</option>`).join('')}</select></div><div class="field"><label for="fa-flair">Type</label><select class="select" id="fa-flair">${Object.entries(FLAIRS).map(([k, l]) => `<option value="${k}">${l}</option>`).join('')}</select></div></div>
           <div class="field"><label for="fa-body">Body</label><textarea class="input" id="fa-body" rows="10" placeholder="Explain the problem. Paste the exact question if you can."></textarea><span class="help">Plain text. <code>**bold**</code>, <code>*italic*</code>, <code>\`code\`</code>, <code>&gt; quote</code>, and <code>$…$</code> for math (LaTeX). Curse words are censored automatically.</span></div>
           <label class="check" style="padding:0"><input type="checkbox" id="fa-anon"><span>Post anonymously <span class="muted small">(classmates see “Anonymous”; moderators can still see who posted)</span></span></label>
+          <label class="check" style="padding:0"><input type="checkbox" id="fa-poll-on"><span>Add a poll <span class="muted small">(votes are anonymous)</span></span></label>
+          <div id="fa-poll-fields" class="poll-fields hidden"><div class="field"><label for="fa-poll-q">Poll question (optional)</label><input class="input" id="fa-poll-q" maxlength="140" placeholder="e.g. Which topic should the review session focus on?"></div><div class="grid cols-2" style="gap:8px">${[1, 2, 3, 4].map(i => `<input class="input" id="fa-poll-o${i}" maxlength="80" placeholder="Option ${i}${i > 2 ? ' (optional)' : ''}">`).join('')}</div><label class="check small mt-1" style="padding:0"><input type="checkbox" id="fa-poll-multi"><span>Allow picking several options</span></label></div>
           <div class="row gap-sm"><button class="btn primary" data-action="submit-post">${icon('pen', 14)} Post</button><button class="btn" data-action="preview-post">${icon('eye', 14)} Preview</button><span class="small muted">By posting you agree to the <a href="#/policy" target="_blank">community rules</a>.</span></div>
           <div id="fa-post-preview"></div></div>
           <div class="stack"><div class="panel"><div class="panel-h"><div class="panel-title">${icon('bulb')} Tips</div></div><ul class="list small"><li>One question per post.</li><li>Include the section or problem number.</li><li>Show your attempt: people help faster when they can see where you got stuck.</li><li>Math renders: <code>$x^2$</code> becomes $x^2$.</li></ul></div>
           <div class="panel"><div class="panel-h"><div class="panel-title">${icon('shield')} Rules in short</div></div><ul class="list small"><li>Be decent. No harassment or hate.</li><li>Nothing illegal, ever.</li><li>No exam answers during exams.</li><li>Moderators can remove anything.</li></ul><a class="small" href="#/policy" target="_blank">Full terms and privacy policy</a></div></div></div>`;
       typeset(box);
+      const pon = $('#fa-poll-on', box); if (pon) pon.addEventListener('change', () => $('#fa-poll-fields', box).classList.toggle('hidden', !pon.checked));
     },
 
     /* --- moderator report queue --- */
@@ -236,12 +251,13 @@
       if (offline()) { el.innerHTML = '<div class="empty">The inbox needs the discussion server, which is not reachable right now.</div>'; return; }
       try {
         const r = await api('notif_list'); if (auth().setUnread) auth().setUnread(r.unread);
-        el.innerHTML = r.notifications.length ? `<div class="panel" style="padding:6px 8px">${r.notifications.map(n => `<a class="inbox-row${n.read ? '' : ' unread'}" href="${threadLink(n.post_id)}" data-action="open-notif" data-id="${n.id}"><span class="inbox-dot"></span><div class="inbox-body"><div><b>${esc(n.actor)}</b> ${n.kind === 'reply' ? 'replied to your comment on' : 'commented on your post'} <b>${esc(n.title)}</b></div><div class="small muted">${esc(n.snippet)}</div></div><span class="small muted">${timeAgo(n.created)}</span></a>`).join('')}</div>` : '<div class="empty">Nothing yet. When someone answers one of your posts, it shows up here.</div>';
+        el.innerHTML = r.notifications.length ? `<div class="panel" style="padding:6px 8px">${r.notifications.map(n => `<a class="inbox-row${n.read ? '' : ' unread'}" href="${threadLink(n.post_id)}" data-action="open-notif" data-id="${n.id}"><span class="inbox-dot"></span><div class="inbox-body"><div><b>${esc(n.actor)}</b> ${n.kind === 'reply' ? 'replied to your comment on' : n.kind === 'accepted' ? 'accepted your answer on' : 'commented on your post'} <b>${esc(n.title)}</b></div><div class="small muted">${esc(n.snippet)}</div></div><span class="small muted">${timeAgo(n.created)}</span></a>`).join('')}</div>` : '<div class="empty">Nothing yet. When someone answers one of your posts, it shows up here.</div>';
       } catch (e) { el.innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
     },
 
     /* --- administrator panel --- */
     async admin(box, q, page) {
+      if (App.views.admin && App.views.admin !== this) { location.hash = '#/admin'; return; }
       box.innerHTML = `<div class="fa-back"><a href="${base()}">${icon('left', 14)} All discussions</a> <span class="sep muted">·</span> <a href="${base()}/reports">Report queue</a></div>${pageHead('Admin panel', 'Site overview and member management. You can ban, unban or delete any account, and permanently delete any post or comment from its thread.')}<div id="fa-admin"><div class="empty">Loading…</div></div>`;
       const el = $('#fa-admin', box);
       if (!isAdmin()) { el.innerHTML = '<div class="empty">Administrators only.</div>'; return; }
@@ -266,6 +282,11 @@
       const refreshThread = async () => { const d = await api('forum_post&id=' + F.thread.post.id); F.thread = d; self.paintThread($('#fa-thread', root)); };
       return {
         sort: el => { F.sort = el.dataset.s; F.page = 0; self.list(V()); },
+        filter: el => { F.filter = el.dataset.f; F.page = 0; self.list(V()); },
+        'poll-pick': async el => { const poll = F.thread.poll; if (!poll) return; if (poll.multi) { el.classList.toggle('picked'); return; } try { const r = await api('poll_vote', { poll_id: poll.id, options: [+el.dataset.i] }); F.thread.poll = r.poll; $('#fa-poll', root).outerHTML = self.pollHtml(r.poll); toast('Vote counted'); } catch (e) { toast(e.message, 3000); } },
+        'poll-submit': async () => { const poll = F.thread.poll; const picks = $$('#fa-poll .poll-opt.picked', root).map(b => +b.dataset.i); if (!picks.length) { toast('Pick at least one option.'); return; } try { const r = await api('poll_vote', { poll_id: poll.id, options: picks }); F.thread.poll = r.poll; $('#fa-poll', root).outerHTML = self.pollHtml(r.poll); toast('Vote counted'); } catch (e) { toast(e.message, 3000); } },
+        'poll-change': () => { const poll = F.thread.poll; poll.mine = []; $('#fa-poll', root).outerHTML = self.pollHtml(poll); },
+        accept: async el => { try { const r = await api('forum_accept', { post_id: F.thread.post.id, comment_id: +el.dataset.id }); toast(r.accepted_id ? 'Marked as the accepted answer' : 'Accepted answer removed'); await refreshThread(); } catch (e) { toast(e.message, 3000); } },
         course: el => { F.course = el.dataset.c; F.page = 0; self.list(V()); },
         more: () => { F.page++; self.loadList(V(), true); },
         'need-login': (el, e) => { e.preventDefault(); auth().open('signup'); },
@@ -286,7 +307,9 @@
           const title = $('#fa-title', root).value.trim(), body = $('#fa-body', root).value.trim(), course = $('#fa-course', root).value, flair = $('#fa-flair', root).value, anon = $('#fa-anon', root).checked;
           if (title.length < 3) { toast('Give the post a title.'); $('#fa-title', root).focus(); return; } if (!body) { toast('Write something in the body.'); $('#fa-body', root).focus(); return; }
           const btn = $('[data-action="submit-post"]', root); btn.disabled = true;
-          try { const r = await api('forum_post_create', { title, body, course, flair, anon }); toast('Posted'); F.course = course; F.sort = 'new'; location.hash = threadLink(r.post.id); } catch (e) { btn.disabled = false; if (e.data && e.data.terms === false) { auth().user.terms = false; } toast(e.message, 3500); }
+          const pollOn = $('#fa-poll-on', root) && $('#fa-poll-on', root).checked; const poll = pollOn ? { question: $('#fa-poll-q', root).value, options: [1, 2, 3, 4].map(i => $('#fa-poll-o' + i, root).value.trim()).filter(Boolean), multi: $('#fa-poll-multi', root).checked } : null;
+          if (poll && poll.options.length < 2) { toast('A poll needs at least two options.'); btn.disabled = false; return; }
+          try { const r = await api('forum_post_create', { title, body, course, flair, anon, poll }); toast('Posted'); F.course = course; F.sort = 'new'; location.hash = threadLink(r.post.id); } catch (e) { btn.disabled = false; if (e.data && e.data.terms === false) { auth().user.terms = false; } toast(e.message, 3500); }
         },
         'preview-post': () => { const title = $('#fa-title', root).value, body = $('#fa-body', root).value; const pv = $('#fa-post-preview', root); pv.innerHTML = `<div class="divider"></div><div class="eyebrow mb-1">Preview</div><div class="fa-post full" style="border-style:dashed"><div class="fa-main"><h2 class="fa-title big">${esc(censor(title) || 'Untitled')}</h2><div class="fa-body">${renderBody(censor(body))}</div></div></div>`; typeset(pv); },
         'submit-comment': async () => { await self.postComment(root, null, $('#fa-comment', root), $('#fa-comment-anon', root).checked); },

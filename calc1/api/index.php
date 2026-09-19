@@ -19,6 +19,7 @@ switch ($route) {
     mh_method('GET');
     require_once __DIR__ . '/mailer.php';
     $db = mh_db(); mh_secret();
+    try { require_once __DIR__ . '/social.php'; mh_housekeeping(); } catch (Throwable $e) { /* never block the site */ }
     mh_json(['ok' => true, 'site' => $cfg['site_name'] ?? 'MatHub', 'domains' => $cfg['allowed_domains'], 'mail' => mh_mail_mode($cfg), 'user' => ($u = mh_current_user()) ? mh_user_public($u) : null]);
 
   case 'me':
@@ -110,7 +111,9 @@ switch ($route) {
     mh_method('POST');
     $u = mh_require_user(); $name = array_key_exists('name', $in) ? mh_str($in, 'name', 60) : $u['name'];
     $notify = array_key_exists('notify_email', $in) ? (!empty($in['notify_email']) ? 1 : 0) : (int)($u['notify_email'] ?? 1);
-    mh_db()->prepare('UPDATE users SET name = ?, notify_email = ? WHERE id = ?')->execute([$name, $notify, $u['id']]); $u['name'] = $name; $u['notify_email'] = $notify;
+    $lb = array_key_exists('show_on_leaderboard', $in) ? (!empty($in['show_on_leaderboard']) ? 1 : 0) : (int)($u['show_on_leaderboard'] ?? 1);
+    $dg = array_key_exists('digest_email', $in) ? (!empty($in['digest_email']) ? 1 : 0) : (int)($u['digest_email'] ?? 1);
+    mh_db()->prepare('UPDATE users SET name = ?, notify_email = ?, show_on_leaderboard = ?, digest_email = ? WHERE id = ?')->execute([$name, $notify, $lb, $dg, $u['id']]); $u['name'] = $name; $u['notify_email'] = $notify; $u['show_on_leaderboard'] = $lb; $u['digest_email'] = $dg;
     mh_json(['ok' => true, 'user' => mh_user_public($u)]);
 
   case 'canvas':
@@ -164,5 +167,6 @@ switch ($route) {
 
   default:
     if (str_starts_with($route, 'forum_') || str_starts_with($route, 'admin_') || str_starts_with($route, 'notif_') || $route === 'terms_accept') { require_once __DIR__ . '/forum.php'; mh_forum_route($route, $in, $cfg, $ip); }
+    foreach (['challenge_', 'badges', 'presence', 'meet_', 'poll_', 'mock_', 'contrib_', 'activity', 'cron', 'helpers'] as $pre) if (str_starts_with($route, $pre)) { require_once __DIR__ . '/social.php'; mh_social_route($route, $in, $cfg, $ip); }
     mh_fail('Not found.', 404);
 }

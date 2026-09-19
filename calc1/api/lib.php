@@ -65,6 +65,26 @@ function mh_db(): PDO {
   $db->exec('CREATE TABLE IF NOT EXISTS notifications (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE, kind TEXT NOT NULL, post_id INTEGER NOT NULL, comment_id INTEGER, actor_id INTEGER, actor TEXT NOT NULL DEFAULT "", title TEXT NOT NULL DEFAULT "", snippet TEXT NOT NULL DEFAULT "", created INTEGER NOT NULL, read INTEGER NOT NULL DEFAULT 0)');
   $db->exec('CREATE INDEX IF NOT EXISTS notif_user ON notifications(user_id, read, created)');
   $db->exec('CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT NOT NULL, updated INTEGER NOT NULL)');
+  // community features (additive)
+  foreach (['show_on_leaderboard' => 1, 'digest_email' => 1] as $col => $def) if (!in_array($col, $cols, true)) $db->exec("ALTER TABLE users ADD COLUMN $col INTEGER NOT NULL DEFAULT $def");
+  if (!in_array('digest_sent', $cols, true)) $db->exec('ALTER TABLE users ADD COLUMN digest_sent INTEGER NOT NULL DEFAULT 0');
+  $pcols = array_column($db->query('PRAGMA table_info(posts)')->fetchAll(), 'name');
+  if (!in_array('accepted_id', $pcols, true)) $db->exec('ALTER TABLE posts ADD COLUMN accepted_id INTEGER');
+  $db->exec('CREATE TABLE IF NOT EXISTS challenge_attempts (user_id INTEGER NOT NULL, course TEXT NOT NULL, date TEXT NOT NULL, ok INTEGER NOT NULL, ms INTEGER NOT NULL, points INTEGER NOT NULL, topic TEXT NOT NULL DEFAULT "", created INTEGER NOT NULL, PRIMARY KEY (user_id, course, date))');
+  $db->exec('CREATE INDEX IF NOT EXISTS ca_course_date ON challenge_attempts(course, date)');
+  $db->exec('CREATE TABLE IF NOT EXISTS badges (user_id INTEGER NOT NULL, code TEXT NOT NULL, earned INTEGER NOT NULL, seen INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (user_id, code))');
+  $db->exec('CREATE TABLE IF NOT EXISTS presence (user_id INTEGER PRIMARY KEY, course TEXT NOT NULL DEFAULT "", view TEXT NOT NULL DEFAULT "", post_id INTEGER NOT NULL DEFAULT 0, seen INTEGER NOT NULL)');
+  $db->exec('CREATE TABLE IF NOT EXISTS meets (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, course TEXT NOT NULL, title TEXT NOT NULL, place TEXT NOT NULL, start INTEGER NOT NULL, end INTEGER NOT NULL, note TEXT NOT NULL DEFAULT "", cancelled INTEGER NOT NULL DEFAULT 0, created INTEGER NOT NULL)');
+  $db->exec('CREATE TABLE IF NOT EXISTS meet_rsvp (meet_id INTEGER NOT NULL, user_id INTEGER NOT NULL, created INTEGER NOT NULL, PRIMARY KEY (meet_id, user_id))');
+  $db->exec('CREATE TABLE IF NOT EXISTS polls (id INTEGER PRIMARY KEY AUTOINCREMENT, post_id INTEGER NOT NULL UNIQUE, question TEXT NOT NULL DEFAULT "", options TEXT NOT NULL, multi INTEGER NOT NULL DEFAULT 0, auto_key TEXT UNIQUE, created INTEGER NOT NULL)');
+  $db->exec('CREATE TABLE IF NOT EXISTS poll_votes (poll_id INTEGER NOT NULL, user_id INTEGER NOT NULL, opt INTEGER NOT NULL, created INTEGER NOT NULL, PRIMARY KEY (poll_id, user_id, opt))');
+  $db->exec('CREATE TABLE IF NOT EXISTS mocks (id INTEGER PRIMARY KEY AUTOINCREMENT, course TEXT NOT NULL, exam_id TEXT NOT NULL, title TEXT NOT NULL, start INTEGER NOT NULL, minutes INTEGER NOT NULL, count INTEGER NOT NULL, seed INTEGER NOT NULL, created_by INTEGER NOT NULL, created INTEGER NOT NULL, cancelled INTEGER NOT NULL DEFAULT 0)');
+  $db->exec('CREATE TABLE IF NOT EXISTS mock_reg (mock_id INTEGER NOT NULL, user_id INTEGER NOT NULL, created INTEGER NOT NULL, PRIMARY KEY (mock_id, user_id))');
+  $db->exec('CREATE TABLE IF NOT EXISTS mock_results (mock_id INTEGER NOT NULL, user_id INTEGER NOT NULL, score INTEGER NOT NULL, total INTEGER NOT NULL, ms INTEGER NOT NULL, created INTEGER NOT NULL, PRIMARY KEY (mock_id, user_id))');
+  $db->exec('CREATE TABLE IF NOT EXISTS contributions (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, course TEXT NOT NULL, kind TEXT NOT NULL, unit INTEGER NOT NULL DEFAULT 0, sec TEXT NOT NULL DEFAULT "", front TEXT NOT NULL, back TEXT NOT NULL, explanation TEXT NOT NULL DEFAULT "", status TEXT NOT NULL DEFAULT "pending", score INTEGER NOT NULL DEFAULT 0, anon INTEGER NOT NULL DEFAULT 0, created INTEGER NOT NULL)');
+  $db->exec('CREATE INDEX IF NOT EXISTS contrib_course ON contributions(course, kind, status)');
+  $db->exec('CREATE TABLE IF NOT EXISTS activity (id INTEGER PRIMARY KEY AUTOINCREMENT, kind TEXT NOT NULL, course TEXT NOT NULL DEFAULT "", text TEXT NOT NULL, link TEXT NOT NULL DEFAULT "", created INTEGER NOT NULL)');
+  $db->exec('CREATE TABLE IF NOT EXISTS roles (email TEXT PRIMARY KEY, role TEXT NOT NULL, updated INTEGER NOT NULL)');
   return $db;
 }
 
@@ -114,7 +134,22 @@ function mh_is_admin(?array $u): bool { return $u ? in_array(strtolower($u['emai
 function mh_is_mod(?array $u): bool { return $u ? (mh_is_admin($u) || in_array(strtolower($u['email']), array_map('strtolower', mh_config()['moderators'] ?? []), true)) : false; }
 function mh_user_public(array $u): array {
   $unread = 0; try { $st = mh_db()->prepare('SELECT COUNT(*) FROM notifications WHERE user_id = ? AND read = 0'); $st->execute([$u['id']]); $unread = (int)$st->fetchColumn(); } catch (Throwable $e) {}
-  return ['id' => (int)$u['id'], 'email' => $u['email'], 'name' => $u['name'], 'verified' => (bool)$u['verified'], 'created' => (int)$u['created'], 'mod' => mh_is_mod($u), 'admin' => mh_is_admin($u), 'terms' => (int)($u['terms_accepted'] ?? 0) > 0, 'notify_email' => (int)($u['notify_email'] ?? 1) === 1, 'unread' => $unread];
+  return ['id' => (int)$u['id'], 'email' => $u['email'], 'name' => $u['name'], 'verified' => (bool)$u['verified'], 'created' => (int)$u['created'], 'mod' => mh_is_mod($u), 'admin' => mh_is_admin($u), 'terms' => (int)($u['terms_accepted'] ?? 0) > 0, 'notify_email' => (int)($u['notify_email'] ?? 1) === 1, 'unread' => $unread,
+    'show_on_leaderboard' => (int)($u['show_on_leaderboard'] ?? 1) === 1, 'digest_email' => (int)($u['digest_email'] ?? 1) === 1, 'role' => mh_role($u['email'])];
+}
+/** Display name: the chosen name, else the part of the email before the @. */
+function mh_display_name(array $row, string $prefix = ''): string {
+  $name = trim((string)($row[$prefix . 'name'] ?? '')); if ($name !== '') return mb_substr($name, 0, 40);
+  $email = (string)($row[$prefix . 'email'] ?? ''); return $email !== '' ? substr($email, 0, strrpos($email, '@') ?: null) : 'student';
+}
+/** Staff role for an email: from the roles table (admin panel) or the config 'staff' map. Returns 'Instructor', 'TA', or ''. */
+function mh_role(string $email): string {
+  static $cache = [];
+  $email = strtolower($email); if (isset($cache[$email])) return $cache[$email];
+  $cfg = mh_config(); $r = '';
+  foreach ($cfg['staff'] ?? [] as $e => $role) if (strtolower((string)$e) === $email) $r = (string)$role;
+  if ($r === '') { try { $st = mh_db()->prepare('SELECT role FROM roles WHERE email = ?'); $st->execute([$email]); $v = $st->fetchColumn(); if ($v) $r = (string)$v; } catch (Throwable $e) {} }
+  return $cache[$email] = $r;
 }
 
 /* ---------- one-time codes ---------- */
