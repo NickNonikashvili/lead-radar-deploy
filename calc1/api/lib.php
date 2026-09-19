@@ -68,6 +68,11 @@ function mh_db(): PDO {
   // community features (additive)
   foreach (['show_on_leaderboard' => 1, 'digest_email' => 1] as $col => $def) if (!in_array($col, $cols, true)) $db->exec("ALTER TABLE users ADD COLUMN $col INTEGER NOT NULL DEFAULT $def");
   if (!in_array('digest_sent', $cols, true)) $db->exec('ALTER TABLE users ADD COLUMN digest_sent INTEGER NOT NULL DEFAULT 0');
+  // personalization + evening reminders (additive)
+  if (!in_array('courses', $cols, true)) $db->exec('ALTER TABLE users ADD COLUMN courses TEXT');
+  if (!in_array('sections', $cols, true)) $db->exec('ALTER TABLE users ADD COLUMN sections TEXT');
+  if (!in_array('reminder_email', $cols, true)) $db->exec('ALTER TABLE users ADD COLUMN reminder_email INTEGER NOT NULL DEFAULT 0');
+  if (!in_array('reminder_sent', $cols, true)) $db->exec('ALTER TABLE users ADD COLUMN reminder_sent INTEGER NOT NULL DEFAULT 0');
   $pcols = array_column($db->query('PRAGMA table_info(posts)')->fetchAll(), 'name');
   if (!in_array('accepted_id', $pcols, true)) $db->exec('ALTER TABLE posts ADD COLUMN accepted_id INTEGER');
   $db->exec('CREATE TABLE IF NOT EXISTS challenge_attempts (user_id INTEGER NOT NULL, course TEXT NOT NULL, date TEXT NOT NULL, ok INTEGER NOT NULL, ms INTEGER NOT NULL, points INTEGER NOT NULL, topic TEXT NOT NULL DEFAULT "", created INTEGER NOT NULL, PRIMARY KEY (user_id, course, date))');
@@ -135,7 +140,8 @@ function mh_is_mod(?array $u): bool { return $u ? (mh_is_admin($u) || in_array(s
 function mh_user_public(array $u): array {
   $unread = 0; try { $st = mh_db()->prepare('SELECT COUNT(*) FROM notifications WHERE user_id = ? AND read = 0'); $st->execute([$u['id']]); $unread = (int)$st->fetchColumn(); } catch (Throwable $e) {}
   return ['id' => (int)$u['id'], 'email' => $u['email'], 'name' => $u['name'], 'verified' => (bool)$u['verified'], 'created' => (int)$u['created'], 'mod' => mh_is_mod($u), 'admin' => mh_is_admin($u), 'terms' => (int)($u['terms_accepted'] ?? 0) > 0, 'notify_email' => (int)($u['notify_email'] ?? 1) === 1, 'unread' => $unread,
-    'show_on_leaderboard' => (int)($u['show_on_leaderboard'] ?? 1) === 1, 'digest_email' => (int)($u['digest_email'] ?? 1) === 1, 'role' => mh_role($u['email'])];
+    'show_on_leaderboard' => (int)($u['show_on_leaderboard'] ?? 1) === 1, 'digest_email' => (int)($u['digest_email'] ?? 1) === 1, 'role' => mh_role($u['email']),
+    'courses' => isset($u['courses']) && $u['courses'] !== null && $u['courses'] !== '' ? (json_decode((string)$u['courses'], true) ?: []) : null, 'sections' => isset($u['sections']) && $u['sections'] ? (json_decode((string)$u['sections'], true) ?: (object)[]) : (object)[], 'reminder_email' => (int)($u['reminder_email'] ?? 0) === 1];
 }
 /** Display name: the chosen name, else the part of the email before the @. */
 function mh_display_name(array $row, string $prefix = ''): string {

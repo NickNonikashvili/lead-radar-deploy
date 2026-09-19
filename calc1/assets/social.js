@@ -277,7 +277,7 @@
   /* ---------- widgets: landing + dashboard ---------- */
   S.fillLanding = async function (root) {
     const el = $('#landing-social', root); if (!el) return;
-    const courses = App.COURSE_ORDER.filter(id => global.Courses[id]);
+    const courses = App.myCourses ? App.myCourses() : App.COURSE_ORDER.filter(id => global.Courses[id]);
     el.innerHTML = `<div class="grid cols-3"><div class="panel span-2"><div class="panel-h"><div class="panel-title">${icon('target')} Today’s challenges</div><a class="btn sm" href="#/challenge">${icon('target', 13)} Play</a></div><div class="challenge-row" id="ls-ch">${courses.map(c => `<a class="card-link ch-card" href="#/challenge?course=${c}"><div class="eyebrow">${esc(courseName(c))}</div><h4 id="lsc-${c}">Loading…</h4><p class="small muted">Same problem for everyone · beat the clock</p></a>`).join('')}</div></div>
       <div class="panel"><div class="panel-h"><div class="panel-title">${icon('bulb')} Happening now</div></div><div id="ls-act"><div class="empty small">Loading…</div></div></div></div>
       <div class="grid cols-2 mt-3"><div class="panel"><div class="panel-h"><div class="panel-title">${icon('clock')} Study sessions</div><a class="btn sm" href="#/meet">Post one</a></div><div id="ls-meet"><div class="empty small">Loading…</div></div></div><div class="panel"><div class="panel-h"><div class="panel-title">${icon('flag')} Mock exams</div><a class="btn sm" href="#/mock">See all</a></div><div id="ls-mock"><div class="empty small">Loading…</div></div></div></div>`;

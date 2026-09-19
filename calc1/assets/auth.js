@@ -41,7 +41,38 @@
   Auth.emailOk = email => { const m = /^[^\s@]+@([^\s@]+)$/.exec(String(email || '').trim().toLowerCase()); if (!m) return false; const dom = m[1]; const allowed = (Auth.health && Auth.health.domains) || ['montana.edu']; return allowed.some(d => dom === d || dom.endsWith('.' + d)); };
   Auth.onChange = fn => Auth.listeners.push(fn);
   Auth.setUnread = n => { if (Auth.user) Auth.user.unread = n; const b = $('#notif-badge'); if (b) { b.textContent = n > 99 ? '99+' : String(n); b.hidden = !(n > 0); } const btn = $('#notif-btn'); if (btn) btn.hidden = !Auth.user || Auth.mode === 'offline'; };
-  function changed() { paintAccount(); paintBanner(); Auth.setUnread(Auth.user ? (Auth.user.unread || 0) : 0); if (Auth.user && !Auth.user.local && Auth.mode === 'server') writeJSON(LAST_KEY, { user: Auth.user, health: Auth.health ? { domains: Auth.health.domains } : null, at: Date.now() }); if (!Auth.user) writeJSON(LAST_KEY, null); Auth.listeners.forEach(fn => { try { fn(Auth.user); } catch (e) { console.error(e); } }); }
+  function applyServerPrefs() {
+    const u = Auth.user; if (!u || u.local) return;
+    if (Array.isArray(u.courses)) App.setSetting('courses', u.courses);
+    if (u.sections && typeof u.sections === 'object') Object.entries(u.sections).forEach(([cid, v]) => { if (!v) return; if (v.section !== undefined) App.setCourseSetting(cid, 'section', v.section || ''); if (v.examTime !== undefined) App.setCourseSetting(cid, 'examTime', v.examTime || ''); if (v.labDay) App.setCourseSetting(cid, 'labDay', v.labDay); });
+  }
+  /** Saves class/section/notification preferences to the account (server) and mirrors them locally. */
+  Auth.savePrefs = async function (patch) {
+    if (patch.courses) App.setSetting('courses', patch.courses);
+    if (patch.sections) Object.entries(patch.sections).forEach(([cid, v]) => { App.setCourseSetting(cid, 'section', v.section || ''); App.setCourseSetting(cid, 'examTime', v.examTime || ''); if (v.labDay) App.setCourseSetting(cid, 'labDay', v.labDay); });
+    if (Auth.user && Auth.mode === 'server' && !Auth.unreachable) { const r = await call('profile', patch); Auth.user = Object.assign(Auth.user, r.user); }
+    else if (Auth.user) { Object.assign(Auth.user, patch); if (Auth.user.local) writeJSON(LOCAL_KEY, Auth.user); }
+    if (App.rebuildNav) App.rebuildNav();
+  };
+  /** Onboarding: which classes, which section, exam time, lab day. Shown once after sign-up, or on demand from Settings. */
+  Auth.onboard = function (force) {
+    const u = Auth.user; if (!u) return; if (!force && Array.isArray(u.courses)) return;
+    let dismissed = false; try { dismissed = localStorage.getItem('mathub-onboarded') === '1'; } catch {}
+    if (!force && dismissed) return;
+    const courses = App.COURSE_ORDER.filter(id => global.Courses[id]); const chosen = Array.isArray(u.courses) && u.courses.length ? u.courses : (App.settings().courses || courses);
+    const m = document.createElement('div'); m.className = 'modal-backdrop'; m.id = 'onboard-modal';
+    m.innerHTML = `<div class="modal auth-modal onboard-modal" role="dialog" aria-label="Your classes"><div class="auth-head"><span class="logo-mark">${App.logoSvg(26)}</span><div><b>Which classes are you taking?</b><div class="small muted">MatHub hides the rest and uses your section's times.</div></div><button class="icon-btn" data-action="close" aria-label="Close">${icon('x', 16)}</button></div>
+      <div class="onboard-list">${courses.map(id => { const C = global.Courses[id]; const on = chosen.includes(id); const hasLab = (C.RECURRING || []).some(r => r.afterLabDay); return `<div class="onboard-course${on ? ' on' : ''}" data-c="${id}"><label class="check" style="padding:0"><input type="checkbox" data-course="${id}" ${on ? 'checked' : ''}><span><b>${esc(C.code)}</b> ${esc(C.name)}</span></label>
+        <div class="onboard-fields grid cols-3" style="gap:8px"><div class="field"><label>Section</label><input class="input" data-sec="${id}" maxlength="20" placeholder="e.g. 002" value="${esc(App.courseSetting(id, 'section', ''))}"></div><div class="field"><label>Your lecture / exam time</label><input class="input" data-time="${id}" maxlength="60" placeholder="e.g. MWF 9:00 am" value="${esc(App.courseSetting(id, 'examTime', ''))}"></div>${hasLab ? `<div class="field"><label>Lab day</label><select class="select" data-lab="${id}"><option value="tue"${App.courseSetting(id, 'labDay', 'tue') !== 'thu' ? ' selected' : ''}>Tuesday</option><option value="thu"${App.courseSetting(id, 'labDay', 'tue') === 'thu' ? ' selected' : ''}>Thursday</option></select></div>` : '<div></div>'}</div></div>`; }).join('')}</div>
+      <div class="row gap-sm mt-2"><button class="btn primary" data-action="save">Save</button><button class="btn" data-action="close">${force ? 'Cancel' : 'Skip for now'}</button></div><div class="auth-msg" id="onboard-msg"></div></div>`;
+    document.body.appendChild(m);
+    const done = () => { m.remove(); try { localStorage.setItem('mathub-onboarded', '1'); } catch {} };
+    on(m, 'change', 'input[data-course]', el => { el.closest('.onboard-course').classList.toggle('on', el.checked); });
+    bind(m, { close: () => { done(); if (!Array.isArray(u.courses)) Auth.savePrefs({ courses: courses }).catch(() => {}); },
+      save: async () => { const picked = $$('input[data-course]', m).filter(i => i.checked).map(i => i.dataset.course); if (!picked.length) { $('#onboard-msg', m).textContent = 'Pick at least one class.'; return; } const sections = {}; courses.forEach(id => { const lab = $(`select[data-lab="${id}"]`, m); sections[id] = { section: $(`input[data-sec="${id}"]`, m).value.trim(), examTime: $(`input[data-time="${id}"]`, m).value.trim(), labDay: lab ? lab.value : '' }; }); try { await Auth.savePrefs({ courses: picked, sections }); done(); toast('Saved. MatHub now shows ' + picked.map(id => global.Courses[id].short).join(', ') + '.', 3500); App.rerender(); } catch (e) { $('#onboard-msg', m).textContent = e.message; } } });
+    m.addEventListener('click', e => { if (e.target === m) bind; });
+  };
+  function changed() { applyServerPrefs(); paintAccount(); paintBanner(); Auth.setUnread(Auth.user ? (Auth.user.unread || 0) : 0); if (Auth.user && !Auth.user.local && Auth.mode === 'server') writeJSON(LAST_KEY, { user: Auth.user, health: Auth.health ? { domains: Auth.health.domains } : null, at: Date.now() }); if (!Auth.user) writeJSON(LAST_KEY, null); Auth.listeners.forEach(fn => { try { fn(Auth.user); } catch (e) { console.error(e); } }); }
 
   /* ---------- boot ---------- */
   Auth.init = async function () {
@@ -105,6 +136,9 @@
     out.activity = Object.assign({}, S.activity || {}, L.activity || {});
     const cl = {}; for (const src of [S.checklists || {}, L.checklists || {}]) for (const [ex, items] of Object.entries(src)) { cl[ex] = cl[ex] || {}; for (const [i, v] of Object.entries(items || {})) cl[ex][i] = cl[ex][i] || !!v; } out.checklists = cl;
     const pd = {}; for (const src of [S.practiceDone || {}, L.practiceDone || {}]) for (const [ex, items] of Object.entries(src)) { pd[ex] = pd[ex] || {}; for (const [i, v] of Object.entries(items || {})) pd[ex][i] = pd[ex][i] || !!v; } out.practiceDone = pd;
+    // focus sessions: union by day (max minutes per day), streak freezes: union
+    const sess = {}; for (const src of [S.sessions || [], L.sessions || []]) for (const x of src) if (x && x.d) sess[x.d] = Math.max(sess[x.d] || 0, x.m || 0); out.sessions = Object.keys(sess).sort().map(d => ({ d, m: sess[d] }));
+    out.freezes = Object.assign({}, S.freezes || {}, L.freezes || {});
     // grades and scratchpad strokes: the newer side already won via Object.assign, but never replace content with nothing
     if (!(out.grades && Object.keys(out.grades).length)) out.grades = (L.grades && Object.keys(L.grades).length) ? L.grades : (S.grades || {});
     if (!(out.scratch && out.scratch.length)) out.scratch = (L.scratch && L.scratch.length) ? L.scratch : (S.scratch || []);
@@ -231,6 +265,7 @@
     toast(isNew ? `Welcome to MatHub, ${user.name || user.email.split('@')[0]}!` : `Welcome back, ${user.name || user.email.split('@')[0]}.`, 2600);
     Auth.pullAll().then(() => App.rerender()).catch(() => App.rerender());
     if (App.rebuildNav) App.rebuildNav();
+    setTimeout(() => Auth.onboard(isNew || !Array.isArray(user.courses)), 900);
   }
   Auth.logout = async function () {
     if (Auth.mode === 'server') { try { await call('logout', {}); } catch {} }
@@ -245,6 +280,7 @@
         <div class="field mb-2"><label>Email</label><div class="mono small">${esc(u.email)}</div></div>
         <div class="field mb-2"><label for="acct-name">Display name</label><div class="row gap-sm"><input class="input" id="acct-name" value="${esc(u.name || '')}" placeholder="Your name" style="max-width:260px"><button class="btn sm" data-action="save-name">Save</button></div></div>
         ${Auth.mode === 'server' ? `<label class="check" style="padding:0"><input type="checkbox" id="acct-notify" ${u.notify_email === false ? '' : 'checked'}><span>Email me when someone replies to my posts or comments <span class="muted small">(at most one email per post every few hours)</span></span></label>
+        <label class="check" style="padding:0"><input type="checkbox" id="acct-reminder" ${u.reminder_email ? 'checked' : ''}><span>Email me the evening before something is due <span class="muted small">(6 pm: tomorrow's Canvas due dates, sessions you joined, and a heads-up if your streak is about to end)</span></span></label>
         <label class="check" style="padding:0"><input type="checkbox" id="acct-digest" ${u.digest_email === false ? '' : 'checked'}><span>Send me the weekly digest <span class="muted small">(Sunday evening: what is due, top posts, your stats vs. the class)</span></span></label>
         <label class="check" style="padding:0"><input type="checkbox" id="acct-lb" ${u.show_on_leaderboard === false ? '' : 'checked'}><span>Show my name on leaderboards and helper lists <span class="muted small">(otherwise “Anonymous student”)</span></span></label>
         <p class="small mt-1"><a href="#/badges">${icon('fire', 13)} Your badges</a></p>` : ''}
@@ -253,7 +289,7 @@
       : `<div class="panel"><div class="panel-h"><div class="panel-title">${icon('info')} Account</div><span class="chip warn">preview</span></div>${Auth.lockCard('You are previewing MatHub', 'Sign up to unlock every tool and sync your progress across devices.', { compact: true })}</div>`;
     const wrap = document.createElement('div'); wrap.innerHTML = html; const panel = wrap.firstElementChild;
     const pref = (id, key, onMsg, offMsg) => { const el = $('#' + id, panel); if (el) el.addEventListener('change', async () => { try { const r = await call('profile', { [key]: el.checked }); Auth.user = Object.assign(Auth.user, r.user); toast(el.checked ? onMsg : offMsg); } catch (e) { toast(e.message); el.checked = !el.checked; } }); };
-    pref('acct-notify', 'notify_email', 'Reply emails on', 'Reply emails off'); pref('acct-digest', 'digest_email', 'Weekly digest on', 'Weekly digest off'); pref('acct-lb', 'show_on_leaderboard', 'Your name shows on leaderboards', 'You appear as “Anonymous student”');
+    pref('acct-notify', 'notify_email', 'Reply emails on', 'Reply emails off'); pref('acct-reminder', 'reminder_email', 'Evening reminders on', 'Evening reminders off'); pref('acct-digest', 'digest_email', 'Weekly digest on', 'Weekly digest off'); pref('acct-lb', 'show_on_leaderboard', 'Your name shows on leaderboards', 'You appear as “Anonymous student”');
     bind(panel, {
       'auth-signup': () => Auth.open('signup'), 'auth-login': () => Auth.open('login'), logout: () => Auth.logout(),
       'save-name': async () => { const name = $('#acct-name', panel).value.trim(); if (Auth.mode === 'server') { try { const r = await call('profile', { name }); Auth.user = r.user; } catch (e) { toast(e.message); return; } } else { Auth.user.name = name; writeJSON(LOCAL_KEY, Auth.user); } changed(); toast('Name saved'); },

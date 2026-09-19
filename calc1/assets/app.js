@@ -228,6 +228,8 @@
     nextExam: () => nextExam(D), currentSection: () => currentSection(D), upcomingDeadlines: n => upcomingDeadlines(D, n), eventsOn: iso => eventsOn(D, iso),
     onCourse(fn) { courseHooks.push(fn); if (D) fn(D); }, BUILD, SITE, COURSE_ORDER, asOf, semesterState: () => semesterState(D) };
   App.toggleTheme = () => toggleTheme();
+  App.myCourses = () => { const c = settings().courses; const mine = Array.isArray(c) ? c.filter(id => Courses[id]) : []; return mine.length ? mine : COURSE_ORDER.filter(id => Courses[id]); };
+  App.isoWeek = d => { const x = new Date(d); x.setHours(0, 0, 0, 0); x.setDate(x.getDate() + 3 - ((x.getDay() + 6) % 7)); const w1 = new Date(x.getFullYear(), 0, 4); return x.getFullYear() + '-W' + String(1 + Math.round(((x - w1) / 86400000 - 3 + ((w1.getDay() + 6) % 7)) / 7)).padStart(2, '0'); };
   App.guest = () => !!(App.auth && App.auth.ready && !App.auth.user);
   App.limit = k => App.guest() && App.auth.limits && App.auth.limits[k] != null ? App.auth.limits[k] : Infinity;
   App.lockCard = (t, x, o) => App.auth ? App.auth.lockCard(t, x, o) : '';
@@ -301,7 +303,8 @@
   function toggleTheme() { const isDark = document.documentElement.getAttribute('data-theme') === 'dark' || (!document.documentElement.getAttribute('data-theme') && matchMedia('(prefers-color-scheme: dark)').matches); setSetting('theme', isDark ? 'light' : 'dark'); applyTheme(); }
   function buildNav() {
     $('#brand-code').textContent = D.code; $('#brand-name').innerHTML = `${esc(D.name)}<small>${esc(D.term)}</small>`;
-    $('#course-switch').innerHTML = COURSE_ORDER.filter(id => Courses[id]).map(id => `<a class="switch-btn${id === D.id ? ' on' : ''}" href="#/${id}/dashboard" title="${esc(Courses[id].name)}">${esc(Courses[id].short)}</a>`).join('') + `<a class="switch-btn home" href="#/" title="All courses">${icon('grid', 14)}</a>`;
+    const mine = App.myCourses(); if (D && !mine.includes(D.id)) mine.push(D.id);
+    $('#course-switch').innerHTML = COURSE_ORDER.filter(id => Courses[id] && mine.includes(id)).map(id => `<a class="switch-btn${id === D.id ? ' on' : ''}" href="#/${id}/dashboard" title="${esc(Courses[id].name)}">${esc(Courses[id].short)}</a>`).join('') + `<a class="switch-btn home" href="#/" title="All courses">${icon('grid', 14)}</a>`;
     const staff = App.auth && App.auth.user && App.auth.user.mod ? [{ label: App.auth.user.admin ? 'Admin' : 'Moderation', items: [['admin', 'Admin panel', 'shield']] }] : [];
     $('#sidebar-nav').innerHTML = D.NAV.concat(staff).map(gp => `<div class="nav-label">${gp.label}</div>` + gp.items.map(([id, label, ic]) => `<button class="nav-item" data-view="${id}" data-action="nav">${icon(ic)}<span>${label}</span></button>`).join('')).join('');
     const cur = (location.hash.replace(/^#\/?/, '').split('?')[0].split('/')[1]) || 'dashboard'; $$('.nav-item').forEach(b => b.classList.toggle('active', b.dataset.view === cur));
@@ -323,10 +326,12 @@
     len() { return this.mode === 'focus' ? 25 * 60 : 5 * 60; },
     draw() { const m = Math.floor(this.left / 60), s = this.left % 60; $('#pomo-time').textContent = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`; $('#pomo-mode').textContent = this.mode === 'focus' ? 'Focus' : 'Break'; $('#pomo-toggle').innerHTML = icon(this.running ? 'pause' : 'play', 15); },
     toggle() { this.running ? this.pause() : this.start(); },
-    start() { if (this.running) return; this.running = true; this.tick = setInterval(() => { this.left--; if (this.left <= 0) this.finish(); this.draw(); }, 1000); this.draw(); },
-    pause() { this.running = false; clearInterval(this.tick); this.draw(); },
+    accum: 0,
+    start() { if (this.running) return; this.running = true; this.tick = setInterval(() => { this.left--; if (this.mode === 'focus') this.accum++; if (this.left <= 0) this.finish(); this.draw(); }, 1000); this.draw(); },
+    pause() { this.running = false; clearInterval(this.tick); this.flush(); this.draw(); },
     reset() { this.pause(); this.left = this.len(); this.draw(); },
     switchMode() { this.mode = this.mode === 'focus' ? 'break' : 'focus'; this.reset(); },
+    flush() { const mins = Math.floor(this.accum / 60); if (mins >= 1 && D) { const ss = store.get('sessions', []); const t = todayISO(); const last = ss[ss.length - 1]; if (last && last.d === t) last.m += mins; else ss.push({ d: t, m: mins }); if (ss.length > 400) ss.splice(0, ss.length - 400); store.set('sessions', ss); markActivity(); } this.accum = this.accum % 60; },
     finish() { this.pause(); this.beep(); if (D) markActivity(); toast(this.mode === 'focus' ? 'Focus block done. Take a 5-minute break.' : 'Break over. Back to it.', 4000); this.mode = this.mode === 'focus' ? 'break' : 'focus'; this.left = this.len(); },
     beep() { try { const ac = new (window.AudioContext || window.webkitAudioContext)(); const o = ac.createOscillator(), gn = ac.createGain(); o.connect(gn); gn.connect(ac.destination); o.frequency.value = 880; gn.gain.value = 0.08; o.start(); setTimeout(() => { o.stop(); ac.close(); }, 500); } catch {} }
   };
@@ -369,7 +374,8 @@
     title: SITE,
     render(root) {
       const t = todayISO(); const d = today();
-      const cards = COURSE_ORDER.filter(id => Courses[id]).map(id => {
+      const mineIds = App.myCourses(); const showAll = Landing.showAll || mineIds.length === COURSE_ORDER.filter(id => Courses[id]).length;
+      const cards = COURSE_ORDER.filter(id => Courses[id] && (showAll || mineIds.includes(id))).map(id => {
         const C = Courses[id]; const data = store.peek(id); const ex = nextExam(C); const st = ex ? examStatus(ex) : null; const ss = semesterState(C);
         const hist = data.history || []; const acc = hist.length ? Math.round(100 * hist.filter(x => x.ok).length / hist.length) : null;
         const cur = currentSection(C); const dl = upcomingDeadlines(C, 3);
@@ -385,7 +391,7 @@
           </div>
           <span class="btn primary course-open">Open ${esc(C.short)} ${icon('right', 14)}</span></a>`;
       }).join('');
-      const merged = COURSE_ORDER.filter(id => Courses[id]).flatMap(id => upcomingDeadlines(Courses[id], 8).map(x => Object.assign({ course: Courses[id] }, x))).filter(x => daysBetween(t, x.date) <= 7).sort((a, b) => a.date.localeCompare(b.date));
+      const merged = COURSE_ORDER.filter(id => Courses[id] && mineIds.includes(id)).flatMap(id => upcomingDeadlines(Courses[id], 8).map(x => Object.assign({ course: Courses[id] }, x))).filter(x => daysBetween(t, x.date) <= 7).sort((a, b) => a.date.localeCompare(b.date));
       const first = Courses[COURSE_ORDER[0]]; const ss = semesterState(first);
       const greeting = d.getHours() < 12 ? 'this morning' : d.getHours() < 18 ? 'this afternoon' : 'tonight';
       const sub = ss.phase === 'before' ? `Classes start ${esc(fmtDate(first.SEMESTER.start, true))}. Get a head start on the first topics.` : ss.phase === 'after' ? 'The semester is over. Everything stays here for review.' : `Which class are you working on ${greeting}?`;
@@ -393,6 +399,7 @@
         <header class="landing-top hero"><div><div class="eyebrow">${esc(fmtDate(t, true))} · ${esc(first.term)}${ss.phase === 'during' ? ` · Week ${ss.week}` : ''}</div><h1 class="landing-title"><span class="logo-mark">${App.logoSvg(44)}</span>${SITE}</h1><p class="hero-sub">${sub}</p><p class="muted small hero-note">Notes, endless practice, simulators, planners and a class board for Montana State math and physics. Free for students.</p><div id="landing-presence" class="mt-1"></div></div><div class="row gap-sm hero-actions"><span id="landing-account"></span><button class="icon-btn theme-btn" data-action="theme" aria-label="Toggle theme"></button></div></header>
         <div id="announcement-slot"></div>
         <div class="course-grid">${cards}</div>
+        <p class="small muted mt-1" style="text-align:right">${mineIds.length < COURSE_ORDER.filter(id => Courses[id]).length ? `Showing your ${mineIds.length} class${mineIds.length === 1 ? '' : 'es'} · <a href="#" data-action="show-all">${showAll ? 'show only mine' : 'show all classes'}</a> · ` : ''}<a href="#" data-action="choose">choose your classes and sections</a></p>
         <div id="landing-social" class="mt-3"></div>
         <div id="landing-canvas" class="mt-3"></div>
         <div class="panel mt-3"><div class="panel-h"><div class="panel-title">${icon('clock')} Next seven days, all classes</div><span class="small muted">Standing due rules from each syllabus plus exam and drop dates</span></div>
@@ -401,7 +408,7 @@
         <div class="panel mt-3"><div class="panel-h"><div class="panel-title">${icon('chat')} Latest discussions</div><a class="btn sm" href="#/forum">${icon('chat', 13)} Open discussions</a></div><div id="landing-forum"><div class="empty small">Loading…</div></div></div>
         <div class="landing-features grid cols-4 mt-3">${[['list', 'Endless quizzers', 'Procedurally generated problems with worked explanations, per topic and per exam.'], ['book', 'Notes on every topic', 'Big ideas, formulas, a worked example, pitfalls and an exam tip, linked to the free textbook.'], ['flask', 'Interactive tools', 'Graphers, simulators, solvers, a unit circle, grade calculators and a scratchpad.'], ['chat', 'Community', 'Discussions, daily challenges, study sessions, mock exams and badges with your classmates.']].map(([ic, h, p]) => `<div class="card-link"><div class="eyebrow">${icon(ic, 14)}</div><h4>${h}</h4><p>${p}</p></div>`).join('')}</div>
         <p class="small muted mt-2" style="text-align:center">${App.guest() ? 'Preview freely. Sign up with a montana.edu email to unlock every tool and keep your progress on all your devices.' : 'Progress, flashcards and grades are saved for each class and synced to your account.'}</p></div>`;
-      bind(root, { theme: toggleTheme }); applyTheme();
+      bind(root, { theme: toggleTheme, 'show-all': (el, e) => { e.preventDefault(); Landing.showAll = !Landing.showAll; render(); }, choose: (el, e) => { e.preventDefault(); if (App.auth && App.auth.user) App.auth.onboard(true); else if (App.auth) App.auth.open('signup'); } }); applyTheme();
       const slot = $('#landing-account', root); if (slot && App.auth) App.auth.paintLandingAccount(slot);
       const lf = $('#landing-forum', root); if (lf) { if (App.forumLatest) { const go = () => App.forumLatest(lf); if (App.auth && App.auth.ready) go(); else if (App.auth) App.auth.onChange(function once() { go(); }); } else lf.innerHTML = ''; }
       Canvas.fill($('#landing-canvas', root), null, 8); paintAnnouncement(root);
@@ -426,6 +433,7 @@
           <div class="countdown"><div class="countdown-num${es.big.length > 3 ? ' small' : ''}">${esc(es.big)}</div><div class="countdown-label">${esc(es.label)}</div></div>
           <div><div class="eyebrow">Next exam · ${ex.weight}% of the grade</div>
             <h2 style="font-size:26px;margin-top:2px">${esc(ex.name)} <span class="muted" style="font-size:16px;font-weight:400">· ${esc(ex.dateLabel || fmtDate(ex.date, true))}</span></h2>
+            ${courseSetting(D.id, 'section', '') || courseSetting(D.id, 'examTime', '') ? `<p class="small" style="opacity:.85;margin-top:2px">${icon('info', 12)} Your section${courseSetting(D.id, 'section', '') ? ' ' + esc(courseSetting(D.id, 'section', '')) : ''}${courseSetting(D.id, 'examTime', '') ? ' · ' + esc(courseSetting(D.id, 'examTime', '')) : ''}</p>` : ''}
             <p class="muted mt-1">Covers ${esc(ex.covers)}. Closed book, no devices.</p>
             <div class="bar-row mt-2"><span>Prep checklist</span><span class="mono">${cl.done} / ${cl.items.length}</span><div class="bar"><div class="bar-fill gold" style="width:${cl.items.length ? 100 * cl.done / cl.items.length : 0}%"></div></div></div>
             <div class="row mt-2">${D.PRACTICE && D.PRACTICE[ex.id] ? `<a class="btn primary" href="${L('exam', ex.id)}">${icon('flag', 14)} ${esc(ex.name)} practice set</a>` : `<a class="btn primary" href="${L('exam', ex.id)}">${icon('flag', 14)} ${esc(ex.name)} prep</a>`}<a class="btn" href="${L('practice', null, { exam: ex.id })}">${icon('list', 14)} Drill ${esc(ex.name)} topics</a><a class="btn" href="${L('flashcards', null, { unit: ex.units[ex.units.length - 1] })}">${icon('cards', 14)} Flashcards</a></div>
@@ -434,8 +442,12 @@
       const weekLabel = ss.phase === 'before' ? `Starts ${esc(shortDate(D.SEMESTER.start))}` : ss.phase === 'after' ? 'Semester over' : ss.phase === 'finals' ? 'Finals week' : `Week ${wk} of ${ss.weeks}`;
       const smart = App.smartReview ? App.smartReview(3) : { picked: [] };
       const plan = App.planToday ? App.planToday() : null;
+      const act = store.get('activity', {}); const yday = toISO(addDays(d, -1)), dby = toISO(addDays(d, -2)); const wk0 = App.isoWeek(d);
+      const atRisk = !act[t] && !!act[yday] && st >= 2; const broken = !act[t] && !act[yday] && !!act[dby]; const freezes = store.get('freezes', {}); const freezeLeft = !freezes[wk0];
+      const weekMins = COURSE_ORDER.filter(id => Courses[id]).reduce((sum, id) => sum + ((store.peek(id).sessions || []).filter(x => App.isoWeek(parseISO(x.d)) === wk0).reduce((a, x) => a + (x.m || 0), 0)), 0);
+      const remindNudge = App.auth && App.auth.user && !App.auth.user.local && App.auth.mode === 'server' && !App.auth.user.reminder_email && !settings().remindNudgeDismissed;
       root.innerHTML = `<div class="page-head"><div><div class="eyebrow">${esc(fmtDate(t, true))} · ${weekLabel} · ${esc(D.code)}</div><h1 class="page-title">Good ${d.getHours() < 12 ? 'morning' : d.getHours() < 18 ? 'afternoon' : 'evening'}. Here's where ${esc(D.short)} stands.</h1></div></div><div id="announcement-slot"></div>${pre}
-        <div class="stack">${examTile}
+        <div class="stack">${remindNudge ? `<div class="callout small row between" style="gap:10px"><span>${icon('bell', 14)} Want an email the evening before something is due, and a heads-up when your streak is about to end?</span><span class="row gap-sm"><button class="btn xs primary" data-action="remind-on">Turn on</button><button class="btn xs ghost" data-action="remind-no">No thanks</button></span></div>` : ''}${examTile}
           <div class="grid cols-3">
             <div class="panel"><div class="panel-h"><div class="panel-title">${icon('calendar')} Today</div><a href="${L('calendar')}" class="small">Full calendar</a></div>
               ${todayEv.length ? todayEv.map(e => `<div class="today-ev"><span class="chip ${e[1]}">${e[1]}</span><span>${esc(e[2])}</span></div>`).join('') : `<div class="empty">No class today.${(() => { const nx = D.CALENDAR.find(e => e[0] > t && (e[1] === 'lecture' || e[1] === 'exam')); return nx ? ` Next: ${esc(nx[2])} on ${fmtDate(nx[0])}.` : ''; })()}</div>`}
@@ -446,7 +458,8 @@
               ${dl.length ? dl.map(x => `<div class="today-ev"><span class="when">${daysBetween(t, x.date) === 0 ? 'Today' : daysBetween(t, x.date) === 1 ? 'Tomorrow' : esc(fmtDate(x.date))}</span><span>${esc(x.title)}${x.time ? ` <span class="muted small">· ${esc(x.time)}</span>` : ''}</span></div>`).join('') : '<div class="empty">Nothing scheduled.</div>'}
               <p class="small muted mt-2">${Canvas.data && Canvas.data.configured && Canvas.events(D.id, t).length ? 'Due dates come from the Canvas calendar; exams and drop dates from the syllabus.' : 'Standing rules from the syllabus. Confirm exact assignments in Canvas.'}</p></div>
             <div class="panel"><div class="panel-h"><div class="panel-title">${icon('fire')} Your progress</div></div>
-              <div class="grid cols-2" style="gap:10px"><div class="stat"><div class="stat-num">${st}</div><div class="stat-label">day streak</div></div><div class="stat"><div class="stat-num">${answered ? Math.round(100 * correct / answered) : 0}%</div><div class="stat-label">accuracy · ${answered} answered</div></div><div class="stat"><div class="stat-num">${cm.mastered}<span class="muted" style="font-size:15px">/${cm.total}</span></div><div class="stat-label">flashcards mastered</div></div><div class="stat"><div class="stat-num">${hist.filter(x => x.d === t).length}</div><div class="stat-label">questions today</div></div></div>
+              ${atRisk ? `<div class="callout warn small mb-2">${icon('fire', 13)} Your ${st}-day streak ends at midnight. <a href="${L('practice', null, { smart: 1 })}">Answer one question</a> to keep it.</div>` : broken ? `<div class="callout small mb-2">${icon('fire', 13)} Your streak broke yesterday.${freezeLeft ? ` <button class="btn xs primary" data-action="freeze">Use this week's freeze</button> to keep it alive.` : ' You used this week\'s freeze already.'}</div>` : ''}
+              <div class="grid cols-2" style="gap:10px"><div class="stat"><div class="stat-num">${st}</div><div class="stat-label">day streak${freezeLeft ? '' : ' · freeze used'}</div></div><div class="stat"><div class="stat-num">${(weekMins / 60).toFixed(1)}<span class="muted" style="font-size:15px"> h</span></div><div class="stat-label" id="dash-hours">focus this week</div></div><div class="stat"><div class="stat-num">${answered ? Math.round(100 * correct / answered) : 0}%</div><div class="stat-label">accuracy · ${answered} answered</div></div><div class="stat"><div class="stat-num">${cm.mastered}<span class="muted" style="font-size:15px">/${cm.total}</span></div><div class="stat-label">flashcards mastered</div></div><div class="stat"><div class="stat-num">${hist.filter(x => x.d === t).length}</div><div class="stat-label">questions today</div></div></div>
               <div class="divider"></div>
               ${D.UNITS.map(u => { const m = unitMastery(u.n); return `<div class="bar-row"><span>Unit ${u.n} · ${esc(u.title)}</span><span class="mono">${m.a ? m.pct + '%' : '—'}</span><div class="bar"><div class="bar-fill ${m.pct >= 80 ? 'good' : m.pct >= 60 ? 'warn' : m.a ? 'bad' : ''}" style="width:${m.a ? m.pct : 0}%"></div></div></div>`; }).join('')}</div>
           </div>
@@ -464,6 +477,8 @@
           <div class="grid cols-3"><div id="dash-social" class="span-2 stack"></div><div id="dash-social-side"></div></div>
           <div class="grid cols-4">${D.NAV.find(gp => gp.label === 'Tools').items.map(([id, label, ic]) => `<a class="card-link" href="${L(id)}"><div class="eyebrow">${icon(ic, 14)} Tool</div><h4>${esc(label)}</h4></a>`).join('')}</div>
         </div>`;
+      bind(root, { freeze: () => { const a = store.get('activity', {}); a[yday] = 'freeze'; store.set('activity', a); const f = store.get('freezes', {}); f[wk0] = yday; store.set('freezes', f); toast('Streak saved. One freeze per week per class.', 3000); render(); }, 'remind-on': async () => { try { await App.auth.savePrefs({ reminder_email: true }); toast('Evening reminders on', 3000); render(); } catch (e) { toast(e.message); } }, 'remind-no': () => { setSetting('remindNudgeDismissed', true); render(); } });
+      if (App.auth && App.auth.mode === 'server' && !App.auth.unreachable) fetch('api/index.php?r=stats_week', { credentials: 'same-origin', headers: { 'X-Requested-With': 'MatHub' } }).then(r => r.json()).then(j => { const el = $('#dash-hours', root); if (el && j && j.ok && j.stats && j.stats.median_hours !== null && j.stats.hours_users >= 3) el.textContent = `focus this week · class median ${j.stats.median_hours} h`; }).catch(() => {});
       on(root, 'change', 'input[data-plan]', el => { const p = store.get('plan', null); if (!p) return; const it = p.items.find(i => i.id === el.dataset.plan); if (it) { it.done = el.checked; store.set('plan', p); markActivity(); el.closest('.plan-item').classList.toggle('done', el.checked); } });
       Canvas.fill($('#dash-canvas', root), D.id, 6); paintAnnouncement(root);
       if (App.social) { const goS = () => App.social.fillDashboard($('#dash-social', root), D.id); if (App.auth && App.auth.ready) goS(); else if (App.auth) App.auth.onChange(function once() { goS(); }); }
@@ -669,6 +684,7 @@
     render(root) {
       const s = settings(); const hasLab = (D.RECURRING || []).some(r => r.afterLabDay);
       root.innerHTML = pageHead('Settings', 'Preferences apply to every class. Progress is stored per class and, when you are logged in, synced to your account.') + `<div class="grid cols-2"><div id="acct-panel" class="span-2"></div>
+        <div class="panel span-2"><div class="panel-h"><div class="panel-title">${icon('grid')} Your classes</div><button class="btn sm" data-action="choose">Choose classes and sections</button></div><div class="row gap-sm" style="flex-wrap:wrap">${App.myCourses().map(id => `<span class="chip course-${id}">${esc(Courses[id].short)}${courseSetting(id, 'section', '') ? ' · sec ' + esc(courseSetting(id, 'section', '')) : ''}${courseSetting(id, 'examTime', '') ? ' · ' + esc(courseSetting(id, 'examTime', '')) : ''}</span>`).join('')}</div><p class="small muted mt-1">Only these classes show on the landing page, in the course switcher, in reminders and in the weekly digest.</p></div>
         <div class="panel"><div class="panel-h"><div class="panel-title">${icon('sliders')} Preferences</div></div>
           <div class="field mb-2"><label>Theme</label><select class="select" id="s-theme"><option value="system"${s.theme === 'system' ? ' selected' : ''}>Match system</option><option value="light"${s.theme === 'light' ? ' selected' : ''}>Light</option><option value="dark"${s.theme === 'dark' ? ' selected' : ''}>Dark</option></select></div>
           ${hasLab ? `<div class="field"><label>Your ${esc(D.short)} lab day</label><select class="select" id="s-lab"><option value="tue"${courseSetting(D.id, 'labDay', 'tue') !== 'thu' ? ' selected' : ''}>Tuesday</option><option value="thu"${courseSetting(D.id, 'labDay', 'tue') === 'thu' ? ' selected' : ''}>Thursday</option></select><span class="help">Sets when lab sheets show as due on the dashboard (8:00 pm the day after lab).</span></div>` : ''}
@@ -683,7 +699,7 @@
       const acct = $('#acct-panel', root); if (acct && App.auth) acct.replaceWith(Object.assign(App.auth.settingsPanel(root), { className: 'panel span-2' }));
       const lab = $('#s-lab', root); if (lab) lab.addEventListener('change', e => { setCourseSetting(D.id, 'labDay', e.target.value); toast('Lab day saved'); });
       $('#s-import', root).addEventListener('change', e => { const f = e.target.files[0]; if (!f) return; f.text().then(txt => { try { store.importJSON(txt); toast('Backup imported'); render(); } catch (err) { alert('Could not import: ' + err.message); } }); });
-      bind(root, { export: () => { const txt = store.exportJSON(); $('#s-json', root).value = txt; try { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([txt], { type: 'application/json' })); a.download = `studyhub-${D.id}-${todayISO()}.json`; a.click(); } catch {} toast('Backup ready'); }, 'import-text': () => { try { store.importJSON($('#s-json', root).value); toast('Backup imported'); render(); } catch (err) { alert('Could not import: ' + err.message); } }, reset: () => { if (confirm(`Erase all saved ${D.short} progress on this device?`)) { store.reset(); toast('Progress reset'); render(); } }, 'asof-clear': () => { setSetting('asof', ''); render(); } });
+      bind(root, { export: () => { const txt = store.exportJSON(); $('#s-json', root).value = txt; try { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([txt], { type: 'application/json' })); a.download = `studyhub-${D.id}-${todayISO()}.json`; a.click(); } catch {} toast('Backup ready'); }, 'import-text': () => { try { store.importJSON($('#s-json', root).value); toast('Backup imported'); render(); } catch (err) { alert('Could not import: ' + err.message); } }, reset: () => { if (confirm(`Erase all saved ${D.short} progress on this device?`)) { store.reset(); toast('Progress reset'); render(); } }, 'asof-clear': () => { setSetting('asof', ''); render(); }, choose: () => { if (App.auth && App.auth.user) App.auth.onboard(true); else if (App.auth) App.auth.open('signup'); } });
     }
   };
 

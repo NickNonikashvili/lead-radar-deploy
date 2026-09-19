@@ -7,6 +7,7 @@
    ============================================================ */
 declare(strict_types=1);
 require_once __DIR__ . '/filter.php';
+require_once __DIR__ . '/canvas.php';
 
 const MH_SOCIAL_COURSES = ['calc', 'physics', 'precalc', 'general'];
 const MH_BADGES = [
@@ -36,6 +37,15 @@ function mh_system_user(): array {
   $st->execute(['mathub@system.local']); return $st->fetch();
 }
 function mh_user_progress(int $uid): array { $st = mh_db()->prepare('SELECT course, json FROM progress WHERE user_id = ?'); $st->execute([$uid]); $out = []; foreach ($st->fetchAll() as $r) { $j = json_decode($r['json'], true); if (is_array($j)) $out[$r['course']] = $j; } return $out; }
+function mh_user_courses(array $u): array { $c = isset($u['courses']) && $u['courses'] !== null && $u['courses'] !== '' ? json_decode((string)$u['courses'], true) : null; return is_array($c) && $c ? $c : ['calc', 'physics', 'precalc']; }
+/** Current streak in days counting back from today (or from yesterday if today has no activity yet). */
+function mh_current_streak(array $days): array {
+  $set = array_fill_keys($days, true); $today = mh_local_date(); $d = $today; $activeToday = isset($set[$today]);
+  if (!$activeToday) $d = date('Y-m-d', strtotime($today . ' -1 day'));
+  $n = 0; while (isset($set[$d])) { $n++; $d = date('Y-m-d', strtotime($d . ' -1 day')); }
+  return ['streak' => $n, 'active_today' => $activeToday];
+}
+function mh_week_minutes(array $blobs, int $since): int { $from = mh_local_date($since); $m = 0; foreach ($blobs as $b) foreach ($b['sessions'] ?? [] as $sn) if (($sn['d'] ?? '') >= $from) $m += (int)($sn['m'] ?? 0); return $m; }
 function mh_longest_streak(array $days): int {
   if (!$days) return 0; sort($days); $best = 1; $run = 1;
   for ($i = 1; $i < count($days); $i++) { $diff = (strtotime($days[$i]) - strtotime($days[$i - 1])) / 86400; if ($diff === 1.0) { $run++; $best = max($best, $run); } elseif ($diff > 1) $run = 1; }
@@ -93,7 +103,41 @@ function mh_housekeeping(bool $full = false): array {
   if ($full || random_int(1, 10) === 1) { $db->exec('DELETE FROM presence WHERE seen < ' . (time() - 900)); $did[] = 'presence pruned'; }
   if ($full) { try { require_once __DIR__ . '/canvas.php'; $r = mh_canvas_events(false); $did[] = 'canvas: ' . count($r['events']) . ' events'; } catch (Throwable $e) {} }
   $sent = mh_digest_tick($full ? 60 : 2); if ($sent) $did[] = "digest: $sent sent";
+  $rem = mh_reminder_tick($full ? 60 : 2); if ($rem) $did[] = "reminders: $rem sent";
   return $did;
+}
+/* ---------- evening reminders: "tomorrow: … due" + streak at risk ---------- */
+function mh_reminder_window_start(): ?int {
+  $hour = (int)(mh_config()['reminder_hour'] ?? 18); $now = new DateTime('now', mh_tz());
+  if ((int)$now->format('G') < $hour) return null; $w = clone $now; $w->setTime($hour, 0); return $w->getTimestamp();
+}
+function mh_reminder_tick(int $max): int {
+  $ws = mh_reminder_window_start(); if ($ws === null || $max <= 0) return 0;
+  $db = mh_db(); $st = $db->prepare('SELECT * FROM users WHERE verified = 1 AND reminder_email = 1 AND reminder_sent < ? AND email NOT LIKE "%@system.local" ORDER BY id LIMIT ?'); $st->execute([$ws, $max]); $users = $st->fetchAll();
+  if (!$users) return 0;
+  require_once __DIR__ . '/mailer.php'; $cfg = mh_config(); $sent = 0; $site = $cfg['site_name'] ?? 'MatHub';
+  $url = rtrim((string)(($cfg['site_url'] ?? '') ?: ('https://' . ($_SERVER['HTTP_HOST'] ?? 'mathub.space'))), '/');
+  $tomorrow = mh_local_date(time() + 86400); $names = ['calc' => 'Calc I', 'physics' => 'Physics I', 'precalc' => 'Precalc', 'general' => 'General'];
+  $events = []; try { require_once __DIR__ . '/canvas.php'; $events = mh_canvas_events(false)['events']; } catch (Throwable $e) {}
+  foreach ($users as $u) {
+    $db->prepare('UPDATE users SET reminder_sent = ? WHERE id = ?')->execute([time(), $u['id']]);
+    try {
+      $mine = mh_user_courses($u); $due = array_values(array_filter($events, fn($e) => $e['date'] === $tomorrow && in_array($e['course'], $mine, true)));
+      $days = []; foreach (mh_user_progress((int)$u['id']) as $b) foreach (array_keys($b['activity'] ?? []) as $d) $days[$d] = true; $sk = mh_current_streak(array_keys($days));
+      $atRisk = !$sk['active_today'] && $sk['streak'] >= 3;
+      $s2 = $db->prepare('SELECT m.title, m.place, m.start FROM meets m JOIN meet_rsvp r ON r.meet_id = m.id WHERE r.user_id = ? AND m.cancelled = 0 AND m.start > ? AND m.start < ? ORDER BY m.start'); $s2->execute([$u['id'], time(), time() + 36 * 3600]); $meets = $s2->fetchAll();
+      if (!$due && !$atRisk && !$meets) continue;
+      $lines = []; $h = [];
+      if ($due) { $lines[] = 'Due tomorrow:'; $h[] = '<h3 style="margin:0 0 6px;font-size:15px">Due tomorrow</h3><ul style="padding-left:18px;margin:0 0 14px">'; foreach ($due as $e) { $row = ($names[$e['course']] ?? $e['course']) . ': ' . $e['title'] . ($e['time'] ? ' · ' . $e['time'] : ''); $lines[] = '  - ' . $row; $h[] = '<li>' . htmlspecialchars($row) . '</li>'; } $h[] = '</ul>'; }
+      if ($meets) { $lines[] = ''; $lines[] = 'Study sessions you joined:'; $h[] = '<h3 style="margin:0 0 6px;font-size:15px">Study sessions you joined</h3><ul style="padding-left:18px;margin:0 0 14px">'; foreach ($meets as $m) { $row = $m['title'] . ' at ' . $m['place'] . ' · ' . (new DateTime('@' . $m['start']))->setTimezone(mh_tz())->format('D g:i a'); $lines[] = '  - ' . $row; $h[] = '<li>' . htmlspecialchars($row) . '</li>'; } $h[] = '</ul>'; }
+      if ($atRisk) { $row = "Your {$sk['streak']}-day streak ends at midnight. Answer one quiz question to keep it going."; $lines[] = ''; $lines[] = $row; $h[] = '<p style="padding:10px 12px;background:#FCEEDB;border-radius:8px;margin:0 0 14px"><b>' . htmlspecialchars($row) . '</b></p>'; }
+      $subject = $due ? 'Tomorrow: ' . implode(', ', array_map(fn($e) => $e['title'], array_slice($due, 0, 2))) . (count($due) > 2 ? ' +' . (count($due) - 2) . ' more' : '') : ($atRisk ? "Your {$sk['streak']}-day streak ends tonight" : 'Study session tomorrow');
+      $text = implode("\n", $lines) . "\n\nOpen $site: $url\nTurn these reminders off in Settings → Account.";
+      $html = '<div style="font-family:Segoe UI,Helvetica,Arial,sans-serif;max-width:520px;margin:0 auto;padding:24px;color:#0F172A">' . implode('', $h) . '<p><a href="' . $url . '" style="display:inline-block;background:#4F46E5;color:#fff;text-decoration:none;padding:9px 14px;border-radius:8px">Open ' . htmlspecialchars($site) . '</a></p><p style="font-size:12px;color:#64748B">Turn these reminders off in Settings → Account.</p></div>';
+      $r = mh_send_mail($cfg, $u['email'], $subject, $text, $html); if ($r['ok']) $sent++;
+    } catch (Throwable $e) {}
+  }
+  return $sent;
 }
 function mh_digest_window_start(): ?int {
   $cfg = mh_config(); $day = (int)($cfg['digest_day'] ?? 0); $hour = (int)($cfg['digest_hour'] ?? 17);
@@ -121,7 +165,7 @@ function mh_digest_context(): array {
   $st = $db->prepare('SELECT id, title, course, score, ncomments FROM posts WHERE removed = 0 AND created > ? ORDER BY score DESC, ncomments DESC LIMIT 5'); $st->execute([$week]); $ctx['top'] = $st->fetchAll();
   $key = 'digest_avg:' . mh_week_start(); $cached = mh_setting($key);
   if ($cached !== null) $ctx['avg'] = json_decode($cached, true);
-  else { $a = 0; $c = 0; $users = 0; $from = mh_local_date($week); foreach ($db->query('SELECT user_id, json FROM progress')->fetchAll() as $r) { $j = json_decode($r['json'], true); if (!is_array($j)) continue; $n = 0; foreach ($j['history'] ?? [] as $h) if (($h['d'] ?? '') >= $from) { $a++; $n++; if (!empty($h['ok'])) $c++; } if ($n) $users++; } $ctx['avg'] = ['answered' => $a, 'acc' => $a ? round(100 * $c / $a) : null, 'users' => $users]; mh_setting_set($key, json_encode($ctx['avg'])); }
+  else { $ctx['avg'] = mh_class_week_stats($week); mh_setting_set($key, json_encode($ctx['avg'])); }
   $st = $db->prepare('SELECT title, place, start, course FROM meets WHERE cancelled = 0 AND start > ? AND start < ? ORDER BY start LIMIT 5'); $st->execute([$now, $now + 7 * 86400]); $ctx['meets'] = $st->fetchAll();
   $st = $db->prepare('SELECT title, start, course FROM mocks WHERE cancelled = 0 AND start > ? AND start < ? ORDER BY start LIMIT 3'); $st->execute([$now, $now + 7 * 86400]); $ctx['mocks'] = $st->fetchAll();
   return $ctx;
@@ -131,13 +175,15 @@ function mh_digest_content(array $u, array $ctx): array {
   $names = ['calc' => 'Calc I', 'physics' => 'Physics I', 'precalc' => 'Precalc', 'general' => 'General'];
   $from = mh_local_date(time() - 7 * 86400); $answered = 0; $correct = 0; $days = [];
   foreach (mh_user_progress((int)$u['id']) as $blob) { foreach ($blob['history'] ?? [] as $h) if (($h['d'] ?? '') >= $from) { $answered++; if (!empty($h['ok'])) $correct++; } foreach (array_keys($blob['activity'] ?? []) as $d) if ($d >= $from) $days[$d] = true; }
+  $mine = mh_user_courses($u); $ctx['canvas'] = array_values(array_filter($ctx['canvas'], fn($e) => in_array($e['course'], $mine, true)));
+  $mins = mh_week_minutes(mh_user_progress((int)$u['id']), time() - 7 * 86400);
   $db = mh_db(); $st = $db->prepare('SELECT COALESCE(SUM(points),0) FROM challenge_attempts WHERE user_id = ? AND created > ?'); $st->execute([$u['id'], time() - 7 * 86400]); $cpts = (int)$st->fetchColumn();
   $st = $db->prepare('SELECT code FROM badges WHERE user_id = ? AND earned > ?'); $st->execute([$u['id'], time() - 7 * 86400]); $newBadges = array_map(fn($c) => MH_BADGES[$c][0] ?? $c, array_column($st->fetchAll(), 'code'));
   $acc = $answered ? round(100 * $correct / $answered) : null; $avg = $ctx['avg'];
   $lines = []; $h = [];
   $lines[] = "Your week on $site"; $lines[] = '';
-  $me = "You answered $answered quiz questions" . ($acc !== null ? " at $acc% accuracy" : '') . ", studied on " . count($days) . " day" . (count($days) === 1 ? '' : 's') . ($cpts ? ", and earned $cpts daily-challenge points" : '') . '.';
-  if ($avg && $avg['acc'] !== null && $avg['users'] > 1) $me .= " The class averaged {$avg['acc']}% across {$avg['users']} active students.";
+  $me = "You answered $answered quiz questions" . ($acc !== null ? " at $acc% accuracy" : '') . ", studied on " . count($days) . " day" . (count($days) === 1 ? '' : 's') . ($mins ? ' for ' . round($mins / 60, 1) . ' h of focused time' : '') . ($cpts ? ", and earned $cpts daily-challenge points" : '') . '.';
+  if ($avg && $avg['acc'] !== null && $avg['users'] > 1) $me .= " The class averaged {$avg['acc']}% across {$avg['users']} active students" . (isset($avg['median_hours']) && $avg['median_hours'] !== null ? " and a median of {$avg['median_hours']} h of focus time" : '') . '.';
   if ($newBadges) $me .= ' New badges: ' . implode(', ', $newBadges) . '.';
   $lines[] = $me; $h[] = '<p>' . htmlspecialchars($me) . '</p>';
   if ($ctx['canvas']) { $lines[] = ''; $lines[] = 'Due in the next 7 days (from Canvas):'; $h[] = '<h3 style="margin:18px 0 6px;font-size:15px">Due in the next 7 days</h3><ul style="padding-left:18px;margin:0">'; foreach ($ctx['canvas'] as $e) { $row = ($names[$e['course']] ?? $e['course']) . ': ' . $e['title'] . ' · ' . date('D M j', strtotime($e['date'])) . ($e['time'] ? ' ' . $e['time'] : ''); $lines[] = '  - ' . $row; $h[] = '<li>' . htmlspecialchars($row) . '</li>'; } $h[] = '</ul>'; }
@@ -146,6 +192,19 @@ function mh_digest_content(array $u, array $ctx): array {
   $lines[] = ''; $lines[] = "Open $site: $url"; $lines[] = "Turn these emails off in Settings → Account.";
   $html = '<div style="font-family:Segoe UI,Helvetica,Arial,sans-serif;max-width:560px;margin:0 auto;padding:24px;color:#0F172A"><h2 style="margin:0 0 12px;font-size:20px">Your week on ' . htmlspecialchars($site) . '</h2>' . implode('', $h) . '<p style="margin-top:20px"><a href="' . $url . '" style="display:inline-block;background:#4F46E5;color:#fff;text-decoration:none;padding:9px 14px;border-radius:8px">Open ' . htmlspecialchars($site) . '</a></p><p style="font-size:12px;color:#64748B">Turn these emails off in Settings → Account.</p></div>';
   return ["Your week on $site" . ($ctx['canvas'] ? ' · ' . count($ctx['canvas']) . ' things due' : ''), implode("\n", $lines), $html];
+}
+
+/** Class-wide numbers for the last week: answered, accuracy, active users, median focus hours (per user with any minutes). */
+function mh_class_week_stats(int $since): array {
+  $db = mh_db(); $a = 0; $c = 0; $users = 0; $from = mh_local_date($since); $minutes = [];
+  foreach ($db->query('SELECT user_id, json FROM progress')->fetchAll() as $r) {
+    $j = json_decode($r['json'], true); if (!is_array($j)) continue; $n = 0;
+    foreach ($j['history'] ?? [] as $h) if (($h['d'] ?? '') >= $from) { $a++; $n++; if (!empty($h['ok'])) $c++; }
+    if ($n) $users++;
+    foreach ($j['sessions'] ?? [] as $sn) if (($sn['d'] ?? '') >= $from) $minutes[$r['user_id']] = ($minutes[$r['user_id']] ?? 0) + (int)($sn['m'] ?? 0);
+  }
+  $vals = array_values($minutes); sort($vals); $median = $vals ? round(($vals[intdiv(count($vals) - 1, 2)] + $vals[intdiv(count($vals), 2)]) / 2 / 60, 1) : null;
+  return ['answered' => $a, 'acc' => $a ? round(100 * $c / $a) : null, 'users' => $users, 'median_hours' => $median, 'hours_users' => count($vals)];
 }
 
 /* ---------- routes ---------- */
@@ -344,6 +403,13 @@ function mh_social_route(string $route, array $in, array $cfg, string $ip): void
       elseif ($action === 'delete') { $db->prepare('DELETE FROM contributions WHERE id = ?')->execute([$id]); $db->prepare('DELETE FROM votes WHERE kind = "s" AND item_id = ?')->execute([$id]); }
       else mh_fail('Unknown action.');
       mh_json(['ok' => true]);
+    }
+
+    /* --- class-wide weekly stats (public; cached an hour) --- */
+    case 'stats_week': {
+      mh_method('GET'); $key = 'stats_week:' . intdiv($now, 3600); $cached = mh_setting($key);
+      if ($cached === null) { $ws = mh_week_start(); $data = mh_class_week_stats($ws); mh_setting_set($key, json_encode($data)); } else $data = json_decode($cached, true);
+      mh_json(['ok' => true, 'week_start' => mh_week_start(), 'stats' => $data]);
     }
 
     /* --- activity feed --- */

@@ -907,3 +907,13 @@ h1, h2, h3, h4 { letter-spacing: -0.01em; }
 .admin-tab.active { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
 .admin-stat .stat-label { display: flex; align-items: center; gap: 4px; }
 @media (max-width: 900px) { .admin-layout { grid-template-columns: 1fr; } .admin-tabs { flex-direction: row; flex-wrap: wrap; position: static; } .fa-filters { margin-left: 0; } }
+
+/* ---------- onboarding ---------- */
+.onboard-modal { max-width: 640px; }
+.onboard-list { display: flex; flex-direction: column; gap: 8px; max-height: 60vh; overflow: auto; }
+.onboard-course { padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface-2); }
+.onboard-course.on { border-color: var(--accent-line); background: var(--accent-soft); }
+.onboard-course .onboard-fields { display: none; margin-top: 8px; }
+.onboard-course.on .onboard-fields { display: grid; }
+.onboard-course .field label { font-size: 11px; }
+@media (max-width: 640px) { .onboard-course.on .onboard-fields { grid-template-columns: 1fr; } }

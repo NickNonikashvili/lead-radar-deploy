@@ -113,7 +113,11 @@ switch ($route) {
     $notify = array_key_exists('notify_email', $in) ? (!empty($in['notify_email']) ? 1 : 0) : (int)($u['notify_email'] ?? 1);
     $lb = array_key_exists('show_on_leaderboard', $in) ? (!empty($in['show_on_leaderboard']) ? 1 : 0) : (int)($u['show_on_leaderboard'] ?? 1);
     $dg = array_key_exists('digest_email', $in) ? (!empty($in['digest_email']) ? 1 : 0) : (int)($u['digest_email'] ?? 1);
-    mh_db()->prepare('UPDATE users SET name = ?, notify_email = ?, show_on_leaderboard = ?, digest_email = ? WHERE id = ?')->execute([$name, $notify, $lb, $dg, $u['id']]); $u['name'] = $name; $u['notify_email'] = $notify; $u['show_on_leaderboard'] = $lb; $u['digest_email'] = $dg;
+    $rm = array_key_exists('reminder_email', $in) ? (!empty($in['reminder_email']) ? 1 : 0) : (int)($u['reminder_email'] ?? 0);
+    $courses = $u['courses'] ?? null; if (array_key_exists('courses', $in)) { $c = is_array($in['courses']) ? array_values(array_unique(array_filter($in['courses'], fn($x) => in_array($x, ['calc', 'physics', 'precalc'], true)))) : []; $courses = json_encode($c); }
+    $sections = $u['sections'] ?? null; if (array_key_exists('sections', $in) && is_array($in['sections'])) { $sec = []; foreach ($in['sections'] as $cid => $v) { if (!in_array($cid, ['calc', 'physics', 'precalc'], true) || !is_array($v)) continue; $sec[$cid] = ['section' => mb_substr(trim((string)($v['section'] ?? '')), 0, 20), 'examTime' => mb_substr(trim((string)($v['examTime'] ?? '')), 0, 60), 'labDay' => in_array($v['labDay'] ?? '', ['tue', 'thu'], true) ? $v['labDay'] : '']; } $sections = json_encode($sec); }
+    mh_db()->prepare('UPDATE users SET name = ?, notify_email = ?, show_on_leaderboard = ?, digest_email = ?, reminder_email = ?, courses = ?, sections = ? WHERE id = ?')->execute([$name, $notify, $lb, $dg, $rm, $courses, $sections, $u['id']]);
+    $u['name'] = $name; $u['notify_email'] = $notify; $u['show_on_leaderboard'] = $lb; $u['digest_email'] = $dg; $u['reminder_email'] = $rm; $u['courses'] = $courses; $u['sections'] = $sections;
     mh_json(['ok' => true, 'user' => mh_user_public($u)]);
 
   case 'canvas':
@@ -167,6 +171,6 @@ switch ($route) {
 
   default:
     if (str_starts_with($route, 'forum_') || str_starts_with($route, 'admin_') || str_starts_with($route, 'notif_') || $route === 'terms_accept') { require_once __DIR__ . '/forum.php'; mh_forum_route($route, $in, $cfg, $ip); }
-    foreach (['challenge_', 'badges', 'presence', 'meet_', 'poll_', 'mock_', 'contrib_', 'activity', 'cron', 'helpers'] as $pre) if (str_starts_with($route, $pre)) { require_once __DIR__ . '/social.php'; mh_social_route($route, $in, $cfg, $ip); }
+    foreach (['challenge_', 'badges', 'presence', 'meet_', 'poll_', 'mock_', 'contrib_', 'activity', 'cron', 'helpers', 'stats_'] as $pre) if (str_starts_with($route, $pre)) { require_once __DIR__ . '/social.php'; mh_social_route($route, $in, $cfg, $ip); }
     mh_fail('Not found.', 404);
 }

@@ -101,6 +101,21 @@ unban, verify or delete any account. Both lists ship with nikoloz.nonikashvili@s
 - **Verified staff**: emails marked Instructor or TA (admin panel → Site settings, or `staff` in config) get a
   badge next to their posts.
 
+## Personalization, reminders, streaks, focus time
+
+- **Your classes and sections.** After sign-up (and any time from Settings → *Choose classes and sections*) a
+  member picks the classes they take, their section number, lecture/exam time and, for Calc I, their lab day.
+  Only those classes show on the landing page, in the course switcher, in reminders and in the digest; the
+  section and time appear on the dashboard's exam tile.
+- **Evening reminders.** Opt-in (Settings, or the one-click card on the dashboard): from 6 pm local time
+  (`reminder_hour`) members get an email listing tomorrow's Canvas due dates for their classes, study sessions
+  they joined, and a warning if their streak ends at midnight. Sent like the digest: a few per request, or all
+  at once by the cron call.
+- **Streak protection.** The dashboard warns when today has no activity yet and the streak is at risk, and
+  offers one *freeze* per class per week when a streak broke yesterday.
+- **Focus time.** Completed pomodoro minutes are logged per day and synced; the dashboard shows hours this
+  week next to the class median (from `stats_week`), and the digest includes it.
+
 ## Admin panel
 
 `#/admin` (also in the sidebar for staff): Overview with stats and the activity feed, Members (search, ban,
