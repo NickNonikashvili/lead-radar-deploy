@@ -182,7 +182,7 @@
       eventsOn(C, iso).filter(e => e[1] === 'exam' || e[1] === 'admin').forEach(e => items.push({ date: iso, time: e[1] === 'exam' ? '' : '', title: e[2], type: e[1] }));
     }
     const cv = Canvas.data && Canvas.data.configured ? Canvas.events(C.id, toISO(start), 28) : [];
-    if (cv.length) { const real = cv.map(e => ({ date: e.date, time: e.time, title: e.title, type: 'canvas', url: e.url })); const keep = items.filter(x => x.type !== 'recurring'); items.length = 0; items.push(...keep, ...real); }
+    if (cv.length) { const real = cv.map(e => ({ date: e.date, time: e.time, title: e.title, type: 'canvas', url: e.url })); const keep = items.filter(x => x.type !== 'recurring' && !(x.type === 'admin' && /^due\b/i.test(x.title))); items.length = 0; items.push(...keep, ...real); }
     const seen = new Set(); const uniq = items.filter(x => { const k = x.date + '|' + x.title.toLowerCase(); if (seen.has(k)) return false; seen.add(k); return true; });
     uniq.sort((a, b) => a.date.localeCompare(b.date)); return uniq.slice(0, count);
   }
@@ -434,7 +434,7 @@
               ${D.CALENDAR_NOTE ? `<p class="small muted mt-1">${esc(D.CALENDAR_NOTE)}</p>` : ''}</div>
             <div class="panel"><div class="panel-h"><div class="panel-title">${icon('clock')} Due soon</div>${(D.RECURRING || []).some(r => r.afterLabDay) ? `<span class="small muted">Lab day: ${courseSetting(D.id, 'labDay', 'tue') === 'thu' ? 'Thu' : 'Tue'} · <a href="${L('settings')}">change</a></span>` : ''}</div>
               ${dl.length ? dl.map(x => `<div class="today-ev"><span class="when">${daysBetween(t, x.date) === 0 ? 'Today' : daysBetween(t, x.date) === 1 ? 'Tomorrow' : esc(fmtDate(x.date))}</span><span>${esc(x.title)}${x.time ? ` <span class="muted small">· ${esc(x.time)}</span>` : ''}</span></div>`).join('') : '<div class="empty">Nothing scheduled.</div>'}
-              <p class="small muted mt-2">Standing rules from the syllabus. Confirm exact assignments in Canvas.</p></div>
+              <p class="small muted mt-2">${Canvas.data && Canvas.data.configured && Canvas.events(D.id, t).length ? 'Due dates come from the Canvas calendar; exams and drop dates from the syllabus.' : 'Standing rules from the syllabus. Confirm exact assignments in Canvas.'}</p></div>
             <div class="panel"><div class="panel-h"><div class="panel-title">${icon('fire')} Your progress</div></div>
               <div class="grid cols-2" style="gap:10px"><div class="stat"><div class="stat-num">${st}</div><div class="stat-label">day streak</div></div><div class="stat"><div class="stat-num">${answered ? Math.round(100 * correct / answered) : 0}%</div><div class="stat-label">accuracy · ${answered} answered</div></div><div class="stat"><div class="stat-num">${cm.mastered}<span class="muted" style="font-size:15px">/${cm.total}</span></div><div class="stat-label">flashcards mastered</div></div><div class="stat"><div class="stat-num">${hist.filter(x => x.d === t).length}</div><div class="stat-label">questions today</div></div></div>
               <div class="divider"></div>
