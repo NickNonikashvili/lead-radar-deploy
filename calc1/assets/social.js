@@ -53,9 +53,48 @@
       S.refreshBadges(true).then(r => {
         if (!r) { el.innerHTML = '<div class="empty">Could not load badges.</div>'; return; }
         const have = {}; r.badges.forEach(b => have[b.code] = b);
-        el.innerHTML = `<div class="panel"><div class="panel-h"><div class="panel-title">${icon('fire')} Your shelf</div><span class="chip good">${r.badges.length} of ${r.catalog.length}</span></div><div class="badge-grid">${r.catalog.map(b => { const h = have[b.code]; return `<div class="badge${h ? ' earned' : ' locked'}" title="${esc(b.desc)}"><div class="badge-ic">${icon(b.icon, 22)}</div><div class="badge-name">${esc(b.name)}</div><div class="badge-desc">${esc(b.desc)}</div>${h ? `<div class="badge-date">${esc(App.fmtDate(App.toISO(new Date(h.earned * 1000))))}</div>` : '<div class="badge-date muted">locked</div>'}</div>`; }).join('')}</div></div>`;
+        el.innerHTML = `<div class="panel"><div class="panel-h"><div class="panel-title">${icon('award')} Your shelf</div><span class="row gap-sm"><span class="chip good">${r.badges.length} of ${r.catalog.length}</span><a class="btn sm" href="#/people">${icon('users', 13)} See everyone's badges</a></span></div><div class="badge-grid">${r.catalog.map(b => { const h = have[b.code]; return `<div class="badge${h ? ' earned' : ' locked'}" title="${esc(b.desc)}"><div class="badge-ic">${icon(b.icon, 22)}</div><div class="badge-name">${esc(b.name)}</div><div class="badge-desc">${esc(b.desc)}</div>${h ? `<div class="badge-date">${esc(App.fmtDate(App.toISO(new Date(h.earned * 1000))))}</div>` : '<div class="badge-date muted">locked</div>'}</div>`; }).join('')}</div></div>`;
         api('badges', { seen: true }).catch(() => {});
       });
+    }
+  };
+
+  /* ---------- people directory ---------- */
+  const PP = { q: '', sort: 'badges', page: 0, rows: [], catalog: [], total: 0, online: 0, more: false, open: {} };
+  const hue = id => Math.round((id * 137.508) % 360);
+  App.views.people = {
+    title: 'People', blurb: 'Everyone on MatHub and the badges they have earned. Names follow each person’s privacy setting.',
+    render(root, param, query, standalone) {
+      const wrap = standalone ? `<div class="landing-wrap"><header class="landing-top"><div><div class="eyebrow">MatHub</div><h1 class="landing-title"><span class="logo-mark">${App.logoSvg(44)}</span>People</h1><p class="muted">${this.blurb}</p></div><div class="row gap-sm"><span id="landing-account"></span><a class="btn" href="#/badges">${icon('award', 14)} Your badges</a><a class="btn" href="#/">${icon('left', 14)} All classes</a></div></header><div id="pp-root"></div></div>` : pageHead('People', this.blurb, `<a class="btn" href="#/badges">${icon('award', 14)} Your badges</a>`) + '<div id="pp-root"></div>';
+      root.innerHTML = wrap; const el = $('#pp-root', root); const slot = $('#landing-account', root); if (slot && App.auth && App.auth.ready) App.auth.paintLandingAccount(slot);
+      if (!user()) { el.innerHTML = lockCard('The People page is for members', 'Sign up free with your montana.edu email to see who is studying with you and the badges they have earned.'); return; }
+      if (offline()) { el.innerHTML = '<div class="empty">The People page needs a connection to the server.</div>'; return; }
+      PP.q = query && query.q !== undefined ? String(query.q) : ''; PP.page = 0; PP.open = {};
+      el.innerHTML = `<div class="panel people-panel"><div class="people-bar"><label class="people-search">${icon('search', 15)}<input class="input" id="pp-q" placeholder="Search by name" value="${esc(PP.q)}" maxlength="60" aria-label="Search people"></label><select class="select" id="pp-sort" aria-label="Sort">${[['badges', 'Most badges'], ['active', 'Online now'], ['new', 'Newest members'], ['name', 'Name A–Z']].map(([v, l]) => `<option value="${v}"${PP.sort === v ? ' selected' : ''}>${l}</option>`).join('')}</select><span class="people-count" id="pp-count"></span></div><div id="pp-list"><div class="empty">Loading…</div></div><div id="pp-more" class="mt-2" style="text-align:center"></div></div>`;
+      const inp = $('#pp-q', el); let t; inp.addEventListener('input', () => { clearTimeout(t); t = setTimeout(() => { PP.q = inp.value.trim(); PP.page = 0; this.load(el); }, 250); });
+      $('#pp-sort', el).addEventListener('change', e => { PP.sort = e.target.value; PP.page = 0; this.load(el); });
+      bind(el, { 'pp-more': () => { PP.page++; this.load(el, true); }, 'pp-expand': btn => { PP.open[btn.dataset.id] = !PP.open[btn.dataset.id]; this.paintList(el); } });
+      PP.page = 0; this.load(el);
+    },
+    async load(el, append) {
+      const list = $('#pp-list', el); if (!list) return; if (!append) list.innerHTML = '<div class="empty">Loading…</div>';
+      try { const r = await api(`people&q=${encodeURIComponent(PP.q)}&sort=${encodeURIComponent(PP.sort)}&page=${PP.page}`); PP.rows = append ? PP.rows.concat(r.people) : r.people; PP.catalog = r.catalog; PP.total = r.total; PP.online = r.online; PP.more = r.more; }
+      catch (e) { list.innerHTML = `<div class="empty">${esc(e.message)}</div>`; return; }
+      this.paintList(el);
+    },
+    paintList(el) {
+      const list = $('#pp-list', el); if (!list) return; const cat = {}; PP.catalog.forEach(b => cat[b.code] = b);
+      $('#pp-count', el).innerHTML = `<b>${PP.total}</b> member${PP.total === 1 ? '' : 's'} · <span class="online-dot"></span> ${PP.online} online now`;
+      if (!PP.rows.length) { list.innerHTML = `<div class="empty">${PP.q ? 'Nobody matches that name.' : 'No members yet.'}</div>`; $('#pp-more', el).innerHTML = ''; return; }
+      list.innerHTML = `<div class="people-grid">${PP.rows.map(p => {
+        const open = !!PP.open[p.id]; const badges = p.badges.map(b => cat[b.code]).filter(Boolean); const shown = open ? badges : badges.slice(0, 5);
+        const initial = p.anon ? '?' : (p.name.trim()[0] || '?').toUpperCase(); const joined = App.fmtDate(App.toISO(new Date(p.joined * 1000)));
+        return `<div class="person${p.me ? ' me' : ''}${p.anon ? ' anon' : ''}">
+          <div class="person-head"><div class="avatar" style="--hue:${hue(p.id)}">${esc(initial)}</div><div class="person-id"><div class="person-name">${esc(p.name)}${p.me ? ' <span class="chip accent">you</span>' : ''}${p.role ? ` <span class="chip staff">${esc(p.role)}</span>` : ''}${p.admin ? ' <span class="chip accent">admin</span>' : p.mod ? ' <span class="chip accent">mod</span>' : ''}${p.online ? ' <span class="online-dot" title="Online now"></span>' : ''}</div><div class="small muted">Joined ${esc(joined)}${p.courses.length ? ' · ' + p.courses.map(c => esc(courseName(c))).join(', ') : ''}</div></div><span class="chip${badges.length ? ' gold' : ''}" title="${badges.length} badge${badges.length === 1 ? '' : 's'}">${icon('award', 12)} ${badges.length}</span></div>
+          <div class="person-badges">${badges.length ? shown.map(b => `<span class="bpill" title="${esc(b.desc)}">${icon(b.icon, 13)}<span>${esc(b.name)}</span></span>`).join('') + (badges.length > 5 ? `<button class="bpill more" data-action="pp-expand" data-id="${p.id}">${open ? 'show fewer' : `+${badges.length - 5} more`}</button>` : '') : '<span class="small muted">No badges yet</span>'}</div>
+          <div class="person-stats small muted">${p.posts} post${p.posts === 1 ? '' : 's'} · ${p.comments} ${p.comments === 1 ? 'reply' : 'replies'} · ${p.accepted} accepted answer${p.accepted === 1 ? '' : 's'}</div>
+        </div>`; }).join('')}</div>`;
+      $('#pp-more', el).innerHTML = PP.more ? `<button class="btn sm" data-action="pp-more">Show more</button>` : '';
     }
   };
 

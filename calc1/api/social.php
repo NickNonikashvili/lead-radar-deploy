@@ -320,6 +320,34 @@ function mh_social_route(string $route, array $in, array $cfg, string $ip): void
       mh_json(['ok' => true, 'week' => $q($week), 'all' => $q(0)]);
     }
 
+    /* --- people directory: every verified member with the badges they have earned --- */
+    case 'people': {
+      mh_method('GET'); $u = mh_require_user();
+      $q = trim((string)($_GET['q'] ?? '')); $sort = (string)($_GET['sort'] ?? 'badges'); $page = max(0, (int)($_GET['page'] ?? 0)); $per = 48; $cut = $now - 150;
+      $where = 'u.verified = 1 AND u.email NOT LIKE "%@system.local"'; $args = [];
+      if ($q !== '') { $like = '%' . str_replace(['%', '_'], ['\\%', '\\_'], mb_substr($q, 0, 60)) . '%'; $where .= ' AND u.show_on_leaderboard = 1 AND (u.name LIKE ? OR (u.name = "" AND substr(u.email, 1, instr(u.email, "@") - 1) LIKE ?))'; $args = [$like, $like]; }
+      $order = ['new' => 'u.created DESC', 'name' => 'u.show_on_leaderboard DESC, LOWER(CASE WHEN u.name <> "" THEN u.name ELSE u.email END) ASC', 'active' => 'online DESC, last_seen DESC, nbadges DESC'][$sort] ?? 'nbadges DESC, accepted DESC, u.created ASC';
+      $sql = "SELECT u.id, u.name, u.email, u.created, u.show_on_leaderboard, u.courses,
+          (SELECT COUNT(*) FROM badges b WHERE b.user_id = u.id) AS nbadges,
+          (SELECT COUNT(*) FROM posts p WHERE p.user_id = u.id AND p.removed = 0) AS nposts,
+          (SELECT COUNT(*) FROM comments c WHERE c.user_id = u.id AND c.removed = 0) AS ncomments,
+          (SELECT COUNT(*) FROM posts p JOIN comments c2 ON c2.id = p.accepted_id WHERE c2.user_id = u.id AND c2.removed = 0) AS accepted,
+          COALESCE((SELECT seen FROM presence pr WHERE pr.user_id = u.id), 0) AS last_seen,
+          CASE WHEN COALESCE((SELECT seen FROM presence pr WHERE pr.user_id = u.id), 0) > $cut THEN 1 ELSE 0 END AS online
+        FROM users u WHERE $where ORDER BY $order LIMIT " . ($per + 1) . ' OFFSET ' . ($page * $per);
+      $st = $db->prepare($sql); $st->execute($args); $rows = $st->fetchAll(); $more = count($rows) > $per; $rows = array_slice($rows, 0, $per);
+      $st = $db->prepare("SELECT COUNT(*) FROM users u WHERE $where"); $st->execute($args); $total = (int)$st->fetchColumn();
+      $st = $db->prepare('SELECT COUNT(*) FROM presence WHERE seen > ?'); $st->execute([$cut]); $online = (int)$st->fetchColumn();
+      $byUser = []; if ($rows) { $ids = array_map(fn($r) => (int)$r['id'], $rows); $st = $db->prepare('SELECT user_id, code, earned FROM badges WHERE user_id IN (' . implode(',', array_fill(0, count($ids), '?')) . ') ORDER BY earned DESC'); $st->execute($ids); foreach ($st->fetchAll() as $b) if (isset(MH_BADGES[$b['code']])) $byUser[(int)$b['user_id']][] = ['code' => $b['code'], 'earned' => (int)$b['earned']]; }
+      $people = array_map(function ($r) use ($byUser, $u) {
+        $shown = (int)$r['show_on_leaderboard'] === 1; $name = $shown ? mh_display_name($r) : 'Anonymous student';
+        return ['id' => (int)$r['id'], 'name' => $name, 'anon' => !$shown, 'role' => mh_role($r['email']), 'mod' => mh_is_mod(['email' => $r['email']]), 'admin' => mh_is_admin(['email' => $r['email']]),
+          'online' => (int)$r['online'] === 1, 'joined' => (int)$r['created'], 'courses' => $shown ? mh_user_courses($r) : [], 'badges' => $byUser[(int)$r['id']] ?? [],
+          'posts' => (int)$r['nposts'], 'comments' => (int)$r['ncomments'], 'accepted' => (int)$r['accepted'], 'me' => (int)$r['id'] === (int)$u['id']];
+      }, $rows);
+      mh_json(['ok' => true, 'people' => $people, 'total' => $total, 'online' => $online, 'more' => $more, 'page' => $page, 'catalog' => array_map(fn($c, $v) => ['code' => $c, 'name' => $v[0], 'desc' => $v[1], 'icon' => $v[2]], array_keys(MH_BADGES), MH_BADGES)]);
+    }
+
     /* --- community mock exams --- */
     case 'mock_list': {
       mh_method('GET');

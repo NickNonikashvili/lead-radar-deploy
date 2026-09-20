@@ -116,6 +116,13 @@ unban, verify or delete any account. Both lists ship with nikoloz.nonikashvili@s
 - **Focus time.** Completed pomodoro minutes are logged per day and synced; the dashboard shows hours this
   week next to the class median (from `stats_week`), and the digest includes it.
 
+## Account menu, settings and the People page
+
+- **Account menu in the header.** Once signed in, your avatar sits in the top bar of every class page, in the landing hero and on every standalone page (badges, discussions, study sessions, mock exams, admin). It opens a menu with Account settings, Your badges, People, Inbox (with the unread count), the admin panel for staff, and Log out. Guests see Sign up and Log in there instead.
+- **Settings from the start page.** `#/settings` works without picking a class: account, notifications, privacy, your classes and sections, theme and a preview-as-of date. Per-class backups (export, import, reset) stay on each class's own settings page, linked from there.
+- **Clearer account panel.** A header with your name, email, role and sync state, then large icon tiles for Your badges (with your earned count), People, Inbox and the admin panel, then Profile, Email me and Privacy sections, and the account actions at the bottom.
+- **People page** (`#/people`, members only, also under Community in every class). Every verified member with their badges, role, classes, join date, an online dot when they are on the site right now, and post, reply and accepted-answer counts. Search by name, sort by most badges, online now, newest or name. Anyone who turned off "Show my name on leaderboards" appears as "Anonymous student" and is left out of name search.
+
 ## Hint ladders
 
 Every generated quiz problem has a "Walk me through it" ladder in practice mode: three progressive hints

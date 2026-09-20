@@ -40,7 +40,7 @@
   Auth.gate = view => (HARD.has(view) && !Auth.user) ? 'hard' : 'open';
   Auth.emailOk = email => { const m = /^[^\s@]+@([^\s@]+)$/.exec(String(email || '').trim().toLowerCase()); if (!m) return false; const dom = m[1]; const allowed = (Auth.health && Auth.health.domains) || ['montana.edu']; return allowed.some(d => dom === d || dom.endsWith('.' + d)); };
   Auth.onChange = fn => Auth.listeners.push(fn);
-  Auth.setUnread = n => { if (Auth.user) Auth.user.unread = n; const b = $('#notif-badge'); if (b) { b.textContent = n > 99 ? '99+' : String(n); b.hidden = !(n > 0); } const btn = $('#notif-btn'); if (btn) btn.hidden = !Auth.user || Auth.mode === 'offline'; };
+  Auth.setUnread = n => { if (Auth.user) Auth.user.unread = n; const b = $('#notif-badge'); if (b) { b.textContent = n > 99 ? '99+' : String(n); b.hidden = !(n > 0); } const btn = $('#notif-btn'); if (btn) btn.hidden = !Auth.user || Auth.mode === 'offline'; $$('.inbox-pill').forEach(p => { p.textContent = n > 99 ? '99+' : String(n); p.hidden = !(n > 0); }); };
   function applyServerPrefs() {
     const u = Auth.user; if (!u || u.local) return;
     if (Array.isArray(u.courses)) App.setSetting('courses', u.courses);
@@ -166,18 +166,42 @@
     if (!Auth.ready) { box.innerHTML = '<div class="acct small muted">Checking account…</div>'; return; }
     if (Auth.user) {
       const name = Auth.user.name || Auth.user.email.split('@')[0]; const initial = name.trim()[0].toUpperCase();
-      box.innerHTML = `<div class="acct"><div class="avatar">${esc(initial)}</div><div class="acct-body"><div class="acct-name" title="${esc(Auth.user.email)}">${esc(name)}</div><div class="acct-sub" id="acct-sync">${syncLabel()}</div></div><button class="icon-btn" data-action="acct-menu" title="Account">${icon('sliders', 14)}</button></div>`;
+      box.innerHTML = `<div class="acct"><div class="avatar">${esc(initial)}</div><div class="acct-body"><div class="acct-name" title="${esc(Auth.user.email)}">${esc(name)}</div><div class="acct-sub" id="acct-sync">${syncLabel()}</div></div><button class="icon-btn" data-action="acct-menu" title="Account settings">${icon('gear', 14)}</button></div>`;
     } else {
       box.innerHTML = `<div class="acct guest"><div><div class="acct-name">Preview mode</div><div class="acct-sub">Sign up to unlock everything</div></div><div class="row gap-sm"><button class="btn xs primary" data-action="auth-signup">Sign up</button><button class="btn xs" data-action="auth-login">Log in</button></div></div>`;
     }
     bind(box, { 'auth-signup': () => Auth.open('signup'), 'auth-login': () => Auth.open('login'), 'acct-menu': () => App.go('settings') });
+    let top = $('#topbar-account'); if (!top) { const ta = $('#topbar .topbar-actions'); if (ta) { top = document.createElement('span'); top.id = 'topbar-account'; top.className = 'acct-slot'; ta.append(top); } }
+    if (top) accountMenu(top);
     $$('#landing-account').forEach(paintLandingAccount);
   }
-  function paintLandingAccount(el) {
-    if (Auth.user) { const name = Auth.user.name || Auth.user.email.split('@')[0]; el.innerHTML = `<div class="row gap-sm"><span class="chip good">${icon('check', 12)} ${esc(name)}</span><button class="btn xs" data-action="landing-logout">Log out</button></div>`; }
-    else el.innerHTML = `<div class="row gap-sm"><button class="btn sm primary" data-action="landing-signup">${icon('fire', 14)} Sign up free</button><button class="btn sm" data-action="landing-login">Log in</button></div>`;
-    bind(el, { 'landing-signup': () => Auth.open('signup'), 'landing-login': () => Auth.open('login'), 'landing-logout': () => Auth.logout() });
+  function paintLandingAccount(el) { accountMenu(el, { landing: true }); }
+  /* ---------- header account menu: avatar button with a dropdown (topbar, landing hero, standalone pages) ---------- */
+  function accountMenu(el, opts = {}) {
+    if (!Auth.ready) { el.innerHTML = ''; return; }
+    if (!Auth.user) {
+      el.innerHTML = opts.landing ? `<div class="row gap-sm"><button class="btn sm primary" data-action="landing-signup">${icon('fire', 14)} Sign up free</button><button class="btn sm" data-action="landing-login">Log in</button></div>` : `<span class="row gap-sm"><button class="btn sm primary" data-action="landing-signup">Sign up</button><button class="btn sm" data-action="landing-login">Log in</button></span>`;
+      bind(el, { 'landing-signup': () => Auth.open('signup'), 'landing-login': () => Auth.open('login') }); return;
+    }
+    const u = Auth.user; const name = u.name || u.email.split('@')[0]; const initial = name.trim()[0].toUpperCase(); const unread = u.unread || 0;
+    el.innerHTML = `<div class="acct-menu"><button class="acct-btn" data-action="acct-toggle" aria-haspopup="true" aria-expanded="false" title="Account menu"><span class="avatar sm">${esc(initial)}</span><span class="acct-btn-name">${esc(name)}</span>${icon('chevron', 12)}</button>
+      <div class="acct-dd" hidden>
+        <div class="acct-dd-head"><div class="acct-name">${esc(name)}</div><div class="acct-sub mono">${esc(u.email)}</div>${u.role || u.admin || u.mod ? `<div class="row gap-sm mt-1">${u.role ? `<span class="chip staff">${esc(u.role)}</span>` : ''}${u.admin ? '<span class="chip accent">administrator</span>' : u.mod ? '<span class="chip accent">moderator</span>' : ''}</div>` : ''}</div>
+        <a class="acct-dd-item" href="${App.settingsLink ? App.settingsLink() : '#/settings'}">${icon('gear', 15)}<span>Account settings</span></a>
+        <a class="acct-dd-item" href="#/badges">${icon('award', 15)}<span>Your badges</span></a>
+        <a class="acct-dd-item" href="#/people">${icon('users', 15)}<span>People</span></a>
+        ${Auth.mode === 'server' ? `<a class="acct-dd-item" href="${App.inboxLink ? App.inboxLink() : '#/forum/inbox'}">${icon('bell', 15)}<span>Inbox</span><b class="pill inbox-pill"${unread ? '' : ' hidden'}>${unread > 99 ? '99+' : unread}</b></a>` : ''}
+        ${u.mod ? `<a class="acct-dd-item" href="#/admin">${icon('shield', 15)}<span>${u.admin ? 'Admin panel' : 'Moderation'}</span></a>` : ''}
+        <div class="acct-dd-sep"></div>
+        <button class="acct-dd-item" data-action="landing-logout">${icon('logout', 15)}<span>Log out</span></button>
+      </div></div>`;
+    bind(el, { 'acct-toggle': (btn, e) => { e.stopPropagation(); const dd = $('.acct-dd', el); const open = dd.hidden; closeMenus(); dd.hidden = !open; btn.setAttribute('aria-expanded', String(open)); }, 'landing-logout': () => { closeMenus(); Auth.logout(); } });
   }
+  function closeMenus() { $$('.acct-dd').forEach(d => { d.hidden = true; }); $$('.acct-btn').forEach(b => b.setAttribute('aria-expanded', 'false')); }
+  document.addEventListener('click', e => { if (!e.target.closest || !e.target.closest('.acct-menu') || e.target.closest('.acct-dd-item')) closeMenus(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeMenus(); });
+  window.addEventListener('hashchange', () => { closeMenus(); const top = $('#topbar-account'); if (top && Auth.ready) accountMenu(top); });   // links in the menu follow the current class
+  Auth.accountMenu = accountMenu;
   Auth.paintLandingAccount = paintLandingAccount;
   function paintBanner() {
     let b = $('#preview-banner');
@@ -275,24 +299,40 @@
 
   /* ---------- settings panel ---------- */
   Auth.settingsPanel = function (root) {
-    const u = Auth.user;
-    const html = u ? `<div class="panel"><div class="panel-h"><div class="panel-title">${icon('info')} Account</div><span class="row gap-sm">${u.admin ? '<a class="chip accent" href="#/admin">administrator · admin panel</a>' : u.mod ? '<a class="chip accent" href="#/admin">moderator · admin panel</a>' : ''}${u.role ? `<span class="chip staff">${esc(u.role)}</span>` : ''}<span class="chip ${Auth.mode === 'server' ? 'good' : ''}">${Auth.mode === 'server' ? 'synced across devices' : 'local browser only'}</span></span></div>
-        <div class="field mb-2"><label>Email</label><div class="mono small">${esc(u.email)}</div></div>
-        <div class="field mb-2"><label for="acct-name">Display name</label><div class="row gap-sm"><input class="input" id="acct-name" value="${esc(u.name || '')}" placeholder="Your name" style="max-width:260px"><button class="btn sm" data-action="save-name">Save</button></div></div>
-        ${Auth.mode === 'server' ? `<label class="check" style="padding:0"><input type="checkbox" id="acct-notify" ${u.notify_email === false ? '' : 'checked'}><span>Email me when someone replies to my posts or comments <span class="muted small">(at most one email per post every few hours)</span></span></label>
-        <label class="check" style="padding:0"><input type="checkbox" id="acct-reminder" ${u.reminder_email ? 'checked' : ''}><span>Email me the evening before something is due <span class="muted small">(6 pm: tomorrow's Canvas due dates, sessions you joined, and a heads-up if your streak is about to end)</span></span></label>
-        <label class="check" style="padding:0"><input type="checkbox" id="acct-digest" ${u.digest_email === false ? '' : 'checked'}><span>Send me the weekly digest <span class="muted small">(Sunday evening: what is due, top posts, your stats vs. the class)</span></span></label>
-        <label class="check" style="padding:0"><input type="checkbox" id="acct-lb" ${u.show_on_leaderboard === false ? '' : 'checked'}><span>Show my name on leaderboards and helper lists <span class="muted small">(otherwise “Anonymous student”)</span></span></label>
-        <p class="small mt-1"><a href="#/badges">${icon('fire', 13)} Your badges</a></p>` : ''}
-        <div class="row gap-sm mt-2">${Auth.mode === 'server' ? `<button class="btn sm" data-action="sync-now">${icon('rotate', 13)} Sync now</button><button class="btn sm" data-action="change-pass">Change password</button>` : ''}<button class="btn sm" data-action="logout">Log out</button><button class="btn sm danger ghost" data-action="delete-acct">Delete account</button></div>
-        <p class="small muted mt-2">${Auth.mode === 'server' ? 'Quiz history, flashcard boxes, checklists and grades are saved to your account a moment after each change and load on any device where you log in.' : 'The account server is unreachable, so nothing leaves this browser.'}</p></div>`
-      : `<div class="panel"><div class="panel-h"><div class="panel-title">${icon('info')} Account</div><span class="chip warn">preview</span></div>${Auth.lockCard('You are previewing MatHub', 'Sign up to unlock every tool and sync your progress across devices.', { compact: true })}</div>`;
+    const u = Auth.user; const server = Auth.mode === 'server'; let html;
+    if (u) {
+      const name = u.name || u.email.split('@')[0]; const initial = name.trim()[0].toUpperCase(); const S = App.social;
+      const badgeLine = S && S.badges ? `${S.badges.badges.length} of ${S.badges.catalog.length} earned` : server ? 'See what you have earned' : 'Needs the account server';
+      html = `<div class="panel acct-panel">
+        <div class="acct-hero"><div class="avatar big">${esc(initial)}</div><div class="acct-hero-body"><h2 class="acct-hero-name">${esc(name)}</h2><div class="mono small muted">${esc(u.email)}</div><div class="row gap-sm mt-1" style="flex-wrap:wrap">${u.role ? `<span class="chip staff">${esc(u.role)}</span>` : ''}${u.admin ? '<span class="chip accent">administrator</span>' : u.mod ? '<span class="chip accent">moderator</span>' : ''}<span class="chip ${server ? (Auth.unreachable ? 'warn' : 'good') : 'warn'}">${server ? (Auth.unreachable ? 'offline · will sync' : 'synced across devices') : 'local browser only'}</span>${u.created ? `<span class="chip">member since ${esc(App.fmtDate(App.toISO(new Date(u.created * 1000))))}</span>` : ''}</div></div></div>
+        <div class="link-tiles">
+          <a class="link-tile gold" href="#/badges"><span class="tile-ic">${icon('award', 20)}</span><span class="tile-body"><b>Your badges</b><small id="acct-badge-count">${badgeLine}</small></span>${icon('right', 14)}</a>
+          <a class="link-tile" href="#/people"><span class="tile-ic">${icon('users', 20)}</span><span class="tile-body"><b>People</b><small>Classmates and their badges</small></span>${icon('right', 14)}</a>
+          ${server ? `<a class="link-tile" href="${App.inboxLink ? App.inboxLink() : '#/forum/inbox'}"><span class="tile-ic">${icon('bell', 20)}</span><span class="tile-body"><b>Inbox</b><small>${u.unread ? `${u.unread} unread ${u.unread === 1 ? 'reply' : 'replies'}` : 'Replies to your posts'}</small></span>${icon('right', 14)}</a>` : ''}
+          ${u.mod ? `<a class="link-tile" href="#/admin"><span class="tile-ic">${icon('shield', 20)}</span><span class="tile-body"><b>${u.admin ? 'Admin panel' : 'Moderation'}</b><small>Members, reports and site settings</small></span>${icon('right', 14)}</a>` : ''}
+        </div>
+        <div class="acct-sections">
+          <section><div class="eyebrow mb-1">Profile</div><div class="field"><label for="acct-name">Display name</label><div class="row gap-sm"><input class="input" id="acct-name" value="${esc(u.name || '')}" placeholder="Your name" maxlength="40" style="max-width:260px"><button class="btn sm" data-action="save-name">Save</button></div><span class="help">Shown on your posts, on leaderboards and on the People page.</span></div></section>
+          ${server ? `<section><div class="eyebrow mb-1">Email me</div>
+            <label class="check"><input type="checkbox" id="acct-notify" ${u.notify_email === false ? '' : 'checked'}><span>When someone replies to my posts or comments <span class="muted small">(at most one email per post every few hours)</span></span></label>
+            <label class="check"><input type="checkbox" id="acct-reminder" ${u.reminder_email ? 'checked' : ''}><span>The evening before something is due <span class="muted small">(6 pm: tomorrow's Canvas due dates, sessions you joined, and a heads-up if your streak is about to end)</span></span></label>
+            <label class="check"><input type="checkbox" id="acct-digest" ${u.digest_email === false ? '' : 'checked'}><span>The weekly digest <span class="muted small">(Sunday evening: what is due, top posts, your stats vs. the class)</span></span></label></section>
+          <section><div class="eyebrow mb-1">Privacy</div>
+            <label class="check"><input type="checkbox" id="acct-lb" ${u.show_on_leaderboard === false ? '' : 'checked'}><span>Show my name on leaderboards, helper lists and the People page <span class="muted small">(otherwise you appear as “Anonymous student”)</span></span></label></section>` : ''}
+        </div>
+        <div class="divider"></div>
+        <div class="row gap-sm" style="flex-wrap:wrap">${server ? `<button class="btn sm" data-action="sync-now">${icon('rotate', 13)} Sync now</button><button class="btn sm" data-action="change-pass">${icon('lock', 13)} Change password</button>` : ''}<button class="btn sm" data-action="logout">${icon('logout', 13)} Log out</button><span style="flex:1"></span><button class="btn sm danger ghost" data-action="delete-acct">${icon('trash', 13)} Delete account</button></div>
+        <p class="small muted mt-2">${server ? 'Quiz history, flashcard boxes, checklists and grades are saved to your account a moment after each change and load on any device where you log in.' : 'The account server is unreachable, so nothing leaves this browser.'}</p></div>`;
+    } else {
+      html = `<div class="panel acct-panel"><div class="panel-h"><div class="panel-title">${icon('user')} Account</div><span class="chip warn">preview</span></div>${Auth.lockCard('You are previewing MatHub', 'Sign up with your montana.edu email to unlock every tool, collect badges, join the People page and sync your progress across devices.', { compact: true })}</div>`;
+    }
     const wrap = document.createElement('div'); wrap.innerHTML = html; const panel = wrap.firstElementChild;
     const pref = (id, key, onMsg, offMsg) => { const el = $('#' + id, panel); if (el) el.addEventListener('change', async () => { try { const r = await call('profile', { [key]: el.checked }); Auth.user = Object.assign(Auth.user, r.user); toast(el.checked ? onMsg : offMsg); } catch (e) { toast(e.message); el.checked = !el.checked; } }); };
-    pref('acct-notify', 'notify_email', 'Reply emails on', 'Reply emails off'); pref('acct-reminder', 'reminder_email', 'Evening reminders on', 'Evening reminders off'); pref('acct-digest', 'digest_email', 'Weekly digest on', 'Weekly digest off'); pref('acct-lb', 'show_on_leaderboard', 'Your name shows on leaderboards', 'You appear as “Anonymous student”');
+    pref('acct-notify', 'notify_email', 'Reply emails on', 'Reply emails off'); pref('acct-reminder', 'reminder_email', 'Evening reminders on', 'Evening reminders off'); pref('acct-digest', 'digest_email', 'Weekly digest on', 'Weekly digest off'); pref('acct-lb', 'show_on_leaderboard', 'Your name shows on leaderboards and the People page', 'You appear as “Anonymous student”');
+    if (u && server && App.social && App.social.refreshBadges) App.social.refreshBadges().then(r => { const el = $('#acct-badge-count', panel); if (el && r) el.textContent = `${r.badges.length} of ${r.catalog.length} earned`; }).catch(() => {});
     bind(panel, {
       'auth-signup': () => Auth.open('signup'), 'auth-login': () => Auth.open('login'), logout: () => Auth.logout(),
-      'save-name': async () => { const name = $('#acct-name', panel).value.trim(); if (Auth.mode === 'server') { try { const r = await call('profile', { name }); Auth.user = r.user; } catch (e) { toast(e.message); return; } } else { Auth.user.name = name; writeJSON(LOCAL_KEY, Auth.user); } changed(); toast('Name saved'); },
+      'save-name': async () => { const name = $('#acct-name', panel).value.trim(); if (Auth.mode === 'server') { try { const r = await call('profile', { name }); Auth.user = r.user; } catch (e) { toast(e.message); return; } } else { Auth.user.name = name; writeJSON(LOCAL_KEY, Auth.user); } changed(); toast('Name saved'); const h = $('.acct-hero-name', panel); if (h) h.textContent = name || Auth.user.email.split('@')[0]; },
       'sync-now': async () => { try { for (const id of Object.keys(global.Courses)) await Auth.pushCourse(id); await Auth.pullAll(); toast('Everything is synced'); } catch (e) { toast(e.message); } },
       'change-pass': async () => { try { await call('forgot', { email: u.email }); M.email = u.email; M.state = 'reset'; const wasUser = Auth.user; Auth.user = null; Auth.open('reset'); Auth.user = wasUser; msg('We emailed you a code. Enter it with your new password.', 'good'); } catch (e) { toast(e.message); } },
       'delete-acct': async () => {
