@@ -996,3 +996,12 @@ h1, h2, h3, h4 { letter-spacing: -0.01em; }
 .bpill.more { background: var(--surface-2); color: var(--ink-2); border-color: var(--border); cursor: pointer; font: inherit; font-size: 12px; font-weight: 600; }
 .bpill.more:hover { background: var(--surface-3); }
 .person-stats { border-top: 1px dashed var(--border); padding-top: 8px; }
+
+/* ---------- admin badge editor ---------- */
+.adm-badge-row > td { background: var(--surface-2); padding: 12px 14px; }
+.badge-editor .bpills { display: flex; flex-wrap: wrap; gap: 6px; }
+.bpill.on, .bpill.off { cursor: pointer; font: inherit; font-size: 12px; font-weight: 600; }
+.bpill.off { background: var(--surface); color: var(--muted); border-color: var(--border); }
+.bpill.off:hover { color: var(--ink); border-color: var(--border-strong); }
+.bpill.on:hover { filter: brightness(0.95); }
+.btn.gold { background: var(--gold-soft); color: var(--gold); border-color: color-mix(in srgb, var(--gold) 35%, transparent); }

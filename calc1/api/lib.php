@@ -73,6 +73,8 @@ function mh_db(): PDO {
   if (!in_array('sections', $cols, true)) $db->exec('ALTER TABLE users ADD COLUMN sections TEXT');
   if (!in_array('reminder_email', $cols, true)) $db->exec('ALTER TABLE users ADD COLUMN reminder_email INTEGER NOT NULL DEFAULT 0');
   if (!in_array('reminder_sent', $cols, true)) $db->exec('ALTER TABLE users ADD COLUMN reminder_sent INTEGER NOT NULL DEFAULT 0');
+  $bcols = array_column($db->query('PRAGMA table_info(badges)')->fetchAll(), 'name');
+  if (!in_array('manual', $bcols, true)) $db->exec('ALTER TABLE badges ADD COLUMN manual INTEGER NOT NULL DEFAULT 0');   // 1 = awarded by an administrator
   $pcols = array_column($db->query('PRAGMA table_info(posts)')->fetchAll(), 'name');
   if (!in_array('accepted_id', $pcols, true)) $db->exec('ALTER TABLE posts ADD COLUMN accepted_id INTEGER');
   $db->exec('CREATE TABLE IF NOT EXISTS challenge_attempts (user_id INTEGER NOT NULL, course TEXT NOT NULL, date TEXT NOT NULL, ok INTEGER NOT NULL, ms INTEGER NOT NULL, points INTEGER NOT NULL, topic TEXT NOT NULL DEFAULT "", created INTEGER NOT NULL, PRIMARY KEY (user_id, course, date))');

@@ -282,11 +282,37 @@ function mh_forum_route(string $route, array $in, array $cfg, string $ip): void 
       $where = '1=1'; if ($q !== '') { $where = '(u.email LIKE ? OR u.name LIKE ?)'; $like = '%' . str_replace(['%', '_'], ['\\%', '\\_'], mb_substr($q, 0, 80)) . '%'; $args = [$like, $like]; }
       $st = $db->prepare("SELECT u.id, u.email, u.name, u.verified, u.created, u.last_login, u.terms_accepted,
           (SELECT COUNT(*) FROM posts p WHERE p.user_id = u.id AND p.removed = 0) AS nposts, (SELECT COUNT(*) FROM comments c WHERE c.user_id = u.id AND c.removed = 0) AS ncomments,
-          (SELECT until FROM bans b WHERE b.user_id = u.id AND b.until > $now) AS banned_until
+          (SELECT until FROM bans b WHERE b.user_id = u.id AND b.until > $now) AS banned_until, (SELECT COUNT(*) FROM badges bd WHERE bd.user_id = u.id) AS nbadges
         FROM users u WHERE $where ORDER BY u.created DESC LIMIT 51 OFFSET " . ($page * 50)); $st->execute($args); $rows = $st->fetchAll();
       $more = count($rows) > 50; $rows = array_slice($rows, 0, 50);
       mh_json(['ok' => true, 'more' => $more, 'users' => array_map(fn($r) => ['id' => (int)$r['id'], 'email' => $r['email'], 'name' => $r['name'], 'verified' => (int)$r['verified'] === 1, 'created' => (int)$r['created'], 'last_login' => (int)$r['last_login'], 'terms' => (int)$r['terms_accepted'] > 0,
-        'posts' => (int)$r['nposts'], 'comments' => (int)$r['ncomments'], 'banned_until' => $r['banned_until'] ? (int)$r['banned_until'] : 0, 'mod' => mh_is_mod(['email' => $r['email']]), 'admin' => mh_is_admin(['email' => $r['email']])], $rows)]);
+        'posts' => (int)$r['nposts'], 'comments' => (int)$r['ncomments'], 'badges' => (int)$r['nbadges'], 'banned_until' => $r['banned_until'] ? (int)$r['banned_until'] : 0, 'mod' => mh_is_mod(['email' => $r['email']]), 'admin' => mh_is_admin(['email' => $r['email']])], $rows)]);
+
+    case 'admin_badges':
+      // Administrators can award or remove any badge for any member (themselves included). Manual awards are never undone by the automatic check.
+      mh_method('GET', 'POST'); $u = mh_require_user(); if (!mh_is_admin($u)) mh_fail('Administrators only.', 403);
+      $target = (int)($in['user_id'] ?? $_GET['user_id'] ?? 0); $st = $db->prepare('SELECT id, email, name FROM users WHERE id = ?'); $st->execute([$target]); $t = $st->fetch(); if (!$t) mh_fail('User not found.', 404);
+      if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        $action = (string)($in['action'] ?? ''); $code = (string)($in['code'] ?? ''); $codes = [];
+        if (in_array($action, ['award', 'remove'], true)) { if (!isset(MH_BADGES[$code])) mh_fail('Unknown badge.'); $codes = [$code]; }
+        elseif (in_array($action, ['award_all', 'remove_all'], true)) $codes = array_keys(MH_BADGES);
+        else mh_fail('Unknown action.');
+        $given = [];
+        if ($action === 'award' || $action === 'award_all') {
+          foreach ($codes as $c) { $st = $db->prepare('INSERT OR IGNORE INTO badges (user_id, code, earned, seen, manual) VALUES (?, ?, ?, 0, 1)'); $st->execute([$target, $c, $now]); if ($st->rowCount() > 0) $given[] = $c; }
+          if ($given && (int)$t['id'] !== (int)$u['id']) {
+            $what = count($given) === 1 ? 'the “' . MH_BADGES[$given[0]][0] . '” badge' : count($given) . ' badges';
+            $db->prepare('INSERT INTO notifications (user_id, kind, post_id, comment_id, actor_id, actor, title, snippet, created) VALUES (?, "badge", 0, NULL, ?, ?, ?, ?, ?)')->execute([$target, $u['id'], mh_display_name($u), $what, 'Open your badge shelf to see it.', $now]);
+          }
+          if ($given) mh_activity('badge', '', count($given) === 1 ? 'A student earned the “' . MH_BADGES[$given[0]][0] . '” badge' : 'A student was awarded ' . count($given) . ' badges', '#/badges');
+        } else {
+          $db->prepare('DELETE FROM badges WHERE user_id = ? AND code IN (' . implode(',', array_fill(0, count($codes), '?')) . ')')->execute(array_merge([$target], $codes));
+        }
+      }
+      $st = $db->prepare('SELECT code, earned, manual FROM badges WHERE user_id = ?'); $st->execute([$target]); $have = [];
+      foreach ($st->fetchAll() as $b) if (isset(MH_BADGES[$b['code']])) $have[$b['code']] = ['earned' => (int)$b['earned'], 'manual' => (int)$b['manual'] === 1];
+      mh_json(['ok' => true, 'user' => ['id' => (int)$t['id'], 'name' => mh_display_name($t), 'email' => $t['email']], 'have' => $have,
+        'catalog' => array_map(fn($c, $v) => ['code' => $c, 'name' => $v[0], 'desc' => $v[1], 'icon' => $v[2]], array_keys(MH_BADGES), MH_BADGES)]);
 
     case 'admin_user':
       mh_method('POST'); $u = mh_require_user(); if (!mh_is_admin($u)) mh_fail('Administrators only.', 403);

@@ -139,6 +139,8 @@ unban, verify, delete), Reports, Contributions queue, Mock exams (schedule and c
 (Canvas feed, announcement banner, Instructor/TA badges) and Digest & cron. Moderators see Reports,
 Contributions and Mock exams; administrators see everything.
 
+- **Badges.** On the Members tab, the badge count next to each member opens an editor: click any of the fifteen badges to award or remove it, or use Award all / Remove all. This works on your own account too. Awarded badges show on the member's shelf and on the People page, the member gets an inbox notification, and the automatic badge check never removes them.
+
 ## Preview vs. members
 
 Without an account a visitor can browse the dashboards, calendars, syllabus pages, the first three
