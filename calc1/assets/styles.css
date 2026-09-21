@@ -1096,14 +1096,18 @@ html.no-live-bg body::before { animation: none; opacity: 0.55; }
 @keyframes blink { 0%, 92%, 100% { transform: scaleY(0); } 95%, 97% { transform: scaleY(1); } }
 .hero-mascot { position: absolute; right: 26px; bottom: -4px; z-index: 1; }
 .hero-mascot .bubble { margin-bottom: 30px; }
-.landing-top.hero { padding-right: 330px; }
+.landing-top.hero > div:first-child { flex: 1; min-width: 0; padding-right: 16px; }
+.hero-actions { flex: none; display: flex; align-items: center; gap: 8px; flex-wrap: nowrap; }
+.hero-actions .landing-acct { flex-wrap: nowrap; }
+@media (min-width: 1000px) { .landing-top.hero > div:first-child { max-width: calc(100% - 430px); } }
 .landing-top.hero::after { display: none; }
 .mascot.compact { align-items: center; gap: 12px; padding: 4px 6px; }
 .mascot.compact .bubble { margin-bottom: 0; order: 2; border-radius: 4px 14px 14px 14px; max-width: none; animation-delay: 0.15s; }
 .mascot.compact .bubble::after { right: auto; left: -7px; bottom: auto; top: 12px; transform: rotate(135deg); }
 .mascot.compact .bobcat { order: 1; }
 .mascot-slot.coach:empty { display: none; }
-@media (max-width: 900px) { .hero-mascot { display: none; } .landing-top.hero { padding-right: 28px; } .landing-top.hero::after { display: block; } }
+@media (max-width: 900px) { .hero-mascot { display: none; } .landing-top.hero::after { display: block; } }
+@media (max-width: 760px) { .hero-actions, .hero-actions .landing-acct { flex-wrap: wrap; } }
 
 /* learning path */
 .path-legend { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin: -8px 0 16px; }
