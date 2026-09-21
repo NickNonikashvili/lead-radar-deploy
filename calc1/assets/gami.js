@@ -129,7 +129,7 @@
   function paintStats() {
     let top = $('#topbar-hub'); if (!top) { const acct = $('#topbar-account'); if (acct) { top = document.createElement('span'); top.id = 'topbar-hub'; top.className = 'hub-slot'; acct.before(top); } }
     $$('.hub-slot').forEach(el => { el.innerHTML = statsHtml(); bind(el, { 'hub-streak': b => streakPopover(b), 'hub-goal': b => goalPopover(b), 'hub-quests': b => { if (App.questsPopover) App.questsPopover(b); } }); });
-    const lc = $('#level-card'); if (lc) { const lv = level(xpTotal()); lc.innerHTML = `<div class="level-card-in"><span class="lvl-badge">${lv.n}</span><div class="level-card-body"><b>Level ${lv.n} · ${lv.name}</b><div class="bar sm"><div class="bar-fill" style="width:${lv.pct}%"></div></div><small>${lv.toNext} XP to level ${lv.n + 1}</small></div></div>`; }
+    const lv = level(xpTotal()); $$('.acct-level').forEach(el => { el.innerHTML = `<span class="lvl-badge">${lv.n}</span><div class="acct-level-body"><b>Level ${lv.n} · ${lv.name}</b><div class="bar sm"><div class="bar-fill" style="width:${lv.pct}%"></div></div></div>`; el.title = `${lv.xp} XP · ${lv.toNext} XP to level ${lv.n + 1}`; });
   }
   function streakPopover(anchor) {
     const st = streakAll(); const t = todayISO(); const days = Array.from({ length: 7 }, (_, i) => toISO(addDays(new Date(), i - 6)));
@@ -145,6 +145,7 @@
       <div class="bar mb-2"><div class="bar-fill ${pct >= 100 ? 'good' : ''}" style="width:${pct}%"></div></div>
       <div class="lvl-row"><span class="lvl-badge">${lv.n}</span><div style="flex:1"><div class="small"><b>Level ${lv.n} · ${lv.name}</b> <span class="muted">· ${lv.xp} XP total</span></div><div class="bar sm mt-1"><div class="bar-fill" style="width:${lv.pct}%"></div></div><div class="small muted mt-1">${lv.toNext} XP to level ${lv.n + 1}</div></div></div>
       <div class="eyebrow mt-2 mb-1">Daily goal</div><div class="goal-picks">${GOALS.map(([n, name]) => `<button class="goal-pick${n === goal ? ' on' : ''}" data-action="goal" data-n="${n}"><b>${n} XP</b><span>${name}</span></button>`).join('')}</div>
+      ${App.questsHtml ? `<div class="eyebrow mt-3 mb-1">Daily quests</div>${App.questsHtml(true)}` : ''}
       <p class="small muted mt-2">Earn XP: correct answer +10 · attempt +2 · flashcard you know +2 · focus minute +1 · daily challenge = its points · 5 in a row +5</p>`,
       { goal: b => { setSetting('dailyGoal', +b.dataset.n); toast(`Daily goal: ${b.dataset.n} XP`); closePopover(); paintStats(); paintMascots(); } }, { cls: 'pop-goal' });
   }
@@ -172,6 +173,21 @@
   function mascotHtml(size = 96, cls = '') { const m = mascotLine(); return `<div class="mascot ${m.mood} ${cls}"><div class="bubble">${esc(m.t)}</div>${bobcatSvg(size)}</div>`; }
   function paintMascots() { $$('.mascot-slot').forEach(el => { el.innerHTML = mascotHtml(+el.dataset.size || 96, el.dataset.cls || ''); }); }
   App.mascotHtml = mascotHtml; App.paintMascots = paintMascots; App.bobcatSvg = bobcatSvg;
+
+  /* ---------- getting started checklist (dashboard, new users) ---------- */
+  App.gettingStarted = function () {
+    if (settings().gsDismissed) return null; const s = settings(); const u = App.auth && App.auth.user; let onboarded = false; try { onboarded = localStorage.getItem('mathub-onboarded') === '1'; } catch {}
+    const badges = App.social && App.social.badges ? App.social.badges.badges.map(b => b.code) : [];
+    const items = [
+      { label: u ? 'Account created' : 'Create your free account', done: !!u, href: '#', action: u ? '' : 'gs-signup' },
+      { label: 'Pick your classes and sections', done: onboarded || Array.isArray(s.courses), href: App.inCourse() ? App.link('settings') : '#/settings' },
+      { label: 'Choose a daily XP goal', done: s.dailyGoal !== undefined, href: App.inCourse() ? App.link('settings') : '#/settings' },
+      { label: 'Finish your first lesson', done: (s.lessonsDone || 0) >= 1, href: App.inCourse() ? App.link('lesson', null, { smart: 1 }) : '#/' },
+      { label: 'Say hi in Discussions', done: badges.includes('first_post') || badges.includes('first_answer'), href: App.inCourse() ? App.link('forum') : '#/forum' }
+    ].map(i => Object.assign(i, { action: i.done ? '' : (i.action || '') }));
+    const done = items.filter(i => i.done).length; if (done === items.length) return null;
+    return { items, done, total: items.length };
+  };
 
   /* ---------- count-up numbers ---------- */
   function countUp(root) {

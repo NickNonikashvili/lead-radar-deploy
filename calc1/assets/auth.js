@@ -168,14 +168,15 @@
     if (!Auth.ready) { box.innerHTML = '<div class="acct small muted">Checking account…</div>'; return; }
     if (Auth.user) {
       const name = Auth.user.name || Auth.user.email.split('@')[0]; const initial = name.trim()[0].toUpperCase();
-      box.innerHTML = `<div class="acct"><div class="avatar">${esc(initial)}</div><div class="acct-body"><div class="acct-name" title="${esc(Auth.user.email)}">${esc(name)}</div><div class="acct-sub" id="acct-sync">${syncLabel()}</div></div><button class="icon-btn" data-action="acct-menu" title="Account settings">${icon('gear', 14)}</button></div>`;
+      box.innerHTML = `<div class="acct"><div class="avatar">${esc(initial)}</div><div class="acct-body"><div class="acct-name" title="${esc(Auth.user.email)}">${esc(name)}</div><div class="acct-sub" id="acct-sync">${syncLabel()}</div></div><button class="icon-btn" data-action="acct-menu" title="Account settings">${icon('gear', 14)}</button></div><div class="acct-level"></div>`;
     } else {
-      box.innerHTML = `<div class="acct guest"><div><div class="acct-name">Preview mode</div><div class="acct-sub">Sign up to unlock everything</div></div><div class="row gap-sm"><button class="btn xs primary" data-action="auth-signup">Sign up</button><button class="btn xs" data-action="auth-login">Log in</button></div></div>`;
+      box.innerHTML = `<div class="acct guest"><div><div class="acct-name">Preview mode</div><div class="acct-sub">Sign up to unlock everything</div></div><div class="row gap-sm"><button class="btn xs primary" data-action="auth-signup">Sign up</button><button class="btn xs" data-action="auth-login">Log in</button></div></div><div class="acct-level"></div>`;
     }
     bind(box, { 'auth-signup': () => Auth.open('signup'), 'auth-login': () => Auth.open('login'), 'acct-menu': () => App.go('settings') });
     let top = $('#topbar-account'); if (!top) { const ta = $('#topbar .topbar-actions'); if (ta) { top = document.createElement('span'); top.id = 'topbar-account'; top.className = 'acct-slot'; ta.append(top); } }
     if (top) accountMenu(top);
     $$('#landing-account').forEach(paintLandingAccount);
+    if (App.paintStats) App.paintStats();
   }
   function paintLandingAccount(el) { el.innerHTML = '<span class="row gap-sm landing-acct"><span class="hub-slot"></span><span class="acct-menu-slot"></span></span>'; accountMenu($('.acct-menu-slot', el), { landing: true }); if (App.paintStats) App.paintStats(); }
   /* ---------- header account menu: avatar button; the menu itself opens as a page-level popover so no header can clip it ---------- */

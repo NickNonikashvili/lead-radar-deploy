@@ -105,11 +105,11 @@
       ${boostActive() ? `<div class="callout small mt-2">${icon('zap', 13)} <b>Double XP</b> until ${new Date(bu).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}.</div>` : `<p class="small muted mt-2">Quests reset at midnight. Finish all three for 15 minutes of double XP.</p>`}</div>`;
   }
   function paintQuests() { $$('.quests-slot').forEach(el => { el.innerHTML = questsHtml(el.dataset.compact === '1'); }); }
-  App.paintQuests = paintQuests;
+  App.paintQuests = paintQuests; App.questsHtml = questsHtml;
   App.questsPopover = function (anchor) { App.popover(anchor, `<div class="pop-head">${icon('target', 18)}<div><b>Daily quests</b><div class="small muted">Small goals, real XP.</div></div></div>${questsHtml(false)}`, null, { cls: 'pop-quests' }); };
   App.hubExtra = function () {
     const { dailyDone } = questRows(); const b = boostActive() ? Math.max(0, Math.ceil((+settings().boostUntil - Date.now()) / 60000)) : 0;
-    return `<button class="quest-btn${dailyDone === 3 ? ' done' : ''}" data-action="hub-quests" aria-haspopup="true" aria-expanded="false" title="Daily quests: ${dailyDone} of 3 done">${icon('target', 15)}<b>${dailyDone}/3</b></button>${b ? `<span class="boost-chip" title="Double XP is on">${icon('zap', 13)} 2× · ${b}m</span>` : ''}`;
+    return `${b ? `<span class="boost-chip" title="Double XP is on · ${dailyDone} of 3 quests done">${icon('zap', 13)} 2× · ${b}m</span>` : ''}`;
   };
   setInterval(() => { if (boostActive() || $('.boost-chip')) App.paintStats(); }, 30000);
 

@@ -71,7 +71,7 @@
     next(root) {
       if (!L.answers[L.i]) return; L.sel = null;
       if (L.i + 1 < L.qs.length) { L.i++; this.paint(root); window.scrollTo({ top: 0, behavior: 'smooth' }); return; }
-      L.done = true; if (App.quest) App.quest('lesson'); this.paintEnd(root);
+      L.done = true; if (App.quest) App.quest('lesson'); App.setSetting('lessonsDone', (App.settings().lessonsDone || 0) + 1); this.paintEnd(root);
     },
     paintEnd(root) {
       const n = L.qs.length, ok = L.answers.filter(a => a && a.ok).length; const pct = Math.round(100 * ok / n); const secs = Math.round((Date.now() - L.start) / 1000); const xp = Math.max(0, (App.xpToday ? App.xpToday() : 0) - L.xp0);

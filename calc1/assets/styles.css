@@ -1313,3 +1313,47 @@ html.no-live-bg body::before { animation: none; opacity: 0.55; }
 .landing-acct { flex-wrap: wrap; justify-content: flex-end; row-gap: 8px; }
 @media (max-width: 760px) { .landing-top { flex-wrap: wrap; } .landing-top > .row.gap-sm { width: 100%; justify-content: flex-start; } }
 @media (max-width: 640px) { .topbar .quest-btn b, .topbar .boost-chip { display: none; } .topbar .quest-btn { padding: 4px 7px; } .topbar .streak-chip b { font-size: 12px; } .topbar-actions { gap: 5px; } }
+
+/* ============================================================
+   Organized layout: collapsible nav, tabs, getting started, level in account box
+   ============================================================ */
+.nav-toggle { display: flex; align-items: center; gap: 6px; width: 100%; padding: 10px 10px 4px; border: 0; background: transparent; color: var(--muted); font: inherit; font-size: 11px; letter-spacing: 0.09em; text-transform: uppercase; font-weight: 600; cursor: pointer; border-radius: 8px; }
+.nav-toggle span { flex: 1; text-align: left; }
+.nav-toggle small { font-size: 10px; font-weight: 600; letter-spacing: 0; padding: 0 5px; border-radius: 999px; background: var(--surface-2); color: var(--muted); }
+.nav-toggle > svg { transition: transform 0.18s; color: var(--muted); }
+.nav-toggle.open > svg { transform: rotate(180deg); }
+.nav-toggle:hover { color: var(--ink); }
+.nav-group { display: flex; flex-direction: column; gap: 2px; overflow: hidden; }
+.nav-group.closed { display: none; }
+.acct-level { display: flex; align-items: center; gap: 8px; padding: 6px 6px 8px; }
+.acct-level:empty { display: none; }
+.acct-level .lvl-badge { width: 26px; height: 26px; font-size: 12px; border-radius: 8px; }
+.acct-level-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.acct-level-body b { font-size: 11.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--ink-2); }
+.acct.guest + .acct-level { padding-top: 8px; }
+
+.dash-tabs { display: flex; gap: 4px; padding: 4px; border-radius: 14px; background: var(--surface-2); border: 1px solid var(--border); overflow-x: auto; scrollbar-width: none; }
+.dash-tabs::-webkit-scrollbar { display: none; }
+.dash-tabs .tab { display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: 10px; border: 0; background: transparent; color: var(--muted); font: inherit; font-size: 13.5px; font-weight: 600; cursor: pointer; white-space: nowrap; transition: background 0.15s, color 0.15s; }
+.dash-tabs .tab:hover { color: var(--ink); }
+.dash-tabs .tab.on { background: var(--surface); color: var(--ink); box-shadow: var(--shadow-sm); }
+.dash-tabs .tab.on svg { color: var(--accent); }
+.panes { margin-top: 12px; }
+.pane[hidden] { display: none; }
+.pane > .grid { animation: riseIn 0.3s cubic-bezier(0.2, 0.7, 0.2, 1); }
+#dash-canvas:not(:empty) + .canvas-fallback { display: none; }
+.keep-going .keep-cta { width: 100%; justify-content: center; white-space: normal; text-align: center; }
+.keep-going .bar-row { margin-bottom: 6px; }
+.page-head .mascot.compact { padding: 0; }
+.page-head .mascot.compact .bubble { max-width: 300px; font-size: 12.5px; padding: 8px 11px; }
+@media (max-width: 900px) { .page-head .mascot-slot.coach { display: none; } }
+
+.gs-card { background: linear-gradient(135deg, var(--accent-soft), var(--surface) 70%); border-color: var(--accent-line); }
+.gs-items { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 8px; }
+.gs-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 12px; background: var(--surface); border: 1px solid var(--border); color: var(--ink); text-decoration: none; font-size: 13.5px; font-weight: 600; transition: transform 0.15s, border-color 0.15s; }
+.gs-item:hover { text-decoration: none; transform: translateY(-1px); border-color: var(--accent-line); }
+.gs-check { width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--border-strong); display: grid; place-items: center; color: transparent; flex: none; }
+.gs-item.done { color: var(--muted); font-weight: 500; text-decoration: line-through; }
+.gs-item.done .gs-check { background: var(--good); border-color: var(--good); color: #fff; }
+.landing-tabs { margin-top: 18px; }
+@media (max-width: 640px) { .dash-tabs .tab span { font-size: 12.5px; } .dash-tabs .tab { padding: 7px 10px; } }

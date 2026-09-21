@@ -133,6 +133,13 @@ unban, verify or delete any account. Both lists ship with nikoloz.nonikashvili@s
 - **Live background.** Math and physics glyphs drift slowly behind every page over soft moving colour. It pauses in background tabs, follows the theme, and switches off under "reduce motion" or in Settings.
 - **Motion.** Panels and cards rise in, the quizzer pops on a correct answer and shakes on a wrong one, a combo chip counts answers in a row, numbers count up, and every menu opens as a page-level popover so headers never clip it.
 
+## Layout: what lives where
+
+- **Header.** Class title, next-exam chip, streak flame, daily goal ring (level inside; tap it for XP, level, goal and today's quests), search, inbox, theme and the account menu. Double XP shows as a chip only while it is on.
+- **Sidebar.** Collapsible groups: Today (Dashboard, Learning path, Calendar), Learn, Practice, Tools and Community. Today, Learn and Practice start open; Tools and Community start closed and remember what you choose. The group holding the page you are on always opens. Your level and progress sit under your name; the Pomodoro timer stays at the bottom.
+- **Dashboard.** The exam tile, then three panels: Today (classes, due soon, current topic), Your progress (goal, streak, hours, accuracy, cards, unit mastery) and Keep going (Continue on your path, smart review, today's quests). Everything else is behind tabs: This week, Planner, Canvas, League, Community and Tools. The tab you pick is remembered. New users see a Getting started checklist until it is complete or hidden.
+- **Landing page.** Hero with your stats, Bo and the league pill, the activity ticker, class cards with Continue, then two tabs: This week (due dates and Canvas) and Community (challenges, boards, latest discussions). Guests get a third tab, What is inside.
+
 ## Lessons, quests, leagues and sound
 
 - **Lesson mode** (`#/<class>/lesson?topics=…`, also `unit=`, `exam=` or `smart=1`). One question at a time with a progress bar: pick an answer or type one, press Check, read the green or red feedback with the explanation, press Continue. Hints are one tap away; a solution shown before answering marks the question assisted. Keys 1–4 and Enter work. The end screen shows XP earned, accuracy, time and best combo with confetti at 80%+, and offers another lesson, a review of the missed topics, or the path. Every path stop, the dashboard's Continue button, the landing cards and the quizzer's Lesson mode button start one. Guests get five-question previews.
