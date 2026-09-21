@@ -39,7 +39,7 @@ return [
   // Canvas calendar feed (Calendar → Calendar Feed in Canvas). Easiest is to paste it in the admin panel (#/forum/admin);
   // setting it here instead overrides the admin panel. Events are matched to classes by the course name in [brackets].
   'canvas_feed'     => '',
-  'canvas_course_match' => ['calc' => ['M 171', 'M171', 'Calculus I'], 'physics' => ['PHSX 220', 'PHSX220', 'Physics I'], 'precalc' => ['M 151', 'M151', 'Precalc']],
+  'canvas_course_match' => ['calc' => ['M 171', 'M171', 'Calculus I'], 'physics' => ['PHSX 220', 'PHSX220', 'Physics I'], 'precalc' => ['M 151', 'M151', 'Precalc'], 'writ' => ['WRIT 101', 'WRIT101', 'College Writing']],
   'timezone'        => 'America/Denver',
 
   // Verified staff, shown with a badge on the board: 'email' => 'Instructor' or 'TA'. Can also be managed in the admin panel.

@@ -9,7 +9,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/filter.php';
 require_once __DIR__ . '/canvas.php';
 
-const MH_SOCIAL_COURSES = ['calc', 'physics', 'precalc', 'general'];
+const MH_SOCIAL_COURSES = ['calc', 'physics', 'precalc', 'writ', 'general'];
 const MH_BADGES = [
   'first_post' => ['First post', 'Started a discussion', 'chat'], 'first_answer' => ['First reply', 'Replied to a classmate', 'reply'],
   'helper_5' => ['Helper', '5 accepted answers', 'shield'], 'helper_25' => ['Mentor', '25 accepted answers', 'shield'],
@@ -37,7 +37,7 @@ function mh_system_user(): array {
   $st->execute(['mathub@system.local']); return $st->fetch();
 }
 function mh_user_progress(int $uid): array { $st = mh_db()->prepare('SELECT course, json FROM progress WHERE user_id = ?'); $st->execute([$uid]); $out = []; foreach ($st->fetchAll() as $r) { $j = json_decode($r['json'], true); if (is_array($j)) $out[$r['course']] = $j; } return $out; }
-function mh_user_courses(array $u): array { $c = isset($u['courses']) && $u['courses'] !== null && $u['courses'] !== '' ? json_decode((string)$u['courses'], true) : null; return is_array($c) && $c ? $c : ['calc', 'physics', 'precalc']; }
+function mh_user_courses(array $u): array { $c = isset($u['courses']) && $u['courses'] !== null && $u['courses'] !== '' ? json_decode((string)$u['courses'], true) : null; return is_array($c) && $c ? $c : ['calc', 'physics', 'precalc', 'writ']; }
 /** Current streak in days counting back from today (or from yesterday if today has no activity yet). */
 function mh_current_streak(array $days): array {
   $set = array_fill_keys($days, true); $today = mh_local_date(); $d = $today; $activeToday = isset($set[$today]);

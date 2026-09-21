@@ -11,7 +11,7 @@
   'use strict';
   const BUILD = global.MATHUB_BUILD || 'dev';
   const Courses = global.Courses || (global.Courses = {});
-  const COURSE_ORDER = ['calc', 'physics', 'precalc'];
+  const COURSE_ORDER = ['calc', 'physics', 'precalc', 'writ'];
   const GLOBAL_VIEWS = ['contact', 'forum', 'policy', 'admin', 'meet', 'badges', 'challenge', 'mock', 'people', 'settings', 'leagues'];   // pages that work without a course, e.g. #/contact
   const SITE = 'MatHub';
   let D = null, QZ = null;        // current course data and quiz module
@@ -218,7 +218,7 @@
       const d = this.data; if (!d || !d.configured) { el.innerHTML = ''; return; }
       const evs = this.events(courseId, t).slice(0, count);
       el.innerHTML = `<div class="panel canvas-panel"><div class="panel-h"><div class="panel-title">${icon('canvas')} From Canvas</div><span class="small muted">${d.error ? '<span style="color:var(--warn)">using the last copy</span>' : d.fetched ? `synced ${relTime(d.fetched)}` : ''}</span></div>
-        ${evs.length ? evs.map(e => `<div class="today-ev"><span class="when">${daysBetween(t, e.date) === 0 ? 'Today' : daysBetween(t, e.date) === 1 ? 'Tomorrow' : esc(fmtDate(e.date))}</span><span>${e.url ? `<a href="${esc(e.url)}" target="_blank" rel="noopener">${esc(e.title)}</a>` : esc(e.title)}${e.time ? ` <span class="muted small">· ${esc(e.time)}</span>` : ''}${!courseId ? ` <span class="chip course-${esc(e.course)}" style="margin-left:6px">${esc((Courses[e.course] || { short: e.course }).short)}</span>` : ''}</div>`).join('') : `<div class="empty">Nothing on the Canvas calendar for the next ${days} days.</div>`}
+        ${evs.length ? evs.map(e => `<div class="today-ev"><span class="when">${daysBetween(t, e.date) === 0 ? 'Today' : daysBetween(t, e.date) === 1 ? 'Tomorrow' : esc(fmtDate(e.date))}</span><span>${e.url ? `<a href="${esc(e.url)}" target="_blank" rel="noopener">${esc(e.title)}</a>` : esc(e.title)}${e.time ? ` <span class="muted small">· ${esc(e.time)}</span>` : ''}${!courseId ? ` <span class="chip course-${esc(e.course)}" style="margin-left:6px">${esc((Courses[e.course] || { short: e.course }).short)}</span>` : ''}</div>`).join('') : `<div class="empty">Nothing on the Canvas calendar for this class in the next few weeks.</div>`}
         <p class="small muted mt-2">Real due dates from the instructor's Canvas calendar, refreshed hourly.</p></div>`;
     }
   };
@@ -251,9 +251,9 @@
   /* ---------- course selection / routing ---------- */
   const COMMUNITY_NAV = [['challenge', 'Daily challenge', 'target'], ['meet', 'Study sessions', 'clock'], ['mock', 'Mock exams', 'flag'], ['contribute', 'Contribute', 'pen'], ['leagues', 'Leagues', 'gem'], ['people', 'People', 'users']];
   function augmentNav(C) {
-    const today = C.NAV[0]; if (App.views.path && today && !today.items.some(x => x[0] === 'path')) today.items.splice(1, 0, ['path', 'Learning path', 'path']);
+    const today = C.NAV[0]; if (C.quiz && App.views.path && today && !today.items.some(x => x[0] === 'path')) today.items.splice(1, 0, ['path', 'Learning path', 'path']);
     let gp = C.NAV.find(g => g.label === 'Community'); if (!gp) { gp = { label: 'Community', items: [['forum', 'Discussions', 'chat']] }; C.NAV.splice(C.NAV.length - 1, 0, gp); }
-    COMMUNITY_NAV.forEach(it => { if (App.views[it[0]] && !gp.items.some(x => x[0] === it[0])) gp.items.push(it); });
+    COMMUNITY_NAV.forEach(it => { if (!C.quiz && ['challenge', 'mock', 'contribute'].includes(it[0])) return; if (App.views[it[0]] && !gp.items.some(x => x[0] === it[0])) gp.items.push(it); });
   }
   function setCourse(id) {
     if (D && D.id === id) return;
@@ -367,7 +367,7 @@
       D.FORMULAS.forEach(gp => gp.items.forEach(f => ix.push({ type: 'formula', t: f.n, s: gp.group, go: () => App.go('formulas', null, { q: f.n }), key: (f.n + ' ' + gp.group + ' ' + strip('$' + f.t + '$')).toLowerCase() })));
       D.FLASHCARDS.forEach(c => ix.push({ type: 'card', t: strip(c.f), s: secLabel(c.sec), go: () => App.go('flashcards', c.id), key: (strip(c.f) + ' ' + strip(c.b)).toLowerCase() }));
       D.CALENDAR.forEach(e => ix.push({ type: 'calendar', t: e[2], s: fmtDate(e[0]), go: () => App.go('calendar', e[0]), key: (e[2] + ' ' + fmtDate(e[0], true)).toLowerCase() }));
-      Object.entries(QZ.TOPICS).forEach(([id, t]) => ix.push({ type: 'practice', t: `Practice: ${t.label}`, s: secLabel(t.sec), go: () => App.go('practice', null, { topics: id }), key: ('practice quiz ' + t.label + ' ' + secLabel(t.sec)).toLowerCase() }));
+      if (QZ) Object.entries(QZ.TOPICS).forEach(([id, t]) => ix.push({ type: 'practice', t: `Practice: ${t.label}`, s: secLabel(t.sec), go: () => App.go('practice', null, { topics: id }), key: ('practice quiz ' + t.label + ' ' + secLabel(t.sec)).toLowerCase() }));
       this.index = ix;
     },
     open() {
@@ -399,17 +399,22 @@
         const hist = data.history || []; const acc = hist.length ? Math.round(100 * hist.filter(x => x.ok).length / hist.length) : null;
         const cur = currentSection(C); const dl = upcomingDeadlines(C, 3);
         const chip = ss.phase === 'after' ? 'Semester complete' : ss.phase === 'before' ? `Starts ${esc(shortDate(C.SEMESTER.start))}` : ex ? `${esc(ex.name)} · ${esc(st.chip)}` : 'Exams done';
-        const nodes = App.pathNodes ? App.pathNodes(C) : []; const curNode = nodes.find(n => n.state === 'current'); const mastered = nodes.filter(n => n.state === 'done').length; const mpct = nodes.length ? Math.round(100 * mastered / nodes.length) : 0; const RC = 2 * Math.PI * 15;
+        const writing = C.kind === 'writing'; const rp = writing && App.readingProgress ? App.readingProgress(C) : null;
+        const nodes = !writing && App.pathNodes ? App.pathNodes(C) : []; const curNode = nodes.find(n => n.state === 'current'); const mastered = writing ? (rp ? rp.done : 0) : nodes.filter(n => n.state === 'done').length; const total = writing ? (rp ? rp.total : 0) : nodes.length; const mpct = total ? Math.round(100 * mastered / total) : 0; const RC = 2 * Math.PI * 15;
+        const ctaHref = writing ? (rp && rp.next ? `#/${id}/reading/${rp.next.id}` : `#/${id}/readings`) : `#/${id}/lesson${curNode ? '?topics=' + encodeURIComponent(curNode.t) : ''}`;
+        const ctaText = writing ? (rp && rp.next ? `${rp.started ? 'Resume' : 'Listen'}: ${esc(rp.next.title)}` : 'All readings finished') : (curNode ? 'Continue: ' + esc(curNode.label) : 'Start a lesson');
+        const statsText = writing ? `${streakOf(data)}-day streak · ${rp ? rp.done : 0} of ${rp ? rp.total : 0} readings` : `${streakOf(data)}-day streak · ${acc === null ? 'no questions yet' : acc + '% accuracy'}`;
+        const nowLabel = writing ? 'This week' : (ss.phase === 'after' ? 'Last topic' : ss.phase === 'before' ? 'First topic' : 'Now covering');
         return `<div class="course-card ${id}" data-action="open-course" data-c="${id}" role="link" tabindex="0">
           <div class="course-card-head"><span class="course-code">${esc(C.code)}</span><span class="chip exam">${chip}</span></div>
           <h2>${esc(C.name)}</h2><p class="muted">${esc(C.tagline || '')}</p>
           <div class="course-meta">
-            <div><span class="eyebrow">${ss.phase === 'after' ? 'Last topic' : ss.phase === 'before' ? 'First topic' : 'Now covering'}</span><div>${esc(cur.label)} ${esc(cur.title)}</div></div>
-            <div><span class="eyebrow">Next exam</span><div>${ex ? esc(ex.dateLabel || fmtDate(ex.date, true)) : ss.phase === 'after' ? 'All done' : '—'}</div></div>
+            <div><span class="eyebrow">${nowLabel}</span><div>${esc(cur.label)} ${esc(cur.title)}</div></div>
+            <div><span class="eyebrow">${writing ? 'Next deadline' : 'Next exam'}</span><div>${ex ? esc(ex.dateLabel || fmtDate(ex.date, true)) : ss.phase === 'after' ? 'All done' : '—'}</div></div>
             <div><span class="eyebrow">Due soon</span><div>${dl.length ? dl.map(x => `${esc(x.title)} · ${daysBetween(t, x.date) === 0 ? 'today' : daysBetween(t, x.date) === 1 ? 'tomorrow' : esc(fmtDate(x.date))}`).slice(0, 2).join('<br>') : 'Nothing scheduled'}</div></div>
-            <div><span class="eyebrow">Your stats</span><div>${streakOf(data)}-day streak · ${acc === null ? 'no questions yet' : acc + '% accuracy'}</div></div>
+            <div><span class="eyebrow">Your stats</span><div>${statsText}</div></div>
           </div>
-          <div class="course-foot"><a class="btn primary course-open" href="#/${id}/lesson${curNode ? '?topics=' + encodeURIComponent(curNode.t) : ''}">${icon('play', 14)} ${curNode ? 'Continue: ' + esc(curNode.label) : 'Start a lesson'}</a><a class="btn course-dash" href="#/${id}/dashboard">Dashboard ${icon('right', 14)}</a><span class="course-ring" title="${mastered} of ${nodes.length} topics mastered"><svg viewBox="0 0 36 36" width="38" height="38"><circle class="ring-bg" cx="18" cy="18" r="15"/><circle class="ring-fg" cx="18" cy="18" r="15" stroke-dasharray="${RC.toFixed(2)}" stroke-dashoffset="${(RC * (1 - mpct / 100)).toFixed(2)}"/></svg><small>${mpct}%</small></span></div></div>`;
+          <div class="course-foot"><a class="btn primary course-open" href="${ctaHref}">${icon(writing ? 'book' : 'play', 14)} ${ctaText}</a><a class="btn course-dash" href="#/${id}/dashboard">Dashboard ${icon('right', 14)}</a><span class="course-ring" title="${mastered} of ${total} ${writing ? 'readings finished' : 'topics mastered'}"><svg viewBox="0 0 36 36" width="38" height="38"><circle class="ring-bg" cx="18" cy="18" r="15"/><circle class="ring-fg" cx="18" cy="18" r="15" stroke-dasharray="${RC.toFixed(2)}" stroke-dashoffset="${(RC * (1 - mpct / 100)).toFixed(2)}"/></svg><small>${mpct}%</small></span></div></div>`;
       }).join('');
       const merged = COURSE_ORDER.filter(id => Courses[id] && mineIds.includes(id)).flatMap(id => upcomingDeadlines(Courses[id], 8).map(x => Object.assign({ course: Courses[id] }, x))).filter(x => daysBetween(t, x.date) <= 7).sort((a, b) => a.date.localeCompare(b.date));
       const first = Courses[COURSE_ORDER[0]]; const ss = semesterState(first);
@@ -444,9 +449,59 @@
   /* ======================================================
      VIEW: Dashboard
      ====================================================== */
+  function renderWritingDash(root) {
+    const t = todayISO(); const d = today(); const ex = nextExam(D); const ss = semesterState(D); const wk = ss.week; const cur = currentSection(D); const st = streak(); const dl = upcomingDeadlines(D, 5); const todayEv = eventsOn(D, t);
+    const weekLabel = ss.phase === 'before' ? `Starts ${esc(shortDate(D.SEMESTER.start))}` : ss.phase === 'after' ? 'Semester over' : ss.phase === 'finals' ? 'Finals week' : `Week ${wk} of ${ss.weeks}`;
+    const es = ex ? examStatus(ex) : null; const cl = ex ? checklistState(ex.id) : { items: [], done: 0 }; const clState = ex ? (store.get('checklists', {})[ex.id] || {}) : {};
+    const rp = App.readingProgress ? App.readingProgress(D) : { total: 0, done: 0, next: null }; const rprog = store.get('readings', {});
+    const xpT = App.xpToday ? App.xpToday() : 0, goal = App.dailyGoal ? App.dailyGoal() : 30, lv = App.level ? App.level() : null; const gpct = Math.min(100, Math.round(100 * xpT / goal)); const RB = 2 * Math.PI * 26;
+    const goalBlock = `<div class="today-goal"><span class="ring-big${gpct >= 100 ? ' done' : ''}"><svg viewBox="0 0 60 60" width="64" height="64" aria-hidden="true"><circle class="ring-bg" cx="30" cy="30" r="26"/><circle class="ring-fg" cx="30" cy="30" r="26" stroke-dasharray="${RB.toFixed(2)}" stroke-dashoffset="${(RB * (1 - gpct / 100)).toFixed(2)}"/></svg><span class="ring-txt">${gpct >= 100 ? icon('check', 18) : `<b>${xpT}</b><small>XP</small>`}</span></span><div class="today-goal-body"><div><b>${xpT} / ${goal} XP today</b>${lv ? ` <span class="chip accent">Level ${lv.n} · ${esc(lv.name)}</span>` : ''}</div><div class="small muted">${gpct >= 100 ? 'Daily goal done. Listening still counts toward your level.' : `${goal - xpT} XP to go · a paragraph is 1 XP, a finished reading 20`}</div></div></div>`;
+    const gs = App.gettingStarted ? App.gettingStarted() : null;
+    const gsCard = gs ? `<div class="panel gs-card"><div class="panel-h"><div class="panel-title">${icon('flag')} Getting started · ${gs.done} of ${gs.total}</div><button class="btn xs ghost" data-action="gs-dismiss">Hide</button></div><div class="gs-items">${gs.items.map(i => `<a class="gs-item${i.done ? ' done' : ''}" href="${i.href}"${i.action ? ` data-action="${i.action}"` : ''}><span class="gs-check">${icon('check', 12)}</span><span>${esc(i.label)}</span></a>`).join('')}</div></div>` : '';
+    const weekMon = addDays(d, -((d.getDay() + 6) % 7)); const weekDays = Array.from({ length: 5 }, (_, i) => toISO(addDays(weekMon, i)));
+    const units = D.UNITS.map(u => { const e = D.EXAMS.find(x => x.id === u.exam); const done = e ? (e.endDate || e.date) < t : false; const active = !done && e && D.EXAMS.filter(x => (x.endDate || x.date) >= t)[0] && u.sections.includes(cur.id); return { u, e, done, active }; });
+    const remindNudge = App.auth && App.auth.user && !App.auth.user.local && App.auth.mode === 'server' && !App.auth.user.reminder_email && !settings().remindNudgeDismissed;
+    const deadlineTile = ex ? `<div class="panel lift hero-exam"><div class="countdown"><div class="countdown-num${es.big.length > 3 ? ' small' : ''}">${esc(es.big)}</div><div class="countdown-label">${esc(es.label)}</div></div>
+        <div><div class="eyebrow">Next deadline · ${ex.weight}% of the grade</div><h2 style="font-size:26px;margin-top:2px">${esc(ex.name)} <span class="muted" style="font-size:16px;font-weight:400">· ${esc(ex.dateLabel || fmtDate(ex.date, true))}</span></h2><p class="muted mt-1">Turn in ${esc(ex.covers)}.</p>
+        <div class="bar-row mt-2"><span>Prep checklist</span><span class="mono">${cl.done} / ${cl.items.length}</span><div class="bar"><div class="bar-fill gold" style="width:${cl.items.length ? 100 * cl.done / cl.items.length : 0}%"></div></div></div>
+        <div class="row mt-2"><a class="btn primary" href="${L('course')}">${icon('info', 14)} Assignment details</a><a class="btn" href="${L('readings')}">${icon('book', 14)} Readings</a><a class="btn" href="${L('calendar')}">${icon('calendar', 14)} Calendar</a></div></div></div>`
+      : `<div class="panel lift hero-exam"><div class="countdown"><div class="countdown-num small">Done</div><div class="countdown-label">all deadlines</div></div><div><div class="eyebrow">${esc(D.code)}</div><h2 style="font-size:26px;margin-top:2px">Semester complete</h2><p class="muted mt-1">Every deadline has passed. The readings and the grade calculator stay here.</p></div></div>`;
+    root.innerHTML = `<div class="page-head"><div><div class="eyebrow">${esc(fmtDate(t, true))} · ${weekLabel} · ${esc(D.code)}</div><h1 class="page-title">Good ${d.getHours() < 12 ? 'morning' : d.getHours() < 18 ? 'afternoon' : 'evening'}. Here's where ${esc(D.short)} stands.</h1></div><div class="page-actions"><div class="mascot-slot coach" data-size="60" data-cls="compact"></div></div></div><div id="announcement-slot"></div>
+      <div class="stack">${remindNudge ? `<div class="callout small row between" style="gap:10px"><span>${icon('bell', 14)} Want an email the evening before something is due, and a heads-up when your streak is about to end?</span><span class="row gap-sm"><button class="btn xs primary" data-action="remind-on">Turn on</button><button class="btn xs ghost" data-action="remind-no">No thanks</button></span></div>` : ''}${deadlineTile}${gsCard}
+        <div class="grid cols-3">
+          <div class="panel"><div class="panel-h"><div class="panel-title">${icon('calendar')} Today</div><a href="${L('calendar')}" class="small">Full calendar</a></div>
+            ${todayEv.length ? todayEv.map(e => `<div class="today-ev"><span class="chip ${e[1]}">${e[1] === 'lecture' ? 'class' : e[1]}</span><span>${esc(e[2])}</span></div>`).join('') : `<div class="empty small">No class today.${(() => { const nx = D.CALENDAR.find(e => e[0] > t && e[1] === 'lecture'); return nx ? ` Next: ${esc(fmtDate(nx[0]))}, ${esc(D.COURSE.meets.split(',')[1] || '9 am')}.` : ''; })()}</div>`}
+            <div class="divider"></div><div class="eyebrow mb-1">${esc(cur.label)} · ${esc(cur.title)}</div><ul class="list-plain small">${(cur.bullets || []).map(b => `<li>${esc(b)}</li>`).join('')}</ul>
+            <div class="divider"></div><div class="eyebrow mb-1">Due soon</div>${dl.length ? dl.slice(0, 4).map(x => `<div class="today-ev"><span class="when">${daysBetween(t, x.date) === 0 ? 'Today' : daysBetween(t, x.date) === 1 ? 'Tomorrow' : esc(fmtDate(x.date))}</span><span>${esc(x.title)}${x.time ? ` <span class="muted small">· ${esc(x.time)}</span>` : ''}</span></div>`).join('') : '<div class="empty small">Nothing scheduled.</div>'}</div>
+          <div class="panel"><div class="panel-h"><div class="panel-title">${icon('fire')} Your progress</div><a class="small" href="${L('grades')}">Grade calculator</a></div>
+            ${goalBlock}
+            <div class="grid cols-2" style="gap:10px"><div class="stat"><div class="stat-num" data-count="${st}">${st}</div><div class="stat-label">day streak</div></div><div class="stat"><div class="stat-num" data-count="${rp.done}">${rp.done}<span class="muted" style="font-size:15px">/${rp.total}</span></div><div class="stat-label">readings finished</div></div></div>
+            <div class="divider"></div>
+            ${units.map(({ u, e, done, active }) => `<div class="bar-row"><span>${esc(u.title)}</span><span class="mono">${done ? 'done' : e ? esc(shortDate(e.date)) : ''}</span><div class="bar"><div class="bar-fill ${done ? 'good' : active ? 'warn' : ''}" style="width:${done ? 100 : active ? 50 : 0}%"></div></div></div>`).join('')}</div>
+          <div class="panel keep-going"><div class="panel-h"><div class="panel-title">${icon('book')} Keep going</div>${rp.next ? '<span class="small muted">next reading</span>' : ''}</div>
+            <a class="btn primary lg keep-cta" href="${rp.next ? L('reading', rp.next.id, rprog[rp.next.id] && rprog[rp.next.id].i ? {} : { play: 1 }) : L('readings')}">${icon(rp.next ? 'play' : 'book', 15)} ${rp.next ? `${rp.started ? 'Resume' : 'Listen'}: ${esc(rp.next.title)}` : 'Browse the readings'}</a>
+            <div class="eyebrow mt-3 mb-1">Readings</div>${(D.READINGS || []).map(r => { const pr = rprog[r.id] || {}; const n = r.parts.reduce((a, pt) => a + pt.p.length + (pt.h ? 1 : 0), 0); const pct = pr.done ? 100 : Math.round(100 * Math.min(pr.i || 0, n) / n); return `<a class="bar-row rd-row" href="${L('reading', r.id)}"><span>${esc(r.title)}<small class="muted"> · ${esc(r.author)}</small></span><span class="mono">${pr.done ? '✓' : pct + '%'}</span><div class="bar"><div class="bar-fill${pr.done ? ' good' : ''}" style="width:${pct}%"></div></div></a>`; }).join('')}
+            <div class="eyebrow mt-3 mb-1">Daily quests</div><div class="quests-slot" data-compact="1"></div></div>
+        </div>
+        <div class="dash-tabs" data-store="dashTabW" role="tablist">${[['week', 'This week', 'calendar'], ['check', 'Checklist', 'check'], ['canvas', 'Canvas', 'canvas'], ['league', 'League', 'gem'], ['community', 'Community', 'chat']].map(([k, l, ic]) => `<button class="tab" data-tab="${k}" role="tab">${icon(ic, 14)}<span>${l}</span></button>`).join('')}</div>
+        <div class="panes">
+          <div class="pane" data-pane="week"><div class="panel"><div class="panel-h"><div class="panel-title">${icon('calendar')} This week</div><span class="small muted">${esc(shortDate(weekDays[0]))} – ${esc(shortDate(weekDays[4]))}</span></div>
+            <div class="week-strip">${weekDays.map(iso => { const dd = parseISO(iso); const evs = eventsOn(D, iso); return `<div class="week-day${iso === t ? ' today' : iso < t ? ' past' : ''}"><div class="d">${DOW[dd.getDay()]}<span>${dd.getDate()}</span></div>${evs.length ? evs.map(e => `<div class="ev ${e[1]}">${esc(e[2].replace(/^Week \d+ · /, ''))}</div>`).join('') : '<div class="ev muted">—</div>'}</div>`; }).join('')}</div></div></div>
+          <div class="pane" data-pane="check"><div class="panel"><div class="panel-h"><div class="panel-title">${icon('check')} ${ex ? esc(ex.name) + ' checklist' : 'Checklist'}</div>${ex ? `<span class="small muted">${cl.done} of ${cl.items.length} done</span>` : ''}</div>${cl.items.length ? cl.items.map((it, i) => `<label class="check"><input type="checkbox" data-cl="${i}" ${clState[i] ? 'checked' : ''}><span>${esc(it)}</span></label>`).join('') : '<div class="empty small">Nothing to check off right now.</div>'}</div></div>
+          <div class="pane" data-pane="canvas"><div id="dash-canvas"></div><div class="panel canvas-fallback"><div class="empty">Nothing from Canvas yet. ${Canvas.data && Canvas.data.configured ? 'No upcoming items for this class.' : 'The site admin can connect the Canvas calendar in the admin panel.'}</div></div></div>
+          <div class="pane" data-pane="league"><div class="panel"><div class="panel-h"><div class="panel-title">${icon('gem')} Your league</div><a class="small" href="${L('leagues')}">All leagues</a></div><div class="league-slot"></div></div></div>
+          <div class="pane" data-pane="community"><div class="grid cols-3"><div id="dash-social" class="span-2 stack"></div><div id="dash-social-side"></div></div></div>
+        </div>
+      </div>`;
+    bind(root, { 'remind-on': async () => { try { await App.auth.savePrefs({ reminder_email: true }); toast('Evening reminders on', 3000); render(); } catch (e) { toast(e.message); } }, 'remind-no': () => { setSetting('remindNudgeDismissed', true); render(); }, 'gs-dismiss': () => { setSetting('gsDismissed', true); render(); }, 'gs-signup': (el, e) => { e.preventDefault(); if (App.auth) App.auth.open('signup'); } });
+    on(root, 'change', 'input[data-cl]', el => { if (!ex) return; const all = store.get('checklists', {}); all[ex.id] = all[ex.id] || {}; all[ex.id][el.dataset.cl] = el.checked; store.set('checklists', all); markActivity(); });
+    Canvas.fill($('#dash-canvas', root), D.id, 6); paintAnnouncement(root);
+    if (App.social) { const goS = () => App.social.fillDashboard($('#dash-social', root), D.id); if (App.auth && App.auth.ready) goS(); else if (App.auth) App.auth.onChange(function once() { goS(); }); }
+  }
   App.views.dashboard = {
     title: 'Dashboard',
     render(root) {
+      if (D.kind === 'writing') return renderWritingDash(root);
       const t = todayISO(); const d = today(); const ex = nextExam(D); const ss = semesterState(D); const wk = ss.week;
       const todayEv = eventsOn(D, t); const dl = upcomingDeadlines(D, 6); const st = streak();
       const hist = store.get('history', []); const answered = hist.length, correct = hist.filter(x => x.ok).length; const cm = cardsMastered(); const cur = currentSection(D);

@@ -11,7 +11,7 @@
   const { $, $$, esc, icon, bind, on, toast, store, typeset, pageHead } = App;
   const API = 'api/index.php?r=';
   const auth = () => App.auth || {}; const user = () => auth().user || null; const offline = () => auth().mode !== 'server' || auth().unreachable;
-  const NAMES = { calc: 'Calc I', physics: 'Physics I', precalc: 'Precalc', general: 'General' };
+  const NAMES = { calc: 'Calc I', physics: 'Physics I', precalc: 'Precalc', writ: 'WRIT 101', general: 'General' };
   const courseName = id => (global.Courses[id] && global.Courses[id].short) || NAMES[id] || id;
   const courseChip = id => `<span class="chip course-${esc(id)}">${esc(courseName(id))}</span>`;
   const fmtWhen = ts => { const d = new Date(ts * 1000); const t = App.todayISO(); const iso = App.toISO(d); const day = iso === t ? 'Today' : iso === App.toISO(App.addDays(App.parseISO(t), 1)) ? 'Tomorrow' : App.fmtDate(iso); return `${day} · ${d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`; };
@@ -135,7 +135,7 @@
   App.views.challenge = {
     title: 'Daily challenge', blurb: 'One problem per class per day, the same for everyone. Solve it fast for bonus points and climb the weekly board.',
     render(root, param, query, standalone) {
-      const courses = App.COURSE_ORDER.filter(id => global.Courses[id]); const cid = standalone ? (query.course && courses.includes(query.course) ? query.course : courses[0]) : App.D.id;
+      const courses = App.COURSE_ORDER.filter(id => global.Courses[id] && global.Courses[id].quiz); const cid = standalone ? (query.course && courses.includes(query.course) ? query.course : courses[0]) : App.D.id;
       const head = standalone ? `<div class="landing-wrap"><header class="landing-top"><div><div class="eyebrow">MatHub</div><h1 class="landing-title"><span class="logo-mark">${App.logoSvg(44)}</span>Daily challenge</h1><p class="muted">${this.blurb}</p></div><div class="row gap-sm"><span id="landing-account"></span><a class="btn" href="#/">${icon('left', 14)} All classes</a></div></header><div class="chips mb-2">${courses.map(c => `<a class="chip toggle${c === cid ? ' on' : ''}" href="#/challenge?course=${c}">${esc(courseName(c))}</a>`).join('')}</div><div id="ch-root"></div></div>` : pageHead('Daily challenge', this.blurb) + '<div id="ch-root"></div>';
       root.innerHTML = head; const slot = $('#landing-account', root); if (slot && App.auth && App.auth.ready) App.auth.paintLandingAccount(slot);
       this.paint($('#ch-root', root), cid);
@@ -316,7 +316,7 @@
   /* ---------- widgets: landing + dashboard ---------- */
   S.fillLanding = async function (root) {
     const el = $('#landing-social', root); if (!el) return;
-    const courses = App.myCourses ? App.myCourses() : App.COURSE_ORDER.filter(id => global.Courses[id]);
+    const courses = (App.myCourses ? App.myCourses() : App.COURSE_ORDER.filter(id => global.Courses[id])).filter(id => global.Courses[id] && global.Courses[id].quiz);
     el.innerHTML = `<div class="grid cols-3"><div class="panel span-2"><div class="panel-h"><div class="panel-title">${icon('target')} Today’s challenges</div><a class="btn sm" href="#/challenge">${icon('target', 13)} Play</a></div><div class="challenge-row" id="ls-ch">${courses.map(c => `<a class="card-link ch-card" href="#/challenge?course=${c}"><div class="eyebrow">${esc(courseName(c))}</div><h4 id="lsc-${c}">Loading…</h4><p class="small muted">Same problem for everyone · beat the clock</p></a>`).join('')}</div></div>
       <div class="panel"><div class="panel-h"><div class="panel-title">${icon('bulb')} Happening now</div></div><div id="ls-act"><div class="empty small">Loading…</div></div></div></div>
       <div class="grid cols-2 mt-3"><div class="panel"><div class="panel-h"><div class="panel-title">${icon('clock')} Study sessions</div><a class="btn sm" href="#/meet">Post one</a></div><div id="ls-meet"><div class="empty small">Loading…</div></div></div><div class="panel"><div class="panel-h"><div class="panel-title">${icon('flag')} Mock exams</div><a class="btn sm" href="#/mock">See all</a></div><div id="ls-mock"><div class="empty small">Loading…</div></div></div></div>`;
@@ -327,7 +327,9 @@
     api('mock_list&course=all').then(r => { const m = $('#ls-mock', el); if (!m) return; const up = r.mocks.filter(x => !x.ended); m.innerHTML = up.length ? up.slice(0, 3).map(x => `<a class="act-row" href="#/${x.course}/mock">${courseChip(x.course)}<span class="act-text"><b>${esc(x.title)}</b> · ${esc(fmtWhen(x.start))}</span><span class="act-when">${x.registered} registered</span></a>`).join('') : '<div class="empty small">None scheduled yet.</div>'; }).catch(() => {});
   };
   S.fillDashboard = async function (el, courseId) {
-    if (!el) return; const D = global.Courses[courseId]; const t = App.todayISO(); const q = Challenge.question(courseId, t);   // preview topic only; the page itself uses the server date
+    if (!el) return; const D = global.Courses[courseId]; const t = App.todayISO();
+    if (!D.quiz) { el.innerHTML = `<div class="panel"><div class="panel-h"><div class="panel-title">${icon('chat')} Latest discussions</div><a class="btn sm" href="${App.link('forum')}">${icon('chat', 13)} Open discussions</a></div><div id="ws-forum"><div class="empty small">Loading…</div></div></div>`; if (App.forumLatest) App.forumLatest($('#ws-forum', el)); return; }
+    const q = Challenge.question(courseId, t);   // preview topic only; the page itself uses the server date
     el.innerHTML = `<div class="panel ch-panel"><div class="panel-h"><div class="panel-title">${icon('target')} Daily challenge</div><a class="btn sm primary" href="${App.link('challenge')}">Play</a></div><div id="dc-body">${q ? `<p class="small muted">Today: ${esc((D.quiz.TOPICS[q.topic] || {}).label || q.topic)}. Same problem for everyone, points for speed.</p>` : '<p class="small muted">No challenge yet.</p>'}</div></div><div id="dc-extra"></div>`;
     if (offline()) return;
     api('challenge_stats&course=' + courseId).then(s => { const b = $('#dc-body', el); if (!b) return; b.innerHTML = (s.mine ? `<p><span class="chip ${s.mine.ok ? 'good' : 'warn'}">${s.mine.ok ? '✓ Solved today' : 'Tried today'} · ${s.mine.points} pts</span></p>` : '') + `<p class="small muted mt-1">${s.attempts} student${s.attempts === 1 ? '' : 's'} tried today${s.attempts ? ` · ${Math.round(100 * s.correct / s.attempts)}% correct` : ''}. Your week: ${s.my_week_points} pts${s.week.length ? ` · leader: ${esc(s.week[0].name)} (${s.week[0].points})` : ''}.</p>`; }).catch(() => {});
