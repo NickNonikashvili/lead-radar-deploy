@@ -177,7 +177,7 @@
     if (top) accountMenu(top);
     $$('#landing-account').forEach(paintLandingAccount);
   }
-  function paintLandingAccount(el) { el.innerHTML = '<span class="row gap-sm" style="flex-wrap:nowrap"><span class="hub-slot"></span><span class="acct-menu-slot"></span></span>'; accountMenu($('.acct-menu-slot', el), { landing: true }); if (App.paintStats) App.paintStats(); }
+  function paintLandingAccount(el) { el.innerHTML = '<span class="row gap-sm landing-acct"><span class="hub-slot"></span><span class="acct-menu-slot"></span></span>'; accountMenu($('.acct-menu-slot', el), { landing: true }); if (App.paintStats) App.paintStats(); }
   /* ---------- header account menu: avatar button; the menu itself opens as a page-level popover so no header can clip it ---------- */
   function accountMenu(el, opts = {}) {
     if (!Auth.ready) { el.innerHTML = ''; return; }

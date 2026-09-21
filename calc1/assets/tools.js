@@ -130,7 +130,7 @@
           </div>
           <div class="field mt-2"><label>Topics <button class="btn xs ghost" data-action="all-topics">select all</button></label>
             <div class="chips">${topicList.map(t => { const p = prog[t]; const pct = p && p.a ? Math.round(100 * p.c / p.a) : null; return `<span class="chip toggle${PQ.topics.has(t) ? ' on' : ''}" data-action="topic" data-t="${t}" title="${esc(App.secLabel(QZ.TOPICS[t].sec))}">${esc(QZ.TOPICS[t].label)}${pct !== null ? ` <span style="opacity:.75">· ${pct}%</span>` : ''}</span>`; }).join('')}</div></div>
-          <div class="row mt-2"><button class="btn primary" data-action="start">${icon('play', 14)} Generate set</button><span class="small muted">${PQ.topics.size} topic${PQ.topics.size === 1 ? '' : 's'} selected. Percentages are your accuracy so far.</span></div>
+          <div class="row mt-2"><button class="btn primary" data-action="start">${icon('play', 14)} Generate set</button><a class="btn" href="${App.link('lesson', null, PQ.topics.size ? { topics: [...PQ.topics].join(',') } : { unit: PQ.units[0] })}">${icon('right', 14)} Lesson mode</a><span class="small muted">${PQ.topics.size} topic${PQ.topics.size === 1 ? '' : 's'} selected. Percentages are your accuracy so far.</span></div>
         </div></div>`;
       $('#pq-count', root).addEventListener('change', e => PQ.count = +e.target.value);
       $('#pq-mode', root).addEventListener('change', e => PQ.mode = e.target.value);
@@ -197,7 +197,7 @@
     },
     repaintQ(root, qi, ok) { const q = PQ.session.questions[qi]; const old = $(`#qc-${q.id}`, root); if (!old) return; const tmp = document.createElement('div'); tmp.innerHTML = this.qHtml(q, qi); old.replaceWith(tmp.firstElementChild); const nq = $(`#qc-${q.id}`, root); if (nq && ok !== undefined) nq.classList.add(ok ? 'pop' : 'shake'); typeset(nq); },
     flash(root, q, ok) { const nq = $(`#qc-${q.id}`, root); if (nq) nq.classList.add(ok ? 'pop' : 'shake'); },
-    combo(s, ok) { if (ok) { s.combo = (s.combo || 0) + 1; s.best = Math.max(s.best || 0, s.combo); if (s.combo % 5 === 0 && App.addXP) { App.addXP(5, { silent: true }); App.toast(`${App.icon('fire', 14)} ${s.combo} in a row! +5 XP bonus`, 2600); } } else s.combo = 0; },
+    combo(s, ok) { if (ok) { s.combo = (s.combo || 0) + 1; s.best = Math.max(s.best || 0, s.combo); if (s.combo % 5 === 0 && App.addXP) { App.addXP(5, { silent: true }); App.toast(`${App.icon('fire', 14)} ${s.combo} in a row! +5 XP bonus`, 2600); } if (App.quest) App.quest('combo', s.combo); } else s.combo = 0; },
     scrollTo(root, q) { const el = $(`#qc-${q.id}`, root); if (el) setTimeout(() => el.scrollIntoView({ block: 'nearest', behavior: 'smooth' }), 30); },
     submit(root) {
       const s = PQ.session; if (!s || s.submitted) return; s.submitted = true; if (s.timer) clearInterval(s.timer);

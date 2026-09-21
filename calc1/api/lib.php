@@ -73,6 +73,8 @@ function mh_db(): PDO {
   if (!in_array('sections', $cols, true)) $db->exec('ALTER TABLE users ADD COLUMN sections TEXT');
   if (!in_array('reminder_email', $cols, true)) $db->exec('ALTER TABLE users ADD COLUMN reminder_email INTEGER NOT NULL DEFAULT 0');
   if (!in_array('reminder_sent', $cols, true)) $db->exec('ALTER TABLE users ADD COLUMN reminder_sent INTEGER NOT NULL DEFAULT 0');
+  if (!in_array('league', $cols, true)) $db->exec('ALTER TABLE users ADD COLUMN league INTEGER NOT NULL DEFAULT 0');
+  $db->exec('CREATE TABLE IF NOT EXISTS league_history (user_id INTEGER NOT NULL, week INTEGER NOT NULL, league INTEGER NOT NULL, rank INTEGER NOT NULL, xp INTEGER NOT NULL, result TEXT NOT NULL, PRIMARY KEY (user_id, week))');
   $bcols = array_column($db->query('PRAGMA table_info(badges)')->fetchAll(), 'name');
   if (!in_array('manual', $bcols, true)) $db->exec('ALTER TABLE badges ADD COLUMN manual INTEGER NOT NULL DEFAULT 0');   // 1 = awarded by an administrator
   $pcols = array_column($db->query('PRAGMA table_info(posts)')->fetchAll(), 'name');
@@ -143,7 +145,7 @@ function mh_user_public(array $u): array {
   $unread = 0; try { $st = mh_db()->prepare('SELECT COUNT(*) FROM notifications WHERE user_id = ? AND read = 0'); $st->execute([$u['id']]); $unread = (int)$st->fetchColumn(); } catch (Throwable $e) {}
   return ['id' => (int)$u['id'], 'email' => $u['email'], 'name' => $u['name'], 'verified' => (bool)$u['verified'], 'created' => (int)$u['created'], 'mod' => mh_is_mod($u), 'admin' => mh_is_admin($u), 'terms' => (int)($u['terms_accepted'] ?? 0) > 0, 'notify_email' => (int)($u['notify_email'] ?? 1) === 1, 'unread' => $unread,
     'show_on_leaderboard' => (int)($u['show_on_leaderboard'] ?? 1) === 1, 'digest_email' => (int)($u['digest_email'] ?? 1) === 1, 'role' => mh_role($u['email']),
-    'courses' => isset($u['courses']) && $u['courses'] !== null && $u['courses'] !== '' ? (json_decode((string)$u['courses'], true) ?: []) : null, 'sections' => isset($u['sections']) && $u['sections'] ? (json_decode((string)$u['sections'], true) ?: (object)[]) : (object)[], 'reminder_email' => (int)($u['reminder_email'] ?? 0) === 1];
+    'courses' => isset($u['courses']) && $u['courses'] !== null && $u['courses'] !== '' ? (json_decode((string)$u['courses'], true) ?: []) : null, 'sections' => isset($u['sections']) && $u['sections'] ? (json_decode((string)$u['sections'], true) ?: (object)[]) : (object)[], 'reminder_email' => (int)($u['reminder_email'] ?? 0) === 1, 'league' => (int)($u['league'] ?? 0)];
 }
 /** Display name: the chosen name, else the part of the email before the @. */
 function mh_display_name(array $row, string $prefix = ''): string {

@@ -165,7 +165,7 @@
         const ms = Math.max(1000, Date.now() - (CH.started[key] || Date.now())); CH.answered[key] = { ok, raw };
         App.recordAnswer(q.topic, ok);
         if (offline()) { toast('Offline: your answer was not recorded on the board.'); this.paintQuestion(box, cid, date, q, stats); return; }
-        try { const r = await api('challenge_submit', { course: cid, date, ok, ms, topic: q.topic }); toast(ok ? `Correct! +${r.points} points` : '+2 points for trying', 3000); if (App.addXP) App.addXP(r.points || (ok ? 10 : 2), { course: cid }); if (ok && App.confetti) App.confetti({ count: 90 }); if (r.badges_new && r.badges_new.length) S.refreshBadges(true); const st = await api('challenge_stats&course=' + cid); this.paintQuestion(box, cid, date, q, st); this.paintSide($('#ch-side'), cid, st); } catch (e) { toast(e.message, 3500); this.paintQuestion(box, cid, date, q, stats); }
+        try { const r = await api('challenge_submit', { course: cid, date, ok, ms, topic: q.topic }); toast(ok ? `Correct! +${r.points} points` : '+2 points for trying', 3000); if (App.addXP) App.addXP(r.points || (ok ? 10 : 2), { course: cid }); if (App.quest) App.quest('challenge'); if (ok && App.confetti) App.confetti({ count: 90 }); if (r.badges_new && r.badges_new.length) S.refreshBadges(true); const st = await api('challenge_stats&course=' + cid); this.paintQuestion(box, cid, date, q, st); this.paintSide($('#ch-side'), cid, st); } catch (e) { toast(e.message, 3500); this.paintQuestion(box, cid, date, q, stats); }
       };
       bind(box, {
         'ch-mc': el => { if (CH.answered[key]) return; submit(+el.dataset.i === q.answer); },

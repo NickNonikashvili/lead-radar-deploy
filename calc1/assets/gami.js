@@ -97,6 +97,7 @@
     }, 60);
   }
   function addXP(n, opts = {}) {
+    if (!opts.raw && App.boostActive && App.boostActive()) n *= 2;
     n = Math.round(n); const cid = opts.course || (App.D && App.D.id) || App.myCourses()[0]; if (!n || !cid) return;
     const t = todayISO(); store.poke(cid, data => { const xs = data.xp = Array.isArray(data.xp) ? data.xp : []; const last = xs[xs.length - 1]; if (last && last.d === t) last.n += n; else xs.push({ d: t, n }); if (xs.length > 400) xs.splice(0, xs.length - 400); });
     const today = xpToday(), goal = dailyGoal(), s = settings();
@@ -105,6 +106,7 @@
     const lv = level(xpTotal()); const seen = settings().levelSeen;
     if (seen !== undefined && lv.n > seen) setTimeout(() => { confetti({ count: 220 }); toast(`${icon('award', 14)} Level up! Level ${lv.n} · ${lv.name}`, 4800); paintStats(); }, 900);
     if (seen === undefined || lv.n !== seen) setSetting('levelSeen', lv.n);
+    if (App.checkQuests && !opts.raw) App.checkQuests();
   }
   App.addXP = addXP; App.xpToday = xpToday; App.xpTotal = xpTotal; App.level = () => level(xpTotal()); App.dailyGoal = dailyGoal; App.GOALS = GOALS;
 
@@ -122,11 +124,12 @@
     const st = streakAll(); const today = xpToday(), goal = dailyGoal(); const pct = Math.min(100, Math.round(100 * today / goal)); const lv = level(xpTotal());
     const r = 11, C = 2 * Math.PI * r;
     return `<button class="streak-chip${st.activeToday ? ' lit' : ''}" data-action="hub-streak" aria-haspopup="true" aria-expanded="false" title="${st.activeToday ? `${st.n}-day streak, extended today` : st.n ? `${st.n}-day streak: study today to keep it` : 'Study today to start a streak'}">${icon('fire', 15)}<b>${st.n}</b></button>
-      <button class="goal-ring${pct >= 100 ? ' done' : ''}" data-action="hub-goal" aria-haspopup="true" aria-expanded="false" title="${today} of ${goal} XP today · Level ${lv.n} ${lv.name}"><svg viewBox="0 0 28 28" width="30" height="30" aria-hidden="true"><circle class="ring-bg" cx="14" cy="14" r="${r}"/><circle class="ring-fg" cx="14" cy="14" r="${r}" stroke-dasharray="${C.toFixed(2)}" stroke-dashoffset="${(C * (1 - pct / 100)).toFixed(2)}"/></svg><span class="ring-lvl">${pct >= 100 ? icon('check', 12) : lv.n}</span></button>`;
+      <button class="goal-ring${pct >= 100 ? ' done' : ''}" data-action="hub-goal" aria-haspopup="true" aria-expanded="false" title="${today} of ${goal} XP today · Level ${lv.n} ${lv.name}"><svg viewBox="0 0 28 28" width="30" height="30" aria-hidden="true"><circle class="ring-bg" cx="14" cy="14" r="${r}"/><circle class="ring-fg" cx="14" cy="14" r="${r}" stroke-dasharray="${C.toFixed(2)}" stroke-dashoffset="${(C * (1 - pct / 100)).toFixed(2)}"/></svg><span class="ring-lvl">${pct >= 100 ? icon('check', 12) : lv.n}</span></button>${App.hubExtra ? App.hubExtra() : ''}`;
   }
   function paintStats() {
     let top = $('#topbar-hub'); if (!top) { const acct = $('#topbar-account'); if (acct) { top = document.createElement('span'); top.id = 'topbar-hub'; top.className = 'hub-slot'; acct.before(top); } }
-    $$('.hub-slot').forEach(el => { el.innerHTML = statsHtml(); bind(el, { 'hub-streak': b => streakPopover(b), 'hub-goal': b => goalPopover(b) }); });
+    $$('.hub-slot').forEach(el => { el.innerHTML = statsHtml(); bind(el, { 'hub-streak': b => streakPopover(b), 'hub-goal': b => goalPopover(b), 'hub-quests': b => { if (App.questsPopover) App.questsPopover(b); } }); });
+    const lc = $('#level-card'); if (lc) { const lv = level(xpTotal()); lc.innerHTML = `<div class="level-card-in"><span class="lvl-badge">${lv.n}</span><div class="level-card-body"><b>Level ${lv.n} · ${lv.name}</b><div class="bar sm"><div class="bar-fill" style="width:${lv.pct}%"></div></div><small>${lv.toNext} XP to level ${lv.n + 1}</small></div></div>`; }
   }
   function streakPopover(anchor) {
     const st = streakAll(); const t = todayISO(); const days = Array.from({ length: 7 }, (_, i) => toISO(addDays(new Date(), i - 6)));
@@ -168,7 +171,7 @@
   }
   function mascotHtml(size = 96, cls = '') { const m = mascotLine(); return `<div class="mascot ${m.mood} ${cls}"><div class="bubble">${esc(m.t)}</div>${bobcatSvg(size)}</div>`; }
   function paintMascots() { $$('.mascot-slot').forEach(el => { el.innerHTML = mascotHtml(+el.dataset.size || 96, el.dataset.cls || ''); }); }
-  App.mascotHtml = mascotHtml; App.paintMascots = paintMascots;
+  App.mascotHtml = mascotHtml; App.paintMascots = paintMascots; App.bobcatSvg = bobcatSvg;
 
   /* ---------- count-up numbers ---------- */
   function countUp(root) {
@@ -179,8 +182,8 @@
 
   /* ---------- learning path ---------- */
   function crownsFor(v) { if (!v || !v.a) return 0; const acc = v.c / v.a; if (v.a >= 40 && acc >= 0.9) return 5; if (v.a >= 25 && acc >= 0.8) return 4; if (v.a >= 15 && acc >= 0.7) return 3; if (v.a >= 10 && acc >= 0.6) return 2; return v.a >= 5 ? 1 : 0; }
-  App.pathNodes = function () {
-    const D = App.D, QZ = App.Q; if (!D || !QZ) return []; const p = App.progress(); const cur = App.currentSection(); const curIdx = Math.max(0, D.SECTIONS.findIndex(s => s.id === cur.id));
+  App.pathNodes = function (C) {
+    const D = C || App.D; const QZ = D && D.quiz; if (!D || !QZ) return []; const p = (dataOf(D.id).progress) || {}; const cur = App.currentSectionOf ? App.currentSectionOf(D) : App.currentSection(); const curIdx = Math.max(0, D.SECTIONS.findIndex(s => s.id === cur.id));
     let currentSet = false, k = 0; const out = [];
     D.UNITS.forEach(u => { D.SECTIONS.filter(s => s.unit === u.n).forEach(s => { const sIdx = D.SECTIONS.findIndex(x => x.id === s.id); Object.keys(QZ.TOPICS).filter(t => QZ.TOPICS[t].sec === s.id).forEach(t => { const c = crownsFor(p[t]); const covered = sIdx <= curIdx; let state = covered ? (c >= 3 ? 'done' : 'open') : 'soon'; if (state === 'open' && !currentSet) { state = 'current'; currentSet = true; } out.push({ t, label: QZ.TOPICS[t].label, sec: s, unit: u, crowns: c, state, k: k++, n: p[t] ? p[t].a : 0 }); }); }); });
     if (!currentSet) { const f = out.find(n => n.state === 'soon'); if (f) f.state = 'current'; }
@@ -191,10 +194,10 @@
     render(root) {
       const D = App.D; const nodes = App.pathNodes(); const cur = nodes.find(n => n.state === 'current');
       const units = D.UNITS.map(u => ({ u, nodes: nodes.filter(n => n.unit.n === u.n) })).filter(x => x.nodes.length);
-      root.innerHTML = App.pageHead('Learning path', 'One stop per topic, in the order the class covers them. Earn crowns by answering questions on a topic: five crowns is 40 questions at 90% accuracy.', cur ? `<a class="btn primary" href="${App.link('practice', null, { topics: cur.t })}">${icon('play', 14)} Continue: ${esc(cur.label)}</a>` : '') + `
+      root.innerHTML = App.pageHead('Learning path', 'One stop per topic, in the order the class covers them. Earn crowns by answering questions on a topic: five crowns is 40 questions at 90% accuracy.', cur ? `<a class="btn primary" href="${App.link('lesson', null, { topics: cur.t })}">${icon('play', 14)} Continue: ${esc(cur.label)}</a>` : '') + `
         <div class="path-legend small muted">${icon('award', 13)} mastered (3+ crowns) · ${icon('play', 13)} covered in class · ${icon('clock', 13)} coming up · <b>${nodes.filter(n => n.state === 'done').length} of ${nodes.length}</b> topics mastered</div>
         <div class="path-wrap">${units.map(({ u, nodes: ns }, ui) => { const ex = D.EXAMS.find(e => e.id === u.exam); return `<section class="path-unit u${(ui % 4) + 1}"><div class="path-unit-head"><div><div class="eyebrow">Unit ${u.n}${ex ? ` · on ${esc(ex.name)}` : ''}</div><h2>${esc(u.title)}</h2></div><span class="chip">${ns.filter(n => n.state === 'done').length} / ${ns.length} mastered</span><a class="btn sm" href="${App.link('practice', null, { unit: u.n })}">${icon('list', 13)} Practice unit</a></div>
-          <div class="path-nodes">${ns.map(n => `<a class="path-node ${n.state}" style="--ox:${Math.round(Math.sin(n.k * 0.85) * 96)}px" href="${App.link('practice', null, { topics: n.t })}" title="${esc(n.label)} · ${n.crowns} crown${n.crowns === 1 ? '' : 's'} · ${n.n} answered">${n.state === 'current' ? '<span class="node-start">START</span>' : ''}<span class="node-btn">${n.state === 'done' ? icon('award', 24) : n.state === 'soon' ? icon('clock', 20) : icon('play', 22)}</span><span class="node-crowns" aria-label="${n.crowns} of 5 crowns">${'★'.repeat(n.crowns)}<i>${'★'.repeat(5 - n.crowns)}</i></span><span class="node-label">${esc(n.label)}<small>${esc(App.secLabel(n.sec.id))} · ${esc(n.sec.title)}</small></span></a>`).join('')}</div></section>`; }).join('')}</div>`;
+          <div class="path-nodes">${ns.map(n => `<a class="path-node ${n.state}" style="--ox:${Math.round(Math.sin(n.k * 0.85) * 96)}px" href="${App.link('lesson', null, { topics: n.t })}" title="${esc(n.label)} · ${n.crowns} crown${n.crowns === 1 ? '' : 's'} · ${n.n} answered">${n.state === 'current' ? '<span class="node-start">START</span>' : ''}<span class="node-btn">${n.state === 'done' ? icon('award', 24) : n.state === 'soon' ? icon('clock', 20) : icon('play', 22)}</span><span class="node-crowns" aria-label="${n.crowns} of 5 crowns">${'★'.repeat(n.crowns)}<i>${'★'.repeat(5 - n.crowns)}</i></span><span class="node-label">${esc(n.label)}<small>${esc(App.secLabel(n.sec.id))} · ${esc(n.sec.title)}</small></span></a>`).join('')}</div></section>`; }).join('')}</div>`;
     }
   };
 

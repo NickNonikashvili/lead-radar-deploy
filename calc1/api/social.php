@@ -81,6 +81,43 @@ function mh_award_badges(int $uid, array $clientCodes = [], string $course = '')
   return ['all' => $all, 'new' => $new];
 }
 
+/* ---------- leagues: weekly XP boards; the top of each league moves up on Monday, the bottom moves down ---------- */
+const MH_LEAGUES = ['Bronze', 'Silver', 'Gold', 'Sapphire', 'Ruby', 'Emerald', 'Amethyst', 'Pearl', 'Obsidian', 'Diamond'];
+const MH_LEAGUE_PROMOTE = 7; const MH_LEAGUE_DEMOTE = 5; const MH_LEAGUE_MIN_DEMOTE = 15;
+function mh_week_xp_of(array $blob, string $from, string $to): int { $n = 0; foreach ($blob['xp'] ?? [] as $x) { $d = (string)($x['d'] ?? ''); if ($d >= $from && $d <= $to) $n += (int)($x['n'] ?? 0); } return $n; }
+/** Every verified member with their XP for the week starting at $ws. Cached for 90 s because it decodes every progress blob. */
+function mh_league_rows(int $ws, bool $fresh = false): array {
+  $key = 'league_rows:' . $ws;
+  if (!$fresh) { $c = mh_setting($key); if ($c !== null) { $j = json_decode($c, true); if (is_array($j) && (int)($j['at'] ?? 0) > time() - 90) return $j['rows']; } }
+  $db = mh_db(); $from = mh_local_date($ws); $to = mh_local_date($ws + 6 * 86400); $rows = [];
+  $st = $db->query('SELECT u.id, u.name, u.email, u.show_on_leaderboard, u.league, p.json FROM users u LEFT JOIN progress p ON p.user_id = u.id WHERE u.verified = 1 AND u.email NOT LIKE "%@system.local" ORDER BY u.id');
+  foreach ($st->fetchAll() as $r) {
+    $id = (int)$r['id']; if (!isset($rows[$id])) $rows[$id] = ['id' => $id, 'name' => mh_lb_name($r), 'role' => mh_role($r['email']), 'league' => (int)$r['league'], 'xp' => 0];
+    if ($r['json']) { $j = json_decode($r['json'], true); if (is_array($j)) $rows[$id]['xp'] += mh_week_xp_of($j, $from, $to); }
+  }
+  $rows = array_values($rows); mh_setting_set($key, json_encode(['at' => time(), 'rows' => $rows])); return $rows;
+}
+/** Settles the week that just ended (once), then marks the current week as open. */
+function mh_league_tick(): void {
+  $ws = mh_week_start(); $done = mh_setting('league_week'); if ($done === (string)$ws) return;
+  $db = mh_db(); $pws = $ws - 7 * 86400;
+  if ($done !== null) {
+    $by = []; foreach (mh_league_rows($pws, true) as $r) $by[$r['league']][] = $r;
+    foreach ($by as $lg => $members) {
+      usort($members, fn($a, $b) => ($b['xp'] <=> $a['xp']) ?: ($a['id'] <=> $b['id'])); $n = count($members);
+      foreach ($members as $i => $m) {
+        $rank = $i + 1; $result = 'stay'; $new = $lg;
+        if ($rank <= MH_LEAGUE_PROMOTE && $m['xp'] > 0 && $lg < count(MH_LEAGUES) - 1) { $result = 'up'; $new = $lg + 1; }
+        elseif ($lg > 0 && $n >= MH_LEAGUE_MIN_DEMOTE && $rank > $n - MH_LEAGUE_DEMOTE) { $result = 'down'; $new = $lg - 1; }
+        $db->prepare('INSERT OR REPLACE INTO league_history (user_id, week, league, rank, xp, result) VALUES (?, ?, ?, ?, ?, ?)')->execute([$m['id'], $pws, $lg, $rank, $m['xp'], $result]);
+        if ($new !== $lg) $db->prepare('UPDATE users SET league = ? WHERE id = ?')->execute([$new, $m['id']]);
+      }
+    }
+    mh_setting_set('league_rows:' . $ws, null);
+  }
+  mh_setting_set('league_week', (string)$ws);
+}
+
 /* ---------- polls ---------- */
 function mh_poll_create(int $postId, array $options, string $question = '', int $multi = 0, ?string $autoKey = null): int {
   $opts = array_values(array_filter(array_map(fn($o) => mb_substr(trim(mh_censor((string)$o)), 0, 80), $options), fn($o) => $o !== '')); $opts = array_slice($opts, 0, 8);
@@ -104,6 +141,7 @@ function mh_housekeeping(bool $full = false): array {
   if ($full) { try { require_once __DIR__ . '/canvas.php'; $r = mh_canvas_events(false); $did[] = 'canvas: ' . count($r['events']) . ' events'; } catch (Throwable $e) {} }
   $sent = mh_digest_tick($full ? 60 : 2); if ($sent) $did[] = "digest: $sent sent";
   $rem = mh_reminder_tick($full ? 60 : 2); if ($rem) $did[] = "reminders: $rem sent";
+  try { mh_league_tick(); } catch (Throwable $e) {}
   return $did;
 }
 /* ---------- evening reminders: "tomorrow: … due" + streak at risk ---------- */
@@ -318,6 +356,21 @@ function mh_social_route(string $route, array $in, array $cfg, string $ip): void
         return array_map(fn($r) => ['name' => mh_lb_name($r), 'role' => mh_role($r['email']), 'points' => (int)$r['accepted'] * 15 + (int)$r['cscore'] * 2 + (int)$r['comments'], 'accepted' => (int)$r['accepted'], 'comments' => (int)$r['comments']], $st->fetchAll());
       };
       mh_json(['ok' => true, 'week' => $q($week), 'all' => $q(0)]);
+    }
+
+    /* --- leagues --- */
+    case 'league': {
+      mh_method('GET'); $u = mh_require_user(); mh_league_tick(); $ws = mh_week_start(); $rows = mh_league_rows($ws);
+      $st = $db->prepare('SELECT league FROM users WHERE id = ?'); $st->execute([$u['id']]); $lg = (int)$st->fetchColumn();
+      $mine = array_values(array_filter($rows, fn($r) => $r['league'] === $lg)); $localXp = max(0, min(100000, (int)($_GET['xp'] ?? 0)));
+      $found = false; foreach ($mine as &$r) if ($r['id'] === (int)$u['id']) { $r['xp'] = max($r['xp'], $localXp); $found = true; } unset($r);
+      if (!$found) $mine[] = ['id' => (int)$u['id'], 'name' => mh_lb_name($u), 'role' => mh_role($u['email']), 'league' => $lg, 'xp' => $localXp];
+      usort($mine, fn($a, $b) => ($b['xp'] <=> $a['xp']) ?: ($a['id'] <=> $b['id']));
+      $board = []; $myRank = 0; foreach ($mine as $i => $r) { $me = $r['id'] === (int)$u['id']; if ($me) $myRank = $i + 1; $board[] = ['rank' => $i + 1, 'id' => $r['id'], 'name' => $r['name'], 'role' => $r['role'], 'xp' => $r['xp'], 'me' => $me]; }
+      $n = count($mine); $demote = ($lg > 0 && $n >= MH_LEAGUE_MIN_DEMOTE) ? MH_LEAGUE_DEMOTE : 0; $promote = $lg < count(MH_LEAGUES) - 1 ? MH_LEAGUE_PROMOTE : 0;
+      $st = $db->prepare('SELECT week, league, rank, xp, result FROM league_history WHERE user_id = ? ORDER BY week DESC LIMIT 1'); $st->execute([$u['id']]); $last = $st->fetch() ?: null;
+      mh_json(['ok' => true, 'league' => $lg, 'tiers' => MH_LEAGUES, 'week_start' => $ws, 'week_end' => $ws + 7 * 86400, 'board' => array_slice($board, 0, 50), 'members' => $n, 'me' => ['rank' => $myRank, 'xp' => $myRank ? $board[$myRank - 1]['xp'] : 0], 'zones' => ['promote' => $promote, 'demote' => $demote],
+        'last' => $last ? ['week' => (int)$last['week'], 'league' => (int)$last['league'], 'rank' => (int)$last['rank'], 'xp' => (int)$last['xp'], 'result' => $last['result']] : null]);
     }
 
     /* --- people directory: every verified member with the badges they have earned --- */
