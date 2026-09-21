@@ -157,7 +157,7 @@
       const answered = Object.keys(s.answers).length, correct = Object.values(s.answers).filter(a => a.ok && !a.assisted).length;
       const done = s.mode === 'practice' ? answered : (s.submitted ? s.questions.length : answered);
       const bar = s.mode === 'practice'
-        ? `<div class="score-bar"><span class="stat"><span class="stat-num">${correct}<span class="muted" style="font-size:15px">/${answered}</span></span><span class="stat-label">correct so far · ${s.questions.length} questions</span></span><div class="bar" style="flex:1;min-width:120px"><div class="bar-fill ${answered && correct / answered < 0.6 ? 'bad' : answered && correct / answered < 0.8 ? 'warn' : 'good'}" style="width:${s.questions.length ? 100 * answered / s.questions.length : 0}%"></div></div><button class="btn" data-action="retry-missed">${icon('target', 14)} Retry missed topics</button><button class="btn primary" data-action="new-set">${icon('rotate', 14)} New set</button></div>`
+        ? `<div class="score-bar"><span class="stat"><span class="stat-num">${correct}<span class="muted" style="font-size:15px">/${answered}</span></span><span class="stat-label">correct so far · ${s.questions.length} questions</span></span>${(s.combo || 0) >= 2 ? `<span class="combo-chip" key="${s.combo}">${App.icon('fire', 13)} ${s.combo} in a row</span>` : ''}<div class="bar" style="flex:1;min-width:120px"><div class="bar-fill ${answered && correct / answered < 0.6 ? 'bad' : answered && correct / answered < 0.8 ? 'warn' : 'good'}" style="width:${s.questions.length ? 100 * answered / s.questions.length : 0}%"></div></div><button class="btn" data-action="retry-missed">${icon('target', 14)} Retry missed topics</button><button class="btn primary" data-action="new-set">${icon('rotate', 14)} New set</button></div>`
         : s.submitted ? this.summaryHtml(s)
         : `<div class="score-bar"><span class="timer" id="pq-timer">${fmtClock(s.left)}</span><span class="muted small">${answered} / ${s.questions.length} answered · no feedback until you submit</span><button class="btn primary" style="margin-left:auto" data-action="submit">${icon('check', 14)} Submit exam</button></div>`;
       box.innerHTML = `<div class="panel mb-2">${bar}</div><div class="stack">${s.questions.map((q, i) => this.qHtml(q, i)).join('')}</div>${s.mode === 'exam' && !s.submitted ? `<div class="row mt-2" style="justify-content:flex-end"><button class="btn primary" data-action="submit">${icon('check', 14)} Submit exam</button></div>` : ''}${s.capped ? `<div class="mt-2">${App.lockCard('That is the preview: ' + s.questions.length + ' questions per set', `Members get sets of up to 30 questions, timed exam mode, retry-missed drills and per-topic accuracy that follows you across devices.`)}</div>` : ''}`;
@@ -182,7 +182,7 @@
       const s = PQ.session; if (s.submitted) return; const q = s.questions[qi]; if (s.mode === 'practice' && s.answers[qi]) return;
       const assistedMC = s.mode === 'practice' && s.ladder && (s.ladder[qi] || 0) >= App.ladder(q).length;
       s.answers[qi] = { sel: k, ok: k === q.answer, assisted: assistedMC };
-      if (s.mode === 'practice') { if (!assistedMC) App.recordAnswer(q.topic, s.answers[qi].ok); else App.markActivity(); this.repaintQ(root, qi); this.paintSession(root); this.scrollTo(root, q); }
+      if (s.mode === 'practice') { const ok = s.answers[qi].ok; if (!assistedMC) App.recordAnswer(q.topic, ok); else App.markActivity(); this.combo(s, ok && !assistedMC); this.paintSession(root); this.flash(root, q, ok); this.scrollTo(root, q); }
       else this.repaintQ(root, qi);
     },
     answerNum(root, qi) {
@@ -192,16 +192,19 @@
       const tol = q.tol ? Math.max(q.tol * Math.abs(q.answer), 1e-9) : Math.max(0.011, 0.005 * Math.abs(q.answer));
       const assistedNum = s.mode === 'practice' && s.ladder && (s.ladder[qi] || 0) >= App.ladder(q).length;
       s.answers[qi] = { raw, val: v, ok: Math.abs(v - q.answer) <= tol, assisted: assistedNum };
-      if (s.mode === 'practice') { if (!assistedNum) App.recordAnswer(q.topic, s.answers[qi].ok); else App.markActivity(); this.repaintQ(root, qi); this.paintSession(root); this.scrollTo(root, q); }
+      if (s.mode === 'practice') { const ok = s.answers[qi].ok; if (!assistedNum) App.recordAnswer(q.topic, ok); else App.markActivity(); this.combo(s, ok && !assistedNum); this.paintSession(root); this.flash(root, q, ok); this.scrollTo(root, q); }
       else this.repaintQ(root, qi);
     },
-    repaintQ(root, qi) { const q = PQ.session.questions[qi]; const old = $(`#qc-${q.id}`, root); if (!old) return; const tmp = document.createElement('div'); tmp.innerHTML = this.qHtml(q, qi); old.replaceWith(tmp.firstElementChild); typeset($(`#qc-${q.id}`, root)); },
+    repaintQ(root, qi, ok) { const q = PQ.session.questions[qi]; const old = $(`#qc-${q.id}`, root); if (!old) return; const tmp = document.createElement('div'); tmp.innerHTML = this.qHtml(q, qi); old.replaceWith(tmp.firstElementChild); const nq = $(`#qc-${q.id}`, root); if (nq && ok !== undefined) nq.classList.add(ok ? 'pop' : 'shake'); typeset(nq); },
+    flash(root, q, ok) { const nq = $(`#qc-${q.id}`, root); if (nq) nq.classList.add(ok ? 'pop' : 'shake'); },
+    combo(s, ok) { if (ok) { s.combo = (s.combo || 0) + 1; s.best = Math.max(s.best || 0, s.combo); if (s.combo % 5 === 0 && App.addXP) { App.addXP(5, { silent: true }); App.toast(`${App.icon('fire', 14)} ${s.combo} in a row! +5 XP bonus`, 2600); } } else s.combo = 0; },
     scrollTo(root, q) { const el = $(`#qc-${q.id}`, root); if (el) setTimeout(() => el.scrollIntoView({ block: 'nearest', behavior: 'smooth' }), 30); },
     submit(root) {
       const s = PQ.session; if (!s || s.submitted) return; s.submitted = true; if (s.timer) clearInterval(s.timer);
       s.questions.forEach((q, i) => { const a = s.answers[i]; App.recordAnswer(q.topic, !!(a && a.ok)); });
       if (s.external && PQ.external && PQ.external.onSubmit) { const correct = s.questions.filter((q, i) => s.answers[i] && s.answers[i].ok).length; try { PQ.external.onSubmit(correct, s.questions.length, PQ.minutes * 60 - s.left); } catch (e) { console.error(e); } }
       this.paintSession(root); window.scrollTo({ top: 0, behavior: 'smooth' });
+      const nOk = s.questions.filter((q, i) => s.answers[i] && s.answers[i].ok).length; if (s.questions.length && nOk / s.questions.length >= 0.8 && App.confetti) setTimeout(() => App.confetti(), 250);
     },
     summaryHtml(s) {
       const n = s.questions.length, correct = s.questions.filter((q, i) => s.answers[i] && s.answers[i].ok).length;

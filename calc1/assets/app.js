@@ -33,7 +33,7 @@
     root.__on = root.__on || {}; const key = evt + '|' + sel; root.__on[key] = fn; root.__onBound = root.__onBound || {};
     if (!root.__onBound[key]) { root.__onBound[key] = true; root.addEventListener(evt, e => { const el = e.target.closest(sel); if (el && root.contains(el)) root.__on[key](el, e); }); }
   }
-  function toast(msg, ms = 1800) { $$('.toast').forEach(t => t.remove()); const t = document.createElement('div'); t.className = 'toast'; t.textContent = msg; document.body.appendChild(t); setTimeout(() => t.remove(), ms); }
+  function toast(msg, ms = 1800) { $$('.toast').forEach(t => t.remove()); const t = document.createElement('div'); t.className = 'toast'; if (/^\s*<(svg|b|i)\b/.test(msg)) t.innerHTML = msg; else t.textContent = msg; document.body.appendChild(t); setTimeout(() => t.remove(), ms); }
 
   /* ---------- icons ---------- */
   const ICONS = {
@@ -57,7 +57,8 @@
     pin: '<path d="M12 17v5"/><path d="M8 3h8l-1 7 3 3H6l3-3z"/>', bell: '<path d="M6 16V11a6 6 0 0 1 12 0v5l2 2H4z"/><path d="M10 20a2 2 0 0 0 4 0"/>', canvas: '<rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/><path d="M8 14l3 3 5-5"/>', wifi_off: '<path d="M2 8.5a16 16 0 0 1 20 0M5 12a11 11 0 0 1 14 0M8.5 15.5a6 6 0 0 1 7 0M12 19h.01"/><path d="M3 3l18 18"/>', lock: '<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>', shield: '<path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M9 12l2 2 4-4"/>', swap: '<path d="M7 16V4M7 4L3 8M7 4l4 4"/><path d="M17 8v12M17 20l4-4M17 20l-4-4"/>', grid: '<rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>',
     users: '<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><circle cx="17" cy="9" r="2.6"/><path d="M15.5 14.2a5 5 0 0 1 6 4.8"/>', award: '<circle cx="12" cy="9" r="5.5"/><path d="M8.5 13.5L7 22l5-3 5 3-1.5-8.5"/><path d="M12 6.5l.9 1.9 2.1.3-1.5 1.5.4 2.1-1.9-1-1.9 1 .4-2.1L9 8.7l2.1-.3z"/>',
     gear: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>',
-    logout: '<path d="M10 4H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h5"/><path d="M15 16l4-4-4-4M19 12H9"/>', chevron: '<path d="M6 9l6 6 6-6"/>', user: '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>'
+    logout: '<path d="M10 4H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h5"/><path d="M15 16l4-4-4-4M19 12H9"/>', chevron: '<path d="M6 9l6 6 6-6"/>', user: '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',
+    zap: '<path d="M13 2L4 14h7l-1 8 9-12h-7z"/>', path: '<path d="M5 5c9 0 9 7 0 7s-9 7 0 7h14"/><circle cx="5" cy="5" r="1.8"/><circle cx="19" cy="19" r="1.8"/>'
   };
   const icon = (name, size = 18) => `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[name] || ''}</svg>`;
 
@@ -78,7 +79,8 @@
     exportJSON() { return JSON.stringify({ course: this.id, data: this.data, settings: readJSON('studyhub-settings') }, null, 2); },
     importJSON(txt) { const obj = JSON.parse(txt); if (!obj || typeof obj !== 'object') throw new Error('Not a valid export'); const data = obj.data && typeof obj.data === 'object' ? obj.data : obj; this.data = data; writeJSON(storeKey(this.id), data); if (obj.settings) writeJSON('studyhub-settings', obj.settings); if (global.App && global.App.auth) global.App.auth.noteWrite(this.id); },
     reset() { this.data = {}; try { localStorage.removeItem(storeKey(this.id)); } catch {} if (global.App && global.App.auth) global.App.auth.noteWrite(this.id); },
-    peek(id) { return readJSON(storeKey(id)); }
+    peek(id) { return readJSON(storeKey(id)); },
+    poke(id, fn) { if (id === this.id) { fn(this.data); writeJSON(storeKey(id), this.data); } else { const d = readJSON(storeKey(id)); fn(d); writeJSON(storeKey(id), d); } if (global.App && global.App.auth) global.App.auth.noteWrite(id); }
   };
   const settings = () => Object.assign({ theme: 'system' }, readJSON('studyhub-settings'));
   const setSetting = (k, v) => { const s = settings(); s[k] = v; writeJSON('studyhub-settings', s); };
@@ -157,7 +159,7 @@
   function progress() { return store.get('progress', {}); }
   function recordAnswer(topic, ok) {
     const p = progress(); const t = p[topic] || { a: 0, c: 0 }; t.a++; if (ok) t.c++; p[topic] = t; store.set('progress', p);
-    const hist = store.get('history', []); hist.push({ t: topic, ok, d: todayISO(), k: Date.now().toString(36) + Math.random().toString(36).slice(2, 6) }); if (hist.length > 500) hist.splice(0, hist.length - 500); store.set('history', hist); markActivity();
+    const hist = store.get('history', []); hist.push({ t: topic, ok, d: todayISO(), k: Date.now().toString(36) + Math.random().toString(36).slice(2, 6) }); if (hist.length > 500) hist.splice(0, hist.length - 500); store.set('history', hist); markActivity(); if (App.addXP) App.addXP(ok ? 10 : 2);
   }
   function markActivity() { const days = store.get('activity', {}); days[todayISO()] = true; store.set('activity', days); }
   function streakOf(data) { const days = data.activity || {}; let n = 0; let d = today(); if (!days[toISO(d)]) d = addDays(d, -1); while (days[toISO(d)]) { n++; d = addDays(d, -1); } return n; }
@@ -249,6 +251,7 @@
   /* ---------- course selection / routing ---------- */
   const COMMUNITY_NAV = [['challenge', 'Daily challenge', 'target'], ['meet', 'Study sessions', 'clock'], ['mock', 'Mock exams', 'flag'], ['contribute', 'Contribute', 'pen'], ['people', 'People', 'users']];
   function augmentNav(C) {
+    const today = C.NAV[0]; if (App.views.path && today && !today.items.some(x => x[0] === 'path')) today.items.splice(1, 0, ['path', 'Learning path', 'path']);
     let gp = C.NAV.find(g => g.label === 'Community'); if (!gp) { gp = { label: 'Community', items: [['forum', 'Discussions', 'chat']] }; C.NAV.splice(C.NAV.length - 1, 0, gp); }
     COMMUNITY_NAV.forEach(it => { if (App.views[it[0]] && !gp.items.some(x => x[0] === it[0])) gp.items.push(it); });
   }
@@ -275,7 +278,7 @@
       app.classList.add('landing'); document.documentElement.removeAttribute('data-course');
       if (view !== 'home') { const V = App.views[view]; App.current = V; document.title = `${V.title} · ${SITE}`; V.render(root, param, query, true); applyTheme(); }
       else { App.current = Landing; document.title = `${SITE} · Fall 2026`; Landing.render(root); }
-      typeset(root); if (App.auth) App.auth.bindLocks(root); return;
+      typeset(root); if (App.auth) App.auth.bindLocks(root); afterRender(root); return;
     }
     app.classList.remove('landing'); setCourse(course);
     const V = App.views[view]; App.current = V;
@@ -283,8 +286,9 @@
     $('#topbar-title').textContent = V.title; document.title = `${V.title} · ${D.code} · ${SITE}`;
     if (App.auth && App.auth.ready && App.auth.gate(view) === 'hard') App.auth.renderLocked(root, V, view); else V.render(root, param, query);
     if (App.auth) App.auth.bindLocks(root);
-    typeset(root); app.classList.remove('nav-open'); updateExamChip(); paintAsOf();
+    typeset(root); app.classList.remove('nav-open'); updateExamChip(); paintAsOf(); afterRender(root);
   }
+  function afterRender(root) { if (App.paintStats) { App.paintStats(); App.paintMascots(); App.countUp(root); } }
   App.rerender = () => render();
   App.inCourse = () => !!route().course;
   App.settingsLink = () => App.inCourse() ? App.link('settings') : '#/settings';
@@ -337,7 +341,7 @@
     pause() { this.running = false; clearInterval(this.tick); this.flush(); this.draw(); },
     reset() { this.pause(); this.left = this.len(); this.draw(); },
     switchMode() { this.mode = this.mode === 'focus' ? 'break' : 'focus'; this.reset(); },
-    flush() { const mins = Math.floor(this.accum / 60); if (mins >= 1 && D) { const ss = store.get('sessions', []); const t = todayISO(); const last = ss[ss.length - 1]; if (last && last.d === t) last.m += mins; else ss.push({ d: t, m: mins }); if (ss.length > 400) ss.splice(0, ss.length - 400); store.set('sessions', ss); markActivity(); } this.accum = this.accum % 60; },
+    flush() { const mins = Math.floor(this.accum / 60); if (mins >= 1 && D) { const ss = store.get('sessions', []); const t = todayISO(); const last = ss[ss.length - 1]; if (last && last.d === t) last.m += mins; else ss.push({ d: t, m: mins }); if (ss.length > 400) ss.splice(0, ss.length - 400); store.set('sessions', ss); markActivity(); if (App.addXP) App.addXP(mins); } this.accum = this.accum % 60; },
     finish() { this.pause(); this.beep(); if (D) markActivity(); toast(this.mode === 'focus' ? 'Focus block done. Take a 5-minute break.' : 'Break over. Back to it.', 4000); this.mode = this.mode === 'focus' ? 'break' : 'focus'; this.left = this.len(); },
     beep() { try { const ac = new (window.AudioContext || window.webkitAudioContext)(); const o = ac.createOscillator(), gn = ac.createGain(); o.connect(gn); gn.connect(ac.destination); o.frequency.value = 880; gn.gain.value = 0.08; o.start(); setTimeout(() => { o.stop(); ac.close(); }, 500); } catch {} }
   };
@@ -402,7 +406,7 @@
       const greeting = d.getHours() < 12 ? 'this morning' : d.getHours() < 18 ? 'this afternoon' : 'tonight';
       const sub = ss.phase === 'before' ? `Classes start ${esc(fmtDate(first.SEMESTER.start, true))}. Get a head start on the first topics.` : ss.phase === 'after' ? 'The semester is over. Everything stays here for review.' : `Which class are you working on ${greeting}?`;
       root.innerHTML = `<div class="landing-wrap">
-        <header class="landing-top hero"><div><div class="eyebrow">${esc(fmtDate(t, true))} · ${esc(first.term)}${ss.phase === 'during' ? ` · Week ${ss.week}` : ''}</div><h1 class="landing-title"><span class="logo-mark">${App.logoSvg(44)}</span>${SITE}</h1><p class="hero-sub">${sub}</p><p class="muted small hero-note">Notes, endless practice, simulators, planners and a class board for Montana State math and physics. Free for students.</p><div id="landing-presence" class="mt-1"></div></div><div class="row gap-sm hero-actions"><span id="landing-account"></span><button class="icon-btn theme-btn" data-action="theme" aria-label="Toggle theme"></button></div></header>
+        <header class="landing-top hero"><div><div class="eyebrow">${esc(fmtDate(t, true))} · ${esc(first.term)}${ss.phase === 'during' ? ` · Week ${ss.week}` : ''}</div><h1 class="landing-title"><span class="logo-mark">${App.logoSvg(44)}</span>${SITE}</h1><p class="hero-sub">${sub}</p><p class="muted small hero-note">Notes, endless practice, simulators, planners and a class board for Montana State math and physics. Free for students.</p><div id="landing-presence" class="mt-1"></div></div><div class="row gap-sm hero-actions"><span id="landing-account"></span><button class="icon-btn theme-btn" data-action="theme" aria-label="Toggle theme"></button></div><div class="mascot-slot hero-mascot" data-size="112"></div></header>
         <div id="announcement-slot"></div>
         <div class="course-grid">${cards}</div>
         <p class="small muted mt-1" style="text-align:right">${mineIds.length < COURSE_ORDER.filter(id => Courses[id]).length ? `Showing your ${mineIds.length} class${mineIds.length === 1 ? '' : 'es'} · <a href="#" data-action="show-all">${showAll ? 'show only mine' : 'show all classes'}</a> · ` : ''}<a href="#" data-action="choose">choose your classes and sections</a></p>
@@ -450,10 +454,12 @@
       const plan = App.planToday ? App.planToday() : null;
       const act = store.get('activity', {}); const yday = toISO(addDays(d, -1)), dby = toISO(addDays(d, -2)); const wk0 = App.isoWeek(d);
       const atRisk = !act[t] && !!act[yday] && st >= 2; const broken = !act[t] && !act[yday] && !!act[dby]; const freezes = store.get('freezes', {}); const freezeLeft = !freezes[wk0];
+      const xpT = App.xpToday ? App.xpToday() : 0, goal = App.dailyGoal ? App.dailyGoal() : 30, lv = App.level ? App.level() : null; const gpct = Math.min(100, Math.round(100 * xpT / goal)); const curNode = App.pathNodes ? App.pathNodes().find(n => n.state === 'current') : null; const RB = 2 * Math.PI * 26;
+      const goalBlock = `<div class="today-goal"><span class="ring-big${gpct >= 100 ? ' done' : ''}"><svg viewBox="0 0 60 60" width="64" height="64" aria-hidden="true"><circle class="ring-bg" cx="30" cy="30" r="26"/><circle class="ring-fg" cx="30" cy="30" r="26" stroke-dasharray="${RB.toFixed(2)}" stroke-dashoffset="${(RB * (1 - gpct / 100)).toFixed(2)}"/></svg><span class="ring-txt">${gpct >= 100 ? icon('check', 18) : `<b>${xpT}</b><small>XP</small>`}</span></span><div class="today-goal-body"><div><b>${xpT} / ${goal} XP today</b>${lv ? ` <span class="chip accent">Level ${lv.n} · ${esc(lv.name)}</span>` : ''}</div><div class="small muted">${gpct >= 100 ? 'Daily goal done. Extra XP still counts toward your level.' : `${goal - xpT} XP to go${lv ? ` · ${lv.toNext} XP to level ${lv.n + 1}` : ''}`}</div>${curNode ? `<a class="small" href="${L('practice', null, { topics: curNode.t })}">${icon('play', 12)} Continue on your path: ${esc(curNode.label)}</a>` : ''}</div></div>`;
       const weekMins = COURSE_ORDER.filter(id => Courses[id]).reduce((sum, id) => sum + ((store.peek(id).sessions || []).filter(x => App.isoWeek(parseISO(x.d)) === wk0).reduce((a, x) => a + (x.m || 0), 0)), 0);
       const remindNudge = App.auth && App.auth.user && !App.auth.user.local && App.auth.mode === 'server' && !App.auth.user.reminder_email && !settings().remindNudgeDismissed;
       root.innerHTML = `<div class="page-head"><div><div class="eyebrow">${esc(fmtDate(t, true))} · ${weekLabel} · ${esc(D.code)}</div><h1 class="page-title">Good ${d.getHours() < 12 ? 'morning' : d.getHours() < 18 ? 'afternoon' : 'evening'}. Here's where ${esc(D.short)} stands.</h1></div></div><div id="announcement-slot"></div>${pre}
-        <div class="stack">${remindNudge ? `<div class="callout small row between" style="gap:10px"><span>${icon('bell', 14)} Want an email the evening before something is due, and a heads-up when your streak is about to end?</span><span class="row gap-sm"><button class="btn xs primary" data-action="remind-on">Turn on</button><button class="btn xs ghost" data-action="remind-no">No thanks</button></span></div>` : ''}${examTile}
+        <div class="stack">${remindNudge ? `<div class="callout small row between" style="gap:10px"><span>${icon('bell', 14)} Want an email the evening before something is due, and a heads-up when your streak is about to end?</span><span class="row gap-sm"><button class="btn xs primary" data-action="remind-on">Turn on</button><button class="btn xs ghost" data-action="remind-no">No thanks</button></span></div>` : ''}${examTile}<div class="mascot-slot coach" data-size="72" data-cls="compact"></div>
           <div class="grid cols-3">
             <div class="panel"><div class="panel-h"><div class="panel-title">${icon('calendar')} Today</div><a href="${L('calendar')}" class="small">Full calendar</a></div>
               ${todayEv.length ? todayEv.map(e => `<div class="today-ev"><span class="chip ${e[1]}">${e[1]}</span><span>${esc(e[2])}</span></div>`).join('') : `<div class="empty">No class today.${(() => { const nx = D.CALENDAR.find(e => e[0] > t && (e[1] === 'lecture' || e[1] === 'exam')); return nx ? ` Next: ${esc(nx[2])} on ${fmtDate(nx[0])}.` : ''; })()}</div>`}
@@ -463,9 +469,10 @@
             <div class="panel"><div class="panel-h"><div class="panel-title">${icon('clock')} Due soon</div>${(D.RECURRING || []).some(r => r.afterLabDay) ? `<span class="small muted">Lab day: ${courseSetting(D.id, 'labDay', 'tue') === 'thu' ? 'Thu' : 'Tue'} · <a href="${L('settings')}">change</a></span>` : ''}</div>
               ${dl.length ? dl.map(x => `<div class="today-ev"><span class="when">${daysBetween(t, x.date) === 0 ? 'Today' : daysBetween(t, x.date) === 1 ? 'Tomorrow' : esc(fmtDate(x.date))}</span><span>${esc(x.title)}${x.time ? ` <span class="muted small">· ${esc(x.time)}</span>` : ''}</span></div>`).join('') : '<div class="empty">Nothing scheduled.</div>'}
               <p class="small muted mt-2">${Canvas.data && Canvas.data.configured && Canvas.events(D.id, t).length ? 'Due dates come from the Canvas calendar; exams and drop dates from the syllabus.' : 'Standing rules from the syllabus. Confirm exact assignments in Canvas.'}</p></div>
-            <div class="panel"><div class="panel-h"><div class="panel-title">${icon('fire')} Your progress</div></div>
+            <div class="panel"><div class="panel-h"><div class="panel-title">${icon('fire')} Your progress</div><a class="small" href="${L('path')}">Learning path</a></div>
+              ${goalBlock}
               ${atRisk ? `<div class="callout warn small mb-2">${icon('fire', 13)} Your ${st}-day streak ends at midnight. <a href="${L('practice', null, { smart: 1 })}">Answer one question</a> to keep it.</div>` : broken ? `<div class="callout small mb-2">${icon('fire', 13)} Your streak broke yesterday.${freezeLeft ? ` <button class="btn xs primary" data-action="freeze">Use this week's freeze</button> to keep it alive.` : ' You used this week\'s freeze already.'}</div>` : ''}
-              <div class="grid cols-2" style="gap:10px"><div class="stat"><div class="stat-num">${st}</div><div class="stat-label">day streak${freezeLeft ? '' : ' · freeze used'}</div></div><div class="stat"><div class="stat-num">${(weekMins / 60).toFixed(1)}<span class="muted" style="font-size:15px"> h</span></div><div class="stat-label" id="dash-hours">focus this week</div></div><div class="stat"><div class="stat-num">${answered ? Math.round(100 * correct / answered) : 0}%</div><div class="stat-label">accuracy · ${answered} answered</div></div><div class="stat"><div class="stat-num">${cm.mastered}<span class="muted" style="font-size:15px">/${cm.total}</span></div><div class="stat-label">flashcards mastered</div></div><div class="stat"><div class="stat-num">${hist.filter(x => x.d === t).length}</div><div class="stat-label">questions today</div></div></div>
+              <div class="grid cols-2" style="gap:10px"><div class="stat"><div class="stat-num" data-count="${st}">${st}</div><div class="stat-label">day streak${freezeLeft ? '' : ' · freeze used'}</div></div><div class="stat"><div class="stat-num" data-count="${(weekMins / 60).toFixed(1)}">${(weekMins / 60).toFixed(1)}<span class="muted" style="font-size:15px"> h</span></div><div class="stat-label" id="dash-hours">focus this week</div></div><div class="stat"><div class="stat-num"><span data-count="${answered ? Math.round(100 * correct / answered) : 0}">${answered ? Math.round(100 * correct / answered) : 0}</span>%</div><div class="stat-label">accuracy · ${answered} answered</div></div><div class="stat"><div class="stat-num" data-count="${cm.mastered}">${cm.mastered}<span class="muted" style="font-size:15px">/${cm.total}</span></div><div class="stat-label">flashcards mastered</div></div><div class="stat"><div class="stat-num">${hist.filter(x => x.d === t).length}</div><div class="stat-label">questions today</div></div></div>
               <div class="divider"></div>
               ${D.UNITS.map(u => { const m = unitMastery(u.n); return `<div class="bar-row"><span>Unit ${u.n} · ${esc(u.title)}</span><span class="mono">${m.a ? m.pct + '%' : '—'}</span><div class="bar"><div class="bar-fill ${m.pct >= 80 ? 'good' : m.pct >= 60 ? 'warn' : m.a ? 'bad' : ''}" style="width:${m.a ? m.pct : 0}%"></div></div></div>`; }).join('')}</div>
           </div>
@@ -584,7 +591,7 @@
       const grade = up => { const c = st.deck[st.i]; if (!c) return; const b = boxes(); b[c.id] = up ? Math.min(3, (b[c.id] || 0) + 1) : 0; store.set('flashcards', b); markActivity(); if (st.i < st.deck.length - 1) st.i++; st.flipped = false; paint(); };
       const flip = () => { st.flipped = !st.flipped; const el = $('#fc-card', root); if (el) el.classList.toggle('flipped', st.flipped); };
       if (useCommunity && App.social && !st.community) { App.social.communityCards(D.id).then(cards => { st.community = cards; buildDeck(); paint(); if (!cards.length) toast('No community cards for this class yet. Add one under Contribute.'); }); }
-      bind(root, { community: () => { setCourseSetting(D.id, 'communityCards', !useCommunity); st.community = null; this.render(root, null, {}); }, unit: el => { st.unit = +el.dataset.u; st.sec = null; App.go('flashcards', null, { unit: st.unit }); }, clearsec: () => { st.sec = null; App.go('flashcards'); }, mode: () => { st.mode = st.mode === 'due' ? 'shuffle' : 'due'; this.render(root, null, {}); }, reshuffle: () => { buildDeck(); paint(); }, reset: () => { if (confirm('Reset flashcard progress for this class?')) { store.set('flashcards', {}); paint(); toast('Flashcard progress reset'); } }, prev: () => { if (st.i > 0) { st.i--; st.flipped = false; paint(); } }, next: () => { if (st.i < st.deck.length - 1) { st.i++; st.flipped = false; paint(); } }, again: () => grade(false), good: () => grade(true) });
+      bind(root, { community: () => { setCourseSetting(D.id, 'communityCards', !useCommunity); st.community = null; this.render(root, null, {}); }, unit: el => { st.unit = +el.dataset.u; st.sec = null; App.go('flashcards', null, { unit: st.unit }); }, clearsec: () => { st.sec = null; App.go('flashcards'); }, mode: () => { st.mode = st.mode === 'due' ? 'shuffle' : 'due'; this.render(root, null, {}); }, reshuffle: () => { buildDeck(); paint(); }, reset: () => { if (confirm('Reset flashcard progress for this class?')) { store.set('flashcards', {}); paint(); toast('Flashcard progress reset'); } }, prev: () => { if (st.i > 0) { st.i--; st.flipped = false; paint(); } }, next: () => { if (st.i < st.deck.length - 1) { st.i++; st.flipped = false; paint(); } }, again: () => { grade(false); if (App.addXP) App.addXP(1); }, good: () => { grade(true); if (App.addXP) App.addXP(2); } });
       on(root, 'click', '#fc-card', flip);
       this.keys = e => { if (e.target.matches('input, textarea, select') || $('#search-modal')) return; if (e.key === ' ') { e.preventDefault(); flip(); } else if (e.key === '1') grade(false); else if (e.key === '2') grade(true); else if (e.key === 'ArrowLeft') { if (st.i > 0) { st.i--; st.flipped = false; paint(); } } else if (e.key === 'ArrowRight') { if (st.i < st.deck.length - 1) { st.i++; st.flipped = false; paint(); } } };
       document.addEventListener('keydown', this.keys);
@@ -696,6 +703,8 @@
       const classesPanel = `<div class="panel span-2"><div class="panel-h"><div class="panel-title">${icon('grid')} Your classes</div><button class="btn sm" data-action="choose">Choose classes and sections</button></div><div class="row gap-sm" style="flex-wrap:wrap">${mine.map(id => `<span class="chip course-${id}">${esc(Courses[id].short)}${courseSetting(id, 'section', '') ? ' · sec ' + esc(courseSetting(id, 'section', '')) : ''}${courseSetting(id, 'examTime', '') ? ' · ' + esc(courseSetting(id, 'examTime', '')) : ''}</span>`).join('')}</div><p class="small muted mt-1">Only these classes show on the landing page, in the course switcher, in reminders and in the weekly digest.</p></div>`;
       const prefsPanel = `<div class="panel"><div class="panel-h"><div class="panel-title">${icon('sliders')} Preferences</div></div>
           <div class="field mb-2"><label>Theme</label><select class="select" id="s-theme"><option value="system"${s.theme === 'system' ? ' selected' : ''}>Match system</option><option value="light"${s.theme === 'light' ? ' selected' : ''}>Light</option><option value="dark"${s.theme === 'dark' ? ' selected' : ''}>Dark</option></select></div>
+          <div class="field mb-2"><label>Daily XP goal</label><select class="select" id="s-goal">${(App.GOALS || [[30, 'Regular']]).map(([n, name]) => `<option value="${n}"${(App.dailyGoal ? App.dailyGoal() : 30) === n ? ' selected' : ''}>${n} XP · ${name}</option>`).join('')}</select><span class="help">A correct answer is 10 XP. The ring in the header fills up as you go; hit the goal every day to keep your streak strong.</span></div>
+          <label class="check mb-2" style="padding:0"><input type="checkbox" id="s-livebg" ${s.liveBg === false ? '' : 'checked'}><span>Animated background <span class="muted small">(drifting symbols; off automatically when your system prefers reduced motion)</span></span></label>
           ${hasLab ? `<div class="field"><label>Your ${esc(C.short)} lab day</label><select class="select" id="s-lab"><option value="tue"${courseSetting(C.id, 'labDay', 'tue') !== 'thu' ? ' selected' : ''}>Tuesday</option><option value="thu"${courseSetting(C.id, 'labDay', 'tue') === 'thu' ? ' selected' : ''}>Thursday</option></select><span class="help">Sets when lab sheets show as due on the dashboard (8:00 pm the day after lab).</span></div>` : ''}
           <div class="field mt-2"><label for="s-asof">Preview the site as of a date</label><div class="row gap-sm"><input class="input" id="s-asof" type="date" value="${esc(s.asof || '')}" min="${sem.start}" max="${sem.end}" style="max-width:200px"><button class="btn sm ghost" data-action="asof-clear">Back to today</button></div><span class="help">Jump ahead to see what the dashboard, countdowns and due lists will show later in the semester.</span></div>
           <div class="divider"></div><div class="eyebrow mb-1">Keyboard shortcuts</div>
@@ -707,6 +716,8 @@
       root.innerHTML = `${standalone ? '<div class="landing-wrap settings-wrap">' : ''}${head}<div class="grid cols-2"><div id="acct-panel" class="span-2"></div>${classesPanel}${prefsPanel}${dataPanel}</div>${standalone ? '</div>' : ''}`;
       const slot = $('#landing-account', root); if (slot && App.auth && App.auth.ready) App.auth.paintLandingAccount(slot);
       $('#s-theme', root).addEventListener('change', e => { setSetting('theme', e.target.value); applyTheme(); });
+      const sg = $('#s-goal', root); if (sg) sg.addEventListener('change', e => { setSetting('dailyGoal', +e.target.value); if (App.paintStats) { App.paintStats(); App.paintMascots(); } toast(`Daily goal: ${e.target.value} XP`); });
+      const lb = $('#s-livebg', root); if (lb) lb.addEventListener('change', e => { setSetting('liveBg', e.target.checked); if (App.liveBg) App.liveBg.apply(); });
       $('#s-asof', root).addEventListener('change', e => { setSetting('asof', e.target.value || ''); render(); if (e.target.value) toast(`Viewing the site as of ${fmtDate(e.target.value)}`); });
       const acct = $('#acct-panel', root); if (acct && App.auth) acct.replaceWith(Object.assign(App.auth.settingsPanel(root), { className: 'panel span-2 acct-panel' }));
       const lab = $('#s-lab', root); if (lab) lab.addEventListener('change', e => { setCourseSetting(C.id, 'labDay', e.target.value); toast('Lab day saved'); });

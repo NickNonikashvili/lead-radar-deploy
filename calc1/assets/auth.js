@@ -64,12 +64,13 @@
     m.innerHTML = `<div class="modal auth-modal onboard-modal" role="dialog" aria-label="Your classes"><div class="auth-head"><span class="logo-mark">${App.logoSvg(26)}</span><div><b>Which classes are you taking?</b><div class="small muted">MatHub hides the rest and uses your section's times.</div></div><button class="icon-btn" data-action="close" aria-label="Close">${icon('x', 16)}</button></div>
       <div class="onboard-list">${courses.map(id => { const C = global.Courses[id]; const on = chosen.includes(id); const hasLab = (C.RECURRING || []).some(r => r.afterLabDay); return `<div class="onboard-course${on ? ' on' : ''}" data-c="${id}"><label class="check" style="padding:0"><input type="checkbox" data-course="${id}" ${on ? 'checked' : ''}><span><b>${esc(C.code)}</b> ${esc(C.name)}</span></label>
         <div class="onboard-fields grid cols-3" style="gap:8px"><div class="field"><label>Section</label><input class="input" data-sec="${id}" maxlength="20" placeholder="e.g. 002" value="${esc(App.courseSetting(id, 'section', ''))}"></div><div class="field"><label>Your lecture / exam time</label><input class="input" data-time="${id}" maxlength="60" placeholder="e.g. MWF 9:00 am" value="${esc(App.courseSetting(id, 'examTime', ''))}"></div>${hasLab ? `<div class="field"><label>Lab day</label><select class="select" data-lab="${id}"><option value="tue"${App.courseSetting(id, 'labDay', 'tue') !== 'thu' ? ' selected' : ''}>Tuesday</option><option value="thu"${App.courseSetting(id, 'labDay', 'tue') === 'thu' ? ' selected' : ''}>Thursday</option></select></div>` : '<div></div>'}</div></div>`; }).join('')}</div>
+      <div class="eyebrow mt-2 mb-1">Daily XP goal</div><div class="goal-picks">${(App.GOALS || []).map(([n, nm]) => `<button type="button" class="goal-pick${(App.dailyGoal ? App.dailyGoal() : 30) === n ? ' on' : ''}" data-action="goal" data-n="${n}"><b>${n} XP</b><span>${nm}</span></button>`).join('')}</div><p class="small muted mt-1">A correct answer is 10 XP. You can change this any time in Settings.</p>
       <div class="row gap-sm mt-2"><button class="btn primary" data-action="save">Save</button><button class="btn" data-action="close">${force ? 'Cancel' : 'Skip for now'}</button></div><div class="auth-msg" id="onboard-msg"></div></div>`;
     document.body.appendChild(m);
     const done = () => { m.remove(); try { localStorage.setItem('mathub-onboarded', '1'); } catch {} };
     on(m, 'change', 'input[data-course]', el => { el.closest('.onboard-course').classList.toggle('on', el.checked); });
-    bind(m, { close: () => { done(); if (!Array.isArray(u.courses)) Auth.savePrefs({ courses: courses }).catch(() => {}); },
-      save: async () => { const picked = $$('input[data-course]', m).filter(i => i.checked).map(i => i.dataset.course); if (!picked.length) { $('#onboard-msg', m).textContent = 'Pick at least one class.'; return; } const sections = {}; courses.forEach(id => { const lab = $(`select[data-lab="${id}"]`, m); sections[id] = { section: $(`input[data-sec="${id}"]`, m).value.trim(), examTime: $(`input[data-time="${id}"]`, m).value.trim(), labDay: lab ? lab.value : '' }; }); try { await Auth.savePrefs({ courses: picked, sections }); done(); toast('Saved. MatHub now shows ' + picked.map(id => global.Courses[id].short).join(', ') + '.', 3500); App.rerender(); } catch (e) { $('#onboard-msg', m).textContent = e.message; } } });
+    bind(m, { goal: b => { $$('.goal-pick', m).forEach(x => x.classList.toggle('on', x === b)); }, close: () => { done(); if (!Array.isArray(u.courses)) Auth.savePrefs({ courses: courses }).catch(() => {}); },
+      save: async () => { const picked = $$('input[data-course]', m).filter(i => i.checked).map(i => i.dataset.course); if (!picked.length) { $('#onboard-msg', m).textContent = 'Pick at least one class.'; return; } const sections = {}; courses.forEach(id => { const lab = $(`select[data-lab="${id}"]`, m); sections[id] = { section: $(`input[data-sec="${id}"]`, m).value.trim(), examTime: $(`input[data-time="${id}"]`, m).value.trim(), labDay: lab ? lab.value : '' }; }); const gp = $('.goal-pick.on', m); if (gp) App.setSetting('dailyGoal', +gp.dataset.n); try { await Auth.savePrefs({ courses: picked, sections }); done(); if (App.paintStats) App.paintStats(); toast('Saved. MatHub now shows ' + picked.map(id => global.Courses[id].short).join(', ') + '.', 3500); App.rerender(); } catch (e) { $('#onboard-msg', m).textContent = e.message; } } });
     m.addEventListener('click', e => { if (e.target === m) bind; });
   };
   function changed() { applyServerPrefs(); paintAccount(); paintBanner(); Auth.setUnread(Auth.user ? (Auth.user.unread || 0) : 0); if (Auth.user && !Auth.user.local && Auth.mode === 'server') writeJSON(LAST_KEY, { user: Auth.user, health: Auth.health ? { domains: Auth.health.domains } : null, at: Date.now() }); if (!Auth.user) writeJSON(LAST_KEY, null); Auth.listeners.forEach(fn => { try { fn(Auth.user); } catch (e) { console.error(e); } }); }
@@ -139,6 +140,7 @@
     // focus sessions: union by day (max minutes per day), streak freezes: union
     const sess = {}; for (const src of [S.sessions || [], L.sessions || []]) for (const x of src) if (x && x.d) sess[x.d] = Math.max(sess[x.d] || 0, x.m || 0); out.sessions = Object.keys(sess).sort().map(d => ({ d, m: sess[d] }));
     out.freezes = Object.assign({}, S.freezes || {}, L.freezes || {});
+    const xp = {}; for (const src of [S.xp || [], L.xp || []]) for (const x of src) if (x && x.d) xp[x.d] = Math.max(xp[x.d] || 0, x.n || 0); out.xp = Object.keys(xp).sort().map(d => ({ d, n: xp[d] }));
     // grades and scratchpad strokes: the newer side already won via Object.assign, but never replace content with nothing
     if (!(out.grades && Object.keys(out.grades).length)) out.grades = (L.grades && Object.keys(L.grades).length) ? L.grades : (S.grades || {});
     if (!(out.scratch && out.scratch.length)) out.scratch = (L.scratch && L.scratch.length) ? L.scratch : (S.scratch || []);
@@ -175,32 +177,30 @@
     if (top) accountMenu(top);
     $$('#landing-account').forEach(paintLandingAccount);
   }
-  function paintLandingAccount(el) { accountMenu(el, { landing: true }); }
-  /* ---------- header account menu: avatar button with a dropdown (topbar, landing hero, standalone pages) ---------- */
+  function paintLandingAccount(el) { el.innerHTML = '<span class="row gap-sm" style="flex-wrap:nowrap"><span class="hub-slot"></span><span class="acct-menu-slot"></span></span>'; accountMenu($('.acct-menu-slot', el), { landing: true }); if (App.paintStats) App.paintStats(); }
+  /* ---------- header account menu: avatar button; the menu itself opens as a page-level popover so no header can clip it ---------- */
   function accountMenu(el, opts = {}) {
     if (!Auth.ready) { el.innerHTML = ''; return; }
     if (!Auth.user) {
-      el.innerHTML = opts.landing ? `<div class="row gap-sm"><button class="btn sm primary" data-action="landing-signup">${icon('fire', 14)} Sign up free</button><button class="btn sm" data-action="landing-login">Log in</button></div>` : `<span class="row gap-sm"><button class="btn sm primary" data-action="landing-signup">Sign up</button><button class="btn sm" data-action="landing-login">Log in</button></span>`;
+      el.innerHTML = opts.landing ? `<span class="row gap-sm" style="flex-wrap:nowrap"><button class="btn sm primary" data-action="landing-signup">${icon('fire', 14)} Sign up free</button><button class="btn sm" data-action="landing-login">Log in</button></span>` : `<span class="row gap-sm" style="flex-wrap:nowrap"><button class="btn sm primary" data-action="landing-signup">Sign up</button><button class="btn sm" data-action="landing-login">Log in</button></span>`;
       bind(el, { 'landing-signup': () => Auth.open('signup'), 'landing-login': () => Auth.open('login') }); return;
     }
-    const u = Auth.user; const name = u.name || u.email.split('@')[0]; const initial = name.trim()[0].toUpperCase(); const unread = u.unread || 0;
-    el.innerHTML = `<div class="acct-menu"><button class="acct-btn" data-action="acct-toggle" aria-haspopup="true" aria-expanded="false" title="Account menu"><span class="avatar sm">${esc(initial)}</span><span class="acct-btn-name">${esc(name)}</span>${icon('chevron', 12)}</button>
-      <div class="acct-dd" hidden>
-        <div class="acct-dd-head"><div class="acct-name">${esc(name)}</div><div class="acct-sub mono">${esc(u.email)}</div>${u.role || u.admin || u.mod ? `<div class="row gap-sm mt-1">${u.role ? `<span class="chip staff">${esc(u.role)}</span>` : ''}${u.admin ? '<span class="chip accent">administrator</span>' : u.mod ? '<span class="chip accent">moderator</span>' : ''}</div>` : ''}</div>
+    const u = Auth.user; const name = u.name || u.email.split('@')[0]; const initial = name.trim()[0].toUpperCase();
+    el.innerHTML = `<span class="acct-menu"><button class="acct-btn" data-action="acct-toggle" aria-haspopup="true" aria-expanded="false" title="Account menu"><span class="avatar sm">${esc(initial)}</span><span class="acct-btn-name">${esc(name)}</span>${icon('chevron', 12)}</button></span>`;
+    bind(el, { 'acct-toggle': btn => {
+      const unread = u.unread || 0;
+      App.popover(btn, `<div class="acct-dd-head"><div class="acct-name">${esc(name)}</div><div class="acct-sub mono">${esc(u.email)}</div>${u.role || u.admin || u.mod ? `<div class="row gap-sm mt-1">${u.role ? `<span class="chip staff">${esc(u.role)}</span>` : ''}${u.admin ? '<span class="chip accent">administrator</span>' : u.mod ? '<span class="chip accent">moderator</span>' : ''}</div>` : ''}</div>
         <a class="acct-dd-item" href="${App.settingsLink ? App.settingsLink() : '#/settings'}">${icon('gear', 15)}<span>Account settings</span></a>
         <a class="acct-dd-item" href="#/badges">${icon('award', 15)}<span>Your badges</span></a>
         <a class="acct-dd-item" href="#/people">${icon('users', 15)}<span>People</span></a>
         ${Auth.mode === 'server' ? `<a class="acct-dd-item" href="${App.inboxLink ? App.inboxLink() : '#/forum/inbox'}">${icon('bell', 15)}<span>Inbox</span><b class="pill inbox-pill"${unread ? '' : ' hidden'}>${unread > 99 ? '99+' : unread}</b></a>` : ''}
         ${u.mod ? `<a class="acct-dd-item" href="#/admin">${icon('shield', 15)}<span>${u.admin ? 'Admin panel' : 'Moderation'}</span></a>` : ''}
         <div class="acct-dd-sep"></div>
-        <button class="acct-dd-item" data-action="landing-logout">${icon('logout', 15)}<span>Log out</span></button>
-      </div></div>`;
-    bind(el, { 'acct-toggle': (btn, e) => { e.stopPropagation(); const dd = $('.acct-dd', el); const open = dd.hidden; closeMenus(); dd.hidden = !open; btn.setAttribute('aria-expanded', String(open)); }, 'landing-logout': () => { closeMenus(); Auth.logout(); } });
+        <button class="acct-dd-item" data-action="landing-logout" data-close>${icon('logout', 15)}<span>Log out</span></button>`,
+        { 'landing-logout': () => { App.closePopover(); Auth.logout(); } }, { cls: 'pop-account' });
+    } });
   }
-  function closeMenus() { $$('.acct-dd').forEach(d => { d.hidden = true; }); $$('.acct-btn').forEach(b => b.setAttribute('aria-expanded', 'false')); }
-  document.addEventListener('click', e => { if (!e.target.closest || !e.target.closest('.acct-menu') || e.target.closest('.acct-dd-item')) closeMenus(); });
-  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeMenus(); });
-  window.addEventListener('hashchange', () => { closeMenus(); const top = $('#topbar-account'); if (top && Auth.ready) accountMenu(top); });   // links in the menu follow the current class
+  window.addEventListener('hashchange', () => { const top = $('#topbar-account'); if (top && Auth.ready) accountMenu(top); });   // links in the menu follow the current class
   Auth.accountMenu = accountMenu;
   Auth.paintLandingAccount = paintLandingAccount;
   function paintBanner() {

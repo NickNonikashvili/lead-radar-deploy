@@ -123,6 +123,16 @@ unban, verify or delete any account. Both lists ship with nikoloz.nonikashvili@s
 - **Clearer account panel.** A header with your name, email, role and sync state, then large icon tiles for Your badges (with your earned count), People, Inbox and the admin panel, then Profile, Email me and Privacy sections, and the account actions at the bottom.
 - **People page** (`#/people`, members only, also under Community in every class). Every verified member with their badges, role, classes, join date, an online dot when they are on the site right now, and post, reply and accepted-answer counts. Search by name, sort by most badges, online now, newest or name. Anyone who turned off "Show my name on leaderboards" appears as "Anonymous student" and is left out of name search.
 
+## Streaks, XP, daily goals, the learning path and Bo
+
+- **Header widgets.** Every header (class top bar, landing hero, standalone pages) shows a streak flame that lights up once you have studied today, and a daily goal ring with your level number in the middle. Tap the flame for the last seven days, your longest streak and this week's freeze; tap the ring for today's XP, your level and the goal picker.
+- **XP.** A correct answer is 10 XP, an attempt 2, a flashcard you know 2, a focus minute 1, a daily challenge its points, and every 5 correct in a row a 5 XP bonus. XP is stored per class alongside your progress and synced to your account. Levels grow with the square root of total XP (level 2 at 100, level 3 at 400, level 4 at 900...), each with a name from Newcomer to Grandmaster.
+- **Daily goal.** 10, 30, 50 or 100 XP a day, chosen at sign-up and in Settings. Reaching it fires confetti once a day; so does levelling up, a daily challenge solved, an exam set at 80% or better, and a new badge.
+- **Learning path** (first item under Today in every class). One stop per topic in syllabus order, grouped by unit with the unit's exam. Stops earn up to five crowns from your accuracy and question count; three crowns marks a topic mastered. The next stop to work on bounces with a START tag and the dashboard links straight to it.
+- **Bo the bobcat** sits in the landing hero and above the dashboard with a one-line nudge: how much XP is left today, a warning when a streak is about to end, congratulations when the goal is done.
+- **Live background.** Math and physics glyphs drift slowly behind every page over soft moving colour. It pauses in background tabs, follows the theme, and switches off under "reduce motion" or in Settings.
+- **Motion.** Panels and cards rise in, the quizzer pops on a correct answer and shakes on a wrong one, a combo chip counts answers in a row, numbers count up, and every menu opens as a page-level popover so headers never clip it.
+
 ## Hint ladders
 
 Every generated quiz problem has a "Walk me through it" ladder in practice mode: three progressive hints
