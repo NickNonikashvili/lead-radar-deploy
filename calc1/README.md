@@ -125,6 +125,7 @@ unban, verify or delete any account. Both lists ship with nikoloz.nonikashvili@s
 
 ## Streaks, XP, daily goals, the learning path and Bo
 
+- **Class picker.** The choose-your-classes dialog scrolls inside itself, so the Save button stays reachable however many classes and sections you fill in.
 - **Header widgets.** Every header (class top bar, landing hero, standalone pages) shows a streak flame that lights up once you have studied today, and a daily goal ring with your level number in the middle. Tap the flame for the last seven days, your longest streak and this week's freeze; tap the ring for today's XP, your level and the goal picker.
 - **XP.** A correct answer is 10 XP, an attempt 2, a flashcard you know 2, a focus minute 1, a daily challenge its points, and every 5 correct in a row a 5 XP bonus. XP is stored per class alongside your progress and synced to your account. Levels grow with the square root of total XP (level 2 at 100, level 3 at 400, level 4 at 900...), each with a name from Newcomer to Grandmaster.
 - **Daily goal.** 10, 30, 50 or 100 XP a day, chosen at sign-up and in Settings. Reaching it fires confetti once a day; so does levelling up, a daily challenge solved, an exam set at 80% or better, and a new badge.
@@ -132,6 +133,14 @@ unban, verify or delete any account. Both lists ship with nikoloz.nonikashvili@s
 - **Bo the bobcat** sits in the landing hero and above the dashboard with a one-line nudge: how much XP is left today, a warning when a streak is about to end, congratulations when the goal is done.
 - **Live background.** Math and physics glyphs drift slowly behind every page over soft moving colour. It pauses in background tabs, follows the theme, and switches off under "reduce motion" or in Settings.
 - **Motion.** Panels and cards rise in, the quizzer pops on a correct answer and shakes on a wrong one, a combo chip counts answers in a row, numbers count up, and every menu opens as a page-level popover so headers never clip it.
+
+## Focus sounds
+
+A headphones bubble floats in the bottom-right corner of every page. It opens into a panel of background sounds generated on the device with the Web Audio API, so nothing streams and nothing is hosted: rain, thunderstorm, ocean waves, wind, fireplace, forest, summer night, coffee shop, a lo-fi beat generator, and white, pink and brown noise. Sounds layer, each has its own volume, there is a master volume, a 15, 30 or 60 minute sleep timer that fades everything out, and the mix is remembered (browsers require a click before audio starts, so a saved mix waits for Resume). A second tab embeds Spotify: four focus playlists plus any pasted playlist, album or track link. Spotify plays full songs for people logged into Premium in that browser and 30-second previews otherwise; the player keeps going while you move around the site.
+
+## English Phonetics Lab
+
+`phonetics/` is a self-contained app (its own index.html, app.js and styles.css) with IPA transcription practice, phoneme description, syllabification, stress, a minimal pairs lab, symbol learning, charts and a word explorer. WRIT 101 shows it under Learn as Phonetics lab inside a frame that follows MatHub's theme; every graded answer sends a message to MatHub for XP (5 for a correct answer, 1 for an attempt) and counts toward quests and streaks. Open full screen for the standalone version.
 
 ## WRIT 101 College Writing I and the read-along audiobooks
 

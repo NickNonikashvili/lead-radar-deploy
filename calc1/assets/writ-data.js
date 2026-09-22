@@ -127,7 +127,7 @@
 
   const NAV = [
     { label: 'Today', items: [['dashboard', 'Dashboard', 'home'], ['calendar', 'Calendar', 'calendar']] },
-    { label: 'Read & listen', items: [['readings', 'Readings', 'book']] },
+    { label: 'Learn', items: [['readings', 'Readings', 'book'], ['phonetics', 'Phonetics lab', 'mic']] },
     { label: 'Course', items: [['course', 'Syllabus & policies', 'info'], ['grades', 'Grade calculator', 'calc'], ['settings', 'Settings', 'sliders']] }
   ];
 
