@@ -316,7 +316,6 @@
     if (t === 'system') document.documentElement.removeAttribute('data-theme'); else document.documentElement.setAttribute('data-theme', t);
     const dark = document.documentElement.getAttribute('data-theme') === 'dark' || (t === 'system' && matchMedia('(prefers-color-scheme: dark)').matches);
     $$('.theme-btn').forEach(b => b.innerHTML = icon(dark ? 'sun' : 'moon', 16));
-    const lab = $('#lab-frame'); if (lab && lab.contentWindow) { try { lab.contentWindow.postMessage({ type: 'mathub-theme', dark }, location.origin); } catch {} }
   }
   function toggleTheme() { const isDark = document.documentElement.getAttribute('data-theme') === 'dark' || (!document.documentElement.getAttribute('data-theme') && matchMedia('(prefers-color-scheme: dark)').matches); setSetting('theme', isDark ? 'light' : 'dark'); applyTheme(); }
   function buildNav() {
@@ -482,7 +481,7 @@
           <div class="panel keep-going"><div class="panel-h"><div class="panel-title">${icon('book')} Keep going</div>${rp.next ? '<span class="small muted">next reading</span>' : ''}</div>
             <a class="btn primary lg keep-cta" href="${rp.next ? L('reading', rp.next.id, rprog[rp.next.id] && rprog[rp.next.id].i ? {} : { play: 1 }) : L('readings')}">${icon(rp.next ? 'play' : 'book', 15)} ${rp.next ? `${rp.started ? 'Resume' : 'Listen'}: ${esc(rp.next.title)}` : 'Browse the readings'}</a>
             <div class="eyebrow mt-3 mb-1">Readings</div>${(D.READINGS || []).map(r => { const pr = rprog[r.id] || {}; const n = r.parts.reduce((a, pt) => a + pt.p.length + (pt.h ? 1 : 0), 0); const pct = pr.done ? 100 : Math.round(100 * Math.min(pr.i || 0, n) / n); return `<a class="bar-row rd-row" href="${L('reading', r.id)}"><span>${esc(r.title)}<small class="muted"> · ${esc(r.author)}</small></span><span class="mono">${pr.done ? '✓' : pct + '%'}</span><div class="bar"><div class="bar-fill${pr.done ? ' good' : ''}" style="width:${pct}%"></div></div></a>`; }).join('')}
-            <a class="card-link mt-2" href="${L('phonetics')}"><div class="eyebrow">${icon('mic', 13)} Tool</div><h4>English Phonetics Lab</h4><p>IPA, syllables, stress and minimal pairs. XP for every answer.</p></a>
+            <a class="card-link mt-2" href="${L('phonetics')}"><div class="eyebrow">${icon('mic', 13)} Phonetics lab</div><h4>Sounds, IPA and stress</h4><p>${(() => { const pp = App.phoneticsProgress ? App.phoneticsProgress(D) : null; return pp && pp.answered ? `${pp.answered} answered · ${pp.pct}% right · ${pp.seen} of ${pp.symbols} symbols explored.` : 'Practice transcription, minimal pairs, syllables and stress. XP for every answer.'; })()}</p></a>
             <div class="eyebrow mt-3 mb-1">Daily quests</div><div class="quests-slot" data-compact="1"></div></div>
         </div>
         <div class="dash-tabs" data-store="dashTabW" role="tablist">${[['week', 'This week', 'calendar'], ['check', 'Checklist', 'check'], ['canvas', 'Canvas', 'canvas'], ['league', 'League', 'gem'], ['community', 'Community', 'chat']].map(([k, l, ic]) => `<button class="tab" data-tab="${k}" role="tab">${icon(ic, 14)}<span>${l}</span></button>`).join('')}</div>

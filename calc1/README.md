@@ -134,13 +134,26 @@ unban, verify or delete any account. Both lists ship with nikoloz.nonikashvili@s
 - **Live background.** Math and physics glyphs drift slowly behind every page over soft moving colour. It pauses in background tabs, follows the theme, and switches off under "reduce motion" or in Settings.
 - **Motion.** Panels and cards rise in, the quizzer pops on a correct answer and shakes on a wrong one, a combo chip counts answers in a row, numbers count up, and every menu opens as a page-level popover so headers never clip it.
 
-## Focus sounds
+## Focus sounds and My music
 
-A headphones bubble floats in the bottom-right corner of every page. It opens into a panel of background sounds generated on the device with the Web Audio API, so nothing streams and nothing is hosted: rain, thunderstorm, ocean waves, wind, fireplace, forest, summer night, coffee shop, a lo-fi beat generator, and white, pink and brown noise. Sounds layer, each has its own volume, there is a master volume, a 15, 30 or 60 minute sleep timer that fades everything out, and the mix is remembered (browsers require a click before audio starts, so a saved mix waits for Resume). A second tab embeds Spotify: four focus playlists plus any pasted playlist, album or track link. Spotify plays full songs for people logged into Premium in that browser and 30-second previews otherwise; the player keeps going while you move around the site.
+A headphones bubble floats in the bottom-right corner of every page and opens into a panel with two tabs.
+
+**Focus sounds** are soundscapes synthesised on the device with the Web Audio API, so nothing streams and nothing is hosted: rain (layered body, hiss, drops with random panning, gusts), thunderstorm (rain plus rolling rumbles and the occasional close crack), ocean waves (each wave scheduled with its own swell, crash and foam), wind (gusts with a whistle), fireplace (roar, crackle clusters, pops), forest (breeze, rustling leaves and four kinds of birdsong), summer night (three crickets, a katydid, a distant owl), coffee shop (murmuring voices, cup clinks, someone typing, the espresso machine), lo-fi beats (a Rhodes-style chord loop with wow and flutter, bass, swung drums, sparse melody and vinyl crackle), soft piano (slow generative piano in a random key), an ambient drone and white, pink and brown noise. Everything runs through a synthetic reverb and a limiter. Sounds layer, each has its own volume, there is a master volume, a 15, 30 or 60 minute sleep timer that fades everything (music included) out, and the mix is remembered; browsers require a click before audio starts, so a saved mix waits for Resume.
+
+**My music** is a personal playlist of up to 10 MP3 files, each up to 8 minutes, that the student adds from their own device. Files are kept in the browser's IndexedDB and are never uploaded, so the site hosts no music and every student's playlist is private to that browser. Play/pause, previous/next, shuffle, repeat (all, one, off), seek, volume, reorder and remove; playback continues while moving around MatHub, and the phone's lock-screen media keys work through the Media Session API. Clearing site data removes the files.
 
 ## English Phonetics Lab
 
-`phonetics/` is a self-contained app (its own index.html, app.js and styles.css) with IPA transcription practice, phoneme description, syllabification, stress, a minimal pairs lab, symbol learning, charts and a word explorer. WRIT 101 shows it under Learn as Phonetics lab inside a frame that follows MatHub's theme; every graded answer sends a message to MatHub for XP (5 for a correct answer, 1 for an attempt) and counts toward quests and streaks. Open full screen for the standalone version.
+`assets/phonetics.js` is a native port of the English Phonetics Lab, driven by `assets/phonetics-data.js` (134 practice words with British and American IPA, syllables and stress; 96 sentences; 96 minimal pairs; a 49-symbol library; phoneme features; an IPA keyboard layout; a dictionary of about 950 further words for the transcription tool; guides and reference charts). WRIT 101 shows it under Learn as Phonetics lab, at `#/writ/phonetics/<section>`:
+
+- **Practice**: word → IPA, IPA → word, sentence → IPA, IPA → sentence, syllabification (transcribe first, then mark the boundaries), word stress (tap the stressed syllable) and phoneme features (symbol → place/manner/voicing or height/backness/rounding, or the reverse). British RP or American, three levels, an IPA keyboard that types into whichever box has focus, a Listen button, feedback with the expected answer and a Cambridge Dictionary link, session score and streak.
+- **Minimal pairs**: two words one sound apart, listen to each, transcribe both, then see which sound changes.
+- **Symbols**: a card per symbol with its name, description and example; play the sound or the word; the grid ticks the symbols you have opened.
+- **Charts**: consonant chart, vowel positions, monophthongs, diphthongs, place, manner, voicing and vowel features. Every symbol is a button that speaks.
+- **Transcribe**: any English text to IPA, British or American, with optional weak forms, three layouts, copy, edit, listen and a YouGlish link. Unknown words are looked up on the free Dictionary API when online.
+- **Word explorer**: look up any dictionary word or open a random one: both accents, weak form, syllables, stress, word type, Cambridge and YouGlish links.
+
+Speech uses the browser's speech synthesis with a voice picker per accent and a speed slider. Every graded answer is 5 XP (1 for a try, +5 for every five in a row), counts toward quests and streaks, and the lab's all-time stats show on the WRIT 101 dashboard.
 
 ## WRIT 101 College Writing I and the read-along audiobooks
 

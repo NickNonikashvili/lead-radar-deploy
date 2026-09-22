@@ -123,14 +123,5 @@
     },
     unmount() { stop(); }
   };
-  /* ---------- English Phonetics Lab (embedded app in /phonetics) ---------- */
-  App.views.phonetics = {
-    title: 'Phonetics lab',
-    render(root) {
-      const dark = document.documentElement.getAttribute('data-theme') === 'dark' || (!document.documentElement.getAttribute('data-theme') && matchMedia('(prefers-color-scheme: dark)').matches);
-      root.innerHTML = App.pageHead('English Phonetics Lab', 'IPA transcription, phoneme features, syllables, stress, minimal pairs and a symbol trainer. Every graded answer earns XP here too.', `<a class="btn sm" href="phonetics/index.html" target="_blank" rel="noopener">${icon('external', 13)} Open full screen</a>`) + `<div class="lab-wrap"><iframe class="lab-frame" id="lab-frame" src="phonetics/index.html?embed=1&theme=${dark ? 'dark' : 'light'}" title="English Phonetics Lab" loading="eager"></iframe></div>`;
-    }
-  };
-  window.addEventListener('message', e => { if (e.origin !== location.origin || !e.data || e.data.type !== 'mathub-xp') return; if (App.addXP) App.addXP(e.data.correct ? 5 : 1); if (App.markActivity) App.markActivity(); if (App.quest) { App.quest('answers'); if (e.data.correct) App.quest('correct'); } });
   App.readingProgress = function (C) { const rs = (C && C.READINGS) || []; const p = (store.id === C.id ? store.data : store.peek(C.id)).readings || {}; const done = rs.filter(r => p[r.id] && p[r.id].done).length; const next = rs.find(r => !(p[r.id] && p[r.id].done)) || null; return { total: rs.length, done, next, started: next && p[next.id] && p[next.id].i > 0 }; };
 })(window);
