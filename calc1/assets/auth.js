@@ -194,6 +194,7 @@
         <a class="acct-dd-item" href="${App.settingsLink ? App.settingsLink() : '#/settings'}">${icon('gear', 15)}<span>Account settings</span></a>
         <a class="acct-dd-item" href="#/badges">${icon('award', 15)}<span>Your badges</span></a>
         <a class="acct-dd-item" href="#/people">${icon('users', 15)}<span>People</span></a>
+        <a class="acct-dd-item" href="#/gpa">${icon('calc', 15)}<span>GPA calculator</span></a>
         ${Auth.mode === 'server' ? `<a class="acct-dd-item" href="${App.inboxLink ? App.inboxLink() : '#/forum/inbox'}">${icon('bell', 15)}<span>Inbox</span><b class="pill inbox-pill"${unread ? '' : ' hidden'}>${unread > 99 ? '99+' : unread}</b></a>` : ''}
         ${u.mod ? `<a class="acct-dd-item" href="#/admin">${icon('shield', 15)}<span>${u.admin ? 'Admin panel' : 'Moderation'}</span></a>` : ''}
         <div class="acct-dd-sep"></div>
@@ -309,6 +310,7 @@
         <div class="link-tiles">
           <a class="link-tile gold" href="#/badges"><span class="tile-ic">${icon('award', 20)}</span><span class="tile-body"><b>Your badges</b><small id="acct-badge-count">${badgeLine}</small></span>${icon('right', 14)}</a>
           <a class="link-tile" href="#/people"><span class="tile-ic">${icon('users', 20)}</span><span class="tile-body"><b>People</b><small>Classmates and their badges</small></span>${icon('right', 14)}</a>
+          <a class="link-tile" href="#/gpa"><span class="tile-ic">${icon('calc', 20)}</span><span class="tile-body"><b>GPA calculator</b><small>Semester, cumulative and goals</small></span>${icon('right', 14)}</a>
           ${server ? `<a class="link-tile" href="${App.inboxLink ? App.inboxLink() : '#/forum/inbox'}"><span class="tile-ic">${icon('bell', 20)}</span><span class="tile-body"><b>Inbox</b><small>${u.unread ? `${u.unread} unread ${u.unread === 1 ? 'reply' : 'replies'}` : 'Replies to your posts'}</small></span>${icon('right', 14)}</a>` : ''}
           ${u.mod ? `<a class="link-tile" href="#/admin"><span class="tile-ic">${icon('shield', 20)}</span><span class="tile-body"><b>${u.admin ? 'Admin panel' : 'Moderation'}</b><small>Members, reports and site settings</small></span>${icon('right', 14)}</a>` : ''}
         </div>

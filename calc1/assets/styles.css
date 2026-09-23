@@ -1567,3 +1567,15 @@ body:has(.lesson-foot) #ambient { bottom: 96px; }
 .amb-empty p { margin: 0; }
 .input.sm { padding: 6px 9px; font-size: 13px; }
 @media (prefers-reduced-motion: reduce) { .amb-eq i, .amb-panel { animation: none !important; } }
+
+/* ---- GPA calculator ---- */
+.gpa-hero { text-align: center; padding: 22px 16px; }
+.gpa-big { font-family: var(--font-display); font-size: 58px; font-weight: 600; line-height: 1; color: var(--accent); letter-spacing: -0.02em; animation: pop 0.35s cubic-bezier(0.2, 0.8, 0.2, 1); }
+.gpa-big.muted { color: var(--muted); }
+.gpa-table td { vertical-align: top; }
+.gpa-table .input, .gpa-table .select { padding: 6px 8px; font-size: 13.5px; }
+.gpa-proj a { color: var(--accent); }
+.gpa-notes { margin: 10px 0 0 16px; padding: 0; display: grid; gap: 4px; }
+.field > span { font-size: 12.5px; font-weight: 600; color: var(--ink-2); }
+.stat-num.good, .num.good { color: var(--good); } .stat-num.bad, .num.bad { color: var(--bad); }
+@media (max-width: 760px) { .gpa-grid .span-2 { grid-column: auto; } }

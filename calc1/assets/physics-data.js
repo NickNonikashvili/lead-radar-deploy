@@ -10,7 +10,7 @@
   const OS = 'https://openstax.org/books/university-physics-volume-1/pages/';
 
   const COURSE = {
-    code: 'PHSX 220', name: 'Physics I (w/ Calculus)', term: 'Fall 2026', school: 'Montana State University',
+    code: 'PHSX 220', name: 'Physics I (w/ Calculus)', term: 'Fall 2026', school: 'Montana State University', credits: 4,
     instructor: 'Craig Ogilvie', instructorRoom: 'Barnard 240', instructorEmail: 'craig.ogilvie@montana.edu',
     officeHours: 'Mon, Wed, Fri 2–3 pm (or by arrangement)',
     lectures: 'Mon · Wed · Fri in Barnard 103 · 11:00 am (Sect 1) or 1:10 pm (Sect 2)',

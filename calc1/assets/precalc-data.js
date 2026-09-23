@@ -12,7 +12,7 @@
   const TRIG = 'https://yoshiwaramath.org/trig/frontmatter.html';
 
   const COURSE = {
-    code: 'M151Q', name: 'Precalculus', term: 'Fall 2026', school: 'Montana State University',
+    code: 'M151Q', name: 'Precalculus', term: 'Fall 2026', school: 'Montana State University', credits: 4,
     instructor: 'Jenna Stitt', instructorRoom: 'Wilson 1-136', instructorEmail: 'jennastitt@montana.edu',
     officeHours: 'Tue & Thu 10–11 am · Fri 1–2 pm',
     classDays: 'In-class sessions with quizzes and worksheets; exams on Thursdays',

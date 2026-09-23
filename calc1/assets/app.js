@@ -12,7 +12,7 @@
   const BUILD = global.MATHUB_BUILD || 'dev';
   const Courses = global.Courses || (global.Courses = {});
   const COURSE_ORDER = ['calc', 'physics', 'precalc', 'writ'];
-  const GLOBAL_VIEWS = ['contact', 'forum', 'policy', 'admin', 'meet', 'badges', 'challenge', 'mock', 'people', 'settings', 'leagues'];   // pages that work without a course, e.g. #/contact
+  const GLOBAL_VIEWS = ['contact', 'forum', 'policy', 'admin', 'meet', 'badges', 'challenge', 'mock', 'people', 'settings', 'leagues', 'gpa'];   // pages that work without a course, e.g. #/contact
   const SITE = 'MatHub';
   let D = null, QZ = null;        // current course data and quiz module
   const courseHooks = [];
@@ -254,6 +254,7 @@
     const today = C.NAV[0]; if (C.quiz && App.views.path && today && !today.items.some(x => x[0] === 'path')) today.items.splice(1, 0, ['path', 'Learning path', 'path']);
     let gp = C.NAV.find(g => g.label === 'Community'); if (!gp) { gp = { label: 'Community', items: [['forum', 'Discussions', 'chat']] }; C.NAV.splice(C.NAV.length - 1, 0, gp); }
     COMMUNITY_NAV.forEach(it => { if (!C.quiz && ['challenge', 'mock', 'contribute'].includes(it[0])) return; if (App.views[it[0]] && !gp.items.some(x => x[0] === it[0])) gp.items.push(it); });
+    const cg = C.NAV.find(g => g.label === 'Course'); if (cg && App.views.gpa && !cg.items.some(x => x[0] === 'gpa')) { const gi = cg.items.findIndex(x => x[0] === 'grades'); cg.items.splice(gi >= 0 ? gi + 1 : 1, 0, ['gpa', 'GPA calculator', 'calc']); }
   }
   function setCourse(id) {
     if (D && D.id === id) return;
@@ -425,7 +426,7 @@
         <div id="announcement-slot"></div>
         <div class="ticker" id="landing-ticker" hidden></div>
         <div class="course-grid">${cards}</div>
-        <p class="small muted mt-1" style="text-align:right">${mineIds.length < COURSE_ORDER.filter(id => Courses[id]).length ? `Showing your ${mineIds.length} class${mineIds.length === 1 ? '' : 'es'} · <a href="#" data-action="show-all">${showAll ? 'show only mine' : 'show all classes'}</a> · ` : ''}<a href="#" data-action="choose">choose your classes and sections</a></p>
+        <p class="small muted mt-1" style="text-align:right">${mineIds.length < COURSE_ORDER.filter(id => Courses[id]).length ? `Showing your ${mineIds.length} class${mineIds.length === 1 ? '' : 'es'} · <a href="#" data-action="show-all">${showAll ? 'show only mine' : 'show all classes'}</a> · ` : ''}<a href="#" data-action="choose">choose your classes and sections</a> · <a href="#/gpa">GPA calculator</a></p>
         <div class="dash-tabs landing-tabs mt-3" data-store="landTab" role="tablist">${[['week', 'This week', 'calendar'], ['community', 'Community', 'chat']].concat(App.guest() ? [['inside', 'What is inside', 'grid']] : []).map(([k, l, ic]) => `<button class="tab" data-tab="${k}" role="tab">${icon(ic, 14)}<span>${l}</span></button>`).join('')}</div>
         <div class="panes">
         <div class="pane" data-pane="week"><div class="grid cols-2">
@@ -693,8 +694,8 @@
   /* ======================================================
      VIEW: Grades (supports "best n of a group", e.g. drop the lowest exam)
      ====================================================== */
-  function gradeModel(vals) {
-    const G = D.GRADING; const cats = G.categories; const groups = G.groups || {};
+  function gradeModel(vals, G = D.GRADING) {
+    const cats = G.categories; const groups = G.groups || {};
     let num = 0, den = 0; const used = {};
     const groupCats = {}; cats.forEach(c => { if (c.group) (groupCats[c.group] = groupCats[c.group] || []).push(c); });
     cats.filter(c => !c.group).forEach(c => { if (c.id in vals) { num += c.weight * vals[c.id]; den += c.weight; used[c.id] = c.weight; } });
@@ -702,6 +703,7 @@
     return { cur: den ? num / den : NaN, banked: num / 100, den, used };
   }
   function overallWith(vals, fill) { const all = {}; D.GRADING.categories.forEach(c => { all[c.id] = (c.id in vals) ? vals[c.id] : fill; }); return gradeModel(all).cur; }
+  App.projectedGrade = id => { const C = Courses[id]; if (!C || !C.GRADING) return null; const data = (store.id === id ? store.data : store.peek(id)) || {}; const vals = data.grades || {}; if (!Object.keys(vals).length) return null; const m = gradeModel(vals, C.GRADING); if (!m.den) return null; return { letter: C.GRADING.scale.find(x => m.cur >= x.min)?.letter || 'F', pct: m.cur, den: m.den }; };
   App.views.grades = {
     title: 'Grade calculator',
     render(root) {
@@ -715,7 +717,7 @@
         out.innerHTML = `<div class="grid cols-3"><div class="stat"><div class="grade-letter">${letterFor(m.cur)}</div><div class="stat-label">current letter grade</div></div><div class="stat"><div class="stat-num">${m.cur.toFixed(1)}%</div><div class="stat-label">weighted average of what you entered (${Math.round(m.den)}% of the grade)</div></div><div class="stat"><div class="stat-num">${m.banked.toFixed(1)}</div><div class="stat-label">points already banked out of 100</div></div></div>
           ${finalEntered ? '' : `<div class="divider"></div><div class="eyebrow mb-1">What you need on the ${esc(cats.find(c => c.id === finalId)?.name.split(' (')[0] || 'final')}</div><p class="small muted mb-1">Assumes categories you left blank end up at your current average${Object.keys(G.groups || {}).length ? ', and applies the drop-lowest rule' : ''}.</p><div class="table-wrap"><table class="table compact"><thead><tr><th>Target</th><th class="num">Score needed</th><th>Verdict</th></tr></thead><tbody>${need.map(n => `<tr><td><b>${n.letter}</b></td><td class="num">${n.needed <= 0 ? 'any score' : n.needed > 100 ? '> 100%' : n.needed.toFixed(1) + '%'}</td><td class="small">${n.needed <= 0 ? '<span class="chip good">locked in</span>' : n.needed > 100 ? '<span class="chip bad">out of reach</span>' : n.needed > 90 ? '<span class="chip warn">tough</span>' : '<span class="chip good">doable</span>'}</td></tr>`).join('')}</tbody></table></div>`}`;
       };
-      root.innerHTML = pageHead('Grade calculator', `Weights come straight from the ${esc(D.code)} syllabus. Leave a category blank if it has not happened yet.${G.note ? ' ' + esc(G.note) : ''}`) + `<div class="grid cols-3"><div class="panel span-2"><div class="panel-h"><div class="panel-title">${icon('calc')} Your scores</div><button class="btn sm ghost" data-action="clear">Clear</button></div>
+      root.innerHTML = pageHead('Grade calculator', `Weights come straight from the ${esc(D.code)} syllabus. Leave a category blank if it has not happened yet.${G.note ? ' ' + esc(G.note) : ''}`, `<a class="btn sm" href="${L('gpa')}">${icon('chart', 13)} Semester GPA</a>`) + `<div class="grid cols-3"><div class="panel span-2"><div class="panel-h"><div class="panel-title">${icon('calc')} Your scores</div><button class="btn sm ghost" data-action="clear">Clear</button></div>
           <div class="table-wrap"><table class="table"><thead><tr><th>Category</th><th class="num">Weight</th><th>Your %</th></tr></thead><tbody>${cats.map(c => `<tr class="grade-row"><td>${esc(c.name)}</td><td class="num">${(+c.weight.toFixed(1))}%</td><td><input class="input mono" id="g-${c.id}" type="number" min="0" max="100" step="0.1" placeholder="—" value="${saved[c.id] ?? ''}"></td></tr>`).join('')}</tbody></table></div>
           ${Object.values(G.groups || {}).map(gp => `<p class="small muted mt-1">${esc(gp.note || '')}</p>`).join('')}</div>
         <div class="stack"><div class="panel" id="g-out"></div><div class="panel"><div class="eyebrow mb-1">Letter grade scale</div><div class="table-wrap"><table class="table compact"><thead><tr><th>Grade</th><th class="num">Percent</th>${G.scale[0].fourPt ? '<th class="num">4-point</th>' : ''}</tr></thead><tbody>${G.scale.map(s => `<tr><td><b>${s.letter}</b></td><td class="num">${s.min === 0 ? '< ' + G.scale[G.scale.length - 2].min : '≥ ' + s.min}</td>${s.fourPt ? `<td class="num">${s.fourPt}</td>` : ''}</tr>`).join('')}</tbody></table></div></div></div></div>
