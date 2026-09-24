@@ -7,7 +7,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/filter.php';
 require_once __DIR__ . '/social.php';
 
-const MH_COURSES = ['calc', 'physics', 'precalc', 'writ', 'general'];
+const MH_COURSES = ['calc', 'physics', 'precalc', 'writ', 'csci', 'general'];
 const MH_FLAIRS = ['question', 'discussion', 'resource', 'study-group', 'exam', 'other'];
 const MH_PAGE = 25;
 

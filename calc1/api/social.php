@@ -9,7 +9,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/filter.php';
 require_once __DIR__ . '/canvas.php';
 
-const MH_SOCIAL_COURSES = ['calc', 'physics', 'precalc', 'writ', 'general'];
+const MH_SOCIAL_COURSES = ['calc', 'physics', 'precalc', 'writ', 'csci', 'general'];
 const MH_BADGES = [
   'first_post' => ['First post', 'Started a discussion', 'chat'], 'first_answer' => ['First reply', 'Replied to a classmate', 'reply'],
   'helper_5' => ['Helper', '5 accepted answers', 'shield'], 'helper_25' => ['Mentor', '25 accepted answers', 'shield'],

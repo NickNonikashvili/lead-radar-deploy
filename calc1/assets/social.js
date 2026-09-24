@@ -11,7 +11,7 @@
   const { $, $$, esc, icon, bind, on, toast, store, typeset, pageHead } = App;
   const API = 'api/index.php?r=';
   const auth = () => App.auth || {}; const user = () => auth().user || null; const offline = () => auth().mode !== 'server' || auth().unreachable;
-  const NAMES = { calc: 'Calc I', physics: 'Physics I', precalc: 'Precalc', writ: 'WRIT 101', general: 'General' };
+  const NAMES = { calc: 'Calc I', physics: 'Physics I', precalc: 'Precalc', writ: 'WRIT 101', csci: 'CSCI 127', general: 'General' };
   const courseName = id => (global.Courses[id] && global.Courses[id].short) || NAMES[id] || id;
   const courseChip = id => `<span class="chip course-${esc(id)}">${esc(courseName(id))}</span>`;
   const fmtWhen = ts => { const d = new Date(ts * 1000); const t = App.todayISO(); const iso = App.toISO(d); const day = iso === t ? 'Today' : iso === App.toISO(App.addDays(App.parseISO(t), 1)) ? 'Tomorrow' : App.fmtDate(iso); return `${day} · ${d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`; };

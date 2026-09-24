@@ -10,7 +10,7 @@
   const { $, $$, esc, icon, bind, on, toast, pageHead } = App;
   const API = 'api/index.php?r=';
   const user = () => (App.auth && App.auth.user) || null; const isAdmin = () => !!(user() && user().admin); const isMod = () => !!(user() && user().mod);
-  const NAMES = { calc: 'Calc I', physics: 'Physics I', precalc: 'Precalc', writ: 'WRIT 101', general: 'General' };
+  const NAMES = { calc: 'Calc I', physics: 'Physics I', precalc: 'Precalc', writ: 'WRIT 101', csci: 'CSCI 127', general: 'General' };
   const courseChip = id => `<span class="chip course-${esc(id)}">${esc((global.Courses[id] && global.Courses[id].short) || NAMES[id] || id)}</span>`;
   const timeAgo = ts => { const s = Math.max(0, Date.now() / 1000 - ts); if (s < 60) return 'just now'; if (s < 3600) return `${Math.floor(s / 60)}m ago`; if (s < 86400) return `${Math.floor(s / 3600)}h ago`; return `${Math.floor(s / 86400)}d ago`; };
   const fmtWhen = ts => new Date(ts * 1000).toLocaleString([], { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
