@@ -3,7 +3,7 @@
 const BUILD = new URL(self.location.href).searchParams.get('v') || 'dev';
 const CACHE = 'mathub-' + BUILD;
 const V = '?v=' + BUILD;
-const SHELL = ['./', 'index.html', 'assets/styles.css' + V, 'assets/app.js' + V, 'assets/gami.js' + V, 'assets/quests.js' + V, 'assets/lesson.js' + V, 'assets/ladders.js' + V, 'assets/tools.js' + V, 'assets/auth.js' + V, 'assets/forum.js' + V, 'assets/policy.js' + V, 'assets/planner.js' + V, 'assets/gpa.js' + V, 'assets/social.js' + V, 'assets/admin.js' + V,
+const SHELL = ['./', 'index.html', 'assets/styles.css' + V, 'assets/courses-index.js' + V, 'assets/app.js' + V, 'assets/gami.js' + V, 'assets/quests.js' + V, 'assets/lesson.js' + V, 'assets/ladders.js' + V, 'assets/tools.js' + V, 'assets/auth.js' + V, 'assets/forum.js' + V, 'assets/policy.js' + V, 'assets/planner.js' + V, 'assets/gpa.js' + V, 'assets/today.js' + V, 'assets/report.js' + V, 'assets/pwa.js' + V, 'assets/changelog.js' + V, 'assets/social.js' + V, 'assets/admin.js' + V,
   'assets/calc-data.js' + V, 'assets/calc-quiz.js' + V, 'assets/calc-tools.js' + V, 'assets/physics-data.js' + V, 'assets/physics-quiz.js' + V, 'assets/physics-tools.js' + V,
   'assets/precalc-data.js' + V, 'assets/precalc-quiz.js' + V, 'assets/precalc-tools.js' + V, 'assets/writ-data.js' + V, 'assets/csci-data.js' + V, 'assets/csci-quiz.js' + V, 'assets/pylab.js' + V, 'assets/pyworker.js' + V, 'assets/reader.js' + V, 'assets/phonetics-data.js' + V, 'assets/phonetics.js' + V, 'assets/ambient.js' + V, 'assets/icon.svg' + V, 'assets/icon-192.png' + V, 'assets/icon-512.png' + V, 'assets/manifest.webmanifest' + V];
 
@@ -36,4 +36,19 @@ self.addEventListener('fetch', e => {
   }
   // Fonts and MathJax from CDNs: serve the cached copy at once and refresh it in the background.
   e.respondWith(caches.match(req).then(hit => { const net = fetch(req).then(res => { if (res && (res.ok || res.type === 'opaque')) { const copy = res.clone(); caches.open(CACHE).then(c => c.put(req, copy)).catch(() => {}); } return res; }).catch(() => hit); return hit || net; }));
+});
+
+/* ---------- push notifications: the push itself is empty; the pending items are fetched for the logged-in user ---------- */
+self.addEventListener('push', e => {
+  e.waitUntil((async () => {
+    let items = [];
+    try { const r = await fetch('api/index.php?r=push_pending', { credentials: 'include', headers: { 'X-Requested-With': 'MatHub' }, cache: 'no-store' }); const j = await r.json(); items = (j && j.items) || []; } catch (err) {}
+    if (!items.length && e.data) { try { const d = e.data.json(); if (d && d.title) items = [d]; } catch (err) { items = [{ title: 'MatHub', body: e.data.text() }]; } }
+    if (!items.length) items = [{ title: 'MatHub', body: 'Something new is waiting for you.', url: './' }];
+    await Promise.all(items.map(it => self.registration.showNotification(it.title || 'MatHub', { body: it.body || '', icon: 'assets/icon-192.png', badge: 'assets/icon-192.png', tag: it.tag || undefined, data: { url: it.url || './' } })));
+  })());
+});
+self.addEventListener('notificationclick', e => {
+  e.notification.close(); const target = (e.notification.data && e.notification.data.url) || './'; const url = new URL(target, self.registration.scope).href;
+  e.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(cs => { const c = cs.find(x => x.url.startsWith(self.registration.scope)); if (c) { return c.focus().then(w => ('navigate' in w ? w.navigate(url) : w)); } return self.clients.openWindow(url); }));
 });

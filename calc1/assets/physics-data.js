@@ -806,9 +806,9 @@
   ];
 
   global.Courses = global.Courses || {};
-  global.Courses.physics = {
+  global.Courses.physics = Object.assign(global.Courses.physics || {}, {
     id: 'physics', code: COURSE.code, name: COURSE.name, short: 'Physics I', term: COURSE.term, tagline: 'Mechanics, waves and sound with OpenStax University Physics',
     quizNote: 'Use g = 9.8 m/s², G = 6.67×10⁻¹¹ N·m²/kg², speed of sound 343 m/s, ρ_water = 1000 kg/m³. Answers within 2% count. You can type 3/8, 2pi, 6.67e-11 or 1.5*10^3.',
     COURSE, GRADING, EXAMS, CALENDAR, CALENDAR_NOTE, RECURRING, SEMESTER, UNITS, SECTIONS, FORMULAS, FLASHCARDS, PRACTICE, CHECKLISTS, INFO, NAV
-  };
+  });
 })(window);

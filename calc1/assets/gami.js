@@ -38,7 +38,7 @@
   /* ---------- confetti ---------- */
   function confetti(opts = {}) {
     if (reduced()) return;
-    const c = document.createElement('canvas'); c.className = 'confetti'; document.body.appendChild(c); const ctx = c.getContext('2d');
+    const c = document.createElement('canvas'); c.className = 'confetti'; c.setAttribute('aria-hidden', 'true'); document.body.appendChild(c); const ctx = c.getContext('2d');
     const dpr = Math.min(2, devicePixelRatio || 1); c.width = innerWidth * dpr; c.height = innerHeight * dpr; ctx.scale(dpr, dpr);
     const colors = opts.colors || ['#2B55B8', '#0E7C86', '#F2C14E', '#E4572E', '#7B61FF', '#2FB36B', '#FF7AB6'];
     const n = opts.count || 150; const ox = opts.x ?? innerWidth / 2, oy = opts.y ?? innerHeight * 0.32;
@@ -173,6 +173,15 @@
   function mascotHtml(size = 96, cls = '') { const m = mascotLine(); return `<div class="mascot ${m.mood} ${cls}"><div class="bubble">${esc(m.t)}</div>${bobcatSvg(size)}</div>`; }
   function paintMascots() { $$('.mascot-slot').forEach(el => { el.innerHTML = mascotHtml(+el.dataset.size || 96, el.dataset.cls || ''); }); }
   App.mascotHtml = mascotHtml; App.paintMascots = paintMascots; App.bobcatSvg = bobcatSvg;
+  /* Empty states: "Loading…" boxes become skeleton bars; other empty boxes get a small Bo. Works for every panel, present and future. */
+  function dressEmpty(el) {
+    if (el.dataset.dressed) return; el.dataset.dressed = '1'; const txt = el.textContent.trim();
+    if (txt === 'Loading…') { el.classList.add('skel'); el.setAttribute('aria-busy', 'true'); el.setAttribute('aria-label', 'Loading'); el.innerHTML = '<i></i><i></i><i></i>'; return; }
+    if (el.classList.contains('small') || el.querySelector('svg, .bo-mini, .btn') || txt.length > 170 || /Results appear here/.test(txt)) return;
+    el.classList.add('bo'); el.insertAdjacentHTML('afterbegin', `<span class="bo-mini" aria-hidden="true">${bobcatSvg(36)}</span>`);
+  }
+  App.skeleton = (n = 3) => `<div class="empty skel" aria-busy="true" aria-label="Loading">${'<i></i>'.repeat(n)}</div>`;
+  if (global.MutationObserver) { const mo = new MutationObserver(muts => { muts.forEach(m => m.addedNodes.forEach(n => { if (n.nodeType !== 1) return; if (n.matches && n.matches('.empty')) dressEmpty(n); if (n.querySelectorAll) n.querySelectorAll('.empty').forEach(dressEmpty); })); }); mo.observe(document.documentElement, { childList: true, subtree: true }); }
 
   /* ---------- getting started checklist (dashboard, new users) ---------- */
   App.gettingStarted = function () {
@@ -199,7 +208,7 @@
   /* ---------- learning path ---------- */
   function crownsFor(v) { if (!v || !v.a) return 0; const acc = v.c / v.a; if (v.a >= 40 && acc >= 0.9) return 5; if (v.a >= 25 && acc >= 0.8) return 4; if (v.a >= 15 && acc >= 0.7) return 3; if (v.a >= 10 && acc >= 0.6) return 2; return v.a >= 5 ? 1 : 0; }
   App.pathNodes = function (C) {
-    const D = C || App.D; const QZ = D && D.quiz; if (!D || !QZ) return []; const p = (dataOf(D.id).progress) || {}; const cur = App.currentSectionOf ? App.currentSectionOf(D) : App.currentSection(); const curIdx = Math.max(0, D.SECTIONS.findIndex(s => s.id === cur.id));
+    const D = C || App.D; const QZ = D && (D.quiz || (D.quizTopics ? { TOPICS: D.quizTopics } : null)); if (!D || !QZ || !D.SECTIONS) return []; const p = (dataOf(D.id).progress) || {}; const cur = App.currentSectionOf ? App.currentSectionOf(D) : App.currentSection(); const curIdx = Math.max(0, D.SECTIONS.findIndex(s => s.id === cur.id));
     let currentSet = false, k = 0; const out = [];
     D.UNITS.forEach(u => { D.SECTIONS.filter(s => s.unit === u.n).forEach(s => { const sIdx = D.SECTIONS.findIndex(x => x.id === s.id); Object.keys(QZ.TOPICS).filter(t => QZ.TOPICS[t].sec === s.id).forEach(t => { const c = crownsFor(p[t]); const covered = sIdx <= curIdx; let state = covered ? (c >= 3 ? 'done' : 'open') : 'soon'; if (state === 'open' && !currentSet) { state = 'current'; currentSet = true; } out.push({ t, label: QZ.TOPICS[t].label, sec: s, unit: u, crowns: c, state, k: k++, n: p[t] ? p[t].a : 0 }); }); }); });
     if (!currentSet) { const f = out.find(n => n.state === 'soon'); if (f) f.state = 'current'; }

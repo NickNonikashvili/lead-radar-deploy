@@ -92,6 +92,24 @@
     document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && Auth.user && Auth.mode === 'server' && App.D) Auth.pullCourse(App.D.id, true).catch(() => {}); });
   };
 
+  /* ---------- push notifications ---------- */
+  const b64ToU8 = b64 => { const s = (b64 + '='.repeat((4 - b64.length % 4) % 4)).replace(/-/g, '+').replace(/_/g, '/'); const raw = atob(s); const out = new Uint8Array(raw.length); for (let i = 0; i < raw.length; i++) out[i] = raw.charCodeAt(i); return out; };
+  Auth.pushSupported = () => 'serviceWorker' in navigator && 'PushManager' in global && 'Notification' in global && Auth.mode === 'server';
+  Auth.pushSubscribe = async function () {
+    const reg = await navigator.serviceWorker.ready; const perm = await Notification.requestPermission(); if (perm !== 'granted') throw new Error('Notifications are blocked for this site. Allow them in the browser settings and try again.');
+    const k = await call('push_key'); let sub = await reg.pushManager.getSubscription(); if (!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64ToU8(k.key) });
+    const r = await call('push_subscribe', sub.toJSON()); App.setSetting('pushOn', true); return r;
+  };
+  Auth.pushUnsubscribe = async function () { try { const reg = await navigator.serviceWorker.ready; const sub = await reg.pushManager.getSubscription(); if (sub) { await call('push_unsubscribe', { endpoint: sub.endpoint }); await sub.unsubscribe(); } } catch (e) {} App.setSetting('pushOn', false); };
+  Auth.pushInit = async function (panel) {
+    const box = $('#acct-push', panel), note = $('#acct-push-note', panel), test = $('[data-action="push-test"]', panel); if (!box) return;
+    if (!Auth.user || !Auth.pushSupported()) { note.textContent = Auth.mode !== 'server' ? 'Needs the account server.' : 'Not supported in this browser.'; return; }
+    let sub = null; try { const reg = await navigator.serviceWorker.ready; sub = await reg.pushManager.getSubscription(); } catch (e) {}
+    box.disabled = false; box.checked = !!sub && Notification.permission === 'granted'; test.disabled = !box.checked; note.textContent = box.checked ? 'On for this device.' : (Notification.permission === 'denied' ? 'Blocked in the browser settings.' : 'Off.');
+    box.addEventListener('change', async () => { box.disabled = true; try { if (box.checked) { const r = await Auth.pushSubscribe(); note.textContent = `On for this device${r.devices > 1 ? ` (${r.devices} devices)` : ''}.`; App.toast('Reminders will arrive the evening before something is due.'); } else { await Auth.pushUnsubscribe(); note.textContent = 'Off.'; } } catch (e) { box.checked = false; note.textContent = e.message || 'Could not turn notifications on.'; } box.disabled = false; test.disabled = !box.checked; });
+    test.addEventListener('click', async () => { test.disabled = true; try { const r = await call('push_test', {}); note.textContent = r.note || 'Sent.'; } catch (e) { note.textContent = e.message; } test.disabled = false; });
+  };
+
   /* ---------- sync ---------- */
   Auth.noteWrite = function (course) {
     setMeta(course, { updated: Date.now() });
@@ -115,8 +133,14 @@
     const r = await call('data&course=' + encodeURIComponent(course));
     applyServer(course, r.data, r.updated);
   };
+  /* ---------- preferences that follow the account (device-local settings such as the GPA calculator, sounds, goal, theme) ---------- */
+  const PREF_KEYS = ['gpa', 'ambient', 'dailyGoal', 'theme', 'liveBg', 'sound', 'phonRate', 'phonVoice_uk', 'phonVoice_us', 'readerVoice', 'readerScroll', 'navOpen', 'seenChangelog', 'todayPlan', 'lastVisit', 'challengeDone', 'lastLessonDay', 'pushOn'];
+  function applyPrefs(prefs, updated) { if (!prefs || typeof prefs !== 'object') return; const s = App.settings(); PREF_KEYS.forEach(k => { if (prefs[k] !== undefined) s[k] = prefs[k]; }); s.prefsUpdated = updated; writeJSON('studyhub-settings', s); if (App.applyTheme) App.applyTheme(); }
+  Auth.prefsPush = function () { if (!Auth.user || Auth.mode !== 'server' || Auth.unreachable) return; clearTimeout(Auth.prefsTimer); Auth.prefsTimer = setTimeout(async () => { const s = App.settings(); const prefs = {}; PREF_KEYS.forEach(k => { if (s[k] !== undefined) prefs[k] = s[k]; }); const updated = Date.now(); s.prefsUpdated = updated; writeJSON('studyhub-settings', s); try { const r = await call('prefs', { prefs, updated }, 'PUT'); if (r.stale) applyPrefs(r.prefs, r.updated); } catch (e) {} }, 2500); };
+  Auth.prefsPull = async function () { if (!Auth.user || Auth.mode !== 'server') return; try { const r = await call('prefs'); const local = App.settings().prefsUpdated || 0; if ((r.updated || 0) > local) applyPrefs(r.prefs, r.updated); else if (local > (r.updated || 0)) Auth.prefsPush(); } catch (e) {} };
+  App.onSetting = k => { if (PREF_KEYS.includes(k)) Auth.prefsPush(); };
   Auth.pullAll = async function () {
-    const r = await call('data_all'); const courses = r.courses || {};
+    const r = await call('data_all'); const courses = r.courses || {}; Auth.prefsPull();
     const ids = Object.keys(global.Courses || {});
     for (const id of ids) { const s = courses[id]; if (s) applyServer(id, s.data, s.updated); else if (Object.keys(App.store.peek(id)).length) { setMeta(id, { updated: (meta()[id] || {}).updated || Date.now() }); await Auth.pushCourse(id).catch(() => {}); } }
     setSyncState('ok');
@@ -133,6 +157,7 @@
     const prog = {}; for (const src of [S.progress || {}, L.progress || {}]) for (const [t, v] of Object.entries(src)) { if (!prog[t] || (v.a || 0) > (prog[t].a || 0)) prog[t] = Object.assign({}, v); } out.progress = prog;
     // flashcard boxes: highest box wins
     const fc = Object.assign({}, S.flashcards || {}); for (const [id, box] of Object.entries(L.flashcards || {})) fc[id] = Math.max(fc[id] || 0, box || 0); out.flashcards = fc;
+    const at = Object.assign({}, S.fcAt || {}); for (const [id, t] of Object.entries(L.fcAt || {})) at[id] = Math.max(at[id] || 0, t || 0); out.fcAt = at;
     // activity days, checklists and practice ticks: union
     out.activity = Object.assign({}, S.activity || {}, L.activity || {});
     const cl = {}; for (const src of [S.checklists || {}, L.checklists || {}]) for (const [ex, items] of Object.entries(src)) { cl[ex] = cl[ex] || {}; for (const [i, v] of Object.entries(items || {})) cl[ex][i] = cl[ex][i] || !!v; } out.checklists = cl;
@@ -191,15 +216,18 @@
     bind(el, { 'acct-toggle': btn => {
       const unread = u.unread || 0;
       App.popover(btn, `<div class="acct-dd-head"><div class="acct-name">${esc(name)}</div><div class="acct-sub mono">${esc(u.email)}</div>${u.role || u.admin || u.mod ? `<div class="row gap-sm mt-1">${u.role ? `<span class="chip staff">${esc(u.role)}</span>` : ''}${u.admin ? '<span class="chip accent">administrator</span>' : u.mod ? '<span class="chip accent">moderator</span>' : ''}</div>` : ''}</div>
+        <a class="acct-dd-item" href="#/today">${icon('flag', 15)}<span>Today</span></a>
         <a class="acct-dd-item" href="${App.settingsLink ? App.settingsLink() : '#/settings'}">${icon('gear', 15)}<span>Account settings</span></a>
         <a class="acct-dd-item" href="#/badges">${icon('award', 15)}<span>Your badges</span></a>
         <a class="acct-dd-item" href="#/people">${icon('users', 15)}<span>People</span></a>
         <a class="acct-dd-item" href="#/gpa">${icon('calc', 15)}<span>GPA calculator</span></a>
+        <a class="acct-dd-item" href="#/whatsnew">${icon('zap', 15)}<span>What's new</span>${App.changelogUnseen && App.changelogUnseen() ? '<i class="menu-dot"></i>' : ''}</a>
+        ${App.installAvailable && App.installAvailable() ? `<button class="acct-dd-item" data-action="install-app" data-close>${icon('download', 15)}<span>Install the app</span></button>` : ''}
         ${Auth.mode === 'server' ? `<a class="acct-dd-item" href="${App.inboxLink ? App.inboxLink() : '#/forum/inbox'}">${icon('bell', 15)}<span>Inbox</span><b class="pill inbox-pill"${unread ? '' : ' hidden'}>${unread > 99 ? '99+' : unread}</b></a>` : ''}
         ${u.mod ? `<a class="acct-dd-item" href="#/admin">${icon('shield', 15)}<span>${u.admin ? 'Admin panel' : 'Moderation'}</span></a>` : ''}
         <div class="acct-dd-sep"></div>
         <button class="acct-dd-item" data-action="landing-logout" data-close>${icon('logout', 15)}<span>Log out</span></button>`,
-        { 'landing-logout': () => { App.closePopover(); Auth.logout(); } }, { cls: 'pop-account' });
+        { 'landing-logout': () => { App.closePopover(); Auth.logout(); }, 'install-app': () => { App.closePopover(); if (App.installApp) App.installApp(); } }, { cls: 'pop-account' });
     } });
   }
   window.addEventListener('hashchange', () => { const top = $('#topbar-account'); if (top && Auth.ready) accountMenu(top); });   // links in the menu follow the current class
@@ -320,6 +348,7 @@
             <label class="check"><input type="checkbox" id="acct-notify" ${u.notify_email === false ? '' : 'checked'}><span>When someone replies to my posts or comments <span class="muted small">(at most one email per post every few hours)</span></span></label>
             <label class="check"><input type="checkbox" id="acct-reminder" ${u.reminder_email ? 'checked' : ''}><span>The evening before something is due <span class="muted small">(6 pm: tomorrow's Canvas due dates, sessions you joined, and a heads-up if your streak is about to end)</span></span></label>
             <label class="check"><input type="checkbox" id="acct-digest" ${u.digest_email === false ? '' : 'checked'}><span>The weekly digest <span class="muted small">(Sunday evening: what is due, top posts, your stats vs. the class)</span></span></label></section>
+          <section><div class="eyebrow mb-1">Notifications on this device</div><label class="check"><input type="checkbox" id="acct-push" disabled><span>Push notifications <span class="muted small">(the evening before something is due, and when a streak is at risk; on iPhone this needs the app added to the home screen)</span></span></label><div class="row gap-sm mt-1"><button class="btn xs" data-action="push-test" disabled>Send a test</button><span class="small muted" id="acct-push-note">Checking…</span></div></section>
           <section><div class="eyebrow mb-1">Privacy</div>
             <label class="check"><input type="checkbox" id="acct-lb" ${u.show_on_leaderboard === false ? '' : 'checked'}><span>Show my name on leaderboards, helper lists and the People page <span class="muted small">(otherwise you appear as “Anonymous student”)</span></span></label></section>` : ''}
         </div>
@@ -331,6 +360,7 @@
     }
     const wrap = document.createElement('div'); wrap.innerHTML = html; const panel = wrap.firstElementChild;
     const pref = (id, key, onMsg, offMsg) => { const el = $('#' + id, panel); if (el) el.addEventListener('change', async () => { try { const r = await call('profile', { [key]: el.checked }); Auth.user = Object.assign(Auth.user, r.user); toast(el.checked ? onMsg : offMsg); } catch (e) { toast(e.message); el.checked = !el.checked; } }); };
+    Auth.pushInit(panel);
     pref('acct-notify', 'notify_email', 'Reply emails on', 'Reply emails off'); pref('acct-reminder', 'reminder_email', 'Evening reminders on', 'Evening reminders off'); pref('acct-digest', 'digest_email', 'Weekly digest on', 'Weekly digest off'); pref('acct-lb', 'show_on_leaderboard', 'Your name shows on leaderboards and the People page', 'You appear as “Anonymous student”');
     if (u && server && App.social && App.social.refreshBadges) App.social.refreshBadges().then(r => { const el = $('#acct-badge-count', panel); if (el && r) el.textContent = `${r.badges.length} of ${r.catalog.length} earned`; }).catch(() => {});
     bind(panel, {

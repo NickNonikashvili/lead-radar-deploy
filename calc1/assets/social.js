@@ -34,7 +34,7 @@
   function clientBadgeCodes() {
     const codes = []; const D = App.D; if (!D) return codes;
     const fc = store.get('flashcards', {});
-    for (const u of D.UNITS) { const cards = D.FLASHCARDS.filter(c => c.unit === u.n); if (cards.length && cards.every(c => (fc[c.id] || 0) >= 3)) { codes.push('unit_master'); break; } }
+    for (const u of D.UNITS || []) { const cards = (D.FLASHCARDS || []).filter(c => c.unit === u.n); if (cards.length && cards.every(c => (fc[c.id] || 0) >= 3)) { codes.push('unit_master'); break; } }
     return codes;
   }
   S.refreshBadges = async function (force) {
@@ -135,13 +135,14 @@
   App.views.challenge = {
     title: 'Daily challenge', blurb: 'One problem per class per day, the same for everyone. Solve it fast for bonus points and climb the weekly board.',
     render(root, param, query, standalone) {
-      const courses = App.COURSE_ORDER.filter(id => global.Courses[id] && global.Courses[id].quiz); const cid = standalone ? (query.course && courses.includes(query.course) ? query.course : courses[0]) : App.D.id;
+      const courses = App.COURSE_ORDER.filter(id => global.Courses[id] && (global.Courses[id].quiz || global.Courses[id].hasQuiz)); const cid = standalone ? (query.course && courses.includes(query.course) ? query.course : courses[0]) : App.D.id;
       const head = standalone ? `<div class="landing-wrap"><header class="landing-top"><div><div class="eyebrow">MatHub</div><h1 class="landing-title"><span class="logo-mark">${App.logoSvg(44)}</span>Daily challenge</h1><p class="muted">${this.blurb}</p></div><div class="row gap-sm"><span id="landing-account"></span><a class="btn" href="#/">${icon('left', 14)} All classes</a></div></header><div class="chips mb-2">${courses.map(c => `<a class="chip toggle${c === cid ? ' on' : ''}" href="#/challenge?course=${c}">${esc(courseName(c))}</a>`).join('')}</div><div id="ch-root"></div></div>` : pageHead('Daily challenge', this.blurb) + '<div id="ch-root"></div>';
       root.innerHTML = head; const slot = $('#landing-account', root); if (slot && App.auth && App.auth.ready) App.auth.paintLandingAccount(slot);
       this.paint($('#ch-root', root), cid);
     },
     async paint(el, cid) {
       el.innerHTML = `<div class="grid cols-3"><div class="panel span-2" id="ch-q"><div class="empty">Loading…</div></div><div class="stack" id="ch-side"></div></div>`;
+      if (App.loadCourse) { try { await App.loadCourse(cid); } catch (e) { el.innerHTML = `<div class="empty">${esc(e.message)}</div>`; return; } }
       let stats = null; if (!offline()) { try { stats = await api('challenge_stats&course=' + cid); } catch (e) { stats = null; } }
       const date = stats && stats.date ? stats.date : App.todayISO(); const q = Challenge.question(cid, date);
       if (!q) { el.innerHTML = '<div class="empty">No challenge available for this class yet.</div>'; return; }
@@ -165,7 +166,7 @@
         const ms = Math.max(1000, Date.now() - (CH.started[key] || Date.now())); CH.answered[key] = { ok, raw };
         App.recordAnswer(q.topic, ok);
         if (offline()) { toast('Offline: your answer was not recorded on the board.'); this.paintQuestion(box, cid, date, q, stats); return; }
-        try { const r = await api('challenge_submit', { course: cid, date, ok, ms, topic: q.topic }); toast(ok ? `Correct! +${r.points} points` : '+2 points for trying', 3000); if (App.addXP) App.addXP(r.points || (ok ? 10 : 2), { course: cid }); if (App.quest) App.quest('challenge'); if (ok && App.confetti) App.confetti({ count: 90 }); if (r.badges_new && r.badges_new.length) S.refreshBadges(true); const st = await api('challenge_stats&course=' + cid); this.paintQuestion(box, cid, date, q, st); this.paintSide($('#ch-side'), cid, st); } catch (e) { toast(e.message, 3500); this.paintQuestion(box, cid, date, q, stats); }
+        App.setSetting('challengeDone', Object.assign({}, App.settings().challengeDone || {}, { [cid]: date })); try { const r = await api('challenge_submit', { course: cid, date, ok, ms, topic: q.topic }); toast(ok ? `Correct! +${r.points} points` : '+2 points for trying', 3000); if (App.addXP) App.addXP(r.points || (ok ? 10 : 2), { course: cid }); if (App.quest) App.quest('challenge'); if (ok && App.confetti) App.confetti({ count: 90 }); if (r.badges_new && r.badges_new.length) S.refreshBadges(true); const st = await api('challenge_stats&course=' + cid); this.paintQuestion(box, cid, date, q, st); this.paintSide($('#ch-side'), cid, st); } catch (e) { toast(e.message, 3500); this.paintQuestion(box, cid, date, q, stats); }
       };
       bind(box, {
         'ch-mc': el => { if (CH.answered[key]) return; submit(+el.dataset.i === q.answer); },
@@ -249,8 +250,9 @@
       return `<div class="panel mock ${state}"><div class="row between" style="align-items:flex-start;gap:12px"><div><div class="fa-meta">${courseChip(m.course)}${ex ? `<span class="chip">${esc(ex.name)} topics</span>` : ''}<span class="chip ${state === 'open' ? 'good' : state === 'ended' ? '' : 'warn'}">${state === 'open' ? 'open now' : state === 'ended' ? 'finished' : 'upcoming'}</span></div><h3 class="meet-title">${esc(m.title)}</h3><div class="meet-where">${icon('clock', 14)} ${esc(fmtWhen(m.start))} · ${m.minutes} min · ${m.count} questions</div><p class="small muted mt-1">${m.registered} registered${m.results ? ` · ${m.results} finished` : ''}${m.my_result ? ` · you scored ${m.my_result.score}/${m.my_result.total}` : ''}</p></div>
         <div class="meet-side">${state === 'open' && !m.my_result ? `<button class="btn primary" data-action="mk-start" data-id="${m.id}">${icon('play', 14)} Start now</button>` : ''}${state === 'upcoming' ? (m.im_registered ? `<button class="btn sm" data-action="mk-reg" data-id="${m.id}" data-going="0">${icon('check', 13)} Registered</button>` : `<button class="btn sm primary" data-action="mk-reg" data-id="${m.id}" data-going="1">Register</button>`) : ''}${state === 'ended' || m.my_result ? `<button class="btn sm" data-action="mk-results" data-id="${m.id}">Rankings</button>` : ''}</div></div></div>`;
     },
-    start(m) {
+    async start(m) {
       const C = global.Courses[m.course]; if (!C) return; const ex = C.EXAMS.find(e => e.id === m.exam_id) || C.EXAMS[0];
+      if (App.loadCourse) { try { await App.loadCourse(m.course); } catch (e) { toast(e.message, 4000); return; } }
       const go = () => {
         const QZ = C.quiz; const topics = ex.cumulative ? Object.keys(QZ.TOPICS) : Object.keys(QZ.TOPICS).filter(t => ex.sections.includes(QZ.TOPICS[t].sec));
         const qs = App.seededSet(topics, m.count, m.seed); if (!qs.length) { toast('Could not build the set.'); return; }
@@ -316,11 +318,11 @@
   /* ---------- widgets: landing + dashboard ---------- */
   S.fillLanding = async function (root) {
     const el = $('#landing-social', root); if (!el) return;
-    const courses = (App.myCourses ? App.myCourses() : App.COURSE_ORDER.filter(id => global.Courses[id])).filter(id => global.Courses[id] && global.Courses[id].quiz);
+    const courses = (App.myCourses ? App.myCourses() : App.COURSE_ORDER.filter(id => global.Courses[id])).filter(id => global.Courses[id] && (global.Courses[id].quiz || global.Courses[id].hasQuiz));
     el.innerHTML = `<div class="grid cols-3"><div class="panel span-2"><div class="panel-h"><div class="panel-title">${icon('target')} Today’s challenges</div><a class="btn sm" href="#/challenge">${icon('target', 13)} Play</a></div><div class="challenge-row" id="ls-ch">${courses.map(c => `<a class="card-link ch-card" href="#/challenge?course=${c}"><div class="eyebrow">${esc(courseName(c))}</div><h4 id="lsc-${c}">Loading…</h4><p class="small muted">Same problem for everyone · beat the clock</p></a>`).join('')}</div></div>
       <div class="panel"><div class="panel-h"><div class="panel-title">${icon('bulb')} Happening now</div></div><div id="ls-act"><div class="empty small">Loading…</div></div></div></div>
       <div class="grid cols-2 mt-3"><div class="panel"><div class="panel-h"><div class="panel-title">${icon('clock')} Study sessions</div><a class="btn sm" href="#/meet">Post one</a></div><div id="ls-meet"><div class="empty small">Loading…</div></div></div><div class="panel"><div class="panel-h"><div class="panel-title">${icon('flag')} Mock exams</div><a class="btn sm" href="#/mock">See all</a></div><div id="ls-mock"><div class="empty small">Loading…</div></div></div></div>`;
-    if (offline()) { $('#ls-act', el).innerHTML = '<div class="empty small">Needs the server.</div>'; $('#ls-meet', el).innerHTML = '<div class="empty small">Needs the server.</div>'; $('#ls-mock', el).innerHTML = '<div class="empty small">Needs the server.</div>'; courses.forEach(c => { const q = Challenge.question(c, App.todayISO()); $('#lsc-' + c, el).textContent = q ? 'Today’s problem is ready' : 'No challenge yet'; }); return; }
+    if (offline()) { $('#ls-act', el).innerHTML = '<div class="empty small">Needs the server.</div>'; $('#ls-meet', el).innerHTML = '<div class="empty small">Needs the server.</div>'; $('#ls-mock', el).innerHTML = '<div class="empty small">Needs the server.</div>'; courses.forEach(c => { const q = global.Courses[c].quiz ? Challenge.question(c, App.todayISO()) : true; $('#lsc-' + c, el).textContent = q ? 'Today’s problem is ready' : 'No challenge yet'; }); return; }
     courses.forEach(c => api('challenge_stats&course=' + c).then(s => { const h = $('#lsc-' + c, el); if (h) h.innerHTML = s.mine ? `${s.mine.ok ? '✓ Solved' : 'Tried'} · ${s.attempts} student${s.attempts === 1 ? '' : 's'} today` : `${s.attempts} tried today${s.attempts ? ` · ${Math.round(100 * s.correct / s.attempts)}% correct` : ''}`; }).catch(() => {}));
     api('activity').then(r => { const a = $('#ls-act', el); if (!a) return; a.innerHTML = r.items.length ? `<div class="act-feed">${r.items.slice(0, 8).map(i => `<a class="act-row" href="${esc(i.link || '#/')}"><span class="act-ic">${icon({ post: 'chat', solved: 'check', challenge: 'target', badge: 'fire', meet: 'clock', mock: 'flag', poll: 'list', contrib: 'pen' }[i.kind] || 'bulb', 13)}</span><span class="act-text">${esc(i.text)}</span><span class="act-when">${timeAgo(i.created)}</span></a>`).join('')}</div>` : '<div class="empty small">Quiet so far today.</div>'; }).catch(() => { const a = $('#ls-act', el); if (a) a.innerHTML = ''; });
     api('meet_list&course=all').then(r => { const m = $('#ls-meet', el); if (!m) return; m.innerHTML = r.meets.length ? r.meets.slice(0, 4).map(x => `<a class="act-row" href="#/meet">${courseChip(x.course)}<span class="act-text"><b>${esc(x.title)}</b> · ${esc(x.place)} · ${esc(fmtWhen(x.start))}</span><span class="act-when">${x.going} going</span></a>`).join('') : '<div class="empty small">No sessions posted. Studying somewhere? Post it.</div>'; }).catch(() => {});

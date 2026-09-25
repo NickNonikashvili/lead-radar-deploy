@@ -179,6 +179,43 @@ A mobile tab bar (Home, Learn, Practice or Code, Board, Me) appears under 900 px
 
 `assets/gpa.js` adds a GPA calculator at `#/gpa` (also under Course in every class sidebar, in the account menu, on the account settings page and from each grade calculator). It uses Montana State's 4.0 scale with plus and minus grades (A 4.00, A- 3.67, B+ 3.33 … D- 0.67, F 0). The semester table starts with the student's chosen classes and their credits, and each row shows the letter that class's grade calculator projects from the scores entered there, with a one-click "use it". Add or remove classes, mark one P/W so it is not counted, and see semester GPA, graded credits and quality points, with a Dean's List (3.50 on 12+ credits) or below-good-standing flag. Enter the GPA and graded credits from before this semester for the cumulative GPA and its change; set a goal to see the semester GPA it needs (and roughly which letter in every class), or how many more credits at 4.0 it would take when it is out of reach this semester. A what-if table shows how one grade step up or down in each class moves the result. Everything is saved in the browser.
 
+## Today: one plan across every class
+
+`#/today` (Today in the account menu, the mobile tab bar and the hero button) builds one checklist for the day from all your classes: flashcards that are due on a spacing schedule (a card you get right comes back after 1, 3 and then 14 days; one you miss returns tomorrow; up to ten new cards per class), a lesson on your weakest topic (lowest accuracy over at least four questions, otherwise where the class is right now), the daily challenge, and anything due in the next 48 hours. The review player runs across classes inline (space flips, 1 = again, 2 = got it) and counts toward XP, quests and the streak. A summary card on the landing page shows what is left. Today's counts work from the light class index even before a class has been downloaded; pressing Start downloads what it needs.
+
+## Report a problem
+
+A small flag sits on every practice question, lesson step, flashcard (in the control row) and topic page. It opens a dialog with the reason (wrong answer, typo, unclear, bug, other), an optional comment and, for questions, the student's own answer. Reports go to `issues` in the database (guests can report too; twenty per hour per address) and appear under **Problems** in the admin panel (moderators and admins), with open/resolved/all filters, the page link and the build. Resolving a report with a note sends the reporter an inbox notification; the same prompt reported by several people is counted.
+
+## Only the class you open is downloaded
+
+`assets/courses-index.js` is a generated light index of every class (facts, exams, calendar, unit and topic titles, quiz topic names, counts, and the list of files the class needs). The shell loads only that; `App.loadCourse(id)` fetches a class's data, question generators and tools the first time it is opened (a skeleton shows while it loads, with a retry button if the download fails) and merges them into the same object. The landing page, Today, search, GPA and calendars work from the index. Search downloads your other classes in the background the first time it opens so results cover everything; the class you visited last is prefetched when the landing page is idle. The service worker still precaches every class for offline use. **After editing any `*-data.js` or `*-quiz.js` file, run `node scripts/build-course-index.js`** so the index (titles, counts, calendars) matches.
+
+## Push notifications
+
+Settings → Account → "Notifications on this device" turns on web push (Chrome, Edge, Firefox, Safari 16.4+; on iPhone the app must be added to the home screen first). The server signs pushes with VAPID keys it generates once into `api/data/vapid.json` (PHP's OpenSSL, no extra library) and sends an empty push; the service worker then asks the server what is pending and shows it. Reminders go out in the evening before something is due and when a streak is at risk, at most once a day per account, from the same housekeeping pass that sends digest emails (any request triggers it; a cron hitting `api/index.php?r=health` every 15 minutes keeps it timely on a quiet site). "Send a test" checks the device end to end. Subscriptions that a browser has dropped are removed automatically.
+
+## Install prompt, global search, synced preferences
+
+- **Add to home screen.** From the second visit a banner offers to install MatHub: the native prompt on Chrome and Edge (Android and desktop), and step-by-step Share → Add to Home Screen instructions on iPhone and iPad. Dismissing hides it for a month; "Install the app" also lives in the account menu whenever installing is possible. The manifest has shortcuts (Today, Discussions, GPA) and a maskable icon.
+- **Search everywhere.** Ctrl/⌘ K (or the search icon on the landing page) searches notes, formulas, flashcards, calendars, practice topics and pages across every class, with class chips to narrow it; each result shows its class.
+- **Preferences follow your account.** GPA calculator entries, focus-sound choices, daily goal, theme, phonetics and reader voices, seen-changelog and Today state sync through `prefs` (newest wins). Course progress already synced.
+
+## Backups
+
+The server copies the SQLite database once a day (SQLite's own `VACUUM INTO`, consistent while in use) into `api/data/backups/`, which the web server cannot serve, and keeps the last fourteen automatic copies; manual copies are kept until deleted. The admin panel's **Backups** tab lists them, makes one on demand and downloads any of them. Restore = stop, replace `api/data/mathub.sqlite` with a backup, start.
+
+## Empty states, accessibility, what's new
+
+- Empty panels get Bo and a short line; loading placeholders become skeleton bars automatically.
+- Accessibility: a skip link is the first tab stop, every control has a name, dialogs are announced, small text and chips meet WCAG AA contrast in both themes, and `tests/a11y.test.js` runs axe-core over the main pages so it stays that way.
+- `#/whatsnew` lists every release (a dot in the account menu until you have seen the latest); `learn/whats-new.html` is the public copy for search engines and links.
+- Every class has its own social card (`assets/og-<class>.png`, made by `node scripts/build-og.js`) used by its study-guide pages.
+
+## Tests
+
+`tests/` holds headless Chromium checks (Playwright) that cover the classes, the Python playground, phonetics, GPA, the SEO pages, Today, problem reports, the admin tabs, push and preference routes, on-demand loading and the accessibility audit. One-time setup: `cd tests && npm install` (Playwright downloads its Chromium). Then `node tests/run.js` starts PHP's built-in server on 127.0.0.1:8766 if nothing is listening, runs every `*.test.js` and prints a summary; `node tests/run.js today` runs the suites whose names contain "today". The playground test uses the Pyodide CDN unless a local mirror is unpacked into `tests/pyodide/package/` (a PHP router for it is included). The suites log in with the seeded test accounts (`alice.a@montana.edu`, `mod.user@montana.edu`, `admin.user@montana.edu`, password `password123`), which exist only in a development database.
+
 ## Layout: what lives where
 
 - **Header.** Class title, next-exam chip, streak flame, daily goal ring (level inside; tap it for XP, level, goal and today's quests), search, inbox, theme and the account menu. Double XP shows as a chip only while it is on.
@@ -206,9 +243,10 @@ solutions reveal step by step, and the daily challenge offers the three hints wi
 ## Admin panel
 
 `#/admin` (also in the sidebar for staff): Overview with stats and the activity feed, Members (search, ban,
-unban, verify, delete), Reports, Contributions queue, Mock exams (schedule and cancel), Site settings
-(Canvas feed, announcement banner, Instructor/TA badges) and Digest & cron. Moderators see Reports,
-Contributions and Mock exams; administrators see everything.
+unban, verify, delete), Reports, Problems (flagged questions and notes), Contributions queue, Mock exams
+(schedule and cancel), Site settings (Canvas feed, announcement banner, Instructor/TA badges), Backups
+and Digest & cron. Moderators see Reports, Problems, Contributions and Mock exams; administrators see
+everything.
 
 - **Badges.** On the Members tab, the badge count next to each member opens an editor: click any of the fifteen badges to award or remove it, or use Award all / Remove all. This works on your own account too. Awarded badges show on the member's shelf and on the People page, the member gets an inbox notification, and the automatic badge check never removes them.
 
@@ -244,6 +282,9 @@ public_html/
     forum.php, filter.php   discussion board endpoints and the language filter
     canvas.php              Canvas calendar feed sync
     social.php              challenges, badges, presence, sessions, polls, mocks, contributions, digest
+    push.php, extras.php    web push (VAPID), problem reports, backups, synced preferences
+  learn/                    static study guides (generated), sitemap.xml, robots.txt
+  tests/                    browser checks (not needed on the server; safe to leave out of the upload)
   sw.js                     service worker for offline use
     config.php              <-- edit this one
     data/                   SQLite database is created here automatically (blocked from the web)
@@ -276,10 +317,16 @@ Optional: set `admin_key` in `config.php` and call `api/index.php?r=stats` with 
 ## Editing content
 
 - Course facts, calendars, notes, formula sheets, flashcards, practice sets and checklists live in
-  `assets/calc-data.js`, `assets/physics-data.js` and `assets/precalc-data.js`.
+  `assets/calc-data.js`, `assets/physics-data.js`, `assets/precalc-data.js`, `assets/writ-data.js` and
+  `assets/csci-data.js`. After editing them run `node scripts/build-course-index.js` (the light index
+  the shell loads) and `node scripts/build-seo.js` (the static study pages).
 - Question generators live in `*-quiz.js`. Each function returns one question; add a function and list
   it in `GENERATORS`.
 - Week-by-week lecture topics for physics and precalculus are estimated from the syllabus topic order
   and the exam dates; adjust `CALENDAR` when Canvas modules differ.
 - When you change any file in `assets/`, bump the build string at the top of `index.html`
-  (`data-build` and `MATHUB_BUILD` and the `?v=` suffixes) so browsers fetch the new files.
+  (`data-build` and `MATHUB_BUILD` and the `?v=` suffixes) so browsers fetch the new files, and add
+  an entry to `assets/changelog.js` so What's new and `learn/whats-new.html` mention it.
+- Adding a class: write `<id>-data.js` (and `-quiz.js`, `-tools.js` as needed), list its files in
+  `scripts/build-course-index.js`, add the id to `COURSE_ORDER` in `assets/app.js` and to the service
+  worker's shell list, then run the three build scripts (`build-course-index`, `build-og`, `build-seo`).

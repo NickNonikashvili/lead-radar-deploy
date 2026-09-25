@@ -74,6 +74,14 @@ function mh_db(): PDO {
   if (!in_array('reminder_email', $cols, true)) $db->exec('ALTER TABLE users ADD COLUMN reminder_email INTEGER NOT NULL DEFAULT 0');
   if (!in_array('reminder_sent', $cols, true)) $db->exec('ALTER TABLE users ADD COLUMN reminder_sent INTEGER NOT NULL DEFAULT 0');
   if (!in_array('league', $cols, true)) $db->exec('ALTER TABLE users ADD COLUMN league INTEGER NOT NULL DEFAULT 0');
+  if (!in_array('prefs', $cols, true)) $db->exec('ALTER TABLE users ADD COLUMN prefs TEXT');
+  $ncols = array_column($db->query('PRAGMA table_info(notifications)')->fetchAll(), 'name'); if (!in_array('link', $ncols, true)) $db->exec('ALTER TABLE notifications ADD COLUMN link TEXT NOT NULL DEFAULT ""');
+  if (!in_array('prefs_updated', $cols, true)) $db->exec('ALTER TABLE users ADD COLUMN prefs_updated INTEGER NOT NULL DEFAULT 0');
+  if (!in_array('push_sent', $cols, true)) $db->exec('ALTER TABLE users ADD COLUMN push_sent INTEGER NOT NULL DEFAULT 0');
+  $db->exec('CREATE TABLE IF NOT EXISTS issues (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL DEFAULT 0, email TEXT NOT NULL DEFAULT "", course TEXT NOT NULL DEFAULT "", view TEXT NOT NULL DEFAULT "", ref TEXT NOT NULL DEFAULT "", prompt TEXT NOT NULL DEFAULT "", answer TEXT NOT NULL DEFAULT "", reason TEXT NOT NULL DEFAULT "other", comment TEXT NOT NULL DEFAULT "", url TEXT NOT NULL DEFAULT "", build TEXT NOT NULL DEFAULT "", ua TEXT NOT NULL DEFAULT "", created INTEGER NOT NULL, status TEXT NOT NULL DEFAULT "open", resolved_by INTEGER NOT NULL DEFAULT 0, resolved INTEGER NOT NULL DEFAULT 0)');
+  $db->exec('CREATE TABLE IF NOT EXISTS push_subs (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, endpoint TEXT NOT NULL UNIQUE, p256dh TEXT NOT NULL, auth TEXT NOT NULL, ua TEXT NOT NULL DEFAULT "", created INTEGER NOT NULL, last_ok INTEGER NOT NULL DEFAULT 0)');
+  $db->exec('CREATE TABLE IF NOT EXISTS push_queue (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, title TEXT NOT NULL, body TEXT NOT NULL DEFAULT "", url TEXT NOT NULL DEFAULT "", tag TEXT NOT NULL DEFAULT "", created INTEGER NOT NULL, delivered INTEGER NOT NULL DEFAULT 0)');
+  $db->exec('CREATE INDEX IF NOT EXISTS push_queue_user ON push_queue(user_id, delivered)');
   $db->exec('CREATE TABLE IF NOT EXISTS league_history (user_id INTEGER NOT NULL, week INTEGER NOT NULL, league INTEGER NOT NULL, rank INTEGER NOT NULL, xp INTEGER NOT NULL, result TEXT NOT NULL, PRIMARY KEY (user_id, week))');
   $bcols = array_column($db->query('PRAGMA table_info(badges)')->fetchAll(), 'name');
   if (!in_array('manual', $bcols, true)) $db->exec('ALTER TABLE badges ADD COLUMN manual INTEGER NOT NULL DEFAULT 0');   // 1 = awarded by an administrator

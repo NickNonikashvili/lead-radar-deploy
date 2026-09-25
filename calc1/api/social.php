@@ -142,7 +142,19 @@ function mh_housekeeping(bool $full = false): array {
   $sent = mh_digest_tick($full ? 60 : 2); if ($sent) $did[] = "digest: $sent sent";
   $rem = mh_reminder_tick($full ? 60 : 2); if ($rem) $did[] = "reminders: $rem sent";
   try { mh_league_tick(); } catch (Throwable $e) {}
+  try { require_once __DIR__ . '/extras.php'; $b = mh_backup_tick(); if ($b) $did[] = 'backup: ' . $b['name']; } catch (Throwable $e) {}
+  try { require_once __DIR__ . '/push.php'; $p = mh_push_tick($full ? 60 : 3); if ($p) $did[] = "push: $p sent"; } catch (Throwable $e) {}
   return $did;
+}
+/** What an evening reminder is about for one user: Canvas events due tomorrow in their classes, a streak at risk, sessions they joined. Shared by the email and the push. */
+function mh_reminder_items(array $u, array $events, string $tomorrow): array {
+  $db = mh_db(); $names = ['calc' => 'Calc I', 'physics' => 'Physics I', 'precalc' => 'Precalc', 'writ' => 'WRIT 101', 'csci' => 'CSCI 127', 'general' => 'General'];
+  $mine = mh_user_courses($u); $due = array_values(array_filter($events, fn($e) => $e['date'] === $tomorrow && in_array($e['course'], $mine, true)));
+  $days = []; foreach (mh_user_progress((int)$u['id']) as $b) foreach (array_keys($b['activity'] ?? []) as $d) $days[$d] = true; $sk = mh_current_streak(array_keys($days));
+  $atRisk = !$sk['active_today'] && $sk['streak'] >= 3;
+  $s2 = $db->prepare('SELECT m.title, m.place, m.start FROM meets m JOIN meet_rsvp r ON r.meet_id = m.id WHERE r.user_id = ? AND m.cancelled = 0 AND m.start > ? AND m.start < ? ORDER BY m.start'); $s2->execute([$u['id'], time(), time() + 36 * 3600]);
+  $meets = array_map(fn($m) => ['title' => $m['title'], 'place' => $m['place'], 'when' => (new DateTime('@' . $m['start']))->setTimezone(mh_tz())->format('D g:i a')], $s2->fetchAll());
+  return ['due' => $due, 'atRisk' => $atRisk, 'streak' => $sk['streak'], 'meets' => $meets, 'names' => $names];
 }
 /* ---------- evening reminders: "tomorrow: … due" + streak at risk ---------- */
 function mh_reminder_window_start(): ?int {

@@ -42,8 +42,9 @@ const quizTopics = (C, secId) => C.quiz ? Object.keys(C.quiz.TOPICS).filter(t =>
 const meets = C => C.COURSE.lectures || C.COURSE.meets || C.COURSE.classDays || '';
 const instructor = C => C.COURSE.instructor || (Array.isArray(C.COURSE.instructors) ? C.COURSE.instructors.map(i => i.name || i).join(', ') : '');
 
+const ogFor = c => (c && fs.existsSync(path.join(ROOT, 'assets', `og-${c}.png`)) ? `/assets/og-${c}.png` : '/assets/og.png');
 function page(o) {
-  const hasTex = /\$/.test(o.body);
+  const hasTex = /\$/.test(o.body); const image = o.image || ogFor(o.course);
   const crumbs = [{ n: SITE, u: '/' }, { n: 'Study guides', u: '/learn/' }].concat(o.crumbs || []);
   const breadcrumbLd = { '@context': 'https://schema.org', '@type': 'BreadcrumbList', itemListElement: crumbs.map((c, i) => ({ '@type': 'ListItem', position: i + 1, name: c.n, item: SITE_URL + c.u })) };
   const ld = [breadcrumbLd].concat(o.ld || []);
@@ -61,13 +62,13 @@ function page(o) {
 <meta property="og:title" content="${esc(o.ogTitle || o.title)}">
 <meta property="og:description" content="${esc(o.desc)}">
 <meta property="og:url" content="${SITE_URL}${o.url}">
-<meta property="og:image" content="${SITE_URL}/assets/og.png">
+<meta property="og:image" content="${SITE_URL}${image}">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="${esc(o.ogTitle || o.title)}">
 <meta name="twitter:description" content="${esc(o.desc)}">
-<meta name="twitter:image" content="${SITE_URL}/assets/og.png">
+<meta name="twitter:image" content="${SITE_URL}${image}">
 <meta name="theme-color" content="#2B55B8">
 <link rel="icon" type="image/svg+xml" href="/assets/icon.svg">
 <link rel="apple-touch-icon" sizes="180x180" href="/assets/icon-180.png">
@@ -85,7 +86,7 @@ ${hasTex ? `<script>window.MathJax = { tex: { inlineMath: [['$', '$'], ['\\\\(',
 <nav class="s-crumbs" aria-label="Breadcrumb">${crumbs.map((c, i) => i < crumbs.length - 1 ? `<a href="${c.u}">${esc(c.n)}</a><span>›</span>` : `<span aria-current="page">${esc(c.n)}</span>`).join('')}</nav>
 ${o.body}
 </main>
-<footer class="s-foot"><div><b>${SITE}</b> is a free, independent study site made by a Montana State student. It is not affiliated with Montana State University; syllabus details come from each class and can change, so confirm dates on Canvas.</div><div class="s-foot-links">${ORDER.map(c => `<a href="${courseUrl(c)}">${esc(Courses[c].code)}</a>`).join('')}<a href="/#/contact">Contact</a><a href="/#/policy">Terms &amp; Privacy</a></div></footer>
+<footer class="s-foot"><div><b>${SITE}</b> is a free, independent study site made by a Montana State student. It is not affiliated with Montana State University; syllabus details come from each class and can change, so confirm dates on Canvas.</div><div class="s-foot-links">${ORDER.map(c => `<a href="${courseUrl(c)}">${esc(Courses[c].code)}</a>`).join('')}<a href="/learn/whats-new.html">What's new</a><a href="/#/contact">Contact</a><a href="/#/policy">Terms &amp; Privacy</a></div></footer>
 </body>
 </html>
 `;
@@ -111,7 +112,7 @@ function topicBody(c, C, s, i) {
   if (C.kind === 'code') cta.push(`<a class="s-btn" href="/#/${c}/playground">Python playground</a>`);
   if (C.kind === 'writing') cta.push(`<a class="s-btn" href="/#/${c}/readings">Readings as audiobooks</a>`);
   parts.push(`<section class="s-cta"><h2>Keep going in MatHub</h2><p>MatHub is free for Montana State students: ${C.quiz ? 'an endless quizzer with worked explanations, one-question lessons, ' : ''}flashcards, exam prep checklists, the class calendar with every deadline, a grade calculator and a study board for ${esc(C.code)}.</p><div class="s-btns">${cta.join('')}</div></section>`);
-  parts.push(`<nav class="s-prevnext">${prev ? `<a href="${topicUrl(c, prev)}">← ${esc(prev.label || '')} ${esc(prev.title)}</a>` : '<span></span>'}${next ? `<a href="${topicUrl(c, next)}">${esc(next.label || '')} ${esc(next.title)} →</a>` : '<span></span>'}</nav>`);
+  parts.push(`<nav class="s-prevnext" aria-label="Previous and next topic">${prev ? `<a href="${topicUrl(c, prev)}">← ${esc(prev.label || '')} ${esc(prev.title)}</a>` : '<span></span>'}${next ? `<a href="${topicUrl(c, next)}">${esc(next.label || '')} ${esc(next.title)} →</a>` : '<span></span>'}</nav>`);
   return parts.join('\n');
 }
 
@@ -141,6 +142,17 @@ function hubPage() {
   return page({ title: `Study guides for Montana State classes: M171, PHSX 220, M151Q, WRIT 101, CSCI 127 · ${SITE}`, desc: 'Free topic-by-topic study notes, practice questions, flashcards and deadline calendars for Montana State University classes: Calculus I, Physics I, Precalculus, College Writing I and Joy and Beauty of Data.', url: '/learn/', type: 'website', appLink: '/', body, ld });
 }
 
+function whatsNewPage() {
+  require(path.join(ROOT, 'assets', 'changelog.js')); const LOG = (global.MATHUB_CHANGELOG || window.MATHUB_CHANGELOG || []);
+  const body = `<div class="s-eyebrow">MatHub · release notes</div>
+<h1>What's new in MatHub</h1>
+<p class="s-lead">Every release, newest first. MatHub ships most weeks; the current build is ${esc(LOG[0] ? LOG[0].v : BUILD)}. Ideas and bug reports are welcome on the class board or with the flag on any page.</p>
+${LOG.map((r, i) => `<section class="s-release${i === 0 ? ' latest' : ''}"><h2>${esc(r.t)}</h2><div class="s-eyebrow">${esc(fmtDate(r.d))} · build ${esc(r.v)}</div><ul class="s-list">${r.items.map(x => `<li>${esc(x)}</li>`).join('')}</ul></section>`).join('')}
+<section class="s-cta"><div class="s-btns"><a class="s-btn primary" href="/#/whatsnew">Open in the app</a><a class="s-btn" href="/learn/">All study guides</a></div></section>`;
+  const ld = [{ '@context': 'https://schema.org', '@type': 'WebPage', name: "What's new in MatHub", url: SITE_URL + '/learn/whats-new.html', dateModified: LOG[0] ? LOG[0].d : TODAY, isPartOf: { '@type': 'WebSite', name: SITE, url: SITE_URL + '/' } }];
+  return page({ title: `What's new · release notes · ${SITE}`, desc: clip(`MatHub release notes: ${LOG.slice(0, 3).map(r => r.t).join('; ')}.`, 158), url: '/learn/whats-new.html', type: 'website', crumbs: [{ n: "What's new", u: '/learn/whats-new.html' }], body, ld });
+}
+
 /* ---------- write everything ---------- */
 const written = [];
 const out = (rel, content) => { const p = path.join(ROOT, rel); fs.mkdirSync(path.dirname(p), { recursive: true }); fs.writeFileSync(p, content); written.push(rel); };
@@ -148,6 +160,7 @@ fs.rmSync(path.join(ROOT, 'learn'), { recursive: true, force: true });
 out('learn/index.html', hubPage());
 out('learn/.htaccess', '# Static study pages: cache for an hour, revalidate after\n<IfModule mod_headers.c>\n  <FilesMatch "\\.html$">\n    Header set Cache-Control "public, max-age=3600, must-revalidate"\n  </FilesMatch>\n</IfModule>\n');
 const urls = [{ u: '/', p: '1.0', f: 'daily' }, { u: '/learn/', p: '0.9', f: 'weekly' }];
+out('learn/whats-new.html', whatsNewPage()); urls.push({ u: '/learn/whats-new.html', p: '0.6', f: 'weekly' });
 for (const c of ORDER) {
   const C = Courses[c]; out(`learn/${c}/index.html`, coursePage(c, C)); urls.push({ u: courseUrl(c), p: '0.8', f: 'weekly' });
   C.SECTIONS.forEach((s, i) => {
@@ -161,4 +174,4 @@ for (const c of ORDER) {
 }
 out('sitemap.xml', `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.map(x => `  <url><loc>${SITE_URL}${x.u}</loc><lastmod>${TODAY}</lastmod><changefreq>${x.f}</changefreq><priority>${x.p}</priority></url>`).join('\n')}\n</urlset>\n`);
 out('robots.txt', `User-agent: *\nAllow: /\nDisallow: /api/\n\nSitemap: ${SITE_URL}/sitemap.xml\n`);
-console.log(`Wrote ${written.length} files: ${urls.length - 2} topic and class pages, learn/index.html, sitemap.xml, robots.txt (build ${BUILD}).`);
+console.log(`Wrote ${written.length} files: ${urls.length - 3} topic and class pages, learn/index.html, learn/whats-new.html, sitemap.xml, robots.txt (build ${BUILD}).`);

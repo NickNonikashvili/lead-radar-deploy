@@ -176,7 +176,7 @@
         : graded && !a ? `<div class="q-feedback no"><b class="res">Not answered${q.type === 'num' ? ` — the answer is $${q.answerTex}$` : ` — the answer is ${LETTERS[q.answer]}`}</b><div>${q.explanation}</div></div>` : '';
       const lvl = (s.ladder && s.ladder[i]) || 0; const assisted = a && a.assisted;
       const ladder = s.mode === 'practice' && !graded ? App.ladderHtml(q, lvl, i) : (s.mode === 'practice' && graded && lvl > 0 ? `<div class="small muted mt-1">${assisted ? 'Solved with the full solution shown (not counted toward accuracy).' : `You used ${lvl} hint${lvl === 1 ? '' : 's'}.`}</div>` : '');
-      return `<div class="q-card${graded && a ? (a.ok ? ' correct' : ' wrong') : ''}" id="qc-${q.id}"><div class="q-top"><span class="q-num">Q${i + 1}</span><span class="chip accent">${esc(App.secLabel(T.sec))} · ${esc(T.label)}</span>${assisted ? '<span class="chip warn">assisted</span>' : ''}</div><div class="q-prompt">${q.prompt}</div>${ladder}${body}${fb}</div>`;
+      return `<div class="q-card${graded && a ? (a.ok ? ' correct' : ' wrong') : ''}" id="qc-${q.id}"><div class="q-top"><span class="q-num">Q${i + 1}</span><span class="chip accent">${esc(App.secLabel(T.sec))} · ${esc(T.label)}</span>${assisted ? '<span class="chip warn">assisted</span>' : ''}${App.flagButton ? App.flagButton({ course: D.id, view: 'Practice', ref: T.label, prompt: q.prompt, answer: a ? String(a.given !== undefined ? a.given : a.text !== undefined ? a.text : a.sel !== undefined ? 'option ' + (a.sel + 1) : '') : '' }) : ''}</div><div class="q-prompt">${q.prompt}</div>${ladder}${body}${fb}</div>`;
     },
     answerMC(root, qi, k) {
       const s = PQ.session; if (s.submitted) return; const q = s.questions[qi]; if (s.mode === 'practice' && s.answers[qi]) return;

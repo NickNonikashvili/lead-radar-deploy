@@ -12,7 +12,7 @@
   const BUILD = global.MATHUB_BUILD || 'dev';
   const Courses = global.Courses || (global.Courses = {});
   const COURSE_ORDER = ['calc', 'physics', 'precalc', 'writ', 'csci'];
-  const GLOBAL_VIEWS = ['contact', 'forum', 'policy', 'admin', 'meet', 'badges', 'challenge', 'mock', 'people', 'settings', 'leagues', 'gpa'];   // pages that work without a course, e.g. #/contact
+  const GLOBAL_VIEWS = ['contact', 'forum', 'policy', 'admin', 'meet', 'badges', 'challenge', 'mock', 'people', 'settings', 'leagues', 'gpa', 'today', 'whatsnew'];   // pages that work without a course, e.g. #/contact
   const SITE = 'MatHub';
   let D = null, QZ = null;        // current course data and quiz module
   const courseHooks = [];
@@ -83,7 +83,7 @@
     poke(id, fn) { if (id === this.id) { fn(this.data); writeJSON(storeKey(id), this.data); } else { const d = readJSON(storeKey(id)); fn(d); writeJSON(storeKey(id), d); } if (global.App && global.App.auth) global.App.auth.noteWrite(id); }
   };
   const settings = () => Object.assign({ theme: 'system' }, readJSON('studyhub-settings'));
-  const setSetting = (k, v) => { const s = settings(); s[k] = v; writeJSON('studyhub-settings', s); };
+  const setSetting = (k, v) => { const s = settings(); s[k] = v; writeJSON('studyhub-settings', s); if (global.App && global.App.onSetting) { try { global.App.onSetting(k); } catch (e) {} } };
   const courseSetting = (courseId, k, def) => { const s = settings(); return (s[courseId] && k in s[courseId]) ? s[courseId][k] : def; };
   const setCourseSetting = (courseId, k, v) => { const s = settings(); s[courseId] = Object.assign({}, s[courseId], { [k]: v }); writeJSON('studyhub-settings', s); };
 
@@ -231,7 +231,8 @@
   const App = { views: {}, current: null, icon, esc, $, $$, bind, on, toast, store, settings, setSetting, courseSetting, setCourseSetting, typeset, compileExpr, d1, d2, parseNumber, fmtNum, cssVar, fitCanvas, niceStep,
     recordAnswer, markActivity, progress, streak, unitMastery, cardsMastered, checklistState, todayISO, toISO, parseISO, fmtDate, shortDate, addDays, daysBetween, relDays, examStatus, secLabel, secById, topicsForSection,
     nextExam: () => nextExam(D), currentSection: () => currentSection(D), upcomingDeadlines: n => upcomingDeadlines(D, n), eventsOn: iso => eventsOn(D, iso),
-    onCourse(fn) { courseHooks.push(fn); if (D) fn(D); }, BUILD, SITE, COURSE_ORDER, asOf, semesterState: () => semesterState(D) };
+    onCourse(fn) { courseHooks.push(fn); if (D) fn(D); }, BUILD, SITE, COURSE_ORDER, asOf, semesterState: () => semesterState(D),
+    upcomingDeadlinesOf: upcomingDeadlines, nextExamOf: nextExam, semesterStateOf: semesterState, streakOf, secLabelOf: (C, id) => { const x = (C.SECTIONS || []).find(z => z.id === id); return x ? x.label : id; } };
   App.toggleTheme = () => toggleTheme();
   App.myCourses = () => { const c = settings().courses; const mine = Array.isArray(c) ? c.filter(id => Courses[id]) : []; return mine.length ? mine : COURSE_ORDER.filter(id => Courses[id]); };
   App.isoWeek = d => { const x = new Date(d); x.setHours(0, 0, 0, 0); x.setDate(x.getDate() + 3 - ((x.getDay() + 6) % 7)); const w1 = new Date(x.getFullYear(), 0, 4); return x.getFullYear() + '-W' + String(1 + Math.round(((x - w1) / 86400000 - 3 + ((w1.getDay() + 6) % 7)) / 7)).padStart(2, '0'); };
@@ -263,12 +264,37 @@
     Search.index = null; buildNav(); courseHooks.forEach(fn => { try { fn(D); } catch (e) { console.error(e); } });
     if (App.auth && App.auth.user) App.auth.pullCourse(id, true).catch(() => {});
   }
+  /* ---------- on-demand class loading: the shell ships light stubs (assets/courses-index.js); the full files come when a class is opened ---------- */
+  const loading = {};
+  App.loadCourse = function (id) {
+    const C = Courses[id]; if (!C) return Promise.reject(new Error('Unknown class.'));
+    if (C.loaded || !C.files || !C.files.length) { C.loaded = true; delete C.stub; return Promise.resolve(C); }
+    if (loading[id]) return loading[id];
+    const one = src => new Promise((res, rej) => { if (document.querySelector(`script[data-src="${src}"]`)) return res(); const sc = document.createElement('script'); sc.src = `assets/${src}.js?v=${BUILD}`; sc.dataset.src = src; sc.onload = res; sc.onerror = () => { sc.remove(); rej(new Error(`Could not download ${src}.js. Check your connection and try again.`)); }; document.head.appendChild(sc); });
+    loading[id] = (async () => { try { for (const f of C.files) await one(f); } finally { delete loading[id]; } const F = Courses[id]; F.loaded = true; delete F.stub; Search.index = null; return F; })();
+    return loading[id];
+  };
+  App.loadCourses = ids => Promise.all(ids.map(id => App.loadCourse(id).catch(() => null)));
+  App.courseLoaded = id => !!(Courses[id] && Courses[id].loaded);
+  function renderLoading(root, id) {
+    const C = Courses[id]; document.documentElement.setAttribute('data-course', id);
+    $('#topbar-title').innerHTML = `<a class="crumb" href="#/${id}/dashboard" title="${esc(C.name)}">${esc(C.short)}</a><span class="crumb-sep">›</span><span class="crumb-cur">Loading…</span>`; document.title = `${C.code} · ${SITE}`;
+    root.innerHTML = `<div class="page-load" aria-busy="true" aria-live="polite"><div class="eyebrow">${esc(C.code)}</div><h1 class="page-title">${esc(C.name)}</h1><p class="muted small">Opening the class…</p>${App.skeleton ? App.skeleton(6) : ''}</div>`;
+  }
+  function renderLoadError(root, id, err) {
+    root.innerHTML = `<div class="page-load"><div class="empty">${esc(err && err.message || 'Could not load this class.')}<div class="row gap-sm mt-2" style="justify-content:center"><button class="btn sm primary" data-action="retry">${icon('rotate', 13)} Try again</button><a class="btn sm" href="#/">All classes</a></div></div></div>`;
+    bind(root, { retry: () => render() });
+  }
+  function prefetchLast() {
+    const lv = settings().lastVisit; const id = lv && lv.course; if (!id || !Courses[id] || Courses[id].loaded || !App.myCourses().includes(id)) return;
+    const idle = global.requestIdleCallback || (fn => setTimeout(fn, 1500)); idle(() => { if (navigator.onLine === false) return; App.loadCourse(id).catch(() => {}); });
+  }
   function route() {
     const raw = location.hash.replace(/^#\/?/, ''); const [path, qs] = raw.split('?'); const parts = path.split('/').filter(Boolean);
     const query = Object.fromEntries(new URLSearchParams(qs || ''));
     if (!parts.length || !Courses[parts[0]]) return { course: null, view: GLOBAL_VIEWS.includes(parts[0]) ? parts[0] : 'home', param: parts.slice(1).join('/') || null, query };
     const view = parts[1] || 'dashboard';
-    return { course: parts[0], view: App.views[view] ? view : 'dashboard', param: parts.slice(2).join('/') || null, query };
+    return { course: parts[0], view: App.views[view] || !Courses[parts[0]].loaded ? view : 'dashboard', param: parts.slice(2).join('/') || null, query };
   }
   function render() {
     const { course, view, param, query } = route();
@@ -281,7 +307,9 @@
       else { App.current = Landing; document.title = `${SITE} · Fall 2026`; Landing.render(root); }
       typeset(root); if (App.auth) App.auth.bindLocks(root); afterRender(root); return;
     }
-    app.classList.remove('landing'); setCourse(course);
+    app.classList.remove('landing');
+    if (!Courses[course].loaded) { App.current = null; renderLoading(root, course); App.loadCourse(course).then(() => { if (route().course === course && $('#view') === root) render(); }).catch(err => { if ($('#view') === root) renderLoadError(root, course, err); }); afterRender(root); return; }
+    setCourse(course);
     const V = App.views[view]; App.current = V;
     $$('.nav-item').forEach(b => b.classList.toggle('active', b.dataset.view === view));
     const actNav = $('.nav-item.active'); if (actNav) { const g = actNav.closest('.nav-group'); if (g && g.classList.contains('closed')) { g.classList.remove('closed'); const tg = g.previousElementSibling; if (tg) { tg.classList.add('open'); tg.setAttribute('aria-expanded', 'true'); } } }
@@ -293,12 +321,12 @@
   }
   App.ago = t => { const m = Math.round((Date.now() - t) / 60000); if (m < 2) return 'just now'; if (m < 60) return m + ' min ago'; const h = Math.round(m / 60); if (h < 24) return h + (h === 1 ? ' hour ago' : ' hours ago'); const d = Math.round(h / 24); return d + (d === 1 ? ' day ago' : ' days ago'); };
   App.resumeCard = mine => {
-    const lv = settings().lastVisit; const all = COURSE_ORDER.filter(id => Courses[id]); const topics = all.reduce((n, id) => n + Courses[id].SECTIONS.length, 0); const cards = all.reduce((n, id) => n + ((Courses[id].FLASHCARDS || []).length), 0);
+    const lv = settings().lastVisit; const all = COURSE_ORDER.filter(id => Courses[id]); const topics = all.reduce((n, id) => n + (Courses[id].SECTIONS || []).length, 0); const cards = all.reduce((n, id) => n + ((Courses[id].FLASHCARDS || []).length || Courses[id].flashcardCount || 0), 0);
     const strip = `<div class="stat-strip" aria-label="What is inside"><span><b>${all.length}</b> classes</span><span><b>${topics}</b> topic guides</span><span><b>${cards}</b> flashcards</span><span><b>∞</b> practice questions</span><span><b>$0</b> forever</span></div>`;
     if (!lv || !lv.hash || !Courses[lv.course] || !mine.includes(lv.course) || Date.now() - lv.t > 7 * 86400000 || Date.now() - lv.t < 20000) return strip;
     return `<a class="resume-card course-${lv.course}" href="${esc(lv.hash)}"><span class="resume-ic">${icon('play', 16)}</span><span class="resume-body"><small>Pick up where you left off · ${esc(App.ago(lv.t))}</small><b>${esc(lv.label)}${lv.detail ? ` · ${esc(lv.detail)}` : ''}</b></span>${icon('right', 16)}</a>` + strip;
   };
-  const TABS_GLOBAL = [['#/', 'Home', 'home', 'home'], ['#/forum', 'Board', 'chat', 'forum'], ['#/leagues', 'Leagues', 'gem', 'leagues'], ['#/gpa', 'GPA', 'calc', 'gpa'], ['#/settings', 'Me', 'user', 'settings']];
+  const TABS_GLOBAL = [['#/', 'Home', 'home', 'home'], ['#/today', 'Today', 'flag', 'today'], ['#/forum', 'Board', 'chat', 'forum'], ['#/gpa', 'GPA', 'calc', 'gpa'], ['#/settings', 'Me', 'user', 'settings']];
   function paintTabbar(course, view) {
     let bar = $('#tabbar'); if (!bar) { bar = document.createElement('nav'); bar.id = 'tabbar'; bar.setAttribute('aria-label', 'Quick navigation'); document.body.appendChild(bar); }
     let tabs;
@@ -319,7 +347,7 @@
   }
   App.initTabs = initTabs;
   function afterRender(root) {
-    initTabs(root); initToTop(); { const r = route(); paintTabbar(r.course, r.course ? r.view : (r.view === 'home' ? 'home' : r.view)); } if (App.paintStats) { App.paintStats(); App.paintMascots(); App.countUp(root); } if (App.paintQuests) App.paintQuests(); if (App.paintLeagueWidgets) App.paintLeagueWidgets(root); const tk = $('#landing-ticker', root); if (tk && App.fillTicker) App.fillTicker(tk); }
+    initTabs(root); initToTop(); { const r = route(); paintTabbar(r.course, r.course ? r.view : (r.view === 'home' ? 'home' : r.view)); if (!r.course) prefetchLast(); } if (App.paintStats) { App.paintStats(); App.paintMascots(); App.countUp(root); } if (App.paintQuests) App.paintQuests(); if (App.paintLeagueWidgets) App.paintLeagueWidgets(root); const tk = $('#landing-ticker', root); if (tk && App.fillTicker) App.fillTicker(tk); }
   App.rerender = () => render();
   App.currentSectionOf = C => currentSection(C);
   App.inCourse = () => !!route().course;
@@ -360,7 +388,7 @@
     bind($('#topbar'), { menu: () => app.classList.toggle('nav-open'), search: () => Search.open(), theme: toggleTheme, 'exam-chip': () => App.go('dashboard'), 'asof-clear': () => { setSetting('asof', ''); render(); toast('Back to today'); }, inbox: () => { if (App.auth && !App.auth.user) App.auth.open('login'); else App.go('forum', 'inbox'); } });
     $('#nav-backdrop').addEventListener('click', () => app.classList.remove('nav-open'));
     applyTheme(); matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applyTheme);
-    document.addEventListener('keydown', e => { if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); if (D) Search.open(); } if (e.key === 'Escape') { Search.close(); app.classList.remove('nav-open'); } });
+    document.addEventListener('keydown', e => { if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); Search.open(); } if (e.key === 'Escape') { Search.close(); app.classList.remove('nav-open'); } });
     window.addEventListener('hashchange', render);
   }
 
@@ -382,33 +410,45 @@
 
   /* ---------- Search (per course) ---------- */
   const Search = {
-    index: null, sel: 0, results: [],
+    index: null, sel: 0, results: [], course: 'all',
+    strip(str) { return String(str).replace(/<[^>]+>/g, '').replace(/\$[^$]*\$/g, m => m.replace(/\\[a-zA-Z]+|[{}$^_\\]/g, ' ')); },
     build() {
-      const strip = s => String(s).replace(/<[^>]+>/g, '').replace(/\$[^$]*\$/g, m => m.replace(/\\[a-zA-Z]+|[{}$^_\\]/g, ' '));
-      const ix = [];
-      D.NAV.forEach(gp => gp.items.forEach(([id, label]) => ix.push({ type: 'page', t: label, s: gp.label, go: () => App.go(id), key: label.toLowerCase() })));
-      ix.push({ type: 'page', t: 'Contact', s: SITE, go: () => App.go('contact'), key: 'contact creator nikoloz nonikashvili phone email help feedback' });
-      D.SECTIONS.forEach(s => ix.push({ type: 'notes', t: `${s.label} ${s.title}`, s: `Unit ${s.unit}`, go: () => App.go('notes', s.id), key: (`${s.label} ${s.title} ` + s.ideas.map(strip).join(' ') + ' ' + s.pitfalls.map(strip).join(' ')).toLowerCase() }));
-      D.FORMULAS.forEach(gp => gp.items.forEach(f => ix.push({ type: 'formula', t: f.n, s: gp.group, go: () => App.go('formulas', null, { q: f.n }), key: (f.n + ' ' + gp.group + ' ' + strip('$' + f.t + '$')).toLowerCase() })));
-      D.FLASHCARDS.forEach(c => ix.push({ type: 'card', t: strip(c.f), s: secLabel(c.sec), go: () => App.go('flashcards', c.id), key: (strip(c.f) + ' ' + strip(c.b)).toLowerCase() }));
-      D.CALENDAR.forEach(e => ix.push({ type: 'calendar', t: e[2], s: fmtDate(e[0]), go: () => App.go('calendar', e[0]), key: (e[2] + ' ' + fmtDate(e[0], true)).toLowerCase() }));
-      if (QZ) Object.entries(QZ.TOPICS).forEach(([id, t]) => ix.push({ type: 'practice', t: `Practice: ${t.label}`, s: secLabel(t.sec), go: () => App.go('practice', null, { topics: id }), key: ('practice quiz ' + t.label + ' ' + secLabel(t.sec)).toLowerCase() }));
+      const strip = this.strip; const ix = []; const goC = (c, view, param, query) => () => { location.hash = '#/' + c + '/' + view + (param ? '/' + encodeURIComponent(param) : '') + (query ? '?' + new URLSearchParams(query).toString() : ''); };
+      [['today', 'Today', 'plan for today due cards lesson challenge'], ['gpa', 'GPA calculator', 'gpa grade point average semester cumulative'], ['forum', 'Discussions', 'board forum posts questions classmates'], ['people', 'People', 'classmates members badges'], ['leagues', 'Leagues', 'weekly league xp rank'], ['badges', 'Your badges', 'badges achievements'], ['settings', 'Settings', 'account settings classes notifications theme email'], ['whatsnew', "What's new", 'changelog updates releases news'], ['contact', 'Contact', 'contact creator nikoloz nonikashvili phone email help feedback']].forEach(([id, label, key]) => ix.push({ type: 'page', c: '', t: label, s: SITE, go: () => { location.hash = '#/' + id; }, key: (label + ' ' + key).toLowerCase() }));
+      COURSE_ORDER.filter(id => Courses[id]).forEach(id => {
+        const C = Courses[id]; const secLabelC = sid => { const x = (C.SECTIONS || []).find(z => z.id === sid); return x ? x.label : sid; };
+        if (C.NAV) C.NAV.forEach(gp => gp.items.forEach(([v, label]) => ix.push({ type: 'page', c: id, t: label, s: `${C.short} · ${gp.label}`, go: goC(id, v), key: (label + ' ' + C.short + ' ' + C.code).toLowerCase() })));
+        else ix.push({ type: 'page', c: id, t: `${C.short} dashboard`, s: C.name, go: goC(id, 'dashboard'), key: (C.short + ' ' + C.code + ' ' + C.name + ' notes practice flashcards calendar').toLowerCase() });
+        (C.SECTIONS || []).forEach(sec => ix.push({ type: 'notes', c: id, t: `${sec.label} ${sec.title}`, s: `${C.short} · Unit ${sec.unit}`, go: goC(id, 'notes', sec.id), key: (`${sec.label} ${sec.title} ` + (sec.ideas || []).map(strip).join(' ') + ' ' + (sec.pitfalls || []).map(strip).join(' ')).toLowerCase() }));
+        (C.FORMULAS || []).forEach(gp => gp.items.forEach(f => ix.push({ type: 'formula', c: id, t: f.n, s: `${C.short} · ${gp.group}`, go: goC(id, 'formulas', null, { q: f.n }), key: (f.n + ' ' + gp.group + ' ' + strip(f.t ? '$' + f.t + '$' : (f.c || ''))).toLowerCase() })));
+        (C.FLASHCARDS || []).forEach(cd => ix.push({ type: 'card', c: id, t: strip(cd.f), s: `${C.short} · ${cd.sec ? secLabelC(cd.sec) : 'Unit ' + cd.unit}`, go: goC(id, 'flashcards', cd.id), key: (strip(cd.f) + ' ' + strip(cd.b)).toLowerCase() }));
+        (C.CALENDAR || []).forEach(e => ix.push({ type: 'calendar', c: id, t: e[2], s: `${C.short} · ${fmtDate(e[0])}`, go: goC(id, 'calendar', e[0]), key: (e[2] + ' ' + fmtDate(e[0], true)).toLowerCase() }));
+        const T = (C.quiz && C.quiz.TOPICS) || C.quizTopics || {}; Object.entries(T).forEach(([tid, t]) => ix.push({ type: 'practice', c: id, t: `Practice: ${t.label}`, s: `${C.short} · ${secLabelC(t.sec)}`, go: goC(id, 'practice', null, { topics: tid }), key: ('practice quiz ' + t.label + ' ' + C.short + ' ' + secLabelC(t.sec)).toLowerCase() }));
+      });
       this.index = ix;
     },
     open() {
-      if (!D) return; if (!this.index) this.build();
+      if (!this.index) this.build(); const seg = location.hash.replace(/^#\/?/, '').split(/[/?]/)[0]; this.course = Courses[seg] ? seg : 'all';
       if ($('#search-modal')) { $('#search-input').focus(); return; }
       const m = document.createElement('div'); m.className = 'modal-backdrop'; m.id = 'search-modal';
-      m.innerHTML = `<div class="modal" role="dialog" aria-label="Search"><input id="search-input" class="search-input" placeholder="Search ${esc(D.short)} notes, formulas, flashcards, calendar…" autocomplete="off"><div class="search-results" id="search-results"></div><div class="search-foot"><span><span class="kbd">↑↓</span> move</span><span><span class="kbd">↵</span> open</span><span><span class="kbd">esc</span> close</span></div></div>`;
+      const chips = [['all', 'All classes']].concat(COURSE_ORDER.filter(id => Courses[id]).map(id => [id, Courses[id].short]));
+      m.innerHTML = `<div class="modal" role="dialog" aria-label="Search"><input id="search-input" class="search-input" placeholder="Search notes, formulas, flashcards, calendars, pages…" autocomplete="off" aria-label="Search MatHub"><div class="search-chips" id="search-chips">${chips.map(([id, l]) => `<button type="button" class="chip toggle${id === this.course ? ' on' : ''}" data-c="${id}">${esc(l)}</button>`).join('')}</div><div class="search-results" id="search-results"></div><div class="search-foot"><span><span class="kbd">↑↓</span> move</span><span><span class="kbd">Enter</span> open</span><span><span class="kbd">Esc</span> close</span></div></div>`;
       document.body.appendChild(m); m.addEventListener('click', e => { if (e.target === m) this.close(); });
       const inp = $('#search-input'); inp.focus(); inp.addEventListener('input', () => this.query(inp.value));
+      const missing = App.myCourses().filter(id => Courses[id] && !Courses[id].loaded); if (missing.length) App.loadCourses(missing).then(r => { if (r.some(Boolean) && $('#search-modal')) { this.index = null; this.query(inp.value); } });
       inp.addEventListener('keydown', e => { if (e.key === 'ArrowDown') { e.preventDefault(); this.sel = Math.min(this.sel + 1, this.results.length - 1); this.paint(); } else if (e.key === 'ArrowUp') { e.preventDefault(); this.sel = Math.max(this.sel - 1, 0); this.paint(); } else if (e.key === 'Enter') { const r = this.results[this.sel]; if (r) { this.close(); r.go(); } } });
+      on($('#search-chips'), 'click', '.chip', el => { this.course = el.dataset.c; $$('#search-chips .chip').forEach(c => c.classList.toggle('on', c === el)); this.query(inp.value); inp.focus(); });
       on($('#search-results'), 'click', '.search-item', el => { const r = this.results[+el.dataset.i]; if (r) { this.close(); r.go(); } });
       this.query('');
     },
     close() { const m = $('#search-modal'); if (m) m.remove(); },
-    query(q) { q = q.trim().toLowerCase(); const words = q.split(/\s+/).filter(Boolean); this.results = !q ? this.index.filter(r => r.type === 'page').slice(0, 12) : this.index.map(r => ({ r, score: words.reduce((s, w) => s + (r.t.toLowerCase().includes(w) ? 3 : r.key.includes(w) ? 1 : -100), 0) })).filter(x => x.score > 0).sort((a, b) => b.score - a.score).slice(0, 14).map(x => x.r); this.sel = 0; this.paint(); },
-    paint() { const box = $('#search-results'); if (!box) return; box.innerHTML = this.results.length ? this.results.map((r, i) => `<div class="search-item${i === this.sel ? ' active' : ''}" data-i="${i}"><span class="type">${r.type}</span><span class="t">${esc(r.t)}</span><span class="s">${esc(r.s)}</span></div>`).join('') : '<div class="empty">No matches.</div>'; }
+    query(q) {
+      if (!this.index) this.build();
+      q = q.trim().toLowerCase(); const words = q.split(/\s+/).filter(Boolean); const pool = this.index.filter(r => this.course === 'all' || !r.c || r.c === this.course);
+      this.results = !q ? pool.filter(r => r.type === 'page').slice(0, 14) : pool.map(r => ({ r, score: words.reduce((sc, w) => sc + (r.t.toLowerCase().includes(w) ? 3 : r.key.includes(w) ? 1 : -100), 0) + (D && r.c === D.id ? 0.5 : 0) })).filter(x => x.score > 0).sort((a, b) => b.score - a.score).slice(0, 30).map(x => x.r);
+      this.sel = 0; this.paint();
+    },
+    paint() { const box = $('#search-results'); if (!box) return; box.innerHTML = this.results.length ? this.results.map((r, i) => `<div class="search-item${i === this.sel ? ' active' : ''}" data-i="${i}"><span class="type">${r.type}</span><span class="t">${esc(r.t)}</span><span class="s">${r.c && Courses[r.c] ? `<span class="chip course-${r.c}">${esc(Courses[r.c].short)}</span> ` : ''}${esc(r.s)}</span></div>`).join('') : '<div class="empty small">No matches. Try another word or another class.</div>'; const a = $('.search-item.active', box); if (a) a.scrollIntoView({ block: 'nearest' }); }
   };
 
   /* ======================================================
@@ -446,9 +486,10 @@
       const greeting = d.getHours() < 12 ? 'this morning' : d.getHours() < 18 ? 'this afternoon' : 'tonight';
       const sub = ss.phase === 'before' ? `Classes start ${esc(fmtDate(first.SEMESTER.start, true))}. Get a head start on the first topics.` : ss.phase === 'after' ? 'The semester is over. Everything stays here for review.' : `Which class are you working on ${greeting}?`;
       root.innerHTML = `<div class="landing-wrap">
-        <header class="landing-top hero"><div><div class="eyebrow">${esc(fmtDate(t, true))} · ${esc(first.term)}${ss.phase === 'during' ? ` · Week ${ss.week}` : ''}</div><h1 class="landing-title"><span class="logo-mark">${App.logoSvg(44)}</span>${SITE}</h1><p class="hero-sub">${sub}</p><p class="muted small hero-note">Notes, endless practice, simulators, a Python playground, planners and a class board for Montana State math, physics, writing and computing. Free for students.</p><div id="landing-presence" class="mt-1"></div><div class="league-slot mt-2" data-compact="1"></div></div><div class="row gap-sm hero-actions"><span id="landing-account"></span><button class="icon-btn theme-btn" data-action="theme" aria-label="Toggle theme"></button></div><div class="mascot-slot hero-mascot" data-size="112"></div></header>
+        <header class="landing-top hero"><div><div class="eyebrow">${esc(fmtDate(t, true))} · ${esc(first.term)}${ss.phase === 'during' ? ` · Week ${ss.week}` : ''}</div><h1 class="landing-title"><span class="logo-mark">${App.logoSvg(44)}</span>${SITE}</h1><p class="hero-sub">${sub}</p><p class="muted small hero-note">Notes, endless practice, simulators, a Python playground, planners and a class board for Montana State math, physics, writing and computing. Free for students.</p><div id="landing-presence" class="mt-1"></div><div class="league-slot mt-2" data-compact="1"></div></div><div class="row gap-sm hero-actions"><a class="btn primary sm hero-today" href="#/today">${icon('flag', 14)} Today</a><button class="icon-btn" data-action="search" aria-label="Search" title="Search (Ctrl K)">${icon('search', 15)}</button><span id="landing-account"></span><button class="icon-btn theme-btn" data-action="theme" aria-label="Toggle theme"></button></div><div class="mascot-slot hero-mascot" data-size="112"></div></header>
         <div id="announcement-slot"></div>
         <div class="ticker" id="landing-ticker" hidden></div>
+        ${App.todaySummary ? App.todaySummary() : ''}
         ${App.resumeCard ? App.resumeCard(mineIds) : ''}
         <div class="course-grid">${cards}</div>
         <p class="small muted mt-1" style="text-align:right">${mineIds.length < COURSE_ORDER.filter(id => Courses[id]).length ? `Showing your ${mineIds.length} class${mineIds.length === 1 ? '' : 'es'} · <a href="#" data-action="show-all">${showAll ? 'show only mine' : 'show all classes'}</a> · ` : ''}<a href="#" data-action="choose">choose your classes and sections</a> · <a href="#/gpa">GPA calculator</a></p>
@@ -464,7 +505,7 @@
         <div class="pane" data-pane="inside"><div class="landing-features grid cols-4">${[['list', 'Endless quizzers', 'Procedurally generated problems with worked explanations, per topic and per exam.'], ['book', 'Notes on every topic', 'Big ideas, formulas, a worked example, pitfalls and an exam tip, linked to the free textbook.'], ['flask', 'Interactive tools', 'Graphers, simulators, solvers, a unit circle, grade calculators and a scratchpad.'], ['chat', 'Community', 'Discussions, daily challenges, study sessions, mock exams and badges with your classmates.']].map(([ic, h, p]) => `<div class="card-link"><div class="eyebrow">${icon(ic, 14)}</div><h4>${h}</h4><p>${p}</p></div>`).join('')}</div></div>
         </div>
         <p class="small muted mt-2" style="text-align:center">${App.guest() ? 'Preview freely. Sign up with a montana.edu email to unlock every tool and keep your progress on all your devices.' : 'Progress, flashcards and grades are saved for each class and synced to your account.'}</p></div>`;
-      bind(root, { theme: toggleTheme, 'open-course': (el, e) => { if (e.target.closest('a')) return; location.hash = '#/' + el.dataset.c + '/dashboard'; }, 'show-all': (el, e) => { e.preventDefault(); Landing.showAll = !Landing.showAll; render(); }, choose: (el, e) => { e.preventDefault(); if (App.auth && App.auth.user) App.auth.onboard(true); else if (App.auth) App.auth.open('signup'); } }); applyTheme();
+      bind(root, { theme: toggleTheme, search: () => Search.open(), 'open-course': (el, e) => { if (e.target.closest('a')) return; location.hash = '#/' + el.dataset.c + '/dashboard'; }, 'show-all': (el, e) => { e.preventDefault(); Landing.showAll = !Landing.showAll; render(); }, choose: (el, e) => { e.preventDefault(); if (App.auth && App.auth.user) App.auth.onboard(true); else if (App.auth) App.auth.open('signup'); } }); applyTheme();
       const slot = $('#landing-account', root); if (slot && App.auth) App.auth.paintLandingAccount(slot);
       const lf = $('#landing-forum', root); if (lf) { if (App.forumLatest) { const go = () => App.forumLatest(lf); if (App.auth && App.auth.ready) go(); else if (App.auth) App.auth.onChange(function once() { go(); }); } else lf.innerHTML = ''; }
       Canvas.fill($('#landing-canvas', root), null, 8); paintAnnouncement(root);
@@ -631,21 +672,21 @@
       if (lockedSec) {
         root.innerHTML = `<div class="notes-layout"><div class="panel sec-nav">${navHtml}</div><div class="stack"><div class="panel">
           <div class="note-head"><span class="note-num">${esc(sec.label)}</span><span class="chip">Unit ${sec.unit}</span>${ex ? `<span class="chip exam">${esc(ex.name)}</span>` : ''}</div>
-          <h2 class="note-title">${esc(sec.title)}</h2>
-          <div class="note-block"><h4>Big ideas</h4><ul class="list">${sec.ideas.slice(0, 2).map(i => `<li>${i}</li>`).join('')}<li class="muted">… and ${Math.max(0, sec.ideas.length - 2)} more, plus formulas, a worked example, common mistakes and an exam tip.</li></ul></div>
+          <h1 class="note-title">${esc(sec.title)}</h1>
+          <div class="note-block"><h2>Big ideas</h2><ul class="list">${sec.ideas.slice(0, 2).map(i => `<li>${i}</li>`).join('')}<li class="muted">… and ${Math.max(0, sec.ideas.length - 2)} more, plus formulas, a worked example, common mistakes and an exam tip.</li></ul></div>
           ${App.lockCard(`Notes beyond the first ${freeN} topics are for members`, `Sign up free to read every ${D.short} topic (${D.SECTIONS.length} in total) with worked examples and exam tips.`)}
           <div class="row between mt-3"><div>${prev ? `<button class="btn" data-action="open" data-id="${prev.id}">${icon('left', 14)} ${esc(prev.label)}</button>` : ''}</div><div>${next ? `<button class="btn" data-action="open" data-id="${next.id}">${esc(next.label)} ${icon('right', 14)}</button>` : ''}</div></div>
           </div></div></div>`;
         bind(root, { open: el => App.go('notes', el.dataset.id) }); return;
       }
       root.innerHTML = `<div class="notes-layout"><div class="panel sec-nav">${navHtml}</div><div class="stack"><div class="panel">
-        <div class="note-head"><span class="note-num">${esc(sec.label)}</span><span class="chip">Unit ${sec.unit}</span>${ex ? `<span class="chip exam">${esc(ex.name)}</span>` : ''}<a class="small" style="margin-left:auto" href="${sec.link}" target="_blank" rel="noopener">${esc(sec.linkLabel || (D.kind === 'code' ? 'Class site' : 'Read in the textbook'))} ${icon('external', 12)}</a></div>
-        <h2 class="note-title">${esc(sec.title)}</h2>
-        <div class="note-block"><h4>Big ideas</h4><ul class="list">${sec.ideas.map(i => `<li>${i}</li>`).join('')}</ul></div>
-        ${sec.formulas && sec.formulas.length ? `<div class="note-block"><h4>Key formulas</h4>${sec.formulas.map(f => `<div class="formula-row"><div class="name">${esc(f.n)}</div><div class="tex">$$${f.t}$$</div></div>`).join('')}</div>` : ''}
-        ${sec.code && sec.code.length ? `<div class="note-block"><h4>Code you should know</h4>${sec.code.map((c, i) => `<div class="code-card"><div class="code-card-h"><span>${esc(c.t)}</span><a class="btn xs primary" href="${L('playground', null, { ex: `sec:${sec.id}:${i}`, run: 1 })}">${icon('play', 11)} Try it</a></div><pre class="code-ex">${esc(c.c)}</pre>${c.out ? `<div class="code-out"><span class="eyebrow">Output</span><pre>${esc(c.out)}</pre></div>` : ''}</div>`).join('')}</div>` : ''}
-        <div class="note-block"><h4>Worked example</h4><div class="callout"><div>${sec.example.p}</div><button class="btn sm mt-2" data-action="reveal">${icon('eye', 14)} Show solution</button><div class="reveal mt-2" id="sol">${sec.example.s}</div></div></div>
-        <div class="note-block"><h4>Common mistakes</h4><ul class="list">${sec.pitfalls.map(i => `<li>${i}</li>`).join('')}</ul></div>
+        <div class="note-head"><span class="note-num">${esc(sec.label)}</span><span class="chip">Unit ${sec.unit}</span>${ex ? `<span class="chip exam">${esc(ex.name)}</span>` : ''}<a class="small" style="margin-left:auto" href="${sec.link}" target="_blank" rel="noopener">${esc(sec.linkLabel || (D.kind === 'code' ? 'Class site' : 'Read in the textbook'))} ${icon('external', 12)}</a>${App.flagButton ? App.flagButton({ course: D.id, view: 'Notes', ref: `${sec.label} ${sec.title}` }) : ''}</div>
+        <h1 class="note-title">${esc(sec.title)}</h1>
+        <div class="note-block"><h2>Big ideas</h2><ul class="list">${sec.ideas.map(i => `<li>${i}</li>`).join('')}</ul></div>
+        ${sec.formulas && sec.formulas.length ? `<div class="note-block"><h2>Key formulas</h2>${sec.formulas.map(f => `<div class="formula-row"><div class="name">${esc(f.n)}</div><div class="tex">$$${f.t}$$</div></div>`).join('')}</div>` : ''}
+        ${sec.code && sec.code.length ? `<div class="note-block"><h2>Code you should know</h2>${sec.code.map((c, i) => `<div class="code-card"><div class="code-card-h"><span>${esc(c.t)}</span><a class="btn xs primary" href="${L('playground', null, { ex: `sec:${sec.id}:${i}`, run: 1 })}">${icon('play', 11)} Try it</a></div><pre class="code-ex">${esc(c.c)}</pre>${c.out ? `<div class="code-out"><span class="eyebrow">Output</span><pre>${esc(c.out)}</pre></div>` : ''}</div>`).join('')}</div>` : ''}
+        <div class="note-block"><h2>Worked example</h2><div class="callout"><div>${sec.example.p}</div><button class="btn sm mt-2" data-action="reveal">${icon('eye', 14)} Show solution</button><div class="reveal mt-2" id="sol">${sec.example.s}</div></div></div>
+        <div class="note-block"><h2>Common mistakes</h2><ul class="list">${sec.pitfalls.map(i => `<li>${i}</li>`).join('')}</ul></div>
         <div class="note-block"><div class="callout tip"><div class="eyebrow">Exam tip</div>${sec.tip}</div></div>
         <div class="row between mt-3"><div>${prev ? `<button class="btn" data-action="open" data-id="${prev.id}">${icon('left', 14)} ${esc(prev.label)}</button>` : ''}</div><div class="row">${topics.length ? `<a class="btn primary" href="${L('practice', null, { topics: topics.join(',') })}">${icon('list', 14)} Practice ${esc(sec.label)}</a>` : ''}<a class="btn" href="${L('flashcards', null, { sec: sec.id })}">${icon('cards', 14)} Cards</a></div><div>${next ? `<button class="btn" data-action="open" data-id="${next.id}">${esc(next.label)} ${icon('right', 14)}</button>` : ''}</div></div>
       </div></div></div>`;
@@ -685,12 +726,12 @@
         const stage = $('#fc-stage', root); if (!c) { stage.innerHTML = '<div class="empty">No cards match this filter.</div>'; $('#fc-controls', root).innerHTML = ''; return; }
         const box = b[c.id] || 0;
         stage.innerHTML = `<div class="fc-card${st.flipped ? ' flipped' : ''}" id="fc-card" tabindex="0" role="button" aria-label="Flip card"><div class="fc-face fc-front"><span class="eyebrow">Card ${st.i + 1} / ${st.deck.length} · box ${box}${c.community ? ` · <span style="color:var(--accent)">community · ${esc(c.author)}</span>` : ''}</span><span class="sec chip">${esc(c.sec ? secLabel(c.sec) : 'Unit ' + c.unit)}</span><div>${c.f}</div><div class="fc-hint">Click or press space to flip</div></div><div class="fc-face fc-back"><span class="eyebrow">Answer</span><span class="sec chip">${esc(c.sec ? secLabel(c.sec) : 'Unit ' + c.unit)}</span><div>${c.b}</div></div></div>`;
-        $('#fc-controls', root).innerHTML = `<button class="btn" data-action="prev" ${st.i === 0 ? 'disabled' : ''}>${icon('left', 14)} Prev</button><button class="btn danger" data-action="again">Again <span class="kbd">1</span></button><button class="btn primary" data-action="good">Got it <span class="kbd">2</span></button><button class="btn" data-action="next" ${st.i >= st.deck.length - 1 ? 'disabled' : ''}>Next ${icon('right', 14)}</button>`;
+        $('#fc-controls', root).innerHTML = `${App.flagButton ? App.flagButton({ course: D.id, view: 'Flashcards', ref: c.id, prompt: c.f }) : ''}<button class="btn" data-action="prev" ${st.i === 0 ? 'disabled' : ''}>${icon('left', 14)} Prev</button><button class="btn danger" data-action="again">Again <span class="kbd">1</span></button><button class="btn primary" data-action="good">Got it <span class="kbd">2</span></button><button class="btn" data-action="next" ${st.i >= st.deck.length - 1 ? 'disabled' : ''}>Next ${icon('right', 14)}</button>`;
         typeset(stage);
       };
       root.innerHTML = pageHead('Flashcards', 'Definitions, laws and formulas. "Got it" moves a card up a box; three boxes means mastered. "Again" sends it back to the start.') + `<div class="panel"><div class="row between mb-2"><div class="chips">${[0, 1, 2, 3, 4].map(u => `<span class="chip toggle${st.unit === u ? ' on' : ''}" data-action="unit" data-u="${u}">${u ? 'Unit ' + u : 'All units'}</span>`).join('')}${st.sec ? `<span class="chip accent">${esc(secLabel(st.sec))} <span data-action="clearsec" style="cursor:pointer">✕</span></span>` : ''}</div><div class="row"><span id="fc-stats" class="row gap-sm"></span><button class="btn sm" data-action="mode">${st.mode === 'due' ? 'Order: weakest first' : 'Order: shuffled'}</button><button class="btn sm" data-action="reshuffle">${icon('rotate', 13)} Reshuffle</button><button class="btn sm${useCommunity ? ' active' : ''}" data-action="community" title="Include flashcards written by classmates">${icon('pen', 13)} Community cards</button><button class="btn sm ghost" data-action="reset">Reset progress</button></div></div><div class="fc-stage" id="fc-stage"></div><div class="fc-controls" id="fc-controls"></div><div id="fc-lock" class="mt-2"></div></div>`;
       paint();
-      const grade = up => { const c = st.deck[st.i]; if (!c) return; const b = boxes(); b[c.id] = up ? Math.min(3, (b[c.id] || 0) + 1) : 0; store.set('flashcards', b); markActivity(); if (st.i < st.deck.length - 1) st.i++; st.flipped = false; paint(); };
+      const grade = up => { const c = st.deck[st.i]; if (!c) return; const b = boxes(); b[c.id] = up ? Math.min(3, (b[c.id] || 0) + 1) : 0; store.set('flashcards', b); const at = store.get('fcAt', {}); at[c.id] = Date.now(); store.set('fcAt', at); markActivity(); if (st.i < st.deck.length - 1) st.i++; st.flipped = false; paint(); };
       const flip = () => { st.flipped = !st.flipped; const el = $('#fc-card', root); if (el) el.classList.toggle('flipped', st.flipped); };
       if (useCommunity && App.social && !st.community) { App.social.communityCards(D.id).then(cards => { st.community = cards; buildDeck(); paint(); if (!cards.length) toast('No community cards for this class yet. Add one under Contribute.'); }); }
       bind(root, { community: () => { setCourseSetting(D.id, 'communityCards', !useCommunity); st.community = null; this.render(root, null, {}); }, unit: el => { st.unit = +el.dataset.u; st.sec = null; App.go('flashcards', null, { unit: st.unit }); }, clearsec: () => { st.sec = null; App.go('flashcards'); }, mode: () => { st.mode = st.mode === 'due' ? 'shuffle' : 'due'; this.render(root, null, {}); }, reshuffle: () => { buildDeck(); paint(); }, reset: () => { if (confirm('Reset flashcard progress for this class?')) { store.set('flashcards', {}); paint(); toast('Flashcard progress reset'); } }, prev: () => { if (st.i > 0) { st.i--; st.flipped = false; paint(); } }, next: () => { if (st.i < st.deck.length - 1) { st.i++; st.flipped = false; paint(); } }, again: () => { grade(false); if (App.addXP) App.addXP(1); if (App.quest) App.quest('cards'); }, good: () => { grade(true); if (App.addXP) App.addXP(2); if (App.quest) App.quest('cards'); } });
@@ -805,8 +846,8 @@
         : pageHead('Settings', 'Preferences apply to every class. Progress is stored per class and, when you are logged in, synced to your account.');
       const classesPanel = `<div class="panel span-2"><div class="panel-h"><div class="panel-title">${icon('grid')} Your classes</div><button class="btn sm" data-action="choose">Choose classes and sections</button></div><div class="row gap-sm" style="flex-wrap:wrap">${mine.map(id => `<span class="chip course-${id}">${esc(Courses[id].short)}${courseSetting(id, 'section', '') ? ' · sec ' + esc(courseSetting(id, 'section', '')) : ''}${courseSetting(id, 'examTime', '') ? ' · ' + esc(courseSetting(id, 'examTime', '')) : ''}</span>`).join('')}</div><p class="small muted mt-1">Only these classes show on the landing page, in the course switcher, in reminders and in the weekly digest.</p></div>`;
       const prefsPanel = `<div class="panel"><div class="panel-h"><div class="panel-title">${icon('sliders')} Preferences</div></div>
-          <div class="field mb-2"><label>Theme</label><select class="select" id="s-theme"><option value="system"${s.theme === 'system' ? ' selected' : ''}>Match system</option><option value="light"${s.theme === 'light' ? ' selected' : ''}>Light</option><option value="dark"${s.theme === 'dark' ? ' selected' : ''}>Dark</option></select></div>
-          <div class="field mb-2"><label>Daily XP goal</label><select class="select" id="s-goal">${(App.GOALS || [[30, 'Regular']]).map(([n, name]) => `<option value="${n}"${(App.dailyGoal ? App.dailyGoal() : 30) === n ? ' selected' : ''}>${n} XP · ${name}</option>`).join('')}</select><span class="help">A correct answer is 10 XP. The ring in the header fills up as you go; hit the goal every day to keep your streak strong.</span></div>
+          <div class="field mb-2"><label for="s-theme">Theme</label><select class="select" id="s-theme"><option value="system"${s.theme === 'system' ? ' selected' : ''}>Match system</option><option value="light"${s.theme === 'light' ? ' selected' : ''}>Light</option><option value="dark"${s.theme === 'dark' ? ' selected' : ''}>Dark</option></select></div>
+          <div class="field mb-2"><label for="s-goal">Daily XP goal</label><select class="select" id="s-goal">${(App.GOALS || [[30, 'Regular']]).map(([n, name]) => `<option value="${n}"${(App.dailyGoal ? App.dailyGoal() : 30) === n ? ' selected' : ''}>${n} XP · ${name}</option>`).join('')}</select><span class="help">A correct answer is 10 XP. The ring in the header fills up as you go; hit the goal every day to keep your streak strong.</span></div>
           <label class="check" style="padding:0"><input type="checkbox" id="s-sound" ${s.sound === false ? '' : 'checked'}><span>Sound effects <span class="muted small">(short cues for right, wrong and finished lessons)</span></span></label>
           <label class="check mb-2" style="padding:0"><input type="checkbox" id="s-livebg" ${s.liveBg === false ? '' : 'checked'}><span>Animated background <span class="muted small">(drifting symbols; off automatically when your system prefers reduced motion)</span></span></label>
           ${hasLab ? `<div class="field"><label>Your ${esc(C.short)} lab day</label><select class="select" id="s-lab"><option value="tue"${courseSetting(C.id, 'labDay', 'tue') !== 'thu' ? ' selected' : ''}>Tuesday</option><option value="thu"${courseSetting(C.id, 'labDay', 'tue') === 'thu' ? ' selected' : ''}>Thursday</option></select><span class="help">Sets when lab sheets show as due on the dashboard (8:00 pm the day after lab).</span></div>` : ''}

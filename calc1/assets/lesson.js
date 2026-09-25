@@ -48,7 +48,7 @@
         : `<div class="lesson-foot"><span class="small muted">${q.type === 'mc' ? 'Pick an answer, then check. Keys 1–4 and Enter work too.' : 'Type your answer and press Enter.'}</span><button class="btn primary lg" data-action="check" ${q.type === 'mc' && L.sel === null ? 'disabled' : ''}>Check</button></div>`;
       root.innerHTML = `<div class="lesson">
         <div class="lesson-top"><a class="icon-btn" href="${App.link('path')}" title="Quit lesson" aria-label="Quit lesson">${icon('x', 16)}</a><div class="lesson-bar"><div class="lesson-fill" style="width:${Math.round(100 * (L.i + (a ? 1 : 0)) / L.qs.length)}%"></div></div>${L.combo >= 2 ? `<span class="combo-chip">${icon('fire', 13)} ${L.combo}</span>` : ''}<button class="icon-btn" data-action="mute" title="${L.muted ? 'Sound off' : 'Sound on'}">${icon(L.muted ? 'off' : 'bell', 15)}</button></div>
-        <div class="lesson-q"><div class="eyebrow">${esc(L.label)} · ${L.i + 1} of ${L.qs.length} · ${esc(App.secLabel(T.sec))} ${esc(T.label)}</div><div class="q-prompt lesson-prompt">${q.prompt}</div>${ladder}${body}</div>
+        <div class="lesson-q"><div class="eyebrow">${esc(L.label)} · ${L.i + 1} of ${L.qs.length} · ${esc(App.secLabel(T.sec))} ${esc(T.label)}${App.flagButton ? App.flagButton({ course: App.D.id, view: 'Lesson', ref: T.label, prompt: q.prompt, answer: a ? String(a.given !== undefined ? a.given : a.text !== undefined ? a.text : a.sel !== undefined ? 'option ' + (a.sel + 1) : '') : '' }) : ''}</div><div class="q-prompt lesson-prompt">${q.prompt}</div>${ladder}${body}</div>
         ${foot}</div>`;
       bind(root, {
         pick: b => { if (L.answers[L.i]) return; L.sel = +b.dataset.i; $$('.q-opt', root).forEach(x => x.classList.toggle('selected', +x.dataset.i === L.sel)); const c = $('[data-action="check"]', root); if (c) c.disabled = false; if (App.sfx) App.sfx.play('tap'); },
@@ -71,7 +71,7 @@
     next(root) {
       if (!L.answers[L.i]) return; L.sel = null;
       if (L.i + 1 < L.qs.length) { L.i++; this.paint(root); window.scrollTo({ top: 0, behavior: 'smooth' }); return; }
-      L.done = true; if (App.quest) App.quest('lesson'); App.setSetting('lessonsDone', (App.settings().lessonsDone || 0) + 1); this.paintEnd(root);
+      L.done = true; if (App.quest) App.quest('lesson'); App.setSetting('lessonsDone', (App.settings().lessonsDone || 0) + 1); App.setSetting('lastLessonDay', App.todayISO()); this.paintEnd(root);
     },
     paintEnd(root) {
       const n = L.qs.length, ok = L.answers.filter(a => a && a.ok).length; const pct = Math.round(100 * ok / n); const secs = Math.round((Date.now() - L.start) / 1000); const xp = Math.max(0, (App.xpToday ? App.xpToday() : 0) - L.xp0);

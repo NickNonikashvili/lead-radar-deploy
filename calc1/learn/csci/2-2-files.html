@@ -12,20 +12,20 @@
 <meta property="og:title" content="2.2 Files · CSCI 127 Joy and Beauty of Data · MatHub">
 <meta property="og:description" content="CSCI 127 Files: with open(&quot;data.txt&quot;) as f: opens a file and closes it automatically at the end of the block. Modes: &quot;r&quot; read (default), &quot;w&quot; write…">
 <meta property="og:url" content="https://mathub.space/learn/csci/2-2-files.html">
-<meta property="og:image" content="https://mathub.space/assets/og.png">
+<meta property="og:image" content="https://mathub.space/assets/og-csci.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="2.2 Files · CSCI 127 Joy and Beauty of Data · MatHub">
 <meta name="twitter:description" content="CSCI 127 Files: with open(&quot;data.txt&quot;) as f: opens a file and closes it automatically at the end of the block. Modes: &quot;r&quot; read (default), &quot;w&quot; write…">
-<meta name="twitter:image" content="https://mathub.space/assets/og.png">
+<meta name="twitter:image" content="https://mathub.space/assets/og-csci.png">
 <meta name="theme-color" content="#2B55B8">
 <link rel="icon" type="image/svg+xml" href="/assets/icon.svg">
 <link rel="apple-touch-icon" sizes="180x180" href="/assets/icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,500&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/assets/seo.css?v=2026.09.25.1">
+<link rel="stylesheet" href="/assets/seo.css?v=2026.09.25.2">
 
 <script type="application/ld+json">[{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"MatHub","item":"https://mathub.space/"},{"@type":"ListItem","position":2,"name":"Study guides","item":"https://mathub.space/learn/"},{"@type":"ListItem","position":3,"name":"CSCI 127","item":"https://mathub.space/learn/csci/"},{"@type":"ListItem","position":4,"name":"2.2 Files","item":"https://mathub.space/learn/csci/2-2-files.html"}]},{"@context":"https://schema.org","@type":"LearningResource","name":"2.2 Files","description":"CSCI 127 Files: with open(\"data.txt\") as f: opens a file and closes it automatically at the end of the block. Modes: \"r\" read (default), \"w\" write…","url":"https://mathub.space/learn/csci/2-2-files.html","inLanguage":"en","learningResourceType":"Study guide","educationalLevel":"Undergraduate","dateModified":"2026-09-25","about":{"@type":"Thing","name":"CSCI 127 Joy and Beauty of Data, Montana State University"},"isPartOf":{"@type":"CollectionPage","name":"CSCI 127 Joy and Beauty of Data study guide","url":"https://mathub.space/learn/csci/"},"publisher":{"@type":"Organization","name":"MatHub","url":"https://mathub.space/"}}]</script>
 </head>
@@ -79,8 +79,8 @@ print(total)</pre></div><details><summary>Show the solution</summary><div class=
 <section><h2>Common mistakes</h2><ul class="s-list"><li>Opening with <code>"w"</code> when you meant to add: the old contents are gone.</li><li>Forgetting <code>strip()</code>, so the last field keeps a newline and <code>"85\n" == "85"</code> is False.</li><li>Writing a number with <code>f.write(42)</code> (TypeError); write a string.</li><li>Reading the file twice without reopening it: the second loop sees nothing.</li></ul></section>
 <section><div class="s-tip"><span class="s-eyebrow">Exam tip</span>Know the three modes cold and the shape of the read-loop: open, loop over lines, strip, split, convert, accumulate.</div></section>
 <section class="s-cta"><h2>Keep going in MatHub</h2><p>MatHub is free for Montana State students: an endless quizzer with worked explanations, one-question lessons, flashcards, exam prep checklists, the class calendar with every deadline, a grade calculator and a study board for CSCI 127.</p><div class="s-btns"><a class="s-btn primary" href="/#/csci/notes/files">Open these notes in MatHub</a><a class="s-btn" href="/#/csci/practice?topics=files">Practice questions on this topic</a><a class="s-btn" href="/#/csci/flashcards?sec=files">Flashcards</a><a class="s-btn" href="/#/csci/playground">Python playground</a></div></section>
-<nav class="s-prevnext"><a href="/learn/csci/2-1-lists.html">← 2.1 Lists</a><a href="/learn/csci/2-3-dictionaries.html">2.3 Dictionaries →</a></nav>
+<nav class="s-prevnext" aria-label="Previous and next topic"><a href="/learn/csci/2-1-lists.html">← 2.1 Lists</a><a href="/learn/csci/2-3-dictionaries.html">2.3 Dictionaries →</a></nav>
 </main>
-<footer class="s-foot"><div><b>MatHub</b> is a free, independent study site made by a Montana State student. It is not affiliated with Montana State University; syllabus details come from each class and can change, so confirm dates on Canvas.</div><div class="s-foot-links"><a href="/learn/calc/">M171</a><a href="/learn/physics/">PHSX 220</a><a href="/learn/precalc/">M151Q</a><a href="/learn/writ/">WRIT 101</a><a href="/learn/csci/">CSCI 127</a><a href="/#/contact">Contact</a><a href="/#/policy">Terms &amp; Privacy</a></div></footer>
+<footer class="s-foot"><div><b>MatHub</b> is a free, independent study site made by a Montana State student. It is not affiliated with Montana State University; syllabus details come from each class and can change, so confirm dates on Canvas.</div><div class="s-foot-links"><a href="/learn/calc/">M171</a><a href="/learn/physics/">PHSX 220</a><a href="/learn/precalc/">M151Q</a><a href="/learn/writ/">WRIT 101</a><a href="/learn/csci/">CSCI 127</a><a href="/learn/whats-new.html">What's new</a><a href="/#/contact">Contact</a><a href="/#/policy">Terms &amp; Privacy</a></div></footer>
 </body>
 </html>

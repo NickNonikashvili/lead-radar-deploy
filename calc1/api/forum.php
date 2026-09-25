@@ -242,7 +242,7 @@ function mh_forum_route(string $route, array $in, array $cfg, string $ip): void 
     case 'notif_list':
       mh_method('GET'); $u = mh_require_user();
       $st = $db->prepare('SELECT * FROM notifications WHERE user_id = ? ORDER BY created DESC LIMIT 60'); $st->execute([$u['id']]);
-      $rows = array_map(fn($n) => ['id' => (int)$n['id'], 'kind' => $n['kind'], 'post_id' => (int)$n['post_id'], 'comment_id' => $n['comment_id'] ? (int)$n['comment_id'] : null, 'actor' => $n['actor'], 'title' => $n['title'], 'snippet' => $n['snippet'], 'created' => (int)$n['created'], 'read' => (int)$n['read'] === 1], $st->fetchAll());
+      $rows = array_map(fn($n) => ['id' => (int)$n['id'], 'kind' => $n['kind'], 'post_id' => (int)$n['post_id'], 'comment_id' => $n['comment_id'] ? (int)$n['comment_id'] : null, 'actor' => $n['actor'], 'title' => $n['title'], 'snippet' => $n['snippet'], 'link' => (string)($n['link'] ?? ''), 'created' => (int)$n['created'], 'read' => (int)$n['read'] === 1], $st->fetchAll());
       $st = $db->prepare('SELECT COUNT(*) FROM notifications WHERE user_id = ? AND read = 0'); $st->execute([$u['id']]);
       mh_json(['ok' => true, 'notifications' => $rows, 'unread' => (int)$st->fetchColumn()]);
 
@@ -269,7 +269,7 @@ function mh_forum_route(string $route, array $in, array $cfg, string $ip): void 
     case 'admin_stats':
       mh_method('GET'); $u = mh_require_user(); if (!mh_is_admin($u)) mh_fail('Administrators only.', 403);
       $n = fn($sql) => (int)$db->query($sql)->fetchColumn();
-      mh_json(['ok' => true, 'users' => $n('SELECT COUNT(*) FROM users WHERE verified = 1'), 'pending' => $n('SELECT COUNT(*) FROM users WHERE verified = 0'), 'active_7d' => $n('SELECT COUNT(*) FROM users WHERE last_login > ' . ($now - 7 * 86400)),
+      mh_json(['ok' => true, 'issues_open' => $n('SELECT COUNT(*) FROM issues WHERE status = "open"'), 'users' => $n('SELECT COUNT(*) FROM users WHERE verified = 1'), 'pending' => $n('SELECT COUNT(*) FROM users WHERE verified = 0'), 'active_7d' => $n('SELECT COUNT(*) FROM users WHERE last_login > ' . ($now - 7 * 86400)),
         'posts' => $n('SELECT COUNT(*) FROM posts WHERE removed = 0'), 'comments' => $n('SELECT COUNT(*) FROM comments WHERE removed = 0'), 'removed' => $n('SELECT COUNT(*) FROM posts WHERE removed > 0') + $n('SELECT COUNT(*) FROM comments WHERE removed > 0'),
         'reports' => $n('SELECT COUNT(*) FROM reports WHERE status = "open"'), 'bans' => $n('SELECT COUNT(*) FROM bans WHERE until > ' . $now), 'moderators' => array_values(array_unique(array_merge($cfg['admins'] ?? [], $cfg['moderators'] ?? []))), 'admins' => $cfg['admins'] ?? [],
         'meets' => $n('SELECT COUNT(*) FROM meets WHERE cancelled = 0 AND end > ' . $now), 'mocks' => $n('SELECT COUNT(*) FROM mocks WHERE cancelled = 0 AND start > ' . $now), 'contrib_pending' => $n('SELECT COUNT(*) FROM contributions WHERE status = "pending"'), 'challenges_today' => $n('SELECT COUNT(*) FROM challenge_attempts WHERE date = "' . mh_local_date() . '"'), 'online' => $n('SELECT COUNT(*) FROM presence WHERE seen > ' . ($now - 150)),

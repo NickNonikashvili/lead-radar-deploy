@@ -37,7 +37,7 @@
   /* ---------- celebration overlay ---------- */
   function celebrate(o = {}) {
     $$('.celebrate').forEach(e => e.remove());
-    const el = document.createElement('div'); el.className = 'celebrate';
+    const el = document.createElement('div'); el.className = 'celebrate'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-modal', 'true'); el.setAttribute('aria-label', o.title || 'Celebration');
     el.innerHTML = `<div class="celebrate-card"><div class="celebrate-ic">${o.icon || icon('award', 40)}</div><h2>${o.title || 'Nice!'}</h2>${o.sub ? `<p>${o.sub}</p>` : ''}${o.mascot !== false && App.bobcatSvg ? `<div class="celebrate-bo">${App.bobcatSvg(92)}</div>` : ''}<button class="btn primary lg" data-action="close">${o.cta || 'Keep going'}</button></div>`;
     document.body.appendChild(el); if (App.confetti) App.confetti({ count: o.confetti || 170 }); SFX.play(o.sound || 'complete');
     const close = () => { el.remove(); document.removeEventListener('keydown', onKey); }; const onKey = e => { if (e.key === 'Escape' || e.key === 'Enter') close(); };
