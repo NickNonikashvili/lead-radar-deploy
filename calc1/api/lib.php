@@ -244,7 +244,7 @@ function mh_send_code(string $email, string $kind, string $code): void {
   $what = $kind === 'reset' ? 'password reset' : 'sign-up';
   $subject = "$site $what code: $code";
   $text = "Your $site $what code is $code\n\nIt expires in $ttl minutes. If you did not request this, you can ignore this email.\n\n— $site";
-  $html = "<div style=\"font-family:Segoe UI,Helvetica,Arial,sans-serif;max-width:480px;margin:0 auto;padding:24px;color:#131C2E\">"
+  $html = "<div style=\"font-family:Helvetica Neue,Helvetica,Arial,sans-serif;max-width:480px;margin:0 auto;padding:24px;color:#131C2E\">"
         . "<p style=\"font-size:15px;margin:0 0 12px\">Your <b>$site</b> $what code is</p>"
         . "<p style=\"font-size:34px;letter-spacing:8px;font-weight:700;margin:0 0 16px;font-family:Consolas,Menlo,monospace\">$code</p>"
         . "<p style=\"font-size:14px;color:#64718A;margin:0\">It expires in $ttl minutes. If you did not request this, you can ignore this email.</p></div>";

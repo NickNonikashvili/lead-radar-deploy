@@ -125,7 +125,7 @@
           const stY = niceStep(ymax - ymin); for (let y = Math.ceil(ymin / stY) * stY; y <= ymax; y += stY) { ctx.beginPath(); ctx.moveTo(pl, Y(y)); ctx.lineTo(W - pr, Y(y)); ctx.stroke(); ctx.fillText(fmtNum(y, 2), 4, Y(y) + 4); }
           const stT = niceStep(T); for (let t = 0; t <= T + 1e-9; t += stT) { ctx.beginPath(); ctx.moveTo(X(t), pt); ctx.lineTo(X(t), H - pb); ctx.stroke(); ctx.fillText(fmtNum(t, 2), X(t) - 6, H - 6); }
           ctx.strokeStyle = col.axis; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(pl, Y(0)); ctx.lineTo(W - pr, Y(0)); ctx.stroke();
-          ctx.fillStyle = col.ink; ctx.font = '12px "IBM Plex Sans", sans-serif'; ctx.fillText(labels[i], pl + 8, pt + 12);
+          ctx.fillStyle = col.ink; ctx.font = '12px "Helvetica Neue", "TeX Gyre Heros", Helvetica, Arial, sans-serif'; ctx.fillText(labels[i], pl + 8, pt + 12);
           ctx.strokeStyle = colors[i]; ctx.lineWidth = 2.2; ctx.beginPath(); let pen = false; ys.forEach((y, k) => { if (isNaN(y)) { pen = false; return; } const px = X(T * k / N), py = Y(y); if (!pen) { ctx.moveTo(px, py); pen = true; } else ctx.lineTo(px, py); }); ctx.stroke();
           if (MG.hover !== null) { const t = MG.hover; const y = fn(t); ctx.strokeStyle = col.axis; ctx.setLineDash([3, 3]); ctx.beginPath(); ctx.moveTo(X(t), pt); ctx.lineTo(X(t), H - pb); ctx.stroke(); ctx.setLineDash([]); if (isFinite(y)) { ctx.fillStyle = colors[i]; ctx.beginPath(); ctx.arc(X(t), Y(y), 4, 0, Math.PI * 2); ctx.fill(); } }
           c.__map = { X, T, pl, pr, W };
@@ -283,7 +283,7 @@
       for (let x = Math.ceil((cx - span / 2) / step) * step; x <= cx + span / 2; x += step) { ctx.beginPath(); ctx.moveTo(X(x), 0); ctx.lineTo(X(x), H); ctx.stroke(); }
       for (let y = Math.ceil((cy - span / 2) / step) * step; y <= cy + span / 2; y += step) { ctx.beginPath(); ctx.moveTo(0, Y(y)); ctx.lineTo(W, Y(y)); ctx.stroke(); }
       ctx.strokeStyle = col.axis; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(0, Y(0)); ctx.lineTo(W, Y(0)); ctx.moveTo(X(0), 0); ctx.lineTo(X(0), H); ctx.stroke();
-      const arrow = (x0, y0, x1, y1, color, label, width = 2.4) => { ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = width; ctx.beginPath(); ctx.moveTo(X(x0), Y(y0)); ctx.lineTo(X(x1), Y(y1)); ctx.stroke(); const a = Math.atan2(Y(y1) - Y(y0), X(x1) - X(x0)); ctx.beginPath(); ctx.moveTo(X(x1), Y(y1)); ctx.lineTo(X(x1) - 10 * Math.cos(a - 0.4), Y(y1) - 10 * Math.sin(a - 0.4)); ctx.lineTo(X(x1) - 10 * Math.cos(a + 0.4), Y(y1) - 10 * Math.sin(a + 0.4)); ctx.closePath(); ctx.fill(); ctx.font = 'bold 13px "IBM Plex Sans", sans-serif'; ctx.fillText(label, (X(x0) + X(x1)) / 2 + 6, (Y(y0) + Y(y1)) / 2 - 6); };
+      const arrow = (x0, y0, x1, y1, color, label, width = 2.4) => { ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = width; ctx.beginPath(); ctx.moveTo(X(x0), Y(y0)); ctx.lineTo(X(x1), Y(y1)); ctx.stroke(); const a = Math.atan2(Y(y1) - Y(y0), X(x1) - X(x0)); ctx.beginPath(); ctx.moveTo(X(x1), Y(y1)); ctx.lineTo(X(x1) - 10 * Math.cos(a - 0.4), Y(y1) - 10 * Math.sin(a - 0.4)); ctx.lineTo(X(x1) - 10 * Math.cos(a + 0.4), Y(y1) - 10 * Math.sin(a + 0.4)); ctx.closePath(); ctx.fill(); ctx.font = 'bold 13px "Helvetica Neue", "TeX Gyre Heros", Helvetica, Arial, sans-serif'; ctx.fillText(label, (X(x0) + X(x1)) / 2 + 6, (Y(y0) + Y(y1)) / 2 - 6); };
       px = 0; py = 0; vs.forEach((v, i) => { arrow(px, py, px + v.x, py + v.y, col.v[i], v.name); px += v.x; py += v.y; });
       if (vs.length > 1) arrow(0, 0, Rr.x, Rr.y, col.r, 'R', 3);
     },
@@ -294,7 +294,7 @@
       const th = rad(Math.max(0, Math.min(89, o.th))); const baseY = H - 30, x0 = 40, L = Math.min(W - 80, (H - 70) / Math.max(Math.tan(th), 0.25));
       const topX = x0 + L, topY = baseY - L * Math.tan(th);
       ctx.fillStyle = col.slope; ctx.strokeStyle = col.edge; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(x0, baseY); ctx.lineTo(topX, baseY); ctx.lineTo(topX, topY); ctx.closePath(); ctx.fill(); ctx.stroke();
-      ctx.fillStyle = col.muted; ctx.font = '12px "IBM Plex Sans", sans-serif'; ctx.fillText(`θ = ${o.th}°`, x0 + 46, baseY - 6);
+      ctx.fillStyle = col.muted; ctx.font = '12px "Helvetica Neue", "TeX Gyre Heros", Helvetica, Arial, sans-serif'; ctx.fillText(`θ = ${o.th}°`, x0 + 46, baseY - 6);
       // block center at 55% up the slope
       const bx = x0 + L * 0.55, by = baseY - L * 0.55 * Math.tan(th); const ux = Math.cos(th), uy = -Math.sin(th); // up-slope unit (screen)
       const nx = Math.sin(th), ny = -Math.cos(th) * 1; // normal (screen, pointing up-left away from slope): perpendicular to slope, outward
@@ -302,7 +302,7 @@
       ctx.save(); ctx.translate(bx, by); ctx.rotate(-th); ctx.fillStyle = col.ink; ctx.globalAlpha = 0.85; ctx.fillRect(-size / 2, -size, size, size); ctx.globalAlpha = 1; ctx.restore();
       const ccx = bx + Math.sin(th) * size / 2, ccy = by - Math.cos(th) * size / 2;
       const maxF = Math.max(o.N, o.wPar, Math.abs(o.F), Math.abs(o.fric), o.m * g0, 1); const scale = 80 / maxF;
-      const arrow = (dx, dy, mag, color, label) => { const len = Math.max(6, mag * scale); const x1 = ccx + dx * len, y1 = ccy + dy * len; ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = 2.4; ctx.beginPath(); ctx.moveTo(ccx, ccy); ctx.lineTo(x1, y1); ctx.stroke(); const a = Math.atan2(y1 - ccy, x1 - ccx); ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x1 - 9 * Math.cos(a - 0.4), y1 - 9 * Math.sin(a - 0.4)); ctx.lineTo(x1 - 9 * Math.cos(a + 0.4), y1 - 9 * Math.sin(a + 0.4)); ctx.closePath(); ctx.fill(); ctx.font = 'bold 12px "IBM Plex Sans", sans-serif'; ctx.fillText(label, x1 + dx * 8 + 2, y1 + dy * 8 + 4); };
+      const arrow = (dx, dy, mag, color, label) => { const len = Math.max(6, mag * scale); const x1 = ccx + dx * len, y1 = ccy + dy * len; ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = 2.4; ctx.beginPath(); ctx.moveTo(ccx, ccy); ctx.lineTo(x1, y1); ctx.stroke(); const a = Math.atan2(y1 - ccy, x1 - ccx); ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x1 - 9 * Math.cos(a - 0.4), y1 - 9 * Math.sin(a - 0.4)); ctx.lineTo(x1 - 9 * Math.cos(a + 0.4), y1 - 9 * Math.sin(a + 0.4)); ctx.closePath(); ctx.fill(); ctx.font = 'bold 12px "Helvetica Neue", "TeX Gyre Heros", Helvetica, Arial, sans-serif'; ctx.fillText(label, x1 + dx * 8 + 2, y1 + dy * 8 + 4); };
       arrow(0, 1, o.m * g0, col.w, `mg = ${s3(o.m * g0)} N`);
       arrow(Math.sin(th), -Math.cos(th), o.N, col.N, `N = ${s3(o.N)} N`);
       if (o.F) arrow(Math.sign(o.F) * ux, Math.sign(o.F) * uy, Math.abs(o.F), col.F, `F = ${s3(Math.abs(o.F))} N`);

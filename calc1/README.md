@@ -253,6 +253,10 @@ The logo is the Mathub mark: a navy M whose right diagonal is a rising blue arro
 
 Pages that belong to no class (start page, Today, Focus, Settings, board, resources) use the brand blue as their accent; every class keeps its own hue. The colour system in `styles.css` ("Look v3") gives every other hue a meaning: indigo for learning, green for progress and readiness, amber for XP and rewards, coral for deadlines and mistakes, teal for focus, violet for community and creative tools. Sidebar groups, panel icons, the mobile tab bar and calls to action follow it, a four-hue wash sits behind the page, and the floating background carries glyphs from every subject in that subject's hue.
 
+## Typography
+
+The whole site is set in Helvetica Neue (`--font-sans` in `styles.css`, also used for `--font-display` and `--font-body`). Macs, iPhones and iPads render their built-in Helvetica Neue; other devices fall back to TeX Gyre Heros, a free Helvetica-metric family from the GUST e-foundry served from `assets/fonts` (regular, bold, italic, bold italic as WOFF2, licence in the same folder). The two exceptions are the logo wordmark, which stays Poppins because it is part of the logo, and code, which stays JetBrains Mono. Emails use the same stack, and the social cards embed the fallback so they render identically on the build machine.
+
 ## Layout: what lives where
 
 - **Header.** Class title, next-exam chip, streak flame, daily goal ring (level inside; tap it for XP, level, goal and today's quests), search, inbox, theme and the account menu. Double XP shows as a chip only while it is on.

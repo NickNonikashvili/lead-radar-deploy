@@ -17,21 +17,23 @@ const ORDER = ['calc', 'physics', 'precalc', 'writ', 'csci'].filter(id => Course
 const COLORS = { site: ['#0B1B3A', '#10307A', '#1F5EFF'], calc: ['#0f1f4d', '#2B55B8', '#4C7BE0'], physics: ['#063d44', '#0E7C86', '#2AA6B0'], precalc: ['#4a1a08', '#B5451B', '#E07A3F'], writ: ['#33153f', '#7A3E9D', '#A66BC7'], csci: ['#0f3a12', '#2E7D32', '#5AA85E'] };
 const LOGO = '<svg width="124" height="102" viewBox="-2 -2 102 84"><path fill="#fff" d="M0 0H20V79H0Z"/><path fill="#fff" d="M20 0L52 30V44L20 14Z"/><path fill="#fff" d="M77 20L97 10V79H77Z"/><path stroke="#5B8CFF" fill="none" stroke-width="5.2" stroke-linecap="round" d="M22 60Q45 52 89 10"/><path fill="#5B8CFF" d="M96 4L93.6 13.1L86.8 5.8Z"/></svg>';
 // Fonts: Google Fonts by default; set MATHUB_FONT_CSS to a local stylesheet (same @font-face rules, file:// urls) when the build machine has no web access.
-const FONT_LINK = process.env.MATHUB_FONT_CSS ? `<style>${fs.readFileSync(process.env.MATHUB_FONT_CSS, 'utf8')}</style>` : '<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@600;700&family=Inter:wght@500;600;700&family=Poppins:wght@600;700&display=swap" rel="stylesheet">';
+const FONT_LINK = (process.env.MATHUB_FONT_CSS ? `<style>${fs.readFileSync(process.env.MATHUB_FONT_CSS, 'utf8')}</style>` : '<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700&display=swap" rel="stylesheet">')
+  // the site font, embedded from assets/fonts so the cards render the same with or without web access
+  + '<style>' + [['regular', 400, 'normal'], ['bold', 700, 'normal'], ['italic', 400, 'italic'], ['bolditalic', 700, 'italic']].map(([f, w, st]) => `@font-face{font-family:"TeX Gyre Heros";font-weight:${w};font-style:${st};src:url(data:font/woff2;base64,${fs.readFileSync(path.join(ROOT, 'assets', 'fonts', `texgyreheros-${f}.woff2`)).toString('base64')}) format("woff2")}`).join('') + '</style>';
 const esc = s => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 const HEAD = `<!DOCTYPE html><html><head><meta charset="utf-8">${FONT_LINK}<style>
-  html,body{margin:0;width:1200px;height:630px;overflow:hidden;font-family:Inter,system-ui,sans-serif}
+  html,body{margin:0;width:1200px;height:630px;overflow:hidden;font-family:"Helvetica Neue","TeX Gyre Heros",Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased}
   .card{position:relative;width:1200px;height:630px;color:#fff;padding:64px 72px;box-sizing:border-box}
   .glow{position:absolute;width:640px;height:640px;border-radius:50%;background:radial-gradient(circle,rgba(127,176,255,.35),transparent 60%);right:-160px;top:-200px}
   .glow2{position:absolute;width:520px;height:520px;border-radius:50%;background:radial-gradient(circle,rgba(255,255,255,.18),transparent 60%);left:-140px;bottom:-240px}
   .brand{display:flex;align-items:center;gap:26px} .brand svg{flex:none}
   .brand .lock{display:flex;flex-direction:column;gap:6px;flex:none}
-  .brand .tagline{white-space:nowrap;font-family:Inter,sans-serif;font-size:22px;font-weight:600;letter-spacing:.3em;text-transform:uppercase;opacity:.92}
+  .brand .tagline{white-space:nowrap;font-size:22px;font-weight:600;letter-spacing:.3em;text-transform:uppercase;opacity:.92}
   .brand .tagline i{font-style:normal;color:#7FB0FF;margin:0 6px}
-  .brand b{font-family:Poppins,Inter,sans-serif;font-size:84px;font-weight:700;letter-spacing:-.04em;line-height:1}
+  .brand b{font-family:Poppins,"Helvetica Neue","TeX Gyre Heros",Helvetica,Arial,sans-serif;font-size:84px;font-weight:700;letter-spacing:-.04em;line-height:1}
   .brand small{align-self:flex-end;margin-bottom:12px;white-space:nowrap;font-size:22px}
   .brand small{font-size:26px;font-weight:600;opacity:.85;margin-left:auto;letter-spacing:.06em;text-transform:uppercase}
-  .tag{font-family:Fraunces,serif;font-size:44px;font-weight:600;line-height:1.15;margin-top:44px;max-width:960px;letter-spacing:-.01em}
+  .tag{font-size:46px;font-weight:700;line-height:1.15;margin-top:44px;max-width:960px;letter-spacing:-.025em}
   .tag.big{font-size:56px;margin-top:38px}
   .sub{font-size:24px;opacity:.9;margin-top:18px;max-width:900px;line-height:1.4}
   .chips{position:absolute;left:72px;bottom:64px;display:flex;gap:12px}

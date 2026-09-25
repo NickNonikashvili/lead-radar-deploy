@@ -2141,3 +2141,27 @@ html[data-motion="off"] body::before { background: radial-gradient(60% 45% at 8%
 /* brand-blue primaries on class-less pages, still lively */
 .landing-top.hero { border-color: color-mix(in srgb, var(--brand-blue) 16%, transparent); }
 .landing-top.hero::after { background: radial-gradient(circle, color-mix(in srgb, var(--brand-blue) 20%, transparent), transparent 70%); }
+
+/* ============================================================
+   Typography: Helvetica Neue on the whole site. Apple devices have it;
+   everything else gets TeX Gyre Heros, a free Helvetica-metric family
+   shipped in assets/fonts (GUST Font License). The wordmark stays
+   Poppins because it is part of the logo; code stays monospace.
+   ============================================================ */
+@font-face { font-family: "TeX Gyre Heros"; src: url("fonts/texgyreheros-regular.woff2") format("woff2"); font-weight: 400; font-style: normal; font-display: swap; }
+@font-face { font-family: "TeX Gyre Heros"; src: url("fonts/texgyreheros-bold.woff2") format("woff2"); font-weight: 700; font-style: normal; font-display: swap; }
+@font-face { font-family: "TeX Gyre Heros"; src: url("fonts/texgyreheros-italic.woff2") format("woff2"); font-weight: 400; font-style: italic; font-display: swap; }
+@font-face { font-family: "TeX Gyre Heros"; src: url("fonts/texgyreheros-bolditalic.woff2") format("woff2"); font-weight: 700; font-style: italic; font-display: swap; }
+:root { --font-sans: "Helvetica Neue", "TeX Gyre Heros", Helvetica, Arial, system-ui, -apple-system, sans-serif; --font-display: var(--font-sans); --font-body: var(--font-sans); --font-brand: "Poppins", var(--font-sans); }
+body { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+h1, h2, h3, h4, .page-title, .panel-title, .topbar-title, .fa-title.big, .acct-hero-name, .ph-guide h2, .ph-guide h3, .ph-symcard h2, .ph-symcard h3, .rd-by { font-weight: 700; letter-spacing: -0.02em; }
+h1, .page-title, .landing-title { letter-spacing: -0.03em; }
+.brand-code, .course-code { font-style: normal; font-weight: 700; letter-spacing: -0.03em; }
+.countdown-num, .grade-letter, .gpa-big, .fz-time, .stat-num, .league-me b, .lstat b, .fz-preset b, .fz-stats b, .ring-txt b, .stat-strip b, .fz-big, .ph-prompt, .ph-bigword { font-weight: 700; letter-spacing: -0.03em; }
+.fc-front { font-weight: 500; }
+.rd-text { font-size: 18px; line-height: 1.7; }
+.rd-by { font-weight: 400; }
+.eyebrow, .nav-label { letter-spacing: 0.1em; }
+.btn, .tab, .chip { letter-spacing: -0.005em; }
+/* Today: the mascot and its line take a full row under the streak and league chips instead of squeezing beside them */
+.td-hero { flex-wrap: wrap; } .td-hero .mascot-slot { flex: 1 1 100%; }

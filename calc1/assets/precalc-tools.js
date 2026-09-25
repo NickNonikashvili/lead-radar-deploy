@@ -193,7 +193,7 @@
       ctx.fillStyle = col.surface; ctx.fillRect(0, 0, W, H); const scale = Math.min((W - 120) / a, (H - 80) / o); const x0 = 60, y0 = H - 40; const x1 = x0 + a * scale, y1 = y0 - o * scale;
       ctx.fillStyle = col.fill; ctx.strokeStyle = col.line; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y0); ctx.lineTo(x1, y1); ctx.closePath(); ctx.fill(); ctx.stroke();
       ctx.strokeStyle = col.muted; ctx.lineWidth = 1; ctx.strokeRect(x1 - 14, y0 - 14, 14, 14);
-      ctx.fillStyle = col.ink; ctx.font = '13px "IBM Plex Sans", sans-serif'; ctx.fillText(`adj = ${s3(a)}`, (x0 + x1) / 2 - 30, y0 + 20); ctx.fillText(`opp = ${s3(o)}`, x1 + 8, (y0 + y1) / 2 + 4); ctx.fillText(`hyp = ${s3(h)}`, (x0 + x1) / 2 - 60, (y0 + y1) / 2 - 10); ctx.fillText(`θ = ${s3(t)}°`, x0 + 26, y0 - 8);
+      ctx.fillStyle = col.ink; ctx.font = '13px "Helvetica Neue", "TeX Gyre Heros", Helvetica, Arial, sans-serif'; ctx.fillText(`adj = ${s3(a)}`, (x0 + x1) / 2 - 30, y0 + 20); ctx.fillText(`opp = ${s3(o)}`, x1 + 8, (y0 + y1) / 2 + 4); ctx.fillText(`hyp = ${s3(h)}`, (x0 + x1) / 2 - 60, (y0 + y1) / 2 - 10); ctx.fillText(`θ = ${s3(t)}°`, x0 + 26, y0 - 8);
     }
   };
 })(window);
