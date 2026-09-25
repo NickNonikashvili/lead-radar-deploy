@@ -24,6 +24,7 @@ self.addEventListener('fetch', e => {
     return;
   }
   // The page itself: network first so new builds arrive immediately, cached copy when offline.
+  if (url.origin === self.location.origin && (url.pathname.includes('/learn/') || url.pathname.endsWith('/sitemap.xml') || url.pathname.endsWith('/robots.txt'))) { e.respondWith(fetch(req).catch(() => caches.match(req))); return; }
   if (req.mode === 'navigate' || url.pathname.endsWith('/index.html') || url.pathname.endsWith('/')) {
     e.respondWith(fetch(req).then(res => { const copy = res.clone(); caches.open(CACHE).then(c => c.put('index.html', copy)).catch(() => {}); return res; }).catch(() => caches.match('index.html').then(r => r || caches.match('./'))));
     return;

@@ -1625,3 +1625,41 @@ body:has(.lesson-foot) #ambient { bottom: 96px; }
 .py-status.bad { background: var(--bad-soft); color: var(--bad); }
 .py-status.run { background: var(--accent-soft); color: var(--accent); animation: pulse 1.2s ease-in-out infinite; }
 .py-status.load { background: var(--warn-soft); color: var(--warn); }
+
+/* ---- UI polish: breadcrumb, resume card, stat strip, tab bar, shortcuts, back to top ---- */
+.crumb { color: var(--muted); font-weight: 600; font-size: 14px; text-decoration: none; } .crumb:hover { color: var(--accent); text-decoration: none; }
+.crumb-sep { color: var(--muted); margin: 0 7px; font-weight: 400; } .crumb-cur { color: var(--ink); }
+@media (max-width: 640px) { .crumb, .crumb-sep { display: none; } }
+.resume-card { display: flex; align-items: center; gap: 12px; padding: 12px 16px; margin: 6px 0 12px; border-radius: 14px; border: 1px solid var(--accent-line); background: linear-gradient(135deg, var(--accent-soft), var(--surface)); color: var(--ink); text-decoration: none; box-shadow: var(--shadow-sm); transition: transform 0.15s, box-shadow 0.15s; }
+.resume-card:hover { transform: translateY(-2px); box-shadow: var(--shadow); text-decoration: none; }
+.resume-card.course-physics { --accent: var(--phys-accent); --accent-soft: var(--phys-accent-soft); --accent-line: var(--phys-accent-line); --accent-ink: var(--phys-accent-ink); }
+.resume-card.course-precalc { --accent: var(--precalc-accent); --accent-soft: var(--precalc-accent-soft); --accent-line: var(--precalc-accent-line); --accent-ink: var(--precalc-accent-ink); }
+.resume-card.course-writ { --accent: var(--writ-accent); --accent-soft: var(--writ-accent-soft); --accent-line: var(--writ-accent-line); --accent-ink: var(--writ-accent-ink); }
+.resume-card.course-csci { --accent: var(--csci-accent); --accent-soft: var(--csci-accent-soft); --accent-line: var(--csci-accent-line); --accent-ink: var(--csci-accent-ink); }
+.resume-ic { width: 38px; height: 38px; border-radius: 50%; background: var(--accent); color: var(--accent-ink); display: grid; place-items: center; flex: none; }
+.resume-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; } .resume-body small { font-size: 11.5px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); font-weight: 700; } .resume-body b { font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.resume-card > svg:last-child { color: var(--muted); flex: none; }
+.stat-strip { display: flex; flex-wrap: wrap; gap: 6px 18px; margin: 0 0 14px 2px; font-size: 13px; color: var(--muted); }
+.stat-strip b { color: var(--ink); font-family: var(--font-display); font-size: 17px; margin-right: 4px; }
+.landing-top.hero::before { content: ''; position: absolute; inset: -30% auto auto -10%; width: 60%; height: 120%; background: radial-gradient(closest-side, color-mix(in srgb, var(--accent-soft) 70%, transparent), transparent); pointer-events: none; z-index: 0; }
+.switch-btn { position: relative; padding-left: 16px; } .switch-btn::before { content: ''; position: absolute; left: 7px; top: 50%; width: 6px; height: 6px; border-radius: 50%; transform: translateY(-50%); background: var(--accent); opacity: 0.85; }
+.switch-btn[data-c="calc"]::before { background: var(--calc-accent); } .switch-btn[data-c="physics"]::before { background: var(--phys-accent); } .switch-btn[data-c="precalc"]::before { background: var(--precalc-accent); } .switch-btn[data-c="writ"]::before { background: var(--writ-accent); } .switch-btn[data-c="csci"]::before { background: var(--csci-accent); }
+.switch-btn.home::before { display: none; } .switch-btn.home { padding-left: 8px; } .switch-btn.on::before { background: var(--accent-ink); }
+#tabbar { display: none; }
+@media (max-width: 900px) {
+  #tabbar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 45; display: grid; grid-template-columns: repeat(5, 1fr); padding: 6px 6px calc(6px + env(safe-area-inset-bottom)); background: color-mix(in srgb, var(--surface) 92%, transparent); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border-top: 1px solid var(--border); }
+  .tab-item { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 6px 4px; border-radius: 12px; color: var(--muted); font-size: 11px; font-weight: 600; text-decoration: none; }
+  .tab-item.active { color: var(--accent); background: var(--accent-soft); } .tab-item:hover { text-decoration: none; color: var(--ink); }
+  .page { padding-bottom: 96px; } .app.landing .page { padding-bottom: 96px; } .site-foot { padding-bottom: 80px; }
+  #ambient { bottom: 78px; } body:has(.lesson-foot) #tabbar { display: none; } body:has(.lesson-foot) #ambient { bottom: 96px; }
+  .totop { bottom: 78px; }
+}
+.totop { position: fixed; left: 18px; bottom: 18px; z-index: 40; width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--border); background: var(--surface); color: var(--ink-2); box-shadow: var(--shadow); display: grid; place-items: center; cursor: pointer; opacity: 0; transform: translateY(12px); pointer-events: none; transition: opacity 0.2s, transform 0.2s; }
+.totop.show { opacity: 1; transform: none; pointer-events: auto; } .totop:hover { color: var(--accent); border-color: var(--accent-line); }
+@media (max-width: 900px) { .totop { left: auto; right: 12px; bottom: 140px; width: 36px; height: 36px; } }
+.shortcuts-modal { max-width: 520px; padding: 18px 20px; }
+.shortcut-list { display: grid; gap: 6px; } .shortcut { display: grid; grid-template-columns: 150px 1fr; gap: 12px; align-items: center; padding: 6px 0; border-bottom: 1px solid var(--border); font-size: 14px; } .shortcut:last-child { border-bottom: 0; }
+.shortcut kbd { font-family: var(--font-mono); font-size: 12px; padding: 3px 8px; border-radius: 7px; border: 1px solid var(--border-strong); background: var(--surface-2); box-shadow: 0 1px 0 var(--border-strong); white-space: nowrap; justify-self: start; }
+.page { animation: fadeUp 0.22s ease-out both; } @keyframes fadeUp { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+:where(a, button, input, select, textarea, [tabindex]):focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 6px; }
+@media (prefers-reduced-motion: reduce) { .page, .resume-card, .totop { animation: none !important; transition: none !important; } }

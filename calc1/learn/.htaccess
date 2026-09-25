@@ -1,0 +1,6 @@
+# Static study pages: cache for an hour, revalidate after
+<IfModule mod_headers.c>
+  <FilesMatch "\.html$">
+    Header set Cache-Control "public, max-age=3600, must-revalidate"
+  </FilesMatch>
+</IfModule>

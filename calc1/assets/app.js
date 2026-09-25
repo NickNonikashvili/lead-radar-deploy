@@ -285,17 +285,41 @@
     const V = App.views[view]; App.current = V;
     $$('.nav-item').forEach(b => b.classList.toggle('active', b.dataset.view === view));
     const actNav = $('.nav-item.active'); if (actNav) { const g = actNav.closest('.nav-group'); if (g && g.classList.contains('closed')) { g.classList.remove('closed'); const tg = g.previousElementSibling; if (tg) { tg.classList.add('open'); tg.setAttribute('aria-expanded', 'true'); } } }
-    $('#topbar-title').textContent = V.title; document.title = `${V.title} · ${D.code} · ${SITE}`;
+    $('#topbar-title').innerHTML = `<a class="crumb" href="#/${D.id}/dashboard" title="${esc(D.name)}">${esc(D.short)}</a><span class="crumb-sep">›</span><span class="crumb-cur">${esc(V.title)}</span>`; document.title = `${V.title} · ${D.code} · ${SITE}`;
     if (App.auth && App.auth.ready && App.auth.gate(view) === 'hard') App.auth.renderLocked(root, V, view); else V.render(root, param, query);
     if (App.auth) App.auth.bindLocks(root);
     typeset(root); app.classList.remove('nav-open'); updateExamChip(); paintAsOf(); afterRender(root);
+    if (!['settings', 'contact', 'policy'].includes(view)) { const h = $('.note-title, .rd-title, .page-title', root); setSetting('lastVisit', { hash: location.hash, label: `${D.short} · ${V.title}`, detail: h && !/^Good (morning|afternoon|evening)/.test(h.textContent) && h.textContent.trim() !== V.title ? h.textContent.trim().slice(0, 70) : '', course: D.id, t: Date.now() }); }
   }
+  App.ago = t => { const m = Math.round((Date.now() - t) / 60000); if (m < 2) return 'just now'; if (m < 60) return m + ' min ago'; const h = Math.round(m / 60); if (h < 24) return h + (h === 1 ? ' hour ago' : ' hours ago'); const d = Math.round(h / 24); return d + (d === 1 ? ' day ago' : ' days ago'); };
+  App.resumeCard = mine => {
+    const lv = settings().lastVisit; const all = COURSE_ORDER.filter(id => Courses[id]); const topics = all.reduce((n, id) => n + Courses[id].SECTIONS.length, 0); const cards = all.reduce((n, id) => n + ((Courses[id].FLASHCARDS || []).length), 0);
+    const strip = `<div class="stat-strip" aria-label="What is inside"><span><b>${all.length}</b> classes</span><span><b>${topics}</b> topic guides</span><span><b>${cards}</b> flashcards</span><span><b>∞</b> practice questions</span><span><b>$0</b> forever</span></div>`;
+    if (!lv || !lv.hash || !Courses[lv.course] || !mine.includes(lv.course) || Date.now() - lv.t > 7 * 86400000 || Date.now() - lv.t < 20000) return strip;
+    return `<a class="resume-card course-${lv.course}" href="${esc(lv.hash)}"><span class="resume-ic">${icon('play', 16)}</span><span class="resume-body"><small>Pick up where you left off · ${esc(App.ago(lv.t))}</small><b>${esc(lv.label)}${lv.detail ? ` · ${esc(lv.detail)}` : ''}</b></span>${icon('right', 16)}</a>` + strip;
+  };
+  const TABS_GLOBAL = [['#/', 'Home', 'home', 'home'], ['#/forum', 'Board', 'chat', 'forum'], ['#/leagues', 'Leagues', 'gem', 'leagues'], ['#/gpa', 'GPA', 'calc', 'gpa'], ['#/settings', 'Me', 'user', 'settings']];
+  function paintTabbar(course, view) {
+    let bar = $('#tabbar'); if (!bar) { bar = document.createElement('nav'); bar.id = 'tabbar'; bar.setAttribute('aria-label', 'Quick navigation'); document.body.appendChild(bar); }
+    let tabs;
+    if (course && D) { const learn = D.kind === 'writing' ? ['readings', 'Learn', 'book'] : ['notes', 'Learn', 'book']; const prac = D.quiz ? ['practice', 'Practice', 'list'] : D.kind === 'code' ? ['playground', 'Code', 'flask'] : ['calendar', 'Calendar', 'calendar']; tabs = [['dashboard', 'Home', 'home'], learn, prac, ['forum', 'Board', 'chat'], ['settings', 'Me', 'user']].map(([v, l, ic]) => [App.link(v), l, ic, v]); }
+    else tabs = TABS_GLOBAL;
+    bar.innerHTML = tabs.map(([href, label, ic, v]) => `<a class="tab-item${v === view ? ' active' : ''}" href="${href}"${v === view ? ' aria-current="page"' : ''}>${icon(ic, 20)}<span>${label}</span></a>`).join('');
+  }
+  const SHORTCUTS = [['Ctrl / ⌘ + K', 'Search notes, formulas and pages'], ['?', 'This list'], ['Esc', 'Close search, menus and dialogs'], ['← →', 'Previous or next paragraph in a reading, previous or next question in a lesson'], ['Space', 'Play or pause a reading'], ['Enter', 'Check an answer, then continue'], ['Ctrl / ⌘ + Enter', 'Run code in the playground'], ['Tab / Shift + Tab', 'Indent or outdent in the playground']];
+  App.showShortcuts = () => {
+    if ($('#shortcuts-modal')) return; const el = document.createElement('div'); el.className = 'modal-backdrop'; el.id = 'shortcuts-modal';
+    el.innerHTML = `<div class="modal shortcuts-modal" role="dialog" aria-label="Keyboard shortcuts"><div class="row between mb-2"><div class="panel-title">${icon('zap')} Keyboard shortcuts</div><button class="icon-btn" data-action="close" aria-label="Close">${icon('x', 14)}</button></div><div class="shortcut-list">${SHORTCUTS.map(([k, d]) => `<div class="shortcut"><kbd>${esc(k)}</kbd><span>${esc(d)}</span></div>`).join('')}</div></div>`;
+    document.body.appendChild(el); const close = () => el.remove(); el.addEventListener('click', e => { if (e.target === el || e.target.closest('[data-action="close"]')) close(); }); const key = e => { if (e.key === 'Escape') { close(); document.removeEventListener('keydown', key); } }; document.addEventListener('keydown', key);
+  };
+  document.addEventListener('keydown', e => { if (e.key === '?' && !e.ctrlKey && !e.metaKey && !e.altKey && !e.target.matches('input, textarea, select, [contenteditable]')) { e.preventDefault(); App.showShortcuts(); } });
+  function initToTop() { if ($('#totop')) return; const b = document.createElement('button'); b.id = 'totop'; b.className = 'totop'; b.title = 'Back to top'; b.setAttribute('aria-label', 'Back to top'); b.innerHTML = icon('up', 16); b.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' })); document.body.appendChild(b); let t = 0; window.addEventListener('scroll', () => { if (t) return; t = setTimeout(() => { t = 0; b.classList.toggle('show', window.scrollY > 400); }, 120); }, { passive: true }); }
   function initTabs(root) {
     $$('.dash-tabs', root).forEach(bar => { const key = bar.dataset.store; const panes = bar.nextElementSibling; if (!panes) return; const pick = (id, save) => { $$('.tab', bar).forEach(b => { b.classList.toggle('on', b.dataset.tab === id); b.setAttribute('aria-selected', String(b.dataset.tab === id)); }); $$(':scope > .pane', panes).forEach(pn => { pn.hidden = pn.dataset.pane !== id; }); if (key && save) setSetting(key, id); }; bar.addEventListener('click', e => { const b = e.target.closest('.tab'); if (b) pick(b.dataset.tab, true); }); const saved = key ? settings()[key] : null; const first = $('.tab', bar); pick(saved && $(`.tab[data-tab="${saved}"]`, bar) ? saved : first.dataset.tab, false); });
   }
   App.initTabs = initTabs;
   function afterRender(root) {
-    initTabs(root); if (App.paintStats) { App.paintStats(); App.paintMascots(); App.countUp(root); } if (App.paintQuests) App.paintQuests(); if (App.paintLeagueWidgets) App.paintLeagueWidgets(root); const tk = $('#landing-ticker', root); if (tk && App.fillTicker) App.fillTicker(tk); }
+    initTabs(root); initToTop(); { const r = route(); paintTabbar(r.course, r.course ? r.view : (r.view === 'home' ? 'home' : r.view)); } if (App.paintStats) { App.paintStats(); App.paintMascots(); App.countUp(root); } if (App.paintQuests) App.paintQuests(); if (App.paintLeagueWidgets) App.paintLeagueWidgets(root); const tk = $('#landing-ticker', root); if (tk && App.fillTicker) App.fillTicker(tk); }
   App.rerender = () => render();
   App.currentSectionOf = C => currentSection(C);
   App.inCourse = () => !!route().course;
@@ -322,7 +346,7 @@
   function buildNav() {
     $('#brand-code').textContent = D.code; $('#brand-name').innerHTML = `${esc(D.name)}<small>${esc(D.term)}</small>`;
     const mine = App.myCourses(); if (D && !mine.includes(D.id)) mine.push(D.id);
-    $('#course-switch').innerHTML = COURSE_ORDER.filter(id => Courses[id] && mine.includes(id)).map(id => `<a class="switch-btn${id === D.id ? ' on' : ''}" href="#/${id}/dashboard" title="${esc(Courses[id].name)}">${esc(Courses[id].short)}</a>`).join('') + `<a class="switch-btn home" href="#/" title="All courses">${icon('grid', 14)}</a>`;
+    $('#course-switch').innerHTML = COURSE_ORDER.filter(id => Courses[id] && mine.includes(id)).map(id => `<a class="switch-btn${id === D.id ? ' on' : ''}" data-c="${id}" href="#/${id}/dashboard" title="${esc(Courses[id].name)}">${esc(Courses[id].short)}</a>`).join('') + `<a class="switch-btn home" href="#/" title="All courses">${icon('grid', 14)}</a>`;
     const staff = App.auth && App.auth.user && App.auth.user.mod ? [{ label: App.auth.user.admin ? 'Admin' : 'Moderation', items: [['admin', 'Admin panel', 'shield']] }] : [];
     const cur = (location.hash.replace(/^#\/?/, '').split('?')[0].split('/')[1]) || 'dashboard';
     const openMap = Object.assign({ Today: true, Learn: true, Practice: true, Admin: true, Moderation: true }, settings().navOpen || {});
@@ -425,6 +449,7 @@
         <header class="landing-top hero"><div><div class="eyebrow">${esc(fmtDate(t, true))} · ${esc(first.term)}${ss.phase === 'during' ? ` · Week ${ss.week}` : ''}</div><h1 class="landing-title"><span class="logo-mark">${App.logoSvg(44)}</span>${SITE}</h1><p class="hero-sub">${sub}</p><p class="muted small hero-note">Notes, endless practice, simulators, a Python playground, planners and a class board for Montana State math, physics, writing and computing. Free for students.</p><div id="landing-presence" class="mt-1"></div><div class="league-slot mt-2" data-compact="1"></div></div><div class="row gap-sm hero-actions"><span id="landing-account"></span><button class="icon-btn theme-btn" data-action="theme" aria-label="Toggle theme"></button></div><div class="mascot-slot hero-mascot" data-size="112"></div></header>
         <div id="announcement-slot"></div>
         <div class="ticker" id="landing-ticker" hidden></div>
+        ${App.resumeCard ? App.resumeCard(mineIds) : ''}
         <div class="course-grid">${cards}</div>
         <p class="small muted mt-1" style="text-align:right">${mineIds.length < COURSE_ORDER.filter(id => Courses[id]).length ? `Showing your ${mineIds.length} class${mineIds.length === 1 ? '' : 'es'} · <a href="#" data-action="show-all">${showAll ? 'show only mine' : 'show all classes'}</a> · ` : ''}<a href="#" data-action="choose">choose your classes and sections</a> · <a href="#/gpa">GPA calculator</a></p>
         <div class="dash-tabs landing-tabs mt-3" data-store="landTab" role="tablist">${[['week', 'This week', 'calendar'], ['community', 'Community', 'chat']].concat(App.guest() ? [['inside', 'What is inside', 'grid']] : []).map(([k, l, ic]) => `<button class="tab" data-tab="${k}" role="tab">${icon(ic, 14)}<span>${l}</span></button>`).join('')}</div>

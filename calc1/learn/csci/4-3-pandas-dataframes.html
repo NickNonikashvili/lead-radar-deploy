@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>4.3 pandas DataFrames · CSCI 127 Joy and Beauty of Data · MatHub</title>
+<meta name="description" content="CSCI 127 pandas DataFrames: import pandas as pd . A DataFrame is a table with named columns; a Series is one column. pd.read_csv(&quot;file.csv&quot;) loads data;…">
+<link rel="canonical" href="https://mathub.space/learn/csci/4-3-pandas-dataframes.html">
+<meta name="robots" content="index, follow, max-image-preview:large">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="MatHub">
+<meta property="og:title" content="4.3 pandas DataFrames · CSCI 127 Joy and Beauty of Data · MatHub">
+<meta property="og:description" content="CSCI 127 pandas DataFrames: import pandas as pd . A DataFrame is a table with named columns; a Series is one column. pd.read_csv(&quot;file.csv&quot;) loads data;…">
+<meta property="og:url" content="https://mathub.space/learn/csci/4-3-pandas-dataframes.html">
+<meta property="og:image" content="https://mathub.space/assets/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="4.3 pandas DataFrames · CSCI 127 Joy and Beauty of Data · MatHub">
+<meta name="twitter:description" content="CSCI 127 pandas DataFrames: import pandas as pd . A DataFrame is a table with named columns; a Series is one column. pd.read_csv(&quot;file.csv&quot;) loads data;…">
+<meta name="twitter:image" content="https://mathub.space/assets/og.png">
+<meta name="theme-color" content="#2B55B8">
+<link rel="icon" type="image/svg+xml" href="/assets/icon.svg">
+<link rel="apple-touch-icon" sizes="180x180" href="/assets/icon-180.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,500&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/seo.css?v=2026.09.25.1">
+
+<script type="application/ld+json">[{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"MatHub","item":"https://mathub.space/"},{"@type":"ListItem","position":2,"name":"Study guides","item":"https://mathub.space/learn/"},{"@type":"ListItem","position":3,"name":"CSCI 127","item":"https://mathub.space/learn/csci/"},{"@type":"ListItem","position":4,"name":"4.3 pandas DataFrames","item":"https://mathub.space/learn/csci/4-3-pandas-dataframes.html"}]},{"@context":"https://schema.org","@type":"LearningResource","name":"4.3 pandas DataFrames","description":"CSCI 127 pandas DataFrames: import pandas as pd . A DataFrame is a table with named columns; a Series is one column. pd.read_csv(\"file.csv\") loads data;…","url":"https://mathub.space/learn/csci/4-3-pandas-dataframes.html","inLanguage":"en","learningResourceType":"Study guide","educationalLevel":"Undergraduate","dateModified":"2026-09-25","about":{"@type":"Thing","name":"CSCI 127 Joy and Beauty of Data, Montana State University"},"isPartOf":{"@type":"CollectionPage","name":"CSCI 127 Joy and Beauty of Data study guide","url":"https://mathub.space/learn/csci/"},"publisher":{"@type":"Organization","name":"MatHub","url":"https://mathub.space/"}}]</script>
+</head>
+<body class="course-csci">
+<header class="s-head"><a class="s-brand" href="/"><svg width="28" height="28" viewBox="0 0 64 64" aria-hidden="true"><defs><linearGradient id="mh-g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#2B55B8"/><stop offset="1" stop-color="#0E7C86"/></linearGradient></defs><rect width="64" height="64" rx="15" fill="url(#mh-g)"/><path d="M15 46V21l17 17 17-17v25" fill="none" stroke="#fff" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/><circle cx="32" cy="38" r="4.2" fill="#F2C14E"/><circle cx="15" cy="21" r="3.4" fill="#F2C14E"/><circle cx="49" cy="21" r="3.4" fill="#F2C14E"/></svg><span><b>Mat<i>Hub</i></b><small>Montana State · Fall 2026</small></span></a><nav class="s-nav"><a href="/learn/">Study guides</a><a href="/learn/csci/">CSCI 127</a><a class="s-btn" href="/#/csci/notes/pandas">Open MatHub</a></nav></header>
+<main class="s-wrap">
+<nav class="s-crumbs" aria-label="Breadcrumb"><a href="/">MatHub</a><span>›</span><a href="/learn/">Study guides</a><span>›</span><a href="/learn/csci/">CSCI 127</a><span>›</span><span aria-current="page">4.3 pandas DataFrames</span></nav>
+<div class="s-eyebrow">CSCI 127 Joy and Beauty of Data · Unit 4: Data science · on Final exam (Exam 3)</div>
+<h1>4.3 pandas DataFrames</h1>
+<p class="s-lead">Study notes for <b>pandas DataFrames</b> in CSCI 127 Joy and Beauty of Data at Montana State University: the big ideas, code you should know, a worked example, common mistakes and an exam tip. The same topic has endless practice questions and flashcards in MatHub.</p>
+<section><h2>Big ideas</h2><ul class="s-list"><li><code>import pandas as pd</code>. A <b>DataFrame</b> is a table with named columns; a <b>Series</b> is one column. <code>pd.read_csv("file.csv")</code> loads data; <code>pd.DataFrame({...})</code> builds one from lists.</li><li>First look: <code>df.head()</code> (5 rows), <code>df.shape</code>, <code>df.columns</code>, <code>df.info()</code>, <code>df.describe()</code>.</li><li>Select: <code>df["col"]</code> a column, <code>df[["a", "b"]]</code> several, <code>df.loc[row_label, "col"]</code> by label, <code>df.iloc[0]</code> by position. Filter with a mask: <code>df[df["score"] &gt; 80]</code>.</li><li>Compute: <code>df["col"].mean()</code>, <code>.max()</code>, <code>.value_counts()</code>, <code>df.sort_values("col", ascending=False)</code>, new columns <code>df["pct"] = df["score"] / 100</code>.</li><li>Group: <code>df.groupby("major")["score"].mean()</code> answers “average per group”. <code>df.plot(...)</code> hands the table to matplotlib.</li></ul></section>
+<section><h2>Code you should know</h2><div class="s-code"><div class="s-code-h">Build, inspect, filter, sort</div><pre><code>import pandas as pd
+
+df = pd.DataFrame({
+    &quot;name&quot;: [&quot;Ana&quot;, &quot;Ben&quot;, &quot;Cy&quot;, &quot;Dee&quot;],
+    &quot;major&quot;: [&quot;CS&quot;, &quot;Math&quot;, &quot;CS&quot;, &quot;Bio&quot;],
+    &quot;score&quot;: [91, 84, 77, 95]
+})
+print(df.shape, list(df.columns))
+print(df.head(2))
+print(df[&quot;score&quot;].mean(), df[&quot;score&quot;].max())
+print(df[df[&quot;score&quot;] &gt; 80][&quot;name&quot;].tolist())
+print(df.sort_values(&quot;score&quot;, ascending=False).iloc[0][&quot;name&quot;])
+print(df[&quot;major&quot;].value_counts())</code></pre><div class="s-out"><span>Output</span><pre>(4, 3) ['name', 'major', 'score']
+  name major  score
+0  Ana    CS     91
+1  Ben  Math     84
+86.75 95
+['Ana', 'Ben', 'Dee']
+Dee
+major
+CS      2
+Math    1
+Bio     1</pre></div></div><div class="s-code"><div class="s-code-h">groupby and a new column</div><pre><code>import pandas as pd
+
+df = pd.DataFrame({&quot;city&quot;: [&quot;Bozeman&quot;, &quot;Bozeman&quot;, &quot;Billings&quot;, &quot;Billings&quot;], &quot;day&quot;: [&quot;Mon&quot;, &quot;Tue&quot;, &quot;Mon&quot;, &quot;Tue&quot;], &quot;high&quot;: [61, 68, 70, 74]})
+df[&quot;high_c&quot;] = (df[&quot;high&quot;] - 32) * 5 / 9
+print(df.groupby(&quot;city&quot;)[&quot;high&quot;].mean())
+print(df.groupby(&quot;city&quot;)[&quot;high_c&quot;].max().round(1))
+print(df.loc[df[&quot;high&quot;].idxmax(), &quot;city&quot;])</code></pre><div class="s-out"><span>Output</span><pre>city
+Billings    72.0
+Bozeman     64.5
+Name: high, dtype: float64
+city
+Billings    23.3
+Bozeman     20.0
+Name: high_c, dtype: float64
+Billings</pre></div></div></section>
+<section><h2>Worked example</h2><div class="s-callout"><div>Given a DataFrame <code>df</code> with columns <code>name, major, score</code>, write one line for each: the average score, the rows with score above 85, the number of students per major.</div><details><summary>Show the solution</summary><div class="s-solution"><code>df["score"].mean()</code>; <code>df[df["score"] &gt; 85]</code>; <code>df["major"].value_counts()</code> (or <code>df.groupby("major").size()</code>).</div></details></div></section>
+<section><h2>Common mistakes</h2><ul class="s-list"><li><code>df.score &gt; 85</code> gives a mask of True/False; you still need <code>df[mask]</code> to get rows.</li><li>Confusing <code>loc</code> (labels) with <code>iloc</code> (positions).</li><li>Forgetting that most methods return a new DataFrame; assign the result.</li></ul></section>
+<section><div class="s-tip"><span class="s-eyebrow">Exam tip</span>Know the six verbs: read, look (head/shape), select, filter, summarize (mean/value_counts), group.</div></section>
+<section class="s-cta"><h2>Keep going in MatHub</h2><p>MatHub is free for Montana State students: an endless quizzer with worked explanations, one-question lessons, flashcards, exam prep checklists, the class calendar with every deadline, a grade calculator and a study board for CSCI 127.</p><div class="s-btns"><a class="s-btn primary" href="/#/csci/notes/pandas">Open these notes in MatHub</a><a class="s-btn" href="/#/csci/practice?topics=pandas">Practice questions on this topic</a><a class="s-btn" href="/#/csci/flashcards?sec=pandas">Flashcards</a><a class="s-btn" href="/#/csci/playground">Python playground</a></div></section>
+<nav class="s-prevnext"><a href="/learn/csci/4-2-matplotlib.html">← 4.2 matplotlib</a><a href="/learn/csci/4-4-python-vs-c-vs-java-and-the-final.html">4.4 Python vs C vs Java, and the final →</a></nav>
+</main>
+<footer class="s-foot"><div><b>MatHub</b> is a free, independent study site made by a Montana State student. It is not affiliated with Montana State University; syllabus details come from each class and can change, so confirm dates on Canvas.</div><div class="s-foot-links"><a href="/learn/calc/">M171</a><a href="/learn/physics/">PHSX 220</a><a href="/learn/precalc/">M151Q</a><a href="/learn/writ/">WRIT 101</a><a href="/learn/csci/">CSCI 127</a><a href="/#/contact">Contact</a><a href="/#/policy">Terms &amp; Privacy</a></div></footer>
+</body>
+</html>

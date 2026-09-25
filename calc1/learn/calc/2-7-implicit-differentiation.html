@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>§2.7 Implicit differentiation · M171 Calculus I · MatHub</title>
+<meta name="description" content="M171 Implicit differentiation: When y is defined by an equation like x^2 + y^2 = 25 rather than a formula y = f(x), differentiate both sides with respect to…">
+<link rel="canonical" href="https://mathub.space/learn/calc/2-7-implicit-differentiation.html">
+<meta name="robots" content="index, follow, max-image-preview:large">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="MatHub">
+<meta property="og:title" content="§2.7 Implicit differentiation · M171 Calculus I · MatHub">
+<meta property="og:description" content="M171 Implicit differentiation: When y is defined by an equation like x^2 + y^2 = 25 rather than a formula y = f(x), differentiate both sides with respect to…">
+<meta property="og:url" content="https://mathub.space/learn/calc/2-7-implicit-differentiation.html">
+<meta property="og:image" content="https://mathub.space/assets/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="§2.7 Implicit differentiation · M171 Calculus I · MatHub">
+<meta name="twitter:description" content="M171 Implicit differentiation: When y is defined by an equation like x^2 + y^2 = 25 rather than a formula y = f(x), differentiate both sides with respect to…">
+<meta name="twitter:image" content="https://mathub.space/assets/og.png">
+<meta name="theme-color" content="#2B55B8">
+<link rel="icon" type="image/svg+xml" href="/assets/icon.svg">
+<link rel="apple-touch-icon" sizes="180x180" href="/assets/icon-180.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,500&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/seo.css?v=2026.09.25.1">
+<script>window.MathJax = { tex: { inlineMath: [['$', '$'], ['\\(', '\\)']], displayMath: [['$$', '$$'], ['\\[', '\\]']], processEscapes: true }, svg: { fontCache: 'global' }, options: { skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'] } };</script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3.2.2/es5/tex-svg.js"></script>
+<script type="application/ld+json">[{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"MatHub","item":"https://mathub.space/"},{"@type":"ListItem","position":2,"name":"Study guides","item":"https://mathub.space/learn/"},{"@type":"ListItem","position":3,"name":"Calc I","item":"https://mathub.space/learn/calc/"},{"@type":"ListItem","position":4,"name":"§2.7 Implicit differentiation","item":"https://mathub.space/learn/calc/2-7-implicit-differentiation.html"}]},{"@context":"https://schema.org","@type":"LearningResource","name":"§2.7 Implicit differentiation","description":"M171 Implicit differentiation: When y is defined by an equation like x^2 + y^2 = 25 rather than a formula y = f(x), differentiate both sides with respect to…","url":"https://mathub.space/learn/calc/2-7-implicit-differentiation.html","inLanguage":"en","learningResourceType":"Study guide","educationalLevel":"Undergraduate","dateModified":"2026-09-25","about":{"@type":"Thing","name":"M171 Calculus I, Montana State University"},"isPartOf":{"@type":"CollectionPage","name":"M171 Calculus I study guide","url":"https://mathub.space/learn/calc/"},"publisher":{"@type":"Organization","name":"MatHub","url":"https://mathub.space/"}}]</script>
+</head>
+<body class="course-calc">
+<header class="s-head"><a class="s-brand" href="/"><svg width="28" height="28" viewBox="0 0 64 64" aria-hidden="true"><defs><linearGradient id="mh-g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#2B55B8"/><stop offset="1" stop-color="#0E7C86"/></linearGradient></defs><rect width="64" height="64" rx="15" fill="url(#mh-g)"/><path d="M15 46V21l17 17 17-17v25" fill="none" stroke="#fff" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/><circle cx="32" cy="38" r="4.2" fill="#F2C14E"/><circle cx="15" cy="21" r="3.4" fill="#F2C14E"/><circle cx="49" cy="21" r="3.4" fill="#F2C14E"/></svg><span><b>Mat<i>Hub</i></b><small>Montana State · Fall 2026</small></span></a><nav class="s-nav"><a href="/learn/">Study guides</a><a href="/learn/calc/">Calc I</a><a class="s-btn" href="/#/calc/notes/2.7">Open MatHub</a></nav></header>
+<main class="s-wrap">
+<nav class="s-crumbs" aria-label="Breadcrumb"><a href="/">MatHub</a><span>›</span><a href="/learn/">Study guides</a><span>›</span><a href="/learn/calc/">Calc I</a><span>›</span><span aria-current="page">§2.7 Implicit differentiation</span></nav>
+<div class="s-eyebrow">M171 Calculus I · Unit 3: Implicit, limits &amp; extrema · on Exam 3</div>
+<h1>§2.7 Implicit differentiation</h1>
+<p class="s-lead">Study notes for <b>Implicit differentiation</b> in M171 Calculus I at Montana State University: the big ideas, key formulas, a worked example, common mistakes and an exam tip. The same topic has endless practice questions and flashcards in MatHub.</p>
+<section><h2>Big ideas</h2><ul class="s-list"><li>When $y$ is defined by an equation like $x^2 + y^2 = 25$ rather than a formula $y = f(x)$, differentiate both sides with respect to $x$, treating $y$ as a function of $x$: every $y$-term picks up a factor $\frac{dy}{dx}$ by the chain rule.</li><li>Then collect the $\frac{dy}{dx}$ terms on one side and solve. The answer usually involves both $x$ and $y$; to find a slope at a point, substitute both coordinates.</li><li>Product terms like $xy$ need the product rule: $\frac{d}{dx}[xy] = y + x\frac{dy}{dx}$.</li></ul></section>
+<section><h2>Key formulas</h2><div class="s-formula"><div class="s-fname">Chain on y</div><div class="s-tex">$$\frac{d}{dx}\big[y^n\big] = n y^{n-1}\frac{dy}{dx}$$</div></div><div class="s-formula"><div class="s-fname">Circle</div><div class="s-tex">$$x^2+y^2=r^2 \;\Rightarrow\; \frac{dy}{dx} = -\frac{x}{y}$$</div></div></section>
+<section><h2>Worked example</h2><div class="s-callout"><div>Find the slope of $x^3 + y^3 = 9$ at $(1,2)$.</div><details><summary>Show the solution</summary><div class="s-solution">$3x^2 + 3y^2 y' = 0 \Rightarrow y' = -\dfrac{x^2}{y^2}$. At $(1,2)$: $y' = -\dfrac14$.</div></details></div></section>
+<section><h2>Common mistakes</h2><ul class="s-list"><li>Forgetting $\frac{dy}{dx}$ on $y$-terms.</li><li>Substituting the point before solving for y′ in the wrong spot, or substituting only x.</li></ul></section>
+<section><div class="s-tip"><span class="s-eyebrow">Exam tip</span>Box every dy/dx as you produce it so none go missing when you collect terms.</div></section>
+<section class="s-cta"><h2>Keep going in MatHub</h2><p>MatHub is free for Montana State students: an endless quizzer with worked explanations, one-question lessons, flashcards, exam prep checklists, the class calendar with every deadline, a grade calculator and a study board for M171.</p><div class="s-btns"><a class="s-btn primary" href="/#/calc/notes/2.7">Open these notes in MatHub</a><a class="s-btn" href="/#/calc/practice?topics=implicit">Practice questions on this topic</a><a class="s-btn" href="/#/calc/flashcards?sec=2.7">Flashcards</a></div></section>
+<nav class="s-prevnext"><a href="/learn/calc/2-6-derivatives-of-inverse-functions.html">← §2.6 Derivatives of inverse functions</a><a href="/learn/calc/2-8-l-h-pital-s-rule-and-limits-at-infinity.html">§2.8 L'Hôpital's rule and limits at infinity →</a></nav>
+</main>
+<footer class="s-foot"><div><b>MatHub</b> is a free, independent study site made by a Montana State student. It is not affiliated with Montana State University; syllabus details come from each class and can change, so confirm dates on Canvas.</div><div class="s-foot-links"><a href="/learn/calc/">M171</a><a href="/learn/physics/">PHSX 220</a><a href="/learn/precalc/">M151Q</a><a href="/learn/writ/">WRIT 101</a><a href="/learn/csci/">CSCI 127</a><a href="/#/contact">Contact</a><a href="/#/policy">Terms &amp; Privacy</a></div></footer>
+</body>
+</html>
