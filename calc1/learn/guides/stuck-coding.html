@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Getting unstuck on a coding problem · study guide · MatHub</title>
+<meta name="description" content="Errors are not failures; they are the computer telling you exactly where to look. A repeatable routine for CSCI 127.">
+<link rel="canonical" href="https://mathub.space/learn/guides/stuck-coding.html">
+<meta name="robots" content="index, follow, max-image-preview:large">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="MatHub">
+<meta property="og:title" content="Getting unstuck on a coding problem · study guide · MatHub">
+<meta property="og:description" content="Errors are not failures; they are the computer telling you exactly where to look. A repeatable routine for CSCI 127.">
+<meta property="og:url" content="https://mathub.space/learn/guides/stuck-coding.html">
+<meta property="og:image" content="https://mathub.space/assets/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Getting unstuck on a coding problem · study guide · MatHub">
+<meta name="twitter:description" content="Errors are not failures; they are the computer telling you exactly where to look. A repeatable routine for CSCI 127.">
+<meta name="twitter:image" content="https://mathub.space/assets/og.png">
+<meta name="theme-color" content="#2B55B8">
+<link rel="icon" type="image/svg+xml" href="/assets/icon.svg">
+<link rel="apple-touch-icon" sizes="180x180" href="/assets/icon-180.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,500&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/seo.css?v=2026.09.26.1">
+
+<script type="application/ld+json">[{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"MatHub","item":"https://mathub.space/"},{"@type":"ListItem","position":2,"name":"Study guides","item":"https://mathub.space/learn/"},{"@type":"ListItem","position":3,"name":"Guides","item":"https://mathub.space/learn/guides/"},{"@type":"ListItem","position":4,"name":"Getting unstuck on a coding problem","item":"https://mathub.space/learn/guides/stuck-coding.html"}]},{"@context":"https://schema.org","@type":"Article","headline":"Getting unstuck on a coding problem","description":"Errors are not failures; they are the computer telling you exactly where to look. A repeatable routine for CSCI 127.","url":"https://mathub.space/learn/guides/stuck-coding.html","datePublished":"2026-09-25","dateModified":"2026-09-25","author":{"@type":"Organization","name":"MatHub"},"publisher":{"@type":"Organization","name":"MatHub"},"keywords":"programming, debugging","timeRequired":"PT5M"}]</script>
+</head>
+<body class="">
+<header class="s-head"><a class="s-brand" href="/"><svg width="28" height="28" viewBox="0 0 64 64" aria-hidden="true"><defs><linearGradient id="mh-g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#2B55B8"/><stop offset="1" stop-color="#0E7C86"/></linearGradient></defs><rect width="64" height="64" rx="15" fill="url(#mh-g)"/><path d="M15 46V21l17 17 17-17v25" fill="none" stroke="#fff" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/><circle cx="32" cy="38" r="4.2" fill="#F2C14E"/><circle cx="15" cy="21" r="3.4" fill="#F2C14E"/><circle cx="49" cy="21" r="3.4" fill="#F2C14E"/></svg><span><b>Mat<i>Hub</i></b><small>Montana State · Fall 2026</small></span></a><nav class="s-nav"><a href="/learn/">Study guides</a><a class="s-btn" href="/">Open MatHub</a></nav></header>
+<main class="s-wrap">
+<nav class="s-crumbs" aria-label="Breadcrumb"><a href="/">MatHub</a><span>›</span><a href="/learn/">Study guides</a><span>›</span><a href="/learn/guides/">Guides</a><span>›</span><span aria-current="page">Getting unstuck on a coding problem</span></nav>
+<div class="s-eyebrow">MatHub study guide · 5 min read · programming · debugging</div>
+<h1>Getting unstuck on a coding problem</h1>
+<p class="s-lead">Errors are not failures; they are the computer telling you exactly where to look. A repeatable routine for CSCI 127.</p>
+<p>Everyone who codes gets stuck constantly; the difference between beginners and experienced programmers is what they do in the next five minutes. This is the routine.</p><h2>Read the error, all of it</h2><ul class="s-list"><li>The <b>last line</b> of a Python traceback names the error and usually the cause: NameError means a typo or something defined later; TypeError often means a string where a number was expected; IndexError means you asked for an item that is not there.</li><li>The line above it with &quot;File ... line N&quot; points at your code. Start there, not at the top of the file.</li><li>Paste the exact message into a search engine in quotes. Someone has hit it before.</li></ul><h2>Make it smaller</h2><ol class="s-list ol"><li>Print the values just before the failing line: `print(i, len(items))`. Guesses about what a variable holds are wrong more often than you expect.</li><li>Comment out half the code. Does the error persist? Now you know which half.</li><li>Paste the function into <a href="https://pythontutor.com/" target="_blank" rel="noopener">Python Tutor</a> and step through it. Watching variables change fixes most loop and list bugs in a minute.</li><li>Write the smallest program that shows the problem. Often, by the time it is small, the bug is obvious.</li></ol><h2>When it runs but the answer is wrong</h2><ul class="s-list"><li>Hand-trace the code with a tiny input (a list of three numbers) on paper.</li><li>Check the boundaries: the first item, the last item, an empty list, zero.</li><li>Check integer division and off-by-one in ranges: `range(1, n)` stops at n - 1.</li><li>Use the playground in MatHub to test one function at a time with known inputs.</li></ul><h2>Ask well</h2><p>On the discussion board or in office hours, share the exact error, the smallest code that causes it, and what you expected instead. That message gets answered in minutes; &quot;my code does not work&quot; does not.</p><div class="s-tip"><span class="s-eyebrow">Tip</span><div>Take a ten-minute walk. Nobody knows why it works, but the bug you could not see for an hour is often obvious when you come back.</div></div>
+<section class="s-cta"><h2>Put it to work</h2><p>MatHub turns these ideas into a daily plan: due flashcards on a spacing schedule, one-question lessons, endless practice and a focus timer, for M171, PHSX 220, M151Q, WRIT 101, CSCI 127.</p><div class="s-btns"><a class="s-btn primary" href="/#/today">Open Today in MatHub</a><a class="s-btn" href="/learn/guides/">All study guides</a></div></section>
+<section><h2>More guides</h2><div class="s-cards"><a class="s-card" href="/learn/guides/math-exam.html"><div class="s-eyebrow">6 min</div><h2>How to study for a math exam: the ten-day plan</h2><p>Rereading notes the night before is the most common plan and the worst one. Here is what works, day by day.</p></a><a class="s-card" href="/learn/guides/active-recall.html"><div class="s-eyebrow">5 min</div><h2>Active recall and spaced repetition: why rereading feels good and does not work</h2><p>The two most-researched study techniques, explained in five minutes, with how MatHub uses them.</p></a><a class="s-card" href="/learn/guides/focus-blocks.html"><div class="s-eyebrow">4 min</div><h2>The 25-minute block: how to actually start</h2><p>Starting is the hard part. A short timer, a single task and a visible finish line get you past it.</p></a><a class="s-card" href="/learn/guides/read-textbook.html"><div class="s-eyebrow">4 min</div><h2>How to read a math or physics section in twenty minutes</h2><p>Textbooks are not novels. Read them out of order, with a pencil, and stop when you have what you need.</p></a></div></section>
+</main>
+<footer class="s-foot"><div><b>MatHub</b> is a free, independent study site made by a Montana State student. It is not affiliated with Montana State University; syllabus details come from each class and can change, so confirm dates on Canvas.</div><div class="s-foot-links"><a href="/learn/calc/">M171</a><a href="/learn/physics/">PHSX 220</a><a href="/learn/precalc/">M151Q</a><a href="/learn/writ/">WRIT 101</a><a href="/learn/csci/">CSCI 127</a><a href="/learn/guides/">Guides</a><a href="/learn/resources.html">Resources</a><a href="/learn/whats-new.html">What's new</a><a href="/#/contact">Contact</a><a href="/#/policy">Terms &amp; Privacy</a></div></footer>
+</body>
+</html>

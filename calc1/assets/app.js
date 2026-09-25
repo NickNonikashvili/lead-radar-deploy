@@ -12,7 +12,7 @@
   const BUILD = global.MATHUB_BUILD || 'dev';
   const Courses = global.Courses || (global.Courses = {});
   const COURSE_ORDER = ['calc', 'physics', 'precalc', 'writ', 'csci'];
-  const GLOBAL_VIEWS = ['contact', 'forum', 'policy', 'admin', 'meet', 'badges', 'challenge', 'mock', 'people', 'settings', 'leagues', 'gpa', 'today', 'whatsnew'];   // pages that work without a course, e.g. #/contact
+  const GLOBAL_VIEWS = ['contact', 'forum', 'policy', 'admin', 'meet', 'badges', 'challenge', 'mock', 'people', 'settings', 'leagues', 'gpa', 'today', 'whatsnew', 'resources', 'guides', 'focus', 'recap', 'tools'];   // pages that work without a course, e.g. #/contact
   const SITE = 'MatHub';
   let D = null, QZ = null;        // current course data and quiz module
   const courseHooks = [];
@@ -256,6 +256,8 @@
     let gp = C.NAV.find(g => g.label === 'Community'); if (!gp) { gp = { label: 'Community', items: [['forum', 'Discussions', 'chat']] }; C.NAV.splice(C.NAV.length - 1, 0, gp); }
     COMMUNITY_NAV.forEach(it => { if (!C.quiz && ['challenge', 'mock', 'contribute'].includes(it[0])) return; if (App.views[it[0]] && !gp.items.some(x => x[0] === it[0])) gp.items.push(it); });
     const cg = C.NAV.find(g => g.label === 'Course'); if (cg && App.views.gpa && !cg.items.some(x => x[0] === 'gpa')) { const gi = cg.items.findIndex(x => x[0] === 'grades'); cg.items.splice(gi >= 0 ? gi + 1 : 1, 0, ['gpa', 'GPA calculator', 'calc']); }
+    if (cg && App.views.resources && !cg.items.some(x => x[0] === 'resources')) cg.items.splice(Math.max(1, cg.items.length - 1), 0, ['resources', 'Resources & guides', 'link']);
+    const pg = C.NAV.find(g => g.label === 'Practice'); if (pg && C.quiz && App.views.blitz && !pg.items.some(x => x[0] === 'blitz')) pg.items.push(['blitz', 'Blitz', 'zap']);
   }
   function setCourse(id) {
     if (D && D.id === id) return;
@@ -271,7 +273,8 @@
     if (C.loaded || !C.files || !C.files.length) { C.loaded = true; delete C.stub; return Promise.resolve(C); }
     if (loading[id]) return loading[id];
     const one = src => new Promise((res, rej) => { if (document.querySelector(`script[data-src="${src}"]`)) return res(); const sc = document.createElement('script'); sc.src = `assets/${src}.js?v=${BUILD}`; sc.dataset.src = src; sc.onload = res; sc.onerror = () => { sc.remove(); rej(new Error(`Could not download ${src}.js. Check your connection and try again.`)); }; document.head.appendChild(sc); });
-    loading[id] = (async () => { try { for (const f of C.files) await one(f); } finally { delete loading[id]; } const F = Courses[id]; F.loaded = true; delete F.stub; Search.index = null; return F; })();
+    if (App.loadbar) App.loadbar.start();
+    loading[id] = (async () => { try { for (const f of C.files) await one(f); } finally { delete loading[id]; if (App.loadbar) App.loadbar.done(); } const F = Courses[id]; F.loaded = true; delete F.stub; Search.index = null; return F; })();
     return loading[id];
   };
   App.loadCourses = ids => Promise.all(ids.map(id => App.loadCourse(id).catch(() => null)));
@@ -326,7 +329,7 @@
     if (!lv || !lv.hash || !Courses[lv.course] || !mine.includes(lv.course) || Date.now() - lv.t > 7 * 86400000 || Date.now() - lv.t < 20000) return strip;
     return `<a class="resume-card course-${lv.course}" href="${esc(lv.hash)}"><span class="resume-ic">${icon('play', 16)}</span><span class="resume-body"><small>Pick up where you left off · ${esc(App.ago(lv.t))}</small><b>${esc(lv.label)}${lv.detail ? ` · ${esc(lv.detail)}` : ''}</b></span>${icon('right', 16)}</a>` + strip;
   };
-  const TABS_GLOBAL = [['#/', 'Home', 'home', 'home'], ['#/today', 'Today', 'flag', 'today'], ['#/forum', 'Board', 'chat', 'forum'], ['#/gpa', 'GPA', 'calc', 'gpa'], ['#/settings', 'Me', 'user', 'settings']];
+  const TABS_GLOBAL = [['#/', 'Home', 'home', 'home'], ['#/today', 'Today', 'flag', 'today'], ['#/focus', 'Focus', 'clock', 'focus'], ['#/forum', 'Board', 'chat', 'forum'], ['#/settings', 'Me', 'user', 'settings']];
   function paintTabbar(course, view) {
     let bar = $('#tabbar'); if (!bar) { bar = document.createElement('nav'); bar.id = 'tabbar'; bar.setAttribute('aria-label', 'Quick navigation'); document.body.appendChild(bar); }
     let tabs;
@@ -347,7 +350,8 @@
   }
   App.initTabs = initTabs;
   function afterRender(root) {
-    initTabs(root); initToTop(); { const r = route(); paintTabbar(r.course, r.course ? r.view : (r.view === 'home' ? 'home' : r.view)); if (!r.course) prefetchLast(); } if (App.paintStats) { App.paintStats(); App.paintMascots(); App.countUp(root); } if (App.paintQuests) App.paintQuests(); if (App.paintLeagueWidgets) App.paintLeagueWidgets(root); const tk = $('#landing-ticker', root); if (tk && App.fillTicker) App.fillTicker(tk); }
+    initTabs(root); initToTop(); { const r = route(); paintTabbar(r.course, r.course ? r.view : (r.view === 'home' ? 'home' : r.view)); if (!r.course) prefetchLast(); const PRINTABLE = ['notes', 'formulas', 'course', 'calendar', 'planner', 'exam', 'checklist', 'gpa']; const pa = $('.page-head .page-actions', root) || (r.view === 'notes' ? $('.note-head', root) : null); if (pa && PRINTABLE.includes(r.view) && !$('.print-btn', pa)) pa.insertAdjacentHTML('beforeend', `<button class="btn sm print-btn" data-action="print-page" title="Print or save as PDF">${icon('print', 13)} Print</button>`); }
+    if (App.motionRender) App.motionRender(root); if (App.paintStats) { App.paintStats(); App.paintMascots(); App.countUp(root); } if (App.paintQuests) App.paintQuests(); if (App.paintLeagueWidgets) App.paintLeagueWidgets(root); const tk = $('#landing-ticker', root); if (tk && App.fillTicker) App.fillTicker(tk); }
   App.rerender = () => render();
   App.currentSectionOf = C => currentSection(C);
   App.inCourse = () => !!route().course;
@@ -365,12 +369,13 @@
     const st = examStatus(ex); chip.innerHTML = `${icon('flag', 14)} <span>${esc(ex.name)} ·</span> <b>${esc(st.chip)}</b>`;
   }
   function applyTheme() {
+    if (App.applySkin) App.applySkin(); if (App.applyMotion) App.applyMotion();
     const t = settings().theme || 'system';
     if (t === 'system') document.documentElement.removeAttribute('data-theme'); else document.documentElement.setAttribute('data-theme', t);
     const dark = document.documentElement.getAttribute('data-theme') === 'dark' || (t === 'system' && matchMedia('(prefers-color-scheme: dark)').matches);
     $$('.theme-btn').forEach(b => b.innerHTML = icon(dark ? 'sun' : 'moon', 16));
   }
-  function toggleTheme() { const isDark = document.documentElement.getAttribute('data-theme') === 'dark' || (!document.documentElement.getAttribute('data-theme') && matchMedia('(prefers-color-scheme: dark)').matches); setSetting('theme', isDark ? 'light' : 'dark'); applyTheme(); }
+  function toggleTheme() { if (App.themeFade) App.themeFade(); const isDark = document.documentElement.getAttribute('data-theme') === 'dark' || (!document.documentElement.getAttribute('data-theme') && matchMedia('(prefers-color-scheme: dark)').matches); setSetting('theme', isDark ? 'light' : 'dark'); applyTheme(); }
   function buildNav() {
     $('#brand-code').textContent = D.code; $('#brand-name').innerHTML = `${esc(D.name)}<small>${esc(D.term)}</small>`;
     const mine = App.myCourses(); if (D && !mine.includes(D.id)) mine.push(D.id);
@@ -385,6 +390,7 @@
   function buildLayout() {
     const app = $('.app');
     bind($('#sidebar'), { nav: el => App.go(el.dataset.view), navgroup: el => { const m = Object.assign({}, settings().navOpen || {}); const now = el.classList.contains('open'); m[el.dataset.g] = !now; setSetting('navOpen', m); el.classList.toggle('open', !now); el.setAttribute('aria-expanded', String(!now)); const g = el.nextElementSibling; if (g) g.classList.toggle('closed', now); }, 'pomo-toggle': () => Pomo.toggle(), 'pomo-reset': () => Pomo.reset(), 'pomo-mode': () => Pomo.switchMode() });
+    document.addEventListener('click', e => { if (e.target.closest('[data-action="print-page"]')) global.print(); });
     bind($('#topbar'), { menu: () => app.classList.toggle('nav-open'), search: () => Search.open(), theme: toggleTheme, 'exam-chip': () => App.go('dashboard'), 'asof-clear': () => { setSetting('asof', ''); render(); toast('Back to today'); }, inbox: () => { if (App.auth && !App.auth.user) App.auth.open('login'); else App.go('forum', 'inbox'); } });
     $('#nav-backdrop').addEventListener('click', () => app.classList.remove('nav-open'));
     applyTheme(); matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applyTheme);
@@ -414,7 +420,9 @@
     strip(str) { return String(str).replace(/<[^>]+>/g, '').replace(/\$[^$]*\$/g, m => m.replace(/\\[a-zA-Z]+|[{}$^_\\]/g, ' ')); },
     build() {
       const strip = this.strip; const ix = []; const goC = (c, view, param, query) => () => { location.hash = '#/' + c + '/' + view + (param ? '/' + encodeURIComponent(param) : '') + (query ? '?' + new URLSearchParams(query).toString() : ''); };
-      [['today', 'Today', 'plan for today due cards lesson challenge'], ['gpa', 'GPA calculator', 'gpa grade point average semester cumulative'], ['forum', 'Discussions', 'board forum posts questions classmates'], ['people', 'People', 'classmates members badges'], ['leagues', 'Leagues', 'weekly league xp rank'], ['badges', 'Your badges', 'badges achievements'], ['settings', 'Settings', 'account settings classes notifications theme email'], ['whatsnew', "What's new", 'changelog updates releases news'], ['contact', 'Contact', 'contact creator nikoloz nonikashvili phone email help feedback']].forEach(([id, label, key]) => ix.push({ type: 'page', c: '', t: label, s: SITE, go: () => { location.hash = '#/' + id; }, key: (label + ' ' + key).toLowerCase() }));
+      [['today', 'Today', 'plan for today due cards lesson challenge'], ['focus', 'Focus room', 'focus timer pomodoro study session sounds'], ['resources', 'Resources', 'resources links tutoring textbook videos help'], ['guides', 'Study guides', 'guides how to study exam anxiety notes office hours'], ['tools', 'Tools', 'calculator unit converter citation word counter significant figures'], ['recap', 'Your week', 'weekly recap stats share'], ['gpa', 'GPA calculator', 'gpa grade point average semester cumulative'], ['forum', 'Discussions', 'board forum posts questions classmates'], ['people', 'People', 'classmates members badges'], ['leagues', 'Leagues', 'weekly league xp rank'], ['badges', 'Your badges', 'badges achievements'], ['settings', 'Settings', 'account settings classes notifications theme email'], ['whatsnew', "What's new", 'changelog updates releases news'], ['contact', 'Contact', 'contact creator nikoloz nonikashvili phone email help feedback']].forEach(([id, label, key]) => ix.push({ type: 'page', c: '', t: label, s: SITE, go: () => { location.hash = '#/' + id; }, key: (label + ' ' + key).toLowerCase() }));
+      (global.MATHUB_RESOURCES ? global.MATHUB_RESOURCES.ITEMS : []).forEach(it => ix.push({ type: 'resource', c: Courses[it.g] ? it.g : '', t: it.t, s: `Resource · ${it.g === 'general' ? 'every class' : it.g === 'msu' ? 'Montana State' : Courses[it.g] ? Courses[it.g].short : it.g}`, go: () => { if (/^https?:/.test(it.u)) global.open(it.u, '_blank', 'noopener'); else location.hash = it.u; }, key: (it.t + ' ' + it.d + ' ' + (it.tags || []).join(' ')).toLowerCase() }));
+      (global.MATHUB_GUIDES || []).forEach(g => ix.push({ type: 'guide', c: '', t: g.title, s: `Guide · ${g.minutes} min`, go: () => { location.hash = '#/guides/' + g.id; }, key: (g.title + ' ' + g.blurb + ' ' + g.tags.join(' ')).toLowerCase() }));
       COURSE_ORDER.filter(id => Courses[id]).forEach(id => {
         const C = Courses[id]; const secLabelC = sid => { const x = (C.SECTIONS || []).find(z => z.id === sid); return x ? x.label : sid; };
         if (C.NAV) C.NAV.forEach(gp => gp.items.forEach(([v, label]) => ix.push({ type: 'page', c: id, t: label, s: `${C.short} · ${gp.label}`, go: goC(id, v), key: (label + ' ' + C.short + ' ' + C.code).toLowerCase() })));
@@ -486,13 +494,15 @@
       const greeting = d.getHours() < 12 ? 'this morning' : d.getHours() < 18 ? 'this afternoon' : 'tonight';
       const sub = ss.phase === 'before' ? `Classes start ${esc(fmtDate(first.SEMESTER.start, true))}. Get a head start on the first topics.` : ss.phase === 'after' ? 'The semester is over. Everything stays here for review.' : `Which class are you working on ${greeting}?`;
       root.innerHTML = `<div class="landing-wrap">
-        <header class="landing-top hero"><div><div class="eyebrow">${esc(fmtDate(t, true))} · ${esc(first.term)}${ss.phase === 'during' ? ` · Week ${ss.week}` : ''}</div><h1 class="landing-title"><span class="logo-mark">${App.logoSvg(44)}</span>${SITE}</h1><p class="hero-sub">${sub}</p><p class="muted small hero-note">Notes, endless practice, simulators, a Python playground, planners and a class board for Montana State math, physics, writing and computing. Free for students.</p><div id="landing-presence" class="mt-1"></div><div class="league-slot mt-2" data-compact="1"></div></div><div class="row gap-sm hero-actions"><a class="btn primary sm hero-today" href="#/today">${icon('flag', 14)} Today</a><button class="icon-btn" data-action="search" aria-label="Search" title="Search (Ctrl K)">${icon('search', 15)}</button><span id="landing-account"></span><button class="icon-btn theme-btn" data-action="theme" aria-label="Toggle theme"></button></div><div class="mascot-slot hero-mascot" data-size="112"></div></header>
+        <header class="landing-top hero"><div><div class="eyebrow">${esc(fmtDate(t, true))} · ${esc(first.term)}${ss.phase === 'during' ? ` · Week ${ss.week}` : ''}</div><h1 class="landing-title"><span class="logo-mark">${App.logoSvg(44)}</span>${SITE}</h1><p class="hero-sub">${sub}</p><p class="muted small hero-note">Notes, endless practice, simulators, a Python playground, planners and a class board for Montana State math, physics, writing and computing. Free for students.</p>${(() => { const soon = mineIds.map(id => ({ C: Courses[id], ex: nextExam(Courses[id]) })).filter(x => x.ex && x.ex.date >= t).sort((a, b) => a.ex.date.localeCompare(b.ex.date))[0]; if (!soon) return ''; const n = daysBetween(t, soon.ex.date); return `<a class="hero-count" href="#/${soon.C.id}/dashboard"><span class="hc-num count" data-count="${n}">${n}</span><span class="hc-body"><small>day${n === 1 ? '' : 's'} until ${esc(soon.ex.name)}</small><b>${esc(soon.C.short)} · ${esc(soon.ex.dateLabel || fmtDate(soon.ex.date, true))}${App.readiness ? (() => { const r = App.readiness(soon.C.id); return r && r.ok && r.score > 0 ? ` · ${r.score}% ready` : ''; })() : ''}</b></span>${icon('right', 14)}</a>`; })()}<div id="landing-presence" class="mt-1"></div><div class="league-slot mt-2" data-compact="1"></div></div><div class="row gap-sm hero-actions"><a class="btn primary sm hero-today" href="#/today">${icon('flag', 14)} Today</a><a class="btn sm hero-focus" href="#/focus">${icon('clock', 14)} Focus</a><button class="icon-btn" data-action="search" aria-label="Search" title="Search (Ctrl K)">${icon('search', 15)}</button><span id="landing-account"></span><button class="icon-btn theme-btn" data-action="theme" aria-label="Toggle theme"></button></div><div class="mascot-slot hero-mascot" data-size="112"></div></header>
         <div id="announcement-slot"></div>
         <div class="ticker" id="landing-ticker" hidden></div>
+        ${App.recapBanner ? App.recapBanner() : ''}
         ${App.todaySummary ? App.todaySummary() : ''}
         ${App.resumeCard ? App.resumeCard(mineIds) : ''}
         <div class="course-grid">${cards}</div>
         <p class="small muted mt-1" style="text-align:right">${mineIds.length < COURSE_ORDER.filter(id => Courses[id]).length ? `Showing your ${mineIds.length} class${mineIds.length === 1 ? '' : 'es'} · <a href="#" data-action="show-all">${showAll ? 'show only mine' : 'show all classes'}</a> · ` : ''}<a href="#" data-action="choose">choose your classes and sections</a> · <a href="#/gpa">GPA calculator</a></p>
+        ${App.guidesStrip ? App.guidesStrip() : ''}
         <div class="dash-tabs landing-tabs mt-3" data-store="landTab" role="tablist">${[['week', 'This week', 'calendar'], ['community', 'Community', 'chat']].concat(App.guest() ? [['inside', 'What is inside', 'grid']] : []).map(([k, l, ic]) => `<button class="tab" data-tab="${k}" role="tab">${icon(ic, 14)}<span>${l}</span></button>`).join('')}</div>
         <div class="panes">
         <div class="pane" data-pane="week"><div class="grid cols-2">
@@ -599,7 +609,7 @@
       const weekMins = COURSE_ORDER.filter(id => Courses[id]).reduce((sum, id) => sum + ((store.peek(id).sessions || []).filter(x => App.isoWeek(parseISO(x.d)) === wk0).reduce((a, x) => a + (x.m || 0), 0)), 0);
       const remindNudge = App.auth && App.auth.user && !App.auth.user.local && App.auth.mode === 'server' && !App.auth.user.reminder_email && !settings().remindNudgeDismissed;
       root.innerHTML = `<div class="page-head"><div><div class="eyebrow">${esc(fmtDate(t, true))} · ${weekLabel} · ${esc(D.code)}</div><h1 class="page-title">Good ${d.getHours() < 12 ? 'morning' : d.getHours() < 18 ? 'afternoon' : 'evening'}. Here's where ${esc(D.short)} stands.</h1></div><div class="page-actions"><div class="mascot-slot coach" data-size="60" data-cls="compact"></div></div></div><div id="announcement-slot"></div>${pre}
-        <div class="stack">${remindNudge ? `<div class="callout small row between" style="gap:10px"><span>${icon('bell', 14)} Want an email the evening before something is due, and a heads-up when your streak is about to end?</span><span class="row gap-sm"><button class="btn xs primary" data-action="remind-on">Turn on</button><button class="btn xs ghost" data-action="remind-no">No thanks</button></span></div>` : ''}${examTile}
+        <div class="stack">${remindNudge ? `<div class="callout small row between" style="gap:10px"><span>${icon('bell', 14)} Want an email the evening before something is due, and a heads-up when your streak is about to end?</span><span class="row gap-sm"><button class="btn xs primary" data-action="remind-on">Turn on</button><button class="btn xs ghost" data-action="remind-no">No thanks</button></span></div>` : ''}${examTile}${App.readinessPanel ? App.readinessPanel(D.id) : ''}
           ${gsCard}
           <div class="grid cols-3">
             <div class="panel"><div class="panel-h"><div class="panel-title">${icon('calendar')} Today</div><a href="${L('calendar')}" class="small">Full calendar</a></div>
@@ -847,6 +857,9 @@
       const classesPanel = `<div class="panel span-2"><div class="panel-h"><div class="panel-title">${icon('grid')} Your classes</div><button class="btn sm" data-action="choose">Choose classes and sections</button></div><div class="row gap-sm" style="flex-wrap:wrap">${mine.map(id => `<span class="chip course-${id}">${esc(Courses[id].short)}${courseSetting(id, 'section', '') ? ' · sec ' + esc(courseSetting(id, 'section', '')) : ''}${courseSetting(id, 'examTime', '') ? ' · ' + esc(courseSetting(id, 'examTime', '')) : ''}</span>`).join('')}</div><p class="small muted mt-1">Only these classes show on the landing page, in the course switcher, in reminders and in the weekly digest.</p></div>`;
       const prefsPanel = `<div class="panel"><div class="panel-h"><div class="panel-title">${icon('sliders')} Preferences</div></div>
           <div class="field mb-2"><label for="s-theme">Theme</label><select class="select" id="s-theme"><option value="system"${s.theme === 'system' ? ' selected' : ''}>Match system</option><option value="light"${s.theme === 'light' ? ' selected' : ''}>Light</option><option value="dark"${s.theme === 'dark' ? ' selected' : ''}>Dark</option></select></div>
+          <div class="field mb-2"><label>Look</label><div class="skin-pick" id="s-skins">${(App.SKINS || []).map(([id, name, sub, [bg, ac]]) => `<button type="button" class="skin-opt${(s.skin || 'default') === id ? ' on' : ''}" data-action="skin" data-skin="${id}" aria-pressed="${(s.skin || 'default') === id}"><span class="skin-swatch" style="background:${bg}"><i style="background:${ac}"></i><i></i></span><b>${name}</b><small>${sub}</small></button>`).join('')}</div></div>
+          <label class="check" style="padding:0"><input type="checkbox" id="s-motion" ${s.motion === 'off' ? 'checked' : ''}><span>Reduce motion <span class="muted small">(no animations or transitions)</span></span></label>
+          <div class="row gap-sm mt-2" style="flex-wrap:wrap"><button class="btn sm" data-action="tour-again">${icon('eye', 13)} Show the tour again</button><a class="btn sm" href="#/tools">${icon('sliders', 13)} Tools</a><a class="btn sm" href="#/resources">${icon('link', 13)} Resources</a></div>
           <div class="field mb-2"><label for="s-goal">Daily XP goal</label><select class="select" id="s-goal">${(App.GOALS || [[30, 'Regular']]).map(([n, name]) => `<option value="${n}"${(App.dailyGoal ? App.dailyGoal() : 30) === n ? ' selected' : ''}>${n} XP · ${name}</option>`).join('')}</select><span class="help">A correct answer is 10 XP. The ring in the header fills up as you go; hit the goal every day to keep your streak strong.</span></div>
           <label class="check" style="padding:0"><input type="checkbox" id="s-sound" ${s.sound === false ? '' : 'checked'}><span>Sound effects <span class="muted small">(short cues for right, wrong and finished lessons)</span></span></label>
           <label class="check mb-2" style="padding:0"><input type="checkbox" id="s-livebg" ${s.liveBg === false ? '' : 'checked'}><span>Animated background <span class="muted small">(drifting symbols; off automatically when your system prefers reduced motion)</span></span></label>
@@ -861,6 +874,9 @@
       root.innerHTML = `${standalone ? '<div class="landing-wrap settings-wrap">' : ''}${head}<div class="grid cols-2"><div id="acct-panel" class="span-2"></div>${classesPanel}${prefsPanel}${dataPanel}</div>${standalone ? '</div>' : ''}`;
       const slot = $('#landing-account', root); if (slot && App.auth && App.auth.ready) App.auth.paintLandingAccount(slot);
       $('#s-theme', root).addEventListener('change', e => { setSetting('theme', e.target.value); applyTheme(); });
+      on(root, 'click', '[data-action="tour-again"]', () => { setSetting('tourDone', false); try { sessionStorage.removeItem('mh-tour'); } catch (e) {} location.hash = '#/'; setTimeout(() => { if (App.tour) App.tour.start(true); }, 700); });
+      on(root, 'click', '[data-action="skin"]', el => { setSetting('skin', el.dataset.skin); applyTheme(); $$('.skin-opt', root).forEach(b => { b.classList.toggle('on', b === el); b.setAttribute('aria-pressed', b === el); }); toast(`${el.querySelector('b').textContent} look on.`, 1800); });
+      const sm = $('#s-motion', root); if (sm) sm.addEventListener('change', e => { setSetting('motion', e.target.checked ? 'off' : 'on'); applyTheme(); });
       const sg = $('#s-goal', root); if (sg) sg.addEventListener('change', e => { setSetting('dailyGoal', +e.target.value); if (App.paintStats) { App.paintStats(); App.paintMascots(); } toast(`Daily goal: ${e.target.value} XP`); });
       const sd = $('#s-sound', root); if (sd) sd.addEventListener('change', e => { setSetting('sound', e.target.checked); if (e.target.checked && App.sfx) App.sfx.play('correct'); });
       const lb = $('#s-livebg', root); if (lb) lb.addEventListener('change', e => { setSetting('liveBg', e.target.checked); if (App.liveBg) App.liveBg.apply(); });

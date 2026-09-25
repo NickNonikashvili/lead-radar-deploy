@@ -6,7 +6,7 @@ const T = require('./lib');
 
   const [c, p] = await mk(); const js = []; p.on('response', r => { if (/assets\/.*\.js/.test(r.url())) js.push(r.url().replace(/.*assets\//, '').replace(/\?.*/, '')); });
   await go(p, '#/'); await p.waitForTimeout(800);
-  check('landing downloads no class files', js.length > 5 && !js.some(f => /-data|-quiz|-tools|phonetics|pylab/.test(f)), js.filter(f => /-data|-quiz|-tools|phonetics|pylab/.test(f)));
+  const isClassFile = f => /^(calc|physics|precalc|writ|csci)-(data|quiz|tools)|phonetics|pylab/.test(f); check('landing downloads no class files', js.length > 5 && !js.some(isClassFile), js.filter(isClassFile));
   log('landing cards:', (await p.$$('.course-card')).length, '| stat strip:', await txt(p, '.stat-strip'));
   const card = await txt(p, '.course-card'); log('first card:', card.slice(0, 160));
   await p.evaluate(() => { const s = App.settings(); s.courses = ['calc', 'writ', 'csci']; s.lastVisit = { hash: '#/calc/notes/1.3', label: 'Calc I · Notes', course: 'calc', t: Date.now() - 3600000 }; localStorage.setItem('studyhub-settings', JSON.stringify(s)); });

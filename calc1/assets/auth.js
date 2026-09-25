@@ -134,7 +134,7 @@
     applyServer(course, r.data, r.updated);
   };
   /* ---------- preferences that follow the account (device-local settings such as the GPA calculator, sounds, goal, theme) ---------- */
-  const PREF_KEYS = ['gpa', 'ambient', 'dailyGoal', 'theme', 'liveBg', 'sound', 'phonRate', 'phonVoice_uk', 'phonVoice_us', 'readerVoice', 'readerScroll', 'navOpen', 'seenChangelog', 'todayPlan', 'lastVisit', 'challengeDone', 'lastLessonDay', 'pushOn'];
+  const PREF_KEYS = ['gpa', 'ambient', 'dailyGoal', 'theme', 'liveBg', 'sound', 'phonRate', 'phonVoice_uk', 'phonVoice_us', 'readerVoice', 'readerScroll', 'navOpen', 'seenChangelog', 'todayPlan', 'lastVisit', 'challengeDone', 'lastLessonDay', 'pushOn', 'savedResources', 'guidesRead', 'skin', 'motion', 'tourDone', 'recapSeen', 'focusLog', 'focusGoal'];
   function applyPrefs(prefs, updated) { if (!prefs || typeof prefs !== 'object') return; const s = App.settings(); PREF_KEYS.forEach(k => { if (prefs[k] !== undefined) s[k] = prefs[k]; }); s.prefsUpdated = updated; writeJSON('studyhub-settings', s); if (App.applyTheme) App.applyTheme(); }
   Auth.prefsPush = function () { if (!Auth.user || Auth.mode !== 'server' || Auth.unreachable) return; clearTimeout(Auth.prefsTimer); Auth.prefsTimer = setTimeout(async () => { const s = App.settings(); const prefs = {}; PREF_KEYS.forEach(k => { if (s[k] !== undefined) prefs[k] = s[k]; }); const updated = Date.now(); s.prefsUpdated = updated; writeJSON('studyhub-settings', s); try { const r = await call('prefs', { prefs, updated }, 'PUT'); if (r.stale) applyPrefs(r.prefs, r.updated); } catch (e) {} }, 2500); };
   Auth.prefsPull = async function () { if (!Auth.user || Auth.mode !== 'server') return; try { const r = await call('prefs'); const local = App.settings().prefsUpdated || 0; if ((r.updated || 0) > local) applyPrefs(r.prefs, r.updated); else if (local > (r.updated || 0)) Auth.prefsPush(); } catch (e) {} };
@@ -217,6 +217,10 @@
       const unread = u.unread || 0;
       App.popover(btn, `<div class="acct-dd-head"><div class="acct-name">${esc(name)}</div><div class="acct-sub mono">${esc(u.email)}</div>${u.role || u.admin || u.mod ? `<div class="row gap-sm mt-1">${u.role ? `<span class="chip staff">${esc(u.role)}</span>` : ''}${u.admin ? '<span class="chip accent">administrator</span>' : u.mod ? '<span class="chip accent">moderator</span>' : ''}</div>` : ''}</div>
         <a class="acct-dd-item" href="#/today">${icon('flag', 15)}<span>Today</span></a>
+        <a class="acct-dd-item" href="#/focus">${icon('clock', 15)}<span>Focus room</span></a>
+        <a class="acct-dd-item" href="#/recap">${icon('zap', 15)}<span>Your week</span></a>
+        <a class="acct-dd-item" href="#/resources">${icon('link', 15)}<span>Resources & guides</span></a>
+        <a class="acct-dd-item" href="#/tools">${icon('sliders', 15)}<span>Tools</span></a>
         <a class="acct-dd-item" href="${App.settingsLink ? App.settingsLink() : '#/settings'}">${icon('gear', 15)}<span>Account settings</span></a>
         <a class="acct-dd-item" href="#/badges">${icon('award', 15)}<span>Your badges</span></a>
         <a class="acct-dd-item" href="#/people">${icon('users', 15)}<span>People</span></a>

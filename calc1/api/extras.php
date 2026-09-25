@@ -33,7 +33,7 @@ function mh_extras_route(string $route, array $in, array $cfg, string $ip): void
     /* --- problem reports --- */
     case 'issue_report': {
       mh_method('POST'); $u = mh_current_user(); mh_rate_or_fail("issue:ip:$ip", 20, 3600, 'That is a lot of reports at once. Try again in an hour.');
-      $course = preg_replace('/[^a-z0-9]/', '', (string)($in['course'] ?? '')); $reason = in_array($in['reason'] ?? '', ['wrong', 'typo', 'unclear', 'bug', 'other'], true) ? $in['reason'] : 'other';
+      $course = preg_replace('/[^a-z0-9]/', '', (string)($in['course'] ?? '')); $reason = in_array($in['reason'] ?? '', ['wrong', 'typo', 'unclear', 'bug', 'link', 'resource', 'other'], true) ? $in['reason'] : 'other';
       $ref = mh_str($in, 'ref', 120); $prompt = mh_str($in, 'prompt', 400); $comment = mh_str($in, 'comment', 800); $answer = mh_str($in, 'answer', 200); $view = mh_str($in, 'view', 60); $url = mh_str($in, 'url', 200); $build = mh_str($in, 'build', 30);
       if ($comment === '' && $prompt === '' && $ref === '') mh_fail('Tell us what the problem is.');
       $st = $db->prepare('SELECT COUNT(*) FROM issues WHERE prompt = ? AND prompt != "" AND status = "open"'); $st->execute([$prompt]); $dupes = (int)$st->fetchColumn();

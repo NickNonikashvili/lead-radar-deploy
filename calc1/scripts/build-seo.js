@@ -86,7 +86,7 @@ ${hasTex ? `<script>window.MathJax = { tex: { inlineMath: [['$', '$'], ['\\\\(',
 <nav class="s-crumbs" aria-label="Breadcrumb">${crumbs.map((c, i) => i < crumbs.length - 1 ? `<a href="${c.u}">${esc(c.n)}</a><span>›</span>` : `<span aria-current="page">${esc(c.n)}</span>`).join('')}</nav>
 ${o.body}
 </main>
-<footer class="s-foot"><div><b>${SITE}</b> is a free, independent study site made by a Montana State student. It is not affiliated with Montana State University; syllabus details come from each class and can change, so confirm dates on Canvas.</div><div class="s-foot-links">${ORDER.map(c => `<a href="${courseUrl(c)}">${esc(Courses[c].code)}</a>`).join('')}<a href="/learn/whats-new.html">What's new</a><a href="/#/contact">Contact</a><a href="/#/policy">Terms &amp; Privacy</a></div></footer>
+<footer class="s-foot"><div><b>${SITE}</b> is a free, independent study site made by a Montana State student. It is not affiliated with Montana State University; syllabus details come from each class and can change, so confirm dates on Canvas.</div><div class="s-foot-links">${ORDER.map(c => `<a href="${courseUrl(c)}">${esc(Courses[c].code)}</a>`).join('')}<a href="/learn/guides/">Guides</a><a href="/learn/resources.html">Resources</a><a href="/learn/whats-new.html">What's new</a><a href="/#/contact">Contact</a><a href="/#/policy">Terms &amp; Privacy</a></div></footer>
 </body>
 </html>
 `;
@@ -153,6 +153,39 @@ ${LOG.map((r, i) => `<section class="s-release${i === 0 ? ' latest' : ''}"><h2>$
   return page({ title: `What's new · release notes · ${SITE}`, desc: clip(`MatHub release notes: ${LOG.slice(0, 3).map(r => r.t).join('; ')}.`, 158), url: '/learn/whats-new.html', type: 'website', crumbs: [{ n: "What's new", u: '/learn/whats-new.html' }], body, ld });
 }
 
+/* ---------- study guides and resources ---------- */
+require(path.join(ROOT, 'assets', 'guides-data.js')); require(path.join(ROOT, 'assets', 'resources-data.js'));
+const GUIDES = global.MATHUB_GUIDES || window.MATHUB_GUIDES || []; const RES = global.MATHUB_RESOURCES || window.MATHUB_RESOURCES || { GROUPS: [], ITEMS: [], KINDS: {} };
+const inlineMd = t => esc(t).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, (m, txt, u) => /^https?:/.test(u) ? `<a href="${u}" target="_blank" rel="noopener">${txt}</a>` : `<a href="${u.startsWith('#/guides/') ? '/learn/guides/' + u.slice(9) + '.html' : '/' + u}">${txt}</a>`).replace(/\n/g, '<br>');
+const guideUrl = g => `/learn/guides/${g.id}.html`;
+function guideBodyHtml(g) { return g.body.map(b => b.h ? `<h2>${inlineMd(b.h)}</h2>` : b.p ? `<p>${inlineMd(b.p)}</p>` : b.ul ? `<ul class="s-list">${b.ul.map(x => `<li>${inlineMd(x)}</li>`).join('')}</ul>` : b.ol ? `<ol class="s-list ol">${b.ol.map(x => `<li>${inlineMd(x)}</li>`).join('')}</ol>` : b.tip ? `<div class="s-tip"><span class="s-eyebrow">Tip</span><div>${inlineMd(b.tip)}</div></div>` : b.q ? `<blockquote class="s-quote">${inlineMd(b.q)}</blockquote>` : '').join(''); }
+function guidePage(g) {
+  const others = GUIDES.filter(x => x !== g).slice(0, 4);
+  const body = `<div class="s-eyebrow">MatHub study guide · ${g.minutes} min read · ${g.tags.map(esc).join(' · ')}</div>
+<h1>${esc(g.title)}</h1>
+<p class="s-lead">${esc(g.blurb)}</p>
+${guideBodyHtml(g)}
+<section class="s-cta"><h2>Put it to work</h2><p>MatHub turns these ideas into a daily plan: due flashcards on a spacing schedule, one-question lessons, endless practice and a focus timer, for ${ORDER.map(c => Courses[c].code).join(', ')}.</p><div class="s-btns"><a class="s-btn primary" href="/#/today">Open Today in MatHub</a><a class="s-btn" href="/learn/guides/">All study guides</a></div></section>
+<section><h2>More guides</h2><div class="s-cards">${others.map(o => `<a class="s-card" href="${guideUrl(o)}"><div class="s-eyebrow">${o.minutes} min</div><h2>${esc(o.title)}</h2><p>${esc(o.blurb)}</p></a>`).join('')}</div></section>`;
+  const ld = [{ '@context': 'https://schema.org', '@type': 'Article', headline: g.title, description: g.blurb, url: SITE_URL + guideUrl(g), datePublished: TODAY, dateModified: TODAY, author: { '@type': 'Organization', name: SITE }, publisher: { '@type': 'Organization', name: SITE }, keywords: g.tags.join(', '), timeRequired: `PT${g.minutes}M` }];
+  return page({ title: `${g.title} · study guide · ${SITE}`, desc: clip(g.blurb, 158), url: guideUrl(g), crumbs: [{ n: 'Guides', u: '/learn/guides/' }, { n: g.title, u: guideUrl(g) }], body, ld });
+}
+function guidesIndexPage() {
+  const body = `<div class="s-eyebrow">MatHub · study skills</div><h1>Study guides for college classes</h1><p class="s-lead">${GUIDES.length} short, practical guides written for Montana State students in calculus, physics, precalculus, writing and Python: how to study for a math exam, active recall, focus, office hours, test anxiety, note-taking and more. Each takes under six minutes.</p>
+<div class="s-cards">${GUIDES.map(g => `<a class="s-card" href="${guideUrl(g)}"><div class="s-eyebrow">${g.minutes} min · ${g.tags.slice(0, 2).map(esc).join(' · ')}</div><h2>${esc(g.title)}</h2><p>${esc(g.blurb)}</p></a>`).join('')}</div>
+<section class="s-cta"><h2>Study with MatHub</h2><p>Free notes, endless practice, flashcards and calendars for every class, plus a focus room and a resources hub.</p><div class="s-btns"><a class="s-btn primary" href="/">Open MatHub</a><a class="s-btn" href="/learn/resources.html">Resources</a></div></section>`;
+  const ld = [{ '@context': 'https://schema.org', '@type': 'CollectionPage', name: 'Study guides', url: SITE_URL + '/learn/guides/', hasPart: GUIDES.map(g => ({ '@type': 'Article', headline: g.title, url: SITE_URL + guideUrl(g) })) }];
+  return page({ title: `Study guides: how to study for math and physics exams, focus, notes · ${SITE}`, desc: clip(`${GUIDES.length} practical study-skills guides for college students: exam plans, active recall, focus blocks, office hours, test anxiety, note-taking, coding and essay drafting.`, 158), url: '/learn/guides/', type: 'website', crumbs: [{ n: 'Guides', u: '/learn/guides/' }], body, ld });
+}
+function resourcesPage() {
+  const grp = g => RES.ITEMS.filter(it => it.g === g.id && /^https?:/.test(it.u));
+  const body = `<div class="s-eyebrow">MatHub · resources</div><h1>Free study resources for Montana State classes</h1><p class="s-lead">Curated links for every class and for studying in general: free textbooks, video channels, practice sites, tools, and the campus services most students never use. Save any of them to your account inside MatHub.</p>
+${RES.GROUPS.map(g => { const items = grp(g); return items.length ? `<section><h2>${esc(g.title)}</h2><p>${esc(g.blurb)}</p><ul class="s-res">${items.map(it => `<li><a href="${esc(it.u)}" target="_blank" rel="noopener">${esc(it.t)}</a> <span class="s-kind">${esc(RES.KINDS[it.k] || it.k)}</span><br><span class="s-desc">${esc(it.d)}</span></li>`).join('')}</ul></section>` : ''; }).join('')}
+<section class="s-cta"><h2>Everything else lives in the app</h2><p>Practice questions, flashcards, calendars, a focus room, a code playground and a class board.</p><div class="s-btns"><a class="s-btn primary" href="/#/resources">Open resources in MatHub</a><a class="s-btn" href="/learn/guides/">Study guides</a></div></section>`;
+  const ld = [{ '@context': 'https://schema.org', '@type': 'CollectionPage', name: 'Study resources for Montana State classes', url: SITE_URL + '/learn/resources.html', isPartOf: { '@type': 'WebSite', name: SITE, url: SITE_URL + '/' } }];
+  return page({ title: `Free study resources for M171, PHSX 220, M151Q, WRIT 101 and CSCI 127 · ${SITE}`, desc: clip('Curated free resources for Montana State classes: textbooks, video channels, practice sites, tools, tutoring, the Writing Center, counseling and more, organized by class.', 158), url: '/learn/resources.html', type: 'website', crumbs: [{ n: 'Resources', u: '/learn/resources.html' }], body, ld });
+}
+
 /* ---------- write everything ---------- */
 const written = [];
 const out = (rel, content) => { const p = path.join(ROOT, rel); fs.mkdirSync(path.dirname(p), { recursive: true }); fs.writeFileSync(p, content); written.push(rel); };
@@ -161,6 +194,9 @@ out('learn/index.html', hubPage());
 out('learn/.htaccess', '# Static study pages: cache for an hour, revalidate after\n<IfModule mod_headers.c>\n  <FilesMatch "\\.html$">\n    Header set Cache-Control "public, max-age=3600, must-revalidate"\n  </FilesMatch>\n</IfModule>\n');
 const urls = [{ u: '/', p: '1.0', f: 'daily' }, { u: '/learn/', p: '0.9', f: 'weekly' }];
 out('learn/whats-new.html', whatsNewPage()); urls.push({ u: '/learn/whats-new.html', p: '0.6', f: 'weekly' });
+out('learn/guides/index.html', guidesIndexPage()); urls.push({ u: '/learn/guides/', p: '0.8', f: 'monthly' });
+GUIDES.forEach(g => { out(`learn/guides/${g.id}.html`, guidePage(g)); urls.push({ u: guideUrl(g), p: '0.7', f: 'monthly' }); });
+out('learn/resources.html', resourcesPage()); urls.push({ u: '/learn/resources.html', p: '0.8', f: 'monthly' });
 for (const c of ORDER) {
   const C = Courses[c]; out(`learn/${c}/index.html`, coursePage(c, C)); urls.push({ u: courseUrl(c), p: '0.8', f: 'weekly' });
   C.SECTIONS.forEach((s, i) => {
@@ -174,4 +210,4 @@ for (const c of ORDER) {
 }
 out('sitemap.xml', `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.map(x => `  <url><loc>${SITE_URL}${x.u}</loc><lastmod>${TODAY}</lastmod><changefreq>${x.f}</changefreq><priority>${x.p}</priority></url>`).join('\n')}\n</urlset>\n`);
 out('robots.txt', `User-agent: *\nAllow: /\nDisallow: /api/\n\nSitemap: ${SITE_URL}/sitemap.xml\n`);
-console.log(`Wrote ${written.length} files: ${urls.length - 3} topic and class pages, learn/index.html, learn/whats-new.html, sitemap.xml, robots.txt (build ${BUILD}).`);
+console.log(`Wrote ${written.length} files: ${urls.length - 3} topic, class, guide and resource pages, learn/index.html, learn/whats-new.html, sitemap.xml, robots.txt (build ${BUILD}).`);
