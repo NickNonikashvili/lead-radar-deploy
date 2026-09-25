@@ -1,5 +1,5 @@
 /* ============================================================
-   MatHub — shared interactive tools (every course)
+   Mathub — shared interactive tools (every course)
    Quizzer, exam prep, scratchpad. Course data comes from App.D / App.Q.
    ============================================================ */
 (function (global) {
@@ -23,7 +23,7 @@
   }
   App.splitSteps = splitSteps;
   App.ladder = function (q) {
-    const L = global.MatHubLadders && D ? (global.MatHubLadders[D.id] || {})[q.topic] : null; const topic = Array.isArray(L) ? L : [];
+    const L = global.MathubLadders && D ? (global.MathubLadders[D.id] || {})[q.topic] : null; const topic = Array.isArray(L) ? L : [];
     const hints = topic.slice(0, 3); if (q.hint) { if (hints.length >= 3) hints[2] = q.hint; else hints.push(q.hint); }
     while (hints.length < 3 && hints.length) hints.push(hints[hints.length - 1]);
     const steps = splitSteps(q.explanation); const rungs = hints.map((h, i) => ({ kind: 'hint', label: `Hint ${i + 1} of 3`, html: h }));

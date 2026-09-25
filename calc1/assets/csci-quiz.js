@@ -1,5 +1,5 @@
 /* ============================================================
-   MatHub — CSCI 127 procedural question generators
+   Mathub — CSCI 127 procedural question generators
    "What does this print?" style questions whose answers are computed
    in JavaScript with Python semantics (floor division, negative
    modulo, slicing, list and dictionary operations, class behavior).

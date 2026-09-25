@@ -1,6 +1,6 @@
 <?php
 /* ============================================================
-   MatHub account server — web push
+   Mathub account server — web push
    Sends "empty" pushes signed with VAPID (no payload encryption
    needed); the service worker then fetches the pending notifications
    for the logged-in user with push_pending and shows them. Keys are
@@ -112,7 +112,7 @@ function mh_push_route(string $route, array $in, array $cfg, string $ip): void {
     }
     case 'push_test': {
       mh_method('POST'); $u = mh_require_user(); mh_rate_or_fail('push:test:' . $u['id'], 5, 86400, 'Five test notifications a day is plenty.');
-      mh_push_queue((int)$u['id'], 'MatHub notifications work', 'This is your test. Reminders arrive the evening before something is due, and when a streak is at risk.', '#/today', 'test');
+      mh_push_queue((int)$u['id'], 'Mathub notifications work', 'This is your test. Reminders arrive the evening before something is due, and when a streak is at risk.', '#/today', 'test');
       $n = mh_push_user((int)$u['id']);
       mh_json(['ok' => true, 'sent' => $n, 'note' => $n ? 'Sent to ' . $n . ' device' . ($n === 1 ? '' : 's') . '.' : 'No device accepted the push. Turn notifications on in this browser first.']);
     }

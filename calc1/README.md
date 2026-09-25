@@ -1,4 +1,4 @@
-# MatHub
+# Mathub
 
 A free study hub for three Fall 2026 courses at Montana State University:
 
@@ -57,7 +57,7 @@ unban, verify or delete any account. Both lists ship with nikoloz.nonikashvili@s
 
 - **Canvas calendar feed.** In Canvas open Calendar → *Calendar Feed* and copy the link. Paste it in the admin
   panel (`#/forum/admin` → Site settings). The server (`api/canvas.php`) downloads the feed at most once an hour,
-  keeps only events whose course name matches a MatHub class (`canvas_course_match` in `config.php`), and the
+  keeps only events whose course name matches a Mathub class (`canvas_course_match` in `config.php`), and the
   site shows them as "From Canvas" on the landing page, each dashboard and the calendar. Real Canvas due dates
   replace the estimated standing rules in the due-soon lists. The admin panel also has an announcement banner.
 - **Reply notifications.** Members get an inbox (bell in the top bar, `#/forum/inbox`) whenever someone comments on
@@ -140,7 +140,7 @@ A headphones bubble floats in the bottom-right corner of every page and opens in
 
 **Focus sounds** are soundscapes synthesised on the device with the Web Audio API, so nothing streams and nothing is hosted: rain (layered body, hiss, drops with random panning, gusts), thunderstorm (rain plus rolling rumbles and the occasional close crack), ocean waves (each wave scheduled with its own swell, crash and foam), wind (gusts with a whistle), fireplace (roar, crackle clusters, pops), forest (breeze, rustling leaves and four kinds of birdsong), summer night (three crickets, a katydid, a distant owl), coffee shop (murmuring voices, cup clinks, someone typing, the espresso machine), lo-fi beats (a Rhodes-style chord loop with wow and flutter, bass, swung drums, sparse melody and vinyl crackle), soft piano (slow generative piano in a random key), an ambient drone and white, pink and brown noise. Everything runs through a synthetic reverb and a limiter. Sounds layer, each has its own volume, there is a master volume, a 15, 30 or 60 minute sleep timer that fades everything (music included) out, and the mix is remembered; browsers require a click before audio starts, so a saved mix waits for Resume.
 
-**My music** is a personal playlist of up to 10 MP3 files, each up to 8 minutes, that the student adds from their own device. Files are kept in the browser's IndexedDB and are never uploaded, so the site hosts no music and every student's playlist is private to that browser. Play/pause, previous/next, shuffle, repeat (all, one, off), seek, volume, reorder and remove; playback continues while moving around MatHub, and the phone's lock-screen media keys work through the Media Session API. Clearing site data removes the files.
+**My music** is a personal playlist of up to 10 MP3 files, each up to 8 minutes, that the student adds from their own device. Files are kept in the browser's IndexedDB and are never uploaded, so the site hosts no music and every student's playlist is private to that browser. Play/pause, previous/next, shuffle, repeat (all, one, off), seek, volume, reorder and remove; playback continues while moving around Mathub, and the phone's lock-screen media keys work through the Media Session API. Clearing site data removes the files.
 
 ## English Phonetics Lab
 
@@ -197,7 +197,7 @@ Settings → Account → "Notifications on this device" turns on web push (Chrom
 
 ## Install prompt, global search, synced preferences
 
-- **Add to home screen.** From the second visit a banner offers to install MatHub: the native prompt on Chrome and Edge (Android and desktop), and step-by-step Share → Add to Home Screen instructions on iPhone and iPad. Dismissing hides it for a month; "Install the app" also lives in the account menu whenever installing is possible. The manifest has shortcuts (Today, Discussions, GPA) and a maskable icon.
+- **Add to home screen.** From the second visit a banner offers to install Mathub: the native prompt on Chrome and Edge (Android and desktop), and step-by-step Share → Add to Home Screen instructions on iPhone and iPad. Dismissing hides it for a month; "Install the app" also lives in the account menu whenever installing is possible. The manifest has shortcuts (Today, Discussions, GPA) and a maskable icon.
 - **Search everywhere.** Ctrl/⌘ K (or the search icon on the landing page) searches notes, formulas, flashcards, calendars, practice topics and pages across every class, with class chips to narrow it; each result shows its class.
 - **Preferences follow your account.** GPA calculator entries, focus-sound choices, daily goal, theme, phonetics and reader voices, seen-changelog and Today state sync through `prefs` (newest wins). Course progress already synced.
 
@@ -249,7 +249,9 @@ The server copies the SQLite database once a day (SQLite's own `VACUUM INTO`, co
 
 ## The look
 
-`assets/icon.svg` and `assets/logo.svg` hold the mark: two mountain peaks that read as an M, a gold sun, a gradient from indigo through violet to teal. `node scripts/build-icons.js` renders the PNG sizes, `node scripts/build-og.js` the social cards. The colour system in `styles.css` ("Look v3") gives every hue a meaning: indigo for learning, green for progress and readiness, amber for XP and rewards, coral for deadlines and mistakes, teal for focus, violet for community and creative tools. Sidebar groups, panel icons, the mobile tab bar and calls to action follow it, a four-hue wash sits behind the page, and the floating background carries glyphs from every subject in that subject's hue.
+The logo is the Mathub mark: a navy M whose right diagonal is a rising blue arrow, the wordmark "Mathub" in Poppins, and the line "Learn / Practice / Excel" with blue slashes. `assets/mark.svg` is the bare mark, `assets/icon.svg` the mark on a white tile (favicon, home-screen icon), `assets/logo.svg` the full lockup, `assets/logo.png` a 1200px raster of it for places that cannot take SVG. In the app the mark is drawn by `App.logoSvg(size, tile)` from `App.LOGO_PATHS`, so its colours follow the theme (`--brand-navy`, `--brand-blue`: navy and #1F5EFF in light mode, white and a lighter blue in dark mode). `node scripts/build-icons.js` renders the PNG sizes plus a maskable 512 with the safe-zone padding, `node scripts/build-og.js` the social cards, `node scripts/build-seo.js` the static pages, which share the lockup.
+
+Pages that belong to no class (start page, Today, Focus, Settings, board, resources) use the brand blue as their accent; every class keeps its own hue. The colour system in `styles.css` ("Look v3") gives every other hue a meaning: indigo for learning, green for progress and readiness, amber for XP and rewards, coral for deadlines and mistakes, teal for focus, violet for community and creative tools. Sidebar groups, panel icons, the mobile tab bar and calls to action follow it, a four-hue wash sits behind the page, and the floating background carries glyphs from every subject in that subject's hue.
 
 ## Layout: what lives where
 

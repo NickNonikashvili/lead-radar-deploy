@@ -1,5 +1,5 @@
 /* ============================================================
-   MatHub — M151Q Precalculus course data
+   Mathub — M151Q Precalculus course data
    Source: M151Q Fall 2026 syllabus (Jenna Stitt) and the Yoshiwara
    textbooks Modeling, Functions, and Graphs (MFG) and Trigonometry (TRIG).
    Week-by-week topics are estimated from the syllabus topic list and exam

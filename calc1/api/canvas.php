@@ -1,8 +1,8 @@
 <?php
 /* ============================================================
-   MatHub — Canvas calendar feed sync
+   Mathub — Canvas calendar feed sync
    Fetches the owner's Canvas iCal feed (Calendar → Calendar Feed),
-   maps each event to a MatHub course by the course name in the
+   maps each event to a Mathub course by the course name in the
    event title, caches the result for an hour in api/data/canvas.json
    and serves it to the site. Only events for the mapped courses are
    exposed; anything else in the feed is dropped.
@@ -22,7 +22,7 @@ function mh_canvas_feed_url(): string {
   $cfg = mh_config(); $u = trim((string)($cfg['canvas_feed'] ?? '')); if ($u !== '') return $u;
   return trim((string)mh_setting('canvas_feed', ''));
 }
-/** Which MatHub course an event belongs to, from the course name Canvas appends in [brackets]. */
+/** Which Mathub course an event belongs to, from the course name Canvas appends in [brackets]. */
 function mh_canvas_course(string $summary, array $cfg): ?string {
   $rules = $cfg['canvas_course_match'] ?? ['calc' => ['M 171', 'M171', 'CALCULUS I'], 'physics' => ['PHSX 220', 'PHSX220', 'PHYSICS I'], 'precalc' => ['M 151', 'M151', 'PRECALC'], 'writ' => ['WRIT 101', 'WRIT101', 'COLLEGE WRITING'], 'csci' => ['CSCI 127', 'CSCI127', 'Joy and Beauty of Data']];
   $hay = strtoupper(preg_match('/\[([^\]]+)\]\s*$/', $summary, $m) ? $m[1] : $summary);
@@ -68,13 +68,13 @@ $GLOBALS['mh_http_error'] = '';
 function mh_http_get(string $url): ?string {
   $GLOBALS['mh_http_error'] = '';
   if (function_exists('curl_init')) {
-    $ch = curl_init($url); curl_setopt_array($ch, [CURLOPT_RETURNTRANSFER => true, CURLOPT_FOLLOWLOCATION => true, CURLOPT_MAXREDIRS => 4, CURLOPT_TIMEOUT => 20, CURLOPT_CONNECTTIMEOUT => 10, CURLOPT_USERAGENT => 'MatHub/1.0 (+calendar sync)']);
+    $ch = curl_init($url); curl_setopt_array($ch, [CURLOPT_RETURNTRANSFER => true, CURLOPT_FOLLOWLOCATION => true, CURLOPT_MAXREDIRS => 4, CURLOPT_TIMEOUT => 20, CURLOPT_CONNECTTIMEOUT => 10, CURLOPT_USERAGENT => 'Mathub/1.0 (+calendar sync)']);
     $body = curl_exec($ch); $code = (int)curl_getinfo($ch, CURLINFO_RESPONSE_CODE); $err = curl_error($ch); curl_close($ch);
     if ($body !== false && $code >= 200 && $code < 300) return (string)$body;
     $GLOBALS['mh_http_error'] = $err !== '' ? $err : ('HTTP ' . $code);
     return null;
   }
-  $ctx = stream_context_create(['http' => ['timeout' => 20, 'follow_location' => 1, 'user_agent' => 'MatHub/1.0 (+calendar sync)']]);
+  $ctx = stream_context_create(['http' => ['timeout' => 20, 'follow_location' => 1, 'user_agent' => 'Mathub/1.0 (+calendar sync)']]);
   $body = @file_get_contents($url, false, $ctx); if ($body === false) { $GLOBALS['mh_http_error'] = error_get_last()['message'] ?? 'request failed'; return null; } return $body;
 }
 /** Returns ['events' => [...], 'fetched' => ts, 'error' => ?string, 'configured' => bool]. */

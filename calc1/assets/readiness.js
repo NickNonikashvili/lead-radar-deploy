@@ -1,5 +1,5 @@
 /* ============================================================
-   MatHub — exam readiness
+   Mathub — exam readiness
    One number per class that answers "am I ready for the next exam?",
    built from what the student has actually done: practice accuracy
    and volume per topic on the exam, flashcard boxes for those

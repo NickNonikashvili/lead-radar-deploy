@@ -1,5 +1,5 @@
 /* ============================================================
-   MatHub — CSCI 127 Joy and Beauty of Data (Fall 2026)
+   Mathub — CSCI 127 Joy and Beauty of Data (Fall 2026)
    Instructor: Daniel DeFrance. Built from the course syllabus and the
    weekly schedule on the class site. Topic notes carry runnable code
    examples that open in the Code playground (pylab.js); the quiz
@@ -21,7 +21,7 @@
     links: [
       { eyebrow: 'Class site', title: 'CSCI 127 syllabus and schedule', url: SITE, desc: 'The weekly schedule, lecture pages and the free online textbook.' },
       { eyebrow: 'Assignments', title: 'Canvas', url: 'https://ecat.montana.edu/', desc: 'Lab and program details, submissions, grades and TA contact info.' },
-      { eyebrow: 'Set-up', title: 'Python setup instructions', url: SITE, desc: 'Install Python on your own laptop (week 1). MatHub’s playground runs Python in the browser meanwhile.' },
+      { eyebrow: 'Set-up', title: 'Python setup instructions', url: SITE, desc: 'Install Python on your own laptop (week 1). Mathub’s playground runs Python in the browser meanwhile.' },
       { eyebrow: 'Docs', title: 'Python documentation', url: 'https://docs.python.org/3/tutorial/', desc: 'The official tutorial and library reference.' },
       { eyebrow: 'Data science', title: 'NumPy, matplotlib and pandas', url: 'https://numpy.org/doc/stable/user/absolute_beginners.html', desc: 'Absolute-beginner guides for the three libraries used in Unit 4.' }
     ],
@@ -434,7 +434,7 @@
         <li><b>Late pass:</b> in an emergency you may use one seven-day late pass for a <b>lab</b> through Week 12. It does not apply to programs. Email your TA before the original deadline and submit within seven days of the due date.</li>
         <li><b>Exams:</b> at the scheduled time and place only.</li>
         <li><b>General policies:</b> see the policies page linked from the class site (academic integrity, accommodations, attendance).</li></ul>` },
-    { icon: 'link', title: 'Where things live', html: `<ul class="list-plain small"><li><b>Class site:</b> schedule, lecture pages, textbook links.</li><li><b>Canvas:</b> lab and program details, submissions, grades, TA contact info.</li><li><b>MatHub:</b> topic notes with runnable examples, the Code playground, cheat sheet, flashcards, endless practice and exam prep.</li></ul>` }
+    { icon: 'link', title: 'Where things live', html: `<ul class="list-plain small"><li><b>Class site:</b> schedule, lecture pages, textbook links.</li><li><b>Canvas:</b> lab and program details, submissions, grades, TA contact info.</li><li><b>Mathub:</b> topic notes with runnable examples, the Code playground, cheat sheet, flashcards, endless practice and exam prep.</li></ul>` }
   ];
 
   const NAV = [

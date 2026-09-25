@@ -1,5 +1,5 @@
 /* ============================================================
-   MatHub — community features (front-end)
+   Mathub — community features (front-end)
    Daily challenge + leaderboards, badges, live presence, study
    sessions, community mock exams, student contributions, activity
    feed, and the landing/dashboard widgets that surface them.
@@ -45,7 +45,7 @@
   App.views.badges = {
     title: 'Badges', blurb: 'Earned by studying, helping classmates and showing up.',
     render(root, param, query, standalone) {
-      const wrap = standalone ? `<div class="landing-wrap"><header class="landing-top"><div><div class="eyebrow">MatHub</div><h1 class="landing-title"><span class="logo-mark">${App.logoSvg(44)}</span>Badges</h1><p class="muted">${this.blurb}</p></div><div class="row gap-sm"><span id="landing-account"></span><a class="btn" href="#/">${icon('left', 14)} All classes</a></div></header><div id="bd-root"></div></div>` : pageHead('Badges', this.blurb) + '<div id="bd-root"></div>';
+      const wrap = standalone ? `<div class="landing-wrap"><header class="landing-top"><div><div class="eyebrow">Mathub</div><h1 class="landing-title"><span class="logo-mark">${App.logoSvg(44)}</span>Badges</h1><p class="muted">${this.blurb}</p></div><div class="row gap-sm"><span id="landing-account"></span><a class="btn" href="#/">${icon('left', 14)} All classes</a></div></header><div id="bd-root"></div></div>` : pageHead('Badges', this.blurb) + '<div id="bd-root"></div>';
       root.innerHTML = wrap; const el = $('#bd-root', root); const slot = $('#landing-account', root); if (slot && App.auth && App.auth.ready) App.auth.paintLandingAccount(slot);
       if (!user()) { el.innerHTML = lockCard('Badges are for members', 'Sign up free to collect badges for streaks, questions answered, accepted answers, daily challenges and more.'); return; }
       if (offline()) { el.innerHTML = '<div class="empty">Badges need a connection to the server.</div>'; return; }
@@ -63,9 +63,9 @@
   const PP = { q: '', sort: 'badges', page: 0, rows: [], catalog: [], total: 0, online: 0, more: false, open: {} };
   const hue = id => Math.round((id * 137.508) % 360);
   App.views.people = {
-    title: 'People', blurb: 'Everyone on MatHub and the badges they have earned. Names follow each person’s privacy setting.',
+    title: 'People', blurb: 'Everyone on Mathub and the badges they have earned. Names follow each person’s privacy setting.',
     render(root, param, query, standalone) {
-      const wrap = standalone ? `<div class="landing-wrap"><header class="landing-top"><div><div class="eyebrow">MatHub</div><h1 class="landing-title"><span class="logo-mark">${App.logoSvg(44)}</span>People</h1><p class="muted">${this.blurb}</p></div><div class="row gap-sm"><span id="landing-account"></span><a class="btn" href="#/badges">${icon('award', 14)} Your badges</a><a class="btn" href="#/">${icon('left', 14)} All classes</a></div></header><div id="pp-root"></div></div>` : pageHead('People', this.blurb, `<a class="btn" href="#/badges">${icon('award', 14)} Your badges</a>`) + '<div id="pp-root"></div>';
+      const wrap = standalone ? `<div class="landing-wrap"><header class="landing-top"><div><div class="eyebrow">Mathub</div><h1 class="landing-title"><span class="logo-mark">${App.logoSvg(44)}</span>People</h1><p class="muted">${this.blurb}</p></div><div class="row gap-sm"><span id="landing-account"></span><a class="btn" href="#/badges">${icon('award', 14)} Your badges</a><a class="btn" href="#/">${icon('left', 14)} All classes</a></div></header><div id="pp-root"></div></div>` : pageHead('People', this.blurb, `<a class="btn" href="#/badges">${icon('award', 14)} Your badges</a>`) + '<div id="pp-root"></div>';
       root.innerHTML = wrap; const el = $('#pp-root', root); const slot = $('#landing-account', root); if (slot && App.auth && App.auth.ready) App.auth.paintLandingAccount(slot);
       if (!user()) { el.innerHTML = lockCard('The People page is for members', 'Sign up free with your montana.edu email to see who is studying with you and the badges they have earned.'); return; }
       if (offline()) { el.innerHTML = '<div class="empty">The People page needs a connection to the server.</div>'; return; }
@@ -106,7 +106,7 @@
     api('presence', { course: D ? D.id : '', view, post_id: post }).then(r => { S.presence = r; paintPresence(); }).catch(() => {});
   }
   function paintPresence() {
-    const p = S.presence; const pill = $('#presence-pill'); if (pill) { if (!p || !user()) pill.hidden = true; else { pill.hidden = false; const D = App.D; const n = D ? (p.by_course[D.id] || 0) : p.online; pill.innerHTML = `<span class="dot"></span>${n} studying${D ? ' ' + esc(D.short) : ''} now`; pill.title = `${p.online} online across MatHub`; } }
+    const p = S.presence; const pill = $('#presence-pill'); if (pill) { if (!p || !user()) pill.hidden = true; else { pill.hidden = false; const D = App.D; const n = D ? (p.by_course[D.id] || 0) : p.online; pill.innerHTML = `<span class="dot"></span>${n} studying${D ? ' ' + esc(D.short) : ''} now`; pill.title = `${p.online} online across Mathub`; } }
     const lp = $('#landing-presence'); if (lp && p) lp.innerHTML = `<span class="presence-inline"><span class="dot"></span>${p.online} studying right now${Object.keys(p.by_course).filter(k => k !== 'home' && p.by_course[k]).length ? ' · ' + Object.entries(p.by_course).filter(([k, v]) => k !== 'home' && v).map(([k, v]) => `${v} in ${esc(courseName(k))}`).join(', ') : ''}</span>`;
     const here = $('#fa-here'); if (here && p) here.textContent = p.here > 1 ? `${p.here} people are reading this` : '';
   }
@@ -136,7 +136,7 @@
     title: 'Daily challenge', blurb: 'One problem per class per day, the same for everyone. Solve it fast for bonus points and climb the weekly board.',
     render(root, param, query, standalone) {
       const courses = App.COURSE_ORDER.filter(id => global.Courses[id] && (global.Courses[id].quiz || global.Courses[id].hasQuiz)); const cid = standalone ? (query.course && courses.includes(query.course) ? query.course : courses[0]) : App.D.id;
-      const head = standalone ? `<div class="landing-wrap"><header class="landing-top"><div><div class="eyebrow">MatHub</div><h1 class="landing-title"><span class="logo-mark">${App.logoSvg(44)}</span>Daily challenge</h1><p class="muted">${this.blurb}</p></div><div class="row gap-sm"><span id="landing-account"></span><a class="btn" href="#/">${icon('left', 14)} All classes</a></div></header><div class="chips mb-2">${courses.map(c => `<a class="chip toggle${c === cid ? ' on' : ''}" href="#/challenge?course=${c}">${esc(courseName(c))}</a>`).join('')}</div><div id="ch-root"></div></div>` : pageHead('Daily challenge', this.blurb) + '<div id="ch-root"></div>';
+      const head = standalone ? `<div class="landing-wrap"><header class="landing-top"><div><div class="eyebrow">Mathub</div><h1 class="landing-title"><span class="logo-mark">${App.logoSvg(44)}</span>Daily challenge</h1><p class="muted">${this.blurb}</p></div><div class="row gap-sm"><span id="landing-account"></span><a class="btn" href="#/">${icon('left', 14)} All classes</a></div></header><div class="chips mb-2">${courses.map(c => `<a class="chip toggle${c === cid ? ' on' : ''}" href="#/challenge?course=${c}">${esc(courseName(c))}</a>`).join('')}</div><div id="ch-root"></div></div>` : pageHead('Daily challenge', this.blurb) + '<div id="ch-root"></div>';
       root.innerHTML = head; const slot = $('#landing-account', root); if (slot && App.auth && App.auth.ready) App.auth.paintLandingAccount(slot);
       this.paint($('#ch-root', root), cid);
     },
@@ -171,7 +171,7 @@
       bind(box, {
         'ch-mc': el => { if (CH.answered[key]) return; submit(+el.dataset.i === q.answer); },
         'ch-num': () => { if (CH.answered[key]) return; const raw = $('#ch-num', box).value.trim(); const v = App.parseNumber(raw); if (isNaN(v)) { toast('Enter a number, fraction or expression like 2pi'); return; } const tol = q.tol ? Math.max(q.tol * Math.abs(q.answer), 1e-9) : Math.max(0.011, 0.005 * Math.abs(q.answer)); submit(Math.abs(v - q.answer) <= tol, raw); },
-        'ch-hint': el => { const L = (global.MatHubLadders && global.MatHubLadders[cid] || {})[q.topic] || []; const hints = L.slice(0, 3); if (q.hint) { if (hints.length >= 3) hints[2] = q.hint; else hints.push(q.hint); } const n = CH.hint = (CH.hint || 0) + 1; const h = $('#ch-hints', box); if (!h) return; h.innerHTML = hints.slice(0, n).map((x, i) => `<div class="rung hint"><span class="rung-label">${icon('bulb', 12)} Hint ${i + 1} of ${hints.length}</span><div>${x}</div></div>`).join(''); typeset(h); if (n >= hints.length) el.remove(); }
+        'ch-hint': el => { const L = (global.MathubLadders && global.MathubLadders[cid] || {})[q.topic] || []; const hints = L.slice(0, 3); if (q.hint) { if (hints.length >= 3) hints[2] = q.hint; else hints.push(q.hint); } const n = CH.hint = (CH.hint || 0) + 1; const h = $('#ch-hints', box); if (!h) return; h.innerHTML = hints.slice(0, n).map((x, i) => `<div class="rung hint"><span class="rung-label">${icon('bulb', 12)} Hint ${i + 1} of ${hints.length}</span><div>${x}</div></div>`).join(''); typeset(h); if (n >= hints.length) el.remove(); }
       });
       const inp = $('#ch-num', box); if (inp) inp.addEventListener('keydown', e => { if (e.key === 'Enter') $('[data-action="ch-num"]', box).click(); });
     },
@@ -190,7 +190,7 @@
     title: 'Study sessions', blurb: 'Post where and when you are studying and let classmates join. Sessions disappear an hour after they end.',
     render(root, param, query, standalone) {
       const courses = App.COURSE_ORDER.filter(id => global.Courses[id]); const cid = standalone ? 'all' : App.D.id;
-      root.innerHTML = standalone ? `<div class="landing-wrap"><header class="landing-top"><div><div class="eyebrow">MatHub</div><h1 class="landing-title"><span class="logo-mark">${App.logoSvg(44)}</span>Study sessions</h1><p class="muted">${this.blurb}</p></div><div class="row gap-sm"><span id="landing-account"></span><a class="btn" href="#/">${icon('left', 14)} All classes</a></div></header><div id="mt-root"></div></div>` : pageHead('Study sessions', this.blurb) + '<div id="mt-root"></div>';
+      root.innerHTML = standalone ? `<div class="landing-wrap"><header class="landing-top"><div><div class="eyebrow">Mathub</div><h1 class="landing-title"><span class="logo-mark">${App.logoSvg(44)}</span>Study sessions</h1><p class="muted">${this.blurb}</p></div><div class="row gap-sm"><span id="landing-account"></span><a class="btn" href="#/">${icon('left', 14)} All classes</a></div></header><div id="mt-root"></div></div>` : pageHead('Study sessions', this.blurb) + '<div id="mt-root"></div>';
       const slot = $('#landing-account', root); if (slot && App.auth && App.auth.ready) App.auth.paintLandingAccount(slot);
       this.paint($('#mt-root', root), cid, courses);
     },
@@ -199,7 +199,7 @@
       const form = u && !offline() ? `<div class="panel mb-2"><div class="panel-h"><div class="panel-title">${icon('pen')} Post a session</div></div>
         <div class="grid cols-3" style="gap:12px"><div class="field"><label for="mt-title">What</label><input class="input" id="mt-title" maxlength="80" placeholder="e.g. WebWork 3.2 + Exam 2 practice"></div><div class="field"><label for="mt-place">Where</label><input class="input" id="mt-place" maxlength="80" placeholder="e.g. Romney 220, table by the window"></div><div class="field"><label for="mt-course">Class</label><select class="select" id="mt-course">${[...courses, 'general'].map(c => `<option value="${c}"${c === defCourse ? ' selected' : ''}>${esc(courseName(c))}</option>`).join('')}</select></div>
           <div class="field"><label for="mt-date">Date</label><input class="input" type="date" id="mt-date" value="${App.toISO(t)}" min="${App.todayISO()}"></div><div class="field"><label for="mt-time">Start</label><input class="input" type="time" id="mt-time" value="${String(t.getHours()).padStart(2, '0')}:00"></div><div class="field"><label for="mt-min">Length</label><select class="select" id="mt-min">${[60, 90, 120, 180, 240].map(m => `<option value="${m}"${m === 120 ? ' selected' : ''}>${m / 60 % 1 ? m + ' min' : m / 60 + ' h'}</option>`).join('')}</select></div></div>
-        <div class="field"><label for="mt-note">Note (optional)</label><input class="input" id="mt-note" maxlength="300" placeholder="Bring your formula sheet. Look for the MatHub sticker."></div>
+        <div class="field"><label for="mt-note">Note (optional)</label><input class="input" id="mt-note" maxlength="300" placeholder="Bring your formula sheet. Look for the Mathub sticker."></div>
         <div class="row gap-sm mt-1"><button class="btn primary" data-action="mt-create">${icon('clock', 14)} Post session</button><span class="small muted">You are marked as going automatically.</span></div></div>` : `<div class="mb-2">${u ? '' : needLogin('Sign in to post or join sessions', 'Members can post study sessions and RSVP to them.')}</div>`;
       el.innerHTML = form + `<div id="mt-list"><div class="empty">Loading…</div></div>`;
       bind(el, {
@@ -225,7 +225,7 @@
     preview: [['Scheduled', 'Moderators schedule a mock before each exam'], ['Timed', 'Runs in the Quizzer with a clock and no feedback until you submit'], ['Ranked', 'See where you landed when the window closes']],
     render(root, param, query, standalone) {
       const cid = standalone ? 'all' : App.D.id;
-      root.innerHTML = standalone ? `<div class="landing-wrap"><header class="landing-top"><div><div class="eyebrow">MatHub</div><h1 class="landing-title"><span class="logo-mark">${App.logoSvg(44)}</span>Mock exams</h1><p class="muted">${this.blurb}</p></div><div class="row gap-sm"><span id="landing-account"></span><a class="btn" href="#/">${icon('left', 14)} All classes</a></div></header><div id="mk-root"></div></div>` : pageHead('Community mock exams', this.blurb) + '<div id="mk-root"></div>';
+      root.innerHTML = standalone ? `<div class="landing-wrap"><header class="landing-top"><div><div class="eyebrow">Mathub</div><h1 class="landing-title"><span class="logo-mark">${App.logoSvg(44)}</span>Mock exams</h1><p class="muted">${this.blurb}</p></div><div class="row gap-sm"><span id="landing-account"></span><a class="btn" href="#/">${icon('left', 14)} All classes</a></div></header><div id="mk-root"></div></div>` : pageHead('Community mock exams', this.blurb) + '<div id="mk-root"></div>';
       const slot = $('#landing-account', root); if (slot && App.auth && App.auth.ready) App.auth.paintLandingAccount(slot);
       this.paint($('#mk-root', root), cid, param);
     },

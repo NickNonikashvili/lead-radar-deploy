@@ -1,6 +1,6 @@
 <?php
 /* ============================================================
-   MatHub account server — problem reports, backups, preferences
+   Mathub account server — problem reports, backups, preferences
    Routes: issue_report, admin_issues, admin_issue, admin_backups,
            admin_backup_now, admin_backup_download, prefs
    mh_backup_tick() runs from housekeeping once a day and keeps the

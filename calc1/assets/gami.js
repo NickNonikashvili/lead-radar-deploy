@@ -1,5 +1,5 @@
 /* ============================================================
-   MatHub — motivation layer
+   Mathub — motivation layer
    Popovers that never get clipped, confetti, the live background,
    XP + levels + daily goal, the streak / goal widgets in every header,
    Bo the bobcat, count-up numbers and the learning path view.

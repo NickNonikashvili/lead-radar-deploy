@@ -1,5 +1,5 @@
 /* ============================================================
-   MatHub — WRIT 101 College Writing I (section 030, Fall 2026)
+   Mathub — WRIT 101 College Writing I (section 030, Fall 2026)
    Instructor: Dr. Nicole J. Hall. Built from the course syllabus and
    the readings handed out in class. A writing course has no quiz
    generators, so `quiz` is absent and the app shows the writing layout.
@@ -122,7 +122,7 @@
         <li><b>Counseling &amp; Psychological Services:</b> mental health challenges often become writing challenges; CAPS can help.</li>
         <li><b>Office of the Dean of Students:</b> a good starting point when you are not sure which office fits your problem.</li>
         <li><b>First-Gen Student Resources:</b> for students whose parents did not complete a four-year degree.</li></ul>
-      <p class="small muted mt-2">Dates on the schedule can change. Confirm exact due dates and times on Canvas and in class announcements. The syllabus lists fall break as Nov 16–20 while the schedule skips Nov 23–27; MatHub shows Nov 23–27 as the break, so check Canvas.</p>` }
+      <p class="small muted mt-2">Dates on the schedule can change. Confirm exact due dates and times on Canvas and in class announcements. The syllabus lists fall break as Nov 16–20 while the schedule skips Nov 23–27; Mathub shows Nov 23–27 as the break, so check Canvas.</p>` }
   ];
 
   const NAV = [

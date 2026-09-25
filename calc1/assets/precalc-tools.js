@@ -1,5 +1,5 @@
 /* ============================================================
-   MatHub — Precalculus tools: function explorer, unit circle & triangles
+   Mathub — Precalculus tools: function explorer, unit circle & triangles
    ============================================================ */
 (function (global) {
   'use strict';

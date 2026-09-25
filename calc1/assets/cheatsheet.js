@@ -1,5 +1,5 @@
 /* ============================================================
-   MatHub — cheat-sheet builder (#/<class>/cheatsheet)
+   Mathub — cheat-sheet builder (#/<class>/cheatsheet)
    Pick formulas from the formula sheet and the key formulas, big
    ideas and pitfalls from any topic, add your own lines, choose
    columns and text size, and print a one-page sheet. The selection

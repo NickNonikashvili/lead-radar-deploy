@@ -1,5 +1,5 @@
 <?php
-// Serves the local Pyodide package with CORS for MatHub tests.
+// Serves the local Pyodide package with CORS for Mathub tests.
 header('Access-Control-Allow-Origin: *');
 $path = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
 $file = __DIR__ . '/package' . $path;

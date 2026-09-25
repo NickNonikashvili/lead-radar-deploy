@@ -1,5 +1,5 @@
 /* ============================================================
-   MatHub — lesson mode
+   Mathub — lesson mode
    One question at a time with a progress bar, a Check button,
    a green/red feedback footer with the explanation, hints on demand,
    combo and XP, keyboard control, and an end screen with stats.

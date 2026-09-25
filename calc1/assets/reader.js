@@ -1,5 +1,5 @@
 /* ============================================================
-   MatHub — readings library and read-along audiobook player
+   Mathub — readings library and read-along audiobook player
    Uses the browser's speech synthesis (no audio files): one sentence
    at a time with highlighting, play/pause, paragraph skipping, speed,
    voice choice, auto-scroll, remembered position, XP for progress.

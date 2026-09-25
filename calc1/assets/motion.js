@@ -1,5 +1,5 @@
 /* ============================================================
-   MatHub — motion helpers
+   Mathub — motion helpers
    The top loading bar (class downloads), staggered card entrances,
    ring and progress-bar fills, scroll reveal for long pages, the
    theme-change fade, and the "Reduce motion" setting. Pure polish:
@@ -13,7 +13,7 @@
   App.motionReduced = reduced;
   App.applyMotion = () => { document.documentElement.setAttribute('data-motion', settings().motion === 'off' ? 'off' : 'on'); };
   App.applySkin = () => { const s = settings().skin; if (s && s !== 'default') document.documentElement.setAttribute('data-skin', s); else document.documentElement.removeAttribute('data-skin'); };
-  App.SKINS = [['default', 'Classic', 'The MatHub look', ['#F4F6FC', '#4F46E5']], ['bobcat', 'Bobcat', 'MSU blue and gold', ['#EEF3FB', '#003F7F']], ['paper', 'Paper', 'Warm and easy on the eyes', ['#F6F1E7', '#8A6A16']], ['forest', 'Forest', 'Calm greens', ['#EDF4EF', '#2E7D32']], ['midnight', 'Midnight', 'Deeper dark mode', ['#03050C', '#7C86FF']]];
+  App.SKINS = [['default', 'Classic', 'The Mathub look', ['#F4F6FC', '#4F46E5']], ['bobcat', 'Bobcat', 'MSU blue and gold', ['#EEF3FB', '#003F7F']], ['paper', 'Paper', 'Warm and easy on the eyes', ['#F6F1E7', '#8A6A16']], ['forest', 'Forest', 'Calm greens', ['#EDF4EF', '#2E7D32']], ['midnight', 'Midnight', 'Deeper dark mode', ['#03050C', '#7C86FF']]];
 
   /* ---------- loading bar ---------- */
   let barTimer = null, barCount = 0;

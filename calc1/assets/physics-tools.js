@@ -1,5 +1,5 @@
 /* ============================================================
-   MatHub — Physics I interactive tools
+   Mathub — Physics I interactive tools
    Views: motion (projectile simulator, motion graphs), solvers
    (kinematics, vectors, incline & friction, unit converter).
    ============================================================ */

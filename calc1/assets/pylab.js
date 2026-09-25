@@ -1,5 +1,5 @@
 /* ============================================================
-   MatHub — Code playground (Python in the browser)
+   Mathub — Code playground (Python in the browser)
    A W3Schools-style "try it" editor for CSCI 127: an editor with line
    numbers, tab and auto-indent, a program-input box for input(), a
    streamed output console that also shows turtle drawings and

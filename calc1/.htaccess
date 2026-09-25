@@ -1,4 +1,4 @@
-# MatHub — caching rules
+# Mathub — caching rules
 # The page itself is never cached, so every visit picks up the newest build.
 # Scripts, styles and icons carry ?v=<build> in their URLs, so they can be cached for a long time.
 Options -Indexes

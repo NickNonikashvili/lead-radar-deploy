@@ -1,5 +1,5 @@
 /* ============================================================
-   MatHub — tools (#/tools)
+   Mathub — tools (#/tools)
    Small utilities students reach for every week, all offline:
    a scientific calculator (degrees or radians, history, keyboard),
    a unit converter for physics, a citation builder (APA 7 and MLA 9
@@ -178,7 +178,7 @@
   App.views.tools = {
     title: 'Tools', blurb: 'Calculator, unit converter, citation builder, word counter and sig figs. Everything runs in your browser and works offline.',
     render(root, param, query, standalone) {
-      const head = standalone ? `<div class="landing-wrap"><header class="landing-top"><div><div class="eyebrow">MatHub</div><h1 class="landing-title"><span class="logo-mark">${App.logoSvg(44)}</span>Tools</h1><p class="muted">${this.blurb}</p></div><div class="row gap-sm"><span id="landing-account"></span><a class="btn" href="#/">${icon('left', 14)} All classes</a></div></header>` : App.pageHead('Tools', this.blurb);
+      const head = standalone ? `<div class="landing-wrap"><header class="landing-top"><div><div class="eyebrow">Mathub</div><h1 class="landing-title"><span class="logo-mark">${App.logoSvg(44)}</span>Tools</h1><p class="muted">${this.blurb}</p></div><div class="row gap-sm"><span id="landing-account"></span><a class="btn" href="#/">${icon('left', 14)} All classes</a></div></header>` : App.pageHead('Tools', this.blurb);
       root.innerHTML = `${head}<div class="dash-tabs" data-store="toolsTab" role="tablist">${TABS.map(([k, l, ic]) => `<button class="tab" data-tab="${k}" role="tab">${icon(ic, 14)}<span>${l}</span></button>`).join('')}</div><div class="panes">${TABS.map(([k, , , html]) => `<div class="pane" data-pane="${k}"><div class="panel">${html()}</div></div>`).join('')}</div>${standalone ? '</div>' : ''}`;
       TABS.forEach(([k, , , , bindFn]) => bindFn($(`.pane[data-pane="${k}"]`, root)));
       if (param && TABS.some(t => t[0] === param)) { setSetting('toolsTab', param); }

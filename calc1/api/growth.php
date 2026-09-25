@@ -1,6 +1,6 @@
 <?php
 /* ============================================================
-   MatHub account server — calendar feed, focus together, growth
+   Mathub account server — calendar feed, focus together, growth
    analytics, class goals, section leagues, announcements, invites,
    the Sunday planning email.
    Routes: ics, ics_token, ics_token_reset, focus_ping, focus_stop,
@@ -42,11 +42,11 @@ function mh_user_events(array $u, bool $lectures = false): array {
 function mh_ics_esc(string $s): string { return str_replace(["\\", ";", ",", "\n"], ["\\\\", "\\;", "\\,", "\\n"], $s); }
 function mh_ics_fold(string $line): string { $out = ''; while (strlen($line) > 73) { $out .= substr($line, 0, 73) . "\r\n "; $line = substr($line, 73); } return $out . $line; }
 function mh_ics(array $u): string {
-  $now = gmdate('Ymd\THis\Z'); $lines = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//MatHub//Class calendar//EN', 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH', 'X-WR-CALNAME:MatHub classes', 'X-WR-TIMEZONE:America/Denver', 'X-PUBLISHED-TTL:PT6H', 'REFRESH-INTERVAL;VALUE=DURATION:PT6H'];
+  $now = gmdate('Ymd\THis\Z'); $lines = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Mathub//Class calendar//EN', 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH', 'X-WR-CALNAME:Mathub classes', 'X-WR-TIMEZONE:America/Denver', 'X-PUBLISHED-TTL:PT6H', 'REFRESH-INTERVAL;VALUE=DURATION:PT6H'];
   foreach (mh_user_events($u) as $e) {
     if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $e['date'])) continue; $d = str_replace('-', '', $e['date']); $next = date('Ymd', strtotime($e['date'] . ' +1 day'));
     $summary = '[' . $e['short'] . '] ' . $e['title'] . ($e['time'] !== '' ? ' · ' . $e['time'] : ''); $uid = 'mathub-' . $e['course'] . '-' . $d . '-' . substr(md5($e['title']), 0, 8) . '@mathub.space';
-    $desc = ucfirst($e['type']) . ' · ' . $e['short'] . ($e['time'] !== '' ? ' · ' . $e['time'] : '') . "\nOpen in MatHub: https://mathub.space/#/" . $e['course'] . '/calendar/' . $e['date'];
+    $desc = ucfirst($e['type']) . ' · ' . $e['short'] . ($e['time'] !== '' ? ' · ' . $e['time'] : '') . "\nOpen in Mathub: https://mathub.space/#/" . $e['course'] . '/calendar/' . $e['date'];
     $lines[] = 'BEGIN:VEVENT'; $lines[] = mh_ics_fold('UID:' . $uid); $lines[] = 'DTSTAMP:' . $now; $lines[] = 'DTSTART;VALUE=DATE:' . $d; $lines[] = 'DTEND;VALUE=DATE:' . $next;
     $lines[] = mh_ics_fold('SUMMARY:' . mh_ics_esc($summary)); $lines[] = mh_ics_fold('DESCRIPTION:' . mh_ics_esc($desc)); $lines[] = mh_ics_fold('URL:https://mathub.space/#/' . $e['course'] . '/calendar/' . $e['date']); $lines[] = 'CATEGORIES:' . mh_ics_esc($e['short']);
     if ($e['type'] === 'exam') { $lines[] = 'BEGIN:VALARM'; $lines[] = 'ACTION:DISPLAY'; $lines[] = 'DESCRIPTION:' . mh_ics_esc($summary . ' is in a week'); $lines[] = 'TRIGGER:-P7D'; $lines[] = 'END:VALARM'; }
@@ -98,13 +98,13 @@ function mh_planning_tick(int $max, bool $force = false): int {
     $db->prepare('UPDATE users SET planning_sent = ? WHERE id = ?')->execute([time(), $u['id']]);
     $from = mh_local_date(time() + 86400); $to = mh_local_date(time() + 7 * 86400); $ev = array_values(array_filter(mh_user_events($u), fn($e) => $e['date'] >= $from && $e['date'] <= $to));
     $byDay = []; foreach ($ev as $e) $byDay[$e['date']][] = $e; $name = mh_display_name($u);
-    $text = "Hi $name,\n\nHere is your week on MatHub.\n\n"; $html = '<div style="font-family:Inter,system-ui,sans-serif;font-size:15px;line-height:1.55;color:#0F172A;max-width:560px"><p>Hi ' . htmlspecialchars($name) . ',</p><p>Here is your week on MatHub.</p>';
+    $text = "Hi $name,\n\nHere is your week on Mathub.\n\n"; $html = '<div style="font-family:Inter,system-ui,sans-serif;font-size:15px;line-height:1.55;color:#0F172A;max-width:560px"><p>Hi ' . htmlspecialchars($name) . ',</p><p>Here is your week on Mathub.</p>';
     if ($byDay) { $html .= '<h3 style="margin:18px 0 6px">Due this week</h3>'; foreach ($byDay as $d => $list) { $label = (new DateTime($d, mh_tz()))->format('l, M j'); $text .= "$label\n"; $html .= '<p style="margin:8px 0 2px"><b>' . htmlspecialchars($label) . '</b></p><ul style="margin:0 0 6px 18px;padding:0">'; foreach ($list as $e) { $line = '[' . $e['short'] . '] ' . $e['title'] . ($e['time'] !== '' ? ' · ' . $e['time'] : ''); $text .= "  - $line\n"; $html .= '<li>' . htmlspecialchars($line) . '</li>'; } $html .= '</ul>'; $text .= "\n"; } }
     else { $text .= "Nothing is due in the next seven days in your classes. A good week to get ahead.\n\n"; $html .= '<p>Nothing is due in the next seven days in your classes. A good week to get ahead.</p>'; }
     $first = $ev[0] ?? null; $sugg = $first ? 'Monday, 25 minutes on ' . $first['title'] . ' (' . $first['short'] . ')' : 'Monday, 25 minutes of due flashcards in Today';
     $text .= "Suggested first focus block: $sugg.\nStart it: https://mathub.space/#/focus\n\nYour week in numbers: https://mathub.space/#/recap?w=last\nToday's plan: https://mathub.space/#/today\n\nYou get this on Sundays because you turned on the planning email in Settings. Turn it off there any time.\n";
     $html .= '<p style="margin:16px 0 4px"><b>Suggested first focus block:</b> ' . htmlspecialchars($sugg) . '. <a href="https://mathub.space/#/focus">Start it</a>.</p><p><a href="https://mathub.space/#/recap?w=last" style="display:inline-block;padding:10px 16px;background:#4F46E5;color:#fff;border-radius:10px;text-decoration:none;font-weight:700">See your week in numbers</a> &nbsp; <a href="https://mathub.space/#/today">Today\'s plan</a></p><p style="color:#5A6578;font-size:13px">You get this on Sundays because you turned on the planning email in Settings. Turn it off there any time.</p></div>';
-    try { mh_send_mail($cfg, $u['email'], 'Your week on MatHub', $text, $html); $sent++; } catch (Throwable $e) {}
+    try { mh_send_mail($cfg, $u['email'], 'Your week on Mathub', $text, $html); $sent++; } catch (Throwable $e) {}
   }
   return $sent;
 }

@@ -1,4 +1,4 @@
-/* MatHub service worker: makes notes, formula sheets, flashcards and tools work offline.
+/* Mathub service worker: makes notes, formula sheets, flashcards and tools work offline.
    Registered as sw.js?v=<build>; the build string names the cache, so every release gets a clean cache. */
 const BUILD = new URL(self.location.href).searchParams.get('v') || 'dev';
 const CACHE = 'mathub-' + BUILD;
@@ -43,9 +43,9 @@ self.addEventListener('push', e => {
   e.waitUntil((async () => {
     let items = [];
     try { const r = await fetch('api/index.php?r=push_pending', { credentials: 'include', headers: { 'X-Requested-With': 'MatHub' }, cache: 'no-store' }); const j = await r.json(); items = (j && j.items) || []; } catch (err) {}
-    if (!items.length && e.data) { try { const d = e.data.json(); if (d && d.title) items = [d]; } catch (err) { items = [{ title: 'MatHub', body: e.data.text() }]; } }
-    if (!items.length) items = [{ title: 'MatHub', body: 'Something new is waiting for you.', url: './' }];
-    await Promise.all(items.map(it => self.registration.showNotification(it.title || 'MatHub', { body: it.body || '', icon: 'assets/icon-192.png', badge: 'assets/icon-192.png', tag: it.tag || undefined, data: { url: it.url || './' } })));
+    if (!items.length && e.data) { try { const d = e.data.json(); if (d && d.title) items = [d]; } catch (err) { items = [{ title: 'Mathub', body: e.data.text() }]; } }
+    if (!items.length) items = [{ title: 'Mathub', body: 'Something new is waiting for you.', url: './' }];
+    await Promise.all(items.map(it => self.registration.showNotification(it.title || 'Mathub', { body: it.body || '', icon: 'assets/icon-192.png', badge: 'assets/icon-192.png', tag: it.tag || undefined, data: { url: it.url || './' } })));
   })());
 });
 self.addEventListener('notificationclick', e => {

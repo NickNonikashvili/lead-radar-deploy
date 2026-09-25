@@ -1,5 +1,5 @@
 /* ============================================================
-   MatHub — your week (#/recap)
+   Mathub — your week (#/recap)
    A short animated story of the last seven days: days studied, XP
    per day, questions and accuracy, cards and focus minutes, the
    streak, then a share card rendered on a canvas that can be saved
@@ -47,7 +47,7 @@
     const c = document.createElement('canvas'); c.width = 1080; c.height = 1080; const x = c.getContext('2d');
     const g = x.createLinearGradient(0, 0, 1080, 1080); g.addColorStop(0, '#0f1f4d'); g.addColorStop(0.55, '#2B55B8'); g.addColorStop(1, '#0E7C86'); x.fillStyle = g; x.fillRect(0, 0, 1080, 1080);
     const glow = x.createRadialGradient(900, 160, 10, 900, 160, 520); glow.addColorStop(0, 'rgba(242,193,78,0.45)'); glow.addColorStop(1, 'rgba(242,193,78,0)'); x.fillStyle = glow; x.fillRect(0, 0, 1080, 1080);
-    x.fillStyle = '#fff'; x.font = '700 64px Fraunces, Georgia, serif'; x.fillText('MatHub', 80, 130); x.fillStyle = '#F2C14E'; x.font = 'italic 700 64px Fraunces, Georgia, serif'; x.fillText('', 80, 130);
+    x.fillStyle = '#fff'; x.font = '700 64px Fraunces, Georgia, serif'; x.fillText('Mathub', 80, 130); x.fillStyle = '#F2C14E'; x.font = 'italic 700 64px Fraunces, Georgia, serif'; x.fillText('', 80, 130);
     x.fillStyle = 'rgba(255,255,255,0.85)'; x.font = '600 30px Inter, system-ui, sans-serif'; x.fillText('MY WEEK · ' + s.label.toUpperCase(), 80, 190);
     const [big] = compliment(s); x.fillStyle = '#fff'; x.font = '700 104px Fraunces, Georgia, serif'; x.fillText(big, 80, 330);
     // day dots
@@ -60,7 +60,7 @@
   function roundRect(x, px, py, w, h, r) { x.beginPath(); x.moveTo(px + r, py); x.arcTo(px + w, py, px + w, py + h, r); x.arcTo(px + w, py + h, px, py + h, r); x.arcTo(px, py + h, px, py, r); x.arcTo(px, py, px + w, py, r); x.closePath(); }
   async function share(s) {
     const c = App.recapCanvas(s); const blob = await new Promise(r => c.toBlob(r, 'image/png')); const file = new File([blob], `mathub-week-${s.key}.png`, { type: 'image/png' });
-    try { if (navigator.canShare && navigator.canShare({ files: [file] })) { await navigator.share({ files: [file], title: 'My week on MatHub', text: `${s.xp} XP, ${s.daysActive} study days, ${s.answered} questions on MatHub this week.` }); return; } } catch (e) { if (e && e.name === 'AbortError') return; }
+    try { if (navigator.canShare && navigator.canShare({ files: [file] })) { await navigator.share({ files: [file], title: 'My week on Mathub', text: `${s.xp} XP, ${s.daysActive} study days, ${s.answered} questions on Mathub this week.` }); return; } } catch (e) { if (e && e.name === 'AbortError') return; }
     const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = file.name; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000); toast('Saved as an image. Post it, or send it to a friend who needs a push.', 3500);
   }
 
@@ -93,7 +93,7 @@
     title: 'Your week', blurb: 'Seven days, in numbers you can be proud of.',
     render(root, param, query, standalone) {
       const d = new Date(); R.offset = query.w === 'last' ? -1 : query.w === 'this' ? 0 : (d.getDay() >= 1 && d.getDay() <= 3 && App.weekStats(-1).hasData ? -1 : 0); R.i = 0;
-      root.innerHTML = `${standalone ? '<div class="landing-wrap rc-wrap">' : ''}<div class="fz-top"><div><div class="eyebrow">MatHub</div><h1 class="landing-title">${standalone ? `<span class="logo-mark">${App.logoSvg(40)}</span>` : ''}Your week</h1></div><div class="row gap-sm"><span id="landing-account"></span><a class="btn" href="${standalone ? '#/' : App.link('dashboard')}">${icon('left', 14)} Back</a></div></div><div id="rc-root"></div>${standalone ? '</div>' : ''}`;
+      root.innerHTML = `${standalone ? '<div class="landing-wrap rc-wrap">' : ''}<div class="fz-top"><div><div class="eyebrow">Mathub</div><h1 class="landing-title">${standalone ? `<span class="logo-mark">${App.logoSvg(40)}</span>` : ''}Your week</h1></div><div class="row gap-sm"><span id="landing-account"></span><a class="btn" href="${standalone ? '#/' : App.link('dashboard')}">${icon('left', 14)} Back</a></div></div><div id="rc-root"></div>${standalone ? '</div>' : ''}`;
       paint($('#rc-root', root));
       const slot = $('#landing-account', root); if (slot && App.auth && App.auth.ready) App.auth.paintLandingAccount(slot);
       this.keys = e => { if (e.target.matches('input, textarea')) return; if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); go($('#rc-root', root), 1); } else if (e.key === 'ArrowLeft') { e.preventDefault(); go($('#rc-root', root), -1); } };

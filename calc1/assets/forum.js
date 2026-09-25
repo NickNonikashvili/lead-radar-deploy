@@ -1,5 +1,5 @@
 /* ============================================================
-   MatHub — Discussions (a small Reddit-style board)
+   Mathub — Discussions (a small Reddit-style board)
    Posts, threaded comments, votes, reports, moderation tools.
    Members only for reading bodies and posting; visitors see titles.
    Server: api/forum.php. Offline (no server): sample content, read-only.
@@ -79,7 +79,7 @@
       const m = document.createElement('div'); m.className = 'modal-backdrop'; m.id = 'terms-modal';
       m.innerHTML = `<div class="modal auth-modal terms-modal" role="dialog" aria-label="Community rules"><div class="auth-head"><span class="logo-mark">${App.logoSvg(26)}</span><div><b>Before you post</b><div class="small muted">One-time agreement</div></div><button class="icon-btn" data-action="close" aria-label="Close">${icon('x', 16)}</button></div>
         <p class="small">Discussions are written by students, for students. To keep it useful and safe, every member agrees to the community rules:</p>
-        <ul class="list small mt-1"><li><b>Be decent.</b> No harassment, hate, threats or targeting of individual people.</li><li><b>Nothing illegal.</b> No selling or seeking drugs, alcohol, weapons, stolen goods or anything else against the law. Posts like that are removed and may be reported.</li><li><b>Academic honesty.</b> Help each other learn; do not share exam questions or answers during an exam, and follow each course's policies.</li><li><b>You own your words.</b> You are responsible for what you post. MatHub can remove content and accounts at any time.</li><li><b>Language filter.</b> Curse words are censored automatically.</li></ul>
+        <ul class="list small mt-1"><li><b>Be decent.</b> No harassment, hate, threats or targeting of individual people.</li><li><b>Nothing illegal.</b> No selling or seeking drugs, alcohol, weapons, stolen goods or anything else against the law. Posts like that are removed and may be reported.</li><li><b>Academic honesty.</b> Help each other learn; do not share exam questions or answers during an exam, and follow each course's policies.</li><li><b>You own your words.</b> You are responsible for what you post. Mathub can remove content and accounts at any time.</li><li><b>Language filter.</b> Curse words are censored automatically.</li></ul>
         <label class="check mt-2"><input type="checkbox" id="terms-ok"><span>I agree to the <a href="#/policy" target="_blank">Terms of Use, Community Rules and Privacy Policy</a>.</span></label>
         <div class="row gap-sm mt-2"><button class="btn primary" data-action="agree" disabled>Agree and continue</button><button class="btn" data-action="close">Not now</button></div><div class="auth-msg" id="terms-msg"></div></div>`;
       document.body.appendChild(m);
@@ -102,7 +102,7 @@
       if (F.course === null || F.lastCtx !== ctx) { F.course = ctx; F.lastCtx = ctx; F.page = 0; }
       if (query.course) F.course = query.course;
       const wrapOpen = standalone ? '<div class="landing-wrap forum-wrap">' : '', wrapClose = standalone ? '</div>' : '';
-      const head = standalone ? `<header class="landing-top"><div><div class="eyebrow">MatHub</div><h1 class="landing-title"><span class="logo-mark">${App.logoSvg(44)}</span>Discussions</h1><p class="muted">${this.blurb}</p></div><div class="row gap-sm"><span id="landing-account"></span><a class="btn" href="#/">${icon('left', 14)} All classes</a><button class="icon-btn theme-btn" data-action="theme" aria-label="Toggle theme"></button></div></header>` : '';
+      const head = standalone ? `<header class="landing-top"><div><div class="eyebrow">Mathub</div><h1 class="landing-title"><span class="logo-mark">${App.logoSvg(44)}</span>Discussions</h1><p class="muted">${this.blurb}</p></div><div class="row gap-sm"><span id="landing-account"></span><a class="btn" href="#/">${icon('left', 14)} All classes</a><button class="icon-btn theme-btn" data-action="theme" aria-label="Toggle theme"></button></div></header>` : '';
       root.innerHTML = `${wrapOpen}${head}<div id="fa-root"></div>${wrapClose}`;
       const slot = $('#landing-account', root); if (slot && App.auth && App.auth.ready) App.auth.paintLandingAccount(slot);
       const box = $('#fa-root', root);

@@ -1,5 +1,5 @@
 /* ============================================================
-   MatHub — report a problem
+   Mathub — report a problem
    A small flag on every question, lesson step, flashcard and topic
    page. Opens a dialog that sends what the student was looking at
    (class, page, question or section, their answer) plus a reason and
@@ -17,7 +17,7 @@
   App.reportIssue = function (ctx) {
     ctx = ctx || {}; if ($('#report-modal')) return;
     const course = ctx.course || (App.D && App.D.id) || ''; const C = global.Courses[course]; const el = document.createElement('div'); el.className = 'modal-backdrop'; el.id = 'report-modal';
-    const where = [C ? C.short : 'MatHub', ctx.view || (App.current && App.current.title) || '', ctx.ref || ''].filter(Boolean).join(' · ');
+    const where = [C ? C.short : 'Mathub', ctx.view || (App.current && App.current.title) || '', ctx.ref || ''].filter(Boolean).join(' · ');
     el.innerHTML = `<form class="modal report-modal" role="dialog" aria-label="${esc(ctx.title || 'Report a problem')}"><div class="row between mb-1"><div class="panel-title">${icon(ctx.reason === 'resource' ? 'pen' : 'flag')} ${esc(ctx.title || 'Report a problem')}</div><button type="button" class="icon-btn" data-action="close" aria-label="Close">${icon('x', 14)}</button></div>
       <p class="small muted">${esc(where)}${ctx.prompt ? `<br><span class="report-quote">${esc(strip(ctx.prompt).slice(0, 160))}${strip(ctx.prompt).length > 160 ? '…' : ''}</span>` : ''}</p>
       <div class="field"><label for="rp-reason">What is wrong?</label><select class="select" id="rp-reason">${REASONS.map(([v, l]) => `<option value="${v}"${ctx.reason === v ? ' selected' : ''}>${l}</option>`).join('')}</select></div>

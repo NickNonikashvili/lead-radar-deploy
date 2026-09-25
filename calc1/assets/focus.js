@@ -1,5 +1,5 @@
 /* ============================================================
-   MatHub — focus room (#/focus)
+   Mathub — focus room (#/focus)
    A study-session timer that keeps running while you use the rest of
    the site (a small pill shows the time left), with a task, presets
    (25 / 50 / 90 minutes or your own), the sound bubble one tap away,
@@ -80,7 +80,7 @@
     const inBreak = F.breakTick && !F.running; const left = inBreak ? F.breakLeft : F.left; const total = inBreak ? 300 : F.total; t.textContent = fmt(Math.max(0, left));
     const fg = $('#fz-ring', root); if (fg) fg.style.strokeDashoffset = (RING * (total ? left / total : 1)).toFixed(1);
     const sub = $('#fz-sub', root); if (sub) sub.textContent = inBreak ? 'Break · stretch, water, no phone' : F.paused ? 'Paused' : F.running ? (F.task || 'Focus') : 'Ready';
-    if (location.hash.startsWith('#/focus')) document.title = F.running || inBreak ? `${fmt(left)} · Focus · MatHub` : 'Focus · MatHub';
+    if (location.hash.startsWith('#/focus')) document.title = F.running || inBreak ? `${fmt(left)} · Focus · Mathub` : 'Focus · Mathub';
   }
   function suggestions() {
     const out = []; const ids = App.myCourses();
@@ -120,7 +120,7 @@
   App.views.focus = {
     title: 'Focus', blurb: 'One task, one timer, no phone.',
     render(root, param, query, standalone) {
-      root.innerHTML = `${standalone ? '<div class="landing-wrap fz-wrap">' : ''}<div class="fz-top"><div><div class="eyebrow">MatHub · focus room</div><h1 class="landing-title">${standalone ? `<span class="logo-mark">${App.logoSvg(40)}</span>` : ''}Focus</h1></div><div class="row gap-sm"><span id="landing-account"></span><a class="btn" href="${standalone ? '#/' : App.link('dashboard')}">${icon('left', 14)} Back</a></div></div><div id="fz-root"></div>${standalone ? '</div>' : ''}`;
+      root.innerHTML = `${standalone ? '<div class="landing-wrap fz-wrap">' : ''}<div class="fz-top"><div><div class="eyebrow">Mathub · focus room</div><h1 class="landing-title">${standalone ? `<span class="logo-mark">${App.logoSvg(40)}</span>` : ''}Focus</h1></div><div class="row gap-sm"><span id="landing-account"></span><a class="btn" href="${standalone ? '#/' : App.link('dashboard')}">${icon('left', 14)} Back</a></div></div><div id="fz-root"></div>${standalone ? '</div>' : ''}`;
       paint(); if (query && query.start && !F.running) { const m = parseInt(query.start, 10) || 25; start(m, query.task || '', null); }
       const slot = $('#landing-account', root); if (slot && App.auth && App.auth.ready) App.auth.paintLandingAccount(slot);
       this.keys = e => { if (e.target.matches('input, textarea, select') || !F.running) return; if (e.key === ' ') { e.preventDefault(); pause(); } };

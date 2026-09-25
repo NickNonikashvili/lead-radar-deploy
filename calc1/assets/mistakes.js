@@ -1,5 +1,5 @@
 /* ============================================================
-   MatHub — mistakes notebook
+   Mathub — mistakes notebook
    Every question you get wrong (practice, lessons, Blitz, the daily
    challenge) is saved with its explanation and comes back on a
    schedule: tomorrow after a miss, three days after a hit, and it is
@@ -84,7 +84,7 @@
     title: 'Mistakes', blurb: 'Every question you missed, with its explanation, until you get it right twice.',
     render(root, param, query, standalone) {
       const ids = standalone ? App.myCourses().filter(id => Courses[id]) : [App.D.id]; root.dataset.ids = ids.join(',');
-      const head = standalone ? `<div class="landing-wrap"><header class="landing-top"><div><div class="eyebrow">MatHub</div><h1 class="landing-title"><span class="logo-mark">${App.logoSvg(44)}</span>Mistakes</h1><p class="muted">${this.blurb} Across every class.</p></div><div class="row gap-sm"><span id="landing-account"></span><a class="btn" href="#/">${icon('left', 14)} All classes</a></div></header>` : App.pageHead('Mistakes notebook', this.blurb);
+      const head = standalone ? `<div class="landing-wrap"><header class="landing-top"><div><div class="eyebrow">Mathub</div><h1 class="landing-title"><span class="logo-mark">${App.logoSvg(44)}</span>Mistakes</h1><p class="muted">${this.blurb} Across every class.</p></div><div class="row gap-sm"><span id="landing-account"></span><a class="btn" href="#/">${icon('left', 14)} All classes</a></div></header>` : App.pageHead('Mistakes notebook', this.blurb);
       root.innerHTML = `${head}<div class="mk-wrap"><div class="panel"><div class="row between" style="flex-wrap:wrap;gap:10px"><div class="stats" id="mk-stats"></div><div class="row gap-sm"><button class="btn primary" data-action="mk-retry">${icon('play', 14)} Retry</button><button class="btn" data-action="mk-all">${icon('rotate', 14)} Retry everything</button></div></div></div>
         <div class="panel" id="mk-player" hidden></div><div id="mk-list" class="stack"></div></div>${standalone ? '</div>' : ''}`;
       bind(root, {

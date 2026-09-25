@@ -1,5 +1,5 @@
 /* ============================================================
-   MatHub — hint ladders
+   Mathub — hint ladders
    Three progressive hints per quiz topic: a way to think about it,
    the procedure, and the nearly-there nudge. The quizzer adds the
    problem's own hint, the first step of the worked solution, and
@@ -8,7 +8,7 @@
 (function (global) {
   'use strict';
   const R = String.raw;
-  global.MatHubLadders = {
+  global.MathubLadders = {
     calc: {
       velocity: ['Velocity is the rate of change of position: it asks how fast the position value is changing, not what the position is.', R`Average velocity on $[a,b]$ is $\dfrac{s(b)-s(a)}{b-a}$; instantaneous velocity is the limit of that as $b \to a$ (the derivative $s'(a)$).`, 'Plug the endpoints into the position function, subtract, and divide by the time elapsed. Watch the sign: negative means moving backward.'],
       aroc: ['An average rate of change is the slope of the line through two points on the graph.', R`Use $\dfrac{f(b)-f(a)}{b-a}$ with the two given inputs. Units are output units per input unit.`, 'Evaluate the function at both inputs first, then subtract in the same order top and bottom.'],

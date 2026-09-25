@@ -1,6 +1,6 @@
 <?php
 /* ============================================================
-   MatHub — outgoing mail. No dependencies.
+   Mathub — outgoing mail. No dependencies.
    Modes: smtp (built-in client, SSL or STARTTLS), mail (PHP mail()), log (write to data/mail.log).
    ============================================================ */
 
@@ -13,7 +13,7 @@ function mh_mail_mode(array $cfg): string {
 /** Returns ['ok' => bool, 'error' => string|null]. */
 function mh_send_mail(array $cfg, string $to, string $subject, string $text, string $html): array {
   $mode = mh_mail_mode($cfg);
-  $from = $cfg['mail_from']; $fromName = $cfg['mail_from_name'] ?? 'MatHub';
+  $from = $cfg['mail_from']; $fromName = $cfg['mail_from_name'] ?? 'Mathub';
   $boundary = 'mh' . bin2hex(random_bytes(8));
   $body = "--$boundary\r\nContent-Type: text/plain; charset=UTF-8\r\nContent-Transfer-Encoding: 8bit\r\n\r\n" . mh_crlf($text) . "\r\n\r\n"
         . "--$boundary\r\nContent-Type: text/html; charset=UTF-8\r\nContent-Transfer-Encoding: 8bit\r\n\r\n" . mh_crlf($html) . "\r\n\r\n--$boundary--\r\n";
@@ -24,7 +24,7 @@ function mh_send_mail(array $cfg, string $to, string $subject, string $text, str
     'Reply-To' => $from,
     'MIME-Version' => '1.0',
     'Content-Type' => "multipart/alternative; boundary=\"$boundary\"",
-    'X-Mailer' => 'MatHub',
+    'X-Mailer' => 'Mathub',
   ];
   if ($mode === 'log') {
     $line = '[' . gmdate('c') . "] to=$to subject=\"$subject\"\n$text\n---\n";

@@ -1,5 +1,5 @@
 /* ============================================================
-   MatHub — quests, leagues, celebrations and sound
+   Mathub — quests, leagues, celebrations and sound
    Daily and weekly quests with XP rewards and a double-XP boost,
    weekly leagues (server: api/social.php 'league'), the celebration
    overlay, synthesized sound effects and the landing activity ticker.
@@ -137,7 +137,7 @@
   App.views.leagues = {
     title: 'Leagues', blurb: 'Every Monday the boards reset. Earn XP all week: the top of each league moves up, the bottom moves down.',
     render(root, param, query, standalone) {
-      const head = standalone ? `<div class="landing-wrap"><header class="landing-top"><div><div class="eyebrow">MatHub</div><h1 class="landing-title"><span class="logo-mark">${App.logoSvg(44)}</span>Leagues</h1><p class="muted">${this.blurb}</p></div><div class="row gap-sm"><span id="landing-account"></span><a class="btn" href="#/">${icon('left', 14)} All classes</a></div></header><div id="lg-root"></div></div>` : App.pageHead('Leagues', this.blurb) + '<div id="lg-root"></div>';
+      const head = standalone ? `<div class="landing-wrap"><header class="landing-top"><div><div class="eyebrow">Mathub</div><h1 class="landing-title"><span class="logo-mark">${App.logoSvg(44)}</span>Leagues</h1><p class="muted">${this.blurb}</p></div><div class="row gap-sm"><span id="landing-account"></span><a class="btn" href="#/">${icon('left', 14)} All classes</a></div></header><div id="lg-root"></div></div>` : App.pageHead('Leagues', this.blurb) + '<div id="lg-root"></div>';
       root.innerHTML = head; const el = $('#lg-root', root); const slot = $('#landing-account', root); if (slot && App.auth && App.auth.ready) App.auth.paintLandingAccount(slot);
       if (!user()) { el.innerHTML = App.lockCard('Leagues are for members', 'Sign up free to compete on a weekly XP board with classmates at your level. Top finishers move up a league every Monday.'); return; }
       if (offline()) { el.innerHTML = '<div class="empty">Leagues need a connection to the server.</div>'; return; }

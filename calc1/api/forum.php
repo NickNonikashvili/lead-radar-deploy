@@ -1,6 +1,6 @@
 <?php
 /* ============================================================
-   MatHub — discussion board endpoints (posts, comments, votes,
+   Mathub — discussion board endpoints (posts, comments, votes,
    reports, moderation). Included by index.php for forum_* routes.
    ============================================================ */
 declare(strict_types=1);
@@ -63,7 +63,7 @@ function mh_notify_reply(array $post, ?array $parent, array $actor, int $comment
     $st = $db->prepare('SELECT * FROM users WHERE id = ?'); $st->execute([$uid]); $to = $st->fetch();
     if ($to && (int)($to['notify_email'] ?? 1) === 1 && (int)$to['verified'] === 1 && mh_rate("notifmail:{$uid}:{$post['id']}", 1, 6 * 3600)) {
       try {
-        require_once __DIR__ . '/mailer.php'; $cfg = mh_config(); $site = $cfg['site_name'] ?? 'MatHub';
+        require_once __DIR__ . '/mailer.php'; $cfg = mh_config(); $site = $cfg['site_name'] ?? 'Mathub';
         $link = rtrim((string)(($cfg['site_url'] ?? '') ?: ('https://' . ($_SERVER['HTTP_HOST'] ?? 'mathub.space'))), '/') . '/#/forum/' . (int)$post['id'];
         $what = $kind === 'reply' ? 'replied to your comment on' : 'commented on your post';
         $subject = $actorName . ' ' . $what . ' "' . mb_substr($post['title'], 0, 60) . '"';

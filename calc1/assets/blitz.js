@@ -1,5 +1,5 @@
 /* ============================================================
-   MatHub — Blitz (#/<class>/blitz)
+   Mathub — Blitz (#/<class>/blitz)
    Ninety seconds of rapid-fire multiple-choice questions from the
    topics the class has covered so far. Combos raise the multiplier,
    a wrong answer resets it, the clock never stops. Answers still
@@ -73,7 +73,7 @@
         <div class="panel bz-stagewrap"><div id="bz-stage"><div class="bz-intro"><div class="mascot-slot" data-size="72" data-cls="compact"></div><h2>Ready?</h2><p class="muted">Multiple choice only, one point burst per right answer, ×2 after three in a row, ×3 after six, ×4 after nine. A miss resets the combo but the clock keeps going. Every answer counts toward your topic progress.</p><button class="btn primary lg" data-action="bz-start">${icon('play', 16)} Start 90 seconds</button></div></div></div></div>`;
       bind(root, {
         'bz-start': () => start(root, D.id), 'bz-opt': b => answer(root, +b.dataset.i),
-        'bz-share': async () => { const text = `I scored ${B.score} in a 90-second ${D.short} Blitz on MatHub (${B.correct}/${B.n} right, best combo ${B.maxCombo || 0}). Beat it: https://mathub.space/#/${D.id}/blitz`; try { if (navigator.share) await navigator.share({ text }); else { await navigator.clipboard.writeText(text); toast('Score copied. Paste it anywhere.', 2500); } } catch (e) {} }
+        'bz-share': async () => { const text = `I scored ${B.score} in a 90-second ${D.short} Blitz on Mathub (${B.correct}/${B.n} right, best combo ${B.maxCombo || 0}). Beat it: https://mathub.space/#/${D.id}/blitz`; try { if (navigator.share) await navigator.share({ text }); else { await navigator.clipboard.writeText(text); toast('Score copied. Paste it anywhere.', 2500); } } catch (e) {} }
       });
       this.keys = e => { if (!B.on || e.target.matches('input, textarea')) return; const k = ['1', '2', '3', '4', '5'].indexOf(e.key); const kl = LETTERS.indexOf(e.key.toUpperCase()); const i = k >= 0 ? k : kl; if (i >= 0) { e.preventDefault(); answer(root, i); } };
       document.addEventListener('keydown', this.keys); if (App.paintMascots) App.paintMascots();

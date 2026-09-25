@@ -1,6 +1,6 @@
 <?php
 /* ============================================================
-   MatHub account server — shared helpers
+   Mathub account server — shared helpers
    SQLite storage, JSON I/O, rate limits, email codes, login tokens.
    ============================================================ */
 declare(strict_types=1);
@@ -148,7 +148,7 @@ function mh_email_check(string $email): array {
   $domain = substr($email, strrpos($email, '@') + 1);
   $ok = in_array($email, array_map('strtolower', mh_config()['extra_allowed_emails'] ?? []), true);
   foreach (mh_config()['allowed_domains'] as $d) { $d = strtolower($d); if ($domain === $d || str_ends_with($domain, '.' . $d)) { $ok = true; break; } }
-  if (!$ok) return [null, 'MatHub is for Montana State students: sign up with your @montana.edu address.'];
+  if (!$ok) return [null, 'Mathub is for Montana State students: sign up with your @montana.edu address.'];
   return [$email, null];
 }
 
@@ -240,7 +240,7 @@ function mh_method(string ...$allowed): void {
 /* ---------- emails ---------- */
 function mh_send_code(string $email, string $kind, string $code): void {
   require_once __DIR__ . '/mailer.php';
-  $cfg = mh_config(); $site = $cfg['site_name'] ?? 'MatHub'; $ttl = (int)($cfg['code_ttl_minutes'] ?? 15);
+  $cfg = mh_config(); $site = $cfg['site_name'] ?? 'Mathub'; $ttl = (int)($cfg['code_ttl_minutes'] ?? 15);
   $what = $kind === 'reset' ? 'password reset' : 'sign-up';
   $subject = "$site $what code: $code";
   $text = "Your $site $what code is $code\n\nIt expires in $ttl minutes. If you did not request this, you can ignore this email.\n\n— $site";

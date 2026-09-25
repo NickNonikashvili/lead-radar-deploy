@@ -1,5 +1,5 @@
 /* ============================================================
-   MatHub — personal notes and highlights
+   Mathub — personal notes and highlights
    Every topic page gets a "My notes" box (saved as you type) and a
    highlighter: select any text in the notes and tap Highlight. Both
    live in the class data (mynotes: {sec: text}, mynotesAt: {sec: ts},

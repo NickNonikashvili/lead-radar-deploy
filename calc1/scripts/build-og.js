@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /* ============================================================
-   MatHub — social preview cards (1200×630 PNG)
+   Mathub — social preview cards (1200×630 PNG)
    Renders assets/og.png (site) and assets/og-<class>.png (one per
    class, in the class colour) with headless Chromium, so links to
    the app and to /learn pages show a proper card on iMessage,
@@ -14,17 +14,22 @@ const ROOT = path.resolve(__dirname, '..');
 let chromium; try { ({ chromium } = require('playwright')); } catch (e) { ({ chromium } = require(path.join(ROOT, 'tests', 'node_modules', 'playwright'))); }
 global.window = {}; require(path.join(ROOT, 'assets', 'courses-index.js')); const Courses = window.Courses;
 const ORDER = ['calc', 'physics', 'precalc', 'writ', 'csci'].filter(id => Courses[id]);
-const COLORS = { site: ['#0f1f4d', '#2B55B8', '#0E7C86'], calc: ['#0f1f4d', '#2B55B8', '#4C7BE0'], physics: ['#063d44', '#0E7C86', '#2AA6B0'], precalc: ['#4a1a08', '#B5451B', '#E07A3F'], writ: ['#33153f', '#7A3E9D', '#A66BC7'], csci: ['#0f3a12', '#2E7D32', '#5AA85E'] };
-const LOGO = '<svg width="96" height="96" viewBox="0 0 64 64"><defs><linearGradient id="mh-g-lg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#4338CA"/><stop offset="0.55" stop-color="#6D4AED"/><stop offset="1" stop-color="#0E9488"/></linearGradient></defs><rect width="64" height="64" rx="16" fill="url(#mh-g-lg)"/><circle cx="16.5" cy="16.5" r="5" fill="#F2C14E"/><path d="M11 49 L22.5 24 L31.5 39 L42 17 L53 49" fill="none" stroke="#fff" stroke-width="6.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 53.5 H56" stroke="#fff" stroke-opacity="0.55" stroke-width="2.4" stroke-linecap="round"/></svg>';
+const COLORS = { site: ['#0B1B3A', '#10307A', '#1F5EFF'], calc: ['#0f1f4d', '#2B55B8', '#4C7BE0'], physics: ['#063d44', '#0E7C86', '#2AA6B0'], precalc: ['#4a1a08', '#B5451B', '#E07A3F'], writ: ['#33153f', '#7A3E9D', '#A66BC7'], csci: ['#0f3a12', '#2E7D32', '#5AA85E'] };
+const LOGO = '<svg width="124" height="102" viewBox="-2 -2 102 84"><path fill="#fff" d="M0 0H20V79H0Z"/><path fill="#fff" d="M20 0L52 30V44L20 14Z"/><path fill="#fff" d="M77 20L97 10V79H77Z"/><path stroke="#5B8CFF" fill="none" stroke-width="5.2" stroke-linecap="round" d="M22 60Q45 52 89 10"/><path fill="#5B8CFF" d="M96 4L93.6 13.1L86.8 5.8Z"/></svg>';
+// Fonts: Google Fonts by default; set MATHUB_FONT_CSS to a local stylesheet (same @font-face rules, file:// urls) when the build machine has no web access.
+const FONT_LINK = process.env.MATHUB_FONT_CSS ? `<style>${fs.readFileSync(process.env.MATHUB_FONT_CSS, 'utf8')}</style>` : '<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@600;700&family=Inter:wght@500;600;700&family=Poppins:wght@600;700&display=swap" rel="stylesheet">';
 const esc = s => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-const HEAD = `<!DOCTYPE html><html><head><meta charset="utf-8"><link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@600;700&family=Inter:wght@500;600;700&display=swap" rel="stylesheet"><style>
+const HEAD = `<!DOCTYPE html><html><head><meta charset="utf-8">${FONT_LINK}<style>
   html,body{margin:0;width:1200px;height:630px;overflow:hidden;font-family:Inter,system-ui,sans-serif}
   .card{position:relative;width:1200px;height:630px;color:#fff;padding:64px 72px;box-sizing:border-box}
-  .glow{position:absolute;width:640px;height:640px;border-radius:50%;background:radial-gradient(circle,rgba(242,193,78,.35),transparent 60%);right:-160px;top:-200px}
+  .glow{position:absolute;width:640px;height:640px;border-radius:50%;background:radial-gradient(circle,rgba(127,176,255,.35),transparent 60%);right:-160px;top:-200px}
   .glow2{position:absolute;width:520px;height:520px;border-radius:50%;background:radial-gradient(circle,rgba(255,255,255,.18),transparent 60%);left:-140px;bottom:-240px}
-  .brand{display:flex;align-items:center;gap:22px}
-  .brand b{font-family:Fraunces,serif;font-size:74px;font-weight:700;letter-spacing:-.02em;line-height:1}
-  .brand i{font-style:italic;color:#F2C14E}
+  .brand{display:flex;align-items:center;gap:26px} .brand svg{flex:none}
+  .brand .lock{display:flex;flex-direction:column;gap:6px;flex:none}
+  .brand .tagline{white-space:nowrap;font-family:Inter,sans-serif;font-size:22px;font-weight:600;letter-spacing:.3em;text-transform:uppercase;opacity:.92}
+  .brand .tagline i{font-style:normal;color:#7FB0FF;margin:0 6px}
+  .brand b{font-family:Poppins,Inter,sans-serif;font-size:84px;font-weight:700;letter-spacing:-.04em;line-height:1}
+  .brand small{align-self:flex-end;margin-bottom:12px;white-space:nowrap;font-size:22px}
   .brand small{font-size:26px;font-weight:600;opacity:.85;margin-left:auto;letter-spacing:.06em;text-transform:uppercase}
   .tag{font-family:Fraunces,serif;font-size:44px;font-weight:600;line-height:1.15;margin-top:44px;max-width:960px;letter-spacing:-.01em}
   .tag.big{font-size:56px;margin-top:38px}
@@ -35,12 +40,12 @@ const HEAD = `<!DOCTYPE html><html><head><meta charset="utf-8"><link href="https
   .card.cls .chips{bottom:122px} .card.cls .url{left:72px;right:auto;bottom:66px}
 </style></head><body>`;
 const card = (colors, inner, cls = '') => `${HEAD}<div class="card${cls ? ' ' + cls : ''}" style="background:linear-gradient(135deg,${colors[0]} 0%,${colors[1]} 55%,${colors[2]} 100%)"><div class="glow"></div><div class="glow2"></div>${inner}</div></body></html>`;
-const site = card(COLORS.site, `<div class="brand">${LOGO}<b>Mat<i>Hub</i></b></div>
+const site = card(COLORS.site, `<div class="brand">${LOGO}<div class="lock"><b>Mathub</b><span class="tagline">Learn <i>/</i> Practice <i>/</i> Excel</span></div></div>
 <div class="tag">Free study hub for Montana State classes</div>
 <div class="sub">Topic notes, endless practice, flashcards, deadline calendars, simulators, a Python playground and a class board. Built by a Bobcat, for Bobcats.</div>
 <div class="chips">${ORDER.map(c => `<span class="chip">${esc(Courses[c].code)}</span>`).join('')}</div><div class="url">mathub.space</div>`);
 const classCard = c => { const C = Courses[c]; const bits = [`${C.sectionCount} topic guides`, C.flashcardCount ? `${C.flashcardCount} flashcards` : null, C.hasQuiz ? 'endless practice' : (C.READINGS ? 'read-along readings' : null), 'deadline calendar'].filter(Boolean);
-  return card(COLORS[c] || COLORS.site, `<div class="brand">${LOGO}<b>Mat<i>Hub</i></b><small>Montana State · ${esc(C.term)}</small></div>
+  return card(COLORS[c] || COLORS.site, `<div class="brand">${LOGO}<div class="lock"><b>Mathub</b><span class="tagline">Learn <i>/</i> Practice <i>/</i> Excel</span></div><small>Montana State · ${esc(C.term)}</small></div>
 <div class="tag big">${esc(C.code)} · ${esc(C.name)}</div>
 <div class="sub">${esc(C.tagline || '')}</div>
 <div class="chips">${bits.map(b => `<span class="chip">${esc(b)}</span>`).join('')}</div><div class="url">mathub.space/learn/${c}</div>`, 'cls'); };
@@ -49,6 +54,6 @@ const classCard = c => { const C = Courses[c]; const bits = [`${C.sectionCount} 
   const browser = await chromium.launch({ executablePath: exe, args: ['--no-sandbox'] });
   const page = await browser.newPage({ viewport: { width: 1200, height: 630 }, deviceScaleFactor: 1 });
   const shots = [['og.png', site]].concat(ORDER.map(c => [`og-${c}.png`, classCard(c)]));
-  for (const [name, html] of shots) { await page.setContent(html); await page.waitForTimeout(name === 'og.png' ? 1500 : 400); const out = path.join(ROOT, 'assets', name); await page.screenshot({ path: out, type: 'png' }); console.log(name, Math.round(fs.statSync(out).size / 1024) + ' KB'); }
+  for (const [name, html] of shots) { await page.setContent(html); await page.evaluate(() => document.fonts.ready); await page.waitForTimeout(name === 'og.png' ? 1200 : 300); const out = path.join(ROOT, 'assets', name); await page.screenshot({ path: out, type: 'png' }); console.log(name, Math.round(fs.statSync(out).size / 1024) + ' KB'); }
   await browser.close();
 })();

@@ -1,5 +1,5 @@
 /* ============================================================
-   MatHub — Today: one daily plan across every class
+   Mathub — Today: one daily plan across every class
    Due flashcards from all classes with a light spaced-repetition
    rule (box 0 now, box 1 after a day, box 2 after three days,
    mastered cards get a refresh after two weeks), a lesson on the
@@ -89,7 +89,7 @@
     title: 'Today',
     render(root, param, query, standalone) {
       const d = new Date(); const hour = d.getHours(); const ids = mine(); const p = plan();
-      const head = standalone !== false ? `<header class="landing-top"><div><div class="eyebrow">MatHub · ${esc(App.fmtDate(tISO(), true))}</div><h1 class="landing-title"><span class="logo-mark">${App.logoSvg(44)}</span>Today</h1><p class="muted">Good ${hour < 12 ? 'morning' : hour < 18 ? 'afternoon' : 'evening'}. Your plan across ${ids.length} class${ids.length === 1 ? '' : 'es'}: a few cards, one lesson, the challenge, and anything due soon.</p></div><div class="row gap-sm"><span id="landing-account"></span><a class="btn" href="#/">${icon('left', 14)} All classes</a></div></header>` : App.pageHead('Today', 'Your plan across every class.');
+      const head = standalone !== false ? `<header class="landing-top"><div><div class="eyebrow">Mathub · ${esc(App.fmtDate(tISO(), true))}</div><h1 class="landing-title"><span class="logo-mark">${App.logoSvg(44)}</span>Today</h1><p class="muted">Good ${hour < 12 ? 'morning' : hour < 18 ? 'afternoon' : 'evening'}. Your plan across ${ids.length} class${ids.length === 1 ? '' : 'es'}: a few cards, one lesson, the challenge, and anything due soon.</p></div><div class="row gap-sm"><span id="landing-account"></span><a class="btn" href="#/">${icon('left', 14)} All classes</a></div></header>` : App.pageHead('Today', 'Your plan across every class.');
       root.innerHTML = `${standalone !== false ? '<div class="landing-wrap contact-wrap">' : ''}${head}<div class="grid cols-3 td-grid">
         <div class="panel td-hero"><div class="row between"><div><div class="eyebrow">Right now</div><div class="hub-slot"></div></div><div class="league-slot" data-compact="1"></div></div><div class="mascot-slot" data-size="56" data-cls="compact"></div></div>
         <div class="panel span-2"><div class="panel-h"><div class="panel-title">${icon('flag')} Your plan</div><span class="small muted">${p.reviewed ? `${p.reviewed} cards reviewed today` : 'resets every morning'}</span></div><div id="td-plan"></div></div>

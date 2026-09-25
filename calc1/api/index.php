@@ -1,6 +1,6 @@
 <?php
 /* ============================================================
-   MatHub account server — endpoints
+   Mathub account server — endpoints
    Called as api/index.php?r=<route>. Responses are JSON.
    Routes: health, me, signup, verify, resend, login, logout, forgot,
            reset, profile, data, data_all, account_delete, stats
@@ -20,7 +20,7 @@ switch ($route) {
     require_once __DIR__ . '/mailer.php';
     $db = mh_db(); mh_secret();
     try { require_once __DIR__ . '/social.php'; mh_housekeeping(); } catch (Throwable $e) { /* never block the site */ }
-    mh_json(['ok' => true, 'site' => $cfg['site_name'] ?? 'MatHub', 'domains' => $cfg['allowed_domains'], 'mail' => mh_mail_mode($cfg), 'user' => ($u = mh_current_user()) ? mh_user_public($u) : null]);
+    mh_json(['ok' => true, 'site' => $cfg['site_name'] ?? 'Mathub', 'domains' => $cfg['allowed_domains'], 'mail' => mh_mail_mode($cfg), 'user' => ($u = mh_current_user()) ? mh_user_public($u) : null]);
 
   case 'me':
     mh_method('GET');

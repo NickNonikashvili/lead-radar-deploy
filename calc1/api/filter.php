@@ -1,6 +1,6 @@
 <?php
 /* ============================================================
-   MatHub — profanity filter for discussions
+   Mathub — profanity filter for discussions
    Censors curse words and slurs (with common obfuscations such as
    f*ck, sh1t, fuuuck) by replacing all but the first letter with *.
    The same list lives in assets/forum.js for the live preview; this

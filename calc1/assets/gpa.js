@@ -1,5 +1,5 @@
 /* ============================================================
-   MatHub — GPA calculator
+   Mathub — GPA calculator
    Semester GPA from a list of classes (prefilled with the student's
    chosen classes, their credits and the letter each class's grade
    calculator projects), cumulative GPA from what came before, and a
@@ -79,7 +79,7 @@
     render(root, param, query, standalone) {
       const s = load(); const D = App.D; const back = standalone ? '#/' : App.link('dashboard');
       const head = standalone
-        ? `<header class="landing-top"><div><div class="eyebrow">MatHub</div><h1 class="landing-title"><span class="logo-mark">${App.logoSvg(44)}</span>GPA calculator</h1><p class="muted">Semester GPA, cumulative GPA and what it takes to hit a goal, on Montana State's 4.0 scale.</p></div><div class="row gap-sm"><span id="landing-account"></span><a class="btn" href="#/">${icon('left', 14)} All classes</a></div></header>`
+        ? `<header class="landing-top"><div><div class="eyebrow">Mathub</div><h1 class="landing-title"><span class="logo-mark">${App.logoSvg(44)}</span>GPA calculator</h1><p class="muted">Semester GPA, cumulative GPA and what it takes to hit a goal, on Montana State's 4.0 scale.</p></div><div class="row gap-sm"><span id="landing-account"></span><a class="btn" href="#/">${icon('left', 14)} All classes</a></div></header>`
         : App.pageHead('GPA calculator', 'Semester GPA, cumulative GPA and what it takes to hit a goal, on Montana State’s 4.0 scale. Your classes and credits are filled in; letters come from each grade calculator when you have entered scores there.', `<button class="btn sm ghost" data-action="gpa-reset">${icon('rotate', 13)} Reset to my classes</button>`);
       root.innerHTML = `${standalone ? '<div class="landing-wrap contact-wrap">' : ''}${head}<div class="grid cols-3 gpa-grid">
         <div class="panel span-2"><div class="panel-h"><div class="panel-title">${icon('calc')} This semester</div>${standalone ? `<button class="btn sm ghost" data-action="gpa-reset">${icon('rotate', 13)} Reset to my classes</button>` : ''}</div>

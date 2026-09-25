@@ -1,5 +1,5 @@
 /* ============================================================
-   MatHub — Precalculus procedural question generators
+   Mathub — Precalculus procedural question generators
    ============================================================ */
 (function (global) {
   'use strict';

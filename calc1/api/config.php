@@ -1,6 +1,6 @@
 <?php
 /* ============================================================
-   MatHub account server — configuration
+   Mathub account server — configuration
    Edit this file after uploading to Hostinger. Nothing else needs
    changing. Keep it out of version control if you add a password.
    ============================================================ */
@@ -19,8 +19,8 @@ return [
 
   // Sender for verification / reset emails. Must be a mailbox that exists on your domain.
   'mail_from'       => 'info@mathub.space',
-  'mail_from_name'  => 'MatHub',
-  'site_name'       => 'MatHub',
+  'mail_from_name'  => 'Mathub',
+  'site_name'       => 'Mathub',
 
   // How to send mail:
   //   'auto' = use SMTP when smtp_pass is filled in, otherwise PHP mail()

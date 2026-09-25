@@ -1,5 +1,5 @@
 /* ============================================================
-   MatHub — admin panel (#/admin, or inside a class)
+   Mathub — admin panel (#/admin, or inside a class)
    Overview, members, reports, contributions queue, mock exams,
    site settings (Canvas feed, announcement, staff roles), digest.
    Admins see everything; moderators see reports, contributions and mocks.
@@ -27,7 +27,7 @@
     title: 'Admin panel',
     render(root, param, query, standalone) {
       const tabs = TABS.filter(t => t[3] === 'mod' ? isMod() : isAdmin()); const tab = tabs.find(t => t[0] === param) ? param : (tabs[0] ? tabs[0][0] : 'overview');
-      const head = standalone ? `<header class="landing-top"><div><div class="eyebrow">MatHub</div><h1 class="landing-title"><span class="logo-mark">${App.logoSvg(44)}</span>Admin panel</h1><p class="muted">${isAdmin() ? 'Everything about the site, in one place.' : 'Moderation tools.'}</p></div><div class="row gap-sm"><span id="landing-account"></span><a class="btn" href="#/">${icon('left', 14)} All classes</a><button class="icon-btn theme-btn" data-action="theme" aria-label="Toggle theme"></button></div></header>` : pageHead('Admin panel', isAdmin() ? 'Everything about the site, in one place.' : 'Moderation tools.');
+      const head = standalone ? `<header class="landing-top"><div><div class="eyebrow">Mathub</div><h1 class="landing-title"><span class="logo-mark">${App.logoSvg(44)}</span>Admin panel</h1><p class="muted">${isAdmin() ? 'Everything about the site, in one place.' : 'Moderation tools.'}</p></div><div class="row gap-sm"><span id="landing-account"></span><a class="btn" href="#/">${icon('left', 14)} All classes</a><button class="icon-btn theme-btn" data-action="theme" aria-label="Toggle theme"></button></div></header>` : pageHead('Admin panel', isAdmin() ? 'Everything about the site, in one place.' : 'Moderation tools.');
       root.innerHTML = `${standalone ? '<div class="landing-wrap admin-wrap">' : ''}${head}${!isMod() ? App.lockCard('Staff only', 'Log in with a moderator or administrator account to open the admin panel.') : `<div class="admin-layout"><nav class="admin-tabs">${tabs.map(t => `<a class="admin-tab${t[0] === tab ? ' active' : ''}" href="${standalone ? '#/admin/' + t[0] : App.link('admin', t[0])}">${icon(t[2], 15)}<span>${t[1]}</span></a>`).join('')}</nav><div class="admin-body" id="adm-body"><div class="empty">Loading…</div></div></div>`}${standalone ? '</div>' : ''}`;
       const slot = $('#landing-account', root); if (slot && App.auth && App.auth.ready) App.auth.paintLandingAccount(slot);
       bind(root, { theme: () => App.toggleTheme(), 'auth-signup': () => App.auth.open('signup'), 'auth-login': () => App.auth.open('login') });

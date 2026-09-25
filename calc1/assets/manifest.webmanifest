@@ -1,7 +1,7 @@
 {
   "id": "/",
-  "name": "MatHub",
-  "short_name": "MatHub",
+  "name": "Mathub",
+  "short_name": "Mathub",
   "description": "Free study hub for Montana State classes: notes, endless practice, flashcards, deadline calendars, a Python playground and a class board.",
   "start_url": "./?source=pwa",
   "scope": "./",
@@ -9,12 +9,12 @@
   "display_override": ["standalone", "minimal-ui"],
   "orientation": "any",
   "background_color": "#F6F8FB",
-  "theme_color": "#2B55B8",
+  "theme_color": "#1F5EFF",
   "categories": ["education", "productivity"],
   "icons": [
     { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
     { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
-    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
+    { "src": "icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
     { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml" }
   ],
   "shortcuts": [

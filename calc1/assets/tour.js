@@ -1,5 +1,5 @@
 /* ============================================================
-   MatHub — first-visit tour
+   Mathub — first-visit tour
    Five coach marks on the landing page: Today, your classes, search,
    the Focus room and the account menu. A spotlight cuts a hole in a
    dim overlay around each target; Next, Back, Skip, arrow keys and

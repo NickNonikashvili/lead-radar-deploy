@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /* ============================================================
-   MatHub test runner:  node tests/run.js [name ...]
+   Mathub test runner:  node tests/run.js [name ...]
    Starts PHP's built-in server on 127.0.0.1:8766 serving calc1/ when
    nothing answers there (and a local Pyodide mirror on :8767 when
    tests/pyodide/package exists), then runs every tests/*.test.js in

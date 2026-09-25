@@ -1,5 +1,5 @@
 /* ============================================================
-   MatHub — Python worker for the Code playground
+   Mathub — Python worker for the Code playground
    Loads Pyodide (CPython compiled to WebAssembly) inside a Web Worker
    so long loops cannot freeze the page and Stop can kill them. Streams
    stdout/stderr back as they happen, feeds input() from a list of
@@ -215,7 +215,7 @@ def Screen(): return _screen
 TurtleScreen = _Screen
 
 _turtle = _types.ModuleType('turtle')
-_turtle.__doc__ = 'MatHub turtle: records the drawing and shows the finished picture in the playground.'
+_turtle.__doc__ = 'Mathub turtle: records the drawing and shows the finished picture in the playground.'
 _default = None
 def _dt():
     global _default

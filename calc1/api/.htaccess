@@ -1,4 +1,4 @@
-# MatHub account server: only index.php is reachable from the web.
+# Mathub account server: only index.php is reachable from the web.
 Options -Indexes
 <FilesMatch "^(config(\.local)?|lib|mailer|filter|forum|canvas|social)\.php$">
   Require all denied
