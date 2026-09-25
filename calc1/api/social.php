@@ -19,7 +19,8 @@ const MH_BADGES = [
   'unit_master' => ['Unit master', 'Every flashcard in a unit mastered', 'cards'],
   'challenge_7' => ['Daily regular', '7 daily challenges', 'target'], 'challenge_30' => ['Daily legend', '30 daily challenges', 'target'],
   'mock_1' => ['Mock examinee', 'Took a community mock exam', 'flag'], 'contributor' => ['Contributor', 'A submitted problem or card was approved', 'pen'],
-  'founder' => ['Founder', 'Joined MatHub in its first weeks', 'bulb']
+  'founder' => ['Founder', 'Joined MatHub in its first weeks', 'bulb'],
+  'recruiter' => ['Recruiter', 'Brought a classmate to MatHub', 'users'], 'invited' => ['Invited', 'Joined through a classmate\'s link', 'users']
 ];
 
 /* ---------- small helpers ---------- */
@@ -144,6 +145,7 @@ function mh_housekeeping(bool $full = false): array {
   try { mh_league_tick(); } catch (Throwable $e) {}
   try { require_once __DIR__ . '/extras.php'; $b = mh_backup_tick(); if ($b) $did[] = 'backup: ' . $b['name']; } catch (Throwable $e) {}
   try { require_once __DIR__ . '/push.php'; $p = mh_push_tick($full ? 60 : 3); if ($p) $did[] = "push: $p sent"; } catch (Throwable $e) {}
+  try { require_once __DIR__ . '/growth.php'; $pl = mh_planning_tick($full ? 60 : 2); if ($pl) $did[] = "planning: $pl sent"; if ($full || random_int(1, 20) === 1) { $db->exec('DELETE FROM focus_live WHERE seen < ' . (time() - 600)); $db->exec('DELETE FROM metrics WHERE day < "' . mh_local_date(time() - 120 * 86400) . '"'); } } catch (Throwable $e) {}
   return $did;
 }
 /** What an evening reminder is about for one user: Canvas events due tomorrow in their classes, a streak at risk, sessions they joined. Shared by the email and the push. */
@@ -421,7 +423,7 @@ function mh_social_route(string $route, array $in, array $cfg, string $ip): void
       foreach ($st->fetchAll() as $m) {
         $end = (int)$m['start'] + (int)$m['minutes'] * 60; $open = $now >= (int)$m['start'] - 60 && $now <= $end + 900; $ended = $now > $end;
         $reg = false; $res = null; if ($me) { $s2 = $db->prepare('SELECT 1 FROM mock_reg WHERE mock_id = ? AND user_id = ?'); $s2->execute([$m['id'], $me['id']]); $reg = (bool)$s2->fetchColumn(); $s3 = $db->prepare('SELECT score, total, ms FROM mock_results WHERE mock_id = ? AND user_id = ?'); $s3->execute([$m['id'], $me['id']]); $r = $s3->fetch(); if ($r) $res = ['score' => (int)$r['score'], 'total' => (int)$r['total'], 'ms' => (int)$r['ms']]; }
-        $out[] = ['id' => (int)$m['id'], 'course' => $m['course'], 'exam_id' => $m['exam_id'], 'title' => $m['title'], 'start' => (int)$m['start'], 'minutes' => (int)$m['minutes'], 'count' => (int)$m['count'], 'registered' => (int)$m['registered'], 'results' => (int)$m['results'], 'im_registered' => $reg, 'my_result' => $res, 'open' => $open, 'ended' => $ended, 'seed' => ($open || $ended) ? (int)$m['seed'] : null];
+        $out[] = ['id' => (int)$m['id'], 'course' => $m['course'], 'exam_id' => $m['exam_id'], 'title' => $m['title'], 'start' => (int)$m['start'], 'minutes' => (int)$m['minutes'], 'count' => (int)$m['count'], 'official' => (int)($m['official'] ?? 0) === 1, 'registered' => (int)$m['registered'], 'results' => (int)$m['results'], 'im_registered' => $reg, 'my_result' => $res, 'open' => $open, 'ended' => $ended, 'seed' => ($open || $ended) ? (int)$m['seed'] : null];
       }
       mh_json(['ok' => true, 'mocks' => $out]);
     }

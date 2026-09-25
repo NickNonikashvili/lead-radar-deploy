@@ -63,7 +63,7 @@
       if (q.type === 'mc') { if (L.sel === null) return; ans = { sel: L.sel, ok: L.sel === q.answer }; }
       else { const inp = $('#ls-num', root); const raw = (inp ? inp.value : '').trim(); const v = parseNumber(raw); if (isNaN(v)) { if (inp) inp.classList.add('invalid'); toast('Enter a number, fraction, or expression like 2pi'); return; } const tol = q.tol ? Math.max(q.tol * Math.abs(q.answer), 1e-9) : Math.max(0.011, 0.005 * Math.abs(q.answer)); ans = { raw, val: v, ok: Math.abs(v - q.answer) <= tol }; }
       ans.assisted = (L.ladder[L.i] || 0) >= App.ladder(q).length; L.answers[L.i] = ans;
-      if (!ans.assisted) App.recordAnswer(q.topic, ans.ok); else App.markActivity();
+      if (!ans.assisted) App.recordAnswer(q.topic, ans.ok); else App.markActivity(); if (!ans.ok && App.recordMistake) App.recordMistake(q, App.D.id, 'lesson');
       if (ans.ok && !ans.assisted) { L.combo++; L.best = Math.max(L.best, L.combo); if (L.combo % 5 === 0 && App.addXP) { App.addXP(5, { silent: true }); toast(`${icon('fire', 14)} ${L.combo} in a row! +5 XP bonus`, 2400); } if (App.quest) App.quest('combo', L.combo); } else L.combo = 0;
       if (App.sfx) App.sfx.play(ans.ok ? 'correct' : 'wrong');
       this.paint(root); const card = $('.lesson-q', root); if (card) card.classList.add(ans.ok ? 'pop' : 'shake'); const nb = $('[data-action="next"]', root); if (nb) nb.focus();

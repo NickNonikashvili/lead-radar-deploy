@@ -102,6 +102,14 @@ function mh_db(): PDO {
   $db->exec('CREATE INDEX IF NOT EXISTS contrib_course ON contributions(course, kind, status)');
   $db->exec('CREATE TABLE IF NOT EXISTS activity (id INTEGER PRIMARY KEY AUTOINCREMENT, kind TEXT NOT NULL, course TEXT NOT NULL DEFAULT "", text TEXT NOT NULL, link TEXT NOT NULL DEFAULT "", created INTEGER NOT NULL)');
   $db->exec('CREATE TABLE IF NOT EXISTS roles (email TEXT PRIMARY KEY, role TEXT NOT NULL, updated INTEGER NOT NULL)');
+  // growth: calendar feed tokens, invites, planning email, focus together, usage metrics, class goals, announcements
+  foreach (['ics_token' => 'TEXT', 'invite_code' => 'TEXT', 'invited_by' => 'INTEGER NOT NULL DEFAULT 0', 'planning_email' => 'INTEGER NOT NULL DEFAULT 0', 'planning_sent' => 'INTEGER NOT NULL DEFAULT 0', 'focus_public' => 'INTEGER NOT NULL DEFAULT 1'] as $col => $type) if (!in_array($col, $cols, true)) $db->exec("ALTER TABLE users ADD COLUMN $col $type");
+  $mcols = array_column($db->query('PRAGMA table_info(mocks)')->fetchAll(), 'name'); if (!in_array('official', $mcols, true)) $db->exec('ALTER TABLE mocks ADD COLUMN official INTEGER NOT NULL DEFAULT 0');
+  $db->exec('CREATE TABLE IF NOT EXISTS user_days (user_id INTEGER NOT NULL, day TEXT NOT NULL, PRIMARY KEY (user_id, day))');
+  $db->exec('CREATE TABLE IF NOT EXISTS metrics (day TEXT NOT NULL, key TEXT NOT NULL, n INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (day, key))');
+  $db->exec('CREATE TABLE IF NOT EXISTS focus_live (user_id INTEGER PRIMARY KEY, task TEXT NOT NULL DEFAULT "", course TEXT NOT NULL DEFAULT "", started INTEGER NOT NULL, ends INTEGER NOT NULL, seen INTEGER NOT NULL)');
+  $db->exec('CREATE TABLE IF NOT EXISTS weekly_stats (user_id INTEGER NOT NULL, course TEXT NOT NULL, week TEXT NOT NULL, answered INTEGER NOT NULL DEFAULT 0, correct INTEGER NOT NULL DEFAULT 0, cards INTEGER NOT NULL DEFAULT 0, focus INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (user_id, course, week))');
+  $db->exec('CREATE TABLE IF NOT EXISTS announcements (id INTEGER PRIMARY KEY AUTOINCREMENT, course TEXT NOT NULL, text TEXT NOT NULL, link TEXT NOT NULL DEFAULT "", user_id INTEGER NOT NULL, created INTEGER NOT NULL, expires INTEGER NOT NULL DEFAULT 0)');
   return $db;
 }
 
@@ -152,7 +160,7 @@ function mh_is_mod(?array $u): bool { return $u ? (mh_is_admin($u) || in_array(s
 function mh_user_public(array $u): array {
   $unread = 0; try { $st = mh_db()->prepare('SELECT COUNT(*) FROM notifications WHERE user_id = ? AND read = 0'); $st->execute([$u['id']]); $unread = (int)$st->fetchColumn(); } catch (Throwable $e) {}
   return ['id' => (int)$u['id'], 'email' => $u['email'], 'name' => $u['name'], 'verified' => (bool)$u['verified'], 'created' => (int)$u['created'], 'mod' => mh_is_mod($u), 'admin' => mh_is_admin($u), 'terms' => (int)($u['terms_accepted'] ?? 0) > 0, 'notify_email' => (int)($u['notify_email'] ?? 1) === 1, 'unread' => $unread,
-    'show_on_leaderboard' => (int)($u['show_on_leaderboard'] ?? 1) === 1, 'digest_email' => (int)($u['digest_email'] ?? 1) === 1, 'role' => mh_role($u['email']),
+    'show_on_leaderboard' => (int)($u['show_on_leaderboard'] ?? 1) === 1, 'digest_email' => (int)($u['digest_email'] ?? 1) === 1, 'planning_email' => (int)($u['planning_email'] ?? 0) === 1, 'focus_public' => (int)($u['focus_public'] ?? 1) === 1, 'staff' => mh_role($u['email']) !== '', 'role' => mh_role($u['email']),
     'courses' => isset($u['courses']) && $u['courses'] !== null && $u['courses'] !== '' ? (json_decode((string)$u['courses'], true) ?: []) : null, 'sections' => isset($u['sections']) && $u['sections'] ? (json_decode((string)$u['sections'], true) ?: (object)[]) : (object)[], 'reminder_email' => (int)($u['reminder_email'] ?? 0) === 1, 'league' => (int)($u['league'] ?? 0)];
 }
 /** Display name: the chosen name, else the part of the email before the @. */

@@ -39,7 +39,7 @@
   function answer(root, k) {
     if (!B.on || B.locked || !B.q) return; B.locked = true; const q = B.q; const ok = k === q.answer; const C = Courses[B.cid]; B.n++;
     const btns = $$('#bz-stage .q-opt', root); btns.forEach((b, i) => { b.disabled = true; if (i === q.answer) b.classList.add('correct'); else if (i === k) b.classList.add('wrong'); });
-    const tp = B.topics[q.topic] = B.topics[q.topic] || { a: 0, c: 0 }; tp.a++;
+    const tp = B.topics[q.topic] = B.topics[q.topic] || { a: 0, c: 0 }; tp.a++; if (!ok && App.recordMistake) App.recordMistake(q, B.cid, 'blitz');
     if (ok) { B.correct++; B.combo++; B.maxCombo = Math.max(B.maxCombo || 0, B.combo); const gain = 10 * mult(); B.score += gain; tp.c++; if (App.sfx) App.sfx.play('correct'); floatScore(root, `+${gain}`); }
     else { B.combo = 0; if (App.sfx) App.sfx.play('wrong'); const st = $('.bz-score', root); if (st && App.burst) App.burst(st, 'shake'); }
     // progress without XP (XP comes at the end)

@@ -26,13 +26,25 @@
   function start(mins, task, course) {
     stopBreak(); F.total = Math.max(60, Math.round(mins * 60)); F.left = F.total; F.elapsed = 0; F.task = task || ''; F.course = course || (App.D ? App.D.id : App.myCourses()[0]); F.running = true; F.paused = false; F.startedAt = Date.now(); F.lastSummary = null;
     setSetting('focusLastTask', F.task); setSetting('focusLastMins', mins);
-    clearInterval(F.tick); F.tick = setInterval(tick, 1000); if (App.sfx) App.sfx.play('tap'); paint(); pill();
+    clearInterval(F.tick); F.tick = setInterval(tick, 1000); if (App.sfx) App.sfx.play('tap'); paint(); pill(); ping();
   }
-  function tick() { if (!F.running || F.paused) return; F.left--; F.elapsed++; if (F.left <= 0) finish(); else { paintTime(); pill(); } }
+  function tick() { if (!F.running || F.paused) return; F.left--; F.elapsed++; if (F.left <= 0) finish(); else { paintTime(); pill(); if (F.elapsed % 30 === 0) ping(); } }
+  /* ---------- focus together: tell the server while a block runs, show who else is in ---------- */
+  const online = () => App.auth && App.auth.user && App.auth.mode === 'server' && !App.auth.unreachable;
+  const call = (r, body) => fetch('api/index.php?r=' + r, { method: body ? 'POST' : 'GET', credentials: 'same-origin', headers: { 'X-Requested-With': 'MatHub', 'Content-Type': 'application/json' }, body: body ? JSON.stringify(body) : undefined }).then(x => x.json());
+  function ping() { if (!online() || !F.running) return; call('focus_ping', { task: F.task, course: F.course || '', started: Math.floor(F.startedAt / 1000), ends: Math.floor(Date.now() / 1000) + F.left }).then(r => { if (r && r.ok) { F.room = r; paintRoom(); } }).catch(() => {}); }
+  function roomFetch() { if (!(App.auth && App.auth.mode === 'server' && !App.auth.unreachable)) return; call('focus_room').then(r => { if (r && r.ok) { F.room = r; paintRoom(); } }).catch(() => {}); }
+  function paintRoom() {
+    const box = $('#fz-room'); if (!box) return; const r = F.room; if (!r) { box.innerHTML = ''; return; }
+    const rows = r.now || []; const others = rows.filter(x => !x.me);
+    box.innerHTML = `<div class="panel-h"><div class="panel-title">${icon('users')} Focus together</div><span class="small muted">${r.today_sessions ? `${r.today_sessions} session${r.today_sessions === 1 ? '' : 's'} · ${r.today_minutes} min on the site today` : 'nobody has focused yet today'}</span></div>
+      ${rows.length ? `<div class="fr-list">${rows.map(x => `<div class="fr-row${x.me ? ' me' : ''}"><span class="avatar sm">${esc((x.name || '?').trim()[0].toUpperCase())}</span><div class="fr-body"><b>${esc(x.name)}${x.me ? ' (you)' : ''}</b><small>${x.task ? esc(x.task) : 'focusing'}${x.course && global.Courses[x.course] ? ` · ${esc(global.Courses[x.course].short)}` : ''}</small><div class="bar sm"><div class="bar-fill" style="width:${Math.round(100 * (1 - x.left / x.total))}%"></div></div></div><span class="fr-left mono">${Math.ceil(x.left / 60)} min</span></div>`).join('')}</div>` : `<div class="empty small">${App.auth && App.auth.user ? 'Nobody is in a focus block right now. Start one and you will be first on the list.' : 'Sign in to see who is focusing right now and to be counted.'}</div>`}
+      ${others.length ? `<p class="small muted mt-1">${others.length} classmate${others.length === 1 ? ' is' : 's are'} in a block right now. Same room, different desks.</p>` : ''}`;
+  }
   function pause() { if (!F.running) return; F.paused = !F.paused; paint(); pill(); }
-  function stop() { if (!F.running) return; const mins = Math.floor(F.elapsed / 60); F.running = false; clearInterval(F.tick); logSession(mins, false); paint(); pill(); }
+  function stop() { if (!F.running) return; const mins = Math.floor(F.elapsed / 60); F.running = false; clearInterval(F.tick); logSession(mins, false); paint(); pill(); if (online()) call('focus_done', { minutes: mins }).then(roomFetch).catch(() => {}); }
   function finish() {
-    F.running = false; clearInterval(F.tick); F.finishedAt = Date.now(); const mins = Math.round(F.total / 60); logSession(mins, true);
+    F.running = false; clearInterval(F.tick); F.finishedAt = Date.now(); const mins = Math.round(F.total / 60); logSession(mins, true); if (online()) call('focus_done', { minutes: mins }).then(roomFetch).catch(() => {});
     if (App.sfx) App.sfx.play('complete'); if (App.confetti && !(App.motionReduced && App.motionReduced())) App.confetti({ count: 160 });
     try { if ('Notification' in global && Notification.permission === 'granted' && document.visibilityState !== 'visible') new Notification('Focus block done', { body: `${mins} minutes on ${F.task || 'your work'}. Take a short break.`, icon: 'assets/icon-192.png' }); } catch (e) {}
     paint(); pill(); if (!location.hash.startsWith('#/focus')) toast(`${icon('check', 14)} Focus block done: ${mins} minutes logged. Take five.`, 6000);
@@ -91,7 +103,7 @@
         <div class="row gap-sm mt-2" style="flex-wrap:wrap"><button class="btn primary lg" data-action="fz-start">${icon('play', 16)} Start focus</button><button class="btn" data-action="fz-sounds">${icon('mic', 14)} Sounds</button><button class="btn" data-action="fz-full">${icon('zoomin', 14)} Full screen</button></div></div>` : ''}
       ${active ? `<div class="fz-controls">${inBreak ? `<button class="btn primary" data-action="fz-skipbreak">${icon('play', 14)} Skip break</button>` : `<button class="btn primary lg" data-action="fz-pause">${F.paused ? icon('play', 16) + ' Resume' : icon('pause', 16) + ' Pause'}</button><button class="btn" data-action="fz-stop">${icon('x', 14)} Stop</button>`}<button class="btn" data-action="fz-sounds">${icon('mic', 14)} Sounds</button><button class="btn" data-action="fz-full">${icon('zoomin', 14)} Full screen</button></div><p class="small muted fz-hint">Space pauses. Leave this page and a pill keeps the time; come back any time.</p>` : ''}
       <div class="fz-goal"><div class="row between"><span class="small"><b>${st.today}</b> of <b>${st.goal}</b> focus minutes today</span><span class="small muted">${st.week} this week · <button class="linkish" data-action="fz-goal">change goal</button></span></div><div class="bar sm"><div class="bar-fill" style="width:${pct}%"></div></div></div>
-      <p class="fz-quote">“${esc(q)}”</p></div>`;
+      <p class="fz-quote">“${esc(q)}”</p><div class="panel fz-room" id="fz-room"></div></div>`;
     bind(root, {
       'fz-preset': b => { $$('.fz-preset', root).forEach(x => x.classList.toggle('on', x === b)); setSetting('focusLastMins', +b.dataset.m); },
       'fz-sugg': b => { $('#fz-task', root).value = b.dataset.t; $$('.fz-sugg .chip', root).forEach(x => x.classList.toggle('on', x === b)); if (b.dataset.h) root.dataset.go = b.dataset.h; },
@@ -103,7 +115,7 @@
       'fz-goal': () => { const v = prompt('Daily focus goal in minutes:', String(goal())); const n = parseInt(v, 10); if (n > 0 && n <= 600) { setSetting('focusGoal', n); paint(); } }
     });
     const ci = $('#fz-custom', root); if (ci) ci.addEventListener('focus', () => { $$('.fz-preset', root).forEach(x => x.classList.remove('on')); });
-    if (App.motionRender) App.motionRender(root); if (App.countUp) App.countUp(root);
+    if (App.motionRender) App.motionRender(root); if (App.countUp) App.countUp(root); paintRoom();
   }
   App.views.focus = {
     title: 'Focus', blurb: 'One task, one timer, no phone.',
@@ -112,9 +124,9 @@
       paint(); if (query && query.start && !F.running) { const m = parseInt(query.start, 10) || 25; start(m, query.task || '', null); }
       const slot = $('#landing-account', root); if (slot && App.auth && App.auth.ready) App.auth.paintLandingAccount(slot);
       this.keys = e => { if (e.target.matches('input, textarea, select') || !F.running) return; if (e.key === ' ') { e.preventDefault(); pause(); } };
-      document.addEventListener('keydown', this.keys); pill();
+      document.addEventListener('keydown', this.keys); pill(); roomFetch(); this.roomTimer = setInterval(roomFetch, 30000);
     },
-    unmount() { if (this.keys) document.removeEventListener('keydown', this.keys); setTimeout(pill, 0); }
+    unmount() { if (this.keys) document.removeEventListener('keydown', this.keys); clearInterval(this.roomTimer); setTimeout(pill, 0); }
   };
   document.addEventListener('DOMContentLoaded', pill);
 })(window);

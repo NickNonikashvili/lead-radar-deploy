@@ -182,7 +182,7 @@
       const s = PQ.session; if (s.submitted) return; const q = s.questions[qi]; if (s.mode === 'practice' && s.answers[qi]) return;
       const assistedMC = s.mode === 'practice' && s.ladder && (s.ladder[qi] || 0) >= App.ladder(q).length;
       s.answers[qi] = { sel: k, ok: k === q.answer, assisted: assistedMC };
-      if (s.mode === 'practice') { const ok = s.answers[qi].ok; if (!assistedMC) App.recordAnswer(q.topic, ok); else App.markActivity(); this.combo(s, ok && !assistedMC); this.paintSession(root); this.flash(root, q, ok); this.scrollTo(root, q); }
+      if (s.mode === 'practice') { const ok = s.answers[qi].ok; if (!assistedMC) App.recordAnswer(q.topic, ok); else App.markActivity(); if (!ok && App.recordMistake) App.recordMistake(q, D.id, 'practice'); this.combo(s, ok && !assistedMC); this.paintSession(root); this.flash(root, q, ok); this.scrollTo(root, q); }
       else this.repaintQ(root, qi);
     },
     answerNum(root, qi) {
@@ -192,7 +192,7 @@
       const tol = q.tol ? Math.max(q.tol * Math.abs(q.answer), 1e-9) : Math.max(0.011, 0.005 * Math.abs(q.answer));
       const assistedNum = s.mode === 'practice' && s.ladder && (s.ladder[qi] || 0) >= App.ladder(q).length;
       s.answers[qi] = { raw, val: v, ok: Math.abs(v - q.answer) <= tol, assisted: assistedNum };
-      if (s.mode === 'practice') { const ok = s.answers[qi].ok; if (!assistedNum) App.recordAnswer(q.topic, ok); else App.markActivity(); this.combo(s, ok && !assistedNum); this.paintSession(root); this.flash(root, q, ok); this.scrollTo(root, q); }
+      if (s.mode === 'practice') { const ok = s.answers[qi].ok; if (!assistedNum) App.recordAnswer(q.topic, ok); else App.markActivity(); if (!ok && App.recordMistake) App.recordMistake(q, D.id, 'practice'); this.combo(s, ok && !assistedNum); this.paintSession(root); this.flash(root, q, ok); this.scrollTo(root, q); }
       else this.repaintQ(root, qi);
     },
     repaintQ(root, qi, ok) { const q = PQ.session.questions[qi]; const old = $(`#qc-${q.id}`, root); if (!old) return; const tmp = document.createElement('div'); tmp.innerHTML = this.qHtml(q, qi); old.replaceWith(tmp.firstElementChild); const nq = $(`#qc-${q.id}`, root); if (nq && ok !== undefined) nq.classList.add(ok ? 'pop' : 'shake'); typeset(nq); },

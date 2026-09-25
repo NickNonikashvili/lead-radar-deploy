@@ -203,8 +203,9 @@ function mh_forum_route(string $route, array $in, array $cfg, string $ip): void 
       mh_json(['ok' => true, 'reports' => $out, 'bans' => array_map(fn($b) => ['user_id' => (int)$b['user_id'], 'email' => $b['email'], 'until' => (int)$b['until'], 'reason' => $b['reason']], $bans)]);
 
     case 'forum_mod':
-      mh_method('POST'); $u = mh_require_user(); if (!$mod) mh_fail('Moderators only.', 403);
-      $action = (string)($in['action'] ?? ''); $kind = ($in['kind'] ?? '') === 'c' ? 'c' : 'p'; $id = (int)($in['id'] ?? 0);
+      mh_method('POST'); $u = mh_require_user(); $action = (string)($in['action'] ?? ''); $staffOnly = in_array($action, ['pin', 'unpin', 'lock', 'unlock'], true) && mh_role($u['email']) !== '';
+      if (!$mod && !$staffOnly) mh_fail('Moderators only.', 403);
+      $kind = ($in['kind'] ?? '') === 'c' ? 'c' : 'p'; $id = (int)($in['id'] ?? 0);
       $item = $kind === 'p' ? mh_get_post($id) : mh_get_comment($id);
       if (in_array($action, ['pin', 'unpin', 'lock', 'unlock'], true)) { if (!$item || $kind !== 'p') mh_fail('Post not found.', 404); $col = in_array($action, ['pin', 'unpin'], true) ? 'pinned' : 'locked'; $db->prepare("UPDATE posts SET $col = ? WHERE id = ?")->execute([in_array($action, ['pin', 'lock'], true) ? 1 : 0, $id]); }
       elseif ($action === 'remove' || $action === 'restore') { if (!$item) mh_fail('Not found.', 404); $db->prepare(($kind === 'p' ? 'UPDATE posts' : 'UPDATE comments') . ' SET removed = ? WHERE id = ?')->execute([$action === 'remove' ? 2 : 0, $id]); if ($kind === 'c') $db->prepare('UPDATE posts SET ncomments = (SELECT COUNT(*) FROM comments WHERE post_id = ? AND removed = 0) WHERE id = ?')->execute([$item['post_id'], $item['post_id']]); }

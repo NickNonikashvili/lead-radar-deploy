@@ -101,6 +101,23 @@
     const r = await call('push_subscribe', sub.toJSON()); App.setSetting('pushOn', true); return r;
   };
   Auth.pushUnsubscribe = async function () { try { const reg = await navigator.serviceWorker.ready; const sub = await reg.pushManager.getSubscription(); if (sub) { await call('push_unsubscribe', { endpoint: sub.endpoint }); await sub.unsubscribe(); } } catch (e) {} App.setSetting('pushOn', false); };
+  /* ---------- calendar link, invite link, join banner ---------- */
+  Auth.growthInit = async function (panel) {
+    const cal = $('#acct-cal', panel), inv = $('#acct-invite', panel); if (!cal && !inv) return; if (!Auth.user || Auth.mode !== 'server') { if (cal) cal.innerHTML = '<div class="small muted">Needs the account server.</div>'; if (inv) inv.innerHTML = ''; return; }
+    const base = location.origin + location.pathname.replace(/index\.html$/, '');
+    if (cal) { try { const r = await call('ics_token'); const url = `${base}api/index.php?r=ics&t=${r.token}`; const webcal = url.replace(/^https?:\/\//, 'webcal://');
+      cal.innerHTML = `<div class="cal-sub"><input class="input mono small" id="acct-ics" value="${esc(url)}" readonly aria-label="Calendar subscription link"><div class="row gap-sm mt-1" style="flex-wrap:wrap"><button class="btn sm primary" data-action="ics-copy">${icon('file', 13)} Copy link</button><a class="btn sm" href="${esc(webcal)}">${icon('calendar', 13)} Open in calendar app</a><a class="btn sm" href="${esc(url)}" download="mathub.ics">${icon('download', 13)} Download .ics</a><button class="btn sm ghost" data-action="ics-reset">${icon('rotate', 13)} New link</button></div><details class="mt-1"><summary class="small">How to subscribe (${r.events} events)</summary><ul class="list small mt-1"><li><b>Google Calendar</b> (on a computer): Other calendars → + → From URL → paste the link → Add calendar. Updates every few hours.</li><li><b>Apple Calendar</b>: File → New Calendar Subscription → paste the link. On iPhone: Settings → Calendar → Accounts → Add Subscribed Calendar.</li><li><b>Outlook</b>: Add calendar → Subscribe from web → paste the link.</li></ul></details></div>`;
+      bind(cal, { 'ics-copy': async () => { try { await navigator.clipboard.writeText(url); toast('Calendar link copied. Paste it into your calendar app.', 3000); } catch (e) { $('#acct-ics', cal).select(); } }, 'ics-reset': async () => { if (!confirm('Make a new link? Calendars using the old one stop updating.')) return; await call('ics_token_reset', {}); Auth.growthInit(panel); toast('New calendar link made.'); } });
+    } catch (e) { cal.innerHTML = `<div class="small muted">${esc(e.message)}</div>`; } }
+    if (inv) { try { const r = await call('invite_mine'); const link = `${base}#/join?ref=${r.code}`; const text = `Study with me on MatHub: free notes, endless practice and a class board for our Montana State classes. ${link}`;
+      inv.innerHTML = `<div class="invite-card"><div class="row gap-sm" style="flex-wrap:wrap"><input class="input mono small" id="acct-invlink" value="${esc(link)}" readonly aria-label="Invite link" style="flex:1 1 240px"><button class="btn sm primary" data-action="inv-share">${icon('external', 13)} ${navigator.share ? 'Share' : 'Copy'}</button></div><div class="small muted mt-1">${r.joined ? `${r.joined} classmate${r.joined === 1 ? '' : 's'} joined through your link.` : 'Nobody has used it yet. Send it to your study group.'}</div></div>`;
+      bind(inv, { 'inv-share': async () => { try { if (navigator.share) await navigator.share({ title: 'MatHub', text, url: link }); else { await navigator.clipboard.writeText(text); toast('Invite copied. Paste it in your group chat.', 3000); } } catch (e) {} } });
+    } catch (e) { inv.innerHTML = `<div class="small muted">${esc(e.message)}</div>`; } }
+  };
+  App.inviteBanner = function () {
+    let ref = '', name = ''; try { ref = localStorage.getItem('mathub-ref') || ''; name = sessionStorage.getItem('mathub-ref-name') || ''; } catch (e) {}
+    if (!ref || Auth.user) return ''; return `<div class="callout small row between" style="gap:10px;margin-bottom:12px"><span>${icon('users', 14)} ${name ? `<b>${esc(name)}</b> invited you.` : 'You were invited by a classmate.'} Sign up with your montana.edu email and you both earn a badge.</span><button class="btn sm primary" data-action="auth-signup">Sign up</button></div>`;
+  };
   Auth.pushInit = async function (panel) {
     const box = $('#acct-push', panel), note = $('#acct-push-note', panel), test = $('[data-action="push-test"]', panel); if (!box) return;
     if (!Auth.user || !Auth.pushSupported()) { note.textContent = Auth.mode !== 'server' ? 'Needs the account server.' : 'Not supported in this browser.'; return; }
@@ -134,7 +151,7 @@
     applyServer(course, r.data, r.updated);
   };
   /* ---------- preferences that follow the account (device-local settings such as the GPA calculator, sounds, goal, theme) ---------- */
-  const PREF_KEYS = ['gpa', 'ambient', 'dailyGoal', 'theme', 'liveBg', 'sound', 'phonRate', 'phonVoice_uk', 'phonVoice_us', 'readerVoice', 'readerScroll', 'navOpen', 'seenChangelog', 'todayPlan', 'lastVisit', 'challengeDone', 'lastLessonDay', 'pushOn', 'savedResources', 'guidesRead', 'skin', 'motion', 'tourDone', 'recapSeen', 'focusLog', 'focusGoal'];
+  const PREF_KEYS = ['gpa', 'ambient', 'dailyGoal', 'theme', 'liveBg', 'sound', 'phonRate', 'phonVoice_uk', 'phonVoice_us', 'readerVoice', 'readerScroll', 'navOpen', 'seenChangelog', 'todayPlan', 'lastVisit', 'challengeDone', 'lastLessonDay', 'pushOn', 'savedResources', 'guidesRead', 'skin', 'motion', 'tourDone', 'recapSeen', 'focusLog', 'focusGoal', 'freezeBank', 'freezeUsed', 'freezeWeeks', 'focusPublic', 'planningEmail'];
   function applyPrefs(prefs, updated) { if (!prefs || typeof prefs !== 'object') return; const s = App.settings(); PREF_KEYS.forEach(k => { if (prefs[k] !== undefined) s[k] = prefs[k]; }); s.prefsUpdated = updated; writeJSON('studyhub-settings', s); if (App.applyTheme) App.applyTheme(); }
   Auth.prefsPush = function () { if (!Auth.user || Auth.mode !== 'server' || Auth.unreachable) return; clearTimeout(Auth.prefsTimer); Auth.prefsTimer = setTimeout(async () => { const s = App.settings(); const prefs = {}; PREF_KEYS.forEach(k => { if (s[k] !== undefined) prefs[k] = s[k]; }); const updated = Date.now(); s.prefsUpdated = updated; writeJSON('studyhub-settings', s); try { const r = await call('prefs', { prefs, updated }, 'PUT'); if (r.stale) applyPrefs(r.prefs, r.updated); } catch (e) {} }, 2500); };
   Auth.prefsPull = async function () { if (!Auth.user || Auth.mode !== 'server') return; try { const r = await call('prefs'); const local = App.settings().prefsUpdated || 0; if ((r.updated || 0) > local) applyPrefs(r.prefs, r.updated); else if (local > (r.updated || 0)) Auth.prefsPush(); } catch (e) {} };
@@ -165,6 +182,12 @@
     // focus sessions: union by day (max minutes per day), streak freezes: union
     const sess = {}; for (const src of [S.sessions || [], L.sessions || []]) for (const x of src) if (x && x.d) sess[x.d] = Math.max(sess[x.d] || 0, x.m || 0); out.sessions = Object.keys(sess).sort().map(d => ({ d, m: sess[d] }));
     out.freezes = Object.assign({}, S.freezes || {}, L.freezes || {});
+    // mistakes: union by key, the more recent attempt wins; cleared count: max
+    const mk = {}; for (const src of [S.mistakes || [], L.mistakes || []]) for (const m of src) if (m && m.k && (!mk[m.k] || (m.at || 0) > (mk[m.k].at || 0))) mk[m.k] = m; out.mistakes = Object.values(mk).slice(-120); out.mistakesCleared = Math.max(S.mistakesCleared || 0, L.mistakesCleared || 0);
+    // personal notes: newer text per topic; highlights: union; cheat sheet: union of picked lines
+    const mn = {}, mnAt = {}; for (const src of [S, L]) for (const [sec, txt] of Object.entries(src.mynotes || {})) { const ts = (src.mynotesAt || {})[sec] || 0; if (!(sec in mn) || ts > mnAt[sec]) { mn[sec] = txt; mnAt[sec] = ts; } } out.mynotes = mn; out.mynotesAt = mnAt;
+    const hl = {}; for (const src of [S.highlights || {}, L.highlights || {}]) for (const [sec, arr] of Object.entries(src)) { hl[sec] = [...new Set((hl[sec] || []).concat(arr || []))]; } out.highlights = hl;
+    if (S.cheatsheet || L.cheatsheet) { const base = Object.assign({}, S.cheatsheet || {}, L.cheatsheet || {}); base.items = [...new Set(((S.cheatsheet || {}).items || []).concat((L.cheatsheet || {}).items || []))]; out.cheatsheet = base; }
     const xp = {}; for (const src of [S.xp || [], L.xp || []]) for (const x of src) if (x && x.d) xp[x.d] = Math.max(xp[x.d] || 0, x.n || 0); out.xp = Object.keys(xp).sort().map(d => ({ d, n: xp[d] }));
     // grades and scratchpad strokes: the newer side already won via Object.assign, but never replace content with nothing
     if (!(out.grades && Object.keys(out.grades).length)) out.grades = (L.grades && Object.keys(L.grades).length) ? L.grades : (S.grades || {});
@@ -308,7 +331,7 @@
       else if (action === 'forgot-again') { await call('forgot', { email: M.email }); msg('A new reset code is on its way.', 'good'); }
       else if (M.state === 'signup') {
         if (!Auth.emailOk(email)) throw new Error('MatHub is for Montana State students: use your @montana.edu address.');
-        const r = await call('signup', { email, password: v('au-pass'), name: v('au-name') }); M.email = r.email || email; M.state = 'verify'; M.msg = ''; paintModal(); msg('Code sent. It expires in 15 minutes.', 'good');
+        const r = await call('signup', { email, password: v('au-pass'), name: v('au-name'), ref: (() => { try { return localStorage.getItem('mathub-ref') || ''; } catch (e) { return ''; } })() }); M.email = r.email || email; M.state = 'verify'; M.msg = ''; paintModal(); msg('Code sent. It expires in 15 minutes.', 'good');
       } else if (M.state === 'verify') { const r = await call('verify', { email: M.email, code: v('au-code') }); finishLogin(r.user, true); }
       else if (M.state === 'forgot') { await call('forgot', { email }); M.email = email; M.state = 'reset'; M.msg = ''; paintModal(); msg('If that address has an account, a code is on its way.', 'good'); }
       else if (M.state === 'reset') { const r = await call('reset', { email: M.email, code: v('au-code'), password: v('au-pass') }); finishLogin(r.user, false); }
@@ -352,6 +375,11 @@
             <label class="check"><input type="checkbox" id="acct-notify" ${u.notify_email === false ? '' : 'checked'}><span>When someone replies to my posts or comments <span class="muted small">(at most one email per post every few hours)</span></span></label>
             <label class="check"><input type="checkbox" id="acct-reminder" ${u.reminder_email ? 'checked' : ''}><span>The evening before something is due <span class="muted small">(6 pm: tomorrow's Canvas due dates, sessions you joined, and a heads-up if your streak is about to end)</span></span></label>
             <label class="check"><input type="checkbox" id="acct-digest" ${u.digest_email === false ? '' : 'checked'}><span>The weekly digest <span class="muted small">(Sunday evening: what is due, top posts, your stats vs. the class)</span></span></label></section>
+          ${server ? `<section><div class="eyebrow mb-1">Plan the week</div>
+            <label class="check"><input type="checkbox" id="acct-planning" ${u.planning_email ? 'checked' : ''}><span>Sunday planning email <span class="muted small">(4 pm: everything due next week, your week in numbers, one suggested focus block)</span></span></label>
+            <label class="check"><input type="checkbox" id="acct-focuspub" ${u.focus_public === false ? '' : 'checked'}><span>Show me in Focus together <span class="muted small">(others in the focus room see your name and task while your timer runs)</span></span></label></section>
+          <section><div class="eyebrow mb-1">Calendar subscription</div><p class="small muted mb-1">Every exam and deadline of your classes in Google Calendar, Apple Calendar or Outlook, updated automatically. Keep the link private; anyone with it can see your class schedule.</p><div id="acct-cal"><div class="small muted">Loading…</div></div></section>
+          <section><div class="eyebrow mb-1">Invite a classmate</div><p class="small muted mb-1">Share your link. When a classmate signs up through it you both earn a badge.</p><div id="acct-invite"><div class="small muted">Loading…</div></div></section>` : ''}
           <section><div class="eyebrow mb-1">Notifications on this device</div><label class="check"><input type="checkbox" id="acct-push" disabled><span>Push notifications <span class="muted small">(the evening before something is due, and when a streak is at risk; on iPhone this needs the app added to the home screen)</span></span></label><div class="row gap-sm mt-1"><button class="btn xs" data-action="push-test" disabled>Send a test</button><span class="small muted" id="acct-push-note">Checking…</span></div></section>
           <section><div class="eyebrow mb-1">Privacy</div>
             <label class="check"><input type="checkbox" id="acct-lb" ${u.show_on_leaderboard === false ? '' : 'checked'}><span>Show my name on leaderboards, helper lists and the People page <span class="muted small">(otherwise you appear as “Anonymous student”)</span></span></label></section>` : ''}
@@ -365,6 +393,7 @@
     const wrap = document.createElement('div'); wrap.innerHTML = html; const panel = wrap.firstElementChild;
     const pref = (id, key, onMsg, offMsg) => { const el = $('#' + id, panel); if (el) el.addEventListener('change', async () => { try { const r = await call('profile', { [key]: el.checked }); Auth.user = Object.assign(Auth.user, r.user); toast(el.checked ? onMsg : offMsg); } catch (e) { toast(e.message); el.checked = !el.checked; } }); };
     Auth.pushInit(panel);
+    pref('acct-planning', 'planning_email', 'Sunday planning email on', 'Sunday planning email off'); pref('acct-focuspub', 'focus_public', 'You show up in Focus together', 'Hidden from Focus together'); Auth.growthInit(panel);
     pref('acct-notify', 'notify_email', 'Reply emails on', 'Reply emails off'); pref('acct-reminder', 'reminder_email', 'Evening reminders on', 'Evening reminders off'); pref('acct-digest', 'digest_email', 'Weekly digest on', 'Weekly digest off'); pref('acct-lb', 'show_on_leaderboard', 'Your name shows on leaderboards and the People page', 'You appear as “Anonymous student”');
     if (u && server && App.social && App.social.refreshBadges) App.social.refreshBadges().then(r => { const el = $('#acct-badge-count', panel); if (el && r) el.textContent = `${r.badges.length} of ${r.catalog.length} earned`; }).catch(() => {});
     bind(panel, {

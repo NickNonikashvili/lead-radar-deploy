@@ -230,6 +230,27 @@ The server copies the SQLite database once a day (SQLite's own `VACUUM INTO`, co
 
 `assets/motion.css` and `assets/motion.js` add staggered card entrances, ring and progress-bar fills, a top loading bar while a class downloads, button and chip micro-interactions, feedback on answers, a theme fade, and hover polish. Settings → Appearance offers five looks (Classic, Bobcat, Paper, Forest, Midnight) via `data-skin` on the root, and a Reduce motion switch (`data-motion="off"`, also honored from the OS setting) that turns every animation off. Both are applied before first paint by the inline script in `index.html` and follow the account. A five-step tour runs once on the landing page (`assets/tour.js`, "Show the tour again" in Settings). Notes, formula sheets, calendars, planners, exam prep and the GPA page have a Print button, and the print stylesheet drops the chrome.
 
+## Mistakes notebook, streak freezes, cheat sheets, personal notes
+
+- **Mistakes** (`#/mistakes` for every class, `#/<class>/mistakes` under Practice). `App.recordMistake(question, class)` runs whenever an answer is wrong in practice, a lesson, Blitz or the daily challenge and stores the question with its explanation in the class data (`mistakes`, synced; 120 per class). The retry player brings each one back the day after a miss and three days after a hit; two hits in a row clear it. Today shows a "Retry N mistakes" row.
+- **Streak freezes.** Hitting the daily XP goal on three days of an ISO week earns one freeze (bank of two, `settings.freezeBank`, synced). When yesterday was missed and the day before was not, a freeze is applied automatically: the day is marked `freeze` in the class activity so the streak count, the server's streak-at-risk logic and the popover all agree. The streak popover shows the bank and the goal-day count.
+- **Cheat sheet** (`#/<class>/cheatsheet` under Learn). Tick formulas from the formula sheet and the key formulas, big ideas and pitfalls of any topic, add your own lines, pick columns and size, print. "Suggest for next exam" pre-selects the formulas for the sections on the next exam. Saved per class (`cheatsheet`, synced).
+- **My notes and highlights.** Every topic page ends with a notes box (saved as you type) and a highlighter: select text in the notes and tap Highlight. `#/<class>/mynotes` lists them per topic with print and export. Stored as `mynotes`, `mynotesAt` and `highlights` in the class data.
+
+## Calendar feed, focus together, invites, announcements, growth
+
+- **Calendar subscription.** Settings → Calendar subscription shows a private link (`api/index.php?r=ics&t=<token>`) that serves every deadline and exam of the member's classes as an iCalendar feed, all-day events with the time in the title, plus Canvas events, with a reminder a week before each exam. Subscribe from Google Calendar (From URL), Apple Calendar or Outlook; the feed refreshes every few hours. "New link" invalidates the old one. The server reads class calendars from the generated `assets/courses-index.js`.
+- **Focus together.** While a focus block runs the client pings `focus_ping` every 30 seconds; the room lists everyone in a block (name, task, time left) and the site's focus minutes for the day. Members can hide themselves in Settings ("Show me in Focus together"); members hidden from leaderboards appear as "Anonymous student".
+- **Class goals and section boards.** Every progress save updates `weekly_stats`; `class_goal` sums each class's questions answered this week against a goal that scales with members. The dashboard and landing page show the bar. `league_section` ranks the week's XP among members who set the same section for a class (Settings → classes and sections), shown at the bottom of the Leagues page.
+- **Announcements.** Members with a staff role (Instructor, TA, via the admin panel's role editor) and moderators can post an announcement to a class or to everyone (text, optional link, days to show); it appears at the top of the class dashboard's community panel. Staff can also pin and lock threads and mark a mock exam official.
+- **Invite links.** Settings → Invite a classmate gives each member a code; `#/join?ref=CODE` greets the visitor with the inviter's first name and stores the code. A sign-up that carries it records `invited_by`, and verification awards the Invited badge to the newcomer and the Recruiter badge to the inviter.
+- **Sunday planning email.** Opt in under Settings → Plan the week. Sundays after 3 pm the housekeeping pass emails next week's deadlines by day, a link to the recap and one suggested focus block.
+- **Growth tab** (admin). Sign-ups per week, active members per day, retention by sign-up week (seen again after 1, 7 and 30 days) and a table of what people use (page views and key actions, this week vs. last). Activity is recorded from any signed-in request (`user_days`) and counted events (`metrics`); the client batches page views and posts them quietly.
+
+## The look
+
+`assets/icon.svg` and `assets/logo.svg` hold the mark: two mountain peaks that read as an M, a gold sun, a gradient from indigo through violet to teal. `node scripts/build-icons.js` renders the PNG sizes, `node scripts/build-og.js` the social cards. The colour system in `styles.css` ("Look v3") gives every hue a meaning: indigo for learning, green for progress and readiness, amber for XP and rewards, coral for deadlines and mistakes, teal for focus, violet for community and creative tools. Sidebar groups, panel icons, the mobile tab bar and calls to action follow it, a four-hue wash sits behind the page, and the floating background carries glyphs from every subject in that subject's hue.
+
 ## Layout: what lives where
 
 - **Header.** Class title, next-exam chip, streak flame, daily goal ring (level inside; tap it for XP, level, goal and today's quests), search, inbox, theme and the account menu. Double XP shows as a chip only while it is on.
@@ -297,6 +318,7 @@ public_html/
     canvas.php              Canvas calendar feed sync
     social.php              challenges, badges, presence, sessions, polls, mocks, contributions, digest
     push.php, extras.php    web push (VAPID), problem reports, backups, synced preferences
+    growth.php              calendar feed, focus together, metrics, class goals, announcements, invites, planning email
   learn/                    static study guides (generated), sitemap.xml, robots.txt
   tests/                    browser checks (not needed on the server; safe to leave out of the upload)
   sw.js                     service worker for offline use

@@ -40,6 +40,7 @@ switch ($route) {
     $hash = password_hash($pass, PASSWORD_DEFAULT);
     if ($u) $db->prepare('UPDATE users SET pass_hash = ?, name = ?, created = ? WHERE id = ?')->execute([$hash, $name, time(), $u['id']]);
     else $db->prepare('INSERT INTO users (email, name, pass_hash, verified, created) VALUES (?, ?, ?, 0, ?)')->execute([$email, $name, $hash, time()]);
+    $ref = strtoupper(preg_replace('/[^A-Za-z0-9]/', '', (string)($in['ref'] ?? ''))); if (strlen($ref) === 6) { $st = $db->prepare('SELECT id FROM users WHERE invite_code = ? AND verified = 1 AND email != ?'); $st->execute([$ref, $email]); $inv = (int)$st->fetchColumn(); if ($inv) $db->prepare('UPDATE users SET invited_by = ? WHERE email = ? AND invited_by = 0')->execute([$inv, $email]); }
     $code = mh_code_issue($email, 'verify'); mh_send_code($email, 'verify', $code);
     mh_json(['ok' => true, 'pending' => true, 'email' => $email]);
 
@@ -62,6 +63,7 @@ switch ($route) {
     if ((int)$u['verified'] === 1) mh_fail('That address is already verified. Log in instead.', 409, ['exists' => true]);
     $e = mh_code_consume($email, 'verify', mh_str($in, 'code', 12)); if ($e) mh_fail($e);
     $db = mh_db(); $db->prepare('UPDATE users SET verified = 1, last_login = ? WHERE id = ?')->execute([time(), $u['id']]);
+    try { $fresh = mh_user_by_email($email); if ($fresh && (int)($fresh['invited_by'] ?? 0)) { require_once __DIR__ . '/social.php'; require_once __DIR__ . '/growth.php'; mh_invite_reward($fresh); } } catch (Throwable $e) {}
     $u['verified'] = 1; mh_token_issue((int)$u['id']);
     mh_json(['ok' => true, 'user' => mh_user_public($u)]);
 
@@ -114,8 +116,9 @@ switch ($route) {
     $lb = array_key_exists('show_on_leaderboard', $in) ? (!empty($in['show_on_leaderboard']) ? 1 : 0) : (int)($u['show_on_leaderboard'] ?? 1);
     $dg = array_key_exists('digest_email', $in) ? (!empty($in['digest_email']) ? 1 : 0) : (int)($u['digest_email'] ?? 1);
     $rm = array_key_exists('reminder_email', $in) ? (!empty($in['reminder_email']) ? 1 : 0) : (int)($u['reminder_email'] ?? 0);
-    $courses = $u['courses'] ?? null; if (array_key_exists('courses', $in)) { $c = is_array($in['courses']) ? array_values(array_unique(array_filter($in['courses'], fn($x) => in_array($x, ['calc', 'physics', 'precalc'], true)))) : []; $courses = json_encode($c); }
-    $sections = $u['sections'] ?? null; if (array_key_exists('sections', $in) && is_array($in['sections'])) { $sec = []; foreach ($in['sections'] as $cid => $v) { if (!in_array($cid, ['calc', 'physics', 'precalc'], true) || !is_array($v)) continue; $sec[$cid] = ['section' => mb_substr(trim((string)($v['section'] ?? '')), 0, 20), 'examTime' => mb_substr(trim((string)($v['examTime'] ?? '')), 0, 60), 'labDay' => in_array($v['labDay'] ?? '', ['tue', 'thu'], true) ? $v['labDay'] : '']; } $sections = json_encode($sec); }
+    if (array_key_exists('planning_email', $in) || array_key_exists('focus_public', $in)) { $pe = array_key_exists('planning_email', $in) ? (!empty($in['planning_email']) ? 1 : 0) : (int)($u['planning_email'] ?? 0); $fp = array_key_exists('focus_public', $in) ? (!empty($in['focus_public']) ? 1 : 0) : (int)($u['focus_public'] ?? 1); mh_db()->prepare('UPDATE users SET planning_email = ?, focus_public = ? WHERE id = ?')->execute([$pe, $fp, $u['id']]); $u['planning_email'] = $pe; $u['focus_public'] = $fp; }
+    $courses = $u['courses'] ?? null; if (array_key_exists('courses', $in)) { $c = is_array($in['courses']) ? array_values(array_unique(array_filter($in['courses'], fn($x) => in_array($x, ['calc', 'physics', 'precalc', 'writ', 'csci'], true)))) : []; $courses = json_encode($c); }
+    $sections = $u['sections'] ?? null; if (array_key_exists('sections', $in) && is_array($in['sections'])) { $sec = []; foreach ($in['sections'] as $cid => $v) { if (!in_array($cid, ['calc', 'physics', 'precalc', 'writ', 'csci'], true) || !is_array($v)) continue; $sec[$cid] = ['section' => mb_substr(trim((string)($v['section'] ?? '')), 0, 20), 'examTime' => mb_substr(trim((string)($v['examTime'] ?? '')), 0, 60), 'labDay' => in_array($v['labDay'] ?? '', ['tue', 'thu'], true) ? $v['labDay'] : '']; } $sections = json_encode($sec); }
     mh_db()->prepare('UPDATE users SET name = ?, notify_email = ?, show_on_leaderboard = ?, digest_email = ?, reminder_email = ?, courses = ?, sections = ? WHERE id = ?')->execute([$name, $notify, $lb, $dg, $rm, $courses, $sections, $u['id']]);
     $u['name'] = $name; $u['notify_email'] = $notify; $u['show_on_leaderboard'] = $lb; $u['digest_email'] = $dg; $u['reminder_email'] = $rm; $u['courses'] = $courses; $u['sections'] = $sections;
     mh_json(['ok' => true, 'user' => mh_user_public($u)]);
@@ -144,6 +147,7 @@ switch ($route) {
     $st = $db->prepare('SELECT updated FROM progress WHERE user_id = ? AND course = ?'); $st->execute([$u['id'], $course]); $cur = $st->fetchColumn();
     if ($cur !== false && (int)$cur > $updated && empty($in['force'])) mh_json(['ok' => true, 'stale' => true, 'updated' => (int)$cur]);
     $db->prepare('INSERT INTO progress (user_id, course, json, updated) VALUES (?, ?, ?, ?) ON CONFLICT(user_id, course) DO UPDATE SET json = excluded.json, updated = excluded.updated')->execute([$u['id'], $course, $json, $updated]);
+    try { require_once __DIR__ . '/social.php'; require_once __DIR__ . '/growth.php'; mh_weekly_stats_update((int)$u['id'], $course, $data); mh_track_day((int)$u['id']); } catch (Throwable $e) {}
     mh_json(['ok' => true, 'updated' => $updated]);
 
   case 'data_all':
@@ -170,6 +174,7 @@ switch ($route) {
       'active_7d' => (int)$db->query('SELECT COUNT(*) FROM users WHERE last_login > ' . (time() - 7 * 86400))->fetchColumn(), 'progress_rows' => (int)$db->query('SELECT COUNT(*) FROM progress')->fetchColumn()]);
 
   default:
+    if (in_array($route, ['ics', 'ics_token', 'ics_token_reset', 'focus_ping', 'focus_stop', 'focus_done', 'focus_room', 'track', 'admin_growth', 'class_goal', 'league_section', 'ann_list', 'ann_post', 'ann_delete', 'mock_official', 'invite_mine', 'invite_info'], true)) { require_once __DIR__ . '/social.php'; require_once __DIR__ . '/growth.php'; mh_growth_route($route, $in, $cfg, $ip); }
     if (str_starts_with($route, 'push_')) { require_once __DIR__ . '/social.php'; require_once __DIR__ . '/push.php'; mh_push_route($route, $in, $cfg, $ip); }
     if (str_starts_with($route, 'issue_') || str_starts_with($route, 'admin_issue') || str_starts_with($route, 'admin_backup') || $route === 'prefs') { require_once __DIR__ . '/social.php'; require_once __DIR__ . '/extras.php'; mh_extras_route($route, $in, $cfg, $ip); }
     if (str_starts_with($route, 'forum_') || str_starts_with($route, 'admin_') || str_starts_with($route, 'notif_') || $route === 'terms_accept') { require_once __DIR__ . '/forum.php'; mh_forum_route($route, $in, $cfg, $ip); }

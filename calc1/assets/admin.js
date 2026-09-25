@@ -21,7 +21,7 @@
     if (!json || json.ok === false) { const err = new Error((json && json.error) || 'Request failed.'); err.data = json; throw err; }
     return json;
   }
-  const TABS = [['overview', 'Overview', 'grid', 'admin'], ['members', 'Members', 'info', 'admin'], ['issues', 'Problems', 'bulb', 'mod'], ['backups', 'Backups', 'download', 'admin'], ['reports', 'Reports', 'flag', 'mod'], ['contrib', 'Contributions', 'pen', 'mod'], ['mocks', 'Mock exams', 'target', 'mod'], ['settings', 'Site settings', 'sliders', 'admin'], ['digest', 'Digest & cron', 'clock', 'admin']];
+  const TABS = [['overview', 'Overview', 'grid', 'admin'], ['members', 'Members', 'info', 'admin'], ['issues', 'Problems', 'bulb', 'mod'], ['backups', 'Backups', 'download', 'admin'], ['reports', 'Reports', 'flag', 'mod'], ['contrib', 'Contributions', 'pen', 'mod'], ['mocks', 'Mock exams', 'target', 'mod'], ['growth', 'Growth', 'chart', 'admin'], ['settings', 'Site settings', 'sliders', 'admin'], ['digest', 'Digest & cron', 'clock', 'admin']];
 
   App.views.admin = {
     title: 'Admin panel',
@@ -34,6 +34,18 @@
       if (isMod()) this[tab]($('#adm-body', root), root);
     },
 
+    async growth(el) {
+      try {
+        const r = await api('admin_growth'); const t = r.totals; const maxW = Math.max(1, ...r.weeks.map(w => w.signups)); const maxD = Math.max(1, ...r.days.map(d => d.n));
+        const pct = (a, b) => b ? Math.round(100 * a / b) : 0; const heat = v => v >= 40 ? 'hot' : v >= 20 ? 'warm' : v > 0 ? 'cool' : '';
+        el.innerHTML = `<div class="stats mb-2">${[['Members', t.users], ['Pending', t.pending], ['Active today', t.dau], ['Active 7 days', t.wau], ['Active 30 days', t.mau], ['Joined by invite', t.invited]].map(([l, v]) => `<div class="stat"><div class="stat-num count" data-count="${v}">${v}</div><div class="stat-label">${l}</div></div>`).join('')}</div>
+          <div class="grid cols-2"><div class="panel"><div class="panel-h"><div class="panel-title">${icon('users')} Sign-ups per week</div><span class="small muted">last 12 weeks · verified in solid</span></div><div class="gr-chart">${r.weeks.map(w => `<div class="gr-bar" title="${w.label}: ${w.signups} signed up, ${w.verified} verified"><i style="height:${Math.round(100 * w.signups / maxW)}%"><b style="height:${pct(w.verified, w.signups)}%"></b></i><small>${esc(w.label)}</small></div>`).join('')}</div></div>
+          <div class="panel"><div class="panel-h"><div class="panel-title">${icon('chart')} Active members per day</div><span class="small muted">last 30 days</span></div><div class="gr-chart dense">${r.days.map(d => `<div class="gr-bar" title="${d.day}: ${d.n}"><i style="height:${Math.round(100 * d.n / maxD)}%"></i></div>`).join('')}</div><div class="row between small muted mt-1"><span>${esc(r.days[0].day)}</span><span>${esc(r.days[r.days.length - 1].day)}</span></div></div></div>
+          <div class="panel mt-2"><div class="panel-h"><div class="panel-title">${icon('rotate')} Retention by sign-up week</div><span class="small muted">share of each cohort seen again after 1, 7 and 30 days</span></div>${r.cohorts.length ? `<div class="table-wrap"><table class="table compact gr-cohorts"><thead><tr><th>Week of</th><th class="num">Members</th><th class="num">After 1 day</th><th class="num">After 7 days</th><th class="num">After 30 days</th></tr></thead><tbody>${r.cohorts.map(c => `<tr><td>${esc(c.label)}</td><td class="num">${c.n}</td><td class="num ${heat(pct(c.d1, c.n))}">${c.age >= 1 ? pct(c.d1, c.n) + '%' : '—'}</td><td class="num ${heat(pct(c.d7, c.n))}">${c.age >= 7 ? pct(c.d7, c.n) + '%' : '—'}</td><td class="num ${heat(pct(c.d30, c.n))}">${c.age >= 30 ? pct(c.d30, c.n) + '%' : '—'}</td></tr>`).join('')}</tbody></table></div><p class="small muted mt-1">Activity is recorded from any signed-in request since this build, so cohorts before it show low numbers.</p>` : '<div class="empty small">No cohorts yet.</div>'}</div>
+          <div class="panel mt-2"><div class="panel-h"><div class="panel-title">${icon('bulb')} What people use</div><span class="small muted">this week vs. the week before</span></div>${r.features.length ? `<div class="table-wrap"><table class="table compact"><thead><tr><th>Event</th><th class="num">This week</th><th class="num">Last week</th><th class="num">Change</th></tr></thead><tbody>${r.features.map(f => { const d = f.prev ? Math.round(100 * (f.cur - f.prev) / f.prev) : null; return `<tr><td class="mono small">${esc(f.key)}</td><td class="num">${f.cur}</td><td class="num">${f.prev}</td><td class="num ${d === null ? '' : d >= 0 ? 'good' : 'bad'}">${d === null ? (f.cur ? 'new' : '') : (d >= 0 ? '+' : '') + d + '%'}</td></tr>`; }).join('')}</tbody></table></div>` : '<div class="empty small">Nothing recorded yet. Views and key actions are counted from now on.</div>'}</div>`;
+        if (App.countUp) App.countUp(el);
+      } catch (e) { el.innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
+    },
     async overview(el) {
       try {
         const [st, act] = await Promise.all([api('admin_stats'), api('activity')]);

@@ -5,7 +5,7 @@ const T = require('./lib'); const fs = require('fs'); const path = require('path
   const axe = fs.readFileSync(path.join(__dirname, 'node_modules', 'axe-core', 'axe.min.js'), 'utf8');
   const PAGES = [['#/', 'landing'], ['#/today', 'today'], ['#/calc', 'dashboard'], ['#/calc/notes/1.3', 'notes'], ['#/calc/practice', 'practice'], ['#/calc/flashcards', 'flashcards'], ['#/calc/calendar', 'calendar'], ['#/forum', 'forum'], ['#/settings', 'settings'], ['#/gpa', 'gpa'], ['#/whatsnew', 'whatsnew'], ['#/csci/playground', 'playground'], ['#/writ/phonetics', 'phonetics']];
   const [c, p] = await mk(1360, 900); await go(p, '#/'); await login(p, 'alice.a@montana.edu'); await p.reload(); await p.waitForTimeout(1200); if (await p.$('.celebrate')) await p.keyboard.press('Escape');
-  await p.evaluate(() => { const s = App.settings(); s.courses = ['calc', 'physics', 'writ', 'csci']; localStorage.setItem('studyhub-settings', JSON.stringify(s)); });
+  await p.evaluate(() => { const s = App.settings(); s.courses = ['calc', 'physics', 'writ', 'csci']; s.motion = 'off'; localStorage.setItem('studyhub-settings', JSON.stringify(s)); });   // no entrance animations: axe measures colours mid-fade otherwise
   const totals = {}; const serious = [];
   for (const [hash, name] of PAGES) {
     await go(p, hash, 900); await p.addScriptTag({ content: axe });

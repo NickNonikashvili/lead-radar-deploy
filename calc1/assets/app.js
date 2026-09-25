@@ -12,7 +12,7 @@
   const BUILD = global.MATHUB_BUILD || 'dev';
   const Courses = global.Courses || (global.Courses = {});
   const COURSE_ORDER = ['calc', 'physics', 'precalc', 'writ', 'csci'];
-  const GLOBAL_VIEWS = ['contact', 'forum', 'policy', 'admin', 'meet', 'badges', 'challenge', 'mock', 'people', 'settings', 'leagues', 'gpa', 'today', 'whatsnew', 'resources', 'guides', 'focus', 'recap', 'tools'];   // pages that work without a course, e.g. #/contact
+  const GLOBAL_VIEWS = ['contact', 'forum', 'policy', 'admin', 'meet', 'badges', 'challenge', 'mock', 'people', 'settings', 'leagues', 'gpa', 'today', 'whatsnew', 'resources', 'guides', 'focus', 'recap', 'tools', 'mistakes', 'join'];   // pages that work without a course, e.g. #/contact
   const SITE = 'MatHub';
   let D = null, QZ = null;        // current course data and quiz module
   const courseHooks = [];
@@ -239,7 +239,7 @@
   App.guest = () => !!(App.auth && App.auth.ready && !App.auth.user);
   App.limit = k => App.guest() && App.auth.limits && App.auth.limits[k] != null ? App.auth.limits[k] : Infinity;
   App.lockCard = (t, x, o) => App.auth ? App.auth.lockCard(t, x, o) : '';
-  App.logoSvg = (size = 28) => `<svg width="${size}" height="${size}" viewBox="0 0 64 64" aria-hidden="true"><defs><linearGradient id="mh-g${size}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#2B55B8"/><stop offset="1" stop-color="#0E7C86"/></linearGradient></defs><rect width="64" height="64" rx="15" fill="url(#mh-g${size})"/><path d="M15 46V21l17 17 17-17v25" fill="none" stroke="#fff" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/><circle cx="32" cy="38" r="4.2" fill="#F2C14E"/><circle cx="15" cy="21" r="3.4" fill="#F2C14E"/><circle cx="49" cy="21" r="3.4" fill="#F2C14E"/></svg>`;
+  App.logoSvg = (size = 28) => `<svg width="${size}" height="${size}" viewBox="0 0 64 64" aria-hidden="true"><defs><linearGradient id="mh-g${size}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#4338CA"/><stop offset="0.55" stop-color="#6D4AED"/><stop offset="1" stop-color="#0E9488"/></linearGradient></defs><rect width="64" height="64" rx="16" fill="url(#mh-g${size})"/><circle cx="16.5" cy="16.5" r="5" fill="#F2C14E"/><path d="M11 49 L22.5 24 L31.5 39 L42 17 L53 49" fill="none" stroke="#fff" stroke-width="6.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 53.5 H56" stroke="#fff" stroke-opacity="0.55" stroke-width="2.4" stroke-linecap="round"/></svg>`;
   Object.defineProperty(App, 'D', { get: () => D }); Object.defineProperty(App, 'Q', { get: () => QZ });
   App.Canvas = Canvas;
   App.link = (view, param, query) => { let hs = '#/' + (D ? D.id : 'calc') + '/' + view + (param ? '/' + param : ''); if (query) hs += '?' + new URLSearchParams(query).toString(); return hs; };
@@ -258,6 +258,9 @@
     const cg = C.NAV.find(g => g.label === 'Course'); if (cg && App.views.gpa && !cg.items.some(x => x[0] === 'gpa')) { const gi = cg.items.findIndex(x => x[0] === 'grades'); cg.items.splice(gi >= 0 ? gi + 1 : 1, 0, ['gpa', 'GPA calculator', 'calc']); }
     if (cg && App.views.resources && !cg.items.some(x => x[0] === 'resources')) cg.items.splice(Math.max(1, cg.items.length - 1), 0, ['resources', 'Resources & guides', 'link']);
     const pg = C.NAV.find(g => g.label === 'Practice'); if (pg && C.quiz && App.views.blitz && !pg.items.some(x => x[0] === 'blitz')) pg.items.push(['blitz', 'Blitz', 'zap']);
+    if (pg && C.quiz && App.views.mistakes && !pg.items.some(x => x[0] === 'mistakes')) pg.items.push(['mistakes', 'Mistakes', 'undo']);
+    const lg = C.NAV.find(g => g.label === 'Learn'); if (lg && App.views.cheatsheet && (C.FORMULAS || []).length && !lg.items.some(x => x[0] === 'cheatsheet')) lg.items.push(['cheatsheet', 'Cheat sheet', 'sigma']);
+    if (lg && App.views.mynotes && (C.SECTIONS || []).length && (C.SECTIONS[0].ideas || C.SECTIONS[0].bullets) && !lg.items.some(x => x[0] === 'mynotes')) lg.items.push(['mynotes', 'My notes', 'pen']);
   }
   function setCourse(id) {
     if (D && D.id === id) return;
@@ -322,6 +325,28 @@
     typeset(root); app.classList.remove('nav-open'); updateExamChip(); paintAsOf(); afterRender(root);
     if (!['settings', 'contact', 'policy'].includes(view)) { const h = $('.note-title, .rd-title, .page-title', root); setSetting('lastVisit', { hash: location.hash, label: `${D.short} · ${V.title}`, detail: h && !/^Good (morning|afternoon|evening)/.test(h.textContent) && h.textContent.trim() !== V.title ? h.textContent.trim().slice(0, 70) : '', course: D.id, t: Date.now() }); }
   }
+  /* ---------- invite landing: #/join?ref=CODE ---------- */
+  App.views.join = {
+    title: 'Join a classmate',
+    render(root, param, query) {
+      const ref = String(query.ref || param || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6);
+      root.innerHTML = `<div class="landing-wrap"><header class="landing-top"><div><div class="eyebrow">MatHub</div><h1 class="landing-title"><span class="logo-mark">${App.logoSvg(44)}</span>You're invited</h1><p class="muted" id="join-sub">Checking the invite…</p></div><div class="row gap-sm"><span id="landing-account"></span></div></header><div class="panel lift" id="join-card"><div class="empty small">Loading…</div></div></div>`;
+      const card = $('#join-card', root); const sub = $('#join-sub', root);
+      if (!ref) { sub.textContent = 'That link is missing its code.'; card.innerHTML = `<div class="row gap-sm" style="flex-wrap:wrap"><a class="btn primary" href="#/">Open MatHub</a></div>`; return; }
+      try { localStorage.setItem('mathub-ref', ref); } catch (e) {}
+      fetch(`api/index.php?r=invite_info&ref=${ref}`, { credentials: 'same-origin', headers: { 'X-Requested-With': 'MatHub' } }).then(r => r.json()).then(j => {
+        const name = j && j.ok ? j.name : ''; try { sessionStorage.setItem('mathub-ref-name', name || ''); } catch (e) {}
+        sub.textContent = name ? `${name} uses MatHub for ${(j.courses || []).map(c => Courses[c] ? Courses[c].short : c).join(', ') || 'their classes'} and wants you in.` : 'A classmate wants you to study on MatHub.';
+        card.innerHTML = `<div class="grid cols-2" style="align-items:center"><div><h2 style="margin-top:0">${name ? `Study with ${esc(name)}` : 'Study together'}</h2><p>Free topic notes, endless practice, flashcards on a schedule, deadline calendars, a focus room and a class board for Montana State classes. Sign up with your montana.edu email and you both earn the Invited and Recruiter badges.</p><div class="row gap-sm" style="flex-wrap:wrap">${App.auth && App.auth.user ? `<a class="btn primary" href="#/">You are already signed in · open MatHub</a>` : `<button class="btn primary lg" data-action="auth-signup">${icon('fire', 14)} Sign up free</button><button class="btn" data-action="auth-login">Log in</button>`}<a class="btn" href="#/">Look around first</a></div></div><div class="mascot-slot" data-size="120"></div></div>`;
+        if (App.auth) App.auth.bindLocks(card); if (App.paintMascots) App.paintMascots();
+      }).catch(() => { sub.textContent = 'Could not check the invite, but you can still sign up.'; card.innerHTML = `<div class="row gap-sm"><button class="btn primary" data-action="auth-signup">Sign up free</button><a class="btn" href="#/">Open MatHub</a></div>`; if (App.auth) App.auth.bindLocks(card); });
+      const slot = $('#landing-account', root); if (slot && App.auth && App.auth.ready) App.auth.paintLandingAccount(slot);
+    }
+  };
+  /* ---------- usage counts for the admin growth tab: which pages get opened, flushed quietly ---------- */
+  const Track = { counts: {}, timer: null, hit(k) { if (!/^[a-z]+:[a-z0-9_-]{1,30}$/.test(k)) return; this.counts[k] = (this.counts[k] || 0) + 1; if (!this.timer) this.timer = setTimeout(() => this.flush(), 90000); },
+    flush() { clearTimeout(this.timer); this.timer = null; const ev = this.counts; this.counts = {}; if (!Object.keys(ev).length || !navigator.onLine || !(App.auth && App.auth.mode === 'server' && !App.auth.unreachable)) return; try { fetch('api/index.php?r=track', { method: 'POST', keepalive: true, credentials: 'same-origin', headers: { 'X-Requested-With': 'MatHub', 'Content-Type': 'application/json' }, body: JSON.stringify({ events: ev }) }).catch(() => {}); } catch (e) {} } };
+  App.track = k => Track.hit(k); document.addEventListener('visibilitychange', () => { if (document.hidden) Track.flush(); });
   App.ago = t => { const m = Math.round((Date.now() - t) / 60000); if (m < 2) return 'just now'; if (m < 60) return m + ' min ago'; const h = Math.round(m / 60); if (h < 24) return h + (h === 1 ? ' hour ago' : ' hours ago'); const d = Math.round(h / 24); return d + (d === 1 ? ' day ago' : ' days ago'); };
   App.resumeCard = mine => {
     const lv = settings().lastVisit; const all = COURSE_ORDER.filter(id => Courses[id]); const topics = all.reduce((n, id) => n + (Courses[id].SECTIONS || []).length, 0); const cards = all.reduce((n, id) => n + ((Courses[id].FLASHCARDS || []).length || Courses[id].flashcardCount || 0), 0);
@@ -351,7 +376,7 @@
   App.initTabs = initTabs;
   function afterRender(root) {
     initTabs(root); initToTop(); { const r = route(); paintTabbar(r.course, r.course ? r.view : (r.view === 'home' ? 'home' : r.view)); if (!r.course) prefetchLast(); const PRINTABLE = ['notes', 'formulas', 'course', 'calendar', 'planner', 'exam', 'checklist', 'gpa']; const pa = $('.page-head .page-actions', root) || (r.view === 'notes' ? $('.note-head', root) : null); if (pa && PRINTABLE.includes(r.view) && !$('.print-btn', pa)) pa.insertAdjacentHTML('beforeend', `<button class="btn sm print-btn" data-action="print-page" title="Print or save as PDF">${icon('print', 13)} Print</button>`); }
-    if (App.motionRender) App.motionRender(root); if (App.paintStats) { App.paintStats(); App.paintMascots(); App.countUp(root); } if (App.paintQuests) App.paintQuests(); if (App.paintLeagueWidgets) App.paintLeagueWidgets(root); const tk = $('#landing-ticker', root); if (tk && App.fillTicker) App.fillTicker(tk); }
+    if (App.motionRender) App.motionRender(root); { const r = route(); App.track('view:' + (r.course ? r.view : (r.view === 'home' ? 'landing' : r.view))); } if (App.paintStats) { App.paintStats(); App.paintMascots(); App.countUp(root); } if (App.paintQuests) App.paintQuests(); if (App.paintLeagueWidgets) App.paintLeagueWidgets(root); const tk = $('#landing-ticker', root); if (tk && App.fillTicker) App.fillTicker(tk); }
   App.rerender = () => render();
   App.currentSectionOf = C => currentSection(C);
   App.inCourse = () => !!route().course;
@@ -383,7 +408,7 @@
     const staff = App.auth && App.auth.user && App.auth.user.mod ? [{ label: App.auth.user.admin ? 'Admin' : 'Moderation', items: [['admin', 'Admin panel', 'shield']] }] : [];
     const cur = (location.hash.replace(/^#\/?/, '').split('?')[0].split('/')[1]) || 'dashboard';
     const openMap = Object.assign({ Today: true, Learn: true, Practice: true, Admin: true, Moderation: true }, settings().navOpen || {});
-    $('#sidebar-nav').innerHTML = D.NAV.concat(staff).map(gp => { const o = !!openMap[gp.label] || gp.items.some(x => x[0] === cur); return `<button class="nav-label nav-toggle${o ? ' open' : ''}" data-action="navgroup" data-g="${esc(gp.label)}" aria-expanded="${o}"><span>${gp.label}</span><small>${gp.items.length}</small>${icon('chevron', 12)}</button><div class="nav-group${o ? '' : ' closed'}">` + gp.items.map(([id, label, ic]) => `<button class="nav-item" data-view="${id}" data-action="nav">${icon(ic)}<span>${label}</span></button>`).join('') + '</div>'; }).join('');
+    $('#sidebar-nav').innerHTML = D.NAV.concat(staff).map(gp => { const o = !!openMap[gp.label] || gp.items.some(x => x[0] === cur); return `<button class="nav-label nav-toggle${o ? ' open' : ''}" data-action="navgroup" data-g="${esc(gp.label)}" aria-expanded="${o}"><span>${gp.label}</span><small>${gp.items.length}</small>${icon('chevron', 12)}</button><div class="nav-group${o ? '' : ' closed'}" data-g="${esc(gp.label)}">` + gp.items.map(([id, label, ic]) => `<button class="nav-item" data-view="${id}" data-action="nav">${icon(ic)}<span>${label}</span></button>`).join('') + '</div>'; }).join('');
     $$('.nav-item').forEach(b => b.classList.toggle('active', b.dataset.view === cur));
   }
   App.rebuildNav = () => { if (D) buildNav(); };
@@ -497,6 +522,7 @@
         <header class="landing-top hero"><div><div class="eyebrow">${esc(fmtDate(t, true))} · ${esc(first.term)}${ss.phase === 'during' ? ` · Week ${ss.week}` : ''}</div><h1 class="landing-title"><span class="logo-mark">${App.logoSvg(44)}</span>${SITE}</h1><p class="hero-sub">${sub}</p><p class="muted small hero-note">Notes, endless practice, simulators, a Python playground, planners and a class board for Montana State math, physics, writing and computing. Free for students.</p>${(() => { const soon = mineIds.map(id => ({ C: Courses[id], ex: nextExam(Courses[id]) })).filter(x => x.ex && x.ex.date >= t).sort((a, b) => a.ex.date.localeCompare(b.ex.date))[0]; if (!soon) return ''; const n = daysBetween(t, soon.ex.date); return `<a class="hero-count" href="#/${soon.C.id}/dashboard"><span class="hc-num count" data-count="${n}">${n}</span><span class="hc-body"><small>day${n === 1 ? '' : 's'} until ${esc(soon.ex.name)}</small><b>${esc(soon.C.short)} · ${esc(soon.ex.dateLabel || fmtDate(soon.ex.date, true))}${App.readiness ? (() => { const r = App.readiness(soon.C.id); return r && r.ok && r.score > 0 ? ` · ${r.score}% ready` : ''; })() : ''}</b></span>${icon('right', 14)}</a>`; })()}<div id="landing-presence" class="mt-1"></div><div class="league-slot mt-2" data-compact="1"></div></div><div class="row gap-sm hero-actions"><a class="btn primary sm hero-today" href="#/today">${icon('flag', 14)} Today</a><a class="btn sm hero-focus" href="#/focus">${icon('clock', 14)} Focus</a><button class="icon-btn" data-action="search" aria-label="Search" title="Search (Ctrl K)">${icon('search', 15)}</button><span id="landing-account"></span><button class="icon-btn theme-btn" data-action="theme" aria-label="Toggle theme"></button></div><div class="mascot-slot hero-mascot" data-size="112"></div></header>
         <div id="announcement-slot"></div>
         <div class="ticker" id="landing-ticker" hidden></div>
+        ${App.inviteBanner ? App.inviteBanner() : ''}
         ${App.recapBanner ? App.recapBanner() : ''}
         ${App.todaySummary ? App.todaySummary() : ''}
         ${App.resumeCard ? App.resumeCard(mineIds) : ''}
@@ -642,7 +668,7 @@
             <div class="pane" data-pane="tools"><div class="grid cols-4">${D.NAV.find(gp => gp.label === 'Tools').items.map(([id, label, ic]) => `<a class="card-link" href="${L(id)}"><div class="eyebrow">${icon(ic, 14)} Tool</div><h4>${esc(label)}</h4></a>`).join('')}</div></div>
           </div>
         </div>`;
-      bind(root, { freeze: () => { const a = store.get('activity', {}); a[yday] = 'freeze'; store.set('activity', a); const f = store.get('freezes', {}); f[wk0] = yday; store.set('freezes', f); toast('Streak saved. One freeze per week per class.', 3000); render(); }, 'remind-on': async () => { try { await App.auth.savePrefs({ reminder_email: true }); toast('Evening reminders on', 3000); render(); } catch (e) { toast(e.message); } }, 'remind-no': () => { setSetting('remindNudgeDismissed', true); render(); }, 'gs-dismiss': () => { setSetting('gsDismissed', true); render(); }, 'gs-signup': (el, e) => { e.preventDefault(); if (App.auth) App.auth.open('signup'); } });
+      bind(root, { freeze: () => { if (App.useFreeze && App.useFreeze(yday)) render(); else toast('No streak freezes left. Hit your daily goal three days in a week to earn one.', 3500); }, 'remind-on': async () => { try { await App.auth.savePrefs({ reminder_email: true }); toast('Evening reminders on', 3000); render(); } catch (e) { toast(e.message); } }, 'remind-no': () => { setSetting('remindNudgeDismissed', true); render(); }, 'gs-dismiss': () => { setSetting('gsDismissed', true); render(); }, 'gs-signup': (el, e) => { e.preventDefault(); if (App.auth) App.auth.open('signup'); } });
       if (App.auth && App.auth.mode === 'server' && !App.auth.unreachable) fetch('api/index.php?r=stats_week', { credentials: 'same-origin', headers: { 'X-Requested-With': 'MatHub' } }).then(r => r.json()).then(j => { const el = $('#dash-hours', root); if (el && j && j.ok && j.stats && j.stats.median_hours !== null && j.stats.hours_users >= 3) el.textContent = `focus this week · class median ${j.stats.median_hours} h`; }).catch(() => {});
       on(root, 'change', 'input[data-plan]', el => { const p = store.get('plan', null); if (!p) return; const it = p.items.find(i => i.id === el.dataset.plan); if (it) { it.done = el.checked; store.set('plan', p); markActivity(); el.closest('.plan-item').classList.toggle('done', el.checked); } });
       Canvas.fill($('#dash-canvas', root), D.id, 6); paintAnnouncement(root);
@@ -701,6 +727,7 @@
         <div class="row between mt-3"><div>${prev ? `<button class="btn" data-action="open" data-id="${prev.id}">${icon('left', 14)} ${esc(prev.label)}</button>` : ''}</div><div class="row">${topics.length ? `<a class="btn primary" href="${L('practice', null, { topics: topics.join(',') })}">${icon('list', 14)} Practice ${esc(sec.label)}</a>` : ''}<a class="btn" href="${L('flashcards', null, { sec: sec.id })}">${icon('cards', 14)} Cards</a></div><div>${next ? `<button class="btn" data-action="open" data-id="${next.id}">${esc(next.label)} ${icon('right', 14)}</button>` : ''}</div></div>
       </div></div></div>`;
       bind(root, { open: el => App.go('notes', el.dataset.id), reveal: el => { const s = $('#sol', root); s.classList.toggle('open'); el.innerHTML = s.classList.contains('open') ? `${icon('eye', 14)} Hide solution` : `${icon('eye', 14)} Show solution`; } });
+      if (App.paintMyNotes) App.paintMyNotes(root, sec);
     }
   };
 

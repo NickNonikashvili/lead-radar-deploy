@@ -53,7 +53,17 @@
   App.confetti = confetti;
 
   /* ---------- live background: drifting math and physics glyphs behind everything ---------- */
-  const GLYPHS = ['∫', 'Σ', 'π', '√', '∞', 'θ', '∂', 'Δ', 'λ', '∮', 'ƒ', 'dx', 'lim', 'sin', 'cos', 'e', '≈', '∇', 'F=ma', 'x²', 'ω', 'μ', 'α', 'Ω', 'log', 'tan', '∑', 'v₀', 'ħ', 'dy/dx', '≤', 'φ'];
+  /* glyphs by subject; each subject floats in its own hue so the background reads as "all the classes", not only math */
+  const GLYPH_SETS = [
+    ['math', ['∫', 'Σ', 'π', '√', '∞', 'θ', '∂', 'Δ', 'λ', '∮', 'ƒ', 'dx', 'lim', 'sin', 'cos', '≈', '∇', 'x²', 'log', 'tan', 'dy/dx', '≤', 'φ', 'e^x', 'ln']],
+    ['physics', ['F=ma', 'v₀', 'ħ', 'ω', 'μ', 'α', 'Ω', 'E=mc²', 'p=mv', '½mv²', 'g', '⚡', '∆t', 'kg·m/s', 'N']],
+    ['code', ['{ }', 'def', 'for', '>>>', '</>', 'if', 'return', '[ ]', 'print()', 'while', '==', 'import', '#']],
+    ['writing', ['¶', '“ ”', '&', 'Aa', ';', '…', 'the', '—', 'ẽ', 'ə', 'ʃ', 'θ']],
+    ['science', ['H₂O', 'mol', 'CO₂', 'pH', 'ΔG', 'Na⁺']]
+  ];
+  const GLYPHS = GLYPH_SETS.flatMap(([k, g]) => g.map(x => ({ k, g: x })));
+  const SHAPES = ['ring', 'tri', 'dot', 'square', 'star'];
+  const HUES = { math: '#4F46E5', physics: '#0E9488', code: '#16A34A', writing: '#7C3AED', science: '#D97706', shape: '#F2C14E' };
   const LiveBg = {
     c: null, ctx: null, items: [], raf: 0, cols: null, tick: 0,
     enabled() { return settings().liveBg !== false; },
@@ -65,11 +75,13 @@
     },
     apply() { const on = this.enabled(); this.c.hidden = !on; document.documentElement.classList.toggle('no-live-bg', !on); if (on) this.start(); else this.stop(); },
     resize() { const dpr = Math.min(2, devicePixelRatio || 1); this.c.width = innerWidth * dpr; this.c.height = innerHeight * dpr; this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0); const n = Math.min(60, Math.max(16, Math.round(innerWidth * innerHeight / 40000))); while (this.items.length < n) this.items.push(this.spawn(true)); this.items.length = n; this.draw(performance.now()); },
-    spawn(anyY) { return { g: GLYPHS[Math.floor(Math.random() * GLYPHS.length)], x: Math.random() * innerWidth, y: anyY ? Math.random() * innerHeight : innerHeight + 40, s: 14 + Math.random() * 24, v: 0.1 + Math.random() * 0.25, ph: Math.random() * Math.PI * 2, amp: 8 + Math.random() * 26, rot: (Math.random() - 0.5) * 0.7, a: 0.09 + Math.random() * 0.15 }; },
-    palette() { if (this.cols) return this.cols; const cs = getComputedStyle(document.documentElement); return this.cols = [cs.getPropertyValue('--accent').trim() || '#2B55B8', cs.getPropertyValue('--phys-accent').trim() || '#0E7C86', cs.getPropertyValue('--gold').trim() || '#A8841A']; },
+    spawn(anyY) { const shape = Math.random() < 0.22; const pick = GLYPHS[Math.floor(Math.random() * GLYPHS.length)]; return { g: shape ? '' : pick.g, k: shape ? 'shape' : pick.k, shape: shape ? SHAPES[Math.floor(Math.random() * SHAPES.length)] : '', x: Math.random() * innerWidth, y: anyY ? Math.random() * innerHeight : innerHeight + 40, s: 14 + Math.random() * 24, v: 0.1 + Math.random() * 0.25, ph: Math.random() * Math.PI * 2, amp: 8 + Math.random() * 26, rot: (Math.random() - 0.5) * 0.7, a: 0.09 + Math.random() * 0.15 }; },
+    palette() { if (this.cols) return this.cols; const cs = getComputedStyle(document.documentElement); const v = (n, d) => cs.getPropertyValue(n).trim() || d; return this.cols = { math: v('--c-learn', HUES.math), physics: v('--c-calm', HUES.physics), code: v('--c-practice', HUES.code), writing: v('--c-create', HUES.writing), science: v('--c-reward', HUES.science), shape: v('--gold', HUES.shape) }; },
+    shapeDraw(ctx, p) { const s = p.s * 0.55; ctx.lineWidth = Math.max(1.2, s / 9); ctx.strokeStyle = ctx.fillStyle; ctx.beginPath();
+      if (p.shape === 'ring') { ctx.arc(0, 0, s / 2, 0, Math.PI * 2); ctx.stroke(); } else if (p.shape === 'dot') { ctx.arc(0, 0, s / 4, 0, Math.PI * 2); ctx.fill(); } else if (p.shape === 'tri') { ctx.moveTo(0, -s / 2); ctx.lineTo(s / 2, s / 2); ctx.lineTo(-s / 2, s / 2); ctx.closePath(); ctx.stroke(); } else if (p.shape === 'square') { ctx.rect(-s / 2, -s / 2, s, s); ctx.stroke(); } else { for (let i = 0; i < 5; i++) { const a = -Math.PI / 2 + i * 2 * Math.PI / 5, b = a + Math.PI / 5; ctx.lineTo(Math.cos(a) * s / 2, Math.sin(a) * s / 2); ctx.lineTo(Math.cos(b) * s / 5, Math.sin(b) * s / 5); } ctx.closePath(); ctx.fill(); } },
     draw(t) {
       const ctx = this.ctx; ctx.clearRect(0, 0, innerWidth, innerHeight); const cols = this.palette(); const dim = isDark() ? 0.85 : 1;
-      this.items.forEach((p, i) => { ctx.save(); ctx.globalAlpha = p.a * dim; ctx.fillStyle = cols[i % 3]; ctx.font = `500 ${p.s}px Fraunces, Georgia, serif`; ctx.translate(p.x + Math.sin(t / 1900 + p.ph) * p.amp, p.y); ctx.rotate(p.rot + Math.sin(t / 3100 + p.ph) * 0.12); ctx.fillText(p.g, 0, 0); ctx.restore(); });
+      this.items.forEach(p => { ctx.save(); ctx.globalAlpha = p.a * dim * (p.k === 'shape' ? 0.8 : 1); ctx.fillStyle = cols[p.k] || cols.math; ctx.translate(p.x + Math.sin(t / 1900 + p.ph) * p.amp, p.y); ctx.rotate(p.rot + Math.sin(t / 3100 + p.ph) * 0.12); if (p.k === 'shape') this.shapeDraw(ctx, p); else { ctx.font = `${p.k === 'code' ? '600' : '500'} ${p.s}px ${p.k === 'code' ? 'JetBrains Mono, ui-monospace, monospace' : p.k === 'writing' ? 'Fraunces, Georgia, serif' : 'Fraunces, Georgia, serif'}`; ctx.fillText(p.g, 0, 0); } ctx.restore(); });
     },
     step(t) { if (reduced()) { this.draw(t); this.raf = 0; return; } this.items.forEach((p, i) => { p.y -= p.v; if (p.y < -40) this.items[i] = this.spawn(false); }); this.draw(t); this.raf = requestAnimationFrame(ts => this.step(ts)); },
     start() { if (this.raf || !this.c || this.c.hidden) return; this.raf = requestAnimationFrame(ts => this.step(ts)); },
@@ -102,7 +114,7 @@
     const t = todayISO(); store.poke(cid, data => { const xs = data.xp = Array.isArray(data.xp) ? data.xp : []; const last = xs[xs.length - 1]; if (last && last.d === t) last.n += n; else xs.push({ d: t, n }); if (xs.length > 400) xs.splice(0, xs.length - 400); });
     const today = xpToday(), goal = dailyGoal(), s = settings();
     paintStats(); if (!opts.silent) floatXP(n);
-    if (today >= goal && s.goalHit !== t) { setSetting('goalHit', t); setTimeout(() => { confetti(); toast(`${icon('zap', 14)} Daily goal reached: ${today} XP today. Nice work!`, 4200); paintStats(); paintMascots(); }, 300); }
+    if (today >= goal && s.goalHit !== t) { setSetting('goalHit', t); if (App.noteGoalDay) App.noteGoalDay(); setTimeout(() => { confetti(); toast(`${icon('zap', 14)} Daily goal reached: ${today} XP today. Nice work!`, 4200); paintStats(); paintMascots(); }, 300); }
     const lv = level(xpTotal()); const seen = settings().levelSeen;
     if (seen !== undefined && lv.n > seen) setTimeout(() => { confetti({ count: 220 }); toast(`${icon('award', 14)} Level up! Level ${lv.n} · ${lv.name}`, 4800); paintStats(); }, 900);
     if (seen === undefined || lv.n !== seen) setSetting('levelSeen', lv.n);
@@ -118,6 +130,23 @@
     return { n, activeToday, days, longest };
   }
   App.streakAll = streakAll;
+  /* ---------- streak freezes: earned by hitting the daily goal on three days of a week (bank of two), applied automatically to a single missed day ---------- */
+  App.freezeBank = () => Math.max(0, Math.min(2, settings().freezeBank || 0));
+  App.useFreeze = function (dayISO) {
+    const bank = App.freezeBank(); if (!bank) return false; const cid = courses()[0]; if (!cid) return false; const days = streakAll().days; if (days[dayISO]) return false;
+    store.poke(cid, d => { d.activity = d.activity || {}; d.activity[dayISO] = 'freeze'; });
+    setSetting('freezeBank', bank - 1); const used = settings().freezeUsed || {}; used[dayISO] = true; setSetting('freezeUsed', used);
+    toast(`${icon('shield', 14)} Streak freeze used for ${App.fmtDate(dayISO)}. ${bank - 1} left.`, 4000); if (App.sfx) App.sfx.play('tap'); return true;
+  };
+  function autoFreeze() {
+    if (!App.freezeBank()) return; const st = streakAll(); const yday = toISO(addDays(new Date(), -1)), dby = toISO(addDays(new Date(), -2));
+    if (!st.days[yday] && st.days[dby] && (settings().freezeUsed || {})[yday] === undefined) { if (App.useFreeze(yday)) setTimeout(paintStats, 50); }
+  }
+  App.noteGoalDay = function () {
+    const wk = App.isoWeek(new Date()); const t = todayISO(); const weeks = settings().freezeWeeks || {}; const w = weeks[wk] || { days: [] }; if (w.days.includes(t)) return; w.days.push(t); w.days = w.days.slice(-7); weeks[wk] = w;
+    Object.keys(weeks).forEach(k => { if (k < App.isoWeek(addDays(new Date(), -21))) delete weeks[k]; }); setSetting('freezeWeeks', weeks);
+    if (w.days.length === 3 && !w.granted) { w.granted = true; setSetting('freezeWeeks', weeks); const bank = App.freezeBank(); if (bank < 2) { setSetting('freezeBank', bank + 1); setTimeout(() => { toast(`${icon('shield', 14)} Streak freeze earned: three goal days this week. It covers one missed day automatically.`, 5000); if (App.sfx) App.sfx.play('levelup'); }, 1200); } }
+  };
 
   /* ---------- the header widgets: streak flame + daily goal ring ---------- */
   function statsHtml() {
@@ -127,16 +156,17 @@
       <button class="goal-ring${pct >= 100 ? ' done' : ''}" data-action="hub-goal" aria-haspopup="true" aria-expanded="false" title="${today} of ${goal} XP today · Level ${lv.n} ${lv.name}"><svg viewBox="0 0 28 28" width="30" height="30" aria-hidden="true"><circle class="ring-bg" cx="14" cy="14" r="${r}"/><circle class="ring-fg" cx="14" cy="14" r="${r}" stroke-dasharray="${C.toFixed(2)}" stroke-dashoffset="${(C * (1 - pct / 100)).toFixed(2)}"/></svg><span class="ring-lvl">${pct >= 100 ? icon('check', 12) : lv.n}</span></button>${App.hubExtra ? App.hubExtra() : ''}`;
   }
   function paintStats() {
+    try { autoFreeze(); } catch (e) {}
     let top = $('#topbar-hub'); if (!top) { const acct = $('#topbar-account'); if (acct) { top = document.createElement('span'); top.id = 'topbar-hub'; top.className = 'hub-slot'; acct.before(top); } }
     $$('.hub-slot').forEach(el => { el.innerHTML = statsHtml(); bind(el, { 'hub-streak': b => streakPopover(b), 'hub-goal': b => goalPopover(b), 'hub-quests': b => { if (App.questsPopover) App.questsPopover(b); } }); });
     const lv = level(xpTotal()); $$('.acct-level').forEach(el => { el.innerHTML = `<span class="lvl-badge">${lv.n}</span><div class="acct-level-body"><b>Level ${lv.n} · ${lv.name}</b><div class="bar sm"><div class="bar-fill" style="width:${lv.pct}%"></div></div></div>`; el.title = `${lv.xp} XP · ${lv.toNext} XP to level ${lv.n + 1}`; });
   }
   function streakPopover(anchor) {
     const st = streakAll(); const t = todayISO(); const days = Array.from({ length: 7 }, (_, i) => toISO(addDays(new Date(), i - 6)));
-    const fz = App.D ? (store.get('freezes', {})[App.isoWeek(new Date())] ? 'used' : 'available') : null;
+    const bank = App.freezeBank(); const wk = (settings().freezeWeeks || {})[App.isoWeek(new Date())] || { days: [] };
     popover(anchor, `<div class="pop-head">${icon('fire', 18)}<div><b>${st.n}-day streak</b><div class="small muted">${st.activeToday ? 'Extended today. See you tomorrow.' : st.n ? 'Answer one question today to keep it going.' : 'Study today to light the first flame.'}</div></div></div>
-      <div class="streak-week">${days.map(d => `<div class="sday${st.days[d] ? ' lit' : ''}${d === t ? ' today' : ''}"><span class="sday-flame">${icon('fire', 16)}</span><span class="sday-name">${'SMTWTFS'[App.parseISO(d).getDay()]}</span></div>`).join('')}</div>
-      <div class="row gap-sm small muted" style="justify-content:space-between"><span>Longest: <b>${st.longest}</b> day${st.longest === 1 ? '' : 's'}</span>${fz ? `<span>Freeze this week: <b>${fz}</b></span>` : ''}</div>
+      <div class="streak-week">${days.map(d => `<div class="sday${st.days[d] ? ' lit' : ''}${st.days[d] === 'freeze' ? ' frozen' : ''}${d === t ? ' today' : ''}"><span class="sday-flame">${st.days[d] === 'freeze' ? icon('shield', 16) : icon('fire', 16)}</span><span class="sday-name">${'SMTWTFS'[App.parseISO(d).getDay()]}</span></div>`).join('')}</div>
+      <div class="row gap-sm small muted" style="justify-content:space-between"><span>Longest: <b>${st.longest}</b> day${st.longest === 1 ? '' : 's'}</span><span title="A freeze covers one missed day on its own. Hit your daily goal on three days of a week to earn one (you can hold two).">${icon('shield', 12)} <b>${bank}</b> freeze${bank === 1 ? '' : 's'} · ${Math.min(3, wk.days.length)}/3 goal days this week</span></div>
       ${App.D ? `<a class="btn sm primary mt-2" style="width:100%;justify-content:center" href="${App.link('practice', null, { smart: 1 })}">${icon('list', 13)} Quick set to keep it alive</a>` : ''}`, null, { cls: 'pop-streak' });
   }
   function goalPopover(anchor) {
