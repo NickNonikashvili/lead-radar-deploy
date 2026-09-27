@@ -8,7 +8,7 @@ const T = require('./lib');
   check('rings animate', (await p.$$('.ring-fg.ring-anim')).length >= 1);
   await go(p, '#/physics', 100); const on = await p.$eval('#loadbar', e => e.classList.contains('on')).catch(() => 'missing'); await p.waitForTimeout(1500); const off = await p.$eval('#loadbar', e => !e.classList.contains('on')).catch(() => 'missing');
   check('loading bar shows during class download and hides after', on === true && off === true, { on, off });
-  await go(p, '#/settings', 800); check('skin picker present', (await p.$$('.skin-opt')).length === 5); await p.click('.skin-opt[data-skin="bobcat"]'); await p.waitForTimeout(200);
+  await go(p, '#/settings', 800); check('skin picker present', (await p.$$('.skin-opt')).length === 6); await p.click('.skin-opt[data-skin="bobcat"]'); await p.waitForTimeout(200);
   check('skin applied', await p.evaluate(() => document.documentElement.getAttribute('data-skin')) === 'bobcat');
   await p.click('#s-motion'); await p.waitForTimeout(200); check('reduce motion applied', await p.evaluate(() => document.documentElement.getAttribute('data-motion')) === 'off');
   await p.reload(); await p.waitForTimeout(600); check('skin + motion applied before paint on reload', await p.evaluate(() => document.documentElement.getAttribute('data-skin') === 'bobcat' && document.documentElement.getAttribute('data-motion') === 'off'));

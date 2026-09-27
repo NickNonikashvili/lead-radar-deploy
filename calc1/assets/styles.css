@@ -765,7 +765,7 @@ h1, h2, h3, h4 { letter-spacing: -0.01em; }
 .topbar-title { font-size: 19px; }
 .exam-chip { background: linear-gradient(135deg, var(--gold-soft), color-mix(in srgb, var(--gold-soft) 60%, var(--surface))); border-color: color-mix(in srgb, var(--gold) 30%, transparent); box-shadow: var(--shadow-sm); }
 .bell-btn { position: relative; }
-.bell-btn .badge { position: absolute; top: -5px; right: -5px; min-width: 17px; height: 17px; padding: 0 4px; border-radius: 999px; background: var(--bad); color: #fff; font-size: 10.5px; font-weight: 700; display: grid; place-items: center; line-height: 1; box-shadow: 0 0 0 2px var(--surface); }
+.bell-btn .badge { position: absolute; top: -5px; right: -5px; min-width: 17px; height: 17px; padding: 0 4px; border-radius: 999px; background: #C42222; color: #fff; font-size: 10.5px; font-weight: 700; display: grid; place-items: center; line-height: 1; box-shadow: 0 0 0 2px var(--surface); }
 .bell-btn .badge[hidden] { display: none; }
 
 /* panels, cards, buttons, chips */

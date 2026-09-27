@@ -242,6 +242,7 @@
         <a class="acct-dd-item" href="#/today">${icon('flag', 15)}<span>Today</span></a>
         <a class="acct-dd-item" href="#/focus">${icon('clock', 15)}<span>Focus room</span></a>
         <a class="acct-dd-item" href="#/recap">${icon('zap', 15)}<span>Your week</span></a>
+        <a class="acct-dd-item" href="#/sheet">${icon('shield', 15)}<span>Character sheet</span></a>
         <a class="acct-dd-item" href="#/resources">${icon('link', 15)}<span>Resources & guides</span></a>
         <a class="acct-dd-item" href="#/tools">${icon('sliders', 15)}<span>Tools</span></a>
         <a class="acct-dd-item" href="${App.settingsLink ? App.settingsLink() : '#/settings'}">${icon('gear', 15)}<span>Account settings</span></a>

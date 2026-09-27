@@ -63,6 +63,9 @@
   ];
   const GLYPHS = GLYPH_SETS.flatMap(([k, g]) => g.map(x => ({ k, g: x })));
   const SHAPES = ['ring', 'tri', 'dot', 'square', 'star'];
+  // the Realm look floats runes, marks and dice as well as the subject glyphs
+  const REALM_GLYPHS = [['rune', [...'ᚠᚢᚦᚨᚱᚲᚷᚹᚺᚾᛁᛃᛇᛈᛉᛊᛏᛒᛖᛗᛚᛜᛞᛟ']], ['mark', ['✦', '✧', '☽', '⚔', '⚜', '♜', '♞', 'd20', '+2', 'XP', 'DC 15', 'nat 20']]].flatMap(([k, g]) => g.map(x => ({ k, g: x })));
+  const REALM_SHAPES = ['d20', 'd20', 'star', 'ring', 'd20'];
   const HUES = { math: '#4F46E5', physics: '#0E9488', code: '#16A34A', writing: '#7C3AED', science: '#D97706', shape: '#F2C14E' };
   const LiveBg = {
     c: null, ctx: null, items: [], raf: 0, cols: null, tick: 0,
@@ -70,18 +73,18 @@
     init() {
       if (this.c) return; const c = document.createElement('canvas'); c.id = 'live-bg'; c.setAttribute('aria-hidden', 'true'); document.body.prepend(c); this.c = c; this.ctx = c.getContext('2d');
       this.resize(); window.addEventListener('resize', () => this.resize()); document.addEventListener('visibilitychange', () => { if (document.hidden) this.stop(); else this.start(); });
-      new MutationObserver(() => { this.cols = null; }).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme', 'data-course'] });
+      new MutationObserver(recs => { this.cols = null; if (recs.some(r => r.attributeName === 'data-skin')) { this.items = []; this.resize(); } }).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme', 'data-course', 'data-skin'] });
       this.apply();
     },
     apply() { const on = this.enabled(); this.c.hidden = !on; document.documentElement.classList.toggle('no-live-bg', !on); if (on) this.start(); else this.stop(); },
     resize() { const dpr = Math.min(2, devicePixelRatio || 1); this.c.width = innerWidth * dpr; this.c.height = innerHeight * dpr; this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0); const n = Math.min(60, Math.max(16, Math.round(innerWidth * innerHeight / 40000))); while (this.items.length < n) this.items.push(this.spawn(true)); this.items.length = n; this.draw(performance.now()); },
-    spawn(anyY) { const shape = Math.random() < 0.22; const pick = GLYPHS[Math.floor(Math.random() * GLYPHS.length)]; return { g: shape ? '' : pick.g, k: shape ? 'shape' : pick.k, shape: shape ? SHAPES[Math.floor(Math.random() * SHAPES.length)] : '', x: Math.random() * innerWidth, y: anyY ? Math.random() * innerHeight : innerHeight + 40, s: 14 + Math.random() * 24, v: 0.1 + Math.random() * 0.25, ph: Math.random() * Math.PI * 2, amp: 8 + Math.random() * 26, rot: (Math.random() - 0.5) * 0.7, a: 0.09 + Math.random() * 0.15 }; },
-    palette() { if (this.cols) return this.cols; const cs = getComputedStyle(document.documentElement); const v = (n, d) => cs.getPropertyValue(n).trim() || d; return this.cols = { math: v('--c-learn', HUES.math), physics: v('--c-calm', HUES.physics), code: v('--c-practice', HUES.code), writing: v('--c-create', HUES.writing), science: v('--c-reward', HUES.science), shape: v('--gold', HUES.shape) }; },
+    spawn(anyY) { const realm = document.documentElement.getAttribute('data-skin') === 'realm'; const shape = Math.random() < (realm ? 0.26 : 0.22); const pool = realm && Math.random() < 0.62 ? REALM_GLYPHS : GLYPHS; const pick = pool[Math.floor(Math.random() * pool.length)]; const shapes = realm ? REALM_SHAPES : SHAPES; return { g: shape ? '' : pick.g, k: shape ? 'shape' : pick.k, shape: shape ? shapes[Math.floor(Math.random() * shapes.length)] : '', x: Math.random() * innerWidth, y: anyY ? Math.random() * innerHeight : innerHeight + 40, s: 14 + Math.random() * 24, v: 0.1 + Math.random() * 0.25, ph: Math.random() * Math.PI * 2, amp: 8 + Math.random() * 26, rot: (Math.random() - 0.5) * 0.7, a: 0.09 + Math.random() * 0.15 }; },
+    palette() { if (this.cols) return this.cols; const cs = getComputedStyle(document.documentElement); const v = (n, d) => cs.getPropertyValue(n).trim() || d; return this.cols = { math: v('--c-learn', HUES.math), physics: v('--c-calm', HUES.physics), code: v('--c-practice', HUES.code), writing: v('--c-create', HUES.writing), science: v('--c-reward', HUES.science), shape: v('--gold', HUES.shape), rune: v('--bg-rune', '#9A6C1C'), mark: v('--bg-mark', '#6B3A94') }; },
     shapeDraw(ctx, p) { const s = p.s * 0.55; ctx.lineWidth = Math.max(1.2, s / 9); ctx.strokeStyle = ctx.fillStyle; ctx.beginPath();
-      if (p.shape === 'ring') { ctx.arc(0, 0, s / 2, 0, Math.PI * 2); ctx.stroke(); } else if (p.shape === 'dot') { ctx.arc(0, 0, s / 4, 0, Math.PI * 2); ctx.fill(); } else if (p.shape === 'tri') { ctx.moveTo(0, -s / 2); ctx.lineTo(s / 2, s / 2); ctx.lineTo(-s / 2, s / 2); ctx.closePath(); ctx.stroke(); } else if (p.shape === 'square') { ctx.rect(-s / 2, -s / 2, s, s); ctx.stroke(); } else { for (let i = 0; i < 5; i++) { const a = -Math.PI / 2 + i * 2 * Math.PI / 5, b = a + Math.PI / 5; ctx.lineTo(Math.cos(a) * s / 2, Math.sin(a) * s / 2); ctx.lineTo(Math.cos(b) * s / 5, Math.sin(b) * s / 5); } ctx.closePath(); ctx.fill(); } },
+      if (p.shape === 'ring') { ctx.arc(0, 0, s / 2, 0, Math.PI * 2); ctx.stroke(); } else if (p.shape === 'dot') { ctx.arc(0, 0, s / 4, 0, Math.PI * 2); ctx.fill(); } else if (p.shape === 'tri') { ctx.moveTo(0, -s / 2); ctx.lineTo(s / 2, s / 2); ctx.lineTo(-s / 2, s / 2); ctx.closePath(); ctx.stroke(); } else if (p.shape === 'square') { ctx.rect(-s / 2, -s / 2, s, s); ctx.stroke(); } else if (p.shape === 'd20') { const r = s * 0.62, hx = Math.cos(Math.PI / 6) * r; const H = [[0, -r], [hx, -r / 2], [hx, r / 2], [0, r], [-hx, r / 2], [-hx, -r / 2]]; const tri = [[0, -r * 0.55], [hx * 0.6, r * 0.33], [-hx * 0.6, r * 0.33]]; H.forEach(([x, y], i) => i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)); ctx.closePath(); tri.forEach(([x, y], i) => i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)); ctx.closePath(); [[0, 0], [0, 5], [0, 1], [1, 1], [1, 2], [1, 3], [2, 3], [2, 4], [2, 5]].forEach(([a, b]) => { ctx.moveTo(tri[a][0], tri[a][1]); ctx.lineTo(H[b][0], H[b][1]); }); ctx.stroke(); } else { for (let i = 0; i < 5; i++) { const a = -Math.PI / 2 + i * 2 * Math.PI / 5, b = a + Math.PI / 5; ctx.lineTo(Math.cos(a) * s / 2, Math.sin(a) * s / 2); ctx.lineTo(Math.cos(b) * s / 5, Math.sin(b) * s / 5); } ctx.closePath(); ctx.fill(); } },
     draw(t) {
       const ctx = this.ctx; ctx.clearRect(0, 0, innerWidth, innerHeight); const cols = this.palette(); const dim = isDark() ? 0.85 : 1;
-      this.items.forEach(p => { ctx.save(); ctx.globalAlpha = p.a * dim * (p.k === 'shape' ? 0.8 : 1); ctx.fillStyle = cols[p.k] || cols.math; ctx.translate(p.x + Math.sin(t / 1900 + p.ph) * p.amp, p.y); ctx.rotate(p.rot + Math.sin(t / 3100 + p.ph) * 0.12); if (p.k === 'shape') this.shapeDraw(ctx, p); else { ctx.font = `${p.k === 'code' ? '600' : '500'} ${p.s}px ${p.k === 'code' ? 'JetBrains Mono, ui-monospace, monospace' : p.k === 'writing' ? 'Fraunces, Georgia, serif' : 'Fraunces, Georgia, serif'}`; ctx.fillText(p.g, 0, 0); } ctx.restore(); });
+      this.items.forEach(p => { ctx.save(); ctx.globalAlpha = p.a * dim * (p.k === 'shape' ? 0.8 : 1); ctx.fillStyle = cols[p.k] || cols.math; ctx.translate(p.x + Math.sin(t / 1900 + p.ph) * p.amp, p.y); ctx.rotate(p.rot + Math.sin(t / 3100 + p.ph) * 0.12); if (p.k === 'shape') this.shapeDraw(ctx, p); else { ctx.font = `${p.k === 'code' ? '600' : '500'} ${p.s}px ${p.k === 'code' ? 'JetBrains Mono, ui-monospace, monospace' : p.k === 'rune' ? '"Mathub Runes", "Segoe UI Historic", serif' : p.k === 'mark' ? 'Cinzel, Georgia, serif' : 'Georgia, serif'}`; ctx.fillText(p.g, 0, 0); } ctx.restore(); });
     },
     step(t) { if (reduced()) { this.draw(t); this.raf = 0; return; } this.items.forEach((p, i) => { p.y -= p.v; if (p.y < -40) this.items[i] = this.spawn(false); }); this.draw(t); this.raf = requestAnimationFrame(ts => this.step(ts)); },
     start() { if (this.raf || !this.c || this.c.hidden) return; this.raf = requestAnimationFrame(ts => this.step(ts)); },
@@ -92,12 +95,15 @@
   /* ---------- XP, levels, daily goal ---------- */
   const GOALS = [[10, 'Casual'], [30, 'Regular'], [50, 'Serious'], [100, 'Intense']];
   const LEVEL_NAMES = ['Newcomer', 'Explorer', 'Learner', 'Scholar', 'Problem solver', 'Analyst', 'Strategist', 'Expert', 'Master', 'Grandmaster'];
+  const REALM_LEVELS = ['Commoner', 'Apprentice', 'Initiate', 'Adept', 'Spellwright', 'Sage', 'Loremaster', 'Archmage', 'Mythic', 'Legend'];
+  const isRealm = () => document.documentElement.getAttribute('data-skin') === 'realm';
   const dailyGoal = () => { const g = +settings().dailyGoal; return GOALS.some(x => x[0] === g) ? g : 30; };
   const xpOf = id => dataOf(id).xp || [];
   const xpOn = d => courses().reduce((s, id) => s + xpOf(id).filter(x => x.d === d).reduce((a, x) => a + (x.n || 0), 0), 0);
   const xpToday = () => xpOn(todayISO());
   const xpTotal = () => courses().reduce((s, id) => s + xpOf(id).reduce((a, x) => a + (x.n || 0), 0), 0);
-  function level(xp) { const n = 1 + Math.floor(Math.sqrt(Math.max(0, xp) / 100)); const base = (n - 1) ** 2 * 100, next = n ** 2 * 100; return { n, xp, base, next, pct: Math.round(100 * (xp - base) / (next - base)), toNext: next - xp, name: LEVEL_NAMES[Math.min(n - 1, LEVEL_NAMES.length - 1)] }; }
+  function level(xp) { const n = 1 + Math.floor(Math.sqrt(Math.max(0, xp) / 100)); const base = (n - 1) ** 2 * 100, next = n ** 2 * 100; return { n, xp, base, next, pct: Math.round(100 * (xp - base) / (next - base)), toNext: next - xp, name: (isRealm() ? REALM_LEVELS : LEVEL_NAMES)[Math.min(n - 1, LEVEL_NAMES.length - 1)] }; }
+  App.levelOf = level;
   let floatPending = 0, floatTimer = 0;
   function floatXP(n) {
     floatPending += n; clearTimeout(floatTimer);
@@ -190,7 +196,8 @@
         <path d="M30 42c4 5 8 10 8 18M90 42c-4 5-8 10-8 18M36 76c-6 0-10-3-14-6M84 76c6 0 10-3 14-6" stroke="#8B5A2B" stroke-width="3" stroke-linecap="round" fill="none"/>
         <g class="bob-eyes"><ellipse cx="46" cy="56" rx="7" ry="8" fill="#fff"/><ellipse cx="74" cy="56" rx="7" ry="8" fill="#fff"/><circle cx="47" cy="57" r="4" fill="#2A1B0E"/><circle cx="75" cy="57" r="4" fill="#2A1B0E"/><circle cx="48.5" cy="55" r="1.4" fill="#fff"/><circle cx="76.5" cy="55" r="1.4" fill="#fff"/><g class="bob-lids"><ellipse cx="46" cy="56" rx="7.5" ry="8.5" fill="#D9A15B"/><ellipse cx="74" cy="56" rx="7.5" ry="8.5" fill="#D9A15B"/></g></g>
         <path d="M55 68h10l-5 5z" fill="#3B2A1C"/><path d="M60 73v4M60 77c-3 3-7 3-9 0M60 77c3 3 7 3 9 0" stroke="#3B2A1C" stroke-width="2" stroke-linecap="round" fill="none"/>
-        <path d="M18 70l18 2M18 78l18-1M102 70l-18 2M102 78l-18-1" stroke="#8B5A2B" stroke-width="1.6" stroke-linecap="round"/></g></svg>`;
+        <path d="M18 70l18 2M18 78l18-1M102 70l-18 2M102 78l-18-1" stroke="#8B5A2B" stroke-width="1.6" stroke-linecap="round"/></g>
+      <g class="bo-hat"><path d="M39 31Q57 15 73 1Q77 16 83 31Z" fill="#4C2A85"/><path d="M73 1Q77 16 83 31L77 31Q74 16 73 1Z" fill="#3A1F68"/><ellipse cx="61" cy="31" rx="28" ry="5.5" fill="#3A1F68"/><path d="M43 27.5Q61 31 80 27.5L81.5 30.5Q61 34.5 41.5 30.5Z" fill="#E8B84E"/><path d="M60 14l1.1 2.6 2.6 1.1-2.6 1.1-1.1 2.6-1.1-2.6-2.6-1.1 2.6-1.1z M69 8.5l.8 1.8 1.8.8-1.8.8-.8 1.8-.8-1.8-1.8-.8 1.8-.8z" fill="#F6E4B3"/></g></svg>`;
   }
   function mascotLine() {
     const st = streakAll(); const today = xpToday(), goal = dailyGoal(); const h = new Date().getHours(); const guest = App.guest();

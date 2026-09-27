@@ -22,7 +22,9 @@
   const App = global.App; if (!App) return;
   const { $, $$, settings } = App;
   const GLYPHS = '0101010110ABCDEF∑∫∂πλΔ√∞≈≠±θΩμσφ<>{}[]#%&*+=/|~^';
-  const glyph = () => GLYPHS[(Math.random() * GLYPHS.length) | 0];
+  const RUNES = 'ᚠᚢᚦᚨᚱᚲᚷᚹᚺᚾᛁᛃᛇᛈᛉᛊᛏᛒᛖᛗᛚᛜᛞᛟ✦';
+  const realm = () => document.documentElement.getAttribute('data-skin') === 'realm';
+  const glyph = () => { const set = realm() ? RUNES : GLYPHS; return set[(Math.random() * set.length) | 0]; };
   const on = () => settings().geek !== false && !(App.motionReduced && App.motionReduced());
   App.geekOn = on;
   App.applyGeek = () => document.documentElement.setAttribute('data-geek', on() ? 'on' : 'off');
@@ -86,11 +88,11 @@
   }
   function status(cmd, ms) {
     const el = chip(); placeChip(el); clearTimeout(chipTimer); clearInterval(typeTimer);
-    const c = $('.gk-cmd', el), ok = $('.gk-ok', el); c.textContent = ''; ok.textContent = ''; el.classList.remove('done', 'out'); void el.offsetWidth; el.classList.add('show');
+    const c = $('.gk-cmd', el), ok = $('.gk-ok', el); $('.gk-path', el).textContent = realm() ? '~/realm' : '~/mathub'; c.textContent = ''; ok.textContent = ''; el.classList.remove('done', 'out'); void el.offsetWidth; el.classList.add('show');
     let i = 0; const step = Math.max(1, Math.ceil(cmd.length / 18));
     typeTimer = setInterval(() => { i = Math.min(cmd.length, i + step); c.textContent = cmd.slice(0, i); if (i >= cmd.length) { clearInterval(typeTimer); ok.textContent = ` ✓ ${ms} ms`; el.classList.add('done'); chipTimer = setTimeout(() => { el.classList.add('out'); chipTimer = setTimeout(() => el.classList.remove('show', 'out', 'done'), 380); }, 1500); } }, 16);
   }
-  const cmdFor = () => { const raw = location.hash.replace(/^#\/?/, '').split('?')[0].replace(/\/+$/, ''); return raw ? `cd ${raw}` : 'cd ~'; };
+  const cmdFor = () => { const raw = location.hash.replace(/^#\/?/, '').split('?')[0].replace(/\/+$/, ''); return realm() ? `teleport ${raw || '~'}` : (raw ? `cd ${raw}` : 'cd ~'); };
 
   /* ---------- scanline sweep ---------- */
   function sweep() { let el = $('#gk-scan'); if (!el) { el = document.createElement('div'); el.id = 'gk-scan'; el.setAttribute('aria-hidden', 'true'); document.body.appendChild(el); } el.classList.remove('run'); void el.offsetWidth; el.classList.add('run'); }
@@ -102,7 +104,7 @@
     if (baseMotionRender) baseMotionRender(root);
     if (!on() || !root || !pendingNav || $('.page-load', root)) return;
     pendingNav = false; const boot = navAt === null; const ms = Math.max(1, Math.round(performance.now() - (boot ? 0 : navAt))); navAt = null;
-    sweep(); status(boot ? './mathub --boot' : cmdFor(), ms);
+    sweep(); status(boot ? (realm() ? './mathub --roll-initiative' : './mathub --boot') : cmdFor(), ms);
     // decode after the router has finished reading the page (it stores the title for "pick up where you left off")
     queueMicrotask(() => {
       const main = $('.note-title, .rd-title, .page-title, .landing-title', root); if (main) decode(main, { ms: 520, caret: true });
@@ -119,7 +121,7 @@
   document.addEventListener('mh:load', e => {
     if (!on()) return; const { course, files } = e.detail || {}; const box = $(`#view .page-load[data-course="${course}"]`); if (!box || $('.gk-boot', box)) return;
     const pre = document.createElement('pre'); pre.className = 'gk-boot'; pre.setAttribute('aria-hidden', 'true');
-    pre.innerHTML = `<b>$</b> mathub open ${course}\n<span class="gk-dim">  resolving ${files.length} module${files.length === 1 ? '' : 's'}…</span>\n`;
+    pre.innerHTML = realm() ? `<b>$</b> summon ${course}\n<span class="gk-dim">  unrolling ${files.length} scroll${files.length === 1 ? '' : 's'}…</span>\n` : `<b>$</b> mathub open ${course}\n<span class="gk-dim">  resolving ${files.length} module${files.length === 1 ? '' : 's'}…</span>\n`;
     const skel = $('.skel', box); box.insertBefore(pre, skel || null);
   });
   document.addEventListener('mh:file', e => {
@@ -127,7 +129,7 @@
     let kb = ''; try { const en = performance.getEntriesByName(url)[0]; const b = en && (en.decodedBodySize || en.encodedBodySize); if (b) kb = `${(b / 1024).toFixed(b < 10240 ? 1 : 0)} KB`; } catch (err) {}
     const line = document.createElement('span'); line.className = 'gk-line'; line.textContent = `  ✓ ${src}.js`.padEnd(30) + `${kb.padStart(8)}  ${String(ms).padStart(4)} ms\n`; pre.appendChild(line);
   });
-  document.addEventListener('mh:loaded', e => { const pre = $(`#view .page-load[data-course="${(e.detail || {}).course}"] .gk-boot`); if (pre) { const l = document.createElement('span'); l.className = 'gk-line gk-ready'; l.textContent = '  ready.'; pre.appendChild(l); } });
+  document.addEventListener('mh:loaded', e => { const pre = $(`#view .page-load[data-course="${(e.detail || {}).course}"] .gk-boot`); if (pre) { const l = document.createElement('span'); l.className = 'gk-line gk-ready'; l.textContent = realm() ? '  the tome is open.' : '  ready.'; pre.appendChild(l); } });
 
   /* ---------- dashboard tabs: stepped wipe on the pane you switch to ---------- */
   document.addEventListener('click', e => {
@@ -158,11 +160,11 @@
     const dpr = Math.min(2, global.devicePixelRatio || 1); const W = c.width = Math.round(innerWidth * dpr), H = c.height = Math.round(innerHeight * dpr); const x = c.getContext('2d');
     const fs = Math.round(16 * dpr), cols = Math.ceil(W / fs), drops = Array.from({ length: cols }, () => Math.random() * -H / fs); const t0 = performance.now(); let raf = 0;
     const draw = now => {
-      x.fillStyle = 'rgba(3, 7, 18, 0.16)'; x.fillRect(0, 0, W, H); x.font = `${fs}px "JetBrains Mono", ui-monospace, monospace`;
-      for (let i = 0; i < cols; i++) { const y = drops[i] * fs; x.fillStyle = Math.random() < 0.08 ? '#E6F0FF' : (i % 3 ? '#4ADE80' : '#5B8CFF'); x.fillText(glyph(), i * fs, y); drops[i] = y > H && Math.random() > 0.975 ? 0 : drops[i] + 1; }
+      const rl = realm(); x.fillStyle = rl ? 'rgba(14, 9, 20, 0.16)' : 'rgba(3, 7, 18, 0.16)'; x.fillRect(0, 0, W, H); x.font = rl ? `${fs}px "Mathub Runes", "Segoe UI Historic", serif` : `${fs}px "JetBrains Mono", ui-monospace, monospace`;
+      for (let i = 0; i < cols; i++) { const y = drops[i] * fs; x.fillStyle = Math.random() < 0.08 ? (rl ? '#FFF3D6' : '#E6F0FF') : rl ? (i % 3 ? '#E8B84E' : (i % 2 ? '#B69BE8' : '#F07A86')) : (i % 3 ? '#4ADE80' : '#5B8CFF'); x.fillText(glyph(), i * fs, y); drops[i] = y > H && Math.random() > 0.975 ? 0 : drops[i] + 1; }
       if (now - t0 < ms) raf = requestAnimationFrame(draw); else { c.classList.add('out'); setTimeout(() => c.remove(), 600); }
     };
     raf = requestAnimationFrame(draw); c.addEventListener('click', () => { cancelAnimationFrame(raf); c.remove(); });
-    if (App.sfx) App.sfx.play('levelup'); if (App.toast) App.toast('Cheat code accepted. It is worth exactly 0 XP.', 2600);
+    if (App.sfx) App.sfx.play('levelup'); if (App.toast) App.toast(realm() ? 'Cheat code accepted. You rolled a natural 20 on a check worth 0 XP.' : 'Cheat code accepted. It is worth exactly 0 XP.', 2600);
   };
 })(window);

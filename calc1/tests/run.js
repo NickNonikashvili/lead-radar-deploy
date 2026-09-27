@@ -27,10 +27,11 @@ async function ensure(port, args, cwd, label) {
   else console.log('pyodide mirror: not present, the playground test uses the CDN');
   // the suites log in many times; clear the login rate limits of the development database so they never lock the test accounts out
   const dbFile = path.join(ROOT, 'api', 'data', 'mathub.sqlite');
-  if (fs.existsSync(dbFile)) spawnSync('php', ['-r', 'try { (new PDO("sqlite:" . $argv[1]))->exec("DELETE FROM rate WHERE key LIKE \'login:%\' OR key LIKE \'issue:%\'"); } catch (Throwable $e) {}', dbFile], { stdio: 'ignore' });
+  // cleared before every suite: the limit is 12 logins per 15 minutes per account, and the suites together sign in more often than that
+  const clearRate = () => { if (fs.existsSync(dbFile)) spawnSync('php', ['-r', 'try { (new PDO("sqlite:" . $argv[1]))->exec("DELETE FROM rate WHERE key LIKE \'login:%\' OR key LIKE \'issue:%\'"); } catch (Throwable $e) {}', dbFile], { stdio: 'ignore' }); };
   const results = [];
   for (const f of files) {
-    console.log(`\n━━━ ${f} ━━━`); const t0 = Date.now();
+    clearRate(); console.log(`\n━━━ ${f} ━━━`); const t0 = Date.now();
     const r = spawnSync(process.execPath, [path.join(__dirname, f)], { stdio: 'inherit', timeout: 600000, env: process.env });
     results.push([f, r.status === 0, Math.round((Date.now() - t0) / 1000)]);
   }
