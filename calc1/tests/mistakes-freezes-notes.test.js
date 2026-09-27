@@ -10,7 +10,10 @@ const T = require('./lib');
   await p.evaluate(() => { const card = document.querySelector('.q-card'); const opts = card.querySelectorAll('.q-opt'); if (opts.length) { const qi = +opts[0].dataset.q; const q = App.__pq ? App.__pq.session.questions[qi] : null; } });
   // simplest: click every option except the right one is unknown; click option 0 then option 1 on next card, one will be wrong most of the time; instead use recordMistake directly plus one real practice click
   const before = await p.evaluate(() => App.mistakesAll('calc').length);
-  await p.click('.q-card .q-opt[data-i="0"]').catch(() => {}); await p.waitForTimeout(400);
+  // guests get three random questions; about one set in eight is all typed answers, so miss whichever kind is there
+  const kind = await p.evaluate(() => document.querySelector('#view .q-card .q-opt[data-i="0"]') ? 'mc' : (document.querySelector('#view .q-card .q-numrow input') ? 'num' : null));
+  if (kind === 'mc') await p.click('#view .q-card .q-opt[data-i="0"]'); else if (kind === 'num') { await p.fill('#view .q-card .q-numrow input', '987654321'); await p.click('#view .q-card [data-action="check-num"]'); }
+  check('practice set has a question to miss', !!kind, kind); await p.waitForTimeout(400);
   const after = await p.evaluate(() => ({ n: App.mistakesAll('calc').length, ok: !!document.querySelector('.q-card.correct') }));
   check('practice miss saved to mistakes (or the guess was right)', after.ok ? after.n === before : after.n === before + 1, after);
   await p.evaluate(() => { App.recordMistake({ type: 'mc', prompt: 'Test prompt $x^2$', options: ['1', '2', '3', '4'], answer: 2, explanation: 'Because.', topic: 'velocity' }, 'calc', 'practice'); App.recordMistake({ type: 'num', prompt: 'What is 2+2?', answer: 4, answerTex: '4', explanation: 'Add.', topic: 'velocity' }, 'physics', 'lesson'); App.store.poke('calc', d => { d.mistakes.forEach(m => { m.due = Date.now() - 1000; }); }); App.store.poke('physics', d => { d.mistakes.forEach(m => { m.due = Date.now() - 1000; }); }); });

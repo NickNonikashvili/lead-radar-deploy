@@ -29,6 +29,8 @@ async function start(opts = {}) {
   const mk = async (w = 1360, h = 850, ctxOpts = {}) => {
     const c = await browser.newContext(Object.assign({ viewport: { width: w, height: h } }, ctxOpts));
     if (pyodide) await c.addInitScript(url => { window.PYODIDE_URL = url; }, pyodide);
+    const geek = opts.geek === true || process.env.MATHUB_GEEK === '1';
+    if (!geek) await c.addInitScript(() => { try { const s = JSON.parse(localStorage.getItem('studyhub-settings') || '{}'); if (s.geek === undefined) { s.geek = false; localStorage.setItem('studyhub-settings', JSON.stringify(s)); } } catch (e) {} });
     if (opts.tour !== true) await c.addInitScript(() => { try { const s = JSON.parse(localStorage.getItem('studyhub-settings') || '{}'); if (s.tourDone === undefined) { s.tourDone = true; localStorage.setItem('studyhub-settings', JSON.stringify(s)); } } catch (e) {} });
     const p = await c.newPage();
     p.on('pageerror', e => errors.push('PAGEERROR ' + e.message + ' @ ' + String(e.stack || '').split('\n').slice(1, 3).join(' ').replace(/\s+/g, ' ').trim().slice(0, 160)));

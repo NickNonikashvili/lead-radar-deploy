@@ -282,9 +282,11 @@
     const C = Courses[id]; if (!C) return Promise.reject(new Error('Unknown class.'));
     if (C.loaded || !C.files || !C.files.length) { C.loaded = true; delete C.stub; return Promise.resolve(C); }
     if (loading[id]) return loading[id];
-    const one = src => new Promise((res, rej) => { if (document.querySelector(`script[data-src="${src}"]`)) return res(); const sc = document.createElement('script'); sc.src = `assets/${src}.js?v=${BUILD}`; sc.dataset.src = src; sc.onload = res; sc.onerror = () => { sc.remove(); rej(new Error(`Could not download ${src}.js. Check your connection and try again.`)); }; document.head.appendChild(sc); });
+    const emit = (type, detail) => { try { document.dispatchEvent(new CustomEvent(type, { detail: Object.assign({ course: id }, detail) })); } catch (e) {} };
+    const one = src => new Promise((res, rej) => { if (document.querySelector(`script[data-src="${src}"]`)) return res(); const sc = document.createElement('script'); sc.src = `assets/${src}.js?v=${BUILD}`; sc.dataset.src = src; const t0 = performance.now(); sc.onload = () => { emit('mh:file', { src, url: sc.src, ms: Math.round(performance.now() - t0) }); res(); }; sc.onerror = () => { sc.remove(); rej(new Error(`Could not download ${src}.js. Check your connection and try again.`)); }; document.head.appendChild(sc); });
     if (App.loadbar) App.loadbar.start();
-    loading[id] = (async () => { try { for (const f of C.files) await one(f); } finally { delete loading[id]; if (App.loadbar) App.loadbar.done(); } const F = Courses[id]; F.loaded = true; delete F.stub; Search.index = null; return F; })();
+    emit('mh:load', { files: C.files.slice() });
+    loading[id] = (async () => { try { for (const f of C.files) await one(f); } finally { delete loading[id]; if (App.loadbar) App.loadbar.done(); } const F = Courses[id]; F.loaded = true; delete F.stub; Search.index = null; emit('mh:loaded', {}); return F; })();
     return loading[id];
   };
   App.loadCourses = ids => Promise.all(ids.map(id => App.loadCourse(id).catch(() => null)));
@@ -292,7 +294,7 @@
   function renderLoading(root, id) {
     const C = Courses[id]; document.documentElement.setAttribute('data-course', id);
     $('#topbar-title').innerHTML = `<a class="crumb" href="#/${id}/dashboard" title="${esc(C.name)}">${esc(C.short)}</a><span class="crumb-sep">›</span><span class="crumb-cur">Loading…</span>`; document.title = `${C.code} · ${SITE}`;
-    root.innerHTML = `<div class="page-load" aria-busy="true" aria-live="polite"><div class="eyebrow">${esc(C.code)}</div><h1 class="page-title">${esc(C.name)}</h1><p class="muted small">Opening the class…</p>${App.skeleton ? App.skeleton(6) : ''}</div>`;
+    root.innerHTML = `<div class="page-load" data-course="${id}" aria-busy="true" aria-live="polite"><div class="eyebrow">${esc(C.code)}</div><h1 class="page-title">${esc(C.name)}</h1><p class="muted small">Opening the class…</p>${App.skeleton ? App.skeleton(6) : ''}</div>`;
   }
   function renderLoadError(root, id, err) {
     root.innerHTML = `<div class="page-load"><div class="empty">${esc(err && err.message || 'Could not load this class.')}<div class="row gap-sm mt-2" style="justify-content:center"><button class="btn sm primary" data-action="retry">${icon('rotate', 13)} Try again</button><a class="btn sm" href="#/">All classes</a></div></div></div>`;
@@ -893,6 +895,7 @@
           <div class="field mb-2"><label for="s-theme">Theme</label><select class="select" id="s-theme"><option value="system"${s.theme === 'system' ? ' selected' : ''}>Match system</option><option value="light"${s.theme === 'light' ? ' selected' : ''}>Light</option><option value="dark"${s.theme === 'dark' ? ' selected' : ''}>Dark</option></select></div>
           <div class="field mb-2"><label>Look</label><div class="skin-pick" id="s-skins">${(App.SKINS || []).map(([id, name, sub, [bg, ac]]) => `<button type="button" class="skin-opt${(s.skin || 'default') === id ? ' on' : ''}" data-action="skin" data-skin="${id}" aria-pressed="${(s.skin || 'default') === id}"><span class="skin-swatch" style="background:${bg}"><i style="background:${ac}"></i><i></i></span><b>${name}</b><small>${sub}</small></button>`).join('')}</div></div>
           <label class="check" style="padding:0"><input type="checkbox" id="s-motion" ${s.motion === 'off' ? 'checked' : ''}><span>Reduce motion <span class="muted small">(no animations or transitions)</span></span></label>
+          <label class="check" style="padding:0"><input type="checkbox" id="s-geek" ${s.geek === false ? '' : 'checked'}><span>Geek mode <span class="muted small">(headings decode, a terminal status line, scanlines and CRT dialogs between pages)</span></span></label>
           <div class="row gap-sm mt-2" style="flex-wrap:wrap"><button class="btn sm" data-action="tour-again">${icon('eye', 13)} Show the tour again</button><a class="btn sm" href="#/tools">${icon('sliders', 13)} Tools</a><a class="btn sm" href="#/resources">${icon('link', 13)} Resources</a></div>
           <div class="field mb-2"><label for="s-goal">Daily XP goal</label><select class="select" id="s-goal">${(App.GOALS || [[30, 'Regular']]).map(([n, name]) => `<option value="${n}"${(App.dailyGoal ? App.dailyGoal() : 30) === n ? ' selected' : ''}>${n} XP · ${name}</option>`).join('')}</select><span class="help">A correct answer is 10 XP. The ring in the header fills up as you go; hit the goal every day to keep your streak strong.</span></div>
           <label class="check" style="padding:0"><input type="checkbox" id="s-sound" ${s.sound === false ? '' : 'checked'}><span>Sound effects <span class="muted small">(short cues for right, wrong and finished lessons)</span></span></label>
@@ -911,6 +914,7 @@
       on(root, 'click', '[data-action="tour-again"]', () => { setSetting('tourDone', false); try { sessionStorage.removeItem('mh-tour'); } catch (e) {} location.hash = '#/'; setTimeout(() => { if (App.tour) App.tour.start(true); }, 700); });
       on(root, 'click', '[data-action="skin"]', el => { setSetting('skin', el.dataset.skin); applyTheme(); $$('.skin-opt', root).forEach(b => { b.classList.toggle('on', b === el); b.setAttribute('aria-pressed', b === el); }); toast(`${el.querySelector('b').textContent} look on.`, 1800); });
       const sm = $('#s-motion', root); if (sm) sm.addEventListener('change', e => { setSetting('motion', e.target.checked ? 'off' : 'on'); applyTheme(); });
+      const sgk = $('#s-geek', root); if (sgk) sgk.addEventListener('change', e => { setSetting('geek', e.target.checked); applyTheme(); if (e.target.checked && App.geekSweep) App.geekSweep(); toast(e.target.checked ? (App.geekOn && App.geekOn() ? 'Geek mode on.' : 'Geek mode on. It stays still while Reduce motion is on.') : 'Geek mode off.', 2200); });
       const sg = $('#s-goal', root); if (sg) sg.addEventListener('change', e => { setSetting('dailyGoal', +e.target.value); if (App.paintStats) { App.paintStats(); App.paintMascots(); } toast(`Daily goal: ${e.target.value} XP`); });
       const sd = $('#s-sound', root); if (sd) sd.addEventListener('change', e => { setSetting('sound', e.target.checked); if (e.target.checked && App.sfx) App.sfx.play('correct'); });
       const lb = $('#s-livebg', root); if (lb) lb.addEventListener('change', e => { setSetting('liveBg', e.target.checked); if (App.liveBg) App.liveBg.apply(); });

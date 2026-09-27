@@ -177,3 +177,75 @@ html.theme-fade, html.theme-fade *, html.theme-fade *::before, html.theme-fade *
 html[data-motion="off"] *, html[data-motion="off"] *::before, html[data-motion="off"] *::after { animation-duration: 0.001s !important; animation-iteration-count: 1 !important; transition-duration: 0.001s !important; scroll-behavior: auto !important; }
 html[data-motion="off"] .mh-reveal { opacity: 1; }
 html[data-motion="off"] #loadbar.on { width: 60%; }
+
+/* ============================================================
+   Geek mode (assets/geek.js): decoding headings, a typed status line,
+   a scanline on every route change, CRT dialogs, shell-style toasts,
+   stepped tab wipes, materialising cards, flying bits, the class boot
+   log and a glyph rain easter egg. Everything is gated on
+   html[data-geek="on"], which geek.js only sets when the setting is on
+   and motion is not reduced (by the setting or the system).
+   ============================================================ */
+@keyframes gkScan { 0% { transform: translateY(-6vh); opacity: 0; } 10% { opacity: 1; } 100% { transform: translateY(106vh); opacity: 0.15; } }
+@keyframes gkLines { 0% { opacity: 0.6; } 100% { opacity: 0; } }
+@keyframes gkCaret { 0%, 49% { opacity: 1; } 50%, 100% { opacity: 0; } }
+@keyframes gkCrtOn { 0% { transform: scale(0.05, 0.008); opacity: 0.5; filter: brightness(3) saturate(0.3); } 38% { transform: scale(1, 0.008); opacity: 1; filter: brightness(2.4) saturate(0.5); } 74% { transform: scale(1, 1.015); filter: brightness(1.12); } 100% { transform: none; filter: none; opacity: 1; } }
+@keyframes gkBit { 0% { transform: translate(-50%, -50%) scale(0.6) rotate(0deg); opacity: 1; } 100% { transform: translate(calc(-50% + var(--dx, 0px)), calc(-50% + var(--dy, 0px))) scale(1.05) rotate(var(--rot, 0deg)); opacity: 0; } }
+@keyframes gkWipe { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
+@keyframes gkMaterialize { 0% { opacity: 0; clip-path: inset(0 0 100% 0 round 14px); } 55% { opacity: 1; clip-path: inset(0 0 0 0 round 14px); } 100% { opacity: 1; clip-path: inset(-40px round 14px); } }
+@keyframes gkGlitch { 0% { transform: translate(0); filter: none; } 25% { transform: translate(-2px, 1px); filter: drop-shadow(2px 0 #FF2D6F) drop-shadow(-2px 0 #22D3EE); } 50% { transform: translate(2px, -1px); filter: drop-shadow(-2px 0 #FF2D6F) drop-shadow(2px 0 #22D3EE); } 75% { transform: translate(-1px, 0); } 100% { transform: translate(0); filter: none; } }
+@keyframes gkStatusIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+/* headings decoding: the scrambled tail is monospace in the accent colour */
+.gk-dec i { font-style: normal; font-family: var(--font-mono); font-weight: 500; color: var(--accent); letter-spacing: 0; }
+html[data-geek="on"] .gk-decoding:not(.landing-title) { text-shadow: -1px 0 rgba(255, 45, 111, 0.32), 1px 0 rgba(34, 211, 238, 0.32); }
+html[data-geek="on"] .gk-caret::after { content: ''; display: inline-block; width: 0.48em; height: 0.11em; margin-left: 0.14em; background: var(--accent); vertical-align: baseline; animation: gkCaret 0.85s steps(1) 2; }
+
+/* status line */
+#gk-status { position: fixed; z-index: 60; display: none; max-width: calc(100vw - 32px); padding: 7px 11px; border-radius: 9px; background: rgba(8, 16, 36, 0.93); color: #C9D8FF; border: 1px solid rgba(91, 140, 255, 0.35); box-shadow: 0 12px 30px -14px rgba(0, 0, 0, 0.55); font: 500 12px/1.35 var(--font-mono); white-space: pre; overflow: hidden; text-overflow: ellipsis; pointer-events: none; -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); }
+html[data-geek="on"] #gk-status.show { display: block; animation: gkStatusIn 0.2s ease-out both; }
+#gk-status.out { opacity: 0; transform: translateY(6px); transition: opacity 0.35s, transform 0.35s; }
+#gk-status .gk-path { color: #7FA4FF; }
+#gk-status .gk-dollar { color: #94A3B8; }
+#gk-status .gk-cmd { color: #F1F5FF; }
+#gk-status .gk-ok { color: #4ADE80; }
+#gk-status .gk-cur { display: inline-block; width: 7px; height: 13px; margin-left: 3px; background: #7FA4FF; vertical-align: -2px; animation: gkCaret 0.9s steps(1) infinite; }
+
+/* scanline sweep */
+#gk-scan { position: fixed; inset: 0; z-index: 64; pointer-events: none; display: none; overflow: hidden; }
+html[data-geek="on"] #gk-scan.run { display: block; }
+#gk-scan::before { content: ''; position: absolute; left: 0; right: 0; top: 0; height: 2px; opacity: 0; background: color-mix(in srgb, var(--accent) 75%, #fff); box-shadow: 0 0 12px 2px color-mix(in srgb, var(--accent) 50%, transparent), 0 0 44px 10px color-mix(in srgb, var(--accent) 18%, transparent); }
+#gk-scan::after { content: ''; position: absolute; inset: 0; opacity: 0; background: repeating-linear-gradient(0deg, color-mix(in srgb, var(--accent) 8%, transparent) 0 1px, transparent 1px 3px); }
+html[data-geek="on"] #gk-scan.run::before { animation: gkScan 0.46s cubic-bezier(0.3, 0.6, 0.2, 1) forwards; }
+html[data-geek="on"] #gk-scan.run::after { animation: gkLines 0.5s ease-out forwards; }
+
+/* cards materialise top-down instead of rising */
+html[data-geek="on"] .mh-enter { animation: gkMaterialize 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) backwards; animation-delay: calc(var(--i, 0) * 55ms); }
+
+/* dialogs power on like a monitor; toasts read like shell output */
+html[data-geek="on"] .modal, html[data-geek="on"] .celebrate-card { animation: gkCrtOn 0.38s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+html[data-geek="on"] .toast { font-family: var(--font-mono); font-size: 13px; letter-spacing: -0.01em; }
+html[data-geek="on"] .toast::before { content: '$ '; opacity: 0.6; }
+html[data-geek="on"] .toast::after { content: ''; display: inline-block; width: 7px; height: 13px; margin-left: 5px; vertical-align: -2px; background: currentColor; opacity: 0.8; animation: gkCaret 0.9s steps(1) infinite; }
+
+/* dashboard tabs: stepped wipe */
+html[data-geek="on"] .pane.gk-swap { animation: gkWipe 0.34s steps(7, end); }
+
+/* the logo glitches on hover */
+html[data-geek="on"] .brand-logo:hover .mh-logo, html[data-geek="on"] .logo-mark:hover .mh-logo { animation: gkGlitch 0.42s steps(3, end); }
+
+/* bits off primary buttons */
+.gk-bit { position: fixed; z-index: 90; pointer-events: none; font: 700 12px/1 var(--font-mono); color: var(--accent); text-shadow: 0 0 6px color-mix(in srgb, var(--accent) 45%, transparent); animation: gkBit 0.62s cubic-bezier(0.2, 0.7, 0.3, 1) forwards; }
+
+/* class download boot log */
+.gk-boot { margin: 12px 0 14px; padding: 12px 14px; max-width: 560px; border-radius: 12px; background: #081024; color: #C9D8FF; border: 1px solid rgba(91, 140, 255, 0.28); font: 12.5px/1.6 var(--font-mono); white-space: pre; overflow-x: auto; }
+.gk-boot b { color: #7FA4FF; }
+.gk-boot .gk-dim { color: #8C97B1; }
+.gk-boot .gk-line { color: #D6E4FF; animation: mhTickIn 0.2s ease-out both; }
+.gk-boot .gk-ready { color: #4ADE80; }
+
+/* ↑ ↑ ↓ ↓ ← → ← → B A */
+#gk-rain { position: fixed; inset: 0; width: 100vw; height: 100vh; z-index: 5000; cursor: pointer; animation: fadeIn 0.3s ease-out both; }
+#gk-rain.out { opacity: 0; transition: opacity 0.55s; }
+
+@media print { #gk-status, #gk-scan, .gk-bit, #gk-rain, .gk-boot { display: none !important; } }
