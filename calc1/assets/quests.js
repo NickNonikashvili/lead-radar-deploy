@@ -94,7 +94,7 @@
     const allDaily = daily.every(x => x.cur >= x.n); const giveBoost = allDaily && !q.boostGiven; if (giveBoost) q.boostGiven = true;
     if (!newly.length && !giveBoost) return; qsave(q);
     newly.forEach((x, i) => setTimeout(() => { App.addXP(x.reward, { raw: true }); toast(`${icon('target', 14)} Quest done: ${esc(x.title)} · +${x.reward} XP`, 3200); SFX.play('complete'); paintQuests(); }, 150 + i * 900));
-    if (giveBoost) { setSetting('boostUntil', Date.now() + 15 * 60000); setTimeout(() => { celebrate({ title: 'All quests done!', sub: 'Double XP is on for the next 15 minutes. Make it count.', icon: icon('zap', 40), sound: 'levelup' }); App.paintStats(); }, 200 + newly.length * 900); }
+    if (giveBoost) { setSetting('boostUntil', Date.now() + 15 * 60000); setTimeout(() => { celebrate({ title: 'All quests done!', sub: 'Double XP is on for the next 15 minutes. Make it count.', icon: App.pixel ? App.pixel('trophy', 5) : icon('zap', 40), sound: 'levelup' }); App.paintStats(); }, 200 + newly.length * 900); }
     paintQuests(); App.paintStats();
   }
   App.quest = quest; App.checkQuests = checkQuests;

@@ -2165,3 +2165,65 @@ h1, .page-title, .landing-title { letter-spacing: -0.03em; }
 .btn, .tab, .chip { letter-spacing: -0.005em; }
 /* Today: the mascot and its line take a full row under the streak and league chips instead of squeezing beside them */
 .td-hero { flex-wrap: wrap; } .td-hero .mascot-slot { flex: 1 1 100%; }
+
+/* ============================================================
+   Pixel art (assets/pixel.js). Sprites are crisp SVG; two-frame sprites
+   swap frames with CSS steps and hold still when motion is reduced.
+   Press Start 2P (Google Fonts) sets the small arcade labels.
+   ============================================================ */
+:root { --font-pixel: "Press Start 2P", ui-monospace, "JetBrains Mono", monospace; }
+.px { display: inline-block; vertical-align: middle; flex: none; overflow: visible; }
+.px-anim .pxf2 { visibility: hidden; }
+.px-anim.px-n2 .pxf1 { animation: pxA 0.9s steps(1) infinite; } .px-anim.px-n2 .pxf2 { animation: pxB 0.9s steps(1) infinite; }
+.px-bo.px-anim .pxf1 { animation: pxBlinkA 3.6s steps(1) infinite; } .px-bo.px-anim .pxf2 { animation: pxBlinkB 3.6s steps(1) infinite; }
+@keyframes pxA { 0%, 49.9% { visibility: visible; } 50%, 100% { visibility: hidden; } }
+@keyframes pxB { 0%, 49.9% { visibility: hidden; } 50%, 100% { visibility: visible; } }
+@keyframes pxBlinkA { 0%, 92.9% { visibility: visible; } 93%, 100% { visibility: hidden; } }
+@keyframes pxBlinkB { 0%, 92.9% { visibility: hidden; } 93%, 100% { visibility: visible; } }
+@keyframes pxDots { from { width: 0; } to { width: 4em; } }
+@keyframes pxBob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
+html[data-motion="off"] .px-anim .pxf1 { animation: none !important; visibility: visible; } html[data-motion="off"] .px-anim .pxf2 { animation: none !important; visibility: hidden; }
+@media (prefers-reduced-motion: reduce) { .px-anim .pxf1 { animation: none !important; visibility: visible; } .px-anim .pxf2 { animation: none !important; visibility: hidden; } }
+.px-label { font-family: var(--font-pixel); font-size: 10px; line-height: 1.6; letter-spacing: 0.04em; text-transform: uppercase; }
+.px-invader, .px-foot-inv, .px-monster { color: var(--c-practice, #16A34A); }
+/* start page: the Bridger Range along the bottom of the hero */
+.landing-top.hero { isolation: isolate; padding-bottom: 46px; }
+.px-skyline { position: absolute; left: 0; right: 0; bottom: 0; height: 64px; z-index: -1; pointer-events: none; background: var(--px-skyline) repeat-x left bottom / 205px 64px; opacity: 0.92; }
+:root[data-theme="dark"] .px-skyline { filter: brightness(0.72) saturate(0.85); opacity: 0.85; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .px-skyline { filter: brightness(0.72) saturate(0.85); opacity: 0.85; } }
+:root[data-skin="realm"] .px-skyline { display: none; }
+:root[data-skin="realm"] .landing-top.hero { padding-bottom: 26px; }
+@media (max-width: 640px) { .landing-top.hero { padding-bottom: 40px; } .px-skyline { height: 48px; background-size: 154px 48px; } }
+/* empty states: a pixel friend */
+.bo-mini .px-friend { image-rendering: pixelated; }
+.empty.bo:hover .bo-mini .px { animation: pxBob 0.5s steps(2) 2; }
+/* XP pop-up, streak flame, level-up toast */
+.xp-float { display: inline-flex; align-items: center; gap: 6px; font-family: var(--font-pixel); font-size: 10px; font-weight: 400; letter-spacing: 0.02em; padding: 5px 9px; }
+.streak-chip .px-flame { margin: -2px 1px -2px -1px; }
+.streak-chip:not(.lit) .px-flame { filter: grayscale(1); opacity: 0.55; }
+.toast .px { margin-right: 6px; vertical-align: -3px; }
+.celebrate-ic .px, .celebrate-ic.big .px { display: block; margin: 0 auto; animation: pxBob 0.8s steps(2) 3; }
+/* class loading and the game-over screen */
+.px-loader { display: flex; align-items: center; gap: 12px; margin: 12px 0 14px; color: var(--muted); }
+.px-loader .px-bo { animation: pxBob 0.6s steps(2) infinite; }
+.px-dots::after { content: '...'; display: inline-block; overflow: hidden; width: 0; vertical-align: bottom; animation: pxDots 1.2s steps(4) infinite; }
+html[data-motion="off"] .px-loader .px-bo, html[data-motion="off"] .px-dots::after { animation: none !important; } html[data-motion="off"] .px-dots::after { width: 3em; }
+.px-gameover { text-align: center; padding: 26px 18px; }
+.px-go-art { margin: 0 auto 10px; }
+.px-go-title { font-size: 20px; color: var(--bad); margin-bottom: 10px; text-shadow: 2px 2px 0 color-mix(in srgb, var(--bad) 25%, transparent); }
+.px-go-q { font-size: 11px; color: var(--muted); margin-top: 10px; animation: gkCaret 1.1s steps(1) infinite; }
+html[data-motion="off"] .px-go-q { animation: none; }
+/* footer signature */
+.px-sig { display: inline-flex; align-items: center; gap: 6px; }
+.px-sig .px-foot-inv { margin-right: 2px; }
+/* Blitz: arcade HUD */
+.bz-hud .eyebrow, .bz-endlabel { font-family: var(--font-pixel); font-size: 9px; letter-spacing: 0.06em; }
+.bz-score b, .bz-best b { font-family: var(--font-pixel); font-size: 22px; font-weight: 400; }
+.bz-clock { font-family: var(--font-pixel); font-size: 30px; font-weight: 400; }
+.bz-mult { font-family: var(--font-pixel); font-size: 11px; font-weight: 400; }
+.bz-final { font-family: var(--font-pixel); font-size: 44px; font-weight: 400; margin: 10px 0 14px; }
+.bz-endart { margin: 8px auto 2px; }
+/* character sheet items */
+.cs-item .px { flex: none; }
+@media print { .px-skyline, .px-loader { display: none !important; } }
+.cs-item .px-monster { color: var(--c-practice, #16A34A); }

@@ -2,9 +2,15 @@
 const T = require('./lib');
 (async () => {
   const { mk, go, log, check, txt, login } = await T.start({});
-  const [c, p] = await mk(1360, 900, { serviceWorkers: 'block' });
+  // Classic is the default; Realm is one click away in Settings → Look
+  const [c0, p0] = await mk(1360, 900, { serviceWorkers: 'block' }); await go(p0, '#/', 900);
+  check('Classic is the default look', await p0.evaluate(() => document.documentElement.getAttribute('data-skin')) === null);
+  await go(p0, '#/settings', 800); check('Classic is first in the look picker and selected', await p0.evaluate(() => { const o = document.querySelector('.skin-opt'); return o.dataset.skin === 'default' && o.classList.contains('on'); }));
+  await p0.click('.skin-opt[data-skin="realm"]'); await p0.waitForTimeout(200); check('picking Realm applies it', await p0.evaluate(() => document.documentElement.getAttribute('data-skin')) === 'realm'); await c0.close();
+  const realmOn = ctx => ctx.addInitScript(() => { try { const s = JSON.parse(localStorage.getItem('studyhub-settings') || '{}'); if (!s.skin) { s.skin = 'realm'; localStorage.setItem('studyhub-settings', JSON.stringify(s)); } } catch (e) {} });
+  const [c, p] = await mk(1360, 900, { serviceWorkers: 'block' }); await realmOn(c);
   await go(p, '#/', 1200);
-  check('Realm is the default look', await p.evaluate(() => document.documentElement.getAttribute('data-skin')) === 'realm');
+  check('Realm applies before first paint', await p.evaluate(() => document.documentElement.getAttribute('data-skin')) === 'realm');
   const fonts = await p.evaluate(async () => { await document.fonts.ready; const h = document.querySelector('.course-card h2'); return { cinzel: document.fonts.check('600 20px Cinzel'), h2: getComputedStyle(h).fontFamily, body: getComputedStyle(document.body).fontFamily, feat: getComputedStyle(document.body).fontFeatureSettings }; });
   log('fonts:', JSON.stringify(fonts));
   check('Cinzel loads from the site and sets the headings', fonts.cinzel && /Cinzel/.test(fonts.h2), fonts);
@@ -65,7 +71,7 @@ const T = require('./lib');
 
   // Classic takes it all away
   await go(p, '#/settings', 900);
-  check('Realm is first in the look picker and selected', await p.evaluate(() => { const o = document.querySelector('.skin-opt'); return o.dataset.skin === 'realm' && o.classList.contains('on'); }));
+  check('Realm is marked in the look picker', await p.evaluate(() => document.querySelector('.skin-opt[data-skin="realm"]').classList.contains('on')));
   await p.click('.skin-opt[data-skin="default"]'); await p.waitForTimeout(200);
   const classic = await p.evaluate(() => ({ skin: document.documentElement.getAttribute('data-skin'), h: getComputedStyle(document.querySelector('h1')).fontFamily, hat: getComputedStyle(document.querySelector('.bo-hat') || document.body).display }));
   check('Classic removes the look, Cinzel and the hat', classic.skin === null && !/Cinzel/.test(classic.h), classic);
@@ -77,14 +83,14 @@ const T = require('./lib');
   await c.close();
 
   // dark mode: dungeon, gold accent with dark text
-  const [cd, dp] = await mk(1360, 900, { serviceWorkers: 'block', colorScheme: 'dark' }); await go(dp, '#/', 1000);
+  const [cd, dp] = await mk(1360, 900, { serviceWorkers: 'block', colorScheme: 'dark' }); await realmOn(cd); await go(dp, '#/', 1000);
   const dark = await dp.evaluate(() => { const cs = getComputedStyle(document.documentElement); const b = document.querySelector('.hero-today'); return { bg: getComputedStyle(document.body).backgroundColor, accent: cs.getPropertyValue('--accent').trim(), ink: cs.getPropertyValue('--accent-ink').trim(), btn: b ? getComputedStyle(b).color : '' }; });
   log('dark:', JSON.stringify(dark));
   check('dark Realm is a starlit dungeon with a gold accent and dark button text', dark.bg === 'rgb(17, 14, 24)' && dark.accent === '#E8B84E' && dark.ink === '#1B1206' && dark.btn === 'rgb(27, 18, 6)', dark);
   await cd.close();
 
   // phones
-  const [cm, m] = await mk(390, 820, { serviceWorkers: 'block' });
+  const [cm, m] = await mk(390, 820, { serviceWorkers: 'block' }); await realmOn(cm);
   for (const h of ['#/', '#/sheet', '#/calc']) { await go(m, h, 900); check(`no sideways scroll on ${h}`, await m.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)); }
   await cm.close();
   // the account menu links the sheet (signed in, own context so synced preferences stay out of the other checks)

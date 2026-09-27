@@ -109,7 +109,7 @@
     floatPending += n; clearTimeout(floatTimer);
     floatTimer = setTimeout(() => {
       const amt = floatPending; floatPending = 0; if (reduced()) return;
-      const ring = $$('.goal-ring').find(el => el.offsetParent !== null); const el = document.createElement('div'); el.className = 'xp-float'; el.textContent = `+${amt} XP`; document.body.appendChild(el);
+      const ring = $$('.goal-ring').find(el => el.offsetParent !== null); const el = document.createElement('div'); el.className = 'xp-float'; el.innerHTML = `${App.pixel ? App.pixel('coin', 2) : ''}<span>+${amt} XP</span>`; document.body.appendChild(el);
       if (ring) { const r = ring.getBoundingClientRect(); el.style.left = (r.left + r.width / 2) + 'px'; el.style.top = (r.bottom + 4) + 'px'; } else { el.style.left = '50%'; el.style.top = '60px'; }
       setTimeout(() => el.remove(), 1300);
     }, 60);
@@ -122,7 +122,7 @@
     paintStats(); if (!opts.silent) floatXP(n);
     if (today >= goal && s.goalHit !== t) { setSetting('goalHit', t); if (App.noteGoalDay) App.noteGoalDay(); setTimeout(() => { confetti(); toast(`${icon('zap', 14)} Daily goal reached: ${today} XP today. Nice work!`, 4200); paintStats(); paintMascots(); }, 300); }
     const lv = level(xpTotal()); const seen = settings().levelSeen;
-    if (seen !== undefined && lv.n > seen) setTimeout(() => { confetti({ count: 220 }); toast(`${icon('award', 14)} Level up! Level ${lv.n} · ${lv.name}`, 4800); paintStats(); }, 900);
+    if (seen !== undefined && lv.n > seen) setTimeout(() => { confetti({ count: 220 }); toast(`${App.pixel ? App.pixel('star', 2) : icon('award', 14)} Level up! Level ${lv.n} · ${lv.name}`, 4800); paintStats(); }, 900);
     if (seen === undefined || lv.n !== seen) setSetting('levelSeen', lv.n);
     if (App.checkQuests && !opts.raw) App.checkQuests();
   }
@@ -158,7 +158,7 @@
   function statsHtml() {
     const st = streakAll(); const today = xpToday(), goal = dailyGoal(); const pct = Math.min(100, Math.round(100 * today / goal)); const lv = level(xpTotal());
     const r = 11, C = 2 * Math.PI * r;
-    return `<button class="streak-chip${st.activeToday ? ' lit' : ''}" data-action="hub-streak" aria-haspopup="true" aria-expanded="false" title="${st.activeToday ? `${st.n}-day streak, extended today` : st.n ? `${st.n}-day streak: study today to keep it` : 'Study today to start a streak'}">${icon('fire', 15)}<b>${st.n}</b></button>
+    return `<button class="streak-chip${st.activeToday ? ' lit' : ''}" data-action="hub-streak" aria-haspopup="true" aria-expanded="false" title="${st.activeToday ? `${st.n}-day streak, extended today` : st.n ? `${st.n}-day streak: study today to keep it` : 'Study today to start a streak'}">${App.pixel ? App.pixel('flame', 2) : icon('fire', 15)}<b>${st.n}</b></button>
       <button class="goal-ring${pct >= 100 ? ' done' : ''}" data-action="hub-goal" aria-haspopup="true" aria-expanded="false" title="${today} of ${goal} XP today · Level ${lv.n} ${lv.name}"><svg viewBox="0 0 28 28" width="30" height="30" aria-hidden="true"><circle class="ring-bg" cx="14" cy="14" r="${r}"/><circle class="ring-fg" cx="14" cy="14" r="${r}" stroke-dasharray="${C.toFixed(2)}" stroke-dashoffset="${(C * (1 - pct / 100)).toFixed(2)}"/></svg><span class="ring-lvl">${pct >= 100 ? icon('check', 12) : lv.n}</span></button>${App.hubExtra ? App.hubExtra() : ''}`;
   }
   function paintStats() {
@@ -214,8 +214,8 @@
   function dressEmpty(el) {
     if (el.dataset.dressed) return; el.dataset.dressed = '1'; const txt = el.textContent.trim();
     if (txt === 'Loading…') { el.classList.add('skel'); el.setAttribute('aria-busy', 'true'); el.setAttribute('aria-label', 'Loading'); el.innerHTML = '<i></i><i></i><i></i>'; return; }
-    if (el.classList.contains('small') || el.querySelector('svg, .bo-mini, .btn') || txt.length > 170 || /Results appear here/.test(txt)) return;
-    el.classList.add('bo'); el.insertAdjacentHTML('afterbegin', `<span class="bo-mini" aria-hidden="true">${bobcatSvg(36)}</span>`);
+    if (el.classList.contains('small') || el.classList.contains('skel') || el.querySelector('svg, .bo-mini, .btn') || txt.length > 170 || /Results appear here/.test(txt)) return;
+    el.classList.add('bo'); el.insertAdjacentHTML('afterbegin', `<span class="bo-mini" aria-hidden="true">${App.pixelFor ? App.pixelFor(txt) : bobcatSvg(36)}</span>`);
   }
   App.skeleton = (n = 3) => `<div class="empty skel" aria-busy="true" aria-label="Loading">${'<i></i>'.repeat(n)}</div>`;
   if (global.MutationObserver) { const mo = new MutationObserver(muts => { muts.forEach(m => m.addedNodes.forEach(n => { if (n.nodeType !== 1) return; if (n.matches && n.matches('.empty')) dressEmpty(n); if (n.querySelectorAll) n.querySelectorAll('.empty').forEach(dressEmpty); })); }); mo.observe(document.documentElement, { childList: true, subtree: true }); }

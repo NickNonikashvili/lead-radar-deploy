@@ -148,10 +148,10 @@
             ${S.nemesis ? `<a class="cs-item" href="${lessonHref(S.nemesis)}">${icon('sword', 20)}<span><b style="font-size:15px">${esc(S.nemesis.label)}</b><small>${esc(Courses[S.nemesis.id].short)} · ${Math.round(S.nemesis.acc * 100)}% on ${S.nemesis.a} answers. Go face it.</small></span></a>` : '<div class="empty small">No nemesis yet. Answer a few questions and one will appear.</div>'}</div>
           <div class="panel"><div class="panel-h"><div class="panel-title">${icon('potion')} Inventory</div></div>
             <div class="cs-inv">
-              <a class="cs-item" href="#/today">${icon('potion', 22)}<span><b>${S.potions}</b> Potion${S.potions === 1 ? '' : 's'} of Respite<small>Streak freezes; each covers a missed day</small></span></a>
-              <a class="cs-item" href="#/mistakes">${icon('sword', 22)}<span><b>${S.monsters}</b> Monster${S.monsters === 1 ? '' : 's'} to slay<small>Open items in your mistakes notebook</small></span></a>
-              <div class="cs-item">${icon('scroll', 22)}<span><b>${S.scrolls}</b> Scroll${S.scrolls === 1 ? '' : 's'}<small>Lines on your cheat sheets</small></span></div>
-              <div class="cs-item">${icon('book', 22)}<span><b>${S.tomes}</b> Tome${S.tomes === 1 ? '' : 's'}<small>Topics with your own notes</small></span></div>
+              <a class="cs-item" href="#/today">${App.pixel ? App.pixel('potion', 3) : icon('potion', 22)}<span><b>${S.potions}</b> Potion${S.potions === 1 ? '' : 's'} of Respite<small>Streak freezes; each covers a missed day</small></span></a>
+              <a class="cs-item" href="#/mistakes">${App.pixel ? App.pixel('invader', 3, { cls: 'px-monster' }) : icon('sword', 22)}<span><b>${S.monsters}</b> Monster${S.monsters === 1 ? '' : 's'} to slay<small>Open items in your mistakes notebook</small></span></a>
+              <div class="cs-item">${App.pixel ? App.pixel('scroll', 3) : icon('scroll', 22)}<span><b>${S.scrolls}</b> Scroll${S.scrolls === 1 ? '' : 's'}<small>Lines on your cheat sheets</small></span></div>
+              <div class="cs-item">${App.pixel ? App.pixel('book', 3) : icon('book', 22)}<span><b>${S.tomes}</b> Tome${S.tomes === 1 ? '' : 's'}<small>Topics with your own notes</small></span></div>
             </div></div>
         </div></div>`;
       const slot = $('#landing-account', root); if (slot && App.auth && App.auth.ready) App.auth.paintLandingAccount(slot);
