@@ -1190,7 +1190,7 @@ html.no-live-bg body::before { animation: none; opacity: 0.55; }
 }
 
 /* ============================================================
-   Lessons, quests, leagues, celebrations, ticker, level card
+   Lessons, quests, leagues, celebrations, level card
    ============================================================ */
 /* course cards v2 */
 .course-card { cursor: pointer; }
@@ -1200,14 +1200,6 @@ html.no-live-bg body::before { animation: none; opacity: 0.55; }
 .course-ring svg { position: absolute; inset: 0; transform: rotate(-90deg); }
 .course-ring .ring-bg, .course-ring .ring-fg { stroke-width: 3.5; }
 .course-ring small { position: relative; font-size: 9.5px; font-weight: 800; color: var(--ink); }
-.ticker { position: relative; overflow: hidden; margin: -10px 0 18px; padding: 8px 0; border-top: 1px dashed var(--border); border-bottom: 1px dashed var(--border); mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent); -webkit-mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent); }
-.ticker[hidden] { display: none; }
-.ticker-track { display: inline-flex; gap: 34px; white-space: nowrap; animation: ticker 60s linear infinite; padding-left: 100%; }
-.ticker:hover .ticker-track { animation-play-state: paused; }
-@keyframes ticker { from { transform: translateX(0); } to { transform: translateX(-50%); } }
-.tick { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--ink-2); }
-.tick small { color: var(--muted); }
-.tick-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); flex: none; }
 
 /* header extras */
 .quest-btn { display: inline-flex; align-items: center; gap: 4px; padding: 4px 9px 4px 7px; border-radius: 999px; border: 1px solid var(--border); background: var(--surface); color: var(--muted); font: inherit; font-size: 12.5px; font-weight: 700; cursor: pointer; transition: transform 0.15s; }
@@ -2227,3 +2219,44 @@ html[data-motion="off"] .px-go-q { animation: none; }
 .cs-item .px { flex: none; }
 @media print { .px-skyline, .px-loader { display: none !important; } }
 .cs-item .px-monster { color: var(--c-practice, #16A34A); }
+
+/* sidebar groups (Study, Plan, More tools, Community, Class info): one hue each */
+.nav-label[data-g="Study"]::before { background: var(--c-learn); } .nav-label[data-g="Plan"]::before { background: var(--c-reward); } .nav-label[data-g="More tools"]::before { background: var(--c-calm); } .nav-label[data-g="Class info"]::before { background: var(--c-slate); }
+.nav-group[data-g="Study"] .nav-item svg { color: var(--c-learn); } .nav-group[data-g="Plan"] .nav-item svg { color: var(--c-reward); } .nav-group[data-g="More tools"] .nav-item svg { color: var(--c-calm); } .nav-group[data-g="Class info"] .nav-item svg { color: var(--c-slate); }
+
+/* simpler screens: things that are hidden stay hidden, a text-style button, the readiness line on the exam card, the two-panel dashboard, the one-line preview note */
+.icon-btn[hidden], .hub-slot[hidden] { display: none; }
+.linkbtn { background: none; border: 0; padding: 0; font: inherit; color: var(--accent); font-weight: 600; text-decoration: none; cursor: pointer; display: inline-flex; align-items: center; gap: 3px; }
+.linkbtn:hover { text-decoration: underline; }
+.linkbtn svg { width: 12px; height: 12px; }
+.ready-line { margin-top: 8px; font-size: 13.5px; opacity: 0.92; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; }
+.hero-exam .ready-line .linkbtn { color: inherit; text-decoration: underline; text-underline-offset: 3px; }
+.dash-main { align-items: start; }
+@media (max-width: 860px) { .dash-main { grid-template-columns: minmax(0, 1fr); } }
+.preview-banner { padding-top: 6px; padding-bottom: 6px; }
+.preview-banner .linkbtn { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
+.preview-banner .icon-btn { width: 26px; height: 26px; background: transparent; border-color: transparent; }
+/* start page groups: a heading per group, the quick actions, the three first steps */
+.land-sec { margin-top: 26px; }
+.land-sec > .sec-title, .land-sec .sec-h .sec-title { font-size: 13px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 10px 2px; }
+.land-sec .sec-h { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.land-sec .sec-h .linkbtn { font-size: 13px; }
+.land-sec .today-card, .land-sec .resume-card, .land-sec .recap-card { margin: 0 0 10px; }
+.land-sec .landing-tabs { margin-top: 0; }
+.land-sec .guides-strip { margin-top: 0; }
+.quick-row { display: flex; flex-wrap: wrap; gap: 8px; }
+.quick-row .btn svg { flex: none; }
+.start-steps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-bottom: 12px; }
+.start-step { display: flex; gap: 10px; align-items: flex-start; padding: 12px 14px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); }
+.start-step b { display: block; font-size: 14.5px; }
+.start-step small { display: block; color: var(--muted); font-size: 12.5px; line-height: 1.4; margin-top: 2px; }
+.ss-n { flex: none; width: 26px; height: 26px; border-radius: 50%; display: inline-grid; place-items: center; font-weight: 700; font-size: 13px; background: var(--accent-soft); color: var(--accent-deep, var(--accent)); }
+.course-foot .course-dash { font-size: 13.5px; }
+.hero .hero-count { margin-top: 12px; }
+@media (max-width: 760px) { .start-steps { grid-template-columns: minmax(0, 1fr); } .land-sec { margin-top: 20px; } }
+@media (max-width: 560px) { .course-foot .course-open { flex: 1 1 100%; white-space: normal; text-align: center; } .course-foot .course-dash { margin-right: auto; } }
+.preview-banner { flex-wrap: nowrap; }
+.preview-banner > span:first-child { display: block; min-width: 0; }
+.preview-banner > span:first-child > svg { vertical-align: -2px; margin-right: 2px; }
+.preview-banner .linkbtn { display: inline; white-space: nowrap; }
+.preview-banner .icon-btn { flex: none; }

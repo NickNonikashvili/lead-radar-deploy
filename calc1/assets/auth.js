@@ -263,11 +263,12 @@
   Auth.paintLandingAccount = paintLandingAccount;
   function paintBanner() {
     let b = $('#preview-banner');
-    if (Auth.user || !Auth.ready) { if (b) b.remove(); document.documentElement.classList.toggle('guest', !Auth.user && Auth.ready); return; }
+    const gone = (() => { try { return localStorage.getItem('mh-banner-hidden') === '1'; } catch (e) { return false; } })();
+    if (Auth.user || !Auth.ready || gone) { if (b) b.remove(); document.documentElement.classList.toggle('guest', !Auth.user && Auth.ready); return; }
     document.documentElement.classList.add('guest');
     if (!b) { b = document.createElement('div'); b.id = 'preview-banner'; b.className = 'preview-banner'; const main = $('.main'); const top = $('#topbar'); if (main && top) main.insertBefore(b, top.nextSibling); else document.body.prepend(b); }
-    b.innerHTML = `<span>${icon('eye', 14)} <b>Preview.</b> Sign up with your montana.edu email to unlock every tool and keep your progress on all your devices.</span><span class="row gap-sm"><button class="btn xs primary" data-action="b-signup">Sign up</button><button class="btn xs ghost" data-action="b-login">Log in</button></span>`;
-    bind(b, { 'b-signup': () => Auth.open('signup'), 'b-login': () => Auth.open('login') });
+    b.innerHTML = `<span>${icon('eye', 14)} <b>Preview.</b> <button class="linkbtn" data-action="b-signup">Sign up</button> with your montana.edu email to unlock every tool and keep your progress.</span><button class="icon-btn ghost" data-action="b-hide" aria-label="Hide this message">${icon('x', 14)}</button>`;
+    bind(b, { 'b-signup': () => Auth.open('signup'), 'b-hide': () => { try { localStorage.setItem('mh-banner-hidden', '1'); } catch (e) {} b.remove(); } });
   }
 
   /* ---------- lock cards used by views ---------- */

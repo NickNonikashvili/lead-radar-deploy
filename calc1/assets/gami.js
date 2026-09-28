@@ -164,7 +164,8 @@
   function paintStats() {
     try { autoFreeze(); } catch (e) {}
     let top = $('#topbar-hub'); if (!top) { const acct = $('#topbar-account'); if (acct) { top = document.createElement('span'); top.id = 'topbar-hub'; top.className = 'hub-slot'; acct.before(top); } }
-    $$('.hub-slot').forEach(el => { el.innerHTML = statsHtml(); bind(el, { 'hub-streak': b => streakPopover(b), 'hub-goal': b => goalPopover(b), 'hub-quests': b => { if (App.questsPopover) App.questsPopover(b); } }); });
+    const fresh = !xpTotal() && !streakAll().longest;   // brand-new visitors: no streak or XP widgets until they have done something
+    $$('.hub-slot').forEach(el => { el.hidden = fresh; el.innerHTML = statsHtml(); bind(el, { 'hub-streak': b => streakPopover(b), 'hub-goal': b => goalPopover(b), 'hub-quests': b => { if (App.questsPopover) App.questsPopover(b); } }); });
     const lv = level(xpTotal()); $$('.acct-level').forEach(el => { el.innerHTML = `<span class="lvl-badge">${lv.n}</span><div class="acct-level-body"><b>Level ${lv.n} · ${lv.name}</b><div class="bar sm"><div class="bar-fill" style="width:${lv.pct}%"></div></div></div>`; el.title = `${lv.xp} XP · ${lv.toNext} XP to level ${lv.n + 1}`; });
   }
   function streakPopover(anchor) {

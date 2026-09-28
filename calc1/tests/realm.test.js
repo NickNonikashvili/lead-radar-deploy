@@ -30,7 +30,7 @@ const T = require('./lib');
   check('natural 1 sends you to your nemesis lesson', out[0].kind === 'fumble' && /\/lesson\?topics=/.test(out[0].href), out[0]);
   check('middle rolls set a DC and a lesson', [out[1], out[2]].every(o => (o.kind === 'pass' || o.kind === 'fail') && o.dc >= 5 && o.dc <= 20 && /\/lesson\?topics=/.test(o.href) && o.topic) && (out[1].kind === 'pass') === (7 >= out[1].dc), out.slice(1, 3));
   check('natural 20 grants a Blitz', out[3].kind === 'crit' && /\/blitz$/.test(out[3].href), out[3]);
-  await p.click('.landing-top [data-roll="all"]'); await p.waitForTimeout(80);
+  await p.click('.land-next [data-roll="all"]'); await p.waitForTimeout(80);
   check('rolling tumbles the die', await p.evaluate(() => !!document.querySelector('#roll-modal .d20-big.rolling')));
   await p.waitForTimeout(1500);
   const roll = await p.evaluate(() => { const m = document.querySelector('#roll-modal'); const n = +m.querySelector('.d20-big text').textContent; return { n, verdict: m.querySelector('.roll-verdict').textContent, go: m.querySelector('[data-act="go"]').getAttribute('href'), focus: document.activeElement === m.querySelector('[data-act="go"]') }; });

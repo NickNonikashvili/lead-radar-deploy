@@ -4,7 +4,7 @@ const T = require('./lib');
 
   const [c, p] = await mk(); await go(p, '#/'); await login(p, 'alice.a@montana.edu'); await p.reload(); await p.waitForTimeout(1500); if (await p.$('.celebrate')) await p.keyboard.press('Escape');
   await p.evaluate(() => { const s = App.settings(); delete s.lastVisit; s.courses = ['calc', 'physics', 'precalc', 'writ', 'csci']; localStorage.setItem('studyhub-settings', JSON.stringify(s)); });
-  await go(p, '#/'); await p.waitForTimeout(400); log('landing: stat strip:', await txt(p, '.stat-strip'), '| resume card (none yet):', !(await p.$('.resume-card')), '| tabbar hidden on desktop:', await p.$eval('#tabbar', e => getComputedStyle(e).display === 'none'));
+  await go(p, '#/'); await p.waitForTimeout(400); log('landing: stat strip (guests only):', !!(await p.$('.stat-strip')), '| resume card (none yet):', !(await p.$('.resume-card')), '| tabbar hidden on desktop:', await p.$eval('#tabbar', e => getComputedStyle(e).display === 'none'));
   await go(p, '#/calc/notes/1.3'); await p.waitForTimeout(600); log('breadcrumb:', await txt(p, '#topbar-title'), '| crumb link:', await p.$eval('#topbar-title .crumb', e => e.getAttribute('href')), '| lastVisit:', JSON.stringify(await p.evaluate(() => { const l = App.settings().lastVisit; return { hash: l.hash, label: l.label, detail: l.detail }; })));
   log('switcher dots:', await p.$$eval('.switch-btn', b => b.map(x => x.dataset.c || 'home').join(',')));
   await p.evaluate(() => { const s = App.settings(); s.lastVisit.t = Date.now() - 3600000; localStorage.setItem('studyhub-settings', JSON.stringify(s)); });

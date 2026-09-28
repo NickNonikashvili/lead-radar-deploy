@@ -2,7 +2,7 @@
    Mathub — quests, leagues, celebrations and sound
    Daily and weekly quests with XP rewards and a double-XP boost,
    weekly leagues (server: api/social.php 'league'), the celebration
-   overlay, synthesized sound effects and the landing activity ticker.
+   overlay, synthesized sound effects.
    Loaded after gami.js.
    ============================================================ */
 (function (global) {
@@ -165,14 +165,5 @@
       el.innerHTML = compact ? `<a class="league-pill" href="${link}">${gem(r.league, 20)}<span>${TIERS[r.league]} League</span><b>${r.me.rank ? '#' + r.me.rank : '—'}</b><small>${r.me.xp} XP · ends in ${endsIn(r.week_end)}</small></a>`
         : `<div class="league-mini"><div class="league-mini-head">${gem(r.league, 34)}<div><b>${TIERS[r.league]} League</b><div class="small muted">${r.me.rank ? `You are #${r.me.rank}` : 'No XP yet this week'} · ends in ${endsIn(r.week_end)}</div></div><a class="btn xs" href="${link}">Full board</a></div>${boardHtml(r, 5)}</div>`;
     }); });
-  };
-
-  /* ---------- landing activity ticker ---------- */
-  App.fillTicker = async function (el) {
-    if (!el) return; let items = []; try { items = (await api('activity')).items || []; } catch (e) { items = []; }
-    items = items.filter(x => x.text).slice(0, 14); if (!items.length) { el.hidden = true; return; }
-    const ago = ts => { const s = Math.max(0, Date.now() / 1000 - ts); return s < 3600 ? `${Math.max(1, Math.floor(s / 60))}m ago` : s < 86400 ? `${Math.floor(s / 3600)}h ago` : `${Math.floor(s / 86400)}d ago`; };
-    const one = items.map(x => `<span class="tick"><span class="tick-dot"></span>${esc(x.text)}<small>${ago(x.created)}</small></span>`).join('');
-    el.hidden = false; el.innerHTML = `<div class="ticker-track">${one}${one}</div>`;
   };
 })(window);
