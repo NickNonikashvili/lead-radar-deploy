@@ -14,7 +14,7 @@
   const R = () => global.MATHUB_RESOURCES || { KINDS: {}, GROUPS: [], ITEMS: [] };
   const GUIDES = () => global.MATHUB_GUIDES || [];
   const KIND_ICON = { video: 'play', practice: 'list', tool: 'flask', reading: 'book', reference: 'file', msu: 'pin', community: 'users', app: 'grid', wellbeing: 'info' };
-  const COURSE_GROUPS = ['calc', 'physics', 'precalc', 'writ', 'csci'];
+  const COURSE_GROUPS = ['calc', 'physics', 'precalc', 'writ', 'csci', 'biob', 'kin', 'psyx'];
   const saved = () => Array.isArray(settings().savedResources) ? settings().savedResources : [];
   const isSaved = u => saved().includes(u);
   const toggleSaved = u => { const s = saved(); const i = s.indexOf(u); if (i >= 0) s.splice(i, 1); else s.unshift(u); setSetting('savedResources', s.slice(0, 200)); return i < 0; };

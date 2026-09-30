@@ -2260,3 +2260,57 @@ html[data-motion="off"] .px-go-q { animation: none; }
 .preview-banner > span:first-child > svg { vertical-align: -2px; margin-right: 2px; }
 .preview-banner .linkbtn { display: inline; white-space: nowrap; }
 .preview-banner .icon-btn { flex: none; }
+
+/* definition lines on the cheat sheet (classes built on vocabulary rather than formulas) */
+.fs-def { font-size: 14px; line-height: 1.45; color: var(--ink); }
+.fs-row:has(.fs-def) { align-items: start; }
+.cs-def { font-size: 13px; color: var(--ink-2); }
+
+/* ============================================================
+   Class colours for BIOB 160 (lime), KIN 322 (amber) and PSYX 340 (rose).
+   Kept together here, after the brand block, so they win over the
+   theme blocks above at equal specificity.
+   ============================================================ */
+:root {
+  --biob-accent: #4D7C0F; --biob-accent-ink: #FFFFFF; --biob-accent-soft: #ECF7D9; --biob-accent-line: #B9DC86; --biob-accent-deep: #3F6212;
+  --kin-accent: #B45309; --kin-accent-ink: #FFFFFF; --kin-accent-soft: #FEF0DB; --kin-accent-line: #F2C27E; --kin-accent-deep: #92400E;
+  --psyx-accent: #BE185D; --psyx-accent-ink: #FFFFFF; --psyx-accent-soft: #FCE7F3; --psyx-accent-line: #F5A8CC; --psyx-accent-deep: #9D174D;
+  --chip-biob: #3F6212; --chip-kin: #92400E; --chip-psyx: #9D174D;
+}
+:root[data-theme="dark"] {
+  --biob-accent: #A3E635; --biob-accent-ink: #1A2E05; --biob-accent-soft: #22300F; --biob-accent-line: #4D6B1F; --biob-accent-deep: #84CC16;
+  --kin-accent: #FBBF24; --kin-accent-ink: #2A1A03; --kin-accent-soft: #3A2A10; --kin-accent-line: #8A6420; --kin-accent-deep: #F59E0B;
+  --psyx-accent: #F472B6; --psyx-accent-ink: #2A0A18; --psyx-accent-soft: #3A1526; --psyx-accent-line: #8A3A62; --psyx-accent-deep: #EC4899;
+  --chip-biob: var(--biob-accent); --chip-kin: var(--kin-accent); --chip-psyx: var(--psyx-accent);
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --biob-accent: #A3E635; --biob-accent-ink: #1A2E05; --biob-accent-soft: #22300F; --biob-accent-line: #4D6B1F; --biob-accent-deep: #84CC16;
+  --kin-accent: #FBBF24; --kin-accent-ink: #2A1A03; --kin-accent-soft: #3A2A10; --kin-accent-line: #8A6420; --kin-accent-deep: #F59E0B;
+  --psyx-accent: #F472B6; --psyx-accent-ink: #2A0A18; --psyx-accent-soft: #3A1526; --psyx-accent-line: #8A3A62; --psyx-accent-deep: #EC4899;
+  --chip-biob: var(--biob-accent); --chip-kin: var(--kin-accent); --chip-psyx: var(--psyx-accent);
+} }
+:root[data-course="biob"] { --accent: var(--biob-accent); --accent-ink: var(--biob-accent-ink); --accent-soft: var(--biob-accent-soft); --accent-line: var(--biob-accent-line); --accent-deep: var(--biob-accent-deep); }
+:root[data-course="kin"] { --accent: var(--kin-accent); --accent-ink: var(--kin-accent-ink); --accent-soft: var(--kin-accent-soft); --accent-line: var(--kin-accent-line); --accent-deep: var(--kin-accent-deep); }
+:root[data-course="psyx"] { --accent: var(--psyx-accent); --accent-ink: var(--psyx-accent-ink); --accent-soft: var(--psyx-accent-soft); --accent-line: var(--psyx-accent-line); --accent-deep: var(--psyx-accent-deep); }
+.course-card.biob, .resume-card.course-biob { --accent: var(--biob-accent); --accent-ink: var(--biob-accent-ink); --accent-soft: var(--biob-accent-soft); --accent-line: var(--biob-accent-line); }
+.course-card.kin, .resume-card.course-kin { --accent: var(--kin-accent); --accent-ink: var(--kin-accent-ink); --accent-soft: var(--kin-accent-soft); --accent-line: var(--kin-accent-line); }
+.course-card.psyx, .resume-card.course-psyx { --accent: var(--psyx-accent); --accent-ink: var(--psyx-accent-ink); --accent-soft: var(--psyx-accent-soft); --accent-line: var(--psyx-accent-line); }
+.chip.course-biob { background: var(--biob-accent-soft); color: var(--chip-biob); }
+.chip.course-kin { background: var(--kin-accent-soft); color: var(--chip-kin); }
+.chip.course-psyx { background: var(--psyx-accent-soft); color: var(--chip-psyx); }
+.switch-btn[data-c="biob"]::before { background: var(--biob-accent); } .switch-btn[data-c="kin"]::before { background: var(--kin-accent); } .switch-btn[data-c="psyx"]::before { background: var(--psyx-accent); }
+/* the exam hero keeps white text, so in dark mode it uses the deeper light-mode shades of these bright accents */
+:root[data-theme="dark"][data-course="biob"] .hero-exam { background: linear-gradient(135deg, #4D7C0F 0%, #365314 100%); }
+:root[data-theme="dark"][data-course="kin"] .hero-exam { background: linear-gradient(135deg, #B45309 0%, #7C2D12 100%); }
+:root[data-theme="dark"][data-course="psyx"] .hero-exam { background: linear-gradient(135deg, #BE185D 0%, #831843 100%); }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"])[data-course="biob"] .hero-exam { background: linear-gradient(135deg, #4D7C0F 0%, #365314 100%); }
+  :root:not([data-theme="light"])[data-course="kin"] .hero-exam { background: linear-gradient(135deg, #B45309 0%, #7C2D12 100%); }
+  :root:not([data-theme="light"])[data-course="psyx"] .hero-exam { background: linear-gradient(135deg, #BE185D 0%, #831843 100%); }
+}
+:root[data-theme="dark"][data-course="biob"] .hero-exam .btn.primary { color: #3F6212; } :root[data-theme="dark"][data-course="kin"] .hero-exam .btn.primary { color: #92400E; } :root[data-theme="dark"][data-course="psyx"] .hero-exam .btn.primary { color: #9D174D; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"])[data-course="biob"] .hero-exam .btn.primary { color: #3F6212; } :root:not([data-theme="light"])[data-course="kin"] .hero-exam .btn.primary { color: #92400E; } :root:not([data-theme="light"])[data-course="psyx"] .hero-exam .btn.primary { color: #9D174D; }
+}
+.cal-up { display: flex; gap: 10px; padding: 4px 0; border-top: 1px dashed var(--border); } .cal-up:first-of-type { border-top: 0; }
+.cal-up .mono { flex: none; min-width: 52px; }

@@ -44,12 +44,12 @@
   function applyServerPrefs() {
     const u = Auth.user; if (!u || u.local) return;
     if (Array.isArray(u.courses)) App.setSetting('courses', u.courses);
-    if (u.sections && typeof u.sections === 'object') Object.entries(u.sections).forEach(([cid, v]) => { if (!v) return; if (v.section !== undefined) App.setCourseSetting(cid, 'section', v.section || ''); if (v.examTime !== undefined) App.setCourseSetting(cid, 'examTime', v.examTime || ''); if (v.labDay) App.setCourseSetting(cid, 'labDay', v.labDay); });
+    if (u.sections && typeof u.sections === 'object') Object.entries(u.sections).forEach(([cid, v]) => { if (!v) return; if (v.section !== undefined) App.setCourseSetting(cid, 'section', v.section || ''); if (v.examTime !== undefined) App.setCourseSetting(cid, 'examTime', v.examTime || ''); if (v.labDay) App.setCourseSetting(cid, 'labDay', v.labDay); if (App.applyVariant) App.applyVariant(global.Courses[cid]); });
   }
   /** Saves class/section/notification preferences to the account (server) and mirrors them locally. */
   Auth.savePrefs = async function (patch) {
     if (patch.courses) App.setSetting('courses', patch.courses);
-    if (patch.sections) Object.entries(patch.sections).forEach(([cid, v]) => { App.setCourseSetting(cid, 'section', v.section || ''); App.setCourseSetting(cid, 'examTime', v.examTime || ''); if (v.labDay) App.setCourseSetting(cid, 'labDay', v.labDay); });
+    if (patch.sections) Object.entries(patch.sections).forEach(([cid, v]) => { App.setCourseSetting(cid, 'section', v.section || ''); App.setCourseSetting(cid, 'examTime', v.examTime || ''); if (v.labDay) App.setCourseSetting(cid, 'labDay', v.labDay); if (App.applyVariant) App.applyVariant(global.Courses[cid]); });
     if (Auth.user && Auth.mode === 'server' && !Auth.unreachable) { const r = await call('profile', patch); Auth.user = Object.assign(Auth.user, r.user); }
     else if (Auth.user) { Object.assign(Auth.user, patch); if (Auth.user.local) writeJSON(LOCAL_KEY, Auth.user); }
     if (App.rebuildNav) App.rebuildNav();

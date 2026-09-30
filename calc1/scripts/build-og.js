@@ -13,8 +13,8 @@ const fs = require('fs'); const path = require('path');
 const ROOT = path.resolve(__dirname, '..');
 let chromium; try { ({ chromium } = require('playwright')); } catch (e) { ({ chromium } = require(path.join(ROOT, 'tests', 'node_modules', 'playwright'))); }
 global.window = {}; require(path.join(ROOT, 'assets', 'courses-index.js')); const Courses = window.Courses;
-const ORDER = ['calc', 'physics', 'precalc', 'writ', 'csci'].filter(id => Courses[id]);
-const COLORS = { site: ['#0B1B3A', '#10307A', '#1F5EFF'], calc: ['#0f1f4d', '#2B55B8', '#4C7BE0'], physics: ['#063d44', '#0E7C86', '#2AA6B0'], precalc: ['#4a1a08', '#B5451B', '#E07A3F'], writ: ['#33153f', '#7A3E9D', '#A66BC7'], csci: ['#0f3a12', '#2E7D32', '#5AA85E'] };
+const ORDER = ['calc', 'physics', 'precalc', 'writ', 'csci', 'biob', 'kin', 'psyx'].filter(id => Courses[id]);
+const COLORS = { site: ['#0B1B3A', '#10307A', '#1F5EFF'], calc: ['#0f1f4d', '#2B55B8', '#4C7BE0'], physics: ['#063d44', '#0E7C86', '#2AA6B0'], precalc: ['#4a1a08', '#B5451B', '#E07A3F'], writ: ['#33153f', '#7A3E9D', '#A66BC7'], csci: ['#0f3a12', '#2E7D32', '#5AA85E'], biob: ['#1f3306', '#4D7C0F', '#7FB23A'], kin: ['#3d1c03', '#B45309', '#E08A3A'], psyx: ['#420a24', '#BE185D', '#E05592'] };
 const LOGO = '<svg width="124" height="102" viewBox="-2 -2 102 84"><path fill="#fff" d="M0 0H20V79H0Z"/><path fill="#fff" d="M20 0L52 30V44L20 14Z"/><path fill="#fff" d="M77 20L97 10V79H77Z"/><path stroke="#5B8CFF" fill="none" stroke-width="5.2" stroke-linecap="round" d="M22 60Q45 52 89 10"/><path fill="#5B8CFF" d="M96 4L93.6 13.1L86.8 5.8Z"/></svg>';
 // Fonts: Google Fonts by default; set MATHUB_FONT_CSS to a local stylesheet (same @font-face rules, file:// urls) when the build machine has no web access.
 const FONT_LINK = (process.env.MATHUB_FONT_CSS ? `<style>${fs.readFileSync(process.env.MATHUB_FONT_CSS, 'utf8')}</style>` : '<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700&display=swap" rel="stylesheet">')
@@ -40,12 +40,13 @@ const HEAD = `<!DOCTYPE html><html><head><meta charset="utf-8">${FONT_LINK}<styl
   .chip{padding:10px 18px;border-radius:999px;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.35);font-weight:700;font-size:22px;letter-spacing:.01em}
   .url{position:absolute;right:72px;bottom:70px;font-size:24px;font-weight:600;opacity:.85}
   .card.cls .chips{bottom:122px} .card.cls .url{left:72px;right:auto;bottom:66px}
+  .chips.many{right:72px;flex-wrap:wrap;gap:10px} .chips.many .chip{font-size:19px;padding:8px 15px}
 </style></head><body>`;
 const card = (colors, inner, cls = '') => `${HEAD}<div class="card${cls ? ' ' + cls : ''}" style="background:linear-gradient(135deg,${colors[0]} 0%,${colors[1]} 55%,${colors[2]} 100%)"><div class="glow"></div><div class="glow2"></div>${inner}</div></body></html>`;
 const site = card(COLORS.site, `<div class="brand">${LOGO}<div class="lock"><b>Mathub</b><span class="tagline">Learn <i>/</i> Practice <i>/</i> Excel</span></div></div>
 <div class="tag">Free study hub for Montana State classes</div>
 <div class="sub">Topic notes, endless practice, flashcards, deadline calendars, simulators, a Python playground and a class board. Built by a Bobcat, for Bobcats.</div>
-<div class="chips">${ORDER.map(c => `<span class="chip">${esc(Courses[c].code)}</span>`).join('')}</div><div class="url">mathub.space</div>`);
+<div class="chips${ORDER.length > 6 ? ' many' : ''}">${ORDER.map(c => `<span class="chip">${esc(Courses[c].code)}</span>`).join('')}</div><div class="url">mathub.space</div>`, ORDER.length > 6 ? 'cls' : '');
 const classCard = c => { const C = Courses[c]; const bits = [`${C.sectionCount} topic guides`, C.flashcardCount ? `${C.flashcardCount} flashcards` : null, C.hasQuiz ? 'endless practice' : (C.READINGS ? 'read-along readings' : null), 'deadline calendar'].filter(Boolean);
   return card(COLORS[c] || COLORS.site, `<div class="brand">${LOGO}<div class="lock"><b>Mathub</b><span class="tagline">Learn <i>/</i> Practice <i>/</i> Excel</span></div><small>Montana State · ${esc(C.term)}</small></div>
 <div class="tag big">${esc(C.code)} · ${esc(C.name)}</div>

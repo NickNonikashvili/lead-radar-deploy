@@ -13,7 +13,7 @@ const T = require('./lib');
   await p.click('.rs-groups .chip[data-g="saved"]'); await p.waitForTimeout(200); check('saved tab lists it', (await p.$$('.rs-item')).length === 1);
   check('external links open new tab', await p.$$eval('.rs-item h3 a', a => a.filter(x => /^https?:/.test(x.getAttribute('href'))).every(x => x.target === '_blank' && /noopener/.test(x.rel))));
   await p.click('[data-action="rs-suggest"]'); await p.waitForTimeout(200); check('suggest opens report with resource reason', !!(await p.$('#report-modal')) && (await p.$eval('#rp-reason', e => e.value)) === 'resource'); await p.keyboard.press('Escape'); await p.waitForTimeout(100);
-  await go(p, '#/guides', 600); check('guides index', (await p.$$('.guide-card')).length === 16);
+  await go(p, '#/guides', 600); check('guides index', (await p.$$('.guide-card')).length === 17);
   await p.click('.rs-groups .chip[data-f="csci"]'); await p.waitForTimeout(150); const nc = (await p.$$('.guide-card')).length; check('guides class filter', nc < 16 && nc >= 8, nc);
   await go(p, '#/guides/math-exam', 600); check('guide renders', (await p.$$('.guide h2')).length >= 4 && !!(await p.$('.guide-tip')) && !!(await p.$('.guide-quote')));
   check('inline links render', await p.$eval('.guide', e => !!e.querySelector('a[href="#/calc/practice"]') && e.innerHTML.includes('<b>do</b>')));

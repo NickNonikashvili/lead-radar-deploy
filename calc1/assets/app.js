@@ -11,7 +11,7 @@
   'use strict';
   const BUILD = global.MATHUB_BUILD || 'dev';
   const Courses = global.Courses || (global.Courses = {});
-  const COURSE_ORDER = ['calc', 'physics', 'precalc', 'writ', 'csci'];
+  const COURSE_ORDER = ['calc', 'physics', 'precalc', 'writ', 'csci', 'biob', 'kin', 'psyx'];
   const GLOBAL_VIEWS = ['contact', 'forum', 'policy', 'admin', 'meet', 'badges', 'challenge', 'mock', 'people', 'settings', 'leagues', 'gpa', 'today', 'whatsnew', 'resources', 'guides', 'focus', 'recap', 'tools', 'mistakes', 'join', 'sheet'];   // pages that work without a course, e.g. #/contact
   const SITE = 'Mathub';
   let D = null, QZ = null;        // current course data and quiz module
@@ -87,6 +87,11 @@
   const setSetting = (k, v) => { const s = settings(); s[k] = v; writeJSON('studyhub-settings', s); if (global.App && global.App.onSetting) { try { global.App.onSetting(k); } catch (e) {} } };
   const courseSetting = (courseId, k, def) => { const s = settings(); return (s[courseId] && k in s[courseId]) ? s[courseId][k] : def; };
   const setCourseSetting = (courseId, k, v) => { const s = settings(); s[courseId] = Object.assign({}, s[courseId], { [k]: v }); writeJSON('studyhub-settings', s); };
+  /* classes whose sections meet on different days (VARIANTS): calendar rows carry a section id in slot 3 and exams carry dates per section.
+     The section comes from the Settings picker, or from the section number typed at sign-up ("01" → "1"). */
+  const sectionVariant = C => { const V = C && C.VARIANTS; if (!V) return ''; const has = id => V.options.some(o => o.id === id); const pick = String(courseSetting(C.id, 'variant', '') || ''); if (has(pick)) return pick; const typed = String(parseInt(courseSetting(C.id, 'section', ''), 10) || ''); return has(typed) ? typed : V.default; };
+  const applyVariant = C => { if (!C || !C.VARIANTS) return; const v = sectionVariant(C); if (C.CALENDAR !== C._calView) C._calAll = C.CALENDAR; C._calView = (C._calAll || []).filter(e => !e[4] || e[4] === v); C.CALENDAR = C._calView; (C.EXAMS || []).forEach(ex => { if (ex.dates && ex.dates[v]) { ex.date = ex.dates[v]; if (ex.dateLabels && ex.dateLabels[v]) ex.dateLabel = ex.dateLabels[v]; } }); };
+  Object.keys(global.Courses || {}).forEach(id => applyVariant(global.Courses[id]));
 
   /* ---------- dates ---------- */
   const DOW = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -229,7 +234,7 @@
   }
 
   /* ---------- App object ---------- */
-  const App = { views: {}, current: null, icon, esc, $, $$, bind, on, toast, store, settings, setSetting, courseSetting, setCourseSetting, typeset, compileExpr, d1, d2, parseNumber, fmtNum, cssVar, fitCanvas, niceStep,
+  const App = { views: {}, current: null, icon, esc, $, $$, bind, on, toast, store, settings, setSetting, courseSetting, setCourseSetting, applyVariant, sectionVariant, typeset, compileExpr, d1, d2, parseNumber, fmtNum, cssVar, fitCanvas, niceStep,
     recordAnswer, markActivity, progress, streak, unitMastery, cardsMastered, checklistState, todayISO, toISO, parseISO, fmtDate, shortDate, addDays, daysBetween, relDays, examStatus, secLabel, secById, topicsForSection,
     nextExam: () => nextExam(D), currentSection: () => currentSection(D), upcomingDeadlines: n => upcomingDeadlines(D, n), eventsOn: iso => eventsOn(D, iso),
     onCourse(fn) { courseHooks.push(fn); if (D) fn(D); }, BUILD, SITE, COURSE_ORDER, asOf, semesterState: () => semesterState(D),
@@ -287,7 +292,7 @@
     const one = src => new Promise((res, rej) => { if (document.querySelector(`script[data-src="${src}"]`)) return res(); const sc = document.createElement('script'); sc.src = `assets/${src}.js?v=${BUILD}`; sc.dataset.src = src; const t0 = performance.now(); sc.onload = () => { emit('mh:file', { src, url: sc.src, ms: Math.round(performance.now() - t0) }); res(); }; sc.onerror = () => { sc.remove(); rej(new Error(`Could not download ${src}.js. Check your connection and try again.`)); }; document.head.appendChild(sc); });
     if (App.loadbar) App.loadbar.start();
     emit('mh:load', { files: C.files.slice() });
-    loading[id] = (async () => { try { for (const f of C.files) await one(f); } finally { delete loading[id]; if (App.loadbar) App.loadbar.done(); } const F = Courses[id]; F.loaded = true; delete F.stub; Search.index = null; emit('mh:loaded', {}); return F; })();
+    loading[id] = (async () => { try { for (const f of C.files) await one(f); } finally { delete loading[id]; if (App.loadbar) App.loadbar.done(); } const F = Courses[id]; F.loaded = true; delete F.stub; applyVariant(F); Search.index = null; emit('mh:loaded', {}); return F; })();
     return loading[id];
   };
   App.loadCourses = ids => Promise.all(ids.map(id => App.loadCourse(id).catch(() => null)));
@@ -640,7 +645,7 @@
           <div><div class="eyebrow">Next exam · ${ex.weight}% of the grade</div>
             <h2 style="font-size:26px;margin-top:2px">${esc(ex.name)} <span class="muted" style="font-size:16px;font-weight:400">· ${esc(ex.dateLabel || fmtDate(ex.date, true))}</span></h2>
             ${courseSetting(D.id, 'section', '') || courseSetting(D.id, 'examTime', '') ? `<p class="small" style="opacity:.85;margin-top:2px">${icon('info', 12)} Your section${courseSetting(D.id, 'section', '') ? ' ' + esc(courseSetting(D.id, 'section', '')) : ''}${courseSetting(D.id, 'examTime', '') ? ' · ' + esc(courseSetting(D.id, 'examTime', '')) : ''}</p>` : ''}
-            <p class="muted mt-1">Covers ${esc(ex.covers)}. Closed book, no devices.</p>
+            <p class="muted mt-1">Covers ${esc(ex.covers)}. ${esc(ex.format || 'Closed book, no devices.')}</p>
             <div class="bar-row mt-2"><span>Prep checklist</span><span class="mono">${cl.done} / ${cl.items.length}</span><div class="bar"><div class="bar-fill gold" style="width:${cl.items.length ? 100 * cl.done / cl.items.length : 0}%"></div></div></div>${readyLine}
             <div class="row mt-2">${D.PRACTICE && D.PRACTICE[ex.id] ? `<a class="btn primary" href="${L('exam', ex.id)}">${icon('flag', 14)} ${esc(ex.name)} practice set</a>` : `<a class="btn primary" href="${L('exam', ex.id)}">${icon('flag', 14)} ${esc(ex.name)} prep</a>`}<a class="btn" href="${L('practice', null, { exam: ex.id })}">${icon('list', 14)} Drill ${esc(ex.name)} topics</a><a class="btn" href="${L('flashcards', null, { unit: ex.units[ex.units.length - 1] })}">${icon('cards', 14)} Flashcards</a></div>
           </div></div>` : `<div class="panel lift hero-exam"><div class="countdown"><div class="countdown-num small">Done</div><div class="countdown-label">all exams</div></div><div><div class="eyebrow">${esc(D.code)}</div><h2 style="font-size:26px;margin-top:2px">Semester complete</h2><p class="muted mt-1">Every exam on the calendar has passed. Everything stays here for review, and the grade calculator can settle your final letter grade.</p><div class="row mt-2"><a class="btn primary" href="${L('grades')}">${icon('calc', 14)} Grade calculator</a><a class="btn" href="${L('practice')}">${icon('list', 14)} Keep practicing</a></div></div></div>`;
@@ -702,8 +707,8 @@
     render(root, param) {
       const t = todayISO(); const start = parseISO(D.SEMESTER.start); const weeks = [];
       for (let w = 0; ; w++) { const mon = addDays(start, 7 * w); if (toISO(mon) > D.SEMESTER.end) break; weeks.push(Array.from({ length: 5 }, (_, i) => toISO(addDays(mon, i)))); }
-      root.innerHTML = pageHead(`${esc(D.term)} calendar`, D.CALENDAR_NOTE || 'Subject to change; the instructor’s Canvas calendar wins.', `<button class="btn" data-action="today">${icon('target', 14)} Jump to today</button><button class="btn" data-action="print">${icon('print', 14)} Print</button>`) + `
-        <div class="grid cols-3 mb-2"><div class="panel span-2"><div class="cal-legend"><span class="chip lecture">Lecture</span><span class="chip lab">Lab</span><span class="chip exam">Exam</span><span class="chip admin">Due / deadline</span><span class="chip holiday">No class</span><span class="chip review">Review</span></div></div>
+      root.innerHTML = pageHead(`${esc(D.term)} calendar`, D.CALENDAR_NOTE || 'Subject to change; the instructor’s Canvas calendar wins.', `<button class="btn" data-action="today">${icon('target', 14)} Jump to today</button><button class="btn print-btn" data-action="print">${icon('print', 14)} Print</button>`) + `
+        <div class="grid cols-3 mb-2"><div class="panel span-2"><div class="cal-legend"><span class="chip lecture">Lecture</span><span class="chip lab">Lab</span><span class="chip exam">Exam</span><span class="chip admin">Due / deadline</span><span class="chip holiday">No class</span><span class="chip review">Review</span></div>${(() => { const up = upcomingDeadlines(D, 6); return up.length ? `<div class="eyebrow mt-2 mb-1">Coming up</div>${up.map(x => `<div class="small cal-up"><span class="mono muted">${shortDate(x.date)}</span> ${esc(x.title)}${x.time ? ` <span class="muted">· ${esc(x.time)}</span>` : ''}</div>`).join('')}` : ''; })()}</div>
           <div class="panel"><div class="eyebrow mb-1">Standing due times</div>${D.COURSE.deadlines.map(x => `<div class="small" style="padding:4px 0"><b>${esc(x.name)}.</b> ${esc(x.rule)}</div>`).join('')}</div></div>
         <div class="cal-head"><span>Week</span><span>Monday</span><span>Tuesday</span><span>Wednesday</span><span>Thursday</span><span>Friday</span></div>
         ${weeks.map((wk, i) => `<div class="cal-week"><div class="cal-wk">Wk ${i + 1}</div>${wk.map(iso => { const dd = parseISO(iso); const evs = eventsOn(D, iso); const isExam = evs.some(e => e[1] === 'exam' && !/^Finals week$/.test(e[2])); return `<div class="cal-day${iso === t ? ' today' : ''}${iso < t ? ' past' : ''}${isExam ? ' exam-day' : ''}" id="cal-${iso}"><div class="cal-date"><b>${dd.getDate()}</b><span>${MON[dd.getMonth()]}</span></div>${evs.map(e => `<div class="cal-ev ${e[1]}">${esc(e[2])}</div>`).join('')}<div class="cal-canvas" data-date="${iso}"></div></div>`; }).join('')}</div>`).join('')}`;
@@ -753,11 +758,11 @@
      VIEW: Formula sheet
      ====================================================== */
   App.views.formulas = {
-    title: 'Formula sheet',
+    get title() { const it = D && (D.NAV || []).flatMap(g => g.items).find(i => i[0] === 'formulas'); return it ? it[1] : 'Formula sheet'; },
     render(root, param, query) {
       const freeG = App.limit('formulaGroups');
-      const paint = filter => { const f = filter.toLowerCase(); const groups = D.FORMULAS.slice(0, freeG); const hidden = D.FORMULAS.length - groups.length; $('#fs-body', root).innerHTML = `<div class="grid cols-2">${groups.map(gp => { const items = gp.items.filter(it => !f || it.n.toLowerCase().includes(f) || gp.group.toLowerCase().includes(f)); if (!items.length) return ''; return `<div class="panel fs-group"><h3>${esc(gp.group)}</h3>${items.map(it => `<div class="fs-row"><div class="name">${esc(it.n)}</div>${it.c ? `<pre class="code-ex fs-code">${esc(it.c)}</pre>` : `<div class="tex">$$${it.t}$$</div>`}</div>`).join('')}</div>`; }).join('') || '<div class="empty">No formulas match.</div>'}</div>${hidden > 0 ? `<div class="mt-2">${App.lockCard(`${hidden} more formula group${hidden === 1 ? '' : 's'} for members`, `The full ${D.short} sheet covers ${D.FORMULAS.map(g => g.group.toLowerCase()).join(', ')}. Sign up free to see and print all of it.`)}</div>` : ''}`; typeset($('#fs-body', root)); if (App.auth) App.auth.bindLocks(root); };
-      root.innerHTML = pageHead('Formula sheet', 'Everything on one page. Exams are closed-book: use this to test what you can rewrite from memory.', `<input class="input" id="fs-filter" placeholder="Filter (e.g. chain, torque)…" value="${esc(query.q || '')}" style="width:220px"><button class="btn" data-action="print">${icon('print', 14)} Print</button>`) + '<div id="fs-body"></div>';
+      const paint = filter => { const f = filter.toLowerCase(); const groups = D.FORMULAS.slice(0, freeG); const hidden = D.FORMULAS.length - groups.length; $('#fs-body', root).innerHTML = `<div class="grid cols-2">${groups.map(gp => { const items = gp.items.filter(it => !f || it.n.toLowerCase().includes(f) || gp.group.toLowerCase().includes(f) || (it.d && it.d.toLowerCase().includes(f))); if (!items.length) return ''; return `<div class="panel fs-group"><h3>${esc(gp.group)}</h3>${items.map(it => `<div class="fs-row"><div class="name">${esc(it.n)}</div>${it.c ? `<pre class="code-ex fs-code">${esc(it.c)}</pre>` : it.d ? `<div class="fs-def">${it.d}</div>` : `<div class="tex">$$${it.t}$$</div>`}</div>`).join('')}</div>`; }).join('') || '<div class="empty">No formulas match.</div>'}</div>${hidden > 0 ? `<div class="mt-2">${App.lockCard(`${hidden} more formula group${hidden === 1 ? '' : 's'} for members`, `The full ${D.short} sheet covers ${D.FORMULAS.map(g => g.group.toLowerCase()).join(', ')}. Sign up free to see and print all of it.`)}</div>` : ''}`; typeset($('#fs-body', root)); if (App.auth) App.auth.bindLocks(root); };
+      root.innerHTML = pageHead(this.title, D.formulasNote || 'Everything on one page. Exams are closed-book: use this to test what you can rewrite from memory.', `<input class="input" id="fs-filter" placeholder="Filter (e.g. ${esc(D.filterExample || 'chain, torque')})…" value="${esc(query.q || '')}" style="width:220px"><button class="btn print-btn" data-action="print">${icon('print', 14)} Print</button>`) + '<div id="fs-body"></div>';
       paint(query.q || ''); $('#fs-filter', root).addEventListener('input', e => paint(e.target.value)); bind(root, { print: () => window.print() });
     }
   };
@@ -817,6 +822,7 @@
      VIEW: Grades (supports "best n of a group", e.g. drop the lowest exam)
      ====================================================== */
   function gradeModel(vals, G = D.GRADING) {
+    if (G.options && G.options.length) { let best = null; for (const o of G.options) { const m = gradeModel(vals, Object.assign({}, G, { options: null, categories: G.categories.map(c => (c.id in o.weights) ? Object.assign({}, c, { weight: o.weights[c.id] }) : c) })); if (m.den && (!best || m.cur > best.cur + 1e-9)) { best = m; best.option = o; } } return best || gradeModel(vals, Object.assign({}, G, { options: null })); }
     const cats = G.categories; const groups = G.groups || {};
     let num = 0, den = 0; const used = {};
     const groupCats = {}; cats.forEach(c => { if (c.group) (groupCats[c.group] = groupCats[c.group] || []).push(c); });
@@ -836,7 +842,7 @@
         if (!m.den) { out.innerHTML = '<div class="empty">Enter a percentage for at least one category.</div>'; return; }
         const finalId = G.finalId; const finalEntered = finalId in vals;
         const need = finalEntered ? [] : G.scale.filter(s => s.letter !== 'F').map(s => { const f = x => overallWith(Object.assign({}, vals, { [finalId]: x }), m.cur) - s.min; let lo = 0, hi = 100; if (f(0) >= 0) return { letter: s.letter, needed: 0 }; if (f(100) < 0) return { letter: s.letter, needed: 101 }; for (let k = 0; k < 40; k++) { const mid = (lo + hi) / 2; if (f(mid) >= 0) hi = mid; else lo = mid; } return { letter: s.letter, needed: hi }; });
-        out.innerHTML = `<div class="grid cols-3"><div class="stat"><div class="grade-letter">${letterFor(m.cur)}</div><div class="stat-label">current letter grade</div></div><div class="stat"><div class="stat-num">${m.cur.toFixed(1)}%</div><div class="stat-label">weighted average of what you entered (${Math.round(m.den)}% of the grade)</div></div><div class="stat"><div class="stat-num">${m.banked.toFixed(1)}</div><div class="stat-label">points already banked out of 100</div></div></div>
+        out.innerHTML = `<div class="grid cols-3"><div class="stat"><div class="grade-letter">${letterFor(m.cur)}</div><div class="stat-label">current letter grade</div></div><div class="stat"><div class="stat-num">${m.cur.toFixed(1)}%</div><div class="stat-label">weighted average of what you entered (${Math.round(m.den)}% of the grade)</div></div><div class="stat"><div class="stat-num">${m.banked.toFixed(1)}</div><div class="stat-label">points already banked out of 100</div></div></div>${m.option ? `<p class="small mt-1">${icon('check', 12)} Using <b>${esc(m.option.label)}</b>, the exam weighting that gives you the best grade so far.</p>` : ''}
           ${finalEntered ? '' : `<div class="divider"></div><div class="eyebrow mb-1">What you need on the ${esc(cats.find(c => c.id === finalId)?.name.split(' (')[0] || 'final')}</div><p class="small muted mb-1">Assumes categories you left blank end up at your current average${Object.keys(G.groups || {}).length ? ', and applies the drop-lowest rule' : ''}.</p><div class="table-wrap"><table class="table compact"><thead><tr><th>Target</th><th class="num">Score needed</th><th>Verdict</th></tr></thead><tbody>${need.map(n => `<tr><td><b>${n.letter}</b></td><td class="num">${n.needed <= 0 ? 'any score' : n.needed > 100 ? '> 100%' : n.needed.toFixed(1) + '%'}</td><td class="small">${n.needed <= 0 ? '<span class="chip good">locked in</span>' : n.needed > 100 ? '<span class="chip bad">out of reach</span>' : n.needed > 90 ? '<span class="chip warn">tough</span>' : '<span class="chip good">doable</span>'}</td></tr>`).join('')}</tbody></table></div>`}`;
       };
       root.innerHTML = pageHead('Grade calculator', `Weights come straight from the ${esc(D.code)} syllabus. Leave a category blank if it has not happened yet.${G.note ? ' ' + esc(G.note) : ''}`, `<a class="btn sm" href="${L('gpa')}">${icon('chart', 13)} Semester GPA</a>`) + `<div class="grid cols-3"><div class="panel span-2"><div class="panel-h"><div class="panel-title">${icon('calc')} Your scores</div><button class="btn sm ghost" data-action="clear">Clear</button></div>
@@ -894,7 +900,7 @@
   App.views.settings = {
     title: 'Settings',
     render(root, param, query, standalone) {
-      const s = settings(); const C = standalone ? null : D; const hasLab = !!(C && (C.RECURRING || []).some(r => r.afterLabDay));
+      const s = settings(); const C = standalone ? null : D; const hasLab = !!(C && (C.RECURRING || []).some(r => r.afterLabDay)); const V = C && C.VARIANTS;
       const mine = App.myCourses(); const sem = (C || Courses[mine[0]] || Courses[COURSE_ORDER[0]]).SEMESTER;
       const head = standalone
         ? `<header class="landing-top"><div><div class="eyebrow">Mathub</div><h1 class="landing-title"><span class="logo-mark">${App.logoSvg(44)}</span>Settings</h1><p class="muted">Your account, notifications, classes and preferences. They apply everywhere on Mathub.</p></div><div class="row gap-sm"><span id="landing-account"></span><a class="btn" href="#/">${icon('left', 14)} All classes</a></div></header>`
@@ -909,6 +915,7 @@
           <div class="field mb-2"><label for="s-goal">Daily XP goal</label><select class="select" id="s-goal">${(App.GOALS || [[30, 'Regular']]).map(([n, name]) => `<option value="${n}"${(App.dailyGoal ? App.dailyGoal() : 30) === n ? ' selected' : ''}>${n} XP · ${name}</option>`).join('')}</select><span class="help">A correct answer is 10 XP. The ring in the header fills up as you go; hit the goal every day to keep your streak strong.</span></div>
           <label class="check" style="padding:0"><input type="checkbox" id="s-sound" ${s.sound === false ? '' : 'checked'}><span>Sound effects <span class="muted small">(short cues for right, wrong and finished lessons)</span></span></label>
           <label class="check mb-2" style="padding:0"><input type="checkbox" id="s-livebg" ${s.liveBg === false ? '' : 'checked'}><span>Animated background <span class="muted small">(drifting symbols; off automatically when your system prefers reduced motion)</span></span></label>
+          ${V ? `<div class="field"><label for="s-variant">${esc(V.label || 'Your section')}</label><select class="select" id="s-variant">${V.options.map(o => `<option value="${esc(o.id)}"${sectionVariant(C) === o.id ? ' selected' : ''}>${esc(o.label)}</option>`).join('')}</select><span class="help">${esc(V.hint || 'Sets the lecture days and exam dates on your calendar.')}</span></div>` : ''}
           ${hasLab ? `<div class="field"><label>Your ${esc(C.short)} lab day</label><select class="select" id="s-lab"><option value="tue"${courseSetting(C.id, 'labDay', 'tue') !== 'thu' ? ' selected' : ''}>Tuesday</option><option value="thu"${courseSetting(C.id, 'labDay', 'tue') === 'thu' ? ' selected' : ''}>Thursday</option></select><span class="help">Sets when lab sheets show as due on the dashboard (8:00 pm the day after lab).</span></div>` : ''}
           <div class="field mt-2"><label for="s-asof">Preview the site as of a date</label><div class="row gap-sm"><input class="input" id="s-asof" type="date" value="${esc(s.asof || '')}" min="${sem.start}" max="${sem.end}" style="max-width:200px"><button class="btn sm ghost" data-action="asof-clear">Back to today</button></div><span class="help">Jump ahead to see what the dashboard, countdowns and due lists will show later in the semester.</span></div>
           <div class="divider"></div><div class="eyebrow mb-1">Keyboard shortcuts</div>
@@ -930,6 +937,7 @@
       $('#s-asof', root).addEventListener('change', e => { setSetting('asof', e.target.value || ''); render(); if (e.target.value) toast(`Viewing the site as of ${fmtDate(e.target.value)}`); });
       const acct = $('#acct-panel', root); if (acct && App.auth) acct.replaceWith(Object.assign(App.auth.settingsPanel(root), { className: 'panel span-2 acct-panel' }));
       const lab = $('#s-lab', root); if (lab) lab.addEventListener('change', e => { setCourseSetting(C.id, 'labDay', e.target.value); toast('Lab day saved'); });
+      const vsel = $('#s-variant', root); if (vsel) vsel.addEventListener('change', e => { setCourseSetting(C.id, 'variant', e.target.value); applyVariant(C); toast(V.saved || 'Section saved. Your calendar and exam dates now follow it.'); });
       const imp = $('#s-import', root); if (imp) imp.addEventListener('change', e => { const f = e.target.files[0]; if (!f) return; f.text().then(txt => { try { store.importJSON(txt); toast('Backup imported'); render(); } catch (err) { alert('Could not import: ' + err.message); } }); });
       bind(root, { export: () => { const txt = store.exportJSON(); $('#s-json', root).value = txt; try { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([txt], { type: 'application/json' })); a.download = `studyhub-${C.id}-${todayISO()}.json`; a.click(); } catch {} toast('Backup ready'); }, 'import-text': () => { try { store.importJSON($('#s-json', root).value); toast('Backup imported'); render(); } catch (err) { alert('Could not import: ' + err.message); } }, reset: () => { if (confirm(`Erase all saved ${C.short} progress on this device?`)) { store.reset(); toast('Progress reset'); render(); } }, 'asof-clear': () => { setSetting('asof', ''); render(); }, choose: () => { if (App.auth && App.auth.user) App.auth.onboard(true); else if (App.auth) App.auth.open('signup'); } });
     }

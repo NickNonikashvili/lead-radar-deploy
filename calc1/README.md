@@ -1,10 +1,15 @@
 # Mathub
 
-A free study hub for three Fall 2026 courses at Montana State University:
+A free study hub for eight Fall 2026 courses at Montana State University:
 
 - **M151Q Precalculus** (Yoshiwara *Modeling, Functions, and Graphs* + *Trigonometry*)
 - **M171 Calculus I** (Active Calculus)
 - **PHSX 220 Physics I with Calculus** (OpenStax University Physics Vol. 1)
+- **WRIT 101 College Writing I**
+- **CSCI 127 Joy and Beauty of Data**
+- **BIOB 160 Principles of Living Systems** (Campbell *Biology*)
+- **KIN 322 Kinesiology** (Biel *Trail Guide to the Body*, suggested)
+- **PSYX 340 Psychological Disorders** (Comer & Comer *Psychopathology*)
 
 The site is plain HTML, CSS and JavaScript with a small PHP + SQLite account server (`api/`).
 Anyone can preview it; students sign up with a **montana.edu** email to unlock everything and
@@ -174,6 +179,18 @@ A mobile tab bar (Home, Learn, Practice or Code, Board, Me) appears under 900 px
 `assets/csci-data.js` adds CSCI 127 (Daniel DeFrance, Fall 2026) from the syllabus and the weekly schedule: every lecture, Tuesday lab, program deadline, the two in-class exams (Sept 23 and Nov 6) and the Dec 14 final on the calendar; the grade calculator with labs 45%, programs 25% and three equal exams at 10% each plus the syllabus scale; 18 topic notes across four units (data types, modules and turtle, functions, selection, strings, iteration, recursion, memory; lists, files, dictionaries; classes, inheritance, OOP principles; NumPy, matplotlib, pandas, Python vs C vs Java), each with big ideas, runnable code examples with expected output, a worked example, common mistakes and an exam tip; a cheat sheet (the "formula sheet" of a coding class, in code); 46 flashcards; practice sets for all three exams; the lab sections and TA table on the syllabus page. `assets/csci-quiz.js` has 17 generators of "what does this print" questions whose answers are computed with Python semantics, so the quizzer, lessons, learning path, daily challenge and mock exams all work for this class.
 
 **Code playground** (`assets/pylab.js`, `assets/pyworker.js`) is the W3Schools-style "try it" editor at `#/csci/playground`: an editor with line numbers, Tab indent and auto-indent after a colon, Ctrl+Enter to run, a program-input box that feeds `input()`, a streamed console, Stop for runaway loops, an examples menu (course examples plus every code block in the notes, which have Try it buttons that open and run them), saved snippets, share links that carry the code, and 2 XP per successful run (10 a day). Python is Pyodide (CPython compiled to WebAssembly) running in a Web Worker, fetched from the jsDelivr CDN on first use (about 12 MB, cached by the browser); NumPy, pandas and matplotlib download the first time they are imported. The worker ships its own `turtle` module that records every move and renders the finished drawing as SVG (moves, turns, pen, colors, fills, circles, dots, stamps, write, Screen size and background); key, mouse and timer events are noted but need a real window. matplotlib figures come back as PNGs through the Agg backend. Nothing is uploaded; files written by a program exist only during that run.
+
+## BIOB 160, KIN 322 and PSYX 340
+
+Three classes built from their Fall 2026 syllabi, each with the full set: calendar, exams and exam prep, topic notes, flashcards, a formulas or criteria sheet, a quizzer, practice sets, the syllabus page and a grade calculator.
+
+- **BIOB 160 Principles of Living Systems** (`assets/biob-data.js`, `assets/biob-quiz.js`; Dlakic and Dyer). 22 topics following the lecture schedule, from the chemistry of life through energy and cells, cell division and genetics, to DNA, gene expression and DNA technology, with Campbell reading pages in each tip and free OpenStax Biology 2e links. The three 5-hour-window exams and the cumulative final (Dec 16) are on the calendar; the grade calculator uses the 400-point breakdown. The quizzer generates Punnett squares, the product rule, sex linkage, recombination and map order, Hardy–Weinberg, pH and molarity, isotopes and half-lives, complementary strands, transcription and translation with the full codon table, mutation types, chromosome counts, respiration bookkeeping, tonicity, coupled ΔG, PCR and restriction fragments, all with computed answers.
+- **KIN 322 Kinesiology** (`assets/kin-data.js`, `assets/kin-quiz.js`; Jim Becker). 14 topics from planes and axes to gait. Lectures, homework, the five review-quiz windows, the two-part exams (Tuesday closed-note, Thursday open-note) and the Dec 15 final are on the calendar. Labs run in six sections, so the class uses **variants**: pick your lab section in Settings and every lab and lab practical moves to your day (unset, each lab shows as a weekly item). The grade calculator applies the syllabus's **six exam-weighting options** (`GRADING.options`) and uses whichever gives the highest grade. The quizzer covers planes and axes, lever classes, torque and muscle force, mechanical advantage, stress and strain, contraction type, the convex–concave rule, spinal cord levels, scapulohumeral rhythm, carpals, ROM norms, knee tests, leg compartments, Trendelenburg and gait timing.
+- **PSYX 340 Psychological Disorders** (`assets/psyx-data.js`, `assets/psyx-quiz.js`; Barbara Drescher). 18 topics on the disorders in the syllabus, summarized from the DSM-5-TR in our own words. The two sections meet on different days (Tue/Thu and Mon/Wed), so calendar rows and exam dates follow the section chosen in Settings (or typed on the account). The quizzer includes timing and counting rules: mood episodes, PTSD vs acute stress disorder, substance use severity, the psychosis duration ladder, anorexia BMI severity, ADHD thresholds and personality clusters.
+
+**How variants work.** A class may define `VARIANTS = { label, default, options: [{ id, label }], hint?, saved? }`. Calendar rows carry the variant id in their fifth field (`[date, type, title, topicId, variantId]`; the fourth field stays the topic id that drives "current topic"), and exams may carry `dates` and `dateLabels` keyed by variant. `App.applyVariant(C)` filters the calendar and sets the exam dates at boot, after the class loads and after account preferences sync.
+
+Also new for every class: definition lines (`{ n, d }`) on the formulas sheet and the cheat-sheet builder, an exam `format` line on exam prep (defaults to "Closed book, no devices."), a class-specific title and note on the formulas page (`formulasNote`, `filterExample`), and the new colours (lime, amber, rose) in light and dark.
 
 ## GPA calculator
 

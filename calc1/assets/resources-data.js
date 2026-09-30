@@ -18,6 +18,9 @@
     { id: 'precalc', title: 'Precalculus · M151Q', blurb: 'Algebra and trig refreshers, unit-circle drills, and graphing tools for functions.' },
     { id: 'writ', title: 'College Writing · WRIT 101', blurb: 'Citation guides, editing tools, pronunciation help and the campus Writing Center.' },
     { id: 'csci', title: 'Joy and Beauty of Data · CSCI 127', blurb: 'Python from the official docs down to visual debuggers, practice sites and the libraries the class uses.' },
+    { id: 'biob', title: 'Principles of Living Systems · BIOB 160', blurb: 'A free textbook that follows the same chapters, animations for the molecular parts, and genetics practice.' },
+    { id: 'kin', title: 'Kinesiology · KIN 322', blurb: 'Free anatomy references, region-by-region videos and quizzes, and the spinal cord injury standards.' },
+    { id: 'psyx', title: 'Psychological Disorders · PSYX 340', blurb: 'Reliable information on each disorder, research and citation help for your papers, and where to get support.' },
     { id: 'wellbeing', title: 'Sleep, stress, help', blurb: 'The unglamorous things that matter more than any study hack. If you are struggling, the people below want to hear from you.' }
   ];
   const I = [];
@@ -157,6 +160,35 @@
   add('csci', 'Replit', 'https://replit.com/', 'Code in the browser from any device, with files and packages.', 'app', ['online editor']);
   add('csci', 'Stack Overflow', 'https://stackoverflow.com/', 'Search the exact error message in quotes. Read the accepted answer and the top comment.', 'community', ['q&a', 'errors']);
   add('csci', 'regex101', 'https://regex101.com/', 'Test regular expressions with a live explanation of each part.', 'tool', ['regex']);
+
+  /* ---------- BIOB 160 ---------- */
+  add('biob', 'Mathub BIOB 160 quizzer', '#/biob/practice', 'Punnett squares, pH, respiration counts, codons and PCR questions generated fresh, with worked answers.', 'tool', ['mathub', 'practice'], true);
+  add('biob', 'OpenStax Biology 2e', 'https://openstax.org/details/books/biology-2e', 'A free, full introductory biology textbook that covers the same chapters as Campbell.', 'reading', ['book', 'free'], true);
+  add('biob', 'Khan Academy: Biology', 'https://www.khanacademy.org/science/biology', 'Videos and practice on chemistry of life, cells, energy and genetics.', 'video', ['videos', 'practice'], true);
+  add('biob', 'Amoeba Sisters', 'https://www.youtube.com/@AmoebaSisters', 'Short, clear cartoon videos on mitosis, meiosis, Punnett squares, protein synthesis and more.', 'video', ['videos'], true);
+  add('biob', 'Bozeman Science', 'https://www.youtube.com/@bozemanscience', 'Paul Andersen, a Bozeman teacher, walks through every intro biology topic on a whiteboard.', 'video', ['videos']);
+  add('biob', 'HHMI BioInteractive', 'https://www.biointeractive.org/', 'Free animations and data activities on DNA replication, gene expression and evolution.', 'video', ['animations', 'data']);
+  add('biob', 'Learn.Genetics (University of Utah)', 'https://learn.genetics.utah.edu/', 'Interactive pages on DNA, inheritance and cell biology, including a virtual lab for PCR and gels.', 'tool', ['interactive', 'genetics']);
+  add('biob', 'PhET: Gene Expression Essentials', 'https://phet.colorado.edu/en/simulations/gene-expression-essentials', 'Build a protein from a gene: transcription and translation you can control.', 'tool', ['simulation']);
+
+  /* ---------- KIN 322 ---------- */
+  add('kin', 'Mathub KIN 322 quizzer', '#/kin/practice', 'Planes and axes, levers and torque, ROM norms, knee tests and gait timing, with worked answers.', 'tool', ['mathub', 'practice'], true);
+  add('kin', 'OpenStax Anatomy & Physiology 2e', 'https://openstax.org/details/books/anatomy-and-physiology-2e', 'A free textbook; chapters 7–11 cover the skeleton, joints and muscles.', 'reading', ['book', 'free'], true);
+  add('kin', 'TeachMeAnatomy', 'https://teachmeanatomy.info/', 'Clear pages for every joint, muscle and nerve, with clinical notes; organized by region like this class.', 'reference', ['anatomy'], true);
+  add('kin', 'Kenhub', 'https://www.kenhub.com/', 'Anatomy articles, videos and quizzes; many are free, some need an account.', 'practice', ['anatomy', 'quizzes']);
+  add('kin', 'AnatomyZone', 'https://www.youtube.com/@AnatomyZone', '3D anatomy videos that rotate each joint and muscle group.', 'video', ['videos', '3D']);
+  add('kin', 'Physiopedia', 'https://www.physio-pedia.com/', 'Reference pages on special tests, injuries and gait, written by physical therapists.', 'reference', ['clinical', 'tests']);
+  add('kin', 'American Spinal Injury Association', 'https://asia-spinalinjury.org/', 'Home of the International Standards (ISNCSCI) exam used to classify spinal cord injuries.', 'reference', ['spinal cord injury']);
+
+  /* ---------- PSYX 340 ---------- */
+  add('psyx', 'Mathub PSYX 340 quizzer', '#/psyx/practice', 'Criteria, durations, severity counts and case questions for every disorder, with explanations.', 'tool', ['mathub', 'practice'], true);
+  add('psyx', 'OpenStax Psychology 2e: psychological disorders', 'https://openstax.org/books/psychology-2e/pages/15-introduction', 'A free, shorter second explanation of the major disorders (chapter 15) and therapy (chapter 16).', 'reading', ['book', 'free'], true);
+  add('psyx', 'NIMH health topics', 'https://www.nimh.nih.gov/health/topics', 'The National Institute of Mental Health’s overviews of each disorder, with current research and statistics.', 'reference', ['disorders', 'statistics'], true);
+  add('psyx', 'APA Dictionary of Psychology', 'https://dictionary.apa.org/', 'Precise definitions for the terms that show up on exams.', 'reference', ['terms']);
+  add('psyx', 'APA Style', 'https://apastyle.apa.org/', 'The official APA 7 guide for formatting and citing your reflection and term papers.', 'reference', ['citations', 'papers']);
+  add('psyx', 'MSU Library', 'https://www.lib.montana.edu/', 'Search PsycInfo and PsycArticles for peer-reviewed sources, as the syllabus asks.', 'msu', ['research']);
+  add('psyx', 'NAMI', 'https://www.nami.org/', 'The National Alliance on Mental Illness: plain-language guides written with people who live with these conditions.', 'reading', ['lived experience']);
+  add('psyx', 'SAMHSA National Helpline', 'https://www.samhsa.gov/find-help/national-helpline', 'Free, confidential treatment referral for mental health and substance use, 24/7: 1-800-662-4357.', 'wellbeing', ['help', 'substance use']);
 
   /* ---------- wellbeing ---------- */
   add('wellbeing', '988 Suicide & Crisis Lifeline', 'https://988lifeline.org/', 'Call or text 988 any time, in the US, for yourself or a friend. Free and confidential.', 'wellbeing', ['crisis'], true);

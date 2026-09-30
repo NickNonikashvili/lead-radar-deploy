@@ -28,10 +28,13 @@
     physics: { name: 'Artificer', icon: 'gear', line: 'Builds with force, motion and energy.' },
     precalc: { name: 'Ranger', icon: 'compass', line: 'Navigates by angles, bearings and curves.' },
     writ: { name: 'Bard', icon: 'quill', line: 'Wins the argument with words.' },
-    csci: { name: 'Warlock', icon: 'orb', line: 'Made a pact with Python.' }
+    csci: { name: 'Warlock', icon: 'orb', line: 'Made a pact with Python.' },
+    biob: { name: 'Druid', icon: 'potion', line: 'Speaks the language of cells and genes.' },
+    kin: { name: 'Paladin', icon: 'shield', line: 'Knows every joint, lever and muscle in the fight.' },
+    psyx: { name: 'Seer', icon: 'eye', line: 'Reads the patterns behind the behavior.' }
   };
   App.archetype = id => ARCH[id] || { name: 'Adventurer', icon: 'sword', line: 'Ready for any quest.' };
-  const ACCENT = { calc: '--calc-accent', physics: '--phys-accent', precalc: '--precalc-accent', writ: '--writ-accent', csci: '--csci-accent' };
+  const ACCENT = { calc: '--calc-accent', physics: '--phys-accent', precalc: '--precalc-accent', writ: '--writ-accent', csci: '--csci-accent', biob: '--biob-accent', kin: '--kin-accent', psyx: '--psyx-accent' };
 
   /* ---------- d20 ---------- */
   const d20Svg = (n, cls = '') => `<svg class="d20-big ${cls}" viewBox="0 0 100 100" aria-hidden="true"><path class="d20-face" d="M50 4 90 27 90 73 50 96 10 73 10 27Z"/><path class="d20-inner" d="M50 26 74 67 26 67Z"/><path class="d20-edge" d="M50 4 90 27 90 73 50 96 10 73 10 27Z M50 26 74 67 26 67Z M50 4V26 M50 26 10 27 M50 26 90 27 M74 67 90 27 M74 67 90 73 M74 67 50 96 M26 67 50 96 M26 67 10 73 M26 67 10 27"/><text x="50" y="54" text-anchor="middle" dominant-baseline="middle">${n}</text></svg>`;

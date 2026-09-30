@@ -15,7 +15,7 @@
   /* every selectable line in the class, with a stable id */
   function catalog(D) {
     const out = [];
-    (D.FORMULAS || []).forEach((gp, gi) => gp.items.forEach((f, fi) => out.push({ id: `f:${gi}:${fi}`, group: gp.group, name: f.n, tex: f.t, code: f.c, sec: null, kind: 'formula' })));
+    (D.FORMULAS || []).forEach((gp, gi) => gp.items.forEach((f, fi) => out.push({ id: `f:${gi}:${fi}`, group: gp.group, name: f.n, tex: f.t, code: f.c, def: f.d, sec: null, kind: 'formula' })));
     (D.SECTIONS || []).forEach(s => {
       (s.formulas || []).forEach((f, i) => out.push({ id: `s:${s.id}:f:${i}`, group: `${s.label} ${s.title}`, name: f.n, tex: f.t, sec: s.id, kind: 'formula' }));
       (s.ideas || []).forEach((t, i) => out.push({ id: `s:${s.id}:i:${i}`, group: `${s.label} ${s.title}`, name: '', html: t, sec: s.id, kind: 'idea' }));
@@ -23,7 +23,7 @@
     });
     return out;
   }
-  const lineHtml = it => it.kind === 'formula' ? `<div class="cs-line formula"><span class="cs-name">${esc(it.name)}</span>${it.tex ? `<span class="cs-tex">$${it.tex}$</span>` : it.code ? `<code>${esc(it.code)}</code>` : ''}</div>` : `<div class="cs-line ${it.kind}">${it.kind === 'pitfall' ? '<span class="cs-flag">!</span>' : '•'} ${it.html}</div>`;
+  const lineHtml = it => it.kind === 'formula' ? `<div class="cs-line formula"><span class="cs-name">${esc(it.name)}</span>${it.tex ? `<span class="cs-tex">$${it.tex}$</span>` : it.code ? `<code>${esc(it.code)}</code>` : it.def ? `<span class="cs-def">${it.def}</span>` : ''}</div>` : `<div class="cs-line ${it.kind}">${it.kind === 'pitfall' ? '<span class="cs-flag">!</span>' : '•'} ${it.html}</div>`;
   App.views.cheatsheet = {
     title: 'Cheat sheet', blurb: 'Build a one-page sheet from the formulas and notes you keep looking up, then print it. Building it is studying.',
     render(root, param, query) {

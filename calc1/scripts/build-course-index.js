@@ -15,7 +15,7 @@
 const fs = require('fs'); const path = require('path');
 const ROOT = path.resolve(__dirname, '..');
 global.window = {};
-['calc-data', 'calc-quiz', 'physics-data', 'physics-quiz', 'precalc-data', 'precalc-quiz', 'writ-data', 'csci-data', 'csci-quiz'].forEach(f => require(path.join(ROOT, 'assets', f + '.js')));
+['calc-data', 'calc-quiz', 'physics-data', 'physics-quiz', 'precalc-data', 'precalc-quiz', 'writ-data', 'csci-data', 'csci-quiz', 'biob-data', 'biob-quiz', 'kin-data', 'kin-quiz', 'psyx-data', 'psyx-quiz'].forEach(f => require(path.join(ROOT, 'assets', f + '.js')));
 const Courses = window.Courses;
 /* the scripts each class needs, in load order (shared files are fetched once) */
 const FILES = {
@@ -23,9 +23,12 @@ const FILES = {
   physics: ['physics-data', 'physics-quiz', 'physics-tools'],
   precalc: ['precalc-data', 'precalc-quiz', 'calc-tools', 'precalc-tools'],   // the grapher lives in calc-tools
   writ: ['writ-data', 'phonetics-data', 'phonetics'],
-  csci: ['csci-data', 'csci-quiz', 'pylab']
+  csci: ['csci-data', 'csci-quiz', 'pylab'],
+  biob: ['biob-data', 'biob-quiz'],
+  kin: ['kin-data', 'kin-quiz'],
+  psyx: ['psyx-data', 'psyx-quiz']
 };
-const LIGHT = ['id', 'code', 'name', 'short', 'term', 'tagline', 'kind', 'quizNote', 'COURSE', 'EXAMS', 'CALENDAR', 'CALENDAR_NOTE', 'RECURRING', 'SEMESTER', 'UNITS', 'NAV'];
+const LIGHT = ['id', 'code', 'name', 'short', 'term', 'tagline', 'kind', 'quizNote', 'COURSE', 'EXAMS', 'CALENDAR', 'CALENDAR_NOTE', 'RECURRING', 'SEMESTER', 'VARIANTS', 'UNITS', 'NAV'];
 const out = {};
 for (const [id, C] of Object.entries(Courses)) {
   const files = FILES[id]; if (!files) { console.warn('No file list for class', id); continue; }

@@ -13,7 +13,7 @@
    ============================================================ */
 declare(strict_types=1);
 
-const MH_COURSE_NAMES = ['calc' => 'Calc I', 'physics' => 'Physics I', 'precalc' => 'Precalc', 'writ' => 'WRIT 101', 'csci' => 'CSCI 127'];
+const MH_COURSE_NAMES = ['calc' => 'Calc I', 'physics' => 'Physics I', 'precalc' => 'Precalc', 'writ' => 'WRIT 101', 'csci' => 'CSCI 127', 'biob' => 'BIOB 160', 'kin' => 'KIN 322', 'psyx' => 'PSYX 340'];
 
 /* ---------- the class index the app ships, read from the generated file ---------- */
 function mh_course_index(): array {

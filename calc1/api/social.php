@@ -9,7 +9,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/filter.php';
 require_once __DIR__ . '/canvas.php';
 
-const MH_SOCIAL_COURSES = ['calc', 'physics', 'precalc', 'writ', 'csci', 'general'];
+const MH_SOCIAL_COURSES = ['calc', 'physics', 'precalc', 'writ', 'csci', 'biob', 'kin', 'psyx', 'general'];
 const MH_BADGES = [
   'first_post' => ['First post', 'Started a discussion', 'chat'], 'first_answer' => ['First reply', 'Replied to a classmate', 'reply'],
   'helper_5' => ['Helper', '5 accepted answers', 'shield'], 'helper_25' => ['Mentor', '25 accepted answers', 'shield'],
@@ -150,7 +150,7 @@ function mh_housekeeping(bool $full = false): array {
 }
 /** What an evening reminder is about for one user: Canvas events due tomorrow in their classes, a streak at risk, sessions they joined. Shared by the email and the push. */
 function mh_reminder_items(array $u, array $events, string $tomorrow): array {
-  $db = mh_db(); $names = ['calc' => 'Calc I', 'physics' => 'Physics I', 'precalc' => 'Precalc', 'writ' => 'WRIT 101', 'csci' => 'CSCI 127', 'general' => 'General'];
+  $db = mh_db(); $names = ['calc' => 'Calc I', 'physics' => 'Physics I', 'precalc' => 'Precalc', 'writ' => 'WRIT 101', 'csci' => 'CSCI 127', 'biob' => 'BIOB 160', 'kin' => 'KIN 322', 'psyx' => 'PSYX 340', 'general' => 'General'];
   $mine = mh_user_courses($u); $due = array_values(array_filter($events, fn($e) => $e['date'] === $tomorrow && in_array($e['course'], $mine, true)));
   $days = []; foreach (mh_user_progress((int)$u['id']) as $b) foreach (array_keys($b['activity'] ?? []) as $d) $days[$d] = true; $sk = mh_current_streak(array_keys($days));
   $atRisk = !$sk['active_today'] && $sk['streak'] >= 3;

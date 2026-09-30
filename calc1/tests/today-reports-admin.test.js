@@ -46,7 +46,8 @@ const T = require('./lib');
   await c.close();
 
   // admin: Problems + Backups
-  const [ca, a] = await mk(); await go(a, '#/'); await login(a, 'admin.user@montana.edu'); await a.reload(); await a.waitForTimeout(1200); await go(a, '#/admin'); await a.waitForTimeout(800);
+  const [ca, a] = await mk(); await go(a, '#/'); await login(a, 'admin.user@montana.edu'); await a.reload(); await a.waitForTimeout(1200); if (await a.$('.celebrate')) { await a.keyboard.press('Escape'); await a.waitForTimeout(300); }   // a league promotion can greet the account after the week rolls over
+  await go(a, '#/admin'); await a.waitForTimeout(800);
   log('admin tabs:', await a.$$eval('.admin-tab', t => t.map(x => x.textContent.trim()).join(',')).catch(() => 'n/a'), '| issues tile:', (await txt(a, '#view')).includes('open report') || (await txt(a, '#view')).match(/report/i) !== null);
   await go(a, '#/admin/issues'); await a.waitForTimeout(800); log('issues list:', (await a.$$('.issue')).length, '| first:', (await txt(a, '.issue')).slice(0, 200));
   const resolveBtn = await a.$('[data-action="is-resolve"]'); if (resolveBtn) { await resolveBtn.click(); await a.waitForTimeout(800); log('after resolve open count:', (await a.$$('.issue')).length); await a.click('[data-action="is-filter"][data-s="resolved"]'); await a.waitForTimeout(600); log('resolved list:', (await a.$$('.issue.resolved')).length); }

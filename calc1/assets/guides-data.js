@@ -177,6 +177,14 @@
     { tip: 'Mathub physics practice questions carry a hint ladder: the first hint is always which principle to use. Try to name it yourself before opening the hint.' }
   ]);
 
+  add('science-exam', 'Studying for a biology, anatomy or psychology exam', 'Exams in these classes ask you to use terms, structures and criteria, not just recite them. A routine that builds both.', 5, ['exams', 'memory', 'science'], ['biob', 'kin', 'psyx'], [
+    { p: 'These classes pile up vocabulary fast, and it is tempting to reread slides until they feel familiar. Familiar is not the same as usable: exam questions give you a case, a diagram or a cross and ask you to apply what you know.' },
+    { ol: ['**Turn each lecture into questions the same day.** Ten minutes after class, write five questions the professor could ask. That is your [active recall](#/guides/active-recall) deck.', '**Retrieve, do not reread.** Flashcards first, notes only to check. Say the answer before you flip.', '**Draw it.** A Punnett square, a replication fork, a joint with its ligaments, a flowchart for telling two disorders apart. If you can draw it from memory, you know it.', '**Compare in tables.** Mitosis vs meiosis, ACL vs PCL, bipolar I vs II. Exams love the pair that is easy to confuse.', '**Practice application.** Case questions, “which muscle and how,” and genetics problems, worked by hand and checked.', '**Space it.** Short sessions across the week beat one long night, especially for anatomy and criteria.'] },
+    { h: 'Class by class' },
+    { ul: ['**BIOB 160:** work genetics and pH problems until they are automatic; the Mathub quizzer makes new ones every time. Keep the respiration table (stage, place, products) on one card.', '**KIN 322:** do the movement while you say its plane and axis, learn muscles by action group, and palpate in open lab before each practical.', '**PSYX 340:** for each disorder, one card with the core feature, the time rule, the main explanations and the first-line treatment. Then practice vignettes that make you choose between similar disorders.'] },
+    { tip: 'Each class in Mathub has a Formulas & key terms sheet. Copying it by hand, in your own words, is one of the best study sessions you can do the week before an exam.' }
+  ]);
+
   add('bad-grade', 'You got a bad grade. Now what?', 'One bad exam is information, not a verdict. The steps to take in the next week.', 4, ['exams', 'wellbeing', 'planning'], 'all', [
     { p: 'A low grade feels like a judgment about you. It is not. It is a measurement of one exam on one day, and the most useful thing you can do is treat it like data.' },
     { h: 'The first 48 hours' },
