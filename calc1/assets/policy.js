@@ -6,7 +6,7 @@
   'use strict';
   const App = global.App; if (!App) return;
   const { $, esc, icon, bind, pageHead } = App;
-  const EFFECTIVE = 'September 18, 2026';
+  const EFFECTIVE = 'October 1, 2026';
   const OP = () => App.CREATOR || { name: 'Nikoloz Nonikashvili', email: 'nonikashvilinikolozi@gmail.com' };
 
   function html() {
@@ -70,6 +70,7 @@
         <li><b>Account data:</b> your email address, an optional display name, a hashed version of your password (we never store the password itself), and the dates you signed up, verified your email, logged in and accepted these Terms.</li>
         <li><b>Study progress:</b> quiz history and accuracy, flashcard boxes, checklist ticks, grade entries you type into the calculator and scratchpad strokes. This is saved to your account so it follows you across devices.</li>
         <li><b>Discussions:</b> posts, comments, votes, reports and edits you make, including the “anonymous” flag. Anonymous posts still record which account made them.</li>
+        <li><b>Class requests:</b> the course code and details you enter when you request a class, and the syllabus file or text you attach.</li>
         <li><b>Technical data:</b> your IP address and browser type when you sign up, log in, post or comment (kept to prevent abuse, enforce bans and rate limits, and investigate reports), and a session cookie that keeps you logged in.</li>
         <li><b>Local data:</b> preferences (theme, as-of date), a copy of your progress, and unsent drafts are stored in your browser’s local storage on each device you use.</li>
       </ul>
@@ -79,11 +80,12 @@
       <ul>
         <li>Other members see your display name (or the part of your email before the @ if you have not set one) next to your posts, unless you post anonymously. Visitors who are not logged in see only post titles.</li>
         <li>Moderators can see the author of every post and comment, including anonymous ones, and the report queue.</li>
+        <li>Class requests: only administrators see who asked and the syllabus files or text. Other members see the course code and how many students asked, never names or files. Syllabi are used only to build study materials in our own words and are never posted.</li>
         <li>Service providers: the site and its database are hosted by Hostinger; emails are sent through Hostinger’s mail servers; fonts are loaded from Google Fonts and the math renderer (MathJax) from the jsDelivr CDN. Those providers receive your IP address when your browser loads their resources.</li>
         <li>Legal: we may disclose account data if required by law, subpoena or court order, to enforce these Terms, to report suspected illegal activity, or to protect the safety of any person.</li>
       </ul>
       <h3>3.4 Retention and deletion</h3>
-      <p>Your data is kept while your account exists. Deleting your account from Settings permanently deletes your account record, progress, votes and reports. Posts and comments you deleted earlier are hidden from members; moderators may keep removed content, and short-lived backups may persist, for up to 90 days for abuse investigations. Verification codes expire within minutes and are deleted when used.</p>
+      <p>Your data is kept while your account exists. Deleting your account from Settings permanently deletes your account record, progress, votes and reports. Posts and comments you deleted earlier are hidden from members; moderators may keep removed content, and short-lived backups may persist, for up to 90 days for abuse investigations. Verification codes expire within minutes and are deleted when used. You can withdraw a class request while it is still new, which deletes the syllabus you sent; administrators may delete request files once a class is built. If you delete your account, your class requests stay as anonymous requests for that course, with any syllabus you attached, so the class can still be built; withdraw them first if you want them gone.</p>
       <h3>3.5 Your choices</h3>
       <p>You can edit or delete your posts and comments, change your display name, post anonymously, export a backup of your progress, or delete your whole account, all from within the Service. Email us for anything you cannot do yourself.</p>
       <h3>3.6 Security</h3>

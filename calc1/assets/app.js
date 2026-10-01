@@ -12,7 +12,7 @@
   const BUILD = global.MATHUB_BUILD || 'dev';
   const Courses = global.Courses || (global.Courses = {});
   const COURSE_ORDER = ['calc', 'physics', 'precalc', 'writ', 'csci', 'biob', 'kin', 'psyx'];
-  const GLOBAL_VIEWS = ['contact', 'forum', 'policy', 'admin', 'meet', 'badges', 'challenge', 'mock', 'people', 'settings', 'leagues', 'gpa', 'today', 'whatsnew', 'resources', 'guides', 'focus', 'recap', 'tools', 'mistakes', 'join', 'sheet'];   // pages that work without a course, e.g. #/contact
+  const GLOBAL_VIEWS = ['contact', 'forum', 'policy', 'admin', 'meet', 'badges', 'challenge', 'mock', 'people', 'settings', 'leagues', 'gpa', 'today', 'whatsnew', 'resources', 'guides', 'focus', 'recap', 'tools', 'mistakes', 'join', 'sheet', 'request'];   // pages that work without a course, e.g. #/contact
   const SITE = 'Mathub';
   let D = null, QZ = null;        // current course data and quiz module
   const courseHooks = [];
@@ -505,6 +505,8 @@
       if (!this.index) this.build();
       q = q.trim().toLowerCase(); const words = q.split(/\s+/).filter(Boolean); const pool = this.index.filter(r => this.course === 'all' || !r.c || r.c === this.course);
       this.results = !q ? pool.filter(r => r.type === 'page').slice(0, 14) : pool.map(r => ({ r, score: words.reduce((sc, w) => sc + (r.t.toLowerCase().includes(w) ? 3 : r.key.includes(w) ? 1 : -100), 0) + (D && r.c === D.id ? 0.5 : 0) })).filter(x => x.score > 0).sort((a, b) => b.score - a.score).slice(0, 30).map(x => x.r);
+      { const m = q.toUpperCase().replace(/[\s\-_.]+/g, ' ').match(/^([A-Z]{1,5}) ?([0-9]{3}[A-Z]{0,3})$/); const bare = c => String(c).toUpperCase().replace(/[^A-Z0-9]/g, '').replace(/([0-9])[A-Z]+$/, '$1');   // a course code Mathub does not have: offer to request it
+        if (m && App.views.request && !COURSE_ORDER.some(id => Courses[id] && bare(Courses[id].code) === bare(m[1] + m[2]))) { const code = `${m[1]} ${m[2]}`; this.results.unshift({ type: 'request', t: `Request ${code}`, s: 'Not on Mathub yet. Send its syllabus and we will build it.', key: '', go: () => { location.hash = '#/request?code=' + encodeURIComponent(code); } }); } }
       this.sel = 0; this.paint();
     },
     paint() { const box = $('#search-results'); if (!box) return; box.innerHTML = this.results.length ? this.results.map((r, i) => `<div class="search-item${i === this.sel ? ' active' : ''}" data-i="${i}"><span class="type">${r.type}</span><span class="t">${esc(r.t)}</span><span class="s">${r.c && Courses[r.c] ? `<span class="chip course-${r.c}">${esc(Courses[r.c].short)}</span> ` : ''}${esc(r.s)}</span></div>`).join('') : '<div class="empty small">No matches. Try another word or another class.</div>'; const a = $('.search-item.active', box); if (a) a.scrollIntoView({ block: 'nearest' }); }
@@ -552,6 +554,7 @@
         </section>
         <section class="land-sec" aria-labelledby="lsec-classes"><div class="sec-h"><h2 class="sec-title" id="lsec-classes">${showAll && mineIds.length < COURSE_ORDER.filter(id => Courses[id]).length ? 'All classes' : 'Your classes'}</h2>${mineIds.length < COURSE_ORDER.filter(id => Courses[id]).length ? `<button class="linkbtn small" data-action="show-all">${showAll ? 'Show only mine' : 'Show all classes'}</button>` : ''}</div>
           <div class="course-grid">${cards}</div>
+          ${App.requestLink ? `<div class="rq-under">${App.requestLink()}</div>` : ''}
         </section>
         <section class="land-sec" aria-labelledby="lsec-more"><h2 class="sec-title" id="lsec-more">Explore</h2>
         <div class="dash-tabs landing-tabs" data-store="landTab" role="tablist">${tabs.map(([k, l, ic]) => `<button class="tab" data-tab="${k}" role="tab">${icon(ic, 14)}<span>${l}</span></button>`).join('')}</div>
@@ -905,7 +908,7 @@
       const head = standalone
         ? `<header class="landing-top"><div><div class="eyebrow">Mathub</div><h1 class="landing-title"><span class="logo-mark">${App.logoSvg(44)}</span>Settings</h1><p class="muted">Your account, notifications, classes and preferences. They apply everywhere on Mathub.</p></div><div class="row gap-sm"><span id="landing-account"></span><a class="btn" href="#/">${icon('left', 14)} All classes</a></div></header>`
         : pageHead('Settings', 'Preferences apply to every class. Progress is stored per class and, when you are logged in, synced to your account.');
-      const classesPanel = `<div class="panel span-2"><div class="panel-h"><div class="panel-title">${icon('grid')} Your classes</div><button class="btn sm" data-action="choose">Choose classes and sections</button></div><div class="row gap-sm" style="flex-wrap:wrap">${mine.map(id => `<span class="chip course-${id}">${esc(Courses[id].short)}${courseSetting(id, 'section', '') ? ' · sec ' + esc(courseSetting(id, 'section', '')) : ''}${courseSetting(id, 'examTime', '') ? ' · ' + esc(courseSetting(id, 'examTime', '')) : ''}</span>`).join('')}</div><p class="small muted mt-1">Only these classes show on the landing page, in the course switcher, in reminders and in the weekly digest.</p></div>`;
+      const classesPanel = `<div class="panel span-2"><div class="panel-h"><div class="panel-title">${icon('grid')} Your classes</div><button class="btn sm" data-action="choose">Choose classes and sections</button></div><div class="row gap-sm" style="flex-wrap:wrap">${mine.map(id => `<span class="chip course-${id}">${esc(Courses[id].short)}${courseSetting(id, 'section', '') ? ' · sec ' + esc(courseSetting(id, 'section', '')) : ''}${courseSetting(id, 'examTime', '') ? ' · ' + esc(courseSetting(id, 'examTime', '')) : ''}</span>`).join('')}</div><p class="small muted mt-1">Only these classes show on the landing page, in the course switcher, in reminders and in the weekly digest.</p>${App.requestLink ? App.requestLink('small') : ''}</div>`;
       const prefsPanel = `<div class="panel"><div class="panel-h"><div class="panel-title">${icon('sliders')} Preferences</div></div>
           <div class="field mb-2"><label for="s-theme">Theme</label><select class="select" id="s-theme"><option value="system"${s.theme === 'system' ? ' selected' : ''}>Match system</option><option value="light"${s.theme === 'light' ? ' selected' : ''}>Light</option><option value="dark"${s.theme === 'dark' ? ' selected' : ''}>Dark</option></select></div>
           <div class="field mb-2"><label>Look</label><div class="skin-pick" id="s-skins">${(App.SKINS || []).map(([id, name, sub, [bg, ac]]) => `<button type="button" class="skin-opt${(App.skinOf ? App.skinOf() : (s.skin || 'default')) === id ? ' on' : ''}" data-action="skin" data-skin="${id}" aria-pressed="${(App.skinOf ? App.skinOf() : (s.skin || 'default')) === id}"><span class="skin-swatch" style="background:${bg}"><i style="background:${ac}"></i><i></i></span><b>${name}</b><small>${sub}</small></button>`).join('')}</div></div>
