@@ -11,7 +11,7 @@
   'use strict';
   const App = global.App; if (!App) return;
   const { $, $$, esc, icon, bind, toast, store, typeset } = App; const Courses = global.Courses;
-  const LEN = 90; const LETTERS = ['A', 'B', 'C', 'D', 'E'];
+  const LEN = 90; const LETTERS = ['A', 'B', 'C', 'D', 'E', 'F'];
   const B = { on: false, left: LEN, tick: null, q: null, pool: [], score: 0, combo: 0, best: 0, n: 0, correct: 0, topics: {}, cid: null, locked: false, started: 0 };
   App.blitz = B;
   const mult = () => Math.min(4, 1 + Math.floor(B.combo / 3));
@@ -75,7 +75,7 @@
         'bz-start': () => start(root, D.id), 'bz-opt': b => answer(root, +b.dataset.i),
         'bz-share': async () => { const text = `I scored ${B.score} in a 90-second ${D.short} Blitz on Mathub (${B.correct}/${B.n} right, best combo ${B.maxCombo || 0}). Beat it: https://mathub.space/#/${D.id}/blitz`; try { if (navigator.share) await navigator.share({ text }); else { await navigator.clipboard.writeText(text); toast('Score copied. Paste it anywhere.', 2500); } } catch (e) {} }
       });
-      this.keys = e => { if (!B.on || e.target.matches('input, textarea')) return; const k = ['1', '2', '3', '4', '5'].indexOf(e.key); const kl = LETTERS.indexOf(e.key.toUpperCase()); const i = k >= 0 ? k : kl; if (i >= 0) { e.preventDefault(); answer(root, i); } };
+      this.keys = e => { if (!B.on || e.target.matches('input, textarea')) return; const k = ['1', '2', '3', '4', '5', '6'].indexOf(e.key); const kl = LETTERS.indexOf(e.key.toUpperCase()); const i = k >= 0 ? k : kl; if (i >= 0) { e.preventDefault(); answer(root, i); } };
       document.addEventListener('keydown', this.keys); if (App.paintMascots) App.paintMascots();
       if (query && query.auto) start(root, D.id);
     },

@@ -28,6 +28,7 @@ const T = require('./lib');
     check(`${id} key-terms sheet title`, /key terms/i.test(await txt(p, '.page-title')));
     await go(p, `#/${id}/flashcards`); check(`${id} flashcards view`, /flash/i.test(await txt(p, '.page-title')));
     await go(p, `#/${id}/practice`); check(`${id} quizzer page`, (await txt(p, '#view')).length > 100);
+    check(`${id} every option has a letter`, !/undefined/.test(await txt(p, '#view')) && (await p.$$eval('.q-opt .letter', ls => ls.map(l => l.textContent))).every(l => /^[A-F]$/.test(l)));
     const gen = await p.evaluate(id => { const Q = window.Courses[id].quiz; const set = Q.generateSet(Object.keys(Q.TOPICS), 30); return { n: set.length, bad: set.filter(q => q.type === 'mc' ? !(q.answer >= 0 && q.answer < q.options.length) : !isFinite(q.answer)).length }; }, id);
     check(`${id} generates a 30-question set`, gen.n === 30 && gen.bad === 0, gen);
     await go(p, `#/${id}/exam/exam1`); check(`${id} exam prep`, /Exam prep/.test(await txt(p, '.page-title')) && /Exam 1/.test(await txt(p, '#view')));

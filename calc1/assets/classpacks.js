@@ -32,7 +32,7 @@
   const PACK_VIEWS = ['dashboard', 'calendar', 'notes', 'formulas', 'flashcards', 'textbook', 'practice', 'exam', 'planner', 'grades', 'scratchpad', 'forum', 'course', 'settings'];
   const ICON_NAMES = ['d20', 'wand', 'compass', 'orb', 'sword', 'potion', 'scroll', 'quill', 'crown', 'home', 'calendar', 'book', 'sigma', 'cards', 'list', 'file', 'chart', 'flask', 'calc', 'pen', 'link', 'info', 'search', 'flag', 'clock', 'bulb', 'fire', 'eye', 'target', 'chat', 'pin', 'bell', 'lock', 'shield', 'grid', 'users', 'award', 'gear', 'user', 'zap', 'mic', 'gem', 'trophy', 'path', 'sliders'];
   const DATA_KEYS = ['code', 'name', 'short', 'term', 'tagline', 'kind', 'quizNote', 'formulasNote', 'filterExample', 'COURSE', 'GRADING', 'EXAMS', 'CALENDAR', 'CALENDAR_NOTE', 'RECURRING', 'SEMESTER', 'VARIANTS', 'UNITS', 'SECTIONS', 'FORMULAS', 'FLASHCARDS', 'PRACTICE', 'CHECKLISTS', 'INFO', 'NAV'];
-  const META_KEYS = ['format', 'version', 'id', 'color', 'archetype', 'resources', 'guides', 'canvasMatch', 'QUIZ', 'notes'];
+  const META_KEYS = ['format', 'version', 'id', 'color', 'archetype', 'resources', 'resourcesBlurb', 'guides', 'canvasMatch', 'QUIZ', 'notes'];
   const DEFAULT_HINT = 'Rule out the options that describe a different structure, process or idea first.';
 
   /* ============================================================
@@ -208,7 +208,7 @@
     return sc => parts.map(x => typeof x === 'function' ? safeHtml(String(x(sc))) : x).join('');
   }
   const texNum = (x, f) => fmtWith(x, f).replace(/,/g, '{,}');
-  const texUnit = u => u ? `\\ \\text{${String(u).replace(/[^A-Za-z0-9·/%°.\-\s²³μΩ]/g, '')}}` : '';
+  const texUnit = u => u ? `\\ \\text{${String(u).replace(/[^A-Za-z0-9·/%°.\-\s²³μΩ]/g, '').replace(/%/g, '\\%')}}` : '';   // % starts a TeX comment
   function mc(topic, prompt, correct, distractors, explanation, hint, size = 5) {
     const c = String(correct); const ds = shuffle(uniq(distractors.map(String)).filter(d => d !== c)).slice(0, Math.max(1, size - 1));
     const options = shuffle([c].concat(ds));

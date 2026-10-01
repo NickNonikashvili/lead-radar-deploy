@@ -9,7 +9,7 @@
   'use strict';
   const App = global.App; if (!App) return;
   const { $, $$, esc, icon, bind, toast, typeset, parseNumber } = App;
-  const LETTERS = 'ABCD';
+  const LETTERS = 'ABCDEF';
   let L = null; let keyHandler = null;
 
   function buildTopics(q) {
@@ -32,7 +32,7 @@
       L = { qs, i: 0, answers: [], sel: null, combo: 0, best: 0, start: Date.now(), xp0: App.xpToday ? App.xpToday() : 0, label, query: q, ladder: {}, muted: App.settings().sound === false, done: false };
       this.paint(root);
       if (keyHandler) document.removeEventListener('keydown', keyHandler);
-      keyHandler = e => { if (!L || e.target.matches('input, textarea, select')) { if (e.key === 'Enter' && L && !L.done && e.target.matches('input')) { e.preventDefault(); this.check(root); } return; } if (L.done) return; if (/^[1-4]$/.test(e.key)) { const b = $(`.q-opt[data-i="${+e.key - 1}"]`, root); if (b && !b.disabled) b.click(); } else if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); const a = L.answers[L.i]; if (a) this.next(root); else this.check(root); } };
+      keyHandler = e => { if (!L || e.target.matches('input, textarea, select')) { if (e.key === 'Enter' && L && !L.done && e.target.matches('input')) { e.preventDefault(); this.check(root); } return; } if (L.done) return; if (/^[1-6]$/.test(e.key)) { const b = $(`.q-opt[data-i="${+e.key - 1}"]`, root); if (b && !b.disabled) b.click(); } else if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); const a = L.answers[L.i]; if (a) this.next(root); else this.check(root); } };
       document.addEventListener('keydown', keyHandler);
     },
     unmount() { if (keyHandler) document.removeEventListener('keydown', keyHandler); keyHandler = null; L = null; },

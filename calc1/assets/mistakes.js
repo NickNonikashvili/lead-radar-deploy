@@ -45,7 +45,7 @@
 
   /* ---------- player ---------- */
   const P = { queue: [], i: 0, answered: null, done: 0, right: 0, cleared: 0 };
-  const LETTERS = ['A', 'B', 'C', 'D', 'E'];
+  const LETTERS = ['A', 'B', 'C', 'D', 'E', 'F'];
   function startRetry(root, ids, all) {
     P.queue = ids.flatMap(id => (all ? App.mistakesAll(id) : App.mistakesDue(id)).map(m => ({ m, cid: id }))); P.i = 0; P.answered = null; P.done = 0; P.right = 0; P.cleared = 0;
     const box = $('#mk-player', root); if (!box) return; box.hidden = false; paintPlayer(root); box.scrollIntoView({ block: 'start', behavior: 'smooth' });
@@ -95,7 +95,7 @@
         'mk-drop': b => { store.poke(b.dataset.c, d => { d.mistakes = (d.mistakes || []).filter(m => m.k !== b.dataset.k); }); paintList(root); toast('Removed.', 1500); }
       });
       root.addEventListener('keydown', e => { if (e.target.matches('input') && e.key === 'Enter') { e.preventDefault(); const btn = $('[data-action="mk-num"]', root); if (btn && !btn.disabled) btn.click(); } });
-      this.keys = e => { if (e.target.matches('input, textarea') || !P.queue.length || $('#mk-player', root).hidden) return; const it = P.queue[P.i]; if (!it) return; if (P.answered && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); P.i++; P.answered = null; paintPlayer(root); return; } const i = ['1', '2', '3', '4', '5'].indexOf(e.key); if (i >= 0 && it.m.q.type === 'mc' && !P.answered) { e.preventDefault(); answer(root, it.cid, it.m, i === it.m.q.answer, { sel: i }); } };
+      this.keys = e => { if (e.target.matches('input, textarea') || !P.queue.length || $('#mk-player', root).hidden) return; const it = P.queue[P.i]; if (!it) return; if (P.answered && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); P.i++; P.answered = null; paintPlayer(root); return; } const i = ['1', '2', '3', '4', '5', '6'].indexOf(e.key); if (i >= 0 && it.m.q.type === 'mc' && !P.answered) { e.preventDefault(); answer(root, it.cid, it.m, i === it.m.q.answer, { sel: i }); } };
       document.addEventListener('keydown', this.keys);
       paintList(root); if (query && query.retry) startRetry(root, ids, false);
       const slot = $('#landing-account', root); if (slot && App.auth && App.auth.ready) App.auth.paintLandingAccount(slot);

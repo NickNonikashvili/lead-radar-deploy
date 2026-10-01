@@ -8,7 +8,7 @@
   let D = null, QZ = null;
   const { $, $$, esc, icon, bind, on, toast, store, typeset, parseNumber, fmtNum, cssVar, fitCanvas, pageHead } = App;
   const L = App.link;
-  const LETTERS = 'ABCD';
+  const LETTERS = 'ABCDEF';   // banks can have up to six options
   /* ---------- hint ladders: topic hints → problem hint → first step of the solution → full solution ---------- */
   function splitSteps(text) {
     const out = []; let cur = ''; let inMath = false; const s = String(text || '');
@@ -106,7 +106,7 @@
       $('#pq-session', root).addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.matches('input[data-q]')) { e.preventDefault(); this.answerNum(root, +e.target.dataset.q); } });
       this.keys = e => {
         if (e.target.matches('input, textarea, select') || $('#search-modal') || !PQ.session) return;
-        const k = LETTERS.indexOf(e.key.toUpperCase()) >= 0 ? LETTERS.indexOf(e.key.toUpperCase()) : (/^[1-4]$/.test(e.key) ? +e.key - 1 : -1);
+        const k = LETTERS.indexOf(e.key.toUpperCase()) >= 0 ? LETTERS.indexOf(e.key.toUpperCase()) : (/^[1-6]$/.test(e.key) ? +e.key - 1 : -1);
         if (k < 0) return;
         const qi = PQ.session.questions.findIndex((q, i) => q.type === 'mc' && !PQ.session.answers[i]);
         if (qi >= 0) { const btn = $(`[data-action="mc"][data-q="${qi}"][data-i="${k}"]`, root); if (btn) { btn.click(); btn.scrollIntoView({ block: 'center', behavior: 'smooth' }); } }
