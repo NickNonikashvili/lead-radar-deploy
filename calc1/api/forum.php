@@ -7,7 +7,6 @@ declare(strict_types=1);
 require_once __DIR__ . '/filter.php';
 require_once __DIR__ . '/social.php';
 
-const MH_COURSES = ['calc', 'physics', 'precalc', 'writ', 'csci', 'biob', 'kin', 'psyx', 'general'];
 const MH_FLAIRS = ['question', 'discussion', 'resource', 'study-group', 'exam', 'other'];
 const MH_PAGE = 25;
 
@@ -88,7 +87,7 @@ function mh_forum_route(string $route, array $in, array $cfg, string $ip): void 
       mh_method('GET');
       $course = (string)($_GET['course'] ?? ''); $sort = (string)($_GET['sort'] ?? 'hot'); $q = trim((string)($_GET['q'] ?? '')); $page = max(0, (int)($_GET['page'] ?? 0));
       $where = ['p.removed = 0']; $args = [];
-      if ($course !== '' && $course !== 'all') { if (!in_array($course, MH_COURSES, true)) mh_fail('Unknown class.'); $where[] = 'p.course = ?'; $args[] = $course; }
+      if ($course !== '' && $course !== 'all') { if (!mh_is_course($course, true)) mh_fail('Unknown class.'); $where[] = 'p.course = ?'; $args[] = $course; }
       $filter = (string)($_GET['filter'] ?? ''); if ($filter === 'unanswered') { $where[] = 'p.ncomments = 0'; $where[] = 'u.email <> "mathub@system.local"'; } elseif ($filter === 'solved') $where[] = 'p.accepted_id IS NOT NULL'; elseif ($filter === 'polls') $where[] = 'EXISTS (SELECT 1 FROM polls pl WHERE pl.post_id = p.id)';
       if ($q !== '') { $where[] = '(p.title LIKE ? OR p.body LIKE ?)'; $like = '%' . str_replace(['%', '_'], ['\\%', '\\_'], mb_substr($q, 0, 80)) . '%'; $args[] = $like; $args[] = $like; }
       $order = $sort === 'new' ? 'p.created DESC' : ($sort === 'top' ? 'p.score DESC, p.created DESC' : 'p.created DESC');
@@ -112,7 +111,7 @@ function mh_forum_route(string $route, array $in, array $cfg, string $ip): void 
       mh_method('POST'); $u = mh_require_user(); mh_can_post($u);
       mh_rate_or_fail("post:user:{$u['id']}", 12, 3600, 'You are posting very fast. Take a short break and try again.');
       $course = (string)($in['course'] ?? 'general'); $flair = (string)($in['flair'] ?? 'question');
-      if (!in_array($course, MH_COURSES, true)) mh_fail('Pick a class for the post.'); if (!in_array($flair, MH_FLAIRS, true)) $flair = 'other';
+      if (!mh_is_course($course, true)) mh_fail('Pick a class for the post.'); if (!in_array($flair, MH_FLAIRS, true)) $flair = 'other';
       $title = trim(preg_replace('/\s+/u', ' ', mh_str($in, 'title', 140))); $body = trim(mb_substr((string)($in['body'] ?? ''), 0, 8000));
       if (mb_strlen($title) < 3) mh_fail('Give the post a title (at least 3 characters).'); if ($body === '') mh_fail('Write something in the body.');
       $title = mh_censor($title); $body = mh_censor($body); $anon = !empty($in['anon']) ? 1 : 0;
@@ -242,7 +241,7 @@ function mh_forum_route(string $route, array $in, array $cfg, string $ip): void 
     /* ---------- notifications ---------- */
     case 'notif_list':
       mh_method('GET'); $u = mh_require_user();
-      $st = $db->prepare('SELECT * FROM notifications WHERE user_id = ? ORDER BY created DESC LIMIT 60'); $st->execute([$u['id']]);
+      $st = $db->prepare('SELECT * FROM notifications WHERE user_id = ? ORDER BY created DESC, id DESC LIMIT 60'); $st->execute([$u['id']]);
       $rows = array_map(fn($n) => ['id' => (int)$n['id'], 'kind' => $n['kind'], 'post_id' => (int)$n['post_id'], 'comment_id' => $n['comment_id'] ? (int)$n['comment_id'] : null, 'actor' => $n['actor'], 'title' => $n['title'], 'snippet' => $n['snippet'], 'link' => (string)($n['link'] ?? ''), 'created' => (int)$n['created'], 'read' => (int)$n['read'] === 1], $st->fetchAll());
       $st = $db->prepare('SELECT COUNT(*) FROM notifications WHERE user_id = ? AND read = 0'); $st->execute([$u['id']]);
       mh_json(['ok' => true, 'notifications' => $rows, 'unread' => (int)$st->fetchColumn()]);

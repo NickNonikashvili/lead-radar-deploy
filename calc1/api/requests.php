@@ -74,6 +74,20 @@ function mh_req_admin_users(): array {
   $st = mh_db()->prepare('SELECT * FROM users WHERE lower(email) IN (' . implode(',', array_fill(0, count($emails), '?')) . ') AND verified = 1'); $st->execute($emails); return $st->fetchAll();
 }
 
+/** Sets the status of every request for a course code and messages each student whose request changed. Returns how many were notified, or -1 when nobody asked for the class. */
+function mh_req_set_status(string $code, string $status, string $note = '', string $courseId = ''): int {
+  $db = mh_req_db(); $st = $db->prepare('SELECT * FROM class_requests WHERE code = ? AND status <> "withdrawn"'); $st->execute([$code]); $rows = $st->fetchAll(); if (!$rows) return -1;
+  $db->prepare('UPDATE class_requests SET status = ?, admin_note = ?, course_id = ?, updated = ? WHERE code = ? AND status <> "withdrawn"')->execute([$status, $note, $status === 'added' ? $courseId : '', time(), $code]);
+  $changed = 0;
+  foreach ($rows as $r) {
+    if ($r['status'] === $status && $r['admin_note'] === $note) continue; $changed++;
+    $msg = ['new' => "$code is back in the queue.", 'working' => "We are building $code now.", 'added' => "$code is on Mathub. Open it and add it to your classes.", 'declined' => "We can't add $code right now."][$status] . ($note !== '' ? " $note" : '');
+    mh_req_notify((int)$r['user_id'], ['id' => (int)mh_system_user()['id'], 'name' => 'Mathub'], 'classreq', $code, $msg, $status === 'added' ? "#/$courseId" : '#/request');
+    if ($status === 'added') { try { require_once __DIR__ . '/push.php'; mh_push_queue((int)$r['user_id'], "$code is on Mathub", 'The class you asked for is ready: notes, practice and the calendar.', "#/$courseId", 'classreq'); } catch (Throwable $e) {} }
+  }
+  return $changed;
+}
+
 function mh_requests_route(string $route, array $in, array $cfg, string $ip): void {
   $db = mh_req_db();
   switch ($route) {
@@ -160,15 +174,7 @@ function mh_requests_route(string $route, array $in, array $cfg, string $ip): vo
       $status = (string)($in['status'] ?? ''); if (!in_array($status, MH_REQ_STATUSES, true)) mh_fail('Unknown status.');
       $note = mh_str($in, 'note', 400); $courseId = preg_replace('/[^a-z0-9]/', '', strtolower((string)($in['course_id'] ?? '')));
       if ($status === 'added' && $courseId === '') mh_fail('Give the class id on Mathub (for example chmy) so students can open it.');
-      $st = $db->prepare('SELECT * FROM class_requests WHERE code = ? AND status <> "withdrawn"'); $st->execute([$code]); $rows = $st->fetchAll(); if (!$rows) mh_fail('No requests for that class.', 404);
-      $db->prepare('UPDATE class_requests SET status = ?, admin_note = ?, course_id = ?, updated = ? WHERE code = ? AND status <> "withdrawn"')->execute([$status, $note, $status === 'added' ? $courseId : '', time(), $code]);
-      $changed = 0;
-      foreach ($rows as $r) {
-        if ($r['status'] === $status && $r['admin_note'] === $note) continue; $changed++;
-        $msg = ['new' => "$code is back in the queue.", 'working' => "We are building $code now.", 'added' => "$code is on Mathub. Open it and add it to your classes.", 'declined' => "We can't add $code right now."][$status] . ($note !== '' ? " $note" : '');
-        mh_req_notify((int)$r['user_id'], ['id' => (int)mh_system_user()['id'], 'name' => 'Mathub'], 'classreq', $code, $msg, $status === 'added' ? "#/$courseId" : '#/request');
-        if ($status === 'added') { try { require_once __DIR__ . '/push.php'; mh_push_queue((int)$r['user_id'], "$code is on Mathub", 'The class you asked for is ready: notes, practice and the calendar.', "#/$courseId", 'classreq'); } catch (Throwable $e) {} }
-      }
+      $changed = mh_req_set_status($code, $status, $note, $courseId); if ($changed < 0) mh_fail('No requests for that class.', 404);
       mh_json(['ok' => true, 'notified' => $changed]);
     }
 

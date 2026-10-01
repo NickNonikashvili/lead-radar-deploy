@@ -25,6 +25,7 @@ function mh_canvas_feed_url(): string {
 /** Which Mathub course an event belongs to, from the course name Canvas appends in [brackets]. */
 function mh_canvas_course(string $summary, array $cfg): ?string {
   $rules = $cfg['canvas_course_match'] ?? ['calc' => ['M 171', 'M171', 'CALCULUS I'], 'physics' => ['PHSX 220', 'PHSX220', 'PHYSICS I'], 'precalc' => ['M 151', 'M151', 'PRECALC'], 'writ' => ['WRIT 101', 'WRIT101', 'COLLEGE WRITING'], 'csci' => ['CSCI 127', 'CSCI127', 'Joy and Beauty of Data'], 'biob' => ['BIOB 160', 'BIOB160', 'PRINCIPLES OF LIVING SYSTEMS'], 'kin' => ['KIN 322', 'KIN322'], 'psyx' => ['PSYX 340', 'PSYX340', 'PSYCHOLOGICAL DISORDERS']];
+  foreach (mh_pack_rows() as $p) if (!isset($rules[$p['id']])) { $c = json_decode((string)$p['canvas'], true); $rules[$p['id']] = is_array($c) && $c ? $c : [$p['code'], str_replace(' ', '', $p['code'])]; }
   $hay = strtoupper(preg_match('/\[([^\]]+)\]\s*$/', $summary, $m) ? $m[1] : $summary);
   foreach ($rules as $course => $needles) foreach ((array)$needles as $n) if ($n !== '' && str_contains($hay, strtoupper($n))) return $course;
   return null;

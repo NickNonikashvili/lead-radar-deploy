@@ -200,6 +200,23 @@ Also new for every class: definition lines (`{ n, d }`) on the formulas sheet an
 - **Demand.** Requests for the same code are grouped. The page shows a public **Most requested** list (codes and counts only, never names or files) with a one-click **Me too**, and each student's own requests with their status.
 - **Admin panel → Class requests.** Groups sorted by demand, with each requester, their note, and the syllabus download. Buttons set the status for everyone who asked: **Working on it**, **Mark added** (asks for the Mathub class id, so the inbox message links to it), **Can't add** (with a reason) or **Back to new**. Each change sends an inbox message (and a push when added); admins get an inbox alert for a new class or a first syllabus. A delete button removes spam.
 - **Limits.** 8 requests per student per day, 10 open at once, one open request per class per student; banned accounts cannot request. Students can withdraw a request while it is new, which deletes the file.
+- **Sidebar.** Inside any class, a full-width **Request a class** link sits under the class switcher.
+
+## Add a class from the admin panel (class packs)
+
+The workflow is syllabus in, one file out, upload, done. Full format: [`packs/README.md`](packs/README.md).
+
+1. Claude turns a syllabus into `packs/src/<id>.js` and runs `node scripts/make-pack.js packs/src/<id>.js`. The script checks everything and generates 400 questions from each question set. It then writes `packs/<id>.mathub.json`.
+2. In **Admin panel → Add a class** (`#/admin/packs`), choose that file. The panel checks it again and shows the counts, any problems and sample questions. Press **Add class**. It can tell every student who requested the course code, with an inbox message and a push, and it can add the class hidden for review first.
+3. The class appears for everyone, including on the start page, sidebar switcher, search, Today, resources, the calendar feed, reminders, discussions, leagues and Canvas matching. It gets every standard class view, the quizzer and everything built on it.
+
+How it works:
+- **Data only.** A pack is JSON and never code. `assets/classpacks.js` cleans every string to a short list of formatting tags and safe links. It builds questions from four declarative types: `bank`, `table`, `calc` and `calc-mc`. Calculated answers use a small expression language with no `eval`.
+- **Storage.** Packs live in the `class_packs` table (`api/packs.php`), so database backups include them. The previous version is kept for **Previous version** (rollback). **Hide** keeps a class for admins only, and **Delete** asks for the course code.
+- **Saved progress survives.** Students' progress and discussion posts are stored under the class id, so they come back if the class is re-uploaded.
+- **Loading.** Browsers fetch the list of packs (`classpack_list`, light stubs) on every visit and keep a copy for offline use. A class's full file is fetched the first time it is opened and cached by version. An update reaches students on their next visit.
+- **Server class lists.** Lists that used to be hard-coded (discussions, goals, profile classes, emails, the ICS feed, Canvas matching) now come from `mh_course_ids()` and `mh_course_names()` in `api/lib.php`, which add the installed packs to the built-in classes.
+- **Not available to uploaded classes:** custom tools (graphers, solvers, the Python playground) and the static `/learn/<id>/` pages and share images. Those still need a built-in class.
 
 ## GPA calculator
 
@@ -326,7 +343,7 @@ solutions reveal step by step, and the daily challenge offers the three hints wi
 ## Admin panel
 
 `#/admin` (also in the sidebar for staff): Overview with stats and the activity feed, Members (search, ban,
-unban, verify, delete), Reports, Problems (flagged questions and notes), Contributions queue, Mock exams
+unban, verify, delete), Add a class (class packs), Class requests, Reports, Problems (flagged questions and notes), Contributions queue, Mock exams
 (schedule and cancel), Site settings (Canvas feed, announcement banner, Instructor/TA badges), Backups
 and Digest & cron. Moderators see Reports, Problems, Contributions and Mock exams; administrators see
 everything.
@@ -411,6 +428,6 @@ Optional: set `admin_key` in `config.php` and call `api/index.php?r=stats` with 
 - When you change any file in `assets/`, bump the build string at the top of `index.html`
   (`data-build` and `MATHUB_BUILD` and the `?v=` suffixes) so browsers fetch the new files, and add
   an entry to `assets/changelog.js` so What's new and `learn/whats-new.html` mention it.
-- Adding a class: write `<id>-data.js` (and `-quiz.js`, `-tools.js` as needed), list its files in
+- Adding a class: the quick way is a class pack uploaded in the admin panel (see "Add a class from the admin panel" above). For a built-in class with custom tools, write `<id>-data.js` (and `-quiz.js`, `-tools.js` as needed), list its files in
   `scripts/build-course-index.js`, add the id to `COURSE_ORDER` in `assets/app.js` and to the service
   worker's shell list, then run the three build scripts (`build-course-index`, `build-og`, `build-seo`).

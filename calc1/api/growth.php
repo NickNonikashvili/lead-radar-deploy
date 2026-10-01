@@ -13,13 +13,14 @@
    ============================================================ */
 declare(strict_types=1);
 
-const MH_COURSE_NAMES = ['calc' => 'Calc I', 'physics' => 'Physics I', 'precalc' => 'Precalc', 'writ' => 'WRIT 101', 'csci' => 'CSCI 127', 'biob' => 'BIOB 160', 'kin' => 'KIN 322', 'psyx' => 'PSYX 340'];
 
 /* ---------- the class index the app ships, read from the generated file ---------- */
 function mh_course_index(): array {
   static $ix = null; if ($ix !== null) return $ix;
   $f = dirname(__DIR__) . '/assets/courses-index.js'; $ix = [];
   if (is_file($f)) { $s = (string)file_get_contents($f); if (preg_match('/const IX = (\{.*\});\s*\n\s*for \(const id in IX\)/s', $s, $m)) { $j = json_decode($m[1], true); if (is_array($j)) $ix = $j; } }
+  // classes uploaded in the admin panel; their text can carry formatting tags, which calendar files and emails do not want
+  try { foreach (mh_pack_db()->query('SELECT id, stub FROM class_packs WHERE enabled = 1')->fetchAll() as $r) { $st = json_decode((string)$r['stub'], true); if (!is_array($st) || isset($ix[$r['id']])) continue; array_walk_recursive($st, function (&$v) { if (is_string($v) && str_contains($v, '<')) $v = html_entity_decode(strip_tags($v), ENT_QUOTES | ENT_HTML5, 'UTF-8'); }); $ix[$r['id']] = $st; } } catch (Throwable $e) {}
   return $ix;
 }
 function mh_is_staff(?array $u): bool { return $u ? (mh_is_mod($u) || mh_role($u['email']) !== '') : false; }
@@ -29,11 +30,11 @@ function mh_iso_week(int $ts = 0): string { $d = new DateTime('@' . ($ts ?: time
 function mh_user_events(array $u, bool $lectures = false): array {
   $ix = mh_course_index(); $mine = mh_user_courses($u); $out = [];
   foreach ($mine as $cid) {
-    $C = $ix[$cid] ?? null; if (!$C) continue; $short = $C['short'] ?? (MH_COURSE_NAMES[$cid] ?? $cid);
+    $C = $ix[$cid] ?? null; if (!$C) continue; $short = $C['short'] ?? (mh_course_names()[$cid] ?? $cid);
     foreach ($C['CALENDAR'] ?? [] as $e) { if (!is_array($e) || count($e) < 3) continue; $type = (string)$e[1]; if (!$lectures && in_array($type, ['lecture', 'reading', 'topic'], true)) continue; $out[] = ['course' => $cid, 'short' => $short, 'date' => (string)$e[0], 'type' => $type, 'title' => (string)$e[2], 'time' => isset($e[4]) && is_string($e[4]) ? $e[4] : '']; }
     foreach ($C['EXAMS'] ?? [] as $ex) { if (empty($ex['date'])) continue; $out[] = ['course' => $cid, 'short' => $short, 'date' => (string)$ex['date'], 'type' => 'exam', 'title' => (string)($ex['name'] ?? 'Exam') . (!empty($ex['dateLabel']) ? ' · ' . $ex['dateLabel'] : ''), 'time' => (string)($ex['time'] ?? ''), 'weight' => $ex['weight'] ?? null]; }
   }
-  try { require_once __DIR__ . '/canvas.php'; $cv = mh_canvas_events(false); foreach ($cv['events'] ?? [] as $e) { if (!in_array($e['course'] ?? '', $mine, true)) continue; $out[] = ['course' => $e['course'], 'short' => MH_COURSE_NAMES[$e['course']] ?? $e['course'], 'date' => (string)$e['date'], 'type' => 'canvas', 'title' => (string)($e['title'] ?? 'Canvas'), 'time' => (string)($e['time'] ?? '')]; } } catch (Throwable $e) {}
+  try { require_once __DIR__ . '/canvas.php'; $cv = mh_canvas_events(false); foreach ($cv['events'] ?? [] as $e) { if (!in_array($e['course'] ?? '', $mine, true)) continue; $out[] = ['course' => $e['course'], 'short' => mh_course_names()[$e['course']] ?? $e['course'], 'date' => (string)$e['date'], 'type' => 'canvas', 'title' => (string)($e['title'] ?? 'Canvas'), 'time' => (string)($e['time'] ?? '')]; } } catch (Throwable $e) {}
   usort($out, fn($a, $b) => strcmp($a['date'], $b['date']) ?: strcmp($a['title'], $b['title']));
   return $out;
 }
@@ -144,14 +145,14 @@ function mh_growth_route(string $route, array $in, array $cfg, string $ip): void
     /* --- class goals and section leagues --- */
     case 'class_goal': {
       mh_method('GET'); $week = mh_iso_week(); $prev = mh_iso_week($now - 7 * 86400); $out = [];
-      $users = []; foreach ($db->query('SELECT courses FROM users WHERE verified = 1 AND email NOT LIKE "%@system.local"')->fetchAll() as $r) { $c = $r['courses'] ? json_decode((string)$r['courses'], true) : null; foreach (is_array($c) && $c ? $c : array_keys(MH_COURSE_NAMES) as $cid) $users[$cid] = ($users[$cid] ?? 0) + 1; }
+      $users = []; foreach ($db->query('SELECT courses FROM users WHERE verified = 1 AND email NOT LIKE "%@system.local"')->fetchAll() as $r) { $c = $r['courses'] ? json_decode((string)$r['courses'], true) : null; foreach (is_array($c) && $c ? $c : array_keys(mh_course_names()) as $cid) $users[$cid] = ($users[$cid] ?? 0) + 1; }
       $st = $db->prepare('SELECT course, SUM(answered) AS a, SUM(correct) AS c, SUM(cards) AS k, SUM(focus) AS f, COUNT(DISTINCT user_id) AS n FROM weekly_stats WHERE week = ? GROUP BY course'); $st->execute([$week]); $cur = []; foreach ($st->fetchAll() as $r) $cur[$r['course']] = $r;
       $st->execute([$prev]); $pv = []; foreach ($st->fetchAll() as $r) $pv[$r['course']] = $r;
-      foreach (array_keys(MH_COURSE_NAMES) as $cid) { $n = $users[$cid] ?? 0; $goal = max(300, (int)(ceil($n * 120 / 50) * 50)); $out[$cid] = ['answered' => (int)($cur[$cid]['a'] ?? 0), 'correct' => (int)($cur[$cid]['c'] ?? 0), 'cards' => (int)($cur[$cid]['k'] ?? 0), 'focus' => (int)($cur[$cid]['f'] ?? 0), 'active' => (int)($cur[$cid]['n'] ?? 0), 'members' => $n, 'goal' => $goal, 'prev' => (int)($pv[$cid]['a'] ?? 0)]; }
+      foreach (array_keys(mh_course_names()) as $cid) { $n = $users[$cid] ?? 0; $goal = max(300, (int)(ceil($n * 120 / 50) * 50)); $out[$cid] = ['answered' => (int)($cur[$cid]['a'] ?? 0), 'correct' => (int)($cur[$cid]['c'] ?? 0), 'cards' => (int)($cur[$cid]['k'] ?? 0), 'focus' => (int)($cur[$cid]['f'] ?? 0), 'active' => (int)($cur[$cid]['n'] ?? 0), 'members' => $n, 'goal' => $goal, 'prev' => (int)($pv[$cid]['a'] ?? 0)]; }
       header('Cache-Control: private, max-age=120'); mh_json(['ok' => true, 'week' => $week, 'courses' => $out]);
     }
     case 'league_section': {
-      mh_method('GET'); $u = mh_require_user(); $course = preg_replace('/[^a-z]/', '', (string)($_GET['course'] ?? '')); if (!isset(MH_COURSE_NAMES[$course])) mh_fail('Unknown class.');
+      mh_method('GET'); $u = mh_require_user(); $course = preg_replace('/[^a-z0-9]/', '', (string)($_GET['course'] ?? '')); if (!isset(mh_course_names()[$course])) mh_fail('Unknown class.');
       $mySec = mh_section_of($u, $course); if ($mySec === '') mh_json(['ok' => true, 'none' => true]);
       $ws = mh_week_start(); $rows = mh_league_rows($ws); $ids = []; foreach ($db->query('SELECT id, sections FROM users WHERE verified = 1')->fetchAll() as $r) { if (mh_section_of($r, $course) === $mySec) $ids[(int)$r['id']] = true; }
       $board = array_values(array_filter($rows, fn($r) => isset($ids[$r['id']]))); $localXp = max(0, min(100000, (int)($_GET['xp'] ?? 0)));
@@ -164,18 +165,18 @@ function mh_growth_route(string $route, array $in, array $cfg, string $ip): void
 
     /* --- course announcements (instructors, TAs, moderators) --- */
     case 'ann_list': {
-      mh_method('GET'); $course = preg_replace('/[^a-z]/', '', (string)($_GET['course'] ?? 'all'));
+      mh_method('GET'); $course = preg_replace('/[^a-z0-9]/', '', (string)($_GET['course'] ?? 'all'));
       $st = $db->prepare('SELECT a.*, u.name AS u_name, u.email AS u_email FROM announcements a JOIN users u ON u.id = a.user_id WHERE (a.expires = 0 OR a.expires > ?) AND (a.course = ? OR a.course = "all" OR ? = "all") ORDER BY a.created DESC LIMIT 12'); $st->execute([$now, $course, $course]);
       $rows = array_map(fn($a) => ['id' => (int)$a['id'], 'course' => $a['course'], 'text' => $a['text'], 'link' => $a['link'], 'author' => mh_display_name(['name' => $a['u_name'], 'email' => $a['u_email']]), 'role' => mh_role($a['u_email']), 'created' => (int)$a['created'], 'expires' => (int)$a['expires'], 'mine' => $me && (int)$a['user_id'] === (int)$me['id']], $st->fetchAll());
       header('Cache-Control: private, max-age=60'); mh_json(['ok' => true, 'items' => $rows, 'can_post' => mh_is_staff($me)]);
     }
     case 'ann_post': {
       mh_method('POST'); $u = mh_require_user(); if (!mh_is_staff($u)) mh_fail('Instructors, TAs and moderators only.', 403);
-      $course = preg_replace('/[^a-z]/', '', (string)($in['course'] ?? '')); if ($course !== 'all' && !isset(MH_COURSE_NAMES[$course])) mh_fail('Pick a class.');
+      $course = preg_replace('/[^a-z0-9]/', '', (string)($in['course'] ?? '')); if ($course !== 'all' && !isset(mh_course_names()[$course])) mh_fail('Pick a class.');
       $text = mh_str($in, 'text', 300); if (strlen($text) < 3) mh_fail('Write the announcement.'); $link = mh_str($in, 'link', 200); if ($link !== '' && !preg_match('#^(https?://|\#/)#', $link)) mh_fail('Links must start with https:// or #/.');
       $days = max(1, min(60, (int)($in['days'] ?? 7))); mh_rate_or_fail("ann:user:{$u['id']}", 20, 86400);
       $db->prepare('INSERT INTO announcements (course, text, link, user_id, created, expires) VALUES (?, ?, ?, ?, ?, ?)')->execute([$course, $text, $link, $u['id'], $now, $now + $days * 86400]);
-      mh_activity('post', $course === 'all' ? '' : $course, ($course === 'all' ? 'Announcement: ' : (MH_COURSE_NAMES[$course] . ': ')) . mb_substr($text, 0, 90), $course === 'all' ? '#/' : '#/' . $course); mh_json(['ok' => true]);
+      mh_activity('post', $course === 'all' ? '' : $course, ($course === 'all' ? 'Announcement: ' : (mh_course_names()[$course] . ': ')) . mb_substr($text, 0, 90), $course === 'all' ? '#/' : '#/' . $course); mh_json(['ok' => true]);
     }
     case 'ann_delete': {
       mh_method('POST'); $u = mh_require_user(); $id = (int)($in['id'] ?? 0); $st = $db->prepare('SELECT user_id FROM announcements WHERE id = ?'); $st->execute([$id]); $owner = (int)$st->fetchColumn();
@@ -192,7 +193,7 @@ function mh_growth_route(string $route, array $in, array $cfg, string $ip): void
       mh_method('GET'); $code = strtoupper(preg_replace('/[^A-Za-z0-9]/', '', (string)($_GET['ref'] ?? ''))); if (strlen($code) !== 6) mh_fail('Not found.', 404);
       $st = $db->prepare('SELECT name, email, courses FROM users WHERE invite_code = ? AND verified = 1'); $st->execute([$code]); $r = $st->fetch(); if (!$r) mh_fail('Not found.', 404);
       $first = trim(explode(' ', trim((string)$r['name']))[0] ?: explode('@', $r['email'])[0]); $courses = $r['courses'] ? (json_decode((string)$r['courses'], true) ?: []) : [];
-      header('Cache-Control: private, max-age=300'); mh_json(['ok' => true, 'name' => $first, 'courses' => array_values(array_filter($courses, fn($c) => isset(MH_COURSE_NAMES[$c])))]);
+      header('Cache-Control: private, max-age=300'); mh_json(['ok' => true, 'name' => $first, 'courses' => array_values(array_filter($courses, fn($c) => isset(mh_course_names()[$c])))]);
     }
   }
   mh_fail('Not found.', 404);

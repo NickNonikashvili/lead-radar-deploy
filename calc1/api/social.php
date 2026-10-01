@@ -9,7 +9,6 @@ declare(strict_types=1);
 require_once __DIR__ . '/filter.php';
 require_once __DIR__ . '/canvas.php';
 
-const MH_SOCIAL_COURSES = ['calc', 'physics', 'precalc', 'writ', 'csci', 'biob', 'kin', 'psyx', 'general'];
 const MH_BADGES = [
   'first_post' => ['First post', 'Started a discussion', 'chat'], 'first_answer' => ['First reply', 'Replied to a classmate', 'reply'],
   'helper_5' => ['Helper', '5 accepted answers', 'shield'], 'helper_25' => ['Mentor', '25 accepted answers', 'shield'],
@@ -150,7 +149,7 @@ function mh_housekeeping(bool $full = false): array {
 }
 /** What an evening reminder is about for one user: Canvas events due tomorrow in their classes, a streak at risk, sessions they joined. Shared by the email and the push. */
 function mh_reminder_items(array $u, array $events, string $tomorrow): array {
-  $db = mh_db(); $names = ['calc' => 'Calc I', 'physics' => 'Physics I', 'precalc' => 'Precalc', 'writ' => 'WRIT 101', 'csci' => 'CSCI 127', 'biob' => 'BIOB 160', 'kin' => 'KIN 322', 'psyx' => 'PSYX 340', 'general' => 'General'];
+  $db = mh_db(); $names = mh_course_names() + ['general' => 'General'];
   $mine = mh_user_courses($u); $due = array_values(array_filter($events, fn($e) => $e['date'] === $tomorrow && in_array($e['course'], $mine, true)));
   $days = []; foreach (mh_user_progress((int)$u['id']) as $b) foreach (array_keys($b['activity'] ?? []) as $d) $days[$d] = true; $sk = mh_current_streak(array_keys($days));
   $atRisk = !$sk['active_today'] && $sk['streak'] >= 3;
@@ -169,7 +168,7 @@ function mh_reminder_tick(int $max): int {
   if (!$users) return 0;
   require_once __DIR__ . '/mailer.php'; $cfg = mh_config(); $sent = 0; $site = $cfg['site_name'] ?? 'Mathub';
   $url = rtrim((string)(($cfg['site_url'] ?? '') ?: ('https://' . ($_SERVER['HTTP_HOST'] ?? 'mathub.space'))), '/');
-  $tomorrow = mh_local_date(time() + 86400); $names = ['calc' => 'Calc I', 'physics' => 'Physics I', 'precalc' => 'Precalc', 'general' => 'General'];
+  $tomorrow = mh_local_date(time() + 86400); $names = mh_course_names() + ['general' => 'General'];
   $events = []; try { require_once __DIR__ . '/canvas.php'; $events = mh_canvas_events(false)['events']; } catch (Throwable $e) {}
   foreach ($users as $u) {
     $db->prepare('UPDATE users SET reminder_sent = ? WHERE id = ?')->execute([time(), $u['id']]);
@@ -224,7 +223,7 @@ function mh_digest_context(): array {
 }
 function mh_digest_content(array $u, array $ctx): array {
   $cfg = mh_config(); $site = $cfg['site_name'] ?? 'Mathub'; $url = rtrim((string)(($cfg['site_url'] ?? '') ?: ('https://' . ($_SERVER['HTTP_HOST'] ?? 'mathub.space'))), '/');
-  $names = ['calc' => 'Calc I', 'physics' => 'Physics I', 'precalc' => 'Precalc', 'general' => 'General'];
+  $names = mh_course_names() + ['general' => 'General'];
   $from = mh_local_date(time() - 7 * 86400); $answered = 0; $correct = 0; $days = [];
   foreach (mh_user_progress((int)$u['id']) as $blob) { foreach ($blob['history'] ?? [] as $h) if (($h['d'] ?? '') >= $from) { $answered++; if (!empty($h['ok'])) $correct++; } foreach (array_keys($blob['activity'] ?? []) as $d) if ($d >= $from) $days[$d] = true; }
   $mine = mh_user_courses($u); $ctx['canvas'] = array_values(array_filter($ctx['canvas'], fn($e) => in_array($e['course'], $mine, true)));
@@ -267,7 +266,7 @@ function mh_social_route(string $route, array $in, array $cfg, string $ip): void
 
     /* --- daily challenge --- */
     case 'challenge_stats': {
-      mh_method('GET'); if (!in_array($course, MH_SOCIAL_COURSES, true)) mh_fail('Unknown class.');
+      mh_method('GET'); if (!mh_is_course($course, true)) mh_fail('Unknown class.');
       $date = preg_match('/^\d{4}-\d{2}-\d{2}$/', (string)($_GET['date'] ?? '')) ? $_GET['date'] : mh_local_date();
       $st = $db->prepare('SELECT COUNT(*) AS n, COALESCE(SUM(ok),0) AS ok FROM challenge_attempts WHERE course = ? AND date = ?'); $st->execute([$course, $date]); $agg = $st->fetch();
       $mine = null; if ($me) { $st = $db->prepare('SELECT ok, ms, points FROM challenge_attempts WHERE user_id = ? AND course = ? AND date = ?'); $st->execute([$me['id'], $course, $date]); $r = $st->fetch(); if ($r) $mine = ['ok' => (int)$r['ok'] === 1, 'ms' => (int)$r['ms'], 'points' => (int)$r['points']]; }
@@ -282,7 +281,7 @@ function mh_social_route(string $route, array $in, array $cfg, string $ip): void
       mh_json(['ok' => true, 'date' => $date, 'attempts' => (int)$agg['n'], 'correct' => (int)$agg['ok'], 'mine' => $mine, 'today' => $today, 'week' => $week, 'overall' => $overall, 'my_week_points' => $myWeek]);
     }
     case 'challenge_submit': {
-      mh_method('POST'); $u = mh_require_user(); if (!in_array($course, MH_SOCIAL_COURSES, true)) mh_fail('Unknown class.');
+      mh_method('POST'); $u = mh_require_user(); if (!mh_is_course($course, true)) mh_fail('Unknown class.');
       $date = (string)($in['date'] ?? ''); if (!in_array($date, [mh_local_date(), mh_local_date($now - 86400)], true)) mh_fail('That challenge day is over.');
       $ok = !empty($in['ok']) ? 1 : 0; $ms = max(1000, min(3600000, (int)($in['ms'] ?? 60000)));
       $points = $ok ? 10 + max(0, min(5, (int)round((90 - $ms / 1000) / 15))) : 2;
@@ -321,7 +320,7 @@ function mh_social_route(string $route, array $in, array $cfg, string $ip): void
     case 'meet_create': {
       mh_method('POST'); $u = mh_require_user(); require_once __DIR__ . '/forum.php'; mh_can_post($u);
       mh_rate_or_fail("meet:user:{$u['id']}", 10, 86400);
-      if (!in_array($course, MH_SOCIAL_COURSES, true)) mh_fail('Pick a class.');
+      if (!mh_is_course($course, true)) mh_fail('Pick a class.');
       $title = mh_censor(mh_str($in, 'title', 80)); $place = mh_censor(mh_str($in, 'place', 80)); $note = mh_censor(mb_substr(trim((string)($in['note'] ?? '')), 0, 300));
       $start = (int)($in['start'] ?? 0); $minutes = max(30, min(480, (int)($in['minutes'] ?? 90)));
       if (mb_strlen($title) < 3 || mb_strlen($place) < 2) mh_fail('Give the session a title and a place.'); if ($start < $now - 1800 || $start > $now + 45 * 86400) mh_fail('Pick a start time in the next 45 days.');
@@ -351,7 +350,7 @@ function mh_social_route(string $route, array $in, array $cfg, string $ip): void
       mh_json(['ok' => true, 'poll' => mh_poll_view((int)$p['post_id'], (int)$u['id'])]);
     }
     case 'poll_exam': {
-      mh_method('POST'); $u = mh_require_user(); if (!in_array($course, MH_SOCIAL_COURSES, true)) mh_fail('Unknown class.');
+      mh_method('POST'); $u = mh_require_user(); if (!mh_is_course($course, true)) mh_fail('Unknown class.');
       $examId = preg_replace('/[^a-z0-9_-]/i', '', (string)($in['exam_id'] ?? '')); $examName = mh_str($in, 'exam_name', 40); $date = (string)($in['date'] ?? '');
       if ($examId === '' || $examName === '' || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $date) || $date > mh_local_date()) mh_fail('That exam has not happened yet.');
       $key = "exam:$course:$examId"; $st = $db->prepare('SELECT post_id FROM polls WHERE auto_key = ?'); $st->execute([$key]); if ($pid = $st->fetchColumn()) mh_json(['ok' => true, 'post_id' => (int)$pid, 'existing' => true]);
@@ -429,7 +428,7 @@ function mh_social_route(string $route, array $in, array $cfg, string $ip): void
     }
     case 'mock_create': {
       mh_method('POST'); $u = mh_require_user(); if (!$mod) mh_fail('Moderators only.', 403);
-      if (!in_array($course, MH_SOCIAL_COURSES, true) || $course === 'general') mh_fail('Pick a class.');
+      if (!mh_is_course($course, true) || $course === 'general') mh_fail('Pick a class.');
       $title = mh_str($in, 'title', 80) ?: 'Community mock exam'; $examId = preg_replace('/[^a-z0-9_-]/i', '', (string)($in['exam_id'] ?? '')); $start = (int)($in['start'] ?? 0); $minutes = max(15, min(180, (int)($in['minutes'] ?? 50))); $count = max(5, min(30, (int)($in['count'] ?? 15)));
       if ($examId === '' || $start < $now) mh_fail('Pick an exam and a future start time.');
       $db->prepare('INSERT INTO mocks (course, exam_id, title, start, minutes, count, seed, created_by, created) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)')->execute([$course, $examId, $title, $start, $minutes, $count, random_int(1000, 2147483000), $u['id'], $now]); $id = (int)$db->lastInsertId();
@@ -473,7 +472,7 @@ function mh_social_route(string $route, array $in, array $cfg, string $ip): void
     case 'contrib_create': {
       mh_method('POST'); $u = mh_require_user(); require_once __DIR__ . '/forum.php'; mh_can_post($u);
       mh_rate_or_fail("contrib:user:{$u['id']}", 25, 86400, 'That is a lot of submissions for one day. Try again tomorrow.');
-      if (!in_array($course, MH_SOCIAL_COURSES, true) || $course === 'general') mh_fail('Pick a class.');
+      if (!mh_is_course($course, true) || $course === 'general') mh_fail('Pick a class.');
       $kind = ($in['kind'] ?? 'problem') === 'card' ? 'card' : 'problem'; $front = trim(mb_substr((string)($in['front'] ?? ''), 0, 2000)); $back = trim(mb_substr((string)($in['back'] ?? ''), 0, 2000)); $expl = trim(mb_substr((string)($in['explanation'] ?? ''), 0, 3000));
       if (mb_strlen($front) < 5 || mb_strlen($back) < 1) mh_fail($kind === 'card' ? 'Write both sides of the card.' : 'Write the problem and its answer.');
       $db->prepare('INSERT INTO contributions (user_id, course, kind, unit, sec, front, back, explanation, anon, created) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')->execute([$u['id'], $course, $kind, max(0, min(9, (int)($in['unit'] ?? 0))), mh_str($in, 'sec', 20), mh_censor($front), mh_censor($back), mh_censor($expl), !empty($in['anon']) ? 1 : 0, $now]);

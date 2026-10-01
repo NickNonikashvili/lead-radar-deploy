@@ -87,7 +87,7 @@
   const setSetting = (k, v) => { const s = settings(); s[k] = v; writeJSON('studyhub-settings', s); if (global.App && global.App.onSetting) { try { global.App.onSetting(k); } catch (e) {} } };
   const courseSetting = (courseId, k, def) => { const s = settings(); return (s[courseId] && k in s[courseId]) ? s[courseId][k] : def; };
   const setCourseSetting = (courseId, k, v) => { const s = settings(); s[courseId] = Object.assign({}, s[courseId], { [k]: v }); writeJSON('studyhub-settings', s); };
-  /* classes whose sections meet on different days (VARIANTS): calendar rows carry a section id in slot 3 and exams carry dates per section.
+  /* classes whose sections meet on different days (VARIANTS): calendar rows carry a section id in slot 4 and exams carry dates per section.
      The section comes from the Settings picker, or from the section number typed at sign-up ("01" → "1"). */
   const sectionVariant = C => { const V = C && C.VARIANTS; if (!V) return ''; const has = id => V.options.some(o => o.id === id); const pick = String(courseSetting(C.id, 'variant', '') || ''); if (has(pick)) return pick; const typed = String(parseInt(courseSetting(C.id, 'section', ''), 10) || ''); return has(typed) ? typed : V.default; };
   const applyVariant = C => { if (!C || !C.VARIANTS) return; const v = sectionVariant(C); if (C.CALENDAR !== C._calView) C._calAll = C.CALENDAR; C._calView = (C._calAll || []).filter(e => !e[4] || e[4] === v); C.CALENDAR = C._calView; (C.EXAMS || []).forEach(ex => { if (ex.dates && ex.dates[v]) { ex.date = ex.dates[v]; if (ex.dateLabels && ex.dateLabels[v]) ex.dateLabel = ex.dateLabels[v]; } }); };
@@ -286,9 +286,15 @@
   const loading = {};
   App.loadCourse = function (id) {
     const C = Courses[id]; if (!C) return Promise.reject(new Error('Unknown class.'));
+    const emit = (type, detail) => { try { document.dispatchEvent(new CustomEvent(type, { detail: Object.assign({ course: id }, detail) })); } catch (e) {} };
+    if (C.pack && !C.loaded && App.packs) {   // a class uploaded in the admin panel (assets/classpacks.js): one JSON file from the server instead of scripts
+      if (loading[id]) return loading[id];
+      if (App.loadbar) App.loadbar.start();
+      loading[id] = App.packs.load(id).then(F => { F.loaded = true; delete F.stub; applyVariant(F); Search.index = null; emit('mh:loaded', {}); return F; }).finally(() => { delete loading[id]; if (App.loadbar) App.loadbar.done(); });
+      return loading[id];
+    }
     if (C.loaded || !C.files || !C.files.length) { C.loaded = true; delete C.stub; return Promise.resolve(C); }
     if (loading[id]) return loading[id];
-    const emit = (type, detail) => { try { document.dispatchEvent(new CustomEvent(type, { detail: Object.assign({ course: id }, detail) })); } catch (e) {} };
     const one = src => new Promise((res, rej) => { if (document.querySelector(`script[data-src="${src}"]`)) return res(); const sc = document.createElement('script'); sc.src = `assets/${src}.js?v=${BUILD}`; sc.dataset.src = src; const t0 = performance.now(); sc.onload = () => { emit('mh:file', { src, url: sc.src, ms: Math.round(performance.now() - t0) }); res(); }; sc.onerror = () => { sc.remove(); rej(new Error(`Could not download ${src}.js. Check your connection and try again.`)); }; document.head.appendChild(sc); });
     if (App.loadbar) App.loadbar.start();
     emit('mh:load', { files: C.files.slice() });
@@ -430,7 +436,7 @@
   function buildNav() {
     $('#brand-code').textContent = D.code; $('#brand-name').innerHTML = `${esc(D.name)}<small>${esc(D.term)}</small>`;
     const mine = App.myCourses(); if (D && !mine.includes(D.id)) mine.push(D.id);
-    $('#course-switch').innerHTML = COURSE_ORDER.filter(id => Courses[id] && mine.includes(id)).map(id => `<a class="switch-btn${id === D.id ? ' on' : ''}" data-c="${id}" href="#/${id}/dashboard" title="${esc(Courses[id].name)}">${esc(Courses[id].short)}</a>`).join('') + `<a class="switch-btn home" href="#/" title="All courses">${icon('grid', 14)}</a>`;
+    $('#course-switch').innerHTML = COURSE_ORDER.filter(id => Courses[id] && mine.includes(id)).map(id => `<a class="switch-btn${id === D.id ? ' on' : ''}" data-c="${id}" href="#/${id}/dashboard" title="${esc(Courses[id].name)}">${esc(Courses[id].short)}</a>`).join('') + `<a class="switch-btn home" href="#/" title="All courses">${icon('grid', 14)}</a>` + (App.views.request ? `<a class="switch-btn req" href="#/request" title="Send us the syllabus of a class that is not on Mathub yet">${icon('file', 13)} Request a class</a>` : '');
     const staff = App.auth && App.auth.user && App.auth.user.mod ? [{ label: App.auth.user.admin ? 'Admin' : 'Moderation', items: [['admin', 'Admin panel', 'shield']] }] : [];
     const cur = (location.hash.replace(/^#\/?/, '').split('?')[0].split('/')[1]) || 'dashboard';
     const openMap = Object.assign({ Study: true, Plan: true, Admin: true, Moderation: true }, settings().navOpen || {});
@@ -438,6 +444,7 @@
     $$('.nav-item').forEach(b => b.classList.toggle('active', b.dataset.view === cur));
   }
   App.rebuildNav = () => { if (D) buildNav(); };
+  App.forgetCourse = () => { D = null; QZ = null; };   // the next render sets the class up again (a class pack that changed under the open page)
   function buildLayout() {
     const app = $('.app');
     bind($('#sidebar'), { nav: el => App.go(el.dataset.view), navgroup: el => { const m = Object.assign({}, settings().navOpen || {}); const now = el.classList.contains('open'); m[el.dataset.g] = !now; setSetting('navOpen', m); el.classList.toggle('open', !now); el.setAttribute('aria-expanded', String(!now)); const g = el.nextElementSibling; if (g) g.classList.toggle('closed', now); }, 'pomo-toggle': () => Pomo.toggle(), 'pomo-reset': () => Pomo.reset(), 'pomo-mode': () => Pomo.switchMode() });
@@ -742,14 +749,14 @@
         bind(root, { open: el => App.go('notes', el.dataset.id) }); return;
       }
       root.innerHTML = `<div class="notes-layout"><div class="panel sec-nav">${navHtml}</div><div class="stack"><div class="panel">
-        <div class="note-head"><span class="note-num">${esc(sec.label)}</span><span class="chip">Unit ${sec.unit}</span>${ex ? `<span class="chip exam">${esc(ex.name)}</span>` : ''}<a class="small" style="margin-left:auto" href="${sec.link}" target="_blank" rel="noopener">${esc(sec.linkLabel || (D.kind === 'code' ? 'Class site' : 'Read in the textbook'))} ${icon('external', 12)}</a>${App.flagButton ? App.flagButton({ course: D.id, view: 'Notes', ref: `${sec.label} ${sec.title}` }) : ''}</div>
+        <div class="note-head"><span class="note-num">${esc(sec.label)}</span><span class="chip">Unit ${sec.unit}</span>${ex ? `<span class="chip exam">${esc(ex.name)}</span>` : ''}${sec.link ? `<a class="small" style="margin-left:auto" href="${sec.link}" target="_blank" rel="noopener">${esc(sec.linkLabel || (D.kind === 'code' ? 'Class site' : 'Read in the textbook'))} ${icon('external', 12)}</a>` : '<span style="margin-left:auto"></span>'}${App.flagButton ? App.flagButton({ course: D.id, view: 'Notes', ref: `${sec.label} ${sec.title}` }) : ''}</div>
         <h1 class="note-title">${esc(sec.title)}</h1>
-        <div class="note-block"><h2>Big ideas</h2><ul class="list">${sec.ideas.map(i => `<li>${i}</li>`).join('')}</ul></div>
+        <div class="note-block"><h2>Big ideas</h2><ul class="list">${(sec.ideas || []).map(i => `<li>${i}</li>`).join('')}</ul></div>
         ${sec.formulas && sec.formulas.length ? `<div class="note-block"><h2>Key formulas</h2>${sec.formulas.map(f => `<div class="formula-row"><div class="name">${esc(f.n)}</div><div class="tex">$$${f.t}$$</div></div>`).join('')}</div>` : ''}
         ${sec.code && sec.code.length ? `<div class="note-block"><h2>Code you should know</h2>${sec.code.map((c, i) => `<div class="code-card"><div class="code-card-h"><span>${esc(c.t)}</span><a class="btn xs primary" href="${L('playground', null, { ex: `sec:${sec.id}:${i}`, run: 1 })}">${icon('play', 11)} Try it</a></div><pre class="code-ex">${esc(c.c)}</pre>${c.out ? `<div class="code-out"><span class="eyebrow">Output</span><pre>${esc(c.out)}</pre></div>` : ''}</div>`).join('')}</div>` : ''}
-        <div class="note-block"><h2>Worked example</h2><div class="callout"><div>${sec.example.p}</div><button class="btn sm mt-2" data-action="reveal">${icon('eye', 14)} Show solution</button><div class="reveal mt-2" id="sol">${sec.example.s}</div></div></div>
-        <div class="note-block"><h2>Common mistakes</h2><ul class="list">${sec.pitfalls.map(i => `<li>${i}</li>`).join('')}</ul></div>
-        <div class="note-block"><div class="callout tip"><div class="eyebrow">Exam tip</div>${sec.tip}</div></div>
+        ${sec.example && sec.example.p ? `<div class="note-block"><h2>Worked example</h2><div class="callout"><div>${sec.example.p}</div><button class="btn sm mt-2" data-action="reveal">${icon('eye', 14)} Show solution</button><div class="reveal mt-2" id="sol">${sec.example.s || ''}</div></div></div>` : ''}
+        ${sec.pitfalls && sec.pitfalls.length ? `<div class="note-block"><h2>Common mistakes</h2><ul class="list">${sec.pitfalls.map(i => `<li>${i}</li>`).join('')}</ul></div>` : ''}
+        ${sec.tip ? `<div class="note-block"><div class="callout tip"><div class="eyebrow">Exam tip</div>${sec.tip}</div></div>` : ''}
         <div class="row between mt-3"><div>${prev ? `<button class="btn" data-action="open" data-id="${prev.id}">${icon('left', 14)} ${esc(prev.label)}</button>` : ''}</div><div class="row">${topics.length ? `<a class="btn primary" href="${L('practice', null, { topics: topics.join(',') })}">${icon('list', 14)} Practice ${esc(sec.label)}</a>` : ''}<a class="btn" href="${L('flashcards', null, { sec: sec.id })}">${icon('cards', 14)} Cards</a></div><div>${next ? `<button class="btn" data-action="open" data-id="${next.id}">${esc(next.label)} ${icon('right', 14)}</button>` : ''}</div></div>
       </div></div></div>`;
       bind(root, { open: el => App.go('notes', el.dataset.id), reveal: el => { const s = $('#sol', root); s.classList.toggle('open'); el.innerHTML = s.classList.contains('open') ? `${icon('eye', 14)} Hide solution` : `${icon('eye', 14)} Show solution`; } });

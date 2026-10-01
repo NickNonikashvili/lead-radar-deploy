@@ -21,7 +21,7 @@
     if (!json || json.ok === false) { const err = new Error((json && json.error) || 'Request failed.'); err.data = json; throw err; }
     return json;
   }
-  const TABS = [['overview', 'Overview', 'grid', 'admin'], ['members', 'Members', 'info', 'admin'], ['issues', 'Problems', 'bulb', 'mod'], ['classes', 'Class requests', 'path', 'admin'], ['backups', 'Backups', 'download', 'admin'], ['reports', 'Reports', 'flag', 'mod'], ['contrib', 'Contributions', 'pen', 'mod'], ['mocks', 'Mock exams', 'target', 'mod'], ['growth', 'Growth', 'chart', 'admin'], ['settings', 'Site settings', 'sliders', 'admin'], ['digest', 'Digest & cron', 'clock', 'admin']];
+  const TABS = [['overview', 'Overview', 'grid', 'admin'], ['members', 'Members', 'info', 'admin'], ['issues', 'Problems', 'bulb', 'mod'], ['packs', 'Add a class', 'book', 'admin'], ['classes', 'Class requests', 'path', 'admin'], ['backups', 'Backups', 'download', 'admin'], ['reports', 'Reports', 'flag', 'mod'], ['contrib', 'Contributions', 'pen', 'mod'], ['mocks', 'Mock exams', 'target', 'mod'], ['growth', 'Growth', 'chart', 'admin'], ['settings', 'Site settings', 'sliders', 'admin'], ['digest', 'Digest & cron', 'clock', 'admin']];
 
   App.views.admin = {
     title: 'Admin panel',
@@ -69,14 +69,15 @@
       try {
         const r = await api('admin_classreqs&status=' + status); const kb = n => n > 1048576 ? (n / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(n / 1024)) + ' KB';
         const ST = { new: ['New', ''], working: ['Being built', 'warn'], added: ['Added', 'good'], declined: ['Declined', 'muted'] };
-        const guessId = code => code.split(' ')[0].toLowerCase();
+        const guessId = code => code.replace(/\s+/g, '').toLowerCase();
         el.innerHTML = `<div class="row between mb-2" style="flex-wrap:wrap;gap:8px"><div class="row gap-sm">${[['open', 'Open'], ['added', 'Added'], ['declined', 'Declined'], ['all', 'All']].map(([k, l]) => `<button class="chip toggle${k === status ? ' on' : ''}" data-action="cr-filter" data-s="${k}">${l} <b>${r.counts[k] || 0}</b></button>`).join('')}</div><span class="small muted">Most requested first. Syllabus files are only visible here.</span></div>
           ${r.groups.length ? `<div class="stack-sm">${r.groups.map(g => `<div class="panel cr-group" data-code="${esc(g.code)}"><div class="row between" style="flex-wrap:wrap;gap:8px"><div class="row gap-sm"><b class="mono" style="font-size:16px">${esc(g.code)}</b>${g.title ? `<span>${esc(g.title)}</span>` : ''}<span class="chip ${ST[g.status] ? ST[g.status][1] : ''}">${esc(ST[g.status] ? ST[g.status][0] : g.status)}</span><span class="chip">${g.n} student${g.n === 1 ? '' : 's'}</span><span class="chip${g.syllabi ? ' good' : ' warn'}">${g.syllabi ? `${g.syllabi} syllab${g.syllabi === 1 ? 'us' : 'i'}` : 'no syllabus yet'}</span>${g.status === 'added' && g.course_id ? `<a class="chip accent" href="#/${esc(g.course_id)}">#/${esc(g.course_id)}</a>` : ''}</div>
               <div class="row gap-sm">${g.status !== 'working' && g.status !== 'added' ? `<button class="btn xs" data-action="cr-set" data-st="working">Working on it</button>` : ''}${g.status !== 'added' ? `<button class="btn xs primary" data-action="cr-set" data-st="added">Mark added</button>` : ''}${g.status !== 'declined' ? `<button class="btn xs" data-action="cr-set" data-st="declined">Can't add</button>` : ''}${g.status !== 'new' ? `<button class="btn xs ghost" data-action="cr-set" data-st="new">Back to new</button>` : ''}</div></div>
               ${g.admin_note ? `<div class="small muted mt-1">${icon('chat', 11)} Note sent: ${esc(g.admin_note)}</div>` : ''}
               <div class="cr-list mt-1">${g.requests.map(q => `<div class="cr-row"><div><b>${q.deleted ? '<span class="muted">account deleted</span>' : esc(q.name || q.email)}</b>${q.email ? ` <a class="small muted" href="mailto:${esc(q.email)}">${esc(q.email)}</a>` : ''} <span class="small muted">· ${App.ago(q.created * 1000)}${q.term ? ' · ' + esc(q.term) : ''}${q.instructor ? ' · ' + esc(q.instructor) : ''}</span>${q.note ? `<div class="small mt-1">${esc(q.note)}</div>` : ''}</div>
                 <div class="row gap-sm">${q.file_name ? `<a class="btn xs" href="${API}admin_classreq_file&id=${q.id}" download>${icon('download', 12)} ${esc(q.file_name)} · ${kb(q.file_size)}</a>` : ''}${q.has_text ? `<a class="btn xs" href="${API}admin_classreq_file&id=${q.id}&part=text" download>${icon('file', 12)} Pasted text</a>` : ''}${!q.file_name && !q.has_text ? '<span class="small muted">no syllabus</span>' : ''}<button class="btn xs danger" data-action="cr-delete" data-id="${q.id}" title="Delete this request and its file">${icon('trash', 12)}</button></div></div>`).join('')}</div></div>`).join('')}</div>`
-            : `<div class="empty">${status === 'open' ? 'No open class requests. Students ask from the start page, the class picker and Settings.' : 'Nothing here.'}</div>`}`;
+            : `<div class="empty">${status === 'open' ? 'No open class requests. Students ask from the start page, the class picker and Settings.' : 'Nothing here.'}</div>`}
+          <p class="small muted mt-2">${icon('book', 12)} Built a class from a syllabus? Upload its class pack under <a href="#/admin/packs">Add a class</a>; it can tell everyone who asked.</p>`;
         const groupOf = b => r.groups.find(g => g.code === b.closest('.cr-group').dataset.code);
         bind(el, {
           'cr-filter': b => this.classes(el, root, b.dataset.s),
@@ -90,6 +91,74 @@
           'cr-delete': async b => { if (!confirm('Delete this request and its syllabus file? The student is not notified.')) return; try { await api('admin_classreq_delete', { id: +b.dataset.id }); } catch (e) { App.toast(e.message); } this.classes(el, root, status); }
         });
       } catch (e) { el.innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
+    },
+    /* class packs: one .mathub.json file per class, checked here before it goes live (assets/classpacks.js, api/packs.php) */
+    async packs(el, root) {
+      const P = App.packs && App.packs.api; if (!P) { el.innerHTML = '<div class="empty">The class pack engine did not load. Refresh the page.</div>'; return; }
+      let r; try { r = await api('admin_classpacks'); } catch (e) { el.innerHTML = `<div class="empty">${esc(e.message)}</div>`; return; }
+      const kb = n => n > 1048576 ? (n / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(n / 1024)) + ' KB';
+      const reqCode = c => { const m = String(c || '').toUpperCase().replace(/[\s\-_.]+/g, ' ').trim().match(/^([A-Z]{1,5}) ?([0-9]{3}[A-Z]{0,3})$/); return m ? `${m[1]} ${m[2]}` : ''; };
+      const asked = code => (r.requests && r.requests[reqCode(code)]) || 0;
+      const builtins = App.COURSE_ORDER.filter(id => global.Courses[id] && !global.Courses[id].pack);
+      el.innerHTML = `<div class="panel pk-up"><div class="panel-h"><div class="panel-title">${icon('book')} Add or update a class</div><span class="small muted">Up to ${r.max_mb} MB</span></div>
+          <ol class="pk-steps small"><li>Send Claude the syllabus. You get back one file, <code>&lt;id&gt;.mathub.json</code>.</li><li>Choose it below. It is checked here, with sample questions, before anything goes live.</li><li>Press <b>Add class</b>. Uploading the same class again updates it, and the previous version is kept.</li></ol>
+          <label class="rq-drop" id="pk-drop" for="pk-file"><input type="file" id="pk-file" accept=".json,application/json"><span class="rq-drop-ic">${icon('download', 22)}</span><span class="rq-drop-t"><b>Choose a class pack</b> or drop it here<small>a .mathub.json file</small></span></label>
+          <div id="pk-preview"></div></div>
+        <div class="panel mt-2"><div class="panel-h"><div class="panel-title">${icon('list')} Uploaded classes</div><span class="small muted">${r.packs.length} installed</span></div>
+          ${r.packs.length ? `<div class="pk-list">${r.packs.map(p => `<div class="pk-row" data-id="${esc(p.id)}"><div class="pk-main"><div class="row gap-sm" style="flex-wrap:wrap"><b class="mono">${esc(p.code)}</b><span>${esc(p.name)}</span><span class="chip ${p.enabled ? 'good' : 'warn'}">${p.enabled ? 'Live' : 'Hidden'}</span><span class="chip">v${p.version}</span>${p.requests ? `<span class="chip accent">${p.requests} asking</span>` : ''}</div><div class="small muted mt-1">#/${esc(p.id)} · ${kb(p.size)} · updated ${App.ago(p.updated * 1000)}${p.uploaded_by ? ' by ' + esc(p.uploaded_by) : ''}</div></div>
+            <div class="row gap-sm pk-acts"><a class="btn xs" href="#/${esc(p.id)}">${icon('eye', 12)} Open</a><button class="btn xs" data-action="pk-toggle">${p.enabled ? `${icon('lock', 12)} Hide` : `${icon('check', 12)} Publish`}</button><a class="btn xs" href="${API}admin_classpack_download&id=${esc(p.id)}" download>${icon('download', 12)} File</a>${p.has_prev ? `<button class="btn xs" data-action="pk-rollback">${icon('undo', 12)} Previous version</button>` : ''}<button class="btn xs danger" data-action="pk-delete" title="Remove this class from the site">${icon('trash', 12)}</button></div></div>`).join('')}</div>`
+            : '<div class="empty">No uploaded classes yet. Classes you add here appear for everyone on the start page, in search and in the class picker.</div>'}</div>
+        <div class="panel mt-2"><div class="panel-h"><div class="panel-title">${icon('grid')} Built-in classes</div></div><div class="row gap-sm" style="flex-wrap:wrap">${builtins.map(id => `<a class="chip course-${id}" href="#/${id}">${esc(global.Courses[id].short)}</a>`).join('')}</div><p class="small muted mt-1">These ship with the site's code, so they are changed in a new build rather than here.</p></div>`;
+      const prev = $('#pk-preview', el), file = $('#pk-file', el), drop = $('#pk-drop', el); let pending = null;
+      const refresh = async () => { try { await App.packs.sync(); } catch (e) {} this.packs(el, root); };
+      const sample = (P, pack) => { try { const built = P.buildQuiz(P.clean(pack.QUIZ, 'QUIZ', { quiz: true })); const ts = Object.keys(built.quiz.TOPICS); return built.quiz.generateSet(ts.sort(() => Math.random() - 0.5).slice(0, 3), 3); } catch (e) { return []; } };
+      const show = async f => {
+        prev.innerHTML = ''; pending = null; if (!f) return; drop.classList.add('has-file');
+        if (f.size > r.max_mb * 1048576) { prev.innerHTML = `<div class="pk-msg bad">${icon('x', 14)} ${esc(f.name)} is ${kb(f.size)}; class packs can be up to ${r.max_mb} MB.</div>`; return; }
+        const text = await f.text(); let pack; try { pack = JSON.parse(text); } catch (e) { prev.innerHTML = `<div class="pk-msg bad">${icon('x', 14)} ${esc(f.name)} is not valid JSON: ${esc(e.message)}</div>`; return; }
+        const v = P.validate(pack); const st = v.stats || {}; const old = r.packs.find(p => p.id === pack.id); const n = asked(pack.code);
+        const qs = v.errors.length ? [] : sample(P, pack); const pal = v.errors.length ? null : P.palette(pack.color);
+        prev.innerHTML = `<div class="pk-card mt-2">
+          <div class="row between" style="flex-wrap:wrap;gap:8px"><div class="row gap-sm" style="flex-wrap:wrap">${pal ? `<span class="pk-swatch" style="background:${pal.light.accent}"></span><span class="pk-swatch" style="background:${pal.dark.accent}"></span>` : ''}<b class="mono" style="font-size:16px">${esc(pack.code || '?')}</b><span>${esc(P.safeHtml(pack.name || ''))}</span><span class="chip">${esc(pack.term || '')}</span><span class="chip ${old ? 'warn' : 'accent'}">${old ? `Update: v${old.version} → v${old.version + 1}` : 'New class'}</span></div><span class="small muted mono">#/${esc(pack.id || '?')} · ${kb(f.size)}</span></div>
+          <div class="pk-stats mt-1">${[['sections', 'topics'], ['units', 'units'], ['exams', 'exams'], ['calendar', 'calendar days'], ['flashcards', 'flashcards'], ['formulas', 'formulas & terms'], ['practice', 'practice problems'], ['topics', 'quiz topics'], ['questions', 'question sets'], ['bankItems', 'bank questions']].map(([k, l]) => `<span><b>${st[k] || 0}</b> ${l}</span>`).join('')}</div>
+          ${v.errors.length ? `<div class="pk-msg bad mt-2"><b>${v.errors.length} problem${v.errors.length === 1 ? '' : 's'} to fix before this can go live:</b><ul>${v.errors.slice(0, 30).map(x => `<li>${esc(x)}</li>`).join('')}</ul>${v.errors.length > 30 ? `<div class="small">…and ${v.errors.length - 30} more.</div>` : ''}</div>` : `<div class="pk-msg good mt-2">${icon('check', 14)} Checked: every section, date and question set is valid${st.questions ? `, and each question set generated 40 questions without a problem` : ''}.</div>`}
+          ${v.warnings.length ? `<details class="pk-warn mt-1"><summary>${v.warnings.length} note${v.warnings.length === 1 ? '' : 's'} (optional to fix)</summary><ul class="small">${v.warnings.slice(0, 40).map(x => `<li>${esc(x)}</li>`).join('')}</ul></details>` : ''}
+          ${qs.length ? `<div class="eyebrow mt-2 mb-1">Sample questions</div><div class="stack-sm">${qs.map(q => `<div class="pk-q"><div>${q.prompt}</div>${q.type === 'mc' ? `<ol class="pk-opts">${q.options.map((o, i) => `<li class="${i === q.answer ? 'right' : ''}">${o}</li>`).join('')}</ol>` : `<div class="small mt-1">Answer: $${q.answerTex}$</div>`}<div class="small muted mt-1">${q.explanation}</div></div>`).join('')}</div>` : ''}
+          ${v.errors.length ? '' : `<div class="pk-go mt-2"><label class="check"><input type="checkbox" id="pk-publish" checked> Publish now <span class="small muted">(untick to add it hidden, so only admins see it while you check it)</span></label>
+            ${n ? `<label class="check"><input type="checkbox" id="pk-notify" checked> Tell the ${n} student${n === 1 ? '' : 's'} who asked for ${esc(reqCode(pack.code))} <span class="small muted">(inbox message and phone notification)</span></label>` : ''}
+            <div class="row gap-sm mt-1"><button class="btn primary" data-action="pk-install">${icon('check', 14)} ${old ? 'Update class' : 'Add class'}</button><button class="btn ghost" data-action="pk-cancel">Cancel</button><span class="small muted" id="pk-status" role="status"></span></div></div>`}
+        </div>`;
+        pending = { text, pack, old }; App.typeset(prev);
+      };
+      file.addEventListener('change', () => show(file.files[0]));
+      ['dragenter', 'dragover'].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.add('drag'); }));
+      ['dragleave', 'drop'].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.remove('drag'); }));
+      drop.addEventListener('drop', e => { const f = e.dataTransfer && e.dataTransfer.files[0]; if (f) show(f); });
+      const rowOf = b => r.packs.find(p => p.id === b.closest('.pk-row').dataset.id);
+      bind(el, {
+        'pk-cancel': () => { prev.innerHTML = ''; pending = null; file.value = ''; drop.classList.remove('has-file'); },
+        'pk-install': async b => {
+          if (!pending) return; b.disabled = true; const status = $('#pk-status', el); status.textContent = 'Uploading…';
+          const publish = !!($('#pk-publish', el) || {}).checked, notify = !!($('#pk-notify', el) || {}).checked;
+          try {
+            const res = await api('admin_classpack_install', { json: pending.text, publish, notify });
+            App.toast(`${pending.pack.code} ${res.created ? 'added' : 'updated'}${res.notified ? ` · ${res.notified} student${res.notified === 1 ? '' : 's'} told` : ''}`, 2600);
+            pending = null; await refresh();
+          } catch (e) { status.textContent = e.message; b.disabled = false; }
+        },
+        'pk-toggle': async b => {
+          const p = rowOf(b); const on = !p.enabled; let notify = false;
+          if (on && p.requests) notify = confirm(`Publish ${p.code} and tell the ${p.requests} student${p.requests === 1 ? '' : 's'} who asked for it?\n\nOK publishes and tells them. Cancel publishes without a message.`);
+          else if (!on && !confirm(`Hide ${p.code}? Students stop seeing it right away; their saved progress is kept.`)) return;
+          try { const res = await api('admin_classpack_set', { id: p.id, enabled: on, notify }); App.toast(`${p.code} ${on ? 'is live' : 'is hidden'}${res.notified ? ` · ${res.notified} told` : ''}`); } catch (e) { App.toast(e.message); }
+          refresh();
+        },
+        'pk-rollback': async b => { const p = rowOf(b); if (!confirm(`Go back to the previous version of ${p.code}? The current one is kept as the "previous" version, so you can switch back.`)) return; try { await api('admin_classpack_rollback', { id: p.id }); App.toast(`${p.code} rolled back`); } catch (e) { App.toast(e.message); } refresh(); },
+        'pk-delete': async b => {
+          const p = rowOf(b); const typed = prompt(`Remove ${p.code} ${p.name} from the site?\n\nStudents' saved progress and its discussion posts stay in the database, so uploading the same class again brings them back.\n\nType ${p.code} to confirm:`); if (typed === null) return;
+          try { await api('admin_classpack_delete', { id: p.id, confirm: typed }); App.toast(`${p.code} removed`); } catch (e) { App.toast(e.message); } refresh();
+        }
+      });
     },
     async backups(el, root) {
       try {
