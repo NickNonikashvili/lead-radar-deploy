@@ -103,6 +103,17 @@ const fs = require('fs'); const path = require('path'); const { spawnSync } = re
   await go(a, '#/admin/packs', 1000); await a.click('.pk-row[data-id="zzp101"] [data-action="pk-delete"]'); await a.waitForTimeout(1200);
   check('the class is removed', !(await a.$('.pk-row[data-id="zzp101"]')) && !(await api(a, 'classpack_list')).packs.some(p => p.id === 'zzp101'));
 
+  // ---- a class with no exams (graded on coursework) ----
+  const noEx = JSON.parse(JSON.stringify(pack)); noEx.EXAMS = []; noEx.PRACTICE = {}; noEx.CHECKLISTS = {}; noEx.CALENDAR = noEx.CALENDAR.filter(e => e[1] !== 'exam'); noEx.UNITS.forEach(u => delete u.exam);
+  check('a pack without exams passes the checker', P.validate(noEx).errors.length === 0, P.validate(noEx).errors);
+  check('and installs', (await api(a, 'admin_classpack_install', { json: JSON.stringify(noEx), publish: true })).ok === true);
+  await g.reload(); await g.waitForTimeout(1200); await go(g, '#/zzp101', 1500);
+  check('its dashboard explains there are no exams', /Graded on assignments and quizzes/.test(await txt(g, '#view')) && !/Semester complete/.test(await txt(g, '#view')) && /No exams/.test(await txt(g, '#exam-chip')));
+  check('the sidebar has no exam prep', !(await g.$('#sidebar-nav .nav-item[data-view="exam"]')));
+  await go(g, '#/zzp101/exam', 900); check('the exam page says there are none instead of breaking', /has no exams/.test(await txt(g, '#view')));
+  await go(g, '#/', 900); check('its start page card says No exams', /No exams/.test(await txt(g, '.course-card.zzp101')));
+  await api(a, 'admin_classpack_delete', { id: 'zzp101', confirm: 'ZZP 101' });
+
   // ---- clean up ----
   const all = await api(a, 'admin_classreqs&status=all'); for (const gr of (all.groups || []).filter(x => x.code === 'ZZP 101')) for (const q of gr.requests) await api(a, 'admin_classreq_delete', { id: q.id });
   fs.rmSync(bad, { force: true });

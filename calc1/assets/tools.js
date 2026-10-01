@@ -223,6 +223,7 @@
   App.views.exam = {
     title: 'Exam prep',
     render(root, param) {
+      if (!(D.EXAMS || []).length) { root.innerHTML = pageHead('Exam prep', `${esc(D.short)} has no exams.`) + `<div class="empty">This class is graded on assignments and quizzes, so there is nothing to prep here. Use the quizzer and flashcards to review topics.</div>`; return; }
       const exId = D.EXAMS.some(e => e.id === param) ? param : (App.nextExam() || D.EXAMS[0]).id;
       const ex = D.EXAMS.find(e => e.id === exId);
       const t = App.todayISO(); const n = App.daysBetween(t, ex.date);
