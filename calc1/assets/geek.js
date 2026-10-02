@@ -25,7 +25,7 @@
   const RUNES = 'ᚠᚢᚦᚨᚱᚲᚷᚹᚺᚾᛁᛃᛇᛈᛉᛊᛏᛒᛖᛗᛚᛜᛞᛟ✦';
   const realm = () => document.documentElement.getAttribute('data-skin') === 'realm';
   const glyph = () => { const set = realm() ? RUNES : GLYPHS; return set[(Math.random() * set.length) | 0]; };
-  const on = () => settings().geek !== false && !(App.motionReduced && App.motionReduced());
+  const on = () => settings().geek === true && !(App.motionReduced && App.motionReduced());   // opt-in since the trail-map redesign
   App.geekOn = on;
   App.applyGeek = () => document.documentElement.setAttribute('data-geek', on() ? 'on' : 'off');
   const baseApplyMotion = App.applyMotion; App.applyMotion = () => { if (baseApplyMotion) baseApplyMotion(); App.applyGeek(); };

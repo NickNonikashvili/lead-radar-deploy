@@ -69,7 +69,7 @@
   const HUES = { math: '#4F46E5', physics: '#0E9488', code: '#16A34A', writing: '#7C3AED', science: '#D97706', shape: '#F2C14E' };
   const LiveBg = {
     c: null, ctx: null, items: [], raf: 0, cols: null, tick: 0,
-    enabled() { return settings().liveBg !== false; },
+    enabled() { return settings().liveBg === true; },   // opt-in since the trail-map redesign (2026.10.03)
     init() {
       if (this.c) return; const c = document.createElement('canvas'); c.id = 'live-bg'; c.setAttribute('aria-hidden', 'true'); document.body.prepend(c); this.c = c; this.ctx = c.getContext('2d');
       this.resize(); window.addEventListener('resize', () => this.resize()); document.addEventListener('visibilitychange', () => { if (document.hidden) this.stop(); else this.start(); });

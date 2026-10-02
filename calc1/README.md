@@ -174,6 +174,17 @@ The app is a hash-routed single page, which search engines index as one URL. `no
 
 A mobile tab bar (Home, Learn, Practice or Code, Board, Me) appears under 900 px, adapting to the class; the top bar shows a breadcrumb (class › page); the landing page has a "pick up where you left off" card that remembers the last page visited in any of your classes and a stats strip; class switcher buttons carry their class color; `?` opens a keyboard-shortcuts dialog; a back-to-top button appears after scrolling; pages fade in; keyboard focus rings are visible.
 
+### The trail map (default look since 2026.10.02.2)
+
+The default look is a printed Bridger Bowl trail map: every class is a mountain and its next exam is the summit. Product truth is in `PRODUCT.md`; the direction contract is in `.impeccable/surfaces/index-html.md`; the built system is documented in `DESIGN.md` (and `.impeccable/design.json`). The whole world is one stylesheet, `assets/world.css`, loaded last and scoped to `:root:not([data-skin])`, so the other looks in Settings keep their own styling.
+
+- Inks: night-sky navy text, run blue, pine green, lift red, trail-sign yellow; each class keeps its own ink. No gradients, glow or glass; 4px corners; shadows only on things that float. Dark mode is the night map.
+- Type: Barlow (text) and Barlow Condensed (headings, numerals, signs), self-hosted in `assets/fonts/` (SIL Open Font License).
+- Surfaces: `.panel` is a ruled section (a top hairline and whitespace), not a card. The one solid plate per screen is the trail board.
+- The trail board (`trailTile` in `assets/app.js`, dashboard view): the summit block (exam, date, days to go, covers, readiness) and the trail of the exam's sections from the trailhead up, each marked by `.run-glyph` (`easy` green circle, `mid` blue square, `hard` black diamond, `new` hollow ring) from the readiness score of its topics (`App.readiness`). The weakest section carries the red "You are here" pin and the "Take the next run" button links to practice on its topics. It draws itself once per class per session (path, markers, pin) and holds still with Reduce motion.
+- Section notes show the same glyph per section in the contents.
+- The drifting background (`liveBg`) and geek mode are opt-in (`settings.liveBg === true`, `settings.geek === true`).
+
 ### Interface rules (2026.10.02 audit)
 
 The site was audited with the impeccable detector and the make-interfaces-feel-better and transitions.dev guides; the fixes live in the "POLISH 2026.10.02" block at the end of `assets/styles.css` and the matching block at the end of `assets/motion.css`. Keep to them when adding UI:

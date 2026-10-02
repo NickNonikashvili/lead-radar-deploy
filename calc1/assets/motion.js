@@ -15,7 +15,7 @@
   // no saved choice means Classic ('default', no attribute); Realm and the others are opt-in
   App.skinOf = () => settings().skin || 'default';
   App.applySkin = () => { const s = App.skinOf(); if (s !== 'default') document.documentElement.setAttribute('data-skin', s); else document.documentElement.removeAttribute('data-skin'); };
-  App.SKINS = [['default', 'Classic', 'The clean Mathub look', ['#F4F6FC', '#4F46E5']], ['realm', 'Realm', 'Parchment, runes and dice', ['#EDE1C6', '#9E1B2E']], ['bobcat', 'Bobcat', 'MSU blue and gold', ['#EEF3FB', '#003F7F']], ['paper', 'Paper', 'Warm and easy on the eyes', ['#F6F1E7', '#8A6A16']], ['forest', 'Forest', 'Calm greens', ['#EDF4EF', '#2E7D32']], ['midnight', 'Midnight', 'Deeper dark mode', ['#03050C', '#7C86FF']]];
+  App.SKINS = [['default', 'Trail map', 'Flat inks on plain paper, the Bridgers on the horizon', ['#F6F8FA', '#1D5BB5']], ['realm', 'Realm', 'Parchment, runes and dice', ['#EDE1C6', '#9E1B2E']], ['bobcat', 'Bobcat', 'MSU blue and gold', ['#EEF3FB', '#003F7F']], ['paper', 'Paper', 'Warm and easy on the eyes', ['#F6F1E7', '#8A6A16']], ['forest', 'Forest', 'Calm greens', ['#EDF4EF', '#2E7D32']], ['midnight', 'Midnight', 'Deeper dark mode', ['#03050C', '#7C86FF']]];
 
   /* ---------- loading bar ---------- */
   let barTimer = null, barCount = 0;

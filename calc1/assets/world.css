@@ -1,0 +1,406 @@
+/* ============================================================
+   Mathub — the trail map (default look since 2026.10.02.2)
+   Every class is a mountain and its next exam is the summit. This
+   layer turns the old card-and-gradient look into a printed Bridger
+   Bowl trail map: flat inks on snow-white paper, Barlow and Barlow
+   Condensed (signage faces), hairline rules instead of cards, one
+   solid plate per screen (the trail board), difficulty glyphs as the
+   only ornament, Bo and the pixel art as the hand-made layer. Night
+   map in dark mode. Scoped to the default look (no data-skin), so the
+   opt-in looks in Settings keep their own styling. Loaded last.
+   Direction contract: .impeccable/surfaces/index-html.md.
+   ============================================================ */
+
+@font-face { font-family: "Barlow"; font-style: normal; font-weight: 400; font-display: swap; src: url(fonts/barlow-400.woff2) format("woff2"); }
+@font-face { font-family: "Barlow"; font-style: normal; font-weight: 500; font-display: swap; src: url(fonts/barlow-500.woff2) format("woff2"); }
+@font-face { font-family: "Barlow"; font-style: normal; font-weight: 600; font-display: swap; src: url(fonts/barlow-600.woff2) format("woff2"); }
+@font-face { font-family: "Barlow"; font-style: normal; font-weight: 700; font-display: swap; src: url(fonts/barlow-700.woff2) format("woff2"); }
+@font-face { font-family: "Barlow Condensed"; font-style: normal; font-weight: 500; font-display: swap; src: url(fonts/barlow-condensed-500.woff2) format("woff2"); }
+@font-face { font-family: "Barlow Condensed"; font-style: normal; font-weight: 600; font-display: swap; src: url(fonts/barlow-condensed-600.woff2) format("woff2"); }
+@font-face { font-family: "Barlow Condensed"; font-style: normal; font-weight: 700; font-display: swap; src: url(fonts/barlow-condensed-700.woff2) format("woff2"); }
+
+/* ---------- inks: the day map ---------- */
+:root:not([data-skin]) {
+  --font-display: "Barlow Condensed", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+  --font-body: "Barlow", "Helvetica Neue", Arial, system-ui, sans-serif;
+  --font-sans: var(--font-body);
+  --font-brand: "Barlow Condensed", "Arial Narrow", Arial, sans-serif;
+  --bg: #F6F8FA; --grid: transparent;
+  --surface: #FFFFFF; --surface-2: #EEF2F6; --surface-3: #E0E7EE;
+  --border: #D7DFE7; --border-strong: #AEBCCA;
+  --ink: #0F2236; --ink-2: #33475C; --muted: #566779;
+  --run: #1D5BB5; --pine: #1E6B45; --lift: #C9352B; --diamond: #10161D; --sign: #F2C230; --sign-ink: #1B1500;
+  --accent: var(--run); --accent-ink: #FFFFFF; --accent-soft: #E3ECF8; --accent-line: #A8C2E6; --accent-deep: #164A95;
+  --brand-navy: var(--ink); --brand-blue: var(--run); --brand-accent: var(--run); --brand-accent-soft: var(--accent-soft); --brand-accent-line: var(--accent-line); --brand-accent-deep: var(--accent-deep);
+  --good: var(--pine); --good-soft: #E0F0E6; --bad: var(--lift); --bad-soft: #FBE5E2; --warn: #9E5300; --warn-soft: #FCEBD6;
+  --gold: #8A5C00; --gold-soft: #FFF2CC; --lab: #6B3FA0; --lab-soft: #EFE7F8;
+  --c-learn: var(--run); --c-learn-soft: var(--accent-soft); --c-practice: var(--pine); --c-practice-soft: var(--good-soft); --c-reward: var(--gold); --c-reward-soft: var(--gold-soft); --c-urgent: var(--lift); --c-urgent-soft: var(--bad-soft); --c-calm: #0F6E66; --c-calm-soft: #DDF0EE; --c-create: var(--lab); --c-create-soft: var(--lab-soft); --c-slate: #64748B;
+  --mesh-a: transparent; --mesh-b: transparent; --mesh-c: transparent; --mesh-d: transparent;
+  --shadow: 0 14px 30px -14px rgba(15, 34, 54, 0.32), 0 2px 6px -2px rgba(15, 34, 54, 0.12);
+  --shadow-sm: 0 1px 2px rgba(15, 34, 54, 0.07);
+  --radius: 6px; --radius-sm: 4px;
+  /* class inks */
+  --calc-accent: #1D5BB5; --calc-accent-ink: #FFFFFF; --calc-accent-soft: #E3ECF8; --calc-accent-line: #A8C2E6; --calc-accent-deep: #164A95;
+  --phys-accent: #0F6E66; --phys-accent-ink: #FFFFFF; --phys-accent-soft: #DDF0EE; --phys-accent-line: #8CCBC4; --phys-accent-deep: #0B5650;
+  --precalc-accent: #C2410C; --precalc-accent-ink: #FFFFFF; --precalc-accent-soft: #FCE8DD; --precalc-accent-line: #F0B28F; --precalc-accent-deep: #9A3412;
+  --writ-accent: #6B3FA0; --writ-accent-ink: #FFFFFF; --writ-accent-soft: #EFE7F8; --writ-accent-line: #C7B0E4;
+  --csci-accent: #2E7D32; --csci-accent-ink: #FFFFFF; --csci-accent-soft: #E2F1E3; --csci-accent-line: #9CCB9F;
+  --biob-accent: #4D7C0F; --biob-accent-ink: #FFFFFF; --biob-accent-soft: #ECF5DC; --biob-accent-line: #B5D489; --biob-accent-deep: #3F6212;
+  --kin-accent: #B45309; --kin-accent-ink: #FFFFFF; --kin-accent-soft: #FDF0DD; --kin-accent-line: #EEC08A; --kin-accent-deep: #92400E;
+  --psyx-accent: #BE185D; --psyx-accent-ink: #FFFFFF; --psyx-accent-soft: #FCE7F1; --psyx-accent-line: #F0A9C9; --psyx-accent-deep: #9D174D;
+  --chip-calc: var(--calc-accent-deep); --chip-physics: var(--phys-accent-deep); --chip-precalc: var(--precalc-accent-deep); --chip-writ: var(--writ-accent); --chip-csci: #1F5F23; --chip-biob: var(--biob-accent-deep); --chip-kin: var(--kin-accent-deep); --chip-psyx: var(--psyx-accent-deep);
+  color-scheme: light;
+}
+/* ---------- the night map ---------- */
+:root:not([data-skin])[data-theme="dark"] {
+  --bg: #0B1420; --surface: #101C2A; --surface-2: #162435; --surface-3: #1E2F43;
+  --border: #22344A; --border-strong: #37516D;
+  --ink: #E8EEF6; --ink-2: #C4D1DF; --muted: #93A6BA;
+  --run: #82B1F5; --pine: #5FC690; --lift: #FF8676; --diamond: #E8EEF6; --sign: #F2C230; --sign-ink: #1B1500;
+  --accent: var(--run); --accent-ink: #0B1420; --accent-soft: #15304F; --accent-line: #2C5487; --accent-deep: #5E97E9;
+  --good-soft: #11301F; --bad-soft: #3A1A17; --warn: #F5B356; --warn-soft: #33250F; --gold: #F2C14E; --gold-soft: #33290F; --lab: #BDA0F2; --lab-soft: #2A2142;
+  --c-calm: #4FD1C5; --c-calm-soft: #10353A;
+  --shadow: 0 16px 32px -14px rgba(0, 0, 0, 0.7), 0 2px 6px -2px rgba(0, 0, 0, 0.4); --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35);
+  --calc-accent: #82B1F5; --calc-accent-ink: #0B1420; --calc-accent-soft: #15304F; --calc-accent-line: #2C5487; --calc-accent-deep: #5E97E9;
+  --phys-accent: #4FD1C5; --phys-accent-ink: #062320; --phys-accent-soft: #10353A; --phys-accent-line: #2A6B6E; --phys-accent-deep: #2FB3A7;
+  --precalc-accent: #FF9B6A; --precalc-accent-ink: #2A1008; --precalc-accent-soft: #3B2116; --precalc-accent-line: #8A4A2E; --precalc-accent-deep: #F0783A;
+  --writ-accent: #C9A3F0; --writ-accent-ink: #24102E; --writ-accent-soft: #2E2140; --writ-accent-line: #6E4A85;
+  --csci-accent: #7FD68A; --csci-accent-ink: #0F2A14; --csci-accent-soft: #1E3323; --csci-accent-line: #3F6B47;
+  --biob-accent: #A3D65A; --biob-accent-ink: #1A2E05; --biob-accent-soft: #22300F; --biob-accent-line: #4D6B1F; --biob-accent-deep: #84CC16;
+  --kin-accent: #F5B356; --kin-accent-ink: #2A1A03; --kin-accent-soft: #3A2A10; --kin-accent-line: #8A6420; --kin-accent-deep: #F59E0B;
+  --psyx-accent: #F48BBE; --psyx-accent-ink: #2A0A18; --psyx-accent-soft: #3A1526; --psyx-accent-line: #8A3A62; --psyx-accent-deep: #EC4899;
+  --chip-calc: var(--calc-accent); --chip-physics: var(--phys-accent); --chip-precalc: var(--precalc-accent); --chip-writ: var(--writ-accent); --chip-csci: var(--csci-accent); --chip-biob: var(--biob-accent); --chip-kin: var(--kin-accent); --chip-psyx: var(--psyx-accent);
+  color-scheme: dark;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-skin]):not([data-theme="light"]) {
+    --bg: #0B1420; --surface: #101C2A; --surface-2: #162435; --surface-3: #1E2F43;
+    --border: #22344A; --border-strong: #37516D;
+    --ink: #E8EEF6; --ink-2: #C4D1DF; --muted: #93A6BA;
+    --run: #82B1F5; --pine: #5FC690; --lift: #FF8676; --diamond: #E8EEF6; --sign: #F2C230; --sign-ink: #1B1500;
+    --accent: var(--run); --accent-ink: #0B1420; --accent-soft: #15304F; --accent-line: #2C5487; --accent-deep: #5E97E9;
+    --good-soft: #11301F; --bad-soft: #3A1A17; --warn: #F5B356; --warn-soft: #33250F; --gold: #F2C14E; --gold-soft: #33290F; --lab: #BDA0F2; --lab-soft: #2A2142;
+    --c-calm: #4FD1C5; --c-calm-soft: #10353A;
+    --shadow: 0 16px 32px -14px rgba(0, 0, 0, 0.7), 0 2px 6px -2px rgba(0, 0, 0, 0.4); --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35);
+    --calc-accent: #82B1F5; --calc-accent-ink: #0B1420; --calc-accent-soft: #15304F; --calc-accent-line: #2C5487; --calc-accent-deep: #5E97E9;
+    --phys-accent: #4FD1C5; --phys-accent-ink: #062320; --phys-accent-soft: #10353A; --phys-accent-line: #2A6B6E; --phys-accent-deep: #2FB3A7;
+    --precalc-accent: #FF9B6A; --precalc-accent-ink: #2A1008; --precalc-accent-soft: #3B2116; --precalc-accent-line: #8A4A2E; --precalc-accent-deep: #F0783A;
+    --writ-accent: #C9A3F0; --writ-accent-ink: #24102E; --writ-accent-soft: #2E2140; --writ-accent-line: #6E4A85;
+    --csci-accent: #7FD68A; --csci-accent-ink: #0F2A14; --csci-accent-soft: #1E3323; --csci-accent-line: #3F6B47;
+    --biob-accent: #A3D65A; --biob-accent-ink: #1A2E05; --biob-accent-soft: #22300F; --biob-accent-line: #4D6B1F; --biob-accent-deep: #84CC16;
+    --kin-accent: #F5B356; --kin-accent-ink: #2A1A03; --kin-accent-soft: #3A2A10; --kin-accent-line: #8A6420; --kin-accent-deep: #F59E0B;
+    --psyx-accent: #F48BBE; --psyx-accent-ink: #2A0A18; --psyx-accent-soft: #3A1526; --psyx-accent-line: #8A3A62; --psyx-accent-deep: #EC4899;
+    --chip-calc: var(--calc-accent); --chip-physics: var(--phys-accent); --chip-precalc: var(--precalc-accent); --chip-writ: var(--writ-accent); --chip-csci: var(--csci-accent); --chip-biob: var(--biob-accent); --chip-kin: var(--kin-accent); --chip-psyx: var(--psyx-accent);
+    color-scheme: dark;
+  }
+}
+/* each class page wears its own ink (the old per-class blocks are re-declared here so the new inks win) */
+:root:not([data-skin])[data-course="calc"] { --accent: var(--calc-accent); --accent-ink: var(--calc-accent-ink); --accent-soft: var(--calc-accent-soft); --accent-line: var(--calc-accent-line); --accent-deep: var(--calc-accent-deep); }
+:root:not([data-skin])[data-course="physics"] { --accent: var(--phys-accent); --accent-ink: var(--phys-accent-ink); --accent-soft: var(--phys-accent-soft); --accent-line: var(--phys-accent-line); --accent-deep: var(--phys-accent-deep); }
+:root:not([data-skin])[data-course="precalc"] { --accent: var(--precalc-accent); --accent-ink: var(--precalc-accent-ink); --accent-soft: var(--precalc-accent-soft); --accent-line: var(--precalc-accent-line); --accent-deep: var(--precalc-accent-deep); }
+:root:not([data-skin])[data-course="writ"] { --accent: var(--writ-accent); --accent-ink: var(--writ-accent-ink); --accent-soft: var(--writ-accent-soft); --accent-line: var(--writ-accent-line); --accent-deep: var(--writ-accent); }
+:root:not([data-skin])[data-course="csci"] { --accent: var(--csci-accent); --accent-ink: var(--csci-accent-ink); --accent-soft: var(--csci-accent-soft); --accent-line: var(--csci-accent-line); --accent-deep: var(--csci-accent); }
+:root:not([data-skin])[data-course="biob"] { --accent: var(--biob-accent); --accent-ink: var(--biob-accent-ink); --accent-soft: var(--biob-accent-soft); --accent-line: var(--biob-accent-line); --accent-deep: var(--biob-accent-deep); }
+:root:not([data-skin])[data-course="kin"] { --accent: var(--kin-accent); --accent-ink: var(--kin-accent-ink); --accent-soft: var(--kin-accent-soft); --accent-line: var(--kin-accent-line); --accent-deep: var(--kin-accent-deep); }
+:root:not([data-skin])[data-course="psyx"] { --accent: var(--psyx-accent); --accent-ink: var(--psyx-accent-ink); --accent-soft: var(--psyx-accent-soft); --accent-line: var(--psyx-accent-line); --accent-deep: var(--psyx-accent-deep); }
+
+/* ---------- paper and type ---------- */
+:root:not([data-skin]) body { background: var(--bg); background-image: none; font-family: var(--font-body); font-size: 16px; line-height: 1.55; font-feature-settings: normal; color: var(--ink); }
+:root:not([data-skin]) body::before, :root:not([data-skin]) body::after { display: none; }
+:root:not([data-skin]) h1, :root:not([data-skin]) h2, :root:not([data-skin]) h3, :root:not([data-skin]) h4 { font-family: var(--font-display); font-weight: 700; letter-spacing: 0; line-height: 1.08; color: var(--ink); }
+:root:not([data-skin]) h3 { font-size: 21px; } :root:not([data-skin]) h4 { font-size: 18px; font-weight: 600; }
+:root:not([data-skin]) .page-title { font-size: 44px; font-weight: 700; letter-spacing: -0.005em; animation: none; }
+:root:not([data-skin]) .page-sub, :root:not([data-skin]) .page-head p { font-size: 16px; color: var(--ink-2); max-width: 68ch; }
+:where(:root:not([data-skin])) .small { font-size: 14px; }
+/* the small tracked capitals over everything are gone: context reads as plain text */
+:root:not([data-skin]) .eyebrow { font-family: var(--font-body); font-size: 14px; font-weight: 500; letter-spacing: 0; text-transform: none; color: var(--muted); }
+:root:not([data-skin]) .nav-label, :root:not([data-skin]) .sec-title, :root:not([data-skin]) .cs-sec-h { text-transform: none; letter-spacing: 0; }
+:root:not([data-skin]) code, :root:not([data-skin]) .mono { font-family: var(--font-mono); }
+:root:not([data-skin]) .tabular, :root:not([data-skin]) .countdown-num, :root:not([data-skin]) .stat-num, :root:not([data-skin]) .table td { font-variant-numeric: tabular-nums; }
+:where(:root:not([data-skin])) a { color: var(--accent); }
+/* a link inside running text is underlined, never told apart by colour alone */
+:root:not([data-skin]) p a:not(.btn):not(.chip):not(.linkbtn), :root:not([data-skin]) li a:not(.btn):not(.chip):not(.nav-item) { text-decoration: underline; text-underline-offset: 0.2em; text-decoration-thickness: 1px; }
+:root:not([data-skin]) ::selection { background: color-mix(in srgb, var(--run) 22%, transparent); }
+
+/* ---------- frame: sidebar and top bar ---------- */
+:root:not([data-skin]) .sidebar { background: var(--surface); border-right: 1px solid var(--border); box-shadow: none; }
+:root:not([data-skin]) .brand-logo b, :root:not([data-skin]) .wordmark, :root:not([data-skin]) .brand-logo .wm { font-family: var(--font-brand); font-weight: 700; letter-spacing: 0; color: var(--ink); }
+:root:not([data-skin]) .brand { border-bottom: 1px solid var(--border); }
+:root:not([data-skin]) .brand-code { font-family: var(--font-display); font-weight: 700; font-size: 32px; letter-spacing: 0; color: var(--accent); }
+:root:not([data-skin]) .brand-name { font-weight: 600; color: var(--ink); }
+:root:not([data-skin]) .brand-name small { text-transform: none; letter-spacing: 0; font-size: 13px; }
+:root:not([data-skin]) .switch-btn { border-radius: var(--radius-sm); background: transparent; border: 1px solid var(--border); box-shadow: none; font-family: var(--font-body); font-weight: 600; font-size: 13px; color: var(--ink-2); }
+:root:not([data-skin]) .switch-btn:hover { background: var(--surface-2); transform: none; }
+:root:not([data-skin]) .switch-btn.on { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); animation: none; }
+:root:not([data-skin]) .nav-toggle { font-family: var(--font-display); font-size: 16px; font-weight: 600; letter-spacing: 0; text-transform: none; color: var(--ink-2); padding: 14px 10px 4px; }
+:root:not([data-skin]) .nav-toggle small { font-family: var(--font-body); font-size: 12px; background: transparent; color: var(--muted); padding: 0; }
+:root:not([data-skin]) .nav-item { font-family: var(--font-body); font-size: 15px; font-weight: 500; color: var(--ink-2); border-radius: var(--radius-sm); padding: 7px 10px; }
+:root:not([data-skin]) .nav-item::before { display: none; }
+:root:not([data-skin]) .nav-item:hover:not(.active) { padding-left: 10px; background: var(--surface-2); color: var(--ink); }
+:root:not([data-skin]) .nav-item svg, :root:not([data-skin]) .nav-group .nav-item svg { color: var(--muted); opacity: 1; }
+:root:not([data-skin]) .nav-item.active { background: var(--accent-soft); color: var(--ink); font-weight: 600; }
+:root:not([data-skin]) .nav-item.active svg { color: var(--accent); }
+:root:not([data-skin]) .topbar { background: color-mix(in srgb, var(--surface) 96%, transparent); border-bottom: 1px solid var(--border); box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; }
+:root:not([data-skin]) .topbar-title, :root:not([data-skin]) .crumb-cur { font-family: var(--font-display); font-weight: 700; font-size: 22px; letter-spacing: 0; }
+:root:not([data-skin]) .crumb { font-family: var(--font-body); }
+/* the exam chip is a trail sign: yellow plate, black lettering */
+:root:not([data-skin]) .exam-chip { background: var(--sign); color: var(--sign-ink); border: 0; border-radius: 3px; box-shadow: none; font-family: var(--font-display); font-weight: 700; font-size: 15px; letter-spacing: 0.02em; text-transform: uppercase; padding: 5px 10px; }
+:root:not([data-skin]) .exam-chip svg { color: var(--sign-ink); }
+:root:not([data-skin]) .exam-chip .mono { font-family: var(--font-display); }
+:root:not([data-skin]) .search-btn { border-radius: var(--radius-sm); background: var(--surface); border: 1px solid var(--border-strong); box-shadow: none; font-family: var(--font-body); }
+:root:not([data-skin]) .kbd, :root:not([data-skin]) kbd { font-family: var(--font-body); font-size: 12px; border-radius: 3px; }
+:root:not([data-skin]) .preview-banner { background: var(--surface-2); color: var(--ink-2); border-bottom: 1px solid var(--border); animation: none; }
+:root:not([data-skin]) #tabbar { background: var(--surface); border-top: 1px solid var(--border); box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; }
+:root:not([data-skin]) #tabbar .tab-item { font-family: var(--font-body); font-size: 12px; }
+:root:not([data-skin]) #tabbar .tab-item.active { background: transparent; color: var(--accent); }
+:root:not([data-skin]) #tabbar .tab-item.active svg { animation: none; }
+
+/* ---------- controls: sign plates, not candy ---------- */
+:root:not([data-skin]) .btn { font-family: var(--font-body); font-weight: 600; font-size: 15px; border-radius: var(--radius-sm); background: var(--surface); color: var(--ink); border: 1px solid var(--border-strong); box-shadow: none; background-image: none; }
+:root:not([data-skin]) .btn:not(:disabled):hover { transform: none; background: var(--surface-2); box-shadow: none; }
+:root:not([data-skin]) .btn.primary { background: var(--accent); background-image: none; color: var(--accent-ink); border-color: var(--accent); box-shadow: none; }
+:root:not([data-skin]) .btn.primary:not(:disabled):hover { background: var(--accent-deep); border-color: var(--accent-deep); box-shadow: none; filter: none; }
+:root:not([data-skin]) .btn.ghost { background: transparent; border-color: transparent; }
+:root:not([data-skin]) .btn.danger { background: var(--surface); color: var(--bad); border-color: color-mix(in srgb, var(--bad) 45%, transparent); }
+:root:not([data-skin]) .btn svg { transition: none; }
+:root:not([data-skin]) .btn:not(:disabled):hover > svg:last-child:not(:first-child) { transform: none; }
+:root:not([data-skin]) .icon-btn { border-radius: var(--radius-sm); background: var(--surface); border-color: var(--border); box-shadow: none; }
+:root:not([data-skin]) .icon-btn:hover svg { transform: none; }
+:root:not([data-skin]) .linkbtn { font-family: var(--font-body); font-weight: 600; color: var(--accent); }
+:where(:root:not([data-skin])) .chip { border-radius: 3px; font-family: var(--font-body); font-weight: 600; font-size: 13px; background: var(--surface-2); color: var(--ink-2); border: 0; box-shadow: none; background-image: none; }
+:root:not([data-skin]) .chip.toggle:hover { transform: none; }
+:root:not([data-skin]) .chip.toggle.on, :root:not([data-skin]) .chip.on { background: var(--ink); color: var(--surface); animation: none; }
+:root:not([data-skin]) .chip.exam { background: var(--sign); color: var(--sign-ink); font-family: var(--font-display); font-weight: 700; text-transform: uppercase; letter-spacing: 0.02em; }
+:root:not([data-skin]) .chip.good { background: var(--good-soft); color: var(--good); }
+:root:not([data-skin]) .chip.bad { background: var(--bad-soft); color: var(--bad); }
+:root:not([data-skin]) .input, :root:not([data-skin]) .select, :root:not([data-skin]) textarea.input { font-family: var(--font-body); font-size: 16px; border-radius: var(--radius-sm); border: 1px solid var(--border-strong); background: var(--surface); box-shadow: none; }
+:root:not([data-skin]) .input:focus, :root:not([data-skin]) .select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent); }
+:root:not([data-skin]) .check input, :root:not([data-skin]) input[type="checkbox"], :root:not([data-skin]) input[type="radio"], :root:not([data-skin]) input[type="range"] { accent-color: var(--accent); }
+
+/* ---------- surfaces: rules and whitespace instead of cards ---------- */
+:root:not([data-skin]) .panel { background: transparent; background-image: none; border: 0; border-top: 1px solid var(--border); border-radius: 0; box-shadow: none; padding: 16px 0 6px; }
+:root:not([data-skin]) .panel:hover { box-shadow: none; transform: none; }
+:root:not([data-skin]) .panel .panel { border-top: 1px dashed var(--border); }
+:root:not([data-skin]) .panel-title { font-family: var(--font-display); font-size: 22px; font-weight: 700; letter-spacing: 0; color: var(--ink); }
+:root:not([data-skin]) .panel-title svg { color: var(--muted); }
+:root:not([data-skin]) .panel-h { border: 0; }
+:root:not([data-skin]) .callout { background: var(--surface-2); border: 0; border-radius: var(--radius-sm); box-shadow: none; }
+:root:not([data-skin]) .callout.warn { background: var(--warn-soft); }
+:root:not([data-skin]) .callout.tip { background: var(--gold-soft); }
+:root:not([data-skin]) .callout.good { background: var(--good-soft); }
+:root:not([data-skin]) .callout.smart { background: var(--accent-soft); }
+:root:not([data-skin]) .announce, :root:not([data-skin]) .ann-panel { background: var(--sign); background-image: none; color: var(--sign-ink); border: 0; border-radius: var(--radius-sm); box-shadow: none; }
+:root:not([data-skin]) .announce svg, :root:not([data-skin]) .ann-panel svg { color: var(--sign-ink); }
+:root:not([data-skin]) .announce .icon-btn, :root:not([data-skin]) .ann-panel .icon-btn { background: transparent; border-color: color-mix(in srgb, var(--sign-ink) 30%, transparent); color: var(--sign-ink); }
+:root:not([data-skin]) .table th { font-family: var(--font-display); font-size: 15px; font-weight: 600; letter-spacing: 0; text-transform: none; color: var(--muted); }
+:root:not([data-skin]) .table td, :root:not([data-skin]) .table th { border-color: var(--border); }
+:root:not([data-skin]) .table td.num { font-family: var(--font-body); }
+:root:not([data-skin]) .card-link, :root:not([data-skin]) .tile, :root:not([data-skin]) .today-card, :root:not([data-skin]) .resume-card, :root:not([data-skin]) .gs-card, :root:not([data-skin]) .rs-item, :root:not([data-skin]) .guide-card, :root:not([data-skin]) .link-tile, :root:not([data-skin]) .start-step, :root:not([data-skin]) .gs-step { background: var(--surface); background-image: none; border: 1px solid var(--border); border-radius: var(--radius-sm); box-shadow: none; }
+:root:not([data-skin]) .card-link:hover, :root:not([data-skin]) .tile:hover, :root:not([data-skin]) .today-card:hover, :root:not([data-skin]) .resume-card:hover, :root:not([data-skin]) .guide-card:hover { transform: none; box-shadow: none; border-color: var(--border-strong); }
+:root:not([data-skin]) .bar { background: var(--surface-3); border-radius: 2px; }
+:root:not([data-skin]) .bar-fill, :root:not([data-skin]) .bar-fill.gold { background: var(--accent); background-image: none; border-radius: 2px; }
+:root:not([data-skin]) .modal { border-radius: 8px; border: 1px solid var(--border); background: var(--surface); box-shadow: var(--shadow); }
+:root:not([data-skin]) .modal-backdrop { background: rgba(10, 22, 36, 0.5); -webkit-backdrop-filter: none; backdrop-filter: none; }
+:root:not([data-skin]) .toast { background: var(--ink); color: var(--surface); border-radius: var(--radius-sm); font-weight: 500; box-shadow: var(--shadow); }
+:root:not([data-skin]):not([data-geek="on"]) .toast { font-family: var(--font-body); }
+:root:not([data-skin]) .popover, :root:not([data-skin]) .acct-dd { border-radius: 6px; box-shadow: var(--shadow); }
+:root:not([data-skin]) .dash-tabs { background: var(--surface-2); border: 0; border-radius: 6px; padding: 3px; }
+:root:not([data-skin]) .dash-tabs .tab { font-family: var(--font-body); font-weight: 600; font-size: 14.5px; border-radius: 4px; color: var(--ink-2); }
+:root:not([data-skin]) .dash-tabs.has-pill .tab.on, :root:not([data-skin]) .dash-tabs .tab.on { color: var(--ink); }
+:root:not([data-skin]) .tab-pill { border-radius: 4px; background: var(--surface); box-shadow: 0 0 0 1px var(--border), var(--shadow-sm); }
+:root:not([data-skin]) .tabs .tab.active { color: var(--ink); border-bottom-color: var(--ink); }
+:root:not([data-skin]) #loadbar { background: var(--accent); background-image: none; box-shadow: none; }
+:root:not([data-skin]) #loadbar.on { animation: mhBarTrickle 6s cubic-bezier(0.1, 0.6, 0.3, 1) forwards; }
+/* everything that glowed, shimmered or wore a gradient is a flat ink now */
+:root:not([data-skin]) .course-card::after, :root:not([data-skin]) .course-card::before, :root:not([data-skin]) .hero-exam::after, :root:not([data-skin]) .landing-top.hero::before, :root:not([data-skin]) .landing-top.hero::after { display: none; }
+:root:not([data-skin]) .streak-chip, :root:not([data-skin]) .streak-chip.lit, :root:not([data-skin]) .combo-chip, :root:not([data-skin]) .boost-chip, :root:not([data-skin]) .lvl-badge, :root:not([data-skin]) .sday.lit, :root:not([data-skin]) .badge.earned, :root:not([data-skin]) .lstat.xp, :root:not([data-skin]) .today-goal, :root:not([data-skin]) .path-unit-head, :root:not([data-skin]) .level-card-in, :root:not([data-skin]) .league-title, :root:not([data-skin]) .celebrate-ic, :root:not([data-skin]) .lesson-fill, :root:not([data-skin]) .rd-cover, :root:not([data-skin]) .amb-now, :root:not([data-skin]) .rs-item.top, :root:not([data-skin]) .recap-card, :root:not([data-skin]) .mk-row.due, :root:not([data-skin]) .lock-card, :root:not([data-skin]) .person.me, :root:not([data-skin]) .avatar.big, :root:not([data-skin]) .acct-btn .avatar.sm, :root:not([data-skin]) .path-node.done .node-btn, :root:not([data-skin]) .recap-card .rc-ic, :root:not([data-skin]) .hero-count .hc-num { background-image: none; box-shadow: none; }
+:root:not([data-skin]) .streak-chip.lit, :root:not([data-skin]) .sday.lit, :root:not([data-skin]) .combo-chip, :root:not([data-skin]) .boost-chip { background-color: var(--sign); color: var(--sign-ink); border-color: transparent; }
+:root:not([data-skin]) .lvl-badge, :root:not([data-skin]) .badge.earned { background-color: var(--ink); color: var(--surface); }
+:root:not([data-skin]) .lesson-fill { background-color: var(--accent); }
+:root:not([data-skin]) .today-goal, :root:not([data-skin]) .path-unit-head, :root:not([data-skin]) .level-card-in, :root:not([data-skin]) .league-title, :root:not([data-skin]) .rs-item.top, :root:not([data-skin]) .recap-card, :root:not([data-skin]) .mk-row.due, :root:not([data-skin]) .lock-card, :root:not([data-skin]) .person.me, :root:not([data-skin]) .amb-now, :root:not([data-skin]) .rd-cover { background-color: var(--surface); }
+:root:not([data-skin]) .path-node.done .node-btn { background-color: var(--good); }
+:root:not([data-skin]) .avatar.big, :root:not([data-skin]) .acct-btn .avatar.sm, :root:not([data-skin]) .celebrate-ic, :root:not([data-skin]) .recap-card .rc-ic { background-color: var(--accent); }
+:root:not([data-skin]) .recap-slide, :root:not([data-skin]) .recap-slide.xp, :root:not([data-skin]) .recap-slide.q, :root:not([data-skin]) .recap-slide.focus, :root:not([data-skin]) .recap-slide.end { background: var(--surface); background-image: none; border: 1px solid var(--border); border-radius: 8px; box-shadow: none; }
+:root:not([data-skin]) .amb-bubble { background: var(--ink); background-image: none; color: var(--surface); box-shadow: var(--shadow); }
+:root:not([data-skin]) .empty.skel i { background: var(--surface-2); background-image: none; }
+:root:not([data-skin]) .rs-item.top { border-color: var(--border-strong); }
+
+/* ---------- difficulty glyphs: green circle, blue square, black diamond, hollow ring ---------- */
+.run-glyph { display: inline-block; flex: none; width: 14px; height: 14px; vertical-align: -2px; }
+.run-glyph.easy { border-radius: 50%; background: var(--pine, #1E6B45); }
+.run-glyph.mid { border-radius: 1px; background: var(--run, #1D5BB5); }
+.run-glyph.hard { width: 12px; height: 12px; margin: 1px; transform: rotate(45deg); background: var(--diamond, #10161D); border-radius: 1px; }
+.run-glyph.new { border-radius: 50%; border: 2px solid var(--border-strong, #AEBCCA); background: var(--surface, #fff); }
+.run-glyph.sm { width: 11px; height: 11px; } .run-glyph.hard.sm { width: 9px; height: 9px; }
+
+/* ---------- start page ---------- */
+:root:not([data-skin]) .landing-top.hero { background: transparent; background-image: none; border: 0; border-radius: 0; box-shadow: none; padding: 34px 0 0; overflow: visible; }
+:root:not([data-skin]) .landing-top.hero .landing-title, :root:not([data-skin]) .landing-title { background: none; -webkit-background-clip: border-box; background-clip: border-box; -webkit-text-fill-color: currentColor; color: var(--ink); font-family: var(--font-brand); font-weight: 700; letter-spacing: -0.01em; animation: none; }
+:root:not([data-skin]) .landing-top.hero .logo-mark { animation: none; }
+:root:not([data-skin]) .hero-tag, :root:not([data-skin]) .brand-tag { display: none; }
+:root:not([data-skin]) .hero-sub { font-size: 19px; line-height: 1.45; color: var(--ink-2); max-width: 46ch; animation: none; }
+:root:not([data-skin]) .landing-top.hero .hero-actions { animation: none; }
+:root:not([data-skin]) .sec-title { font-family: var(--font-display); font-size: 28px; font-weight: 700; color: var(--ink); }
+:root:not([data-skin]) .land-sec { border-top: 2px solid var(--ink); padding-top: 14px; }
+:root:not([data-skin]) .hero-count { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); box-shadow: none; }
+:root:not([data-skin]) .hero-count .hc-num { background: none; color: var(--lift); font-family: var(--font-display); }
+/* your classes read like the lift board at the base area: one row per class */
+:root:not([data-skin]) .course-grid { display: flex; flex-direction: column; gap: 0; border-top: 1px solid var(--border); }
+:root:not([data-skin]) .course-card { display: grid; grid-template-columns: minmax(230px, 1.25fr) minmax(240px, 1.5fr) auto; grid-template-areas: "head meta foot" "name meta foot" "tag meta foot"; column-gap: 32px; row-gap: 2px; align-items: start; padding: 18px 2px 18px; background: transparent; background-image: none; border: 0; border-bottom: 1px solid var(--border); border-radius: 0; box-shadow: none; overflow: visible; cursor: pointer; }
+:root:not([data-skin]) .course-card:hover { transform: none; box-shadow: none; background: color-mix(in srgb, var(--accent-soft) 45%, transparent); }
+:root:not([data-skin]) .course-card-head { grid-area: head; display: flex; align-items: center; gap: 10px; margin: 0; padding: 0; background: none; border: 0; }
+:root:not([data-skin]) .course-card .course-code { font-family: var(--font-display); font-weight: 700; font-size: 30px; line-height: 1; letter-spacing: 0; color: var(--accent); background: none; -webkit-text-fill-color: currentColor; }
+:root:not([data-skin]) .course-card h2 { grid-area: name; font-size: 22px; font-weight: 600; margin: 4px 0 0; }
+:root:not([data-skin]) .course-card > p.muted { grid-area: tag; font-size: 15px; margin: 0; }
+:root:not([data-skin]) .course-card .course-meta { grid-area: meta; display: grid; grid-template-columns: 1fr 1fr; gap: 6px 22px; margin: 2px 0 0; padding: 0; border: 0; background: none; }
+:root:not([data-skin]) .course-card .course-meta .eyebrow { font-size: 13px; }
+:root:not([data-skin]) .course-card .course-foot { grid-area: foot; display: flex; flex-direction: column; align-items: flex-end; gap: 8px; margin: 0; padding: 0; border: 0; }
+:root:not([data-skin]) .course-card .arch-chip { display: none; }
+:root:not([data-skin]) .course-card .chip.exam { font-size: 13px; }
+:root:not([data-skin]) .course-ring .ring-bg { stroke: var(--surface-3); }
+:root:not([data-skin]) .course-ring .ring-fg { stroke: var(--accent); }
+@media (max-width: 900px) {
+  :root:not([data-skin]) .course-card { grid-template-columns: 1fr auto; grid-template-areas: "head head" "name name" "tag tag" "meta meta" "foot foot"; row-gap: 6px; }
+  :root:not([data-skin]) .course-card .course-foot { flex-direction: row; align-items: center; justify-content: space-between; margin-top: 6px; }
+}
+
+/* ---------- class dashboard: the trail board ---------- */
+:root:not([data-skin]) .hero-exam { background: var(--surface); background-image: none; color: var(--ink); border: 1px solid var(--border); border-radius: 8px; box-shadow: none; overflow: hidden; }
+:root:not([data-skin]) .hero-exam h2, :root:not([data-skin]) .hero-exam .countdown-num, :root:not([data-skin]) .hero-exam .stat-num { color: var(--ink); }
+:root:not([data-skin]) .hero-exam .eyebrow, :root:not([data-skin]) .hero-exam .muted, :root:not([data-skin]) .hero-exam .countdown-label, :root:not([data-skin]) .hero-exam .mono, :root:not([data-skin]) .hero-exam .bar-row > span { color: var(--muted); }
+:root:not([data-skin]) .hero-exam .countdown { border-right: 1px solid var(--border); }
+:root:not([data-skin]) .hero-exam .countdown-num { color: var(--lift); font-family: var(--font-display); }
+:root:not([data-skin]) .hero-exam .bar { background: var(--surface-3); }
+:root:not([data-skin]) .hero-exam .bar-fill, :root:not([data-skin]) .hero-exam .bar-fill.gold { background: var(--accent); }
+:root:not([data-skin]) .hero-exam .btn { background: var(--surface); border-color: var(--border-strong); color: var(--ink); }
+:root:not([data-skin]) .hero-exam .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+:root:not([data-skin]) .hero-exam .ready-line .linkbtn { color: var(--accent); }
+
+.trail-board { display: grid; grid-template-columns: minmax(250px, 0.9fr) minmax(0, 2fr); gap: 0; align-items: stretch; padding: 0 !important; }
+.tb-summit { position: relative; padding: 24px 26px 22px; border-right: 1px solid var(--border); display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.tb-exam { font-family: var(--font-display); font-weight: 700; font-size: 60px; line-height: 0.95; letter-spacing: 0; text-transform: uppercase; color: var(--ink); margin: 0; }
+.tb-date { font-family: var(--font-display); font-weight: 600; font-size: 22px; color: var(--ink); }
+.tb-days { display: flex; align-items: baseline; gap: 8px; margin-top: 10px; color: var(--lift); font-family: var(--font-display); font-weight: 700; }
+.tb-days b { font-size: 72px; line-height: 0.9; font-variant-numeric: tabular-nums; }
+.tb-days span { font-size: 20px; text-transform: uppercase; letter-spacing: 0.02em; }
+.tb-covers { font-size: 15px; color: var(--ink-2); }
+.tb-meta { font-size: 14px; color: var(--muted); }
+.tb-ready { margin-top: auto; padding-top: 16px; }
+.tb-ready .ready-line { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; font-size: 15px; color: var(--ink-2); }
+.tb-ready .ready-line b { font-family: var(--font-display); font-size: 26px; font-weight: 700; color: var(--ink); }
+.tb-ready .linkbtn { font-size: 14px; flex-basis: 100%; text-align: left; padding: 0; }
+.tb-trail { position: relative; padding: 0 26px 22px; display: flex; flex-direction: column; min-width: 0; }
+.tb-ridge { display: block; width: calc(100% + 52px); margin: 0 -26px 6px; height: 56px; background: var(--px-skyline) repeat-x left bottom / auto 100%; image-rendering: pixelated; }
+:root[data-theme="dark"] .tb-ridge { filter: brightness(0.72) saturate(0.85); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .tb-ridge { filter: brightness(0.72) saturate(0.85); } }
+.tb-ridge svg, .tb-ridge canvas { display: block; width: 100%; height: 100%; }
+.tb-legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 13px; color: var(--muted); margin: 2px 0 10px; }
+.tb-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.tb-runs { position: relative; list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column-reverse; }
+/* the trail: one dashed line through every marker, from the trailhead up to the summit */
+.tb-runs::before { content: ''; position: absolute; left: 8px; top: 4px; bottom: 4px; width: 0; border-left: 2px dashed var(--border-strong); }
+.trail-board a.tb-run { position: relative; display: grid; grid-template-columns: 18px 46px minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 8px 8px 8px 0; border-bottom: 1px solid var(--border); text-decoration: none; color: var(--ink); }
+.tb-runs li:last-child .tb-run { border-bottom: 0; }
+.trail-board a.tb-run:hover { background: color-mix(in srgb, var(--accent-soft) 55%, transparent); text-decoration: none; }
+.tb-run .run-glyph { position: relative; z-index: 1; justify-self: center; box-shadow: 0 0 0 3px var(--surface); }
+.tb-run .tb-sec { font-family: var(--font-display); font-weight: 700; font-size: 17px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.tb-run .tb-name { font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tb-run .tb-score { font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.trail-board a.tb-run.here { background: color-mix(in srgb, var(--lift) 8%, transparent); }
+.tb-run.here .tb-name { font-weight: 700; }
+.tb-run.here .run-glyph { box-shadow: 0 0 0 3px var(--surface), 0 0 0 5px var(--lift); }
+.tb-pin { font-family: var(--font-display); font-weight: 700; font-size: 12px; letter-spacing: 0.04em; text-transform: uppercase; color: #fff; background: var(--lift); padding: 2px 6px; border-radius: 2px; white-space: nowrap; }
+.tb-summit-row { display: flex; align-items: center; gap: 10px; padding: 0 0 6px; font-family: var(--font-display); font-weight: 700; font-size: 16px; text-transform: uppercase; letter-spacing: 0.03em; color: var(--ink); }
+.tb-summit-row i { flex: none; width: 0; height: 0; margin-left: 0; border-left: 9px solid transparent; border-right: 9px solid transparent; border-bottom: 14px solid var(--ink); }
+.tb-base { display: flex; align-items: center; gap: 10px; padding-top: 6px; font-size: 13px; color: var(--muted); }
+.tb-base::before { content: ''; flex: none; width: 18px; height: 3px; background: var(--border-strong); border-radius: 2px; }
+.tb-go { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 14px; }
+.tb-go .btn.primary { font-size: 16px; padding: 10px 16px; }
+.tb-more { font-size: 14px; color: var(--muted); }
+:root[data-skin] .tb-run .run-glyph.hard { background: var(--ink); }
+/* night map: the lift-red pin is light, so its lettering turns dark */
+:root:not([data-skin])[data-theme="dark"] .tb-pin { color: var(--bg); }
+@media (prefers-color-scheme: dark) { :root:not([data-skin]):not([data-theme="light"]) .tb-pin { color: var(--bg); } }
+@media (max-width: 900px) {
+  .trail-board { grid-template-columns: 1fr; }
+  .tb-summit { border-right: 0; border-bottom: 1px solid var(--border); padding: 18px 18px 16px; }
+  .tb-exam { font-size: 46px; } .tb-days b { font-size: 56px; }
+  .tb-trail { padding: 0 18px 18px; }
+  .tb-ridge { width: calc(100% + 36px); margin: 0 -18px 6px; height: 44px; }
+  .tb-run { grid-template-columns: 16px 40px minmax(0, 1fr); }
+  .tb-run .tb-score { display: none; }
+  .tb-go .btn.primary { width: 100%; justify-content: center; }
+}
+/* the one authored moment: the trail draws up from the base, markers stamp in, the pin drops last */
+@keyframes tbStamp { from { opacity: 0; transform: scale(0.4); } to { opacity: 1; transform: none; } }
+@keyframes tbRise { from { clip-path: inset(100% 0 0 0); } to { clip-path: inset(0 0 0 0); } }
+@keyframes tbPin { 0% { opacity: 0; transform: translateY(-14px); } 70% { opacity: 1; transform: translateY(1px); } 100% { opacity: 1; transform: none; } }
+.trail-board.tb-anim .tb-runs::before { animation: tbRise 0.7s cubic-bezier(0.16, 1, 0.3, 1) both; }
+.trail-board.tb-anim .tb-run .run-glyph { animation: tbStamp 0.32s cubic-bezier(0.16, 1, 0.3, 1) both; animation-delay: calc(0.12s + var(--k, 0) * 60ms); }
+.trail-board.tb-anim .tb-pin { animation: tbPin 0.42s cubic-bezier(0.16, 1, 0.3, 1) both; animation-delay: calc(0.3s + var(--n, 0) * 60ms); }
+@media (prefers-reduced-motion: reduce) { .trail-board.tb-anim .tb-runs::before, .trail-board.tb-anim .tb-run .run-glyph, .trail-board.tb-anim .tb-pin { animation: none; } }
+html[data-motion="off"] .trail-board.tb-anim .tb-runs::before, html[data-motion="off"] .trail-board.tb-anim .tb-run .run-glyph, html[data-motion="off"] .trail-board.tb-anim .tb-pin { animation: none; }
+
+@media print { .tb-ridge, .tb-go { display: none; } .trail-board { border: 1px solid #999; } }
+
+/* trail-board fixes: mobile */
+@media (max-width: 900px) { .trail-board a.tb-run { grid-template-columns: 18px 40px minmax(0, 1fr) auto; } .tb-run .tb-score { display: none; } }
+
+/* ---------- getting started, start here: checklists, not boxes ---------- */
+:root:not([data-skin]) .gs-card { background: transparent; border: 0; border-top: 1px solid var(--border); border-radius: 0; }
+:root:not([data-skin]) .gs-items { display: flex; flex-wrap: wrap; gap: 6px 26px; }
+:root:not([data-skin]) .gs-item { padding: 6px 0; border: 0; border-radius: 0; background: transparent; color: var(--ink); font-weight: 500; }
+:root:not([data-skin]) .gs-item:hover { transform: none; text-decoration: underline; text-underline-offset: 0.2em; }
+:root:not([data-skin]) .gs-check { width: 20px; height: 20px; border-width: 2px; }
+:root:not([data-skin]) .start-steps { gap: 0 28px; }
+:root:not([data-skin]) .start-step { border: 0; border-top: 2px solid var(--ink); border-radius: 0; background: transparent; padding: 12px 0 4px; }
+:root:not([data-skin]) .start-step b { font-family: var(--font-display); font-size: 20px; font-weight: 700; }
+:root:not([data-skin]) .start-step small { font-size: 14.5px; }
+:root:not([data-skin]) .start-step .ss-n { background: var(--ink); color: var(--surface); border-radius: 2px; font-family: var(--font-display); font-weight: 700; }
+
+/* ---------- start page hero: content above the pixel horizon ---------- */
+:root:not([data-skin]) .landing-top.hero { padding-bottom: 86px; }
+:root:not([data-skin]) .landing-top.hero .px-skyline { height: 64px; }
+:root:not([data-skin]) .exam-chip b { font-family: var(--font-display); font-weight: 700; }
+
+/* ---------- quizzer, lessons, notes ---------- */
+:root:not([data-skin]) .stat { background: transparent; padding: 0; border-radius: 0; }
+:root:not([data-skin]) .stat-num { font-family: var(--font-display); font-weight: 700; font-size: 34px; letter-spacing: 0; }
+:root:not([data-skin]) .stat-label { font-size: 13px; }
+:root:not([data-skin]) .score-bar { border-bottom: 1px solid var(--border); padding-bottom: 12px; }
+:root:not([data-skin]) .q-card { border: 1px solid var(--border); border-radius: 6px; background: var(--surface); box-shadow: none; }
+:root:not([data-skin]) .q-card.correct { border-color: var(--good); }
+:root:not([data-skin]) .q-card.wrong { border-color: var(--bad); }
+:root:not([data-skin]) .q-opt, :root:not([data-skin]) .lesson .q-opt { background: var(--surface); border: 1px solid var(--border-strong); border-radius: var(--radius-sm); box-shadow: none; font-family: var(--font-body); }
+:root:not([data-skin]) .q-opt:not(:disabled):hover { border-color: var(--ink); transform: none; background: var(--surface); }
+:root:not([data-skin]) .q-opt .q-letter, :root:not([data-skin]) .q-opt > b:first-child { font-family: var(--font-display); font-weight: 700; }
+:root:not([data-skin]) .q-opt.correct { background: var(--good-soft); border-color: var(--good); animation: none; }
+:root:not([data-skin]) .q-opt.wrong { background: var(--bad-soft); border-color: var(--bad); }
+:root:not([data-skin]) .q-top .chip { font-family: var(--font-body); }
+:root:not([data-skin]) .note-title { font-size: 40px; }
+:root:not([data-skin]) .note-block h2, :root:not([data-skin]) .note-block h4 { font-family: var(--font-display); font-size: 20px; font-weight: 700; letter-spacing: 0; text-transform: none; color: var(--ink); margin-bottom: 6px; }
+:root:not([data-skin]) .sec-nav { border-top: 0; }
+:root:not([data-skin]) .sec-nav .nav-label { font-family: var(--font-display); font-size: 15px; font-weight: 600; color: var(--ink); padding-top: 14px; }
+:root:not([data-skin]) .sec-link { align-items: center; font-size: 14.5px; }
+:root:not([data-skin]) .sec-link .num { font-family: var(--font-display); font-weight: 600; font-size: 15px; letter-spacing: 0; min-width: 30px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+:root:not([data-skin]) .sec-link.active { background: var(--accent-soft); color: var(--ink); font-weight: 600; }
+.sec-link .run-glyph { margin-right: 2px; }
+:root:not([data-skin]) .note-head .chip { font-family: var(--font-body); }
+:root:not([data-skin]) .note-num { font-family: var(--font-display); font-weight: 700; font-size: 18px; color: var(--accent); }
+:root:not([data-skin]) .lock-card { border: 1px dashed var(--border-strong); border-radius: 6px; }
+@media (max-width: 640px) { :root:not([data-skin]) .gs-items { flex-direction: column; gap: 0; } }
+
+/* ---------- discussions: posts are entries on the board, not floating cards ---------- */
+:root:not([data-skin]) .fa-post { border: 0; border-bottom: 1px solid var(--border); border-radius: 0; background: transparent; box-shadow: none; padding: 14px 2px; }
+:root:not([data-skin]) .fa-post:hover { border-color: var(--border); background: color-mix(in srgb, var(--accent-soft) 40%, transparent); }
+:root:not([data-skin]) .fa-post.pinned { border-color: var(--border); }
+:root:not([data-skin]) .fa-post.full { border: 1px solid var(--border); border-radius: 6px; background: var(--surface); padding: 20px 22px; }
+:root:not([data-skin]) .fa-post h3, :root:not([data-skin]) .fa-title { font-family: var(--font-display); font-weight: 700; }
+
+/* ---------- detector round: small fixes ---------- */
+:root:not([data-skin]) .acct-sub, :root:not([data-skin]) .acct-level b, :root:not([data-skin]) .account-box small { font-size: 12.5px; }
+:root:not([data-skin]) .hero-note { max-width: 62ch; }
+
+/* flair and state chips: text a step deeper than the ink so it reads on its own tint */
+:root:not([data-skin]):not([data-theme="dark"]) .chip.bad, :root:not([data-skin]):not([data-theme="dark"]) .flair-exam { color: #A82A21; }
+@media (prefers-color-scheme: dark) { :root:not([data-skin]):not([data-theme="light"]) .chip.bad, :root:not([data-skin]):not([data-theme="light"]) .flair-exam { color: var(--bad); } }

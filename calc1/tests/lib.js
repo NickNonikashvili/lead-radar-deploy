@@ -30,6 +30,7 @@ async function start(opts = {}) {
     const c = await browser.newContext(Object.assign({ viewport: { width: w, height: h } }, ctxOpts));
     if (pyodide) await c.addInitScript(url => { window.PYODIDE_URL = url; }, pyodide);
     const geek = opts.geek === true || process.env.MATHUB_GEEK === '1';
+    if (geek) await c.addInitScript(() => { try { const s = JSON.parse(localStorage.getItem('studyhub-settings') || '{}'); if (s.geek === undefined) { s.geek = true; localStorage.setItem('studyhub-settings', JSON.stringify(s)); } } catch (e) {} });
     if (!geek) await c.addInitScript(() => { try { const s = JSON.parse(localStorage.getItem('studyhub-settings') || '{}'); if (s.geek === undefined) { s.geek = false; localStorage.setItem('studyhub-settings', JSON.stringify(s)); } } catch (e) {} });
     if (opts.tour !== true) await c.addInitScript(() => { try { const s = JSON.parse(localStorage.getItem('studyhub-settings') || '{}'); if (s.tourDone === undefined) { s.tourDone = true; localStorage.setItem('studyhub-settings', JSON.stringify(s)); } } catch (e) {} });
     const p = await c.newPage();

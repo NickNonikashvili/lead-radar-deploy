@@ -6,7 +6,7 @@ const T = require('./lib');
   // these checks use the Classic wording; tests/realm.test.js covers the Realm variants (runes, teleport)
   await c.addInitScript(() => { try { const s = JSON.parse(localStorage.getItem('studyhub-settings') || '{}'); if (!s.skin) { s.skin = 'default'; localStorage.setItem('studyhub-settings', JSON.stringify(s)); } } catch (e) {} });
   await go(p, '#/', 900);
-  check('geek mode on by default', await p.evaluate(() => document.documentElement.getAttribute('data-geek')) === 'on');
+  check('geek mode on once switched on', await p.evaluate(() => document.documentElement.getAttribute('data-geek')) === 'on');
   const boot = await p.evaluate(() => { const s = document.querySelector('#gk-status'); return s ? s.textContent : ''; });
   check('first render prints a boot line with a time', /\.\/mathub --boot/.test(boot) || /cd ~/.test(boot), boot);
   check('scanline ran', !!(await p.$('#gk-scan.run')));
