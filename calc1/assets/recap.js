@@ -64,8 +64,16 @@
     const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = file.name; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000); toast('Saved as an image. Post it, or send it to a friend who needs a push.', 3500);
   }
 
-  /* ---------- story ---------- */
-  const R = { i: 0, offset: 0, timer: null };
+  /* ---------- story ----------
+     With GSAP (assets/gsap-fx.js) every slide is one authored timeline: it arrives from the side you
+     moved toward, the headline sharpens out of a blur, numbers count up, bars grow and the accuracy
+     ring draws, while the segment above fills over seven seconds before the story moves on. Holding a
+     finger or the mouse on the slide pauses it; so does switching tabs. Without GSAP (or with Reduce
+     motion) the CSS entrances and a plain timer do the same job. */
+  const R = { i: 0, offset: 0, timer: null, tl: null, seg: null, out: null };
+  const STEP = 7;
+  const stop = () => { clearTimeout(R.timer); [R.tl, R.seg].forEach(t => t && t.kill()); R.tl = R.seg = null; };
+  document.addEventListener('visibilitychange', () => { if (R.seg) { if (document.hidden) R.seg.pause(); else R.seg.resume(); } });
   function slides(s) {
     const [big, why] = compliment(s); const maxXp = Math.max(1, ...s.days.map(d => s.xpDay[d]));
     return [
@@ -76,34 +84,64 @@
       { cls: 'end', html: `<div class="eyebrow">Verdict</div><h2 class="rc-big">${esc(big)}</h2><p>${esc(why)}</p><div class="rc-streak">${icon('fire', 18)} <b>${s.streak}</b>-day streak right now</div><div class="row gap-sm mt-2" style="flex-wrap:wrap;justify-content:center"><button class="btn primary" data-action="rc-share">${icon('external', 14)} Share this week</button><a class="btn" href="#/today">${icon('flag', 14)} Plan next week</a></div>` }
     ];
   }
-  function paint(root) {
-    const s = App.weekStats(R.offset); const list = slides(s); R.i = Math.min(R.i, list.length - 1);
-    root.innerHTML = `<div class="rc-top"><div class="row gap-sm"><button class="chip toggle${R.offset === -1 ? ' on' : ''}" data-action="rc-week" data-o="-1">Last week</button><button class="chip toggle${R.offset === 0 ? ' on' : ''}" data-action="rc-week" data-o="0">This week</button></div><div class="rc-dots">${list.map((_, i) => `<i class="${i === R.i ? 'on' : i < R.i ? 'done' : ''}"></i>`).join('')}</div></div>
-      <div class="recap-stage"><button class="rc-arrow left" data-action="rc-prev" aria-label="Previous">${icon('left', 18)}</button><div class="recap-slide ${list[R.i].cls}" id="rc-slide">${list[R.i].html}</div><button class="rc-arrow right" data-action="rc-next" aria-label="Next">${icon('right', 18)}</button></div>
-      <p class="small muted" style="text-align:center">Tap, swipe or use the arrow keys. Numbers come from this device and your account.</p>`;
+  function paint(root, dir = 0) {
+    stop(); const s = App.weekStats(R.offset); const list = slides(s); R.i = Math.min(R.i, list.length - 1); const last = R.i >= list.length - 1;
+    root.innerHTML = `<div class="rc-top"><div class="row gap-sm"><button class="chip toggle${R.offset === -1 ? ' on' : ''}" data-action="rc-week" data-o="-1">Last week</button><button class="chip toggle${R.offset === 0 ? ' on' : ''}" data-action="rc-week" data-o="0">This week</button></div><div class="rc-segs" aria-hidden="true">${list.map((_, i) => `<i class="${i < R.i ? 'done' : i === R.i ? 'on' : ''}"><b></b></i>`).join('')}</div></div>
+      <div class="recap-stage"><button class="rc-arrow left" data-action="rc-prev" aria-label="Previous">${icon('left', 18)}</button><div class="recap-slide ${list[R.i].cls}" id="rc-slide" aria-live="polite">${list[R.i].html}</div><button class="rc-arrow right" data-action="rc-next" aria-label="Next">${icon('right', 18)}</button></div>
+      <p class="small muted" style="text-align:center">Tap, swipe or use the arrow keys. Hold to pause. Numbers come from this device and your account.</p>`;
     bind(root, { 'rc-week': b => { R.offset = +b.dataset.o; R.i = 0; paint(root); }, 'rc-prev': () => go(root, -1), 'rc-next': () => go(root, 1), 'rc-share': () => share(s) });
     const sl = $('#rc-slide', root); sl.addEventListener('click', e => { if (e.target.closest('a, button')) return; go(root, 1); });
     let x0 = null; sl.addEventListener('touchstart', e => { x0 = e.touches[0].clientX; }, { passive: true }); sl.addEventListener('touchend', e => { if (x0 === null) return; const dx = e.changedTouches[0].clientX - x0; x0 = null; if (Math.abs(dx) > 40) go(root, dx < 0 ? 1 : -1); }, { passive: true });
-    if (App.countUp) App.countUp(sl); if (App.motionRender) App.motionRender(root); if (R.i === 0 && s.hasData) setSetting('recapSeen', s.key);
-    clearTimeout(R.timer); if (R.i < list.length - 1) R.timer = setTimeout(() => { if ($('#rc-slide')) go(root, 1); }, 7000);
+    sl.addEventListener('pointerdown', () => { if (R.seg) R.seg.pause(); }); ['pointerup', 'pointercancel', 'pointerleave'].forEach(ev => sl.addEventListener(ev, () => { if (R.seg && !document.hidden) R.seg.resume(); }));
+    if (R.i === 0 && s.hasData) setSetting('recapSeen', s.key);
+    const g = App.gsapNow && App.gsapNow(); root.classList.toggle('gs', !!g);
+    if (!g) { if (App.countUp) App.countUp(sl); if (App.motionRender) App.motionRender(root); if (!last) R.timer = setTimeout(() => { if ($('#rc-slide')) go(root, 1); }, STEP * 1000); return; }
+    choreograph(g, sl, dir);
+    const fill = $('.rc-segs i.on b', root);
+    if (fill) R.seg = last ? g.set(fill, { scaleX: 1 }) : g.fromTo(fill, { scaleX: 0 }, { scaleX: 1, duration: STEP, ease: 'none', onComplete: () => setTimeout(() => { if ($('#rc-slide')) go(root, 1); }) });
   }
-  function go(root, d) { const n = slides(App.weekStats(R.offset)).length; const ni = R.i + d; if (ni < 0 || ni >= n) return; R.i = ni; paint(root); }
+  function choreograph(g, sl, dir) {
+    const q = sel => Array.from(sl.querySelectorAll(sel));
+    // CSS transitions on the same properties fight GSAP, so they stand down while the timeline runs (.gs-run),
+    // and every tween hands its element back to the stylesheet when done, so hover and press effects still work
+    sl.classList.add('gs-run');
+    const tl = R.tl = g.timeline({ defaults: { ease: 'expo.out', duration: 0.6, clearProps: 'all' }, onComplete: () => sl.classList.remove('gs-run') });
+    tl.from(sl, { x: dir * 44, opacity: 0, filter: 'blur(6px)', duration: 0.55 }, 0)
+      .from(q(':scope > .eyebrow'), { y: 10, opacity: 0, duration: 0.45 }, 0.06)
+      .from(q('.rc-big'), { y: 26, opacity: 0, filter: 'blur(10px)', duration: 0.8 }, 0.12);
+    q('.count[data-count]').forEach((el, k) => { const to = +el.dataset.count || 0; const o = { v: 0 }; el.textContent = '0'; tl.add(g.to(o, { v: to, duration: Math.min(1.6, 0.6 + to / 500), ease: 'power3.out', onUpdate: () => { el.textContent = Math.round(o.v); } }), 0.25 + k * 0.18); });
+    tl.from(q('.rc-day i'), { scale: 0.3, opacity: 0, duration: 0.5, stagger: 0.06 }, 0.3)
+      .from(q('.rc-bar i'), { scaleY: 0, transformOrigin: '50% 100%', duration: 0.9, stagger: 0.07 }, 0.28)
+      .from(q('.rc-bar b'), { y: 6, opacity: 0, duration: 0.4, stagger: 0.07 }, 0.6);
+    const ring = sl.querySelector('.rc-acc .ring-fg');
+    if (ring) tl.fromTo(ring, { strokeDashoffset: +ring.getAttribute('stroke-dasharray') }, { strokeDashoffset: +ring.getAttribute('stroke-dashoffset'), duration: 1.2, ease: 'power3.out' }, 0.3);
+    tl.from(q('.rc-acc > div, .rc-two > div, .rc-streak, .row .btn, :scope > p'), { y: 10, opacity: 0, duration: 0.5, stagger: 0.07 }, 0.42);
+  }
+  function go(root, d) {
+    if (R.out) R.out.progress(1); // a press during the exit finishes it first
+    const n = slides(App.weekStats(R.offset)).length; const ni = R.i + d; if (ni < 0 || ni >= n) return; R.i = ni;
+    const g = App.gsapNow && App.gsapNow(); const old = $('#rc-slide', root);
+    if (!g || !old) { paint(root, d); return; }
+    if (R.seg) R.seg.pause();
+    R.out = g.to(old, { x: -30 * d, opacity: 0, filter: 'blur(4px)', duration: 0.16, ease: 'power2.in', onComplete: () => { R.out = null; paint(root, d); } });
+  }
 
   App.views.recap = {
     title: 'Your week', blurb: 'Seven days, in numbers you can be proud of.',
     render(root, param, query, standalone) {
       const d = new Date(); R.offset = query.w === 'last' ? -1 : query.w === 'this' ? 0 : (d.getDay() >= 1 && d.getDay() <= 3 && App.weekStats(-1).hasData ? -1 : 0); R.i = 0;
       root.innerHTML = `${standalone ? '<div class="landing-wrap rc-wrap">' : ''}<div class="fz-top"><div><div class="eyebrow">Mathub</div><h1 class="landing-title">${standalone ? `<span class="logo-mark">${App.logoSvg(40)}</span>` : ''}Your week</h1></div><div class="row gap-sm"><span id="landing-account"></span><a class="btn" href="${standalone ? '#/' : App.link('dashboard')}">${icon('left', 14)} Back</a></div></div><div id="rc-root"></div>${standalone ? '</div>' : ''}`;
-      paint($('#rc-root', root));
+      const host = $('#rc-root', root); if (App.gsapWithin) App.gsapWithin(450).then(() => { if (host.isConnected && !$('#rc-slide', host)) paint(host); }); else paint(host);
       const slot = $('#landing-account', root); if (slot && App.auth && App.auth.ready) App.auth.paintLandingAccount(slot);
       this.keys = e => { if (e.target.matches('input, textarea')) return; if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); go($('#rc-root', root), 1); } else if (e.key === 'ArrowLeft') { e.preventDefault(); go($('#rc-root', root), -1); } };
       document.addEventListener('keydown', this.keys);
     },
-    unmount() { if (this.keys) document.removeEventListener('keydown', this.keys); clearTimeout(R.timer); }
+    unmount() { if (this.keys) document.removeEventListener('keydown', this.keys); stop(); if (R.out) { R.out.kill(); R.out = null; } }
   };
   /* landing banner: once per week, when last week had something to show */
   App.recapBanner = function () {
     const last = App.weekStats(-1); if (!last.hasData || settings().recapSeen === last.key || settings().recapDismissed === last.key) return '';
+    if (App.gsapLoad) (global.requestIdleCallback || setTimeout)(() => App.gsapLoad());
     return `<a class="recap-card" href="#/recap?w=last"><span class="rc-ic">${icon('zap', 18)}</span><span class="rc-body"><small>Your week is ready</small><b>${last.xp} XP · ${last.daysActive} day${last.daysActive === 1 ? '' : 's'} · ${last.answered} questions</b></span><span class="btn sm primary">See it ${icon('right', 13)}</span><button class="icon-btn rc-x" data-action="recap-dismiss" aria-label="Dismiss">${icon('x', 13)}</button></a>`;
   };
   document.addEventListener('click', e => { const b = e.target.closest('[data-action="recap-dismiss"]'); if (!b) return; e.preventDefault(); e.stopPropagation(); setSetting('recapDismissed', App.weekStats(-1).key); const card = b.closest('.recap-card'); if (card) card.remove(); }, true);

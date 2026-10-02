@@ -24,7 +24,7 @@
       <div class="field mt-1"><label for="rp-text">Tell us more <span class="muted">(optional)</span></label><textarea class="input" id="rp-text" rows="3" maxlength="800" placeholder="${esc(ctx.placeholder || 'What did you expect instead?')}"></textarea></div>
       ${ctx.answer ? `<label class="check small"><input type="checkbox" id="rp-ans" checked><span>Include my answer (${esc(strip(ctx.answer).slice(0, 60))})</span></label>` : ''}
       <div class="row between mt-2"><span class="small muted">${App.auth && App.auth.user ? 'Sent with your account, so we can reply in your inbox.' : 'Sent anonymously. Log in if you want a reply.'}</span><button class="btn primary" type="submit" id="rp-send">Send report</button></div></form>`;
-    document.body.appendChild(el); const close = () => el.remove();
+    document.body.appendChild(el); const close = () => App.dismiss(el);
     el.addEventListener('click', e => { if (e.target === el || e.target.closest('[data-action="close"]')) close(); });
     const key = e => { if (e.key === 'Escape') { close(); document.removeEventListener('keydown', key); } }; document.addEventListener('keydown', key);
     $('form', el).addEventListener('submit', async e => {

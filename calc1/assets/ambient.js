@@ -329,12 +329,16 @@
       else if (t.dataset && t.dataset.vol) setVol(t.dataset.vol, +t.value);
     });
     document.addEventListener('keydown', e => { if (e.key === 'Escape' && A.open) { A.open = false; paint(); } });
-    document.addEventListener('click', e => { if (A.open && !e.composedPath().includes(el)) { A.open = false; paint(); } });
+    // on phones the floating bubble covered page controls, so the same toggle also lives in the top bar (.amb-top)
+    document.addEventListener('click', e => {
+      if (e.target.closest('.amb-top')) { A.open = !A.open; if (A.open) loadLibrary(); paint(); return; }
+      if (A.open && !e.composedPath().includes(el)) { A.open = false; paint(); }
+    });
     return el;
   }
   function paint() {
     const el = ensure(); const s = saved(); const on = playing(); const panel = $('#amb-panel', el); const bubble = $('.amb-bubble', el); const anyOn = on.length > 0 || musicOn();
-    bubble.classList.toggle('on', anyOn); bubble.classList.toggle('open', A.open); bubble.setAttribute('aria-expanded', String(A.open));
+    [bubble, ...$$('.amb-top')].forEach(b => { b.classList.toggle('on', anyOn); b.classList.toggle('open', A.open); b.setAttribute('aria-expanded', String(A.open)); });
     panel.hidden = !A.open; if (!A.open) return;
     const tab = A.tab || s.tab || 'sounds'; const sleepLeft = A.sleepAt ? Math.max(1, Math.ceil((A.sleepAt - Date.now()) / 60000)) : 0;
     const soundsTab = `<div class="amb-grid">${SOUNDS.map(x => { const act = !!A.nodes[x.id]; const v = s.mix[x.id] !== undefined ? s.mix[x.id] : 0.7; return `<div class="amb-tile${act ? ' on' : ''}"><button class="amb-tbtn" data-action="amb-sound" data-id="${x.id}" title="${esc(x.desc)}"><span class="amb-ic">${ic(x.ic, 20)}</span><span class="amb-name">${esc(x.name)}</span></button>${act ? `<input type="range" class="amb-vol" min="0" max="1" step="0.02" value="${v}" data-vol="${x.id}" aria-label="${esc(x.name)} volume">` : ''}</div>`; }).join('')}</div>

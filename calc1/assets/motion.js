@@ -53,6 +53,15 @@
   /* ---------- small helpers other modules use ---------- */
   App.burst = function (el, cls = 'pop') { if (!el || reduced()) return; el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls); };
   App.tada = el => App.burst(el, 'tada');
+  // dialogs and toasts leave softer and faster than they arrive (transitions.dev modal and toast close).
+  // The element stops counting as open at once: ids go (so $('#auth-modal') and the tests see it gone),
+  // it turns inert, and it is removed when the exit has played. With motion reduced it simply goes.
+  App.dismiss = function (el, ms = 190) {
+    if (!el || !el.isConnected) return;
+    if (reduced()) { el.remove(); return; }
+    el.removeAttribute('id'); $$('[id]', el).forEach(n => n.removeAttribute('id')); el.inert = true; el.classList.add('is-closing');
+    setTimeout(() => el.remove(), ms);
+  };
   App.applyMotion(); App.applySkin();
   document.addEventListener('DOMContentLoaded', () => { App.applyMotion(); App.applySkin(); });
 })(window);

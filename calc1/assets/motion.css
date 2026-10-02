@@ -249,3 +249,28 @@ html[data-geek="on"] .brand-logo:hover .mh-logo, html[data-geek="on"] .logo-mark
 #gk-rain.out { opacity: 0; transition: opacity 0.55s; }
 
 @media print { #gk-status, #gk-scan, .gk-bit, #gk-rain, .gk-boot { display: none !important; } }
+
+/* ============================================================
+   Polish 2026.10.02 — exits, press feedback, gentler reduced motion.
+   Dialogs and toasts now leave (App.dismiss adds .is-closing): softer
+   and faster than they arrive, per transitions.dev. One press scale
+   (0.96) everywhere, per make-interfaces-feel-better.
+   ============================================================ */
+@keyframes mhFadeOut { to { opacity: 0; } }
+@keyframes mhModalOut { from { opacity: 1; transform: none; } to { opacity: 0; transform: scale(0.96); } }
+@keyframes mhToastOut { from { opacity: 1; transform: translate(-50%, 0); filter: blur(0); } to { opacity: 0; transform: translate(-50%, 8px) scale(0.98); filter: blur(2px); } }
+@keyframes gkCrtOff { 0% { transform: none; opacity: 1; filter: none; } 55% { transform: scale(1, 0.008); opacity: 1; filter: brightness(2.4) saturate(0.5); } 100% { transform: scale(0.05, 0.008); opacity: 0; filter: brightness(3) saturate(0.3); } }
+.modal-backdrop.is-closing { animation: mhFadeOut 0.19s ease-out forwards; pointer-events: none; }
+.modal-backdrop.is-closing .modal { animation: mhModalOut 0.15s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
+html[data-geek="on"] .modal-backdrop.is-closing .modal { animation: gkCrtOff 0.19s cubic-bezier(0.4, 0, 1, 1) forwards; }
+.toast.is-closing { animation: mhToastOut 0.2s cubic-bezier(0.22, 1, 0.36, 1) forwards; pointer-events: none; }
+
+/* press feedback: one scale for every control, never below 0.95 (icon buttons were 0.92, tabs 0.94) */
+.btn:not(:disabled):active, .icon-btn:active, .chip.toggle:active, .switch-btn:active, #tabbar .tab-item:active, .tab:active, .search-btn:active { transform: scale(0.96); transition-duration: 0.06s; }
+
+/* reduced motion keeps the meaning, drops the movement: controls still fade their colour and state
+   instead of snapping, while everything spatial stays off (the blanket rule above handles that) */
+@media (prefers-reduced-motion: reduce) {
+  .btn, .icon-btn, .chip, .nav-item, .tab, .tab-item, .q-opt, .input, .select, .switch-btn, .amb-top { transition-property: color, background-color, border-color, box-shadow, opacity !important; transition-duration: 0.12s !important; }
+}
+html[data-motion="off"] .btn, html[data-motion="off"] .icon-btn, html[data-motion="off"] .chip, html[data-motion="off"] .nav-item, html[data-motion="off"] .tab, html[data-motion="off"] .tab-item, html[data-motion="off"] .q-opt, html[data-motion="off"] .input, html[data-motion="off"] .select, html[data-motion="off"] .switch-btn { transition-property: color, background-color, border-color, box-shadow, opacity !important; transition-duration: 0.12s !important; }

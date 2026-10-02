@@ -83,7 +83,7 @@
         <label class="check mt-2"><input type="checkbox" id="terms-ok"><span>I agree to the <a href="#/policy" target="_blank">Terms of Use, Community Rules and Privacy Policy</a>.</span></label>
         <div class="row gap-sm mt-2"><button class="btn primary" data-action="agree" disabled>Agree and continue</button><button class="btn" data-action="close">Not now</button></div><div class="auth-msg" id="terms-msg"></div></div>`;
       document.body.appendChild(m);
-      const done = ok => { m.remove(); resolve(ok); };
+      const done = ok => { App.dismiss(m); resolve(ok); };
       $('#terms-ok', m).addEventListener('change', e => { $('[data-action="agree"]', m).disabled = !e.target.checked; });
       bind(m, { close: () => done(false), agree: async () => { try { const r = await api('terms_accept', {}); auth().user = r.user; done(true); } catch (e) { $('#terms-msg', m).textContent = e.message; } } });
       m.addEventListener('click', e => { if (e.target === m) done(false); });

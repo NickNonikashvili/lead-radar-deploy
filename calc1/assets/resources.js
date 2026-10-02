@@ -109,6 +109,7 @@
           'g-print': () => global.print(),
           'g-share': async () => { try { await navigator.share({ title: g.title, text: g.blurb, url: `https://mathub.space/learn/guides/${g.id}.html` }); } catch (e) {} }
         });
+        if (App.scrollProgress) App.scrollProgress($('article.guide', root));
         global.scrollTo(0, 0);
       } else {
         const st = { f: query.f || 'all' };

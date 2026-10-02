@@ -1879,9 +1879,16 @@ body:has(.lesson-foot) #ambient { bottom: 96px; }
 /* ---------- your week ---------- */
 .rc-wrap { max-width: 760px; }
 .rc-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
-.rc-dots { display: flex; gap: 6px; }
-.rc-dots i { width: 28px; height: 5px; border-radius: 3px; background: var(--surface-3); transition: background 0.3s; }
-.rc-dots i.on { background: var(--accent); } .rc-dots i.done { background: var(--accent-line); }
+.rc-segs { display: flex; gap: 6px; }
+.rc-segs i { position: relative; width: 34px; height: 5px; border-radius: 3px; background: var(--surface-3); overflow: hidden; }
+.rc-segs b { position: absolute; inset: 0; border-radius: inherit; background: var(--accent); transform: scaleX(0); transform-origin: 0 50%; }
+.rc-segs i.done b { transform: none; background: var(--accent-line); }
+.rc-segs i.on b { animation: rcFill 7s linear forwards; }
+.rc-segs i.on:last-child b { animation: none; transform: none; }
+@keyframes rcFill { to { transform: scaleX(1); } }
+/* the GSAP story (assets/gsap-fx.js) drives these itself, so the CSS entrances stand down */
+.gs .rc-segs i.on b, .gs .recap-slide.mh-enter, .gs .rc-day i, .gs .rc-bar i { animation: none; }
+.gs-run, .gs-run * { transition: none !important; }
 .recap-stage { position: relative; display: flex; align-items: center; gap: 8px; }
 .recap-slide { flex: 1; min-height: 360px; border-radius: 22px; padding: 30px 32px; background: linear-gradient(135deg, var(--accent-soft) 0%, var(--surface) 70%); border: 1px solid var(--border); box-shadow: var(--shadow); display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; gap: 10px; cursor: pointer; animation: popIn 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
 .recap-slide.xp { background: linear-gradient(135deg, var(--gold-soft) 0%, var(--surface) 70%); }
@@ -2361,3 +2368,94 @@ html[data-motion="off"] .px-go-q { animation: none; }
 .pk-go { display: grid; gap: 6px; }
 .pk-list { display: grid; } .pk-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; padding: 10px 0; border-top: 1px dashed var(--border); flex-wrap: wrap; } .pk-row:first-child { border-top: 0; }
 .pk-main { min-width: 0; flex: 1 1 260px; } .pk-acts { flex-wrap: wrap; }
+
+/* ============================================================
+   POLISH 2026.10.02 — interface audit fixes (impeccable audit,
+   make-interfaces-feel-better, transitions.dev). Contrast, a legible
+   type floor, browser surfaces, press feedback, hit areas, the phone
+   music button and the sliding tab pill. Appended last so it wins.
+   ============================================================ */
+
+/* white on the light-mode physics teal (3.7:1) and precalc orange (3.8:1) failed AA; one shade deeper clears 5:1 */
+:root { --phys-accent: #0F766E; --phys-accent-deep: #115E59; --precalc-accent: #C2410C; --precalc-accent-deep: #9A3412; }
+
+/* the exam hero keeps white text, so in dark mode every class gets a deep shade of its own hue
+   (the bright dark-mode accents under white text read 2:1). BIOB, KIN, PSYX and packs keep their own rules. */
+:root[data-theme="dark"] .hero-exam { background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 46%, #0B1020) 0%, color-mix(in srgb, var(--accent) 32%, #0B1020) 100%); }
+:root[data-theme="dark"] .hero-exam .btn.primary { color: color-mix(in srgb, var(--accent) 50%, #0B1020); }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .hero-exam { background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 46%, #0B1020) 0%, color-mix(in srgb, var(--accent) 32%, #0B1020) 100%); }
+  :root:not([data-theme="light"]) .hero-exam .btn.primary { color: color-mix(in srgb, var(--accent) 50%, #0B1020); }
+}
+.hero-exam .eyebrow, .hero-exam .muted, .hero-exam .countdown-label, .hero-exam .mono, .hero-exam .bar-row > span { color: rgba(255, 255, 255, 0.88); }
+
+/* type floor: nothing a student has to read sits under 11px */
+.eyebrow { font-size: 11.5px; letter-spacing: 0.1em; }
+.nav-label, .nav-toggle small, .chip.op, .chip.staff, .chip.staff.xs, .bell-btn .badge, .rung-label, .sday-name, .ph-klabel, .cs-sec-h, .league-me small, .search-item .s .chip, .tier small, .gr-bar small, .px-label, .xp-float, .rg-txt small, .bz-hud .eyebrow, .bz-endlabel { font-size: 11px; }
+.ring-txt small { font-size: 11px; letter-spacing: 0.02em; }
+.course-ring small { font-size: 11px; letter-spacing: -0.03em; }
+/* the compact gauge sits under a "Ready" column header, so its own 8px "ready" was noise */
+.ready-gauge.compact .rg-txt small { display: none; }
+/* the sidebar lockup is too narrow for a legible tagline; the landing hero still carries it */
+.sidebar .brand-logo small { display: none; }
+
+/* numbers that change hold their width */
+.rc-big, .course-ring small, .rg-txt b, .ring-txt b, .exam-chip, .table td, .fz-time, .q-score b { font-variant-numeric: tabular-nums; }
+
+/* browser surfaces carry the design too */
+::selection { background: color-mix(in srgb, var(--accent) 26%, transparent); }
+input, textarea, [contenteditable="true"] { caret-color: var(--accent); }
+html { scrollbar-color: color-mix(in srgb, var(--ink) 24%, transparent) transparent; }
+a:hover, .linkbtn:hover { text-underline-offset: 0.2em; text-decoration-thickness: 1px; }
+/* a link inside running text is underlined, not told apart by colour alone (WCAG 1.4.1) */
+.callout a:not(.btn):not(.chip) { text-decoration: underline; text-underline-offset: 0.2em; text-decoration-thickness: 1px; }
+p, li, .muted { text-wrap: pretty; }
+
+/* hit areas: the 24px report flag reaches 40px without moving anything */
+.q-flag { position: relative; }
+.q-flag::after { content: ''; position: absolute; inset: -8px; }
+@media (pointer: coarse) { .topbar .icon-btn, .topbar .search-btn { min-width: 40px; min-height: 40px; } }
+
+/* "Walk me through it" was stretched across the whole question */
+.ladder > .btn { align-self: flex-start; }
+/* "5 due" broke over two lines in the Today table */
+.table td.num { white-space: nowrap; }
+/* standalone headers (Tools, Today, Focus…): the actions keep their row and the title column gives way */
+@media (min-width: 761px) { .landing-top > .row.gap-sm, .fz-top > .row.gap-sm { flex: none; flex-wrap: nowrap; } .landing-top > div:first-child, .fz-top > div:first-child { min-width: 0; } }
+
+/* phones: the floating music bubble covered page controls (flashcard buttons, quiz inputs), so on pages
+   with a top bar it moves there and its panel drops down from the top instead */
+.amb-top { display: none; position: relative; }
+.amb-top.on::after { content: ''; position: absolute; top: 5px; right: 5px; width: 7px; height: 7px; border-radius: 50%; background: var(--good); box-shadow: 0 0 0 2px var(--surface); }
+.amb-top.open { background: var(--accent-soft); color: var(--accent); border-color: var(--accent-line); }
+@media (max-width: 900px) {
+  body:has(.app:not(.landing)) .amb-top { display: inline-flex; }
+  body:has(.app:not(.landing)) #ambient .amb-bubble { display: none; }
+  body:has(.app:not(.landing)) #ambient { top: 64px; bottom: auto; right: 12px; }
+  body:has(.app:not(.landing)) .amb-panel { top: 0; bottom: auto; max-height: calc(100vh - 160px); transform-origin: top right; }
+  .app.landing ~ #ambient .amb-bubble { width: 46px; height: 46px; }
+}
+
+/* sliding tab pill: one surface glides between tabs instead of each tab lighting up (transitions.dev tabs sliding) */
+.dash-tabs { position: relative; }
+.dash-tabs .tab { position: relative; z-index: 1; }
+.dash-tabs.has-pill .tab.on { background: transparent; box-shadow: none; }
+.tab-pill { position: absolute; left: 0; top: 0; width: 0; height: 0; border-radius: 10px; background: var(--surface); box-shadow: var(--shadow-sm); pointer-events: none; z-index: 0; transition: transform 250ms cubic-bezier(0.22, 1, 0.36, 1), width 250ms cubic-bezier(0.22, 1, 0.36, 1); }
+/* Realm draws its gold underline on the pill, so it travels with it */
+:root[data-skin="realm"] .dash-tabs.has-pill .tab.on { background: transparent; box-shadow: none; }
+:root[data-skin="realm"] .tab-pill { box-shadow: inset 0 -2px 0 var(--realm-gold), var(--shadow-sm); }
+
+/* sidebar groups open and close as an accordion (grid rows 0fr → 1fr, transitions.dev) instead of popping */
+.nav-group, .nav-group.closed { display: grid; grid-template-rows: 1fr; gap: 0; overflow: visible; transition: grid-template-rows 250ms cubic-bezier(0.22, 1, 0.36, 1); }
+.nav-group.closed { grid-template-rows: 0fr; }
+.nav-group-in { display: flex; flex-direction: column; gap: 2px; min-height: 0; overflow: hidden; transition: opacity 250ms cubic-bezier(0.22, 1, 0.36, 1), visibility 0s; }
+.nav-group.closed .nav-group-in { opacity: 0; visibility: hidden; transition: opacity 200ms cubic-bezier(0.22, 1, 0.36, 1), visibility 0s 250ms; }
+.nav-toggle > svg { transition: transform 250ms cubic-bezier(0.22, 1, 0.36, 1); }
+/* the accordion clips overflow, so sidebar focus rings sit inside the item */
+.nav-group .nav-item:focus-visible { outline-offset: -2px; }
+/* phones: toasts rise above the tab bar instead of sitting on it */
+@media (max-width: 900px) { .toast { bottom: calc(84px + env(safe-area-inset-bottom)); max-width: calc(100vw - 32px); } body:has(.lesson-foot) .toast { bottom: calc(96px + env(safe-area-inset-bottom)); } }
+/* reading progress on study guides and section notes (ScrollTrigger scrubs it to the article, not the page) */
+.read-progress { position: fixed; left: 0; right: 0; top: 0; height: 3px; z-index: 58; background: var(--accent); transform: scaleX(0); transform-origin: 0 50%; opacity: 0; transition: opacity 0.2s; pointer-events: none; }
+.read-progress.on { opacity: 1; }
+@media print { .read-progress { display: none; } }

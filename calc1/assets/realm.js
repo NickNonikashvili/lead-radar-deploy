@@ -66,7 +66,7 @@
     const m = document.createElement('div'); m.className = 'modal-backdrop'; m.id = 'roll-modal';
     m.innerHTML = `<div class="modal roll-modal" role="dialog" aria-modal="true" aria-label="Roll for a quest"><button class="icon-btn roll-close" data-act="close" aria-label="Close">${icon('x', 14)}</button><div class="eyebrow">${scope && scope !== 'all' && Courses[scope] ? `${esc(Courses[scope].short)} · ${esc(App.archetype(scope).name)}` : 'All your classes'}</div><div class="d20-stage">${d20Svg('?')}</div><div class="roll-verdict" aria-live="polite"></div><div class="roll-sub"></div><div id="roll-body"></div></div>`;
     document.body.appendChild(m);
-    const close = () => { m.remove(); document.removeEventListener('keydown', onKey); }; const onKey = e => { if (e.key === 'Escape') close(); };
+    const close = () => { App.dismiss(m); document.removeEventListener('keydown', onKey); }; const onKey = e => { if (e.key === 'Escape') close(); };
     document.addEventListener('keydown', onKey); m.addEventListener('click', e => { if (e.target === m || e.target.closest('[data-act="close"]')) close(); });
     const roll = async () => {
       const svg = $('.d20-big', m); const txt = $('text', svg); const verdict = $('.roll-verdict', m), sub = $('.roll-sub', m), body = $('#roll-body', m);

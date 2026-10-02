@@ -68,7 +68,7 @@
       <div class="eyebrow mt-2 mb-1">Daily XP goal</div><div class="goal-picks">${(App.GOALS || []).map(([n, nm]) => `<button type="button" class="goal-pick${(App.dailyGoal ? App.dailyGoal() : 30) === n ? ' on' : ''}" data-action="goal" data-n="${n}"><b>${n} XP</b><span>${nm}</span></button>`).join('')}</div><p class="small muted mt-1">A correct answer is 10 XP. You can change this any time in Settings.</p>
       <div class="row gap-sm mt-2"><button class="btn primary" data-action="save">Save</button><button class="btn" data-action="close">${force ? 'Cancel' : 'Skip for now'}</button></div><div class="auth-msg" id="onboard-msg"></div></div>`;
     document.body.appendChild(m);
-    const done = () => { m.remove(); try { localStorage.setItem('mathub-onboarded', '1'); } catch {} };
+    const done = () => { App.dismiss(m); try { localStorage.setItem('mathub-onboarded', '1'); } catch {} };
     on(m, 'change', 'input[data-course]', el => { el.closest('.onboard-course').classList.toggle('on', el.checked); });
     bind(m, { goal: b => { $$('.goal-pick', m).forEach(x => x.classList.toggle('on', x === b)); }, close: () => { done(); if (!Array.isArray(u.courses)) Auth.savePrefs({ courses: courses }).catch(() => {}); },
       save: async () => { const picked = $$('input[data-course]', m).filter(i => i.checked).map(i => i.dataset.course); if (!picked.length) { $('#onboard-msg', m).textContent = 'Pick at least one class.'; return; } const sections = {}; courses.forEach(id => { const lab = $(`select[data-lab="${id}"]`, m); sections[id] = { section: $(`input[data-sec="${id}"]`, m).value.trim(), examTime: $(`input[data-time="${id}"]`, m).value.trim(), labDay: lab ? lab.value : '' }; }); const gp = $('.goal-pick.on', m); if (gp) App.setSetting('dailyGoal', +gp.dataset.n); try { await Auth.savePrefs({ courses: picked, sections }); done(); if (App.paintStats) App.paintStats(); toast('Saved. Mathub now shows ' + picked.map(id => global.Courses[id].short).join(', ') + '.', 3500); App.rerender(); } catch (e) { $('#onboard-msg', m).textContent = e.message; } } });
@@ -292,7 +292,7 @@
     if (!m) { m = document.createElement('div'); m.className = 'modal-backdrop'; m.id = 'auth-modal'; document.body.appendChild(m); m.addEventListener('click', e => { if (e.target === m) Auth.close(); }); }
     paintModal();
   };
-  Auth.close = () => { const m = $('#auth-modal'); if (m) m.remove(); };
+  Auth.close = () => { const m = $('#auth-modal'); if (m) App.dismiss(m); };
   function paintModal() {
     const m = $('#auth-modal'); if (!m) return;
     const offline = Auth.mode === 'offline';

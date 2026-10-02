@@ -33,7 +33,7 @@
     root.__on = root.__on || {}; const key = evt + '|' + sel; root.__on[key] = fn; root.__onBound = root.__onBound || {};
     if (!root.__onBound[key]) { root.__onBound[key] = true; root.addEventListener(evt, e => { const el = e.target.closest(sel); if (el && root.contains(el)) root.__on[key](el, e); }); }
   }
-  function toast(msg, ms = 1800) { $$('.toast').forEach(t => t.remove()); const t = document.createElement('div'); t.className = 'toast'; if (/^\s*<(svg|b|i)\b/.test(msg)) t.innerHTML = msg; else t.textContent = msg; document.body.appendChild(t); setTimeout(() => t.remove(), ms); }
+  function toast(msg, ms = 1800) { $$('.toast').forEach(t => t.remove()); const t = document.createElement('div'); t.className = 'toast'; if (/^\s*<(svg|b|i)\b/.test(msg)) t.innerHTML = msg; else t.textContent = msg; document.body.appendChild(t); setTimeout(() => (App.dismiss ? App.dismiss(t, 220) : t.remove()), ms); }
 
   /* ---------- icons ---------- */
   const ICONS = {
@@ -388,12 +388,17 @@
   App.showShortcuts = () => {
     if ($('#shortcuts-modal')) return; const el = document.createElement('div'); el.className = 'modal-backdrop'; el.id = 'shortcuts-modal';
     el.innerHTML = `<div class="modal shortcuts-modal" role="dialog" aria-label="Keyboard shortcuts"><div class="row between mb-2"><div class="panel-title">${icon('zap')} Keyboard shortcuts</div><button class="icon-btn" data-action="close" aria-label="Close">${icon('x', 14)}</button></div><div class="shortcut-list">${SHORTCUTS.map(([k, d]) => `<div class="shortcut"><kbd>${esc(k)}</kbd><span>${esc(d)}</span></div>`).join('')}</div></div>`;
-    document.body.appendChild(el); const close = () => el.remove(); el.addEventListener('click', e => { if (e.target === el || e.target.closest('[data-action="close"]')) close(); }); const key = e => { if (e.key === 'Escape') { close(); document.removeEventListener('keydown', key); } }; document.addEventListener('keydown', key);
+    document.body.appendChild(el); const close = () => App.dismiss(el); el.addEventListener('click', e => { if (e.target === el || e.target.closest('[data-action="close"]')) close(); }); const key = e => { if (e.key === 'Escape') { close(); document.removeEventListener('keydown', key); } }; document.addEventListener('keydown', key);
   };
   document.addEventListener('keydown', e => { if (e.key === '?' && !e.ctrlKey && !e.metaKey && !e.altKey && !e.target.matches('input, textarea, select, [contenteditable]')) { e.preventDefault(); App.showShortcuts(); } });
   function initToTop() { if ($('#totop')) return; const b = document.createElement('button'); b.id = 'totop'; b.className = 'totop'; b.title = 'Back to top'; b.setAttribute('aria-label', 'Back to top'); b.innerHTML = icon('up', 16); b.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' })); document.body.appendChild(b); let t = 0; window.addEventListener('scroll', () => { if (t) return; t = setTimeout(() => { t = 0; b.classList.toggle('show', window.scrollY > 400); }, 120); }, { passive: true }); }
   function initTabs(root) {
-    $$('.dash-tabs', root).forEach(bar => { const key = bar.dataset.store; const panes = bar.nextElementSibling; if (!panes) return; const pick = (id, save) => { $$('.tab', bar).forEach(b => { b.classList.toggle('on', b.dataset.tab === id); b.setAttribute('aria-selected', String(b.dataset.tab === id)); }); $$(':scope > .pane', panes).forEach(pn => { pn.hidden = pn.dataset.pane !== id; }); if (key && save) setSetting(key, id); }; bar.addEventListener('click', e => { const b = e.target.closest('.tab'); if (b) pick(b.dataset.tab, true); }); const saved = key ? settings()[key] : null; const first = $('.tab', bar); pick(saved && $(`.tab[data-tab="${saved}"]`, bar) ? saved : first.dataset.tab, false); });
+    $$('.dash-tabs', root).forEach(bar => { const key = bar.dataset.store; const panes = bar.nextElementSibling; if (!panes) return; const pick = (id, save) => { $$('.tab', bar).forEach(b => { b.classList.toggle('on', b.dataset.tab === id); b.setAttribute('aria-selected', String(b.dataset.tab === id)); }); $$(':scope > .pane', panes).forEach(pn => { pn.hidden = pn.dataset.pane !== id; }); if (key && save) setSetting(key, id); slide(save); };
+      // one pill slides between tabs instead of each tab lighting up on its own (transitions.dev "tabs sliding")
+      let pill = $(':scope > .tab-pill', bar); if (!pill) { pill = document.createElement('span'); pill.className = 'tab-pill'; pill.setAttribute('aria-hidden', 'true'); bar.prepend(pill); bar.classList.add('has-pill'); }
+      const slide = animate => { const b = $('.tab.on', bar); if (!b || !b.offsetWidth) return; if (!animate) pill.style.transition = 'none'; pill.style.transform = `translate(${b.offsetLeft}px, ${b.offsetTop}px)`; pill.style.width = b.offsetWidth + 'px'; pill.style.height = b.offsetHeight + 'px'; if (!animate) { void pill.offsetWidth; pill.style.transition = ''; } };
+      if (global.ResizeObserver) { const ro = new ResizeObserver(() => { if (!bar.isConnected) { ro.disconnect(); return; } slide(false); }); ro.observe(bar); }
+      bar.addEventListener('click', e => { const b = e.target.closest('.tab'); if (b) pick(b.dataset.tab, true); }); const saved = key ? settings()[key] : null; const first = $('.tab', bar); pick(saved && $(`.tab[data-tab="${saved}"]`, bar) ? saved : first.dataset.tab, false); });
   }
   App.initTabs = initTabs;
   function afterRender(root) {
@@ -440,7 +445,7 @@
     const staff = App.auth && App.auth.user && App.auth.user.mod ? [{ label: App.auth.user.admin ? 'Admin' : 'Moderation', items: [['admin', 'Admin panel', 'shield']] }] : [];
     const cur = (location.hash.replace(/^#\/?/, '').split('?')[0].split('/')[1]) || 'dashboard';
     const openMap = Object.assign({ Study: true, Plan: true, Admin: true, Moderation: true }, settings().navOpen || {});
-    $('#sidebar-nav').innerHTML = groupNav(D.NAV).concat(staff).map(gp => { const o = !!openMap[gp.label] || gp.items.some(x => x[0] === cur); return `<button class="nav-label nav-toggle${o ? ' open' : ''}" data-action="navgroup" data-g="${esc(gp.label)}" aria-expanded="${o}"><span>${gp.label}</span><small>${gp.items.length}</small>${icon('chevron', 12)}</button><div class="nav-group${o ? '' : ' closed'}" data-g="${esc(gp.label)}">` + gp.items.map(([id, label, ic]) => `<button class="nav-item" data-view="${id}" data-action="nav">${icon(ic)}<span>${label}</span></button>`).join('') + '</div>'; }).join('');
+    $('#sidebar-nav').innerHTML = groupNav(D.NAV).concat(staff).map(gp => { const o = !!openMap[gp.label] || gp.items.some(x => x[0] === cur); return `<button class="nav-label nav-toggle${o ? ' open' : ''}" data-action="navgroup" data-g="${esc(gp.label)}" aria-expanded="${o}"><span>${gp.label}</span><small>${gp.items.length}</small>${icon('chevron', 12)}</button><div class="nav-group${o ? '' : ' closed'}" data-g="${esc(gp.label)}"><div class="nav-group-in">` + gp.items.map(([id, label, ic]) => `<button class="nav-item" data-view="${id}" data-action="nav">${icon(ic)}<span>${label}</span></button>`).join('') + '</div></div>'; }).join('');
     $$('.nav-item').forEach(b => b.classList.toggle('active', b.dataset.view === cur));
   }
   App.rebuildNav = () => { if (D) buildNav(); };
@@ -507,7 +512,7 @@
       on($('#search-results'), 'click', '.search-item', el => { const r = this.results[+el.dataset.i]; if (r) { this.close(); r.go(); } });
       this.query('');
     },
-    close() { const m = $('#search-modal'); if (m) m.remove(); },
+    close() { const m = $('#search-modal'); if (m) App.dismiss(m); },
     query(q) {
       if (!this.index) this.build();
       q = q.trim().toLowerCase(); const words = q.split(/\s+/).filter(Boolean); const pool = this.index.filter(r => this.course === 'all' || !r.c || r.c === this.course);
@@ -761,6 +766,7 @@
       </div></div></div>`;
       bind(root, { open: el => App.go('notes', el.dataset.id), reveal: el => { const s = $('#sol', root); s.classList.toggle('open'); el.innerHTML = s.classList.contains('open') ? `${icon('eye', 14)} Hide solution` : `${icon('eye', 14)} Show solution`; } });
       if (App.paintMyNotes) App.paintMyNotes(root, sec);
+      if (App.scrollProgress) App.scrollProgress($('.notes-layout > .stack > .panel', root));
     }
   };
 
@@ -795,7 +801,7 @@
         const lk = $('#fc-lock', root); if (lk) lk.innerHTML = st.total > st.deck.length ? App.lockCard(`${st.total - st.deck.length} more cards for members`, `Preview shows ${st.deck.length} cards per deck. Sign up free for all ${D.FLASHCARDS.length} ${D.short} flashcards and saved mastery boxes.`, { compact: true }) : '';
         const stage = $('#fc-stage', root); if (!c) { stage.innerHTML = '<div class="empty">No cards match this filter.</div>'; $('#fc-controls', root).innerHTML = ''; return; }
         const box = b[c.id] || 0;
-        stage.innerHTML = `<div class="fc-card${st.flipped ? ' flipped' : ''}" id="fc-card" tabindex="0" role="button" aria-label="Flip card"><div class="fc-face fc-front"><span class="eyebrow">Card ${st.i + 1} / ${st.deck.length} · box ${box}${c.community ? ` · <span style="color:var(--accent)">community · ${esc(c.author)}</span>` : ''}</span><span class="sec chip">${esc(c.sec ? secLabel(c.sec) : 'Unit ' + c.unit)}</span><div>${c.f}</div><div class="fc-hint">Click or press space to flip</div></div><div class="fc-face fc-back"><span class="eyebrow">Answer</span><span class="sec chip">${esc(c.sec ? secLabel(c.sec) : 'Unit ' + c.unit)}</span><div>${c.b}</div></div></div>`;
+        stage.innerHTML = `<div class="fc-card${st.flipped ? ' flipped' : ''}" id="fc-card" tabindex="0" role="button" aria-label="Flip card"><div class="fc-face fc-front"><span class="eyebrow">Card ${st.i + 1} / ${st.deck.length} · box ${box}${c.community ? ` · <span style="color:var(--accent)">community · ${esc(c.author)}</span>` : ''}</span><span class="sec chip">${esc(c.sec ? secLabel(c.sec) : 'Unit ' + c.unit)}</span><div>${c.f}</div><div class="fc-hint">Tap or press space to flip</div></div><div class="fc-face fc-back"><span class="eyebrow">Answer</span><span class="sec chip">${esc(c.sec ? secLabel(c.sec) : 'Unit ' + c.unit)}</span><div>${c.b}</div></div></div>`;
         $('#fc-controls', root).innerHTML = `${App.flagButton ? App.flagButton({ course: D.id, view: 'Flashcards', ref: c.id, prompt: c.f }) : ''}<button class="btn" data-action="prev" ${st.i === 0 ? 'disabled' : ''}>${icon('left', 14)} Prev</button><button class="btn danger" data-action="again">Again <span class="kbd">1</span></button><button class="btn primary" data-action="good">Got it <span class="kbd">2</span></button><button class="btn" data-action="next" ${st.i >= st.deck.length - 1 ? 'disabled' : ''}>Next ${icon('right', 14)}</button>`;
         typeset(stage);
       };
