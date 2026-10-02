@@ -466,6 +466,10 @@
   const lsDel = k => { try { localStorage.removeItem(k); } catch (e) {} };
   const api = (route, opts = {}) => fetch('api/index.php?r=' + route, Object.assign({ credentials: 'include', cache: 'no-store', headers: { 'X-Requested-With': 'MatHub' } }, opts)).then(r => r.json());
   const registered = new Set(); const bootAt = Date.now();
+  // packs shipped in packs/ (scripts/bundle-packs.js writes the listing): used when the account server cannot be reached, e.g. the static preview
+  let bundledList = null; const bundled = () => bundledList || (bundledList = fetch('packs/index.json', { cache: 'no-store' }).then(r => (r.ok ? r.json() : null)).catch(() => null));
+  const FILE_RE = /^[a-z0-9]+\.mathub\.json$/;
+  const fromFile = (id, file, v) => fetch('packs/' + file, { cache: 'no-store' }).then(r => (r.ok ? r.json() : null)).then(data => { if (data && data.id === id) { lsSet(DATA_KEY(id), { v, data }); return data; } return null; }).catch(() => null);
   const STUB_KEYS = ['id', 'code', 'name', 'short', 'term', 'tagline', 'kind', 'quizNote', 'COURSE', 'EXAMS', 'CALENDAR', 'CALENDAR_NOTE', 'RECURRING', 'SEMESTER', 'VARIANTS', 'UNITS', 'NAV', 'SECTIONS', 'hasQuiz', 'hasGrading', 'quizTopics', 'sectionCount', 'flashcardCount', 'formulaCount'];
   const archOf = a => a && a.name && ICON_NAMES.includes(a.icon) ? { name: String(a.name).slice(0, 24), icon: a.icon, line: String(a.line || '').slice(0, 90) } : null;
   function addResources(id, S) {
@@ -485,7 +489,7 @@
     if (App.D === C && C.loaded) { if (!replaceOpen) return false; App.forgetCourse(); }   // the open class keeps its copy, unless the page has only just loaded
     Object.keys(C).forEach(k => delete C[k]);
     const N = normalize(S); STUB_KEYS.forEach(k => { if (N[k] !== undefined) C[k] = N[k]; });
-    Object.assign(C, { id, pack: true, packVersion: Number(raw.version) || 1, hidden: !!raw.hidden, stub: true, loaded: false, files: [], archetype: archOf(S.archetype) });
+    Object.assign(C, { id, pack: true, packVersion: Number(raw.version) || 1, hidden: !!raw.hidden, stub: true, loaded: false, files: [], archetype: archOf(S.archetype), packFile: typeof raw.file === 'string' && FILE_RE.test(raw.file) ? raw.file : '' });
     if (!App.COURSE_ORDER.includes(id)) App.COURSE_ORDER.push(id);
     styleFor(id, raw.color); addResources(id, S); addGuides(id, raw.guides); if (App.addArchetype) App.addArchetype(id, C.archetype);
     App.applyVariant(C); registered.add(id); return true;
@@ -510,6 +514,7 @@
   async function load(id) {
     const C = Courses[id]; if (!C || !C.pack) throw new Error('Unknown class.');
     const v = C.packVersion; const cached = lsGet(DATA_KEY(id)); let data = cached && cached.v === v ? cached.data : null;
+    if (!data && C.packFile) data = await fromFile(id, C.packFile, v);   // listed from packs/index.json: read the pack's own file
     if (!data) {
       try { const j = await api(`classpack_get&id=${id}&v=${v}`); if (!j || !j.ok) throw new Error((j && j.error) || 'Could not load this class.'); data = j.pack; lsSet(DATA_KEY(id), { v: j.version || v, data }); }
       catch (e) { if (cached && cached.data) data = cached.data; else throw new Error(navigator.onLine === false ? 'You are offline and this class has not been saved on this device yet.' : (e.message || 'Could not load this class.')); }
@@ -520,8 +525,8 @@
   let lastSig = '';
   /* fetch the list of packs, register new and changed ones, drop removed ones; re-render when the page on screen depends on it */
   async function sync() {
-    let j; try { j = await api('classpack_list'); } catch (e) { return false; }
-    if (!j || !j.ok || !Array.isArray(j.packs)) return false;
+    let j; try { j = await api('classpack_list'); } catch (e) { j = null; }
+    if (!j || !j.ok || !Array.isArray(j.packs)) { const b = await bundled(); if (!b || !Array.isArray(b.packs)) return false; j = { ok: true, packs: b.packs }; }   // no account server: the bundled packs
     lsSet(LIST_KEY, { packs: j.packs, at: Date.now() });
     const s = sig(j.packs); if (s === lastSig) return false; lastSig = s;
     const ids = new Set(j.packs.map(p => p.id)); const changed = [];

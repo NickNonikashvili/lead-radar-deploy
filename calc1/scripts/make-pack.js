@@ -42,4 +42,5 @@ if (pack.QUIZ) {
   Object.keys(built.quiz.TOPICS).forEach(t => { const q = built.quiz.generateSet([t], 1)[0]; console.log(`    ${t.padEnd(14)} ${String(per[t] || 0).padStart(2)} sets · e.g. ${q ? String(q.prompt).replace(/<[^>]+>/g, '').slice(0, 90) : '(none)'}`); });
 }
 if (json.length > 3 * 1024 * 1024) console.log(red('Larger than 3 MB: the server will refuse it. Trim notes or split question banks.'));
-console.log(`\nUpload it in the admin panel: #/admin/packs → Choose a class pack.`);
+if (path.resolve(outDir) === path.resolve(__dirname, '..', 'packs')) require('./bundle-packs.js');   // packs/ ships with the site: keep its listing current
+console.log(`\nIt installs itself on the server with the next deploy (packs/ is bundled), or upload it now in the admin panel: #/admin/packs → Choose a class pack.`);

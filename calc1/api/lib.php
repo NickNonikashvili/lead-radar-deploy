@@ -256,8 +256,20 @@ function mh_send_code(string $email, string $kind, string $code): void {
 const MH_BUILTIN_NAMES = ['calc' => 'Calc I', 'physics' => 'Physics I', 'precalc' => 'Precalc', 'writ' => 'WRIT 101', 'csci' => 'CSCI 127', 'biob' => 'BIOB 160', 'kin' => 'KIN 322', 'psyx' => 'PSYX 340'];
 function mh_pack_db(): PDO {
   static $ready = false; $db = mh_db();
-  if (!$ready) { $db->exec('CREATE TABLE IF NOT EXISTS class_packs (id TEXT PRIMARY KEY, code TEXT NOT NULL, name TEXT NOT NULL, short TEXT NOT NULL DEFAULT "", version INTEGER NOT NULL DEFAULT 1, json TEXT NOT NULL, prev_json TEXT NOT NULL DEFAULT "", stub TEXT NOT NULL, canvas TEXT NOT NULL DEFAULT "", enabled INTEGER NOT NULL DEFAULT 1, size INTEGER NOT NULL DEFAULT 0, uploaded_by TEXT NOT NULL DEFAULT "", created INTEGER NOT NULL, updated INTEGER NOT NULL)'); $ready = true; }
+  if (!$ready) { $db->exec('CREATE TABLE IF NOT EXISTS class_packs (id TEXT PRIMARY KEY, code TEXT NOT NULL, name TEXT NOT NULL, short TEXT NOT NULL DEFAULT "", version INTEGER NOT NULL DEFAULT 1, json TEXT NOT NULL, prev_json TEXT NOT NULL DEFAULT "", stub TEXT NOT NULL, canvas TEXT NOT NULL DEFAULT "", enabled INTEGER NOT NULL DEFAULT 1, size INTEGER NOT NULL DEFAULT 0, uploaded_by TEXT NOT NULL DEFAULT "", created INTEGER NOT NULL, updated INTEGER NOT NULL)'); $ready = true; mh_packs_seed_bundled($db); }
   return $db;
+}
+/** Class packs shipped with the site in packs/*.mathub.json install themselves (packs.php, mh_packs_apply_bundled).
+ *  The file list is checked by name, size and date first, so a normal request costs one small query. */
+function mh_packs_seed_bundled(PDO $db): void {
+  $files = @glob(dirname(__DIR__) . '/packs/*.mathub.json') ?: []; if (!$files) return;
+  $sig = implode('|', array_map(fn($f) => basename($f) . ':' . @filesize($f) . ':' . @filemtime($f), $files));
+  try {
+    $db->exec('CREATE TABLE IF NOT EXISTS class_pack_seeds (id TEXT PRIMARY KEY, sha TEXT NOT NULL, seeded INTEGER NOT NULL)');
+    $st = $db->prepare('SELECT sha FROM class_pack_seeds WHERE id = ?'); $st->execute(['*']); if ($st->fetchColumn() === $sig) return;
+    require_once __DIR__ . '/packs.php'; mh_packs_apply_bundled($db, $files);
+    $db->prepare('INSERT OR REPLACE INTO class_pack_seeds (id, sha, seeded) VALUES (?, ?, ?)')->execute(['*', $sig, time()]);
+  } catch (Throwable $e) { error_log('Mathub bundled packs: ' . $e->getMessage()); }
 }
 /** Every installed pack (hidden ones too), without the pack data: id, code, name, short, version, enabled, canvas. */
 function mh_pack_rows(bool $fresh = false): array {

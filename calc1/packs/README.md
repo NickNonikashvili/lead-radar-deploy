@@ -15,7 +15,8 @@ redeploy.
    ```
    The builder runs every check the admin panel runs, then generates 400 questions from each
    question set. It writes nothing if anything fails.
-3. **Upload.** Open **Admin panel → Add a class** (`#/admin/packs`) and choose the
+3. **Ship or upload.** A pack in `packs/` installs itself with the next deploy (see *Bundled with
+   the site* below). To add one without a deploy, open **Admin panel → Add a class** (`#/admin/packs`) and choose the
    `.mathub.json` file. The panel checks it again and shows the counts, any problems and three
    sample questions. Press **Add class**.
    - **Publish now** is ticked by default. Untick it to add the class hidden, so only admins
@@ -31,6 +32,32 @@ time they open the site.
 **Hide** removes the class from the site for students and keeps it for admins. **Delete**
 removes it for everyone. Either way, students' saved progress and the class's discussion
 posts stay in the database, so uploading the class again brings them back.
+
+## Bundled with the site
+
+Every `packs/<id>.mathub.json` file ships in the deploy zip and installs itself: the first
+request after a deploy that the server sees a new file, it checks the pack, installs it,
+publishes it and posts "New class on Mathub" (`mh_packs_seed_bundled` in `api/lib.php`,
+`mh_packs_apply_bundled` in `api/packs.php`). In **Admin panel → Classes** it shows as
+uploaded by "bundled with the site". The rules, so the admin panel always wins:
+
+- **Already uploaded** by an admin under that id: left as it is.
+- **A newer bundled file** (the pack was rebuilt) updates the class only while it is still the
+  bundled copy; the previous version is kept for rollback, as with an upload.
+- **Deleted** by an admin: never re-added, even when the file is still in `packs/`.
+- **Hidden** by an admin: stays hidden.
+
+Students who requested the class are not messaged automatically; to tell them, hide the class
+and publish it again with **Tell the N students who asked** ticked.
+
+`packs/index.json` lists the bundled packs (the light part every page needs). It is written by
+`node scripts/bundle-packs.js`, which `make-pack.js` runs after building into `packs/`. When
+the account server cannot be reached (the static preview, or a first visit while the server is
+down), the site lists the classes from that file and opens each one from its `.mathub.json`.
+To ship a class only by upload, build it with `--out` somewhere other than `packs/`.
+
+Bundled now: **PSCI 230D** (Introduction to International Relations) and **EMEC 100**
+(Introduction to Mechanical Engineering).
 
 ## Limits
 

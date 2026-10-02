@@ -66,6 +66,40 @@ function mh_pack_meta(array $r, array $req): array {
   return ['id' => $r['id'], 'code' => $r['code'], 'name' => $r['name'], 'short' => $r['short'], 'version' => (int)$r['version'], 'enabled' => (bool)$r['enabled'], 'size' => (int)$r['size'], 'uploaded_by' => $r['uploaded_by'], 'created' => (int)$r['created'], 'updated' => (int)$r['updated'], 'has_prev' => $r['prev_json'] !== '', 'requests' => $req[$code] ?? 0];
 }
 
+/** Writes a checked pack. A new id is inserted as version 1; an existing one is updated and its previous copy kept for rollback.
+ *  $publish null keeps the current published state (new classes are published). Returns [the row before the write or null, published]. */
+function mh_pack_store(PDO $db, array $p, string $raw, string $by, ?int $publish): array {
+  $id = $p['id']; $min = json_encode(json_decode($raw), JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+  $stub = json_encode(mh_pack_stub($p), JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+  $old = mh_pack_get($id); $now = time(); $by = mb_substr($by, 0, 120);
+  $enabled = $publish !== null ? $publish : ($old ? (int)$old['enabled'] : 1);
+  $short = mb_substr(trim((string)($p['short'] ?? '')) ?: (string)$p['code'], 0, 24);
+  if ($old) $db->prepare('UPDATE class_packs SET code = ?, name = ?, short = ?, version = version + 1, prev_json = json, json = ?, stub = ?, canvas = ?, enabled = ?, size = ?, uploaded_by = ?, updated = ? WHERE id = ?')
+    ->execute([$p['code'], $p['name'], $short, $min, $stub, mh_pack_canvas($p), $enabled, strlen($min), $by, $now, $id]);
+  else $db->prepare('INSERT INTO class_packs (id, code, name, short, version, json, prev_json, stub, canvas, enabled, size, uploaded_by, created, updated) VALUES (?, ?, ?, ?, 1, ?, "", ?, ?, ?, ?, ?, ?, ?)')
+    ->execute([$id, $p['code'], $p['name'], $short, $min, $stub, mh_pack_canvas($p), $enabled, strlen($min), $by, $now, $now]);
+  return [$old, $enabled];
+}
+
+/** Class packs shipped in packs/*.mathub.json (called from mh_packs_seed_bundled in lib.php when those files change).
+ *  A bundled class seen for the first time is installed and published, unless an admin already uploaded that id (theirs stays).
+ *  A newer bundled file updates the class only while it is still the bundled copy. A class an admin deleted is never re-added. */
+const MH_PACK_BUNDLED = 'bundled with the site';
+function mh_packs_apply_bundled(PDO $db, array $files): void {
+  $seen = $db->prepare('SELECT sha FROM class_pack_seeds WHERE id = ?'); $mark = $db->prepare('INSERT OR REPLACE INTO class_pack_seeds (id, sha, seeded) VALUES (?, ?, ?)');
+  foreach ($files as $f) {
+    $raw = (string)@file_get_contents($f); if ($raw === '' || strlen($raw) > MH_PACK_MAX_BYTES) continue;
+    $p = json_decode($raw, true); $err = mh_pack_check($p); if ($err !== '') { error_log('Mathub bundled pack ' . basename($f) . ': ' . $err); continue; }
+    $id = $p['id']; $sha = sha1($raw); $seen->execute([$id]); $prev = $seen->fetchColumn(); if ($prev === $sha) continue;
+    $row = mh_pack_get($id);
+    if ($prev === false ? !$row : ($row && $row['uploaded_by'] === MH_PACK_BUNDLED)) {
+      [$old, $enabled] = mh_pack_store($db, $p, $raw, MH_PACK_BUNDLED, null);
+      if (!$old && $enabled) { try { require_once __DIR__ . '/social.php'; mh_activity('class', $id, 'New class on Mathub: ' . $p['code'] . ' ' . $p['name'], '#/' . $id); } catch (Throwable $e) {} }
+    }
+    $mark->execute([$id, $sha, time()]);
+  }
+}
+
 function mh_packs_route(string $route, array $in, array $cfg, string $ip): void {
   $db = mh_pack_db();
   $admin = function (): array { $u = mh_require_user(); if (!mh_is_admin($u)) mh_fail('Admins only.', 403); return $u; };
@@ -98,16 +132,9 @@ function mh_packs_route(string $route, array $in, array $cfg, string $ip): void 
       if (strlen($raw) > MH_PACK_MAX_BYTES) mh_fail('Class packs can be up to ' . (MH_PACK_MAX_BYTES / 1048576) . ' MB.', 413);
       $p = json_decode($raw, true); if (!is_array($p)) mh_fail('This file is not valid JSON: ' . json_last_error_msg() . '.');
       if ($err = mh_pack_check($p)) mh_fail($err);
-      $id = $p['id']; $min = json_encode(json_decode($raw), JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
-      $stub = json_encode(mh_pack_stub($p), JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
-      $old = mh_pack_get($id); $now = time(); $by = mb_substr((string)$u['email'], 0, 120);
-      if ($old && !empty($in['expect_new'])) mh_fail("A class with the id $id is already installed. Upload it as an update instead.", 409, ['exists' => true]);
-      $enabled = array_key_exists('publish', $in) ? (!empty($in['publish']) ? 1 : 0) : ($old ? (int)$old['enabled'] : 1);
-      $short = mb_substr(trim((string)($p['short'] ?? '')) ?: (string)$p['code'], 0, 24);
-      if ($old) $db->prepare('UPDATE class_packs SET code = ?, name = ?, short = ?, version = version + 1, prev_json = json, json = ?, stub = ?, canvas = ?, enabled = ?, size = ?, uploaded_by = ?, updated = ? WHERE id = ?')
-        ->execute([$p['code'], $p['name'], $short, $min, $stub, mh_pack_canvas($p), $enabled, strlen($min), $by, $now, $id]);
-      else $db->prepare('INSERT INTO class_packs (id, code, name, short, version, json, prev_json, stub, canvas, enabled, size, uploaded_by, created, updated) VALUES (?, ?, ?, ?, 1, ?, "", ?, ?, ?, ?, ?, ?, ?)')
-        ->execute([$id, $p['code'], $p['name'], $short, $min, $stub, mh_pack_canvas($p), $enabled, strlen($min), $by, $now, $now]);
+      $id = $p['id'];
+      if (mh_pack_get($id) && !empty($in['expect_new'])) mh_fail("A class with the id $id is already installed. Upload it as an update instead.", 409, ['exists' => true]);
+      [$old, $enabled] = mh_pack_store($db, $p, $raw, (string)$u['email'], array_key_exists('publish', $in) ? (!empty($in['publish']) ? 1 : 0) : null);
       $notified = !empty($in['notify']) && $enabled ? mh_pack_notify($p, $id) : 0;
       if (!$old && $enabled) { try { require_once __DIR__ . '/social.php'; mh_activity('class', $id, 'New class on Mathub: ' . $p['code'] . ' ' . $p['name'], '#/' . $id); } catch (Throwable $e) {} }
       $r = mh_pack_get($id);
