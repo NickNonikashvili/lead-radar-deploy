@@ -119,7 +119,7 @@
 :root:not([data-skin]) .tabular, :root:not([data-skin]) .countdown-num, :root:not([data-skin]) .stat-num, :root:not([data-skin]) .table td { font-variant-numeric: tabular-nums; }
 :where(:root:not([data-skin])) a { color: var(--accent); }
 /* a link inside running text is underlined, never told apart by colour alone */
-:root:not([data-skin]) p a:not(.btn):not(.chip):not(.linkbtn), :root:not([data-skin]) li a:not(.btn):not(.chip):not(.nav-item) { text-decoration: underline; text-underline-offset: 0.2em; text-decoration-thickness: 1px; }
+:root:not([data-skin]) p a:not(.btn):not(.chip):not(.linkbtn), :root:not([data-skin]) li a:not(.btn):not(.chip):not(.nav-item):not(.tb-run):not(.sec-link) { text-decoration: underline; text-underline-offset: 0.2em; text-decoration-thickness: 1px; }
 :root:not([data-skin]) ::selection { background: color-mix(in srgb, var(--run) 22%, transparent); }
 
 /* ---------- frame: sidebar and top bar ---------- */
@@ -404,3 +404,70 @@ html[data-motion="off"] .trail-board.tb-anim .tb-runs::before, html[data-motion=
 /* flair and state chips: text a step deeper than the ink so it reads on its own tint */
 :root:not([data-skin]):not([data-theme="dark"]) .chip.bad, :root:not([data-skin]):not([data-theme="dark"]) .flair-exam { color: #A82A21; }
 @media (prefers-color-scheme: dark) { :root:not([data-skin]):not([data-theme="light"]) .chip.bad, :root:not([data-skin]):not([data-theme="light"]) .flair-exam { color: var(--bad); } }
+
+/* ---------- finish review round ---------- */
+/* the board is a printed plate: square-shouldered like the rest of the signs */
+:root:not([data-skin]) .hero-exam.trail-board { border-radius: var(--radius-sm); }
+/* Bo stands at the pin: wherever you are on the trail, he is there with you */
+.tb-here { display: inline-flex; align-items: flex-end; gap: 4px; justify-self: end; }
+.tb-bo { display: block; width: 34px; height: 34px; margin: -10px 0 -8px; }
+.tb-bo .bobcat { display: block; width: 100%; height: 100%; }
+.trail-board.tb-anim .tb-bo { animation: tbPin 0.42s cubic-bezier(0.16, 1, 0.3, 1) both; animation-delay: calc(0.36s + var(--n, 0) * 60ms); }
+.tb-run.here .tb-name { white-space: normal; overflow: visible; }
+/* one button, the run's name on its own line under the verb; the rest are plain links */
+.trail-board .tb-next { display: inline-flex; flex-direction: column; align-items: flex-start; gap: 1px; white-space: normal; text-align: left; max-width: 100%; }
+.tb-next-a { display: inline-flex; align-items: center; gap: 6px; font-size: 16px; font-weight: 700; }
+.tb-next-b { font-size: 14px; font-weight: 500; opacity: 0.92; }
+.tb-more { display: flex; flex-wrap: wrap; gap: 4px 18px; margin: 0; font-size: 15px; }
+.tb-more a { font-weight: 600; text-decoration: underline; text-underline-offset: 0.2em; text-decoration-thickness: 1px; }
+.tb-run .tb-score { white-space: nowrap; }
+@media (max-width: 900px) {
+  .trail-board a.tb-run.here { grid-template-columns: 16px 40px minmax(0, 1fr); row-gap: 4px; }
+  .tb-run.here .tb-here { grid-column: 3; justify-self: start; }
+  .tb-go { flex-direction: column; align-items: stretch; }
+  .trail-board .tb-next { width: 100%; align-items: center; text-align: center; }
+}
+/* the date line sits under the headline, never as a kicker above it */
+:root:not([data-skin]) .dash-when, :root:not([data-skin]) .hero-when { margin: 4px 0 0; font-size: 15px; color: var(--muted); }
+:root:not([data-skin]) .hero-when { margin-top: 6px; }
+/* sections are headed by their words alone */
+:root:not([data-skin]) .panel-title svg { display: none; }
+/* what was still a card below the board becomes ruled */
+:root:not([data-skin]) .dash-main .card-link { background: transparent; border: 0; border-radius: 0; padding: 2px 0; }
+:root:not([data-skin]) .dash-main .card-link h4 { color: var(--accent); text-decoration: underline; text-underline-offset: 0.18em; text-decoration-thickness: 1px; }
+:root:not([data-skin]) .dash-main .card-link:hover { border: 0; background: transparent; }
+:root:not([data-skin]) .dash-main .card-link:hover h4 { color: var(--accent-deep); }
+:root:not([data-skin]) .week-strip { gap: 0 14px; }
+:root:not([data-skin]) .week-day { background: transparent; border: 0; border-top: 2px solid var(--border); border-radius: 0; padding: 8px 0 4px; min-height: 0; box-shadow: none; }
+:root:not([data-skin]) .week-day.today { border-top-color: var(--ink); box-shadow: none; }
+:root:not([data-skin]) .week-day .d { font-family: var(--font-display); font-size: 16px; font-weight: 700; }
+:root:not([data-skin]) .empty { border: 0; border-radius: 0; text-align: left; padding: 10px 0; }
+:root:not([data-skin]) .dash-tabs { background: transparent; border: 0; border-bottom: 1px solid var(--border); border-radius: 0; padding: 0; gap: 2px; }
+:root:not([data-skin]) .dash-tabs .tab { border-radius: 0; padding: 10px 12px; }
+:root:not([data-skin]) .dash-tabs .tab svg { display: none; }
+:root:not([data-skin]) .dash-tabs .tab.on { background: transparent; box-shadow: none; }
+:root:not([data-skin]) .tab-pill { top: auto; bottom: -1px; height: 2px !important; border-radius: 0; background: var(--ink); box-shadow: none; }
+:root:not([data-skin]) .keep-going .keep-cta { justify-content: flex-start; }
+/* start page: the exam countdown is a line of the hero, not a box; Bo stays on phones too */
+:root:not([data-skin]) .hero-count { background: transparent; border: 0; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); border-radius: 0; padding: 10px 0; box-shadow: none; }
+@media (max-width: 900px) {
+  :root:not([data-skin]) .hero-mascot { display: block; right: 10px; bottom: 4px; }
+  :root:not([data-skin]) .hero-mascot .bubble { display: none; }
+  :root:not([data-skin]) .hero-mascot .bobcat { width: 64px; height: 64px; }
+}
+@media (max-width: 760px) { :root:not([data-skin]) .hero-actions { flex-wrap: nowrap; } :root:not([data-skin]) .hero-actions #landing-account { min-width: 0; } }
+/* phone: the summit block is compact (exam and date beside the days left) so the trail starts on the first screen */
+@media (max-width: 900px) {
+  .tb-summit { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 14px; row-gap: 4px; align-items: start; }
+  .tb-summit > * { grid-column: 1 / -1; }
+  .tb-summit > .tb-exam { grid-column: 1; grid-row: 1; font-size: 40px; }
+  .tb-summit > .tb-date { grid-column: 1; grid-row: 2; font-size: 19px; }
+  .tb-summit > .tb-days { grid-column: 2; grid-row: 1 / span 2; flex-direction: column; align-items: flex-end; gap: 0; margin-top: 0; }
+  .tb-days b { font-size: 52px; } .tb-days span { font-size: 15px; }
+  .tb-covers { font-size: 14px; margin: 4px 0 0; }
+  .tb-ready { margin-top: 2px; padding-top: 6px; }
+  .tb-ready .ready-line b { font-size: 22px; }
+}
+/* the per-class dark exam gradients from the old look stay out of the trail map (same weight, loaded later) */
+:root:not([data-skin])[data-course] .hero-exam { background: var(--surface); background-image: none; }
+:root:not([data-skin])[data-course] .hero-exam .btn.primary { color: var(--accent-ink); }

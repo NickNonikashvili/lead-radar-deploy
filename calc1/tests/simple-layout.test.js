@@ -1,4 +1,4 @@
-/* Simpler screens: the sidebar in five groups, the start page in four (hero, next step, classes, explore), the class dashboard with five tabs, a quiet top bar for newcomers, and the one-line preview note. */
+/* Simpler screens: the sidebar in five groups, the start page in four (hero, classes and next step, explore; a first visit sees its classes before the steps), the class dashboard with five tabs, a quiet top bar for newcomers, and the one-line preview note. */
 const T = require('./lib');
 (async () => {
   const { mk, go, log, check, hscroll } = await T.start({});
@@ -14,7 +14,7 @@ const T = require('./lib');
     return { secs, hero, quick, focus: !!document.querySelector('.land-next .hero-focus'), dice: !!document.querySelector('.land-next [data-roll="all"]'), steps: document.querySelectorAll('.start-steps .start-step').length, ticker: !!document.querySelector('#landing-ticker'), meta: card.querySelectorAll('.course-meta > div').length, buttons: card.querySelectorAll('.course-foot .btn').length, tabs: [...document.querySelectorAll('.landing-tabs .tab')].map(t => t.dataset.tab), guides: document.querySelectorAll('.pane[data-pane="guides"] .guides-strip .guide-card').length, strip: !!document.querySelector('.pane[data-pane="inside"] .stat-strip'), presence: !!document.querySelector('.pane[data-pane="community"] #landing-presence'), league: !!document.querySelector('.pane[data-pane="community"] .league-slot') };
   });
   log('start page:', JSON.stringify(land));
-  check('start page reads in four groups: hero, start here, classes, explore', land.secs.join('|') === 'Start here|Your classes|Explore', land.secs);
+  check('start page reads in four groups: hero, then a first visit sees classes before the steps, explore', land.secs.join('|') === 'Your classes|Start here|Explore', land.secs);
   check('the hero keeps four controls: Today, search, account, theme', land.hero.length === 4 && /hero-today/.test(land.hero[0]) && land.hero.includes('landing-account'), land.hero);
   check('Focus, the d20, GPA and class picking sit together under the next step', land.focus && land.dice && land.quick.length === 4, land.quick);
   check('first-time visitors get three numbered steps', land.steps === 3);

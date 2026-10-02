@@ -639,7 +639,7 @@
       "name": "Trail Board Runs",
       "kind": "custom",
       "refersTo": "you-are-here-pin",
-      "description": "The signature: an exam's sections as runs up to the summit, graded by difficulty glyph, with the You are here pin on the next run.",
+      "description": "The signature: an exam's sections as runs up to the summit, graded by difficulty glyph, with the You are here pin (and Bo) on the next run.",
       "html": "<div class=\"ds-trail\"><div class=\"ds-summit\"><i></i>Summit · Exam 2</div><ol class=\"ds-runs\"><li><a class=\"ds-run\"><span class=\"ds-g ds-new\"></span><b>3.5</b><span>Implicit differentiation</span></a></li><li><a class=\"ds-run ds-here\"><span class=\"ds-g ds-hard\"></span><b>3.4</b><span>Derivatives of trig functions</span><em>You are here</em></a></li><li><a class=\"ds-run\"><span class=\"ds-g ds-mid\"></span><b>3.2</b><span>Product and quotient rules</span></a></li><li><a class=\"ds-run\"><span class=\"ds-g ds-easy\"></span><b>3.1</b><span>Power rule</span></a></li></ol></div>",
       "css": ".ds-trail { width: 460px; font-family: \"Barlow\", \"Helvetica Neue\", Arial, sans-serif; color: #0F2236; background: #FFFFFF; padding: 12px 18px; border: 1px solid #D7DFE7; border-radius: 6px; } .ds-summit { display: flex; align-items: center; gap: 10px; font-family: \"Barlow Condensed\", \"Arial Narrow\", Arial, sans-serif; font-weight: 700; font-size: 16px; text-transform: uppercase; letter-spacing: 0.03em; padding-bottom: 6px; } .ds-summit i { width: 0; height: 0; border-left: 9px solid transparent; border-right: 9px solid transparent; border-bottom: 14px solid #0F2236; } .ds-runs { position: relative; list-style: none; margin: 0; padding: 0; } .ds-runs::before { content: \"\"; position: absolute; left: 8px; top: 4px; bottom: 4px; border-left: 2px dashed #AEBCCA; } .ds-run { position: relative; display: grid; grid-template-columns: 18px 40px 1fr auto; align-items: center; gap: 10px; padding: 8px 8px 8px 0; border-bottom: 1px solid #D7DFE7; color: #0F2236; text-decoration: none; cursor: pointer; } .ds-runs li:last-child .ds-run { border-bottom: 0; } .ds-run:hover { background: rgba(227, 236, 248, 0.55); } .ds-run b { font-family: \"Barlow Condensed\", \"Arial Narrow\", Arial, sans-serif; font-size: 17px; color: #33475C; } .ds-run.ds-here { background: rgba(201, 53, 43, 0.08); } .ds-run.ds-here span:not(.ds-g) { font-weight: 700; } .ds-run em { font-style: normal; font-family: \"Barlow Condensed\", \"Arial Narrow\", Arial, sans-serif; font-weight: 700; font-size: 12px; letter-spacing: 0.04em; text-transform: uppercase; color: #FFFFFF; background: #C9352B; padding: 2px 6px; border-radius: 2px; } .ds-g { position: relative; z-index: 1; justify-self: center; width: 14px; height: 14px; box-shadow: 0 0 0 3px #FFFFFF; } .ds-easy { border-radius: 50%; background: #1E6B45; } .ds-mid { border-radius: 1px; background: #1D5BB5; } .ds-hard { width: 12px; height: 12px; transform: rotate(45deg); background: #10161D; border-radius: 1px; } .ds-here .ds-hard { box-shadow: 0 0 0 3px #FFFFFF, 0 0 0 5px #C9352B; } .ds-new { box-sizing: border-box; border-radius: 50%; border: 2px solid #AEBCCA; background: #FFFFFF; }"
     },
@@ -702,6 +702,7 @@
       "**Do** let each class page wear its own ink; use the deep tone for small text so it passes AA.",
       "**Do** keep Bo and the pixel art as the only illustration, and keep the pixel ridge on the horizon.",
       "**Do** write labels in sentence case at 13–14px, and say things the way a fellow student would.",
+      "**Do** keep one solid primary button per screen region; secondary actions are outlined buttons or underlined links.",
       "**Do** honour Reduce motion: every entrance (trail draw, glyph stamp, pin drop) has a no-motion path."
     ],
     "donts": [
@@ -710,7 +711,8 @@
       "**Don't** put tiny tracked uppercase labels over blocks.",
       "**Don't** use purple-to-blue as a brand colour; purple exists only as WRIT 101's class ink.",
       "**Don't** lift, scale or glow buttons and rows on hover; darken or tint them instead.",
-      "**Don't** spend trail-sign yellow on decoration."
+      "**Don't** spend trail-sign yellow on decoration.",
+      "**Don't** put stock icons in front of section headings; a heading is its words."
     ]
   }
 }

@@ -194,7 +194,7 @@ A printed map's palette: navy type on white, four working inks, and one ink per 
 
 Fixed sidebar plus a single content column. Sections are separated by a 1px top rule with about 16px above the content (start-page sections by a 2px navy rule), not by boxed cards. Nested sections use a dashed rule. Lists of classes read like the lift board at the base area: one ruled row per class with its code, name, meta and action in columns.
 
-The class dashboard opens on the trail board: the summit block (exam, date, days left, what it covers, readiness) in the left third, the trail (pixel ridge, summit row, runs, trailhead, legend, next-run actions) in the right two-thirds. Under 900px the board stacks, the summit block above the trail, and the main "Take the next run" button spans the full width. Phones and laptops get the same content, never a reduced phone version; there is no sideways scroll at 390px.
+The class dashboard opens on the trail board: the summit block (exam, date, days left, what it covers, readiness) in the left third, the trail (pixel ridge, summit row, runs, trailhead, legend, next-run actions) in the right two-thirds. The board sits directly under the page title (announcements, onboarding and streak notes come after it), so on a 1440x900 laptop the pin and the button are above the fold. Under 900px the board stacks: a compact summit block (exam and date beside the days left), then the trail, and the main "Take the next run" button spans the full width. Dates and week numbers sit under a title, never as a kicker above it. Phones and laptops get the same content, never a reduced phone version; there is no sideways scroll at 390px.
 
 ## Elevation & Depth
 
@@ -240,7 +240,7 @@ Square-shouldered, like printed signs: 3px on signs and chips, 4px on buttons, i
 - **Phones:** a bottom tab bar, white with a top hairline; the active tab is the accent colour, nothing else.
 
 ### Trail Board (signature component)
-The class dashboard's one plate. Summit block: uppercase exam name, date, the days count in lift red, what the exam covers, the prep checklist and the readiness line ("62% ready", with "How to raise it"). Trail: the pixel Bridger ridge across the top, a summit row with a triangle, then the exam's sections as runs from the trailhead (bottom) up to the summit. Each run is a ruled row: difficulty glyph on a dashed trail line, condensed section number, topic name, score. A run is graded from practice: green circle at 65% or better, blue square at 35% or better, black diamond below, hollow ring when not yet tried. The weakest section carries the lift-red "You are here" pin, and the primary button "Take the next run" links to practice on exactly that section. On first view the trail draws upward, the glyphs stamp in and the pin drops; with reduced motion all of it simply appears.
+The class dashboard's one plate. Summit block: uppercase exam name, date, the days count in lift red, what the exam covers, the prep checklist and the readiness line ("62% ready", with "How to raise it"). Trail: the pixel Bridger ridge across the top, a summit row with a triangle, then the exam's sections as runs from the trailhead (bottom) up to the summit. Each run is a ruled row: difficulty glyph on a dashed trail line, condensed section number, topic name, score. A run is graded from practice: green circle at 65% or better, blue square at 35% or better, black diamond below, hollow ring when not yet tried. The weakest section carries the lift-red "You are here" pin with Bo standing beside it, and the one primary button ("Take the next run", with the section's name on a second line) links to practice on exactly that section; exam prep, "Drill every run" and flashcards are plain underlined links beside it. A section with no practice questions is still a run (hollow ring, "notes only") and links to its notes. On first view the trail draws upward, the glyphs stamp in and the pin drops; with reduced motion all of it simply appears.
 
 ### Run markers
 The same four glyphs appear beside every section in the notes contents, so a student sees which runs they have skied wherever they are.
@@ -254,6 +254,7 @@ The same four glyphs appear beside every section in the notes contents, so a stu
 - **Do** let each class page wear its own ink; use the deep tone for small text so it passes AA.
 - **Do** keep Bo and the pixel art as the only illustration, and keep the pixel ridge on the horizon.
 - **Do** write labels in sentence case at 13–14px, and say things the way a fellow student would.
+- **Do** keep one solid primary button per screen region; secondary actions are outlined buttons or underlined links.
 - **Do** honour Reduce motion: every entrance (trail draw, glyph stamp, pin drop) has a no-motion path.
 
 ### Don't:
@@ -263,3 +264,4 @@ The same four glyphs appear beside every section in the notes contents, so a stu
 - **Don't** use purple-to-blue as a brand colour; purple exists only as WRIT 101's class ink.
 - **Don't** lift, scale or glow buttons and rows on hover; darken or tint them instead.
 - **Don't** spend trail-sign yellow on decoration.
+- **Don't** put stock icons in front of section headings; a heading is its words.

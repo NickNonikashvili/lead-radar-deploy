@@ -446,9 +446,9 @@
 .course-card.${id},.resume-card.course-${id}{${use}}
 .chip.course-${id}{background:var(--${id}-accent-soft);color:var(--chip-${id});}
 .switch-btn[data-c="${id}"]::before{background:var(--${id}-accent);}
-:root[data-theme="dark"][data-course="${id}"] .hero-exam{${hero}}
-:root[data-theme="dark"][data-course="${id}"] .hero-exam .btn.primary{color:${p.heroInk}}
-@media (prefers-color-scheme: dark){:root:not([data-theme="light"])[data-course="${id}"] .hero-exam{${hero}} :root:not([data-theme="light"])[data-course="${id}"] .hero-exam .btn.primary{color:${p.heroInk}}}`;
+:root[data-skin][data-theme="dark"][data-course="${id}"] .hero-exam{${hero}}
+:root[data-skin][data-theme="dark"][data-course="${id}"] .hero-exam .btn.primary{color:${p.heroInk}}
+@media (prefers-color-scheme: dark){:root[data-skin]:not([data-theme="light"])[data-course="${id}"] .hero-exam{${hero}} :root[data-skin]:not([data-theme="light"])[data-course="${id}"] .hero-exam .btn.primary{color:${p.heroInk}}}`;
   }
 
   const API = { FORMAT, BUILTIN, ID_RE, PACK_VIEWS, CAL_TYPES, ICON_NAMES, DATA_KEYS, safeHtml, safeUrl, safeTex, clean, compile, compileTemplate, buildQuiz, exercise, normalize, validate, palette, css, contrast };
