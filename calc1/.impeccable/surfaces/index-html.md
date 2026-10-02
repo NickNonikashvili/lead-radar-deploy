@@ -11,22 +11,22 @@ The whole app shell and every view share one world; the first surface that has t
 
 ## Audience and job
 
-Montana State students in a hard class, opening it to answer: when is the exam, what is on it, how ready am I, what do I do now. Constraint: every existing feature, route and test hook stays; Bo and the pixel art stay.
+Montana State students in a hard class, opening it to answer: when is the exam, what is on it, how ready am I, what do I do now. Constraint: every existing feature, route and test hook stays; Bo and the pixel art stay; the trail board, its run markers and the "You are here" pin with Bo stay (the owner likes them).
 
 ## Direction contract
 
-THESIS: Every class is a mountain and its next exam is the summit; Mathub is the trail map that shows where you stand and which run to take next. It refuses the study-SaaS default: an indigo gradient hero card, stat tiles, rounded cards inside rounded cards, tracked caps labels over everything.
+THESIS: Big Sky. Every class is a mountain and its next exam is the summit, drawn as a bright, illustrated climb with a winding path of chunky run nodes; studying should feel like play, not paperwork. Craft bar: the category leaders the owner named (Khan Academy, Duolingo, Brilliant), never a copy of any. It refuses both earlier misses: the indigo-gradient glow SaaS look and the flat, colourless printed map.
 
-OWN-WORLD: A printed Bridger Bowl trail map in flat inks on snow-white paper: night-sky navy ink, run blue, pine green, lift red, trail-sign yellow; class colours are map inks. Barlow Condensed carries signage-weight headings and numerals, Barlow the text. Hairline rules and whitespace replace cards; one solid plate per screen, the trail board. The difficulty glyphs (green circle, blue square, black diamond, hollow ring) are the ornament; Bo and the 8-bit Bridger Range are the hand-made layer. No gradients, glow or glass; 4px corners; shadows only on things that float. Night map in dark mode.
+OWN-WORLD: Montana daylight. White surfaces on a faint sky ground, deep Bobcat navy ink, each class in its own saturated colour, MSU gold for stars, streaks and XP, pine green for mastery, sunrise coral for urgency. Gabarito (bold, friendly geometric) for headings and numbers, Figtree for text. Soft 16px corners, 2px borders; anything you can press has a chunky darker lip and sinks when pressed. Layered illustrated ridges, Bo and the 8-bit Bridger Range are the art. Night-sky dark mode.
 
-STORY: A student opens Calc I and sees the summit (Exam 2, Fri Oct 16, 14 days), the runs that lead there, each marked by how hard that topic is for them right now, a red you-are-here pin on the run to take next, and one button to take it. Practising moves the pin and re-marks the run. On a phone between classes it is the same board, stacked.
+STORY: A student opens Calc I and sees the mountain: Exam 2 at the summit flag with days left, the exam's sections as round nodes climbing a winding trail, coloured by how they are doing, Bo standing at the next one saying you are here, and one big button to take it. Practising turns nodes green and moves Bo up.
 
-FIRST VIEWPORT: Class line in plain small text (M 171 · Calculus I · Week 6 of 17), then the trail board at full content width: left third the summit block (EXAM 2 in condensed 56-64px, date and covers, days-to-go in lift red), right two thirds the trail, sections of the exam rising from base to summit along a drawn path under a pixel ridgeline, each with glyph, number and title; the next run carries the red pin and a solid run-blue button "Take the next run: <section>". Below: Today and Keep going as ruled sections, then the tabs. Signature motion, once: the path draws upward, markers stamp in, the pin drops last. Mobile: summit on top, trail as a vertical list, full-width button.
+FIRST VIEWPORT: Title sentence ("14 days to Exam 2. Here's the way up."), then the board at full width: a summit card on the left (exam name 48px, date, days-left badge, what it covers, chunky readiness bar, the big "Take the next run" button), the illustrated climb on the right (sky, layered ridges in the class colour, pixel ridge on the horizon, flag at the top, nodes zig-zagging up a dashed trail with labels beside them, Bo at the current node). Signature motion, once: the trail draws upward, nodes pop in, Bo hops in. Mobile: summit card, then the climb, button full width.
 
-FORM: Bridger Bowl trail map, first on my ordered list of seven (the user chose it over the assigned fourth, the field book); seed key eb47baac, degraded roll with no challengers.
+FORM: the category standard played straight at full craft (the owner's own words chose it: take inspiration from Khan Academy and similar high-traffic learning sites, do not copy them); keeps the trail-map mechanism from seed key eb47baac.
 
 FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, DESIGN.md, and every shipping raster carrying its provenance
 
 ## Unresolved
 
-The M-arrow logo is no longer binding but is kept for now; the extra looks (Realm, Bobcat, Paper, Forest, Midnight) stay as opt-in skins and geek mode becomes opt-in.
+The M-arrow logo stays. The extra looks (Realm, Bobcat, Paper, Forest, Midnight) stay opt-in; geek mode and the drifting background stay opt-in.

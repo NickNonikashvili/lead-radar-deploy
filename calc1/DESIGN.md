@@ -1,33 +1,45 @@
 ---
 name: Mathub
-description: Every class is a mountain and its next exam is the summit, drawn as a printed Bridger Bowl trail map.
+description: Every class is a mountain and its next exam is the summit, drawn as a bright, illustrated climb.
 colors:
-  paper: "#F6F8FA"
+  sky-ground: "#F4F7FB"
   surface: "#FFFFFF"
-  surface-2: "#EEF2F6"
-  surface-3: "#E0E7EE"
-  border: "#D7DFE7"
-  border-strong: "#AEBCCA"
-  ink: "#0F2236"
-  ink-2: "#33475C"
-  muted: "#566779"
-  run-blue: "#1D5BB5"
-  run-blue-deep: "#164A95"
-  run-blue-soft: "#E3ECF8"
-  pine: "#1E6B45"
-  lift-red: "#C9352B"
-  diamond: "#10161D"
-  trail-sign: "#F2C230"
-  trail-sign-ink: "#1B1500"
-  warn: "#9E5300"
-  gold: "#8A5C00"
-  night-paper: "#0B1420"
-  night-surface: "#101C2A"
-  night-ink: "#E8EEF6"
-  night-muted: "#93A6BA"
-  night-run: "#82B1F5"
-  night-pine: "#5FC690"
-  night-lift: "#FF8676"
+  surface-2: "#F0F4F9"
+  surface-3: "#E3E9F2"
+  border: "#E1E7EF"
+  border-strong: "#CBD5E1"
+  lip: "#D5DDE8"
+  ink: "#14213D"
+  ink-2: "#3B4A66"
+  muted: "#536279"
+  sky-top: "#BFDDFF"
+  sky-mid: "#DDEEFF"
+  sky-low: "#F3F9FF"
+  big-sky-blue: "#1A64D6"
+  big-sky-blue-deep: "#1450B0"
+  big-sky-blue-soft: "#E3EEFD"
+  sun: "#FFC629"
+  sun-deep: "#E0A800"
+  gold-text: "#8A5C00"
+  gold-soft: "#FFF4D1"
+  pine: "#22A447"
+  pine-deep: "#178A39"
+  good-text: "#137036"
+  coral: "#F2564B"
+  coral-deep: "#C9372D"
+  coral-soft: "#FFE6E3"
+  coral-ink: "#A82A21"
+  run-blue: "#2F7BEA"
+  diamond: "#1B2333"
+  trail: "#A86B3C"
+  trail-sign: "#8F5A30"
+  bo-tan: "#D9A15B"
+  bo-cream: "#F3DFB8"
+  bo-brown: "#3B2A1C"
+  night-ground: "#0D1626"
+  night-surface: "#142036"
+  night-ink: "#EEF3FA"
+  night-accent: "#6EA8FF"
   class-calc: "#1D5BB5"
   class-physics: "#0F6E66"
   class-precalc: "#C2410C"
@@ -38,230 +50,253 @@ colors:
   class-psyx: "#BE185D"
 typography:
   display:
-    fontFamily: "Barlow Condensed, Arial Narrow, Helvetica Neue, Arial, sans-serif"
-    fontSize: "60px"
-    fontWeight: 700
-    lineHeight: 0.95
-    letterSpacing: "0"
+    fontFamily: "Gabarito, Figtree, Helvetica Neue, Arial, sans-serif"
+    fontSize: "46px"
+    fontWeight: 800
+    lineHeight: 1.06
+    letterSpacing: "-0.025em"
   headline:
-    fontFamily: "Barlow Condensed, Arial Narrow, Helvetica Neue, Arial, sans-serif"
-    fontSize: "44px"
-    fontWeight: 700
+    fontFamily: "Gabarito, Figtree, Helvetica Neue, Arial, sans-serif"
+    fontSize: "40px"
+    fontWeight: 800
     lineHeight: 1.08
-    letterSpacing: "-0.005em"
+    letterSpacing: "-0.02em"
   title:
-    fontFamily: "Barlow Condensed, Arial Narrow, Helvetica Neue, Arial, sans-serif"
-    fontSize: "22px"
-    fontWeight: 700
-    lineHeight: 1.08
+    fontFamily: "Gabarito, Figtree, Helvetica Neue, Arial, sans-serif"
+    fontSize: "21px"
+    fontWeight: 800
+    lineHeight: 1.12
+    letterSpacing: "-0.01em"
   body:
-    fontFamily: "Barlow, Helvetica Neue, Arial, system-ui, sans-serif"
+    fontFamily: "Figtree, Helvetica Neue, Arial, system-ui, sans-serif"
     fontSize: "16px"
     fontWeight: 400
-    lineHeight: 1.55
+    lineHeight: 1.6
   label:
-    fontFamily: "Barlow, Helvetica Neue, Arial, system-ui, sans-serif"
-    fontSize: "14px"
-    fontWeight: 500
+    fontFamily: "Figtree, Helvetica Neue, Arial, system-ui, sans-serif"
+    fontSize: "13.5px"
+    fontWeight: 600
     lineHeight: 1.4
-  sign:
-    fontFamily: "Barlow Condensed, Arial Narrow, Helvetica Neue, Arial, sans-serif"
+  button:
+    fontFamily: "Figtree, Helvetica Neue, Arial, system-ui, sans-serif"
     fontSize: "15px"
     fontWeight: 700
-    letterSpacing: "0.02em"
+    lineHeight: 1.2
 rounded:
-  sign: "3px"
-  sm: "4px"
-  md: "6px"
-  dialog: "8px"
+  sm: "10px"
+  md: "12px"
+  control: "14px"
+  tile: "16px"
+  card: "20px"
+  board: "24px"
+  hero: "28px"
+  pill: "999px"
+spacing:
+  xs: "4px"
+  sm: "8px"
+  md: "16px"
+  lg: "22px"
+  xl: "30px"
 components:
   button-primary:
-    backgroundColor: "{colors.run-blue}"
+    backgroundColor: "{colors.big-sky-blue}"
     textColor: "{colors.surface}"
-    rounded: "{rounded.sm}"
-    typography: "{typography.body}"
-    padding: "10px 16px"
+    rounded: "{rounded.control}"
+    typography: "{typography.button}"
+    padding: "9px 16px"
   button-primary-hover:
-    backgroundColor: "{colors.run-blue-deep}"
+    backgroundColor: "#3577DB"
   button-secondary:
     backgroundColor: "{colors.surface}"
     textColor: "{colors.ink}"
-    rounded: "{rounded.sm}"
-    padding: "8px 14px"
+    rounded: "{rounded.control}"
+    typography: "{typography.button}"
+    padding: "9px 16px"
   button-secondary-hover:
     backgroundColor: "{colors.surface-2}"
-  exam-sign:
-    backgroundColor: "{colors.trail-sign}"
-    textColor: "{colors.trail-sign-ink}"
-    rounded: "{rounded.sign}"
-    typography: "{typography.sign}"
-    padding: "5px 10px"
+  card:
+    backgroundColor: "{colors.surface}"
+    textColor: "{colors.ink}"
+    rounded: "{rounded.card}"
+    padding: "20px 22px"
+  tile:
+    backgroundColor: "{colors.surface}"
+    textColor: "{colors.ink}"
+    rounded: "{rounded.tile}"
   chip:
     backgroundColor: "{colors.surface-2}"
     textColor: "{colors.ink-2}"
-    rounded: "{rounded.sign}"
-  chip-on:
-    backgroundColor: "{colors.ink}"
-    textColor: "{colors.surface}"
+    rounded: "{rounded.pill}"
+    padding: "3px 10px"
+  chip-exam:
+    backgroundColor: "{colors.coral-soft}"
+    textColor: "{colors.coral-ink}"
+    rounded: "{rounded.pill}"
   input:
     backgroundColor: "{colors.surface}"
     textColor: "{colors.ink}"
-    rounded: "{rounded.sm}"
+    rounded: "{rounded.md}"
     typography: "{typography.body}"
-  you-are-here-pin:
-    backgroundColor: "{colors.lift-red}"
-    textColor: "{colors.surface}"
-    rounded: "2px"
-    padding: "2px 6px"
   nav-item-active:
-    backgroundColor: "{colors.run-blue-soft}"
-    textColor: "{colors.ink}"
-    rounded: "{rounded.sm}"
-    padding: "7px 10px"
+    backgroundColor: "{colors.big-sky-blue-soft}"
+    textColor: "{colors.big-sky-blue-deep}"
+    rounded: "{rounded.md}"
+    padding: "8px 12px"
+  days-badge:
+    backgroundColor: "{colors.coral}"
+    textColor: "{colors.surface}"
+    rounded: "14px"
+  you-are-here-pin:
+    backgroundColor: "{colors.coral-deep}"
+    textColor: "{colors.surface}"
+    rounded: "{rounded.pill}"
+    padding: "3px 10px"
 ---
 
 # Design System: Mathub
 
 ## Overview
 
-**Creative North Star: "The Trail Map"**
+**Creative North Star: "Big Sky"**
 
-Mathub's default look is a printed ski-area trail map of the Bridger Range, the mountains on the horizon from the MSU campus. Every class is a mountain and its next exam is the summit; the sections on that exam are the runs up to it, marked the way a trail map marks them (green circle, blue square, black diamond). A student opens a class and reads it like a map at the base lodge: where the summit is, how far, which run they are on, and which one to take next.
+Mathub looks like a bright Montana day. Every class is a mountain and its next exam is the summit; the class dashboard draws that literally, as an illustrated climb with the exam's sections as stops on a winding trail, Bo the bobcat standing at the one you are on. The rest of the product carries the same daylight: white cards on a faint sky-blue page, each class in its own saturated colour, friendly bold lettering, and controls that feel physical because they have a chunky edge and sink when pressed.
 
-The world is flat ink on plain paper. Snow-white ground, navy lettering, a handful of map inks (run blue, pine green, lift red, trail-sign yellow) and nothing that glows, shimmers or wears a gradient. Structure comes from hairline rules and whitespace, the way a printed map divides its legend, not from rounded floating cards. Each screen gets at most one solid plate (on the class dashboard, the trail board). The hand-made layer is Bo the bobcat and the 8-bit pixel art: the pixel Bridger skyline sits on the horizon of the start page and the trail board. Dark mode is the night map: the same inks re-mixed for a navy ground.
+The craft bar is the most-used learning sites (Khan Academy, Duolingo, Brilliant): bright, warm, tactile and illustrated, with progress shown in plain colours. Mathub takes that level of craft, not their faces. Its own material is Montana State and Bozeman: Bo, the 8-bit Bridger Range, MSU gold for rewards, mountains drawn in the class colour, and ski-run difficulty marks for how a student is doing on each topic. Two earlier looks were rejected by the owner and stay rejected: purple and blue gradients with glow and generic soft-shadow cards (read as AI-made), and a flat, near-colourless printed map (read as a downgrade with no soul).
 
-The look was chosen to replace an earlier world the owner felt read as AI-generated: purple and blue gradients and glow, every block a soft-shadow card (cards inside cards, tiny tracked capitals over everything), and generic voice and icons.
+Density is comfortable: generous padding, one level of cards, never a card inside a card. Motion is used once per screen, where it means something: the trail draws itself and Bo hops onto his node.
 
 **Key Characteristics:**
-- Flat map inks on white paper; no gradients, glow, blur or glass.
-- Hairline rules and whitespace instead of cards; one solid plate per screen.
-- Barlow Condensed for signage and numbers, Barlow for reading.
-- Difficulty glyphs are the only ornament; Bo and the pixel art are the only illustration.
-- Each class wears its own ink on its own pages.
-- The exam is a yellow trail sign everywhere it appears.
+- White cards with 2px borders on a sky-blue ground; no gradients in the interface, no glow, no glass.
+- Anything you can press has a darker lip under it and sinks when pressed; static containers have none.
+- Gabarito for headings and numbers, Figtree for text.
+- Every class wears its own colour on its pages and tiles.
+- Gold means reward, coral means the exam is close, green means mastered.
+- Bo is the logo and the guide; the Bridger Range (vector ridges and 8-bit pixels) is the scenery.
 
 ## Colors
 
-A printed map's palette: navy type on white, four working inks, and one ink per class.
+A daylight palette: navy on white over a sky tint, a full set of class colours, and three meaning colours (gold, coral, pine).
 
 ### Primary
-- **Run Blue** (#1D5BB5): the default accent. Primary buttons, links, the active nav item's icon, progress fills and the "blue square" run. On a class page it is replaced by that class's ink.
+- **Big Sky Blue** (#1A64D6): the accent on pages that belong to no class (start page, Today, Settings, board). Primary buttons, active navigation, links (in its deep shade #1450B0). On a class page it is replaced by that class's colour.
+- **Class colours**: calc #1D5BB5, physics #0F6E66, precalc #C2410C, writing #6B3FA0, CSCI #2E7D32, BIOB #4D7C0F, KIN #B45309, PSYX #BE185D. Each has soft, line and deep companions. They fill class tile covers, primary buttons on class pages, the mountains on the trail board and the class switcher.
 
 ### Secondary
-- **Trail-Sign Yellow** (#F2C230) with **Sign Ink** (#1B1500): the exam. The top-bar exam chip, exam chips in lists, announcements, lit streak days. Yellow never carries body text other than its own black lettering.
-- **Lift Red** (#C9352B): urgency and position. The days-to-exam count, the "You are here" pin, error text and "bad" chips (darkened to #A82A21 for small text on tinted grounds).
+- **Sun Gold** (#FFC629, lip #E0A800): rewards. Streak days, XP, level badges, the numbered steps of "Start here", the sun in the illustrations, the loading bar, text selection. Text on gold is dark (#3D2C00). For gold-coloured text use the text-safe Gold Text (#8A5C00).
+- **Sunrise Coral** (#F2564B, deep #C9372D): the exam is close. The days-left badge, the exam chip in the top bar and on tiles (on Coral Soft #FFE6E3 with Coral Ink #A82A21), the summit flag, the "You are here" pin (on the deep shade so white text passes AA).
 
 ### Tertiary
-- **Pine** (#1E6B45): the green-circle run, "good" states, completed path nodes.
-- **Diamond Black** (#10161D): the black-diamond run only.
-- **Class inks**: calc #1D5BB5, physics #0F6E66, precalc #C2410C, WRIT #6B3FA0, CSCI #2E7D32, BIOB #4D7C0F, KIN #B45309, PSYX #BE185D. Each has soft, line and deep companions; class chips use the deep tone so small text passes AA.
+- **Pine** (#22A447, deep #178A39): mastery. Solid runs on the trail, the readiness bar, finished path nodes, correct answers. Green text uses Good Text (#137036).
+- **Ski-run marks**: green circle (Pine), blue square (Run Blue #2F7BEA), black diamond (Diamond #1B2333), white ring (not tried). They are the only difficulty language in the product.
+- **Trail** (#A86B3C) for the dotted path; the trailhead sign sits on Trail Sign brown (#8F5A30) with white text.
 
 ### Neutral
-- **Snow Paper** (#F6F8FA): the page ground.
-- **Surface** (#FFFFFF) / **Surface 2** (#EEF2F6) / **Surface 3** (#E0E7EE): the trail board plate, chips and callouts, bar tracks.
-- **Hairline** (#D7DFE7) and **Strong Rule** (#AEBCCA): section rules, row dividers, control outlines, the dashed trail line.
-- **Navy Ink** (#0F2236), **Ink 2** (#33475C), **Muted** (#566779): headings, body, secondary text.
-- **Night map**: ground #0B1420, plate #101C2A, ink #E8EEF6, muted #93A6BA, with lightened inks (#82B1F5, #5FC690, #FF8676). Yellow stays the same by night.
+- **Sky Ground** (#F4F7FB): the page. **Surface** (#FFFFFF): cards and tiles. **Surface 2** (#F0F4F9) and **Surface 3** (#E3E9F2): chips, tracks, segmented controls.
+- **Border** (#E1E7EF) for every 2px outline; **Border Strong** (#CBD5E1) for hover and untried nodes; **Lip** (#D5DDE8) under neutral pressable things.
+- **Ink** (#14213D) headings and body, **Ink 2** (#3B4A66) secondary text, **Muted** (#536279) captions.
+- **Sky** (#BFDDFF to #DDEEFF to #F3F9FF): the illustrated skies of the hero and the trail board only.
+- **Night sky** in dark mode: ground #0D1626, cards #142036, ink #EEF3FA, accent #6EA8FF; the sun becomes a moon and white numbers on coral turn dark.
 
 ### Named Rules
-**The Flat Ink Rule.** Every fill is one solid colour. No gradient, glow, inner shine or coloured shadow on any surface, button, number or title.
+**The Meaning Colour Rule.** Gold is only for rewards, coral only for exam urgency, pine only for mastery. A colour that means something is never decoration.
 
-**The Sign Rule.** Trail-sign yellow means "exam". Do not spend it on anything else that is not an exam, a streak or a notice.
+**The Own Colour Rule.** A class page and a class tile wear that class's colour; pages that belong to no class wear Big Sky Blue.
 
-**The Own Ink Rule.** On a class page the accent is that class's ink, not run blue; on cross-class pages it is run blue.
+**The No Glow Rule.** No gradient on any button, card, title or number, no coloured glow, no glass. The only soft gradients are the painted skies of illustrations.
 
 ## Typography
 
-**Display Font:** Barlow Condensed (with Arial Narrow, Helvetica Neue, Arial)
-**Body Font:** Barlow (with Helvetica Neue, Arial, system-ui)
+**Display Font:** Gabarito (with Figtree, Helvetica Neue, Arial)
+**Body Font:** Figtree (with Helvetica Neue, Arial, system-ui)
 **Label/Mono Font:** the existing monospace stack, for code only
 
-**Character:** Barlow is drawn from highway and trail signage: plain, sturdy and legible at a distance. The condensed cut does the shouting (exam names, countdowns, section numbers); the regular cut does the reading. Both are self-hosted (OFL).
+**Character:** Gabarito is a bold, round-shouldered geometric face that is friendly without being childish; it carries the headings and every number that matters. Figtree is a clean, open text face that stays readable at 13px on a phone. Both are variable fonts, self-hosted.
 
 ### Hierarchy
-- **Display** (700, 60px, 0.95; 46px on phones): the exam name at the top of the trail board, uppercase. The days count beside it is 72px (56px on phones) in lift red.
-- **Headline** (700, 44px, 1.08): page titles, which on a class dashboard read as a sentence ("12 days to Exam 2. Here's the way up.").
-- **Title** (700, 22px): panel titles, top-bar title, start-page course names; section titles on the start page are 28px.
-- **Body** (400, 16px, 1.55): all reading text, capped near 62–68ch.
-- **Label** (500, 14px): context lines that used to be tracked capitals. Sentence case, no letter-spacing. Small text never goes under 12px.
+- **Display** (800, 46px, 1.06, -0.025em): the start page question ("Which class is giving you trouble this morning?"); 34px on phones.
+- **Headline** (800, 40px, 1.08): page titles, which on a class dashboard are a sentence ("14 days to Exam 2. Here's the way up."); the exam name on the trail board is 44px.
+- **Title** (800, 21px): card titles, course names on tiles, section headings in notes.
+- **Body** (400, 16px, 1.6): reading text, capped near 68ch; notes use 1.7.
+- **Label** (600, 13.5px): captions and data labels in sentence case. Buttons are Figtree 700 at 15px.
 
 ### Named Rules
-**The No Tiny Capitals Rule.** Labels are sentence case at 13–14px. Uppercase is reserved for sign lettering (the exam chip, the summit row, the pin), set in Barlow Condensed.
+**The Sentence Case Rule.** No tracked uppercase labels and no kicker above a heading; a heading carries its own weight.
 
-**The Condensed Numbers Rule.** Counts that matter (days left, readiness %, section numbers) are set in Barlow Condensed with tabular figures.
+**The Gabarito Numbers Rule.** Counts that matter (days left, readiness percent, section numbers, stat numbers) are set in Gabarito with tabular figures.
 
 ## Layout
 
-Fixed sidebar plus a single content column. Sections are separated by a 1px top rule with about 16px above the content (start-page sections by a 2px navy rule), not by boxed cards. Nested sections use a dashed rule. Lists of classes read like the lift board at the base area: one ruled row per class with its code, name, meta and action in columns.
-
-The class dashboard opens on the trail board: the summit block (exam, date, days left, what it covers, readiness) in the left third, the trail (pixel ridge, summit row, runs, trailhead, legend, next-run actions) in the right two-thirds. The board sits directly under the page title (announcements, onboarding and streak notes come after it), so on a 1440x900 laptop the pin and the button are above the fold. Under 900px the board stacks: a compact summit block (exam and date beside the days left), then the trail, and the main "Take the next run" button spans the full width. Dates and week numbers sit under a title, never as a kicker above it. Phones and laptops get the same content, never a reduced phone version; there is no sideways scroll at 390px.
+A fixed sidebar beside one content column. Pages are stacks of white cards on the sky ground with 16-30px between them. Class lists are a responsive grid of tiles (auto-fill, 290px minimum). The class dashboard opens on the trail board at full width: the summit card in about a third, the illustrated climb in the rest; on a 1440x900 laptop the "Take the next run" button sits above the fold. Under 900px the board stacks (a compact summit card with the days badge beside the exam name, then the climb), nodes shrink and swing less, and every button that leads goes full width. Phones and laptops get the same content.
 
 ## Elevation & Depth
 
-Flat by default. Surfaces sit on the page with a hairline, not a shadow. A shadow exists only for things that genuinely float above the page: dialogs, popovers, the account menu, toasts and Bo's speech bubble.
+Depth comes from borders and lips, not from floating shadows. Static cards have a 2px border and no shadow. Pressable things (buttons, tiles, chips that toggle, quiz answers, trail nodes, class tiles) sit on a solid darker lip directly below them and drop onto it when pressed. Soft shadows are reserved for things that truly float: dialogs, popovers, toasts and Bo's speech bubble.
 
 ### Shadow Vocabulary
-- **Float** (`box-shadow: 0 14px 30px -14px rgba(15, 34, 54, 0.32), 0 2px 6px -2px rgba(15, 34, 54, 0.12)`): dialogs, popovers, toasts.
-- **Hairline lift** (`box-shadow: 0 1px 2px rgba(15, 34, 54, 0.07)`): the sliding tab pill only, together with a 1px border ring.
+- **Lip, neutral** (`box-shadow: 0 3px 0 #D5DDE8`): secondary buttons, tiles, answers; 2px on small controls, 4px on class tiles and the board.
+- **Lip, coloured** (`box-shadow: 0 4px 0 color-mix(in srgb, var(--accent) 66%, #0A1428)`): primary buttons and trail nodes, in a darker shade of their own colour.
+- **Float** (`box-shadow: 0 18px 40px -18px rgba(20, 33, 61, 0.35), 0 3px 8px -3px rgba(20, 33, 61, 0.12)`): dialogs, popovers, toasts.
 
 ### Named Rules
-**The One Plate Rule.** A screen has at most one solid plate (the trail board on the class dashboard). Everything else is ruled sections on the paper.
+**The Press Rule.** If it has a lip it can be pressed, and if it can be pressed it has a lip. Badges, pins, signs and labels never get one. Pressing moves it down by the lip's height; nothing lifts or glows on hover.
 
 ## Shapes
 
-Square-shouldered, like printed signs: 3px on signs and chips, 4px on buttons, inputs and small boxes, 6px on the tab track and popovers, 8px on dialogs. Panels have no radius at all, because they are ruled sections, not boxes. The difficulty glyphs are the only round or rotated forms: a 14px circle, a 14px square, a 12px square turned 45° and a hollow ring. The summit is a small solid triangle. The trail itself is a 2px dashed line.
+Soft and friendly: 10-14px corners on controls, 16px on tiles, 20px on cards, 24px on the trail board, 28px on the start-page hero, full pills for chips, progress bars and badges. Borders are always 2px. Progress bars are 12-14px pills with a pale highlight stripe across the fill. The trail nodes are circles; the difficulty marks are a circle, a square, a diamond (a square turned 45°) and a ring. Illustrations are flat layered shapes: ridges, a snowcap, clouds, a sun, plus the 8-bit pixel ridge.
 
 ## Components
 
 ### Buttons
-- **Shape:** sign-plate corners (4px).
-- **Primary:** the page's accent ink with white lettering, 15px Barlow 600 (16px on the trail board).
-- **Hover / Focus:** hover darkens to the deep accent; no lift, scale or glow. Focus keeps the global visible focus ring.
-- **Secondary:** white with a strong-rule outline; hover fills Surface 2. **Ghost:** no outline.
+- **Shape:** soft corners (14px; 12px small, 16px large).
+- **Primary:** the page's accent with white text (dark text in dark mode), Figtree 700, on a darker lip of its own colour.
+- **Hover / Focus:** hover lightens the fill slightly; focus shows a 3px accent ring; pressing drops it onto its lip.
+- **Secondary:** white with a 2px border and a neutral lip. **Ghost:** no border, no lip.
 
 ### Chips
-- **Style:** 3px corners, Surface 2 ground, Ink 2 lettering, 13px Barlow 600, no border.
-- **State:** an "on" chip inverts to navy with white lettering. The exam chip is a trail sign (yellow, uppercase condensed). Good and bad chips use pine and lift red on their soft grounds.
+- **Style:** full pills, Figtree 700 at 12.5px, on Surface 2. Toggle chips are white with a 2px border and a small lip; the on state takes the soft accent.
+- **State:** the exam chip is coral (Coral Soft and Coral Ink); good and bad chips use pine and coral tints.
 
 ### Cards / Containers
-- **Corner Style:** none for panels (ruled sections); 4px for the few remaining boxed items (link tiles, start steps).
-- **Background:** transparent on the paper; white for boxed items.
-- **Shadow Strategy:** none (see Elevation & Depth).
-- **Border:** 1px top rule for panels; 1px hairline around boxed items.
-- **Internal Padding:** 16px above, 6px below for panels.
+- **Corner Style:** 20px (16px for tiles).
+- **Background:** white on the sky ground.
+- **Shadow Strategy:** none for static cards; a lip for anything clickable (see Elevation & Depth).
+- **Border:** 2px Border.
+- **Internal Padding:** 20px 22px.
 
 ### Inputs / Fields
-- **Style:** white, 1px strong-rule outline, 4px corners, 16px text (no zoom on iOS).
-- **Focus:** the outline turns to the accent with a 3px accent ring at 22% strength.
+- **Style:** white, 2px border, 12px corners, 16px text.
+- **Focus:** the border turns the accent with a 4px accent ring at 20%.
 
 ### Navigation
-- **Sidebar:** white, right hairline. Items are 15px Barlow 500 in Ink 2 with muted icons; hover fills Surface 2; the active item gets the soft accent ground, navy text at 600 and an accent icon. Group toggles are 16px Barlow Condensed in sentence case. Home's icon is a mountain with a flag.
-- **Top bar:** near-opaque white with a bottom hairline, no blur. The title is 22px Barlow Condensed. The exam chip sits here as a yellow sign.
-- **Phones:** a bottom tab bar, white with a top hairline; the active tab is the accent colour, nothing else.
+- **Sidebar:** white with a 2px right border. Bo's head and the wordmark at the top, the class switcher as small pressable pills (the current class filled in its colour), then grouped items in Figtree 600; the active item has the soft accent ground, a 2px accent outline and deep-accent text and icon.
+- **Top bar:** white with a 2px bottom border; the title in Gabarito; the exam as a coral pill.
+- **Phones:** a bottom tab bar, white with a 2px top border; the active tab in the accent colour.
 
-### Trail Board (signature component)
-The class dashboard's one plate. Summit block: uppercase exam name, date, the days count in lift red, what the exam covers, the prep checklist and the readiness line ("62% ready", with "How to raise it"). Trail: the pixel Bridger ridge across the top, a summit row with a triangle, then the exam's sections as runs from the trailhead (bottom) up to the summit. Each run is a ruled row: difficulty glyph on a dashed trail line, condensed section number, topic name, score. A run is graded from practice: green circle at 65% or better, blue square at 35% or better, black diamond below, hollow ring when not yet tried. The weakest section carries the lift-red "You are here" pin with Bo standing beside it, and the one primary button ("Take the next run", with the section's name on a second line) links to practice on exactly that section; exam prep, "Drill every run" and flashcards are plain underlined links beside it. A section with no practice questions is still a run (hollow ring, "notes only") and links to its notes. On first view the trail draws upward, the glyphs stamp in and the pin drops; with reduced motion all of it simply appears.
+### The Trail Board (signature component)
+The class dashboard's centrepiece. The summit card holds the exam name, its date, a coral days-left badge, what it covers, the readiness line with a green progress bar and "How to raise it", and the big "Take the next run" button (the section's name on a second line) with text links to exam prep, drilling every run and flashcards. Below the readiness bar, the next three unchecked items of the exam's prep checklist can be ticked right there. The climb beside it is an illustration: a sky with a sun and clouds, far ridges, and one big mountain in the class colour whose snowcapped peak sits under the summit flag, with the pixel Bridger Range along the bottom. The exam's sections are round nodes zig-zagging up the face of that mountain on a dotted trail, from a trailhead sign to the flag, each coloured like a ski run by the student's readiness on its topics, with a light label beside it (text with a sky-coloured halo, no box). The current node is larger, ringed in the accent with a slow pulse, has a 64px Bo standing beside it, and its label is the one filled card on the climb, with a "You are here" pin. On first view the trail draws upward, nodes pop in and Bo hops onto his node.
 
-### Run markers
-The same four glyphs appear beside every section in the notes contents, so a student sees which runs they have skied wherever they are.
+### Class Tiles
+On the start page each class is a tile, four across on a laptop: a cover in the class colour with the course code in large white Gabarito, the next exam as a white pill and the class's own 8-bit sprite (an integral sign for Calculus, Newton's apple for Physics, a rising graph for Precalculus, a scroll for Writing, a computer for CSCI, a potion for Biology, a heart for Kinesiology, a brain for Psychology), then the course name, a line about it, what is being covered now and the next exam, and one soft-filled button to continue. The whole tile presses.
+
+### Bo, the logo
+The mark is Bo's head, the same drawing as the mascot, always in his own tan, cream and brown. Bare in the app (sidebar, page headers), on a navy rounded tile for icons, on a white tile on share cards. He tilts his head when pointed at.
 
 ## Do's and Don'ts
 
 ### Do:
-- **Do** separate content with 1px rules and whitespace; reserve the plate for the trail board.
-- **Do** set exams as trail signs: yellow ground, black uppercase Barlow Condensed lettering.
-- **Do** mark progress with the four difficulty glyphs (green circle, blue square, black diamond, hollow ring) and nothing invented.
-- **Do** let each class page wear its own ink; use the deep tone for small text so it passes AA.
-- **Do** keep Bo and the pixel art as the only illustration, and keep the pixel ridge on the horizon.
-- **Do** write labels in sentence case at 13–14px, and say things the way a fellow student would.
-- **Do** keep one solid primary button per screen region; secondary actions are outlined buttons or underlined links.
-- **Do** honour Reduce motion: every entrance (trail draw, glyph stamp, pin drop) has a no-motion path.
+- **Do** put white cards with 2px borders on the sky ground, one level deep.
+- **Do** give everything pressable a darker lip and a press-down state, and nothing else.
+- **Do** colour class pages, tiles and illustrations with the class's own colour.
+- **Do** keep gold for rewards, coral for exam urgency and pine for mastery.
+- **Do** show progress with the ski-run marks and thick pill bars.
+- **Do** give each class its own 8-bit sprite, drawn in the pixel style of Bo's world.
+- **Do** keep Bo and the pixel Bridger Range in the scenery, and Bo as the logo.
+- **Do** honour Reduce motion: every entrance and the node pulse have a still version.
 
 ### Don't:
-- **Don't** use gradients, glow, gradient text, glass or blur anywhere in the default look.
-- **Don't** wrap sections in rounded soft-shadow cards, and never put a card inside a card.
-- **Don't** put tiny tracked uppercase labels over blocks.
-- **Don't** use purple-to-blue as a brand colour; purple exists only as WRIT 101's class ink.
-- **Don't** lift, scale or glow buttons and rows on hover; darken or tint them instead.
-- **Don't** spend trail-sign yellow on decoration.
-- **Don't** put stock icons in front of section headings; a heading is its words.
+- **Don't** use gradients, glow or glass on buttons, cards, titles or numbers; the only gradients are painted skies.
+- **Don't** fall back to the flat, near-colourless printed look: the owner rejected it as having no soul.
+- **Don't** put a card inside a card, or tiny tracked uppercase labels and kickers above headings.
+- **Don't** lift or glow things on hover; press them down instead.
+- **Don't** copy Khan Academy's, Duolingo's or Brilliant's faces, colours or mascots; match their craft.
+- **Don't** spend gold, coral or pine on decoration.

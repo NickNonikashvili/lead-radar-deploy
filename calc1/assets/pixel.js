@@ -40,7 +40,12 @@
     book: { rows: ['ooooooooo.', 'oBBBBBBBo.', 'oBBwwwBBo.', 'oBBBBBBBo.', 'oBBBBBBBoo', 'oBBBBBBBop', 'oBBBBBBBop', 'oBBBBBBBop', 'ooooooooop', '.ppppppppp'], pal: { o: '#3B1F0F', B: '#B4232A', w: '#F2C14E', p: '#F3E9D2' } },
     scroll: { rows: ['.oo....oo.', 'oPPooooPPo', 'oPPwwwwPPo', 'oPPwllwPPo', 'oPPwwwwPPo', 'oPPwllwPPo', 'oPPooooPPo', '.oo....oo.'], pal: { o: '#6B4A1A', P: '#D9B26B', w: '#F6E7C1', l: '#9C7A45' } },
     computer: { rows: ['.oooooooooooo.', '.oSSSSSSSSSSo.', '.oSGSSSSSSSSo.', '.oSSGSSSSSSSo.', '.oSGSGGSSSSSo.', '.oSSSSSSSSSSo.', '.oooooooooooo.', '......oo......', '....oooooo....', 'oooooooooooooo', 'okkkkkkkkkkkko', 'oooooooooooooo'], pal: { o: '#1E293B', S: '#0B1B3A', G: '#4ADE80', k: '#94A3B8' },
-      frames: [null, null] }
+      frames: [null, null] },
+    // class icons on the start-page tiles
+    integral: { rows: [".....ooooo.", "....ooWWWoo", "....oWWooWo", "....oWWoooo", "...ooWWo...", "...oWWoo...", "...oWWo....", "...oWWo....", "...oWWo....", "...oWWo....", "...oWWo....", "...oWWo....", "ooooWWo....", "oWoWWoo....", "ooWWWo.....", ".ooooo....."], pal: {"o": "#14213D", "W": "#FFFFFF"} },
+    graph: { rows: [".ooo.......ooo", ".oAo.......oWo", ".oAo..ooo.ooWo", ".oAo..oYoooWoo", ".oAo..ooooWWo.", ".oAo....oWWoo.", ".oAo..oooWoo..", ".oAo.ooWWoo...", ".oAoooWooo....", ".oAWWWoooooooo", ".oAAAAAAAAAAAo", ".oAooooooooooo", ".ooo.........."], pal: {"o": "#14213D", "W": "#FFFFFF", "A": "#FFC629", "Y": "#FFC629"} },
+    brain: { rows: ["...oooooooo...", ".oooPPPdPPooo.", "ooPPwPPdPPwPoo", "oPPdPPPdPPdPPo", "oPPPdPPdPdPPPo", "oPPPPPPdPPPPPo", "oPPddPPdPPddPo", "oPPPPPPdPPPPPo", "ooPPPdPdPdPPoo", ".oooPPPdPPooo.", "...oooooooo..."], pal: {"o": "#14213D", "P": "#F9A8D4", "d": "#DB5A9B", "w": "#FFE4F1"} },
+    apple: { rows: ["........oooo..", "......oooGGo..", "......oBGGGo..", "...ooooBGooo..", "..ooRRoBRRoo..", ".ooRRRDDRRRoo.", "ooRwwRRRRRRRoo", "oRRwRRRRRRRRRo", "oRRRRRRRRRRRRo", "oRRRRRRRRRRRRo", "ooRRRRRRRRRRoo", ".oRRRRRRRRRRo.", ".ooRRRRRRRRoo.", "..oooooooooo.."], pal: {"o": "#14213D", "R": "#E5383B", "D": "#B42328", "B": "#7A4A20", "G": "#4ADE80", "w": "#FFC2C2"} }
   };
   S.computer.frames[1] = withRows(S.computer.rows, { 4: '.oSGSSSSSSSSo.' });
   // the start page skyline: the Bridger Range, pines and a sun, generated so it tiles seamlessly
@@ -74,6 +79,9 @@
     return (cache[key] = `<svg class="${cls}" width="${w * scale}" height="${h * scale}" viewBox="0 0 ${w} ${h}" shape-rendering="crispEdges" ${aria} focusable="false">${body}</svg>`);
   };
   App.pixelSprites = Object.keys(S);
+  // each class wears its own little sprite on its start-page tile; class packs fall back to the book
+  const CLASS_SPRITE = { calc: 'integral', physics: 'apple', precalc: 'graph', writ: 'scroll', csci: 'computer', biob: 'potion', kin: 'heart', psyx: 'brain' };
+  App.classSprite = (id, scale = 4) => App.pixel(CLASS_SPRITE[id] || 'book', scale, { cls: 'px-class', still: true });
   // a stable sprite per empty-state message, so the same box always shows the same friend
   const FRIENDS = ['bo', 'invader', 'floppy', 'potion', 'computer', 'book', 'star', 'heart'];
   App.pixelFor = txt => { let h = 0; for (const ch of String(txt || '')) h = (h * 31 + ch.charCodeAt(0)) | 0; const name = FRIENDS[Math.abs(h) % FRIENDS.length]; return App.pixel(name, name === 'heart' || name === 'star' ? 4 : 3, { cls: 'px-friend' }); };

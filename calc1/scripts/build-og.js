@@ -14,41 +14,39 @@ const ROOT = path.resolve(__dirname, '..');
 let chromium; try { ({ chromium } = require('playwright')); } catch (e) { ({ chromium } = require(path.join(ROOT, 'tests', 'node_modules', 'playwright'))); }
 global.window = {}; require(path.join(ROOT, 'assets', 'courses-index.js')); const Courses = window.Courses;
 const ORDER = ['calc', 'physics', 'precalc', 'writ', 'csci', 'biob', 'kin', 'psyx'].filter(id => Courses[id]);
-const COLORS = { site: ['#0B1B3A', '#10307A', '#1F5EFF'], calc: ['#0f1f4d', '#2B55B8', '#4C7BE0'], physics: ['#063d44', '#0E7C86', '#2AA6B0'], precalc: ['#4a1a08', '#B5451B', '#E07A3F'], writ: ['#33153f', '#7A3E9D', '#A66BC7'], csci: ['#0f3a12', '#2E7D32', '#5AA85E'], biob: ['#1f3306', '#4D7C0F', '#7FB23A'], kin: ['#3d1c03', '#B45309', '#E08A3A'], psyx: ['#420a24', '#BE185D', '#E05592'] };
-const LOGO = '<svg width="124" height="102" viewBox="-2 -2 102 84"><path fill="#fff" d="M0 0H20V79H0Z"/><path fill="#fff" d="M20 0L52 30V44L20 14Z"/><path fill="#fff" d="M77 20L97 10V79H77Z"/><path stroke="#5B8CFF" fill="none" stroke-width="5.2" stroke-linecap="round" d="M22 60Q45 52 89 10"/><path fill="#5B8CFF" d="M96 4L93.6 13.1L86.8 5.8Z"/></svg>';
-// Fonts: Google Fonts by default; set MATHUB_FONT_CSS to a local stylesheet (same @font-face rules, file:// urls) when the build machine has no web access.
-const FONT_LINK = (process.env.MATHUB_FONT_CSS ? `<style>${fs.readFileSync(process.env.MATHUB_FONT_CSS, 'utf8')}</style>` : '<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700&display=swap" rel="stylesheet">')
-  // the site font, embedded from assets/fonts so the cards render the same with or without web access
-  + '<style>' + [['regular', 400, 'normal'], ['bold', 700, 'normal'], ['italic', 400, 'italic'], ['bolditalic', 700, 'italic']].map(([f, w, st]) => `@font-face{font-family:"TeX Gyre Heros";font-weight:${w};font-style:${st};src:url(data:font/woff2;base64,${fs.readFileSync(path.join(ROOT, 'assets', 'fonts', `texgyreheros-${f}.woff2`)).toString('base64')}) format("woff2")}`).join('') + '</style>';
+const COLORS = { site: '#1A64D6', calc: '#1D5BB5', physics: '#0F6E66', precalc: '#C2410C', writ: '#6B3FA0', csci: '#2E7D32', biob: '#4D7C0F', kin: '#B45309', psyx: '#BE185D' };
+// Bo's head on a white tile: the same mark as the app (assets/app.js App.LOGO_PATHS)
+const BO = '<path d="M22 46L14 14l32 14z" fill="#C98B4B"/><path d="M98 46l8-32-32 14z" fill="#C98B4B"/><path d="M24 40l-6-19 20 10z" fill="#3B2A1C"/><path d="M96 40l6-19-20 10z" fill="#3B2A1C"/><ellipse cx="60" cy="58" rx="40" ry="34" fill="#D9A15B"/><ellipse cx="60" cy="69" rx="27" ry="21" fill="#F3DFB8"/><path d="M30 42c4 5 8 10 8 18M90 42c-4 5-8 10-8 18" stroke="#8B5A2B" stroke-width="3.2" stroke-linecap="round" fill="none"/><path d="M19 70l17 2M19 78l17-1M101 70l-17 2M101 78l-17-1" stroke="#8B5A2B" stroke-width="1.8" stroke-linecap="round"/><ellipse cx="46" cy="56" rx="7.5" ry="8.5" fill="#fff"/><ellipse cx="74" cy="56" rx="7.5" ry="8.5" fill="#fff"/><circle cx="47" cy="57.5" r="4.6" fill="#2A1B0E"/><circle cx="75" cy="57.5" r="4.6" fill="#2A1B0E"/><circle cx="48.6" cy="55.4" r="1.6" fill="#fff"/><circle cx="76.6" cy="55.4" r="1.6" fill="#fff"/><path d="M54 68h12l-6 6z" fill="#3B2A1C"/><path d="M60 74v3.5M60 77.5c-3 3-7 3-9 0M60 77.5c3 3 7 3 9 0" stroke="#3B2A1C" stroke-width="2.2" stroke-linecap="round" fill="none"/>';
+const LOGO = `<svg width="116" height="116" viewBox="0 0 64 64"><rect width="64" height="64" rx="16" fill="#fff"/><g transform="translate(-2.8 1.3) scale(0.58)">${BO}</g></svg>`;
+// the site faces, embedded from assets/fonts so the cards render the same with or without web access
+const font = (fam, file) => `@font-face{font-family:"${fam}";font-weight:100 900;src:url(data:font/woff2;base64,${fs.readFileSync(path.join(ROOT, 'assets', 'fonts', file)).toString('base64')}) format("woff2")}`;
+const FONT_LINK = `<style>${font('Gabarito', 'gabarito-var.woff2')}${font('Figtree', 'figtree-var.woff2')}</style>`;
+// a range of peaks in white along the bottom, like the class tiles in the app
+const RANGE = '<svg class="range" viewBox="0 0 1200 260" preserveAspectRatio="none"><path d="M0 260V170l120-80 90 50 150-120 110 90 90-60 140 120 120-90 140 110 110-70 130 80V260z" fill="#fff" opacity=".14"/><path d="M380 260l180-170 70 60 110-110 160 220z" fill="#fff" opacity=".22"/><path d="M630 120l110-110 50 70-26-8-20 22-24-22-30 26z" fill="#fff" opacity=".6"/></svg>';
 const esc = s => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 const HEAD = `<!DOCTYPE html><html><head><meta charset="utf-8">${FONT_LINK}<style>
-  html,body{margin:0;width:1200px;height:630px;overflow:hidden;font-family:"Helvetica Neue","TeX Gyre Heros",Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased}
-  .card{position:relative;width:1200px;height:630px;color:#fff;padding:64px 72px;box-sizing:border-box}
-  .glow{position:absolute;width:640px;height:640px;border-radius:50%;background:radial-gradient(circle,rgba(127,176,255,.35),transparent 60%);right:-160px;top:-200px}
-  .glow2{position:absolute;width:520px;height:520px;border-radius:50%;background:radial-gradient(circle,rgba(255,255,255,.18),transparent 60%);left:-140px;bottom:-240px}
-  .brand{display:flex;align-items:center;gap:26px} .brand svg{flex:none}
-  .brand .lock{display:flex;flex-direction:column;gap:6px;flex:none}
-  .brand .tagline{white-space:nowrap;font-size:22px;font-weight:600;letter-spacing:.3em;text-transform:uppercase;opacity:.92}
-  .brand .tagline i{font-style:normal;color:#7FB0FF;margin:0 6px}
-  .brand b{font-family:Poppins,"Helvetica Neue","TeX Gyre Heros",Helvetica,Arial,sans-serif;font-size:84px;font-weight:700;letter-spacing:-.04em;line-height:1}
-  .brand small{align-self:flex-end;margin-bottom:12px;white-space:nowrap;font-size:22px}
-  .brand small{font-size:26px;font-weight:600;opacity:.85;margin-left:auto;letter-spacing:.06em;text-transform:uppercase}
-  .tag{font-size:46px;font-weight:700;line-height:1.15;margin-top:44px;max-width:960px;letter-spacing:-.025em}
-  .tag.big{font-size:56px;margin-top:38px}
-  .sub{font-size:24px;opacity:.9;margin-top:18px;max-width:900px;line-height:1.4}
+  html,body{margin:0;width:1200px;height:630px;overflow:hidden;font-family:Figtree,"Helvetica Neue",Arial,sans-serif;-webkit-font-smoothing:antialiased}
+  .card{position:relative;width:1200px;height:630px;color:#fff;padding:64px 72px;box-sizing:border-box;overflow:hidden}
+  .range{position:absolute;left:0;right:0;bottom:0;width:1200px;height:260px}
+  .brand{position:relative;display:flex;align-items:center;gap:26px} .brand svg{flex:none;border-radius:16px;box-shadow:0 6px 0 rgba(0,0,0,.18)}
+  .brand b{font-family:Gabarito,Figtree,sans-serif;font-size:84px;font-weight:800;letter-spacing:-.03em;line-height:1}
+  .brand small{margin-left:auto;align-self:center;white-space:nowrap;font-size:24px;font-weight:700;opacity:.9}
+  .tag{position:relative;font-family:Gabarito,Figtree,sans-serif;font-size:54px;font-weight:800;line-height:1.08;margin-top:44px;max-width:980px;letter-spacing:-.025em}
+  .tag.big{font-size:60px;margin-top:40px}
+  .sub{position:relative;font-size:25px;font-weight:500;opacity:.95;margin-top:18px;max-width:900px;line-height:1.4}
   .chips{position:absolute;left:72px;bottom:64px;display:flex;gap:12px}
-  .chip{padding:10px 18px;border-radius:999px;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.35);font-weight:700;font-size:22px;letter-spacing:.01em}
-  .url{position:absolute;right:72px;bottom:70px;font-size:24px;font-weight:600;opacity:.85}
+  .chip{padding:9px 18px;border-radius:999px;background:#fff;color:#14213D;font-weight:800;font-size:21px;box-shadow:0 4px 0 rgba(0,0,0,.18)}
+  .url{position:absolute;right:72px;bottom:70px;font-size:24px;font-weight:700}
   .card.cls .chips{bottom:122px} .card.cls .url{left:72px;right:auto;bottom:66px}
   .chips.many{right:72px;flex-wrap:wrap;gap:10px} .chips.many .chip{font-size:19px;padding:8px 15px}
 </style></head><body>`;
-const card = (colors, inner, cls = '') => `${HEAD}<div class="card${cls ? ' ' + cls : ''}" style="background:linear-gradient(135deg,${colors[0]} 0%,${colors[1]} 55%,${colors[2]} 100%)"><div class="glow"></div><div class="glow2"></div>${inner}</div></body></html>`;
-const site = card(COLORS.site, `<div class="brand">${LOGO}<div class="lock"><b>Mathub</b><span class="tagline">Learn <i>/</i> Practice <i>/</i> Excel</span></div></div>
+const card = (color, inner, cls = '') => `${HEAD}<div class="card${cls ? ' ' + cls : ''}" style="background:${color}">${RANGE}${inner}</div></body></html>`;
+const site = card(COLORS.site, `<div class="brand">${LOGO}<b>Mathub</b></div>
 <div class="tag">Free study hub for Montana State classes</div>
 <div class="sub">Topic notes, endless practice, flashcards, deadline calendars, simulators, a Python playground and a class board. Built by a Bobcat, for Bobcats.</div>
 <div class="chips${ORDER.length > 6 ? ' many' : ''}">${ORDER.map(c => `<span class="chip">${esc(Courses[c].code)}</span>`).join('')}</div><div class="url">mathub.space</div>`, ORDER.length > 6 ? 'cls' : '');
 const classCard = c => { const C = Courses[c]; const bits = [`${C.sectionCount} topic guides`, C.flashcardCount ? `${C.flashcardCount} flashcards` : null, C.hasQuiz ? 'endless practice' : (C.READINGS ? 'read-along readings' : null), 'deadline calendar'].filter(Boolean);
-  return card(COLORS[c] || COLORS.site, `<div class="brand">${LOGO}<div class="lock"><b>Mathub</b><span class="tagline">Learn <i>/</i> Practice <i>/</i> Excel</span></div><small>Montana State · ${esc(C.term)}</small></div>
+  return card(COLORS[c] || COLORS.site, `<div class="brand">${LOGO}<b>Mathub</b><small>Montana State · ${esc(C.term)}</small></div>
 <div class="tag big">${esc(C.code)} · ${esc(C.name)}</div>
 <div class="sub">${esc(C.tagline || '')}</div>
 <div class="chips">${bits.map(b => `<span class="chip">${esc(b)}</span>`).join('')}</div><div class="url">mathub.space/learn/${c}</div>`, 'cls'); };

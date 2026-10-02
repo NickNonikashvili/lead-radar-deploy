@@ -35,6 +35,7 @@ A student opens the class they are worried about, sees the next exam and how rea
 - Bo the bobcat (the mascot) and the hand-made pixel art (the 8-bit Bridger Range, pixel friends and icons) must survive any redesign.
 - Not binding: the current M-arrow logo, the "Learn / Practice / Excel" line, the extra looks (Realm, Bobcat, Paper, Forest, Midnight) and geek mode.
 - The owner finds these read as AI-generated and wants them gone: purple and blue gradients and glow, every block as a rounded soft-shadow card (cards inside cards, tiny caps labels over everything), and generic voice and icons that could belong to any study app.
+- The owner also rejected the opposite: the flat, near-colourless printed trail map (2026.10.02.2) read as a downgrade with no soul. Standing preference: hold the craft level of the most-used learning sites (Khan Academy, Duolingo, Brilliant): bright, warm, tactile and illustrated, with Mathub's own identity, never a copy of any of them. The trail board, its run markers and the "You are here" pin with Bo are liked and stay.
 
 ## Evidence on Hand
 

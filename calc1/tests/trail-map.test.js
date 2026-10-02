@@ -1,4 +1,4 @@
-/* The trail map (2026.10.02.2): the default look's faces and flat inks, the trail board on the class dashboard (summit, runs marked by difficulty, the you-are-here pin and its next-run link), run markers in the notes contents, the exam-first headline, and the drifting background and geek mode being opt-in. */
+/* The trail map, Big Sky look (2026.10.02.3): the default look's faces and flat fills, the trail board on the class dashboard (summit, runs marked by difficulty, the you-are-here pin and its next-run link), run markers in the notes contents, the exam-first headline, and the drifting background and geek mode being opt-in. */
 const T = require('./lib');
 (async () => {
   const { mk, go, log, check, hscroll } = await T.start({});
@@ -10,7 +10,7 @@ const T = require('./lib');
     return { body: cs(document.body).fontFamily, h1: cs(document.querySelector('.page-title')).fontFamily, bodyBg: cs(document.body).backgroundImage, btnBg: b ? cs(b).backgroundImage : '', live: !!document.querySelector('#live-bg:not([hidden])'), geek: document.documentElement.getAttribute('data-geek'), skin: document.documentElement.getAttribute('data-skin') };
   });
   log('look:', JSON.stringify(look));
-  check('default look sets text in Barlow and headings in Barlow Condensed', /Barlow/.test(look.body) && /Barlow Condensed/.test(look.h1), look);
+  check('default look sets text in Figtree and headings in Gabarito', /Figtree/.test(look.body) && /Gabarito/.test(look.h1), look);
   check('no gradients on the page ground or the primary button', look.bodyBg === 'none' && look.btnBg === 'none', look);
   check('the drifting background and geek mode are off unless switched on', !look.live && look.geek !== 'on' && look.skin === null, look);
 
@@ -38,6 +38,10 @@ const T = require('./lib');
   await go(p, '#/calc/notes', 1000);
   const toc = await p.evaluate(() => ({ links: document.querySelectorAll('.sec-link').length, glyphs: document.querySelectorAll('.sec-link .run-glyph').length }));
   check('section notes mark every topic with its run marker', toc.links > 5 && toc.glyphs === toc.links, toc);
+  await go(p, '#/calc', 1200);
+  const trail = await p.evaluate(() => { const svg = document.querySelector('.trail-board .tb-path path.tb-path-line'); const bo = document.querySelector('.tb-run.here .tb-bo'); return { path: svg ? svg.getAttribute('d').split('C').length - 1 : 0, nodes: document.querySelectorAll('.tb-node').length, bo: !!bo }; });
+  check('the trail is drawn through every run node, from the trailhead to the flag', trail.path === trail.nodes + 1 && trail.nodes >= 3, trail);
+  check('Bo stands at the run you are on', trail.bo, trail);
   await c.close();
 
   const [cm, m] = await mk(390, 844, { serviceWorkers: 'block' });

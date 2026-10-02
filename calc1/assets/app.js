@@ -245,12 +245,12 @@
   App.guest = () => !!(App.auth && App.auth.ready && !App.auth.user);
   App.limit = k => App.guest() && App.auth.limits && App.auth.limits[k] != null ? App.auth.limits[k] : Infinity;
   App.lockCard = (t, x, o) => App.auth ? App.auth.lockCard(t, x, o) : '';
-  // The Mathub mark: a navy M whose right diagonal is a rising blue arrow. Bare by default (colours follow the theme through
-  // --brand-navy / --brand-blue); tile=true draws it on a white rounded tile with fixed colours for places outside the theme.
-  App.LOGO_PATHS = '<path class="mh-n" d="M0 0H20V79H0Z"/><path class="mh-n" d="M20 0L52 30V44L20 14Z"/><path class="mh-n" d="M77 20L97 10V79H77Z"/><path class="mh-a" fill="none" stroke-width="5.2" stroke-linecap="round" d="M22 60Q45 52 89 10"/><path class="mh-b" d="M96 4L93.6 13.1L86.8 5.8Z"/>';
+  // The Mathub mark: Bo the bobcat's head, the same drawing as the mascot. Fixed colours (he is tan in every theme);
+  // tile=true sets him on a navy rounded tile for places outside the page (icons, share cards).
+  App.LOGO_PATHS = '<path d="M22 46L14 14l32 14z" fill="#C98B4B"/><path d="M98 46l8-32-32 14z" fill="#C98B4B"/><path d="M24 40l-6-19 20 10z" fill="#3B2A1C"/><path d="M96 40l6-19-20 10z" fill="#3B2A1C"/><ellipse cx="60" cy="58" rx="40" ry="34" fill="#D9A15B"/><ellipse cx="60" cy="69" rx="27" ry="21" fill="#F3DFB8"/><path d="M30 42c4 5 8 10 8 18M90 42c-4 5-8 10-8 18" stroke="#8B5A2B" stroke-width="3.2" stroke-linecap="round" fill="none"/><path d="M19 70l17 2M19 78l17-1M101 70l-17 2M101 78l-17-1" stroke="#8B5A2B" stroke-width="1.8" stroke-linecap="round"/><ellipse cx="46" cy="56" rx="7.5" ry="8.5" fill="#fff"/><ellipse cx="74" cy="56" rx="7.5" ry="8.5" fill="#fff"/><circle cx="47" cy="57.5" r="4.6" fill="#2A1B0E"/><circle cx="75" cy="57.5" r="4.6" fill="#2A1B0E"/><circle cx="48.6" cy="55.4" r="1.6" fill="#fff"/><circle cx="76.6" cy="55.4" r="1.6" fill="#fff"/><path d="M54 68h12l-6 6z" fill="#3B2A1C"/><path d="M60 74v3.5M60 77.5c-3 3-7 3-9 0M60 77.5c3 3 7 3 9 0" stroke="#3B2A1C" stroke-width="2.2" stroke-linecap="round" fill="none"/>';
   App.logoSvg = (size = 28, tile = false) => tile
-    ? `<svg class="mh-logo tile" width="${size}" height="${size}" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="14" fill="#fff"/><g transform="translate(9 11) scale(0.47)">${App.LOGO_PATHS}</g></svg>`
-    : `<svg class="mh-logo" width="${Math.round(size * 1.21)}" height="${size}" viewBox="-2 -2 102 84" aria-hidden="true">${App.LOGO_PATHS}</svg>`;
+    ? `<svg class="mh-logo tile" width="${size}" height="${size}" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="14" fill="#14213D"/><g transform="translate(-2.8 1.3) scale(0.58)">${App.LOGO_PATHS}</g></svg>`
+    : `<svg class="mh-logo bo-mark" width="${Math.round(size * 1.16)}" height="${size}" viewBox="10 10 100 86" aria-hidden="true">${App.LOGO_PATHS}</svg>`;
   App.wordmark = (cls = '') => `<span class="brand-word${cls ? ' ' + cls : ''}">Mathub</span>`;
   App.tagline = (cls = '') => `<span class="brand-tag${cls ? ' ' + cls : ''}">Learn <i>/</i> Practice <i>/</i> Excel</span>`;
   Object.defineProperty(App, 'D', { get: () => D }); Object.defineProperty(App, 'Q', { get: () => QZ });
@@ -393,7 +393,25 @@
   document.addEventListener('keydown', e => { if (e.key === '?' && !e.ctrlKey && !e.metaKey && !e.altKey && !e.target.matches('input, textarea, select, [contenteditable]')) { e.preventDefault(); App.showShortcuts(); } });
   function initToTop() { if ($('#totop')) return; const b = document.createElement('button'); b.id = 'totop'; b.className = 'totop'; b.title = 'Back to top'; b.setAttribute('aria-label', 'Back to top'); b.innerHTML = icon('up', 16); b.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' })); document.body.appendChild(b); let t = 0; window.addEventListener('scroll', () => { if (t) return; t = setTimeout(() => { t = 0; b.classList.toggle('show', window.scrollY > 400); }, 120); }, { passive: true }); }
   const NAV_ICON = { planner: 'path', gpa: 'award' };   // their own marks instead of a second calendar and a second calculator
-  const trailSeen = new Set();   // classes whose trail board already drew itself this session
+  const trailSeen = new Set();
+  // the winding trail between the run nodes: measured after layout so it follows the nodes at any width
+  function drawTrail(root) {
+    const wrap = $('.trail-board .tb-climb', root); const svg = wrap && $('.tb-path', wrap); if (!svg) return;
+    const paint = () => {
+      const wr = wrap.getBoundingClientRect(); if (!wr.width || !wr.height) return;
+      const at = el => { const r = el.getBoundingClientRect(); return [Math.round(r.left + r.width / 2 - wr.left), Math.round(r.top + r.height / 2 - wr.top)]; };
+      const pts = $$('.tb-node', wrap).map(at).sort((a, b) => b[1] - a[1]); const flag = $('.tb-flag', wrap), base = $('.tb-base-sign', wrap);
+      if (base) { const b = at(base); pts.unshift([pts.length ? pts[0][0] : b[0], b[1] - 4]); }
+      if (flag) { const f = flag.getBoundingClientRect(); pts.push([Math.round(f.left + 7 - wr.left), Math.round(f.bottom - 2 - wr.top)]); }
+      if (pts.length < 2) return;
+      let d = `M${pts[0][0]} ${pts[0][1]}`; for (let i = 1; i < pts.length; i++) { const [x0, y0] = pts[i - 1], [x1, y1] = pts[i]; const my = Math.round((y0 + y1) / 2); d += ` C${x0} ${my} ${x1} ${my} ${x1} ${y1}`; }
+      svg.setAttribute('viewBox', `0 0 ${Math.round(wr.width)} ${Math.round(wr.height)}`); svg.setAttribute('width', Math.round(wr.width)); svg.setAttribute('height', Math.round(wr.height));
+      svg.innerHTML = `<path class="tb-path-bed" d="${d}"/><path class="tb-path-line" d="${d}"/>`;
+    };
+    paint(); if (document.fonts && document.fonts.ready) document.fonts.ready.then(paint);
+    if (global.ResizeObserver) { const ro = new ResizeObserver(() => { if (!wrap.isConnected) { ro.disconnect(); return; } paint(); }); ro.observe(wrap); }
+  }
+  App.drawTrail = drawTrail;   // classes whose trail board already drew itself this session
   function initTabs(root) {
     $$('.dash-tabs', root).forEach(bar => { const key = bar.dataset.store; const panes = bar.nextElementSibling; if (!panes) return; const pick = (id, save) => { $$('.tab', bar).forEach(b => { b.classList.toggle('on', b.dataset.tab === id); b.setAttribute('aria-selected', String(b.dataset.tab === id)); }); $$(':scope > .pane', panes).forEach(pn => { pn.hidden = pn.dataset.pane !== id; }); if (key && save) setSetting(key, id); slide(save); };
       // one pill slides between tabs instead of each tab lighting up on its own (transitions.dev "tabs sliding")
@@ -544,7 +562,7 @@
         const ctaText = writing ? (rp && rp.next ? `${rp.started ? 'Resume' : 'Listen'}: ${esc(rp.next.title)}` : 'All readings finished') : (curNode ? 'Continue: ' + esc(curNode.label) : 'Start a lesson');
         const nowLabel = writing ? 'This week' : (ss.phase === 'after' ? 'Last topic' : ss.phase === 'before' ? 'First topic' : 'Now covering');
         return `<div class="course-card ${id}" data-action="open-course" data-c="${id}" role="link" tabindex="0">
-          <div class="course-card-head"><span class="course-idline"><span class="course-code">${esc(C.code)}</span>${App.archetype ? `<span class="arch-chip" title="${esc(App.archetype(id).line)}">${icon(App.archetype(id).icon, 13)} ${esc(App.archetype(id).name)}</span>` : ''}</span><span class="chip exam">${chip}</span></div>
+          <div class="course-card-head">${App.classSprite ? `<span class="cc-art" aria-hidden="true">${App.classSprite(id, 5)}</span>` : ''}<span class="course-idline"><span class="course-code">${esc(C.code)}</span>${App.archetype ? `<span class="arch-chip" title="${esc(App.archetype(id).line)}">${icon(App.archetype(id).icon, 13)} ${esc(App.archetype(id).name)}</span>` : ''}</span><span class="chip exam">${chip}</span></div>
           <h2>${esc(C.name)}</h2><p class="muted">${esc(C.tagline || '')}</p>
           <div class="course-meta">
             <div><span class="eyebrow">${nowLabel}</span><div>${esc(cur.label)} ${esc(cur.title)}</div></div>
@@ -671,23 +689,35 @@
         const sect = courseSetting(D.id, 'section', ''), etime = courseSetting(D.id, 'examTime', '');
         const anim = !trailSeen.has(D.id); trailSeen.add(D.id); const hi = runs.indexOf(here);
         const glyph = g => `<i class="run-glyph ${g}" aria-hidden="true"></i>`;
-        return `<div class="panel lift hero-exam trail-board${anim ? ' tb-anim' : ''}">
+        // each run sits on a winding trail: x offsets follow a gentle wave so the nodes zig-zag up the mountain
+        const wave = i => Math.round(50 * Math.sin(i * 1.15 + 0.4));
+        const scoreText = r => !r.ts.length ? 'notes only' : r.a ? `${Math.round(100 * r.score)}% · ${r.grade === 'easy' ? 'solid' : r.grade === 'mid' ? 'getting there' : 'hard for you'}` : 'not tried yet';
+        const bo = x => App.bobcatSvg ? `<span class="tb-bo ${x < 0 ? 'bo-r' : 'bo-l'}" aria-hidden="true">${App.bobcatSvg(64)}</span>` : '';
+        const readyPct = Math.max(0, Math.min(100, rd.score));
+        const clDone = store.get('checklists', {})[ex.id] || {}; const nextChecks = cl.items.map((t, i) => [t, i]).filter(([, i]) => !clDone[i]).slice(0, 3);
+        return `<div class="panel lift hero-exam trail-board${anim ? ' tb-anim' : ''}${runs.length > 9 ? ' tb-many' : ''}">
           <div class="tb-summit">
-            <h2 class="tb-exam">${esc(ex.name)}</h2>
-            <div class="tb-date">${esc(ex.dateLabel || fmtDate(ex.date, true))}</div>
-            ${sect || etime ? `<div class="tb-meta">Your section${sect ? ' ' + esc(sect) : ''}${etime ? ' · ' + esc(etime) : ''}</div>` : ''}
+            <div class="tb-head">
+              <h2 class="tb-exam">${esc(ex.name)}</h2>
+              <div class="tb-date">${esc(ex.dateLabel || fmtDate(ex.date, true))}</div>
+              ${sect || etime ? `<div class="tb-meta">Your section${sect ? ' ' + esc(sect) : ''}${etime ? ' · ' + esc(etime) : ''}</div>` : ''}
+            </div>
             <div class="tb-days"><b>${esc(es.big)}</b><span>${esc(es.label)}</span></div>
             <p class="tb-covers">Covers ${esc(ex.covers)}. ${esc(ex.format || 'Closed book, no devices.')} ${ex.weight}% of the grade.</p>
-            <div class="tb-meta">Prep checklist ${cl.done} of ${cl.items.length}</div>
-            <div class="tb-ready"><div class="ready-line"><b>${rd.score}% ready</b><span>${esc(rd.label)}</span><button class="linkbtn" data-action="tab-ready">How to raise it ${icon('right', 12)}</button></div></div>
+            <div class="tb-ready"><div class="ready-line"><b>${rd.score}% ready</b><span>${esc(rd.label)}</span><button class="linkbtn" data-action="tab-ready">How to raise it ${icon('right', 12)}</button></div><div class="tb-readybar" role="presentation"><i style="width:${readyPct}%"></i></div></div>
+            ${cl.items.length ? `<div class="tb-checks"><div class="tb-checks-h"><b>Prep checklist</b><span>${cl.done} of ${cl.items.length} done</span></div>${nextChecks.map(([t, i]) => `<label class="tb-check"><input type="checkbox" data-cl="${i}"><span>${esc(t)}</span></label>`).join('')}</div>` : ''}
+            <div class="tb-go"><a class="btn primary lg tb-next" href="${runHref(here)}"><span class="tb-next-a">${icon('play', 15)} Take the next run</span><span class="tb-next-b">${esc(here.s.label)} ${esc(here.s.title)}</span></a><p class="tb-more"><a href="${L('exam', ex.id)}">${esc(ex.name)} ${D.PRACTICE && D.PRACTICE[ex.id] ? 'practice set' : 'prep'}</a><a href="${L('practice', null, { exam: ex.id })}">Drill every run</a><a href="${L('flashcards', null, { unit: ex.units[ex.units.length - 1] })}">Flashcards</a></p></div>
           </div>
           <div class="tb-trail">
+            <svg class="tb-scene" viewBox="0 0 600 560" preserveAspectRatio="xMidYMax slice" aria-hidden="true" focusable="false"><circle class="tb-sun" cx="552" cy="128" r="30"/><path class="tb-cloud" d="M64 120h86a16 16 0 0 0-14-24 22 22 0 0 0-40-6 15 15 0 0 0-32 30z"/><path class="tb-cloud" d="M392 196h64a12 12 0 0 0-10-18 17 17 0 0 0-31-4 11 11 0 0 0-23 22z"/><path class="tb-m-far" d="M0 330L70 262l52 40 86-108 70 82 60-54 92 96 66-62 104 92V560H0z"/><path class="tb-m-near" d="M0 470c60-30 120-42 190-30s120 34 200 26 150-34 210-28V560H0z"/></svg>
             <div class="tb-ridge" aria-hidden="true"></div>
-            <div class="tb-summit-row"><i aria-hidden="true"></i>${esc(ex.name)} · the summit</div>
-            <ol class="tb-runs" aria-label="The runs to ${esc(ex.name)}, from the trailhead up">${runs.map((r, i) => `<li style="--k:${i}"><a class="tb-run ${r.grade}${r === here ? ' here' : ''}${r.grade === 'easy' ? ' done' : ''}" href="${runHref(r)}" title="${esc(GRADE[r.ts.length ? r.grade : 'notes'])}">${glyph(r.grade)}<span class="tb-sec">${esc(r.s.label)}</span><span class="tb-name">${esc(r.s.title)}<span class="sr-only"> (${esc(GRADE[r.ts.length ? r.grade : 'notes'])})</span></span>${r === here ? `<span class="tb-here">${App.bobcatSvg ? `<span class="tb-bo" aria-hidden="true">${App.bobcatSvg(34)}</span>` : ''}<span class="tb-pin" style="--n:${hi}">You are here</span></span>` : `<span class="tb-score">${!r.ts.length ? 'notes only' : r.a ? Math.round(100 * r.score) + '%' : 'not tried'}</span>`}</a></li>`).join('')}</ol>
-            <div class="tb-base">Trailhead</div>
+            <div class="tb-climb">
+              <svg class="tb-peak" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true" focusable="false"><path class="tb-peak-side" d="M50 0L100 100H0z"/><path class="tb-peak-shade" d="M50 0L100 100H62z"/><path class="tb-peak-snow" d="M50 0L58.5 15 54 12.5 50 17 46 12.5 41.5 15z"/></svg><svg class="tb-path" aria-hidden="true" focusable="false"></svg>
+              <div class="tb-summit-row"><span class="tb-flag" aria-hidden="true"><svg viewBox="0 0 32 40" width="30" height="38"><path d="M6 38V3" stroke="currentColor" stroke-width="3" stroke-linecap="round"/><path class="tb-flag-cloth" d="M8 4h19l-5 7 5 7H8z"/></svg></span><span class="tb-summit-text"><b>${esc(ex.name)}</b> · the summit</span></div>
+              <ol class="tb-runs" aria-label="The runs to ${esc(ex.name)}, from the trailhead up">${runs.map((r, i) => { const x = wave(i); return `<li style="--k:${i};--x:${x}px"><a class="tb-run ${r.grade}${r === here ? ' here' : ''}${r.grade === 'easy' ? ' done' : ''}" href="${runHref(r)}" title="${esc(GRADE[r.ts.length ? r.grade : 'notes'])}"><span class="tb-band"><span class="tb-node">${glyph(r.grade)}</span>${r === here ? bo(x) : ''}</span><span class="tb-label"><span class="tb-sec">${esc(r.s.label)}</span><span class="tb-name">${esc(r.s.title)}<span class="sr-only"> (${esc(GRADE[r.ts.length ? r.grade : 'notes'])})</span></span>${r === here ? `<span class="tb-pin" style="--n:${hi}">You are here</span>` : `<span class="tb-score">${scoreText(r)}</span>`}</span></a></li>`; }).join('')}</ol>
+              <div class="tb-base"><span class="tb-base-sign">Trailhead</span></div>
+            </div>
             <div class="tb-legend" aria-hidden="true"><span>${glyph('easy sm')} solid</span><span>${glyph('mid sm')} getting there</span><span>${glyph('hard sm')} hard for you</span><span>${glyph('new sm')} not tried</span></div>
-            <div class="tb-go"><a class="btn primary tb-next" href="${runHref(here)}"><span class="tb-next-a">${icon('play', 14)} Take the next run</span><span class="tb-next-b">${esc(here.s.label)} ${esc(here.s.title)}</span></a><p class="tb-more"><a href="${L('exam', ex.id)}">${esc(ex.name)} ${D.PRACTICE && D.PRACTICE[ex.id] ? 'practice set' : 'prep'}</a><a href="${L('practice', null, { exam: ex.id })}">Drill every run</a><a href="${L('flashcards', null, { unit: ex.units[ex.units.length - 1] })}">Flashcards</a></p></div>
           </div></div>`;
       })();
       const examTile = trailTile || (ex ? `<div class="panel lift hero-exam">
@@ -744,7 +774,7 @@
       bind(root, { 'tab-ready': () => { const b = $('.dash-tabs .tab[data-tab="ready"]', root); if (b) { b.click(); b.scrollIntoView({ behavior: 'smooth', block: 'start' }); } }, freeze: () => { if (App.useFreeze && App.useFreeze(yday)) render(); else toast('No streak freezes left. Hit your daily goal three days in a week to earn one.', 3500); }, 'remind-on': async () => { try { await App.auth.savePrefs({ reminder_email: true }); toast('Evening reminders on', 3000); render(); } catch (e) { toast(e.message); } }, 'remind-no': () => { setSetting('remindNudgeDismissed', true); render(); }, 'gs-dismiss': () => { setSetting('gsDismissed', true); render(); }, 'gs-signup': (el, e) => { e.preventDefault(); if (App.auth) App.auth.open('signup'); } });
       if (App.auth && App.auth.mode === 'server' && !App.auth.unreachable) fetch('api/index.php?r=stats_week', { credentials: 'same-origin', headers: { 'X-Requested-With': 'MatHub' } }).then(r => r.json()).then(j => { const el = $('#dash-hours', root); if (el && j && j.ok && j.stats && j.stats.median_hours !== null && j.stats.hours_users >= 3) el.textContent = `focus this week · class median ${j.stats.median_hours} h`; }).catch(() => {});
       on(root, 'change', 'input[data-plan]', el => { const p = store.get('plan', null); if (!p) return; const it = p.items.find(i => i.id === el.dataset.plan); if (it) { it.done = el.checked; store.set('plan', p); markActivity(); el.closest('.plan-item').classList.toggle('done', el.checked); } });
-      Canvas.fill($('#dash-canvas', root), D.id, 6); paintAnnouncement(root);
+      Canvas.fill($('#dash-canvas', root), D.id, 6); paintAnnouncement(root); drawTrail(root);
       if (App.social) { const goS = () => App.social.fillDashboard($('#dash-social', root), D.id); if (App.auth && App.auth.ready) goS(); else if (App.auth) App.auth.onChange(function once() { goS(); }); }
     }
   };

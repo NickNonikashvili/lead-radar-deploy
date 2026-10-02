@@ -1,22 +1,22 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-02T02:18:19Z",
+  "generatedAt": "2026-10-02T06:10:40Z",
   "title": "Design System: Mathub",
   "extensions": {
     "colorMeta": {
-      "paper": {
+      "sky-ground": {
         "role": "neutral",
-        "displayName": "Snow Paper",
-        "canonical": "#F6F8FA",
+        "displayName": "Sky Ground",
+        "canonical": "#F4F7FB",
         "tonalRamp": [
-          "#1B2631",
-          "#2E4052",
-          "#405973",
-          "#527394",
-          "#7594B2",
-          "#A3B8CC",
-          "#CED9E4",
-          "#EFF2F6"
+          "#142438",
+          "#223B5D",
+          "#305383",
+          "#3D6BA8",
+          "#628DC6",
+          "#96B3D9",
+          "#C7D6EB",
+          "#ECF1F8"
         ]
       },
       "surface": {
@@ -37,246 +37,246 @@
       "surface-2": {
         "role": "neutral",
         "displayName": "Surface 2",
-        "canonical": "#EEF2F6",
+        "canonical": "#F0F4F9",
         "tonalRamp": [
-          "#1A2632",
-          "#2C4053",
-          "#3E5975",
-          "#4F7396",
-          "#7394B5",
-          "#A2B8CE",
-          "#CDD9E5",
-          "#EEF2F6"
+          "#162437",
+          "#243D5B",
+          "#335580",
+          "#426DA4",
+          "#668FC2",
+          "#99B4D6",
+          "#C8D7E9",
+          "#EDF2F8"
         ]
       },
       "surface-3": {
         "role": "neutral",
         "displayName": "Surface 3",
-        "canonical": "#E0E7EE",
+        "canonical": "#E3E9F2",
         "tonalRamp": [
-          "#1B2631",
-          "#2D4052",
-          "#3F5973",
-          "#517394",
-          "#7594B3",
-          "#A3B8CC",
-          "#CED9E4",
-          "#EFF2F6"
+          "#182334",
+          "#283B57",
+          "#39537A",
+          "#496A9D",
+          "#6D8CBB",
+          "#9DB2D2",
+          "#CBD6E7",
+          "#EEF1F7"
         ]
       },
       "border": {
         "role": "neutral",
-        "displayName": "Hairline",
-        "canonical": "#D7DFE7",
+        "displayName": "Border",
+        "canonical": "#E1E7EF",
         "tonalRamp": [
-          "#1D2630",
-          "#304050",
-          "#435970",
-          "#56738F",
-          "#7994AF",
-          "#A6B8C9",
-          "#CFD9E2",
-          "#EFF2F5"
+          "#1B2532",
+          "#2C3D53",
+          "#3E5574",
+          "#506E96",
+          "#738FB4",
+          "#A2B4CD",
+          "#CDD7E4",
+          "#EEF2F6"
         ]
       },
       "border-strong": {
         "role": "neutral",
-        "displayName": "Strong Rule",
-        "canonical": "#AEBCCA",
+        "displayName": "Border Strong",
+        "canonical": "#CBD5E1",
         "tonalRamp": [
-          "#1E262E",
-          "#32404D",
-          "#47596C",
-          "#5B738B",
-          "#7E94AA",
-          "#A9B8C7",
-          "#D1D9E1",
-          "#F0F2F5"
+          "#1C2531",
+          "#2F3E51",
+          "#415771",
+          "#547092",
+          "#7791B1",
+          "#A4B6CB",
+          "#CED8E3",
+          "#EFF2F6"
+        ]
+      },
+      "lip": {
+        "role": "neutral",
+        "displayName": "Lip",
+        "canonical": "#D5DDE8",
+        "tonalRamp": [
+          "#1B2431",
+          "#2D3D52",
+          "#3F5573",
+          "#516D94",
+          "#758FB3",
+          "#A3B4CC",
+          "#CED7E4",
+          "#EFF2F6"
         ]
       },
       "ink": {
         "role": "neutral",
-        "displayName": "Navy Ink",
-        "canonical": "#0F2236",
+        "displayName": "Bobcat Navy Ink",
+        "canonical": "#14213D",
         "tonalRamp": [
-          "#11263C",
-          "#1C3F64",
-          "#27588C",
-          "#3271B4",
-          "#5792D0",
-          "#8FB7E0",
-          "#C3D8EE",
-          "#EBF2F9"
+          "#131F3A",
+          "#1F3460",
+          "#2C4986",
+          "#395EAD",
+          "#5E80CA",
+          "#93AADC",
+          "#C5D2EC",
+          "#ECF0F9"
         ]
       },
       "ink-2": {
         "role": "neutral",
         "displayName": "Ink 2",
-        "canonical": "#33475C",
+        "canonical": "#3B4A66",
         "tonalRamp": [
-          "#1B2631",
-          "#2D3F52",
-          "#405973",
-          "#527294",
-          "#7593B3",
-          "#A3B7CC",
-          "#CED8E4",
-          "#EFF2F6"
+          "#1C2330",
+          "#2F3B51",
+          "#415271",
+          "#546991",
+          "#778BB1",
+          "#A5B2CB",
+          "#CFD6E3",
+          "#EFF1F6"
         ]
       },
       "muted": {
         "role": "neutral",
         "displayName": "Muted",
-        "canonical": "#566779",
+        "canonical": "#536279",
         "tonalRamp": [
-          "#20262D",
-          "#353F4B",
-          "#4A5968",
-          "#5F7286",
-          "#8293A6",
-          "#ACB7C4",
-          "#D2D9DF",
-          "#F0F2F4"
+          "#1F252D",
+          "#343D4C",
+          "#49566A",
+          "#5D6E88",
+          "#8090A8",
+          "#AAB5C5",
+          "#D2D7E0",
+          "#F0F2F5"
         ]
       },
-      "run-blue": {
+      "sky-top": {
+        "role": "neutral",
+        "displayName": "Sky Top",
+        "canonical": "#BFDDFF",
+        "tonalRamp": [
+          "#00244C",
+          "#003C80",
+          "#0054B2",
+          "#006CE6",
+          "#298DFF",
+          "#70B3FF",
+          "#B2D6FF",
+          "#E5F1FF"
+        ]
+      },
+      "sky-mid": {
+        "role": "neutral",
+        "displayName": "Sky Middle",
+        "canonical": "#DDEEFF",
+        "tonalRamp": [
+          "#00264C",
+          "#004080",
+          "#0059B2",
+          "#0073E6",
+          "#2994FF",
+          "#70B8FF",
+          "#B2D9FF",
+          "#E5F2FF"
+        ]
+      },
+      "sky-low": {
+        "role": "neutral",
+        "displayName": "Sky Low",
+        "canonical": "#F3F9FF",
+        "tonalRamp": [
+          "#00264C",
+          "#004080",
+          "#0059B2",
+          "#0073E6",
+          "#2994FF",
+          "#70B8FF",
+          "#B2D9FF",
+          "#E5F2FF"
+        ]
+      },
+      "big-sky-blue": {
         "role": "primary",
-        "displayName": "Run Blue",
-        "canonical": "#1D5BB5",
+        "displayName": "Big Sky Blue",
+        "canonical": "#1A64D6",
         "tonalRamp": [
-          "#0B2142",
-          "#12376E",
-          "#194D9A",
-          "#2063C6",
-          "#4686E1",
-          "#84AEEB",
-          "#BDD4F4",
-          "#E9F1FB"
+          "#082044",
+          "#0E3572",
+          "#134A9F",
+          "#1960CD",
+          "#4082E8",
+          "#80ACF0",
+          "#BBD2F7",
+          "#E8F0FC"
         ]
       },
-      "run-blue-deep": {
+      "big-sky-blue-deep": {
         "role": "primary",
-        "displayName": "Run Blue Deep",
-        "canonical": "#164A95",
+        "displayName": "Big Sky Blue Deep",
+        "canonical": "#1450B0",
         "tonalRamp": [
-          "#0A2143",
-          "#10376F",
-          "#174D9C",
-          "#1E63C8",
-          "#4485E3",
-          "#83AEED",
-          "#BCD4F5",
-          "#E9F1FC"
+          "#081F45",
+          "#0D3472",
+          "#1249A0",
+          "#175ECE",
+          "#3F80E9",
+          "#7FAAF0",
+          "#BAD2F7",
+          "#E8F0FC"
         ]
       },
-      "run-blue-soft": {
+      "big-sky-blue-soft": {
         "role": "primary",
-        "displayName": "Run Blue Soft",
-        "canonical": "#E3ECF8",
+        "displayName": "Big Sky Blue Soft",
+        "canonical": "#E3EEFD",
         "tonalRamp": [
-          "#0F233D",
-          "#193A66",
-          "#24528F",
-          "#2E69B8",
-          "#548BD4",
-          "#8DB1E2",
-          "#C2D5F0",
-          "#EBF1FA"
+          "#052147",
+          "#083777",
+          "#0C4DA7",
+          "#0F63D6",
+          "#3786F1",
+          "#7AAEF5",
+          "#B8D4FA",
+          "#E7F1FD"
         ]
       },
-      "pine": {
-        "role": "tertiary",
-        "displayName": "Pine",
-        "canonical": "#1E6B45",
-        "tonalRamp": [
-          "#113C27",
-          "#1C6440",
-          "#278B5A",
-          "#32B374",
-          "#58D095",
-          "#8FE0B8",
-          "#C3EED9",
-          "#EBF9F2"
-        ]
-      },
-      "lift-red": {
+      "sun": {
         "role": "secondary",
-        "displayName": "Lift Red",
-        "canonical": "#C9352B",
+        "displayName": "Sun Gold",
+        "canonical": "#FFC629",
         "tonalRamp": [
-          "#3F110D",
-          "#691C16",
-          "#93271F",
-          "#BD3228",
-          "#D9574F",
-          "#E68F89",
-          "#F2C3C0",
-          "#FBEBEA"
+          "#4C3800",
+          "#805E00",
+          "#B28300",
+          "#E6A800",
+          "#FFC629",
+          "#FFD970",
+          "#FFEBB2",
+          "#FFF8E5"
         ]
       },
-      "diamond": {
-        "role": "tertiary",
-        "displayName": "Diamond Black",
-        "canonical": "#10161D",
-        "tonalRamp": [
-          "#1B2531",
-          "#2D3E52",
-          "#3F5773",
-          "#527094",
-          "#7592B3",
-          "#A3B6CC",
-          "#CED8E4",
-          "#EFF2F6"
-        ]
-      },
-      "trail-sign": {
+      "sun-deep": {
         "role": "secondary",
-        "displayName": "Trail-Sign Yellow",
-        "canonical": "#F2C230",
+        "displayName": "Sun Gold Lip",
+        "canonical": "#E0A800",
         "tonalRamp": [
-          "#483705",
-          "#785C08",
-          "#A8810B",
-          "#D8A60E",
-          "#F2C435",
-          "#F7D779",
-          "#FAEAB7",
-          "#FDF8E7"
-        ]
-      },
-      "trail-sign-ink": {
-        "role": "secondary",
-        "displayName": "Sign Ink",
-        "canonical": "#1B1500",
-        "tonalRamp": [
-          "#4C3B00",
-          "#806300",
-          "#B28B00",
-          "#E6B200",
-          "#FFCF29",
-          "#FFDF70",
-          "#FFEEB2",
+          "#4C3900",
+          "#806000",
+          "#B28600",
+          "#E6AC00",
+          "#FFC929",
+          "#FFDB70",
+          "#FFECB2",
           "#FFF9E5"
         ]
       },
-      "warn": {
-        "role": "tertiary",
-        "displayName": "Warning Amber",
-        "canonical": "#9E5300",
-        "tonalRamp": [
-          "#4C2800",
-          "#804300",
-          "#B25E00",
-          "#E67900",
-          "#FF9929",
-          "#FFBB70",
-          "#FFDBB2",
-          "#FFF3E5"
-        ]
-      },
-      "gold": {
-        "role": "tertiary",
-        "displayName": "Reward Gold",
+      "gold-text": {
+        "role": "secondary",
+        "displayName": "Gold Text",
         "canonical": "#8A5C00",
         "tonalRamp": [
           "#4C3300",
@@ -289,114 +289,294 @@
           "#FFF6E5"
         ]
       },
-      "night-paper": {
-        "role": "neutral",
-        "displayName": "Night Paper",
-        "canonical": "#0B1420",
+      "gold-soft": {
+        "role": "secondary",
+        "displayName": "Gold Soft",
+        "canonical": "#FFF4D1",
         "tonalRamp": [
-          "#142439",
-          "#213B5F",
-          "#2E5385",
-          "#3B6BAB",
-          "#608CC8",
-          "#95B3DA",
-          "#C6D6EB",
-          "#ECF1F8"
+          "#4C3A00",
+          "#806100",
+          "#B28800",
+          "#E6AF00",
+          "#FFCC29",
+          "#FFDD70",
+          "#FFEDB2",
+          "#FFF9E5"
+        ]
+      },
+      "pine": {
+        "role": "tertiary",
+        "displayName": "Pine",
+        "canonical": "#22A447",
+        "tonalRamp": [
+          "#0D3F1B",
+          "#166A2E",
+          "#1F9440",
+          "#27BE52",
+          "#4EDA76",
+          "#89E6A3",
+          "#C0F2CE",
+          "#EAFBEF"
+        ]
+      },
+      "pine-deep": {
+        "role": "tertiary",
+        "displayName": "Pine Lip",
+        "canonical": "#178A39",
+        "tonalRamp": [
+          "#0B421B",
+          "#126D2D",
+          "#19993F",
+          "#21C551",
+          "#47E075",
+          "#85EBA3",
+          "#BDF4CE",
+          "#E9FBEF"
+        ]
+      },
+      "good-text": {
+        "role": "tertiary",
+        "displayName": "Good Text",
+        "canonical": "#137036",
+        "tonalRamp": [
+          "#0B4120",
+          "#126D35",
+          "#1A994A",
+          "#21C45F",
+          "#48E081",
+          "#85EAAB",
+          "#BEF4D2",
+          "#E9FBF0"
+        ]
+      },
+      "coral": {
+        "role": "secondary",
+        "displayName": "Sunrise Coral",
+        "canonical": "#F2564B",
+        "tonalRamp": [
+          "#470A05",
+          "#771009",
+          "#A6160C",
+          "#D61D0F",
+          "#F14337",
+          "#F5827A",
+          "#FABCB8",
+          "#FDE9E7"
+        ]
+      },
+      "coral-deep": {
+        "role": "secondary",
+        "displayName": "Coral Deep",
+        "canonical": "#C9372D",
+        "tonalRamp": [
+          "#3F110E",
+          "#681D17",
+          "#922821",
+          "#BC332A",
+          "#D85950",
+          "#E5908A",
+          "#F1C4C0",
+          "#FAEBEA"
+        ]
+      },
+      "coral-soft": {
+        "role": "secondary",
+        "displayName": "Coral Soft",
+        "canonical": "#FFE6E3",
+        "tonalRamp": [
+          "#4C0800",
+          "#800E00",
+          "#B21300",
+          "#E61900",
+          "#FF4029",
+          "#FF8070",
+          "#FFBBB2",
+          "#FFE8E5"
+        ]
+      },
+      "coral-ink": {
+        "role": "secondary",
+        "displayName": "Coral Ink",
+        "canonical": "#A82A21",
+        "tonalRamp": [
+          "#40100D",
+          "#6B1B15",
+          "#95251D",
+          "#C03026",
+          "#DC564C",
+          "#E88E88",
+          "#F2C2BF",
+          "#FBEBEA"
+        ]
+      },
+      "run-blue": {
+        "role": "tertiary",
+        "displayName": "Run Blue",
+        "canonical": "#2F7BEA",
+        "tonalRamp": [
+          "#072045",
+          "#0C3674",
+          "#104CA2",
+          "#1561D0",
+          "#3C84EB",
+          "#7DADF2",
+          "#BAD3F8",
+          "#E8F0FD"
+        ]
+      },
+      "diamond": {
+        "role": "tertiary",
+        "displayName": "Black Diamond",
+        "canonical": "#1B2333",
+        "tonalRamp": [
+          "#1A2232",
+          "#2C3953",
+          "#3E5075",
+          "#4F6796",
+          "#7389B5",
+          "#A2B0CE",
+          "#CDD5E5",
+          "#EEF1F6"
+        ]
+      },
+      "trail": {
+        "role": "tertiary",
+        "displayName": "Trail",
+        "canonical": "#A86B3C",
+        "tonalRamp": [
+          "#382414",
+          "#5E3C22",
+          "#84542F",
+          "#A96C3C",
+          "#C78D61",
+          "#D9B396",
+          "#EBD6C7",
+          "#F8F1EC"
+        ]
+      },
+      "trail-sign": {
+        "role": "tertiary",
+        "displayName": "Trail Sign",
+        "canonical": "#8F5A30",
+        "tonalRamp": [
+          "#392413",
+          "#5F3C20",
+          "#86542D",
+          "#AC6C3A",
+          "#C98E5F",
+          "#DBB394",
+          "#ECD7C6",
+          "#F9F2EC"
+        ]
+      },
+      "bo-tan": {
+        "role": "tertiary",
+        "displayName": "Bo Tan",
+        "canonical": "#D9A15B",
+        "tonalRamp": [
+          "#3E290E",
+          "#684418",
+          "#915F22",
+          "#BA7B2B",
+          "#D79B51",
+          "#E4BD8B",
+          "#F1DBC1",
+          "#FAF3EA"
+        ]
+      },
+      "bo-cream": {
+        "role": "tertiary",
+        "displayName": "Bo Cream",
+        "canonical": "#F3DFB8",
+        "tonalRamp": [
+          "#412F0B",
+          "#6D4E12",
+          "#996E1A",
+          "#C48D21",
+          "#E0AC48",
+          "#EAC885",
+          "#F4E2BE",
+          "#FBF5E9"
+        ]
+      },
+      "bo-brown": {
+        "role": "tertiary",
+        "displayName": "Bo Brown",
+        "canonical": "#3B2A1C",
+        "tonalRamp": [
+          "#342519",
+          "#563E29",
+          "#795639",
+          "#9C6F4A",
+          "#BA906E",
+          "#D1B59E",
+          "#E6D7CB",
+          "#F7F2EE"
+        ]
+      },
+      "night-ground": {
+        "role": "neutral",
+        "displayName": "Night Ground",
+        "canonical": "#0D1626",
+        "tonalRamp": [
+          "#132139",
+          "#20375F",
+          "#2D4D85",
+          "#3A63AB",
+          "#5F85C8",
+          "#95AEDB",
+          "#C6D4EB",
+          "#ECF0F9"
         ]
       },
       "night-surface": {
         "role": "neutral",
-        "displayName": "Night Plate",
-        "canonical": "#101C2A",
+        "displayName": "Night Surface",
+        "canonical": "#142036",
         "tonalRamp": [
-          "#152537",
-          "#233E5C",
-          "#315681",
-          "#3F6FA6",
-          "#6490C4",
-          "#98B5D8",
-          "#C8D7EA",
-          "#EDF2F8"
+          "#152138",
+          "#22375D",
+          "#304D82",
+          "#3E63A7",
+          "#6385C5",
+          "#97AED8",
+          "#C7D4EA",
+          "#ECF1F8"
         ]
       },
       "night-ink": {
         "role": "neutral",
         "displayName": "Night Ink",
-        "canonical": "#E8EEF6",
+        "canonical": "#EEF3FA",
         "tonalRamp": [
-          "#162437",
-          "#243C5C",
-          "#325480",
-          "#416CA5",
-          "#658DC3",
-          "#98B3D7",
-          "#C8D6E9",
-          "#EDF1F8"
+          "#11233B",
+          "#1D3A63",
+          "#29518A",
+          "#3468B1",
+          "#598ACE",
+          "#91B1DF",
+          "#C4D5EE",
+          "#EBF1F9"
         ]
       },
-      "night-muted": {
+      "night-accent": {
         "role": "neutral",
-        "displayName": "Night Muted",
-        "canonical": "#93A6BA",
+        "displayName": "Night Accent",
+        "canonical": "#6EA8FF",
         "tonalRamp": [
-          "#1E262F",
-          "#323F4E",
-          "#46596D",
-          "#59728C",
-          "#7C93AB",
-          "#A8B7C7",
-          "#D0D9E1",
-          "#EFF2F5"
-        ]
-      },
-      "night-run": {
-        "role": "primary",
-        "displayName": "Night Run Blue",
-        "canonical": "#82B1F5",
-        "tonalRamp": [
-          "#062047",
-          "#093676",
-          "#0D4BA5",
-          "#1161D5",
-          "#3983EF",
-          "#7BACF4",
-          "#B8D3F9",
-          "#E7F0FD"
-        ]
-      },
-      "night-pine": {
-        "role": "tertiary",
-        "displayName": "Night Pine",
-        "canonical": "#5FC690",
-        "tonalRamp": [
-          "#143825",
-          "#215E3E",
-          "#2F8457",
-          "#3CA970",
-          "#61C791",
-          "#96D9B6",
-          "#C7EBD8",
-          "#ECF8F2"
-        ]
-      },
-      "night-lift": {
-        "role": "secondary",
-        "displayName": "Night Lift Red",
-        "canonical": "#FF8676",
-        "tonalRamp": [
-          "#4C0900",
-          "#800F00",
-          "#B21500",
-          "#E61B00",
-          "#FF4229",
-          "#FF8170",
-          "#FFBBB2",
-          "#FFE8E5"
+          "#001F4C",
+          "#003380",
+          "#0047B2",
+          "#005CE6",
+          "#297EFF",
+          "#70A9FF",
+          "#B2D1FF",
+          "#E5F0FF"
         ]
       },
       "class-calc": {
-        "role": "tertiary",
-        "displayName": "Class ink: M 171 Calculus I",
+        "role": "primary",
+        "displayName": "Class colour: M 171 Calculus I",
         "canonical": "#1D5BB5",
         "tonalRamp": [
           "#0B2142",
@@ -410,8 +590,8 @@
         ]
       },
       "class-physics": {
-        "role": "tertiary",
-        "displayName": "Class ink: PHSX 220 Physics I",
+        "role": "primary",
+        "displayName": "Class colour: PHSX 220 Physics I",
         "canonical": "#0F6E66",
         "tonalRamp": [
           "#09433E",
@@ -425,8 +605,8 @@
         ]
       },
       "class-precalc": {
-        "role": "tertiary",
-        "displayName": "Class ink: M 151Q Precalculus",
+        "role": "primary",
+        "displayName": "Class colour: M 151Q Precalculus",
         "canonical": "#C2410C",
         "tonalRamp": [
           "#481804",
@@ -440,8 +620,8 @@
         ]
       },
       "class-writ": {
-        "role": "tertiary",
-        "displayName": "Class ink: WRIT 101",
+        "role": "primary",
+        "displayName": "Class colour: WRIT 101",
         "canonical": "#6B3FA0",
         "tonalRamp": [
           "#251637",
@@ -455,8 +635,8 @@
         ]
       },
       "class-csci": {
-        "role": "tertiary",
-        "displayName": "Class ink: CSCI 127",
+        "role": "primary",
+        "displayName": "Class colour: CSCI 127",
         "canonical": "#2E7D32",
         "tonalRamp": [
           "#153816",
@@ -470,8 +650,8 @@
         ]
       },
       "class-biob": {
-        "role": "tertiary",
-        "displayName": "Class ink: BIOB 160",
+        "role": "primary",
+        "displayName": "Class colour: BIOB 160",
         "canonical": "#4D7C0F",
         "tonalRamp": [
           "#2A4408",
@@ -485,8 +665,8 @@
         ]
       },
       "class-kin": {
-        "role": "tertiary",
-        "displayName": "Class ink: KIN 322",
+        "role": "primary",
+        "displayName": "Class colour: KIN 322",
         "canonical": "#B45309",
         "tonalRamp": [
           "#492204",
@@ -500,8 +680,8 @@
         ]
       },
       "class-psyx": {
-        "role": "tertiary",
-        "displayName": "Class ink: PSYX 340",
+        "role": "primary",
+        "displayName": "Class colour: PSYX 340",
         "canonical": "#BE185D",
         "tonalRamp": [
           "#440921",
@@ -518,7 +698,7 @@
     "typographyMeta": {
       "display": {
         "displayName": "Display",
-        "purpose": "Exam name on the trail board, uppercase; the days count is set larger in lift red."
+        "purpose": "The start page question; 34px on phones."
       },
       "headline": {
         "displayName": "Headline",
@@ -526,53 +706,58 @@
       },
       "title": {
         "displayName": "Title",
-        "purpose": "Panel titles, top-bar title, course names."
+        "purpose": "Card titles, course names, note section headings."
       },
       "body": {
         "displayName": "Body",
-        "purpose": "All reading text, capped near 62-68ch."
+        "purpose": "Reading text near 68ch."
       },
       "label": {
         "displayName": "Label",
-        "purpose": "Context lines in sentence case; replaces tracked capitals."
+        "purpose": "Captions and data labels, sentence case."
       },
-      "sign": {
-        "displayName": "Sign lettering",
-        "purpose": "Exam chips and other trail-sign plates, uppercase condensed."
+      "button": {
+        "displayName": "Button",
+        "purpose": "Every button."
       }
     },
     "shadows": [
       {
+        "name": "lip-neutral",
+        "value": "0 3px 0 #D5DDE8",
+        "purpose": "Under secondary buttons, tiles, answers: the thing presses down onto it."
+      },
+      {
+        "name": "lip-accent",
+        "value": "0 4px 0 color-mix(in srgb, var(--accent) 66%, #0A1428)",
+        "purpose": "Under primary buttons and trail nodes, in a darker shade of their own colour."
+      },
+      {
         "name": "float",
-        "value": "0 14px 30px -14px rgba(15, 34, 54, 0.32), 0 2px 6px -2px rgba(15, 34, 54, 0.12)",
-        "purpose": "Dialogs, popovers, toasts and Bo's bubble only."
-      },
-      {
-        "name": "hairline-lift",
-        "value": "0 1px 2px rgba(15, 34, 54, 0.07)",
-        "purpose": "The sliding tab pill, with a 1px border ring."
-      },
-      {
-        "name": "night-float",
-        "value": "0 16px 32px -14px rgba(0, 0, 0, 0.7), 0 2px 6px -2px rgba(0, 0, 0, 0.4)",
-        "purpose": "Float on the night map."
+        "value": "0 18px 40px -18px rgba(20, 33, 61, 0.35), 0 3px 8px -3px rgba(20, 33, 61, 0.12)",
+        "purpose": "Dialogs, popovers, toasts only."
       }
     ],
     "motion": [
       {
-        "name": "ease-out-expo",
-        "value": "cubic-bezier(0.16, 1, 0.3, 1)",
-        "purpose": "Trail board entrances: the trail draws up (0.7s), glyphs stamp in (0.32s, 60ms stagger), the pin drops (0.42s)."
+        "name": "press",
+        "value": "0.1s ease-out translateY(lip height)",
+        "purpose": "Every pressable thing drops onto its lip."
       },
       {
-        "name": "state-change",
-        "value": "0.15s",
-        "purpose": "Hover and focus colour changes on buttons, chips, rows and fields."
+        "name": "trail-draw",
+        "value": "1s cubic-bezier(0.16, 1, 0.3, 1)",
+        "purpose": "The trail draws up from the trailhead once per class per session."
       },
       {
-        "name": "reduced-motion",
-        "value": "none",
-        "purpose": "With Reduce motion (system or Settings) every entrance is skipped and content simply appears."
+        "name": "node-pop",
+        "value": "0.42s, 70ms stagger",
+        "purpose": "Run nodes pop in after the trail; Bo hops onto his node at 0.85s."
+      },
+      {
+        "name": "node-pulse",
+        "value": "2.2s ease-out infinite",
+        "purpose": "A slow ring around the current node; off with Reduce motion."
       }
     ],
     "breakpoints": [
@@ -583,6 +768,10 @@
       {
         "name": "stack",
         "value": "900px"
+      },
+      {
+        "name": "board-compact",
+        "value": "1100px"
       }
     ]
   },
@@ -591,128 +780,127 @@
       "name": "Primary Button",
       "kind": "button",
       "refersTo": "button-primary",
-      "description": "The one main action on a screen, in the page's accent ink.",
-      "html": "<button class=\"ds-btn-primary\">Take the next run: 3.4 Derivatives of trig functions</button>",
-      "css": ".ds-btn-primary { font-family: \"Barlow\", \"Helvetica Neue\", Arial, sans-serif; font-weight: 600; font-size: 16px; padding: 10px 16px; border-radius: 4px; border: 1px solid #1D5BB5; background: #1D5BB5; color: #FFFFFF; cursor: pointer; transition: background-color 0.15s, border-color 0.15s; } .ds-btn-primary:hover { background: #164A95; border-color: #164A95; } .ds-btn-primary:focus-visible { outline: 2px solid #0F2236; outline-offset: 2px; }"
+      "description": "The main action, in the page accent, on a darker lip it presses down onto.",
+      "html": "<button class=\"ds-btn-primary\">Take the next run</button>",
+      "css": ".ds-btn-primary { font-family: \"Figtree\", \"Helvetica Neue\", Arial, sans-serif; font-weight: 700; font-size: 15px; padding: 9px 16px; border-radius: 14px; border: 2px solid #1A64D6; background: #1A64D6; color: #FFFFFF; box-shadow: 0 4px 0 #13428D; cursor: pointer; transition: transform 0.1s ease-out, box-shadow 0.1s ease-out, background-color 0.15s; } .ds-btn-primary:hover { background: #3577DB; border-color: #3577DB; } .ds-btn-primary:active { transform: translateY(4px); box-shadow: 0 0 0 transparent; } .ds-btn-primary:focus-visible { outline: 3px solid rgba(26, 100, 214, 0.55); outline-offset: 2px; }"
     },
     {
       "name": "Secondary Button",
       "kind": "button",
       "refersTo": "button-secondary",
-      "description": "Every other action: white plate, strong-rule outline.",
+      "description": "Every other action: white, 2px border, neutral lip.",
       "html": "<button class=\"ds-btn\">Drill every run</button>",
-      "css": ".ds-btn { font-family: \"Barlow\", \"Helvetica Neue\", Arial, sans-serif; font-weight: 600; font-size: 15px; padding: 8px 14px; border-radius: 4px; border: 1px solid #AEBCCA; background: #FFFFFF; color: #0F2236; cursor: pointer; transition: background-color 0.15s; } .ds-btn:hover { background: #EEF2F6; } .ds-btn:focus-visible { outline: 2px solid #1D5BB5; outline-offset: 2px; }"
+      "css": ".ds-btn { font-family: \"Figtree\", \"Helvetica Neue\", Arial, sans-serif; font-weight: 700; font-size: 15px; padding: 9px 16px; border-radius: 14px; border: 2px solid #E1E7EF; background: #FFFFFF; color: #14213D; box-shadow: 0 3px 0 #D5DDE8; cursor: pointer; transition: transform 0.1s ease-out, box-shadow 0.1s ease-out, background-color 0.15s; } .ds-btn:hover { background: #F0F4F9; } .ds-btn:active { transform: translateY(3px); box-shadow: 0 0 0 #D5DDE8; } .ds-btn:focus-visible { outline: 3px solid rgba(26, 100, 214, 0.55); outline-offset: 2px; }"
     },
     {
-      "name": "Exam Trail Sign",
+      "name": "Exam Chip",
       "kind": "chip",
-      "refersTo": "exam-sign",
-      "description": "The exam, wherever it appears: yellow plate, black condensed capitals.",
-      "html": "<span class=\"ds-exam-sign\">Exam 2 · Oct 14</span>",
-      "css": ".ds-exam-sign { display: inline-block; font-family: \"Barlow Condensed\", \"Arial Narrow\", Arial, sans-serif; font-weight: 700; font-size: 15px; letter-spacing: 0.02em; text-transform: uppercase; padding: 5px 10px; border-radius: 3px; background: #F2C230; color: #1B1500; }"
+      "refersTo": "chip-exam",
+      "description": "The exam, close at hand: coral pill.",
+      "html": "<span class=\"ds-chip-exam\">Exam 2 · 14 days</span>",
+      "css": ".ds-chip-exam { display: inline-flex; align-items: center; font-family: \"Figtree\", \"Helvetica Neue\", Arial, sans-serif; font-weight: 800; font-size: 13.5px; padding: 5px 12px; border-radius: 999px; background: #FFE6E3; color: #A82A21; border: 2px solid rgba(242, 86, 75, 0.35); }"
     },
     {
-      "name": "Chip",
+      "name": "Toggle Chips",
       "kind": "chip",
       "refersTo": "chip",
-      "description": "Filters and small tags; the on state inverts to navy.",
-      "html": "<span class=\"ds-chip\">Derivatives</span> <span class=\"ds-chip ds-chip-on\">Limits</span>",
-      "css": ".ds-chip { display: inline-block; font-family: \"Barlow\", \"Helvetica Neue\", Arial, sans-serif; font-weight: 600; font-size: 13px; padding: 4px 9px; border-radius: 3px; background: #EEF2F6; color: #33475C; cursor: pointer; } .ds-chip:hover { background: #E0E7EE; } .ds-chip-on, .ds-chip-on:hover { background: #0F2236; color: #FFFFFF; }"
+      "description": "Filters: white pills with a small lip; on takes the soft accent.",
+      "html": "<span class=\"ds-chip\">Unit 1</span> <span class=\"ds-chip ds-on\">Unit 2</span>",
+      "css": ".ds-chip { display: inline-flex; font-family: \"Figtree\", \"Helvetica Neue\", Arial, sans-serif; font-weight: 700; font-size: 12.5px; padding: 4px 12px; border-radius: 999px; background: #FFFFFF; color: #3B4A66; border: 2px solid #E1E7EF; box-shadow: 0 2px 0 #D5DDE8; cursor: pointer; } .ds-chip:hover { background: #F0F4F9; } .ds-chip.ds-on { background: #E3EEFD; border-color: #A9C8F5; color: #1450B0; box-shadow: 0 2px 0 #A9C8F5; }"
     },
     {
       "name": "Text Field",
       "kind": "input",
       "refersTo": "input",
-      "description": "White field, strong-rule outline, accent ring on focus.",
+      "description": "White field, 2px border, accent ring on focus.",
       "html": "<input class=\"ds-input\" placeholder=\"Search notes, formulas, flashcards\">",
-      "css": ".ds-input { font-family: \"Barlow\", \"Helvetica Neue\", Arial, sans-serif; font-size: 16px; padding: 9px 12px; border-radius: 4px; border: 1px solid #AEBCCA; background: #FFFFFF; color: #0F2236; width: 280px; transition: border-color 0.15s, box-shadow 0.15s; } .ds-input::placeholder { color: #566779; } .ds-input:focus { outline: none; border-color: #1D5BB5; box-shadow: 0 0 0 3px rgba(29, 91, 181, 0.22); }"
+      "css": ".ds-input { font-family: \"Figtree\", \"Helvetica Neue\", Arial, sans-serif; font-size: 16px; padding: 10px 14px; border-radius: 12px; border: 2px solid #E1E7EF; background: #FFFFFF; color: #14213D; width: 300px; transition: border-color 0.15s, box-shadow 0.15s; } .ds-input::placeholder { color: #536279; } .ds-input:hover { border-color: #CBD5E1; } .ds-input:focus { outline: none; border-color: #1A64D6; box-shadow: 0 0 0 4px rgba(26, 100, 214, 0.2); }"
     },
     {
       "name": "Sidebar Navigation",
       "kind": "nav",
       "refersTo": "nav-item-active",
-      "description": "Plain list on white; the active item takes the soft accent ground.",
-      "html": "<nav class=\"ds-nav\"><a class=\"ds-nav-item ds-on\" href=\"#\"><svg viewBox=\"0 0 24 24\" width=\"18\" height=\"18\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linejoin=\"round\"><path d=\"M2.5 20l6.5-10.5 3.5 5 2.5-3.5 6.5 9z\"/><path d=\"M9 9.5V3.5l4.5 1.8L9 7\"/></svg>Dashboard</a><a class=\"ds-nav-item\" href=\"#\">Notes</a><a class=\"ds-nav-item\" href=\"#\">Practice</a></nav>",
-      "css": ".ds-nav { display: flex; flex-direction: column; gap: 2px; width: 220px; padding: 8px; background: #FFFFFF; border-right: 1px solid #D7DFE7; } .ds-nav-item { display: flex; align-items: center; gap: 10px; font-family: \"Barlow\", \"Helvetica Neue\", Arial, sans-serif; font-size: 15px; font-weight: 500; color: #33475C; text-decoration: none; padding: 7px 10px; border-radius: 4px; } .ds-nav-item svg { color: #566779; } .ds-nav-item:hover { background: #EEF2F6; color: #0F2236; } .ds-nav-item.ds-on { background: #E3ECF8; color: #0F2236; font-weight: 600; } .ds-nav-item.ds-on svg { color: #1D5BB5; } .ds-nav-item:focus-visible { outline: 2px solid #1D5BB5; outline-offset: 1px; }"
+      "description": "Bo and the wordmark on top; the active item has a soft accent ground and outline.",
+      "html": "<nav class=\"ds-nav\"><div class=\"ds-brand\"><svg viewBox=\"10 10 100 86\" width=\"38\" height=\"33\"><path d=\"M22 46L14 14l32 14z\" fill=\"#C98B4B\"/><path d=\"M98 46l8-32-32 14z\" fill=\"#C98B4B\"/><path d=\"M24 40l-6-19 20 10z\" fill=\"#3B2A1C\"/><path d=\"M96 40l6-19-20 10z\" fill=\"#3B2A1C\"/><ellipse cx=\"60\" cy=\"58\" rx=\"40\" ry=\"34\" fill=\"#D9A15B\"/><ellipse cx=\"60\" cy=\"69\" rx=\"27\" ry=\"21\" fill=\"#F3DFB8\"/><path d=\"M30 42c4 5 8 10 8 18M90 42c-4 5-8 10-8 18\" stroke=\"#8B5A2B\" stroke-width=\"3.2\" stroke-linecap=\"round\" fill=\"none\"/><path d=\"M19 70l17 2M19 78l17-1M101 70l-17 2M101 78l-17-1\" stroke=\"#8B5A2B\" stroke-width=\"1.8\" stroke-linecap=\"round\"/><ellipse cx=\"46\" cy=\"56\" rx=\"7.5\" ry=\"8.5\" fill=\"#fff\"/><ellipse cx=\"74\" cy=\"56\" rx=\"7.5\" ry=\"8.5\" fill=\"#fff\"/><circle cx=\"47\" cy=\"57.5\" r=\"4.6\" fill=\"#2A1B0E\"/><circle cx=\"75\" cy=\"57.5\" r=\"4.6\" fill=\"#2A1B0E\"/><circle cx=\"48.6\" cy=\"55.4\" r=\"1.6\" fill=\"#fff\"/><circle cx=\"76.6\" cy=\"55.4\" r=\"1.6\" fill=\"#fff\"/><path d=\"M54 68h12l-6 6z\" fill=\"#3B2A1C\"/><path d=\"M60 74v3.5M60 77.5c-3 3-7 3-9 0M60 77.5c3 3 7 3 9 0\" stroke=\"#3B2A1C\" stroke-width=\"2.2\" stroke-linecap=\"round\" fill=\"none\"/></svg><b>Mathub</b></div><a class=\"ds-nav-item ds-on\" href=\"#\">Dashboard</a><a class=\"ds-nav-item\" href=\"#\">Section notes</a><a class=\"ds-nav-item\" href=\"#\">Quizzer</a></nav>",
+      "css": ".ds-nav { display: flex; flex-direction: column; gap: 2px; width: 230px; padding: 12px; background: #FFFFFF; border-right: 2px solid #E1E7EF; } .ds-brand { display: flex; align-items: center; gap: 8px; padding: 4px 6px 12px; font-family: \"Gabarito\", \"Figtree\", sans-serif; font-size: 22px; font-weight: 800; color: #14213D; } .ds-nav-item { font-family: \"Figtree\", \"Helvetica Neue\", Arial, sans-serif; font-size: 15px; font-weight: 600; color: #3B4A66; text-decoration: none; padding: 8px 12px; border-radius: 12px; border: 2px solid transparent; } .ds-nav-item:hover { background: #F0F4F9; color: #14213D; } .ds-nav-item.ds-on { background: #E3EEFD; border-color: #A9C8F5; color: #1450B0; font-weight: 700; } .ds-nav-item:focus-visible { outline: 3px solid rgba(26, 100, 214, 0.55); outline-offset: 1px; }"
     },
     {
-      "name": "Trail Board Runs",
+      "name": "Class Tile",
+      "kind": "card",
+      "refersTo": "tile",
+      "description": "A class on the start page: colour cover with a small range, facts, one outlined button; the whole tile presses.",
+      "html": "<a class=\"ds-tile\" href=\"#\"><span class=\"ds-cover\"><b>M171</b><i>Exam 2 · 14 days</i></span><h3>Calculus I</h3><p>Limits, derivatives and integrals</p><span class=\"ds-go\">Continue: Velocity &amp; position</span></a>",
+      "css": ".ds-tile { display: flex; flex-direction: column; gap: 6px; width: 300px; padding: 0 0 16px; border: 2px solid #E1E7EF; border-radius: 22px; background: #FFFFFF; box-shadow: 0 4px 0 #D5DDE8; overflow: hidden; color: #14213D; text-decoration: none; font-family: \"Figtree\", \"Helvetica Neue\", Arial, sans-serif; transition: transform 0.12s ease-out, box-shadow 0.12s ease-out; } .ds-tile:hover { border-color: #A8C2E6; } .ds-tile:active { transform: translateY(4px); box-shadow: 0 0 0 #D5DDE8; } .ds-cover { display: flex; justify-content: space-between; align-items: flex-start; min-height: 96px; padding: 14px 16px; background: #1D5BB5; } .ds-cover b { font-family: \"Gabarito\", \"Figtree\", sans-serif; font-size: 30px; font-weight: 800; color: #FFFFFF; } .ds-cover i { font-style: normal; font-size: 12.5px; font-weight: 800; background: #FFFFFF; color: #14213D; padding: 3px 10px; border-radius: 999px; height: fit-content; } .ds-tile h3 { margin: 4px 16px 0; font-family: \"Gabarito\", \"Figtree\", sans-serif; font-size: 20px; font-weight: 800; } .ds-tile p { margin: 0 16px; font-size: 14px; color: #536279; } .ds-go { margin: 8px 16px 0; padding: 8px 12px; text-align: center; border: 2px solid #E1E7EF; border-radius: 12px; box-shadow: 0 2px 0 #D5DDE8; font-weight: 700; font-size: 14px; color: #164A95; }"
+    },
+    {
+      "name": "Trail Nodes",
       "kind": "custom",
       "refersTo": "you-are-here-pin",
-      "description": "The signature: an exam's sections as runs up to the summit, graded by difficulty glyph, with the You are here pin (and Bo) on the next run.",
-      "html": "<div class=\"ds-trail\"><div class=\"ds-summit\"><i></i>Summit · Exam 2</div><ol class=\"ds-runs\"><li><a class=\"ds-run\"><span class=\"ds-g ds-new\"></span><b>3.5</b><span>Implicit differentiation</span></a></li><li><a class=\"ds-run ds-here\"><span class=\"ds-g ds-hard\"></span><b>3.4</b><span>Derivatives of trig functions</span><em>You are here</em></a></li><li><a class=\"ds-run\"><span class=\"ds-g ds-mid\"></span><b>3.2</b><span>Product and quotient rules</span></a></li><li><a class=\"ds-run\"><span class=\"ds-g ds-easy\"></span><b>3.1</b><span>Power rule</span></a></li></ol></div>",
-      "css": ".ds-trail { width: 460px; font-family: \"Barlow\", \"Helvetica Neue\", Arial, sans-serif; color: #0F2236; background: #FFFFFF; padding: 12px 18px; border: 1px solid #D7DFE7; border-radius: 6px; } .ds-summit { display: flex; align-items: center; gap: 10px; font-family: \"Barlow Condensed\", \"Arial Narrow\", Arial, sans-serif; font-weight: 700; font-size: 16px; text-transform: uppercase; letter-spacing: 0.03em; padding-bottom: 6px; } .ds-summit i { width: 0; height: 0; border-left: 9px solid transparent; border-right: 9px solid transparent; border-bottom: 14px solid #0F2236; } .ds-runs { position: relative; list-style: none; margin: 0; padding: 0; } .ds-runs::before { content: \"\"; position: absolute; left: 8px; top: 4px; bottom: 4px; border-left: 2px dashed #AEBCCA; } .ds-run { position: relative; display: grid; grid-template-columns: 18px 40px 1fr auto; align-items: center; gap: 10px; padding: 8px 8px 8px 0; border-bottom: 1px solid #D7DFE7; color: #0F2236; text-decoration: none; cursor: pointer; } .ds-runs li:last-child .ds-run { border-bottom: 0; } .ds-run:hover { background: rgba(227, 236, 248, 0.55); } .ds-run b { font-family: \"Barlow Condensed\", \"Arial Narrow\", Arial, sans-serif; font-size: 17px; color: #33475C; } .ds-run.ds-here { background: rgba(201, 53, 43, 0.08); } .ds-run.ds-here span:not(.ds-g) { font-weight: 700; } .ds-run em { font-style: normal; font-family: \"Barlow Condensed\", \"Arial Narrow\", Arial, sans-serif; font-weight: 700; font-size: 12px; letter-spacing: 0.04em; text-transform: uppercase; color: #FFFFFF; background: #C9352B; padding: 2px 6px; border-radius: 2px; } .ds-g { position: relative; z-index: 1; justify-self: center; width: 14px; height: 14px; box-shadow: 0 0 0 3px #FFFFFF; } .ds-easy { border-radius: 50%; background: #1E6B45; } .ds-mid { border-radius: 1px; background: #1D5BB5; } .ds-hard { width: 12px; height: 12px; transform: rotate(45deg); background: #10161D; border-radius: 1px; } .ds-here .ds-hard { box-shadow: 0 0 0 3px #FFFFFF, 0 0 0 5px #C9352B; } .ds-new { box-sizing: border-box; border-radius: 50%; border: 2px solid #AEBCCA; background: #FFFFFF; }"
-    },
-    {
-      "name": "Ruled Section",
-      "kind": "card",
-      "refersTo": "",
-      "description": "What replaced cards: a section separated by a hairline rule and whitespace.",
-      "html": "<section class=\"ds-section\"><h3>This week</h3><p>Three things due before Friday, and Exam 2 on Tuesday.</p></section>",
-      "css": ".ds-section { width: 460px; border-top: 1px solid #D7DFE7; padding: 16px 0 6px; font-family: \"Barlow\", \"Helvetica Neue\", Arial, sans-serif; color: #33475C; } .ds-section h3 { margin: 0 0 6px; font-family: \"Barlow Condensed\", \"Arial Narrow\", Arial, sans-serif; font-weight: 700; font-size: 22px; color: #0F2236; } .ds-section p { margin: 0; font-size: 16px; line-height: 1.55; }"
+      "description": "The signature: an exam's sections as ski-run nodes up a dotted trail, Bo at the current one.",
+      "html": "<ol class=\"ds-trail\"><li class=\"ds-run\"><span class=\"ds-node ds-new\"><i></i></span><span class=\"ds-label\"><b>§2.3</b> Product and quotient rules</span></li><li class=\"ds-run ds-here\"><span class=\"ds-node ds-cur\"><i></i></span><span class=\"ds-label\"><b>§2.2</b> Sine and cosine <em>You are here</em></span></li><li class=\"ds-run\"><span class=\"ds-node ds-hard\"><i></i></span><span class=\"ds-label\"><b>§2.1</b> Elementary derivative rules</span></li><li class=\"ds-run\"><span class=\"ds-node ds-mid\"><i></i></span><span class=\"ds-label\"><b>§1.8</b> The tangent line</span></li><li class=\"ds-run\"><span class=\"ds-node ds-easy\"><i></i></span><span class=\"ds-label\"><b>§1.7</b> Limits and continuity</span></li></ol>",
+      "css": ".ds-trail { list-style: none; margin: 0; padding: 16px; width: 440px; display: flex; flex-direction: column; gap: 8px; background: #DDEEFF; border-radius: 24px; font-family: \"Figtree\", \"Helvetica Neue\", Arial, sans-serif; } .ds-run { display: flex; align-items: center; gap: 14px; } .ds-node { display: grid; place-items: center; width: 46px; height: 46px; border-radius: 50%; border: 3px solid #CBD5E1; background: #FFFFFF; box-shadow: 0 5px 0 #CBD5E1; } .ds-node i { display: block; width: 16px; height: 16px; border-radius: 50%; border: 2.5px solid #CBD5E1; background: #FFFFFF; box-sizing: border-box; } .ds-easy { background: #22A447; border-color: #22A447; box-shadow: 0 5px 0 #178A39; } .ds-easy i { border: 0; background: #FFFFFF; } .ds-mid { background: #2F7BEA; border-color: #2F7BEA; box-shadow: 0 5px 0 #1D5FC4; } .ds-mid i { border: 0; border-radius: 2px; background: #FFFFFF; } .ds-hard { background: #1B2333; border-color: #1B2333; box-shadow: 0 5px 0 #070B13; } .ds-hard i { border: 0; border-radius: 2px; width: 13px; height: 13px; transform: rotate(45deg); background: #FFFFFF; } .ds-cur { width: 56px; height: 56px; border: 4px solid #1D5BB5; box-shadow: 0 6px 0 #133D7A; } .ds-label { padding: 6px 12px; border-radius: 14px; background: rgba(255, 255, 255, 0.9); border: 2px solid transparent; font-weight: 700; font-size: 15px; color: #14213D; } .ds-label b { font-family: \"Gabarito\", \"Figtree\", sans-serif; font-size: 13.5px; font-weight: 800; color: #3B4A66; background: #F0F4F9; padding: 1px 8px; border-radius: 999px; margin-right: 6px; } .ds-here .ds-label { background: #FFFFFF; border-color: #1D5BB5; } .ds-label em { font-style: normal; margin-left: 8px; padding: 3px 10px; border-radius: 999px; background: #C9372D; color: #FFFFFF; font-size: 12px; font-weight: 800; }"
     }
   ],
   "narrative": {
-    "northStar": "The Trail Map",
-    "overview": "Mathub's default look is a printed ski-area trail map of the Bridger Range, the mountains on the horizon from the MSU campus. Every class is a mountain and its next exam is the summit; the sections on that exam are the runs up to it, marked the way a trail map marks them (green circle, blue square, black diamond). A student opens a class and reads it like a map at the base lodge: where the summit is, how far, which run they are on, and which one to take next.\n\nThe world is flat ink on plain paper. Snow-white ground, navy lettering, a handful of map inks (run blue, pine green, lift red, trail-sign yellow) and nothing that glows, shimmers or wears a gradient. Structure comes from hairline rules and whitespace, the way a printed map divides its legend, not from rounded floating cards. Each screen gets at most one solid plate (on the class dashboard, the trail board). The hand-made layer is Bo the bobcat and the 8-bit pixel art: the pixel Bridger skyline sits on the horizon of the start page and the trail board. Dark mode is the night map: the same inks re-mixed for a navy ground.\n\nThe look was chosen to replace an earlier world the owner felt read as AI-generated: purple and blue gradients and glow, every block a soft-shadow card (cards inside cards, tiny tracked capitals over everything), and generic voice and icons.",
+    "northStar": "Big Sky",
+    "overview": "Mathub looks like a bright Montana day. Every class is a mountain and its next exam is the summit; the class dashboard draws that literally, as an illustrated climb with the exam's sections as stops on a winding trail, Bo the bobcat standing at the one you are on. The rest of the product carries the same daylight: white cards on a faint sky-blue page, each class in its own saturated colour, friendly bold lettering, and controls that feel physical because they have a chunky edge and sink when pressed.\n\nThe craft bar is the most-used learning sites (Khan Academy, Duolingo, Brilliant): bright, warm, tactile and illustrated, with progress shown in plain colours. Mathub takes that level of craft, not their faces. Its own material is Montana State and Bozeman: Bo, the 8-bit Bridger Range, MSU gold for rewards, mountains drawn in the class colour, and ski-run difficulty marks for how a student is doing on each topic. Two earlier looks were rejected by the owner and stay rejected: purple and blue gradients with glow and generic soft-shadow cards (read as AI-made), and a flat, near-colourless printed map (read as a downgrade with no soul).\n\nDensity is comfortable: generous padding, one level of cards, never a card inside a card. Motion is used once per screen, where it means something: the trail draws itself and Bo hops onto his node.",
     "keyCharacteristics": [
-      "Flat map inks on white paper; no gradients, glow, blur or glass.",
-      "Hairline rules and whitespace instead of cards; one solid plate per screen.",
-      "Barlow Condensed for signage and numbers, Barlow for reading.",
-      "Difficulty glyphs are the only ornament; Bo and the pixel art are the only illustration.",
-      "Each class wears its own ink on its own pages.",
-      "The exam is a yellow trail sign everywhere it appears."
+      "White cards with 2px borders on a sky-blue ground; no gradients in the interface, no glow, no glass.",
+      "Anything you can press has a darker lip under it and sinks when pressed; static containers have none.",
+      "Gabarito for headings and numbers, Figtree for text.",
+      "Every class wears its own colour on its pages and tiles.",
+      "Gold means reward, coral means the exam is close, green means mastered.",
+      "Bo is the logo and the guide; the Bridger Range (vector ridges and 8-bit pixels) is the scenery."
     ],
     "rules": [
       {
-        "name": "The Flat Ink Rule",
-        "body": "Every fill is one solid colour. No gradient, glow, inner shine or coloured shadow on any surface, button, number or title.",
+        "name": "The Meaning Colour Rule",
+        "body": "Gold is only for rewards, coral only for exam urgency, pine only for mastery. A colour that means something is never decoration.",
         "section": "colors"
       },
       {
-        "name": "The Sign Rule",
-        "body": "Trail-sign yellow means \"exam\". Do not spend it on anything else that is not an exam, a streak or a notice.",
+        "name": "The Own Colour Rule",
+        "body": "A class page and a class tile wear that class's colour; pages that belong to no class wear Big Sky Blue.",
         "section": "colors"
       },
       {
-        "name": "The Own Ink Rule",
-        "body": "On a class page the accent is that class's ink, not run blue; on cross-class pages it is run blue.",
+        "name": "The No Glow Rule",
+        "body": "No gradient on any button, card, title or number, no coloured glow, no glass. The only soft gradients are the painted skies of illustrations.",
         "section": "colors"
       },
       {
-        "name": "The No Tiny Capitals Rule",
-        "body": "Labels are sentence case at 13–14px. Uppercase is reserved for sign lettering (the exam chip, the summit row, the pin), set in Barlow Condensed.",
+        "name": "The Sentence Case Rule",
+        "body": "No tracked uppercase labels and no kicker above a heading; a heading carries its own weight.",
         "section": "typography"
       },
       {
-        "name": "The Condensed Numbers Rule",
-        "body": "Counts that matter (days left, readiness %, section numbers) are set in Barlow Condensed with tabular figures.",
+        "name": "The Gabarito Numbers Rule",
+        "body": "Counts that matter (days left, readiness percent, section numbers, stat numbers) are set in Gabarito with tabular figures.",
         "section": "typography"
       },
       {
-        "name": "The One Plate Rule",
-        "body": "A screen has at most one solid plate (the trail board on the class dashboard). Everything else is ruled sections on the paper.",
+        "name": "The Press Rule",
+        "body": "If it has a lip it can be pressed, and if it can be pressed it has a lip. Badges, pins, signs and labels never get one. Pressing moves it down by the lip's height; nothing lifts or glows on hover.",
         "section": "elevation"
       }
     ],
     "dos": [
-      "**Do** separate content with 1px rules and whitespace; reserve the plate for the trail board.",
-      "**Do** set exams as trail signs: yellow ground, black uppercase Barlow Condensed lettering.",
-      "**Do** mark progress with the four difficulty glyphs (green circle, blue square, black diamond, hollow ring) and nothing invented.",
-      "**Do** let each class page wear its own ink; use the deep tone for small text so it passes AA.",
-      "**Do** keep Bo and the pixel art as the only illustration, and keep the pixel ridge on the horizon.",
-      "**Do** write labels in sentence case at 13–14px, and say things the way a fellow student would.",
-      "**Do** keep one solid primary button per screen region; secondary actions are outlined buttons or underlined links.",
-      "**Do** honour Reduce motion: every entrance (trail draw, glyph stamp, pin drop) has a no-motion path."
+      "**Do** put white cards with 2px borders on the sky ground, one level deep.",
+      "**Do** give everything pressable a darker lip and a press-down state, and nothing else.",
+      "**Do** colour class pages, tiles and illustrations with the class's own colour.",
+      "**Do** keep gold for rewards, coral for exam urgency and pine for mastery.",
+      "**Do** show progress with the ski-run marks and thick pill bars.",
+      "**Do** give each class its own 8-bit sprite, drawn in the pixel style of Bo's world.",
+      "**Do** keep Bo and the pixel Bridger Range in the scenery, and Bo as the logo.",
+      "**Do** honour Reduce motion: every entrance and the node pulse have a still version."
     ],
     "donts": [
-      "**Don't** use gradients, glow, gradient text, glass or blur anywhere in the default look.",
-      "**Don't** wrap sections in rounded soft-shadow cards, and never put a card inside a card.",
-      "**Don't** put tiny tracked uppercase labels over blocks.",
-      "**Don't** use purple-to-blue as a brand colour; purple exists only as WRIT 101's class ink.",
-      "**Don't** lift, scale or glow buttons and rows on hover; darken or tint them instead.",
-      "**Don't** spend trail-sign yellow on decoration.",
-      "**Don't** put stock icons in front of section headings; a heading is its words."
+      "**Don't** use gradients, glow or glass on buttons, cards, titles or numbers; the only gradients are painted skies.",
+      "**Don't** fall back to the flat, near-colourless printed look: the owner rejected it as having no soul.",
+      "**Don't** put a card inside a card, or tiny tracked uppercase labels and kickers above headings.",
+      "**Don't** lift or glow things on hover; press them down instead.",
+      "**Don't** copy Khan Academy's, Duolingo's or Brilliant's faces, colours or mascots; match their craft.",
+      "**Don't** spend gold, coral or pine on decoration."
     ]
   }
 }
