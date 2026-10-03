@@ -8,7 +8,7 @@ web
 
 ## Users
 
-Montana State University students in Bozeman taking specific hard classes: Calculus I (M 171), Physics I with calculus (PHSX 220), Precalculus (M 151Q), College Writing I (WRIT 101), CSCI 127, BIOB 160, KIN 322, PSYX 340, plus classes added later as class packs (for example PSCI 230D, EMEC 100). They use it equally on a phone in short sessions between classes and on a laptop in long study sessions (library or dorm desk, often at night). Anyone can preview; students sign up with a montana.edu email to unlock everything.
+Montana State University students in Bozeman taking specific hard classes: Calculus I (M 171), Physics I with calculus (PHSX 220), Precalculus (M 151Q), College Writing I (WRIT 101), CSCI 127, BIOB 160, KIN 322, PSYX 340, plus classes added later as class packs (for example PSCI 230D, EMEC 100, M 172 Calculus II). They use it equally on a phone in short sessions between classes and on a laptop in long study sessions (library or dorm desk, often at night). Anyone can preview; students sign up with a montana.edu email to unlock everything.
 
 ## Product Purpose
 

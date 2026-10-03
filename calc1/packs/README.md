@@ -56,8 +56,8 @@ the account server cannot be reached (the static preview, or a first visit while
 down), the site lists the classes from that file and opens each one from its `.mathub.json`.
 To ship a class only by upload, build it with `--out` somewhere other than `packs/`.
 
-Bundled now: **PSCI 230D** (Introduction to International Relations) and **EMEC 100**
-(Introduction to Mechanical Engineering).
+Bundled now: **PSCI 230D** (Introduction to International Relations), **EMEC 100**
+(Introduction to Mechanical Engineering) and **M 172** (Calculus II).
 
 ## Limits
 
