@@ -1,14 +1,15 @@
 /* M 172 Calculus II, Fall 2026 (Dr. Rob Malo; built from the 1 pm section's syllabus).
    Built from the Fall 2026 syllabus and its tentative calendar. Build:  node scripts/make-pack.js packs/src/m172.js
    Notes, formulas, flashcards, practice and checklists live in m172/notes.js; the question bank in m172/quiz.js.
-   The section numbers follow Active Calculus: 5.3–7.4 match the current online edition, and chapter 8
-   (sequences, geometric series, series, alternating series, Taylor, power series) matches the first edition,
-   so chapter 8 links point there. "Euler" and "Fourier" at the end of the semester are not in the textbook. */
+   The textbook is the first edition of Active Calculus (activecalculus.org/single1e), whose section numbers
+   the syllabus follows, so every topic links there. "Euler" and "Fourier" at the end of the semester are not
+   in the textbook. */
 const N = require('./m172/notes.js');
 const QUIZ = require('./m172/quiz.js');
 
 const CANVAS = 'https://montana.instructure.com/';
-const AC = 'https://activecalculus.org/single/';
+const AC = 'https://activecalculus.org/single1e/';
+const TEXT = AC + 'frontmatter.html';
 const WEBWORK = 'https://webwork3.math.montana.edu/webwork2/';
 const GRADESCOPE = 'https://www.gradescope.com/';
 const L = (date, title, sec) => [date, 'lecture', title, sec];
@@ -31,8 +32,7 @@ module.exports = {
   guides: ['math-exam', 'active-recall', 'office-hours', 'study-group'],
   resourcesBlurb: 'The free textbook, homework and grading sites, plus second explanations for every technique and series test.',
   resources: [
-    { t: 'Active Calculus (free online textbook)', u: AC, d: 'The course textbook. Sections 5.3 through 7.4 follow it directly.', k: 'reading', tags: ['textbook'], top: true },
-    { t: 'Active Calculus, first edition: chapter 8', u: 'https://activecalculus.org/single1e/C-8.html', d: 'Sequences, geometric series, series, the alternating series test, Taylor and power series, numbered 8.1–8.6 exactly as on the syllabus.', k: 'reading', tags: ['textbook', 'series'], top: true },
+    { t: 'Active Calculus, first edition (free online textbook)', u: TEXT, d: 'The course textbook. Every section on the syllabus, 5.3 through 8.6, is numbered as in this edition.', k: 'reading', tags: ['textbook'], top: true },
     { t: 'WeBWorK', u: WEBWORK, d: 'Online homework for every section, due 8:00 pm Tuesdays and Fridays. Pick the M 172 course from the list or use the link on Canvas.', k: 'practice', tags: ['homework'], top: true },
     { t: 'Gradescope', u: GRADESCOPE, d: 'Group lab sheets are turned in here.', k: 'app', tags: ['labs'] },
     { t: 'Paul’s Online Math Notes: Calculus II', u: 'https://tutorial.math.lamar.edu/Classes/CalcII/CalcII.aspx', d: 'Clear notes and many worked examples for every technique, application and series test.', k: 'reading', tags: ['notes', 'examples'], top: true },
@@ -53,10 +53,9 @@ module.exports = {
     officeHours: 'Mon and Wed 9:15–10:45, and by appointment (Wilson Hall 2-252)',
     lectures: 'Class Mon · Wed · Fri (this syllabus is the 1 pm section’s), plus a required lab on Tuesday or Thursday', classDays: 'Mon · Wed · Fri, plus lab on Tue or Thu', weeklyHours: 12,
     site: CANVAS, canvas: CANVAS,
-    textbook: { title: 'Active Calculus (free online)', url: AC },
+    textbook: { title: 'Active Calculus, first edition (free online)', url: TEXT },
     links: [
-      { eyebrow: 'Textbook', title: 'Active Calculus', url: AC, desc: 'Free online. Chapters 5–7 follow it directly.' },
-      { eyebrow: 'Textbook', title: 'Active Calculus chapter 8 (first edition)', url: 'https://activecalculus.org/single1e/C-8.html', desc: 'Sequences and series, numbered 8.1–8.6 as on the syllabus.' },
+      { eyebrow: 'Textbook', title: 'Active Calculus (first edition)', url: TEXT, desc: 'Free online. Its section numbers match the syllabus.' },
       { eyebrow: 'Homework', title: 'WeBWorK', url: WEBWORK, desc: 'One assignment per section, due 8:00 pm Tuesdays and Fridays.' },
       { eyebrow: 'Labs', title: 'Gradescope', url: GRADESCOPE, desc: 'Turn in each group lab sheet here.' },
       { eyebrow: 'Course site', title: 'Canvas', url: CANVAS, desc: 'Announcements, the textbook and homework links, and grades.' }
@@ -201,7 +200,7 @@ module.exports = {
       <li><b>Format:</b> active-learning class Mon · Wed · Fri plus a required lab on Tuesday or Thursday. Labs often bring new material, and it is on the exams. 4 credits: plan on at least 12 hours a week.</li>
       <li><b>Instructor:</b> Dr. Rob Malo, <a href="mailto:malo@montana.edu">malo@montana.edu</a>, Wilson Hall 2-252. Office hours Mon and Wed 9:15–10:45 and by appointment.</li>
       <li><b>Graduate assistant:</b> Ziyal Jandrasi, <a href="mailto:ziyaljandrasi@montana.edu">ziyaljandrasi@montana.edu</a>, Wilson Hall 1-136. Office hours Tue and Thu 2:35–3:25, Fri 2:40–3:30, and by appointment.</li>
-      <li><b>Materials:</b> the free <a href="${AC}" target="_blank" rel="noopener">Active Calculus</a> textbook online, internet access for WeBWorK, and at least one laptop per lab group. A calculator or computer helps with some homework, but no electronics are allowed on quizzes or exams.</li>
+      <li><b>Materials:</b> the free <a href="${TEXT}" target="_blank" rel="noopener">Active Calculus</a> textbook online (first edition), internet access for WeBWorK, and at least one laptop per lab group. A calculator or computer helps with some homework, but no electronics are allowed on quizzes or exams.</li>
       <li>These details are from the 1 pm section’s syllabus. In another section, check your own syllabus for your instructor and office hours.</li></ul>` },
     { icon: 'calc', title: 'Grading', html: `<div class="table-wrap"><table class="table compact"><thead><tr><th>Item</th><th class="num">Share</th></tr></thead><tbody>
       <tr><td>Four exams (19% each)</td><td class="num">76%</td></tr><tr><td>Quizzes (lowest two dropped)</td><td class="num">7%</td></tr><tr><td>WeBWorK</td><td class="num">7%</td></tr><tr><td>Labs</td><td class="num">7%</td></tr><tr><td>Prework</td><td class="num">3%</td></tr></tbody></table></div>

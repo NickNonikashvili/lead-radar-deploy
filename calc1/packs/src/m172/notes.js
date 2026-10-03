@@ -2,8 +2,7 @@
    Written for Mathub from standard Calculus II material, following the section numbers of Active Calculus
    used on the syllabus. The instructor's classes, labs and WeBWorK decide what the exams ask. */
 const R = String.raw;
-const AC = 'https://activecalculus.org/single/';
-const AC1 = 'https://activecalculus.org/single1e/';
+const AC = 'https://activecalculus.org/single1e/';   // the first edition: its section numbers match the syllabus
 
 const SECTIONS = [
   /* ---------- Unit 1: integration techniques, area and arc length ---------- */
@@ -177,7 +176,7 @@ const SECTIONS = [
     pitfalls: [R`Confusing order (highest derivative) with the power on $y$.`, R`Checking the equation but not the initial condition.`],
     tip: R`"Verify" means substitute and simplify both sides; you do not need to solve.` },
 
-  { id: 'qualitative', label: '7.2', title: 'Slope fields and equilibrium solutions', unit: 3, link: 'https://activecalculus.org/single-alt/sec-7-2-qualitative.html', linkLabel: 'Active Calculus 7.2',
+  { id: 'qualitative', label: '7.2', title: 'Slope fields and equilibrium solutions', unit: 3, link: AC + 'sec-7-2-qualitative.html', linkLabel: 'Active Calculus 7.2',
     ideas: [
       R`A <b>slope field</b> draws a short segment with slope $f(t,y)$ at many points. Solution curves follow the segments.`,
       R`In an <b>autonomous</b> equation $\frac{dy}{dt} = f(y)$ the slope depends only on $y$, so each horizontal row of segments looks the same.`,
@@ -203,7 +202,7 @@ const SECTIONS = [
     pitfalls: [R`Using the new $t$ with the old $y$ when computing a slope.`, R`Forgetting to multiply the slope by $\Delta t$.`],
     tip: R`Count steps: from $t_0$ to $T$ takes $(T-t_0)/\Delta t$ of them.` },
 
-  { id: 'separable', label: '7.4', title: 'Separable differential equations', unit: 3, link: 'https://activecalculus.org/single2e/sec-7-4-separable.html', linkLabel: 'Active Calculus 7.4',
+  { id: 'separable', label: '7.4', title: 'Separable differential equations', unit: 3, link: AC + 'sec-7-4-separable.html', linkLabel: 'Active Calculus 7.4',
     ideas: [
       R`A separable equation has the form $\frac{dy}{dt} = g(t)\,h(y)$.`,
       R`Separate and integrate: $\int\frac{dy}{h(y)} = \int g(t)\,dt$, add one constant, then solve for $y$ if you can.`,
@@ -217,7 +216,7 @@ const SECTIONS = [
     tip: R`Check your answer by substituting it back into the equation and the initial condition.` },
 
   /* ---------- Unit 4: sequences and series ---------- */
-  { id: 'sequences', label: '8.1', title: 'Sequences', unit: 4, link: AC1 + 'sec-8-1-sequences.html', linkLabel: 'Active Calculus 8.1 (first edition)',
+  { id: 'sequences', label: '8.1', title: 'Sequences', unit: 4, link: AC + 'sec-8-1-sequences.html', linkLabel: 'Active Calculus 8.1',
     ideas: [
       R`A <b>sequence</b> $\{a_n\}$ is an infinite list $a_1, a_2, a_3,\ldots$. It <b>converges</b> to $L$ if $a_n$ gets as close to $L$ as we like for all large $n$.`,
       R`If $a_n = f(n)$ and $\lim_{x\to\infty}f(x) = L$, then $a_n\to L$, so function tools such as L'Hôpital's rule apply to $f(x)$.`,
@@ -231,7 +230,7 @@ const SECTIONS = [
     pitfalls: [R`Mixing up a sequence converging with the series of its terms converging.`, R`Using L'Hôpital on $n$ directly; switch to $x$ first.`],
     tip: R`Write the first five terms. The pattern usually tells you what the limit is.` },
 
-  { id: 'geometric', label: '8.2', title: 'Geometric series', unit: 4, link: AC1 + 'sec-8-2-geometric.html', linkLabel: 'Active Calculus 8.2 (first edition)',
+  { id: 'geometric', label: '8.2', title: 'Geometric series', unit: 4, link: AC + 'sec-8-2-geometric.html', linkLabel: 'Active Calculus 8.2',
     ideas: [
       R`A <b>geometric series</b> multiplies by the same ratio $r$ each time: $\sum_{k=0}^\infty ar^k = a+ar+ar^2+\cdots$.`,
       R`It converges to $\frac{a}{1-r}$ when $|r|\lt1$, and diverges when $|r|\ge1$.`,
@@ -244,7 +243,7 @@ const SECTIONS = [
     pitfalls: [R`Using $a = 5$ when the sum starts at $k = 1$.`, R`Applying $\frac{a}{1-r}$ when $|r|\ge1$.`, R`Dropping the sign of a negative ratio.`],
     tip: R`Write out the first two terms: $a$ is the first, and $r$ is the second divided by the first.` },
 
-  { id: 'series', label: '8.3', title: 'Series of real numbers and convergence tests', unit: 4, link: AC1 + 'sec-8-3-series.html', linkLabel: 'Active Calculus 8.3 (first edition)',
+  { id: 'series', label: '8.3', title: 'Series of real numbers and convergence tests', unit: 4, link: AC + 'sec-8-3-series.html', linkLabel: 'Active Calculus 8.3',
     ideas: [
       R`A series $\sum a_k$ <b>converges</b> when its sequence of partial sums $S_n = a_1+\cdots+a_n$ converges.`,
       R`<b>Divergence test:</b> if $\lim a_k\ne0$ (or does not exist), the series diverges. If the limit is 0, the test says nothing: the harmonic series $\sum\frac1k$ diverges.`,
@@ -259,7 +258,7 @@ const SECTIONS = [
     tip: R`Run the divergence test first. It takes one line and ends many problems.` },
 
   /* ---------- Unit 5: alternating, Taylor, power and Fourier series ---------- */
-  { id: 'ast', label: '8.4', title: 'Alternating series', unit: 5, link: AC1 + 'sec-8-4-alternating.html', linkLabel: 'Active Calculus 8.4 (first edition)',
+  { id: 'ast', label: '8.4', title: 'Alternating series', unit: 5, link: AC + 'sec-8-4-alternating.html', linkLabel: 'Active Calculus 8.4',
     ideas: [
       R`An alternating series has terms of alternating sign: $\sum(-1)^kb_k$ with $b_k\gt0$.`,
       R`<b>Alternating series test:</b> if $b_k$ decreases and $b_k\to0$, the series converges.`,
@@ -272,7 +271,7 @@ const SECTIONS = [
     pitfalls: [R`Using the alternating series test to prove divergence; it cannot.`, R`Skipping the check that $b_k$ is decreasing.`, R`Calling a series absolutely convergent without testing $\sum|a_k|$.`],
     tip: R`Test $\sum|a_k|$ first. If it converges, you are done (absolutely); if not, try the alternating series test.` },
 
-  { id: 'taylor', label: '8.5', title: 'Taylor polynomials and Taylor series', unit: 5, link: AC1 + 'sec-8-5-taylor.html', linkLabel: 'Active Calculus 8.5 (first edition)',
+  { id: 'taylor', label: '8.5', title: 'Taylor polynomials and Taylor series', unit: 5, link: AC + 'sec-8-5-taylor.html', linkLabel: 'Active Calculus 8.5',
     ideas: [
       R`The degree-$n$ <b>Taylor polynomial</b> of $f$ at $a$ is $P_n(x) = \sum_{k=0}^n\frac{f^{(k)}(a)}{k!}(x-a)^k$. It matches $f$ and its first $n$ derivatives at $a$.`,
       R`The <b>Taylor series</b> lets $n\to\infty$. Centered at $a = 0$ it is called a Maclaurin series.`,
@@ -285,7 +284,7 @@ const SECTIONS = [
     pitfalls: [R`Forgetting the $k!$ in the denominator.`, R`Centering at $a$ but writing powers of $x$ instead of $(x-a)$.`, R`Getting the alternating signs of $\sin$ and $\cos$ wrong.`],
     tip: R`Build new series from known ones (substitute, multiply, differentiate) instead of computing derivatives from scratch.` },
 
-  { id: 'power', label: '8.6', title: 'Power series', unit: 5, link: AC1 + 'sec-8-6-powerseries.html', linkLabel: 'Active Calculus 8.6 (first edition)',
+  { id: 'power', label: '8.6', title: 'Power series', unit: 5, link: AC + 'sec-8-6-powerseries.html', linkLabel: 'Active Calculus 8.6',
     ideas: [
       R`A <b>power series</b> $\sum c_k(x-a)^k$ converges on an interval centered at $a$, with a <b>radius of convergence</b> $R$ (which can be 0 or $\infty$).`,
       R`Find $R$ with the ratio test: require $\lim\left|\frac{c_{k+1}(x-a)^{k+1}}{c_k(x-a)^k}\right|\lt1$.`,
