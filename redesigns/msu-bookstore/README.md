@@ -66,7 +66,7 @@ The folder is the whole site. Pick one:
 - **Cloudflare Pages:** create a project, upload the folder (or connect the repo with build command empty
   and output directory `redesigns/msu-bookstore`).
 - **GitHub Pages:** publish the folder from a branch. All links are relative, so it works from a subpath
-  like `/msu-bookstore/`. The 404 page's links assume the site is at the domain root.
+  like `/msu-bookstore/`, and the 404 page adjusts itself for GitHub Pages project URLs.
 
 ## Before going public
 

@@ -5,7 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Page not found — MSU Bookstore</title>
 <meta name="robots" content="noindex">
-<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<script>
+  // Works at a domain root and under a GitHub Pages project path like /repo-name/.
+  window.SITE_BASE = location.hostname.endsWith('github.io') ? '/' + (location.pathname.split('/')[1] || '') + '/' : '/';
+  document.write('<base href="' + window.SITE_BASE + '">');
+</script>
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
 <style>
   :root { --navy: #0b2a4a; --gold: #e8b521; }
   body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: var(--navy); color: #fff; font: 16px/1.55 Inter, system-ui, -apple-system, "Segoe UI", sans-serif; text-align: center; padding: 24px; box-sizing: border-box; }
@@ -20,8 +25,8 @@
     <svg width="64" height="64" viewBox="0 0 24 24" style="margin:0 auto" aria-hidden="true"><path d="M2 19 9 8l4 6 3-4 6 9z" fill="#e8b521"/></svg>
     <h1>Lost on the trail?</h1>
     <p>We couldn't find that page. Let's get you back to the store.</p>
-    <a href="/index.html">Back home</a>
-    <a class="alt" href="/shop.html">Shop</a>
+    <a href="index.html">Back home</a>
+    <a class="alt" href="shop.html">Shop</a>
   </main>
 </body>
 </html>
