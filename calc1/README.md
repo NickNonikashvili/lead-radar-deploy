@@ -232,7 +232,7 @@ Also new for every class: definition lines (`{ n, d }`) on the formulas sheet an
 
 ## Add a class from the admin panel (class packs)
 
-The workflow is syllabus in, one file out, upload, done. Full format: [`packs/README.md`](packs/README.md). Packs kept in `packs/` ship with the site and install themselves on the server after a deploy (an admin's upload, hide or delete always wins); `packs/index.json` lets the static preview show them without a server. Bundled now: PSCI 230D, EMEC 100 and M 172 (Calculus II).
+The workflow is syllabus in, one file out, upload, done. Full format: [`packs/README.md`](packs/README.md). Packs kept in `packs/` ship with the site and install themselves on the server after a deploy (an admin's upload, hide or delete always wins); `packs/index.json` lets the static preview show them without a server. Bundled now: PSCI 230D, EMEC 100, M 172 (Calculus II) and JPNS 150D (Japanese Culture and Civilization).
 
 1. Claude turns a syllabus into `packs/src/<id>.js` and runs `node scripts/make-pack.js packs/src/<id>.js`. The script checks everything and generates 400 questions from each question set. It then writes `packs/<id>.mathub.json`.
 2. In **Admin panel → Add a class** (`#/admin/packs`), choose that file. The panel checks it again and shows the counts, any problems and sample questions. Press **Add class**. It can tell every student who requested the course code, with an inbox message and a push, and it can add the class hidden for review first.

@@ -57,7 +57,8 @@ down), the site lists the classes from that file and opens each one from its `.m
 To ship a class only by upload, build it with `--out` somewhere other than `packs/`.
 
 Bundled now: **PSCI 230D** (Introduction to International Relations), **EMEC 100**
-(Introduction to Mechanical Engineering) and **M 172** (Calculus II).
+(Introduction to Mechanical Engineering), **M 172** (Calculus II) and **JPNS 150D**
+(Introduction to Japanese Culture and Civilization).
 
 ## Limits
 
