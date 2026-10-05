@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>About Us — MSU Bookstore</title>
+<meta name="description" content="Independent and not-for-profit since 1931, owned by the faculty and students of Montana State University.">
+<meta name="robots" content="noindex">
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/styles.css">
+</head>
+<body data-page="about">
+<div id="site-header"></div>
+
+<main id="main">
+  <div class="page-hero">
+    <div class="wrap">
+      <nav class="crumbs" aria-label="Breadcrumb"><a href="index.html">Home</a><span>/</span><span>About</span></nav>
+      <div class="eyebrow">Our mission</div>
+      <h1>A campus store that <em>works for students.</em></h1>
+      <p>MSU Bookstore is a 501(c)(3) Montana not-for-profit corporation with one mission: lower the cost of course materials for every Montana State student.</p>
+    </div>
+    <svg class="mtn" viewBox="0 0 1440 90" preserveAspectRatio="none" aria-hidden="true"><path fill="currentColor" d="M0 90V62l120-30 90 22 140-46 110 38 80-18 150 44 120-34 110 20 140-52 130 40 100-16 150 34V90z"/></svg>
+  </div>
+
+  <section>
+    <div class="wrap" style="display:grid;gap:40px;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));align-items:start">
+      <div class="prose">
+        <h2>Independent since 1931</h2>
+        <p>The store has been owned by Montana State's faculty and students since 1931. It's independent of the university and isn't run by a national chain, so decisions are made on campus, for campus.</p>
+        <p>Being not-for-profit means there are no outside shareholders to pay. Earnings beyond running costs go back into the store as sales and discounts. MSU Bookstore is the only not-for-profit campus store in Montana.</p>
+        <h2 style="margin-top:32px">More than textbooks</h2>
+        <p>What started as a place to buy required textbooks has grown into a small department store. It carries course materials, Bobcat clothing and gifts, school and art supplies, health and beauty items, snacks and candy, laptops and iPads, and a large selection of general interest books.</p>
+      </div>
+      <div class="stats light">
+        <div class="stat"><b>1931</b><span>Year the store was founded</span></div>
+        <div class="stat"><b>501(c)(3)</b><span>Montana not-for-profit corporation</span></div>
+        <div class="stat"><b>Only one</b><span>Not-for-profit campus store in Montana</span></div>
+        <div class="stat"><b>Owned</b><span>By MSU faculty and students</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="alt">
+    <div class="wrap">
+      <div class="sec-head"><div><div class="eyebrow">What we carry</div><h2>One stop in the SUB</h2></div></div>
+      <div class="cat-grid" id="carry"></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap">
+      <div class="sec-head"><div><div class="eyebrow">Services</div><h2>Beyond the shelves</h2></div></div>
+      <div class="svc-grid three">
+        <div class="svc"><span class="ic" data-i="book"></span><h3>Course materials</h3><p>Rentals, used and new books, eBooks, access codes and Inclusive Access for every MSU course.</p><a href="textbooks.html">Find textbooks →</a></div>
+        <div class="svc"><span class="ic" data-i="laptop"></span><h3>Bobcat Tech Services</h3><p>Laptops, iPads and accessories for class, from the store's technology department.</p><a id="techLink" target="_blank" rel="noopener">Bobcat Tech Services ↗</a></div>
+        <div class="svc"><span class="ic" data-i="grad"></span><h3>Faculty support</h3><p>Instructors submit course material adoptions through Verba Collect so students can plan ahead.</p><a href="textbooks.html#faculty">For faculty →</a></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="help">
+    <div class="wrap">
+      <div><h2>Come say hi.</h2><p>Room 125, Strand Union Building, Montana State University.</p></div>
+      <div class="ctas"><a class="btn btn-navy" href="visit.html">Hours &amp; directions</a><a class="btn btn-line" id="aboutLink" target="_blank" rel="noopener">Mission on msubookstore.org ↗</a></div>
+    </div>
+  </section>
+</main>
+
+<div id="site-footer"></div>
+<script src="assets/data.js"></script>
+<script src="assets/photos.js"></script>
+<script src="assets/site.js"></script>
+<script>
+  (function () {
+    const { S, L, $, $$, esc, icon } = window.SITE;
+    $('#techLink').href = L.techServices;
+    $('#aboutLink').href = L.about;
+    $$('[data-i]').forEach(el => el.innerHTML = icon(el.dataset.i));
+    $('#carry').innerHTML = S.categories.filter(c => c.id !== 'kids').map(c => `
+      <a class="cat" href="shop.html?cat=${c.id}"><span class="ic">${icon(c.icon)}</span><div><b>${esc(c.name)}</b><span class="d">${esc(c.blurb)}</span></div></a>`).join('');
+  })();
+</script>
+</body>
+</html>

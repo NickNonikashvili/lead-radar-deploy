@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MSU Bookstore — Textbooks, Bobcat Gear &amp; More</title>
+<meta name="description" content="Student and faculty owned since 1931. Course materials, Bobcat apparel, gifts and tech in the Strand Union Building, Bozeman.">
+<meta name="robots" content="noindex">
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/styles.css">
+</head>
+<body data-page="home">
+<div id="site-header"></div>
+
+<main id="main">
+  <div class="hero">
+    <div class="wrap">
+      <div>
+        <div class="eyebrow">Student &amp; faculty owned · Not-for-profit</div>
+        <h1>Everything for the semester, <em>right in the SUB.</em></h1>
+        <p class="lead">Course materials, Bobcat gear, tech and supplies from Montana's only not-for-profit campus store. Our mission is to lower what students pay for course materials.</p>
+        <div class="ctas">
+          <a class="btn btn-gold" href="textbooks.html">Find my textbooks
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+          </a>
+          <a class="btn btn-ghost" href="shop.html">Shop Bobcat gear</a>
+        </div>
+      </div>
+
+      <div class="finder">
+        <h2>Find your course materials</h2>
+        <p class="sub">New, used, rental, eBook and Inclusive Access options for every MSU course.</p>
+        <form id="finderForm" target="_blank">
+          <label for="tq">Student ID, ISBN, title or author</label>
+          <div class="inrow">
+            <input id="tq" name="q" placeholder="M12345678 or 978…" autocomplete="off">
+            <button class="btn btn-navy" type="submit">Search</button>
+          </div>
+          <div class="hint">Using your student ID? Put an <b>M</b> in front of the number.</div>
+        </form>
+        <div class="or">or</div>
+        <a class="btn browse" id="browseCourses" target="_blank" rel="noopener">Browse by term, department &amp; course ↗</a>
+        <div class="pills">
+          <a href="textbooks.html#how">How it works</a>
+          <a href="textbooks.html#inclusive-access">Inclusive Access</a>
+          <a href="help.html#returns">Returns</a>
+        </div>
+      </div>
+    </div>
+    <svg class="mtn" viewBox="0 0 1440 90" preserveAspectRatio="none" aria-hidden="true"><path fill="currentColor" d="M0 90V62l120-30 90 22 140-46 110 38 80-18 150 44 120-34 110 20 140-52 130 40 100-16 150 34V90z"/></svg>
+  </div>
+
+  <div class="champs">
+    <div class="wrap">
+      <div class="trophy">
+        <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M7 6H4a3 3 0 0 0 3 4M17 6h3a3 3 0 0 1-3 4M12 14v4M8 21h8M9 18h6"/></svg>
+        <div>
+          <h2>Your Bobcats are 2025 National Champions.</h2>
+          <p>Championship tees and keepsakes, with more added as they arrive in store.</p>
+        </div>
+      </div>
+      <a class="btn btn-navy" href="shop.html?cat=champs">Shop National Champions gear</a>
+    </div>
+  </div>
+
+  <section>
+    <div class="wrap">
+      <div class="sec-head">
+        <div><div class="eyebrow">Shop the store</div><h2>What are you after?</h2></div>
+        <a class="link" href="shop.html">Shop everything →</a>
+      </div>
+      <div class="cat-grid" id="catGrid"></div>
+    </div>
+  </section>
+
+  <section class="alt">
+    <div class="wrap">
+      <div class="sec-head">
+        <div><div class="eyebrow">From the store</div><h2>Popular right now</h2></div>
+        <a class="link" id="shopMore" href="shop.html">See all →</a>
+      </div>
+      <div class="tabs" role="tablist" id="shopTabs"></div>
+      <div class="prod-grid" id="products"></div>
+    </div>
+  </section>
+
+  <section class="owned">
+    <div class="wrap">
+      <div>
+        <div class="eyebrow">Why shop here</div>
+        <h2>Owned by students and faculty. Not by a chain.</h2>
+        <p>MSU Bookstore has been independent since 1931. It's a 501(c)(3) Montana not-for-profit, owned and run by Montana State's faculty and students, with one mission: lower the cost of course materials for every student.</p>
+        <a class="btn btn-gold" href="about.html" style="margin-top:12px">Read our story</a>
+      </div>
+      <div class="stats">
+        <div class="stat"><b>1931</b><span>Serving Montana State since</span></div>
+        <div class="stat"><b>501(c)(3)</b><span>Montana not-for-profit corporation</span></div>
+        <div class="stat"><b>Only one</b><span>Not-for-profit campus store in Montana</span></div>
+        <div class="stat"><b>5 formats</b><span>Inclusive Access, codes, eBooks, print &amp; course packs</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap">
+      <div class="sec-head">
+        <div><div class="eyebrow">Course materials</div><h2>Save on every class</h2></div>
+        <a class="link" href="textbooks.html">All textbook info →</a>
+      </div>
+      <div class="svc-grid four" id="svcGrid"></div>
+    </div>
+  </section>
+
+  <section class="alt">
+    <div class="wrap mini-visit">
+      <div>
+        <div class="eyebrow">Visit</div>
+        <h2 style="font-size:clamp(28px,3.4vw,40px);color:var(--navy);margin:8px 0 14px">Find us in the Strand Union Building</h2>
+        <p style="color:var(--muted);margin:0 0 18px;font-size:17px">Room 125 of the SUB on the Montana State campus, Bozeman.</p>
+        <span class="status" id="status"></span>
+        <div class="ctas" style="margin-top:22px">
+          <a class="btn btn-navy" href="visit.html">Hours &amp; directions</a>
+          <a class="btn btn-line" href="tel:+14069942811">(406) 994-2811</a>
+        </div>
+      </div>
+      <div class="card">
+        <table class="hours" id="hours" style="margin-top:0"></table>
+      </div>
+    </div>
+  </section>
+</main>
+
+<div id="site-footer"></div>
+<script src="assets/data.js"></script>
+<script src="assets/photos.js"></script>
+<script src="assets/site.js"></script>
+<script>
+  (function () {
+    const { S, L, $, $$, esc, icon, card, catById, renderStatus, renderHoursTable, defaultSchedule } = window.SITE;
+
+    // textbook finder goes to the real store's course materials search
+    $('#finderForm').action = L.textbookSearch;
+    $('#browseCourses').href = L.textbookSearch;
+
+    $('#catGrid').innerHTML = S.categories.filter(c => c.id !== 'books').map(c => `
+      <a class="cat" href="shop.html?cat=${c.id}"><span class="ic">${icon(c.icon)}</span><div><b>${esc(c.name)}</b><span class="d">${esc(c.blurb)}</span></div></a>`).join('');
+
+    const tabs = ['champs', 'sweatshirts', 'hats', 'gifts', 'tech'];
+    function show(id) {
+      $$('#shopTabs button').forEach(b => b.setAttribute('aria-selected', b.dataset.cat === id));
+      const items = S.products.filter(p => p.cat === id).sort((a, b) => (b.tags.includes('featured') - a.tags.includes('featured'))).slice(0, 4);
+      $('#products').innerHTML = items.map(card).join('');
+      $('#shopMore').href = `shop.html?cat=${id}`;
+      $('#shopMore').textContent = `See all ${catById[id].name.toLowerCase()} →`;
+    }
+    $('#shopTabs').innerHTML = tabs.map(id => `<button role="tab" data-cat="${id}">${esc(catById[id].name)}</button>`).join('');
+    $$('#shopTabs button').forEach(b => b.addEventListener('click', () => show(b.dataset.cat)));
+    show('champs');
+
+    $('#svcGrid').innerHTML = [
+      ['rent', 'Rent', 'Pay less up front and return your books by the last day of finals week.', 'textbooks.html#rent', 'How rentals work →'],
+      ['dollar', 'Sell back', 'Buyback runs from the Friday before finals through the last Friday of finals.', 'textbooks.html#sell', 'Buyback details →'],
+      ['phone', 'Inclusive Access', 'Digital materials are ready in Canvas on the first day of class.', 'textbooks.html#inclusive-access', 'How it works →'],
+      ['grad', 'Faculty adoptions', 'Instructors submit next term\'s materials through Verba Collect.', 'textbooks.html#faculty', 'For faculty →']
+    ].map(([i, t, d, u, l]) => `<div class="svc"><span class="ic">${icon(i)}</span><h3>${t}</h3><p>${d}</p><a href="${u}">${l}</a></div>`).join('');
+
+    const sched = defaultSchedule();
+    renderStatus($('#status'), sched);
+    renderHoursTable($('#hours'), sched);
+  })();
+</script>
+</body>
+</html>
