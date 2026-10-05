@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Shop — MSU Bookstore</title>
+<meta name="description" content="Bobcat apparel, National Champions gear, gifts, tech and art supplies from the MSU Bookstore.">
+<meta name="robots" content="noindex">
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/styles.css">
+</head>
+<body data-page="shop">
+<div id="site-header"></div>
+
+<main id="main">
+  <div class="page-hero">
+    <div class="wrap">
+      <nav class="crumbs" aria-label="Breadcrumb"><a href="index.html">Home</a><span>/</span><span id="crumbCat">Shop</span></nav>
+      <h1 id="title">Shop the store</h1>
+      <p id="lede">Bobcat apparel, gifts, tech and supplies. Prices and stock are confirmed at checkout on msubookstore.org.</p>
+    </div>
+    <svg class="mtn" viewBox="0 0 1440 90" preserveAspectRatio="none" aria-hidden="true"><path fill="currentColor" d="M0 90V62l120-30 90 22 140-46 110 38 80-18 150 44 120-34 110 20 140-52 130 40 100-16 150 34V90z"/></svg>
+  </div>
+
+  <section class="tight">
+    <div class="wrap shop-layout">
+      <aside class="filters" aria-label="Filters">
+        <h3>Category</h3>
+        <ul id="catList"></ul>
+        <h3>Price</h3>
+        <label class="check"><input type="checkbox" id="under25Side"> Under $25</label>
+        <label class="check"><input type="checkbox" id="pricedSide"> Price listed</label>
+      </aside>
+
+      <div>
+        <div class="tabs mobile-cats" id="catChips"></div>
+        <div class="toolbar">
+          <div class="count" id="count" aria-live="polite"></div>
+          <div class="controls">
+            <input type="search" id="q" placeholder="Filter products…" aria-label="Filter products">
+            <label class="check chip-filter"><input type="checkbox" id="under25Top"> Under $25</label>
+            <select id="sort" aria-label="Sort">
+              <option value="featured">Featured</option>
+              <option value="low">Price: low to high</option>
+              <option value="high">Price: high to low</option>
+              <option value="name">Name A–Z</option>
+            </select>
+          </div>
+        </div>
+        <div class="prod-grid three" id="grid"></div>
+        <div class="store-note" id="storeNote"></div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<div id="site-footer"></div>
+<script src="assets/data.js"></script>
+<script src="assets/photos.js"></script>
+<script src="assets/site.js"></script>
+<script>
+  (function () {
+    const { S, L, $, $$, esc, ext, card, catById } = window.SITE;
+    const params = new URLSearchParams(location.search);
+    const state = {
+      cat: catById[params.get('cat')] ? params.get('cat') : '',
+      q: params.get('q') || '',
+      under25: params.get('under') === '25',
+      priced: false,
+      sort: params.get('sort') || 'featured'
+    };
+
+    const count = id => S.products.filter(p => !id || p.cat === id).length;
+    const catLinks = [{ id: '', name: 'All products' }, ...S.categories];
+
+    function syncUrl() {
+      const u = new URLSearchParams();
+      if (state.cat) u.set('cat', state.cat);
+      if (state.q) u.set('q', state.q);
+      if (state.under25) u.set('under', '25');
+      if (state.sort !== 'featured') u.set('sort', state.sort);
+      history.replaceState(null, '', 'shop.html' + (u.toString() ? '?' + u : ''));
+    }
+
+    function render() {
+      const c = catById[state.cat];
+      document.title = (c ? c.name : 'Shop') + ' — MSU Bookstore';
+      $('#title').textContent = c ? c.name : 'Shop the store';
+      $('#crumbCat').textContent = c ? c.name : 'Shop';
+      $('#lede').textContent = c ? `${c.blurb}. Prices and stock are confirmed at checkout on msubookstore.org.` : 'Bobcat apparel, gifts, tech and supplies. Prices and stock are confirmed at checkout on msubookstore.org.';
+
+      $('#catList').innerHTML = catLinks.map(x => `<li><a href="shop.html${x.id ? '?cat=' + x.id : ''}" data-cat="${x.id}" ${x.id === state.cat ? 'aria-current="true"' : ''}>${esc(x.name)} <span>${count(x.id)}</span></a></li>`).join('');
+      $('#catChips').innerHTML = catLinks.map(x => `<a href="shop.html${x.id ? '?cat=' + x.id : ''}" data-cat="${x.id}" ${x.id === state.cat ? 'aria-current="true"' : ''}>${esc(x.name)}</a>`).join('');
+
+      const terms = state.q.toLowerCase().split(/\s+/).filter(Boolean);
+      let items = S.products.filter(p =>
+        (!state.cat || p.cat === state.cat) &&
+        (!state.under25 || (p.price && p.price < 25)) &&
+        (!state.priced || p.price) &&
+        terms.every(t => (p.name + ' ' + (p.brand || '') + ' ' + catById[p.cat].name + ' ' + (p.desc || '')).toLowerCase().includes(t)));
+
+      const priceOr = (p, d) => p.price ?? d;
+      if (state.sort === 'low') items.sort((a, b) => priceOr(a, Infinity) - priceOr(b, Infinity));
+      if (state.sort === 'high') items.sort((a, b) => priceOr(b, -1) - priceOr(a, -1));
+      if (state.sort === 'name') items.sort((a, b) => a.name.localeCompare(b.name));
+      if (state.sort === 'featured') items.sort((a, b) => b.tags.includes('featured') - a.tags.includes('featured'));
+
+      $('#count').textContent = `${items.length} product${items.length === 1 ? '' : 's'}` + (state.q ? ` for “${state.q}”` : '');
+      const fullSearch = L.search + '?q=' + encodeURIComponent(state.q);
+      $('#grid').innerHTML = items.length ? items.map(card).join('') : `
+        <div class="empty" style="grid-column:1/-1">
+          <h3>Nothing here yet</h3>
+          <p>Try a different filter, or search the store's full catalog.</p>
+          <a class="btn btn-navy" href="${state.q ? fullSearch : L.site}" ${ext}>Search msubookstore.org ↗</a>
+        </div>`;
+
+      const storeLink = c ? c.store : (state.q ? fullSearch : L.site);
+      $('#storeNote').innerHTML = `<span>This is a curated selection. The full ${c ? esc(c.name.toLowerCase()) + ' range' : 'catalog'} is on the store's website.</span>
+        <a class="btn btn-navy" href="${storeLink}" ${ext}>See everything ↗</a>`;
+
+      $('#q').value = state.q;
+      $('#sort').value = state.sort;
+      $('#under25Side').checked = $('#under25Top').checked = state.under25;
+      $('#pricedSide').checked = state.priced;
+      syncUrl();
+    }
+
+    // category links switch in place (still real links if JS is slow)
+    document.addEventListener('click', e => {
+      const a = e.target.closest('a[data-cat]');
+      if (!a) return;
+      e.preventDefault();
+      state.cat = a.dataset.cat;
+      render();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+    $('#q').addEventListener('input', e => { state.q = e.target.value.trim(); render(); });
+    $('#sort').addEventListener('change', e => { state.sort = e.target.value; render(); });
+    ['#under25Side', '#under25Top'].forEach(id => $(id).addEventListener('change', e => { state.under25 = e.target.checked; render(); }));
+    $('#pricedSide').addEventListener('change', e => { state.priced = e.target.checked; render(); });
+
+    render();
+  })();
+</script>
+</body>
+</html>

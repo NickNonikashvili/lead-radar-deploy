@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hours &amp; Location — MSU Bookstore</title>
+<meta name="description" content="MSU Bookstore hours, location in the Strand Union Building, Bozeman, and contact details.">
+<meta name="robots" content="noindex">
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/styles.css">
+</head>
+<body data-page="visit">
+<div id="site-header"></div>
+
+<main id="main">
+  <div class="page-hero">
+    <div class="wrap">
+      <nav class="crumbs" aria-label="Breadcrumb"><a href="index.html">Home</a><span>/</span><span>Visit</span></nav>
+      <div class="eyebrow">Visit</div>
+      <h1>Hours &amp; location</h1>
+      <p>Room 125 of the Strand Union Building on the Montana State campus in Bozeman.</p>
+    </div>
+    <svg class="mtn" viewBox="0 0 1440 90" preserveAspectRatio="none" aria-hidden="true"><path fill="currentColor" d="M0 90V62l120-30 90 22 140-46 110 38 80-18 150 44 120-34 110 20 140-52 130 40 100-16 150 34V90z"/></svg>
+  </div>
+
+  <section class="tight">
+    <div class="wrap visit-grid">
+      <div class="card">
+        <span class="status" id="status"></span>
+        <div class="toggle" role="group" aria-label="Hours schedule">
+          <button data-sched="semester">Semester</button>
+          <button data-sched="summer">Summer</button>
+        </div>
+        <table class="hours" id="hours"></table>
+        <p style="font-size:14px;color:var(--muted);margin:14px 0 0">Holiday and break hours vary. <a id="hoursLink" target="_blank" rel="noopener" style="color:var(--navy);font-weight:600">Check the latest hours ↗</a></p>
+      </div>
+      <div class="map-embed">
+        <iframe title="Map of the Strand Union Building, Montana State University" loading="lazy" referrerpolicy="no-referrer-when-downgrade"
+          src="https://www.google.com/maps?q=Strand+Union+Building,+Montana+State+University,+Bozeman,+MT+59717&output=embed"></iframe>
+      </div>
+    </div>
+  </section>
+
+  <section class="alt" id="contact">
+    <div class="wrap">
+      <div class="sec-head"><div><div class="eyebrow">Contact</div><h2>Get in touch</h2></div></div>
+      <div class="svc-grid three">
+        <div class="svc"><span class="ic" data-i="call"></span><h3>Call</h3><p>Questions about orders, textbooks or stock.</p><a href="tel:+14069942811">(406) 994-2811</a></div>
+        <div class="svc"><span class="ic" data-i="mail"></span><h3>Email</h3><p>We'll get back to you during store hours.</p><a href="mailto:bookstore@montana.edu">bookstore@montana.edu</a></div>
+        <div class="svc"><span class="ic" data-i="pin"></span><h3>Visit</h3><p>125 Strand Union Building, Bozeman, MT 59717.</p><a href="https://www.google.com/maps/search/?api=1&query=Strand+Union+Building+Montana+State+University+Bozeman+MT" target="_blank" rel="noopener">Get directions ↗</a></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="help">
+    <div class="wrap">
+      <div><h2>Looking for an answer?</h2><p>Rentals, buyback, returns and Inclusive Access are covered in the FAQ.</p></div>
+      <div class="ctas"><a class="btn btn-navy" href="help.html">Read the FAQ</a><a class="btn btn-line" id="contactLink" target="_blank" rel="noopener">Contact form ↗</a></div>
+    </div>
+  </section>
+</main>
+
+<div id="site-footer"></div>
+<script src="assets/data.js"></script>
+<script src="assets/photos.js"></script>
+<script src="assets/site.js"></script>
+<script>
+  (function () {
+    const { L, $, $$, icon, renderStatus, renderHoursTable, defaultSchedule } = window.SITE;
+    $('#hoursLink').href = L.hours;
+    $('#contactLink').href = L.contact;
+    $$('[data-i]').forEach(el => el.innerHTML = icon(el.dataset.i));
+    function pick(name) {
+      $$('.toggle button').forEach(b => b.setAttribute('aria-pressed', b.dataset.sched === name));
+      renderStatus($('#status'), name);
+      renderHoursTable($('#hours'), name);
+    }
+    $$('.toggle button').forEach(b => b.addEventListener('click', () => pick(b.dataset.sched)));
+    pick(defaultSchedule());
+  })();
+</script>
+</body>
+</html>

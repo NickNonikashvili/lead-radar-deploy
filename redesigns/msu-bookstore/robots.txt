@@ -1,0 +1,4 @@
+# Redesign concept: keep it out of search results so it isn't confused with the official store.
+# Replace with "Allow: /" if the store adopts this site.
+User-agent: *
+Disallow: /

@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Product — MSU Bookstore</title>
+<meta name="robots" content="noindex">
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/styles.css">
+</head>
+<body data-page="product">
+<div id="site-header"></div>
+
+<main id="main">
+  <section class="tight">
+    <div class="wrap">
+      <nav class="crumbs light" aria-label="Breadcrumb" id="crumbs"></nav>
+      <div class="pdp" id="pdp" style="margin-top:16px"></div>
+    </div>
+  </section>
+
+  <section class="alt" id="relatedWrap">
+    <div class="wrap">
+      <div class="sec-head">
+        <div><div class="eyebrow">You might also like</div><h2 id="relatedTitle">More from this category</h2></div>
+        <a class="link" id="relatedMore" href="shop.html">See all →</a>
+      </div>
+      <div class="prod-grid" id="related"></div>
+    </div>
+  </section>
+</main>
+
+<div id="site-footer"></div>
+<script src="assets/data.js"></script>
+<script src="assets/photos.js"></script>
+<script src="assets/site.js"></script>
+<script>
+  (function () {
+    const { S, L, $, esc, ext, icon, money, card, media, catById, byId } = window.SITE;
+    const id = new URLSearchParams(location.search).get('id');
+    const p = byId[id];
+
+    if (!p) {
+      document.title = 'Product not found — MSU Bookstore';
+      $('#crumbs').innerHTML = '<a href="index.html">Home</a><span>/</span><a href="shop.html">Shop</a>';
+      $('#pdp').outerHTML = `<div class="empty"><h3>We couldn't find that product</h3><p>It may have sold out or moved.</p><a class="btn btn-navy" href="shop.html">Back to the shop</a></div>`;
+      $('#relatedWrap').remove();
+      return;
+    }
+
+    const c = catById[p.cat];
+    const directPage = /\/product\//.test(p.url);
+    document.title = `${p.name} — MSU Bookstore`;
+    const meta = document.createElement('meta');
+    meta.name = 'description'; meta.content = p.desc || p.name;
+    document.head.appendChild(meta);
+
+    $('#crumbs').innerHTML = `<a href="index.html">Home</a><span>/</span><a href="shop.html">Shop</a><span>/</span><a href="shop.html?cat=${c.id}">${esc(c.name)}</a>`;
+    const m = media(p);
+    $('#pdp').innerHTML = `
+      <div class="gallery"><div class="ph" style="background:${m.bg}">${p.badge ? `<span class="tag ${p.badge === 'Clearance' ? 'sale' : p.badge === 'Champs' ? 'gold' : ''}">${esc(p.badge)}</span>` : ''}${m.html}</div></div>
+      <div>
+        <div class="brand">${esc(p.brand || c.name)}</div>
+        <h1>${esc(p.name)}</h1>
+        <p class="price">${p.price ? money(p.price) + '<small>Price as listed on msubookstore.org. Confirm at checkout.</small>' : '<span style="font-size:20px">See price on msubookstore.org</span><small>Sizes, colors and stock are on the store page.</small>'}</p>
+        ${p.desc ? `<p class="desc">${esc(p.desc)}</p>` : ''}
+        <div class="buy">
+          <a class="btn btn-gold btn-lg" href="${esc(p.url)}" ${ext}>${directPage ? 'Choose size &amp; buy on msubookstore.org ↗' : `Find it in ${esc(c.name)} on msubookstore.org ↗`}</a>
+          <a class="btn btn-line btn-lg" href="visit.html">Pick it up in the SUB</a>
+        </div>
+        <ul class="perks">
+          <li>${icon('store', 20)}<div><b>In store at the Strand Union Building</b><span>Room 125, Montana State campus.</span></div></li>
+          <li>${icon('check', 20)}<div><b>Not-for-profit since 1931</b><span>Proceeds go back into lowering costs for students.</span></div></li>
+          <li>${icon('call', 20)}<div><b>Questions about this item?</b><span><a href="tel:+14069942811">(406) 994-2811</a> · <a href="mailto:bookstore@montana.edu">bookstore@montana.edu</a></span></div></li>
+        </ul>
+      </div>`;
+
+    const related = S.products.filter(x => x.cat === p.cat && x.id !== p.id).slice(0, 4);
+    if (!related.length) { $('#relatedWrap').remove(); return; }
+    $('#relatedTitle').textContent = `More ${c.name.toLowerCase()}`;
+    $('#relatedMore').href = `shop.html?cat=${c.id}`;
+    $('#related').innerHTML = related.map(card).join('');
+  })();
+</script>
+</body>
+</html>

@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Help &amp; FAQ — MSU Bookstore</title>
+<meta name="description" content="Answers about textbook rentals, buyback, returns, Inclusive Access and more at the MSU Bookstore.">
+<meta name="robots" content="noindex">
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/styles.css">
+</head>
+<body data-page="help">
+<div id="site-header"></div>
+
+<main id="main">
+  <div class="page-hero">
+    <div class="wrap">
+      <nav class="crumbs" aria-label="Breadcrumb"><a href="index.html">Home</a><span>/</span><span>Help</span></nav>
+      <div class="eyebrow">Help</div>
+      <h1>Questions, answered.</h1>
+      <p>Rentals, buyback, returns and digital materials in plain language.</p>
+    </div>
+    <svg class="mtn" viewBox="0 0 1440 90" preserveAspectRatio="none" aria-hidden="true"><path fill="currentColor" d="M0 90V62l120-30 90 22 140-46 110 38 80-18 150 44 120-34 110 20 140-52 130 40 100-16 150 34V90z"/></svg>
+  </div>
+
+  <section class="tight">
+    <div class="wrap faq-layout">
+      <div>
+        <div class="faq-group" id="rentals">
+          <h2>Rentals</h2>
+          <details><summary>How does renting a textbook work?</summary><div class="a">It's like renting a movie. You pay a lower cost up front, use the book for the semester and return it when your class is over.</div></details>
+          <details><summary>When are rentals due back?</summary><div class="a">Rented textbooks are due back the last day of finals week.</div></details>
+          <details><summary>What happens if I don't return a rental?</summary><div class="a">The remaining cost of the book plus a $10 fee is charged to the card used to rent it.</div></details>
+        </div>
+
+        <div class="faq-group" id="buyback">
+          <h2>Buyback</h2>
+          <details><summary>What is buyback?</summary><div class="a">Buyback is when you sell your unwanted textbooks back to the store at the end of the semester.</div></details>
+          <details><summary>When does buyback happen?</summary><div class="a">From the Friday before finals week through the last Friday of finals.</div></details>
+          <details><summary>Which books can I sell back?</summary><div class="a">The store buys books at retail value only when a faculty member has requested them for the upcoming semester.</div></details>
+          <details><summary>What condition do books need to be in?</summary><div class="a">Normal wear and tear is fine. Books with water or liquid damage, or a lot of ripped pages, can't be accepted.</div></details>
+        </div>
+
+        <div class="faq-group" id="returns">
+          <h2>Returns</h2>
+          <details><summary>Can I return course materials?</summary><div class="a">Fall and spring course materials are refundable for the first two weeks of the term they were bought in. They must be in the same condition and come with a receipt.</div></details>
+          <details><summary>What about summer courses?</summary><div class="a">Summer refund deadlines are shorter and depend on how long the course runs. Contact the store before buying if you're unsure.</div></details>
+          <details><summary>Where's the full return policy?</summary><div class="a">See the <a id="returnsLink" target="_blank" rel="noopener">returns page on msubookstore.org ↗</a>.</div></details>
+        </div>
+
+        <div class="faq-group" id="digital">
+          <h2>Digital &amp; Inclusive Access</h2>
+          <details><summary>What is Inclusive Access?</summary><div class="a">Inclusive Access (IA) delivers your digital textbooks and course materials in Canvas on the first day of class. The cost is charged to your university student account.</div></details>
+          <details><summary>What formats are available?</summary><div class="a">Inclusive Access digital materials, access codes, eBooks, physical books and course packets.</div></details>
+          <details><summary>How do I search by student ID?</summary><div class="a">Put an <b>M</b> in front of your student ID number in the <a href="textbooks.html">course materials search</a>.</div></details>
+        </div>
+
+        <div class="faq-group" id="faculty">
+          <h2>Faculty</h2>
+          <details><summary>What is an adoption?</summary><div class="a">An adoption is a textbook or other course material that an instructor selects for students to use in a course.</div></details>
+          <details><summary>How do I submit adoptions?</summary><div class="a">Through Verba Collect, the store's adoption partner. The course materials manager then finalizes adoptions for all Montana State courses. <a href="textbooks.html#faculty">More for faculty →</a></div></details>
+        </div>
+      </div>
+
+      <aside class="card">
+        <h3 style="font-size:22px;color:var(--navy);margin-bottom:8px">Still need help?</h3>
+        <p style="color:var(--muted);margin:0 0 6px">The team in the SUB is happy to help.</p>
+        <ul class="contact-list">
+          <li><a href="tel:+14069942811"><span data-i="call"></span>(406) 994-2811</a></li>
+          <li><a href="mailto:bookstore@montana.edu"><span data-i="mail"></span>bookstore@montana.edu</a></li>
+          <li><a href="visit.html"><span data-i="pin"></span>Hours &amp; location</a></li>
+        </ul>
+        <a class="btn btn-line" id="faqLink" target="_blank" rel="noopener" style="margin-top:18px;width:100%">Official FAQ ↗</a>
+      </aside>
+    </div>
+  </section>
+</main>
+
+<div id="site-footer"></div>
+<script src="assets/data.js"></script>
+<script src="assets/photos.js"></script>
+<script src="assets/site.js"></script>
+<script>
+  (function () {
+    const { L, $, $$, icon } = window.SITE;
+    $('#returnsLink').href = L.returns;
+    $('#faqLink').href = L.faq;
+    $$('[data-i]').forEach(el => el.outerHTML = icon(el.dataset.i, 18, 2));
+    // open the question group named in the URL hash
+    const target = location.hash && document.querySelector(location.hash);
+    if (target && target.classList.contains('faq-group')) target.querySelectorAll('details').forEach(d => d.open = true);
+  })();
+</script>
+</body>
+</html>
