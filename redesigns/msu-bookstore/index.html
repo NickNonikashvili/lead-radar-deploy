@@ -22,25 +22,19 @@
     --red: #b4372f;
     --radius: 14px;
     --shadow: 0 1px 2px rgba(11,42,74,.06), 0 8px 24px rgba(11,42,74,.08);
+    --sans: Inter, system-ui, -apple-system, "Segoe UI", sans-serif;
   }
   * { box-sizing: border-box; }
   html { scroll-behavior: smooth; }
-  body {
-    margin: 0; background: var(--bg); color: var(--ink);
-    font: 16px/1.55 Inter, system-ui, -apple-system, Segoe UI, sans-serif;
-    -webkit-font-smoothing: antialiased;
-  }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.55 var(--sans); -webkit-font-smoothing: antialiased; }
+  button, input, select { font-family: var(--sans); }
   a { color: inherit; }
   img, svg { display: block; max-width: 100%; }
   .wrap { max-width: 1200px; margin: 0 auto; padding: 0 16px; }
   @media (min-width: 768px) { .wrap { padding: 0 28px; } }
   h1, h2, h3 { font-family: Fraunces, Georgia, serif; line-height: 1.1; margin: 0; letter-spacing: -.01em; }
   .eyebrow { font-size: 12px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--gold); }
-  .btn {
-    display: inline-flex; align-items: center; gap: 8px; border: 0; cursor: pointer;
-    font: 600 15px Inter, system-ui, sans-serif; padding: 12px 20px; border-radius: 999px; text-decoration: none;
-    transition: transform .15s ease, background .15s ease;
-  }
+  .btn { display: inline-flex; align-items: center; gap: 8px; border: 0; cursor: pointer; font-weight: 600; font-size: 15px; padding: 12px 20px; border-radius: 999px; text-decoration: none; transition: transform .15s ease, background .15s ease; }
   .btn:hover { transform: translateY(-1px); }
   .btn-gold { background: var(--gold); color: var(--navy); }
   .btn-gold:hover { background: #f2c43a; }
@@ -48,19 +42,18 @@
   .btn-navy { background: var(--navy); color: #fff; }
   :focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
 
-  /* Concept banner */
   .concept { background: #fff7e0; color: #6b5310; font-size: 13px; text-align: center; padding: 6px 16px; border-bottom: 1px solid #f0e2b3; }
+  .concept a { font-weight: 600; }
 
-  /* Announcement */
   .announce { background: var(--navy); color: #dfe7f1; font-size: 14px; }
   .announce .wrap { display: flex; justify-content: space-between; gap: 16px; padding-top: 9px; padding-bottom: 9px; }
   .announce strong { color: var(--gold); }
+  .announce a { text-decoration: none; }
   .announce .right { display: none; gap: 20px; }
-  .announce .right a { text-decoration: none; opacity: .85; }
+  .announce .right a { opacity: .85; }
   .announce .right a:hover { opacity: 1; }
   @media (min-width: 860px) { .announce .right { display: flex; } }
 
-  /* Header */
   header.site { position: sticky; top: 0; z-index: 50; background: rgba(255,255,255,.96); backdrop-filter: saturate(1.4) blur(10px); border-bottom: 1px solid var(--line); }
   header.site .wrap { display: flex; align-items: center; gap: 20px; height: 72px; }
   .logo { display: flex; align-items: center; gap: 10px; text-decoration: none; flex-shrink: 0; }
@@ -69,112 +62,104 @@
   .logo-text b { display: block; font-family: Fraunces, serif; font-size: 19px; color: var(--navy); }
   .logo-text span { font-size: 11px; color: var(--muted); letter-spacing: .06em; text-transform: uppercase; }
   .search { flex: 1; display: none; position: relative; }
-  .search input {
-    width: 100%; height: 44px; border-radius: 999px; border: 1.5px solid var(--line); background: var(--bg-alt);
-    padding: 0 16px 0 44px; font: 15px Inter, system-ui, sans-serif; color: var(--ink);
-  }
+  .search input { width: 100%; height: 44px; border-radius: 999px; border: 1.5px solid var(--line); background: var(--bg-alt); padding: 0 16px 0 44px; font-size: 15px; color: var(--ink); }
   .search input:focus { outline: none; border-color: var(--navy); background: #fff; }
-  .search svg { position: absolute; left: 15px; top: 12px; color: var(--muted); }
+  .search svg { position: absolute; left: 15px; top: 13px; color: var(--muted); }
   @media (min-width: 860px) { .search { display: block; } }
   .head-actions { display: flex; align-items: center; gap: 6px; margin-left: auto; }
   .icon-btn { position: relative; width: 44px; height: 44px; border-radius: 50%; border: 0; background: transparent; display: grid; place-items: center; cursor: pointer; color: var(--navy); }
   .icon-btn:hover { background: var(--bg-alt); }
-  .badge { position: absolute; top: 4px; right: 3px; min-width: 18px; height: 18px; border-radius: 9px; background: var(--gold); color: var(--navy); font-size: 11px; font-weight: 700; display: grid; place-items: center; padding: 0 4px; }
   .menu-toggle { display: grid; }
   @media (min-width: 1000px) { .menu-toggle { display: none; } }
 
   nav.cats { border-top: 1px solid var(--line); display: none; }
-  nav.cats ul { list-style: none; margin: 0; padding: 0; display: flex; gap: 4px; }
-  nav.cats a { display: block; padding: 12px 14px; font-size: 14.5px; font-weight: 500; text-decoration: none; color: var(--ink); border-bottom: 2px solid transparent; }
+  nav.cats ul { list-style: none; margin: 0; padding: 0; display: flex; gap: 2px; }
+  nav.cats a { display: block; padding: 12px 13px; font-size: 14.5px; font-weight: 500; text-decoration: none; color: var(--ink); border-bottom: 2px solid transparent; }
   nav.cats a:hover { color: var(--navy); border-color: var(--gold); }
-  nav.cats .sale a { color: var(--red); font-weight: 600; }
+  nav.cats .hot a { color: #a77d07; font-weight: 700; }
   @media (min-width: 1000px) { nav.cats { display: block; } }
 
-  /* Mobile drawer */
   .drawer { position: fixed; inset: 0; z-index: 100; display: none; }
   .drawer.open { display: block; }
   .drawer .scrim { position: absolute; inset: 0; background: rgba(11,42,74,.45); }
   .drawer .panel { position: absolute; top: 0; left: 0; bottom: 0; width: min(340px, 86vw); background: #fff; padding: 20px; overflow-y: auto; }
-  .drawer .panel input { width: 100%; height: 44px; border-radius: 10px; border: 1.5px solid var(--line); padding: 0 14px; font: 15px Inter, system-ui, sans-serif; margin: 14px 0; }
+  .drawer .panel input { width: 100%; height: 44px; border-radius: 10px; border: 1.5px solid var(--line); padding: 0 14px; font-size: 15px; margin: 14px 0; }
   .drawer ul { list-style: none; padding: 0; margin: 0; }
   .drawer li a { display: block; padding: 13px 4px; border-bottom: 1px solid var(--line); text-decoration: none; font-weight: 500; }
 
   /* Hero */
   .hero { background: radial-gradient(1200px 500px at 85% -10%, #1d4f84 0%, transparent 60%), var(--navy); color: #fff; overflow: hidden; position: relative; }
-  .hero .wrap { display: grid; gap: 40px; padding-top: 56px; padding-bottom: 64px; }
-  @media (min-width: 960px) { .hero .wrap { grid-template-columns: 1.05fr 1fr; align-items: center; padding-top: 80px; padding-bottom: 88px; } }
+  .hero .wrap { display: grid; gap: 40px; padding-top: 56px; padding-bottom: 72px; }
+  @media (min-width: 960px) { .hero .wrap { grid-template-columns: 1.05fr 1fr; align-items: center; padding-top: 80px; padding-bottom: 96px; } }
   .hero h1 { font-size: clamp(38px, 5.5vw, 64px); margin: 14px 0 18px; }
   .hero h1 em { font-style: normal; color: var(--gold); }
   .hero p.lead { font-size: 18px; color: #c9d6e6; max-width: 520px; margin: 0 0 28px; }
   .hero .ctas { display: flex; flex-wrap: wrap; gap: 12px; }
   .hero .mtn { position: absolute; left: 0; right: 0; bottom: -1px; height: 90px; color: var(--bg); pointer-events: none; }
 
-  /* Textbook finder */
   .finder { background: #fff; color: var(--ink); border-radius: 18px; padding: 24px; box-shadow: 0 20px 60px rgba(0,0,0,.25); position: relative; z-index: 2; }
   .finder h2 { font-size: 24px; color: var(--navy); }
   .finder .sub { color: var(--muted); font-size: 14px; margin: 6px 0 18px; }
-  .tabs { display: flex; gap: 6px; background: var(--bg-alt); padding: 4px; border-radius: 10px; margin-bottom: 18px; }
-  .tabs button { flex: 1; border: 0; background: transparent; font: 600 14px Inter, system-ui, sans-serif; padding: 9px; border-radius: 8px; cursor: pointer; color: var(--muted); }
-  .tabs button[aria-selected="true"] { background: #fff; color: var(--navy); box-shadow: 0 1px 3px rgba(0,0,0,.1); }
-  .fields { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-  .field label { display: block; font-size: 12px; font-weight: 600; color: var(--muted); margin-bottom: 5px; text-transform: uppercase; letter-spacing: .05em; }
-  .field select, .field input {
-    width: 100%; height: 46px; border: 1.5px solid var(--line); border-radius: 10px; padding: 0 12px;
-    font: 15px Inter, system-ui, sans-serif; color: var(--ink); background: #fff;
-  }
-  .field select:focus, .field input:focus { outline: none; border-color: var(--navy); }
-  .field select:disabled { background: var(--bg-alt); color: #a0a7b2; }
-  .finder .btn { width: 100%; justify-content: center; margin-top: 16px; height: 50px; }
-  .finder .fine { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 14px; font-size: 13px; color: var(--muted); }
-  .finder .fine span { display: inline-flex; align-items: center; gap: 6px; }
-  .finder .fine svg { color: var(--green); }
-  .result { margin-top: 16px; border: 1.5px dashed var(--line); border-radius: 12px; padding: 14px; font-size: 14px; display: none; }
-  .result.show { display: block; }
-  .result .row { display: flex; justify-content: space-between; gap: 12px; padding: 6px 0; }
-  .result .opts { display: flex; gap: 6px; flex-wrap: wrap; }
-  .chip { font-size: 12px; font-weight: 600; padding: 4px 9px; border-radius: 999px; background: var(--bg-alt); color: var(--navy); }
-  .chip.best { background: #e3f4ea; color: var(--green); }
-  [hidden] { display: none !important; }
+  .finder label { display: block; font-size: 12px; font-weight: 600; color: var(--muted); margin-bottom: 6px; text-transform: uppercase; letter-spacing: .05em; }
+  .finder .inrow { display: flex; gap: 8px; }
+  .finder input { flex: 1; min-width: 0; height: 50px; border: 1.5px solid var(--line); border-radius: 12px; padding: 0 14px; font-size: 15px; color: var(--ink); }
+  .finder input:focus { outline: none; border-color: var(--navy); }
+  .finder .inrow .btn { height: 50px; border-radius: 12px; }
+  .finder .hint { font-size: 13px; color: var(--muted); margin-top: 8px; }
+  .finder .or { display: flex; align-items: center; gap: 12px; color: var(--muted); font-size: 13px; margin: 18px 0; }
+  .finder .or::before, .finder .or::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+  .finder .browse { width: 100%; justify-content: center; height: 50px; background: var(--bg-alt); color: var(--navy); }
+  .finder .links { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 16px; }
+  .finder .links a { font-size: 13px; font-weight: 600; text-decoration: none; color: var(--navy); padding: 6px 12px; border-radius: 999px; border: 1.5px solid var(--line); }
+  .finder .links a:hover { border-color: var(--navy); }
 
-  /* Sections */
+  /* Champs banner */
+  .champs { background: linear-gradient(90deg, #e8b521, #f2cd5c); color: var(--navy); }
+  .champs .wrap { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding-top: 22px; padding-bottom: 22px; flex-wrap: wrap; }
+  .champs h2 { font-size: clamp(22px, 2.6vw, 30px); }
+  .champs p { margin: 4px 0 0; font-size: 15px; }
+  .champs .trophy { display: flex; align-items: center; gap: 16px; }
+
   section { padding: 72px 0; }
   .sec-head { display: flex; align-items: end; justify-content: space-between; gap: 20px; margin-bottom: 28px; flex-wrap: wrap; }
   .sec-head h2 { font-size: clamp(28px, 3.4vw, 40px); color: var(--navy); margin-top: 8px; }
   .sec-head .eyebrow { color: #a77d07; }
   .sec-head a.more { font-weight: 600; color: var(--navy); text-decoration: none; border-bottom: 2px solid var(--gold); padding-bottom: 2px; }
 
-  /* Category grid */
   .cat-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
-  @media (min-width: 720px) { .cat-grid { grid-template-columns: repeat(3, 1fr); } }
-  @media (min-width: 1080px) { .cat-grid { grid-template-columns: repeat(6, 1fr); } }
-  .cat {
-    border: 1px solid var(--line); border-radius: var(--radius); padding: 20px 16px; text-decoration: none; background: #fff;
-    display: flex; flex-direction: column; gap: 14px; transition: border-color .15s, box-shadow .15s, transform .15s;
-  }
+  @media (min-width: 720px) { .cat-grid { grid-template-columns: repeat(4, 1fr); } }
+  .cat { border: 1px solid var(--line); border-radius: var(--radius); padding: 20px 16px; text-decoration: none; background: #fff; display: flex; flex-direction: column; gap: 14px; transition: border-color .15s, box-shadow .15s, transform .15s; }
   .cat:hover { border-color: var(--navy); box-shadow: var(--shadow); transform: translateY(-2px); }
-  .cat .ic { width: 48px; height: 48px; border-radius: 12px; background: var(--gold-soft); color: var(--navy); display: grid; place-items: center; }
+  .ic { width: 48px; height: 48px; border-radius: 12px; background: var(--gold-soft); color: var(--navy); display: grid; place-items: center; flex-shrink: 0; }
   .cat b { font-size: 16px; color: var(--navy); }
-  .cat span { font-size: 13px; color: var(--muted); display: block; margin-top: 2px; }
+  .cat span.d { font-size: 13px; color: var(--muted); display: block; margin-top: 2px; }
 
-  /* Products */
+  /* Shop */
   .alt { background: var(--bg-alt); }
+  .shop-tabs { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; margin-bottom: 24px; scrollbar-width: none; }
+  .shop-tabs::-webkit-scrollbar { display: none; }
+  .shop-tabs button { flex-shrink: 0; border: 1.5px solid var(--line); background: #fff; border-radius: 999px; padding: 9px 16px; font-weight: 600; font-size: 14px; color: var(--muted); cursor: pointer; }
+  .shop-tabs button[aria-selected="true"] { background: var(--navy); border-color: var(--navy); color: #fff; }
   .prod-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
   @media (min-width: 900px) { .prod-grid { grid-template-columns: repeat(4, 1fr); gap: 22px; } }
-  .prod { background: #fff; border-radius: var(--radius); overflow: hidden; border: 1px solid var(--line); display: flex; flex-direction: column; }
+  .prod { background: #fff; border-radius: var(--radius); overflow: hidden; border: 1px solid var(--line); display: flex; flex-direction: column; text-decoration: none; transition: box-shadow .15s, transform .15s; }
+  .prod:hover { box-shadow: var(--shadow); transform: translateY(-2px); }
   .prod .ph { aspect-ratio: 1 / 1; display: grid; place-items: center; position: relative; }
   .prod .tag { position: absolute; top: 10px; left: 10px; font-size: 11px; font-weight: 700; padding: 4px 8px; border-radius: 6px; background: var(--navy); color: #fff; letter-spacing: .04em; }
   .prod .tag.sale { background: var(--red); }
+  .prod .tag.gold { background: var(--gold); color: var(--navy); }
   .prod .body { padding: 14px 14px 16px; display: flex; flex-direction: column; gap: 4px; flex: 1; }
-  .prod .name { font-weight: 600; font-size: 15px; }
+  .prod .brand { font-size: 12px; font-weight: 600; color: #a77d07; text-transform: uppercase; letter-spacing: .06em; }
+  .prod .name { font-weight: 600; font-size: 15px; line-height: 1.35; }
   .prod .meta { font-size: 13px; color: var(--muted); }
-  .prod .price { margin-top: auto; padding-top: 10px; display: flex; align-items: center; justify-content: space-between; }
+  .prod .price { margin-top: auto; padding-top: 12px; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
   .prod .price b { font-size: 17px; color: var(--navy); }
-  .prod .price s { color: var(--muted); font-size: 13px; margin-left: 6px; }
-  .add { width: 38px; height: 38px; border-radius: 50%; border: 1.5px solid var(--line); background: #fff; cursor: pointer; display: grid; place-items: center; color: var(--navy); transition: all .15s; }
-  .add:hover { background: var(--navy); color: #fff; border-color: var(--navy); }
-  .add.done { background: var(--green); border-color: var(--green); color: #fff; }
+  .prod .price .see { font-size: 14px; font-weight: 600; color: var(--navy); }
+  .prod .go { width: 36px; height: 36px; border-radius: 50%; border: 1.5px solid var(--line); display: grid; place-items: center; color: var(--navy); flex-shrink: 0; transition: all .15s; }
+  .prod:hover .go { background: var(--navy); border-color: var(--navy); color: #fff; }
+  .shop-foot { margin-top: 24px; text-align: center; }
 
-  /* Owned band */
+  /* Owned */
   .owned { background: var(--navy); color: #fff; }
   .owned .wrap { display: grid; gap: 40px; }
   @media (min-width: 900px) { .owned .wrap { grid-template-columns: 1.1fr 1fr; align-items: center; } }
@@ -182,15 +167,16 @@
   .owned p { color: #c9d6e6; font-size: 17px; max-width: 540px; }
   .stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
   .stat { border: 1px solid rgba(255,255,255,.14); border-radius: var(--radius); padding: 22px; background: rgba(255,255,255,.03); }
-  .stat b { font-family: Fraunces, serif; font-size: 40px; color: var(--gold); display: block; line-height: 1; }
+  .stat b { font-family: Fraunces, serif; font-size: 36px; color: var(--gold); display: block; line-height: 1; }
   .stat span { font-size: 14px; color: #c9d6e6; display: block; margin-top: 8px; }
 
   /* Services */
   .svc-grid { display: grid; gap: 16px; }
-  @media (min-width: 800px) { .svc-grid { grid-template-columns: repeat(3, 1fr); } }
-  .svc { border: 1px solid var(--line); border-radius: var(--radius); padding: 26px; }
-  .svc h3 { font-size: 22px; color: var(--navy); margin: 14px 0 8px; }
-  .svc p { color: var(--muted); margin: 0 0 14px; font-size: 15px; }
+  @media (min-width: 800px) { .svc-grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (min-width: 1100px) { .svc-grid { grid-template-columns: repeat(4, 1fr); } }
+  .svc { border: 1px solid var(--line); border-radius: var(--radius); padding: 24px; display: flex; flex-direction: column; }
+  .svc h3 { font-size: 21px; color: var(--navy); margin: 14px 0 8px; }
+  .svc p { color: var(--muted); margin: 0 0 14px; font-size: 15px; flex: 1; }
   .svc a { font-weight: 600; color: var(--navy); font-size: 14px; }
 
   /* Visit */
@@ -206,12 +192,9 @@
   table.hours td:last-child { text-align: right; font-variant-numeric: tabular-nums; }
   table.hours tr.today td { font-weight: 700; color: var(--navy); }
   .hours-toggle { display: flex; gap: 6px; margin-top: 18px; }
-  .hours-toggle button { border: 1.5px solid var(--line); background: #fff; border-radius: 999px; padding: 6px 14px; font: 600 13px Inter, system-ui, sans-serif; cursor: pointer; color: var(--muted); }
+  .hours-toggle button { border: 1.5px solid var(--line); background: #fff; border-radius: 999px; padding: 6px 14px; font-weight: 600; font-size: 13px; cursor: pointer; color: var(--muted); }
   .hours-toggle button[aria-pressed="true"] { border-color: var(--navy); color: var(--navy); }
-  .map {
-    border-radius: var(--radius); min-height: 300px; position: relative; overflow: hidden;
-    background: linear-gradient(135deg, #e9eef3, #dfe7ee);
-  }
+  .map { border-radius: var(--radius); min-height: 300px; position: relative; overflow: hidden; background: linear-gradient(135deg, #e9eef3, #dfe7ee); }
   .map svg.bg { position: absolute; inset: 0; width: 100%; height: 100%; }
   .map .pin { position: absolute; left: 50%; top: 45%; transform: translate(-50%, -100%); }
   .map .addr { position: absolute; left: 16px; right: 16px; bottom: 16px; background: #fff; border-radius: 12px; padding: 16px; box-shadow: var(--shadow); display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
@@ -221,18 +204,15 @@
   .contact-list a { display: flex; align-items: center; gap: 10px; text-decoration: none; font-weight: 500; }
   .contact-list svg { color: #a77d07; }
 
-  /* Newsletter */
-  .news { background: var(--gold-soft); }
-  .news .wrap { display: grid; gap: 20px; align-items: center; }
-  @media (min-width: 860px) { .news .wrap { grid-template-columns: 1fr 1fr; } }
-  .news h2 { font-size: clamp(26px, 3vw, 34px); color: var(--navy); }
-  .news p { color: #5c5236; margin: 8px 0 0; }
-  .news form { display: flex; gap: 10px; flex-wrap: wrap; }
-  .news input { flex: 1 1 220px; height: 50px; border-radius: 999px; border: 1.5px solid #e6d7a8; padding: 0 20px; font: 15px Inter, system-ui, sans-serif; background: #fff; }
-  .news .btn { height: 50px; }
-  .news .msg { font-size: 14px; color: var(--green); font-weight: 600; margin-top: 8px; min-height: 20px; }
+  /* Help band */
+  .help { background: var(--gold-soft); }
+  .help .wrap { display: grid; gap: 20px; align-items: center; }
+  @media (min-width: 860px) { .help .wrap { grid-template-columns: 1fr auto; } }
+  .help h2 { font-size: clamp(26px, 3vw, 34px); color: var(--navy); }
+  .help p { color: #5c5236; margin: 8px 0 0; }
+  .help .ctas { display: flex; gap: 10px; flex-wrap: wrap; }
+  .help .btn-line { background: #fff; color: var(--navy); box-shadow: inset 0 0 0 1.5px #e6d7a8; }
 
-  /* Footer */
   footer { background: #071d34; color: #a9b8c9; font-size: 14px; padding: 56px 0 28px; }
   .foot-grid { display: grid; gap: 32px; grid-template-columns: repeat(2, 1fr); }
   @media (min-width: 900px) { .foot-grid { grid-template-columns: 1.6fr repeat(3, 1fr); } }
@@ -244,23 +224,20 @@
   footer a:hover { color: #fff; }
   .foot-bottom { border-top: 1px solid rgba(255,255,255,.1); margin-top: 40px; padding-top: 20px; display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; font-size: 13px; }
 
-  .toast { position: fixed; bottom: 20px; left: 50%; transform: translate(-50%, 120px); background: var(--navy); color: #fff; padding: 12px 20px; border-radius: 999px; font-weight: 600; font-size: 14px; box-shadow: var(--shadow); transition: transform .25s ease, visibility .25s; z-index: 200; visibility: hidden; }
-  .toast.show { transform: translate(-50%, 0); visibility: visible; }
-
   @media (prefers-reduced-motion: reduce) { * { transition: none !important; scroll-behavior: auto !important; } }
 </style>
 </head>
 <body>
 
-<div class="concept">Redesign concept — not the official site. Products, prices and course data are placeholders.</div>
+<div class="concept">Redesign concept, not the official site. Every link goes to the real store at <a href="https://www.msubookstore.org/" target="_blank" rel="noopener">msubookstore.org</a>.</div>
 
 <div class="announce">
   <div class="wrap">
-    <div><strong>Fall 2026:</strong> Rentals due back Dec 18 · Free in-store pickup on all orders</div>
+    <div><strong>Fall rentals</strong> are due back the last day of finals week · <a href="https://www.msubookstore.org/faq" target="_blank" rel="noopener">Buyback &amp; rental FAQ →</a></div>
     <div class="right">
       <a href="#visit">Hours &amp; location</a>
-      <a href="#services">Faculty adoptions</a>
-      <a href="#visit">Contact</a>
+      <a href="https://www.msubookstore.org/coursematerials201" target="_blank" rel="noopener">Faculty adoptions</a>
+      <a href="https://www.msubookstore.org/contact" target="_blank" rel="noopener">Contact</a>
     </div>
   </div>
 </div>
@@ -270,38 +247,28 @@
     <button class="icon-btn menu-toggle" aria-label="Open menu" id="openMenu">
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
     </button>
-    <a class="logo" href="#">
+    <a class="logo" href="#top">
       <span class="logo-mark" aria-hidden="true">
         <svg width="24" height="24" viewBox="0 0 24 24"><path d="M2 19 9 8l4 6 3-4 6 9z" fill="#e8b521"/><path d="M4 19h16" stroke="#fff" stroke-width="1.6"/></svg>
       </span>
       <span class="logo-text"><b>MSU Bookstore</b><span>Bozeman · Since 1931</span></span>
     </a>
-    <form class="search" role="search" onsubmit="event.preventDefault(); toast('Search is a demo in this concept')">
+    <form class="search" role="search" action="https://www.msubookstore.org/catalogsearch/result/" target="_blank">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-      <input type="search" placeholder="Search textbooks, ISBN, apparel, tech…" aria-label="Search the store">
+      <input type="search" name="q" placeholder="Search apparel, gifts, tech, supplies…" aria-label="Search the store">
     </form>
     <div class="head-actions">
-      <button class="icon-btn" aria-label="Account" onclick="toast('Sign-in is a demo in this concept')">
+      <a class="icon-btn" aria-label="My account" href="https://www.msubookstore.org/customer/account/" target="_blank" rel="noopener">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 5-6 8-6s6.5 2 8 6"/></svg>
-      </button>
-      <button class="icon-btn" aria-label="Cart">
+      </a>
+      <a class="icon-btn" aria-label="Cart" href="https://www.msubookstore.org/checkout/cart/" target="_blank" rel="noopener">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M3 4h2l2.4 11.2a2 2 0 0 0 2 1.6h7.7a2 2 0 0 0 2-1.5L21 8H6"/><circle cx="10" cy="21" r="1"/><circle cx="18" cy="21" r="1"/></svg>
-        <span class="badge" id="cartCount">0</span>
-      </button>
+      </a>
     </div>
   </div>
   <nav class="cats" aria-label="Shop categories">
     <div class="wrap">
-      <ul>
-        <li><a href="#finder">Textbooks</a></li>
-        <li><a href="#shop">Apparel</a></li>
-        <li><a href="#shop">Gifts &amp; Alumni</a></li>
-        <li><a href="#shop">Computers &amp; Tech</a></li>
-        <li><a href="#shop">School &amp; Art Supplies</a></li>
-        <li><a href="#shop">General Books</a></li>
-        <li><a href="#shop">Health &amp; Snacks</a></li>
-        <li class="sale"><a href="#shop">Sale</a></li>
-      </ul>
+      <ul id="navList"></ul>
     </div>
   </nav>
 </header>
@@ -315,28 +282,20 @@
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>
       </button>
     </div>
-    <input type="search" placeholder="Search the store" aria-label="Search">
-    <ul>
-      <li><a href="#finder" data-close>Textbooks</a></li>
-      <li><a href="#shop" data-close>Apparel</a></li>
-      <li><a href="#shop" data-close>Gifts &amp; Alumni</a></li>
-      <li><a href="#shop" data-close>Computers &amp; Tech</a></li>
-      <li><a href="#shop" data-close>School &amp; Art Supplies</a></li>
-      <li><a href="#shop" data-close>General Books</a></li>
-      <li><a href="#services" data-close>Faculty adoptions</a></li>
-      <li><a href="#visit" data-close>Hours &amp; location</a></li>
-    </ul>
+    <form role="search" action="https://www.msubookstore.org/catalogsearch/result/" target="_blank">
+      <input type="search" name="q" placeholder="Search the store" aria-label="Search the store">
+    </form>
+    <ul id="drawerList"></ul>
   </div>
 </div>
 
-<main>
-  <!-- HERO -->
+<main id="top">
   <div class="hero">
     <div class="wrap">
       <div>
-        <div class="eyebrow">Student &amp; faculty owned · Nonprofit</div>
+        <div class="eyebrow">Student &amp; faculty owned · Not-for-profit</div>
         <h1>Everything for the semester, <em>right in the SUB.</em></h1>
-        <p class="lead">Course materials, Bobcat gear, tech and supplies. We put our surplus back into lower prices for students, not shareholders.</p>
+        <p class="lead">Course materials, Bobcat gear, tech and supplies from Montana's only not-for-profit campus store. Our mission is to lower what students pay for course materials.</p>
         <div class="ctas">
           <a class="btn btn-gold" href="#finder">Find my textbooks
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
@@ -347,139 +306,116 @@
 
       <div class="finder" id="finder">
         <h2>Find your course materials</h2>
-        <p class="sub">Pick your courses and compare new, used, rental and digital options.</p>
-        <div class="tabs" role="tablist">
-          <button role="tab" aria-selected="true" data-tab="course">By course</button>
-          <button role="tab" aria-selected="false" data-tab="isbn">By ISBN / title</button>
-        </div>
-        <form id="finderForm">
-          <div class="fields" data-panel="course">
-            <div class="field">
-              <label for="term">Term</label>
-              <select id="term"><option>Fall 2026</option><option>Spring 2027</option></select>
-            </div>
-            <div class="field">
-              <label for="dept">Department</label>
-              <select id="dept">
-                <option value="">Select…</option>
-                <option>BIOB</option><option>CHMY</option><option>CSCI</option><option>ECNS</option>
-                <option>EGEN</option><option>M</option><option>PSYX</option><option>WRIT</option>
-              </select>
-            </div>
-            <div class="field">
-              <label for="course">Course</label>
-              <select id="course" disabled><option>Select department first</option></select>
-            </div>
-            <div class="field">
-              <label for="section">Section</label>
-              <select id="section" disabled><option>—</option></select>
-            </div>
+        <p class="sub">New, used, rental, eBook and Inclusive Access options for every MSU course.</p>
+        <form action="https://www.msubookstore.org/textbook/index/search/" target="_blank">
+          <label for="tq">Student ID, ISBN, title or author</label>
+          <div class="inrow">
+            <input id="tq" name="q" placeholder="M12345678 or 978…" autocomplete="off">
+            <button class="btn btn-navy" type="submit">Search</button>
           </div>
-          <div class="fields" data-panel="isbn" hidden style="grid-template-columns:1fr">
-            <div class="field">
-              <label for="isbn">ISBN, title or author</label>
-              <input id="isbn" placeholder="e.g. 978-0-13-468599-1">
-            </div>
-          </div>
-          <button class="btn btn-navy" type="submit">Show my materials</button>
+          <div class="hint">Using your student ID? Put an <b>M</b> in front of the number.</div>
         </form>
-        <div class="result" id="result" aria-live="polite"></div>
-        <div class="fine">
-          <span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="m5 12 5 5 9-10"/></svg>Price-compare built in</span>
-          <span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="m5 12 5 5 9-10"/></svg>Inclusive Access titles flagged</span>
-          <span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="m5 12 5 5 9-10"/></svg>Free pickup</span>
+        <div class="or">or</div>
+        <a class="btn browse" href="https://www.msubookstore.org/textbook/index/search/" target="_blank" rel="noopener">Browse by term, department &amp; course →</a>
+        <div class="links">
+          <a href="https://www.msubookstore.org/course-materials-101" target="_blank" rel="noopener">Course Materials 101</a>
+          <a href="https://www.msubookstore.org/inclusive_access" target="_blank" rel="noopener">Inclusive Access</a>
+          <a href="https://www.msubookstore.org/returns" target="_blank" rel="noopener">Returns</a>
         </div>
       </div>
     </div>
     <svg class="mtn" viewBox="0 0 1440 90" preserveAspectRatio="none" aria-hidden="true"><path fill="currentColor" d="M0 90V62l120-30 90 22 140-46 110 38 80-18 150 44 120-34 110 20 140-52 130 40 100-16 150 34V90z"/></svg>
   </div>
 
-  <!-- CATEGORIES -->
+  <div class="champs">
+    <div class="wrap">
+      <div class="trophy">
+        <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M7 6H4a3 3 0 0 0 3 4M17 6h3a3 3 0 0 1-3 4M12 14v4M8 21h8M9 18h6"/></svg>
+        <div>
+          <h2>Your Bobcats are 2025 National Champions.</h2>
+          <p>Championship tees, hoodies and keepsakes, with more added as they arrive in store.</p>
+        </div>
+      </div>
+      <a class="btn btn-navy" href="https://www.msubookstore.org/category/10006391" target="_blank" rel="noopener">Shop National Champions gear</a>
+    </div>
+  </div>
+
   <section>
     <div class="wrap">
       <div class="sec-head">
         <div><div class="eyebrow">Shop the store</div><h2>What are you after?</h2></div>
       </div>
-      <div class="cat-grid">
-        <a class="cat" href="#finder"><span class="ic"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2z"/><path d="M4 21V5M8 7h7"/></svg></span><div><b>Textbooks</b><span>New, used, rent, eBook</span></div></a>
-        <a class="cat" href="#shop"><span class="ic"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M8 3 3 6l2 5 2-1v11h10V10l2 1 2-5-5-3a4 4 0 0 1-8 0z"/></svg></span><div><b>Apparel</b><span>Hoodies, tees, hats</span></div></a>
-        <a class="cat" href="#shop"><span class="ic"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="12" rx="2"/><path d="M2 20h20"/></svg></span><div><b>Computers &amp; Tech</b><span>Laptops, cables, calculators</span></div></a>
-        <a class="cat" href="#shop"><span class="ic"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m15 4 5 5L9 20H4v-5z"/><path d="m13 6 5 5"/></svg></span><div><b>School &amp; Art</b><span>Notebooks, paints, lab kits</span></div></a>
-        <a class="cat" href="#shop"><span class="ic"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="8" width="18" height="13" rx="2"/><path d="M12 8v13M3 12h18M12 8c-2-4-6-4-6-1s6 1 6 1 6 2 6-1-4-3-6 1"/></svg></span><div><b>Gifts &amp; Alumni</b><span>Diploma frames, mugs</span></div></a>
-        <a class="cat" href="#shop"><span class="ic"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 5h7a3 3 0 0 1 3 3v13a2 2 0 0 0-2-2H2zM22 5h-7a3 3 0 0 0-3 3v13a2 2 0 0 1 2-2h8z"/></svg></span><div><b>General Books</b><span>Montana authors, bestsellers</span></div></a>
-      </div>
+      <div class="cat-grid" id="catGrid"></div>
     </div>
   </section>
 
-  <!-- PRODUCTS -->
   <section class="alt" id="shop">
     <div class="wrap">
       <div class="sec-head">
-        <div><div class="eyebrow">Bobcat gear</div><h2>New for fall</h2></div>
-        <a class="more" href="#shop">Shop all apparel →</a>
+        <div><div class="eyebrow">From the store</div><h2>Popular right now</h2></div>
+        <a class="more" id="shopMore" href="https://www.msubookstore.org/category/10006391" target="_blank" rel="noopener">See all →</a>
       </div>
+      <div class="shop-tabs" role="tablist" id="shopTabs"></div>
       <div class="prod-grid" id="products"></div>
     </div>
   </section>
 
-  <!-- OWNED -->
   <section class="owned">
     <div class="wrap">
       <div>
         <div class="eyebrow">Why shop here</div>
         <h2>Owned by students and faculty. Not by a chain.</h2>
-        <p>The MSU Bookstore has been independent and nonprofit since 1931. Anything we earn beyond running costs goes back into the store as sales and discounts for the campus community.</p>
-        <a class="btn btn-gold" href="#visit" style="margin-top:12px">Visit us in the SUB</a>
+        <p>MSU Bookstore has been independent since 1931. It's a 501(c)(3) Montana not-for-profit, owned and run by Montana State's faculty and students. Its one mission is to lower the cost of course materials for every student.</p>
+        <a class="btn btn-gold" href="https://www.msubookstore.org/about" target="_blank" rel="noopener" style="margin-top:12px">Read our mission</a>
       </div>
       <div class="stats">
-        <div class="stat"><b>1931</b><span>Serving MSU from the start</span></div>
-        <div class="stat"><b>$0</b><span>Paid to outside shareholders</span></div>
-        <div class="stat"><b>4 ways</b><span>New, used, rental &amp; digital</span></div>
-        <div class="stat"><b>1 stop</b><span>Books, gear, tech &amp; snacks</span></div>
+        <div class="stat"><b>1931</b><span>Serving Montana State since</span></div>
+        <div class="stat"><b>501(c)(3)</b><span>Montana not-for-profit corporation</span></div>
+        <div class="stat"><b>Only one</b><span>Not-for-profit campus store in Montana</span></div>
+        <div class="stat"><b>5 formats</b><span>Inclusive Access, codes, eBooks, print &amp; course packs</span></div>
       </div>
     </div>
   </section>
 
-  <!-- SERVICES -->
   <section id="services">
     <div class="wrap">
       <div class="sec-head">
-        <div><div class="eyebrow">Services</div><h2>Made simpler</h2></div>
+        <div><div class="eyebrow">Course materials</div><h2>How it works</h2></div>
       </div>
       <div class="svc-grid">
         <div class="svc">
-          <span class="cat ic" style="padding:0;border:0;width:48px;height:48px;display:grid;place-items:center;background:var(--gold-soft);border-radius:12px">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5M12 7v5l3 2"/></svg>
-          </span>
-          <h3>Rentals &amp; buyback</h3>
-          <p>Rent to save up front, then return in store at the end of term. Sell back books you own during finals week.</p>
-          <a href="#">How rentals work →</a>
+          <span class="ic"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5M12 7v5l3 2"/></svg></span>
+          <h3>Rent</h3>
+          <p>Pay less up front and return your books by the last day of finals week. Rentals that aren't returned are charged the remaining cost plus a $10 fee.</p>
+          <a href="https://www.msubookstore.org/course-materials-101" target="_blank" rel="noopener">Rental details →</a>
         </div>
         <div class="svc">
-          <span style="width:48px;height:48px;display:grid;place-items:center;background:var(--gold-soft);border-radius:12px;color:var(--navy)">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M11 18h2"/></svg>
-          </span>
-          <h3>Access codes &amp; eBooks</h3>
-          <p>Get courseware codes, eBooks and Inclusive Access materials ready before the first day of class.</p>
-          <a href="#">Course Materials 101 →</a>
+          <span class="ic"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 2v20M17 6H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></span>
+          <h3>Sell back</h3>
+          <p>Buyback runs from the Friday before finals through the last Friday of finals. Books that faculty have requested for next term are bought back at retail value.</p>
+          <a href="https://www.msubookstore.org/faq" target="_blank" rel="noopener">Buyback FAQ →</a>
         </div>
         <div class="svc">
-          <span style="width:48px;height:48px;display:grid;place-items:center;background:var(--gold-soft);border-radius:12px;color:var(--navy)">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M22 10 12 5 2 10l10 5z"/><path d="M6 12v5c3 2 9 2 12 0v-5"/></svg>
-          </span>
+          <span class="ic"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M11 18h2"/></svg></span>
+          <h3>Inclusive Access</h3>
+          <p>Digital materials are ready in Canvas on the first day of class and billed to your student account.</p>
+          <a href="https://www.msubookstore.org/inclusive_access" target="_blank" rel="noopener">How Inclusive Access works →</a>
+        </div>
+        <div class="svc">
+          <span class="ic"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M22 10 12 5 2 10l10 5z"/><path d="M6 12v5c3 2 9 2 12 0v-5"/></svg></span>
           <h3>Faculty adoptions</h3>
-          <p>Submit next term's adoptions early so students can see their materials and compare prices.</p>
-          <a href="#">Submit adoptions →</a>
+          <p>Submit next term's materials through Verba Collect so students can see what they need and compare prices early.</p>
+          <a href="https://www.msubookstore.org/coursematerials201" target="_blank" rel="noopener">Course Materials 201 →</a>
         </div>
       </div>
     </div>
   </section>
 
-  <!-- VISIT -->
   <section class="alt" id="visit">
     <div class="wrap">
       <div class="sec-head">
         <div><div class="eyebrow">Visit</div><h2>Hours &amp; location</h2></div>
+        <a class="more" href="https://www.msubookstore.org/store-hours" target="_blank" rel="noopener">Holiday &amp; break hours →</a>
       </div>
       <div class="visit-grid">
         <div class="card">
@@ -505,26 +441,23 @@
           <svg class="pin" width="44" height="56" viewBox="0 0 44 56" aria-hidden="true"><path d="M22 55S2 34 2 21a20 20 0 0 1 40 0c0 13-20 34-20 34z" fill="#0b2a4a"/><circle cx="22" cy="21" r="8" fill="#e8b521"/></svg>
           <div class="addr">
             <div><b>Strand Union Building, Room 125</b><span>Montana State University · Bozeman, MT 59717</span></div>
-            <a class="btn btn-navy" href="https://maps.google.com/?q=Strand+Union+Building+Bozeman+MT" target="_blank" rel="noopener">Directions</a>
+            <a class="btn btn-navy" href="https://www.google.com/maps/search/?api=1&query=Strand+Union+Building+Montana+State+University+Bozeman+MT" target="_blank" rel="noopener">Directions</a>
           </div>
         </div>
       </div>
     </div>
   </section>
 
-  <!-- NEWSLETTER -->
-  <section class="news">
+  <section class="help">
     <div class="wrap">
       <div>
-        <h2>Hear about sales first.</h2>
-        <p>Members-only discounts, buyback dates and new gear drops. About two emails a month.</p>
+        <h2>Can't find what you need?</h2>
+        <p>Call, email or check the FAQ. The team in the SUB is happy to help.</p>
       </div>
-      <div>
-        <form id="newsForm">
-          <input type="email" required placeholder="you@montana.edu" aria-label="Email address">
-          <button class="btn btn-navy" type="submit">Sign up</button>
-        </form>
-        <div class="msg" id="newsMsg" aria-live="polite"></div>
+      <div class="ctas">
+        <a class="btn btn-navy" href="tel:+14069942811">Call (406) 994-2811</a>
+        <a class="btn btn-line" href="mailto:bookstore@montana.edu">Email us</a>
+        <a class="btn btn-line" href="https://www.msubookstore.org/faq" target="_blank" rel="noopener">FAQ</a>
       </div>
     </div>
   </section>
@@ -538,11 +471,11 @@
           <span class="logo-mark" aria-hidden="true" style="background:#123a63"><svg width="24" height="24" viewBox="0 0 24 24"><path d="M2 19 9 8l4 6 3-4 6 9z" fill="#e8b521"/></svg></span>
           <span class="logo-text"><b style="color:#fff">MSU Bookstore</b><span style="color:#a9b8c9">Bozeman · Since 1931</span></span>
         </div>
-        <p style="max-width:340px;margin:0">Independent, nonprofit and owned by the students and faculty of Montana State University.</p>
+        <p style="max-width:340px;margin:0">Independent, not-for-profit and owned by the students and faculty of Montana State University.</p>
       </div>
-      <div><h4>Shop</h4><ul><li><a href="#finder">Textbooks</a></li><li><a href="#shop">Apparel</a></li><li><a href="#shop">Tech</a></li><li><a href="#shop">Gifts</a></li></ul></div>
-      <div><h4>Help</h4><ul><li><a href="#">Course Materials 101</a></li><li><a href="#">Returns &amp; refunds</a></li><li><a href="#">Rental policy</a></li><li><a href="#">Shipping &amp; pickup</a></li></ul></div>
-      <div><h4>About</h4><ul><li><a href="#visit">Hours</a></li><li><a href="#visit">Contact</a></li><li><a href="#services">Faculty</a></li><li><a href="#">Jobs</a></li></ul></div>
+      <div><h4>Shop</h4><ul id="footShop"></ul></div>
+      <div><h4>Course materials</h4><ul id="footHelp"></ul></div>
+      <div><h4>About</h4><ul id="footAbout"></ul></div>
     </div>
     <div class="foot-bottom">
       <span>125 Strand Union Building · Bozeman, MT 59717 · (406) 994-2811</span>
@@ -551,98 +484,164 @@
   </div>
 </footer>
 
-<div class="toast" id="toast" role="status"></div>
-
 <script>
-  // ---------- helpers
   const $ = (s, r = document) => r.querySelector(s);
   const $$ = (s, r = document) => [...r.querySelectorAll(s)];
-  let toastTimer;
-  function toast(msg) {
-    const t = $('#toast'); t.textContent = msg; t.classList.add('show');
-    clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), 2200);
-  }
+  const SITE = 'https://www.msubookstore.org';
+  const ext = path => SITE + path;
+  const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const linkAttrs = 'target="_blank" rel="noopener"';
 
-  // ---------- mobile drawer
+  // ---------- real store URLs
+  const L = {
+    textbooks: '/textbook/index/search/',
+    apparel: '/apparel',
+    mens: '/apparel/mens-apparel',
+    hats: '/fan-zone/accessories/hats-beanies',
+    champs: '/category/10006391',
+    gifts: '/category/10004969',
+    under25: '/category/10006395',
+    holiday: '/category/10006393',
+    plush: '/category/10004958',
+    regalia: '/category/10005048',
+    computers: '/category/10005001',
+    art: '/art-school/lab-materials',
+    tees: '/category/10004935',
+    cm101: '/course-materials-101',
+    cm201: '/coursematerials201',
+    ia: '/inclusive_access',
+    faq: '/faq',
+    returns: '/returns',
+    about: '/about',
+    hours: '/store-hours',
+    contact: '/contact'
+  };
+
+  // ---------- nav / drawer / footer
+  const nav = [
+    ['Textbooks', L.textbooks], ['National Champions', L.champs, 'hot'], ['Apparel', L.apparel], ["Men's", L.mens],
+    ['Hats & Beanies', L.hats], ['Gifts', L.gifts], ['Under $25', L.under25], ['Computers', L.computers], ['Art & Lab', L.art]
+  ];
+  $('#navList').innerHTML = nav.map(([t, u, c]) => `<li class="${c || ''}"><a href="${ext(u)}" ${linkAttrs}>${esc(t)}</a></li>`).join('');
+  $('#drawerList').innerHTML = nav.map(([t, u]) => `<li><a href="${ext(u)}" ${linkAttrs}>${esc(t)}</a></li>`).join('')
+    + `<li><a href="#visit" data-close>Hours &amp; location</a></li>`;
+  const foot = (id, items) => $(id).innerHTML = items.map(([t, u]) => `<li><a href="${u.startsWith('#') ? u : ext(u)}" ${u.startsWith('#') ? '' : linkAttrs}>${esc(t)}</a></li>`).join('');
+  foot('#footShop', [['Apparel', L.apparel], ['National Champions', L.champs], ['Gifts', L.gifts], ['Regalia', L.regalia], ['Computers', L.computers]]);
+  foot('#footHelp', [['Find textbooks', L.textbooks], ['Course Materials 101', L.cm101], ['Course Materials 201 (faculty)', L.cm201], ['Inclusive Access', L.ia], ['Returns', L.returns]]);
+  foot('#footAbout', [['Our mission', L.about], ['Store hours', L.hours], ['Contact', L.contact], ['FAQ', L.faq]]);
+
+  // ---------- drawer
   const drawer = $('#drawer');
   $('#openMenu').addEventListener('click', () => { drawer.classList.add('open'); drawer.setAttribute('aria-hidden', 'false'); });
-  $$('[data-close]', drawer).forEach(el => el.addEventListener('click', () => { drawer.classList.remove('open'); drawer.setAttribute('aria-hidden', 'true'); }));
+  drawer.addEventListener('click', e => { if (e.target.closest('[data-close]') || e.target.closest('a')) { drawer.classList.remove('open'); drawer.setAttribute('aria-hidden', 'true'); } });
 
-  // ---------- textbook finder (placeholder data)
-  const courses = {
-    BIOB: ['160 Principles of Living Systems', '170 Principles of Biological Diversity'],
-    CHMY: ['121 Intro to General Chemistry', '141 College Chemistry I'],
-    CSCI: ['127 Joy and Beauty of Data', '132 Basic Data Structures'],
-    ECNS: ['101 Economic Way of Thinking', '202 Principles of Macroeconomics'],
-    EGEN: ['101 Intro to Engineering'],
-    M: ['171 Calculus I', '172 Calculus II', '273 Multivariable Calculus'],
-    PSYX: ['100 Intro to Psychology'],
-    WRIT: ['101 College Writing I']
+  // ---------- category tiles
+  const icons = {
+    book: '<path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2z"/><path d="M4 21V5M8 7h7"/>',
+    shirt: '<path d="M8 3 3 6l2 5 2-1v11h10V10l2 1 2-5-5-3a4 4 0 0 1-8 0z" stroke-linejoin="round"/>',
+    trophy: '<path d="M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M7 6H4a3 3 0 0 0 3 4M17 6h3a3 3 0 0 1-3 4M12 14v4M8 21h8"/>',
+    cap: '<path d="M4 15c0-6 3.5-9 8-9s8 3 8 9z"/><path d="M2 15h18c1 0 2 1 1 2H3c-1 0-2-1-1-2z"/>',
+    gift: '<rect x="3" y="8" width="18" height="13" rx="2"/><path d="M12 8v13M3 12h18M12 8c-2-4-6-4-6-1s6 1 6 1 6 2 6-1-4-3-6 1"/>',
+    laptop: '<rect x="3" y="5" width="18" height="12" rx="2"/><path d="M2 20h20"/>',
+    brush: '<path d="m15 4 5 5L9 20H4v-5z"/><path d="m13 6 5 5"/>',
+    grad: '<path d="M22 10 12 5 2 10l10 5z"/><path d="M6 12v5c3 2 9 2 12 0v-5"/>'
   };
-  const dept = $('#dept'), course = $('#course'), section = $('#section');
-  dept.addEventListener('change', () => {
-    const list = courses[dept.value] || [];
-    course.innerHTML = list.length ? '<option value="">Select…</option>' + list.map(c => `<option>${c}</option>`).join('') : '<option>Select department first</option>';
-    course.disabled = !list.length;
-    section.innerHTML = '<option>—</option>'; section.disabled = true;
-  });
-  course.addEventListener('change', () => {
-    section.innerHTML = ['001', '002', '003'].map(s => `<option>${s}</option>`).join('');
-    section.disabled = !course.value;
-  });
-  $$('.tabs button').forEach(b => b.addEventListener('click', () => {
-    $$('.tabs button').forEach(x => x.setAttribute('aria-selected', x === b));
-    $$('[data-panel]').forEach(p => p.hidden = p.dataset.panel !== b.dataset.tab);
-  }));
-  $('#finderForm').addEventListener('submit', e => {
-    e.preventDefault();
-    const r = $('#result');
-    const byIsbn = !$('[data-panel="isbn"]').hidden;
-    if (!byIsbn && !course.value) { toast('Pick a department and course first'); return; }
-    const label = byIsbn ? ($('#isbn').value || 'Your search') : `${dept.value} ${course.value.split(' ')[0]} · Sec ${section.value}`;
-    r.innerHTML = `
-      <div style="font-weight:700;color:var(--navy);margin-bottom:6px">${label.replace(/</g,'&lt;')}</div>
-      <div class="row"><span>Required text (sample)</span><span class="opts"><span class="chip best">Rent $38</span><span class="chip">Used $62</span><span class="chip">New $94</span><span class="chip">eBook $45</span></span></div>
-      <div class="row"><span>Courseware access code</span><span class="opts"><span class="chip">Digital $79</span></span></div>
-      <div style="margin-top:8px;font-size:12px;color:var(--muted)">Sample data in this concept. The real site would pull live adoptions.</div>`;
-    r.classList.add('show');
-  });
-
-  // ---------- products (placeholders, drawn with SVG, no photos)
-  const products = [
-    { name: 'Bobcat Classic Hoodie', meta: 'Navy · Unisex', price: 54, tag: 'New', bg: '#0b2a4a', fg: '#e8b521', kind: 'hoodie' },
-    { name: 'Bridger Range Tee', meta: 'Heather gold', price: 24, was: 30, tag: 'Sale', bg: '#f3dfa1', fg: '#0b2a4a', kind: 'tee' },
-    { name: 'Trucker Cap', meta: 'Adjustable', price: 26, bg: '#dfe7ee', fg: '#0b2a4a', kind: 'cap' },
-    { name: 'Insulated Bottle 20 oz', meta: 'Keeps cold 24 h', price: 32, tag: 'New', bg: '#123a63', fg: '#ffffff', kind: 'bottle' }
+  const svg = (k, s = 24) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">${icons[k]}</svg>`;
+  const cats = [
+    ['Textbooks', 'Search by ID, ISBN or course', 'book', L.textbooks],
+    ['National Champions', '2025 title gear', 'trophy', L.champs],
+    ['Apparel', 'Hoodies, tees, crews', 'shirt', L.apparel],
+    ['Hats & Beanies', 'New Era, Richardson & more', 'cap', L.hats],
+    ['Gifts', 'Mugs, ornaments, plushies', 'gift', L.gifts],
+    ['Computers', 'MacBook, iPad, accessories', 'laptop', L.computers],
+    ['Art & Lab Supplies', 'Paints, tools, lab kits', 'brush', L.art],
+    ['Regalia', 'Caps, gowns & grad gifts', 'grad', L.regalia]
   ];
-  const art = {
-    hoodie: c => `<path d="M60 40c6 10 34 10 40 0l26 12 14 40-18 6v52H38v-52l-18-6 14-40z" fill="${c}"/><path d="M68 40c4 12 20 12 24 0" fill="none" stroke="rgba(0,0,0,.25)" stroke-width="3"/><rect x="62" y="112" width="36" height="16" rx="3" fill="rgba(0,0,0,.18)"/><text x="80" y="92" text-anchor="middle" font-family="Fraunces,serif" font-weight="700" font-size="14" fill="rgba(255,255,255,.95)">MSU</text>`,
-    tee: c => `<path d="M62 40c6 8 30 8 36 0l28 14-10 26-14-6v76H58V74l-14 6-10-26z" fill="${c}"/><path d="M50 106l18-22 10 12 8-8 22 18z" fill="rgba(255,255,255,.85)"/>`,
-    cap: c => `<path d="M40 100c0-30 18-48 40-48s40 18 40 48z" fill="${c}"/><path d="M36 100h90c6 0 10 4 6 10H40c-6 0-8-6-4-10z" fill="${c}" opacity=".85"/><path d="M58 92l12-16 8 10 6-6 14 12z" fill="#e8b521"/>`,
-    bottle: c => `<rect x="62" y="34" width="36" height="16" rx="4" fill="#9fb0c2"/><rect x="56" y="48" width="48" height="96" rx="14" fill="${c}"/><path d="M64 104l10-14 6 8 6-6 10 12z" fill="#e8b521"/>`
+  $('#catGrid').innerHTML = cats.map(([t, d, i, u]) => `
+    <a class="cat" href="${ext(u)}" ${linkAttrs}><span class="ic">${svg(i)}</span><div><b>${esc(t)}</b><span class="d">${esc(d)}</span></div></a>`).join('');
+
+  // ---------- real products from msubookstore.org
+  // url: product page when known, else its category page. price: only when listed on the store; otherwise "See price".
+  const P = (name, brand, kind, url, price, tag) => ({ name, brand, kind, url, price, tag });
+  const shop = {
+    'National Champions': { more: L.champs, items: [
+      P('MSU Football 2025 National Champions State Shape Youth Navy Tee', 'Youth', 'tee-navy', '/product/gm/10153841', 25, 'Champs'),
+      P('MSU Football 2025 National Champions State Shape Basic Tee', 'Unisex', 'tee-navy', L.champs, 30, 'Champs'),
+      P('Under Armour 2025 National Champions Trophy Tee', 'Under Armour', 'tee-gold', L.champs, 45, 'Champs'),
+      P('2025 Football Championship Game Nashville Skyline Tee', 'Clearance', 'tee-slate', '/product/gm/10153644', 35, 'Clearance')
+    ]},
+    'Hoodies': { more: L.apparel, items: [
+      P('MSU Bobcats 3D Embroidered Big Cotton Hood', '80/20 cotton fleece', 'hoodie-navy', '/product/10115115'),
+      P('Nike Bobcat MSU Club Fleece Full Zip Hoodie', 'Nike', 'zip', '/product/10102542'),
+      P('Nike Bobcats Dri Fit Lightweight Hoodie', 'Nike', 'hoodie-gray', '/product/10116039'),
+      P('Champion Montana State Bobcat Rodeo Powerblend Hood', 'Champion', 'hoodie-gold', '/product/gm/10098645')
+    ]},
+    'Hats': { more: L.hats, items: [
+      P('New Era Bobcats Montana State 9FORTY A-Frame Snapback Hat', 'New Era', 'cap-navy', '/product/gm/10146725'),
+      P('New Era Montana State Bobcats Camo Monbob', 'New Era', 'cap-camo', '/product/10115893'),
+      P('New Era Bobcats Fitted with M Side Script', 'New Era', 'cap-gold', '/product/gm/10117102'),
+      P('Richardson Bobcat Fitted Cap', 'Richardson', 'cap-gray', L.hats)
+    ]},
+    'Gifts under $25': { more: L.under25, items: [
+      P('Julia Gash Campus Art Tea Towel', 'Kitchen', 'towel', L.under25, 22.99),
+      P('Montana State Bobcats Holiday Sweater 16oz Ceramic Sandstone Mug', 'Mug', 'mug', L.under25, 17.99),
+      P('Bobcat Montana State Shaped Slate Ornament', 'Holiday', 'ornament', L.under25, 14.99),
+      P('Bobcata Fuzzy Dot Socks', 'Socks', 'socks', L.under25, 15)
+    ]},
+    'Tech & Supplies': { more: L.computers, items: [
+      P('Shokz OpenRun Pro 2 Wireless Headphones', 'Shokz', 'headphones', '/product/gm/10123656'),
+      P('Logitech R500 Wireless Presenter with Laser Pointer', 'Logitech', 'presenter', '/product/gm/10123802'),
+      P('Prismacolor Verithin Red/Blue Colored Pencil', 'Prismacolor', 'pencil', '/product/gm/10098275'),
+      P('Grumbacher Miskit Liquid Frisket 1.2oz', 'Grumbacher', 'bottle', '/product/gm/10131744')
+    ]}
   };
-  $('#products').innerHTML = products.map((p, i) => `
-    <article class="prod">
-      <div class="ph" style="background:${p.kind === 'hoodie' ? '#e7ecf2' : p.kind === 'bottle' ? '#f4ead0' : '#eef1f4'}">
-        ${p.tag ? `<span class="tag ${p.tag === 'Sale' ? 'sale' : ''}">${p.tag}</span>` : ''}
-        <svg viewBox="0 0 160 170" width="70%" aria-hidden="true">${art[p.kind](p.bg)}</svg>
-      </div>
-      <div class="body">
-        <div class="name">${p.name}</div>
-        <div class="meta">${p.meta}</div>
-        <div class="price"><span><b>$${p.price}</b>${p.was ? `<s>$${p.was}</s>` : ''}</span>
-          <button class="add" aria-label="Add ${p.name} to cart" data-i="${i}">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
-          </button>
+
+  // simple original product illustrations (no photos available in this concept)
+  const shirt = (c, a = '#e8b521') => `<path d="M62 40c6 8 30 8 36 0l28 14-10 26-14-6v76H58V74l-14 6-10-26z" fill="${c}"/><path d="M60 110l14-18 8 10 6-6 14 14z" fill="${a}"/>`;
+  const hood = (c, t = '#fff') => `<path d="M60 40c6 10 34 10 40 0l26 12 14 40-18 6v52H38v-52l-18-6 14-40z" fill="${c}"/><path d="M68 40c4 12 20 12 24 0" fill="none" stroke="rgba(0,0,0,.25)" stroke-width="3"/><rect x="62" y="114" width="36" height="16" rx="3" fill="rgba(0,0,0,.15)"/><text x="80" y="96" text-anchor="middle" font-family="Fraunces,Georgia,serif" font-weight="700" font-size="15" fill="${t}">MSU</text>`;
+  const cap = (c, a = '#e8b521') => `<path d="M40 104c0-30 18-48 40-48s40 18 40 48z" fill="${c}"/><path d="M36 104h90c6 0 10 4 6 10H40c-6 0-8-6-4-10z" fill="${c}" opacity=".85"/><path d="M60 96l12-16 8 10 6-6 14 12z" fill="${a}"/>`;
+  const art = {
+    'tee-navy': () => shirt('#0b2a4a'), 'tee-gold': () => shirt('#c9a640', '#0b2a4a'), 'tee-slate': () => shirt('#5d7186'),
+    'hoodie-navy': () => hood('#0b2a4a', '#e8b521'), 'hoodie-gray': () => hood('#8d99a6'), 'hoodie-gold': () => hood('#d9ae3b', '#0b2a4a'),
+    zip: () => hood('#1b2430') + '<path d="M80 52v96" stroke="#e8b521" stroke-width="2.5"/>',
+    'cap-navy': () => cap('#0b2a4a'), 'cap-gold': () => cap('#d9ae3b', '#0b2a4a'), 'cap-gray': () => cap('#7c8a99'),
+    'cap-camo': () => cap('#6b7350', '#e8b521') + '<g fill="#4f5a3a" opacity=".8"><circle cx="66" cy="80" r="7"/><circle cx="96" cy="74" r="6"/><circle cx="84" cy="94" r="5"/></g>',
+    mug: () => `<rect x="44" y="52" width="62" height="78" rx="8" fill="#d7c8a8"/><path d="M106 70h10a12 12 0 0 1 0 24h-10" fill="none" stroke="#d7c8a8" stroke-width="8"/><path d="M52 80h46M52 92h46M52 104h46" stroke="#0b2a4a" stroke-width="4" stroke-dasharray="6 5"/>`,
+    towel: () => `<rect x="44" y="34" width="72" height="104" rx="4" fill="#f4f1ea" stroke="#d6cfbf" stroke-width="2"/><path d="M44 52h72M44 122h72" stroke="#0b2a4a" stroke-width="4"/><path d="M58 104l12-16 8 10 6-6 18 12z" fill="#e8b521"/>`,
+    ornament: () => `<path d="M80 30v18" stroke="#9aa6b2" stroke-width="2"/><path d="M48 60h64l-6 40-26 30-26-30z" fill="#3b4652"/><text x="80" y="92" text-anchor="middle" font-family="Fraunces,Georgia,serif" font-size="16" font-weight="700" fill="#e8b521">MSU</text>`,
+    socks: () => `<path d="M58 36h24v62l18 18a12 12 0 0 1-17 17L58 108z" fill="#0b2a4a"/><g fill="#e8b521"><circle cx="66" cy="54" r="3"/><circle cx="74" cy="70" r="3"/><circle cx="64" cy="86" r="3"/><circle cx="86" cy="118" r="3"/></g>`,
+    headphones: () => `<path d="M46 96c0-36 68-36 68 0" fill="none" stroke="#1b2430" stroke-width="7"/><rect x="38" y="90" width="18" height="30" rx="8" fill="#1b2430"/><rect x="104" y="90" width="18" height="30" rx="8" fill="#1b2430"/>`,
+    presenter: () => `<rect x="68" y="34" width="26" height="104" rx="13" fill="#2b3440"/><circle cx="81" cy="62" r="6" fill="#e8b521"/><rect x="75" y="80" width="12" height="18" rx="4" fill="#59636f"/>`,
+    pencil: () => `<g transform="rotate(-35 80 85)"><rect x="34" y="78" width="46" height="14" fill="#c0392b"/><rect x="80" y="78" width="46" height="14" fill="#2457a6"/><path d="M34 78l-12 7 12 7zM126 78l12 7-12 7z" fill="#e9d3a7"/></g>`,
+    bottle: () => `<rect x="66" y="40" width="28" height="16" rx="3" fill="#2b3440"/><rect x="58" y="56" width="44" height="80" rx="8" fill="#ef7d22"/><rect x="64" y="80" width="32" height="30" rx="3" fill="#fff" opacity=".85"/>`,
+    book: () => `<rect x="50" y="32" width="64" height="104" rx="4" fill="#5a7d3a"/><rect x="50" y="32" width="10" height="104" fill="#46632d"/><path d="M68 54h36M68 64h28" stroke="#f1e6c8" stroke-width="4"/><circle cx="86" cy="104" r="14" fill="#e8b521"/>`
+  };
+  const bgFor = k => k.includes('gold') || k === 'mug' || k === 'towel' ? '#f6eed8' : k === 'book' || k === 'pencil' || k === 'bottle' ? '#f1efe9' : '#e9eef3';
+  const money = n => '$' + (Number.isInteger(n) ? n : n.toFixed(2));
+
+  function renderShop(tab) {
+    const g = shop[tab];
+    $$('#shopTabs button').forEach(b => b.setAttribute('aria-selected', b.dataset.tab === tab));
+    $('#shopMore').href = ext(g.more);
+    $('#shopMore').textContent = `See all ${tab.toLowerCase()} →`;
+    $('#products').innerHTML = g.items.map(p => `
+      <a class="prod" href="${ext(p.url)}" ${linkAttrs}>
+        <div class="ph" style="background:${bgFor(p.kind)}">
+          ${p.tag ? `<span class="tag ${p.tag === 'Clearance' ? 'sale' : p.tag === 'Champs' ? 'gold' : ''}">${esc(p.tag)}</span>` : ''}
+          <svg viewBox="0 0 160 170" width="68%" aria-hidden="true">${art[p.kind]()}</svg>
         </div>
-      </div>
-    </article>`).join('');
-  let cart = 0;
-  $$('.add').forEach(b => b.addEventListener('click', () => {
-    cart++; $('#cartCount').textContent = cart;
-    b.classList.add('done'); setTimeout(() => b.classList.remove('done'), 900);
-    toast(`Added ${products[b.dataset.i].name}`);
-  }));
+        <div class="body">
+          <div class="brand">${esc(p.brand)}</div>
+          <div class="name">${esc(p.name)}</div>
+          <div class="price">${p.price ? `<b>${money(p.price)}</b>` : '<span class="see">See price</span>'}
+            <span class="go" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M7 17 17 7M9 7h8v8"/></svg></span>
+          </div>
+        </div>
+      </a>`).join('');
+  }
+  $('#shopTabs').innerHTML = Object.keys(shop).map(t => `<button role="tab" data-tab="${esc(t)}">${esc(t)}</button>`).join('');
+  $$('#shopTabs button').forEach(b => b.addEventListener('click', () => renderShop(b.dataset.tab)));
+  renderShop('National Champions');
 
   // ---------- hours + live open/closed (Mountain time)
   const schedules = {
@@ -654,13 +653,13 @@
   function mtNow() {
     const parts = new Intl.DateTimeFormat('en-US', { timeZone: 'America/Denver', weekday: 'short', hour: 'numeric', minute: 'numeric', hour12: false }).formatToParts(new Date());
     const g = t => parts.find(p => p.type === t).value;
-    return { day: ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].indexOf(g('weekday')), hour: (+g('hour') % 24) + (+g('minute')) / 60 };
+    return { day: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].indexOf(g('weekday')), hour: (+g('hour') % 24) + (+g('minute')) / 60 };
   }
   function renderHours(name) {
     const s = schedules[name], now = mtNow();
     $('#hours').innerHTML = [1, 2, 3, 4, 5, 6, 0].map(d => `<tr class="${d === now.day ? 'today' : ''}"><td>${days[d]}</td><td>${s[d] ? fmt(s[d][0]) + ' – ' + fmt(s[d][1]) : 'Closed'}</td></tr>`).join('');
     const t = s[now.day], open = t && now.hour >= t[0] && now.hour < t[1];
-    const st = $('#status'); st.className = 'status ' + (open ? 'open' : 'closed');
+    $('#status').className = 'status ' + (open ? 'open' : 'closed');
     $('#statusText').textContent = open ? `Open now · until ${fmt(t[1])}` : 'Closed now';
   }
   $$('.hours-toggle button').forEach(b => b.addEventListener('click', () => {
@@ -668,9 +667,6 @@
     renderHours(b.dataset.sched);
   }));
   renderHours('semester');
-
-  // ---------- newsletter
-  $('#newsForm').addEventListener('submit', e => { e.preventDefault(); $('#newsMsg').textContent = "Thanks! You're on the list."; e.target.reset(); });
 </script>
 </body>
 </html>
