@@ -1,0 +1,20 @@
+{
+  "name": "million-first-steps",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Website for Million First Steps — Georgia Travel Experiences",
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs",
+    "dev": "node build.mjs && node scripts/serve.mjs",
+    "photos:commons": "node scripts/fetch-photos.mjs",
+    "photos:optimize": "node scripts/fetch-photos.mjs --local-only",
+    "geo": "node scripts/make-geo.mjs"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "optionalDependencies": {
+    "sharp": "^0.34.0"
+  }
+}

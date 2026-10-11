@@ -1,0 +1,9 @@
+# Netlify: set "Base directory" to million-first-steps (this file is picked up from there).
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=604800"
