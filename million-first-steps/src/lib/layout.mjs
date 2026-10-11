@@ -3,6 +3,7 @@ import { esc, join } from "./html.mjs";
 import { logoMark, wordmark } from "./logo.mjs";
 import { icon } from "./icons.mjs";
 import { TOURS } from "../data/tours.mjs";
+import { LANGS } from "./i18n.mjs";
 
 export const NAV = [
   { href: "tours.html", label: "Tours", ka: "ტურები" },
@@ -13,6 +14,14 @@ export const NAV = [
 ];
 
 const year = new Date().getFullYear();
+
+// Links to this page in every language. The build adds "../" to them on translated pages.
+const langLinks = (root, path) =>
+  join(
+    LANGS,
+    (l) =>
+      `<li><a class="lang-link" href="${root}${l.code === "en" ? "" : l.code + "/"}${path === "404.html" ? "index.html" : path}" data-set-lang="${l.code}" hreflang="${l.code}" lang="${l.code}">${l.name}</a></li>`
+  );
 
 function header(root, current) {
   return `<a class="skip-link" href="#main">Skip to content</a>
@@ -26,8 +35,12 @@ function header(root, current) {
       )}</ul>
     </nav>
     <div class="header-tools">
+      <label class="currency lang-select"><span class="sr-only">Language</span>
+        <select data-lang-switch translate="no">${join(LANGS, (l) => `<option value="${l.code}"${l.code === "en" ? " selected" : ""}>${l.code.toUpperCase()}</option>`)}</select>
+        ${icon("arrow-down", "icon currency__chev")}
+      </label>
       <label class="currency"><span class="sr-only">Currency</span>
-        <select data-currency>${join(Object.keys(config.currencies), (c) => `<option value="${c}">${c}</option>`)}</select>
+        <select data-currency translate="no">${join(Object.keys(config.currencies), (c) => `<option value="${c}">${c}</option>`)}</select>
         ${icon("arrow-down", "icon currency__chev")}
       </label>
       <a class="btn btn--gold btn--sm header-cta" href="${root}contact.html"><span class="btn__label">Plan my journey</span></a>
@@ -46,6 +59,7 @@ function header(root, current) {
         <li><a href="${root}contact.html"><span class="menu__ka">კონტაქტი</span>Contact</a></li>
       </ol>
     </nav>
+    <ul class="lang-links lang-links--menu" translate="no">${langLinks(root, current)}</ul>
     <div class="menu__foot">
       ${config.email ? `<a href="mailto:${config.email}">${icon("mail")} ${config.email}</a>` : ""}
       ${config.whatsapp ? `<a href="https://wa.me/${config.whatsapp}">${icon("chat")} WhatsApp</a>` : ""}
@@ -54,7 +68,7 @@ function header(root, current) {
 </div>`;
 }
 
-function footer(root, { cta = true } = {}) {
+function footer(root, { cta = true, path = "index.html" } = {}) {
   return `<footer class="site-footer">
   ${
     cta
@@ -101,6 +115,7 @@ function footer(root, { cta = true } = {}) {
         </ul>
       </div>
     </div>
+    <div class="container footer-langs"><ul class="lang-links" translate="no">${langLinks(root, path)}</ul></div>
     <div class="container footer-bottom">
       <p>© ${year} ${esc(config.legalName)}${config.registrationNumber ? ` · Reg. no. ${esc(config.registrationNumber)}` : ""}</p>
       <ul>
@@ -122,7 +137,7 @@ export function layout({ title, description, root = "", path = "index.html", bod
   const canonical = config.siteUrl ? `${config.siteUrl}/${path === "index.html" ? "" : path}` : "";
   const og = ogImage || "assets/img/og.jpg";
   return `<!doctype html>
-<html lang="en" data-tier="explorer" data-currency="EUR">
+<html lang="en" data-tier="explorer" data-currency="EUR" data-page="${path === "404.html" ? "" : path}" data-site-root="${root}">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -131,6 +146,8 @@ export function layout({ title, description, root = "", path = "index.html", bod
 <meta name="theme-color" content="#1b130c">
 ${canonical ? `<link rel="canonical" href="${canonical}">` : ""}
 <meta property="og:type" content="website">
+<meta property="og:locale" content="en_GB">
+${config.siteUrl && path !== "404.html" ? LANGS.map((l) => `<link rel="alternate" hreflang="${l.code}" href="${config.siteUrl}/${l.code === "en" ? "" : l.code + "/"}${path === "index.html" ? "" : path}">`).join("\n") + `\n<link rel="alternate" hreflang="x-default" href="${config.siteUrl}/${path === "index.html" ? "" : path}">` : ""}
 <meta property="og:site_name" content="${config.brand}">
 <meta property="og:title" content="${esc(fullTitle)}">
 <meta property="og:description" content="${esc(description)}">
@@ -145,8 +162,14 @@ ${config.siteUrl ? `<meta property="og:image" content="${config.siteUrl}/${og}">
 (function(d){var h=d.documentElement;h.classList.add("js");
 try{if(!matchMedia("(prefers-reduced-motion: reduce)").matches)h.classList.add("motion");
 var t=localStorage.getItem("mfs-tier"),c=localStorage.getItem("mfs-currency");if(t)h.dataset.tier=t;if(c)h.dataset.currency=c;}catch(e){}
-setTimeout(function(){if(!window.__mfsReady)h.classList.remove("motion")},3000);})(document);
+setTimeout(function(){if(!window.__mfsReady)h.classList.remove("motion")},3000);
+// Language: a visitor's saved choice wins, otherwise the first browser language the site speaks.
+try{var L=${JSON.stringify(LANGS.map((l) => l.code))},want=localStorage.getItem("mfs-lang"),page=h.getAttribute("data-page");
+if(!want){var n=navigator.languages||[navigator.language||""];for(var i=0;i<n.length&&!want;i++){var c=String(n[i]).slice(0,2).toLowerCase();if(L.indexOf(c)>-1)want=c}want=want||"en";localStorage.setItem("mfs-lang",want)}
+if(page&&want!==h.lang&&L.indexOf(want)>-1)location.replace(h.getAttribute("data-site-root")+(want==="en"?"":want+"/")+page+location.hash);}catch(e){}
+})(document);
 window.MFS=${JSON.stringify({ currencies: config.currencies, partyFactors: config.partyFactors, formEndpoint: config.formEndpoint, email: config.email, brand: config.brand })};
+window.MFS.t=null;
 </script>
 ${jsonld ? `<script type="application/ld+json">${JSON.stringify(jsonld)}</script>` : ""}
 </head>
@@ -155,7 +178,7 @@ ${header(root, path)}
 <main id="main">
 ${body}
 </main>
-${footer(root, { cta })}
+${footer(root, { cta, path })}
 <script src="${root}assets/vendor/gsap.min.js" defer></script>
 <script src="${root}assets/vendor/ScrollTrigger.min.js" defer></script>
 <script src="${root}assets/vendor/SplitText.min.js" defer></script>

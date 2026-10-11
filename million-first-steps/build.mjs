@@ -15,6 +15,7 @@ import aboutPage from "./src/pages/about.mjs";
 import planPage from "./src/pages/plan.mjs";
 import contactPage from "./src/pages/contact.mjs";
 import { creditsPage, privacyPage, termsPage, notFoundPage } from "./src/pages/legal.mjs";
+import { LANGS, JS_STRINGS, extract, loadDict, translatePage } from "./src/lib/i18n.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const out = path.join(here, "dist");
@@ -54,8 +55,32 @@ for (const [file, html] of pages) {
   fs.writeFileSync(dest, html);
 }
 
+// ── Languages ──────────────────────────────────────────────────────────────
+// Every page is rebuilt in each language from src/i18n/<lang>*.json; untranslated strings stay English.
+const i18nDir = path.join(here, "src", "i18n");
+const strings = new Set();
+for (const [file, html] of pages) if (file !== "404.html") extract(html, strings);
+Object.values(JS_STRINGS).forEach((t) => strings.add(t));
+fs.mkdirSync(i18nDir, { recursive: true });
+fs.writeFileSync(path.join(i18nDir, "_strings.json"), JSON.stringify([...strings], null, 1) + "\n");
+const report = [];
+for (const { code } of LANGS.filter((l) => l.code !== "en")) {
+  const dict = loadDict(i18nDir, code);
+  const missing = new Set();
+  for (const [file, html] of pages) {
+    if (file === "404.html") continue;
+    const dest = path.join(out, code, file);
+    fs.mkdirSync(path.dirname(dest), { recursive: true });
+    fs.writeFileSync(dest, translatePage(html, { lang: code, dict, missing }));
+  }
+  report.push(`${code} ${Math.round((100 * (strings.size - missing.size)) / strings.size)}%`);
+}
+console.log(`${strings.size} strings · translated: ${report.join(", ")}`);
+
 if (config.siteUrl) {
-  const urls = pages.filter(([f]) => f !== "404.html").map(([f]) => `<url><loc>${config.siteUrl}/${f === "index.html" ? "" : f}</loc></url>`);
+  const urls = pages
+    .filter(([f]) => f !== "404.html")
+    .flatMap(([f]) => LANGS.map((l) => `<url><loc>${config.siteUrl}/${l.code === "en" ? "" : l.code + "/"}${f === "index.html" ? "" : f}</loc></url>`));
   fs.writeFileSync(path.join(out, "sitemap.xml"), `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${urls.join("")}</urlset>\n`);
   fs.writeFileSync(path.join(out, "robots.txt"), `User-agent: *\nAllow: /\nSitemap: ${config.siteUrl}/sitemap.xml\n`);
 } else {
@@ -64,7 +89,7 @@ if (config.siteUrl) {
 
 const size = (dir) =>
   fs.readdirSync(dir, { withFileTypes: true }).reduce((n, e) => n + (e.isDirectory() ? size(path.join(dir, e.name)) : fs.statSync(path.join(dir, e.name)).size), 0);
-console.log(`Built ${pages.length} pages into dist/ (${(size(out) / 1024).toFixed(0)} KB) in ${Date.now() - t0} ms`);
+console.log(`Built ${pages.length} pages × ${LANGS.length} languages into dist/ (${(size(out) / 1024).toFixed(0)} KB) in ${Date.now() - t0} ms`);
 
 // Topographic contour lines, used as a quiet texture on dark sections.
 function topo() {

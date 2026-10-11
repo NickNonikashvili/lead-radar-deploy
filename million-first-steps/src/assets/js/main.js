@@ -17,7 +17,10 @@
   if (!motion) html.classList.remove("motion");
 
   /* ───────────────────────── Tier + currency ───────────────────────── */
-  var TIER_NAMES = { wanderer: "Wanderer", explorer: "Explorer", "golden-fleece": "Golden Fleece" };
+  // Interface text; the build fills in cfg.t for each language.
+  var T = cfg.t || {};
+  var tr = function (key, fallback) { return T[key] || fallback; };
+  var TIER_NAMES = { wanderer: tr("wanderer", "Wanderer"), explorer: tr("explorer", "Explorer"), "golden-fleece": tr("golden-fleece", "Golden Fleece") };
 
   function setTier(id, persist) {
     if (!TIER_NAMES[id]) return;
@@ -43,7 +46,23 @@
     if (!(cfg.currencies || {})[code]) return;
     html.dataset.currency = code;
     store.set("mfs-currency", code);
-    $$("select[data-currency]").forEach(function (s) { s.value = code; });
+    /* ───────────────────────── Language ───────────────────────── */
+  function goToLang(code) {
+    store.set("mfs-lang", code);
+    if (code === html.lang) return;
+    var page = html.getAttribute("data-page") || "index.html";
+    location.href = (html.getAttribute("data-site-root") || "") + (code === "en" ? "" : code + "/") + page + location.hash;
+  }
+  $$("select[data-lang-switch]").forEach(function (s) {
+    s.value = html.lang;
+    s.addEventListener("change", function () { goToLang(s.value); });
+  });
+  document.addEventListener("click", function (e) {
+    var a = e.target.closest("[data-set-lang]");
+    if (a) store.set("mfs-lang", a.getAttribute("data-set-lang"));
+  });
+
+  $$("select[data-currency]").forEach(function (s) { s.value = code; });
     renderPrices();
   }
 
@@ -62,6 +81,22 @@
     setTier(next.dataset.setTier);
     e.preventDefault();
   });
+  /* ───────────────────────── Language ───────────────────────── */
+  function goToLang(code) {
+    store.set("mfs-lang", code);
+    if (code === html.lang) return;
+    var page = html.getAttribute("data-page") || "index.html";
+    location.href = (html.getAttribute("data-site-root") || "") + (code === "en" ? "" : code + "/") + page + location.hash;
+  }
+  $$("select[data-lang-switch]").forEach(function (s) {
+    s.value = html.lang;
+    s.addEventListener("change", function () { goToLang(s.value); });
+  });
+  document.addEventListener("click", function (e) {
+    var a = e.target.closest("[data-set-lang]");
+    if (a) store.set("mfs-lang", a.getAttribute("data-set-lang"));
+  });
+
   $$("select[data-currency]").forEach(function (s) {
     s.value = html.dataset.currency || "EUR";
     s.addEventListener("change", function () { setCurrency(s.value); });
@@ -202,26 +237,26 @@
       var bad = $$("[required]", form).filter(function (f) { return f.type === "checkbox" ? !f.checked : !f.value.trim() || (f.type === "email" && !/^\S+@\S+\.\S+$/.test(f.value)); });
       $$("[required]", form).forEach(function (f) { f.setAttribute("aria-invalid", String(bad.indexOf(f) > -1)); });
       if (bad.length) {
-        status.textContent = "Please fill in the highlighted fields.";
+        status.textContent = tr("fill", "Please fill in the highlighted fields.");
         status.classList.add("is-err");
         bad[0].focus();
         return;
       }
-      if (form.company.value) { status.textContent = "Thank you!"; return; } // spam trap
+      if (form.company.value) { status.textContent = tr("thanks", "Thank you!"); return; } // spam trap
 
       var data = new FormData(form);
       var tourSel = form.tour.options[form.tour.selectedIndex];
       if (cfg.formEndpoint) {
-        status.textContent = "Sending…";
+        status.textContent = tr("sending", "Sending…");
         fetch(cfg.formEndpoint, { method: "POST", body: data, headers: { Accept: "application/json" } })
           .then(function (r) {
             if (!r.ok) throw new Error(r.status);
             form.reset();
-            status.textContent = "Gmadlobt — thank you! We'll reply within a day.";
+            status.textContent = tr("sent", "Gmadlobt — thank you! We'll reply within a day.");
             status.classList.add("is-ok");
           })
           .catch(function () {
-            status.textContent = "Sorry, that didn't send. Please email us at " + cfg.email + ".";
+            status.textContent = tr("failed", "Sorry, that didn't send. Please email us at") + " " + cfg.email + ".";
             status.classList.add("is-err");
           });
         return;
@@ -240,7 +275,7 @@
         data.get("message") || "",
       ];
       location.href = "mailto:" + cfg.email + "?subject=" + encodeURIComponent("Journey request: " + tourSel.text) + "&body=" + encodeURIComponent(lines.join("\n"));
-      status.textContent = "Your email app should open with everything filled in — just press send.";
+      status.textContent = tr("mailto", "Your email app should open with everything filled in — just press send.");
       status.classList.add("is-ok");
     });
   }
@@ -283,7 +318,7 @@
         s.classList.toggle("is-active", s.dataset.stop === d.dataset.stop);
       });
       var label = $('.gmap__stop[data-stop="' + d.dataset.stop + '"] text', map);
-      nowDay.textContent = "Day " + d.dataset.day;
+      nowDay.textContent = tr("day", "Day") + " " + d.dataset.day;
       nowPlace.textContent = label ? label.textContent : "";
       if (routePath) {
         if (motion) gsap.to(routePath, { strokeDashoffset: 1 - Math.max(at, 0.002), duration: 1.1, ease: "power2.inOut" });

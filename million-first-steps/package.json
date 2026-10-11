@@ -9,12 +9,16 @@
     "dev": "node build.mjs && node scripts/serve.mjs",
     "photos:commons": "node scripts/fetch-photos.mjs",
     "photos:optimize": "node scripts/fetch-photos.mjs --local-only",
-    "geo": "node scripts/make-geo.mjs"
+    "geo": "node scripts/make-geo.mjs",
+    "i18n:check": "node scripts/i18n-check.mjs"
   },
   "engines": {
     "node": ">=18"
   },
   "optionalDependencies": {
     "sharp": "^0.34.0"
+  },
+  "dependencies": {
+    "node-html-parser": "^7.1.0"
   }
 }

@@ -72,9 +72,9 @@ export default function home() {
     .map(([id]) => id);
 
   // The title sits between the far range and the main massif, so it can sink behind the peaks.
-  const heroTitle = `<p class="hero__ka" lang="ka"><span data-hero-title>საქართველო · Sakartvelo</span></p>
-      <h1 class="hero__title"><span class="hero__line" data-hero-title>Million</span> <span class="hero__line" data-hero-title>First Steps</span></h1>
-      <p class="hero__tag"><span data-hero-title>Georgia Travel Experiences</span></p>`;
+  const heroTitle = `<p class="hero__ka" lang="ka" translate="no"><span data-hero-title>საქართველო · Sakartvelo</span></p>
+      <h1 class="hero__title" translate="no"><span class="hero__line" data-hero-title>Million</span> <span class="hero__line" data-hero-title>First Steps</span></h1>
+      <p class="hero__tag" translate="no"><span data-hero-title>Georgia Travel Experiences</span></p>`;
   const heroScene = scene("hero", { layered: true, className: "hero__scene" }).replace(
     '<svg class="scene__layer scene__layer--main"',
     `${heroTitle}<svg class="scene__layer scene__layer--main"`

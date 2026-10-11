@@ -61,7 +61,7 @@ export function logoMark({ className = "logo-mark", mono = false, title = "" } =
   </svg>`;
 }
 
-export const wordmark = (small = false) => `<span class="wordmark${small ? " wordmark--sm" : ""}">
+export const wordmark = (small = false) => `<span class="wordmark${small ? " wordmark--sm" : ""}" translate="no">
     <span class="wordmark__name">Million <br>First Steps</span>
     <span class="wordmark__tag">Georgia Travel Experiences</span>
   </span>`;
