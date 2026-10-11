@@ -12,7 +12,6 @@ export const STYLES = {
 export const TOURS = [
   {
     id: "footsteps-of-the-first-europeans",
-    photo: "region-samtskhe", // photo slot used on cards and the page hero once a photo exists
     name: "Footsteps of the First Europeans",
     kicker: "Our signature journey",
     days: 7,
@@ -145,7 +144,7 @@ export const TOURS = [
   },
   {
     id: "tusheti-the-last-road",
-    photo: "region-tusheti", // photo slot used on cards and the page hero once a photo exists
+    photo: "tour-tusheti", // photo slot used on cards and the page hero once a photo exists
     name: "Tusheti: The Last Road",
     kicker: "Open only in summer",
     days: 6,

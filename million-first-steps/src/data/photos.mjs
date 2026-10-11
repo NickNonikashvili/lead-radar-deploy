@@ -9,22 +9,24 @@
 //     match and records author + licence in photo-credits.json. Always review what it picked.
 //     Found a better one? Set `file: "File:<name on Commons>"` and run it again with --force.
 //
+// focus: where to keep the photo when it is cropped (CSS object-position), e.g. "50% 80%".
 // orientation: "any" allows portrait images (used where the photo is shown small or cropped square).
 export const PHOTOS = {
-  "region-tbilisi": { alt: "Old Tbilisi with Narikala fortress above the Mtkvari river", commons: ["Narikala Tbilisi old town panorama", "Tbilisi old town view"] },
+  "region-tbilisi": { focus: "50% 82%", alt: "Tbilisi at dusk, with the Mtkvari river and Holy Trinity Cathedral", commons: ["Narikala Tbilisi old town panorama", "Tbilisi old town view"] },
   "region-kazbegi": { alt: "Gergeti Trinity Church below Mount Kazbek", commons: ["Gergeti Trinity Church Kazbek", "Gergeti Trinity Church"] },
-  "region-svaneti": { alt: "Svan defensive towers in Ushguli", commons: ["Ushguli towers Shkhara", "Ushguli"] },
-  "region-kakheti": { alt: "Vineyards in the Alazani valley below the Caucasus", commons: ["Alazani valley vineyards", "Kakheti vineyard Caucasus"] },
-  "region-samtskhe": { alt: "The Vardzia cave monastery carved into the cliff", commons: ["Vardzia cave monastery", "Vardzia"] },
+  "region-svaneti": { alt: "Glaciers and snow peaks of the Caucasus in Svaneti", commons: ["Ushguli towers Shkhara", "Ushguli"] },
+  "region-kakheti": { alt: "Vineyards in Kakheti below the mountains", commons: ["Alazani valley vineyards", "Kakheti vineyard Caucasus"] },
+  "region-samtskhe": { alt: "A river valley in Samtskhe-Javakheti", commons: ["Vardzia cave monastery", "Vardzia"] },
   "region-colchis": { alt: "Gelati Monastery near Kutaisi", commons: ["Gelati Monastery", "Gelati Monastery Kutaisi"] },
-  "region-adjara": { alt: "Batumi on the Black Sea coast", commons: ["Batumi seaside panorama", "Batumi Botanical Garden"] },
-  "region-tusheti": { alt: "The tower village of Dartlo in Tusheti", commons: ["Dartlo Tusheti", "Tusheti village towers"] },
-  "region-dmanisi": { alt: "The Dmanisi archaeological site", commons: ["Dmanisi archaeological site", "Dmanisi"] },
+  "region-adjara": { alt: "The Black Sea coast in Adjara, with Batumi in the distance", commons: ["Batumi seaside panorama", "Batumi Botanical Garden"] },
+  "region-tusheti": { alt: "A medieval defensive tower at Kvavlo, Tusheti", commons: ["Dartlo Tusheti", "Tusheti village towers"] },
+  "region-dmanisi": { alt: "A ram-shaped medieval gravestone at Dmanisi Sioni", commons: ["Dmanisi archaeological site", "Dmanisi"] },
   "history-skull": { alt: "Dmanisi Skull 5, a 1.8-million-year-old early human skull", commons: ["Dmanisi skull", "Dmanisi hominin"], orientation: "any", minWidth: 900 },
   "history-qvevri": { alt: "Clay qvevri wine vessels", commons: ["Qvevri", "Georgian qvevri wine"], orientation: "any", minWidth: 1000 },
   "history-tamar": { alt: "Medieval fresco of King Tamar at Vardzia", commons: ["Tamar fresco Vardzia", "Queen Tamar fresco"], orientation: "any", minWidth: 900 },
   "history-gelati": { alt: "Mosaic of the Virgin in Gelati Monastery", commons: ["Gelati mosaic Virgin", "Gelati Monastery mosaic"], orientation: "any", minWidth: 1000 },
   "history-towers": { alt: "Medieval towers in Mestia, Svaneti", commons: ["Mestia towers", "Svan towers Mestia"] },
   "history-script": { alt: "Medieval Georgian manuscript", commons: ["Georgian manuscript", "Asomtavruli inscription"], orientation: "any", minWidth: 900 },
+  "tour-tusheti": { alt: "The winding road over the Abano pass into Tusheti" },
   "about-founders": { alt: "The founders of Million First Steps" }, // your own photo only
 };

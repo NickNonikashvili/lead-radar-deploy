@@ -1,1 +1,90 @@
-{}
+{
+  "region-tbilisi": {
+    "file": "File:2013 - banner - Georgia - The Evening Tbilisi.jpg",
+    "title": "2013 - banner - Georgia - The Evening Tbilisi",
+    "author": "Moahim",
+    "license": "CC BY-SA 4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:2013_-_banner_-_Georgia_-_The_Evening_Tbilisi.jpg",
+    "width": 1600,
+    "changes": "Cropped, resized and converted to WebP",
+    "short": "Photo: Moahim / Wikimedia Commons, CC BY-SA 4.0"
+  },
+  "region-svaneti": {
+    "file": "File:Svaneti, Georgia. 2018 83.jpg",
+    "title": "Svaneti, Georgia. 2018 83",
+    "author": "hr.icio",
+    "license": "CC BY 2.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by/2.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Svaneti,_Georgia._2018_83.jpg",
+    "width": 2800,
+    "changes": "Cropped, resized and converted to WebP",
+    "short": "Photo: hr.icio / Wikimedia Commons, CC BY 2.0"
+  },
+  "region-kakheti": {
+    "file": "File:Kakheti (10065023153).jpg",
+    "title": "Kakheti (10065023153)",
+    "author": "Levan Gokadze from Tbilisi, Georgia",
+    "license": "CC BY-SA 2.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/2.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Kakheti_(10065023153).jpg",
+    "width": 900,
+    "changes": "Converted to WebP",
+    "short": "Photo: Levan Gokadze from Tbilisi, Georgia / Wikimedia Commons, CC BY-SA 2.0"
+  },
+  "region-adjara": {
+    "file": "File:Adjara (7984853380).jpg",
+    "title": "Adjara (7984853380)",
+    "author": "Levan Gokadze from Tbilisi, Georgia",
+    "license": "CC BY-SA 2.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/2.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Adjara_(7984853380).jpg",
+    "width": 900,
+    "changes": "Converted to WebP",
+    "short": "Photo: Levan Gokadze from Tbilisi, Georgia / Wikimedia Commons, CC BY-SA 2.0"
+  },
+  "region-tusheti": {
+    "file": "File:Tusheti, kvavlo.jpg",
+    "title": "Tusheti, kvavlo",
+    "author": "Paata Vardanashvili from Tbilisi, Georgia",
+    "license": "CC BY 2.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by/2.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Tusheti,_kvavlo.jpg",
+    "width": 800,
+    "changes": "Converted to WebP",
+    "short": "Photo: Paata Vardanashvili from Tbilisi, Georgia / Wikimedia Commons, CC BY 2.0"
+  },
+  "tour-tusheti": {
+    "file": "File:Tusheti 12.jpg",
+    "title": "Tusheti 12",
+    "author": "MIKHEIL",
+    "license": "CC BY-SA 3.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Tusheti_12.jpg",
+    "width": 1172,
+    "changes": "Converted to WebP",
+    "short": "Photo: MIKHEIL / Wikimedia Commons, CC BY-SA 3.0"
+  },
+  "region-dmanisi": {
+    "file": "File:Dmanisi Sioni 07 10 2013 turkmenischer Grabstein.jpg",
+    "title": "Dmanisi Sioni 07 10 2013 turkmenischer Grabstein",
+    "author": "Volker Höhfeld",
+    "license": "CC BY-SA 4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Dmanisi_Sioni_07_10_2013_turkmenischer_Grabstein.jpg",
+    "width": 3648,
+    "changes": "Resized and converted to WebP",
+    "short": "Photo: Volker Höhfeld / Wikimedia Commons, CC BY-SA 4.0"
+  },
+  "region-samtskhe": {
+    "file": "File:Samtskhe-Javakheti, Georgia - panoramio (10).jpg",
+    "title": "Samtskhe-Javakheti, Georgia - panoramio (10)",
+    "author": "G.N.",
+    "license": "CC BY-SA 3.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Samtskhe-Javakheti,_Georgia_-_panoramio_(10).jpg",
+    "width": 4288,
+    "changes": "Resized and converted to WebP",
+    "short": "Photo: G.N. / Wikimedia Commons, CC BY-SA 3.0"
+  }
+}

@@ -34,7 +34,7 @@ export function media({ slot, sceneName, alt = "", root = "", className = "", ea
     const a = alt || PHOTOS[slot]?.alt || "";
     const credit = CREDITS[slot];
     return `<figure class="media media--photo ${className}">
-      <img src="${root}assets/photos/${slot}-1600.webp" srcset="${root}assets/photos/${slot}-800.webp 800w, ${root}assets/photos/${slot}-1600.webp 1600w" sizes="(min-width: 900px) 60vw, 100vw" alt="${esc(a)}" ${eager ? 'fetchpriority="high"' : 'loading="lazy"'} decoding="async" data-depth-img>
+      <img src="${root}assets/photos/${slot}-1600.webp" srcset="${root}assets/photos/${slot}-800.webp 800w, ${root}assets/photos/${slot}-1600.webp 1600w" sizes="(min-width: 900px) 60vw, 100vw" alt="${esc(a)}"${PHOTOS[slot]?.focus ? ` style="object-position:${PHOTOS[slot].focus}"` : ""} ${eager ? 'fetchpriority="high"' : 'loading="lazy"'} decoding="async" data-depth-img>
       ${credit ? `<figcaption class="media__credit">${esc(credit.short || `Photo: ${credit.author}, ${credit.license}`)}</figcaption>` : ""}
     </figure>`;
   }
@@ -84,9 +84,10 @@ export const footprints = (n = 6, cls = "") =>
 
 /** Hero used on every inner page: an illustrated scene whose layers drift apart on scroll. */
 export function pageHero({ kicker, title, lead = "", sceneName, photo, ka = "", crumbs = [], root = "", extra = "" }) {
-  const usePhoto = photo && hasPhoto(photo);
+  // Full-screen heroes need a large original; smaller photos stay on cards only.
+  const usePhoto = photo && hasPhoto(photo) && (CREDITS[photo]?.width ?? 2000) >= 1400;
   const bg = usePhoto
-    ? `<img class="page-hero__photo" src="${root}assets/photos/${photo}-1600.webp" srcset="${root}assets/photos/${photo}-800.webp 800w, ${root}assets/photos/${photo}-1600.webp 1600w" sizes="100vw" alt="" fetchpriority="high">`
+    ? `<img class="page-hero__photo" src="${root}assets/photos/${photo}-1600.webp" srcset="${root}assets/photos/${photo}-800.webp 800w, ${root}assets/photos/${photo}-1600.webp 1600w" sizes="100vw" alt="" fetchpriority="high"${PHOTOS[photo]?.focus ? ` style="object-position:${PHOTOS[photo].focus}"` : ""}>`
     : sceneInline(sceneName);
   const credit = usePhoto && CREDITS[photo] ? `<p class="page-hero__credit">${esc(CREDITS[photo].short)}</p>` : "";
   return `<section class="page-hero" data-page-hero>
