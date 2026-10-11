@@ -40,7 +40,10 @@ Node 18 or newer. `npm install` is only needed for the photo tools (it installs 
 The site is fully illustrated, so it looks finished without photos. Every place a photo can go is a **slot** listed in `src/data/photos.mjs`; when a slot gets a photo, the illustration there is swapped for it automatically.
 
 - **Your own photo:** save it as `src/assets/photos/<slot-id>.jpg` (e.g. `region-kazbegi.jpg`), run `npm install` once, then `npm run photos:optimize` and `npm run build`.
-- **Wikimedia Commons:** `npm run photos:commons` finds freely licensed photos for every empty slot, downloads and optimises them and records the credits (shown on `credits.html` and on the photo). Review each one. Use `--only=<slot-id>` or `--force` to redo a single slot.
+- **Wikimedia Commons:** `npm run photos:commons` finds freely licensed photos for every empty slot, downloads and optimises them and records the credits (shown on `credits.html` and on the photo). Review each one.
+  - See the alternatives for a slot: `node scripts/fetch-photos.mjs --list=region-kazbegi --previews` (small previews go to `photo-previews/`).
+  - Use a specific one: `node scripts/fetch-photos.mjs --only=region-kazbegi --file="File:<name on Commons>" --force` — it is still licence-checked. To keep that choice, add `file: "File:…"` to the slot in `src/data/photos.mjs`.
+  - Needs access to `commons.wikimedia.org` and `upload.wikimedia.org`; behind a proxy the script picks up `HTTPS_PROXY` automatically.
 
 ## Editing content
 

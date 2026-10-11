@@ -3,3 +3,4 @@ dist/
 src/assets/photos/*.jpg
 src/assets/photos/*.jpeg
 src/assets/photos/*.png
+photo-previews/

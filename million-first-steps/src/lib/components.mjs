@@ -84,10 +84,11 @@ export const footprints = (n = 6, cls = "") =>
 
 /** Hero used on every inner page: an illustrated scene whose layers drift apart on scroll. */
 export function pageHero({ kicker, title, lead = "", sceneName, photo, ka = "", crumbs = [], root = "", extra = "" }) {
-  const bg =
-    photo && hasPhoto(photo)
-      ? `<img class="page-hero__photo" src="${root}assets/photos/${photo}-1600.webp" srcset="${root}assets/photos/${photo}-800.webp 800w, ${root}assets/photos/${photo}-1600.webp 1600w" sizes="100vw" alt="" fetchpriority="high">`
-      : sceneInline(sceneName);
+  const usePhoto = photo && hasPhoto(photo);
+  const bg = usePhoto
+    ? `<img class="page-hero__photo" src="${root}assets/photos/${photo}-1600.webp" srcset="${root}assets/photos/${photo}-800.webp 800w, ${root}assets/photos/${photo}-1600.webp 1600w" sizes="100vw" alt="" fetchpriority="high">`
+    : sceneInline(sceneName);
+  const credit = usePhoto && CREDITS[photo] ? `<p class="page-hero__credit">${esc(CREDITS[photo].short)}</p>` : "";
   return `<section class="page-hero" data-page-hero>
   <div class="page-hero__scene" aria-hidden="true">${bg}</div>
   <div class="page-hero__veil" aria-hidden="true"></div>
@@ -105,5 +106,6 @@ export function pageHero({ kicker, title, lead = "", sceneName, photo, ka = "", 
     ${lead ? `<p class="page-hero__lead" data-reveal>${lead}</p>` : ""}
     ${extra}
   </div>
+  ${credit}
 </section>`;
 }
