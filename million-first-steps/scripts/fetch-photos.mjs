@@ -13,7 +13,8 @@
 // Other flags: --force (replace existing photos), --only=<slot-id>, --any-quality (don't prefer
 // Commons "Quality images"), --local-only.
 //
-// To make a choice permanent, put `file: "File:…"` on the slot in src/data/photos.mjs.
+// To make a choice permanent, put `file: "File:…"` (or a list of files, best first — later
+// ones are backups) on the slot in src/data/photos.mjs.
 //
 // Only these licences are accepted: CC0, public domain, CC BY and CC BY-SA. Anything
 // NonCommercial (NC) or NoDerivatives (ND), or with extra restrictions (personality rights,
@@ -208,21 +209,34 @@ for (const [slot, def] of Object.entries(PHOTOS)) {
   }
 
   try {
-    let pick = null;
+    let ok = false;
     if (wanted) {
-      pick = check(await commonsFile(wanted), { ...def, orientation: "any", minWidth: 1200 });
-      if (typeof pick === "string") {
-        console.log(`✗ ${slot}: ${wanted} can't be used — ${pick}`);
-        continue;
+      // `file` may list backups: the first file that passes the checks and downloads wins.
+      for (const title of [].concat(wanted)) {
+        const pick = check(await commonsFile(title), { ...def, orientation: "any", minWidth: 1200 });
+        if (typeof pick === "string") {
+          console.log(`✗ ${slot}: ${title} can't be used — ${pick}`);
+          continue;
+        }
+        try {
+          await install(slot, pick);
+          ok = true;
+          break;
+        } catch (e) {
+          if (e instanceof Offline) throw e;
+          console.log(`✗ ${slot}: ${title} — ${e.message}`);
+        }
       }
     } else {
-      pick = (await candidates(def, 1))[0];
+      const pick = (await candidates(def, 1))[0];
       if (!pick) {
         console.log(`– ${slot}: nothing suitable for "${[].concat(def.commons).join('" / "')}" — add your own photo or edit the query in photos.mjs`);
         continue;
       }
+      await install(slot, pick);
+      ok = true;
     }
-    await install(slot, pick);
+    if (!ok) continue;
     done++;
     await new Promise((r) => setTimeout(r, 600)); // be polite to Wikimedia's servers
   } catch (e) {
