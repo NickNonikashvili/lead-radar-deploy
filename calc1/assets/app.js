@@ -12,7 +12,7 @@
   const BUILD = global.MATHUB_BUILD || 'dev';
   const Courses = global.Courses || (global.Courses = {});
   const COURSE_ORDER = ['calc', 'physics', 'precalc', 'writ', 'csci', 'biob', 'kin', 'psyx'];
-  const GLOBAL_VIEWS = ['contact', 'forum', 'policy', 'admin', 'meet', 'badges', 'challenge', 'mock', 'people', 'settings', 'leagues', 'gpa', 'today', 'whatsnew', 'resources', 'guides', 'focus', 'recap', 'tools', 'mistakes', 'join', 'sheet', 'request'];   // pages that work without a course, e.g. #/contact
+  const GLOBAL_VIEWS = ['contact', 'forum', 'policy', 'admin', 'meet', 'badges', 'challenge', 'mock', 'people', 'settings', 'leagues', 'gpa', 'today', 'whatsnew', 'resources', 'guides', 'focus', 'recap', 'tools', 'mistakes', 'join', 'sheet', 'request', 'teach', 'class', 'syllabus', 'notfound'];   // pages that work without a course, e.g. #/contact
   const SITE = 'Mathub';
   let D = null, QZ = null;        // current course data and quiz module
   const courseHooks = [];
@@ -37,6 +37,7 @@
 
   /* ---------- icons ---------- */
   const ICONS = {
+    plus: '<path d="M12 5v14M5 12h14"/>', copy: '<rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/>', send: '<path d="M21 3L10 14"/><path d="M21 3l-7 18-4-7-7-4z"/>', megaphone: '<path d="M3 11v2a1 1 0 0 0 1 1h3l6 4V6L7 10H4a1 1 0 0 0-1 1z"/><path d="M17 8a5 5 0 0 1 0 8"/>',
     d20: '<path d="M12 2l8.7 5v10L12 22l-8.7-5V7z"/><path d="M12 6.5l5.2 9H6.8z"/><path d="M12 2v4.5M12 6.5L3.3 7M12 6.5L20.7 7M17.2 15.5L20.7 7M17.2 15.5L20.7 17M17.2 15.5L12 22M6.8 15.5L12 22M6.8 15.5L3.3 17M6.8 15.5L3.3 7"/>', wand: '<path d="M4 20l10-10"/><path d="M17 3l1 2.5 2.5 1-2.5 1-1 2.5-1-2.5-2.5-1 2.5-1z"/><path d="M20 13v2M19 14h2M8 4v2M7 5h2"/>', compass: '<circle cx="12" cy="12" r="9"/><path d="M15.5 8.5l-2 5-5 2 2-5z"/>', orb: '<circle cx="12" cy="10" r="6.5"/><path d="M7 20h10M8.5 16.5L7 20M15.5 16.5L17 20"/><path d="M9.5 8.5a3 3 0 0 1 2.5-2"/>', sword: '<path d="M20 4l-10.5 10.5M20 4h-4.2M20 4v4.2M6.5 12.5l5 5M8 16l-3.5 3.5"/>', potion: '<path d="M9.5 3h5M10.5 3v5.2L6 15.5A4.5 4.5 0 0 0 10 22h4a4.5 4.5 0 0 0 4-6.5L13.5 8.2V3"/><path d="M7.5 14h9"/>', scroll: '<path d="M8 4h10a2 2 0 0 1 2 2v1h-4"/><path d="M16 7v11a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-1h10"/><path d="M8 4a2 2 0 0 0-2 2v11M9.5 9h4M9.5 12.5h4"/>', quill: '<path d="M20 3C12 4 7 9 5.5 17.5L4 21"/><path d="M20 3c-1 6-5 10.5-12.5 13M9 12h5"/>', crown: '<path d="M3 8l4.5 4L12 5l4.5 7L21 8l-2 11H5z"/>',
     home: '<path d="M2.5 20l6.5-10.5 3.5 5 2.5-3.5 6.5 9z"/><path d="M9 9.5V3.5l4.5 1.8L9 7"/>', calendar: '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>',
     book: '<path d="M4 4h6a3 3 0 0 1 3 3v13a2 2 0 0 0-2-2H4z"/><path d="M20 4h-6a3 3 0 0 0-3 3v13a2 2 0 0 1 2-2h7z"/>', sigma: '<path d="M18 5H7l6 7-6 7h11"/>',
@@ -170,7 +171,7 @@
   function markActivity() { const days = store.get('activity', {}); days[todayISO()] = true; store.set('activity', days); }
   function streakOf(data) { const days = data.activity || {}; let n = 0; let d = today(); if (!days[toISO(d)]) d = addDays(d, -1); while (days[toISO(d)]) { n++; d = addDays(d, -1); } return n; }
   const streak = () => streakOf(store.data);
-  function unitMastery(unit) { const p = progress(); const topics = QZ.topicsForUnits([unit]); let a = 0, c = 0; topics.forEach(t => { if (p[t]) { a += p[t].a; c += p[t].c; } }); return { a, c, pct: a ? Math.round(100 * c / a) : 0 }; }
+  function unitMastery(unit) { const p = progress(); const topics = QZ && QZ.topicsForUnits ? QZ.topicsForUnits([unit]) : []; let a = 0, c = 0; topics.forEach(t => { if (p[t]) { a += p[t].a; c += p[t].c; } }); return { a, c, pct: a ? Math.round(100 * c / a) : 0 }; }
   function cardsMastered(unit) { const fc = store.get('flashcards', {}); const cards = D.FLASHCARDS.filter(c => !unit || c.unit === unit); return { total: cards.length, mastered: cards.filter(c => (fc[c.id] || 0) >= 3).length }; }
   function checklistState(examId) { const items = D.CHECKLISTS[examId] || []; const st = store.get('checklists', {})[examId] || {}; return { items, done: items.filter((_, i) => st[i]).length }; }
 
@@ -206,7 +207,7 @@
   }
   const secById = id => D.SECTIONS.find(s => s.id === id);
   const secLabel = id => { const s = secById(id); return s ? s.label : ('§' + id); };
-  const topicsForSection = secId => Object.keys(QZ.TOPICS).filter(t => QZ.TOPICS[t].sec === secId);
+  const topicsForSection = secId => QZ && QZ.TOPICS ? Object.keys(QZ.TOPICS).filter(t => QZ.TOPICS[t].sec === secId) : [];
 
   /* ---------- Canvas feed + announcement (fetched once per session, cached 5 minutes) ---------- */
   const Canvas = {
@@ -319,7 +320,7 @@
   function route() {
     const raw = location.hash.replace(/^#\/?/, ''); const [path, qs] = raw.split('?'); const parts = path.split('/').filter(Boolean);
     const query = Object.fromEntries(new URLSearchParams(qs || ''));
-    if (!parts.length || !Courses[parts[0]]) return { course: null, view: GLOBAL_VIEWS.includes(parts[0]) ? parts[0] : 'home', param: parts.slice(1).join('/') || null, query };
+    if (!parts.length || !Courses[parts[0]]) return { course: null, view: !parts.length ? 'home' : GLOBAL_VIEWS.includes(parts[0]) && App.views[parts[0]] ? parts[0] : 'notfound', param: parts.length && !GLOBAL_VIEWS.includes(parts[0]) ? parts.join('/') : parts.slice(1).join('/') || null, query };
     const view = parts[1] || 'dashboard';
     return { course: parts[0], view: App.views[view] || !Courses[parts[0]].loaded ? view : 'dashboard', param: parts.slice(2).join('/') || null, query };
   }
@@ -346,6 +347,16 @@
     typeset(root); app.classList.remove('nav-open'); updateExamChip(); paintAsOf(); afterRender(root);
     if (!['settings', 'contact', 'policy'].includes(view)) { const h = $('.note-title, .rd-title, .page-title', root); setSetting('lastVisit', { hash: location.hash, label: `${D.short} · ${V.title}`, detail: h && !h.classList.contains('dash-greet') && !/^Good (morning|afternoon|evening)/.test(h.textContent) && h.textContent.trim() !== V.title ? h.textContent.trim().slice(0, 70) : '', course: D.id, t: Date.now() }); }
   }
+  /* ---------- an address that matches no page ---------- */
+  App.views.notfound = {
+    title: 'Page not found',
+    render(root, param) {
+      const first = String(param || '').split('/')[0]; const classy = /^[a-z]{1,6}\d{2,4}[a-z]?$/.test(first);
+      root.innerHTML = `<div class="landing-wrap"><header class="landing-top"><div><div class="eyebrow">${SITE}</div><h1 class="landing-title"><span class="logo-mark">${App.logoSvg(44)}</span>${classy ? 'This class is not open to you' : 'Page not found'}</h1><p class="muted">${classy ? `There is no class <b>${esc(first)}</b> on Mathub that you can open. If your instructor set it up, join it with the class code they gave you.` : 'The link may be old or mistyped. Nothing was lost; pick where to go from here.'}</p></div></header>
+        <div class="row gap-sm" style="flex-wrap:wrap"><a class="btn primary" href="#/">${icon('home', 14)} Start page</a>${classy ? `<a class="btn" href="#/class">${icon('users', 14)} Join a class with a code</a><a class="btn" href="#/request?code=${encodeURIComponent(first.toUpperCase())}">${icon('path', 14)} Request this class</a>` : `<button class="btn" data-action="search">${icon('search', 14)} Search Mathub</button>`}</div></div>`;
+      bind(root, { search: () => { const b = $('.search-btn'); if (b) b.click(); } });
+    }
+  };
   /* ---------- invite landing: #/join?ref=CODE ---------- */
   App.views.join = {
     title: 'Join a classmate',
@@ -423,6 +434,7 @@
   App.initTabs = initTabs;
   function afterRender(root) {
     initTabs(root); initToTop(); { const r = route(); paintTabbar(r.course, r.course ? r.view : (r.view === 'home' ? 'home' : r.view)); if (!r.course) prefetchLast(); const PRINTABLE = ['notes', 'formulas', 'course', 'calendar', 'planner', 'exam', 'checklist', 'gpa']; const pa = $('.page-head .page-actions', root) || (r.view === 'notes' ? $('.note-head', root) : null); if (pa && PRINTABLE.includes(r.view) && !$('.print-btn', pa)) pa.insertAdjacentHTML('beforeend', `<button class="btn sm print-btn" data-action="print-page" title="Print or save as PDF">${icon('print', 13)} Print</button>`); }
+    (App.onRender || []).forEach(fn => { try { fn(root, route()); } catch (e) { console.error(e); } });
     if (App.motionRender) App.motionRender(root); { const r = route(); App.track('view:' + (r.course ? r.view : (r.view === 'home' ? 'landing' : r.view))); } if (App.paintStats) { App.paintStats(); App.paintMascots(); App.countUp(root); } if (App.paintQuests) App.paintQuests(); if (App.paintLeagueWidgets) App.paintLeagueWidgets(root); }
   App.rerender = () => render();
   App.currentSectionOf = C => currentSection(C);
@@ -586,7 +598,7 @@
         </section>
         <section class="land-sec" aria-labelledby="lsec-classes"><div class="sec-h"><h2 class="sec-title" id="lsec-classes">${showAll && mineIds.length < COURSE_ORDER.filter(id => Courses[id]).length ? 'All classes' : 'Your classes'}</h2>${mineIds.length < COURSE_ORDER.filter(id => Courses[id]).length ? `<button class="linkbtn small" data-action="show-all">${showAll ? 'Show only mine' : 'Show all classes'}</button>` : ''}</div>
           <div class="course-grid">${cards}</div>
-          ${App.requestLink ? `<div class="rq-under">${App.requestLink()}</div>` : ''}
+          ${App.requestLink ? `<div class="rq-under">${App.requestLink()}${App.teachLinks ? App.teachLinks() : ''}</div>` : ''}
         </section>
         <section class="land-sec" aria-labelledby="lsec-more"><h2 class="sec-title" id="lsec-more">Explore</h2>
         <div class="dash-tabs landing-tabs" data-store="landTab" role="tablist">${tabs.map(([k, l, ic]) => `<button class="tab" data-tab="${k}" role="tab">${icon(ic, 14)}<span>${l}</span></button>`).join('')}</div>
@@ -672,7 +684,7 @@
       const hist = store.get('history', []); const answered = hist.length, correct = hist.filter(x => x.ok).length; const cm = cardsMastered(); const cur = currentSection(D);
       const weekMon = addDays(d, -((d.getDay() + 6) % 7)); const weekDays = Array.from({ length: 5 }, (_, i) => toISO(addDays(weekMon, i)));
       const cl = ex ? checklistState(ex.id) : { items: [], done: 0 }; const p = progress();
-      const weak = Object.entries(p).filter(([k, v]) => QZ.TOPICS[k] && v.a >= 3 && v.c / v.a < 0.7).sort((a, b) => (a[1].c / a[1].a) - (b[1].c / b[1].a)).slice(0, 4);
+      const weak = Object.entries(p).filter(([k, v]) => QZ && QZ.TOPICS[k] && v.a >= 3 && v.c / v.a < 0.7).sort((a, b) => (a[1].c / a[1].a) - (b[1].c / b[1].a)).slice(0, 4);
       const es = ex ? examStatus(ex) : null;
       const rd = App.readiness ? App.readiness(D.id) : null; const weak0 = rd && rd.ok && rd.weakest && rd.weakest[0];
       const readyLine = rd && rd.ok ? `<div class="ready-line"><b>${rd.score}% ready</b> · ${esc(rd.label)}${weak0 ? ` · weakest: ${esc(weak0.label)}` : ''} <button class="linkbtn" data-action="tab-ready">How to raise it ${icon('right', 12)}</button></div>` : '';
@@ -749,7 +761,7 @@
               <div class="divider"></div><div class="eyebrow mb-1">Due soon${(D.RECURRING || []).some(r => r.afterLabDay) ? ` · lab ${courseSetting(D.id, 'labDay', 'tue') === 'thu' ? 'Thu' : 'Tue'} <a href="${L('settings')}">change</a>` : ''}</div>
               ${dl.length ? dl.slice(0, 4).map(x => `<div class="today-ev"><span class="when">${daysBetween(t, x.date) === 0 ? 'Today' : daysBetween(t, x.date) === 1 ? 'Tomorrow' : esc(fmtDate(x.date))}</span><span>${esc(x.title)}${x.time ? ` <span class="muted small">· ${esc(x.time)}</span>` : ''}</span></div>`).join('') : '<div class="empty small">Nothing scheduled.</div>'}
               <div class="divider"></div><div class="eyebrow mb-1">Current topic</div>
-              <a class="card-link" href="${L('notes', cur.id)}"><h4>${esc(cur.label)} ${esc(cur.title)}</h4><p>Notes, worked example and practice for this topic.</p></a></div>
+              <a class="card-link" href="${L('notes', cur.id)}"><h3>${esc(cur.label)} ${esc(cur.title)}</h3><p>Notes, worked example and practice for this topic.</p></a></div>
             <div class="panel keep-going"><div class="panel-h"><div class="panel-title">${icon('play')} Keep going</div>${curNode ? '<span class="small muted">next on your path</span>' : ''}</div>
               <a class="btn keep-cta" href="${curNode ? L('lesson', null, { topics: curNode.t }) : L('lesson', null, { smart: 1 })}">${icon('play', 15)} ${curNode ? 'Continue: ' + esc(curNode.label) : 'Start a lesson'}</a>
               <div class="eyebrow mt-3 mb-1">Smart review</div>
@@ -1005,7 +1017,7 @@
       const dataPanel = C ? `<div class="panel"><div class="panel-h"><div class="panel-title">${icon('download')} Your ${esc(C.short)} data</div></div><p class="small muted mb-2">Quiz history, flashcard boxes, checklists, grade entries and scratchpad strokes for this class.</p>
           <div class="row"><button class="btn" data-action="export">${icon('download', 14)} Export backup</button><label class="btn">${icon('rotate', 14)} Import backup <input type="file" id="s-import" accept="application/json" hidden></label><button class="btn danger" data-action="reset">${icon('trash', 14)} Reset ${esc(C.short)} progress</button></div>
           <textarea class="input mono mt-2" id="s-json" rows="8" placeholder="Export writes your backup here; paste a backup here and click Import from text." spellcheck="false"></textarea><button class="btn sm mt-1" data-action="import-text">Import from text</button></div>`
-        : `<div class="panel"><div class="panel-h"><div class="panel-title">${icon('download')} Backups and class data</div></div><p class="small muted mb-2">Quiz history, flashcard boxes, checklists, grades and scratchpads are stored per class. Open a class to export, import or reset its data.</p><div class="stack-sm">${mine.map(id => `<a class="card-link" href="#/${id}/settings"><h4>${esc(Courses[id].short)} · ${esc(Courses[id].name)}</h4><p>Backup, import or reset ${esc(Courses[id].short)} progress ${icon('right', 12)}</p></a>`).join('')}</div></div>`;
+        : `<div class="panel"><div class="panel-h"><div class="panel-title">${icon('download')} Backups and class data</div></div><p class="small muted mb-2">Quiz history, flashcard boxes, checklists, grades and scratchpads are stored per class. Open a class to export, import or reset its data.</p><div class="stack-sm">${mine.map(id => `<a class="card-link" href="#/${id}/settings"><h3>${esc(Courses[id].short)} · ${esc(Courses[id].name)}</h3><p>Backup, import or reset ${esc(Courses[id].short)} progress ${icon('right', 12)}</p></a>`).join('')}</div></div>`;
       root.innerHTML = `${standalone ? '<div class="landing-wrap settings-wrap">' : ''}${head}<div class="grid cols-2"><div id="acct-panel" class="span-2"></div>${classesPanel}${prefsPanel}${dataPanel}</div>${standalone ? '</div>' : ''}`;
       const slot = $('#landing-account', root); if (slot && App.auth && App.auth.ready) App.auth.paintLandingAccount(slot);
       $('#s-theme', root).addEventListener('change', e => { setSetting('theme', e.target.value); applyTheme(); });

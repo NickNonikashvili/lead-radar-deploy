@@ -6,13 +6,13 @@
   'use strict';
   const App = global.App; if (!App) return;
   const { $, esc, icon, bind, pageHead } = App;
-  const EFFECTIVE = 'October 1, 2026';
+  const EFFECTIVE = 'October 11, 2026';
   const OP = () => App.CREATOR || { name: 'Nikoloz Nonikashvili', email: 'nonikashvilinikolozi@gmail.com' };
 
   function html() {
     const op = OP();
     return `<div class="policy">
-      <div class="policy-nav">${[['terms', 'Terms of Use'], ['rules', 'Community Rules'], ['privacy', 'Privacy Policy'], ['disclaimer', 'Disclaimer'], ['contact', 'Contact']].map(([id, l]) => `<a class="btn sm" href="#" data-action="jump" data-t="${id}">${l}</a>`).join('')}</div>
+      <div class="policy-nav">${[['terms', 'Terms of Use'], ['rules', 'Community Rules'], ['privacy', 'Privacy Policy'], ['access', 'Accessibility'], ['disclaimer', 'Disclaimer'], ['contact', 'Contact']].map(([id, l]) => `<a class="btn sm" href="#" data-action="jump" data-t="${id}">${l}</a>`).join('')}</div>
       <div class="callout small"><b>Plain-language summary.</b> Mathub is a free study site made by a student. You may use it if you follow the rules. What you post is yours and your responsibility. We do not sell your data. Illegal activity, harassment and cheating are not allowed, get removed, and can get you banned. Mathub is provided as is, without guarantees. Effective ${EFFECTIVE}.</div>
 
       <h2 id="pol-terms">1. Terms of Use</h2>
@@ -71,7 +71,9 @@
         <li><b>Study progress:</b> quiz history and accuracy, flashcard boxes, checklist ticks, grade entries you type into the calculator and scratchpad strokes. This is saved to your account so it follows you across devices.</li>
         <li><b>Discussions:</b> posts, comments, votes, reports and edits you make, including the “anonymous” flag. Anonymous posts still record which account made them.</li>
         <li><b>Class requests:</b> the course code and details you enter when you request a class, and the syllabus file or text you attach.</li>
-        <li><b>Technical data:</b> your IP address and browser type when you sign up, log in, post or comment (kept to prevent abuse, enforce bans and rate limits, and investigate reports), and a session cookie that keeps you logged in.</li>
+        <li><b>Classes with an instructor:</b> if you join a class with the code your instructor gave you, that you joined and when, your results on that class’s practice assignments (score, time taken and which topics you got right) and your attendance check-ins. If you are an instructor: your request for instructor access, the syllabi you write, and your announcements and assignments.</li>
+        <li><b>Technical data:</b> your IP address and browser type when you sign up, log in, post or comment (kept to prevent abuse, enforce bans and rate limits, and investigate reports), a session cookie that keeps you logged in, and the device and date of each login (so you can see and end them in Settings).</li>
+        <li><b>Error reports:</b> when a page breaks, your browser sends the error message, the file and line, the page you were on (without anything after a “?”), the site version and your browser type. Reports carry no account, name or answers, and are deleted after 45 days.</li>
         <li><b>Local data:</b> preferences (theme, as-of date), a copy of your progress, and unsent drafts are stored in your browser’s local storage on each device you use.</li>
       </ul>
       <h3>3.2 How we use it</h3>
@@ -80,25 +82,29 @@
       <ul>
         <li>Other members see your display name (or the part of your email before the @ if you have not set one) next to your posts, unless you post anonymously. Visitors who are not logged in see only post titles.</li>
         <li>Moderators can see the author of every post and comment, including anonymous ones, and the report queue.</li>
+        <li><b>Your instructor</b>, only for classes you join with their code: your name, your email, your results on that class’s practice assignments and your check-ins. Nothing else you do on Mathub. Leaving the class stops this; results already recorded stay with the class until the instructor deletes it.</li>
         <li>Class requests: only administrators see who asked and the syllabus files or text. Other members see the course code and how many students asked, never names or files. Syllabi are used only to build study materials in our own words and are never posted.</li>
-        <li>Service providers: the site and its database are hosted by Hostinger; emails are sent through Hostinger’s mail servers; fonts are loaded from Google Fonts and the math renderer (MathJax) from the jsDelivr CDN. Those providers receive your IP address when your browser loads their resources.</li>
+        <li>Service providers: the site and its database are hosted by Hostinger; emails are sent through Hostinger’s mail servers; the math renderer (MathJax) loads from the jsDelivr CDN, which receives your IP address when your browser loads it. Fonts are served by Mathub itself.</li>
         <li>Legal: we may disclose account data if required by law, subpoena or court order, to enforce these Terms, to report suspected illegal activity, or to protect the safety of any person.</li>
       </ul>
       <h3>3.4 Retention and deletion</h3>
       <p>Your data is kept while your account exists. Deleting your account from Settings permanently deletes your account record, progress, votes and reports. Posts and comments you deleted earlier are hidden from members; moderators may keep removed content, and short-lived backups may persist, for up to 90 days for abuse investigations. Verification codes expire within minutes and are deleted when used. You can withdraw a class request while it is still new, which deletes the syllabus you sent; administrators may delete request files once a class is built. If you delete your account, your class requests stay as anonymous requests for that course, with any syllabus you attached, so the class can still be built; withdraw them first if you want them gone.</p>
       <h3>3.5 Your choices</h3>
-      <p>You can edit or delete your posts and comments, change your display name, post anonymously, export a backup of your progress, or delete your whole account, all from within the Service. Email us for anything you cannot do yourself.</p>
+      <p>You can edit or delete your posts and comments, change your display name, post anonymously, download everything stored about your account as one file (Settings → Download my data), see the devices you are signed in on and sign out of the others, leave a class you joined, or delete your whole account, all from within the Service. Email us for anything you cannot do yourself.</p>
       <h3>3.6 Security</h3>
-      <p>Passwords are stored as one-way hashes, logins use secure cookies over HTTPS, and the account database is not accessible from the web. No system is perfectly secure; use a password you do not use elsewhere and tell us if you suspect a problem.</p>
+      <p>Passwords are stored as one-way hashes and checked against a list of the most common passwords, logins use secure cookies over HTTPS only, the pages forbid scripts from anywhere but Mathub and its pinned math renderer, and the account database is not accessible from the web. No system is perfectly secure; use a password you do not use elsewhere. To report a security problem, email us (see <a href="/.well-known/security.txt" target="_blank" rel="noopener">security.txt</a>); we answer within a few days and credit reporters who ask.</p>
       <h3>3.7 Children</h3>
       <p>The Service is intended for university students and is not directed at children under 13. We do not knowingly collect data from children under 13; if you believe we have, contact us and we will delete it.</p>
       <h3>3.8 Changes</h3>
       <p>If this policy changes in a meaningful way we will update the effective date and note the change on the site.</p>
 
-      <h2 id="pol-disclaimer">4. Disclaimer</h2>
-      <p>Mathub is an independent student project. It is <b>not affiliated with, endorsed by or operated by Montana State University</b>, its Department of Mathematical Sciences, its Department of Physics, or any instructor. Course names and dates are referenced only to help students organize their own studying. Discussions are written by students and are not moderated by the University. Nothing on this site is professional, legal, medical or academic advice.</p>
+      <h2 id="pol-access">4. Accessibility</h2>
+      <p>Mathub aims to meet the Web Content Accessibility Guidelines (WCAG) 2.2 at level AA. Every page works with a keyboard alone, starts with a “Skip to content” link, has visible focus, respects your system’s reduced-motion and dark-mode settings, and is checked with automated accessibility tests before each release. Automated tests cannot catch everything. If something on Mathub is hard or impossible for you to use, email us with the page and what happened; we treat it as a bug and reply within a few days.</p>
 
-      <h2 id="pol-contact">5. Contact</h2>
+      <h2 id="pol-disclaimer">5. Disclaimer</h2>
+      <p>Mathub is an independent student project. It is <b>not affiliated with, endorsed by or operated by Montana State University</b>, its Department of Mathematical Sciences or its Department of Physics. Instructors who publish a class on Mathub do so on their own; the University does not operate those classes here, and official grades stay in the University’s own systems. Course names and dates are referenced only to help students organize their own studying. Discussions are written by students and are not moderated by the University. Nothing on this site is professional, legal, medical or academic advice.</p>
+
+      <h2 id="pol-contact">6. Contact</h2>
       <p>Questions about these Terms, the Privacy Policy, a report, or a request to delete data: ${esc(op.name)} · <a href="mailto:${esc(op.email)}">${esc(op.email)}</a> · <a href="#/contact">contact page</a>.</p>
       <p class="small muted">Effective ${EFFECTIVE}.</p>
     </div>`;

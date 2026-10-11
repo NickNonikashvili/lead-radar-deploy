@@ -178,6 +178,25 @@ function mh_role(string $email): string {
   return $cache[$email] = $r;
 }
 
+/* ---------- passwords ---------- */
+/** NIST SP 800-63B style check: long enough, not a well-known password, not the email name. Returns an error or ''. */
+function mh_password_problem(string $pass, string $email = ''): string {
+  if (strlen($pass) < 8) return 'Use a password of at least 8 characters.';
+  if (strlen($pass) > 200) return 'That password is too long.';
+  $p = strtolower($pass);
+  static $common = ['password', 'password1', 'password12', 'password123', 'password1234', 'passw0rd', 'p@ssw0rd', 'p@ssword', '12345678', '123456789', '1234567890', '0123456789', '87654321', '11111111', '00000000', '12341234', '11223344', 'qwertyui', 'qwerty12', 'qwerty123', 'qwertyuiop', '1q2w3e4r', '1qaz2wsx', 'zaq12wsx', 'asdfghjk', 'asdfasdf', 'abcd1234', 'abc12345', 'abcdefgh', 'iloveyou', 'iloveyou1', 'sunshine', 'sunshine1', 'princess', 'football', 'football1', 'baseball', 'basketball', 'superman', 'batman123', 'starwars', 'trustno1', 'welcome1', 'welcome123', 'letmein1', 'monkey123', 'dragon123', 'master123', 'shadow123', 'michael1', 'jennifer', 'computer', 'whatever', 'internet', 'changeme', 'mathub123', 'montana1', 'montana123', 'bobcats1', 'gocats123', 'bozeman1', 'student1', 'student123', 'college1', 'school123'];
+  if (in_array($p, $common, true) || preg_match('/^(.)\1{7,}$/', $p) || preg_match('/^(0123456789|1234567890|9876543210|abcdefghij)/', $p)) return 'That password is one of the most common ones and easy to guess. Pick something more personal, like three unrelated words.';
+  $local = strtolower(explode('@', $email)[0] ?? '');
+  if ($local !== '' && strlen($local) >= 4 && str_contains($p, $local)) return 'Your password should not contain your email name.';
+  return '';
+}
+/** Runs a password check even when the account does not exist, so a login takes the same time either way. */
+function mh_password_check(?array $u, string $pass): bool {
+  static $dummy = null; if ($dummy === null) $dummy = password_hash('mathub-timing-equalizer', PASSWORD_DEFAULT);
+  if (!$u) { password_verify($pass, $dummy); return false; }
+  return password_verify($pass, (string)$u['pass_hash']);
+}
+
 /* ---------- one-time codes ---------- */
 function mh_code_hash(string $email, string $kind, string $code): string { return hash_hmac('sha256', "$email|$kind|$code", mh_secret()); }
 function mh_code_issue(string $email, string $kind): string {
@@ -224,6 +243,31 @@ function mh_current_user(): ?array {
 }
 function mh_require_user(): array { $u = mh_current_user(); if (!$u) mh_fail('Please log in.', 401, ['auth' => false]); return $u; }
 
+/* ---------- account self-service: devices, data export ---------- */
+/** A readable device name from a user agent: "Chrome on Windows". */
+function mh_ua_label(string $ua): string {
+  $b = 'Browser'; foreach (['Edg/' => 'Edge', 'OPR/' => 'Opera', 'Firefox/' => 'Firefox', 'CriOS' => 'Chrome', 'Chrome/' => 'Chrome', 'Safari/' => 'Safari'] as $k => $v) if (str_contains($ua, $k)) { $b = $v; break; }
+  $o = ''; foreach (['iPhone' => 'iPhone', 'iPad' => 'iPad', 'Android' => 'Android', 'Windows' => 'Windows', 'Mac OS X' => 'Mac', 'CrOS' => 'Chromebook', 'Linux' => 'Linux'] as $k => $v) if (str_contains($ua, $k)) { $o = $v; break; }
+  return $o !== '' ? "$b on $o" : $b;
+}
+/** Everything stored about one account, for "Download my data". Secrets (password hash, login tokens, calendar and push keys, IP addresses) are left out. */
+function mh_export_user(array $u): array {
+  $db = mh_db(); $out = ['exported' => gmdate('c'), 'site' => mh_config()['site_name'] ?? 'Mathub'];
+  $hide = ['pass_hash', 'ics_token', 'ip', 'hash', 'code_hash', 'p256dh', 'auth', 'endpoint', 'invite_code'];
+  $acct = $u; foreach ($hide as $k) unset($acct[$k]); $out['account'] = $acct; $out['role'] = mh_role($u['email']);
+  $skip = ['users', 'tokens', 'codes', 'rate', 'sqlite_sequence'];
+  foreach ($db->query("SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name")->fetchAll(PDO::FETCH_COLUMN) as $t) {
+    if (in_array($t, $skip, true) || !preg_match('/^[a-z_0-9]+$/', $t)) continue;
+    $cols = array_column($db->query("PRAGMA table_info($t)")->fetchAll(), 'name'); $who = in_array('user_id', $cols, true) ? 'user_id' : (in_array('owner_id', $cols, true) ? 'owner_id' : ''); if ($who === '') continue;
+    $st = $db->prepare("SELECT * FROM $t WHERE $who = ? LIMIT 5000"); $st->execute([$u['id']]); $rows = $st->fetchAll(); if (!$rows) continue;
+    foreach ($rows as &$r) { foreach ($hide as $k) unset($r[$k]); if ($t === 'progress' && isset($r['json'])) { $r['data'] = json_decode((string)$r['json'], true); unset($r['json']); } } unset($r);
+    $out['tables'][$t] = $rows;
+  }
+  $st = $db->prepare('SELECT created, expires, ua FROM tokens WHERE user_id = ? AND expires > ?'); $st->execute([$u['id'], time()]);
+  $out['signed_in_devices'] = array_map(fn($r) => ['device' => mh_ua_label((string)$r['ua']), 'signed_in' => gmdate('c', (int)$r['created']), 'expires' => gmdate('c', (int)$r['expires'])], $st->fetchAll());
+  return $out;
+}
+
 /* ---------- request guards ---------- */
 function mh_guard_mutation(): void {
   if (($_SERVER['HTTP_X_REQUESTED_WITH'] ?? '') !== 'MatHub') mh_fail('Bad request.', 400);
@@ -249,7 +293,7 @@ function mh_send_code(string $email, string $kind, string $code): void {
         . "<p style=\"font-size:34px;letter-spacing:8px;font-weight:700;margin:0 0 16px;font-family:Consolas,Menlo,monospace\">$code</p>"
         . "<p style=\"font-size:14px;color:#64718A;margin:0\">It expires in $ttl minutes. If you did not request this, you can ignore this email.</p></div>";
   $r = mh_send_mail($cfg, $email, $subject, $text, $html);
-  if (!$r['ok']) mh_fail('The code could not be emailed right now. ' . ($r['error'] ?? ''), 502);
+  if (!$r['ok']) { error_log('Mathub mail to ' . $email . ': ' . ($r['error'] ?? 'unknown error')); mh_fail('The code could not be emailed right now. Please try again in a few minutes.', 502); }
 }
 
 /* ---------- the class list: built-in classes plus class packs uploaded in the admin panel (packs.php) ---------- */

@@ -246,6 +246,29 @@ How it works:
 - **Server class lists.** Lists that used to be hard-coded (discussions, goals, profile classes, emails, the ICS feed, Canvas matching) now come from `mh_course_ids()` and `mh_course_names()` in `api/lib.php`, which add the installed packs to the built-in classes.
 - **Not available to uploaded classes:** custom tools (graphers, solvers, the Python playground) and the static `/learn/<id>/` pages and share images. Those still need a built-in class.
 
+## For professors (#/teach) and their students (#/class)
+
+`assets/teach.js`, `assets/teach.css`, `api/teach.php`. Instructors run a class on Mathub without touching the admin panel.
+
+- **Access.** An instructor signs in with their montana.edu address and asks for access at `#/teach` (name, title, department, courses). Administrators approve or decline in **Admin panel → Instructors**; approval gives the role `Instructor` with scope `teach`, which only reaches that instructor's own classes. Administrators are instructors automatically.
+- **Syllabus builder** (`#/teach/<id>/syllabus`, `schedule`, `grading`). Course facts, meetings, people and office hours, description and outcomes, materials, policies (MSU's accommodations, integrity and wellbeing statements pre-filled; three AI-policy presets), exams, a day-by-day schedule and grading (weights must add to 100). It saves itself as you type. A checklist marks what blocks publishing and what students usually look for. **Fill in class meetings** builds the term from the meeting days and marks Labor Day, Veterans Day, Thanksgiving week and the Monday holidays; **Paste topics** fills them. Preview, Print / PDF, and a public page at `#/syllabus/<CODE>`.
+- **Publishing.** The server turns the plain-text syllabus into a class pack (weeks become topics, exams split the units, the grading becomes the grade calculator, the policies become the syllabus page) with an id from the course code (`m171`, else `m171b`, else `tc0042`). Packs built here are listed and served only to the class's students, its teaching team and administrators. Re-publishing updates the class and can tell students what changed.
+- **Running the class.** Join code and link, roster with CSV export, co-instructors and TAs; announcements (inbox + push); practice assignments from any Mathub question bank (each student gets their own seeded version, retakes count their best score, results by student and by topic); attendance check-in with a 4-digit code that stays open a few minutes; insights (completion, averages, weakest topics, attendance).
+- **Students.** `#/class/join/<CODE>` shows the class and exactly what the instructor will see before they join. `#/class/<id>` is the class hub: links to the class pages, assignments, announcements and check-in. The class dashboard links back to the hub.
+- **Privacy.** Instructors see a student's name, email, results on that class's assignments and check-ins, nothing else. Deleting a class (owner types the course code) removes its pack and its rows; student accounts are never touched.
+- **Tests.** `tests/teach.test.js` (the whole flow in a browser) and `tests/teach-api.test.js` (permissions and boundaries over HTTP).
+
+## Security, privacy and quality
+
+The October 2026 audit against what careful, large sites do (and where AI-built sites usually fall short), with sources and what changed, is in [`docs/quality-audit.md`](docs/quality-audit.md). In short:
+
+- **Headers.** `index.html` and the static pages carry a Content-Security-Policy with no inline scripts (startup code is `assets/boot.js`, MathJax settings for static pages `assets/mathjax-static.js`); scripts come only from this site and `cdn.jsdelivr.net/npm/mathjax@3.2.2/`. `.htaccess` adds HSTS, frame protection, Permissions-Policy, Cross-Origin-Opener-Policy and an HTTPS redirect. `api/.htaccess` allows only `api/index.php`.
+- **Fonts** are self-hosted (`assets/fonts.css`, licences in `assets/fonts/`); no Google Fonts request.
+- **Accounts.** Common passwords are refused, logins take the same time whether or not the account exists, **Settings → Signed-in devices** can sign out every other device, and **Settings → Download my data** exports everything stored about the account (secrets left out).
+- **Errors.** Unexpected server errors show a reference code and log the details. Browser errors are reported without personal data (`client_error`) and grouped in **Admin panel → Site errors** for 45 days.
+- **Staff scope.** Instructors and TAs act only on the classes they teach; only moderators post to every class.
+- **Contact.** `/.well-known/security.txt`; the policy page has an accessibility statement (target: WCAG 2.2 AA, checked by `tests/a11y.test.js`).
+
 ## GPA calculator
 
 `assets/gpa.js` adds a GPA calculator at `#/gpa` (also under Course in every class sidebar, in the account menu, on the account settings page and from each grade calculator). It uses Montana State's 4.0 scale with plus and minus grades (A 4.00, A- 3.67, B+ 3.33 … D- 0.67, F 0). The semester table starts with the student's chosen classes and their credits, and each row shows the letter that class's grade calculator projects from the scores entered there, with a one-click "use it". Add or remove classes, mark one P/W so it is not counted, and see semester GPA, graded credits and quality points, with a Dean's List (3.50 on 12+ credits) or below-good-standing flag. Enter the GPA and graded credits from before this semester for the cumulative GPA and its change; set a goal to see the semester GPA it needs (and roughly which letter in every class), or how many more credits at 4.0 it would take when it is out of reach this semester. A what-if table shows how one grade step up or down in each class moves the result. Everything is saved in the browser.
@@ -402,7 +425,8 @@ Upload the contents of this folder into `public_html` (or a subfolder). Keep the
 ```
 public_html/
   index.html
-  .htaccess                 no-cache for the page, long cache for versioned assets
+  .htaccess                 caching, security headers (HSTS, frame protection) and the HTTPS redirect
+  .well-known/security.txt  security contact (upload it too: it is a hidden folder)
   assets/                   styles, scripts, icons, manifest
   api/
     index.php               account endpoints (sign-up, verify, login, reset, progress sync)
@@ -412,6 +436,7 @@ public_html/
     social.php              challenges, badges, presence, sessions, polls, mocks, contributions, digest
     push.php, extras.php    web push (VAPID), problem reports, backups, synced preferences
     growth.php              calendar feed, focus together, metrics, class goals, announcements, invites, planning email
+    teach.php               the professors' section: syllabus builder, publishing, roster, announcements, assignments, attendance
   learn/                    static study guides (generated), sitemap.xml, robots.txt
   tests/                    browser checks (not needed on the server; safe to leave out of the upload)
   sw.js                     service worker for offline use
@@ -432,6 +457,8 @@ Then in **hPanel**:
 5. If a device still shows an old version, purge the cache in hPanel (Websites → Advanced → Cache
    Manager) and hard-refresh once. From then on the page is served with no-cache headers and a
    stale copy repairs itself automatically.
+
+**HTTPS.** `.htaccess` sends every `http://` visit to `https://` and tells browsers to stay on HTTPS for a year, so the site needs its SSL certificate active (hPanel → Security → SSL) before this build goes up. Hidden files and folders (`.htaccess`, `.well-known`) must be uploaded too; File Manager shows them when "Show hidden files" is on.
 
 **Updating without losing users.** Accounts, posts and progress live only in `api/data/` (the SQLite
 database and `secret.key`). Those files are never in the zip. Upload a new zip over the old files and

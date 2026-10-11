@@ -545,6 +545,7 @@
   const resync = () => { lastSync = Date.now(); return sync(); };
   global.addEventListener('hashchange', () => { const first = location.hash.replace(/^#\/?/, '').split(/[/?]/)[0]; if (ID_RE.test(first) && !Courses[first]) resync(); });   // e.g. the inbox link to a class added after this tab opened
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && Date.now() - lastSync > 10 * 60 * 1000) resync(); });
-  /* admins also get hidden packs, so the list changes when an admin signs in or out */
-  document.addEventListener('DOMContentLoaded', () => { let admin = null; if (App.auth && App.auth.onChange) App.auth.onChange(() => { const a = !!(App.auth.user && App.auth.user.admin); if (admin !== null && a !== admin) { lastSig = ''; sync(); } admin = a; }); });
+  /* the list depends on who is signed in: admins also get hidden packs, and a class built in #/teach is listed only for its
+     students and teaching team, so the list is fetched again whenever a different person signs in or out */
+  document.addEventListener('DOMContentLoaded', () => { let who = null; if (App.auth && App.auth.onChange) App.auth.onChange(() => { const u = App.auth.user; const w = u ? `${u.id || u.email}:${u.admin ? 1 : 0}` : '-'; if (who !== null && w !== who) { lastSig = ''; sync(); } who = w; }); });
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -21,7 +21,7 @@
     if (!json || json.ok === false) { const err = new Error((json && json.error) || 'Request failed.'); err.data = json; throw err; }
     return json;
   }
-  const TABS = [['overview', 'Overview', 'grid', 'admin'], ['members', 'Members', 'info', 'admin'], ['issues', 'Problems', 'bulb', 'mod'], ['packs', 'Add a class', 'book', 'admin'], ['classes', 'Class requests', 'path', 'admin'], ['backups', 'Backups', 'download', 'admin'], ['reports', 'Reports', 'flag', 'mod'], ['contrib', 'Contributions', 'pen', 'mod'], ['mocks', 'Mock exams', 'target', 'mod'], ['growth', 'Growth', 'chart', 'admin'], ['settings', 'Site settings', 'sliders', 'admin'], ['digest', 'Digest & cron', 'clock', 'admin']];
+  const TABS = [['overview', 'Overview', 'grid', 'admin'], ['members', 'Members', 'info', 'admin'], ['issues', 'Problems', 'bulb', 'mod'], ['packs', 'Add a class', 'book', 'admin'], ['classes', 'Class requests', 'path', 'admin'], ['teach', 'Instructors', 'users', 'admin'], ['errors', 'Site errors', 'zap', 'admin'], ['backups', 'Backups', 'download', 'admin'], ['reports', 'Reports', 'flag', 'mod'], ['contrib', 'Contributions', 'pen', 'mod'], ['mocks', 'Mock exams', 'target', 'mod'], ['growth', 'Growth', 'chart', 'admin'], ['settings', 'Site settings', 'sliders', 'admin'], ['digest', 'Digest & cron', 'clock', 'admin']];
 
   App.views.admin = {
     title: 'Admin panel',
@@ -34,6 +34,17 @@
       if (isMod()) this[tab]($('#adm-body', root), root);
     },
 
+    /* browser errors reported by boot.js (api client_error): grouped by message, file and line */
+    async errors(el) {
+      try {
+        const r = await api('admin_errors');
+        el.innerHTML = `<div class="callout small mb-2">Uncaught errors from visitors' browsers, grouped. No names or answers are recorded: only the message, file, line, page and browser. Entries older than 45 days are removed automatically. Fix the most frequent first, then clear them.</div>
+          <div class="panel"><div class="panel-h"><div class="panel-title">${icon('zap')} Errors <span class="chip xs">${r.items.length}</span></div>${r.items.length ? '<button class="btn sm ghost" data-action="err-clear-all">Clear all</button>' : ''}</div>
+          ${r.items.length ? r.items.map(x => `<div class="err-row"><div class="row between"><b class="mono small">${esc(x.message)}</b><div class="row gap-sm"><span class="chip xs ${x.count >= 10 ? 'bad' : x.count >= 3 ? 'warn' : ''}">×${x.count}</span><button class="btn xs ghost" data-action="err-clear" data-sig="${esc(x.sig)}">Fixed</button></div></div>
+            <div class="small muted">${esc(x.source || 'unknown file')}${x.line ? ':' + x.line : ''} · page ${esc(x.view || '#/')} · build ${esc(x.build || '?')} · ${esc(x.ua)} · last ${timeAgo(x.last)}, first ${timeAgo(x.first)}</div>${x.stack ? `<details class="small"><summary>Stack</summary><pre class="mono err-stack">${esc(x.stack)}</pre></details>` : ''}</div>`).join('') : '<div class="empty">No errors reported. Nice.</div>'}</div>`;
+        bind(el, { 'err-clear': async b => { try { await api('admin_errors', { sig: b.dataset.sig }); this.errors(el); } catch (e) { toast(e.message); } }, 'err-clear-all': async () => { if (!confirm('Clear every reported error?')) return; try { await api('admin_errors', { sig: '' }); this.errors(el); } catch (e) { toast(e.message); } } });
+      } catch (e) { el.innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
+    },
     async growth(el) {
       try {
         const r = await api('admin_growth'); const t = r.totals; const maxW = Math.max(1, ...r.weeks.map(w => w.signups)); const maxD = Math.max(1, ...r.days.map(d => d.n));

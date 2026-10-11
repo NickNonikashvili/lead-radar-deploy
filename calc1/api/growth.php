@@ -173,6 +173,7 @@ function mh_growth_route(string $route, array $in, array $cfg, string $ip): void
     case 'ann_post': {
       mh_method('POST'); $u = mh_require_user(); if (!mh_is_staff($u)) mh_fail('Instructors, TAs and moderators only.', 403);
       $course = preg_replace('/[^a-z0-9]/', '', (string)($in['course'] ?? '')); if ($course !== 'all' && !isset(mh_course_names()[$course])) mh_fail('Pick a class.');
+      require_once __DIR__ . '/teach.php'; if (!mh_staff_can_course($u, $course)) mh_fail($course === 'all' ? 'Only moderators can post to every class.' : 'You can post announcements only to the classes you teach.', 403);
       $text = mh_str($in, 'text', 300); if (strlen($text) < 3) mh_fail('Write the announcement.'); $link = mh_str($in, 'link', 200); if ($link !== '' && !preg_match('#^(https?://|\#/)#', $link)) mh_fail('Links must start with https:// or #/.');
       $days = max(1, min(60, (int)($in['days'] ?? 7))); mh_rate_or_fail("ann:user:{$u['id']}", 20, 86400);
       $db->prepare('INSERT INTO announcements (course, text, link, user_id, created, expires) VALUES (?, ?, ?, ?, ?, ?)')->execute([$course, $text, $link, $u['id'], $now, $now + $days * 86400]);
@@ -184,6 +185,8 @@ function mh_growth_route(string $route, array $in, array $cfg, string $ip): void
     }
     case 'mock_official': {
       mh_method('POST'); $u = mh_require_user(); if (!mh_is_staff($u)) mh_fail('Instructors, TAs and moderators only.', 403);
+      $st = $db->prepare('SELECT course FROM mocks WHERE id = ?'); $st->execute([(int)($in['id'] ?? 0)]); $mc = $st->fetchColumn(); if ($mc === false) mh_fail('Mock exam not found.', 404);
+      require_once __DIR__ . '/teach.php'; if (!mh_staff_can_course($u, (string)$mc)) mh_fail('You can mark mock exams official only in the classes you teach.', 403);
       $db->prepare('UPDATE mocks SET official = ? WHERE id = ?')->execute([!empty($in['official']) ? 1 : 0, (int)($in['id'] ?? 0)]); mh_json(['ok' => true]);
     }
 

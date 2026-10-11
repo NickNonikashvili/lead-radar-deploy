@@ -103,6 +103,13 @@
   };
   Auth.pushUnsubscribe = async function () { try { const reg = await navigator.serviceWorker.ready; const sub = await reg.pushManager.getSubscription(); if (sub) { await call('push_unsubscribe', { endpoint: sub.endpoint }); await sub.unsubscribe(); } } catch (e) {} App.setSetting('pushOn', false); };
   /* ---------- calendar link, invite link, join banner ---------- */
+  /* the devices this account is signed in on, with "sign out everywhere else" (api: sessions, logout_others) */
+  Auth.devicesInit = async function (panel) {
+    const el = $('#acct-devices', panel); if (!el) return;
+    try { const r = await call('sessions', null, 'GET'); const others = r.devices.filter(d => !d.current).length;
+      el.innerHTML = `<ul class="list-plain small dev-list">${r.devices.map(d => `<li>${icon(d.current ? 'check' : 'user', 12)} <b>${esc(d.device)}</b>${d.current ? ' <span class="chip xs good">this device</span>' : ''} <span class="muted">· signed in ${esc(new Date(d.created * 1000).toLocaleDateString())}</span></li>`).join('')}</ul>${others ? `<button class="btn sm mt-1" data-action="devices-out">${icon('logout', 13)} Sign out everywhere else</button>` : '<p class="small muted mt-1">Only this device is signed in.</p>'}`; }
+    catch (e) { el.innerHTML = `<div class="small muted">${esc(e.message)}</div>`; }
+  };
   Auth.growthInit = async function (panel) {
     const cal = $('#acct-cal', panel), inv = $('#acct-invite', panel); if (!cal && !inv) return; if (!Auth.user || Auth.mode !== 'server') { if (cal) cal.innerHTML = '<div class="small muted">Needs the account server.</div>'; if (inv) inv.innerHTML = ''; return; }
     const base = location.origin + location.pathname.replace(/index\.html$/, '');
@@ -385,7 +392,9 @@
           <section><div class="eyebrow mb-1">Invite a classmate</div><p class="small muted mb-1">Share your link. When a classmate signs up through it you both earn a badge.</p><div id="acct-invite"><div class="small muted">Loading…</div></div></section>` : ''}
           <section><div class="eyebrow mb-1">Notifications on this device</div><label class="check"><input type="checkbox" id="acct-push" disabled><span>Push notifications <span class="muted small">(the evening before something is due, and when a streak is at risk; on iPhone this needs the app added to the home screen)</span></span></label><div class="row gap-sm mt-1"><button class="btn xs" data-action="push-test" disabled>Send a test</button><span class="small muted" id="acct-push-note">Checking…</span></div></section>
           <section><div class="eyebrow mb-1">Privacy</div>
-            <label class="check"><input type="checkbox" id="acct-lb" ${u.show_on_leaderboard === false ? '' : 'checked'}><span>Show my name on leaderboards, helper lists and the People page <span class="muted small">(otherwise you appear as “Anonymous student”)</span></span></label></section>` : ''}
+            <label class="check"><input type="checkbox" id="acct-lb" ${u.show_on_leaderboard === false ? '' : 'checked'}><span>Show my name on leaderboards, helper lists and the People page <span class="muted small">(otherwise you appear as “Anonymous student”)</span></span></label>
+            ${server ? `<div class="row gap-sm mt-1" style="flex-wrap:wrap"><button class="btn sm" data-action="data-export">${icon('download', 13)} Download my data</button><span class="small muted">Everything stored about your account, as one file.</span></div>` : ''}</section>
+          ${server ? `<section><div class="eyebrow mb-1">Signed-in devices</div><div id="acct-devices"><div class="small muted">Loading…</div></div></section>` : ''}` : ''}
         </div>
         <div class="divider"></div>
         <div class="row gap-sm" style="flex-wrap:wrap">${server ? `<button class="btn sm" data-action="sync-now">${icon('rotate', 13)} Sync now</button><button class="btn sm" data-action="change-pass">${icon('lock', 13)} Change password</button>` : ''}<button class="btn sm" data-action="logout">${icon('logout', 13)} Log out</button><span style="flex:1"></span><button class="btn sm danger ghost" data-action="delete-acct">${icon('trash', 13)} Delete account</button></div>
@@ -395,7 +404,7 @@
     }
     const wrap = document.createElement('div'); wrap.innerHTML = html; const panel = wrap.firstElementChild;
     const pref = (id, key, onMsg, offMsg) => { const el = $('#' + id, panel); if (el) el.addEventListener('change', async () => { try { const r = await call('profile', { [key]: el.checked }); Auth.user = Object.assign(Auth.user, r.user); toast(el.checked ? onMsg : offMsg); } catch (e) { toast(e.message); el.checked = !el.checked; } }); };
-    Auth.pushInit(panel);
+    Auth.pushInit(panel); if (server && u) Auth.devicesInit(panel);
     pref('acct-planning', 'planning_email', 'Sunday planning email on', 'Sunday planning email off'); pref('acct-focuspub', 'focus_public', 'You show up in Focus together', 'Hidden from Focus together'); Auth.growthInit(panel);
     pref('acct-notify', 'notify_email', 'Reply emails on', 'Reply emails off'); pref('acct-reminder', 'reminder_email', 'Evening reminders on', 'Evening reminders off'); pref('acct-digest', 'digest_email', 'Weekly digest on', 'Weekly digest off'); pref('acct-lb', 'show_on_leaderboard', 'Your name shows on leaderboards and the People page', 'You appear as “Anonymous student”');
     if (u && server && App.social && App.social.refreshBadges) App.social.refreshBadges().then(r => { const el = $('#acct-badge-count', panel); if (el && r) el.textContent = `${r.badges.length} of ${r.catalog.length} earned`; }).catch(() => {});
@@ -404,6 +413,12 @@
       'save-name': async () => { const name = $('#acct-name', panel).value.trim(); if (Auth.mode === 'server') { try { const r = await call('profile', { name }); Auth.user = r.user; } catch (e) { toast(e.message); return; } } else { Auth.user.name = name; writeJSON(LOCAL_KEY, Auth.user); } changed(); toast('Name saved'); const h = $('.acct-hero-name', panel); if (h) h.textContent = name || Auth.user.email.split('@')[0]; },
       'sync-now': async () => { try { for (const id of Object.keys(global.Courses)) await Auth.pushCourse(id); await Auth.pullAll(); toast('Everything is synced'); } catch (e) { toast(e.message); } },
       'change-pass': async () => { try { await call('forgot', { email: u.email }); M.email = u.email; M.state = 'reset'; const wasUser = Auth.user; Auth.user = null; Auth.open('reset'); Auth.user = wasUser; msg('We emailed you a code. Enter it with your new password.', 'good'); } catch (e) { toast(e.message); } },
+      'data-export': async () => {
+        try { const res = await fetch('api/index.php?r=data_export', { credentials: 'same-origin', headers: { 'X-Requested-With': 'MatHub' }, cache: 'no-store' }); if (!res.ok) { let m = 'Could not export your data.'; try { m = (await res.json()).error || m; } catch (e) {} throw new Error(m); }
+          const blob = await res.blob(); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `mathub-data-${new Date().toISOString().slice(0, 10)}.json`; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500); toast('Your data is downloading.'); }
+        catch (e) { toast(e.message); }
+      },
+      'devices-out': async () => { if (!confirm('Sign out of Mathub on every other device? This one stays signed in.')) return; try { const r = await call('logout_others', {}); toast(r.signed_out ? `Signed out of ${r.signed_out} other device${r.signed_out === 1 ? '' : 's'}.` : 'No other devices were signed in.'); Auth.devicesInit(panel); } catch (e) { toast(e.message); } },
       'delete-acct': async () => {
         if (!confirm('Delete your Mathub account and everything saved to it? This cannot be undone.')) return;
         if (Auth.mode === 'server') { const pass = prompt('Confirm with your password:'); if (pass === null) return; try { await call('account_delete', { password: pass }); } catch (e) { toast(e.message); return; } }

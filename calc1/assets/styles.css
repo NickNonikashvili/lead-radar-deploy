@@ -264,7 +264,7 @@ input[type="checkbox"] { accent-color: var(--accent); width: 16px; height: 16px;
 .card-link { display: block; padding: 14px 16px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); color: inherit; text-decoration: none; transition: border-color 0.12s, transform 0.12s; }
 .card-link:hover { border-color: var(--accent-line); text-decoration: none; transform: translateY(-1px); }
 .card-link .eyebrow { margin-bottom: 4px; }
-.card-link h4 { font-size: 15px; }
+.card-link :is(h3, h4) { font-size: 15px; }
 .card-link p { font-size: 13px; color: var(--muted); margin-top: 3px; }
 .tabs { display: flex; flex-wrap: wrap; gap: 4px; border-bottom: 1px solid var(--border); margin-bottom: 16px; }
 .tab { padding: 8px 12px; border: 0; background: transparent; color: var(--muted); font-weight: 500; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; }

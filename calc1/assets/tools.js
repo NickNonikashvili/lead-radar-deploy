@@ -45,7 +45,7 @@
     return Object.keys(QZ.TOPICS).filter(t => ex.sections.includes(QZ.TOPICS[t].sec));
   }
   App.onCourse(C => { D = C; QZ = C.quiz; PQ.units = [1]; PQ.topics = new Set(); PQ.session = null; PQ.smart = null; PQ.external = null; });
-  /** Runs a supplied question set as a timed exam; opts = { questions, minutes, title, onSubmit(correct, total, seconds) }. */
+  /** Runs a supplied question set as a timed exam; opts = { questions, minutes, title, onSubmit(correct, total, seconds, perQuestion [{ topic, ok }]) }. */
   App.runTimedSet = function (opts) {
     PQ.external = opts; PQ.mode = 'exam'; PQ.minutes = opts.minutes || 30; PQ.count = opts.questions.length; PQ.topics = new Set(opts.questions.map(q => q.topic)); PQ.units = [...new Set(opts.questions.map(q => QZ.TOPICS[q.topic] ? QZ.TOPICS[q.topic].unit : 1))];
     PQ.session = { questions: opts.questions, answers: {}, mode: 'exam', submitted: false, left: PQ.minutes * 60, timer: null, external: true };
@@ -59,6 +59,7 @@
   };
   /* Smart review: rank topics by weakness, staleness and coverage; returns a weighted topic list plus reasons. */
   App.smartReview = function (max = 8) {
+    if (!QZ || !QZ.TOPICS) return { picked: [], weighted: [] };   // a class without a question bank (a syllabus-only class from #/teach)
     const t = App.todayISO(); const prog = App.progress(); const hist = store.get('history', []);
     const cur = App.currentSection(); const curIdx = D.SECTIONS.indexOf(cur);
     const covered = new Set(D.SECTIONS.slice(0, curIdx + 1).map(s => s.id));
@@ -202,7 +203,7 @@
     submit(root) {
       const s = PQ.session; if (!s || s.submitted) return; s.submitted = true; if (s.timer) clearInterval(s.timer);
       s.questions.forEach((q, i) => { const a = s.answers[i]; App.recordAnswer(q.topic, !!(a && a.ok)); });
-      if (s.external && PQ.external && PQ.external.onSubmit) { const correct = s.questions.filter((q, i) => s.answers[i] && s.answers[i].ok).length; try { PQ.external.onSubmit(correct, s.questions.length, PQ.minutes * 60 - s.left); } catch (e) { console.error(e); } }
+      if (s.external && PQ.external && PQ.external.onSubmit) { const correct = s.questions.filter((q, i) => s.answers[i] && s.answers[i].ok).length; try { PQ.external.onSubmit(correct, s.questions.length, PQ.minutes * 60 - s.left, s.questions.map((q, i) => ({ topic: q.topic, ok: !!(s.answers[i] && s.answers[i].ok) }))); } catch (e) { console.error(e); } }
       this.paintSession(root); window.scrollTo({ top: 0, behavior: 'smooth' });
       const nOk = s.questions.filter((q, i) => s.answers[i] && s.answers[i].ok).length; if (s.questions.length && nOk / s.questions.length >= 0.8 && App.confetti) setTimeout(() => App.confetti(), 250);
     },

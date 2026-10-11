@@ -52,7 +52,7 @@ function mh_pack_get(string $id): ?array { $st = mh_pack_db()->prepare('SELECT *
 function mh_pack_id_in(array $in): string { $id = strtolower((string)($in['id'] ?? $_GET['id'] ?? '')); return preg_match(MH_PACK_ID_RE, $id) ? $id : ''; }
 /** Open requests per course code, so the admin panel can offer to tell the students who asked. */
 function mh_pack_request_counts(): array {
-  try { require_once __DIR__ . '/requests.php'; $rows = mh_req_db()->query('SELECT code, COUNT(*) AS n FROM class_requests WHERE status IN ("new", "working") GROUP BY code')->fetchAll(); } catch (Throwable $e) { return []; }
+  try { require_once __DIR__ . '/requests.php'; $rows = mh_req_db()->query('SELECT code, COUNT(*) AS n FROM class_requests WHERE status IN (\'new\', \'working\') GROUP BY code')->fetchAll(); } catch (Throwable $e) { return []; }
   $out = []; foreach ($rows as $r) $out[$r['code']] = (int)$r['n']; return $out;
 }
 /** Marks the requests for this class as added and messages everyone who asked. Returns how many students were told. */
@@ -76,7 +76,7 @@ function mh_pack_store(PDO $db, array $p, string $raw, string $by, ?int $publish
   $short = mb_substr(trim((string)($p['short'] ?? '')) ?: (string)$p['code'], 0, 24);
   if ($old) $db->prepare('UPDATE class_packs SET code = ?, name = ?, short = ?, version = version + 1, prev_json = json, json = ?, stub = ?, canvas = ?, enabled = ?, size = ?, uploaded_by = ?, updated = ? WHERE id = ?')
     ->execute([$p['code'], $p['name'], $short, $min, $stub, mh_pack_canvas($p), $enabled, strlen($min), $by, $now, $id]);
-  else $db->prepare('INSERT INTO class_packs (id, code, name, short, version, json, prev_json, stub, canvas, enabled, size, uploaded_by, created, updated) VALUES (?, ?, ?, ?, 1, ?, "", ?, ?, ?, ?, ?, ?, ?)')
+  else $db->prepare('INSERT INTO class_packs (id, code, name, short, version, json, prev_json, stub, canvas, enabled, size, uploaded_by, created, updated) VALUES (?, ?, ?, ?, 1, ?, \'\', ?, ?, ?, ?, ?, ?, ?)')
     ->execute([$id, $p['code'], $p['name'], $short, $min, $stub, mh_pack_canvas($p), $enabled, strlen($min), $by, $now, $now]);
   return [$old, $enabled];
 }
@@ -100,6 +100,12 @@ function mh_packs_apply_bundled(PDO $db, array $files): void {
   }
 }
 
+/** Pack ids of #/teach classes the signed-in person may open: classes they joined, own or help teach. */
+function mh_pack_teach_visible(): array {
+  $u = mh_current_user(); if (!$u) return [];
+  try { require_once __DIR__ . '/teach.php'; $db = mh_teach_db(); $st = $db->prepare('SELECT c.pack_id FROM teach_classes c LEFT JOIN teach_members m ON m.class_id = c.id AND m.user_id = ? WHERE c.pack_id != \'\' AND (c.owner_id = ? OR m.user_id IS NOT NULL)'); $st->execute([$u['id'], $u['id']]); return array_values(array_unique($st->fetchAll(PDO::FETCH_COLUMN))); }
+  catch (Throwable $e) { error_log('Mathub teach visibility: ' . $e->getMessage()); return []; }
+}
 function mh_packs_route(string $route, array $in, array $cfg, string $ip): void {
   $db = mh_pack_db();
   $admin = function (): array { $u = mh_require_user(); if (!mh_is_admin($u)) mh_fail('Admins only.', 403); return $u; };
@@ -107,15 +113,16 @@ function mh_packs_route(string $route, array $in, array $cfg, string $ip): void 
 
     /* the light stubs of every published pack (admins also get hidden ones, marked hidden) */
     case 'classpack_list': {
-      mh_method('GET'); $isAdmin = mh_is_admin(mh_current_user());
-      $rows = $db->query('SELECT id, version, enabled, stub FROM class_packs' . ($isAdmin ? '' : ' WHERE enabled = 1') . ' ORDER BY created, id')->fetchAll();
-      $out = []; foreach ($rows as $r) { $o = json_decode((string)$r['stub']); if (!is_object($o)) continue; $o->id = $r['id']; $o->version = (int)$r['version']; $o->hidden = !(int)$r['enabled']; $out[] = $o; }
+      mh_method('GET'); $isAdmin = mh_is_admin(mh_current_user()); $mine = $isAdmin ? null : mh_pack_teach_visible();
+      $rows = $db->query('SELECT id, version, enabled, stub, uploaded_by FROM class_packs' . ($isAdmin ? '' : ' WHERE enabled = 1') . ' ORDER BY created, id')->fetchAll();
+      $out = []; foreach ($rows as $r) { if ($mine !== null && str_starts_with((string)$r['uploaded_by'], 'teach:') && !in_array($r['id'], $mine, true)) continue; $o = json_decode((string)$r['stub']); if (!is_object($o)) continue; $o->id = $r['id']; $o->version = (int)$r['version']; $o->hidden = !(int)$r['enabled']; $out[] = $o; }
       mh_json(['ok' => true, 'packs' => $out]);
     }
 
     case 'classpack_get': {
       mh_method('GET'); $id = mh_pack_id_in($in); $r = $id ? mh_pack_get($id) : null;
       if (!$r || (!(int)$r['enabled'] && !mh_is_admin(mh_current_user()))) mh_fail('This class is not on Mathub.', 404);
+      if (str_starts_with((string)$r['uploaded_by'], 'teach:') && !mh_is_admin(mh_current_user()) && !in_array($id, mh_pack_teach_visible(), true)) mh_fail('Join this class with the code from your instructor to open it.', 403);
       mh_json(['ok' => true, 'version' => (int)$r['version'], 'pack' => json_decode((string)$r['json'])]);
     }
 

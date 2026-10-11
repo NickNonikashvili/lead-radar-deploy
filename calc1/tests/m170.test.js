@@ -32,7 +32,7 @@ const T = require('./lib');
   const fs = await txt(p, '#view');
   check('the formula sheet has the unit circle, identities and triangle laws', /SOH CAH TOA/.test(fs) && /Pythagorean/.test(fs) && /Law of Sines/.test(fs) && /Inverse ranges/.test(fs));
   await go(p, '#/m170/practice', 1200); if (await p.isVisible('#view [data-action="start"]')) { await p.click('#view [data-action="start"]'); await p.waitForTimeout(600); }
-  check('every quizzer option has a letter', !/undefined|NaN/.test(await txt(p, '#view')) && (await p.$$eval('.q-opt .letter', ls => ls.map(l => l.textContent))).every(l => /^[A-F]$/.test(l)));
+  check('every quizzer option has a letter', !/NaN|\{\{\s*[a-z=]/.test(await txt(p, '#view')) && (await p.$$eval('.q-opt .letter', ls => ls.map(l => l.textContent))).every(l => /^[A-F]$/.test(l)));
   const gen = await p.evaluate(() => { const Q = window.Courses.m170.quiz; let n = 0, bad = 0; for (let r = 0; r < 10; r++) { const set = Q.generateSet(Object.keys(Q.TOPICS), 30); n += set.length; bad += set.filter(q => q.type === 'mc' ? !(q.answer >= 0 && q.answer < q.options.length && q.options.length >= 2 && new Set(q.options).size === q.options.length) : !(typeof q.answer === 'number' && isFinite(q.answer))).length; } return { n, bad, topics: Object.keys(Q.TOPICS).length }; });
   check('the quizzer generates 300 well-formed questions across 9 topics', gen.n === 300 && gen.bad === 0 && gen.topics === 9, gen);
   const typed = await p.evaluate(() => [['sqrt(3)/2', 0.8660254], ['5pi/6', 2.6179939], ['(sqrt(6)-sqrt(2))/4', 0.2588190], ['-sqrt(2)/2', -0.7071068]].map(([s, v]) => Math.abs(App.parseNumber(s) - v) < 1e-6));

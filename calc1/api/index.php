@@ -3,12 +3,14 @@
    Mathub account server — endpoints
    Called as api/index.php?r=<route>. Responses are JSON.
    Routes: health, me, signup, verify, resend, login, logout, forgot,
-           reset, profile, data, data_all, account_delete, stats
+           reset, profile, data, data_all, account_delete, stats,
+           sessions, logout_others, data_export, client_error, admin_errors
    ============================================================ */
 declare(strict_types=1);
 require_once __DIR__ . '/lib.php';
 error_reporting(E_ALL); ini_set('display_errors', '0');
-set_exception_handler(function (Throwable $e) { mh_fail('Server error: ' . $e->getMessage(), 500); });
+// Details of an unexpected error go to the server log under a short reference; the visitor only sees the reference.
+set_exception_handler(function (Throwable $e) { $ref = bin2hex(random_bytes(4)); error_log("Mathub error $ref: " . $e->getMessage() . ' @ ' . basename($e->getFile()) . ':' . $e->getLine()); mh_fail("Something went wrong on our side (reference $ref). Please try again.", 500, ['ref' => $ref]); });
 
 $route = preg_replace('/[^a-z_]/', '', (string)($_GET['r'] ?? ''));
 $ip = mh_client_ip(); $in = mh_input(); $cfg = mh_config();
@@ -32,8 +34,7 @@ switch ($route) {
     mh_rate_or_fail("signup:ip:$ip", 30, 3600);
     [$email, $err] = mh_email_check(mh_str($in, 'email')); if ($err) mh_fail($err);
     $pass = (string)($in['password'] ?? ''); $name = mh_str($in, 'name', 60);
-    if (strlen($pass) < 8) mh_fail('Use a password of at least 8 characters.');
-    if (strlen($pass) > 200) mh_fail('That password is too long.');
+    if (($pe = mh_password_problem($pass, $email)) !== '') mh_fail($pe);
     mh_rate_or_fail("signup:email:$email", 6, 3600, 'Too many sign-up emails for that address. Try again in an hour.');
     $db = mh_db(); $u = mh_user_by_email($email);
     if ($u && (int)$u['verified'] === 1) mh_fail('That address already has an account. Log in instead.', 409, ['exists' => true]);
@@ -73,7 +74,7 @@ switch ($route) {
     $pass = (string)($in['password'] ?? '');
     mh_rate_or_fail("login:ip:$ip", 80, 3600); mh_rate_or_fail("login:email:$email", 12, 900, 'Too many login attempts. Wait 15 minutes or reset your password.');
     $u = mh_user_by_email($email);
-    if (!$u || !password_verify($pass, $u['pass_hash'])) mh_fail('Wrong email or password.', 401);
+    if (!mh_password_check($u, $pass)) mh_fail('Wrong email or password.', 401);
     if ((int)$u['verified'] !== 1) {
       if (mh_rate("signup:email:$email", 6, 3600)) { $code = mh_code_issue($email, 'verify'); mh_send_code($email, 'verify', $code); }
       mh_json(['ok' => true, 'pending' => true, 'email' => $email, 'message' => 'That address has not been verified yet. We sent a new code.']);
@@ -101,7 +102,7 @@ switch ($route) {
     mh_method('POST');
     mh_rate_or_fail("reset:ip:$ip", 60, 900);
     [$email, $err] = mh_email_check(mh_str($in, 'email')); if ($err) mh_fail($err);
-    $pass = (string)($in['password'] ?? ''); if (strlen($pass) < 8) mh_fail('Use a password of at least 8 characters.');
+    $pass = (string)($in['password'] ?? ''); if (($pe = mh_password_problem($pass, $email)) !== '') mh_fail($pe);
     $u = mh_user_by_email($email); if (!$u || (int)$u['verified'] !== 1) mh_fail('That code is not right.', 400);
     $e = mh_code_consume($email, 'reset', mh_str($in, 'code', 12)); if ($e) mh_fail($e);
     $db = mh_db(); $db->prepare('UPDATE users SET pass_hash = ?, last_login = ? WHERE id = ?')->execute([password_hash($pass, PASSWORD_DEFAULT), time(), $u['id']]);
@@ -165,6 +166,48 @@ switch ($route) {
     mh_token_clear();
     mh_json(['ok' => true]);
 
+  /* --- signed-in devices: see them and sign out everywhere else --- */
+  case 'sessions':
+    mh_method('GET');
+    $u = mh_require_user(); $cur = hash('sha256', (string)($_COOKIE[MH_COOKIE] ?? ''));
+    $st = mh_db()->prepare('SELECT hash, created, ua FROM tokens WHERE user_id = ? AND expires > ? ORDER BY created DESC LIMIT 50'); $st->execute([$u['id'], time()]);
+    mh_json(['ok' => true, 'devices' => array_map(fn($r) => ['device' => mh_ua_label((string)$r['ua']), 'created' => (int)$r['created'], 'current' => hash_equals((string)$r['hash'], $cur)], $st->fetchAll())]);
+
+  case 'logout_others':
+    mh_method('POST');
+    $u = mh_require_user(); $cur = hash('sha256', (string)($_COOKIE[MH_COOKIE] ?? ''));
+    $st = mh_db()->prepare('DELETE FROM tokens WHERE user_id = ? AND hash != ?'); $st->execute([$u['id'], $cur]);
+    mh_json(['ok' => true, 'signed_out' => $st->rowCount()]);
+
+  /* --- everything stored about the account, as one JSON file --- */
+  case 'data_export':
+    mh_method('GET');
+    $u = mh_require_user(); mh_rate_or_fail("export:user:{$u['id']}", 10, 3600);
+    header('Content-Disposition: attachment; filename="mathub-data-' . gmdate('Y-m-d') . '.json"');
+    mh_json(mh_export_user($u));
+
+  /* --- browser errors, so problems are found before students report them; no personal data, capped and rate limited --- */
+  case 'client_error':
+    mh_method('POST');
+    if (!mh_rate("cerr:ip:$ip", 40, 3600)) mh_json(['ok' => true, 'dropped' => true]);
+    $msg = mb_substr(trim(preg_replace('/\s+/', ' ', (string)($in['message'] ?? ''))), 0, 300); if ($msg === '') mh_fail('Missing message.');
+    $src = mb_substr(preg_replace('#^https?://[^/]+#', '', preg_replace('/[?#].*$/', '', (string)($in['source'] ?? ''))), 0, 160);
+    $line = max(0, min(10000000, (int)($in['line'] ?? 0))); $stack = mb_substr(preg_replace('#https?://[^/\s)]+#', '', (string)($in['stack'] ?? '')), 0, 1200);
+    $view = mb_substr(preg_replace('/[^a-z0-9\/#_.-]/i', '', preg_replace('/\?.*$/', '', (string)($in['view'] ?? ''))), 0, 80);
+    $build = mb_substr(preg_replace('/[^0-9.]/', '', (string)($in['build'] ?? '')), 0, 20); $ua = mh_ua_label((string)($_SERVER['HTTP_USER_AGENT'] ?? ''));
+    $db = mh_db(); $db->exec('CREATE TABLE IF NOT EXISTS client_errors (sig TEXT PRIMARY KEY, message TEXT NOT NULL, source TEXT NOT NULL DEFAULT "", line INTEGER NOT NULL DEFAULT 0, stack TEXT NOT NULL DEFAULT "", view TEXT NOT NULL DEFAULT "", build TEXT NOT NULL DEFAULT "", ua TEXT NOT NULL DEFAULT "", count INTEGER NOT NULL DEFAULT 1, first INTEGER NOT NULL, last INTEGER NOT NULL)');
+    $sig = substr(sha1($msg . '|' . $src . '|' . $line . '|' . $build), 0, 20); $now = time();
+    $db->prepare('INSERT INTO client_errors (sig, message, source, line, stack, view, build, ua, count, first, last) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?) ON CONFLICT(sig) DO UPDATE SET count = count + 1, last = excluded.last, view = excluded.view, ua = excluded.ua')->execute([$sig, $msg, $src, $line, $stack, $view, $build, $ua, $now, $now]);
+    if (random_int(1, 40) === 1) $db->exec('DELETE FROM client_errors WHERE last < ' . ($now - 45 * 86400));
+    mh_json(['ok' => true]);
+
+  case 'admin_errors':
+    mh_method('GET', 'POST');
+    $u = mh_require_user(); if (!mh_is_admin($u)) mh_fail('Admins only.', 403);
+    $db = mh_db(); $db->exec('CREATE TABLE IF NOT EXISTS client_errors (sig TEXT PRIMARY KEY, message TEXT NOT NULL, source TEXT NOT NULL DEFAULT "", line INTEGER NOT NULL DEFAULT 0, stack TEXT NOT NULL DEFAULT "", view TEXT NOT NULL DEFAULT "", build TEXT NOT NULL DEFAULT "", ua TEXT NOT NULL DEFAULT "", count INTEGER NOT NULL DEFAULT 1, first INTEGER NOT NULL, last INTEGER NOT NULL)');
+    if ($_SERVER['REQUEST_METHOD'] === 'POST') { $sig = preg_replace('/[^a-f0-9]/', '', (string)($in['sig'] ?? '')); if ($sig === '') $db->exec('DELETE FROM client_errors'); else $db->prepare('DELETE FROM client_errors WHERE sig = ?')->execute([$sig]); mh_json(['ok' => true]); }
+    mh_json(['ok' => true, 'items' => $db->query('SELECT * FROM client_errors ORDER BY last DESC LIMIT 100')->fetchAll()]);
+
   case 'stats':
     mh_method('GET');
     $key = (string)($cfg['admin_key'] ?? '');
@@ -179,6 +222,7 @@ switch ($route) {
     if (str_starts_with($route, 'classreq_') || str_starts_with($route, 'admin_classreq')) { require_once __DIR__ . '/forum.php'; require_once __DIR__ . '/requests.php'; mh_requests_route($route, $in, $cfg, $ip); }
     if (str_starts_with($route, 'push_')) { require_once __DIR__ . '/social.php'; require_once __DIR__ . '/push.php'; mh_push_route($route, $in, $cfg, $ip); }
     if (str_starts_with($route, 'issue_') || str_starts_with($route, 'admin_issue') || str_starts_with($route, 'admin_backup') || $route === 'prefs') { require_once __DIR__ . '/social.php'; require_once __DIR__ . '/extras.php'; mh_extras_route($route, $in, $cfg, $ip); }
+    if (str_starts_with($route, 'teach_') || str_starts_with($route, 'admin_teach')) { require_once __DIR__ . '/teach.php'; mh_teach_route($route, $in, $cfg, $ip); }
     if (str_starts_with($route, 'forum_') || str_starts_with($route, 'admin_') || str_starts_with($route, 'notif_') || $route === 'terms_accept') { require_once __DIR__ . '/forum.php'; mh_forum_route($route, $in, $cfg, $ip); }
     foreach (['challenge_', 'badges', 'presence', 'meet_', 'poll_', 'mock_', 'contrib_', 'activity', 'cron', 'helpers', 'people', 'league', 'stats_'] as $pre) if (str_starts_with($route, $pre)) { require_once __DIR__ . '/social.php'; mh_social_route($route, $in, $cfg, $ip); }
     mh_fail('Not found.', 404);

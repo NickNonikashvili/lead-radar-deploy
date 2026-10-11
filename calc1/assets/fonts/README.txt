@@ -7,3 +7,8 @@ gabarito-var.woff2    Gabarito (The Gabarito Project Authors, Naipe Foundry), th
 runes.woff2           Noto Sans Runic (The Noto Project Authors), only the Runic block, used for the rune glyphs in Realm. SIL Open Font License 1.1 (OFL-NotoSansRunic.txt). Source: https://github.com/notofonts/runic
 
 All files are converted to WOFF2 and subset; the glyph outlines are unmodified.
+
+poppins-latin-*.woff2         Poppins 500/600/700 (Indian Type Foundry), the brand wordmark face. SIL Open Font License 1.1 (OFL-Poppins.txt). Source: https://github.com/itfoundry/Poppins (files from @fontsource/poppins)
+jetbrains-mono-latin-*.woff2  JetBrains Mono 400/500 (JetBrains), code and numbers. SIL Open Font License 1.1 (OFL-JetBrainsMono.txt). Source: https://github.com/JetBrains/JetBrainsMono (files from @fontsource/jetbrains-mono)
+press-start-2p-latin-*.woff2  Press Start 2P (CodeMan38), the small arcade labels. SIL Open Font License 1.1 (OFL-PressStart2P.txt). Source: https://github.com/codeman38/PressStart2P (files from @fontsource/press-start-2p)
+These three used to load from Google Fonts. They are served from this folder so no visitor's IP address goes to a third party just to draw text.

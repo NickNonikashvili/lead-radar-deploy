@@ -89,7 +89,7 @@ function mh_push_tick(int $max): int {
 function mh_push_route(string $route, array $in, array $cfg, string $ip): void {
   $db = mh_db();
   switch ($route) {
-    case 'push_key': { mh_method('GET'); try { mh_json(['ok' => true, 'key' => mh_vapid()['pub']]); } catch (Throwable $e) { mh_fail('Push notifications are not available on this server: ' . $e->getMessage(), 500); } }
+    case 'push_key': { mh_method('GET'); try { mh_json(['ok' => true, 'key' => mh_vapid()['pub']]); } catch (Throwable $e) { error_log('Mathub push key: ' . $e->getMessage()); mh_fail('Push notifications are not available on this server right now.', 500); } }
     case 'push_subscribe': {
       mh_method('POST'); $u = mh_require_user(); mh_rate_or_fail("push:sub:$ip", 30, 3600);
       $endpoint = (string)($in['endpoint'] ?? ''); $keys = is_array($in['keys'] ?? null) ? $in['keys'] : []; $p256 = (string)($keys['p256dh'] ?? ''); $auth = (string)($keys['auth'] ?? '');
