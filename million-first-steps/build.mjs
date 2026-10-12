@@ -27,6 +27,8 @@ fs.cpSync(path.join(here, "src", "assets"), path.join(out, "assets"), {
   recursive: true,
   filter: (src) => !/photos[\\/].+\.(jpe?g|png|tiff?)$/i.test(src) && !src.endsWith("README.md"),
 });
+// Files served from the site root as they are (e.g. .htaccess for Apache/LiteSpeed hosts).
+fs.cpSync(path.join(here, "src", "root"), out, { recursive: true });
 
 // Generated assets: illustrated scenes as cacheable SVG files, the favicon and the footprint mask.
 fs.mkdirSync(path.join(out, "assets", "scenes"), { recursive: true });

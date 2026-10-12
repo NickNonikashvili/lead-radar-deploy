@@ -63,6 +63,7 @@ The illustrations are generated in `src/lib/scenes.mjs` and the logo in `src/lib
 
 - **Netlify:** new site from this repo, *Base directory* `million-first-steps`; `netlify.toml` sets the build command and publish folder.
 - **Cloudflare Pages / Vercel:** root directory `million-first-steps`, build command `npm run build`, output `dist`.
+- **Hostinger (or any Apache/LiteSpeed host):** run `npm run build`, zip the *contents* of `dist/` and upload the zip to `public_html` in hPanel's File Manager, then extract it there. The included `.htaccess` sets up the 404 page, compression and caching. Turn on *Force HTTPS* in hPanel.
 - **Anywhere else:** run `npm run build` and upload the contents of `dist/`.
 
 ## Accessibility & performance

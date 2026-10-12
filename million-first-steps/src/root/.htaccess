@@ -1,0 +1,22 @@
+# Settings for Apache / LiteSpeed hosting (e.g. Hostinger). Other hosts ignore this file.
+DirectoryIndex index.html
+ErrorDocument 404 /404.html
+
+<IfModule mod_mime.c>
+  AddType image/webp .webp
+  AddType font/woff2 .woff2
+  AddType image/svg+xml .svg
+</IfModule>
+
+<IfModule mod_deflate.c>
+  AddOutputFilterByType DEFLATE text/html text/css application/javascript text/javascript image/svg+xml application/json text/plain
+</IfModule>
+
+<IfModule mod_headers.c>
+  <FilesMatch "\.(css|js|webp|png|jpg|svg|woff2)$">
+    Header set Cache-Control "public, max-age=604800"
+  </FilesMatch>
+  <FilesMatch "\.html$">
+    Header set Cache-Control "no-cache"
+  </FilesMatch>
+</IfModule>
