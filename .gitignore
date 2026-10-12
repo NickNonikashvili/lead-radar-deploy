@@ -3,3 +3,6 @@ node_modules/
 
 # Mathub iOS app: built from calc1/ by calc1/app/scripts/build-www.js
 calc1/app/www/
+
+# written and removed by tests/class-packs.test.js while it runs
+calc1/tests/fixtures/zzp101-broken.mathub.json
