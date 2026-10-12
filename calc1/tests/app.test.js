@@ -151,6 +151,10 @@ const { execFileSync } = require('child_process'); const path = require('path');
   // reminders: asked only when turned on, then scheduled for the exams
   await go(p, '#/settings', 1600);
   check('Settings has the "On this iPhone" panel', /On this iPhone/.test(await txt(p, '#app-panel')));
+  check('signed out, Settings says an account is optional and does not offer web push', /An account is optional/.test(await txt(p, '.acct-panel')) && !(await p.$('#acct-push')));
+  await go(p, '#/calc/grapher', 1500);
+  check('every study tool works without an account in the app (the grapher is open)', !(await p.$('#view .lock-card')) && !(await p.isVisible('#preview-banner')) && /Grapher/.test(await txt(p, '#view')) && !!(await p.$('#view canvas, #view svg')), (await txt(p, '#view')).slice(0, 120));
+  await go(p, '#/settings', 1200);
   const before2 = await p.evaluate(() => window.__cap.perm);
   await p.check('#ap-exams'); await p.waitForTimeout(1200);
   const rem = await p.evaluate(() => ({ perm: window.__cap.perm, n: window.__cap.scheduled.length, titles: window.__cap.scheduled.map(n => n.title).slice(0, 4), on: App.settings().examReminders }));
@@ -159,6 +163,16 @@ const { execFileSync } = require('child_process'); const path = require('path');
   check('the daily reminder repeats at the chosen time', await p.evaluate(() => window.__cap.scheduled.some(n => n.id === 999 && n.schedule.repeats && n.schedule.on.hour === 19)));
   await p.uncheck('#ap-exams'); await p.uncheck('#ap-daily'); await p.waitForTimeout(900);
   check('turning them off cancels them', await p.evaluate(() => window.__cap.scheduled.filter(n => n.extra && n.extra.mh === 1).length === 0));
+
+  // a web view cannot save files: files the page makes go to the share sheet, files on the server open in the Safari sheet
+  await p.evaluate(() => { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob(['{"x":1}'], { type: 'application/json' })); a.download = 'mathub-data.json'; document.body.appendChild(a); a.click(); a.remove(); });
+  await p.waitForTimeout(700);
+  const dl = await p.evaluate(() => ({ s: window.__cap.shared.slice(-1)[0], body: atob(localStorage.getItem('fakefs:CACHE/share/mathub-data.json') || '') }));
+  check('a file the page makes (Download my data) opens the share sheet with that file', dl.s && /share\/mathub-data\.json$/.test(dl.s.files[0]) && dl.body === '{"x":1}', dl);
+  await p.evaluate(() => { const a = document.createElement('a'); a.href = 'https://mathub.space/api/index.php?r=ics&t=x'; a.download = 'mathub.ics'; a.id = 'dl-ics'; a.textContent = 'ics'; a.style.cssText = 'position:fixed;top:120px;left:10px;z-index:9999;padding:8px;background:#fff'; document.body.appendChild(a); });
+  await p.click('#dl-ics'); await p.waitForTimeout(300);
+  check('a file on the server (the .ics feed) opens in the in-app browser', (await p.evaluate(() => window.__cap.browser.slice(-1)[0])) === 'https://mathub.space/api/index.php?r=ics&t=x' && p.url().startsWith(APP));
+  check('links people share point at mathub.space, not the app', await p.evaluate(() => App.siteBase()) === 'https://mathub.space/');
 
   // #/teach in the app points to the web
   await go(p, '#/teach', 1000); await p.click('[data-action="open-web"]'); await p.waitForTimeout(200);

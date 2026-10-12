@@ -132,6 +132,29 @@
     var to = external(href) || webOnly(href); if (!to) return;
     e.preventDefault(); Native.open(to);
   }, true);
+  /* ---------- downloads: a web view on iOS cannot save files, so a file the page makes goes to the share sheet
+     (Save to Files, AirDrop, Mail...) and a file on the server opens in the Safari sheet, which can save it ---------- */
+  var b64 = function (blob) { return new Promise(function (res, rej) { var fr = new FileReader(); fr.onload = function () { res(String(fr.result).split(',')[1] || ''); }; fr.onerror = rej; fr.readAsDataURL(blob); }); };
+  var saveFile = function (href, name) {
+    name = String(name || 'mathub-file').replace(/[\/\\:*?"<>|]+/g, '-').slice(0, 80) || 'mathub-file';
+    if (!P.Filesystem || !P.Share) return;
+    webFetch(href).then(function (r) { return r.blob(); }).then(b64)
+      .then(function (data) { return P.Filesystem.writeFile({ path: 'share/' + name, data: data, directory: 'CACHE', recursive: true }); })
+      .then(function (r) { return P.Share.share({ title: name, files: [r.uri], dialogTitle: name }); })
+      .catch(function () {});
+  };
+  var aclick = HTMLAnchorElement.prototype.click;
+  HTMLAnchorElement.prototype.click = function () {
+    var href = this.getAttribute('href') || '';
+    if (this.hasAttribute('download') && /^(blob|data):/.test(href)) { saveFile(href, this.getAttribute('download')); return; }
+    return aclick.apply(this, arguments);
+  };
+  document.addEventListener('click', function (e) {
+    var a = e.target && e.target.closest ? e.target.closest('a[download]') : null; if (!a) return;
+    var href = a.getAttribute('href') || '';
+    if (/^(blob|data):/.test(href)) { e.preventDefault(); saveFile(href, a.getAttribute('download')); }
+    else if (/^https?:/.test(href)) { e.preventDefault(); Native.open(href); }
+  }, true);
   var wopen = window.open;
   window.open = function (url) { var to = url && external(url); if (to) { Native.open(to); return null; } return wopen.apply(window, arguments); };
 

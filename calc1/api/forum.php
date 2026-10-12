@@ -17,6 +17,15 @@ function mh_can_post(array $u): void {
   if ((int)($u['terms_accepted'] ?? 0) <= 0) mh_fail('Please accept the community rules before posting.', 403, ['terms' => false]);
   if ($b = mh_banned((int)$u['id'])) mh_fail('Your posting access is paused until ' . gmdate('M j, Y', (int)$b['until']) . ($b['reason'] ? ' (' . $b['reason'] . ')' : '') . '.', 403, ['banned' => true]);
 }
+/** the members this user blocked: 'all' hides everything they post, 'anon' only what they post anonymously.
+    Their content is hidden from this user only. */
+function mh_blocks(?array $me): array {
+  static $cache = []; if (!$me) return ['all' => [], 'anon' => []]; $id = (int)$me['id'];
+  if (!isset($cache[$id])) { $out = ['all' => [], 'anon' => []]; $st = mh_db()->prepare('SELECT blocked_id, anon FROM member_blocks WHERE user_id = ?'); $st->execute([$id]); foreach ($st->fetchAll() as $r) $out[(int)$r['anon'] ? 'anon' : 'all'][] = (int)$r['blocked_id']; $cache[$id] = $out; }
+  return $cache[$id];
+}
+function mh_blocked_author(array $bl, int $authorId, bool $anon): bool { return in_array($authorId, $bl['all'], true) || ($anon && in_array($authorId, $bl['anon'], true)); }
+function mh_has_blocked(int $userId, int $otherId, bool $anon): bool { $st = mh_db()->prepare('SELECT 1 FROM member_blocks WHERE user_id = ? AND blocked_id = ? AND (anon = 0 OR ? = 1)'); $st->execute([$userId, $otherId, $anon ? 1 : 0]); return (bool)$st->fetchColumn(); }
 function mh_hot(int $score, int $created): float { $s = $score === 0 ? 0 : ($score > 0 ? 1 : -1) * log10(max(abs($score), 1)); return $s + ($created - 1600000000) / 45000; }
 function mh_post_row(array $p, ?array $me, bool $mod, array $votes = []): array {
   $mine = $me && (int)$p['user_id'] === (int)$me['id']; $removed = (int)$p['removed'];
@@ -58,6 +67,7 @@ function mh_notify_reply(array $post, ?array $parent, array $actor, int $comment
   if ((int)$post['user_id'] !== (int)$actor['id']) $targets[(int)$post['user_id']] = 'comment';
   if ($parent && (int)$parent['user_id'] !== (int)$actor['id']) $targets[(int)$parent['user_id']] = 'reply';
   foreach ($targets as $uid => $kind) {
+    if (mh_has_blocked($uid, (int)$actor['id'], (bool)$anon)) continue;
     $db->prepare('INSERT INTO notifications (user_id, kind, post_id, comment_id, actor_id, actor, title, snippet, created) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)')->execute([$uid, $kind, $post['id'], $commentId, $actor['id'], $actorName, mb_substr($post['title'], 0, 120), $snippet, $now]);
     $st = $db->prepare('SELECT * FROM users WHERE id = ?'); $st->execute([$uid]); $to = $st->fetch();
     if ($to && (int)($to['notify_email'] ?? 1) === 1 && (int)$to['verified'] === 1 && mh_rate("notifmail:{$uid}:{$post['id']}", 1, 6 * 3600)) {
@@ -87,6 +97,7 @@ function mh_forum_route(string $route, array $in, array $cfg, string $ip): void 
       mh_method('GET');
       $course = (string)($_GET['course'] ?? ''); $sort = (string)($_GET['sort'] ?? 'hot'); $q = trim((string)($_GET['q'] ?? '')); $page = max(0, (int)($_GET['page'] ?? 0));
       $where = ['p.removed = 0']; $args = [];
+      $bl = mh_blocks($me); if ($bl['all']) $where[] = 'p.user_id NOT IN (' . implode(',', $bl['all']) . ')'; if ($bl['anon']) $where[] = 'NOT (p.anon = 1 AND p.user_id IN (' . implode(',', $bl['anon']) . '))';
       if ($course !== '' && $course !== 'all') { if (!mh_is_course($course, true)) mh_fail('Unknown class.'); $where[] = 'p.course = ?'; $args[] = $course; }
       $filter = (string)($_GET['filter'] ?? ''); if ($filter === 'unanswered') { $where[] = 'p.ncomments = 0'; $where[] = 'u.email <> "mathub@system.local"'; } elseif ($filter === 'solved') $where[] = 'p.accepted_id IS NOT NULL'; elseif ($filter === 'polls') $where[] = 'EXISTS (SELECT 1 FROM polls pl WHERE pl.post_id = p.id)';
       if ($q !== '') { $where[] = '(p.title LIKE ? OR p.body LIKE ?)'; $like = '%' . str_replace(['%', '_'], ['\\%', '\\_'], mb_substr($q, 0, 80)) . '%'; $args[] = $like; $args[] = $like; }
@@ -102,10 +113,11 @@ function mh_forum_route(string $route, array $in, array $cfg, string $ip): void 
     case 'forum_post':
       mh_method('GET'); $u = mh_require_user();
       $p = mh_get_post((int)($_GET['id'] ?? 0)); if (!$p || ((int)$p['removed'] === 2 && !$mod && (int)$p['user_id'] !== (int)$u['id'])) mh_fail('That post is not available.', 404);
+      $bl = mh_blocks($u); if (mh_blocked_author($bl, (int)$p['user_id'], (int)$p['anon'] === 1)) mh_fail('You blocked the member who wrote this post. You can unblock them in Settings, under Blocked members.', 403, ['blocked' => true]);
       $st = $db->prepare('SELECT c.*, u.name AS u_name, u.email AS u_email, ? AS p_accepted FROM comments c JOIN users u ON u.id = c.user_id WHERE c.post_id = ? ORDER BY c.created ASC'); $st->execute([(int)$p['accepted_id'], $p['id']]); $cs = $st->fetchAll();
       $votes = array_merge(mh_my_votes($u, 'p', [(int)$p['id']]), mh_my_votes($u, 'c', array_map(fn($c) => (int)$c['id'], $cs)));
       $b = mh_banned((int)$u['id']);
-      mh_json(['ok' => true, 'post' => mh_post_row($p, $u, $mod, $votes), 'comments' => array_map(fn($c) => mh_comment_row($c, $u, $mod, (int)$p['user_id'], $votes), $cs), 'poll' => mh_poll_view((int)$p['id'], (int)$u['id']), 'mod' => $mod, 'banned' => $b ? (int)$b['until'] : 0, 'terms' => (int)$u['terms_accepted'] > 0]);
+      mh_json(['ok' => true, 'post' => mh_post_row($p, $u, $mod, $votes), 'comments' => array_map(function ($c) use ($u, $mod, $p, $votes, $bl) { $o = mh_comment_row($c, $u, $mod, (int)$p['user_id'], $votes); if (mh_blocked_author($bl, (int)$c['user_id'], (int)$c['anon'] === 1)) { $o['body'] = ''; $o['author'] = ''; $o['author_role'] = ''; $o['blocked'] = true; } return $o; }, $cs), 'poll' => mh_poll_view((int)$p['id'], (int)$u['id']), 'mod' => $mod, 'banned' => $b ? (int)$b['until'] : 0, 'terms' => (int)$u['terms_accepted'] > 0]);
 
     case 'forum_post_create':
       mh_method('POST'); $u = mh_require_user(); mh_can_post($u);
@@ -190,6 +202,34 @@ function mh_forum_route(string $route, array $in, array $cfg, string $ip): void 
       if (!$st->fetch()) $db->prepare('INSERT INTO reports (kind, item_id, user_id, reason, created) VALUES (?, ?, ?, ?, ?)')->execute([$kind, $id, $u['id'], $reason, $now]);
       mh_json(['ok' => true, 'message' => 'Thanks. A moderator will take a look.']);
 
+    case 'forum_block':
+      /* blocks the author of a post or comment: their posts, comments, meetups and notifications disappear for this
+         member right away, and the item goes to the moderators' report queue (App Store guideline 1.2) */
+      mh_method('POST'); $u = mh_require_user();
+      mh_rate_or_fail("block:user:{$u['id']}", 40, 3600);
+      $kind = ($in['kind'] ?? '') === 'c' ? 'c' : 'p'; $id = (int)($in['id'] ?? 0);
+      $item = $kind === 'p' ? mh_get_post($id) : mh_get_comment($id); if (!$item) mh_fail('Not available.', 404);
+      $target = (int)$item['user_id'];
+      if ($target === (int)$u['id']) mh_fail('That is your own post.');
+      if ($item['u_email'] === 'mathub@system.local') mh_fail('Posts from Mathub itself cannot be blocked. Report it instead if something is wrong.');
+      $anon = (int)$item['anon'] === 1; $label = $anon ? 'An anonymous member' : mh_display_name($item, 'u_');
+      $db->prepare('INSERT OR IGNORE INTO member_blocks (user_id, blocked_id, anon, label, created) VALUES (?, ?, ?, ?, ?)')->execute([$u['id'], $target, $anon ? 1 : 0, mb_substr($label, 0, 80), $now]);
+      $db->prepare('UPDATE notifications SET read = 1 WHERE user_id = ? AND actor_id = ?' . ($anon ? ' AND actor = \'Someone\'' : ''))->execute([$u['id'], $target]);
+      $reason = mb_substr(trim((string)($in['reason'] ?? '')), 0, 280);
+      $st = $db->prepare('SELECT id FROM reports WHERE kind = ? AND item_id = ? AND user_id = ? AND status = "open"'); $st->execute([$kind, $id, $u['id']]);
+      if (!$st->fetch()) $db->prepare('INSERT INTO reports (kind, item_id, user_id, reason, created) VALUES (?, ?, ?, ?, ?)')->execute([$kind, $id, $u['id'], 'Blocked the author' . ($reason !== '' ? ': ' . $reason : ''), $now]);
+      mh_json(['ok' => true, 'message' => 'Blocked. You will not see their posts, comments or notifications, and the moderators have been told.']);
+
+    case 'forum_blocks':
+      mh_method('GET'); $u = mh_require_user();
+      $st = $db->prepare('SELECT rowid AS bid, anon, label, created FROM member_blocks WHERE user_id = ? ORDER BY created DESC'); $st->execute([$u['id']]);
+      mh_json(['ok' => true, 'blocks' => array_map(fn($r) => ['id' => (int)$r['bid'], 'anon' => (int)$r['anon'] === 1, 'label' => $r['label'], 'created' => (int)$r['created']], $st->fetchAll())]);
+
+    case 'forum_unblock':
+      mh_method('POST'); $u = mh_require_user();
+      $db->prepare('DELETE FROM member_blocks WHERE rowid = ? AND user_id = ?')->execute([(int)($in['id'] ?? 0), $u['id']]);
+      mh_json(['ok' => true]);
+
     case 'forum_reports':
       mh_method('GET'); $u = mh_require_user(); if (!$mod) mh_fail('Moderators only.', 403);
       $st = $db->query('SELECT r.*, u.email AS reporter FROM reports r JOIN users u ON u.id = r.user_id WHERE r.status = "open" ORDER BY r.created DESC LIMIT 200'); $out = [];
@@ -242,9 +282,9 @@ function mh_forum_route(string $route, array $in, array $cfg, string $ip): void 
     /* ---------- notifications ---------- */
     case 'notif_list':
       mh_method('GET'); $u = mh_require_user();
-      $st = $db->prepare('SELECT * FROM notifications WHERE user_id = ? ORDER BY created DESC, id DESC LIMIT 60'); $st->execute([$u['id']]);
+      $st = $db->prepare('SELECT * FROM notifications WHERE user_id = ?' . MH_NOTIF_UNBLOCKED . ' ORDER BY created DESC, id DESC LIMIT 60'); $st->execute([$u['id']]);
       $rows = array_map(fn($n) => ['id' => (int)$n['id'], 'kind' => $n['kind'], 'post_id' => (int)$n['post_id'], 'comment_id' => $n['comment_id'] ? (int)$n['comment_id'] : null, 'actor' => $n['actor'], 'title' => $n['title'], 'snippet' => $n['snippet'], 'link' => (string)($n['link'] ?? ''), 'created' => (int)$n['created'], 'read' => (int)$n['read'] === 1], $st->fetchAll());
-      $st = $db->prepare('SELECT COUNT(*) FROM notifications WHERE user_id = ? AND read = 0'); $st->execute([$u['id']]);
+      $st = $db->prepare('SELECT COUNT(*) FROM notifications WHERE user_id = ? AND read = 0' . MH_NOTIF_UNBLOCKED); $st->execute([$u['id']]);
       mh_json(['ok' => true, 'notifications' => $rows, 'unread' => (int)$st->fetchColumn()]);
 
     case 'notif_read':
@@ -252,7 +292,7 @@ function mh_forum_route(string $route, array $in, array $cfg, string $ip): void 
       if (!empty($in['all'])) $db->prepare('UPDATE notifications SET read = 1 WHERE user_id = ?')->execute([$u['id']]);
       elseif (!empty($in['id'])) $db->prepare('UPDATE notifications SET read = 1 WHERE user_id = ? AND id = ?')->execute([$u['id'], (int)$in['id']]);
       elseif (!empty($in['post_id'])) $db->prepare('UPDATE notifications SET read = 1 WHERE user_id = ? AND post_id = ?')->execute([$u['id'], (int)$in['post_id']]);
-      $st = $db->prepare('SELECT COUNT(*) FROM notifications WHERE user_id = ? AND read = 0'); $st->execute([$u['id']]);
+      $st = $db->prepare('SELECT COUNT(*) FROM notifications WHERE user_id = ? AND read = 0' . MH_NOTIF_UNBLOCKED); $st->execute([$u['id']]);
       mh_json(['ok' => true, 'unread' => (int)$st->fetchColumn()]);
 
     case 'admin_setting':

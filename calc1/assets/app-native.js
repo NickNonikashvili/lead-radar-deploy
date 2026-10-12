@@ -26,6 +26,9 @@
 
   /* ---------- website-only pieces step aside ---------- */
   App.installAvailable = () => false;
+  /* every study tool works without an account in the app (App Store guideline 5.1.1(v)): an account only adds sync,
+     discussions and classes with an instructor, and sign-up is limited to Montana State addresses */
+  if (App.auth) App.auth.gate = () => 'open';
   App.views.teach = {
     title: 'Mathub Faculty',
     render(root) {
@@ -442,6 +445,8 @@ THE SYLLABUS:
   /* ---------- where the app's own pieces join the pages ---------- */
   App.onRender = App.onRender || [];
   App.onRender.push((root, r) => {
+    /* web push needs a home-screen web app; the app has its own reminders in the panel below */
+    if (r.view === 'settings') { const push = $('#acct-push', root); if (push && push.closest('section')) push.closest('section').remove(); }
     if (r.view === 'settings') { const acct = $('#acct-panel', root) || $('.acct-panel', root); const grid = $('.grid.cols-2', root); if (grid && !$('#app-panel', root)) { (acct ? acct : grid.firstElementChild || grid).insertAdjacentHTML(acct ? 'afterend' : 'beforebegin', devicePanel()); wireDevicePanel($('#app-panel', root)); } }
     if (!r.course && r.view === 'home') {
       const under = $('.rq-under', root); if (under && !$('.mk-cta', root)) under.insertAdjacentHTML('beforebegin', `<a class="mk-cta" href="#/create"><span class="mk-cta-ic">${icon('plus', 20)}</span><span><b>Create a class from your syllabus</b><small>Any class: your AI writes it, Mathub checks it, and it stays on this ${DEVICE}.</small></span>${icon('right', 16)}</a>`);

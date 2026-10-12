@@ -99,7 +99,7 @@
     const f = $('input, textarea, button:not([data-close])', el) || $('[data-close]', el); if (f) setTimeout(() => f.focus(), 30);
     return { el, close };
   }
-  const joinLink = code => `${location.origin}${location.pathname}#/class/join/${code}`;
+  const joinLink = code => `${App.siteBase()}#/class/join/${code}`;
   function copy(text, msg) { (navigator.clipboard ? navigator.clipboard.writeText(text) : Promise.reject()).then(() => toast(msg || 'Copied.')).catch(() => { const m = modal(`<h2 class="fx-dlg-h">Copy this</h2><input class="fx-input mono" value="${esc(text)}" readonly aria-label="Text to copy"><div class="fx-dlg-actions"><button class="fx-btn" data-close>Done</button></div>`, { cls: 'fx-dlg', label: 'Copy' }); const i = $('input', m.el); i.select(); }); }
   function download(text, name, type) { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([text], { type })); a.download = name; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500); }
 

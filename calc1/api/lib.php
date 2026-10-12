@@ -110,6 +110,10 @@ function mh_db(): PDO {
   $db->exec('CREATE TABLE IF NOT EXISTS focus_live (user_id INTEGER PRIMARY KEY, task TEXT NOT NULL DEFAULT "", course TEXT NOT NULL DEFAULT "", started INTEGER NOT NULL, ends INTEGER NOT NULL, seen INTEGER NOT NULL)');
   $db->exec('CREATE TABLE IF NOT EXISTS weekly_stats (user_id INTEGER NOT NULL, course TEXT NOT NULL, week TEXT NOT NULL, answered INTEGER NOT NULL DEFAULT 0, correct INTEGER NOT NULL DEFAULT 0, cards INTEGER NOT NULL DEFAULT 0, focus INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (user_id, course, week))');
   $db->exec('CREATE TABLE IF NOT EXISTS announcements (id INTEGER PRIMARY KEY AUTOINCREMENT, course TEXT NOT NULL, text TEXT NOT NULL, link TEXT NOT NULL DEFAULT "", user_id INTEGER NOT NULL, created INTEGER NOT NULL, expires INTEGER NOT NULL DEFAULT 0)');
+  // blocks: a member hides another member's posts, comments, meetups and notifications from themself (App Store guideline 1.2).
+  // anon = 1 when the block was made from an anonymous post: it then hides only that member's anonymous posts, so blocking
+  // never reveals who wrote one (their named posts staying visible says nothing about which named member it was)
+  $db->exec('CREATE TABLE IF NOT EXISTS member_blocks (user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE, blocked_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE, anon INTEGER NOT NULL DEFAULT 0, label TEXT NOT NULL DEFAULT "", created INTEGER NOT NULL, PRIMARY KEY (user_id, blocked_id, anon))');
   return $db;
 }
 
@@ -157,8 +161,10 @@ function mh_user_by_email(string $email): ?array {
 }
 function mh_is_admin(?array $u): bool { return $u ? in_array(strtolower($u['email']), array_map('strtolower', mh_config()['admins'] ?? []), true) : false; }
 function mh_is_mod(?array $u): bool { return $u ? (mh_is_admin($u) || in_array(strtolower($u['email']), array_map('strtolower', mh_config()['moderators'] ?? []), true)) : false; }
+/** SQL for a notifications query: leaves out what members the reader blocked set off */
+const MH_NOTIF_UNBLOCKED = ' AND NOT EXISTS (SELECT 1 FROM member_blocks b WHERE b.user_id = notifications.user_id AND b.blocked_id = notifications.actor_id AND (b.anon = 0 OR notifications.actor = \'Someone\'))';
 function mh_user_public(array $u): array {
-  $unread = 0; try { $st = mh_db()->prepare('SELECT COUNT(*) FROM notifications WHERE user_id = ? AND read = 0'); $st->execute([$u['id']]); $unread = (int)$st->fetchColumn(); } catch (Throwable $e) {}
+  $unread = 0; try { $st = mh_db()->prepare('SELECT COUNT(*) FROM notifications WHERE user_id = ? AND read = 0' . MH_NOTIF_UNBLOCKED); $st->execute([$u['id']]); $unread = (int)$st->fetchColumn(); } catch (Throwable $e) {}
   return ['id' => (int)$u['id'], 'email' => $u['email'], 'name' => $u['name'], 'verified' => (bool)$u['verified'], 'created' => (int)$u['created'], 'mod' => mh_is_mod($u), 'admin' => mh_is_admin($u), 'terms' => (int)($u['terms_accepted'] ?? 0) > 0, 'notify_email' => (int)($u['notify_email'] ?? 1) === 1, 'unread' => $unread,
     'show_on_leaderboard' => (int)($u['show_on_leaderboard'] ?? 1) === 1, 'digest_email' => (int)($u['digest_email'] ?? 1) === 1, 'planning_email' => (int)($u['planning_email'] ?? 0) === 1, 'focus_public' => (int)($u['focus_public'] ?? 1) === 1, 'staff' => mh_role($u['email']) !== '', 'role' => mh_role($u['email']),
     'courses' => isset($u['courses']) && $u['courses'] !== null && $u['courses'] !== '' ? (json_decode((string)$u['courses'], true) ?: []) : null, 'sections' => isset($u['sections']) && $u['sections'] ? (json_decode((string)$u['sections'], true) ?: (object)[]) : (object)[], 'reminder_email' => (int)($u['reminder_email'] ?? 0) === 1, 'league' => (int)($u['league'] ?? 0)];

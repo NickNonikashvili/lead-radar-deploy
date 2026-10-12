@@ -313,7 +313,7 @@ function mh_social_route(string $route, array $in, array $cfg, string $ip): void
     /* --- study sessions --- */
     case 'meet_list': {
       mh_method('GET');
-      $st = $db->prepare('SELECT m.*, u.name AS u_name, u.email AS u_email, (SELECT COUNT(*) FROM meet_rsvp r WHERE r.meet_id = m.id) AS going FROM meets m JOIN users u ON u.id = m.user_id WHERE m.cancelled = 0 AND m.end > ? ' . ($course && $course !== 'all' ? 'AND m.course = ? ' : '') . 'ORDER BY m.start ASC LIMIT 60'); $st->execute($course && $course !== 'all' ? [$now - 3600, $course] : [$now - 3600]);
+      $st = $db->prepare('SELECT m.*, u.name AS u_name, u.email AS u_email, (SELECT COUNT(*) FROM meet_rsvp r WHERE r.meet_id = m.id) AS going FROM meets m JOIN users u ON u.id = m.user_id WHERE m.cancelled = 0 AND m.end > ? ' . ($me ? 'AND m.user_id NOT IN (SELECT blocked_id FROM member_blocks WHERE anon = 0 AND user_id = ' . (int)$me['id'] . ') ' : '') . ($course && $course !== 'all' ? 'AND m.course = ? ' : '') . 'ORDER BY m.start ASC LIMIT 60'); $st->execute($course && $course !== 'all' ? [$now - 3600, $course] : [$now - 3600]);
       $mine = []; if ($me) { $st2 = $db->prepare('SELECT meet_id FROM meet_rsvp WHERE user_id = ?'); $st2->execute([$me['id']]); $mine = array_map('intval', array_column($st2->fetchAll(), 'meet_id')); }
       mh_json(['ok' => true, 'meets' => array_map(fn($m) => ['id' => (int)$m['id'], 'course' => $m['course'], 'title' => $m['title'], 'place' => $m['place'], 'start' => (int)$m['start'], 'end' => (int)$m['end'], 'note' => $m['note'], 'host' => mh_display_name($m, 'u_'), 'mine' => $me && (int)$m['user_id'] === (int)$me['id'], 'going' => (int)$m['going'], 'im_going' => in_array((int)$m['id'], $mine, true), 'live' => (int)$m['start'] <= $now && (int)$m['end'] >= $now], $st->fetchAll())]);
     }
@@ -508,7 +508,9 @@ function mh_social_route(string $route, array $in, array $cfg, string $ip): void
 
     /* --- activity feed --- */
     case 'activity': {
-      mh_method('GET'); $st = $db->query('SELECT * FROM activity ORDER BY id DESC LIMIT 20');
+      mh_method('GET');
+      if ($me) { $st = $db->prepare("SELECT a.* FROM activity a WHERE NOT EXISTS (SELECT 1 FROM posts p JOIN member_blocks b ON b.blocked_id = p.user_id AND b.user_id = ? AND (b.anon = 0 OR p.anon = 1) WHERE a.link = '#/forum/' || p.id) ORDER BY a.id DESC LIMIT 20"); $st->execute([$me['id']]); }
+      else $st = $db->query('SELECT * FROM activity ORDER BY id DESC LIMIT 20');
       mh_json(['ok' => true, 'items' => array_map(fn($r) => ['kind' => $r['kind'], 'course' => $r['course'], 'text' => $r['text'], 'link' => $r['link'], 'created' => (int)$r['created']], $st->fetchAll())]);
     }
 

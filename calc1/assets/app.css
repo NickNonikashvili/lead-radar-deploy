@@ -16,6 +16,8 @@ html[data-app] .site-foot { padding-bottom: calc(80px + env(safe-area-inset-bott
 /* fields at 16px or more, so iOS does not zoom the page when one gets the focus */
 html[data-app] :is(.input, .select, textarea, input[type="text"], input[type="email"], input[type="password"], input[type="search"], input[type="number"], input[type="time"], input[type="date"]) { font-size: max(16px, 1em); }
 html[data-app] :is(button, .btn, .chip, .nav-item, .tab-item) { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+/* the website's "Preview, sign up to unlock" strip: in the app nothing is locked, so it has nothing to say */
+html[data-app] #preview-banner { display: none; }
 /* website-only: the instructors' workspace is on the web */
 html[data-app] :is(.hero-faculty, .site-foot a[href="#/teach"]) { display: none; }
 html[data-app] .site-foot a[href="#/teach"] + .sep { display: none; }

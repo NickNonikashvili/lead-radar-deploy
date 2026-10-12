@@ -110,9 +110,17 @@
       el.innerHTML = `<ul class="list-plain small dev-list">${r.devices.map(d => `<li>${icon(d.current ? 'check' : 'user', 12)} <b>${esc(d.device)}</b>${d.current ? ' <span class="chip xs good">this device</span>' : ''} <span class="muted">· signed in ${esc(new Date(d.created * 1000).toLocaleDateString())}</span></li>`).join('')}</ul>${others ? `<button class="btn sm mt-1" data-action="devices-out">${icon('logout', 13)} Sign out everywhere else</button>` : '<p class="small muted mt-1">Only this device is signed in.</p>'}`; }
     catch (e) { el.innerHTML = `<div class="small muted">${esc(e.message)}</div>`; }
   };
+  /* members this account blocked in discussions, with Unblock (api: forum_blocks, forum_unblock) */
+  Auth.blocksInit = async function (panel) {
+    const el = $('#acct-blocks', panel); if (!el) return;
+    try { const r = await call('forum_blocks', null, 'GET');
+      el.innerHTML = r.blocks.length ? `<ul class="list-plain small dev-list">${r.blocks.map(b => `<li class="row between gap-sm"><span>${icon('user', 12)} <b>${esc(b.label || 'A member')}</b>${b.anon ? ' <span class="muted">(their anonymous posts)</span>' : ''} <span class="muted">· blocked ${esc(new Date(b.created * 1000).toLocaleDateString())}</span></span><button class="btn xs" data-action="unblock" data-id="${b.id}">Unblock</button></li>`).join('')}</ul>` : '<p class="small muted">You have not blocked anyone.</p>';
+      bind(el, { unblock: async b => { try { await call('forum_unblock', { id: +b.dataset.id }); toast('Unblocked. Their posts show again.'); Auth.blocksInit(panel); } catch (e) { toast(e.message, 3000); } } }); }
+    catch (e) { el.innerHTML = `<div class="small muted">${esc(e.message)}</div>`; }
+  };
   Auth.growthInit = async function (panel) {
     const cal = $('#acct-cal', panel), inv = $('#acct-invite', panel); if (!cal && !inv) return; if (!Auth.user || Auth.mode !== 'server') { if (cal) cal.innerHTML = '<div class="small muted">Needs the account server.</div>'; if (inv) inv.innerHTML = ''; return; }
-    const base = location.origin + location.pathname.replace(/index\.html$/, '');
+    const base = App.siteBase();
     if (cal) { try { const r = await call('ics_token'); const url = `${base}api/index.php?r=ics&t=${r.token}`; const webcal = url.replace(/^https?:\/\//, 'webcal://');
       cal.innerHTML = `<div class="cal-sub"><input class="input mono small" id="acct-ics" value="${esc(url)}" readonly aria-label="Calendar subscription link"><div class="row gap-sm mt-1" style="flex-wrap:wrap"><button class="btn sm primary" data-action="ics-copy">${icon('file', 13)} Copy link</button><a class="btn sm" href="${esc(webcal)}">${icon('calendar', 13)} Open in calendar app</a><a class="btn sm" href="${esc(url)}" download="mathub.ics">${icon('download', 13)} Download .ics</a><button class="btn sm ghost" data-action="ics-reset">${icon('rotate', 13)} New link</button></div><details class="mt-1"><summary class="small">How to subscribe (${r.events} events)</summary><ul class="list small mt-1"><li><b>Google Calendar</b> (on a computer): Other calendars → + → From URL → paste the link → Add calendar. Updates every few hours.</li><li><b>Apple Calendar</b>: File → New Calendar Subscription → paste the link. On iPhone: Settings → Calendar → Accounts → Add Subscribed Calendar.</li><li><b>Outlook</b>: Add calendar → Subscribe from web → paste the link.</li></ul></details></div>`;
       bind(cal, { 'ics-copy': async () => { try { await navigator.clipboard.writeText(url); toast('Calendar link copied. Paste it into your calendar app.', 3000); } catch (e) { $('#acct-ics', cal).select(); } }, 'ics-reset': async () => { if (!confirm('Make a new link? Calendars using the old one stop updating.')) return; await call('ics_token_reset', {}); Auth.growthInit(panel); toast('New calendar link made.'); } });
@@ -340,7 +348,7 @@
       if (action === 'resend') { await call('resend', { email: M.email }); msg('A new code is on its way.', 'good'); }
       else if (action === 'forgot-again') { await call('forgot', { email: M.email }); msg('A new reset code is on its way.', 'good'); }
       else if (M.state === 'signup') {
-        if (!Auth.emailOk(email)) throw new Error('Mathub is for Montana State students: use your @montana.edu address.');
+        // the server checks the address (montana.edu, plus any address the operator allows, such as the App Review account)
         const r = await call('signup', { email, password: v('au-pass'), name: v('au-name'), ref: (() => { try { return localStorage.getItem('mathub-ref') || ''; } catch (e) { return ''; } })() }); M.email = r.email || email; M.state = 'verify'; M.msg = ''; paintModal(); msg('Code sent. It expires in 15 minutes.', 'good');
       } else if (M.state === 'verify') { const r = await call('verify', { email: M.email, code: v('au-code') }); finishLogin(r.user, true); }
       else if (M.state === 'forgot') { await call('forgot', { email }); M.email = email; M.state = 'reset'; M.msg = ''; paintModal(); msg('If that address has an account, a code is on its way.', 'good'); }
@@ -394,17 +402,20 @@
           <section><div class="eyebrow mb-1">Privacy</div>
             <label class="check"><input type="checkbox" id="acct-lb" ${u.show_on_leaderboard === false ? '' : 'checked'}><span>Show my name on leaderboards, helper lists and the People page <span class="muted small">(otherwise you appear as “Anonymous student”)</span></span></label>
             ${server ? `<div class="row gap-sm mt-1" style="flex-wrap:wrap"><button class="btn sm" data-action="data-export">${icon('download', 13)} Download my data</button><span class="small muted">Everything stored about your account, as one file.</span></div>` : ''}</section>
-          ${server ? `<section><div class="eyebrow mb-1">Signed-in devices</div><div id="acct-devices"><div class="small muted">Loading…</div></div></section>` : ''}` : ''}
+          ${server ? `<section><div class="eyebrow mb-1">Signed-in devices</div><div id="acct-devices"><div class="small muted">Loading…</div></div></section>
+          <section><div class="eyebrow mb-1">Blocked members</div><p class="small muted mb-1">You do not see posts, comments, study sessions or notifications from members you block. To block someone, use Block under one of their posts or comments.</p><div id="acct-blocks"><div class="small muted">Loading…</div></div></section>` : ''}` : ''}
         </div>
         <div class="divider"></div>
         <div class="row gap-sm" style="flex-wrap:wrap">${server ? `<button class="btn sm" data-action="sync-now">${icon('rotate', 13)} Sync now</button><button class="btn sm" data-action="change-pass">${icon('lock', 13)} Change password</button>` : ''}<button class="btn sm" data-action="logout">${icon('logout', 13)} Log out</button><span style="flex:1"></span><button class="btn sm danger ghost" data-action="delete-acct">${icon('trash', 13)} Delete account</button></div>
         <p class="small muted mt-2">${server ? 'Quiz history, flashcard boxes, checklists and grades are saved to your account a moment after each change and load on any device where you log in.' : 'The account server is unreachable, so nothing leaves this browser.'}</p></div>`;
     } else {
-      html = `<div class="panel acct-panel"><div class="panel-h"><div class="panel-title">${icon('user')} Account</div><span class="chip warn">preview</span></div>${Auth.lockCard('You are previewing Mathub', 'Sign up with your montana.edu email to unlock every tool, collect badges, join the People page and sync your progress across devices.', { compact: true })}</div>`;
+      const inApp = !!(window.MATHUB_APP && window.MATHUB_APP.native);
+      html = inApp ? `<div class="panel acct-panel"><div class="panel-h"><div class="panel-title">${icon('user')} Account</div><span class="chip">optional</span></div>${Auth.lockCard('An account is optional', 'Everything in the app works without one. Montana State students can sign in with their montana.edu email to sync progress across devices, join the class discussions and collect badges.', { compact: true })}</div>`
+        : `<div class="panel acct-panel"><div class="panel-h"><div class="panel-title">${icon('user')} Account</div><span class="chip warn">preview</span></div>${Auth.lockCard('You are previewing Mathub', 'Sign up with your montana.edu email to unlock every tool, collect badges, join the People page and sync your progress across devices.', { compact: true })}</div>`;
     }
     const wrap = document.createElement('div'); wrap.innerHTML = html; const panel = wrap.firstElementChild;
     const pref = (id, key, onMsg, offMsg) => { const el = $('#' + id, panel); if (el) el.addEventListener('change', async () => { try { const r = await call('profile', { [key]: el.checked }); Auth.user = Object.assign(Auth.user, r.user); toast(el.checked ? onMsg : offMsg); } catch (e) { toast(e.message); el.checked = !el.checked; } }); };
-    Auth.pushInit(panel); if (server && u) Auth.devicesInit(panel);
+    Auth.pushInit(panel); if (server && u) { Auth.devicesInit(panel); Auth.blocksInit(panel); }
     pref('acct-planning', 'planning_email', 'Sunday planning email on', 'Sunday planning email off'); pref('acct-focuspub', 'focus_public', 'You show up in Focus together', 'Hidden from Focus together'); Auth.growthInit(panel);
     pref('acct-notify', 'notify_email', 'Reply emails on', 'Reply emails off'); pref('acct-reminder', 'reminder_email', 'Evening reminders on', 'Evening reminders off'); pref('acct-digest', 'digest_email', 'Weekly digest on', 'Weekly digest off'); pref('acct-lb', 'show_on_leaderboard', 'Your name shows on leaderboards and the People page', 'You appear as “Anonymous student”');
     if (u && server && App.social && App.social.refreshBadges) App.social.refreshBadges().then(r => { const el = $('#acct-badge-count', panel); if (el && r) el.textContent = `${r.badges.length} of ${r.catalog.length} earned`; }).catch(() => {});

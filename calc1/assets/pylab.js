@@ -95,7 +95,7 @@
         'py-save': () => { const name = prompt('Name this snippet:'); if (!name) return; const list = store.get('snippets', []); list.push({ id: 's' + Date.now().toString(36), name: name.trim().slice(0, 40) || 'Snippet', code: ta.value, t: Date.now() }); store.set('snippets', list.slice(-30)); toast('Snippet saved'); this.render(root, param, {}); },
         'py-load': b => { const s = store.get('snippets', []).find(x => x.id === b.dataset.id); if (s) loadCode(s.code, '', s.name); },
         'py-del': b => { store.set('snippets', store.get('snippets', []).filter(x => x.id !== b.dataset.id)); this.render(root, param, {}); },
-        'py-share': async () => { const url = location.origin + location.pathname + App.link('playground', null, { code: b64e(ta.value) }); try { await navigator.clipboard.writeText(url); toast('Link copied. Anyone who opens it sees this code in the playground.'); } catch { prompt('Copy this link:', url); } },
+        'py-share': async () => { const url = App.siteBase() + App.link('playground', null, { code: b64e(ta.value) }); try { await navigator.clipboard.writeText(url); toast('Link copied. Anyone who opens it sees this code in the playground.'); } catch { prompt('Copy this link:', url); } },
         'py-new': () => loadCode('', '', '')
       });
       if (q.run) run();

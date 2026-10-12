@@ -256,6 +256,8 @@
   App.tagline = (cls = '') => `<span class="brand-tag${cls ? ' ' + cls : ''}">Learn <i>/</i> Practice <i>/</i> Excel</span>`;
   Object.defineProperty(App, 'D', { get: () => D }); Object.defineProperty(App, 'Q', { get: () => QZ });
   App.Canvas = Canvas;
+  /* the site's address for links people share; inside the iOS app the page lives at capacitor://localhost, so links point at mathub.space */
+  App.siteBase = () => (window.MATHUB_APP && window.MATHUB_APP.native ? window.MATHUB_APP.api : location.origin + location.pathname.replace(/index\.html$/, ''));
   App.link = (view, param, query) => { let hs = '#/' + (D ? D.id : 'calc') + '/' + view + (param ? '/' + param : ''); if (query) hs += '?' + new URLSearchParams(query).toString(); return hs; };
   App.go = (view, param, query) => { const hs = App.link(view, param, query); if (location.hash === hs) { render(); return; } try { location.hash = hs; } catch { render(); } };
   App.replaceHash = hs => { try { history.replaceState(null, '', hs); } catch {} };

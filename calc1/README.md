@@ -44,7 +44,11 @@ Class-specific tools:
 A members-only board (Reddit style) at `#/forum` and inside every class under **Community → Discussions**:
 posts with a class and a type (question, discussion, resource, study group, exam, other), threaded
 comments, up/down votes, hot / new / top sorting, search, anonymous posting (moderators still see the
-author), reports, and a language filter that censors curse words and slurs (server side, in
+author), reports, **blocking** (Block under any post or comment hides that member's posts, comments, study
+sessions and notifications from you at once, files the item in the report queue, and is undone under
+**Settings → Blocked members**; table `member_blocks`, routes `forum_block`, `forum_blocks`, `forum_unblock`;
+blocking from an anonymous post hides only that member's anonymous posts, so a block never reveals who wrote one),
+and a language filter that censors curse words and slurs (server side, in
 `api/filter.php`, with a matching preview in `assets/forum.js`). Math renders with `$…$`.
 
 Before the first post every member accepts the Community Rules. The full **Terms of Use, Community
@@ -258,6 +262,30 @@ How it works:
 - **Students.** `#/class/join/<CODE>` shows the class and exactly what the instructor will see before they join. `#/class/<id>` is the class hub: links to the class pages, assignments, announcements and check-in. The class dashboard links back to the hub.
 - **Privacy.** Instructors see a student's name, email, results on that class's assignments and check-ins, nothing else. Deleting a class (owner types the course code) removes its pack and its rows; student accounts are never touched.
 - **Tests.** `tests/teach.test.js` (the whole flow in a browser) and `tests/teach-api.test.js` (permissions and boundaries over HTTP).
+
+## Mathub for iPhone and iPad (`app/`)
+
+A native iOS app built with Capacitor from this same site. It carries the whole site inside it and
+works offline: MathJax and the Python runtime are bundled, nothing is downloaded at runtime. Account
+calls go to `https://mathub.space/api/` (the server accepts the app's origin, `capacitor://localhost`).
+
+- **Create a class** (app-only, `#/create`, `assets/app-native.js`): copy the instructions, give them to any
+  AI with your syllabus, paste the answer back. The app finds the JSON in the answer, repairs what it safely
+  can, validates it with the class-pack checker, shows a preview, and saves the class as a file on the
+  device (`classes/my####.mathub.json`). Classes can be shared as files and imported. "Try an example class"
+  adds `assets/app-sample-class.json` with no AI needed.
+- **On the phone:** exam and daily reminders as local notifications, haptics, the share sheet (classes, data
+  export, any file the page makes), outside links in the Safari sheet, safe areas and the status bar.
+- **No account needed:** every study tool is open in the app; an account adds sync and discussions.
+- **Files:** `app/` (Capacitor project, `scripts/build-www.js` builds `app/www` from this folder),
+  `assets/app-boot.js`, `assets/app-native.js`, `assets/app.css` (loaded only in the app; the website never
+  loads them), `ios/App/App/PrivacyInfo.xcprivacy`.
+- **Build:** `cd app && npm ci && npm run sync && npm run open`, then archive in Xcode 26.
+  `.github/workflows/ios-build.yml` builds it for the simulator on every change.
+- **App Review:** what gets apps rejected, what Mathub does about each guideline, the App Store Connect
+  answers, the review account and the reviewer notes are in [`docs/ios-app-review.md`](docs/ios-app-review.md).
+
+The Hostinger zip never includes `app/`.
 
 ## Security, privacy and quality
 

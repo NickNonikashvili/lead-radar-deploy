@@ -50,7 +50,7 @@ const BUILD = (/data-build="([^"]+)"/.exec(html) || [])[1] || 'dev';
 const must = (re, what) => { if (!re.test(html)) throw new Error('build-www: could not find ' + what + ' in index.html'); };
 must(/<meta http-equiv="Content-Security-Policy"[^>]*>/, 'the CSP meta tag');
 html = html.replace(/<meta http-equiv="Content-Security-Policy"[^>]*>/,
-  `<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https:; media-src 'self' blob: data:; connect-src 'self' https://mathub.space https://api.dictionaryapi.dev; object-src 'none'; base-uri 'none'; form-action 'none'; frame-src 'none'">`);
+  `<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https:; media-src 'self' blob: data:; connect-src 'self' blob: data: https://mathub.space https://api.dictionaryapi.dev; object-src 'none'; base-uri 'none'; form-action 'none'; frame-src 'none'">`);
 must(/<meta name="viewport"[^>]*>/, 'the viewport meta tag');
 html = html.replace(/<meta name="viewport"[^>]*>/, '<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">');
 html = html.replace(/<html lang="en" data-build="([^"]+)">/, `<html lang="en" data-build="$1" data-app-version="${VERSION}">`);
