@@ -6,7 +6,7 @@ import { PHOTOS } from "../data/photos.mjs";
 import config from "../config.mjs";
 
 const simpleHero = (title, kicker) => `<section class="legal-hero"><div class="container"><p class="eyebrow">${kicker}</p><h1 class="h1">${title}</h1></div></section>`;
-const updated = new Date().toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
+const updated = config.legalUpdated;
 
 export function creditsPage() {
   const photos = Object.entries(CREDITS);

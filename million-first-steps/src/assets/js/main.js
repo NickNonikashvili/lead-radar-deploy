@@ -20,6 +20,8 @@
   // Interface text; the build fills in cfg.t for each language.
   var T = cfg.t || {};
   var tr = function (key, fallback) { return T[key] || fallback; };
+  var LOCALE = { en: "en-US", ka: "ka-GE", ru: "ru-RU", es: "es-ES", fr: "fr-FR", it: "it-IT", pt: "pt-PT", de: "de-DE" }[html.lang] || "en-US";
+  var num = function (n) { return Math.round(n).toLocaleString(LOCALE); };
   var TIER_NAMES = { wanderer: tr("wanderer", "Wanderer"), explorer: tr("explorer", "Explorer"), "golden-fleece": tr("golden-fleece", "Golden Fleece") };
 
   function setTier(id, persist) {
@@ -36,7 +38,7 @@
     var c = (cfg.currencies || {})[code] || { symbol: "€", rate: 1 };
     var v = eur * c.rate;
     v = code === "EUR" ? Math.round(v) : Math.round(v / 10) * 10;
-    var n = v.toLocaleString("en-US");
+    var n = num(v);
     return code === "GEL" ? n + " " + c.symbol : c.symbol + n;
   }
   function renderPrices(root) {
@@ -434,7 +436,7 @@
         duration: 1.4,
         ease: "expo.out",
         overwrite: true,
-        onUpdate: function () { numEl.textContent = Math.round(counter.v).toLocaleString("en-US"); },
+        onUpdate: function () { numEl.textContent = num(counter.v); },
       });
       gsap.fromTo(unitEl, { opacity: 0, y: 12 }, { opacity: 1, y: 0, duration: 0.8, ease: "expo.out", onStart: function () { unitEl.textContent = next.dataset.unit; } });
       ticks.forEach(function (t, j) { t.classList.toggle("is-on", j <= i); });
@@ -496,7 +498,7 @@
       v: thisYear,
       ease: "none",
       scrollTrigger: wineTrigger,
-      onUpdate: function () { var v = Math.round(yr.v); yearEl.textContent = v < 0 ? -v + " BC" : v === 0 ? "1 AD" : "AD " + v; },
+      onUpdate: function () { var v = Math.round(yr.v); yearEl.textContent = v < 0 ? tr("bc", "{n} BC").replace("{n}", -v) : tr("ad", "AD {n}").replace("{n}", Math.max(1, v)); },
     });
     $$("[data-qvevri-bubbles] circle", wine).forEach(function (c, i) {
       gsap.to(c, { attr: { cy: "-=" + (90 + i * 7) }, opacity: 0, duration: 3 + (i % 4), repeat: -1, delay: i * 0.3, ease: "sine.in" });
@@ -626,7 +628,7 @@
       duration: 2,
       ease: "expo.out",
       scrollTrigger: { trigger: el, start: "top 90%", once: true },
-      onUpdate: function () { el.textContent = Math.round(o.v).toLocaleString("en-US"); },
+      onUpdate: function () { el.textContent = num(o.v); },
     });
   });
 

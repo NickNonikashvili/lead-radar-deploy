@@ -28,6 +28,8 @@ export const JS_STRINGS = {
   failed: "Sorry, that didn't send. Please email us at",
   mailto: "Your email app should open with everything filled in — just press send.",
   thanks: "Thank you!",
+  bc: "{n} BC",
+  ad: "AD {n}",
   wanderer: "Wanderer",
   explorer: "Explorer",
   "golden-fleece": "Golden Fleece",

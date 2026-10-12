@@ -23,6 +23,10 @@ export default {
   legalName: "Million First Steps",
   registrationNumber: "",
 
+  // Date shown as "Last updated" on the privacy policy and booking terms. Change it when you edit
+  // those pages (and update the translations of that line in src/i18n/*.json).
+  legalUpdated: "11 October 2026",
+
   // Booking-request form. Paste the endpoint from a form service such as Formspree
   // (https://formspree.io) or Basin; requests are then emailed to you.
   // Left empty, the form opens the visitor's email app with everything pre-filled instead.
