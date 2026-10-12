@@ -13,8 +13,8 @@ const { execFileSync } = require('child_process'); const path = require('path');
   const go = async (p, hash, wait = 1200) => { await p.goto(APP + hash, { waitUntil: 'domcontentloaded' }); await p.waitForTimeout(wait); };
 
   /* a stand-in for Capacitor and its plugins; what the app asks of them is recorded in window.__cap */
-  const fakeCapacitor = () => {
-    const rec = window.__cap = { haptics: [], browser: [], shared: [], scheduled: [], cancelled: [], clipboard: sessionStorage.getItem('fake-clip') || '', perm: sessionStorage.getItem('fake-perm') || 'prompt', status: [] };
+  const fakeCapacitor = (platform = 'ios') => {
+    const rec = window.__cap = { haptics: [], browser: [], shared: [], scheduled: [], cancelled: [], clipboard: sessionStorage.getItem('fake-clip') || '', perm: sessionStorage.getItem('fake-perm') || 'prompt', status: [], bars: [], channels: [], listeners: {}, minimized: 0 };
     const fsKey = p => 'fakefs:' + p;
     const ok = v => Promise.resolve(v);
     const Plugins = {
@@ -30,19 +30,21 @@ const { execFileSync } = require('child_process'); const path = require('path');
       LocalNotifications: {
         checkPermissions: () => ok({ display: rec.perm }), requestPermissions: () => { rec.perm = 'granted'; sessionStorage.setItem('fake-perm', 'granted'); return ok({ display: 'granted' }); },
         schedule: o => { rec.scheduled = rec.scheduled.concat(o.notifications); return ok({ notifications: o.notifications.map(n => ({ id: n.id })) }); },
+        createChannel: o => { rec.channels.push(o); return ok(); },
         getPending: () => ok({ notifications: rec.scheduled.map(n => ({ id: n.id, extra: n.extra })) }),
         cancel: o => { const ids = o.notifications.map(n => n.id); rec.cancelled.push(...ids); rec.scheduled = rec.scheduled.filter(n => !ids.includes(n.id)); return ok(); },
         addListener: () => ok({ remove() {} })
       },
       Browser: { open: o => { rec.browser.push(o.url); return ok(); } },
       StatusBar: { setStyle: o => { rec.status.push(o.style); return ok(); } },
-      App: { addListener: () => ok({ remove() {} }) }, SplashScreen: { hide: () => ok() }, Keyboard: {}
+      SystemBars: { setStyle: o => { rec.bars.push(o.style); return ok(); } },
+      App: { addListener: (ev, fn) => { (rec.listeners[ev] = rec.listeners[ev] || []).push(fn); return ok({ remove() {} }); }, minimizeApp: () => { rec.minimized++; return ok(); } }, SplashScreen: { hide: () => ok() }, Keyboard: {}
     };
-    window.Capacitor = { isNativePlatform: () => true, getPlatform: () => 'ios', getServerUrl: () => location.origin, Plugins, registerPlugin: n => Plugins[n] };
+    window.Capacitor = { isNativePlatform: () => true, getPlatform: () => platform, getServerUrl: () => location.origin, Plugins, registerPlugin: n => Plugins[n] };
   };
-  const mkApp = async (w = 390, h = 844) => {
+  const mkApp = async (w = 390, h = 844, platform = 'ios') => {
     const [c, p] = await mk(w, h, { serviceWorkers: 'block' });
-    await c.addInitScript(fakeCapacitor);
+    await c.addInitScript(fakeCapacitor, platform);
     await c.addInitScript(() => { document.addEventListener('DOMContentLoaded', () => { const st = document.createElement('style'); st.textContent = '.celebrate{display:none!important}'; document.head.appendChild(st); }); });
     // the app's account calls go to https://mathub.space; here they go to the test server
     await c.route('https://mathub.space/**', async route => { const u = route.request().url().replace('https://mathub.space/', base.replace(/index\.html$/, '')); try { const r = await route.fetch({ url: u }); await route.fulfill({ response: r }); } catch (e) { await route.abort(); } });
@@ -179,12 +181,41 @@ const { execFileSync } = require('child_process'); const path = require('path');
   await go(p, '#/teach', 1000); await p.click('[data-action="open-web"]'); await p.waitForTimeout(200);
   check('Mathub Faculty opens on the web from the app', (await p.evaluate(() => window.__cap.browser.slice(-1)[0])) === 'https://mathub.space/#/teach');
 
+  // ---------- Android: the same app, with Android's conventions ----------
+  const [cn, a] = await mkApp(412, 915, 'android');
+  await go(a, '#/', 2200);
+  const and = await a.evaluate(() => ({ app: document.documentElement.dataset.app, platform: MATHUB_APP.platform, bars: window.__cap.bars.slice(), back: (window.__cap.listeners.backButton || []).length }));
+  check('Android: the app marks itself and colours the system bars through SystemBars', and.app === 'android' && and.platform === 'android' && and.bars.length > 0, and);
+  check('Android: the back button and back gesture are handled', and.back === 1, and);
+  await a.evaluate(() => { location.hash = '#/create'; }); await a.waitForTimeout(1000);
+  check('Android: Create a class says the class stays on this phone', /saved on this phone/.test(await txt(a, '#view')));
+  const back = () => a.evaluate(() => window.__cap.listeners.backButton.forEach(fn => fn({ canGoBack: true })));
+  await a.evaluate(() => App.showShortcuts()); await a.waitForTimeout(300);
+  await back(); await a.waitForTimeout(700);
+  check('Android back: closes an open dialog first', !(await a.$('#shortcuts-modal')) && /#\/create$/.test(a.url()), a.url());
+  await a.evaluate(() => document.querySelector('.app') && document.querySelector('.app').classList.add('nav-open'));
+  await back(); await a.waitForTimeout(300);
+  check('Android back: then closes the menu', await a.evaluate(() => !document.querySelector('.app.nav-open')) && /#\/create$/.test(a.url()));
+  await back(); await a.waitForTimeout(1000);
+  check('Android back: then goes back a page', /#\/$/.test(a.url()), a.url());
+  await back(); await a.waitForTimeout(300);
+  check('Android back: on the start page it leaves the app for the home screen', (await a.evaluate(() => window.__cap.minimized)) === 1);
+  await a.evaluate(() => { location.hash = '#/settings'; }); await a.waitForTimeout(1400);
+  check('Android: Settings has the "On this phone" panel', /On this phone/.test(await txt(a, '#app-panel')));
+  await a.check('#ap-daily'); await a.waitForTimeout(1000);
+  const arem = await a.evaluate(() => ({ ch: window.__cap.channels, n: window.__cap.scheduled.filter(n => n.id === 999) }));
+  check('Android: reminders go in their own channel and are inexact (no exact-alarm permission needed)', arem.ch.some(c => c.id === 'reminders' && c.importance === 3) && arem.n.length === 1 && arem.n[0].channelId === 'reminders' && arem.n[0].isExactNotification === false, arem);
+  check('no sideways scroll on Android at 412px', await hscroll(a));
+
   // the website has none of this
   const [cw, w] = await mk(1360, 900, { serviceWorkers: 'block' });
   await goSite(w, '#/create', 1400);
   const web = await w.evaluate(() => ({ app: document.documentElement.dataset.app || '', create: !!(window.App && App.views.create), scripts: [...document.scripts].map(s => s.src).filter(s => /app-(boot|native)/.test(s)).length }));
   check('the website has no Create a class page and loads no app code', web.app === '' && !web.create && web.scripts === 0 && /not found/i.test(await txt(w, '#view')), web);
 
-  await Promise.all([ca.close(), cw.close()]);
+  await goSite(w, '#/policy/delete', 1400);
+  const del = await txt(w, '#pol-delete') + ' ' + await w.evaluate(() => { const h = document.querySelector('#pol-delete'); let t = ''; for (let n = h && h.nextElementSibling; n && n.tagName !== 'H2'; n = n.nextElementSibling) t += n.textContent + ' '; return t; });
+  check('the website has a public "Deleting your Mathub account" page (Google Play asks for its link)', /Deleting your Mathub account/.test(del) && /Settings/.test(del) && /Delete account/.test(del) && /within 7 days/.test(del) && /Kept, but no longer linked/.test(del), del.slice(0, 160));
+  await Promise.all([ca.close(), cn.close(), cw.close()]);
   await T.finish();
 })();

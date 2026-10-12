@@ -1,0 +1,98 @@
+# Builds the Mathub Android app (calc1/app/android) on every change to it: a debug APK you can install on a phone
+# to try, and an unsigned release bundle (AAB, what Google Play takes), then checks what Play review looks at.
+# Signing and uploading stay manual (see calc1/docs/android-play-review.md).
+name: Android build
+
+on:
+  push:
+    paths:
+      - 'calc1/app/**'
+      - 'calc1/assets/**'
+      - 'calc1/index.html'
+      - 'calc1/packs/**'
+      - '.github/workflows/android-build.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: android-build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  gradle:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    defaults:
+      run:
+        working-directory: calc1/app
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: calc1/app/package-lock.json
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Android SDK 36 (Google Play has required target API 36 since August 31, 2026)
+        run: |
+          SDKM="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          yes | "$SDKM" --licenses > /dev/null
+          "$SDKM" --install "platforms;android-36" "build-tools;36.0.0" > /dev/null
+          ls "$ANDROID_HOME/platforms" "$ANDROID_HOME/build-tools"
+
+      - name: Install
+        run: npm ci
+
+      - name: Bundle the site into the app (checks for remote scripts and missing files)
+        run: node scripts/build-www.js
+
+      - name: Copy it into the Android project
+        run: npx cap sync android
+
+      - name: Build the debug APK and the release bundle
+        working-directory: calc1/app/android
+        run: ./gradlew --no-daemon --stacktrace assembleDebug bundleRelease lintRelease
+
+      - name: Check what Play review looks at
+        working-directory: calc1/app/android
+        run: |
+          set -e
+          AAPT2="$ANDROID_HOME/build-tools/36.0.0/aapt2"
+          APK=app/build/outputs/apk/debug/app-debug.apk
+          AAB=app/build/outputs/bundle/release/app-release.aab
+          "$AAPT2" dump badging "$APK" > badging.txt
+          grep -E "^package:|sdkVersion|targetSdkVersion|uses-permission|application-label:" badging.txt
+          grep -q "package: name='space.mathub.app'" badging.txt
+          grep -q "targetSdkVersion:'36'" badging.txt
+          grep -q "sdkVersion:'24'" badging.txt
+          # Google Play keeps the exact-alarm permissions for alarm-clock and calendar apps; reminders here are inexact
+          if grep -E "SCHEDULE_EXACT_ALARM|USE_EXACT_ALARM" badging.txt; then echo "an exact-alarm permission is in the manifest"; exit 1; fi
+          # no permission beyond what the app uses: network, notifications, boot (to keep reminders), wake lock, vibration
+          EXTRA=$(grep -oE "uses-permission: name='[^']+'" badging.txt | sed -E "s/.*name='([^']+)'/\1/" | grep -vE "^android.permission.(INTERNET|POST_NOTIFICATIONS|RECEIVE_BOOT_COMPLETED|WAKE_LOCK|VIBRATE)$|^space.mathub.app.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION$" || true)
+          if [ -n "$EXTRA" ]; then echo "unexpected permissions: $EXTRA"; exit 1; fi
+          unzip -l "$AAB" > aab.txt
+          grep -q "base/assets/public/index.html" aab.txt
+          grep -q "base/assets/public/assets/pyodide/pyodide.asm.wasm" aab.txt
+          grep -q "base/assets/public/assets/mathjax/tex-svg.js" aab.txt
+          grep -q "base/res/mipmap-anydpi-v26/ic_launcher.xml" aab.txt
+          grep -q "base/res/drawable-xxxhdpi-v4/ic_stat_mathub.png\|base/res/drawable-xxxhdpi/ic_stat_mathub.png" aab.txt
+          unzip -p "$APK" assets/public/index.html | grep -q 'data-app-version'
+          if unzip -p "$APK" assets/public/index.html | grep -E '<script[^>]+src="https?://'; then echo "a page loads a script from the internet"; exit 1; fi
+          # 16 KB memory pages (required for apps with native code on Android 15+): check any native libraries
+          if grep -q "\.so$" aab.txt; then "$ANDROID_HOME/build-tools/36.0.0/zipalign" -c -P 16 -v 4 "$APK" | tail -3; else echo "no native libraries"; fi
+          ls -la "$APK" "$AAB"
+
+      - name: Keep the debug APK (install it on an Android phone to try the app)
+        uses: actions/upload-artifact@v4
+        with:
+          name: mathub-android-debug-apk
+          path: calc1/app/android/app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 14

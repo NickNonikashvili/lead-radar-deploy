@@ -2,13 +2,18 @@
   "name": "mathub-app",
   "version": "1.0.0",
   "private": true,
-  "description": "Mathub for iOS: the study hub, offline, with classes you create from your own syllabus.",
+  "description": "Mathub for iOS and Android: the study hub, offline, with classes you create from your own syllabus.",
   "scripts": {
     "build": "node scripts/build-www.js",
-    "sync": "node scripts/build-www.js && cap sync ios",
-    "open": "cap open ios"
+    "sync": "node scripts/build-www.js && cap sync",
+    "sync:ios": "node scripts/build-www.js && cap sync ios",
+    "sync:android": "node scripts/build-www.js && cap sync android",
+    "open": "cap open ios",
+    "open:android": "cap open android",
+    "art": "node scripts/make-art.js"
   },
   "dependencies": {
+    "@capacitor/android": "8.5.3",
     "@capacitor/app": "8.1.2",
     "@capacitor/browser": "8.0.5",
     "@capacitor/clipboard": "8.0.1",

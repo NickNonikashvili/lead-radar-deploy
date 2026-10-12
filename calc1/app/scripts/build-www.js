@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /* ============================================================
-   Builds app/www, the web content the iOS app ships inside it.
+   Builds app/www, the web content the iOS and Android apps ship inside them.
    Run from calc1/app:  node scripts/build-www.js   (then: npx cap sync ios)
 
    - copies the site (index.html, assets/, the bundled class packs in packs/)

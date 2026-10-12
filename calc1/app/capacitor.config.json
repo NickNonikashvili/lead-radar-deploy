@@ -30,6 +30,19 @@
     "Keyboard": {
       "resize": "native",
       "resizeOnFullScreen": true
+    },
+    "SystemBars": {
+      "insetsHandling": "native",
+      "initialViewportFitValueHint": "cover"
+    },
+    "LocalNotifications": {
+      "smallIcon": "ic_stat_mathub",
+      "iconColor": "#2563EB"
     }
+  },
+  "android": {
+    "allowMixedContent": false,
+    "captureInput": false,
+    "webContentsDebuggingEnabled": false
   }
 }

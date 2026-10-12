@@ -1,5 +1,5 @@
 /* ============================================================
-   Mathub app — what only the app does (loaded only in the iOS app, after every other script)
+   Mathub app — what only the app does (loaded only in the iOS and Android apps, after every other script)
    - Create a class (#/create): Mathub writes instructions for an AI; the student gives them,
      with their syllabus, to the AI chat they already use, pastes the answer back, and Mathub
      checks it, repairs what it safely can, shows a preview and adds the class. The class is
@@ -18,7 +18,8 @@
   if (!App || !N || !MA || !MA.native || !Packs || !App.packs) return;
   const { $, $$, esc, icon, bind, toast, settings, setSetting } = App;
   const Courses = global.Courses;
-  const DEVICE = /iPad/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1) ? 'iPad' : 'iPhone';
+  const ANDROID = !!(window.MATHUB_APP && window.MATHUB_APP.platform === 'android');
+  const DEVICE = ANDROID ? (Math.min(screen.width, screen.height) >= 600 ? 'tablet' : 'phone') : /iPad/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1) ? 'iPad' : 'iPhone';
 
   /* ---------- haptics follow the sound cues ---------- */
   const HAPTIC = { correct: 'success', wrong: 'error', complete: 'medium', levelup: 'success', tap: 'select' };
@@ -412,7 +413,7 @@ THE SYLLABUS:
     async enable() {
       if (!N.notify.available()) return false;
       let p = await N.notify.permission(); if (p === 'prompt' || p === 'prompt-with-rationale') p = await N.notify.request();
-      if (p !== 'granted') { toast(`Notifications are off for Mathub. Turn them on in the Settings app: Mathub › Notifications.`, 6000); return false; }
+      if (p !== 'granted') { toast(ANDROID ? 'Notifications are off for Mathub. Turn them on in Settings › Apps › Mathub › Notifications.' : 'Notifications are off for Mathub. Turn them on in the Settings app: Mathub › Notifications.', 6000); return false; }
       return true;
     }
   };

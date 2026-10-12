@@ -1,5 +1,5 @@
 /* ============================================================
-   Mathub app (iOS): fitting the phone, and the pages only the app has.
+   Mathub app (iOS and Android): fitting the phone, and the pages only the app has.
    Loaded only in the app (see app/scripts/build-www.js); the student
    site's look (world.css) still does the rest.
    ============================================================ */

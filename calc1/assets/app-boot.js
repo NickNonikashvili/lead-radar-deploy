@@ -1,7 +1,7 @@
 /* ============================================================
-   Mathub app — the bridge to the phone (loaded only in the iOS app, right after boot.js)
+   Mathub app — the bridge to the phone (loaded only in the iOS and Android apps, right after boot.js)
    The app ships the whole site inside it and runs offline. This file:
-   - marks the page as the app (<html data-app="ios">, window.MATHUB_APP)
+   - marks the page as the app (<html data-app="ios" or "android">, window.MATHUB_APP)
    - sends the site's account calls (api/index.php) to https://mathub.space; Capacitor's
      native HTTP carries them, so the session cookie lives in the app, not in a browser
    - points the Python playground at the copy of Pyodide inside the app (no code is downloaded)
@@ -40,7 +40,7 @@
   /* ---------- plugins ---------- */
   var plugin = function (name) { if (!native) return null; try { return (C.Plugins && C.Plugins[name]) || (C.registerPlugin && C.registerPlugin(name)) || null; } catch (e) { return null; } };
   var P = {};
-  ['Haptics', 'Clipboard', 'Share', 'Filesystem', 'LocalNotifications', 'Browser', 'StatusBar', 'App', 'SplashScreen', 'Keyboard'].forEach(function (n) { P[n] = plugin(n); });
+  ['Haptics', 'Clipboard', 'Share', 'Filesystem', 'LocalNotifications', 'Browser', 'StatusBar', 'SystemBars', 'App', 'SplashScreen', 'Keyboard'].forEach(function (n) { P[n] = plugin(n); });
   var settings = function () { try { return JSON.parse(localStorage.getItem('studyhub-settings') || '{}'); } catch (e) { return {}; } };
   var reduceMotion = function () { return settings().motion === 'off' || (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches); };
   var DIR = 'DATA';   // the app's own Documents-like folder (Filesystem Directory.Data); nothing outside the app's container
@@ -106,7 +106,14 @@
       available: function () { return !!P.LocalNotifications; },
       permission: function () { return P.LocalNotifications ? P.LocalNotifications.checkPermissions().then(function (r) { return r.display; }) : Promise.resolve('denied'); },
       request: function () { return P.LocalNotifications ? P.LocalNotifications.requestPermissions().then(function (r) { return r.display; }) : Promise.resolve('denied'); },
-      schedule: function (list) { return P.LocalNotifications && list.length ? P.LocalNotifications.schedule({ notifications: list }) : Promise.resolve(); },
+      /* Android: reminders go in their own channel (named in the system settings) and are inexact, so the app needs no
+         exact-alarm permission, which Google Play keeps for alarm-clock and calendar apps; a few minutes either way is fine */
+      schedule: function (list) {
+        if (!P.LocalNotifications || !list.length) return Promise.resolve();
+        if (platform !== 'android') return P.LocalNotifications.schedule({ notifications: list });
+        var ch = P.LocalNotifications.createChannel ? P.LocalNotifications.createChannel({ id: 'reminders', name: 'Exam and study reminders', description: 'Exams coming up in your classes, and the daily study reminder you set.', importance: 3, visibility: 1, vibration: true }).catch(function () {}) : Promise.resolve();
+        return ch.then(function () { return P.LocalNotifications.schedule({ notifications: list.map(function (n) { return Object.assign({}, n, { channelId: 'reminders', isExactNotification: false }); }) }); });
+      },
       pending: function () { return P.LocalNotifications ? P.LocalNotifications.getPending().then(function (r) { return r.notifications || []; }) : Promise.resolve([]); },
       cancel: function (ids) { return P.LocalNotifications && ids.length ? P.LocalNotifications.cancel({ notifications: ids.map(function (id) { return { id: id }; }) }) : Promise.resolve(); },
       onTap: function (fn) { if (P.LocalNotifications) P.LocalNotifications.addListener('localNotificationActionPerformed', function (e) { fn((e && e.notification && e.notification.extra) || {}); }); }
@@ -115,7 +122,8 @@
       if (P.Browser) return P.Browser.open({ url: url, presentationStyle: 'popover' });
       window.open(url, '_blank', 'noopener'); return Promise.resolve();
     },
-    statusBar: function (dark) { if (!P.StatusBar) return; try { P.StatusBar.setStyle({ style: dark ? 'DARK' : 'LIGHT' }); } catch (e) {} },
+    /* the clock and battery icons: light on dark pages, dark on light ones (Android: both system bars, drawn edge to edge) */
+    statusBar: function (dark) { var bars = platform === 'android' && P.SystemBars ? P.SystemBars : P.StatusBar; if (!bars) return; try { bars.setStyle({ style: dark ? 'DARK' : 'LIGHT' }); } catch (e) {} },
     onResume: function (fn) { if (P.App) P.App.addListener('resume', fn); },
     reduceMotion: reduceMotion
   };
@@ -132,7 +140,7 @@
     var to = external(href) || webOnly(href); if (!to) return;
     e.preventDefault(); Native.open(to);
   }, true);
-  /* ---------- downloads: a web view on iOS cannot save files, so a file the page makes goes to the share sheet
+  /* ---------- downloads: an app web view (iOS or Android) cannot save files, so a file the page makes goes to the share sheet
      (Save to Files, AirDrop, Mail...) and a file on the server opens in the Safari sheet, which can save it ---------- */
   var b64 = function (blob) { return new Promise(function (res, rej) { var fr = new FileReader(); fr.onload = function () { res(String(fr.result).split(',')[1] || ''); }; fr.onerror = rej; fr.readAsDataURL(blob); }); };
   var saveFile = function (href, name) {
@@ -157,6 +165,15 @@
   }, true);
   var wopen = window.open;
   window.open = function (url) { var to = url && external(url); if (to) { Native.open(to); return null; } return wopen.apply(window, arguments); };
+
+  /* ---------- Android back button and back gesture: close what is open, then go back a page, then leave the app ---------- */
+  if (platform === 'android' && P.App) P.App.addListener('backButton', function (e) {
+    var modals = document.querySelectorAll('.modal-backdrop'); var top = modals[modals.length - 1];
+    if (top) { var x = top.querySelector('[data-action="close"]'); if (x) x.click(); else document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })); return; }
+    var shell = document.querySelector('.app'); if (shell && shell.classList.contains('nav-open')) { shell.classList.remove('nav-open'); return; }
+    var h = location.hash; if (h && h !== '#/' && h !== '#') { if (e && e.canGoBack) history.back(); else location.hash = '#/'; return; }
+    if (P.App.minimizeApp) P.App.minimizeApp(); else if (P.App.exitApp) P.App.exitApp();
+  });
 
   /* ---------- the strip behind the status bar (styled in app.css) ---------- */
   var strip = function () { if (document.body && !document.querySelector('.app-statusbar')) { var d = document.createElement('div'); d.className = 'app-statusbar'; d.setAttribute('aria-hidden', 'true'); document.body.insertBefore(d, document.body.firstChild); } };
