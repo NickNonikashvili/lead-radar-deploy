@@ -16,7 +16,7 @@ const DEEP_TIME = [
   { value: 8000, unit: "years of winemaking", icon: "qvevri", title: "The first wine on Earth", text: "Neolithic jars from villages near Tbilisi hold the earliest known traces of grape wine, from around 6000 BC. Georgians never stopped." },
   { value: 1500, unit: "years of a unique alphabet", icon: "script", title: "A script found nowhere else", text: "Georgian has its own alphabet — three scripts, now UNESCO-listed — with inscriptions dated to the 5th century." },
   { value: 900, unit: "years since a golden age", icon: "crown", title: "Kings who built, a king named Tamar", text: "David the Builder's victory at Didgori in 1121 opened a golden age of cathedrals, academies and poetry under King Tamar." },
-  { value: 1000001, unit: "th step — yours", icon: "door", title: "And the door is still open", text: "A guest, Georgians say, is a gift from God. Every journey here is the next step in a very long walk." },
+  { value: 1000001, unit: "st step — yours", icon: "door", title: "And the door is still open", text: "A guest, Georgians say, is a gift from God. Every journey here is the next step in a very long walk." },
 ];
 
 // Buried qvevri in cross-section; wine fills it as you scroll.

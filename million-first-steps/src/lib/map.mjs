@@ -67,7 +67,21 @@ export function georgiaMap({ route = [], stops = [], className = "", label = "Ma
       }).join("")
     : "";
 
-  return `<svg class="gmap ${className}" viewBox="${geo.viewBox}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="${label}">
+  // Tour maps also carry a landscape crop around their stops; small screens switch to it (main.js fitMaps).
+  let crop = "";
+  if (className.includes("gmap--tour") && ids.length > 1) {
+    const xy = ids.map((id) => project(PLACES[id].lat, PLACES[id].lon));
+    const [fx, fy, fw, fh] = geo.viewBox.split(/\s+/).map(Number);
+    let x0 = Math.min(...xy.map((p) => p[0])) - 110, x1 = Math.max(...xy.map((p) => p[0])) + 110;
+    let y0 = Math.min(...xy.map((p) => p[1])) - 50, y1 = Math.max(...xy.map((p) => p[1])) + 45;
+    let w = x1 - x0, h = y1 - y0;
+    if (w / h < 2.2) { x0 -= (h * 2.2 - w) / 2; w = h * 2.2; }
+    if (w >= fw) { x0 = fx; w = fw; } else x0 = Math.max(fx, Math.min(x0, fx + fw - w));
+    if (h >= fh) { y0 = fy; h = fh; } else y0 = Math.max(fy, Math.min(y0, fy + fh - h));
+    crop = ` data-crop="${r1(x0)} ${r1(y0)} ${r1(w)} ${r1(h)}"`;
+  }
+
+  return `<svg class="gmap ${className}" viewBox="${geo.viewBox}"${crop} xmlns="http://www.w3.org/2000/svg" role="img" aria-label="${label}">
   <path class="gmap__land" d="${geo.outline}"/>
   ${regions ? `<g class="gmap__regions">${geo.regions.map((r) => `<path d="${r.d}" data-region="${r.name}"><title>${r.name}</title></path>`).join("")}</g>` : ""}
   ${geo.rivers.map((d) => `<path class="gmap__river" d="${d}"/>`).join("")}

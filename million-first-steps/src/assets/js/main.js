@@ -13,6 +13,8 @@
     set: function (k, v) { try { localStorage.setItem(k, v); } catch (e) {} },
   };
   var hasGsap = !!(window.gsap && window.ScrollTrigger);
+  // Phones and small tablets get shorter pinned scenes and earlier, quicker reveals.
+  var narrow = window.matchMedia("(max-width: 860px)").matches;
   var motion = html.classList.contains("motion") && hasGsap;
   if (!motion) html.classList.remove("motion");
 
@@ -48,23 +50,7 @@
     if (!(cfg.currencies || {})[code]) return;
     html.dataset.currency = code;
     store.set("mfs-currency", code);
-    /* ───────────────────────── Language ───────────────────────── */
-  function goToLang(code) {
-    store.set("mfs-lang", code);
-    if (code === html.lang) return;
-    var page = html.getAttribute("data-page") || "index.html";
-    location.href = (html.getAttribute("data-site-root") || "") + (code === "en" ? "" : code + "/") + page + location.hash;
-  }
-  $$("select[data-lang-switch]").forEach(function (s) {
-    s.value = html.lang;
-    s.addEventListener("change", function () { goToLang(s.value); });
-  });
-  document.addEventListener("click", function (e) {
-    var a = e.target.closest("[data-set-lang]");
-    if (a) store.set("mfs-lang", a.getAttribute("data-set-lang"));
-  });
-
-  $$("select[data-currency]").forEach(function (s) { s.value = code; });
+    $$("select[data-currency]").forEach(function (s) { s.value = code; });
     renderPrices();
   }
 
@@ -145,6 +131,7 @@
     var menuOpen = document.body.classList.contains("menu-open");
     header.classList.toggle("is-hidden", !menuOpen && y > 400 && y > lastY + 2);
     if (y < lastY - 2) header.classList.remove("is-hidden");
+    html.classList.toggle("header-hidden", header.classList.contains("is-hidden"));
     lastY = y;
   }
   window.addEventListener("scroll", onScroll, { passive: true });
@@ -238,10 +225,20 @@
       status.className = "form__status";
       var bad = $$("[required]", form).filter(function (f) { return f.type === "checkbox" ? !f.checked : !f.value.trim() || (f.type === "email" && !/^\S+@\S+\.\S+$/.test(f.value)); });
       $$("[required]", form).forEach(function (f) { f.setAttribute("aria-invalid", String(bad.indexOf(f) > -1)); });
+      var oldNote = $(".form__inline-err", form);
+      if (oldNote) oldNote.remove();
       if (bad.length) {
         status.textContent = tr("fill", "Please fill in the highlighted fields.");
         status.classList.add("is-err");
-        bad[0].focus();
+        var first = bad[0], box = first.closest(".field, .check") || first;
+        var note = document.createElement("p");
+        note.className = "form__inline-err";
+        note.setAttribute("role", "alert");
+        note.textContent = status.textContent;
+        box.parentNode.insertBefore(note, box);
+        first.focus({ preventScroll: true });
+        if (window.__lenis) window.__lenis.scrollTo(note, { offset: -40, duration: 0.9 });
+        else note.scrollIntoView({ block: "center", behavior: motion ? "smooth" : "auto" });
         return;
       }
       if (form.company.value) { status.textContent = tr("thanks", "Thank you!"); return; } // spam trap
@@ -286,7 +283,7 @@
   function scrollToTarget(hash) {
     var el = $(hash);
     if (!el) return;
-    if (window.__lenis) window.__lenis.scrollTo(el, { offset: -80, duration: 1.6 });
+    if (window.__lenis) window.__lenis.scrollTo(el, { offset: 0, duration: 1.6 });
     else el.scrollIntoView({ behavior: motion ? "smooth" : "auto" });
   }
   document.addEventListener("click", function (e) {
@@ -337,6 +334,31 @@
         days.forEach(function (d) { io.observe(d); });
       }
     }
+  }
+
+  /* ───────────────────────── Maps stay legible on small screens ───────────────────────── */
+  var maps = $$("svg.gmap");
+  function fitMaps() {
+    var small = window.matchMedia("(max-width: 900px)").matches;
+    maps.forEach(function (svg) {
+      var full = svg.getAttribute("data-full") || svg.getAttribute("viewBox");
+      svg.setAttribute("data-full", full);
+      var crop = svg.getAttribute("data-crop");
+      var vb = (small && crop ? crop : full).split(" ").map(Number);
+      svg.setAttribute("viewBox", vb.join(" "));
+      var box = svg.getBoundingClientRect();
+      var s = box.width ? Math.min(box.width / vb[2], (box.height || Infinity) / vb[3]) : 1;
+      svg.style.setProperty("--gs", s.toFixed(3));
+      svg.classList.toggle("is-small", small && s < 0.6);
+    });
+  }
+  if (maps.length) {
+    fitMaps();
+    var fitTimer;
+    window.addEventListener("resize", function () {
+      clearTimeout(fitTimer);
+      fitTimer = setTimeout(function () { fitMaps(); if (hasGsap) ScrollTrigger.refresh(); }, 200);
+    });
   }
 
   if (!motion) {
@@ -405,7 +427,7 @@
     // …while scrolling animates the layers and outer containers, so the two never collide.
     var tl = gsap.timeline({
       defaults: { ease: "none", immediateRender: false },
-      scrollTrigger: { trigger: heroEl, start: "top top", end: "+=220%", pin: true, scrub: 0.8, anticipatePin: 1 },
+      scrollTrigger: { trigger: heroEl, start: "top top", end: narrow ? "+=160%" : "+=220%", pin: true, scrub: narrow ? 0.5 : 0.8, anticipatePin: 1 },
     });
     layers.forEach(function (l) {
       var d = +l.dataset.depth;
@@ -441,24 +463,25 @@
     var showStep = function (i) {
       if (i === shown) return;
       var prev = dtSteps[shown], next = dtSteps[i], down = i > shown;
-      if (prev) gsap.to(prev, { autoAlpha: 0, y: down ? -40 : 40, duration: 0.5, ease: "power2.in", overwrite: true });
-      gsap.fromTo(next, { autoAlpha: 0, y: down ? 50 : -50 }, { autoAlpha: 1, y: 0, duration: 0.9, delay: prev ? 0.25 : 0, ease: "expo.out", overwrite: true });
+      if (prev) gsap.to(prev, { autoAlpha: 0, y: down ? -30 : 30, duration: 0.28, ease: "power2.in", overwrite: true });
+      gsap.fromTo(next, { autoAlpha: 0, y: down ? 40 : -40 }, { autoAlpha: 1, y: 0, duration: 0.8, delay: prev ? 0.3 : 0, ease: "expo.out", overwrite: true });
       gsap.to(counter, {
         v: +next.dataset.value,
-        duration: 1.4,
+        duration: 1.1,
         ease: "expo.out",
         overwrite: true,
         onUpdate: function () { numEl.textContent = num(counter.v); },
       });
-      gsap.fromTo(unitEl, { opacity: 0, y: 12 }, { opacity: 1, y: 0, duration: 0.8, ease: "expo.out", onStart: function () { unitEl.textContent = next.dataset.unit; } });
+      gsap.fromTo(unitEl, { opacity: 0, y: 12 }, { opacity: 1, y: 0, duration: 0.8, delay: prev ? 0.3 : 0, ease: "expo.out", onStart: function () { unitEl.textContent = next.dataset.unit; } });
       ticks.forEach(function (t, j) { t.classList.toggle("is-on", j <= i); });
       shown = i;
     };
     showStep(0);
+    var dtLength = "+=" + dtSteps.length * (narrow ? 60 : 85) + "%";
     ScrollTrigger.create({
       trigger: dt,
       start: "top top",
-      end: "+=" + dtSteps.length * 85 + "%",
+      end: dtLength,
       pin: true,
       scrub: true,
       onUpdate: function (self) {
@@ -466,7 +489,7 @@
         showStep(Math.min(dtSteps.length - 1, Math.floor(self.progress * dtSteps.length * 0.9999)));
       },
     });
-    gsap.fromTo(".deeptime__sky", { yPercent: 0 }, { yPercent: 8, ease: "none", scrollTrigger: { trigger: dt, start: "top top", end: "+=" + dtSteps.length * 85 + "%", scrub: true } });
+    gsap.fromTo(".deeptime__sky", { yPercent: 0 }, { yPercent: 8, ease: "none", scrollTrigger: { trigger: dt, start: "top top", end: dtLength, scrub: true } });
   }
 
   /* ---- Worlds: scrolling down travels sideways (phones included) ---- */
@@ -578,7 +601,7 @@
     $$("[data-era]", tlEl).forEach(function (era) {
       ScrollTrigger.create({ trigger: era, start: "top 60%", end: "bottom 60%", toggleClass: "is-active" });
       var medal = $(".era__medal", era);
-      if (medal) gsap.fromTo(medal, { rotate: -12, scale: 0.85 }, { rotate: 0, scale: 1, ease: "none", scrollTrigger: { trigger: era, start: "top bottom", end: "center center", scrub: true } });
+      if (medal) gsap.fromTo(medal, { rotate: narrow ? -6 : -12, scale: narrow ? 0.92 : 0.85 }, { rotate: 0, scale: 1, ease: "none", scrollTrigger: { trigger: narrow ? medal.parentNode : era, start: "top bottom", end: narrow ? "top 45%" : "center center", scrub: true } });
     });
   }
 
@@ -598,10 +621,10 @@
   // Generic effects are created last so their positions account for the pinned sections above them.
   /* ---- Generic reveals ---- */
   ScrollTrigger.batch("[data-reveal]", {
-    start: "top 90%",
+    start: narrow ? "top bottom" : "top 90%",
     once: true,
     onEnter: function (batch) {
-      gsap.to(batch, { opacity: 1, y: 0, duration: 1.2, ease: "expo.out", stagger: 0.09, overwrite: true });
+      gsap.to(batch, { opacity: 1, y: 0, duration: narrow ? 0.7 : 1.2, ease: "expo.out", stagger: narrow ? 0.05 : 0.09, overwrite: true });
     },
   });
 
@@ -620,7 +643,7 @@
             duration: 1.3,
             ease: "expo.out",
             stagger: 0.1,
-            scrollTrigger: { trigger: el, start: "top 88%", once: true },
+            scrollTrigger: { trigger: el, start: narrow ? "top 98%" : "top 88%", once: true },
           });
         },
       });

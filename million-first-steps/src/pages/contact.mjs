@@ -19,6 +19,7 @@ ${pageHero({
 
 <section class="section contact" aria-label="Request form">
   <div class="container contact__grid">
+    ${config.email ? `<p class="contact__quick"><span>Prefer to talk?</span> <a href="mailto:${config.email}" translate="no">${icon("mail")}${config.email}</a></p>` : ""}
     <form class="form" data-enquiry novalidate ${config.formEndpoint ? `action="${config.formEndpoint}" method="POST"` : ""}>
       <fieldset>
         <legend class="form__legend"><span>01</span> Your journey</legend>
@@ -42,8 +43,8 @@ ${pageHero({
         </div>
         <div class="form__row form__row--3">
           <label class="field"><span>Arrival (approx.)</span><input type="month" name="arrival"></label>
-          <label class="field"><span>Adults</span><input type="number" name="adults" min="1" max="30" value="2" data-party-input></label>
-          <label class="field"><span>Children</span><input type="number" name="children" min="0" max="20" value="0"></label>
+          <label class="field"><span>Adults</span><input type="number" name="adults" min="1" max="30" value="2" inputmode="numeric" data-party-input></label>
+          <label class="field"><span>Children</span><input type="number" name="children" min="0" max="20" value="0" inputmode="numeric"></label>
         </div>
       </fieldset>
       <fieldset>

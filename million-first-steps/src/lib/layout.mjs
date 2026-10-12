@@ -50,7 +50,7 @@ function header(root, current) {
     </div>
   </div>
 </header>
-<div class="menu" id="menu" data-menu hidden>
+<div class="menu" id="menu" data-menu data-lenis-prevent hidden>
   <div class="menu__inner">
     <nav aria-label="Mobile">
       <ol class="menu__list">
@@ -60,6 +60,12 @@ function header(root, current) {
       </ol>
     </nav>
     <ul class="lang-links lang-links--menu" translate="no">${langLinks(root, current)}</ul>
+    <div class="menu__prefs">
+      <label class="currency"><span class="menu__prefs-label">Currency</span>
+        <select data-currency translate="no">${join(Object.keys(config.currencies), (c) => `<option value="${c}">${c}</option>`)}</select>
+        ${icon("arrow-down", "icon currency__chev")}
+      </label>
+    </div>
     <div class="menu__foot">
       ${config.email ? `<a href="mailto:${config.email}">${icon("mail")} ${config.email}</a>` : ""}
       ${config.whatsapp ? `<a href="https://wa.me/${config.whatsapp}">${icon("chat")} WhatsApp</a>` : ""}

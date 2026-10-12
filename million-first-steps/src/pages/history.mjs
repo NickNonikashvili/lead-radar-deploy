@@ -53,7 +53,7 @@ ${pageHero({
         <h2 class="era__title" data-split>${e.title}</h2>
         ${join(e.text, (p) => `<p data-reveal>${p}</p>`)}
         ${e.alphabet ? alphabetWidget : ""}
-        ${tour ? `<a class="link-arrow era__tour" href="tours/${tour.id}.html" data-reveal>Walk it on <strong>${tour.name}</strong> ${icon("arrow")}</a>` : ""}
+        ${tour ? `<a class="link-arrow era__tour" href="tours/${tour.id}.html" data-reveal><span class="era__tour-label">Walk it on</span> <strong>${tour.name}</strong> ${icon("arrow")}</a>` : ""}
       </div>
     </li>`;
     })}
