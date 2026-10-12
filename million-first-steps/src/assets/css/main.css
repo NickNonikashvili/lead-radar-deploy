@@ -1096,11 +1096,12 @@ html[data-tier="wanderer"] .tp[data-tier="wanderer"], html[data-tier="explorer"]
 /* ---------- Home: wine — the jar stays in view and fills while you read ---------- */
 @media (max-width: 860px) {
   .wine__grid { display: block; }
-  .wine__visual { position: sticky; top: 0; z-index: 3; margin: 0 calc(var(--gutter) * -1); padding: 12px var(--gutter) 26px; background: linear-gradient(#2b120c 76%, rgba(43, 18, 12, 0)); }
+  .wine__visual { position: sticky; top: 0; z-index: 3; margin: 0 calc(var(--gutter) * -1); padding: 12px var(--gutter) 26px; background: linear-gradient(#2e130c 74%, rgba(46, 19, 12, 0)); transition: top 0.6s var(--ease); }
   html:not(.header-hidden) .wine__visual { top: var(--header-h); }
   .wine__sticky { position: static; display: grid; grid-template-columns: 92px 1fr; align-items: center; gap: 18px; }
   .qvevri { max-height: 21svh; width: auto; justify-self: center; filter: drop-shadow(0 14px 20px rgba(0, 0, 0, 0.4)); }
   .wine__caption { margin: 0; text-align: left; font-size: 0.72rem; letter-spacing: 0.16em; }
+  .wine__caption [data-wine-year] { display: block; margin-bottom: 4px; font-size: 1.35rem; letter-spacing: 0.06em; color: var(--gold-3); }
   .wine__text { margin-top: 24px; }
 }
 
@@ -1117,6 +1118,8 @@ html[data-tier="wanderer"] .tp[data-tier="wanderer"], html[data-tier="explorer"]
 }
 @media (max-width: 860px) {
   .tier-panel { padding: 24px 20px; gap: 20px; }
+  .tier-panel { display: none; }
+  html[data-tier="wanderer"] .tier-panel[data-tier-panel="wanderer"], html[data-tier="explorer"] .tier-panel[data-tier-panel="explorer"], html[data-tier="golden-fleece"] .tier-panel[data-tier-panel="golden-fleece"] { display: grid; }
   .tier-panel__summary { font-size: 1rem; line-height: 1.55; }
   .tier-panel__eg { margin-top: 16px; padding-top: 16px; }
   .tier-panel__features { gap: 16px; }
