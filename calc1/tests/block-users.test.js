@@ -7,8 +7,10 @@ const T = require('./lib');
 (async () => {
   const { mk, txt, login, api, go, log, check } = await T.start();
   const ALICE = 'alice.a@montana.edu', BOB = 'bob.bmu6j92pq@montana.edu';
-  const [ca, a] = await mk(1280, 900); await go(a, '#/'); check('Alice signs in', await login(a, ALICE));
-  const [cb, b] = await mk(1280, 900); await go(b, '#/'); check('Bob signs in', await login(b, BOB));
+  // celebrations (a new league, a badge) would cover the page; they are not what this test is about
+  const quiet = () => document.addEventListener('DOMContentLoaded', () => { const st = document.createElement('style'); st.textContent = '.celebrate{display:none!important}'; document.head.appendChild(st); });
+  const [ca, a] = await mk(1280, 900); await ca.addInitScript(quiet); await go(a, '#/'); check('Alice signs in', await login(a, ALICE));
+  const [cb, b] = await mk(1280, 900); await cb.addInitScript(quiet); await go(b, '#/'); check('Bob signs in', await login(b, BOB));
   // a clean start: nothing blocked from earlier runs
   for (const x of ((await api(a, 'forum_blocks')).json.blocks || [])) await api(a, 'forum_unblock', { id: x.id });
 
@@ -43,7 +45,7 @@ const T = require('./lib');
   check('nobody can block themself', self.status === 400 || self.json.ok === false, self.json);
 
   // the moderators hear about it
-  const [cm, m] = await mk(1280, 900); await go(m, '#/'); await login(m, 'mod.user@montana.edu');
+  const [cm, m] = await mk(1280, 900); await cm.addInitScript(quiet); await go(m, '#/'); await login(m, 'mod.user@montana.edu');
   const reps = (await api(m, 'forum_reports')).json.reports || [];
   check('the blocked comment is in the moderators\' report queue', reps.some(r => r.kind === 'c' && r.item_id === hisComment.id && /Blocked the author/.test(r.reason)), reps.slice(0, 2).map(r => r.reason));
 
