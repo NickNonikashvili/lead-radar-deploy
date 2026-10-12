@@ -69,10 +69,10 @@ jobs:
           APK=app/build/outputs/apk/debug/app-debug.apk
           AAB=app/build/outputs/bundle/release/app-release.aab
           "$AAPT2" dump badging "$APK" > badging.txt
-          grep -E "^package:|sdkVersion|targetSdkVersion|uses-permission|application-label:" badging.txt
+          grep -iE "^package:|sdkVersion|uses-permission|application-label:" badging.txt
           grep -q "package: name='space.mathub.app'" badging.txt
           grep -q "targetSdkVersion:'36'" badging.txt
-          grep -q "sdkVersion:'24'" badging.txt
+          grep -qE "(minSdkVersion|sdkVersion):'24'" badging.txt   # newer aapt2 prints minSdkVersion
           # Google Play keeps the exact-alarm permissions for alarm-clock and calendar apps; reminders here are inexact
           if grep -E "SCHEDULE_EXACT_ALARM|USE_EXACT_ALARM" badging.txt; then echo "an exact-alarm permission is in the manifest"; exit 1; fi
           # no permission beyond what the app uses: network, notifications, boot (to keep reminders), wake lock, vibration
