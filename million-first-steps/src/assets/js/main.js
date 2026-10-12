@@ -416,6 +416,18 @@
       .fromTo(".hero__content, .hero__scroll", { opacity: 1, y: 0 }, { opacity: 0, y: 60, duration: 0.18 }, 0)
       .fromTo(reveal, { "--ms": "0%" }, { "--ms": "1300%", duration: 0.5, ease: "power2.in" }, 0.42)
       .fromTo(".hero__reveal-inner", { scale: 1.5, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.3 }, 0.62);
+
+    // The same number waits in the section below; fade this copy out as that one arrives, so it never shows twice.
+    var nextSection = (heroEl.parentNode.classList.contains("pin-spacer") ? heroEl.parentNode : heroEl).nextElementSibling;
+    if (nextSection) {
+      gsap.fromTo($$(".hero__reveal-inner > *", heroEl), { opacity: 1, y: 0 }, {
+        opacity: 0,
+        y: -40,
+        ease: "none",
+        immediateRender: false,
+        scrollTrigger: { trigger: nextSection, start: "top bottom", end: "top 45%", scrub: true },
+      });
+    }
   }
 
   /* ---- Deep time: pinned counter ---- */
@@ -457,12 +469,15 @@
     gsap.fromTo(".deeptime__sky", { yPercent: 0 }, { yPercent: 8, ease: "none", scrollTrigger: { trigger: dt, start: "top top", end: "+=" + dtSteps.length * 85 + "%", scrub: true } });
   }
 
-  /* ---- Worlds: horizontal journey on wide screens ---- */
+  /* ---- Worlds: scrolling down travels sideways (phones included) ---- */
   var worlds = $("[data-worlds]");
   if (worlds) {
-    mm.add("(min-width: 900px)", function () {
+    mm.add({ narrow: "(max-width: 899.98px)", wide: "(min-width: 900px)" }, function (ctx) {
       worlds.classList.add("is-enhanced");
       var track = $("[data-worlds-track]", worlds);
+      // Phones keep the heading still above the cards; wide screens slide it away with them.
+      var intro = $(".worlds__intro", worlds);
+      if (ctx.conditions.narrow) track.parentNode.insertBefore(intro, track);
       var wbar = $("[data-worlds-bar]", worlds);
       var dist = function () { return Math.max(0, track.scrollWidth - window.innerWidth); };
       var tween = gsap.to(track, {
@@ -483,7 +498,11 @@
         if (img) gsap.fromTo(img, { xPercent: 7 }, { xPercent: -7, ease: "none", scrollTrigger: { trigger: w, containerAnimation: tween, start: "left right", end: "right left", scrub: true } });
         gsap.from($(".world__text", w), { y: 40, opacity: 0, duration: 1, ease: "expo.out", scrollTrigger: { trigger: w, containerAnimation: tween, start: "left 85%" } });
       });
-      return function () { worlds.classList.remove("is-enhanced"); gsap.set(track, { clearProps: "transform" }); };
+      return function () {
+        worlds.classList.remove("is-enhanced");
+        gsap.set(track, { clearProps: "transform" });
+        if (ctx.conditions.narrow) track.insertBefore(intro, track.firstChild);
+      };
     });
   }
 
