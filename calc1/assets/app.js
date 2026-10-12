@@ -334,7 +334,7 @@
     if (!course) {
       app.classList.add('landing'); document.documentElement.removeAttribute('data-course');
       if (view !== 'home') { const V = App.views[view]; App.current = V; document.title = `${V.title} · ${SITE}`; V.render(root, param, query, true); applyTheme(); }
-      else { App.current = Landing; document.title = `${SITE} · Fall 2026`; Landing.render(root); }
+      else { App.current = App.homeView || Landing; document.title = `${SITE} · Fall 2026`; App.current.render(root); }   // App.homeView: the iOS and Android apps' own start page (assets/app-native.js)
       typeset(root); if (App.auth) App.auth.bindLocks(root); afterRender(root); return;
     }
     app.classList.remove('landing');

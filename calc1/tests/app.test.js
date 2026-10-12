@@ -53,11 +53,40 @@ const { execFileSync } = require('child_process'); const path = require('path');
 
   const [ca, p] = await mkApp();
   await go(p, '#/', 2200);
-  const shell = await p.evaluate(() => ({ app: document.documentElement.dataset.app, native: !!(window.MATHUB_APP && window.MATHUB_APP.native), py: window.PYODIDE_URL, mj: (document.getElementById('MathJax-script') || {}).src || '', sw: 'serviceWorker' in navigator && !!navigator.serviceWorker.controller, faculty: (() => { const b = document.querySelector('.hero-faculty'); return b ? getComputedStyle(b).display : 'none'; })(), cta: !!document.querySelector('.mk-cta[href="#/create"]') }));
+  const shell = await p.evaluate(() => ({ app: document.documentElement.dataset.app, native: !!(window.MATHUB_APP && window.MATHUB_APP.native), py: window.PYODIDE_URL, mj: (document.getElementById('MathJax-script') || {}).src || '', sw: 'serviceWorker' in navigator && !!navigator.serviceWorker.controller, faculty: (() => { const b = document.querySelector('.hero-faculty'); return b ? getComputedStyle(b).display : 'none'; })(), home: App.current === App.homeView }));
   check('the app marks itself and points Python at its own copy', shell.app === 'ios' && shell.native && shell.py === 'assets/pyodide/', shell);
   check('MathJax loads from inside the app, not from a CDN', /\/app\/www\/assets\/mathjax\/tex-svg\.js$/.test(shell.mj), shell.mj);
-  check('the start page offers "Create a class" and not the website-only "For professors"', shell.cta && shell.faculty === 'none', shell);
+  check('the app has its own start page, not the website’s (no "For professors")', shell.home && shell.faculty === 'none', shell);
   check('no sideways scroll on the start page at 390px', await hscroll(p));
+
+  // the app's own layout: a top bar with the class switcher, streak, XP and the account; a card per class; the class's path; a tab bar
+  const look = await p.evaluate(() => { const q = s => document.querySelector(s); const b = q('#appbar'); const r = b ? b.getBoundingClientRect() : {}; const shown = s => { const e = q(s); return !!e && getComputedStyle(e).display !== 'none'; };
+    return { bar: !!b && getComputedStyle(b).position === 'fixed' && r.top >= 0 && r.top < 80, parts: ['.ab-class', '.ab-streak', '.ab-xp', '.ab-signin'].filter(x => !!q('#appbar ' + x)), site: ['.topbar', '.sidebar', '.site-foot', '.hero-faculty'].filter(shown), cards: [...document.querySelectorAll('.ah-card[data-cid]')].map(c => c.dataset.cid), on: q('.ah-card.on') ? q('.ah-card.on').dataset.cid : '', add: !!q('.ah-add'), nodes: document.querySelectorAll('.ap-node').length, start: !!q('.ap-li.current .ap-start'), bo: !!q('.ap-li.current .ap-bo'), banner: q('.ap-banner h2') ? q('.ap-banner h2').textContent : '', tabs: [...document.querySelectorAll('#tabbar.app-tabs .tab-item')].map(t => t.textContent.trim()), active: q('#tabbar .tab-item.active') ? q('#tabbar .tab-item.active').textContent.trim() : '' }; });
+  check('a top bar holds the class switcher, streak, XP and Sign in; the website’s top bar, menu and footer are hidden', look.bar && look.parts.length === 4 && !look.site.length, look);
+  check('the start page has a card per class (and Add a class) and the chosen class’s path, with Start and Bo on the next lesson', look.cards.length >= 1 && look.cards.includes(look.on) && look.add && look.nodes >= 3 && look.start && look.bo && look.banner.length > 0, look);
+  check('a tab bar: Learn, Practice, Today, Board, Me, with Learn chosen', look.tabs.join() === 'Learn,Practice,Today,Board,Me' && look.active === 'Learn', look.tabs);
+  await p.click('.ap-li.current .ap-node'); await p.waitForTimeout(250);
+  const lesson = await p.evaluate(() => { const li = document.querySelector('.ap-li.current'); const pp = li.querySelector('.ap-pop'); return { shown: !pp.hidden, raised: li.classList.contains('open') && getComputedStyle(li).zIndex !== 'auto', open: document.querySelectorAll('.ap-pop:not([hidden])').length, links: [...pp.querySelectorAll('a')].map(x => x.textContent.trim()) }; });
+  check('tapping a lesson opens its card (above the lessons after it) with Start lesson, Practice and Notes', lesson.shown && lesson.raised && lesson.open === 1 && /Start lesson/.test(lesson.links.join()) && /Practice/.test(lesson.links.join()), lesson);
+  await p.click('#appbar .ab-streak'); await p.waitForTimeout(250);
+  const sp = await p.evaluate(() => { const e = document.querySelector('.ab-pop'); if (!e) return null; const r = e.getBoundingClientRect(); return { l: r.left, r: r.right, w: innerWidth, t: e.textContent }; });
+  check('the streak opens a note that stays on screen', sp && sp.l >= 8 && sp.r <= sp.w - 8 && /in a row/.test(sp.t), sp);
+  await p.click('#appbar .ab-class'); await p.waitForTimeout(450);
+  const sheet = await p.evaluate(() => { const s = document.querySelector('#class-sheet'); return s && { open: s.classList.contains('open'), pop: !!document.querySelector('.ab-pop'), rows: s.querySelectorAll('[data-pick]').length, create: !!s.querySelector('a[href="#/create"]'), tools: s.querySelectorAll('.sg-item').length }; });
+  check('the class button opens a sheet: your classes, Create a class, and every tool', sheet && sheet.open && sheet.rows >= 1 && sheet.create && sheet.tools >= 8, sheet);
+  await p.keyboard.press('Escape'); await p.waitForTimeout(400);
+  check('Escape closes the sheet', !(await p.$('#class-sheet')));
+  const other = look.cards.find(x => x !== look.on);
+  if (other) {
+    await p.click(`.ah-card[data-cid="${other}"]`); await p.waitForTimeout(1500);
+    const sw = await p.evaluate(() => ({ on: document.querySelector('.ah-card.on').dataset.cid, chip: document.querySelector('#appbar .ab-class').textContent.trim(), nodes: document.querySelectorAll('.ap-node, .ap-exam').length }));
+    check('tapping another class card switches the path and the top bar to it', sw.on === other && sw.nodes > 0 && sw.chip.length > 0, sw);
+  }
+  await go(p, '#/calc/dashboard', 1600);
+  check('inside a class the top bar has a back button and Practice points into that class', !!(await p.$('#appbar [data-ab="back"]')) && await p.evaluate(() => /#\/calc\/(practice|flashcards)$/.test(document.querySelector('#tabbar .tab-item:nth-child(2)').getAttribute('href'))));
+  await go(p, '#/settings', 1400);
+  check('the Me tab is chosen on Settings', (await txt(p, '#tabbar .tab-item.active')).trim() === 'Me');
+  await go(p, '#/', 1800);
   check('a strip covers the status bar area, above the top bar and below dialogs', await p.evaluate(() => { const s = document.querySelector('.app-statusbar'); if (!s) return false; const cs = getComputedStyle(s); return cs.position === 'fixed' && cs.display !== 'none' && +cs.zIndex > 50 && +cs.zIndex < 60; }));
   const fetched = await p.evaluate(async () => { const r = await fetch('api/index.php?r=config', { headers: { 'X-Requested-With': 'MatHub' } }); return r.url; });
   check('account calls go to https://mathub.space', /^https:\/\/mathub\.space\/api\/index\.php\?r=config/.test(fetched), fetched);

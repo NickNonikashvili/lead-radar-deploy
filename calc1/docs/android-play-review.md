@@ -69,9 +69,9 @@ Research date: October 2026. Play policies change; re-read the sources below bef
 - **App access:** "All or some functionality is restricted" → give the review account (see below) with these instructions:
 
 ```
-Everything except discussions works without signing in. To see discussions, tap Me (bottom right), then Log in,
+Everything except discussions works without signing in. To see discussions, tap Sign in (top right), then Log in,
 and use the account below. Sign-up is limited to Montana State University addresses, so please use this account.
-Create a class (app only): Start page → "Create a class from your syllabus" → "Try an example class" →
+Create a class (app only): Learn tab → the class button (top left) → "Create a class from a syllabus" → "Try an example class" →
 "Add SKIL 101". The app never contacts an AI service: the student copies the instructions to an AI of their
 choice and pastes the answer back. Report and Block are under every post and comment.
 Account deletion: Settings → Delete account, or https://mathub.space/#/policy/delete.
@@ -134,7 +134,7 @@ The CI build proves the project compiles and the manifest is right, not how it f
 or 16 and one running an older version (Android 10 to 13):
 - the status bar and the gesture bar do not cover the top bar or the tab bar, in light and dark mode;
 - the keyboard does not cover the field you are typing in (Create a class, step 3);
-- back closes a dialog, then the menu, then goes back a page, then leaves the app from the start page;
+- back closes a dialog or the class sheet, then goes back a page, then leaves the app from the Learn tab;
 - turning on a reminder asks for the notification permission once, and the reminder arrives;
 - Send (a created class) and Download my data open the share sheet;
 - the Python playground runs code with no connection.

@@ -94,7 +94,8 @@ calculator, a graphing tool and exam countdowns. It works offline and without an
 Signing in is optional. It syncs progress and opens the class discussions. Sign-up is limited to
 Montana State University students, so please use the demo account provided.
 
-Create a class (app-only feature): Start page → "Create a class from your syllabus".
+Create a class (app-only feature): on the Learn tab, tap the class button at the top left (or the
+"Add a class" card) → "Create a class from a syllabus".
  - To try it without any AI: tap "Try an example class", then "Add SKIL 101".
  - The full flow: the app shows instructions; the student copies them into an AI assistant of their
    own choice together with their syllabus, then pastes the answer back. The app checks and repairs
@@ -116,7 +117,7 @@ App Store Connect needs at least one set for each device class the app runs on:
 - iPhone 6.9" (1320 × 2868 or 1290 × 2796): required.
 - iPad 13" (2064 × 2752 or 2048 × 2732): required, because the app runs on iPad.
 
-Take them in the Simulator (File → Save Screen) from the real app: the start page with your classes,
+Take them in the Simulator (File → Save Screen) from the real app: the Learn tab with your classes and the path,
 a class dashboard with the trail to the next exam, the quizzer, flashcards, and Create a class
 (step 1 and a preview). No device frames with other brands, no text that promises features the app
 does not have.

@@ -443,15 +443,148 @@ THE SYLLABUS:
     hp.addEventListener('change', () => { setSetting('haptics', hp.checked); if (hp.checked) N.haptic('success'); });
   }
 
+  /* ============================================================
+     The app's own shell (the website keeps its sidebar, top bar and start page):
+     - an app bar: the class you are in (tap to switch, add a class or open its tools), your streak,
+       today's XP and the account button
+     - the start page: your classes as a row of cards, and the winding path through the one you picked
+     - a tab bar: Learn, Practice, Today, Board, Me
+     ============================================================ */
+  const myIds = () => App.myCourses().filter(id => Courses[id] && !Courses[id].preview);
+  const curClass = () => { const mine = myIds(); const s = settings().appClass; return mine.includes(s) ? s : App.D && mine.includes(App.D.id) ? App.D.id : mine[0] || null; };
+  const setClass = id => { if (id) setSetting('appClass', id); };
+  // each class's colours, read from the site's own class rules (works for built-in classes, packs and classes made in the app)
+  const probe = (() => { let el = null; return id => { if (!el) { el = document.createElement('i'); el.hidden = true; el.setAttribute('aria-hidden', 'true'); document.body.appendChild(el); } el.className = 'course-card ' + id; const cs = getComputedStyle(el); const v = n => cs.getPropertyValue(n).trim(); return { c: v('--accent'), ink: v('--accent-ink') || '#fff', soft: v('--accent-soft'), line: v('--accent-line'), deep: v('--accent-deep') || v('--accent') }; }; })();
+  const ccStyle = id => { const k = probe(id); return k.c ? `--cc:${k.c};--cc-ink:${k.ink};--cc-soft:${k.soft};--cc-line:${k.line};--cc-deep:${k.deep}` : ''; };
+  const examOf = C => { try { return App.nextExamOf(C); } catch (e) { return null; } };
+  const daysTo = ex => ex && ex.date ? App.daysBetween(App.todayISO(), ex.date) : null;
+  const inDays = d => d === 0 ? 'today' : d === 1 ? 'tomorrow' : `in ${d} days`;
+  const goSearch = () => document.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true, bubbles: true }));
+  const ROOTS = r => (!r.course && ['home', 'today', 'forum', 'settings'].includes(r.view)) || (r.course && ['practice', 'flashcards'].includes(r.view));
+  const practiceHref = id => { const C = Courses[id]; if (!C) return '#/'; return (C.quiz || C.hasQuiz || C.quizTopics || C.QUIZ) ? `#/${id}/practice` : `#/${id}/flashcards`; };
+
+  /* ---------- app bar ---------- */
+  function paintAppBar(r) {
+    let bar = $('#appbar'); if (!bar) { bar = document.createElement('header'); bar.id = 'appbar'; bar.className = 'appbar'; document.body.prepend(bar); bar.addEventListener('click', onBar); }
+    const id = (r && r.course && Courses[r.course]) ? r.course : curClass(); const C = id ? Courses[id] : null;
+    const st = App.streakAll ? App.streakAll() : { n: 0, activeToday: false }; const xp = App.xpToday ? App.xpToday() : 0; const goal = App.dailyGoal ? App.dailyGoal() : 30;
+    const u = App.auth && App.auth.user; const name = u ? (u.name || u.email.split('@')[0]) : '';
+    const back = r && !ROOTS(r) ? `<button class="ab-back" data-ab="back" aria-label="Back">${icon('left', 22)}</button>` : '';
+    bar.innerHTML = `<div class="ab-l">${back}${C ? `<button class="ab-class" data-ab="classes" style="${ccStyle(id)}" aria-label="${esc(C.short || C.code)}: switch class or open its tools" aria-haspopup="dialog"><span class="ab-class-code">${esc(C.short || C.code)}</span>${icon('chevron', 14)}</button>` : `<button class="ab-class none" data-ab="classes" aria-haspopup="dialog">${icon('plus', 16)}<span class="ab-class-code">Add a class</span></button>`}</div>
+      <div class="ab-r"><button class="ab-stat ab-streak${st.activeToday ? ' on' : ''}" data-ab="streak" aria-label="${st.n} day streak${st.activeToday ? ', studied today' : ''}">${icon('fire', 20)}<b>${st.n}</b></button>
+      <button class="ab-stat ab-xp${xp >= goal ? ' on' : ''}" data-ab="xp" aria-label="${xp} of ${goal} XP today">${icon('zap', 20)}<b>${xp}</b></button>
+      ${u ? `<a class="ab-acct" href="#/settings" aria-label="Your account, ${esc(name)}"><span class="ab-avatar">${esc(name.trim()[0].toUpperCase())}</span></a>` : `<button class="ab-signin" data-ab="signin">Sign in</button>`}</div>`;
+  }
+  function onBar(e) {
+    const b = e.target.closest('[data-ab]'); if (!b) return; const a = b.dataset.ab; N.haptic('select');
+    if (a === 'back') { if (history.length > 1) history.back(); else location.hash = '#/'; }
+    else if (a === 'classes') openSheet();
+    else if (a === 'signin') { if (App.auth) App.auth.open('login'); }
+    else if (a === 'streak' || a === 'xp') pop(a, b);
+  }
+  function pop(kind, anchor) {
+    const old = $('.ab-pop'); if (old) { const same = old.dataset.kind === kind; old.remove(); if (same) return; }
+    const el = document.createElement('div'); el.className = 'ab-pop'; el.dataset.kind = kind; el.setAttribute('role', 'status');
+    if (kind === 'streak') { const st = App.streakAll(); const fz = App.freezeBank ? App.freezeBank() : 0;
+      el.innerHTML = `<b>${st.n} day${st.n === 1 ? '' : 's'} in a row</b><span>${st.activeToday ? 'You studied today. Come back tomorrow to keep it going.' : st.n ? 'Answer a question or review a card today to keep it.' : 'Answer a question or review a card to start a streak.'}</span><span class="ab-pop-meta">Longest ${st.longest || st.n} · ${fz} streak freeze${fz === 1 ? '' : 's'} saved</span>`; }
+    else { const xp = App.xpToday(), goal = App.dailyGoal(), lv = App.level ? App.level() : null; const pct = Math.min(100, Math.round(100 * xp / goal));
+      el.innerHTML = `<b>${xp} of ${goal} XP today</b><span class="ab-bar" role="presentation"><i style="width:${pct}%"></i></span><span class="ab-pop-meta">${lv ? `Level ${lv.n}${lv.name ? ' · ' + esc(lv.name) : ''} · ${lv.toNext} XP to the next` : ''}</span>`; }
+    document.body.appendChild(el); const r = anchor.getBoundingClientRect(), w = el.offsetWidth;   // centred under its button, kept 12 px inside the screen
+    el.style.top = (r.bottom + 8) + 'px'; el.style.left = Math.max(12, Math.min(r.left + r.width / 2 - w / 2, innerWidth - w - 12)) + 'px';
+    setTimeout(() => document.addEventListener('click', function off(ev) { if (!el.contains(ev.target)) { el.remove(); document.removeEventListener('click', off, true); } }, true), 0);
+  }
+
+  /* ---------- the class sheet: switch class, add one, and this class's tools ---------- */
+  function openSheet() {
+    if ($('#class-sheet')) return; const id = curClass(); const C = id ? Courses[id] : null; const mine = myIds();
+    const all = App.COURSE_ORDER.filter(x => Courses[x] && !Courses[x].preview && !local.has(x));
+    const tools = C && C.NAV && App.groupNav ? App.groupNav(C.NAV).flatMap(g => g.items) : [];
+    const more = [['#/today', 'Today', 'flag'], ['#/focus', 'Focus room', 'clock'], ['#/resources', 'Resources', 'book'], ['#/guides', 'Study guides', 'bulb'], ['#/tools', 'Tools', 'calc'], ['#/gpa', 'GPA', 'chart'], ['#/leagues', 'Leagues', 'trophy'], ['#/badges', 'Badges', 'award']];
+    const el = document.createElement('div'); el.className = 'modal-backdrop sheet-backdrop'; el.id = 'class-sheet';
+    el.innerHTML = `<div class="sheet" role="dialog" aria-modal="true" aria-label="Your classes"><div class="sheet-grab" aria-hidden="true"></div>
+      <div class="sheet-h"><h2>Your classes</h2><button class="icon-btn" data-action="close" aria-label="Close">${icon('x', 18)}</button></div>
+      <div class="sheet-classes">${mine.map(x => { const K = Courses[x]; const ex = examOf(K); const d = daysTo(ex); return `<a class="sc-row${x === id ? ' on' : ''}" href="#/" data-pick="${x}" style="${ccStyle(x)}"><span class="sc-badge">${esc((K.short || K.code).replace(/\s+/g, ' '))}</span><span class="sc-main"><b>${esc(K.name)}</b><small>${ex && d !== null && d >= 0 ? `${esc(ex.name)} ${inDays(d)}` : local.has(x) ? 'Made from your syllabus' : 'No exam ahead'}</small></span>${x === id ? icon('check', 18) : icon('right', 16)}</a>`; }).join('')}</div>
+      <div class="sheet-actions"><a class="btn primary" href="#/create">${icon('plus', 15)} Create a class from a syllabus</a><button class="btn" data-action="pick">${icon('grid', 15)} Choose Montana State classes</button></div>
+      <div class="sheet-pick" hidden><p class="small muted">Tick the classes you take. The rest stay out of your way.</p><div class="pick-list">${all.map(x => `<label class="check pick-row" style="${ccStyle(x)}"><input type="checkbox" data-c="${x}"${mine.includes(x) ? ' checked' : ''}><span class="sc-badge">${esc(Courses[x].short || Courses[x].code)}</span><span>${esc(Courses[x].name)}</span></label>`).join('')}</div><div class="row gap-sm mt-1"><button class="btn primary" data-action="save-pick">Save</button>${App.views.request ? `<a class="btn ghost" href="#/request">Not listed? Request it</a>` : ''}</div></div>
+      ${C ? `<h3 class="sheet-sub">In ${esc(C.short || C.code)}</h3><div class="sheet-grid" style="${ccStyle(id)}"><a class="sg-item" href="#/${id}/dashboard">${icon('home', 20)}<span>Class page</span></a>${tools.filter(t => t[0] !== 'dashboard').map(([v, l, ic]) => `<a class="sg-item" href="#/${id}/${v}">${icon(ic || 'book', 20)}<span>${esc(l)}</span></a>`).join('')}</div>` : ''}
+      <h3 class="sheet-sub">Everything else</h3><div class="sheet-grid">${more.map(([h, l, ic]) => `<a class="sg-item" href="${h}">${icon(ic, 20)}<span>${l}</span></a>`).join('')}<button class="sg-item" data-action="search">${icon('search', 20)}<span>Search</span></button></div></div>`;
+    document.body.appendChild(el); requestAnimationFrame(() => el.classList.add('open'));
+    const close = () => { document.removeEventListener('keydown', onKey); el.classList.remove('open'); setTimeout(() => el.remove(), N.reduceMotion() ? 0 : 220); };
+    const onKey = e => { if (e.key === 'Escape') close(); }; document.addEventListener('keydown', onKey);
+    el.addEventListener('click', e => {
+      if (e.target === el || e.target.closest('[data-action="close"]')) return close();
+      const pick = e.target.closest('[data-pick]'); if (pick) { e.preventDefault(); setClass(pick.dataset.pick); N.haptic('select'); close(); if (location.hash === '#/' || location.hash === '' || location.hash === '#') App.rerender(); else location.hash = '#/'; return; }
+      if (e.target.closest('[data-action="pick"]')) { const box = $('.sheet-pick', el); box.hidden = !box.hidden; return; }
+      if (e.target.closest('[data-action="save-pick"]')) { const ids = $$('input[data-c]', el).filter(i => i.checked).map(i => i.dataset.c).concat([...local].filter(x => Courses[x])); if (!ids.length) { toast('Pick at least one class.'); return; } setSetting('courses', ids); if (App.auth && App.auth.user && App.auth.savePrefs) App.auth.savePrefs({ courses: ids }).catch(() => {}); if (App.rebuildNav) App.rebuildNav(); if (!ids.includes(settings().appClass)) setClass(ids[0]); close(); App.rerender(); return; }
+      if (e.target.closest('[data-action="search"]')) { close(); setTimeout(goSearch, 50); return; }
+      if (e.target.closest('a[href]')) close();
+    });
+  }
+
+  /* ---------- the start page: classes, then the path ---------- */
+  const NODE_IC = { done: 'check', current: 'play', open: 'play', soon: 'clock' };
+  function classRow(mine, id) {
+    return `<div class="ah-row" role="list" aria-label="Your classes">${mine.map(x => { const K = Courses[x]; const ex = examOf(K); const d = daysTo(ex); return `<button class="ah-card${x === id ? ' on' : ''}" role="listitem" data-cid="${x}" style="${ccStyle(x)}" aria-pressed="${x === id}"><span class="ah-art" aria-hidden="true">${App.classSprite ? App.classSprite(x, 3) : ''}</span><b class="ah-code">${esc(K.short || K.code)}</b><span class="ah-exam">${ex && d !== null && d >= 0 ? `${d === 0 ? 'Exam today' : d === 1 ? 'Exam tomorrow' : `${d}d · ${esc(ex.name)}`}` : local.has(x) ? 'Your class' : 'No exam ahead'}</span></button>`; }).join('')}<button class="ah-card ah-add" data-ab-add="1" aria-label="Add a class">${icon('plus', 26)}<span class="ah-exam">Add a class</span></button></div>`;
+  }
+  function pathHtml(C) {
+    const id = C.id; const nodes = App.pathNodes ? App.pathNodes(C) : [];
+    const units = (C.UNITS || []).map(u => ({ u, ns: nodes.filter(n => n.unit && n.unit.n === u.n) }));
+    // classes without practice topics get a path of their sections (each opens its notes)
+    const secPath = !nodes.length ? (C.UNITS || []).map(u => ({ u, ns: (C.SECTIONS || []).filter(s => s.unit === u.n).map(s => ({ sec: s, label: s.title || s.label, state: 'open', href: `#/${id}/notes/${s.id}` })) })) : null;
+    const list = (secPath || units).filter(x => x.ns.length);
+    if (!list.length) return `<div class="ah-empty"><p>This class has no path yet.</p><a class="btn primary" href="#/${id}/dashboard">Open the class page</a></div>`;
+    if (secPath && secPath.length) { const first = secPath.flatMap(x => x.ns)[0]; if (first) first.state = 'current'; }
+    const today = App.todayISO(); let k = 0;
+    return list.map(({ u, ns }) => {
+      const ex = (C.EXAMS || []).find(e => e.id === u.exam); const d = ex ? daysTo(ex) : null; const done = ns.filter(n => n.state === 'done').length;
+      const items = ns.map(n => { const x = Math.round(Math.sin(k++ * 0.9) * 74); const href = n.href || `#/${id}/lesson?topics=${encodeURIComponent(n.t)}`; const prac = n.t ? `#/${id}/practice?topics=${encodeURIComponent(n.t)}` : ''; const sec = n.sec || {}; const notes = `#/${id}/notes/${sec.id}`;
+        const crowns = n.crowns ? `<span class="ap-crowns" aria-hidden="true">${icon('award', 11)}${n.crowns}</span>` : '';
+        return `<li class="ap-li ${n.state}" style="--x:${x}px">${n.state === 'current' ? `<span class="ap-start" aria-hidden="true">Start</span><span class="ap-bo ${x > 0 ? 'left' : 'right'}" aria-hidden="true">${App.bobcatSvg ? App.bobcatSvg(58) : ''}</span>` : ''}<button class="ap-node" data-node aria-expanded="false" aria-label="${esc(n.label)}${n.state === 'done' ? ', mastered' : n.state === 'current' ? ', up next' : n.state === 'soon' ? ', coming up in class' : ''}">${icon(NODE_IC[n.state] || 'play', 30)}</button>${crowns}
+          <div class="ap-pop" hidden><b>${esc(n.label)}</b><span>${esc([sec.label, n.t ? sec.title : ''].filter(Boolean).join(' '))}${n.n ? ` · ${n.n} answered` : ''}</span><div class="ap-pop-acts"><a class="btn primary" href="${href}">${icon('play', 15)} ${n.t ? 'Start lesson' : 'Read the notes'}</a>${prac ? `<a class="btn" href="${prac}">Practice</a><a class="btn ghost" href="${notes}">Notes</a>` : ''}</div></div></li>`; }).join('');
+      const exNode = ex ? `<li class="ap-li exam${ex.date < today ? ' past' : ''}" style="--x:0px"><a class="ap-exam" href="#/${id}/exam/${encodeURIComponent(ex.id)}" aria-label="${esc(ex.name)}, ${ex.date < today ? 'done' : inDays(d)}">${icon('flag', 30)}</a><span class="ap-exam-label"><b>${esc(ex.name)}</b>${ex.date < today ? 'done' : inDays(d)}</span></li>` : '';
+      return `<section class="ap-unit"><header class="ap-banner"><div class="ap-banner-txt"><h2>${esc(u.title)}</h2><p>Unit ${u.n}${ex ? ` · ${esc(ex.name)} ${ex.date < today ? 'done' : inDays(d)}` : ''} · ${done} of ${ns.length} ${secPath ? 'topics' : 'mastered'}</p></div><a class="ap-guide" href="#/${id}/notes" aria-label="Notes for ${esc(u.title)}">${icon('book', 22)}</a></header><ol class="ap-nodes">${items}${exNode}</ol></section>`;
+    }).join('');
+  }
+  App.homeView = {
+    title: 'Learn',
+    render(root) {
+      const mine = myIds(); const id = curClass();
+      root.innerHTML = `<div class="ah">${classRow(mine, id)}<div class="ah-path" id="ah-path" aria-busy="${id ? 'true' : 'false'}">${id ? '<div class="ah-loading" aria-hidden="true"><i></i><i></i><i></i></div>' : `<div class="ah-empty"><span class="ah-empty-bo" aria-hidden="true">${App.bobcatSvg ? App.bobcatSvg(96) : ''}</span><h2>Which classes are you taking?</h2><p>Pick yours, or make one from any syllabus.</p><div class="row gap-sm"><button class="btn primary" data-ab-add="1">Add a class</button></div></div>`}</div></div>`;
+      const row = $('.ah-row', root); const on = row && $('.ah-card.on', row); if (on) row.scrollLeft = Math.max(0, on.offsetLeft - 16);
+      root.addEventListener('click', e => {
+        if (e.target.closest('[data-ab-add]')) { N.haptic('select'); openSheet(); return; }
+        const card = e.target.closest('.ah-card[data-cid]'); if (card) { N.haptic('select'); setClass(card.dataset.cid); App.rerender(); return; }
+        const node = e.target.closest('.ap-node'); if (node) { N.haptic('select'); const li = node.closest('.ap-li'); const p = $('.ap-pop', li); const open = p.hidden; $$('.ap-pop', root).forEach(x => { x.hidden = true; }); $$('.ap-node', root).forEach(x => x.setAttribute('aria-expanded', 'false')); $$('.ap-li.open', root).forEach(x => x.classList.remove('open')); p.hidden = !open; li.classList.toggle('open', open); node.setAttribute('aria-expanded', String(open)); return; }
+        if (!e.target.closest('.ap-pop')) { $$('.ap-pop', root).forEach(x => { x.hidden = true; }); $$('.ap-li.open', root).forEach(x => x.classList.remove('open')); }
+      });
+      if (!id) return;
+      App.loadCourse(id).then(C => {
+        const box = $('#ah-path'); if (!box || !root.isConnected) return;
+        box.setAttribute('style', ccStyle(id)); box.innerHTML = pathHtml(C); box.setAttribute('aria-busy', 'false');
+        const cur = $('.ap-li.current', box); if (cur && !App.homeView.scrolled) { App.homeView.scrolled = true; const r = cur.getBoundingClientRect(), tabs = ($('#tabbar') || { offsetHeight: 0 }).offsetHeight; if (r.bottom > innerHeight - tabs - 24) scrollTo({ top: r.top + scrollY - innerHeight * 0.42, behavior: N.reduceMotion() ? 'auto' : 'smooth' }); }   // only when the next lesson is out of sight, so the class cards stay in view
+      }).catch(() => { const box = $('#ah-path'); if (box) box.innerHTML = `<div class="ah-empty"><p>This class could not be opened.</p><a class="btn" href="#/${id}/dashboard">Try its class page</a></div>`; });
+    }
+  };
+
+  /* ---------- tab bar ---------- */
+  function paintTabs(r) {
+    const bar = $('#tabbar'); if (!bar) return; const id = (r.course && Courses[r.course]) ? r.course : curClass();
+    const tabs = [['#/', 'Learn', 'home', !r.course && r.view === 'home'], [id ? practiceHref(id) : '#/', 'Practice', 'list', !!r.course && ['practice', 'flashcards', 'lesson', 'blitz', 'exam'].includes(r.view)], ['#/today', 'Today', 'flag', r.view === 'today'], ['#/forum', 'Board', 'chat', r.view === 'forum'], ['#/settings', 'Me', 'user', r.view === 'settings']];
+    bar.className = 'app-tabs'; bar.setAttribute('aria-label', 'Main');
+    bar.innerHTML = tabs.map(([h, l, ic, a]) => `<a class="tab-item${a ? ' active' : ''}" href="${h}"${a ? ' aria-current="page"' : ''}><span class="tab-ic">${icon(ic, 26)}</span><span>${l}</span></a>`).join('');
+  }
+  // the app bar follows XP and streak changes as they happen
+  if (App.paintStats) { const ps = App.paintStats; App.paintStats = function () { const out = ps.apply(this, arguments); try { if ($('#appbar')) paintAppBar(lastRoute); } catch (e) {} return out; }; }
+  let lastRoute = { course: null, view: 'home' };
+  if (App.auth && App.auth.onChange) App.auth.onChange(() => { try { paintAppBar(lastRoute); } catch (e) {} });
+
   /* ---------- where the app's own pieces join the pages ---------- */
   App.onRender = App.onRender || [];
   App.onRender.push((root, r) => {
     /* web push needs a home-screen web app; the app has its own reminders in the panel below */
     if (r.view === 'settings') { const push = $('#acct-push', root); if (push && push.closest('section')) push.closest('section').remove(); }
     if (r.view === 'settings') { const acct = $('#acct-panel', root) || $('.acct-panel', root); const grid = $('.grid.cols-2', root); if (grid && !$('#app-panel', root)) { (acct ? acct : grid.firstElementChild || grid).insertAdjacentHTML(acct ? 'afterend' : 'beforebegin', devicePanel()); wireDevicePanel($('#app-panel', root)); } }
-    if (!r.course && r.view === 'home') {
-      const under = $('.rq-under', root); if (under && !$('.mk-cta', root)) under.insertAdjacentHTML('beforebegin', `<a class="mk-cta" href="#/create"><span class="mk-cta-ic">${icon('plus', 20)}</span><span><b>Create a class from your syllabus</b><small>Any class: your AI writes it, Mathub checks it, and it stays on this ${DEVICE}.</small></span>${icon('right', 16)}</a>`);
-    }
+    lastRoute = r; paintAppBar(r); paintTabs(r); const p = $('.ab-pop'); if (p) p.remove(); const sh = $('#class-sheet'); if (sh) sh.remove();
     if (r.course && r.view === 'dashboard' && local.has(r.course) && !$('.mk-strip', root)) root.insertAdjacentHTML('afterbegin', `<p class="mk-strip small">${icon('file', 13)} A class you created from your syllabus, saved on this ${DEVICE}. <a href="#/create">Manage it</a></p>`);
   });
   document.addEventListener('DOMContentLoaded', () => setTimeout(() => Reminders.sync(), 1500));
