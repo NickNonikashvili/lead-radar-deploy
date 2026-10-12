@@ -1,0 +1,73 @@
+# Builds the Mathub iOS app (calc1/app) for the simulator on every change to it, so a
+# broken Xcode project shows up here and not on the Mac that uploads to App Store Connect.
+# No signing, no upload: that stays a manual step in Xcode (see calc1/docs/ios-app-review.md).
+name: iOS build
+
+on:
+  push:
+    paths:
+      - 'calc1/app/**'
+      - 'calc1/assets/**'
+      - 'calc1/index.html'
+      - 'calc1/packs/**'
+      - '.github/workflows/ios-build.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ios-build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  simulator:
+    runs-on: macos-26
+    timeout-minutes: 40
+    defaults:
+      run:
+        working-directory: calc1/app
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: calc1/app/package-lock.json
+
+      - name: Use Xcode 26 (the App Store has required the iOS 26 SDK since April 2026)
+        run: |
+          X=$(ls -d /Applications/Xcode_26*.app | sort -V | tail -1)
+          sudo xcode-select -s "$X/Contents/Developer"
+          xcodebuild -version
+
+      - name: Install
+        run: npm ci
+
+      - name: Bundle the site into the app (checks for remote scripts and missing files)
+        run: node scripts/build-www.js
+
+      - name: Copy it into the Xcode project
+        run: npx cap sync ios
+
+      - name: Build for the simulator
+        run: |
+          set -o pipefail
+          xcodebuild -project ios/App/App.xcodeproj -scheme App -configuration Release \
+            -destination 'generic/platform=iOS Simulator' -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO build | tail -n 60
+
+      - name: Check what App Review looks at in the bundle
+        run: |
+          APP=$(ls -d build/Build/Products/Release-iphonesimulator/App.app)
+          test -f "$APP/PrivacyInfo.xcprivacy" || { echo "PrivacyInfo.xcprivacy is not in the app"; exit 1; }
+          plutil -lint "$APP/PrivacyInfo.xcprivacy"
+          test "$(/usr/libexec/PlistBuddy -c 'Print :ITSAppUsesNonExemptEncryption' "$APP/Info.plist")" = "false"
+          test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$APP/Info.plist")" = "space.mathub.app"
+          test -f "$APP/public/index.html" && test -f "$APP/public/assets/pyodide/pyodide.asm.wasm" && test -f "$APP/public/assets/mathjax/tex-svg.js"
+          if grep -R -l -E '<script[^>]+src="https?://' "$APP/public" --include='*.html'; then echo "a page loads a script from the internet"; exit 1; fi
+          ICON=ios/App/App/Assets.xcassets/AppIcon.appiconset/AppIcon-512@2x.png
+          sips -g pixelWidth -g pixelHeight -g hasAlpha "$ICON"
+          test "$(sips -g hasAlpha "$ICON" | awk '/hasAlpha/ {print $2}')" = "no"
+          du -sh "$APP"
