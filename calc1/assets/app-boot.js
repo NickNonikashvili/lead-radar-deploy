@@ -158,6 +158,10 @@
   var wopen = window.open;
   window.open = function (url) { var to = url && external(url); if (to) { Native.open(to); return null; } return wopen.apply(window, arguments); };
 
+  /* ---------- the strip behind the status bar (styled in app.css) ---------- */
+  var strip = function () { if (document.body && !document.querySelector('.app-statusbar')) { var d = document.createElement('div'); d.className = 'app-statusbar'; d.setAttribute('aria-hidden', 'true'); document.body.insertBefore(d, document.body.firstChild); } };
+  if (document.body) strip(); else document.addEventListener('DOMContentLoaded', strip);
+
   /* ---------- status bar follows the theme ---------- */
   var paintBar = function () { var t = html.getAttribute('data-theme'); var dark = t === 'dark' || (!t && window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches); Native.statusBar(dark); };
   paintBar(); new MutationObserver(paintBar).observe(html, { attributes: true, attributeFilter: ['data-theme'] });

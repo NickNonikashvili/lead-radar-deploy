@@ -56,6 +56,7 @@ const { execFileSync } = require('child_process'); const path = require('path');
   check('MathJax loads from inside the app, not from a CDN', /\/app\/www\/assets\/mathjax\/tex-svg\.js$/.test(shell.mj), shell.mj);
   check('the start page offers "Create a class" and not the website-only "For professors"', shell.cta && shell.faculty === 'none', shell);
   check('no sideways scroll on the start page at 390px', await hscroll(p));
+  check('a strip covers the status bar area, above the top bar and below dialogs', await p.evaluate(() => { const s = document.querySelector('.app-statusbar'); if (!s) return false; const cs = getComputedStyle(s); return cs.position === 'fixed' && cs.display !== 'none' && +cs.zIndex > 50 && +cs.zIndex < 60; }));
   const fetched = await p.evaluate(async () => { const r = await fetch('api/index.php?r=config', { headers: { 'X-Requested-With': 'MatHub' } }); return r.url; });
   check('account calls go to https://mathub.space', /^https:\/\/mathub\.space\/api\/index\.php\?r=config/.test(fetched), fetched);
 

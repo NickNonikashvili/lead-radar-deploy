@@ -7,7 +7,9 @@
 /* ---------- the phone around the page: notch, home indicator, keyboard ---------- */
 html[data-app] { -webkit-tap-highlight-color: transparent; -webkit-text-size-adjust: 100%; }
 html[data-app] body { padding-top: env(safe-area-inset-top); padding-left: env(safe-area-inset-left); padding-right: env(safe-area-inset-right); overscroll-behavior-y: none; }
-html[data-app] body::before { content: ""; position: fixed; z-index: 80; top: 0; left: 0; right: 0; height: env(safe-area-inset-top); background: var(--bg); pointer-events: none; }
+/* the strip behind the clock and the Dynamic Island, so the page scrolls under it, not through it (its own element:
+   the site's looks use body::before for their backgrounds); above the top bar, tab bar and drawer, below dialogs */
+html[data-app] .app-statusbar { position: fixed; z-index: 55; top: 0; left: 0; right: 0; height: env(safe-area-inset-top); background: var(--bg); pointer-events: none; }
 html[data-app] .topbar { top: env(safe-area-inset-top); }
 html[data-app] .sidebar { padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom); }
 html[data-app] .read-progress { top: env(safe-area-inset-top); }
