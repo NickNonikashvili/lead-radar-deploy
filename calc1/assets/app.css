@@ -1,0 +1,74 @@
+/* ============================================================
+   Mathub app (iOS): fitting the phone, and the pages only the app has.
+   Loaded only in the app (see app/scripts/build-www.js); the student
+   site's look (world.css) still does the rest.
+   ============================================================ */
+
+/* ---------- the phone around the page: notch, home indicator, keyboard ---------- */
+html[data-app] { -webkit-tap-highlight-color: transparent; -webkit-text-size-adjust: 100%; }
+html[data-app] body { padding-top: env(safe-area-inset-top); padding-left: env(safe-area-inset-left); padding-right: env(safe-area-inset-right); overscroll-behavior-y: none; }
+html[data-app] body::before { content: ""; position: fixed; z-index: 80; top: 0; left: 0; right: 0; height: env(safe-area-inset-top); background: var(--bg); pointer-events: none; }
+html[data-app] .topbar { top: env(safe-area-inset-top); }
+html[data-app] .sidebar { padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom); }
+html[data-app] .read-progress { top: env(safe-area-inset-top); }
+html[data-app] .modal-backdrop { padding-top: calc(env(safe-area-inset-top) + 16px); padding-bottom: calc(env(safe-area-inset-bottom) + 16px); }
+html[data-app] .site-foot { padding-bottom: calc(80px + env(safe-area-inset-bottom)); }
+/* fields at 16px or more, so iOS does not zoom the page when one gets the focus */
+html[data-app] :is(.input, .select, textarea, input[type="text"], input[type="email"], input[type="password"], input[type="search"], input[type="number"], input[type="time"], input[type="date"]) { font-size: max(16px, 1em); }
+html[data-app] :is(button, .btn, .chip, .nav-item, .tab-item) { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+/* website-only: the instructors' workspace is on the web */
+html[data-app] :is(.hero-faculty, .site-foot a[href="#/teach"]) { display: none; }
+html[data-app] .site-foot a[href="#/teach"] + .sep { display: none; }
+
+/* ---------- start page: the way into Create a class ---------- */
+.mk-cta { display: flex; align-items: center; gap: 14px; margin: 14px 0 10px; padding: 14px 16px; border-radius: 16px; border: 2px dashed var(--accent-line, var(--border-strong)); background: var(--surface); color: var(--ink); text-decoration: none; }
+.mk-cta:hover, .mk-cta:active { border-style: solid; background: var(--accent-soft); }
+.mk-cta > span:nth-child(2) { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.mk-cta small { color: var(--muted); font-size: 13.5px; line-height: 1.4; }
+.mk-cta-ic { flex: none; display: grid; place-items: center; width: 40px; height: 40px; border-radius: 12px; background: var(--accent); color: var(--accent-ink, #fff); }
+.mk-strip { margin: 0 0 12px; color: var(--muted); }
+
+/* ---------- #/create ---------- */
+.mk-lede { max-width: 62ch; }
+.mk-steps { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 14px; }
+.mk-step { display: flex; gap: 16px; align-items: flex-start; }
+.mk-n { flex: none; display: grid; place-items: center; width: 36px; height: 36px; border-radius: 50%; background: var(--accent); color: var(--accent-ink, #fff); font-family: var(--font-display); font-weight: 800; font-size: 17px; }
+.mk-body { flex: 1; min-width: 0; }
+.mk-body p { margin: 0 0 8px; max-width: 64ch; }
+.mk-body .small svg { vertical-align: -2px; }
+.mk-h { font-size: 20px; margin: 4px 0 6px; }
+.mk-size { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.mk-size .small { flex-basis: 100%; }
+.mk-prompt { margin: 12px 0 0; max-height: 320px; overflow: auto; white-space: pre-wrap; word-break: break-word; font-size: 12.5px; line-height: 1.5; padding: 12px 14px; border-radius: 12px; background: var(--surface-2); border: 1px solid var(--border); }
+.mk-text { min-height: 150px; font-size: 13px !important; line-height: 1.45; resize: vertical; }
+html[data-app] .mk-text { font-size: 16px !important; }
+.mk-result { margin-top: 12px; }
+.mk-result .callout b { display: inline; }
+.mk-list { margin: 8px 0 4px; padding-left: 20px; font-size: 14px; }
+.mk-list li { margin: 3px 0; }
+.mk-preview { display: grid; grid-template-columns: 150px minmax(0, 1fr); border-radius: 16px; overflow: hidden; border: 2px solid var(--border); background: var(--surface); }
+.mk-cover { display: flex; flex-direction: column; justify-content: space-between; gap: 6px; padding: 16px; background: var(--mk); color: #fff; }
+.mk-code { font-family: var(--font-display); font-weight: 800; font-size: 24px; line-height: 1.05; }
+.mk-term { font-size: 13px; opacity: 0.9; }
+.mk-pv-body { padding: 14px 16px 16px; min-width: 0; }
+.mk-pv-name { font-size: 19px; margin: 0 0 8px; }
+.mk-chips { margin-bottom: 10px; }
+.mk-exams { list-style: none; margin: 0 0 10px; padding: 0; font-size: 14px; }
+.mk-exams li { padding: 3px 0; }
+.mk-notes { margin: 6px 0 8px; font-size: 14px; }
+.mk-notes summary { cursor: pointer; color: var(--ink-2); font-weight: 600; }
+.mk-alt { margin: 16px 0 0; }
+.mk-file { cursor: pointer; }
+.mk-mine { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.mk-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.mk-row-main { min-width: 0; }
+.mk-row-act { flex-wrap: wrap; }
+.app-panel .check + .check { margin-top: 8px; }
+
+@media (max-width: 620px) {
+  .mk-step { gap: 12px; }
+  .mk-n { width: 30px; height: 30px; font-size: 15px; }
+  .mk-preview { grid-template-columns: minmax(0, 1fr); }
+  .mk-cover { flex-direction: row; align-items: baseline; }
+  .mk-row-act { width: 100%; }
+}

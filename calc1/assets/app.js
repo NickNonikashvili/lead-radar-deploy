@@ -12,7 +12,7 @@
   const BUILD = global.MATHUB_BUILD || 'dev';
   const Courses = global.Courses || (global.Courses = {});
   const COURSE_ORDER = ['calc', 'physics', 'precalc', 'writ', 'csci', 'biob', 'kin', 'psyx'];
-  const GLOBAL_VIEWS = ['contact', 'forum', 'policy', 'admin', 'meet', 'badges', 'challenge', 'mock', 'people', 'settings', 'leagues', 'gpa', 'today', 'whatsnew', 'resources', 'guides', 'focus', 'recap', 'tools', 'mistakes', 'join', 'sheet', 'request', 'teach', 'class', 'syllabus', 'notfound'];   // pages that work without a course, e.g. #/contact
+  const GLOBAL_VIEWS = ['contact', 'forum', 'policy', 'admin', 'meet', 'badges', 'challenge', 'mock', 'people', 'settings', 'leagues', 'gpa', 'today', 'whatsnew', 'resources', 'guides', 'focus', 'recap', 'tools', 'mistakes', 'join', 'sheet', 'request', 'teach', 'class', 'syllabus', 'notfound', 'create'];   // pages that work without a course, e.g. #/contact
   const SITE = 'Mathub';
   let D = null, QZ = null;        // current course data and quiz module
   const courseHooks = [];
@@ -639,7 +639,7 @@
     const units = D.UNITS.map(u => { const e = D.EXAMS.find(x => x.id === u.exam); const done = e ? (e.endDate || e.date) < t : false; const active = !done && e && D.EXAMS.filter(x => (x.endDate || x.date) >= t)[0] && u.sections.includes(cur.id); return { u, e, done, active }; });
     const remindNudge = App.auth && App.auth.user && !App.auth.user.local && App.auth.mode === 'server' && !App.auth.user.reminder_email && !settings().remindNudgeDismissed;
     const deadlineTile = ex ? `<div class="panel lift hero-exam"><div class="countdown"><div class="countdown-num${es.big.length > 3 ? ' small' : ''}">${esc(es.big)}</div><div class="countdown-label">${esc(es.label)}</div></div>
-        <div><div class="eyebrow">Next deadline · ${ex.weight}% of the grade</div><h2 style="font-size:26px;margin-top:2px">${esc(ex.name)} <span class="muted" style="font-size:16px;font-weight:400">· ${esc(ex.dateLabel || fmtDate(ex.date, true))}</span></h2><p class="muted mt-1">Turn in ${esc(ex.covers)}.</p>
+        <div><div class="eyebrow">Next deadline${ex.weight ? ` · ${ex.weight}% of the grade` : ''}</div><h2 style="font-size:26px;margin-top:2px">${esc(ex.name)} <span class="muted" style="font-size:16px;font-weight:400">· ${esc(ex.dateLabel || fmtDate(ex.date, true))}</span></h2><p class="muted mt-1">Turn in ${esc(ex.covers)}.</p>
         <div class="bar-row mt-2"><span>Prep checklist</span><span class="mono">${cl.done} / ${cl.items.length}</span><div class="bar"><div class="bar-fill gold" style="width:${cl.items.length ? 100 * cl.done / cl.items.length : 0}%"></div></div></div>
         <div class="row mt-2"><a class="btn primary" href="${L('course')}">${icon('info', 14)} Assignment details</a><a class="btn" href="${L('readings')}">${icon('book', 14)} Readings</a><a class="btn" href="${L('calendar')}">${icon('calendar', 14)} Calendar</a></div></div></div>`
       : `<div class="panel lift hero-exam"><div class="countdown"><div class="countdown-num small">Done</div><div class="countdown-label">all deadlines</div></div><div><div class="eyebrow">${esc(D.code)}</div><h2 style="font-size:26px;margin-top:2px">Semester complete</h2><p class="muted mt-1">Every deadline has passed. The readings and the grade calculator stay here.</p></div></div>`;
@@ -715,7 +715,7 @@
               ${sect || etime ? `<div class="tb-meta">Your section${sect ? ' ' + esc(sect) : ''}${etime ? ' · ' + esc(etime) : ''}</div>` : ''}
             </div>
             <div class="tb-days"><b>${esc(es.big)}</b><span>${esc(es.label)}</span></div>
-            <p class="tb-covers">Covers ${esc(ex.covers)}. ${esc(ex.format || 'Closed book, no devices.')} ${ex.weight}% of the grade.</p>
+            <p class="tb-covers">Covers ${esc(ex.covers)}. ${esc(ex.format || 'Closed book, no devices.')}${ex.weight ? ` ${ex.weight}% of the grade.` : ''}</p>
             <div class="tb-ready"><div class="ready-line"><b>${rd.score}% ready</b><span>${esc(rd.label)}</span><button class="linkbtn" data-action="tab-ready">How to raise it ${icon('right', 12)}</button></div><div class="tb-readybar" role="presentation"><i style="width:${readyPct}%"></i></div></div>
             ${cl.items.length ? `<div class="tb-checks"><div class="tb-checks-h"><b>Prep checklist</b><span>${cl.done} of ${cl.items.length} done</span></div>${nextChecks.map(([t, i]) => `<label class="tb-check"><input type="checkbox" data-cl="${i}"><span>${esc(t)}</span></label>`).join('')}</div>` : ''}
             <div class="tb-go"><a class="btn primary lg tb-next" href="${runHref(here)}"><span class="tb-next-a">${icon('play', 15)} Take the next run</span><span class="tb-next-b">${esc(here.s.label)} ${esc(here.s.title)}</span></a><p class="tb-more"><a href="${L('exam', ex.id)}">${esc(ex.name)} ${D.PRACTICE && D.PRACTICE[ex.id] ? 'practice set' : 'prep'}</a><a href="${L('practice', null, { exam: ex.id })}">Drill every run</a><a href="${L('flashcards', null, { unit: ex.units[ex.units.length - 1] })}">Flashcards</a></p></div>
@@ -734,7 +734,7 @@
       })();
       const examTile = trailTile || (ex ? `<div class="panel lift hero-exam">
           <div class="countdown"><div class="countdown-num${es.big.length > 3 ? ' small' : ''}">${esc(es.big)}</div><div class="countdown-label">${esc(es.label)}</div></div>
-          <div><div class="eyebrow">Next exam · ${ex.weight}% of the grade</div>
+          <div><div class="eyebrow">Next exam${ex.weight ? ` · ${ex.weight}% of the grade` : ''}</div>
             <h2 style="font-size:26px;margin-top:2px">${esc(ex.name)} <span class="muted" style="font-size:16px;font-weight:400">· ${esc(ex.dateLabel || fmtDate(ex.date, true))}</span></h2>
             ${courseSetting(D.id, 'section', '') || courseSetting(D.id, 'examTime', '') ? `<p class="small" style="opacity:.85;margin-top:2px">${icon('info', 12)} Your section${courseSetting(D.id, 'section', '') ? ' ' + esc(courseSetting(D.id, 'section', '')) : ''}${courseSetting(D.id, 'examTime', '') ? ' · ' + esc(courseSetting(D.id, 'examTime', '')) : ''}</p>` : ''}
             <p class="muted mt-1">Covers ${esc(ex.covers)}. ${esc(ex.format || 'Closed book, no devices.')}</p>

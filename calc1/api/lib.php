@@ -271,6 +271,7 @@ function mh_export_user(array $u): array {
 /* ---------- request guards ---------- */
 function mh_guard_mutation(): void {
   if (($_SERVER['HTTP_X_REQUESTED_WITH'] ?? '') !== 'MatHub') mh_fail('Bad request.', 400);
+  if (($_SERVER['HTTP_ORIGIN'] ?? '') === 'capacitor://localhost') return;   // the Mathub iOS app (its pages are served from capacitor://localhost); no website can send this origin
   $site = $_SERVER['HTTP_SEC_FETCH_SITE'] ?? '';
   if ($site !== '' && !in_array($site, ['same-origin', 'same-site', 'none'], true)) mh_fail('Cross-site request blocked.', 403);
   $origin = $_SERVER['HTTP_ORIGIN'] ?? '';

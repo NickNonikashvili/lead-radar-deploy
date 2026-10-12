@@ -1,2 +1,5 @@
 node_modules/
 .env
+
+# Mathub iOS app: built from calc1/ by calc1/app/scripts/build-www.js
+calc1/app/www/

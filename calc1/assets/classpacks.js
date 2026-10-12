@@ -466,6 +466,7 @@
   const lsDel = k => { try { localStorage.removeItem(k); } catch (e) {} };
   const api = (route, opts = {}) => fetch('api/index.php?r=' + route, Object.assign({ credentials: 'include', cache: 'no-store', headers: { 'X-Requested-With': 'MatHub' } }, opts)).then(r => r.json());
   const registered = new Set(); const bootAt = Date.now();
+  const local = new Set();   // classes made in the app from a student's syllabus: on the device only, never in the server's list
   // packs shipped in packs/ (scripts/bundle-packs.js writes the listing): used when the account server cannot be reached, e.g. the static preview
   let bundledList = null; const bundled = () => bundledList || (bundledList = fetch('packs/index.json', { cache: 'no-store' }).then(r => (r.ok ? r.json() : null)).catch(() => null));
   const FILE_RE = /^[a-z0-9]+\.mathub\.json$/;
@@ -531,9 +532,9 @@
     lsSet(LIST_KEY, { packs: j.packs, at: Date.now() });
     const s = sig(j.packs); if (s === lastSig) return false; lastSig = s;
     const ids = new Set(j.packs.map(p => p.id)); const changed = [];
-    [...registered].forEach(id => { if (!ids.has(id)) { if (App.D && App.D.id === id) App.forgetCourse(); unregister(id); changed.push(id); } });
+    [...registered].forEach(id => { if (!ids.has(id) && !local.has(id)) { if (App.D && App.D.id === id) App.forgetCourse(); unregister(id); changed.push(id); } });
     const early = Date.now() - bootAt < 20000;   // right after a page load nothing is in progress yet, so the open class can switch to the new version
-    j.packs.forEach(p => { const C = Courses[p.id]; if (!C || !C.pack || C.packVersion !== Number(p.version) || !!C.hidden !== !!p.hidden || !!C.preview !== !!p.preview) { if (register(p, early)) changed.push(p.id); } });
+    j.packs.forEach(p => { if (local.has(p.id)) return; const C = Courses[p.id]; if (!C || !C.pack || C.packVersion !== Number(p.version) || !!C.hidden !== !!p.hidden || !!C.preview !== !!p.preview) { if (register(p, early)) changed.push(p.id); } });
     if (!changed.length || document.readyState === 'loading' || !document.getElementById('view')) return changed.length > 0;
     const first = location.hash.replace(/^#\/?/, '').split(/[/?]/)[0];
     if (!first || changed.includes(first)) App.rerender(); else App.rebuildNav();   // the start page lists the classes; a class that appeared or went away re-routes
@@ -541,7 +542,19 @@
   }
   /* registered before the first render, from the copy saved on this device */
   const saved = lsGet(LIST_KEY); if (saved && Array.isArray(saved.packs)) { saved.packs.forEach(p => { try { register(p); } catch (e) {} }); lastSig = sig(saved.packs); }
-  App.packs = { register, unregister, load, install, sync, list: () => [...registered], api: API };
+  /* the light fields a class needs before it is opened, as mh_pack_stub() in api/packs.php and scripts/bundle-packs.js build them */
+  const STUB_SRC = ['id', 'code', 'name', 'short', 'term', 'tagline', 'kind', 'quizNote', 'COURSE', 'EXAMS', 'CALENDAR', 'CALENDAR_NOTE', 'RECURRING', 'SEMESTER', 'VARIANTS', 'UNITS', 'NAV', 'color', 'archetype', 'resources', 'resourcesBlurb', 'guides', 'canvasMatch'];
+  function stubOf(p) {
+    const s = {}; STUB_SRC.forEach(k => { if (p[k] !== undefined) s[k] = p[k]; }); if (!s.short) s.short = p.code;
+    s.SECTIONS = (p.SECTIONS || []).filter(x => x && typeof x === 'object').map(x => ({ id: String(x.id || ''), label: String(x.label || x.id || ''), title: String(x.title || ''), unit: x.unit != null ? x.unit : 1 }));
+    const topics = p.QUIZ && p.QUIZ.topics;
+    if (topics && Object.keys(topics).length) { s.hasQuiz = true; s.quizTopics = {}; Object.entries(topics).forEach(([k, t]) => { s.quizTopics[k] = { label: String((t && t.label) || k), sec: String((t && t.sec) || k), unit: (t && t.unit != null) ? t.unit : 1 }; }); }
+    s.hasGrading = !!(p.GRADING && Array.isArray(p.GRADING.categories) && p.GRADING.categories.length);
+    s.sectionCount = s.SECTIONS.length; s.flashcardCount = Array.isArray(p.FLASHCARDS) ? p.FLASHCARDS.length : 0;
+    s.formulaCount = (p.FORMULAS || []).reduce((n, g) => n + (g && Array.isArray(g.items) ? g.items.length : 0), 0);
+    return s;
+  }
+  App.packs = { register, unregister, load, install, sync, list: () => [...registered], api: API, local, stubOf };
   sync(); let lastSync = Date.now();
   const resync = () => { lastSync = Date.now(); return sync(); };
   global.addEventListener('hashchange', () => { const first = location.hash.replace(/^#\/?/, '').split(/[/?]/)[0]; if (ID_RE.test(first) && !Courses[first]) resync(); });   // e.g. the inbox link to a class added after this tab opened
