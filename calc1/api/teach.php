@@ -9,11 +9,18 @@
    attendance check-in, and class insights.
 
    Who can do what
-   - Instructor access is granted by an administrator (a request from
-     #/teach, approved in the admin panel). Administrators are
-     instructors automatically.
-   - A class belongs to the instructor who made it. Co-instructors and
+   - Anyone signed in can write syllabi: drafts, the live preview and
+     the printable page are private to their author.
+   - Faculty status is confirmed by an administrator (a request from
+     #/teach, approved in the admin panel); administrators count as
+     confirmed. Only a confirmed owner's class can be published, joined
+     by students, or use the roster, announcements, assignments,
+     attendance and insights.
+   - A class belongs to the person who made it. Co-instructors and
      TAs the owner adds can edit it too. Nobody else can.
+   - The class is the instructor's tool, not one of their own classes:
+     it never joins the teaching team's class list on the student
+     site (they can open it there as a preview).
    - Students join with the class code. They see the class, its
      announcements and assignments. Their instructor sees their name,
      email, assignment results and check-ins for this class only, never
@@ -68,6 +75,18 @@ function mh_teach_access(?array $u, array $c): string {
   return $role === 'student' ? 'student' : '';
 }
 function mh_teach_staff_or_fail(array $u, array $c): string { $a = mh_teach_access($u, $c); if (!in_array($a, ['owner', 'staff', 'admin'], true)) mh_fail('Only this class\'s instructors can do that.', 403); return $a; }
+/** Is the class owner's faculty status confirmed? Only then can the class reach students. */
+function mh_teach_verified(array $c): bool {
+  static $memo = []; $oid = (int)$c['owner_id']; if (array_key_exists($oid, $memo)) return $memo[$oid];
+  $st = mh_db()->prepare('SELECT * FROM users WHERE id = ?'); $st->execute([$oid]); $o = $st->fetch();
+  return $memo[$oid] = $o ? mh_teach_is_instructor($o) : false;
+}
+/** The teaching team of a confirmed class (or an administrator): publishing, roster, announcements, assignments, attendance, insights. */
+function mh_teach_tools_or_fail(array $u, array $c): string {
+  $a = mh_teach_staff_or_fail($u, $c);
+  if ($a !== 'admin' && !mh_teach_verified($c)) mh_fail('Publishing and class tools turn on once your faculty status is confirmed.', 403, ['verify' => true]);
+  return $a;
+}
 function mh_teach_class_or_fail(array $in): array { $c = mh_teach_class((int)($in['id'] ?? $_GET['id'] ?? 0)); if (!$c) mh_fail('Class not found.', 404); return $c; }
 /** Pack ids of the classes this user teaches (owner or staff): the classes a "teach"-scoped instructor may post announcements to. */
 function mh_teach_pack_ids_for(array $u): array {
@@ -164,34 +183,36 @@ function mh_teach_clean_syllabus($in): array {
   return $out;
 }
 
-/** What a reviewer would flag before the syllabus goes out: [['error'|'warn'|'tip', message]]. Errors block publishing. */
+/** What a reviewer would flag before the syllabus goes out: [['error'|'warn'|'tip', message, section]]. Errors block publishing.
+    The section is the editor page that fixes it (course, people, about, materials, schedule, exams, grading, policies). */
 function mh_teach_lint(array $s): array {
-  $L = []; $E = function (string $m) use (&$L) { $L[] = ['error', $m]; }; $W = function (string $m) use (&$L) { $L[] = ['warn', $m]; }; $T = function (string $m) use (&$L) { $L[] = ['tip', $m]; };
+  $L = []; $sec = 'course';
+  $E = function (string $m) use (&$L, &$sec) { $L[] = ['error', $m, $sec]; }; $W = function (string $m) use (&$L, &$sec) { $L[] = ['warn', $m, $sec]; }; $T = function (string $m) use (&$L, &$sec) { $L[] = ['tip', $m, $sec]; };
   $c = $s['course'];
   if ($c['code'] === '') $E('Add the course code (for example M 171).');
   if ($c['title'] === '') $E('Add the course title.');
   if ($c['term'] === '') $E('Add the term (for example Fall 2026).');
-  $people = array_values(array_filter($s['people'], fn($p) => $p['name'] !== ''));
+  $sec = 'people'; $people = array_values(array_filter($s['people'], fn($p) => $p['name'] !== ''));
   if (!$people) $E('Add at least one instructor with a name.');
   elseif (!array_filter($people, fn($p) => $p['email'] !== '')) $W('Give students an email address to reach you.');
   if ($people && !array_filter($people, fn($p) => $p['hours'] !== '')) $W('Add office hours (when and where students can find you).');
-  if (!array_filter($c['meets'], fn($m) => $m['days'] !== '' || $m['room'] !== '')) $W('Add when and where the class meets.');
-  if ($c['description'] === '') $W('Add a course description.');
+  $sec = 'course'; if (!array_filter($c['meets'], fn($m) => $m['days'] !== '' || $m['room'] !== '')) $W('Add when and where the class meets.');
+  $sec = 'about'; if ($c['description'] === '') $W('Add a course description.');
   if (!$c['outcomes']) $T('List a few learning outcomes: what students will be able to do by the end.');
-  $cats = array_values(array_filter($s['grading']['categories'], fn($x) => $x['name'] !== ''));
+  $sec = 'grading'; $cats = array_values(array_filter($s['grading']['categories'], fn($x) => $x['name'] !== ''));
   if (!$cats) $E('Add at least one grading category.');
   else { $sum = array_sum(array_column($cats, 'weight')); if (abs($sum - 100) > 0.01) $E('Grading weights add up to ' . rtrim(rtrim(number_format($sum, 2), '0'), '.') . '%, not 100%.'); }
   if (!$s['grading']['scale']) $E('Add the letter-grade scale.');
   else { $mins = array_column($s['grading']['scale'], 'min'); $sorted = $mins; rsort($sorted); if ($mins !== $sorted) $W('List the letter grades from highest to lowest cut-off.'); }
-  foreach ($s['exams'] as $i => $e) { if ($e['name'] === '') $E('Exam ' . ($i + 1) . ' needs a name.'); if ($e['date'] === '') $W(($e['name'] ?: 'Exam ' . ($i + 1)) . ' has no date yet; students will not see a countdown for it.'); }
-  if (!$s['schedule']['rows']) $W('The schedule is empty. Use "Fill in class meetings" on the Schedule tab to start from your meeting days.');
-  $p = $s['policies'];
+  $sec = 'exams'; foreach ($s['exams'] as $i => $e) { if ($e['name'] === '') $E('Exam ' . ($i + 1) . ' needs a name.'); if ($e['date'] === '') $W(($e['name'] ?: 'Exam ' . ($i + 1)) . ' has no date yet; students will not see a countdown for it.'); }
+  $sec = 'schedule'; if (!$s['schedule']['rows']) $W('The schedule is empty. Use "Fill in class meetings" on the Schedule page to start from your meeting days.');
+  $sec = 'policies'; $p = $s['policies'];
   if ($p['accommodations'] === '') $E('Keep an accommodations statement (students with disabilities need to know who to contact).');
   if ($p['integrity'] === '') $W('Add an academic integrity statement.');
   if ($p['aiText'] === '') $W('Say whether students may use AI tools.');
   if ($p['late'] === '') $T('Say how late work is handled.');
   if ($p['attendance'] === '') $T('Say what you expect about attendance.');
-  if (!$s['materials']) $T('List the textbook or materials, even if they are all on Canvas.');
+  $sec = 'materials'; if (!$s['materials']) $T('List the textbook or materials, even if they are all on Canvas.');
   return $L;
 }
 
@@ -304,13 +325,19 @@ function mh_teach_summary(array $c, string $access): array {
   // the instructor as students know them: the first named person on the (published, else draft) syllabus, else the account name
   $syl = json_decode((string)($c['published'] !== '' ? $c['published'] : $c['syllabus']), true); $named = '';
   foreach ((array)($syl['people'] ?? []) as $p) if (is_array($p) && trim((string)($p['name'] ?? '')) !== '') { $named = (string)$p['name']; break; }
-  return ['id' => (int)$c['id'], 'code' => $c['code'], 'title' => $c['title'], 'term' => $c['term'], 'section' => $c['section'], 'status' => $c['status'], 'pack_id' => $c['pack_id'], 'link_course' => $c['link_course'], 'join_code' => in_array($access, ['owner', 'staff', 'admin'], true) ? $c['join_code'] : null, 'students' => $n, 'access' => $access, 'instructor' => $named !== '' ? $named : mh_teach_owner_name($c), 'published_at' => (int)$c['published_at'], 'updated' => (int)$c['updated'], 'version' => (int)$c['version']];
+  return ['id' => (int)$c['id'], 'code' => $c['code'], 'title' => $c['title'], 'term' => $c['term'], 'section' => $c['section'], 'status' => $c['status'], 'pack_id' => $c['pack_id'], 'link_course' => $c['link_course'], 'join_code' => in_array($access, ['owner', 'staff', 'admin'], true) ? $c['join_code'] : null, 'students' => $n, 'access' => $access, 'instructor' => $named !== '' ? $named : mh_teach_owner_name($c), 'published_at' => (int)$c['published_at'], 'updated' => (int)$c['updated'], 'version' => (int)$c['version'], 'verified' => mh_teach_verified($c)];
 }
 /** Adds a class id to a student's own class list (users.courses), so the class shows on their start page right away. */
 function mh_teach_add_course(int $uid, string $pid): void {
   if ($pid === '') return; $db = mh_db(); $st = $db->prepare('SELECT courses FROM users WHERE id = ?'); $st->execute([$uid]); $raw = $st->fetchColumn();
   $list = $raw ? (json_decode((string)$raw, true) ?: []) : []; if (in_array($pid, $list, true)) return; $list[] = $pid;
   $db->prepare('UPDATE users SET courses = ? WHERE id = ?')->execute([json_encode(array_values($list)), $uid]);
+}
+/** Takes a class id back out of someone's class list: the teaching team works on a class in #/teach, not among their own classes. */
+function mh_teach_drop_course(int $uid, string $pid): void {
+  if ($pid === '') return; $db = mh_db(); $st = $db->prepare('SELECT courses FROM users WHERE id = ?'); $st->execute([$uid]); $raw = $st->fetchColumn();
+  $list = $raw ? (json_decode((string)$raw, true) ?: []) : []; if (!in_array($pid, $list, true)) return;
+  $db->prepare('UPDATE users SET courses = ? WHERE id = ?')->execute([json_encode(array_values(array_filter($list, fn($x) => $x !== $pid))), $uid]);
 }
 /** Inbox notification (and a push, when the student has notifications on) for every member of a class except the author. */
 function mh_teach_notify_members(array $c, array $actor, string $kind, string $title, string $snippet, string $link): int {
@@ -382,8 +409,9 @@ function mh_teach_route(string $route, array $in, array $cfg, string $ip): void 
 
     /* --- classes --- */
     case 'teach_class_create': {
-      mh_method('POST'); $u = mh_require_user(); if (!mh_teach_is_instructor($u)) mh_fail('Ask for instructor access first.', 403);
+      mh_method('POST'); $u = mh_require_user();
       mh_rate_or_fail("teachnew:user:{$u['id']}", 30, 86400);
+      if (!mh_teach_is_instructor($u)) { $st = $db->prepare('SELECT COUNT(*) FROM teach_classes WHERE owner_id = ?'); $st->execute([$u['id']]); if ((int)$st->fetchColumn() >= 15) mh_fail('That is 15 drafts. Confirm your faculty status to make more, or delete one you no longer need.', 403); }
       $code = mh_teach_line($in['code'] ?? '', 24); $title = mh_teach_line($in['title'] ?? '', 120); $term = mh_teach_line($in['term'] ?? '', 40); $section = mh_teach_line($in['section'] ?? '', 20);
       if (!preg_match('/^[A-Za-z]{1,6}\s?\d{2,4}[A-Za-z]?$/', $code)) mh_fail('Enter the course code like M 171 or WRIT 101.'); if ($title === '') mh_fail('Add the course title.');
       $code = strtoupper(preg_replace('/^([A-Za-z]+)\s?/', '$1 ', $code));
@@ -400,7 +428,7 @@ function mh_teach_route(string $route, array $in, array $cfg, string $ip): void 
       mh_method('GET'); $u = mh_require_user(); $c = mh_teach_class_or_fail($in); $acc = mh_teach_staff_or_fail($u, $c);
       $syl = json_decode((string)$c['syllabus'], true) ?: mh_teach_starter($u, $c);
       $st = $db->prepare('SELECT u.id, u.name, u.email, m.role FROM teach_members m JOIN users u ON u.id = m.user_id WHERE m.class_id = ? AND m.role = \'ta\''); $st->execute([$c['id']]);
-      mh_json(['ok' => true, 'class' => mh_teach_summary($c, $acc), 'syllabus' => $syl, 'lint' => mh_teach_lint(mh_teach_clean_syllabus($syl)), 'starter' => MH_TEACH_STARTER, 'ai_presets' => MH_TEACH_AI, 'staff' => array_map(fn($r) => ['id' => (int)$r['id'], 'name' => mh_display_name($r), 'email' => $r['email']], $st->fetchAll()), 'owner' => mh_teach_owner_name($c), 'dirty' => $c['published'] !== '' && $c['published'] !== $c['syllabus']]);
+      mh_json(['ok' => true, 'class' => mh_teach_summary($c, $acc), 'me_instructor' => mh_teach_is_instructor($u), 'syllabus' => $syl, 'lint' => mh_teach_lint(mh_teach_clean_syllabus($syl)), 'starter' => MH_TEACH_STARTER, 'ai_presets' => MH_TEACH_AI, 'staff' => array_map(fn($r) => ['id' => (int)$r['id'], 'name' => mh_display_name($r), 'email' => $r['email']], $st->fetchAll()), 'owner' => mh_teach_owner_name($c), 'dirty' => $c['published'] !== '' && $c['published'] !== $c['syllabus']]);
     }
     case 'teach_class_save': {
       mh_method('POST'); $u = mh_require_user(); $c = mh_teach_class_or_fail($in); mh_teach_staff_or_fail($u, $c);
@@ -413,7 +441,7 @@ function mh_teach_route(string $route, array $in, array $cfg, string $ip): void 
       mh_json(['ok' => true, 'lint' => mh_teach_lint($syl), 'dirty' => $c['published'] !== '' && $c['published'] !== $json, 'saved' => $now]);
     }
     case 'teach_class_publish': {
-      mh_method('POST'); $u = mh_require_user(); $c = mh_teach_class_or_fail($in); mh_teach_staff_or_fail($u, $c);
+      mh_method('POST'); $u = mh_require_user(); $c = mh_teach_class_or_fail($in); mh_teach_tools_or_fail($u, $c);
       mh_rate_or_fail("teachpub:user:{$u['id']}", 60, 3600);
       $syl = mh_teach_clean_syllabus(json_decode((string)$c['syllabus'], true) ?: []);
       $errs = array_values(array_map(fn($x) => $x[1], array_filter(mh_teach_lint($syl), fn($x) => $x[0] === 'error'))); if ($errs) mh_fail('Fix these first: ' . implode(' ', $errs), 400, ['problems' => $errs]);
@@ -424,8 +452,8 @@ function mh_teach_route(string $route, array $in, array $cfg, string $ip): void 
       mh_pack_store(mh_pack_db(), $pack, $raw, 'teach:' . $c['id'] . ' ' . mb_substr(mh_display_name($u), 0, 60), 1);
       $json = json_encode($syl, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
       $db->prepare('UPDATE teach_classes SET pack_id = ?, status = \'published\', published = ?, published_at = ?, version = version + 1, updated = ? WHERE id = ?')->execute([$pid, $json, $now, $now, $c['id']]);
-      $st = $db->prepare('SELECT user_id FROM teach_members WHERE class_id = ?'); $st->execute([$c['id']]); foreach ($st->fetchAll(PDO::FETCH_COLUMN) as $uid) mh_teach_add_course((int)$uid, $pid);
-      mh_teach_add_course((int)$c['owner_id'], $pid);
+      $st = $db->prepare('SELECT user_id FROM teach_members WHERE class_id = ? AND role = \'student\''); $st->execute([$c['id']]); foreach ($st->fetchAll(PDO::FETCH_COLUMN) as $uid) mh_teach_add_course((int)$uid, $pid);
+      $st = $db->prepare('SELECT user_id FROM teach_members WHERE class_id = ? AND role = \'ta\''); $st->execute([$c['id']]); foreach (array_merge([(int)$c['owner_id']], $st->fetchAll(PDO::FETCH_COLUMN)) as $uid) mh_teach_drop_course((int)$uid, $pid);
       $told = 0; $note = mh_teach_line($in['note'] ?? '', 200);
       if (!$first) $told = mh_teach_notify_members(array_merge($c, ['pack_id' => $pid]), $u, 'class', 'Syllabus updated', $note !== '' ? $note : 'The syllabus and schedule were updated.', '#/' . $pid . '/course');
       mh_json(['ok' => true, 'pack_id' => $pid, 'first' => $first, 'told' => $told]);
@@ -453,7 +481,7 @@ function mh_teach_route(string $route, array $in, array $cfg, string $ip): void 
       $code = strtoupper(preg_replace('/[^A-Za-z0-9]/', '', (string)($_GET['code'] ?? ''))); if (strlen($code) !== 6) mh_fail('Class codes have 6 letters and numbers.', 404);
       $st = $db->prepare('SELECT * FROM teach_classes WHERE join_code = ?'); $st->execute([$code]); $c = $st->fetch(); if (!$c) mh_fail('No class has that code. Check it with your instructor.', 404);
       $me = mh_current_user(); $acc = $me ? mh_teach_access($me, $c) : '';
-      $out = mh_teach_summary($c, $acc); $out['join_code'] = $code;
+      $out = mh_teach_summary($c, $acc); $out['join_code'] = $code; $out['open'] = $out['verified'];
       $out['syllabus'] = $c['published'] !== '' ? json_decode((string)$c['published'], true) : null;
       header('Cache-Control: private, max-age=60'); mh_json(['ok' => true, 'class' => $out]);
     }
@@ -462,6 +490,7 @@ function mh_teach_route(string $route, array $in, array $cfg, string $ip): void 
       $code = strtoupper(preg_replace('/[^A-Za-z0-9]/', '', (string)($in['code'] ?? ''))); $st = $db->prepare('SELECT * FROM teach_classes WHERE join_code = ?'); $st->execute([$code]); $c = $st->fetch();
       if (!$c) mh_fail('No class has that code. Check it with your instructor.', 404);
       $acc = mh_teach_access($u, $c); if (in_array($acc, ['owner', 'staff'], true)) mh_fail('You teach this class.');
+      if ($acc !== 'student' && !mh_teach_verified($c)) mh_fail('This class is not open to students yet. Check with your instructor.', 403);
       if ($acc !== 'student') { $db->prepare('INSERT OR IGNORE INTO teach_members (class_id, user_id, role, joined) VALUES (?, ?, \'student\', ?)')->execute([$c['id'], $u['id'], $now]); }
       mh_teach_add_course((int)$u['id'], (string)$c['pack_id']);
       mh_json(['ok' => true, 'id' => (int)$c['id'], 'pack_id' => $c['pack_id']]);
@@ -489,7 +518,7 @@ function mh_teach_route(string $route, array $in, array $cfg, string $ip): void 
 
     /* --- roster --- */
     case 'teach_roster': {
-      mh_method('GET'); $u = mh_require_user(); $c = mh_teach_class_or_fail($in); mh_teach_staff_or_fail($u, $c);
+      mh_method('GET'); $u = mh_require_user(); $c = mh_teach_class_or_fail($in); mh_teach_tools_or_fail($u, $c);
       $st = $db->prepare('SELECT u.id, u.name, u.email, m.joined, m.role FROM teach_members m JOIN users u ON u.id = m.user_id WHERE m.class_id = ? ORDER BY m.role DESC, lower(u.name), u.email'); $st->execute([$c['id']]); $members = $st->fetchAll();
       $na = $db->prepare('SELECT COUNT(*) FROM teach_assignments WHERE class_id = ?'); $na->execute([$c['id']]); $nAsg = (int)$na->fetchColumn();
       $sub = $db->prepare('SELECT COUNT(*) AS n, AVG(CAST(s.best AS REAL) / NULLIF(s.total, 0)) AS avg FROM teach_submissions s JOIN teach_assignments a ON a.id = s.assignment_id WHERE a.class_id = ? AND s.user_id = ?');
@@ -500,11 +529,11 @@ function mh_teach_route(string $route, array $in, array $cfg, string $ip): void 
       mh_json(['ok' => true, 'members' => $out, 'assignments' => $nAsg, 'sessions' => $nSess]);
     }
     case 'teach_member_remove': {
-      mh_method('POST'); $u = mh_require_user(); $c = mh_teach_class_or_fail($in); mh_teach_staff_or_fail($u, $c);
+      mh_method('POST'); $u = mh_require_user(); $c = mh_teach_class_or_fail($in); mh_teach_tools_or_fail($u, $c);
       $db->prepare('DELETE FROM teach_members WHERE class_id = ? AND user_id = ?')->execute([$c['id'], (int)($in['user_id'] ?? 0)]); mh_json(['ok' => true]);
     }
     case 'teach_staff_add': {
-      mh_method('POST'); $u = mh_require_user(); $c = mh_teach_class_or_fail($in); $acc = mh_teach_access($u, $c); if (!in_array($acc, ['owner', 'admin'], true)) mh_fail('Only the class owner can add co-instructors and TAs.', 403);
+      mh_method('POST'); $u = mh_require_user(); $c = mh_teach_class_or_fail($in); $acc = mh_teach_access($u, $c); if (!in_array($acc, ['owner', 'admin'], true)) mh_fail('Only the class owner can add co-instructors and TAs.', 403); mh_teach_tools_or_fail($u, $c);
       $email = mh_teach_email($in['email'] ?? ''); if ($email === '') mh_fail('Enter their email address.');
       $t = mh_user_by_email($email); if (!$t || (int)$t['verified'] !== 1) mh_fail('That person needs a Mathub account first: ask them to sign up with their montana.edu address.');
       if ((int)$t['id'] === (int)$c['owner_id']) mh_fail('That is the class owner.');
@@ -516,7 +545,7 @@ function mh_teach_route(string $route, array $in, array $cfg, string $ip): void 
 
     /* --- announcements --- */
     case 'teach_post': {
-      mh_method('POST'); $u = mh_require_user(); $c = mh_teach_class_or_fail($in); mh_teach_staff_or_fail($u, $c);
+      mh_method('POST'); $u = mh_require_user(); $c = mh_teach_class_or_fail($in); mh_teach_tools_or_fail($u, $c);
       mh_rate_or_fail("teachpost:user:{$u['id']}", 40, 86400);
       $title = mh_teach_line($in['title'] ?? '', 120); $body = mh_teach_text($in['body'] ?? '', 4000); if (mb_strlen($title) < 3) mh_fail('Give the announcement a title.');
       $db->prepare('INSERT INTO teach_posts (class_id, user_id, title, body, pinned, created) VALUES (?, ?, ?, ?, ?, ?)')->execute([$c['id'], $u['id'], $title, $body, !empty($in['pinned']) ? 1 : 0, $now]);
@@ -525,13 +554,13 @@ function mh_teach_route(string $route, array $in, array $cfg, string $ip): void 
     }
     case 'teach_post_delete': {
       mh_method('POST'); $u = mh_require_user(); $st = $db->prepare('SELECT * FROM teach_posts WHERE id = ?'); $st->execute([(int)($in['post_id'] ?? 0)]); $p = $st->fetch(); if (!$p) mh_fail('Not found.', 404);
-      $c = mh_teach_class((int)$p['class_id']); if (!$c) mh_fail('Not found.', 404); mh_teach_staff_or_fail($u, $c);
+      $c = mh_teach_class((int)$p['class_id']); if (!$c) mh_fail('Not found.', 404); mh_teach_tools_or_fail($u, $c);
       $db->prepare('DELETE FROM teach_posts WHERE id = ?')->execute([$p['id']]); mh_json(['ok' => true]);
     }
 
     /* --- practice assignments, drawn from a Mathub class's question bank --- */
     case 'teach_assignment_save': {
-      mh_method('POST'); $u = mh_require_user(); $c = mh_teach_class_or_fail($in); mh_teach_staff_or_fail($u, $c);
+      mh_method('POST'); $u = mh_require_user(); $c = mh_teach_class_or_fail($in); mh_teach_tools_or_fail($u, $c);
       $title = mh_teach_line($in['title'] ?? '', 120); if (mb_strlen($title) < 3) mh_fail('Give the assignment a title.');
       $course = preg_replace('/[^a-z0-9]/', '', (string)($in['course'] ?? '')); if (!mh_is_course($course)) mh_fail('Pick the Mathub class whose questions to use.');
       $topics = array_values(array_unique(array_filter(array_map(fn($t) => preg_replace('/[^A-Za-z0-9_.-]/', '', (string)$t), is_array($in['topics'] ?? null) ? array_slice($in['topics'], 0, 40) : []), fn($t) => $t !== ''))); if (!$topics) mh_fail('Pick at least one topic.');
@@ -546,7 +575,7 @@ function mh_teach_route(string $route, array $in, array $cfg, string $ip): void 
       mh_json(['ok' => true, 'id' => $id, 'told' => $told]);
     }
     case 'teach_assignment_delete': {
-      mh_method('POST'); $u = mh_require_user(); $c = mh_teach_class_or_fail($in); mh_teach_staff_or_fail($u, $c);
+      mh_method('POST'); $u = mh_require_user(); $c = mh_teach_class_or_fail($in); mh_teach_tools_or_fail($u, $c);
       $db->prepare('DELETE FROM teach_assignments WHERE id = ? AND class_id = ?')->execute([(int)($in['assignment_id'] ?? 0), $c['id']]); mh_json(['ok' => true]);
     }
     case 'teach_submit': {
@@ -561,7 +590,7 @@ function mh_teach_route(string $route, array $in, array $cfg, string $ip): void 
     }
     case 'teach_results': {
       mh_method('GET'); $u = mh_require_user(); $st = $db->prepare('SELECT * FROM teach_assignments WHERE id = ?'); $st->execute([(int)($_GET['assignment_id'] ?? 0)]); $a = $st->fetch(); if (!$a) mh_fail('Assignment not found.', 404);
-      $c = mh_teach_class((int)$a['class_id']); if (!$c) mh_fail('Not found.', 404); mh_teach_staff_or_fail($u, $c);
+      $c = mh_teach_class((int)$a['class_id']); if (!$c) mh_fail('Not found.', 404); mh_teach_tools_or_fail($u, $c);
       $st = $db->prepare('SELECT u.id, u.name, u.email, s.score, s.best, s.total, s.attempts, s.seconds, s.topics, s.updated FROM teach_members m JOIN users u ON u.id = m.user_id LEFT JOIN teach_submissions s ON s.user_id = m.user_id AND s.assignment_id = ? WHERE m.class_id = ? AND m.role = \'student\' ORDER BY lower(u.name), u.email'); $st->execute([$a['id'], $c['id']]);
       $rows = []; $topicAgg = [];
       foreach ($st->fetchAll() as $r) { $rows[] = ['id' => (int)$r['id'], 'name' => mh_display_name($r), 'email' => $r['email'], 'done' => $r['updated'] !== null, 'best' => $r['best'] !== null ? (int)$r['best'] : null, 'total' => (int)($r['total'] ?? $a['count']), 'attempts' => (int)($r['attempts'] ?? 0), 'minutes' => $r['seconds'] !== null ? round((int)$r['seconds'] / 60, 1) : null, 'late' => $r['updated'] !== null && (int)$a['due'] > 0 && (int)$r['updated'] > (int)$a['due'], 'updated' => (int)($r['updated'] ?? 0)];
@@ -572,7 +601,7 @@ function mh_teach_route(string $route, array $in, array $cfg, string $ip): void 
 
     /* --- attendance: a 4-digit code shown in class, open for a few minutes --- */
     case 'teach_att_open': {
-      mh_method('POST'); $u = mh_require_user(); $c = mh_teach_class_or_fail($in); mh_teach_staff_or_fail($u, $c);
+      mh_method('POST'); $u = mh_require_user(); $c = mh_teach_class_or_fail($in); mh_teach_tools_or_fail($u, $c);
       $min = max(1, min(30, (int)($in['minutes'] ?? 10))); $label = mh_teach_line($in['label'] ?? '', 60) ?: ('Class on ' . (new DateTime('now', new DateTimeZone(mh_config()['timezone'] ?? 'America/Denver')))->format('D M j'));
       $db->prepare('UPDATE teach_attendance SET closes = ? WHERE class_id = ? AND closes > ?')->execute([$now, $c['id'], $now]);
       $code = str_pad((string)random_int(0, 9999), 4, '0', STR_PAD_LEFT);
@@ -580,7 +609,7 @@ function mh_teach_route(string $route, array $in, array $cfg, string $ip): void 
       mh_json(['ok' => true, 'session' => ['id' => (int)$db->lastInsertId(), 'code' => $code, 'label' => $label, 'closes' => $now + $min * 60]]);
     }
     case 'teach_att_close': {
-      mh_method('POST'); $u = mh_require_user(); $c = mh_teach_class_or_fail($in); mh_teach_staff_or_fail($u, $c);
+      mh_method('POST'); $u = mh_require_user(); $c = mh_teach_class_or_fail($in); mh_teach_tools_or_fail($u, $c);
       $db->prepare('UPDATE teach_attendance SET closes = ? WHERE class_id = ? AND id = ? AND closes > ?')->execute([$now, $c['id'], (int)($in['session_id'] ?? 0), $now]); mh_json(['ok' => true]);
     }
     case 'teach_checkin': {
@@ -594,7 +623,7 @@ function mh_teach_route(string $route, array $in, array $cfg, string $ip): void 
 
     /* --- insights: how the class is doing, from its own assignments and check-ins --- */
     case 'teach_insights': {
-      mh_method('GET'); $u = mh_require_user(); $c = mh_teach_class_or_fail($in); mh_teach_staff_or_fail($u, $c);
+      mh_method('GET'); $u = mh_require_user(); $c = mh_teach_class_or_fail($in); mh_teach_tools_or_fail($u, $c);
       $q = fn(string $sql, array $a) => (function () use ($db, $sql, $a) { $st = $db->prepare($sql); $st->execute($a); return $st; })();
       $students = (int)$q('SELECT COUNT(*) FROM teach_members WHERE class_id = ? AND role = \'student\'', [$c['id']])->fetchColumn();
       $joinedWeek = (int)$q('SELECT COUNT(*) FROM teach_members WHERE class_id = ? AND role = \'student\' AND joined > ?', [$c['id'], $now - 7 * 86400])->fetchColumn();

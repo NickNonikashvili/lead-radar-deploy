@@ -101,11 +101,14 @@ function mh_packs_apply_bundled(PDO $db, array $files): void {
 }
 
 /** Pack ids of #/teach classes the signed-in person may open: classes they joined, own or help teach. */
-function mh_pack_teach_visible(): array {
+/** The classes built in #/teach that the signed-in person may open, as pack id => 'student' (joined it) or 'team' (owner, co-instructor or TA). */
+function mh_pack_teach_roles(): array {
   $u = mh_current_user(); if (!$u) return [];
-  try { require_once __DIR__ . '/teach.php'; $db = mh_teach_db(); $st = $db->prepare('SELECT c.pack_id FROM teach_classes c LEFT JOIN teach_members m ON m.class_id = c.id AND m.user_id = ? WHERE c.pack_id != \'\' AND (c.owner_id = ? OR m.user_id IS NOT NULL)'); $st->execute([$u['id'], $u['id']]); return array_values(array_unique($st->fetchAll(PDO::FETCH_COLUMN))); }
+  try { require_once __DIR__ . '/teach.php'; $db = mh_teach_db(); $st = $db->prepare('SELECT c.pack_id, CASE WHEN c.owner_id = ? THEN \'team\' WHEN m.role = \'ta\' THEN \'team\' ELSE \'student\' END AS r FROM teach_classes c LEFT JOIN teach_members m ON m.class_id = c.id AND m.user_id = ? WHERE c.pack_id != \'\' AND (c.owner_id = ? OR m.user_id IS NOT NULL)'); $st->execute([$u['id'], $u['id'], $u['id']]);
+    $out = []; foreach ($st->fetchAll() as $r) $out[(string)$r['pack_id']] = $r['r'] === 'student' ? 'student' : 'team'; return $out; }
   catch (Throwable $e) { error_log('Mathub teach visibility: ' . $e->getMessage()); return []; }
 }
+function mh_pack_teach_visible(): array { return array_keys(mh_pack_teach_roles()); }
 function mh_packs_route(string $route, array $in, array $cfg, string $ip): void {
   $db = mh_pack_db();
   $admin = function (): array { $u = mh_require_user(); if (!mh_is_admin($u)) mh_fail('Admins only.', 403); return $u; };
@@ -113,9 +116,11 @@ function mh_packs_route(string $route, array $in, array $cfg, string $ip): void 
 
     /* the light stubs of every published pack (admins also get hidden ones, marked hidden) */
     case 'classpack_list': {
-      mh_method('GET'); $isAdmin = mh_is_admin(mh_current_user()); $mine = $isAdmin ? null : mh_pack_teach_visible();
+      mh_method('GET'); $isAdmin = mh_is_admin(mh_current_user()); $roles = mh_pack_teach_roles();
       $rows = $db->query('SELECT id, version, enabled, stub, uploaded_by FROM class_packs' . ($isAdmin ? '' : ' WHERE enabled = 1') . ' ORDER BY created, id')->fetchAll();
-      $out = []; foreach ($rows as $r) { if ($mine !== null && str_starts_with((string)$r['uploaded_by'], 'teach:') && !in_array($r['id'], $mine, true)) continue; $o = json_decode((string)$r['stub']); if (!is_object($o)) continue; $o->id = $r['id']; $o->version = (int)$r['version']; $o->hidden = !(int)$r['enabled']; $out[] = $o; }
+      // a class built in #/teach is listed for the students who joined it; its teaching team (and admins) get it as a preview, kept out of their own class lists
+      $out = []; foreach ($rows as $r) { $teach = str_starts_with((string)$r['uploaded_by'], 'teach:'); $role = $roles[$r['id']] ?? '';
+        if ($teach && $role === '' && !$isAdmin) continue; $o = json_decode((string)$r['stub']); if (!is_object($o)) continue; $o->id = $r['id']; $o->version = (int)$r['version']; $o->hidden = !(int)$r['enabled']; if ($teach && $role !== 'student') $o->preview = true; $out[] = $o; }
       mh_json(['ok' => true, 'packs' => $out]);
     }
 

@@ -91,7 +91,7 @@ Mathub was audited against that list, and every gap that could be closed in code
 
 ## The professors' section (built in the same release)
 
-Instructors ask for access at `#/teach`, and an administrator approves them in **Admin → Instructors**. They then get:
+Since build 2026.10.12.1 this is **Mathub Faculty**, a separate workspace with its own look, opened from a "For professors" button on the start page. Anyone signed in can write and print syllabi there; an administrator confirms faculty status in **Admin → Instructors** before a class can be published or use the class tools. Instructors get:
 
 - **A syllabus builder.** It covers course facts, meeting times, people and office hours, outcomes, materials, policies, exams, a day-by-day schedule and grading.
   - MSU's accommodations, integrity and wellbeing statements come pre-filled, with three AI-policy presets.

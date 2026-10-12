@@ -12,3 +12,6 @@ poppins-latin-*.woff2         Poppins 500/600/700 (Indian Type Foundry), the bra
 jetbrains-mono-latin-*.woff2  JetBrains Mono 400/500 (JetBrains), code and numbers. SIL Open Font License 1.1 (OFL-JetBrainsMono.txt). Source: https://github.com/JetBrains/JetBrainsMono (files from @fontsource/jetbrains-mono)
 press-start-2p-latin-*.woff2  Press Start 2P (CodeMan38), the small arcade labels. SIL Open Font License 1.1 (OFL-PressStart2P.txt). Source: https://github.com/codeman38/PressStart2P (files from @fontsource/press-start-2p)
 These three used to load from Google Fonts. They are served from this folder so no visitor's IP address goes to a third party just to draw text.
+
+source-serif-4-var*.woff2  Source Serif 4 (Adobe), the title and document face of Mathub Faculty and the syllabus page. Variable weight 200-900, roman and italic, Latin. SIL Open Font License 1.1 (OFL-SourceSerif4.txt). Source: https://github.com/adobe-fonts/source-serif (files from @fontsource-variable/source-serif-4)
+source-sans-3-var.woff2    Source Sans 3 (Adobe), the interface face of Mathub Faculty. Variable weight 200-900, Latin. SIL Open Font License 1.1 (OFL-SourceSans3.txt). Source: https://github.com/adobe-fonts/source-sans (files from @fontsource-variable/source-sans-3)

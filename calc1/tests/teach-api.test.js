@@ -17,7 +17,15 @@ let check; const ok = (label, cond, extra) => check(label, !!cond, cond ? undefi
   let r = await call('admin', 'teach_me'); for (const c of (r.teaching || []).filter(c => c.code === 'M 171' && c.title === 'Calculus I' && !c.section)) await call('admin', 'teach_class_delete', { id: c.id, confirm: 'M 171' });
   r = await call('admin', 'teach_me'); ok('admin is an instructor', r.ok && r.instructor === true, r);
   r = await call('alice', 'teach_me'); ok('alice is not an instructor', r.ok && r.instructor === false, r);
-  r = await call('alice', 'teach_class_create', { code: 'M 171', title: 'x' }); ok('a student cannot create a class', r.status === 403, r);
+  // anyone signed in can write a syllabus; only a confirmed instructor's class can reach students
+  r = await call('alice', 'teach_class_create', { code: 'M 171', title: 'Draft', section: '950' }); ok('without faculty status she can still start a syllabus', r.ok && r.id > 0, r); const draft = r.id;
+  r = await call('alice', 'teach_class_get&id=' + draft); ok('it opens for her, marked as not confirmed', r.ok && r.class.verified === false && r.me_instructor === false && Array.isArray(r.lint) && r.lint.every(x => typeof x[2] === 'string'), r);
+  r = await call('alice', 'teach_class_publish', { id: draft }); ok('publishing it is refused until her faculty status is confirmed', r.status === 403 && r.verify === true, r);
+  r = await call('alice', 'teach_roster&id=' + draft); ok('class tools are refused too', r.status === 403, r);
+  r = await call('alice', 'teach_class_get&id=' + draft); const dcode = r.class.join_code;
+  r = await call('bob', 'teach_join', { code: dcode }); ok('nobody can join a class whose owner is not confirmed', r.status === 403, r);
+  r = await call('bob', 'teach_class_get&id=' + draft); ok('another student cannot open her draft', r.status === 403, r);
+  r = await call('alice', 'teach_class_delete', { id: draft, confirm: 'M 171' }); ok('she can delete her draft', r.ok, r);
   r = await call('admin', 'teach_class_create', { code: 'm171', title: 'Calculus I', term: 'Fall 2026', section: '003', link_course: 'calc' }); ok('admin creates a class', r.ok && r.id > 0, r); const id = r.id;
   r = await call('admin', 'teach_class_get&id=' + id); ok('the draft has the starter syllabus and lint', r.ok && r.syllabus.policies.accommodations.length > 50 && r.lint.length > 0 && r.class.join_code.length === 6, r); const code = r.class.join_code; const syl = r.syllabus;
   { const bad = JSON.parse(JSON.stringify(r.syllabus)); bad.grading.categories[0].weight = 10; await call('admin', 'teach_class_save', { id, syllabus: bad }); }
@@ -31,6 +39,8 @@ let check; const ok = (label, cond, extra) => check(label, !!cond, cond ? undefi
   r = await call('admin', 'teach_class_save', { id, syllabus: syl }); ok('saving a complete syllabus leaves no errors', r.ok && !r.lint.some(x => x[0] === 'error'), r);
   r = await call('admin', 'teach_class_get&id=' + id); ok('saved text is plain (tags stripped) and bad links dropped', r.ok && !/<script/.test(r.syllabus.course.description) && r.syllabus.materials[1].url === '', r.syllabus && r.syllabus.course);
   r = await call('admin', 'teach_class_publish', { id }); ok('publishing builds a class pack', r.ok && /^m171[b-z]?$|^tc\d{4}$/.test(r.pack_id), r); const pid = r.pack_id;
+  r = await call('admin', 'me'); ok('the class does not join the instructor’s own classes', r.ok && !(r.user.courses || []).includes(pid), r.user && r.user.courses);
+  r = await call('admin', 'classpack_list'); ok('the instructor gets it only as a preview', r.ok && r.packs.some(p => p.id === pid && p.preview === true), r.packs && r.packs.filter(p => p.id === pid));
   r = await call('admin', 'classpack_get&id=' + pid); const P = r.pack; ok('the pack has weeks, units, exams, calendar and syllabus panels', r.ok && P.SECTIONS.length >= 4 && P.UNITS.length >= 2 && P.EXAMS.length === 2 && P.CALENDAR.some(e => e[2] === 'Due: WeBWorK 1') && P.INFO.some(p => p.title === 'Grading') && P.INFO.some(p => p.title === 'Accommodations'), r.pack && { s: P.SECTIONS.length, u: P.UNITS, e: P.EXAMS });
   ok('the pack escapes instructor text', !JSON.stringify(P).includes('<script'), null);
   r = await call('bob', 'classpack_list'); ok('a non-member does not see the class in the list', r.ok && !r.packs.some(p => p.id === pid), r.packs && r.packs.map(p => p.id));
@@ -38,7 +48,7 @@ let check; const ok = (label, cond, extra) => check(label, !!cond, cond ? undefi
   r = await call('alice', 'teach_join_info&code=' + code); ok('the public join card shows the published syllabus', r.ok && r.class.title === 'Calculus I' && r.class.syllabus && r.class.join_code === code && r.class.access === '', r);
   r = await call('alice', 'teach_join', { code: 'ZZZZZZ' }); ok('a wrong code is refused', r.status === 404, r);
   r = await call('alice', 'teach_join', { code }); ok('alice joins with the code', r.ok && r.pack_id === pid, r);
-  r = await call('alice', 'classpack_list'); ok('after joining, the class is in her list', r.ok && r.packs.some(p => p.id === pid), r.packs && r.packs.map(p => p.id));
+  r = await call('alice', 'classpack_list'); ok('after joining, the class is in her list as a normal class', r.ok && r.packs.some(p => p.id === pid && !p.preview), r.packs && r.packs.map(p => p.id));
   r = await call('alice', 'me'); ok('the class is added to her classes', r.ok && (r.user.courses || []).includes(pid), r.user && r.user.courses);
   r = await call('alice', 'teach_roster&id=' + id); ok('a student cannot see the roster', r.status === 403, r);
   r = await call('alice', 'teach_post', { id, title: 'hi' }); ok('a student cannot post announcements', r.status === 403, r);

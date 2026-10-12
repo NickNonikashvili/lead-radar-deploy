@@ -489,8 +489,9 @@
     if (App.D === C && C.loaded) { if (!replaceOpen) return false; App.forgetCourse(); }   // the open class keeps its copy, unless the page has only just loaded
     Object.keys(C).forEach(k => delete C[k]);
     const N = normalize(S); STUB_KEYS.forEach(k => { if (N[k] !== undefined) C[k] = N[k]; });
-    Object.assign(C, { id, pack: true, packVersion: Number(raw.version) || 1, hidden: !!raw.hidden, stub: true, loaded: false, files: [], archetype: archOf(S.archetype), packFile: typeof raw.file === 'string' && FILE_RE.test(raw.file) ? raw.file : '' });
-    if (!App.COURSE_ORDER.includes(id)) App.COURSE_ORDER.push(id);
+    Object.assign(C, { id, pack: true, packVersion: Number(raw.version) || 1, hidden: !!raw.hidden, preview: !!raw.preview, stub: true, loaded: false, files: [], archetype: archOf(S.archetype), packFile: typeof raw.file === 'string' && FILE_RE.test(raw.file) ? raw.file : '' });
+    /* a class its teaching team built in #/teach opens for them as a preview, but stays out of every class list */
+    const at = App.COURSE_ORDER.indexOf(id); if (C.preview) { if (at >= 0) App.COURSE_ORDER.splice(at, 1); } else if (at < 0) App.COURSE_ORDER.push(id);
     styleFor(id, raw.color); addResources(id, S); addGuides(id, raw.guides); if (App.addArchetype) App.addArchetype(id, C.archetype);
     App.applyVariant(C); registered.add(id); return true;
   }
@@ -521,7 +522,7 @@
     }
     return install(id, data);
   }
-  const sig = list => (list || []).map(p => `${p.id}:${p.version}:${p.hidden ? 1 : 0}`).sort().join('|');
+  const sig = list => (list || []).map(p => `${p.id}:${p.version}:${p.hidden ? 1 : 0}${p.preview ? 1 : 0}`).sort().join('|');
   let lastSig = '';
   /* fetch the list of packs, register new and changed ones, drop removed ones; re-render when the page on screen depends on it */
   async function sync() {
@@ -532,7 +533,7 @@
     const ids = new Set(j.packs.map(p => p.id)); const changed = [];
     [...registered].forEach(id => { if (!ids.has(id)) { if (App.D && App.D.id === id) App.forgetCourse(); unregister(id); changed.push(id); } });
     const early = Date.now() - bootAt < 20000;   // right after a page load nothing is in progress yet, so the open class can switch to the new version
-    j.packs.forEach(p => { const C = Courses[p.id]; if (!C || !C.pack || C.packVersion !== Number(p.version) || !!C.hidden !== !!p.hidden) { if (register(p, early)) changed.push(p.id); } });
+    j.packs.forEach(p => { const C = Courses[p.id]; if (!C || !C.pack || C.packVersion !== Number(p.version) || !!C.hidden !== !!p.hidden || !!C.preview !== !!p.preview) { if (register(p, early)) changed.push(p.id); } });
     if (!changed.length || document.readyState === 'loading' || !document.getElementById('view')) return changed.length > 0;
     const first = location.hash.replace(/^#\/?/, '').split(/[/?]/)[0];
     if (!first || changed.includes(first)) App.rerender(); else App.rebuildNav();   // the start page lists the classes; a class that appeared or went away re-routes

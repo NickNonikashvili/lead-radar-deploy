@@ -300,3 +300,14 @@ The mark is Bo's head, the same drawing as the mascot, always in his own tan, cr
 - **Don't** lift or glow things on hover; press them down instead.
 - **Don't** copy Khan Academy's, Duolingo's or Brilliant's faces, colours or mascots; match their craft.
 - **Don't** spend gold, coral or pine on decoration.
+
+## Mathub Faculty (a separate register)
+
+The instructors' workspace at `#/teach` deliberately leaves Big Sky. It is an Operate tool for professors, and the owner asked for it to feel more grown-up than the student site, so none of the rules above about lips, Gabarito, mascots or class colours apply there. It is switched on by `<html data-surface="faculty">` and styled only in `assets/teach.css` (`.fx-*`).
+
+- **Frame.** A navy rail (#142A4C) with the wordmark "Mathub" in Source Serif 4 and "Faculty" in Montana gold (#E1B43F), the page list grouped as Syllabus and Class; a white top bar with breadcrumbs, the save state, Print / PDF and Publish. Under 900px the rail becomes a drawer.
+- **Type.** Source Serif 4 at 600 for page titles, section titles and the syllabus itself; Source Sans 3 for every control, label and table. Tabular numbers in tables. Codes (join code, course code in the rail) in JetBrains Mono.
+- **Colour.** Restrained: cool neutrals, one ink blue (#1F4C91) for primary actions, links and focus; gold only as the mark of where you are (the active rail icon, the change bar). Red, amber and green only for what must be fixed, suggestions and done.
+- **Controls.** 1px borders, 6px corners, 38px fields and buttons, no lips and no press-down; hover changes the fill, focus gets a 3px ring in the accent at 22%.
+- **The page.** The syllabus is a white sheet on a grey desk, set in Source Serif 4, exactly as it prints. In the editor it sits beside the form and updates as you type; the part being edited carries a 3px gold change bar in the left margin, the way revised passages are marked in printed documents. Empty parts wait as italic placeholders.
+- **Don't** bring the student site's pieces in (Bo, XP, confetti, pixel art, chunky buttons, class colours), and don't use tracked uppercase labels or eyebrows here either.
