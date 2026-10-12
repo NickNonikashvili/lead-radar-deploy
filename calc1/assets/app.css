@@ -146,7 +146,8 @@ html[data-app] .ap-banner h2 { margin: 0; color: inherit; font: 800 21px/1.12 va
 .ap-guide:active { background: color-mix(in srgb, var(--cc-ink, #fff) 16%, transparent); }
 .ap-nodes { list-style: none; margin: 0; padding: 74px 0 10px; display: flex; flex-direction: column; align-items: center; gap: 24px; }
 .ap-li { position: relative; display: flex; flex-direction: column; align-items: center; transform: translateX(var(--x)); }
-.ap-li.open { z-index: 7; }   /* each node is its own layer (the transform), so the open one rises above the nodes after it */
+.ap-li.open { z-index: 7; }
+html[data-app] body.ap-open #ambient { opacity: 0; pointer-events: none; }   /* the sound button would sit on the open lesson card's buttons */   /* each node is its own layer (the transform), so the open one rises above the nodes after it */
 .ap-node { width: 76px; height: 70px; display: grid; place-items: center; border: 0; border-radius: 50%; background: var(--cc, var(--accent)); color: var(--cc-ink, #fff); box-shadow: 0 8px 0 var(--cc-deep, var(--accent-deep)); transition: transform .08s ease-out, box-shadow .08s ease-out; }
 .ap-node:active { transform: translateY(8px); box-shadow: 0 0 0 var(--cc-deep, var(--accent-deep)); }
 .ap-li.done .ap-node { background: var(--pine); color: #fff; box-shadow: 0 8px 0 var(--pine-deep); }

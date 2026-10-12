@@ -554,8 +554,10 @@ THE SYLLABUS:
       root.addEventListener('click', e => {
         if (e.target.closest('[data-ab-add]')) { N.haptic('select'); openSheet(); return; }
         const card = e.target.closest('.ah-card[data-cid]'); if (card) { N.haptic('select'); setClass(card.dataset.cid); App.rerender(); return; }
-        const node = e.target.closest('.ap-node'); if (node) { N.haptic('select'); const li = node.closest('.ap-li'); const p = $('.ap-pop', li); const open = p.hidden; $$('.ap-pop', root).forEach(x => { x.hidden = true; }); $$('.ap-node', root).forEach(x => x.setAttribute('aria-expanded', 'false')); $$('.ap-li.open', root).forEach(x => x.classList.remove('open')); p.hidden = !open; li.classList.toggle('open', open); node.setAttribute('aria-expanded', String(open)); return; }
-        if (!e.target.closest('.ap-pop')) { $$('.ap-pop', root).forEach(x => { x.hidden = true; }); $$('.ap-li.open', root).forEach(x => x.classList.remove('open')); }
+        const node = e.target.closest('.ap-node'); if (node) { N.haptic('select'); const li = node.closest('.ap-li'); const p = $('.ap-pop', li); const open = p.hidden; $$('.ap-pop', root).forEach(x => { x.hidden = true; }); $$('.ap-node', root).forEach(x => x.setAttribute('aria-expanded', 'false')); $$('.ap-li.open', root).forEach(x => x.classList.remove('open')); p.hidden = !open; li.classList.toggle('open', open); document.body.classList.toggle('ap-open', open); node.setAttribute('aria-expanded', String(open));
+          if (open) { const lim = innerHeight - ($('#tabbar') || { offsetHeight: 0 }).offsetHeight - 16, below = p.getBoundingClientRect().bottom - lim; if (below > 0) scrollBy({ top: below, behavior: N.reduceMotion() ? 'auto' : 'smooth' }); }   // the card opens fully in view, above the tab bar
+          return; }
+        if (!e.target.closest('.ap-pop')) { $$('.ap-pop', root).forEach(x => { x.hidden = true; }); $$('.ap-li.open', root).forEach(x => x.classList.remove('open')); document.body.classList.remove('ap-open'); }
       });
       if (!id) return;
       App.loadCourse(id).then(C => {
@@ -584,7 +586,7 @@ THE SYLLABUS:
     /* web push needs a home-screen web app; the app has its own reminders in the panel below */
     if (r.view === 'settings') { const push = $('#acct-push', root); if (push && push.closest('section')) push.closest('section').remove(); }
     if (r.view === 'settings') { const acct = $('#acct-panel', root) || $('.acct-panel', root); const grid = $('.grid.cols-2', root); if (grid && !$('#app-panel', root)) { (acct ? acct : grid.firstElementChild || grid).insertAdjacentHTML(acct ? 'afterend' : 'beforebegin', devicePanel()); wireDevicePanel($('#app-panel', root)); } }
-    lastRoute = r; paintAppBar(r); paintTabs(r); const p = $('.ab-pop'); if (p) p.remove(); const sh = $('#class-sheet'); if (sh) sh.remove();
+    lastRoute = r; document.body.classList.remove('ap-open'); paintAppBar(r); paintTabs(r); const p = $('.ab-pop'); if (p) p.remove(); const sh = $('#class-sheet'); if (sh) sh.remove();
     if (r.course && r.view === 'dashboard' && local.has(r.course) && !$('.mk-strip', root)) root.insertAdjacentHTML('afterbegin', `<p class="mk-strip small">${icon('file', 13)} A class you created from your syllabus, saved on this ${DEVICE}. <a href="#/create">Manage it</a></p>`);
   });
   document.addEventListener('DOMContentLoaded', () => setTimeout(() => Reminders.sync(), 1500));
