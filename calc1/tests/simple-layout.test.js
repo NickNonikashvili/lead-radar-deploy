@@ -15,7 +15,7 @@ const T = require('./lib');
   });
   log('start page:', JSON.stringify(land));
   check('start page reads in four groups: hero, then a first visit sees classes before the steps, explore', land.secs.join('|') === 'Your classes|Start here|Explore', land.secs);
-  check('the hero keeps four controls: Today, search, account, theme', land.hero.length === 4 && /hero-today/.test(land.hero[0]) && land.hero.includes('landing-account'), land.hero);
+  check('the hero keeps five controls: Today, For professors, search, account, theme', land.hero.length === 5 && /hero-today/.test(land.hero[0]) && land.hero[1] === 'hero-faculty' && land.hero.includes('landing-account'), land.hero);
   check('Focus, the d20, GPA and class picking sit together under the next step', land.focus && land.dice && land.quick.length === 4, land.quick);
   check('first-time visitors get three numbered steps', land.steps === 3);
   check('no scrolling ticker', !land.ticker);
