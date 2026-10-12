@@ -263,9 +263,9 @@ How it works:
 - **Privacy.** Instructors see a student's name, email, results on that class's assignments and check-ins, nothing else. Deleting a class (owner types the course code) removes its pack and its rows; student accounts are never touched.
 - **Tests.** `tests/teach.test.js` (the whole flow in a browser) and `tests/teach-api.test.js` (permissions and boundaries over HTTP).
 
-## Mathub for iPhone and iPad (`app/`)
+## Mathub for iPhone, iPad and Android (`app/`)
 
-A native iOS app built with Capacitor from this same site. It carries the whole site inside it and
+Native iOS and Android apps built with Capacitor from this same site. It carries the whole site inside it and
 works offline: MathJax and the Python runtime are bundled, nothing is downloaded at runtime. Account
 calls go to `https://mathub.space/api/` (the server accepts the app's origin, `capacitor://localhost`).
 
@@ -280,10 +280,19 @@ calls go to `https://mathub.space/api/` (the server accepts the app's origin, `c
 - **Files:** `app/` (Capacitor project, `scripts/build-www.js` builds `app/www` from this folder),
   `assets/app-boot.js`, `assets/app-native.js`, `assets/app.css` (loaded only in the app; the website never
   loads them), `ios/App/App/PrivacyInfo.xcprivacy`.
-- **Build:** `cd app && npm ci && npm run sync && npm run open`, then archive in Xcode 26.
+- **Android:** the same app in `app/android` (target API 36, edge to edge, Bo adaptive and themed icons, back
+  button and gesture, reminders in their own notification channel and inexact, so no exact-alarm permission).
+- **Build iOS:** `cd app && npm ci && npm run sync:ios && npm run open`, then archive in Xcode 26.
   `.github/workflows/ios-build.yml` builds it for the simulator on every change.
+- **Build Android:** `npm run sync:android && npm run open:android` (Android Studio, SDK 36, JDK 21), or
+  `cd android && ./gradlew bundleRelease`. `.github/workflows/android-build.yml` builds a debug APK (kept as a
+  download on the workflow run, to install on a phone) and the release bundle, and checks the target SDK and permissions.
+- **Art:** `node app/scripts/make-art.js` redraws every icon, launch image and the Play listing art from Bo.
 - **App Review:** what gets apps rejected, what Mathub does about each guideline, the App Store Connect
-  answers, the review account and the reviewer notes are in [`docs/ios-app-review.md`](docs/ios-app-review.md).
+  answers, the review account and the reviewer notes are in [`docs/ios-app-review.md`](docs/ios-app-review.md);
+  the same for Google Play (Data safety, content rating, the closed test, signing) in
+  [`docs/android-play-review.md`](docs/android-play-review.md). Store art is in `app/store/`.
+- **Account deletion link** (Google Play asks for one): `https://mathub.space/#/policy/delete`.
 
 The Hostinger zip never includes `app/`.
 

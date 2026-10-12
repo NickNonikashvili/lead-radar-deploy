@@ -128,7 +128,7 @@ On a Mac with Xcode 26:
 ```
 cd calc1/app
 npm ci
-npm run sync          # builds www from the site and copies it into ios/
+npm run sync:ios      # builds www from the site and copies it into ios/
 npm run open          # opens ios/App/App.xcodeproj in Xcode
 ```
 
