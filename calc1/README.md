@@ -281,9 +281,9 @@ calls go to `https://mathub.space/api/` (the server accepts the app's origin, `c
   flashcards, missed questions, what is due), the class's tools, and its path with every lesson named, unit by
   unit, with exam checkpoints; the class button opens a sheet with your classes, Create a class and every tool;
   the tab bar is Learn, Practice, Today, Discuss, Me.
-- **Mathub Create** (`assets/create.js`, setup in `docs/app-subscriptions.md`): one monthly subscription, sold
+- **Mathub Pro and Max** (`assets/create.js`, setup in `docs/app-subscriptions.md`): two monthly plans, sold
   through the App Store and Google Play via RevenueCat (`@revenuecat/purchases-capacitor`) and on the website
-  through a RevenueCat Web Purchase Link; the same subscription works everywhere the student signs in.
+  through RevenueCat Web Purchase Links; a plan works everywhere the student signs in. Bo, the AI tutor, is a tab.
 - **On the phone:** exam and daily reminders as local notifications, haptics, the share sheet (classes, data
   export, any file the page makes), outside links in the Safari sheet, safe areas and the status bar.
 - **No account needed:** every study tool is open in the app; an account adds sync and discussions.
@@ -307,7 +307,7 @@ calls go to `https://mathub.space/api/` (the server accepts the app's origin, `c
 
 The Hostinger zip never includes `app/`.
 
-## Classes students make, Mathub Create and sharing
+## Classes students make, Mathub Pro and Max, and sharing
 
 `assets/create.js`, `assets/create.css`, `api/myclasses.php`; setup and store details in
 `docs/app-subscriptions.md`.
@@ -322,17 +322,42 @@ The Hostinger zip never includes `app/`.
   signed out goes up at the next sign-in. `App.classSync` keeps both sides the same (new ones up, the account's
   down, deleted ones gone everywhere; an id clash gets a new id). Rows go with the account through
   `ON DELETE CASCADE`, and Download my data includes them.
-- **Mathub Create** (`App.subscription`): one monthly subscription for making classes. The apps buy it through
-  the App Store or Google Play; the website opens a RevenueCat Web Purchase Link (Stripe) in a new tab and waits
-  for it (`create_status`, which asks RevenueCat's REST API and keeps the answer for 10 minutes unless asked to
-  refresh). All three use the RevenueCat customer `mh_<account id>`. The example class and classes made before
-  subscriptions existed are free; when it ends, classes are kept, locked (`App.courseGate`), until it is back.
-  Settings has a Mathub Create panel (website) or row (apps) with Manage subscription.
+- **Mathub Pro ($15) and Mathub Max ($50)** (`App.subscription`, `App.paywall({ need })`): Pro makes classes;
+  Max adds Bo, the AI tutor, and classes Bo writes from a syllabus. The apps buy them through the App Store or
+  Google Play; the website opens the plan's RevenueCat Web Purchase Link (Stripe) in a new tab and waits for it
+  (`create_status`, which asks RevenueCat's REST API and keeps the answer for 10 minutes unless asked to refresh).
+  All use the RevenueCat customer `mh_<account id>` and the entitlements `pro` and `max` (a Max product unlocks
+  both). `plan_grants` in `config.local.php` gives testers a plan without paying. The example class and classes
+  made before the plans existed are free; when a plan ends, classes are kept, locked (`App.courseGate`), until it
+  is back. Settings has a Your plan panel (website) or row (apps) with Manage subscription and Move up to Max.
 - **Sharing.** Share gives `https://mathub.space/#/c/CODE`, the 8-character code and a QR code
   (`assets/vendor/qrcode.js`, qrcode-generator, MIT, loaded on demand). `#/c/CODE` shows the class to anyone,
-  without the owner's name, with Add (a copy; needs Mathub Create) and Report. Moderators can stop a reported
+  without the owner's name, with Add (a copy; needs Pro or Max) and Report. Moderators can stop a reported
   share from Admin → Problems. The owner can stop sharing at any time.
 - **Server keys** (in `api/config.local.php` only): `revenuecat_secret`, `create_web_link`, `create_web_price`.
+
+## Bo, the AI tutor, and the AI server (Mathub Max)
+
+`assets/tutor.js`, `assets/tutor.css`, `api/ai.php`; details and costs in `docs/app-subscriptions.md`.
+
+- **Ask Bo** (`#/tutor`, `#/tutor/<class>`): a chat with Bo for the class you pick. He knows the class from its
+  syllabus and how the student is doing: the device sends a short progress snapshot with each question (next exam
+  and readiness, weakest topics, recent mistakes, flashcards due, deadlines). The first message and the suggestions
+  are made on the device (free). Photos of problems are shrunk on the device and sent with the question. Bo keeps up
+  to 12 short notes about the student (`[remember: …]`), shown under his answer and in "What Bo knows", where they
+  and the chat can be deleted. Every answer has Copy and Report. The student agrees to what is sent to Anthropic
+  before the first question. Bo is a tab in the apps, a button in the website's top bar, and "Ask Bo to quiz you"
+  in exam week.
+- **Let Bo write it** (Create a class, Max): paste or attach a syllabus (PDF, photo or text); Bo reads it into an
+  outline, then writes each unit, with the steps shown as they happen; the class is checked like any other and
+  added with Add.
+- **The AI server** (`api/ai.php`, routes `ai_status`, `ai_thread`, `ai_tutor`, `ai_forget`, `ai_class`): the only
+  thing that talks to the AI (Anthropic's Messages API; `anthropic_key` in `config.local.php`). It checks Max,
+  enforces limits (1,500 questions and 15 classes a month per account), and keeps requests small: compact class
+  summaries (`api/classdata/*.json` from `scripts/build-classdata.js`, packs, or the student's own class), the
+  trimmed snapshot, the last 6 turns, prompt caching on the fixed parts, and `claude-haiku-5-5` by default.
+  Chats, notes, usage and day-old class outlines live in `ai_threads`, `ai_notes`, `ai_usage` and `ai_builds`
+  (removed with the account; included in Download my data).
 
 ## The start page and exam week
 

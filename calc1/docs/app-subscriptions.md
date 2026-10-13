@@ -1,95 +1,114 @@
-# Mathub Create: the subscription, on the website and in the apps
+# Mathub Pro and Mathub Max: the plans, Bo, and the AI server
 
-Mathub Create is one monthly subscription (about $5) for making classes: from a syllabus (Create a class), from a
-class file a classmate sends, or from a class someone shares by link. Everything else stays free:
+Two monthly plans, on the website and in the iPhone, iPad and Android apps:
 
-- **The example class** ("Try an example class") is free, so anyone (and App Review) can try the whole flow.
-- **Classes made before subscriptions existed** stay free. The first time the new version starts, every class
-  already on the device is marked free.
-- **When the subscription ends**, the classes made with it are kept, locked ("CHMY 121 is locked", Subscribe and
-  Restore purchases / I already subscribed). They open again, progress and all, the moment it is back.
-- **Offline**, the apps remember until when the subscription is paid for, so classes stay open on a plane.
+| Plan | Price | What it unlocks |
+|---|---|---|
+| **Mathub Pro** | $15 a month | Making your own classes: from a syllabus with the AI you already use (copy the instructions, paste the answer), from a class file, or from a class someone shares. |
+| **Mathub Max** | $50 a month | Everything in Pro, plus **Bo, the AI tutor** (`#/tutor`), and **classes Bo writes** from a syllabus you paste or attach (PDF or photo). |
 
-One subscription works everywhere the student signs in with the same Mathub account:
+Everything else stays free:
 
-| Where | How it is sold | How Mathub knows it is on |
+- **The example class** ("Try an example class") is free, so anyone (and App Review) can try the flow.
+- **Classes made before the plans existed** stay free (marked free the first time the new version starts).
+- **When a plan ends**, the classes made with it are kept, locked, and open again the moment it is back.
+- **Offline**, the apps remember until when the plan is paid for, so classes stay open on a plane.
+
+One plan works everywhere the student signs in with the same Mathub account:
+
+| Where | How it is sold | How Mathub knows the plan |
 |---|---|---|
 | iPhone, iPad | App Store In-App Purchase | RevenueCat SDK in the app (`@revenuecat/purchases-capacitor`) |
 | Android | Google Play Billing | the same SDK |
-| Website | RevenueCat **Web Purchase Link** (checkout by Stripe) | `api/myclasses.php` asks RevenueCat's REST API (`create_status`) |
+| Website | RevenueCat **Web Purchase Links** (checkout by Stripe), one per plan | `api/myclasses.php` asks RevenueCat's REST API (`create_status`) |
 
-All three use the same RevenueCat customer: **`mh_<account id>`**. The apps call `Purchases.logIn('mh_<id>')`
-when the student signs in (a purchase made before signing in moves to the account), and the website's checkout
-link ends in that ID. Apple and Google require their own billing inside the apps, so the apps never mention or
-link to the web checkout (App Store 3.1.1 / 3.1.3(b), Play Payments policy); a subscription bought on the web
-simply works in the app after signing in.
+All of them use the same RevenueCat customer, **`mh_<account id>`** (the apps call `Purchases.logIn` when the
+student signs in). Entitlements: **`pro`** and **`max`**; a Max product unlocks both. The apps never mention or
+link to the web checkout (App Store 3.1.1 / 3.1.3(b), Play Payments policy); a plan bought on the web simply
+works in the app after signing in.
 
-| | Value |
-|---|---|
-| App Store product | `mathub_create_monthly` (auto-renewable, 1 month, group "Mathub Create") |
-| Google Play product | subscription `mathub_create`, base plan `monthly` (auto-renewing, 1 month) |
-| Web product | a RevenueCat Web Billing product, 1 month, $4.99, in the same `default` offering |
-| RevenueCat entitlement | `create` |
-| RevenueCat offering | `default` (current), package Monthly (`$rc_monthly`) |
-| App keys | `BILLING` at the top of the Mathub Create section in `assets/create.js` |
-| Server keys | `revenuecat_secret`, `create_web_link`, `create_web_price` in `api/config.local.php` |
+| | Pro | Max |
+|---|---|---|
+| App Store product (one subscription group "Mathub", Max ranked above Pro) | `mathub_pro_monthly` | `mathub_max_monthly` |
+| Google Play subscription, base plan | `mathub_pro` / `monthly` | `mathub_max` / `monthly` |
+| RevenueCat entitlements | `pro` | `pro` and `max` |
+| RevenueCat offering `default`: package identifiers | `pro` | `max` |
+| Web Purchase Link (its own offering) | `pro_web_link` | `max_web_link` |
 
-Code: `assets/create.js` (classes students make, sync with the account, `App.subscription` for the store and for
-the web, the paywall `App.paywall`, the lock `App.courseGate`, sharing and `#/c/CODE`), `assets/create.css`,
-`api/myclasses.php` (classes saved with the account, share codes, `create_status`), `assets/app-boot.js` (the
-`Purchases` plugin). Tests: `tests/app.test.js` (a stand-in store), `tests/create-web.test.js` and
-`tests/myclasses-api.test.js` (a stand-in RevenueCat in `tests/pyodide/router.php`).
+Code: `assets/create.js` (plans: `App.subscription`, the paywall `App.paywall({ need: 'pro' | 'max' })`, the lock
+`App.courseGate`, "Let Bo write it"), `assets/tutor.js` (Ask Bo), `api/myclasses.php` (`create_status`, plans and
+`plan_grants`), `api/ai.php` (the AI server). Tests: `tests/app.test.js` (a stand-in store),
+`tests/create-web.test.js`, `tests/tutor-web.test.js`, `tests/myclasses-api.test.js` and `tests/ai-api.test.js`
+(stand-ins for RevenueCat and the AI in `tests/pyodide/router.php`).
 
 ## 1. The money side (once)
 
 **Google Play Console**
-1. Settings → Payments profile: create the merchant (payments) profile and add your bank account.
-2. Upload a build that contains Mathub Create to a testing track first (Play only lets you create subscriptions
-   once a bundle with the billing permission is uploaded).
-3. Monetize with Play → Products → Subscriptions → Create subscription. Product ID `mathub_create`, name
-   "Mathub Create". Add a base plan: ID `monthly`, auto-renewing, billing period 1 month, price US$4.99 (or 5.00);
-   let Play set the other countries. Activate it.
+1. Settings → Payments profile: create the merchant profile and add your bank account.
+2. Upload a build with the billing permission to a testing track first (Play only then lets you create subscriptions).
+3. Monetize with Play → Products → Subscriptions: create `mathub_pro` ("Mathub Pro") with a base plan `monthly`,
+   auto-renewing, 1 month, US$14.99 (or 15.00), and `mathub_max` ("Mathub Max") with a base plan `monthly`,
+   US$49.99 (or 50.00). Activate both.
 
 **App Store Connect**
-1. Business: sign the **Paid Apps Agreement**, add bank and tax information. Enroll in the **App Store Small
-   Business Program** (15% commission instead of 30%).
-2. Your app → Monetization → Subscriptions: create the group "Mathub Create", then a subscription: reference name
-   "Mathub Create Monthly", product ID `mathub_create_monthly`, duration 1 month, price $4.99 (or $5.00).
-   Add a display name ("Mathub Create") and description ("Make your own classes from any syllabus"), and a
-   screenshot of the paywall for review.
-3. The first subscription has to be submitted **together with an app version**: on the version page, under
-   In-App Purchases and Subscriptions, add it before you submit.
-4. Add the Terms of Use link to the App Store description (Apple asks for it in the metadata of apps with
-   subscriptions): `Terms of Use: https://mathub.space/#/policy/create`.
+1. Business: sign the **Paid Apps Agreement**, add bank and tax information; enroll in the **Small Business Program** (15%).
+2. Your app → Monetization → Subscriptions: create the group "Mathub", then `mathub_max_monthly` (level 1, "Mathub Max",
+   $49.99) and `mathub_pro_monthly` (level 2, "Mathub Pro", $14.99), 1 month each. Putting Max above Pro in the
+   group makes a Pro member's purchase of Max an upgrade. Add display names, descriptions and a screenshot of the paywall.
+3. Submit the subscriptions **together with an app version** (on the version page, under In-App Purchases and Subscriptions).
+4. Add the Terms of Use link to the App Store description: `Terms of Use: https://mathub.space/#/policy/create`.
 
-**Stripe (for the website)**
-1. Create a Stripe account (stripe.com) and finish its activation (business details, bank account).
-2. In RevenueCat (below) connect it under Project settings → Web → Stripe. RevenueCat Web Billing uses it to take
-   the card payment; Stripe's fee applies, no store commission.
+**Stripe (for the website)**: create a Stripe account, finish its activation, and connect it in RevenueCat
+(Project settings → Web → Stripe).
 
-## 2. RevenueCat (free account at revenuecat.com)
+## 2. RevenueCat (revenuecat.com)
 
-1. Create a project "Mathub".
-2. Add the **App Store** app: bundle ID `space.mathub.app`; upload an **In-App Purchase Key** (App Store Connect →
-   Users and Access → Integrations → In-App Purchase) as RevenueCat asks.
-3. Add the **Play Store** app: package `space.mathub.app`; upload a Google Cloud **service account** JSON that has
-   access to your Play Console (RevenueCat's setup screen walks through the permissions it needs).
-4. Add a **Web Billing** app (Stripe connected), with a product "Mathub Create", 1 month, $4.99.
-5. Products: add `mathub_create_monthly` (App Store), `mathub_create:monthly` (Play Store) and the web product.
-6. Entitlements: create `create` and attach all three products.
-7. Offerings: make `default` the current offering, with a **Monthly** package containing all three products.
-8. Web → **Web Purchase Links**: create one for the `default` offering. Set its success redirect to
-   `https://mathub.space/#/create?paid=1` (the page checks the subscription again when the buyer comes back).
-   Copy the link: it looks like `https://pay.rev.cat/<token>/` and Mathub adds the customer ID to its end.
-9. Project settings → API keys: copy the two **public** app-specific keys, `appl_…` and `goog_…`, and create a
-   **secret** key (`sk_…`, read access is enough) for the server.
+1. Project "Mathub"; add the **App Store** app (bundle `space.mathub.app`, In-App Purchase Key), the **Play Store**
+   app (package `space.mathub.app`, service-account JSON) and a **Web Billing** app (Stripe connected) with two
+   products: "Mathub Pro" $15 a month and "Mathub Max" $50 a month.
+2. Products: the App Store, Play Store and web products for both plans.
+3. Entitlements: `pro` (attach every Pro **and** Max product) and `max` (attach the Max products).
+4. Offerings: `default` (current) with two custom packages, identifiers **`pro`** and **`max`**, each with its App
+   Store and Play product. For the website, two more offerings, `web_pro` and `web_max`, each with its web product.
+5. Web → **Web Purchase Links**: one for `web_pro`, one for `web_max`. Set the success redirect of both to
+   `https://mathub.space/#/create?paid=1`. Copy both links (`https://pay.rev.cat/<token>/`).
+6. API keys: copy the public `appl_…` and `goog_…` keys and create a **secret** key (`sk_…`) for the server.
 
-## 3. Put the keys in
+## 3. Bo and the AI server (Anthropic)
+
+Bo and "Let Bo write it" run through Mathub's own server, `api/ai.php`. The apps and the website never talk to the
+AI directly. The server holds the key, checks that the account has Max, enforces the limits, and keeps every
+request small:
+
+- **Class summaries.** Each class is turned into a compact text (facts, grading, exams, then every unit with one
+  line per topic): Calculus I is about 5,000 characters (≈1,300 tokens). Built-in classes come from
+  `api/classdata/*.json` (run `node scripts/build-classdata.js` after changing a class), packs from
+  `packs/*.mathub.json`, and a student's own class from the copy saved with their account.
+- **Progress snapshot.** The device sends a short summary (next exam and readiness, weakest topics, recent
+  mistakes, flashcards due, deadlines); the server trims it again to a few lines.
+- **Short memory.** Only the last 6 chat turns go to the AI, plus up to 12 short notes Bo keeps about the student
+  (`[remember: …]` in his reply). The full chat (40 turns per class) is kept for the screen only.
+- **Prompt caching.** Bo's instructions and the class summary are marked `cache_control: ephemeral`, so repeat
+  questions in a session pay a fraction for them.
+- **Classes in steps.** The syllabus is read once into an outline (kept on the server for a day); each unit is then
+  written from that outline (≈1,000 tokens in), not the whole syllabus again.
+- **Small answers.** Bo is told to answer in about 150 words; answers are capped at 700 tokens.
+- **The smallest model that does the job:** `claude-haiku-5-5` for both Bo and class writing. If the classes Bo
+  writes are not good enough, set `ai_model_class` to `claude-sonnet-5-5` (costs more); keep Bo on Haiku.
+- **Limits per account:** 1,500 questions a month (300 a day, 12 a minute) and 15 classes a month, set in
+  `api/config.php` (`ai_tutor_monthly`, `ai_tutor_daily`, `ai_class_monthly`). Usage per month (questions, classes,
+  tokens in and out) is in the `ai_usage` table.
+- Free greetings: Bo's first message in a chat and the suggestions are made on the device, with no AI call.
+
+To switch Bo on: create an API key at console.anthropic.com (Settings → API keys; add a payment method and set a
+monthly spend limit there), then put it in `api/config.local.php`.
+
+## 4. Put the keys in
 
 In `calc1/assets/create.js` (public SDK keys, meant to ship inside apps):
 
 ```
-const BILLING = { ios: 'appl_xxxxxxxx', android: 'goog_xxxxxxxx', entitlement: 'create' };
+const BILLING = { ios: 'appl_xxxxxxxx', android: 'goog_xxxxxxxx', pro: 'pro', max: 'max' };
 ```
 
 Then `cd calc1/app && npm run sync` and make new app builds.
@@ -98,57 +117,54 @@ On the server, in `api/config.local.php` (never in the repository or the zip):
 
 ```
 'revenuecat_secret' => 'sk_xxxxxxxx',
-'create_web_link'   => 'https://pay.rev.cat/xxxxxxxx/',
-'create_web_price'  => '$4.99',
+'pro_web_link'      => 'https://pay.rev.cat/xxxxxxxx/',
+'max_web_link'      => 'https://pay.rev.cat/yyyyyyyy/',
+'anthropic_key'     => 'sk-ant-xxxxxxxx',
+'plan_grants'       => ['you@montana.edu' => 'max'],   // testers who get a plan without paying
 ```
 
-Without app keys the apps cannot sell the subscription (the paywall says so; the example class still works).
-Without the server keys the website's paywall says subscribing on the website is not available yet, and
-subscriptions bought in the apps are not recognised on the website.
+`pro_web_price` and `max_web_price` default to `$15` and `$50`. Without the app keys the apps cannot sell the
+plans; without the server keys the website cannot sell them and plans bought in the apps are not recognised there;
+without `anthropic_key` Bo says he is not switched on yet.
 
-## 4. Test before you release
+## 5. Test before you release
 
-- **Android:** Play Console → Settings → License testing: add your Google account. Install from the internal or
-  closed test track. Purchases are test purchases (no charge) and a monthly subscription renews every 5 minutes.
-- **iPhone:** App Store Connect → Users and Access → Sandbox → add a tester. On the phone: Settings → App Store →
-  Sandbox Account. Sandbox monthly subscriptions renew every 5 minutes, up to 12 times.
-- **Website:** use a RevenueCat **sandbox** Web Purchase Link and Stripe's test card `4242 4242 4242 4242` (any
-  future date and CVC). Settings → Mathub Create shows "On" after the checkout tab closes.
-- Check: Create a class → paste an answer → Add → the paywall shows the price → Subscribe → the class is added.
-  Settings shows "Mathub Create: On. Renews …". Sign in on the website with the same account: the class is there
-  and opens. Cancel; after it lapses the class shows as locked; subscribing again opens it.
+- **Android:** Play Console → License testing (your Google account); install from a test track; monthly
+  subscriptions renew every 5 minutes. Try Pro, then Max (an upgrade).
+- **iPhone:** a Sandbox tester (App Store Connect → Users and Access → Sandbox); Settings → App Store → Sandbox Account.
+- **Website:** RevenueCat sandbox Web Purchase Links and Stripe's test card `4242 4242 4242 4242`.
+- **Bo without paying:** add your account to `plan_grants` with `'max'`.
+- Check: Create a class → Add → the plans card (Pro picked) → Get Pro → the class is added. Ask Bo → Move up to Max
+  → agree → ask a question; attach a photo; "What Bo knows" shows the notes. Create a class → Let Bo write it →
+  paste a syllabus → the steps run → Add. Cancel; after it lapses classes lock and Bo shows Meet Bo again.
 
-## 5. What changes in the store forms
+## 6. What changes in the store forms
 
-- **Google Play Data safety:** Financial info → **Purchase history**: collected, not shared (RevenueCat is a
-  service provider), optional, purpose App functionality. App activity → Other user-generated content now also
-  covers classes the student makes (saved with the account when signed in).
-- **App Store App Privacy:** Purchases → **Purchase History**: App Functionality, **linked** to the user (the
-  RevenueCat customer is the account ID), not used for tracking. User Content → Other User Content covers classes
-  saved with the account.
-- **Permissions (Android):** `com.android.vending.BILLING` and `ACCESS_NETWORK_STATE` come with Play Billing and
-  RevenueCat; the CI check allows exactly these.
-- **Review notes:** "Making your own class needs the Mathub Create subscription. To try the flow without buying:
-  Start page → class button → Create a class from a syllabus → Try an example class → Add SKIL 101 (free). The
-  subscription itself can be tested with a sandbox account."
+- **App Store App Privacy:** Purchases → Purchase History (App Functionality, linked to the user). User Content →
+  Other User Content (classes, chats with Bo, photos sent to Bo; App Functionality; linked). Usage Data → Product
+  Interaction (study progress sent with questions to Bo; App Functionality; linked). Not used for tracking.
+- **App Review guideline 5.1.2(i) (sharing personal data with third-party AI):** Ask Bo shows what is sent to
+  Anthropic and asks for agreement before the first question; "Let Bo write it" says the syllabus goes to Anthropic.
+- **Google Play Data safety:** Financial info → Purchase history; App activity → App interactions and Other
+  user-generated content (classes, chats with Bo); Photos (only those sent to Bo). Anthropic and RevenueCat are
+  service providers, so this is not "shared". **AI-Generated Content policy:** every answer from Bo has Report,
+  which files it for the moderators.
+- **Review notes:** "Making a class needs Mathub Pro; Bo, the AI tutor, needs Mathub Max. To try without buying:
+  Create a class → Try an example class (free). Sandbox purchases unlock both. Bo's answers come from Anthropic's
+  Claude through our server; the student agrees before the first question, and every answer can be reported."
 
 ## Sharing a class
 
-A class saved with the account can be shared (`myclass_share`): an 8-character code from
-`ABCDEFGHJKMNPQRSTUVWXYZ23456789` and the link `https://mathub.space/#/c/CODE` with its QR code
-(`assets/vendor/qrcode.js`, MIT, loaded only when a share sheet opens). Anyone can open the link (`shared_class`,
-120 an hour per address) and see the class without the owner's name; adding a copy needs Mathub Create. A shared
-class page has **Report**, which files a problem report; moderators see it in Admin → Problems with a **Stop
-sharing this class** button (`admin_unshare`). The owner can stop sharing at any time; copies already added stay.
+A class saved with the account can be shared (`myclass_share`): an 8-character code and the link
+`https://mathub.space/#/c/CODE` with its QR code (`assets/vendor/qrcode.js`, MIT, loaded on demand). Anyone can
+open it and see the class without the owner's name; adding a copy needs Pro or Max. Shared classes have Report;
+moderators can stop a share from Admin → Problems (`admin_unshare`).
 
 ## What the paywall shows (store rules)
 
-Apple (guideline 3.1.2) and Google ask that a subscription screen states what you get, the price and period, that
-it renews automatically and how to cancel, with links to the Terms of Use and the Privacy Policy, and that people
-can restore a purchase. The paywall shows: the price ("$4.99 a month"), three lines on what it unlocks,
-Subscribe, **Restore purchases** (in the apps) or **I already subscribed** (on the website), "Renews every month at
-$4.99 until you cancel. Cancel any time in your Apple ID (or Google Play) subscriptions, at least 24 hours before
-it renews" (on the website: "in Settings › Mathub Create › Manage subscription, or with the link in your receipt
-email. Payment is handled by Stripe."), and links to the Terms (section 1.12, `#/policy/create`) and the Privacy
-Policy. On the website Subscribe opens the checkout in a new tab and the card waits, checking every 10 seconds
-and whenever the tab comes back into view.
+Apple (3.1.2) and Google ask that a subscription screen states what you get, the price and period, that it renews
+automatically and how to cancel, with links to the Terms and the Privacy Policy, and a way to restore purchases.
+The paywall shows both plans as cards (only Max where Bo is needed, "Move up to Max" for Pro members) with the
+store's prices, what each unlocks, one button naming the plan and price, **Restore purchases** (apps) or
+**I already subscribed** (website), the renewal terms and how to cancel, and the Terms (section 1.12,
+`#/policy/create`) and Privacy Policy links. No countdowns, no crossed-out prices.
