@@ -78,7 +78,7 @@
   App.views.practice = {
     title: 'Quizzer', hasSession: () => !!(PQ.session && Object.keys(PQ.session.answers).length),
     render(root, param, query) {
-      if (query.exam) { const ex = D.EXAMS.find(e => e.id === query.exam); if (ex) { PQ.units = ex.units.slice(); PQ.topics = new Set(topicsForExam(ex)); PQ.session = null; } }
+      if (query.exam) { const ex = D.EXAMS.find(e => e.id === query.exam); if (ex) { PQ.units = ex.units.slice(); PQ.topics = new Set(topicsForExam(ex)); PQ.session = null; if (query.timed) { PQ.mode = 'exam'; PQ.count = Math.max(PQ.count, 15); } } }   // ?timed=1: exam week's timed practice exam
       else if (query.topics) { const ts = query.topics.split(',').filter(t => QZ.TOPICS[t]); if (ts.length) { PQ.units = [...new Set(ts.map(t => QZ.TOPICS[t].unit))]; PQ.topics = new Set(ts); PQ.session = null; } }
       else if (query.unit) { PQ.units = [+query.unit]; PQ.topics = new Set(QZ.topicsForUnits(PQ.units)); PQ.session = null; }
       if (query.smart) { const sr = App.smartReview(); if (sr.picked.length) { PQ.smart = sr; PQ.topics = new Set(sr.picked.map(r => r.topic)); PQ.units = [...new Set(sr.picked.map(r => r.unit))].sort(); PQ.session = null; PQ.mode = 'practice'; } }

@@ -107,6 +107,12 @@ const { execFileSync } = require('child_process'); const path = require('path');
   check('the Me tab is chosen on Settings', (await txt(p, '#tabbar .tab-item.active')).trim() === 'Me');
   await go(p, '#/', 1800);
   check('a strip covers the status bar area, above the top bar and below dialogs', await p.evaluate(() => { const s = document.querySelector('.app-statusbar'); if (!s) return false; const cs = getComputedStyle(s); return cs.position === 'fixed' && cs.display !== 'none' && +cs.zIndex > 50 && +cs.zIndex < 60; }));
+  // exam week: three days before calc's Exam 2 the Learn page shows the plan under the class card
+  await p.evaluate(() => { App.setSetting('asof', '2026-10-13'); App.setSetting('appClass', 'calc'); App.rerender(); }); await p.waitForTimeout(2200);
+  const xw = await p.evaluate(() => { const x = document.querySelector('#ah-main .xw'); return x ? { h: x.querySelector('h2').textContent, items: x.querySelectorAll('.xw-today .xw-item').length, days: x.querySelectorAll('.xw-plan li').length, exRow: !!document.querySelector('#ah-main .ah-hero .ah-ex'), after: x.previousElementSibling && x.previousElementSibling.classList.contains('ah-hero') } : { cls: App.home.curClass(), asof: App.settings().asof, d: App.home.daysTo(App.home.examOf(Courses.calc)), wk: !!App.home.examWeek(Courses.calc), main: ((document.querySelector('#ah-main') || {}).innerHTML || '').slice(0, 120) }; });
+  check('exam week in the app: the plan for today and each day, right under the class card (which drops its exam row)', xw && xw.h && /Exam week: Exam 2 in 3 days/.test(xw.h) && xw.items >= 3 && xw.days === 4 && !xw.exRow && xw.after, xw);
+  check('no sideways scroll on the Learn page in exam week', await hscroll(p));
+  await p.evaluate(() => App.setSetting('asof', null));
   const fetched = await p.evaluate(async () => { const r = await fetch('api/index.php?r=config', { headers: { 'X-Requested-With': 'MatHub' } }); return r.url; });
   check('account calls go to https://mathub.space', /^https:\/\/mathub\.space\/api\/index\.php\?r=config/.test(fetched), fetched);
 

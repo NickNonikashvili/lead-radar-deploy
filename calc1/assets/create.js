@@ -596,7 +596,7 @@ THE SYLLABUS:
       b.disabled = true; try { if (await Sub.restore()) { toast('Mathub Create is on.', 3000); App.rerender(); } else toast(Sub.noneFound(), 4500); } catch (x) { if (x.signin) signIn('login'); else toast(x.message, 4500); } b.disabled = false;
     });
   }
-  App.createLock = { html: lockHtml, wire: wireLock };
+  App.createLock = { html: lockHtml, wire: wireLock, where: WHERE, restoreLabel: NATIVE ? 'Restore purchases' : 'I already subscribed' };
   App.courseGate = (id, root) => { if (!locked(id)) return false; const C = Courses[id]; document.title = `${C.short || C.code} is locked · Mathub`; root.innerHTML = lockHtml(C); wireLock(root, C); return true; };
   // when the subscription turns on or off, the page in front of the student follows (not the Create page: a class may be waiting to be added)
   document.addEventListener('mathub-sub', () => { const m = /^#\/([^/?]*)/.exec(location.hash || '#/'); const first = m ? m[1] : ''; if (!first || first === 'settings' || local.has(first)) App.rerender(); });

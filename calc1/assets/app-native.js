@@ -124,13 +124,9 @@
      - the start page: your classes as a row of cards, and the winding path through the one you picked
      - a tab bar: Learn, Practice, Today, Board, Me
      ============================================================ */
-  const myIds = () => App.myCourses().filter(id => Courses[id] && !Courses[id].preview);
-  const curClass = () => { const mine = myIds(); const s = settings().appClass; return mine.includes(s) ? s : App.D && mine.includes(App.D.id) ? App.D.id : mine[0] || null; };
-  const setClass = id => { if (id) setSetting('appClass', id); };
+  const { myIds, curClass, setClass, examOf, daysTo } = App.home;
   const ccStyle = App.classStyle;   // each class's colours (assets/create.js)
-  const examOf = C => { try { return App.nextExamOf(C); } catch (e) { return null; } };
-  const daysTo = ex => ex && ex.date ? App.daysBetween(App.todayISO(), ex.date) : null;
-  const inDays = d => d === 0 ? 'today' : d === 1 ? 'tomorrow' : `in ${d} days`;
+  const inDays = App.home.inDays;
   const goSearch = () => document.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true, bubbles: true }));
   const ROOTS = r => (!r.course && ['home', 'today', 'forum', 'settings'].includes(r.view)) || (r.course && ['practice', 'flashcards'].includes(r.view));
   const practiceHref = id => { const C = Courses[id]; if (!C) return '#/'; return (C.quiz || C.hasQuiz || C.quizTopics || C.QUIZ) ? `#/${id}/practice` : `#/${id}/flashcards`; };
@@ -197,94 +193,11 @@
 
   /* ---------- the start page ----------
      Your classes as cards; under them the one you picked: where the class is, its next exam and how ready
-     you are, and the next lesson; then today across all your classes (daily goal, flashcards, missed
-     questions, what is due); then the class's tools and its path with every lesson named. Nothing the
-     website's start page and class page show is left out. */
-  const safe = f => { try { return f(); } catch (e) { return null; } };
-  const NODE_IC = { done: 'check', current: 'play', open: 'play', soon: 'book' };
-  const TOOL_ORDER = ['notes', 'readings', 'practice', 'flashcards', 'formulas', 'exam', 'calendar', 'grades', 'playground', 'mistakes', 'planner', 'course'];
-  const TOOL_NAME = { notes: 'Notes', readings: 'Readings', practice: 'Practice', flashcards: 'Flashcards', formulas: 'Formulas', exam: 'Exam prep', calendar: 'Calendar', grades: 'Grades', playground: 'Python', mistakes: 'Mistakes', planner: 'Planner', course: 'Syllabus' };
-  const SIDE_X = [-44, -14, 14, 44, 14, -14];   // the path's gentle zig-zag; each lesson's name sits on the roomier side of its button
-  const nodesOf = C => (C && C.kind !== 'writing' && App.pathNodes ? safe(() => App.pathNodes(C)) : null) || [];
-  const whenTxt = n => n === 0 ? 'Today' : n === 1 ? 'Tomorrow' : `In ${n} days`;
-  const bar = (pct, cls = '', label = '') => `<span class="ah-bar${cls ? ' ' + cls : ''}" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${pct}"${label ? ` aria-label="${esc(label)}"` : ''}><i style="width:${pct}%"></i></span>`;
-
-  function todayHtml() {
-    const ids = myIds(); const t = App.todayISO();
-    const due = ids.map(x => ({ x, n: safe(() => { const d = App.dueCards(x); return d.count + (d.estimated || 0); }) || 0 })).filter(o => o.n); const dueN = due.reduce((s, o) => s + o.n, 0);
-    const mist = ids.map(x => ({ x, n: (safe(() => App.mistakesDue(x)) || []).length })).filter(o => o.n); const mistN = mist.reduce((s, o) => s + o.n, 0);
-    const dls = ids.flatMap(x => (safe(() => App.upcomingDeadlinesOf(Courses[x], 8)) || []).map(d => Object.assign({ c: x, n: App.daysBetween(t, d.date) }, d))).filter(d => d.n >= 0 && d.n <= 7).sort((a, b) => a.date.localeCompare(b.date));
-    const xp = App.xpToday ? App.xpToday() : 0, goal = App.dailyGoal ? App.dailyGoal() : 30; const pct = Math.min(100, Math.round(100 * xp / goal));
-    const row = (href, ic, tone, title, sub, end) => `<a class="ah-item ${tone}" href="${href}"><span class="ah-ic" aria-hidden="true">${icon(ic, 19)}</span><span class="ah-item-t"><b>${title}</b>${sub ? `<small>${sub}</small>` : ''}</span>${end ? `<span class="ah-end">${end}</span>` : icon('right', 16)}</a>`;
-    const rows = [];
-    if (dueN) rows.push(row('#/today?review=1', 'cards', 'blue', `${dueN} flashcard${dueN === 1 ? '' : 's'} to review`, esc(due.map(o => `${Courses[o.x].short || Courses[o.x].code} ${o.n}`).join(' · ')), ''));
-    if (mistN) rows.push(row(`#/${mist[0].x}/mistakes`, 'undo', 'coral', `Retry ${mistN} missed question${mistN === 1 ? '' : 's'}`, 'Back with their explanations', ''));
-    const shown = dls.slice(0, Math.max(1, 3 - rows.length));
-    shown.forEach(d => rows.push(row(`#/${d.c}/calendar`, d.type === 'exam' ? 'flag' : 'clock', d.type === 'exam' ? 'coral' : 'gold', esc(d.title), `${esc(Courses[d.c].short || Courses[d.c].code)}${d.n > 1 ? ' · ' + esc(App.fmtDate(d.date)) : ''}${d.time ? ' · ' + esc(d.time) : ''}`, whenTxt(d.n))));
-    const more = dls.length > shown.length ? `<a class="ah-more-row" href="#/today">${dls.length - shown.length} more due this week ${icon('right', 14)}</a>` : '';
-    return `<section class="ah-today" aria-labelledby="ah-today-h"><div class="ah-sec-h"><h2 id="ah-today-h">Today, all classes</h2><a class="ah-link" href="#/today">Full plan ${icon('right', 14)}</a></div>
-      <div class="ah-goal"><span>${icon('zap', 16)} <b>${xp}</b> of ${goal} XP</span>${bar(pct, 'gold', 'Daily goal')}</div>
-      ${rows.length ? `<div class="ah-list">${rows.join('')}</div>${more}` : `<p class="ah-quiet">Nothing due this week. One lesson below keeps your streak going.</p>`}</section>`;
-  }
-
-  function classRow(mine, id) {
-    return `<div class="ah-sec-h"><h2>Your classes</h2></div><div class="ah-row" role="list" aria-label="Your classes">${mine.map(x => { const K = Courses[x]; const ex = examOf(K); const d = daysTo(ex); const ns = nodesOf(K); const done = ns.filter(n => n.state === 'done').length;
-      if (locked(x)) return `<button class="ah-card locked${x === id ? ' on' : ''}" role="listitem" data-cid="${x}" style="${ccStyle(x)}" aria-pressed="${x === id}"><span class="ah-art" aria-hidden="true">${icon('lock', 22)}</span><b class="ah-code">${esc(K.short || K.code)}</b><span class="ah-exam">Locked</span></button>`;
-      return `<button class="ah-card${x === id ? ' on' : ''}" role="listitem" data-cid="${x}" style="${ccStyle(x)}" aria-pressed="${x === id}"><span class="ah-art" aria-hidden="true">${App.classSprite ? App.classSprite(x, 3) : ''}</span><b class="ah-code">${esc(K.short || K.code)}</b><span class="ah-exam">${ex && d !== null && d >= 0 ? `${esc(ex.name)} ${d === 0 ? 'today' : d === 1 ? 'tomorrow' : `in ${d} days`}` : local.has(x) ? 'Your class' : 'No exam ahead'}</span>${ns.length ? `<span class="ah-cbar" aria-label="${done} of ${ns.length} topics mastered"><i style="width:${Math.round(100 * done / ns.length)}%"></i></span>` : ''}</button>`; }).join('')}<button class="ah-card ah-add" data-ab-add="1" aria-label="Add a class">${icon('plus', 26)}<span class="ah-exam">Add a class</span></button></div>`;
-  }
-
-  function heroHtml(C) {
-    const id = C.id; const writing = C.kind === 'writing';
-    const ss = safe(() => App.semesterStateOf(C)); const cur = safe(() => App.currentSectionOf(C));
-    const ex = examOf(C); const es = ex ? safe(() => App.examStatus(ex)) : null; const rd = ex && !writing ? safe(() => App.readiness(id)) : null;
-    const ns = nodesOf(C); const done = ns.filter(n => n.state === 'done').length; const next = ns.find(n => n.state === 'current') || ns.find(n => n.state === 'open');
-    const rp = writing && App.readingProgress ? safe(() => App.readingProgress(C)) : null;
-    const go = writing ? (rp && rp.next ? [`#/${id}/reading/${rp.next.id}`, rp.started ? 'Keep listening' : 'Next reading', rp.next.title] : [`#/${id}/readings`, 'Readings', 'Browse the readings'])
-      : next ? [`#/${id}/lesson?topics=${encodeURIComponent(next.t)}`, done || next.n ? 'Continue · 5-minute lesson' : 'Start here · 5-minute lesson', next.label]
-      : cur ? [`#/${id}/notes/${cur.id}`, 'This week in class', cur.title] : [`#/${id}/dashboard`, 'Open the class', C.name];
-    const when = ss ? (ss.phase === 'before' ? `Starts ${App.fmtDate(C.SEMESTER.start, true)}` : ss.phase === 'after' ? 'Semester over' : ss.phase === 'finals' ? 'Finals week' : `Week ${ss.week}${ss.weeks ? ' of ' + ss.weeks : ''}`) : '';
-    const now = cur && ss && ss.phase !== 'after' ? `${ss.phase === 'before' ? 'first up' : 'now covering'} ${cur.label} ${cur.title}` : '';
-    const exHtml = ex && es ? `<a class="ah-ex" href="#/${id}/${writing ? 'course' : 'exam/' + encodeURIComponent(ex.id)}">
-        <span class="ah-days">${es.n > 0 ? `<b>${es.n}</b> <small>${es.n === 1 ? 'day' : 'days'}</small>` : `<b class="sm">${esc(es.big)}</b>`}</span>
-        <span class="ah-ex-t"><b>${esc(ex.name)} · ${esc(ex.dateLabel || App.fmtDate(ex.date))}</b><small>${[ex.covers ? `${writing ? 'Turn in' : 'Covers'} ${ex.covers}` : '', ex.weight ? `${ex.weight}% of the grade` : ''].filter(Boolean).map(esc).join(' · ')}</small>
-        ${rd && rd.ok ? `<span class="ah-ready">${bar(rd.score, 'pine', 'Ready for ' + ex.name)}<em>${rd.score}% ready · ${esc(rd.label)}</em></span>` : ''}</span>${icon('right', 18)}</a>`
-      : `<p class="ah-quiet">${(C.EXAMS || []).length ? 'No exams left this semester.' : 'No exams in this class.'}</p>`;
-    return `<section class="ah-hero" aria-labelledby="ah-hero-h">
-      <div class="ah-hero-h"><div><h2 id="ah-hero-h">${esc(C.name)}</h2>${when || now ? `<p>${esc([when, now].filter(Boolean).join(' · '))}</p>` : ''}</div><a class="ah-link" href="#/${id}/dashboard">Class page ${icon('right', 14)}</a></div>
-      ${exHtml}
-      <a class="ah-go" href="${go[0]}"><span class="ah-go-ic" aria-hidden="true">${icon('play', 22)}</span><span class="ah-go-t"><small>${esc(go[1])}</small><b>${esc(go[2])}</b></span></a>
-      ${ns.length ? `<p class="ah-mast">${bar(Math.round(100 * done / ns.length), 'pine', 'Topics mastered')}<span>${done} of ${ns.length} topics mastered</span></p>` : ''}</section>`;
-  }
-
-  const lockHero = C => `<section class="ah-hero ah-locked" aria-labelledby="ah-hero-h"><div class="ah-hero-h"><div><h2 id="ah-hero-h">${esc(C.name)}</h2><p>${icon('lock', 14)} Locked because Mathub Create is off. The class and your progress in it are still saved on this ${DEVICE}.</p></div></div><div class="lock-acts"><button type="button" class="btn primary lg" data-lock="buy">Subscribe to open it</button><button type="button" class="btn" data-lock="restore">Restore purchases</button></div></section>`;
-  function toolsHtml(C) {
-    const id = C.id; const all = C.NAV && App.groupNav ? App.groupNav(C.NAV).flatMap(g => g.items) : [];
-    const pick = TOOL_ORDER.map(v => all.find(x => x[0] === v)).filter(Boolean).slice(0, 7);
-    if (!pick.length) return '';
-    return `<section class="ah-tools" aria-labelledby="ah-tools-h"><div class="ah-sec-h"><h2 id="ah-tools-h">Study tools</h2></div><div class="ah-tgrid">${pick.map(([v, l, ic]) => `<a class="ah-tool" href="#/${id}/${v}"><span class="ah-tool-ic" aria-hidden="true">${icon(ic || 'book', 22)}</span><span>${esc(TOOL_NAME[v] || l)}</span></a>`).join('')}<button class="ah-tool" data-ab-tools="1"><span class="ah-tool-ic" aria-hidden="true">${icon('grid', 22)}</span><span>All tools</span></button></div></section>`;
-  }
-
-  function pathHtml(C) {
-    const id = C.id; const nodes = nodesOf(C);
-    const units = (C.UNITS || []).map(u => ({ u, ns: nodes.filter(n => n.unit && n.unit.n === u.n) }));
-    // classes without practice topics get a path of their sections (each opens its notes)
-    const cur = safe(() => App.currentSectionOf(C));
-    const secPath = !nodes.length ? (C.UNITS || []).map(u => ({ u, ns: (C.SECTIONS || []).filter(s => s.unit === u.n).map(s => ({ sec: s, label: s.title || s.label, state: cur && cur.id === s.id ? 'current' : 'open', href: `#/${id}/notes/${s.id}` })) })) : null;
-    const list = (secPath || units).filter(x => x.ns.length);
-    if (!list.length) return '';
-    const today = App.todayISO(); let k = 0; const all = list.flatMap(x => x.ns); const done = all.filter(n => n.state === 'done').length;
-    const html = list.map(({ u, ns }) => {
-      const ex = (C.EXAMS || []).find(e => e.id === u.exam); const d = ex ? daysTo(ex) : null; const udone = ns.filter(n => n.state === 'done').length; const firstSec = (ns[0] && ns[0].sec && ns[0].sec.id) || '';
-      const items = ns.map(n => { const x = SIDE_X[k++ % SIDE_X.length]; const side = x <= 0 ? 'r' : 'l'; const st = n.state; const sec = n.sec || {};
-        const href = n.href || `#/${id}/lesson?topics=${encodeURIComponent(n.t)}`; const prac = n.t ? `#/${id}/practice?topics=${encodeURIComponent(n.t)}` : ''; const notes = `#/${id}/notes/${sec.id}`;
-        const sub = secPath ? (st === 'current' ? 'This week in class' : 'Notes') : st === 'done' ? `Mastered · ${n.crowns} of 5 crowns` : st === 'current' ? (n.n ? `Up next · ${n.n} answered` : 'Up next') : st === 'soon' ? (n.n ? `Coming up in class · ${n.n} answered` : 'Coming up in class') : n.n ? `${n.n} answered · ${n.crowns} of 5 crowns` : 'Not started';
-        return `<li class="ap-li ${st}" style="--x:${x}px" data-side="${side}">${st === 'current' ? `<span class="ap-start" aria-hidden="true">${secPath ? 'Read' : 'Start'}</span><span class="ap-bo" aria-hidden="true">${App.bobcatSvg ? App.bobcatSvg(52) : ''}</span>` : ''}<button class="ap-row" data-node aria-expanded="false"><span class="ap-node" aria-hidden="true">${icon(NODE_IC[st] || 'play', 28)}</span><span class="ap-label"><b>${esc(n.label)}</b><small>${sec.label ? esc(sec.label) + ' · ' : ''}${sub}</small></span></button>
-          <div class="ap-pop" hidden><b>${esc(n.label)}</b><span>${esc([sec.label, n.t ? sec.title : ''].filter(Boolean).join(' '))}${n.n ? ` · ${n.n} answered` : ''}</span><div class="ap-pop-acts"><a class="btn primary" href="${href}">${icon('play', 15)} ${n.t ? 'Start lesson' : 'Read the notes'}</a>${prac ? `<a class="btn" href="${prac}">Practice</a><a class="btn ghost" href="${notes}">Notes</a>` : ''}</div></div></li>`; }).join('');
-      const exNode = ex ? `<li class="ap-li exam${ex.date < today ? ' past' : ''}"><a class="ap-exam" href="#/${id}/exam/${encodeURIComponent(ex.id)}" aria-label="${esc(ex.name)}, ${ex.date < today ? 'done' : inDays(d)}">${icon(ex.date < today ? 'check' : 'flag', 30)}</a><span class="ap-exam-label"><b>${esc(ex.name)}</b>${esc(ex.dateLabel || App.fmtDate(ex.date, true))} · ${ex.date < today ? 'done' : inDays(d)}</span></li>` : '';
-      return `<section class="ap-unit"><header class="ap-banner"><div class="ap-banner-txt"><h3>${esc(u.title)}</h3><p>Unit ${u.n} · ${udone} of ${ns.length} ${secPath ? 'topics' : 'mastered'}${ex ? ` · ${esc(ex.name)} ${ex.date < today ? 'done' : inDays(d)}` : ''}</p>${secPath ? '' : `<span class="ap-ubar" aria-hidden="true"><i style="width:${Math.round(100 * udone / ns.length)}%"></i></span>`}</div><a class="ap-guide" href="#/${id}/notes${firstSec ? '/' + firstSec : ''}">${icon('book', 18)}<span>Notes</span></a></header><ol class="ap-nodes">${items}${exNode}</ol></section>`;
-    }).join('');
-    return `<section class="ah-pathsec" aria-labelledby="ah-path-h"><div class="ah-sec-h"><h2 id="ah-path-h">Your path</h2>${secPath ? '' : `<span class="ah-count">${done} of ${all.length} mastered</span>`}</div><p class="ah-hint">Every topic in the order the class covers it. Tap one to ${secPath ? 'read its notes' : 'start a lesson, practise it or read its notes'}.</p>${html}</section>`;
-  }
+     you are, and the next lesson; exam week when an exam is 7 days away or closer; then today across all
+     your classes; then the class's tools and its path with every lesson named. The pieces are shared with
+     the website's start page (assets/home.js). */
+  const H = App.home; const safe = f => { try { return f(); } catch (e) { return null; } };
+  const { nodesOf, todayHtml, classRow, heroHtml, lockHero, toolsHtml, pathHtml, examWeekHtml } = H;
 
   App.homeView = {
     title: 'Learn',
@@ -311,7 +224,7 @@
         const box = $('#ah-main'); if (!box || !root.isConnected) return;
         box.setAttribute('style', ccStyle(id)); box.setAttribute('aria-busy', 'false');
         if (locked(id)) { box.innerHTML = lockHero(C) + todayHtml(); wireLock(box, C); return; }
-        box.innerHTML = heroHtml(C) + todayHtml() + toolsHtml(C) + pathHtml(C);
+        const xw = examWeekHtml(C); box.innerHTML = heroHtml(C, { noExam: !!xw }) + xw + todayHtml() + toolsHtml(C) + pathHtml(C);
         // the class's cards can now show its progress, and the plan its flashcards
         const card = $(`.ah-card[data-cid="${id}"]`, root); if (card && !$('.ah-cbar', card)) { const ns = nodesOf(C); if (ns.length) { const dn = ns.filter(n => n.state === 'done').length; card.insertAdjacentHTML('beforeend', `<span class="ah-cbar" aria-label="${dn} of ${ns.length} topics mastered"><i style="width:${Math.round(100 * dn / ns.length)}%"></i></span>`); } }
         if (App.typeset) safe(() => App.typeset(box));
