@@ -46,16 +46,20 @@ const pack = (id, code, extra = {}) => Object.assign({ format: 'mathub-class-pac
   r = await call('alice', 'myclass_unshare', { id: 'my1234' }); r = await call('anon', 'shared_class&code=' + code); ok('after she stops sharing, the link stops working', r.status === 404, r);
   r = await call('anon', 'shared_class&code=abc'); ok('a malformed code is refused with a reason', r.status === 400 && /8 letters/.test(r.error), r);
 
-  // Mathub Create from RevenueCat
-  r = await call('anon', 'create_status'); ok('signed out: not active, and says whether web purchase is set up', r.ok && r.active === false && r.signed_in === false && r.configured === true, r);
-  r = await call('alice', 'create_status&refresh=1'); ok('alice without a subscription: not active, with her own checkout link', r.ok && r.active === false && /^https:\/\/pay\.rev\.cat\/sbx_test_link\/mh_\d+$/.test(r.buy_url) && r.customer === r.buy_url.split('/').pop(), r);
+  // the Pro and Max plans from RevenueCat
+  r = await call('anon', 'create_status'); ok('signed out: no plan, the web prices, and whether web purchase is set up', r.ok && r.active === false && r.plan === '' && r.signed_in === false && r.configured === true && r.prices.pro === '$15' && r.prices.max === '$50', r);
+  r = await call('alice', 'create_status&refresh=1'); ok('alice without a plan: a checkout link for each plan with her customer id', r.ok && r.active === false && r.plan === '' && /^https:\/\/pay\.rev\.cat\/sbx_pro_link\/mh_\d+$/.test(r.buy.pro) && /^https:\/\/pay\.rev\.cat\/sbx_max_link\/mh_\d+$/.test(r.buy.max) && r.customer === r.buy.pro.split('/').pop(), r);
   const aliceId = r.customer;
-  fs.writeFileSync(STATE, JSON.stringify({ [aliceId]: { expires: new Date(Date.now() + 30 * 864e5).toISOString(), store: 'rc_billing' } }));
+  fs.writeFileSync(STATE, JSON.stringify({ [aliceId]: { expires: new Date(Date.now() + 30 * 864e5).toISOString(), store: 'rc_billing', plan: 'pro' } }));
   r = await call('alice', 'create_status'); ok('the answer is kept for a while (no refresh asked)', r.active === false, r);
-  r = await call('alice', 'create_status&refresh=1'); ok('after paying on the web, a refresh shows it active until the period ends, with a manage link', r.ok && r.active === true && /T/.test(r.until) && r.store === 'rc_billing' && r.manage_url === 'https://billing.example/manage', r);
-  r = await call('bob', 'create_status&refresh=1'); ok('bob is still not subscribed', r.ok && r.active === false, r);
-  fs.writeFileSync(STATE, JSON.stringify({ [aliceId]: { expires: new Date(Date.now() - 864e5).toISOString() } }));
-  r = await call('alice', 'create_status&refresh=1'); ok('when it has expired, it is not active', r.ok && r.active === false, r);
+  r = await call('alice', 'create_status&refresh=1'); ok('after buying Pro on the web, a refresh shows Pro until the period ends, with a manage link', r.ok && r.active === true && r.plan === 'pro' && /T/.test(r.until) && r.store === 'rc_billing' && r.manage_url === 'https://billing.example/manage' && r.renews === true, r);
+  fs.writeFileSync(STATE, JSON.stringify({ [aliceId]: { expires: new Date(Date.now() + 30 * 864e5).toISOString(), store: 'app_store', plan: 'max', cancelled: new Date().toISOString() } }));
+  r = await call('alice', 'create_status&refresh=1'); ok('after moving to Max (bought in the app, then cancelled): Max, from the App Store, not renewing', r.ok && r.plan === 'max' && r.store === 'app_store' && r.renews === false, r);
+  r = await call('bob', 'create_status&refresh=1'); ok('bob has no plan', r.ok && r.active === false && r.plan === '', r);
+  fs.writeFileSync(STATE, JSON.stringify({ [aliceId]: { expires: new Date(Date.now() - 864e5).toISOString(), plan: 'max' } }));
+  r = await call('alice', 'create_status&refresh=1'); ok('when it has expired, there is no plan', r.ok && r.active === false && r.plan === '', r);
+  r = await call('mod', 'login', { email: 'mod.user@montana.edu', password: 'password123' });
+  r = await call('mod', 'create_status'); ok('an account in plan_grants has Max without paying (for testers)', r.ok && r.active === true && r.plan === 'max' && r.granted === true, r);
 
   // export and account deletion
   r = await call('alice', 'data_export'); ok('her classes are in Download my data', r.tables && Array.isArray(r.tables.my_classes) && r.tables.my_classes.length === 2, Object.keys(r.tables || {}));

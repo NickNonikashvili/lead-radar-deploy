@@ -12,7 +12,7 @@
   const BUILD = global.MATHUB_BUILD || 'dev';
   const Courses = global.Courses || (global.Courses = {});
   const COURSE_ORDER = ['calc', 'physics', 'precalc', 'writ', 'csci', 'biob', 'kin', 'psyx'];
-  const GLOBAL_VIEWS = ['contact', 'forum', 'policy', 'admin', 'meet', 'badges', 'challenge', 'mock', 'people', 'settings', 'leagues', 'gpa', 'today', 'whatsnew', 'resources', 'guides', 'focus', 'recap', 'tools', 'mistakes', 'join', 'sheet', 'request', 'teach', 'class', 'syllabus', 'notfound', 'create', 'c'];   // pages that work without a course, e.g. #/contact
+  const GLOBAL_VIEWS = ['contact', 'forum', 'policy', 'admin', 'meet', 'badges', 'challenge', 'mock', 'people', 'settings', 'leagues', 'gpa', 'today', 'whatsnew', 'resources', 'guides', 'focus', 'recap', 'tools', 'mistakes', 'join', 'sheet', 'request', 'teach', 'class', 'syllabus', 'notfound', 'create', 'c', 'tutor'];   // pages that work without a course, e.g. #/contact
   const SITE = 'Mathub';
   let D = null, QZ = null;        // current course data and quiz module
   const courseHooks = [];
@@ -37,7 +37,7 @@
 
   /* ---------- icons ---------- */
   const ICONS = {
-    plus: '<path d="M12 5v14M5 12h14"/>', copy: '<rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/>', send: '<path d="M21 3L10 14"/><path d="M21 3l-7 18-4-7-7-4z"/>', megaphone: '<path d="M3 11v2a1 1 0 0 0 1 1h3l6 4V6L7 10H4a1 1 0 0 0-1 1z"/><path d="M17 8a5 5 0 0 1 0 8"/>',
+    plus: '<path d="M12 5v14M5 12h14"/>', copy: '<rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/>', send: '<path d="M21 3L10 14"/><path d="M21 3l-7 18-4-7-7-4z"/>', image: '<path d="M4 8a2 2 0 0 1 2-2h2l1.5-2h5L16 6h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z"/><circle cx="12" cy="12.5" r="3.5"/>', megaphone: '<path d="M3 11v2a1 1 0 0 0 1 1h3l6 4V6L7 10H4a1 1 0 0 0-1 1z"/><path d="M17 8a5 5 0 0 1 0 8"/>',
     d20: '<path d="M12 2l8.7 5v10L12 22l-8.7-5V7z"/><path d="M12 6.5l5.2 9H6.8z"/><path d="M12 2v4.5M12 6.5L3.3 7M12 6.5L20.7 7M17.2 15.5L20.7 7M17.2 15.5L20.7 17M17.2 15.5L12 22M6.8 15.5L12 22M6.8 15.5L3.3 17M6.8 15.5L3.3 7"/>', wand: '<path d="M4 20l10-10"/><path d="M17 3l1 2.5 2.5 1-2.5 1-1 2.5-1-2.5-2.5-1 2.5-1z"/><path d="M20 13v2M19 14h2M8 4v2M7 5h2"/>', compass: '<circle cx="12" cy="12" r="9"/><path d="M15.5 8.5l-2 5-5 2 2-5z"/>', orb: '<circle cx="12" cy="10" r="6.5"/><path d="M7 20h10M8.5 16.5L7 20M15.5 16.5L17 20"/><path d="M9.5 8.5a3 3 0 0 1 2.5-2"/>', sword: '<path d="M20 4l-10.5 10.5M20 4h-4.2M20 4v4.2M6.5 12.5l5 5M8 16l-3.5 3.5"/>', potion: '<path d="M9.5 3h5M10.5 3v5.2L6 15.5A4.5 4.5 0 0 0 10 22h4a4.5 4.5 0 0 0 4-6.5L13.5 8.2V3"/><path d="M7.5 14h9"/>', scroll: '<path d="M8 4h10a2 2 0 0 1 2 2v1h-4"/><path d="M16 7v11a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-1h10"/><path d="M8 4a2 2 0 0 0-2 2v11M9.5 9h4M9.5 12.5h4"/>', quill: '<path d="M20 3C12 4 7 9 5.5 17.5L4 21"/><path d="M20 3c-1 6-5 10.5-12.5 13M9 12h5"/>', crown: '<path d="M3 8l4.5 4L12 5l4.5 7L21 8l-2 11H5z"/>',
     home: '<path d="M2.5 20l6.5-10.5 3.5 5 2.5-3.5 6.5 9z"/><path d="M9 9.5V3.5l4.5 1.8L9 7"/>', calendar: '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>',
     book: '<path d="M4 4h6a3 3 0 0 1 3 3v13a2 2 0 0 0-2-2H4z"/><path d="M20 4h-6a3 3 0 0 0-3 3v13a2 2 0 0 1 2-2h7z"/>', sigma: '<path d="M18 5H7l6 7-6 7h11"/>',
@@ -340,7 +340,7 @@
     app.classList.remove('landing');
     if (!Courses[course].loaded) { App.current = null; renderLoading(root, course); App.loadCourse(course).then(() => { if (route().course === course && $('#view') === root) render(); }).catch(err => { if ($('#view') === root) renderLoadError(root, course, err); }); afterRender(root); return; }
     setCourse(course);
-    if (App.courseGate && App.courseGate(course, root, view)) { App.current = null; afterRender(root); return; }   // a class made from a syllabus is locked while Mathub Create is off (assets/create.js)
+    if (App.courseGate && App.courseGate(course, root, view)) { App.current = null; afterRender(root); return; }   // a class made from a syllabus is locked while the student has no plan (assets/create.js)
     const V = App.views[view]; App.current = V;
     $$('.nav-item').forEach(b => b.classList.toggle('active', b.dataset.view === view));
     const actNav = $('.nav-item.active'); if (actNav) { const g = actNav.closest('.nav-group'); if (g && g.classList.contains('closed')) { g.classList.remove('closed'); const tg = g.previousElementSibling; if (tg) { tg.classList.add('open'); tg.setAttribute('aria-expanded', 'true'); } } }

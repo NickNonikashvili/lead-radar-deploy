@@ -55,14 +55,30 @@ return [
   // Optional. If set, GET api/index.php?r=stats with header X-Admin-Key: <this value> returns sign-up counts.
   'admin_key'       => '',
 
-  // Mathub Create, the subscription for making classes (see docs/app-subscriptions.md). For the website:
-  //   revenuecat_secret  RevenueCat secret API key (sk_...). Put it in config.local.php, never in this file.
-  //   create_web_link    the production Web Purchase Link from RevenueCat (https://pay.rev.cat/...), without a user id
-  //   create_web_price   the price to show on the website, e.g. '$4.99 a month' is shown as '$4.99'
+  // The plans (see docs/app-subscriptions.md): Mathub Pro (making classes) and Mathub Max (Pro, plus Bo the AI
+  // tutor and classes Bo writes from a syllabus). Secrets go in config.local.php, never in this file:
+  //   revenuecat_secret  RevenueCat secret API key (sk_...)
+  //   pro_web_link, max_web_link  the production Web Purchase Links from RevenueCat (https://pay.rev.cat/...), without a user id
+  //   pro_web_price, max_web_price  the prices to show on the website
+  //   plan_grants        accounts that get a plan without paying, for testing: ['someone@montana.edu' => 'max']
   'revenuecat_secret' => '',
-  'create_web_link'   => '',
-  'create_web_price'  => '$4.99',
-  'create_entitlement' => 'create',
+  'pro_web_link'      => '',
+  'max_web_link'      => '',
+  'pro_web_price'     => '$15',
+  'max_web_price'     => '$50',
+  'pro_entitlement'   => 'pro',
+  'max_entitlement'   => 'max',
+  'plan_grants'       => [],
+
+  // Bo, the AI tutor, and classes Bo writes (api/ai.php), for Mathub Max. Put the Anthropic API key in
+  // config.local.php as 'anthropic_key'. The defaults use the smallest model that does the job well; every
+  // request is kept small by the server (class summaries, a short progress snapshot, the last few turns).
+  'anthropic_key'     => '',
+  'ai_model_tutor'    => 'claude-haiku-5-5',
+  'ai_model_class'    => 'claude-haiku-5-5',
+  'ai_tutor_monthly'  => 1500,   // questions to Bo per account per month
+  'ai_tutor_daily'    => 300,
+  'ai_class_monthly'  => 15,     // classes Bo writes per account per month
 
   // Storage. Keep the database inside api/data (protected by .htaccess) or move it above public_html.
   'db_path'         => __DIR__ . '/data/mathub.sqlite',

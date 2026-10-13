@@ -1,0 +1,108 @@
+/* Bo, the AI tutor, and classes Bo writes (api/ai.php), on the account server: only Mathub Max (or a granted
+   account) can use them; what the server sends to the AI is small (a class summary marked for caching, a short
+   progress snapshot, the last few turns, Bo's notes) and goes to the small default model; the chat and Bo's
+   notes are kept with the account; a class is written as an outline, then one unit at a time from the outline.
+   The AI and RevenueCat are stand-ins on the Pyodide mirror server (tests/pyodide/router.php); config.local.php
+   needs anthropic_key 'sk-ant-test', anthropic_api, and plan_grants for mod.user. Plain HTTP, no browser pages. */
+const T = require('./lib'); const fs = require('fs'); const path = require('path');
+const BASE = T.base.replace(/index\.html.*$/, '') + 'api/index.php?r=';
+const STATE = path.join(__dirname, 'fixtures', 'rc-state.json'); const LAST = path.join(__dirname, 'fixtures', 'ai-last.json');
+const jar = {};
+async function call(who, route, body, method) {
+  const headers = { 'X-Requested-With': 'MatHub', 'Content-Type': 'application/json' }; if (jar[who]) headers.Cookie = jar[who];
+  const r = await fetch(BASE + route, { method: method || (body ? 'POST' : 'GET'), headers, body: body ? JSON.stringify(body) : undefined });
+  const sc = r.headers.get('set-cookie'); if (sc) { const m = /mathub_session=([^;]*)/.exec(sc); if (m) jar[who] = 'mathub_session=' + m[1]; }
+  const t = await r.text(); let j; try { j = JSON.parse(t); } catch (e) { j = { raw: t.slice(0, 200) }; } j.status = r.status; return j;
+}
+let check; const ok = (label, cond, extra) => check(label, !!cond, cond ? undefined : JSON.stringify(extra === undefined ? null : extra).slice(0, 400));
+const last = () => JSON.parse(fs.readFileSync(LAST, 'utf8'));
+const PNG = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
+const snapshot = { name: 'Alice', streak: 4, xpToday: 10, goal: 30, page: 'Calc I notes 1.7', readiness: { exam: 'Exam 2', date: '2026-10-16', days: 3, score: 41, label: 'Getting there', checklist: '2/6' }, weak: [{ t: 'Limits by algebra', acc: 0.4, n: 5 }, { t: 'Chain rule', acc: 0.5, n: 4 }], strong: ['Velocity'], missed: [{ t: 'Limits', q: '<p>Find the limit of (x^2-1)/(x-1) as x → 1</p>', a: '0', c: '2' }], due: 12, mistakes: 3, deadlines: [{ d: '2026-10-14', t: 'WebWork 2.3' }], others: [{ c: 'PHSX 220', ex: 'Exam 2', days: 9 }], junk: 'x'.repeat(50000) };
+(async () => {
+  ({ check } = await T.start());
+  fs.writeFileSync(STATE, '{}');
+  for (const [who, email] of [['alice', 'alice.a@montana.edu'], ['bob', 'bob.bmu6j92pq@montana.edu'], ['mod', 'mod.user@montana.edu']]) { const r = await call(who, 'login', { email, password: 'password123' }); ok(`${who} signs in`, r.ok, r); }
+  await call('alice', 'ai_forget', { what: 'all' }); await call('mod', 'ai_forget', { what: 'all' }); await call('alice', 'create_status&refresh=1');
+  for (const c of ((await call('alice', 'myclasses')).classes || [])) await call('alice', 'myclass_delete', { id: c.id });
+
+  // who can use Bo
+  let r = await call('anon', 'ai_status'); ok('signed out: Bo is switched on, no plan', r.ok && r.enabled === true && r.signed_in === false && r.max === false, r);
+  r = await call('anon', 'ai_tutor', { class: 'calc', q: 'hi' }); ok('signed out: asking Bo needs an account', r.status === 401, r);
+  r = await call('alice', 'ai_tutor', { class: 'calc', q: 'hi' }); ok('without Max, asking Bo is refused and names the plan', r.status === 402 && r.plan === 'max', r);
+  const aliceId = (await call('alice', 'create_status')).customer;
+  fs.writeFileSync(STATE, JSON.stringify({ [aliceId]: { expires: new Date(Date.now() + 30 * 864e5).toISOString(), plan: 'pro' } }));
+  await call('alice', 'create_status&refresh=1');
+  r = await call('alice', 'ai_tutor', { class: 'calc', q: 'hi' }); ok('Pro is not enough for Bo', r.status === 402, r);
+  fs.writeFileSync(STATE, JSON.stringify({ [aliceId]: { expires: new Date(Date.now() + 30 * 864e5).toISOString(), plan: 'max' } }));
+  await call('alice', 'create_status&refresh=1');
+  r = await call('alice', 'ai_status'); ok('with Max: plan max, this month\'s usage and limits', r.ok && r.max === true && r.usage.tutor === 0 && r.usage.tutor_limit === 1500 && r.usage.class_limit === 15, r);
+
+  // a question, and what the server sends to the AI
+  r = await call('alice', 'ai_tutor', { class: 'calc', q: 'What should I study tonight?', snapshot, today: '2026-10-13' });
+  ok('Bo answers with her weakest topic and her class', r.ok && /weakest topic is Limits by algebra/.test(r.reply) && /I know your class/.test(r.reply), r);
+  let q = last(); const sysText = q.system.map(b => b.text).join('\n');
+  ok('the small default model, and a short answer limit', q.model === 'claude-haiku-5-5' && q.max_tokens <= 800, { model: q.model, max: q.max_tokens });
+  ok('Bo\'s instructions and the class summary come first and are marked for caching', q.system.length === 3 && q.system[1].cache_control && q.system[1].cache_control.type === 'ephemeral' && /^CLASS: M171 Calculus I/.test(q.system[1].text) && !q.system[2].cache_control, q.system.map(b => [b.text.slice(0, 30), !!b.cache_control]));
+  ok('the class summary is compact: every unit, one line per topic, exams and grading, under 9,000 characters', q.system[1].text.length < 9000 && /EXAMS: .*Exam 2 2026-10-16/.test(q.system[1].text) && /GRADING: /.test(q.system[1].text) && /\n- §?1\.1 How do we measure velocity\?/.test(q.system[1].text), q.system[1].text.length);
+  ok('today\'s part: the date, the next two weeks, and her progress cut to a few lines (HTML stripped, junk dropped)', /TODAY: 2026-10-13/.test(sysText) && /NEXT TWO WEEKS: /.test(sysText) && /READINESS: Exam 2 on 2026-10-16 \(3 days\): 41% Getting there, prep checklist 2\/6/.test(sysText) && /RECENTLY MISSED:\n- \[Limits\] Find the limit/.test(sysText) && !/<p>/.test(sysText) && !/xxxxxxxxxx/.test(sysText) && q.system[2].text.length < 2500, q.system[2].text);
+  ok('the first question goes alone', q.messages.length === 1 && q.messages[0].role === 'user', q.messages.length);
+
+  // more turns: only the last few go to the AI
+  for (let i = 1; i <= 5; i++) await call('alice', 'ai_tutor', { class: 'calc', q: 'Question number ' + i, snapshot });
+  q = last(); ok('later questions carry only the last 6 turns, starting with the student, ending with the new question', q.messages.length === 7 && q.messages[0].role === 'user' && q.messages[6].role === 'user' && /Question number 5/.test(JSON.stringify(q.messages[6])), q.messages.map(m => m.role));
+  r = await call('alice', 'ai_thread&class=calc'); ok('the chat is kept with the account (all 12 turns, newest last)', r.ok && r.turns.length === 12 && r.turns[11].r === 'b' && /Question number 5/.test(r.turns[10].t), r.turns && r.turns.length);
+
+  // Bo remembers, and math survives
+  r = await call('alice', 'ai_tutor', { class: 'calc', q: 'Please remember I like worked examples', snapshot });
+  ok('a [remember: …] line is saved as a note and taken out of the reply', r.ok && r.remembered === 'Likes worked examples first' && !/\[remember/.test(r.reply), r);
+  await call('alice', 'ai_tutor', { class: 'calc', q: 'math please, is x < 3?', snapshot });
+  q = last(); ok('the next question carries Bo\'s notes about her', /WHAT BO REMEMBERS ABOUT THEM:\n- Likes worked examples first/.test(q.system[2].text), q.system[2].text.slice(-200));
+  ok('math in her question is kept (x < 3 is not taken for HTML)', /x < 3\?/.test(JSON.stringify(q.messages[q.messages.length - 1])));
+  r = await call('alice', 'ai_thread&class=calc'); ok('and in Bo\'s answer', /x < 3 here/.test(r.turns[r.turns.length - 1].t) && /\\frac\{\\Delta y\}/.test(r.turns[r.turns.length - 1].t), r.turns[r.turns.length - 1]);
+
+  // a photo of a problem
+  r = await call('alice', 'ai_tutor', { class: 'calc', q: 'Help with this one', image: { type: 'image/png', data: PNG } });
+  q = last(); ok('a photo goes with the question as an image', r.ok && /I see your photo/.test(r.reply) && q.messages[q.messages.length - 1].content[0].type === 'image', r);
+  r = await call('alice', 'ai_tutor', { class: 'calc', q: 'x', image: { type: 'application/zip', data: PNG } }); ok('other file types are refused', r.status === 400, r);
+  r = await call('alice', 'ai_tutor', { class: 'calc', q: 'x', image: { type: 'image/png', data: 'A'.repeat(3600000) } }); ok('a photo over 2.5 MB is refused', r.status === 413, r);
+  r = await call('alice', 'ai_tutor', { class: 'calc', q: '   ' }); ok('an empty question is refused', r.status === 400, r);
+
+  // her own class
+  const mine = { format: 'mathub-class-pack', version: 1, id: 'my7777', code: 'OWN 101', name: 'Her own class', term: 'Fall 2026', COURSE: { code: 'OWN 101', name: 'Her own class', term: 'Fall 2026', instructor: 'Dr. Own' }, EXAMS: [{ id: 'e1', name: 'Midterm', date: '2026-10-30', covers: 'Unit 1' }], UNITS: [{ n: 1, title: 'Basics', sections: ['a'], exam: 'e1' }], SECTIONS: [{ id: 'a', label: '1.1', title: 'Alpha', unit: 1, ideas: ['<b>Alpha</b> is the first idea.'] }] };
+  await call('alice', 'myclass_save', { id: 'my7777', pack: mine });
+  r = await call('alice', 'ai_tutor', { class: 'my7777', q: 'What is on my midterm?' }); q = last();
+  ok('Bo knows a class she made, from the copy saved with her account', r.ok && /^CLASS: OWN 101 Her own class/.test(q.system[1].text) && /U1 Basics \[Midterm\]\n- 1\.1 Alpha: Alpha is the first idea\./.test(q.system[1].text), q.system[1].text);
+  r = await call('bob', 'ai_thread&class=my7777'); ok('nobody else sees her chat', r.ok && r.turns.length === 0, r);
+
+  // forgetting
+  r = await call('alice', 'ai_forget', { what: 'note', i: 0 }); ok('she can delete a note', r.ok && r.notes.length === 0, r);
+  r = await call('alice', 'ai_forget', { what: 'chat', class: 'calc' }); r = await call('alice', 'ai_thread&class=calc'); ok('and clear a chat', r.turns.length === 0, r);
+
+  // Bo writes a class from a syllabus
+  r = await call('bob', 'ai_class', { step: 'outline', syllabus: { text: 'TEST 101 syllabus' } }); ok('writing a class needs Max', r.status === 402, r);
+  r = await call('alice', 'ai_class', { step: 'outline', syllabus: {} }); ok('a syllabus is needed', r.status === 400, r);
+  r = await call('alice', 'ai_class', { step: 'outline', syllabus: { text: 'TEST 101 Testing Bo. Fall 2026. Exam 1 Oct 20. Topics: ratios, percents, rates, growth.' }, size: 'short' });
+  ok('step 1: the syllabus becomes an outline with its units, kept on the server', r.ok && /^[a-f0-9]{24}$/.test(r.build) && r.units.join() === '1,2' && r.outline.SECTIONS.length === 4, r);
+  const build = r.build; q = last();
+  const otext = q.messages[0].content.map(b => b.text || '').join('\n');
+  ok('the outline request carries the syllabus once, with the outline instructions', /THE SYLLABUS:\nTEST 101/.test(otext) && /Read the syllabus/.test(otext) && q.model === 'claude-haiku-5-5', otext.slice(0, 200));
+  r = await call('alice', 'ai_class', { step: 'unit', build, unit: 1, size: 'short' }); q = last();
+  ok('step 2: a unit is written from the outline alone, not the syllabus', r.ok && r.unit === 1 && r.data.SECTIONS.map(s => s.id).join() === 'ratios,percents' && !/THE SYLLABUS/.test(JSON.stringify(q.messages)) && /Write the study material for unit 1 "Numbers"/.test(q.messages[0].content) && q.messages[0].content.length < 3000, r);
+  r = await call('alice', 'ai_class', { step: 'unit', build, unit: 2 }); ok('and the next unit', r.ok && r.data.SECTIONS.map(s => s.id).join() === 'rates,growth' && r.data.QUIZ.questions.length === 2, r);
+  r = await call('alice', 'ai_class', { step: 'unit', build, unit: 9 }); ok('a unit not in the outline is refused', r.status === 400, r);
+  r = await call('alice', 'ai_class', { step: 'unit', build: 'ffffffffffffffffffffffff', unit: 1 }); ok('an unknown build is refused', r.status === 404, r);
+  r = await call('mod', 'ai_class', { step: 'unit', build, unit: 1 }); ok('another account cannot continue her build', r.status === 404, r);
+  r = await call('alice', 'ai_status'); ok('her month: 1 class written by Bo, and the questions she asked', r.usage.classes === 1 && r.usage.tutor === 10, r.usage);
+  r = await call('alice', 'ai_class', { step: 'outline', syllabus: { file: { type: 'application/pdf', data: 'JVBERi0xLjQK' } } }); q = last();
+  ok('a syllabus PDF goes to the AI as a document', r.ok && q.messages[0].content[0].type === 'document' && q.messages[0].content[0].source.media_type === 'application/pdf', q.messages[0].content.map(b => b.type));
+
+  // a granted tester
+  r = await call('mod', 'ai_tutor', { class: 'physics', q: 'hello' }); ok('an account in plan_grants can ask Bo without paying', r.ok && /Bo here/.test(r.reply), r);
+
+  // Download my data, then clean up
+  r = await call('alice', 'data_export'); ok('Bo\'s chats, notes and usage are in Download my data', r.tables && Array.isArray(r.tables.ai_threads) && Array.isArray(r.tables.ai_usage) && Array.isArray(r.tables.ai_notes), Object.keys(r.tables || {}));
+  await call('alice', 'ai_forget', { what: 'all' }); await call('mod', 'ai_forget', { what: 'all' });
+  for (const c of ((await call('alice', 'myclasses')).classes || [])) await call('alice', 'myclass_delete', { id: c.id });
+  try { fs.unlinkSync(STATE); } catch (e) {}
+  await T.finish();
+})().catch(e => { console.error(e); try { require('fs').unlinkSync(STATE); } catch (x) {} process.exit(1); });

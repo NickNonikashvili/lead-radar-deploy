@@ -1,6 +1,6 @@
 <?php
 /* ============================================================
-   Mathub account server — classes students make, sharing them, and Mathub Create
+   Mathub account server — classes students make, sharing them, and the Pro and Max plans
    Routes: myclasses, myclass, myclass_save, myclass_delete, myclass_share, myclass_unshare,
            shared_class (public, by share code), create_status
    - A student's own classes (made from a syllabus or a class file) are kept with their account, so they
@@ -8,9 +8,11 @@
      device and syncs; the website keeps a copy in the browser.
    - Share codes: the owner can turn on a link (mathub.space/#/c/CODE) that lets anyone open the class
      and add a copy; turning it off makes the link stop working at once.
-   - Mathub Create, the subscription for making classes: app purchases (App Store, Google Play) and web
-     purchases (RevenueCat web checkout) belong to the RevenueCat customer "mh_<user id>". The server asks
-     RevenueCat with the secret key in config.local.php and keeps the answer for ten minutes.
+   - The plans: Mathub Pro (making classes) and Mathub Max (Pro, plus Bo the AI tutor and classes Bo writes
+     from a syllabus, api/ai.php). App purchases (App Store, Google Play) and web purchases (RevenueCat web
+     checkout) belong to the RevenueCat customer "mh_<user id>", with the entitlements "pro" and "max" (a Max
+     product unlocks both). The server asks RevenueCat with the secret key in config.local.php and keeps the
+     answer for ten minutes. Accounts in plan_grants (config.local.php) get a plan without paying, for testing.
    Rows are removed with the account (ON DELETE CASCADE); housekeeping clears any left behind.
    ============================================================ */
 
@@ -25,6 +27,7 @@ function mh_myclass_db(): PDO {
     $db->exec('CREATE TABLE IF NOT EXISTS create_status (user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE, active INTEGER NOT NULL DEFAULT 0, expires INTEGER NOT NULL DEFAULT 0, store TEXT NOT NULL DEFAULT "", manage TEXT NOT NULL DEFAULT "", renews INTEGER NOT NULL DEFAULT 1, checked INTEGER NOT NULL)');
     $cols = array_column($db->query('PRAGMA table_info(create_status)')->fetchAll(), 'name');
     if (!in_array('renews', $cols, true)) $db->exec('ALTER TABLE create_status ADD COLUMN renews INTEGER NOT NULL DEFAULT 1');
+    if (!in_array('tier', $cols, true)) $db->exec("ALTER TABLE create_status ADD COLUMN tier TEXT NOT NULL DEFAULT ''");
     $ready = true;
   }
   return $db;
@@ -67,7 +70,7 @@ function mh_rc_subscriber(array $cfg, string $appUserId): ?array {
   $j = json_decode((string)$body, true); return is_array($j) && isset($j['subscriber']) && is_array($j['subscriber']) ? $j['subscriber'] : null;
 }
 
-/** Mathub Create for one account: asks RevenueCat at most every ten minutes, or when $refresh (120 times an hour at most), and remembers the answer. */
+/** The plan of one account, from RevenueCat: asks at most every ten minutes, or when $refresh (120 times an hour at most), and remembers the answer. */
 function mh_create_status(array $u, array $cfg, bool $refresh = false): array {
   $db = mh_myclass_db(); $now = time(); $uid = 'mh_' . $u['id'];
   $st = $db->prepare('SELECT * FROM create_status WHERE user_id = ?'); $st->execute([$u['id']]); $row = $st->fetch() ?: null;
@@ -76,21 +79,37 @@ function mh_create_status(array $u, array $cfg, bool $refresh = false): array {
   if ($secret !== '' && $stale && ($row === null || mh_rate("create_status:{$u['id']}", 120, 3600))) {
     $sub = mh_rc_subscriber($cfg, $uid);
     if ($sub !== null) {
-      $ent = $sub['entitlements'][(string)($cfg['create_entitlement'] ?? 'create')] ?? null; $active = false; $exp = 0; $store = ''; $renews = false;
-      if (is_array($ent)) {
-        $exp = !empty($ent['expires_date']) ? (int)strtotime((string)$ent['expires_date']) : 0;
+      $tier = ''; $exp = 0; $store = ''; $renews = false;
+      foreach (['max' => (string)($cfg['max_entitlement'] ?? 'max'), 'pro' => (string)($cfg['pro_entitlement'] ?? 'pro')] as $name => $key) {
+        $ent = $sub['entitlements'][$key] ?? null; if (!is_array($ent)) continue;
+        $e = !empty($ent['expires_date']) ? (int)strtotime((string)$ent['expires_date']) : 0;
         $grace = !empty($ent['grace_period_expires_date']) ? (int)strtotime((string)$ent['grace_period_expires_date']) : 0;
-        $active = $exp === 0 || max($exp, $grace) > $now; $exp = max($exp, $grace);
+        if (!($e === 0 || max($e, $grace) > $now)) continue;
+        $tier = $name; $exp = $e === 0 ? 0 : max($e, $grace);
         $prod = (string)($ent['product_identifier'] ?? ''); $ps = $sub['subscriptions'][$prod] ?? []; $store = (string)($ps['store'] ?? '');
         $renews = empty($ps['unsubscribe_detected_at']) && empty($ps['billing_issues_detected_at']);
+        break;
       }
-      $db->prepare('INSERT INTO create_status (user_id, active, expires, store, manage, renews, checked) VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT(user_id) DO UPDATE SET active = excluded.active, expires = excluded.expires, store = excluded.store, manage = excluded.manage, renews = excluded.renews, checked = excluded.checked')
-        ->execute([$u['id'], $active ? 1 : 0, $exp, mb_substr($store, 0, 40), mb_substr((string)($sub['management_url'] ?? ''), 0, 400), $renews ? 1 : 0, $now]);
+      $db->prepare('INSERT INTO create_status (user_id, active, tier, expires, store, manage, renews, checked) VALUES (?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(user_id) DO UPDATE SET active = excluded.active, tier = excluded.tier, expires = excluded.expires, store = excluded.store, manage = excluded.manage, renews = excluded.renews, checked = excluded.checked')
+        ->execute([$u['id'], $tier !== '' ? 1 : 0, $tier, $exp, mb_substr($store, 0, 40), mb_substr((string)($sub['management_url'] ?? ''), 0, 400), $renews ? 1 : 0, $now]);
       $st->execute([$u['id']]); $row = $st->fetch() ?: null;
     }
   }
   $active = $row && (int)$row['active'] === 1 && ((int)$row['expires'] === 0 || (int)$row['expires'] > $now);
-  return ['active' => $active, 'until' => $row && (int)$row['expires'] ? gmdate('c', (int)$row['expires']) : null, 'store' => $row['store'] ?? '', 'manage_url' => $row['manage'] ?? '', 'renews' => $row ? (int)$row['renews'] === 1 : false, 'checked' => $row ? (int)$row['checked'] : 0];
+  $plan = $active ? ((string)($row['tier'] ?? '') ?: 'pro') : '';
+  return ['active' => $active, 'plan' => $plan, 'until' => $row && (int)$row['expires'] ? gmdate('c', (int)$row['expires']) : null, 'store' => $row['store'] ?? '', 'manage_url' => $row['manage'] ?? '', 'renews' => $row ? (int)$row['renews'] === 1 : false, 'checked' => $row ? (int)$row['checked'] : 0];
+}
+
+/** A plan given without paying, for testers (plan_grants in config.local.php: email => 'pro' or 'max'). */
+function mh_plan_grant(array $u, array $cfg): string {
+  $g = is_array($cfg['plan_grants'] ?? null) ? $cfg['plan_grants'] : []; $email = strtolower((string)($u['email'] ?? ''));
+  foreach ($g as $k => $v) if (strtolower((string)$k) === $email && in_array($v, ['pro', 'max'], true)) return $v;
+  return '';
+}
+/** 'max', 'pro' or '' for one account: a grant, or what RevenueCat says. */
+function mh_plan(array $u, array $cfg, bool $refresh = false): string {
+  $g = mh_plan_grant($u, $cfg); if ($g === 'max') return 'max';
+  $p = mh_create_status($u, $cfg, $refresh)['plan']; return $p === 'max' ? 'max' : ($g ?: $p);
 }
 
 function mh_myclass_route(string $route, array $in, array $cfg, string $ip): void {
@@ -155,14 +174,15 @@ function mh_myclass_route(string $route, array $in, array $cfg, string $ip): voi
       $pack = json_decode((string)$r['pack'], true); if (!is_array($pack)) mh_fail('This class could not be read.', 500);
       mh_json(['ok' => true, 'code' => $code, 'pack' => $pack, 'updated' => (int)$r['updated']]);
     }
-    case 'create_status': {
+    case 'create_status': {   // the plan of the account signed in, and the web checkout for each plan
       mh_method('GET'); $u = mh_current_user();
-      $link = trim((string)($cfg['create_web_link'] ?? '')); $secret = trim((string)($cfg['revenuecat_secret'] ?? ''));
-      $out = ['ok' => true, 'configured' => $secret !== '' && $link !== '', 'price' => (string)($cfg['create_web_price'] ?? ''), 'signed_in' => (bool)$u];
-      if (!$u) mh_json($out + ['active' => false]);
+      $links = ['pro' => trim((string)($cfg['pro_web_link'] ?? '')), 'max' => trim((string)($cfg['max_web_link'] ?? ''))]; $secret = trim((string)($cfg['revenuecat_secret'] ?? ''));
+      $out = ['ok' => true, 'configured' => $secret !== '' && $links['pro'] !== '' && $links['max'] !== '', 'prices' => ['pro' => (string)($cfg['pro_web_price'] ?? '$15'), 'max' => (string)($cfg['max_web_price'] ?? '$50')], 'signed_in' => (bool)$u];
+      if (!$u) mh_json($out + ['active' => false, 'plan' => '']);
       $s = mh_create_status($u, $cfg, !empty($_GET['refresh']));
+      $grant = mh_plan_grant($u, $cfg); if ($grant && ($grant === 'max' || !$s['active'])) { $s['plan'] = $grant; $s['active'] = true; $s['granted'] = true; }
       $out['customer'] = 'mh_' . $u['id'];
-      $out['buy_url'] = $link !== '' ? rtrim($link, '/') . '/' . rawurlencode($out['customer']) : '';
+      $out['buy'] = array_map(fn($l) => $l !== '' ? rtrim($l, '/') . '/' . rawurlencode($out['customer']) : '', $links);
       mh_json($out + $s);
     }
   }

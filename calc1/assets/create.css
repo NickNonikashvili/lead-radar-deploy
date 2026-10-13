@@ -76,6 +76,19 @@
 .pw-list { list-style: none; margin: 0 0 14px; padding: 0; display: flex; flex-direction: column; gap: 10px; }
 .pw-list li { display: flex; align-items: flex-start; gap: 10px; font-size: 15px; line-height: 1.4; }
 .pw-list li svg { flex: none; margin-top: 1px; color: var(--pine, var(--good, #15803d)); }
+.pw-plans { display: grid; gap: 10px; margin: 0 0 14px; }
+.pw-plan { display: block; width: 100%; padding: 12px 14px; border: 2px solid var(--border); border-radius: 18px; background: var(--surface); color: var(--ink); text-align: left; font: inherit; cursor: pointer; box-shadow: 0 3px 0 var(--lip, var(--border-strong)); transition: border-color .12s ease-out, box-shadow .12s ease-out, transform .08s ease-out; }
+.pw-plan:active { transform: translateY(3px); box-shadow: none; }
+.pw-plan.on { border-color: var(--accent); background: color-mix(in srgb, var(--accent-soft) 55%, var(--surface)); box-shadow: 0 3px 0 var(--accent-deep); }
+.pw-plan:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+.pw-plans.one .pw-plan { cursor: default; }
+.pw-plan-h { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.pw-plan-h b { font: 800 18px/1.2 var(--font-display); }
+.pw-plan-price { flex: none; font: 800 18px/1 var(--font-display); font-variant-numeric: tabular-nums; }
+.pw-plan-price small { font: 600 13px/1 var(--font-body); color: var(--muted); }
+.pw-plan ul { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.pw-plan li { display: flex; align-items: flex-start; gap: 8px; font-size: 14px; line-height: 1.38; color: var(--ink-2); }
+.pw-plan li svg { flex: none; margin-top: 2px; color: var(--pine, var(--good, #15803d)); }
 .pw-acts { display: grid; gap: 8px; }
 .pw-acts .btn { justify-content: center; text-align: center; }
 .pw-err, .pw-wait { margin: 0 0 12px; padding: 10px 12px; border-radius: 14px; font-size: 14px; line-height: 1.4; }
@@ -125,5 +138,34 @@
 .ap-sub-t { display: flex; flex-direction: column; gap: 2px; }
 .ap-sub .row { flex-wrap: wrap; }
 
-@media (prefers-reduced-motion: reduce) { .pw-backdrop, .modal.pw { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .pw-backdrop, .modal.pw, .pw-plan { transition: none; } }
 html[data-motion="off"] :is(.pw-backdrop, .modal.pw) { transition: none; }
+
+/* ---------- Mathub Max: Bo writes the class ---------- */
+.mk-bo { display: flex; flex-direction: column; gap: 12px; margin-top: 8px; border-width: 2px; border-color: var(--accent-line, var(--border)); box-shadow: 0 4px 0 var(--accent-deep); }
+.mk-bo-top { display: flex; align-items: flex-start; gap: 14px; }
+.mk-bo-av { flex: none; display: grid; place-items: center; width: 68px; height: 68px; border-radius: 22px; background: var(--accent-soft); }
+.mk-bo-t { flex: 1; min-width: 0; }
+.mk-bo-t p { margin: 0; max-width: 60ch; color: var(--ink-2); line-height: 1.5; }
+.mk-max { flex: none; background: var(--accent); color: var(--accent-ink, #fff); border-color: transparent; font-weight: 800; }
+.mk-bo-label { font-weight: 700; font-size: 14px; color: var(--ink); }
+.mk-bo-text { min-height: 120px; resize: vertical; font-size: 15px; line-height: 1.45; }
+html[data-app] .mk-bo-text { font-size: 16px; }
+.mk-bo-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
+.mk-bo-file { cursor: pointer; }
+.mk-bo-note { margin: 0; }
+.mk-bo-note svg { vertical-align: -2px; }
+.mk-bo-steps { list-style: none; margin: 0; padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; border-radius: 16px; background: var(--surface-2); }
+.mk-bo-steps[hidden] { display: none; }
+.mk-bo-steps li { display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: 14.5px; }
+.mk-bo-steps li.done { color: var(--ink-2); }
+.mk-bo-steps li.now { color: var(--ink); font-weight: 700; }
+.mk-bo-steps li.fail { color: var(--coral-deep, #9f2d1f); font-weight: 700; }
+.mk-bo-dot { flex: none; display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--border-strong); color: #fff; }
+.mk-bo-steps li.done .mk-bo-dot { background: var(--pine, #15803d); border-color: var(--pine, #15803d); }
+.mk-bo-steps li.now .mk-bo-dot { border-color: var(--accent); border-top-color: transparent; animation: mk-spin .9s linear infinite; }
+.mk-bo-steps li.fail .mk-bo-dot { border-color: var(--coral, #e5533d); }
+@keyframes mk-spin { to { transform: rotate(360deg); } }
+.mk-or { margin: 22px 0 4px; font: 800 18px/1.2 var(--font-display); color: var(--ink); }
+@media (prefers-reduced-motion: reduce) { .mk-bo-steps li.now .mk-bo-dot { animation: none; border-top-color: var(--accent); } }
+html[data-motion="off"] .mk-bo-steps li.now .mk-bo-dot { animation: none; border-top-color: var(--accent); }

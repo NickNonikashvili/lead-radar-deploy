@@ -77,7 +77,7 @@
       ${ns.length ? `<p class="ah-mast">${bar(Math.round(100 * done / ns.length), 'pine', 'Topics mastered')}<span>${done} of ${ns.length} topics mastered</span></p>` : ''}</section>`;
   }
 
-  const lockHero = C => { const L = App.createLock || {}; return `<section class="ah-hero ah-locked" aria-labelledby="ah-hero-h"><div class="ah-hero-h"><div><h2 id="ah-hero-h">${esc(C.name)}</h2><p>${icon('lock', 14)} Locked because Mathub Create is off. The class and your progress in it are still saved ${esc(L.where || 'with your account')}.</p></div></div><div class="lock-acts"><button type="button" class="btn primary lg" data-lock="buy">Subscribe to open it</button><button type="button" class="btn" data-lock="restore">${esc(L.restoreLabel || 'Restore purchases')}</button></div></section>`; };
+  const lockHero = C => { const L = App.createLock || {}; return `<section class="ah-hero ah-locked" aria-labelledby="ah-hero-h"><div class="ah-hero-h"><div><h2 id="ah-hero-h">${esc(C.name)}</h2><p>${icon('lock', 14)} Locked because your plan is off. The class and your progress in it are still saved ${esc(L.where || 'with your account')}.</p></div></div><div class="lock-acts"><button type="button" class="btn primary lg" data-lock="buy">Subscribe to open it</button><button type="button" class="btn" data-lock="restore">${esc(L.restoreLabel || 'Restore purchases')}</button></div></section>`; };
   function toolsHtml(C, o = {}) {
     const id = C.id; const all = C.NAV && App.groupNav ? App.groupNav(C.NAV).flatMap(g => g.items) : [];
     const pick = TOOL_ORDER.map(v => all.find(x => x[0] === v)).filter(Boolean).slice(0, 7);
@@ -164,6 +164,7 @@
     if (d > 0 && weak[0]) today.push(row(weak[0].href, 'target', `Weakest topic: ${esc(weak[0].label)}`, weak[0].kind === 'lesson' ? '5-minute lesson, then practise it' : 'Read the notes, then try the flashcards'));
     if (due) today.push(row(`#/${id}/flashcards`, 'cards', `${due} flashcard${due === 1 ? '' : 's'} due`, 'Spaced review keeps them for the exam'));
     if (d > 0 && d <= 3 && timed) today.push(row(timed, 'clock', 'Timed practice exam', 'Questions from the whole exam, no feedback until you submit'));
+    if (d > 0) today.push(row(`#/tutor/${id}?q=quiz`, 'chat', 'Ask Bo to quiz you', 'Your AI tutor starts with your weakest topic'));
     if (items.length) today.push(row(`#/${id}/exam/${encodeURIComponent(ex.id)}`, 'check', checked !== null ? `Prep checklist: ${checked} of ${items.length}` : 'Prep checklist', 'What to bring, what is allowed, what to review'));
     const dayName = iso => { const n = App.daysBetween(App.todayISO(), iso); return n === 0 ? 'Today' : n === 1 ? 'Tomorrow' : esc(App.fmtDate(iso)); };
     return `<section class="xw${o.wide ? ' xw-wide' : ''}" aria-labelledby="xw-h-${id}"${o.style ? ` style="${o.style}"` : ''}>

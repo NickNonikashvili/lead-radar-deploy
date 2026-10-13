@@ -1,6 +1,6 @@
 /* ============================================================
    Create a class on the website (assets/create.js, api/myclasses.php): the page works for guests up to
-   Add, classes are saved with the account (and come back in a new browser), Mathub Create is bought
+   Add, classes are saved with the account (and come back in a new browser), Mathub Pro is bought
    through the RevenueCat web checkout (a stand-in RevenueCat answers in the tests), a class is locked
    when it lapses, and a class can be shared by link and QR code, opened by anyone and reported.
    ============================================================ */
@@ -33,7 +33,7 @@ const STATE = path.join(__dirname, 'fixtures', 'rc-state.json');
   for (const c of ((await api(a, 'myclasses')).json.classes || [])) await api(a, 'myclass_delete', { id: c.id });
   await go(a, '#/create', 1400);
   check('signed in, the page says classes are saved with the account', /saved with your account/.test(await txt(a, '.mk-lede')) && !(await a.$('#mk-signin')));
-  check('it names Mathub Create with the web price', /Mathub Create/.test(await txt(a, '#mk-sub')) && /\$4\.99 a month/.test(await txt(a, '#mk-sub')), await txt(a, '#mk-sub'));
+  check('it names Mathub Pro with the web price, and Max', /Mathub Pro/.test(await txt(a, '#mk-sub')) && /\$15 a month/.test(await txt(a, '#mk-sub')) && /Max/.test(await txt(a, '#mk-sub')), await txt(a, '#mk-sub'));
 
   // the free example class: no paywall, saved with the account
   await a.click('[data-action="example"]'); await a.waitForTimeout(700); await a.click('#mk-result [data-add]'); await a.waitForTimeout(1500);
@@ -47,11 +47,11 @@ const STATE = path.join(__dirname, 'fixtures', 'rc-state.json');
   await go(a, '#/create', 1200); await paste(a, other);
   await a.click('#mk-result [data-add]'); await a.waitForTimeout(1200);
   const pw = await a.evaluate(() => { const s = document.querySelector('#paywall'); if (!s) return null; const b = s.querySelector('[data-action="pw-buy"]'); return { card: !!s.querySelector('.modal.pw'), price: s.querySelector('#pw-price').textContent, tag: b.tagName, href: b.getAttribute('href') || '', target: b.getAttribute('target'), text: b.textContent, fine: s.querySelector('.pw-fine').textContent, terms: !!s.querySelector('.pw-fine a[href="#/policy/create"]'), restore: s.querySelector('[data-action="pw-restore"]').textContent }; });
-  check('adding it opens the Mathub Create card: $4.99 a month', pw && pw.card && /\$4\.99/.test(pw.price), pw);
-  check('Subscribe is a link to her own RevenueCat checkout, in a new tab', pw && pw.tag === 'A' && /^https:\/\/pay\.rev\.cat\/sbx_test_link\/mh_\d+$/.test(pw.href) && pw.target === '_blank' && /Subscribe for \$4\.99 a month/.test(pw.text), pw);
-  check('the terms: renews monthly, how to cancel, Stripe, works in the app too, Terms and Privacy', pw && /Renews every month at \$4\.99/.test(pw.fine) && /Manage subscription/.test(pw.fine) && /Stripe/.test(pw.fine) && /app with this account/.test(pw.fine) && pw.terms, pw && pw.fine);
+  check('adding it opens the plans card: Pro $15 and Max $50 a month', pw && pw.card && /Pro \$15 · Max \$50/.test(pw.price), pw);
+  check('Get Pro is a link to her own Pro checkout at RevenueCat, in a new tab', pw && pw.tag === 'A' && /^https:\/\/pay\.rev\.cat\/sbx_pro_link\/mh_\d+$/.test(pw.href) && pw.target === '_blank' && /Get Pro for \$15 a month/.test(pw.text), pw);
+  check('the terms: renews monthly, how to cancel, Stripe, works in the app too, Terms and Privacy', pw && /Renews every month at \$15/.test(pw.fine) && /Manage subscription/.test(pw.fine) && /Stripe/.test(pw.fine) && /app with this account/.test(pw.fine) && pw.terms, pw && pw.fine);
   await a.click('#paywall [data-action="pw-restore"]'); await a.waitForTimeout(900);
-  check('"I already subscribed" before paying says none was found', /No Mathub Create subscription was found/.test(await txt(a, '#pw-err')));
+  check('"I already subscribed" before paying says none was found', /No Mathub Pro or Max subscription was found/.test(await txt(a, '#pw-err')));
   // she pays in the other tab (the stand-in RevenueCat now says she has it), then comes back
   const customer = pw.href.split('/').pop();
   const ctxPages = ca.pages().length;
@@ -67,7 +67,7 @@ const STATE = path.join(__dirname, 'fixtures', 'rc-state.json');
 
   // Settings shows the subscription
   await go(a, '#/settings', 1400);
-  check('Settings has a Mathub Create panel: on, with Manage subscription', /On\. Renews/.test(await txt(a, '#create-panel')) && !!(await a.$('#create-panel a[href="https://billing.example/manage"]')), await txt(a, '#create-panel'));
+  check('Settings has a Your plan panel: Mathub Pro, renewing, with Manage subscription and Move up to Max', /Mathub Pro\. Renews/.test(await txt(a, '#create-panel')) && !!(await a.$('#create-panel [data-cp="max"]')) && !!(await a.$('#create-panel a[href="https://billing.example/manage"]')), await txt(a, '#create-panel'));
 
   // a new browser: her classes come back from the account
   const [cn, n] = await mk(1360, 900); await cn.addInitScript(quiet); await go(n, '#/'); await login(n, ALICE); await n.reload(); await n.waitForTimeout(800); await go(n, '#/create', 2500);
@@ -94,23 +94,23 @@ const STATE = path.join(__dirname, 'fixtures', 'rc-state.json');
   check('Report opens the report form for this shared class', /Report this shared class/.test(await txt(g, '#report-modal')));
   await g.keyboard.press('Escape'); await g.waitForTimeout(300);
 
-  // Bob is signed in without Mathub Create: adding a shared class asks for it
+  // Bob is signed in without a plan: adding a shared class asks for it
   const [cb, b] = await mk(390, 844); await cb.addInitScript(quiet); await go(b, '#/'); await login(b, BOB); await b.reload(); await b.waitForTimeout(800);
   for (const c of ((await api(b, 'myclasses')).json.classes || [])) await api(b, 'myclass_delete', { id: c.id });
   await go(b, '#/c/' + code, 1800);
   check('no sideways scroll on a shared class at 390px', await hscroll(b));
   await b.click('[data-sc="add"]'); await b.waitForTimeout(1200);
-  check('Bob adding it gets the Mathub Create card (he has no subscription)', /Adding WEBT 210 to your classes needs Mathub Create/.test(await txt(b, '#paywall .pw-why')), await txt(b, '#paywall'));
+  check('Bob adding it gets the plans card (he has no plan)', /Adding WEBT 210 to your classes needs Mathub Pro or Max/.test(await txt(b, '#paywall .pw-why')), await txt(b, '#paywall'));
   check('no sideways scroll with the card open at 390px', await hscroll(b));
   await b.keyboard.press('Escape'); await b.waitForTimeout(400);
   // the share code form on the Create page goes to the same place
   await go(b, '#/create', 1200); await b.fill('#mk-code', code.slice(0, 4) + '-' + code.slice(4)); await b.click('#mk-code-form button'); await b.waitForTimeout(1500);
   check('a code typed with a dash on the Create page opens the shared class', new RegExp('#/c/' + code + '$').test(b.url()) && /WEBT 210/.test(await txt(b, '#shared-box')), b.url());
 
-  // when Mathub Create ends, her class from a syllabus is locked; the free example stays open
+  // when the plan ends, her class from a syllabus is locked; the free example stays open
   setRc({ [customer]: { expires: new Date(Date.now() - 864e5).toISOString(), store: 'rc_billing' } });
   await go(a, '#/settings', 1400); await a.click('#create-panel [data-cp="check"]'); await a.waitForTimeout(1800);
-  check('after it ends, Settings says it is off', /Off\./.test(await txt(a, '#create-panel')), await txt(a, '#create-panel'));
+  check('after it ends, Settings says there is no plan', /No plan\./.test(await txt(a, '#create-panel')), await txt(a, '#create-panel'));
   await go(a, `#/${myId}/dashboard`, 1500);
   check('her class is locked, kept with the account', !!(await a.$('.sublock')) && /saved with your account/.test(await txt(a, '.sublock')) && /I already subscribed/.test(await txt(a, '.sublock')));
   await go(a, `#/${exId}/dashboard`, 1500);

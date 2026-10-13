@@ -9,7 +9,7 @@
      downloaded at run time (App Review guideline 2.5.2)
    - index.html gets the app's Content-Security-Policy, viewport-fit=cover,
      assets/app.css, and the two app-only scripts: assets/app-boot.js (right after
-     boot.js) and assets/app-native.js (last, after create.js and home.js)
+     boot.js) and assets/app-native.js (last, after create.js, home.js and tutor.js)
    - the website keeps working as before: nothing here changes the files it serves
    ============================================================ */
 'use strict';
@@ -60,8 +60,8 @@ must(/<script src="assets\/boot\.js[^"]*"><\/script>/, 'boot.js');
 html = html.replace(/(<script src="assets\/boot\.js[^"]*"><\/script>)/, `$1\n  <script src="assets/app-boot.js?v=${BUILD}"></script>`);
 must(/<link rel="stylesheet" href="assets\/teach\.css[^"]*">/, 'teach.css');
 html = html.replace(/(<link rel="stylesheet" href="assets\/teach\.css[^"]*">)/, `$1\n  <link rel="stylesheet" href="assets/app.css?v=${BUILD}">`);
-must(/<script src="assets\/home\.js[^"]*"><\/script>/, 'home.js');
-html = html.replace(/(<script src="assets\/home\.js[^"]*"><\/script>)/, `$1\n  <script src="assets/app-native.js?v=${BUILD}"></script>`);
+must(/<script src="assets\/tutor\.js[^"]*"><\/script>/, 'tutor.js');
+html = html.replace(/(<script src="assets\/tutor\.js[^"]*"><\/script>)/, `$1\n  <script src="assets/app-native.js?v=${BUILD}"></script>`);
 // the app has no service worker, web manifest or install prompt
 html = html.replace(/\s*<link rel="manifest"[^>]*>/, '').replace(/\s*<meta name="apple-mobile-web-app-[^>]*>/g, '').replace(/\s*<meta name="mobile-web-app-capable"[^>]*>/, '');
 fs.writeFileSync(path.join(WWW, 'index.html'), html);

@@ -3,9 +3,9 @@
    - reminders: exam reminders and a daily study reminder as local notifications, only after
      the student turns them on and allows them
    - haptics on right and wrong answers, finished lessons and level-ups
-   - an "On this device" panel in Settings (reminders, haptics, Mathub Create)
+   - an "On this device" panel in Settings (reminders, haptics, your plan)
    - the app's own shell: app bar, start page (class cards, plan, tools, path) and tab bar
-   Create a class, the classes students make, Mathub Create and sharing are in assets/create.js,
+   Create a class, the classes students make, the Pro and Max plans and sharing are in assets/create.js,
    which the website loads too.
    The website never loads this file (see app/scripts/build-www.js).
    ============================================================ */
@@ -37,7 +37,7 @@
   };
 
   /* ============================================================
-     Classes students make, Mathub Create and sharing are in assets/create.js (the website has them too);
+     Classes students make, the Pro and Max plans and sharing are in assets/create.js (the website has them too);
      what is used here:
      ============================================================ */
   const Mine = App.myClasses, Sub = App.subscription, paywall = App.paywall, locked = App.classLocked, local = App.packs.local;
@@ -89,7 +89,7 @@
         <div class="field mt-1" style="max-width:220px"><label for="ap-time">Remind me at</label><input class="input" type="time" id="ap-time" value="${esc(s.reminderTime || '19:00')}" ${s.dailyReminder ? '' : 'disabled'}></div>
       </div><div>
         <label class="check" style="padding:0"><input type="checkbox" id="ap-haptics" ${s.haptics === false ? '' : 'checked'}><span>Haptics <span class="muted small">(a tap when an answer is right or wrong)</span></span></label>
-        <div class="ap-sub"><div class="ap-sub-t"><b>Mathub Create</b><span class="small muted">${subLine()}</span></div><div class="row gap-sm">${Sub.active() ? `<button type="button" class="btn sm" data-sub="manage">Manage subscription</button>` : `<button type="button" class="btn sm primary" data-sub="buy">Subscribe</button>`}<button type="button" class="btn sm ghost" data-sub="restore">Restore purchases</button></div></div>
+        <div class="ap-sub"><div class="ap-sub-t"><b>${Sub.active() ? esc(Sub.planName()) : 'Your plan'}</b><span class="small muted">${subLine()}</span></div><div class="row gap-sm">${Sub.active() ? `<button type="button" class="btn sm" data-sub="manage">Manage subscription</button>` : `<button type="button" class="btn sm primary" data-sub="buy">See the plans</button>`}${Sub.plan() === 'pro' ? `<button type="button" class="btn sm primary" data-sub="max">Move up to Max</button>` : ''}<button type="button" class="btn sm ghost" data-sub="restore">Restore purchases</button></div></div>
         <p class="small mt-1">${mine ? `${mine} class${mine === 1 ? '' : 'es'} you created ${mine === 1 ? 'is' : 'are'} saved on this ${DEVICE}${App.auth && App.auth.user ? ' and with your account' : ''}.` : `Classes you create from a syllabus are saved on this ${DEVICE}, and with your account when you are signed in.`} <a href="#/create">Create a class</a></p>
         <p class="small muted">Mathub ${esc(MA.version)} · <a href="#/policy">Terms and privacy</a> · <a href="#/contact">Contact</a></p>
       </div></div></div>`;
@@ -97,14 +97,14 @@
   function subLine() {
     const st = Sub.status(); const day = d => { try { return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }); } catch (e) { return ''; } };
     if (Sub.active()) return st.until ? (st.renews ? `On. Renews ${day(st.until)}.` : `On until ${day(st.until)}; it will not renew.`) : 'On.';
-    return 'Off. Needed to make classes from a syllabus or a class file; the example class is free.';
+    return 'No plan. Pro makes classes from any syllabus; Max adds Bo, your AI tutor, who also writes classes for you. The example class is free.';
   }
   function wireSub(el) {
     el.addEventListener('click', async e => {
       const b = e.target.closest('[data-sub]'); if (!b) return; const a = b.dataset.sub;
       if (a === 'manage') { N.open(Sub.manageUrl()); return; }
-      if (a === 'buy') { if (await paywall()) App.rerender(); return; }
-      b.disabled = true; try { if (await Sub.restore()) { toast('Mathub Create is back on.', 3000); App.rerender(); } else toast(Sub.noneFound(), 4500); } catch (x) { toast(x.message, 4500); } b.disabled = false;
+      if (a === 'buy' || a === 'max') { if (await paywall(a === 'max' ? { need: 'max', reason: 'bo' } : {})) App.rerender(); return; }
+      b.disabled = true; try { if (await Sub.restore()) { toast(`${Sub.planName()} is on.`, 3000); App.rerender(); } else toast(Sub.noneFound(), 4500); } catch (x) { toast(x.message, 4500); } b.disabled = false;
     });
   }
   function wireDevicePanel(el) {
@@ -128,7 +128,7 @@
   const ccStyle = App.classStyle;   // each class's colours (assets/create.js)
   const inDays = App.home.inDays;
   const goSearch = () => document.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true, bubbles: true }));
-  const ROOTS = r => (!r.course && ['home', 'today', 'forum', 'settings'].includes(r.view)) || (r.course && ['practice', 'flashcards'].includes(r.view));
+  const ROOTS = r => (!r.course && ['home', 'today', 'forum', 'settings', 'tutor'].includes(r.view)) || (r.course && ['practice', 'flashcards'].includes(r.view));
   const practiceHref = id => { const C = Courses[id]; if (!C) return '#/'; return (C.quiz || C.hasQuiz || C.quizTopics || C.QUIZ) ? `#/${id}/practice` : `#/${id}/flashcards`; };
 
   /* ---------- app bar ---------- */
@@ -171,7 +171,7 @@
     const el = document.createElement('div'); el.className = 'modal-backdrop sheet-backdrop'; el.id = 'class-sheet';
     el.innerHTML = `<div class="sheet" role="dialog" aria-modal="true" aria-label="Your classes"><div class="sheet-grab" aria-hidden="true"></div>
       <div class="sheet-h"><h2>Your classes</h2><button class="icon-btn" data-action="close" aria-label="Close">${icon('x', 18)}</button></div>
-      <div class="sheet-classes">${mine.map(x => { const K = Courses[x]; const ex = examOf(K); const d = daysTo(ex); return `<a class="sc-row${x === id ? ' on' : ''}" href="#/" data-pick="${x}" style="${ccStyle(x)}"><span class="sc-badge">${esc((K.short || K.code).replace(/\s+/g, ' '))}</span><span class="sc-main"><b>${esc(K.name)}</b><small>${locked(x) ? 'Locked: Mathub Create is off' : ex && d !== null && d >= 0 ? `${esc(ex.name)} ${inDays(d)}` : local.has(x) ? 'Made from your syllabus' : 'No exam ahead'}</small></span>${x === id ? icon('check', 18) : icon('right', 16)}</a>`; }).join('')}</div>
+      <div class="sheet-classes">${mine.map(x => { const K = Courses[x]; const ex = examOf(K); const d = daysTo(ex); return `<a class="sc-row${x === id ? ' on' : ''}" href="#/" data-pick="${x}" style="${ccStyle(x)}"><span class="sc-badge">${esc((K.short || K.code).replace(/\s+/g, ' '))}</span><span class="sc-main"><b>${esc(K.name)}</b><small>${locked(x) ? 'Locked: your plan is off' : ex && d !== null && d >= 0 ? `${esc(ex.name)} ${inDays(d)}` : local.has(x) ? 'Made from your syllabus' : 'No exam ahead'}</small></span>${x === id ? icon('check', 18) : icon('right', 16)}</a>`; }).join('')}</div>
       <div class="sheet-actions"><a class="btn primary" href="#/create">${icon('plus', 15)} Create a class from a syllabus</a><button class="btn" data-action="pick">${icon('grid', 15)} Choose Montana State classes</button></div>
       <div class="sheet-pick" hidden><p class="small muted">Tick the classes you take. The rest stay out of your way.</p><div class="pick-list">${all.map(x => `<label class="check pick-row" style="${ccStyle(x)}"><input type="checkbox" data-c="${x}"${mine.includes(x) ? ' checked' : ''}><span class="sc-badge">${esc(Courses[x].short || Courses[x].code)}</span><span>${esc(Courses[x].name)}</span></label>`).join('')}</div><div class="row gap-sm mt-1"><button class="btn primary" data-action="save-pick">Save</button>${App.views.request ? `<a class="btn ghost" href="#/request">Not listed? Request it</a>` : ''}</div></div>
       ${C ? `<h3 class="sheet-sub sheet-tools-h">In ${esc(C.short || C.code)}</h3><div class="sheet-grid" style="${ccStyle(id)}"><a class="sg-item" href="#/${id}/dashboard">${icon('home', 20)}<span>Class page</span></a>${tools.filter(t => t[0] !== 'dashboard').map(([v, l, ic]) => `<a class="sg-item" href="#/${id}/${v}">${icon(ic || 'book', 20)}<span>${esc(l)}</span></a>`).join('')}</div>` : ''}
@@ -235,9 +235,10 @@
   /* ---------- tab bar ---------- */
   function paintTabs(r) {
     const bar = $('#tabbar'); if (!bar) return; const id = (r.course && Courses[r.course]) ? r.course : curClass();
-    const tabs = [['#/', 'Learn', 'home', !r.course && r.view === 'home'], [id ? practiceHref(id) : '#/', 'Practice', 'list', !!r.course && ['practice', 'flashcards', 'lesson', 'blitz', 'exam'].includes(r.view)], ['#/today', 'Today', 'flag', r.view === 'today'], ['#/forum', 'Discuss', 'chat', r.view === 'forum'], ['#/settings', 'Me', 'user', r.view === 'settings']];
+    const tabs = [['#/', 'Learn', 'home', !r.course && r.view === 'home'], [id ? practiceHref(id) : '#/', 'Practice', 'list', !!r.course && ['practice', 'flashcards', 'lesson', 'blitz', 'exam'].includes(r.view)], ['#/tutor' + (id ? '/' + id : ''), 'Bo', 'bo', r.view === 'tutor'], ['#/today', 'Today', 'flag', r.view === 'today'], ['#/forum', 'Discuss', 'chat', r.view === 'forum'], ['#/settings', 'Me', 'user', r.view === 'settings']];
     bar.className = 'app-tabs'; bar.setAttribute('aria-label', 'Main');
-    bar.innerHTML = tabs.map(([h, l, ic, a]) => `<a class="tab-item${a ? ' active' : ''}" href="${h}"${a ? ' aria-current="page"' : ''}><span class="tab-ic">${icon(ic, 26)}</span><span>${l}</span></a>`).join('');
+    // Bo, the AI tutor, sits in the middle as himself
+    bar.innerHTML = tabs.map(([h, l, ic, a]) => `<a class="tab-item${ic === 'bo' ? ' tab-bo' : ''}${a ? ' active' : ''}" href="${h}"${a ? ' aria-current="page"' : ''}${ic === 'bo' ? ' aria-label="Ask Bo, your AI tutor"' : ''}><span class="tab-ic">${ic === 'bo' ? (App.bobcatSvg ? App.bobcatSvg(30) : '') : icon(ic, 26)}</span><span>${l}</span></a>`).join('');
   }
   // the app bar follows XP and streak changes as they happen
   if (App.paintStats) { const ps = App.paintStats; App.paintStats = function () { const out = ps.apply(this, arguments); try { if ($('#appbar')) paintAppBar(lastRoute); } catch (e) {} return out; }; }

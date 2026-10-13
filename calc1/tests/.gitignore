@@ -4,3 +4,4 @@ pyodide/package
 pyodide/*.tgz
 *.png
 fixtures/rc-state.json
+fixtures/ai-last.json
