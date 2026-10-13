@@ -340,6 +340,7 @@
     app.classList.remove('landing');
     if (!Courses[course].loaded) { App.current = null; renderLoading(root, course); App.loadCourse(course).then(() => { if (route().course === course && $('#view') === root) render(); }).catch(err => { if ($('#view') === root) renderLoadError(root, course, err); }); afterRender(root); return; }
     setCourse(course);
+    if (App.courseGate && App.courseGate(course, root, view)) { App.current = null; afterRender(root); return; }   // the apps lock a class made from a syllabus while its subscription is off (assets/app-native.js)
     const V = App.views[view]; App.current = V;
     $$('.nav-item').forEach(b => b.classList.toggle('active', b.dataset.view === view));
     const actNav = $('.nav-item.active'); if (actNav) { const g = actNav.closest('.nav-group'); if (g && g.classList.contains('closed')) { g.classList.remove('closed'); const tg = g.previousElementSibling; if (tg) { tg.classList.add('open'); tg.setAttribute('aria-expanded', 'true'); } } }

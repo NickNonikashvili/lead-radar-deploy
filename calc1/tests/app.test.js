@@ -14,7 +14,12 @@ const { execFileSync } = require('child_process'); const path = require('path');
 
   /* a stand-in for Capacitor and its plugins; what the app asks of them is recorded in window.__cap */
   const fakeCapacitor = (platform = 'ios') => {
-    const rec = window.__cap = { haptics: [], browser: [], shared: [], scheduled: [], cancelled: [], clipboard: sessionStorage.getItem('fake-clip') || '', perm: sessionStorage.getItem('fake-perm') || 'prompt', status: [], bars: [], channels: [], listeners: {}, minimized: 0 };
+    const rec = window.__cap = { haptics: [], browser: [], shared: [], scheduled: [], cancelled: [], clipboard: sessionStorage.getItem('fake-clip') || '', perm: sessionStorage.getItem('fake-perm') || 'prompt', status: [], bars: [], channels: [], listeners: {}, minimized: 0, purchases: [], billingKey: '' };
+    // the store (RevenueCat): Mathub Create is on while sessionStorage says so
+    const subOn = () => sessionStorage.getItem('fake-sub') === '1';
+    const info = () => ({ entitlements: { active: subOn() ? { create: { identifier: 'create', isActive: true, willRenew: true, expirationDate: new Date(Date.now() + 30 * 864e5).toISOString() } } : {}, all: {} }, managementURL: 'https://apps.apple.com/account/subscriptions' });
+    const pkg = { identifier: '$rc_monthly', packageType: 'MONTHLY', offeringIdentifier: 'default', product: { identifier: 'mathub_create_monthly', title: 'Mathub Create', priceString: '$4.99', price: 4.99 } };
+    window.MATHUB_BILLING_KEYS = { ios: 'appl_test', android: 'goog_test' };
     const fsKey = p => 'fakefs:' + p;
     const ok = v => Promise.resolve(v);
     const Plugins = {
@@ -38,6 +43,12 @@ const { execFileSync } = require('child_process'); const path = require('path');
       Browser: { open: o => { rec.browser.push(o.url); return ok(); } },
       StatusBar: { setStyle: o => { rec.status.push(o.style); return ok(); } },
       SystemBars: { setStyle: o => { rec.bars.push(o.style); return ok(); } },
+      Purchases: {
+        configure: o => { rec.billingKey = o.apiKey; return ok(); }, addCustomerInfoUpdateListener: () => ok('cb'), getCustomerInfo: () => ok({ customerInfo: info() }),
+        getOfferings: () => ok({ current: { identifier: 'default', monthly: pkg, availablePackages: [pkg] } }),
+        purchasePackage: o => { rec.purchases.push(o.aPackage.identifier); sessionStorage.setItem('fake-sub', '1'); return ok({ customerInfo: info(), productIdentifier: pkg.product.identifier }); },
+        restorePurchases: () => ok({ customerInfo: info() })
+      },
       App: { addListener: (ev, fn) => { (rec.listeners[ev] = rec.listeners[ev] || []).push(fn); return ok({ remove() {} }); }, minimizeApp: () => { rec.minimized++; return ok(); } }, SplashScreen: { hide: () => ok() }, Keyboard: {}
     };
     window.Capacitor = { isNativePlatform: () => true, getPlatform: () => platform, getServerUrl: () => location.origin, Plugins, registerPlugin: n => Plugins[n] };
@@ -134,7 +145,13 @@ const { execFileSync } = require('child_process'); const path = require('path');
   const pv = await txt(p, '#mk-result');
   check('a messy answer is repaired and previewed', /Introduction to General Chemistry/.test(pv) && /Add CHMY 121/.test(pv), pv.slice(0, 300));
   check('the preview counts what is in it and says what was left out', /2 topics/.test(pv) && /flashcards/.test(pv) && /notes? about this class/.test(pv), pv.slice(0, 300));
-  await p.click('[data-add]'); await p.waitForTimeout(1600);
+  check('the Create page says classes you make are part of Mathub Create, with the store price', /Mathub Create/.test(await txt(p, '#mk-sub')) && /\$4\.99 a month/.test(await txt(p, '#mk-sub')), await txt(p, '#mk-sub'));
+  await p.click('[data-add]'); await p.waitForTimeout(700);
+  const pw = await p.evaluate(() => { const s = document.querySelector('#paywall'); return s && { price: s.querySelector('#pw-price').textContent, buy: s.querySelector('[data-action="pw-buy"]').textContent, restore: !!s.querySelector('[data-action="pw-restore"]'), fine: s.querySelector('.pw-fine').textContent, terms: !!s.querySelector('.pw-fine a[href="#/policy/create"]') && !!s.querySelector('.pw-fine a[href="#/policy/privacy"]'), why: s.querySelector('.pw-why').textContent, saved: JSON.parse(localStorage.getItem('mh-my-classes') || '[]').length }; });
+  check('adding a class from a syllabus asks for Mathub Create first: store price, renewal terms, Terms and Privacy, Restore; nothing is saved yet', pw && /\$4\.99/.test(pw.price) && /\$4\.99 a month/.test(pw.buy) && pw.restore && /Renews every month at \$4\.99/.test(pw.fine) && /at least 24 hours/.test(pw.fine) && pw.terms && /CHMY 121/.test(pw.why) && pw.saved === 0, pw);
+  check('the app connects to the store with its own key', (await p.evaluate(() => window.__cap.billingKey)) === 'appl_test');
+  await p.click('#paywall [data-action="pw-buy"]'); await p.waitForTimeout(1800);
+  check('subscribing buys the monthly package, then the class is added', (await p.evaluate(() => window.__cap.purchases)).join() === '$rc_monthly' && /#\/my\d{4}\/dashboard/.test(p.url()), p.url());
   const cid = (/#\/(my\d{4})\/dashboard/.exec(p.url()) || [])[1];
   check('adding the class opens its dashboard', !!cid, p.url());
   const saved = await p.evaluate(id => ({ file: !!localStorage.getItem('fakefs:DATA/classes/' + id + '.mathub.json'), idx: JSON.parse(localStorage.getItem('mh-my-classes') || '[]').map(e => e.id), local: App.packs.local.has(id), order: App.COURSE_ORDER.includes(id), strip: !!document.querySelector('.mk-strip') }), cid);
@@ -187,12 +204,35 @@ const { execFileSync } = require('child_process'); const path = require('path');
   const gone = await p.evaluate(id => ({ file: !!localStorage.getItem('fakefs:DATA/classes/' + id + '.mathub.json'), reg: !!window.Courses[id], rows: document.querySelectorAll('.mk-row').length }), exId);
   check('Delete removes the class and its file', !gone.file && !gone.reg && gone.rows === 1, gone);
 
+  // when Mathub Create ends: the class stays, locked; the example class is still free; classes made before subscriptions stay free
+  await p.evaluate(() => { sessionStorage.setItem('fake-sub', '0'); return App.subscription.refresh(); }); await p.waitForTimeout(300);
+  await go(p, `#/${cid}/dashboard`, 1600);
+  const lk = await p.evaluate(() => { const c = document.querySelector('.sublock'); return { text: c ? c.textContent.replace(/\s+/g, ' ') : '', buy: !!document.querySelector('[data-lock="buy"]'), restore: !!document.querySelector('[data-lock="restore"]') }; });
+  check('when Mathub Create is off, a class made from a syllabus is kept but locked, with Subscribe and Restore', /is locked/.test(lk.text) && /still saved/.test(lk.text) && lk.buy && lk.restore, lk.text.slice(0, 160));
+  check('the locked class is still on the device', await p.evaluate(id => !!localStorage.getItem('fakefs:DATA/classes/' + id + '.mathub.json'), cid));
+  await go(p, '#/', 1800);
+  check('its card on the start page says Locked', /Locked/.test(await txt(p, `.ah-card[data-cid="${cid}"]`)), await txt(p, `.ah-card[data-cid="${cid}"]`));
+  await go(p, '#/create', 1000);
+  await p.click('[data-action="example"]'); await p.waitForTimeout(800); await p.click('[data-add]'); await p.waitForTimeout(1600);
+  const ex2 = (/#\/(my\d{4})\/dashboard/.exec(p.url()) || [])[1];
+  check('the example class is free: added without the paywall, and it opens', !!ex2 && !(await p.$('#paywall')) && !(await p.$('.sublock')), p.url());
+  await go(p, `#/${cid}/dashboard`, 1600); await p.click('[data-lock="buy"]'); await p.waitForTimeout(700); await p.click('#paywall [data-action="pw-buy"]'); await p.waitForTimeout(1600);
+  check('subscribing from the locked class opens it again', !(await p.$('.sublock')) && /Exam 1/.test(await txt(p, '#view')));
+  await go(p, '#/settings', 1400);
+  check('Settings shows Mathub Create as on, with Manage subscription and Restore', /Mathub Create/.test(await txt(p, '.ap-sub')) && /On\. Renews/.test(await txt(p, '.ap-sub')) && !!(await p.$('.ap-sub [data-sub="manage"]')) && !!(await p.$('.ap-sub [data-sub="restore"]')), await txt(p, '.ap-sub'));
+  await p.evaluate(() => { sessionStorage.setItem('fake-sub', '0'); return App.subscription.refresh(); });
+  await go(p, `#/${cid}/dashboard`, 1400);
+  check('with Mathub Create off again, the class locks again', !!(await p.$('.sublock')));
+  await p.evaluate(() => App.setSetting('subMigrated', 0)); await p.reload(); await p.waitForTimeout(2000);   // as if this version had just been installed over an older one
+  await go(p, `#/${cid}/dashboard`, 1600);
+  check('classes made before subscriptions existed stay free', !(await p.$('.sublock')) && /Exam 1/.test(await txt(p, '#view')));
+
   // reminders: asked only when turned on, then scheduled for the exams
   await go(p, '#/settings', 1600);
   check('Settings has the "On this iPhone" panel', /On this iPhone/.test(await txt(p, '#app-panel')));
   check('signed out, Settings says an account is optional and does not offer web push', /An account is optional/.test(await txt(p, '.acct-panel')) && !(await p.$('#acct-push')));
   await go(p, '#/calc/grapher', 1500);
-  check('every study tool works without an account in the app (the grapher is open)', !(await p.$('#view .lock-card')) && !(await p.isVisible('#preview-banner')) && /Grapher/.test(await txt(p, '#view')) && !!(await p.$('#view canvas, #view svg')), (await txt(p, '#view')).slice(0, 120));
+  check('every study tool works without an account in the app (the grapher is open)', !(await p.$('#view .sublock')) && !(await p.isVisible('#preview-banner')) && /Grapher/.test(await txt(p, '#view')) && !!(await p.$('#view canvas, #view svg')), (await txt(p, '#view')).slice(0, 120));
   await go(p, '#/settings', 1200);
   const before2 = await p.evaluate(() => window.__cap.perm);
   await p.check('#ap-exams'); await p.waitForTimeout(1200);

@@ -6,7 +6,7 @@
   'use strict';
   const App = global.App; if (!App) return;
   const { $, esc, icon, bind, pageHead } = App;
-  const EFFECTIVE = 'October 12, 2026';
+  const EFFECTIVE = 'October 13, 2026';
   const OP = () => App.CREATOR || { name: 'Nikoloz Nonikashvili', email: 'nonikashvilinikolozi@gmail.com' };
 
   function html() {
@@ -50,6 +50,8 @@
       <h3>1.11 General</h3>
       <p>These Terms are governed by the laws of the State of Montana, USA, without regard to conflict-of-law rules, and any dispute will be brought in the state or federal courts located in Montana. If any part of these Terms is found unenforceable, the rest remains in effect. We may update these Terms; the effective date at the top changes when we do, and continued use after a change means you accept it. These Terms are the entire agreement between you and Mathub about the Service.</p>
 
+      <h3 id="pol-create">1.12 Mathub Create (a subscription in the app)</h3>
+      <p>Making your own classes in the Mathub app, from a syllabus or from a class file, needs Mathub Create: a monthly subscription sold through the App Store or Google Play at the price the app shows before you buy. It renews automatically every month until you cancel. Cancel any time in your Apple ID or Google Play subscription settings, at least 24 hours before it renews; it then ends when the month you paid for ends. Apple or Google take the payment and handle billing questions and refunds under their own terms. Everything else in Mathub stays free, including the example class and any class you made before Mathub Create existed. If your subscription ends, the classes you made stay on your device, locked, and open again when you subscribe. If the price changes, the store tells you first.</p>
       <h2 id="pol-rules">2. Community Rules</h2>
       <p>Short version of what every member agrees to before posting on Discussions:</p>
       <ol>
@@ -76,7 +78,7 @@
         <li><b>Technical data:</b> your IP address and browser type when you sign up, log in, post or comment (kept to prevent abuse, enforce bans and rate limits, and investigate reports), a session cookie that keeps you logged in, and the device and date of each login (so you can see and end them in Settings).</li>
         <li><b>Error reports:</b> when a page breaks, your browser sends the error message, the file and line, the page you were on (without anything after a “?”), the site version and your browser type. Reports carry no account, name or answers, and are deleted after 45 days.</li>
         <li><b>Local data:</b> preferences (theme, as-of date), a copy of your progress, and unsent drafts are stored in your browser’s local storage on each device you use.</li>
-        <li><b>The Mathub app (iPhone, iPad and Android):</b> works without an account. Signing in is optional and syncs the same data as the website. <b>Classes you create in the app stay on your device</b>: the instructions the app gives you, the syllabus you share with an AI, and the AI’s answer never pass through Mathub. You choose the AI and copy text to it yourself, so what you share is governed by that AI provider’s own terms and privacy policy; Mathub has no agreement with any AI provider and sends nothing to one. Reminders you turn on in the app are scheduled on the device. The app has no ads, no analytics or tracking tools and no third-party code that collects data; the math renderer and the Python runtime are built into the app.</li>
+        <li><b>The Mathub app (iPhone, iPad and Android):</b> works without an account. Signing in is optional and syncs the same data as the website. <b>Classes you create in the app stay on your device</b>: the instructions the app gives you, the syllabus you share with an AI, and the AI’s answer never pass through Mathub. You choose the AI and copy text to it yourself, so what you share is governed by that AI provider’s own terms and privacy policy; Mathub has no agreement with any AI provider and sends nothing to one. Reminders you turn on in the app are scheduled on the device. <b>Mathub Create:</b> if you subscribe, Apple or Google take the payment, and Mathub never sees your card or billing details. To know whether your subscription is active, the app uses RevenueCat, a subscription service that receives the store’s purchase record and a random ID the app makes up (not your name or email). The app has no ads and no analytics or tracking tools; RevenueCat is the only outside service in it; the math renderer and the Python runtime are built into the app.</li>
       </ul>
       <h3>3.2 How we use it</h3>
       <p>To operate the Service (log you in, sync progress, show your posts), to send the emails you request (verification and password-reset codes), to keep the community safe (moderation, bans, abuse prevention) and to fix bugs. We do not use your data for advertising and we do not sell or rent it to anyone.</p>

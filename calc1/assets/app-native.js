@@ -53,10 +53,10 @@
     list: () => readIdx(),
     has: id => local.has(id),
     async read(id) { return JSON.parse(await N.fs.read(fileOf(id))); },
-    async add(pack) {
+    async add(pack, opts = {}) {
       const text = JSON.stringify(pack);
       await N.fs.write(fileOf(pack.id), text);
-      const entry = { id: pack.id, code: pack.code, name: pack.name, term: pack.term, added: Date.now(), bytes: text.length, stub: App.packs.stubOf(pack) };
+      const entry = { id: pack.id, code: pack.code, name: pack.name, term: pack.term, added: Date.now(), bytes: text.length, stub: App.packs.stubOf(pack) }; if (opts.free) entry.free = true;   // the example class is free; other classes need Mathub Create
       const list = readIdx().filter(e => e.id !== pack.id).concat([entry]);
       if (!writeIdx(list)) { writeIdx(list.map(e => e.id === pack.id ? e : Object.assign({}, e))); }
       registerLocal(entry);
@@ -297,17 +297,125 @@ THE SYLLABUS:
   }
 
   /* ============================================================
+     Mathub Create: one monthly subscription (App Store and Google Play, through RevenueCat) for making classes.
+     Adding a class from a syllabus or from a class file needs it; the example class is free, and classes made
+     before subscriptions existed stay free. When it ends, those classes stay on the device, locked, and open
+     again the moment it is back. Setup: docs/app-subscriptions.md.
+     ============================================================ */
+  const BILLING = { ios: '', android: '', entitlement: 'create' };   // RevenueCat public SDK keys (appl_… and goog_…): public by design, safe in the app
+  const STORE = ANDROID ? 'Google Play' : 'the App Store';
+  const subKey = () => ((window.MATHUB_BILLING_KEYS || BILLING)[ANDROID ? 'android' : 'ios']) || '';
+  const cancelled = e => !!(e && (e.userCancelled || (e.data && e.data.userCancelled) || String(e.code) === '1' || /cancel/i.test(e.message || '')));
+  const pendingPay = e => !!(e && (String(e.code) === '20' || /pending/i.test(e.message || '')));
+  const Sub = App.subscription = {
+    ok: false, pkg: null, manage: null,
+    /* on while the store says so; the last answer is kept so locked classes stay open offline until the paid period ends */
+    active() { const s = settings().sub; return !!(s && s.on && (!s.until || Date.parse(s.until) > Date.now())); },
+    status() { return settings().sub || { on: false }; },
+    async init() {
+      const p = N.purchases; const key = subKey(); if (!p || !key) return;
+      try { await p.configure({ apiKey: key }); Sub.ok = true; } catch (e) { console.warn('Mathub Create: the store connection did not start', e); return; }
+      try { await p.addCustomerInfoUpdateListener(info => Sub.apply(info)); } catch (e) {}
+      Sub.refresh();
+    },
+    async refresh() { if (!Sub.ok) return; try { const r = await N.purchases.getCustomerInfo(); Sub.apply(r.customerInfo); } catch (e) {} },
+    apply(info) {
+      if (!info) return; const was = Sub.active(); const e = info.entitlements && info.entitlements.active && info.entitlements.active[BILLING.entitlement];
+      setSetting('sub', e ? { on: true, until: e.expirationDate || null, renews: e.willRenew !== false, at: Date.now() } : { on: false, at: Date.now() });
+      Sub.manage = info.managementURL || null;
+      if (was !== Sub.active()) document.dispatchEvent(new CustomEvent('mathub-sub'));
+    },
+    async offer() {
+      if (!Sub.ok) throw Object.assign(new Error('Subscribing is not available in this version of the app.'), { off: true });
+      if (Sub.pkg) return Sub.pkg;
+      const o = await N.purchases.getOfferings(); const cur = o && o.current; const pkg = cur && (cur.monthly || (cur.availablePackages || [])[0]);
+      if (!pkg) throw new Error(`Mathub Create is not on sale in ${STORE} yet.`); Sub.pkg = pkg; return pkg;
+    },
+    price() { return (Sub.pkg && Sub.pkg.product && Sub.pkg.product.priceString) || ''; },
+    async buy() { const pkg = await Sub.offer(); const r = await N.purchases.purchasePackage({ aPackage: pkg }); Sub.apply(r.customerInfo); return Sub.active(); },
+    async restore() { if (!Sub.ok) throw new Error('Subscribing is not available in this version of the app.'); const r = await N.purchases.restorePurchases(); Sub.apply(r.customerInfo); return Sub.active(); },
+    manageUrl() { return Sub.manage || (ANDROID ? 'https://play.google.com/store/account/subscriptions?package=space.mathub.app' : 'https://apps.apple.com/account/subscriptions'); }
+  };
+  // classes made before subscriptions existed stay free (runs once, on the first start of this version)
+  if (!settings().subMigrated) { const list = readIdx(); if (list.length) writeIdx(list.map(e => Object.assign({}, e, { free: true }))); setSetting('subMigrated', 1); }
+  const freeClass = id => { const e = readIdx().find(x => x.id === id); return !!(e && e.free); };
+  const locked = App.classLocked = id => local.has(id) && !freeClass(id) && !Sub.active();
+  N.onResume(() => Sub.refresh());
+
+  /* the paywall: a sheet with the price from the store, what it unlocks, Subscribe, Restore, and the renewal terms. Resolves true once subscribed. */
+  function paywall(o = {}) {
+    return new Promise(resolve => {
+      const old = $('#paywall'); if (old) old.remove();
+      const why = o.code ? (o.reason === 'locked' ? `${esc(o.code)} is locked because Mathub Create is off. Everything in it is still saved on this ${DEVICE}.` : `Adding ${esc(o.code)} needs Mathub Create.`) : 'Make your own classes with Mathub Create.';
+      const el = document.createElement('div'); el.className = 'modal-backdrop sheet-backdrop'; el.id = 'paywall';
+      el.innerHTML = `<div class="sheet pw" role="dialog" aria-modal="true" aria-labelledby="pw-h"><div class="sheet-grab" aria-hidden="true"></div>
+        <div class="pw-top"><span class="pw-bo" aria-hidden="true">${App.bobcatSvg ? App.bobcatSvg(64) : ''}</span><div class="pw-title"><h2 id="pw-h">Mathub Create</h2><p class="pw-price" id="pw-price">Getting the price from ${STORE}…</p></div><button class="icon-btn" data-action="close" aria-label="Close">${icon('x', 18)}</button></div>
+        <p class="pw-why">${why}</p>
+        <ul class="pw-list"><li>${icon('check', 18)}<span>Turn any syllabus into a full class: notes, flashcards, practice questions, its calendar and grades</span></li><li>${icon('check', 18)}<span>As many classes as you like, and class files your classmates send you</span></li><li>${icon('check', 18)}<span>Saved on your ${DEVICE}, and it works offline</span></li></ul>
+        <p class="pw-err" id="pw-err" role="alert" hidden></p>
+        <div class="pw-acts"><button type="button" class="btn primary lg" data-action="pw-buy" disabled>Subscribe</button><button type="button" class="btn ghost" data-action="pw-restore">Restore purchases</button></div>
+        <p class="pw-fine" id="pw-fine">A monthly subscription that renews automatically until you cancel. Cancel any time in your ${ANDROID ? 'Google Play' : 'Apple ID'} subscriptions, at least 24 hours before it renews. The example class stays free. <a href="#/policy/create">Terms of Use</a> · <a href="#/policy/privacy">Privacy Policy</a></p></div>`;
+      document.body.appendChild(el); requestAnimationFrame(() => el.classList.add('open'));
+      const buy = $('[data-action="pw-buy"]', el), rest = $('[data-action="pw-restore"]', el), err = $('#pw-err', el);
+      let done = false; const finish = v => { if (done) return; done = true; document.removeEventListener('keydown', onKey); el.classList.remove('open'); setTimeout(() => el.remove(), N.reduceMotion() ? 0 : 220); resolve(v); };
+      const onKey = e => { if (e.key === 'Escape') finish(false); }; document.addEventListener('keydown', onKey);
+      const fail = msg => { err.textContent = msg; err.hidden = !msg; };
+      const showPrice = () => Sub.offer().then(() => { const p = Sub.price(); $('#pw-price', el).innerHTML = p ? `<b>${esc(p)}</b> a month` : 'Monthly'; buy.textContent = p ? `Subscribe for ${p} a month` : 'Subscribe'; buy.disabled = false; $('#pw-fine', el).firstChild.textContent = `Renews every month${p ? ` at ${p}` : ''} until you cancel. Cancel any time in your ${ANDROID ? 'Google Play' : 'Apple ID'} subscriptions, at least 24 hours before it renews. The example class stays free. `; })
+        .catch(e => { $('#pw-price', el).textContent = e.off ? 'Not available yet' : 'Price unavailable'; fail(e.off ? e.message : `Mathub could not reach ${STORE}. Check your connection and try again.`); buy.disabled = !!e.off; buy.textContent = e.off ? 'Subscribe' : 'Try again'; if (!e.off) buy.dataset.retry = '1'; });
+      showPrice();
+      el.addEventListener('click', async e => {
+        if (e.target === el || e.target.closest('[data-action="close"]')) return finish(false);
+        if (e.target.closest('a[href]')) return finish(false);
+        if (e.target.closest('[data-action="pw-buy"]')) {
+          if (buy.dataset.retry) { delete buy.dataset.retry; fail(''); buy.disabled = true; buy.textContent = 'Subscribe'; showPrice(); return; }
+          fail(''); buy.disabled = true; rest.disabled = true; const label = buy.textContent; buy.textContent = `Waiting for ${STORE}…`;
+          try { const on = await Sub.buy(); if (on) { N.haptic('success'); toast('Mathub Create is on. Thank you!', 3500); return finish(true); } fail('The purchase went through but Mathub Create is not on yet. Tap Restore purchases in a minute.'); }
+          catch (x) { if (!cancelled(x)) fail(pendingPay(x) ? `Your payment is pending with ${STORE}. Mathub Create turns on as soon as it goes through.` : (x.message || 'The purchase did not go through. Nothing was charged.')); }
+          buy.disabled = false; rest.disabled = false; buy.textContent = label; return;
+        }
+        if (e.target.closest('[data-action="pw-restore"]')) {
+          fail(''); rest.disabled = true;
+          try { const on = await Sub.restore(); if (on) { N.haptic('success'); toast('Mathub Create is back on.', 3000); return finish(true); } fail(`No Mathub Create subscription was found for this ${ANDROID ? 'Google' : 'Apple'} account.`); }
+          catch (x) { fail(x.message || `Mathub could not reach ${STORE}. Check your connection and try again.`); }
+          rest.disabled = false;
+        }
+      });
+    });
+  }
+  App.paywall = paywall;
+  Sub.init();
+
+  /* a locked class: what it is, that it is kept, and how to open it again */
+  function lockHtml(C) {
+    return `<div class="lock-wrap"><div class="sublock" style="${ccStyle(C.id)}"><span class="lock-ic" aria-hidden="true">${icon('lock', 30)}</span>
+      <h1 class="lock-h">${esc(C.short || C.code)} is locked</h1>
+      <p>${esc(C.name)} is a class you made from a syllabus. Classes you make are part of Mathub Create, which is off right now. Everything in it, your progress included, is still saved on this ${DEVICE} and opens again when you subscribe.</p>
+      <div class="lock-acts"><button type="button" class="btn primary lg" data-lock="buy">Subscribe to open it</button><button type="button" class="btn" data-lock="restore">Restore purchases</button><a class="btn ghost" href="#/">Back to your classes</a></div></div></div>`;
+  }
+  function wireLock(el, C) {
+    el.addEventListener('click', async e => {
+      const b = e.target.closest('[data-lock]'); if (!b) return;
+      if (b.dataset.lock === 'buy') { if (await paywall({ reason: 'locked', code: C.short || C.code })) App.rerender(); return; }
+      b.disabled = true; try { if (await Sub.restore()) { toast('Mathub Create is back on.', 3000); App.rerender(); } else toast(`No Mathub Create subscription was found for this ${ANDROID ? 'Google' : 'Apple'} account.`, 4500); } catch (x) { toast(x.message, 4500); } b.disabled = false;
+    });
+  }
+  App.courseGate = (id, root) => { if (!locked(id)) return false; const C = Courses[id]; document.title = `${C.short || C.code} is locked · Mathub`; root.innerHTML = lockHtml(C); wireLock(root, C); return true; };
+  // when the subscription turns on or off, the page in front of the student follows (not the Create page: a class may be waiting to be added)
+  document.addEventListener('mathub-sub', () => { const r = lastRoute; if (r && (r.view === 'home' || (r.course && local.has(r.course)) || r.view === 'settings')) App.rerender(); });
+
+  /* ============================================================
      #/create
      ============================================================ */
   const fmtDay = d => { try { return new Date(d + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }); } catch (e) { return d; } };
   const fmtSize = n => n > 1e6 ? (n / 1e6).toFixed(1) + ' MB' : Math.max(1, Math.round(n / 1000)) + ' KB';
   let pending = null;   // the checked class waiting for "Add"
+  let pendingFree = false, exampleText = null;   // the example class is the one class anyone can add for free
   App.views.create = {
     title: 'Create a class',
     render(root) {
       const size = settings().mkSize === 'short' ? 'short' : 'full'; pending = null;
       root.innerHTML = `<div class="landing-wrap mk-wrap">
-        <header class="landing-top"><div><h1 class="landing-title"><span class="logo-mark">${App.logoSvg(44)}</span>Create a class</h1><p class="muted mk-lede">Any class with a syllabus: notes, flashcards, practice questions, its calendar and your grade calculator, written from the syllabus by the AI you already use. The class is saved on this ${DEVICE} and works offline.</p></div><div class="row gap-sm"><a class="btn" href="#/">${icon('left', 14)} Your classes</a></div></header>
+        <header class="landing-top"><div><h1 class="landing-title"><span class="logo-mark">${App.logoSvg(44)}</span>Create a class</h1><p class="muted mk-lede">Any class with a syllabus: notes, flashcards, practice questions, its calendar and your grade calculator, written from the syllabus by the AI you already use. The class is saved on this ${DEVICE} and works offline.</p><p class="mk-sub" id="mk-sub">${Sub.active() ? `${icon('check', 15)} Mathub Create is on: make as many classes as you like.` : `Classes you make are part of <button type="button" class="linkbtn" data-action="sub">Mathub Create</button>, <span class="mk-sub-price">a monthly subscription</span>. The example class is free.`}</p></div><div class="row gap-sm"><a class="btn" href="#/">${icon('left', 14)} Your classes</a></div></header>
         <ol class="mk-steps">
           <li class="panel mk-step"><span class="mk-n" aria-hidden="true">1</span><div class="mk-body"><h2 class="mk-h">Copy the instructions</h2>
             <p>Mathub writes instructions that tell an AI exactly how to turn a syllabus into a class.</p>
@@ -329,7 +437,8 @@ THE SYLLABUS:
       </div>`;
       const ta = $('#mk-text', root), out = $('#mk-result', root);
       paintMine($('#mk-mine', root));
-      const check = () => { pending = null; out.innerHTML = resultHtml(ta.value); wireResult(out, ta); };
+      if (!Sub.active() && Sub.ok) Sub.offer().then(() => { const p = Sub.price(); const el = $('.mk-sub-price', root); if (p && el) el.textContent = `${p} a month`; }).catch(() => {});
+      const check = () => { pending = null; pendingFree = exampleText !== null && ta.value === exampleText; out.innerHTML = resultHtml(ta.value); wireResult(out, ta); };
       ta.addEventListener('paste', () => setTimeout(check, 30));
       bind(root, {
         size: b => { setSetting('mkSize', b.dataset.size); $$('[data-action="size"]', root).forEach(x => { const on = x === b; x.classList.toggle('on', on); x.setAttribute('aria-checked', String(on)); }); const pre = $('#mk-prompt', root); if (!pre.hidden) pre.textContent = prompt(b.dataset.size); },
@@ -338,7 +447,8 @@ THE SYLLABUS:
         paste: async () => { try { const t = await N.paste(); if (!t) { toast('The clipboard is empty. Copy the AI’s answer first.'); return; } ta.value = t; check(); } catch (e) { toast(e.message, 4000); } },
         check,
         clear: () => { ta.value = ''; out.innerHTML = ''; pending = null; ta.focus(); },
-        example: async () => { try { const t = await (await fetch('assets/app-sample-class.json')).text(); ta.value = t; check(); } catch (e) { toast('The example could not be opened.'); } }
+        sub: async () => { if (await paywall()) { const el = $('#mk-sub', root); if (el) el.innerHTML = `${icon('check', 15)} Mathub Create is on: make as many classes as you like.`; } },
+        example: async () => { try { const t = await (await fetch('assets/app-sample-class.json')).text(); exampleText = t; ta.value = t; check(); } catch (e) { toast('The example could not be opened.'); } }
       });
       $('#mk-file', root).addEventListener('change', async e => { const f = e.target.files && e.target.files[0]; if (!f) return; if (f.size > 3e6) { toast('That file is too large to be a class.'); return; } ta.value = await f.text(); e.target.value = ''; check(); });
     }
@@ -371,14 +481,16 @@ THE SYLLABUS:
     out.querySelectorAll('[data-copy]').forEach(b => b.addEventListener('click', async () => { try { await N.copy(b.dataset.copy); N.haptic('success'); toast('Copied. Paste it into the same AI chat.', 3000); } catch (e) { toast(e.message); } }));
     const add = $('[data-add]', out); if (!add) { N.haptic('warning'); return; }
     add.addEventListener('click', async () => {
-      if (!pending) return; add.disabled = true;
-      try { const entry = await Mine.add(pending); pending = null; ta.value = ''; N.haptic('success'); toast(`${entry.code} is ready. It is saved on this ${DEVICE}.`, 4000); location.hash = `#/${entry.id}/dashboard`; }
+      if (!pending) return; const free = pendingFree;
+      if (!free && !Sub.active() && !(await paywall({ code: pending.code }))) return;
+      add.disabled = true;
+      try { const entry = await Mine.add(pending, { free }); pending = null; ta.value = ''; N.haptic('success'); toast(`${entry.code} is ready. It is saved on this ${DEVICE}.`, 4000); location.hash = `#/${entry.id}/dashboard`; }
       catch (e) { add.disabled = false; toast('The class could not be saved: ' + e.message, 5000); }
     });
   }
   function paintMine(el) {
     const list = Mine.list();
-    el.innerHTML = list.length ? `<ul class="mk-mine">${list.map(e => `<li class="panel mk-row"><div class="mk-row-main"><b>${esc(e.code)}</b> <span>${esc(e.name)}</span><div class="small muted">${esc(e.term || '')} · added ${esc(new Date(e.added).toLocaleDateString())}</div></div>
+    el.innerHTML = list.length ? `<ul class="mk-mine">${list.map(e => `<li class="panel mk-row"><div class="mk-row-main"><b>${esc(e.code)}</b> <span>${esc(e.name)}</span>${locked(e.id) ? ` <span class="chip lock-chip">${icon('lock', 12)} Locked</span>` : ''}<div class="small muted">${esc(e.term || '')} · added ${esc(new Date(e.added).toLocaleDateString())}</div></div>
         <div class="row gap-sm mk-row-act"><a class="btn sm primary" href="#/${esc(e.id)}/dashboard">Open</a><button type="button" class="btn sm" data-share="${esc(e.id)}">${icon('external', 13)} Send</button><button type="button" class="btn sm ghost" data-del="${esc(e.id)}" aria-label="Delete ${esc(e.code)}">${icon('trash', 13)} Delete</button></div></li>`).join('')}</ul>`
       : `<p class="small muted">None yet. Classes you create show up here and with your other classes.</p>`;
     $$('[data-share]', el).forEach(b => b.addEventListener('click', async () => { const id = b.dataset.share; const e = list.find(x => x.id === id); try { const pack = await Mine.read(id); const name = `${String(e.code || id).replace(/[^A-Za-z0-9]+/g, '')}.mathub.json`; await N.shareFile(name, JSON.stringify(pack), `${e.code} for Mathub`); } catch (err) { if (!/cancel/i.test(err.message || '')) toast('Could not share the class: ' + err.message); } }));
@@ -430,11 +542,26 @@ THE SYLLABUS:
         <div class="field mt-1" style="max-width:220px"><label for="ap-time">Remind me at</label><input class="input" type="time" id="ap-time" value="${esc(s.reminderTime || '19:00')}" ${s.dailyReminder ? '' : 'disabled'}></div>
       </div><div>
         <label class="check" style="padding:0"><input type="checkbox" id="ap-haptics" ${s.haptics === false ? '' : 'checked'}><span>Haptics <span class="muted small">(a tap when an answer is right or wrong)</span></span></label>
+        <div class="ap-sub"><div class="ap-sub-t"><b>Mathub Create</b><span class="small muted">${subLine()}</span></div><div class="row gap-sm">${Sub.active() ? `<button type="button" class="btn sm" data-sub="manage">Manage subscription</button>` : `<button type="button" class="btn sm primary" data-sub="buy">Subscribe</button>`}<button type="button" class="btn sm ghost" data-sub="restore">Restore purchases</button></div></div>
         <p class="small mt-1">${mine ? `${mine} class${mine === 1 ? '' : 'es'} you created ${mine === 1 ? 'is' : 'are'} saved on this ${DEVICE}.` : 'Classes you create from a syllabus are saved on this device.'} <a href="#/create">Create a class</a></p>
         <p class="small muted">Mathub ${esc(MA.version)} · <a href="#/policy">Terms and privacy</a> · <a href="#/contact">Contact</a></p>
       </div></div></div>`;
   }
+  function subLine() {
+    const st = Sub.status(); const day = d => { try { return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }); } catch (e) { return ''; } };
+    if (Sub.active()) return st.until ? (st.renews ? `On. Renews ${day(st.until)}.` : `On until ${day(st.until)}; it will not renew.`) : 'On.';
+    return 'Off. Needed to make classes from a syllabus or a class file; the example class is free.';
+  }
+  function wireSub(el) {
+    el.addEventListener('click', async e => {
+      const b = e.target.closest('[data-sub]'); if (!b) return; const a = b.dataset.sub;
+      if (a === 'manage') { N.open(Sub.manageUrl()); return; }
+      if (a === 'buy') { if (await paywall()) App.rerender(); return; }
+      b.disabled = true; try { if (await Sub.restore()) { toast('Mathub Create is back on.', 3000); App.rerender(); } else toast(`No Mathub Create subscription was found for this ${ANDROID ? 'Google' : 'Apple'} account.`, 4500); } catch (x) { toast(x.message, 4500); } b.disabled = false;
+    });
+  }
   function wireDevicePanel(el) {
+    wireSub(el);
     const ex = $('#ap-exams', el), dy = $('#ap-daily', el), tm = $('#ap-time', el), hp = $('#ap-haptics', el);
     const turnOn = async (box, key) => { if (box.checked && !(await Reminders.enable())) { box.checked = false; return; } setSetting(key, box.checked); if (key === 'dailyReminder') tm.disabled = !box.checked; Reminders.sync(); if (box.checked) toast(key === 'examReminders' ? 'Exam reminders are on.' : `You will get a reminder every day at ${tm.value}.`); };
     ex.addEventListener('change', () => turnOn(ex, 'examReminders'));
@@ -503,7 +630,7 @@ THE SYLLABUS:
     const el = document.createElement('div'); el.className = 'modal-backdrop sheet-backdrop'; el.id = 'class-sheet';
     el.innerHTML = `<div class="sheet" role="dialog" aria-modal="true" aria-label="Your classes"><div class="sheet-grab" aria-hidden="true"></div>
       <div class="sheet-h"><h2>Your classes</h2><button class="icon-btn" data-action="close" aria-label="Close">${icon('x', 18)}</button></div>
-      <div class="sheet-classes">${mine.map(x => { const K = Courses[x]; const ex = examOf(K); const d = daysTo(ex); return `<a class="sc-row${x === id ? ' on' : ''}" href="#/" data-pick="${x}" style="${ccStyle(x)}"><span class="sc-badge">${esc((K.short || K.code).replace(/\s+/g, ' '))}</span><span class="sc-main"><b>${esc(K.name)}</b><small>${ex && d !== null && d >= 0 ? `${esc(ex.name)} ${inDays(d)}` : local.has(x) ? 'Made from your syllabus' : 'No exam ahead'}</small></span>${x === id ? icon('check', 18) : icon('right', 16)}</a>`; }).join('')}</div>
+      <div class="sheet-classes">${mine.map(x => { const K = Courses[x]; const ex = examOf(K); const d = daysTo(ex); return `<a class="sc-row${x === id ? ' on' : ''}" href="#/" data-pick="${x}" style="${ccStyle(x)}"><span class="sc-badge">${esc((K.short || K.code).replace(/\s+/g, ' '))}</span><span class="sc-main"><b>${esc(K.name)}</b><small>${locked(x) ? 'Locked: Mathub Create is off' : ex && d !== null && d >= 0 ? `${esc(ex.name)} ${inDays(d)}` : local.has(x) ? 'Made from your syllabus' : 'No exam ahead'}</small></span>${x === id ? icon('check', 18) : icon('right', 16)}</a>`; }).join('')}</div>
       <div class="sheet-actions"><a class="btn primary" href="#/create">${icon('plus', 15)} Create a class from a syllabus</a><button class="btn" data-action="pick">${icon('grid', 15)} Choose Montana State classes</button></div>
       <div class="sheet-pick" hidden><p class="small muted">Tick the classes you take. The rest stay out of your way.</p><div class="pick-list">${all.map(x => `<label class="check pick-row" style="${ccStyle(x)}"><input type="checkbox" data-c="${x}"${mine.includes(x) ? ' checked' : ''}><span class="sc-badge">${esc(Courses[x].short || Courses[x].code)}</span><span>${esc(Courses[x].name)}</span></label>`).join('')}</div><div class="row gap-sm mt-1"><button class="btn primary" data-action="save-pick">Save</button>${App.views.request ? `<a class="btn ghost" href="#/request">Not listed? Request it</a>` : ''}</div></div>
       ${C ? `<h3 class="sheet-sub sheet-tools-h">In ${esc(C.short || C.code)}</h3><div class="sheet-grid" style="${ccStyle(id)}"><a class="sg-item" href="#/${id}/dashboard">${icon('home', 20)}<span>Class page</span></a>${tools.filter(t => t[0] !== 'dashboard').map(([v, l, ic]) => `<a class="sg-item" href="#/${id}/${v}">${icon(ic || 'book', 20)}<span>${esc(l)}</span></a>`).join('')}</div>` : ''}
@@ -557,6 +684,7 @@ THE SYLLABUS:
 
   function classRow(mine, id) {
     return `<div class="ah-sec-h"><h2>Your classes</h2></div><div class="ah-row" role="list" aria-label="Your classes">${mine.map(x => { const K = Courses[x]; const ex = examOf(K); const d = daysTo(ex); const ns = nodesOf(K); const done = ns.filter(n => n.state === 'done').length;
+      if (locked(x)) return `<button class="ah-card locked${x === id ? ' on' : ''}" role="listitem" data-cid="${x}" style="${ccStyle(x)}" aria-pressed="${x === id}"><span class="ah-art" aria-hidden="true">${icon('lock', 22)}</span><b class="ah-code">${esc(K.short || K.code)}</b><span class="ah-exam">Locked</span></button>`;
       return `<button class="ah-card${x === id ? ' on' : ''}" role="listitem" data-cid="${x}" style="${ccStyle(x)}" aria-pressed="${x === id}"><span class="ah-art" aria-hidden="true">${App.classSprite ? App.classSprite(x, 3) : ''}</span><b class="ah-code">${esc(K.short || K.code)}</b><span class="ah-exam">${ex && d !== null && d >= 0 ? `${esc(ex.name)} ${d === 0 ? 'today' : d === 1 ? 'tomorrow' : `in ${d} days`}` : local.has(x) ? 'Your class' : 'No exam ahead'}</span>${ns.length ? `<span class="ah-cbar" aria-label="${done} of ${ns.length} topics mastered"><i style="width:${Math.round(100 * done / ns.length)}%"></i></span>` : ''}</button>`; }).join('')}<button class="ah-card ah-add" data-ab-add="1" aria-label="Add a class">${icon('plus', 26)}<span class="ah-exam">Add a class</span></button></div>`;
   }
 
@@ -583,6 +711,7 @@ THE SYLLABUS:
       ${ns.length ? `<p class="ah-mast">${bar(Math.round(100 * done / ns.length), 'pine', 'Topics mastered')}<span>${done} of ${ns.length} topics mastered</span></p>` : ''}</section>`;
   }
 
+  const lockHero = C => `<section class="ah-hero ah-locked" aria-labelledby="ah-hero-h"><div class="ah-hero-h"><div><h2 id="ah-hero-h">${esc(C.name)}</h2><p>${icon('lock', 14)} Locked because Mathub Create is off. The class and your progress in it are still saved on this ${DEVICE}.</p></div></div><div class="lock-acts"><button type="button" class="btn primary lg" data-lock="buy">Subscribe to open it</button><button type="button" class="btn" data-lock="restore">Restore purchases</button></div></section>`;
   function toolsHtml(C) {
     const id = C.id; const all = C.NAV && App.groupNav ? App.groupNav(C.NAV).flatMap(g => g.items) : [];
     const pick = TOOL_ORDER.map(v => all.find(x => x[0] === v)).filter(Boolean).slice(0, 7);
@@ -635,7 +764,9 @@ THE SYLLABUS:
       if (!id) return;
       App.loadCourse(id).then(C => {
         const box = $('#ah-main'); if (!box || !root.isConnected) return;
-        box.setAttribute('style', ccStyle(id)); box.innerHTML = heroHtml(C) + todayHtml() + toolsHtml(C) + pathHtml(C); box.setAttribute('aria-busy', 'false');
+        box.setAttribute('style', ccStyle(id)); box.setAttribute('aria-busy', 'false');
+        if (locked(id)) { box.innerHTML = lockHero(C) + todayHtml(); wireLock(box, C); return; }
+        box.innerHTML = heroHtml(C) + todayHtml() + toolsHtml(C) + pathHtml(C);
         // the class's cards can now show its progress, and the plan its flashcards
         const card = $(`.ah-card[data-cid="${id}"]`, root); if (card && !$('.ah-cbar', card)) { const ns = nodesOf(C); if (ns.length) { const dn = ns.filter(n => n.state === 'done').length; card.insertAdjacentHTML('beforeend', `<span class="ah-cbar" aria-label="${dn} of ${ns.length} topics mastered"><i style="width:${Math.round(100 * dn / ns.length)}%"></i></span>`); } }
         if (App.typeset) safe(() => App.typeset(box));

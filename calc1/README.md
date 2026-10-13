@@ -282,6 +282,10 @@ calls go to `https://mathub.space/api/` (the server accepts the app's origin, `c
   (daily goal, flashcards, missed questions, what is due), the class's tools, and its path with every lesson
   named, unit by unit, with exam checkpoints; the class button opens a sheet with your classes, Create a
   class and every tool; the tab bar is Learn, Practice, Today, Discuss, Me.
+- **Mathub Create** (`assets/app-native.js`, setup in `docs/app-subscriptions.md`): one monthly subscription,
+  sold through the App Store and Google Play via RevenueCat (`@revenuecat/purchases-capacitor`), unlocks making
+  classes from a syllabus or a class file. The example class and classes made before it existed stay free; when
+  it ends, those classes stay on the device, locked, until it is back. The RevenueCat public keys go in `BILLING`.
 - **On the phone:** exam and daily reminders as local notifications, haptics, the share sheet (classes, data
   export, any file the page makes), outside links in the Safari sheet, safe areas and the status bar.
 - **No account needed:** every study tool is open in the app; an account adds sync and discussions.

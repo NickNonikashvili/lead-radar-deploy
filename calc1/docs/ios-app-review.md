@@ -32,6 +32,7 @@ Research date: October 2026. Guidelines change; re-read the sources below before
 | **5.1.1(v)** Accounts | No login for features that do not need one. Apps with accounts must let people delete the account in the app. | Every study tool works signed out in the app (the website locks a few tools for guests; the app does not). Signing in only adds sync, discussions and classes with an instructor. **Settings → Delete account** deletes the account and its data on the server. |
 | **4.8** Login services | Apps that offer a third-party login (Google, Facebook) must also offer an equivalent privacy-focused one such as Sign in with Apple. | Mathub has only its own email and password sign-in, so Sign in with Apple is not required. If a Google or Microsoft login is ever added, add Sign in with Apple in the same release. |
 | **Permissions** | Asking for access the app does not need, or a vague purpose string; a missing purpose string crashes the app on first use. | The app asks for one permission: notifications, only when a reminder is turned on. It uses no camera, microphone, photos, location or contacts (the file pickers accept only JSON, PDF, Word and MP3), so Info.plist has no purpose strings. |
+| **3.1.1**, **3.1.2** In-app purchase and subscriptions | Unlocking features with anything but In-App Purchase; subscription screens without the price, period, auto-renewal terms, Terms of Use and Privacy Policy links, or a way to restore purchases. | One auto-renewable subscription, **Mathub Create** (making your own classes), through In-App Purchase (via RevenueCat). The paywall shows the App Store price and period, "renews every month until you cancel" and how to cancel, links to the Terms of Use (`#/policy/create`) and Privacy Policy, and Restore purchases; Settings has Manage subscription. Everything else is free, and so is the example class, so review can try the whole flow. See [`app-subscriptions.md`](app-subscriptions.md). |
 | **5.1.2(i)** Data shared with AI (Nov 2025) | Apps must say clearly, and get permission, before sending personal data to a third-party AI. | The app sends nothing to any AI. The student copies the instructions, pastes them into an AI they chose, and pastes the answer back. Step 2 of Create a class says so in plain words, and the Privacy Policy says the AI's own terms apply. |
 | **5.1.1**, privacy manifest | Uploads that use "required reason" APIs without a privacy manifest fail with ITMS-91053. | `ios/App/App/PrivacyInfo.xcprivacy`: no tracking, the data types below, UserDefaults (CA92.1) and file timestamps (C617.1). Capacitor and its plugins ship their own manifests. |
 | **Build requirements** | Uploads built with an older SDK are refused. | Build with Xcode 26 (iOS 26 SDK). Minimum iOS 15. arm64 only. `ITSAppUsesNonExemptEncryption = false` (the app uses only HTTPS from the system), so there is no export-compliance question per upload. |
@@ -50,7 +51,8 @@ Research date: October 2026. Guidelines change; re-read the sources below before
   - User Content → **Other User Content** (posts, comments, class requests)
   - Usage Data → **Product Interaction** (study progress that syncs across devices)
 - **Diagnostics → Other Diagnostic Data**: **not linked** to the user (error reports carry no account), App Functionality.
-- Not collected: location, contacts, photos, health, financial info, browsing history, search history, purchases, device ID, crash logs from a third-party SDK.
+- **Purchases → Purchase History**: **not linked** to the user (RevenueCat knows a random ID the app makes, not the account), App Functionality. Only for people who subscribe to Mathub Create.
+- Not collected: location, contacts, photos, health, financial info, browsing history, search history, device ID, crash logs from a third-party SDK.
 - Classes created in the app and the syllabus a student pastes stay on the device and are **not** collected.
 
 ### Age rating
@@ -67,7 +69,7 @@ Connect asks the social media question, answer **Yes** and keep 13+.
 ### Other fields
 
 - **Category:** Education (secondary: Productivity).
-- **Price:** Free. No in-app purchases.
+- **Price:** Free. One in-app purchase: the Mathub Create monthly subscription (submit it with the app version; see `app-subscriptions.md`).
 - **Content rights:** the app contains no third-party content you do not have rights to (study notes are
   written in our own words; MathJax and Pyodide are open-source and bundled with their licences).
 - **Support URL:** `https://mathub.space/#/contact`. **Privacy Policy URL:** `https://mathub.space/#/policy`.
@@ -96,7 +98,9 @@ Montana State University students, so please use the demo account provided.
 
 Create a class (app-only feature): on the Learn tab, tap the class button at the top left (or the
 "Add a class" card) → "Create a class from a syllabus".
- - To try it without any AI: tap "Try an example class", then "Add SKIL 101".
+ - To try it without any AI: tap "Try an example class", then "Add SKIL 101". The example class is free.
+ - Adding a class from a real syllabus needs the Mathub Create subscription (In-App Purchase, testable
+   with a sandbox account). Restore purchases is on the paywall and in Settings.
  - The full flow: the app shows instructions; the student copies them into an AI assistant of their
    own choice together with their syllabus, then pastes the answer back. The app checks and repairs
    the answer and saves the class on the device. The app itself never contacts any AI service and

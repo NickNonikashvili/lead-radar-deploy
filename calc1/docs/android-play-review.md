@@ -30,10 +30,10 @@ Research date: October 2026. Play policies change; re-read the sources below bef
 | **Account deletion** | Apps that let people create accounts must offer deletion in the app **and** a web link where people can ask for deletion without the app. | In the app and on the web: **Settings → Delete account**. The web link for the Data safety form: **https://mathub.space/#/policy/delete** (section 6 of the policy page: the steps, an email route for people who cannot sign in, what is deleted and what is kept). |
 | **Data safety** | The form must match what the app does; a mismatch is a common rejection and a later enforcement reason. | Answers below, the same facts as the Privacy Policy (section 3) and the iOS privacy manifest. |
 | **Privacy policy** | A policy must be linked in Play Console and reachable in the app. | https://mathub.space/#/policy, linked in Settings → On this phone, and in the footer. |
-| **Permissions** | Asking for permissions the app does not need, or restricted ones without a declaration. | Only INTERNET, POST_NOTIFICATIONS (asked when a reminder is turned on), RECEIVE_BOOT_COMPLETED and WAKE_LOCK (keep reminders after a restart), VIBRATE (haptics). CI fails the build if anything else appears. |
+| **Permissions** | Asking for permissions the app does not need, or restricted ones without a declaration. | Only INTERNET, POST_NOTIFICATIONS (asked when a reminder is turned on), RECEIVE_BOOT_COMPLETED and WAKE_LOCK (keep reminders after a restart), VIBRATE (haptics), and for Mathub Create com.android.vending.BILLING and ACCESS_NETWORK_STATE (Google Play Billing and RevenueCat). CI fails the build if anything else appears. |
 | **Exact alarms** | `SCHEDULE_EXACT_ALARM` / `USE_EXACT_ALARM` are for alarm-clock and calendar apps; other apps get a policy violation. On Android 14+ the permission is also denied by default, so the notifications plugin would open a system settings screen. | Both are removed from the manifest (`tools:node="remove"`); reminders are scheduled as inexact (`isExactNotification: false` in `assets/app-boot.js`), which is fine for "your exam is in 3 days". CI fails if either permission is present. |
 | **Deceptive behaviour, metadata** | Misleading titles, icons or screenshots; a title over 30 characters, emoji or all caps; claims about rankings or affiliation. | Title "Mathub" or "Mathub: Study Hub" (under 30 characters). Bo is our own art. Keep "Montana State" out of the title and icon; the description says Mathub is not affiliated with Montana State University. Screenshots come from the app. |
-| **Payments** | Selling digital goods outside Google Play Billing. | Free, no purchases, no ads. |
+| **Payments and subscriptions** | Selling digital goods outside Google Play Billing; subscription screens that hide the price, the renewal or how to cancel. | Free to download, no ads. One subscription, **Mathub Create** (making your own classes), sold only through Google Play Billing (via RevenueCat). The paywall shows the Play price and period, that it renews until cancelled and how to cancel, links to the Terms and Privacy Policy, and Restore purchases; Settings has Manage subscription. See [`app-subscriptions.md`](app-subscriptions.md). |
 | **AI-generated content** | Apps that generate content with AI must let users report offensive AI output. | Mathub generates nothing with AI and sends nothing to an AI. The student pastes an answer from an AI they chose; the class it makes is saved only on their phone and shown only to them. If reviewers ask, point to this and to the in-app problem report. |
 | **Developer verification** | Since September 30, 2026, apps from unverified developers cannot be installed in Brazil, Indonesia, Singapore and Thailand; Google plans to extend this worldwide in 2027. | Complete identity verification in Play Console before the first release; Play registers the app automatically. |
 | **16 KB memory pages** | Apps with native code must support 16 KB page sizes for Android 15+ devices. | The app's code is web code and Kotlin/Java; CI checks the bundle for native libraries and, if any appear, checks their alignment. |
@@ -52,7 +52,8 @@ Research date: October 2026. Play policies change; re-read the sources below bef
   - App activity → **App interactions** (study progress that syncs), **Other user-generated content** (posts, comments, class requests)
   - Files and docs → **Files and docs** (a syllabus a student attaches to a class request)
   - App info and performance → **Diagnostics** (error reports, no account attached)
-- **Not collected:** location, contacts, photos and videos, audio, calendar, health, financial info, messages, web history, device or other IDs.
+  - Financial info → **Purchase history** (only for people who subscribe to Mathub Create; processed by RevenueCat as a service provider, so not "shared")
+- **Not collected:** location, contacts, photos and videos, audio, calendar, health, other financial info, messages, web history, device or other IDs.
 - Classes created in the app and the syllabus pasted into an AI stay on the phone and are not collected.
 
 ### Content rating (IARC questionnaire)
@@ -60,7 +61,7 @@ Research date: October 2026. Play policies change; re-read the sources below bef
 - Category: **Reference, News, or Educational**.
 - Violence, fear, sexuality, language, controlled substances, gambling: **No**.
 - **Users can interact or exchange content:** Yes (moderated class discussions; no private messages).
-- **Shares the user's location:** No. **Digital purchases:** No. **Unrestricted internet access:** No (outside links open in the browser).
+- **Shares the user's location:** No. **Digital purchases:** Yes (the Mathub Create subscription). **Unrestricted internet access:** No (outside links open in the browser).
 
 ### Target audience and content
 
@@ -73,7 +74,8 @@ Everything except discussions works without signing in. To see discussions, tap 
 and use the account below. Sign-up is limited to Montana State University addresses, so please use this account.
 Create a class (app only): Learn tab → the class button (top left) → "Create a class from a syllabus" → "Try an example class" →
 "Add SKIL 101". The app never contacts an AI service: the student copies the instructions to an AI of their
-choice and pastes the answer back. Report and Block are under every post and comment.
+choice and pastes the answer back. The example class is free; adding a class from a real syllabus needs the
+Mathub Create subscription (test it with a license-testing account). Report and Block are under every post and comment.
 Account deletion: Settings → Delete account, or https://mathub.space/#/policy/delete.
 ```
 

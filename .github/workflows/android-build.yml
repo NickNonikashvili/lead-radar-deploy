@@ -75,14 +75,16 @@ jobs:
           grep -qE "(minSdkVersion|sdkVersion):'24'" badging.txt   # newer aapt2 prints minSdkVersion
           # Google Play keeps the exact-alarm permissions for alarm-clock and calendar apps; reminders here are inexact
           if grep -E "SCHEDULE_EXACT_ALARM|USE_EXACT_ALARM" badging.txt; then echo "an exact-alarm permission is in the manifest"; exit 1; fi
-          # no permission beyond what the app uses: network, notifications, boot (to keep reminders), wake lock, vibration
-          EXTRA=$(grep -oE "uses-permission: name='[^']+'" badging.txt | sed -E "s/.*name='([^']+)'/\1/" | grep -vE "^android.permission.(INTERNET|POST_NOTIFICATIONS|RECEIVE_BOOT_COMPLETED|WAKE_LOCK|VIBRATE)$|^space.mathub.app.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION$" || true)
+          # no permission beyond what the app uses: network, notifications, boot (to keep reminders), wake lock, vibration,
+          # and for Mathub Create (RevenueCat and Google Play Billing): the billing permission and the network state
+          EXTRA=$(grep -oE "uses-permission: name='[^']+'" badging.txt | sed -E "s/.*name='([^']+)'/\1/" | grep -vE "^android.permission.(INTERNET|POST_NOTIFICATIONS|RECEIVE_BOOT_COMPLETED|WAKE_LOCK|VIBRATE|ACCESS_NETWORK_STATE)$|^com.android.vending.BILLING$|^space.mathub.app.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION$" || true)
           if [ -n "$EXTRA" ]; then echo "unexpected permissions: $EXTRA"; exit 1; fi
           unzip -l "$AAB" > aab.txt
           grep -q "base/assets/public/index.html" aab.txt
           grep -q "base/assets/public/assets/pyodide/pyodide.asm.wasm" aab.txt
           grep -q "base/assets/public/assets/mathjax/tex-svg.js" aab.txt
           grep -q "base/res/mipmap-anydpi-v26/ic_launcher.xml" aab.txt
+          grep -q "uses-permission: name='com.android.vending.BILLING'" badging.txt   # Mathub Create can be bought through Google Play
           grep -q "base/res/drawable-xxxhdpi-v4/ic_stat_mathub.png\|base/res/drawable-xxxhdpi/ic_stat_mathub.png" aab.txt
           unzip -p "$APK" assets/public/index.html | grep -q 'data-app-version'
           if unzip -p "$APK" assets/public/index.html | grep -E '<script[^>]+src="https?://'; then echo "a page loads a script from the internet"; exit 1; fi

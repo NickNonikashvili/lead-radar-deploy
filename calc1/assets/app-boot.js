@@ -40,13 +40,14 @@
   /* ---------- plugins ---------- */
   var plugin = function (name) { if (!native) return null; try { return (C.Plugins && C.Plugins[name]) || (C.registerPlugin && C.registerPlugin(name)) || null; } catch (e) { return null; } };
   var P = {};
-  ['Haptics', 'Clipboard', 'Share', 'Filesystem', 'LocalNotifications', 'Browser', 'StatusBar', 'SystemBars', 'App', 'SplashScreen', 'Keyboard'].forEach(function (n) { P[n] = plugin(n); });
+  ['Haptics', 'Clipboard', 'Share', 'Filesystem', 'LocalNotifications', 'Browser', 'StatusBar', 'SystemBars', 'App', 'SplashScreen', 'Keyboard', 'Purchases'].forEach(function (n) { P[n] = plugin(n); });
   var settings = function () { try { return JSON.parse(localStorage.getItem('studyhub-settings') || '{}'); } catch (e) { return {}; } };
   var reduceMotion = function () { return settings().motion === 'off' || (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches); };
   var DIR = 'DATA';   // the app's own Documents-like folder (Filesystem Directory.Data); nothing outside the app's container
 
   var Native = window.Native = {
     native: native,
+    purchases: P.Purchases,   // RevenueCat (App Store and Google Play subscriptions); used by assets/app-native.js
     /* success | error | warning | light | medium | select */
     haptic: function (kind) {
       if (!P.Haptics || settings().haptics === false) return;
