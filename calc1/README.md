@@ -269,29 +269,28 @@ Native iOS and Android apps built with Capacitor from this same site. It carries
 works offline: MathJax and the Python runtime are bundled, nothing is downloaded at runtime. Account
 calls go to `https://mathub.space/api/` (the server accepts the app's origin, `capacitor://localhost`).
 
-- **Create a class** (app-only, `#/create`, `assets/app-native.js`): copy the instructions, give them to any
-  AI with your syllabus, paste the answer back. The app finds the JSON in the answer, repairs what it safely
-  can, validates it with the class-pack checker, shows a preview, and saves the class as a file on the
-  device (`classes/my####.mathub.json`). Classes can be shared as files and imported. "Try an example class"
-  adds `assets/app-sample-class.json` with no AI needed.
+- **Create a class** (`#/create`, `assets/create.js`, on the website and in the apps): see "Classes students
+  make" below. In the apps classes are saved as files on the device (`classes/my####.mathub.json`) and, when
+  signed in, with the account; "Try an example class" adds `assets/app-sample-class.json` with no AI needed.
 - **Its own frame** (`assets/app-native.js`, `assets/app.css`; see "The iPhone, iPad and Android apps" in
   DESIGN.md): the website's top bar, sidebar and footer are hidden. A top bar holds the class button, the
   streak, today's XP against the daily goal and the account (or Sign in); the start page (`App.homeView`,
-  hooked in `app.js`) is a row of class cards, then the chosen class (the week and what it covers now, its
-  next exam with days left and readiness, a Continue button into the next lesson), today across all classes
-  (daily goal, flashcards, missed questions, what is due), the class's tools, and its path with every lesson
-  named, unit by unit, with exam checkpoints; the class button opens a sheet with your classes, Create a
-  class and every tool; the tab bar is Learn, Practice, Today, Discuss, Me.
-- **Mathub Create** (`assets/app-native.js`, setup in `docs/app-subscriptions.md`): one monthly subscription,
-  sold through the App Store and Google Play via RevenueCat (`@revenuecat/purchases-capacitor`), unlocks making
-  classes from a syllabus or a class file. The example class and classes made before it existed stay free; when
-  it ends, those classes stay on the device, locked, until it is back. The RevenueCat public keys go in `BILLING`.
+  hooked in `app.js`, built from the shared pieces in `assets/home.js`) is a row of class cards, then the chosen
+  class (the week and what it covers now, its next exam with days left and readiness, a Continue button into
+  the next lesson), exam week when an exam is 7 days away or closer, today across all classes (daily goal,
+  flashcards, missed questions, what is due), the class's tools, and its path with every lesson named, unit by
+  unit, with exam checkpoints; the class button opens a sheet with your classes, Create a class and every tool;
+  the tab bar is Learn, Practice, Today, Discuss, Me.
+- **Mathub Create** (`assets/create.js`, setup in `docs/app-subscriptions.md`): one monthly subscription, sold
+  through the App Store and Google Play via RevenueCat (`@revenuecat/purchases-capacitor`) and on the website
+  through a RevenueCat Web Purchase Link; the same subscription works everywhere the student signs in.
 - **On the phone:** exam and daily reminders as local notifications, haptics, the share sheet (classes, data
   export, any file the page makes), outside links in the Safari sheet, safe areas and the status bar.
 - **No account needed:** every study tool is open in the app; an account adds sync and discussions.
 - **Files:** `app/` (Capacitor project, `scripts/build-www.js` builds `app/www` from this folder),
   `assets/app-boot.js`, `assets/app-native.js`, `assets/app.css` (loaded only in the app; the website never
-  loads them), `ios/App/App/PrivacyInfo.xcprivacy`.
+  loads them), `ios/App/App/PrivacyInfo.xcprivacy`. `assets/create.js`, `assets/home.js` and their CSS are
+  shared with the website.
 - **Android:** the same app in `app/android` (target API 36, edge to edge, Bo adaptive and themed icons, back
   button and gesture, reminders in their own notification channel and inexact, so no exact-alarm permission).
 - **Build iOS:** `cd app && npm ci && npm run sync:ios && npm run open`, then archive in Xcode 26.
@@ -307,6 +306,48 @@ calls go to `https://mathub.space/api/` (the server accepts the app's origin, `c
 - **Account deletion link** (Google Play asks for one): `https://mathub.space/#/policy/delete`.
 
 The Hostinger zip never includes `app/`.
+
+## Classes students make, Mathub Create and sharing
+
+`assets/create.js`, `assets/create.css`, `api/myclasses.php`; setup and store details in
+`docs/app-subscriptions.md`.
+
+- **Create a class** (`#/create`, website and apps): copy the instructions, give them to any AI with your
+  syllabus, paste the answer back. Mathub finds the JSON in the answer, repairs what it safely can, validates
+  it with the class-pack checker and shows a preview before adding it. Mathub never sends the syllabus anywhere.
+  On the website adding a class needs an account; the page itself is open to guests.
+- **Where classes live.** With the account (`my_classes`: the class pack, up to 40 classes of 3 MB each), so
+  they are on the website and in the apps wherever the student signs in. The website caches them in IndexedDB
+  and clears them on sign-out; the apps keep a file per class and work offline. A class made in the app while
+  signed out goes up at the next sign-in. `App.classSync` keeps both sides the same (new ones up, the account's
+  down, deleted ones gone everywhere; an id clash gets a new id). Rows go with the account through
+  `ON DELETE CASCADE`, and Download my data includes them.
+- **Mathub Create** (`App.subscription`): one monthly subscription for making classes. The apps buy it through
+  the App Store or Google Play; the website opens a RevenueCat Web Purchase Link (Stripe) in a new tab and waits
+  for it (`create_status`, which asks RevenueCat's REST API and keeps the answer for 10 minutes unless asked to
+  refresh). All three use the RevenueCat customer `mh_<account id>`. The example class and classes made before
+  subscriptions existed are free; when it ends, classes are kept, locked (`App.courseGate`), until it is back.
+  Settings has a Mathub Create panel (website) or row (apps) with Manage subscription.
+- **Sharing.** Share gives `https://mathub.space/#/c/CODE`, the 8-character code and a QR code
+  (`assets/vendor/qrcode.js`, qrcode-generator, MIT, loaded on demand). `#/c/CODE` shows the class to anyone,
+  without the owner's name, with Add (a copy; needs Mathub Create) and Report. Moderators can stop a reported
+  share from Admin → Problems. The owner can stop sharing at any time.
+- **Server keys** (in `api/config.local.php` only): `revenuecat_secret`, `create_web_link`, `create_web_price`.
+
+## The start page and exam week
+
+`assets/home.js`, `assets/home.css`. The apps' Learn page and the website's start page share the same pieces:
+class cards, the class card (where the class is, its next exam with days left and readiness, the next lesson),
+Today across all classes, the class's study tools, and the labelled path. On the website, students who have
+studied here get them under "Your next step": a tab per class, the class card and the unit they are in, beside
+Today, the tools, where they left off and the quick buttons (two columns on wide screens). A first visit keeps
+the intro and the three steps.
+
+**Exam week.** From 7 days before an exam (`App.home.examWeek`), the start page (website and apps) and the class
+page show a plan for today (the weakest topic as a 5-minute lesson, flashcards due, a timed practice exam in the
+last three days, the prep checklist) and one for each day until the exam (weak topics spread over the days, the
+practice exam the day before, a light review on exam day). It is built from readiness, so it follows what the
+student has practised. The quizzer takes `?exam=ID&timed=1` to open in exam mode on that exam's topics.
 
 ## Security, privacy and quality
 

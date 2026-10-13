@@ -161,7 +161,8 @@
 .wh-side .ah-tools { margin-top: 20px; }
 .wh .ap-banner { position: static; }
 .wh .ah-pathsec { margin-top: 24px; }
-.wh .ah-hero-h .ah-link, .wh .ah-link { min-height: 32px; }
+@media (pointer: fine) { .wh .ah-hero-h .ah-link, .wh .ah-link { min-height: 32px; } }
+@media (pointer: coarse) { .wh-tab { min-height: 44px; } }
 .wh .ah-whole { margin-top: 8px; }
 .wh :is(.ah-item, .ah-tool, .ah-go, .ah-ex):hover { filter: brightness(1.03); }
 .wh .ah-item:hover .ah-item-t b, .wh .xw-item:hover .xw-t b { text-decoration: underline; text-underline-offset: 3px; }

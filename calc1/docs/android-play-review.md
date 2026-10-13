@@ -49,7 +49,7 @@ Research date: October 2026. Play policies change; re-read the sources below bef
 - **Shared with third parties:** none. (Hostinger hosts the site and sends its emails as a service provider, which the form does not count as sharing.)
 - **Collected** (all **optional**: the app works without an account; purpose **App functionality** and **Account management** for the first three, **App functionality** for the rest; none processed ephemerally only):
   - Personal info → **Email address**, **Name** (optional display name), **User IDs**
-  - App activity → **App interactions** (study progress that syncs), **Other user-generated content** (posts, comments, class requests)
+  - App activity → **App interactions** (study progress that syncs), **Other user-generated content** (posts, comments, class requests, and classes the student makes when signed in: they sync with the account and can be shared by link)
   - Files and docs → **Files and docs** (a syllabus a student attaches to a class request)
   - App info and performance → **Diagnostics** (error reports, no account attached)
   - Financial info → **Purchase history** (only for people who subscribe to Mathub Create; processed by RevenueCat as a service provider, so not "shared")

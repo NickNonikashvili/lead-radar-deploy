@@ -48,10 +48,10 @@ Research date: October 2026. Guidelines change; re-read the sources below before
   - Contact Info → **Email Address** (the account)
   - Contact Info → **Name** (optional display name)
   - Identifiers → **User ID** (the account number)
-  - User Content → **Other User Content** (posts, comments, class requests)
+  - User Content → **Other User Content** (posts, comments, class requests, and classes the student makes when signed in: they sync with the account and can be shared by link)
   - Usage Data → **Product Interaction** (study progress that syncs across devices)
 - **Diagnostics → Other Diagnostic Data**: **not linked** to the user (error reports carry no account), App Functionality.
-- **Purchases → Purchase History**: **not linked** to the user (RevenueCat knows a random ID the app makes, not the account), App Functionality. Only for people who subscribe to Mathub Create.
+- **Purchases → Purchase History**: **linked** to the user (once signed in, RevenueCat knows the subscription by an ID made from the Mathub account number, so it also works on the website), App Functionality, not used for tracking. Only for people who subscribe to Mathub Create.
 - Not collected: location, contacts, photos, health, financial info, browsing history, search history, device ID, crash logs from a third-party SDK.
 - Classes created in the app and the syllabus a student pastes stay on the device and are **not** collected.
 
