@@ -29,7 +29,7 @@ async function ensure(port, args, cwd, label) {
   const dbFile = path.join(ROOT, 'api', 'data', 'mathub.sqlite');
   // cleared before every suite: the limit is 12 logins per 15 minutes per account, and the suites together sign in more often than that;
   // the same goes for the daily and hourly limits on new classes, posts, comments, reports and blocks when the suite runs several times a day
-  const clearRate = () => { if (fs.existsSync(dbFile)) spawnSync('php', ['-r', 'try { (new PDO("sqlite:" . $argv[1]))->exec("DELETE FROM rate WHERE key LIKE \'login:%\' OR key LIKE \'issue:%\' OR key LIKE \'classreq:%\' OR key LIKE \'teach%\' OR key LIKE \'post:%\' OR key LIKE \'comment:%\' OR key LIKE \'report:%\' OR key LIKE \'block:%\'"); } catch (Throwable $e) {}', dbFile], { stdio: 'ignore' }); };
+  const clearRate = () => { if (fs.existsSync(dbFile)) spawnSync('php', ['-r', 'try { (new PDO("sqlite:" . $argv[1]))->exec("DELETE FROM rate WHERE key LIKE \'login:%\' OR key LIKE \'issue:%\' OR key LIKE \'classreq:%\' OR key LIKE \'teach%\' OR key LIKE \'post:%\' OR key LIKE \'comment:%\' OR key LIKE \'report:%\' OR key LIKE \'block:%\' OR key LIKE \'create_status:%\' OR key LIKE \'myclass%\' OR key LIKE \'shared_class:%\'"); } catch (Throwable $e) {}', dbFile], { stdio: 'ignore' }); };
   const results = [];
   for (const f of files) {
     clearRate(); console.log(`\n━━━ ${f} ━━━`); const t0 = Date.now();

@@ -55,6 +55,15 @@ return [
   // Optional. If set, GET api/index.php?r=stats with header X-Admin-Key: <this value> returns sign-up counts.
   'admin_key'       => '',
 
+  // Mathub Create, the subscription for making classes (see docs/app-subscriptions.md). For the website:
+  //   revenuecat_secret  RevenueCat secret API key (sk_...). Put it in config.local.php, never in this file.
+  //   create_web_link    the production Web Purchase Link from RevenueCat (https://pay.rev.cat/...), without a user id
+  //   create_web_price   the price to show on the website, e.g. '$4.99 a month' is shown as '$4.99'
+  'revenuecat_secret' => '',
+  'create_web_link'   => '',
+  'create_web_price'  => '$4.99',
+  'create_entitlement' => 'create',
+
   // Storage. Keep the database inside api/data (protected by .htaccess) or move it above public_html.
   'db_path'         => __DIR__ . '/data/mathub.sqlite',
 
