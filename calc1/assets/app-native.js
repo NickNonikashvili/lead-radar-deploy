@@ -472,7 +472,7 @@ THE SYLLABUS:
     const back = r && !ROOTS(r) ? `<button class="ab-back" data-ab="back" aria-label="Back">${icon('left', 22)}</button>` : '';
     bar.innerHTML = `<div class="ab-l">${back}${C ? `<button class="ab-class" data-ab="classes" style="${ccStyle(id)}" aria-label="${esc(C.short || C.code)}: switch class or open its tools" aria-haspopup="dialog"><span class="ab-class-code">${esc(C.short || C.code)}</span>${icon('chevron', 14)}</button>` : `<button class="ab-class none" data-ab="classes" aria-haspopup="dialog">${icon('plus', 16)}<span class="ab-class-code">Add a class</span></button>`}</div>
       <div class="ab-r"><button class="ab-stat ab-streak${st.activeToday ? ' on' : ''}" data-ab="streak" aria-label="${st.n} day streak${st.activeToday ? ', studied today' : ''}">${icon('fire', 20)}<b>${st.n}</b></button>
-      <button class="ab-stat ab-xp${xp >= goal ? ' on' : ''}" data-ab="xp" aria-label="${xp} of ${goal} XP today">${icon('zap', 20)}<b>${xp}</b></button>
+      <button class="ab-stat ab-xp${xp >= goal ? ' on' : ''}" data-ab="xp" aria-label="${xp} of ${goal} XP today">${icon('zap', 20)}<b>${xp}</b><small>/${goal}</small></button>
       ${u ? `<a class="ab-acct" href="#/settings" aria-label="Your account, ${esc(name)}"><span class="ab-avatar">${esc(name.trim()[0].toUpperCase())}</span></a>` : `<button class="ab-signin" data-ab="signin">Sign in</button>`}</div>`;
   }
   function onBar(e) {
@@ -495,7 +495,7 @@ THE SYLLABUS:
   }
 
   /* ---------- the class sheet: switch class, add one, and this class's tools ---------- */
-  function openSheet() {
+  function openSheet(focus) {
     if ($('#class-sheet')) return; const id = curClass(); const C = id ? Courses[id] : null; const mine = myIds();
     const all = App.COURSE_ORDER.filter(x => Courses[x] && !Courses[x].preview && !local.has(x));
     const tools = C && C.NAV && App.groupNav ? App.groupNav(C.NAV).flatMap(g => g.items) : [];
@@ -506,9 +506,10 @@ THE SYLLABUS:
       <div class="sheet-classes">${mine.map(x => { const K = Courses[x]; const ex = examOf(K); const d = daysTo(ex); return `<a class="sc-row${x === id ? ' on' : ''}" href="#/" data-pick="${x}" style="${ccStyle(x)}"><span class="sc-badge">${esc((K.short || K.code).replace(/\s+/g, ' '))}</span><span class="sc-main"><b>${esc(K.name)}</b><small>${ex && d !== null && d >= 0 ? `${esc(ex.name)} ${inDays(d)}` : local.has(x) ? 'Made from your syllabus' : 'No exam ahead'}</small></span>${x === id ? icon('check', 18) : icon('right', 16)}</a>`; }).join('')}</div>
       <div class="sheet-actions"><a class="btn primary" href="#/create">${icon('plus', 15)} Create a class from a syllabus</a><button class="btn" data-action="pick">${icon('grid', 15)} Choose Montana State classes</button></div>
       <div class="sheet-pick" hidden><p class="small muted">Tick the classes you take. The rest stay out of your way.</p><div class="pick-list">${all.map(x => `<label class="check pick-row" style="${ccStyle(x)}"><input type="checkbox" data-c="${x}"${mine.includes(x) ? ' checked' : ''}><span class="sc-badge">${esc(Courses[x].short || Courses[x].code)}</span><span>${esc(Courses[x].name)}</span></label>`).join('')}</div><div class="row gap-sm mt-1"><button class="btn primary" data-action="save-pick">Save</button>${App.views.request ? `<a class="btn ghost" href="#/request">Not listed? Request it</a>` : ''}</div></div>
-      ${C ? `<h3 class="sheet-sub">In ${esc(C.short || C.code)}</h3><div class="sheet-grid" style="${ccStyle(id)}"><a class="sg-item" href="#/${id}/dashboard">${icon('home', 20)}<span>Class page</span></a>${tools.filter(t => t[0] !== 'dashboard').map(([v, l, ic]) => `<a class="sg-item" href="#/${id}/${v}">${icon(ic || 'book', 20)}<span>${esc(l)}</span></a>`).join('')}</div>` : ''}
-      <h3 class="sheet-sub">Everything else</h3><div class="sheet-grid">${more.map(([h, l, ic]) => `<a class="sg-item" href="${h}">${icon(ic, 20)}<span>${l}</span></a>`).join('')}<button class="sg-item" data-action="search">${icon('search', 20)}<span>Search</span></button></div></div>`;
+      ${C ? `<h3 class="sheet-sub sheet-tools-h">In ${esc(C.short || C.code)}</h3><div class="sheet-grid" style="${ccStyle(id)}"><a class="sg-item" href="#/${id}/dashboard">${icon('home', 20)}<span>Class page</span></a>${tools.filter(t => t[0] !== 'dashboard').map(([v, l, ic]) => `<a class="sg-item" href="#/${id}/${v}">${icon(ic || 'book', 20)}<span>${esc(l)}</span></a>`).join('')}</div>` : ''}
+      <h3 class="sheet-sub">Everything else</h3><div class="sheet-grid">${more.map(([h, l, ic]) => `<a class="sg-item" href="${h}">${icon(ic, 20)}<span>${l}</span></a>`).join('')}<button class="sg-item" data-action="search">${icon('search', 20)}<span>Search</span></button>${App.ambient ? `<button class="sg-item" data-action="sounds"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/></svg><span>Focus sounds</span></button>` : ''}</div></div>`;
     document.body.appendChild(el); requestAnimationFrame(() => el.classList.add('open'));
+    if (focus === 'tools') { const h = $('.sheet-tools-h', el); if (h) requestAnimationFrame(() => { const sh = $('.sheet', el); sh.scrollTop += h.getBoundingClientRect().top - sh.getBoundingClientRect().top - 12; }); }   // "All tools" on the start page opens the sheet at the class's tools
     const close = () => { document.removeEventListener('keydown', onKey); el.classList.remove('open'); setTimeout(() => el.remove(), N.reduceMotion() ? 0 : 220); };
     const onKey = e => { if (e.key === 'Escape') close(); }; document.addEventListener('keydown', onKey);
     el.addEventListener('click', e => {
@@ -517,61 +518,135 @@ THE SYLLABUS:
       if (e.target.closest('[data-action="pick"]')) { const box = $('.sheet-pick', el); box.hidden = !box.hidden; return; }
       if (e.target.closest('[data-action="save-pick"]')) { const ids = $$('input[data-c]', el).filter(i => i.checked).map(i => i.dataset.c).concat([...local].filter(x => Courses[x])); if (!ids.length) { toast('Pick at least one class.'); return; } setSetting('courses', ids); if (App.auth && App.auth.user && App.auth.savePrefs) App.auth.savePrefs({ courses: ids }).catch(() => {}); if (App.rebuildNav) App.rebuildNav(); if (!ids.includes(settings().appClass)) setClass(ids[0]); close(); App.rerender(); return; }
       if (e.target.closest('[data-action="search"]')) { close(); setTimeout(goSearch, 50); return; }
+      if (e.target.closest('[data-action="sounds"]')) { close(); setTimeout(() => App.ambient.open(), 50); return; }   // the sounds bubble stays out of the way in the app until something plays
       if (e.target.closest('a[href]')) close();
     });
   }
 
-  /* ---------- the start page: classes, then the path ---------- */
-  const NODE_IC = { done: 'check', current: 'play', open: 'play', soon: 'clock' };
-  function classRow(mine, id) {
-    return `<div class="ah-row" role="list" aria-label="Your classes">${mine.map(x => { const K = Courses[x]; const ex = examOf(K); const d = daysTo(ex); return `<button class="ah-card${x === id ? ' on' : ''}" role="listitem" data-cid="${x}" style="${ccStyle(x)}" aria-pressed="${x === id}"><span class="ah-art" aria-hidden="true">${App.classSprite ? App.classSprite(x, 3) : ''}</span><b class="ah-code">${esc(K.short || K.code)}</b><span class="ah-exam">${ex && d !== null && d >= 0 ? `${d === 0 ? 'Exam today' : d === 1 ? 'Exam tomorrow' : `${d}d · ${esc(ex.name)}`}` : local.has(x) ? 'Your class' : 'No exam ahead'}</span></button>`; }).join('')}<button class="ah-card ah-add" data-ab-add="1" aria-label="Add a class">${icon('plus', 26)}<span class="ah-exam">Add a class</span></button></div>`;
+  /* ---------- the start page ----------
+     Your classes as cards; under them the one you picked: where the class is, its next exam and how ready
+     you are, and the next lesson; then today across all your classes (daily goal, flashcards, missed
+     questions, what is due); then the class's tools and its path with every lesson named. Nothing the
+     website's start page and class page show is left out. */
+  const safe = f => { try { return f(); } catch (e) { return null; } };
+  const NODE_IC = { done: 'check', current: 'play', open: 'play', soon: 'book' };
+  const TOOL_ORDER = ['notes', 'readings', 'practice', 'flashcards', 'formulas', 'exam', 'calendar', 'grades', 'playground', 'mistakes', 'planner', 'course'];
+  const TOOL_NAME = { notes: 'Notes', readings: 'Readings', practice: 'Practice', flashcards: 'Flashcards', formulas: 'Formulas', exam: 'Exam prep', calendar: 'Calendar', grades: 'Grades', playground: 'Python', mistakes: 'Mistakes', planner: 'Planner', course: 'Syllabus' };
+  const SIDE_X = [-44, -14, 14, 44, 14, -14];   // the path's gentle zig-zag; each lesson's name sits on the roomier side of its button
+  const nodesOf = C => (C && C.kind !== 'writing' && App.pathNodes ? safe(() => App.pathNodes(C)) : null) || [];
+  const whenTxt = n => n === 0 ? 'Today' : n === 1 ? 'Tomorrow' : `In ${n} days`;
+  const bar = (pct, cls = '', label = '') => `<span class="ah-bar${cls ? ' ' + cls : ''}" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${pct}"${label ? ` aria-label="${esc(label)}"` : ''}><i style="width:${pct}%"></i></span>`;
+
+  function todayHtml() {
+    const ids = myIds(); const t = App.todayISO();
+    const due = ids.map(x => ({ x, n: safe(() => { const d = App.dueCards(x); return d.count + (d.estimated || 0); }) || 0 })).filter(o => o.n); const dueN = due.reduce((s, o) => s + o.n, 0);
+    const mist = ids.map(x => ({ x, n: (safe(() => App.mistakesDue(x)) || []).length })).filter(o => o.n); const mistN = mist.reduce((s, o) => s + o.n, 0);
+    const dls = ids.flatMap(x => (safe(() => App.upcomingDeadlinesOf(Courses[x], 8)) || []).map(d => Object.assign({ c: x, n: App.daysBetween(t, d.date) }, d))).filter(d => d.n >= 0 && d.n <= 7).sort((a, b) => a.date.localeCompare(b.date));
+    const xp = App.xpToday ? App.xpToday() : 0, goal = App.dailyGoal ? App.dailyGoal() : 30; const pct = Math.min(100, Math.round(100 * xp / goal));
+    const row = (href, ic, tone, title, sub, end) => `<a class="ah-item ${tone}" href="${href}"><span class="ah-ic" aria-hidden="true">${icon(ic, 19)}</span><span class="ah-item-t"><b>${title}</b>${sub ? `<small>${sub}</small>` : ''}</span>${end ? `<span class="ah-end">${end}</span>` : icon('right', 16)}</a>`;
+    const rows = [];
+    if (dueN) rows.push(row('#/today?review=1', 'cards', 'blue', `${dueN} flashcard${dueN === 1 ? '' : 's'} to review`, esc(due.map(o => `${Courses[o.x].short || Courses[o.x].code} ${o.n}`).join(' · ')), ''));
+    if (mistN) rows.push(row(`#/${mist[0].x}/mistakes`, 'undo', 'coral', `Retry ${mistN} missed question${mistN === 1 ? '' : 's'}`, 'Back with their explanations', ''));
+    const shown = dls.slice(0, Math.max(1, 3 - rows.length));
+    shown.forEach(d => rows.push(row(`#/${d.c}/calendar`, d.type === 'exam' ? 'flag' : 'clock', d.type === 'exam' ? 'coral' : 'gold', esc(d.title), `${esc(Courses[d.c].short || Courses[d.c].code)}${d.n > 1 ? ' · ' + esc(App.fmtDate(d.date)) : ''}${d.time ? ' · ' + esc(d.time) : ''}`, whenTxt(d.n))));
+    const more = dls.length > shown.length ? `<a class="ah-more-row" href="#/today">${dls.length - shown.length} more due this week ${icon('right', 14)}</a>` : '';
+    return `<section class="ah-today" aria-labelledby="ah-today-h"><div class="ah-sec-h"><h2 id="ah-today-h">Today, all classes</h2><a class="ah-link" href="#/today">Full plan ${icon('right', 14)}</a></div>
+      <div class="ah-goal"><span>${icon('zap', 16)} <b>${xp}</b> of ${goal} XP</span>${bar(pct, 'gold', 'Daily goal')}</div>
+      ${rows.length ? `<div class="ah-list">${rows.join('')}</div>${more}` : `<p class="ah-quiet">Nothing due this week. One lesson below keeps your streak going.</p>`}</section>`;
   }
+
+  function classRow(mine, id) {
+    return `<div class="ah-sec-h"><h2>Your classes</h2></div><div class="ah-row" role="list" aria-label="Your classes">${mine.map(x => { const K = Courses[x]; const ex = examOf(K); const d = daysTo(ex); const ns = nodesOf(K); const done = ns.filter(n => n.state === 'done').length;
+      return `<button class="ah-card${x === id ? ' on' : ''}" role="listitem" data-cid="${x}" style="${ccStyle(x)}" aria-pressed="${x === id}"><span class="ah-art" aria-hidden="true">${App.classSprite ? App.classSprite(x, 3) : ''}</span><b class="ah-code">${esc(K.short || K.code)}</b><span class="ah-exam">${ex && d !== null && d >= 0 ? `${esc(ex.name)} ${d === 0 ? 'today' : d === 1 ? 'tomorrow' : `in ${d} days`}` : local.has(x) ? 'Your class' : 'No exam ahead'}</span>${ns.length ? `<span class="ah-cbar" aria-label="${done} of ${ns.length} topics mastered"><i style="width:${Math.round(100 * done / ns.length)}%"></i></span>` : ''}</button>`; }).join('')}<button class="ah-card ah-add" data-ab-add="1" aria-label="Add a class">${icon('plus', 26)}<span class="ah-exam">Add a class</span></button></div>`;
+  }
+
+  function heroHtml(C) {
+    const id = C.id; const writing = C.kind === 'writing';
+    const ss = safe(() => App.semesterStateOf(C)); const cur = safe(() => App.currentSectionOf(C));
+    const ex = examOf(C); const es = ex ? safe(() => App.examStatus(ex)) : null; const rd = ex && !writing ? safe(() => App.readiness(id)) : null;
+    const ns = nodesOf(C); const done = ns.filter(n => n.state === 'done').length; const next = ns.find(n => n.state === 'current') || ns.find(n => n.state === 'open');
+    const rp = writing && App.readingProgress ? safe(() => App.readingProgress(C)) : null;
+    const go = writing ? (rp && rp.next ? [`#/${id}/reading/${rp.next.id}`, rp.started ? 'Keep listening' : 'Next reading', rp.next.title] : [`#/${id}/readings`, 'Readings', 'Browse the readings'])
+      : next ? [`#/${id}/lesson?topics=${encodeURIComponent(next.t)}`, done || next.n ? 'Continue · 5-minute lesson' : 'Start here · 5-minute lesson', next.label]
+      : cur ? [`#/${id}/notes/${cur.id}`, 'This week in class', cur.title] : [`#/${id}/dashboard`, 'Open the class', C.name];
+    const when = ss ? (ss.phase === 'before' ? `Starts ${App.fmtDate(C.SEMESTER.start, true)}` : ss.phase === 'after' ? 'Semester over' : ss.phase === 'finals' ? 'Finals week' : `Week ${ss.week}${ss.weeks ? ' of ' + ss.weeks : ''}`) : '';
+    const now = cur && ss && ss.phase !== 'after' ? `${ss.phase === 'before' ? 'first up' : 'now covering'} ${cur.label} ${cur.title}` : '';
+    const exHtml = ex && es ? `<a class="ah-ex" href="#/${id}/${writing ? 'course' : 'exam/' + encodeURIComponent(ex.id)}">
+        <span class="ah-days">${es.n > 0 ? `<b>${es.n}</b> <small>${es.n === 1 ? 'day' : 'days'}</small>` : `<b class="sm">${esc(es.big)}</b>`}</span>
+        <span class="ah-ex-t"><b>${esc(ex.name)} · ${esc(ex.dateLabel || App.fmtDate(ex.date))}</b><small>${[ex.covers ? `${writing ? 'Turn in' : 'Covers'} ${ex.covers}` : '', ex.weight ? `${ex.weight}% of the grade` : ''].filter(Boolean).map(esc).join(' · ')}</small>
+        ${rd && rd.ok ? `<span class="ah-ready">${bar(rd.score, 'pine', 'Ready for ' + ex.name)}<em>${rd.score}% ready · ${esc(rd.label)}</em></span>` : ''}</span>${icon('right', 18)}</a>`
+      : `<p class="ah-quiet">${(C.EXAMS || []).length ? 'No exams left this semester.' : 'No exams in this class.'}</p>`;
+    return `<section class="ah-hero" aria-labelledby="ah-hero-h">
+      <div class="ah-hero-h"><div><h2 id="ah-hero-h">${esc(C.name)}</h2>${when || now ? `<p>${esc([when, now].filter(Boolean).join(' · '))}</p>` : ''}</div><a class="ah-link" href="#/${id}/dashboard">Class page ${icon('right', 14)}</a></div>
+      ${exHtml}
+      <a class="ah-go" href="${go[0]}"><span class="ah-go-ic" aria-hidden="true">${icon('play', 22)}</span><span class="ah-go-t"><small>${esc(go[1])}</small><b>${esc(go[2])}</b></span></a>
+      ${ns.length ? `<p class="ah-mast">${bar(Math.round(100 * done / ns.length), 'pine', 'Topics mastered')}<span>${done} of ${ns.length} topics mastered</span></p>` : ''}</section>`;
+  }
+
+  function toolsHtml(C) {
+    const id = C.id; const all = C.NAV && App.groupNav ? App.groupNav(C.NAV).flatMap(g => g.items) : [];
+    const pick = TOOL_ORDER.map(v => all.find(x => x[0] === v)).filter(Boolean).slice(0, 7);
+    if (!pick.length) return '';
+    return `<section class="ah-tools" aria-labelledby="ah-tools-h"><div class="ah-sec-h"><h2 id="ah-tools-h">Study tools</h2></div><div class="ah-tgrid">${pick.map(([v, l, ic]) => `<a class="ah-tool" href="#/${id}/${v}"><span class="ah-tool-ic" aria-hidden="true">${icon(ic || 'book', 22)}</span><span>${esc(TOOL_NAME[v] || l)}</span></a>`).join('')}<button class="ah-tool" data-ab-tools="1"><span class="ah-tool-ic" aria-hidden="true">${icon('grid', 22)}</span><span>All tools</span></button></div></section>`;
+  }
+
   function pathHtml(C) {
-    const id = C.id; const nodes = App.pathNodes ? App.pathNodes(C) : [];
+    const id = C.id; const nodes = nodesOf(C);
     const units = (C.UNITS || []).map(u => ({ u, ns: nodes.filter(n => n.unit && n.unit.n === u.n) }));
     // classes without practice topics get a path of their sections (each opens its notes)
-    const secPath = !nodes.length ? (C.UNITS || []).map(u => ({ u, ns: (C.SECTIONS || []).filter(s => s.unit === u.n).map(s => ({ sec: s, label: s.title || s.label, state: 'open', href: `#/${id}/notes/${s.id}` })) })) : null;
+    const cur = safe(() => App.currentSectionOf(C));
+    const secPath = !nodes.length ? (C.UNITS || []).map(u => ({ u, ns: (C.SECTIONS || []).filter(s => s.unit === u.n).map(s => ({ sec: s, label: s.title || s.label, state: cur && cur.id === s.id ? 'current' : 'open', href: `#/${id}/notes/${s.id}` })) })) : null;
     const list = (secPath || units).filter(x => x.ns.length);
-    if (!list.length) return `<div class="ah-empty"><p>This class has no path yet.</p><a class="btn primary" href="#/${id}/dashboard">Open the class page</a></div>`;
-    if (secPath && secPath.length) { const first = secPath.flatMap(x => x.ns)[0]; if (first) first.state = 'current'; }
-    const today = App.todayISO(); let k = 0;
-    return list.map(({ u, ns }) => {
-      const ex = (C.EXAMS || []).find(e => e.id === u.exam); const d = ex ? daysTo(ex) : null; const done = ns.filter(n => n.state === 'done').length;
-      const items = ns.map(n => { const x = Math.round(Math.sin(k++ * 0.9) * 74); const href = n.href || `#/${id}/lesson?topics=${encodeURIComponent(n.t)}`; const prac = n.t ? `#/${id}/practice?topics=${encodeURIComponent(n.t)}` : ''; const sec = n.sec || {}; const notes = `#/${id}/notes/${sec.id}`;
-        const crowns = n.crowns ? `<span class="ap-crowns" aria-hidden="true">${icon('award', 11)}${n.crowns}</span>` : '';
-        return `<li class="ap-li ${n.state}" style="--x:${x}px">${n.state === 'current' ? `<span class="ap-start" aria-hidden="true">Start</span><span class="ap-bo ${x > 0 ? 'left' : 'right'}" aria-hidden="true">${App.bobcatSvg ? App.bobcatSvg(58) : ''}</span>` : ''}<button class="ap-node" data-node aria-expanded="false" aria-label="${esc(n.label)}${n.state === 'done' ? ', mastered' : n.state === 'current' ? ', up next' : n.state === 'soon' ? ', coming up in class' : ''}">${icon(NODE_IC[n.state] || 'play', 30)}</button>${crowns}
+    if (!list.length) return '';
+    const today = App.todayISO(); let k = 0; const all = list.flatMap(x => x.ns); const done = all.filter(n => n.state === 'done').length;
+    const html = list.map(({ u, ns }) => {
+      const ex = (C.EXAMS || []).find(e => e.id === u.exam); const d = ex ? daysTo(ex) : null; const udone = ns.filter(n => n.state === 'done').length; const firstSec = (ns[0] && ns[0].sec && ns[0].sec.id) || '';
+      const items = ns.map(n => { const x = SIDE_X[k++ % SIDE_X.length]; const side = x <= 0 ? 'r' : 'l'; const st = n.state; const sec = n.sec || {};
+        const href = n.href || `#/${id}/lesson?topics=${encodeURIComponent(n.t)}`; const prac = n.t ? `#/${id}/practice?topics=${encodeURIComponent(n.t)}` : ''; const notes = `#/${id}/notes/${sec.id}`;
+        const sub = secPath ? (st === 'current' ? 'This week in class' : 'Notes') : st === 'done' ? `Mastered · ${n.crowns} of 5 crowns` : st === 'current' ? (n.n ? `Up next · ${n.n} answered` : 'Up next') : st === 'soon' ? (n.n ? `Coming up in class · ${n.n} answered` : 'Coming up in class') : n.n ? `${n.n} answered · ${n.crowns} of 5 crowns` : 'Not started';
+        return `<li class="ap-li ${st}" style="--x:${x}px" data-side="${side}">${st === 'current' ? `<span class="ap-start" aria-hidden="true">${secPath ? 'Read' : 'Start'}</span><span class="ap-bo" aria-hidden="true">${App.bobcatSvg ? App.bobcatSvg(52) : ''}</span>` : ''}<button class="ap-row" data-node aria-expanded="false"><span class="ap-node" aria-hidden="true">${icon(NODE_IC[st] || 'play', 28)}</span><span class="ap-label"><b>${esc(n.label)}</b><small>${sec.label ? esc(sec.label) + ' · ' : ''}${sub}</small></span></button>
           <div class="ap-pop" hidden><b>${esc(n.label)}</b><span>${esc([sec.label, n.t ? sec.title : ''].filter(Boolean).join(' '))}${n.n ? ` · ${n.n} answered` : ''}</span><div class="ap-pop-acts"><a class="btn primary" href="${href}">${icon('play', 15)} ${n.t ? 'Start lesson' : 'Read the notes'}</a>${prac ? `<a class="btn" href="${prac}">Practice</a><a class="btn ghost" href="${notes}">Notes</a>` : ''}</div></div></li>`; }).join('');
-      const exNode = ex ? `<li class="ap-li exam${ex.date < today ? ' past' : ''}" style="--x:0px"><a class="ap-exam" href="#/${id}/exam/${encodeURIComponent(ex.id)}" aria-label="${esc(ex.name)}, ${ex.date < today ? 'done' : inDays(d)}">${icon('flag', 30)}</a><span class="ap-exam-label"><b>${esc(ex.name)}</b>${ex.date < today ? 'done' : inDays(d)}</span></li>` : '';
-      return `<section class="ap-unit"><header class="ap-banner"><div class="ap-banner-txt"><h2>${esc(u.title)}</h2><p>Unit ${u.n}${ex ? ` · ${esc(ex.name)} ${ex.date < today ? 'done' : inDays(d)}` : ''} · ${done} of ${ns.length} ${secPath ? 'topics' : 'mastered'}</p></div><a class="ap-guide" href="#/${id}/notes" aria-label="Notes for ${esc(u.title)}">${icon('book', 22)}</a></header><ol class="ap-nodes">${items}${exNode}</ol></section>`;
+      const exNode = ex ? `<li class="ap-li exam${ex.date < today ? ' past' : ''}"><a class="ap-exam" href="#/${id}/exam/${encodeURIComponent(ex.id)}" aria-label="${esc(ex.name)}, ${ex.date < today ? 'done' : inDays(d)}">${icon(ex.date < today ? 'check' : 'flag', 30)}</a><span class="ap-exam-label"><b>${esc(ex.name)}</b>${esc(ex.dateLabel || App.fmtDate(ex.date, true))} · ${ex.date < today ? 'done' : inDays(d)}</span></li>` : '';
+      return `<section class="ap-unit"><header class="ap-banner"><div class="ap-banner-txt"><h3>${esc(u.title)}</h3><p>Unit ${u.n} · ${udone} of ${ns.length} ${secPath ? 'topics' : 'mastered'}${ex ? ` · ${esc(ex.name)} ${ex.date < today ? 'done' : inDays(d)}` : ''}</p>${secPath ? '' : `<span class="ap-ubar" aria-hidden="true"><i style="width:${Math.round(100 * udone / ns.length)}%"></i></span>`}</div><a class="ap-guide" href="#/${id}/notes${firstSec ? '/' + firstSec : ''}">${icon('book', 18)}<span>Notes</span></a></header><ol class="ap-nodes">${items}${exNode}</ol></section>`;
     }).join('');
+    return `<section class="ah-pathsec" aria-labelledby="ah-path-h"><div class="ah-sec-h"><h2 id="ah-path-h">Your path</h2>${secPath ? '' : `<span class="ah-count">${done} of ${all.length} mastered</span>`}</div><p class="ah-hint">Every topic in the order the class covers it. Tap one to ${secPath ? 'read its notes' : 'start a lesson, practise it or read its notes'}.</p>${html}</section>`;
   }
+
   App.homeView = {
     title: 'Learn',
     render(root) {
       const mine = myIds(); const id = curClass();
-      root.innerHTML = `<div class="ah">${classRow(mine, id)}<div class="ah-path" id="ah-path" aria-busy="${id ? 'true' : 'false'}">${id ? '<div class="ah-loading" aria-hidden="true"><i></i><i></i><i></i></div>' : `<div class="ah-empty"><span class="ah-empty-bo" aria-hidden="true">${App.bobcatSvg ? App.bobcatSvg(96) : ''}</span><h2>Which classes are you taking?</h2><p>Pick yours, or make one from any syllabus.</p><div class="row gap-sm"><button class="btn primary" data-ab-add="1">Add a class</button></div></div>`}</div></div>`;
+      const banners = [App.inviteBanner ? safe(() => App.inviteBanner()) : '', App.recapBanner ? safe(() => App.recapBanner()) : ''].filter(Boolean).join('');
+      root.innerHTML = `<div class="ah"><h1 class="sr-only">Learn</h1><div id="announcement-slot"></div>${banners ? `<div class="ah-banners">${banners}</div>` : ''}
+        ${mine.length ? classRow(mine, id) : ''}
+        <div class="ah-main" id="ah-main" aria-busy="${id ? 'true' : 'false'}">${id ? '<div class="ah-loading" aria-hidden="true"><i></i><i></i><i></i></div>' : `<div class="ah-empty"><span class="ah-empty-bo" aria-hidden="true">${App.bobcatSvg ? App.bobcatSvg(96) : ''}</span><h2>Which classes are you taking?</h2><p>Pick yours, or make one from any syllabus.</p><div class="row gap-sm"><button class="btn primary" data-ab-add="1">Add a class</button></div></div>`}</div></div>`;
       const row = $('.ah-row', root); const on = row && $('.ah-card.on', row); if (on) row.scrollLeft = Math.max(0, on.offsetLeft - 16);
+      if (App.paintAnnouncement) safe(() => App.paintAnnouncement(root));
+      const closePops = () => { $$('.ap-pop', root).forEach(x => { x.hidden = true; }); $$('[data-node]', root).forEach(x => x.setAttribute('aria-expanded', 'false')); $$('.ap-li.open', root).forEach(x => x.classList.remove('open')); document.body.classList.remove('ap-open'); };
       root.addEventListener('click', e => {
         if (e.target.closest('[data-ab-add]')) { N.haptic('select'); openSheet(); return; }
-        const card = e.target.closest('.ah-card[data-cid]'); if (card) { N.haptic('select'); setClass(card.dataset.cid); App.rerender(); return; }
-        const node = e.target.closest('.ap-node'); if (node) { N.haptic('select'); const li = node.closest('.ap-li'); const p = $('.ap-pop', li); const open = p.hidden; $$('.ap-pop', root).forEach(x => { x.hidden = true; }); $$('.ap-node', root).forEach(x => x.setAttribute('aria-expanded', 'false')); $$('.ap-li.open', root).forEach(x => x.classList.remove('open')); p.hidden = !open; li.classList.toggle('open', open); document.body.classList.toggle('ap-open', open); node.setAttribute('aria-expanded', String(open));
+        if (e.target.closest('[data-ab-tools]')) { N.haptic('select'); openSheet('tools'); return; }
+        const card = e.target.closest('.ah-card[data-cid]'); if (card) { N.haptic('select'); setClass(card.dataset.cid); App.homeView.scrolled = false; App.rerender(); return; }
+        const node = e.target.closest('[data-node]'); if (node) { N.haptic('select'); const li = node.closest('.ap-li'); const p = $('.ap-pop', li); const open = p.hidden; closePops(); p.hidden = !open; li.classList.toggle('open', open); document.body.classList.toggle('ap-open', open); node.setAttribute('aria-expanded', String(open));
           if (open) { const lim = innerHeight - ($('#tabbar') || { offsetHeight: 0 }).offsetHeight - 16, below = p.getBoundingClientRect().bottom - lim; if (below > 0) scrollBy({ top: below, behavior: N.reduceMotion() ? 'auto' : 'smooth' }); }   // the card opens fully in view, above the tab bar
           return; }
-        if (!e.target.closest('.ap-pop')) { $$('.ap-pop', root).forEach(x => { x.hidden = true; }); $$('.ap-li.open', root).forEach(x => x.classList.remove('open')); document.body.classList.remove('ap-open'); }
+        if (!e.target.closest('.ap-pop')) closePops();
       });
       if (!id) return;
       App.loadCourse(id).then(C => {
-        const box = $('#ah-path'); if (!box || !root.isConnected) return;
-        box.setAttribute('style', ccStyle(id)); box.innerHTML = pathHtml(C); box.setAttribute('aria-busy', 'false');
-        const cur = $('.ap-li.current', box); if (cur && !App.homeView.scrolled) { App.homeView.scrolled = true; const r = cur.getBoundingClientRect(), tabs = ($('#tabbar') || { offsetHeight: 0 }).offsetHeight; if (r.bottom > innerHeight - tabs - 24) scrollTo({ top: r.top + scrollY - innerHeight * 0.42, behavior: N.reduceMotion() ? 'auto' : 'smooth' }); }   // only when the next lesson is out of sight, so the class cards stay in view
-      }).catch(() => { const box = $('#ah-path'); if (box) box.innerHTML = `<div class="ah-empty"><p>This class could not be opened.</p><a class="btn" href="#/${id}/dashboard">Try its class page</a></div>`; });
+        const box = $('#ah-main'); if (!box || !root.isConnected) return;
+        box.setAttribute('style', ccStyle(id)); box.innerHTML = heroHtml(C) + todayHtml() + toolsHtml(C) + pathHtml(C); box.setAttribute('aria-busy', 'false');
+        // the class's cards can now show its progress, and the plan its flashcards
+        const card = $(`.ah-card[data-cid="${id}"]`, root); if (card && !$('.ah-cbar', card)) { const ns = nodesOf(C); if (ns.length) { const dn = ns.filter(n => n.state === 'done').length; card.insertAdjacentHTML('beforeend', `<span class="ah-cbar" aria-label="${dn} of ${ns.length} topics mastered"><i style="width:${Math.round(100 * dn / ns.length)}%"></i></span>`); } }
+        if (App.typeset) safe(() => App.typeset(box));
+      }).catch(() => { const box = $('#ah-main'); if (box) { box.setAttribute('aria-busy', 'false'); box.innerHTML = `<div class="ah-empty"><p>This class could not be opened.</p><a class="btn" href="#/${id}/dashboard">Try its class page</a></div>`; } });
     }
   };
 
   /* ---------- tab bar ---------- */
   function paintTabs(r) {
     const bar = $('#tabbar'); if (!bar) return; const id = (r.course && Courses[r.course]) ? r.course : curClass();
-    const tabs = [['#/', 'Learn', 'home', !r.course && r.view === 'home'], [id ? practiceHref(id) : '#/', 'Practice', 'list', !!r.course && ['practice', 'flashcards', 'lesson', 'blitz', 'exam'].includes(r.view)], ['#/today', 'Today', 'flag', r.view === 'today'], ['#/forum', 'Board', 'chat', r.view === 'forum'], ['#/settings', 'Me', 'user', r.view === 'settings']];
+    const tabs = [['#/', 'Learn', 'home', !r.course && r.view === 'home'], [id ? practiceHref(id) : '#/', 'Practice', 'list', !!r.course && ['practice', 'flashcards', 'lesson', 'blitz', 'exam'].includes(r.view)], ['#/today', 'Today', 'flag', r.view === 'today'], ['#/forum', 'Discuss', 'chat', r.view === 'forum'], ['#/settings', 'Me', 'user', r.view === 'settings']];
     bar.className = 'app-tabs'; bar.setAttribute('aria-label', 'Main');
     bar.innerHTML = tabs.map(([h, l, ic, a]) => `<a class="tab-item${a ? ' active' : ''}" href="${h}"${a ? ' aria-current="page"' : ''}><span class="tab-ic">${icon(ic, 26)}</span><span>${l}</span></a>`).join('');
   }

@@ -276,10 +276,12 @@ calls go to `https://mathub.space/api/` (the server accepts the app's origin, `c
   adds `assets/app-sample-class.json` with no AI needed.
 - **Its own frame** (`assets/app-native.js`, `assets/app.css`; see "The iPhone, iPad and Android apps" in
   DESIGN.md): the website's top bar, sidebar and footer are hidden. A top bar holds the class button, the
-  streak, today's XP and the account (or Sign in); the start page (`App.homeView`, hooked in `app.js`) is a
-  row of class cards and the chosen class's path of lessons, unit by unit, with exam checkpoints; the class
-  button opens a sheet with your classes, Create a class and every tool; the tab bar is Learn, Practice,
-  Today, Board, Me.
+  streak, today's XP against the daily goal and the account (or Sign in); the start page (`App.homeView`,
+  hooked in `app.js`) is a row of class cards, then the chosen class (the week and what it covers now, its
+  next exam with days left and readiness, a Continue button into the next lesson), today across all classes
+  (daily goal, flashcards, missed questions, what is due), the class's tools, and its path with every lesson
+  named, unit by unit, with exam checkpoints; the class button opens a sheet with your classes, Create a
+  class and every tool; the tab bar is Learn, Practice, Today, Discuss, Me.
 - **On the phone:** exam and daily reminders as local notifications, haptics, the share sheet (classes, data
   export, any file the page makes), outside links in the Safari sheet, safe areas and the status bar.
 - **No account needed:** every study tool is open in the app; an account adds sync and discussions.

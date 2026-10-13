@@ -440,6 +440,7 @@
     if (App.motionRender) App.motionRender(root); { const r = route(); App.track('view:' + (r.course ? r.view : (r.view === 'home' ? 'landing' : r.view))); } if (App.paintStats) { App.paintStats(); App.paintMascots(); App.countUp(root); } if (App.paintQuests) App.paintQuests(); if (App.paintLeagueWidgets) App.paintLeagueWidgets(root); }
   App.rerender = () => render();
   App.currentSectionOf = C => currentSection(C);
+  App.paintAnnouncement = root => paintAnnouncement(root);   // the apps' own start page shows the admin announcement too
   App.inCourse = () => !!route().course;
   App.settingsLink = () => App.inCourse() ? App.link('settings') : '#/settings';
   App.inboxLink = () => App.inCourse() ? App.link('forum', 'inbox') : '#/forum/inbox';
