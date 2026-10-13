@@ -1,15 +1,12 @@
 /* ============================================================
    Mathub app — what only the app does (loaded only in the iOS and Android apps, after every other script)
-   - Create a class (#/create): Mathub writes instructions for an AI; the student gives them,
-     with their syllabus, to the AI chat they already use, pastes the answer back, and Mathub
-     checks it, repairs what it safely can, shows a preview and adds the class. The class is
-     data, cleaned like every other class pack, and it is saved in the app's own folder on
-     this device. Nothing is sent to Mathub or to any AI by the app.
-   - classes you made: open, send the file to a classmate (share sheet), delete; import a file
    - reminders: exam reminders and a daily study reminder as local notifications, only after
      the student turns them on and allows them
    - haptics on right and wrong answers, finished lessons and level-ups
-   - an "On this device" panel in Settings
+   - an "On this device" panel in Settings (reminders, haptics, Mathub Create)
+   - the app's own shell: app bar, start page (class cards, plan, tools, path) and tab bar
+   Create a class, the classes students make, Mathub Create and sharing are in assets/create.js,
+   which the website loads too.
    The website never loads this file (see app/scripts/build-www.js).
    ============================================================ */
 (function (global) {
@@ -40,462 +37,12 @@
   };
 
   /* ============================================================
-     Classes made on this device
+     Classes students make, Mathub Create and sharing are in assets/create.js (the website has them too);
+     what is used here:
      ============================================================ */
-  const IDX = 'mh-my-classes';
-  const readIdx = () => { try { const v = JSON.parse(localStorage.getItem(IDX) || '[]'); return Array.isArray(v) ? v : []; } catch (e) { return []; } };
-  const writeIdx = list => { try { localStorage.setItem(IDX, JSON.stringify(list)); return true; } catch (e) { return false; } };
-  const fileOf = id => `classes/${id}.mathub.json`;
-  const local = App.packs.local;
-  const newId = () => { let id; do { id = 'my' + String(1000 + Math.floor(Math.random() * 9000)); } while (Courses[id] || local.has(id)); return id; };
-  function registerLocal(entry) { local.add(entry.id); App.packs.register(entry.stub, true); }
-  const Mine = App.myClasses = {
-    list: () => readIdx(),
-    has: id => local.has(id),
-    async read(id) { return JSON.parse(await N.fs.read(fileOf(id))); },
-    async add(pack, opts = {}) {
-      const text = JSON.stringify(pack);
-      await N.fs.write(fileOf(pack.id), text);
-      const entry = { id: pack.id, code: pack.code, name: pack.name, term: pack.term, added: Date.now(), bytes: text.length, stub: App.packs.stubOf(pack) }; if (opts.free) entry.free = true;   // the example class is free; other classes need Mathub Create
-      const list = readIdx().filter(e => e.id !== pack.id).concat([entry]);
-      if (!writeIdx(list)) { writeIdx(list.map(e => e.id === pack.id ? e : Object.assign({}, e))); }
-      registerLocal(entry);
-      const s = settings(); if (Array.isArray(s.courses) && s.courses.length && !s.courses.includes(pack.id)) setSetting('courses', s.courses.concat([pack.id]));
-      if (App.rebuildNav) App.rebuildNav();
-      Reminders.sync();
-      return entry;
-    },
-    async remove(id) {
-      if (App.D && App.D.id === id && App.forgetCourse) App.forgetCourse();
-      await N.fs.remove(fileOf(id)); writeIdx(readIdx().filter(e => e.id !== id)); local.delete(id); App.packs.unregister(id);
-      const s = settings(); if (Array.isArray(s.courses) && s.courses.includes(id)) setSetting('courses', s.courses.filter(x => x !== id));
-      if (App.rebuildNav) App.rebuildNav();
-      Reminders.sync();
-    }
-  };
-  /* registered before the first render, from the light copy kept in the index; the full class is read from its file when opened */
-  readIdx().forEach(e => { try { if (e && e.stub && Packs.ID_RE.test(e.id)) registerLocal(e); } catch (err) {} });
-  /* if the index was lost (storage cleared) the files are still there: rebuild it from them */
-  (async () => {
-    const files = await N.fs.list('classes'); const known = new Set(readIdx().map(e => e.id)); let added = 0;
-    for (const f of files) { const m = /^(my\d{4})\.mathub\.json$/.exec(f); if (!m || known.has(m[1])) continue;
-      try { const pack = await Mine.read(m[1]); const entry = { id: pack.id, code: pack.code, name: pack.name, term: pack.term, added: Date.now(), bytes: 0, stub: App.packs.stubOf(pack) }; writeIdx(readIdx().concat([entry])); registerLocal(entry); added++; } catch (e) {} }
-    if (added && App.rerender) App.rerender();
-  })();
-  const baseLoad = App.packs.load;
-  App.packs.load = async id => {
-    if (!local.has(id)) return baseLoad(id);
-    let raw; try { raw = await Mine.read(id); } catch (e) { throw new Error(`This class is not saved on this ${DEVICE} any more.`); }
-    return App.packs.install(id, raw);
-  };
-
-  /* ============================================================
-     The instructions for the AI, and reading its answer
-     ============================================================ */
-  const SIZES = {
-    full: { sections: '8 to 16', ideas: '3 to 5', cards: 'about 60', questions: '6 to 8' },
-    short: { sections: '6 to 10', ideas: '2 or 3', cards: 'about 25', questions: '4' }
-  };
-  function prompt(size) {
-    const Z = SIZES[size] || SIZES.full;
-    return `You are turning a college course syllabus into a study class for Mathub, a study app. The syllabus is attached or pasted after these instructions.
-
-Reply with ONE JSON object and nothing else: no greeting and no explanation, just the JSON in a single \`\`\`json code block.
-
-WHAT TO WRITE
-1. Course facts from the syllabus: code, title, term, instructor, email, office hours, meeting times, textbook, grading categories and weights, the letter-grade scale, exam dates, holidays and deadlines. Copy dates and numbers exactly. Never invent a date: if an exam has no date in the syllabus, leave it out of EXAMS and list it in COURSE.deadlines instead.
-2. Study material you write yourself from the topics the syllabus covers, accurate and at the level of the course:
-   - SECTIONS: one per main topic, ${Z.sections} in total, grouped into UNITS (one unit per exam period when the course has exams).
-   - Each section: ${Z.ideas} "ideas" (short paragraphs that teach the topic), one or two "pitfalls" (common mistakes), and an "example" ({ "p": a problem, "s": its worked solution }) when the subject has problems to solve.
-   - FLASHCARDS: ${Z.cards} cards, front "f" and back "b".
-   - QUIZ: one topic per section with ${Z.questions} multiple-choice questions each.
-3. Plain text only: no HTML and no Markdown inside the strings. Write math as LaTeX between dollar signs, and double every backslash inside JSON strings, for example "$\\\\frac{a}{b}$".
-
-FORMAT (ids use lowercase letters, digits and dashes)
-{
-  "format": "mathub-class-pack",
-  "version": 1,
-  "id": "chmy121",
-  "code": "CHMY 121",
-  "name": "Introduction to General Chemistry",
-  "term": "Fall 2026",
-  "color": { "light": "#0F766E" },
-  "COURSE": {
-    "code": "CHMY 121", "name": "Introduction to General Chemistry", "term": "Fall 2026",
-    "school": "Montana State University",
-    "instructor": "Dr. Jane Smith", "instructorEmail": "jane.smith@montana.edu",
-    "officeHours": "Tue 2-3 pm, Gaines 210", "lectures": "MWF 9:00-9:50, Gaines 101",
-    "textbook": { "title": "Chemistry: The Central Science", "url": "" },
-    "deadlines": [{ "name": "Last day to drop", "rule": "Oct 30" }]
-  },
-  "GRADING": {
-    "categories": [{ "id": "hw", "name": "Homework", "weight": 20 }, { "id": "exams", "name": "Midterms", "weight": 50 }, { "id": "final", "name": "Final exam", "weight": 30 }],
-    "scale": [{ "letter": "A", "min": 93 }, { "letter": "B", "min": 83 }, { "letter": "C", "min": 73 }, { "letter": "D", "min": 63 }, { "letter": "F", "min": 0 }]
-  },
-  "SEMESTER": { "start": "2026-08-24", "end": "2026-12-18" },
-  "EXAMS": [{ "id": "exam1", "name": "Exam 1", "date": "2026-09-30", "covers": "Units 1 and 2", "units": [1, 2], "weight": 15 }],
-  "CALENDAR": [
-    ["2026-08-24", "lecture", "Atoms and isotopes", "atoms"],
-    ["2026-09-07", "holiday", "Labor Day, no class"],
-    ["2026-09-30", "exam", "Exam 1"],
-    ["2026-10-30", "admin", "Last day to drop"]
-  ],
-  "UNITS": [{ "n": 1, "title": "Atoms and molecules", "sections": ["atoms", "moles"], "exam": "exam1" }],
-  "SECTIONS": [{
-    "id": "atoms", "label": "1.1", "title": "Atoms and isotopes", "unit": 1,
-    "ideas": ["An atom has protons and neutrons in its nucleus...", "..."],
-    "pitfalls": ["The mass number is protons plus neutrons, not protons plus electrons."],
-    "example": { "p": "How many neutrons are in carbon-14?", "s": "14 - 6 = 8 neutrons." }
-  }],
-  "FLASHCARDS": [{ "id": "c1", "unit": 1, "sec": "atoms", "f": "Isotopes", "b": "Atoms of one element with different numbers of neutrons." }],
-  "QUIZ": {
-    "topics": { "atoms": { "unit": 1, "sec": "atoms", "label": "Atoms and isotopes" } },
-    "questions": [{ "type": "bank", "topic": "atoms", "items": [
-      ["Isotopes of an element differ in their number of", "neutrons", ["protons", "electrons", "charges"], "Same element means same protons; isotopes differ in neutrons."]
-    ] }]
-  }
-}
-
-RULES THAT MATTER
-- CALENDAR rows are ["YYYY-MM-DD", type, title] with an optional fourth value, the id of the section taught that day. type is one of lecture, lab, exam, review, holiday, admin (use admin for deadlines). Include every exam, holiday and deadline in the syllabus, and one lecture row per topic when the syllabus has a schedule.
-- Every section has a "unit" that is one of the UNITS "n" values, and every id in a unit's "sections" exists in SECTIONS.
-- An exam's "units" lists the unit numbers it covers. Its "weight" is its percent of the final grade; leave "weight" out when the syllabus does not say.
-- GRADING weights add up to 100. Use the syllabus's own letter scale when it has one.
-- Each question item is [question, correct answer, [three or four wrong answers], a one-sentence explanation]. Wrong answers are plausible but clearly wrong, and the question never gives the answer away.
-- color.light is a deep colour that white text can sit on, as #RRGGBB.
-- If the answer would get too long, write fewer flashcards and questions, but always finish with a complete, valid JSON object.
-
-THE SYLLABUS:
-`;
-  }
-  const fixPrompt = problems => `The JSON you wrote for Mathub has problems. Fix them and send the complete corrected JSON again, in one \`\`\`json code block and nothing else:\n${problems.map(p => '- ' + p).join('\n')}`;
-  const cutPrompt = () => 'Your answer was cut off before the JSON ended, so Mathub cannot read it. Write the whole class again, shorter this time: 6 to 10 SECTIONS with 2 ideas each, about 25 FLASHCARDS and 4 questions per topic. Send only the JSON, in one ```json code block, and make sure it is complete.';
-
-  /* finds the JSON in whatever was pasted: a code block, text around it, or the bare object */
-  function extract(text) {
-    let t = String(text || '').replace(/^﻿/, '').trim();
-    if (!t) return { error: 'empty' };
-    const fence = /```[a-zA-Z]*\s*\n?([\s\S]*?)```/.exec(t);
-    if (fence && fence[1].includes('{')) t = fence[1].trim(); else t = t.replace(/^```[a-zA-Z]*\s*/, '');
-    const s = t.indexOf('{'); if (s < 0) return { error: 'none' };
-    t = t.slice(s);
-    let depth = 0, inStr = false, escp = false, end = -1;
-    for (let i = 0; i < t.length; i++) { const ch = t[i];
-      if (inStr) { if (escp) escp = false; else if (ch === '\\') escp = true; else if (ch === '"') inStr = false; continue; }
-      if (ch === '"') inStr = true; else if (ch === '{' || ch === '[') depth++; else if (ch === '}' || ch === ']') { depth--; if (depth === 0) { end = i; break; } } }
-    if (end < 0) return { error: 'cut' };
-    const body = t.slice(0, end + 1);
-    try { return { data: JSON.parse(body) }; } catch (e) {
-      try { return { data: JSON.parse(body.replace(/,(\s*[}\]])/g, '$1')) }; } catch (e2) {
-        const at = Number((/position (\d+)/.exec(e.message) || [])[1]); const near = Number.isFinite(at) ? body.slice(Math.max(0, at - 40), at + 40).replace(/\s+/g, ' ') : '';
-        return { error: 'syntax', message: e.message.replace(/^JSON\.parse: /, ''), near };
-      }
-    }
-  }
-
-  /* safe, mechanical repairs: missing ids, unknown calendar types, units and topics left implied */
-  const KEY = /^[a-z0-9][a-z0-9_.-]{0,40}$/i; const ISO = /^\d{4}-\d{2}-\d{2}$/; const HEX = /^#[0-9a-f]{6}$/i;
-  const COLORS = ['#1D4ED8', '#0F766E', '#B91C1C', '#6D28D9', '#B45309', '#0E7490', '#BE185D', '#4D7C0F', '#9333EA', '#C2410C'];
-  const str = v => (v == null ? '' : typeof v === 'string' ? v : typeof v === 'number' ? String(v) : '').trim();
-  const arr = v => (Array.isArray(v) ? v : []);
-  const obj = v => v && typeof v === 'object' && !Array.isArray(v);
-  const slug = (s, fb) => { const x = String(s || '').toLowerCase().normalize('NFKD').replace(/[^\w\s.-]/g, '').trim().replace(/[\s_]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40); return KEY.test(x) ? x : fb; };
-  const realDate = d => ISO.test(d || '') && !isNaN(Date.parse(d + 'T00:00:00Z')) && new Date(d + 'T00:00:00Z').toISOString().slice(0, 10) === d;
-  const hash = s => { let h = 0; for (const c of String(s)) h = (h * 31 + c.charCodeAt(0)) >>> 0; return h; };
-  const CAL = { lecture: 'lecture', class: 'lecture', lesson: 'lecture', discussion: 'lecture', seminar: 'lecture', topic: 'lecture', recitation: 'lab', lab: 'lab', laboratory: 'lab', studio: 'lab', exam: 'exam', midterm: 'exam', final: 'exam', test: 'exam', quiz: 'admin', review: 'review', holiday: 'holiday', break: 'holiday', 'no class': 'holiday', 'no-class': 'holiday', admin: 'admin', deadline: 'admin', due: 'admin', assignment: 'admin', homework: 'admin', project: 'admin' };
-  function termGuess() { const d = new Date(); const m = d.getMonth() + 1, y = d.getFullYear(); return m >= 8 ? `Fall ${y}` : m <= 5 ? `Spring ${y}` : `Summer ${y}`; }
-  function termDates(term) {
-    const m = /(fall|autumn|spring|summer|winter)\s+(\d{4})/i.exec(term || ''); const y = m ? m[2] : String(new Date().getFullYear()); const k = m ? m[1].toLowerCase() : '';
-    return k === 'spring' || k === 'winter' ? { start: `${y}-01-12`, end: `${y}-05-08` } : k === 'summer' ? { start: `${y}-05-18`, end: `${y}-08-07` } : { start: `${y}-08-24`, end: `${y}-12-18` };
-  }
-  function repair(input, id) {
-    const notes = []; const P = obj(input) ? input : {};
-    const C = P.COURSE = obj(P.COURSE) ? P.COURSE : {};
-    P.format = 'mathub-class-pack'; P.version = 1; P.id = id;
-    P.code = str(P.code) || str(C.code) || 'MY CLASS'; P.name = str(P.name) || str(C.name) || str(P.title) || P.code; P.term = str(P.term) || str(C.term);
-    if (!P.term) { P.term = termGuess(); notes.push(`The answer had no term, so it is set to ${P.term}.`); }
-    P.short = (str(P.short) || P.code).slice(0, 12);
-    C.code = str(C.code) || P.code; C.name = str(C.name) || P.name; C.term = str(C.term) || P.term;
-    if (!obj(P.color) || !HEX.test(P.color.light || '')) P.color = { light: COLORS[hash(P.code) % COLORS.length] };
-    if (P.color.dark && !HEX.test(P.color.dark)) delete P.color.dark;
-    ['NAV', 'title', 'notes', 'hidden', 'preview', 'file'].forEach(k => delete P[k]);
-    const keep = new Set(Packs.DATA_KEYS.concat(['format', 'version', 'id', 'color', 'archetype', 'resources', 'resourcesBlurb', 'guides', 'canvasMatch', 'QUIZ', 'formulasTitle']));
-    Object.keys(P).forEach(k => { if (!keep.has(k)) delete P[k]; });
-    // sections, with a map from the ids the AI wrote to the ids used here
-    const secMap = {}; const used = new Set();
-    P.SECTIONS = arr(P.SECTIONS).filter(obj).map((s, i) => {
-      const was = str(s.id); let sid = KEY.test(was) ? was : slug(was || s.title, `topic-${i + 1}`); let n = 2; while (used.has(sid)) sid = `${sid.replace(/-\d+$/, '')}-${n++}`; used.add(sid); if (was) secMap[was] = sid; secMap[sid] = sid;
-      s.id = sid; s.title = str(s.title) || str(s.name) || `Topic ${i + 1}`; s.unit = Number(s.unit) || 1;
-      if (typeof s.ideas === 'string') s.ideas = [s.ideas]; s.ideas = arr(s.ideas || s.bullets || s.notes).map(x => (typeof x === 'string' ? x : str(x && (x.text || x.idea)))).filter(Boolean);
-      if (typeof s.pitfalls === 'string') s.pitfalls = [s.pitfalls]; s.pitfalls = arr(s.pitfalls).map(str).filter(Boolean);
-      if (!(obj(s.example) && s.example.p && s.example.s)) delete s.example;
-      if (s.formulas && !Array.isArray(s.formulas)) delete s.formulas;
-      delete s.bullets; delete s.notes; delete s.name; return s;
-    });
-    const mapSec = x => secMap[str(x)] || '';
-    // units
-    let units = arr(P.UNITS).filter(obj).map((u, i) => ({ n: Number(u.n) || Number(u.unit) || i + 1, title: str(u.title) || str(u.name) || `Unit ${Number(u.n) || i + 1}`, sections: arr(u.sections).map(mapSec).filter(Boolean), exam: str(u.exam) || undefined }));
-    const seen = new Set(); units = units.filter(u => (seen.has(u.n) ? false : seen.add(u.n)));
-    P.SECTIONS.forEach(s => { let u = units.find(x => x.n === s.unit); if (!u) { u = { n: s.unit, title: `Unit ${s.unit}`, sections: [] }; units.push(u); } if (!u.sections.includes(s.id)) u.sections.push(s.id); });
-    units.forEach(u => { u.sections = u.sections.filter(id => P.SECTIONS.some(s => s.id === id && s.unit === u.n)); });
-    P.UNITS = units.sort((a, b) => a.n - b.n);
-    P.SECTIONS.forEach(s => { if (!str(s.label)) { const u = P.UNITS.find(x => x.n === s.unit); s.label = `${s.unit}.${u ? u.sections.indexOf(s.id) + 1 : 1}`; } });
-    // exams: an exam without a real date cannot have a countdown
-    const exIds = new Set(); let dropped = 0;
-    P.EXAMS = arr(P.EXAMS).filter(obj).map((e, i) => { let eid = KEY.test(str(e.id)) ? str(e.id) : slug(e.name, `exam${i + 1}`); while (exIds.has(eid)) eid += 'b'; exIds.add(eid); e.id = eid; e.name = str(e.name) || `Exam ${i + 1}`; e.date = str(e.date).slice(0, 10); e.units = arr(e.units).map(Number).filter(n => P.UNITS.some(u => u.n === n)); e.sections = arr(e.sections).map(mapSec).filter(Boolean); const w = Number(e.weight); if (w > 0 && w <= 100) e.weight = Math.round(w * 10) / 10; else delete e.weight; e.covers = str(e.covers) || (e.units.length ? `Unit${e.units.length > 1 ? 's' : ''} ${e.units.join(', ')}` : 'the material before it'); if (e.endDate && !realDate(e.endDate)) delete e.endDate; ['dates', 'dateLabels', 'n'].forEach(k => delete e[k]); return e; })
-      .filter(e => { if (realDate(e.date)) return true; dropped++; return false; });
-    if (dropped) notes.push(`${dropped} exam${dropped === 1 ? ' had' : 's had'} no date in the answer and ${dropped === 1 ? 'is' : 'are'} left out.`);
-    P.UNITS.forEach(u => { if (u.exam && !P.EXAMS.some(e => e.id === u.exam)) delete u.exam; });
-    // calendar
-    let badRows = 0;
-    P.CALENDAR = arr(P.CALENDAR).map(r => (Array.isArray(r) ? r : obj(r) ? [r.date, r.type, r.title || r.name, r.section || r.sec] : null)).filter(Boolean).map(r => {
-      const d = str(r[0]).slice(0, 10); const type = CAL[str(r[1]).toLowerCase()] || (str(r[1]) ? 'lecture' : 'lecture'); const title = str(r[2]) || (type === 'holiday' ? 'No class' : 'Class');
-      if (!realDate(d)) { badRows++; return null; } const sec = r[3] ? mapSec(r[3]) : ''; return sec ? [d, type, title, sec] : [d, type, title];
-    }).filter(Boolean).sort((a, b) => a[0].localeCompare(b[0]));
-    if (badRows) notes.push(`${badRows} calendar row${badRows === 1 ? '' : 's'} without a real date ${badRows === 1 ? 'was' : 'were'} left out.`);
-    delete P.RECURRING; delete P.VARIANTS;
-    if (!obj(P.SEMESTER) || !realDate(P.SEMESTER.start) || !realDate(P.SEMESTER.end)) { const ds = P.CALENDAR.map(r => r[0]).concat(P.EXAMS.map(e => e.date)).sort(); P.SEMESTER = ds.length > 1 ? { start: ds[0], end: ds[ds.length - 1] } : termDates(P.term); if (!ds.length) notes.push(`The answer had no dates, so the term is set to ${P.SEMESTER.start} to ${P.SEMESTER.end}.`); }
-    // grading
-    const G = P.GRADING = obj(P.GRADING) ? P.GRADING : {}; const catIds = new Set();
-    G.categories = arr(G.categories).filter(obj).map((c, i) => { let cid = KEY.test(str(c.id)) ? str(c.id) : slug(c.name, `cat${i + 1}`); while (catIds.has(cid)) cid += '2'; catIds.add(cid); return { id: cid, name: str(c.name) || `Category ${i + 1}`, weight: Number(c.weight) || 0 }; }).filter(c => c.weight > 0);
-    if (!G.categories.length) { G.categories = [{ id: 'course', name: 'Course grade', weight: 100 }]; notes.push('The answer had no grading categories, so the grade calculator uses one overall grade.'); }
-    G.scale = arr(G.scale).filter(obj).map(x => ({ letter: str(x.letter), min: Number(x.min) })).filter(x => x.letter && Number.isFinite(x.min)).sort((a, b) => b.min - a.min);
-    if (!G.scale.length) { G.scale = [['A', 90], ['B', 80], ['C', 70], ['D', 60], ['F', 0]].map(([letter, min]) => ({ letter, min })); notes.push('The answer had no letter-grade scale, so A 90, B 80, C 70, D 60 is used.'); }
-    if (G.options && !Array.isArray(G.options)) delete G.options;
-    // flashcards
-    const cardIds = new Set();
-    P.FLASHCARDS = arr(P.FLASHCARDS).filter(obj).map((c, i) => { const f = str(c.f || c.front || c.q || c.term), b = str(c.b || c.back || c.a || c.definition); if (!f || !b) return null; let cid = KEY.test(str(c.id)) ? str(c.id) : `c${i + 1}`; while (cardIds.has(cid)) cid += 'x'; cardIds.add(cid); const sec = mapSec(c.sec || c.section); const s = sec && P.SECTIONS.find(x => x.id === sec); return Object.assign({ id: cid, unit: Number(c.unit) || (s ? s.unit : 1), f, b }, sec ? { sec } : {}); }).filter(Boolean);
-    P.FORMULAS = arr(P.FORMULAS).filter(g => obj(g) && str(g.group)).map(g => ({ group: str(g.group), items: arr(g.items).filter(it => obj(it) && it.n && (it.t || it.d || it.c)) })).filter(g => g.items.length);
-    if (!obj(P.PRACTICE)) delete P.PRACTICE; else Object.keys(P.PRACTICE).forEach(k => { const v = P.PRACTICE[k]; if (!exIds.has(k) || !obj(v) || !Array.isArray(v.problems)) { delete P.PRACTICE[k]; return; } v.title = str(v.title) || k; v.problems = v.problems.filter(p => obj(p) && p.q && p.s).map((p, i) => Object.assign(p, { n: i + 1 })); if (!v.problems.length) delete P.PRACTICE[k]; });
-    if (!obj(P.CHECKLISTS)) delete P.CHECKLISTS; else Object.keys(P.CHECKLISTS).forEach(k => { if (!exIds.has(k) || !Array.isArray(P.CHECKLISTS[k])) delete P.CHECKLISTS[k]; });
-    P.INFO = arr(P.INFO).filter(x => obj(x) && str(x.title) && str(x.html));
-    // the question bank
-    if (obj(P.QUIZ)) {
-      const Q = P.QUIZ; let topics = Q.topics; if (Array.isArray(topics)) topics = Object.fromEntries(topics.filter(obj).map((t, i) => [str(t.id) || slug(t.label, `t${i + 1}`), t]));
-      topics = obj(topics) ? topics : {}; const T = {}; const tMap = {};
-      Object.entries(topics).forEach(([k, t], i) => { const tk = KEY.test(k) ? k : slug(k, `t${i + 1}`); tMap[k] = tk; const sec = mapSec((t && t.sec) || k); const s = sec && P.SECTIONS.find(x => x.id === sec); T[tk] = Object.assign({ unit: Number(t && t.unit) || (s ? s.unit : 1), label: str(t && t.label) || (s ? s.title : tk) }, sec ? { sec } : {}); });
-      let badItems = 0;
-      const qs = arr(Q.questions).filter(obj).map(q => {
-        let tk = tMap[str(q.topic)] || str(q.topic); if (!T[tk]) { const sec = mapSec(q.topic); if (sec) { const s = P.SECTIONS.find(x => x.id === sec); T[sec] = { unit: s.unit, label: s.title, sec }; tk = sec; } else return null; }
-        q.topic = tk;
-        if (q.type === 'bank' || (!q.type && Array.isArray(q.items))) {
-          q.type = 'bank';
-          q.items = arr(q.items).map(it => Array.isArray(it) ? it : obj(it) ? [it.q || it.question || it.prompt, it.a || it.answer || it.correct, it.wrong || it.distractors || it.options, it.why || it.explanation || it.explain || ''] : null)
-            .filter(it => { const ok = it && str(it[0]) && it[1] != null && str(it[1]) !== '' && Array.isArray(it[2]) && it[2].filter(x => str(x) && str(x) !== str(it[1])).length; if (!ok) badItems++; return ok; })
-            .map(it => [str(it[0]), str(it[1]), it[2].map(str).filter(x => x && x !== str(it[1])).slice(0, 6), str(it[3])]);
-          return q.items.length ? q : null;
-        }
-        if (q.type === 'mc') return q.prompt && q.answer != null && arr(q.distractors).length ? q : null;
-        if (q.type === 'table') return Array.isArray(q.columns) && Array.isArray(q.rows) && Array.isArray(q.asks) ? q : null;
-        return null;   // calculated questions need the expression language; the instructions only ask for multiple choice
-      }).filter(Boolean);
-      if (badItems) notes.push(`${badItems} question${badItems === 1 ? ' was' : 's were'} incomplete and left out.`);
-      const usedT = new Set(qs.map(q => q.topic)); Object.keys(T).forEach(k => { if (!usedT.has(k)) delete T[k]; });
-      if (qs.length) P.QUIZ = Object.assign({ topics: T, questions: qs }, Q.hint ? { hint: str(Q.hint) } : {}); else { delete P.QUIZ; notes.push('The answer had no usable questions, so the class has no quizzer.'); }
-    } else delete P.QUIZ;
-    return { pack: P, notes };
-  }
-
-  /* ============================================================
-     Mathub Create: one monthly subscription (App Store and Google Play, through RevenueCat) for making classes.
-     Adding a class from a syllabus or from a class file needs it; the example class is free, and classes made
-     before subscriptions existed stay free. When it ends, those classes stay on the device, locked, and open
-     again the moment it is back. Setup: docs/app-subscriptions.md.
-     ============================================================ */
-  const BILLING = { ios: '', android: '', entitlement: 'create' };   // RevenueCat public SDK keys (appl_… and goog_…): public by design, safe in the app
-  const STORE = ANDROID ? 'Google Play' : 'the App Store';
-  const subKey = () => ((window.MATHUB_BILLING_KEYS || BILLING)[ANDROID ? 'android' : 'ios']) || '';
-  const cancelled = e => !!(e && (e.userCancelled || (e.data && e.data.userCancelled) || String(e.code) === '1' || /cancel/i.test(e.message || '')));
-  const pendingPay = e => !!(e && (String(e.code) === '20' || /pending/i.test(e.message || '')));
-  const Sub = App.subscription = {
-    ok: false, pkg: null, manage: null,
-    /* on while the store says so; the last answer is kept so locked classes stay open offline until the paid period ends */
-    active() { const s = settings().sub; return !!(s && s.on && (!s.until || Date.parse(s.until) > Date.now())); },
-    status() { return settings().sub || { on: false }; },
-    async init() {
-      const p = N.purchases; const key = subKey(); if (!p || !key) return;
-      try { await p.configure({ apiKey: key }); Sub.ok = true; } catch (e) { console.warn('Mathub Create: the store connection did not start', e); return; }
-      try { await p.addCustomerInfoUpdateListener(info => Sub.apply(info)); } catch (e) {}
-      Sub.refresh();
-    },
-    async refresh() { if (!Sub.ok) return; try { const r = await N.purchases.getCustomerInfo(); Sub.apply(r.customerInfo); } catch (e) {} },
-    apply(info) {
-      if (!info) return; const was = Sub.active(); const e = info.entitlements && info.entitlements.active && info.entitlements.active[BILLING.entitlement];
-      setSetting('sub', e ? { on: true, until: e.expirationDate || null, renews: e.willRenew !== false, at: Date.now() } : { on: false, at: Date.now() });
-      Sub.manage = info.managementURL || null;
-      if (was !== Sub.active()) document.dispatchEvent(new CustomEvent('mathub-sub'));
-    },
-    async offer() {
-      if (!Sub.ok) throw Object.assign(new Error('Subscribing is not available in this version of the app.'), { off: true });
-      if (Sub.pkg) return Sub.pkg;
-      const o = await N.purchases.getOfferings(); const cur = o && o.current; const pkg = cur && (cur.monthly || (cur.availablePackages || [])[0]);
-      if (!pkg) throw new Error(`Mathub Create is not on sale in ${STORE} yet.`); Sub.pkg = pkg; return pkg;
-    },
-    price() { return (Sub.pkg && Sub.pkg.product && Sub.pkg.product.priceString) || ''; },
-    async buy() { const pkg = await Sub.offer(); const r = await N.purchases.purchasePackage({ aPackage: pkg }); Sub.apply(r.customerInfo); return Sub.active(); },
-    async restore() { if (!Sub.ok) throw new Error('Subscribing is not available in this version of the app.'); const r = await N.purchases.restorePurchases(); Sub.apply(r.customerInfo); return Sub.active(); },
-    manageUrl() { return Sub.manage || (ANDROID ? 'https://play.google.com/store/account/subscriptions?package=space.mathub.app' : 'https://apps.apple.com/account/subscriptions'); }
-  };
-  // classes made before subscriptions existed stay free (runs once, on the first start of this version)
-  if (!settings().subMigrated) { const list = readIdx(); if (list.length) writeIdx(list.map(e => Object.assign({}, e, { free: true }))); setSetting('subMigrated', 1); }
-  const freeClass = id => { const e = readIdx().find(x => x.id === id); return !!(e && e.free); };
-  const locked = App.classLocked = id => local.has(id) && !freeClass(id) && !Sub.active();
-  N.onResume(() => Sub.refresh());
-
-  /* the paywall: a sheet with the price from the store, what it unlocks, Subscribe, Restore, and the renewal terms. Resolves true once subscribed. */
-  function paywall(o = {}) {
-    return new Promise(resolve => {
-      const old = $('#paywall'); if (old) old.remove();
-      const why = o.code ? (o.reason === 'locked' ? `${esc(o.code)} is locked because Mathub Create is off. Everything in it is still saved on this ${DEVICE}.` : `Adding ${esc(o.code)} needs Mathub Create.`) : 'Make your own classes with Mathub Create.';
-      const el = document.createElement('div'); el.className = 'modal-backdrop sheet-backdrop'; el.id = 'paywall';
-      el.innerHTML = `<div class="sheet pw" role="dialog" aria-modal="true" aria-labelledby="pw-h"><div class="sheet-grab" aria-hidden="true"></div>
-        <div class="pw-top"><span class="pw-bo" aria-hidden="true">${App.bobcatSvg ? App.bobcatSvg(64) : ''}</span><div class="pw-title"><h2 id="pw-h">Mathub Create</h2><p class="pw-price" id="pw-price">Getting the price from ${STORE}…</p></div><button class="icon-btn" data-action="close" aria-label="Close">${icon('x', 18)}</button></div>
-        <p class="pw-why">${why}</p>
-        <ul class="pw-list"><li>${icon('check', 18)}<span>Turn any syllabus into a full class: notes, flashcards, practice questions, its calendar and grades</span></li><li>${icon('check', 18)}<span>As many classes as you like, and class files your classmates send you</span></li><li>${icon('check', 18)}<span>Saved on your ${DEVICE}, and it works offline</span></li></ul>
-        <p class="pw-err" id="pw-err" role="alert" hidden></p>
-        <div class="pw-acts"><button type="button" class="btn primary lg" data-action="pw-buy" disabled>Subscribe</button><button type="button" class="btn ghost" data-action="pw-restore">Restore purchases</button></div>
-        <p class="pw-fine" id="pw-fine">A monthly subscription that renews automatically until you cancel. Cancel any time in your ${ANDROID ? 'Google Play' : 'Apple ID'} subscriptions, at least 24 hours before it renews. The example class stays free. <a href="#/policy/create">Terms of Use</a> · <a href="#/policy/privacy">Privacy Policy</a></p></div>`;
-      document.body.appendChild(el); requestAnimationFrame(() => el.classList.add('open'));
-      const buy = $('[data-action="pw-buy"]', el), rest = $('[data-action="pw-restore"]', el), err = $('#pw-err', el);
-      let done = false; const finish = v => { if (done) return; done = true; document.removeEventListener('keydown', onKey); el.classList.remove('open'); setTimeout(() => el.remove(), N.reduceMotion() ? 0 : 220); resolve(v); };
-      const onKey = e => { if (e.key === 'Escape') finish(false); }; document.addEventListener('keydown', onKey);
-      const fail = msg => { err.textContent = msg; err.hidden = !msg; };
-      const showPrice = () => Sub.offer().then(() => { const p = Sub.price(); $('#pw-price', el).innerHTML = p ? `<b>${esc(p)}</b> a month` : 'Monthly'; buy.textContent = p ? `Subscribe for ${p} a month` : 'Subscribe'; buy.disabled = false; $('#pw-fine', el).firstChild.textContent = `Renews every month${p ? ` at ${p}` : ''} until you cancel. Cancel any time in your ${ANDROID ? 'Google Play' : 'Apple ID'} subscriptions, at least 24 hours before it renews. The example class stays free. `; })
-        .catch(e => { $('#pw-price', el).textContent = e.off ? 'Not available yet' : 'Price unavailable'; fail(e.off ? e.message : `Mathub could not reach ${STORE}. Check your connection and try again.`); buy.disabled = !!e.off; buy.textContent = e.off ? 'Subscribe' : 'Try again'; if (!e.off) buy.dataset.retry = '1'; });
-      showPrice();
-      el.addEventListener('click', async e => {
-        if (e.target === el || e.target.closest('[data-action="close"]')) return finish(false);
-        if (e.target.closest('a[href]')) return finish(false);
-        if (e.target.closest('[data-action="pw-buy"]')) {
-          if (buy.dataset.retry) { delete buy.dataset.retry; fail(''); buy.disabled = true; buy.textContent = 'Subscribe'; showPrice(); return; }
-          fail(''); buy.disabled = true; rest.disabled = true; const label = buy.textContent; buy.textContent = `Waiting for ${STORE}…`;
-          try { const on = await Sub.buy(); if (on) { N.haptic('success'); toast('Mathub Create is on. Thank you!', 3500); return finish(true); } fail('The purchase went through but Mathub Create is not on yet. Tap Restore purchases in a minute.'); }
-          catch (x) { if (!cancelled(x)) fail(pendingPay(x) ? `Your payment is pending with ${STORE}. Mathub Create turns on as soon as it goes through.` : (x.message || 'The purchase did not go through. Nothing was charged.')); }
-          buy.disabled = false; rest.disabled = false; buy.textContent = label; return;
-        }
-        if (e.target.closest('[data-action="pw-restore"]')) {
-          fail(''); rest.disabled = true;
-          try { const on = await Sub.restore(); if (on) { N.haptic('success'); toast('Mathub Create is back on.', 3000); return finish(true); } fail(`No Mathub Create subscription was found for this ${ANDROID ? 'Google' : 'Apple'} account.`); }
-          catch (x) { fail(x.message || `Mathub could not reach ${STORE}. Check your connection and try again.`); }
-          rest.disabled = false;
-        }
-      });
-    });
-  }
-  App.paywall = paywall;
-  Sub.init();
-
-  /* a locked class: what it is, that it is kept, and how to open it again */
-  function lockHtml(C) {
-    return `<div class="lock-wrap"><div class="sublock" style="${ccStyle(C.id)}"><span class="lock-ic" aria-hidden="true">${icon('lock', 30)}</span>
-      <h1 class="lock-h">${esc(C.short || C.code)} is locked</h1>
-      <p>${esc(C.name)} is a class you made from a syllabus. Classes you make are part of Mathub Create, which is off right now. Everything in it, your progress included, is still saved on this ${DEVICE} and opens again when you subscribe.</p>
-      <div class="lock-acts"><button type="button" class="btn primary lg" data-lock="buy">Subscribe to open it</button><button type="button" class="btn" data-lock="restore">Restore purchases</button><a class="btn ghost" href="#/">Back to your classes</a></div></div></div>`;
-  }
-  function wireLock(el, C) {
-    el.addEventListener('click', async e => {
-      const b = e.target.closest('[data-lock]'); if (!b) return;
-      if (b.dataset.lock === 'buy') { if (await paywall({ reason: 'locked', code: C.short || C.code })) App.rerender(); return; }
-      b.disabled = true; try { if (await Sub.restore()) { toast('Mathub Create is back on.', 3000); App.rerender(); } else toast(`No Mathub Create subscription was found for this ${ANDROID ? 'Google' : 'Apple'} account.`, 4500); } catch (x) { toast(x.message, 4500); } b.disabled = false;
-    });
-  }
-  App.courseGate = (id, root) => { if (!locked(id)) return false; const C = Courses[id]; document.title = `${C.short || C.code} is locked · Mathub`; root.innerHTML = lockHtml(C); wireLock(root, C); return true; };
-  // when the subscription turns on or off, the page in front of the student follows (not the Create page: a class may be waiting to be added)
-  document.addEventListener('mathub-sub', () => { const r = lastRoute; if (r && (r.view === 'home' || (r.course && local.has(r.course)) || r.view === 'settings')) App.rerender(); });
-
-  /* ============================================================
-     #/create
-     ============================================================ */
-  const fmtDay = d => { try { return new Date(d + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }); } catch (e) { return d; } };
-  const fmtSize = n => n > 1e6 ? (n / 1e6).toFixed(1) + ' MB' : Math.max(1, Math.round(n / 1000)) + ' KB';
-  let pending = null;   // the checked class waiting for "Add"
-  let pendingFree = false, exampleText = null;   // the example class is the one class anyone can add for free
-  App.views.create = {
-    title: 'Create a class',
-    render(root) {
-      const size = settings().mkSize === 'short' ? 'short' : 'full'; pending = null;
-      root.innerHTML = `<div class="landing-wrap mk-wrap">
-        <header class="landing-top"><div><h1 class="landing-title"><span class="logo-mark">${App.logoSvg(44)}</span>Create a class</h1><p class="muted mk-lede">Any class with a syllabus: notes, flashcards, practice questions, its calendar and your grade calculator, written from the syllabus by the AI you already use. The class is saved on this ${DEVICE} and works offline.</p><p class="mk-sub" id="mk-sub">${Sub.active() ? `${icon('check', 15)} Mathub Create is on: make as many classes as you like.` : `Classes you make are part of <button type="button" class="linkbtn" data-action="sub">Mathub Create</button>, <span class="mk-sub-price">a monthly subscription</span>. The example class is free.`}</p></div><div class="row gap-sm"><a class="btn" href="#/">${icon('left', 14)} Your classes</a></div></header>
-        <ol class="mk-steps">
-          <li class="panel mk-step"><span class="mk-n" aria-hidden="true">1</span><div class="mk-body"><h2 class="mk-h">Copy the instructions</h2>
-            <p>Mathub writes instructions that tell an AI exactly how to turn a syllabus into a class.</p>
-            <div class="mk-size" role="radiogroup" aria-label="How long should the answer be?"><button type="button" role="radio" class="chip toggle${size === 'full' ? ' on' : ''}" aria-checked="${size === 'full'}" data-action="size" data-size="full">Full class</button><button type="button" role="radio" class="chip toggle${size === 'short' ? ' on' : ''}" aria-checked="${size === 'short'}" data-action="size" data-size="short">Shorter answer</button><span class="small muted">Choose “Shorter answer” if your AI stops partway through long replies.</span></div>
-            <div class="row gap-sm mt-2" style="flex-wrap:wrap"><button type="button" class="btn primary" data-action="copy-prompt">${icon('copy', 15)} Copy instructions</button><button type="button" class="btn" data-action="show-prompt" aria-expanded="false" aria-controls="mk-prompt">${icon('eye', 15)} Read them</button></div>
-            <pre class="mk-prompt" id="mk-prompt" hidden></pre></div></li>
-          <li class="panel mk-step"><span class="mk-n" aria-hidden="true">2</span><div class="mk-body"><h2 class="mk-h">Ask your AI</h2>
-            <p>Open the AI chat you use, in its app or on the web. Paste the instructions, attach your syllabus (a PDF, a photo of it, or its text) and send.</p>
-            <p class="small muted">${icon('shield', 13)} Mathub never sees or sends your syllabus. You choose which AI to give it to, and that AI's own privacy terms apply to what you send it.</p></div></li>
-          <li class="panel mk-step"><span class="mk-n" aria-hidden="true">3</span><div class="mk-body"><h2 class="mk-h">Paste the answer</h2>
-            <p>Copy the AI's whole answer and paste it here. Mathub checks it, fixes small slips and shows you the class before adding it.</p>
-            <label class="sr-only" for="mk-text">The AI's answer</label>
-            <textarea class="input mono mk-text" id="mk-text" rows="7" placeholder="Paste the AI's answer here" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off"></textarea>
-            <div class="row gap-sm mt-1" style="flex-wrap:wrap"><button type="button" class="btn" data-action="paste">${icon('download', 15)} Paste</button><button type="button" class="btn primary" data-action="check">${icon('check', 15)} Check the answer</button><button type="button" class="btn ghost" data-action="clear">Clear</button></div>
-            <div id="mk-result" class="mk-result" aria-live="polite"></div></div></li>
-        </ol>
-        <p class="small muted mk-alt">No syllabus handy? <button type="button" class="linkbtn small" data-action="example">Try an example class</button>. Got a class file from a classmate? <label class="linkbtn small mk-file">Import it<input type="file" id="mk-file" accept=".json,application/json" hidden></label>.</p>
-        <section class="land-sec" aria-labelledby="mk-mine-h"><h2 class="sec-title" id="mk-mine-h">Classes you created</h2><div id="mk-mine"></div></section>
-      </div>`;
-      const ta = $('#mk-text', root), out = $('#mk-result', root);
-      paintMine($('#mk-mine', root));
-      if (!Sub.active() && Sub.ok) Sub.offer().then(() => { const p = Sub.price(); const el = $('.mk-sub-price', root); if (p && el) el.textContent = `${p} a month`; }).catch(() => {});
-      const check = () => { pending = null; pendingFree = exampleText !== null && ta.value === exampleText; out.innerHTML = resultHtml(ta.value); wireResult(out, ta); };
-      ta.addEventListener('paste', () => setTimeout(check, 30));
-      bind(root, {
-        size: b => { setSetting('mkSize', b.dataset.size); $$('[data-action="size"]', root).forEach(x => { const on = x === b; x.classList.toggle('on', on); x.setAttribute('aria-checked', String(on)); }); const pre = $('#mk-prompt', root); if (!pre.hidden) pre.textContent = prompt(b.dataset.size); },
-        'copy-prompt': async () => { try { await N.copy(prompt(settings().mkSize === 'short' ? 'short' : 'full')); N.haptic('success'); toast('Instructions copied. Paste them into your AI with your syllabus.', 3500); } catch (e) { toast(e.message); } },
-        'show-prompt': b => { const pre = $('#mk-prompt', root); pre.hidden = !pre.hidden; b.setAttribute('aria-expanded', String(!pre.hidden)); if (!pre.hidden) pre.textContent = prompt(settings().mkSize === 'short' ? 'short' : 'full'); },
-        paste: async () => { try { const t = await N.paste(); if (!t) { toast('The clipboard is empty. Copy the AI’s answer first.'); return; } ta.value = t; check(); } catch (e) { toast(e.message, 4000); } },
-        check,
-        clear: () => { ta.value = ''; out.innerHTML = ''; pending = null; ta.focus(); },
-        sub: async () => { if (await paywall()) { const el = $('#mk-sub', root); if (el) el.innerHTML = `${icon('check', 15)} Mathub Create is on: make as many classes as you like.`; } },
-        example: async () => { try { const t = await (await fetch('assets/app-sample-class.json')).text(); exampleText = t; ta.value = t; check(); } catch (e) { toast('The example could not be opened.'); } }
-      });
-      $('#mk-file', root).addEventListener('change', async e => { const f = e.target.files && e.target.files[0]; if (!f) return; if (f.size > 3e6) { toast('That file is too large to be a class.'); return; } ta.value = await f.text(); e.target.value = ''; check(); });
-    }
-  };
-  function resultHtml(text) {
-    const x = extract(text);
-    const copyBtn = msg => `<button type="button" class="btn sm" data-copy="${esc(msg)}">${icon('copy', 13)} Copy a message for your AI</button>`;
-    if (x.error === 'empty') return `<p class="small muted">Paste the AI's answer first.</p>`;
-    if (x.error === 'none') return `<div class="callout warn"><b>No class in that text.</b> Paste the AI's whole answer, including the part that starts with <code>{</code>. If it only wrote a summary, send it the instructions again.</div>`;
-    if (x.error === 'cut') return `<div class="callout warn"><b>The answer stops before the end.</b> The AI ran out of room partway through. Send it this message, or choose “Shorter answer” in step 1 and start again.<div class="mt-1">${copyBtn(cutPrompt())}</div></div>`;
-    if (x.error === 'syntax') { const msg = `Mathub could not read your JSON: ${x.message}${x.near ? ` (near: ${x.near})` : ''}. Send the complete corrected JSON again, in one \`\`\`json code block and nothing else.`; return `<div class="callout warn"><b>The answer has a typo in it</b>, so it cannot be read${x.near ? `, near “${esc(x.near.slice(0, 60))}”` : ''}. Send the AI this message and paste its new answer.<div class="mt-1">${copyBtn(msg)}</div></div>`; }
-    const id = newId(); const { pack, notes } = repair(x.data, id); const v = Packs.validate(pack);
-    const bytes = JSON.stringify(pack).length;
-    if (bytes > 3e6) return `<div class="callout warn"><b>This class is too large</b> (${fmtSize(bytes)}; the limit is 3 MB). Choose “Shorter answer” in step 1 and ask again.</div>`;
-    if (v.errors.length) return `<div class="callout warn"><b>Almost there: ${v.errors.length} thing${v.errors.length === 1 ? '' : 's'} to fix.</b><ul class="mk-list">${v.errors.slice(0, 6).map(m => `<li>${esc(m)}</li>`).join('')}</ul>${v.errors.length > 6 ? `<p class="small">…and ${v.errors.length - 6} more.</p>` : ''}<div class="mt-1">${copyBtn(fixPrompt(v.errors.slice(0, 20)))}</div></div>`;
-    pending = pack;
-    const st = v.stats || {}; const chip = (n, l) => n ? `<span class="chip">${n} ${l}</span>` : '';
-    const later = notes.concat(v.warnings.filter(w => !/^Unknown key/.test(w)));
-    const exams = pack.EXAMS.slice(0, 6);
-    return `<div class="mk-preview course-card-like" style="--mk:${esc(pack.color.light)}">
-      <div class="mk-cover"><span class="mk-code">${esc(pack.code)}</span><span class="mk-term">${esc(pack.term)}</span></div>
-      <div class="mk-pv-body"><h3 class="mk-pv-name">${esc(pack.name)}</h3>
-        <div class="row gap-sm mk-chips" style="flex-wrap:wrap">${chip(st.sections, st.sections === 1 ? 'topic' : 'topics')}${chip(st.flashcards, 'flashcards')}${chip(st.bankItems || st.questions, 'practice questions')}${chip(st.exams, st.exams === 1 ? 'exam' : 'exams')}${chip(st.calendar, 'calendar dates')}</div>
-        ${exams.length ? `<ul class="mk-exams">${exams.map(e => `<li><b>${esc(e.name)}</b> · ${esc(fmtDay(e.date))}</li>`).join('')}</ul>` : '<p class="small muted">No exam dates in the syllabus.</p>'}
-        ${later.length ? `<details class="mk-notes"><summary>${later.length} note${later.length === 1 ? '' : 's'} about this class</summary><ul class="mk-list">${later.slice(0, 12).map(w => `<li>${esc(w)}</li>`).join('')}</ul></details>` : ''}
-        <p class="small muted">Written by an AI from your syllabus: check dates and grading against the syllabus itself.</p>
-        <div class="row gap-sm mt-1"><button type="button" class="btn primary" data-add>${icon('plus', 15)} Add ${esc(pack.code)}</button></div></div></div>`;
-  }
-  function wireResult(out, ta) {
-    out.querySelectorAll('[data-copy]').forEach(b => b.addEventListener('click', async () => { try { await N.copy(b.dataset.copy); N.haptic('success'); toast('Copied. Paste it into the same AI chat.', 3000); } catch (e) { toast(e.message); } }));
-    const add = $('[data-add]', out); if (!add) { N.haptic('warning'); return; }
-    add.addEventListener('click', async () => {
-      if (!pending) return; const free = pendingFree;
-      if (!free && !Sub.active() && !(await paywall({ code: pending.code }))) return;
-      add.disabled = true;
-      try { const entry = await Mine.add(pending, { free }); pending = null; ta.value = ''; N.haptic('success'); toast(`${entry.code} is ready. It is saved on this ${DEVICE}.`, 4000); location.hash = `#/${entry.id}/dashboard`; }
-      catch (e) { add.disabled = false; toast('The class could not be saved: ' + e.message, 5000); }
-    });
-  }
-  function paintMine(el) {
-    const list = Mine.list();
-    el.innerHTML = list.length ? `<ul class="mk-mine">${list.map(e => `<li class="panel mk-row"><div class="mk-row-main"><b>${esc(e.code)}</b> <span>${esc(e.name)}</span>${locked(e.id) ? ` <span class="chip lock-chip">${icon('lock', 12)} Locked</span>` : ''}<div class="small muted">${esc(e.term || '')} · added ${esc(new Date(e.added).toLocaleDateString())}</div></div>
-        <div class="row gap-sm mk-row-act"><a class="btn sm primary" href="#/${esc(e.id)}/dashboard">Open</a><button type="button" class="btn sm" data-share="${esc(e.id)}">${icon('external', 13)} Send</button><button type="button" class="btn sm ghost" data-del="${esc(e.id)}" aria-label="Delete ${esc(e.code)}">${icon('trash', 13)} Delete</button></div></li>`).join('')}</ul>`
-      : `<p class="small muted">None yet. Classes you create show up here and with your other classes.</p>`;
-    $$('[data-share]', el).forEach(b => b.addEventListener('click', async () => { const id = b.dataset.share; const e = list.find(x => x.id === id); try { const pack = await Mine.read(id); const name = `${String(e.code || id).replace(/[^A-Za-z0-9]+/g, '')}.mathub.json`; await N.shareFile(name, JSON.stringify(pack), `${e.code} for Mathub`); } catch (err) { if (!/cancel/i.test(err.message || '')) toast('Could not share the class: ' + err.message); } }));
-    $$('[data-del]', el).forEach(b => b.addEventListener('click', async () => { const id = b.dataset.del; const e = list.find(x => x.id === id); if (!confirm(`Delete ${e.code} from this ${DEVICE}? Your progress in it is deleted too.`)) return; try { await Mine.remove(id); try { localStorage.removeItem('studyhub-' + id); } catch (er) {} toast(`${e.code} deleted.`); paintMine(el); } catch (err) { toast(err.message); } }));
-  }
+  const Mine = App.myClasses, Sub = App.subscription, paywall = App.paywall, locked = App.classLocked, local = App.packs.local;
+  const wireLock = (el, C) => App.createLock.wire(el, C);
+  const ISO = /^\d{4}-\d{2}-\d{2}$/;
 
   /* ============================================================
      Reminders: local notifications, only when turned on
@@ -543,7 +90,7 @@ THE SYLLABUS:
       </div><div>
         <label class="check" style="padding:0"><input type="checkbox" id="ap-haptics" ${s.haptics === false ? '' : 'checked'}><span>Haptics <span class="muted small">(a tap when an answer is right or wrong)</span></span></label>
         <div class="ap-sub"><div class="ap-sub-t"><b>Mathub Create</b><span class="small muted">${subLine()}</span></div><div class="row gap-sm">${Sub.active() ? `<button type="button" class="btn sm" data-sub="manage">Manage subscription</button>` : `<button type="button" class="btn sm primary" data-sub="buy">Subscribe</button>`}<button type="button" class="btn sm ghost" data-sub="restore">Restore purchases</button></div></div>
-        <p class="small mt-1">${mine ? `${mine} class${mine === 1 ? '' : 'es'} you created ${mine === 1 ? 'is' : 'are'} saved on this ${DEVICE}.` : 'Classes you create from a syllabus are saved on this device.'} <a href="#/create">Create a class</a></p>
+        <p class="small mt-1">${mine ? `${mine} class${mine === 1 ? '' : 'es'} you created ${mine === 1 ? 'is' : 'are'} saved on this ${DEVICE}${App.auth && App.auth.user ? ' and with your account' : ''}.` : `Classes you create from a syllabus are saved on this ${DEVICE}, and with your account when you are signed in.`} <a href="#/create">Create a class</a></p>
         <p class="small muted">Mathub ${esc(MA.version)} · <a href="#/policy">Terms and privacy</a> · <a href="#/contact">Contact</a></p>
       </div></div></div>`;
   }
@@ -557,7 +104,7 @@ THE SYLLABUS:
       const b = e.target.closest('[data-sub]'); if (!b) return; const a = b.dataset.sub;
       if (a === 'manage') { N.open(Sub.manageUrl()); return; }
       if (a === 'buy') { if (await paywall()) App.rerender(); return; }
-      b.disabled = true; try { if (await Sub.restore()) { toast('Mathub Create is back on.', 3000); App.rerender(); } else toast(`No Mathub Create subscription was found for this ${ANDROID ? 'Google' : 'Apple'} account.`, 4500); } catch (x) { toast(x.message, 4500); } b.disabled = false;
+      b.disabled = true; try { if (await Sub.restore()) { toast('Mathub Create is back on.', 3000); App.rerender(); } else toast(Sub.noneFound(), 4500); } catch (x) { toast(x.message, 4500); } b.disabled = false;
     });
   }
   function wireDevicePanel(el) {
@@ -580,9 +127,7 @@ THE SYLLABUS:
   const myIds = () => App.myCourses().filter(id => Courses[id] && !Courses[id].preview);
   const curClass = () => { const mine = myIds(); const s = settings().appClass; return mine.includes(s) ? s : App.D && mine.includes(App.D.id) ? App.D.id : mine[0] || null; };
   const setClass = id => { if (id) setSetting('appClass', id); };
-  // each class's colours, read from the site's own class rules (works for built-in classes, packs and classes made in the app)
-  const probe = (() => { let el = null; return id => { if (!el) { el = document.createElement('i'); el.hidden = true; el.setAttribute('aria-hidden', 'true'); document.body.appendChild(el); } el.className = 'course-card ' + id; const cs = getComputedStyle(el); const v = n => cs.getPropertyValue(n).trim(); return { c: v('--accent'), ink: v('--accent-ink') || '#fff', soft: v('--accent-soft'), line: v('--accent-line'), deep: v('--accent-deep') || v('--accent') }; }; })();
-  const ccStyle = id => { const k = probe(id); return k.c ? `--cc:${k.c};--cc-ink:${k.ink};--cc-soft:${k.soft};--cc-line:${k.line};--cc-deep:${k.deep}` : ''; };
+  const ccStyle = App.classStyle;   // each class's colours (assets/create.js)
   const examOf = C => { try { return App.nextExamOf(C); } catch (e) { return null; } };
   const daysTo = ex => ex && ex.date ? App.daysBetween(App.todayISO(), ex.date) : null;
   const inDays = d => d === 0 ? 'today' : d === 1 ? 'tomorrow' : `in ${d} days`;
@@ -793,7 +338,6 @@ THE SYLLABUS:
     if (r.view === 'settings') { const push = $('#acct-push', root); if (push && push.closest('section')) push.closest('section').remove(); }
     if (r.view === 'settings') { const acct = $('#acct-panel', root) || $('.acct-panel', root); const grid = $('.grid.cols-2', root); if (grid && !$('#app-panel', root)) { (acct ? acct : grid.firstElementChild || grid).insertAdjacentHTML(acct ? 'afterend' : 'beforebegin', devicePanel()); wireDevicePanel($('#app-panel', root)); } }
     lastRoute = r; document.body.classList.remove('ap-open'); paintAppBar(r); paintTabs(r); const p = $('.ab-pop'); if (p) p.remove(); const sh = $('#class-sheet'); if (sh) sh.remove();
-    if (r.course && r.view === 'dashboard' && local.has(r.course) && !$('.mk-strip', root)) root.insertAdjacentHTML('afterbegin', `<p class="mk-strip small">${icon('file', 13)} A class you created from your syllabus, saved on this ${DEVICE}. <a href="#/create">Manage it</a></p>`);
   });
   document.addEventListener('DOMContentLoaded', () => setTimeout(() => Reminders.sync(), 1500));
 })(window);

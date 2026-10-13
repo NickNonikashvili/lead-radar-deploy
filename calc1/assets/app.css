@@ -23,50 +23,9 @@ html[data-app] #preview-banner { display: none; }
 html[data-app] :is(.hero-faculty, .site-foot a[href="#/teach"]) { display: none; }
 html[data-app] .site-foot a[href="#/teach"] + .sep { display: none; }
 
-/* ---------- #/create ---------- */
-.mk-lede { max-width: 62ch; }
-.mk-steps { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 14px; }
-.mk-step { display: flex; gap: 16px; align-items: flex-start; }
-.mk-n { flex: none; display: grid; place-items: center; width: 36px; height: 36px; border-radius: 50%; background: var(--accent); color: var(--accent-ink, #fff); font-family: var(--font-display); font-weight: 800; font-size: 17px; }
-.mk-body { flex: 1; min-width: 0; }
-.mk-body p { margin: 0 0 8px; max-width: 64ch; }
-.mk-body .small svg { vertical-align: -2px; }
-.mk-h { font-size: 20px; margin: 4px 0 6px; }
-.mk-size { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.mk-size .small { flex-basis: 100%; }
-.mk-prompt { margin: 12px 0 0; max-height: 320px; overflow: auto; white-space: pre-wrap; word-break: break-word; font-size: 12.5px; line-height: 1.5; padding: 12px 14px; border-radius: 12px; background: var(--surface-2); border: 1px solid var(--border); }
-.mk-text { min-height: 150px; font-size: 13px !important; line-height: 1.45; resize: vertical; }
+/* ---------- #/create (shared styles in create.css) ---------- */
 html[data-app] .mk-text { font-size: 16px !important; }
-.mk-result { margin-top: 12px; }
-.mk-result .callout b { display: inline; }
-.mk-list { margin: 8px 0 4px; padding-left: 20px; font-size: 14px; }
-.mk-list li { margin: 3px 0; }
-.mk-preview { display: grid; grid-template-columns: 150px minmax(0, 1fr); border-radius: 16px; overflow: hidden; border: 2px solid var(--border); background: var(--surface); }
-.mk-cover { display: flex; flex-direction: column; justify-content: space-between; gap: 6px; padding: 16px; background: var(--mk); color: #fff; }
-.mk-code { font-family: var(--font-display); font-weight: 800; font-size: 24px; line-height: 1.05; }
-.mk-term { font-size: 13px; opacity: 0.9; }
-.mk-pv-body { padding: 14px 16px 16px; min-width: 0; }
-.mk-pv-name { font-size: 19px; margin: 0 0 8px; }
-.mk-chips { margin-bottom: 10px; }
-.mk-exams { list-style: none; margin: 0 0 10px; padding: 0; font-size: 14px; }
-.mk-exams li { padding: 3px 0; }
-.mk-notes { margin: 6px 0 8px; font-size: 14px; }
-.mk-notes summary { cursor: pointer; color: var(--ink-2); font-weight: 600; }
-.mk-alt { margin: 16px 0 0; }
-.mk-file { cursor: pointer; }
-.mk-mine { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
-.mk-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
-.mk-row-main { min-width: 0; }
-.mk-row-act { flex-wrap: wrap; }
 .app-panel .check + .check { margin-top: 8px; }
-
-@media (max-width: 620px) {
-  .mk-step { gap: 12px; }
-  .mk-n { width: 30px; height: 30px; font-size: 15px; }
-  .mk-preview { grid-template-columns: minmax(0, 1fr); }
-  .mk-cover { flex-direction: row; align-items: baseline; }
-  .mk-row-act { width: 100%; }
-}
 
 /* ============================================================
    The app's own shell (iOS and Android): an app bar on top, the class row and the path on the
@@ -76,7 +35,6 @@ html[data-app] .mk-text { font-size: 16px !important; }
    ============================================================ */
 html[data-app] :is(.topbar, .sidebar, #nav-backdrop, .site-foot) { display: none !important; }
 html[data-app] .app { display: block; }
-html[data-app] .mk-strip { margin: 0 0 12px; color: var(--muted); }
 
 /* ---------- app bar ---------- */
 .appbar { position: fixed; z-index: 54; top: env(safe-area-inset-top); left: 0; right: 0; height: var(--ab-h); display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 0 max(10px, env(safe-area-inset-right)) 0 max(10px, env(safe-area-inset-left)); background: var(--surface); border-bottom: 2px solid var(--border); }
@@ -299,43 +257,13 @@ html[data-app] .sheet-backdrop.open { opacity: 1; }
 .sg-item svg { color: var(--cc, var(--accent)); }
 .sg-item:active { transform: translateY(4px); box-shadow: none; }
 
-/* ---------- Mathub Create: the paywall sheet, locked classes, the Settings row ---------- */
-.pw { padding-bottom: calc(22px + env(safe-area-inset-bottom)); }
-.pw-top { display: flex; align-items: center; gap: 14px; margin: 2px 0 10px; }
-.pw-bo { flex: none; display: grid; place-items: center; width: 72px; height: 72px; border-radius: 22px; background: var(--accent-soft); }
-.pw-title { flex: 1; min-width: 0; }
-html[data-app] .pw-title h2 { margin: 0; font: 800 26px/1.1 var(--font-display); letter-spacing: -.015em; color: var(--ink); }
-.pw-price { margin: 4px 0 0; color: var(--muted); font-size: 15px; }
-.pw-price b { font: 800 20px/1 var(--font-display); color: var(--ink); font-variant-numeric: tabular-nums; }
-.pw-top .icon-btn { align-self: flex-start; width: 44px; height: 44px; }
-.pw-why { margin: 0 0 12px; font-size: 15.5px; line-height: 1.45; color: var(--ink-2); }
-.pw-list { list-style: none; margin: 0 0 14px; padding: 0; display: flex; flex-direction: column; gap: 10px; }
-.pw-list li { display: flex; align-items: flex-start; gap: 10px; font-size: 15px; line-height: 1.4; }
-.pw-list li svg { flex: none; margin-top: 1px; color: var(--pine); }
-.pw-acts { display: grid; gap: 8px; }
-.pw-acts .btn { justify-content: center; }
-.pw-err { margin: 0 0 12px; padding: 10px 12px; border-radius: 14px; background: var(--coral-soft); color: var(--coral-deep); font-size: 14px; line-height: 1.4; }
-.pw-fine { margin: 14px 0 0; color: var(--muted); font-size: 12.5px; line-height: 1.5; }
-.pw-fine a { color: var(--accent-deep); }
-.lock-wrap { max-width: 560px; margin: 0 auto; padding: 24px 16px; }
-html[data-app] .sublock { display: flex; flex-direction: column; gap: 12px; padding: 22px 20px; border: 2px solid var(--border); border-radius: 24px; background: var(--surface); box-shadow: 0 4px 0 var(--lip); }
-.lock-ic { display: grid; place-items: center; width: 60px; height: 60px; border-radius: 18px; background: var(--cc-soft, var(--accent-soft)); color: var(--cc-deep, var(--accent-deep)); }
-html[data-app] .lock-h { margin: 0; font: 800 26px/1.12 var(--font-display); letter-spacing: -.015em; }
-.sublock p { margin: 0; color: var(--ink-2); line-height: 1.5; }
-.lock-acts { display: grid; gap: 8px; margin-top: 4px; justify-items: stretch; }
-html[data-app] .lock-acts .btn { width: 100%; justify-content: center; }
+/* ---------- Mathub Create in the start page (the paywall, lock and Settings row are in create.css) ---------- */
 .ah-locked .ah-hero-h p { display: flex; gap: 6px; align-items: flex-start; }
 .ah-locked .ah-hero-h p svg { flex: none; margin-top: 2px; }
 .ah-locked .lock-acts { margin-top: 14px; }
 .ah-card.locked { background: var(--surface-3); color: var(--muted); box-shadow: 0 5px 0 var(--border-strong); }
 .ah-card.locked.on { box-shadow: 0 5px 0 var(--border-strong), 0 0 0 3px var(--bg), 0 0 0 6px var(--border-strong); }
 .ah-card.locked .ah-art { color: var(--muted); }
-.mk-sub { margin: 8px 0 0; font-size: 14.5px; line-height: 1.5; color: var(--ink-2); }
-.mk-sub svg { color: var(--pine); vertical-align: -3px; }
-.lock-chip { gap: 3px; }
-.ap-sub { display: flex; flex-direction: column; gap: 8px; margin: 14px 0 6px; padding: 12px 14px; border: 2px solid var(--border); border-radius: 16px; }
-.ap-sub-t { display: flex; flex-direction: column; gap: 2px; }
-.ap-sub .row { flex-wrap: wrap; }
 
 @media (prefers-reduced-motion: reduce) {
   .ap-start, .ah-loading i, .ab-pop, .ap-pop { animation: none; }

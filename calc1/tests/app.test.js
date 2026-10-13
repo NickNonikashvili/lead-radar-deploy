@@ -47,7 +47,8 @@ const { execFileSync } = require('child_process'); const path = require('path');
         configure: o => { rec.billingKey = o.apiKey; return ok(); }, addCustomerInfoUpdateListener: () => ok('cb'), getCustomerInfo: () => ok({ customerInfo: info() }),
         getOfferings: () => ok({ current: { identifier: 'default', monthly: pkg, availablePackages: [pkg] } }),
         purchasePackage: o => { rec.purchases.push(o.aPackage.identifier); sessionStorage.setItem('fake-sub', '1'); return ok({ customerInfo: info(), productIdentifier: pkg.product.identifier }); },
-        restorePurchases: () => ok({ customerInfo: info() })
+        restorePurchases: () => ok({ customerInfo: info() }),
+        logIn: o => { rec.billingUser = o.appUserID; return ok({ customerInfo: info(), created: false }); }
       },
       App: { addListener: (ev, fn) => { (rec.listeners[ev] = rec.listeners[ev] || []).push(fn); return ok({ remove() {} }); }, minimizeApp: () => { rec.minimized++; return ok(); } }, SplashScreen: { hide: () => ok() }, Keyboard: {}
     };
@@ -196,12 +197,12 @@ const { execFileSync } = require('child_process'); const path = require('path');
 
   // managing them: send, delete
   await go(p, '#/create', 1000);
-  check('both classes are listed under "Classes you created"', (await p.$$('.mk-row')).length === 2);
-  await p.click(`[data-share="${cid}"]`); await p.waitForTimeout(400);
+  check('both classes are listed under "Classes you created"', (await p.$$('.mk-item')).length === 2);
+  await p.click(`[data-file="${cid}"]`); await p.waitForTimeout(400);
   const sh = await p.evaluate(() => window.__cap.shared.slice(-1)[0]);
   check('Send shares the class as a file', sh && Array.isArray(sh.files) && /CHMY121\.mathub\.json$/.test(sh.files[0]), sh);
   await p.click(`[data-del="${exId}"]`); await p.waitForTimeout(800);
-  const gone = await p.evaluate(id => ({ file: !!localStorage.getItem('fakefs:DATA/classes/' + id + '.mathub.json'), reg: !!window.Courses[id], rows: document.querySelectorAll('.mk-row').length }), exId);
+  const gone = await p.evaluate(id => ({ file: !!localStorage.getItem('fakefs:DATA/classes/' + id + '.mathub.json'), reg: !!window.Courses[id], rows: document.querySelectorAll('.mk-item').length }), exId);
   check('Delete removes the class and its file', !gone.file && !gone.reg && gone.rows === 1, gone);
 
   // when Mathub Create ends: the class stays, locked; the example class is still free; classes made before subscriptions stay free
@@ -283,11 +284,11 @@ const { execFileSync } = require('child_process'); const path = require('path');
   check('Android: reminders go in their own channel and are inexact (no exact-alarm permission needed)', arem.ch.some(c => c.id === 'reminders' && c.importance === 3) && arem.n.length === 1 && arem.n[0].channelId === 'reminders' && arem.n[0].isExactNotification === false, arem);
   check('no sideways scroll on Android at 412px', await hscroll(a));
 
-  // the website has none of this
+  // the website has Create a class too (assets/create.js), but none of the app's own code
   const [cw, w] = await mk(1360, 900, { serviceWorkers: 'block' });
   await goSite(w, '#/create', 1400);
-  const web = await w.evaluate(() => ({ app: document.documentElement.dataset.app || '', create: !!(window.App && App.views.create), scripts: [...document.scripts].map(s => s.src).filter(s => /app-(boot|native)/.test(s)).length }));
-  check('the website has no Create a class page and loads no app code', web.app === '' && !web.create && web.scripts === 0 && /not found/i.test(await txt(w, '#view')), web);
+  const web = await w.evaluate(() => ({ app: document.documentElement.dataset.app || '', create: !!(window.App && App.views.create), scripts: [...document.scripts].map(s => s.src).filter(s => /app-(boot|native)/.test(s)).length, steps: document.querySelectorAll('.mk-step').length }));
+  check('the website has the Create a class page and loads no app code', web.app === '' && web.create && web.scripts === 0 && web.steps === 3, web);
 
   await goSite(w, '#/policy/delete', 1400);
   const del = await txt(w, '#pol-delete') + ' ' + await w.evaluate(() => { const h = document.querySelector('#pol-delete'); let t = ''; for (let n = h && h.nextElementSibling; n && n.tagName !== 'H2'; n = n.nextElementSibling) t += n.textContent + ' '; return t; });

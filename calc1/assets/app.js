@@ -12,7 +12,7 @@
   const BUILD = global.MATHUB_BUILD || 'dev';
   const Courses = global.Courses || (global.Courses = {});
   const COURSE_ORDER = ['calc', 'physics', 'precalc', 'writ', 'csci', 'biob', 'kin', 'psyx'];
-  const GLOBAL_VIEWS = ['contact', 'forum', 'policy', 'admin', 'meet', 'badges', 'challenge', 'mock', 'people', 'settings', 'leagues', 'gpa', 'today', 'whatsnew', 'resources', 'guides', 'focus', 'recap', 'tools', 'mistakes', 'join', 'sheet', 'request', 'teach', 'class', 'syllabus', 'notfound', 'create'];   // pages that work without a course, e.g. #/contact
+  const GLOBAL_VIEWS = ['contact', 'forum', 'policy', 'admin', 'meet', 'badges', 'challenge', 'mock', 'people', 'settings', 'leagues', 'gpa', 'today', 'whatsnew', 'resources', 'guides', 'focus', 'recap', 'tools', 'mistakes', 'join', 'sheet', 'request', 'teach', 'class', 'syllabus', 'notfound', 'create', 'c'];   // pages that work without a course, e.g. #/contact
   const SITE = 'Mathub';
   let D = null, QZ = null;        // current course data and quiz module
   const courseHooks = [];
@@ -340,7 +340,7 @@
     app.classList.remove('landing');
     if (!Courses[course].loaded) { App.current = null; renderLoading(root, course); App.loadCourse(course).then(() => { if (route().course === course && $('#view') === root) render(); }).catch(err => { if ($('#view') === root) renderLoadError(root, course, err); }); afterRender(root); return; }
     setCourse(course);
-    if (App.courseGate && App.courseGate(course, root, view)) { App.current = null; afterRender(root); return; }   // the apps lock a class made from a syllabus while its subscription is off (assets/app-native.js)
+    if (App.courseGate && App.courseGate(course, root, view)) { App.current = null; afterRender(root); return; }   // a class made from a syllabus is locked while Mathub Create is off (assets/create.js)
     const V = App.views[view]; App.current = V;
     $$('.nav-item').forEach(b => b.classList.toggle('active', b.dataset.view === view));
     const actNav = $('.nav-item.active'); if (actNav) { const g = actNav.closest('.nav-group'); if (g && g.classList.contains('closed')) { g.classList.remove('closed'); const tg = g.previousElementSibling; if (tg) { tg.classList.add('open'); tg.setAttribute('aria-expanded', 'true'); } } }
@@ -602,7 +602,7 @@
         </section>
         <section class="land-sec" aria-labelledby="lsec-classes"><div class="sec-h"><h2 class="sec-title" id="lsec-classes">${showAll && mineIds.length < COURSE_ORDER.filter(id => Courses[id]).length ? 'All classes' : 'Your classes'}</h2>${mineIds.length < COURSE_ORDER.filter(id => Courses[id]).length ? `<button class="linkbtn small" data-action="show-all">${showAll ? 'Show only mine' : 'Show all classes'}</button>` : ''}</div>
           <div class="course-grid">${cards}</div>
-          ${App.requestLink ? `<div class="rq-under">${App.requestLink()}${App.teachLinks ? App.teachLinks() : ''}</div>` : ''}
+          ${App.requestLink ? `<div class="rq-under">${App.requestLink()}${App.createLink ? App.createLink() : ''}${App.teachLinks ? App.teachLinks() : ''}</div>` : ''}
         </section>
         <section class="land-sec" aria-labelledby="lsec-more"><h2 class="sec-title" id="lsec-more">Explore</h2>
         <div class="dash-tabs landing-tabs" data-store="landTab" role="tablist">${tabs.map(([k, l, ic]) => `<button class="tab" data-tab="${k}" role="tab">${icon(ic, 14)}<span>${l}</span></button>`).join('')}</div>

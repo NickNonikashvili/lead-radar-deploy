@@ -218,7 +218,7 @@ switch ($route) {
 
   default:
     if (in_array($route, ['ics', 'ics_token', 'ics_token_reset', 'focus_ping', 'focus_stop', 'focus_done', 'focus_room', 'track', 'admin_growth', 'class_goal', 'league_section', 'ann_list', 'ann_post', 'ann_delete', 'mock_official', 'invite_mine', 'invite_info'], true)) { require_once __DIR__ . '/social.php'; require_once __DIR__ . '/growth.php'; mh_growth_route($route, $in, $cfg, $ip); }
-    if (str_starts_with($route, 'myclass') || $route === 'shared_class' || $route === 'create_status') { require_once __DIR__ . '/myclasses.php'; mh_myclass_route($route, $in, $cfg, $ip); }   // classes students make, sharing them, Mathub Create
+    if (str_starts_with($route, 'myclass') || in_array($route, ['shared_class', 'create_status', 'admin_unshare'], true)) { require_once __DIR__ . '/myclasses.php'; mh_myclass_route($route, $in, $cfg, $ip); }   // classes students make, sharing them, Mathub Create
     if (str_starts_with($route, 'classpack_') || str_starts_with($route, 'admin_classpack')) { require_once __DIR__ . '/packs.php'; mh_packs_route($route, $in, $cfg, $ip); }
     if (str_starts_with($route, 'classreq_') || str_starts_with($route, 'admin_classreq')) { require_once __DIR__ . '/forum.php'; require_once __DIR__ . '/requests.php'; mh_requests_route($route, $in, $cfg, $ip); }
     if (str_starts_with($route, 'push_')) { require_once __DIR__ . '/social.php'; require_once __DIR__ . '/push.php'; mh_push_route($route, $in, $cfg, $ip); }

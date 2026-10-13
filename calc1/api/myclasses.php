@@ -22,7 +22,9 @@ function mh_myclass_db(): PDO {
   static $ready = false; $db = mh_db();
   if (!$ready) {
     $db->exec('CREATE TABLE IF NOT EXISTS my_classes (user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE, cid TEXT NOT NULL, code TEXT NOT NULL DEFAULT "", name TEXT NOT NULL DEFAULT "", term TEXT NOT NULL DEFAULT "", pack TEXT NOT NULL, bytes INTEGER NOT NULL DEFAULT 0, free INTEGER NOT NULL DEFAULT 0, share TEXT UNIQUE, created INTEGER NOT NULL, updated INTEGER NOT NULL, PRIMARY KEY (user_id, cid))');
-    $db->exec('CREATE TABLE IF NOT EXISTS create_status (user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE, active INTEGER NOT NULL DEFAULT 0, expires INTEGER NOT NULL DEFAULT 0, store TEXT NOT NULL DEFAULT "", manage TEXT NOT NULL DEFAULT "", checked INTEGER NOT NULL)');
+    $db->exec('CREATE TABLE IF NOT EXISTS create_status (user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE, active INTEGER NOT NULL DEFAULT 0, expires INTEGER NOT NULL DEFAULT 0, store TEXT NOT NULL DEFAULT "", manage TEXT NOT NULL DEFAULT "", renews INTEGER NOT NULL DEFAULT 1, checked INTEGER NOT NULL)');
+    $cols = array_column($db->query('PRAGMA table_info(create_status)')->fetchAll(), 'name');
+    if (!in_array('renews', $cols, true)) $db->exec('ALTER TABLE create_status ADD COLUMN renews INTEGER NOT NULL DEFAULT 1');
     $ready = true;
   }
   return $db;
@@ -65,29 +67,30 @@ function mh_rc_subscriber(array $cfg, string $appUserId): ?array {
   $j = json_decode((string)$body, true); return is_array($j) && isset($j['subscriber']) && is_array($j['subscriber']) ? $j['subscriber'] : null;
 }
 
-/** Mathub Create for one account: asks RevenueCat at most every ten minutes, or when $refresh (60 times an hour at most), and remembers the answer. */
+/** Mathub Create for one account: asks RevenueCat at most every ten minutes, or when $refresh (120 times an hour at most), and remembers the answer. */
 function mh_create_status(array $u, array $cfg, bool $refresh = false): array {
   $db = mh_myclass_db(); $now = time(); $uid = 'mh_' . $u['id'];
   $st = $db->prepare('SELECT * FROM create_status WHERE user_id = ?'); $st->execute([$u['id']]); $row = $st->fetch() ?: null;
   $secret = trim((string)($cfg['revenuecat_secret'] ?? ''));
   $stale = !$row || (int)$row['checked'] < $now - 600 || $refresh;
-  if ($secret !== '' && $stale && ($row === null || mh_rate("create_status:{$u['id']}", 60, 3600))) {
+  if ($secret !== '' && $stale && ($row === null || mh_rate("create_status:{$u['id']}", 120, 3600))) {
     $sub = mh_rc_subscriber($cfg, $uid);
     if ($sub !== null) {
-      $ent = $sub['entitlements'][(string)($cfg['create_entitlement'] ?? 'create')] ?? null; $active = false; $exp = 0; $store = '';
+      $ent = $sub['entitlements'][(string)($cfg['create_entitlement'] ?? 'create')] ?? null; $active = false; $exp = 0; $store = ''; $renews = false;
       if (is_array($ent)) {
         $exp = !empty($ent['expires_date']) ? (int)strtotime((string)$ent['expires_date']) : 0;
         $grace = !empty($ent['grace_period_expires_date']) ? (int)strtotime((string)$ent['grace_period_expires_date']) : 0;
         $active = $exp === 0 || max($exp, $grace) > $now; $exp = max($exp, $grace);
-        $prod = (string)($ent['product_identifier'] ?? ''); $store = (string)($sub['subscriptions'][$prod]['store'] ?? '');
+        $prod = (string)($ent['product_identifier'] ?? ''); $ps = $sub['subscriptions'][$prod] ?? []; $store = (string)($ps['store'] ?? '');
+        $renews = empty($ps['unsubscribe_detected_at']) && empty($ps['billing_issues_detected_at']);
       }
-      $db->prepare('INSERT INTO create_status (user_id, active, expires, store, manage, checked) VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT(user_id) DO UPDATE SET active = excluded.active, expires = excluded.expires, store = excluded.store, manage = excluded.manage, checked = excluded.checked')
-        ->execute([$u['id'], $active ? 1 : 0, $exp, mb_substr($store, 0, 40), mb_substr((string)($sub['management_url'] ?? ''), 0, 400), $now]);
+      $db->prepare('INSERT INTO create_status (user_id, active, expires, store, manage, renews, checked) VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT(user_id) DO UPDATE SET active = excluded.active, expires = excluded.expires, store = excluded.store, manage = excluded.manage, renews = excluded.renews, checked = excluded.checked')
+        ->execute([$u['id'], $active ? 1 : 0, $exp, mb_substr($store, 0, 40), mb_substr((string)($sub['management_url'] ?? ''), 0, 400), $renews ? 1 : 0, $now]);
       $st->execute([$u['id']]); $row = $st->fetch() ?: null;
     }
   }
   $active = $row && (int)$row['active'] === 1 && ((int)$row['expires'] === 0 || (int)$row['expires'] > $now);
-  return ['active' => $active, 'until' => $row && (int)$row['expires'] ? gmdate('c', (int)$row['expires']) : null, 'store' => $row['store'] ?? '', 'manage_url' => $row['manage'] ?? '', 'checked' => $row ? (int)$row['checked'] : 0];
+  return ['active' => $active, 'until' => $row && (int)$row['expires'] ? gmdate('c', (int)$row['expires']) : null, 'store' => $row['store'] ?? '', 'manage_url' => $row['manage'] ?? '', 'renews' => $row ? (int)$row['renews'] === 1 : false, 'checked' => $row ? (int)$row['checked'] : 0];
 }
 
 function mh_myclass_route(string $route, array $in, array $cfg, string $ip): void {
@@ -136,6 +139,12 @@ function mh_myclass_route(string $route, array $in, array $cfg, string $ip): voi
       mh_method('POST'); $u = mh_require_user(); $cid = mh_myclass_id($in['id'] ?? '');
       $db->prepare('UPDATE my_classes SET share = NULL WHERE user_id = ? AND cid = ?')->execute([$u['id'], $cid]);
       mh_json(['ok' => true]);
+    }
+    case 'admin_unshare': {   // a moderator stops a reported shared class (the class stays with its owner)
+      mh_method('POST'); $u = mh_require_user(); if (!mh_is_mod($u)) mh_fail('Moderators only.', 403);
+      $code = strtoupper(preg_replace('/[^A-Za-z0-9]/', '', (string)($in['code'] ?? '')));
+      $st = $db->prepare('UPDATE my_classes SET share = NULL WHERE share = ?'); $st->execute([$code]);
+      mh_json(['ok' => true, 'stopped' => $st->rowCount()]);
     }
     case 'shared_class': {
       mh_method('GET'); mh_rate_or_fail("shared_class:$ip", 120, 3600);
