@@ -90,6 +90,16 @@ return [
   'ai_voice_monthly'  => 300000,   // characters Bo speaks per account per month (about 5 hours), then the device's voice
   'ai_listen_monthly' => 36000,    // seconds Bo listens per account per month (10 hours) on browsers without speech recognition
 
+  // Live calls with Bo (the same openai_key): a real-time voice conversation, speech to speech, through OpenAI's
+  // Realtime API. Bo hears tone and pauses, answers in about half a second, and can be interrupted like a person.
+  // The mini model keeps it to a few cents a minute; 'gpt-realtime-2.1' sounds the same and reasons better, at
+  // several times the price. Without the key, calls fall back to basic voice (the browser hears, Claude answers).
+  'ai_live_model'     => 'gpt-realtime-2.1-mini',
+  'ai_live_voice'     => 'cedar',    // cedar, marin, ash, ballad, coral, sage or verse; students can pick another
+  'ai_live_monthly'   => 300,        // minutes of live calls per account per month
+  'ai_live_daily'     => 90,         // minutes per day
+  'ai_live_call'      => 30,         // minutes per call (Bo can be called again right away)
+
   // Storage. Keep the database inside api/data (protected by .htaccess) or move it above public_html.
   'db_path'         => __DIR__ . '/data/mathub.sqlite',
 

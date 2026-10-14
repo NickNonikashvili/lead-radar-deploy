@@ -121,7 +121,7 @@
       st.cid = want && Courses[want] ? want : ids[0] || null;
       if (st.cid && !ids.includes(st.cid)) ids.unshift(st.cid);
       root.innerHTML = `<div class="bo-shell"><div class="bo-page"><div class="bo-col">
-        <header class="bo-head"><span class="bo-av" aria-hidden="true">${bo(52)}</span><div class="bo-title"><h1>Ask Bo</h1><p>Your tutor${st.cid ? ` for <b>${esc(short(st.cid))}</b>` : ''}. He knows your syllabus and how your studying is going.</p></div>${talk() ? `<button type="button" class="btn primary bo-talk-btn" data-bo-talk hidden>${icon('mic', 17)}<span>Talk with Bo</span></button>` : ''}<button type="button" class="icon-btn bo-knows-btn" data-bo="knows" aria-label="What Bo knows about you" title="What Bo knows">${icon('info', 18)}</button></header>
+        <header class="bo-head"><span class="bo-av" aria-hidden="true">${bo(52)}</span><div class="bo-title"><h1>Ask Bo</h1><p>Your tutor${st.cid ? ` for <b>${esc(short(st.cid))}</b>` : ''}. He knows your syllabus and how your studying is going.</p></div>${talk() ? `<button type="button" class="btn primary bo-talk-btn" data-bo-talk hidden>${icon('phone', 17)}<span>Call Bo</span></button>` : ''}<button type="button" class="icon-btn bo-knows-btn" data-bo="knows" aria-label="What Bo knows about you" title="What Bo knows">${icon('info', 18)}</button></header>
         ${ids.length > 1 ? `<div class="bo-classes" role="tablist" aria-label="Which class">${ids.map(x => `<button type="button" role="tab" class="wh-tab bo-class${x === st.cid ? ' on' : ''}" aria-selected="${x === st.cid}" data-bo-class="${esc(x)}" style="${App.classStyle ? App.classStyle(x) : ''}">${esc(short(x))}</button>`).join('')}</div>` : ''}
         <div class="bo-main" id="bo-main"><div class="bo-loading" aria-hidden="true"><i></i><i></i></div></div></div>
         <aside class="bo-side" id="bo-side" aria-label="What Bo knows"></aside></div></div>`;
@@ -159,7 +159,7 @@
   function intro(plan) {
     return `<section class="bo-gate bo-intro"><span class="bo-gate-av" aria-hidden="true">${bo(96)}</span><h2>Meet Bo, your tutor</h2>
       <p>Bo knows your classes from their syllabi and keeps up with how you are doing, so his help fits you.</p>
-      <ul class="bo-perks"><li>${icon('chat', 18)}<span><b>Ask anything</b> about your classes, any time: “Why is the derivative of $\\sin x$ equal to $\\cos x$?”</span></li><li>${icon('target', 18)}<span><b>He knows where you are stuck</b>: your weakest topics, the questions you missed and your next exam.</span></li>${talk() ? `<li>${icon('mic', 18)}<span><b>Talk with him out loud</b>: he answers in a few seconds and writes the math on his board.</span></li>` : ''}<li>${icon('image', 18)}<span><b>Snap a problem</b> and he walks you through it, step by step.</span></li><li>${icon('flag', 18)}<span><b>Plans and quizzes</b> built on your real exam dates.</span></li></ul>
+      <ul class="bo-perks"><li>${icon('chat', 18)}<span><b>Ask anything</b> about your classes, any time: “Why is the derivative of $\\sin x$ equal to $\\cos x$?”</span></li><li>${icon('target', 18)}<span><b>He knows where you are stuck</b>: your weakest topics, the questions you missed and your next exam.</span></li>${talk() ? `<li>${icon('phone', 18)}<span><b>Call him</b> and just talk, like with a friend: he answers right away, you can cut in, and he writes the math on his board.</span></li>` : ''}<li>${icon('image', 18)}<span><b>Snap a problem</b> and he walks you through it, step by step.</span></li><li>${icon('flag', 18)}<span><b>Plans and quizzes</b> built on your real exam dates.</span></li></ul>
       <div class="bo-gate-acts"><button type="button" class="btn primary lg" data-go="max">${plan === 'pro' ? 'Move up to Max' : 'Get Mathub Max'}</button></div>
       <p class="small muted">Mathub Max includes everything in Pro: Bo also writes your classes from their syllabi.</p></section>`;
   }
@@ -199,7 +199,7 @@
       <form class="bo-compose" id="bo-compose"><div class="bo-photo-prev" id="bo-photo-prev" hidden></div>
         <div class="bo-row"><label class="icon-btn bo-photo" title="Add a photo of a problem" aria-label="Add a photo of a problem">${icon('image', 19)}<input type="file" id="bo-file" accept="image/*" hidden></label>
         <label class="sr-only" for="bo-q">Ask Bo</label><textarea id="bo-q" class="input bo-q" rows="1" maxlength="2000" placeholder="Ask Bo about ${esc(short(id))}…"></textarea>
-        ${talk() ? `<button type="button" class="icon-btn bo-mic" data-bo-talk aria-label="Talk with Bo out loud" title="Talk with Bo">${icon('mic', 20)}</button>` : ''}<button type="submit" class="btn primary bo-send" aria-label="Send">${icon('send', 18)}</button></div>
+        ${talk() ? `<button type="button" class="icon-btn bo-mic" data-bo-talk aria-label="Call Bo and talk out loud" title="Call Bo">${icon('phone', 19)}</button>` : ''}<button type="submit" class="btn primary bo-send" aria-label="Send">${icon('send', 18)}</button></div>
         <p class="bo-foot" id="bo-foot">Bo is an AI and can be wrong. Check important answers against your notes or your instructor.</p></form>`;
     const log = $('#bo-log', main), q = $('#bo-q', main), form = $('#bo-compose', main), sug = $('#bo-suggest', main);
     const scroll = () => { const last = log.lastElementChild; if (last) last.scrollIntoView({ block: 'end', behavior: 'auto' }); };

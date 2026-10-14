@@ -131,6 +131,44 @@ const snapshot = { name: 'Alice', streak: 4, xpToday: 10, goal: 30, page: 'Calc 
   r = await call('mod', 'ai_status'); ok('this month\'s voice use is counted: characters spoken and seconds heard', r.usage.voice >= 90 && r.usage.voice_limit === 300000 && r.usage.listen === 3 && r.usage.listen_limit === 36000, r.usage);
   await call('mod', 'ai_forget', { what: 'all' });
 
+  // live calls: set up here with OpenAI (the stand-in), counted in minutes, hung up past a limit, saved to the chat
+  const FX = n => path.join(__dirname, 'fixtures', n); const rd = (n, fb) => { try { return JSON.parse(fs.readFileSync(FX(n), 'utf8')); } catch (e) { return fb; } };
+  for (const n of ['live-last.json', 'live-hangups.json', 'live-tries.json']) try { fs.unlinkSync(FX(n)); } catch (e) {}
+  const db = (sql, arg) => require('child_process').spawnSync('php', ['-r', '$d = new PDO("sqlite:" . $argv[1]); $s = $d->prepare($argv[2]); $s->execute([$argv[3]]);', path.join(__dirname, '..', 'api', 'data', 'mathub.sqlite'), sql, arg]);
+  const OFFER = 'v=0\r\no=- 1 2 IN IP4 127.0.0.1\r\ns=test\r\nt=0 0\r\n';
+  r = await call('anon', 'ai_status'); ok('live calls are switched on, with the realtime voices (cedar first)', r.voice.live === true && r.voice.live_default === 'cedar' && Object.keys(r.voice.live_voices)[0] === 'cedar' && 'marin' in r.voice.live_voices, r.voice);
+  r = await call('bob', 'ai_live_start', { class: 'calc', sdp: OFFER }); ok('a live call needs Max', r.status === 402 && r.plan === 'max', r);
+  r = await call('mod', 'ai_live_start', { class: 'calc', sdp: 'not sdp' }); ok('an offer that is not SDP is refused', r.status === 400, r);
+  r = await call('mod', 'ai_live_start', { class: 'calc', sdp: OFFER, voice: 'marin', speed: 1.1, eagerness: 'high', snapshot, today: '2026-10-13' });
+  const live1 = r; const L1 = rd('live-last.json', {}); const ls = L1.session || {};
+  ok('a call starts: OpenAI\'s answer comes back with an id for the call', r.ok && /^v=0/.test(r.sdp) && /^[a-f0-9]{24}$/.test(r.lid) && r.left === 1800 && r.voice === 'marin', r);
+  ok('the offer and the session go to OpenAI as a form, asking for SDP back', /s=test/.test(L1.sdp) && L1.accept === 'application/sdp' && ls.type === 'realtime' && ls.model === 'gpt-realtime-2.1-mini', { accept: L1.accept, model: ls.model });
+  ok('the voice, speed and eagerness picked are used; semantic turn-taking with interruptions', ls.audio.output.voice === 'marin' && ls.audio.output.speed === 1.1 && ls.audio.input.turn_detection.eagerness === 'high' && ls.audio.input.turn_detection.type === 'semantic_vad' && ls.audio.input.turn_detection.interrupt_response === true, ls.audio);
+  ok('Bo\'s live instructions: his persona, then the class, today, the student\'s progress and his notes', /You are Bo, the bobcat tutor from Mathub, on a live voice call/.test(ls.instructions) && /CLASS:/.test(ls.instructions) && /TODAY: 2026-10-13/.test(ls.instructions) && /WEAKEST TOPICS: Limits by algebra/.test(ls.instructions) && ls.instructions.length < 16000, ls.instructions.length);
+  ok('his tools: the board and his notes', ls.tools.map(t => t.name).join() === 'write_on_board,remember' && ls.tools[0].parameters.required[0] === 'lines');
+  r = await call('mod', 'ai_live_start', { class: 'calc', sdp: OFFER, voice: 'nobody', speed: 9, eagerness: 'wild' });
+  const L2 = rd('live-last.json', {}).session;
+  ok('unknown voices, speeds and eagerness fall back to the defaults (and the speed is kept in range)', r.ok && L2.audio.output.voice === 'cedar' && L2.audio.output.speed === 1.25 && L2.audio.input.turn_detection.eagerness === 'auto', L2.audio);
+  ok('one call at a time: starting a new call hung up the last one', rd('live-hangups.json', []).length === 1, rd('live-hangups.json', []));
+  const lid = r.lid;
+  r = await call('mod', 'ai_live_tick', { lid }); ok('the browser reports the call; the minutes left come back', r.ok && r.left > 1790 && !r.end, r);
+  r = await call('mod', 'ai_live_tick', { lid: live1.lid }); ok('the call that was replaced is over', r.ok && r.end === true && r.left === 0, r);
+  r = await call('alice', 'ai_live_tick', { lid }); ok('another account cannot report on this call', r.status === 404, r);
+  db('UPDATE ai_live SET secs = 1800 WHERE id = ?', lid);
+  r = await call('mod', 'ai_live_tick', { lid }); ok('past the length of a call, the server ends it and says why', r.ok && r.end === true && /30 minutes/.test(r.why) && rd('live-hangups.json', []).length === 2, r);
+  r = await call('mod', 'ai_live_start', { class: 'calc', sdp: OFFER, snapshot: Object.assign({}, snapshot, { name: 'REFUSE-FULL' }) });
+  const tries = rd('live-tries.json', []).slice(-2);
+  ok('if OpenAI refuses a setting, the call is tried again with the fewest settings', r.ok && tries[0].includes('max_output_tokens') && !tries[1].includes('max_output_tokens') && tries[1].includes('tools'), tries);
+  await call('mod', 'ai_forget', { what: 'all' });
+  r = await call('mod', 'ai_live_log', { lid: r.lid, turns: [{ r: 'b', t: 'Hey! What are we working on?' }, { r: 'u', t: 'The chain rule' }, { r: 'b', t: 'Outside, then inside. [board: $f(g(x))\'$]' }, { r: 'u', t: '' }], notes: ['Likes to talk it through', 'Likes to talk it through'], end: 1 });
+  ok('what was said on the call is saved to the chat, and new notes to his notes (once)', r.ok && r.saved === 3 && r.notes.filter(n => n === 'Likes to talk it through').length === 1, r);
+  r = await call('mod', 'ai_thread&class=calc'); ok('in order, marked as said out loud', r.turns.length === 3 && r.turns.every(t => t.v === 1) && r.turns[0].r === 'b' && r.turns[1].t === 'The chain rule' && /\[board:/.test(r.turns[2].t), r.turns);
+  ok('ending the call hangs it up on OpenAI\'s side', rd('live-hangups.json', []).length === 3);
+  r = await call('mod', 'ai_status'); ok('live minutes are counted, with the monthly limit, and what is left takes today\'s calls into account', typeof r.usage.live === 'number' && r.usage.live_limit === 18000 && r.usage.live_left <= 90 * 60 - 1800, r.usage);
+  db('DELETE FROM ai_live WHERE user_id = (SELECT id FROM users WHERE email = ?)', 'mod.user@montana.edu');
+  require('child_process').spawnSync('php', ['-r', '$d = new PDO("sqlite:" . $argv[1]); $d->exec("UPDATE ai_usage SET live = 0");', path.join(__dirname, '..', 'api', 'data', 'mathub.sqlite')]);
+  await call('mod', 'ai_forget', { what: 'all' });
+
   // Download my data, then clean up
   r = await call('alice', 'data_export'); ok('Bo\'s chats, notes and usage are in Download my data', r.tables && Array.isArray(r.tables.ai_threads) && Array.isArray(r.tables.ai_usage) && Array.isArray(r.tables.ai_notes), Object.keys(r.tables || {}));
   await call('alice', 'ai_forget', { what: 'all' }); await call('mod', 'ai_forget', { what: 'all' });

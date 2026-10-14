@@ -345,10 +345,13 @@ The Hostinger zip never includes `app/`.
 
 `assets/tutor.js`, `assets/tutor.css`, `api/ai.php`; details and costs in `docs/app-subscriptions.md`.
 
-- **Talk with Bo** (`assets/talk.js`, website): a voice call. The browser's speech recognition hears the student
-  (or a recording goes to `ai_listen` where there is none), the answer streams from `ai_tutor` in voice mode, and Bo
-  speaks it a sentence at a time (`ai_speak`, a natural voice, or the device's voice) while formulas go on his board.
-  Hands-free by default; tap Bo or press Space to talk, send or cut in; Esc ends the call; turns are saved in the chat.
+- **Calling Bo** (`assets/talk.js`, website): a **live call** through OpenAI's Realtime API over WebRTC, set up by
+  the server (`ai_live_start`: the browser's offer plus Bo's live persona and what he knows; the key stays on the
+  server). Speech to speech: Bo answers in about half a second, waits until the student is done, stops when talked
+  over, writes on his board and keeps notes through tools; minutes are reported (`ai_live_tick`) and limited, the
+  transcript is saved to the chat (`ai_live_log`). Without the speech key, or if a call can't connect, **basic
+  voice**: the browser hears, the answer streams from `ai_tutor` in voice mode, and Bo reads it out (`ai_speak` or
+  the device's voice). Mute (M), tap Bo to stop him, Type, Photo, captions, Esc ends the call.
 - **Ask Bo** (`#/tutor`, `#/tutor/<class>`): a chat with Bo for the class you pick; answers stream in as he writes them. He knows the class from its
   syllabus and how the student is doing: the device sends a short progress snapshot with each question (next exam
   and readiness, weakest topics, recent mistakes, flashcards due, deadlines). The first message and the suggestions

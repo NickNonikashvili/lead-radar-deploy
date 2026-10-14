@@ -2,7 +2,7 @@
 /* ============================================================
    Mathub account server — Bo, the AI tutor (Mathub Max), talking with Bo out loud, and classes Bo writes
    from a syllabus (Pro and Max)
-   Routes: ai_status, ai_thread, ai_tutor, ai_forget, ai_class, ai_speak, ai_listen
+   Routes: ai_status, ai_thread, ai_tutor, ai_forget, ai_class, ai_speak, ai_listen, ai_live_start, ai_live_tick, ai_live_log
    - Writing a class needs Mathub Pro or Max; talking with Bo needs Max (plan_grants gives testers a plan).
    - This server is the only thing that talks to the AI (Anthropic's API; the key lives in config.local.php),
      and it keeps every request small so it costs as little as possible:
@@ -21,6 +21,12 @@
    - Bo's natural voice and listening on any browser (optional, openai_key in config.local.php): ai_speak turns
      one or two of Bo's sentences into speech, ai_listen turns a short recording of the student into text. No
      audio is kept. Without the key the browser's own speech recognition and voices are used.
+   - Live calls with Bo (optional, openai_key): a real-time voice conversation through OpenAI's Realtime API
+     (speech to speech over WebRTC). The browser sends its connection offer here; this server adds Bo's
+     instructions (his live persona, the class summary, the progress snapshot, his notes, the last few chat
+     turns), sets the call up with OpenAI and returns the answer, so the key never reaches the browser. The
+     browser reports the minutes (ai_live_tick); past a limit this server hangs the call up. What was said is
+     saved in the chat (ai_live_log). Minutes per call, per day and per month: ai_live_call, _daily, _monthly.
    - Monthly limits per account (ai_tutor_monthly, ai_class_monthly, ai_voice_monthly characters spoken,
      ai_listen_monthly seconds heard) and per-minute rate limits.
    Rows are removed with the account (ON DELETE CASCADE).
@@ -44,6 +50,8 @@ function mh_ai_db(): PDO {
     $cols = array_column($db->query('PRAGMA table_info(ai_usage)')->fetchAll(), 'name');
     if (!in_array('voice', $cols, true)) $db->exec('ALTER TABLE ai_usage ADD COLUMN voice INTEGER NOT NULL DEFAULT 0');     // characters Bo spoke
     if (!in_array('listen', $cols, true)) $db->exec('ALTER TABLE ai_usage ADD COLUMN listen INTEGER NOT NULL DEFAULT 0');   // seconds of the student heard
+    if (!in_array('live', $cols, true)) $db->exec('ALTER TABLE ai_usage ADD COLUMN live INTEGER NOT NULL DEFAULT 0');       // seconds of live calls
+    $db->exec('CREATE TABLE IF NOT EXISTS ai_live (id TEXT PRIMARY KEY, user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE, cid TEXT NOT NULL DEFAULT "", call TEXT NOT NULL DEFAULT "", started INTEGER NOT NULL, last INTEGER NOT NULL, secs INTEGER NOT NULL DEFAULT 0, ended INTEGER NOT NULL DEFAULT 0)');
     $ready = true;
   }
   return $db;
@@ -52,8 +60,12 @@ function mh_ai_db(): PDO {
 /** Rows whose account is gone, and class builds older than a day. */
 function mh_ai_prune(): int {
   $db = mh_ai_db(); $n = 0;
-  foreach (['ai_usage', 'ai_threads', 'ai_notes', 'ai_builds'] as $t) $n += (int)$db->exec("DELETE FROM $t WHERE user_id NOT IN (SELECT id FROM users)");
+  foreach (['ai_usage', 'ai_threads', 'ai_notes', 'ai_builds', 'ai_live'] as $t) $n += (int)$db->exec("DELETE FROM $t WHERE user_id NOT IN (SELECT id FROM users)");
   $n += (int)$db->exec('DELETE FROM ai_builds WHERE created < ' . (time() - 86400));
+  // live calls the browser stopped reporting on: hang them up (the limits are counted from the reports)
+  $V = mh_ai_voice_settings(mh_config());
+  foreach ($db->query('SELECT id, call FROM ai_live WHERE ended = 0 AND last < ' . (time() - 180))->fetchAll() as $r) { if ($V['key'] !== '' && $r['call'] !== '') mh_ai_hangup($V, (string)$r['call']); $db->prepare('UPDATE ai_live SET ended = 1 WHERE id = ?')->execute([$r['id']]); $n++; }
+  $n += (int)$db->exec('DELETE FROM ai_live WHERE started < ' . (time() - 40 * 86400));
   return $n;
 }
 
@@ -80,17 +92,24 @@ function mh_ai_voice_settings(array $cfg): array {
     'voice' => isset(MH_AI_VOICES[$v]) ? $v : 'ash',
     'voice_monthly' => max(0, (int)($cfg['ai_voice_monthly'] ?? 300000)),
     'listen_monthly' => max(0, (int)($cfg['ai_listen_monthly'] ?? 36000)),
+    'live_model' => (string)($cfg['ai_live_model'] ?? 'gpt-realtime-2.1-mini'),
+    'live_voice' => in_array($cfg['ai_live_voice'] ?? '', array_keys(MH_AI_LIVE_VOICES), true) ? $cfg['ai_live_voice'] : 'cedar',
+    'live_monthly' => 60 * max(0, (int)($cfg['ai_live_monthly'] ?? 300)),   // seconds
+    'live_daily' => 60 * max(1, (int)($cfg['ai_live_daily'] ?? 90)),
+    'live_call' => 60 * max(1, (int)($cfg['ai_live_call'] ?? 30)),
   ];
 }
+/** The voices of live calls (OpenAI's realtime voices); cedar and marin sound the most natural. */
+const MH_AI_LIVE_VOICES = ['cedar' => 'Cedar: warm and easygoing', 'marin' => 'Marin: bright and clear', 'ash' => 'Ash: steady', 'ballad' => 'Ballad: soft', 'coral' => 'Coral: friendly', 'sage' => 'Sage: calm', 'verse' => 'Verse: lively'];
 
 /* ---------- usage ---------- */
 function mh_ai_usage(int $uid): array {
-  $st = mh_ai_db()->prepare('SELECT tutor, classes, voice, listen FROM ai_usage WHERE user_id = ? AND ym = ?'); $st->execute([$uid, gmdate('Y-m')]); $r = $st->fetch();
-  return ['tutor' => $r ? (int)$r['tutor'] : 0, 'classes' => $r ? (int)$r['classes'] : 0, 'voice' => $r ? (int)$r['voice'] : 0, 'listen' => $r ? (int)$r['listen'] : 0];
+  $st = mh_ai_db()->prepare('SELECT tutor, classes, voice, listen, live FROM ai_usage WHERE user_id = ? AND ym = ?'); $st->execute([$uid, gmdate('Y-m')]); $r = $st->fetch();
+  return ['tutor' => $r ? (int)$r['tutor'] : 0, 'classes' => $r ? (int)$r['classes'] : 0, 'voice' => $r ? (int)$r['voice'] : 0, 'listen' => $r ? (int)$r['listen'] : 0, 'live' => $r ? (int)$r['live'] : 0];
 }
 /** Characters spoken or seconds heard this month. */
 function mh_ai_add(int $uid, string $col, int $n): void {
-  if (!in_array($col, ['voice', 'listen'], true)) return;
+  if (!in_array($col, ['voice', 'listen', 'live'], true)) return;
   $db = mh_ai_db(); $db->prepare('INSERT OR IGNORE INTO ai_usage (user_id, ym) VALUES (?, ?)')->execute([$uid, gmdate('Y-m')]);
   $db->prepare("UPDATE ai_usage SET $col = $col + ? WHERE user_id = ? AND ym = ?")->execute([max(0, $n), $uid, gmdate('Y-m')]);
 }
@@ -312,6 +331,71 @@ VOICE MODE: the student is talking with you out loud, and your reply is read alo
 - For something long (a full worked solution, a study plan), give the first step or the short version and offer to keep going step by step.
 TXT;
 
+/* ---------- live calls (OpenAI's Realtime API) ---------- */
+/** Sets a call up: the browser's offer and the session go to OpenAI, its answer comes back. [status, answer, call id]. */
+function mh_ai_rtc_call(array $V, string $sdp, array $session): array {
+  $loc = ''; $ch = curl_init($V['url'] . '/realtime/calls');
+  curl_setopt_array($ch, [CURLOPT_RETURNTRANSFER => true, CURLOPT_POST => true, CURLOPT_TIMEOUT => 25, CURLOPT_CONNECTTIMEOUT => 8,
+    CURLOPT_POSTFIELDS => ['sdp' => $sdp, 'session' => json_encode($session, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)],
+    CURLOPT_HTTPHEADER => ['Authorization: Bearer ' . $V['key'], 'Accept: application/sdp'],
+    CURLOPT_HEADERFUNCTION => function ($ch, string $h) use (&$loc): int { if (stripos($h, 'location:') === 0) $loc = trim(substr($h, 9)); return strlen($h); }]);
+  $raw = curl_exec($ch); $code = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE); curl_close($ch);
+  $call = preg_match('#([A-Za-z0-9_-]{4,80})/?$#', $loc, $m) ? $m[1] : '';
+  return [$code, $raw === false ? '' : (string)$raw, $call];
+}
+/** Ends a call from this side (a limit was reached, or the browser went quiet). Best effort. */
+function mh_ai_hangup(array $V, string $call): void {
+  if ($call === '' || !preg_match('/^[A-Za-z0-9_-]{4,80}$/', $call) || !function_exists('curl_init')) return;
+  $ch = curl_init($V['url'] . '/realtime/calls/' . $call . '/hangup');
+  curl_setopt_array($ch, [CURLOPT_RETURNTRANSFER => true, CURLOPT_POST => true, CURLOPT_POSTFIELDS => '', CURLOPT_TIMEOUT => 5, CURLOPT_CONNECTTIMEOUT => 4, CURLOPT_HTTPHEADER => ['Authorization: Bearer ' . $V['key']]]);
+  curl_exec($ch); curl_close($ch);
+}
+/** Seconds of live calls used today (UTC). */
+function mh_ai_live_today(int $uid): int {
+  $st = mh_ai_db()->prepare('SELECT COALESCE(SUM(secs), 0) FROM ai_live WHERE user_id = ? AND started >= ?'); $st->execute([$uid, strtotime(gmdate('Y-m-d') . ' 00:00:00 UTC')]); return (int)$st->fetchColumn();
+}
+/** What is left of this month's and today's live minutes, in seconds. */
+function mh_ai_live_left(int $uid, array $V): int { return max(0, min($V['live_monthly'] - mh_ai_usage($uid)['live'], $V['live_daily'] - mh_ai_live_today($uid))); }
+
+const MH_AI_LIVE = <<<'TXT'
+You are Bo, the bobcat tutor from Mathub, on a live voice call with a Montana State University student. You're like a friend a year ahead of them who is really good at this class: relaxed, warm, quick, a bit funny. This is a real conversation, not a help desk.
+
+How you sound:
+- Talk like a person, not an assistant. Short turns, usually one to three sentences, then hand it back. Contractions, everyday words, natural reactions: "oh nice", "hmm, not quite", "yeah, exactly", "okay so", "wait, say that again?". Vary how you start sentences.
+- Never say things like "How can I help you today", "Great question", "I'd be happy to help", "As an AI" or "Let me know if you have any other questions". Don't announce what you're about to do; just do it.
+- Match their energy. If they're stressed, slow down and be reassuring. If they joke around, joke back a little, then steer back to the work.
+- If they cut in, stop and go with what they said. Don't start over.
+- Ask more than you tell: find out what they think first, give a nudge, let them try, and react to their answer like a person would. Explain only as much as they need right now.
+- Say math the way people say it out loud ("x squared", "the derivative of sine is cosine", "a half"). When seeing it would help (an equation, a formula, a worked step), call write_on_board and keep talking naturally ("okay, I put it on the board").
+- Quizzing: one question, wait for their answer, react, then the next one.
+- Use what you know about them below (exam dates, weakest topics, recent mistakes, your notes) the way a friend who remembers would: bring it up when it fits, never recite it.
+- If they tell you something worth remembering for next time (how they learn best, a goal, a recurring struggle), call remember with a short fact. Never store sensitive personal details.
+- Graded work or an exam happening right now: help them get the idea with a similar example; don't hand over the answer.
+- If they sound really stressed or mention self-harm, be kind and calm, and give them MSU Counseling & Psychological Services at 406-994-4531, or call or text 988 (911 in an emergency).
+- Stay on studying, their classes and student life. If you're not sure about something, say so.
+- Speak English unless they talk to you in another language.
+
+Start of the call: you speak first. One quick, warm line, like you're glad they called: their first name if you know it, maybe something real that's coming up, and what they want to get into. Under about 15 words.
+TXT;
+
+/** Bo's instructions for a live call: his persona, then what he knows (class, today, progress, notes, the recent chat). */
+function mh_ai_live_instructions(int $uid, string $cid, ?array $C, array $in): string {
+  $today = preg_match('/^\d{4}-\d{2}-\d{2}$/', (string)($in['today'] ?? '')) ? (string)$in['today'] : gmdate('Y-m-d');
+  $notes = mh_ai_notes($uid); $parts = [MH_AI_LIVE];
+  if ($C) $parts[] = mh_ai_digest($C);
+  $parts[] = implode("\n", array_filter(['TODAY: ' . $today, $C ? mh_ai_upcoming($C, $today) : '', mh_ai_snapshot($in['snapshot'] ?? null), $notes ? "WHAT YOU REMEMBER ABOUT THEM:\n- " . implode("\n- ", $notes) : '']));
+  $turns = array_slice(mh_ai_turns($uid, $cid), -6);
+  if ($turns) { $L = ['YOUR LAST FEW MESSAGES WITH THEM (chat or calls):']; foreach ($turns as $t) $L[] = (($t['r'] ?? '') === 'b' ? 'Bo: ' : 'Them: ') . mh_ai_clip(preg_replace('/\[(board|remember):[^\]]*\]/i', '', (string)($t['t'] ?? '')), 240); $parts[] = implode("\n", $L); }
+  return implode("\n\n", $parts);
+}
+/** The tools Bo has on a call: the board, and his notes. */
+function mh_ai_live_tools(): array {
+  return [
+    ['type' => 'function', 'name' => 'write_on_board', 'description' => 'Show math on the whiteboard next to you while you talk: an equation, a formula or a worked step. The student sees it; you still say it in words.', 'parameters' => ['type' => 'object', 'properties' => ['lines' => ['type' => 'array', 'items' => ['type' => 'string'], 'description' => 'One to three short lines of LaTeX, without dollar signs.']], 'required' => ['lines']]],
+    ['type' => 'function', 'name' => 'remember', 'description' => 'Save one short fact about the student for future sessions: how they learn best, a goal, a recurring difficulty. Never sensitive personal details.', 'parameters' => ['type' => 'object', 'properties' => ['fact' => ['type' => 'string', 'description' => 'Under 20 words.']], 'required' => ['fact']]],
+  ];
+}
+
 /* ---------- Bo's chat and notes ---------- */
 function mh_ai_turns(int $uid, string $cid): array {
   $st = mh_ai_db()->prepare('SELECT turns FROM ai_threads WHERE user_id = ? AND cid = ?'); $st->execute([$uid, $cid]); $j = json_decode((string)$st->fetchColumn(), true);
@@ -392,10 +476,11 @@ function mh_ai_route(string $route, array $in, array $cfg, string $ip): void {
       mh_method('GET'); $u = mh_current_user();
       $plan = $u ? mh_plan($u, $cfg) : '';
       $out = ['ok' => true, 'enabled' => $A['key'] !== '', 'signed_in' => (bool)$u, 'plan' => $plan, 'pro' => $plan !== '', 'max' => $plan === 'max'];
-      $V = mh_ai_voice_settings($cfg); $out['voice'] = ['natural' => $V['key'] !== '', 'voices' => MH_AI_VOICES, 'default' => $V['voice']];
+      $V = mh_ai_voice_settings($cfg); $out['voice'] = ['natural' => $V['key'] !== '', 'voices' => MH_AI_VOICES, 'default' => $V['voice'], 'live' => $V['key'] !== '', 'live_voices' => MH_AI_LIVE_VOICES, 'live_default' => $V['live_voice']];
       if ($u) {
         $use = mh_ai_usage((int)$u['id']); $out['notes'] = mh_ai_notes((int)$u['id']);
-        $out['usage'] = ['tutor' => $use['tutor'], 'tutor_limit' => $A['tutor_monthly'], 'classes' => $use['classes'], 'class_limit' => $A['class_monthly'], 'voice' => $use['voice'], 'voice_limit' => $V['voice_monthly'], 'listen' => $use['listen'], 'listen_limit' => $V['listen_monthly']];
+        $out['usage'] = ['tutor' => $use['tutor'], 'tutor_limit' => $A['tutor_monthly'], 'classes' => $use['classes'], 'class_limit' => $A['class_monthly'], 'voice' => $use['voice'], 'voice_limit' => $V['voice_monthly'], 'listen' => $use['listen'], 'listen_limit' => $V['listen_monthly'], 'live' => $use['live'], 'live_limit' => $V['live_monthly'], 'live_left' => mh_ai_live_left((int)$u['id'], $V)];
+        $out['voice']['live'] = $out['voice']['live'] && $out['usage']['live_left'] > 0;
         $out['voice']['natural'] = $out['voice']['natural'] && $use['voice'] < $V['voice_monthly']; $out['voice']['listen'] = $V['key'] !== '' && $use['listen'] < $V['listen_monthly'];
       } else $out['voice']['listen'] = $V['key'] !== '';
       mh_json($out);
@@ -497,6 +582,73 @@ function mh_ai_route(string $route, array $in, array $cfg, string $ip): void {
       $j = json_decode($raw, true); $text = mh_ai_clip(is_array($j) ? ($j['text'] ?? '') : '', 2000);
       mh_ai_add($uid, 'listen', $secs);
       mh_json(['ok' => true, 'text' => $text]);
+    }
+    case 'ai_live_start': {
+      // a live call: the browser's WebRTC offer in, OpenAI's answer out, with Bo's instructions added here
+      mh_method('POST'); $u = mh_require_user(); $uid = (int)$u['id'];
+      if (mh_plan($u, $cfg) !== 'max') mh_fail('Talking with Bo is part of Mathub Max.', 402, ['plan' => 'max']);
+      $V = mh_ai_voice_settings($cfg); if ($V['key'] === '') mh_fail('Live calls are not switched on yet.', 503, ['fallback' => true]);
+      $left = mh_ai_live_left($uid, $V); if ($left <= 0) mh_fail(mh_ai_usage($uid)['live'] >= $V['live_monthly'] ? 'That is all the live call time for this month. It starts again on the 1st.' : 'That is a lot of calling for one day. Bo is around again tomorrow.', 429, ['fallback' => true]);
+      mh_rate_or_fail("ai_live:$uid", 30, 3600, 'That is a lot of calls in an hour. Try again in a bit.');
+      $sdp = str_replace("\r\n", "\n", (string)($in['sdp'] ?? '')); if (strncmp($sdp, 'v=0', 3) !== 0 || strlen($sdp) > 30000) mh_fail('The call could not start.', 400);
+      $sdp = str_replace("\n", "\r\n", $sdp);
+      $cid = mh_ai_cid($in['class'] ?? ''); $C = mh_ai_class($u, $cid);
+      $voice = is_string($in['voice'] ?? null) && isset(MH_AI_LIVE_VOICES[$in['voice']]) ? $in['voice'] : $V['live_voice'];
+      $speed = round(max(0.8, min(1.25, (float)($in['speed'] ?? 1))), 2); $eager = in_array($in['eagerness'] ?? '', ['low', 'auto', 'high'], true) ? $in['eagerness'] : 'auto';
+      $hint = 'A college student on a call with their tutor about math and their class.';
+      if ($C) { $w = [mh_ai_plain($C['code'] ?? '', 20), mh_ai_plain($C['name'] ?? '', 60)]; foreach (array_slice((array)($C['SECTIONS'] ?? []), 0, 40) as $sec) if (is_array($sec)) $w[] = mh_ai_plain($sec['title'] ?? '', 40); $hint .= ' Topics: ' . mb_substr(implode(', ', array_filter($w)), 0, 600); }
+      $sys = mh_ai_live_instructions($uid, $cid, $C, $in);
+      $full = ['type' => 'realtime', 'model' => $V['live_model'], 'instructions' => $sys, 'output_modalities' => ['audio'], 'max_output_tokens' => 900,
+        'audio' => ['input' => ['noise_reduction' => ['type' => 'near_field'], 'transcription' => ['model' => 'gpt-4o-mini-transcribe', 'language' => 'en', 'prompt' => $hint], 'turn_detection' => ['type' => 'semantic_vad', 'eagerness' => $eager, 'create_response' => true, 'interrupt_response' => true]],
+                    'output' => array_merge(['voice' => $voice], $speed != 1.0 ? ['speed' => $speed] : [])],
+        'tools' => mh_ai_live_tools(), 'tool_choice' => 'auto'];
+      // the fewest settings that still make a good call, in case the account's model refuses one of the others
+      $lean = ['type' => 'realtime', 'model' => $V['live_model'], 'instructions' => $sys, 'audio' => ['input' => ['transcription' => ['model' => 'gpt-4o-mini-transcribe'], 'turn_detection' => ['type' => 'semantic_vad']], 'output' => ['voice' => $voice]], 'tools' => mh_ai_live_tools()];
+      // one call at a time per account
+      foreach ($db->query('SELECT id, call FROM ai_live WHERE ended = 0 AND user_id = ' . $uid)->fetchAll() as $r) { mh_ai_hangup($V, (string)$r['call']); $db->prepare('UPDATE ai_live SET ended = 1 WHERE id = ?')->execute([$r['id']]); }
+      @set_time_limit(60);
+      [$code, $answer, $call] = mh_ai_rtc_call($V, $sdp, $full);
+      if ($code >= 400 && $code < 500 && $code !== 401 && $code !== 429) { error_log('mathub live: ' . $code . ' ' . substr($answer, 0, 300)); [$code, $answer, $call] = mh_ai_rtc_call($V, $sdp, $lean); }
+      if ($code < 200 || $code >= 300 || strncmp(ltrim($answer), 'v=0', 3) !== 0) { error_log('mathub live: ' . $code . ' ' . substr($answer, 0, 300)); mh_fail($code === 429 ? 'Bo is very busy right now. Try the call again in a minute.' : 'Bo could not pick up just now. Try again, or use basic voice.', 502, ['fallback' => true]); }
+      $lid = bin2hex(random_bytes(12)); $now = time();
+      $db->prepare('INSERT INTO ai_live (id, user_id, cid, call, started, last) VALUES (?, ?, ?, ?, ?, ?)')->execute([$lid, $uid, $cid, $call, $now, $now]);
+      mh_json(['ok' => true, 'sdp' => $answer, 'lid' => $lid, 'left' => min($left, $V['live_call']), 'voice' => $voice]);
+    }
+    case 'ai_live_tick': {
+      // the browser reports the call every half minute; the minutes are counted here and the limits kept
+      mh_method('POST'); $u = mh_require_user(); $uid = (int)$u['id']; $V = mh_ai_voice_settings($cfg);
+      $lid = preg_replace('/[^a-f0-9]/', '', (string)($in['lid'] ?? '')); $st = $db->prepare('SELECT * FROM ai_live WHERE id = ? AND user_id = ?'); $st->execute([$lid, $uid]); $r = $st->fetch();
+      if (!$r) mh_fail('That call is over.', 404);
+      if ((int)$r['ended']) mh_json(['ok' => true, 'left' => 0, 'end' => true]);
+      $now = time(); $d = max(0, min(45, $now - (int)$r['last'])); $secs = (int)$r['secs'] + $d;
+      $db->prepare('UPDATE ai_live SET secs = ?, last = ? WHERE id = ?')->execute([$secs, $now, $lid]); mh_ai_add($uid, 'live', $d);
+      $left = min(mh_ai_live_left($uid, $V), $V['live_call'] - $secs);
+      if ($left <= 0) {
+        mh_ai_hangup($V, (string)$r['call']); $db->prepare('UPDATE ai_live SET ended = 1 WHERE id = ?')->execute([$lid]);
+        mh_json(['ok' => true, 'left' => 0, 'end' => true, 'why' => $V['live_call'] - $secs <= 0 ? 'That was a long one: calls end after ' . round($V['live_call'] / 60) . ' minutes. Call Bo again any time.' : 'That is all the live call time for now. It comes back tomorrow, or on the 1st for the monthly limit.']);
+      }
+      mh_json(['ok' => true, 'left' => $left]);
+    }
+    case 'ai_live_log': {
+      // what was said on the call goes into the chat with Bo, his new notes into his notes; end: the call is over
+      mh_method('POST'); $u = mh_require_user(); $uid = (int)$u['id']; $V = mh_ai_voice_settings($cfg);
+      $lid = preg_replace('/[^a-f0-9]/', '', (string)($in['lid'] ?? '')); $st = $db->prepare('SELECT * FROM ai_live WHERE id = ? AND user_id = ?'); $st->execute([$lid, $uid]); $r = $st->fetch();
+      if (!$r) mh_fail('That call is over.', 404);
+      $new = [];
+      foreach (array_slice(is_array($in['turns'] ?? null) ? $in['turns'] : [], 0, 80) as $t) {
+        if (!is_array($t)) continue; $txt = mh_ai_clip($t['t'] ?? '', 1500); if ($txt === '') continue;
+        $new[] = ['r' => ($t['r'] ?? '') === 'b' ? 'b' : 'u', 't' => $txt, 'at' => time(), 'v' => 1];
+      }
+      if ($new) mh_ai_save_turns($uid, (string)$r['cid'], array_merge(mh_ai_turns($uid, (string)$r['cid']), $new));
+      $notes = mh_ai_notes($uid); $added = false;
+      foreach (array_slice(is_array($in['notes'] ?? null) ? $in['notes'] : [], 0, 4) as $f) { $f = mh_ai_clip(is_string($f) ? $f : '', 140); if ($f !== '' && !in_array($f, $notes, true)) { $notes[] = $f; $added = true; } }
+      if ($added) mh_ai_save_notes($uid, $notes);
+      if (!empty($in['end']) && !(int)$r['ended']) {
+        $now = time(); $d = max(0, min(45, $now - (int)$r['last'])); mh_ai_add($uid, 'live', $d);
+        $db->prepare('UPDATE ai_live SET secs = secs + ?, last = ?, ended = 1 WHERE id = ?')->execute([$d, $now, $lid]);
+        mh_ai_hangup($V, (string)$r['call']);
+      }
+      mh_json(['ok' => true, 'saved' => count($new), 'notes' => mh_ai_notes($uid)]);
     }
     case 'ai_class': {
       mh_method('POST'); $u = mh_require_user(); $uid = (int)$u['id'];

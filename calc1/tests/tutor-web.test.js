@@ -32,7 +32,7 @@ const PNG = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwA
   const [ca, a] = await open(1360, 900, 'alice.a@montana.edu');
   await api(a, 'create_status&refresh=1');
   await go(a, '#/tutor', 1800);
-  check('without Max: Meet Bo, what he does, and Get Mathub Max', /Meet Bo, your tutor/.test(await txt(a, '#bo-main')) && (await a.$$('.bo-perks li')).length === 5 && /Talk with him out loud/.test(await txt(a, '.bo-perks')) && /Get Mathub Max/.test(await txt(a, '[data-go="max"]')));
+  check('without Max: Meet Bo, what he does, and Get Mathub Max', /Meet Bo, your tutor/.test(await txt(a, '#bo-main')) && (await a.$$('.bo-perks li')).length === 5 && /Call him/.test(await txt(a, '.bo-perks')) && /Get Mathub Max/.test(await txt(a, '[data-go="max"]')));
   await a.click('[data-go="max"]'); await a.waitForTimeout(1500);
   const pw = await a.evaluate(() => { const s = document.querySelector('#paywall'); return s && { h: s.querySelector('h2').textContent, plans: [...s.querySelectorAll('[data-plan]')].map(b => b.dataset.plan), buy: (s.querySelector('[data-action="pw-buy"]') || {}).textContent, href: (s.querySelector('[data-action="pw-buy"]') || {}).getAttribute && s.querySelector('[data-action="pw-buy"]').getAttribute('href'), why: s.querySelector('.pw-why').textContent }; });
   check('Bo\'s paywall offers Max only, at $50, with her Max checkout', pw && pw.h === 'Mathub Max' && pw.plans.join() === 'max' && /Get Max for \$50 a month/.test(pw.buy) && /^https:\/\/pay\.rev\.cat\/sbx_max_link\/mh_\d+$/.test(pw.href) && /part of Mathub Max/.test(pw.why), pw);

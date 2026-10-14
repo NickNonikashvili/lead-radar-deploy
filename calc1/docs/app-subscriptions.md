@@ -100,7 +100,30 @@ enforces the limits, and keeps every request small:
   tokens in and out) is in the `ai_usage` table.
 - Free greetings: Bo's first message in a chat and the suggestions are made on the device, with no AI call.
 
-**Talking with Bo out loud** (website only; `assets/talk.js`, Talk on Ask Bo):
+**Calling Bo** (website only; `assets/talk.js`, Call Bo on Ask Bo) has two engines behind one call screen:
+
+**Live calls** (the default when `openai_key` is set): a real-time voice conversation, speech to speech, through
+OpenAI's Realtime API over WebRTC. It feels like a phone call: Bo answers in about half a second in a natural voice
+(Cedar by default; Marin, Ash, Ballad, Coral, Sage, Verse), waits until the student is actually done ("semantic"
+turn detection, with a setting for how quickly he jumps in), and stops the moment the student talks over him.
+
+- **Set up by the server, key never in the browser.** The browser sends its WebRTC offer to `ai_live_start`; the
+  server adds Bo's instructions and posts both to OpenAI (`/v1/realtime/calls`), returning the answer. Bo's
+  instructions are his live persona (a friend a year ahead who is great at the class, not an assistant: short turns,
+  real reactions, asks more than tells, no help-desk phrases), the class summary, today, the progress snapshot, his
+  notes and the last six chat turns.
+- **Tools:** `write_on_board` (LaTeX on his whiteboard while he talks) and `remember` (a note for next time).
+- **Minutes:** the browser reports every 30 seconds (`ai_live_tick`); past a limit the server hangs the call up
+  (`/v1/realtime/calls/{id}/hangup`), as it does for calls that stop reporting (housekeeping) and for the old call
+  when a new one starts. Limits per account: `ai_live_call` (30 minutes a call), `ai_live_daily` (90 a day),
+  `ai_live_monthly` (300 a month). What was said is saved to the chat with Bo (`ai_live_log`), notes to his notes.
+- **Model and cost:** `ai_live_model` = `gpt-realtime-2.1-mini` (a few cents a minute of conversation); set it to
+  `gpt-realtime-2.1` for Bo's best reasoning at several times the price. Check OpenAI's pricing page for the
+  current rates and set a monthly budget in the OpenAI dashboard. If OpenAI refuses one of the settings, the server
+  retries with the fewest (a note goes to the PHP error log).
+
+**Basic voice** (no key, a browser without WebRTC, a call that cannot connect, or the student's choice in the
+call settings): the browser hears, the answer streams from Claude, and Bo reads it out sentence by sentence.
 
 - Bo's answers **stream** (`ai_tutor` with `stream: 1` sends JSON lines while the AI writes), so he starts talking
   after his first sentence, about a second or two after the student stops.
@@ -139,14 +162,14 @@ On the server, in `api/config.local.php` (never in the repository or the zip):
 'pro_web_link'      => 'https://pay.rev.cat/xxxxxxxx/',
 'max_web_link'      => 'https://pay.rev.cat/yyyyyyyy/',
 'anthropic_key'     => 'sk-ant-xxxxxxxx',
-'openai_key'        => 'sk-proj-xxxxxxxx',   // optional: Bo's natural voice, and listening in Firefox
+'openai_key'        => 'sk-proj-xxxxxxxx',   // live calls with Bo, his natural voice, and listening in Firefox
 'plan_grants'       => ['you@montana.edu' => 'max'],   // testers who get a plan without paying
 ```
 
 `pro_web_price` and `max_web_price` default to `$15` and `$50`. Without the app keys the apps cannot sell the
 plans; without the server keys the website cannot sell them and plans bought in the apps are not recognised there;
-without `anthropic_key` Bo says he is not switched on yet; without `openai_key` voice calls still work in Chrome,
-Edge and Safari with the device's own voice.
+without `anthropic_key` Bo says he is not switched on yet; without `openai_key` there are no live calls, and calls
+use basic voice (Chrome, Edge and Safari, with the device's own voice).
 
 ## 5. Test before you release
 

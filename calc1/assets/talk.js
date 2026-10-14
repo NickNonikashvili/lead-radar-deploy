@@ -72,8 +72,6 @@
       + (/(andrew|guy|christopher|eric|davis|brian|aaron|evan|alex|daniel|tom|samantha|aria|jenny|ava|zoe|emma|michelle)/i.test(v.name) ? 12 : 0) + (/en-US/i.test(v.lang) ? 8 : 0) + (v.default ? 2 : 0) - (NOVELTY.test(v.name) ? 200 : 0);
     return vs.slice().sort((a, b) => score(b) - score(a))[0];
   }
-  if (synth && synth.addEventListener) synth.addEventListener('voiceschanged', () => { if (T.el) paintSettings(); });
-
   /* ---------- Bo's mouth: one sentence after another, in his natural voice or this device's ---------- */
   const Speaker = {
     queue: [], busy: false, gen: 0, audio: null, ctx: null, analyser: null, natural: false, voice: 'ash', onStart: null, onIdle: null, onLevel: null, fellBack: false,
@@ -185,190 +183,359 @@
     return j;
   }
 
-  /* ---------- the call ---------- */
-  const T = { el: null, cid: null, state: 'idle', status: null, listener: null, turn: 0, done: true, caption: [], now: -1, board: [], boardTurn: -1, photo: null, changed: false, onClose: null, back: null, lvl: 0, target: 0, raf: 0, lock: null };
+  /* ============================================================
+     The call. One screen, two engines:
+     - live (default when the server has the speech key): a real-time voice conversation through OpenAI's
+       Realtime API over WebRTC, set up by api/ai.php (ai_live_start). Bo hears you as you talk, answers in
+       about half a second in a natural voice, waits until you are actually done, and stops when you talk over
+       him, like a phone call. Formulas go on his board (a tool he calls), notes he keeps through another.
+     - basic: when live calls are not switched on or cannot connect: the browser hears, Bo's answer streams from
+       the chat, and he reads it out sentence by sentence.
+     ============================================================ */
+  const T = { el: null, mode: 'live', cid: null, status: null, state: 'idle', who: 'listening', onClose: null, back: null, changed: false, lock: null, raf: 0, lvl: 0, board: [], fresh: true, photo: null, muted: false, t0: 0, clock: 0, listener: null, turn: 0, done: true };
+  const liveOn = () => !!(T.status && T.status.voice && T.status.voice.live) && !!global.RTCPeerConnection && !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia) && settings().boMode !== 'basic';
   const canHear = () => !!SR || !!(T.status && T.status.voice && T.status.voice.listen && navigator.mediaDevices && global.MediaRecorder);
   const naturalOn = () => !!(T.status && T.status.voice && T.status.voice.natural) && settings().boVoice !== 'device';
-  const hands = () => settings().boHands !== false;
   const caps = () => settings().boCaptions !== false;
-  const ear = () => (SR ? 'browser' : 'server');
+  const LIVE_RATES = [0.9, 1, 1.1, 1.2];
+  const liveRate = () => LIVE_RATES.includes(+settings().boLiveRate) ? +settings().boLiveRate : 1;
+  const eager = () => ['low', 'auto', 'high'].includes(settings().boEager) ? settings().boEager : 'auto';
+  const liveVoices = () => (T.status && T.status.voice && T.status.voice.live_voices) || {};
+  const liveVoice = () => liveVoices()[settings().boLiveVoice] ? settings().boLiveVoice : ((T.status && T.status.voice && T.status.voice.live_default) || 'cedar');
+  const basicVoice = () => (T.status && T.status.voice && T.status.voice.voices && T.status.voice.voices[settings().boVoice]) ? settings().boVoice : ((T.status && T.status.voice && T.status.voice.default) || 'ash');
+  const snap = () => (App.tutorSnapshot ? App.tutorSnapshot(T.cid) : {});
+  const clockText = s => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
+
+  /* levels of Bo's voice and of yours, for the rings */
+  let ACX = null;
+  function audioCtx() { const AC = global.AudioContext || global.webkitAudioContext; if (!AC || still()) return null; if (!ACX) { try { ACX = new AC(); } catch (e) { return null; } } if (ACX.state === 'suspended') ACX.resume().catch(() => {}); return ACX; }
+  function meter(stream) { const ctx = audioCtx(); if (!ctx) return null; try { const an = ctx.createAnalyser(); an.fftSize = 512; ctx.createMediaStreamSource(stream).connect(an); return an; } catch (e) { return null; } }
+  function levelOf(an) { if (!an) return 0; const d = new Uint8Array(an.fftSize); an.getByteTimeDomainData(d); let s = 0; for (const x of d) { const v = (x - 128) / 128; s += v * v; } return Math.min(1, Math.sqrt(s / d.length) * 4.5); }
 
   function open(o = {}) {
     if (NATIVE || T.el) return;
-    T.cid = o.cid; T.status = o.status || T.status; T.onClose = o.onClose || null; T.changed = false; T.back = document.activeElement; T.caption = []; T.board = []; T.boardTurn = -1; T.photo = null; T.turn++;
-    Speaker.natural = naturalOn(); Speaker.voice = (T.status && T.status.voice && T.status.voice.voices && T.status.voice.voices[settings().boVoice]) ? settings().boVoice : ((T.status && T.status.voice && T.status.voice.default) || 'ash'); Speaker.fellBack = false;
-    const el = T.el = document.createElement('div'); el.id = 'bo-talk'; el.className = 'bt'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-modal', 'true'); el.setAttribute('aria-labelledby', 'bt-h');
-    el.innerHTML = `<header class="bt-top"><h2 class="sr-only" id="bt-h">Talking with Bo about ${esc(short(T.cid))}</h2><span class="bt-class" style="${App.classStyle ? App.classStyle(T.cid) : ''}">${esc(short(T.cid))}</span><span class="bt-mode" id="bt-mode"></span>
-        <button type="button" class="bt-icon" data-t="settings" aria-label="Voice settings" aria-expanded="false" aria-controls="bt-set">${icon('sliders', 19)}</button><button type="button" class="bt-icon" data-t="end" aria-label="End the call">${icon('x', 20)}</button></header>
+    Object.assign(T, { cid: o.cid, status: o.status || T.status, onClose: o.onClose || null, changed: false, back: document.activeElement, board: [], fresh: true, photo: null, muted: false, t0: 0, state: 'idle', who: 'listening' });
+    T.mode = liveOn() ? 'live' : 'basic';
+    const el = T.el = document.createElement('div'); el.id = 'bo-talk'; el.className = 'bt'; el.dataset.mode = T.mode;
+    el.setAttribute('role', 'dialog'); el.setAttribute('aria-modal', 'true'); el.setAttribute('aria-labelledby', 'bt-h');
+    el.innerHTML = `<header class="bt-top"><h2 class="sr-only" id="bt-h">Call with Bo about ${esc(short(T.cid))}</h2>
+        <span class="bt-class" style="${App.classStyle ? App.classStyle(T.cid) : ''}">${esc(short(T.cid))}</span><span class="bt-clock" id="bt-clock"><i aria-hidden="true"></i><span id="bt-clock-t"></span></span><span class="bt-spacer"></span>
+        <button type="button" class="bt-icon" data-t="cc" aria-pressed="${caps()}" aria-label="Captions" title="Captions">${icon('cc', 20)}</button><button type="button" class="bt-icon" data-t="settings" aria-label="Call settings" title="Call settings" aria-expanded="false" aria-controls="bt-set">${icon('sliders', 19)}</button></header>
       <div class="bt-set" id="bt-set" hidden></div>
       <main class="bt-stage">
-        <button type="button" class="bt-orb" data-t="main" id="bt-orb" aria-describedby="bt-status"><span class="bt-ring r2" aria-hidden="true"></span><span class="bt-ring r1" aria-hidden="true"></span><span class="bt-face" aria-hidden="true">${bo(132)}</span></button>
-        <p class="bt-status" id="bt-status" role="status" aria-live="polite"></p>
-        <section class="bt-board" id="bt-board" hidden aria-labelledby="bt-board-h"><div class="bt-board-h"><span id="bt-board-h">${icon('pen', 15)} Bo's board</span><button type="button" class="bt-icon sm" data-t="board-x" aria-label="Hide the board">${icon('x', 15)}</button></div><div class="bt-board-body" id="bt-board-body"></div></section>
-        <div class="bt-caps" id="bt-caps"><p class="bt-you" id="bt-you"></p><p class="bt-bo" id="bt-bo"></p></div>
+        <div class="bt-who"><button type="button" class="bt-orb" data-t="orb" id="bt-orb" aria-describedby="bt-status"><span class="bt-ring r3" aria-hidden="true"></span><span class="bt-ring r2" aria-hidden="true"></span><span class="bt-ring r1" aria-hidden="true"></span><span class="bt-face" aria-hidden="true">${bo(140)}</span></button>
+          <p class="bt-name">Bo</p><p class="bt-status" id="bt-status" role="status" aria-live="polite"></p></div>
+        <section class="bt-board" id="bt-board" hidden aria-labelledby="bt-board-h"><div class="bt-board-h"><span id="bt-board-h">${icon('pen', 15)} Bo’s board</span><button type="button" class="bt-icon sm" data-t="board-x" aria-label="Hide the board">${icon('x', 15)}</button></div><div class="bt-board-body" id="bt-board-body"></div></section>
+        <div class="bt-caps" id="bt-caps"><p class="bt-line you" id="bt-you"></p><p class="bt-line bo" id="bt-bo"></p></div>
         <div class="bt-extra" id="bt-extra"></div>
       </main>
       <form class="bt-type" id="bt-type" hidden><label class="sr-only" for="bt-q">Type to Bo</label><input class="input" id="bt-q" maxlength="2000" autocomplete="off" placeholder="Type to Bo…"><button type="submit" class="btn primary" aria-label="Send">${icon('send', 17)}</button></form>
       <footer class="bt-bar">
-        <label class="bt-btn" title="Show Bo a photo of a problem"><span class="bt-btn-ic">${icon('image', 22)}</span><span>Photo</span><input type="file" id="bt-file" class="sr-only" accept="image/*"></label>
-        <button type="button" class="bt-btn bt-main" data-t="main" id="bt-main"><span class="bt-btn-ic" id="bt-main-ic">${icon('mic', 30)}</span><span id="bt-main-l">Talk</span></button>
-        <button type="button" class="bt-btn" data-t="type" aria-controls="bt-type" aria-expanded="false"><span class="bt-btn-ic">${icon('pen', 21)}</span><span>Type</span></button>
-        <button type="button" class="bt-btn bt-end" data-t="end"><span class="bt-btn-ic">${icon('x', 24)}</span><span>End</span></button>
+        <button type="button" class="bt-btn" data-t="mute" id="bt-mute" aria-pressed="false"><span class="bt-btn-ic">${icon('mic', 24)}</span><span class="bt-btn-l">Mute</span></button>
+        <label class="bt-btn" title="Show Bo a photo of a problem"><span class="bt-btn-ic">${icon('image', 23)}</span><span class="bt-btn-l">Photo</span><input type="file" id="bt-file" class="sr-only" accept="image/*"></label>
+        <button type="button" class="bt-btn" data-t="type" aria-expanded="false" aria-controls="bt-type"><span class="bt-btn-ic">${icon('keyboard', 24)}</span><span class="bt-btn-l">Type</span></button>
+        <button type="button" class="bt-btn bt-end" data-t="end"><span class="bt-btn-ic">${icon('phoneoff', 26)}</span><span class="bt-btn-l">End</span></button>
       </footer>`;
     document.body.appendChild(el); document.documentElement.classList.add('bt-lock');
     requestAnimationFrame(() => el.classList.add('open'));
     el.addEventListener('click', onClick); document.addEventListener('keydown', onKey, true);
-    $('#bt-type', el).addEventListener('submit', e => { e.preventDefault(); const q = $('#bt-q', el); const t = q.value.trim(); if (!t) { q.focus(); return; } q.value = ''; Speaker.unlock(); stopListening(); ask(t); });
-    $('#bt-file', el).addEventListener('change', async e => { const f = e.target.files && e.target.files[0]; e.target.value = ''; if (!f || !App.shrinkPhoto) return; try { T.photo = await App.shrinkPhoto(f); paintExtra(); if (T.state === 'idle' || T.state === 'error') { Speaker.unlock(); listen(); } } catch (x) { toast(x.message); } });
-    document.addEventListener('visibilitychange', onHidden);
+    $('#bt-type', el).addEventListener('submit', e => { e.preventDefault(); const q = $('#bt-q', el); const t = q.value.trim(); if (!t) { q.focus(); return; } q.value = ''; sayTyped(t); });
+    $('#bt-file', el).addEventListener('change', async e => { const f = e.target.files && e.target.files[0]; e.target.value = ''; if (!f || !App.shrinkPhoto) return; try { const p = await App.shrinkPhoto(f, 900); if (T.state === 'live') sendPhoto(p); else { T.photo = p; paintExtra(); } } catch (x) { toast(x.message); } });
+    document.addEventListener('visibilitychange', onHidden); addEventListener('pagehide', onLeave);
     try { if (navigator.wakeLock) navigator.wakeLock.request('screen').then(l => { T.lock = l; }).catch(() => {}); } catch (e) {}
-    paintMode(); loop();
-    if (!canHear()) showType(true);
-    if (!settings().boTalkOk) { setState('idle'); hello(); $('#bt-status', el).textContent = ''; $('#bt-start', el).focus(); return; }
-    if (o.gesture !== false) { Speaker.unlock(); greet(); } else setState('idle');
-    $('#bt-main', el).focus();
+    paintCaps(); loop();
+    if (!settings().boTalkOk) { setState('idle'); hello(); return; }
+    if (o.gesture !== false) begin(); else setState('idle');
+    $('#bt-orb', el).focus();
   }
   function close() {
-    if (!T.el) return; const el = T.el; T.el = null; T.turn++;
-    stopListening(); Speaker.stop(); cancelAnimationFrame(T.raf);
-    document.removeEventListener('visibilitychange', onHidden); document.removeEventListener('keydown', onKey, true); document.documentElement.classList.remove('bt-lock');
+    if (!T.el) return; const el = T.el;
+    if (T.mode === 'live') Live.stop(); else Basic.stop();
+    T.el = null; clearInterval(T.clock); cancelAnimationFrame(T.raf);
+    document.removeEventListener('visibilitychange', onHidden); document.removeEventListener('keydown', onKey, true); removeEventListener('pagehide', onLeave); document.documentElement.classList.remove('bt-lock');
     try { if (T.lock) T.lock.release(); } catch (e) {} T.lock = null;
-    el.classList.remove('open'); setTimeout(() => el.remove(), still() ? 0 : 200);
+    el.classList.remove('open'); setTimeout(() => el.remove(), still() ? 0 : 220);
     if (T.back && T.back.focus) try { T.back.focus(); } catch (e) {}
     if (T.onClose) T.onClose(T.changed);
   }
-  const onHidden = () => { if (document.visibilityState === 'hidden' && T.state === 'listening') { stopListening(); setState('idle'); } };
-
-  /* first time: what talking does and where the words go; the tap on Start also lets audio play */
-  function hello() {
-    const ex = $('#bt-extra', T.el); $('#bt-caps', T.el).hidden = true;
-    const hear = SR ? 'Your browser turns what you say into text (Chrome uses Google’s speech service, Edge Microsoft’s, Safari Apple’s).' : canHear() ? 'What you say is recorded only while Bo listens, turned into text by OpenAI through Mathub’s server, and not kept.' : 'This browser cannot listen, so you type and Bo talks.';
-    ex.innerHTML = `<section class="bt-hello" aria-labelledby="bt-hello-h"><h3 id="bt-hello-h">Talk with Bo out loud</h3>
-      <p>Ask anything and Bo answers out loud, writing the math on his board. The microphone is on only while the ring is blue.</p>
-      <p class="bt-fine">${hear} ${naturalOn() ? 'Bo’s voice is made by OpenAI from his written answer. ' : ''}As in the chat, your words go to Anthropic’s AI for Bo’s reply, and the conversation is saved in your chat with Bo. <a href="#/policy/privacy">Privacy</a></p>
-      <button type="button" class="btn primary lg" id="bt-start" data-t="start">${icon('mic', 18)} Start talking</button></section>`;
-  }
-  function greet() {
-    const s = App.tutorSnapshot ? App.tutorSnapshot(T.cid) : {}; const name = s.name ? ` ${s.name}` : '';
-    const r = s.readiness; const ex = r && r.exam && r.days >= 0 && r.days <= 14 ? ` ${r.exam} is ${r.days === 0 ? 'today' : r.days === 1 ? 'tomorrow' : `in ${r.days} days`}.` : '';
-    const w = s.weak && s.weak[0] ? ` Want to go over ${s.weak[0].t}, or ask me anything?` : ' What are we working on?';
-    const text = `Hey${name}! It's Bo.${ex}${w}`;
-    T.caption = [text]; T.now = 0; paintCaps(''); T.done = false; setState('speaking');
-    Speaker.say(text, { i: 0, turn: T.turn }); T.done = true;
+  const onHidden = () => { if (document.visibilityState === 'hidden' && T.mode === 'basic' && T.who === 'listening') { stopListening(); who('muted'); } };
+  const onLeave = () => { if (T.mode === 'live') Live.stop(); };
+  function begin() {
+    if (!T.el) return; $('#bt-extra', T.el).innerHTML = ''; $('#bt-caps', T.el).hidden = false; audioCtx(); Speaker.unlock();
+    if (T.mode === 'live') Live.start(); else Basic.start();
   }
 
+  /* ---------- what the screen shows ---------- */
   function setState(s, msg) {
-    T.state = s; if (!T.el) return; T.el.dataset.state = s;
-    const L = { idle: ['Tap Bo or the button to talk', 'mic', 'Talk'], listening: ['Listening…', 'send', 'Send'], hearing: ['Got it. One moment…', 'mic', 'Talk'], thinking: ['Bo is thinking…', 'stop', 'Stop'], speaking: ['Bo is talking. Tap him to cut in.', 'mic', 'Cut in'], error: ['', 'rotate', 'Try again'] }[s];
-    $('#bt-status', T.el).textContent = msg != null && msg !== '' ? msg : L[0];
-    $('#bt-main-ic', T.el).innerHTML = icon(L[1], 30); $('#bt-main-l', T.el).textContent = L[2];
-    $('#bt-orb', T.el).setAttribute('aria-label', s === 'listening' ? 'Send what you said' : s === 'speaking' ? 'Cut in and talk' : s === 'thinking' ? 'Stop waiting' : 'Talk to Bo');
-    $('#bt-main', T.el).disabled = s === 'hearing';
-    paintExtra();
+    T.state = s; if (!T.el) return; T.el.dataset.state = s; T.el.dataset.mode = T.mode;
+    clearInterval(T.clock);
+    if (s === 'live') { if (!T.t0) T.t0 = Date.now(); const tick = () => { if (T.el) $('#bt-clock-t', T.el).textContent = clockText((Date.now() - T.t0) / 1000) + (Live.soon() ? ` · ${Math.max(1, Math.ceil(Live.leftNow() / 60))} min left` : ''); }; tick(); T.clock = setInterval(tick, 1000); }
+    else $('#bt-clock-t', T.el).textContent = s === 'connecting' ? 'Calling…' : s === 'ended' ? 'Call ended' : '';
+    paintStatus(msg); paintExtra();
   }
-  function paintMode() { if (!T.el) return; $('#bt-mode', T.el).textContent = hands() ? 'Hands-free' : ''; $('#bt-caps', T.el).classList.toggle('off', !caps()); }
-  function you(text, live) { if (!T.el) return; const y = $('#bt-you', T.el); y.textContent = text; y.classList.toggle('live', !!live); }
-  function paintCaps(youText) {
-    if (!T.el) return; if (youText !== undefined) you(youText, false);
-    const b = $('#bt-bo', T.el); b.innerHTML = T.caption.map((s, i) => `<span class="${i < T.now ? 'said' : i === T.now ? 'now' : 'next'}">${esc(shown(s))}</span>`).join(' ');
-    if (T.caption.some(s => s.includes('$')) && App.typeset) App.typeset(b);
+  function who(w) { T.who = w; if (!T.el) return; T.el.dataset.who = w; paintStatus(); }
+  function paintStatus(msg) {
+    if (!T.el) return; const L = T.mode === 'live';
+    const live = { listening: L ? 'listening' : 'listening · tap Bo to send', you: 'listening…', thinking: 'thinking…', bo: L ? 'talking' : 'talking · tap Bo to cut in', muted: L ? 'you’re muted' : 'not listening · tap Bo to talk' };
+    $('#bt-status', T.el).textContent = msg != null && msg !== '' ? msg : T.state === 'connecting' ? 'calling…' : T.state === 'idle' ? (settings().boTalkOk ? 'tap Bo to start the call' : '') : T.state === 'live' ? live[T.who] || '' : '';
+    $('#bt-orb', T.el).setAttribute('aria-label', T.state !== 'live' ? 'Start the call' : T.who === 'bo' ? (L ? 'Stop Bo talking' : 'Cut in') : T.who === 'muted' ? 'Unmute' : L ? 'Bo' : 'Send what you said');
+    const m = $('#bt-mute', T.el); m.setAttribute('aria-pressed', String(T.muted)); m.disabled = T.state !== 'live';
+    $('.bt-btn-ic', m).innerHTML = icon(T.muted ? 'micoff' : 'mic', 24); $('.bt-btn-l', m).textContent = T.muted ? 'Unmute' : 'Mute';
   }
-  function board(line) {
-    if (!T.el || !line) return;
-    if (T.boardTurn !== T.turn) { T.board = []; T.boardTurn = T.turn; }
-    T.board.push(line); T.board = T.board.slice(-4);
+  /* captions: the last thing you said, and what Bo is saying now */
+  function caption(k, text, live) {
+    if (!T.el) return; const p = $(k === 'you' ? '#bt-you' : '#bt-bo', T.el);
+    let t = shown(text); if (t.length > 230) t = '…' + t.slice(-230).replace(/^\S*\s/, '');   // only the latest words, so the screen stays calm
+    p.textContent = t; p.classList.toggle('live', !!live); if (k === 'bo' && /\$/.test(t) && App.typeset) App.typeset(p);
+  }
+  function paintCaps() { if (!T.el) return; $('#bt-caps', T.el).classList.toggle('off', !caps()); $('[data-t="cc"]', T.el).setAttribute('aria-pressed', String(caps())); }
+  function boardShow(lines, wrap) {
+    if (!T.el || !lines.length) return;
+    if (T.fresh) { T.board = []; T.fresh = false; }
+    T.board = T.board.concat(lines.map(l => wrap ? `$$${l}$$` : l)).slice(-4);
     const box = $('#bt-board', T.el); box.hidden = false; T.el.classList.add('has-board');
     const body = $('#bt-board-body', T.el); body.innerHTML = T.board.map(l => `<div class="bt-board-line">${esc(l)}</div>`).join('');
     if (App.typeset) App.typeset(body);
   }
   function paintExtra() {
-    if (!T.el || !settings().boTalkOk) return; const ex = $('#bt-extra', T.el); $('#bt-caps', T.el).hidden = false;
-    const photo = T.photo ? `<span class="bt-photo"><img src="${T.photo.preview}" alt="Your photo"><span>Bo sees this with your next question</span><button type="button" class="bt-icon sm" data-t="unphoto" aria-label="Remove the photo">${icon('x', 14)}</button></span>` : '';
-    const sug = (T.state === 'idle' || T.state === 'error') && App.boSuggestions ? `<div class="bt-chips">${App.boSuggestions(T.cid).slice(0, 3).map(x => `<button type="button" class="chip bt-chip" data-say="${esc(x)}">${esc(x)}</button>`).join('')}</div>` : '';
+    if (!T.el || !settings().boTalkOk) return; const ex = $('#bt-extra', T.el);
+    if (T.state === 'error' || T.state === 'ended') return;
+    const photo = T.photo ? `<span class="bt-photo"><img src="${T.photo.preview}" alt="Your photo"><span>Bo sees this with what you say next</span><button type="button" class="bt-icon sm" data-t="unphoto" aria-label="Remove the photo">${icon('x', 14)}</button></span>` : '';
+    const sug = T.state === 'live' && T.mode === 'basic' && T.who === 'muted' && App.boSuggestions ? `<div class="bt-chips">${App.boSuggestions(T.cid).slice(0, 3).map(x => `<button type="button" class="chip bt-chip" data-say="${esc(x)}">${esc(x)}</button>`).join('')}</div>` : '';
     ex.innerHTML = photo + sug;
   }
-  function showType(on) { if (!T.el) return; const f = $('#bt-type', T.el); f.hidden = !on; const b = $('[data-t="type"]', T.el); if (b) b.setAttribute('aria-expanded', String(on)); if (on) setTimeout(() => { const q = $('#bt-q', T.el); if (q && document.activeElement !== q && !canHear()) q.focus(); }, 50); }
+  function failed(msg, canBasic) {
+    setState('error', ''); if (!T.el) return;
+    $('#bt-status', T.el).textContent = 'couldn’t connect';
+    $('#bt-extra', T.el).innerHTML = `<div class="bt-msg" role="alert"><p>${esc(msg)}</p><div class="bt-msg-acts"><button type="button" class="btn primary" data-t="retry">${icon('phone', 16)} Call again</button>${canBasic ? `<button type="button" class="btn" data-t="basic">Use basic voice</button>` : ''}</div></div>`;
+  }
+  function ended(msg) {
+    setState('ended'); if (!T.el) return;
+    $('#bt-extra', T.el).innerHTML = `<div class="bt-msg" role="status"><p>${esc(msg)}</p><div class="bt-msg-acts"><button type="button" class="btn primary" data-t="retry">${icon('phone', 16)} Call again</button><button type="button" class="btn" data-t="end">Close</button></div></div>`;
+  }
+  function showType(on) { if (!T.el) return; const f = $('#bt-type', T.el); f.hidden = !on; const b = $('[data-t="type"]', T.el); if (b) b.setAttribute('aria-expanded', String(on)); if (on) setTimeout(() => { const q = $('#bt-q', T.el); if (q) q.focus(); }, 30); }
+  function micTrouble(code) {
+    const msg = code === 'not-allowed' || code === 'service-not-allowed' ? 'Mathub can’t use your microphone. Allow it from the icon in the address bar, then call again. You can also type to Bo.'
+      : code === 'audio-capture' ? 'No microphone was found. Plug one in, or type to Bo.' : code === 'network' ? 'Speech recognition needs the internet. Check your connection and try again.' : /^Bo |^Slow|month|long one/.test(code) ? code : 'Bo couldn’t hear that. Tap him to try again, or type.';
+    if (T.mode === 'live') { failed(msg, false); showType(true); return; }
+    who('muted'); paintStatus(msg); if (code === 'not-allowed' || code === 'service-not-allowed' || code === 'audio-capture') showType(true);
+  }
 
-  /* the level of the voice or the microphone moves the rings (not when motion is off) */
+  /* first call: how it works and where your voice goes; the tap on Start lets audio play */
+  function hello() {
+    if (!T.el) return; const ex = $('#bt-extra', T.el); $('#bt-caps', T.el).hidden = true;
+    const live = T.mode === 'live';
+    const where = live ? 'Your voice goes straight to OpenAI, whose real-time voice model Bo talks with, together with what Bo knows about your class and how you’re doing. Nothing is recorded.'
+      : (SR ? 'Your browser turns what you say into text (Chrome uses Google’s speech service, Edge Microsoft’s, Safari Apple’s).' : canHear() ? 'What you say is recorded only while Bo listens, written down by OpenAI through Mathub’s server, and not kept.' : 'This browser can’t listen, so you type and Bo talks.') + (naturalOn() ? ' Bo’s voice is made by OpenAI from his written answer.' : '');
+    ex.innerHTML = `<section class="bt-hello" aria-labelledby="bt-hello-h"><h3 id="bt-hello-h">${live ? 'It’s a real call' : 'Talk with Bo out loud'}</h3>
+      <p>${live ? 'Just talk. Bo answers right away, waits until you’re done, and you can cut in whenever you want, like with a friend. Mute pauses your mic.' : 'Ask anything and Bo answers out loud, writing the math on his board. Tap Bo to send what you said, or to cut in.'}</p>
+      <p class="bt-fine">${where} ${live ? 'What you both say is saved in your chat with Bo.' : 'As in the chat, your words go to Anthropic’s AI for Bo’s reply, and what you both say is saved in your chat with Bo.'} <a href="#/policy/privacy">Privacy</a></p>
+      <button type="button" class="btn primary lg" id="bt-start" data-t="start">${icon(live ? 'phone' : 'mic', 18)} ${live ? 'Start the call' : 'Start talking'}</button></section>`;
+    $('#bt-start', T.el).focus();
+  }
+
+  /* the rings follow whoever is talking; still when motion is off */
   function loop() {
     cancelAnimationFrame(T.raf); if (!T.el) return;
     const tick = () => {
       if (!T.el) return;
-      if (!still()) { const sp = T.state === 'speaking' ? Speaker.level() : 0; T.target = Math.max(T.target * 0.92, sp); T.lvl += (T.target - T.lvl) * 0.35; T.el.style.setProperty('--lvl', T.lvl.toFixed(3)); }
+      if (!still()) {
+        const b = T.mode === 'live' ? levelOf(Live.anBo) : T.who === 'bo' ? Speaker.level() : 0, y = T.mode === 'live' && !T.muted ? levelOf(Live.anYou) : 0;
+        const target = Math.max(T.target || 0, b, y * 0.9); T.target = (T.target || 0) * 0.9;
+        T.lvl += (target - T.lvl) * 0.3; T.el.style.setProperty('--lvl', T.lvl.toFixed(3));
+        if (T.mode === 'live' && T.state === 'live') { const k = b > 0.08 ? 'bo' : y > 0.12 ? 'you' : ''; if (k && T.el.dataset.voice !== k) T.el.dataset.voice = k; }
+      }
       T.raf = requestAnimationFrame(tick);
     };
     T.raf = requestAnimationFrame(tick);
   }
-  const bump = l => { T.target = Math.max(T.target, l); };
+  const bump = l => { T.target = Math.max(T.target || 0, l); };
+
+  /* ---------- live: the real-time call ---------- */
+  const Live = {
+    pc: null, dc: null, mic: null, audio: null, anBo: null, anYou: null, lid: null, left: 0, at: 0, tick: 0, save: 0, items: new Map(), order: [], notes: [], boards: [], boText: '', youText: '', talking: false, ended: true,
+    reset() { Object.assign(this, { pc: null, dc: null, mic: null, anBo: null, anYou: null, lid: null, left: 0, at: 0, items: new Map(), order: [], notes: [], boards: [], boText: '', youText: '', talking: false, ended: false }); },
+    leftNow() { return this.left - (Date.now() - this.at) / 1000; },
+    soon() { return T.mode === 'live' && !!this.lid && this.at > 0 && this.leftNow() < 180; },
+    async start() {
+      const L = this; L.reset(); T.t0 = 0; setState('connecting'); who('listening');
+      try { L.mic = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } }); }
+      catch (e) { L.ended = true; return micTrouble(e && e.name === 'NotAllowedError' ? 'not-allowed' : 'audio-capture'); }
+      if (!T.el) return L.stop();
+      try {
+        const pc = L.pc = new RTCPeerConnection();
+        L.audio = L.audio || new Audio(); L.audio.autoplay = true;
+        pc.ontrack = e => { const s = e.streams[0]; L.audio.srcObject = s; const p = L.audio.play && L.audio.play(); if (p && p.catch) p.catch(() => {}); L.anBo = meter(s); };
+        L.mic.getTracks().forEach(t => pc.addTrack(t, L.mic)); L.anYou = meter(L.mic);
+        const dc = L.dc = pc.createDataChannel('oai-events');
+        dc.addEventListener('open', () => { if (!T.el || L.ended) return; T.t0 = Date.now(); setState('live'); who(T.muted ? 'muted' : 'listening'); L.send({ type: 'response.create' }); });   // Bo says hi first
+        dc.addEventListener('message', e => { let ev; try { ev = JSON.parse(e.data); } catch (x) { return; } L.on(ev); });
+        pc.addEventListener('connectionstatechange', () => { if (['failed', 'disconnected'].includes(pc.connectionState) && T.el && T.state === 'live' && !L.ended) { L.stop(); ended('The call dropped. Check your connection and call Bo again.'); } });
+        const offer = await pc.createOffer(); await pc.setLocalDescription(offer);
+        const r = await post('ai_live_start', { class: T.cid, sdp: offer.sdp, voice: liveVoice(), speed: liveRate(), eagerness: eager(), snapshot: snap(), today: App.todayISO() });
+        L.lid = r.lid; L.left = r.left; L.at = Date.now();
+        if (!T.el || L.ended) return L.stop();
+        await pc.setRemoteDescription({ type: 'answer', sdp: r.sdp });
+        L.tick = setInterval(() => L.report(), 30000); L.save = setInterval(() => L.flush(false), 40000);
+      } catch (x) {
+        L.stop();
+        if (x.status === 402) { failed(x.message, false); setTimeout(() => { close(); App.rerender(); }, 2500); return; }
+        failed(x.message && !/^Something/.test(x.message) ? x.message : 'Bo couldn’t pick up just now.', true);
+      }
+    },
+    send(o) { const dc = this.dc; if (dc && dc.readyState === 'open') { try { dc.send(JSON.stringify(o)); } catch (e) {} } },
+    turn(id, r) { let t = this.items.get(id); if (!t) { t = { r, t: '', done: false, saved: false }; this.items.set(id || 'x' + Math.random(), t); this.order.push(id); } return t; },
+    takeBoards() { const b = this.boards.splice(0); return b.length ? ' ' + b.map(l => `[board: $${l}$]`).join(' ') : ''; },
+    on(ev) {
+      const L = this; if (!T.el || L.ended) return;
+      switch (ev.type) {
+        case 'conversation.item.added': case 'conversation.item.created': {
+          const it = ev.item || {}; if (it.type !== 'message' || !it.id || L.items.has(it.id)) break;
+          const r = it.role === 'assistant' ? 'b' : it.role === 'user' ? 'u' : ''; if (!r) break;
+          const c = Array.isArray(it.content) ? it.content : []; const spoken = c.some(x => x.type === 'input_audio');
+          const typed = c.map(x => x.type === 'input_text' ? x.text : x.type === 'input_image' ? '[photo]' : '').filter(Boolean).join(' ').trim();
+          L.items.set(it.id, { r, t: r === 'u' && !spoken ? typed : '', done: r === 'u' && !spoken, saved: false }); L.order.push(it.id); break;
+        }
+        case 'input_audio_buffer.speech_started': L.youText = ''; caption('you', '…', true); who('you'); if (L.talking) caption('bo', L.boText, false); break;
+        case 'input_audio_buffer.speech_stopped': if (!T.muted) who('thinking'); break;
+        case 'conversation.item.input_audio_transcription.delta': L.youText += ev.delta || ''; caption('you', L.youText, true); break;
+        case 'conversation.item.input_audio_transcription.completed': { const t = L.turn(ev.item_id, 'u'); t.t = String(ev.transcript || '').trim(); t.done = true; caption('you', t.t || L.youText, false); break; }
+        case 'conversation.item.input_audio_transcription.failed': L.turn(ev.item_id, 'u').done = true; break;
+        case 'response.created': L.boText = ''; T.fresh = true; break;
+        case 'response.output_audio_transcript.delta': case 'response.audio_transcript.delta': L.boText += ev.delta || ''; caption('bo', L.boText, true); break;
+        case 'response.output_audio_transcript.done': case 'response.audio_transcript.done': { const said = String(ev.transcript || L.boText).trim(); const t = L.turn(ev.item_id, 'b'); t.t = said + L.takeBoards(); t.done = !!said; caption('bo', said, false); T.changed = true; break; }
+        case 'output_audio_buffer.started': L.talking = true; who('bo'); break;
+        case 'output_audio_buffer.stopped': case 'output_audio_buffer.cleared': L.talking = false; if (T.who === 'bo' || T.who === 'thinking') who(T.muted ? 'muted' : 'listening'); break;
+        case 'response.function_call_arguments.done': L.tool(ev.name, ev.call_id, ev.arguments); break;
+        case 'response.done': { const out = (ev.response && ev.response.output) || []; if (out.some(o => o.type === 'function_call') && !out.some(o => o.type === 'message')) L.send({ type: 'response.create' }); if (T.who === 'thinking' && !L.talking) who(T.muted ? 'muted' : 'listening'); break; }
+        case 'error': if (ev.error && ev.error.message) console.warn('Bo live:', ev.error.message); break;
+      }
+    },
+    tool(name, id, args) {
+      let a = {}; try { a = JSON.parse(args || '{}'); } catch (e) {}
+      let out;
+      if (name === 'write_on_board') { const lines = (Array.isArray(a.lines) ? a.lines : [a.lines]).map(x => String(x || '').replace(/^\$+|\$+$/g, '').trim()).filter(Boolean).slice(0, 4); boardShow(lines, true); this.boards.push(...lines); out = { shown: lines.length }; }
+      else if (name === 'remember') { const f = String(a.fact || '').trim().slice(0, 140); if (f) { this.notes.push(f); toast(`Bo will remember: ${f}`, 3500); } out = { saved: !!f }; }
+      else out = { error: 'There is no such tool.' };
+      this.send({ type: 'conversation.item.create', item: { type: 'function_call_output', call_id: id, output: JSON.stringify(out) } });
+    },
+    async report() {
+      if (!this.lid || this.ended) return;
+      try { const r = await post('ai_live_tick', { lid: this.lid }); if (r.end) { this.flush(false); this.stop(); ended(r.why || 'The call ended.'); return; } this.left = r.left; this.at = Date.now(); } catch (e) {}
+    },
+    /* what was said goes into the chat: in order, and only once it is written down (all of it when the call ends) */
+    flush(end) {
+      const turns = [];
+      for (const id of this.order) { const t = this.items.get(id); if (!t || t.saved) continue; if (!t.done && !end) break; if (t.t) turns.push({ r: t.r, t: t.t }); t.saved = true; }
+      const notes = this.notes.splice(0);
+      if (!this.lid || (!turns.length && !notes.length && !end)) return;
+      try { fetch(API + 'ai_live_log', { method: 'POST', credentials: 'same-origin', headers: HDR, body: JSON.stringify({ lid: this.lid, turns, notes, end: end ? 1 : 0 }), keepalive: true }).catch(() => {}); } catch (e) {}
+      if (turns.length) T.changed = true;
+    },
+    stop() {
+      const L = this; clearInterval(L.tick); clearInterval(L.save);
+      if (!L.ended) { L.ended = true; if (L.lid) L.flush(true); }
+      try { if (L.dc) L.dc.close(); } catch (e) {} try { if (L.pc) L.pc.close(); } catch (e) {}
+      if (L.mic) L.mic.getTracks().forEach(t => t.stop()); if (L.audio) { try { L.audio.pause(); } catch (e) {} L.audio.srcObject = null; }
+      L.pc = L.dc = L.mic = null; L.anBo = L.anYou = null; L.talking = false;
+    },
+    mute(on) { if (this.mic) this.mic.getAudioTracks().forEach(t => { t.enabled = !on; }); },
+    hush() { this.send({ type: 'response.cancel' }); this.send({ type: 'output_audio_buffer.clear' }); },
+    say(text) { this.send({ type: 'conversation.item.create', item: { type: 'message', role: 'user', content: [{ type: 'input_text', text }] } }); this.send({ type: 'response.create' }); caption('you', text, false); who('thinking'); },
+    photo(p) { this.send({ type: 'conversation.item.create', item: { type: 'message', role: 'user', content: [{ type: 'input_image', image_url: `data:${p.type};base64,${p.data}` }, { type: 'input_text', text: 'Take a look at this.' }] } }); this.send({ type: 'response.create' }); caption('you', 'Sent a photo', false); who('thinking'); },
+    tune() { this.send({ type: 'session.update', session: { type: 'realtime', audio: { input: { turn_detection: { type: 'semantic_vad', eagerness: eager(), create_response: true, interrupt_response: true } }, output: { speed: liveRate() } } } }); }
+  };
+
+  /* ---------- basic: the browser hears, the chat answers, Bo reads it out ---------- */
+  const Basic = {
+    start() { Speaker.natural = naturalOn(); Speaker.voice = basicVoice(); Speaker.fellBack = false; T.t0 = Date.now(); setState('live'); if (!canHear()) showType(true); greet(); },
+    stop() { T.turn++; stopListening(); Speaker.stop(); },
+    orb() { if (T.who === 'bo') return interrupt(); if (T.who === 'listening' && T.listener) return T.listener.send(); if (T.who === 'thinking') { T.turn++; Speaker.stop(); return who('muted'); } T.muted = false; listen(); },
+    mute(on) { if (on) { stopListening(); who('muted'); } else listen(); }
+  };
+  function greet() {
+    const s = snap(); const name = s.name ? ` ${s.name}` : '';
+    const r = s.readiness; const ex = r && r.exam && r.days >= 0 && r.days <= 14 ? ` ${r.exam} is ${r.days === 0 ? 'today' : r.days === 1 ? 'tomorrow' : `in ${r.days} days`}.` : '';
+    const w = s.weak && s.weak[0] ? ` Want to go over ${s.weak[0].t}, or ask me anything?` : ' What are we working on?';
+    const text = `Hey${name}! It's Bo.${ex}${w}`; T.done = false; who('bo'); caption('bo', text, false);
+    Speaker.say(text, { i: 0, turn: T.turn }); T.done = true;
+  }
   Speaker.onLevel = bump;
-  Speaker.onStart = item => { if (item.meta && item.meta.turn === T.turn) { T.now = item.meta.i; paintCaps(); if (T.state === 'thinking') setState('speaking'); } };
+  Speaker.onStart = item => { if (T.mode === 'basic' && item.meta && item.meta.turn === T.turn && item.meta.text) caption('bo', item.meta.text, true); if (T.mode === 'basic' && T.who === 'thinking') who('bo'); };
   Speaker.onIdle = () => {
     if (reading) { reading.classList.remove('on'); reading = null; }
-    if (T.el && T.state === 'speaking' && T.done) { T.now = T.caption.length; paintCaps(); after(); }
+    if (T.el && T.mode === 'basic' && T.who === 'bo' && T.done) after();
   };
-  function after() { if (!T.el) return; if (hands() && canHear()) listen(); else setState('idle'); }
-
+  function after() { if (!T.el) return; if (!T.muted && canHear()) listen(); else who('muted'); }
   function stopListening() { if (T.listener) { T.listener.cancel(); T.listener = null; } }
   async function listen() {
-    if (!T.el) return; stopListening(); Speaker.stop();
-    if (!canHear()) { showType(true); setState('idle', 'Type to Bo below. He answers out loud.'); return; }
-    setState('listening'); you('', true);
+    if (!T.el || T.mode !== 'basic') return; stopListening(); Speaker.stop();
+    if (!canHear()) { showType(true); who('muted'); paintStatus('type to Bo below · he answers out loud'); return; }
+    who('listening'); caption('you', '', true);
     const turn = T.turn;
     const h = {
-      onInterim: (t, fin) => { if (turn === T.turn) you(t, !fin); },
+      onInterim: (t, fin) => { if (turn === T.turn) { caption('you', t, !fin); if (T.who !== 'you') who('you'); } },
       onFinal: t => { if (turn !== T.turn) return; T.listener = null; ask(t); },
-      onNothing: () => { if (turn !== T.turn) return; T.listener = null; you(''); setState('idle', 'I didn’t catch that. Tap Bo when you’re ready.'); },
-      onHearing: () => { if (turn === T.turn) setState('hearing'); },
+      onNothing: () => { if (turn !== T.turn) return; T.listener = null; caption('you', '', false); who('muted'); paintStatus('didn’t catch that · tap Bo when you’re ready'); },
+      onHearing: () => { if (turn === T.turn) who('thinking'); },
       onError: code => { if (turn !== T.turn) return; T.listener = null; micTrouble(code); },
       onLevel: bump
     };
     T.listener = SR && settings().boEar !== 'server' ? srListen(h) : await recListen(h);
   }
-  function micTrouble(code) {
-    const msg = code === 'not-allowed' || code === 'service-not-allowed' ? 'Mathub can’t use your microphone. Allow it from the icon in the address bar, then tap Bo. You can also type.'
-      : code === 'audio-capture' ? 'No microphone was found. Plug one in, or type to Bo.' : code === 'network' ? 'Speech recognition needs the internet. Check your connection and tap Bo again.' : /^Bo |^Slow|month|long one/.test(code) ? code : 'Bo couldn’t hear that. Tap him to try again, or type.';
-    setState('error', msg); if (code === 'not-allowed' || code === 'service-not-allowed' || code === 'audio-capture') showType(true);
-  }
-
   async function ask(text) {
     if (!T.el) return;
-    const turn = ++T.turn; const photo = T.photo; T.photo = null;
-    T.caption = []; T.now = -1; T.done = false; you((photo ? 'With your photo: ' : '') + text, false); paintCaps();
-    setState('thinking');
-    const sp = splitter(s => { if (turn !== T.turn) return; const i = T.caption.length; T.caption.push(s); paintCaps(); Speaker.say(s, { i, turn }); }, b => { if (turn === T.turn) board(b); });
+    const turn = ++T.turn; const photo = T.photo; T.photo = null; paintExtra();
+    T.done = false; T.fresh = true; caption('you', (photo ? 'With your photo: ' : '') + text, false); caption('bo', '', true);
+    who('thinking'); let n = 0;
+    const sp = splitter(s => { if (turn !== T.turn) return; Speaker.say(s, { i: n++, turn, text: s }); }, b => { if (turn === T.turn) boardShow([b], false); });
     try {
-      const r = await App.boAsk(Object.assign({ class: T.cid, q: text, voice: 1, snapshot: App.tutorSnapshot ? App.tutorSnapshot(T.cid) : {}, today: App.todayISO() }, photo ? { image: { type: photo.type, data: photo.data } } : {}), d => { if (turn === T.turn) sp.push(d); });
+      const r = await App.boAsk(Object.assign({ class: T.cid, q: text, voice: 1, snapshot: snap(), today: App.todayISO() }, photo ? { image: { type: photo.type, data: photo.data } } : {}), d => { if (turn === T.turn) sp.push(d); });
       T.changed = true; if (turn !== T.turn) return;
       sp.end(); T.done = true;
       if (r.remembered) toast(`Bo will remember: ${r.remembered}`, 3500);
-      if (!T.caption.length) { T.caption = [shown(r.reply)]; paintCaps(); Speaker.say(r.reply, { i: 0, turn }); }
-      if (Speaker.idle()) { T.now = T.caption.length; paintCaps(); after(); }
+      if (!n) Speaker.say(r.reply, { i: 0, turn, text: shown(r.reply) });
+      if (Speaker.idle()) after();
     } catch (x) {
       if (turn !== T.turn) return; Speaker.stop(); T.done = true;
-      if (x.status === 402) { setState('error', x.message); setTimeout(() => { close(); App.rerender(); }, 2500); return; }
-      setState('error', x.message || 'Bo could not answer just now. Tap him to try again.');
+      if (x.status === 402) { failed(x.message, false); setTimeout(() => { close(); App.rerender(); }, 2500); return; }
+      who('muted'); paintStatus(x.message || 'Bo couldn’t answer just now · tap him to try again');
     }
   }
-  function interrupt() { T.turn++; Speaker.stop(); T.now = T.caption.length; paintCaps(); listen(); }
-  function main() {
-    Speaker.unlock();
-    if (T.state === 'listening') { if (T.listener) T.listener.send(); return; }
-    if (T.state === 'hearing') return;
-    if (T.state === 'thinking') { T.turn++; Speaker.stop(); setState('idle', 'Stopped. Tap Bo to talk.'); return; }
-    if (T.state === 'speaking') { interrupt(); return; }
-    listen();
+  function interrupt() { T.turn++; Speaker.stop(); T.muted = false; listen(); }
+
+  /* ---------- the controls ---------- */
+  function orb() {
+    if (T.state === 'idle' || T.state === 'error' || T.state === 'ended') { if (!settings().boTalkOk) return; return begin(); }
+    if (T.state !== 'live') return;
+    if (T.mode === 'live') { if (T.muted) return mute(false); if (T.who === 'bo' || Live.talking) return Live.hush(); return; }
+    Basic.orb();
   }
+  function mute(on) {
+    if (T.state !== 'live') return; T.muted = on === undefined ? !T.muted : on;
+    if (T.mode === 'live') { Live.mute(T.muted); who(T.muted ? 'muted' : Live.talking ? 'bo' : 'listening'); } else Basic.mute(T.muted);
+    paintStatus();
+  }
+  function sayTyped(t) {
+    if (T.state !== 'live') { toast('Start the call first.'); return; }
+    if (T.mode === 'live') Live.say(t); else { stopListening(); Speaker.stop(); ask(t); }
+  }
+  function sendPhoto(p) { if (T.mode === 'live') Live.photo(p); else { T.photo = p; paintExtra(); if (T.who === 'muted' || T.who === 'listening') listen(); } }
 
   function onClick(e) {
     if (!e.target.isConnected) return;   // a control the settings just redrew
-    const t = e.target.closest('[data-t]'); const say = e.target.closest('[data-say]');
-    if (say) { Speaker.unlock(); stopListening(); ask(say.dataset.say); return; }
+    const say = e.target.closest('[data-say]'); if (say) { sayTyped(say.dataset.say); return; }
+    const t = e.target.closest('[data-t]');
     if (!t) { if (!e.target.closest('#bt-set, [data-t="settings"]')) toggleSettings(false); return; }
     const k = t.dataset.t;
     if (k === 'end') return close();
-    if (k === 'main') return main();
-    if (k === 'start') { setSetting('boTalkOk', Date.now()); Speaker.unlock(); $('#bt-caps', T.el).hidden = false; paintExtra(); greet(); $('#bt-main', T.el).focus(); return; }
-    if (k === 'type') { const f = $('#bt-type', T.el); showType(f.hidden); if (!f.hidden) $('#bt-q', T.el).focus(); return; }
+    if (k === 'orb') return orb();
+    if (k === 'mute') return mute();
+    if (k === 'start') { setSetting('boTalkOk', Date.now()); begin(); $('#bt-orb', T.el).focus(); return; }
+    if (k === 'retry') return begin();
+    if (k === 'basic') { T.mode = 'basic'; return begin(); }
+    if (k === 'type') { const f = $('#bt-type', T.el); showType(f.hidden); return; }
+    if (k === 'cc') { setSetting('boCaptions', !caps()); paintCaps(); return; }
     if (k === 'settings') return toggleSettings();
     if (k === 'board-x') { $('#bt-board', T.el).hidden = true; T.el.classList.remove('has-board'); return; }
     if (k === 'unphoto') { T.photo = null; paintExtra(); return; }
@@ -377,7 +544,8 @@
     if (!T.el) return;
     if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); const s = $('#bt-set', T.el); if (!s.hidden) toggleSettings(false); else close(); return; }
     const typing = e.target.closest && e.target.closest('input, textarea, select');
-    if ((e.key === ' ' || e.code === 'Space') && !typing && !e.target.closest('button, label, a, summary')) { e.preventDefault(); main(); return; }
+    if (!typing && (e.key === 'm' || e.key === 'M') && !e.metaKey && !e.ctrlKey) { mute(); return; }
+    if ((e.key === ' ' || e.code === 'Space') && !typing && !e.target.closest('button, label, a, summary')) { e.preventDefault(); orb(); return; }
     if (e.key === 'Tab') {   // keep focus inside the call
       const f = $$('button:not([disabled]), [href], input, select', T.el).filter(x => x.offsetParent !== null && !x.closest('[hidden]')); if (!f.length) return;
       const first = f[0], last = f[f.length - 1];
@@ -385,7 +553,7 @@
     }
   }
 
-  /* ---------- the call's settings: voice, speed, hands-free, captions ---------- */
+  /* ---------- the call's settings ---------- */
   function toggleSettings(on) {
     if (!T.el) return; const s = $('#bt-set', T.el); const b = $('[data-t="settings"]', T.el); const show = on === undefined ? s.hidden : on;
     const had = s.contains(document.activeElement);
@@ -393,35 +561,50 @@
   }
   function paintSettings() {
     if (!T.el) return; const s = $('#bt-set', T.el); if (s.hidden) return;
-    const V = (T.status && T.status.voice) || {}; const cur = settings().boVoice === 'device' || !V.natural ? 'device' : (V.voices && V.voices[settings().boVoice] ? settings().boVoice : V.default || 'ash');
-    const nat = V.natural ? Object.entries(V.voices || {}).map(([k, l]) => `<label class="bt-opt"><input type="radio" name="bt-voice" value="${esc(k)}"${cur === k ? ' checked' : ''}><span>${esc(l)}</span></label>`).join('') : '';
-    const dv = deviceVoices(); const best = bestVoice();
-    s.innerHTML = `<h3 class="bt-set-h">Bo’s voice</h3><div class="bt-opts" role="radiogroup" aria-label="Bo's voice">${nat}<label class="bt-opt"><input type="radio" name="bt-voice" value="device"${cur === 'device' ? ' checked' : ''}><span>This device’s voice</span></label></div>
-      ${cur === 'device' && dv.length ? `<label class="bt-set-l" for="bt-dv">Device voice</label><select class="input" id="bt-dv">${dv.map(v => `<option value="${esc(v.name)}"${best && v.name === best.name ? ' selected' : ''}>${esc(v.name)}</option>`).join('')}</select>` : ''}
-      ${!V.natural ? '<p class="bt-fine">Bo’s natural voice is not switched on, so he uses the best voice this device has.</p>' : ''}
-      <h3 class="bt-set-h">Speed</h3><div class="bt-speed" role="radiogroup" aria-label="Speed">${RATES.map(r => `<button type="button" role="radio" class="chip toggle${Speaker.rate() === r ? ' on' : ''}" aria-checked="${Speaker.rate() === r}" data-rate="${r}">${r === 1 ? 'Normal' : r + '×'}</button>`).join('')}</div>
-      <label class="bt-switch"><input type="checkbox" id="bt-hf"${hands() ? ' checked' : ''}><span><b>Hands-free</b> Bo listens again after he talks</span></label>
-      <label class="bt-switch"><input type="checkbox" id="bt-cp"${caps() ? ' checked' : ''}><span><b>Captions</b> Show what you and Bo say</span></label>
-      <button type="button" class="btn sm" id="bt-try">${icon('play', 14)} Hear Bo</button>`;
+    const V = (T.status && T.status.voice) || {}; const live = T.mode === 'live';
+    const radios = (name, entries, cur) => entries.map(([k, l]) => `<label class="bt-opt"><input type="radio" name="${name}" value="${esc(k)}"${cur === k ? ' checked' : ''}><span>${esc(l)}</span></label>`).join('');
+    const chips = (list, cur, attr, fmt) => list.map(r => `<button type="button" role="radio" class="chip toggle${cur === r ? ' on' : ''}" aria-checked="${cur === r}" ${attr}="${r}">${fmt(r)}</button>`).join('');
+    let html;
+    if (live) {
+      html = `<h3 class="bt-set-h">Bo’s voice</h3><div class="bt-opts" role="radiogroup" aria-label="Bo's voice">${radios('bt-lv', Object.entries(liveVoices()), liveVoice())}</div><p class="bt-fine">A new voice starts with your next call.</p>
+        <h3 class="bt-set-h">How fast he talks</h3><div class="bt-speed" role="radiogroup" aria-label="Speed">${chips(LIVE_RATES, liveRate(), 'data-lrate', r => r === 1 ? 'Normal' : r + '×')}</div>
+        <h3 class="bt-set-h">When Bo jumps in</h3><div class="bt-speed" role="radiogroup" aria-label="When Bo jumps in">${chips(['low', 'auto', 'high'], eager(), 'data-eager', r => ({ low: 'Lets me finish', auto: 'Normal', high: 'Quick' })[r])}</div>`;
+    } else {
+      const cur = settings().boVoice === 'device' || !V.natural ? 'device' : basicVoice();
+      const dv = deviceVoices(); const best = bestVoice();
+      html = `<h3 class="bt-set-h">Bo’s voice</h3><div class="bt-opts" role="radiogroup" aria-label="Bo's voice">${V.natural ? radios('bt-voice', Object.entries(V.voices || {}), cur) : ''}<label class="bt-opt"><input type="radio" name="bt-voice" value="device"${cur === 'device' ? ' checked' : ''}><span>This device’s voice</span></label></div>
+        ${cur === 'device' && dv.length ? `<label class="bt-set-l" for="bt-dv">Device voice</label><select class="input" id="bt-dv">${dv.map(v => `<option value="${esc(v.name)}"${best && v.name === best.name ? ' selected' : ''}>${esc(v.name)}</option>`).join('')}</select>` : ''}
+        <h3 class="bt-set-h">How fast he talks</h3><div class="bt-speed" role="radiogroup" aria-label="Speed">${chips(RATES, Speaker.rate(), 'data-rate', r => r === 1 ? 'Normal' : r + '×')}</div>
+        ${!V.live ? '<p class="bt-fine">Live calls, with Bo’s natural real-time voice, are not switched on here yet, so this is basic voice.</p>' : ''}`;
+    }
+    html += `<label class="bt-switch"><input type="checkbox" id="bt-cp"${caps() ? ' checked' : ''}><span><b>Captions</b> Show what you and Bo say</span></label>
+      ${V.live && global.RTCPeerConnection ? `<label class="bt-switch"><input type="checkbox" id="bt-bm"${settings().boMode === 'basic' ? ' checked' : ''}><span><b>Basic voice</b> For slow connections: Bo answers in turns instead of live (from your next call)</span></label>` : ''}
+      ${!live ? `<button type="button" class="btn sm" id="bt-try">${icon('play', 14)} Hear Bo</button>` : ''}`;
+    s.innerHTML = html;
     s.onchange = e => {
       const t = e.target;
+      if (t.name === 'bt-lv') { setSetting('boLiveVoice', t.value); }
       if (t.name === 'bt-voice') { setSetting('boVoice', t.value); Speaker.natural = naturalOn(); if (t.value !== 'device') Speaker.voice = t.value; paintSettings(); }
       if (t.id === 'bt-dv') setSetting('boDeviceVoice', t.value);
-      if (t.id === 'bt-hf') { setSetting('boHands', t.checked); paintMode(); }
-      if (t.id === 'bt-cp') { setSetting('boCaptions', t.checked); paintMode(); }
+      if (t.id === 'bt-cp') { setSetting('boCaptions', t.checked); paintCaps(); }
+      if (t.id === 'bt-bm') setSetting('boMode', t.checked ? 'basic' : '');
     };
     s.onclick = e => {
-      const r = e.target.closest('[data-rate]'); if (r) { setSetting('boRate', +r.dataset.rate); $$('[data-rate]', s).forEach(x => { const on = x === r; x.classList.toggle('on', on); x.setAttribute('aria-checked', String(on)); }); return; }
-      if (e.target.closest('#bt-try')) { Speaker.unlock(); if (T.state === 'listening') { stopListening(); setState('idle'); } Speaker.stop(); Speaker.say('Hi, I’m Bo. This is how I sound.', { i: -1, turn: -1 }); }
+      const pick = (attr, key, cast) => { const r = e.target.closest(`[${attr}]`); if (!r) return false; setSetting(key, cast(r.getAttribute(attr))); $$(`[${attr}]`, s).forEach(x => { const on = x === r; x.classList.toggle('on', on); x.setAttribute('aria-checked', String(on)); }); return true; };
+      if (pick('data-lrate', 'boLiveRate', Number)) { Live.tune(); return; }
+      if (pick('data-eager', 'boEager', String)) { Live.tune(); return; }
+      if (pick('data-rate', 'boRate', Number)) return;
+      if (e.target.closest('#bt-try')) { Speaker.unlock(); Speaker.stop(); Speaker.say('Hi, I’m Bo. This is how I sound.', { i: -1, turn: -1 }); }
     };
   }
+  if (synth && synth.addEventListener) synth.addEventListener('voiceschanged', () => { if (T.el) paintSettings(); });
 
   /* ---------- Read aloud, for answers in the chat ---------- */
   let reading = null;
   function read(text, btn, status) {
     if (status) T.status = status;
     if (reading) { const was = reading; reading = null; Speaker.stop(); was.classList.remove('on'); if (was === btn) return; }
-    Speaker.natural = naturalOn(); Speaker.voice = settings().boVoice && T.status && T.status.voice && T.status.voice.voices && T.status.voice.voices[settings().boVoice] ? settings().boVoice : ((T.status && T.status.voice && T.status.voice.default) || 'ash');
+    Speaker.natural = naturalOn(); Speaker.voice = basicVoice();
     Speaker.unlock(); Speaker.stop(); reading = btn; if (btn) btn.classList.add('on');
     const parts = []; const sp = splitter(s => parts.push(s), () => {}); sp.push(text); sp.end();
     parts.forEach((s, i) => Speaker.say(s, { i, turn: -1 }));

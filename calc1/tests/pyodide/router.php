@@ -73,10 +73,23 @@ if ($path === '/anthropic/v1/messages') {
 // a stand-in for OpenAI's speech API (config.local.php: openai_api, openai_key 'sk-openai-test'): /audio/speech answers
 // with a short silent WAV and keeps the request in tests/fixtures/tts-last.json; /audio/transcriptions hears the same
 // question every time and keeps what it was sent in tests/fixtures/stt-last.json
+// the Realtime API's call setup and hang-up (live calls with Bo): the offer and session go to tests/fixtures/live-last.json,
+// hang-ups to tests/fixtures/live-hangups.json; a session whose instructions say REFUSE-FULL is refused unless it is the lean one
+if (preg_match('#^/openai/v1/realtime/calls(?:/([A-Za-z0-9_-]+)/hangup)?$#', $path, $m)) {
+  if (($_SERVER['HTTP_AUTHORIZATION'] ?? '') !== 'Bearer sk-openai-test') { http_response_code(401); header('Content-Type: application/json'); echo '{"error":{"message":"Incorrect API key"}}'; exit; }
+  if (!empty($m[1])) { $f = __DIR__ . '/../fixtures/live-hangups.json'; $h = json_decode((string)@file_get_contents($f), true) ?: []; $h[] = $m[1]; @file_put_contents($f, json_encode($h)); header('Content-Type: application/json'); echo '{}'; exit; }
+  $sess = json_decode((string)($_POST['session'] ?? ''), true) ?: [];
+  $tries = json_decode((string)@file_get_contents(__DIR__ . '/../fixtures/live-tries.json'), true) ?: []; $tries[] = array_keys($sess); @file_put_contents(__DIR__ . '/../fixtures/live-tries.json', json_encode($tries));
+  if (str_contains((string)($sess['instructions'] ?? ''), 'REFUSE-FULL') && isset($sess['max_output_tokens'])) { http_response_code(400); header('Content-Type: application/json'); echo '{"error":{"message":"Unknown parameter: max_output_tokens"}}'; exit; }
+  @file_put_contents(__DIR__ . '/../fixtures/live-last.json', json_encode(['sdp' => $_POST['sdp'] ?? '', 'session' => $sess, 'accept' => $_SERVER['HTTP_ACCEPT'] ?? '']));
+  http_response_code(201); header('Content-Type: application/sdp'); header('Location: /v1/realtime/calls/rtc_test' . substr(md5((string)microtime(true)), 0, 8));
+  echo "v=0\r\no=- 4611 2 IN IP4 127.0.0.1\r\ns=stand-in\r\nt=0 0\r\nm=audio 9 UDP/TLS/RTP/SAVPF 111\r\n"; exit;
+}
 if (preg_match('#^/openai/v1/audio/(speech|transcriptions)$#', $path, $m)) {
   if (($_SERVER['HTTP_AUTHORIZATION'] ?? '') !== 'Bearer sk-openai-test') { http_response_code(401); header('Content-Type: application/json'); echo '{"error":{"message":"Incorrect API key"}}'; exit; }
   if ($m[1] === 'speech') {
     $raw = (string)file_get_contents('php://input'); @file_put_contents(__DIR__ . '/../fixtures/tts-last.json', $raw);
+    $all = json_decode((string)@file_get_contents(__DIR__ . '/../fixtures/tts-all.json'), true) ?: []; $all[] = (json_decode($raw, true) ?: [])['input'] ?? ''; @file_put_contents(__DIR__ . '/../fixtures/tts-all.json', json_encode(array_slice($all, -40)));
     $n = 2400; $wav = 'RIFF' . pack('V', 36 + 2 * $n) . 'WAVEfmt ' . pack('VvvVVvv', 16, 1, 1, 8000, 16000, 2, 16) . 'data' . pack('V', 2 * $n) . str_repeat("\0", 2 * $n);
     header('Content-Type: audio/wav'); echo $wav; exit;
   }
