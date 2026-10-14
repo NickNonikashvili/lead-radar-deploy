@@ -322,8 +322,8 @@ The Hostinger zip never includes `app/`.
   signed out goes up at the next sign-in. `App.classSync` keeps both sides the same (new ones up, the account's
   down, deleted ones gone everywhere; an id clash gets a new id). Rows go with the account through
   `ON DELETE CASCADE`, and Download my data includes them.
-- **Mathub Pro ($15) and Mathub Max ($50)** (`App.subscription`, `App.paywall({ need })`): Pro makes classes;
-  Max adds Bo, the AI tutor, and classes Bo writes from a syllabus. The apps buy them through the App Store or
+- **Mathub Pro ($15) and Mathub Max ($50)** (`App.subscription`, `App.paywall({ need })`): with Pro, Bo writes
+  classes from a syllabus (and classes can be made any other way); Max adds Ask Bo, the AI tutor. The apps buy them through the App Store or
   Google Play; the website opens the plan's RevenueCat Web Purchase Link (Stripe) in a new tab and waits for it
   (`create_status`, which asks RevenueCat's REST API and keeps the answer for 10 minutes unless asked to refresh).
   All use the RevenueCat customer `mh_<account id>` and the entitlements `pro` and `max` (a Max product unlocks
@@ -334,18 +334,27 @@ The Hostinger zip never includes `app/`.
   (`assets/vendor/qrcode.js`, qrcode-generator, MIT, loaded on demand). `#/c/CODE` shows the class to anyone,
   without the owner's name, with Add (a copy; needs Pro or Max) and Report. Moderators can stop a reported
   share from Admin → Problems. The owner can stop sharing at any time.
-- **Server keys** (in `api/config.local.php` only): `revenuecat_secret`, `create_web_link`, `create_web_price`.
+- **Create a class** (`#/create`): "Bo writes it from your syllabus" first (drop in a PDF, photo or text file, or
+  paste the text; Full or Shorter class; Write my class, then his steps and the class preview with Add), then
+  "Other ways to add a class": the free example class, a share code, a class file, and "Use the AI you already
+  use" (the three copy-and-paste steps, folded away).
+- **Server keys** (in `api/config.local.php` only): `revenuecat_secret`, `pro_web_link`, `max_web_link`,
+  `anthropic_key`, `openai_key` (optional: Bo's natural voice), and `plan_grants` for testers.
 
-## Bo, the AI tutor, and the AI server (Mathub Max)
+## Bo, the AI tutor (Mathub Max), classes Bo writes (Pro and Max), and the AI server
 
 `assets/tutor.js`, `assets/tutor.css`, `api/ai.php`; details and costs in `docs/app-subscriptions.md`.
 
-- **Ask Bo** (`#/tutor`, `#/tutor/<class>`): a chat with Bo for the class you pick. He knows the class from its
+- **Talk with Bo** (`assets/talk.js`, website): a voice call. The browser's speech recognition hears the student
+  (or a recording goes to `ai_listen` where there is none), the answer streams from `ai_tutor` in voice mode, and Bo
+  speaks it a sentence at a time (`ai_speak`, a natural voice, or the device's voice) while formulas go on his board.
+  Hands-free by default; tap Bo or press Space to talk, send or cut in; Esc ends the call; turns are saved in the chat.
+- **Ask Bo** (`#/tutor`, `#/tutor/<class>`): a chat with Bo for the class you pick; answers stream in as he writes them. He knows the class from its
   syllabus and how the student is doing: the device sends a short progress snapshot with each question (next exam
   and readiness, weakest topics, recent mistakes, flashcards due, deadlines). The first message and the suggestions
   are made on the device (free). Photos of problems are shrunk on the device and sent with the question. Bo keeps up
   to 12 short notes about the student (`[remember: …]`), shown under his answer and in "What Bo knows", where they
-  and the chat can be deleted. Every answer has Copy and Report. The student agrees to what is sent to Anthropic
+  and the chat can be deleted ("What Bo knows" sits beside the chat on a wide screen, and is a sheet elsewhere). Every answer has Copy and Report. The student agrees to what is sent to Anthropic
   before the first question. Bo is a tab in the apps, a button in the website's top bar, and "Ask Bo to quiz you"
   in exam week.
 - **Let Bo write it** (Create a class, Max): paste or attach a syllabus (PDF, photo or text); Bo reads it into an

@@ -43,14 +43,45 @@ if ($path === '/anthropic/v1/messages') {
       $qs[] = ['topic' => $sid, 'items' => [["Which one is $sid?", 'This one', ['That one', 'Neither', 'Both'], "Because it is $sid."], ["Is $sid useful?", 'Yes', ['No', 'Never', 'Only on Sundays'], 'It is.']]];
     }
     $text = "Here you go:\n```json\n" . json_encode(['SECTIONS' => $secs, 'FLASHCARDS' => $cards, 'QUIZ' => ['questions' => $qs]]) . "\n```";
+  } elseif (str_contains($sys, 'VOICE MODE')) {
+    // talking out loud: a short spoken answer with a line for the whiteboard
+    $weak = preg_match('/WEAKEST TOPICS: ([^;\n]+?) \d+%|WEAKEST TOPICS: ([^;\n]+?) not practised/', $sys, $w) ? trim($w[1] ?: $w[2]) : '';
+    $text = 'You said: ' . rtrim(mb_substr($utext, 0, 60), '?.!') . '. The chain rule says: take the derivative of the outside, then multiply by the derivative of the inside. [board: $\\frac{d}{dx}f(g(x)) = f\'(g(x))\\,g\'(x)$] ' . ($weak ? "Since $weak is your weakest topic, want to try one together?" : 'Want to try one together?');
+    if (stripos($utext, 'remember') !== false) $text .= "\n[remember: Likes to talk things through]";
   } else {
     $weak = preg_match('/WEAKEST TOPICS: ([^;\n]+?) \d+%|WEAKEST TOPICS: ([^;\n]+?) not practised/', $sys, $w) ? trim($w[1] ?: $w[2]) : '';
     $text = 'Bo here. ' . ($weak ? "Your weakest topic is $weak. " : '') . (str_contains($sys, 'CLASS: ') ? 'I know your class. ' : '') . ($hasImage ? 'I see your photo. ' : '') . 'You asked: ' . mb_substr($utext, 0, 80) . ' (turns: ' . count($req['messages']) . ')';
     if (stripos($utext, 'remember') !== false) $text .= "\n[remember: Likes worked examples first]";
     if (stripos($utext, 'math') !== false) $text .= "\nThe slope is $\\frac{\\Delta y}{\\Delta x}$ and x < 3 here.";
   }
+  if (!empty($req['stream'])) {
+    // the streaming form: server-sent events, the text in small pieces
+    header('Content-Type: text/event-stream'); header('Cache-Control: no-cache');
+    $ev = function (string $type, array $data): void { echo "event: $type\ndata: " . json_encode(['type' => $type] + $data) . "\n\n"; @ob_flush(); flush(); };
+    $ev('message_start', ['message' => ['id' => 'msg_test', 'type' => 'message', 'role' => 'assistant', 'content' => [], 'model' => $req['model'] ?? '', 'usage' => ['input_tokens' => (int)(strlen($raw) / 4), 'output_tokens' => 1]]]);
+    $ev('content_block_start', ['index' => 0, 'content_block' => ['type' => 'text', 'text' => '']]);
+    $ev('ping', []);
+    foreach (mb_str_split($text, 14) as $piece) { $ev('content_block_delta', ['index' => 0, 'delta' => ['type' => 'text_delta', 'text' => $piece]]); usleep(12000); }
+    $ev('content_block_stop', ['index' => 0]);
+    $ev('message_delta', ['delta' => ['stop_reason' => 'end_turn', 'stop_sequence' => null], 'usage' => ['output_tokens' => (int)(strlen($text) / 4)]]);
+    $ev('message_stop', []);
+    exit;
+  }
   echo json_encode(['id' => 'msg_test', 'type' => 'message', 'role' => 'assistant', 'model' => $req['model'] ?? '', 'content' => [['type' => 'text', 'text' => $text]], 'stop_reason' => 'end_turn', 'usage' => ['input_tokens' => (int)(strlen($raw) / 4), 'output_tokens' => (int)(strlen($text) / 4)]]);
   exit;
+}
+// a stand-in for OpenAI's speech API (config.local.php: openai_api, openai_key 'sk-openai-test'): /audio/speech answers
+// with a short silent WAV and keeps the request in tests/fixtures/tts-last.json; /audio/transcriptions hears the same
+// question every time and keeps what it was sent in tests/fixtures/stt-last.json
+if (preg_match('#^/openai/v1/audio/(speech|transcriptions)$#', $path, $m)) {
+  if (($_SERVER['HTTP_AUTHORIZATION'] ?? '') !== 'Bearer sk-openai-test') { http_response_code(401); header('Content-Type: application/json'); echo '{"error":{"message":"Incorrect API key"}}'; exit; }
+  if ($m[1] === 'speech') {
+    $raw = (string)file_get_contents('php://input'); @file_put_contents(__DIR__ . '/../fixtures/tts-last.json', $raw);
+    $n = 2400; $wav = 'RIFF' . pack('V', 36 + 2 * $n) . 'WAVEfmt ' . pack('VvvVVvv', 16, 1, 1, 8000, 16000, 2, 16) . 'data' . pack('V', 2 * $n) . str_repeat("\0", 2 * $n);
+    header('Content-Type: audio/wav'); echo $wav; exit;
+  }
+  @file_put_contents(__DIR__ . '/../fixtures/stt-last.json', json_encode(['post' => $_POST, 'file' => isset($_FILES['file']) ? ['name' => $_FILES['file']['name'], 'type' => $_FILES['file']['type'], 'size' => $_FILES['file']['size']] : null]));
+  header('Content-Type: application/json'); echo json_encode(['text' => 'What is the chain rule?']); exit;
 }
 $file = __DIR__ . '/package' . $path;
 if ($path === '/' || !is_file($file)) { http_response_code(404); echo 'not found'; exit; }

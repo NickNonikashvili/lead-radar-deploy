@@ -7,8 +7,8 @@
    - where classes live: in the apps, on the device (and with the account when signed in); on the website,
      with the account (and cached in this browser). The same account sees the same classes everywhere.
      Server: api/myclasses.php.
-   - the plans: Mathub Pro (making classes, $15 a month) and Mathub Max (Pro, plus Bo the AI tutor and classes Bo
-     writes from a syllabus, $50 a month; assets/tutor.js, api/ai.php). In the apps they are bought through the
+   - the plans: Mathub Pro (Bo writes classes from a syllabus, api/ai.php; making and adding classes; $15 a month)
+     and Mathub Max (Pro, plus Ask Bo, the AI tutor, assets/tutor.js; $50 a month). In the apps they are bought through the
      App Store or Google Play; on the website through a RevenueCat Web Purchase Link (Stripe). Both go to
      the same RevenueCat customer (mh_<account id>), so one subscription works everywhere.
      The example class is free, and classes made before subscriptions existed stay free. When it ends,
@@ -411,14 +411,14 @@ THE SYLLABUS:
     return { pack: P, notes };
   }
   /* ============================================================
-     The plans: Mathub Pro (making classes) and Mathub Max (Pro, plus Bo the AI tutor and classes Bo writes
-     from a syllabus). One RevenueCat customer per account (mh_<id>) with the entitlements "pro" and "max";
+     The plans: Mathub Pro (Bo writes classes from a syllabus; making and adding classes) and Mathub Max (Pro,
+     plus Ask Bo, the AI tutor). One RevenueCat customer per account (mh_<id>) with the entitlements "pro" and "max";
      a Max product unlocks both.
      ============================================================ */
   const BILLING = { ios: '', android: '', pro: 'pro', max: 'max' };   // RevenueCat public SDK keys (appl_… and goog_…): public by design, safe in the app
   const PLANS = {
-    pro: { name: 'Mathub Pro', short: 'Pro', web: '$15', lines: ['Turn any syllabus into a full class with the AI you already use: notes, flashcards, practice questions, its calendar and grades', 'As many classes as you like, and classes your classmates share with you'] },
-    max: { name: 'Mathub Max', short: 'Max', web: '$50', lines: ['Everything in Pro', 'Bo writes the class for you: drop in your syllabus, no copying and pasting', 'Ask Bo, your AI tutor, any question. He knows your syllabus, your exams and what you are stuck on'] }
+    pro: { name: 'Mathub Pro', short: 'Pro', web: '$15', lines: ['Drop in any syllabus and Bo writes the whole class: notes, flashcards, practice questions, its calendar and grades', 'Classes your classmates share, class files, and classes made with the AI you already use'] },
+    max: { name: 'Mathub Max', short: 'Max', web: '$50', lines: ['Everything in Pro', 'Ask Bo, your AI tutor, any question, any time. He knows your syllabus, your exams and what you are stuck on', NATIVE ? 'Send him a photo of a problem and he walks you through it' : 'Talk with him out loud, or send a photo of a problem, and he walks you through it'] }
   };
   const RANK = { '': 0, pro: 1, max: 2 };
   const subKey = () => ((global.MATHUB_BILLING_KEYS || BILLING)[ANDROID ? 'android' : 'ios']) || '';
@@ -552,7 +552,7 @@ THE SYLLABUS:
       const old = $('#paywall'); if (old) old.remove();
       const need = o.need === 'max' ? 'max' : 'pro'; const have = Sub.plan();
       const what = o.code ? esc(o.code) : '';
-      const why = o.reason === 'locked' ? `${what} is locked because your plan is off. Everything in it is still saved ${WHERE}.` : o.reason === 'shared' ? `Adding ${what} to your classes needs Mathub Pro or Max.` : o.reason === 'bo' ? (have === 'pro' ? 'Bo is part of Mathub Max. Move up from Pro to talk with him.' : 'Talking with Bo, your AI tutor, is part of Mathub Max.') : o.reason === 'bo-class' ? 'Having Bo write your class from the syllabus is part of Mathub Max.' : what ? `Adding ${what} needs Mathub Pro or Max.` : 'Make your own classes with Mathub Pro, or let Bo do it with Max.';
+      const why = o.reason === 'locked' ? `${what} is locked because your plan is off. Everything in it is still saved ${WHERE}.` : o.reason === 'shared' ? `Adding ${what} to your classes needs Mathub Pro or Max.` : o.reason === 'bo' ? (have === 'pro' ? 'Bo is part of Mathub Max. Move up from Pro to talk with him.' : 'Talking with Bo, your AI tutor, is part of Mathub Max.') : o.reason === 'bo-class' ? 'Bo writing your class from the syllabus is part of Mathub Pro and Max.' : what ? `Adding ${what} needs Mathub Pro or Max.` : 'Bo writes your classes with Mathub Pro. Max adds Ask Bo, your AI tutor.';
       const plans = need === 'max' || have === 'pro' ? ['max'] : ['pro', 'max']; let pick = plans[0];
       const el = document.createElement('div'); el.id = 'paywall'; el.className = NATIVE ? 'modal-backdrop sheet-backdrop' : 'modal-backdrop pw-backdrop';
       const cancelWhere = NATIVE ? `your ${ANDROID ? 'Google Play' : 'Apple ID'} subscriptions` : 'Settings › Your plan › Manage subscription, or with the link in your receipt email';
@@ -649,44 +649,58 @@ THE SYLLABUS:
   /* ============================================================
      #/create
      ============================================================ */
-  let pending = null;   // the checked class waiting for "Add"
-  let pendingFree = false, exampleText = null;   // the example class is the one class anyone can add for free
-  const subOnHtml = () => `${icon('check', 15)} ${Sub.planName()} is on: make as many classes as you like.${Sub.isMax() ? '' : ' With <button type="button" class="linkbtn" data-action="sub-max">Max</button>, Bo writes them for you.'}`;
+  let pending = null;   // the checked class waiting for "Add" (each result keeps its own copy when it is wired)
+  let pendingFree = false;   // the example class is the one class anyone can add for free
+  /* the plan line under the title: what the plan gives here, and the way up */
+  const subLine = () => {
+    const p = Sub.plan();
+    if (p === 'max') return `${icon('check', 15)} Mathub Max is on: Bo writes your classes, and you can <a href="#/tutor">ask him anything</a>.`;
+    if (p === 'pro') return `${icon('check', 15)} Mathub Pro is on: Bo writes your classes. <button type="button" class="linkbtn" data-action="sub-max">Max</button> adds Ask Bo, your AI tutor.`;
+    return `Bo writing your class is part of <button type="button" class="linkbtn" data-action="sub">Mathub Pro</button> (<span class="mk-sub-price">${esc(PLANS.pro.web)} a month</span>). <button type="button" class="linkbtn" data-action="sub-max">Max</button> adds Ask Bo, your AI tutor. The example class is free.`;
+  };
   App.views.create = {
     title: 'Create a class',
     render(root) {
       const size = settings().mkSize === 'short' ? 'short' : 'full'; pending = null;
       const u = user(); const webOut = !NATIVE && !u;
       root.innerHTML = `<div class="landing-wrap mk-page">
-        <header class="landing-top"><div><h1 class="landing-title"><span class="logo-mark">${App.logoSvg(44)}</span>Create a class</h1><p class="muted mk-lede">Any class with a syllabus: notes, flashcards, practice questions, its calendar and your grade calculator, written from the syllabus by the AI you already use. ${NATIVE ? `The class is saved on this ${DEVICE}${u ? ' and with your account' : ''}, and it works offline.` : 'The class is saved with your account, so it is also in the Mathub apps when you sign in there.'}</p><p class="mk-sub" id="mk-sub">${Sub.active() ? subOnHtml() : `Making classes is part of <button type="button" class="linkbtn" data-action="sub">Mathub Pro</button> (<span class="mk-sub-price">${esc(PLANS.pro.web)} a month</span>). With <button type="button" class="linkbtn" data-action="sub-max">Max</button>, Bo writes the class for you. The example class is free.`}</p></div><div class="row gap-sm"><a class="btn" href="#/">${icon('left', 14)} Your classes</a></div></header>
+        <header class="landing-top mk-head"><div><h1 class="landing-title"><span class="logo-mark">${App.logoSvg(44)}</span>Create a class</h1><p class="muted mk-lede">Any class with a syllabus becomes a Mathub class: notes, flashcards, practice questions, its calendar and your grade calculator. ${NATIVE ? `It is saved on this ${DEVICE}${u ? ' and with your account' : ''}, and it works offline.` : 'It is saved with your account, so it is also in the Mathub apps when you sign in there.'}</p><p class="mk-sub" id="mk-sub">${subLine()}</p></div><div class="row gap-sm"><a class="btn" href="#/">${icon('left', 14)} Your classes</a></div></header>
         ${webOut ? `<div class="callout mk-signin" id="mk-signin"><b>Sign in to add a class.</b> Classes you make are saved with your Mathub account, so they are on every device where you sign in, the apps included. <span class="row gap-sm mt-1" style="flex-wrap:wrap"><button type="button" class="btn sm primary" data-action="login">Log in</button><button type="button" class="btn sm" data-action="signup">Create an account</button></span></div>` : ''}
         ${boCardHtml()}
-        <h2 class="mk-or" id="mk-or">${Sub.isMax() ? 'Or make it yourself with the AI you already use' : 'Make it with the AI you already use'}</h2>
-        <ol class="mk-steps">
-          <li class="panel mk-step"><span class="mk-n" aria-hidden="true">1</span><div class="mk-body"><h2 class="mk-h">Copy the instructions</h2>
-            <p>Mathub writes instructions that tell an AI exactly how to turn a syllabus into a class.</p>
-            <div class="mk-size" role="radiogroup" aria-label="How long should the answer be?"><button type="button" role="radio" class="chip toggle${size === 'full' ? ' on' : ''}" aria-checked="${size === 'full'}" data-action="size" data-size="full">Full class</button><button type="button" role="radio" class="chip toggle${size === 'short' ? ' on' : ''}" aria-checked="${size === 'short'}" data-action="size" data-size="short">Shorter answer</button><span class="small muted">Choose “Shorter answer” if your AI stops partway through long replies.</span></div>
-            <div class="row gap-sm mt-2" style="flex-wrap:wrap"><button type="button" class="btn primary" data-action="copy-prompt">${icon('copy', 15)} Copy instructions</button><button type="button" class="btn" data-action="show-prompt" aria-expanded="false" aria-controls="mk-prompt">${icon('eye', 15)} Read them</button></div>
-            <pre class="mk-prompt" id="mk-prompt" hidden></pre></div></li>
-          <li class="panel mk-step"><span class="mk-n" aria-hidden="true">2</span><div class="mk-body"><h2 class="mk-h">Ask your AI</h2>
-            <p>Open the AI chat you use${NATIVE ? ', in its app or on the web' : ' in another tab'}. Paste the instructions, attach your syllabus (a PDF, a photo of it, or its text) and send.</p>
-            <p class="small muted">${icon('shield', 13)} Mathub never sees or sends your syllabus. You choose which AI to give it to, and that AI's own privacy terms apply to what you send it.</p></div></li>
-          <li class="panel mk-step"><span class="mk-n" aria-hidden="true">3</span><div class="mk-body"><h2 class="mk-h">Paste the answer</h2>
-            <p>Copy the AI's whole answer and paste it here. Mathub checks it, fixes small slips and shows you the class before adding it.</p>
-            <label class="sr-only" for="mk-text">The AI's answer</label>
-            <textarea class="input mono mk-text" id="mk-text" rows="7" placeholder="Paste the AI's answer here" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off"></textarea>
-            <div class="row gap-sm mt-1" style="flex-wrap:wrap"><button type="button" class="btn" data-action="paste">${icon('download', 15)} Paste</button><button type="button" class="btn primary" data-action="check">${icon('check', 15)} Check the answer</button><button type="button" class="btn ghost" data-action="clear">Clear</button></div>
-            <div id="mk-result" class="mk-result" aria-live="polite"></div></div></li>
-        </ol>
-        <div class="mk-alt"><p class="small muted">No syllabus handy? <button type="button" class="linkbtn small" data-action="example">Try an example class</button>. Got a class file from a classmate? <label class="linkbtn small mk-file">Import it<input type="file" id="mk-file" accept=".json,application/json" hidden></label>.</p>
-          <form class="mk-code-form" id="mk-code-form"><label for="mk-code">Got a share code?</label><input class="input mono" id="mk-code" maxlength="40" placeholder="K7P2QX9M" autocapitalize="characters" autocomplete="off" spellcheck="false"><button class="btn sm" type="submit">Open</button></form></div>
-        <section class="land-sec" aria-labelledby="mk-mine-h"><h2 class="sec-title" id="mk-mine-h">Classes you created</h2><div id="mk-mine"></div></section>
+        <section class="mk-ways" aria-labelledby="mk-ways-h"><h2 class="sec-title" id="mk-ways-h">Other ways to add a class</h2>
+          <div class="panel mk-ways-list">
+            <div class="mk-way"><span class="mk-way-ic" aria-hidden="true">${icon('play', 18)}</span><div class="mk-way-t"><b>Try the example class</b><span>See what a finished class looks like. It is free.</span></div><div class="mk-way-act"><button type="button" class="btn" data-action="example">Open the example</button></div></div>
+            <div class="mk-way"><span class="mk-way-ic" aria-hidden="true">${icon('link', 18)}</span><div class="mk-way-t"><b>Open a shared class</b><span>The 8-character code from a classmate's link.</span></div><form class="mk-way-act mk-code-form" id="mk-code-form"><label class="sr-only" for="mk-code">Share code</label><input class="input mono" id="mk-code" maxlength="40" placeholder="K7P2QX9M" autocapitalize="characters" autocomplete="off" spellcheck="false"><button class="btn" type="submit">Open</button></form></div>
+            <div class="mk-way"><span class="mk-way-ic" aria-hidden="true">${icon('file', 18)}</span><div class="mk-way-t"><b>Import a class file</b><span>A .mathub.json file someone sent you.</span></div><div class="mk-way-act"><label class="btn mk-file">${icon('upload', 15)} Choose a file<input type="file" id="mk-file" class="sr-only" accept=".json,application/json"></label></div></div>
+            <details class="mk-way mk-diy" id="mk-diy"><summary><span class="mk-way-ic" aria-hidden="true">${icon('copy', 18)}</span><span class="mk-way-t"><b>Use the AI you already use</b><span>Copy Mathub's instructions into any AI chat, then paste its answer here.</span></span><span class="mk-diy-chev" aria-hidden="true">${icon('chevron', 18)}</span></summary>
+              <ol class="mk-steps">
+                <li class="mk-step"><span class="mk-n" aria-hidden="true">1</span><div class="mk-body"><h3 class="mk-h">Copy the instructions</h3>
+                  <p>Mathub writes instructions that tell an AI exactly how to turn a syllabus into a class.</p>
+                  <div class="mk-size" role="radiogroup" aria-label="How long should the answer be?"><button type="button" role="radio" class="chip toggle${size === 'full' ? ' on' : ''}" aria-checked="${size === 'full'}" data-action="size" data-size="full">Full class</button><button type="button" role="radio" class="chip toggle${size === 'short' ? ' on' : ''}" aria-checked="${size === 'short'}" data-action="size" data-size="short">Shorter answer</button><span class="small muted">Choose “Shorter answer” if your AI stops partway through long replies.</span></div>
+                  <div class="row gap-sm mt-2" style="flex-wrap:wrap"><button type="button" class="btn primary" data-action="copy-prompt">${icon('copy', 15)} Copy instructions</button><button type="button" class="btn" data-action="show-prompt" aria-expanded="false" aria-controls="mk-prompt">${icon('eye', 15)} Read them</button></div>
+                  <pre class="mk-prompt" id="mk-prompt" hidden></pre></div></li>
+                <li class="mk-step"><span class="mk-n" aria-hidden="true">2</span><div class="mk-body"><h3 class="mk-h">Ask your AI</h3>
+                  <p>Open the AI chat you use${NATIVE ? ', in its app or on the web' : ' in another tab'}. Paste the instructions, attach your syllabus (a PDF, a photo of it, or its text) and send.</p>
+                  <p class="small muted">${icon('shield', 13)} This way Mathub never sees or sends your syllabus. You choose which AI to give it to, and that AI's own privacy terms apply to what you send it.</p></div></li>
+                <li class="mk-step"><span class="mk-n" aria-hidden="true">3</span><div class="mk-body"><h3 class="mk-h">Paste the answer</h3>
+                  <p>Copy the AI's whole answer and paste it here. Mathub checks it, fixes small slips and shows you the class before adding it.</p>
+                  <label class="sr-only" for="mk-text">The AI's answer</label>
+                  <textarea class="input mono mk-text" id="mk-text" rows="7" placeholder="Paste the AI's answer here" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off"></textarea>
+                  <div class="row gap-sm mt-1" style="flex-wrap:wrap"><button type="button" class="btn" data-action="paste">${icon('download', 15)} Paste</button><button type="button" class="btn primary" data-action="check">${icon('check', 15)} Check the answer</button><button type="button" class="btn ghost" data-action="clear">Clear</button></div>
+                  <div id="mk-result" class="mk-result" aria-live="polite"></div></div></li>
+              </ol>
+            </details>
+          </div>
+          <div class="mk-result" id="mk-alt-result" aria-live="polite"></div>
+        </section>
+        <section class="land-sec mk-mine-sec" aria-labelledby="mk-mine-h"><h2 class="sec-title" id="mk-mine-h">Classes you created</h2><div id="mk-mine"></div></section>
       </div>`;
-      const ta = $('#mk-text', root), out = $('#mk-result', root);
+      const ta = $('#mk-text', root), out = $('#mk-result', root), alt = $('#mk-alt-result', root);
       wireBo($('#mk-bo', root));
       paintMine($('#mk-mine', root));
       if (!Sub.active()) Sub.offer().then(() => { const p = Sub.price('pro'); const el = $('.mk-sub-price', root); if (p && el) el.textContent = `${p} a month`; }).catch(() => {});
-      const check = () => { pending = null; pendingFree = exampleText !== null && ta.value === exampleText; out.innerHTML = resultHtml(ta.value); wireResult(out, ta); };
+      const check = () => { pending = null; pendingFree = false; out.innerHTML = resultHtml(ta.value); wireResult(out, ta); };
+      const showAlt = (text, free) => { pending = null; out.innerHTML = ''; alt.innerHTML = resultHtml(text); pendingFree = !!free; wireResult(alt, null); alt.scrollIntoView({ block: 'nearest', behavior: Plat.reduceMotion() ? 'auto' : 'smooth' }); };
       ta.addEventListener('paste', () => setTimeout(check, 30));
       bind(root, {
         size: b => { setSetting('mkSize', b.dataset.size); $$('[data-action="size"]', root).forEach(x => { const on = x === b; x.classList.toggle('on', on); x.setAttribute('aria-checked', String(on)); }); const pre = $('#mk-prompt', root); if (!pre.hidden) pre.textContent = prompt(b.dataset.size); },
@@ -696,11 +710,11 @@ THE SYLLABUS:
         check,
         clear: () => { ta.value = ''; out.innerHTML = ''; pending = null; ta.focus(); },
         sub: async () => { if (await paywall()) App.rerender(); },
-        'sub-max': async () => { if (await paywall({ need: 'max', reason: 'bo-class' })) App.rerender(); },
+        'sub-max': async () => { if (await paywall({ need: 'max', reason: 'bo' })) App.rerender(); },
         login: () => signIn('login'), signup: () => signIn('signup'),
-        example: async () => { try { const t = await (await fetch('assets/app-sample-class.json')).text(); exampleText = t; ta.value = t; check(); } catch (e) { toast('The example could not be opened.'); } }
+        example: async b => { b.disabled = true; try { const t = await (await fetch('assets/app-sample-class.json')).text(); showAlt(t, true); } catch (e) { toast('The example could not be opened.'); } b.disabled = false; }
       });
-      $('#mk-file', root).addEventListener('change', async e => { const f = e.target.files && e.target.files[0]; if (!f) return; if (f.size > 3e6) { toast('That file is too large to be a class.'); return; } ta.value = await f.text(); e.target.value = ''; check(); });
+      $('#mk-file', root).addEventListener('change', async e => { const f = e.target.files && e.target.files[0]; e.target.value = ''; if (!f) return; if (f.size > 3e6) { toast('That file is too large to be a class.'); return; } showAlt(await f.text()); });
       $('#mk-code-form', root).addEventListener('submit', e => { e.preventDefault(); const c = codeOf($('#mk-code', root).value); if (!c) { toast('A share code has 8 letters and numbers, like K7P2QX9M.', 4000); return; } location.hash = '#/c/' + c; });
     }
   };
@@ -743,19 +757,26 @@ THE SYLLABUS:
   }
   const savedMsg = code => NATIVE ? `${code} is ready. It is saved on this ${DEVICE}${user() ? ' and with your account' : ''}.` : `${code} is ready. It is saved with your account.`;
   /* ============================================================
-     Mathub Max: Bo writes the class from the syllabus (api/ai.php, step by step: the outline, then each unit)
+     Mathub Pro and Max: Bo writes the class from the syllabus (api/ai.php, step by step: the outline, then each unit)
      ============================================================ */
   function boCardHtml() {
-    const max = Sub.isMax(); const size = settings().mkSize === 'short' ? 'short' : 'full';
-    return `<section class="panel mk-bo" id="mk-bo" aria-labelledby="mk-bo-h">
-      <div class="mk-bo-top"><span class="mk-bo-av" aria-hidden="true">${App.bobcatSvg ? App.bobcatSvg(56) : ''}</span><div class="mk-bo-t"><h2 class="mk-h" id="mk-bo-h">Let Bo write it</h2><p>Give Bo your syllabus and he builds the whole class: notes, flashcards, practice questions, its calendar and grading. It takes a minute or two.</p></div><span class="chip mk-max">Max</span></div>
-      ${max ? `<label class="mk-bo-label" for="mk-bo-text">Paste the syllabus, or attach it</label>
-        <textarea class="input mk-bo-text" id="mk-bo-text" rows="5" placeholder="Paste your syllabus here (the schedule, topics, exams and grading)"></textarea>
-        <div class="mk-bo-row"><label class="btn mk-bo-file">${icon('file', 15)} Attach a PDF or photo<input type="file" id="mk-bo-file" accept=".pdf,application/pdf,image/*,.txt,text/plain" hidden></label><span class="mk-bo-fname small muted" id="mk-bo-fname"></span></div>
-        <div class="mk-bo-row"><div class="mk-size" role="radiogroup" aria-label="How big a class?"><button type="button" role="radio" class="chip toggle${size === 'full' ? ' on' : ''}" aria-checked="${size === 'full'}" data-bo-size="full">Full class</button><button type="button" role="radio" class="chip toggle${size === 'short' ? ' on' : ''}" aria-checked="${size === 'short'}" data-bo-size="short">Shorter class</button></div><button type="button" class="btn primary" data-bo-write>${icon('zap', 15)} Write my class</button></div>
-        <p class="small muted mk-bo-note">${icon('shield', 13)} Bo sends your syllabus to Anthropic's AI to write the class; it is not used to train the AI. <a href="#/policy/privacy">Privacy</a></p>
-        <ol class="mk-bo-steps" id="mk-bo-steps" hidden></ol><div class="mk-result" id="mk-bo-result" aria-live="polite"></div>`
-      : `<div class="mk-bo-row"><button type="button" class="btn primary" data-bo-max>${Sub.plan() === 'pro' ? 'Move up to Max' : 'See Mathub Max'}</button><span class="small muted">${esc(PLANS.max.web)} a month, with Bo, your AI tutor.</span></div>`}
+    const size = settings().mkSize === 'short' ? 'short' : 'full';
+    return `<section class="mk-bo" id="mk-bo" aria-labelledby="mk-bo-h">
+      <div class="mk-bo-intro"><span class="mk-bo-av" aria-hidden="true">${App.bobcatSvg ? App.bobcatSvg(84) : ''}</span>
+        <div class="mk-bo-t"><h2 class="mk-bo-h" id="mk-bo-h">Bo writes it from your syllabus</h2><p>Give him the syllabus. In a minute or two you have the whole class:</p>
+        <ul class="mk-bo-gets"><li>${icon('book', 16)}<span>Notes and the key ideas of every topic</span></li><li>${icon('cards', 16)}<span>Flashcards and practice questions</span></li><li>${icon('calendar', 16)}<span>Its calendar, exams and your grade calculator</span></li></ul></div></div>
+      <div class="mk-bo-form">
+        <label class="mk-drop" id="mk-drop"><input type="file" id="mk-bo-file" class="sr-only" accept=".pdf,application/pdf,image/*,.txt,text/plain"><span class="mk-drop-ic" aria-hidden="true">${icon('upload', 22)}</span><span class="mk-drop-t"><b>Drop your syllabus here</b><span>PDF, photo or text file · <u>choose a file</u></span></span></label>
+        <div class="mk-drop-file" id="mk-bo-filechip" hidden><span class="mk-drop-ic" aria-hidden="true">${icon('file', 20)}</span><span class="mk-drop-t"><b id="mk-bo-fname"></b><span id="mk-bo-fsize"></span></span><button type="button" class="icon-btn" data-bo-unfile aria-label="Remove the file">${icon('x', 16)}</button></div>
+        <div class="mk-or-line" aria-hidden="true"><span>or paste its text</span></div>
+        <label class="sr-only" for="mk-bo-text">The syllabus text</label>
+        <textarea class="input mk-bo-text" id="mk-bo-text" rows="4" placeholder="The schedule, topics, exams and grading"></textarea>
+        <div class="mk-bo-go"><div class="mk-size" role="radiogroup" aria-label="How big a class?"><button type="button" role="radio" class="chip toggle${size === 'full' ? ' on' : ''}" aria-checked="${size === 'full'}" data-bo-size="full">Full class</button><button type="button" role="radio" class="chip toggle${size === 'short' ? ' on' : ''}" aria-checked="${size === 'short'}" data-bo-size="short">Shorter class</button></div><button type="button" class="btn primary lg mk-bo-write" data-bo-write>${icon('wand', 18)} Write my class</button></div>
+        <p class="small muted mk-bo-note">${icon('shield', 13)} Bo sends your syllabus to Anthropic's AI to write the class; it is not used to train the AI. <a href="#/policy/privacy">Privacy</a></p><p class="small mk-bo-left" id="mk-bo-left"></p>
+      </div>
+      <div class="mk-prog" id="mk-bo-prog" hidden><div class="mk-prog-h"><span class="mk-prog-av" aria-hidden="true">${App.bobcatSvg ? App.bobcatSvg(40) : ''}</span><div class="mk-prog-t" role="status"><b id="mk-prog-now"></b><span id="mk-prog-of"></span></div></div>
+        <div class="mk-prog-bar" aria-hidden="true"><i id="mk-prog-fill"></i></div><ol class="mk-bo-steps" id="mk-bo-steps"></ol></div>
+      <div class="mk-result" id="mk-bo-result" aria-live="polite"></div>
     </section>`;
   }
   /* reads a file into base64; photos are shrunk on the device, PDFs and text go as they are */
@@ -780,21 +801,41 @@ THE SYLLABUS:
   }
   function wireBo(box) {
     if (!box) return; let file = null, build = null, outline = null, done = [];
+    const ta = $('#mk-bo-text', box), drop = $('#mk-drop', box), chip = $('#mk-bo-filechip', box), left = $('#mk-bo-left', box);
+    // how many classes Bo can still write this month, and whether he is switched on at all (no AI call)
+    if (user()) api('ai_status').then(r => {
+      if (!left.isConnected) return;
+      if (!r.enabled) { left.textContent = 'Bo is not switched on yet: use the AI you already use below for now.'; const d = $('#mk-diy'); if (d) d.open = true; return; }
+      if (r.pro && r.usage) { const n = Math.max(0, r.usage.class_limit - r.usage.classes); left.textContent = `${n} of ${r.usage.class_limit} classes left this month.`; }
+    }).catch(() => {});
+    const setFile = (f, name) => { file = f; build = null; chip.hidden = !f; drop.hidden = !!f; if (f) { $('#mk-bo-fname', box).textContent = name; $('#mk-bo-fsize', box).textContent = `${f.type === 'application/pdf' ? 'PDF' : f.type === 'text/plain' ? 'Text file' : 'Photo'} · ${fmtSize(f.data.length * 0.75)} · ready for Bo`; } };
+    const take = async f => { if (!f) return; try { setFile(await readSyllabusFile(f), f.name); } catch (x) { toast(x.message, 4000); } };
     box.addEventListener('click', async e => {
-      if (e.target.closest('[data-bo-max]')) { if (await paywall({ need: 'max', reason: 'bo-class' })) App.rerender(); return; }
       const sz = e.target.closest('[data-bo-size]'); if (sz) { setSetting('mkSize', sz.dataset.boSize); $$('[data-bo-size]', box).forEach(x => { const on = x === sz; x.classList.toggle('on', on); x.setAttribute('aria-checked', String(on)); }); return; }
+      if (e.target.closest('[data-bo-unfile]')) { setFile(null); $('#mk-bo-file', box).focus(); return; }
       const go = e.target.closest('[data-bo-write]'); if (go) run(go);
     });
-    const fileIn = $('#mk-bo-file', box);
-    if (fileIn) fileIn.addEventListener('change', async e => { const f = e.target.files && e.target.files[0]; e.target.value = ''; if (!f) return; try { file = await readSyllabusFile(f); $('#mk-bo-fname', box).textContent = `${f.name} attached`; build = null; } catch (x) { toast(x.message, 4000); } });
-    const steps = $('#mk-bo-steps', box), res = $('#mk-bo-result', box);
-    const paint = (list, at, fail) => { steps.hidden = false; steps.innerHTML = list.map((t, i) => `<li class="${i < at ? 'done' : i === at ? (fail ? 'fail' : 'now') : ''}"><span class="mk-bo-dot" aria-hidden="true">${i < at ? icon('check', 13) : ''}</span>${esc(t)}</li>`).join(''); };
+    $('#mk-bo-file', box).addEventListener('change', e => { const f = e.target.files && e.target.files[0]; e.target.value = ''; take(f); });
+    // drag a syllabus onto the drop zone (or the paste box)
+    [drop, ta].forEach(z => {
+      z.addEventListener('dragover', e => { if (![...(e.dataTransfer.types || [])].includes('Files')) return; e.preventDefault(); drop.classList.add('drag'); });
+      z.addEventListener('dragleave', () => drop.classList.remove('drag'));
+      z.addEventListener('drop', e => { const f = e.dataTransfer.files && e.dataTransfer.files[0]; if (!f) return; e.preventDefault(); drop.classList.remove('drag'); take(f); });
+    });
+    const prog = $('#mk-bo-prog', box), steps = $('#mk-bo-steps', box), res = $('#mk-bo-result', box);
+    const paint = (list, at, fail) => {
+      prog.hidden = false; prog.classList.toggle('fail', !!fail); prog.classList.toggle('done', at >= list.length);
+      $('#mk-prog-now', box).textContent = fail ? `Bo stopped while ${list[at].charAt(0).toLowerCase() + list[at].slice(1)}` : at >= list.length ? 'Your class is ready' : list[at] + '…';
+      $('#mk-prog-of', box).textContent = at >= list.length ? `${list.length} steps done` : `Step ${at + 1} of ${list.length}${at === 0 && !fail ? ' · this takes a minute or two' : ''}`;
+      $('#mk-prog-fill', box).style.width = `${Math.round(Math.min(1, (at + (fail ? 0 : at >= list.length ? 0 : 0.35)) / list.length) * 100)}%`;
+      steps.innerHTML = list.map((t, i) => `<li class="${i < at ? 'done' : i === at ? (fail ? 'fail' : 'now') : ''}"><span class="mk-bo-dot" aria-hidden="true">${i < at ? icon('check', 13) : ''}</span>${esc(t)}</li>`).join('');
+    };
     async function run(btn) {
-      if (!user()) { toast('Sign in first: your classes and your plan belong to your account.', 4000); signIn('login'); return; }
-      if (!Sub.isMax() && !(await paywall({ need: 'max', reason: 'bo-class' }))) return;
-      const text = ($('#mk-bo-text', box).value || '').trim(); const size = settings().mkSize === 'short' ? 'short' : 'full';
-      if (!build && !text && !file) { toast('Paste your syllabus or attach it first.', 3500); $('#mk-bo-text', box).focus(); return; }
-      btn.disabled = true; res.innerHTML = '';
+      if (!user()) { toast('Sign in first: Bo writes classes for your Mathub account.', 4000); signIn('login'); return; }
+      if (!Sub.active() && !(await paywall({ need: 'pro', reason: 'bo-class' }))) return;
+      const text = (ta.value || '').trim(); const size = settings().mkSize === 'short' ? 'short' : 'full';
+      if (!build && !text && !file) { toast('Drop in your syllabus or paste its text first.', 3500); ta.focus(); return; }
+      btn.disabled = true; res.innerHTML = ''; box.classList.add('busy');
       let list = ['Reading your syllabus']; let at = 0;
       try {
         if (!build) { paint(list, 0); const r = await api('ai_class', { step: 'outline', size, syllabus: Object.assign({}, text ? { text } : {}, file ? { file } : {}) }); build = r.build; outline = r.outline; done = []; }
@@ -809,35 +850,39 @@ THE SYLLABUS:
         if (v.errors.length) throw new Error('Bo\'s class did not pass the checks: ' + v.errors.slice(0, 2).join(' ') + ' Try again, or use “Shorter class”.');
         paint(list, list.length); pending = pack; pendingFree = false;
         res.innerHTML = previewHtml(pack, v, notes, `<div class="row gap-sm mt-1"><button type="button" class="btn primary" data-add>${icon('plus', 15)} Add ${esc(pack.code)}</button></div>`);
-        wireResult(res, $('#mk-bo-text', box)); Plat.haptic('success'); build = null; file = null; $('#mk-bo-fname', box).textContent = '';
+        wireResult(res, ta); Plat.haptic('success'); build = null; setFile(null);
+        if (left.textContent && /left this month/.test(left.textContent)) left.textContent = left.textContent.replace(/\d+(?= of)/, m => Math.max(0, +m - 1));
         res.scrollIntoView({ block: 'nearest', behavior: Plat.reduceMotion() ? 'auto' : 'smooth' });
       } catch (x) {
         paint(list, at, true);
-        if (x.status === 402) { if (await paywall({ need: 'max', reason: 'bo-class' })) App.rerender(); }
+        if (x.status === 402) { if (await paywall({ need: 'pro', reason: 'bo-class' })) App.rerender(); }
         else res.innerHTML = `<div class="callout warn"><b>${esc(x.message)}</b>${build ? ' Bo kept what he has written so far: Write my class picks up where he stopped.' : ''}</div>`;
         if (x.status === 404) build = null;
       }
-      btn.disabled = false;
+      btn.disabled = false; box.classList.remove('busy');
     }
   }
 
+  /* Add: each result adds the class it showed (pending and pendingFree are read when it is wired) */
   function wireResult(out, ta) {
     out.querySelectorAll('[data-copy]').forEach(b => b.addEventListener('click', async () => { try { await Plat.copy(b.dataset.copy); Plat.haptic('success'); toast('Copied. Paste it into the same AI chat.', 3000); } catch (e) { toast(e.message); } }));
     const add = $('[data-add]', out); if (!add) { Plat.haptic('warning'); return; }
+    const pack = pending, free = pendingFree;
     add.addEventListener('click', async () => {
-      if (!pending) return; const free = pendingFree;
-      if (!(await canAdd(pending.code, free))) return;
+      if (!pack) return;
+      if (!(await canAdd(pack.code, free))) return;
       add.disabled = true;
-      try { const entry = await Mine.add(pending, { free }); pending = null; ta.value = ''; Plat.haptic('success'); toast(savedMsg(entry.code), 4000); location.hash = `#/${entry.id}/dashboard`; }
+      try { const entry = await Mine.add(pack, { free }); pending = null; if (ta) ta.value = ''; Plat.haptic('success'); toast(savedMsg(entry.code), 4000); location.hash = `#/${entry.id}/dashboard`; }
       catch (e) { add.disabled = false; toast('The class could not be saved: ' + e.message, 5000); }
     });
   }
   function paintMine(el) {
     const list = Mine.list(); const u = user();
     const where = e => !u ? (NATIVE ? `On this ${DEVICE}` : '') : e.owner && e.owner !== u.id ? `On this ${DEVICE} only (made under another account)` : e.synced ? (NATIVE ? `On this ${DEVICE} and in your account` : 'Saved with your account') : 'Saving to your account…';
-    el.innerHTML = list.length ? `<ul class="mk-mine">${list.map(e => `<li class="panel mk-item"><div class="mk-item-main"><b>${esc(e.code)}</b> <span>${esc(e.name)}</span>${locked(e.id) ? ` <span class="chip lock-chip">${icon('lock', 12)} Locked</span>` : ''}${e.share ? ` <span class="chip mk-shared">${icon('link', 12)} Shared</span>` : ''}<div class="small muted">${[esc(e.term || ''), `added ${esc(new Date(e.added).toLocaleDateString())}`, esc(where(e))].filter(Boolean).join(' · ')}</div></div>
+    const tile = code => { const m = /^(\S+)\s+(.+)$/.exec(String(code || '').trim()); return m ? `${esc(m[1])}<br>${esc(m[2])}` : esc(code); };
+    el.innerHTML = list.length ? `<ul class="mk-mine">${list.map(e => `<li class="panel mk-item" style="${classStyle(e.id)}"><span class="mk-item-tile" aria-hidden="true">${tile(e.code)}</span><div class="mk-item-main"><b>${esc(e.code)}</b> <span>${esc(e.name)}</span>${locked(e.id) ? ` <span class="chip lock-chip">${icon('lock', 12)} Locked</span>` : ''}${e.share ? ` <span class="chip mk-shared">${icon('link', 12)} Shared</span>` : ''}<div class="small muted">${[esc(e.term || ''), `added ${esc(new Date(e.added).toLocaleDateString())}`, esc(where(e))].filter(Boolean).join(' · ')}</div></div>
         <div class="row gap-sm mk-item-act"><a class="btn sm primary" href="#/${esc(e.id)}/dashboard">Open</a><button type="button" class="btn sm" data-sharelink="${esc(e.id)}">${icon('link', 13)} Share</button><button type="button" class="btn sm" data-file="${esc(e.id)}">${icon(NATIVE ? 'external' : 'download', 13)} ${NATIVE ? 'Send file' : 'Download'}</button><button type="button" class="btn sm ghost" data-del="${esc(e.id)}" aria-label="Delete ${esc(e.code)}">${icon('trash', 13)} Delete</button></div></li>`).join('')}</ul>`
-      : `<p class="small muted">None yet. Classes you create show up here and with your other classes.</p>`;
+      : `<p class="mk-none small muted">None yet. Classes you create show up here and with your other classes.</p>`;
     $$('[data-file]', el).forEach(b => b.addEventListener('click', async () => { const id = b.dataset.file; const e = list.find(x => x.id === id); try { const pack = await Mine.read(id); const name = `${String(e.code || id).replace(/[^A-Za-z0-9]+/g, '')}.mathub.json`; await Plat.shareFile(name, JSON.stringify(pack), `${e.code} for Mathub`); } catch (err) { if (!/cancel/i.test(err.message || '')) toast('Could not send the class: ' + err.message); } }));
     $$('[data-sharelink]', el).forEach(b => b.addEventListener('click', () => shareSheet(b.dataset.sharelink).then(() => paintMine(el))));
     $$('[data-del]', el).forEach(b => b.addEventListener('click', async () => { const id = b.dataset.del; const e = list.find(x => x.id === id);
@@ -943,7 +988,7 @@ THE SYLLABUS:
     /* Settings: your plan */
     const panel = () => {
       const s = Sub.status(); const on = Sub.active(); const plan = Sub.plan(); const mine = Mine.list().length; const u = user();
-      const line = !u ? 'Sign in to see your plan.' : on ? `${Sub.planName()}${s.granted ? ' (given to your account)' : ''}. ` + (s.until ? (s.renews ? `Renews ${fmtDate(s.until)}.` : `On until ${fmtDate(s.until)}; it will not renew.`) : '') : `No plan. Mathub Pro (${PLANS.pro.web} a month) makes classes from any syllabus; Mathub Max (${PLANS.max.web} a month) adds Bo, your AI tutor, and classes Bo writes for you. The example class is free.`;
+      const line = !u ? 'Sign in to see your plan.' : on ? `${Sub.planName()}${s.granted ? ' (given to your account)' : ''}. ` + (s.until ? (s.renews ? `Renews ${fmtDate(s.until)}.` : `On until ${fmtDate(s.until)}; it will not renew.`) : '') : `No plan. With Mathub Pro (${PLANS.pro.web} a month) Bo writes your classes from any syllabus; Mathub Max (${PLANS.max.web} a month) adds Ask Bo, your AI tutor. The example class is free.`;
       return `<div class="panel span-2 create-panel" id="create-panel"><div class="panel-h"><div class="panel-title">${icon('plus')} Your plan</div></div>
         <div class="ap-sub"><div class="ap-sub-t"><b>${on ? esc(Sub.planName()) : 'Mathub Pro and Max'}</b><span class="small muted">${line}</span></div><div class="row gap-sm">${on && Sub.manageUrl() ? `<a class="btn sm" href="${esc(Sub.manageUrl())}" target="_blank" rel="noopener">Manage subscription</a>` : ''}${!on ? `<button type="button" class="btn sm primary" data-cp="buy">See the plans</button>` : plan === 'pro' ? `<button type="button" class="btn sm primary" data-cp="max">Move up to Max</button>` : `<a class="btn sm primary" href="#/tutor">Ask Bo</a>`}${u ? `<button type="button" class="btn sm ghost" data-cp="check">Check again</button>` : ''}</div></div>
         <p class="small mt-1">${mine ? `${mine} class${mine === 1 ? '' : 'es'} you created ${mine === 1 ? 'is' : 'are'} saved with your account.` : 'Classes you create from a syllabus are saved with your account.'} <a href="#/create">Create a class</a></p></div>`;

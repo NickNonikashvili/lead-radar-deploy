@@ -32,7 +32,7 @@ const PNG = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwA
   const [ca, a] = await open(1360, 900, 'alice.a@montana.edu');
   await api(a, 'create_status&refresh=1');
   await go(a, '#/tutor', 1800);
-  check('without Max: Meet Bo, what he does, and Get Mathub Max', /Meet Bo, your tutor/.test(await txt(a, '#bo-main')) && (await a.$$('.bo-perks li')).length === 4 && /Get Mathub Max/.test(await txt(a, '[data-go="max"]')));
+  check('without Max: Meet Bo, what he does, and Get Mathub Max', /Meet Bo, your tutor/.test(await txt(a, '#bo-main')) && (await a.$$('.bo-perks li')).length === 5 && /Talk with him out loud/.test(await txt(a, '.bo-perks')) && /Get Mathub Max/.test(await txt(a, '[data-go="max"]')));
   await a.click('[data-go="max"]'); await a.waitForTimeout(1500);
   const pw = await a.evaluate(() => { const s = document.querySelector('#paywall'); return s && { h: s.querySelector('h2').textContent, plans: [...s.querySelectorAll('[data-plan]')].map(b => b.dataset.plan), buy: (s.querySelector('[data-action="pw-buy"]') || {}).textContent, href: (s.querySelector('[data-action="pw-buy"]') || {}).getAttribute && s.querySelector('[data-action="pw-buy"]').getAttribute('href'), why: s.querySelector('.pw-why').textContent }; });
   check('Bo\'s paywall offers Max only, at $50, with her Max checkout', pw && pw.h === 'Mathub Max' && pw.plans.join() === 'max' && /Get Max for \$50 a month/.test(pw.buy) && /^https:\/\/pay\.rev\.cat\/sbx_max_link\/mh_\d+$/.test(pw.href) && /part of Mathub Max/.test(pw.why), pw);
@@ -41,8 +41,11 @@ const PNG = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwA
   fs.writeFileSync(STATE, JSON.stringify({ [aliceId]: { expires: new Date(Date.now() + 30 * 864e5).toISOString(), plan: 'pro' } }));
   await api(a, 'create_status&refresh=1'); await a.evaluate(() => App.subscription.refresh(true)); await a.waitForTimeout(500);
   await go(a, '#/create', 1500);
-  check('with Pro, the Create page offers the move up to Max for Bo writing classes', /Move up to Max/.test(await txt(a, '#mk-bo [data-bo-max]')) && !(await a.$('#mk-bo-text')));
-  await a.click('#mk-bo [data-bo-max]'); await a.waitForTimeout(1200);
+  check('with Pro, the Create page says Pro is on and Bo writes her classes, with the way up to Max for Ask Bo', /Mathub Pro is on: Bo writes your classes/.test(await txt(a, '#mk-sub')) && !!(await a.$('#mk-bo-text')) && /classes left this month/.test(await txt(a, '#mk-bo-left')), await txt(a, '#mk-sub'));
+  await a.fill('#mk-bo-text', 'TEST 102 Pro writing, Fall 2026. Exam 1 Oct 20. Topics: ratios, percents, rates, growth.');
+  await a.click('[data-bo-write]'); await a.waitForTimeout(5000);
+  check('Bo writes a class for a Pro member too: no plans card, the steps run, then the preview with Add', !(await a.$('#paywall')) && (await a.$$eval('#mk-bo-steps li.done', l => l.length)) === 4 && /TEST 101/.test(await txt(a, '#mk-bo-result')) && !!(await a.$('#mk-bo-result [data-add]')) && /Your class is ready/.test(await txt(a, '#mk-prog-now')), await txt(a, '#mk-bo'));
+  await a.click('#mk-sub [data-action="sub-max"]'); await a.waitForTimeout(1200);
   check('the move-up card: Max only, and a note to cancel Pro on the website so she is not billed twice', /Move up to Max/.test(await txt(a, '#paywall h2')) && /cancel Pro/.test(await txt(a, '#paywall .pw-fine')) && /Move up to Max for \$50 a month/.test(await txt(a, '#paywall [data-action="pw-buy"]')));
   await a.keyboard.press('Escape');
   fs.writeFileSync(STATE, '{}'); await api(a, 'create_status&refresh=1');
@@ -75,13 +78,13 @@ const PNG = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwA
   await m.fill('#bo-q', 'Help with this one'); await m.click('.bo-send'); await m.waitForTimeout(2500);
   const lq = last(); const lc = lq.messages[lq.messages.length - 1].content;
   check('the photo goes as a small JPEG made on the device, and Bo sees it', lc[0].type === 'image' && lc[0].source.media_type === 'image/jpeg' && /I see your photo/.test(await txt(m, '#bo-log .bo-msg.bo:last-child')) && /Photo/.test(await m.evaluate(() => { const y = document.querySelectorAll('#bo-log .bo-msg.you'); return y[y.length - 1].textContent; })), lc.map(b => b.type));
-  // What Bo knows
-  await m.click('[data-bo="knows"]'); await m.waitForTimeout(500);
-  const k = await txt(m, '#bo-knows');
-  check('What Bo knows: the class, the next exam, weakest topics, and his notes', /The class/.test(k) && /Exam 2, 3 days away/.test(k) && /Weakest topics/.test(k) && /Likes worked examples first/.test(k), k.slice(0, 300));
-  await m.click('#bo-knows [data-k-note="0"]'); await m.waitForTimeout(700);
-  check('a note can be deleted there', !/Likes worked examples first/.test(await txt(m, '#bo-k-notes')) && ((await api(m, 'ai_status')).json.notes || []).length === 0);
-  await m.keyboard.press('Escape'); await m.waitForTimeout(300);
+  // What Bo knows: a side panel next to the chat on a wide screen
+  const side = await m.evaluate(() => { const s = document.querySelector('#bo-side'); const r = s.getBoundingClientRect(); const c = document.querySelector('.bo-col').getBoundingClientRect(); return { shown: getComputedStyle(s).display !== 'none' && r.width > 200, beside: r.left >= c.right, knowsBtn: getComputedStyle(document.querySelector('.bo-knows-btn')).display }; });
+  check('on a wide screen, What Bo knows sits beside the chat (and the i button steps aside)', side.shown && side.beside && side.knowsBtn === 'none', side);
+  const k = await txt(m, '#bo-side');
+  check('What Bo knows: the class, the next exam, weakest topics, his notes and questions left', /The class/.test(k) && /Exam 2, in 3 days/.test(k) && /Weakest topics/.test(k) && /Likes worked examples first/.test(k) && /questions left/.test(k), k.slice(0, 300));
+  await m.click('#bo-side [data-k-note="0"]'); await m.waitForTimeout(700);
+  check('a note can be deleted there', !/Likes worked examples first/.test(await txt(m, '#bo-side .bo-k-notes')) && ((await api(m, 'ai_status')).json.notes || []).length === 0);
   // the chat is kept with the account
   await m.reload(); await m.waitForTimeout(2200);
   check('the chat is still there after a reload (kept with the account)', (await m.$$('#bo-log .bo-msg.you')).length === 2 && (await m.$$('#bo-log .bo-msg.bo')).length === 2);
@@ -93,7 +96,7 @@ const PNG = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwA
   check('which opens Bo with the quiz request ready to send', /Quiz me for Exam 2/.test(await m.$eval('#bo-q', x => x.value)));
   // Bo writes a class
   await go(m, '#/create', 1500);
-  check('with Max, the Create page has Let Bo write it, above the do-it-yourself steps', !!(await m.$('#mk-bo-text')) && /Or make it yourself/.test(await txt(m, '#mk-or')));
+  check('with Max, the Create page says so, with the link to ask Bo, and the syllabus form', /Mathub Max is on/.test(await txt(m, '#mk-sub')) && !!(await m.$('#mk-sub a[href="#/tutor"]')) && !!(await m.$('#mk-bo-text')));
   await m.fill('#mk-bo-text', 'TEST 101 Testing Bo, Fall 2026. Exam 1 Oct 20. Topics: ratios, percents, rates, growth.');
   await m.click('[data-bo-write]'); await m.waitForTimeout(5000);
   const steps = await m.$$eval('#mk-bo-steps li', ls => ls.map(l => [l.textContent.trim(), l.className]));
@@ -114,6 +117,10 @@ const PNG = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwA
   check('phone: Ask Bo does not scroll sideways', await hscroll(ph));
   const pos = await ph.evaluate(() => { const c = document.querySelector('.bo-compose').getBoundingClientRect(); const t = document.querySelector('#tabbar'); return { composer: Math.round(c.bottom), tabbar: t ? Math.round(t.getBoundingClientRect().top) : innerHeight }; });
   check('phone: the message box sits above the tab bar', pos.composer <= pos.tabbar + 1, pos);
+  check('phone: no side panel; the i button opens What Bo knows as a sheet', (await ph.$eval('#bo-side', s => getComputedStyle(s).display)) === 'none');
+  await ph.click('[data-bo="knows"]'); await ph.waitForTimeout(500);
+  check('phone: the sheet has the class, the next exam and the notes', /The class/.test(await txt(ph, '#bo-knows')) && /Bo's notes about you/.test(await txt(ph, '#bo-knows')) && await hscroll(ph));
+  await ph.keyboard.press('Escape'); await ph.waitForTimeout(300);
   await cp.close();
 
   // clean up

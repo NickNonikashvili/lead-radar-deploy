@@ -8,8 +8,8 @@
      device and syncs; the website keeps a copy in the browser.
    - Share codes: the owner can turn on a link (mathub.space/#/c/CODE) that lets anyone open the class
      and add a copy; turning it off makes the link stop working at once.
-   - The plans: Mathub Pro (making classes) and Mathub Max (Pro, plus Bo the AI tutor and classes Bo writes
-     from a syllabus, api/ai.php). App purchases (App Store, Google Play) and web purchases (RevenueCat web
+   - The plans: Mathub Pro (classes Bo writes from a syllabus, api/ai.php, and making classes) and Mathub Max
+     (Pro, plus Bo the AI tutor). App purchases (App Store, Google Play) and web purchases (RevenueCat web
      checkout) belong to the RevenueCat customer "mh_<user id>", with the entitlements "pro" and "max" (a Max
      product unlocks both). The server asks RevenueCat with the secret key in config.local.php and keeps the
      answer for ten minutes. Accounts in plan_grants (config.local.php) get a plan without paying, for testing.

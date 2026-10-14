@@ -126,8 +126,9 @@ const { execFileSync } = require('child_process'); const path = require('path');
 
   // Create a class: the instructions
   await go(p, '#/create', 1200);
-  check('#/create opens with three steps', (await p.$$('.mk-step')).length === 3 && /Create a class/.test(await txt(p, '#view')));
+  check('#/create opens with Bo writing it from the syllabus, and the three do-it-yourself steps folded away', /Create a class/.test(await txt(p, '#view')) && !!(await p.$('#mk-bo-text')) && (await p.$$('#mk-diy .mk-step')).length === 3);
   check('no sideways scroll on #/create at 390px', await hscroll(p));
+  await p.click('#mk-diy summary'); await p.waitForTimeout(200);
   await p.click('[data-action="copy-prompt"]'); await p.waitForTimeout(300);
   const clip = await p.evaluate(() => window.__cap.clipboard);
   check('Copy instructions puts the full instructions on the clipboard', /mathub-class-pack/.test(clip) && /THE SYLLABUS:\s*$/.test(clip) && /about 60/.test(clip), clip.slice(0, 120));
@@ -153,7 +154,7 @@ const { execFileSync } = require('child_process'); const path = require('path');
   const pv = await txt(p, '#mk-result');
   check('a messy answer is repaired and previewed', /Introduction to General Chemistry/.test(pv) && /Add CHMY 121/.test(pv), pv.slice(0, 300));
   check('the preview counts what is in it and says what was left out', /2 topics/.test(pv) && /flashcards/.test(pv) && /notes? about this class/.test(pv), pv.slice(0, 300));
-  check('the Create page says making classes is part of Mathub Pro, with the store price, and that Bo writes them with Max', /Mathub Pro/.test(await txt(p, '#mk-sub')) && /\$14\.99 a month/.test(await txt(p, '#mk-sub')) && /Max, Bo writes/.test(await txt(p, '#mk-sub')), await txt(p, '#mk-sub'));
+  check('the Create page says Bo writing classes is part of Mathub Pro, with the store price, and that Max adds Ask Bo', /Mathub Pro/.test(await txt(p, '#mk-sub')) && /\$14\.99 a month/.test(await txt(p, '#mk-sub')) && /Max adds Ask Bo/.test(await txt(p, '#mk-sub')), await txt(p, '#mk-sub'));
   await p.click('[data-add]'); await p.waitForTimeout(700);
   const pw = await p.evaluate(() => { const s = document.querySelector('#paywall'); return s && { plans: [...s.querySelectorAll('[data-plan]')].map(b => [b.dataset.plan, b.querySelector('.pw-plan-price').textContent, b.getAttribute('aria-checked')]), price: s.querySelector('#pw-price').textContent, buy: s.querySelector('[data-action="pw-buy"]').textContent, restore: !!s.querySelector('[data-action="pw-restore"]'), fine: s.querySelector('.pw-fine').textContent, terms: !!s.querySelector('.pw-fine a[href="#/policy/create"]') && !!s.querySelector('.pw-fine a[href="#/policy/privacy"]'), why: s.querySelector('.pw-why').textContent, saved: JSON.parse(localStorage.getItem('mh-my-classes') || '[]').length }; });
   check('adding a class from a syllabus asks for a plan first: Pro and Max with the store prices, Pro picked, renewal terms, Terms and Privacy, Restore; nothing is saved yet', pw && pw.plans.map(x => x.join(':')).join() === 'pro:$14.99 a month:true,max:$49.99 a month:false' && /Pro \$14\.99 · Max \$49\.99/.test(pw.price) && /Get Pro for \$14\.99 a month/.test(pw.buy) && pw.restore && /Renews every month at \$14\.99/.test(pw.fine) && /at least 24 hours/.test(pw.fine) && pw.terms && /CHMY 121/.test(pw.why) && pw.saved === 0, pw);
@@ -181,7 +182,7 @@ const { execFileSync } = require('child_process'); const path = require('path');
   check('right and wrong answers give the matching haptic', (await p.evaluate(() => window.__cap.haptics)).join() === 'n:SUCCESS,n:ERROR', await p.evaluate(() => window.__cap.haptics));
 
   // a cut-off answer and a broken one
-  await go(p, '#/create', 1000);
+  await go(p, '#/create', 1000); await p.click('#mk-diy summary'); await p.waitForTimeout(200);
   await p.fill('#mk-text', messy.slice(0, 900)); await p.click('[data-action="check"]'); await p.waitForTimeout(300);
   check('a cut-off answer is caught, with a message to send the AI', /stops before the end/.test(await txt(p, '#mk-result')) && !!(await p.$('#mk-result [data-copy]')));
   await p.click('#mk-result [data-copy]'); await p.waitForTimeout(200);
@@ -196,8 +197,8 @@ const { execFileSync } = require('child_process'); const path = require('path');
 
   // the example class
   await p.click('[data-action="example"]'); await p.waitForTimeout(800);
-  check('the example class checks clean', /Add SKIL 101/.test(await txt(p, '#mk-result')) && !/to fix/.test(await txt(p, '#mk-result')));
-  await p.click('[data-add]'); await p.waitForTimeout(1500);
+  check('the example class checks clean', /Add SKIL 101/.test(await txt(p, '#mk-alt-result')) && !/to fix/.test(await txt(p, '#mk-alt-result')));
+  await p.click('#mk-alt-result [data-add]'); await p.waitForTimeout(1500);
   const exId = (/#\/(my\d{4})\/dashboard/.exec(p.url()) || [])[1];
   await go(p, `#/${exId}/practice`, 2500);
   check('the example class has a working quizzer', !!(await p.$('#view .q-opt, #view [data-action="answer"], #view .quiz')) || /Retrieval|Spacing|Notes|Planning/.test(await txt(p, '#view')), (await txt(p, '#view')).slice(0, 160));
@@ -221,7 +222,7 @@ const { execFileSync } = require('child_process'); const path = require('path');
   await go(p, '#/', 1800);
   check('its card on the start page says Locked', /Locked/.test(await txt(p, `.ah-card[data-cid="${cid}"]`)), await txt(p, `.ah-card[data-cid="${cid}"]`));
   await go(p, '#/create', 1000);
-  await p.click('[data-action="example"]'); await p.waitForTimeout(800); await p.click('[data-add]'); await p.waitForTimeout(1600);
+  await p.click('[data-action="example"]'); await p.waitForTimeout(800); await p.click('#mk-alt-result [data-add]'); await p.waitForTimeout(1600);
   const ex2 = (/#\/(my\d{4})\/dashboard/.exec(p.url()) || [])[1];
   check('the example class is free: added without the paywall, and it opens', !!ex2 && !(await p.$('#paywall')) && !(await p.$('.sublock')), p.url());
   await go(p, `#/${cid}/dashboard`, 1600); await p.click('[data-lock="buy"]'); await p.waitForTimeout(700); await p.click('#paywall [data-action="pw-buy"]'); await p.waitForTimeout(1600);

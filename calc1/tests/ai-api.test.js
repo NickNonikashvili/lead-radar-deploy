@@ -3,7 +3,8 @@
    progress snapshot, the last few turns, Bo's notes) and goes to the small default model; the chat and Bo's
    notes are kept with the account; a class is written as an outline, then one unit at a time from the outline.
    The AI and RevenueCat are stand-ins on the Pyodide mirror server (tests/pyodide/router.php); config.local.php
-   needs anthropic_key 'sk-ant-test', anthropic_api, and plan_grants for mod.user. Plain HTTP, no browser pages. */
+   needs anthropic_key 'sk-ant-test', anthropic_api, openai_key 'sk-openai-test', openai_api, and plan_grants for mod.user.
+   Also: answers streamed as JSON lines, voice mode, and Bo's voice and ears (ai_speak, ai_listen). Plain HTTP, no browser pages. */
 const T = require('./lib'); const fs = require('fs'); const path = require('path');
 const BASE = T.base.replace(/index\.html.*$/, '') + 'api/index.php?r=';
 const STATE = path.join(__dirname, 'fixtures', 'rc-state.json'); const LAST = path.join(__dirname, 'fixtures', 'ai-last.json');
@@ -33,6 +34,9 @@ const snapshot = { name: 'Alice', streak: 4, xpToday: 10, goal: 30, page: 'Calc 
   fs.writeFileSync(STATE, JSON.stringify({ [aliceId]: { expires: new Date(Date.now() + 30 * 864e5).toISOString(), plan: 'pro' } }));
   await call('alice', 'create_status&refresh=1');
   r = await call('alice', 'ai_tutor', { class: 'calc', q: 'hi' }); ok('Pro is not enough for Bo', r.status === 402, r);
+  r = await call('alice', 'ai_status'); ok('with Pro: pro, not max', r.ok && r.plan === 'pro' && r.pro === true && r.max === false, r);
+  r = await call('alice', 'ai_class', { step: 'outline', syllabus: { text: 'TEST 100 Pro writing. Fall 2026. Exam 1 Oct 20. Topics: ratios, percents, rates, growth.' }, size: 'short' });
+  ok('Pro is enough for Bo to write a class from a syllabus', r.ok && /^[a-f0-9]{24}$/.test(r.build) && r.units.join() === '1,2', r);
   fs.writeFileSync(STATE, JSON.stringify({ [aliceId]: { expires: new Date(Date.now() + 30 * 864e5).toISOString(), plan: 'max' } }));
   await call('alice', 'create_status&refresh=1');
   r = await call('alice', 'ai_status'); ok('with Max: plan max, this month\'s usage and limits', r.ok && r.max === true && r.usage.tutor === 0 && r.usage.tutor_limit === 1500 && r.usage.class_limit === 15, r);
@@ -79,7 +83,7 @@ const snapshot = { name: 'Alice', streak: 4, xpToday: 10, goal: 30, page: 'Calc 
   r = await call('alice', 'ai_forget', { what: 'chat', class: 'calc' }); r = await call('alice', 'ai_thread&class=calc'); ok('and clear a chat', r.turns.length === 0, r);
 
   // Bo writes a class from a syllabus
-  r = await call('bob', 'ai_class', { step: 'outline', syllabus: { text: 'TEST 101 syllabus' } }); ok('writing a class needs Max', r.status === 402, r);
+  r = await call('bob', 'ai_class', { step: 'outline', syllabus: { text: 'TEST 101 syllabus' } }); ok('writing a class needs Pro or Max (bob has neither)', r.status === 402 && r.plan === 'pro', r);
   r = await call('alice', 'ai_class', { step: 'outline', syllabus: {} }); ok('a syllabus is needed', r.status === 400, r);
   r = await call('alice', 'ai_class', { step: 'outline', syllabus: { text: 'TEST 101 Testing Bo. Fall 2026. Exam 1 Oct 20. Topics: ratios, percents, rates, growth.' }, size: 'short' });
   ok('step 1: the syllabus becomes an outline with its units, kept on the server', r.ok && /^[a-f0-9]{24}$/.test(r.build) && r.units.join() === '1,2' && r.outline.SECTIONS.length === 4, r);
@@ -92,12 +96,40 @@ const snapshot = { name: 'Alice', streak: 4, xpToday: 10, goal: 30, page: 'Calc 
   r = await call('alice', 'ai_class', { step: 'unit', build, unit: 9 }); ok('a unit not in the outline is refused', r.status === 400, r);
   r = await call('alice', 'ai_class', { step: 'unit', build: 'ffffffffffffffffffffffff', unit: 1 }); ok('an unknown build is refused', r.status === 404, r);
   r = await call('mod', 'ai_class', { step: 'unit', build, unit: 1 }); ok('another account cannot continue her build', r.status === 404, r);
-  r = await call('alice', 'ai_status'); ok('her month: 1 class written by Bo, and the questions she asked', r.usage.classes === 1 && r.usage.tutor === 10, r.usage);
+  r = await call('alice', 'ai_status'); ok('her month: 2 classes written by Bo (one with Pro, one with Max), and the questions she asked', r.usage.classes === 2 && r.usage.tutor === 10, r.usage);
   r = await call('alice', 'ai_class', { step: 'outline', syllabus: { file: { type: 'application/pdf', data: 'JVBERi0xLjQK' } } }); q = last();
   ok('a syllabus PDF goes to the AI as a document', r.ok && q.messages[0].content[0].type === 'document' && q.messages[0].content[0].source.media_type === 'application/pdf', q.messages[0].content.map(b => b.type));
 
   // a granted tester
   r = await call('mod', 'ai_tutor', { class: 'physics', q: 'hello' }); ok('an account in plan_grants can ask Bo without paying', r.ok && /Bo here/.test(r.reply), r);
+
+  // talking with Bo: answers stream as JSON lines, voice mode answers briefly with a board line, and the speech routes
+  const raw = async (who, route, body) => { const r = await fetch(BASE + route, { method: 'POST', headers: { 'X-Requested-With': 'MatHub', 'Content-Type': 'application/json', Cookie: jar[who] || '' }, body: JSON.stringify(body) }); return { status: r.status, type: r.headers.get('content-type') || '', buf: Buffer.from(await r.arrayBuffer()) }; };
+  await call('mod', 'ai_forget', { what: 'all' });
+  let sr = await raw('mod', 'ai_tutor', { class: 'calc', q: 'What is the chain rule?', snapshot, today: '2026-10-13', voice: 1, stream: 1 });
+  const lines = sr.buf.toString('utf8').trim().split('\n').map(l => { try { return JSON.parse(l); } catch (e) { return { bad: l }; } });
+  const deltas = lines.filter(l => l.t === 'd'); const fin = lines[lines.length - 1];
+  ok('a streamed answer comes as JSON lines: pieces of text, then the whole answer', /ndjson/.test(sr.type) && deltas.length > 3 && fin.t === 'done' && fin.ok === true && deltas.map(d => d.x).join('') === fin.reply, { type: sr.type, n: deltas.length, fin });
+  q = last(); const vsys = q.system.map(b => b.text).join('\n');
+  ok('the server asks the AI to stream, in voice mode: brief, spoken math, a whiteboard for formulas', q.stream === true && /VOICE MODE/.test(vsys) && /\[board: \.\.\.\]/.test(vsys) && q.max_tokens === 400 && q.system[1].cache_control && !q.system[q.system.length - 1].cache_control, { stream: q.stream, max: q.max_tokens });
+  ok('the voice answer keeps its board line for the screen', /\[board: \$\\frac\{d\}\{dx\}/.test(fin.reply), fin.reply);
+  r = await call('mod', 'ai_thread&class=calc'); ok('a spoken question and its answer are saved in the chat, marked as said out loud', r.turns.length === 2 && r.turns[0].v === 1 && r.turns[1].v === 1 && /chain rule/.test(r.turns[0].t), r.turns);
+  r = await call('mod', 'ai_tutor', { class: 'calc', q: 'And the product rule?', today: '2026-10-13' });
+  ok('without stream, the same route answers in one JSON object (and not in voice mode)', r.ok && typeof r.reply === 'string' && !/VOICE MODE/.test(last().system.map(b => b.text).join('')) && last().max_tokens === 700 && !last().stream, r);
+  r = await call('anon', 'ai_status'); ok('Bo\'s natural voice and listening are switched on, with the voices to pick from', r.voice && r.voice.natural === true && r.voice.listen === true && r.voice.default === 'ash' && Object.keys(r.voice.voices).length >= 5, r.voice);
+  sr = await raw('mod', 'ai_speak', { text: 'The chain rule: take the derivative of the outside, times the derivative of the inside.', voice: 'coral' });
+  const tts = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures', 'tts-last.json'), 'utf8'));
+  ok('ai_speak answers with audio in the voice picked, from the speech model with Bo\'s speaking style', sr.status === 200 && /^audio\//.test(sr.type) && sr.buf.slice(0, 4).toString() === 'RIFF' && tts.voice === 'coral' && tts.model === 'gpt-4o-mini-tts' && /warm/.test(tts.instructions) && /chain rule/.test(tts.input), { status: sr.status, type: sr.type, tts });
+  sr = await raw('mod', 'ai_speak', { text: 'Hello there', voice: 'not-a-voice' }); ok('an unknown voice falls back to the default', sr.status === 200 && JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures', 'tts-last.json'), 'utf8')).voice === 'ash');
+  r = await call('mod', 'ai_speak', { text: '' }); ok('nothing to say is refused', r.status === 400, r);
+  r = await call('bob', 'ai_speak', { text: 'hi' }); ok('Bo\'s voice needs Max', r.status === 402 && r.plan === 'max', r);
+  r = await call('anon', 'ai_speak', { text: 'hi' }); ok('and an account', r.status === 401, r);
+  r = await call('mod', 'ai_listen', { audio: { type: 'audio/webm;codecs=opus', data: Buffer.from('fake opus audio '.repeat(40)).toString('base64') }, secs: 3, class: 'calc' });
+  const stt = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures', 'stt-last.json'), 'utf8'));
+  ok('ai_listen turns a recording into text, with the class\'s topics as a hint', r.ok && r.text === 'What is the chain rule?' && stt.post.model === 'gpt-4o-mini-transcribe' && stt.post.language === 'en' && /Calculus I/.test(stt.post.prompt) && /speech\.webm$/.test(stt.file.name) && stt.file.size > 100, { r, stt });
+  r = await call('mod', 'ai_listen', { audio: { type: 'video/mp4', data: 'AAAA' }, secs: 3 }); ok('a recording of another kind is refused', r.status === 400, r);
+  r = await call('mod', 'ai_status'); ok('this month\'s voice use is counted: characters spoken and seconds heard', r.usage.voice >= 90 && r.usage.voice_limit === 300000 && r.usage.listen === 3 && r.usage.listen_limit === 36000, r.usage);
+  await call('mod', 'ai_forget', { what: 'all' });
 
   // Download my data, then clean up
   r = await call('alice', 'data_export'); ok('Bo\'s chats, notes and usage are in Download my data', r.tables && Array.isArray(r.tables.ai_threads) && Array.isArray(r.tables.ai_usage) && Array.isArray(r.tables.ai_notes), Object.keys(r.tables || {}));

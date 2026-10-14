@@ -15,16 +15,20 @@ const STATE = path.join(__dirname, 'fixtures', 'rc-state.json');
   setRc({});
   const sample = fs.readFileSync(path.join(__dirname, '..', 'assets', 'app-sample-class.json'), 'utf8');
   const other = sample.split('SKIL 101').join('WEBT 210').split('"SKIL').join('"WEBT');
-  const paste = async (p, text) => { await p.fill('#mk-text', text); await p.click('[data-action="check"]'); await p.waitForTimeout(400); };
+  const paste = async (p, text) => { await p.evaluate(() => { document.querySelector('#mk-diy').open = true; }); await p.fill('#mk-text', text); await p.click('[data-action="check"]'); await p.waitForTimeout(400); };
 
   // a guest can read the page and check an answer; adding asks them to sign in
   const [cg, g] = await mk(1360, 900); await cg.addInitScript(quiet);
   await go(g, '#/create', 1200);
-  check('the website has Create a class, with three steps', (await g.$$('.mk-step')).length === 3 && /Create a class/.test(await txt(g, '#view')));
+  check('the website has Create a class: Bo writes it from the syllabus first, the three do-it-yourself steps folded away', /Create a class/.test(await txt(g, '#view')) && /Bo writes it from your syllabus/.test(await txt(g, '#mk-bo')) && !!(await g.$('#mk-drop #mk-bo-file')) && !!(await g.$('#mk-bo-text')) && (await g.$$('#mk-diy .mk-step')).length === 3 && !(await g.$eval('#mk-diy', d => d.open)));
+  check('the other ways: the example, a share code, a class file, and your own AI', !!(await g.$('.mk-ways [data-action="example"]')) && !!(await g.$('.mk-ways #mk-code-form')) && !!(await g.$('.mk-ways #mk-file')) && /Use the AI you already use/.test(await txt(g, '#mk-diy summary')));
+  await g.fill('#mk-bo-text', 'TEST 101, Fall 2026'); await g.click('[data-bo-write]'); await g.waitForTimeout(600);
+  check('Write my class asks a guest to sign in first', !!(await g.$('#auth-modal')) && !(await g.$('#paywall')));
+  await g.evaluate(() => App.auth.close()); await g.waitForTimeout(300);
   check('a guest sees why to sign in: classes are saved with the account', /Sign in to add a class/.test(await txt(g, '#mk-signin')));
   await g.click('[data-action="example"]'); await g.waitForTimeout(700);
-  check('the example class checks clean for a guest too', !!(await g.$('#mk-result [data-add]')));
-  await g.click('#mk-result [data-add]'); await g.waitForTimeout(600);
+  check('the example class checks clean for a guest too, shown right under the other ways', !!(await g.$('#mk-alt-result [data-add]')));
+  await g.click('#mk-alt-result [data-add]'); await g.waitForTimeout(600);
   check('Add asks a guest to sign in (and saves nothing)', !!(await g.$('#auth-modal')) && (await g.evaluate(() => JSON.parse(localStorage.getItem('mh-my-classes') || '[]').length)) === 0);
   await g.evaluate(() => App.auth.close()); await g.waitForTimeout(300);
 
@@ -36,7 +40,7 @@ const STATE = path.join(__dirname, 'fixtures', 'rc-state.json');
   check('it names Mathub Pro with the web price, and Max', /Mathub Pro/.test(await txt(a, '#mk-sub')) && /\$15 a month/.test(await txt(a, '#mk-sub')) && /Max/.test(await txt(a, '#mk-sub')), await txt(a, '#mk-sub'));
 
   // the free example class: no paywall, saved with the account
-  await a.click('[data-action="example"]'); await a.waitForTimeout(700); await a.click('#mk-result [data-add]'); await a.waitForTimeout(1500);
+  await a.click('[data-action="example"]'); await a.waitForTimeout(700); await a.click('#mk-alt-result [data-add]'); await a.waitForTimeout(1500);
   check('the example class is added without a subscription and opens', !(await a.$('#paywall')) && /#\/my\d{4}\/dashboard/.test(a.url()), a.url());
   const exId = (/#\/(my\d{4})\//.exec(a.url()) || [])[1];
   let srv = (await api(a, 'myclasses')).json.classes || [];
@@ -102,6 +106,13 @@ const STATE = path.join(__dirname, 'fixtures', 'rc-state.json');
   await b.click('[data-sc="add"]'); await b.waitForTimeout(1200);
   check('Bob adding it gets the plans card (he has no plan)', /Adding WEBT 210 to your classes needs Mathub Pro or Max/.test(await txt(b, '#paywall .pw-why')), await txt(b, '#paywall'));
   check('no sideways scroll with the card open at 390px', await hscroll(b));
+  await b.keyboard.press('Escape'); await b.waitForTimeout(400);
+  // Bo writing a class needs Pro (or Max): Bob is offered both plans, Pro first
+  await go(b, '#/create', 1400);
+  check('no sideways scroll on the Create page at 390px', await hscroll(b));
+  await b.fill('#mk-bo-text', 'TEST 101, Fall 2026'); await b.click('[data-bo-write]'); await b.waitForTimeout(1200);
+  const bpw = await b.evaluate(() => { const s = document.querySelector('#paywall'); return s && { why: s.querySelector('.pw-why').textContent, plans: [...s.querySelectorAll('[data-plan]')].map(x => x.dataset.plan), on: (s.querySelector('[data-plan].on') || {}).dataset }; });
+  check('Write my class without a plan opens the plans card: Pro (picked) and Max', bpw && /part of Mathub Pro and Max/.test(bpw.why) && bpw.plans.join() === 'pro,max' && bpw.on && bpw.on.plan === 'pro', bpw);
   await b.keyboard.press('Escape'); await b.waitForTimeout(400);
   // the share code form on the Create page goes to the same place
   await go(b, '#/create', 1200); await b.fill('#mk-code', code.slice(0, 4) + '-' + code.slice(4)); await b.click('#mk-code-form button'); await b.waitForTimeout(1500);

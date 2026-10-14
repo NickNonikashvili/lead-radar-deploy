@@ -5,3 +5,5 @@ pyodide/*.tgz
 *.png
 fixtures/rc-state.json
 fixtures/ai-last.json
+fixtures/tts-last.json
+fixtures/stt-last.json

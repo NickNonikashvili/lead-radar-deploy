@@ -55,8 +55,8 @@ return [
   // Optional. If set, GET api/index.php?r=stats with header X-Admin-Key: <this value> returns sign-up counts.
   'admin_key'       => '',
 
-  // The plans (see docs/app-subscriptions.md): Mathub Pro (making classes) and Mathub Max (Pro, plus Bo the AI
-  // tutor and classes Bo writes from a syllabus). Secrets go in config.local.php, never in this file:
+  // The plans (see docs/app-subscriptions.md): Mathub Pro (classes Bo writes from a syllabus, and making classes)
+  // and Mathub Max (Pro, plus Bo the AI tutor). Secrets go in config.local.php, never in this file:
   //   revenuecat_secret  RevenueCat secret API key (sk_...)
   //   pro_web_link, max_web_link  the production Web Purchase Links from RevenueCat (https://pay.rev.cat/...), without a user id
   //   pro_web_price, max_web_price  the prices to show on the website
@@ -70,7 +70,7 @@ return [
   'max_entitlement'   => 'max',
   'plan_grants'       => [],
 
-  // Bo, the AI tutor, and classes Bo writes (api/ai.php), for Mathub Max. Put the Anthropic API key in
+  // Classes Bo writes (Pro and Max) and Bo, the AI tutor (Max): api/ai.php. Put the Anthropic API key in
   // config.local.php as 'anthropic_key'. The defaults use the smallest model that does the job well; every
   // request is kept small by the server (class summaries, a short progress snapshot, the last few turns).
   'anthropic_key'     => '',
@@ -79,6 +79,16 @@ return [
   'ai_tutor_monthly'  => 1500,   // questions to Bo per account per month
   'ai_tutor_daily'    => 300,
   'ai_class_monthly'  => 15,     // classes Bo writes per account per month
+
+  // Talking with Bo out loud. Without a key, the browser's own speech recognition and voices are used (free).
+  // With an OpenAI API key in config.local.php as 'openai_key', Bo speaks in a natural voice (about 1.5 cents a
+  // minute of speech) and can listen on every browser, Firefox included (about a third of a cent a minute).
+  'openai_key'        => '',
+  'ai_tts_model'      => 'gpt-4o-mini-tts',
+  'ai_tts_voice'      => 'ash',      // ash, ballad, coral, sage, verse or alloy; students can pick another
+  'ai_stt_model'      => 'gpt-4o-mini-transcribe',
+  'ai_voice_monthly'  => 300000,   // characters Bo speaks per account per month (about 5 hours), then the device's voice
+  'ai_listen_monthly' => 36000,    // seconds Bo listens per account per month (10 hours) on browsers without speech recognition
 
   // Storage. Keep the database inside api/data (protected by .htaccess) or move it above public_html.
   'db_path'         => __DIR__ . '/data/mathub.sqlite',

@@ -1,8 +1,9 @@
 <?php
 /* ============================================================
-   Mathub account server — Bo, the AI tutor, and "Bo writes my class" (Mathub Max)
-   Routes: ai_status, ai_thread, ai_tutor, ai_forget, ai_class
-   - Only Mathub Max members (and accounts listed in plan_grants) can use it; the plan is checked here.
+   Mathub account server — Bo, the AI tutor (Mathub Max), talking with Bo out loud, and classes Bo writes
+   from a syllabus (Pro and Max)
+   Routes: ai_status, ai_thread, ai_tutor, ai_forget, ai_class, ai_speak, ai_listen
+   - Writing a class needs Mathub Pro or Max; talking with Bo needs Max (plan_grants gives testers a plan).
    - This server is the only thing that talks to the AI (Anthropic's API; the key lives in config.local.php),
      and it keeps every request small so it costs as little as possible:
        * each class is turned into a compact text summary: its facts, grading, exams and one line per
@@ -14,7 +15,14 @@
        * a class from a syllabus is written in steps: the syllabus is read once into an outline that is
          kept here, then each unit is written from that outline instead of the whole syllabus again.
    - The smallest model that does the job well: claude-haiku-5-5 by default (ai_model_tutor, ai_model_class).
-   - Monthly limits per account (ai_tutor_monthly, ai_class_monthly) and per-minute rate limits.
+   - Answers can stream (stream: 1): the reply goes out line by line as JSON (NDJSON) while the AI writes it, so
+     the chat fills in and Bo starts talking within a second or two. In voice mode (voice: 1) Bo answers the way
+     a tutor talks, briefly and in words, and writes formulas on a whiteboard ([board: ...]) instead of reading them.
+   - Bo's natural voice and listening on any browser (optional, openai_key in config.local.php): ai_speak turns
+     one or two of Bo's sentences into speech, ai_listen turns a short recording of the student into text. No
+     audio is kept. Without the key the browser's own speech recognition and voices are used.
+   - Monthly limits per account (ai_tutor_monthly, ai_class_monthly, ai_voice_monthly characters spoken,
+     ai_listen_monthly seconds heard) and per-minute rate limits.
    Rows are removed with the account (ON DELETE CASCADE).
    ============================================================ */
 
@@ -33,6 +41,9 @@ function mh_ai_db(): PDO {
     $db->exec('CREATE TABLE IF NOT EXISTS ai_threads (user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE, cid TEXT NOT NULL, turns TEXT NOT NULL DEFAULT "[]", updated INTEGER NOT NULL, PRIMARY KEY (user_id, cid))');
     $db->exec('CREATE TABLE IF NOT EXISTS ai_notes (user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE, notes TEXT NOT NULL DEFAULT "[]", updated INTEGER NOT NULL)');
     $db->exec('CREATE TABLE IF NOT EXISTS ai_builds (id TEXT PRIMARY KEY, user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE, created INTEGER NOT NULL, outline TEXT NOT NULL, units INTEGER NOT NULL, steps INTEGER NOT NULL DEFAULT 0)');
+    $cols = array_column($db->query('PRAGMA table_info(ai_usage)')->fetchAll(), 'name');
+    if (!in_array('voice', $cols, true)) $db->exec('ALTER TABLE ai_usage ADD COLUMN voice INTEGER NOT NULL DEFAULT 0');     // characters Bo spoke
+    if (!in_array('listen', $cols, true)) $db->exec('ALTER TABLE ai_usage ADD COLUMN listen INTEGER NOT NULL DEFAULT 0');   // seconds of the student heard
     $ready = true;
   }
   return $db;
@@ -57,11 +68,31 @@ function mh_ai_settings(array $cfg): array {
     'tutor_daily' => max(1, (int)($cfg['ai_tutor_daily'] ?? 300)),
   ];
 }
+/** Bo's natural voice and listening (OpenAI's speech API); optional. */
+const MH_AI_VOICES = ['ash' => 'Ash: warm and steady', 'ballad' => 'Ballad: soft and calm', 'coral' => 'Coral: bright and friendly', 'sage' => 'Sage: clear and thoughtful', 'verse' => 'Verse: lively', 'alloy' => 'Alloy: even and neutral'];
+function mh_ai_voice_settings(array $cfg): array {
+  $v = (string)($cfg['ai_tts_voice'] ?? 'ash');
+  return [
+    'key' => trim((string)($cfg['openai_key'] ?? '')),
+    'url' => rtrim((string)($cfg['openai_api'] ?? 'https://api.openai.com/v1'), '/'),
+    'tts_model' => (string)($cfg['ai_tts_model'] ?? 'gpt-4o-mini-tts'),
+    'stt_model' => (string)($cfg['ai_stt_model'] ?? 'gpt-4o-mini-transcribe'),
+    'voice' => isset(MH_AI_VOICES[$v]) ? $v : 'ash',
+    'voice_monthly' => max(0, (int)($cfg['ai_voice_monthly'] ?? 300000)),
+    'listen_monthly' => max(0, (int)($cfg['ai_listen_monthly'] ?? 36000)),
+  ];
+}
 
 /* ---------- usage ---------- */
 function mh_ai_usage(int $uid): array {
-  $st = mh_ai_db()->prepare('SELECT tutor, classes FROM ai_usage WHERE user_id = ? AND ym = ?'); $st->execute([$uid, gmdate('Y-m')]); $r = $st->fetch();
-  return ['tutor' => $r ? (int)$r['tutor'] : 0, 'classes' => $r ? (int)$r['classes'] : 0];
+  $st = mh_ai_db()->prepare('SELECT tutor, classes, voice, listen FROM ai_usage WHERE user_id = ? AND ym = ?'); $st->execute([$uid, gmdate('Y-m')]); $r = $st->fetch();
+  return ['tutor' => $r ? (int)$r['tutor'] : 0, 'classes' => $r ? (int)$r['classes'] : 0, 'voice' => $r ? (int)$r['voice'] : 0, 'listen' => $r ? (int)$r['listen'] : 0];
+}
+/** Characters spoken or seconds heard this month. */
+function mh_ai_add(int $uid, string $col, int $n): void {
+  if (!in_array($col, ['voice', 'listen'], true)) return;
+  $db = mh_ai_db(); $db->prepare('INSERT OR IGNORE INTO ai_usage (user_id, ym) VALUES (?, ?)')->execute([$uid, gmdate('Y-m')]);
+  $db->prepare("UPDATE ai_usage SET $col = $col + ? WHERE user_id = ? AND ym = ?")->execute([max(0, $n), $uid, gmdate('Y-m')]);
 }
 function mh_ai_count(int $uid, string $what, int $tin, int $tout): void {
   $col = $what === 'classes' ? 'classes' : ($what === 'tutor' ? 'tutor' : '');
@@ -79,14 +110,84 @@ function mh_ai_call(array $A, string $model, array $system, array $messages, int
   curl_setopt_array($ch, [CURLOPT_RETURNTRANSFER => true, CURLOPT_POST => true, CURLOPT_POSTFIELDS => $body, CURLOPT_TIMEOUT => $timeout, CURLOPT_CONNECTTIMEOUT => 8,
     CURLOPT_HTTPHEADER => ['x-api-key: ' . $A['key'], 'anthropic-version: 2023-06-01', 'content-type: application/json', 'accept: application/json']]);
   $raw = curl_exec($ch); $code = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE); $err = curl_errno($ch); curl_close($ch);
-  if ($raw === false) mh_fail($err === CURLE_OPERATION_TIMEDOUT ? 'Bo took too long to answer. Please try again.' : 'Bo could not be reached. Please try again in a minute.', 504);
-  $j = json_decode((string)$raw, true);
-  if ($code === 429 || $code === 529 || $code === 503) mh_fail('Bo is very busy right now. Please try again in a minute.', 503);
-  if ($code === 413) mh_fail('That is too much for Bo to read at once. Try a shorter text or a smaller file.', 413);
-  if ($code < 200 || $code >= 300 || !is_array($j)) { error_log('mathub ai: ' . $code . ' ' . substr((string)$raw, 0, 300)); mh_fail($code === 400 ? 'Bo could not read that. Try a different file, or paste the text instead.' : 'Bo could not answer just now. Please try again.', 502); }
+  $j = $raw === false ? null : json_decode((string)$raw, true);
+  if ($raw === false || $code < 200 || $code >= 300 || !is_array($j)) { [$msg, $status] = mh_ai_trouble($raw === false ? null : (string)$raw, $code, $err); mh_fail($msg, $status); }
   $text = ''; foreach (($j['content'] ?? []) as $b) if (($b['type'] ?? '') === 'text') $text .= (string)$b['text'];
   $u = $j['usage'] ?? [];
   return ['text' => $text, 'stop' => (string)($j['stop_reason'] ?? ''), 'in' => (int)($u['input_tokens'] ?? 0) + (int)($u['cache_creation_input_tokens'] ?? 0) + (int)($u['cache_read_input_tokens'] ?? 0), 'out' => (int)($u['output_tokens'] ?? 0)];
+}
+/** What to tell the student when the AI did not answer: [message, HTTP status]. */
+function mh_ai_trouble(?string $raw, int $code, int $err): array {
+  if ($raw === null) return [$err === CURLE_OPERATION_TIMEDOUT ? 'Bo took too long to answer. Please try again.' : 'Bo could not be reached. Please try again in a minute.', 504];
+  if ($code === 429 || $code === 529 || $code === 503) return ['Bo is very busy right now. Please try again in a minute.', 503];
+  if ($code === 413) return ['That is too much for Bo to read at once. Try a shorter text or a smaller file.', 413];
+  error_log('mathub ai: ' . $code . ' ' . substr($raw, 0, 300));
+  return [$code === 400 ? 'Bo could not read that. Try a different file, or paste the text instead.' : 'Bo could not answer just now. Please try again.', 502];
+}
+
+/* ---------- streaming: the reply goes to the browser while the AI writes it ---------- */
+/** One line of the stream (NDJSON). The first one sends the headers and turns off every buffer it can. */
+function mh_ai_emit(array $o): void {
+  static $open = false;
+  if (!$open) {
+    $open = true; $GLOBALS['mh_ai_streaming'] = true;
+    @ini_set('zlib.output_compression', '0'); @ini_set('output_buffering', '0'); @ini_set('implicit_flush', '1');
+    while (ob_get_level() > 0) @ob_end_clean();
+    http_response_code(200);
+    header('Content-Type: application/x-ndjson; charset=UTF-8');
+    header('Cache-Control: no-store, no-transform');
+    header('X-Accel-Buffering: no');   // nginx and some proxies: do not hold the reply back
+  }
+  echo json_encode($o, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE), "\n";
+  @flush();
+}
+/** A failure: a normal JSON error before the stream started, an error line after. */
+function mh_ai_fail(string $msg, int $status): void {
+  if (!empty($GLOBALS['mh_ai_streaming'])) { mh_ai_emit(['t' => 'error', 'error' => $msg, 'status' => $status]); exit; }
+  mh_fail($msg, $status);
+}
+/** mh_ai_call, streamed: $onText gets each piece of text as it arrives. Returns what mh_ai_call returns. */
+function mh_ai_stream(array $A, string $model, array $system, array $messages, int $maxTokens, int $timeout, callable $onText): array {
+  if ($A['key'] === '') mh_fail('Bo is not switched on yet. Please try again later.', 503);
+  if (!function_exists('curl_init')) mh_fail('Bo cannot reach the AI from this server.', 503);
+  $body = json_encode(['model' => $model, 'max_tokens' => $maxTokens, 'system' => $system, 'messages' => $messages, 'stream' => true], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+  $S = ['buf' => '', 'raw' => '', 'text' => '', 'in' => 0, 'out' => 0, 'stop' => '', 'err' => ''];
+  $ch = curl_init($A['url']);
+  curl_setopt_array($ch, [CURLOPT_POST => true, CURLOPT_POSTFIELDS => $body, CURLOPT_TIMEOUT => $timeout, CURLOPT_CONNECTTIMEOUT => 8,
+    CURLOPT_HTTPHEADER => ['x-api-key: ' . $A['key'], 'anthropic-version: 2023-06-01', 'content-type: application/json', 'accept: text/event-stream'],
+    CURLOPT_WRITEFUNCTION => function ($ch, string $chunk) use (&$S, $onText): int {
+      $code = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
+      if ($code && ($code < 200 || $code >= 300)) { $S['raw'] .= $chunk; return strlen($chunk); }
+      $S['buf'] .= str_replace("\r\n", "\n", $chunk);
+      while (($p = strpos($S['buf'], "\n\n")) !== false) {
+        $ev = substr($S['buf'], 0, $p); $S['buf'] = substr($S['buf'], $p + 2); $data = '';
+        foreach (explode("\n", $ev) as $line) if (strncmp($line, 'data:', 5) === 0) $data .= ltrim(substr($line, 5));
+        $j = json_decode($data, true); if (!is_array($j)) continue;
+        $type = (string)($j['type'] ?? '');
+        if ($type === 'message_start') { $u = $j['message']['usage'] ?? []; $S['in'] = (int)($u['input_tokens'] ?? 0) + (int)($u['cache_creation_input_tokens'] ?? 0) + (int)($u['cache_read_input_tokens'] ?? 0); $S['out'] = (int)($u['output_tokens'] ?? 0); }
+        elseif ($type === 'content_block_delta' && ($j['delta']['type'] ?? '') === 'text_delta') { $t = (string)($j['delta']['text'] ?? ''); if ($t !== '') { $S['text'] .= $t; $onText($t); } }
+        elseif ($type === 'message_delta') { $S['stop'] = (string)($j['delta']['stop_reason'] ?? $S['stop']); if (isset($j['usage']['output_tokens'])) $S['out'] = (int)$j['usage']['output_tokens']; }
+        elseif ($type === 'error') { $S['err'] = (string)($j['error']['type'] ?? 'error'); }
+      }
+      return strlen($chunk);
+    }]);
+  $ok = curl_exec($ch); $code = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE); $err = curl_errno($ch); curl_close($ch);
+  if ($ok === false && $S['text'] === '') { [$msg, $status] = mh_ai_trouble(null, $code, $err); mh_ai_fail($msg, $status); }
+  if ($code < 200 || $code >= 300) { [$msg, $status] = mh_ai_trouble($S['raw'], $code, $err); mh_ai_fail($msg, $status); }
+  if ($S['err'] !== '' && $S['text'] === '') { [$msg, $status] = mh_ai_trouble('', $S['err'] === 'overloaded_error' ? 529 : 500, 0); mh_ai_fail($msg, $status); }
+  if (($ok === false || $S['err'] !== '') && $S['stop'] === '') $S['stop'] = 'cut';
+  return ['text' => $S['text'], 'stop' => $S['stop'], 'in' => $S['in'], 'out' => $S['out']];
+}
+
+/* ---------- Bo's voice and ears (OpenAI's speech API, optional) ---------- */
+/** One request to the speech API: [HTTP status, body, content type]. $body is JSON, or an array for a file upload. */
+function mh_ai_openai(array $V, string $path, $body, int $timeout): array {
+  if (!function_exists('curl_init')) mh_fail('Speech is not available on this server.', 503, ['fallback' => true]);
+  $ch = curl_init($V['url'] . $path); $h = ['Authorization: Bearer ' . $V['key']]; if (is_string($body)) $h[] = 'Content-Type: application/json';
+  curl_setopt_array($ch, [CURLOPT_RETURNTRANSFER => true, CURLOPT_POST => true, CURLOPT_POSTFIELDS => $body, CURLOPT_TIMEOUT => $timeout, CURLOPT_CONNECTTIMEOUT => 8, CURLOPT_HTTPHEADER => $h]);
+  $raw = curl_exec($ch); $code = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE); $type = (string)curl_getinfo($ch, CURLINFO_CONTENT_TYPE); curl_close($ch);
+  if ($raw === false || $code < 200 || $code >= 300) { if ($raw !== false) error_log('mathub speech: ' . $code . ' ' . substr((string)$raw, 0, 300)); mh_fail('Bo\'s voice is not available right now, so your device\'s voice is used.', 502, ['fallback' => true]); }
+  return [$code, (string)$raw, $type];
 }
 
 /** The JSON object in a reply: inside a ```json block, or the outermost braces. */
@@ -201,6 +302,16 @@ How you help:
 - Stay on studying, their classes and student life. Decline harmful requests. No medical, legal or financial advice. You are an AI and can be wrong; say when you are unsure.
 TXT;
 
+const MH_AI_VOICE = <<<'TXT'
+VOICE MODE: the student is talking with you out loud, and your reply is read aloud to them in your voice.
+- Talk like a tutor sitting next to them: 1 to 4 short sentences, under about 70 words. Plain spoken English: no lists, headings, markdown, emoji or LaTeX in what you say.
+- Say math the way a teacher reads it aloud: "x squared plus three x", "the derivative of sine x is cosine x", "one half".
+- When seeing it helps (a formula, an equation, a worked step), also write it on the whiteboard: add [board: ...] with the math in LaTeX between $...$, at most two board lines per reply. The board is shown, never read aloud, so still say the idea in words.
+- One question at a time, then stop and let them answer. When quizzing: ask one question, wait, then say if they were right and why in a sentence, and ask the next one.
+- Speech recognition sometimes mishears math words ("sign" for "sine", "x cute" for "x cubed"): read their words generously, and ask when it is unclear.
+- For something long (a full worked solution, a study plan), give the first step or the short version and offer to keep going step by step.
+TXT;
+
 /* ---------- Bo's chat and notes ---------- */
 function mh_ai_turns(int $uid, string $cid): array {
   $st = mh_ai_db()->prepare('SELECT turns FROM ai_threads WHERE user_id = ? AND cid = ?'); $st->execute([$uid, $cid]); $j = json_decode((string)$st->fetchColumn(), true);
@@ -280,8 +391,13 @@ function mh_ai_route(string $route, array $in, array $cfg, string $ip): void {
     case 'ai_status': {
       mh_method('GET'); $u = mh_current_user();
       $plan = $u ? mh_plan($u, $cfg) : '';
-      $out = ['ok' => true, 'enabled' => $A['key'] !== '', 'signed_in' => (bool)$u, 'plan' => $plan, 'max' => $plan === 'max'];
-      if ($u) { $use = mh_ai_usage((int)$u['id']); $out['usage'] = ['tutor' => $use['tutor'], 'tutor_limit' => $A['tutor_monthly'], 'classes' => $use['classes'], 'class_limit' => $A['class_monthly']]; $out['notes'] = mh_ai_notes((int)$u['id']); }
+      $out = ['ok' => true, 'enabled' => $A['key'] !== '', 'signed_in' => (bool)$u, 'plan' => $plan, 'pro' => $plan !== '', 'max' => $plan === 'max'];
+      $V = mh_ai_voice_settings($cfg); $out['voice'] = ['natural' => $V['key'] !== '', 'voices' => MH_AI_VOICES, 'default' => $V['voice']];
+      if ($u) {
+        $use = mh_ai_usage((int)$u['id']); $out['notes'] = mh_ai_notes((int)$u['id']);
+        $out['usage'] = ['tutor' => $use['tutor'], 'tutor_limit' => $A['tutor_monthly'], 'classes' => $use['classes'], 'class_limit' => $A['class_monthly'], 'voice' => $use['voice'], 'voice_limit' => $V['voice_monthly'], 'listen' => $use['listen'], 'listen_limit' => $V['listen_monthly']];
+        $out['voice']['natural'] = $out['voice']['natural'] && $use['voice'] < $V['voice_monthly']; $out['voice']['listen'] = $V['key'] !== '' && $use['listen'] < $V['listen_monthly'];
+      } else $out['voice']['listen'] = $V['key'] !== '';
       mh_json($out);
     }
     case 'ai_thread': {
@@ -311,9 +427,11 @@ function mh_ai_route(string $route, array $in, array $cfg, string $ip): void {
       $system = [['type' => 'text', 'text' => MH_AI_BO]];
       if ($C) $system[] = ['type' => 'text', 'text' => mh_ai_digest($C), 'cache_control' => ['type' => 'ephemeral']];
       else $system[0]['cache_control'] = ['type' => 'ephemeral'];
+      $voice = !empty($in['voice']); $stream = !empty($in['stream']);
       $notes = mh_ai_notes($uid);
       $now = array_filter(['TODAY: ' . $today, $C ? mh_ai_upcoming($C, $today) : '', mh_ai_snapshot($in['snapshot'] ?? null), $notes ? "WHAT BO REMEMBERS ABOUT THEM:\n- " . implode("\n- ", $notes) : '']);
       $system[] = ['type' => 'text', 'text' => implode("\n", $now)];
+      if ($voice) $system[] = ['type' => 'text', 'text' => MH_AI_VOICE];
       // the last few turns, oldest first, starting with the student
       $turns = mh_ai_turns($uid, $cid); $msgs = [];
       foreach (array_slice($turns, -MH_AI_TURNS_SENT) as $t) { $role = ($t['r'] ?? '') === 'b' ? 'assistant' : 'user'; $txt = mh_ai_clip($t['t'] ?? '', 900); if ($txt === '') continue; if ($msgs && end($msgs)['role'] === $role) { $msgs[count($msgs) - 1]['content'] .= "\n" . $txt; continue; } $msgs[] = ['role' => $role, 'content' => $txt]; }
@@ -323,20 +441,66 @@ function mh_ai_route(string $route, array $in, array $cfg, string $ip): void {
       $content[] = ['type' => 'text', 'text' => $q !== '' ? $q : 'Can you help me with this?'];
       $msgs[] = ['role' => 'user', 'content' => $content];
       @set_time_limit(90);
-      $r = mh_ai_call($A, $A['tutor_model'], $system, $msgs, 700, 60);
+      $max = $voice ? 400 : 700;
+      if ($stream) { @ignore_user_abort(true); $r = mh_ai_stream($A, $A['tutor_model'], $system, $msgs, $max, 60, function (string $t): void { mh_ai_emit(['t' => 'd', 'x' => $t]); }); }
+      else $r = mh_ai_call($A, $A['tutor_model'], $system, $msgs, $max, 60);
       $reply = trim($r['text']); $remembered = null;
       if (preg_match_all('/^\s*\[remember:\s*(.+?)\]\s*$/mi', $reply, $mm)) {
         foreach ($mm[1] as $fact) { $fact = mh_ai_clip($fact, 140); if ($fact !== '' && !in_array($fact, $notes, true)) { $notes[] = $fact; $remembered = $fact; } }
         mh_ai_save_notes($uid, $notes); $reply = trim(preg_replace('/^\s*\[remember:.*\]\s*$/mi', '', $reply));
       }
       if ($reply === '') $reply = 'Sorry, I lost my train of thought. Could you ask that again?';
-      $turns[] = ['r' => 'u', 't' => ($img ? '[photo] ' : '') . $q, 'at' => time()]; $turns[] = ['r' => 'b', 't' => $reply, 'at' => time()];
+      $turns[] = array_merge(['r' => 'u', 't' => ($img ? '[photo] ' : '') . $q, 'at' => time()], $voice ? ['v' => 1] : []); $turns[] = array_merge(['r' => 'b', 't' => $reply, 'at' => time()], $voice ? ['v' => 1] : []);
       mh_ai_save_turns($uid, $cid, $turns); mh_ai_count($uid, 'tutor', $r['in'], $r['out']);
-      mh_json(['ok' => true, 'reply' => $reply, 'remembered' => $remembered, 'cut' => $r['stop'] === 'max_tokens', 'usage' => ['tutor' => $use['tutor'] + 1, 'tutor_limit' => $A['tutor_monthly']]]);
+      $out = ['ok' => true, 'reply' => $reply, 'remembered' => $remembered, 'cut' => in_array($r['stop'], ['max_tokens', 'cut'], true), 'usage' => ['tutor' => $use['tutor'] + 1, 'tutor_limit' => $A['tutor_monthly']]];
+      if ($stream) { mh_ai_emit(['t' => 'done'] + $out); exit; }
+      mh_json($out);
+    }
+    case 'ai_speak': {
+      // a sentence or two of Bo's reply, spoken in his natural voice; the browser plays it (no audio is kept)
+      mh_method('POST'); $u = mh_require_user(); $uid = (int)$u['id'];
+      if (mh_plan($u, $cfg) !== 'max') mh_fail('Talking with Bo is part of Mathub Max.', 402, ['plan' => 'max']);
+      $V = mh_ai_voice_settings($cfg); if ($V['key'] === '') mh_fail('Bo\'s natural voice is not switched on, so your device\'s voice is used.', 503, ['fallback' => true]);
+      $text = mh_ai_clip($in['text'] ?? '', 700); if ($text === '') mh_fail('Nothing to say.', 400);
+      $voice = is_string($in['voice'] ?? null) && isset(MH_AI_VOICES[$in['voice']]) ? $in['voice'] : $V['voice'];
+      $use = mh_ai_usage($uid); if ($use['voice'] + mb_strlen($text) > $V['voice_monthly']) mh_fail('Bo\'s natural voice has been used a lot this month, so your device\'s voice takes over until the 1st.', 429, ['fallback' => true]);
+      mh_rate_or_fail("ai_speak:$uid", 90, 60, 'Bo is talking a lot. Your device\'s voice takes over for a minute.');
+      @set_time_limit(45);
+      [, $audio, $type] = mh_ai_openai($V, '/audio/speech', json_encode(['model' => $V['tts_model'], 'voice' => $voice, 'input' => $text, 'response_format' => 'mp3',
+        'instructions' => 'You are Bo, a friendly bobcat who tutors college students. Voice: warm, upbeat and encouraging, like a favourite tutor. Pace: natural and relaxed, a little slower through math. Read math the way a teacher says it aloud. Never sound robotic.'], JSON_UNESCAPED_UNICODE), 40);
+      mh_ai_add($uid, 'voice', mb_strlen($text));
+      http_response_code(200); header('Content-Type: ' . (preg_match('#^audio/[a-z0-9.+-]+$#i', $type) ? $type : 'audio/mpeg')); header('Cache-Control: no-store'); header('Content-Length: ' . strlen($audio));
+      echo $audio; exit;
+    }
+    case 'ai_listen': {
+      // a short recording of the student, turned into text (for browsers without their own speech recognition)
+      mh_method('POST'); $u = mh_require_user(); $uid = (int)$u['id'];
+      if (mh_plan($u, $cfg) !== 'max') mh_fail('Talking with Bo is part of Mathub Max.', 402, ['plan' => 'max']);
+      $V = mh_ai_voice_settings($cfg); if ($V['key'] === '') mh_fail('Listening is not switched on here. Type your question instead.', 503, ['fallback' => true]);
+      $a = is_array($in['audio'] ?? null) ? $in['audio'] : []; $type = strtolower(trim(explode(';', (string)($a['type'] ?? ''))[0]));
+      $ext = ['audio/webm' => 'webm', 'audio/ogg' => 'ogg', 'audio/mp4' => 'mp4', 'audio/x-m4a' => 'm4a', 'audio/aac' => 'm4a', 'audio/mpeg' => 'mp3', 'audio/wav' => 'wav', 'audio/x-wav' => 'wav'][$type] ?? '';
+      if ($ext === '') mh_fail('That recording could not be read.', 400);
+      $data = preg_replace('/\s+/', '', (string)($a['data'] ?? '')); if ($data === '' || !preg_match('/^[A-Za-z0-9+\/]+=*$/', $data)) mh_fail('That recording could not be read.', 400);
+      if ((int)(strlen($data) * 3 / 4) > 4000000) mh_fail('That was a long one. Keep it under two minutes.', 413);
+      $secs = max(1, min(120, (int)($in['secs'] ?? 10)));
+      $use = mh_ai_usage($uid); if ($use['listen'] + $secs > $V['listen_monthly']) mh_fail('Bo has listened a lot this month. Type your questions until the 1st.', 429);
+      mh_rate_or_fail("ai_listen:$uid", 30, 60, 'Slow down a little: Bo listens to up to 30 questions a minute.');
+      // the class's own words help it hear math and topic names right
+      $C = isset($in['class']) && is_string($in['class']) && preg_match('/^[a-z0-9][a-z0-9_-]{0,40}$/', $in['class']) ? mh_ai_class($u, $in['class']) : null;
+      $hint = 'A college student talking with their tutor about math and their class.';
+      if ($C) { $words = [mh_ai_plain($C['code'] ?? '', 20), mh_ai_plain($C['name'] ?? '', 60)]; foreach (array_slice((array)($C['SECTIONS'] ?? []), 0, 40) as $sec) if (is_array($sec)) $words[] = mh_ai_plain($sec['title'] ?? '', 40); $hint .= ' Topics: ' . mb_substr(implode(', ', array_filter($words)), 0, 600); }
+      $bin = base64_decode($data); @set_time_limit(60);
+      $file = class_exists('CURLStringFile') ? new CURLStringFile($bin, 'speech.' . $ext, $type) : null;
+      $tmp = null; if (!$file) { $tmp = tempnam(sys_get_temp_dir(), 'mhs'); file_put_contents($tmp, $bin); $file = new CURLFile($tmp, $type, 'speech.' . $ext); }
+      try { [, $raw] = mh_ai_openai($V, '/audio/transcriptions', ['model' => $V['stt_model'], 'file' => $file, 'language' => 'en', 'prompt' => $hint, 'response_format' => 'json'], 50); }
+      finally { if ($tmp) @unlink($tmp); }
+      $j = json_decode($raw, true); $text = mh_ai_clip(is_array($j) ? ($j['text'] ?? '') : '', 2000);
+      mh_ai_add($uid, 'listen', $secs);
+      mh_json(['ok' => true, 'text' => $text]);
     }
     case 'ai_class': {
       mh_method('POST'); $u = mh_require_user(); $uid = (int)$u['id'];
-      if (mh_plan($u, $cfg) !== 'max') mh_fail('Having Bo write your class is part of Mathub Max.', 402, ['plan' => 'max']);
+      if (!in_array(mh_plan($u, $cfg), ['pro', 'max'], true)) mh_fail('Making a class with Bo is part of Mathub Pro and Max.', 402, ['plan' => 'pro']);
       mh_rate_or_fail("ai_class:$uid", 40, 3600, 'Bo is writing a lot of classes for you. Try again in a while.');
       $step = (string)($in['step'] ?? ''); $Z = mh_ai_sizes((string)($in['size'] ?? 'full'));
       @set_time_limit(200);

@@ -101,8 +101,8 @@ Montana State University students, so please use the demo account provided.
 Create a class (app-only feature): on the Learn tab, tap the class button at the top left (or the
 "Add a class" card) → "Create a class from a syllabus".
  - To try it without any AI: tap "Try an example class", then "Add SKIL 101". The example class is free.
- - Adding a class from a real syllabus needs Mathub Pro; Bo, the AI tutor (the Bo tab), and "Let Bo write it"
-   need Mathub Max (In-App Purchase, testable with a sandbox account). Restore purchases is on the paywall and in
+ - Adding a class from a real syllabus (Bo writes it, or the student uses their own AI) needs Mathub Pro;
+   Bo, the AI tutor (the Bo tab), needs Mathub Max (In-App Purchase, testable with a sandbox account). Restore purchases is on the paywall and in
    Settings. Bo's answers come from Anthropic's Claude through our server, after the student agrees; every
    answer can be reported.
  - The full flow: the app shows instructions; the student copies them into an AI assistant of their
