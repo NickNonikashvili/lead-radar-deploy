@@ -40,7 +40,7 @@
   Auth.gate = view => (HARD.has(view) && !Auth.user) ? 'hard' : 'open';
   Auth.emailOk = email => { const m = /^[^\s@]+@([^\s@]+)$/.exec(String(email || '').trim().toLowerCase()); if (!m) return false; const dom = m[1]; const allowed = (Auth.health && Auth.health.domains) || ['montana.edu']; return allowed.some(d => dom === d || dom.endsWith('.' + d)); };
   Auth.onChange = fn => Auth.listeners.push(fn);
-  Auth.setUnread = n => { if (Auth.user) Auth.user.unread = n; const b = $('#notif-badge'); if (b) { b.textContent = n > 99 ? '99+' : String(n); b.hidden = !(n > 0); } const btn = $('#notif-btn'); if (btn) btn.hidden = !Auth.user || Auth.mode === 'offline'; $$('.inbox-pill').forEach(p => { p.textContent = n > 99 ? '99+' : String(n); p.hidden = !(n > 0); }); };
+  Auth.setUnread = n => { if (Auth.user) Auth.user.unread = n; const b = $('#notif-badge'); if (b) { b.textContent = n > 99 ? '99+' : String(n); b.hidden = !(n > 0); } const btn = $('#notif-btn'); if (btn) { btn.hidden = !Auth.user || Auth.mode === 'offline'; btn.setAttribute('aria-label', n > 0 ? `Inbox, ${n > 99 ? '99+' : n} unread` : 'Inbox'); } $$('.inbox-pill').forEach(p => { p.textContent = n > 99 ? '99+' : String(n); p.hidden = !(n > 0); }); };
   function applyServerPrefs() {
     const u = Auth.user; if (!u || u.local) return;
     if (Array.isArray(u.courses)) App.setSetting('courses', u.courses);

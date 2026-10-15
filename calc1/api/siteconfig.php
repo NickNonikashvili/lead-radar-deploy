@@ -160,9 +160,9 @@ function mh_siteconfig_route(string $route, array $in, array $cfg, string $ip): 
     }
     case 'admin_config_save': {
       mh_method('POST');
-      mh_rate_or_fail("config_pass:{$u['id']}", 8, 900, 'Too many tries. Wait a few minutes.');
+      mh_rate_or_fail("config_save:{$u['id']}", 40, 900, 'Too many saves at once. Wait a few minutes.');
       $full = $db->prepare('SELECT * FROM users WHERE id = ?'); $full->execute([$u['id']]); $me = $full->fetch();
-      if (!mh_password_check($me ?: null, (string)($in['password'] ?? ''))) mh_fail('That is not your password. Saving keys and settings needs your Mathub password.', 401, ['field' => 'password']);
+      if (!mh_password_check($me ?: null, (string)($in['password'] ?? ''))) { mh_rate_or_fail("config_badpass:{$u['id']}", 6, 900, 'Too many wrong passwords. Wait a few minutes.'); mh_fail('That is not your password. Saving keys and settings needs your Mathub password.', 401, ['field' => 'password']); }
       $values = is_array($in['values'] ?? null) ? $in['values'] : []; $clear = is_array($in['clear'] ?? null) ? array_values(array_filter($in['clear'], 'is_string')) : [];
       $next = $saved; $changed = [];
       foreach ($values as $k => $v) {
