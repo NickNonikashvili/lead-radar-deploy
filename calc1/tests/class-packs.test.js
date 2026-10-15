@@ -26,10 +26,11 @@ const fs = require('fs'); const path = require('path'); const { spawnSync } = re
   // ---- the admin uploads it ----
   const [ca, a] = await mk(1360, 1000); await go(a, '#/'); await login(a, 'admin.user@montana.edu'); await a.reload(); await a.waitForTimeout(900);
   const leftover = await api(a, 'admin_classpacks'); for (const p of (leftover.packs || []).filter(p => p.id === 'zzp101')) await api(a, 'admin_classpack_delete', { id: p.id, confirm: p.code });
-  // a student asks for the class first, so the upload can tell them
+  // a TA asks for the class first, so the upload can tell them (requests come from professors and TAs)
+  await api(a, 'admin_role', { email: 'alice.a@montana.edu', role: 'TA' });
   const [cs, s] = await mk(1360, 1000); await go(s, '#/'); await login(s, 'alice.a@montana.edu'); await s.reload(); await s.waitForTimeout(900);
   const asked = await api(s, 'classreq_create', { code: 'ZZP 101', title: 'Sample Statistics' });
-  check('a student asks for ZZP 101', asked.ok === true || /already asked/.test(asked.error || ''), asked);
+  check('a TA asks for ZZP 101', asked.ok === true || /already asked/.test(asked.error || ''), asked);
   check('students cannot use the admin pack routes', (await api(s, 'admin_classpacks')).ok === false && (await api(s, 'admin_classpack_install', { json: JSON.stringify(pack) })).ok === false);
 
   await go(a, '#/admin/packs', 1200);
@@ -50,7 +51,7 @@ const fs = require('fs'); const path = require('path'); const { spawnSync } = re
   check('a direct link works on a first visit', /Data and sampling/.test(await txt(g, '#view')) && await g.evaluate(() => window.Courses.zzp101 && window.Courses.zzp101.loaded));
   check('hostile markup in the pack never runs', await g.evaluate(() => window.__pwned === undefined && !document.querySelector('#view img, #view script')) && /this sentence stays/.test(await txt(g, '#view')));
   check('the sidebar switcher includes the class with its colour', await g.evaluate(() => !!document.querySelector('.switch-btn[data-c="zzp101"]') && getComputedStyle(document.documentElement).getPropertyValue('--accent').trim().toUpperCase() === '#0F766E'));
-  check('the sidebar has the Request a class link', !!(await g.$('#course-switch a.req[href="#/request"]')));
+  check('the sidebar offers a guest Make a class (requests are for professors and TAs)', !!(await g.$('#course-switch a.req[href="#/create"]')) && !(await g.$('#course-switch a.req[href="#/request"]')));
   await go(g, '#/', 900);
   check('the start page shows the class card', !!(await g.$('.course-card.zzp101')) || /ZZP 101/.test(await txt(g, '.course-grid')));
   await g.keyboard.press('Control+k'); await g.waitForTimeout(300); await g.fill('#search-input', 'z-score'); await g.waitForTimeout(400);
@@ -116,6 +117,7 @@ const fs = require('fs'); const path = require('path'); const { spawnSync } = re
 
   // ---- clean up ----
   const all = await api(a, 'admin_classreqs&status=all'); for (const gr of (all.groups || []).filter(x => x.code === 'ZZP 101')) for (const q of gr.requests) await api(a, 'admin_classreq_delete', { id: q.id });
+  await api(a, 'admin_role', { email: 'alice.a@montana.edu', role: '' });
   fs.rmSync(bad, { force: true });
   await cg.close(); await cs.close(); await ca.close();
   await T.finish();
