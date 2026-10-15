@@ -915,6 +915,37 @@ h1, h2, h3, h4 { letter-spacing: -0.01em; }
 .poll-fields { padding: 10px 12px; border: 1px dashed var(--border-strong); border-radius: 10px; }
 .contrib .q-prompt { font-size: 15px; }
 .admin-layout { display: grid; grid-template-columns: 210px 1fr; gap: 18px; align-items: start; }
+/* Admin → Keys & settings: one panel per group, the fields two to a row, a sticky save bar at the bottom */
+.cfg-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 18px; }
+.cfg-field { display: flex; flex-direction: column; gap: 6px; min-width: 0; padding: 2px; border-radius: 12px; }
+.cfg-field.wide { grid-column: 1 / -1; }
+.cfg-field.dirty > .input, .cfg-field.dirty > .select, .cfg-field.dirty .cfg-secret .input { border-color: var(--accent); }
+.cfg-field.bad > .input, .cfg-field.bad > .select, .cfg-field.bad .cfg-secret .input { border-color: var(--bad); }
+.cfg-lab { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.cfg-lab label { font-weight: 700; font-size: 14px; color: var(--ink); }
+.cfg-field .input, .cfg-field .select { width: 100%; }
+.cfg-field textarea.input { resize: vertical; line-height: 1.5; }
+.cfg-secret { display: flex; gap: 6px; }
+.cfg-secret .input { flex: 1; min-width: 0; }
+.cfg-secret .icon-btn { flex: none; width: 42px; height: 42px; }
+.cfg-secret .icon-btn[aria-pressed="true"] { color: var(--accent); }
+.cfg-help { margin: 0; color: var(--muted); font-size: 12.5px; line-height: 1.45; }
+.cfg-results:empty { display: none; }
+.cfg-results { margin: -4px 0 12px; }
+.cfg-res { display: flex; align-items: flex-start; gap: 6px; margin: 0 0 4px; font-size: 13.5px; }
+.cfg-res svg { flex: none; margin-top: 2px; }
+.cfg-res.ok svg { color: var(--good); }
+.cfg-res.bad svg { color: var(--bad); }
+.cfg-log { list-style: none; margin: 0; padding: 0; font-size: 13.5px; }
+.cfg-log li { padding: 7px 0; border-top: 1px solid var(--border); }
+.cfg-log li:first-child { border-top: 0; }
+.cfg-bar { position: sticky; bottom: 12px; z-index: 8; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 8px; padding: 10px 12px; border: 2px solid var(--accent); border-radius: 16px; background: var(--surface); box-shadow: var(--shadow); }
+.cfg-bar[hidden] { display: none; }
+.cfg-count { flex: 1; min-width: 90px; font-weight: 700; color: var(--ink); }
+.cfg-bar .input { width: 220px; max-width: 100%; }
+@media (max-width: 720px) { .cfg-grid { grid-template-columns: minmax(0, 1fr); } .cfg-bar .input { flex: 1 1 100%; width: auto; } }
+@media (max-width: 900px) { html:not([data-app]) .cfg-bar { bottom: calc(80px + env(safe-area-inset-bottom)); } }
+
 .admin-tabs { display: flex; flex-direction: column; gap: 2px; position: sticky; top: 76px; }
 .admin-tab { display: flex; align-items: center; gap: 9px; padding: 9px 12px; border-radius: 10px; color: var(--ink-2); font-weight: 500; font-size: 14px; }
 .admin-tab:hover { background: var(--surface-2); text-decoration: none; }
@@ -2325,6 +2356,9 @@ html[data-motion="off"] .px-go-q { animation: none; }
 
 /* ---------- request a class (#/request) ---------- */
 .rq-wrap { align-items: start; }
+.rq-staff { display: flex; flex-direction: column; gap: 14px; }
+.rq-staff h2 { display: flex; align-items: center; gap: 8px; margin: 0 0 6px; font-size: 20px; }
+.rq-staff p { margin: 0; color: var(--ink-2); line-height: 1.55; max-width: 62ch; }
 .rq-form .req { color: var(--bad); }
 .rq-grid { gap: 12px; }
 .rq-drop { display: flex; align-items: center; gap: 14px; padding: 18px; border: 2px dashed var(--border-strong); border-radius: 14px; background: var(--surface-2); cursor: pointer; transition: border-color .15s, background .15s; }

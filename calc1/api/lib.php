@@ -10,6 +10,7 @@ function mh_config(): array {
   if ($cfg !== null) return $cfg;
   $cfg = require __DIR__ . '/config.php';
   if (is_file(__DIR__ . '/config.local.php')) { $local = require __DIR__ . '/config.local.php'; if (is_array($local)) $cfg = array_merge($cfg, $local); }
+  require_once __DIR__ . '/siteconfig.php'; $cfg = array_merge($cfg, mh_siteconfig_saved($cfg));   // keys and settings saved in the admin panel (Keys & settings) win
   return $cfg;
 }
 
@@ -78,6 +79,9 @@ function mh_db(): PDO {
   $ncols = array_column($db->query('PRAGMA table_info(notifications)')->fetchAll(), 'name'); if (!in_array('link', $ncols, true)) $db->exec('ALTER TABLE notifications ADD COLUMN link TEXT NOT NULL DEFAULT ""');
   if (!in_array('prefs_updated', $cols, true)) $db->exec('ALTER TABLE users ADD COLUMN prefs_updated INTEGER NOT NULL DEFAULT 0');
   if (!in_array('push_sent', $cols, true)) $db->exec('ALTER TABLE users ADD COLUMN push_sent INTEGER NOT NULL DEFAULT 0');
+  // the welcome after sign-up (classes and a membership): accounts from before it count as welcomed
+  if (!in_array('welcomed', $cols, true)) { $db->exec('ALTER TABLE users ADD COLUMN welcomed INTEGER NOT NULL DEFAULT 0'); $db->exec('UPDATE users SET welcomed = MAX(created, 1)'); }
+  if (!in_array('plan_choice', $cols, true)) $db->exec("ALTER TABLE users ADD COLUMN plan_choice TEXT NOT NULL DEFAULT ''");
   $db->exec('CREATE TABLE IF NOT EXISTS issues (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL DEFAULT 0, email TEXT NOT NULL DEFAULT "", course TEXT NOT NULL DEFAULT "", view TEXT NOT NULL DEFAULT "", ref TEXT NOT NULL DEFAULT "", prompt TEXT NOT NULL DEFAULT "", answer TEXT NOT NULL DEFAULT "", reason TEXT NOT NULL DEFAULT "other", comment TEXT NOT NULL DEFAULT "", url TEXT NOT NULL DEFAULT "", build TEXT NOT NULL DEFAULT "", ua TEXT NOT NULL DEFAULT "", created INTEGER NOT NULL, status TEXT NOT NULL DEFAULT "open", resolved_by INTEGER NOT NULL DEFAULT 0, resolved INTEGER NOT NULL DEFAULT 0)');
   $db->exec('CREATE TABLE IF NOT EXISTS push_subs (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, endpoint TEXT NOT NULL UNIQUE, p256dh TEXT NOT NULL, auth TEXT NOT NULL, ua TEXT NOT NULL DEFAULT "", created INTEGER NOT NULL, last_ok INTEGER NOT NULL DEFAULT 0)');
   $db->exec('CREATE TABLE IF NOT EXISTS push_queue (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, title TEXT NOT NULL, body TEXT NOT NULL DEFAULT "", url TEXT NOT NULL DEFAULT "", tag TEXT NOT NULL DEFAULT "", created INTEGER NOT NULL, delivered INTEGER NOT NULL DEFAULT 0)');
@@ -167,7 +171,12 @@ function mh_user_public(array $u): array {
   $unread = 0; try { $st = mh_db()->prepare('SELECT COUNT(*) FROM notifications WHERE user_id = ? AND read = 0' . MH_NOTIF_UNBLOCKED); $st->execute([$u['id']]); $unread = (int)$st->fetchColumn(); } catch (Throwable $e) {}
   return ['id' => (int)$u['id'], 'email' => $u['email'], 'name' => $u['name'], 'verified' => (bool)$u['verified'], 'created' => (int)$u['created'], 'mod' => mh_is_mod($u), 'admin' => mh_is_admin($u), 'terms' => (int)($u['terms_accepted'] ?? 0) > 0, 'notify_email' => (int)($u['notify_email'] ?? 1) === 1, 'unread' => $unread,
     'show_on_leaderboard' => (int)($u['show_on_leaderboard'] ?? 1) === 1, 'digest_email' => (int)($u['digest_email'] ?? 1) === 1, 'planning_email' => (int)($u['planning_email'] ?? 0) === 1, 'focus_public' => (int)($u['focus_public'] ?? 1) === 1, 'staff' => mh_role($u['email']) !== '', 'role' => mh_role($u['email']),
-    'courses' => isset($u['courses']) && $u['courses'] !== null && $u['courses'] !== '' ? (json_decode((string)$u['courses'], true) ?: []) : null, 'sections' => isset($u['sections']) && $u['sections'] ? (json_decode((string)$u['sections'], true) ?: (object)[]) : (object)[], 'reminder_email' => (int)($u['reminder_email'] ?? 0) === 1, 'league' => (int)($u['league'] ?? 0)];
+    'courses' => isset($u['courses']) && $u['courses'] !== null && $u['courses'] !== '' ? (json_decode((string)$u['courses'], true) ?: []) : null, 'sections' => isset($u['sections']) && $u['sections'] ? (json_decode((string)$u['sections'], true) ?: (object)[]) : (object)[], 'reminder_email' => (int)($u['reminder_email'] ?? 0) === 1, 'league' => (int)($u['league'] ?? 0), 'can_request' => mh_can_request($u), 'welcomed' => (int)($u['welcomed'] ?? 1) > 0];
+}
+/** Professors and TAs (an Instructor or TA role, or a TA in a Mathub Faculty class) and administrators: they request new classes. */
+function mh_can_request(array $u): bool {
+  if (mh_is_admin($u) || mh_role((string)$u['email']) !== '') return true;
+  try { $st = mh_db()->prepare("SELECT 1 FROM teach_members WHERE user_id = ? AND role = 'ta' LIMIT 1"); $st->execute([$u['id']]); return (bool)$st->fetchColumn(); } catch (Throwable $e) { return false; }
 }
 /** Display name: the chosen name, else the part of the email before the @. */
 function mh_display_name(array $row, string $prefix = ''): string {

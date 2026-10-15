@@ -155,7 +155,8 @@ const BILLING = { ios: 'appl_xxxxxxxx', android: 'goog_xxxxxxxx', pro: 'pro', ma
 
 Then `cd calc1/app && npm run sync` and make new app builds.
 
-On the server, in `api/config.local.php` (never in the repository or the zip):
+On the server: either in the admin panel (Keys & settings, which keeps them in `api/data/site-config.json` and
+never shows them again), or in `api/config.local.php` (never in the repository or the zip):
 
 ```
 'revenuecat_secret' => 'sk_xxxxxxxx',

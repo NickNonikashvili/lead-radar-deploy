@@ -88,6 +88,7 @@
     window.addEventListener('online', () => { if (Auth.unreachable) Auth.init(); });
     if (Auth.mode === 'server' && !Auth.unreachable) setInterval(() => { if (document.visibilityState === 'visible' && Auth.user) call('me').then(r => { if (r.user) { Auth.user = Object.assign(Auth.user, r.user); Auth.setUnread(r.user.unread || 0); } else if (Auth.user && !Auth.user.local) { Auth.user = null; changed(); App.rerender(); } }).catch(() => {}); }, 90000);
     Auth.ready = true; changed(); if (App.rebuildNav) App.rebuildNav();
+    if (App.welcome && App.welcome.needed()) setTimeout(() => { if (App.welcome.needed()) App.welcome.open(); }, 500);   // the welcome was left before the choices were made
     if (App.current && !(App.current === App.views.practice && App.views.practice.hasSession && App.views.practice.hasSession())) { try { App.rerender(); } catch (e) { console.error(e); } }
     if (Auth.user && Auth.mode === 'server') Auth.pullAll().catch(() => {});
     document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && Auth.user && Auth.mode === 'server' && App.D) Auth.pullCourse(App.D.id, true).catch(() => {}); });
@@ -365,7 +366,8 @@
     toast(isNew ? `Welcome to Mathub, ${user.name || user.email.split('@')[0]}!` : `Welcome back, ${user.name || user.email.split('@')[0]}.`, 2600);
     Auth.pullAll().then(() => App.rerender()).catch(() => App.rerender());
     if (App.rebuildNav) App.rebuildNav();
-    setTimeout(() => Auth.onboard(isNew || !Array.isArray(user.courses)), 900);
+    // a new account gets the welcome (what Mathub is, then its classes and a membership); otherwise the class picker if it has none
+    setTimeout(() => { if (App.welcome && App.welcome.needed()) App.welcome.open(); else Auth.onboard(isNew || !Array.isArray(user.courses)); }, 900);
   }
   Auth.logout = async function () {
     if (Auth.mode === 'server') { try { await call('logout', {}); } catch {} }

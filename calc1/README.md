@@ -224,9 +224,31 @@ Three classes built from their Fall 2026 syllabi, each with the full set: calend
 
 Also new for every class: definition lines (`{ n, d }`) on the formulas sheet and the cheat-sheet builder, an exam `format` line on exam prep (defaults to "Closed book, no devices."), a class-specific title and note on the formulas page (`formulasNote`, `filterExample`), and the new colours (lime, amber, rose) in light and dark.
 
+## The welcome after sign-up
+
+`assets/welcome.js`, `assets/welcome.css`, website only. A new account gets it right after verifying its email: a
+full-screen Big Sky where the range glides past and Bo walks the trail at the top, five short scenes (welcome,
+every class is a climb, practice that sticks, Bo with his board and calls, any class from its syllabus), then two
+choices it must make: its classes (at least one) and a membership (Free, Pro or Max; Pro and Max open the
+checkout, and closing it leaves the account on Free), then You're all set. `api welcome_done` saves the classes,
+`users.welcomed` and `users.plan_choice`; until then it comes back at every visit (`user.welcomed === false`).
+Accounts from before it count as welcomed. Skip the tour (or Esc) jumps to the choices; Back, the arrow keys and
+Log out work; it is still when motion is off or reduced, and the old coach-mark tour no longer starts after it.
+
+## Keys and settings from the admin panel
+
+Admin panel → **Keys & settings** (`assets/admin.js`, `api/siteconfig.php`): the API keys (Anthropic, OpenAI,
+RevenueCat v1 and v2), the email password and mail server, plans and prices, plans given without paying, Bo's
+limits and models, who may sign up, moderators and administrators, and site settings. What is saved there goes to
+`api/data/site-config.json` (next to the database, never in the zip) and wins over `config.local.php`; "Use the
+file's value" goes back. Keys and passwords never come back to the browser (only set or not, where from and the
+last four characters), saving needs the administrator's password, every change is logged in `config_log` (which
+setting, who, when; never the value), and an administrator cannot remove themselves. Check buttons try the AI
+keys, RevenueCat and email (a test email to you).
+
 ## Request a class
 
-`#/request` (`assets/requests.js`, `api/requests.php`). Students who don't see their class send its course code (normalised to MSU style, e.g. `chmy121` → `CHMY 121`), optional name, term and instructor, and the syllabus as a PDF or Word file (up to 10 MB) or pasted text, with a consent box. Links lead there from the start page (under Your classes), the class picker, Settings, and search (typing an unknown course code offers "Request CHMY 999"). Codes already on Mathub are caught as you type.
+`#/request` (`assets/requests.js`, `api/requests.php`), for **professors and TAs** (`mh_can_request`: an Instructor or TA role from the admin panel or a Faculty approval, a TA in a Mathub Faculty class, or an administrator; `user.can_request`). Students and guests do not see the links; they are pointed to Create a class instead, and the server refuses their requests. Staff who don't see their class send its course code (normalised to MSU style, e.g. `chmy121` → `CHMY 121`), optional name, term and instructor, and the syllabus as a PDF or Word file (up to 10 MB) or pasted text, with a consent box. Links lead there from the start page (under Your classes), the class picker, Settings, and search (typing an unknown course code offers "Request CHMY 999"). Codes already on Mathub are caught as you type.
 
 - **Storage.** Requests live in the `class_requests` table (created on first use). Files go to `api/data/syllabi/` under random names, with `Require all denied`, and are only served to administrators through `admin_classreq_file` as attachments. `api/.user.ini` raises PHP's upload limit to 12 MB for the API.
 - **Demand.** Requests for the same code are grouped. The page shows a public **Most requested** list (codes and counts only, never names or files) with a one-click **Me too**, and each student's own requests with their status.

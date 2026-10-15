@@ -110,6 +110,17 @@ switch ($route) {
     mh_token_issue((int)$u['id']);
     mh_json(['ok' => true, 'user' => mh_user_public($u)]);
 
+  case 'welcome_done':
+    // the end of the welcome after sign-up: the classes they take (at least one) and the membership they picked
+    mh_method('POST');
+    $u = mh_require_user();
+    $c = is_array($in['courses'] ?? null) ? array_values(array_unique(array_filter($in['courses'], fn($x) => is_string($x) && mh_is_course($x)))) : [];
+    if (!$c) mh_fail('Pick at least one class.');
+    $plan = in_array($in['plan'] ?? '', ['free', 'pro', 'max'], true) ? (string)$in['plan'] : ''; if ($plan === '') mh_fail('Pick a membership: Free, Pro or Max.');
+    mh_db()->prepare('UPDATE users SET courses = ?, welcomed = ?, plan_choice = ? WHERE id = ?')->execute([json_encode($c), time(), $plan, $u['id']]);
+    $u['courses'] = json_encode($c); $u['welcomed'] = time(); $u['plan_choice'] = $plan;
+    mh_json(['ok' => true, 'user' => mh_user_public($u)]);
+
   case 'profile':
     mh_method('POST');
     $u = mh_require_user(); $name = array_key_exists('name', $in) ? mh_str($in, 'name', 60) : $u['name'];
@@ -225,6 +236,7 @@ switch ($route) {
     if (str_starts_with($route, 'push_')) { require_once __DIR__ . '/social.php'; require_once __DIR__ . '/push.php'; mh_push_route($route, $in, $cfg, $ip); }
     if (str_starts_with($route, 'issue_') || str_starts_with($route, 'admin_issue') || str_starts_with($route, 'admin_backup') || $route === 'prefs') { require_once __DIR__ . '/social.php'; require_once __DIR__ . '/extras.php'; mh_extras_route($route, $in, $cfg, $ip); }
     if (str_starts_with($route, 'teach_') || str_starts_with($route, 'admin_teach')) { require_once __DIR__ . '/teach.php'; mh_teach_route($route, $in, $cfg, $ip); }
+    if (str_starts_with($route, 'admin_config')) { require_once __DIR__ . '/siteconfig.php'; mh_siteconfig_route($route, $in, $cfg, $ip); }   // keys and settings from the admin panel
     if (str_starts_with($route, 'forum_') || str_starts_with($route, 'admin_') || str_starts_with($route, 'notif_') || $route === 'terms_accept') { require_once __DIR__ . '/forum.php'; mh_forum_route($route, $in, $cfg, $ip); }
     foreach (['challenge_', 'badges', 'presence', 'meet_', 'poll_', 'mock_', 'contrib_', 'activity', 'cron', 'helpers', 'people', 'league', 'stats_'] as $pre) if (str_starts_with($route, $pre)) { require_once __DIR__ . '/social.php'; mh_social_route($route, $in, $cfg, $ip); }
     mh_fail('Not found.', 404);

@@ -1,6 +1,7 @@
 /* ============================================================
    Mathub — request a class (#/request)
-   Students ask for a class Mathub does not have yet and attach its
+   Professors and TAs ask for a class Mathub does not have yet (students
+   are pointed to Create a class, where Bo writes it from the syllabus) and attach its
    syllabus (PDF or Word, up to 10 MB) or paste the text. Requests for
    the same course code are grouped on the server, so the "most
    requested" list shows demand and anyone can add their voice with one
@@ -45,7 +46,7 @@
     render(root, param, query, standalone) {
       const guest = App.guest(); const pre = normCode(query.code || param || '') || '';
       const head = standalone ? `<div class="landing-wrap"><header class="landing-top"><div><div class="eyebrow">Mathub</div><h1 class="landing-title"><span class="logo-mark">${App.logoSvg(44)}</span>Request a class</h1><p class="muted">${this.blurb}</p></div><div class="row gap-sm"><span id="landing-account"></span><a class="btn" href="#/">${icon('left', 14)} All classes</a></div></header>` : App.pageHead('Request a class', this.blurb);
-      const form = guest ? App.lockCard('Sign in to request a class', 'Requests are for Montana State students, so we can tell you when your class is ready. It takes a minute with your montana.edu email.') : `
+      const form = !App.canRequest() ? `<div class="panel rq-staff"><div class="rq-staff-t"><h2>${icon('path', 18)} Class requests are for professors and TAs</h2><p>They send the official syllabus, so the class is right from day one. You can make any class yourself, right now: drop in its syllabus and Bo writes the whole thing, notes, practice, flashcards and its calendar.</p></div><div class="row gap-sm" style="flex-wrap:wrap"><a class="btn primary" href="#/create">${icon('plus', 14)} Create a class</a>${guest ? '<button class="btn" data-action="auth-login">Log in</button>' : ''}<a class="btn ghost" href="#/class">${icon('users', 14)} Join your instructor’s class</a></div></div>` : guest ? App.lockCard('Sign in to request a class', 'Requests are for Montana State students, so we can tell you when your class is ready. It takes a minute with your montana.edu email.') : `
         <form class="panel rq-form" id="rq-form" novalidate>
           <div class="panel-h"><div class="panel-title">${icon('path')} Which class?</div></div>
           <div class="grid cols-2 rq-grid">
@@ -79,7 +80,7 @@
         try {
           const r = await api('classreq_top');
           el.innerHTML = r.items.length ? `<div class="rq-top">${r.items.map(it => { const C = it.status === 'added' && it.course_id && global.Courses[it.course_id];
-            return `<div class="rq-top-row"><div><b class="mono">${esc(it.code)}</b>${it.title ? ` <span class="small muted">${esc(it.title)}</span>` : ''}<div class="small muted">${it.n} student${it.n === 1 ? '' : 's'} · ${it.syllabus ? 'syllabus in' : 'needs a syllabus'}</div></div><div class="row gap-sm">${statusChip(it.status)}${C ? `<a class="btn xs" href="#/${esc(it.course_id)}">Open</a>` : it.mine ? `<span class="chip xs good">${icon('check', 11)} you</span>` : (it.status === 'new' || it.status === 'working') && !guest ? `<button class="btn xs" data-action="rq-metoo" data-code="${esc(it.code)}">${icon('up', 11)} Me too</button>` : ''}</div></div>`; }).join('')}</div>`
+            return `<div class="rq-top-row"><div><b class="mono">${esc(it.code)}</b>${it.title ? ` <span class="small muted">${esc(it.title)}</span>` : ''}<div class="small muted">${it.n} student${it.n === 1 ? '' : 's'} · ${it.syllabus ? 'syllabus in' : 'needs a syllabus'}</div></div><div class="row gap-sm">${statusChip(it.status)}${C ? `<a class="btn xs" href="#/${esc(it.course_id)}">Open</a>` : it.mine ? `<span class="chip xs good">${icon('check', 11)} you</span>` : (it.status === 'new' || it.status === 'working') && !guest && App.canRequest() ? `<button class="btn xs" data-action="rq-metoo" data-code="${esc(it.code)}">${icon('up', 11)} Me too</button>` : ''}</div></div>`; }).join('')}</div>`
             : '<div class="empty small">No requests yet. Be the first.</div>';
         } catch (e) { el.innerHTML = `<div class="empty small">${esc(e.message)}</div>`; }
       };
@@ -146,6 +147,8 @@
     }
   };
 
-  /* a small link for the start page, the class picker and Settings */
-  App.requestLink = (cls = '') => `<a class="rq-link ${cls}" href="#/request">${icon('path', 13)} Don’t see your class? Request it</a>`;
+  /* who can request a class: professors and TAs (a staff role, set by the server) and administrators */
+  App.canRequest = () => { const u = App.auth && App.auth.user; return !!(u && !u.local && (u.can_request || u.admin || u.role)); };
+  /* a small link for the start page, the class picker and Settings: professors and TAs only */
+  App.requestLink = (cls = '') => App.canRequest() ? `<a class="rq-link ${cls}" href="#/request">${icon('path', 13)} Don’t see your class? Request it</a>` : '';
 })(window);

@@ -43,7 +43,7 @@
   function start(force) {
     if (T.on) return false; if (!force && (settings().tourDone || sessionStorage.getItem('mh-tour'))) return false;
     if (!location.hash.startsWith('#/') || location.hash.replace(/^#\/?/, '').split(/[/?]/)[0]) return false;   // landing page only
-    if ($('.modal-backdrop, .celebrate, #install-banner, #report-modal')) return false;
+    if ($('.modal-backdrop, .celebrate, #install-banner, #report-modal, #welcome')) return false;
     try { sessionStorage.setItem('mh-tour', '1'); } catch (e) {}
     T.i = 0; T.on = true; const el = document.createElement('div'); el.className = 'tour'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-label', 'Quick tour'); el.innerHTML = `<div class="tour-spot"></div><div class="tour-card"></div><div class="tour-dots">${STEPS.map(() => '<i></i>').join('')}</div>`; document.body.appendChild(el); T.el = el;
     el.addEventListener('click', e => { const b = e.target.closest('[data-action]'); if (!b) { if (e.target === el) stop(false); return; } const a = b.dataset.action; if (a === 'tour-next') next(); else if (a === 'tour-back') back(); else if (a === 'tour-skip') stop(false); });

@@ -1,7 +1,8 @@
 /* ============================================================
    Mathub — admin panel (#/admin, or inside a class)
    Overview, members, reports, contributions queue, mock exams,
-   site settings (Canvas feed, announcement, staff roles), digest.
+   keys and settings (API keys, the email password, plans, limits, who may sign up and who is staff;
+   api/siteconfig.php), site settings (Canvas feed, announcement, staff roles), digest.
    Admins see everything; moderators see reports, contributions and mocks.
    ============================================================ */
 (function (global) {
@@ -21,7 +22,7 @@
     if (!json || json.ok === false) { const err = new Error((json && json.error) || 'Request failed.'); err.data = json; throw err; }
     return json;
   }
-  const TABS = [['overview', 'Overview', 'grid', 'admin'], ['members', 'Members', 'info', 'admin'], ['issues', 'Problems', 'bulb', 'mod'], ['packs', 'Add a class', 'book', 'admin'], ['classes', 'Class requests', 'path', 'admin'], ['teach', 'Instructors', 'users', 'admin'], ['errors', 'Site errors', 'zap', 'admin'], ['backups', 'Backups', 'download', 'admin'], ['reports', 'Reports', 'flag', 'mod'], ['contrib', 'Contributions', 'pen', 'mod'], ['mocks', 'Mock exams', 'target', 'mod'], ['growth', 'Growth', 'chart', 'admin'], ['settings', 'Site settings', 'sliders', 'admin'], ['digest', 'Digest & cron', 'clock', 'admin']];
+  const TABS = [['overview', 'Overview', 'grid', 'admin'], ['members', 'Members', 'info', 'admin'], ['issues', 'Problems', 'bulb', 'mod'], ['packs', 'Add a class', 'book', 'admin'], ['classes', 'Class requests', 'path', 'admin'], ['teach', 'Instructors', 'users', 'admin'], ['errors', 'Site errors', 'zap', 'admin'], ['backups', 'Backups', 'download', 'admin'], ['reports', 'Reports', 'flag', 'mod'], ['contrib', 'Contributions', 'pen', 'mod'], ['mocks', 'Mock exams', 'target', 'mod'], ['growth', 'Growth', 'chart', 'admin'], ['config', 'Keys & settings', 'lock', 'admin'], ['settings', 'Site settings', 'sliders', 'admin'], ['digest', 'Digest & cron', 'clock', 'admin']];
 
   App.views.admin = {
     title: 'Admin panel',
@@ -261,6 +262,60 @@
           'role-del': async b => { try { await api('admin_role', { email: b.dataset.e, role: '' }); this.settings(el); } catch (e) { toast(e.message); } }
         });
       } catch (e) { el.innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
+    },
+
+    /* Keys & settings: every setting the server reads, by group. Keys and passwords are never shown, only whether
+       one is set (and its last four characters); a new one replaces it. Saving asks for the administrator's password. */
+    async config(el) {
+      let r; try { r = await api('admin_config'); } catch (e) { el.innerHTML = `<div class="empty">${esc(e.message)}</div>`; return; }
+      const CHECK = { ai: ['ai', 'Check the keys'], pay: ['pay', 'Check RevenueCat'], mail: ['mail', 'Send me a test email'] };
+      const from = f => f.from === 'panel' ? '<span class="chip xs accent">set here</span>' : f.from === 'file' ? '<span class="chip xs">from the config file</span>' : '<span class="chip xs warn">not set</span>';
+      const id = k => 'cfg-' + k;
+      const input = f => {
+        const a = `id="${id(f.key)}" data-k="${esc(f.key)}" aria-describedby="${id(f.key)}-h"`;
+        if (f.type === 'secret') return `<div class="cfg-secret"><input class="input mono" type="password" autocomplete="new-password" spellcheck="false" ${a} placeholder="${f.set ? `Set, ends in ${esc(f.hint)}. Paste a new one to replace it` : 'Not set. Paste it here'}"><button type="button" class="icon-btn" data-action="cfg-eye" aria-label="Show what you typed" aria-pressed="false">${icon('eye', 15)}</button></div>`;
+        if (f.type === 'select') return `<select class="select" ${a}>${f.options.map(o => `<option value="${esc(o)}"${o === f.value ? ' selected' : ''}>${esc(f.key === 'digest_day' ? ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][+o] : o)}</option>`).join('')}</select>`;
+        if (['emails', 'domains', 'grants'].includes(f.type)) return `<textarea class="input mono" rows="${Math.min(6, Math.max(2, (f.value || '').split('\n').length + 1))}" spellcheck="false" ${a}>${esc(f.value || '')}</textarea>`;
+        return `<input class="input${['url', 'host', 'model', 'email', 'text'].includes(f.type) && f.type !== 'text' ? ' mono' : ''}" type="${f.type === 'int' ? 'number' : f.type === 'email' ? 'email' : f.type === 'url' ? 'url' : 'text'}"${f.range ? ` min="${f.range[0]}" max="${f.range[1]}"` : ''} value="${esc(f.value || '')}" ${a}>`;
+      };
+      el.innerHTML = `<div class="callout small mb-2">${icon('lock', 14)} Keys and passwords are kept on the server and never shown again: you only see whether each one is set and its last four characters. What you save here takes the place of <code>config.local.php</code>; <b>Use the file's value</b> goes back to it. Saving asks for your password, and every change is logged (which setting, who and when, never the value).${r.writable ? '' : ' <b>The data folder is not writable, so nothing can be saved.</b>'}</div>
+        ${r.groups.map(g => `<section class="panel mb-2 cfg-group" aria-labelledby="cfg-h-${g.id}"><div class="panel-h"><h2 class="panel-title" id="cfg-h-${g.id}">${esc(g.title)}</h2>${CHECK[g.id] ? `<button type="button" class="btn sm" data-action="cfg-test" data-w="${CHECK[g.id][0]}">${icon('check', 13)} ${CHECK[g.id][1]}</button>` : ''}</div>
+          ${CHECK[g.id] ? `<div class="cfg-results" id="cfg-res-${g.id}" role="status" aria-live="polite"></div>` : ''}
+          <div class="cfg-grid">${g.fields.map(f => `<div class="cfg-field${['emails', 'domains', 'grants'].includes(f.type) || f.type === 'secret' ? ' wide' : ''}" data-f="${esc(f.key)}"><div class="cfg-lab"><label for="${id(f.key)}">${esc(f.label)}</label>${from(f)}</div>${input(f)}<p class="cfg-help" id="${id(f.key)}-h">${esc(f.help || '')}${f.from === 'panel' ? ` <button type="button" class="linkbtn small" data-action="cfg-clear" data-k="${esc(f.key)}">Use the file's value</button>` : ''}</p></div>`).join('')}</div></section>`).join('')}
+        <section class="panel mb-2" aria-labelledby="cfg-log-h"><div class="panel-h"><h2 class="panel-title" id="cfg-log-h">${icon('clock')} Recent changes</h2></div>${r.log.length ? `<ul class="cfg-log">${r.log.map(x => `<li><b>${esc(x.label)}</b> ${x.action === 'cleared' ? 'back to the file’s value' : 'changed'} · ${esc(x.by || 'a removed account')} · <span class="muted">${timeAgo(x.at)}</span></li>`).join('')}</ul>` : '<p class="small muted">Nothing changed here yet.</p>'}</section>
+        <form class="cfg-bar" id="cfg-bar" hidden><span class="cfg-count" id="cfg-count" role="status"></span><label class="sr-only" for="cfg-pass">Your password</label><input class="input" type="password" id="cfg-pass" autocomplete="current-password" placeholder="Your password" required><button type="submit" class="btn primary">Save changes</button><button type="button" class="btn ghost" data-action="cfg-undo">Discard</button></form>`;
+      const orig = {}; r.groups.forEach(g => g.fields.forEach(f => { orig[f.key] = f; }));
+      const clear = new Set(); const bar = $('#cfg-bar', el);
+      const changes = () => {
+        const values = {};
+        $$('[data-k]', el).forEach(x => { if (!x.matches('input, select, textarea')) return; const f = orig[x.dataset.k]; const v = x.value; if (f.type === 'secret' ? v.trim() !== '' : v.trim() !== String(f.value || '').trim()) values[f.key] = v; });
+        return values;
+      };
+      const paint = () => { const n = Object.keys(changes()).length + clear.size; bar.hidden = !n; $('#cfg-count', el).textContent = `${n} change${n === 1 ? '' : 's'}`; $$('.cfg-field', el).forEach(d => d.classList.toggle('dirty', d.dataset.f in changes() || clear.has(d.dataset.f))); };
+      el.addEventListener('input', e => { if (e.target.closest('[data-k]')) paint(); });
+      el.addEventListener('change', e => { if (e.target.closest('[data-k]')) paint(); });
+      bind(el, {
+        'cfg-eye': b => { const i = b.previousElementSibling; const show = i.type === 'password'; i.type = show ? 'text' : 'password'; b.setAttribute('aria-pressed', String(show)); b.setAttribute('aria-label', show ? 'Hide what you typed' : 'Show what you typed'); },
+        'cfg-clear': b => { const k = b.dataset.k; if (clear.has(k)) { clear.delete(k); b.textContent = "Use the file's value"; } else { clear.add(k); b.textContent = 'Keep the value set here'; } paint(); },
+        'cfg-undo': () => this.config(el),
+        'cfg-test': async b => {
+          const w = b.dataset.w; const box = $('#cfg-res-' + (w === 'ai' ? 'ai' : w === 'pay' ? 'pay' : 'mail'), el); b.disabled = true; box.innerHTML = `<p class="small muted">${icon('rotate', 13)} Checking…</p>`;
+          try { const t = await api('admin_config_test', { what: w }); const rows = t.results || [{ name: '', pass: t.pass, message: t.message }]; box.innerHTML = rows.map(x => `<p class="cfg-res ${x.pass ? 'ok' : 'bad'}">${icon(x.pass ? 'check' : 'x', 14)} ${x.name ? `<b>${esc(x.name)}:</b> ` : ''}${esc(x.message)}</p>`).join(''); }
+          catch (e) { box.innerHTML = `<p class="cfg-res bad">${icon('x', 14)} ${esc(e.message)}</p>`; }
+          b.disabled = false;
+        }
+      });
+      bar.addEventListener('submit', async e => {
+        e.preventDefault(); const pass = $('#cfg-pass', el); const btn = $('button[type="submit"]', bar); btn.disabled = true;
+        $$('.cfg-field.bad', el).forEach(d => d.classList.remove('bad'));
+        try {
+          const res = await api('admin_config_save', { password: pass.value, values: changes(), clear: [...clear] });
+          toast(res.changed.length ? `Saved: ${res.changed.length} setting${res.changed.length === 1 ? '' : 's'} changed.` : 'Nothing changed.', 3500); this.config(el);
+        } catch (x) {
+          btn.disabled = false; const f = x.data && x.data.field; toast(x.message, 5000);
+          if (f === 'password') { pass.value = ''; pass.focus(); } else if (f) { const d = $(`.cfg-field[data-f="${f}"]`, el); if (d) { d.classList.add('bad'); const i = $('[data-k]', d); if (i) i.focus(); } }
+        }
+      });
     },
 
     async digest(el) {

@@ -1,7 +1,9 @@
 <?php
 /* ============================================================
    Mathub account server — class requests
-   Students ask for a class Mathub does not have yet and can attach
+   Professors and TAs (mh_can_request: an Instructor or TA role, a TA in a
+   Mathub Faculty class, or an administrator) ask for a class Mathub does
+   not have yet; students make their own instead (Create a class). They can attach
    its syllabus (PDF or Word, up to 10 MB) or paste the text. Files go
    to data/syllabi, which the web cannot read; only administrators can
    download them, through admin_classreq_file. Requests for the same
@@ -94,6 +96,7 @@ function mh_requests_route(string $route, array $in, array $cfg, string $ip): vo
 
     case 'classreq_create': {
       mh_method('POST'); $u = mh_require_user(); $uid = (int)$u['id'];
+      if (!mh_can_request($u)) mh_fail('Class requests come from professors and TAs. You can make any class yourself: Create a class, drop in its syllabus, and Bo writes it.', 403, ['staff_only' => true]);
       if ($b = mh_banned($uid)) mh_fail('Your account is paused until ' . gmdate('M j, Y', (int)$b['until']) . '.', 403, ['banned' => true]);
       mh_rate_or_fail("classreq:user:$uid", 8, 86400, 'That is a lot of requests for one day. Try again tomorrow.');
       mh_rate_or_fail("classreq:ip:$ip", 30, 86400, 'Too many requests from this network today.');

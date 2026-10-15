@@ -95,6 +95,12 @@ if ($path === '/anthropic/v1/messages') {
 // question every time and keeps what it was sent in tests/fixtures/stt-last.json
 // the Realtime API's call setup and hang-up (live calls with Bo): the offer and session go to tests/fixtures/live-last.json,
 // hang-ups to tests/fixtures/live-hangups.json; a session whose instructions say REFUSE-FULL is refused unless it is the lean one
+// the model list, which the admin panel's Check uses to try the key
+if ($path === '/openai/v1/models') {
+  header('Content-Type: application/json');
+  if (($_SERVER['HTTP_AUTHORIZATION'] ?? '') !== 'Bearer sk-openai-test') { http_response_code(401); echo '{"error":{"message":"Incorrect API key provided."}}'; exit; }
+  echo '{"object":"list","data":[{"id":"gpt-realtime-2.1-mini","object":"model"}]}'; exit;
+}
 if (preg_match('#^/openai/v1/realtime/calls(?:/([A-Za-z0-9_-]+)/hangup)?$#', $path, $m)) {
   if (($_SERVER['HTTP_AUTHORIZATION'] ?? '') !== 'Bearer sk-openai-test') { http_response_code(401); header('Content-Type: application/json'); echo '{"error":{"message":"Incorrect API key"}}'; exit; }
   if (!empty($m[1])) { $f = __DIR__ . '/../fixtures/live-hangups.json'; $h = json_decode((string)@file_get_contents($f), true) ?: []; $h[] = $m[1]; @file_put_contents($f, json_encode($h)); header('Content-Type: application/json'); echo '{}'; exit; }
