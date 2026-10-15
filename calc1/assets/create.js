@@ -503,7 +503,7 @@ THE SYLLABUS:
         const was = S.plan();
         const r = await api('create_status' + (force ? '&refresh=1' : ''));
         S.info = r; S.ok = !!r.configured;
-        lsSet(KEY, { uid: u.id, on: !!r.active, plan: r.plan || '', until: r.until || null, renews: r.renews !== false, store: r.store || '', manage: r.manage_url || '', granted: !!r.granted, at: Date.now() });
+        lsSet(KEY, { uid: u.id, on: !!r.active, plan: r.plan || '', until: r.until || null, renews: r.renews !== false, store: r.store || '', manage: r.manage_url || '', granted: !!r.granted, paid: r.paid || '', paidRenews: r.paid_renews !== false, at: Date.now() });
         if (was !== S.plan()) subChanged(); else if (S.onInfo) S.onInfo();   // the same plan, maybe cancelled or turned back on
         return S.active();
       },
@@ -1019,19 +1019,22 @@ THE SYLLABUS:
     const u = user(); const s = Sub.status(); const plan = Sub.plan(); const on = !!plan;
     if (!u && !NATIVE) return `<div class="pl-now pl-out"><div class="pl-now-t"><h2 class="pl-name">Sign in to see your plan</h2><p>Your plan belongs to your Mathub account, so it works on the website and in the apps.</p></div><div class="pl-acts"><button type="button" class="btn primary" data-pl="login">Log in</button><button type="button" class="btn" data-pl="signup">Create an account</button></div></div>`;
     if (!on) return `<div class="pl-now pl-free"><span class="pl-badge" aria-hidden="true">${App.bobcatSvg ? App.bobcatSvg(54) : ''}</span><div class="pl-now-t"><p class="pl-state"><span class="pl-chip">Free</span></p><h2 class="pl-name">You’re on the free plan</h2><p>Everything built into Mathub is free. With <b>Mathub Pro</b> Bo writes your classes from any syllabus, and <b>Mathub Max</b> adds Bo, your AI tutor, in a chat and on calls.</p></div><div class="pl-acts"><button type="button" class="btn primary" data-pl="buy-max">Get Max</button><button type="button" class="btn" data-pl="buy-pro">Get Pro</button>${u ? `<button type="button" class="btn ghost" data-pl="check">I already subscribed</button>` : ''}</div></div>`;
-    const ends = s.until && !s.renews; const store = planStore(s); const where = s.granted ? 'given to your account' : STORE_NAME[store] || 'the website';
-    const chip = s.granted ? '<span class="pl-chip gift">Given to your account</span>' : ends ? `<span class="pl-chip warn">Ends ${esc(fmtDate(s.until))}</span>` : '<span class="pl-chip ok">Active</span>';
+    const ends = s.until && !s.renews && !s.granted; const store = planStore(s); const where = STORE_NAME[store] || 'the website';
+    const paid = s.granted && PLANS[s.paid] ? s.paid : '';   // given a plan, and paying for a smaller one too
+    const chip = s.granted ? `<span class="pl-chip gift">Given to your account${s.until ? ` until ${esc(fmtDate(s.until))}` : ''}</span>` : ends ? `<span class="pl-chip warn">Ends ${esc(fmtDate(s.until))}</span>` : '<span class="pl-chip ok">Active</span>';
     const facts = [
       ['Price', s.granted ? 'Free for you' : `${esc(Sub.price(plan) || PLANS[plan].web)} a month`],
-      [ends ? 'Ends' : 'Renews', s.granted ? 'Does not renew or charge' : s.until ? `${esc(fmtDate(s.until))}${ends ? ', and it will not renew' : ''}` : 'Every month'],
-      ['Paid through', esc(where)],
+      s.granted ? (s.until ? ['Ends', `${esc(fmtDate(s.until))}. It never charges you`] : ['Lasts', 'No end date. It never charges you']) : [ends ? 'Ends' : 'Renews', s.until ? `${esc(fmtDate(s.until))}${ends ? ', and it will not renew' : ''}` : 'Every month'],
+      s.granted ? ['From', 'Given by Mathub'] : ['Paid through', esc(where)],
       u ? ['Account', esc(u.email)] : null
     ].filter(Boolean);
-    const manage = !s.granted && Sub.manageUrl();
+    const manage = (!s.granted || paid) && Sub.manageUrl();
     return `<div class="pl-now pl-${plan}"><span class="pl-badge" aria-hidden="true">${icon(plan === 'max' ? 'gem' : 'zap', 30)}</span><div class="pl-now-t"><p class="pl-state">${chip}</p><h2 class="pl-name">${esc(PLANS[plan].name)}</h2>
         <dl class="pl-facts">${facts.map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join('')}</dl>
-        ${ends ? `<p class="pl-note">${icon('clock', 15)} Everything in ${esc(PLANS[plan].short)} keeps working until then. Changed your mind? ${manage ? 'Turn it back on from Manage billing.' : ''}</p>` : ''}</div>
-      <div class="pl-acts">${plan === 'pro' ? `<button type="button" class="btn primary" data-pl="buy-max">Move up to Max</button>` : ''}${manage ? `<a class="btn${plan === 'max' ? ' primary' : ''}" href="${esc(manage)}" target="_blank" rel="noopener">${icon('external', 15)} Manage billing</a>` : ''}${!s.granted && !ends ? `<button type="button" class="btn ghost pl-cancel" data-pl="cancel">Cancel plan</button>` : ''}<button type="button" class="btn ghost" data-pl="check">${icon('rotate', 14)} Check again</button></div></div>`;
+        ${ends ? `<p class="pl-note">${icon('clock', 15)} Everything in ${esc(PLANS[plan].short)} keeps working until then. Changed your mind? ${manage ? 'Turn it back on from Manage billing.' : ''}</p>` : ''}
+        ${s.granted && s.until ? `<p class="pl-note">${icon('clock', 15)} Everything in ${esc(PLANS[plan].short)} works until then. After that you are on ${paid ? esc(PLANS[paid].name) : 'Free'} again, unless you get a plan.</p>` : ''}
+        ${paid ? `<p class="pl-note pl-paid">${icon('info', 15)} You also pay for <b>${esc(PLANS[paid].name)}</b> through ${esc(where)}. That did not change: cancel it below if you no longer need it.</p>` : ''}</div>
+      <div class="pl-acts">${plan === 'pro' ? `<button type="button" class="btn primary" data-pl="buy-max">Move up to Max</button>` : ''}${manage ? `<a class="btn${plan === 'max' && !paid ? ' primary' : ''}" href="${esc(manage)}" target="_blank" rel="noopener">${icon('external', 15)} Manage billing</a>` : ''}${(!s.granted && !ends) || (paid && s.paidRenews) ? `<button type="button" class="btn ghost pl-cancel" data-pl="cancel">${paid ? `Cancel ${esc(PLANS[paid].short)}` : 'Cancel plan'}</button>` : ''}<button type="button" class="btn ghost" data-pl="check">${icon('rotate', 14)} Check again</button></div></div>`;
   }
   function useHtml() {
     const plan = Sub.plan(); const st = P.use; if (!plan) return '';
@@ -1091,12 +1094,12 @@ THE SYLLABUS:
       };
       // what has been used this month (the same numbers Bo's pages show)
       if (user() && Sub.plan()) api('ai_status').then(st => { P.use = st; const el = $('#pl-use'); if (el) el.innerHTML = useHtml(); const f = $('#pl-faq-b'); if (f) f.innerHTML = faqHtml(); }).catch(() => { const el = $('#pl-use'); if (el) el.innerHTML = '<p class="small muted">This month’s numbers could not be loaded. Try again in a moment.</p>'; });
-      if (user() && !P.fresh) { P.fresh = true; Sub.refresh(true).catch(() => {}); }
+      if (user() && (!P.fresh || Date.now() - (Sub.status().at || 0) > 60000)) { P.fresh = true; Sub.refresh(true).catch(() => {}); }   // also a plan given since (the inbox links here)
     }
   };
   /* cancelling: what changes and when, an optional reason, then it is done here or the page says where */
   function cancelPlan() {
-    const plan = Sub.plan(); if (!plan) return; const s = Sub.status(); const store = planStore(s);
+    const s = Sub.status(); const plan = s.granted && PLANS[s.paid] ? s.paid : Sub.plan(); if (!plan) return; const store = planStore(s);   // given a plan: what they also pay for
     const inStore = store === 'app_store' || store === 'mac_app_store' || store === 'play_store';
     const old = $('#pl-cancel'); if (old) old.remove();
     const el = document.createElement('div'); el.id = 'pl-cancel'; el.className = NATIVE ? 'modal-backdrop sheet-backdrop' : 'modal-backdrop pw-backdrop';
@@ -1134,7 +1137,7 @@ THE SYLLABUS:
       if (r.how === 'portal' && r.url) return step('One more step', `Website plans are cancelled on their billing page, which RevenueCat runs for Mathub (payments by Stripe). It opens in a new tab: choose <b>Cancel subscription</b> there. ${esc(name)} stays on until ${esc(end)}.`, r.url, 'Open the billing page');
       if (r.how === 'app_store' || r.how === 'play_store') return step(`Cancel in ${r.how === 'play_store' ? 'Google Play' : 'the App Store'}`, `You bought ${esc(name)} in the Mathub app, so ${r.how === 'play_store' ? 'Google Play' : 'Apple'} handles it: open your subscriptions, pick Mathub and cancel. It stays on until ${esc(end)}.`, r.url, `Open ${r.how === 'play_store' ? 'Google Play' : 'App Store'} subscriptions`);
       if (r.how === 'already') return step('It is already cancelled', `${esc(name)} ends on ${esc(end)} and will not renew.`, '', '');
-      if (r.how === 'granted') return step('Nothing to cancel', `${esc(name)} was given to your account (for testing), so it never charges you.`, '', '');
+      if (r.how === 'granted') return step('Nothing to cancel', `${esc(name)} was given to your account by Mathub, so it never charges you.`, '', '');
       if (r.how === 'portal') return step('Write to us to cancel', 'The billing page for your plan could not be found. Write to us from the Contact page and we will cancel it for you, and make sure you are not charged again.', '', '');
       step('No plan to cancel', 'Your account has no plan right now.', '', '');
       Sub.refresh(true).catch(() => {});

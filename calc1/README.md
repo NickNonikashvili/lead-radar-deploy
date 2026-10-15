@@ -239,10 +239,22 @@ Log out work; it is still when motion is off or reduced, and the old coach-mark 
 
 Admin panel → Members → **Add a member** (`api admin_user_add`): any email address, also outside montana.edu
 (it is added to "Also allowed to sign up" in Keys & settings so it can sign in), with a name, a role (student, TA,
-instructor) and a plan given without paying (Pro or Max, added to plan grants). The account is verified at once.
+instructor) and a plan given without paying (Pro or Max, given like below). The account is verified at once.
 Either the administrator sets the password, or the person gets an email with a link (`#/?setpw=<email>`, which
 opens "choose your password" with the address filled in) and a code good for 7 days. Mathub's welcome greets them
 at their first sign-in. Duplicates and weak passwords are refused.
+
+## Giving members a membership
+
+Admin panel → Members: every member shows their plan (Free, Pro or Max) and where it comes from (given, paid, or
+tester), and "With Pro or Max" lists only them. Pressing the plan opens **Membership for …** under the row
+(`api admin_plan`): Free, Pro or Max; for how long (no end date, 1, 3 or 6 months, a year, or until a day); a note
+only administrators see; and "Tell them in their inbox". It is kept in `plan_gifts` (by email, with who gave it and
+when) and counts at once everywhere a plan does (Bo, making classes, Your plan, which shows its last day). It never
+charges anything and does not touch a plan the member pays for: Your plan still offers Manage billing and Cancel for
+that one. Taking it back (Free) leaves whatever they pay for. Picking a plan here replaces a tester plan for the same
+address saved in Keys & settings; one in `config.local.php` stays. Housekeeping removes given memberships of deleted
+accounts and ones that ended three months ago.
 
 ## Floating buttons
 

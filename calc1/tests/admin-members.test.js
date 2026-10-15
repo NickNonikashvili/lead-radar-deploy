@@ -1,17 +1,18 @@
 /* ============================================================
    Admin panel → Members → Add a member (assets/admin.js, api admin_user_add):
    - an administrator adds anyone, also outside montana.edu: the account is verified at once, with a role and
-     a plan if wanted; an outside address is allowed to sign in, and both show in Keys & settings
+     a plan if wanted (given like Members gives one); an outside address is allowed to sign in (Keys & settings)
    - invited: an email with a link (#/?setpw=…) that opens "choose your password" with the address filled in,
      and a code good for 7 days; then Mathub welcomes them. Or the administrator sets the password
    - duplicates and weak passwords are refused, naming the field; students and moderators cannot add anyone
    Everything made here is removed at the end.
    ============================================================ */
 const T = require('./lib');
-const fs = require('fs'); const path = require('path');
+const fs = require('fs'); const path = require('path'); const { spawnSync } = require('child_process');
 const LOG = path.join(__dirname, '..', 'api', 'data', 'mail.log');
 (async () => {
   const { mk, txt, login, api, go, hscroll, check } = await T.start();
+  const rowPlan = (p, e) => p.evaluate(e => { const tr = [...document.querySelectorAll('#adm-body tbody tr')].find(r => r.textContent.includes(e)); return tr && tr.querySelector('[data-action="plan"]').textContent.trim(); }, e);
   const open = async (w, h, email) => { const [c, p] = await mk(w, h, { serviceWorkers: 'block' }); await go(p, '#/', 600); if (email) { await login(p, email); await p.reload(); await p.waitForTimeout(900); } return [c, p]; };
   const stamp = Date.now().toString(36); const OUT = `dr.hall.${stamp}@example.edu`, IN = `ta.${stamp}@montana.edu`;
 
@@ -35,7 +36,8 @@ const LOG = path.join(__dirname, '..', 'api', 'data', 'mail.log');
   const code = (/Your code: (\d{6})/.exec(part) || [])[1]; const link = (/(https?:\/\/\S+#\/\?setpw=\S+)/.exec(part) || [])[1];
   check('they get an email with a link to choose their password and a code', !!code && !!link && link.includes(encodeURIComponent(OUT)) && /Ada added you to Mathub/.test(part), part.slice(0, 300));
   const cfg = (await api(a, 'admin_config')).json.groups.flatMap(g => g.fields); const F = k => cfg.find(f => f.key === k).value;
-  check('an outside address is allowed to sign in, and the plan is given to them (both in Keys & settings)', F('extra_allowed_emails').includes(OUT) && F('plan_grants').includes(`${OUT} = max`));
+  const given = (await api(a, `admin_users&q=${encodeURIComponent(OUT)}`)).json.users[0].plan;
+  check('an outside address is allowed to sign in (Keys & settings), and Max is given to them (Members shows it)', F('extra_allowed_emails').includes(OUT) && given.plan === 'max' && given.gift.plan === 'max' && given.gift.until === 0 && (await rowPlan(a, OUT)) === 'Max', given);
   const dup = await api(a, 'admin_user_add', { email: OUT });
   check('adding the same address again is refused, naming the field', dup.status === 409 && dup.json.field === 'email');
   // with a password set by the administrator
@@ -69,6 +71,7 @@ const LOG = path.join(__dirname, '..', 'api', 'data', 'mail.log');
   await cp.close();
   await api(a, 'admin_role', { email: OUT, role: '' }); await api(a, 'admin_role', { email: IN, role: '' });
   await api(a, 'admin_config_save', { password: 'password123', clear: ['extra_allowed_emails', 'plan_grants'] });
+  spawnSync('php', ['-r', '$d = new PDO("sqlite:" . $argv[1]); $d->prepare("DELETE FROM plan_gifts WHERE email LIKE ?")->execute(["%" . $argv[2] . "%"]);', path.join(__dirname, '..', 'api', 'data', 'mathub.sqlite'), stamp]);
   check('cleaned up: no test accounts or grants left', !(await api(a, `admin_users&q=${stamp}`)).json.users.length);
   await ca.close();
   await T.finish();

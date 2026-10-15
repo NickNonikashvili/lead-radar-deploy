@@ -2,7 +2,7 @@
 /* ============================================================
    Mathub account server — classes students make, sharing them, and the Pro and Max plans
    Routes: myclasses, myclass, myclass_save, myclass_delete, myclass_share, myclass_unshare,
-           shared_class (public, by share code), create_status, plan_cancel
+           shared_class (public, by share code), create_status, plan_cancel, admin_plan (administrators)
    - A student's own classes (made from a syllabus or a class file) are kept with their account, so they
      open on the website and on every phone they sign in on. The app keeps its own copy in files on the
      device and syncs; the website keeps a copy in the browser.
@@ -12,13 +12,19 @@
      (Pro, plus Bo the AI tutor). App purchases (App Store, Google Play) and web purchases (RevenueCat web
      checkout) belong to the RevenueCat customer "mh_<user id>", with the entitlements "pro" and "max" (a Max
      product unlocks both). The server asks RevenueCat with the secret key in config.local.php and keeps the
-     answer for ten minutes. Accounts in plan_grants (config.local.php) get a plan without paying, for testing.
+     answer for ten minutes. Accounts in plan_grants (config.local.php or Keys & settings) get a plan without
+     paying, for testing.
+   - Given memberships (admin_plan, from Members in the admin panel): an administrator gives anyone Pro or Max,
+     with no end or until a day they pick, and can take it back. Kept in plan_gifts by email (so it also waits for
+     an account made later), with who gave it and an optional note only administrators see. The member is told in
+     their inbox if the administrator wants. It never charges anything and does not touch a plan they pay for.
    - Cancelling (plan_cancel, from the Your plan page): an App Store or Google Play plan is cancelled in the store,
      so the page sends the student there. A plan bought on the website is cancelled right here when RevenueCat's
      API v2 is set up (revenuecat_v2_key with write access to subscriptions, and revenuecat_project); otherwise, or
      if that fails, the page opens RevenueCat's customer portal for it (the plan's management_url). Either way the
      plan runs to the end of the month paid for. A reason, if the student gives one, is kept in plan_feedback.
-   Rows are removed with the account (ON DELETE CASCADE); housekeeping clears any left behind.
+   Rows are removed with the account (ON DELETE CASCADE); housekeeping clears any left behind, and given memberships
+   of accounts that are gone (or that ended three months ago).
    ============================================================ */
 
 const MH_MYCLASS_MAX = 40;            // classes per account
@@ -34,6 +40,7 @@ function mh_myclass_db(): PDO {
     if (!in_array('renews', $cols, true)) $db->exec('ALTER TABLE create_status ADD COLUMN renews INTEGER NOT NULL DEFAULT 1');
     if (!in_array('tier', $cols, true)) $db->exec("ALTER TABLE create_status ADD COLUMN tier TEXT NOT NULL DEFAULT ''");
     $db->exec("CREATE TABLE IF NOT EXISTS plan_feedback (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE, plan TEXT NOT NULL DEFAULT '', store TEXT NOT NULL DEFAULT '', reason TEXT NOT NULL DEFAULT '', note TEXT NOT NULL DEFAULT '', at INTEGER NOT NULL)");
+    $db->exec("CREATE TABLE IF NOT EXISTS plan_gifts (email TEXT PRIMARY KEY, plan TEXT NOT NULL, until INTEGER NOT NULL DEFAULT 0, note TEXT NOT NULL DEFAULT '', by_id INTEGER, created INTEGER NOT NULL)");
     $ready = true;
   }
   return $db;
@@ -45,6 +52,7 @@ function mh_myclass_prune(): int {
   $n = $db->exec('DELETE FROM my_classes WHERE user_id NOT IN (SELECT id FROM users)');
   $db->exec('DELETE FROM create_status WHERE user_id NOT IN (SELECT id FROM users)');
   $db->exec('DELETE FROM plan_feedback WHERE user_id NOT IN (SELECT id FROM users)');
+  $db->exec('DELETE FROM plan_gifts WHERE email NOT IN (SELECT lower(email) FROM users) OR (until > 0 AND until < ' . (time() - 90 * 86400) . ')');   // given to an account that is gone, or ended three months ago
   return (int)$n;
 }
 
@@ -131,11 +139,66 @@ function mh_rc_cancel_web(array $cfg, string $customer): bool {
   return $done;
 }
 
-/** A plan given without paying, for testers (plan_grants in config.local.php: email => 'pro' or 'max'). */
-function mh_plan_grant(array $u, array $cfg): string {
-  $g = is_array($cfg['plan_grants'] ?? null) ? $cfg['plan_grants'] : []; $email = strtolower((string)($u['email'] ?? ''));
+const MH_PLAN_RANK = ['' => 0, 'pro' => 1, 'max' => 2];
+
+/** A membership an administrator gave this address and that has not ended, or null. */
+function mh_plan_gift(string $email): ?array {
+  $st = mh_myclass_db()->prepare('SELECT * FROM plan_gifts WHERE email = ? AND (until = 0 OR until > ?)'); $st->execute([strtolower(trim($email)), time()]);
+  $g = $st->fetch(); return $g && isset(MH_PLAN_RANK[$g['plan']]) && $g['plan'] !== '' ? $g : null;
+}
+/** Gives an address Pro or Max (until a time, 0 = no end), or takes it back ($plan ''). */
+function mh_plan_gift_set(string $email, string $plan, int $until, string $note, int $by): void {
+  $db = mh_myclass_db(); $email = strtolower(trim($email));
+  if ($plan === '') { $db->prepare('DELETE FROM plan_gifts WHERE email = ?')->execute([$email]); return; }
+  $db->prepare('INSERT INTO plan_gifts (email, plan, until, note, by_id, created) VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT(email) DO UPDATE SET plan = excluded.plan, until = excluded.until, note = excluded.note, by_id = excluded.by_id, created = excluded.created')
+    ->execute([$email, $plan, $until, mb_substr($note, 0, 120), $by ?: null, time()]);
+}
+/** The tester plan for an address in plan_grants (config.local.php or Keys & settings): 'pro', 'max' or ''. */
+function mh_plan_tester(string $email, array $cfg): string {
+  $g = is_array($cfg['plan_grants'] ?? null) ? $cfg['plan_grants'] : []; $email = strtolower($email);
   foreach ($g as $k => $v) if (strtolower((string)$k) === $email && in_array($v, ['pro', 'max'], true)) return $v;
   return '';
+}
+/** The plan given to an account without paying, the higher of a given membership and a tester plan:
+    ['plan' => 'max'|'pro'|'', 'until' => end time or 0, 'from' => 'gift'|'tester'|'']. */
+function mh_plan_given(array $u, array $cfg): array {
+  $email = strtolower((string)($u['email'] ?? '')); $out = ['plan' => '', 'until' => 0, 'from' => ''];
+  if ($email === '') return $out;
+  $t = mh_plan_tester($email, $cfg); if ($t !== '') $out = ['plan' => $t, 'until' => 0, 'from' => 'tester'];
+  $g = mh_plan_gift($email); if ($g && MH_PLAN_RANK[$g['plan']] > MH_PLAN_RANK[$out['plan']]) $out = ['plan' => $g['plan'], 'until' => (int)$g['until'], 'from' => 'gift'];
+  return $out;
+}
+/** 'max', 'pro' or '': the plan given to this account (by an administrator, or for testing). */
+function mh_plan_grant(array $u, array $cfg): string { return mh_plan_given($u, $cfg)['plan']; }
+/** What each member has, for Members in the admin panel, keyed by user id. Uses the last answer kept from
+    RevenueCat (no new calls): the plan paid for, a membership given by an administrator, a tester plan, and the
+    plan that counts (the highest). */
+function mh_plan_admin_rows(array $users, array $cfg): array {
+  if (!$users) return [];
+  $db = mh_myclass_db(); $now = time(); $ids = array_map(fn($r) => (int)$r['id'], $users); $emails = array_map(fn($r) => strtolower((string)$r['email']), $users);
+  $paid = []; $st = $db->prepare('SELECT user_id, tier, expires, store, renews FROM create_status WHERE active = 1 AND (expires = 0 OR expires > ?) AND user_id IN (' . implode(',', array_fill(0, count($ids), '?')) . ')');
+  $st->execute(array_merge([$now], $ids)); foreach ($st->fetchAll() as $r) $paid[(int)$r['user_id']] = $r;
+  $gifts = []; $st = $db->prepare('SELECT g.*, u.name AS by_name, u.email AS by_email FROM plan_gifts g LEFT JOIN users u ON u.id = g.by_id WHERE (g.until = 0 OR g.until > ?) AND g.email IN (' . implode(',', array_fill(0, count($emails), '?')) . ')');
+  $st->execute(array_merge([$now], $emails)); foreach ($st->fetchAll() as $r) $gifts[$r['email']] = $r;
+  $out = [];
+  foreach ($users as $r) {
+    $id = (int)$r['id']; $e = strtolower((string)$r['email']); $p = $paid[$id] ?? null; $g = $gifts[$e] ?? null;
+    $v = ['paid' => $p ? ['plan' => ((string)$p['tier'] ?: 'pro'), 'until' => (int)$p['expires'], 'store' => (string)$p['store'], 'renews' => (int)$p['renews'] === 1] : null,
+          'gift' => $g ? ['plan' => (string)$g['plan'], 'until' => (int)$g['until'], 'note' => (string)$g['note'], 'by' => (string)($g['by_name'] ?: explode('@', (string)$g['by_email'])[0]), 'at' => (int)$g['created']] : null,
+          'tester' => mh_plan_tester($e, $cfg)];
+    $plan = ''; foreach ([$v['paid']['plan'] ?? '', $v['gift']['plan'] ?? '', $v['tester']] as $c) if ((MH_PLAN_RANK[$c] ?? 0) > MH_PLAN_RANK[$plan]) $plan = $c;
+    $out[$id] = ['plan' => $plan] + $v;
+  }
+  return $out;
+}
+/** The ids of members with Pro or Max now (paid, given or tester), for the "Pro or Max" filter in Members. */
+function mh_plan_member_ids(array $cfg): array {
+  $db = mh_myclass_db(); $now = time();
+  $st = $db->prepare('SELECT user_id FROM create_status WHERE active = 1 AND (expires = 0 OR expires > ?) UNION SELECT u.id FROM users u JOIN plan_gifts g ON g.email = lower(u.email) WHERE g.until = 0 OR g.until > ?');
+  $st->execute([$now, $now]); $ids = array_map('intval', $st->fetchAll(PDO::FETCH_COLUMN));
+  $t = array_keys(array_filter(is_array($cfg['plan_grants'] ?? null) ? $cfg['plan_grants'] : [], fn($v) => in_array($v, ['pro', 'max'], true)));
+  if ($t) { $st = $db->prepare('SELECT id FROM users WHERE lower(email) IN (' . implode(',', array_fill(0, count($t), '?')) . ')'); $st->execute(array_map(fn($e) => strtolower((string)$e), $t)); $ids = array_merge($ids, array_map('intval', $st->fetchAll(PDO::FETCH_COLUMN))); }
+  return array_values(array_unique($ids));
 }
 /** 'max', 'pro' or '' for one account: a grant, or what RevenueCat says. */
 function mh_plan(array $u, array $cfg, bool $refresh = false): string {
@@ -211,7 +274,11 @@ function mh_myclass_route(string $route, array $in, array $cfg, string $ip): voi
       $out = ['ok' => true, 'configured' => $secret !== '' && $links['pro'] !== '' && $links['max'] !== '', 'prices' => ['pro' => (string)($cfg['pro_web_price'] ?? '$15'), 'max' => (string)($cfg['max_web_price'] ?? '$50')], 'signed_in' => (bool)$u];
       if (!$u) mh_json($out + ['active' => false, 'plan' => '']);
       $s = mh_create_status($u, $cfg, !empty($_GET['refresh']));
-      $grant = mh_plan_grant($u, $cfg); if ($grant && ($grant === 'max' || !$s['active'])) { $s['plan'] = $grant; $s['active'] = true; $s['granted'] = true; }
+      $given = mh_plan_given($u, $cfg); $grant = $given['plan'];
+      if ($grant && MH_PLAN_RANK[$grant] > MH_PLAN_RANK[$s['active'] ? $s['plan'] : '']) {   // given: it never charges; a smaller plan they also pay for stays theirs to manage
+        if ($s['active']) { $s['paid'] = $s['plan']; $s['paid_renews'] = $s['renews']; }
+        $s['plan'] = $grant; $s['active'] = true; $s['granted'] = true; $s['until'] = $given['until'] ? gmdate('c', $given['until']) : null; $s['renews'] = false;
+      }
       $out['customer'] = 'mh_' . $u['id'];
       $out['buy'] = array_map(fn($l) => $l !== '' ? rtrim($l, '/') . '/' . rawurlencode($out['customer']) : '', $links);
       mh_json($out + $s);
@@ -234,6 +301,45 @@ function mh_myclass_route(string $route, array $in, array $cfg, string $ip): voi
         mh_json(['ok' => true, 'how' => 'cancelled', 'plan' => $plan, 'until' => $s['until'] ?: $out['until'], 'store' => $store]);
       }
       mh_json($out + ['how' => 'portal', 'url' => (string)$s['manage_url']]);
+    }
+    case 'admin_plan': {   // an administrator gives a member Pro or Max (no end, or until a day), or takes it back
+      mh_method('POST'); $u = mh_require_user(); if (!mh_is_admin($u)) mh_fail('Administrators only.', 403);
+      mh_rate_or_fail("admin_plan:{$u['id']}", 200, 3600, 'That is a lot of changes at once. Wait a little.');
+      $plan = (string)($in['plan'] ?? ''); if (!isset(MH_PLAN_RANK[$plan])) mh_fail('Pick Free, Pro or Max.', 400, ['field' => 'plan']);
+      $st = $db->prepare('SELECT id, email, name FROM users WHERE id = ?'); $st->execute([(int)($in['user_id'] ?? 0)]); $t = $st->fetch();
+      if (!$t) mh_fail('That member was not found.', 404);
+      $email = strtolower((string)$t['email']); $until = 0; $day = trim((string)($in['until'] ?? ''));
+      if ($plan !== '' && $day !== '') {
+        $tz = new DateTimeZone(in_array($cfg['timezone'] ?? '', timezone_identifiers_list(), true) ? (string)$cfg['timezone'] : 'America/Denver');
+        $d = DateTime::createFromFormat('!Y-m-d', $day, $tz);
+        if (!$d || $d->format('Y-m-d') !== $day) mh_fail('Pick the last day as a date.', 400, ['field' => 'until']);
+        $until = $d->setTime(23, 59, 59)->getTimestamp();
+        if ($until <= $now) mh_fail('The last day has to be today or later.', 400, ['field' => 'until']);
+        if ($until > $now + 5 * 366 * 86400) mh_fail('Pick a last day within five years, or no end date.', 400, ['field' => 'until']);
+      }
+      $note = trim(preg_replace('/\s+/u', ' ', is_string($in['note'] ?? null) ? $in['note'] : ''));
+      $had = mh_plan_gift($email);
+      mh_plan_gift_set($email, $plan, $until, $note, (int)$u['id']);
+      // a tester plan for this address saved in Keys & settings moves here, so what is picked in Members is what they get
+      $files = mh_siteconfig_files(); $saved = mh_siteconfig_saved($files);
+      if (is_array($saved['plan_grants'] ?? null)) {
+        $g = array_filter($saved['plan_grants'], fn($k) => strtolower((string)$k) !== $email, ARRAY_FILTER_USE_KEY);
+        if (count($g) !== count($saved['plan_grants'])) {
+          $saved['plan_grants'] = $g; mh_siteconfig_write($files, $saved); $cfg['plan_grants'] = $g;
+          $db->exec('CREATE TABLE IF NOT EXISTS config_log (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER REFERENCES users(id) ON DELETE CASCADE, key TEXT NOT NULL, action TEXT NOT NULL DEFAULT "set", at INTEGER NOT NULL)');
+          $db->prepare('INSERT INTO config_log (user_id, key, action, at) VALUES (?, ?, ?, ?)')->execute([$u['id'], 'plan_grants', 'set', $now]);
+        }
+      }
+      $told = false;
+      if ($plan !== '' && !empty($in['tell']) && (int)$t['id'] !== (int)$u['id'] && (!$had || $had['plan'] !== $plan || (int)$had['until'] !== $until)) {
+        $name = $plan === 'max' ? 'Mathub Max' : 'Mathub Pro';
+        $when = $until ? 'It is yours until ' . (new DateTime('@' . $until))->setTimezone(new DateTimeZone(in_array($cfg['timezone'] ?? '', timezone_identifiers_list(), true) ? (string)$cfg['timezone'] : 'America/Denver'))->format('F j, Y') . '.' : 'It has no end date.';
+        $db->prepare('INSERT INTO notifications (user_id, kind, post_id, comment_id, actor_id, actor, title, snippet, link, created) VALUES (?, "plan", 0, NULL, ?, ?, ?, ?, "#/plan", ?)')
+          ->execute([$t['id'], $u['id'], mb_substr(mh_display_name($u) ?: 'Mathub', 0, 60), $name, "$when It never charges you. Open Your plan to see what it includes.", $now]);
+        $told = true;
+      }
+      $row = mh_plan_admin_rows([$t], $cfg)[(int)$t['id']];
+      mh_json(['ok' => true, 'user_id' => (int)$t['id'], 'email' => $email, 'plan' => $row, 'told' => $told]);
     }
   }
   mh_fail('Not found.', 404);

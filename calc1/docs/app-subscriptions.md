@@ -180,7 +180,8 @@ on). **Cancel plan** asks first (when it ends, what stops, what is kept, an opti
   Web Billing one (`POST /v2/projects/{project}/subscriptions/{id}/actions/cancel`); it runs to the end of the
   month paid for. Without those keys, or if RevenueCat says no, the page opens the subscription's billing page
   instead, so cancelling always works. Check the cancel call once with a sandbox purchase before relying on it.
-- A plan from `plan_grants` has nothing to cancel.
+- A plan from `plan_grants`, or one given in the admin panel (Members → a member's plan), has nothing to cancel.
+  If the member also pays for a smaller plan, Your plan offers Manage billing and Cancel for that one.
 
 `pro_web_price` and `max_web_price` default to `$15` and `$50`. Without the app keys the apps cannot sell the
 plans; without the server keys the website cannot sell them and plans bought in the apps are not recognised there;
@@ -193,7 +194,8 @@ use basic voice (Chrome, Edge and Safari, with the device's own voice).
   subscriptions renew every 5 minutes. Try Pro, then Max (an upgrade).
 - **iPhone:** a Sandbox tester (App Store Connect → Users and Access → Sandbox); Settings → App Store → Sandbox Account.
 - **Website:** RevenueCat sandbox Web Purchase Links and Stripe's test card `4242 4242 4242 4242`.
-- **Bo without paying:** add your account to `plan_grants` with `'max'` (or `'pro'` to try Pro only).
+- **Bo without paying:** give your account Max (or Pro) from the admin panel: Members → your plan; or add it to
+  `plan_grants` with `'max'` (or `'pro'`).
 - Check: Create a class → drop in a syllabus → Write my class → the plans card (Pro picked) → Get Pro → Write my
   class again → the steps run → Add. Ask Bo → Move up to Max → agree → ask a question; attach a photo; "What Bo
   knows" (beside the chat on a wide screen) shows the notes. Cancel; after it lapses classes lock and Bo shows Meet Bo again.

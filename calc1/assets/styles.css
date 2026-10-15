@@ -929,6 +929,42 @@ h1, h2, h3, h4 { letter-spacing: -0.01em; }
 .adm-add-msg.good { color: var(--good); font-weight: 600; }
 .adm-add-msg.bad { color: var(--bad); font-weight: 600; }
 @media (max-width: 640px) { .adm-add-grid { grid-template-columns: minmax(0, 1fr); } }
+/* Members: each member's plan, and Give a membership under their row */
+.adm-find { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.adm-find .select { width: auto; min-width: 160px; }
+.adm-find .input { width: 240px; max-width: 100%; }
+.adm-plan-cell { white-space: nowrap; }
+.adm-plan-btn { min-width: 68px; justify-content: center; }
+.adm-plan-btn:not(.is-pro):not(.is-max) svg { color: var(--muted); }
+.adm-plan-btn.is-pro { background: var(--accent-soft); border-color: var(--accent-line); color: var(--accent); }
+.adm-plan-btn.is-max { background: var(--gold-soft); border-color: color-mix(in srgb, var(--gold) 55%, var(--border)); color: var(--ink); }
+.adm-plan-btn.is-max svg { color: var(--gold); }
+.adm-plan-src { margin-top: 3px; font-size: 12px; color: var(--muted); }
+.adm-mem-meta { margin-top: 2px; }
+.adm-plan-row > td { background: var(--surface-2); padding: 0 !important; }
+.table-wrap.adm-members { container-type: inline-size; }
+.adm-plan { position: sticky; left: 0; box-sizing: border-box; width: min(780px, 100cqw); padding: 14px 12px 16px; display: grid; gap: 14px; white-space: normal; }
+.adm-plan-h { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 10px; }
+.adm-plan-h h3 { margin: 0; font-size: 16px; }
+.adm-plan-now { margin: 0; padding-left: 18px; font-size: 13.5px; line-height: 1.45; color: var(--ink-2, var(--ink)); }
+.adm-plan-opts { margin: 0; padding: 0; border: 0; min-width: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.adm-plan-opts legend { margin-bottom: 6px; padding: 0; font-weight: 700; font-size: 14px; color: var(--ink); }
+.adm-plan-opt { display: flex; align-items: flex-start; gap: 10px; min-height: 44px; padding: 10px 12px; border: 1.5px solid var(--border); border-radius: 12px; background: var(--surface); cursor: pointer; }
+.adm-plan-opt input { margin: 3px 0 0; accent-color: var(--accent); }
+.adm-plan-opt b { display: block; font-size: 14px; }
+.adm-plan-opt small { display: block; margin-top: 1px; font-size: 12.5px; line-height: 1.35; color: var(--muted); }
+.adm-plan-opt:has(input:checked) { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+.adm-plan-opt.is-max:has(input:checked) { border-color: var(--gold); box-shadow: inset 0 0 0 1px var(--gold); background: var(--gold-soft); }
+.adm-plan-opt.is-pro:has(input:checked) { background: var(--accent-soft); }
+.adm-plan-opt:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
+.adm-plan-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px 14px; }
+.adm-plan-grid .field { margin: 0; }
+.adm-plan-grid[hidden], .adm-plan-day[hidden], .adm-plan-tell[hidden] { display: none; }
+.adm-plan .field.bad .input { border-color: var(--bad); }
+.adm-plan-tell { display: flex; align-items: center; gap: 8px; min-height: 32px; font-size: 14px; }
+.adm-plan-sum { margin: 0; padding: 10px 12px; border: 1px dashed var(--border); border-radius: 10px; background: var(--surface); font-size: 14px; line-height: 1.45; }
+.adm-plan-acts { flex-wrap: wrap; align-items: center; }
+@media (max-width: 760px) { .adm-plan-opts, .adm-plan-grid { grid-template-columns: minmax(0, 1fr); } .adm-find, .adm-find .select, .adm-find .input { width: 100%; } }
 /* Admin → Keys & settings: one panel per group, the fields two to a row, a sticky save bar at the bottom */
 .cfg-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 18px; }
 .cfg-field { display: flex; flex-direction: column; gap: 6px; min-width: 0; padding: 2px; border-radius: 12px; }

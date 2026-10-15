@@ -9,6 +9,15 @@
   'use strict';
   const App = global.App; if (!App) return;
   const { $, $$, esc, icon, bind, on, toast, pageHead } = App;
+  const PLAN_NAME = { pro: 'Pro', max: 'Max' };
+  const PAID_IN = { app_store: 'the App Store', mac_app_store: 'the App Store', play_store: 'Google Play', rc_billing: 'the website', stripe: 'the website', promotional: 'RevenueCat (promotional)' };
+  const day = t => new Date(t * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  // the plan a member has, for the Members list: the button opens Give a membership
+  const planCell = x => {
+    const P = x.plan || {}; const k = P.plan || '';
+    const src = !k ? '' : P.gift && P.gift.plan === k ? (P.gift.until ? `given, until ${day(P.gift.until)}` : 'given') : P.paid && P.paid.plan === k ? 'paid' : 'tester';
+    return `<button class="btn xs adm-plan-btn${k ? ' is-' + k : ''}" data-action="plan" data-u="${x.id}" aria-expanded="false" aria-label="${k ? `Mathub ${PLAN_NAME[k]}${src ? `, ${src}` : ''}` : 'Free'}: give or change the membership of ${esc(x.name || x.email)}">${icon(k === 'pro' ? 'zap' : 'gem', 12)} ${k ? PLAN_NAME[k] : 'Free'}</button>${src ? `<div class="adm-plan-src">${esc(src)}</div>` : ''}`;
+  };
   const API = 'api/index.php?r=';
   const user = () => (App.auth && App.auth.user) || null; const isAdmin = () => !!(user() && user().admin); const isMod = () => !!(user() && user().mod);
   const NAMES = { calc: 'Calc I', physics: 'Physics I', precalc: 'Precalc', writ: 'WRIT 101', csci: 'CSCI 127', biob: 'BIOB 160', kin: 'KIN 322', psyx: 'PSYX 340', general: 'General' };
@@ -193,9 +202,70 @@
         'bd-close': () => { onDone(); }
       });
     },
-    async members(el, root, q, page) {
+    /* a member's membership: what they pay for, what an administrator gave them (and until when), a tester plan */
+    planEditor(cell, x, done) {
+      const P = x.plan || {}; const g = P.gift; const name = x.name || x.email.split('@')[0]; const id = x.id;
+      const iso = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      const plus = n => { const d = new Date(); d.setDate(d.getDate() + n); return iso(d); };
+      const nice = v => new Date(v + 'T12:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+      const lines = [];
+      if (P.paid) lines.push(`Pays for Mathub ${PLAN_NAME[P.paid.plan]} through ${PAID_IN[P.paid.store] || 'the website'}${P.paid.until ? `; ${P.paid.renews ? 'renews' : 'ends'} ${day(P.paid.until)}` : ''}.`);
+      if (g) lines.push(`Given Mathub ${PLAN_NAME[g.plan]}${g.by ? ` by ${g.by}` : ''} on ${day(g.at)}, ${g.until ? `until ${day(g.until)}` : 'with no end date'}${g.note ? `. Note: ${g.note}` : ''}.`);
+      if (P.tester) lines.push(`Tester plan: Mathub ${PLAN_NAME[P.tester]} (Keys & settings or config.local.php).`);
+      if (!lines.length) lines.push('Free: nothing paid for or given.');
+      const untilDay = g && g.until ? iso(new Date(g.until * 1000)) : '';
+      cell.innerHTML = `<form class="adm-plan" novalidate aria-labelledby="pl-h-${id}">
+        <div class="adm-plan-h"><h3 id="pl-h-${id}">Membership for ${esc(name)}</h3><span class="mono small muted">${esc(x.email)}</span></div>
+        <ul class="adm-plan-now">${lines.map(l => `<li>${esc(l)}</li>`).join('')}</ul>
+        <fieldset class="adm-plan-opts"><legend>Give them</legend>
+          ${[['', 'Free', g ? 'Take back what was given' : 'Nothing given'], ['pro', 'Mathub Pro', 'Bo writes classes from any syllabus'], ['max', 'Mathub Max', 'Pro, plus Ask Bo and calls']].map(([v, h, d]) => `<label class="adm-plan-opt${v ? ' is-' + v : ''}"><input type="radio" name="pl-${id}" value="${v}"${(g ? g.plan : '') === v ? ' checked' : ''}><span><b>${h}</b><small>${d}</small></span></label>`).join('')}
+        </fieldset>
+        <div class="adm-plan-grid">
+          <div class="field"><label for="pl-for-${id}">For how long</label><select class="select" id="pl-for-${id}"><option value="">No end date</option><option value="30">1 month</option><option value="91">3 months</option><option value="183">6 months</option><option value="365">1 year</option><option value="day"${untilDay ? ' selected' : ''}>Until a day you pick</option></select></div>
+          <div class="field adm-plan-day"${untilDay ? '' : ' hidden'}><label for="pl-day-${id}">Last day</label><input class="input" type="date" id="pl-day-${id}" min="${iso(new Date())}" value="${untilDay}"></div>
+          <div class="field"><label for="pl-note-${id}">Note <span class="muted small">(only administrators see it)</span></label><input class="input" id="pl-note-${id}" maxlength="120" autocomplete="off" placeholder="For example: TA for M 171" value="${esc(g ? g.note : '')}"></div>
+        </div>
+        <label class="check adm-plan-tell"><input type="checkbox" id="pl-tell-${id}" checked> <span>Tell them in their inbox</span></label>
+        <p class="adm-plan-sum" id="pl-sum-${id}" aria-live="polite"></p>
+        <div class="row gap-sm adm-plan-acts"><button class="btn primary" type="submit">Save</button><button class="btn ghost" type="button" data-pl-x>Close</button><p class="small adm-add-msg" role="status" id="pl-msg-${id}"></p></div>
+      </form>`;
+      const form = $('form', cell); const forSel = $(`#pl-for-${id}`, form); const dayBox = $('.adm-plan-day', form); const dayIn = $(`#pl-day-${id}`, form); const msg = $(`#pl-msg-${id}`, form);
+      const pick = () => ($(`input[name="pl-${id}"]:checked`, form) || {}).value || '';
+      const until = () => !pick() ? '' : forSel.value === 'day' ? dayIn.value : forSel.value ? plus(+forSel.value) : '';
+      const sum = () => {
+        const p = pick(); const u = until(); form.classList.toggle('is-free', !p);
+        $('.adm-plan-grid', form).hidden = !p; $('.adm-plan-tell', form).hidden = !p; dayBox.hidden = forSel.value !== 'day';
+        $(`#pl-sum-${id}`, form).textContent = p
+          ? `${name} gets Mathub ${PLAN_NAME[p]} free, ${u ? `until the end of ${nice(u)}` : 'with no end date'}. It never charges them.${P.paid ? ' What they pay for is not changed.' : ''}`
+          : g ? `What was given to ${name} is taken back now.${P.paid ? ` They keep Mathub ${PLAN_NAME[P.paid.plan]}, which they pay for.` : ''}` : `Nothing is given to ${name}.`;
+        if (P.tester) $(`#pl-sum-${id}`, form).textContent += ' Saving also removes their tester plan from Keys & settings (one in config.local.php stays).';
+      };
+      form.addEventListener('change', sum); dayIn.addEventListener('input', sum); sum();
+      form.addEventListener('keydown', e => { if (e.key === 'Escape') { e.preventDefault(); done(null); } });
+      $('[data-pl-x]', form).addEventListener('click', () => done(null));
+      form.addEventListener('submit', async e => {
+        e.preventDefault(); const p = pick(); const u = until(); const btn = $('button[type="submit"]', form);
+        dayBox.classList.remove('bad');
+        if (p && forSel.value === 'day' && !u) { msg.className = 'small adm-add-msg bad'; msg.textContent = 'Pick the last day.'; dayBox.classList.add('bad'); dayIn.focus(); return; }
+        btn.disabled = true; msg.className = 'small adm-add-msg'; msg.textContent = 'Saving…';
+        try {
+          const r = await api('admin_plan', { user_id: id, plan: p, until: u, note: $(`#pl-note-${id}`, form).value.trim(), tell: $(`#pl-tell-${id}`, form).checked });
+          const still = r.plan && r.plan.plan;
+          toast(p ? `${name} has Mathub ${PLAN_NAME[p]}${u ? ` until ${nice(u)}` : ''}.${r.told ? ' They were told in their inbox.' : ''}` : `Took back what was given to ${name}.${still ? ` They still have Mathub ${PLAN_NAME[still]} (${r.plan.paid && r.plan.paid.plan === still ? 'they pay for it' : 'a tester plan in config.local.php'}).` : ''}`, 5000);
+          done(r);
+        } catch (x2) {
+          btn.disabled = false; msg.className = 'small adm-add-msg bad'; msg.textContent = x2.message;
+          if (x2.data && x2.data.field === 'until') { dayBox.hidden = false; forSel.value = 'day'; dayBox.classList.add('bad'); dayIn.focus(); }
+        }
+      });
+      const first = $(`input[name="pl-${id}"]:checked`, form) || $(`input[name="pl-${id}"]`, form); first.focus();
+    },
+    async members(el, root, q, page, show) {
+      show = show === 'plan' ? 'plan' : '';
       try {
-        const us = await api('admin_users&q=' + encodeURIComponent(q || '') + '&page=' + (page || 0));
+        const us = await api('admin_users&q=' + encodeURIComponent(q || '') + '&page=' + (page || 0) + (show ? '&show=plan' : ''));
+        const again = (p2, cb) => this.members(el, root, $('#adm-q', el).value.trim(), p2 || 0, $('#adm-show', el).value).then(cb);
+        const byId = new Map(us.users.map(x => [x.id, x]));
         // add a member: any email address, ready to use, with a role and a plan if wanted
         const add = `<form class="panel mb-2 adm-add" id="adm-add" novalidate><div class="panel-h"><h2 class="panel-title">${icon('plus')} Add a member</h2></div>
           <p class="small muted mb-2">Any email address, also outside montana.edu. The account is ready at once; the first time they sign in, Mathub welcomes them and they pick their classes.</p>
@@ -208,10 +278,12 @@
             <label class="check"><input type="radio" name="add-how" value="password"> <span>Set a password now and tell them yourself</span></label>
             <div class="field adm-add-pass" hidden><label for="add-pass">Password</label><input class="input" id="add-pass" type="text" autocomplete="off" spellcheck="false" placeholder="At least 8 characters"></div></fieldset>
           <div class="row gap-sm mt-2" style="flex-wrap:wrap;align-items:center"><button class="btn primary" type="submit">${icon('plus', 14)} Add member</button><p class="small adm-add-msg" id="adm-add-msg" role="status"></p></div></form>`;
-        el.innerHTML = add + `<div class="panel"><div class="panel-h"><div class="panel-title">${icon('info')} Members</div><input class="input" id="adm-q" placeholder="Search email or name…" value="${esc(q || '')}" style="max-width:260px"></div>
-          <div class="table-wrap"><table class="table compact"><thead><tr><th>Member</th><th>Joined</th><th class="num">Posts</th><th class="num">Comments</th><th class="num">Badges</th><th>Status</th><th></th></tr></thead><tbody>${us.users.map(x => `<tr><td><div><b>${esc(x.name || x.email.split('@')[0])}</b>${x.admin ? ' <span class="chip accent">admin</span>' : x.mod ? ' <span class="chip">mod</span>' : ''}</div><div class="mono small muted">${esc(x.email)}</div></td><td class="small">${new Date(x.created * 1000).toLocaleDateString()}<div class="muted">last login ${x.last_login ? timeAgo(x.last_login) : 'never'}</div></td><td class="num">${x.posts}</td><td class="num">${x.comments}</td><td class="num"><button class="btn xs${x.badges ? ' gold' : ''}" data-action="badges" data-u="${x.id}" title="Award or remove badges">${icon('award', 12)} ${x.badges}</button></td><td class="small">${!x.verified ? '<span class="chip warn">unverified</span>' : x.banned_until ? `<span class="chip bad">banned until ${new Date(x.banned_until * 1000).toLocaleDateString()}</span>` : '<span class="chip good">active</span>'}${x.terms ? '' : ' <span class="chip">no rules yet</span>'}</td><td><div class="row gap-sm" style="flex-wrap:nowrap;justify-content:flex-end">${x.admin ? '' : `${x.banned_until ? `<button class="btn xs" data-action="user" data-a="unban" data-u="${x.id}">Unban</button>` : `<button class="btn xs" data-action="user" data-a="ban" data-u="${x.id}">Ban</button>`}${!x.verified ? `<button class="btn xs" data-action="user" data-a="verify" data-u="${x.id}">Verify</button>` : ''}<button class="btn xs danger ghost" data-action="user" data-a="delete" data-u="${x.id}" data-e="${esc(x.email)}">Delete</button>`}</div></td></tr>`).join('') || '<tr><td colspan="7"><div class="empty">No members match.</div></td></tr>'}</tbody></table></div>
-          ${us.more ? `<div class="row mt-2" style="justify-content:center"><button class="btn" data-action="page" data-p="${(page || 0) + 1}" data-q="${esc(q || '')}">Next page</button></div>` : ''}</div>`;
-        const inp = $('#adm-q', el); let t; inp.addEventListener('input', () => { clearTimeout(t); t = setTimeout(() => this.members(el, root, inp.value.trim(), 0), 350); });
+        el.innerHTML = add + `<div class="panel"><div class="panel-h"><div class="panel-title">${icon('info')} Members</div><div class="adm-find"><select class="select" id="adm-show" aria-label="Show"><option value="">Everyone</option><option value="plan"${show ? ' selected' : ''}>With Pro or Max</option></select><input class="input" id="adm-q" type="search" aria-label="Search members" placeholder="Search email or name…" value="${esc(q || '')}"></div></div>
+          <p class="small muted mb-2">Press a member’s plan to give them Mathub Pro or Max, free for them, for as long as you like, or to take it back.</p>
+          <div class="table-wrap adm-members"><table class="table compact"><thead><tr><th>Member</th><th class="num">Badges</th><th>Plan</th><th>Status</th><th></th></tr></thead><tbody>${us.users.map(x => `<tr><td><div><b>${esc(x.name || x.email.split('@')[0])}</b>${x.admin ? ' <span class="chip accent">admin</span>' : x.mod ? ' <span class="chip">mod</span>' : ''}</div><div class="mono small muted">${esc(x.email)}</div><div class="small muted adm-mem-meta">Joined ${day(x.created)} · last login ${x.last_login ? timeAgo(x.last_login) : 'never'} · ${x.posts} ${x.posts === 1 ? 'post' : 'posts'}, ${x.comments} ${x.comments === 1 ? 'comment' : 'comments'}</div></td><td class="num"><button class="btn xs${x.badges ? ' gold' : ''}" data-action="badges" data-u="${x.id}" title="Award or remove badges">${icon('award', 12)} ${x.badges}</button></td><td class="adm-plan-cell">${planCell(x)}</td><td class="small">${!x.verified ? '<span class="chip warn">unverified</span>' : x.banned_until ? `<span class="chip bad">banned until ${new Date(x.banned_until * 1000).toLocaleDateString()}</span>` : '<span class="chip good">active</span>'}${x.terms ? '' : ' <span class="chip">no rules yet</span>'}</td><td><div class="row gap-sm" style="flex-wrap:nowrap;justify-content:flex-end">${x.admin ? '' : `${x.banned_until ? `<button class="btn xs" data-action="user" data-a="unban" data-u="${x.id}">Unban</button>` : `<button class="btn xs" data-action="user" data-a="ban" data-u="${x.id}">Ban</button>`}${!x.verified ? `<button class="btn xs" data-action="user" data-a="verify" data-u="${x.id}">Verify</button>` : ''}<button class="btn xs danger ghost" data-action="user" data-a="delete" data-u="${x.id}" data-e="${esc(x.email)}">Delete</button>`}</div></td></tr>`).join('') || `<tr><td colspan="5"><div class="empty">${show && !q ? 'Nobody has Pro or Max yet. Press a member’s plan to give them one.' : 'No members match.'}</div></td></tr>`}</tbody></table></div>
+          ${us.more ? `<div class="row mt-2" style="justify-content:center"><button class="btn" data-action="page" data-p="${(page || 0) + 1}">Next page</button></div>` : ''}</div>`;
+        const inp = $('#adm-q', el); let t; inp.addEventListener('input', () => { clearTimeout(t); t = setTimeout(() => again(0, () => { const i = $('#adm-q', el); if (i) { i.focus(); i.setSelectionRange(i.value.length, i.value.length); } }), 350); });
+        $('#adm-show', el).addEventListener('change', () => again(0, () => { const s2 = $('#adm-show', el); if (s2) s2.focus(); }));
         const form = $('#adm-add', el); const passBox = $('.adm-add-pass', form);
         form.addEventListener('change', e => { if (e.target.name === 'add-how') passBox.hidden = e.target.value !== 'password'; });
         form.addEventListener('submit', async e => {
@@ -230,9 +302,18 @@
           }
         });
         bind(el, {
-          page: b => this.members(el, root, b.dataset.q, +b.dataset.p),
-          badges: b => { const tr = b.closest('tr'); const open = tr.nextElementSibling && tr.nextElementSibling.classList.contains('adm-badge-row'); $$('.adm-badge-row', el).forEach(r => r.remove()); if (open) return; const row = document.createElement('tr'); row.className = 'adm-badge-row'; row.innerHTML = '<td colspan="7"><div class="empty small">Loading…</div></td>'; tr.after(row); this.badgeEditor(row.firstElementChild, +b.dataset.u, () => { const cnt = $('[data-action="badges"]', tr); if (cnt) this.members(el, root, $('#adm-q', el).value.trim(), page || 0); }); },
-          user: async b => { const a = b.dataset.a, body = { action: a, user_id: +b.dataset.u }; if (a === 'delete' && !confirm('Delete the account ' + b.dataset.e + ' and everything they posted? This cannot be undone.')) return; if (a === 'ban') { const days = prompt('Ban for how many days?', '30'); if (!days) return; body.days = +days; body.reason = prompt('Reason (shown to the user):', 'Breaking the community rules') || ''; } try { await api('admin_user', body); toast('Done'); this.members(el, root, $('#adm-q', el).value.trim(), 0); } catch (e) { toast(e.message, 3500); } }
+          page: b => again(+b.dataset.p),
+          plan: b => {   // give a membership: opens under the member's row
+            const tr = b.closest('tr'); const open = tr.nextElementSibling && tr.nextElementSibling.classList.contains('adm-plan-row');
+            $$('.adm-plan-row, .adm-badge-row', el).forEach(r => r.remove()); $$('[data-action="plan"]', el).forEach(x => x.setAttribute('aria-expanded', 'false')); if (open) return;
+            const row = document.createElement('tr'); row.className = 'adm-plan-row'; row.innerHTML = '<td colspan="5"></td>'; tr.after(row); b.setAttribute('aria-expanded', 'true');
+            this.planEditor(row.firstElementChild, byId.get(+b.dataset.u), r => {
+              if (!r) { row.remove(); b.setAttribute('aria-expanded', 'false'); b.focus(); return; }
+              again(page || 0, () => { const nb = $(`[data-action="plan"][data-u="${r.user_id}"]`, el); if (nb) nb.focus(); });
+            });
+          },
+          badges: b => { const tr = b.closest('tr'); const open = tr.nextElementSibling && tr.nextElementSibling.classList.contains('adm-badge-row'); $$('.adm-badge-row, .adm-plan-row', el).forEach(r => r.remove()); if (open) return; const row = document.createElement('tr'); row.className = 'adm-badge-row'; row.innerHTML = '<td colspan="5"><div class="empty small">Loading…</div></td>'; tr.after(row); this.badgeEditor(row.firstElementChild, +b.dataset.u, () => { const cnt = $('[data-action="badges"]', tr); if (cnt) again(page || 0); }); },
+          user: async b => { const a = b.dataset.a, body = { action: a, user_id: +b.dataset.u }; if (a === 'delete' && !confirm('Delete the account ' + b.dataset.e + ' and everything they posted? This cannot be undone.')) return; if (a === 'ban') { const days = prompt('Ban for how many days?', '30'); if (!days) return; body.days = +days; body.reason = prompt('Reason (shown to the user):', 'Breaking the community rules') || ''; } try { await api('admin_user', body); toast('Done'); again(0); } catch (e) { toast(e.message, 3500); } }
         });
       } catch (e) { el.innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
     },

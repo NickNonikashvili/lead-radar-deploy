@@ -42,7 +42,7 @@ function mh_siteconfig_fields(): array {
     'max_web_link'       => ['pay', 'Mathub Max web purchase link', 'url', ''],
     'pro_web_price'      => ['pay', 'Mathub Pro price shown on the website', 'price', ''],
     'max_web_price'      => ['pay', 'Mathub Max price shown on the website', 'price', ''],
-    'plan_grants'        => ['pay', 'Plans given without paying', 'grants', 'One per line: someone@montana.edu = pro (or max). For testers and staff.'],
+    'plan_grants'        => ['pay', 'Tester plans', 'grants', 'One per line: someone@montana.edu = pro (or max), for testing. To give a member a membership, use Membership in Members.'],
     'mail_mode'          => ['mail', 'How email is sent', 'select', 'auto: SMTP when the password is set, otherwise PHP mail(). log: nothing is sent (testing).', ['auto', 'smtp', 'mail', 'log']],
     'mail_from'          => ['mail', 'Sender address', 'email', 'A mailbox that exists on your domain.'],
     'mail_from_name'     => ['mail', 'Sender name', 'text', ''],

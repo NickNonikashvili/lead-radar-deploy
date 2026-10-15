@@ -296,12 +296,12 @@ function mh_forum_route(string $route, array $in, array $cfg, string $ip): void 
       if ($ex) $db->prepare('UPDATE users SET name = ?, pass_hash = ?, verified = 1 WHERE id = ?')->execute([$name !== '' ? $name : (string)$ex['name'], $hash, $ex['id']]);   // a sign-up that never verified
       else $db->prepare('INSERT INTO users (email, name, pass_hash, verified, created) VALUES (?, ?, ?, 1, ?)')->execute([$email, $name, $hash, $now]);
       if ($role !== '') $db->prepare('INSERT INTO roles (email, role, updated) VALUES (?, ?, ?) ON CONFLICT(email) DO UPDATE SET role = excluded.role, updated = excluded.updated')->execute([$email, $role, $now]);
-      // an address outside the sign-up domains may log in; a plan goes with the account: both saved like Keys & settings
+      // a plan is given like Members gives one (no end date); an address outside the sign-up domains may log in, saved like Keys & settings
+      if ($plan !== '') { require_once __DIR__ . '/myclasses.php'; mh_plan_gift_set($email, $plan, 0, 'Added with the account', (int)$u['id']); }
       [, $outside] = mh_email_check($email); $changed = [];
-      if ($outside || $plan !== '') {
-        require_once __DIR__ . '/siteconfig.php'; $files = mh_siteconfig_files(); $saved = mh_siteconfig_saved($files);
-        if ($outside) { $list = array_values(array_map('strtolower', (array)($saved['extra_allowed_emails'] ?? ($files['extra_allowed_emails'] ?? [])))); if (!in_array($email, $list, true)) { $list[] = $email; $saved['extra_allowed_emails'] = $list; $changed[] = 'extra_allowed_emails'; } }
-        if ($plan !== '') { $g = (array)($saved['plan_grants'] ?? ($files['plan_grants'] ?? [])); $g[$email] = $plan; $saved['plan_grants'] = $g; $changed[] = 'plan_grants'; }
+      if ($outside) {
+        $files = mh_siteconfig_files(); $saved = mh_siteconfig_saved($files);
+        $list = array_values(array_map('strtolower', (array)($saved['extra_allowed_emails'] ?? ($files['extra_allowed_emails'] ?? [])))); if (!in_array($email, $list, true)) { $list[] = $email; $saved['extra_allowed_emails'] = $list; $changed[] = 'extra_allowed_emails'; }
         if ($changed) {
           mh_siteconfig_write($files, $saved);
           $db->exec('CREATE TABLE IF NOT EXISTS config_log (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER REFERENCES users(id) ON DELETE CASCADE, key TEXT NOT NULL, action TEXT NOT NULL DEFAULT "set", at INTEGER NOT NULL)');
@@ -370,13 +370,15 @@ Then pick your classes and you are in.
       mh_method('GET'); $u = mh_require_user(); if (!mh_is_admin($u)) mh_fail('Administrators only.', 403);
       $q = trim((string)($_GET['q'] ?? '')); $page = max(0, (int)($_GET['page'] ?? 0)); $args = [];
       $where = '1=1'; if ($q !== '') { $where = '(u.email LIKE ? OR u.name LIKE ?)'; $like = '%' . str_replace(['%', '_'], ['\\%', '\\_'], mb_substr($q, 0, 80)) . '%'; $args = [$like, $like]; }
+      require_once __DIR__ . '/myclasses.php';
+      if (($_GET['show'] ?? '') === 'plan') { $ids = mh_plan_member_ids($cfg); $where .= $ids ? ' AND u.id IN (' . implode(',', $ids) . ')' : ' AND 0'; }   // members with Pro or Max
       $st = $db->prepare("SELECT u.id, u.email, u.name, u.verified, u.created, u.last_login, u.terms_accepted,
           (SELECT COUNT(*) FROM posts p WHERE p.user_id = u.id AND p.removed = 0) AS nposts, (SELECT COUNT(*) FROM comments c WHERE c.user_id = u.id AND c.removed = 0) AS ncomments,
           (SELECT until FROM bans b WHERE b.user_id = u.id AND b.until > $now) AS banned_until, (SELECT COUNT(*) FROM badges bd WHERE bd.user_id = u.id) AS nbadges
         FROM users u WHERE $where ORDER BY u.created DESC LIMIT 51 OFFSET " . ($page * 50)); $st->execute($args); $rows = $st->fetchAll();
-      $more = count($rows) > 50; $rows = array_slice($rows, 0, 50);
+      $more = count($rows) > 50; $rows = array_slice($rows, 0, 50); $plans = mh_plan_admin_rows($rows, $cfg);
       mh_json(['ok' => true, 'more' => $more, 'users' => array_map(fn($r) => ['id' => (int)$r['id'], 'email' => $r['email'], 'name' => $r['name'], 'verified' => (int)$r['verified'] === 1, 'created' => (int)$r['created'], 'last_login' => (int)$r['last_login'], 'terms' => (int)$r['terms_accepted'] > 0,
-        'posts' => (int)$r['nposts'], 'comments' => (int)$r['ncomments'], 'badges' => (int)$r['nbadges'], 'banned_until' => $r['banned_until'] ? (int)$r['banned_until'] : 0, 'mod' => mh_is_mod(['email' => $r['email']]), 'admin' => mh_is_admin(['email' => $r['email']])], $rows)]);
+        'posts' => (int)$r['nposts'], 'comments' => (int)$r['ncomments'], 'badges' => (int)$r['nbadges'], 'banned_until' => $r['banned_until'] ? (int)$r['banned_until'] : 0, 'mod' => mh_is_mod(['email' => $r['email']]), 'admin' => mh_is_admin(['email' => $r['email']]), 'plan' => $plans[(int)$r['id']] ?? null], $rows)]);
 
     case 'admin_badges':
       // Administrators can award or remove any badge for any member (themselves included). Manual awards are never undone by the automatic check.
