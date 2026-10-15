@@ -72,7 +72,7 @@ const T = require('./lib');
   await m.click('.topbar-title'); await m.waitForTimeout(300);
   check('a tap outside closes it', await m.evaluate(() => document.querySelector('#amb-panel').hidden));
   await go(m, '#/', 1000);
-  check('the start page keeps the floating bubble', await m.evaluate(() => getComputedStyle(document.querySelector('#ambient .amb-bubble')).display !== 'none'));
+  check('the start page has the sound button next to search, and no floating bubble until something plays', await m.evaluate(() => getComputedStyle(document.querySelector('.hero-actions .amb-top')).display !== 'none' && getComputedStyle(document.querySelector('#ambient .amb-bubble')).display === 'none'));
   await cm.close();
 
   // Reduce motion: no GSAP, dialogs simply go

@@ -214,9 +214,9 @@ function mh_password_check(?array $u, string $pass): bool {
 
 /* ---------- one-time codes ---------- */
 function mh_code_hash(string $email, string $kind, string $code): string { return hash_hmac('sha256', "$email|$kind|$code", mh_secret()); }
-function mh_code_issue(string $email, string $kind): string {
+function mh_code_issue(string $email, string $kind, int $ttlSec = 0): string {
   $db = mh_db(); $code = str_pad((string)random_int(0, 999999), 6, '0', STR_PAD_LEFT);
-  $ttl = (int)(mh_config()['code_ttl_minutes'] ?? 15) * 60;
+  $ttl = $ttlSec > 0 ? $ttlSec : (int)(mh_config()['code_ttl_minutes'] ?? 15) * 60;   // longer for an invitation from an administrator
   $db->prepare('DELETE FROM codes WHERE email = ? AND kind = ?')->execute([$email, $kind]);
   $db->prepare('INSERT INTO codes (email, kind, code_hash, expires, created) VALUES (?, ?, ?, ?, ?)')->execute([$email, $kind, mh_code_hash($email, $kind, $code), time() + $ttl, time()]);
   return $code;

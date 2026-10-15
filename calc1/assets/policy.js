@@ -74,7 +74,7 @@
       <p>This policy explains what Mathub collects and how it is used. We collect as little as we can to run the Service.</p>
       <h3>3.1 What we collect</h3>
       <ul>
-        <li><b>Account data:</b> your email address, an optional display name, a hashed version of your password (we never store the password itself), and the dates you signed up, verified your email, logged in and accepted these Terms.</li>
+        <li><b>Account data:</b> your email address, an optional display name, a hashed version of your password (we never store the password itself), and the dates you signed up, verified your email, logged in and accepted these Terms. An administrator can also make an account for you (for example for a professor or TA, with any email address); you then get an email with a link and a code to choose your own password.</li>
         <li><b>Study progress:</b> quiz history and accuracy, flashcard boxes, checklist ticks, grade entries you type into the calculator and scratchpad strokes. This is saved to your account so it follows you across devices.</li>
         <li><b>Discussions:</b> posts, comments, votes, reports, blocks and edits you make, including the “anonymous” flag. Anonymous posts still record which account made them. Who you block is visible only to you.</li>
         <li><b>Class requests (professors and TAs):</b> the course code and details you enter when you request a class, and the syllabus file or text you attach.</li>

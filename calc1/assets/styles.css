@@ -914,7 +914,21 @@ h1, h2, h3, h4 { letter-spacing: -0.01em; }
 .poll-foot { margin-top: 8px; }
 .poll-fields { padding: 10px 12px; border: 1px dashed var(--border-strong); border-radius: 10px; }
 .contrib .q-prompt { font-size: 15px; }
-.admin-layout { display: grid; grid-template-columns: 210px 1fr; gap: 18px; align-items: start; }
+.admin-layout { display: grid; grid-template-columns: 210px minmax(0, 1fr); gap: 18px; align-items: start; }
+.admin-body { min-width: 0; }
+/* Admin → Members: add a member */
+.adm-add-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 14px; }
+.adm-add-grid .field { margin: 0; }
+.adm-add .field.bad .input, .adm-add .field.bad .select { border-color: var(--bad); }
+.adm-add-how { margin: 12px 0 0; padding: 0; border: 0; display: flex; flex-direction: column; gap: 6px; }
+.adm-add-how legend { margin-bottom: 4px; padding: 0; font-weight: 700; font-size: 14px; color: var(--ink); }
+.adm-add-how .check { display: flex; align-items: flex-start; gap: 8px; min-height: 32px; font-size: 14px; line-height: 1.4; }
+.adm-add-pass { max-width: 320px; margin: 4px 0 0 26px; }
+.adm-add-pass[hidden] { display: none; }
+.adm-add-msg { margin: 0; }
+.adm-add-msg.good { color: var(--good); font-weight: 600; }
+.adm-add-msg.bad { color: var(--bad); font-weight: 600; }
+@media (max-width: 640px) { .adm-add-grid { grid-template-columns: minmax(0, 1fr); } }
 /* Admin → Keys & settings: one panel per group, the fields two to a row, a sticky save bar at the bottom */
 .cfg-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 18px; }
 .cfg-field { display: flex; flex-direction: column; gap: 6px; min-width: 0; padding: 2px; border-radius: 12px; }
@@ -951,7 +965,7 @@ h1, h2, h3, h4 { letter-spacing: -0.01em; }
 .admin-tab:hover { background: var(--surface-2); text-decoration: none; }
 .admin-tab.active { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
 .admin-stat .stat-label { display: flex; align-items: center; gap: 4px; }
-@media (max-width: 900px) { .admin-layout { grid-template-columns: 1fr; } .admin-tabs { flex-direction: row; flex-wrap: wrap; position: static; } .fa-filters { margin-left: 0; } }
+@media (max-width: 900px) { .admin-layout { grid-template-columns: minmax(0, 1fr); } .admin-tabs { flex-direction: row; flex-wrap: wrap; position: static; } .fa-filters { margin-left: 0; } }
 
 /* ---------- onboarding ---------- */
 .onboard-modal { max-width: 640px; display: flex; flex-direction: column; max-height: calc(100vh - 6vh - 24px); max-height: calc(100dvh - 6vh - 24px); }
@@ -2462,12 +2476,23 @@ p, li, .muted { text-wrap: pretty; }
 .amb-top { display: none; position: relative; }
 .amb-top.on::after { content: ''; position: absolute; top: 5px; right: 5px; width: 7px; height: 7px; border-radius: 50%; background: var(--good); box-shadow: 0 0 0 2px var(--surface); }
 .amb-top.open { background: var(--accent-soft); color: var(--accent); border-color: var(--accent-line); }
+/* everywhere now: the bubble covered page buttons, so it only floats while something plays (or its panel is open);
+   the sounds start from the top bar's button on class pages, the start page's button next to search, or the Focus room.
+   "Back to top" keeps clear of the sidebar on wide screens. */
+#ambient .amb-bubble:not(.on):not(.open) { display: none; }
+body:has(.app:not(.landing)) .amb-top { display: inline-flex; }
+body:has(.app:not(.landing)) #ambient .amb-bubble { display: none; }
+body:has(.app:not(.landing)) #ambient { top: 64px; bottom: auto; right: 12px; }
+body:has(.app:not(.landing)) .amb-panel { top: 0; bottom: auto; max-height: calc(100vh - 160px); transform-origin: top right; }
+.hero-actions .amb-top { display: inline-flex; }
+@media (min-width: 901px) { body:has(.app:not(.landing)) .totop { left: calc(var(--sidebar-w) + 18px); } }
 @media (max-width: 900px) {
-  body:has(.app:not(.landing)) .amb-top { display: inline-flex; }
-  body:has(.app:not(.landing)) #ambient .amb-bubble { display: none; }
-  body:has(.app:not(.landing)) #ambient { top: 64px; bottom: auto; right: 12px; }
-  body:has(.app:not(.landing)) .amb-panel { top: 0; bottom: auto; max-height: calc(100vh - 160px); transform-origin: top right; }
   .app.landing ~ #ambient .amb-bubble { width: 46px; height: 46px; }
+  .totop { display: none !important; }   /* phones and tablets: it floated over page buttons; the tab bar and a flick do its job */
+  /* the admin panel's many tabs: one row that scrolls sideways, not a screenful of links */
+  .admin-tabs { flex-wrap: nowrap !important; overflow-x: auto; gap: 6px; margin: 0 -16px; padding: 2px 16px 8px; scrollbar-width: none; scroll-snap-type: x proximity; }
+  .admin-tabs::-webkit-scrollbar { display: none; }
+  .admin-tab { flex: none; white-space: nowrap; scroll-snap-align: start; border: 2px solid var(--border); border-radius: 999px; background: var(--surface); }
 }
 
 /* sliding tab pill: one surface glides between tabs instead of each tab lighting up (transitions.dev tabs sliding) */

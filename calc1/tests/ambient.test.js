@@ -15,8 +15,8 @@ const T = require('./lib');
   }
   // ---- ambient bubble ----
   const [cG, G] = await mk(); await G.goto(base + '#/'); await G.waitForTimeout(1200);
-  log('bubble on landing:', !!(await G.$('#ambient .amb-bubble')), '| panel hidden:', await G.$eval('#amb-panel', e => e.hidden));
-  await G.click('#ambient .amb-bubble'); await G.waitForTimeout(250); log('panel open:', !(await G.$eval('#amb-panel', e => e.hidden)), '| tiles:', (await G.$$('.amb-tile')).length, '| tabs:', await G.$$eval('.amb-tab', e => e.map(x => x.textContent.trim()).join(',')));
+  log('sound button on landing:', !!(await G.$('.hero-actions .amb-top')), '| bubble waits until something plays:', await G.$eval('#ambient .amb-bubble', e => getComputedStyle(e).display === 'none'), '| panel hidden:', await G.$eval('#amb-panel', e => e.hidden));
+  await G.click('.hero-actions .amb-top'); await G.waitForTimeout(250); log('panel open:', !(await G.$eval('#amb-panel', e => e.hidden)), '| tiles:', (await G.$$('.amb-tile')).length, '| tabs:', await G.$$eval('.amb-tab', e => e.map(x => x.textContent.trim()).join(',')));
   await G.click('.amb-tbtn[data-id="rain"]'); await G.waitForTimeout(400); log('rain on:', await G.$eval('.amb-tile:has(.amb-tbtn[data-id="rain"])', e => e.classList.contains('on')), '| playing:', await G.evaluate(() => App.ambient.playing().join(',')), '| bubble on:', await G.$eval('.amb-bubble', e => e.classList.contains('on')), '| vol slider:', !!(await G.$('.amb-vol[data-vol="rain"]')), '| ctx state:', await G.evaluate(() => (window.AudioContext ? 'has' : 'none')));
   await G.click('.amb-tbtn[data-id="lofi"]'); await G.click('.amb-tbtn[data-id="storm"]'); await G.waitForTimeout(600); log('three playing:', await G.evaluate(() => App.ambient.playing().join(',')), '| saved mix:', await G.evaluate(() => JSON.stringify(App.settings().ambient.mix)));
   await G.fill('#amb-master', '0.3'); await G.dispatchEvent('#amb-master', 'input'); await G.waitForTimeout(100); log('master saved:', await G.evaluate(() => App.settings().ambient.master));
@@ -24,7 +24,7 @@ const T = require('./lib');
   await G.click('[data-action="amb-stop"]'); await G.waitForTimeout(300); log('stopped:', await G.evaluate(() => App.ambient.playing().length), '| resume btn:', !!(await G.$('[data-action="amb-resume"]')), '| mix cleared:', await G.evaluate(() => Object.keys(App.settings().ambient.mix).length));
   await G.keyboard.press('Escape'); await G.waitForTimeout(150); log('esc closes:', await G.$eval('#amb-panel', e => e.hidden));
   await G.goto(base + '#/calc/lesson?unit=1'); await G.waitForTimeout(1000); log('bubble on lesson raised:', await G.$eval('#ambient', e => getComputedStyle(e).bottom), '| still exists across views:', !!(await G.$('#ambient')));
-  await G.setViewportSize({ width: 390, height: 780 }); await G.goto(base + '#/'); await G.waitForTimeout(900); await G.click('#ambient .amb-bubble'); await G.waitForTimeout(250); log('mobile panel fits:', await G.$eval('#amb-panel', e => { const b = e.getBoundingClientRect(); return b.left >= 0 && b.right <= innerWidth && b.top >= 0; }), '| no h-scroll:', await hscroll(G));
+  await G.setViewportSize({ width: 390, height: 780 }); await G.goto(base + '#/'); await G.waitForTimeout(900); await G.click('.hero-actions .amb-top'); await G.waitForTimeout(250); log('mobile panel fits:', await G.$eval('#amb-panel', e => { const b = e.getBoundingClientRect(); return b.left >= 0 && b.right <= innerWidth && b.top >= 0; }), '| no h-scroll:', await hscroll(G));
   await cG.close();
   await T.finish();
 })().catch(e => { console.log('FATAL', e); process.exit(1); });

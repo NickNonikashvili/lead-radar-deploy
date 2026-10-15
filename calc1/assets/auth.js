@@ -89,6 +89,8 @@
     if (Auth.mode === 'server' && !Auth.unreachable) setInterval(() => { if (document.visibilityState === 'visible' && Auth.user) call('me').then(r => { if (r.user) { Auth.user = Object.assign(Auth.user, r.user); Auth.setUnread(r.user.unread || 0); } else if (Auth.user && !Auth.user.local) { Auth.user = null; changed(); App.rerender(); } }).catch(() => {}); }, 90000);
     Auth.ready = true; changed(); if (App.rebuildNav) App.rebuildNav();
     if (App.welcome && App.welcome.needed()) setTimeout(() => { if (App.welcome.needed()) App.welcome.open(); }, 500);   // the welcome was left before the choices were made
+    // an invitation from an administrator: #/?setpw=<email> opens "choose your password" with the address filled in
+    { const sp = /[?&]setpw=([^&#]+)/.exec(location.hash); if (sp && !Auth.user && Auth.mode === 'server') setTimeout(() => Auth.open('reset', decodeURIComponent(sp[1])), 300); }
     if (App.current && !(App.current === App.views.practice && App.views.practice.hasSession && App.views.practice.hasSession())) { try { App.rerender(); } catch (e) { console.error(e); } }
     if (Auth.user && Auth.mode === 'server') Auth.pullAll().catch(() => {});
     document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && Auth.user && Auth.mode === 'server' && App.D) Auth.pullCourse(App.D.id, true).catch(() => {}); });
@@ -302,8 +304,8 @@
 
   /* ---------- modal ---------- */
   const M = { state: 'login', email: '', busy: false };
-  Auth.open = function (state) {
-    M.state = state || 'login'; M.msg = '';
+  Auth.open = function (state, email) {
+    M.state = state || 'login'; M.msg = ''; if (email) M.email = String(email).trim().toLowerCase();
     if (Auth.user) { App.go('settings'); return; }
     let m = $('#auth-modal');
     if (!m) { m = document.createElement('div'); m.className = 'modal-backdrop'; m.id = 'auth-modal'; document.body.appendChild(m); m.addEventListener('click', e => { if (e.target === m) Auth.close(); }); }

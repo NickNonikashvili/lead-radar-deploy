@@ -82,7 +82,7 @@ const T = require('./lib');
 
   // ---- ambient sounds ----
   const [cg, G] = await mk(); await go(G, '#/'); await G.waitForTimeout(800);
-  await G.click('#ambient .amb-bubble'); await G.waitForTimeout(250); log('panel tiles:', (await G.$$('.amb-tile')).length, '| tabs:', await G.$$eval('.amb-tab', e => e.map(x => x.textContent.trim()).join(',')), '| spotify gone:', !(await G.$('.amb-spotify')));
+  await G.click('.hero-actions .amb-top'); await G.waitForTimeout(250); log('panel tiles:', (await G.$$('.amb-tile')).length, '| tabs:', await G.$$eval('.amb-tab', e => e.map(x => x.textContent.trim()).join(',')), '| spotify gone:', !(await G.$('.amb-spotify')));
   for (const id of ['rain', 'storm', 'ocean', 'wind', 'fire', 'forest', 'night', 'cafe', 'lofi', 'piano', 'drone', 'brown', 'pink', 'white']) { await G.click(`.amb-tbtn[data-id="${id}"]`); await G.waitForTimeout(350); }
   log('all 14 playing:', await G.evaluate(() => App.ambient.playing().length), '| ctx state:', await G.evaluate(() => 'running'), '| bubble on:', await G.$eval('.amb-bubble', e => e.classList.contains('on')), '| sliders:', (await G.$$('.amb-vol')).length);
   await G.waitForTimeout(2500); log('after 2.5s errors so far:', errors.length);
@@ -100,7 +100,7 @@ const T = require('./lib');
   await G.click('[data-action="amb-shuffle"]'); await G.click('[data-action="amb-repeat"]'); await G.waitForTimeout(150); log('shuffle/repeat:', JSON.stringify(await G.evaluate(() => { const m = App.settings().ambient.music; return { shuffle: m.shuffle, repeat: m.repeat }; })));
   await G.click('.amb-track:nth-child(2) [data-action="amb-up"]'); await G.waitForTimeout(150); log('reordered:', await G.$$eval('.amb-track .amb-tname', e => e.map(x => x.textContent).join(' | ')));
   await G.goto(base + '#/calc'); await G.waitForTimeout(800); log('still playing after navigation:', await G.evaluate(() => { const a = document.getElementById('amb-audio'); return a && !a.paused; }));
-  await G.reload(); await G.waitForTimeout(1200); await G.click('#ambient .amb-bubble'); await G.waitForTimeout(600); log('after reload tracks persisted:', await G.$$eval('.amb-track .amb-tname', e => e.map(x => x.textContent).join(' | ')), '| current:', await txt(G, '.amb-now-title'));
+  await G.reload(); await G.waitForTimeout(1200); await G.click('#topbar .amb-top'); await G.waitForTimeout(600); log('after reload tracks persisted:', await G.$$eval('.amb-track .amb-tname', e => e.map(x => x.textContent).join(' | ')), '| current:', await txt(G, '.amb-now-title'));
   await G.click('[data-action="amb-play"]'); await G.waitForTimeout(300); log('plays after reload:', await G.evaluate(() => { const a = document.getElementById('amb-audio'); return a && !a.paused; }));
   await G.click('.amb-track:nth-child(1) [data-action="amb-remove"]'); await G.waitForTimeout(400); log('removed ->', await G.$$eval('.amb-track .amb-tname', e => e.map(x => x.textContent).join(' | ')), '| count:', await txt(G, '.amb-foot .small'));
   // 10 track cap

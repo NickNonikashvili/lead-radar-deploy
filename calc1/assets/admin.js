@@ -33,6 +33,8 @@
       const slot = $('#landing-account', root); if (slot && App.auth && App.auth.ready) App.auth.paintLandingAccount(slot);
       bind(root, { theme: () => App.toggleTheme(), 'auth-signup': () => App.auth.open('signup'), 'auth-login': () => App.auth.open('login') });
       if (isMod()) this[tab]($('#adm-body', root), root);
+      const on = $('.admin-tab.active', root); const row = on && on.parentElement;   // phones: the tab row scrolls to the open tab
+      if (row && row.scrollWidth > row.clientWidth) row.scrollLeft += on.getBoundingClientRect().left - row.getBoundingClientRect().left - 16;
     },
 
     /* browser errors reported by boot.js (api client_error): grouped by message, file and line */
@@ -194,10 +196,39 @@
     async members(el, root, q, page) {
       try {
         const us = await api('admin_users&q=' + encodeURIComponent(q || '') + '&page=' + (page || 0));
-        el.innerHTML = `<div class="panel"><div class="panel-h"><div class="panel-title">${icon('info')} Members</div><input class="input" id="adm-q" placeholder="Search email or name…" value="${esc(q || '')}" style="max-width:260px"></div>
+        // add a member: any email address, ready to use, with a role and a plan if wanted
+        const add = `<form class="panel mb-2 adm-add" id="adm-add" novalidate><div class="panel-h"><h2 class="panel-title">${icon('plus')} Add a member</h2></div>
+          <p class="small muted mb-2">Any email address, also outside montana.edu. The account is ready at once; the first time they sign in, Mathub welcomes them and they pick their classes.</p>
+          <div class="adm-add-grid"><div class="field"><label for="add-email">Email <span class="req">*</span></label><input class="input" id="add-email" type="email" autocomplete="off" required placeholder="name@example.edu"></div>
+            <div class="field"><label for="add-name">Name</label><input class="input" id="add-name" maxlength="60" autocomplete="off" placeholder="Optional"></div>
+            <div class="field"><label for="add-role">Role</label><select class="select" id="add-role"><option value="">Student</option><option value="TA">TA</option><option value="Instructor">Instructor</option></select></div>
+            <div class="field"><label for="add-plan">Plan</label><select class="select" id="add-plan"><option value="">No plan</option><option value="pro">Mathub Pro, free for them</option><option value="max">Mathub Max, free for them</option></select></div></div>
+          <fieldset class="adm-add-how"><legend>How they sign in</legend>
+            <label class="check"><input type="radio" name="add-how" value="invite" checked> <span>Email them a link and a code to choose their own password <span class="muted small">(good for 7 days)</span></span></label>
+            <label class="check"><input type="radio" name="add-how" value="password"> <span>Set a password now and tell them yourself</span></label>
+            <div class="field adm-add-pass" hidden><label for="add-pass">Password</label><input class="input" id="add-pass" type="text" autocomplete="off" spellcheck="false" placeholder="At least 8 characters"></div></fieldset>
+          <div class="row gap-sm mt-2" style="flex-wrap:wrap;align-items:center"><button class="btn primary" type="submit">${icon('plus', 14)} Add member</button><p class="small adm-add-msg" id="adm-add-msg" role="status"></p></div></form>`;
+        el.innerHTML = add + `<div class="panel"><div class="panel-h"><div class="panel-title">${icon('info')} Members</div><input class="input" id="adm-q" placeholder="Search email or name…" value="${esc(q || '')}" style="max-width:260px"></div>
           <div class="table-wrap"><table class="table compact"><thead><tr><th>Member</th><th>Joined</th><th class="num">Posts</th><th class="num">Comments</th><th class="num">Badges</th><th>Status</th><th></th></tr></thead><tbody>${us.users.map(x => `<tr><td><div><b>${esc(x.name || x.email.split('@')[0])}</b>${x.admin ? ' <span class="chip accent">admin</span>' : x.mod ? ' <span class="chip">mod</span>' : ''}</div><div class="mono small muted">${esc(x.email)}</div></td><td class="small">${new Date(x.created * 1000).toLocaleDateString()}<div class="muted">last login ${x.last_login ? timeAgo(x.last_login) : 'never'}</div></td><td class="num">${x.posts}</td><td class="num">${x.comments}</td><td class="num"><button class="btn xs${x.badges ? ' gold' : ''}" data-action="badges" data-u="${x.id}" title="Award or remove badges">${icon('award', 12)} ${x.badges}</button></td><td class="small">${!x.verified ? '<span class="chip warn">unverified</span>' : x.banned_until ? `<span class="chip bad">banned until ${new Date(x.banned_until * 1000).toLocaleDateString()}</span>` : '<span class="chip good">active</span>'}${x.terms ? '' : ' <span class="chip">no rules yet</span>'}</td><td><div class="row gap-sm" style="flex-wrap:nowrap;justify-content:flex-end">${x.admin ? '' : `${x.banned_until ? `<button class="btn xs" data-action="user" data-a="unban" data-u="${x.id}">Unban</button>` : `<button class="btn xs" data-action="user" data-a="ban" data-u="${x.id}">Ban</button>`}${!x.verified ? `<button class="btn xs" data-action="user" data-a="verify" data-u="${x.id}">Verify</button>` : ''}<button class="btn xs danger ghost" data-action="user" data-a="delete" data-u="${x.id}" data-e="${esc(x.email)}">Delete</button>`}</div></td></tr>`).join('') || '<tr><td colspan="7"><div class="empty">No members match.</div></td></tr>'}</tbody></table></div>
           ${us.more ? `<div class="row mt-2" style="justify-content:center"><button class="btn" data-action="page" data-p="${(page || 0) + 1}" data-q="${esc(q || '')}">Next page</button></div>` : ''}</div>`;
         const inp = $('#adm-q', el); let t; inp.addEventListener('input', () => { clearTimeout(t); t = setTimeout(() => this.members(el, root, inp.value.trim(), 0), 350); });
+        const form = $('#adm-add', el); const passBox = $('.adm-add-pass', form);
+        form.addEventListener('change', e => { if (e.target.name === 'add-how') passBox.hidden = e.target.value !== 'password'; });
+        form.addEventListener('submit', async e => {
+          e.preventDefault(); const btn = $('button[type="submit"]', form); const out = $('#adm-add-msg', form);
+          const body = { email: $('#add-email', form).value.trim(), name: $('#add-name', form).value.trim(), role: $('#add-role', form).value, plan: $('#add-plan', form).value, how: $('input[name="add-how"]:checked', form).value, password: $('#add-pass', form).value };
+          $$('.field.bad', form).forEach(f => f.classList.remove('bad')); btn.disabled = true; out.className = 'small adm-add-msg'; out.textContent = 'Adding…';
+          try {
+            const r = await api('admin_user_add', body);
+            const extra = [r.user.role ? `${r.user.role}` : '', r.user.plan ? `Mathub ${r.user.plan === 'max' ? 'Max' : 'Pro'}` : '', r.allowed ? 'allowed to sign in from outside montana.edu' : ''].filter(Boolean).join(' · ');
+            toast(r.how === 'invite' ? (r.invited ? `Added ${r.user.email}. They have an email to choose their password.` : `Added ${r.user.email}, but the email could not be sent. Check Email in Keys & settings.`) : `Added ${r.user.email}. Tell them their password.`, 5000);
+            await this.members(el, root, '', 0);
+            const m2 = $('#adm-add-msg', el); if (m2) { m2.className = 'small adm-add-msg good'; m2.textContent = `Added ${r.user.email}${extra ? ` (${extra})` : ''}.`; }
+          } catch (x) {
+            btn.disabled = false; out.className = 'small adm-add-msg bad'; out.textContent = x.message;
+            const f = x.data && x.data.field; const box = f && $('#add-' + (f === 'password' ? 'pass' : f), form); if (box) { box.closest('.field').classList.add('bad'); box.focus(); }
+          }
+        });
         bind(el, {
           page: b => this.members(el, root, b.dataset.q, +b.dataset.p),
           badges: b => { const tr = b.closest('tr'); const open = tr.nextElementSibling && tr.nextElementSibling.classList.contains('adm-badge-row'); $$('.adm-badge-row', el).forEach(r => r.remove()); if (open) return; const row = document.createElement('tr'); row.className = 'adm-badge-row'; row.innerHTML = '<td colspan="7"><div class="empty small">Loading…</div></td>'; tr.after(row); this.badgeEditor(row.firstElementChild, +b.dataset.u, () => { const cnt = $('[data-action="badges"]', tr); if (cnt) this.members(el, root, $('#adm-q', el).value.trim(), page || 0); }); },

@@ -563,12 +563,13 @@ html[data-motion="off"] .trail-board.tb-anim .tb-path, html[data-motion="off"] .
 @media (max-width: 760px) {
   :root:not([data-skin]) .landing-top.hero { padding: 26px 20px 112px; border-radius: 22px; }
   :root:not([data-skin]) .hero-sub { font-size: 34px; }
-  /* two tidy rows: Today, search and theme, then the account buttons */
-  :root:not([data-skin]) .landing-top .hero-actions { flex-wrap: wrap; gap: 8px; }
-  :root:not([data-skin]) .landing-top .hero-actions .hero-today { order: 0; }
+  /* two tidy rows: Today and For professors side by side, then search, sounds and theme with the account at the end */
+  :root:not([data-skin]) .landing-top .hero-actions { flex-wrap: wrap; gap: 8px; width: 100%; }
+  :root:not([data-skin]) .landing-top .hero-actions :is(.hero-today, .hero-faculty) { order: 0; flex: 1 1 40%; justify-content: center; }
   :root:not([data-skin]) .landing-top .hero-actions [data-action="search"] { order: 1; }
-  :root:not([data-skin]) .landing-top .hero-actions .theme-btn { order: 2; }
-  :root:not([data-skin]) .landing-top .hero-actions #landing-account { order: 3; flex-basis: 100%; min-width: 0; }
+  :root:not([data-skin]) .landing-top .hero-actions .amb-top { order: 2; }
+  :root:not([data-skin]) .landing-top .hero-actions .theme-btn { order: 3; }
+  :root:not([data-skin]) .landing-top .hero-actions #landing-account { order: 4; margin-left: auto; min-width: 0; }
   :root:not([data-skin]) .landing-top .hero-actions .landing-acct { justify-content: flex-start; }
   :root:not([data-skin]) .page-title { font-size: 32px; }
 }

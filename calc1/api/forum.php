@@ -279,6 +279,55 @@ function mh_forum_route(string $route, array $in, array $cfg, string $ip): void 
       if ($role === '') $db->prepare('DELETE FROM roles WHERE email = ?')->execute([$email]); else $db->prepare('INSERT INTO roles (email, role, updated) VALUES (?, ?, ?) ON CONFLICT(email) DO UPDATE SET role = excluded.role, updated = excluded.updated')->execute([$email, $role, time()]);
       mh_json(['ok' => true]);
 
+    case 'admin_user_add':
+      // an administrator adds an account for anyone: verified, with a role and a plan if wanted; they either set the
+      // password here or the person gets an email with a code (good for 7 days) and a link to choose their own
+      mh_method('POST'); $u = mh_require_user(); if (!mh_is_admin($u)) mh_fail('Administrators only.', 403);
+      mh_rate_or_fail("admin_user_add:{$u['id']}", 60, 3600, 'That is a lot of new members at once. Wait a little.');
+      $email = strtolower(mh_str($in, 'email', 254)); if (!filter_var($email, FILTER_VALIDATE_EMAIL)) mh_fail('Enter a valid email address.', 400, ['field' => 'email']);
+      $name = mh_str($in, 'name', 60);
+      $role = (string)($in['role'] ?? ''); if (!in_array($role, ['', 'TA', 'Instructor'], true)) mh_fail('Pick student, TA or instructor.', 400, ['field' => 'role']);
+      $plan = (string)($in['plan'] ?? ''); if (!in_array($plan, ['', 'pro', 'max'], true)) mh_fail('Pick no plan, Pro or Max.', 400, ['field' => 'plan']);
+      $how = ($in['how'] ?? 'invite') === 'password' ? 'password' : 'invite'; $pass = (string)($in['password'] ?? '');
+      if ($how === 'password' && ($pe = mh_password_problem($pass, $email)) !== '') mh_fail($pe, 400, ['field' => 'password']);
+      $ex = mh_user_by_email($email);
+      if ($ex && (int)$ex['verified'] === 1) mh_fail('That address already has an account. Find it in the list below.', 409, ['field' => 'email']);
+      $hash = password_hash($how === 'password' ? $pass : bin2hex(random_bytes(24)), PASSWORD_DEFAULT);
+      if ($ex) $db->prepare('UPDATE users SET name = ?, pass_hash = ?, verified = 1 WHERE id = ?')->execute([$name !== '' ? $name : (string)$ex['name'], $hash, $ex['id']]);   // a sign-up that never verified
+      else $db->prepare('INSERT INTO users (email, name, pass_hash, verified, created) VALUES (?, ?, ?, 1, ?)')->execute([$email, $name, $hash, $now]);
+      if ($role !== '') $db->prepare('INSERT INTO roles (email, role, updated) VALUES (?, ?, ?) ON CONFLICT(email) DO UPDATE SET role = excluded.role, updated = excluded.updated')->execute([$email, $role, $now]);
+      // an address outside the sign-up domains may log in; a plan goes with the account: both saved like Keys & settings
+      [, $outside] = mh_email_check($email); $changed = [];
+      if ($outside || $plan !== '') {
+        require_once __DIR__ . '/siteconfig.php'; $files = mh_siteconfig_files(); $saved = mh_siteconfig_saved($files);
+        if ($outside) { $list = array_values(array_map('strtolower', (array)($saved['extra_allowed_emails'] ?? ($files['extra_allowed_emails'] ?? [])))); if (!in_array($email, $list, true)) { $list[] = $email; $saved['extra_allowed_emails'] = $list; $changed[] = 'extra_allowed_emails'; } }
+        if ($plan !== '') { $g = (array)($saved['plan_grants'] ?? ($files['plan_grants'] ?? [])); $g[$email] = $plan; $saved['plan_grants'] = $g; $changed[] = 'plan_grants'; }
+        if ($changed) {
+          mh_siteconfig_write($files, $saved);
+          $db->exec('CREATE TABLE IF NOT EXISTS config_log (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER REFERENCES users(id) ON DELETE CASCADE, key TEXT NOT NULL, action TEXT NOT NULL DEFAULT "set", at INTEGER NOT NULL)');
+          foreach ($changed as $k) $db->prepare('INSERT INTO config_log (user_id, key, action, at) VALUES (?, ?, ?, ?)')->execute([$u['id'], $k, 'set', $now]);
+        }
+      }
+      $invited = false;
+      if ($how === 'invite') {
+        require_once __DIR__ . '/mailer.php';
+        $site = (string)($cfg['site_name'] ?? 'Mathub'); $code = mh_code_issue($email, 'reset', 7 * 86400);
+        $base = rtrim((string)(($cfg['site_url'] ?? '') ?: ('https://' . preg_replace('/[^A-Za-z0-9.:-]/', '', (string)($_SERVER['HTTP_HOST'] ?? 'mathub.space')))), '/');
+        $link = $base . '/#/?setpw=' . rawurlencode($email); $who = mh_display_name($u);
+        $text = "$who added you to $site.
+
+Choose your password here: $link
+Your code: $code (it works for 7 days).
+
+Then pick your classes and you are in.
+
+— $site";
+        $html = '<div style="font-family:Helvetica Neue,Helvetica,Arial,sans-serif;max-width:480px;margin:0 auto;padding:24px;color:#131C2E"><p style="font-size:16px;margin:0 0 12px"><b>' . htmlspecialchars($who) . '</b> added you to <b>' . htmlspecialchars($site) . '</b>.</p><p style="margin:0 0 16px"><a href="' . htmlspecialchars($link) . '" style="display:inline-block;padding:12px 18px;border-radius:12px;background:#1A64D6;color:#fff;font-weight:700;text-decoration:none">Choose your password</a></p><p style="font-size:14px;margin:0 0 6px">Your code</p><p style="font-size:32px;letter-spacing:8px;font-weight:700;margin:0 0 16px;font-family:Consolas,Menlo,monospace">' . $code . '</p><p style="font-size:14px;color:#64718A;margin:0">It works for 7 days. Then pick your classes and you are in.</p></div>';
+        $r = mh_send_mail($cfg, $email, "$who added you to $site", $text, $html); $invited = (bool)$r['ok'];
+      }
+      $nu = mh_user_by_email($email);
+      mh_json(['ok' => true, 'user' => ['id' => (int)$nu['id'], 'email' => $email, 'name' => (string)$nu['name'], 'role' => $role, 'plan' => $plan], 'invited' => $invited, 'allowed' => (bool)$outside, 'how' => $how]);
+
     /* ---------- notifications ---------- */
     case 'notif_list':
       mh_method('GET'); $u = mh_require_user();

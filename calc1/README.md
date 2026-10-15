@@ -235,6 +235,22 @@ checkout, and closing it leaves the account on Free), then You're all set. `api 
 Accounts from before it count as welcomed. Skip the tour (or Esc) jumps to the choices; Back, the arrow keys and
 Log out work; it is still when motion is off or reduced, and the old coach-mark tour no longer starts after it.
 
+## Adding members from the admin panel
+
+Admin panel → Members → **Add a member** (`api admin_user_add`): any email address, also outside montana.edu
+(it is added to "Also allowed to sign up" in Keys & settings so it can sign in), with a name, a role (student, TA,
+instructor) and a plan given without paying (Pro or Max, added to plan grants). The account is verified at once.
+Either the administrator sets the password, or the person gets an email with a link (`#/?setpw=<email>`, which
+opens "choose your password" with the address filled in) and a code good for 7 days. Mathub's welcome greets them
+at their first sign-in. Duplicates and weak passwords are refused.
+
+## Floating buttons
+
+The focus-sounds bubble floats only while something plays (or its panel is open); the sounds start from the top
+bar's button on class pages, the start page's button next to search, or the Focus room. Back to top is hidden on
+phones and tablets and keeps clear of the sidebar on wide screens. The admin panel's tabs are one scrolling row on
+narrow screens. Ask Bo has "Your classes" and "Open <class>" at the top.
+
 ## Keys and settings from the admin panel
 
 Admin panel → **Keys & settings** (`assets/admin.js`, `api/siteconfig.php`): the API keys (Anthropic, OpenAI,

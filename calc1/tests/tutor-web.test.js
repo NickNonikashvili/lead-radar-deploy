@@ -63,6 +63,7 @@ const PNG = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwA
   const greet = await txt(m, '#bo-log .bo-msg.bo');
   check('Bo greets from what the device knows (no AI call): the next exam and the weakest topic', /I'm Bo/.test(greet) && /Exam 2 is in 3 days/.test(greet) && /weakest topic/.test(greet), greet);
   check('suggestions to start from', (await m.$$('#bo-suggest .bo-chip')).length >= 3 && /Quiz me for Exam 2/.test(await txt(m, '#bo-suggest')));
+  check('a clear way back: Your classes and the class\'s own page, at the top', (await m.$eval('.bo-nav a.bo-back', a => a.getAttribute('href'))) === '#/' && !!(await m.$('.bo-nav a[href="#/calc/dashboard"]')) && /Your classes/.test(await txt(m, '.bo-nav')) && /Open Calc I/.test(await txt(m, '.bo-nav')));
   await m.fill('#bo-q', 'Please remember I like worked examples. And math: is x < 3?'); await m.click('.bo-send'); await m.waitForTimeout(2500);
   const reply = await txt(m, '#bo-log .bo-msg.bo:last-child');
   check('Bo answers in the chat, with what the device sent: her weakest topic', /Bo here\. Your weakest topic is/.test(reply) && /x < 3 here/.test(reply), reply.slice(0, 200));

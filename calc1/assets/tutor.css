@@ -9,7 +9,12 @@
 .bo-col { display: flex; flex-direction: column; min-width: 0; min-height: calc(100dvh - 120px); }
 html[data-app] .bo-page { padding-top: 12px; }
 html[data-app] .bo-col { min-height: calc(100dvh - var(--ab-h) - var(--tab-h) - env(safe-area-inset-top) - env(safe-area-inset-bottom)); }
-.bo-head { display: flex; align-items: center; gap: 14px; }
+.bo-head { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; }
+/* the way back to the classes, above Bo's name */
+.bo-nav { flex: 1 0 100%; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: -2px; }
+.bo-nav .btn { min-height: 38px; gap: 6px; }
+@media (pointer: coarse) { .bo-nav .btn { min-height: 44px; } }
+html[data-app] .bo-nav { display: none; }   /* the apps have their tab bar and back gesture */
 .bo-av { flex: none; display: grid; place-items: center; width: 64px; height: 64px; border-radius: 20px; background: var(--accent-soft); }
 .bo-title { flex: 1; min-width: 0; }
 .bo-title h1 { margin: 0; font: 800 28px/1.1 var(--font-display); letter-spacing: -.015em; color: var(--ink); }
