@@ -53,7 +53,7 @@ const STATE = path.join(__dirname, 'fixtures', 'rc-state.json');
   const pw = await a.evaluate(() => { const s = document.querySelector('#paywall'); if (!s) return null; const b = s.querySelector('[data-action="pw-buy"]'); return { card: !!s.querySelector('.modal.pw'), price: s.querySelector('#pw-price').textContent, tag: b.tagName, href: b.getAttribute('href') || '', target: b.getAttribute('target'), text: b.textContent, fine: s.querySelector('.pw-fine').textContent, terms: !!s.querySelector('.pw-fine a[href="#/policy/create"]'), restore: s.querySelector('[data-action="pw-restore"]').textContent }; });
   check('adding it opens the plans card: Pro $15 and Max $50 a month', pw && pw.card && /Pro \$15 · Max \$50/.test(pw.price), pw);
   check('Get Pro is a link to her own Pro checkout at RevenueCat, in a new tab', pw && pw.tag === 'A' && /^https:\/\/pay\.rev\.cat\/sbx_pro_link\/mh_\d+$/.test(pw.href) && pw.target === '_blank' && /Get Pro for \$15 a month/.test(pw.text), pw);
-  check('the terms: renews monthly, how to cancel, Stripe, works in the app too, Terms and Privacy', pw && /Renews every month at \$15/.test(pw.fine) && /Manage subscription/.test(pw.fine) && /Stripe/.test(pw.fine) && /app with this account/.test(pw.fine) && pw.terms, pw && pw.fine);
+  check('the terms: renews monthly, how to cancel, Stripe, works in the app too, Terms and Privacy', pw && /Renews every month at \$15/.test(pw.fine) && /Cancel any time in Your plan/.test(pw.fine) && /Stripe/.test(pw.fine) && /app with this account/.test(pw.fine) && pw.terms, pw && pw.fine);
   await a.click('#paywall [data-action="pw-restore"]'); await a.waitForTimeout(900);
   check('"I already subscribed" before paying says none was found', /No Mathub Pro or Max subscription was found/.test(await txt(a, '#pw-err')));
   // she pays in the other tab (the stand-in RevenueCat now says she has it), then comes back
@@ -71,7 +71,7 @@ const STATE = path.join(__dirname, 'fixtures', 'rc-state.json');
 
   // Settings shows the subscription
   await go(a, '#/settings', 1400);
-  check('Settings has a Your plan panel: Mathub Pro, renewing, with Manage subscription and Move up to Max', /Mathub Pro\. Renews/.test(await txt(a, '#create-panel')) && !!(await a.$('#create-panel [data-cp="max"]')) && !!(await a.$('#create-panel a[href="https://billing.example/manage"]')), await txt(a, '#create-panel'));
+  check('Settings has a Your plan panel: Mathub Pro, renewing, with Manage your plan (the Your plan page) and Move up to Max', /Mathub Pro\. Renews/.test(await txt(a, '#create-panel')) && !!(await a.$('#create-panel [data-cp="max"]')) && !!(await a.$('#create-panel a[href="#/plan"]')), await txt(a, '#create-panel'));
 
   // a new browser: her classes come back from the account
   const [cn, n] = await mk(1360, 900); await cn.addInitScript(quiet); await go(n, '#/'); await login(n, ALICE); await n.reload(); await n.waitForTimeout(800); await go(n, '#/create', 2500);
