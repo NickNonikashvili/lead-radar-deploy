@@ -504,7 +504,7 @@ THE SYLLABUS:
         const r = await api('create_status' + (force ? '&refresh=1' : ''));
         S.info = r; S.ok = !!r.configured;
         lsSet(KEY, { uid: u.id, on: !!r.active, plan: r.plan || '', until: r.until || null, renews: r.renews !== false, store: r.store || '', manage: r.manage_url || '', granted: !!r.granted, at: Date.now() });
-        if (was !== S.plan()) subChanged();
+        if (was !== S.plan()) subChanged(); else if (S.onInfo) S.onInfo();   // the same plan, maybe cancelled or turned back on
         return S.active();
       },
       async offer() {
@@ -555,7 +555,7 @@ THE SYLLABUS:
       const why = o.reason === 'locked' ? `${what} is locked because your plan is off. Everything in it is still saved ${WHERE}.` : o.reason === 'shared' ? `Adding ${what} to your classes needs Mathub Pro or Max.` : o.reason === 'bo' ? (have === 'pro' ? 'Bo is part of Mathub Max. Move up from Pro to talk with him.' : 'Talking with Bo, your AI tutor, is part of Mathub Max.') : o.reason === 'bo-class' ? 'Bo writing your class from the syllabus is part of Mathub Pro and Max.' : what ? `Adding ${what} needs Mathub Pro or Max.` : 'Bo writes your classes with Mathub Pro. Max adds Ask Bo, your AI tutor.';
       const plans = need === 'max' || have === 'pro' ? ['max'] : ['pro', 'max']; let pick = plans[0];
       const el = document.createElement('div'); el.id = 'paywall'; el.className = NATIVE ? 'modal-backdrop sheet-backdrop' : 'modal-backdrop pw-backdrop';
-      const cancelWhere = NATIVE ? `your ${ANDROID ? 'Google Play' : 'Apple ID'} subscriptions` : 'Settings › Your plan › Manage subscription, or with the link in your receipt email';
+      const cancelWhere = NATIVE ? `your ${ANDROID ? 'Google Play' : 'Apple ID'} subscriptions` : 'Your plan (in your account menu), or with the link in your receipt email';
       const fine = p => `Renews every month${p ? ` at ${p}` : ''} until you cancel. Cancel any time in ${cancelWhere}${NATIVE ? ', at least 24 hours before it renews' : ''}.${NATIVE ? '' : ' Payment is handled by Stripe.'} The example class stays free. `;
       const card = k => `<button type="button" class="pw-plan${k === pick ? ' on' : ''}" data-plan="${k}" role="radio" aria-checked="${k === pick}"><span class="pw-plan-h"><b>${PLANS[k].name}</b><span class="pw-plan-price" data-price="${k}">${esc(PLANS[k].web)}<small> a month</small></span></span><ul>${PLANS[k].lines.map(l => `<li>${icon('check', 15)}<span>${esc(l)}</span></li>`).join('')}</ul></button>`;
       el.innerHTML = `<div class="${NATIVE ? 'sheet' : 'modal'} pw" role="dialog" aria-modal="true" aria-labelledby="pw-h">${NATIVE ? '<div class="sheet-grab" aria-hidden="true"></div>' : ''}
@@ -564,7 +564,7 @@ THE SYLLABUS:
         <div class="pw-plans${plans.length === 1 ? ' one' : ''}" role="radiogroup" aria-label="Plans">${plans.map(card).join('')}</div>
         <p class="pw-err" id="pw-err" role="alert" hidden></p><p class="pw-wait" id="pw-wait" role="status" hidden></p>
         <div class="pw-acts"><button type="button" class="btn primary lg" data-action="pw-buy" disabled>Subscribe</button><button type="button" class="btn ghost" data-action="pw-restore">${NATIVE ? 'Restore purchases' : 'I already subscribed'}</button></div>
-        <p class="pw-fine" id="pw-fine"><span>${fine('')}</span>${NATIVE ? '' : 'If you subscribe in the Mathub app with this account, it works here too. '}${!NATIVE && have === 'pro' ? 'Moving up on the website: cancel Pro in Manage subscription so you are not billed twice. ' : ''}<a href="#/policy/create">Terms of Use</a> · <a href="#/policy/privacy">Privacy Policy</a></p></div>`;
+        <p class="pw-fine" id="pw-fine"><span>${fine('')}</span>${NATIVE ? '' : 'If you subscribe in the Mathub app with this account, it works here too. '}${!NATIVE && have === 'pro' ? 'Moving up on the website: cancel Pro in Your plan so you are not billed twice. ' : ''}<a href="#/policy/create">Terms of Use</a> · <a href="#/policy/privacy">Privacy Policy</a></p></div>`;
       document.body.appendChild(el); requestAnimationFrame(() => el.classList.add('open'));
       let buy = $('[data-action="pw-buy"]', el); const rest = $('[data-action="pw-restore"]', el), err = $('#pw-err', el), wait = $('#pw-wait', el);
       let done = false, poll = null, ready = false;
@@ -644,7 +644,7 @@ THE SYLLABUS:
   App.createLock = { html: lockHtml, wire: wireLock, where: WHERE, restoreLabel: NATIVE ? 'Restore purchases' : 'I already subscribed' };
   App.courseGate = (id, root) => { if (!locked(id)) return false; const C = Courses[id]; document.title = `${C.short || C.code} is locked · Mathub`; root.innerHTML = lockHtml(C); wireLock(root, C); return true; };
   // when the subscription turns on or off, the page in front of the student follows (not the Create page: a class may be waiting to be added)
-  document.addEventListener('mathub-sub', () => { const m = /^#\/([^/?]*)/.exec(location.hash || '#/'); const first = m ? m[1] : ''; if (!first || first === 'settings' || local.has(first)) App.rerender(); });
+  document.addEventListener('mathub-sub', () => { const m = /^#\/([^/?]*)/.exec(location.hash || '#/'); const first = m ? m[1] : ''; if (!first || first === 'settings' || first === 'plan' || local.has(first)) App.rerender(); });
 
   /* ============================================================
      #/create
@@ -990,7 +990,7 @@ THE SYLLABUS:
       const s = Sub.status(); const on = Sub.active(); const plan = Sub.plan(); const mine = Mine.list().length; const u = user();
       const line = !u ? 'Sign in to see your plan.' : on ? `${Sub.planName()}${s.granted ? ' (given to your account)' : ''}. ` + (s.until ? (s.renews ? `Renews ${fmtDate(s.until)}.` : `On until ${fmtDate(s.until)}; it will not renew.`) : '') : `No plan. With Mathub Pro (${PLANS.pro.web} a month) Bo writes your classes from any syllabus; Mathub Max (${PLANS.max.web} a month) adds Ask Bo, your AI tutor. The example class is free.`;
       return `<div class="panel span-2 create-panel" id="create-panel"><div class="panel-h"><div class="panel-title">${icon('plus')} Your plan</div></div>
-        <div class="ap-sub"><div class="ap-sub-t"><b>${on ? esc(Sub.planName()) : 'Mathub Pro and Max'}</b><span class="small muted">${line}</span></div><div class="row gap-sm">${on && Sub.manageUrl() ? `<a class="btn sm" href="${esc(Sub.manageUrl())}" target="_blank" rel="noopener">Manage subscription</a>` : ''}${!on ? `<button type="button" class="btn sm primary" data-cp="buy">See the plans</button>` : plan === 'pro' ? `<button type="button" class="btn sm primary" data-cp="max">Move up to Max</button>` : `<a class="btn sm primary" href="#/tutor">Ask Bo</a>`}${u ? `<button type="button" class="btn sm ghost" data-cp="check">Check again</button>` : ''}</div></div>
+        <div class="ap-sub"><div class="ap-sub-t"><b>${on ? esc(Sub.planName()) : 'Mathub Pro and Max'}</b><span class="small muted">${line}</span></div><div class="row gap-sm">${u ? `<a class="btn sm" href="#/plan">${on ? 'Manage your plan' : 'Your plan'}</a>` : ''}${!on ? `<button type="button" class="btn sm primary" data-cp="buy">See the plans</button>` : plan === 'pro' ? `<button type="button" class="btn sm primary" data-cp="max">Move up to Max</button>` : `<a class="btn sm primary" href="#/tutor">Ask Bo</a>`}${u ? `<button type="button" class="btn sm ghost" data-cp="check">Check again</button>` : ''}</div></div>
         <p class="small mt-1">${mine ? `${mine} class${mine === 1 ? '' : 'es'} you created ${mine === 1 ? 'is' : 'are'} saved with your account.` : 'Classes you create from a syllabus are saved with your account.'} <a href="#/create">Create a class</a></p></div>`;
     };
     App.onRender = App.onRender || [];
@@ -1005,6 +1005,186 @@ THE SYLLABUS:
       });
     });
   }
+  /* ============================================================
+     #/plan — Your plan: the plan you have and how it is paid, what you have used this month, the plans side by
+     side, billing and receipts, cancelling (api: plan_cancel), and answers to the usual questions.
+     ============================================================ */
+  const STORE_NAME = { app_store: 'the App Store', mac_app_store: 'the App Store', play_store: 'Google Play', rc_billing: 'the website (card, through Stripe)', stripe: 'the website (card, through Stripe)', promotional: 'a gift from Mathub' };
+  const FREE_LINES = ['Every class built into Mathub: lessons, practice, flashcards and exam prep', 'Today, your calendar, the Focus room and the GPA calculator', 'The example class you can make from a syllabus'];
+  const nextReset = () => { const d = new Date(); return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 1, 12)).toLocaleDateString('en-US', { month: 'long', day: 'numeric' }); };
+  const num = n => Number(n || 0).toLocaleString('en-US');
+  const P = { use: null, busy: false };
+  function planStore(s) { if (NATIVE) return ANDROID ? 'play_store' : 'app_store'; return s.store || ''; }
+  function nowHtml() {
+    const u = user(); const s = Sub.status(); const plan = Sub.plan(); const on = !!plan;
+    if (!u && !NATIVE) return `<div class="pl-now pl-out"><div class="pl-now-t"><h2 class="pl-name">Sign in to see your plan</h2><p>Your plan belongs to your Mathub account, so it works on the website and in the apps.</p></div><div class="pl-acts"><button type="button" class="btn primary" data-pl="login">Log in</button><button type="button" class="btn" data-pl="signup">Create an account</button></div></div>`;
+    if (!on) return `<div class="pl-now pl-free"><span class="pl-badge" aria-hidden="true">${App.bobcatSvg ? App.bobcatSvg(54) : ''}</span><div class="pl-now-t"><p class="pl-state"><span class="pl-chip">Free</span></p><h2 class="pl-name">You’re on the free plan</h2><p>Everything built into Mathub is free. With <b>Mathub Pro</b> Bo writes your classes from any syllabus, and <b>Mathub Max</b> adds Bo, your AI tutor, in a chat and on calls.</p></div><div class="pl-acts"><button type="button" class="btn primary" data-pl="buy-max">Get Max</button><button type="button" class="btn" data-pl="buy-pro">Get Pro</button>${u ? `<button type="button" class="btn ghost" data-pl="check">I already subscribed</button>` : ''}</div></div>`;
+    const ends = s.until && !s.renews; const store = planStore(s); const where = s.granted ? 'given to your account' : STORE_NAME[store] || 'the website';
+    const chip = s.granted ? '<span class="pl-chip gift">Given to your account</span>' : ends ? `<span class="pl-chip warn">Ends ${esc(fmtDate(s.until))}</span>` : '<span class="pl-chip ok">Active</span>';
+    const facts = [
+      ['Price', s.granted ? 'Free for you' : `${esc(Sub.price(plan) || PLANS[plan].web)} a month`],
+      [ends ? 'Ends' : 'Renews', s.granted ? 'Does not renew or charge' : s.until ? `${esc(fmtDate(s.until))}${ends ? ', and it will not renew' : ''}` : 'Every month'],
+      ['Paid through', esc(where)],
+      u ? ['Account', esc(u.email)] : null
+    ].filter(Boolean);
+    const manage = !s.granted && Sub.manageUrl();
+    return `<div class="pl-now pl-${plan}"><span class="pl-badge" aria-hidden="true">${icon(plan === 'max' ? 'gem' : 'zap', 30)}</span><div class="pl-now-t"><p class="pl-state">${chip}</p><h2 class="pl-name">${esc(PLANS[plan].name)}</h2>
+        <dl class="pl-facts">${facts.map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join('')}</dl>
+        ${ends ? `<p class="pl-note">${icon('clock', 15)} Everything in ${esc(PLANS[plan].short)} keeps working until then. Changed your mind? ${manage ? 'Turn it back on from Manage billing.' : ''}</p>` : ''}</div>
+      <div class="pl-acts">${plan === 'pro' ? `<button type="button" class="btn primary" data-pl="buy-max">Move up to Max</button>` : ''}${manage ? `<a class="btn${plan === 'max' ? ' primary' : ''}" href="${esc(manage)}" target="_blank" rel="noopener">${icon('external', 15)} Manage billing</a>` : ''}${!s.granted && !ends ? `<button type="button" class="btn ghost pl-cancel" data-pl="cancel">Cancel plan</button>` : ''}<button type="button" class="btn ghost" data-pl="check">${icon('rotate', 14)} Check again</button></div></div>`;
+  }
+  function useHtml() {
+    const plan = Sub.plan(); const st = P.use; if (!plan) return '';
+    if (!st || !st.usage) return `<div class="pl-meters pl-wait" aria-busy="true"><i></i><i></i><i></i></div>`;
+    const U = st.usage;
+    const meter = (label, used, limit, unit, note, off) => {
+      if (off) return `<div class="pl-m off"><div class="pl-m-h"><b>${label}</b><span>${note}</span></div></div>`;
+      const left = Math.max(0, limit - used); const pct = limit ? Math.min(100, Math.round(used / limit * 100)) : 0;
+      return `<div class="pl-m${pct >= 90 ? ' low' : ''}"><div class="pl-m-h"><b>${label}</b><span><b>${num(left)}</b> ${unit} left</span></div><div class="pl-bar" role="progressbar" aria-label="${label}" aria-valuemin="0" aria-valuemax="${limit}" aria-valuenow="${used}" aria-valuetext="${num(used)} of ${num(limit)} ${unit} used"><i style="width:${Math.max(pct, used ? 2 : 0)}%"></i></div><p class="pl-m-f">${num(used)} of ${num(limit)} used${note ? ` · ${note}` : ''}</p></div>`;
+    };
+    const mins = s => Math.floor(s / 60); const calls = st.voice && (st.voice.live || U.live > 0) && !NATIVE;
+    return `<div class="pl-meters">
+      ${plan === 'max' ? meter('Questions to Bo', U.tutor, U.tutor_limit, 'questions', '') : meter('Questions to Bo', 0, 0, '', 'Part of Mathub Max', true)}
+      ${meter('Classes Bo writes', U.classes, U.class_limit, U.class_limit - U.classes === 1 ? 'class' : 'classes', '')}
+      ${plan === 'max' && calls ? meter('Calls with Bo', mins(U.live), mins(U.live_limit), 'minutes', '') : ''}
+    </div><p class="pl-reset">${icon('rotate', 14)} These start again on ${nextReset()}.</p>`;
+  }
+  function cardsHtml() {
+    const plan = Sub.plan();
+    const card = (k, name, price, lines) => {
+      const mine = (plan || 'free') === k;
+      const act = k === 'free' ? '' : mine ? '' : k === 'pro' ? (plan === 'max' ? '' : `<button type="button" class="btn" data-pl="buy-pro">Get Pro</button>`) : `<button type="button" class="btn primary" data-pl="buy-max">${plan === 'pro' ? 'Move up to Max' : 'Get Max'}</button>`;
+      return `<article class="pl-card${mine ? ' mine' : ''}" aria-label="${name}${mine ? ', your plan' : ''}"><header><h3>${name}</h3>${mine ? '<span class="pl-chip ok">Your plan</span>' : ''}</header><p class="pl-price"><b>${esc(price)}</b>${k === 'free' ? '' : '<small> a month</small>'}</p><ul>${lines.map(l => `<li>${icon('check', 15)}<span>${esc(l)}</span></li>`).join('')}</ul>${act ? `<div class="pl-card-act">${act}</div>` : ''}</article>`;
+    };
+    return `<div class="pl-cards">${card('free', 'Free', '$0', FREE_LINES)}${card('pro', PLANS.pro.name, Sub.price('pro') || PLANS.pro.web, PLANS.pro.lines)}${card('max', PLANS.max.name, Sub.price('max') || PLANS.max.web, PLANS.max.lines)}</div>
+      <p class="pl-fine">Monthly plans that renew until you cancel. ${NATIVE ? `Bought in ${STORE}, which handles the billing.` : 'On the website the payment is taken by Stripe, through RevenueCat.'} A plan belongs to your Mathub account, so it works on the website and in the apps. <a href="#/policy/create">Terms</a> · <a href="#/policy/privacy">Privacy</a></p>`;
+  }
+  function faqHtml() {
+    const A = P.use && P.use.usage; const lim = A ? `${num(A.tutor_limit)} questions to Bo and ${num(A.class_limit)} classes Bo writes each month${A.live_limit ? `, and ${Math.floor(A.live_limit / 60)} minutes of calls` : ''}` : 'generous monthly limits';
+    const qa = [
+      ['How do I cancel?', NATIVE ? `In your ${ANDROID ? 'Google Play' : 'Apple ID'} subscriptions (Manage billing above), at least 24 hours before it renews. Your plan stays on until the end of the month you paid for.` : 'Press <b>Cancel plan</b> above. Your plan stays on until the end of the month you paid for, and you are not charged again. If you bought it in the Mathub app, it is cancelled in the App Store or Google Play instead; the page tells you where.'],
+      ['What happens when my plan ends?', `The classes you made are kept, locked, and open again if you subscribe again. Your progress, your chats with Bo and his notes stay with your account. Everything built into Mathub, and the example class, stay free.`],
+      ['Where are my receipts? How do I change my card?', NATIVE ? `${STORE} keeps your receipts and payment details.` : '<b>Manage billing</b> opens the billing page for your plan, where you can see every receipt, change your card or cancel. A receipt is also emailed to you each month.'],
+      ['Can I switch between Pro and Max?', NATIVE ? `Yes. Move up any time; ${STORE} handles the change.` : 'Move up to Max any time. On the website, cancel Pro after you get Max so you are not billed for both. To go down to Pro, cancel Max and get Pro when it ends.'],
+      ['I subscribed in the app. Does it work here?', 'Yes. A plan belongs to your Mathub account, so it works everywhere you sign in with it. If it does not show up, press Check again.'],
+      ['Are there limits?', `Fair-use limits that most students never reach: ${lim}. They start again on the 1st.`],
+      ['A question about a charge?', `Write to us from the <a href="#/contact">Contact page</a>${NATIVE ? `, or ask ${STORE}` : ''} and a person will answer.`]
+    ];
+    return `<div class="pl-faq">${qa.map(([q, a]) => `<details><summary>${q}${icon('chevron', 16)}</summary><p>${a}</p></details>`).join('')}</div>`;
+  }
+  Sub.onInfo = () => { const el = $('#pl-now'); if (el && /^#\/plan/.test(location.hash)) el.innerHTML = nowHtml(); };
+  App.views.plan = {
+    title: 'Your plan',
+    render(root) {
+      root.innerHTML = `<div class="landing-wrap pl-page">
+        <header class="landing-top pl-head"><div><h1 class="landing-title">Your plan</h1><p class="muted">What you have, what you have used this month, and everything about billing.</p></div><a class="btn" href="#/">${icon('left', 14)} Your classes</a></header>
+        <section class="pl-sec" aria-label="Your plan now" id="pl-now">${nowHtml()}</section>
+        <section class="pl-sec" aria-labelledby="pl-use-h" id="pl-use-s"${Sub.plan() ? '' : ' hidden'}><h2 class="pl-h" id="pl-use-h">This month</h2><div id="pl-use">${useHtml()}</div></section>
+        <section class="pl-sec" aria-labelledby="pl-cmp-h"><h2 class="pl-h" id="pl-cmp-h">The plans</h2>${cardsHtml()}</section>
+        <section class="pl-sec" aria-labelledby="pl-faq-h"><h2 class="pl-h" id="pl-faq-h">Questions</h2><div id="pl-faq-b">${faqHtml()}</div></section></div>`;
+      root.onclick = async e => {
+        const b = e.target.closest('[data-pl]'); if (!b) return; const k = b.dataset.pl;
+        if (k === 'login' || k === 'signup') return signIn(k);
+        if (k === 'buy-pro' || k === 'buy-max') { if (await paywall(k === 'buy-max' ? { need: 'max' } : {})) App.rerender(); return; }
+        if (k === 'check') { b.disabled = true; try { await Sub.refresh(true); toast(Sub.active() ? `${Sub.planName()} is on.` : Sub.noneFound(), 3500); App.rerender(); } catch (x) { toast(x.message, 4500); b.disabled = false; } return; }
+        if (k === 'cancel') cancelPlan();
+      };
+      // what has been used this month (the same numbers Bo's pages show)
+      if (user() && Sub.plan()) api('ai_status').then(st => { P.use = st; const el = $('#pl-use'); if (el) el.innerHTML = useHtml(); const f = $('#pl-faq-b'); if (f) f.innerHTML = faqHtml(); }).catch(() => { const el = $('#pl-use'); if (el) el.innerHTML = '<p class="small muted">This month’s numbers could not be loaded. Try again in a moment.</p>'; });
+      if (user() && !P.fresh) { P.fresh = true; Sub.refresh(true).catch(() => {}); }
+    }
+  };
+  /* cancelling: what changes and when, an optional reason, then it is done here or the page says where */
+  function cancelPlan() {
+    const plan = Sub.plan(); if (!plan) return; const s = Sub.status(); const store = planStore(s);
+    const inStore = store === 'app_store' || store === 'mac_app_store' || store === 'play_store';
+    const old = $('#pl-cancel'); if (old) old.remove();
+    const el = document.createElement('div'); el.id = 'pl-cancel'; el.className = NATIVE ? 'modal-backdrop sheet-backdrop' : 'modal-backdrop pw-backdrop';
+    const until = s.until ? fmtDate(s.until) : 'the end of the month you paid for';
+    const reasons = [['price', 'It costs too much'], ['use', 'I’m not using it enough'], ['done', 'My semester or exams are over'], ['broken', 'Something didn’t work'], ['other', 'Something else']];
+    el.innerHTML = `<div class="${NATIVE ? 'sheet' : 'modal'} pw pl-cx" role="dialog" aria-modal="true" aria-labelledby="pl-cx-h">${NATIVE ? '<div class="sheet-grab" aria-hidden="true"></div>' : ''}
+      <div class="sheet-h"><h2 id="pl-cx-h">Cancel ${esc(PLANS[plan].name)}?</h2><button class="icon-btn" data-x="keep" aria-label="Close">${icon('x', 18)}</button></div>
+      <div class="pl-cx-body" id="pl-cx-body">
+        <p>Your plan stays on until <b>${esc(until)}</b>. After that it does not renew, and you are not charged again.</p>
+        <ul class="pl-cx-list">${plan === 'max' ? `<li>${icon('chat', 16)}<span>Ask Bo and calls with him stop then.</span></li>` : ''}<li>${icon('lock', 16)}<span>The classes you made are kept, locked, and open again if you come back.</span></li><li>${icon('check', 16)}<span>Your progress, chats and everything built into Mathub stay yours, free.</span></li></ul>
+        <fieldset class="pl-why"><legend>Why are you cancelling? <span class="muted">(optional, it helps us)</span></legend><div class="pl-why-opts">${reasons.map(([v, l]) => `<label class="chip toggle pl-why-o"><input type="radio" name="pl-why" value="${v}"><span>${l}</span></label>`).join('')}</div></fieldset>
+        <label class="pl-note-l" for="pl-cx-note">Anything we could do better? <span class="muted">(optional)</span></label><textarea class="input" id="pl-cx-note" rows="2" maxlength="500"></textarea>
+        <p class="pw-err" id="pl-cx-err" role="alert" hidden></p>
+        <div class="pl-cx-acts"><button type="button" class="btn" data-x="keep">Keep my plan</button><button type="button" class="btn danger" data-x="go">${inStore ? `Cancel in ${store === 'play_store' ? 'Google Play' : 'the App Store'}` : 'Cancel my plan'}</button></div>
+      </div></div>`;
+    document.body.appendChild(el); requestAnimationFrame(() => el.classList.add('open'));
+    const back = document.activeElement;
+    const close = () => { document.removeEventListener('keydown', onKey); el.classList.remove('open'); setTimeout(() => el.remove(), Plat.reduceMotion() ? 0 : 220); if (back && back.focus) try { back.focus(); } catch (x) {} };
+    const onKey = e => { if (e.key === 'Escape') close(); }; document.addEventListener('keydown', onKey);
+    setTimeout(() => { const f = $('[data-x="keep"].btn', el); if (f) f.focus(); }, 50);
+    const step = (h, p, link, label) => { $('#pl-cx-body', el).innerHTML = `<div class="pl-cx-done"><h3>${h}</h3><p>${p}</p><div class="pl-cx-acts">${link ? `<a class="btn primary" href="${esc(link)}" target="_blank" rel="noopener" data-x="out">${icon('external', 15)} ${label}</a>` : ''}<button type="button" class="btn${link ? '' : ' primary'}" data-x="${link ? 'later' : 'keep'}">${link ? 'Done' : 'Close'}</button></div></div>`; const f = $('.pl-cx-done .btn', el); if (f) f.focus(); };
+    el.addEventListener('click', async e => {
+      if (e.target === el) return close();
+      const x = e.target.closest('[data-x]'); if (!x) return; const k = x.dataset.x;
+      if (k === 'keep') return close();
+      if (k === 'out') { Sub.waiting = true; return; }   // back from the billing page, the plan is checked again
+      if (k === 'later') { close(); Sub.refresh(true).then(() => App.rerender()).catch(() => {}); return; }
+      if (k !== 'go') return;
+      const why = $('input[name="pl-why"]:checked', el); const note = $('#pl-cx-note', el).value.trim();
+      x.disabled = true; x.textContent = 'Cancelling…'; const err = $('#pl-cx-err', el); err.hidden = true;
+      let r; try { r = await api('plan_cancel', { reason: why ? why.value : '', note }); }
+      catch (y) { x.disabled = false; x.textContent = 'Cancel my plan'; err.textContent = y.network ? 'Mathub could not be reached. Check your connection and try again.' : y.message; err.hidden = false; return; }
+      const end = r.until ? fmtDate(r.until) : until; const name = PLANS[plan].name;
+      if (r.how === 'cancelled') { Plat.haptic('success'); close(); toast(`${name} is cancelled. It stays on until ${end}.`, 5000); await Sub.refresh(true).catch(() => {}); App.rerender(); return; }
+      if (r.how === 'portal' && r.url) return step('One more step', `Website plans are cancelled on their billing page, which RevenueCat runs for Mathub (payments by Stripe). It opens in a new tab: choose <b>Cancel subscription</b> there. ${esc(name)} stays on until ${esc(end)}.`, r.url, 'Open the billing page');
+      if (r.how === 'app_store' || r.how === 'play_store') return step(`Cancel in ${r.how === 'play_store' ? 'Google Play' : 'the App Store'}`, `You bought ${esc(name)} in the Mathub app, so ${r.how === 'play_store' ? 'Google Play' : 'Apple'} handles it: open your subscriptions, pick Mathub and cancel. It stays on until ${esc(end)}.`, r.url, `Open ${r.how === 'play_store' ? 'Google Play' : 'App Store'} subscriptions`);
+      if (r.how === 'already') return step('It is already cancelled', `${esc(name)} ends on ${esc(end)} and will not renew.`, '', '');
+      if (r.how === 'granted') return step('Nothing to cancel', `${esc(name)} was given to your account (for testing), so it never charges you.`, '', '');
+      if (r.how === 'portal') return step('Write to us to cancel', 'The billing page for your plan could not be found. Write to us from the Contact page and we will cancel it for you, and make sure you are not charged again.', '', '');
+      step('No plan to cancel', 'Your account has no plan right now.', '', '');
+      Sub.refresh(true).catch(() => {});
+    });
+  }
+
+  /* ---------- the start page (website): Bo and your plan in one place: call him, ask him, have him write a class,
+     what is left this month, and the plan, a click away. Without a plan: the two plans. ---------- */
+  if (!NATIVE) {
+    let hubStatus = null;
+    const hubCid = () => {
+      const H = App.home; let ids = [], cur = null; try { ids = H.myIds() || []; cur = H.curClass(); } catch (e) {}
+      const ok = x => !!(x && Courses[x] && !Courses[x].preview && !(App.classLocked && App.classLocked(x)));
+      return ok(cur) && ids.includes(cur) ? cur : ids.find(ok) || null;
+    };
+    const hubLine = () => {
+      const plan = Sub.plan(); const U = hubStatus && hubStatus.usage; const s = Sub.status();
+      const ends = s.until && !s.renews && !s.granted ? ` Your plan ends ${fmtDate(s.until)}.` : '';
+      if (plan === 'max') return (U ? `${num(Math.max(0, U.tutor_limit - U.tutor))} questions${hubStatus.voice && (hubStatus.voice.live || U.live) ? ` and ${Math.floor(Math.max(0, U.live_limit - U.live) / 60)} call minutes` : ''} left this month.` : 'Mathub Max is on.') + ends;
+      if (plan === 'pro') return (U ? `Bo can write ${num(Math.max(0, U.class_limit - U.classes))} more classes this month. ` : 'Bo writes your classes from any syllabus. ') + 'Max adds Ask Bo and calls.' + ends;
+      return 'He knows your syllabus, your exams and where you are stuck. Call him, ask him anything, or have him write a whole class from a syllabus.';
+    };
+    const hubHtml = () => {
+      const plan = Sub.plan(); const cid = hubCid(); const cname = cid ? (Courses[cid].short || Courses[cid].code) : '';
+      const talkOk = !!(App.boTalk && App.boTalk.supported());
+      const act = o => { const tag = o.href ? 'a' : 'button'; return `<${tag} ${o.href ? `href="${o.href}"` : `type="button" data-bh="${o.k}"`} class="bh-act${o.main ? ' bh-main' : ''}"><span class="bh-ic" aria-hidden="true">${icon(o.ic, 22)}</span><span class="bh-l"><b>${o.b}</b><small>${o.s}</small></span></${tag}>`; };
+      let acts;
+      if (plan === 'max') acts = [talkOk && cid ? act({ k: 'call', ic: 'phone', b: 'Call Bo', s: `Talk ${esc(cname)} through, out loud`, main: true }) : '', act({ href: cid ? `#/tutor/${cid}` : '#/tutor', ic: 'chat', b: 'Ask Bo', s: 'Chat, photos and his board', main: !(talkOk && cid) }), act({ href: '#/create', ic: 'wand', b: 'Write a class', s: 'From any syllabus' })];
+      else if (plan === 'pro') acts = [act({ href: '#/create', ic: 'wand', b: 'Write a class', s: 'From any syllabus', main: true }), act({ k: 'max', ic: 'chat', b: 'Ask Bo', s: 'Move up to Max' }), talkOk ? act({ k: 'max', ic: 'phone', b: 'Call Bo', s: 'Move up to Max' }) : ''];
+      else acts = [act({ k: 'max', ic: 'gem', b: 'Get Mathub Max', s: `Bo in a chat and on calls · ${esc(Sub.price('max') || PLANS.max.web)} a month`, main: true }), act({ k: 'pro', ic: 'wand', b: 'Get Mathub Pro', s: `Bo writes your classes · ${esc(Sub.price('pro') || PLANS.pro.web)} a month` }), act({ href: '#/plan', ic: 'list', b: 'Compare the plans', s: 'What each one includes' })];
+      return `<section class="bh bh-${plan || 'free'}" id="bo-hub" aria-labelledby="bh-h"><div class="bh-who"><span class="bh-av" aria-hidden="true">${App.bobcatSvg ? App.bobcatSvg(58) : ''}</span><div class="bh-t"><h2 id="bh-h">${plan ? 'Bo, your tutor' : 'Meet Bo, your tutor'}</h2><p class="bh-sub" id="bh-sub">${esc(hubLine())}</p><a class="bh-plan" href="#/plan"><span>Your plan</span><b>${plan ? PLANS[plan].short : 'Free'}</b>${icon('right', 14)}</a></div></div><div class="bh-acts">${acts.filter(Boolean).join('')}</div></section>`;
+    };
+    App.onRender = App.onRender || [];
+    App.onRender.push((root, r) => {
+      if (r.view !== 'home' || r.course || !user() || $('#bo-hub', root)) return; const slot = $('#announcement-slot', root); if (!slot) return;
+      slot.insertAdjacentHTML('afterend', hubHtml());
+      $('#bo-hub', root).addEventListener('click', async e => {
+        const b = e.target.closest('[data-bh]'); if (!b) return; const k = b.dataset.bh;
+        if (k === 'max' || k === 'pro') { if (await paywall(k === 'max' ? { need: 'max', reason: 'bo' } : {})) App.rerender(); return; }
+        if (k === 'call') {
+          const cid = hubCid(); if (!cid) { location.hash = '#/tutor'; return; }
+          // the first time, Bo's page asks for consent first, then the call opens there
+          if (!settings().aiConsent || !hubStatus || !hubStatus.max || !App.boTalk) { location.hash = `#/tutor/${cid}?talk=1`; return; }
+          App.boTalk.open({ cid, status: hubStatus, gesture: true, onClose: () => { api('ai_status').then(st => { hubStatus = st; const s = $('#bh-sub'); if (s) s.textContent = hubLine(); }).catch(() => {}); } });
+        }
+      });
+      if (Sub.plan()) api('ai_status').then(st => { hubStatus = st; if (App.boTalk && App.boTalk.setStatus) App.boTalk.setStatus(st); const s = $('#bh-sub'); if (s) s.textContent = hubLine(); }).catch(() => {});
+    });
+  }
+
   /* a class you made, on its class page: where it is kept, and the way back to managing it */
   App.onRender = App.onRender || [];
   App.onRender.push((root, r) => {

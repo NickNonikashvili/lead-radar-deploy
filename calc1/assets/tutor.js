@@ -82,21 +82,145 @@
   }
   App.tutorSnapshot = snapshot;
 
-  /* ---------- Bo's answers: plain text with **bold**, lists and LaTeX; everything else escaped ---------- */
-  function fmt(text) {
-    const inline = x => x.replace(/\*\*([^*\n]+)\*\*/g, '<b>$1</b>').replace(/`([^`\n]+)`/g, '<code>$1</code>');
-    const t = String(text || '').replace(/\s*\[board:\s*([^\]]*)\]\s*/gi, (m, x) => `\n\n\u0001${x.trim()}\n\n`).replace(/\[(?:board|remember):[^\]]*$/i, '');
+  /* ---------- Bo's board ----------
+     Bo works things out on a whiteboard, not in the chat bubble. In his replies a page of the board is a block:
+         [board: Solving 2x + 3 = 11]
+         step: Take 3 from both sides: $2x = 8$
+         step: Divide both sides by 2: $x = 4$
+         answer: $x = 4$
+         tip: Check it: $2(4) + 3 = 11$
+         [/board]
+     Lines are text (words), math (LaTeX), step (what to do, then its math), answer (boxed) and tip. On a call
+     Bo can keep writing on the page he is on ([board+: Title]). Older replies have one-line boards
+     ([board: $x^2$]); they become a page without a title. Every page Bo wrote in a chat is kept, in order,
+     so the board has pages to flip back through. Shared with the call (assets/talk.js) through App.boBoard. */
+  const B_KIND = /^\s*(?:[-*•]\s+)?(text|math|step|answer|tip|note)\s*:\s?(.*)$/i;
+  const B_OPEN = /^\s*\[board(\+)?:\s*([^\]]*)\]\s*$/i;
+  const B_CLOSE = /^\s*\[\/board\]\s*$/i;
+  const kindOf = k => { k = String(k || '').toLowerCase(); return k === 'note' ? 'tip' : ['text', 'math', 'step', 'answer', 'tip'].includes(k) ? k : 'text'; };
+  const allTex = s => /^\s*\$\$?[^$]+\$\$?\s*\.?\s*$/.test(s);
+  const unTex = s => String(s).trim().replace(/\.$/, '').replace(/^\$\$?|\$\$?$/g, '').trim();
+  const looksTex = s => !/\$/.test(s) && /[=\\^_{}<>]/.test(s) && !/[a-z]{4,}/i.test(s.replace(/\\[a-z]+/gi, ''));
+  const oneLine = x => ({ k: allTex(x) || looksTex(x) ? 'math' : 'text', t: x });
+  /* a reply taken apart: what Bo says (with a marker where each page goes) and the pages he writes.
+     writing: the reply is still coming in, so a half-written line is left for later */
+  function boardSplit(text, writing) {
+    let src = String(text || '').replace(/\r/g, '');
+    if (writing) src = src.replace(/\[[^\]\n]*$/, '');   // a tag still being written
+    const partial = writing && !/\n$/.test(src);
+    const lines = src.split('\n'); const pages = []; const say = [];
+    let cur = null, loose = null;
+    const next = i => { for (let j = i + 1; j < lines.length; j++) if (lines[j].trim()) return B_KIND.test(lines[j]) || B_CLOSE.test(lines[j]) ? 1 : 0; return -1; };
+    const mark = p => { pages.push(p); say.push(`\u0002${pages.length - 1}\u0002`); };
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      if (cur) {
+        if (B_CLOSE.test(line)) { cur.open = false; cur = null; continue; }
+        const k = B_KIND.exec(line);
+        if (k) { const t = k[2].trim(); if (t && !(partial && i === lines.length - 1)) cur.items.push({ k: kindOf(k[1]), t }); continue; }
+        if (!line.trim()) continue;
+        cur.open = false; cur = null;   // he forgot to close the page
+      }
+      const o = B_OPEN.exec(line);
+      if (o && (next(i) === 1 || (writing && next(i) === -1))) { cur = { title: o[2].trim(), cont: !!o[1], items: [], open: true }; mark(cur); continue; }
+      const l = line.replace(/\[board\+?:\s*([^\]]*)\]/gi, (m, x) => { x = x.trim(); if (x) { if (!loose) { loose = { title: '', items: [], open: false }; mark(loose); } loose.items.push(oneLine(x)); } return ' '; }).replace(/\[\/board\]/gi, ' ');
+      if (l.trim() || !line.trim()) say.push(l);
+    }
+    if (cur && !writing) cur.open = false;
+    pages.forEach(p => { if (!p.items.length && !p.open && p.title) { p.items.push(oneLine(p.title)); p.title = ''; } });
+    return { say: say.join('\n').replace(/\n{3,}/g, '\n\n').trim(), pages };
+  }
+  /* new pages added after the ones already on the board ([board+: …] keeps writing on the last page); nothing is changed in place */
+  function boardMerge(have, add) {
+    const pages = have.slice();
+    const ids = add.map(p => {
+      const last = pages[pages.length - 1];
+      if (p.cont && last && (!p.title || p.title === last.title)) { pages[pages.length - 1] = Object.assign({}, last, { items: last.items.concat(p.items), open: p.open }); return pages.length - 1; }
+      pages.push(p); return pages.length - 1;
+    });
+    return { pages, ids };
+  }
+  const inlineMd = x => x.replace(/\*\*([^*\n]+)\*\*/g, '<b>$1</b>').replace(/`([^`\n]+)`/g, '<code>$1</code>');
+  const words = t => inlineMd(esc(t));
+  const disp = t => `<div class="bb-math">$$${esc(unTex(t))}$$</div>`;
+  function itemHtml(it, n, fresh, d) {
+    const t = String(it.t || ''); const cls = `bb-item bb-${it.k}${fresh ? ' bb-new' : ''}`; const st = fresh ? ` style="--d:${d}ms"` : '';
+    if (it.k === 'math') return `<div class="${cls}"${st}>${allTex(t) || looksTex(t) || !/\s\w{4,}\s/.test(t) ? disp(t) : `<p>${words(t)}</p>`}</div>`;
+    if (it.k === 'step') {
+      // what to do, then its math on a line of its own: "Take 3 from both sides: $2x = 8$"
+      const m = /^(.*?)[\s:;,—–-]*\$\$?([^$]+?)\$\$?\s*\.?\s*$/.exec(t); const say = m ? m[1].trim() : t; const tex = m ? m[2] : (looksTex(t) ? t : '');
+      return `<div class="${cls}"${st}><span class="bb-n" aria-hidden="true">${n}</span><div class="bb-step-b"><span class="sr-only">Step ${n}: </span>${say && !(tex && say === t) ? `<p>${words(say)}</p>` : ''}${tex ? disp(tex) : ''}</div></div>`;
+    }
+    if (it.k === 'answer') return `<div class="${cls}"${st}><span class="bb-answer-l">${icon('check', 14)} Answer</span>${allTex(t) || looksTex(t) ? disp(t) : `<p>${words(t)}</p>`}</div>`;
+    if (it.k === 'tip') return `<div class="${cls}"${st}><span class="bb-tip-i" aria-hidden="true">${icon('bulb', 15)}</span><p><span class="sr-only">Tip: </span>${words(t)}</p></div>`;
+    return `<div class="${cls}"${st}><p>${words(t)}</p></div>`;
+  }
+  const stepNo = (items, i) => items.slice(0, i + 1).filter(x => x.k === 'step').length;
+  function pageHtml(p, fresh) {
+    return `${p.title ? `<h3 class="bb-title">${words(p.title)}</h3>` : ''}<div class="bb-items">${p.items.map((it, i) => itemHtml(it, stepNo(p.items, i), fresh, i * 160)).join('')}</div>${p.open ? `<p class="bb-writing">${icon('pen', 14)} Bo is writing…</p>` : ''}`;
+  }
+  /* a page as plain text, for copying */
+  const pagePlain = p => [p.title, ...p.items.map((it, i) => (it.k === 'step' ? `${stepNo(p.items, i)}. ` : it.k === 'answer' ? 'Answer: ' : it.k === 'tip' ? 'Tip: ' : '') + it.t)].filter(Boolean).join('\n');
+  const EMPTY = `<div class="bb-empty"><p class="bb-empty-h">Nothing on the board yet</p><p>When Bo works something out, the steps, the formulas and the answer go up here, neatly, a page at a time.</p></div>`;
+  function boardShell(o = {}) {
+    return `<div class="bb-bar"><h2 class="bb-name" id="${o.id || 'bb'}-h">${icon('pen', 15)} Bo’s board</h2>
+        <span class="bb-pager" hidden><button type="button" class="bb-btn" data-bb="prev" aria-label="Previous page">${icon('left', 16)}</button><span class="bb-pos" aria-live="polite"></span><button type="button" class="bb-btn" data-bb="next" aria-label="Next page">${icon('right', 16)}</button></span>
+        <button type="button" class="bb-btn" data-bb="copy" aria-label="Copy this page" title="Copy this page" hidden>${icon('copy', 15)}</button>
+        ${o.fold ? `<button type="button" class="bb-btn bb-fold" data-bb="fold" aria-expanded="true" aria-controls="${o.id || 'bb'}-sheet" aria-label="Fold the board away">${icon('chevron', 16)}</button>` : ''}</div>
+      <div class="bb-sheet" id="${o.id || 'bb'}-sheet">${EMPTY}</div>`;
+  }
+  /* draws page i of pages on a board; write: Bo is writing it now, so new lines appear as if written */
+  function boardPaint(root, pages, i, write) {
+    if (!root) return; const s = root._bb || (root._bb = { shown: -1, drawn: 0, open: false, title: '' }); root._pages = pages;
+    const sheet = $('.bb-sheet', root); const p = pages[i]; const anim = write && !still();
+    if (!p) { sheet.innerHTML = EMPTY; s.shown = -1; }
+    else if (write && s.shown === i && s.drawn <= p.items.length && s.title === p.title) {
+      // the page on show grows: only the new lines are added
+      const box = $('.bb-items', sheet); const add = p.items.slice(s.drawn); const from = s.drawn;
+      if (add.length) { const tmp = document.createElement('div'); tmp.innerHTML = add.map((it, j) => itemHtml(it, stepNo(p.items, from + j), anim, j * 160)).join(''); const nodes = [...tmp.children]; nodes.forEach(n => box.appendChild(n)); nodes.forEach(n => { if (App.typeset) safe(() => App.typeset(n)); }); }
+      const w = $('.bb-writing', sheet); if (p.open && !w) sheet.insertAdjacentHTML('beforeend', `<p class="bb-writing">${icon('pen', 14)} Bo is writing…</p>`); else if (!p.open && w) w.remove();
+      if (add.length) { const last = box.lastElementChild; if (last && sheet.scrollHeight > sheet.clientHeight) sheet.scrollTo({ top: sheet.scrollHeight, behavior: anim ? 'smooth' : 'auto' }); }
+    } else {
+      sheet.innerHTML = `<article class="bb-page${anim ? ' bb-fresh' : ''}">${pageHtml(p, anim)}</article>`; sheet.scrollTop = 0;
+      if (App.typeset) safe(() => App.typeset(sheet));
+    }
+    if (p) Object.assign(s, { shown: i, drawn: p.items.length, open: !!p.open, title: p.title });
+    root.dataset.pages = pages.length; root.classList.toggle('has-page', !!p);
+    const pg = $('.bb-pager', root); pg.hidden = pages.length < 2; $('.bb-pos', root).textContent = p ? `Page ${i + 1} of ${pages.length}` : '';
+    $('[data-bb="prev"]', root).disabled = !p || i <= 0; $('[data-bb="next"]', root).disabled = !p || i >= pages.length - 1;
+    $('[data-bb="copy"]', root).hidden = !p || p.open;
+    if (root._onPaint) root._onPaint(p, i);
+  }
+  /* the board's own buttons: pages, copy, fold */
+  function boardWire(root, onFold) {
+    root.addEventListener('click', async e => {
+      const b = e.target.closest('[data-bb]'); if (!b) return; const k = b.dataset.bb; const s = root._bb || {}; const pages = root._pages || [];
+      if (k === 'prev' && s.shown > 0) boardPaint(root, pages, s.shown - 1, false);
+      if (k === 'next' && s.shown < pages.length - 1) boardPaint(root, pages, s.shown + 1, false);
+      if (k === 'copy' && pages[s.shown]) { const t = pagePlain(pages[s.shown]); try { await (NATIVE ? N.copy(t) : navigator.clipboard.writeText(t)); toast('Page copied.'); } catch (x) { toast('Copying is not available here.'); } }
+      if (k === 'fold' && onFold) onFold();
+    });
+  }
+  const still = () => (global.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) || document.documentElement.dataset.motion === 'off';
+  App.boBoard = { KIND: B_KIND, OPEN: B_OPEN, CLOSE: B_CLOSE, kind: kindOf, oneLine, split: boardSplit, merge: boardMerge, shell: boardShell, paint: boardPaint, wire: boardWire, plain: pagePlain };
+
+  /* ---------- Bo's answers: plain text with **bold**, lists and LaTeX, and a link to each page he wrote on the board ---------- */
+  function fmt(sp, ids) {
+    const t = sp.say.replace(/\u0002(\d+)\u0002/g, '\n\n\u0001$1\n\n').replace(/\[remember:[^\]]*\]?\s*$/i, ''); const seen = new Set();
     return t.split(/\n{2,}/).filter(b => b.trim()).map(block => {
-      if (block.startsWith('\u0001')) return `<div class="bo-board-line">${inline(esc(block.slice(1)))}</div>`;
+      if (block.startsWith('\u0001')) { const i = +block.slice(1); const p = sp.pages[i]; const id = ids ? ids[i] : i; if (!p || seen.has(id)) return ''; seen.add(id); const first = p.items[0]; const name = p.title || (first ? (first.k === 'math' || allTex(first.t) ? `$${unTex(first.t)}$` : first.t) : 'a page'); return `<button type="button" class="bo-onb" data-bo-page="${id}">${icon('pen', 15)}<span>On the board: <b>${words(name.length > 90 ? name.slice(0, 88) + '…' : name)}</b></span></button>`; }
       const lines = block.split('\n'); const li = l => /^\s*(?:[-*•]|\d+[.)])\s+/.test(l);
-      if (lines.every(li)) { const ol = /^\s*\d/.test(lines[0]); return `<${ol ? 'ol' : 'ul'}>${lines.map(l => `<li>${inline(esc(l.replace(/^\s*(?:[-*•]|\d+[.)])\s+/, '')))}</li>`).join('')}</${ol ? 'ol' : 'ul'}>`; }
-      return `<p>${lines.map(l => inline(esc(l))).join('<br>')}</p>`;
+      if (lines.every(li)) { const ol = /^\s*\d/.test(lines[0]); return `<${ol ? 'ol' : 'ul'}>${lines.map(l => `<li>${words(l.replace(/^\s*(?:[-*•]|\d+[.)])\s+/, ''))}</li>`).join('')}</${ol ? 'ol' : 'ul'}>`; }
+      return `<p>${lines.map(l => words(l)).join('<br>')}</p>`;
     }).join('');
   }
+  /* an answer as plain text, for copying: what Bo said, then his pages */
+  const plainOf = src => { const sp = boardSplit(src); return [sp.say.replace(/\u0002\d+\u0002/g, '').trim(), ...sp.pages.map(pagePlain)].filter(Boolean).join('\n\n'); };
   const userHtml = (t, v) => { const photo = /^\[photo\]\s?/.test(t); const q = t.replace(/^\[photo\]\s?/, ''); return `${v ? `<span class="bo-photo-tag">${icon('mic', 13)} Said out loud</span>` : ''}${photo ? `<span class="bo-photo-tag">${icon('image', 13)} Photo</span>` : ''}${q ? `<p>${esc(q).replace(/\n/g, '<br>')}</p>` : ''}`; };
   const tools = () => `<div class="bo-tools">${talk() ? `<button type="button" class="bo-tool" data-bo-read aria-label="Read this answer aloud" title="Read aloud">${icon('volume', 15)}</button>` : ''}<button type="button" class="bo-tool" data-bo-copy aria-label="Copy this answer" title="Copy">${icon('copy', 14)}</button><button type="button" class="bo-tool" data-bo-report aria-label="Report this answer" title="Report">${icon('flag', 14)}</button></div>`;
-  const msgHtml = (r, t, extra = '', v = false) => r === 'b'
-    ? `<div class="bo-msg bo" data-src="${esc(t)}"><span class="bo-mini" aria-hidden="true">${bo(34)}</span><div class="bo-bubble"><div class="bo-text">${fmt(t)}</div>${tools()}${extra}</div></div>`
+  /* a message; for Bo's, ids are where his pages are on the board */
+  const msgHtml = (r, t, extra = '', v = false, ids = null) => r === 'b'
+    ? `<div class="bo-msg bo" data-src="${esc(t)}"><span class="bo-mini" aria-hidden="true">${bo(34)}</span><div class="bo-bubble"><div class="bo-text">${fmt(boardSplit(t), ids)}</div>${tools()}${extra}</div></div>`
     : `<div class="bo-msg you"><div class="bo-bubble">${userHtml(t, v)}</div></div>`;
 
   /* ---------- a photo of a problem, shrunk on the device so it costs little to send ---------- */
@@ -120,17 +244,18 @@
       const want = param && Courses[param] ? param : ids.includes(settings().boClass) ? settings().boClass : safe(() => H().curClass());
       st.cid = want && Courses[want] ? want : ids[0] || null;
       if (st.cid && !ids.includes(st.cid)) ids.unshift(st.cid);
-      root.innerHTML = `<div class="bo-shell"><div class="bo-page"><div class="bo-col">
+      root.innerHTML = `<div class="bo-shell"><div class="bo-page bo-col">
         <header class="bo-head"><span class="bo-av" aria-hidden="true">${bo(52)}</span><div class="bo-title"><h1>Ask Bo</h1><p>Your tutor${st.cid ? ` for <b>${esc(short(st.cid))}</b>` : ''}. He knows your syllabus and how your studying is going.</p></div>${talk() ? `<button type="button" class="btn primary bo-talk-btn" data-bo-talk hidden>${icon('phone', 17)}<span>Call Bo</span></button>` : ''}<button type="button" class="icon-btn bo-knows-btn" data-bo="knows" aria-label="What Bo knows about you" title="What Bo knows">${icon('info', 18)}</button></header>
         ${ids.length > 1 ? `<div class="bo-classes" role="tablist" aria-label="Which class">${ids.map(x => `<button type="button" role="tab" class="wh-tab bo-class${x === st.cid ? ' on' : ''}" aria-selected="${x === st.cid}" data-bo-class="${esc(x)}" style="${App.classStyle ? App.classStyle(x) : ''}">${esc(short(x))}</button>`).join('')}</div>` : ''}
-        <div class="bo-main" id="bo-main"><div class="bo-loading" aria-hidden="true"><i></i><i></i></div></div></div>
-        <aside class="bo-side" id="bo-side" aria-label="What Bo knows"></aside></div></div>`;
+        <section class="bb bo-board" id="bo-board" aria-labelledby="bob-h" hidden${settings().boBoardFold ? ' data-fold' : ''}>${boardShell({ id: 'bob', fold: true })}</section>
+        <div class="bo-main" id="bo-main"><div class="bo-loading" aria-hidden="true"><i></i><i></i></div></div></div></div>`;
       $('.bo-page', root).addEventListener('click', e => {
         const c = e.target.closest('[data-bo-class]'); if (c) { setSetting('boClass', c.dataset.boClass); location.hash = '#/tutor/' + c.dataset.boClass; return; }
         if (e.target.closest('[data-bo="knows"]')) knowsSheet();
         if (e.target.closest('[data-bo-talk]')) openTalk(true);
       });
-      wireKnows($('#bo-side', root), () => paintSide());
+      const board = $('#bo-board', root);
+      boardWire(board, () => fold(!board.hasAttribute('data-fold'), true));
       start($('#bo-main', root), query || {});
     }
   };
@@ -161,7 +286,7 @@
       <p>Bo knows your classes from their syllabi and keeps up with how you are doing, so his help fits you.</p>
       <ul class="bo-perks"><li>${icon('chat', 18)}<span><b>Ask anything</b> about your classes, any time: “Why is the derivative of $\\sin x$ equal to $\\cos x$?”</span></li><li>${icon('target', 18)}<span><b>He knows where you are stuck</b>: your weakest topics, the questions you missed and your next exam.</span></li>${talk() ? `<li>${icon('phone', 18)}<span><b>Call him</b> and just talk, like with a friend: he answers right away, you can cut in, and he writes the math on his board.</span></li>` : ''}<li>${icon('image', 18)}<span><b>Snap a problem</b> and he walks you through it, step by step.</span></li><li>${icon('flag', 18)}<span><b>Plans and quizzes</b> built on your real exam dates.</span></li></ul>
       <div class="bo-gate-acts"><button type="button" class="btn primary lg" data-go="max">${plan === 'pro' ? 'Move up to Max' : 'Get Mathub Max'}</button></div>
-      <p class="small muted">Mathub Max includes everything in Pro: Bo also writes your classes from their syllabi.</p></section>`;
+      <p class="small muted">Mathub Max includes everything in Pro: Bo also writes your classes from their syllabi. <a href="#/plan">Compare the plans</a></p></section>`;
   }
   function consent() {
     return `<section class="bo-gate bo-consent" aria-labelledby="bo-consent-h"><span class="bo-gate-av" aria-hidden="true">${bo(80)}</span><h2 id="bo-consent-h">Before you start</h2>
@@ -180,6 +305,13 @@
     return out.slice(0, 4);
   }
   App.boSuggestions = suggestions;
+  /* the board sits beside the chat on wide screens; above it, sticky, on narrow ones, where it can be folded away */
+  const wide = () => { const sh = $('.bo-shell'); return !!sh && sh.clientWidth >= 1000; };
+  function fold(on, user) {
+    const b = $('#bo-board'); if (!b) return; if (wide()) on = false;
+    b.toggleAttribute('data-fold', !!on); const f = $('[data-bb="fold"]', b); if (f) { f.setAttribute('aria-expanded', String(!on)); f.setAttribute('aria-label', on ? 'Show the board' : 'Fold the board away'); }
+    if (user) setSetting('boBoardFold', !!on);
+  }
   /* the voice call; when it ends, the chat shows what was said */
   function openTalk(gesture) {
     if (!talk() || !st.cid || !st.status || !st.status.max) return;
@@ -207,9 +339,12 @@
     const paintFoot = u => { if (!u) return; const left = Math.max(0, u.tutor_limit - u.tutor); $('#bo-foot', main).textContent = `Bo is an AI and can be wrong. Check important answers against your notes or your instructor. ${left} of ${u.tutor_limit} questions left this month.`; };
     paintFoot(st.status && st.status.usage);
     try { await App.loadCourse(id); } catch (e) {}
-    paintSide();
     let turns = []; try { turns = (await api('ai_thread&class=' + encodeURIComponent(id))).turns || []; } catch (e) {}
-    log.innerHTML = turns.length ? turns.map(t => msgHtml(t.r, t.t || '', '', !!t.v)).join('') : msgHtml('b', greeting(id));
+    // the board: every page Bo wrote in this chat, in order, the last one showing
+    const board = $('#bo-board'); let pages = [];
+    const add = text => { const v = boardMerge(pages, boardSplit(text).pages); pages = v.pages; return v.ids; };
+    log.innerHTML = turns.length ? turns.map(t => t.r === 'b' ? msgHtml('b', t.t || '', '', !!t.v, add(t.t || '')) : msgHtml(t.r, t.t || '', '', !!t.v)).join('') : msgHtml('b', greeting(id));
+    if (board) { board.hidden = false; fold(!!settings().boBoardFold); board._onPaint = (p, i) => { $$('.bo-onb', log).forEach(b => b.classList.toggle('on', +b.dataset.boPage === i)); }; boardPaint(board, pages, pages.length - 1, false); }
     const tb = $('[data-bo-talk][hidden]'); if (tb) tb.hidden = false;
     typeset(log); scroll();
     sug.innerHTML = suggestions(id).map(x => `<button type="button" class="chip bo-chip" data-bo-say="${esc(x)}">${esc(x)}</button>`).join('');
@@ -223,11 +358,12 @@
     prev.addEventListener('click', e => { if (e.target.closest('[data-bo-unphoto]')) { st.photo = null; prev.hidden = true; prev.innerHTML = ''; } });
     sug.addEventListener('click', e => { const b = e.target.closest('[data-bo-say]'); if (!b) return; q.value = b.dataset.boSay; grow(); form.requestSubmit(); });
     log.addEventListener('click', async e => {
-      const msg = e.target.closest('.bo-msg'); if (!msg) return; const text = ($('.bo-text', msg) || msg).innerText.trim();
+      const msg = e.target.closest('.bo-msg'); if (!msg) return; const text = msg.dataset.src ? plainOf(msg.dataset.src) : ($('.bo-text', msg) || msg).innerText.trim();
+      const pg = e.target.closest('[data-bo-page]'); if (pg && board) { boardPaint(board, pages, +pg.dataset.boPage, false); fold(false); board.classList.remove('bb-flash'); void board.offsetWidth; board.classList.add('bb-flash'); if (board.getBoundingClientRect().bottom < 60) board.scrollIntoView({ block: 'nearest' }); return; }
       const rd = e.target.closest('[data-bo-read]'); if (rd) { App.boTalk.read(msg.dataset.src || text, rd, st.status); return; }
       if (e.target.closest('[data-bo-copy]')) { try { await (NATIVE ? N.copy(text) : navigator.clipboard.writeText(text)); toast('Copied.'); } catch (x) { toast('Copying is not available here.'); } return; }
       if (e.target.closest('[data-bo-report]')) { if (App.reportIssue) App.reportIssue({ title: 'Report this answer from Bo', view: 'Ask Bo', course: id, ref: 'Bo · ' + short(id), prompt: text.slice(0, 400), reason: 'wrong', placeholder: 'What is wrong with it? For example: a wrong fact, a wrong answer, or something inappropriate.' }); return; }
-      if (e.target.closest('[data-bo-forget]')) { const i = st.notes.indexOf(e.target.closest('[data-bo-forget]').dataset.boForget); try { const r = await api('ai_forget', { what: 'note', i }); st.notes = r.notes || []; e.target.closest('.bo-remember').remove(); toast('Bo forgot it.'); paintSide(); } catch (x) { toast(x.message); } return; }
+      if (e.target.closest('[data-bo-forget]')) { const i = st.notes.indexOf(e.target.closest('[data-bo-forget]').dataset.boForget); try { const r = await api('ai_forget', { what: 'note', i }); st.notes = r.notes || []; e.target.closest('.bo-remember').remove(); toast('Bo forgot it.'); } catch (x) { toast(x.message); } return; }
       if (e.target.closest('[data-bo-retry]')) { const t = msg.dataset.q || ''; msg.remove(); q.value = t; grow(); form.requestSubmit(); }
     });
     form.addEventListener('submit', async e => {
@@ -237,17 +373,27 @@
       log.insertAdjacentHTML('beforeend', msgHtml('u', (photo ? '[photo] ' : '') + text));
       log.insertAdjacentHTML('beforeend', `<div class="bo-msg bo typing" id="bo-typing"><span class="bo-mini" aria-hidden="true">${bo(34)}</span><div class="bo-bubble" aria-label="Bo is thinking"><i></i><i></i><i></i></div></div>`); scroll();
       // the answer appears as Bo writes it
+      // the answer appears as Bo writes it; what he puts on the board goes up on the board as he writes it
       let live = null, sofar = '', frame = 0;
-      const paintLive = () => { frame = 0; if (!live) { const t = $('#bo-typing', log); if (t) t.remove(); log.insertAdjacentHTML('beforeend', `<div class="bo-msg bo live"><span class="bo-mini" aria-hidden="true">${bo(34)}</span><div class="bo-bubble"><div class="bo-text"></div></div></div>`); live = log.lastElementChild; } $('.bo-text', live).innerHTML = fmt(sofar.replace(/\[remember:[^\]]*\]?\s*$/i, '')); scroll(); };
+      const paintLive = () => {
+        frame = 0; const sp = boardSplit(sofar.replace(/\[remember:[^\]]*\]?\s*$/i, ''), true); const v = boardMerge(pages, sp.pages);
+        if (!live && (sp.say.replace(/\u0002\d+\u0002/g, '').trim() || sp.pages.length)) { const t = $('#bo-typing', log); if (t) t.remove(); log.insertAdjacentHTML('beforeend', `<div class="bo-msg bo live"><span class="bo-mini" aria-hidden="true">${bo(34)}</span><div class="bo-bubble"><div class="bo-text"></div></div></div>`); live = log.lastElementChild; }
+        if (live) $('.bo-text', live).innerHTML = fmt(sp, v.ids);
+        if (sp.pages.length && board) { boardPaint(board, v.pages, v.ids[v.ids.length - 1], true); if (!wide()) fold(false); }
+        scroll();
+      };
       try {
         const r = await App.boAsk(Object.assign({ class: id, q: text, snapshot: snapshot(id), today: App.todayISO() }, photo ? { image: { type: photo.type, data: photo.data } } : {}), d => { sofar += d; if (!frame) frame = requestAnimationFrame(paintLive); });
         cancelAnimationFrame(frame); const t = $('#bo-typing', log); if (t) t.remove(); if (live) live.remove();
         if (r.remembered) st.notes.push(r.remembered);
         if (r.usage && st.status) st.status.usage = r.usage;
-        log.insertAdjacentHTML('beforeend', msgHtml('b', r.reply, r.remembered ? `<p class="bo-remember">${icon('bulb', 13)} Bo will remember: ${esc(r.remembered)} <button type="button" class="linkbtn small" data-bo-forget="${esc(r.remembered)}">Forget it</button></p>` : ''));
-        typeset(log.lastElementChild); haptic('light'); paintFoot(r.usage); paintSide();
+        const ids = add(r.reply);
+        log.insertAdjacentHTML('beforeend', msgHtml('b', r.reply, r.remembered ? `<p class="bo-remember">${icon('bulb', 13)} Bo will remember: ${esc(r.remembered)} <button type="button" class="linkbtn small" data-bo-forget="${esc(r.remembered)}">Forget it</button></p>` : '', false, ids));
+        if (ids.length && board) boardPaint(board, pages, ids[ids.length - 1], true);
+        typeset(log.lastElementChild); haptic('light'); paintFoot(r.usage);
       } catch (x) {
         cancelAnimationFrame(frame); if (live) live.remove();
+        if (board) boardPaint(board, pages, pages.length - 1, false);
         const t = $('#bo-typing', log); if (t) t.remove();
         if (x.status === 402) { App.rerender(); return; }
         log.insertAdjacentHTML('beforeend', `<div class="bo-msg bo err" data-q="${esc(text)}"><span class="bo-mini" aria-hidden="true">${bo(34)}</span><div class="bo-bubble"><p>${esc(x.message)}</p>${x.status === 429 ? '' : `<button type="button" class="btn sm" data-bo-retry>Try again</button>`}</div></div>`);
@@ -256,8 +402,7 @@
     });
   }
 
-  /* ---------- What Bo knows: the snapshot in words, Bo's notes, and clearing. A side panel next to the chat
-     on wide screens, a sheet (the i button) everywhere else. ---------- */
+  /* ---------- What Bo knows: the snapshot in words, Bo's notes, and clearing, in a sheet (the i button) ---------- */
   function knowsHtml(id) {
     const s = id ? snapshot(id) : {}; const u = st.status && st.status.usage;
     const li = (h, v) => v ? `<li><b>${h}</b><span>${v}</span></li>` : '';
@@ -271,7 +416,7 @@
         ${li('To do', `${s.due || 0} flashcards due, ${s.mistakes || 0} missed questions to retry`)}
         ${li('Due soon', s.deadlines && s.deadlines.length ? esc(s.deadlines.slice(0, 3).map(d => d.t).join('; ')) : '')}</ul>` : ''}
       <h3 class="bo-k-h">Bo's notes about you</h3><div class="bo-k-notes">${st.notes.length ? `<ul class="bo-notes">${st.notes.map((n, i) => `<li><span>${esc(n)}</span><button type="button" class="icon-btn" data-k-note="${i}" aria-label="Delete this note">${icon('x', 14)}</button></li>`).join('')}</ul>` : '<p class="small muted">Nothing yet. When you tell Bo how you like to learn, he writes it down here.</p>'}</div>
-      ${left !== null ? `<h3 class="bo-k-h">This month</h3><p class="bo-k-use"><span class="bo-k-meter" aria-hidden="true"><i style="width:${Math.round(left / Math.max(1, u.tutor_limit) * 100)}%"></i></span>${left} of ${u.tutor_limit} questions left</p>` : ''}
+      ${left !== null ? `<h3 class="bo-k-h">This month</h3><p class="bo-k-use"><span class="bo-k-meter" aria-hidden="true"><i style="width:${Math.round(left / Math.max(1, u.tutor_limit) * 100)}%"></i></span>${left} of ${u.tutor_limit} questions left · <a href="#/plan">Your plan</a></p>` : ''}
       <div class="bo-gate-acts">${id ? `<button type="button" class="btn sm" data-k="chat">Clear this chat</button>` : ''}<button type="button" class="btn sm ghost" data-k="all">Forget everything</button></div>`;
   }
   /* note deletes and clearing, for the panel and the sheet; after() repaints whichever asked */
@@ -283,10 +428,6 @@
       if (!confirm(k.dataset.k === 'chat' ? `Clear your chat with Bo about ${short(id)}?` : 'Forget everything Bo knows about you: every chat and every note? Your classes and progress stay.')) return;
       try { await api('ai_forget', k.dataset.k === 'chat' ? { what: 'chat', class: id } : { what: 'all' }); if (k.dataset.k === 'all') st.notes = []; toast(k.dataset.k === 'chat' ? 'Chat cleared.' : 'Bo forgot everything.'); if (close) close(); App.rerender(); } catch (x) { toast(x.message); }
     });
-  }
-  function paintSide() {
-    const side = $('#bo-side'); if (!side || !st.cid) return;
-    side.innerHTML = `<h2 class="bo-side-h">${icon('info', 16)} What Bo knows</h2>${knowsHtml(st.cid)}<p class="small muted bo-side-foot">Your chat and these notes are saved with your Mathub account. <a href="#/policy/privacy">Privacy</a></p>`;
   }
   async function knowsSheet() {
     const id = st.cid;
@@ -300,7 +441,7 @@
     const close = () => { document.removeEventListener('keydown', onKey); el.classList.remove('open'); setTimeout(() => el.remove(), 200); };
     const onKey = e => { if (e.key === 'Escape') close(); }; document.addEventListener('keydown', onKey);
     el.addEventListener('click', e => { if (e.target === el || e.target.closest('[data-action="close"]')) return close(); if (e.target.closest('a[href]')) return close(); });
-    wireKnows(el, () => { $('.bo-k-body', el).innerHTML = knowsHtml(id); paintSide(); }, close);
+    wireKnows(el, () => { $('.bo-k-body', el).innerHTML = knowsHtml(id); }, close);
   }
 
   /* ---------- ways in: the website's top bar, and the class pages ---------- */

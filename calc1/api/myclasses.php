@@ -2,7 +2,7 @@
 /* ============================================================
    Mathub account server — classes students make, sharing them, and the Pro and Max plans
    Routes: myclasses, myclass, myclass_save, myclass_delete, myclass_share, myclass_unshare,
-           shared_class (public, by share code), create_status
+           shared_class (public, by share code), create_status, plan_cancel
    - A student's own classes (made from a syllabus or a class file) are kept with their account, so they
      open on the website and on every phone they sign in on. The app keeps its own copy in files on the
      device and syncs; the website keeps a copy in the browser.
@@ -13,6 +13,11 @@
      checkout) belong to the RevenueCat customer "mh_<user id>", with the entitlements "pro" and "max" (a Max
      product unlocks both). The server asks RevenueCat with the secret key in config.local.php and keeps the
      answer for ten minutes. Accounts in plan_grants (config.local.php) get a plan without paying, for testing.
+   - Cancelling (plan_cancel, from the Your plan page): an App Store or Google Play plan is cancelled in the store,
+     so the page sends the student there. A plan bought on the website is cancelled right here when RevenueCat's
+     API v2 is set up (revenuecat_v2_key with write access to subscriptions, and revenuecat_project); otherwise, or
+     if that fails, the page opens RevenueCat's customer portal for it (the plan's management_url). Either way the
+     plan runs to the end of the month paid for. A reason, if the student gives one, is kept in plan_feedback.
    Rows are removed with the account (ON DELETE CASCADE); housekeeping clears any left behind.
    ============================================================ */
 
@@ -28,6 +33,7 @@ function mh_myclass_db(): PDO {
     $cols = array_column($db->query('PRAGMA table_info(create_status)')->fetchAll(), 'name');
     if (!in_array('renews', $cols, true)) $db->exec('ALTER TABLE create_status ADD COLUMN renews INTEGER NOT NULL DEFAULT 1');
     if (!in_array('tier', $cols, true)) $db->exec("ALTER TABLE create_status ADD COLUMN tier TEXT NOT NULL DEFAULT ''");
+    $db->exec("CREATE TABLE IF NOT EXISTS plan_feedback (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE, plan TEXT NOT NULL DEFAULT '', store TEXT NOT NULL DEFAULT '', reason TEXT NOT NULL DEFAULT '', note TEXT NOT NULL DEFAULT '', at INTEGER NOT NULL)");
     $ready = true;
   }
   return $db;
@@ -38,6 +44,7 @@ function mh_myclass_prune(): int {
   $db = mh_myclass_db();
   $n = $db->exec('DELETE FROM my_classes WHERE user_id NOT IN (SELECT id FROM users)');
   $db->exec('DELETE FROM create_status WHERE user_id NOT IN (SELECT id FROM users)');
+  $db->exec('DELETE FROM plan_feedback WHERE user_id NOT IN (SELECT id FROM users)');
   return (int)$n;
 }
 
@@ -98,6 +105,30 @@ function mh_create_status(array $u, array $cfg, bool $refresh = false): array {
   $active = $row && (int)$row['active'] === 1 && ((int)$row['expires'] === 0 || (int)$row['expires'] > $now);
   $plan = $active ? ((string)($row['tier'] ?? '') ?: 'pro') : '';
   return ['active' => $active, 'plan' => $plan, 'until' => $row && (int)$row['expires'] ? gmdate('c', (int)$row['expires']) : null, 'store' => $row['store'] ?? '', 'manage_url' => $row['manage'] ?? '', 'renews' => $row ? (int)$row['renews'] === 1 : false, 'checked' => $row ? (int)$row['checked'] : 0];
+}
+
+/** Cancels the account's website plan through RevenueCat's API v2, so it does not renew (it runs to the end of the
+    month paid for). Needs revenuecat_v2_key and revenuecat_project; true only when RevenueCat confirmed it. */
+function mh_rc_cancel_web(array $cfg, string $customer): bool {
+  $key = trim((string)($cfg['revenuecat_v2_key'] ?? '')); $proj = trim((string)($cfg['revenuecat_project'] ?? ''));
+  if ($key === '' || $proj === '' || !function_exists('curl_init')) return false;
+  $base = rtrim((string)($cfg['revenuecat_v2_api'] ?? 'https://api.revenuecat.com/v2'), '/') . '/projects/' . rawurlencode($proj);
+  $req = function (string $method, string $url) use ($key): array {
+    $ch = curl_init($url); $o = [CURLOPT_RETURNTRANSFER => true, CURLOPT_TIMEOUT => 15, CURLOPT_CONNECTTIMEOUT => 5, CURLOPT_HTTPHEADER => ['Authorization: Bearer ' . $key, 'Accept: application/json', 'Content-Type: application/json']];
+    if ($method === 'POST') { $o[CURLOPT_POST] = true; $o[CURLOPT_POSTFIELDS] = '{}'; }
+    curl_setopt_array($ch, $o); $b = curl_exec($ch); $c = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE); curl_close($ch);
+    return [$c, is_string($b) ? (json_decode($b, true) ?: []) : []];
+  };
+  [$c, $j] = $req('GET', $base . '/customers/' . rawurlencode($customer) . '/subscriptions');
+  if ($c < 200 || $c >= 300) return false;
+  $done = false;
+  foreach ((array)($j['items'] ?? []) as $sub) {
+    if (!is_array($sub) || ($sub['store'] ?? '') !== 'rc_billing' || !in_array($sub['status'] ?? '', ['active', 'trialing', 'in_grace_period'], true)) continue;
+    if (($sub['auto_renewal_status'] ?? '') === 'will_not_renew') { $done = true; continue; }
+    [$c2] = $req('POST', $base . '/subscriptions/' . rawurlencode((string)($sub['id'] ?? '')) . '/actions/cancel');
+    if ($c2 >= 200 && $c2 < 300) $done = true;
+  }
+  return $done;
 }
 
 /** A plan given without paying, for testers (plan_grants in config.local.php: email => 'pro' or 'max'). */
@@ -184,6 +215,25 @@ function mh_myclass_route(string $route, array $in, array $cfg, string $ip): voi
       $out['customer'] = 'mh_' . $u['id'];
       $out['buy'] = array_map(fn($l) => $l !== '' ? rtrim($l, '/') . '/' . rawurlencode($out['customer']) : '', $links);
       mh_json($out + $s);
+    }
+    case 'plan_cancel': {   // the student cancels: here when it can be done here, otherwise where it is done; with an optional reason
+      mh_method('POST'); $u = mh_require_user(); mh_rate_or_fail("plan_cancel:{$u['id']}", 12, 3600, 'Please wait a little before trying again.');
+      $s = mh_create_status($u, $cfg, true); $grant = mh_plan_grant($u, $cfg);
+      $reason = in_array($in['reason'] ?? '', ['price', 'use', 'done', 'broken', 'other'], true) ? (string)$in['reason'] : '';
+      $note = mb_substr(trim(preg_replace('/\s+/u', ' ', is_string($in['note'] ?? null) ? $in['note'] : '')), 0, 500);
+      $plan = $s['active'] ? $s['plan'] : $grant;
+      if ($reason !== '' || $note !== '') $db->prepare('INSERT INTO plan_feedback (user_id, plan, store, reason, note, at) VALUES (?, ?, ?, ?, ?, ?)')->execute([$u['id'], $plan, (string)$s['store'], $reason, $note, $now]);
+      $out = ['ok' => true, 'plan' => $plan, 'until' => $s['until'], 'store' => (string)$s['store']];
+      if (!$s['active']) mh_json($out + ['how' => $grant ? 'granted' : 'none']);
+      if (!$s['renews']) mh_json($out + ['how' => 'already', 'url' => (string)$s['manage_url']]);
+      $store = (string)$s['store'];
+      if (in_array($store, ['app_store', 'mac_app_store'], true)) mh_json($out + ['how' => 'app_store', 'url' => 'https://apps.apple.com/account/subscriptions']);
+      if ($store === 'play_store') mh_json($out + ['how' => 'play_store', 'url' => 'https://play.google.com/store/account/subscriptions?package=space.mathub.app']);
+      if ($store === 'rc_billing' && mh_rc_cancel_web($cfg, 'mh_' . $u['id'])) {
+        $s = mh_create_status($u, $cfg, true); $db->prepare('UPDATE create_status SET renews = 0 WHERE user_id = ?')->execute([$u['id']]);   // RevenueCat may take a moment to show it
+        mh_json(['ok' => true, 'how' => 'cancelled', 'plan' => $plan, 'until' => $s['until'] ?: $out['until'], 'store' => $store]);
+      }
+      mh_json($out + ['how' => 'portal', 'url' => (string)$s['manage_url']]);
     }
   }
   mh_fail('Not found.', 404);

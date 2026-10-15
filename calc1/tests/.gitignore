@@ -11,3 +11,4 @@ fixtures/live-last.json
 fixtures/live-hangups.json
 fixtures/live-tries.json
 fixtures/tts-all.json
+fixtures/rc-cancels.json

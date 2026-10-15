@@ -164,7 +164,22 @@ On the server, in `api/config.local.php` (never in the repository or the zip):
 'anthropic_key'     => 'sk-ant-xxxxxxxx',
 'openai_key'        => 'sk-proj-xxxxxxxx',   // live calls with Bo, his natural voice, and listening in Firefox
 'plan_grants'       => ['you@montana.edu' => 'max'],   // testers who get a plan without paying
+'revenuecat_v2_key' => 'sk_xxxxxxxx',   // optional: Cancel plan cancels website plans right on Mathub
+'revenuecat_project' => 'projxxxxxxxx',
 ```
+
+**Cancelling (Your plan, `#/plan`).** The page shows the plan, how it is paid, when it renews, this month's use and
+Manage billing (the customer portal RevenueCat gives each website subscription: receipts, card, cancel, turn back
+on). **Cancel plan** asks first (when it ends, what stops, what is kept, an optional reason saved in
+`plan_feedback`), then `plan_cancel` on the server:
+- App Store or Google Play plans: the page opens the store's subscriptions (only the store can cancel them).
+- Website plans: with `revenuecat_v2_key` (a v2 secret key allowed to write customer information and
+  subscriptions) and `revenuecat_project` (the project id from the RevenueCat dashboard URL), the server lists the
+  customer's subscriptions (`GET /v2/projects/{project}/customers/mh_<id>/subscriptions`) and cancels the active
+  Web Billing one (`POST /v2/projects/{project}/subscriptions/{id}/actions/cancel`); it runs to the end of the
+  month paid for. Without those keys, or if RevenueCat says no, the page opens the subscription's billing page
+  instead, so cancelling always works. Check the cancel call once with a sandbox purchase before relying on it.
+- A plan from `plan_grants` has nothing to cancel.
 
 `pro_web_price` and `max_web_price` default to `$15` and `$50`. Without the app keys the apps cannot sell the
 plans; without the server keys the website cannot sell them and plans bought in the apps are not recognised there;

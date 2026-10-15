@@ -17,7 +17,10 @@
    - The smallest model that does the job well: claude-haiku-5-5 by default (ai_model_tutor, ai_model_class).
    - Answers can stream (stream: 1): the reply goes out line by line as JSON (NDJSON) while the AI writes it, so
      the chat fills in and Bo starts talking within a second or two. In voice mode (voice: 1) Bo answers the way
-     a tutor talks, briefly and in words, and writes formulas on a whiteboard ([board: ...]) instead of reading them.
+     a tutor talks, briefly and in words, and writes formulas on a whiteboard instead of reading them.
+   - Bo's board: whatever he works out (the steps of a problem, a formula, the answer) he writes as a page of his
+     whiteboard, a [board: Title] … [/board] block with step:, math:, answer:, tip: and text: lines, which the
+     website draws neatly beside the chat and on calls (on a call through his write_on_board tool).
    - Bo's natural voice and listening on any browser (optional, openai_key in config.local.php): ai_speak turns
      one or two of Bo's sentences into speech, ai_listen turns a short recording of the student into text. No
      audio is kept. Without the key the browser's own speech recognition and voices are used.
@@ -316,6 +319,15 @@ How you help:
 - Use the class facts exactly. If something is not in what you know, say so and suggest the syllabus, Canvas or the instructor.
 - Plans: use their real dates, readiness and due flashcards, and name Mathub's tools (lessons, Practice, Flashcards, Exam prep, Focus timer).
 - Math in LaTeX between $...$ or $$...$$. Otherwise plain text; **bold** and "- " lists are fine.
+- Your whiteboard: when you work something out (solving a problem, a derivation, a worked example, a formula and what its parts mean), write it on your board instead of in the chat, as a block on lines of its own:
+[board: A short title, like "Solving 2x + 3 = 11"]
+step: What you do, in a few words: $the math after this step$
+math: a formula or equation on its own line (LaTeX)
+answer: $the final result$
+tip: a quick check, shortcut or common mistake
+text: a short sentence, only when needed
+[/board]
+  Keep each page neat: steps in order, one step and one equation per line, at most about 8 lines, the answer once at the end. Around the board just talk, in a sentence or two (what you did, a question back); never repeat the board's math in the chat. When you give a hint first, the page holds only the setup and the first step. Plain questions get plain answers, no board.
 - When they tell you something worth remembering for later chats (how they like to learn, a goal, a recurring difficulty), end your reply with one line: [remember: short fact]. Never store sensitive personal details.
 - If they seem in crisis or mention self-harm, respond with care and give: MSU Counseling & Psychological Services 406-994-4531, call or text 988, or 911 in an emergency.
 - Stay on studying, their classes and student life. Decline harmful requests. No medical, legal or financial advice. You are an AI and can be wrong; say when you are unsure.
@@ -325,7 +337,7 @@ const MH_AI_VOICE = <<<'TXT'
 VOICE MODE: the student is talking with you out loud, and your reply is read aloud to them in your voice.
 - Talk like a tutor sitting next to them: 1 to 4 short sentences, under about 70 words. Plain spoken English: no lists, headings, markdown, emoji or LaTeX in what you say.
 - Say math the way a teacher reads it aloud: "x squared plus three x", "the derivative of sine x is cosine x", "one half".
-- When seeing it helps (a formula, an equation, a worked step), also write it on the whiteboard: add [board: ...] with the math in LaTeX between $...$, at most two board lines per reply. The board is shown, never read aloud, so still say the idea in words.
+- When seeing it helps (a formula, an equation, the steps of a problem), also write it on your whiteboard, as a block on lines of its own: [board: A short title], then lines like "step: what you do: $math$", "math: LaTeX", "answer: $result$" or "tip: a short note", then [/board]. At most one page per reply, about six lines. The board is shown, never read aloud, so still say the idea in words.
 - One question at a time, then stop and let them answer. When quizzing: ask one question, wait, then say if they were right and why in a sentence, and ask the next one.
 - Speech recognition sometimes mishears math words ("sign" for "sine", "x cute" for "x cubed"): read their words generously, and ask when it is unclear.
 - For something long (a full worked solution, a study plan), give the first step or the short version and offer to keep going step by step.
@@ -366,7 +378,7 @@ How you sound:
 - Match their energy. If they're stressed, slow down and be reassuring. If they joke around, joke back a little, then steer back to the work.
 - If they cut in, stop and go with what they said. Don't start over.
 - Ask more than you tell: find out what they think first, give a nudge, let them try, and react to their answer like a person would. Explain only as much as they need right now.
-- Say math the way people say it out loud ("x squared", "the derivative of sine is cosine", "a half"). When seeing it would help (an equation, a formula, a worked step), call write_on_board and keep talking naturally ("okay, I put it on the board").
+- Say math the way people say it out loud ("x squared", "the derivative of sine is cosine", "a half"). When seeing it would help (an equation, a formula, the steps of a problem), call write_on_board and keep talking naturally ("okay, it's on the board"). Write neatly: a short title, one step per line with its math, the answer once at the end. Start a new page for a new problem; add to the page you're on as you work through it together.
 - Quizzing: one question, wait for their answer, react, then the next one.
 - Use what you know about them below (exam dates, weakest topics, recent mistakes, your notes) the way a friend who remembers would: bring it up when it fits, never recite it.
 - If they tell you something worth remembering for next time (how they learn best, a goal, a recurring struggle), call remember with a short fact. Never store sensitive personal details.
@@ -385,13 +397,23 @@ function mh_ai_live_instructions(int $uid, string $cid, ?array $C, array $in): s
   if ($C) $parts[] = mh_ai_digest($C);
   $parts[] = implode("\n", array_filter(['TODAY: ' . $today, $C ? mh_ai_upcoming($C, $today) : '', mh_ai_snapshot($in['snapshot'] ?? null), $notes ? "WHAT YOU REMEMBER ABOUT THEM:\n- " . implode("\n- ", $notes) : '']));
   $turns = array_slice(mh_ai_turns($uid, $cid), -6);
-  if ($turns) { $L = ['YOUR LAST FEW MESSAGES WITH THEM (chat or calls):']; foreach ($turns as $t) $L[] = (($t['r'] ?? '') === 'b' ? 'Bo: ' : 'Them: ') . mh_ai_clip(preg_replace('/\[(board|remember):[^\]]*\]/i', '', (string)($t['t'] ?? '')), 240); $parts[] = implode("\n", $L); }
+  if ($turns) { $L = ['YOUR LAST FEW MESSAGES WITH THEM (chat or calls):']; foreach ($turns as $t) $L[] = (($t['r'] ?? '') === 'b' ? 'Bo: ' : 'Them: ') . mh_ai_clip(mh_ai_unboard((string)($t['t'] ?? '')), 240); $parts[] = implode("\n", $L); }
   return implode("\n\n", $parts);
+}
+/** A message without its board pages (each one becomes a mention of its title) or notes, for short recaps. */
+function mh_ai_unboard(string $t): string {
+  $t = preg_replace('/\[board\+?:\s*([^\]\n]*)\]\s*\n.*?\[\/board\]/is', ' [on the board: $1] ', $t);
+  return trim(preg_replace('/\[(board\+?|remember):[^\]]*\]|\[\/board\]/i', ' ', $t));
 }
 /** The tools Bo has on a call: the board, and his notes. */
 function mh_ai_live_tools(): array {
   return [
-    ['type' => 'function', 'name' => 'write_on_board', 'description' => 'Show math on the whiteboard next to you while you talk: an equation, a formula or a worked step. The student sees it; you still say it in words.', 'parameters' => ['type' => 'object', 'properties' => ['lines' => ['type' => 'array', 'items' => ['type' => 'string'], 'description' => 'One to three short lines of LaTeX, without dollar signs.']], 'required' => ['lines']]],
+    ['type' => 'function', 'name' => 'write_on_board', 'description' => 'Write on the whiteboard next to you, neatly, while you talk: the steps of a problem, an equation, a formula, the answer. The student sees it; you still talk it through in words.', 'parameters' => ['type' => 'object', 'properties' => [
+      'title' => ['type' => 'string', 'description' => 'A short title for the page, like "Solving 2x + 3 = 11" or "The chain rule".'],
+      'page' => ['type' => 'string', 'enum' => ['new', 'add'], 'description' => 'new: start a fresh page (a new problem or idea). add: keep writing on the page you are on.'],
+      'items' => ['type' => 'array', 'description' => 'One to six lines, in order.', 'items' => ['type' => 'object', 'properties' => [
+        'kind' => ['type' => 'string', 'enum' => ['step', 'math', 'answer', 'tip', 'text']],
+        'text' => ['type' => 'string', 'description' => 'step: what you do in a few words, then its math in $...$. math: just the LaTeX. answer: the result, math in $...$. tip and text: one short line, math in $...$.']], 'required' => ['kind', 'text']]]], 'required' => ['items']]],
     ['type' => 'function', 'name' => 'remember', 'description' => 'Save one short fact about the student for future sessions: how they learn best, a goal, a recurring difficulty. Never sensitive personal details.', 'parameters' => ['type' => 'object', 'properties' => ['fact' => ['type' => 'string', 'description' => 'Under 20 words.']], 'required' => ['fact']]],
   ];
 }
@@ -519,14 +541,14 @@ function mh_ai_route(string $route, array $in, array $cfg, string $ip): void {
       if ($voice) $system[] = ['type' => 'text', 'text' => MH_AI_VOICE];
       // the last few turns, oldest first, starting with the student
       $turns = mh_ai_turns($uid, $cid); $msgs = [];
-      foreach (array_slice($turns, -MH_AI_TURNS_SENT) as $t) { $role = ($t['r'] ?? '') === 'b' ? 'assistant' : 'user'; $txt = mh_ai_clip($t['t'] ?? '', 900); if ($txt === '') continue; if ($msgs && end($msgs)['role'] === $role) { $msgs[count($msgs) - 1]['content'] .= "\n" . $txt; continue; } $msgs[] = ['role' => $role, 'content' => $txt]; }
+      foreach (array_slice($turns, -MH_AI_TURNS_SENT) as $t) { $role = ($t['r'] ?? '') === 'b' ? 'assistant' : 'user'; $txt = mh_ai_clip($t['t'] ?? '', $role === 'assistant' ? 1400 : 900); if ($txt === '') continue; if ($msgs && end($msgs)['role'] === $role) { $msgs[count($msgs) - 1]['content'] .= "\n" . $txt; continue; } $msgs[] = ['role' => $role, 'content' => $txt]; }
       while ($msgs && $msgs[0]['role'] !== 'user') array_shift($msgs);
       if ($msgs && end($msgs)['role'] === 'user') array_pop($msgs);
       $content = []; if ($img) $content[] = ['type' => 'image', 'source' => ['type' => 'base64', 'media_type' => $img['type'], 'data' => $img['data']]];
       $content[] = ['type' => 'text', 'text' => $q !== '' ? $q : 'Can you help me with this?'];
       $msgs[] = ['role' => 'user', 'content' => $content];
       @set_time_limit(90);
-      $max = $voice ? 400 : 700;
+      $max = $voice ? 550 : 1000;   // room for a page of the board
       if ($stream) { @ignore_user_abort(true); $r = mh_ai_stream($A, $A['tutor_model'], $system, $msgs, $max, 60, function (string $t): void { mh_ai_emit(['t' => 'd', 'x' => $t]); }); }
       else $r = mh_ai_call($A, $A['tutor_model'], $system, $msgs, $max, 60);
       $reply = trim($r['text']); $remembered = null;
@@ -636,7 +658,7 @@ function mh_ai_route(string $route, array $in, array $cfg, string $ip): void {
       if (!$r) mh_fail('That call is over.', 404);
       $new = [];
       foreach (array_slice(is_array($in['turns'] ?? null) ? $in['turns'] : [], 0, 80) as $t) {
-        if (!is_array($t)) continue; $txt = mh_ai_clip($t['t'] ?? '', 1500); if ($txt === '') continue;
+        if (!is_array($t)) continue; $txt = mh_ai_clip($t['t'] ?? '', 3000); if ($txt === '') continue;   // room for the pages Bo wrote
         $new[] = ['r' => ($t['r'] ?? '') === 'b' ? 'b' : 'u', 't' => $txt, 'at' => time(), 'v' => 1];
       }
       if ($new) mh_ai_save_turns($uid, (string)$r['cid'], array_merge(mh_ai_turns($uid, (string)$r['cid']), $new));

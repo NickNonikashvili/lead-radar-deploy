@@ -78,16 +78,36 @@ const PNG = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwA
   await m.fill('#bo-q', 'Help with this one'); await m.click('.bo-send'); await m.waitForTimeout(2500);
   const lq = last(); const lc = lq.messages[lq.messages.length - 1].content;
   check('the photo goes as a small JPEG made on the device, and Bo sees it', lc[0].type === 'image' && lc[0].source.media_type === 'image/jpeg' && /I see your photo/.test(await txt(m, '#bo-log .bo-msg.bo:last-child')) && /Photo/.test(await m.evaluate(() => { const y = document.querySelectorAll('#bo-log .bo-msg.you'); return y[y.length - 1].textContent; })), lc.map(b => b.type));
-  // What Bo knows: a side panel next to the chat on a wide screen
-  const side = await m.evaluate(() => { const s = document.querySelector('#bo-side'); const r = s.getBoundingClientRect(); const c = document.querySelector('.bo-col').getBoundingClientRect(); return { shown: getComputedStyle(s).display !== 'none' && r.width > 200, beside: r.left >= c.right, knowsBtn: getComputedStyle(document.querySelector('.bo-knows-btn')).display }; });
-  check('on a wide screen, What Bo knows sits beside the chat (and the i button steps aside)', side.shown && side.beside && side.knowsBtn === 'none', side);
-  const k = await txt(m, '#bo-side');
+  // Bo's board: beside the chat on a wide screen, empty until he writes on it
+  const bd0 = await m.evaluate(() => { const b = document.querySelector('#bo-board'); const r = b.getBoundingClientRect(); const c = document.querySelector('#bo-main').getBoundingClientRect(); return { shown: !b.hidden && r.width > 360, beside: r.left >= c.right, tall: r.height > 500, empty: /Nothing on the board yet/.test(b.textContent), fold: getComputedStyle(b.querySelector('[data-bb="fold"]')).display }; });
+  check('on a wide screen, Bo\'s board sits beside the chat, tall, empty for now (and it does not fold)', bd0.shown && bd0.beside && bd0.tall && bd0.empty && bd0.fold === 'none', bd0);
+  await m.fill('#bo-q', 'Can you solve 2x + 3 = 11?'); await m.click('.bo-send');
+  await m.waitForTimeout(700);
+  const writing = await m.evaluate(() => ({ live: !!document.querySelector('#bo-log .bo-msg.live'), title: (document.querySelector('#bo-board .bb-title') || {}).textContent || '' }));
+  await m.waitForTimeout(2600);
+  const bd1 = await m.evaluate(() => { const b = document.querySelector('#bo-board'); return { title: (b.querySelector('.bb-title') || {}).textContent, steps: [...b.querySelectorAll('.bb-step')].map(x => x.textContent.replace(/\s+/g, ' ').trim()), nums: [...b.querySelectorAll('.bb-n')].map(x => x.textContent), answer: (b.querySelector('.bb-answer') || {}).textContent, tip: (b.querySelector('.bb-tip') || {}).textContent, pager: b.querySelector('.bb-pager').hidden, writing: !!b.querySelector('.bb-writing') }; });
+  check('Bo writes the worked problem on his board: a title, numbered steps with their math, the answer boxed, a tip', bd1.title === 'Solving 2x + 3 = 11' && bd1.steps.length === 2 && bd1.nums.join() === '1,2' && /Take 3 from both sides/.test(bd1.steps[0]) && /2x = 8/.test(bd1.steps[0]) && /Answer/.test(bd1.answer) && /x = 4/.test(bd1.answer) && /Check it/.test(bd1.tip) && bd1.pager && !bd1.writing, bd1);
+  check('the page goes up while he is still writing', writing.title === 'Solving 2x + 3 = 11' || writing.live, writing);
+  const msg1 = await m.evaluate(() => { const b = [...document.querySelectorAll('#bo-log .bo-msg.bo')].pop(); return { text: b.querySelector('.bo-text').textContent, chip: (b.querySelector('[data-bo-page]') || {}).textContent }; });
+  check('in the chat he just talks, with a link to the page instead of the math', /one step at a time/.test(msg1.text) && /On the board: Solving 2x \+ 3 = 11/.test(msg1.chip || '') && !/Take 3 from both sides/.test(msg1.text) && !/\[board/.test(msg1.text), msg1);
+  await m.fill('#bo-q', 'Solve it again, slower'); await m.click('.bo-send'); await m.waitForTimeout(3200);
+  check('a second page: the board turns to it, with the pages to flip through', /Page 2 of 2/.test(await txt(m, '#bo-board .bb-pos')) && !(await m.$('#bo-board .bb-pager[hidden]')));
+  await m.click('#bo-board [data-bb="prev"]'); await m.waitForTimeout(300);
+  check('flipping back shows page 1, and its link in the chat lights up', /Page 1 of 2/.test(await txt(m, '#bo-board .bb-pos')) && await m.$eval('#bo-log [data-bo-page="0"]', b => b.classList.contains('on')));
+  await m.click('#bo-log [data-bo-page="1"]'); await m.waitForTimeout(300);
+  check('the link in a message opens its page', /Page 2 of 2/.test(await txt(m, '#bo-board .bb-pos')));
+  await m.click('#bo-board [data-bb="copy"]'); await m.waitForTimeout(300);
+  check('a page can be copied as text', /Page copied|Copying is not available/.test(await txt(m, '.toast')));
+  // What Bo knows: a sheet from the i button
+  await m.click('[data-bo="knows"]'); await m.waitForTimeout(500);
+  const k = await txt(m, '#bo-knows');
   check('What Bo knows: the class, the next exam, weakest topics, his notes and questions left', /The class/.test(k) && /Exam 2, in 3 days/.test(k) && /Weakest topics/.test(k) && /Likes worked examples first/.test(k) && /questions left/.test(k), k.slice(0, 300));
-  await m.click('#bo-side [data-k-note="0"]'); await m.waitForTimeout(700);
-  check('a note can be deleted there', !/Likes worked examples first/.test(await txt(m, '#bo-side .bo-k-notes')) && ((await api(m, 'ai_status')).json.notes || []).length === 0);
+  await m.click('#bo-knows [data-k-note="0"]'); await m.waitForTimeout(700);
+  check('a note can be deleted there', !/Likes worked examples first/.test(await txt(m, '#bo-knows .bo-k-notes')) && ((await api(m, 'ai_status')).json.notes || []).length === 0);
+  await m.keyboard.press('Escape'); await m.waitForTimeout(300);
   // the chat is kept with the account
   await m.reload(); await m.waitForTimeout(2200);
-  check('the chat is still there after a reload (kept with the account)', (await m.$$('#bo-log .bo-msg.you')).length === 2 && (await m.$$('#bo-log .bo-msg.bo')).length === 2);
+  check('the chat is still there after a reload (kept with the account), and so are the pages of the board', (await m.$$('#bo-log .bo-msg.you')).length === 4 && (await m.$$('#bo-log .bo-msg.bo')).length === 4 && /Page 2 of 2/.test(await txt(m, '#bo-board .bb-pos')));
   // exam week leads to Bo
   await go(m, '#/calc/dashboard', 1800);
   const quiz = await m.$eval('.xw-dash .xw-item[href^="#/tutor/"]', x => x.getAttribute('href'));
@@ -117,7 +137,16 @@ const PNG = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwA
   check('phone: Ask Bo does not scroll sideways', await hscroll(ph));
   const pos = await ph.evaluate(() => { const c = document.querySelector('.bo-compose').getBoundingClientRect(); const t = document.querySelector('#tabbar'); return { composer: Math.round(c.bottom), tabbar: t ? Math.round(t.getBoundingClientRect().top) : innerHeight }; });
   check('phone: the message box sits above the tab bar', pos.composer <= pos.tabbar + 1, pos);
-  check('phone: no side panel; the i button opens What Bo knows as a sheet', (await ph.$eval('#bo-side', s => getComputedStyle(s).display)) === 'none');
+  const pb = await ph.evaluate(() => { const b = document.querySelector('#bo-board'); const r = b.getBoundingClientRect(); const l = document.querySelector('#bo-log').getBoundingClientRect(); return { above: !!(b.compareDocumentPosition(document.querySelector('#bo-log')) & Node.DOCUMENT_POSITION_FOLLOWING), w: r.width, sticky: getComputedStyle(b).position, sheet: b.querySelector('.bb-sheet').getBoundingClientRect().height }; });
+  check('phone: the board is above the chat, sticky, and not too tall', pb.above && pb.w > 300 && pb.sticky === 'sticky' && pb.sheet > 80 && pb.sheet <= 320, pb);
+  await ph.evaluate(() => scrollTo(0, document.body.scrollHeight)); await ph.waitForTimeout(300);
+  check('phone: scrolling the chat, the board stays on screen', await ph.$eval('#bo-board', b => { const r = b.getBoundingClientRect(); return r.top >= 0 && r.top < 40; }));
+  await ph.click('#bo-board [data-bb="fold"]'); await ph.waitForTimeout(250);
+  const folded = await ph.evaluate(() => { const b = document.querySelector('#bo-board'); return { fold: b.hasAttribute('data-fold'), h: b.getBoundingClientRect().height, exp: b.querySelector('[data-bb="fold"]').getAttribute('aria-expanded'), saved: App.settings().boBoardFold }; });
+  check('phone: the board folds down to its bar (and stays folded next time)', folded.fold && folded.h < 70 && folded.exp === 'false' && folded.saved === true, folded);
+  await ph.click('#bo-log [data-bo-page="0"]'); await ph.waitForTimeout(250);
+  check('phone: a page link in the chat unfolds the board on that page', !(await ph.$('#bo-board[data-fold]')) && /Page 1 of 2/.test(await txt(ph, '#bo-board .bb-pos')));
+  await ph.evaluate(() => App.setSetting('boBoardFold', false));
   await ph.click('[data-bo="knows"]'); await ph.waitForTimeout(500);
   check('phone: the sheet has the class, the next exam and the notes', /The class/.test(await txt(ph, '#bo-knows')) && /Bo's notes about you/.test(await txt(ph, '#bo-knows')) && await hscroll(ph));
   await ph.keyboard.press('Escape'); await ph.waitForTimeout(300);

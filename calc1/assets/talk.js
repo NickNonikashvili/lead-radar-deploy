@@ -5,7 +5,7 @@
      none (Firefox) and the server has speech switched on, a short recording is turned into text by the
      server (api/ai.php, ai_listen). Bo never listens while he talks, so he does not hear himself.
    - Answers stream from the server (ai_tutor with voice and stream): Bo starts talking as soon as his first
-     sentence is written. Formulas go on the board ([board: ...]) and are never read aloud.
+     sentence is written. What he works out goes on his board (a [board: …] page, App.boBoard) and is never read aloud.
    - Bo's voice: a natural voice from the server (ai_speak) when it is switched on, otherwise the best voice
      this device has. Speed, voice, hands-free and captions are in the call's settings.
    - Hands-free: after Bo talks he listens again. Tap Bo, the big button or Space to talk, to send what you
@@ -40,26 +40,51 @@
     [/\//g, ' over '], [/\*/g, ' times ']
   ];
   const mathWords = x => ' ' + MATH.reduce((s, [re, to]) => s.replace(re, to), String(x)).replace(/\s+/g, ' ').trim() + ' ';
-  const sayable = t => String(t || '').replace(/\[(board|remember):[^\]]*\]/gi, ' ').replace(/\$\$?([^$]+)\$\$?/g, (m, x) => mathWords(x))
+  const sayable = t => String(t || '').replace(/\[\/?(board\+?|remember)(:[^\]]*)?\]/gi, ' ').replace(/\$\$?([^$]+)\$\$?/g, (m, x) => mathWords(x))
     .replace(/\*\*|__|`/g, '').replace(/^\s*(?:[-*•]|\d+[.)])\s+/gm, '').replace(/\s+/g, ' ').trim();
-  const shown = t => String(t || '').replace(/\[(board|remember):[^\]]*\]/gi, ' ').replace(/\*\*/g, '').replace(/\s+/g, ' ').trim();
+  const shown = t => String(t || '').replace(/\[\/?(board\+?|remember)(:[^\]]*)?\]/gi, ' ').replace(/\*\*/g, '').replace(/\s+/g, ' ').trim();
 
-  /* splits a reply that is still being written into whole sentences; a finished [board: …] goes on the board at once */
-  function splitter(onSentence, onBoard) {
-    let buf = '';
-    function drain(final) {
-      let b; while ((b = /\[board:\s*([^\]]*)\]/i.exec(buf))) { onBoard(b[1].trim()); buf = buf.slice(0, b.index) + ' ' + buf.slice(b.index + b[0].length); }
-      buf = buf.replace(/\[remember:[^\]]*\]/gi, ' ');
-      const open = buf.lastIndexOf('['); const hold = open >= 0 && buf.indexOf(']', open) < 0 ? open : buf.length;
-      let start = 0, math = false;
-      for (let i = 0; i < hold; i++) {
-        const c = buf[i]; if (c === '$') math = !math; if (math) continue;
-        if (c === '\n' || (/[.!?]/.test(c) && i + 1 < hold && /\s/.test(buf[i + 1]))) { const s = buf.slice(start, i + 1).trim(); if (s) onSentence(s); start = i + 1; }
+  /* reads a reply that is still being written, line by line: whole sentences of what Bo says go to onSentence
+     (from a line still coming in too, so he starts talking early); a page for the board ([board: Title] …
+     [/board], see App.boBoard) goes to onPage as it fills, with isNew the first time. Pages are never spoken. */
+  function splitter(onSentence, onPage) {
+    const BB = App.boBoard || {}; const KIND = BB.KIND || /^$/, OPEN = BB.OPEN || /^$/, CLOSE = BB.CLOSE || /^$/;
+    let buf = '', cur = null, wait = null, said = 0, loose = null;
+    const page = (p, isNew) => { if (onPage) onPage(p, isNew); };
+    const looseLine = x => { x = String(x || '').trim(); if (!x) return; const isNew = !loose; if (isNew) loose = { title: '', items: [], open: false }; loose.items.push(BB.oneLine ? BB.oneLine(x) : { k: 'text', t: x }); page(loose, isNew); };
+    const emit = s => { s = s.replace(/\[board\+?:\s*([^\]]*)\]/gi, (m, x) => { looseLine(x); return ' '; }).replace(/\[(?:\/board|remember:[^\]]*)\]/gi, ' ').trim(); if (s) onSentence(s); };
+    // the whole sentences in a line from position from; final: the line is complete, so the rest is a sentence too
+    function sentences(line, from, final) {
+      const open = line.lastIndexOf('['); const hold = !final && open >= 0 && line.indexOf(']', open) < 0 ? open : line.length;
+      let start = from, math = false;
+      for (let i = from; i < hold; i++) {
+        const c = line[i]; if (c === '$') math = !math; if (math) continue;
+        if (/[.!?]/.test(c) && (i + 1 < hold ? /\s/.test(line[i + 1]) : false)) { emit(line.slice(start, i + 1)); start = i + 1; }
       }
-      buf = buf.slice(start);
-      if (final) { const rest = buf.replace(/\[[^\]]*$/, '').trim(); if (rest) onSentence(rest); buf = ''; }
+      if (final && start < line.length) { emit(line.slice(start)); start = line.length; }
+      return start;
     }
-    return { push(t) { buf += t; drain(false); }, end() { drain(true); } };
+    function line(l) {
+      if (wait) {   // a page title: the next line says whether a page follows (or it was a one-line board)
+        if (!l.trim()) return; const w = wait; wait = null;
+        if (KIND.test(l) || CLOSE.test(l)) { cur = { title: w.title, cont: w.cont, items: [], open: true }; page(cur, true); } else looseLine(w.title);
+      }
+      if (cur) {
+        if (CLOSE.test(l)) { cur.open = false; page(cur, false); cur = null; return; }
+        const k = KIND.exec(l); if (k) { const t = k[2].trim(); if (t) { cur.items.push({ k: BB.kind ? BB.kind(k[1]) : 'text', t }); page(cur, false); } return; }
+        if (!l.trim()) return;
+        cur.open = false; page(cur, false); cur = null;
+      }
+      const o = OPEN.exec(l); if (o) { wait = { title: o[2].trim(), cont: !!o[1] }; said = 0; return; }
+      sentences(l, said, true); said = 0;
+    }
+    return {
+      push(t) {
+        buf += t; let i; while ((i = buf.indexOf('\n')) >= 0) { const l = buf.slice(0, i); buf = buf.slice(i + 1); line(l); }
+        if (!cur && !wait && buf && !/^\s*\[/.test(buf)) said = sentences(buf, said, false);
+      },
+      end() { if (buf) { const l = buf; buf = ''; line(l); } if (wait) { const w = wait; wait = null; looseLine(w.title); } if (cur) { cur.open = false; page(cur, false); cur = null; } }
+    };
   }
 
   /* ---------- the voices this device has: the most natural-sounding English one first ---------- */
@@ -192,7 +217,7 @@
      - basic: when live calls are not switched on or cannot connect: the browser hears, Bo's answer streams from
        the chat, and he reads it out sentence by sentence.
      ============================================================ */
-  const T = { el: null, mode: 'live', cid: null, status: null, state: 'idle', who: 'listening', onClose: null, back: null, changed: false, lock: null, raf: 0, lvl: 0, board: [], fresh: true, photo: null, muted: false, t0: 0, clock: 0, listener: null, turn: 0, done: true };
+  const T = { el: null, mode: 'live', cid: null, status: null, state: 'idle', who: 'listening', onClose: null, back: null, changed: false, lock: null, raf: 0, lvl: 0, pages: [], photo: null, muted: false, t0: 0, clock: 0, listener: null, turn: 0, done: true };
   const liveOn = () => !!(T.status && T.status.voice && T.status.voice.live) && !!global.RTCPeerConnection && !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia) && settings().boMode !== 'basic';
   const canHear = () => !!SR || !!(T.status && T.status.voice && T.status.voice.listen && navigator.mediaDevices && global.MediaRecorder);
   const naturalOn = () => !!(T.status && T.status.voice && T.status.voice.natural) && settings().boVoice !== 'device';
@@ -214,7 +239,7 @@
 
   function open(o = {}) {
     if (NATIVE || T.el) return;
-    Object.assign(T, { cid: o.cid, status: o.status || T.status, onClose: o.onClose || null, changed: false, back: document.activeElement, board: [], fresh: true, photo: null, muted: false, t0: 0, state: 'idle', who: 'listening' });
+    Object.assign(T, { cid: o.cid, status: o.status || T.status, onClose: o.onClose || null, changed: false, back: document.activeElement, pages: [], photo: null, muted: false, t0: 0, state: 'idle', who: 'listening' });
     T.mode = liveOn() ? 'live' : 'basic';
     const el = T.el = document.createElement('div'); el.id = 'bo-talk'; el.className = 'bt'; el.dataset.mode = T.mode;
     el.setAttribute('role', 'dialog'); el.setAttribute('aria-modal', 'true'); el.setAttribute('aria-labelledby', 'bt-h');
@@ -225,7 +250,7 @@
       <main class="bt-stage">
         <div class="bt-who"><button type="button" class="bt-orb" data-t="orb" id="bt-orb" aria-describedby="bt-status"><span class="bt-ring r3" aria-hidden="true"></span><span class="bt-ring r2" aria-hidden="true"></span><span class="bt-ring r1" aria-hidden="true"></span><span class="bt-face" aria-hidden="true">${bo(140)}</span></button>
           <p class="bt-name">Bo</p><p class="bt-status" id="bt-status" role="status" aria-live="polite"></p></div>
-        <section class="bt-board" id="bt-board" hidden aria-labelledby="bt-board-h"><div class="bt-board-h"><span id="bt-board-h">${icon('pen', 15)} Bo’s board</span><button type="button" class="bt-icon sm" data-t="board-x" aria-label="Hide the board">${icon('x', 15)}</button></div><div class="bt-board-body" id="bt-board-body"></div></section>
+        <section class="bb bt-board" id="bt-board" aria-labelledby="btb-h">${App.boBoard ? App.boBoard.shell({ id: 'btb' }) : ''}</section>
         <div class="bt-caps" id="bt-caps"><p class="bt-line you" id="bt-you"></p><p class="bt-line bo" id="bt-bo"></p></div>
         <div class="bt-extra" id="bt-extra"></div>
       </main>
@@ -237,6 +262,7 @@
         <button type="button" class="bt-btn bt-end" data-t="end"><span class="bt-btn-ic">${icon('phoneoff', 26)}</span><span class="bt-btn-l">End</span></button>
       </footer>`;
     document.body.appendChild(el); document.documentElement.classList.add('bt-lock');
+    if (App.boBoard) { App.boBoard.wire($('#bt-board', el)); App.boBoard.paint($('#bt-board', el), T.pages, -1, false); }
     requestAnimationFrame(() => el.classList.add('open'));
     el.addEventListener('click', onClick); document.addEventListener('keydown', onKey, true);
     $('#bt-type', el).addEventListener('submit', e => { e.preventDefault(); const q = $('#bt-q', el); const t = q.value.trim(); if (!t) { q.focus(); return; } q.value = ''; sayTyped(t); });
@@ -289,13 +315,11 @@
     p.textContent = t; p.classList.toggle('live', !!live); if (k === 'bo' && /\$/.test(t) && App.typeset) App.typeset(p);
   }
   function paintCaps() { if (!T.el) return; $('#bt-caps', T.el).classList.toggle('off', !caps()); $('[data-t="cc"]', T.el).setAttribute('aria-pressed', String(caps())); }
-  function boardShow(lines, wrap) {
-    if (!T.el || !lines.length) return;
-    if (T.fresh) { T.board = []; T.fresh = false; }
-    T.board = T.board.concat(lines.map(l => wrap ? `$$${l}$$` : l)).slice(-4);
-    const box = $('#bt-board', T.el); box.hidden = false; T.el.classList.add('has-board');
-    const body = $('#bt-board-body', T.el); body.innerHTML = T.board.map(l => `<div class="bt-board-line">${esc(l)}</div>`).join('');
-    if (App.typeset) App.typeset(body);
+  /* a page Bo is writing goes up on his board (a new page, or more lines on the one showing) */
+  function boardPage(p, isNew) {
+    if (!T.el || !p || !App.boBoard) return;
+    if (isNew) T.pages.push(p);
+    const i = T.pages.lastIndexOf(p); App.boBoard.paint($('#bt-board', T.el), T.pages, i < 0 ? T.pages.length - 1 : i, true);
   }
   function paintExtra() {
     if (!T.el || !settings().boTalkOk) return; const ex = $('#bt-extra', T.el);
@@ -385,7 +409,8 @@
     },
     send(o) { const dc = this.dc; if (dc && dc.readyState === 'open') { try { dc.send(JSON.stringify(o)); } catch (e) {} } },
     turn(id, r) { let t = this.items.get(id); if (!t) { t = { r, t: '', done: false, saved: false }; this.items.set(id || 'x' + Math.random(), t); this.order.push(id); } return t; },
-    takeBoards() { const b = this.boards.splice(0); return b.length ? ' ' + b.map(l => `[board: $${l}$]`).join(' ') : ''; },
+    /* the pages written while Bo said this, as text for the chat ([board+: …] for more on a page from before) */
+    takeBoards() { const b = this.boards.splice(0).reduce((a, x) => { const prev = a[a.length - 1]; if (x.cont && prev && prev.title === x.title) prev.items = prev.items.concat(x.items); else a.push(Object.assign({}, x)); return a; }, []); const one = x => String(x || '').replace(/\s+/g, ' ').trim(); return b.map(x => `\n[board${x.cont ? '+' : ''}: ${one(x.title)}]\n${x.items.map(it => `${it.k}: ${one(it.t)}`).join('\n')}\n[/board]`).join(''); },
     on(ev) {
       const L = this; if (!T.el || L.ended) return;
       switch (ev.type) {
@@ -401,7 +426,7 @@
         case 'conversation.item.input_audio_transcription.delta': L.youText += ev.delta || ''; caption('you', L.youText, true); break;
         case 'conversation.item.input_audio_transcription.completed': { const t = L.turn(ev.item_id, 'u'); t.t = String(ev.transcript || '').trim(); t.done = true; caption('you', t.t || L.youText, false); break; }
         case 'conversation.item.input_audio_transcription.failed': L.turn(ev.item_id, 'u').done = true; break;
-        case 'response.created': L.boText = ''; T.fresh = true; break;
+        case 'response.created': L.boText = ''; break;
         case 'response.output_audio_transcript.delta': case 'response.audio_transcript.delta': L.boText += ev.delta || ''; caption('bo', L.boText, true); break;
         case 'response.output_audio_transcript.done': case 'response.audio_transcript.done': { const said = String(ev.transcript || L.boText).trim(); const t = L.turn(ev.item_id, 'b'); t.t = said + L.takeBoards(); t.done = !!said; caption('bo', said, false); T.changed = true; break; }
         case 'output_audio_buffer.started': L.talking = true; who('bo'); break;
@@ -414,7 +439,18 @@
     tool(name, id, args) {
       let a = {}; try { a = JSON.parse(args || '{}'); } catch (e) {}
       let out;
-      if (name === 'write_on_board') { const lines = (Array.isArray(a.lines) ? a.lines : [a.lines]).map(x => String(x || '').replace(/^\$+|\$+$/g, '').trim()).filter(Boolean).slice(0, 4); boardShow(lines, true); this.boards.push(...lines); out = { shown: lines.length }; }
+      if (name === 'write_on_board') {
+        const BB = App.boBoard;
+        let items = (Array.isArray(a.items) ? a.items : []).map(x => ({ k: BB ? BB.kind(x && x.kind) : 'text', t: String((x && x.text) || '').trim().slice(0, 300) })).filter(x => x.t);
+        if (!items.length && a.lines) items = [].concat(a.lines).map(x => ({ k: 'math', t: String(x || '').replace(/^\$+|\$+$/g, '').trim() })).filter(x => x.t);   // the first version of the tool
+        items = items.slice(0, 8); const title = String(a.title || '').trim().slice(0, 90);
+        const last = T.pages[T.pages.length - 1]; const more = a.page === 'add' && !!last && (!title || title === last.title);
+        if (items.length) {
+          if (more) { last.items.push(...items); boardPage(last, false); } else boardPage({ title, items: items.slice(), open: false }, true);
+          this.boards.push({ title: more ? last.title : title, items: items.slice(), cont: more });
+        }
+        out = items.length ? { written: items.length, page: T.pages.length } : { error: 'Nothing to write: give one to six items.' };
+      }
       else if (name === 'remember') { const f = String(a.fact || '').trim().slice(0, 140); if (f) { this.notes.push(f); toast(`Bo will remember: ${f}`, 3500); } out = { saved: !!f }; }
       else out = { error: 'There is no such tool.' };
       this.send({ type: 'conversation.item.create', item: { type: 'function_call_output', call_id: id, output: JSON.stringify(out) } });
@@ -486,15 +522,15 @@
   async function ask(text) {
     if (!T.el) return;
     const turn = ++T.turn; const photo = T.photo; T.photo = null; paintExtra();
-    T.done = false; T.fresh = true; caption('you', (photo ? 'With your photo: ' : '') + text, false); caption('bo', '', true);
+    T.done = false; caption('you', (photo ? 'With your photo: ' : '') + text, false); caption('bo', '', true);
     who('thinking'); let n = 0;
-    const sp = splitter(s => { if (turn !== T.turn) return; Speaker.say(s, { i: n++, turn, text: s }); }, b => { if (turn === T.turn) boardShow([b], false); });
+    const sp = splitter(s => { if (turn !== T.turn) return; Speaker.say(s, { i: n++, turn, text: s }); }, (p, isNew) => { if (turn === T.turn) boardPage(p, isNew); });
     try {
       const r = await App.boAsk(Object.assign({ class: T.cid, q: text, voice: 1, snapshot: snap(), today: App.todayISO() }, photo ? { image: { type: photo.type, data: photo.data } } : {}), d => { if (turn === T.turn) sp.push(d); });
       T.changed = true; if (turn !== T.turn) return;
       sp.end(); T.done = true;
       if (r.remembered) toast(`Bo will remember: ${r.remembered}`, 3500);
-      if (!n) Speaker.say(r.reply, { i: 0, turn, text: shown(r.reply) });
+      if (!n) { const parts = []; const rs = splitter(x => parts.push(x)); rs.push(r.reply || ''); rs.end(); parts.forEach((x, i) => Speaker.say(x, { i, turn, text: x })); }
       if (Speaker.idle()) after();
     } catch (x) {
       if (turn !== T.turn) return; Speaker.stop(); T.done = true;
@@ -537,7 +573,6 @@
     if (k === 'type') { const f = $('#bt-type', T.el); showType(f.hidden); return; }
     if (k === 'cc') { setSetting('boCaptions', !caps()); paintCaps(); return; }
     if (k === 'settings') return toggleSettings();
-    if (k === 'board-x') { $('#bt-board', T.el).hidden = true; T.el.classList.remove('has-board'); return; }
     if (k === 'unphoto') { T.photo = null; paintExtra(); return; }
   }
   function onKey(e) {

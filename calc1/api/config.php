@@ -61,7 +61,12 @@ return [
   //   pro_web_link, max_web_link  the production Web Purchase Links from RevenueCat (https://pay.rev.cat/...), without a user id
   //   pro_web_price, max_web_price  the prices to show on the website
   //   plan_grants        accounts that get a plan without paying, for testing: ['someone@montana.edu' => 'max']
+  //   revenuecat_v2_key, revenuecat_project  optional: a RevenueCat API v2 secret key (sk_...) allowed to write
+  //                      subscriptions, and the project id (proj...), so "Cancel plan" cancels a website plan right
+  //                      on Mathub; without them the Your plan page sends the student to RevenueCat's customer portal
   'revenuecat_secret' => '',
+  'revenuecat_v2_key' => '',
+  'revenuecat_project' => '',
   'pro_web_link'      => '',
   'max_web_link'      => '',
   'pro_web_price'     => '$15',

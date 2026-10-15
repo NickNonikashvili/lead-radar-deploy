@@ -329,7 +329,15 @@ The Hostinger zip never includes `app/`.
   All use the RevenueCat customer `mh_<account id>` and the entitlements `pro` and `max` (a Max product unlocks
   both). `plan_grants` in `config.local.php` gives testers a plan without paying. The example class and classes
   made before the plans existed are free; when a plan ends, classes are kept, locked (`App.courseGate`), until it
-  is back. Settings has a Your plan panel (website) or row (apps) with Manage subscription and Move up to Max.
+  is back. Settings has a Your plan panel (website) or row (apps) leading to **Your plan** (`#/plan`, also in the
+  account menu): the plan and how it is paid, when it renews or ends, this month's use (questions, classes Bo
+  writes, call minutes), the three plans side by side, Manage billing (RevenueCat's customer portal or the store)
+  and **Cancel plan**: one dialog (what changes and when, an optional reason kept in `plan_feedback`, Keep my plan),
+  then `plan_cancel` cancels a website plan through RevenueCat's API v2 when `revenuecat_v2_key` and
+  `revenuecat_project` are set, or opens its billing page; App Store and Google Play plans go to the store.
+- **Bo on the start page** (website, signed in): one card under the hero with Call Bo (a call right there, about
+  the class you are in), Ask Bo and Write a class with Max; Write a class with Pro; Get Max and Get Pro without a
+  plan; what is left this month, and the plan, a click from Your plan.
 - **Sharing.** Share gives `https://mathub.space/#/c/CODE`, the 8-character code and a QR code
   (`assets/vendor/qrcode.js`, qrcode-generator, MIT, loaded on demand). `#/c/CODE` shows the class to anyone,
   without the owner's name, with Add (a copy; needs Pro or Max) and Report. Moderators can stop a reported
@@ -348,7 +356,8 @@ The Hostinger zip never includes `app/`.
 - **Calling Bo** (`assets/talk.js`, website): a **live call** through OpenAI's Realtime API over WebRTC, set up by
   the server (`ai_live_start`: the browser's offer plus Bo's live persona and what he knows; the key stays on the
   server). Speech to speech: Bo answers in about half a second, waits until the student is done, stops when talked
-  over, writes on his board and keeps notes through tools; minutes are reported (`ai_live_tick`) and limited, the
+  over, writes neat pages on his board (`write_on_board`: a title and step, math, answer, tip and text lines) and
+  keeps notes through tools; minutes are reported (`ai_live_tick`) and limited, the
   transcript is saved to the chat (`ai_live_log`). Without the speech key, or if a call can't connect, **basic
   voice**: the browser hears, the answer streams from `ai_tutor` in voice mode, and Bo reads it out (`ai_speak` or
   the device's voice). Mute (M), tap Bo to stop him, Type, Photo, captions, Esc ends the call.
@@ -357,7 +366,13 @@ The Hostinger zip never includes `app/`.
   and readiness, weakest topics, recent mistakes, flashcards due, deadlines). The first message and the suggestions
   are made on the device (free). Photos of problems are shrunk on the device and sent with the question. Bo keeps up
   to 12 short notes about the student (`[remember: …]`), shown under his answer and in "What Bo knows", where they
-  and the chat can be deleted ("What Bo knows" sits beside the chat on a wide screen, and is a sheet elsewhere). Every answer has Copy and Report. The student agrees to what is sent to Anthropic
+  and the chat can be deleted ("What Bo knows" is a sheet from the i button). Every answer has Copy and Report.
+- **Bo's board** (`App.boBoard` in `assets/tutor.js`, also on calls): Bo works problems out on a whiteboard instead
+  of in the chat bubble. In his replies a page is a block, `[board: Title]` then `step:`, `math:`, `answer:`,
+  `tip:` and `text:` lines and `[/board]`; the chat shows "On the board: Title" where it goes, and the board draws
+  the page neatly (numbered steps with their math, the answer boxed, tips on gold), each line written in as it
+  arrives. Every page of the chat is kept, to flip back through. The board sits beside the chat on a wide screen,
+  and above it, sticky and foldable, on a narrow one; it is never read aloud. The student agrees to what is sent to Anthropic
   before the first question. Bo is a tab in the apps, a button in the website's top bar, and "Ask Bo to quiz you"
   in exam week.
 - **Let Bo write it** (Create a class, Max): paste or attach a syllabus (PDF, photo or text); Bo reads it into an

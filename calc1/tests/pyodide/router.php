@@ -14,6 +14,25 @@ if (preg_match('#^/revenuecat/v1/subscribers/(.+)$#', $path, $m)) {
   echo json_encode(['request_date' => gmdate('c'), 'subscriber' => ['original_app_user_id' => $id, 'entitlements' => $ent, 'subscriptions' => $s ? [$prod => ['store' => $s['store'] ?? 'rc_billing', 'expires_date' => $s['expires'] ?? null, 'unsubscribe_detected_at' => $s['cancelled'] ?? null]] : (object)[], 'management_url' => $s ? 'https://billing.example/manage' : null]]);
   exit;
 }
+// a stand-in for RevenueCat's API v2, for cancelling a website plan (config.local.php: revenuecat_v2_api, revenuecat_v2_key
+// 'sk_v2_test', revenuecat_project 'proj_test'): lists the customer's subscriptions from rc-state.json and, on cancel, marks
+// the plan cancelled there (so v1 then shows it as not renewing); each cancel is logged in tests/fixtures/rc-cancels.json
+if (preg_match('#^/revenuecat/v2/projects/([^/]+)/(customers/([^/]+)/subscriptions|subscriptions/([^/]+)/actions/cancel)$#', $path, $m)) {
+  header('Content-Type: application/json');
+  if (($_SERVER['HTTP_AUTHORIZATION'] ?? '') !== 'Bearer sk_v2_test' || $m[1] !== 'proj_test') { http_response_code(403); echo '{"type":"authorization_error","message":"Not allowed."}'; exit; }
+  $F = __DIR__ . '/../fixtures/rc-state.json'; $state = json_decode((string)@file_get_contents($F), true) ?: [];
+  if (!empty($m[3])) {
+    $id = rawurldecode($m[3]); $s = $state[$id] ?? null; $items = [];
+    if ($s && empty($s['v2fail'])) $items[] = ['object' => 'subscription', 'id' => 'sub_' . $id, 'customer_id' => $id, 'store' => $s['store'] ?? 'rc_billing', 'status' => strtotime($s['expires'] ?? 'now') > time() ? 'active' : 'expired', 'auto_renewal_status' => empty($s['cancelled']) ? 'will_renew' : 'will_not_renew'];
+    if ($s && !empty($s['v2fail'])) { http_response_code(500); echo '{"type":"server_error"}'; exit; }
+    echo json_encode(['object' => 'list', 'items' => $items]); exit;
+  }
+  if ($_SERVER['REQUEST_METHOD'] !== 'POST') { http_response_code(405); exit; }
+  $id = preg_replace('/^sub_/', '', rawurldecode($m[4])); if (!isset($state[$id])) { http_response_code(404); echo '{"type":"resource_missing"}'; exit; }
+  $state[$id]['cancelled'] = gmdate('c'); file_put_contents($F, json_encode($state));
+  $log = json_decode((string)@file_get_contents(__DIR__ . '/../fixtures/rc-cancels.json'), true) ?: []; $log[] = $id; file_put_contents(__DIR__ . '/../fixtures/rc-cancels.json', json_encode($log));
+  echo json_encode(['object' => 'subscription', 'id' => 'sub_' . $id, 'auto_renewal_status' => 'will_not_renew']); exit;
+}
 // a stand-in for Anthropic's POST /v1/messages, for Bo's tests (config.local.php: anthropic_api, anthropic_key 'sk-ant-test').
 // It keeps the last request in tests/fixtures/ai-last.json so the tests can check what the server sends.
 if ($path === '/anthropic/v1/messages') {
@@ -46,13 +65,14 @@ if ($path === '/anthropic/v1/messages') {
   } elseif (str_contains($sys, 'VOICE MODE')) {
     // talking out loud: a short spoken answer with a line for the whiteboard
     $weak = preg_match('/WEAKEST TOPICS: ([^;\n]+?) \d+%|WEAKEST TOPICS: ([^;\n]+?) not practised/', $sys, $w) ? trim($w[1] ?: $w[2]) : '';
-    $text = 'You said: ' . rtrim(mb_substr($utext, 0, 60), '?.!') . '. The chain rule says: take the derivative of the outside, then multiply by the derivative of the inside. [board: $\\frac{d}{dx}f(g(x)) = f\'(g(x))\\,g\'(x)$] ' . ($weak ? "Since $weak is your weakest topic, want to try one together?" : 'Want to try one together?');
+    $text = 'You said: ' . rtrim(mb_substr($utext, 0, 60), '?.!') . '. The chain rule says: take the derivative of the outside, then multiply by the derivative of the inside.' . "\n[board: The chain rule]\nmath: \\frac{d}{dx}f(g(x)) = f'(g(x))\\,g'(x)\ntip: Outside first, then times the derivative of the inside\n[/board]\n" . ($weak ? "Since $weak is your weakest topic, want to try one together?" : 'Want to try one together?');
     if (stripos($utext, 'remember') !== false) $text .= "\n[remember: Likes to talk things through]";
   } else {
     $weak = preg_match('/WEAKEST TOPICS: ([^;\n]+?) \d+%|WEAKEST TOPICS: ([^;\n]+?) not practised/', $sys, $w) ? trim($w[1] ?: $w[2]) : '';
     $text = 'Bo here. ' . ($weak ? "Your weakest topic is $weak. " : '') . (str_contains($sys, 'CLASS: ') ? 'I know your class. ' : '') . ($hasImage ? 'I see your photo. ' : '') . 'You asked: ' . mb_substr($utext, 0, 80) . ' (turns: ' . count($req['messages']) . ')';
     if (stripos($utext, 'remember') !== false) $text .= "\n[remember: Likes worked examples first]";
     if (stripos($utext, 'math') !== false) $text .= "\nThe slope is $\\frac{\\Delta y}{\\Delta x}$ and x < 3 here.";
+    if (stripos($utext, 'solve') !== false) $text .= "\nHere it is, one step at a time.\n[board: Solving 2x + 3 = 11]\nstep: Take 3 from both sides: $2x = 8$\nstep: Divide both sides by 2: \$x = 4\$\nanswer: \$x = 4\$\ntip: Check it: $2(4) + 3 = 11$\n[/board]\nCan you do $3x - 5 = 10$ the same way?";
   }
   if (!empty($req['stream'])) {
     // the streaming form: server-sent events, the text in small pieces

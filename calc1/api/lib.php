@@ -83,13 +83,13 @@ function mh_db(): PDO {
   $db->exec('CREATE TABLE IF NOT EXISTS push_queue (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, title TEXT NOT NULL, body TEXT NOT NULL DEFAULT "", url TEXT NOT NULL DEFAULT "", tag TEXT NOT NULL DEFAULT "", created INTEGER NOT NULL, delivered INTEGER NOT NULL DEFAULT 0)');
   $db->exec('CREATE INDEX IF NOT EXISTS push_queue_user ON push_queue(user_id, delivered)');
   $db->exec('CREATE TABLE IF NOT EXISTS league_history (user_id INTEGER NOT NULL, week INTEGER NOT NULL, league INTEGER NOT NULL, rank INTEGER NOT NULL, xp INTEGER NOT NULL, result TEXT NOT NULL, PRIMARY KEY (user_id, week))');
-  $bcols = array_column($db->query('PRAGMA table_info(badges)')->fetchAll(), 'name');
-  if (!in_array('manual', $bcols, true)) $db->exec('ALTER TABLE badges ADD COLUMN manual INTEGER NOT NULL DEFAULT 0');   // 1 = awarded by an administrator
   $pcols = array_column($db->query('PRAGMA table_info(posts)')->fetchAll(), 'name');
   if (!in_array('accepted_id', $pcols, true)) $db->exec('ALTER TABLE posts ADD COLUMN accepted_id INTEGER');
   $db->exec('CREATE TABLE IF NOT EXISTS challenge_attempts (user_id INTEGER NOT NULL, course TEXT NOT NULL, date TEXT NOT NULL, ok INTEGER NOT NULL, ms INTEGER NOT NULL, points INTEGER NOT NULL, topic TEXT NOT NULL DEFAULT "", created INTEGER NOT NULL, PRIMARY KEY (user_id, course, date))');
   $db->exec('CREATE INDEX IF NOT EXISTS ca_course_date ON challenge_attempts(course, date)');
   $db->exec('CREATE TABLE IF NOT EXISTS badges (user_id INTEGER NOT NULL, code TEXT NOT NULL, earned INTEGER NOT NULL, seen INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (user_id, code))');
+  $bcols = array_column($db->query('PRAGMA table_info(badges)')->fetchAll(), 'name');
+  if (!in_array('manual', $bcols, true)) $db->exec('ALTER TABLE badges ADD COLUMN manual INTEGER NOT NULL DEFAULT 0');   // 1 = awarded by an administrator (after the CREATE: a new database used to fail here)
   $db->exec('CREATE TABLE IF NOT EXISTS presence (user_id INTEGER PRIMARY KEY, course TEXT NOT NULL DEFAULT "", view TEXT NOT NULL DEFAULT "", post_id INTEGER NOT NULL DEFAULT 0, seen INTEGER NOT NULL)');
   $db->exec('CREATE TABLE IF NOT EXISTS meets (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, course TEXT NOT NULL, title TEXT NOT NULL, place TEXT NOT NULL, start INTEGER NOT NULL, end INTEGER NOT NULL, note TEXT NOT NULL DEFAULT "", cancelled INTEGER NOT NULL DEFAULT 0, created INTEGER NOT NULL)');
   $db->exec('CREATE TABLE IF NOT EXISTS meet_rsvp (meet_id INTEGER NOT NULL, user_id INTEGER NOT NULL, created INTEGER NOT NULL, PRIMARY KEY (meet_id, user_id))');

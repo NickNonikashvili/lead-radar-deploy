@@ -69,6 +69,8 @@ const quiet = () => { try { const s = JSON.parse(localStorage.getItem('studyhub-
   check('he has two tools: the board and his notes', (sess.tools || []).map(t => t.name).join() === 'write_on_board,remember');
   check('Bo speaks first: the page asks for a response as soon as the call opens', (await sent(m)).some(x => x.type === 'response.create'));
   check('the clock runs', /\d:\d\d/.test(await txt(m, '#bt-clock')));
+  const eb = await m.evaluate(() => { const b = document.querySelector('#bt-board'); const r = b.getBoundingClientRect(); const o = document.querySelector('#bt-orb').getBoundingClientRect(); return { shown: r.width > 300 && r.height > 60, beside: r.left > o.right, empty: /Nothing on the board yet/.test(b.textContent) }; });
+  check('his board is on screen from the start (beside him on a wide screen), empty until he writes', eb.shown && eb.beside && eb.empty, eb);
   // Bo talks
   await E(m, { type: 'conversation.item.added', item: { id: 'b1', type: 'message', role: 'assistant', content: [] } });
   await E(m, { type: 'response.created', response: { id: 'r1' } }); await E(m, { type: 'output_audio_buffer.started' });
@@ -86,14 +88,17 @@ const quiet = () => { try { const s = JSON.parse(localStorage.getItem('studyhub-
   await E(m, { type: 'conversation.item.input_audio_transcription.completed', item_id: 'u1', transcript: 'Yeah, I keep mixing up which part goes inside.' });
   // his answer, with the board and a note
   await E(m, { type: 'response.created', response: { id: 'r2' } });
-  await E(m, { type: 'response.function_call_arguments.done', name: 'write_on_board', call_id: 'c1', arguments: JSON.stringify({ lines: ["\\frac{d}{dx} f(g(x)) = f'(g(x))\\,g'(x)"] }) });
+  await E(m, { type: 'response.function_call_arguments.done', name: 'write_on_board', call_id: 'c1', arguments: JSON.stringify({ title: 'The chain rule', page: 'new', items: [{ kind: 'math', text: "\\frac{d}{dx} f(g(x)) = f'(g(x))\\,g'(x)" }, { kind: 'tip', text: 'Outside first, then times the derivative of the inside' }] }) });
+  await E(m, { type: 'response.function_call_arguments.done', name: 'write_on_board', call_id: 'c3', arguments: JSON.stringify({ page: 'add', items: [{ kind: 'step', text: 'For $\\sin(x^2)$: $\\cos(x^2)\\cdot 2x$' }] }) });
   await E(m, { type: 'response.function_call_arguments.done', name: 'remember', call_id: 'c2', arguments: JSON.stringify({ fact: 'Mixes up inside and outside functions' }) });
   await E(m, { type: 'conversation.item.added', item: { id: 'b2', type: 'message', role: 'assistant', content: [] } });
   await E(m, { type: 'output_audio_buffer.started' });
   await E(m, { type: 'response.output_audio_transcript.done', item_id: 'b2', transcript: 'Totally normal. Outside first, then times the derivative of the inside. I put it on the board.' });
   await E(m, { type: 'response.done', response: { output: [{ type: 'function_call' }, { type: 'function_call' }, { type: 'message' }] } });
   const outs = (await sent(m)).filter(x => x.type === 'conversation.item.create' && x.item.type === 'function_call_output');
-  check('his board shows the formula (beside him on a wide screen), and the page answers the tool', !(await m.$('#bt-board[hidden]')) && /frac\{d\}\{dx\}/.test(await txt(m, '#bt-board')) && await m.$eval('#bo-talk', e => e.classList.contains('has-board')) && outs.some(o => o.item.call_id === 'c1'));
+  const cb1 = await m.evaluate(() => { const b = document.querySelector('#bt-board'); return { title: (b.querySelector('.bb-title') || {}).textContent, items: [...b.querySelectorAll('.bb-item')].map(x => x.className.replace(/bb-item|bb-new/g, '').trim()), text: b.textContent }; });
+  check('he writes a neat page: a title, the formula, a tip, then a step added to the same page', cb1.title === 'The chain rule' && cb1.items.join() === 'bb-math,bb-tip,bb-step' && /frac\{d\}\{dx\}/.test(cb1.text) && !/Nothing on the board/.test(cb1.text), cb1);
+  check('the page answers both board tools', outs.some(o => o.item.call_id === 'c1' && /"written":2/.test(o.item.output)) && outs.some(o => o.item.call_id === 'c3' && /"written":1/.test(o.item.output)), outs.map(o => o.item.output));
   check('his note is kept, and the page answers that tool too', outs.some(o => o.item.call_id === 'c2' && /saved/.test(o.item.output)) && /Bo will remember/.test(await txt(m, '.toast')));
   check('an answer that already spoke is not asked for again', (await sent(m)).filter(x => x.type === 'response.create').length === 1);
   await E(m, { type: 'response.done', response: { output: [{ type: 'function_call' }] } });
@@ -131,10 +136,11 @@ const quiet = () => { try { const s = JSON.parse(localStorage.getItem('studyhub-
   const chat = await m.$$eval('#bo-log .bo-msg', ms => ms.map(x => ({ bo: x.classList.contains('bo'), t: x.textContent.trim() })));
   const iB1 = chat.findIndex(x => x.bo && /Exam two is Friday/.test(x.t)), iU1 = chat.findIndex(x => !x.bo && /which part goes inside/.test(x.t)), iB2 = chat.findIndex(x => x.bo && /Totally normal/.test(x.t));
   check('the chat now has the call, in order, with what you said marked as said out loud', iB1 >= 0 && iU1 > iB1 && iB2 > iU1 && /Said out loud/.test(chat[iU1].t), chat.map(x => x.t.slice(0, 30)));
-  check('his board line is in the chat as a block, and his note is saved', (await m.$$('#bo-log .bo-board-line')).length >= 1 && ((await api(m, 'ai_status')).json.notes || []).includes('Mixes up inside and outside functions'));
+  const cb2 = await m.evaluate(() => ({ links: [...document.querySelectorAll('#bo-log [data-bo-page]')].map(b => b.textContent.trim()), title: (document.querySelector('#bo-board .bb-title') || {}).textContent, items: document.querySelectorAll('#bo-board .bb-item').length }));
+  check('his page is in the chat (one link) and on the chat\'s board, whole, and his note is saved', cb2.links.length === 1 && /On the board: The chain rule/.test(cb2.links[0]) && cb2.title === 'The chain rule' && cb2.items === 3 && ((await api(m, 'ai_status')).json.notes || []).includes('Mixes up inside and outside functions'), cb2);
   await go(m, '#/tutor/calc', 1500); await m.click('.bo-talk-btn'); await waitFor(m, 'state', ['live'], 6000);
   check('the next call uses the voice picked, and Bo never asks for the first-call explanation again', (readJ('live-last.json', {}).session || {}).audio.output.voice === 'marin' && !(await m.$('#bt-start')));
-  check('and he remembers: his note and the last call are in what he is told', /Mixes up inside and outside functions/.test(readJ('live-last.json', {}).session.instructions) && /YOUR LAST FEW MESSAGES/.test(readJ('live-last.json', {}).session.instructions));
+  check('and he remembers: his note and the last call are in what he is told', /Mixes up inside and outside functions/.test(readJ('live-last.json', {}).session.instructions) && /YOUR LAST FEW MESSAGES/.test(readJ('live-last.json', {}).session.instructions) && /\[on the board: The chain rule\]/.test(readJ('live-last.json', {}).session.instructions) && !/\ntip: Outside first/.test(readJ('live-last.json', {}).session.instructions));
   await m.keyboard.press('Escape'); await m.waitForTimeout(500);
   await cm.close();
 
@@ -150,7 +156,7 @@ const quiet = () => { try { const s = JSON.parse(localStorage.getItem('studyhub-
   check('basic voice: Bo greets, listens, hears the question and answers out loud', (await ds(f, 'mode')) === 'basic' && ['you', 'thinking'].includes(f2) && f3 === 'bo' && /What is the chain rule/.test(await txt(f, '#bt-you')), { f2, f3, you: await txt(f, '#bt-you') });
   await waitFor(f, 'who', ['listening'], 9000);
   check('basic voice: his answer is read out, sentence by sentence, without the formula', readJ('tts-all.json', []).some(x => /derivative of the outside/.test(x)) && !readJ('tts-all.json', []).some(x => /frac|board/.test(x)), readJ('tts-all.json', []).slice(-4));
-  check('basic voice: the board shows the formula from his answer', !(await f.$('#bt-board[hidden]')));
+  check('basic voice: the board shows the page from his answer, and the tip on it is not read out', (await txt(f, '#bt-board .bb-title')) === 'The chain rule' && !!(await f.$('#bt-board .bb-tip')) && !readJ('tts-all.json', []).some(x => /Outside first/.test(x)));
   await f.keyboard.press('Escape'); await cf.close();
 
   // a blocked microphone
