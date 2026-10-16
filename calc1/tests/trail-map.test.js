@@ -20,7 +20,7 @@ const T = require('./lib');
     return { exam: b.querySelector('.tb-exam').textContent.trim(), days: b.querySelector('.tb-days b').textContent.trim(), runs: runs.length, glyphs: runs.every(r => /run-glyph (easy|mid|hard|new)/.test(r.querySelector('.run-glyph').className)), pin: here ? here.querySelector('.tb-pin').textContent.trim() : '', hereHref: here ? here.getAttribute('href') : '', go: (b.querySelector('.tb-go .btn.primary') || {}).textContent || '', goHref: (b.querySelector('.tb-go .btn.primary') || { getAttribute: () => '' }).getAttribute('href'), ready: (b.querySelector('.ready-line') || {}).textContent || '', title: document.querySelector('.page-title').textContent.trim() };
   });
   log('board:', JSON.stringify(board));
-  check('the class dashboard opens on the trail board with the exam as the summit', board && /Exam/.test(board.exam) && /^\d+$/.test(board.days), board);
+  check('the class dashboard opens on the trail board with the exam as the summit', board && /Exam/.test(board.exam) && /^(\d+|Today)$/.test(board.days), board);   // on the exam day itself it says Today
   check('every section on the exam is a run with a difficulty marker', board && board.runs >= 3 && board.glyphs, board);
   check('one run carries the you-are-here pin, linked to practice on its topics', board && /You are here/i.test(board.pin) && /practice\?topics=/.test(board.hereHref), board);
   check('the main button takes that run', board && /Take the next run/.test(board.go) && board.goHref === board.hereHref, board);
