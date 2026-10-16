@@ -379,8 +379,8 @@
 
   /* ---------- live: the real-time call ---------- */
   const Live = {
-    pc: null, dc: null, mic: null, audio: null, anBo: null, anYou: null, lid: null, left: 0, at: 0, tick: 0, save: 0, items: new Map(), order: [], notes: [], boards: [], boText: '', youText: '', talking: false, ended: true,
-    reset() { Object.assign(this, { pc: null, dc: null, mic: null, anBo: null, anYou: null, lid: null, left: 0, at: 0, items: new Map(), order: [], notes: [], boards: [], boText: '', youText: '', talking: false, ended: false }); },
+    pc: null, dc: null, mic: null, audio: null, anBo: null, anYou: null, lid: null, left: 0, at: 0, tick: 0, save: 0, items: new Map(), order: [], notes: [], boards: [], boText: '', youText: '', talking: false, ended: true, fns: new Map(), ran: new Set(), auto: 0, toolErr: false,
+    reset() { Object.assign(this, { pc: null, dc: null, mic: null, anBo: null, anYou: null, lid: null, left: 0, at: 0, items: new Map(), order: [], notes: [], boards: [], boText: '', youText: '', talking: false, ended: false, fns: new Map(), ran: new Set(), auto: 0, toolErr: false }); },
     leftNow() { return this.left - (Date.now() - this.at) / 1000; },
     soon() { return T.mode === 'live' && !!this.lid && this.at > 0 && this.leftNow() < 180; },
     async start() {
@@ -413,8 +413,17 @@
     turn(id, r) { let t = this.items.get(id); if (!t) { t = { r, t: '', done: false, saved: false }; this.items.set(id || 'x' + Math.random(), t); this.order.push(id); } return t; },
     /* the pages written while Bo said this, as text for the chat ([board+: …] for more on a page from before) */
     takeBoards() { const b = this.boards.splice(0).reduce((a, x) => { const prev = a[a.length - 1]; if (x.cont && prev && prev.title === x.title) prev.items = prev.items.concat(x.items); else a.push(Object.assign({}, x)); return a; }, []); const one = x => String(x || '').replace(/\s+/g, ' ').trim(); return b.map(x => `\n[board${x.cont ? '+' : ''}: ${one(x.title)}]\n${x.items.map(it => `${it.k}: ${one(it.t)}`).join('\n')}\n[/board]`).join(''); },
+    /* a tool call from Bo, run once. The name comes with the item that starts the call (response.output_item.added),
+       not always with the arguments, so it is looked up by the item's id; failing that, guessed from the arguments */
+    call(name, id, args) {
+      if (!id || this.ran.has(id)) return; this.ran.add(id);
+      if (!name) { let a = {}; try { a = JSON.parse(args || '{}'); } catch (e) {} name = a.drawing ? 'draw_on_board' : a.items || a.lines ? 'write_on_board' : a.fact ? 'remember' : ''; }
+      this.tool(name, id, args);
+    },
     on(ev) {
       const L = this; if (!T.el || L.ended) return;
+      const fn = ev.item && ev.item.type === 'function_call' ? ev.item : null;
+      if (fn) { if (fn.name) { if (fn.id) L.fns.set(fn.id, fn.name); if (fn.call_id) L.fns.set(fn.call_id, fn.name); } if (ev.type === 'response.output_item.done' || ev.type === 'conversation.item.done') L.call(fn.name, fn.call_id, fn.arguments); return; }
       switch (ev.type) {
         case 'conversation.item.added': case 'conversation.item.created': {
           const it = ev.item || {}; if (it.type !== 'message' || !it.id || L.items.has(it.id)) break;
@@ -423,18 +432,24 @@
           const typed = c.map(x => x.type === 'input_text' ? x.text : x.type === 'input_image' ? '[photo]' : '').filter(Boolean).join(' ').trim();
           L.items.set(it.id, { r, t: r === 'u' && !spoken ? typed : '', done: r === 'u' && !spoken, saved: false }); L.order.push(it.id); break;
         }
-        case 'input_audio_buffer.speech_started': L.youText = ''; caption('you', '…', true); who('you'); if (L.talking) caption('bo', L.boText, false); break;
+        case 'input_audio_buffer.speech_started': L.auto = 0; L.youText = ''; caption('you', '…', true); who('you'); if (L.talking) caption('bo', L.boText, false); break;
         case 'input_audio_buffer.speech_stopped': if (!T.muted) who('thinking'); break;
         case 'conversation.item.input_audio_transcription.delta': L.youText += ev.delta || ''; caption('you', L.youText, true); break;
         case 'conversation.item.input_audio_transcription.completed': { const t = L.turn(ev.item_id, 'u'); t.t = String(ev.transcript || '').trim(); t.done = true; caption('you', t.t || L.youText, false); break; }
         case 'conversation.item.input_audio_transcription.failed': L.turn(ev.item_id, 'u').done = true; break;
         case 'response.created': L.boText = ''; break;
         case 'response.output_audio_transcript.delta': case 'response.audio_transcript.delta': L.boText += ev.delta || ''; caption('bo', L.boText, true); break;
-        case 'response.output_audio_transcript.done': case 'response.audio_transcript.done': { const said = String(ev.transcript || L.boText).trim(); const t = L.turn(ev.item_id, 'b'); t.t = said + L.takeBoards(); t.done = !!said; caption('bo', said, false); T.changed = true; break; }
+        case 'response.output_audio_transcript.done': case 'response.audio_transcript.done': { const said = String(ev.transcript || L.boText).trim(); L.boText = said; const t = L.turn(ev.item_id, 'b'); t.t = said + L.takeBoards(); t.done = !!said; caption('bo', said, false); T.changed = true; break; }
         case 'output_audio_buffer.started': L.talking = true; who('bo'); break;
         case 'output_audio_buffer.stopped': case 'output_audio_buffer.cleared': L.talking = false; if (T.who === 'bo' || T.who === 'thinking') who(T.muted ? 'muted' : 'listening'); break;
-        case 'response.function_call_arguments.done': L.tool(ev.name, ev.call_id, ev.arguments); break;
-        case 'response.done': { const out = (ev.response && ev.response.output) || []; if (out.some(o => o.type === 'function_call') && !out.some(o => o.type === 'message')) L.send({ type: 'response.create' }); if (T.who === 'thinking' && !L.talking) who(T.muted ? 'muted' : 'listening'); break; }
+        case 'response.function_call_arguments.done': { const name = ev.name || L.fns.get(ev.item_id) || L.fns.get(ev.call_id); if (name || !ev.item_id) L.call(name, ev.call_id, ev.arguments); break; }   // without a name yet: response.output_item.done brings it
+        case 'response.done': {
+          // after his tools, Bo goes on: when he only used tools, when one failed (so he can fix it), or when he only said a
+          // few words first ("let me sketch that"), so he walks them through what he put up. At most twice in a row.
+          const out = (ev.response && ev.response.output) || []; const calls = out.some(o => o.type === 'function_call'), spoke = out.some(o => o.type === 'message');
+          if (calls && (!spoke || L.toolErr || String(L.boText || '').trim().length < 70) && L.auto < 2) { L.auto++; L.send({ type: 'response.create' }); }
+          L.toolErr = false; if (T.who === 'thinking' && !L.talking) who(T.muted ? 'muted' : 'listening'); break;
+        }
         case 'error': if (ev.error && ev.error.message) console.warn('Bo live:', ev.error.message); break;
       }
     },
@@ -464,6 +479,7 @@
       }
       else if (name === 'remember') { const f = String(a.fact || '').trim().slice(0, 140); if (f) { this.notes.push(f); toast(`Bo will remember: ${f}`, 3500); } out = { saved: !!f }; }
       else out = { error: 'There is no such tool.' };
+      if (out && out.error) this.toolErr = true;
       this.send({ type: 'conversation.item.create', item: { type: 'function_call_output', call_id: id, output: JSON.stringify(out) } });
     },
     async report() {
@@ -488,8 +504,8 @@
     },
     mute(on) { if (this.mic) this.mic.getAudioTracks().forEach(t => { t.enabled = !on; }); },
     hush() { this.send({ type: 'response.cancel' }); this.send({ type: 'output_audio_buffer.clear' }); },
-    say(text) { this.send({ type: 'conversation.item.create', item: { type: 'message', role: 'user', content: [{ type: 'input_text', text }] } }); this.send({ type: 'response.create' }); caption('you', text, false); who('thinking'); },
-    photo(p) { this.send({ type: 'conversation.item.create', item: { type: 'message', role: 'user', content: [{ type: 'input_image', image_url: `data:${p.type};base64,${p.data}` }, { type: 'input_text', text: 'Take a look at this.' }] } }); this.send({ type: 'response.create' }); caption('you', 'Sent a photo', false); who('thinking'); },
+    say(text) { this.auto = 0; this.send({ type: 'conversation.item.create', item: { type: 'message', role: 'user', content: [{ type: 'input_text', text }] } }); this.send({ type: 'response.create' }); caption('you', text, false); who('thinking'); },
+    photo(p) { this.auto = 0; this.send({ type: 'conversation.item.create', item: { type: 'message', role: 'user', content: [{ type: 'input_image', image_url: `data:${p.type};base64,${p.data}` }, { type: 'input_text', text: 'Take a look at this.' }] } }); this.send({ type: 'response.create' }); caption('you', 'Sent a photo', false); who('thinking'); },
     tune() { this.send({ type: 'session.update', session: { type: 'realtime', audio: { input: { turn_detection: { type: 'semantic_vad', eagerness: eager(), create_response: true, interrupt_response: true } }, output: { speed: liveRate() } } } }); }
   };
 

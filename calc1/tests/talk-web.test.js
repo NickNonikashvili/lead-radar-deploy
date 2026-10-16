@@ -89,7 +89,11 @@ const quiet = () => { try { const s = JSON.parse(localStorage.getItem('studyhub-
   await E(m, { type: 'conversation.item.input_audio_transcription.completed', item_id: 'u1', transcript: 'Yeah, I keep mixing up which part goes inside.' });
   // his answer, with the board and a note
   await E(m, { type: 'response.created', response: { id: 'r2' } });
-  await E(m, { type: 'response.function_call_arguments.done', name: 'write_on_board', call_id: 'c1', arguments: JSON.stringify({ title: 'The chain rule', page: 'new', items: [{ kind: 'math', text: "\\frac{d}{dx} f(g(x)) = f'(g(x))\\,g'(x)" }, { kind: 'tip', text: 'Outside first, then times the derivative of the inside' }] }) });
+  // as OpenAI sends it: the item that starts the call has its name; the arguments come later without it, then the finished item
+  const a1 = JSON.stringify({ title: 'The chain rule', page: 'new', items: [{ kind: 'math', text: "\\frac{d}{dx} f(g(x)) = f'(g(x))\\,g'(x)" }, { kind: 'tip', text: 'Outside first, then times the derivative of the inside' }] });
+  await E(m, { type: 'response.output_item.added', response_id: 'r2', output_index: 0, item: { id: 'fc1', type: 'function_call', status: 'in_progress', name: 'write_on_board', call_id: 'c1', arguments: '' } });
+  await E(m, { type: 'response.function_call_arguments.done', response_id: 'r2', item_id: 'fc1', output_index: 0, call_id: 'c1', arguments: a1 });
+  await E(m, { type: 'response.output_item.done', response_id: 'r2', output_index: 0, item: { id: 'fc1', type: 'function_call', status: 'completed', name: 'write_on_board', call_id: 'c1', arguments: a1 } });
   await E(m, { type: 'response.function_call_arguments.done', name: 'write_on_board', call_id: 'c3', arguments: JSON.stringify({ page: 'add', items: [{ kind: 'step', text: 'For $\\sin(x^2)$: $\\cos(x^2)\\cdot 2x$' }] }) });
   await E(m, { type: 'response.function_call_arguments.done', name: 'remember', call_id: 'c2', arguments: JSON.stringify({ fact: 'Mixes up inside and outside functions' }) });
   await E(m, { type: 'conversation.item.added', item: { id: 'b2', type: 'message', role: 'assistant', content: [] } });
@@ -99,11 +103,11 @@ const quiet = () => { try { const s = JSON.parse(localStorage.getItem('studyhub-
   const outs = (await sent(m)).filter(x => x.type === 'conversation.item.create' && x.item.type === 'function_call_output');
   const cb1 = await m.evaluate(() => { const b = document.querySelector('#bt-board'); return { title: (b.querySelector('.bb-title') || {}).textContent, items: [...b.querySelectorAll('.bb-item')].map(x => x.className.replace(/bb-item|bb-new/g, '').trim()), text: b.textContent }; });
   check('he writes a neat page: a title, the formula, a tip, then a step added to the same page', cb1.title === 'The chain rule' && cb1.items.join() === 'bb-math,bb-tip,bb-step' && /frac\{d\}\{dx\}/.test(cb1.text) && !/Nothing on the board/.test(cb1.text), cb1);
-  check('the page answers both board tools', outs.some(o => o.item.call_id === 'c1' && /"written":2/.test(o.item.output)) && outs.some(o => o.item.call_id === 'c3' && /"written":1/.test(o.item.output)), outs.map(o => o.item.output));
+  check('the page answers both board tools, once each (the arguments and the finished item are one call)', outs.filter(o => o.item.call_id === 'c1').length === 1 && outs.some(o => o.item.call_id === 'c1' && /"written":2/.test(o.item.output)) && outs.some(o => o.item.call_id === 'c3' && /"written":1/.test(o.item.output)), outs.map(o => o.item.output));
   check('his note is kept, and the page answers that tool too', outs.some(o => o.item.call_id === 'c2' && /saved/.test(o.item.output)) && /Bo will remember/.test(await txt(m, '.toast')));
   // he draws, too: a graph on a new page; a drawing that makes no sense goes back to him to fix
-  await E(m, { type: 'response.function_call_arguments.done', name: 'draw_on_board', call_id: 'c4', arguments: JSON.stringify({ title: 'y = sin(x^2)', page: 'new', caption: 'It wiggles faster as x grows', drawing: { type: 'graph', x: [0, 4], fns: [{ f: 'sin(x^2)', label: 'y = sin(x^2)' }], points: [{ x: 0, y: 0, label: 'O' }] } }) });
-  await E(m, { type: 'response.function_call_arguments.done', name: 'draw_on_board', call_id: 'c5', arguments: JSON.stringify({ drawing: { type: 'graph', fns: [{ f: 'alert(1)' }] } }) });
+  await E(m, { type: 'response.output_item.done', response_id: 'r3', output_index: 0, item: { id: 'fc4', type: 'function_call', status: 'completed', name: 'draw_on_board', call_id: 'c4', arguments: JSON.stringify({ title: 'y = sin(x^2)', page: 'new', caption: 'It wiggles faster as x grows', drawing: { type: 'graph', x: [0, 4], fns: [{ f: 'sin(x^2)', label: 'y = sin(x^2)' }], points: [{ x: 0, y: 0, label: 'O' }] } }) } });
+  await E(m, { type: 'response.function_call_arguments.done', call_id: 'c5', arguments: JSON.stringify({ drawing: { type: 'graph', fns: [{ f: 'alert(1)' }] } }) });   // no name at all: known by its arguments
   await m.waitForTimeout(400);
   const cbd = await m.evaluate(() => { const b = document.querySelector('#bt-board'); const svg = b.querySelector('.bb-draw svg'); return { title: (b.querySelector('.bb-title') || {}).textContent, pos: b.querySelector('.bb-pos').textContent, role: svg && svg.getAttribute('role'), name: svg && svg.querySelector('title').textContent, curve: !!b.querySelector('.bd-curve'), dot: !!b.querySelector('.bd-dot'), cap: (b.querySelector('.bd-cap') || {}).textContent, anim: !!b.querySelector('.bd.bd-anim') }; });
   check('he draws on the board too: a graph on a new page, drawn stroke by stroke, named for screen readers, with what to notice', cbd.title === 'y = sin(x^2)' && /Page 2 of 2/.test(cbd.pos) && cbd.role === 'img' && /Graph of y = sin\(x²\)/.test(cbd.name) && cbd.curve && cbd.dot && /wiggles faster/.test(cbd.cap) && cbd.anim, cbd);
@@ -112,6 +116,14 @@ const quiet = () => { try { const s = JSON.parse(localStorage.getItem('studyhub-
   check('an answer that already spoke is not asked for again', (await sent(m)).filter(x => x.type === 'response.create').length === 1);
   await E(m, { type: 'response.done', response: { output: [{ type: 'function_call' }] } });
   check('a turn that only used a tool asks Bo to go on talking', (await sent(m)).filter(x => x.type === 'response.create').length === 2);
+  const creates = async () => (await sent(m)).filter(x => x.type === 'response.create').length;
+  await E(m, { type: 'response.created', response: { id: 'r5' } }); await E(m, { type: 'response.output_audio_transcript.delta', item_id: 'b5', delta: 'Let me sketch that.' });
+  await E(m, { type: 'response.done', response: { output: [{ type: 'message' }, { type: 'function_call' }] } });
+  check('after a few words and a drawing ("let me sketch that"), Bo goes on to walk them through it', (await creates()) === 3);
+  await E(m, { type: 'response.created', response: { id: 'r6' } }); await E(m, { type: 'response.done', response: { output: [{ type: 'function_call' }] } });
+  check('but not more than twice in a row without them saying anything (no loops)', (await creates()) === 3);
+  await E(m, { type: 'input_audio_buffer.speech_started' }); await E(m, { type: 'response.created', response: { id: 'r7' } }); await E(m, { type: 'response.done', response: { output: [{ type: 'function_call' }] } });
+  check('once they talk again, he can go on after his tools again', (await creates()) === 4);
   // tapping Bo while he talks stops him at once
   await m.click('#bt-orb');
   check('tapping Bo while he talks stops him (cancel, and clear what is still playing)', (await sent(m)).some(x => x.type === 'response.cancel') && (await sent(m)).some(x => x.type === 'output_audio_buffer.clear'));
@@ -122,9 +134,10 @@ const quiet = () => { try { const s = JSON.parse(localStorage.getItem('studyhub-
   await m.keyboard.press('m');
   check('M unmutes', (await m.evaluate(() => window.__rt.mic.getAudioTracks().every(t => t.enabled))) && (await m.$eval('#bt-mute', b => b.getAttribute('aria-pressed'))) === 'false');
   // typing in the call
+  const before = (await sent(m)).filter(x => x.type === 'response.create').length;
   await m.click('[data-t="type"]'); await m.fill('#bt-q', 'Can you quiz me?'); await m.press('#bt-q', 'Enter');
   const typed = (await sent(m)).filter(x => x.type === 'conversation.item.create' && x.item.type === 'message');
-  check('typing in the call sends your words to Bo and asks him to answer', typed.some(x => x.item.content[0].text === 'Can you quiz me?') && (await sent(m)).filter(x => x.type === 'response.create').length === 3);
+  check('typing in the call sends your words to Bo and asks him to answer', typed.some(x => x.item.content[0].text === 'Can you quiz me?') && (await sent(m)).filter(x => x.type === 'response.create').length === before + 1);
   await E(m, { type: 'conversation.item.added', item: { id: 'u2', type: 'message', role: 'user', content: [{ type: 'input_text', text: 'Can you quiz me?' }] } });
   // settings
   await m.click('[data-t="settings"]'); await m.waitForTimeout(200);
