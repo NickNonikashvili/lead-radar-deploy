@@ -76,12 +76,13 @@
         cur.open = false; page(cur, false); cur = null;
       }
       const o = OPEN.exec(l); if (o) { wait = { title: o[2].trim(), cont: !!o[1] }; said = 0; return; }
+      if (/^\s*draw\s*:/i.test(l)) { const dm = /^\s*draw\s*:\s*(\{.*\})\s*$/i.exec(l); if (dm) { const isNew = !loose; if (isNew) loose = { title: '', items: [], open: false }; loose.items.push({ k: 'draw', t: dm[1] }); page(loose, isNew); } said = 0; return; }   // a drawing is never spoken
       sentences(l, said, true); said = 0;
     }
     return {
       push(t) {
         buf += t; let i; while ((i = buf.indexOf('\n')) >= 0) { const l = buf.slice(0, i); buf = buf.slice(i + 1); line(l); }
-        if (!cur && !wait && buf && !/^\s*\[/.test(buf)) said = sentences(buf, said, false);
+        if (!cur && !wait && buf && !/^\s*\[/.test(buf) && !/^\s*draw\s*:/i.test(buf)) said = sentences(buf, said, false);
       },
       end() { if (buf) { const l = buf; buf = ''; line(l); } if (wait) { const w = wait; wait = null; looseLine(w.title); } if (cur) { cur.open = false; page(cur, false); cur = null; } }
     };
@@ -213,7 +214,8 @@
      - live (default when the server has the speech key): a real-time voice conversation through OpenAI's
        Realtime API over WebRTC, set up by api/ai.php (ai_live_start). Bo hears you as you talk, answers in
        about half a second in a natural voice, waits until you are actually done, and stops when you talk over
-       him, like a phone call. Formulas go on his board (a tool he calls), notes he keeps through another.
+       him, like a phone call. Formulas go on his board and he draws graphs and figures there (tools he calls),
+       notes he keeps through another.
      - basic: when live calls are not switched on or cannot connect: the browser hears, Bo's answer streams from
        the chat, and he reads it out sentence by sentence.
      ============================================================ */
@@ -439,17 +441,26 @@
     tool(name, id, args) {
       let a = {}; try { a = JSON.parse(args || '{}'); } catch (e) {}
       let out;
+      // lines go on the page showing (page: add) or a new one; the chat keeps them as [board] text
+      const put = items => {
+        const title = String(a.title || '').trim().slice(0, 90); const last = T.pages[T.pages.length - 1]; const more = a.page === 'add' && !!last && (!title || title === last.title);
+        if (more) { last.items.push(...items); boardPage(last, false); } else boardPage({ title, items: items.slice(), open: false }, true);
+        this.boards.push({ title: more ? last.title : title, items: items.slice(), cont: more });
+      };
       if (name === 'write_on_board') {
         const BB = App.boBoard;
-        let items = (Array.isArray(a.items) ? a.items : []).map(x => ({ k: BB ? BB.kind(x && x.kind) : 'text', t: String((x && x.text) || '').trim().slice(0, 300) })).filter(x => x.t);
+        let items = (Array.isArray(a.items) ? a.items : []).map(x => ({ k: BB ? BB.kind(x && x.kind) : 'text', t: String((x && x.text) || '').trim().slice(0, 300) })).filter(x => x.t && x.k !== 'draw');
         if (!items.length && a.lines) items = [].concat(a.lines).map(x => ({ k: 'math', t: String(x || '').replace(/^\$+|\$+$/g, '').trim() })).filter(x => x.t);   // the first version of the tool
-        items = items.slice(0, 8); const title = String(a.title || '').trim().slice(0, 90);
-        const last = T.pages[T.pages.length - 1]; const more = a.page === 'add' && !!last && (!title || title === last.title);
-        if (items.length) {
-          if (more) { last.items.push(...items); boardPage(last, false); } else boardPage({ title, items: items.slice(), open: false }, true);
-          this.boards.push({ title: more ? last.title : title, items: items.slice(), cont: more });
-        }
+        items = items.slice(0, 8); if (items.length) put(items);
         out = items.length ? { written: items.length, page: T.pages.length } : { error: 'Nothing to write: give one to six items.' };
+      }
+      else if (name === 'draw_on_board') {
+        // a graph, number line, figure, table, chart or tree (assets/board-draw.js); a bad one is refused, so he can fix it
+        const D = App.boDraw; const d = a.drawing && typeof a.drawing === 'object' ? Object.assign({}, a.drawing) : null;
+        if (d && a.caption && !d.caption) d.caption = a.caption;
+        const sp = D && d ? D.parse(d) : null; const json = sp ? JSON.stringify(d) : '';
+        if (sp && json.length <= 6000) { put([{ k: 'draw', t: json }]); out = { drawn: sp.type, page: T.pages.length }; }
+        else out = { error: 'That drawing could not be drawn. Give drawing.type (graph, numberline, figure, table, bars, normal or tree) and its numbers; graph functions use x, like "x^2 - 3".' };
       }
       else if (name === 'remember') { const f = String(a.fact || '').trim().slice(0, 140); if (f) { this.notes.push(f); toast(`Bo will remember: ${f}`, 3500); } out = { saved: !!f }; }
       else out = { error: 'There is no such tool.' };

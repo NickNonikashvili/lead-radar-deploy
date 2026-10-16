@@ -19,8 +19,14 @@
      the chat fills in and Bo starts talking within a second or two. In voice mode (voice: 1) Bo answers the way
      a tutor talks, briefly and in words, and writes formulas on a whiteboard instead of reading them.
    - Bo's board: whatever he works out (the steps of a problem, a formula, the answer) he writes as a page of his
-     whiteboard, a [board: Title] … [/board] block with step:, math:, answer:, tip: and text: lines, which the
-     website draws neatly beside the chat and on calls (on a call through his write_on_board tool).
+     whiteboard, a [board: Title] … [/board] block with step:, math:, answer:, tip:, text: and draw: lines, which
+     the website draws neatly beside the chat and on calls (on a call through his write_on_board and
+     draw_on_board tools). A draw: line is a picture as one line of JSON: a graph, number line, figure, table,
+     bar chart, normal curve or probability tree (MH_AI_DRAW; drawn by assets/board-draw.js).
+   - How Bo teaches (MH_AI_TEACH, in the chat, voice and call instructions): what research on expert tutors and
+     learning says works: find out where the student is, the big picture first, one idea at a time, concrete
+     before abstract, a worked example and then fading, draw it, check with real questions, a hint ladder,
+     mistakes as information, a different angle when it didn't land, close the loop. Sources: docs/bo-teaching.md.
    - Bo's natural voice and listening on any browser (optional, openai_key in config.local.php): ai_speak turns
      one or two of Bo's sentences into speech, ai_listen turns a short recording of the student into text. No
      audio is kept. Without the key the browser's own speech recognition and voices are used.
@@ -310,11 +316,42 @@ function mh_ai_snapshot($s): string {
   return implode("\n", $L);
 }
 
+const MH_AI_TEACH = <<<'TXT'
+HOW YOU TEACH: what the best tutors do. Use it every time you explain something.
+1. Find out where they are first. If it isn't clear from what they said, ask one quick question: what have they tried, where does it stop making sense? Then pitch it there: new to it, teach it from the start; nearly there, just nudge. Notice how they feel too: stuck and stressed needs calm and smaller steps; confident needs a harder one.
+2. Big picture first: one plain sentence on what the idea is and what it's for, before any procedure ("a derivative is just the slope of the curve at one point").
+3. One idea at a time, in small steps, in order. Don't stack several new ideas together. Define a new word the first time you use it.
+4. Concrete before abstract: start from a simple case with real numbers, a picture or an everyday comparison, then give the general rule, and say how the two connect.
+5. Show, then fade. When the idea is new to them, work one complete example and say why each step happens, not only what you do. Then give a similar problem and hand more of it over each time: first just the next step, then the whole thing.
+6. Draw it. When a picture would make it click (a function, a slope, an area, a triangle, an interval, a distribution, a tree of outcomes, a table of values), put it on your board and refer to it ("see where the curve crosses zero"). Labels go right on the parts they name; mark the one thing that matters.
+7. Words and board together: explain the reasoning in words while the board holds the math and the picture. Never just read the board back.
+8. Check understanding with a real question, never "does that make sense?" or "any questions?": have them do the next step, predict what happens, say why a step works, or spot the mistake. One question, then wait for them.
+9. Let them do the thinking. Hints go up a ladder: a question that points the way, then a hint, then the first step, then the full worked solution. Give the full solution when they ask for it or are still stuck after a couple of hints.
+10. Mistakes are information: say exactly what went wrong and why it's tempting, show that it fails (plug it back in, a quick counterexample), and let them fix it. Praise the specific thinking ("nice, you checked the sign"), not "great job".
+11. Didn't land? Change the angle: a simpler example, a picture, a different comparison. Never repeat the same words louder.
+12. Close the loop: end with the key idea in one sentence and what to do next (a practice problem, a section, a flashcard set).
+13. Be exactly right: work the math carefully and check it (substitute back, estimate). Use their class's notation. If you're not sure, say so.
+TXT;
+
+const MH_AI_DRAW = <<<'TXT'
+DRAWINGS on your board: a line "draw: " followed by one line of JSON, one of these (leave out keys you don't need):
+- graph: {"type":"graph","x":[-4,4],"fns":[{"f":"x^2-3","label":"y = x^2 - 3"}],"points":[{"x":2,"y":1,"label":"(2, 1)"}]}
+  f is in x with + - * / ^ ( ), sqrt, abs, sin, cos, tan, ln, log, exp, pi, e (radians). Also: "y":[min,max] (found if left out); in a fn "domain":[a,b], "dash":true, "color":"red"; a point "open":true (a hole); "shade":{"f":"x^2-3","g":"0","from":0,"to":2} (the area between f and g); "segments":[{"from":[0,-3],"to":[2,1],"dash":true,"arrow":true,"label":"secant"}]; "vlines":[{"x":1,"label":"x = 1"}] and "hlines":[{"y":0}] (dashed: asymptotes, guides); "notes":[{"x":1,"y":4,"text":"max"}]; "xlabel", "ylabel"; "equal":true (same scale both ways). A parametric curve: {"x":"cos(t)","y":"sin(t)","t":[0,6.28]}.
+- numberline: {"type":"numberline","min":-3,"max":6,"points":[{"x":2,"open":true,"label":"2"}],"intervals":[{"from":2,"to":null,"left":"open"}]} (null runs on forever; "left"/"right" are "open" or "closed")
+- figure, for triangles, any shape, vectors, forces and diagrams, in coordinates you choose (y up): {"type":"figure","shapes":[{"kind":"polygon","points":[[0,0],[4,0],[4,3]],"labels":["A","B","C"]},{"kind":"segment","from":[0,0],"to":[4,0],"label":"4"},{"kind":"angle","at":[4,0],"from":[0,0],"to":[4,3],"right":true},{"kind":"angle","at":[0,0],"from":[4,0],"to":[4,3],"label":"θ"}]}
+  kinds: point (at, label), segment and arrow (from, to, label), polygon and curve (points, labels for the vertices), circle (center, r), angle (at, from, to, label, right), text (at, text), rect (at is the lower-left corner, w, h, text); any of them can take "color", "dash", "fill".
+- table: {"type":"table","head":["x","f(x)"],"rows":[["0","1"],["1","3"]]} (cells may use $math$)
+- bars: {"type":"bars","bars":[{"label":"A","value":3},{"label":"B","value":5}],"ylabel":"count"} ("hist":true for a histogram, "highlight":1 marks a bar)
+- normal: {"type":"normal","mean":100,"sd":15,"from":115,"to":null,"label":"IQ"} (shades from..to; null is that whole tail)
+- tree: {"type":"tree","branches":[{"label":"H","p":"1/2","children":[{"label":"H","p":"1/2","result":"HH 1/4"},{"label":"T","p":"1/2","result":"HT 1/4"}]},{"label":"T","p":"1/2"}]}
+Any drawing can have "caption":"what to notice". Labels are short plain text (x^2, θ, π and 1/2 are fine). Valid JSON on one line, at most two drawings on a page, the steps under them. Colors: blue, red, green, purple, orange, gray.
+TXT;
+
 const MH_AI_BO = <<<'TXT'
 You are Bo, the bobcat who tutors students on Mathub, a study app for Montana State University students. You talk with one student. Below you get their class (from its syllabus) and how their studying is going; use it when it helps (their exam dates, weakest topics, questions they missed) without reciting it.
 How you help:
-- Warm, direct, brief: short paragraphs, under about 150 words unless they ask for more or a worked solution needs it.
-- Teach, don't just tell: check what they know, give a hint first on problems, then the full worked solution if they ask or stay stuck. Often end with one short question or a quick practice problem.
+- Warm, direct and clear, like the best tutor they've had. Keep the chat itself short (under about 150 words): your board carries the worked math and the pictures, so the chat is the talking around them. Go longer only when they ask for more.
+- Teach the way the HOW YOU TEACH rules below say.
 - Graded work (a graded assignment, quiz or take-home exam, or one in progress): explain the method with a similar example instead of answering it. Never help during an exam.
 - Use the class facts exactly. If something is not in what you know, say so and suggest the syllabus, Canvas or the instructor.
 - Plans: use their real dates, readiness and due flashcards, and name Mathub's tools (lessons, Practice, Flashcards, Exam prep, Focus timer).
@@ -326,18 +363,20 @@ math: a formula or equation on its own line (LaTeX)
 answer: $the final result$
 tip: a quick check, shortcut or common mistake
 text: a short sentence, only when needed
+draw: a graph, number line, figure, table, chart or tree, as one line of JSON (see DRAWINGS)
 [/board]
-  Keep each page neat: steps in order, one step and one equation per line, at most about 8 lines, the answer once at the end. Around the board just talk, in a sentence or two (what you did, a question back); never repeat the board's math in the chat. When you give a hint first, the page holds only the setup and the first step. Plain questions get plain answers, no board.
+  Keep each page neat: a drawing first when it helps, then the steps in order, one step and one equation per line, at most about 8 lines, the answer once at the end. Around the board just talk, in a sentence or two (what you did, what to notice, a question back); never repeat the board's math in the chat. When you give a hint first, the page holds only the setup and the first step. Plain questions get plain answers, no board.
 - When they tell you something worth remembering for later chats (how they like to learn, a goal, a recurring difficulty), end your reply with one line: [remember: short fact]. Never store sensitive personal details.
 - If they seem in crisis or mention self-harm, respond with care and give: MSU Counseling & Psychological Services 406-994-4531, call or text 988, or 911 in an emergency.
 - Stay on studying, their classes and student life. Decline harmful requests. No medical, legal or financial advice. You are an AI and can be wrong; say when you are unsure.
 TXT;
+const MH_AI_BO_FULL = MH_AI_BO . "\n\n" . MH_AI_TEACH . "\n\n" . MH_AI_DRAW;
 
 const MH_AI_VOICE = <<<'TXT'
 VOICE MODE: the student is talking with you out loud, and your reply is read aloud to them in your voice.
-- Talk like a tutor sitting next to them: 1 to 4 short sentences, under about 70 words. Plain spoken English: no lists, headings, markdown, emoji or LaTeX in what you say.
+- Talk like a tutor sitting next to them: usually 1 to 4 short sentences, under about 70 words. When you explain something new, take up to about 120 words to do it properly (the big idea, the example on the board, why it works), then check with one question. Plain spoken English: no lists, headings, markdown, emoji or LaTeX in what you say.
 - Say math the way a teacher reads it aloud: "x squared plus three x", "the derivative of sine x is cosine x", "one half".
-- When seeing it helps (a formula, an equation, the steps of a problem), also write it on your whiteboard, as a block on lines of its own: [board: A short title], then lines like "step: what you do: $math$", "math: LaTeX", "answer: $result$" or "tip: a short note", then [/board]. At most one page per reply, about six lines. The board is shown, never read aloud, so still say the idea in words.
+- When seeing it helps (a formula, an equation, the steps of a problem, a graph or a figure), also put it on your whiteboard, as a block on lines of its own: [board: A short title], then lines like "draw: {…}" (see DRAWINGS), "step: what you do: $math$", "math: LaTeX", "answer: $result$" or "tip: a short note", then [/board]. At most one page per reply, about six lines. The board is shown, never read aloud, so say the idea in words and point at it ("see the dip at x equals 2?").
 - One question at a time, then stop and let them answer. When quizzing: ask one question, wait, then say if they were right and why in a sentence, and ask the next one.
 - Speech recognition sometimes mishears math words ("sign" for "sine", "x cute" for "x cubed"): read their words generously, and ask when it is unclear.
 - For something long (a full worked solution, a study plan), give the first step or the short version and offer to keep going step by step.
@@ -370,15 +409,26 @@ function mh_ai_live_today(int $uid): int {
 function mh_ai_live_left(int $uid, array $V): int { return max(0, min($V['live_monthly'] - mh_ai_usage($uid)['live'], $V['live_daily'] - mh_ai_live_today($uid))); }
 
 const MH_AI_LIVE = <<<'TXT'
-You are Bo, the bobcat tutor from Mathub, on a live voice call with a Montana State University student. You're like a friend a year ahead of them who is really good at this class: relaxed, warm, quick, a bit funny. This is a real conversation, not a help desk.
+You are Bo, the bobcat tutor from Mathub, on a live voice call with a Montana State University student. You're the best tutor they've ever had, and also like a friend a year ahead of them: relaxed, warm, quick, a bit funny, and really good at explaining. This is a real conversation, not a help desk.
 
 How you sound:
-- Talk like a person, not an assistant. Short turns, usually one to three sentences, then hand it back. Contractions, everyday words, natural reactions: "oh nice", "hmm, not quite", "yeah, exactly", "okay so", "wait, say that again?". Vary how you start sentences.
-- Never say things like "How can I help you today", "Great question", "I'd be happy to help", "As an AI" or "Let me know if you have any other questions". Don't announce what you're about to do; just do it.
-- Match their energy. If they're stressed, slow down and be reassuring. If they joke around, joke back a little, then steer back to the work.
+- Talk like a person, not an assistant: contractions, everyday words, natural reactions ("oh nice", "hmm, not quite", "okay so", "wait, say that again?"). Vary how you start sentences.
+- Never say things like "How can I help you today", "Great question", "I'd be happy to help", "As an AI" or "Let me know if you have any other questions".
+- Match their energy. Stressed: slow down, reassure, smaller steps. Joking around: joke back a little, then back to the work.
 - If they cut in, stop and go with what they said. Don't start over.
-- Ask more than you tell: find out what they think first, give a nudge, let them try, and react to their answer like a person would. Explain only as much as they need right now.
-- Say math the way people say it out loud ("x squared", "the derivative of sine is cosine", "a half"). When seeing it would help (an equation, a formula, the steps of a problem), call write_on_board and keep talking naturally ("okay, it's on the board"). Write neatly: a short title, one step per line with its math, the answer once at the end. Start a new page for a new problem; add to the page you're on as you work through it together.
+- Turn length: chatting, checking in and quizzing stay short (one to three sentences). Explaining something new does not: take a proper turn of four to seven sentences, about 20 to 40 seconds, with the board doing the math, then stop and check. Never explain in one-line crumbs, and never go past about 40 seconds without checking in.
+- Pace: a touch slower on the key idea, with a short pause after it. Say math the way people say it out loud ("x squared", "the derivative of sine is cosine", "a half"); never read out symbols or LaTeX.
+- How an explanation goes on a call: the big idea in a sentence, then put it on the board (a drawing or the first steps), then walk them through it in words, pointing at what's on the board ("see the red dot where it crosses zero?"), then one question to check.
+
+Your board (the student sees it right next to you):
+- write_on_board: the steps of a problem, an equation, a formula, the answer. A short title; one step per line with its math; the answer once at the end. A new problem gets a new page; add to the page while you work through one together.
+- draw_on_board: whenever a picture explains it better. Graph a function (mark points, shade an area, draw a tangent line or an asymptote), a number line for an inequality or interval, a triangle or any figure (angles, sides, vectors, forces), a table of values, a bar chart, a normal curve with the shaded area, a probability tree. Draw it first, then talk them through it.
+- Say something while it goes up ("let me sketch that", "okay, it's up"); never go quiet, and never read the board back symbol by symbol. If a drawing comes back with an error, fix it and draw again.
+
+TXT;
+
+const MH_AI_LIVE_REST = <<<'TXT'
+More:
 - Quizzing: one question, wait for their answer, react, then the next one.
 - Use what you know about them below (exam dates, weakest topics, recent mistakes, your notes) the way a friend who remembers would: bring it up when it fits, never recite it.
 - If they tell you something worth remembering for next time (how they learn best, a goal, a recurring struggle), call remember with a short fact. Never store sensitive personal details.
@@ -389,11 +439,10 @@ How you sound:
 
 Start of the call: you speak first. One quick, warm line, like you're glad they called: their first name if you know it, maybe something real that's coming up, and what they want to get into. Under about 15 words.
 TXT;
-
 /** Bo's instructions for a live call: his persona, then what he knows (class, today, progress, notes, the recent chat). */
 function mh_ai_live_instructions(int $uid, string $cid, ?array $C, array $in): string {
   $today = preg_match('/^\d{4}-\d{2}-\d{2}$/', (string)($in['today'] ?? '')) ? (string)$in['today'] : gmdate('Y-m-d');
-  $notes = mh_ai_notes($uid); $parts = [MH_AI_LIVE];
+  $notes = mh_ai_notes($uid); $parts = [MH_AI_LIVE . "\n" . MH_AI_TEACH . "\n\n" . MH_AI_LIVE_REST];
   if ($C) $parts[] = mh_ai_digest($C);
   $parts[] = implode("\n", array_filter(['TODAY: ' . $today, $C ? mh_ai_upcoming($C, $today) : '', mh_ai_snapshot($in['snapshot'] ?? null), $notes ? "WHAT YOU REMEMBER ABOUT THEM:\n- " . implode("\n- ", $notes) : '']));
   $turns = array_slice(mh_ai_turns($uid, $cid), -6);
@@ -405,7 +454,7 @@ function mh_ai_unboard(string $t): string {
   $t = preg_replace('/\[board\+?:\s*([^\]\n]*)\]\s*\n.*?\[\/board\]/is', ' [on the board: $1] ', $t);
   return trim(preg_replace('/\[(board\+?|remember):[^\]]*\]|\[\/board\]/i', ' ', $t));
 }
-/** The tools Bo has on a call: the board, and his notes. */
+/** The tools Bo has on a call: the board (writing and drawing, see assets/board-draw.js), and his notes. */
 function mh_ai_live_tools(): array {
   return [
     ['type' => 'function', 'name' => 'write_on_board', 'description' => 'Write on the whiteboard next to you, neatly, while you talk: the steps of a problem, an equation, a formula, the answer. The student sees it; you still talk it through in words.', 'parameters' => ['type' => 'object', 'properties' => [
@@ -414,6 +463,40 @@ function mh_ai_live_tools(): array {
       'items' => ['type' => 'array', 'description' => 'One to six lines, in order.', 'items' => ['type' => 'object', 'properties' => [
         'kind' => ['type' => 'string', 'enum' => ['step', 'math', 'answer', 'tip', 'text']],
         'text' => ['type' => 'string', 'description' => 'step: what you do in a few words, then its math in $...$. math: just the LaTeX. answer: the result, math in $...$. tip and text: one short line, math in $...$.']], 'required' => ['kind', 'text']]]], 'required' => ['items']]],
+    ['type' => 'function', 'name' => 'draw_on_board', 'description' => 'Draw on the whiteboard next to you: a graph of functions (with points, a shaded area, segments or vectors, asymptotes), a number line with points and intervals, a figure (triangles, any shape, angles, vectors, forces, diagrams), a table of values, a bar chart or histogram, a normal curve with a shaded region, or a probability tree. The student sees it drawn; you talk them through it.', 'parameters' => ['type' => 'object', 'properties' => [
+      'title' => ['type' => 'string', 'description' => 'A short title for the page, when it starts a new one.'],
+      'page' => ['type' => 'string', 'enum' => ['new', 'add'], 'description' => 'new: a fresh page. add: draw on the page you are on, under what is there.'],
+      'caption' => ['type' => 'string', 'description' => 'One short line: what to notice.'],
+      'drawing' => ['type' => 'object', 'description' => 'Give type and the keys that type uses; leave the rest out. Labels are short plain text (x^2, θ, π, 1/2 are fine).', 'properties' => [
+        'type' => ['type' => 'string', 'enum' => ['graph', 'numberline', 'figure', 'table', 'bars', 'normal', 'tree']],
+        'fns' => ['type' => 'array', 'description' => 'graph: the curves. f is in x: + - * / ^ ( ), sqrt, abs, sin, cos, tan, ln, log, exp, pi, e (radians), like "x^2 - 3". A parametric curve has x and y in t instead, with t: [start, end].', 'items' => ['type' => 'object', 'properties' => ['f' => ['type' => 'string'], 'x' => ['type' => 'string'], 'y' => ['type' => 'string'], 't' => ['type' => 'array', 'items' => ['type' => 'number']], 'label' => ['type' => 'string'], 'domain' => ['type' => 'array', 'items' => ['type' => 'number'], 'description' => '[from, to]'], 'dash' => ['type' => 'boolean'], 'color' => ['type' => 'string', 'enum' => ['blue', 'red', 'green', 'purple', 'orange', 'gray']]]]],
+        'x' => ['type' => 'array', 'items' => ['type' => 'number'], 'description' => 'graph: [xmin, xmax].'],
+        'y' => ['type' => 'array', 'items' => ['type' => 'number'], 'description' => 'graph: [ymin, ymax]; found from the curves if left out.'],
+        'points' => ['type' => 'array', 'description' => 'graph and numberline: points to mark (numberline uses only x). open: a hollow dot (a hole, or an excluded endpoint).', 'items' => ['type' => 'object', 'properties' => ['x' => ['type' => 'number'], 'y' => ['type' => 'number'], 'label' => ['type' => 'string'], 'open' => ['type' => 'boolean'], 'color' => ['type' => 'string']]]],
+        'shade' => ['type' => 'object', 'description' => 'graph: shade the area between f and g (default 0, the x-axis) from x = from to x = to.', 'properties' => ['f' => ['type' => 'string'], 'g' => ['type' => 'string'], 'from' => ['type' => 'number'], 'to' => ['type' => 'number']]],
+        'segments' => ['type' => 'array', 'description' => 'graph: straight lines between two points, like a secant or tangent line; arrow: true for a vector.', 'items' => ['type' => 'object', 'properties' => ['from' => ['type' => 'array', 'items' => ['type' => 'number']], 'to' => ['type' => 'array', 'items' => ['type' => 'number']], 'label' => ['type' => 'string'], 'dash' => ['type' => 'boolean'], 'arrow' => ['type' => 'boolean'], 'color' => ['type' => 'string']]]],
+        'vlines' => ['type' => 'array', 'description' => 'graph: dashed vertical lines, like asymptotes.', 'items' => ['type' => 'object', 'properties' => ['x' => ['type' => 'number'], 'label' => ['type' => 'string']]]],
+        'hlines' => ['type' => 'array', 'description' => 'graph: dashed horizontal lines.', 'items' => ['type' => 'object', 'properties' => ['y' => ['type' => 'number'], 'label' => ['type' => 'string']]]],
+        'notes' => ['type' => 'array', 'description' => 'graph: short text at a point.', 'items' => ['type' => 'object', 'properties' => ['x' => ['type' => 'number'], 'y' => ['type' => 'number'], 'text' => ['type' => 'string']]]],
+        'xlabel' => ['type' => 'string'], 'ylabel' => ['type' => 'string'],
+        'equal' => ['type' => 'boolean', 'description' => 'graph: the same scale on both axes (circles look round).'],
+        'min' => ['type' => 'number', 'description' => 'numberline: left end.'], 'max' => ['type' => 'number', 'description' => 'numberline: right end.'],
+        'intervals' => ['type' => 'array', 'description' => 'numberline: shaded intervals; from or to null runs on forever; left and right are open or closed.', 'items' => ['type' => 'object', 'properties' => ['from' => ['type' => ['number', 'null']], 'to' => ['type' => ['number', 'null']], 'left' => ['type' => 'string', 'enum' => ['open', 'closed']], 'right' => ['type' => 'string', 'enum' => ['open', 'closed']]]]],
+        'shapes' => ['type' => 'array', 'description' => 'figure: shapes in coordinates you choose, y up, the same scale both ways. point (at, label); segment and arrow (from, to, label); polygon and curve (points, labels for the vertices); circle (center, r); angle (at = the vertex, from and to = points on its two sides, label, right: true for a right angle); text (at, text); rect (at = lower-left corner, w, h, text).', 'items' => ['type' => 'object', 'properties' => [
+          'kind' => ['type' => 'string', 'enum' => ['point', 'segment', 'arrow', 'polygon', 'curve', 'circle', 'angle', 'text', 'rect']],
+          'at' => ['type' => 'array', 'items' => ['type' => 'number']], 'from' => ['type' => 'array', 'items' => ['type' => 'number']], 'to' => ['type' => 'array', 'items' => ['type' => 'number']],
+          'points' => ['type' => 'array', 'items' => ['type' => 'array', 'items' => ['type' => 'number']]], 'labels' => ['type' => 'array', 'items' => ['type' => 'string']],
+          'center' => ['type' => 'array', 'items' => ['type' => 'number']], 'r' => ['type' => 'number'], 'w' => ['type' => 'number'], 'h' => ['type' => 'number'],
+          'label' => ['type' => 'string'], 'text' => ['type' => 'string'], 'right' => ['type' => 'boolean'], 'fill' => ['type' => 'boolean'], 'dash' => ['type' => 'boolean'], 'color' => ['type' => 'string']]]],
+        'head' => ['type' => 'array', 'items' => ['type' => 'string'], 'description' => 'table: column headings.'],
+        'rows' => ['type' => 'array', 'items' => ['type' => 'array', 'items' => ['type' => 'string']], 'description' => 'table: the rows (up to 12).'],
+        'bars' => ['type' => 'array', 'description' => 'bars: one per bar.', 'items' => ['type' => 'object', 'properties' => ['label' => ['type' => 'string'], 'value' => ['type' => 'number']]]],
+        'hist' => ['type' => 'boolean', 'description' => 'bars: a histogram (no gaps).'],
+        'mean' => ['type' => 'number', 'description' => 'normal: the mean.'], 'sd' => ['type' => 'number', 'description' => 'normal: the standard deviation.'],
+        'from' => ['type' => ['number', 'null'], 'description' => 'normal: shade from here (null: the whole left tail).'], 'to' => ['type' => ['number', 'null'], 'description' => 'normal: shade to here (null: the whole right tail).'],
+        'label' => ['type' => 'string', 'description' => 'normal: what the values are.'],
+        'branches' => ['type' => 'array', 'description' => 'tree: the first branches; each has label, p (its probability, like "1/2"), children (the same shape, up to three levels) and, at the ends, result (like "HH 1/4").', 'items' => ['type' => 'object', 'properties' => ['label' => ['type' => 'string'], 'p' => ['type' => 'string'], 'result' => ['type' => 'string'], 'children' => ['type' => 'array', 'items' => ['type' => 'object']]]]]
+      ], 'required' => ['type']]], 'required' => ['drawing']]],
     ['type' => 'function', 'name' => 'remember', 'description' => 'Save one short fact about the student for future sessions: how they learn best, a goal, a recurring difficulty. Never sensitive personal details.', 'parameters' => ['type' => 'object', 'properties' => ['fact' => ['type' => 'string', 'description' => 'Under 20 words.']], 'required' => ['fact']]],
   ];
 }
@@ -531,7 +614,7 @@ function mh_ai_route(string $route, array $in, array $cfg, string $ip): void {
       mh_rate_or_fail("ai_tutor_day:$uid", $A['tutor_daily'], 86400, 'That is a lot of questions for one day. Bo will be back tomorrow.');
       $C = mh_ai_class($u, $cid);
       $today = preg_match('/^\d{4}-\d{2}-\d{2}$/', (string)($in['today'] ?? '')) ? (string)$in['today'] : gmdate('Y-m-d');
-      $system = [['type' => 'text', 'text' => MH_AI_BO]];
+      $system = [['type' => 'text', 'text' => MH_AI_BO_FULL]];
       if ($C) $system[] = ['type' => 'text', 'text' => mh_ai_digest($C), 'cache_control' => ['type' => 'ephemeral']];
       else $system[0]['cache_control'] = ['type' => 'ephemeral'];
       $voice = !empty($in['voice']); $stream = !empty($in['stream']);
@@ -541,14 +624,14 @@ function mh_ai_route(string $route, array $in, array $cfg, string $ip): void {
       if ($voice) $system[] = ['type' => 'text', 'text' => MH_AI_VOICE];
       // the last few turns, oldest first, starting with the student
       $turns = mh_ai_turns($uid, $cid); $msgs = [];
-      foreach (array_slice($turns, -MH_AI_TURNS_SENT) as $t) { $role = ($t['r'] ?? '') === 'b' ? 'assistant' : 'user'; $txt = mh_ai_clip($t['t'] ?? '', $role === 'assistant' ? 1400 : 900); if ($txt === '') continue; if ($msgs && end($msgs)['role'] === $role) { $msgs[count($msgs) - 1]['content'] .= "\n" . $txt; continue; } $msgs[] = ['role' => $role, 'content' => $txt]; }
+      foreach (array_slice($turns, -MH_AI_TURNS_SENT) as $t) { $role = ($t['r'] ?? '') === 'b' ? 'assistant' : 'user'; $txt = mh_ai_clip($t['t'] ?? '', $role === 'assistant' ? 2400 : 900); if ($txt === '') continue; if ($msgs && end($msgs)['role'] === $role) { $msgs[count($msgs) - 1]['content'] .= "\n" . $txt; continue; } $msgs[] = ['role' => $role, 'content' => $txt]; }
       while ($msgs && $msgs[0]['role'] !== 'user') array_shift($msgs);
       if ($msgs && end($msgs)['role'] === 'user') array_pop($msgs);
       $content = []; if ($img) $content[] = ['type' => 'image', 'source' => ['type' => 'base64', 'media_type' => $img['type'], 'data' => $img['data']]];
       $content[] = ['type' => 'text', 'text' => $q !== '' ? $q : 'Can you help me with this?'];
       $msgs[] = ['role' => 'user', 'content' => $content];
       @set_time_limit(90);
-      $max = $voice ? 550 : 1000;   // room for a page of the board
+      $max = $voice ? 800 : 1500;   // room for a page of the board, with a drawing
       if ($stream) { @ignore_user_abort(true); $r = mh_ai_stream($A, $A['tutor_model'], $system, $msgs, $max, 60, function (string $t): void { mh_ai_emit(['t' => 'd', 'x' => $t]); }); }
       else $r = mh_ai_call($A, $A['tutor_model'], $system, $msgs, $max, 60);
       $reply = trim($r['text']); $remembered = null;
@@ -620,7 +703,7 @@ function mh_ai_route(string $route, array $in, array $cfg, string $ip): void {
       $hint = 'A college student on a call with their tutor about math and their class.';
       if ($C) { $w = [mh_ai_plain($C['code'] ?? '', 20), mh_ai_plain($C['name'] ?? '', 60)]; foreach (array_slice((array)($C['SECTIONS'] ?? []), 0, 40) as $sec) if (is_array($sec)) $w[] = mh_ai_plain($sec['title'] ?? '', 40); $hint .= ' Topics: ' . mb_substr(implode(', ', array_filter($w)), 0, 600); }
       $sys = mh_ai_live_instructions($uid, $cid, $C, $in);
-      $full = ['type' => 'realtime', 'model' => $V['live_model'], 'instructions' => $sys, 'output_modalities' => ['audio'], 'max_output_tokens' => 900,
+      $full = ['type' => 'realtime', 'model' => $V['live_model'], 'instructions' => $sys, 'output_modalities' => ['audio'], 'max_output_tokens' => 1600,
         'audio' => ['input' => ['noise_reduction' => ['type' => 'near_field'], 'transcription' => ['model' => 'gpt-4o-mini-transcribe', 'language' => 'en', 'prompt' => $hint], 'turn_detection' => ['type' => 'semantic_vad', 'eagerness' => $eager, 'create_response' => true, 'interrupt_response' => true]],
                     'output' => array_merge(['voice' => $voice], $speed != 1.0 ? ['speed' => $speed] : [])],
         'tools' => mh_ai_live_tools(), 'tool_choice' => 'auto'];

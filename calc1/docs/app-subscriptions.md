@@ -112,7 +112,10 @@ turn detection, with a setting for how quickly he jumps in), and stops the momen
   instructions are his live persona (a friend a year ahead who is great at the class, not an assistant: short turns,
   real reactions, asks more than tells, no help-desk phrases), the class summary, today, the progress snapshot, his
   notes and the last six chat turns.
-- **Tools:** `write_on_board` (LaTeX on his whiteboard while he talks) and `remember` (a note for next time).
+- **Tools:** `write_on_board` (LaTeX on his whiteboard while he talks), `draw_on_board` (a graph, number line,
+  figure, table, chart, normal curve or probability tree on the same board) and `remember` (a note for next time).
+- **How he teaches:** the rules in `docs/bo-teaching.md`; on a call he takes a proper turn (about 20 to 40 seconds)
+  to explain something new, with the board, then checks with a real question.
 - **Minutes:** the browser reports every 30 seconds (`ai_live_tick`); past a limit the server hangs the call up
   (`/v1/realtime/calls/{id}/hangup`), as it does for calls that stop reporting (housekeeping) and for the old call
   when a new one starts. Limits per account: `ai_live_call` (30 minutes a call), `ai_live_daily` (90 a day),

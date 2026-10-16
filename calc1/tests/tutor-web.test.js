@@ -109,6 +109,27 @@ const PNG = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwA
   // the chat is kept with the account
   await m.reload(); await m.waitForTimeout(2200);
   check('the chat is still there after a reload (kept with the account), and so are the pages of the board', (await m.$$('#bo-log .bo-msg.you')).length === 4 && (await m.$$('#bo-log .bo-msg.bo')).length === 4 && /Page 2 of 2/.test(await txt(m, '#bo-board .bb-pos')));
+  // he draws: a graph on his board, with the steps under it
+  await m.fill('#bo-q', 'Can you graph x^2 - 3 and show me where it is negative?'); await m.keyboard.press('Enter'); await m.waitForTimeout(4500);
+  const dw = await m.evaluate(() => { const b = document.querySelector('#bo-board'); const f = b.querySelector('.bb-draw'); const svg = f && f.querySelector('svg'); return { title: (b.querySelector('.bb-title') || {}).textContent, first: b.querySelector('.bb-items > *') === f, role: svg && svg.getAttribute('role'), name: svg && svg.querySelector('title').textContent, curve: !!b.querySelector('.bd-curve'), shade: !!b.querySelector('.bd-fill'), dots: b.querySelectorAll('.bd-dot').length, ticks: b.querySelectorAll('.bd-tick').length, cap: (b.querySelector('.bd-cap') || {}).textContent, step: !!b.querySelector('.bb-step'), answer: !!b.querySelector('.bb-answer'), chip: (document.querySelector('#bo-log .bo-msg.bo:last-of-type .bo-onb') || {}).textContent, chat: (document.querySelector('#bo-log .bo-msg.bo:last-of-type') || {}).textContent }; });
+  check('Bo draws: the graph comes first on the page (curve, shaded part, the roots marked, numbered axes, what to notice), then the steps and the answer', dw.title === 'Where y = x^2 - 3 is below zero' && dw.first && dw.role === 'img' && /Graph of y = x² - 3/.test(dw.name) && dw.curve && dw.shade && dw.dots === 2 && dw.ticks > 6 && /Below zero between the two roots/.test(dw.cap) && dw.step && dw.answer, dw);
+  check('the chat links to that page and never shows the drawing\'s code', /On the board: Where y = x\^2 - 3 is below zero/.test(dw.chip || '') && !/"type":"graph"/.test(dw.chat) && /See the red part\?/.test(dw.chat), dw.chat);
+  await m.reload(); await m.waitForTimeout(2200);
+  check('the drawing is still on the board after a reload', !!(await m.$('#bo-board .bb-draw svg .bd-curve')) && !(await m.$('#bo-board .bd.bd-anim')));
+  const kinds = await m.evaluate(() => { const D = App.boDraw; return [
+    { type: 'graph', fns: [{ f: '1/(x-1)', label: 'y = 1/(x - 1)' }, { x: 'cos(t)', y: 'sin(t)', t: [0, 6.3] }], vlines: [{ x: 1, label: 'x = 1' }], points: [{ x: 0, y: -1, open: true }], segments: [{ from: [0, 0], to: [1, 1], arrow: true }] },
+    { type: 'numberline', min: -3, max: 5, points: [{ x: 2, open: true }], intervals: [{ from: 2, to: null, left: 'open' }] },
+    { type: 'figure', shapes: [{ kind: 'polygon', points: [[0, 0], [4, 0], [4, 3]], labels: ['A', 'B', 'C'] }, { kind: 'angle', at: [4, 0], from: [0, 0], to: [4, 3], right: true }, { kind: 'circle', center: [0, 0], r: 1 }, { kind: 'arrow', from: [0, 0], to: [2, 2], label: 'F' }, { kind: 'rect', at: [5, 0], w: 2, h: 1, text: 'box' }] },
+    { type: 'table', head: ['x', 'y'], rows: [['0', '$1$']] },
+    { type: 'bars', bars: [{ label: 'A', value: 3 }, { label: 'B', value: -2 }], hist: true },
+    { type: 'normal', mean: 70, sd: 8, from: null, to: 62 },
+    { type: 'tree', branches: [{ label: 'H', p: '1/2', children: [{ label: 'H', p: '1/2', result: 'HH 1/4' }] }, { label: 'T', p: '1/2' }] }
+  ].map(o => { const sp = D.parse(JSON.stringify(o)); const h = sp ? D.html(sp, false) : ''; return [o.type, !!sp, /<svg|<table/.test(h), /NaN|undefined|Infinity/.test(h), D.plain(sp).length > 10]; }); });
+  check('every kind of drawing draws cleanly and has words for screen readers: graph, number line, figure, table, bars, normal curve, tree', kinds.every(k => k[1] && k[2] && !k[3] && k[4]), kinds);
+  const bad = await m.evaluate(() => { const D = App.boDraw; return [D.parse('{"type":"graph","fns":[{"f":"alert(1)"}]}'), D.parse('{"type":"script"}'), D.parse('not json'), D.html(D.parse({ type: 'table', head: ['<script>alert(1)</script>'], rows: [['<img src=x onerror=alert(1)>']] }))]; });
+  check('a drawing is only data: code, unknown kinds and broken JSON are refused, and its text is escaped', bad[0] === null && bad[1] === null && bad[2] === null && !/<script|<img/.test(bad[3]) && /&lt;script&gt;/.test(bad[3]), bad);
+  const st = await m.evaluate(() => { const sp = App.boBoard.split('Here it is.\ndraw: {"type":"table","head":["x"],"rows":[["1"]]}\nWhat do you see?', false); const live = App.boBoard.split('Look:\ndraw: {"type":"tab', true); return { say: sp.say, kinds: sp.pages.map(p => p.items.map(i => i.k).join()).join(), liveSay: live.say, livePages: live.pages.length }; });
+  check('a drawing written outside a page still goes on the board, and its JSON never shows in the chat (not even half-written)', st.say === 'Here it is.\n\u00020\u0002\nWhat do you see?' && st.kinds === 'draw' && !/draw/.test(st.liveSay) && st.livePages === 0, st);
   // exam week leads to Bo
   await go(m, '#/calc/dashboard', 1800);
   const quiz = await m.$eval('.xw-dash .xw-item[href^="#/tutor/"]', x => x.getAttribute('href'));
@@ -146,7 +167,7 @@ const PNG = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwA
   const folded = await ph.evaluate(() => { const b = document.querySelector('#bo-board'); return { fold: b.hasAttribute('data-fold'), h: b.getBoundingClientRect().height, exp: b.querySelector('[data-bb="fold"]').getAttribute('aria-expanded'), saved: App.settings().boBoardFold }; });
   check('phone: the board folds down to its bar (and stays folded next time)', folded.fold && folded.h < 70 && folded.exp === 'false' && folded.saved === true, folded);
   await ph.click('#bo-log [data-bo-page="0"]'); await ph.waitForTimeout(250);
-  check('phone: a page link in the chat unfolds the board on that page', !(await ph.$('#bo-board[data-fold]')) && /Page 1 of 2/.test(await txt(ph, '#bo-board .bb-pos')));
+  check('phone: a page link in the chat unfolds the board on that page', !(await ph.$('#bo-board[data-fold]')) && /Page 1 of 3/.test(await txt(ph, '#bo-board .bb-pos')));
   await ph.evaluate(() => App.setSetting('boBoardFold', false));
   await ph.click('[data-bo="knows"]'); await ph.waitForTimeout(500);
   check('phone: the sheet has the class, the next exam and the notes', /The class/.test(await txt(ph, '#bo-knows')) && /Bo's notes about you/.test(await txt(ph, '#bo-knows')) && await hscroll(ph));

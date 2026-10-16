@@ -90,14 +90,15 @@
          answer: $x = 4$
          tip: Check it: $2(4) + 3 = 11$
          [/board]
-     Lines are text (words), math (LaTeX), step (what to do, then its math), answer (boxed) and tip. On a call
+     Lines are text (words), math (LaTeX), step (what to do, then its math), answer (boxed), tip and draw (a
+     graph, number line, figure, table, chart or tree, as one line of JSON: assets/board-draw.js). On a call
      Bo can keep writing on the page he is on ([board+: Title]). Older replies have one-line boards
      ([board: $x^2$]); they become a page without a title. Every page Bo wrote in a chat is kept, in order,
      so the board has pages to flip back through. Shared with the call (assets/talk.js) through App.boBoard. */
-  const B_KIND = /^\s*(?:[-*•]\s+)?(text|math|step|answer|tip|note)\s*:\s?(.*)$/i;
+  const B_KIND = /^\s*(?:[-*•]\s+)?(text|math|step|answer|tip|note|draw)\s*:\s?(.*)$/i;
   const B_OPEN = /^\s*\[board(\+)?:\s*([^\]]*)\]\s*$/i;
   const B_CLOSE = /^\s*\[\/board\]\s*$/i;
-  const kindOf = k => { k = String(k || '').toLowerCase(); return k === 'note' ? 'tip' : ['text', 'math', 'step', 'answer', 'tip'].includes(k) ? k : 'text'; };
+  const kindOf = k => { k = String(k || '').toLowerCase(); return k === 'note' ? 'tip' : ['text', 'math', 'step', 'answer', 'tip', 'draw'].includes(k) ? k : 'text'; };
   const allTex = s => /^\s*\$\$?[^$]+\$\$?\s*\.?\s*$/.test(s);
   const unTex = s => String(s).trim().replace(/\.$/, '').replace(/^\$\$?|\$\$?$/g, '').trim();
   const looksTex = s => !/\$/.test(s) && /[=\\^_{}<>]/.test(s) && !/[a-z]{4,}/i.test(s.replace(/\\[a-z]+/gi, ''));
@@ -123,6 +124,8 @@
       }
       const o = B_OPEN.exec(line);
       if (o && (next(i) === 1 || (writing && next(i) === -1))) { cur = { title: o[2].trim(), cont: !!o[1], items: [], open: true }; mark(cur); continue; }
+      // a drawing outside a page still goes on the board (and its JSON never shows in the chat)
+      if (/^\s*draw\s*:/i.test(line)) { const dm = /^\s*draw\s*:\s*(\{.*\})\s*$/i.exec(line); if (dm && !(partial && i === lines.length - 1)) { if (!loose) { loose = { title: '', items: [], open: false }; mark(loose); } loose.items.push({ k: 'draw', t: dm[1] }); } continue; }
       const l = line.replace(/\[board\+?:\s*([^\]]*)\]/gi, (m, x) => { x = x.trim(); if (x) { if (!loose) { loose = { title: '', items: [], open: false }; mark(loose); } loose.items.push(oneLine(x)); } return ' '; }).replace(/\[\/board\]/gi, ' ');
       if (l.trim() || !line.trim()) say.push(l);
     }
@@ -153,6 +156,7 @@
     }
     if (it.k === 'answer') return `<div class="${cls}"${st}><span class="bb-answer-l">${icon('check', 14)} Answer</span>${allTex(t) || looksTex(t) ? disp(t) : `<p>${words(t)}</p>`}</div>`;
     if (it.k === 'tip') return `<div class="${cls}"${st}><span class="bb-tip-i" aria-hidden="true">${icon('bulb', 15)}</span><p><span class="sr-only">Tip: </span>${words(t)}</p></div>`;
+    if (it.k === 'draw') { const D = App.boDraw; const sp = D && D.parse(t); return sp ? `<figure class="${cls}"${st}>${D.html(sp, fresh)}</figure>` : ''; }   // a graph, figure, table or chart
     return `<div class="${cls}"${st}><p>${words(t)}</p></div>`;
   }
   const stepNo = (items, i) => items.slice(0, i + 1).filter(x => x.k === 'step').length;
@@ -160,7 +164,8 @@
     return `${p.title ? `<h3 class="bb-title">${words(p.title)}</h3>` : ''}<div class="bb-items">${p.items.map((it, i) => itemHtml(it, stepNo(p.items, i), fresh, i * 160)).join('')}</div>${p.open ? `<p class="bb-writing">${icon('pen', 14)} Bo is writing…</p>` : ''}`;
   }
   /* a page as plain text, for copying */
-  const pagePlain = p => [p.title, ...p.items.map((it, i) => (it.k === 'step' ? `${stepNo(p.items, i)}. ` : it.k === 'answer' ? 'Answer: ' : it.k === 'tip' ? 'Tip: ' : '') + it.t)].filter(Boolean).join('\n');
+  const drawWords = t => { const D = App.boDraw; return D ? `[${D.plain(D.parse(t))}]` : '[A drawing]'; };
+  const pagePlain = p => [p.title, ...p.items.map((it, i) => it.k === 'draw' ? drawWords(it.t) : (it.k === 'step' ? `${stepNo(p.items, i)}. ` : it.k === 'answer' ? 'Answer: ' : it.k === 'tip' ? 'Tip: ' : '') + it.t)].filter(Boolean).join('\n');
   const EMPTY = `<div class="bb-empty"><p class="bb-empty-h">Nothing on the board yet</p><p>When Bo works something out, the steps, the formulas and the answer go up here, neatly, a page at a time.</p></div>`;
   function boardShell(o = {}) {
     return `<div class="bb-bar"><h2 class="bb-name" id="${o.id || 'bb'}-h">${icon('pen', 15)} Bo’s board</h2>
@@ -208,7 +213,7 @@
   function fmt(sp, ids) {
     const t = sp.say.replace(/\u0002(\d+)\u0002/g, '\n\n\u0001$1\n\n').replace(/\[remember:[^\]]*\]?\s*$/i, ''); const seen = new Set();
     return t.split(/\n{2,}/).filter(b => b.trim()).map(block => {
-      if (block.startsWith('\u0001')) { const i = +block.slice(1); const p = sp.pages[i]; const id = ids ? ids[i] : i; if (!p || seen.has(id)) return ''; seen.add(id); const first = p.items[0]; const name = p.title || (first ? (first.k === 'math' || allTex(first.t) ? `$${unTex(first.t)}$` : first.t) : 'a page'); return `<button type="button" class="bo-onb" data-bo-page="${id}">${icon('pen', 15)}<span>On the board: <b>${words(name.length > 90 ? name.slice(0, 88) + '…' : name)}</b></span></button>`; }
+      if (block.startsWith('\u0001')) { const i = +block.slice(1); const p = sp.pages[i]; const id = ids ? ids[i] : i; if (!p || seen.has(id)) return ''; seen.add(id); const first = p.items[0]; const name = p.title || (first ? (first.k === 'draw' ? 'a drawing' : first.k === 'math' || allTex(first.t) ? `$${unTex(first.t)}$` : first.t) : 'a page'); return `<button type="button" class="bo-onb" data-bo-page="${id}">${icon('pen', 15)}<span>On the board: <b>${words(name.length > 90 ? name.slice(0, 88) + '…' : name)}</b></span></button>`; }
       const lines = block.split('\n'); const li = l => /^\s*(?:[-*•]|\d+[.)])\s+/.test(l);
       if (lines.every(li)) { const ol = /^\s*\d/.test(lines[0]); return `<${ol ? 'ol' : 'ul'}>${lines.map(l => `<li>${words(l.replace(/^\s*(?:[-*•]|\d+[.)])\s+/, ''))}</li>`).join('')}</${ol ? 'ol' : 'ul'}>`; }
       return `<p>${lines.map(l => words(l)).join('<br>')}</p>`;
