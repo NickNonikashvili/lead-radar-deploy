@@ -90,19 +90,46 @@
          answer: $x = 4$
          tip: Check it: $2(4) + 3 = 11$
          [/board]
-     Lines are text (words), math (LaTeX), step (what to do, then its math), answer (boxed), tip and draw (a
-     graph, number line, figure, table, chart or tree, as one line of JSON: assets/board-draw.js). On a call
+     Lines are text (words), math (LaTeX), step (what to do, then its math), answer (boxed), tip, draw (a graph,
+     number line, figure, table, chart, tree…, as JSON: assets/board-draw.js; it may run on over several lines or
+     sit in a ``` block under the draw: line), check (a question the student answers on the board, also JSON:
+     {"q", "choices", "answer", "why"}) and code (a line of code; a ``` block on a page is code too). On a call
      Bo can keep writing on the page he is on ([board+: Title]). Older replies have one-line boards
      ([board: $x^2$]); they become a page without a title. Every page Bo wrote in a chat is kept, in order,
      so the board has pages to flip back through. Shared with the call (assets/talk.js) through App.boBoard. */
-  const B_KIND = /^\s*(?:[-*•]\s+)?(text|math|step|answer|tip|note|draw)\s*:\s?(.*)$/i;
+  const B_KIND = /^\s*(?:[-*•]\s+)?(text|math|step|answer|tip|note|draw|check|code)\s*:\s?(.*)$/i;
   const B_OPEN = /^\s*\[board(\+)?:\s*([^\]]*)\]\s*$/i;
   const B_CLOSE = /^\s*\[\/board\]\s*$/i;
-  const kindOf = k => { k = String(k || '').toLowerCase(); return k === 'note' ? 'tip' : ['text', 'math', 'step', 'answer', 'tip', 'draw'].includes(k) ? k : 'text'; };
+  const kindOf = k => { k = String(k || '').toLowerCase(); return k === 'note' ? 'tip' : ['text', 'math', 'step', 'answer', 'tip', 'draw', 'check', 'code'].includes(k) ? k : 'text'; };
   const allTex = s => /^\s*\$\$?[^$]+\$\$?\s*\.?\s*$/.test(s);
   const unTex = s => String(s).trim().replace(/\.$/, '').replace(/^\$\$?|\$\$?$/g, '').trim();
   const looksTex = s => !/\$/.test(s) && /[=\\^_{}<>]/.test(s) && !/[a-z]{4,}/i.test(s.replace(/\\[a-z]+/gi, ''));
   const oneLine = x => ({ k: allTex(x) || looksTex(x) ? 'math' : 'text', t: x });
+  /* a draw: or check: line whose JSON goes on over the next lines, or sits in a ``` block under it: all of it, the
+     line it ends on, and whether its brackets have closed */
+  function gather(lines, i, t) {
+    const dep = App.boDraw ? App.boDraw.depth : () => 0; let j = i;
+    if (!t.trim() || /^```\w*$/.test(t.trim())) {
+      let k = j + 1; while (k < lines.length && (!lines[k].trim() || /^\s*```\w*\s*$/.test(lines[k]))) k++;
+      if (k < lines.length && /^\s*\{/.test(lines[k])) { j = k; t = lines[k]; } else return { t: '', end: /^```/.test(t.trim()) ? k - 1 : i, done: k < lines.length };
+    }
+    t = t.replace(/^\s*```\w*\s*/, ''); let n = 0;
+    while (dep(t) > 0 && j + 1 < lines.length && n++ < 160) { if (/^\s*```\s*$/.test(lines[j + 1])) { j++; break; } j++; t += '\n' + lines[j]; }
+    const done = dep(t) <= 0;
+    if (done && j + 1 < lines.length && /^\s*```\s*$/.test(lines[j + 1])) j++;   // the block's closing fence
+    return { t: t.replace(/\s*```\s*$/, '').trim(), end: j, done };
+  }
+  /* is what follows draw: or check: JSON (on that line, or on the next ones, maybe in a ``` block)? */
+  function jsonish(lines, i, t) {
+    if (/^\s*(\{|```)/.test(t)) return true; if (t.trim()) return false;
+    let k = i + 1; while (k < lines.length && !lines[k].trim()) k++; return k >= lines.length || /^\s*(\{|```)/.test(lines[k]);
+  }
+  /* an item added to a page: lines of code one after another are one block, the rest as they come */
+  function addItem(page, k, t, extra) {
+    const last = page.items[page.items.length - 1];
+    if (k === 'code' && !extra && last && last.k === 'code' && last.lines) { last.t += '\n' + t; return last; }
+    const it = Object.assign({ k, t }, k === 'code' && !extra ? { lines: true } : {}, extra || {}); page.items.push(it); return it;
+  }
   /* a reply taken apart: what Bo says (with a marker where each page goes) and the pages he writes.
      writing: the reply is still coming in, so a half-written line is left for later */
   function boardSplit(text, writing) {
@@ -113,20 +140,36 @@
     let cur = null, loose = null;
     const next = i => { for (let j = i + 1; j < lines.length; j++) if (lines[j].trim()) return B_KIND.test(lines[j]) || B_CLOSE.test(lines[j]) ? 1 : 0; return -1; };
     const mark = p => { pages.push(p); say.push(`\u0002${pages.length - 1}\u0002`); };
+    const looseOf = () => { if (!loose) { loose = { title: '', items: [], open: false }; mark(loose); } return loose; };
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
       if (cur) {
         if (B_CLOSE.test(line)) { cur.open = false; cur = null; continue; }
+        if (/^\s*```/.test(line)) {   // a block of code on the page (a ```json block that is a drawing goes up as the drawing)
+          const lang = line.replace(/^\s*```/, '').trim().slice(0, 20); const body = []; let j = i + 1;
+          while (j < lines.length && !/^\s*```\s*$/.test(lines[j])) body.push(lines[j++]);
+          const closed = j < lines.length; i = closed ? j : lines.length - 1; const t = body.join('\n').replace(/\s+$/, '');
+          if (/^json$/i.test(lang) && App.boDraw && (closed || !writing) && App.boDraw.parse(t)) addItem(cur, 'draw', t.trim());
+          else if (t || closed) addItem(cur, 'code', t, { lang });
+          continue;
+        }
         const k = B_KIND.exec(line);
-        if (k) { const t = k[2].trim(); if (t && !(partial && i === lines.length - 1)) cur.items.push({ k: kindOf(k[1]), t }); continue; }
+        if (k) {
+          const kind = kindOf(k[1]);
+          if (kind === 'check' && !jsonish(lines, i, k[2])) { const t = k[2].trim(); if (t && !(partial && i === lines.length - 1)) addItem(cur, 'tip', t); continue; }   // "check: plug it back in" is a tip
+          if (kind === 'draw' || kind === 'check') { const g = gather(lines, i, k[2]); i = g.end; if (g.t && (g.done || !writing)) addItem(cur, kind, g.t); continue; }
+          if (kind === 'code') { if (!(partial && i === lines.length - 1)) addItem(cur, 'code', k[2].replace(/\s+$/, '')); continue; }
+          const t = k[2].trim(); if (t && !(partial && i === lines.length - 1)) addItem(cur, kind, t); continue;
+        }
         if (!line.trim()) continue;
         cur.open = false; cur = null;   // he forgot to close the page
       }
       const o = B_OPEN.exec(line);
       if (o && (next(i) === 1 || (writing && next(i) === -1))) { cur = { title: o[2].trim(), cont: !!o[1], items: [], open: true }; mark(cur); continue; }
-      // a drawing outside a page still goes on the board (and its JSON never shows in the chat)
-      if (/^\s*draw\s*:/i.test(line)) { const dm = /^\s*draw\s*:\s*(\{.*\})\s*$/i.exec(line); if (dm && !(partial && i === lines.length - 1)) { if (!loose) { loose = { title: '', items: [], open: false }; mark(loose); } loose.items.push({ k: 'draw', t: dm[1] }); } continue; }
-      const l = line.replace(/\[board\+?:\s*([^\]]*)\]/gi, (m, x) => { x = x.trim(); if (x) { if (!loose) { loose = { title: '', items: [], open: false }; mark(loose); } loose.items.push(oneLine(x)); } return ' '; }).replace(/\[\/board\]/gi, ' ');
+      // a drawing or a question outside a page still goes on the board (and its JSON never shows in the chat)
+      const dm = /^\s*(draw|check)\s*:\s?(.*)$/i.exec(line);
+      if (dm && jsonish(lines, i, dm[2])) { const g = gather(lines, i, dm[2]); i = g.end; if (g.t && (g.done || !writing)) addItem(looseOf(), dm[1].toLowerCase(), g.t); continue; }
+      const l = line.replace(/\[board\+?:\s*([^\]]*)\]/gi, (m, x) => { x = x.trim(); if (x) looseOf().items.push(oneLine(x)); return ' '; }).replace(/\[\/board\]/gi, ' ');
       if (l.trim() || !line.trim()) say.push(l);
     }
     if (cur && !writing) cur.open = false;
@@ -146,7 +189,48 @@
   const inlineMd = x => x.replace(/\*\*([^*\n]+)\*\*/g, '<b>$1</b>').replace(/`([^`\n]+)`/g, '<code>$1</code>');
   const words = t => inlineMd(esc(t));
   const disp = t => `<div class="bb-math">$$${esc(unTex(t))}$$</div>`;
-  function itemHtml(it, n, fresh, d) {
+  /* a question on the board: check: {"q": "…", "choices": ["…", "…"], "answer": "the right choice", "why": "…"};
+     with no choices the student types the answer (numbers are compared as numbers: 0.5, 1/2 and \frac{1}{2} match) */
+  const S = (v, n) => typeof v === 'string' || typeof v === 'number' ? String(v).replace(/\s+/g, ' ').trim().slice(0, n) : '';
+  const norm = x => String(x).replace(/\$/g, '').replace(/\\left|\\right|\\[,;!]|\s+/g, '').replace(/\\[dt]?frac\{([^{}]*)\}\{([^{}]*)\}/g, '($1)/($2)').replace(/[−–]/g, '-').replace(/\*\*/g, '^').replace(/\*/g, '').replace(/^[a-z]=(?!=)/i, '').replace(/\.$/, '').toLowerCase();
+  function checkOf(t) {
+    const D = App.boDraw; let o = null; try { o = typeof t === 'object' ? t : D ? D.json(t) : JSON.parse(t); } catch (e) {}
+    if (!o || typeof o !== 'object') return null;
+    const q = S(o.q ?? o.question ?? o.prompt ?? o.ask ?? o.text, 400); if (!q) return null;
+    const raw = Array.isArray(o.choices ?? o.options) ? (o.choices ?? o.options) : [];
+    const opts = raw.slice(0, 6).map(c => { let x = S(c && typeof c === 'object' ? c.text ?? c.label : c, 160); const star = /^\*\s*/.test(x) || !!(c && typeof c === 'object' && c.correct); return { x: x.replace(/^\*\s*/, ''), star }; }).filter(c => c.x);
+    const choices = opts.length >= 2 ? opts.map(c => c.x) : []; const ans = o.answer ?? o.correct ?? o.ans ?? o.solution;
+    let pick = choices.length ? opts.findIndex(c => c.star) : -1;
+    if (choices.length && pick < 0 && ans != null) {
+      const a = String(ans).trim(); pick = choices.findIndex(c => norm(c) === norm(a));
+      if (pick < 0 && /^[A-F]$/i.test(a)) pick = a.toUpperCase().charCodeAt(0) - 65;   // "B"
+      if (pick < 0 && typeof ans === 'number' && Number.isInteger(ans)) pick = ans;   // an index
+      if (pick >= choices.length) pick = -1;
+    }
+    const answers = choices.length ? [] : [].concat(ans ?? [], o.answers ?? [], o.accept ?? []).map(x => S(x, 80)).filter(Boolean).slice(0, 6);
+    return { q, choices, pick, answers, why: S(o.why ?? o.explanation ?? o.explain ?? o.feedback, 500), hint: S(o.hint, 200) };
+  }
+  function gradeTyped(c, said) {
+    if (!c.answers.length) return null;   // no answer to compare: Bo looks at it
+    const D = App.boDraw; const s = norm(said);
+    return c.answers.some(a => { const n = norm(a); if (n === s) return true; const x = D ? D.value(s) : NaN, y = D ? D.value(n) : NaN; return Number.isFinite(x) && Number.isFinite(y) && Math.abs(x - y) <= Math.max(0.005, 0.005 * Math.abs(y)); });
+  }
+  const rightOf = c => c.choices.length ? (c.pick >= 0 ? c.choices[c.pick] : '') : c.answers[0] || '';
+  function checkFb(c, d) {
+    const right = rightOf(c); const res = d.ok === true ? 'Right!' : d.ok === false ? (right ? `Not quite. The answer is ${right}.` : 'Not quite.') : 'Bo will look at your answer with you.';
+    return `<b class="res">${d.ok === true ? icon('check', 15) + ' ' : ''}${words(res)}</b>${c.why && d.ok !== null ? `<p>${words(c.why)}</p>` : c.hint && d.ok === false ? `<p>${words(c.hint)}</p>` : ''}<div class="bb-chk-acts"><button type="button" class="btn sm" data-chk-ask="explain">${icon('chat', 14)} ${d.ok === true ? 'Why does it work?' : 'Explain it'}</button><button type="button" class="btn sm ghost" data-chk-ask="more">Another one</button></div>`;
+  }
+  let chkN = 0;
+  function checkHtml(it, cls, st, idx) {
+    const c = checkOf(it.t); if (!c) return badItem(cls, st, 'This question did not come out. Ask Bo for it again.');
+    const d = it.done; const id = `bbc${++chkN}`;
+    const body = c.choices.length
+      ? `<div class="bb-chk-opts" role="group" aria-labelledby="${id}">${c.choices.map((x, k) => `<button type="button" class="bb-chk-o${d ? (k === c.pick ? ' ok' : k === d.pick ? ' no' : '') : ''}" data-chk-o="${k}"${d ? ' disabled' : ''}><span class="bb-chk-k" aria-hidden="true">${'ABCDEF'[k]}</span><span>${words(x)}</span></button>`).join('')}</div>`
+      : `<form class="bb-chk-in" data-chk-form><label class="sr-only" for="${id}-in">Your answer</label><input class="input" id="${id}-in" autocomplete="off" autocapitalize="off" spellcheck="false" maxlength="80" placeholder="Your answer"${d ? ` value="${esc(d.said)}" disabled` : ''}><button type="submit" class="btn primary sm"${d ? ' disabled' : ''}>Check</button></form>`;
+    return `<div class="${cls} bb-check" data-chk="${idx}"${st}><span class="bb-chk-l">${icon('target', 14)} Your turn</span><div class="bb-chk-q" id="${id}"><p>${words(c.q)}</p></div>${body}<div class="bb-chk-fb${d ? (d.ok === true ? ' ok' : d.ok === false ? ' no' : '') : ''}" aria-live="polite"${d ? '' : ' hidden'}>${d ? checkFb(c, d) : ''}</div></div>`;
+  }
+  const badItem = (cls, st, t) => `<div class="${cls} bb-draw-bad"${st}>${icon('pen', 15)}<p>${t}</p></div>`;
+  function itemHtml(it, n, fresh, d, idx) {
     const t = String(it.t || ''); const cls = `bb-item bb-${it.k}${fresh ? ' bb-new' : ''}`; const st = fresh ? ` style="--d:${d}ms"` : '';
     if (it.k === 'math') return `<div class="${cls}"${st}>${allTex(t) || looksTex(t) || !/\s\w{4,}\s/.test(t) ? disp(t) : `<p>${words(t)}</p>`}</div>`;
     if (it.k === 'step') {
@@ -156,16 +240,19 @@
     }
     if (it.k === 'answer') return `<div class="${cls}"${st}><span class="bb-answer-l">${icon('check', 14)} Answer</span>${allTex(t) || looksTex(t) ? disp(t) : `<p>${words(t)}</p>`}</div>`;
     if (it.k === 'tip') return `<div class="${cls}"${st}><span class="bb-tip-i" aria-hidden="true">${icon('bulb', 15)}</span><p><span class="sr-only">Tip: </span>${words(t)}</p></div>`;
-    if (it.k === 'draw') { const D = App.boDraw; const sp = D && D.parse(t); return sp ? `<figure class="${cls}"${st}>${D.html(sp, fresh)}</figure>` : ''; }   // a graph, figure, table or chart
+    if (it.k === 'draw') { const D = App.boDraw; const sp = D && D.parse(t); return sp ? `<figure class="${cls}"${st}>${D.html(sp, fresh)}</figure>` : badItem(cls, st, 'This drawing didn’t come out. Ask Bo to draw it again.'); }   // a graph, figure, table, chart…
+    if (it.k === 'check') return checkHtml(it, cls, st, idx);
+    if (it.k === 'code') return `<div class="${cls}"${st}>${it.lang ? `<span class="bb-code-l">${esc(it.lang)}</span>` : ''}<pre><code>${esc(t)}</code></pre></div>`;
     return `<div class="${cls}"${st}><p>${words(t)}</p></div>`;
   }
   const stepNo = (items, i) => items.slice(0, i + 1).filter(x => x.k === 'step').length;
   function pageHtml(p, fresh) {
-    return `${p.title ? `<h3 class="bb-title">${words(p.title)}</h3>` : ''}<div class="bb-items">${p.items.map((it, i) => itemHtml(it, stepNo(p.items, i), fresh, i * 160)).join('')}</div>${p.open ? `<p class="bb-writing">${icon('pen', 14)} Bo is writing…</p>` : ''}`;
+    return `${p.title ? `<h3 class="bb-title">${words(p.title)}</h3>` : ''}<div class="bb-items">${p.items.map((it, i) => itemHtml(it, stepNo(p.items, i), fresh, i * 160, i)).join('')}</div>${p.open ? `<p class="bb-writing">${icon('pen', 14)} Bo is writing…</p>` : ''}`;
   }
   /* a page as plain text, for copying */
   const drawWords = t => { const D = App.boDraw; return D ? `[${D.plain(D.parse(t))}]` : '[A drawing]'; };
-  const pagePlain = p => [p.title, ...p.items.map((it, i) => it.k === 'draw' ? drawWords(it.t) : (it.k === 'step' ? `${stepNo(p.items, i)}. ` : it.k === 'answer' ? 'Answer: ' : it.k === 'tip' ? 'Tip: ' : '') + it.t)].filter(Boolean).join('\n');
+  const checkWords = t => { const c = checkOf(t); return c ? `Question: ${c.q}${c.choices.length ? ' ' + c.choices.map((x, k) => `${'ABCDEF'[k]}) ${x}`).join('  ') : ''}` : ''; };
+  const pagePlain = p => [p.title, ...p.items.map((it, i) => it.k === 'draw' ? drawWords(it.t) : it.k === 'check' ? checkWords(it.t) : it.k === 'code' ? it.t : (it.k === 'step' ? `${stepNo(p.items, i)}. ` : it.k === 'answer' ? 'Answer: ' : it.k === 'tip' ? 'Tip: ' : '') + it.t)].filter(Boolean).join('\n');
   const EMPTY = `<div class="bb-empty"><p class="bb-empty-h">Nothing on the board yet</p><p>When Bo works something out, the steps, the formulas and the answer go up here, neatly, a page at a time.</p></div>`;
   function boardShell(o = {}) {
     return `<div class="bb-bar"><h2 class="bb-name" id="${o.id || 'bb'}-h">${icon('pen', 15)} Bo’s board</h2>
@@ -182,23 +269,44 @@
     else if (write && s.shown === i && s.drawn <= p.items.length && s.title === p.title) {
       // the page on show grows: only the new lines are added
       const box = $('.bb-items', sheet); const add = p.items.slice(s.drawn); const from = s.drawn;
-      if (add.length) { const tmp = document.createElement('div'); tmp.innerHTML = add.map((it, j) => itemHtml(it, stepNo(p.items, from + j), anim, j * 160)).join(''); const nodes = [...tmp.children]; nodes.forEach(n => box.appendChild(n)); nodes.forEach(n => { if (App.typeset) safe(() => App.typeset(n)); }); }
+      const lastIt = p.items[from - 1]; if (lastIt && lastIt.t !== s.lastT && box.children[from - 1]) { const tmp = document.createElement('div'); tmp.innerHTML = itemHtml(lastIt, stepNo(p.items, from - 1), false, 0, from - 1); const nu = tmp.firstElementChild; if (nu) { box.children[from - 1].replaceWith(nu); if (App.typeset) safe(() => App.typeset(nu)); } }   // the last line grew (code still coming in)
+      if (add.length) { const tmp = document.createElement('div'); tmp.innerHTML = add.map((it, j) => itemHtml(it, stepNo(p.items, from + j), anim, j * 160, from + j)).join(''); const nodes = [...tmp.children]; nodes.forEach(n => box.appendChild(n)); nodes.forEach(n => { if (App.typeset) safe(() => App.typeset(n)); }); }
       const w = $('.bb-writing', sheet); if (p.open && !w) sheet.insertAdjacentHTML('beforeend', `<p class="bb-writing">${icon('pen', 14)} Bo is writing…</p>`); else if (!p.open && w) w.remove();
       if (add.length) { const last = box.lastElementChild; if (last && sheet.scrollHeight > sheet.clientHeight) sheet.scrollTo({ top: sheet.scrollHeight, behavior: anim ? 'smooth' : 'auto' }); }
     } else {
       sheet.innerHTML = `<article class="bb-page${anim ? ' bb-fresh' : ''}">${pageHtml(p, anim)}</article>`; sheet.scrollTop = 0;
       if (App.typeset) safe(() => App.typeset(sheet));
     }
-    if (p) Object.assign(s, { shown: i, drawn: p.items.length, open: !!p.open, title: p.title });
+    if (p) Object.assign(s, { shown: i, drawn: p.items.length, open: !!p.open, title: p.title, lastT: p.items.length ? p.items[p.items.length - 1].t : '' });
     root.dataset.pages = pages.length; root.classList.toggle('has-page', !!p);
     const pg = $('.bb-pager', root); pg.hidden = pages.length < 2; $('.bb-pos', root).textContent = p ? `Page ${i + 1} of ${pages.length}` : '';
     $('[data-bb="prev"]', root).disabled = !p || i <= 0; $('[data-bb="next"]', root).disabled = !p || i >= pages.length - 1;
     $('[data-bb="copy"]', root).hidden = !p || p.open;
     if (root._onPaint) root._onPaint(p, i);
   }
-  /* the board's own buttons: pages, copy, fold */
+  /* a question on the board answered: marked at once; root._onAnswer (a call: Bo hears it) and root._onAsk (the
+     Explain and Another one buttons: a message to Bo) are set by whoever shows the board */
+  function answerCheck(root, el, a) {
+    const s = root._bb || {}; const p = (root._pages || [])[s.shown]; const idx = +el.dataset.chk; const it = p && p.items[idx]; if (!it || it.done) return;
+    const c = checkOf(it.t); if (!c) return;
+    const said = a.pick != null ? c.choices[a.pick] : a.said; const ok = a.pick != null ? (c.pick >= 0 ? a.pick === c.pick : null) : gradeTyped(c, said);
+    it.done = { pick: a.pick != null ? a.pick : -1, said, ok };
+    const tmp = document.createElement('div'); tmp.innerHTML = itemHtml(it, 0, false, 0, idx); const nu = tmp.firstElementChild; el.replaceWith(nu); if (App.typeset) safe(() => App.typeset(nu));
+    if (App.sfx && ok !== null) safe(() => App.sfx.play(ok ? 'correct' : 'wrong')); else haptic('light');   // the sound brings its own tap in the app
+    const fb = $('.bb-chk-fb', nu); if (fb && fb.getBoundingClientRect().bottom > (root.querySelector('.bb-sheet') || root).getBoundingClientRect().bottom) fb.scrollIntoView({ block: 'nearest', behavior: still() ? 'auto' : 'smooth' });
+    if (root._onAnswer) root._onAnswer({ q: c.q, said, ok, answer: rightOf(c) });
+  }
+  function askAbout(root, el, kind) {
+    const s = root._bb || {}; const p = (root._pages || [])[s.shown]; const it = p && p.items[+el.dataset.chk]; const c = it && checkOf(it.t); if (!c) return; const d = it.done || {};
+    const text = kind === 'more' ? `Give me another question like this one: "${c.q}"` : `On the board you asked: "${c.q}" I answered "${d.said || '?'}"${d.ok === true ? ' and got it right. Why does it work?' : d.ok === false ? `, but the answer is "${rightOf(c)}". Explain it to me.` : '. Is that right? Explain it to me.'}`;
+    if (root._onAsk) root._onAsk(text);
+  }
+  /* the board's own buttons: pages, copy, fold, and its questions */
   function boardWire(root, onFold) {
+    root.addEventListener('submit', e => { const f = e.target.closest('[data-chk-form]'); if (!f) return; e.preventDefault(); const v = $('input', f).value.trim(); if (!v) { $('input', f).focus(); return; } answerCheck(root, f.closest('[data-chk]'), { said: v }); });
     root.addEventListener('click', async e => {
+      const o = e.target.closest('[data-chk-o]'); if (o) { if (!o.disabled) answerCheck(root, o.closest('[data-chk]'), { pick: +o.dataset.chkO }); return; }
+      const x = e.target.closest('[data-chk-ask]'); if (x) { askAbout(root, x.closest('[data-chk]'), x.dataset.chkAsk); return; }
       const b = e.target.closest('[data-bb]'); if (!b) return; const k = b.dataset.bb; const s = root._bb || {}; const pages = root._pages || [];
       if (k === 'prev' && s.shown > 0) boardPaint(root, pages, s.shown - 1, false);
       if (k === 'next' && s.shown < pages.length - 1) boardPaint(root, pages, s.shown + 1, false);
@@ -207,13 +315,15 @@
     });
   }
   const still = () => (global.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) || document.documentElement.dataset.motion === 'off';
-  App.boBoard = { KIND: B_KIND, OPEN: B_OPEN, CLOSE: B_CLOSE, kind: kindOf, oneLine, split: boardSplit, merge: boardMerge, shell: boardShell, paint: boardPaint, wire: boardWire, plain: pagePlain };
+  App.boBoard = { KIND: B_KIND, OPEN: B_OPEN, CLOSE: B_CLOSE, kind: kindOf, oneLine, split: boardSplit, merge: boardMerge, shell: boardShell, paint: boardPaint, wire: boardWire, plain: pagePlain, add: addItem, check: checkOf };
 
   /* ---------- Bo's answers: plain text with **bold**, lists and LaTeX, and a link to each page he wrote on the board ---------- */
   function fmt(sp, ids) {
-    const t = sp.say.replace(/\u0002(\d+)\u0002/g, '\n\n\u0001$1\n\n').replace(/\[remember:[^\]]*\]?\s*$/i, ''); const seen = new Set();
+    const code = []; const t = sp.say.replace(/\u0002(\d+)\u0002/g, '\n\n\u0001$1\n\n').replace(/\[remember:[^\]]*\]?\s*$/i, '')
+      .replace(/(^|\n)```[^\n]*\n([\s\S]*?)(?:\n```|$)/g, (m, a, body) => `${a}\n\u0003${code.push(body) - 1}\n\n`); const seen = new Set();   // ``` blocks: code, as written
     return t.split(/\n{2,}/).filter(b => b.trim()).map(block => {
-      if (block.startsWith('\u0001')) { const i = +block.slice(1); const p = sp.pages[i]; const id = ids ? ids[i] : i; if (!p || seen.has(id)) return ''; seen.add(id); const first = p.items[0]; const name = p.title || (first ? (first.k === 'draw' ? 'a drawing' : first.k === 'math' || allTex(first.t) ? `$${unTex(first.t)}$` : first.t) : 'a page'); return `<button type="button" class="bo-onb" data-bo-page="${id}">${icon('pen', 15)}<span>On the board: <b>${words(name.length > 90 ? name.slice(0, 88) + '…' : name)}</b></span></button>`; }
+      if (block.trim().startsWith('\u0003')) return `<pre class="bo-code"><code>${esc(code[+block.trim().slice(1)] || '')}</code></pre>`;
+      if (block.startsWith('\u0001')) { const i = +block.slice(1); const p = sp.pages[i]; const id = ids ? ids[i] : i; if (!p || seen.has(id)) return ''; seen.add(id); const first = p.items[0]; const name = p.title || (first ? (first.k === 'draw' ? 'a drawing' : first.k === 'check' ? 'a question for you' : first.k === 'code' ? 'some code' : first.k === 'math' || allTex(first.t) ? `$${unTex(first.t)}$` : first.t) : 'a page'); return `<button type="button" class="bo-onb" data-bo-page="${id}">${icon('pen', 15)}<span>On the board: <b>${words(name.length > 90 ? name.slice(0, 88) + '…' : name)}</b></span></button>`; }
       const lines = block.split('\n'); const li = l => /^\s*(?:[-*•]|\d+[.)])\s+/.test(l);
       if (lines.every(li)) { const ol = /^\s*\d/.test(lines[0]); return `<${ol ? 'ol' : 'ul'}>${lines.map(l => `<li>${words(l.replace(/^\s*(?:[-*•]|\d+[.)])\s+/, ''))}</li>`).join('')}</${ol ? 'ol' : 'ul'}>`; }
       return `<p>${lines.map(l => words(l)).join('<br>')}</p>`;
@@ -310,6 +420,23 @@
     return out.slice(0, 4);
   }
   App.boSuggestions = suggestions;
+  /* after each answer: one tap to go on (simpler, another example, a question, a picture) */
+  function followups(reply) {
+    const items = [].concat(...boardSplit(reply).pages.map(p => p.items)); const drew = items.some(x => x.k === 'draw'), asked = items.some(x => x.k === 'check');
+    return ['Explain it more simply', 'Show me another example', asked ? 'Give me another question' : 'Quiz me on this', drew ? 'Walk me through the drawing' : 'Draw it on the board'];
+  }
+  const chips = list => list.map(x => `<button type="button" class="chip bo-chip" data-bo-say="${esc(x)}">${esc(x)}</button>`).join('');
+  /* "Ask Bo about this", under a question the student missed (the quizzer, the mistakes notebook): straight into a
+     chat with Bo about it. q is the question (prompt, options, answer, answerTex); said is what they answered. */
+  const plainQ = h => String(h || '').replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/\s+/g, ' ').trim();
+  App.askBoHref = (cid, q, said) => {
+    if (!cid || !q) return '';
+    const opts = Array.isArray(q.options) ? q.options.map((o, k) => `${String.fromCharCode(65 + k)}) ${plainQ(o)}`) : [];
+    const right = q.type === 'mc' && opts[q.answer] ? opts[q.answer] : q.answerTex ? `$${q.answerTex}$` : '';
+    const text = `I got this question wrong: "${plainQ(q.prompt).slice(0, 700)}"${opts.length ? ` The choices were ${opts.join('; ').slice(0, 500)}.` : ''}${said ? ` I answered ${String(said).slice(0, 120)}.` : ''}${right ? ` The answer is ${right}.` : ''} Where did I go wrong, and how do I do it?`;
+    return `#/tutor/${encodeURIComponent(cid)}?ask=${encodeURIComponent(text.slice(0, 1800))}`;
+  };
+  App.askBoButton = (cid, q, said) => { const h = App.askBoHref(cid, q, said); return h ? `<a class="btn sm ask-bo" href="${esc(h)}"><span class="ask-bo-av" aria-hidden="true">${bo(20)}</span> Ask Bo about this</a>` : ''; };
   /* the board sits beside the chat on wide screens; above it, sticky, on narrow ones, where it can be folded away */
   const wide = () => { const sh = $('.bo-shell'); return !!sh && sh.clientWidth >= 1000; };
   function fold(on, user) {
@@ -352,7 +479,8 @@
     if (board) { board.hidden = false; fold(!!settings().boBoardFold); board._onPaint = (p, i) => { $$('.bo-onb', log).forEach(b => b.classList.toggle('on', +b.dataset.boPage === i)); }; boardPaint(board, pages, pages.length - 1, false); }
     const tb = $('[data-bo-talk][hidden]'); if (tb) tb.hidden = false;
     typeset(log); scroll();
-    sug.innerHTML = suggestions(id).map(x => `<button type="button" class="chip bo-chip" data-bo-say="${esc(x)}">${esc(x)}</button>`).join('');
+    sug.innerHTML = chips(suggestions(id));
+    if (board) board._onAsk = text => { q.value = text; grow(); form.requestSubmit(); };   // Explain it / Another one, under a question on the board
     if (query.talk && talk()) setTimeout(() => openTalk(false), 300);
     if (query.q === 'quiz') { const s = snapshot(id); q.value = s.readiness && s.readiness.exam ? `Quiz me for ${s.readiness.exam}: one question at a time, starting with my weakest topic.` : 'Quiz me: one question at a time, starting with my weakest topic.'; }
     const grow = () => { q.style.height = 'auto'; q.style.height = Math.min(q.scrollHeight, 168) + 'px'; }; q.addEventListener('input', grow); grow();
@@ -371,6 +499,8 @@
       if (e.target.closest('[data-bo-forget]')) { const i = st.notes.indexOf(e.target.closest('[data-bo-forget]').dataset.boForget); try { const r = await api('ai_forget', { what: 'note', i }); st.notes = r.notes || []; e.target.closest('.bo-remember').remove(); toast('Bo forgot it.'); } catch (x) { toast(x.message); } return; }
       if (e.target.closest('[data-bo-retry]')) { const t = msg.dataset.q || ''; msg.remove(); q.value = t; grow(); form.requestSubmit(); }
     });
+    // from "Ask Bo about this": the question goes straight to Bo, once (the link is taken out of the address)
+    if (query.ask) { q.value = String(query.ask).slice(0, 2000); grow(); try { history.replaceState(history.state, '', `${location.pathname}${location.search}#/tutor/${id}`); } catch (e) {} setTimeout(() => form.requestSubmit(), 60); }
     form.addEventListener('submit', async e => {
       e.preventDefault(); if (st.busy) return;
       const text = q.value.trim(); const photo = st.photo; if (!text && !photo) { q.focus(); return; }
@@ -396,6 +526,7 @@
         log.insertAdjacentHTML('beforeend', msgHtml('b', r.reply, r.remembered ? `<p class="bo-remember">${icon('bulb', 13)} Bo will remember: ${esc(r.remembered)} <button type="button" class="linkbtn small" data-bo-forget="${esc(r.remembered)}">Forget it</button></p>` : '', false, ids));
         if (ids.length && board) boardPaint(board, pages, ids[ids.length - 1], true);
         typeset(log.lastElementChild); haptic('light'); paintFoot(r.usage);
+        sug.innerHTML = chips(followups(r.reply)); sug.hidden = false; sug.classList.add('bo-next');
       } catch (x) {
         cancelAnimationFrame(frame); if (live) live.remove();
         if (board) boardPaint(board, pages, pages.length - 1, false);

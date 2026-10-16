@@ -406,9 +406,10 @@ The Hostinger zip never includes `app/`.
 - **Calling Bo** (`assets/talk.js`, website): a **live call** through OpenAI's Realtime API over WebRTC, set up by
   the server (`ai_live_start`: the browser's offer plus Bo's live persona and what he knows; the key stays on the
   server). Speech to speech: Bo answers in about half a second, waits until the student is done, stops when talked
-  over, writes neat pages on his board (`write_on_board`: a title and step, math, answer, tip and text lines),
-  draws on it (`draw_on_board`: graphs, number lines, figures, tables, charts, normal curves, probability trees) and
-  keeps notes through tools; minutes are reported (`ai_live_tick`) and limited, the
+  over, writes neat pages on his board (`write_on_board`: a title and step, math, answer, tip, text and code lines),
+  draws on it (`draw_on_board`: any of the thirteen kinds of drawing below), puts a question on it for the student
+  to answer there (`ask_on_board`; what they pick goes back to him as a message, so he reacts to it) and keeps
+  notes through tools; tool arguments are read leniently (a drawing sent as text, LaTeX with one backslash); minutes are reported (`ai_live_tick`) and limited, the
   transcript is saved to the chat (`ai_live_log`). Without the speech key, or if a call can't connect, **basic
   voice**: the browser hears, the answer streams from `ai_tutor` in voice mode, and Bo reads it out (`ai_speak` or
   the device's voice). Mute (M), tap Bo to stop him, Type, Photo, captions, Esc ends the call.
@@ -417,7 +418,12 @@ The Hostinger zip never includes `app/`.
   and readiness, weakest topics, recent mistakes, flashcards due, deadlines). The first message and the suggestions
   are made on the device (free). Photos of problems are shrunk on the device and sent with the question. Bo keeps up
   to 12 short notes about the student (`[remember: …]`), shown under his answer and in "What Bo knows", where they
-  and the chat can be deleted ("What Bo knows" is a sheet from the i button). Every answer has Copy and Report.
+  and the chat can be deleted ("What Bo knows" is a sheet from the i button). Every answer has Copy and Report,
+  and after each one there are one-tap ways to go on: Explain it more simply, Show me another example, Quiz me on
+  this (or Give me another question), Draw it on the board (or Walk me through the drawing).
+- **Ask Bo about this**: under a question missed in the Quizzer or the mistakes notebook (`App.askBoButton`), a link
+  to `#/tutor/<class>?ask=…` that opens Ask Bo and sends him the question, the choices, what the student answered
+  and the right answer, once (the address drops it after).
 - **How Bo teaches** (`docs/bo-teaching.md`, `MH_AI_TEACH` in `api/ai.php`): the same thirteen rules in the chat,
   voice mode and calls, from research on expert tutors and learning: find out where the student is, the big picture
   first, one idea at a time, concrete before abstract, a worked example then fading, draw it, words and board
@@ -425,10 +431,20 @@ The Hostinger zip never includes `app/`.
   it didn't land, close the loop, be exactly right. On a call he takes a proper turn to explain something new.
 - **Bo's board** (`App.boBoard` in `assets/tutor.js`, also on calls): Bo works problems out on a whiteboard instead
   of in the chat bubble. In his replies a page is a block, `[board: Title]` then `step:`, `math:`, `answer:`,
-  `tip:`, `text:` and `draw:` lines and `[/board]`. A `draw:` line is a picture as one line of JSON, drawn by
-  `assets/board-draw.js` (`App.boDraw`): a graph (functions, parametric curves, points, shaded areas, segments,
-  vectors, asymptotes), a number line, a figure (shapes, angles, circles, arrows, boxes), a table, a bar chart or
-  histogram, a normal curve or a probability tree. It is data, never code (functions go through `App.compileExpr`,
+  `tip:`, `text:`, `draw:`, `check:` and `code:` lines (or a ``` block of code) and `[/board]`. A `draw:` line is a
+  picture as JSON (it may run on over several lines, or sit in a ``` block), drawn by `assets/board-draw.js`
+  (`App.boDraw`): a graph (functions, parametric curves, points, shaded areas, segments, vectors, asymptotes,
+  tangent and secant lines with their slopes, Riemann sums with their total, and sliders the student drags, which
+  redraw it), a number line (intervals also as "x > 2" or "[1, 4)"), a figure (shapes, angles, circles, arrows,
+  boxes), the unit circle (exact cos and sin of the angle he points at), a table, a bar chart or histogram, a pie
+  chart, a scatter plot (least-squares line, r and r², residuals, a prediction), box plots (from data, with
+  outliers), a normal curve (with the shaded area worked out), a probability tree, a Venn diagram (counts in the
+  regions, any set expression shaded) or a flow chart. What he writes is read the way a model writes it (code
+  fences, single or smart quotes, bare keys, trailing commas, comments, LaTeX with one backslash, a reply cut short,
+  synonyms like "plot" or "bar chart", points as [x, y], "y = \frac{1}{x}", "x²"); a drawing that still makes no
+  sense says so on the board. A `check:` line is a question the student answers on the board (choices to tap, or a
+  box to type in; numbers compared as numbers): marked at once with the right answer and why, with Explain it and
+  Another one to ask Bo more. It is data, never code (functions go through `App.compileExpr`,
   sizes are capped, labels escaped); it is drawn stroke by stroke, with labels placed clear of the ink, and named
   for screen readers; the chat shows "On the board: Title" where it goes, and the board draws
   the page neatly (numbered steps with their math, the answer boxed, tips on gold), each line written in as it

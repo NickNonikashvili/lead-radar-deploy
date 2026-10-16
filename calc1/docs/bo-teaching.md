@@ -36,16 +36,22 @@ on a call Bo now:
 - explains in the order **big idea → put it on the board → walk through it in words, pointing at the board → one
   question to check**;
 - slows down a little on the key idea;
-- draws (`draw_on_board`) as well as writes (`write_on_board`), and keeps talking while it goes up.
+- draws (`draw_on_board`) as well as writes (`write_on_board`), and keeps talking while it goes up;
+- checks with a question on the board (`ask_on_board`, rule 8): the student taps or types the answer right there,
+  sees at once whether it's right and why, and Bo is told what they picked, so he reacts to it (rule 10).
 
 Calls can also use more output per turn now (`max_output_tokens` 1600), so a full explanation and a drawing fit
 in one answer.
 
 ## The board: what Bo can draw
 
-`assets/board-draw.js` draws a picture from a small description Bo writes (one line of JSON, `draw: {…}`, in a
-board page; on a call, the `draw_on_board` tool). Nothing in it runs as code: functions are read by Mathub's own
-expression reader, sizes are capped, and every label is escaped.
+`assets/board-draw.js` draws a picture from a small description Bo writes (JSON after `draw:` in a board page; on a
+call, the `draw_on_board` tool). Nothing in it runs as code: functions are read by Mathub's own expression reader,
+sizes are capped, and every label is escaped. Models don't always write tidy JSON, so it reads what he meant: code
+fences, single or smart quotes, unquoted keys, trailing commas, LaTeX with one backslash (`\frac`, which strict JSON
+would turn into a form feed), a reply cut off, synonyms ("plot", "bar chart"), points as `[x, y]` or `{x, y}`,
+functions as `y = \frac{1}{x}`, `x²` or `sin^2 x`. A drawing that still makes no sense says so on the board instead of
+leaving a gap.
 
 | Kind | For | Example |
 |---|---|---|
@@ -56,6 +62,26 @@ expression reader, sizes are capped, and every label is escaped.
 | `bars` | Bar charts and histograms | `{"type":"bars","bars":[{"label":"A","value":3}],"hist":true}` |
 | `normal` | A normal curve with a shaded region and the mean ± 1, 2, 3 SD | `{"type":"normal","mean":100,"sd":15,"from":115,"to":null}` |
 | `tree` | Probability trees, up to three levels | `{"type":"tree","branches":[{"label":"H","p":"1/2"},{"label":"T","p":"1/2"}]}` |
+| `graph` + `tangent`, `secant`, `riemann` | The tangent line and its slope, a secant line, left, right, midpoint or trapezoid sums with their total | `{"type":"graph","f":"x^2","tangent":{"at":1},"riemann":{"from":0,"to":2,"n":4}}` |
+| `graph` + `sliders` | Numbers the student drags, the drawing redraws: what `a` does to the parabola, the tangent sliding along the curve, more and more rectangles | `{"type":"graph","f":"a*x^2","sliders":[{"name":"a","min":-3,"max":3,"value":1}]}` |
+| `unitcircle` | The special angles; the one he points at gets its triangle and exact cos and sin | `{"type":"unitcircle","highlight":60}` |
+| `pie` | Shares of a whole | `{"type":"pie","slices":[{"label":"Rent","value":45},{"label":"Food","value":30}]}` |
+| `scatter` | Data with the least-squares line, r and r², residuals, a prediction | `{"type":"scatter","points":[[1,52],[2,61],[3,70]],"predict":4}` |
+| `boxplot` | Box plots from data (outliers found by the 1.5 IQR rule) or from five numbers | `{"type":"boxplot","boxes":[{"label":"A","data":[2,4,4,5,7,9,15]}]}` |
+| `venn` | Two or three sets, counts in the regions, any set expression shaded | `{"type":"venn","sets":["A","B"],"values":{"A":5,"AB":2,"B":3},"shade":["A ∩ B'"]}` |
+| `flow` | A process or an algorithm, with decisions and arrows that loop back | `{"type":"flow","steps":["Read it","Pick a method","Does it check out?"],"loops":[{"from":3,"to":2}]}` |
+
+And two more things on the board:
+
+| Line | For | Example |
+|---|---|---|
+| `check:` | A question the student answers on the board (rule 8: a real check). Choices to tap, or a box to type in (numbers are compared as numbers, so 0.5, 1/2 and `\frac{1}{2}` all match). Marked at once, with the right answer and Bo's why, then Explain it and Another one | `check: {"q":"What is the slope at x = 1?","choices":["1","2","4"],"answer":"2","why":"f'(x) = 2x"}` |
+| a ``` block | Code, as written (for programming classes) | ```` ```python ```` … ```` ``` ```` |
+
+After each answer in the chat there are one-tap ways to go on (Explain it more simply, Show me another example,
+Quiz me on this, Draw it on the board), and every question missed in the Quizzer or the mistakes notebook has
+**Ask Bo about this**, which opens the chat with the question, what the student answered and the right answer
+already sent: the moment a student is most ready to learn from a mistake (rule 10).
 
 Drawings appear stroke by stroke like a marker on a whiteboard (not when motion is reduced), use the theme's
 colours in light and dark mode, place their labels where they don't collide with the curves or each other, and

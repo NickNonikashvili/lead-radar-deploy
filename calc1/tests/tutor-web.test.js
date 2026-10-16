@@ -174,6 +174,59 @@ const PNG = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwA
   await ph.keyboard.press('Escape'); await ph.waitForTimeout(300);
   await cp.close();
 
+  // the board does more: a drawing over several lines, a slider to drag, a question to answer right there, code
+  const [cn, n] = await open(1360, 900, 'mod.user@montana.edu');
+  await n.evaluate(() => App.setSetting('aiConsent', Date.now()));
+  await go(n, '#/tutor/calc', 2200);
+  await n.fill('#bo-q', 'Show me the tangent line'); await n.keyboard.press('Enter'); await n.waitForTimeout(4500);
+  const tg = await n.evaluate(() => { const b = document.querySelector('#bo-board'); return { title: (b.querySelector('.bb-title') || {}).textContent, svg: !!b.querySelector('.bb-draw svg .bd-curve'), slider: !!b.querySelector('input[type="range"][data-bd-p="a"]'), out: (b.querySelector('.bd-sl output') || {}).textContent, opts: b.querySelectorAll('.bb-check .bb-chk-o').length, q: (b.querySelector('.bb-chk-q') || {}).textContent, chat: (document.querySelector('#bo-log .bo-msg.bo:last-of-type') || {}).textContent, chips: [...document.querySelectorAll('#bo-suggest:not([hidden]) .bo-chip')].map(c => c.textContent) }; });
+  check('a drawing written over several lines goes up whole: the graph, its tangent line and a slider to drag', tg.title === 'The tangent line' && tg.svg && tg.slider && tg.out === '1' && !/"type"|sliders/.test(tg.chat), tg);
+  check('and a question for them on the board, with choices to tap', tg.opts === 3 && /slope of the tangent at x = 1/.test(tg.q), tg);
+  check('after his answer, one-tap ways to go on (simpler, another example, another question, the drawing)', tg.chips.join('|') === 'Explain it more simply|Show me another example|Give me another question|Walk me through the drawing', tg.chips);
+  const line0 = await n.$eval('#bo-board .bb-draw .bd-seg', p => p.getAttribute('d'));
+  await n.$eval('#bo-board input[data-bd-p="a"]', el => { el.value = '-1'; el.dispatchEvent(new Event('input', { bubbles: true })); }); await n.waitForTimeout(250);
+  const line1 = await n.$eval('#bo-board .bb-draw .bd-seg', p => p.getAttribute('d'));
+  check('dragging the slider redraws it: the tangent moves along the curve, the number shows', line1 !== line0 && (await txt(n, '#bo-board .bd-sl output')) === '−1' && /slope = −2/.test(await txt(n, '#bo-board .bb-draw svg')), { line0, line1 });
+  await n.click('#bo-board .bb-chk-o[data-chk-o="0"]'); await n.waitForTimeout(300);
+  const ck = await n.evaluate(() => { const c = document.querySelector('#bo-board .bb-check'); return { no: c.querySelector('[data-chk-o="0"]').classList.contains('no'), ok: c.querySelector('[data-chk-o="1"]').classList.contains('ok'), off: [...c.querySelectorAll('.bb-chk-o')].every(b => b.disabled), fb: (c.querySelector('.bb-chk-fb:not([hidden])') || {}).textContent }; });
+  check('tapping a wrong answer: marked at once, the right one shown, and why', ck.no && ck.ok && ck.off && /Not quite\. The answer is 2\./.test(ck.fb) && /derivative of x\^2 is 2x/.test(ck.fb), ck);
+  const youBefore = (await n.$$('#bo-log .bo-msg.you')).length;
+  await n.click('#bo-board [data-chk-ask="explain"]'); await n.waitForTimeout(4500);
+  const asked = await n.$$eval('#bo-log .bo-msg.you', ms => ms.map(m => m.textContent).pop());
+  check('"Explain it" asks Bo about the question and what they answered', (await n.$$('#bo-log .bo-msg.you')).length === youBefore + 1 && /On the board you asked: "What is the slope of the tangent at x = 1\?" I answered "1", but the answer is "2"\. Explain it to me\./.test(asked), asked);
+  await n.fill('#bo-q', 'Write a loop that prints 0 to 2'); await n.keyboard.press('Enter'); await n.waitForTimeout(4500);
+  const code = await n.evaluate(() => { const c = document.querySelector('#bo-board .bb-code'); return c ? { lang: (c.querySelector('.bb-code-l') || {}).textContent, text: c.querySelector('pre').textContent } : null; });
+  check('code goes on the board as written, indentation and all', code && code.lang === 'python' && code.text === 'for i in range(3):\n    print(i)', code);
+  const bad2 = await n.evaluate(() => { const el = document.createElement('section'); el.className = 'bb'; el.innerHTML = App.boBoard.shell({ id: 'tmp' }); document.body.appendChild(el); App.boBoard.paint(el, App.boBoard.split('[board: X]\ndraw: {"type":"graph","fns":[{"f":"alert(1)"}]}\nstep: Next\n[/board]').pages, 0, false); const t = el.querySelector('.bb-draw-bad'); const r = t ? t.textContent : ''; el.remove(); return r; });
+  check('a drawing that cannot be drawn says so on the board instead of leaving a gap', /didn’t come out/.test(bad2), bad2);
+  const messy = await n.evaluate(() => { const D = App.boDraw; return [
+    "```json\n{'type': 'graph', 'fns': [{'f': 'x^2'}],}\n```", '{type: graph, f: x^2 - 3, x: [-4, 4]}', '{“type”: “bars”, “bars”: [{“label”: “A”, “value”: 3}]}', '{"type":"graph","fns":[{"f":"\\frac{1}{x}"}],"asymptotes":["x = 0"]}', '{"type":"graph","fns":[{"f":"x^2"},{"f":"2x"', "{'type': 'numberline', 'intervals': [{'from': 2, 'to': None, 'left': 'open'}]}", '{"drawing": {"type": "pie", "slices": {"A": 3, "B": 1}}}', '{"type":"graph","f":"y = \\sqrt{x}, x ≥ 0"}', '{"type":"plot","points":[[1,2],[2,3]]}', '{"type":"number line","intervals":["x > 2"]}'
+  ].map(t => { const sp = D.parse(t); return sp ? sp.type : null; }); });
+  check('drawings are read the way a model writes them: code fences, single or smart quotes, bare keys, trailing commas, LaTeX, cut off, wrapped, synonyms', messy.join() === 'graph,graph,bars,graph,graph,numberline,pie,graph,graph,numberline', messy);
+  const kinds2 = await n.evaluate(() => { const D = App.boDraw; return [
+    { type: 'graph', f: 'x^2', tangent: { at: 1 }, secant: { from: 0, to: 2 }, riemann: { from: 0, to: 2, n: 4, rule: 'mid' } },
+    { type: 'unitcircle', highlight: 60 }, { type: 'pie', slices: [{ label: 'A', value: 3 }, { label: 'B', value: 1 }] },
+    { type: 'scatter', points: [[1, 2], [2, 4.1], [3, 5.9], [4, 8.2]], residuals: true, predict: 5 }, { type: 'boxplot', boxes: [{ label: 'A', data: [1, 2, 3, 4, 5, 30] }, { label: 'B', min: 1, q1: 2, median: 3, q3: 4, max: 5 }] },
+    { type: 'venn', sets: ['A', 'B', 'C'], values: { A: 1, AB: 2, ABC: 3, none: 4 }, shade: ["A ∩ B'"] }, { type: 'flow', steps: ['Start', 'Is it done?', 'Keep going'], loops: [{ from: 3, to: 2 }] },
+    { type: 'normal', mean: 0, sd: 1, to: 1.96, tails: 'both' }
+  ].map(o => { const sp = D.parse(o); const h = sp ? D.html(sp, false) : ''; return [o.type, !!sp, /<svg/.test(h), /NaN|undefined|Infinity/.test(h), D.plain(sp).length > 10]; }); });
+  check('the new kinds draw cleanly too, with words for screen readers: tangent, secant and Riemann sums, the unit circle, pie, scatter with its line, box plots, Venn, flow chart, two tails', kinds2.every(k => k[1] && k[2] && !k[3] && k[4]), kinds2);
+  const nums = await n.evaluate(() => { const D = App.boDraw; const sp = D.parse({ type: 'scatter', points: [[1, 2], [2, 4], [3, 6]] }); const uc = D.plain(D.parse({ type: 'unitcircle', highlight: 'pi/6' })); const nm = D.html(D.parse({ type: 'normal', mean: 100, sd: 15, from: 130, to: null })); const rs = D.plain(D.parse({ type: 'graph', f: 'x^2', riemann: { from: 0, to: 2, n: 4, rule: 'left' } })); return { fit: [sp.fit.a, sp.fit.b, sp.fit.r], uc, area: /area ≈ 0\.02\d\d/.test(nm), rs }; });
+  check('and their numbers are right: the least-squares line, exact unit-circle values, the shaded area, the Riemann sum', Math.abs(nums.fit[0]) < 1e-9 && Math.abs(nums.fit[1] - 2) < 1e-9 && Math.abs(nums.fit[2] - 1) < 1e-9 && /at π\/6: cos = √3\/2, sin = 1\/2/.test(nums.uc) && nums.area && /sum = 1\.75/.test(nums.rs), nums);
+  // "Ask Bo about this", from a question they missed
+  const href = await n.evaluate(() => App.askBoHref('calc', { type: 'mc', prompt: '<p>What is $2 + 2$?</p>', options: ['3', '4'], answer: 1 }, 'A'));
+  check('a missed question links straight to a chat with Bo about it (the question, the choices, what they said, the answer)', href.startsWith('#/tutor/calc?ask=') && /I got this question wrong: "What is \$2 \+ 2\$\?" The choices were A\) 3; B\) 4\. I answered A\. The answer is B\) 4\./.test(decodeURIComponent(href.split('ask=')[1])), decodeURIComponent(href));
+  await go(n, '#/calc/practice', 1800);
+  for (let k = 0; k < 6 && !(await n.$('.q-feedback.no .ask-bo')); k++) { const cards = await n.$$('.q-card'); const c = cards[k]; if (!c) break; const o = await c.$('.q-opt'); if (o) { await o.click(); await n.waitForTimeout(250); } else { const inp = await c.$('input'); if (inp) { await inp.fill('12345'); const b = await c.$('[data-action="check-num"]'); if (b) await b.click(); await n.waitForTimeout(250); } } }
+  const ab = await n.$('.q-feedback.no .ask-bo');
+  check('the quizzer: "Ask Bo about this" under a missed question', !!ab);
+  if (ab) {
+    const youN = (await n.$$('#bo-log .bo-msg.you')).length; await ab.click(); await n.waitForTimeout(5200);
+    const last = await n.$$eval('#bo-log .bo-msg.you', ms => ms.map(m => m.textContent).pop());
+    check('which opens Ask Bo and sends him the question once (the address no longer carries it)', /I got this question wrong/.test(last || '') && /#\/tutor\/calc$/.test(n.url()), { last, url: n.url(), youN });
+  }
+  await cn.close();
+
   // clean up
   const [cc, cl] = await open(1360, 900, 'mod.user@montana.edu');
   await api(cl, 'ai_forget', { what: 'all' }); for (const c of ((await api(cl, 'myclasses')).json.classes || [])) await api(cl, 'myclass_delete', { id: c.id });

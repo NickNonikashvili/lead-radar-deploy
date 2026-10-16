@@ -19,10 +19,13 @@
      the chat fills in and Bo starts talking within a second or two. In voice mode (voice: 1) Bo answers the way
      a tutor talks, briefly and in words, and writes formulas on a whiteboard instead of reading them.
    - Bo's board: whatever he works out (the steps of a problem, a formula, the answer) he writes as a page of his
-     whiteboard, a [board: Title] … [/board] block with step:, math:, answer:, tip:, text: and draw: lines, which
-     the website draws neatly beside the chat and on calls (on a call through his write_on_board and
-     draw_on_board tools). A draw: line is a picture as one line of JSON: a graph, number line, figure, table,
-     bar chart, normal curve or probability tree (MH_AI_DRAW; drawn by assets/board-draw.js).
+     whiteboard, a [board: Title] … [/board] block with step:, math:, answer:, tip:, text:, draw: and check: lines
+     and ``` code blocks, which the website draws neatly beside the chat and on calls (on a call through his
+     write_on_board, draw_on_board and ask_on_board tools). A draw: line is a picture as JSON: a graph (with
+     tangent lines, Riemann sums and sliders the student drags), number line, figure, the unit circle, table, bar
+     or pie chart, scatter plot with its best-fit line, box plot, normal curve, probability tree, Venn diagram or
+     flow chart (MH_AI_DRAW; drawn by assets/board-draw.js). A check: line is a question the student answers on
+     the board, and sees at once whether it's right.
    - How Bo teaches (MH_AI_TEACH, in the chat, voice and call instructions): what research on expert tutors and
      learning says works: find out where the student is, the big picture first, one idea at a time, concrete
      before abstract, a worked example and then fading, draw it, check with real questions, a hint ladder,
@@ -334,17 +337,27 @@ HOW YOU TEACH: what the best tutors do. Use it every time you explain something.
 TXT;
 
 const MH_AI_DRAW = <<<'TXT'
-DRAWINGS on your board: a line "draw: " followed by one line of JSON, one of these (leave out keys you don't need):
+DRAWINGS on your board: a line "draw: " and then JSON (on one line is best), one of these (leave out keys you don't need):
 - graph: {"type":"graph","x":[-4,4],"fns":[{"f":"x^2-3","label":"y = x^2 - 3"}],"points":[{"x":2,"y":1,"label":"(2, 1)"}]}
-  f is in x with + - * / ^ ( ), sqrt, abs, sin, cos, tan, ln, log, exp, pi, e (radians). Also: "y":[min,max] (found if left out); in a fn "domain":[a,b], "dash":true, "color":"red"; a point "open":true (a hole); "shade":{"f":"x^2-3","g":"0","from":0,"to":2} (the area between f and g); "segments":[{"from":[0,-3],"to":[2,1],"dash":true,"arrow":true,"label":"secant"}]; "vlines":[{"x":1,"label":"x = 1"}] and "hlines":[{"y":0}] (dashed: asymptotes, guides); "notes":[{"x":1,"y":4,"text":"max"}]; "xlabel", "ylabel"; "equal":true (same scale both ways). A parametric curve: {"x":"cos(t)","y":"sin(t)","t":[0,6.28]}.
-- numberline: {"type":"numberline","min":-3,"max":6,"points":[{"x":2,"open":true,"label":"2"}],"intervals":[{"from":2,"to":null,"left":"open"}]} (null runs on forever; "left"/"right" are "open" or "closed")
+  f is in x with + - * / ^ ( ), sqrt, abs, sin, cos, tan, ln, log, exp, pi, e (radians). Also: "y":[min,max] (found if left out); in a fn "domain":[a,b], "dash":true, "color":"red"; a point "open":true (a hole); "shade":{"f":"x^2-3","g":"0","from":0,"to":2} (the area between f and g); "segments":[{"from":[0,-3],"to":[2,1],"dash":true,"arrow":true,"label":"v"}]; "asymptotes":["x = 2","y = 1"]; "vlines":[{"x":1,"label":"x = 1"}] and "hlines":[{"y":0}] (dashed guides); "notes":[{"x":1,"y":4,"text":"max"}]; "xlabel", "ylabel"; "equal":true (same scale both ways). A parametric curve: {"x":"cos(t)","y":"sin(t)","t":[0,6.28]}.
+  Calculus: "tangent":{"f":"x^2","at":1} (the line and its slope), "secant":{"f":"x^2","from":0,"to":2}, "riemann":{"f":"x^2","from":0,"to":2,"n":4,"rule":"left"} (left, right, mid or trap; the sum is shown).
+  Sliders the student drags: "sliders":[{"name":"a","min":-3,"max":3,"value":1}], then use a in f ("a*x^2"), or in "at", "from", "to", "n". Use them to let the student explore: what a does to the curve, the tangent sliding along it, more and more rectangles.
+- numberline: {"type":"numberline","intervals":["-1 < x <= 3"],"points":[{"x":5,"open":true,"label":"5"}]} (an interval can also be "[2, inf)" or {"from":2,"to":null,"left":"open"}; "min", "max" for the ends)
 - figure, for triangles, any shape, vectors, forces and diagrams, in coordinates you choose (y up): {"type":"figure","shapes":[{"kind":"polygon","points":[[0,0],[4,0],[4,3]],"labels":["A","B","C"]},{"kind":"segment","from":[0,0],"to":[4,0],"label":"4"},{"kind":"angle","at":[4,0],"from":[0,0],"to":[4,3],"right":true},{"kind":"angle","at":[0,0],"from":[4,0],"to":[4,3],"label":"θ"}]}
   kinds: point (at, label), segment and arrow (from, to, label), polygon and curve (points, labels for the vertices), circle (center, r), angle (at, from, to, label, right), text (at, text), rect (at is the lower-left corner, w, h, text); any of them can take "color", "dash", "fill".
+- unitcircle: {"type":"unitcircle","highlight":60} (the special angles; the highlighted one, in degrees or "pi/3", gets its triangle and its exact cos and sin; "labels":"degrees" to name angles in degrees)
 - table: {"type":"table","head":["x","f(x)"],"rows":[["0","1"],["1","3"]]} (cells may use $math$)
 - bars: {"type":"bars","bars":[{"label":"A","value":3},{"label":"B","value":5}],"ylabel":"count"} ("hist":true for a histogram, "highlight":1 marks a bar)
-- normal: {"type":"normal","mean":100,"sd":15,"from":115,"to":null,"label":"IQ"} (shades from..to; null is that whole tail)
+- pie: {"type":"pie","slices":[{"label":"Rent","value":45},{"label":"Food","value":30}]}
+- scatter: {"type":"scatter","points":[[1,52],[2,61],[3,70]],"xlabel":"hours","ylabel":"score"} (with the least-squares line and r; "fit":false for none, "residuals":true, "predict":4 marks the prediction)
+- boxplot: {"type":"boxplot","boxes":[{"label":"A","data":[2,4,4,5,7,9,15]}]} (or the five numbers: min, q1, median, q3, max; outliers are found; up to four boxes)
+- normal: {"type":"normal","mean":100,"sd":15,"from":115,"to":null,"label":"IQ"} (shades from..to, null being that whole tail, and shows the area; "tails":"both" shades both tails beyond "to")
 - tree: {"type":"tree","branches":[{"label":"H","p":"1/2","children":[{"label":"H","p":"1/2","result":"HH 1/4"},{"label":"T","p":"1/2","result":"HT 1/4"}]},{"label":"T","p":"1/2"}]}
-Any drawing can have "caption":"what to notice". Labels are short plain text (x^2, θ, π and 1/2 are fine). Valid JSON on one line, at most two drawings on a page, the steps under them. Colors: blue, red, green, purple, orange, gray.
+- venn: {"type":"venn","sets":["A","B"],"values":{"A":5,"AB":2,"B":3,"none":4},"shade":["A ∩ B'"]} (two or three sets; in values "A" means A only, "AB" both, "none" neither; shade any set expression: A ∪ B, A ∩ B, A', B - A, A only)
+- flow: {"type":"flow","steps":["Read the problem","Pick a method","Does it check out?","Done"],"loops":[{"from":3,"to":2,"label":"no"}]} (a process or an algorithm; a step ending in ? is a decision; steps count from 1)
+Any drawing can have "caption":"what to notice". Labels are short plain text (x^2, θ, π and 1/2 are fine). At most two drawings on a page, the steps under them. Colors: blue, red, green, purple, orange, gray.
+YOUR TURN: a line "check: " and JSON puts a question on the board that they answer right there (they tap a choice or type the answer, and see at once whether it's right, with your why): {"q":"What is the slope of the tangent at x = 1?","choices":["1","2","4"],"answer":"2","why":"f'(x) = 2x, so f'(1) = 2."}. Leave out choices to have them type it ("answer" is what you'd accept). Use it to check understanding after you explain and when you quiz them, one at a time, then stop and wait.
+CODE: a block in ``` with its language (```python … ```) on the page, for programming and anything written as code.
 TXT;
 
 const MH_AI_BO = <<<'TXT'
@@ -363,7 +376,8 @@ math: a formula or equation on its own line (LaTeX)
 answer: $the final result$
 tip: a quick check, shortcut or common mistake
 text: a short sentence, only when needed
-draw: a graph, number line, figure, table, chart or tree, as one line of JSON (see DRAWINGS)
+draw: a graph, number line, figure, table, chart, diagram…, as JSON (see DRAWINGS)
+check: a question they answer on the board (see YOUR TURN)
 [/board]
   Keep each page neat: a drawing first when it helps, then the steps in order, one step and one equation per line, at most about 8 lines, the answer once at the end. Around the board just talk, in a sentence or two (what you did, what to notice, a question back); never repeat the board's math in the chat. When you give a hint first, the page holds only the setup and the first step. Plain questions get plain answers, no board.
 - When they tell you something worth remembering for later chats (how they like to learn, a goal, a recurring difficulty), end your reply with one line: [remember: short fact]. Never store sensitive personal details.
@@ -376,7 +390,7 @@ const MH_AI_VOICE = <<<'TXT'
 VOICE MODE: the student is talking with you out loud, and your reply is read aloud to them in your voice.
 - Talk like a tutor sitting next to them: usually 1 to 4 short sentences, under about 70 words. When you explain something new, take up to about 120 words to do it properly (the big idea, the example on the board, why it works), then check with one question. Plain spoken English: no lists, headings, markdown, emoji or LaTeX in what you say.
 - Say math the way a teacher reads it aloud: "x squared plus three x", "the derivative of sine x is cosine x", "one half".
-- When seeing it helps (a formula, an equation, the steps of a problem, a graph or a figure), also put it on your whiteboard, as a block on lines of its own: [board: A short title], then lines like "draw: {…}" (see DRAWINGS), "step: what you do: $math$", "math: LaTeX", "answer: $result$" or "tip: a short note", then [/board]. At most one page per reply, about six lines. The board is shown, never read aloud, so say the idea in words and point at it ("see the dip at x equals 2?").
+- When seeing it helps (a formula, an equation, the steps of a problem, a graph or a figure), also put it on your whiteboard, as a block on lines of its own: [board: A short title], then lines like "draw: {…}" (see DRAWINGS), "check: {…}" (a question they answer on the board, see YOUR TURN), "step: what you do: $math$", "math: LaTeX", "answer: $result$" or "tip: a short note", then [/board]. At most one page per reply, about six lines. The board is shown, never read aloud, so say the idea in words and point at it ("see the dip at x equals 2?").
 - One question at a time, then stop and let them answer. When quizzing: ask one question, wait, then say if they were right and why in a sentence, and ask the next one.
 - Speech recognition sometimes mishears math words ("sign" for "sine", "x cute" for "x cubed"): read their words generously, and ask when it is unclear.
 - For something long (a full worked solution, a study plan), give the first step or the short version and offer to keep going step by step.
@@ -422,7 +436,8 @@ How you sound:
 
 Your board (the student sees it right next to you):
 - write_on_board: the steps of a problem, an equation, a formula, the answer. A short title; one step per line with its math; the answer once at the end. A new problem gets a new page; add to the page while you work through one together.
-- draw_on_board: whenever a picture explains it better. Graph a function (mark points, shade an area, draw a tangent line or an asymptote), a number line for an inequality or interval, a triangle or any figure (angles, sides, vectors, forces), a table of values, a bar chart, a normal curve with the shaded area, a probability tree. Draw it first, then talk them through it.
+- draw_on_board: whenever a picture explains it better. Graph a function (mark points, shade an area, a tangent or secant line with its slope, an asymptote, a Riemann sum, sliders they drag to explore), a number line for an inequality or interval, a triangle or any figure (angles, sides, vectors, forces), the unit circle, a table of values, a bar or pie chart, a scatter plot with its best-fit line, a box plot, a normal curve with the shaded area, a probability tree, a Venn diagram, a flow chart of a process or an algorithm. Draw it first, then talk them through it.
+- ask_on_board: a question on the board they answer right there (choices to tap, or a box to type in). Use it to check understanding after you explain something, and when you quiz them. Ask it out loud in a few words too, then stop and wait: you'll get a message saying what they picked. Then react: right, say why in a sentence; wrong, what went wrong, and let them try again.
 - Say something while it goes up ("let me sketch that", "okay, it's up"); never go quiet, and never read the board back symbol by symbol. If a drawing comes back with an error, fix it and draw again.
 
 TXT;
@@ -461,14 +476,15 @@ function mh_ai_live_tools(): array {
       'title' => ['type' => 'string', 'description' => 'A short title for the page, like "Solving 2x + 3 = 11" or "The chain rule".'],
       'page' => ['type' => 'string', 'enum' => ['new', 'add'], 'description' => 'new: start a fresh page (a new problem or idea). add: keep writing on the page you are on.'],
       'items' => ['type' => 'array', 'description' => 'One to six lines, in order.', 'items' => ['type' => 'object', 'properties' => [
-        'kind' => ['type' => 'string', 'enum' => ['step', 'math', 'answer', 'tip', 'text']],
-        'text' => ['type' => 'string', 'description' => 'step: what you do in a few words, then its math in $...$. math: just the LaTeX. answer: the result, math in $...$. tip and text: one short line, math in $...$.']], 'required' => ['kind', 'text']]]], 'required' => ['items']]],
-    ['type' => 'function', 'name' => 'draw_on_board', 'description' => 'Draw on the whiteboard next to you: a graph of functions (with points, a shaded area, segments or vectors, asymptotes), a number line with points and intervals, a figure (triangles, any shape, angles, vectors, forces, diagrams), a table of values, a bar chart or histogram, a normal curve with a shaded region, or a probability tree. The student sees it drawn; you talk them through it.', 'parameters' => ['type' => 'object', 'properties' => [
+        'kind' => ['type' => 'string', 'enum' => ['step', 'math', 'answer', 'tip', 'text', 'code']],
+        'text' => ['type' => 'string', 'description' => 'step: what you do in a few words, then its math in $...$. math: just the LaTeX. answer: the result, math in $...$. tip and text: one short line, math in $...$. code: the code, lines kept as they are.'],
+        'lang' => ['type' => 'string', 'description' => 'code: its language, like python.']], 'required' => ['kind', 'text']]]], 'required' => ['items']]],
+    ['type' => 'function', 'name' => 'draw_on_board', 'description' => 'Draw on the whiteboard next to you: a graph of functions (with points, a shaded area, segments or vectors, asymptotes, tangent and secant lines, a Riemann sum, sliders the student drags), a number line with points and intervals, a figure (triangles, any shape, angles, vectors, forces, diagrams), the unit circle, a table of values, a bar chart or histogram, a pie chart, a scatter plot with its least-squares line, box plots, a normal curve with a shaded region and its area, a probability tree, a Venn diagram, or a flow chart. The student sees it drawn; you talk them through it.', 'parameters' => ['type' => 'object', 'properties' => [
       'title' => ['type' => 'string', 'description' => 'A short title for the page, when it starts a new one.'],
       'page' => ['type' => 'string', 'enum' => ['new', 'add'], 'description' => 'new: a fresh page. add: draw on the page you are on, under what is there.'],
       'caption' => ['type' => 'string', 'description' => 'One short line: what to notice.'],
       'drawing' => ['type' => 'object', 'description' => 'Give type and the keys that type uses; leave the rest out. Labels are short plain text (x^2, θ, π, 1/2 are fine).', 'properties' => [
-        'type' => ['type' => 'string', 'enum' => ['graph', 'numberline', 'figure', 'table', 'bars', 'normal', 'tree']],
+        'type' => ['type' => 'string', 'enum' => ['graph', 'numberline', 'figure', 'unitcircle', 'table', 'bars', 'pie', 'scatter', 'boxplot', 'normal', 'tree', 'venn', 'flow']],
         'fns' => ['type' => 'array', 'description' => 'graph: the curves. f is in x: + - * / ^ ( ), sqrt, abs, sin, cos, tan, ln, log, exp, pi, e (radians), like "x^2 - 3". A parametric curve has x and y in t instead, with t: [start, end].', 'items' => ['type' => 'object', 'properties' => ['f' => ['type' => 'string'], 'x' => ['type' => 'string'], 'y' => ['type' => 'string'], 't' => ['type' => 'array', 'items' => ['type' => 'number']], 'label' => ['type' => 'string'], 'domain' => ['type' => 'array', 'items' => ['type' => 'number'], 'description' => '[from, to]'], 'dash' => ['type' => 'boolean'], 'color' => ['type' => 'string', 'enum' => ['blue', 'red', 'green', 'purple', 'orange', 'gray']]]]],
         'x' => ['type' => 'array', 'items' => ['type' => 'number'], 'description' => 'graph: [xmin, xmax].'],
         'y' => ['type' => 'array', 'items' => ['type' => 'number'], 'description' => 'graph: [ymin, ymax]; found from the curves if left out.'],
@@ -478,6 +494,11 @@ function mh_ai_live_tools(): array {
         'vlines' => ['type' => 'array', 'description' => 'graph: dashed vertical lines, like asymptotes.', 'items' => ['type' => 'object', 'properties' => ['x' => ['type' => 'number'], 'label' => ['type' => 'string']]]],
         'hlines' => ['type' => 'array', 'description' => 'graph: dashed horizontal lines.', 'items' => ['type' => 'object', 'properties' => ['y' => ['type' => 'number'], 'label' => ['type' => 'string']]]],
         'notes' => ['type' => 'array', 'description' => 'graph: short text at a point.', 'items' => ['type' => 'object', 'properties' => ['x' => ['type' => 'number'], 'y' => ['type' => 'number'], 'text' => ['type' => 'string']]]],
+        'asymptotes' => ['type' => 'array', 'items' => ['type' => 'string'], 'description' => 'graph: dashed asymptotes, like "x = 2" or "y = 1".'],
+        'tangent' => ['type' => 'object', 'description' => 'graph: the tangent line to f at x = at, with its slope.', 'properties' => ['f' => ['type' => 'string'], 'at' => ['type' => 'string', 'description' => 'A number, or a slider\'s name.']]],
+        'secant' => ['type' => 'object', 'description' => 'graph: the secant line of f from x = from to x = to.', 'properties' => ['f' => ['type' => 'string'], 'from' => ['type' => 'number'], 'to' => ['type' => 'number']]],
+        'riemann' => ['type' => 'object', 'description' => 'graph: n rectangles under f from x = from to x = to, and their sum.', 'properties' => ['f' => ['type' => 'string'], 'from' => ['type' => 'number'], 'to' => ['type' => 'number'], 'n' => ['type' => 'string', 'description' => 'A number, or a slider\'s name.'], 'rule' => ['type' => 'string', 'enum' => ['left', 'right', 'mid', 'trap']]]],
+        'sliders' => ['type' => 'array', 'description' => 'graph: letters the student can drag (a, b, k, n…), used in f, at or n, like "a*x^2". To explore what a number does.', 'items' => ['type' => 'object', 'properties' => ['name' => ['type' => 'string'], 'min' => ['type' => 'number'], 'max' => ['type' => 'number'], 'value' => ['type' => 'number'], 'step' => ['type' => 'number']]]],
         'xlabel' => ['type' => 'string'], 'ylabel' => ['type' => 'string'],
         'equal' => ['type' => 'boolean', 'description' => 'graph: the same scale on both axes (circles look round).'],
         'min' => ['type' => 'number', 'description' => 'numberline: left end.'], 'max' => ['type' => 'number', 'description' => 'numberline: right end.'],
@@ -495,8 +516,25 @@ function mh_ai_live_tools(): array {
         'mean' => ['type' => 'number', 'description' => 'normal: the mean.'], 'sd' => ['type' => 'number', 'description' => 'normal: the standard deviation.'],
         'from' => ['type' => 'number', 'description' => 'normal: shade from here (leave it out to shade the whole left tail).'], 'to' => ['type' => 'number', 'description' => 'normal: shade to here (leave it out to shade the whole right tail).'],
         'label' => ['type' => 'string', 'description' => 'normal: what the values are.'],
-        'branches' => ['type' => 'array', 'description' => 'tree: the first branches; each has label, p (its probability, like "1/2"), children (the same shape, up to three levels) and, at the ends, result (like "HH 1/4").', 'items' => ['type' => 'object', 'properties' => ['label' => ['type' => 'string'], 'p' => ['type' => 'string'], 'result' => ['type' => 'string'], 'children' => ['type' => 'array', 'items' => ['type' => 'object']]]]]
+        'branches' => ['type' => 'array', 'description' => 'tree: the first branches; each has label, p (its probability, like "1/2"), children (the same shape, up to three levels) and, at the ends, result (like "HH 1/4").', 'items' => ['type' => 'object', 'properties' => ['label' => ['type' => 'string'], 'p' => ['type' => 'string'], 'result' => ['type' => 'string'], 'children' => ['type' => 'array', 'items' => ['type' => 'object']]]]],
+        'highlight' => ['type' => 'number', 'description' => 'unitcircle: the angle to show its triangle and exact cos and sin (degrees). bars and pie: which one to mark (from 0).'],
+        'slices' => ['type' => 'array', 'description' => 'pie: the slices.', 'items' => ['type' => 'object', 'properties' => ['label' => ['type' => 'string'], 'value' => ['type' => 'number']]]],
+        'fit' => ['type' => 'boolean', 'description' => 'scatter: the least-squares line and r (on unless false). Points are {x, y}.'], 'residuals' => ['type' => 'boolean'], 'predict' => ['type' => 'number', 'description' => 'scatter: mark the prediction at this x.'],
+        'boxes' => ['type' => 'array', 'description' => 'boxplot: up to four, each from its data or from its five numbers.', 'items' => ['type' => 'object', 'properties' => ['label' => ['type' => 'string'], 'data' => ['type' => 'array', 'items' => ['type' => 'number']], 'min' => ['type' => 'number'], 'q1' => ['type' => 'number'], 'median' => ['type' => 'number'], 'q3' => ['type' => 'number'], 'max' => ['type' => 'number']]]],
+        'tails' => ['type' => 'string', 'description' => 'normal: "both" shades both tails beyond to.'],
+        'sets' => ['type' => 'array', 'items' => ['type' => 'string'], 'description' => 'venn: two or three set names.'],
+        'values' => ['type' => 'object', 'description' => 'venn: what goes in each region: {"A": 5, "AB": 2, "B": 3, "none": 4} ("A" is A only).'],
+        'shaded' => ['type' => 'array', 'items' => ['type' => 'string'], 'description' => 'venn: regions to shade, as set expressions: "A ∩ B", "A ∪ B", "A\'", "B - A", "A only".'],
+        'steps' => ['type' => 'array', 'items' => ['type' => 'string'], 'description' => 'flow: the steps in order; one ending in ? is a decision.'],
+        'loops' => ['type' => 'array', 'description' => 'flow: arrows back (steps count from 1).', 'items' => ['type' => 'object', 'properties' => ['from' => ['type' => 'number'], 'to' => ['type' => 'number'], 'label' => ['type' => 'string']]]]
       ], 'required' => ['type']]], 'required' => ['drawing']]],
+    ['type' => 'function', 'name' => 'ask_on_board', 'description' => 'Put a question on the whiteboard for the student to answer there: choices to tap, or a box to type the answer in. They see right away whether they got it, with your why, and you get a message saying what they picked. Use it to check understanding after you explain, and to quiz them. Then stop and wait.', 'parameters' => ['type' => 'object', 'properties' => [
+      'title' => ['type' => 'string', 'description' => 'A short title for the page, when it starts a new one.'],
+      'page' => ['type' => 'string', 'enum' => ['new', 'add'], 'description' => 'new: a fresh page. add: under what is on the page you are on.'],
+      'question' => ['type' => 'string', 'description' => 'The question, short; math in $...$.'],
+      'choices' => ['type' => 'array', 'items' => ['type' => 'string'], 'description' => 'Two to four choices to tap. Leave out to have them type the answer.'],
+      'answer' => ['type' => 'string', 'description' => 'The right choice, written exactly as in choices; or, with no choices, the answer you would accept.'],
+      'why' => ['type' => 'string', 'description' => 'One sentence on why that is the answer, shown once they answer.']], 'required' => ['question', 'answer']]],
     ['type' => 'function', 'name' => 'remember', 'description' => 'Save one short fact about the student for future sessions: how they learn best, a goal, a recurring difficulty. Never sensitive personal details.', 'parameters' => ['type' => 'object', 'properties' => ['fact' => ['type' => 'string', 'description' => 'Under 20 words.']], 'required' => ['fact']]],
   ];
 }

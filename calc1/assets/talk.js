@@ -49,9 +49,15 @@
      [/board], see App.boBoard) goes to onPage as it fills, with isNew the first time. Pages are never spoken. */
   function splitter(onSentence, onPage) {
     const BB = App.boBoard || {}; const KIND = BB.KIND || /^$/, OPEN = BB.OPEN || /^$/, CLOSE = BB.CLOSE || /^$/;
-    let buf = '', cur = null, wait = null, said = 0, loose = null;
+    const dep = App.boDraw ? App.boDraw.depth : () => 0;
+    let buf = '', cur = null, wait = null, said = 0, loose = null, grab = null, fence = null, skipFence = false;
     const page = (p, isNew) => { if (onPage) onPage(p, isNew); };
-    const looseLine = x => { x = String(x || '').trim(); if (!x) return; const isNew = !loose; if (isNew) loose = { title: '', items: [], open: false }; loose.items.push(BB.oneLine ? BB.oneLine(x) : { k: 'text', t: x }); page(loose, isNew); };
+    const add = (p, k, t, x) => BB.add ? BB.add(p, k, t, x) : (p.items.push(Object.assign({ k, t }, x || {})), p.items[p.items.length - 1]);
+    const looseOf = () => { const isNew = !loose; if (isNew) loose = { title: '', items: [], open: false }; return [loose, isNew]; };
+    const looseLine = x => { x = String(x || '').trim(); if (!x) return; const [p, isNew] = looseOf(); p.items.push(BB.oneLine ? BB.oneLine(x) : { k: 'text', t: x }); page(p, isNew); };
+    // a draw: or check: whose JSON goes on over the next lines (or sits in a ``` block): it goes up once its brackets close
+    const finish = () => { const g = grab; grab = null; const t = g.t.replace(/\s*```\s*$/, '').trim(); if (!t) return; let p = g.p, isNew = false; if (!p) [p, isNew] = looseOf(); add(p, g.k, t); page(p, isNew); };
+    const startGrab = (p, k, rest) => { grab = { p, k, t: '' }; const t = String(rest || '').replace(/^\s*```\w*\s*/, ''); if (t.trim()) { grab.t = t; if (dep(t) <= 0) { finish(); skipFence = true; } } };
     const emit = s => { s = s.replace(/\[board\+?:\s*([^\]]*)\]/gi, (m, x) => { looseLine(x); return ' '; }).replace(/\[(?:\/board|remember:[^\]]*)\]/gi, ' ').trim(); if (s) onSentence(s); };
     // the whole sentences in a line from position from; final: the line is complete, so the rest is a sentence too
     function sentences(line, from, final) {
@@ -65,26 +71,40 @@
       return start;
     }
     function line(l) {
+      if (skipFence) { skipFence = false; if (/^\s*```\s*$/.test(l)) return; }
+      if (grab) {
+        if (!grab.t) { if (!l.trim() || /^\s*```\w*\s*$/.test(l)) return; if (/^\s*\{/.test(l)) { grab.t = l; if (dep(l) <= 0) { finish(); skipFence = true; } return; } grab = null; }
+        else { if (/^\s*```\s*$/.test(l)) { finish(); return; } grab.t += '\n' + l; if (dep(grab.t) <= 0) { finish(); skipFence = true; } return; }
+      }
+      if (fence) { if (/^\s*```\s*$/.test(l)) { fence = null; return; } fence.it.t += (fence.it.t ? '\n' : '') + l.replace(/\s+$/, ''); page(fence.p, false); return; }   // code, a line at a time
       if (wait) {   // a page title: the next line says whether a page follows (or it was a one-line board)
         if (!l.trim()) return; const w = wait; wait = null;
         if (KIND.test(l) || CLOSE.test(l)) { cur = { title: w.title, cont: w.cont, items: [], open: true }; page(cur, true); } else looseLine(w.title);
       }
       if (cur) {
         if (CLOSE.test(l)) { cur.open = false; page(cur, false); cur = null; return; }
-        const k = KIND.exec(l); if (k) { const t = k[2].trim(); if (t) { cur.items.push({ k: BB.kind ? BB.kind(k[1]) : 'text', t }); page(cur, false); } return; }
+        if (/^\s*```/.test(l)) { const lang = l.replace(/^\s*```/, '').trim().slice(0, 20); if (/^json$/i.test(lang)) grab = { p: cur, k: 'draw', t: '' }; else { fence = { p: cur, it: add(cur, 'code', '', { lang }) }; page(cur, false); } return; }
+        const k = KIND.exec(l);
+        if (k) {
+          const kind = BB.kind ? BB.kind(k[1]) : 'text';
+          if (kind === 'check' && k[2].trim() && !/^\s*(\{|```)/.test(k[2])) { add(cur, 'tip', k[2].trim()); page(cur, false); return; }   // "check: plug it back in" is a tip
+          if (kind === 'draw' || kind === 'check') { startGrab(cur, kind, k[2]); return; }
+          if (kind === 'code') { add(cur, 'code', k[2].replace(/\s+$/, '')); page(cur, false); return; }
+          const t = k[2].trim(); if (t) { add(cur, kind, t); page(cur, false); } return;
+        }
         if (!l.trim()) return;
         cur.open = false; page(cur, false); cur = null;
       }
       const o = OPEN.exec(l); if (o) { wait = { title: o[2].trim(), cont: !!o[1] }; said = 0; return; }
-      if (/^\s*draw\s*:/i.test(l)) { const dm = /^\s*draw\s*:\s*(\{.*\})\s*$/i.exec(l); if (dm) { const isNew = !loose; if (isNew) loose = { title: '', items: [], open: false }; loose.items.push({ k: 'draw', t: dm[1] }); page(loose, isNew); } said = 0; return; }   // a drawing is never spoken
+      const dm = /^\s*(draw|check)\s*:\s?(.*)$/i.exec(l); if (dm && (!dm[2].trim() || /^\s*(\{|```)/.test(dm[2]))) { startGrab(null, dm[1].toLowerCase(), dm[2]); said = 0; return; }   // a drawing or a question is never spoken
       sentences(l, said, true); said = 0;
     }
     return {
       push(t) {
         buf += t; let i; while ((i = buf.indexOf('\n')) >= 0) { const l = buf.slice(0, i); buf = buf.slice(i + 1); line(l); }
-        if (!cur && !wait && buf && !/^\s*\[/.test(buf) && !/^\s*draw\s*:/i.test(buf)) said = sentences(buf, said, false);
+        if (!cur && !wait && !grab && !fence && buf && !/^\s*\[/.test(buf) && !/^\s*(draw|check)\s*:\s*(\{|```|$)/i.test(buf)) said = sentences(buf, said, false);
       },
-      end() { if (buf) { const l = buf; buf = ''; line(l); } if (wait) { const w = wait; wait = null; looseLine(w.title); } if (cur) { cur.open = false; page(cur, false); cur = null; } }
+      end() { if (buf) { const l = buf; buf = ''; line(l); } if (grab) finish(); fence = null; if (wait) { const w = wait; wait = null; looseLine(w.title); } if (cur) { cur.open = false; page(cur, false); cur = null; } }
     };
   }
 
@@ -264,7 +284,12 @@
         <button type="button" class="bt-btn bt-end" data-t="end"><span class="bt-btn-ic">${icon('phoneoff', 26)}</span><span class="bt-btn-l">End</span></button>
       </footer>`;
     document.body.appendChild(el); document.documentElement.classList.add('bt-lock');
-    if (App.boBoard) { App.boBoard.wire($('#bt-board', el)); App.boBoard.paint($('#bt-board', el), T.pages, -1, false); }
+    if (App.boBoard) {
+      const bd = $('#bt-board', el); App.boBoard.wire(bd); App.boBoard.paint(bd, T.pages, -1, false);
+      // a question Bo put on the board: he hears what they picked (and the Explain / Another one buttons ask him)
+      bd._onAsk = t => sayTyped(t);
+      bd._onAnswer = r => { if (T.state !== 'live') return; const t = `(On the board I answered "${r.said}" to your question "${r.q}". ${r.ok === true ? 'That is right.' : r.ok === false ? `That is not right; the answer is ${r.answer}.` : 'Is it right?'})`; if (T.mode === 'live') Live.tell(t); else { stopListening(); Speaker.stop(); ask(t); } };
+    }
     requestAnimationFrame(() => el.classList.add('open'));
     el.addEventListener('click', onClick); document.addEventListener('keydown', onKey, true);
     $('#bt-type', el).addEventListener('submit', e => { e.preventDefault(); const q = $('#bt-q', el); const t = q.value.trim(); if (!t) { q.focus(); return; } q.value = ''; sayTyped(t); });
@@ -412,12 +437,12 @@
     send(o) { const dc = this.dc; if (dc && dc.readyState === 'open') { try { dc.send(JSON.stringify(o)); } catch (e) {} } },
     turn(id, r) { let t = this.items.get(id); if (!t) { t = { r, t: '', done: false, saved: false }; this.items.set(id || 'x' + Math.random(), t); this.order.push(id); } return t; },
     /* the pages written while Bo said this, as text for the chat ([board+: …] for more on a page from before) */
-    takeBoards() { const b = this.boards.splice(0).reduce((a, x) => { const prev = a[a.length - 1]; if (x.cont && prev && prev.title === x.title) prev.items = prev.items.concat(x.items); else a.push(Object.assign({}, x)); return a; }, []); const one = x => String(x || '').replace(/\s+/g, ' ').trim(); return b.map(x => `\n[board${x.cont ? '+' : ''}: ${one(x.title)}]\n${x.items.map(it => `${it.k}: ${one(it.t)}`).join('\n')}\n[/board]`).join(''); },
+    takeBoards() { const b = this.boards.splice(0).reduce((a, x) => { const prev = a[a.length - 1]; if (x.cont && prev && prev.title === x.title) prev.items = prev.items.concat(x.items); else a.push(Object.assign({}, x)); return a; }, []); const one = x => String(x || '').replace(/\s+/g, ' ').trim(); return b.map(x => `\n[board${x.cont ? '+' : ''}: ${one(x.title)}]\n${x.items.map(it => it.k === 'code' ? `\`\`\`${it.lang || ''}\n${String(it.t || '').replace(/```/g, "'''")}\n\`\`\`` : `${it.k}: ${one(it.t)}`).join('\n')}\n[/board]`).join(''); },
     /* a tool call from Bo, run once. The name comes with the item that starts the call (response.output_item.added),
        not always with the arguments, so it is looked up by the item's id; failing that, guessed from the arguments */
     call(name, id, args) {
       if (!id || this.ran.has(id)) return; this.ran.add(id);
-      if (!name) { let a = {}; try { a = JSON.parse(args || '{}'); } catch (e) {} name = a.drawing ? 'draw_on_board' : a.items || a.lines ? 'write_on_board' : a.fact ? 'remember' : ''; }
+      if (!name) { let a = {}; try { a = JSON.parse(args || '{}'); } catch (e) {} name = a.drawing || a.drawings || (a.type && !a.items) ? 'draw_on_board' : a.question ? 'ask_on_board' : a.items || a.lines ? 'write_on_board' : a.fact ? 'remember' : ''; }
       this.tool(name, id, args);
     },
     on(ev) {
@@ -454,8 +479,11 @@
       }
     },
     tool(name, id, args) {
-      let a = {}; try { a = JSON.parse(args || '{}'); } catch (e) {}
+      const D = App.boDraw, BB = App.boBoard;
+      let a = D ? D.json(args) : null; if (!a) { try { a = JSON.parse(args || '{}'); } catch (e) { a = {}; } }   // leniently: LaTeX with one backslash, a cut-off string…
       let out;
+      // a drawing as it comes: an object, a JSON string, or its fields at the top
+      const drawingOf = v => { const o = v && typeof v === 'object' ? v : typeof v === 'string' && D ? D.json(v) : null; const sp = o && D ? D.parse(o) : null; const json = sp ? JSON.stringify(o) : ''; return sp && json.length <= 8000 ? { sp, o, json } : null; };
       // lines go on the page showing (page: add) or a new one; the chat keeps them as [board] text
       const put = items => {
         const title = String(a.title || '').trim().slice(0, 90); const last = T.pages[T.pages.length - 1]; const more = a.page === 'add' && !!last && (!title || title === last.title);
@@ -463,19 +491,32 @@
         this.boards.push({ title: more ? last.title : title, items: items.slice(), cont: more });
       };
       if (name === 'write_on_board') {
-        const BB = App.boBoard;
-        let items = (Array.isArray(a.items) ? a.items : []).map(x => ({ k: BB ? BB.kind(x && x.kind) : 'text', t: String((x && x.text) || '').trim().slice(0, 300) })).filter(x => x.t && x.k !== 'draw');
+        let items = (Array.isArray(a.items) ? a.items : []).slice(0, 10).map(x => {
+          if (!x || typeof x !== 'object') return typeof x === 'string' && x.trim() ? { k: 'text', t: x.trim().slice(0, 300) } : null;
+          const k = BB ? BB.kind(x.kind ?? x.type) : 'text';
+          if (k === 'draw') { const d = drawingOf(x.drawing ?? x.text ?? x); return d ? { k, t: d.json } : null; }
+          if (k === 'check') { const o = (typeof x.text === 'string' && D && D.json(x.text)) || x; return BB && BB.check(o) ? { k, t: JSON.stringify(o) } : null; }
+          if (k === 'code') return { k, t: String(x.text ?? '').replace(/\s+$/, '').slice(0, 3000), lang: String(x.lang || '').slice(0, 20) };
+          return { k, t: String(x.text ?? '').trim().slice(0, 300) };
+        }).filter(x => x && x.t);
         if (!items.length && a.lines) items = [].concat(a.lines).map(x => ({ k: 'math', t: String(x || '').replace(/^\$+|\$+$/g, '').trim() })).filter(x => x.t);   // the first version of the tool
         items = items.slice(0, 8); if (items.length) put(items);
         out = items.length ? { written: items.length, page: T.pages.length } : { error: 'Nothing to write: give one to six items.' };
       }
       else if (name === 'draw_on_board') {
-        // a graph, number line, figure, table, chart or tree (assets/board-draw.js); a bad one is refused, so he can fix it
-        const D = App.boDraw; const d = a.drawing && typeof a.drawing === 'object' ? Object.assign({}, a.drawing) : null;
-        if (d && a.caption && !d.caption) d.caption = a.caption;
-        const sp = D && d ? D.parse(d) : null; const json = sp ? JSON.stringify(d) : '';
-        if (sp && json.length <= 6000) { put([{ k: 'draw', t: json }]); out = { drawn: sp.type, page: T.pages.length }; }
-        else out = { error: 'That drawing could not be drawn. Give drawing.type (graph, numberline, figure, table, bars, normal or tree) and its numbers; graph functions use x, like "x^2 - 3".' };
+        // a drawing (assets/board-draw.js), or a few; a bad one is refused, so he can fix it
+        const top = a.type ? Object.assign({}, a, { title: undefined, page: undefined, caption: undefined }) : null;
+        const want = Array.isArray(a.drawings) ? a.drawings.slice(0, 3) : [a.drawing ?? top];
+        const ds = want.map(drawingOf).filter(Boolean);
+        if (ds.length === 1 && a.caption && !ds[0].o.caption) { ds[0].o = Object.assign({}, ds[0].o, { caption: a.caption }); ds[0].json = JSON.stringify(ds[0].o); }
+        if (ds.length) { put(ds.map(d => ({ k: 'draw', t: d.json }))); out = { drawn: ds.map(d => d.sp.type).join(', '), page: T.pages.length }; }
+        else out = { error: `That drawing could not be drawn. Give drawing.type (one of ${(D ? D.TYPES : ['graph']).join(', ')}) and its numbers; functions use x, like "x^2 - 3".` };
+      }
+      else if (name === 'ask_on_board') {
+        // a question on the board for the student to answer there; what they pick comes back to him as a message
+        const o = { q: a.question ?? a.q, choices: a.choices, answer: a.answer, why: a.why ?? a.explanation, hint: a.hint };
+        if (BB && BB.check(o)) { put([{ k: 'check', t: JSON.stringify(o) }]); out = { asked: true, page: T.pages.length, note: 'It is on the board. Stop talking and let them answer; you will be told what they picked.' }; }
+        else out = { error: 'Nothing to ask: give question, and choices with the right answer (or just answer, for them to type).' };
       }
       else if (name === 'remember') { const f = String(a.fact || '').trim().slice(0, 140); if (f) { this.notes.push(f); toast(`Bo will remember: ${f}`, 3500); } out = { saved: !!f }; }
       else out = { error: 'There is no such tool.' };
@@ -505,6 +546,8 @@
     mute(on) { if (this.mic) this.mic.getAudioTracks().forEach(t => { t.enabled = !on; }); },
     hush() { this.send({ type: 'response.cancel' }); this.send({ type: 'output_audio_buffer.clear' }); },
     say(text) { this.auto = 0; this.send({ type: 'conversation.item.create', item: { type: 'message', role: 'user', content: [{ type: 'input_text', text }] } }); this.send({ type: 'response.create' }); caption('you', text, false); who('thinking'); },
+    /* what the student did on the board (answered his question), for Bo to pick up from; not shown as a caption */
+    tell(text) { this.auto = 0; if (this.talking) this.hush(); this.send({ type: 'conversation.item.create', item: { type: 'message', role: 'user', content: [{ type: 'input_text', text }] } }); this.send({ type: 'response.create' }); who('thinking'); },
     photo(p) { this.auto = 0; this.send({ type: 'conversation.item.create', item: { type: 'message', role: 'user', content: [{ type: 'input_image', image_url: `data:${p.type};base64,${p.data}` }, { type: 'input_text', text: 'Take a look at this.' }] } }); this.send({ type: 'response.create' }); caption('you', 'Sent a photo', false); who('thinking'); },
     tune() { this.send({ type: 'session.update', session: { type: 'realtime', audio: { input: { turn_detection: { type: 'semantic_vad', eagerness: eager(), create_response: true, interrupt_response: true } }, output: { speed: liveRate() } } } }); }
   };

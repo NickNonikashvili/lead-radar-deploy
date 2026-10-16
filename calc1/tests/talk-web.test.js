@@ -66,7 +66,7 @@ const quiet = () => { try { const s = JSON.parse(localStorage.getItem('studyhub-
   check('the call is speech to speech, with semantic turn-taking, interruptions, noise reduction and the natural voice', sess.type === 'realtime' && sess.model === 'gpt-realtime-2.1-mini' && sess.audio.input.turn_detection.type === 'semantic_vad' && sess.audio.input.turn_detection.interrupt_response === true && sess.audio.input.noise_reduction.type === 'near_field' && sess.audio.output.voice === 'cedar' && /Calculus I/.test(sess.audio.input.transcription.prompt), sess.audio);
   const ins = sess.instructions || '';
   check('Bo is told to talk like a friend, not an assistant, and knows the class and the student', /not a help desk/.test(ins) && /Never say things like "How can I help you today"/.test(ins) && /If they cut in, stop/.test(ins) && /CLASS:/.test(ins) && /WEAKEST TOPICS/.test(ins) && /you speak first/.test(ins), ins.slice(0, 200));
-  check('he has three tools: writing on the board, drawing on it, and his notes', (sess.tools || []).map(t => t.name).join() === 'write_on_board,draw_on_board,remember');
+  check('he has four tools: writing on the board, drawing on it, asking a question on it, and his notes', (sess.tools || []).map(t => t.name).join() === 'write_on_board,draw_on_board,ask_on_board,remember');
   check('and he is told how to teach: explain new things properly with the board, check with a real question', /HOW YOU TEACH/.test(ins) && /take a proper turn of four to seven sentences/.test(ins) && /never "does that make sense\?"/.test(ins) && !/Ask more than you tell/.test(ins));
   check('Bo speaks first: the page asks for a response as soon as the call opens', (await sent(m)).some(x => x.type === 'response.create'));
   check('the clock runs', /\d:\d\d/.test(await txt(m, '#bt-clock')));
@@ -139,6 +139,20 @@ const quiet = () => { try { const s = JSON.parse(localStorage.getItem('studyhub-
   const typed = (await sent(m)).filter(x => x.type === 'conversation.item.create' && x.item.type === 'message');
   check('typing in the call sends your words to Bo and asks him to answer', typed.some(x => x.item.content[0].text === 'Can you quiz me?') && (await sent(m)).filter(x => x.type === 'response.create').length === before + 1);
   await E(m, { type: 'conversation.item.added', item: { id: 'u2', type: 'message', role: 'user', content: [{ type: 'input_text', text: 'Can you quiz me?' }] } });
+  // a question on the board: they answer it there, and Bo hears what they picked
+  await E(m, { type: 'response.output_item.done', response_id: 'r8', output_index: 0, item: { id: 'fc8', type: 'function_call', status: 'completed', name: 'ask_on_board', call_id: 'c8', arguments: JSON.stringify({ title: 'Quick check', question: 'What is the derivative of $x^2$?', choices: ['$x$', '$2x$', '$x^2$'], answer: '$2x$', why: 'Bring the 2 down and take one off the power.' }) } });
+  // a drawing as a JSON string with LaTeX written with one backslash, added to that page; and a drawing given as a board line
+  await E(m, { type: 'response.function_call_arguments.done', name: 'draw_on_board', call_id: 'c10', arguments: JSON.stringify({ page: 'add', drawing: '{"type":"graph","fns":[{"f":"\\frac{1}{x}"}],"asymptotes":["x = 0"]}' }) });
+  await E(m, { type: 'response.function_call_arguments.done', name: 'write_on_board', call_id: 'c11', arguments: JSON.stringify({ page: 'add', items: [{ kind: 'code', text: 'def f(x):\n    return x ** 2', lang: 'python' }] }) });
+  await m.waitForTimeout(400);
+  const qb = await m.evaluate(() => { const b = document.querySelector('#bt-board'); return { title: (b.querySelector('.bb-title') || {}).textContent, pos: b.querySelector('.bb-pos').textContent, opts: b.querySelectorAll('.bb-chk-o').length, draws: b.querySelectorAll('.bb-draw svg .bd-curve').length, asym: /x = 0/.test((b.querySelector('.bb-draw svg') || {}).textContent || ''), code: (b.querySelector('.bb-code pre') || {}).textContent }; });
+  check('he puts a question on the board (a new page), a drawing sent as text with one-backslash LaTeX, and code', qb.title === 'Quick check' && /Page 3 of 3/.test(qb.pos) && qb.opts === 3 && qb.draws === 1 && qb.asym && qb.code === 'def f(x):\n    return x ** 2', qb);
+  const outs3 = (await sent(m)).filter(x => x.type === 'conversation.item.create' && x.item.type === 'function_call_output');
+  check('the page tells him the question is up and to wait for the answer', outs3.some(o => o.item.call_id === 'c8' && /"asked":true/.test(o.item.output) && /let them answer/.test(o.item.output)) && outs3.some(o => o.item.call_id === 'c10' && /"drawn":"graph"/.test(o.item.output)), outs3.map(o => o.item.output));
+  const before2 = await creates();
+  await m.click('#bt-board .bb-chk-o[data-chk-o="0"]'); await m.waitForTimeout(250);
+  const told = (await sent(m)).filter(x => x.type === 'conversation.item.create' && x.item.type === 'message').pop();
+  check('tapping an answer marks it on the board and tells Bo what they picked, so he can react', !!(await m.$('#bt-board .bb-chk-o.no[data-chk-o="0"]')) && /On the board I answered "\$x\$" to your question "What is the derivative of \$x\^2\$\?"\. That is not right; the answer is \$2x\$\./.test(told && told.item.content[0].text) && (await creates()) === before2 + 1, told && told.item.content[0].text);
   // settings
   await m.click('[data-t="settings"]'); await m.waitForTimeout(200);
   check('settings: his voices, speed, when he jumps in, captions, and basic voice', (await m.$$('#bt-set input[name="bt-lv"]')).length >= 6 && !!(await m.$('#bt-set [data-eager="low"]')) && !!(await m.$('#bt-set [data-lrate="1.1"]')) && !!(await m.$('#bt-cp')) && !!(await m.$('#bt-bm')));
