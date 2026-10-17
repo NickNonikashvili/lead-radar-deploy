@@ -87,6 +87,28 @@ Drawings appear stroke by stroke like a marker on a whiteboard (not when motion 
 colours in light and dark mode, place their labels where they don't collide with the curves or each other, and
 are named for screen readers ("Graph of y = x² − 3 for x from −4 to 4…"). Copying a page copies that description.
 
+## Bo on every page: teaching from what the student sees
+
+Bo floats on every page of the website (`assets/bo-float.js`). When a student asks him from a page, the question
+carries what is on it (`MH_AI_SCREEN` in `api/ai.php`): the page's questions numbered as the student sees them,
+the choices, what they answered and whether it was right, the text in view, their code. The rules above apply to
+that page:
+
+- **Where they are** (rule 1) is on the screen: a wrong answer, the choice they picked, the notes they are reading.
+  Bo starts from it instead of asking.
+- **A question not answered yet** gets the hint ladder (rule 9): the idea, a hint, the first step; the full
+  solution only when they ask. A worked solution the page still hides is sent too, marked hidden, so Bo is right
+  without giving it away.
+- **A wrong answer** is information (rule 10): what went wrong and why it was tempting, how to do it, then a similar
+  one to try (rule 12, close the loop).
+- **"Check my answers"** goes through each one briefly and spends the words on the wrong ones.
+- **What they point at or select** (`MH_AI_FOCUS`) is what "this" means.
+- **A problem set** (a photo or a PDF, `MH_AI_FILE`): numbered as the set does, help with the one they ask about, or
+  a short plan for all of it starting with the first. Graded homework gets the method with a similar example.
+- He never says he was sent the page's text, and doesn't describe the page back to them.
+
+The student sees what Bo sees ("Bo sees Calc I › Quizzer · 10 questions") and can switch it off with the eye.
+
 ## Sources
 
 - Lepper, M. R., & Woolverton, M. (2002). The wisdom of practice: Lessons learned from the study of highly effective tutors. In J. Aronson (Ed.), *Improving Academic Achievement*. Summary of the INSPIRE model: [UBC CWSEI, INSPIRE guidelines](https://www.eoas.ubc.ca/research/cwsei/resources/INSPIRE-Guidelines.pdf); [MIT TLL, office hours](https://tll.mit.edu/teaching-resources/how-to-teach/facilitate-office-hours).

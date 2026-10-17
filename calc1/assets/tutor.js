@@ -315,7 +315,7 @@
     });
   }
   const still = () => (global.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) || document.documentElement.dataset.motion === 'off';
-  App.boBoard = { KIND: B_KIND, OPEN: B_OPEN, CLOSE: B_CLOSE, kind: kindOf, oneLine, split: boardSplit, merge: boardMerge, shell: boardShell, paint: boardPaint, wire: boardWire, plain: pagePlain, add: addItem, check: checkOf };
+  App.boBoard = { KIND: B_KIND, OPEN: B_OPEN, CLOSE: B_CLOSE, kind: kindOf, oneLine, split: boardSplit, merge: boardMerge, shell: boardShell, paint: boardPaint, wire: boardWire, plain: pagePlain, add: addItem, check: checkOf, fmt: (sp, ids) => fmt(sp, ids), userHtml: (t, v) => userHtml(t, v), plainOf: src => plainOf(src) };
 
   /* ---------- Bo's answers: plain text with **bold**, lists and LaTeX, and a link to each page he wrote on the board ---------- */
   function fmt(sp, ids) {
@@ -331,7 +331,15 @@
   }
   /* an answer as plain text, for copying: what Bo said, then his pages */
   const plainOf = src => { const sp = boardSplit(src); return [sp.say.replace(/\u0002\d+\u0002/g, '').trim(), ...sp.pages.map(pagePlain)].filter(Boolean).join('\n\n'); };
-  const userHtml = (t, v) => { const photo = /^\[photo\]\s?/.test(t); const q = t.replace(/^\[photo\]\s?/, ''); return `${v ? `<span class="bo-photo-tag">${icon('mic', 13)} Said out loud</span>` : ''}${photo ? `<span class="bo-photo-tag">${icon('image', 13)} Photo</span>` : ''}${q ? `<p>${esc(q).replace(/\n/g, '<br>')}</p>` : ''}`; };
+  /* a student's message: tags in front say where it came from ([photo], [pdf: name], [from: Quizzer · Q3], from the floating Bo) */
+  const userHtml = (t, v) => {
+    let q = String(t || ''), tags = ''; let m;
+    while ((m = /^\[(photo|pdf(?::\s*[^\]]*)?|from:\s*[^\]]*)\]\s?/i.exec(q))) {
+      const x = m[1]; q = q.slice(m[0].length);
+      tags += /^photo$/i.test(x) ? `<span class="bo-photo-tag">${icon('image', 13)} Photo</span>` : /^pdf/i.test(x) ? `<span class="bo-photo-tag">${icon('file', 13)} ${esc(x.replace(/^pdf:?\s*/i, '') || 'PDF')}</span>` : `<span class="bo-photo-tag">${icon('target', 13)} ${esc(x.replace(/^from:\s*/i, ''))}</span>`;
+    }
+    return `${v ? `<span class="bo-photo-tag">${icon('mic', 13)} Said out loud</span>` : ''}${tags}${q ? `<p>${esc(q).replace(/\n/g, '<br>')}</p>` : ''}`;
+  };
   const tools = () => `<div class="bo-tools">${talk() ? `<button type="button" class="bo-tool" data-bo-read aria-label="Read this answer aloud" title="Read aloud">${icon('volume', 15)}</button>` : ''}<button type="button" class="bo-tool" data-bo-copy aria-label="Copy this answer" title="Copy">${icon('copy', 14)}</button><button type="button" class="bo-tool" data-bo-report aria-label="Report this answer" title="Report">${icon('flag', 14)}</button></div>`;
   /* a message; for Bo's, ids are where his pages are on the board */
   const msgHtml = (r, t, extra = '', v = false, ids = null) => r === 'b'
@@ -403,9 +411,10 @@
       <div class="bo-gate-acts"><button type="button" class="btn primary lg" data-go="max">${plan === 'pro' ? 'Move up to Max' : 'Get Mathub Max'}</button></div>
       <p class="small muted">Mathub Max includes everything in Pro: Bo also writes your classes from their syllabi. <a href="#/plan">Compare the plans</a></p></section>`;
   }
+  App.boGateHtml = { consent: () => consent(), intro: plan => intro(plan) };   // the floating Bo (assets/bo-float.js) asks the same way
   function consent() {
     return `<section class="bo-gate bo-consent" aria-labelledby="bo-consent-h"><span class="bo-gate-av" aria-hidden="true">${bo(80)}</span><h2 id="bo-consent-h">Before you start</h2>
-      <p>To answer you, Bo sends what you ask (and any photo you add), a summary of your class's syllabus and a short summary of your progress (your scores by topic, questions you missed, flashcards due and your exam dates) to <b>Anthropic</b>, the company that makes the Claude AI Bo runs on. Anthropic uses it only to write Bo's answer and does not train its AI on it.</p>
+      <p>To answer you, Bo sends what you ask (and any photo or PDF you add, and, when you ask him from a page, what is on that page), a summary of your class's syllabus and a short summary of your progress (your scores by topic, questions you missed, flashcards due and your exam dates) to <b>Anthropic</b>, the company that makes the Claude AI Bo runs on. Anthropic uses it only to write Bo's answer and does not train its AI on it.</p>
       <p>Your chat with Bo and the notes he keeps about how you like to learn are saved with your Mathub account, so they are on all your devices. You can see and delete them any time under “What Bo knows”. <a href="#/policy/privacy">Privacy Policy</a></p>
       <div class="bo-gate-acts"><button type="button" class="btn primary lg" data-go="agree">I agree, let's start</button><button type="button" class="btn ghost" data-go="later">Not now</button></div></section>`;
   }
@@ -425,6 +434,7 @@
     const items = [].concat(...boardSplit(reply).pages.map(p => p.items)); const drew = items.some(x => x.k === 'draw'), asked = items.some(x => x.k === 'check');
     return ['Explain it more simply', 'Show me another example', asked ? 'Give me another question' : 'Quiz me on this', drew ? 'Walk me through the drawing' : 'Draw it on the board'];
   }
+  App.boFollowups = followups;
   const chips = list => list.map(x => `<button type="button" class="chip bo-chip" data-bo-say="${esc(x)}">${esc(x)}</button>`).join('');
   /* "Ask Bo about this", under a question the student missed (the quizzer, the mistakes notebook): straight into a
      chat with Bo about it. q is the question (prompt, options, answer, answerTex); said is what they answered. */

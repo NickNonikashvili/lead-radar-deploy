@@ -51,6 +51,8 @@ const MH_AI_TURNS_KEPT = 40;     // chat turns kept for the screen
 const MH_AI_NOTES = 12;          // notes Bo keeps about a student
 const MH_AI_FILE_BYTES = 7000000; // a syllabus file (PDF or photo)
 const MH_AI_IMAGE_BYTES = 2500000; // a photo in the chat
+const MH_AI_PDF_BYTES = 6500000;   // a problem set as a PDF in the chat
+const MH_AI_SCREEN_CHARS = 9000;   // what is on the page the student asked from
 
 function mh_ai_db(): PDO {
   static $ready = false; $db = mh_db();
@@ -386,6 +388,23 @@ check: a question they answer on the board (see YOUR TURN)
 TXT;
 const MH_AI_BO_FULL = MH_AI_BO . "\n\n" . MH_AI_TEACH . "\n\n" . MH_AI_DRAW;
 
+/* asked from a page of Mathub (Bo floats on every page, assets/bo-float.js): what is on it, and what they pointed at */
+const MH_AI_SCREEN = <<<'TXT'
+THEIR SCREEN: they asked you from a page of Mathub, and THE PAGE below is what is on it: the page, its questions or problems numbered as they see them (Q3, Problem 2), the choices, what they answered and whether it was right, and the text in view. "This", "this one", "Q3", "number 2", "the last one" mean what is on it.
+- Answer about what they are looking at, by the numbers they see. If what they ask isn't on the page, just answer it.
+- A question they haven't answered yet: don't hand over the answer; go up the hint ladder (the idea, a hint, the first step) unless they ask for the full solution. One they got wrong: say exactly what went wrong and why it's tempting, then how to do it, and let them try a similar one.
+- "Check my answers": go through each one they answered, briefly; spend your words on the wrong ones.
+- A worked solution marked hidden is for you, so you are right; don't give it away unless they ask for the solution.
+- Their code: say what it does and where it goes wrong (the line), and hint at the fix before giving it.
+- Keep it to the page: never mention that you were sent its text, and don't describe the page back to them.
+TXT;
+const MH_AI_FOCUS = <<<'TXT'
+WHAT THEY POINTED AT (or selected) on the page: when they say "this", they mean this. Explain it; if it is a question, help with it as THEIR SCREEN says.
+TXT;
+const MH_AI_FILE = <<<'TXT'
+THEIR FILE: they attached a problem set or a page of notes. Read all of it; number the problems as it does. Help with the one they ask about; if they ask about all of it, give a short plan (which problems need which idea) and start with the first. Graded homework gets the method with a similar example, as always.
+TXT;
+
 const MH_AI_VOICE = <<<'TXT'
 VOICE MODE: the student is talking with you out loud, and your reply is read aloud to them in your voice.
 - Talk like a tutor sitting next to them: usually 1 to 4 short sentences, under about 70 words. When you explain something new, take up to about 120 words to do it properly (the big idea, the example on the board, why it works), then check with one question. Plain spoken English: no lists, headings, markdown, emoji or LaTeX in what you say.
@@ -647,7 +666,11 @@ function mh_ai_route(string $route, array $in, array $cfg, string $ip): void {
       $use = mh_ai_usage($uid); if ($use['tutor'] >= $A['tutor_monthly']) mh_fail('You have used this month\'s ' . $A['tutor_monthly'] . ' questions for Bo. They start again on the 1st.', 429);
       $cid = mh_ai_cid($in['class'] ?? ''); $q = mh_ai_clip($in['q'] ?? '', 2000);
       $img = isset($in['image']) ? mh_ai_file($in['image'], ['image/jpeg', 'image/png', 'image/webp', 'image/gif'], MH_AI_IMAGE_BYTES) : null;
-      if ($q === '' && !$img) mh_fail('Ask Bo something first.', 400);
+      $pdf = isset($in['file']) ? mh_ai_file($in['file'], ['application/pdf'], MH_AI_PDF_BYTES) : null;   // a problem set
+      $pdfName = $pdf ? (mh_ai_plain($in['file']['name'] ?? '', 60) ?: 'PDF') : '';
+      // asked from a page (the floating Bo): what is on it, what they pointed at, and the page's name for the chat
+      $screen = mh_ai_clip($in['screen'] ?? '', MH_AI_SCREEN_CHARS); $focus = mh_ai_clip($in['focus'] ?? '', 3000); $from = mh_ai_plain($in['where'] ?? '', 80);
+      if ($q === '' && !$img && !$pdf) mh_fail('Ask Bo something first.', 400);
       mh_rate_or_fail("ai_tutor:$uid", 12, 60, 'Slow down a little: Bo answers up to 12 questions a minute.');
       mh_rate_or_fail("ai_tutor_day:$uid", $A['tutor_daily'], 86400, 'That is a lot of questions for one day. Bo will be back tomorrow.');
       $C = mh_ai_class($u, $cid);
@@ -660,16 +683,18 @@ function mh_ai_route(string $route, array $in, array $cfg, string $ip): void {
       $now = array_filter(['TODAY: ' . $today, $C ? mh_ai_upcoming($C, $today) : '', mh_ai_snapshot($in['snapshot'] ?? null), $notes ? "WHAT BO REMEMBERS ABOUT THEM:\n- " . implode("\n- ", $notes) : '']);
       $system[] = ['type' => 'text', 'text' => implode("\n", $now)];
       if ($voice) $system[] = ['type' => 'text', 'text' => MH_AI_VOICE];
+      if ($screen !== '' || $focus !== '' || $pdf) $system[] = ['type' => 'text', 'text' => implode("\n\n", array_filter([$screen !== '' ? MH_AI_SCREEN . "\n\nTHE PAGE:\n" . $screen : '', $focus !== '' ? MH_AI_FOCUS . "\n" . $focus : '', $pdf ? MH_AI_FILE : '']))];
       // the last few turns, oldest first, starting with the student
       $turns = mh_ai_turns($uid, $cid); $msgs = [];
       foreach (array_slice($turns, -MH_AI_TURNS_SENT) as $t) { $role = ($t['r'] ?? '') === 'b' ? 'assistant' : 'user'; $txt = mh_ai_clip($t['t'] ?? '', $role === 'assistant' ? 2400 : 900); if ($txt === '') continue; if ($msgs && end($msgs)['role'] === $role) { $msgs[count($msgs) - 1]['content'] .= "\n" . $txt; continue; } $msgs[] = ['role' => $role, 'content' => $txt]; }
       while ($msgs && $msgs[0]['role'] !== 'user') array_shift($msgs);
       if ($msgs && end($msgs)['role'] === 'user') array_pop($msgs);
       $content = []; if ($img) $content[] = ['type' => 'image', 'source' => ['type' => 'base64', 'media_type' => $img['type'], 'data' => $img['data']]];
+      if ($pdf) $content[] = ['type' => 'document', 'source' => ['type' => 'base64', 'media_type' => 'application/pdf', 'data' => $pdf['data']]];
       $content[] = ['type' => 'text', 'text' => $q !== '' ? $q : 'Can you help me with this?'];
       $msgs[] = ['role' => 'user', 'content' => $content];
       @set_time_limit(90);
-      $max = $voice ? 800 : 1500;   // room for a page of the board, with a drawing
+      $max = $voice ? 800 : ($pdf ? 2000 : 1500);   // room for a page of the board, with a drawing (more for a whole problem set)
       if ($stream) { @ignore_user_abort(true); $r = mh_ai_stream($A, $A['tutor_model'], $system, $msgs, $max, 60, function (string $t): void { mh_ai_emit(['t' => 'd', 'x' => $t]); }); }
       else $r = mh_ai_call($A, $A['tutor_model'], $system, $msgs, $max, 60);
       $reply = trim($r['text']); $remembered = null;
@@ -678,7 +703,7 @@ function mh_ai_route(string $route, array $in, array $cfg, string $ip): void {
         mh_ai_save_notes($uid, $notes); $reply = trim(preg_replace('/^\s*\[remember:.*\]\s*$/mi', '', $reply));
       }
       if ($reply === '') $reply = 'Sorry, I lost my train of thought. Could you ask that again?';
-      $turns[] = array_merge(['r' => 'u', 't' => ($img ? '[photo] ' : '') . $q, 'at' => time()], $voice ? ['v' => 1] : []); $turns[] = array_merge(['r' => 'b', 't' => $reply, 'at' => time()], $voice ? ['v' => 1] : []);
+      $turns[] = array_merge(['r' => 'u', 't' => ($img ? '[photo] ' : '') . ($pdf ? '[pdf: ' . str_replace(']', ')', $pdfName) . '] ' : '') . ($from !== '' ? '[from: ' . str_replace(']', ')', $from) . '] ' : '') . $q, 'at' => time()], $voice ? ['v' => 1] : []); $turns[] = array_merge(['r' => 'b', 't' => $reply, 'at' => time()], $voice ? ['v' => 1] : []);
       mh_ai_save_turns($uid, $cid, $turns); mh_ai_count($uid, 'tutor', $r['in'], $r['out']);
       $out = ['ok' => true, 'reply' => $reply, 'remembered' => $remembered, 'cut' => in_array($r['stop'], ['max_tokens', 'cut'], true), 'usage' => ['tutor' => $use['tutor'] + 1, 'tutor_limit' => $A['tutor_monthly']]];
       if ($stream) { mh_ai_emit(['t' => 'done'] + $out); exit; }

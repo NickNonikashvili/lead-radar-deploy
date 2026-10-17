@@ -106,6 +106,23 @@ const snapshot = { name: 'Alice', streak: 4, xpToday: 10, goal: 30, page: 'Calc 
   // a granted tester
   r = await call('mod', 'ai_tutor', { class: 'physics', q: 'hello' }); ok('an account in plan_grants can ask Bo without paying', r.ok && /Bo here/.test(r.reply), r);
 
+  // asked from a page (Bo floats on every page): what is on it, what they pointed at, a problem set as a PDF
+  const page = "PAGE: Calc I › Quizzer\nTHE 2 ITEMS ON IT (numbered as they see them):\n[Q1] (§1.2 · Limits) What is $\\lim_{x\\to 2} x^2$?\n  Not answered yet.\n[Q2] (§1.3 · Derivatives) Find $f'(x)$ for $f(x) = x^3$.\n  Choices: A) $3x^2$  B) $x^2$\n  They answered B) $x^2$: wrong; the answer is A) $3x^2$.";
+  r = await call('mod', 'ai_tutor', { class: 'calc', q: 'Help me with Q2.', screen: page + '\u0007', focus: "[Q2] Find f'(x) for f(x) = x^3", where: 'Calc I › Quizzer · Q2' });
+  q = last(); const ssys = q.system.map(b => b.text).join('\n'); const sb = q.system[q.system.length - 1];
+  ok('asked from a page: Bo is told what is on it and how to use it, in its own part after the cached ones', r.ok && /THEIR SCREEN:/.test(sb.text) && /THE PAGE:\nPAGE: Calc I › Quizzer/.test(sb.text) && /\[Q2\] \(§1\.3 · Derivatives\) Find \$f'\(x\)\$/.test(sb.text) && /hint ladder/.test(sb.text) && /hidden is for you/.test(sb.text) && !/\u0007/.test(ssys) && !sb.cache_control && q.system[1].cache_control, q.system.map(b => b.text.slice(0, 60)));
+  ok('and what they pointed at, as "this"', /WHAT THEY POINTED AT \(or selected\)/.test(sb.text) && /\[Q2\] Find f'\(x\) for f\(x\) = x\^3/.test(sb.text), sb.text.slice(-300));
+  ok('so Bo answers about Q2 on their page', /I can see your page: Calc I › Quizzer\./.test(r.reply) && /Looking at Q2: Find \$f'\(x\)\$/.test(r.reply), r.reply);
+  r = await call('mod', 'ai_thread&class=calc'); ok('the chat keeps the question with where it was asked from', /^\[from: Calc I › Quizzer · Q2\] Help me with Q2\.$/.test(r.turns[r.turns.length - 2].t), r.turns.slice(-2));
+  r = await call('mod', 'ai_tutor', { class: 'calc', q: 'Explain this', screen: 'P'.repeat(20000) }); q = last();
+  ok('what is on a page is cut to 9,000 characters', r.ok && (q.system[q.system.length - 1].text.match(/P{50,}/) || [''])[0].length < 9000 && (q.system[q.system.length - 1].text.match(/P{50,}/) || [''])[0].length > 8000, null);
+  r = await call('mod', 'ai_tutor', { class: 'calc', q: 'Explain limits' }); q = last(); ok('a question from Ask Bo itself has no page part', r.ok && !/THEIR SCREEN/.test(q.system.map(b => b.text).join('\n')), null);
+  r = await call('mod', 'ai_tutor', { class: 'calc', q: 'Can you help with this set?', file: { type: 'application/pdf', data: 'JVBERi0xLjQK', name: 'HW 5.pdf' } }); q = last();
+  ok('a problem set as a PDF goes to the AI as a document, with what to do with it and more room to answer', r.ok && /I read your PDF\./.test(r.reply) && q.messages[q.messages.length - 1].content[0].type === 'document' && q.messages[q.messages.length - 1].content[0].source.media_type === 'application/pdf' && /THEIR FILE:/.test(q.system.map(b => b.text).join('\n')) && q.max_tokens === 2000, { reply: r.reply, max: q.max_tokens });
+  r = await call('mod', 'ai_thread&class=calc'); ok('and the chat shows the file by its name', /^\[pdf: HW 5\.pdf\] Can you help with this set\?$/.test(r.turns[r.turns.length - 2].t), r.turns.slice(-2));
+  r = await call('mod', 'ai_tutor', { class: 'calc', q: 'x', file: { type: 'image/png', data: PNG } }); ok('only PDFs go as files (photos go as images)', r.status === 400, r);
+  r = await call('mod', 'ai_tutor', { class: 'calc', file: { type: 'application/pdf', data: 'JVBERi0xLjQK', name: 'Set.pdf' } }); ok('a PDF alone is enough to ask', r.ok, r);
+
   // talking with Bo: answers stream as JSON lines, voice mode answers briefly with a board line, and the speech routes
   const raw = async (who, route, body) => { const r = await fetch(BASE + route, { method: 'POST', headers: { 'X-Requested-With': 'MatHub', 'Content-Type': 'application/json', Cookie: jar[who] || '' }, body: JSON.stringify(body) }); return { status: r.status, type: r.headers.get('content-type') || '', buf: Buffer.from(await r.arrayBuffer()) }; };
   await call('mod', 'ai_forget', { what: 'all' });

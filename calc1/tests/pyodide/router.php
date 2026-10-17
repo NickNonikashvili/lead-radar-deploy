@@ -71,6 +71,11 @@ if ($path === '/anthropic/v1/messages') {
     $weak = preg_match('/WEAKEST TOPICS: ([^;\n]+?) \d+%|WEAKEST TOPICS: ([^;\n]+?) not practised/', $sys, $w) ? trim($w[1] ?: $w[2]) : '';
     $text = 'Bo here. ' . ($weak ? "Your weakest topic is $weak. " : '') . (str_contains($sys, 'CLASS: ') ? 'I know your class. ' : '') . ($hasImage ? 'I see your photo. ' : '') . 'You asked: ' . mb_substr($utext, 0, 80) . ' (turns: ' . count($req['messages']) . ')';
     if (stripos($utext, 'remember') !== false) $text .= "\n[remember: Likes worked examples first]";
+    // asked from a page (the floating Bo): say what he sees, so the tests know it arrived
+    if (preg_match('/THE PAGE:\nPAGE: ([^\n]+)/', $sys, $pg)) $text .= "\nI can see your page: " . trim($pg[1]) . '.';
+    if (preg_match('/\b(Q\d+|Problem \d+)\b/', $utext, $qn) && preg_match('/\[' . preg_quote($qn[1], '/') . '\][^\n]*?\) ([^\n]{0,60})/', $sys, $qp)) $text .= "\nLooking at {$qn[1]}: " . trim($qp[1]);
+    if (preg_match('/WHAT THEY POINTED AT[^\n]*\n([^\n]{0,70})/', $sys, $fp)) $text .= "\nYou pointed at: " . trim($fp[1]);
+    if (array_filter($content, fn($b) => ($b['type'] ?? '') === 'document')) $text .= "\nI read your PDF.";
     if (stripos($utext, 'math') !== false) $text .= "\nThe slope is $\\frac{\\Delta y}{\\Delta x}$ and x < 3 here.";
     // drawings on the board (assets/board-draw.js)
     if (stripos($utext, 'graph') !== false) $text .= "\nHere is the picture first." . "\n[board: Where y = x^2 - 3 is below zero]\n" . 'draw: {"type":"graph","x":[-4,4],"fns":[{"f":"x^2-3","label":"y = x^2 - 3"}],"points":[{"x":-1.732,"y":0,"label":"−√3"},{"x":1.732,"y":0,"label":"√3"}],"shade":{"f":"x^2-3","from":-1.732,"to":1.732,"color":"red"},"caption":"Below zero between the two roots"}' . "\n" . 'step: Set it to zero: $x^2 - 3 = 0$' . "\n" . 'answer: $-\sqrt{3} < x < \sqrt{3}$' . "\n[/board]\nSee the red part? What happens to y when x is 0?";

@@ -421,6 +421,24 @@ The Hostinger zip never includes `app/`.
   and the chat can be deleted ("What Bo knows" is a sheet from the i button). Every answer has Copy and Report,
   and after each one there are one-tap ways to go on: Explain it more simply, Show me another example, Quiz me on
   this (or Give me another question), Draw it on the board (or Walk me through the drawing).
+- **Bo on every page** (`assets/bo-float.js`, website): Bo floats in a corner of every page (not on Ask Bo, the
+  welcome, admin or teaching pages, during a call or the tour; Settings → "Bo on every page" turns him off). One tap
+  (or Alt+B) opens a small chat that knows what is on the screen: `App.boScreen()` reads the page as text, with the
+  math back as TeX (MathJax keeps it), its questions and problems numbered as the student sees them (choices, what
+  they answered, right or wrong, the feedback, a worked solution that is still hidden marked as such), a flashcard
+  and whether it is flipped, their code, what is in view on a long page; menus and buttons are left out, and it is
+  capped at 9,000 characters. The ways in fit the page: the questions as chips (Q3 asks "Help me with Q3" with Q3
+  attached; wrong ones are marked), Go over what I missed, Check my answers, Explain the topic, A question like
+  these, Explain a topic…; "Point at it" (tap any part of the page; quick asks follow: Explain this, Give me a hint,
+  Show me the steps); select any text and Explain / Ask Bo… appear beside it; a photo or a PDF of a problem set. It
+  goes to `ai_tutor` as `screen`, `focus` (what was pointed at or selected), `where` and `file` (a PDF, sent as a
+  document); the eye chip turns the page off ("Bo isn't looking at this page"). Answers stream in with the board's
+  pages inline (drawings, sliders, questions to answer), Copy and the one-tap follow-ups. It is the class's chat with
+  Bo, so Ask Bo shows it, each question tagged with where it came from (`[from: Calc I › Quizzer · Q2]`). When the
+  page changes during a chat, a small card offers the ways in for the new page. A one-time hello, and now and then
+  (at most three a visit, never twice for a page; Settings → "Tips from Bo") a short nudge on a page of questions.
+  Drag him to either side (or Alt+arrows); he stays where he is put. On a phone he sits above the tab bar and opens
+  as a sheet. The apps keep Bo as a tab.
 - **Ask Bo about this**: under a question missed in the Quizzer or the mistakes notebook (`App.askBoButton`), a link
   to `#/tutor/<class>?ask=…` that opens Ask Bo and sends him the question, the choices, what the student answered
   and the right answer, once (the address drops it after).

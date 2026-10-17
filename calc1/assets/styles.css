@@ -2499,6 +2499,8 @@ p, li, .muted { text-wrap: pretty; }
 .q-flag { position: relative; }
 .q-flag::after { content: ''; position: absolute; inset: -8px; }
 @media (pointer: coarse) { .topbar .icon-btn, .topbar .search-btn { min-width: 40px; min-height: 40px; } }
+/* those bigger buttons on a narrow phone ran 4px past the screen: closer together (each still 40px to tap) */
+@media (pointer: coarse) and (max-width: 420px) { .topbar { gap: 6px; } .topbar-actions { gap: 2px; } }
 
 /* "Walk me through it" was stretched across the whole question */
 .ladder > .btn { align-self: flex-start; }
