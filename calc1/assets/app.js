@@ -105,8 +105,10 @@
   const today = () => { const ov = asOf(); const d = ov ? parseISO(ov) : new Date(); d.setHours(0, 0, 0, 0); return d; };
   const todayISO = () => toISO(today());
   const daysBetween = (a, b) => Math.round((parseISO(b) - parseISO(a)) / 86400000);
-  const fmtDate = (iso, long = false) => { const d = parseISO(iso); return long ? `${DOW[d.getDay()]}, ${MONL[d.getMonth()]} ${d.getDate()}` : `${DOW[d.getDay()]} ${MON[d.getMonth()]} ${d.getDate()}`; };
-  const shortDate = iso => { const d = parseISO(iso); return `${MON[d.getMonth()]} ${d.getDate()}`; };
+  // in another language the browser writes the date ("jue 15 oct", "Do., 15. Okt."); in English, as it always was
+  const LOC = () => { const l = global.MATHUB_LANG; return l && l !== 'en' && l !== 'qps' ? l : null; };
+  const fmtDate = (iso, long = false) => { const d = parseISO(iso); const l = LOC(); if (l) return d.toLocaleDateString(l, long ? { weekday: 'long', month: 'long', day: 'numeric' } : { weekday: 'short', month: 'short', day: 'numeric' }); return long ? `${DOW[d.getDay()]}, ${MONL[d.getMonth()]} ${d.getDate()}` : `${DOW[d.getDay()]} ${MON[d.getMonth()]} ${d.getDate()}`; };
+  const shortDate = iso => { const d = parseISO(iso); const l = LOC(); if (l) return d.toLocaleDateString(l, { month: 'short', day: 'numeric' }); return `${MON[d.getMonth()]} ${d.getDate()}`; };
   const relDays = n => n === 0 ? 'today' : n === 1 ? 'tomorrow' : n < 0 ? `${-n} day${n === -1 ? '' : 's'} ago` : `in ${n} days`;
 
   /* ---------- MathJax ---------- */
@@ -240,6 +242,8 @@
     nextExam: () => nextExam(D), currentSection: () => currentSection(D), upcomingDeadlines: n => upcomingDeadlines(D, n), eventsOn: iso => eventsOn(D, iso),
     onCourse(fn) { courseHooks.push(fn); if (D) fn(D); }, BUILD, SITE, COURSE_ORDER, asOf, semesterState: () => semesterState(D),
     upcomingDeadlinesOf: upcomingDeadlines, nextExamOf: nextExam, semesterStateOf: semesterState, streakOf, secLabelOf: (C, id) => { const x = (C.SECTIONS || []).find(z => z.id === id); return x ? x.label : id; } };
+  // the interface's language (assets/i18n.js): App.t('…', a, b) for words that never reach the page; the page itself is translated as it is drawn
+  const I18N = global.MathubI18n; App.lang = I18N ? I18N.lang : 'en'; App.t = I18N ? I18N.t : ((x, ...v) => String(x).replace(/\{(\d+)\}/g, (m, n) => v[n - 1] != null ? v[n - 1] : m));
   App.toggleTheme = () => toggleTheme();
   App.myCourses = () => { const c = settings().courses; const mine = Array.isArray(c) ? c.filter(id => Courses[id] && !Courses[id].preview) : []; return mine.length ? mine : COURSE_ORDER.filter(id => Courses[id]); };
   App.isoWeek = d => { const x = new Date(d); x.setHours(0, 0, 0, 0); x.setDate(x.getDate() + 3 - ((x.getDay() + 6) % 7)); const w1 = new Date(x.getFullYear(), 0, 4); return x.getFullYear() + '-W' + String(1 + Math.round(((x - w1) / 86400000 - 3 + ((w1.getDay() + 6) % 7)) / 7)).padStart(2, '0'); };
@@ -1011,6 +1015,7 @@
         : pageHead('Settings', 'Preferences apply to every class. Progress is stored per class and, when you are logged in, synced to your account.');
       const classesPanel = `<div class="panel span-2"><div class="panel-h"><div class="panel-title">${icon('grid')} Your classes</div><button class="btn sm" data-action="choose">Choose classes and sections</button></div><div class="row gap-sm" style="flex-wrap:wrap">${mine.map(id => `<span class="chip course-${id}">${esc(Courses[id].short)}${courseSetting(id, 'section', '') ? ' · sec ' + esc(courseSetting(id, 'section', '')) : ''}${courseSetting(id, 'examTime', '') ? ' · ' + esc(courseSetting(id, 'examTime', '')) : ''}</span>`).join('')}</div><p class="small muted mt-1">Only these classes show on the landing page, in the course switcher, in reminders and in the weekly digest.</p>${App.requestLink ? App.requestLink('small') : ''}</div>`;
       const prefsPanel = `<div class="panel"><div class="panel-h"><div class="panel-title">${icon('sliders')} Preferences</div></div>
+          ${I18N ? `<div class="field mb-2"><label for="s-lang">Language</label><select class="select" id="s-lang" translate="no">${I18N.langs.map(([c, n]) => `<option value="${c}"${c === App.lang ? ' selected' : ''}>${n}</option>`).join('')}</select><p class="muted small mt-1">The interface and Bo. Class notes and questions stay in the class’s own language.</p></div>` : ''}
           <div class="field mb-2"><label for="s-theme">Theme</label><select class="select" id="s-theme"><option value="system"${s.theme === 'system' ? ' selected' : ''}>Match system</option><option value="light"${s.theme === 'light' ? ' selected' : ''}>Light</option><option value="dark"${s.theme === 'dark' ? ' selected' : ''}>Dark</option></select></div>
           <div class="field mb-2"><label>Look</label><div class="skin-pick" id="s-skins">${(App.SKINS || []).map(([id, name, sub, [bg, ac]]) => `<button type="button" class="skin-opt${(App.skinOf ? App.skinOf() : (s.skin || 'default')) === id ? ' on' : ''}" data-action="skin" data-skin="${id}" aria-pressed="${(App.skinOf ? App.skinOf() : (s.skin || 'default')) === id}"><span class="skin-swatch" style="background:${bg}"><i style="background:${ac}"></i><i></i></span><b>${name}</b><small>${sub}</small></button>`).join('')}</div></div>
           <label class="check" style="padding:0"><input type="checkbox" id="s-motion" ${s.motion === 'off' ? 'checked' : ''}><span>Reduce motion <span class="muted small">(no animations or transitions)</span></span></label>
@@ -1035,6 +1040,7 @@
       $('#s-theme', root).addEventListener('change', e => { setSetting('theme', e.target.value); applyTheme(); });
       on(root, 'click', '[data-action="tour-again"]', () => { setSetting('tourDone', false); try { sessionStorage.removeItem('mh-tour'); } catch (e) {} location.hash = '#/'; setTimeout(() => { if (App.tour) App.tour.start(true); }, 700); });
       on(root, 'click', '[data-action="skin"]', el => { setSetting('skin', el.dataset.skin); applyTheme(); $$('.skin-opt', root).forEach(b => { b.classList.toggle('on', b === el); b.setAttribute('aria-pressed', b === el); }); toast(`${el.querySelector('b').textContent} look on.`, 1800); });
+      const sl = $('#s-lang', root); if (sl) sl.addEventListener('change', e => I18N.set(e.target.value));
       const sm = $('#s-motion', root); if (sm) sm.addEventListener('change', e => { setSetting('motion', e.target.checked ? 'off' : 'on'); applyTheme(); });
       const sbf = $('#s-bofloat', root); if (sbf) sbf.addEventListener('change', e => { setSetting('boFloat', e.target.checked); const t = $('#s-botips', root); if (t) { t.disabled = !e.target.checked; t.checked = e.target.checked && settings().boTips !== false; } if (App.boFloat && App.boFloat.sync) App.boFloat.sync(); toast(e.target.checked ? 'Bo is back on every page.' : 'Bo stays on Ask Bo. Turn him back on here any time.'); });
       const sbt = $('#s-botips', root); if (sbt) sbt.addEventListener('change', e => setSetting('boTips', e.target.checked));

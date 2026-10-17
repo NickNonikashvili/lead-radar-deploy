@@ -214,7 +214,7 @@
     F.tipT = setTimeout(() => {
       if (F.open || hidden() || document.hidden) return; const c = safe(screen); if (!c || !['questions', 'problems', 'card', 'code'].includes(c.kind)) return;
       const wrong = c.items.filter(i => i.state === 'wrong').length;
-      const t = c.kind === 'card' ? 'Stuck on this card? I can explain it.' : c.kind === 'code' ? 'Code not working? I can look at it.' : wrong ? `Missed ${wrong === 1 ? 'one' : 'a few'}? Tap me and we’ll go through ${wrong === 1 ? 'it' : 'them'}.` : `Stuck on one of these ${c.kind}? Tap me.`;
+      const t = c.kind === 'card' ? 'Stuck on this card? I can explain it.' : c.kind === 'code' ? 'Code not working? I can look at it.' : wrong ? (wrong === 1 ? 'Missed one? Tap me and we’ll go through it.' : 'Missed a few? Tap me and we’ll go through them.') : c.kind === 'problems' ? 'Stuck on one of these problems? Tap me.' : 'Stuck on one of these questions? Tap me.';
       F.hint++; F.hinted.add(key); tip.innerHTML = `<button type="button" class="bf-tip-b"><span>${esc(t)}</span></button><button type="button" class="bf-tip-x" data-tip="x" aria-label="Hide this tip">${icon('x', 13)}</button>`; tip.hidden = false;
       F.tipT2 = setTimeout(() => { tip.hidden = true; }, 9000);
     }, 6000);
@@ -242,7 +242,7 @@
     const grow = () => { q.style.height = 'auto'; q.style.height = Math.min(q.scrollHeight, 140) + 'px'; }; F.grow = grow;
     q.addEventListener('input', grow);
     q.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey && !(global.matchMedia && matchMedia('(pointer: coarse)').matches)) { e.preventDefault(); form.requestSubmit(); } });
-    form.addEventListener('submit', e => { e.preventDefault(); const t = q.value.trim(); if (!t && !F.file) { q.focus(); return; } send(t || (F.file ? 'Can you help me with this problem set?' : '')); });
+    form.addEventListener('submit', e => { e.preventDefault(); const t = q.value.trim(); if (!t && !F.file) { q.focus(); return; } send(t || (F.file ? App.t('Can you help me with this problem set?') : '')); });
     $('#bf-file', el).addEventListener('change', async e => { const f = e.target.files && e.target.files[0]; e.target.value = ''; if (f) addFile(f); });
     el.addEventListener('click', e => {
       const b = e.target.closest('[data-bf]'); if (b) { const k = b.dataset.bf;
@@ -250,7 +250,7 @@
         else if (k === 'unfocus') { F.focus = null; paintChips(); } else if (k === 'unfile') { F.file = null; paintChips(); } else if (k === 'retry') { const m = b.closest('.bf-msg'); const t = m.dataset.q || ''; m.remove(); send(t); }
         else if (k === 'copy') { const m = b.closest('.bf-msg'); const t = App.boBoard ? App.boBoard.plainOf(m.dataset.src || '') : m.textContent; (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(() => toast('Copied.'), () => toast('Copying is not available here.')); }
         return; }
-      const s = e.target.closest('[data-say]'); if (s) { const it = s.dataset.item != null && F.items ? F.items[+s.dataset.item] : null; send(s.dataset.say, it ? { focus: it.text, tag: `${F.ctxWhere} · ${it.label}` } : {}); return; }
+      const s = e.target.closest('[data-say]'); if (s) { const it = s.dataset.item != null && F.items ? F.items[+s.dataset.item] : null; send(App.t(s.dataset.say), it ? { focus: it.text, tag: `${F.ctxWhere} · ${it.label}` } : {}); return; }
       const g = e.target.closest('[data-go]'); if (g) gateGo(g.dataset.go);
       if (e.target.closest('a[href^="#/"]') && phone()) closePanel();
     });
@@ -279,7 +279,7 @@
   /* what Bo can see: one chip, on or off */
   function paintCtx() {
     if (!F.el) return; const c = see() ? safe(screen) : null; F.ctx = c; F.ctxWhere = c ? c.where : pageName();
-    const n = c && c.items.length; const what = !c ? '' : c.kind === 'card' ? 'this flashcard' : n ? `${n} ${c.kind === 'problems' ? (n === 1 ? 'problem' : 'problems') : n === 1 ? 'question' : 'questions'}` : c.code ? 'your code' : '';
+    const n = c && c.items.length; const what = !c ? '' : c.kind === 'card' ? 'this flashcard' : n ? (c.kind === 'problems' ? App.t(n === 1 ? '1 problem' : '{1} problems', n) : App.t(n === 1 ? '1 question' : '{1} questions', n)) : c.code ? 'your code' : '';
     $('#bf-ctx', F.el).innerHTML = `<button type="button" class="bf-see${see() ? ' on' : ''}" data-bf="see" aria-pressed="${see()}" title="${see() ? 'Bo sees what is on this page when you ask. Tap to turn it off.' : 'Bo does not see this page. Tap to let him.'}">${icon('eye', 15)}<span>${see() ? `Bo sees <b>${esc(F.ctxWhere)}</b>${what ? ` · ${esc(what)}` : ''}` : 'Bo isn’t looking at this page'}</span><i class="bf-sw" aria-hidden="true"></i></button>`;
     const cid = F.cid = pickCid(); $('#bf-sub', F.el).textContent = cid ? `Your tutor for ${short(cid)}` : 'Your tutor';
     $('#bf-full', F.el).setAttribute('href', cid ? `#/tutor/${cid}` : '#/tutor');
@@ -342,24 +342,28 @@
     const its = c ? c.items : []; F.items = its;
     const answered = its.filter(i => i.state !== 'open').length, wrong = its.filter(i => i.state === 'wrong').length;
     const kindWord = c && c.kind === 'problems' ? 'problem' : 'question';
-    const line = !c ? `Ask me about anything in ${esc(short(F.cid))}, or turn on <b>Bo sees</b> above and I'll look at this page with you.`
-      : c.kind === 'card' ? `I can see your flashcard. Want me to explain it, or help you remember it?`
-      : its.length ? `I can see ${its.length === 1 ? `this ${kindWord}` : `these ${its.length} ${kindWord}s`}${answered ? ` (${answered} answered${wrong ? `, ${wrong} wrong` : ''})` : ''}. Which one?`
-      : c.kind === 'code' ? 'I can see your code. Tell me what it should do, or what goes wrong.'
-      : c.kind === 'notes' ? `You're reading <b>${esc(c.topic || 'these notes')}</b>. I can explain it another way, give an example or quiz you on it.`
-      : `You're on <b>${esc(c.where)}</b>. Ask me about anything here, or any topic.`;
+    // whole sentences, each one a line to translate (assets/i18n.js)
+    const T = App.t; const N = its.length, P = kindWord === 'problem';
+    const line = !c ? esc(T('Ask me about anything in {1}, or turn on “Bo sees” above and I\'ll look at this page with you.', short(F.cid)))
+      : c.kind === 'card' ? esc(T('I can see your flashcard. Want me to explain it, or help you remember it?'))
+      : N ? esc(T(answered ? (wrong ? (N === 1 ? (P ? 'I can see this problem ({1} answered, {2} wrong). Which one?' : 'I can see this question ({1} answered, {2} wrong). Which one?') : (P ? 'I can see these {3} problems ({1} answered, {2} wrong). Which one?' : 'I can see these {3} questions ({1} answered, {2} wrong). Which one?'))
+          : (N === 1 ? (P ? 'I can see this problem ({1} answered). Which one?' : 'I can see this question ({1} answered). Which one?') : (P ? 'I can see these {3} problems ({1} answered). Which one?' : 'I can see these {3} questions ({1} answered). Which one?')))
+          : (N === 1 ? (P ? 'I can see this problem. Which one?' : 'I can see this question. Which one?') : (P ? 'I can see these {3} problems. Which one?' : 'I can see these {3} questions. Which one?')), answered, wrong, N))
+      : c.kind === 'code' ? esc(T('I can see your code. Tell me what it should do, or what goes wrong.'))
+      : c.kind === 'notes' ? esc(T('You\'re reading “{1}”. I can explain it another way, give an example or quiz you on it.', c.topic || T('these notes')))
+      : esc(T('You\'re on {1}. Ask me about anything here, or any topic.', c.where));
     const chip = (t, say, o = '') => `<button type="button" class="bf-act" data-say="${esc(say)}"${o}>${t}</button>`;
     const acts = [];
     if (c && c.kind === 'card') acts.push(chip(`${icon('bulb', 15)} Explain this card`, 'Explain this flashcard to me.', ' data-item="0"'), chip(`${icon('target', 15)} Help me remember it`, 'Help me remember this card: a trick, a picture or a story.', ' data-item="0"'), chip(`${icon('list', 15)} Quiz me on it`, 'Quiz me on this card and the idea behind it, one question at a time.', ' data-item="0"'));
     else if (its.length) {
-      if (wrong) acts.push(chip(`${icon('undo', 15)} Go over what I missed`, `Go over the ${kindWord}${wrong === 1 ? '' : 's'} I got wrong on this page: what went wrong, and how to do ${wrong === 1 ? 'it' : 'them'}.`));
+      if (wrong) acts.push(chip(`${icon('undo', 15)} Go over what I missed`, wrong === 1 ? (P ? 'Go over the problem I got wrong on this page: what went wrong, and how to do it.' : 'Go over the question I got wrong on this page: what went wrong, and how to do it.') : (P ? 'Go over the problems I got wrong on this page: what went wrong, and how to do them.' : 'Go over the questions I got wrong on this page: what went wrong, and how to do them.')));
       if (answered && answered > wrong) acts.push(chip(`${icon('check', 15)} Check my answers`, 'Check my answers on this page: which are right, and what went wrong on the others?'));
-      acts.push(chip(`${icon('bulb', 15)} Explain the topic`, `Explain the topic of these ${kindWord}s to me, simply, before I try them.`), chip(`${icon('wand', 15)} A ${kindWord} like these`, `Give me a ${kindWord} like these to practise, and help me if I get stuck.`));
+      acts.push(chip(`${icon('bulb', 15)} Explain the topic`, P ? 'Explain the topic of these problems to me, simply, before I try them.' : 'Explain the topic of these questions to me, simply, before I try them.'), chip(`${icon('wand', 15)} ${P ? 'A problem like these' : 'A question like these'}`, P ? 'Give me a problem like these to practise, and help me if I get stuck.' : 'Give me a question like these to practise, and help me if I get stuck.'));
     } else if (c && c.kind === 'code') acts.push(chip(`${icon('flask', 15)} Why doesn't it work?`, 'Look at my code: what is wrong with it, and how do I fix it? Give me a hint before the answer.'), chip(`${icon('bulb', 15)} Explain my code`, 'Explain what my code does, line by line.'));
-    else if (c && c.kind === 'notes') acts.push(chip(`${icon('bulb', 15)} Explain this more simply`, `Explain ${c.topic ? `"${c.topic}"` : 'what I am reading'} more simply, with an example.`), chip(`${icon('pen', 15)} Draw it`, `Draw ${c.topic ? `"${c.topic}"` : 'this'} on your board and walk me through it.`), chip(`${icon('list', 15)} Quiz me on this`, `Quiz me on ${c.topic ? `"${c.topic}"` : 'what I am reading'}, one question at a time.`));
+    else if (c && c.kind === 'notes') acts.push(chip(`${icon('bulb', 15)} Explain this more simply`, c.topic ? App.t('Explain “{1}” more simply, with an example.', c.topic) : 'Explain what I am reading more simply, with an example.'), chip(`${icon('pen', 15)} Draw it`, c.topic ? App.t('Draw “{1}” on your board and walk me through it.', c.topic) : 'Draw this on your board and walk me through it.'), chip(`${icon('list', 15)} Quiz me on this`, c.topic ? App.t('Quiz me on “{1}”, one question at a time.', c.topic) : 'Quiz me on what I am reading, one question at a time.'));
     else if (c) acts.push(chip(`${icon('bulb', 15)} Explain this page`, 'Explain what is on this page to me, simply.'), chip(`${icon('list', 15)} Quiz me on this`, 'Quiz me on what is on this page, one question at a time.'));
     if (!brief) acts.push(chip(`${icon('chat', 15)} Explain a topic…`, '', ' data-topic="1"'));
-    const items = its.length && c.kind !== 'card' ? `<div class="bf-items" role="group" aria-label="${kindWord === 'problem' ? 'The problems' : 'The questions'} on this page">${its.map((i, k) => `<button type="button" class="bf-item ${i.state}" data-say="${esc(`Help me with ${i.label}.`)}" data-item="${k}" title="${esc(clip(i.prompt || '', 140))}"><span>${esc(i.short)}</span>${i.state === 'wrong' ? '<i aria-label="wrong"></i>' : i.state === 'right' ? '<i aria-label="right"></i>' : ''}</button>`).join('')}</div>` : '';
+    const items = its.length && c.kind !== 'card' ? `<div class="bf-items" role="group" aria-label="${P ? 'The problems on this page' : 'The questions on this page'}">${its.map((i, k) => `<button type="button" class="bf-item ${i.state}" data-say="${esc(`Help me with ${i.label}.`)}" data-item="${k}" title="${esc(clip(i.prompt || '', 140))}"><span>${esc(i.short)}</span>${i.state === 'wrong' ? '<i aria-label="wrong"></i>' : i.state === 'right' ? '<i aria-label="right"></i>' : ''}</button>`).join('')}</div>` : '';
     return { line, items, acts: (brief ? acts.slice(0, 3) : acts).join('') };
   }
 
@@ -478,7 +482,7 @@
       const b = e.target.closest('[data-sel]'); if (!b) return; const s = p._sel; p.hidden = true; if (!s) return;
       const focus = { text: s.ctx ? `They selected: «${s.text}»\nIn: ${s.ctx}` : `They selected: «${s.text}»`, tag: `“${clip(s.text, 48)}”`, short: `“${s.text}”` };
       try { getSelection().removeAllRanges(); } catch (x) {}
-      if (b.dataset.sel === 'explain') { openPanel({ focus, noFocus: true }).then(() => { if (!F.gated) send('Explain this to me.'); }); }
+      if (b.dataset.sel === 'explain') { openPanel({ focus, noFocus: true }).then(() => { if (!F.gated) send(App.t('Explain this to me.')); }); }
       else openPanel({ focus });
     });
     document.body.appendChild(p); return p;
