@@ -5054,10 +5054,10 @@
 {"id":5053,"en":"The questions on this page","files":["bo-float.js"]},
 {"id":5054,"en":"English","files":["index.html"]},
 {"id":5055,"en":"Español","files":["index.html"]},
-{"id":5056,"en":"Français","files":["index.html"]},
-{"id":5057,"en":"Italiano","files":["index.html"]},
-{"id":5058,"en":"Português","files":["index.html"]},
-{"id":5059,"en":"Deutsch","files":["index.html"]},
+{"id":5056,"en":"Français","files":["index.html"],"gone":true},
+{"id":5057,"en":"Italiano","files":["index.html"],"gone":true},
+{"id":5058,"en":"Português","files":["index.html"],"gone":true},
+{"id":5059,"en":"Deutsch","files":["index.html"],"gone":true},
 {"id":5060,"en":"{1} questions","files":["extra"]},
 {"id":5061,"en":"{1} problems","files":["extra"]}
 ]

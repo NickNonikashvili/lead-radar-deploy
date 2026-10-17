@@ -1,5 +1,5 @@
 /* ============================================================
-   Mathub — the interface in seven languages: English, Español, Русский, Français, Italiano, Português, Deutsch.
+   Mathub — the interface in English, Español and Русский (French, Italian, Portuguese and German are on the way).
    Loaded in <head> right after boot.js. The language is the one picked (Settings, the page footer, the welcome
    page), else the browser's first language that Mathub has, else English. For any language but English, its
    dictionary (assets/i18n/<lang>.js, built from i18n/<lang>.tsv by scripts/build-i18n.js) loads before the page,
@@ -17,7 +17,8 @@
    ============================================================ */
 (function (global) {
   'use strict';
-  var LANGS = [['en', 'English'], ['es', 'Español'], ['ru', 'Русский'], ['fr', 'Français'], ['it', 'Italiano'], ['pt', 'Português'], ['de', 'Deutsch']];
+  // French, Italian, Portuguese and German are partly translated (i18n/fr.tsv …) and join the list when they are done
+  var LANGS = [['en', 'English'], ['es', 'Español'], ['ru', 'Русский']];
   var CODES = LANGS.map(function (l) { return l[0]; });
   var KEY = 'studyhub-settings'; var html = document.documentElement;
   function stored() { try { var s = JSON.parse(localStorage.getItem(KEY) || '{}'); return s && s.lang; } catch (e) { return null; } }

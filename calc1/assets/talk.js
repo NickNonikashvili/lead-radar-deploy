@@ -15,6 +15,7 @@
 (function (global) {
   'use strict';
   const App = global.App; if (!App) return;
+  const SPEECH = { es: 'es-ES', ru: 'ru-RU', fr: 'fr-FR', it: 'it-IT', pt: 'pt-BR', de: 'de-DE' };   // the language Bo listens and speaks in (assets/i18n.js)
   const { $, $$, esc, icon, toast, settings, setSetting } = App;
   const N = global.Native; const MA = global.MATHUB_APP; const NATIVE = !!(N && MA && MA.native);
   const SR = global.SpeechRecognition || global.webkitSpeechRecognition || null;
@@ -169,7 +170,7 @@
     speak(text) {
       return new Promise(res => {
         if (!synth || !global.SpeechSynthesisUtterance) return res();
-        const u = new SpeechSynthesisUtterance(text); const v = bestVoice(); if (v) u.voice = v; u.lang = (v && v.lang) || 'en-US'; u.rate = this.rate();
+        const u = new SpeechSynthesisUtterance(text); const v = bestVoice(); if (v) u.voice = v; u.lang = (v && v.lang) || SPEECH[App.lang] || 'en-US'; u.rate = this.rate();
         let done = false; const fin = () => { if (done) return; done = true; clearTimeout(wd); res(); };
         u.onend = fin; u.onerror = fin; u.onboundary = () => { if (this.onLevel) this.onLevel(0.55 + Math.random() * 0.45); };
         const wd = setTimeout(fin, 3000 + text.split(/\s+/).length * 520 / this.rate());   // some browsers never say they finished
@@ -182,7 +183,7 @@
   /* ---------- Bo's ears ---------- */
   /* the browser's own speech recognition: live words, and the turn ends after a short silence */
   function srListen(h) {
-    const rec = new SR(); rec.lang = 'en-US'; rec.interimResults = true; rec.continuous = true; rec.maxAlternatives = 1;
+    const rec = new SR(); rec.lang = SPEECH[App.lang] || 'en-US'; rec.interimResults = true; rec.continuous = true; rec.maxAlternatives = 1;
     let finals = '', interim = '', ended = false, heard = false, timer = 0;
     const clear = () => { clearTimeout(timer); clearTimeout(cap); clearTimeout(longest); };
     const finish = () => { if (ended) return; ended = true; clear(); try { rec.stop(); } catch (e) {} const t = (finals + ' ' + interim).replace(/\s+/g, ' ').trim(); if (t) h.onFinal(t); else h.onNothing(); };
@@ -423,7 +424,7 @@
         dc.addEventListener('message', e => { let ev; try { ev = JSON.parse(e.data); } catch (x) { return; } L.on(ev); });
         pc.addEventListener('connectionstatechange', () => { if (['failed', 'disconnected'].includes(pc.connectionState) && T.el && T.state === 'live' && !L.ended) { L.stop(); ended('The call dropped. Check your connection and call Bo again.'); } });
         const offer = await pc.createOffer(); await pc.setLocalDescription(offer);
-        const r = await post('ai_live_start', { class: T.cid, sdp: offer.sdp, voice: liveVoice(), speed: liveRate(), eagerness: eager(), snapshot: snap(), today: App.todayISO() });
+        const r = await post('ai_live_start', { lang: App.lang, class: T.cid, sdp: offer.sdp, voice: liveVoice(), speed: liveRate(), eagerness: eager(), snapshot: snap(), today: App.todayISO() });
         L.lid = r.lid; L.left = r.left; L.at = Date.now();
         if (!T.el || L.ended) return L.stop();
         await pc.setRemoteDescription({ type: 'answer', sdp: r.sdp });

@@ -388,6 +388,14 @@ check: a question they answer on the board (see YOUR TURN)
 TXT;
 const MH_AI_BO_FULL = MH_AI_BO . "\n\n" . MH_AI_TEACH . "\n\n" . MH_AI_DRAW;
 
+/* the language the student reads Mathub in (assets/i18n.js): Bo answers in it; the class material stays in English */
+const MH_AI_LANGS = ['es' => 'Spanish', 'ru' => 'Russian', 'fr' => 'French', 'it' => 'Italian', 'pt' => 'Portuguese (Brazilian)', 'de' => 'German'];
+function mh_ai_lang(array $in): string {
+  $l = is_string($in['lang'] ?? null) ? $in['lang'] : ''; if (!isset(MH_AI_LANGS[$l])) return '';
+  $n = MH_AI_LANGS[$l];
+  return "LANGUAGE: the student uses Mathub in $n. Always answer in $n (what you say, and the words on your board), even when their message, a suggested question or the page is in English, unless they ask for another language. Their class, notes and exams are in English, so the first time you use a key term, give the English term in brackets, e.g. a $n word (derivative). Math notation stays as it is.";
+}
+
 /* asked from a page of Mathub (Bo floats on every page, assets/bo-float.js): what is on it, and what they pointed at */
 const MH_AI_SCREEN = <<<'TXT'
 THEIR SCREEN: they asked you from a page of Mathub, and THE PAGE below is what is on it: the page, its questions or problems numbered as they see them (Q3, Problem 2), the choices, what they answered and whether it was right, and the text in view. "This", "this one", "Q3", "number 2", "the last one" mean what is on it.
@@ -683,6 +691,7 @@ function mh_ai_route(string $route, array $in, array $cfg, string $ip): void {
       $now = array_filter(['TODAY: ' . $today, $C ? mh_ai_upcoming($C, $today) : '', mh_ai_snapshot($in['snapshot'] ?? null), $notes ? "WHAT BO REMEMBERS ABOUT THEM:\n- " . implode("\n- ", $notes) : '']);
       $system[] = ['type' => 'text', 'text' => implode("\n", $now)];
       if ($voice) $system[] = ['type' => 'text', 'text' => MH_AI_VOICE];
+      if (($lang = mh_ai_lang($in)) !== '') $system[] = ['type' => 'text', 'text' => $lang];
       if ($screen !== '' || $focus !== '' || $pdf) $system[] = ['type' => 'text', 'text' => implode("\n\n", array_filter([$screen !== '' ? MH_AI_SCREEN . "\n\nTHE PAGE:\n" . $screen : '', $focus !== '' ? MH_AI_FOCUS . "\n" . $focus : '', $pdf ? MH_AI_FILE : '']))];
       // the last few turns, oldest first, starting with the student
       $turns = mh_ai_turns($uid, $cid); $msgs = [];
@@ -766,6 +775,7 @@ function mh_ai_route(string $route, array $in, array $cfg, string $ip): void {
       $hint = 'A college student on a call with their tutor about math and their class.';
       if ($C) { $w = [mh_ai_plain($C['code'] ?? '', 20), mh_ai_plain($C['name'] ?? '', 60)]; foreach (array_slice((array)($C['SECTIONS'] ?? []), 0, 40) as $sec) if (is_array($sec)) $w[] = mh_ai_plain($sec['title'] ?? '', 40); $hint .= ' Topics: ' . mb_substr(implode(', ', array_filter($w)), 0, 600); }
       $sys = mh_ai_live_instructions($uid, $cid, $C, $in);
+      if (($lang = mh_ai_lang($in)) !== '') $sys .= "\n\n" . $lang . ' On the call, speak it with a natural accent.';
       $full = ['type' => 'realtime', 'model' => $V['live_model'], 'instructions' => $sys, 'output_modalities' => ['audio'], 'max_output_tokens' => 1600,
         'audio' => ['input' => ['noise_reduction' => ['type' => 'near_field'], 'transcription' => ['model' => 'gpt-4o-mini-transcribe', 'language' => 'en', 'prompt' => $hint], 'turn_detection' => ['type' => 'semantic_vad', 'eagerness' => $eager, 'create_response' => true, 'interrupt_response' => true]],
                     'output' => array_merge(['voice' => $voice], $speed != 1.0 ? ['speed' => $speed] : [])],

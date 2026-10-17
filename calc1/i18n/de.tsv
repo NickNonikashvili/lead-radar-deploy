@@ -1372,3 +1372,480 @@
 1498	Geteilten Kurs öffnen
 1499	Der 8-stellige Code aus dem Link eines Kommilitonen.
 1500	Teilcode
+1501	Kursdatei importieren
+1502	Datei wählen
+1503	Nutze die KI, die du schon verwendest
+1504	Kopiere die Anleitung von Mathub in einen beliebigen KI-Chat und füge dann die Antwort hier ein.
+1505	Kopiere die Anleitung
+1506	Mathub schreibt eine Anleitung, die einer KI genau sagt, wie sie aus einem Kursplan einen Kurs macht.
+1507	Ganzer Kurs
+1508	Kürzere Antwort
+1509	Wähle „Kürzere Antwort“, wenn deine KI bei langen Antworten mittendrin aufhört.
+1510	Anleitung kopieren
+1511	Lesen
+1512	Frag deine KI
+1513	Öffne den KI-Chat, den du nutzt{1}. Füge die Anleitung ein, häng deinen Kursplan an (ein PDF, ein Foto oder den Text) und schick es ab.
+1514	So sieht und versendet Mathub deinen Kursplan nie. Du entscheidest, welcher KI du ihn gibst, und für das, was du schickst, gelten deren Datenschutzregeln.
+1515	Füge die Antwort ein
+1516	Kopiere die ganze Antwort der KI und füge sie hier ein. Mathub prüft sie, korrigiert kleine Fehler und zeigt dir den Kurs, bevor er hinzugefügt wird.
+1517	Die Antwort der KI
+1518	Einfügen
+1519	Antwort prüfen
+1520	Von dir erstellte Kurse
+1521	Er ist auf diesem {1}{2} gespeichert und funktioniert offline.
+1522	und in deinem Konto
+1523	Er ist mit deinem Konto gespeichert und damit auch in den Mathub-Apps, wenn du dich dort anmeldest.
+1524	Melde dich an, um einen Kurs hinzuzufügen.
+1525	Von dir erstellte Kurse werden mit deinem Mathub-Konto gespeichert und sind so auf jedem Gerät, auf dem du angemeldet bist, auch in den Apps.
+1526	, in ihrer App oder im Web
+1527	in einem anderen Tab
+1528	Anleitung kopiert. Füge sie mit deinem Kursplan in deine KI ein.
+1529	Die Zwischenablage ist leer. Kopiere zuerst die Antwort der KI.
+1530	Das Beispiel konnte nicht geöffnet werden.
+1531	Diese Datei ist zu groß für einen Kurs.
+1532	Ein Teilcode hat 8 Buchstaben und Ziffern, etwa K7P2QX9M.
+1533	Von einer KI aus einem Kursplan geschrieben: Prüfe Termine und Bewertung mit dem Kursplan selbst.
+1534	Kalendertermine
+1535	Keine Prüfungstermine im Kursplan.
+1536	{1} {1|Hinweis|Hinweise} zu diesem Kurs{2|}
+1537	Nachricht für deine KI kopieren
+1538	Füge zuerst die Antwort der KI ein.
+1539	In diesem Text steckt kein Kurs.
+1540	Füge die ganze Antwort der KI ein, auch den Teil, der beginnt mit
+1541	. Wenn sie nur eine Zusammenfassung geschrieben hat, schick ihr die Anleitung noch einmal.
+1542	Die Antwort hört vor dem Ende auf.
+1543	Der KI ist mittendrin der Platz ausgegangen. Schick ihr diese Nachricht oder wähle in Schritt 1 „Kürzere Antwort“ und fang neu an.
+1545	(bei: {1})
+1546	In der Antwort steckt ein Tippfehler
+1547	, deshalb kann sie nicht gelesen werden{1}. Schick der KI diese Nachricht und füge ihre neue Antwort ein.
+1548	, bei „{1}“
+1549	Dieser Kurs ist zu groß
+1550	({1}; die Grenze liegt bei 3 MB). Wähle in Schritt 1 „Kürzere Antwort“ und frag noch einmal.
+1551	Fast geschafft: {1} {1|Sache|Sachen} zu beheben.{2|}
+1552	…und {1} weitere.
+1553	{1} hinzufügen
+1554	Melde dich zuerst an: Von dir erstellte Kurse werden mit deinem Konto gespeichert.
+1555	{1} ist fertig. Er ist auf diesem {2}{3} gespeichert.
+1556	{1} ist fertig. Er ist mit deinem Konto gespeichert.
+1557	Zeitplan, Themen, Prüfungen und Bewertung
+1558	Wie groß soll der Kurs sein?
+1559	Bo schreibt ihn aus deinem Kursplan
+1560	Gib ihm den Kursplan. In ein, zwei Minuten hast du den ganzen Kurs:
+1561	Skripte und die Kernideen jedes Themas
+1562	Lernkarten und Übungsfragen
+1563	Kalender, Prüfungen und dein Notenrechner
+1564	Kursplan hier ablegen
+1565	PDF, Foto oder Textdatei ·
+1566	Datei wählen
+1567	oder den Text einfügen
+1568	Der Text des Kursplans
+1569	Kürzerer Kurs
+1570	Meinen Kurs schreiben
+1571	Bo schickt deinen Kursplan an die KI von Anthropic, um den Kurs zu schreiben; er wird nicht zum Training der KI verwendet.
+1572	Bo liest PDFs, Fotos und reine Textdateien.
+1573	Diese Datei ist zu groß. Sie muss unter 7 MB bleiben.
+1574	Bo ist noch nicht eingeschaltet: Nutze vorerst unten die KI, die du schon verwendest.
+1575	Noch {1} von {2} Kursen in diesem Monat.
+1576	{1} · {2} · bereit für Bo
+1577	Textdatei
+1578	Dateien
+1579	Bo hat angehalten bei: {1}
+1580	Dein Kurs ist fertig
+1581	{1} Schritte erledigt
+1582	Schritt {1} von {2}{3}
+1583	· das dauert ein, zwei Minuten
+1584	Melde dich zuerst an: Bo schreibt Kurse für dein Mathub-Konto.
+1585	Leg zuerst deinen Kursplan ab oder füge den Text ein.
+1586	Kursplan wird gelesen
+1587	Einheit {1} wird geschrieben: {2}
+1588	Kurs wird geprüft
+1591	Bo hat behalten, was er schon geschrieben hat: „Meinen Kurs schreiben“ macht dort weiter, wo er aufgehört hat.
+1592	Kopiert. Füge es in denselben KI-Chat ein.
+1594	Auf diesem {1}
+1595	Nur auf diesem {1} (mit einem anderen Konto erstellt)
+1596	Auf diesem {1} und in deinem Konto
+1597	Mit deinem Konto gespeichert
+1598	Wird in deinem Konto gespeichert…
+1599	{1} löschen
+1600	Löschen
+1601	Geteilt
+1602	Datei senden
+1603	Herunterladen
+1604	Noch keine. Kurse, die du erstellst, erscheinen hier und bei deinen anderen Kursen.
+1605	{1} für Mathub
+1607	{1} löschen? Er wird aus deinem Konto und von allen Geräten gelöscht, auf denen du angemeldet bist, samt deinem Fortschritt.{2}
+1608	Sein Teillink funktioniert dann nicht mehr.
+1609	{1} von diesem {2} löschen? Dein Fortschritt darin wird ebenfalls gelöscht.
+1610	{1} gelöscht.
+1611	Der QR-Code konnte nicht gezeichnet werden.
+1612	QR-Code für den Link
+1613	{1} teilen
+1614	Link wird geholt…
+1615	Wer diesen Link oder Code hat, kann {1} sehen und eine Kopie zu den eigenen Kursen hinzufügen. Dein Name und dein Fortschritt bleiben unsichtbar.
+1616	Link
+1617	Für einen geteilten Kurs brauchst du Mathub Pro oder Max.
+1618	Teilen beenden
+1619	Senden…
+1620	{1} auf Mathub
+1621	{1}: {2}. Lern es auf Mathub:
+1622	Teilen von {1} beenden? Link und Code funktionieren dann nicht mehr. Bereits hinzugefügte Kopien bleiben bei ihren Besitzern.
+1623	Der Link funktioniert nicht mehr.
+1624	Ein geteilter Kurs gehört zu deinem Mathub-Konto, deshalb musst du dich zum Teilen anmelden.
+1625	Melde dich an, um diesen Kurs zu teilen.
+1626	Dieser Kurs wurde auf diesem {1} mit einem anderen Konto erstellt und kann daher nicht von diesem aus geteilt werden.
+1627	Geteilter Kurs
+1628	Ein geteilter Kurs
+1629	Jemand aus deinem Kurs hat diesen Kurs auf Mathub aus einem Kursplan erstellt und mit dir geteilt.
+1630	Dieser Teilcode stimmt nicht.
+1631	Ein Code hat 8 Buchstaben und Ziffern, etwa K7P2QX9M.
+1632	{1} wird geöffnet…
+1634	Dieser Kurs wird nicht mehr geteilt.
+1635	Der Kurs konnte nicht geöffnet werden.
+1636	Der Besitzer teilt ihn nicht mehr, oder der Code ist falsch geschrieben.
+1637	Dieser geteilte Kurs kann nicht genutzt werden.
+1638	Er hat Probleme, die Mathub nicht beheben kann: {1}
+1639	{1} · Geteilter Kurs · Mathub
+1640	Deine Kopie öffnen
+1641	{1} zu meinen Kursen hinzufügen
+1642	{1} Du bekommst deine eigene Kopie: Dein Fortschritt bleibt deiner.
+1643	Du hast {1}, das Hinzufügen ist also dabei.
+1644	Diesen geteilten Kurs melden
+1645	Teilen {1} · {2}
+1646	Was stimmt nicht? Zum Beispiel: kopiertes Material, etwas Beleidigendes oder falsche Fakten.
+1648	Eigenen Kurs aus einem Kursplan erstellen
+1649	Melde dich an, um dein Abo zu sehen.
+1650	(deinem Konto geschenkt)
+1651	Verlängert sich am {1}.
+1652	Aktiv bis {1}; verlängert sich nicht.
+1653	Kein Abo. Mit Mathub Pro ({1} pro Monat) schreibt Bo deine Kurse aus jedem Kursplan; Mathub Max ({2} pro Monat) bringt „Bo fragen“ dazu, deinen KI-Tutor. Der Beispielkurs ist kostenlos.
+1654	Mathub Pro und Max
+1655	Abo verwalten
+1656	Abos ansehen
+1657	Nochmal prüfen
+1658	{1} {1|von dir erstellter Kurs ist|von dir erstellte Kurse sind} mit deinem Konto gespeichert.{2|}{3|}
+1659	Kurse, die du aus einem Kursplan erstellst, werden mit deinem Konto gespeichert.
+1660	die Website (Karte, über Stripe)
+1661	ein Geschenk von Mathub
+1662	Alle Kurse, die in Mathub stecken: Lektionen, Übungen, Lernkarten und Prüfungsvorbereitung
+1663	Heute, dein Kalender, der Fokusraum und der GPA-Rechner
+1664	Der Beispielkurs, den du aus einem Kursplan erstellen kannst
+1665	Melde dich an, um dein Abo zu sehen
+1666	Dein Abo gehört zu deinem Mathub-Konto und funktioniert deshalb auf der Website und in den Apps.
+1667	Du hast das kostenlose Abo
+1668	Alles, was in Mathub steckt, ist kostenlos. Mit
+1669	schreibt Bo deine Kurse aus jedem Kursplan, und
+1670	bringt Bo dazu, deinen KI-Tutor, im Chat und am Telefon.
+1671	Max holen
+1672	Pro holen
+1673	die Website
+1674	Deinem Konto geschenkt{1}
+1675	Endet am {1}
+1676	Aktiv
+1677	Preis
+1678	Kostenlos für dich
+1679	Endet
+1680	{1}. Es kostet dich nie etwas
+1681	Läuft
+1682	Ohne Enddatum. Es kostet dich nie etwas
+1683	Verlängert sich
+1684	, und verlängert sich nicht
+1685	Jeden Monat
+1686	Von
+1687	Von Mathub geschenkt
+1688	Bezahlt über
+1689	Alles aus {1} funktioniert bis dahin weiter. Anders überlegt? {2}
+1690	Schalte es unter Abrechnung verwalten wieder ein.
+1691	Alles aus {1} funktioniert bis dahin. Danach bist du wieder bei {2}, außer du holst dir ein Abo.
+1692	Du zahlst außerdem für
+1693	über {1}. Das hat sich nicht geändert: Kündige es unten, wenn du es nicht mehr brauchst.
+1694	Abrechnung verwalten
+1695	{1} kündigen
+1696	Abo kündigen
+1697	{1} von {2} genutzt{3}
+1698	Sie beginnen am {1} von vorn.
+1699	Fragen an Bo
+1700	Teil von Mathub Max
+1701	Kurse, die Bo schreibt
+1702	Anrufe mit Bo
+1703	, dein Abo
+1704	Monatliche Abos, die sich verlängern, bis du kündigst. {1} Ein Abo gehört zu deinem Mathub-Konto und funktioniert deshalb auf der Website und in den Apps.
+1705	Bedingungen
+1706	Gekauft im {1}, der die Abrechnung übernimmt.
+1707	Auf der Website wird die Zahlung von Stripe abgewickelt, über RevenueCat.
+1708	{1} Fragen an Bo und {2} Kurse von Bo pro Monat{3}
+1709	, und {1} Minuten Anrufe
+1710	großzügige Monatsgrenzen
+1711	Wie kündige ich?
+1712	In deinen {1}-Abos (Abrechnung verwalten, oben), spätestens 24 Stunden vor der Verlängerung. Dein Abo bleibt bis zum Ende des bezahlten Monats aktiv.
+1713	Tippe oben auf
+1714	. Dein Abo bleibt bis zum Ende des bezahlten Monats aktiv, und es wird nichts mehr abgebucht. Wenn du es in der Mathub-App gekauft hast, kündigst du stattdessen im App Store oder bei Google Play; die Seite sagt dir, wo.
+1715	Was passiert, wenn mein Abo endet?
+1716	Deine erstellten Kurse bleiben erhalten, gesperrt, und öffnen sich wieder, wenn du erneut abonnierst. Dein Fortschritt, deine Chats mit Bo und seine Notizen bleiben in deinem Konto. Alles, was in Mathub steckt, und der Beispielkurs bleiben kostenlos.
+1717	Wo sind meine Belege? Wie ändere ich meine Karte?
+1718	{1} verwaltet deine Belege und Zahlungsdaten.
+1719	öffnet die Abrechnungsseite deines Abos, wo du alle Belege siehst, die Karte änderst oder kündigst. Außerdem bekommst du jeden Monat einen Beleg per E-Mail.
+1720	Kann ich zwischen Pro und Max wechseln?
+1721	Ja. Wechsle jederzeit auf Max; {1} kümmert sich um den Wechsel.
+1722	Wechsle jederzeit auf Max. Kündige auf der Website Pro, nachdem du Max hast, damit du nicht für beides zahlst. Um zu Pro zurückzugehen, kündige Max und hol dir Pro, wenn es endet.
+1723	Ich habe in der App abonniert. Gilt das hier auch?
+1724	Ja. Ein Abo gehört zu deinem Mathub-Konto und funktioniert deshalb überall, wo du dich damit anmeldest. Wenn es nicht angezeigt wird, tippe auf Nochmal prüfen.
+1725	Gibt es Grenzen?
+1726	Fair-Use-Grenzen, die die meisten Studierenden nie erreichen: {1}. Sie beginnen am 1. von vorn.
+1727	Eine Frage zu einer Abbuchung?
+1728	Schreib uns über die
+1729	Kontaktseite
+1730	{1} und ein Mensch antwortet dir.
+1731	, oder frag {1}
+1732	Dein Abo jetzt
+1733	Was du hast, was du diesen Monat genutzt hast und alles zur Abrechnung.
+1734	Die Abos
+1735	Fragen
+1736	Die Zahlen dieses Monats konnten nicht geladen werden. Versuch es gleich noch einmal.
+1737	das Ende des bezahlten Monats
+1738	Es kostet zu viel
+1739	Ich nutze es nicht genug
+1740	Mein Semester oder meine Prüfungen sind vorbei
+1741	Etwas hat nicht funktioniert
+1742	Etwas anderes
+1743	{1} kündigen?
+1744	Dein Abo bleibt aktiv bis
+1745	. Danach verlängert es sich nicht, und es wird nichts mehr abgebucht.
+1746	Deine erstellten Kurse bleiben erhalten, gesperrt, und öffnen sich wieder, wenn du zurückkommst.
+1747	Dein Fortschritt, deine Chats und alles, was in Mathub steckt, bleiben deins, kostenlos.
+1748	Warum kündigst du?
+1749	(optional, es hilft uns)
+1750	Was könnten wir besser machen?
+1751	(optional)
+1752	Mein Abo behalten
+1753	„Bo fragen“ und Anrufe mit ihm enden dann.
+1754	Im {1} kündigen
+1755	Mein Abo kündigen
+1756	Wird gekündigt…
+1757	Mathub ist nicht erreichbar. Prüfe deine Verbindung und versuch es noch einmal.
+1758	{1} ist gekündigt. Es bleibt aktiv bis {2}.
+1759	Noch ein Schritt
+1760	Website-Abos werden auf ihrer Abrechnungsseite gekündigt, die RevenueCat für Mathub betreibt (Zahlungen über Stripe). Sie öffnet sich in einem neuen Tab: Wähle dort
+1761	Abo kündigen
+1762	. {1} bleibt aktiv bis {2}.
+1763	Abrechnungsseite öffnen
+1764	Du hast {1} in der Mathub-App gekauft, deshalb kümmert sich {2} darum: Öffne deine Abos, wähle Mathub und kündige. Es bleibt aktiv bis {3}.
+1765	{1}-Abos öffnen
+1766	App Store
+1767	Es ist schon gekündigt
+1768	{1} endet am {2} und verlängert sich nicht.
+1769	Nichts zu kündigen
+1770	{1} wurde deinem Konto von Mathub geschenkt und kostet dich daher nie etwas.
+1771	Schreib uns zum Kündigen
+1772	Die Abrechnungsseite für dein Abo wurde nicht gefunden. Schreib uns über die Kontaktseite, dann kündigen wir es für dich und sorgen dafür, dass nichts mehr abgebucht wird.
+1773	Kein Abo zum Kündigen
+1774	Dein Konto hat gerade kein Abo.
+1775	Dein Abo endet am {1}.
+1776	Noch {1} Fragen{2} in diesem Monat.
+1777	und {1} Anrufminuten
+1778	Mathub Max ist aktiv.
+1779	Bo kann diesen Monat noch {1} Kurse schreiben.
+1780	Bo schreibt deine Kurse aus jedem Kursplan.
+1781	Max bringt „Bo fragen“ und Anrufe dazu.
+1782	Er kennt deinen Kursplan, deine Prüfungen und weiß, wo du hängst. Ruf ihn an, frag ihn alles oder lass ihn einen ganzen Kurs aus einem Kursplan schreiben.
+1783	Sprich {1} laut durch
+1784	Chat, Fotos und seine Tafel
+1785	Kurs schreiben
+1786	Aus jedem Kursplan
+1787	Bo im Chat und am Telefon · {1} pro Monat
+1788	Mathub Pro holen
+1789	Bo schreibt deine Kurse · {1} pro Monat
+1790	Was jeweils dabei ist
+1791	Bo, dein Tutor
+1792	Ein Kurs, den du aus einem Kursplan erstellt hast, {1} gespeichert.
+1793	Verwalten oder teilen
+1794	Allgemein
+1795	Allgemein / Campus
+1796	Frage
+1797	Diskussion
+1798	Ressource
+1799	Lerngruppe
+1800	Sonstiges
+1801	Der Diskussionsserver ist gerade nicht erreichbar.
+1803	vor {1} Min.
+1804	vor {1} Std.
+1805	vor {1} T.
+1806	Anonym
+1807	Nur Moderatoren sehen das
+1808	Positiv bewerten
+1809	Negativ bewerten
+1822	Community-Regeln
+1823	Bevor du postest
+1824	Einmalige Zustimmung
+1825	Die Diskussionen schreiben Studierende für Studierende. Damit sie nützlich und sicher bleiben, stimmt jedes Mitglied den Community-Regeln zu:
+1826	Sei anständig.
+1827	Keine Belästigung, kein Hass, keine Drohungen, keine Angriffe auf einzelne Menschen.
+1828	Nichts Illegales.
+1829	Kein Verkauf und keine Suche nach Drogen, Alkohol, Waffen, gestohlener Ware oder sonst etwas Illegalem. Solche Beiträge werden entfernt und können gemeldet werden.
+1830	Akademische Ehrlichkeit.
+1831	Helft euch beim Lernen; teilt während einer Prüfung keine Prüfungsfragen oder -antworten und haltet euch an die Regeln jedes Kurses.
+1832	Deine Worte gehören dir.
+1833	Du bist für das verantwortlich, was du postest. Mathub kann Inhalte und Konten jederzeit entfernen.
+1834	Sprachfilter.
+1835	Schimpfwörter werden automatisch zensiert.
+1836	Ich stimme zu:
+1837	Nutzungsbedingungen, Community-Regeln und Datenschutzerklärung
+1838	Zustimmen und weiter
+1839	Stell Fragen, teile Ressourcen und organisiere Lerngruppen mit deinen Kommilitonen.
+1840	Beiträge durchsuchen…
+1841	Neuer Beitrag
+1842	Angesagt
+1843	Neu
+1844	Top
+1845	Alle
+1846	Unbeantwortet
+1847	Gelöst
+1848	Umfragen
+1849	Lies die Diskussionen und mach mit
+1850	Mitglieder können jeden Beitrag lesen, Fragen stellen, Kommilitonen antworten, abstimmen und Lerngruppen organisieren. Besucher sehen nur die Titel.
+1851	Beispielinhalt: Der Diskussionsserver ist in dieser Vorschau nicht erreichbar, daher sind diese Beiträge Beispiele und Posten ist deaktiviert.
+1852	Meldungsliste
+1853	Administrator
+1854	Moderator
+1855	Admin-Bereich
+1856	Helfer {1}
+1857	akzeptierte Antworten und positive Bewertungen
+1858	aller Zeiten
+1859	· {1} akzeptiert
+1861	Hier gibt es noch keine Beiträge.{1}
+1862	Sei die erste Person: Stell eine Frage oder teile etwas Nützliches.
+1863	Mehr laden
+1864	Umfrage
+1865	Angeheftet
+1866	Blockieren
+1867	Alle Diskussionen
+1868	Melde dich an, um diese Diskussion zu lesen
+1869	Beiträge und Kommentare sind nur für Mitglieder sichtbar. Registriere dich kostenlos mit deiner montana.edu-Adresse.
+1870	Beispielbeitrag nicht gefunden.
+1872	Autor sperren
+1873	Lösen
+1874	Anheften
+1875	Wieder öffnen
+1876	Schließen
+1877	Wiederherstellen
+1878	Entfernen
+1879	Endgültig löschen
+1880	· bearbeitet
+1881	Original (nur Moderatoren)
+1882	Bearbeiten
+1883	Sei konkret. $…$ für Mathe, **fett**, *kursiv*, > Zitat.
+1884	Kommentar hinzufügen
+1885	Anonym posten
+1886	Kommentar posten
+1887	Kommentieren ist in dieser Vorschau deaktiviert.
+1888	Dieser Beitrag ist geschlossen. Keine neuen Kommentare.
+1889	Dieser Beitrag wurde entfernt.
+1890	Dein Zugang zum Posten ist bis {1} pausiert.
+1891	{1} {1|Stimme|Stimmen}{2|} · anonym{3}
+1892	· mehrere wählbar
+1893	Stimme ändern
+1894	Abstimmen
+1895	Antworten
+1896	Sperren
+1897	Einklappen
+1898	Blockiertes Mitglied
+1899	Akzeptierte Antwort
+1900	Als Antwort markieren, die es gelöst hat
+1901	Verborgen, weil du dieses Mitglied blockiert hast.
+1902	Noch keine Kommentare. Starte die Diskussion.
+1903	Melde dich an, um zu posten
+1904	Erstelle ein kostenloses Konto mit deiner montana.edu-Adresse, um Fragen zu stellen und Diskussionen zu starten.
+1905	Zum Posten braucht es den Diskussionsserver, der in dieser Vorschau nicht erreichbar ist.
+1906	z. B. Hänge bei WebWork 2.3 Nr. 7: Warum ist die Ableitung hier negativ?
+1907	Erklär das Problem. Füge die genaue Aufgabe ein, wenn du kannst.
+1908	z. B. Auf welches Thema soll sich die Wiederholungsstunde konzentrieren?
+1909	Titel
+1910	Text
+1911	Reiner Text.
+1912	**fett**
+1913	*kursiv*
+1914	`Code`
+1915	, und
+1916	für Mathe (LaTeX). Schimpfwörter werden automatisch zensiert.
+1917	(Kommilitonen sehen „Anonym“; Moderatoren sehen trotzdem, wer gepostet hat)
+1918	Umfrage hinzufügen
+1919	(Stimmen sind anonym)
+1920	Umfragefrage (optional)
+1921	Mehrere Optionen erlauben
+1922	Posten
+1923	Vorschau
+1924	Mit dem Posten stimmst du zu:
+1925	Community-Regeln
+1926	Tipps
+1927	Eine Frage pro Beitrag.
+1928	Gib den Abschnitt oder die Aufgabennummer an.
+1929	Zeig deinen Versuch: Man hilft schneller, wenn man sieht, wo du hängst.
+1930	Mathe wird so dargestellt:
+1931	wird zu $x^2$.
+1932	Regeln in Kürze
+1933	Sei anständig. Keine Belästigung, kein Hass.
+1934	Nichts Illegales, niemals.
+1935	Keine Prüfungsantworten während Prüfungen.
+1936	Moderatoren können alles entfernen.
+1937	Vollständige Bedingungen und Datenschutzerklärung
+1938	Gute Beiträge bekommen gute Antworten: Sag, was du versucht hast, zitiere die genaue Aufgabe und wähle den richtigen Kurs.
+1939	Option {1}{2}
+1940	Meldungsliste
+1941	Offene Meldungen von Mitgliedern, neueste zuerst. Wer einen Eintrag entfernt oder den Autor sperrt, schließt dessen Meldungen.
+1942	Nur für Moderatoren.
+1943	Offene Meldungen
+1944	Aktive Sperren
+1945	Eintrag
+1946	Grund
+1947	Autor
+1948	von {1} · {2}
+1949	Nichts gemeldet. Schöne Community.
+1950	Entsperren
+1951	Keine aktiven Sperren.
+1952	Antworten auf deine Beiträge und Kommentare.
+1953	Alle als gelesen markieren
+1954	Melde dich an, um deinen Posteingang zu sehen
+1955	Mitglieder bekommen eine Benachrichtigung, wenn jemand auf ihren Beitrag oder Kommentar antwortet.
+1956	Der Posteingang braucht den Diskussionsserver, der gerade nicht erreichbar ist.
+1957	hat deine Meldung bearbeitet
+1958	hat in deinem Kurs gepostet:
+1959	hat Übungen zugewiesen:
+1960	hat deinen Lehrzugang geändert:
+1961	hat Lehrzugang angefragt:
+1962	hat deine Kursanfrage aktualisiert für
+1963	hat einen Kurs angefragt:
+1964	hat dir verliehen:
+1965	hat dir gegeben:
+1966	Noch nichts. Wenn jemand auf einen deiner Beiträge antwortet, erscheint es hier.
+1967	Seitenübersicht und Mitgliederverwaltung. Du kannst jedes Konto sperren, entsperren oder löschen und jeden Beitrag oder Kommentar aus seinem Thread endgültig löschen.
+1968	Nur für Administratoren.
+1970	E-Mail oder Namen suchen…
+1971	Seiteneinstellungen
+1972	URL des Canvas-Kalenderfeeds
+1973	Speichern und synchronisieren
+1974	Hinweisbanner (auf der Startseite und den Übersichten; leer lassen zum Ausblenden)
+1975	Team
+1976	Mitglieder
+1977	Mitglied
+1978	Beigetreten
+1979	Beiträge
+1980	Kommentare
+1981	Status
+1982	diese Woche aktiv
+1983	aktive Sperren
+1984	entfernte Einträge
+1985	In Canvas: Kalender → „Kalender-Feed“ → Link kopieren. Die Abgaben der zugeordneten Kurse erscheinen dann auf jeder Übersicht und werden stündlich aktualisiert.
+1986	Letzte Synchronisierung: {1} · {2} Termine
+1987	· Admin
+1988	letzte Anmeldung {1}
+1989	gesperrt bis {1}
+1990	noch keine Regeln
+1991	Bestätigen
+1992	Keine Mitglieder gefunden.
+1993	Stimme gezählt
+1994	Wähle mindestens eine Option.
+1995	Als akzeptierte Antwort markiert
+1996	Akzeptierte Antwort entfernt
+1997	Link kopiert
+1998	Kopiere diesen Link:
+1999	Was stimmt nicht mit diesem
+2000	Gemeldet

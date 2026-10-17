@@ -2562,3 +2562,10 @@ body:has(.app:not(.landing)) .amb-panel { top: 0; bottom: auto; max-height: calc
 .read-progress { position: fixed; left: 0; right: 0; top: 0; height: 3px; z-index: 58; background: var(--accent); transform: scaleX(0); transform-origin: 0 50%; opacity: 0; transition: opacity 0.2s; pointer-events: none; }
 .read-progress.on { opacity: 1; }
 @media print { .read-progress { display: none; } }
+
+/* Longer words in Spanish and Russian (assets/i18n.js): the top bar gives way instead of running past the screen.
+   The title and the exam chip shrink first (the chip ends in "…"); the account buttons keep their words. */
+.topbar-title { min-width: 0; }
+.topbar-actions { min-width: 0; flex-shrink: 1; }
+.topbar .exam-chip { min-width: 0; max-width: 240px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex-shrink: 1; }
+.topbar #topbar-account .btn { white-space: nowrap; }

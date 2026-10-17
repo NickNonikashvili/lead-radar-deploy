@@ -33,6 +33,7 @@
   const talk = () => !!(App.boTalk && App.boTalk.supported());
   /* a question to Bo, his answer streamed: onDelta gets each piece as it is written; resolves with the whole answer */
   App.boAsk = async function (body, onDelta) {
+    if (App.lang && App.lang !== 'en' && body && !body.lang) body = Object.assign({}, body, { lang: App.lang });   // Bo answers in the student's language
     let res; try { res = await fetch(API + 'ai_tutor', { method: 'POST', credentials: 'same-origin', headers: { 'X-Requested-With': 'MatHub', 'Accept': 'application/x-ndjson, application/json', 'Content-Type': 'application/json' }, cache: 'no-store', body: JSON.stringify(Object.assign({ stream: 1 }, body)) }); }
     catch (e) { throw Object.assign(new Error('Bo cannot be reached right now. Check your connection and try again.'), { network: true }); }
     if (!/ndjson/.test(res.headers.get('content-type') || '') || !res.body) { const j = await res.json().catch(() => null); if (!j || j.ok === false) throw Object.assign(new Error((j && j.error) || 'Bo could not answer just now. Please try again.'), { status: res.status, data: j }); return j; }
