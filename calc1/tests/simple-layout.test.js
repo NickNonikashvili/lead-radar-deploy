@@ -54,7 +54,7 @@ const T = require('./lib');
   // after some studying the start page switches to "Your next step" and the widgets appear
   await p.evaluate(() => { App.addXP(10, { course: 'calc', silent: true }); const s = App.settings(); s.lastVisit = { hash: '#/calc/notes/1.3', label: 'Calc I · Notes', course: 'calc', t: Date.now() - 3600000 }; localStorage.setItem('studyhub-settings', JSON.stringify(s)); });
   await go(p, '#/', 1200);
-  const back = await p.evaluate(() => ({ title: document.querySelector('.land-next .sec-title').textContent.trim(), steps: !!document.querySelector('.start-steps'), resume: !!document.querySelector('.land-next .resume-card'), hub: (() => { const h = document.querySelector('.landing-top .hub-slot'); return !!h && getComputedStyle(h).display !== 'none'; })() }));
+  const back = await p.evaluate(() => ({ title: document.querySelector('.land-next .sec-title').textContent.trim(), steps: !!document.querySelector('.start-steps'), resume: !!document.querySelector('.land-next .resume-card'), hub: (() => { const h = document.querySelector('#topbar .hub-slot'); return !!h && getComputedStyle(h).display !== 'none'; })() }));
   check('returning students see "Your next step" with a resume card', back.title === 'Your next step' && !back.steps && back.resume, back);
   check('streak and XP widgets appear once there is something to show', back.hub, back);
   await c.close();
