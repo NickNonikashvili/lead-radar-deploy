@@ -28,8 +28,8 @@ html[data-app] :is(#sb-now, #sb-quick, #sb-nav, #sb-cal, #tb-clock) { display: n
 .app.landing .landing-wrap { padding-top: 4px; max-width: 1200px; }
 .app.landing .landing-top:not(.hero) .logo-mark { display: none; }
 .app.landing .landing-top:not(.hero) .landing-title { margin-left: 0; }
-.app.landing .bo-board { top: 72px; }
-@container (min-width: 1000px) { .app.landing .bo-board { top: 84px; height: calc(100dvh - 108px); } }
+:root:not([data-app]) .app.landing .bo-board { top: 72px; }
+@container (min-width: 1000px) { :root:not([data-app]) .app.landing .bo-board { top: 84px; height: calc(100dvh - 108px); } }
 
 /* ---------- sidebar ---------- */
 .sidebar { padding: 12px 12px 12px; gap: 10px; overscroll-behavior: contain; scrollbar-width: thin; }

@@ -162,7 +162,8 @@ const PNG = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwA
   const pb = await ph.evaluate(() => { const b = document.querySelector('#bo-board'); const r = b.getBoundingClientRect(); const l = document.querySelector('#bo-log').getBoundingClientRect(); return { above: !!(b.compareDocumentPosition(document.querySelector('#bo-log')) & Node.DOCUMENT_POSITION_FOLLOWING), w: r.width, sticky: getComputedStyle(b).position, sheet: b.querySelector('.bb-sheet').getBoundingClientRect().height }; });
   check('phone: the board is above the chat, sticky, and not too tall', pb.above && pb.w > 300 && pb.sticky === 'sticky' && pb.sheet > 80 && pb.sheet <= 320, pb);
   await ph.evaluate(() => scrollTo(0, document.body.scrollHeight)); await ph.waitForTimeout(300);
-  check('phone: scrolling the chat, the board stays on screen', await ph.$eval('#bo-board', b => { const r = b.getBoundingClientRect(); return r.top >= 0 && r.top < 40; }));
+  const bs = await ph.$eval('#bo-board', b => { const r = b.getBoundingClientRect(); const t = document.querySelector('#topbar'); const tb = t && getComputedStyle(t).display !== 'none' ? Math.round(t.getBoundingClientRect().bottom) : 0; return { top: Math.round(r.top), topbar: tb }; });
+  check('phone: scrolling the chat, the board stays on screen, under the top bar', bs.top >= bs.topbar - 1 && bs.top < bs.topbar + 40, bs);
   await ph.click('#bo-board [data-bb="fold"]'); await ph.waitForTimeout(250);
   const folded = await ph.evaluate(() => { const b = document.querySelector('#bo-board'); return { fold: b.hasAttribute('data-fold'), h: b.getBoundingClientRect().height, exp: b.querySelector('[data-bb="fold"]').getAttribute('aria-expanded'), saved: App.settings().boBoardFold }; });
   check('phone: the board folds down to its bar (and stays folded next time)', folded.fold && folded.h < 70 && folded.exp === 'false' && folded.saved === true, folded);
