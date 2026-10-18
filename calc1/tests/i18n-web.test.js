@@ -27,9 +27,12 @@ const fs = require('fs'); const path = require('path'); const LAST = path.join(_
   // Bo answers in the student's language
   const [c4, m] = await mk(1360, 900, { serviceWorkers: 'block' }); await c4.addInitScript(() => { try { const s = JSON.parse(localStorage.getItem('studyhub-settings') || '{}'); s.tourDone = true; s.courses = ['calc']; if (!s.lang) s.lang = 'ru'; s.aiConsent = Date.now(); localStorage.setItem('studyhub-settings', JSON.stringify(s)); } catch (x) {} });
   await go(m, '#/', 600); await login(m, 'mod.user@montana.edu'); await m.reload(); await m.waitForTimeout(900);
+  // the account may carry another language from an earlier run, and the account's language wins on sign-in: pick Russian here, as a student would
+  if (await m.evaluate(() => App.lang !== 'ru')) { await m.evaluate(() => MathubI18n.set('ru')).catch(() => {}); await m.waitForLoadState('load'); await m.waitForTimeout(1200); }
   await m.evaluate(() => App.boAsk({ class: 'calc', q: 'What is a limit?', snapshot: {}, today: App.todayISO() }, () => {}));
   const sys = JSON.parse(fs.readFileSync(LAST, 'utf8')).system.map(b => b.text).join('\n');
   check('Bo is told to answer in Russian, with the English terms the class uses', /LANGUAGE: the student uses Mathub in Russian\. Always answer in Russian/.test(sys) && /English term in brackets/.test(sys), sys.slice(-400));
   await api(m, 'ai_forget', { what: 'all' });
+  await m.evaluate(() => MathubI18n.set('en')).catch(() => {}); await m.waitForLoadState('load'); await m.waitForTimeout(3500);   // leave the account in English for the tests after this one
   await T.finish();
 })();
