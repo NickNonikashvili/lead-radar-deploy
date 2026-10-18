@@ -1,0 +1,171 @@
+/* ============================================================
+   Mathub — the frame on every page (assets/shell.js)
+   The sidebar and the header now stay on every page of the website,
+   not just inside a class. Big Sky: a white sidebar with a 2px edge,
+   soft sky-tinted blocks inside it, chunky pressable pieces with a
+   lip, Gabarito numbers. The apps (html[data-app]) and the faculty
+   workspace keep their own frames.
+   ============================================================ */
+:root { --sidebar-w: 276px; }
+@media (max-width: 1180px) and (min-width: 901px) { :root { --sidebar-w: 252px; } }
+
+/* every page has the frame; only the apps and the faculty workspace step out of it */
+@media (min-width: 901px) {
+  .app.landing { grid-template-columns: var(--sidebar-w) 1fr; }
+  .app.side-hidden { grid-template-columns: 1fr; }
+  .app.side-hidden .sidebar { display: none; }
+  .app.side-hidden .menu-btn { display: inline-flex; }
+}
+.app.landing .sidebar { display: flex; }
+.app.landing .topbar { display: flex; }
+:root[data-surface="faculty"] :is(.sidebar, .topbar, #nav-backdrop) { display: none !important; }
+html[data-app] :is(#sb-now, #sb-quick, #sb-nav, #sb-cal, #tb-clock) { display: none !important; }
+.app.landing .sb-classbox { display: none; }
+.app:not(.landing) .sb-classbox { display: contents; }
+
+/* pages outside a class drew their own header with the logo and the account; the frame has both now */
+.app #landing-account { display: none; }
+.app.landing .landing-wrap { padding-top: 4px; max-width: 1200px; }
+.app.landing .landing-top:not(.hero) .logo-mark { display: none; }
+.app.landing .landing-top:not(.hero) .landing-title { margin-left: 0; }
+.app.landing .bo-board { top: 72px; }
+@container (min-width: 1000px) { .app.landing .bo-board { top: 84px; height: calc(100dvh - 108px); } }
+
+/* ---------- sidebar ---------- */
+.sidebar { padding: 12px 12px 12px; gap: 10px; overscroll-behavior: contain; scrollbar-width: thin; }
+.sb-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 2px 2px 0 4px; }
+.sb-head .brand-logo { display: inline-flex; align-items: center; gap: 8px; text-decoration: none; color: var(--ink); min-width: 0; }
+.sb-head .brand-logo b { font-family: var(--font-brand, var(--font-display)); font-weight: 800; font-size: 22px; letter-spacing: -0.02em; }
+.sb-head .brand-logo small { display: none; }
+.sb-head .brand-logo span { display: flex; flex-direction: column; line-height: 1; }
+.sb-hide { flex: none; }
+@media (max-width: 900px) { .sb-hide { display: none; } }
+
+/* now: the date, a live clock and three progress bars */
+.sb-now { background: var(--surface-2); border-radius: 16px; padding: 12px 12px 10px; display: flex; flex-direction: column; gap: 10px; }
+.sb-now-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+.sb-date { font-family: var(--font-display); font-weight: 800; font-size: 16px; letter-spacing: -0.01em; color: var(--ink); line-height: 1.2; }
+.sb-home { font-size: 12px; color: var(--muted); margin-top: 3px; display: flex; align-items: center; gap: 4px; }
+.sb-home span { font-variant-numeric: tabular-nums; color: var(--ink-2); font-weight: 600; }
+.sb-time { flex: none; font-family: var(--font-display); font-weight: 800; font-size: 17px; font-variant-numeric: tabular-nums; letter-spacing: -0.01em; color: var(--ink); background: var(--surface); border: 2px solid var(--border); border-radius: 12px; padding: 3px 9px; box-shadow: 0 2px 0 var(--lip, var(--border)); cursor: pointer; line-height: 1.3; }
+.sb-time:hover { background: var(--surface); border-color: var(--border-strong); }
+.sb-time:active { transform: translateY(2px); box-shadow: 0 0 0 var(--lip, var(--border)); }
+.sb-bars { display: flex; flex-direction: column; gap: 6px; }
+.sb-bar { display: grid; grid-template-columns: 88px minmax(0, 1fr) 36px; grid-template-areas: "row track pct"; column-gap: 8px; align-items: center; }
+.sb-bar-row { display: contents; }
+.sb-bar-row span { grid-area: row; font-size: 12.5px; font-weight: 600; color: var(--ink-2); line-height: 1.25; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sb-bar-row b { grid-area: pct; text-align: right; font-family: var(--font-display); font-weight: 800; font-variant-numeric: tabular-nums; color: var(--ink); font-size: 13px; }
+.sb-track { height: 8px; border-radius: 999px; background: var(--surface-3); overflow: hidden; }
+.sb-bar .sb-track { grid-area: track; }
+.sb-track i { display: block; height: 100%; border-radius: inherit; background: var(--accent); box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.32); min-width: 4px; }
+.sb-bar[data-k="month"] .sb-track i { background: color-mix(in srgb, var(--accent) 70%, var(--surface)); }
+.sb-bar[data-k="week"] .sb-track i { background: color-mix(in srgb, var(--accent) 48%, var(--surface)); }
+
+/* new: one primary button and six shortcuts */
+.sb-quick { display: flex; flex-direction: column; gap: 8px; }
+.sb-new { width: 100%; justify-content: center; }
+.sb-qa { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.sb-qa-btn { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 5px 4px 4px; border-radius: 12px; border: 2px solid var(--border); background: var(--surface); color: var(--ink-2); box-shadow: 0 2px 0 var(--lip, var(--border)); font: inherit; font-size: 11.5px; font-weight: 700; cursor: pointer; line-height: 1.15; min-width: 0; }
+.sb-qa-btn span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sb-qa-btn svg { color: var(--accent); }
+.sb-qa-btn:hover { background: var(--surface-2); color: var(--ink); }
+.sb-qa-btn:active { transform: translateY(2px); box-shadow: 0 0 0 var(--lip, var(--border)); }
+
+/* inside a class: its own pages come first, so the shortcuts fold into the New button */
+.app:not(.landing) .sb-qa { display: none; }
+/* inside a class: the class's own block keeps its look, with a line under it */
+.app:not(.landing) #sidebar-nav { padding-bottom: 8px; border-bottom: 2px solid var(--border); }
+
+/* everything on Mathub */
+.sb-nav { display: flex; flex-direction: column; gap: 2px; }
+.sb-top-items { display: flex; flex-direction: column; gap: 2px; }
+.sb-group .nav-toggle { padding-top: 12px; }
+.sb-item, .sb-class, .sb-add { text-decoration: none; }
+.sb-item:hover, .sb-class:hover, .sb-add:hover { text-decoration: none; }
+.sb-count { margin-left: auto; font-family: var(--font-display); font-weight: 800; font-size: 12px; font-variant-numeric: tabular-nums; min-width: 22px; padding: 1px 7px; border-radius: 999px; background: var(--accent-soft); color: var(--accent-deep, var(--accent)); text-align: center; }
+.sb-bo { display: inline-flex; width: 18px; height: 18px; align-items: center; justify-content: center; flex: none; }
+.sb-bo svg { width: 20px; height: auto; }
+.sb-class .sb-dot { width: 12px; height: 12px; border-radius: 4px; flex: none; margin: 0 3px; }
+.sb-exam { margin-left: auto; font-family: var(--font-display); font-weight: 800; font-size: 11.5px; padding: 1px 7px; border-radius: 999px; background: var(--surface-2); color: var(--ink-2); }
+.sb-exam.soon { background: var(--coral-soft, var(--bad-soft)); color: var(--coral-ink, var(--bad)); }
+.sb-add { color: var(--accent-deep, var(--accent)); }
+.sb-add svg { color: var(--accent) !important; }
+.sb-class .sb-dot { background: var(--cc, var(--accent)); box-shadow: 0 2px 0 var(--cc-deep, color-mix(in srgb, var(--accent) 60%, #0A1428)); }
+
+/* the month calendar */
+.sb-cal { border-top: 2px solid var(--border); padding-top: 8px; }
+.sb-cal-h { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+.sb-toggle-cal { width: auto; flex: 1; padding: 6px 6px 6px 4px !important; gap: 6px; }
+.sb-toggle-cal span { font-family: var(--font-display); font-weight: 800; font-size: 14.5px; color: var(--ink); text-transform: none; letter-spacing: 0; }
+.sb-toggle-cal > svg { order: -1; transform: rotate(-90deg); }
+.sb-toggle-cal.open > svg { transform: rotate(0deg); }
+.sb-cal-nav { display: inline-flex; gap: 4px; }
+.icon-btn.xs { width: 26px; height: 26px; border-radius: 9px; }
+.icon-btn.xs svg { width: 12px; height: 12px; }
+.icon-btn[hidden] { display: none !important; }
+.sb-grid { padding: 4px 0 2px; }
+.sb-heads, .sb-days { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 2px; }
+.sb-heads span { text-align: center; font-size: 11px; font-weight: 700; color: var(--muted); padding: 2px 0; }
+.sb-day { position: relative; display: flex; align-items: center; justify-content: center; aspect-ratio: 1 / 1; max-height: 32px; border-radius: 10px; color: var(--ink); font-size: 12.5px; font-weight: 600; font-variant-numeric: tabular-nums; text-decoration: none; }
+.sb-day:hover { background: var(--surface-2); text-decoration: none; }
+.sb-day.out { color: var(--muted); font-weight: 500; }
+.sb-day.today span { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 999px; background: var(--accent); color: var(--accent-ink); font-weight: 800; }
+.sb-day i { position: absolute; bottom: 2px; left: 50%; width: 5px; height: 5px; margin-left: -2.5px; border-radius: 99px; background: var(--accent); }
+.sb-day i.ex { background: var(--coral, var(--bad)); }
+.sb-day.today i { bottom: 0; }
+
+/* the foot keeps the account and the pomodoro */
+.sidebar-foot { border-top-width: 2px; }
+
+/* ---------- header ---------- */
+.menu-btn { flex: none; }
+.topbar-title { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.topbar-title .crumb { color: var(--muted); font-family: var(--font-body); font-weight: 600; font-size: 14px; }
+.tb-clock { display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 11px; border-radius: 12px; border: 2px solid var(--border); background: var(--surface); color: var(--ink); box-shadow: 0 2px 0 var(--lip, var(--border)); font: inherit; font-family: var(--font-display); font-weight: 800; font-size: 14px; font-variant-numeric: tabular-nums; cursor: pointer; white-space: nowrap; }
+.tb-clock svg { color: var(--accent); }
+.tb-clock:hover { background: var(--surface-2); }
+.tb-clock:active { transform: translateY(2px); box-shadow: 0 0 0 var(--lip, var(--border)); }
+.exam-chip[hidden] { display: none !important; }
+/* the sidebar shows the time; the header's clock stands in while the sidebar is tucked away or on a tablet */
+@media (min-width: 901px) { .app:not(.side-hidden) .tb-clock { display: none; } }
+@media (max-width: 760px) { .tb-clock { display: none; } }
+.search-btn .kbd { white-space: nowrap; }
+@media (max-width: 1440px) { .app:not(.side-hidden) .search-btn .kbd { display: none; } }
+
+/* the clock: a bigger face, the time back home and the three bars */
+.pop-clock { width: 330px; max-width: calc(100vw - 16px); padding: 16px; }
+.ck-pop { display: flex; flex-direction: column; gap: 12px; }
+.ck-pop-faces { display: flex; align-items: flex-end; justify-content: center; gap: 18px; }
+.ck-one { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.ck-one b { font-family: var(--font-display); font-weight: 800; font-size: 22px; font-variant-numeric: tabular-nums; color: var(--ink); }
+.ck-one.home b { font-size: 17px; }
+.ck-one small { font-size: 12px; color: var(--muted); text-align: center; }
+.ck-date { text-align: center; font-weight: 700; color: var(--ink-2); }
+.ck-bars { background: var(--surface-2); border-radius: 14px; padding: 10px 12px; }
+.ck-bars .sb-bar { grid-template-columns: 110px minmax(0, 1fr) 40px; }
+.ck-zone { display: flex; flex-direction: column; gap: 6px; font-size: 13px; font-weight: 600; color: var(--ink-2); }
+.ck-zone span { display: flex; align-items: center; gap: 6px; }
+.ck-zone select { font: inherit; padding: 8px 10px; border-radius: 12px; border: 2px solid var(--border); background: var(--surface); color: var(--ink); }
+.ck-links { display: flex; gap: 8px; } .ck-links .btn { flex: 1; }
+
+/* an analog clock face (App.clockFace) */
+.ck-face { display: block; }
+.ck-rim { fill: var(--surface); stroke: var(--border); stroke-width: 2.5; }
+.ck-hr { stroke: var(--ink); stroke-width: 2; stroke-linecap: round; }
+.ck-min { stroke: var(--border-strong); stroke-width: 1; }
+.ck-face text { font-family: var(--font-display); font-weight: 800; font-size: 9.5px; fill: var(--ink-2); text-anchor: middle; }
+.ck-h { stroke: var(--ink); stroke-width: 4.2; stroke-linecap: round; }
+.ck-m { stroke: var(--ink); stroke-width: 2.8; stroke-linecap: round; }
+.ck-s { stroke: var(--coral, var(--bad)); stroke-width: 1.4; stroke-linecap: round; }
+.ck-pin { fill: var(--coral, var(--bad)); stroke: var(--surface); stroke-width: 1.2; }
+.ck-face.small .ck-s { display: none; }
+@media (prefers-reduced-motion: reduce) { .ck-s { display: none; } }
+
+/* phones: the drawer is the same sidebar */
+@media (max-width: 900px) {
+  .sidebar { width: min(320px, 88vw); }
+  .app.landing .sidebar { display: flex; }
+}
+@media print { .sb-now, .sb-quick, .sb-nav, .sb-cal, .tb-clock { display: none !important; } }
+/* focus sounds live in the header on every page now (the start page's hero used to hold the button) */
+.topbar .amb-top { display: inline-flex; }

@@ -95,7 +95,7 @@ const T = require('./lib');
   await cm.close();
   // the account menu links the sheet (signed in, own context so synced preferences stay out of the other checks)
   const [ca, a] = await mk(1360, 900, { serviceWorkers: 'block' }); await go(a, '#/', 400); await login(a, 'alice.a@montana.edu'); await a.reload(); await a.waitForTimeout(1400); if (await a.$('.celebrate')) await a.keyboard.press('Escape');
-  await a.evaluate(() => { const b = document.querySelector('.landing-top [data-action="acct-toggle"]'); if (b) b.click(); }); await a.waitForTimeout(250);
+  await a.evaluate(() => { const b = document.querySelector('#topbar-account [data-action="acct-toggle"]'); if (b) b.click(); }); await a.waitForTimeout(250);
   check('account menu links the sheet', !!(await a.$('.popover a[href="#/sheet"]')));
   await a.evaluate(async () => { await fetch('api/index.php?r=logout', { method: 'POST', credentials: 'same-origin', headers: { 'X-Requested-With': 'MatHub' } }); }); await ca.close();
   await T.finish();

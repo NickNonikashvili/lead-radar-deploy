@@ -2463,3 +2463,554 @@
 5053	Las preguntas de esta página
 5060	{1} preguntas
 5061	{1} problemas
+# the planner and the frame on every page (2026.10.18)
+2524	Mostrar
+2547	Nuevo examen
+2573	Deshacer
+2668	Libro
+2682	Palabras
+2770	Pausa
+2835	¿En qué estás trabajando?
+2917	Día por día
+3069	Siguiente: {1}
+3380	Aún no hay nada registrado.
+3544	Lectura
+3562	Queda
+3729	Reiniciar
+3968	Media
+4172	Entrega
+4181	Otoño 2026
+4184	Nota
+4227	Sesión práctica
+4244	Parcial 2
+4314	Ninguno
+4391	Unirse a una clase
+4409	Tipo
+4410	Días
+4411	Empieza
+4412	Aula
+4424	Puesto
+4428	Nombre
+4435	Horas de consulta
+4582	Nueva tarea de clase
+4591	Resultados
+4602	Minutos
+4603	Cuándo
+5062	Descanso largo
+5063	Cuatro bloques de concentración hechos. Tómate 15 minutos de descanso.
+5064	Tareas
+5066	Horario
+5069	Registro de tiempo
+5071	Proyectos y tesis
+5073	Hábitos
+5075	Metas
+5077	Rueda de la vida
+5079	Diario
+5081	Dinero
+5083	Prácticas y empleos
+5085	Portafolio
+5087	Tarea{1}
+5088	Evento · {1}
+5089	Solicitud
+5090	{1}, ¿qué clase te está costando {2}?
+5091	Este navegador ya no tiene espacio para tu agenda. Inicia sesión para guardarla en tu cuenta.
+5092	Eliminado
+5093	Agenda de Mathub
+5094	No es un archivo de agenda
+5095	No se pudo conectar con tu cuenta.
+5096	Domingo
+5097	Sábado
+5098	Ayer
+5099	Entrega del proyecto
+5100	Fecha límite de la solicitud
+5101	Falta: {1}.
+5102	{1} debe ser un número.
+5103	Baja
+5104	Alta
+5105	En curso
+5106	Tarea
+5107	Trabajo
+5108	Examen o prueba
+5109	Seminario
+5110	Bloque de estudio
+5111	Turno de trabajo
+5112	Club o equipo
+5113	Sin recordatorio
+5114	A la hora
+5115	10 minutos antes
+5116	1 hora antes
+5117	El día anterior
+5118	Comida
+5119	Alquiler
+5120	Libros y material
+5121	Transporte
+5122	Ocio
+5123	Facturas
+5124	Salud
+5125	Compras
+5126	Trabajo
+5127	Familia
+5128	Beca
+5129	Préstamo
+5130	Qué examen o prueba
+5131	Qué hay que hacer
+5132	Hoja de problemas 4
+5133	Escribir a mi asesor
+5134	Prioridad
+5135	Grupo de estudio en la biblioteca
+5136	Biblioteca Renne, 2.º piso
+5137	Recordatorio
+5138	Clase de Cálculo I
+5139	No es una clase
+5140	Wilson 1-122
+5141	Con
+5142	Profesor o asistente
+5143	Gasté
+5144	Recibí
+5145	Cantidad
+5146	Compra en Town & Country
+5147	Editar tarea
+5148	Tarea eliminada
+5149	Editar evento
+5150	Evento eliminado
+5151	Editar clase del horario
+5152	Tiene que terminar después de empezar.
+5153	Quitado de tu horario
+5154	Evento
+5155	Horario de clase
+5156	Gasto
+5157	Qué añadir
+5158	Nueva tarea
+5159	Añadida a tus tareas
+5160	Nuevo evento
+5161	Añadido a tu calendario
+5162	Nueva cosa por hacer
+5163	Comprar un cuaderno de examen
+5164	Para
+5165	Añadido a tus pendientes
+5166	Añadir a tu horario
+5167	Añadido a tu horario
+5168	Añadir gasto o ingreso
+5169	Guardado en Dinero
+5170	Nota rápida
+5171	Lo que quieras recordar
+5172	Guardar en el diario
+5173	Guardado en el día de hoy de tu diario
+5174	Estudios
+5175	Vida
+5176	Futuro
+5177	Novedades
+5178	Términos y privacidad
+5179	Semestre
+5180	Año
+5181	Mes
+5182	Reloj
+5184	Los Ángeles
+5185	Bozeman
+5187	Chicago
+5189	Nueva York
+5191	Ciudad de México
+5193	Bogotá
+5195	São Paulo
+5197	Buenos Aires
+5199	Londres
+5201	Madrid
+5203	París
+5205	Berlín
+5207	Roma
+5209	Lisboa
+5211	Kiev
+5213	Moscú
+5215	Tiflis
+5217	Ereván
+5219	Bakú
+5221	Estambul
+5223	Dubái
+5225	Lagos
+5227	Nairobi
+5229	Delhi
+5231	Daca
+5233	Katmandú
+5235	Almaty
+5237	Bangkok
+5239	Pekín
+5241	Seúl
+5243	Tokio
+5245	Manila
+5247	Sídney
+5249	Auckland
+5251	Honolulu
+5252	la misma hora que aquí
+5253	{1} h por delante
+5254	{1} h por detrás
+5255	Abrir el reloj
+5256	Añade lo que sea: una tarea, un examen, un evento… (Alt+N)
+5257	Añadir rápido
+5258	Nuevo: {1}
+5259	Mes anterior
+5260	Mes siguiente
+5261	Aquí
+5262	La hora en casa
+5263	Sin mostrar
+5265	Proyecto
+5266	Prueba
+5267	Sin fecha
+5268	{1} {1|día|días} de retraso
+5269	Marcar como no hecha
+5270	Marcar como hecha
+5271	Hecho. {1|Queda|Quedan} {1} esta semana.
+5272	Hecho. No queda nada más para esta semana.
+5273	Todas las entregas de las próximas tres semanas ya están en tus tareas.
+5274	Añadir entregas de tus clases
+5275	Del programa de cada clase y del calendario de Canvas, las próximas tres semanas. Elige cuáles seguir como tareas.
+5276	Añadir a mis tareas
+5277	{1} {1|añadida|añadidas} a tus tareas
+5278	Todo lo que tienes que entregar o hacer, de todas tus clases.
+5279	Entregas de tus clases
+5280	Escribe una tarea y pulsa Intro
+5281	Todo lo pendiente
+5283	Atrasadas
+5284	Para hoy
+5285	Para los próximos 7 días
+5286	Hechas esta semana
+5287	{1} más sin fecha o para más adelante. Míralas en Todo lo pendiente.
+5288	Nada que entregar esta semana
+5289	Añade una tarea arriba o trae las entregas de tus clases.
+5290	Nada pendiente. Disfrútalo.
+5291	Volver atrás
+5292	Avanzar
+5293	Suelta una tarea aquí
+5294	Borrar lo hecho hace más de un mes
+5295	Aún no hay nada hecho
+5296	Marca una tarea y aparecerá aquí.
+5297	Su programa no dice cuándo se reúne. Añade tú el horario.
+5298	ya está en tu horario
+5299	Tus clases en tu horario
+5300	Leído del programa de cada clase. Revisa los días y las horas de tu grupo y añádelos.
+5301	Primero elige tus clases.
+5302	Añadir a mi horario
+5303	Revisa los días y las horas de {1}.
+5304	{1} {1|añadida|añadidas} a tu horario
+5305	Añadir algo el {1} a las {2}
+5306	se solapa con otra
+5309	Tu semana: clases, laboratorios, turnos de trabajo y bloques de estudio. Haz clic en una hora libre para añadir algo.
+5310	Desde tus clases
+5311	Un archivo de calendario para Google, Apple u Outlook
+5312	Añadir al móvil
+5313	Abre el archivo para añadir tu horario a tu calendario
+5314	Arma tu semana
+5315	Mathub puede leer en los programas cuándo se reúnen tus clases. Luego añade laboratorios, turnos de trabajo y bloques de estudio, y mira toda tu semana de un vistazo.
+5316	Traer mis clases
+5317	Añadir algo yo
+5318	en {1} min
+5319	Nada en tu horario hoy.
+5320	horas planificadas
+5321	Ocultar el fin de semana
+5322	Mostrar el fin de semana
+5323	Entrega
+5324	Cada examen, entrega, tarea y evento, de todas tus clases y de tu propia agenda.
+5325	Vista
+5326	Lista
+5327	Antes
+5328	Después
+5329	Añadir el {1}
+5330	Cinco semanas tranquilas
+5331	Aún no hay nada con fecha. Añade un evento o elige tus clases para ver sus exámenes y entregas.
+5332	Nada que entregar. Buen día para adelantar.
+5333	{1} h {2} min
+5334	Menos de un minuto, así que no se guardó.
+5335	A dónde van tus horas de estudio, clase por clase. Los minutos de la sala de concentración también cuentan.
+5336	Añadir tiempo a mano
+5337	Añadir tiempo de estudio
+5338	Qué hiciste
+5339	Registro eliminado
+5341	Estudiando
+5342	Parar y guardar
+5343	No es para una clase
+5344	Iniciar el cronómetro
+5345	El cronómetro sigue aunque cierres la página.
+5346	Por clase, esta semana
+5347	Inicia el cronómetro cuando te sientes a estudiar.
+5348	Reciente
+5349	Tiempo de estudio
+5350	Elegir un tema y una pregunta
+5351	Reunirte con tu asesor
+5352	Propuesta
+5353	Revisión bibliográfica
+5354	Métodos
+5355	Recoger datos
+5356	Borrador completo
+5357	Revisiones con tu asesor
+5358	Entrega final
+5359	Elegir un tema
+5360	Encontrar 5 fuentes
+5361	Esquema
+5362	Primer borrador
+5363	Revisión de un compañero o centro de escritura
+5364	Revisar
+5365	Citar y dar formato
+5366	Leer la guía del laboratorio
+5367	Recoger los datos
+5368	Análisis y gráficas
+5369	Borrador: métodos y resultados
+5370	Discusión y conclusión
+5371	Revisar y entregar
+5372	Elegir el mensaje principal
+5373	Esbozar las diapositivas
+5374	Hacer las diapositivas
+5375	Ensayar dos veces
+5376	Presentar
+5377	Tesis
+5378	Trabajo de investigación
+5379	Informe de laboratorio
+5380	Presentación
+5381	Trabajos grandes, divididos en pasos que puedes terminar, con recuento de palabras y fuentes.
+5382	Nuevo proyecto
+5383	Tesis final
+5384	Meta de palabras
+5385	Empezar con los pasos habituales de este tipo
+5386	Crear
+5387	Proyecto creado
+5388	Editar proyecto
+5389	Proyecto eliminado
+5390	{1} palabras. Sigue así.
+5391	Aún no hay proyectos
+5392	Una tesis, un trabajo de investigación o un informe de laboratorio: conviértelo en proyecto y Mathub reparte sus pasos hasta la fecha de entrega.
+5393	para hoy
+5394	{1|Queda|Quedan} {1} {1|día|días}
+5395	{1} de {2} pasos
+5396	Todos los pasos hechos
+5397	Pasos
+5398	Añadir un paso
+5399	Palabras escritas hasta ahora
+5400	Actualizar
+5401	Fuentes
+5402	Aún ninguna
+5403	Autor, título, año
+5404	Fuente
+5405	Ideas, comentarios de tu asesor, qué corregir
+5406	Ciclo
+5407	Corazón
+5408	Llama
+5409	Luna
+5410	Lápiz
+5411	Cronómetro
+5412	Sonrisa
+5413	Leer 20 minutos
+5414	Hacer ejercicio
+5415	Repasar tarjetas
+5416	En la cama antes de medianoche
+5417	Caminar al aire libre
+5418	Llamar a casa
+5419	Nada de móvil en clase
+5420	Escribir en mi diario
+5421	Hábito
+5422	Días a la semana
+5423	Todos los días
+5424	{1} {1|día|días} a la semana
+5425	Símbolo
+5426	Cosas pequeñas, casi todos los días. Márcalas y mira crecer la racha.
+5427	Nuevo hábito
+5428	Hábito añadido
+5429	Hecho por hoy
+5430	Editar hábito
+5431	Pausarlo (ocultarlo de hoy)
+5432	Hábito eliminado
+5433	Elige un primer hábito
+5434	Empieza con uno o dos. Puedes cambiarlos cuando quieras.
+5435	Empieza una racha
+5436	{1} de {2} esta semana
+5437	racha de semanas
+5438	mejor racha
+5439	Las últimas doce semanas
+5440	Salud y forma física
+5441	Mente y ánimo
+5442	Estudios
+5443	Carrera
+5444	Amigos y diversión
+5445	Crecimiento
+5446	Puntúa cada parte de tu vida del 1 al 10, una vez al mes. La más baja es donde una meta ayuda más.
+5447	este mes
+5448	la última vez
+5449	Tus puntuaciones de este mes
+5450	Empieza por la última vez y mueve lo que cambió
+5451	¿Cómo va cada parte de tu vida?
+5452	Se guardan al moverlas. 1 es lo peor posible, 10 lo mejor posible.
+5453	Lo más bajo ahora: {1} ({2})
+5454	Ponle una meta
+5455	Mes a mes
+5456	Ene – Mar
+5457	Abr – Jun
+5458	Jul – Sep
+5459	Oct – Dic
+5460	Meta
+5461	Sacar un notable o más en Cálculo I
+5462	Trimestre
+5463	Parte de la vida
+5464	Por qué importa
+5465	Pasos, uno por línea
+5467	Nueva meta
+5468	Meta añadida
+5469	Unas pocas metas por trimestre, cada una dividida en pasos que puedes marcar.
+5470	Año anterior
+5471	Año siguiente
+5472	Todos los pasos hechos. Buen trabajo.
+5473	Meta alcanzada
+5474	Editar meta
+5475	Meta eliminada
+5476	Sin metas este trimestre.
+5477	Aún no hay metas.
+5478	Añadir una meta
+5479	Mal
+5480	Regular
+5481	Bien
+5482	Bueno
+5483	Genial
+5484	¿Qué hizo que hoy fuera mejor que ayer?
+5485	¿Qué aprendiste hoy que te sorprendió?
+5486	¿Qué es algo que tienes ganas de que llegue?
+5487	¿Quién te ayudó hoy y cómo?
+5488	¿Qué haría genial el día de mañana?
+5489	¿Qué te quitó energía hoy?
+5490	¿De qué estás orgulloso esta semana?
+5491	Una página al día: cómo te fue y tres cosas buenas. Se guarda en tu cuenta; nadie más en Mathub lo ve.
+5492	La página de hoy
+5493	Reflexión semanal
+5494	Todas las páginas
+5495	El día siguiente
+5496	¿Qué tal fue?
+5497	Qué pasó
+5498	Escribe lo que sea. Con una frase basta.
+5499	Hazme una pregunta
+5500	Tres cosas buenas
+5501	Cosa buena {1}
+5502	{1} {1|página|páginas} hasta ahora.
+5503	tareas hechas
+5504	marcas de hábitos
+5505	ánimo medio
+5506	¿Qué salió bien?
+5507	¿Qué fue difícil?
+5508	¿Qué harás distinto la semana que viene?
+5509	¿Qué aprendiste sobre ti?
+5510	Semanas anteriores
+5511	Salió bien
+5512	Fue difícil
+5513	Hacer distinto
+5514	Aprendido
+5515	Ninguna página tiene esas palabras.
+5516	Aún no hay páginas
+5517	Escribe tu primera página hoy. Una frase es un buen comienzo.
+5518	Ánimo, últimos 30 días
+5519	Buscar en tus páginas
+5520	Lo que entró, lo que salió y cuánto queda este mes.
+5521	Moneda
+5522	Presupuestos
+5523	Presupuestos mensuales
+5524	Presupuestos guardados
+5525	Entró
+5526	Salió
+5527	Faltó este mes
+5528	Por encima del presupuesto
+5529	Queda del presupuesto
+5530	Media al día
+5531	En qué se fue
+5532	Fijar presupuestos
+5533	Presupuesto
+5534	Aún no has gastado nada este mes.
+5535	Seis meses
+5536	Ingreso
+5537	Apunta lo que gastas sobre la marcha; lleva cinco segundos.
+5538	Lista de deseos
+5539	Enviada
+5540	Entrevista
+5541	Oferta
+5542	Esta vez no
+5543	Prácticas
+5544	Investigación
+5545	Posgrado
+5547	Prácticas de ingeniería de software
+5548	Etapa
+5549	Próxima fecha (entrevista, seguimiento)
+5550	Enlace a la oferta
+5551	Nombre o correo del reclutador
+5552	Todas tus solicitudes en un solo lugar, de la lista de deseos a la oferta.
+5553	Tu portafolio
+5554	Nueva solicitud
+5555	Solicitud eliminada
+5556	Una oferta. ¡Enhorabuena!
+5557	Sigue tus solicitudes
+5558	Añade las prácticas, empleos, puestos de investigación y becas que quieras. Muévelas según te respondan y no te pierdas ningún plazo: aparecen en tu calendario.
+5559	Añadir la primera
+5560	Arma tu portafolio
+5561	siguiente: {1}
+5562	Abrir la oferta
+5563	Nada aquí
+5564	fecha límite de la solicitud
+5565	siguiente paso
+5566	Simulador de carga de puentes
+5567	Qué es y qué hiciste
+5568	Habilidades, separadas por comas
+5569	Python, trabajo en equipo, CAD
+5570	Tu mejor trabajo en una página que puedes imprimir, guardar como PDF o enviar con una solicitud.
+5571	Editar tus datos
+5572	Imprimir o PDF
+5573	Añadir un proyecto
+5574	Tus datos
+5575	Una línea sobre ti
+5576	Estudiante de ingeniería mecánica al que le encanta construir cosas
+5577	Sobre mí
+5578	Bozeman, MT
+5579	Universidad y titulación
+5580	Montana State University · Grado en Ingeniería Mecánica, 2029
+5581	Enlaces, uno por línea
+5582	Proyecto quitado
+5583	Empieza con tu nombre y una línea sobre ti.
+5584	Añadir tus datos
+5585	Formación
+5586	Este trimestre: {1}
+5587	Habilidades
+5588	Proyectos
+5589	Añade un proyecto de clase, un laboratorio, algo de un club o cualquier cosa que hayas hecho. Con dos o tres buenos basta.
+5590	El horario de hoy
+5591	Para esta semana
+5592	Pomodoro
+5593	Recordatorios y eventos
+5594	Metas de este trimestre
+5595	Tus clases, laboratorios y turnos aparecen aquí cuando tengas el horario hecho.
+5596	Arma tu horario
+5597	Todo el día
+5598	del programa
+5599	{1} más esta semana
+5600	Nada que entregar en los próximos siete días.
+5601	Añadir una tarea para hoy
+5602	Añadir la hora en casa
+5603	Elige una ciudad
+5604	Descanso corto
+5605	Cosas pequeñas que recordar: un cuaderno, un formulario, una llamada.
+5606	Añadir algo por hacer
+5607	Recordatorio activado
+5608	Grupos de estudio, horas de consulta, un concierto: añádelos aquí.
+5609	Un hábito que marcas cada día hace crecer una racha.
+5610	Elegir un hábito
+5611	aún no hoy
+5612	Dos o tres metas para este trimestre mantienen el semestre con rumbo.
+5613	Ponerte una meta
+5614	Puntúa ocho partes de tu vida una vez al mes y mira dónde poner tu energía.
+5615	Puntuarlas
+5616	Tu día
+5617	Personalizar
+5618	Todas las tarjetas están ocultas
+5619	Usa Personalizar para recuperar alguna.
+5620	Cosa por hacer eliminada
+5621	¿Parar el temporizador y cambiar?
+5622	Personaliza tu día
+5623	Esta clase en números
+5624	para esta semana
+5625	examen pendiente
+5626	exámenes pendientes
+5627	{1} de {2} tareas hechas
+5628	Ocultar la barra lateral
+5629	Todo en Mathub
+5630	Guardas demasiado seguido. Vuelve a intentarlo en unos minutos.
+5631	Faltan los datos de la agenda.
+5632	Tu agenda es demasiado grande para guardarla. Borra páginas antiguas del diario o gastos para hacer sitio.

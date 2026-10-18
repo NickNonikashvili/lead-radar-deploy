@@ -82,7 +82,7 @@ const T = require('./lib');
 
   // ---- ambient sounds ----
   const [cg, G] = await mk(); await go(G, '#/'); await G.waitForTimeout(800);
-  await G.click('.hero-actions .amb-top'); await G.waitForTimeout(250); log('panel tiles:', (await G.$$('.amb-tile')).length, '| tabs:', await G.$$eval('.amb-tab', e => e.map(x => x.textContent.trim()).join(',')), '| spotify gone:', !(await G.$('.amb-spotify')));
+  await G.click('#topbar .amb-top'); await G.waitForTimeout(250); log('panel tiles:', (await G.$$('.amb-tile')).length, '| tabs:', await G.$$eval('.amb-tab', e => e.map(x => x.textContent.trim()).join(',')), '| spotify gone:', !(await G.$('.amb-spotify')));
   for (const id of ['rain', 'storm', 'ocean', 'wind', 'fire', 'forest', 'night', 'cafe', 'lofi', 'piano', 'drone', 'brown', 'pink', 'white']) { await G.click(`.amb-tbtn[data-id="${id}"]`); await G.waitForTimeout(350); }
   log('all 14 playing:', await G.evaluate(() => App.ambient.playing().length), '| ctx state:', await G.evaluate(() => 'running'), '| bubble on:', await G.$eval('.amb-bubble', e => e.classList.contains('on')), '| sliders:', (await G.$$('.amb-vol')).length);
   await G.waitForTimeout(2500); log('after 2.5s errors so far:', errors.length);

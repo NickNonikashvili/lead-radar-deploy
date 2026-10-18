@@ -226,7 +226,7 @@ A daylight palette: navy on white over a sky tint, a full set of class colours, 
 
 ## Layout
 
-A fixed sidebar beside one content column. Pages are stacks of white cards on the sky ground with 16-30px between them. Class lists are a responsive grid of tiles (auto-fill, 290px minimum). The class dashboard opens on the trail board at full width: the summit card in about a third, the illustrated climb in the rest; on a 1440x900 laptop the "Take the next run" button sits above the fold. Under 900px the board stacks (a compact summit card with the days badge beside the exam name, then the climb), nodes shrink and swing less, and every button that leads goes full width. Phones and laptops get the same content.
+A fixed sidebar beside one content column, on every page of the website: the start page and the planner pages get the same frame as a class (only the apps and Mathub Faculty keep their own). Pages are stacks of white cards on the sky ground with 16-30px between them. Class lists are a responsive grid of tiles (auto-fill, 290px minimum). The class dashboard opens on the trail board at full width: the summit card in about a third, the illustrated climb in the rest; on a 1440x900 laptop the "Take the next run" button sits above the fold. Under 900px the board stacks (a compact summit card with the days badge beside the exam name, then the climb), nodes shrink and swing less, and every button that leads goes full width. Phones and laptops get the same content.
 
 ## Elevation & Depth
 
@@ -269,7 +269,8 @@ Soft and friendly: 10-14px corners on controls, 16px on tiles, 20px on cards, 24
 
 ### Navigation
 - **Sidebar:** white with a 2px right border. Bo's head and the wordmark at the top, the class switcher as small pressable pills (the current class filled in its colour), then grouped items in Figtree 600; the active item has the soft accent ground, a 2px accent outline and deep-accent text and icon.
-- **Top bar:** white with a 2px bottom border; the title in Gabarito; the exam as a coral pill.
+- **Top bar:** white with a 2px bottom border; the title in Gabarito; the exam as a coral pill. On global pages the crumb names the section ("Plan › Tasks") and the coral pill is the soonest exam across your classes, a link to its class.
+- **Sidebar outside a class:** the same white rail, top to bottom: the date in Gabarito with a clock button (tabular figures), progress bars (88px label, a 6px track in accent, the percent in Gabarito), the New button (accent, on its lip) over a 3-column grid of quick-add tiles, the navigation groups (folding, remembered), then a month calendar of day cells up to 32px: today a 24px accent circle, a 5px accent dot under a busy day, a coral dot under an exam day, days outside the month in muted.
 - **Phones:** a bottom tab bar, white with a 2px top border; the active tab in the accent colour.
 
 ### The Trail Board (signature component)
@@ -300,6 +301,19 @@ The mark is Bo's head, the same drawing as the mascot, always in his own tan, cr
 - **Don't** lift or glow things on hover; press them down instead.
 - **Don't** copy Khan Academy's, Duolingo's or Brilliant's faces, colours or mascots; match their craft.
 - **Don't** spend gold, coral or pine on decoration.
+
+## The planner pages and Your day
+
+The planner (tasks, timetable, calendar, time tracker, projects, habits, goals, wheel of life, journal, money, career, portfolio) is Operate surface: scanability first, Big Sky in the details. Styles live in `assets/life.css`.
+
+- **Page head:** the title in Gabarito, one muted line of what the page is for, the main action on the right (accent, on its lip). Below, a row of up to four stat tiles (white, 2px border, 18px radius, a 38px accent-soft icon tile, the number in Gabarito 24px, a muted label; warn or good tints only when the number means that) when the page has numbers worth knowing.
+- **Class colour is the only colour a record carries:** a pill chip in the soft colour with deep-colour text and an 8px square of the class colour, from `App.classStyle(id)` (`--cc`, `--cc-soft`, `--cc-line`, `--cc-deep`). Records without a class stay neutral. Gold stays for streaks, coral for exams, pine for done; priority and late use the warn amber.
+- **Lists and boards:** rows are 2px-bordered white cards with a 16px radius (a late row's border tinted warn); a 26px rounded-square check on its lip on the left, pine once done, the title then struck through in muted, never faded below contrast; the board's columns are surface-2 wells with a 20px radius, the dragged card dims and the column under it turns accent-soft with an accent dashed outline.
+- **Timetable and calendar:** an hour grid with 2px column rules; blocks in their class's soft colour with a 2px border and lip in its line colour and the title in its deep colour; overlapping blocks share the column in lanes, and a clash is drawn dashed; a 2px accent now line with a dot on today. Month cells show up to three chips in the class's soft colour and "+N more".
+- **The add dialog** (`Life.form`): one centred card (22px radius, 2px border on a lip), fields in two columns where they pair (date and time, class and priority), segmented controls for small choices, required fields named in the error ("Title is needed."). Quick add has the type tabs on top and keeps what you typed when you switch.
+- **Clocks:** analog faces drawn in SVG with a coral second hand (left out on the small faces); your home time zone gets a second face beside it with the zone name and the difference in hours.
+- **Your day (start page):** a compact hero (the date, one greeting line, Today and For professors) above a 12-column grid of panel cards (`.dw`, 3 to 5 columns wide on a wide screen with the week across the full width, a 6-column grid under 1280px): schedule, due, clock, pomodoro, to-dos, events, habits, goals, wheel, week. Each card has an icon, a Gabarito title and a link to its page; empty cards say what to add with one button. Customize picks the cards.
+- **Moods** run along a scale of sky blues, never red to green; the wheel of life is a radar in accent over last month's outline in a dashed neutral.
 
 ## Mathub Faculty (a separate register)
 

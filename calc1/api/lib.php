@@ -79,6 +79,8 @@ function mh_db(): PDO {
   $ncols = array_column($db->query('PRAGMA table_info(notifications)')->fetchAll(), 'name'); if (!in_array('link', $ncols, true)) $db->exec('ALTER TABLE notifications ADD COLUMN link TEXT NOT NULL DEFAULT ""');
   if (!in_array('prefs_updated', $cols, true)) $db->exec('ALTER TABLE users ADD COLUMN prefs_updated INTEGER NOT NULL DEFAULT 0');
   if (!in_array('push_sent', $cols, true)) $db->exec('ALTER TABLE users ADD COLUMN push_sent INTEGER NOT NULL DEFAULT 0');
+  if (!in_array('life', $cols, true)) $db->exec('ALTER TABLE users ADD COLUMN life TEXT');   // the student's own planner (api/life.php)
+  if (!in_array('life_updated', $cols, true)) $db->exec('ALTER TABLE users ADD COLUMN life_updated INTEGER NOT NULL DEFAULT 0');
   // the welcome after sign-up (classes and a membership): accounts from before it count as welcomed
   if (!in_array('welcomed', $cols, true)) { $db->exec('ALTER TABLE users ADD COLUMN welcomed INTEGER NOT NULL DEFAULT 0'); $db->exec('UPDATE users SET welcomed = MAX(created, 1)'); }
   if (!in_array('plan_choice', $cols, true)) $db->exec("ALTER TABLE users ADD COLUMN plan_choice TEXT NOT NULL DEFAULT ''");

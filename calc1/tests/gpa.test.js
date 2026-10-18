@@ -31,8 +31,8 @@ const T = require('./lib');
   await p.click('.gpa-row:nth-child(1) [data-action="gpa-use"]').catch(() => {}); await p.waitForTimeout(150); log('use projected:', await p.$eval('.gpa-row:nth-child(1) select', e => e.value), '| proj line now:', await txt(p, '.gpa-row:nth-child(1) .gpa-proj'));
   await p.click('[data-action="gpa-reset"]'); await p.waitForTimeout(200); log('reset:', await p.$$eval('.gpa-row', rs => rs.map(r => r.querySelector('[data-f=name]').value.split(' · ')[0] + ':' + r.querySelector('[data-f=credits]').value + ':' + (r.querySelector('[data-f=grade]').value || '-')).join(' | ')));
   // standalone
-  await go(p, '#/gpa'); await p.waitForTimeout(500); log('standalone title:', await txt(p, '.landing-title'), '| account painted:', !!(await p.$('#landing-account .acct-btn')), '| landing class:', await p.$eval('.app', e => e.classList.contains('landing')), '| reset btn:', !!(await p.$('[data-action="gpa-reset"]')));
-  await go(p, '#/'); await p.waitForTimeout(600); log('landing link:', !!(await p.$('a[href="#/gpa"]'))); await p.click('#landing-account .acct-btn'); await p.waitForTimeout(200); log('menu item:', await txt(p, '.pop-account a[href="#/gpa"]'));
+  await go(p, '#/gpa'); await p.waitForTimeout(500); log('standalone title:', await txt(p, '.landing-title'), '| account painted:', !!(await p.$('#topbar-account .acct-btn')), '| landing class:', await p.$eval('.app', e => e.classList.contains('landing')), '| reset btn:', !!(await p.$('[data-action="gpa-reset"]')));
+  await go(p, '#/'); await p.waitForTimeout(600); log('landing link:', !!(await p.$('a[href="#/gpa"]'))); await p.click('#topbar-account .acct-btn'); await p.waitForTimeout(200); log('menu item:', await txt(p, '.pop-account a[href="#/gpa"]'));
   await go(p, '#/settings'); await p.waitForTimeout(500); log('settings tile:', await txt(p, '.link-tile[href="#/gpa"]'));
   await go(p, '#/physics/gpa'); await p.waitForTimeout(300); log('physics nav:', !!(await p.$('.nav-item[data-view="gpa"]')), '| credits phys:', await p.evaluate(() => Courses.physics.COURSE.credits + '/' + Courses.precalc.COURSE.credits));
   await c.close();

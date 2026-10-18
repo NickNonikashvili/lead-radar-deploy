@@ -73,7 +73,7 @@ const sql = (q, arg) => (spawnSync('php', ['-r', '$d = new PDO("sqlite:" . $argv
   check('then Call Bo on the start page opens the call right there, about her class', !!(await a.$('#bo-talk')) && (await txt(a, '#bo-talk .bt-class')) === 'Calc I' && /^#\/$|^$/.test(new URL(a.url()).hash));
   await a.keyboard.press('Escape'); await a.waitForTimeout(500);
   // the account menu
-  await a.click('#landing-account [data-action="acct-toggle"]'); await a.waitForTimeout(300);
+  await a.click('#topbar-account [data-action="acct-toggle"]'); await a.waitForTimeout(300);
   const mi = await a.$eval('.pop-account a[href="#/plan"]', x => [x.querySelector('span').textContent, (x.querySelector('.plan-pill') || {}).textContent]).catch(e => String(e).slice(0, 120));
   check('the account menu has Your plan, with the plan on it', Array.isArray(mi) && mi[0] === 'Your plan' && mi[1] === 'Max', mi);
   await a.keyboard.press('Escape');

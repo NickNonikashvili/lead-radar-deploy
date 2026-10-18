@@ -25,7 +25,7 @@ const T = require('./lib');
   await p.fill('#search-input', 'velocity'); await p.click('#search-chips .chip[data-c="physics"]'); await p.waitForTimeout(300); log('physics chip results:', (await p.$$('.search-item')).length, '| first:', (await txt(p, '.search-item')).slice(0, 100));
   await p.fill('#search-input', 'loop'); await p.click('#search-chips .chip[data-c="csci"]'); await p.waitForTimeout(300); log('csci loop results:', (await p.$$('.search-item')).length, '| first:', (await txt(p, '.search-item')).slice(0, 100)); await p.keyboard.press('Escape');
   // account menu
-  await go(p, '#/'); await p.click('.landing-top [data-action="acct-toggle"]'); await p.waitForTimeout(300); log('menu items:', await p.$$eval('.pop-account .acct-dd-item', a => a.map(x => x.textContent.trim()).join(' | ')), '| dot:', !!(await p.$('.pop-account .menu-dot')));
+  await go(p, '#/'); await p.click('#topbar-account [data-action="acct-toggle"]'); await p.waitForTimeout(300); log('menu items:', await p.$$eval('.pop-account .acct-dd-item', a => a.map(x => x.textContent.trim()).join(' | ')), '| dot:', !!(await p.$('.pop-account .menu-dot')));
   await p.click('.pop-account a[href="#/whatsnew"]'); await p.waitForTimeout(500); log('whatsnew:', await txt(p, '.landing-title'), '| entries:', (await p.$$('.changelog .panel')).length, '| seen:', await p.evaluate(() => App.settings().seenChangelog));
   // prefs sync
   await p.evaluate(() => App.setSetting('dailyGoal', 55)); await p.waitForTimeout(3200); const pr = await api(p, 'prefs'); log('prefs on server:', pr.status, JSON.stringify(pr.json && pr.json.prefs && { dailyGoal: pr.json.prefs.dailyGoal, seen: pr.json.prefs.seenChangelog }), '| updated:', pr.json && pr.json.updated > 0);
