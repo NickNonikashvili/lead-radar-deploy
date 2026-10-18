@@ -46,7 +46,7 @@ const T = require('./lib');
   check('toasts ease out before they go', /is-closing/.test(tcls) && !(await p.$('.toast')), tcls);
 
   // the study guide reading line follows the article and goes when you leave
-  await go(p, '#/guides/math-exam', 1600); await p.mouse.move(900, 500); await p.mouse.wheel(0, 900);   // over the article: the sidebar keeps its own scroll await p.waitForTimeout(800);
+  await go(p, '#/guides/math-exam', 1600); await p.mouse.move(900, 500); await p.mouse.wheel(0, 900); await p.waitForTimeout(800);   // over the article: the sidebar keeps its own scroll
   const rp = await p.evaluate(() => { const b = document.querySelector('.read-progress'); return b ? { on: b.classList.contains('on'), tf: getComputedStyle(b).transform } : null; });
   check('a study guide shows a reading-progress line that moves with the scroll', rp && rp.on && rp.tf !== 'none', rp);
   await go(p, '#/calc', 600); check('the reading line is removed on the next page', !(await p.$('.read-progress')));
