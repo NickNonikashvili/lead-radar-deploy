@@ -9,7 +9,7 @@
            mock_official, invite_mine, invite_info
    Helpers used elsewhere: mh_course_index(), mh_user_events(),
            mh_track_day(), mh_metric(), mh_weekly_stats_update(),
-           mh_planning_tick(), mh_is_staff(), mh_invite_reward()
+           mh_planning_tick(), mh_exam_nudge_tick(), mh_is_staff(), mh_invite_reward()
    ============================================================ */
 declare(strict_types=1);
 
@@ -90,6 +90,12 @@ function mh_invite_reward(array $newUser): void {
     $db->prepare('INSERT INTO notifications (user_id, kind, post_id, comment_id, actor_id, actor, title, snippet, link, created) VALUES (?, "badge", 0, NULL, ?, ?, ?, ?, ?, ?)')->execute([$inv, (int)$newUser['id'], mh_display_name($newUser), 'joined through your invite link', 'You both earned a badge. Study together on the class board.', '#/people', $now]);
     mh_activity('badge', '', 'A student joined through a classmate\'s invite', '#/people');
   } catch (Throwable $e) {}
+  // and more free minutes with Bo, for both (api/ai.php)
+  try {
+    require_once __DIR__ . '/ai.php'; $secs = mh_ai_invite_secs(mh_ai_voice_settings(mh_config())); if ($secs <= 0) return;
+    mh_ai_trial_bonus((int)$newUser['id'], $secs); $theirs = mh_ai_trial_bonus($inv, $secs);
+    if ($theirs > 0) $db->prepare('INSERT INTO notifications (user_id, kind, post_id, comment_id, actor_id, actor, title, snippet, link, created) VALUES (?, "badge", 0, NULL, ?, ?, ?, ?, ?, ?)')->execute([$inv, (int)$newUser['id'], mh_display_name($newUser), intdiv($theirs, 60) . ' more free minutes with Bo', 'They joined through your invite, so you both get ' . intdiv($theirs, 60) . ' more minutes to call Bo.', '#/tutor', $now]);
+  } catch (Throwable $e) {}
 }
 /* ---------- Sunday planning email ---------- */
 function mh_planning_tick(int $max, bool $force = false): int {
@@ -106,6 +112,55 @@ function mh_planning_tick(int $max, bool $force = false): int {
     $text .= "Suggested first focus block: $sugg.\nStart it: https://mathub.space/#/focus\n\nYour week in numbers: https://mathub.space/#/recap?w=last\nToday's plan: https://mathub.space/#/today\n\nYou get this on Sundays because you turned on the planning email in Settings. Turn it off there any time.\n";
     $html .= '<p style="margin:16px 0 4px"><b>Suggested first focus block:</b> ' . htmlspecialchars($sugg) . '. <a href="https://mathub.space/#/focus">Start it</a>.</p><p><a href="https://mathub.space/#/recap?w=last" style="display:inline-block;padding:10px 16px;background:#4F46E5;color:#fff;border-radius:10px;text-decoration:none;font-weight:700">See your week in numbers</a> &nbsp; <a href="https://mathub.space/#/today">Today\'s plan</a></p><p style="color:#5A6578;font-size:13px">You get this on Sundays because you turned on the planning email in Settings. Turn it off there any time.</p></div>';
     try { mh_send_mail($cfg, $u['email'], 'Your week on Mathub', $text, $html); $sent++; } catch (Throwable $e) {}
+  }
+  return $sent;
+}
+
+/* ---------- the heads-up 3 days before an exam, with a review call with Bo ----------
+   Once a day from 9 am (a few members on each visit), for members who picked their classes and kept it on
+   (users.exam_nudge, Settings → Account): an exam in 2 or 3 days gets one email and one push (exam_nudges keeps
+   which ones went out). Its button opens Ask Bo with ?call=exam: a call that starts on their weakest topics. Members
+   without Max or free minutes get the class's exam prep page instead. $today is for the tests. */
+function mh_exam_nudge_tick(int $max, bool $force = false, string $today = ''): int {
+  $tz = mh_tz(); $now = new DateTime('now', $tz); if ((!$force && (int)$now->format('G') < 9) || $max <= 0) return 0;
+  $today = preg_match('/^\d{4}-\d{2}-\d{2}$/', $today) ? $today : $now->format('Y-m-d');
+  $day0 = $force ? time() + 1 : (new DateTime($today, $tz))->getTimestamp();
+  $db = mh_db(); $st = $db->prepare("SELECT * FROM users WHERE verified = 1 AND exam_nudge = 1 AND exam_checked < ? AND courses IS NOT NULL AND courses NOT IN ('', '[]') AND email NOT LIKE '%@system.local' ORDER BY id LIMIT ?"); $st->execute([$day0, $max]);
+  $users = $st->fetchAll(); if (!$users) return 0;
+  require_once __DIR__ . '/mailer.php'; require_once __DIR__ . '/ai.php'; require_once __DIR__ . '/myclasses.php';
+  $cfg = mh_config(); $site = $cfg['site_name'] ?? 'Mathub'; $url = rtrim((string)(($cfg['site_url'] ?? '') ?: ('https://' . ($_SERVER['HTTP_HOST'] ?? 'mathub.space'))), '/');
+  $V = mh_ai_voice_settings($cfg); $d0 = new DateTime($today, $tz); $sent = 0;
+  foreach ($users as $u) {
+    $db->prepare('UPDATE users SET exam_checked = ? WHERE id = ?')->execute([time(), $u['id']]);   // mark first so a failure never loops
+    try {
+      $uid = (int)$u['id']; $soon = [];
+      foreach (mh_user_events($u) as $e) {
+        if ($e['type'] !== 'exam' || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $e['date'])) continue;
+        $days = (int)$d0->diff(new DateTime($e['date'], $tz))->format('%r%a'); if ($days < 2 || $days > 3) continue;
+        $key = mb_substr(preg_replace('/\s*·.*$/', '', $e['title']), 0, 80);
+        $ins = $db->prepare('INSERT OR IGNORE INTO exam_nudges (user_id, course, exam, date, sent) VALUES (?, ?, ?, ?, ?)'); $ins->execute([$uid, $e['course'], $key, $e['date'], time()]);
+        if ($ins->rowCount()) $soon[] = $e + ['days' => $days, 'name' => $key];
+      }
+      if (!$soon) continue;
+      $e = $soon[0]; $cid = (string)$e['course']; $short = (string)$e['short']; $exam = $e['name']; $when = (new DateTime($e['date'], $tz))->format('l, M j') . ($e['time'] !== '' ? ', ' . $e['time'] : '');
+      $call = $V['key'] !== '' && (mh_plan($u, $cfg) === 'max' || ($V['trial'] > 0 && mh_ai_trial_left($uid, $V) > 0));
+      $link = $call ? "#/tutor/$cid?call=exam" : "#/$cid/exam"; $go = $url . '/' . $link; $name = mh_display_name($u);
+      $title = "$short $exam is in {$e['days']} days";
+      $pitch = $call ? 'Bo has a review call ready. He starts with your weakest topics, asks you exam-style questions one at a time and checks your work on the board as you go. Fifteen minutes is plenty.' : 'Your exam prep page has the topics it covers, how ready you are and a practice exam. Start with your weakest topic.';
+      $btn = $call ? 'Start the review call with Bo' : 'Open exam prep';
+      $more = count($soon) > 1 ? 'Also soon: ' . implode(', ', array_map(fn($x) => $x['short'] . ' ' . $x['name'] . ' (' . (new DateTime($x['date'], $tz))->format('D, M j') . ')', array_slice($soon, 1, 3))) . '.' : '';
+      $text = "Hi $name,\n\n$short $exam is on $when.\n\n$pitch\n\n$btn: $go\n" . ($more !== '' ? "\n$more\n" : '') . "\nYou get this 3 days before each exam in your classes. Turn it off in Settings → Account.";
+      $h = fn($s) => htmlspecialchars($s, ENT_QUOTES);
+      $html = '<!doctype html><html><body style="margin:0;background:#EEF4FF"><div style="background:#EEF4FF;padding:24px 12px;font-family:Helvetica Neue,Helvetica,Arial,sans-serif"><div style="max-width:520px;margin:0 auto;background:#fff;border:2px solid #D6E2F5;border-radius:20px;overflow:hidden">'
+        . '<div style="background:#1A64D6;padding:16px 24px;color:#fff;font-size:20px;font-weight:800">' . $h($site) . '</div>'
+        . '<div style="padding:24px;color:#0F172A;font-size:16px;line-height:1.55"><p style="margin:0 0 6px;color:#475569">Hi ' . $h($name) . ',</p><h1 style="margin:0 0 6px;font-size:22px">' . $h($title) . '</h1><p style="margin:0 0 16px;color:#475569">' . $h($when) . '</p>'
+        . '<p style="margin:0 0 16px">' . $h($pitch) . '</p><p style="margin:20px 0 8px"><a href="' . $h($go) . '" style="display:inline-block;background:#1A64D6;color:#fff;text-decoration:none;font-weight:700;padding:12px 20px;border-radius:12px;border-bottom:4px solid #1450B0">' . $h($btn) . ' &rarr;</a></p>'
+        . ($more !== '' ? '<p style="margin:16px 0 0;font-size:14px;color:#475569">' . $h($more) . '</p>' : '')
+        . '</div><div style="padding:14px 24px 18px;border-top:1px solid #E2E8F0;color:#64748B;font-size:13px">You get this 3 days before each exam in your classes. Turn it off in Settings &rarr; Account.</div></div></div></body></html>';
+      $ok = mh_send_mail($cfg, $u['email'], $title, $text, $html)['ok'];
+      try { require_once __DIR__ . '/push.php'; $ps = $db->prepare('SELECT 1 FROM push_subs WHERE user_id = ? LIMIT 1'); $ps->execute([$uid]); if ($ps->fetchColumn()) { mh_push_queue($uid, $title, $call ? 'Bo has a review call ready on your weakest topics.' : 'Your exam prep page is ready: start with your weakest topic.', $link, 'exam'); mh_push_user($uid); } } catch (Throwable $x) {}
+      if ($ok) { $sent++; mh_metric('exam_nudge'); }
+    } catch (Throwable $x) {}
   }
   return $sent;
 }
@@ -191,12 +246,12 @@ function mh_growth_route(string $route, array $in, array $cfg, string $ip): void
     }
 
     /* --- invites --- */
-    case 'invite_mine': { mh_method('GET'); $u = mh_require_user(); $st = $db->prepare('SELECT COUNT(*) FROM users WHERE invited_by = ? AND verified = 1'); $st->execute([$u['id']]); mh_json(['ok' => true, 'code' => mh_invite_code($u), 'joined' => (int)$st->fetchColumn()]); }
+    case 'invite_mine': { mh_method('GET'); $u = mh_require_user(); $st = $db->prepare('SELECT COUNT(*) FROM users WHERE invited_by = ? AND verified = 1'); $st->execute([$u['id']]); require_once __DIR__ . '/ai.php'; mh_json(['ok' => true, 'code' => mh_invite_code($u), 'joined' => (int)$st->fetchColumn(), 'minutes' => intdiv(mh_ai_invite_secs(mh_ai_voice_settings($cfg)), 60)]); }
     case 'invite_info': {
       mh_method('GET'); $code = strtoupper(preg_replace('/[^A-Za-z0-9]/', '', (string)($_GET['ref'] ?? ''))); if (strlen($code) !== 6) mh_fail('Not found.', 404);
       $st = $db->prepare('SELECT name, email, courses FROM users WHERE invite_code = ? AND verified = 1'); $st->execute([$code]); $r = $st->fetch(); if (!$r) mh_fail('Not found.', 404);
       $first = trim(explode(' ', trim((string)$r['name']))[0] ?: explode('@', $r['email'])[0]); $courses = $r['courses'] ? (json_decode((string)$r['courses'], true) ?: []) : [];
-      header('Cache-Control: private, max-age=300'); mh_json(['ok' => true, 'name' => $first, 'courses' => array_values(array_filter($courses, fn($c) => isset(mh_course_names()[$c])))]);
+      header('Cache-Control: private, max-age=300'); require_once __DIR__ . '/ai.php'; mh_json(['ok' => true, 'name' => $first, 'courses' => array_values(array_filter($courses, fn($c) => isset(mh_course_names()[$c]))), 'minutes' => intdiv(mh_ai_invite_secs(mh_ai_voice_settings($cfg)), 60)]);
     }
   }
   mh_fail('Not found.', 404);

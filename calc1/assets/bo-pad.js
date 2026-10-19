@@ -204,7 +204,7 @@
 
     /* ---------- you write ---------- */
     let cur = null, ptrs = new Map(), gesture = null, erased = null, dragCard = null;
-    const record = (op, bo) => { P.undo.push(op); if (P.undo.length > 200) P.undo.shift(); P.redo = []; changed(bo); };
+    const record = (op, bo) => { P.undo.push(op); if (P.undo.length > 200) P.undo.shift(); P.redo = []; changed(bo); emit(op); };
     // bo: Bo's own marks, which do not count as you writing (no quiet look at the board for them)
     function changed(bo) { P.rev++; paintTools(); save(); if (o.onChange) o.onChange(); if (bo) return; clearTimeout(P.idleT); if (o.onIdle) P.idleT = setTimeout(() => o.onIdle(P.rev), o.idleMs || 2200); }
     function begin(e, x, y) {
@@ -316,8 +316,8 @@
       pop.style.left = Math.max(8, Math.min(W - 236, r.left - rr.left - 90)) + 'px';
       if (r.top - rr.top > H / 2) pop.style.bottom = (rr.bottom - tr.top + 8) + 'px'; else pop.style.top = (tr.bottom - rr.top + 8) + 'px';
     }
-    function undo() { const op = P.undo.pop(); if (!op) return; apply(op, true); P.redo.push(op); P.rev++; paintTools(); later(); save(); if (o.onChange) o.onChange(); }
-    function redo() { const op = P.redo.pop(); if (!op) return; apply(op, false); P.undo.push(op); P.rev++; paintTools(); later(); save(); if (o.onChange) o.onChange(); }
+    function undo() { const op = P.undo.pop(); if (!op) return; apply(op, true); P.redo.push(op); P.rev++; paintTools(); later(); save(); if (o.onChange) o.onChange(); emit({ a: op.a === 'add' ? 'del' : 'add', its: op.its }); }
+    function redo() { const op = P.redo.pop(); if (!op) return; apply(op, false); P.undo.push(op); P.rev++; paintTools(); later(); save(); if (o.onChange) o.onChange(); emit(op); }
     function apply(op, back) {
       const add = its => its.forEach(it => { if (it.t === 'm') P.marks.push(it); else P.items.push(it); }), del = its => its.forEach(it => { const L = it.t === 'm' ? P.marks : P.items; const i = L.indexOf(it); if (i >= 0) L.splice(i, 1); });
       if (op.a === 'add') (back ? del : add)(op.its); else (back ? add : del)(op.its);
@@ -344,6 +344,22 @@
       if (e.key === 'Escape' && !pop.hidden) { togglePop(false); e.preventDefault(); e.stopPropagation(); }
     }
     global.addEventListener('keydown', keys, true);
+
+    /* ---------- shared with others (a study room, assets/room.js): each change as it happens, and the whole board ----------
+       o.onOp(op) gets every change made here ({ a: 'add' | 'del', its }); remote(op) applies one made elsewhere (not
+       to undo); snap() and loadSnap() are the whole board. Photos stay on the device that has them. */
+    const q1 = v => Math.round(v * 10) / 10;
+    const ser = it => it.t === 's' ? { t: 's', id: it.id, c: it.c, w: q1(it.w), hl: it.hl ? 1 : 0, pr: it.pr ? 1 : 0, p: it.p } : it.t === 'x' ? { t: 'x', id: it.id, c: it.c, x: it.x, y: it.y, s: it.s, v: it.v } : it.t === 'm' ? Object.assign({ t: 'm', id: it.id, kind: it.kind, r: it.r.map(q1), v: it.v, c: it.c }, it.tp ? { tp: it.tp } : {}) : null;
+    const deser = it => !it || typeof it.id !== 'string' ? null : it.t === 's' && Array.isArray(it.p) && it.p.length >= 3 ? Object.assign({}, it, { hl: !!it.hl, pr: !!it.pr }) : it.t === 'x' && typeof it.v === 'string' ? Object.assign({}, it) : it.t === 'm' && KINDS.includes(it.kind) && Array.isArray(it.r) && it.r.length === 4 ? Object.assign({}, it, { at: 0 }) : null;
+    function emit(op) { if (!o.onOp || P.remoteNow) return; const its = op.its.map(ser).filter(Boolean); if (its.length) o.onOp({ a: op.a === 'add' ? 'add' : 'del', its }); }
+    function remote(op) {
+      if (!op || !Array.isArray(op.its)) return; const ids = new Set(P.items.concat(P.marks).map(it => it.id));
+      if (op.a === 'add') op.its.map(deser).filter(it => it && !ids.has(it.id)).forEach(it => (it.t === 'm' ? P.marks : P.items).push(it));
+      else { const gone = new Set(op.its.map(it => it && it.id)); P.items = P.items.filter(it => !gone.has(it.id)); P.marks = P.marks.filter(it => !gone.has(it.id)); }
+      P.remoteNow = true; try { changed(false); } finally { P.remoteNow = false; } later();
+    }
+    const snap = () => ({ items: P.items.map(ser).filter(Boolean), marks: P.marks.map(ser).filter(Boolean) });
+    function loadSnap(d) { if (!d) return; P.items = (d.items || []).map(deser).filter(Boolean).concat(P.items.filter(it => it.t === 'i')); P.marks = (d.marks || []).map(deser).filter(Boolean); P.rev++; paintTools(); later(); }
 
     /* ---------- kept for the next call (your writing and Bo's marks; not photos) ---------- */
     function save() { if (!o.store) return; clearTimeout(P.saveT); P.saveT = setTimeout(store, 500); }
@@ -463,7 +479,7 @@
     size();
     if (!P.items.length && o.center !== false) { const I = insets(); P.tx = I.left + 24; P.ty = I.top + 24; draw(); }
     return {
-      el: root, tools, addCard, removeCard, reveal, look, mark, cells, range, addImage, fit, undo, redo, clear, setTool, show,
+      el: root, tools, addCard, removeCard, reveal, look, mark, cells, range, addImage, fit, undo, redo, clear, setTool, show, remote, snap, loadSnap,
       cards: () => visibleCards(), hasInk: () => P.items.length > 0, rev: () => P.rev, lookedAt: () => P.lookRev,
       state: () => ({ items: P.items.length, marks: P.marks.length, tool: P.tool, color: P.color, k: P.k, look: P.look && Object.assign({}, P.look) }),
       dark(on) { P.dark = !!on; root.classList.toggle('dark', P.dark); paintTools(); draw(); },

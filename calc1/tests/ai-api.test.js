@@ -59,7 +59,7 @@ const snapshot = { name: 'Alice', streak: 4, xpToday: 10, goal: 30, page: 'Calc 
   ok('Bo is told how great tutors teach: where the student is, the big picture, one idea at a time, a worked example then fading, drawing it, real checks, a hint ladder', /HOW YOU TEACH/.test(q.system[0].text) && /Find out where they are first/.test(q.system[0].text) && /Show, then fade/.test(q.system[0].text) && /never "does that make sense\?"/.test(q.system[0].text) && /Hints go up a ladder/.test(q.system[0].text) && /Change the angle/.test(q.system[0].text), q.system[0].text.length);
   ok('and how to draw on his board: all thirteen kinds of drawing, tangent lines, Riemann sums and sliders', /DRAWINGS on your board/.test(q.system[0].text) && /draw: a graph, number line, figure/.test(q.system[0].text) && ['graph', 'numberline', 'figure', 'unitcircle', 'table', 'bars', 'pie', 'scatter', 'boxplot', 'normal', 'tree', 'venn', 'flow'].every(t => q.system[0].text.includes(`{"type":"${t}"`)) && /"tangent":\{/.test(q.system[0].text) && /"riemann":\{/.test(q.system[0].text) && /"sliders":\[/.test(q.system[0].text));
   ok('and to put questions on the board for the student to answer there, and code in a block', /YOUR TURN/.test(q.system[0].text) && /check: a question they answer on the board/.test(q.system[0].text) && /"choices":\[/.test(q.system[0].text) && /CODE: a block in ```/.test(q.system[0].text));
-  ok('Bo\'s instructions and the class summary come first and are marked for caching', q.system.length === 3 && q.system[1].cache_control && q.system[1].cache_control.type === 'ephemeral' && /^CLASS: M171 Calculus I/.test(q.system[1].text) && !q.system[2].cache_control, q.system.map(b => [b.text.slice(0, 30), !!b.cache_control]));
+  ok('Bo\'s instructions and the class summary come first and are marked for caching; today and his character come after', q.system.length === 4 && q.system[1].cache_control && q.system[1].cache_control.type === 'ephemeral' && /^CLASS: M171 Calculus I/.test(q.system[1].text) && !q.system[2].cache_control && /^YOUR CHARACTER: Professor Bo/.test(q.system[3].text) && !q.system[3].cache_control, q.system.map(b => [b.text.slice(0, 30), !!b.cache_control]));
   ok('the class summary is compact: every unit, one line per topic, exams and grading, under 9,000 characters', q.system[1].text.length < 9000 && /EXAMS: .*Exam 2 2026-10-16/.test(q.system[1].text) && /GRADING: /.test(q.system[1].text) && /\n- §?1\.1 How do we measure velocity\?/.test(q.system[1].text), q.system[1].text.length);
   ok('today\'s part: the date, the next two weeks, and her progress cut to a few lines (HTML stripped, junk dropped)', /TODAY: 2026-10-13/.test(sysText) && /NEXT TWO WEEKS: /.test(sysText) && /READINESS: Exam 2 on 2026-10-16 \(3 days\): 41% Getting there, prep checklist 2\/6/.test(sysText) && /RECENTLY MISSED:\n- \[Limits\] Find the limit/.test(sysText) && !/<p>/.test(sysText) && !/xxxxxxxxxx/.test(sysText) && q.system[2].text.length < 2500, q.system[2].text);
   ok('the first question goes alone', q.messages.length === 1 && q.messages[0].role === 'user', q.messages.length);
@@ -263,6 +263,7 @@ const snapshot = { name: 'Alice', streak: 4, xpToday: 10, goal: 30, page: 'Calc 
   r = await call('anon', 'ai_status'); ok('signed out, the page can still say how many minutes are free', r.trial_minutes === 10 && !r.trial);
   r = await call('bob', 'ai_live_start', { class: 'calc', sdp: OFFER }); ok('without Max, a live call starts on the free minutes, for at most what is left', r.ok && r.trial === true && r.left > 0 && r.left <= 600 && /^v=0/.test(r.sdp), r);
   const bobLid = r.lid;
+  ok('a call on the free minutes uses the light model', (rd('live-last.json', {}).session || {}).model === 'gpt-realtime-2.1-mini');
   sqlite(`UPDATE ai_live SET last = strftime('%s','now') - 40 WHERE id = '${bobLid}'`);
   r = await call('bob', 'ai_live_tick', { lid: bobLid }); ok('the call is counted against the free minutes as it is reported', r.ok && !r.end && r.left <= 560 && r.left >= 555, r);
   r = await call('bob', 'ai_status'); ok('…and the page sees what is left', r.trial.used >= 40 && r.trial.left <= 560, r.trial);
@@ -282,15 +283,23 @@ const snapshot = { name: 'Alice', streak: 4, xpToday: 10, goal: 30, page: 'Calc 
   r = await call('bob', 'ai_tutor', { class: 'calc', q: 'More?', voice: 1, lid: bLid }); ok('after which its id no longer works', r.status === 402, r);
   r = await call('mod', 'ai_call_start', { class: 'calc' }); ok('with Max nothing needs starting', r.ok && r.lid === '' && r.trial === false, r);
   r = await call('bob', 'data_export'); ok('the free minutes used are in Download my data', Array.isArray((r.tables || {}).ai_trial), Object.keys(r.tables || {}));
+  // an invite: the classmate who joins and the one who invited both get more free minutes (up to 60 each)
+  sqlite(`DELETE FROM ai_trial WHERE user_id IN (${bobId}, (SELECT id FROM users WHERE email = 'alice.a@montana.edu'))`);
+  const reward = () => require('child_process').spawnSync('php', ['-r', 'chdir($argv[1]); require "lib.php"; require_once "social.php"; require_once "growth.php"; $s = mh_db()->prepare("SELECT * FROM users WHERE email = ?"); $s->execute([$argv[2]]); $u = $s->fetch(); $u["invited_by"] = (int)mh_db()->query("SELECT id FROM users WHERE email = \'alice.a@montana.edu\'")->fetchColumn(); mh_invite_reward($u);', path.join(__dirname, '..', 'api'), BOB]);
+  reward(); r = await call('bob', 'ai_status'); const ra = JSON.parse(String(require('child_process').spawnSync('php', ['-r', '$d = new PDO("sqlite:" . $argv[1]); echo json_encode($d->query("SELECT bonus FROM ai_trial WHERE user_id = (SELECT id FROM users WHERE email = \'alice.a@montana.edu\')")->fetchAll(PDO::FETCH_ASSOC));', path.join(__dirname, '..', 'api', 'data', 'mathub.sqlite')]).stdout) || '[]');
+  ok('an invite gives both of them 10 more free minutes with Bo', r.trial.minutes === 20 && r.trial.left === 1200 && r.trial.bonus === 10 && r.trial.invite === 10 && ra.length === 1 && ra[0].bonus === 600, { bob: r.trial, alice: ra });
+  for (let i = 0; i < 7; i++) reward();
+  r = await call('bob', 'ai_status'); ok('up to an hour more, however many classmates join', r.trial.minutes === 70 && r.trial.bonus === 60, r.trial);
+  sqlite(`DELETE FROM ai_trial WHERE user_id IN (${bobId}, (SELECT id FROM users WHERE email = 'alice.a@montana.edu')); DELETE FROM notifications WHERE title LIKE '%more free minutes with Bo'`);
   sqlite(`DELETE FROM ai_trial WHERE user_id = ${bobId}; DELETE FROM ai_live WHERE user_id = ${bobId}`);
   for (const n of ['live-hangups.json', 'live-tries.json']) try { fs.unlinkSync(FX(n)); } catch (e) {}   // the counts below start from here
   r = await call('mod', 'ai_live_start', { class: 'calc', sdp: 'not sdp' }); ok('an offer that is not SDP is refused', r.status === 400, r);
   r = await call('mod', 'ai_live_start', { class: 'calc', sdp: OFFER, voice: 'marin', speed: 1.1, eagerness: 'high', snapshot, today: '2026-10-13' });
   const live1 = r; const L1 = rd('live-last.json', {}); const ls = L1.session || {};
   ok('a call starts: OpenAI\'s answer comes back with an id for the call', r.ok && /^v=0/.test(r.sdp) && /^[a-f0-9]{24}$/.test(r.lid) && r.left === 1800 && r.voice === 'marin', r);
-  ok('the offer and the session go to OpenAI as a form, asking for SDP back', /s=test/.test(L1.sdp) && L1.accept === 'application/sdp' && ls.type === 'realtime' && ls.model === 'gpt-realtime-2.1-mini', { accept: L1.accept, model: ls.model });
+  ok('the offer and the session go to OpenAI as a form, asking for SDP back', /s=test/.test(L1.sdp) && L1.accept === 'application/sdp' && ls.type === 'realtime' && ls.model === 'gpt-realtime-2.1', { accept: L1.accept, model: ls.model });
   ok('the voice, speed and eagerness picked are used; semantic turn-taking with interruptions', ls.audio.output.voice === 'marin' && ls.audio.output.speed === 1.1 && ls.audio.input.turn_detection.eagerness === 'high' && ls.audio.input.turn_detection.type === 'semantic_vad' && ls.audio.input.turn_detection.interrupt_response === true, ls.audio);
-  ok('Bo\'s live instructions: his persona, then the class, today, the student\'s progress and his notes', /You are Bo, the bobcat tutor from Mathub, on a live voice call/.test(ls.instructions) && /CLASS:/.test(ls.instructions) && /TODAY: 2026-10-13/.test(ls.instructions) && /WEAKEST TOPICS: Limits by algebra/.test(ls.instructions) && ls.instructions.length < 16000, ls.instructions.length);
+  ok('Bo\'s live instructions: his persona, then the class, today, the student\'s progress and his notes', /You are Bo, the bobcat tutor from Mathub, on a live voice call/.test(ls.instructions) && /CLASS:/.test(ls.instructions) && /TODAY: 2026-10-13/.test(ls.instructions) && /WEAKEST TOPICS: Limits by algebra/.test(ls.instructions) && ls.instructions.length < 18000, ls.instructions.length);   // about 4,500 tokens: his character, the honesty rules and check_math included
   ok('his tools: writing on the board (code too), drawing on it, asking on it, marking the student\'s writing, checking math exactly, and his notes', ls.tools.map(t => t.name).join() === 'write_on_board,draw_on_board,ask_on_board,mark_on_board,check_math,remember' && ls.tools[3].parameters.properties.marks.items.properties.kind.enum.join() === 'circle,check,cross,underline,box,arrow,note' && ls.tools[3].parameters.properties.marks.items.required.join() === 'at,kind' && ls.tools.slice(0, 3).every(t => t.parameters.properties.near) && ls.tools[0].parameters.required[0] === 'items' && ls.tools[0].parameters.properties.items.items.properties.kind.enum.join() === 'step,math,answer,tip,text,code' && ls.tools[0].parameters.properties.page.enum.join() === 'new,add', ls.tools && ls.tools[0].parameters);
   const ak = ls.tools[2].parameters;
   ok('the question tool takes a question and its answer, with choices to tap and a why', ak.required.join() === 'question,answer' && ak.properties.choices.type === 'array' && !!ak.properties.why && /stop and wait/i.test(ls.tools[2].description), ak);
@@ -299,7 +308,7 @@ const snapshot = { name: 'Alice', streak: 4, xpToday: 10, goal: 30, page: 'Calc 
   ok('on a call he is told to teach the same way, to take a proper turn to explain something new, and to draw', /HOW YOU TEACH/.test(ls.instructions) && /Explaining something new does not: take a proper turn/.test(ls.instructions) && /draw_on_board: whenever a picture explains it better/.test(ls.instructions) && /ask_on_board: a question on the board/.test(ls.instructions) && !/Ask more than you tell/.test(ls.instructions) && ls.max_output_tokens === 1600, ls.max_output_tokens);
   r = await call('mod', 'ai_live_start', { class: 'calc', sdp: OFFER, voice: 'nobody', speed: 9, eagerness: 'wild' });
   const L2 = rd('live-last.json', {}).session;
-  ok('unknown voices, speeds and eagerness fall back to the defaults (and the speed is kept in range)', r.ok && L2.audio.output.voice === 'cedar' && L2.audio.output.speed === 1.25 && L2.audio.input.turn_detection.eagerness === 'auto', L2.audio);
+  ok('unknown voices, speeds and eagerness fall back to the defaults (his character\'s voice; the speed kept in range)', r.ok && L2.audio.output.voice === 'ash' && L2.audio.output.speed === 1.25 && L2.audio.input.turn_detection.eagerness === 'auto', L2.audio);
   ok('one call at a time: starting a new call hung up the last one', rd('live-hangups.json', []).length === 1, rd('live-hangups.json', []));
   const lid = r.lid;
   r = await call('mod', 'ai_live_tick', { lid }); ok('the browser reports the call; the minutes left come back', r.ok && r.left > 1790 && !r.end, r);
@@ -316,6 +325,49 @@ const snapshot = { name: 'Alice', streak: 4, xpToday: 10, goal: 30, page: 'Calc 
   r = await call('mod', 'ai_thread&class=calc'); ok('in order, marked as said out loud', r.turns.length === 3 && r.turns.every(t => t.v === 1) && r.turns[0].r === 'b' && r.turns[1].t === 'The chain rule' && /\[board:/.test(r.turns[2].t), r.turns);
   ok('ending the call hangs it up on OpenAI\'s side', rd('live-hangups.json', []).length === 3);
   r = await call('mod', 'ai_status'); ok('live minutes are counted, with the monthly limit, and what is left takes today\'s calls into account', typeof r.usage.live === 'number' && r.usage.live_limit === 18000 && r.usage.live_left <= 90 * 60 - 1800, r.usage);
+  // Bo's characters (assets/bo-characters.js): Professor Bo by default, with his voice and pace; others when picked; the student's own voice wins
+  db('UPDATE ai_live SET ended = 1 WHERE user_id = (SELECT id FROM users WHERE email = ?)', 'mod.user@montana.edu');
+  r = await call('mod', 'ai_live_start', { class: 'calc', sdp: OFFER }); let LS = rd('live-last.json', {}).session;
+  ok('a call is Professor Bo by default: his character, his opening, his voice (ash) and his slower pace', r.ok && /YOUR CHARACTER: Professor Bo/.test(LS.instructions) && /taught mathematics at Harvard/.test(LS.instructions) && /HOW YOU OPEN: Open like an old professor/.test(LS.instructions) && LS.audio.output.voice === 'ash' && LS.audio.output.speed === 0.9 && /NEVER AGREE WITH SOMETHING WRONG/.test(LS.instructions), LS.audio);
+  r = await call('mod', 'ai_live_start', { class: 'calc', sdp: OFFER, persona: 'coach' }); LS = rd('live-last.json', {}).session;
+  ok('Coach Bo, when picked: his character and his voice', r.ok && /YOUR CHARACTER: Coach Bo/.test(LS.instructions) && !/Professor Bo/.test(LS.instructions) && LS.audio.output.voice === 'verse' && LS.audio.output.speed === 1.1, LS.audio);
+  r = await call('mod', 'ai_live_start', { class: 'calc', sdp: OFFER, persona: 'zen', voice: 'marin', speed: 1 }); LS = rd('live-last.json', {}).session;
+  ok('a voice and pace the student picked win over the character\'s', r.ok && /YOUR CHARACTER: Zen Bo/.test(LS.instructions) && LS.audio.output.voice === 'marin' && LS.audio.output.speed === undefined, LS.audio);
+  r = await call('mod', 'ai_live_start', { class: 'calc', sdp: OFFER, persona: 'villain' }); LS = rd('live-last.json', {}).session;
+  ok('an unknown character is Professor Bo', r.ok && /YOUR CHARACTER: Professor Bo/.test(LS.instructions));
+  r = await call('mod', 'ai_live_start', { class: 'calc', sdp: OFFER, snapshot: Object.assign({}, snapshot, { name: 'REFUSE-MAXMODEL' }) }); LS = rd('live-last.json', {}).session;
+  ok('if the account cannot use the Max model, the call goes ahead on the usual one', r.ok && LS.model === 'gpt-realtime-2.1-mini' && LS.max_output_tokens > 0, { model: LS.model });
+  require('child_process').spawnSync('php', ['-r', '$d = new PDO("sqlite:" . $argv[1]); $d->exec("DELETE FROM rate WHERE key LIKE \'ai_tutor%\'");', path.join(__dirname, '..', 'api', 'data', 'mathub.sqlite')]);
+  r = await call('mod', 'ai_tutor', { class: 'calc', q: 'hi' }); ok('the chat is Professor Bo by default', r.ok && last().system.some(b => /^YOUR CHARACTER: Professor Bo/.test(b.text)));
+  r = await call('mod', 'ai_tutor', { class: 'calc', q: 'hi', persona: 'detective', voice: 1 }); ok('and the character picked, out loud too', r.ok && last().system.some(b => /^YOUR CHARACTER: Detective Bo/.test(b.text)) && last().system.some(b => /VOICE MODE/.test(b.text)));
+
+  r = await call('mod', 'ai_tutor', { class: 'calc', q: 'hi', voice: 1, focus: 'exam' }); ok('a review call before an exam in basic voice: he is told it is an exam review', r.ok && last().system.some(b => /^THIS CALL IS AN EXAM REVIEW/.test(b.text)));
+  r = await call('mod', 'ai_tutor', { class: 'calc', q: 'hi', focus: 'exam' }); ok('the chat is not a call, so no review', r.ok && !last().system.some(b => /EXAM REVIEW/.test(b.text)));
+
+  // the recap after a call (ai_recap): a page with what they did, the slip and three problems, saved to the chat and emailed
+  await call('mod', 'ai_forget', { what: 'all' }); db('DELETE FROM rate WHERE key LIKE ?', 'ai_recap:%');
+  const since = Math.floor(Date.now() / 1000) - 2; const MAIL = path.join(__dirname, '..', 'api', 'data', 'mail.log'); const mailLen = () => fs.existsSync(MAIL) ? fs.readFileSync(MAIL, 'utf8').length : 0;
+  r = await call('mod', 'ai_recap', { class: 'calc', since }); ok('no call, no recap', r.ok && r.recap === null, r);
+  r = await call('mod', 'ai_live_start', { class: 'calc', sdp: OFFER }); const rLid = r.lid;
+  await call('mod', 'ai_live_log', { lid: rLid, turns: [{ r: 'b', t: 'Good afternoon. What are we doing today?' }, { r: 'u', t: 'x = 11 - 3 so x = 6' }, { r: 'b', t: 'No. Eleven minus three is eight.' }] });
+  let m0 = mailLen();
+  r = await call('mod', 'ai_recap', { class: 'calc', since, slips: ['11 - 3 = 8, not 6'] }); const RQ = last();
+  ok('after a call Bo writes the recap: the topic and three problems with number answers for the notebook', r.ok && /\[board: Call recap: Solving linear equations\]/.test(r.recap) && r.topic === 'Solving linear equations' && r.practice.length === 3 && r.practice[0].answer === 8 && /11 - 3/.test(r.practice[0].prompt) && r.practice[2].answer === 7 && r.practice[0].why, r);
+  ok('he is given the call, the slip the app caught, his character and the shape', RQ.system.some(b => /^THE CALL RECAP/.test(b.text)) && RQ.system.some(b => /^YOUR CHARACTER: Professor Bo/.test(b.text)) && /Them: x = 11 - 3 so x = 6/.test(RQ.messages[0].content) && /Bo: No\. Eleven minus three/.test(RQ.messages[0].content) && /MATH CHECK caught on the call \(exact\): 11 - 3 = 8, not 6/.test(RQ.messages[0].content), RQ.messages[0].content);
+  const th = (await call('mod', 'ai_thread&class=calc')).turns || [];
+  ok('the recap is saved in the chat after the call', th.length === 4 && /Call recap/.test(th[3].t) && th[3].r === 'b', th.map(t => t.t.slice(0, 30)));
+  const mailed = fs.readFileSync(MAIL, 'utf8').slice(m0);
+  ok('and emailed: the topic, the slip, the three problems, a link to practise them, the answers at the bottom, a way to turn it off', r.emailed === true && /to=mod\.user@montana\.edu subject="Your call with Professor Bo: Solving linear equations"/.test(mailed) && /Watch out: 11 - 3 = 8, not 6/.test(mailed) && /Three to try:\n1\. What is 11 - 3\?/.test(mailed) && /#\/mistakes\?retry=1/.test(mailed) && /Answers: 1\. 8; 2\. 6; 3\. 7/.test(mailed) && /Turn it off in Settings/.test(mailed), mailed.slice(0, 700));
+  await call('mod', 'ai_live_log', { lid: rLid, turns: [{ r: 'u', t: 'RECAPSLIP one more' }] });
+  r = await call('mod', 'ai_recap', { class: 'calc', since });
+  ok('a wrong answer in his recap is caught by the math check, and he writes it again', r.ok && r.practice[0].answer === 8 && last().messages.length === 3 && /MATH CHECK \(exact, worked out by the app\) on your recap/.test(last().messages[2].content), last().messages.map(x => String(x.content).slice(0, 80)));
+  db('UPDATE users SET recap_email = 0 WHERE email = ?', 'mod.user@montana.edu'); m0 = mailLen();
+  r = await call('mod', 'ai_recap', { class: 'calc', since, persona: 'coach' });
+  ok('with recap emails off (Settings → Account), it is only in the chat', r.ok && r.recap && r.emailed === false && mailLen() === m0 && /^Nice call!/.test(r.recap), r);
+  ok('the setting is on the account', (await call('mod', 'me')).user.recap_email === false);
+  db('UPDATE users SET recap_email = 1 WHERE email = ?', 'mod.user@montana.edu');
+  r = await call('bob', 'ai_recap', { class: 'calc', since }); ok('without Max and without a free call, there is no recap', r.status === 402, r);
+  await call('mod', 'ai_live_log', { lid: rLid, turns: [], end: 1 });
   db('DELETE FROM ai_live WHERE user_id = (SELECT id FROM users WHERE email = ?)', 'mod.user@montana.edu');
   require('child_process').spawnSync('php', ['-r', '$d = new PDO("sqlite:" . $argv[1]); $d->exec("UPDATE ai_usage SET live = 0");', path.join(__dirname, '..', 'api', 'data', 'mathub.sqlite')]);
   await call('mod', 'ai_forget', { what: 'all' });

@@ -128,6 +128,8 @@ switch ($route) {
     $lb = array_key_exists('show_on_leaderboard', $in) ? (!empty($in['show_on_leaderboard']) ? 1 : 0) : (int)($u['show_on_leaderboard'] ?? 1);
     $dg = array_key_exists('digest_email', $in) ? (!empty($in['digest_email']) ? 1 : 0) : (int)($u['digest_email'] ?? 1);
     $rm = array_key_exists('reminder_email', $in) ? (!empty($in['reminder_email']) ? 1 : 0) : (int)($u['reminder_email'] ?? 0);
+    if (array_key_exists('recap_email', $in)) { $re = !empty($in['recap_email']) ? 1 : 0; mh_db()->prepare('UPDATE users SET recap_email = ? WHERE id = ?')->execute([$re, $u['id']]); $u['recap_email'] = $re; }   // the recap after a call with Bo (api/ai.php)
+    if (array_key_exists('exam_nudge', $in)) { $en = !empty($in['exam_nudge']) ? 1 : 0; mh_db()->prepare('UPDATE users SET exam_nudge = ? WHERE id = ?')->execute([$en, $u['id']]); $u['exam_nudge'] = $en; }   // the heads-up before an exam (api/growth.php)
     if (array_key_exists('news_email', $in)) { $ne = !empty($in['news_email']) ? 1 : 0; mh_db()->prepare('UPDATE users SET news_email = ? WHERE id = ?')->execute([$ne, $u['id']]); $u['news_email'] = $ne; }   // news from Mathub (api/news.php)
     if (array_key_exists('planning_email', $in) || array_key_exists('focus_public', $in)) { $pe = array_key_exists('planning_email', $in) ? (!empty($in['planning_email']) ? 1 : 0) : (int)($u['planning_email'] ?? 0); $fp = array_key_exists('focus_public', $in) ? (!empty($in['focus_public']) ? 1 : 0) : (int)($u['focus_public'] ?? 1); mh_db()->prepare('UPDATE users SET planning_email = ?, focus_public = ? WHERE id = ?')->execute([$pe, $fp, $u['id']]); $u['planning_email'] = $pe; $u['focus_public'] = $fp; }
     $courses = $u['courses'] ?? null; if (array_key_exists('courses', $in)) { $c = is_array($in['courses']) ? array_values(array_unique(array_filter($in['courses'], fn($x) => is_string($x) && mh_is_course($x)))) : []; $courses = json_encode($c); }
@@ -230,7 +232,8 @@ switch ($route) {
 
   default:
     if (in_array($route, ['ics', 'ics_token', 'ics_token_reset', 'focus_ping', 'focus_stop', 'focus_done', 'focus_room', 'track', 'admin_growth', 'class_goal', 'league_section', 'ann_list', 'ann_post', 'ann_delete', 'mock_official', 'invite_mine', 'invite_info'], true)) { require_once __DIR__ . '/social.php'; require_once __DIR__ . '/growth.php'; mh_growth_route($route, $in, $cfg, $ip); }
-    if (str_starts_with($route, 'ai_')) { require_once __DIR__ . '/ai.php'; mh_ai_route($route, $in, $cfg, $ip); }   // Bo, the AI tutor, and classes Bo writes (Mathub Max)
+    if (str_starts_with($route, 'ai_')) { require_once __DIR__ . '/ai.php'; mh_ai_route($route, $in, $cfg, $ip); }
+    if (str_starts_with($route, 'room_')) { require_once __DIR__ . '/room.php'; mh_room_route($route, $in, $cfg, $ip); }   // study rooms: classmates join a call with Bo   // Bo, the AI tutor, and classes Bo writes (Mathub Max)
     if (str_starts_with($route, 'myclass') || in_array($route, ['shared_class', 'create_status', 'plan_cancel', 'admin_unshare', 'admin_plan'], true)) { require_once __DIR__ . '/myclasses.php'; mh_myclass_route($route, $in, $cfg, $ip); }   // classes students make, sharing them, Mathub Create
     if (str_starts_with($route, 'community_')) { require_once __DIR__ . '/community.php'; mh_community_route($route, $in, $cfg, $ip); }   // classes anyone makes from a syllabus, for everyone
     if (str_starts_with($route, 'classpack_') || str_starts_with($route, 'admin_classpack')) { require_once __DIR__ . '/packs.php'; mh_packs_route($route, $in, $cfg, $ip); }

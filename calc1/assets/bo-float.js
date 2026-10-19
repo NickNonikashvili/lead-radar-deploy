@@ -23,7 +23,9 @@
   const N = global.Native; const MA = global.MATHUB_APP; if (N && MA && MA.native) return;   // the apps have Bo as a tab
   const API = 'api/index.php?r=';
   const safe = f => { try { return f(); } catch (e) { return null; } };
-  const bo = n => (App.bobcatSvg ? App.bobcatSvg(n) : '');
+  const bo = n => (App.boCharSvg ? App.boCharSvg(App.boChar(), n) : App.bobcatSvg ? App.bobcatSvg(n) : '');   // Bo as the character they picked
+  // a new character: his look changes wherever he already is
+  document.addEventListener('mathub:bo-character', () => { document.querySelectorAll('.bf-fab-av, .bf-av, .bf-hi-av, .bf-mini-av').forEach(el => { const sv = el.querySelector('svg'); if (sv) el.innerHTML = bo(+sv.getAttribute('width') || 40); }); });
   const user = () => { const a = App.auth; return a && a.user && !a.user.local && a.mode === 'server' ? a.user : null; };
   const still = () => (global.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) || document.documentElement.dataset.motion === 'off';
   const phone = () => global.innerWidth <= 640;
@@ -249,6 +251,10 @@
       const b = e.target.closest('[data-bf]'); if (b) { const k = b.dataset.bf;
         if (k === 'close') closePanel(); else if (k === 'point') startPoint(); else if (k === 'see') { setSetting('boSee', !see()); paintCtx(); if (!logOf().length) paintWelcome(); }
         else if (k === 'unfocus') { F.focus = null; paintChips(); } else if (k === 'unfile') { F.file = null; paintChips(); } else if (k === 'retry') { const m = b.closest('.bf-msg'); const t = m.dataset.q || ''; m.remove(); send(t); }
+        else if (k === 'bad') {   // not right: to Mathub's Bo quality review (api/ai.php ai_flag)
+          const m = b.closest('.bf-msg'); if (b.getAttribute('aria-pressed') === 'true' || !m.dataset.at) return; b.setAttribute('aria-pressed', 'true');
+          fetch('api/index.php?r=ai_flag', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'MatHub' }, body: JSON.stringify({ class: m.dataset.cid, at: +m.dataset.at, text: String(m.dataset.src || '').slice(0, 60) }) }).then(x => x.json()).then(j => toast(j && j.ok ? 'Thanks. Mathub’s team will look at this answer.' : (j && j.error) || 'That did not go through.', 3000), () => { b.setAttribute('aria-pressed', 'false'); toast('That did not go through.'); });
+        }
         else if (k === 'copy') { const m = b.closest('.bf-msg'); const t = App.boBoard ? App.boBoard.plainOf(m.dataset.src || '') : m.textContent; (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(() => toast('Copied.'), () => toast('Copying is not available here.')); }
         return; }
       const s = e.target.closest('[data-say]'); if (s) { const it = s.dataset.item != null && F.items ? F.items[+s.dataset.item] : null; send(App.t(s.dataset.say), it ? { focus: it.text, tag: `${F.ctxWhere} · ${it.label}` } : {}); return; }
@@ -408,10 +414,10 @@
     if (file) { if (file.kind === 'pdf') req.file = { type: file.type, data: file.data, name: file.name }; else req.image = { type: file.type, data: file.data }; }
     try {
       const r = await App.boAsk(req, d => { sofar += d; if (!frame) frame = requestAnimationFrame(paint); });
-      cancelAnimationFrame(frame); me.classList.remove('typing'); me.dataset.src = r.reply;
+      cancelAnimationFrame(frame); me.classList.remove('typing'); me.dataset.src = r.reply; if (r.at) { me.dataset.at = r.at; me.dataset.cid = F.cid || ''; }
       paintFlow(flow, r.reply, false); if (App.typeset) safe(() => App.typeset(flow));
       $('.bf-dots', me) && $('.bf-dots', me).remove();
-      $('.bf-bub', me).insertAdjacentHTML('beforeend', `<div class="bf-tools"><button type="button" class="bf-tool" data-bf="copy" aria-label="Copy" title="Copy">${icon('copy', 14)}</button></div>`);
+      $('.bf-bub', me).insertAdjacentHTML('beforeend', `<div class="bf-tools"><button type="button" class="bf-tool" data-bf="copy" aria-label="Copy" title="Copy">${icon('copy', 14)}</button>${r.at ? `<button type="button" class="bf-tool" data-bf="bad" aria-label="Not right? Tell us" title="Not right?" aria-pressed="false">${icon('thumbdown', 14)}</button>` : ''}</div>`);
       if (r.remembered) $('.bf-bub', me).insertAdjacentHTML('beforeend', `<p class="bf-note">${icon('bulb', 13)} Bo will remember: ${esc(r.remembered)}</p>`);
       if (r.usage && F.status) { F.status.usage = r.usage; paintFoot(); }
       const next = App.boFollowups ? App.boFollowups(r.reply) : []; if (next.length) { const n = document.createElement('div'); n.className = 'bf-next'; n.innerHTML = next.map(t => `<button type="button" class="bf-mini" data-say="${esc(t)}">${esc(t)}</button>`).join(''); body.appendChild(n); }

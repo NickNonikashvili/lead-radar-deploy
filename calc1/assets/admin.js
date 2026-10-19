@@ -31,7 +31,7 @@
     if (!json || json.ok === false) { const err = new Error((json && json.error) || 'Request failed.'); err.data = json; throw err; }
     return json;
   }
-  const TABS = [['overview', 'Overview', 'grid', 'admin'], ['members', 'Members', 'info', 'admin'], ['issues', 'Problems', 'bulb', 'mod'], ['packs', 'Add a class', 'book', 'admin'], ['classes', 'Class requests', 'path', 'admin'], ['teach', 'Instructors', 'users', 'admin'], ['errors', 'Site errors', 'zap', 'admin'], ['backups', 'Backups', 'download', 'admin'], ['reports', 'Reports', 'flag', 'mod'], ['contrib', 'Contributions', 'pen', 'mod'], ['mocks', 'Mock exams', 'target', 'mod'], ['growth', 'Growth', 'chart', 'admin'], ['config', 'Keys & settings', 'lock', 'admin'], ['settings', 'Site settings', 'sliders', 'admin'], ['digest', 'Digest & cron', 'clock', 'admin'], ['email', 'Email everyone', 'send', 'admin']];
+  const TABS = [['overview', 'Overview', 'grid', 'admin'], ['members', 'Members', 'info', 'admin'], ['issues', 'Problems', 'bulb', 'mod'], ['packs', 'Add a class', 'book', 'admin'], ['classes', 'Class requests', 'path', 'admin'], ['teach', 'Instructors', 'users', 'admin'], ['errors', 'Site errors', 'zap', 'admin'], ['backups', 'Backups', 'download', 'admin'], ['reports', 'Reports', 'flag', 'mod'], ['contrib', 'Contributions', 'pen', 'mod'], ['mocks', 'Mock exams', 'target', 'mod'], ['growth', 'Growth', 'chart', 'admin'], ['config', 'Keys & settings', 'lock', 'admin'], ['settings', 'Site settings', 'sliders', 'admin'], ['digest', 'Digest & cron', 'clock', 'admin'], ['email', 'Email everyone', 'send', 'admin'], ['bo', 'Bo quality', 'chat', 'admin']];
 
   App.views.admin = {
     title: 'Admin panel',
@@ -44,6 +44,24 @@
       if (isMod()) this[tab]($('#adm-body', root), root);
       const on = $('.admin-tab.active', root); const row = on && on.parentElement;   // phones: the tab row scrolls to the open tab
       if (row && row.scrollWidth > row.clientWidth) row.scrollLeft += on.getBoundingClientRect().left - row.getBoundingClientRect().left - 16;
+    },
+
+    /* Bo quality (api/ai.php ai_admin_quality): what the math check caught, by week, and the answers students marked not right */
+    async bo(el) {
+      let r; try { r = await api('ai_admin_quality'); } catch (e) { el.innerHTML = `<div class="empty">${esc(e.message)}</div>`; return; }
+      const T = r.total || {}, L = r.labels || {}; const weeks = Object.keys(r.weeks || {}).sort();
+      const pct = (a, b) => b ? `${Math.round(100 * a / b)}%` : '–';
+      const caught = (T.chat_bo || 0) + (T.call_bo || 0) + (T.call_page || 0);
+      const tile = (n, label, sub) => `<div class="bq-tile"><b>${n}</b><span>${esc(label)}</span>${sub ? `<small>${esc(sub)}</small>` : ''}</div>`;
+      const plain = t => String(t || '').replace(/\[board\+?:\s*([^\]\n]*)\]/gi, '— Page: $1 —').replace(/\[\/board\]/gi, '— end of page —').replace(/\$([^$]+)\$/g, '$1');
+      const flags = r.flags || [];
+      el.innerHTML = `<div class="callout small mb-2">How Bo is doing over the last eight weeks. The math check works every answer out exactly: it catches students’ slips (so Bo never agrees with them) and Bo’s own (fixed before anyone sees them, or corrected out loud on a call). Below: answers students marked not right with the thumbs down, with their question. Mark each one done once you have looked at it.</div>
+        <div class="bq-tiles">${tile(T.answers || 0, 'Answers', 'chat and basic voice')}${tile(T.calls || 0, 'Live calls', `${T.recaps || 0} recaps`)}${tile((T.chat_you || 0) + (T.call_you || 0), 'Student slips caught', 'Bo did not agree with them')}${tile(caught, 'Bo’s slips caught', `${T.chat_fixed || 0} rewritten · ${T.call_page || 0} pages held back`)}${tile(T.flags || 0, 'Marked not right', `${pct(T.flags || 0, T.answers || 0)} of answers`)}</div>
+        <div class="panel mb-2"><div class="panel-h"><div class="panel-title">${icon('chart')} By week</div></div>${weeks.length ? `<div class="table-wrap"><table class="table small bq-table"><thead><tr><th>Week of</th>${Object.keys(L).map(k => `<th title="${esc(L[k])}">${esc(L[k])}</th>`).join('')}</tr></thead><tbody>${weeks.map(w => `<tr><td>${esc(w)}</td>${Object.keys(L).map(k => `<td>${(r.weeks[w] || {})[k] || 0}</td>`).join('')}</tr>`).join('')}</tbody></table></div>` : '<div class="empty">Nothing yet. The numbers start with the first answers.</div>'}</div>
+        <div class="panel"><div class="panel-h"><div class="panel-title">${icon('thumbdown')} Marked not right <span class="chip xs ${r.open ? 'warn' : ''}">${r.open} open</span></div></div>
+        ${flags.length ? flags.map(f => `<article class="bq-flag${f.status === 'done' ? ' done' : ''}"><div class="row between"><div class="small muted">${esc(f.who)}${f.email && f.email !== f.who ? ` · ${esc(f.email)}` : ''} · ${courseChip(f.cid || 'general')} · ${f.voice ? 'out loud · ' : ''}${timeAgo(f.created)}</div><button class="btn xs ${f.status === 'done' ? 'ghost' : ''}" data-action="bq-mark" data-id="${f.id}" data-to="${f.status === 'done' ? 'open' : 'done'}">${f.status === 'done' ? 'Open again' : 'Done'}</button></div>
+          ${f.why ? `<p class="bq-why"><b>What was wrong:</b> ${esc(f.why)}</p>` : ''}${f.q ? `<p class="bq-q"><b>They asked:</b> ${esc(plain(f.q)).slice(0, 1200)}</p>` : ''}<details${f.status === 'done' ? '' : ' open'}><summary class="small">Bo’s answer</summary><pre class="bq-a">${esc(plain(f.answer))}</pre></details></article>`).join('') : '<div class="empty">No answers marked not right. Nice.</div>'}</div>`;
+      bind(el, { 'bq-mark': async b => { try { await api('ai_admin_quality', { id: +b.dataset.id, status: b.dataset.to }); this.bo(el); } catch (e) { toast(e.message); } } });
     },
 
     /* browser errors reported by boot.js (api client_error): grouped by message, file and line */

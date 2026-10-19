@@ -17,7 +17,7 @@ const FILES = ['app.js', 'home.js', 'welcome.js', 'auth.js', 'tutor.js', 'bo-flo
   'tools.js', 'utils.js', 'ambient.js', 'focus.js', 'today.js', 'planner.js', 'gpa.js', 'report.js', 'pwa.js', 'resources.js', 'requests.js', 'classpacks.js', 'readiness.js',
   'mistakes.js', 'cheatsheet.js', 'mynotes.js', 'blitz.js', 'recap.js', 'tour.js', 'motion.js', 'pixel.js', 'geek.js', 'lesson.js', 'reader.js', 'board-draw.js', 'bo-pad.js', 'max.js',
   'calc-tools.js', 'precalc-tools.js', 'physics-tools.js', 'phonetics.js', 'pylab.js', 'teach.js', 'boot.js',
-  'life.js', 'shell.js', 'life-school.js', 'life-self.js', 'dash.js'];
+  'life.js', 'shell.js', 'life-school.js', 'life-self.js', 'dash.js', 'bo-characters.js', 'room.js'];
 const ATTRS = /\b(?:aria-label|title|placeholder|alt|aria-description|aria-roledescription|data-tip)\s*=\s*"([^"]*)"/g;
 const ENT = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ', rsquo: '’', lsquo: '‘', ldquo: '“', rdquo: '”', hellip: '…', middot: '·', mdash: '—', ndash: '–', times: '×', rarr: '→', larr: '←', copy: '©', deg: '°', minus: '−', le: '≤', ge: '≥' };
 const decode = s => s.replace(/&(#x?[0-9a-f]+|\w+);/gi, (m, e) => e[0] === '#' ? String.fromCodePoint(e[1] === 'x' || e[1] === 'X' ? parseInt(e.slice(2), 16) : +e.slice(1)) : ENT[e] != null ? ENT[e] : m);

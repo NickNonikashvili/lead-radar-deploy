@@ -54,7 +54,7 @@ const { live, basic, quiet } = require('./talk-fakes');
   const s1 = await waitFor(m, 'state', ['live'], 6000);
   const setupReq = readJ('live-last.json', {}); const sess = setupReq.session || {};
   check('Start: the page sends its offer to Mathub, which sets the call up with OpenAI and hands the answer back', s1 === 'live' && /browser-offer/.test(setupReq.sdp || '') && setupReq.accept === 'application/sdp' && /s=stand-in/.test(await m.evaluate(() => window.__rt.answer)) && (await m.evaluate(() => window.__rt.channel)) === 'oai-events', { s1, accept: setupReq.accept });
-  check('the call is speech to speech, with semantic turn-taking, interruptions, noise reduction and the natural voice', sess.type === 'realtime' && sess.model === 'gpt-realtime-2.1-mini' && sess.audio.input.turn_detection.type === 'semantic_vad' && sess.audio.input.turn_detection.interrupt_response === true && sess.audio.input.noise_reduction.type === 'near_field' && sess.audio.output.voice === 'cedar' && /Calculus I/.test(sess.audio.input.transcription.prompt), sess.audio);
+  check('the call is speech to speech, with semantic turn-taking, interruptions, noise reduction and Professor Bo’s voice (ash, a little slower)', sess.type === 'realtime' && sess.model === 'gpt-realtime-2.1' && sess.audio.input.turn_detection.type === 'semantic_vad' && sess.audio.input.turn_detection.interrupt_response === true && sess.audio.input.noise_reduction.type === 'near_field' && sess.audio.output.voice === 'ash' && sess.audio.output.speed === 0.9 && /Calculus I/.test(sess.audio.input.transcription.prompt), sess.audio);
   const ins = sess.instructions || '';
   check('Bo is told to talk like a friend, not an assistant, and knows the class and the student', /not a help desk/.test(ins) && /Never say things like "How can I help you today"/.test(ins) && /If they cut in, stop/.test(ins) && /CLASS:/.test(ins) && /WEAKEST TOPICS/.test(ins) && /you speak first/.test(ins), ins.slice(0, 200));
   check('he has six tools: writing, drawing and asking on the board, marking their writing, checking math exactly, and his notes', (sess.tools || []).map(t => t.name).join() === 'write_on_board,draw_on_board,ask_on_board,mark_on_board,check_math,remember' && (sess.tools || []).filter(t => t.parameters.properties.near).length === 3);
@@ -300,7 +300,17 @@ const { live, basic, quiet } = require('./talk-fakes');
   await m.fill('#bt-q', 'so 11 - 3 = 6?'); await m.press('#bt-q', 'Enter'); await m.waitForTimeout(150);
   const tailT = (await sent(m)).slice(-3).map(x => x.type + (x.item ? ':' + x.item.role : ''));
   check('typed in the call: checked too, the note goes in before he answers', tailT.join() === 'conversation.item.create:user,conversation.item.create:system,response.create' && /11 − 3 is 8, not 6/.test((await notes()).pop()), tailT);
+  // the end of the call: the slips become practice in the mistakes notebook, and Bo leaves a recap (api ai_recap)
+  await m.evaluate(() => { const d = Date.now.bind(Date); Date.now = () => d() + 60000; });   // a call of over a minute
   await m.keyboard.press('Escape'); await m.waitForTimeout(500);
+  const toastT = await m.waitForFunction(() => { const t = document.querySelector('.toast'); return t && /recap/.test(t.textContent) && t.textContent; }, null, { timeout: 8000 }).then(h => h.jsonValue()).catch(() => '');
+  check('hanging up: Professor Bo leaves a recap in the chat and the email, with three to try', /^Professor Bo left you a recap in the chat and in your email, with three to try\.$/.test(toastT), toastT);
+  const rq = readJ('ai-last.json', {}); const rqText = String(((rq.messages || [])[0] || {}).content || '');
+  check('he writes it from the call, with the slips the app caught and his character', (rq.system || []).some(b => /^THE CALL RECAP/.test(b.text)) && (rq.system || []).some(b => /^YOUR CHARACTER: Professor Bo/.test(b.text)) && /Them: So x equals 11 minus 3/.test(rqText) && /MATH CHECK caught on the call \(exact\): [^\n]*11 − 3 is 8, not 6/.test(rqText), rqText.slice(-400));
+  await m.waitForTimeout(600);
+  const rcp = await m.evaluate(() => ({ links: [...document.querySelectorAll('#bo-log [data-bo-page]')].map(b => b.textContent.trim()), nb: App.mistakesAll('calc').filter(x => x.t === 'From your call with Bo').map(x => ({ p: x.q.prompt, a: x.q.answer, due: x.due <= Date.now(), src: x.src })) }));
+  check('the recap is a page in the chat', rcp.links.some(l => /Call recap: Solving linear equations/.test(l)), rcp.links);
+  check('and the mistakes notebook has the slips to practise, due now: 11 − 3 from the call, and his three', rcp.nb.length >= 3 && rcp.nb.some(x => /11 - 3/.test(x.p) && x.a === 8) && rcp.nb.some(x => /2x = 14/.test(x.p) && x.a === 7) && rcp.nb.every(x => x.due && x.src === 'bo'), rcp.nb);
   // Write it out, in the chat: the same board on the whole screen; its picture goes with the question
   await m.click('[data-bo-draw]'); await m.waitForTimeout(400);
   check('Write it out opens the board on the whole screen, with your writing from the call', !!(await m.$('.wb-sheet .wb')) && (await m.evaluate(() => JSON.parse(localStorage.getItem('mh-pad:calc') || '{}').items.length)) === 10);

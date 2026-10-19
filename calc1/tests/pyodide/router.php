@@ -80,6 +80,12 @@ if ($path === '/anthropic/v1/messages') {
       $qs[] = ['topic' => $sid, 'items' => [["Which one is $sid?", 'This one', ['That one', 'Neither', 'Both'], "Because it is $sid."], ["Is $sid useful?", 'Yes', ['No', 'Never', 'Only on Sundays'], 'It is.']]];
     }
     $text = "Here you go:\n```json\n" . json_encode(['SECTIONS' => $secs, 'FLASHCARDS' => $cards, 'QUIZ' => ['questions' => $qs]]) . "\n```";
+  } elseif (str_contains($sys, 'THE CALL RECAP')) {
+    // the recap after a call: one line, a page with three practice problems, the next step. RECAPSLIP in the call
+    // makes the first answer wrong until he is asked to write it again (the math check on his recap)
+    $wrong = str_contains($utext, 'RECAPSLIP') && !str_contains($utext, 'Write the whole recap again');
+    $slip = preg_match('/MATH CHECK caught on the call \(exact\): ([^\n]+)/', $utext, $sm) ? trim($sm[1]) : '';
+    $text = (str_contains($sys, 'Professor Bo') ? 'Hmm. Not bad, my friend. Not bad at all.' : 'Nice call!') . "\n[board: Call recap: Solving linear equations]\ntext: What we did: we moved numbers across the equals sign\ntip: Watch out: " . ($slip !== '' ? mb_substr($slip, 0, 60) : '$11 - 3 = 8$') . "\ncheck: {\"q\":\"What is \$11 - 3\$?\",\"answer\":\"" . ($wrong ? '6' : '8') . "\",\"why\":\"Take three from eleven.\"}\ncheck: {\"q\":\"Solve \$x + 4 = 10\$ for \$x\$.\",\"answer\":\"6\",\"why\":\"Take four from both sides.\"}\ncheck: {\"q\":\"Solve \$2x = 14\$ for \$x\$.\",\"answer\":\"7\",\"why\":\"Divide both sides by two.\"}\n[/board]\nNext: one more call before your exam.";
   } elseif (str_contains($sys, 'THE SHARED BOARD') && $hasImage) {
     // a look at the board on a call (basic voice): he says what he sees, marks it, and puts a page beside it
     $grid = preg_match('/this one: (\d+) columns, (\d+) rows/', $sys, $gm) ? "$gm[1]x$gm[2]" : '?';
@@ -145,6 +151,7 @@ if (preg_match('#^/openai/v1/realtime/calls(?:/([A-Za-z0-9_-]+)/hangup)?$#', $pa
   if (!empty($m[1])) { $f = __DIR__ . '/../fixtures/live-hangups.json'; $h = json_decode((string)@file_get_contents($f), true) ?: []; $h[] = $m[1]; @file_put_contents($f, json_encode($h)); header('Content-Type: application/json'); echo '{}'; exit; }
   $sess = json_decode((string)($_POST['session'] ?? ''), true) ?: [];
   $tries = json_decode((string)@file_get_contents(__DIR__ . '/../fixtures/live-tries.json'), true) ?: []; $tries[] = array_keys($sess); @file_put_contents(__DIR__ . '/../fixtures/live-tries.json', json_encode($tries));
+  if (str_contains((string)($sess['instructions'] ?? ''), 'REFUSE-MAXMODEL') && ($sess['model'] ?? '') !== 'gpt-realtime-2.1-mini') { http_response_code(400); header('Content-Type: application/json'); echo '{"error":{"message":"The model does not exist or you do not have access to it."}}'; exit; }
   if (str_contains((string)($sess['instructions'] ?? ''), 'REFUSE-FULL') && isset($sess['max_output_tokens'])) { http_response_code(400); header('Content-Type: application/json'); echo '{"error":{"message":"Unknown parameter: max_output_tokens"}}'; exit; }
   @file_put_contents(__DIR__ . '/../fixtures/live-last.json', json_encode(['sdp' => $_POST['sdp'] ?? '', 'session' => $sess, 'accept' => $_SERVER['HTTP_ACCEPT'] ?? '']));
   http_response_code(201); header('Content-Type: application/sdp'); header('Location: /v1/realtime/calls/rtc_test' . substr(md5((string)microtime(true)), 0, 8));

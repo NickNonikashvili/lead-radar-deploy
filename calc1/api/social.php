@@ -146,7 +146,7 @@ function mh_housekeeping(bool $full = false): array {
   try { require_once __DIR__ . '/extras.php'; $b = mh_backup_tick(); if ($b) $did[] = 'backup: ' . $b['name']; } catch (Throwable $e) {}
   if ($full || random_int(1, 20) === 1) { try { require_once __DIR__ . '/myclasses.php'; $n = mh_myclass_prune(); if ($n) $did[] = "classes of deleted accounts: $n removed"; require_once __DIR__ . '/ai.php'; $n = mh_ai_prune(); if ($n) $did[] = "Bo's old chats and drafts: $n removed"; } catch (Throwable $e) {} }
   try { require_once __DIR__ . '/push.php'; $p = mh_push_tick($full ? 60 : 3); if ($p) $did[] = "push: $p sent"; } catch (Throwable $e) {}
-  try { require_once __DIR__ . '/growth.php'; $pl = mh_planning_tick($full ? 60 : 2); if ($pl) $did[] = "planning: $pl sent"; if ($full || random_int(1, 20) === 1) { $db->exec('DELETE FROM focus_live WHERE seen < ' . (time() - 600)); $db->exec('DELETE FROM metrics WHERE day < "' . mh_local_date(time() - 120 * 86400) . '"'); } } catch (Throwable $e) {}
+  try { require_once __DIR__ . '/growth.php'; $pl = mh_planning_tick($full ? 60 : 2); if ($pl) $did[] = "planning: $pl sent"; $ex = mh_exam_nudge_tick($full ? 60 : 2); if ($ex) $did[] = "exam heads-ups: $ex sent"; if ($full || random_int(1, 20) === 1) { $db->exec('DELETE FROM focus_live WHERE seen < ' . (time() - 600)); $db->exec('DELETE FROM metrics WHERE day < "' . mh_local_date(time() - 120 * 86400) . '"'); } } catch (Throwable $e) {}
   return $did;
 }
 /** What an evening reminder is about for one user: Canvas events due tomorrow in their classes, a streak at risk, sessions they joined. Shared by the email and the push. */

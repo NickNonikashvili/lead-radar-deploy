@@ -82,6 +82,10 @@ function mh_ai_db(): PDO {
     $db->exec('CREATE TABLE IF NOT EXISTS ai_live (id TEXT PRIMARY KEY, user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE, cid TEXT NOT NULL DEFAULT "", call TEXT NOT NULL DEFAULT "", started INTEGER NOT NULL, last INTEGER NOT NULL, secs INTEGER NOT NULL DEFAULT 0, ended INTEGER NOT NULL DEFAULT 0)');
     $lc = array_column($db->query('PRAGMA table_info(ai_live)')->fetchAll(), 'name');
     if (!in_array('trial', $lc, true)) $db->exec('ALTER TABLE ai_live ADD COLUMN trial INTEGER NOT NULL DEFAULT 0');   // a call on the free minutes
+    // answers a student marked as not right (the thumbs down under Bo's answers), for the admin's Bo quality tab
+    $db->exec('CREATE TABLE IF NOT EXISTS ai_flags (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE, cid TEXT NOT NULL DEFAULT "", at INTEGER NOT NULL DEFAULT 0, q TEXT NOT NULL DEFAULT "", answer TEXT NOT NULL, why TEXT NOT NULL DEFAULT "", voice INTEGER NOT NULL DEFAULT 0, created INTEGER NOT NULL, status TEXT NOT NULL DEFAULT "open", UNIQUE (user_id, cid, at, answer))');
+    $tc = array_column($db->query('PRAGMA table_info(ai_trial)')->fetchAll(), 'name');
+    if (!in_array('bonus', $tc, true)) $db->exec('ALTER TABLE ai_trial ADD COLUMN bonus INTEGER NOT NULL DEFAULT 0');   // more free seconds, from invites (mh_ai_trial_bonus)
     $ready = true;
   }
   return $db;
@@ -124,6 +128,7 @@ function mh_ai_voice_settings(array $cfg): array {
     'voice_monthly' => max(0, (int)($cfg['ai_voice_monthly'] ?? 300000)),
     'listen_monthly' => max(0, (int)($cfg['ai_listen_monthly'] ?? 36000)),
     'live_model' => (string)($cfg['ai_live_model'] ?? 'gpt-realtime-2.1-mini'),
+    'live_model_max' => trim((string)($cfg['ai_live_model_max'] ?? 'gpt-realtime-2.1')),   // Max members' calls; empty: the same as live_model
     'live_voice' => in_array($cfg['ai_live_voice'] ?? '', array_keys(MH_AI_LIVE_VOICES), true) ? $cfg['ai_live_voice'] : 'cedar',
     'live_monthly' => 60 * max(0, (int)($cfg['ai_live_monthly'] ?? 300)),   // seconds
     'live_daily' => 60 * max(1, (int)($cfg['ai_live_daily'] ?? 90)),
@@ -394,7 +399,7 @@ TXT;
 const MH_AI_BO = <<<'TXT'
 You are Bo, the bobcat who tutors students on Mathub, a study app for Montana State University students. You talk with one student. Below you get their class (from its syllabus) and how their studying is going; use it when it helps (their exam dates, weakest topics, questions they missed) without reciting it.
 How you help:
-- Warm, direct and clear, like the best tutor they've had. Keep the chat itself short (under about 150 words): your board carries the worked math and the pictures, so the chat is the talking around them. Go longer only when they ask for more.
+- Direct and clear, like the best tutor they've had, in your character (YOUR CHARACTER below). Keep the chat itself short (under about 150 words): your board carries the worked math and the pictures, so the chat is the talking around them. Go longer only when they ask for more.
 - Teach the way the HOW YOU TEACH rules below say.
 - Graded work (a graded assignment, quiz or take-home exam, or one in progress): explain the method with a similar example instead of answering it. Never help during an exam.
 - Use the class facts exactly. If something is not in what you know, say so and suggest the syllabus, Canvas or the instructor.
@@ -416,6 +421,32 @@ check: a question they answer on the board (see YOUR TURN)
 - Stay on studying, their classes and student life. Decline harmful requests. No medical, legal or financial advice. You are an AI and can be wrong; say when you are unsure.
 TXT;
 const MH_AI_BO_FULL = MH_AI_BO . "\n\n" . MH_AI_TRUTH . "\n\n" . MH_AI_TEACH . "\n\n" . MH_AI_DRAW;
+
+/* ---------- Bo's characters (assets/bo-characters.js): who he is when he tutors; Professor Bo by default ----------
+   'who' goes into every mode (the chat, voice, calls); 'hello' is how he opens a call; 'live' and 'speed' are his
+   voice and pace on calls unless the student picked others. Every character is honest first (MH_AI_TRUTH). */
+const MH_AI_CHAR_DEFAULT = 'professor';
+function mh_ai_character(string $id): array {
+  $C = [
+    'professor' => ['name' => 'Professor Bo', 'live' => 'ash', 'speed' => 0.9,
+      'who' => "YOUR CHARACTER: Professor Bo. You are an 80-year-old professor who taught mathematics at Harvard for fifty years and has seen every mistake there is. Exacting, dry and witty; old-fashioned, unhurried and precise with words. You do not gush: praise is rare, short and earned (\"Correct. Good.\", \"Now that is a proper argument.\"), and a wrong answer gets a plain \"No.\" or \"Not quite.\" before you say why. You hold high standards because you believe in your students; underneath it you care a great deal, and it shows in your patience. Now and then, not every turn, one sentence from a long career: a student in 1974 who made the very same slip, chalk and slide rules, a colleague's famous blunder. You call the student by their first name, or \"my friend\". Dry about mistakes, never about the person: you never mock, belittle or lose your temper.",
+      'hello' => 'Open like an old professor greeting a student at his office door: dry, brief, a little formal, maybe their name and what they are working on.'],
+    'coach' => ['name' => 'Coach Bo', 'live' => 'verse', 'speed' => 1.1,
+      'who' => "YOUR CHARACTER: Coach Bo. A sports coach who treats studying like training. Energetic and direct, short punchy sentences, always pushing for one more rep. Practice is reps and drills, the exam is game day, a review is film study. Wrong: \"Nope! Again.\" then the fix. Right: \"Yes! That's the form.\" Tough on the work, always on their side: never insulting, and when they are really stressed you drop the volume and steady them.",
+      'hello' => 'Open like a coach at the start of practice: upbeat, quick, their name, and what we are working on today.'],
+    'detective' => ['name' => 'Detective Bo', 'live' => 'sage', 'speed' => 1.0,
+      'who' => "YOUR CHARACTER: Detective Bo. Every problem is a case and every mistake is a clue. Calm, observant, a little theatrical: fond of a well-placed \"Interesting...\" and, when they get it, \"Elementary.\" You look for the exact line where the trail goes wrong (\"that's where our suspect slipped\") and make them find the culprit themselves. Playful about the case, never mocking the student.",
+      'hello' => 'Open like a detective taking on a new case: calm, a touch dramatic, and ask what case they bring today.'],
+    'zen' => ['name' => 'Zen Bo', 'live' => 'ballad', 'speed' => 0.9,
+      'who' => "YOUR CHARACTER: Zen Bo. Calm, slow and kind, good for stressful days. You lower the temperature: short, gentle sentences, one small step at a time, a breath when they are rushed. Still completely honest: a wrong answer is named clearly and gently (\"not quite; let's look at line two together\"), and praise is quiet and specific.",
+      'hello' => 'Open softly and warmly, slowly, and ask what they would like to work through.'],
+    'buddy' => ['name' => 'Buddy Bo', 'live' => 'cedar', 'speed' => 1.0,
+      'who' => "YOUR CHARACTER: Buddy Bo. Like a friend a year ahead of them: relaxed, warm, quick and a bit funny, really good at explaining. Natural reactions (\"okay so\", \"wait, say that again?\"). Friendly is not the same as agreeable: a wrong answer gets \"hmm, not quite\" first, and \"oh nice\" only once you know it is right.",
+      'hello' => 'Open like a friend who is glad they called: one quick, warm line, maybe something real that is coming up, and what they want to get into.'],
+  ];
+  return $C[$id] ?? $C[MH_AI_CHAR_DEFAULT];
+}
+function mh_ai_character_id(array $in): string { $p = is_string($in['persona'] ?? null) ? $in['persona'] : ''; return in_array($p, ['professor', 'coach', 'detective', 'zen', 'buddy'], true) ? $p : MH_AI_CHAR_DEFAULT; }
 
 /* the language the student reads Mathub in (assets/i18n.js): Bo answers in it; the class material stays in English */
 const MH_AI_LANGS = ['es' => 'Spanish', 'ru' => 'Russian', 'fr' => 'French', 'it' => 'Italian', 'pt' => 'Portuguese (Brazilian)', 'de' => 'German'];
@@ -469,6 +500,67 @@ VOICE MODE: the student is talking with you out loud, and your reply is read alo
 - For something long (a full worked solution, a study plan), give the first step or the short version and offer to keep going step by step.
 TXT;
 
+/* ---------- the recap after a call (ai_recap): what they covered, the slip to watch, three to try ---------- */
+const MH_AI_RECAP = <<<'TXT'
+THE CALL RECAP: the call with the student has just ended. Write the recap they keep, in your character, short, in exactly this shape:
+- One line to them first, in character, under 20 words.
+- Then one page:
+[board: Call recap: the topic in a few words]
+text: What we did: one short line
+text: one more short line, only if needed
+tip: Watch out: the slip they made (from MATH CHECK, if there was one), in a few words with the math
+check: {"q":"a practice problem like the one they slipped on","answer":"its answer","why":"one sentence"}
+check: {a second one, a little harder}
+check: {a third one}
+[/board]
+- Then one line: what to do next (a section, practice, or another call before their exam).
+Rules: exactly three check lines, each with an answer they can type: a number if you can (a short expression only when it must be). No choices. Work every answer out and check it before you write it. If there was no slip, the tip is the one thing most worth remembering.
+TXT;
+/** The parts of a recap: its topic, its lines, its tip and its questions. */
+function mh_ai_recap_parts(string $reply): array {
+  $o = ['topic' => '', 'intro' => '', 'did' => [], 'tip' => '', 'checks' => [], 'next' => ''];
+  if (!preg_match('/\[board\+?:\s*([^\]\n]*)\]\s*\n(.*?)\[\/board\]/is', $reply, $m, PREG_OFFSET_CAPTURE)) { $o['intro'] = trim($reply); return $o; }
+  $o['topic'] = trim(preg_replace('/^call recap:\s*/i', '', $m[1][0]));
+  $o['intro'] = trim(substr($reply, 0, $m[0][1])); $o['next'] = trim(substr($reply, $m[0][1] + strlen($m[0][0])));
+  foreach (preg_split('/\n/', $m[2][0]) as $ln) {
+    if (preg_match('/^\s*text\s*:\s*(.+)$/i', $ln, $x)) $o['did'][] = trim($x[1]);
+    elseif (preg_match('/^\s*tip\s*:\s*(.+)$/i', $ln, $x)) $o['tip'] = trim($x[1]);
+    elseif (preg_match('/^\s*check\s*:\s*(\{.*\})\s*$/i', $ln, $x)) { $c = json_decode($x[1], true); if (is_array($c) && trim((string)($c['q'] ?? '')) !== '') $o['checks'][] = ['q' => (string)$c['q'], 'answer' => (string)($c['answer'] ?? ''), 'why' => (string)($c['why'] ?? '')]; }
+  }
+  return $o;
+}
+/** Math in a recap, readable in an email: $\frac{1}{2}$ → 1/2, \cdot → ·, x^2 → x². */
+function mh_ai_mailmath(string $s): string {
+  $s = preg_replace('/\\[dt]?frac\s*\{([^{}]*)\}\s*\{([^{}]*)\}/', '($1)/($2)', $s);
+  $s = str_replace(['\\cdot', '\\times', '\\div', '\\pi', '\\sqrt', '\\le', '\\ge', '\\ne', '\\left', '\\right', '$'], ['·', '×', '÷', 'π', '√', '≤', '≥', '≠', '', '', ''], $s);
+  $s = preg_replace('/\^\{?2\}?/', '²', $s); $s = preg_replace('/\^\{?3\}?/', '³', $s);
+  $s = preg_replace('/\(([0-9a-z]+)\)\/\(([0-9a-z]+)\)/i', '$1/$2', $s);
+  return trim(str_replace(['{', '}', '\\'], ['', '', ''], $s));
+}
+function mh_ai_recap_mail(array $u, array $parts, string $who, string $cid): array {
+  $cfg = mh_config(); $site = $cfg['site_name'] ?? 'Mathub'; $url = rtrim((string)(($cfg['site_url'] ?? '') ?: ('https://' . ($_SERVER['HTTP_HOST'] ?? 'mathub.space'))), '/');
+  $e = fn($x) => htmlspecialchars(mh_ai_mailmath((string)$x), ENT_QUOTES);
+  $topic = $parts['topic'] !== '' ? $parts['topic'] : 'your call';
+  $subject = "Your call with $who: " . mh_ai_mailmath($topic);
+  $text = [mh_ai_mailmath($parts['intro']), '']; $h = [];
+  if ($parts['did']) { $text[] = 'What you did:'; foreach ($parts['did'] as $d) $text[] = '- ' . mh_ai_mailmath($d); $h[] = '<p style="margin:0 0 6px;font-weight:700">What you did</p><ul style="margin:0 0 16px;padding-left:20px">' . implode('', array_map(fn($d) => '<li>' . $e($d) . '</li>', $parts['did'])) . '</ul>'; }
+  if ($parts['tip'] !== '') { $text[] = ''; $text[] = mh_ai_mailmath($parts['tip']); $h[] = '<p style="margin:0 0 16px;padding:12px 14px;background:#FFF4DB;border-radius:12px">' . $e($parts['tip']) . '</p>'; }
+  if ($parts['checks']) { $text[] = ''; $text[] = 'Three to try:'; foreach ($parts['checks'] as $i => $c) $text[] = ($i + 1) . '. ' . mh_ai_mailmath($c['q']); $h[] = '<p style="margin:0 0 6px;font-weight:700">Three to try</p><ol style="margin:0 0 16px;padding-left:22px">' . implode('', array_map(fn($c) => '<li style="margin-bottom:4px">' . $e($c['q']) . '</li>', $parts['checks'])) . '</ol>'; }
+  if ($parts['next'] !== '') { $text[] = ''; $text[] = mh_ai_mailmath($parts['next']); $h[] = '<p style="margin:0 0 16px">' . $e($parts['next']) . '</p>'; }
+  $go = $url . '/#/mistakes?retry=1';
+  $text[] = ''; $text[] = "Practice them on $site: $go";
+  if ($parts['checks']) { $text[] = ''; $text[] = 'Answers: ' . implode('; ', array_map(fn($c, $i) => ($i + 1) . '. ' . mh_ai_mailmath($c['answer']), $parts['checks'], array_keys($parts['checks']))); }
+  $text[] = ''; $text[] = "You get this after each call with Bo. Turn it off in Settings → Account.";
+  $html = '<!doctype html><html><body style="margin:0;background:#EEF4FF"><div style="background:#EEF4FF;padding:24px 12px;font-family:Helvetica Neue,Helvetica,Arial,sans-serif"><div style="max-width:520px;margin:0 auto;background:#fff;border:2px solid #D6E2F5;border-radius:20px;overflow:hidden">'
+    . '<div style="background:#1A64D6;padding:16px 24px;color:#fff;font-size:20px;font-weight:800">' . htmlspecialchars($site, ENT_QUOTES) . '</div>'
+    . '<div style="padding:24px;color:#0F172A;font-size:16px;line-height:1.55"><h1 style="margin:0 0 6px;font-size:22px">Your call with ' . htmlspecialchars($who, ENT_QUOTES) . '</h1><p style="margin:0 0 16px;color:#475569">' . $e($topic) . '</p>'
+    . ($parts['intro'] !== '' ? '<p style="margin:0 0 16px;font-style:italic">' . $e($parts['intro']) . '</p>' : '') . implode('', $h)
+    . '<p style="margin:20px 0 8px"><a href="' . htmlspecialchars($go, ENT_QUOTES) . '" style="display:inline-block;background:#1A64D6;color:#fff;text-decoration:none;font-weight:700;padding:12px 20px;border-radius:12px;border-bottom:4px solid #1450B0">Practice them on ' . htmlspecialchars($site, ENT_QUOTES) . ' &rarr;</a></p>'
+    . ($parts['checks'] ? '<p style="margin:18px 0 0;font-size:13px;color:#64748B">Answers: ' . implode('; ', array_map(fn($c, $i) => ($i + 1) . '. ' . $e($c['answer']), $parts['checks'], array_keys($parts['checks']))) . '</p>' : '')
+    . '</div><div style="padding:14px 24px 18px;border-top:1px solid #E2E8F0;color:#64748B;font-size:13px">You get this after each call with Bo. Turn it off in Settings &rarr; Account.</div></div></div></body></html>';
+  return [$subject, implode("\n", $text), $html];
+}
+
 /* ---------- live calls (OpenAI's Realtime API) ---------- */
 /** Sets a call up: the browser's offer and the session go to OpenAI, its answer comes back. [status, answer, call id]. */
 function mh_ai_rtc_call(array $V, string $sdp, array $session): array {
@@ -496,7 +588,22 @@ function mh_ai_live_today(int $uid): int {
 function mh_ai_live_left(int $uid, array $V): int { return max(0, min($V['live_monthly'] - mh_ai_usage($uid)['live'], $V['live_daily'] - mh_ai_live_today($uid))); }
 /** The free call time with Bo (once, for everyone without Max): seconds used, and seconds left. */
 function mh_ai_trial_used(int $uid): int { $st = mh_ai_db()->prepare('SELECT used FROM ai_trial WHERE user_id = ?'); $st->execute([$uid]); return (int)$st->fetchColumn(); }
-function mh_ai_trial_left(int $uid, array $V): int { return max(0, $V['trial'] - mh_ai_trial_used($uid)); }
+/** Counts for the admin's Bo quality tab, by day (the metrics table, keys bo_*): answers, what the math check
+    caught (the student's slips and Bo's), what was fixed before it was kept, calls, recaps and thumbs down. */
+function mh_ai_q(string $key, int $n = 1): void { if ($n <= 0) return; try { require_once __DIR__ . '/social.php'; require_once __DIR__ . '/growth.php'; mh_metric('bo_' . $key, $n); } catch (Throwable $e) {} }
+const MH_AI_Q_KEYS = ['answers' => 'Answers in the chat and basic voice', 'chat_you' => 'Slips by students, caught (chat)', 'chat_bo' => 'Slips by Bo, caught (chat)', 'chat_fixed' => 'Rewritten before they saw it', 'call_you' => 'Slips by students, caught (calls)', 'call_bo' => 'Slips by Bo, caught (calls)', 'call_page' => 'Pages on calls held back until fixed', 'calls' => 'Live calls', 'recaps' => 'Recaps after calls', 'recap_fixed' => 'Recaps rewritten before they were kept', 'flags' => 'Marked “not right” by students'];
+/** The free seconds an account has: the free minutes everyone gets, plus what invites earned (none while the free minutes are off). */
+function mh_ai_trial_total(int $uid, array $V): int { if ($V['trial'] <= 0) return 0; $st = mh_ai_db()->prepare('SELECT bonus FROM ai_trial WHERE user_id = ?'); $st->execute([$uid]); return $V['trial'] + (int)$st->fetchColumn(); }
+function mh_ai_trial_left(int $uid, array $V): int { return max(0, mh_ai_trial_total($uid, $V) - mh_ai_trial_used($uid)); }
+/** Invites: a classmate who joins through your link gives you both more free minutes with Bo (ai_invite_minutes each,
+    up to MH_AI_INVITE_CAP seconds earned per account). Returns the seconds added. */
+const MH_AI_INVITE_CAP = 3600;
+function mh_ai_trial_bonus(int $uid, int $secs): int {
+  $db = mh_ai_db(); $db->prepare('INSERT OR IGNORE INTO ai_trial (user_id, used, first) VALUES (?, 0, ?)')->execute([$uid, time()]);
+  $st = $db->prepare('SELECT bonus FROM ai_trial WHERE user_id = ?'); $st->execute([$uid]); $add = max(0, min($secs, MH_AI_INVITE_CAP - (int)$st->fetchColumn()));
+  if ($add) $db->prepare('UPDATE ai_trial SET bonus = bonus + ? WHERE user_id = ?')->execute([$add, $uid]);
+  return $add;
+}
 function mh_ai_trial_add(int $uid, int $secs): void {
   $db = mh_ai_db(); $db->prepare('INSERT OR IGNORE INTO ai_trial (user_id, used, first) VALUES (?, 0, ?)')->execute([$uid, time()]);
   $db->prepare('UPDATE ai_trial SET used = used + ? WHERE user_id = ?')->execute([max(0, $secs), $uid]);
@@ -510,16 +617,18 @@ function mh_ai_trial_call(int $uid, $lid, array $V): bool {
 /** Without Max: a call goes on only while free minutes are left; otherwise the answer names Max. */
 function mh_ai_trial_or_fail(int $uid, array $V): void {
   if ($V['trial'] <= 0) mh_fail('Talking with Bo is part of Mathub Max.', 402, ['plan' => 'max']);
-  if (mh_ai_trial_left($uid, $V) <= 0) mh_fail('You have used your ' . intdiv($V['trial'], 60) . ' free minutes with Bo. Calls with Bo are part of Mathub Max.', 402, ['plan' => 'max', 'trial_over' => true]);
+  if (mh_ai_trial_left($uid, $V) <= 0) mh_fail('You have used your ' . intdiv(mh_ai_trial_total($uid, $V), 60) . ' free minutes with Bo. Calls with Bo are part of Mathub Max.', 402, ['plan' => 'max', 'trial_over' => true]);
 }
 /** Free minutes as the page shows them, for an account without Max. */
-function mh_ai_trial_public(int $uid, array $V): array { $used = mh_ai_trial_used($uid); return ['minutes' => intdiv($V['trial'], 60), 'left' => max(0, $V['trial'] - $used), 'used' => $used]; }
+function mh_ai_trial_public(int $uid, array $V): array { $used = mh_ai_trial_used($uid); $all = mh_ai_trial_total($uid, $V); return ['minutes' => intdiv($all, 60), 'left' => max(0, $all - $used), 'used' => $used, 'bonus' => intdiv($all - $V['trial'], 60), 'invite' => intdiv(mh_ai_invite_secs($V), 60)]; }
+/** The free seconds an invite gives each of you (ai_invite_minutes, 10 by default; 0 turns it off). */
+function mh_ai_invite_secs(array $V): int { return $V['trial'] > 0 ? 60 * max(0, min(60, (int)(mh_config()['ai_invite_minutes'] ?? 10))) : 0; }
 
 const MH_AI_LIVE = <<<'TXT'
-You are Bo, the bobcat tutor from Mathub, on a live voice call with a Montana State University student. You're the best tutor they've ever had, and also like a friend a year ahead of them: relaxed, warm, quick, a bit funny, and really good at explaining. This is a real conversation, not a help desk.
+You are Bo, the bobcat tutor from Mathub, on a live voice call with a Montana State University student. You're the best tutor they've ever had and really good at explaining, in your own character (YOUR CHARACTER below). This is a real conversation, not a help desk.
 
 How you sound:
-- Talk like a person, not an assistant: contractions, everyday words, natural reactions that match what is true ("hmm, not quite", "okay so", "wait, say that again?", and "oh nice" only once you know they got it right). Vary how you start sentences.
+- Talk like a person, not an assistant, in your character: natural reactions that match what is true, never praise you haven't checked. Vary how you start sentences.
 - Never say things like "How can I help you today", "Great question", "I'd be happy to help", "As an AI" or "Let me know if you have any other questions".
 - Match their energy. Stressed: slow down, reassure, smaller steps. Joking around: joke back a little, then back to the work.
 - If they cut in, stop and go with what they said. Don't start over.
@@ -556,18 +665,23 @@ More:
 - Stay on studying, their classes and student life. If you're not sure about something, say so.
 - Speak English unless they talk to you in another language.
 
-Start of the call: you speak first. One quick, warm line, like you're glad they called: their first name if you know it, maybe something real that's coming up, and what they want to get into. Under about 15 words.
+Start of the call: you speak first, in character (HOW YOU OPEN below). Their first name if you know it. Under about 15 words.
 TXT;
 /** Bo's instructions for a live call: his persona, then what he knows (class, today, progress, notes, the recent chat). */
 function mh_ai_live_instructions(int $uid, string $cid, ?array $C, array $in): string {
   $today = preg_match('/^\d{4}-\d{2}-\d{2}$/', (string)($in['today'] ?? '')) ? (string)$in['today'] : gmdate('Y-m-d');
-  $notes = mh_ai_notes($uid); $parts = [MH_AI_LIVE . "\n" . MH_AI_TRUTH . "\n\n" . MH_AI_TEACH . "\n\n" . MH_AI_LIVE_REST];
+  $notes = mh_ai_notes($uid); $ch = mh_ai_character(mh_ai_character_id($in)); $parts = [MH_AI_LIVE . "\n" . $ch['who'] . "\n\n" . MH_AI_TRUTH . "\n\n" . MH_AI_TEACH . "\n\n" . MH_AI_LIVE_REST . "\nHOW YOU OPEN: " . $ch['hello']];
+  if (($in['focus'] ?? '') === 'exam') $parts[] = MH_AI_EXAM_CALL;
   if ($C) $parts[] = mh_ai_digest($C);
   $parts[] = implode("\n", array_filter(['TODAY: ' . $today, $C ? mh_ai_upcoming($C, $today) : '', mh_ai_snapshot($in['snapshot'] ?? null), $notes ? "WHAT YOU REMEMBER ABOUT THEM:\n- " . implode("\n- ", $notes) : '']));
   $turns = array_slice(mh_ai_turns($uid, $cid), -6);
   if ($turns) { $L = ['YOUR LAST FEW MESSAGES WITH THEM (chat or calls):']; foreach ($turns as $t) $L[] = (($t['r'] ?? '') === 'b' ? 'Bo: ' : 'Them: ') . mh_ai_clip(mh_ai_unboard((string)($t['t'] ?? '')), 240); $parts[] = implode("\n", $L); }
   return implode("\n\n", $parts);
 }
+/** The review call that the heads-up before an exam opens (api/growth.php, mh_exam_nudge_tick; Ask Bo's ?call=exam). */
+const MH_AI_EXAM_CALL = <<<'TXT'
+THIS CALL IS AN EXAM REVIEW: they came from the heads-up that an exam is a few days away (UPCOMING and READINESS, in what you know about them, say which one and when). Open by naming the exam and its day in one line, in character, then go straight to their weakest topic for it (WEAKEST TOPICS). Teach by asking: one exam-style question at a time; they work it out on the board or out loud; check it (check_math) and fix what slipped, briefly; then the next weakest topic. Explain at length only what they get wrong. When they want to stop, or after about fifteen minutes, name the one topic to practise before the exam.
+TXT;
 /** A message without its board pages (each one becomes a mention of its title) or notes, for short recaps. */
 function mh_ai_unboard(string $t): string {
   $t = preg_replace('/\[board\+?:\s*([^\]\n]*)\]\s*\n.*?\[\/board\]/is', ' [on the board: $1] ', $t);
@@ -761,7 +875,7 @@ function mh_ai_route(string $route, array $in, array $cfg, string $ip): void {
       if ($what === 'chat') { $db->prepare('DELETE FROM ai_threads WHERE user_id = ? AND cid = ?')->execute([$uid, mh_ai_cid($in['class'] ?? '')]); }
       elseif ($what === 'note') { $notes = mh_ai_notes($uid); $i = (int)($in['i'] ?? -1); if (isset($notes[$i])) { array_splice($notes, $i, 1); mh_ai_save_notes($uid, $notes); } }
       elseif ($what === 'notes') { $db->prepare('DELETE FROM ai_notes WHERE user_id = ?')->execute([$uid]); }
-      elseif ($what === 'all') { foreach (['ai_threads', 'ai_notes'] as $t) $db->prepare("DELETE FROM $t WHERE user_id = ?")->execute([$uid]); }
+      elseif ($what === 'all') { foreach (['ai_threads', 'ai_notes', 'ai_flags'] as $t) $db->prepare("DELETE FROM $t WHERE user_id = ?")->execute([$uid]); }
       else mh_fail('Nothing to forget.', 400);
       mh_json(['ok' => true, 'notes' => mh_ai_notes($uid)]);
     }
@@ -792,7 +906,9 @@ function mh_ai_route(string $route, array $in, array $cfg, string $ip): void {
       $notes = mh_ai_notes($uid);
       $now = array_filter(['TODAY: ' . $today, $C ? mh_ai_upcoming($C, $today) : '', mh_ai_snapshot($in['snapshot'] ?? null), $notes ? "WHAT BO REMEMBERS ABOUT THEM:\n- " . implode("\n- ", $notes) : '']);
       $system[] = ['type' => 'text', 'text' => implode("\n", $now)];
+      $system[] = ['type' => 'text', 'text' => mh_ai_character(mh_ai_character_id($in))['who']];   // who he is (assets/bo-characters.js)
       if ($voice) $system[] = ['type' => 'text', 'text' => MH_AI_VOICE];
+      if ($voice && ($in['focus'] ?? '') === 'exam') $system[] = ['type' => 'text', 'text' => MH_AI_EXAM_CALL];
       if ($pad) $system[] = ['type' => 'text', 'text' => str_replace(['%COLS%', '%ROWS%'], [(string)$pad['cols'], (string)$pad['rows']], MH_AI_PAD)];
       elseif ($img && !empty($in['sketch'])) $system[] = ['type' => 'text', 'text' => MH_AI_SKETCH];
       if (($lang = mh_ai_lang($in)) !== '') $system[] = ['type' => 'text', 'text' => $lang];
@@ -804,8 +920,9 @@ function mh_ai_route(string $route, array $in, array $cfg, string $ip): void {
       if ($msgs && end($msgs)['role'] === 'user') array_pop($msgs);
       $content = []; if ($img) $content[] = ['type' => 'image', 'source' => ['type' => 'base64', 'media_type' => $img['type'], 'data' => $img['data']]];
       if ($pdf) $content[] = ['type' => 'document', 'source' => ['type' => 'base64', 'media_type' => 'application/pdf', 'data' => $pdf['data']]];
+      $mcWrong = [];
       // the math check (api/mathcheck.php): what they wrote or said, checked exactly, with the problem and question from Bo's last message
-      if ($q !== '') { require_once __DIR__ . '/mathcheck.php'; $lastBo = ''; foreach (array_reverse($turns) as $t) if (($t['r'] ?? '') === 'b') { $lastBo = (string)($t['t'] ?? ''); break; } $mc = mh_mc_note($q, $lastBo); if ($mc !== '') $system[] = ['type' => 'text', 'text' => $mc]; }
+      if ($q !== '') { require_once __DIR__ . '/mathcheck.php'; $lastBo = ''; foreach (array_reverse($turns) as $t) if (($t['r'] ?? '') === 'b') { $lastBo = (string)($t['t'] ?? ''); break; } $mcr = mh_mc_check_message($q, $lastBo); $mcWrong = $mcr['wrong']; mh_ai_q($voice ? 'call_you' : 'chat_you', count($mcWrong)); if ($mcr['note'] !== '') $system[] = ['type' => 'text', 'text' => $mcr['note']]; }
       $content[] = ['type' => 'text', 'text' => $q !== '' ? $q : 'Can you help me with this?'];
       $msgs[] = ['role' => 'user', 'content' => $content];
       @set_time_limit(90);
@@ -821,16 +938,18 @@ function mh_ai_route(string $route, array $in, array $cfg, string $ip): void {
       // Typed: he writes the reply again with the slip named (the chat shows the fixed one). Out loud: it was spoken as it
       // streamed, so he says the correction too.
       if ($reply !== '') { require_once __DIR__ . '/mathcheck.php'; $slips = mh_mc_reply_slips($reply);
+        if ($slips) mh_ai_q($voice ? 'call_bo' : 'chat_bo');
         if ($slips && $voice) { $fix = 'Wait, my slip: ' . mh_mc_say($slips[0]) . '.'; if ($stream) mh_ai_emit(['t' => 'd', 'x' => "\n\n" . $fix]); $reply .= "\n\n" . $fix; }
         elseif ($slips) {
           $again = $msgs; $again[] = ['role' => 'assistant', 'content' => $reply]; $again[] = ['role' => 'user', 'content' => 'MATH CHECK (exact, worked out by the app) on your reply: ' . implode('; ', $slips) . '. Write your whole reply again with that fixed, in the same format. Do not mention this note.'];
-          try { $r2 = mh_ai_call($A, $A['tutor_model'], $system, $again, $max, 60); $t2 = trim(preg_replace('/^\s*\[remember:.*\]\s*$/mi', '', (string)$r2['text'])); $r['in'] += $r2['in']; $r['out'] += $r2['out']; if ($t2 !== '' && !mh_mc_reply_slips($t2)) $reply = $t2; } catch (Throwable $e) {}
+          try { $r2 = mh_ai_call($A, $A['tutor_model'], $system, $again, $max, 60); $t2 = trim(preg_replace('/^\s*\[remember:.*\]\s*$/mi', '', (string)$r2['text'])); $r['in'] += $r2['in']; $r['out'] += $r2['out']; if ($t2 !== '' && !mh_mc_reply_slips($t2)) { $reply = $t2; mh_ai_q('chat_fixed'); } } catch (Throwable $e) {}
         }
       }
       if ($reply === '') $reply = 'Sorry, I lost my train of thought. Could you ask that again?';
       $turns[] = array_merge(['r' => 'u', 't' => ($img ? ($pad || !empty($in['sketch']) ? '[board] ' : '[photo] ') : '') . ($pdf ? '[pdf: ' . str_replace(']', ')', $pdfName) . '] ' : '') . ($from !== '' ? '[from: ' . str_replace(']', ')', $from) . '] ' : '') . $q, 'at' => time()], $voice ? ['v' => 1] : []); $turns[] = array_merge(['r' => 'b', 't' => $reply, 'at' => time()], $voice ? ['v' => 1] : []);
-      mh_ai_save_turns($uid, $cid, $turns); mh_ai_count($uid, 'tutor', $r['in'], $r['out']);
-      $out = ['ok' => true, 'reply' => $reply, 'remembered' => $remembered, 'cut' => in_array($r['stop'], ['max_tokens', 'cut'], true), 'usage' => ['tutor' => $use['tutor'] + 1, 'tutor_limit' => $A['tutor_monthly']]];
+      mh_ai_save_turns($uid, $cid, $turns); mh_ai_count($uid, 'tutor', $r['in'], $r['out']); mh_ai_q('answers');
+      $out = ['ok' => true, 'reply' => $reply, 'at' => $turns[count($turns) - 1]['at'], 'remembered' => $remembered, 'cut' => in_array($r['stop'], ['max_tokens', 'cut'], true), 'usage' => ['tutor' => $use['tutor'] + 1, 'tutor_limit' => $A['tutor_monthly']]];
+      if (!empty($mcWrong)) { $out['slips'] = array_column($mcWrong, 'msg'); $out['practice'] = mh_mc_practice($mcWrong); }   // what the math check caught: for the call's recap and the mistakes notebook
       if ($stream) { mh_ai_emit(['t' => 'done'] + $out); exit; }
       mh_json($out);
     }
@@ -886,23 +1005,27 @@ function mh_ai_route(string $route, array $in, array $cfg, string $ip): void {
       $sdp = str_replace("\r\n", "\n", (string)($in['sdp'] ?? '')); if (strncmp($sdp, 'v=0', 3) !== 0 || strlen($sdp) > 30000) mh_fail('The call could not start.', 400);
       $sdp = str_replace("\n", "\r\n", $sdp);
       $cid = mh_ai_cid($in['class'] ?? ''); $C = mh_ai_class($u, $cid);
-      $voice = is_string($in['voice'] ?? null) && isset(MH_AI_LIVE_VOICES[$in['voice']]) ? $in['voice'] : $V['live_voice'];
-      $speed = round(max(0.8, min(1.25, (float)($in['speed'] ?? 1))), 2); $eager = in_array($in['eagerness'] ?? '', ['low', 'auto', 'high'], true) ? $in['eagerness'] : 'auto';
+      $ch = mh_ai_character(mh_ai_character_id($in));   // his character: his voice and pace unless they picked others
+      $voice = is_string($in['voice'] ?? null) && isset(MH_AI_LIVE_VOICES[$in['voice']]) ? $in['voice'] : $ch['live'];
+      $speed = round(max(0.8, min(1.25, (float)($in['speed'] ?? $ch['speed']))), 2); $eager = in_array($in['eagerness'] ?? '', ['low', 'auto', 'high'], true) ? $in['eagerness'] : 'auto';
       $hint = 'A college student on a call with their tutor about math and their class.';
       if ($C) { $w = [mh_ai_plain($C['code'] ?? '', 20), mh_ai_plain($C['name'] ?? '', 60)]; foreach (array_slice((array)($C['SECTIONS'] ?? []), 0, 40) as $sec) if (is_array($sec)) $w[] = mh_ai_plain($sec['title'] ?? '', 40); $hint .= ' Topics: ' . mb_substr(implode(', ', array_filter($w)), 0, 600); }
       $sys = mh_ai_live_instructions($uid, $cid, $C, $in);
       if (($lang = mh_ai_lang($in)) !== '') $sys .= "\n\n" . $lang . ' On the call, speak it with a natural accent.';
-      $full = ['type' => 'realtime', 'model' => $V['live_model'], 'instructions' => $sys, 'output_modalities' => ['audio'], 'max_output_tokens' => 1600,
+      $model = !$trial && $V['live_model_max'] !== '' ? $V['live_model_max'] : $V['live_model'];   // the stronger model for Max, the light one for free minutes
+      $full = ['type' => 'realtime', 'model' => $model, 'instructions' => $sys, 'output_modalities' => ['audio'], 'max_output_tokens' => 1600,
         'audio' => ['input' => ['noise_reduction' => ['type' => 'near_field'], 'transcription' => ['model' => 'gpt-4o-mini-transcribe', 'language' => 'en', 'prompt' => $hint], 'turn_detection' => ['type' => 'semantic_vad', 'eagerness' => $eager, 'create_response' => true, 'interrupt_response' => true]],
                     'output' => array_merge(['voice' => $voice], $speed != 1.0 ? ['speed' => $speed] : [])],
         'tools' => mh_ai_live_tools(), 'tool_choice' => 'auto'];
       // the fewest settings that still make a good call, in case the account's model refuses one of the others
-      $lean = ['type' => 'realtime', 'model' => $V['live_model'], 'instructions' => $sys, 'audio' => ['input' => ['transcription' => ['model' => 'gpt-4o-mini-transcribe'], 'turn_detection' => ['type' => 'semantic_vad']], 'output' => ['voice' => $voice]], 'tools' => mh_ai_live_tools()];
+      $lean = ['type' => 'realtime', 'model' => $model, 'instructions' => $sys, 'audio' => ['input' => ['transcription' => ['model' => 'gpt-4o-mini-transcribe'], 'turn_detection' => ['type' => 'semantic_vad']], 'output' => ['voice' => $voice]], 'tools' => mh_ai_live_tools()];
       // one call at a time per account
       foreach ($db->query('SELECT id, call FROM ai_live WHERE ended = 0 AND user_id = ' . $uid)->fetchAll() as $r) { mh_ai_hangup($V, (string)$r['call']); $db->prepare('UPDATE ai_live SET ended = 1 WHERE id = ?')->execute([$r['id']]); }
       @set_time_limit(60);
       [$code, $answer, $call] = mh_ai_rtc_call($V, $sdp, $full);
       if ($code >= 400 && $code < 500 && $code !== 401 && $code !== 429) { error_log('mathub live: ' . $code . ' ' . substr($answer, 0, 300)); [$code, $answer, $call] = mh_ai_rtc_call($V, $sdp, $lean); }
+      // the account cannot use the Max model: the usual one, so the call still happens
+      if ($code >= 400 && $code < 500 && $code !== 401 && $code !== 429 && $model !== $V['live_model']) { error_log('mathub live: ' . $model . ' refused, using ' . $V['live_model']); $full['model'] = $V['live_model']; [$code, $answer, $call] = mh_ai_rtc_call($V, $sdp, $full); }
       if ($code < 200 || $code >= 300 || strncmp(ltrim($answer), 'v=0', 3) !== 0) { error_log('mathub live: ' . $code . ' ' . substr($answer, 0, 300)); mh_fail($code === 429 ? 'Bo is very busy right now. Try the call again in a minute.' : 'Bo could not pick up just now. Try again, or use basic voice.', 502, ['fallback' => true]); }
       $lid = bin2hex(random_bytes(12)); $now = time();
       $db->prepare('INSERT INTO ai_live (id, user_id, cid, call, started, last, trial) VALUES (?, ?, ?, ?, ?, ?, ?)')->execute([$lid, $uid, $cid, $call, $now, $now, $trial ? 1 : 0]);
@@ -934,13 +1057,79 @@ function mh_ai_route(string $route, array $in, array $cfg, string $ip): void {
       if ($trial && (string)$r['call'] === '' && !empty($in['end'])) { $db->prepare('UPDATE ai_live SET ended = 1 WHERE id = ?')->execute([$lid]); mh_json(['ok' => true, 'left' => mh_ai_trial_left($uid, $V), 'end' => true]); }   // a basic voice call hung up
       if ($trial && mh_ai_trial_left($uid, $V) <= 0) {   // the free minutes are up
         mh_ai_hangup($V, (string)$r['call']); $db->prepare('UPDATE ai_live SET ended = 1 WHERE id = ?')->execute([$lid]);
-        mh_json(['ok' => true, 'left' => 0, 'end' => true, 'trial_over' => true, 'why' => 'That was your ' . intdiv($V['trial'], 60) . ' free minutes with Bo. Get Mathub Max to keep calling him.']);
+        mh_json(['ok' => true, 'left' => 0, 'end' => true, 'trial_over' => true, 'why' => 'That was your ' . intdiv(mh_ai_trial_total($uid, $V), 60) . ' free minutes with Bo. Get Mathub Max to keep calling him.']);
       }
       if ($left <= 0) {
         mh_ai_hangup($V, (string)$r['call']); $db->prepare('UPDATE ai_live SET ended = 1 WHERE id = ?')->execute([$lid]);
         mh_json(['ok' => true, 'left' => 0, 'end' => true, 'why' => $V['live_call'] - $secs <= 0 ? 'That was a long one: calls end after ' . round($V['live_call'] / 60) . ' minutes. Call Bo again any time.' : 'That is all the live call time for now. It comes back tomorrow, or on the 1st for the monthly limit.']);
       }
       mh_json(['ok' => true, 'left' => $left]);
+    }
+    case 'ai_flag': {
+      // a thumbs down under one of Bo's answers: the answer and the question before it go to the admin's Bo quality tab
+      mh_method('POST'); $u = mh_require_user(); $uid = (int)$u['id'];
+      mh_rate_or_fail("ai_flag:$uid", 30, 86400, 'Thanks, that is plenty for today.');
+      $cid = mh_ai_cid($in['class'] ?? ''); $at = (int)($in['at'] ?? 0); $turns = mh_ai_turns($uid, $cid); $i = -1;
+      $start = mb_substr(is_string($in['text'] ?? null) ? $in['text'] : '', 0, 60);   // the start of the answer, when several share a second (a call)
+      foreach ($turns as $k => $t) if (($t['r'] ?? '') === 'b' && (int)($t['at'] ?? 0) === $at && ($i < 0 || $start !== '' && str_starts_with((string)($t['t'] ?? ''), $start))) $i = $k;
+      if ($i < 0) mh_fail('That answer is not in your chat any more.', 404);
+      $q = ''; for ($k = $i - 1; $k >= 0; $k--) if (($turns[$k]['r'] ?? '') === 'u') { $q = (string)($turns[$k]['t'] ?? ''); break; }
+      $ans = mh_ai_clip((string)$turns[$i]['t'], 4000); $why = mh_ai_clip(is_string($in['why'] ?? null) ? $in['why'] : '', 500);
+      $st = $db->prepare('SELECT id FROM ai_flags WHERE user_id = ? AND cid = ? AND at = ? AND answer = ?'); $st->execute([$uid, $cid, $at, $ans]); $fid = (int)$st->fetchColumn();
+      if ($fid) { if ($why !== '') $db->prepare('UPDATE ai_flags SET why = ?, status = "open" WHERE id = ?')->execute([$why, $fid]); }   // what was wrong, added after the thumbs down
+      else { $db->prepare('INSERT INTO ai_flags (user_id, cid, at, q, answer, why, voice, created) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')->execute([$uid, $cid, $at, mh_ai_clip($q, 2000), $ans, $why, empty($turns[$i]['v']) ? 0 : 1, time()]); mh_ai_q('flags'); }
+      mh_json(['ok' => true]);
+    }
+    case 'ai_admin_quality': {
+      // the admin's Bo quality tab: the counts by week for the last eight weeks, and the answers marked not right
+      $u = mh_require_user(); if (!mh_is_admin($u)) mh_fail('Administrators only.', 403);
+      if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
+        $id = (int)($in['id'] ?? 0); $status = in_array($in['status'] ?? '', ['open', 'done'], true) ? $in['status'] : 'done';
+        $db->prepare('UPDATE ai_flags SET status = ? WHERE id = ?')->execute([$status, $id]);
+      }
+      require_once __DIR__ . '/social.php'; $from = mh_local_date(time() - 55 * 86400);
+      $st = $db->prepare("SELECT day, key, n FROM metrics WHERE key LIKE 'bo\_%' ESCAPE '\' AND day >= ? ORDER BY day"); $st->execute([$from]);
+      $weeks = []; $total = array_fill_keys(array_keys(MH_AI_Q_KEYS), 0);
+      foreach ($st->fetchAll() as $m) { $k = substr($m['key'], 3); if (!isset($total[$k])) continue; $w = (new DateTime($m['day']))->modify('monday this week')->format('Y-m-d'); $weeks[$w][$k] = ($weeks[$w][$k] ?? 0) + (int)$m['n']; $total[$k] += (int)$m['n']; }
+      ksort($weeks); $open = (int)$db->query("SELECT COUNT(*) FROM ai_flags WHERE status = 'open'")->fetchColumn();
+      $rows = $db->query("SELECT f.*, u.name, u.email FROM ai_flags f LEFT JOIN users u ON u.id = f.user_id ORDER BY f.status = 'open' DESC, f.created DESC LIMIT 60")->fetchAll();
+      $flags = array_map(fn($f) => ['id' => (int)$f['id'], 'cid' => $f['cid'], 'q' => $f['q'], 'answer' => $f['answer'], 'why' => $f['why'], 'voice' => (int)$f['voice'] === 1, 'created' => (int)$f['created'], 'status' => $f['status'], 'who' => trim((string)($f['name'] ?? '')) ?: (string)($f['email'] ?? 'a deleted account'), 'email' => (string)($f['email'] ?? '')], $rows);
+      mh_json(['ok' => true, 'labels' => MH_AI_Q_KEYS, 'total' => $total, 'weeks' => $weeks, 'open' => $open, 'flags' => $flags]);
+    }
+    case 'ai_recap': {
+      // after a call (live or basic voice): Bo writes the recap they keep, saves it in the chat, emails it, and hands back
+      // its practice problems for the mistakes notebook
+      mh_method('POST'); $u = mh_require_user(); $uid = (int)$u['id']; $now = time();
+      if (mh_plan($u, $cfg) !== 'max') { $st = $db->prepare('SELECT 1 FROM ai_live WHERE user_id = ? AND trial = 1 AND started >= ?'); $st->execute([$uid, $now - 10800]); if (!$st->fetchColumn()) mh_fail('Call recaps come with calls with Bo.', 402, ['plan' => 'max']); }
+      mh_rate_or_fail("ai_recap:$uid", 24, 86400, 'That is a lot of recaps for one day.');
+      $cid = mh_ai_cid($in['class'] ?? ''); $C = mh_ai_class($u, $cid); $since = max($now - 10800, (int)($in['since'] ?? 0)) - 5;
+      $turns = mh_ai_turns($uid, $cid); $call = array_values(array_filter($turns, fn($t) => !empty($t['v']) && (int)($t['at'] ?? 0) >= $since && empty($t['recap'])));
+      if (count(array_filter($call, fn($t) => ($t['r'] ?? '') === 'u')) < 1 || count($call) < 2) mh_json(['ok' => true, 'recap' => null]);
+      $slips = array_values(array_filter(array_map(fn($x) => mh_ai_clip(is_string($x) ? $x : '', 200), array_slice((array)($in['slips'] ?? []), 0, 6)), 'strlen'));
+      $ch = mh_ai_character(mh_ai_character_id($in));
+      $system = [['type' => 'text', 'text' => MH_AI_BO_FULL]]; if ($C) $system[] = ['type' => 'text', 'text' => mh_ai_digest($C)];
+      $system[] = ['type' => 'text', 'text' => $ch['who']]; $system[] = ['type' => 'text', 'text' => MH_AI_RECAP];
+      if (($lang = mh_ai_lang($in)) !== '') $system[] = ['type' => 'text', 'text' => $lang];
+      $L = []; foreach (array_slice($call, -40) as $t) $L[] = (($t['r'] ?? '') === 'b' ? 'Bo: ' : 'Them: ') . mh_ai_clip(mh_ai_unboard((string)($t['t'] ?? '')), 400);
+      $msg = "THE CALL (oldest first):\n" . implode("\n", $L) . ($slips ? "\n\nMATH CHECK caught on the call (exact): " . implode('; ', $slips) : "\n\nMATH CHECK caught nothing wrong on the call.") . "\n\nWrite the recap now.";
+      @set_time_limit(90);
+      $r = mh_ai_call($A, $A['tutor_model'], $system, [['role' => 'user', 'content' => $msg]], 900, 60); $reply = trim($r['text']);
+      require_once __DIR__ . '/mathcheck.php';
+      if ($reply !== '' && ($bad = mh_mc_reply_slips($reply))) {   // his answers are checked like any page of his
+        try { $r2 = mh_ai_call($A, $A['tutor_model'], $system, [['role' => 'user', 'content' => $msg], ['role' => 'assistant', 'content' => $reply], ['role' => 'user', 'content' => 'MATH CHECK (exact, worked out by the app) on your recap: ' . implode('; ', $bad) . '. Write the whole recap again with that fixed, in the same shape. Do not mention this note.']], 900, 60); $t2 = trim($r2['text']); $r['in'] += $r2['in']; $r['out'] += $r2['out']; if ($t2 !== '' && !mh_mc_reply_slips($t2)) { $reply = $t2; mh_ai_q('recap_fixed'); } } catch (Throwable $e) {}
+      }
+      if ($reply === '') mh_fail('Bo could not write the recap just now.', 502);
+      mh_ai_q('recaps');
+      $turns[] = ['r' => 'b', 't' => $reply, 'at' => $now, 'v' => 1, 'recap' => 1]; mh_ai_save_turns($uid, $cid, $turns); mh_ai_count($uid, 'tutor', $r['in'], $r['out']);
+      $parts = mh_ai_recap_parts($reply);
+      // the practice problems with an answer that is a number, for the mistakes notebook
+      $practice = [];
+      foreach ($parts['checks'] as $c) { $v = mh_mc_val(mh_mc_edge(mh_mc_norm($c['answer']), false)); if (is_finite($v)) $practice[] = ['prompt' => $c['q'], 'answer' => $v, 'tex' => mh_mc_fmt_tex($v), 'why' => $c['why']]; }
+      $emailed = false;
+      if ((int)($u['recap_email'] ?? 1) === 1 && (int)($u['verified'] ?? 0) === 1 && !str_ends_with((string)$u['email'], '@system.local')) {
+        require_once __DIR__ . '/mailer.php'; [$sub, $txt, $html] = mh_ai_recap_mail($u, $parts, $ch['name'], $cid); $emailed = mh_send_mail($cfg, $u['email'], $sub, $txt, $html)['ok'];
+      }
+      mh_json(['ok' => true, 'recap' => $reply, 'topic' => $parts['topic'], 'practice' => $practice, 'emailed' => $emailed]);
     }
     case 'ai_live_log': {
       // what was said on the call goes into the chat with Bo, his new notes into his notes; end: the call is over
@@ -957,6 +1146,8 @@ function mh_ai_route(string $route, array $in, array $cfg, string $ip): void {
       foreach (array_slice(is_array($in['notes'] ?? null) ? $in['notes'] : [], 0, 4) as $f) { $f = mh_ai_clip(is_string($f) ? $f : '', 140); if ($f !== '' && !in_array($f, $notes, true)) { $notes[] = $f; $added = true; } }
       if ($added) mh_ai_save_notes($uid, $notes);
       if (!empty($in['end']) && !(int)$r['ended']) {
+        $mc = is_array($in['mc'] ?? null) ? $in['mc'] : [];   // what the math check caught on the call (assets/talk.js)
+        mh_ai_q('calls'); foreach (['you' => 'call_you', 'bo' => 'call_bo', 'page' => 'call_page'] as $k => $key) mh_ai_q($key, max(0, min(50, (int)($mc[$k] ?? 0))));
         $now = time(); $d = max(0, min(45, $now - (int)$r['last'])); mh_ai_add($uid, 'live', $d);
         $db->prepare('UPDATE ai_live SET secs = secs + ?, last = ?, ended = 1 WHERE id = ?')->execute([$d, $now, $lid]);
         mh_ai_hangup($V, (string)$r['call']);

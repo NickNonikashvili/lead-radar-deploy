@@ -17,13 +17,13 @@
   const clean = q => ({ type: q.type, prompt: String(q.prompt || ''), options: q.type === 'mc' ? (q.options || []).map(String) : undefined, answer: q.answer, answerTex: q.answerTex, explanation: String(q.explanation || ''), tol: q.tol, topic: q.topic });
   const keyOf = q => { let h = 0; const s = String(q.prompt || '') + '|' + (q.type === 'mc' ? (q.options || []).join('|') : ''); for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0; return 'm' + (h >>> 0).toString(36); };
 
-  App.recordMistake = function (q, course, src = 'practice') {
+  App.recordMistake = function (q, course, src = 'practice', now0) {   // now0: due right away (Bo's practice after a call)
     const cid = course || (App.D && App.D.id); if (!cid || !q || !q.prompt) return;
     const now = Date.now(); const k = keyOf(q);
     store.poke(cid, d => {
       const list = Array.isArray(d.mistakes) ? d.mistakes : (d.mistakes = []); const cur = list.find(m => m.k === k);
-      if (cur) { cur.misses++; cur.wins = 0; cur.at = now; cur.due = startOfDay(now) + DAY; cur.q = clean(q); }
-      else { list.push({ k, t: q.topic, q: clean(q), at: now, due: startOfDay(now) + DAY, wins: 0, misses: 1, src }); }
+      if (cur) { cur.misses++; cur.wins = 0; cur.at = now; cur.due = now0 ? Math.min(cur.due, now) : startOfDay(now) + DAY; cur.q = clean(q); }
+      else { list.push({ k, t: q.topic, q: clean(q), at: now, due: now0 ? now : startOfDay(now) + DAY, wins: 0, misses: 1, src }); }
       if (list.length > MAX) { list.sort((a, b) => a.at - b.at); list.splice(0, list.length - MAX); }
     });
   };

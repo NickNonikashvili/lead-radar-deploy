@@ -100,11 +100,13 @@ return [
   // The mini model keeps it to a few cents a minute; 'gpt-realtime-2.1' sounds the same and reasons better, at
   // several times the price. Without the key, calls fall back to basic voice (the browser hears, Claude answers).
   'ai_live_model'     => 'gpt-realtime-2.1-mini',
+  'ai_live_model_max' => 'gpt-realtime-2.1',   // Max members' calls (free minutes keep ai_live_model); empty: the same model for everyone
   'ai_live_voice'     => 'cedar',    // cedar, marin, ash, ballad, coral, sage or verse; students can pick another
   'ai_live_monthly'   => 300,        // minutes of live calls per account per month
   'ai_live_daily'     => 90,         // minutes per day
   'ai_live_call'      => 30,         // minutes per call (Bo can be called again right away)
   'ai_trial_minutes'  => 10,         // free call minutes with Bo, once, for every account without Max (0 turns it off)
+  'ai_invite_minutes' => 10,         // more free minutes for both, when a classmate joins through your invite link (0 turns it off; up to 60 per account)
 
   // Storage. Keep the database inside api/data (protected by .htaccess) or move it above public_html.
   'db_path'         => __DIR__ . '/data/mathub.sqlite',

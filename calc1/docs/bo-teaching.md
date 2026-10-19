@@ -72,6 +72,56 @@ on a call Bo now:
 Calls can also use more output per turn now (`max_output_tokens` 1600), so a full explanation and a drawing fit
 in one answer.
 
+## Bo's characters
+
+Students found the old Bo too nice: friendly to a fault, quick to praise. Bo now has a character, which each
+student picks (`assets/bo-characters.js`; the words he is given are in `api/ai.php`, `mh_ai_character`):
+
+| Character | Manner | Live voice, pace |
+|---|---|---|
+| **Professor Bo** (default) | An 80-year-old Harvard professor: exacting, dry, hard to impress; praise is rare and earned; precise language; an occasional story from fifty years of teaching | ash, 0.9 |
+| Coach Bo | Practice like training: short, loud, fast, no excuses, reps | verse, 1.1 |
+| Detective Bo | Every problem a case, every mistake a clue; asks what the evidence says | sage, 1.0 |
+| Zen Bo | Calm and patient, for stressful days | ballad, 0.9 |
+| Buddy Bo | The old Bo: a friend a year ahead, warm, a little funny | cedar, 1.0 |
+
+The character changes **how** he talks, never **what is true**: every character gets the same truth rules
+(MH_AI_TRUTH), teaching rules and the math check, and the same "never agree with something wrong". A student's
+own voice and speed (call settings) win over the character's. The character goes into the chat, basic voice,
+live calls (with `HOW YOU OPEN`, his own way to start the call) and the recap.
+
+## After a call: the recap
+
+When a call ends (30 seconds or more, and the student said something), the page asks `ai_recap`. Bo gets the call
+as text and the slips the app's math check caught, and writes, in character, one line, a page (`Call recap:
+topic`: what you did, the slip to watch, exactly three `check:` lines with typed answers) and a next step. The
+recap's own answers go through the math check (`mh_mc_reply_slips`, which reads `check:` lines too); a wrong one
+gets one rewrite. The recap is saved in the chat, emailed (unless Settings → Account says no), and its numeric
+problems go into the mistakes notebook, due now, with the slips the app caught on the call.
+
+## Before an exam: the review call
+
+Three days before an exam in a student's classes (`mh_exam_nudge_tick`), Mathub emails them once (and sends a
+push if they turned those on) with a link to `#/tutor/<class>?call=exam`. That opens a call whose instructions
+add MH_AI_EXAM_CALL: name the exam and its day, start with the weakest topic, one exam-style question at a time,
+check it with `check_math`, short explanations of what went wrong, and end by naming the one topic to practise.
+
+## Study rooms
+
+A student on a call can open a study room (`api/room.php`, `assets/room.js`): up to three classmates join with a
+six-letter code, see the board and captions, write on the board, and type questions. A typed question reaches Bo
+as "(Name, a classmate watching this call in the study room, typed a question for you:) …", so he answers out
+loud on the host's call and can address them by name. Nothing is peer to peer: each side posts its changes and
+polls once a second, which works on shared hosting and campus Wi-Fi.
+
+## How Bo is doing
+
+The admin's **Bo quality** tab (`ai_admin_quality`) shows, by week: answers, the students' slips the math check
+caught, Bo's own slips caught (rewritten before anyone saw them in the chat, corrected out loud on calls, pages
+held back), calls and recaps; and the answers students marked "not right" with the thumbs down, with their
+question and what they said was wrong. Read the queue weekly; recurring kinds of mistakes are prompt or
+math-check work.
+
 ## The board: what Bo can draw
 
 `assets/board-draw.js` draws a picture from a small description Bo writes (JSON after `draw:` in a board page; on a

@@ -247,6 +247,24 @@ const PNG = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwA
   }
   await cn.close();
 
+  // Bo's characters (assets/bo-characters.js): Professor Bo by default; picked in Ask Bo's header or in Settings
+  const [cq, kp] = await open(1360, 900, 'mod.user@montana.edu');
+  await go(kp, '#/tutor/calc', 1800);
+  check('Ask Bo says who Bo is: Professor Bo by default, in glasses and a bow tie', /Professor Bo/.test(await txt(kp, '.bo-char-btn')) && !!(await kp.$('.bo-av svg.bc-professor')));
+  await kp.click('.bo-char-btn'); await kp.waitForTimeout(300);
+  const sheet = await kp.evaluate(() => ({ cards: document.querySelectorAll('#bo-char-sheet .bc-card').length, on: (document.querySelector('#bo-char-sheet .bc-card.on b') || {}).textContent, def: !!document.querySelector('#bo-char-sheet .bc-card.on .bc-def'), focus: document.activeElement && document.activeElement.value }));
+  check('Change opens the five characters, Professor Bo picked and marked default', sheet.cards === 5 && /Professor Bo/.test(sheet.on) && sheet.def && sheet.focus === 'professor', sheet);
+  await kp.click('#bo-char-sheet .bc-card:has(input[value="coach"])'); await kp.waitForTimeout(900);
+  check('picking Coach Bo closes it and changes him: his name, his cap', !(await kp.$('#bo-char-sheet')) && /Coach Bo/.test(await txt(kp, '.bo-char-btn')) && !!(await kp.$('.bo-av svg.bc-coach')) && await kp.evaluate(() => App.settings().boPersona === 'coach'));
+  if (await kp.$('[data-go="agree"]')) { await kp.click('[data-go="agree"]'); await kp.waitForTimeout(1500); }
+  await kp.fill('#bo-q', 'hello coach'); await kp.keyboard.press('Enter'); await kp.waitForTimeout(2500);
+  check('and the chat is Coach Bo from the next message', last().system.some(b => /^YOUR CHARACTER: Coach Bo/.test(b.text)));
+  await go(kp, '#/settings', 1200);
+  check('Settings has Bo’s character too, with Coach Bo picked', !!(await kp.$('#s-bochar .bc-card.on input[value="coach"]')) && (await kp.$$('#s-bochar .bc-card')).length === 5);
+  await kp.click('#s-bochar .bc-card:has(input[value="professor"])'); await kp.waitForTimeout(300);
+  check('and back to Professor Bo there', await kp.evaluate(() => App.settings().boPersona === 'professor'));
+  await cq.close();
+
   // clean up
   const [cc, cl] = await open(1360, 900, 'mod.user@montana.edu');
   await api(cl, 'ai_forget', { what: 'all' }); for (const c of ((await api(cl, 'myclasses')).json.classes || [])) await api(cl, 'myclass_delete', { id: c.id });

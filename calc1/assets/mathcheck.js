@@ -247,7 +247,7 @@
       if (!Number.isFinite(l) || !Number.isFinite(r)) continue;
       if (!close(l, r, 1e-7) && !wrong.some(w => w.v === v)) {
         const near = roots(eq.L, eq.R, v); if (near.some(z => sameAsSaid(z, x, sets[v].src))) continue;   // a rounded answer
-        wrong.push({ kind: 'solve', v, eq: eq.text, said: sets[v].src, saidVal: x, left: l, right: r, msg: `${v} = ${pretty(sets[v].src)} does not solve ${eq.text}: the left side is ${fmt(l)} and the right side is ${fmt(r)}` + (near.length && near.length <= 3 ? ` (${v} = ${near.map(fmt).join(' or ')} does)` : '') });
+        wrong.push({ kind: 'solve', v, eq: eq.text, said: sets[v].src, saidVal: x, left: l, right: r, roots: near, msg: `${v} = ${pretty(sets[v].src)} does not solve ${eq.text}: the left side is ${fmt(l)} and the right side is ${fmt(r)}` + (near.length && near.length <= 3 ? ` (${v} = ${near.map(fmt).join(' or ')} does)` : '') });
       } else if (close(l, r, 1e-7)) right.push({ kind: 'solve', v, eq: eq.text, msg: `${v} = ${fmt(x)} solves ${eq.text}` });
     }
     // a bare number answering a question just asked ("What's 11 minus 3?" … "six")
@@ -342,7 +342,20 @@
     } catch (e) { return { error: 'Could not check that.' }; }
   }
 
-  const API = { norm, parse, claims, question, equations, board, tool, fmt, roots };
+  /* ---------- a practice question for each thing that was wrong (the mistakes notebook): "What is 11 − 3?", "Solve 2x + 3 = 11." ---------- */
+  const tex = s => String(s).replace(/\s+/g, ' ').replace(/\*|·/g, ' \\cdot ').replace(/−/g, '-').trim();
+  const texNum = v => { if (Math.abs(v - Math.round(v)) < 1e-9) return String(Math.round(v)); for (let q = 2; q <= 12; q++) { const p = v * q; if (Math.abs(p - Math.round(p)) < 1e-9 * q) return `${p < 0 ? '-' : ''}\\frac{${Math.abs(Math.round(p))}}{${q}}`; } return String(+v.toPrecision(6)); };
+  function practice(wrong) {
+    const out = [];
+    for (const w of wrong || []) {
+      if (w.kind === 'arith' || w.kind === 'answer') { if (Number.isFinite(w.is)) out.push({ prompt: `What is $${tex(w.expr)}$?`, answer: w.is, tex: texNum(w.is), why: `${pretty(w.expr)} is ${fmt(w.is)}.` }); }
+      else if (w.kind === 'reassign') { if (Number.isFinite(w.firstVal)) out.push({ prompt: `What is $${tex(w.first)}$?`, answer: w.firstVal, tex: texNum(w.firstVal), why: `${pretty(w.first)} is ${fmt(w.firstVal)}.` }); }
+      else if (w.kind === 'solve' && (w.roots || []).length === 1) out.push({ prompt: `Solve $${tex(w.eq)}$ for $${w.v}$.`, answer: w.roots[0], tex: texNum(w.roots[0]), why: `${w.v} = ${fmt(w.roots[0])} makes both sides equal.` });
+    }
+    return out.slice(0, 4);
+  }
+
+  const API = { norm, parse, claims, question, equations, board, tool, fmt, roots, practice };
   if (global.App) global.App.mathCheck = API;
   global.MathubMathCheck = API;
   if (typeof module !== 'undefined' && module.exports) module.exports = API;

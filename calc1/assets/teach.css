@@ -562,3 +562,15 @@ input[type="date"].fx-input, input[type="time"].fx-input, input[type="datetime-l
 .dev-list li { padding: 3px 0; }
 
 @media (prefers-reduced-motion: reduce) { .tc-card { transition: none; } }
+/* admin: Bo quality */
+.bq-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 14px; }
+.bq-tile { display: flex; flex-direction: column; gap: 2px; padding: 14px 16px; border: 1px solid var(--border); border-radius: 14px; background: var(--card); }
+.bq-tile b { font-size: 26px; line-height: 1.1; }
+.bq-tile span { font-weight: 600; }
+.bq-tile small { color: var(--muted); }
+.bq-table th { white-space: normal; min-width: 90px; font-weight: 600; }
+.bq-flag { padding: 12px 0; border-top: 1px solid var(--border); }
+.bq-flag:first-of-type { border-top: 0; }
+.bq-flag.done { opacity: .62; }
+.bq-flag p { margin: 6px 0; }
+.bq-a { white-space: pre-wrap; word-break: break-word; max-height: 320px; overflow: auto; margin: 6px 0 0; padding: 10px 12px; border-radius: 10px; background: var(--surface-2); font: 13.5px/1.5 var(--font, inherit); }

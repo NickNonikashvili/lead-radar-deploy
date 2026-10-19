@@ -836,3 +836,85 @@ html[data-motion="off"] :is(.bf-pop, .bf-fab-l, .bf-hl) { transition: none; }
 /* the free minutes with Bo, on Meet Bo */
 .bo-free { display: flex; flex-direction: column; align-items: center; gap: 12px; width: min(460px, 100%); margin: 4px auto 14px; padding: 18px 20px; border: 2px solid var(--gold, #8A5C00); border-radius: 20px; background: var(--gold-soft, #FFF4D1); }
 .bo-free p { margin: 0; color: var(--ink); font-size: 16px; line-height: 1.45; text-align: center; }
+
+/* ---------- Bo's characters (assets/bo-characters.js): radio cards in Settings, Ask Bo's sheet and a call's settings ---------- */
+.bc-pick { display: grid; gap: 10px; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
+.bc-pick.compact { grid-template-columns: minmax(0, 1fr); gap: 6px; }
+.bc-card { position: relative; display: flex; align-items: flex-start; gap: 12px; padding: 12px 14px; border: 2px solid var(--border); border-radius: 18px; background: var(--surface); cursor: pointer; box-shadow: 0 3px 0 var(--lip, var(--border)); }
+.bc-card:hover { border-color: var(--accent-line, var(--border)); }
+.bc-card.on { border-color: var(--accent); background: color-mix(in srgb, var(--accent-soft) 55%, var(--surface)); box-shadow: 0 3px 0 var(--accent-deep, var(--accent)); }
+.bc-card input { position: absolute; opacity: 0; pointer-events: none; }
+.bc-card:has(input:focus-visible) { outline: 3px solid var(--accent); outline-offset: 2px; }
+.bc-av { flex: none; display: grid; place-items: center; width: 60px; height: 60px; border-radius: 16px; background: var(--accent-soft); }
+.compact .bc-av { width: 46px; height: 46px; border-radius: 13px; }
+.bc-t { min-width: 0; display: grid; gap: 2px; }
+.bc-t b { font-family: var(--font-display, inherit); font-size: 16.5px; font-weight: 800; color: var(--ink); }
+.bc-t > span { font-size: 14px; line-height: 1.4; color: var(--ink-2, var(--ink)); }
+.bc-t i { font-size: 13.5px; line-height: 1.4; color: var(--muted); }
+.bc-def { margin-left: 4px; padding: 1px 7px; border-radius: 999px; background: var(--surface-2); color: var(--muted); font: 700 11px/1.6 var(--font-body, inherit); text-transform: uppercase; letter-spacing: 0.05em; vertical-align: 2px; }
+.compact .bc-t > span { font-size: 13px; }
+.bo-char-btn { display: inline-flex; align-items: center; gap: 4px; margin: 2px 0 2px; padding: 3px 10px; border: 2px solid var(--border); border-radius: 999px; background: var(--surface); color: var(--ink); font: 700 13.5px/1.4 var(--font-body, inherit); cursor: pointer; }
+.bo-char-btn:hover { border-color: var(--accent-line, var(--border)); }
+.bo-char-btn svg { transform: rotate(0deg); opacity: 0.7; }
+.bo-char-modal { max-width: 720px; display: grid; gap: 12px; padding: 22px 24px 24px; }
+.bo-char-modal h2 { margin: 0; font-size: 22px; }
+.bt-char-line { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.bt-char-line .linkbtn { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
+.bt-set .bc-card { padding: 8px 10px; border-radius: 14px; box-shadow: none; }
+@media (max-width: 520px) { .bc-pick { grid-template-columns: minmax(0, 1fr); } }
+/* the review call from the heads-up before an exam */
+.bt-exam { width: 100%; padding: 16px 18px; border: 1px solid rgba(127, 178, 255, .35); border-radius: 18px; background: rgba(26, 100, 214, .22); text-align: left; }
+.bt-hello .bt-exam { margin: 0 0 12px; padding: 12px 14px; }
+.bt-exam p { display: flex; align-items: flex-start; gap: 8px; margin: 0; color: rgba(236, 242, 250, .9); line-height: 1.5; }
+.bt-exam p svg { flex: none; margin-top: 3px; color: #9CC2FF; }
+.bt-exam b { color: var(--bt-ink); }
+.bt-exam .btn { width: 100%; justify-content: center; margin-top: 14px; }
+.bo-exam-note { display: flex; align-items: flex-start; gap: 10px; width: min(520px, 100%); margin: 0 auto 18px; padding: 14px 16px; border: 2px solid var(--line, #D6E2F5); border-radius: 16px; background: var(--card, #fff); text-align: left; }
+.bo-exam-note svg { flex: none; margin-top: 2px; color: var(--accent, #1A64D6); }
+.bo-exam-note p { margin: 0; line-height: 1.5; }
+/* not right: the thumbs down under Bo's answers, and what was wrong */
+.bo-tool[aria-pressed="true"] { color: var(--accent); background: var(--accent-soft, rgba(26, 100, 214, .1)); }
+.bo-bad { margin: 10px 0 2px; padding: 12px 14px; border-radius: 14px; background: var(--surface-2); }
+.bo-bad p { display: flex; align-items: flex-start; gap: 6px; margin: 0 0 8px; font-size: 14px; }
+.bo-bad p svg { flex: none; margin-top: 3px; color: var(--good, #15803D); }
+.bo-bad-row { display: flex; gap: 8px; margin-bottom: 6px; }
+.bo-bad-row .input { flex: 1 1 auto; min-width: 0; min-height: 40px; }
+.bf-tool[aria-pressed="true"] { color: var(--accent); background: var(--accent-soft, rgba(26, 100, 214, .1)); }
+/* the study room panel on a call (classmates join: assets/room.js) */
+.bt-room-b { position: relative; }
+.bt-room .bt-pages-h { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.bt-room-t { margin: 0 0 12px; color: var(--ink-2); line-height: 1.5; font-size: 14.5px; }
+.bt-room-t b { color: var(--ink); }
+.bt-room-code { margin: 0 0 12px; padding: 10px 0; border-radius: 14px; background: var(--surface-2); font: 800 34px/1.1 var(--font-mono, ui-monospace, monospace); letter-spacing: .12em; color: var(--ink); text-align: center; }
+.bt-room-acts { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+.bt-room-acts .btn, .bt-room > .btn { flex: 1 1 auto; justify-content: center; }
+
+/* ---------- a study room, for a classmate who joins a call (assets/room.js) ----------
+   The board on the whole screen, as on the call; the captions over its bottom; a box to ask Bo below. */
+.rm { position: fixed; inset: 0; z-index: 130; display: flex; flex-direction: column; background: var(--surface); color: var(--ink); }
+.rm-top { display: flex; align-items: center; gap: 12px; padding: calc(10px + env(safe-area-inset-top)) 14px 10px 16px; border-bottom: 2px solid var(--border); }
+.rm-av { flex: none; display: grid; place-items: center; }
+.rm-t { min-width: 0; }
+.rm-t h2 { margin: 0; font: 800 18px/1.2 var(--font-display); overflow-wrap: anywhere; }
+.rm-t p { margin: 2px 0 0; color: var(--muted); font-size: 14px; }
+.rm-sp { flex: 1; }
+.rm-pad { position: relative; flex: 1; min-height: 0; }
+.rm-pad .wb { position: absolute; inset: 0; }
+.rm-caps { display: flex; flex-direction: column; gap: 4px; max-height: 30vh; overflow-y: auto; padding: 10px 16px; border-top: 2px solid var(--border); background: var(--surface-2); }
+.rm-cap { margin: 0; font-size: 16px; line-height: 1.45; }
+.rm-cap b { color: var(--accent); }
+.rm-cap.you, .rm-cap.guest, .rm-cap.me { color: var(--ink-2); }
+.rm-cap.me { font-style: italic; }
+.rm-cap.hint { color: var(--muted); }
+.rm-ask { display: flex; gap: 8px; padding: 10px 14px calc(10px + env(safe-area-inset-bottom)); border-top: 1px solid var(--border); }
+.rm-ask .input { flex: 1 1 auto; min-width: 0; min-height: 48px; }
+.rm-ask .btn { flex: none; min-height: 48px; }
+.rm-page { display: grid; place-items: start center; padding: 24px 16px 48px; }
+.rm-box { display: flex; flex-direction: column; gap: 12px; width: min(460px, 100%); padding: 24px; border: 2px solid var(--border); border-radius: 22px; background: var(--card); }
+.rm-box h1 { margin: 0; font: 800 24px/1.2 var(--font-display); }
+.rm-box p { margin: 0; }
+.rm-join-av { align-self: center; }
+.rm-code { font: 800 26px/1.2 var(--font-mono, ui-monospace, monospace); letter-spacing: .14em; text-transform: uppercase; text-align: center; min-height: 56px; }
+.rm-err { color: var(--bad, #B42318); font-weight: 600; }
+.rm-box .btn.lg { justify-content: center; }
+@media (max-width: 760px) { .rm-t h2 { font-size: 16px; } .rm-av { display: none; } .rm-caps { max-height: 24vh; } .rm-ask .btn span, .rm-ask .btn { padding-inline: 14px; } }

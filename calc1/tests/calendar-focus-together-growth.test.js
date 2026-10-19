@@ -8,12 +8,14 @@ const T = require('./lib');
   await go(p, '#/settings', 1500); check('calendar link shown', (await p.$eval('#acct-ics', e => e.value).catch(() => '')).includes('r=ics&t='));
   const icsUrl = await p.$eval('#acct-ics', e => e.value); const ics = await p.evaluate(async u => { const r = await fetch(u); return { status: r.status, type: r.headers.get('content-type'), n: ((await r.text()).match(/BEGIN:VEVENT/g) || []).length }; }, icsUrl); check('ics feed serves events', ics.status === 200 && /text\/calendar/.test(ics.type) && ics.n > 50, ics);
   check('invite link shown', (await p.$eval('#acct-invlink', e => e.value).catch(() => '')).includes('#/join?ref='));
+  check('and what it gives you both: more free minutes with Bo', /you both get 10 more free minutes with Bo, and a badge/.test(await txt(p, '#acct-invite-p')), await txt(p, '#acct-invite-p'));
   if (!(await p.$eval('#acct-planning', e => e.checked))) await p.click('#acct-planning'); await p.waitForTimeout(800); const me = await api(p, 'me'); check('planning email pref saved', me.json.user.planning_email === true, me.json.user.planning_email);
   // join page
   const code = (await p.$eval('#acct-invlink', e => e.value)).split('ref=')[1]; await p.evaluate(() => { localStorage.removeItem('mathub-ref'); }); await p.evaluate(async () => { await fetch('api/index.php?r=logout', { method: 'POST', credentials: 'same-origin', headers: { 'X-Requested-With': 'MatHub' } }); }); await p.reload(); await p.waitForTimeout(800);
   await go(p, '#/join?ref=' + code, 1200); check('join page names the inviter', (await txt(p, '#join-sub')).includes('Alice') && !!(await p.$('#join-card [data-action="auth-signup"]')), await txt(p, '#join-sub'));
   check('ref remembered', (await p.evaluate(() => localStorage.getItem('mathub-ref'))) === code);
-  await go(p, '#/', 800); check('landing invite banner', (await txt(p, '#view')).includes('invited you'));
+  check('the join page says you both get more free minutes with Bo', /you both get 10 more free minutes with Bo/.test(await txt(p, '#join-card')), await txt(p, '#join-card'));
+  await go(p, '#/', 800); check('landing invite banner', (await txt(p, '#view')).includes('invited you') && /you both get 10 more free minutes with Bo/.test(await txt(p, '#view')));
   // focus together
   await login(p, 'alice.a@montana.edu'); await p.reload(); await p.waitForTimeout(1200); if (await p.$('.celebrate')) await p.keyboard.press('Escape');
   await go(p, '#/focus', 900); await p.fill('#fz-task', 'Chain rule set'); await p.click('[data-action="fz-start"]'); await p.waitForTimeout(1200); const room = await api(p, 'focus_room'); check('focus ping registers in the room', room.json.count >= 1 && room.json.now.some(x => x.task === 'Chain rule set'), room.json);

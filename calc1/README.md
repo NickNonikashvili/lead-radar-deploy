@@ -606,6 +606,34 @@ Max can call Bo once for that long, in a live call or basic voice (`api/ai.php`:
 `ai_call_start` for basic voice; see docs/app-subscriptions.md). The start page's Bo card and Ask Bo show Call Bo
 free; the call's clock shows the minutes left and ends the call when they run out, pointing to Max.
 
+**Invites** (`ai_invite_minutes`, 10 by default, 0 turns it off): a classmate who joins through your invite link
+gives you both that many more free minutes (`ai_trial.bonus`, up to 60 per account; `mh_invite_reward` in
+`api/growth.php`). Settings, the join page and the invite banner say so.
+
+## Bo's characters, recaps, exam review calls, study rooms and Bo quality
+
+- **Characters** (`assets/bo-characters.js`, `mh_ai_character` in `api/ai.php`): Professor Bo (the default, an
+  80-year-old Harvard professor), Coach, Detective, Zen and Buddy Bo. Each has his own manner, opening, live voice and
+  pace (a student's own voice and speed win) and look (glasses and a bow tie, a cap, a deerstalker, closed eyes and a
+  leaf). Picked in Settings, at the top of Ask Bo and in a call's settings (`settings.boPersona`); every request to
+  Bo carries `persona`. See docs/bo-teaching.md.
+- **The recap after a call** (`ai_recap`): a page with what you covered, the slip, three problems (checked by the
+  math check), saved in the chat, emailed (`users.recap_email`, Settings → Account) and put in the mistakes notebook
+  with the slips the app caught on the call, due now.
+- **The heads-up before an exam** (`mh_exam_nudge_tick` in `api/growth.php`, from 9 am, a few members per visit):
+  an exam in 2 or 3 days in the classes a member picked gets one email and push (`exam_nudges`;
+  `users.exam_nudge`). Its link, `#/tutor/<class>?call=exam`, opens a review call (MH_AI_EXAM_CALL) for Max members
+  and anyone with free minutes; others get the exam prep page.
+- **Max calls use the stronger model** (`ai_live_model_max`, `gpt-realtime-2.1` by default; the free minutes keep
+  `ai_live_model`). If OpenAI refuses it, the call goes ahead on `ai_live_model`.
+- **Study rooms** (`api/room.php`, `assets/room.js`, `#/room/CODE`): on a call, the people button opens a room;
+  up to three classmates join with its code, see the board (both ways, `App.boPad` `onOp`/`remote`/`snap`), Bo's
+  pages and the captions, and type questions Bo hears with their name. Each side posts changes and polls once a
+  second (no peer-to-peer, no TURN server needed). Events are kept three hours, rooms a day.
+- **Bo quality** (admin → Bo quality, `ai_admin_quality`): by week, answers, the students' and Bo's slips the math
+  check caught, rewrites, pages held back, calls and recaps (`metrics`, keys `bo_*`), and the answers students
+  marked not right with the thumbs down in Ask Bo and the floating Bo (`ai_flag`, `ai_flags`), with Done.
+
 ## News emails (Email everyone)
 
 `api/news.php`, the admin panel's Email everyone tab, `#/unsubscribe`. The administrator writes one email (subject,

@@ -29,11 +29,12 @@
     if (!json || json.ok === false) throw Object.assign(new Error((json && json.error) || 'Something went wrong. Please try again.'), { status: res.status, data: json });
     return json;
   }
-  const bo = n => (App.bobcatSvg ? App.bobcatSvg(n) : '');
+  const bo = n => (App.boCharSvg ? App.boCharSvg(App.boChar(), n) : App.bobcatSvg ? App.bobcatSvg(n) : '');   // Bo as the character they picked
   const talk = () => !!(App.boTalk && App.boTalk.supported());
   /* a question to Bo, his answer streamed: onDelta gets each piece as it is written; resolves with the whole answer */
   App.boAsk = async function (body, onDelta) {
     if (App.lang && App.lang !== 'en' && body && !body.lang) body = Object.assign({}, body, { lang: App.lang });   // Bo answers in the student's language
+    if (body && !body.persona && App.boChar) body = Object.assign({}, body, { persona: App.boChar() });   // who he is (assets/bo-characters.js)
     let res; try { res = await fetch(API + 'ai_tutor', { method: 'POST', credentials: 'same-origin', headers: { 'X-Requested-With': 'MatHub', 'Accept': 'application/x-ndjson, application/json', 'Content-Type': 'application/json' }, cache: 'no-store', body: JSON.stringify(Object.assign({ stream: 1 }, body)) }); }
     catch (e) { throw Object.assign(new Error('Bo cannot be reached right now. Check your connection and try again.'), { network: true }); }
     if (!/ndjson/.test(res.headers.get('content-type') || '') || !res.body) { const j = await res.json().catch(() => null); if (!j || j.ok === false) throw Object.assign(new Error((j && j.error) || 'Bo could not answer just now. Please try again.'), { status: res.status, data: j }); return j; }
@@ -343,10 +344,10 @@
     }
     return `${v ? `<span class="bo-photo-tag">${icon('mic', 13)} Said out loud</span>` : ''}${tags}${q ? `<p>${esc(q).replace(/\n/g, '<br>')}</p>` : ''}`;
   };
-  const tools = () => `<div class="bo-tools">${talk() ? `<button type="button" class="bo-tool" data-bo-read aria-label="Read this answer aloud" title="Read aloud">${icon('volume', 15)}</button>` : ''}<button type="button" class="bo-tool" data-bo-copy aria-label="Copy this answer" title="Copy">${icon('copy', 14)}</button><button type="button" class="bo-tool" data-bo-report aria-label="Report this answer" title="Report">${icon('flag', 14)}</button></div>`;
+  const tools = flag => `<div class="bo-tools">${talk() ? `<button type="button" class="bo-tool" data-bo-read aria-label="Read this answer aloud" title="Read aloud">${icon('volume', 15)}</button>` : ''}<button type="button" class="bo-tool" data-bo-copy aria-label="Copy this answer" title="Copy">${icon('copy', 14)}</button>${flag ? `<button type="button" class="bo-tool" data-bo-bad aria-label="Not right? Tell us" title="Not right?" aria-pressed="false">${icon('thumbdown', 15)}</button>` : ''}</div>`;
   /* a message; for Bo's, ids are where his pages are on the board */
-  const msgHtml = (r, t, extra = '', v = false, ids = null) => r === 'b'
-    ? `<div class="bo-msg bo" data-src="${esc(t)}"><span class="bo-mini" aria-hidden="true">${bo(34)}</span><div class="bo-bubble"><div class="bo-text">${fmt(boardSplit(t), ids)}</div>${tools()}${extra}</div></div>`
+  const msgHtml = (r, t, extra = '', v = false, ids = null, at = 0) => r === 'b'
+    ? `<div class="bo-msg bo" data-src="${esc(t)}"${at ? ` data-at="${+at}"` : ''}><span class="bo-mini" aria-hidden="true">${bo(34)}</span><div class="bo-bubble"><div class="bo-text">${fmt(boardSplit(t), ids)}</div>${tools(!!at)}${extra}</div></div>`
     : `<div class="bo-msg you"><div class="bo-bubble">${userHtml(t, v)}</div></div>`;
 
   /* ---------- a photo of a problem, shrunk on the device so it costs little to send ---------- */
@@ -362,7 +363,7 @@
   App.shrinkPhoto = shrink;
 
   /* ---------- the screen ---------- */
-  const st = { cid: null, status: null, busy: false, photo: null, board: false, notes: [] };
+  const st = { cid: null, status: null, busy: false, photo: null, board: false, notes: [], exam: false };
   App.views.tutor = {
     title: 'Ask Bo',
     render(root, param, query) {
@@ -371,13 +372,14 @@
       st.cid = want && Courses[want] ? want : ids[0] || null;
       if (st.cid && !ids.includes(st.cid)) ids.unshift(st.cid);
       root.innerHTML = `<div class="bo-shell"><div class="bo-page bo-col">
-        <header class="bo-head"><nav class="bo-nav" aria-label="Leave Ask Bo"><a class="btn sm bo-back" href="#/">${icon('left', 14)} Your classes</a>${st.cid && Courses[st.cid] ? `<a class="btn sm ghost" href="#/${esc(st.cid)}/dashboard">Open ${esc(short(st.cid))}</a>` : ''}</nav><span class="bo-av" aria-hidden="true">${bo(52)}</span><div class="bo-title"><h1>Ask Bo</h1><p>Your tutor${st.cid ? ` for <b>${esc(short(st.cid))}</b>` : ''}. He knows your syllabus and how your studying is going.</p></div>${talk() ? `<button type="button" class="btn primary bo-talk-btn" data-bo-talk hidden>${icon('phone', 17)}<span>Call Bo</span></button>` : ''}<button type="button" class="icon-btn bo-knows-btn" data-bo="knows" aria-label="What Bo knows about you" title="What Bo knows">${icon('info', 18)}</button></header>
+        <header class="bo-head"><nav class="bo-nav" aria-label="Leave Ask Bo"><a class="btn sm bo-back" href="#/">${icon('left', 14)} Your classes</a>${st.cid && Courses[st.cid] ? `<a class="btn sm ghost" href="#/${esc(st.cid)}/dashboard">Open ${esc(short(st.cid))}</a>` : ''}</nav><span class="bo-av" aria-hidden="true">${bo(52)}</span><div class="bo-title"><h1>Ask Bo</h1>${App.boCharInfo ? `<button type="button" class="bo-char-btn" data-bo="char" aria-haspopup="dialog" title="Change who Bo is">${esc(App.boCharInfo().name)} ${icon('chevron', 12)}</button>` : ''}<p>Your tutor${st.cid ? ` for <b>${esc(short(st.cid))}</b>` : ''}. He knows your syllabus and how your studying is going.</p></div>${talk() ? `<button type="button" class="btn primary bo-talk-btn" data-bo-talk hidden>${icon('phone', 17)}<span>Call Bo</span></button>` : ''}<button type="button" class="icon-btn bo-knows-btn" data-bo="knows" aria-label="What Bo knows about you" title="What Bo knows">${icon('info', 18)}</button></header>
         ${ids.length > 1 ? `<div class="bo-classes" role="tablist" aria-label="Which class">${ids.map(x => `<button type="button" role="tab" class="wh-tab bo-class${x === st.cid ? ' on' : ''}" aria-selected="${x === st.cid}" data-bo-class="${esc(x)}" style="${App.classStyle ? App.classStyle(x) : ''}">${esc(short(x))}</button>`).join('')}</div>` : ''}
         <section class="bb bo-board" id="bo-board" aria-labelledby="bob-h" hidden${settings().boBoardFold ? ' data-fold' : ''}>${boardShell({ id: 'bob', fold: true })}</section>
         <div class="bo-main" id="bo-main"><div class="bo-loading" aria-hidden="true"><i></i><i></i></div></div></div></div>`;
       $('.bo-page', root).addEventListener('click', e => {
         const c = e.target.closest('[data-bo-class]'); if (c) { setSetting('boClass', c.dataset.boClass); location.hash = '#/tutor/' + c.dataset.boClass; return; }
         if (e.target.closest('[data-bo="knows"]')) knowsSheet();
+        if (e.target.closest('[data-bo="char"]')) charSheet();
         if (e.target.closest('[data-bo-talk]')) openTalk(true);
       });
       const board = $('#bo-board', root);
@@ -391,7 +393,13 @@
     let s; try { s = st.status = await api('ai_status'); } catch (e) { main.innerHTML = gate('Bo cannot be reached', esc(e.message), `<button type="button" class="btn" data-go="retry">Try again</button>`); wireGate(main, () => start(main, query)); return; }
     st.notes = s.notes || []; if (App.boTalk) App.boTalk.setStatus(s);
     if (!s.enabled) { main.innerHTML = gate('Bo is getting ready', 'Bo is not switched on yet. He will be here soon.', ''); return; }
-    if (!s.max) { main.innerHTML = intro(s.plan, s); wireGate(main, () => start(main, query)); return; }
+    st.exam = query.call === 'exam' && talk();   // from the heads-up before an exam: a review call
+    if (st.exam) { try { history.replaceState(history.state, '', `${location.pathname}${location.search}#/tutor/${st.cid || ''}`); } catch (e) {} }
+    if (!s.max) {
+      main.innerHTML = intro(s.plan, s, st.exam); wireGate(main, () => start(main, query));
+      if (st.exam && s.trial && s.trial.left > 0 && App.boTalk) setTimeout(() => App.boTalk.open({ cid: st.cid || 'calc', status: s, gesture: false, focus: 'exam' }), 300);   // on the free minutes
+      st.exam = false; return;
+    }
     if (!settings().aiConsent) { main.innerHTML = consent(); wireGate(main, () => start(main, query)); return; }
     if (!st.cid) { main.innerHTML = gate('Pick a class first', 'Bo helps with a class you take. Choose your classes, or make one from a syllabus.', `<a class="btn primary" href="#/">Your classes</a><a class="btn" href="#/create">Create a class</a>`); return; }
     main.onclick = null; chat(main, query);
@@ -408,15 +416,16 @@
       if (g === 'trial' && App.boTalk) App.boTalk.open({ cid: st.cid || 'calc', status: st.status, gesture: true, onClose: () => again && again() });   // the free minutes
     };
   }
-  function intro(plan, s) {
+  function intro(plan, s, exam) {
     const free = talk() && s && s.trial && s.trial.left > 0 ? Math.max(1, Math.ceil(s.trial.left / 60)) : 0;
     const tried = talk() && s && s.trial && s.trial.left <= 0;
-    return `<section class="bo-gate bo-intro"><span class="bo-gate-av" aria-hidden="true">${bo(96)}</span><h2>Meet Bo, your tutor</h2>
+    const prep = exam && !free && st.cid && Courses[st.cid] ? `<div class="bo-exam-note" role="note">${icon('target', 18)}<p><b>Your exam is close.</b> Review calls with Bo come with Max. Your <a href="#/${esc(st.cid)}/exam">exam prep page</a> has the topics, how ready you are and a practice exam.</p></div>` : '';
+    return `<section class="bo-gate bo-intro">${prep}<span class="bo-gate-av" aria-hidden="true">${bo(96)}</span><h2>Meet Bo, your tutor</h2>
       ${free ? `<div class="bo-free"><p><b>Talk to him free for ${free} minutes.</b> Write on the board, he helps you through it.</p><button type="button" class="btn primary lg" data-go="trial">${icon('phone', 18)} Call Bo free</button></div>` : tried ? '<p class="small muted">You have used your free minutes with Bo.</p>' : ''}
       <p>Bo knows your classes from their syllabi and keeps up with how you are doing, so his help fits you.</p>
       <ul class="bo-perks"><li>${icon('chat', 18)}<span><b>Ask anything</b> about your classes, any time: “Why is the derivative of $\\sin x$ equal to $\\cos x$?”</span></li><li>${icon('target', 18)}<span><b>He knows where you are stuck</b>: your weakest topics, the questions you missed and your next exam.</span></li>${talk() ? `<li>${icon('phone', 18)}<span><b>Call him</b> and just talk, like with a friend: he answers right away, you can cut in, and he writes the math on his board.</span></li>` : ''}<li>${icon('image', 18)}<span><b>Snap a problem</b> and he walks you through it, step by step.</span></li><li>${icon('flag', 18)}<span><b>Plans and quizzes</b> built on your real exam dates.</span></li></ul>
       <div class="bo-gate-acts"><button type="button" class="btn ${free ? '' : 'primary '}lg" data-go="max">${plan === 'pro' ? 'Move up to Max' : 'Get Mathub Max'}</button><a class="btn ghost lg" href="#/max">See it in action</a></div>
-      <p class="small muted">Mathub Max includes everything in Pro, so Bo is also on every page. <a href="#/plan">Compare the plans</a></p></section>`;
+      <p class="small muted">Mathub Max includes everything in Pro, so Bo is also on every page. <a href="#/plan">Compare the plans</a></p>${talk() ? `<p class="small muted">A classmate on a call with Bo gave you a code? <a href="#/room">Join their study room</a></p>` : ''}</section>`;
   }
   App.boGateHtml = { consent: () => consent(), intro: plan => intro(plan) };   // the floating Bo (assets/bo-float.js) asks the same way
   function consent() {
@@ -462,9 +471,9 @@
     if (user) setSetting('boBoardFold', !!on);
   }
   /* the voice call; when it ends, the chat shows what was said */
-  function openTalk(gesture) {
+  function openTalk(gesture, focus) {
     if (!talk() || !st.cid || !st.status || !st.status.max) return;
-    App.boTalk.open({ cid: st.cid, status: st.status, gesture, onClose: changed => { if (changed && /^#\/tutor/.test(location.hash)) App.rerender(); } });
+    App.boTalk.open({ cid: st.cid, status: st.status, gesture, focus, onClose: changed => { if (changed && /^#\/tutor/.test(location.hash)) App.rerender(); } });
   }
   function greeting(id) {
     const s = snapshot(id); const name = s.name ? `Hi ${esc(s.name)}! ` : 'Hi! ';
@@ -492,13 +501,13 @@
     // the board: every page Bo wrote in this chat, in order, the last one showing
     const board = $('#bo-board'); let pages = [];
     const add = text => { const v = boardMerge(pages, boardSplit(text).pages); pages = v.pages; return v.ids; };
-    log.innerHTML = turns.length ? turns.map(t => t.r === 'b' ? msgHtml('b', t.t || '', '', !!t.v, add(t.t || '')) : msgHtml(t.r, t.t || '', '', !!t.v)).join('') : msgHtml('b', greeting(id));
+    log.innerHTML = turns.length ? turns.map(t => t.r === 'b' ? msgHtml('b', t.t || '', '', !!t.v, add(t.t || ''), t.at) : msgHtml(t.r, t.t || '', '', !!t.v)).join('') : msgHtml('b', greeting(id));
     if (board) { board.hidden = false; fold(!!settings().boBoardFold); board._onPaint = (p, i) => { $$('.bo-onb', log).forEach(b => b.classList.toggle('on', +b.dataset.boPage === i)); }; boardPaint(board, pages, pages.length - 1, false); }
     const tb = $('[data-bo-talk][hidden]'); if (tb) tb.hidden = false;
     typeset(log); scroll();
     sug.innerHTML = chips(suggestions(id));
     if (board) board._onAsk = text => { q.value = text; grow(); form.requestSubmit(); };   // Explain it / Another one, under a question on the board
-    if (query.talk && talk()) setTimeout(() => openTalk(false), 300);
+    if ((query.talk || st.exam) && talk()) { const f = st.exam ? 'exam' : ''; st.exam = false; setTimeout(() => openTalk(false, f), 300); }
     if (query.q === 'quiz') { const s = snapshot(id); q.value = s.readiness && s.readiness.exam ? `Quiz me for ${s.readiness.exam}: one question at a time, starting with my weakest topic.` : 'Quiz me: one question at a time, starting with my weakest topic.'; }
     const grow = () => { q.style.height = 'auto'; q.style.height = Math.min(q.scrollHeight, 168) + 'px'; }; q.addEventListener('input', grow); grow();
     const coarse = global.matchMedia && matchMedia('(pointer: coarse)').matches;
@@ -515,6 +524,18 @@
       const pg = e.target.closest('[data-bo-page]'); if (pg && board) { boardPaint(board, pages, +pg.dataset.boPage, false); fold(false); board.classList.remove('bb-flash'); void board.offsetWidth; board.classList.add('bb-flash'); if (board.getBoundingClientRect().bottom < 60) board.scrollIntoView({ block: 'nearest' }); return; }
       const rd = e.target.closest('[data-bo-read]'); if (rd) { App.boTalk.read(msg.dataset.src || text, rd, st.status); return; }
       if (e.target.closest('[data-bo-copy]')) { try { await (NATIVE ? N.copy(text) : navigator.clipboard.writeText(text)); toast('Copied.'); } catch (x) { toast('Copying is not available here.'); } return; }
+      // not right: the answer goes to Mathub's Bo quality review at once; what was wrong can follow
+      const bad = e.target.closest('[data-bo-bad]');
+      if (bad && msg.dataset.at) {
+        if (bad.getAttribute('aria-pressed') === 'true') return;
+        bad.setAttribute('aria-pressed', 'true'); const src = msg.dataset.src || '';
+        try { await api('ai_flag', { class: id, at: +msg.dataset.at, text: src.slice(0, 60) }); } catch (x) { bad.setAttribute('aria-pressed', 'false'); toast(x.message); return; }
+        const box = document.createElement('form'); box.className = 'bo-bad';
+        box.innerHTML = `<p>${icon('check', 14)} Thanks. Mathub’s team will look at this answer. What was wrong? <span class="muted">(optional)</span></p><div class="bo-bad-row"><label class="sr-only" for="bo-bad-${msg.dataset.at}">What was wrong</label><input class="input sm" id="bo-bad-${msg.dataset.at}" maxlength="500" placeholder="A wrong step, a wrong answer, not what I asked…"><button type="submit" class="btn sm">Send</button></div><button type="button" class="linkbtn small" data-bo-report>Something inappropriate? Report it</button>`;
+        $('.bo-bubble', msg).appendChild(box); $('input', box).focus();
+        box.addEventListener('submit', async ev => { ev.preventDefault(); const why = $('input', box).value.trim(); if (!why) { box.remove(); return; } try { await api('ai_flag', { class: id, at: +msg.dataset.at, text: src.slice(0, 60), why }); box.innerHTML = `<p>${icon('check', 14)} Got it. Thank you.</p>`; setTimeout(() => box.remove(), 2400); } catch (x) { toast(x.message); } });
+        return;
+      }
       if (e.target.closest('[data-bo-report]')) { if (App.reportIssue) App.reportIssue({ title: 'Report this answer from Bo', view: 'Ask Bo', course: id, ref: 'Bo · ' + short(id), prompt: text.slice(0, 400), reason: 'wrong', placeholder: 'What is wrong with it? For example: a wrong fact, a wrong answer, or something inappropriate.' }); return; }
       if (e.target.closest('[data-bo-forget]')) { const i = st.notes.indexOf(e.target.closest('[data-bo-forget]').dataset.boForget); try { const r = await api('ai_forget', { what: 'note', i }); st.notes = r.notes || []; e.target.closest('.bo-remember').remove(); toast('Bo forgot it.'); } catch (x) { toast(x.message); } return; }
       if (e.target.closest('[data-bo-retry]')) { const t = msg.dataset.q || ''; msg.remove(); q.value = t; grow(); form.requestSubmit(); }
@@ -543,7 +564,7 @@
         if (r.remembered) st.notes.push(r.remembered);
         if (r.usage && st.status) st.status.usage = r.usage;
         const ids = add(r.reply);
-        log.insertAdjacentHTML('beforeend', msgHtml('b', r.reply, r.remembered ? `<p class="bo-remember">${icon('bulb', 13)} Bo will remember: ${esc(r.remembered)} <button type="button" class="linkbtn small" data-bo-forget="${esc(r.remembered)}">Forget it</button></p>` : '', false, ids));
+        log.insertAdjacentHTML('beforeend', msgHtml('b', r.reply, r.remembered ? `<p class="bo-remember">${icon('bulb', 13)} Bo will remember: ${esc(r.remembered)} <button type="button" class="linkbtn small" data-bo-forget="${esc(r.remembered)}">Forget it</button></p>` : '', false, ids, r.at));
         if (ids.length && board) boardPaint(board, pages, ids[ids.length - 1], true);
         typeset(log.lastElementChild); haptic('light'); paintFoot(r.usage);
         sug.innerHTML = chips(followups(r.reply)); sug.hidden = false; sug.classList.add('bo-next');
@@ -556,6 +577,18 @@
       }
       st.busy = false; scroll();
     });
+  }
+
+  /* ---------- who Bo is (assets/bo-characters.js): the characters, in a sheet ---------- */
+  function charSheet() {
+    if (!App.boCharPicker) return;
+    const m = document.createElement('div'); m.className = 'modal-backdrop'; m.id = 'bo-char-sheet';
+    m.innerHTML = `<div class="modal bo-char-modal" role="dialog" aria-modal="true" aria-labelledby="bo-char-h"><div class="row between"><h2 id="bo-char-h">Who Bo is</h2><button type="button" class="icon-btn" data-close aria-label="Close">${icon('x', 16)}</button></div><p class="muted small">In the chat, out loud and on calls. Each has his own voice; on a call it starts with your next one.</p>${App.boCharPicker({ name: 'bo-char-sheet' })}</div>`;
+    document.body.appendChild(m); const close = () => { m.remove(); const b = $('[data-bo="char"]'); if (b) b.focus(); };
+    m.addEventListener('click', e => { if (e.target === m || e.target.closest('[data-close]')) close(); });
+    m.addEventListener('keydown', e => { if (e.key === 'Escape') close(); });
+    App.boCharWire(m, () => { setTimeout(close, 450); if (App.rerender) App.rerender(); });
+    const on = $('.bc-card.on input', m); if (on) on.focus();
   }
 
   /* ---------- What Bo knows: the snapshot in words, Bo's notes, and clearing, in a sheet (the i button) ---------- */

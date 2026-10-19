@@ -283,6 +283,12 @@ On the start page each class is a tile, four across on a laptop: a cover in the 
 ### Bo, the logo
 The mark is Bo's head, the same drawing as the mascot, always in his own tan, cream and brown. Bare in the app (sidebar, page headers), on a navy rounded tile for icons, on a white tile on share cards. He tilts his head when pointed at.
 
+### Bo's characters
+Where Bo appears as the tutor (Ask Bo, calls, the floating Bo, study rooms) he wears the touch of the character the student picked, drawn over the same bobcat in flat shapes: Professor Bo's white eyebrows, round dark glasses and a deep red bow tie; Coach Bo's blue cap and whistle; Detective Bo's tan deerstalker; Zen Bo's closed eyes and a green leaf; Buddy Bo bare. The logo itself never changes. The picker is a radio group of cards (avatar, name, one line, a sample in italics; "default" chip on Professor Bo); compact in a call's settings, with no samples.
+
+### Study rooms
+A classmate in a study room gets the call's whiteboard on the whole screen in the light surface (not the call's night sky: they are watching and writing, not on the call): a top bar with Bo's face, "Study room with {name}" and Leave; the board with its usual tools; the captions in a quiet band above a full-width "Type a question for Bo" box. The host's room panel matches the call's settings panel; the code is set large in mono, in two groups of three.
+
 ## Do's and Don'ts
 
 ### Do:

@@ -225,7 +225,7 @@ function mh_mc_claims(string $text, array $ctx = []): array {
       $A = mh_mc_parse($a); $B = mh_mc_parse($b); if (!$A || !$B) continue;
       if (preg_match('/^[a-z]$/', trim($a)) && !$B['vars']) {
         $v = trim($a); $val = mh_mc_eval($B['ast']); if (!is_finite($val)) continue;
-        if (isset($sets[$v]) && $sets[$v]['ops'] && !mh_mc_same($sets[$v]['val'], $val, $b) && !mh_mc_same($val, $sets[$v]['val'], $sets[$v]['src'])) $wrong[] = ['kind' => 'reassign', 'v' => $v, 'msg' => "$v = " . mh_mc_pretty($sets[$v]['src']) . ' is ' . mh_mc_fmt($sets[$v]['val']) . ', not ' . mh_mc_pretty($b)];
+        if (isset($sets[$v]) && $sets[$v]['ops'] && !mh_mc_same($sets[$v]['val'], $val, $b) && !mh_mc_same($val, $sets[$v]['val'], $sets[$v]['src'])) $wrong[] = ['kind' => 'reassign', 'v' => $v, 'expr' => $sets[$v]['src'], 'is' => $sets[$v]['val'], 'msg' => "$v = " . mh_mc_pretty($sets[$v]['src']) . ' is ' . mh_mc_fmt($sets[$v]['val']) . ', not ' . mh_mc_pretty($b)];
         elseif (!isset($sets[$v]) || $B['ops']) $sets[$v] = ['val' => $val, 'src' => $b, 'ops' => $B['ops']];
         continue;
       }
@@ -237,7 +237,7 @@ function mh_mc_claims(string $text, array $ctx = []): array {
       if (!$ok0 && $op !== '≈') { $alt = fn($x) => preg_replace('/^\s*-\s*(\d+(?:\.\d+)?)(?=\s*\^)/', '(-$1)', $x); $A2 = $alt($a) !== $a ? mh_mc_parse($alt($a)) : null; $B2 = $alt($b) !== $b ? mh_mc_parse($alt($b)) : null; if (($A2 && mh_mc_close(mh_mc_eval($A2['ast']), $vb)) || ($B2 && mh_mc_close($va, mh_mc_eval($B2['ast'])))) continue; }   // "negative 3 squared is 9": (−3)² said aloud
       $ok = $op === '≈' ? abs($va - $vb) <= 0.02 * max(abs($va), abs($vb), 1e-9) : ($B['ops'] ? (mh_mc_close($va, $vb) || mh_mc_same($vb, $va, $a)) : mh_mc_same($va, $vb, $b));
       if ($ok) $right[] = ['kind' => 'arith', 'msg' => mh_mc_pretty($a) . ' = ' . mh_mc_pretty($b) . ' is right'];
-      else $wrong[] = ['kind' => 'arith', 'msg' => mh_mc_pretty($swap ? $b : $a) . ' is ' . mh_mc_fmt($swap ? $vb : $va) . ', not ' . mh_mc_pretty($swap ? $a : $b)];
+      else $wrong[] = ['kind' => 'arith', 'expr' => $swap ? $b : $a, 'is' => $swap ? $vb : $va, 'msg' => mh_mc_pretty($swap ? $b : $a) . ' is ' . mh_mc_fmt($swap ? $vb : $va) . ', not ' . mh_mc_pretty($swap ? $a : $b)];
     }
   }
   // calculus in words: "the derivative of x squared is 2x"
@@ -259,7 +259,7 @@ function mh_mc_claims(string $text, array $ctx = []): array {
     $done = false; foreach ($wrong as $w) if (($w['v'] ?? '') === $v) $done = true;
     if (!mh_mc_close($l, $r, 1e-7) && !$done) {
       $near = mh_mc_roots($eq['L'], $eq['R'], $v); foreach ($near as $z) if (mh_mc_same($z, $x, $set['src'])) continue 2;
-      $wrong[] = ['kind' => 'solve', 'v' => $v, 'msg' => "$v = " . mh_mc_pretty($set['src']) . ' does not solve ' . $eq['text'] . ': the left side is ' . mh_mc_fmt($l) . ' and the right side is ' . mh_mc_fmt($r) . ($near && count($near) <= 3 ? " ($v = " . implode(' or ', array_map('mh_mc_fmt', $near)) . ' does)' : '')];
+      $wrong[] = ['kind' => 'solve', 'v' => $v, 'eq' => $eq['text'], 'roots' => $near, 'msg' => "$v = " . mh_mc_pretty($set['src']) . ' does not solve ' . $eq['text'] . ': the left side is ' . mh_mc_fmt($l) . ' and the right side is ' . mh_mc_fmt($r) . ($near && count($near) <= 3 ? " ($v = " . implode(' or ', array_map('mh_mc_fmt', $near)) . ' does)' : '')];
     } elseif (mh_mc_close($l, $r, 1e-7)) $right[] = ['kind' => 'solve', 'msg' => "$v = " . mh_mc_fmt($x) . ' solves ' . $eq['text']];
   }
   // a bare number answering the question just asked
@@ -269,7 +269,7 @@ function mh_mc_claims(string $text, array $ctx = []): array {
     $words = array_values(array_filter(explode(' ', str_replace([';', '='], ' ', mh_mc_norm($text))), fn($w) => $w !== '' && !in_array($w, MH_MC_ANSWERW, true)));
     if ($q && !$q['vars'] && $q['ops'] && count($words) === 1 && preg_match('/^(?:-?\d+(?:\.\d+)?|\(\d+\/\d+\))$/', $words[0])) {
       $want = mh_mc_eval($q['ast']); $said = $words[0]; $got = mh_mc_val($said);
-      if (is_finite($want) && is_finite($got)) { if (mh_mc_same($want, $got, $said)) $right[] = ['kind' => 'answer', 'msg' => mh_mc_fmt($got) . ' is right: ' . mh_mc_pretty($ctx['ask']) . ' is ' . mh_mc_fmt($want)]; else $wrong[] = ['kind' => 'answer', 'msg' => mh_mc_pretty($ctx['ask']) . ' is ' . mh_mc_fmt($want) . ', not ' . mh_mc_pretty($said)]; }
+      if (is_finite($want) && is_finite($got)) { if (mh_mc_same($want, $got, $said)) $right[] = ['kind' => 'answer', 'msg' => mh_mc_fmt($got) . ' is right: ' . mh_mc_pretty($ctx['ask']) . ' is ' . mh_mc_fmt($want)]; else $wrong[] = ['kind' => 'answer', 'expr' => (string)$ctx['ask'], 'is' => $want, 'msg' => mh_mc_pretty($ctx['ask']) . ' is ' . mh_mc_fmt($want) . ', not ' . mh_mc_pretty($said)]; }
     }
   }
   return ['wrong' => $wrong, 'right' => $right];
@@ -300,22 +300,42 @@ function mh_mc_board(array $lines, string $title = ''): array {
 function mh_mc_reply_slips(string $reply): array {
   $out = []; $quote = "/\b(not|isn'?t|wasn'?t|aren'?t|wrong|mistake|slip|instead|careful|common|tempting|you\s+(wrote|said|got|had|put|have)|they\s+(wrote|said)|if\s+you)\b|≠|\\ne/i";
   if (preg_match_all('/\[board\+?:\s*([^\]\n]*)\]\s*\n(.*?)\[\/board\]/is', $reply, $pages, PREG_SET_ORDER)) foreach ($pages as $pg) {
-    $lines = []; foreach (preg_split('/\n/', $pg[2]) as $ln) { if (!preg_match('/^\s*(step|math|answer|text|tip)\s*:\s*(.*)$/i', $ln, $m)) continue; $lines[] = preg_match($quote, $m[2]) || strtolower($m[1]) === 'tip' ? '' : $m[2]; }
+    $lines = []; foreach (preg_split('/\n/', $pg[2]) as $ln) { if (preg_match('/^\s*check\s*:\s*(\{.*\})\s*$/i', $ln, $cm)) { $bad = mh_mc_check_line($cm[1]); if ($bad !== '') $out[] = 'on your page "' . trim($pg[1]) . '": ' . $bad; continue; } if (!preg_match('/^\s*(step|math|answer|text|tip)\s*:\s*(.*)$/i', $ln, $m)) continue; $lines[] = preg_match($quote, $m[2]) || strtolower($m[1]) === 'tip' ? '' : $m[2]; }
     foreach (mh_mc_board($lines, $pg[1]) as $b) $out[] = 'on your page "' . trim($pg[1]) . '", line ' . $b['line'] . ': ' . $b['msg'];
   }
   $plain = preg_replace('/\[board\+?:.*?\[\/board\]/is', ' ', $reply);
   foreach (preg_split('/(?<=[.!?])\s+|\n+/', $plain) as $sen) { if (trim($sen) === '' || preg_match($quote, $sen)) continue; foreach (mh_mc_claims($sen)['wrong'] as $w) $out[] = $w['msg']; }
   return array_values(array_unique($out));
 }
+/** A practice question for each thing that was wrong: "What is 11 − 3?" (8), "Solve 2x + 3 = 11." (4). For the mistakes notebook. */
+function mh_mc_tex(string $s): string { return trim(str_replace(['*', '·', '−'], [' \\cdot ', ' \\cdot ', '-'], preg_replace('/\s+/', ' ', $s))); }
+function mh_mc_practice(array $wrong): array {
+  $out = [];
+  foreach ($wrong as $w) {
+    if (in_array($w['kind'], ['arith', 'answer', 'reassign'], true) && isset($w['expr'], $w['is']) && is_finite((float)$w['is'])) $out[] = ['prompt' => 'What is $' . mh_mc_tex((string)$w['expr']) . '$?', 'answer' => (float)$w['is'], 'tex' => mh_mc_fmt_tex((float)$w['is']), 'why' => mh_mc_pretty((string)$w['expr']) . ' is ' . mh_mc_fmt((float)$w['is']) . '.'];
+    elseif ($w['kind'] === 'solve' && count($w['roots'] ?? []) === 1) $out[] = ['prompt' => 'Solve $' . mh_mc_tex($w['eq']) . '$ for $' . $w['v'] . '$.', 'answer' => (float)$w['roots'][0], 'tex' => mh_mc_fmt_tex((float)$w['roots'][0]), 'why' => $w['v'] . ' = ' . mh_mc_fmt((float)$w['roots'][0]) . ' makes both sides equal.'];
+  }
+  return array_slice($out, 0, 4);
+}
+function mh_mc_fmt_tex(float $v): string { if (abs($v - round($v)) < 1e-9) return (string)(int)round($v); for ($q = 2; $q <= 12; $q++) { $p = $v * $q; if (abs($p - round($p)) < 1e-9 * $q) return ($p < 0 ? '-' : '') . '\\frac{' . abs((int)round($p)) . '}{' . $q . '}'; } return rtrim(rtrim(sprintf('%.6g', $v), '0'), '.'); }
+/** A question on one of Bo's pages ("check: {q, answer}"): when it asks for a sum, is his answer right? '' or what is wrong. */
+function mh_mc_check_line(string $json): string {
+  $o = json_decode($json, true); if (!is_array($o)) return '';
+  $q = (string)($o['q'] ?? $o['question'] ?? ''); $a = (string)($o['answer'] ?? ''); if ($q === '' || $a === '') return '';
+  $ask = mh_mc_question(rtrim($q, " ?") . '?'); if ($ask === '') return '';
+  $r = mh_mc_claims($a, ['ask' => $ask]); return $r['wrong'] ? 'the answer to "' . $q . '" is wrong: ' . $r['wrong'][0]['msg'] : '';
+}
 /** A slip said out loud: "7 · 8 is 56, not 54" → "7 times 8 is 56, not 54". */
 function mh_mc_say(string $s): string { return trim(preg_replace('/\s+/', ' ', str_replace(['·', '−', '/', '^2', '^3', '^', '='], [' times ', ' minus ', ' over ', ' squared', ' cubed', ' to the ', ' equals '], $s))); }
 
 /** The note for Bo about what the student just wrote or said (with the problem and question from his last message), or ''. */
-function mh_mc_note(string $q, string $lastBo = ''): string {
-  if (trim($q) === '' || mb_strlen($q) > 2000) return '';
+function mh_mc_note(string $q, string $lastBo = ''): string { return mh_mc_check_message($q, $lastBo)['note']; }
+/** The note, and what was wrong (for practice and the call's recap). */
+function mh_mc_check_message(string $q, string $lastBo = ''): array {
+  if (trim($q) === '' || mb_strlen($q) > 2000) return ['note' => '', 'wrong' => []];
   // the problem: equations in his last message, his pages' titles and lines included; the question: what he asked outside his pages
   $r = mh_mc_claims($q, ['eqs' => array_slice(mh_mc_equations($lastBo), -6), 'ask' => mh_mc_question(preg_replace('/\[board\+?:.*?\[\/board\]/is', ' ', $lastBo))]);
-  if ($r['wrong']) return 'MATH CHECK (exact, worked out by the app from their message): ' . implode('; ', array_column($r['wrong'], 'msg')) . '. So what they wrote is wrong. Do not agree with it or call it right. Say kindly that it\'s not quite, point at the exact slip, and let them fix it (give the right value only if they ask or are stuck).' . (array_filter($r['wrong'], fn($w) => $w['kind'] === 'solve') ? ' (If they mean a different problem than the one you were working on, check that one instead.)' : '');
-  if ($r['right']) return 'MATH CHECK (exact, worked out by the app from their message): ' . implode('; ', array_column($r['right'], 'msg')) . '. Tell them so; do not say it is wrong.';
-  return '';
+  if ($r['wrong']) return ['wrong' => $r['wrong'], 'note' => 'MATH CHECK (exact, worked out by the app from their message): ' . implode('; ', array_column($r['wrong'], 'msg')) . '. So what they wrote is wrong. Do not agree with it or call it right. Say kindly that it\'s not quite, point at the exact slip, and let them fix it (give the right value only if they ask or are stuck).' . (array_filter($r['wrong'], fn($w) => $w['kind'] === 'solve') ? ' (If they mean a different problem than the one you were working on, check that one instead.)' : '')];
+  if ($r['right']) return ['wrong' => [], 'note' => 'MATH CHECK (exact, worked out by the app from their message): ' . implode('; ', array_column($r['right'], 'msg')) . '. Tell them so; do not say it is wrong.'];
+  return ['note' => '', 'wrong' => []];
 }
