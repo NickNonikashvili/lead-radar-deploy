@@ -463,7 +463,30 @@ board stay in one place).
   notes through tools; tool arguments are read leniently (a drawing sent as text, LaTeX with one backslash); minutes are reported (`ai_live_tick`) and limited, the
   transcript is saved to the chat (`ai_live_log`). Without the speech key, or if a call can't connect, **basic
   voice**: the browser hears, the answer streams from `ai_tutor` in voice mode, and Bo reads it out (`ai_speak` or
-  the device's voice). Mute (M), tap Bo to stop him, Type, Photo, captions, Esc ends the call.
+  the device's voice). Mute (M), tap Bo to stop him, Show Bo, Photo, Type, captions (C), Esc ends the call.
+  - **The whole screen is a board you share** (`assets/bo-pad.js`, `App.boPad`): squared paper you write on with a
+    pen (a stylus's pressure; with a stylus, fingers only move the board), a highlighter, an eraser that takes whole
+    strokes, typed text (`x^2` shows as x²) and photos (Photo puts the picture on the board too); five colours,
+    three sizes, undo and redo (Clear can be undone), drag/two fingers/wheel to move, pinch or Ctrl + wheel to zoom,
+    Fit; keys P, H, E, T, V, Ctrl Z, Ctrl Shift Z. Bo's pages go up as paper cards beside your work, in free space
+    you can see (or `near` a place he names), and can be dragged, folded and put away (Bo's pages lists and brings
+    them back). **Show Bo** sends him a picture of it, cropped to your writing, with a grid over it (columns A, B, C…
+    across, rows 1, 2, 3… down; at most 1,280 px, made smaller until it fits a call's data channel); on a live call
+    he also gets a quiet look when you stop writing (at most every 9 seconds, 80 a call, only the newest picture kept
+    in the call; Settings → "Bo sees it as I write"), never answered on its own. He marks your writing at cells of
+    that grid, like a tutor with a pen (circle, check, cross, underline, box, arrow, note), drawn stroke by stroke
+    where it covers the least of your writing: `mark_on_board` on a live call, `mark: C3 circle note` lines in
+    basic voice (`ai_tutor` with `pad: {cols, rows}` adds `MH_AI_PAD`; marks are never spoken or shown in the chat).
+    Your writing and his marks are kept on the device for the class (`mh-pad:<class>`, not photos) for the next call;
+    the chat tags a board you showed as "The board". Settings → Dark board.
+  - **Captions like a video's**: white on see-through black, centred at the bottom over the board, two lines that
+    roll up, who is talking in front (Bo, You). Bo's transcript arrives ahead of his voice, so his words are let out
+    at his pace while his voice is actually sounding (all at once when he stops; what he did not get to say when you
+    cut in never shows); in basic voice they follow the sentence being read (the audio's clock or the voice's word
+    marks). Settings: on/off (C), size (small to huge), background (see-through, solid, none) and names; they fade
+    after a quiet spell.
+- **Write it out** (Ask Bo, website): the same board on the whole screen (the class's board from calls); Add to my
+  question sends its picture with the next question (`sketch: 1` tells Bo it is their handwriting, `MH_AI_SKETCH`).
 - **Ask Bo** (`#/tutor`, `#/tutor/<class>`): a chat with Bo for the class you pick; answers stream in as he writes them. He knows the class from its
   syllabus and how the student is doing: the device sends a short progress snapshot with each question (next exam
   and readiness, weakest topics, recent mistakes, flashcards due, deadlines). The first message and the suggestions
@@ -513,7 +536,12 @@ board stay in one place).
   synonyms like "plot" or "bar chart", points as [x, y], "y = \frac{1}{x}", "x²"); a drawing that still makes no
   sense says so on the board. A `check:` line is a question the student answers on the board (choices to tap, or a
   box to type in; numbers compared as numbers): marked at once with the right answer and why, with Explain it and
-  Another one to ask Bo more. It is data, never code (functions go through `App.compileExpr`,
+  Another one to ask Bo more. **His graphs move like the Calc I grapher**: drag to pan, the wheel zooms around the
+  pointer once you have clicked the graph (or with Ctrl; so scrolling past one in a chat never gets stuck), pinch on
+  a phone, + and −, arrow keys and 0, a double click or Back to the first view; point at a curve (or tap one) to
+  read the point and the slope there. **Open in the grapher** shows one on the whole screen with his curves listed
+  (show or hide each), your own functions (up to four), the derivative and a tangent line you slide along a curve,
+  his sliders, and a readout of where you point (`App.boDraw.open`; a copy, so his page keeps his view). It is data, never code (functions go through `App.compileExpr`,
   sizes are capped, labels escaped); it is drawn stroke by stroke, with labels placed clear of the ink, and named
   for screen readers; the chat shows "On the board: Title" where it goes, and the board draws
   the page neatly (numbered steps with their math, the answer boxed, tips on gold), each line written in as it

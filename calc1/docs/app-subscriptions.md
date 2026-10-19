@@ -118,7 +118,14 @@ turn detection, with a setting for how quickly he jumps in), and stops the momen
   real reactions, asks more than tells, no help-desk phrases), the class summary, today, the progress snapshot, his
   notes and the last six chat turns.
 - **Tools:** `write_on_board` (LaTeX on his whiteboard while he talks), `draw_on_board` (a graph, number line,
-  figure, table, chart, normal curve or probability tree on the same board) and `remember` (a note for next time).
+  figure, table, chart, normal curve or probability tree on the same board), `ask_on_board` (a question to answer
+  there), `mark_on_board` (marks on the student's own writing: circle, check, cross, underline, box, arrow, note, at
+  cells of the grid on the latest picture of the board) and `remember` (a note for next time).
+- **The board you share** (`assets/bo-pad.js`): the whole call screen is a whiteboard. Bo sees it as a picture
+  (JPEG, cropped to the writing, a grid over it, at most 1,280 px and about 140 KB): when the student taps Show Bo,
+  and quietly when they stop writing (at most every 9 seconds and 80 times a call; off in the call's settings). Only
+  the newest picture stays in the call, so it does not grow; each picture costs some input tokens on OpenAI's side.
+  In basic voice the picture goes to Claude with the question (`pad`), and Bo answers with `mark:` lines.
 - **How he teaches:** the rules in `docs/bo-teaching.md`; on a call he takes a proper turn (about 20 to 40 seconds)
   to explain something new, with the board, then checks with a real question.
 - **Minutes:** the browser reports every 30 seconds (`ai_live_tick`); past a limit the server hangs the call up

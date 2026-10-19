@@ -154,6 +154,7 @@
           else if (t || closed) addItem(cur, 'code', t, { lang });
           continue;
         }
+        if (/^\s*mark\s*:/i.test(line)) continue;   // a mark on their writing on a call's board (assets/bo-pad.js), never shown here
         const k = B_KIND.exec(line);
         if (k) {
           const kind = kindOf(k[1]);
@@ -167,6 +168,7 @@
       }
       const o = B_OPEN.exec(line);
       if (o && (next(i) === 1 || (writing && next(i) === -1))) { cur = { title: o[2].trim(), cont: !!o[1], items: [], open: true }; mark(cur); continue; }
+      if (/^\s*mark\s*:/i.test(line)) continue;
       // a drawing or a question outside a page still goes on the board (and its JSON never shows in the chat)
       const dm = /^\s*(draw|check)\s*:\s?(.*)$/i.exec(line);
       if (dm && jsonish(lines, i, dm[2])) { const g = gather(lines, i, dm[2]); i = g.end; if (g.t && (g.done || !writing)) addItem(looseOf(), dm[1].toLowerCase(), g.t); continue; }
@@ -256,10 +258,10 @@
   const pagePlain = p => [p.title, ...p.items.map((it, i) => it.k === 'draw' ? drawWords(it.t) : it.k === 'check' ? checkWords(it.t) : it.k === 'code' ? it.t : (it.k === 'step' ? `${stepNo(p.items, i)}. ` : it.k === 'answer' ? 'Answer: ' : it.k === 'tip' ? 'Tip: ' : '') + it.t)].filter(Boolean).join('\n');
   const EMPTY = `<div class="bb-empty"><p class="bb-empty-h">Nothing on the board yet</p><p>When Bo works something out, the steps, the formulas and the answer go up here, neatly, a page at a time.</p></div>`;
   function boardShell(o = {}) {
-    return `<div class="bb-bar"><h2 class="bb-name" id="${o.id || 'bb'}-h">${icon('pen', 15)} Bo’s board</h2>
+    return `<div class="bb-bar"><h2 class="bb-name" id="${o.id || 'bb'}-h">${icon('pen', 15)} ${o.name ? esc(o.name) : 'Bo’s board'}</h2>
         <span class="bb-pager" hidden><button type="button" class="bb-btn" data-bb="prev" aria-label="Previous page">${icon('left', 16)}</button><span class="bb-pos" aria-live="polite"></span><button type="button" class="bb-btn" data-bb="next" aria-label="Next page">${icon('right', 16)}</button></span>
         <button type="button" class="bb-btn" data-bb="copy" aria-label="Copy this page" title="Copy this page" hidden>${icon('copy', 15)}</button>
-        ${o.fold ? `<button type="button" class="bb-btn bb-fold" data-bb="fold" aria-expanded="true" aria-controls="${o.id || 'bb'}-sheet" aria-label="Fold the board away">${icon('chevron', 16)}</button>` : ''}</div>
+        ${o.fold ? `<button type="button" class="bb-btn bb-fold" data-bb="fold" aria-expanded="true" aria-controls="${o.id || 'bb'}-sheet" aria-label="Fold the board away">${icon('chevron', 16)}</button>` : ''}${o.extra || ''}</div>
       <div class="bb-sheet" id="${o.id || 'bb'}-sheet">${EMPTY}</div>`;
   }
   /* draws page i of pages on a board; write: Bo is writing it now, so new lines appear as if written */
@@ -332,12 +334,12 @@
   }
   /* an answer as plain text, for copying: what Bo said, then his pages */
   const plainOf = src => { const sp = boardSplit(src); return [sp.say.replace(/\u0002\d+\u0002/g, '').trim(), ...sp.pages.map(pagePlain)].filter(Boolean).join('\n\n'); };
-  /* a student's message: tags in front say where it came from ([photo], [pdf: name], [from: Quizzer · Q3], from the floating Bo) */
+  /* a student's message: tags in front say where it came from ([photo], [board]: the board on a call, [pdf: name], [from: Quizzer · Q3], from the floating Bo) */
   const userHtml = (t, v) => {
     let q = String(t || ''), tags = ''; let m;
-    while ((m = /^\[(photo|pdf(?::\s*[^\]]*)?|from:\s*[^\]]*)\]\s?/i.exec(q))) {
+    while ((m = /^\[(photo|board|pdf(?::\s*[^\]]*)?|from:\s*[^\]]*)\]\s?/i.exec(q))) {
       const x = m[1]; q = q.slice(m[0].length);
-      tags += /^photo$/i.test(x) ? `<span class="bo-photo-tag">${icon('image', 13)} Photo</span>` : /^pdf/i.test(x) ? `<span class="bo-photo-tag">${icon('file', 13)} ${esc(x.replace(/^pdf:?\s*/i, '') || 'PDF')}</span>` : `<span class="bo-photo-tag">${icon('target', 13)} ${esc(x.replace(/^from:\s*/i, ''))}</span>`;
+      tags += /^photo$/i.test(x) ? `<span class="bo-photo-tag">${icon('image', 13)} Photo</span>` : /^board$/i.test(x) ? `<span class="bo-photo-tag">${icon('pen', 13)} The board</span>` : /^pdf/i.test(x) ? `<span class="bo-photo-tag">${icon('file', 13)} ${esc(x.replace(/^pdf:?\s*/i, '') || 'PDF')}</span>` : `<span class="bo-photo-tag">${icon('target', 13)} ${esc(x.replace(/^from:\s*/i, ''))}</span>`;
     }
     return `${v ? `<span class="bo-photo-tag">${icon('mic', 13)} Said out loud</span>` : ''}${tags}${q ? `<p>${esc(q).replace(/\n/g, '<br>')}</p>` : ''}`;
   };
@@ -360,7 +362,7 @@
   App.shrinkPhoto = shrink;
 
   /* ---------- the screen ---------- */
-  const st = { cid: null, status: null, busy: false, photo: null, notes: [] };
+  const st = { cid: null, status: null, busy: false, photo: null, board: false, notes: [] };
   App.views.tutor = {
     title: 'Ask Bo',
     render(root, param, query) {
@@ -472,7 +474,7 @@
     main.innerHTML = `<div class="bo-log" id="bo-log" role="log" aria-live="polite" aria-label="Chat with Bo"></div>
       <div class="bo-suggest" id="bo-suggest"></div>
       <form class="bo-compose" id="bo-compose"><div class="bo-photo-prev" id="bo-photo-prev" hidden></div>
-        <div class="bo-row"><label class="icon-btn bo-photo" title="Add a photo of a problem" aria-label="Add a photo of a problem">${icon('image', 19)}<input type="file" id="bo-file" accept="image/*" hidden></label>
+        <div class="bo-row"><label class="icon-btn bo-photo" title="Add a photo of a problem" aria-label="Add a photo of a problem">${icon('image', 19)}<input type="file" id="bo-file" accept="image/*" hidden></label>${App.boPad && !NATIVE ? `<button type="button" class="icon-btn bo-photo" data-bo-draw title="Write it out on a board" aria-label="Write it out on a board">${icon('pen', 19)}</button>` : ''}
         <label class="sr-only" for="bo-q">Ask Bo</label><textarea id="bo-q" class="input bo-q" rows="1" maxlength="2000" placeholder="Ask Bo about ${esc(short(id))}…"></textarea>
         ${talk() ? `<button type="button" class="icon-btn bo-mic" data-bo-talk aria-label="Call Bo and talk out loud" title="Call Bo">${icon('phone', 19)}</button>` : ''}<button type="submit" class="btn primary bo-send" aria-label="Send">${icon('send', 18)}</button></div>
         <p class="bo-foot" id="bo-foot">Bo is an AI and can be wrong. Check important answers against your notes or your instructor.</p></form>`;
@@ -498,7 +500,10 @@
     const coarse = global.matchMedia && matchMedia('(pointer: coarse)').matches;
     q.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey && !coarse) { e.preventDefault(); form.requestSubmit(); } });
     const prev = $('#bo-photo-prev', main);
-    $('#bo-file', main).addEventListener('change', async e => { const f = e.target.files && e.target.files[0]; e.target.value = ''; if (!f) return; try { st.photo = await shrink(f); prev.hidden = false; prev.innerHTML = `<img src="${st.photo.preview}" alt="Your photo"><button type="button" class="icon-btn" data-bo-unphoto aria-label="Remove the photo">${icon('x', 14)}</button>`; } catch (x) { toast(x.message); } });
+    const showPhoto = (p, board) => { st.photo = p; st.board = !!board; prev.hidden = false; prev.innerHTML = `<img src="${p.preview}" alt="${board ? 'What you wrote' : 'Your photo'}"><button type="button" class="icon-btn" data-bo-unphoto aria-label="Remove ${board ? 'what you wrote' : 'the photo'}">${icon('x', 14)}</button>`; };
+    $('#bo-file', main).addEventListener('change', async e => { const f = e.target.files && e.target.files[0]; e.target.value = ''; if (!f) return; try { showPhoto(await shrink(f)); } catch (x) { toast(x.message); } });
+    // Write it out: the board (the same one as on calls, for this class); its picture goes with the next question
+    const drawB = $('[data-bo-draw]', main); if (drawB) drawB.addEventListener('click', () => App.boPad.sketch({ store: 'mh-pad:' + id, dark: settings().boBoardDark === true, onDone: p => { showPhoto(p, true); q.focus(); } }));
     prev.addEventListener('click', e => { if (e.target.closest('[data-bo-unphoto]')) { st.photo = null; prev.hidden = true; prev.innerHTML = ''; } });
     sug.addEventListener('click', e => { const b = e.target.closest('[data-bo-say]'); if (!b) return; q.value = b.dataset.boSay; grow(); form.requestSubmit(); });
     log.addEventListener('click', async e => {
@@ -514,9 +519,9 @@
     if (query.ask) { q.value = String(query.ask).slice(0, 2000); grow(); try { history.replaceState(history.state, '', `${location.pathname}${location.search}#/tutor/${id}`); } catch (e) {} setTimeout(() => form.requestSubmit(), 60); }
     form.addEventListener('submit', async e => {
       e.preventDefault(); if (st.busy) return;
-      const text = q.value.trim(); const photo = st.photo; if (!text && !photo) { q.focus(); return; }
-      st.busy = true; q.value = ''; grow(); st.photo = null; prev.hidden = true; prev.innerHTML = ''; sug.hidden = true;
-      log.insertAdjacentHTML('beforeend', msgHtml('u', (photo ? '[photo] ' : '') + text));
+      const text = q.value.trim(); const photo = st.photo, sketch = st.board; if (!text && !photo) { q.focus(); return; }
+      st.busy = true; q.value = ''; grow(); st.photo = null; st.board = false; prev.hidden = true; prev.innerHTML = ''; sug.hidden = true;
+      log.insertAdjacentHTML('beforeend', msgHtml('u', (photo ? (sketch ? '[board] ' : '[photo] ') : '') + text));
       log.insertAdjacentHTML('beforeend', `<div class="bo-msg bo typing" id="bo-typing"><span class="bo-mini" aria-hidden="true">${bo(34)}</span><div class="bo-bubble" aria-label="Bo is thinking"><i></i><i></i><i></i></div></div>`); scroll();
       // the answer appears as Bo writes it
       // the answer appears as Bo writes it; what he puts on the board goes up on the board as he writes it
@@ -529,7 +534,7 @@
         scroll();
       };
       try {
-        const r = await App.boAsk(Object.assign({ class: id, q: text, snapshot: snapshot(id), today: App.todayISO() }, photo ? { image: { type: photo.type, data: photo.data } } : {}), d => { sofar += d; if (!frame) frame = requestAnimationFrame(paintLive); });
+        const r = await App.boAsk(Object.assign({ class: id, q: text, snapshot: snapshot(id), today: App.todayISO() }, photo ? { image: { type: photo.type, data: photo.data } } : {}, sketch ? { sketch: 1 } : {}), d => { sofar += d; if (!frame) frame = requestAnimationFrame(paintLive); });
         cancelAnimationFrame(frame); const t = $('#bo-typing', log); if (t) t.remove(); if (live) live.remove();
         if (r.remembered) st.notes.push(r.remembered);
         if (r.usage && st.status) st.status.usage = r.usage;

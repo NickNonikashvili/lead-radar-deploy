@@ -29,6 +29,10 @@
      or pie chart, scatter plot with its best-fit line, box plot, normal curve, probability tree, Venn diagram or
      flow chart (MH_AI_DRAW; drawn by assets/board-draw.js). A check: line is a question the student answers on
      the board, and sees at once whether it's right.
+   - The board on a call is the whole screen, shared (assets/bo-pad.js): the student writes on it and Bo sees it
+     as a picture with a grid (columns A, B, C… across, rows 1, 2, 3… down): on a live call when they tap Show
+     Bo and quietly as they write; in basic voice with their question (pad: {cols, rows}, MH_AI_PAD). He marks
+     their writing at grid cells: mark_on_board on a live call, "mark: C3 circle note" lines otherwise.
    - How Bo teaches (MH_AI_TEACH, in the chat, voice and call instructions): what research on expert tutors and
      learning says works: find out where the student is, the big picture first, one idea at a time, concrete
      before abstract, a worked example and then fading, draw it, check with real questions, a hint ladder,
@@ -421,6 +425,23 @@ const MH_AI_FILE = <<<'TXT'
 THEIR FILE: they attached a problem set or a page of notes. Read all of it; number the problems as it does. Help with the one they ask about; if they ask about all of it, give a short plan (which problems need which idea) and start with the first. Graded homework gets the method with a similar example, as always.
 TXT;
 
+/* a picture of the board they share on a call (assets/bo-pad.js), with their question in basic voice; %COLS% and %ROWS% are filled in */
+const MH_AI_PAD = <<<'TXT'
+THE SHARED BOARD: you are on a call, and the whole screen is a whiteboard you share. The picture with their message is that board: their own handwriting and drawings, any marks you made before, and your pages as grey boxes. A grid is drawn over it: columns A, B, C… across the top and rows 1, 2, 3… down the side (this one: %COLS% columns, %ROWS% rows).
+- Read their writing carefully, line by line. If you can't read a part, say which part and ask; never guess at a number.
+- Help with what they wrote: find the first mistake and say what it is and why it's tempting, or tell them it's right; then talk them to the next step. Don't redo the whole problem unless they ask.
+- Mark their writing like a tutor with a pen, on lines of their own outside your [board] pages, one mark per line, at most four:
+mark: D4:E4 circle sign slip here
+mark: G4 check
+mark: B6 note 2x, not x²
+  The place is a cell ("C3") or a block of cells ("B2:D3") that covers what you mean. Kinds: circle (a mistake, or the part that matters), check (right), cross (wrong), underline, box, arrow (with a short note), note (a short note beside it). The words after the kind are a short note, under 30 characters (needed for note). Marks are drawn on their writing and never read aloud; say what they mean in words ("see the circle on the second line?").
+TXT;
+
+/* "Write it out" in the chat: the picture is their own handwriting */
+const MH_AI_SKETCH = <<<'TXT'
+THEIR WRITING: the picture is what they wrote out by hand on a board for you (their working, a problem or a sketch). Read it carefully, line by line; if you can't read a part, say which and ask, and never guess a number. Help with what they wrote: find the first mistake and why it's tempting, or tell them it's right, then take them to the next step instead of redoing it all.
+TXT;
+
 const MH_AI_VOICE = <<<'TXT'
 VOICE MODE: the student is talking with you out loud, and your reply is read aloud to them in your voice.
 - Talk like a tutor sitting next to them: usually 1 to 4 short sentences, under about 70 words. When you explain something new, take up to about 120 words to do it properly (the big idea, the example on the board, why it works), then check with one question. Plain spoken English: no lists, headings, markdown, emoji or LaTeX in what you say.
@@ -475,6 +496,12 @@ Your board (the student sees it right next to you):
 - ask_on_board: a question on the board they answer right there (choices to tap, or a box to type in). Use it to check understanding after you explain something, and when you quiz them. Ask it out loud in a few words too, then stop and wait: you'll get a message saying what they picked. Then react: right, say why in a sentence; wrong, what went wrong, and let them try again.
 - Say something while it goes up ("let me sketch that", "okay, it's up"); never go quiet, and never read the board back symbol by symbol. If a drawing comes back with an error, fix it and draw again.
 
+The board is the whole screen, and you share it:
+- They write and draw on it with a pen; your pages go up on it as cards beside their work (near: a cell, to put one next to the work it's about). You see it as a picture with a grid over it, columns A, B, C… across the top and rows 1, 2, 3… down the side: when they tap Show Bo (look at it then and help), and quietly while they write ("our board right now": don't answer it, just know what's there).
+- When they show you their work: read it carefully, line by line (ask about a part you can't read; never guess a number), find the first mistake and what makes it tempting, or tell them it's right, and talk them to the next step. Don't redo the whole problem unless they ask.
+- mark_on_board: mark their own writing like a tutor with a pen: circle a mistake or the part that matters, check what's right, cross out, underline, box, an arrow or a short note beside a line. The place is a cell from the latest picture ("C3") or a block ("B2:D3") covering what you mean. Then say it in words ("see the circle on the second line?").
+- Following along quietly: if you saw a mistake in what they're writing, bring it up briefly the next time you talk, kindly, before they build on it.
+
 TXT;
 
 const MH_AI_LIVE_REST = <<<'TXT'
@@ -502,13 +529,15 @@ function mh_ai_live_instructions(int $uid, string $cid, ?array $C, array $in): s
 /** A message without its board pages (each one becomes a mention of its title) or notes, for short recaps. */
 function mh_ai_unboard(string $t): string {
   $t = preg_replace('/\[board\+?:\s*([^\]\n]*)\]\s*\n.*?\[\/board\]/is', ' [on the board: $1] ', $t);
+  $t = preg_replace('/^\s*mark\s*:.*$/mi', '', $t);   // marks on their writing
   return trim(preg_replace('/\[(board\+?|remember):[^\]]*\]|\[\/board\]/i', ' ', $t));
 }
-/** The tools Bo has on a call: the board (writing and drawing, see assets/board-draw.js), and his notes. */
+/** The tools Bo has on a call: the board (writing, drawing and asking, see assets/board-draw.js; marking the student's writing, assets/bo-pad.js), and his notes. */
 function mh_ai_live_tools(): array {
   return [
     ['type' => 'function', 'name' => 'write_on_board', 'description' => 'Write on the whiteboard next to you, neatly, while you talk: the steps of a problem, an equation, a formula, the answer. The student sees it; you still talk it through in words.', 'parameters' => ['type' => 'object', 'properties' => [
       'title' => ['type' => 'string', 'description' => 'A short title for the page, like "Solving 2x + 3 = 11" or "The chain rule".'],
+      'near' => ['type' => 'string', 'description' => 'Optional: a cell from the latest picture of the board ("D2") to put a new page beside the work it is about.'],
       'page' => ['type' => 'string', 'enum' => ['new', 'add'], 'description' => 'new: start a fresh page (a new problem or idea). add: keep writing on the page you are on.'],
       'items' => ['type' => 'array', 'description' => 'One to six lines, in order.', 'items' => ['type' => 'object', 'properties' => [
         'kind' => ['type' => 'string', 'enum' => ['step', 'math', 'answer', 'tip', 'text', 'code']],
@@ -516,6 +545,7 @@ function mh_ai_live_tools(): array {
         'lang' => ['type' => 'string', 'description' => 'code: its language, like python.']], 'required' => ['kind', 'text']]]], 'required' => ['items']]],
     ['type' => 'function', 'name' => 'draw_on_board', 'description' => 'Draw on the whiteboard next to you: a graph of functions (with points, a shaded area, segments or vectors, asymptotes, tangent and secant lines, a Riemann sum, sliders the student drags), a number line with points and intervals, a figure (triangles, any shape, angles, vectors, forces, diagrams), the unit circle, a table of values, a bar chart or histogram, a pie chart, a scatter plot with its least-squares line, box plots, a normal curve with a shaded region and its area, a probability tree, a Venn diagram, or a flow chart. The student sees it drawn; you talk them through it.', 'parameters' => ['type' => 'object', 'properties' => [
       'title' => ['type' => 'string', 'description' => 'A short title for the page, when it starts a new one.'],
+      'near' => ['type' => 'string', 'description' => 'Optional: a cell from the latest picture of the board ("D2") to put a new page beside the work it is about.'],
       'page' => ['type' => 'string', 'enum' => ['new', 'add'], 'description' => 'new: a fresh page. add: draw on the page you are on, under what is there.'],
       'caption' => ['type' => 'string', 'description' => 'One short line: what to notice.'],
       'drawing' => ['type' => 'object', 'description' => 'Give type and the keys that type uses; leave the rest out. Labels are short plain text (x^2, θ, π, 1/2 are fine).', 'properties' => [
@@ -565,11 +595,17 @@ function mh_ai_live_tools(): array {
       ], 'required' => ['type']]], 'required' => ['drawing']]],
     ['type' => 'function', 'name' => 'ask_on_board', 'description' => 'Put a question on the whiteboard for the student to answer there: choices to tap, or a box to type the answer in. They see right away whether they got it, with your why, and you get a message saying what they picked. Use it to check understanding after you explain, and to quiz them. Then stop and wait.', 'parameters' => ['type' => 'object', 'properties' => [
       'title' => ['type' => 'string', 'description' => 'A short title for the page, when it starts a new one.'],
+      'near' => ['type' => 'string', 'description' => 'Optional: a cell from the latest picture of the board ("D2") to put a new page beside the work it is about.'],
       'page' => ['type' => 'string', 'enum' => ['new', 'add'], 'description' => 'new: a fresh page. add: under what is on the page you are on.'],
       'question' => ['type' => 'string', 'description' => 'The question, short; math in $...$.'],
       'choices' => ['type' => 'array', 'items' => ['type' => 'string'], 'description' => 'Two to four choices to tap. Leave out to have them type the answer.'],
       'answer' => ['type' => 'string', 'description' => 'The right choice, written exactly as in choices; or, with no choices, the answer you would accept.'],
       'why' => ['type' => 'string', 'description' => 'One sentence on why that is the answer, shown once they answer.']], 'required' => ['question', 'answer']]],
+    ['type' => 'function', 'name' => 'mark_on_board', 'description' => 'Mark the student\'s own writing on the board you share, like a tutor with a pen: circle a mistake, check what is right, cross out, underline, box, point with an arrow, or write a short note beside it. Places are cells of the grid on the latest picture of the board (columns A, B, C… across, rows 1, 2, 3… down): "C3", or a block like "B2:D3" covering what you mean.', 'parameters' => ['type' => 'object', 'properties' => [
+      'marks' => ['type' => 'array', 'description' => 'One to four marks.', 'items' => ['type' => 'object', 'properties' => [
+        'at' => ['type' => 'string', 'description' => 'A cell ("C3") or a block of cells ("B2:D3") on the latest picture.'],
+        'kind' => ['type' => 'string', 'enum' => ['circle', 'check', 'cross', 'underline', 'box', 'arrow', 'note']],
+        'text' => ['type' => 'string', 'description' => 'A short note, under 30 characters (needed for note; optional for the others).']], 'required' => ['at', 'kind']]]], 'required' => ['marks']]],
     ['type' => 'function', 'name' => 'remember', 'description' => 'Save one short fact about the student for future sessions: how they learn best, a goal, a recurring difficulty. Never sensitive personal details.', 'parameters' => ['type' => 'object', 'properties' => ['fact' => ['type' => 'string', 'description' => 'Under 20 words.']], 'required' => ['fact']]],
   ];
 }
@@ -686,6 +722,8 @@ function mh_ai_route(string $route, array $in, array $cfg, string $ip): void {
       $img = isset($in['image']) ? mh_ai_file($in['image'], ['image/jpeg', 'image/png', 'image/webp', 'image/gif'], MH_AI_IMAGE_BYTES) : null;
       $pdf = isset($in['file']) ? mh_ai_file($in['file'], ['application/pdf'], MH_AI_PDF_BYTES) : null;   // a problem set
       $pdfName = $pdf ? (mh_ai_plain($in['file']['name'] ?? '', 60) ?: 'PDF') : '';
+      // the photo is the board they share on a call, with its grid (assets/bo-pad.js): how many columns and rows
+      $pad = $img && is_array($in['pad'] ?? null) ? ['cols' => max(1, min(12, (int)($in['pad']['cols'] ?? 0))), 'rows' => max(1, min(12, (int)($in['pad']['rows'] ?? 0)))] : null;
       // asked from a page (the floating Bo): what is on it, what they pointed at, and the page's name for the chat
       $screen = mh_ai_clip($in['screen'] ?? '', MH_AI_SCREEN_CHARS); $focus = mh_ai_clip($in['focus'] ?? '', 3000); $from = mh_ai_plain($in['where'] ?? '', 80);
       if ($q === '' && !$img && !$pdf) mh_fail('Ask Bo something first.', 400);
@@ -701,6 +739,8 @@ function mh_ai_route(string $route, array $in, array $cfg, string $ip): void {
       $now = array_filter(['TODAY: ' . $today, $C ? mh_ai_upcoming($C, $today) : '', mh_ai_snapshot($in['snapshot'] ?? null), $notes ? "WHAT BO REMEMBERS ABOUT THEM:\n- " . implode("\n- ", $notes) : '']);
       $system[] = ['type' => 'text', 'text' => implode("\n", $now)];
       if ($voice) $system[] = ['type' => 'text', 'text' => MH_AI_VOICE];
+      if ($pad) $system[] = ['type' => 'text', 'text' => str_replace(['%COLS%', '%ROWS%'], [(string)$pad['cols'], (string)$pad['rows']], MH_AI_PAD)];
+      elseif ($img && !empty($in['sketch'])) $system[] = ['type' => 'text', 'text' => MH_AI_SKETCH];
       if (($lang = mh_ai_lang($in)) !== '') $system[] = ['type' => 'text', 'text' => $lang];
       if ($screen !== '' || $focus !== '' || $pdf) $system[] = ['type' => 'text', 'text' => implode("\n\n", array_filter([$screen !== '' ? MH_AI_SCREEN . "\n\nTHE PAGE:\n" . $screen : '', $focus !== '' ? MH_AI_FOCUS . "\n" . $focus : '', $pdf ? MH_AI_FILE : '']))];
       // the last few turns, oldest first, starting with the student
@@ -722,7 +762,7 @@ function mh_ai_route(string $route, array $in, array $cfg, string $ip): void {
         mh_ai_save_notes($uid, $notes); $reply = trim(preg_replace('/^\s*\[remember:.*\]\s*$/mi', '', $reply));
       }
       if ($reply === '') $reply = 'Sorry, I lost my train of thought. Could you ask that again?';
-      $turns[] = array_merge(['r' => 'u', 't' => ($img ? '[photo] ' : '') . ($pdf ? '[pdf: ' . str_replace(']', ')', $pdfName) . '] ' : '') . ($from !== '' ? '[from: ' . str_replace(']', ')', $from) . '] ' : '') . $q, 'at' => time()], $voice ? ['v' => 1] : []); $turns[] = array_merge(['r' => 'b', 't' => $reply, 'at' => time()], $voice ? ['v' => 1] : []);
+      $turns[] = array_merge(['r' => 'u', 't' => ($img ? ($pad || !empty($in['sketch']) ? '[board] ' : '[photo] ') : '') . ($pdf ? '[pdf: ' . str_replace(']', ')', $pdfName) . '] ' : '') . ($from !== '' ? '[from: ' . str_replace(']', ')', $from) . '] ' : '') . $q, 'at' => time()], $voice ? ['v' => 1] : []); $turns[] = array_merge(['r' => 'b', 't' => $reply, 'at' => time()], $voice ? ['v' => 1] : []);
       mh_ai_save_turns($uid, $cid, $turns); mh_ai_count($uid, 'tutor', $r['in'], $r['out']);
       $out = ['ok' => true, 'reply' => $reply, 'remembered' => $remembered, 'cut' => in_array($r['stop'], ['max_tokens', 'cut'], true), 'usage' => ['tutor' => $use['tutor'] + 1, 'tutor_limit' => $A['tutor_monthly']]];
       if ($stream) { mh_ai_emit(['t' => 'done'] + $out); exit; }

@@ -80,6 +80,12 @@ if ($path === '/anthropic/v1/messages') {
       $qs[] = ['topic' => $sid, 'items' => [["Which one is $sid?", 'This one', ['That one', 'Neither', 'Both'], "Because it is $sid."], ["Is $sid useful?", 'Yes', ['No', 'Never', 'Only on Sundays'], 'It is.']]];
     }
     $text = "Here you go:\n```json\n" . json_encode(['SECTIONS' => $secs, 'FLASHCARDS' => $cards, 'QUIZ' => ['questions' => $qs]]) . "\n```";
+  } elseif (str_contains($sys, 'THE SHARED BOARD') && $hasImage) {
+    // a look at the board on a call (basic voice): he says what he sees, marks it, and puts a page beside it
+    $grid = preg_match('/this one: (\d+) columns, (\d+) rows/', $sys, $gm) ? "$gm[1]x$gm[2]" : '?';
+    $text = "I see your board, grid $grid. Your first line is right, look at the circle on the second.\nmark: B2:C2 circle sign slip here\nmark: D1 check\n[board: Fixing the sign]\nstep: Take 3 from both sides: $2x = 8$\nmark: E3 note try this\n[/board]\nWhat do you get when you divide by two?";
+  } elseif (str_contains($sys, 'THEIR WRITING') && $hasImage) {
+    $text = 'I read your writing. The first line is right; check the sign on the second.';
   } elseif (str_contains($sys, 'VOICE MODE')) {
     // talking out loud: a short spoken answer with a line for the whiteboard
     $weak = preg_match('/WEAKEST TOPICS: ([^;\n]+?) \d+%|WEAKEST TOPICS: ([^;\n]+?) not practised/', $sys, $w) ? trim($w[1] ?: $w[2]) : '';

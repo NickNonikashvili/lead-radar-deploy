@@ -193,6 +193,20 @@ const PNG = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwA
   await n.$eval('#bo-board input[data-bd-p="a"]', el => { el.value = '-1'; el.dispatchEvent(new Event('input', { bubbles: true })); }); await n.waitForTimeout(250);
   const line1 = await n.$eval('#bo-board .bb-draw .bd-seg', p => p.getAttribute('d'));
   check('dragging the slider redraws it: the tangent moves along the curve, the number shows', line1 !== line0 && (await txt(n, '#bo-board .bd-sl output')) === '−1' && /slope = −2/.test(await txt(n, '#bo-board .bb-draw svg')), { line0, line1 });
+  // his graph moves like the Calc I grapher: scrolling past it does not get stuck in it; click it, then scroll zooms; drag; read a curve
+  const gb = await (await n.$('#bo-board .bd-live')).boundingBox(); const gticks = () => n.$$eval('#bo-board .bd-live .bd-tick', t => t.map(x => x.textContent).join(' '));
+  const g0 = await gticks(); await n.mouse.move(gb.x + gb.width * 0.6, gb.y + gb.height * 0.5); await n.mouse.wheel(0, -240); await n.waitForTimeout(250);
+  check('scrolling over his graph before clicking it leaves it alone, and says how to zoom', (await gticks()) === g0 && /Click the graph, then scroll to zoom/.test(await txt(n, '#bo-board .bd-hint.on')));
+  await n.mouse.click(gb.x + gb.width * 0.6, gb.y + gb.height * 0.5); await n.mouse.wheel(0, -240); await n.waitForTimeout(250);
+  const g1 = await gticks();
+  check('once clicked, scrolling zooms it around the pointer, and Back to the first view shows', g1 !== g0 && await n.$eval('#bo-board [data-bdz="home"]', b => !b.hidden), g1);
+  await n.mouse.move(gb.x + gb.width * 0.5, gb.y + gb.height * 0.5); await n.mouse.down(); await n.mouse.move(gb.x + gb.width * 0.3, gb.y + gb.height * 0.4, { steps: 5 }); await n.mouse.up(); await n.waitForTimeout(250);
+  check('dragging it moves it', (await gticks()) !== g1);
+  await n.keyboard.press('0'); await n.waitForTimeout(250);
+  check('0 (or a double click) puts his view back', (await gticks()) === g0 && await n.$eval('#bo-board [data-bdz="home"]', b => b.hidden));
+  const sb = await (await n.$('#bo-board .bd-live svg')).boundingBox(); let traced = '';
+  for (const fx of [0.3, 0.45, 0.6, 0.75]) { for (const fy of [0.2, 0.35, 0.5, 0.65, 0.8]) { await n.mouse.move(sb.x + sb.width * fx, sb.y + sb.height * fy); await n.waitForTimeout(40); traced = await n.$eval('#bo-board .bd-trace', g => g.textContent).catch(() => ''); if (traced) break; } if (traced) break; }
+  check('pointing at a curve reads it: the point and the slope there', /^\([−\d.]+, [−\d.]+\)slope [−\d.]+$/.test(traced), traced);
   await n.click('#bo-board .bb-chk-o[data-chk-o="0"]'); await n.waitForTimeout(300);
   const ck = await n.evaluate(() => { const c = document.querySelector('#bo-board .bb-check'); return { no: c.querySelector('[data-chk-o="0"]').classList.contains('no'), ok: c.querySelector('[data-chk-o="1"]').classList.contains('ok'), off: [...c.querySelectorAll('.bb-chk-o')].every(b => b.disabled), fb: (c.querySelector('.bb-chk-fb:not([hidden])') || {}).textContent }; });
   check('tapping a wrong answer: marked at once, the right one shown, and why', ck.no && ck.ok && ck.off && /Not quite\. The answer is 2\./.test(ck.fb) && /derivative of x\^2 is 2x/.test(ck.fb), ck);

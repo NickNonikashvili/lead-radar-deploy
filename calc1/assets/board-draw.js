@@ -676,10 +676,11 @@
     return { rects, sum, n, a, b, rule: Rm.rule, c: Rm.c };
   }
   function graph(sp, id) {
-    const W = 360, H = 250, pl = 30, pr = 14, pt = 14, pb = 24; const P = sp.params || null; const ev = v => v == null ? NaN : value(v, P);
-    const fns = sp.fns.map(g => {
+    // 360 × 250 on a page of the board; the grapher (open()) draws it the size of the screen
+    const W = sp._W || 360, H = sp._H || 250, pl = 30, pr = 14, pt = 14, pb = 24; const P = sp.params || null; const ev = v => v == null ? NaN : value(v, P);
+    const fns = sp.fns.filter(g => !g.hidden).map(g => {
       if (g.xt && g.yt) { const fx = compile(g.xt, P), fy = compile(g.yt, P); return fx && fy ? Object.assign({}, g, { par: true, fx, fy }) : null; }
-      const f = compile(g.f, P); return f ? Object.assign({}, g, { fn: f }) : null;
+      const f = compile(g.f, P); return f ? Object.assign({}, g, { fn: g.deriv ? x => slope(f, x) : f }) : null;   // deriv: its derivative (the grapher's f′)
     }).filter(Boolean);
     const sh = sp.shade ? { f: compile(sp.shade.f, P), g: compile(sp.shade.g, P), from: ev(sp.shade.from), to: ev(sp.shade.to), c: sp.shade.c } : null;
     const tans = (sp.tangents || []).map(t => { const f = compile(t.f, P), a = ev(t.at); if (!f || !Number.isFinite(a)) return null; const y = f(a), m = slope(f, a); return Number.isFinite(y) && Number.isFinite(m) ? { a, y, m, label: t.label, c: t.c } : null; }).filter(Boolean);
@@ -697,7 +698,7 @@
       if (x0 > 0 && x0 < (x1 - x0) * 0.6) x0 = -(x1 - x0) * 0.06; if (x1 < 0 && -x1 < (x1 - x0) * 0.6) x1 = (x1 - x0) * 0.06;
     }
     // sample the curves; the y range is what most of them cover
-    const N = 320; const curves = fns.map(g => {
+    const N = Math.min(1400, Math.max(320, Math.round(W * 0.9))); const curves = fns.map(g => {
       if (g.par) { const [t0, t1] = g.t || [0, 2 * Math.PI]; const pts = []; for (let k = 0; k <= N; k++) { const t = t0 + (t1 - t0) * k / N; pts.push([g.fx(t), g.fy(t)]); } return pts; }
       const a = g.domain ? Math.max(x0, g.domain[0]) : x0, b = g.domain ? Math.min(x1, g.domain[1]) : x1; const pts = [];
       if (b > a) for (let k = 0; k <= N; k++) { const x = a + (b - a) * k / N; pts.push([x, g.fn(x)]); }
@@ -716,20 +717,22 @@
     })();
     if (sp.equal) { const kx = (W - pl - pr) / (x1 - x0), ky = (H - pt - pb) / (y1 - y0); if (kx > ky) { const m = (x0 + x1) / 2, h = (W - pl - pr) / ky / 2; x0 = m - h; x1 = m + h; } else { const m = (y0 + y1) / 2, h = (H - pt - pb) / kx / 2; y0 = m - h; y1 = m + h; } }
     if (sp.sliders && sp.sliders.length) { sp.x = [x0, x1]; sp.y = [y0, y1]; }   // the axes stay put while the student drags a slider
+    if (!sp._home) sp._home = { x: sp.x ? sp.x.slice() : null, y: sp.y ? sp.y.slice() : null };   // the view Bo drew, for Reset
+    sp._map = { W, H, pl, pr, pt, pb, x0, x1, y0, y1 }; sp._fns = fns;   // for moving, zooming and tracing it (below)
     const X = x => pl + (x - x0) / (x1 - x0) * (W - pl - pr), Y = y => pt + (y1 - y) / (y1 - y0) * (H - pt - pb);
     const box = [pl, pt, W - pr, H - pb];
     const ink = Ink(); const clip = `${id}-c`;
     ink.raw(`<defs><clipPath id="${clip}"><rect x="${pl}" y="${pt}" width="${W - pl - pr}" height="${H - pt - pb}"/></clipPath></defs>`);
     // the grid and the axes
-    const sx = niceStep(x1 - x0, 8), sy = niceStep(y1 - y0, 6); const tx = ticks(x0, x1, sx), ty = ticks(y0, y1, sy);
+    const sx = niceStep(x1 - x0, Math.max(8, Math.round((W - pl - pr) / 70))), sy = niceStep(y1 - y0, Math.max(6, Math.round((H - pt - pb) / 56))); const tx = ticks(x0, x1, sx), ty = ticks(y0, y1, sy);
     ink.raw(`<g class="bd-grid">${tx.map(v => `<path d="${M(X(v), pt)}${L(X(v), H - pb)}"/>`).join('')}${ty.map(v => `<path d="${M(pl, Y(v))}${L(W - pr, Y(v))}"/>`).join('')}</g>`);
     const ax = Y(Math.min(Math.max(0, y0), y1)), ay = X(Math.min(Math.max(0, x0), x1)); const n0 = ink.next();
     ink.path(`${M(pl, ax)}${L(W - pr + 4, ax)}`, 'bd-axis', null, { i: n0 }); ink.path(`${M(ay, H - pb)}${L(ay, pt - 4)}`, 'bd-axis', null, { i: n0 });
     const lblX = tx.filter(v => Math.abs(X(v) - ay) > 6 || ay <= pl + 1), lblY = ty.filter(v => Math.abs(Y(v) - ax) > 6);
     const every = (arr, max) => arr.filter((v, k) => arr.length <= max || k % Math.ceil(arr.length / max) === 0);
     const taken = [];   // label boxes already on the page: {x: centre, y: baseline, w}
-    every(lblX, 9).forEach(v => { const t = fmt(v, sx), y = Math.min(H - 6, ax + 14); ink.text(X(v), y, t, 'bd-tick', { anchor: 'middle', i: n0 }); taken.push({ x: X(v), y, w: t.length * 6.2 }); });
-    every(lblY, 7).forEach(v => { const t = fmt(v, sy), x = Math.max(ay - 5, 24); ink.text(x, Y(v) + 3.5, t, 'bd-tick', { anchor: 'end', i: n0 }); taken.push({ x: x - t.length * 3.1, y: Y(v) + 3.5, w: t.length * 6.2 }); });
+    every(lblX, Math.max(9, Math.round(W / 60))).forEach(v => { const t = fmt(v, sx), y = Math.min(H - 6, ax + 14); ink.text(X(v), y, t, 'bd-tick', { anchor: 'middle', i: n0 }); taken.push({ x: X(v), y, w: t.length * 6.2 }); });
+    every(lblY, Math.max(7, Math.round(H / 50))).forEach(v => { const t = fmt(v, sy), x = Math.max(ay - 5, 24); ink.text(x, Y(v) + 3.5, t, 'bd-tick', { anchor: 'end', i: n0 }); taken.push({ x: x - t.length * 3.1, y: Y(v) + 3.5, w: t.length * 6.2 }); });
     if (sp.xlabel) { ink.text(W - pr, ax - 6, lab(sp.xlabel), 'bd-axl', { anchor: 'end', i: n0 }); const w = tw(sp.xlabel); taken.push({ x: W - pr - w / 2, y: ax - 6, w }); }
     if (sp.ylabel) { ink.text(ay + 6, pt + 8, lab(sp.ylabel), 'bd-axl', { i: n0 }); const w = tw(sp.ylabel); taken.push({ x: ay + 6 + w / 2, y: pt + 8, w }); }
     const yc = v => Math.max(y0 - (y1 - y0), Math.min(y1 + (y1 - y0), v));
@@ -805,13 +808,13 @@
 
   /* ---------- scatter plot: a graph of the data and its least-squares line ---------- */
   function scatter(sp, id) {
-    const F = sp.fit; const g = { type: 'graph', fns: [], points: sp.points.map(p => Object.assign({}, p)), segments: [], shade: null, vlines: [], hlines: [], notes: [], x: sp.x, y: sp.y, xlabel: sp.xlabel, ylabel: sp.ylabel, tangents: [], secants: [], riemann: null, corner: '' };
+    const F = sp.fit; const g = { type: 'graph', fns: [], points: sp.points.map(p => Object.assign({}, p)), segments: [], shade: null, vlines: [], hlines: [], notes: [], x: sp.x, y: sp.y, xlabel: sp.xlabel, ylabel: sp.ylabel, tangents: [], secants: [], riemann: null, corner: '', _W: sp._W, _H: sp._H };
     if (F) {
       g.fns.push({ f: `${F.a}+(${F.b})*x`, label: `ŷ = ${sig(F.a)} ${F.b < 0 ? '−' : '+'} ${sig(Math.abs(F.b))}x`, c: 1, dash: false });
       if (sp.residuals) sp.points.forEach(p => g.segments.push({ from: [p.x, p.y], to: [p.x, F.a + F.b * p.x], label: '', arrow: false, dash: true, c: 5 }));
       if (sp.predict !== null) { const y = F.a + F.b * sp.predict; g.points.push({ x: sp.predict, y, label: `ŷ = ${sig(y)}`, open: false, c: 2 }); g.vlines.push({ v: sp.predict, label: '' }); }
     }
-    return graph(g, id);
+    const out = graph(g, id); if (!sp._home) sp._home = g._home; sp._map = g._map; sp._fns = g._fns; return out;
   }
 
   /* ---------- number line ---------- */
@@ -1141,30 +1144,237 @@
   /* ---------- the drawing as markup; a graph with sliders redraws as they move ---------- */
   const R = { graph, numberline, figure, unitcircle, bars, pie, scatter, boxplot, normal, tree, venn: vennDraw, flow };
   const LIVE = new Map();
-  const sliderHtml = (sp, id) => `<div class="bd-sliders" role="group" aria-label="Change the numbers in the drawing">${sp.sliders.map(s => `<label class="bd-sl"><span class="bd-sl-n">${s.label ? `${lab(s.label)} ` : ''}<i>${esc(s.name)}</i> = <output>${esc(sig(s.value))}</output></span><input type="range" min="${s.min}" max="${s.max}" step="${s.step}" value="${s.value}" data-bd-id="${id}" data-bd-p="${esc(s.name)}" aria-label="${esc(s.label || s.name)}"></label>`).join('')}</div>`;
-  function html(sp, animate) {
+  const MOVES = new Set(['graph', 'scatter']);   // drawings you can move, zoom and trace, like the Calc I grapher
+  const ic = (n, z) => (App.icon ? App.icon(n, z) : '');
+  if (App.ICONS) Object.assign(App.ICONS, {
+    expand: '<path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/>',
+    fit: '<path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/><circle cx="12" cy="12" r="2.5"/>'
+  });
+  const sliderHtml = (sp, id) => `<div class="bd-sliders" role="group" aria-label="Change the numbers in the drawing">${sp.sliders.map(s => `<label class="bd-sl"><span class="bd-sl-n">${s.label ? `${lab(s.label)} ` : ''}<i>${esc(s.name)}</i> = <output>${esc(sig(sp.params ? sp.params[s.name] : s.value))}</output></span><input type="range" min="${s.min}" max="${s.max}" step="${s.step}" value="${sp.params ? sp.params[s.name] : s.value}" data-bd-id="${id}" data-bd-p="${esc(s.name)}" aria-label="${esc(s.label || s.name)}"></label>`).join('')}</div>`;
+  const toolsHtml = big => `<div class="bd-tools" role="toolbar" aria-label="Graph"><button type="button" class="bd-tb" data-bdz="in" aria-label="Zoom in" title="Zoom in">${ic('zoomin', 16)}</button><button type="button" class="bd-tb" data-bdz="out" aria-label="Zoom out" title="Zoom out">${ic('zoomout', 16)}</button><button type="button" class="bd-tb" data-bdz="home" aria-label="Back to the first view" title="Back to the first view" hidden>${ic('fit', 16)}</button>${big ? '' : `<button type="button" class="bd-tb" data-bdz="open" aria-label="Open in the grapher" title="Open in the grapher">${ic('expand', 16)}</button>`}</div>`;
+  function html(sp, animate, o = {}) {
     if (!sp) return '';
-    const id = `bd${++uid}`; let inner;
+    const id = o.id || `bd${++uid}`; let inner;
     try {
       if (sp.type === 'table') inner = table(sp);
       else { const g = R[sp.type](sp, id); inner = `${svgOpen(g.w, g.h, plain(sp), id)}${g.body}</svg>`; }
     } catch (e) { return `<p class="bd-bad">This drawing could not be shown.</p>`; }
-    const live = sp.sliders && sp.sliders.length; if (live) { LIVE.set(id, sp); if (LIVE.size > 60) LIVE.delete(LIVE.keys().next().value); }
+    const moves = MOVES.has(sp.type) && !!sp._map;
+    const live = (sp.sliders && sp.sliders.length) || moves; if (live) { LIVE.set(id, sp); if (LIVE.size > 160) LIVE.delete(LIVE.keys().next().value); }
     const F = sp.type === 'scatter' && sp.showR && sp.fit; const stat = F && Number.isFinite(F.r) ? `<p class="bd-stat">r = ${F.r.toFixed(3).replace('-', '−')} · r² = ${(F.r * F.r).toFixed(3)} · n = ${F.n}</p>` : '';
-    return `<div class="bd bd-${sp.type}${animate ? ' bd-anim' : ''}" data-bd="${id}">${inner}</div>${stat}${live ? sliderHtml(sp, id) : ''}${sp.caption ? `<figcaption class="bd-cap">${esc(sp.caption).replace(/\$([^$]+)\$/g, '\\($1\\)')}</figcaption>` : ''}`;
+    const attrs = moves ? ' tabindex="0" role="group" aria-roledescription="graph you can move" aria-label="Drag to move it, scroll or pinch to zoom, point at a curve to read it; arrow keys move it, + and − zoom, 0 goes back"' : '';
+    return `<div class="bd bd-${sp.type}${animate ? ' bd-anim' : ''}${moves ? ' bd-live' : ''}" data-bd="${id}"${attrs}>${inner}${moves ? toolsHtml(o.big) : ''}</div>${stat}${sp.sliders && sp.sliders.length && !o.bare ? sliderHtml(sp, id) : ''}${sp.caption && !o.bare ? `<figcaption class="bd-cap">${esc(sp.caption).replace(/\$([^$]+)\$/g, '\\($1\\)')}</figcaption>` : ''}`;
   }
   let raf = 0; const dirty = new Set();
+  const boxOf = id => document.querySelector(`.bd[data-bd="${id}"]`);
   function redraw() {
     raf = 0;
-    dirty.forEach(id => { const sp = LIVE.get(id); const box = document.querySelector(`.bd[data-bd="${id}"]`); const svg = box && box.querySelector('svg'); if (!sp || !svg) return; try { const g = R[sp.type](sp, id); svg.innerHTML = `<title id="${id}">${esc(plain(sp))}</title>${g.body}`; } catch (e) {} box.classList.remove('bd-anim'); });
+    dirty.forEach(id => {
+      const sp = LIVE.get(id); const box = boxOf(id); const svg = box && box.querySelector('svg'); if (!sp || !svg) return;
+      try { const g = R[sp.type](sp, id); svg.setAttribute('viewBox', `0 0 ${g.w} ${g.h}`); svg.innerHTML = `<title id="${id}">${esc(plain(sp))}</title>${g.body}`; } catch (e) {}
+      box.classList.remove('bd-anim'); const hb = box.querySelector('[data-bdz="home"]'); if (hb) hb.hidden = !sp._moved;
+      const tr = TR.get(id); if (tr) trace(id, tr.ux, tr.uy, tr.touch);
+      if (sp._onDraw) sp._onDraw();
+    });
     dirty.clear();
   }
+  const later = id => { dirty.add(id); if (!raf) raf = requestAnimationFrame(redraw); };
   if (global.document) document.addEventListener('input', e => {
     const el = e.target; if (!el || !el.matches || !el.matches('input[data-bd-p]')) return;
     const sp = LIVE.get(el.dataset.bdId); if (!sp || !sp.params) return;
     sp.params[el.dataset.bdP] = +el.value; const out = el.closest('.bd-sl') && el.closest('.bd-sl').querySelector('output'); if (out) out.textContent = sig(+el.value);
-    dirty.add(el.dataset.bdId); if (!raf) raf = requestAnimationFrame(redraw);
+    later(el.dataset.bdId);
   });
 
-  App.boDraw = { parse, html, plain, pretty, json, depth, value, TYPES };
+  /* ---------- a graph you can move: drag it, zoom it (wheel, pinch, buttons, keys), read a curve where you point ----------
+     Like the Calc I grapher (assets/calc-tools.js), on the same drawing Bo made: moving it only changes the window
+     (sp.x, sp.y), and Back to the first view (or a double click) puts his window back. The wheel zooms a graph once you
+     have clicked it (or with Ctrl, a trackpad pinch), so scrolling past one in a chat does not get stuck in it. */
+  const TR = new Map();   // the point being read on each graph
+  const G = new Map();    // pointers down on each graph
+  const toUnits = (svg, x, y) => { const m = svg.getScreenCTM(); if (!m) return null; const p = new DOMPoint(x, y).matrixTransform(m.inverse()); return [p.x, p.y]; };
+  const world = (M, ux, uy) => [M.x0 + (ux - M.pl) / (M.W - M.pl - M.pr) * (M.x1 - M.x0), M.y1 - (uy - M.pt) / (M.H - M.pt - M.pb) * (M.y1 - M.y0)];
+  function view(id, sp, x0, x1, y0, y1) {
+    const w = x1 - x0, h = y1 - y0; if (!(w > 1e-7 && h > 1e-7 && w < 1e7 && h < 1e7) || ![x0, x1, y0, y1].every(Number.isFinite)) return;
+    sp.x = [x0, x1]; sp.y = [y0, y1]; sp._moved = true; later(id);
+  }
+  function zoom(id, sp, f, wx, wy) {
+    const M = sp._map; if (!M) return; if (wx == null) { wx = (M.x0 + M.x1) / 2; wy = (M.y0 + M.y1) / 2; }
+    view(id, sp, wx - (wx - M.x0) * f, wx + (M.x1 - wx) * f, wy - (wy - M.y0) * f, wy + (M.y1 - wy) * f);
+  }
+  function pan(id, sp, dux, duy) {
+    const M = sp._map; if (!M) return; const kx = (M.x1 - M.x0) / (M.W - M.pl - M.pr), ky = (M.y1 - M.y0) / (M.H - M.pt - M.pb);
+    view(id, sp, M.x0 - dux * kx, M.x1 - dux * kx, M.y0 + duy * ky, M.y1 + duy * ky);
+  }
+  function home(id, sp) { sp.x = sp._home && sp._home.x ? sp._home.x.slice() : null; sp.y = sp._home && sp._home.y ? sp._home.y.slice() : null; sp._moved = false; later(id); }
+  /* the curve nearest the pointer at its x: a dot on it, its coordinates and its slope */
+  function trace(id, ux, uy, touch) {
+    const sp = LIVE.get(id); const M = sp && sp._map; const box = boxOf(id); const svg = box && box.querySelector('svg'); if (!M || !svg) return;
+    const old = svg.querySelector('.bd-trace'); if (old) old.remove();
+    const off = () => { TR.delete(id); if (sp._onTrace) sp._onTrace(null); };
+    if (ux < M.pl || ux > M.W - M.pr || uy < M.pt - 8 || uy > M.H - M.pb + 8) return off();
+    const X = x => M.pl + (x - M.x0) / (M.x1 - M.x0) * (M.W - M.pl - M.pr), Y = y => M.pt + (M.y1 - y) / (M.y1 - M.y0) * (M.H - M.pt - M.pb);
+    const wx = world(M, ux, uy)[0]; let best = null;
+    (sp._fns || []).forEach(g => {
+      if (g.par || !g.fn || (g.domain && (wx < g.domain[0] || wx > g.domain[1]))) return;
+      const y = g.fn(wx); if (!Number.isFinite(y) || y < M.y0 || y > M.y1) return;
+      const d = Math.abs(Y(y) - uy); if (!best || d < best.d) best = { g, y, d };
+    });
+    if (!best || best.d > (touch ? 1e9 : 70)) return off();
+    TR.set(id, { ux, uy, touch });
+    const m = slope(best.g.fn, wx); const px = X(wx), py = Y(best.y); const c = best.g.c != null ? best.g.c : 0;
+    const t1 = `(${sig(wx)}, ${sig(best.y)})`, t2 = Number.isFinite(m) && Math.abs(m) < 1e6 ? `slope ${sig(m)}` : '';
+    const w = Math.max(t1.length, t2.length) * 7 + 10; const right = px + 12 + w < M.W - M.pr; const tx = right ? px + 12 : px - 12; const ty = py - 12 < M.pt + 12 ? py + 22 : py - 12;
+    svg.insertAdjacentHTML('beforeend', `<g class="bd-trace bd-c${c}" aria-hidden="true"><path d="${M_(px, M.pt)}${L(px, M.H - M.pb)}" class="bd-trace-v"/><circle cx="${r1(px)}" cy="${r1(py)}" r="5.5" class="bd-trace-dot"/><text x="${r1(tx)}" y="${r1(ty)}" class="bd-trace-t"${right ? '' : ' text-anchor="end"'}>${esc(t1)}${t2 ? `<tspan x="${r1(tx)}" dy="15" class="bd-trace-m">${esc(t2)}</tspan>` : ''}</text></g>`);
+    if (sp._onTrace) sp._onTrace({ x: wx, y: best.y, m, label: best.g.label || (best.g.f ? `y = ${best.g.f}` : '') });
+  }
+  const M_ = M;
+  const liveBox = e => { const b = e.target && e.target.closest && e.target.closest('.bd-live'); return b && !e.target.closest('.bd-tools') ? b : null; };
+  const near = (sp, svg, x, y) => { const u = toUnits(svg, x, y); const M = sp._map; if (!u || !M) return false; const wx = world(M, u[0], u[1])[0]; const k = (M.H - M.pt - M.pb) / (M.y1 - M.y0); return (sp._fns || []).some(g => { if (g.par || !g.fn) return false; const v = g.fn(wx); return Number.isFinite(v) && Math.abs(M.pt + (M.y1 - v) * k - u[1]) < 26; }); };
+  if (global.document) {
+    document.addEventListener('pointerdown', e => {
+      const box = liveBox(e); if (!box || (e.pointerType === 'mouse' && e.button !== 0)) return;
+      const id = box.dataset.bd, sp = LIVE.get(id), svg = box.querySelector('svg'); if (!sp || !svg) return;
+      const S = G.get(id) || { pts: new Map(), mode: '' }; G.set(id, S);
+      S.pts.set(e.pointerId, { x: e.clientX, y: e.clientY, x0: e.clientX, y0: e.clientY, t: Date.now() });
+      if (S.pts.size === 1) S.mode = e.pointerType !== 'mouse' && near(sp, svg, e.clientX, e.clientY) ? 'trace' : 'pan';
+      else { S.mode = 'pinch'; const [a, b] = [...S.pts.values()]; S.d = Math.hypot(a.x - b.x, a.y - b.y); }
+      try { box.setPointerCapture(e.pointerId); } catch (x) {}
+      box.classList.add('bd-grab');
+      if (S.mode === 'trace') { const u = toUnits(svg, e.clientX, e.clientY); if (u) trace(id, u[0], u[1], true); }
+    });
+    document.addEventListener('pointermove', e => {
+      const box = e.target && e.target.closest && e.target.closest('.bd-live'); const id = box && box.dataset.bd; const sp = id && LIVE.get(id); const svg = box && box.querySelector('svg'); if (!sp || !svg) return;
+      const S = G.get(id); const p = S && S.pts.get(e.pointerId);
+      if (!p) { if (e.pointerType === 'mouse' && !e.buttons) { const u = toUnits(svg, e.clientX, e.clientY); if (u) trace(id, u[0], u[1], false); } return; }
+      if (S.mode === 'pinch' && S.pts.size >= 2) {
+        const before = [...S.pts.values()].map(q => [q.x, q.y]); p.x = e.clientX; p.y = e.clientY; const after = [...S.pts.values()].map(q => [q.x, q.y]);
+        const d = Math.hypot(after[0][0] - after[1][0], after[0][1] - after[1][1]); const mid = [(after[0][0] + after[1][0]) / 2, (after[0][1] + after[1][1]) / 2], mid0 = [(before[0][0] + before[1][0]) / 2, (before[0][1] + before[1][1]) / 2];
+        const u = toUnits(svg, mid[0], mid[1]), u0 = toUnits(svg, mid0[0], mid0[1]); if (!u || !u0 || !S.d || !d) return;
+        pan(id, sp, u[0] - u0[0], u[1] - u0[1]); const w = world(sp._map, u[0], u[1]); zoom(id, sp, S.d / d, w[0], w[1]); S.d = d; return;
+      }
+      const u0 = toUnits(svg, p.x, p.y), u = toUnits(svg, e.clientX, e.clientY); p.x = e.clientX; p.y = e.clientY; if (!u || !u0) return;
+      if (S.mode === 'trace') { trace(id, u[0], u[1], true); return; }
+      if (Math.hypot(p.x - p.x0, p.y - p.y0) > 3) { pan(id, sp, u[0] - u0[0], u[1] - u0[1]); TR.delete(id); const t = svg.querySelector('.bd-trace'); if (t) t.remove(); }
+    });
+    const up = e => {
+      const box = e.target && e.target.closest && e.target.closest('.bd-live'); const id = box && box.dataset.bd; const S = id && G.get(id); if (!S || !S.pts.has(e.pointerId)) return;
+      const p = S.pts.get(e.pointerId); S.pts.delete(e.pointerId); if (!S.pts.size) { G.delete(id); box.classList.remove('bd-grab'); }
+      // a tap: read the curve there
+      if (e.type === 'pointerup' && e.pointerType !== 'mouse' && S.mode === 'pan' && Math.hypot(p.x - p.x0, p.y - p.y0) < 8 && Date.now() - p.t < 400) { const svg = box.querySelector('svg'); const u = svg && toUnits(svg, e.clientX, e.clientY); if (u) trace(id, u[0], u[1], true); }
+      if (S.pts.size === 1) S.mode = 'pan';
+    };
+    document.addEventListener('pointerup', up); document.addEventListener('pointercancel', up);
+    document.addEventListener('pointerout', e => { if (e.pointerType !== 'mouse') return; const box = e.target && e.target.closest && e.target.closest('.bd-live'); if (!box || box.contains(e.relatedTarget)) return; const id = box.dataset.bd; if (G.has(id)) return; const svg = box.querySelector('svg'); const t = svg && svg.querySelector('.bd-trace'); if (t) t.remove(); TR.delete(id); const sp = LIVE.get(id); if (sp && sp._onTrace) sp._onTrace(null); });
+    document.addEventListener('dblclick', e => { const box = liveBox(e); if (!box) return; const sp = LIVE.get(box.dataset.bd); if (sp) { e.preventDefault(); home(box.dataset.bd, sp); } });
+    // the wheel: listened to on each graph (not passive, so the page does not scroll while it zooms)
+    document.addEventListener('pointerover', e => { const box = e.target && e.target.closest && e.target.closest('.bd-live'); if (box && !box._wheel) { box._wheel = true; box.addEventListener('wheel', wheel, { passive: false }); } }, { passive: true });
+    document.addEventListener('click', e => {
+      const b = e.target.closest && e.target.closest('[data-bdz]'); if (!b) return; const box = b.closest('.bd-live'); const id = box && box.dataset.bd; const sp = id && LIVE.get(id); if (!sp) return;
+      e.preventDefault(); e.stopPropagation(); const k = b.dataset.bdz;
+      if (k === 'in') zoom(id, sp, 1 / 1.4); else if (k === 'out') zoom(id, sp, 1.4); else if (k === 'home') { home(id, sp); box.focus({ preventScroll: true }); } else if (k === 'open') open(id, b);
+    }, true);
+    document.addEventListener('keydown', e => {
+      const box = e.target && e.target.classList && e.target.classList.contains('bd-live') ? e.target : null; if (!box || e.altKey || e.ctrlKey || e.metaKey) return;
+      const id = box.dataset.bd, sp = LIVE.get(id); if (!sp || !sp._map) return; const M = sp._map; const dx = (M.x1 - M.x0) / 10, dy = (M.y1 - M.y0) / 10;
+      const k = e.key; let done = true;
+      if (k === 'ArrowLeft') view(id, sp, M.x0 - dx, M.x1 - dx, M.y0, M.y1); else if (k === 'ArrowRight') view(id, sp, M.x0 + dx, M.x1 + dx, M.y0, M.y1);
+      else if (k === 'ArrowUp') view(id, sp, M.x0, M.x1, M.y0 + dy, M.y1 + dy); else if (k === 'ArrowDown') view(id, sp, M.x0, M.x1, M.y0 - dy, M.y1 - dy);
+      else if (k === '+' || k === '=') zoom(id, sp, 1 / 1.3); else if (k === '-' || k === '_') zoom(id, sp, 1.3); else if (k === '0') home(id, sp); else done = false;
+      if (done) { e.preventDefault(); e.stopPropagation(); }
+    });
+  }
+  function wheel(e) {
+    const box = e.currentTarget; const id = box.dataset.bd, sp = LIVE.get(id), svg = box.querySelector('svg'); if (!sp || !svg) return;
+    const on = box.classList.contains('bd-big') || box.contains(document.activeElement) || e.ctrlKey || e.metaKey;
+    if (!on) { hint(box); return; }   // the page scrolls on; a word says how to zoom
+    e.preventDefault(); const u = toUnits(svg, e.clientX, e.clientY); if (!u) return; const w = world(sp._map, u[0], u[1]);
+    const d = e.deltaMode === 1 ? e.deltaY * 16 : e.deltaMode === 2 ? e.deltaY * 400 : e.deltaY; zoom(id, sp, Math.exp(Math.max(-0.5, Math.min(0.5, d * (e.ctrlKey ? 0.01 : 0.0018)))), w[0], w[1]);
+  }
+  function hint(box) {
+    if (box._hinted && Date.now() - box._hinted < 4000) return; box._hinted = Date.now();
+    let h = box.querySelector('.bd-hint'); if (!h) { box.insertAdjacentHTML('beforeend', '<p class="bd-hint" aria-hidden="true">Click the graph, then scroll to zoom</p>'); h = box.querySelector('.bd-hint'); }
+    h.classList.add('on'); clearTimeout(box._ht); box._ht = setTimeout(() => h.classList.remove('on'), 1800);
+  }
+
+  /* ---------- the grapher: a graph of Bo's on the whole screen, with your own functions next to his ----------
+     A copy of his drawing, so the page keeps his: show or hide each curve, add functions of your own, the
+     derivative of a curve, a tangent line you slide along it, his sliders; drag, pinch, scroll and trace. */
+  const PAL = ['blue', 'red', 'green', 'purple', 'orange', 'gray'];
+  const copy = sp => JSON.parse(JSON.stringify(sp, (k, v) => (k && k[0] === '_' ? undefined : v)));
+  const X0 = { el: null };
+  function open(id, from) {
+    const sp0 = LIVE.get(id); if (!sp0 || !sp0._map || X0.el) return;
+    const S = copy(sp0); const M0 = sp0._map; S._home = null; S.tangents = (S.tangents || []).slice(); const mine = [];
+    const xid = `bdx${++uid}`; const back = from || document.activeElement;
+    const el = X0.el = document.createElement('div'); el.className = 'bdx'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-modal', 'true'); el.setAttribute('aria-labelledby', 'bdx-h');
+    el.innerHTML = `<header class="bdx-top"><h2 id="bdx-h">${ic('chart', 18)} ${esc(S.caption ? pretty(S.caption) : 'Grapher')}</h2><p class="bdx-hint">Drag to move · scroll or pinch to zoom · point at a curve to read it</p><button type="button" class="bdx-x" data-bdx="close" aria-label="Close the grapher" title="Close (Esc)">${ic('x', 20)}</button></header>
+      <div class="bdx-body"><aside class="bdx-side" aria-label="What is drawn">
+        <h3 class="bdx-h">Curves</h3><ul class="bdx-fns" id="bdx-fns"></ul>
+        <form class="bdx-add" id="bdx-add" autocomplete="off"><label for="bdx-f">Add your own</label><div class="bdx-row"><span class="bdx-y" aria-hidden="true">y =</span><input class="input" id="bdx-f" maxlength="120" spellcheck="false" autocapitalize="off" placeholder="x^3 - 2x"><button type="submit" class="btn primary sm">Add</button></div><p class="bdx-err" id="bdx-err" role="alert" hidden></p></form>
+        <h3 class="bdx-h">Calculus</h3>
+        <label class="bdx-opt"><input type="checkbox" id="bdx-d"> <span>Its derivative, <i>f′(x)</i></span></label>
+        <label class="bdx-opt"><input type="checkbox" id="bdx-t"> <span>A tangent line you slide along it</span></label>
+        <div class="bdx-tan" id="bdx-tan" hidden><label class="bd-sl"><span class="bd-sl-n"><i>x</i> = <output id="bdx-ta">0</output></span><input type="range" id="bdx-tr" aria-label="Where the tangent touches"></label></div>
+        <p class="bdx-of" id="bdx-of"></p>
+        ${S.sliders && S.sliders.length ? `<h3 class="bdx-h">Bo’s sliders</h3>${sliderHtml(S, xid)}` : ''}
+        <p class="bdx-read" id="bdx-read" aria-live="polite"></p>
+      </aside><div class="bdx-plot" id="bdx-plot"></div></div>`;
+    document.body.appendChild(el); document.documentElement.classList.add('bdx-lock');
+    const plot = el.querySelector('#bdx-plot');
+    const size = () => { const r = plot.getBoundingClientRect(); S._W = Math.max(280, Math.round(r.width)); S._H = Math.max(220, Math.round(r.height)); };
+    size();
+    // the window: Bo's x range across the screen, the same shape of squares as on the page (so more y shows on a tall screen)
+    const fitTo = (ux, uy, cx, cy) => { const hw = ux * (S._W - 44) / 2, hh = uy * (S._H - 38) / 2; S.x = [cx - hw, cx + hw]; S.y = [cy - hh, cy + hh]; };
+    const ux0 = (M0.x1 - M0.x0) / (S._W - 44), uy0 = ux0 * ((M0.y1 - M0.y0) / (M0.H - M0.pt - M0.pb)) / ((M0.x1 - M0.x0) / (M0.W - M0.pl - M0.pr));
+    fitTo(ux0, uy0, (M0.x0 + M0.x1) / 2, (M0.y0 + M0.y1) / 2); S._home = { x: S.x.slice(), y: S.y.slice() };
+    plot.innerHTML = html(S, false, { id: xid, big: true, bare: true });
+    const box = plot.querySelector('.bd'); if (box) box.classList.add('bd-big');
+    const base = () => S.fns.find(g => !g.hidden && !g.deriv && !g.par && g.f && compile(g.f, S.params));
+    const paintFns = () => {
+      el.querySelector('#bdx-fns').innerHTML = S.fns.map((g, k) => `<li class="bdx-fn bd-c${g.c}"><label><input type="checkbox" data-bdx-show="${k}"${g.hidden ? '' : ' checked'}><i class="bdx-sw" aria-hidden="true"></i><span>${esc(g.note || pretty(g.label || (g.f ? 'y = ' + g.f : `x = ${g.xt}, y = ${g.yt}`)))}</span></label>${g.mine || g.deriv ? `<button type="button" class="bdx-rm" data-bdx-rm="${k}" aria-label="Remove ${esc(pretty(g.label || g.f))}">${ic('x', 14)}</button>` : ''}</li>`).join('') || '<li class="bdx-none">No curves yet. Add one below.</li>';
+      const b = base(); el.querySelector('#bdx-of').textContent = b ? `For ${pretty(b.label || 'y = ' + b.f)}` : '';
+      el.querySelector('#bdx-d').disabled = el.querySelector('#bdx-t').disabled = !b && !S.fns.some(g => g.deriv);
+    };
+    const nextC = () => { const used = new Set(S.fns.map(g => g.c)); for (let k = 0; k < 5; k++) if (!used.has(k)) return k; return S.fns.length % 5; };
+    const deriv = on => { S.fns = S.fns.filter(g => !g.deriv); if (on) { const b = base(); if (b) S.fns.push({ f: b.f, xt: '', yt: '', t: null, label: 'f′(x)', note: `f′(x), the derivative of ${pretty(b.label || 'y = ' + b.f)}`, domain: b.domain, c: 5, dash: true, deriv: true }); } paintFns(); later(xid); };
+    const tan = () => {
+      const on = el.querySelector('#bdx-t').checked; const b = base(); el.querySelector('#bdx-tan').hidden = !on || !b;
+      S.tangents = (sp0.tangents || []).map(t => Object.assign({}, t));
+      if (on && b) { const r = el.querySelector('#bdx-tr'); const M = S._map; if (!r.dataset.set) { r.min = M.x0; r.max = M.x1; r.step = (M.x1 - M.x0) / 400; r.value = (M.x0 + M.x1) / 2 + (M.x1 - M.x0) / 8; r.dataset.set = 1; } el.querySelector('#bdx-ta').textContent = sig(+r.value); S.tangents.push({ f: b.f, at: +r.value, label: '', c: 1 }); }
+      later(xid);
+    };
+    S._onTrace = p => { el.querySelector('#bdx-read').textContent = p ? `${pretty(p.label)}: at x = ${sig(p.x, 4)}, y = ${sig(p.y, 4)}${Number.isFinite(p.m) ? `, slope ${sig(p.m, 3)}` : ''}` : ''; };
+    paintFns();
+    el.addEventListener('change', e => {
+      const t = e.target; if (t.dataset.bdxShow != null) { const g = S.fns[+t.dataset.bdxShow]; if (g) g.hidden = !t.checked; paintFns(); if (el.querySelector('#bdx-d').checked && !S.fns.some(g => g.deriv && !g.hidden)) deriv(true); tan(); return; }
+      if (t.id === 'bdx-d') deriv(t.checked); if (t.id === 'bdx-t') tan();
+    });
+    el.addEventListener('input', e => { if (e.target.id === 'bdx-tr') tan(); });
+    el.querySelector('#bdx-add').addEventListener('submit', e => {
+      e.preventDefault(); const inp = el.querySelector('#bdx-f'); const err = el.querySelector('#bdx-err'); const f = inp.value.trim().replace(/^\s*(?:y|f\s*\(\s*x\s*\))\s*=\s*/i, '');
+      if (!f) { inp.focus(); return; }
+      if (S.fns.filter(g => g.mine).length >= 4) { err.hidden = false; err.textContent = 'Four of your own at a time. Remove one first.'; return; }
+      if (!compile(f, S.params)) { err.hidden = false; err.textContent = 'That doesn’t read as a function of x. Try something like x^2 - 3, sin(x) or sqrt(x + 1).'; inp.focus(); return; }
+      err.hidden = true; S.fns.push({ f, xt: '', yt: '', t: null, label: `y = ${f}`, domain: null, c: nextC(), dash: false, mine: true }); inp.value = ''; paintFns(); later(xid);
+    });
+    el.addEventListener('click', e => {
+      if (e.target.closest('[data-bdx="close"]')) return shut();
+      const rm = e.target.closest('[data-bdx-rm]'); if (rm) { const g = S.fns[+rm.dataset.bdxRm]; S.fns.splice(+rm.dataset.bdxRm, 1); if (g && g.deriv) el.querySelector('#bdx-d').checked = false; paintFns(); tan(); }
+    });
+    const ro = global.ResizeObserver ? new ResizeObserver(() => { const M = S._map; if (!M) return; const ux = (M.x1 - M.x0) / (M.W - M.pl - M.pr), uy = (M.y1 - M.y0) / (M.H - M.pt - M.pb); size(); if (S._W === M.W && S._H === M.H) return; fitTo(ux, uy, (M.x0 + M.x1) / 2, (M.y0 + M.y1) / 2); later(xid); }) : null;
+    if (ro) ro.observe(plot);
+    // keys stay inside: Esc closes it (before a call or a dialog under it hears it), Tab goes round
+    const keys = e => {
+      if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); shut(); return; }
+      if (e.key === 'Tab') { const f = [...el.querySelectorAll('button:not([disabled]), input:not([disabled]), [tabindex="0"]')].filter(x => x.offsetParent !== null); if (f.length) { const a = f[0], z = f[f.length - 1]; if (e.shiftKey && document.activeElement === a) { e.preventDefault(); z.focus(); } else if (!e.shiftKey && document.activeElement === z) { e.preventDefault(); a.focus(); } } }
+      e.stopPropagation();
+    };
+    global.addEventListener('keydown', keys, true);
+    function shut() { global.removeEventListener('keydown', keys, true); if (ro) ro.disconnect(); LIVE.delete(xid); el.remove(); X0.el = null; document.documentElement.classList.remove('bdx-lock'); if (back && back.focus) try { back.focus({ preventScroll: true }); } catch (x) {} }
+    requestAnimationFrame(() => { el.classList.add('open'); if (box) box.focus({ preventScroll: true }); });
+    return true;
+  }
+
+  App.boDraw = { parse, html, plain, pretty, json, depth, value, TYPES, open, isOpen: () => !!X0.el };
 })(window);

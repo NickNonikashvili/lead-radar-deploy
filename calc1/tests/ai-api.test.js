@@ -83,6 +83,22 @@ const snapshot = { name: 'Alice', streak: 4, xpToday: 10, goal: 30, page: 'Calc 
   r = await call('alice', 'ai_tutor', { class: 'calc', q: 'x', image: { type: 'application/zip', data: PNG } }); ok('other file types are refused', r.status === 400, r);
   r = await call('alice', 'ai_tutor', { class: 'calc', q: 'x', image: { type: 'image/png', data: 'A'.repeat(3600000) } }); ok('a photo over 2.5 MB is refused', r.status === 413, r);
   r = await call('alice', 'ai_tutor', { class: 'calc', q: '   ' }); ok('an empty question is refused', r.status === 400, r);
+  // the board they share on a call: a picture with a grid; he is told how to read it and mark it, and the chat tags it
+  // (asked as mod, with the rate counters cleared around it, so her month and the minute's limit stay as the checks below expect)
+  const clearRate = () => require('child_process').spawnSync('php', ['-r', '$d = new PDO("sqlite:" . $argv[1]); $d->exec("DELETE FROM rate WHERE key LIKE \'ai_tutor%\'");', path.join(__dirname, '..', 'api', 'data', 'mathub.sqlite')]);
+  clearRate();
+  r = await call('mod', 'ai_tutor', { class: 'calc', q: 'Look at what I wrote on our board and help me with it.', voice: 1, image: { type: 'image/png', data: PNG }, pad: { cols: 10, rows: 7 } }); q = last();
+  const padSys = q.system.map(b => b.text).join('\n');
+  ok('a look at the board on a call: he is told it is the board they share, with a 10 by 7 grid, how to read it and how to mark it', r.ok && /THE SHARED BOARD/.test(padSys) && /this one: 10 columns, 7 rows/.test(padSys) && /mark: D4:E4 circle/.test(padSys) && /find the first mistake/.test(padSys) && /grid 10x7/.test(r.reply), padSys.slice(-600));
+  ok('his marks come back in his reply as mark: lines', /\nmark: B2:C2 circle sign slip here/.test(r.reply));
+  r = await call('mod', 'ai_thread&class=calc'); ok('the chat keeps it as the board, not a photo', /^\[board\] Look at what I wrote/.test(r.turns[r.turns.length - 2].t), r.turns[r.turns.length - 2]);
+  r = await call('mod', 'ai_tutor', { class: 'calc', q: 'Is this right?', image: { type: 'image/png', data: PNG }, pad: { cols: 99, rows: -3 } }); q = last();
+  ok('the grid\'s size is kept to what a picture can have (1 to 12)', /this one: 12 columns, 1 rows/.test(q.system.map(b => b.text).join('\n')));
+  r = await call('mod', 'ai_tutor', { class: 'calc', q: 'Is my working right?', image: { type: 'image/png', data: PNG }, sketch: 1 }); q = last();
+  ok('Write it out in the chat: he is told it is their handwriting (no grid), and the chat tags it as the board', r.ok && /THEIR WRITING/.test(q.system.map(b => b.text).join('\n')) && !/THE SHARED BOARD/.test(q.system.map(b => b.text).join('\n')) && /I read your writing/.test(r.reply) && /^\[board\] Is my working right\?/.test((await call('mod', 'ai_thread&class=calc')).turns.slice(-2)[0].t));
+  r = await call('mod', 'ai_tutor', { class: 'calc', q: 'no picture', pad: { cols: 4, rows: 4 } }); q = last();
+  ok('without a picture there is no board part', r.ok && !/THE SHARED BOARD/.test(q.system.map(b => b.text).join('\n')));
+  await call('mod', 'ai_forget', { what: 'chat', class: 'calc' }); clearRate();
 
   // her own class
   const mine = { format: 'mathub-class-pack', version: 1, id: 'my7777', code: 'OWN 101', name: 'Her own class', term: 'Fall 2026', COURSE: { code: 'OWN 101', name: 'Her own class', term: 'Fall 2026', instructor: 'Dr. Own' }, EXAMS: [{ id: 'e1', name: 'Midterm', date: '2026-10-30', covers: 'Unit 1' }], UNITS: [{ n: 1, title: 'Basics', sections: ['a'], exam: 'e1' }], SECTIONS: [{ id: 'a', label: '1.1', title: 'Alpha', unit: 1, ideas: ['<b>Alpha</b> is the first idea.'] }] };
@@ -230,7 +246,7 @@ const snapshot = { name: 'Alice', streak: 4, xpToday: 10, goal: 30, page: 'Calc 
   ok('the offer and the session go to OpenAI as a form, asking for SDP back', /s=test/.test(L1.sdp) && L1.accept === 'application/sdp' && ls.type === 'realtime' && ls.model === 'gpt-realtime-2.1-mini', { accept: L1.accept, model: ls.model });
   ok('the voice, speed and eagerness picked are used; semantic turn-taking with interruptions', ls.audio.output.voice === 'marin' && ls.audio.output.speed === 1.1 && ls.audio.input.turn_detection.eagerness === 'high' && ls.audio.input.turn_detection.type === 'semantic_vad' && ls.audio.input.turn_detection.interrupt_response === true, ls.audio);
   ok('Bo\'s live instructions: his persona, then the class, today, the student\'s progress and his notes', /You are Bo, the bobcat tutor from Mathub, on a live voice call/.test(ls.instructions) && /CLASS:/.test(ls.instructions) && /TODAY: 2026-10-13/.test(ls.instructions) && /WEAKEST TOPICS: Limits by algebra/.test(ls.instructions) && ls.instructions.length < 16000, ls.instructions.length);
-  ok('his tools: writing on the board (code too), drawing on it, asking on it, and his notes', ls.tools.map(t => t.name).join() === 'write_on_board,draw_on_board,ask_on_board,remember' && ls.tools[0].parameters.required[0] === 'items' && ls.tools[0].parameters.properties.items.items.properties.kind.enum.join() === 'step,math,answer,tip,text,code' && ls.tools[0].parameters.properties.page.enum.join() === 'new,add', ls.tools && ls.tools[0].parameters);
+  ok('his tools: writing on the board (code too), drawing on it, asking on it, marking the student\'s writing, and his notes', ls.tools.map(t => t.name).join() === 'write_on_board,draw_on_board,ask_on_board,mark_on_board,remember' && ls.tools[3].parameters.properties.marks.items.properties.kind.enum.join() === 'circle,check,cross,underline,box,arrow,note' && ls.tools[3].parameters.properties.marks.items.required.join() === 'at,kind' && ls.tools.slice(0, 3).every(t => t.parameters.properties.near) && ls.tools[0].parameters.required[0] === 'items' && ls.tools[0].parameters.properties.items.items.properties.kind.enum.join() === 'step,math,answer,tip,text,code' && ls.tools[0].parameters.properties.page.enum.join() === 'new,add', ls.tools && ls.tools[0].parameters);
   const ak = ls.tools[2].parameters;
   ok('the question tool takes a question and its answer, with choices to tap and a why', ak.required.join() === 'question,answer' && ak.properties.choices.type === 'array' && !!ak.properties.why && /stop and wait/i.test(ls.tools[2].description), ak);
   const dr = ls.tools[1].parameters;

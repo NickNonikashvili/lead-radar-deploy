@@ -3114,3 +3114,100 @@
 4261	Menú
 5731	La barra lateral está oculta. El botón de menú arriba a la izquierda la vuelve a mostrar.
 5732	Mostrar la barra lateral
+5733	La pizarra
+5734	Escríbelo en una pizarra
+5735	Lo que escribiste
+5736	lo que escribiste
+5737	la foto
+5739	Las páginas de Bo
+5740	Subtítulos (C)
+5741	Bo mira lo que escribiste y te ayuda
+5742	Pon una foto de un problema en la pizarra y muéstrasela a Bo
+5743	Mostrar a Bo
+5744	Página {1} de Bo
+5745	Bo · página {1}
+5746	Plegar esta página
+5747	Plegar
+5748	Guardar esta página
+5749	Guardar (Las páginas de Bo la vuelve a mostrar)
+5750	Abrir esta página
+5751	Una pregunta para ti
+5752	Página {1}
+5753	guardada
+5754	Bo ve {1} con lo que digas a continuación
+5755	Tu pizarra
+5756	la pizarra
+5757	Tu voz va directamente a OpenAI, cuyo modelo de voz en tiempo real usa Bo para hablar, junto con lo que Bo sabe de tu clase y de cómo vas, y fotos de la pizarra. No se graba nada.
+5758	Toda la pantalla es una pizarra compartida: escribe tu trabajo en ella y toca
+5759	, y él lo lee, lo marca y te ayuda a resolverlo{1}.
+5760	Pregunta lo que quieras y Bo responde en voz alta, escribiendo las matemáticas en la pizarra. Toca a Bo para enviar lo que dijiste o para interrumpirlo.
+5761	; también la ve mientras escribes
+5764	Primero escribe algo en la pizarra y luego muéstraselo a Bo.
+5768	Mira lo que escribí
+5770	Con la pizarra:
+5771	Tamaño de los subtítulos
+5772	Fondo de los subtítulos
+5773	Lo que dicen tú y Bo, abajo (C)
+5774	Nombres
+5775	Mostrar quién habla
+5776	Pizarra oscura
+5777	Tinta clara sobre una pizarra oscura
+5778	Pequeño
+5779	Grande
+5780	Enorme
+5781	Sólido
+5782	Bo la ve mientras escribo
+5783	Una foto de la pizarra le llega a Bo cuando dejas de escribir un momento, para que pueda seguirte
+5784	La llamada
+5785	Así se ven los subtítulos.
+5786	Gráfica
+5787	Acercar
+5788	Alejar
+5789	Volver a la vista inicial
+5790	Abrir en el graficador
+5791	gráfica que puedes mover
+5792	Arrástrala para moverla, desplaza o pellizca para hacer zoom, señala una curva para leerla; las flechas la mueven, + y − hacen zoom, 0 la devuelve
+5793	Haz clic en la gráfica y luego desplaza para hacer zoom
+5794	Cerrar el graficador
+5795	Lo que está dibujado
+5796	Dónde toca la tangente
+5797	Arrastra para mover · desplaza o pellizca para hacer zoom · señala una curva para leerla
+5798	Curvas
+5799	Añade la tuya
+5800	Cálculo
+5801	Su derivada,
+5802	Una recta tangente que deslizas por ella
+5803	Los deslizadores de Bo
+5804	Aún no hay curvas. Añade una abajo.
+5805	Para {1}
+5806	f′(x), la derivada de {1}
+5807	{1}: en x = {2}, y = {3}{4}
+5808	, pendiente {1}
+5809	Cuatro tuyas a la vez. Quita una primero.
+5810	Eso no se lee como una función de x. Prueba algo como x^2 - 3, sin(x) o sqrt(x + 1).
+5811	Mover la pizarra (también con dos dedos)
+5812	Bolígrafo (P)
+5813	Marcador (H)
+5814	Borrador (E)
+5815	Escribir en la pizarra (T)
+5816	Color y grosor
+5817	Deshacer (Ctrl Z)
+5818	Rehacer (Ctrl Mayús Z)
+5819	Mostrar todo
+5820	Borrar lo que escribiste
+5821	Color
+5822	Mover
+5823	Borrar
+5824	Rehacer
+5825	Ajustar
+5826	Negro
+5827	Morado
+5828	Fino
+5829	Grueso
+5832	Escribe y pulsa Enter
+5833	Escribir en la pizarra
+5834	Pizarra borrada. Deshacer la recupera.
+5841	Escríbelo para Bo
+5842	Tu procedimiento, un problema, un dibujo: Bo lo ve con tu pregunta.
+5843	Añadir a mi pregunta
+5844	Primero escribe algo en la pizarra.

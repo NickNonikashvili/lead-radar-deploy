@@ -33,6 +33,8 @@ async function start(opts = {}) {
     if (geek) await c.addInitScript(() => { try { const s = JSON.parse(localStorage.getItem('studyhub-settings') || '{}'); if (s.geek === undefined) { s.geek = true; localStorage.setItem('studyhub-settings', JSON.stringify(s)); } } catch (e) {} });
     if (!geek) await c.addInitScript(() => { try { const s = JSON.parse(localStorage.getItem('studyhub-settings') || '{}'); if (s.geek === undefined) { s.geek = false; localStorage.setItem('studyhub-settings', JSON.stringify(s)); } } catch (e) {} });
     if (opts.tour !== true) await c.addInitScript(() => { try { const s = JSON.parse(localStorage.getItem('studyhub-settings') || '{}'); if (s.tourDone === undefined) s.tourDone = true; if (s.tourLayout === undefined) s.tourLayout = 99; localStorage.setItem('studyhub-settings', JSON.stringify(s)); } catch (e) {} });
+    // the weekly league result (Monday's "Promoted to … League!") would cover the page in any test that signs in on a Monday
+    if (opts.league !== true) await c.addInitScript(() => { document.addEventListener('DOMContentLoaded', () => { const st = document.createElement('style'); st.textContent = '.celebrate[aria-label$="League!"]{display:none!important}'; document.head.appendChild(st); }); });
     const p = await c.newPage();
     p.on('pageerror', e => errors.push('PAGEERROR ' + e.message + ' @ ' + String(e.stack || '').split('\n').slice(1, 3).join(' ').replace(/\s+/g, ' ').trim().slice(0, 160)));
     p.on('console', m => { if (m.type() === 'error' && !IGNORE.test(m.text())) errors.push('CONSOLE ' + m.text().slice(0, 200)); });
