@@ -70,8 +70,9 @@ const PNG = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwA
   const q = last(); const sys = q.system.map(b => b.text).join('\n');
   check('the device sent a progress snapshot (readiness, topics, due cards) and the date it uses', /READINESS: Exam 2 on 2026-10-16 \(3 days\)/.test(sys) && /WEAKEST TOPICS: /.test(sys) && /TODAY: 2026-10-13/.test(sys) && /flashcards due/.test(sys), sys.slice(-600));
   check('a note Bo keeps shows under his answer, with Forget it', /Bo will remember: Likes worked examples first/.test(await txt(m, '#bo-log .bo-remember')));
-  await m.click('#bo-log .bo-msg.bo:last-child [data-bo-report]'); await m.waitForTimeout(500);
-  check('every answer can be reported', /Report this answer from Bo/.test(await txt(m, '#report-modal')));
+  await m.click('#bo-log .bo-msg.bo:last-child [data-bo-bad]'); await m.waitForTimeout(600);
+  await m.click('#bo-log .bo-msg.bo:last-child .bo-bad [data-bo-report]'); await m.waitForTimeout(500);
+  check('every answer can be marked not right, and something worse reported', /Report this answer from Bo/.test(await txt(m, '#report-modal')));
   await m.keyboard.press('Escape'); await m.waitForTimeout(300);
   // a photo
   await m.setInputFiles('#bo-file', { name: 'problem.png', mimeType: 'image/png', buffer: Buffer.from(PNG, 'base64') }); await m.waitForTimeout(600);
