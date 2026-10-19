@@ -523,7 +523,9 @@
   /* ---------- live: the real-time call ---------- */
   const Live = {
     pc: null, dc: null, mic: null, audio: null, anBo: null, anYou: null, lid: null, left: 0, at: 0, tick: 0, save: 0, items: new Map(), order: [], notes: [], boards: [], boText: '', youText: '', talking: false, ended: true, fns: new Map(), ran: new Set(), auto: 0, toolErr: false, looks: 0, lookAt: 0, lastLook: '', glanceT: 0,
-    reset() { Object.assign(this, { pc: null, dc: null, mic: null, anBo: null, anYou: null, lid: null, left: 0, at: 0, items: new Map(), order: [], notes: [], boards: [], boText: '', youText: '', talking: false, ended: false, fns: new Map(), ran: new Set(), auto: 0, toolErr: false, looks: 0, lookAt: 0, lastLook: '' }); clearTimeout(this.glanceT); },
+    // the math check (assets/mathcheck.js): the problem being worked and a question just asked, what was right, corrections sent, pages refused
+    busy: false, afterDone: false, ctx: { eqs: [], ask: '', at: 0 }, lastRight: null, fixes: 0, refused: new Map(),
+    reset() { Object.assign(this, { pc: null, dc: null, mic: null, anBo: null, anYou: null, lid: null, left: 0, at: 0, items: new Map(), order: [], notes: [], boards: [], boText: '', youText: '', talking: false, ended: false, fns: new Map(), ran: new Set(), auto: 0, toolErr: false, looks: 0, lookAt: 0, lastLook: '', busy: false, afterDone: false, ctx: { eqs: [], ask: '', at: 0 }, lastRight: null, fixes: 0, refused: new Map() }); clearTimeout(this.glanceT); },
     leftNow() { return this.left - (Date.now() - this.at) / 1000; },
     soon() { return T.mode === 'live' && !!this.lid && this.at > 0 && this.leftNow() < 180; },
     async start() {
@@ -560,7 +562,7 @@
        not always with the arguments, so it is looked up by the item's id; failing that, guessed from the arguments */
     call(name, id, args) {
       if (!id || this.ran.has(id)) return; this.ran.add(id);
-      if (!name) { let a = {}; try { a = JSON.parse(args || '{}'); } catch (e) {} name = a.drawing || a.drawings || (a.type && !a.items) ? 'draw_on_board' : a.question ? 'ask_on_board' : a.marks ? 'mark_on_board' : a.items || a.lines ? 'write_on_board' : a.fact ? 'remember' : ''; }
+      if (!name) { let a = {}; try { a = JSON.parse(args || '{}'); } catch (e) {} name = a.drawing || a.drawings || (a.type && !a.items) ? 'draw_on_board' : a.question ? 'ask_on_board' : a.marks ? 'mark_on_board' : a.items || a.lines ? 'write_on_board' : a.fact ? 'remember' : a.kind && (a.expression || a.left || a.equation || a.f || a.lines) ? 'check_math' : ''; }
       this.tool(name, id, args);
     },
     on(ev) {
@@ -579,16 +581,18 @@
         case 'input_audio_buffer.speech_started': L.auto = 0; L.youText = ''; if (L.talking) Pace.stop(true); caption('you', '…'); who('you'); break;
         case 'input_audio_buffer.speech_stopped': if (!T.muted) who('thinking'); break;
         case 'conversation.item.input_audio_transcription.delta': L.youText += ev.delta || ''; caption('you', L.youText); break;
-        case 'conversation.item.input_audio_transcription.completed': { const t = L.turn(ev.item_id, 'u'); t.t = String(ev.transcript || '').trim(); t.done = true; caption('you', t.t || L.youText); break; }
+        case 'conversation.item.input_audio_transcription.completed': { const t = L.turn(ev.item_id, 'u'); t.t = String(ev.transcript || '').trim(); t.done = true; caption('you', t.t || L.youText); L.checkYou(t.t); break; }
         case 'conversation.item.input_audio_transcription.failed': L.turn(ev.item_id, 'u').done = true; break;
-        case 'response.created': L.boText = ''; Pace.start(); break;
+        case 'response.created': L.busy = true; L.boText = ''; Pace.start(); break;
         case 'response.output_audio_transcript.delta': case 'response.audio_transcript.delta': L.boText += ev.delta || ''; Pace.add(); break;
-        case 'response.output_audio_transcript.done': case 'response.audio_transcript.done': { const said = String(ev.transcript || L.boText).trim(); L.boText = said; const t = L.turn(ev.item_id, 'b'); t.t = said + L.takeBoards(); t.done = !!said; Pace.done(said); T.changed = true; break; }
+        case 'response.output_audio_transcript.done': case 'response.audio_transcript.done': { const said = String(ev.transcript || L.boText).trim(); L.boText = said; const t = L.turn(ev.item_id, 'b'); t.t = said + L.takeBoards(); t.done = !!said; Pace.done(said); T.changed = true; L.checkBo(said); break; }
         case 'output_audio_buffer.started': L.talking = true; Pace.began = performance.now(); Pace.t = 0; who('bo'); break;
         case 'output_audio_buffer.stopped': L.talking = false; Pace.stop(false); if (T.who === 'bo' || T.who === 'thinking') who(T.muted ? 'muted' : 'listening'); break;
         case 'output_audio_buffer.cleared': L.talking = false; Pace.stop(true); if (T.who === 'bo' || T.who === 'thinking') who(T.muted ? 'muted' : 'listening'); break;
         case 'response.function_call_arguments.done': { const name = ev.name || L.fns.get(ev.item_id) || L.fns.get(ev.call_id); if (name || !ev.item_id) L.call(name, ev.call_id, ev.arguments); break; }   // without a name yet: response.output_item.done brings it
         case 'response.done': {
+          L.busy = false;
+          if (L.afterDone) { L.afterDone = false; L.toolErr = false; L.send({ type: 'response.create' }); break; }   // a correction from the math check, once the cut-off answer has stopped
           // after his tools, Bo goes on: when he only used tools, when one failed (so he can fix it), or when he only said a
           // few words first ("let me sketch that"), so he walks them through what he put up. At most twice in a row.
           const out = (ev.response && ev.response.output) || []; const calls = out.some(o => o.type === 'function_call'), spoke = out.some(o => o.type === 'message');
@@ -610,7 +614,9 @@
         if (more) { last.items.push(...items); boardPage(last, false); } else boardPage({ title, items: items.slice(), open: false }, true, typeof a.near === 'string' ? a.near : '');
         this.boards.push({ title: more ? last.title : title, items: items.slice(), cont: more });
       };
-      if (name === 'write_on_board') {
+      const M = App.mathCheck;
+      if (name === 'check_math') { out = M ? M.tool(a) : { error: 'The math check is not loaded.' }; this.noteEqs(String(a.equation || '')); }
+      else if (name === 'write_on_board') {
         let items = (Array.isArray(a.items) ? a.items : []).slice(0, 10).map(x => {
           if (!x || typeof x !== 'object') return typeof x === 'string' && x.trim() ? { k: 'text', t: x.trim().slice(0, 300) } : null;
           const k = BB ? BB.kind(x.kind ?? x.type) : 'text';
@@ -620,8 +626,11 @@
           return { k, t: String(x.text ?? '').trim().slice(0, 300) };
         }).filter(x => x && x.t);
         if (!items.length && a.lines) items = [].concat(a.lines).map(x => ({ k: 'math', t: String(x || '').replace(/^\$+|\$+$/g, '').trim() })).filter(x => x.t);   // the first version of the tool
-        items = items.slice(0, 8); if (items.length) put(items);
-        out = items.length ? { written: items.length, page: T.pages.length } : { error: 'Nothing to write: give one to six items.' };
+        items = items.slice(0, 8);
+        // wrong math never goes up: a false line, or a step that does not follow, is sent back to fix (twice at most, then it is his call)
+        const bad = items.length ? this.badPage(items, a) : null;
+        if (bad) out = { error: `Not written, line ${bad.line} is wrong: ${bad.msg}. Fix the math (check_math helps) and write the page again.` };
+        else { if (items.length) put(items); out = items.length ? { written: items.length, page: T.pages.length } : { error: 'Nothing to write: give one to six items.' }; }
       }
       else if (name === 'draw_on_board') {
         // a drawing (assets/board-draw.js), or a few; a bad one is refused, so he can fix it
@@ -635,7 +644,9 @@
       else if (name === 'ask_on_board') {
         // a question on the board for the student to answer there; what they pick comes back to him as a message
         const o = { q: a.question ?? a.q, choices: a.choices, answer: a.answer, why: a.why ?? a.explanation, hint: a.hint };
-        if (BB && BB.check(o)) { put([{ k: 'check', t: JSON.stringify(o) }]); out = { asked: true, page: T.pages.length, note: 'It is on the board. Stop talking and let them answer; you will be told what they picked.' }; }
+        const sum = M && M.question(String(o.q || '').replace(/\?*\s*$/, '?')); const got = sum && M.claims(String(o.answer || ''), { ask: sum });
+        if (got && got.wrong.length && (this.refused.get('ask:' + o.q) || 0) < 2) { this.refused.set('ask:' + o.q, (this.refused.get('ask:' + o.q) || 0) + 1); out = { error: `Not asked: the answer is wrong: ${got.wrong[0].msg}. Fix the answer and ask again.` }; }
+        else if (BB && BB.check(o)) { put([{ k: 'check', t: JSON.stringify(o) }]); out = { asked: true, page: T.pages.length, note: 'It is on the board. Stop talking and let them answer; you will be told what they picked.' }; }
         else out = { error: 'Nothing to ask: give question, and choices with the right answer (or just answer, for them to type).' };
       }
       else if (name === 'mark_on_board') {
@@ -688,7 +699,50 @@
     },
     mute(on) { if (this.mic) this.mic.getAudioTracks().forEach(t => { t.enabled = !on; }); },
     hush() { this.send({ type: 'response.cancel' }); this.send({ type: 'output_audio_buffer.clear' }); },
-    say(text) { this.auto = 0; this.send({ type: 'conversation.item.create', item: { type: 'message', role: 'user', content: [{ type: 'input_text', text }] } }); this.send({ type: 'response.create' }); caption('you', text); who('thinking'); },
+    /* ---------- the math check: Bo never agrees with something wrong (assets/mathcheck.js) ----------
+       What the student says is checked from its transcript (with the problem on the board, or a question he just
+       asked, for a bare answer); what Bo says is checked too. Something wrong: Bo is stopped if he has started, gets
+       an exact note, and answers again. Pages and questions he puts up are checked before they go up (badPage). */
+    noteEqs(text) { const M = App.mathCheck; if (!M || !text) return; const e = M.equations(text); if (e.length) { this.ctx.eqs = this.ctx.eqs.concat(e).slice(-6); this.ctx.at = Date.now(); } },
+    checkYou(text, typed) {
+      const M = App.mathCheck; if (!M || !text) return '';
+      const fresh = Date.now() - this.ctx.at < 300000; const r = M.claims(text, fresh ? this.ctx : {});
+      this.ctx.ask = ''; this.noteEqs(text); this.lastRight = null;
+      if (r.right.length && !r.wrong.length) this.lastRight = { msg: r.right.map(x => x.msg).join('; '), at: Date.now() };
+      if (!r.wrong.length) return '';
+      const note = `MATH CHECK (exact, worked out by the app from ${typed ? 'what they just typed' : 'the transcript of what they just said'}): ${r.wrong.map(w => w.msg).join('; ')}. So that is wrong. Do not agree with it, and do not say "right", "yes", "exactly" or "nice" about it. Tell them kindly it's not quite, point at the exact slip, and let them fix it themselves (give the right value only if they ask or are still stuck).${r.wrong.some(w => w.kind === 'solve') ? ' (If they were talking about a different problem than the one on the board, check that one instead.)' : ''}`;
+      if (typed) return note; this.fix(note); return note;
+    },
+    checkBo(said) {
+      const M = App.mathCheck; if (!M || !said) return;
+      this.noteEqs(said); const q = M.question(said); if (q) { this.ctx.ask = q; this.ctx.at = Date.now(); }
+      const r = M.claims(said);
+      if (r.wrong.length) return this.fix(`MATH CHECK (exact, worked out by the app): you just said ${r.wrong.map(w => w.msg).join('; ')}. That was a slip. Correct yourself out loud right away, in one short sentence ("wait, my bad: …"), then carry on.`);
+      // they were right, and he told them they were not
+      const R = this.lastRight; this.lastRight = null;
+      if (R && Date.now() - R.at < 30000 && /^\W*(?:no\b|nope|not\s+quite|not\s+really|not\s+exactly|hmm+,?\s+not|close,?\s+but|almost|that'?s\s+not|that\s+is\s+not|incorrect|wrong|not\s+right)/i.test(said)) this.fix(`MATH CHECK (exact, worked out by the app): they were right: ${R.msg}. You told them it wasn't. Tell them right away that they were right, say why in a sentence, and carry on.`);
+    },
+    // a note from the math check: Bo stops if he is talking, reads it, and answers again (a few times a call at most)
+    fix(note) {
+      if (this.fixes >= 12 || T.mode !== 'live' || this.ended) return; this.fixes++;
+      this.send({ type: 'conversation.item.create', item: { type: 'message', role: 'system', content: [{ type: 'input_text', text: note }] } });
+      this.auto = 0;
+      if (this.busy || this.talking) { this.hush(); this.afterDone = this.busy; if (!this.busy) this.send({ type: 'response.create' }); }
+      else this.send({ type: 'response.create' });
+      who('thinking');
+    },
+    // a page Bo writes, checked line by line (and a page he adds to, with what is already on it)
+    badPage(items, a) {
+      const M = App.mathCheck; if (!M) return null;
+      const lines = items.filter(x => !['draw', 'check', 'code'].includes(x.k)).map(x => x.t);
+      const last = T.pages[T.pages.length - 1]; const more = a.page === 'add' && last && (!a.title || a.title === last.title);
+      const before = more ? last.items.filter(x => !['draw', 'check', 'code'].includes(x.k)).map(x => x.t) : [];
+      const title = more ? last.title : String(a.title || ''); this.noteEqs(title + '\n' + lines.join('\n'));
+      const bad = M.board(before.concat(lines), title).filter(b => b.line > before.length)[0]; if (!bad) return null;
+      const key = title + '|' + lines.join('|'); const n = (this.refused.get(key) || 0) + 1; this.refused.set(key, n);
+      return n <= 2 ? { line: bad.line - before.length, msg: bad.msg } : null;
+    },
+    say(text) { this.auto = 0; this.send({ type: 'conversation.item.create', item: { type: 'message', role: 'user', content: [{ type: 'input_text', text }] } }); const note = this.checkYou(text, true); if (note) this.send({ type: 'conversation.item.create', item: { type: 'message', role: 'system', content: [{ type: 'input_text', text: note }] } }); this.send({ type: 'response.create' }); caption('you', text); who('thinking'); },   // typed in the call: checked like speech, the note goes before his answer
     /* what the student did on the board (answered his question), for Bo to pick up from; not shown as a caption */
     tell(text) { this.auto = 0; if (this.talking) this.hush(); this.send({ type: 'conversation.item.create', item: { type: 'message', role: 'user', content: [{ type: 'input_text', text }] } }); this.send({ type: 'response.create' }); who('thinking'); },
     photo(p) { this.auto = 0; this.send({ type: 'conversation.item.create', item: { type: 'message', role: 'user', content: [{ type: 'input_image', image_url: `data:${p.type};base64,${p.data}` }, { type: 'input_text', text: 'Take a look at this. (I put it on our board too.)' }] } }); this.send({ type: 'response.create' }); caption('you', 'Sent a photo'); who('thinking'); },

@@ -23,6 +23,35 @@ mode (`MH_AI_VOICE`) and calls (`MH_AI_LIVE`, `MH_AI_LIVE_REST`). Change them th
 | 12 | **Close the loop** | The key idea in one sentence, and what to do next. | Pólya's "look back"; "feed forward" (Hattie & Timperley). |
 | 13 | **Be exactly right** | Work carefully, check answers (substitute back, estimate), use the class's notation, say when unsure. | Pólya's "look back"; Mathub's rule that Bo uses the class facts exactly. |
 
+## Never agreeing with something wrong
+
+Agreeing with a mistake is the worst thing a tutor can do, and a friendly voice model is tempted to ("x = 11 − 3,
+so x = 6" once got "right!"). So Bo is told (`MH_AI_TRUTH`, in every mode) to check before he judges, never to open
+with praise he hasn't checked, to correct his own slips at once, and not to give in when a right answer is pushed
+back on. And the app checks the arithmetic itself, exactly, because a rule alone is not enough:
+
+- **The math check** (`assets/mathcheck.js` in the browser, `api/mathcheck.php` on the server, the same rules):
+  plain and spoken math ("eleven minus three is six"), LaTeX, a letter given a worked value and then another
+  ("x = 11 − 3, so x = 6"), an answer that does not solve the problem being worked (checked against the equations
+  on Bo's pages and in what he said), a bare number answering a question he just asked ("what's 7 times 8?" …
+  "54"), and derivatives or antiderivatives said in words. A stated rounding is fine ("pi is 3.14"), and so is
+  "negative 3 squared is 9" (said aloud it means (−3)²). Anything it cannot read is left alone, so it never cries
+  wrong over notation it does not follow; everyday talk ("my exam is at 9, worth 20 percent") is left alone too.
+- **On a call:** what the student says (from its transcript) and types is checked; something wrong stops Bo if he
+  has started, and he answers again with an exact MATH CHECK note. What Bo says is checked too: his own slip, or
+  telling a student who was right that they were not, gets him a note to correct himself. He has a `check_math`
+  tool (a value, two things equal, an equation and values for its letters, its solutions, a derivative, an
+  antiderivative, a limit, the steps of a solution) and is told to use it before he says whether something is
+  right, including on handwriting he reads from the board. Pages he writes are checked before they go up (a false
+  line, or a step that does not follow from the one before, comes back to him to fix), and so are his questions'
+  answers.
+- **Typed and basic voice** (Claude): the student's message is checked on the server and a MATH CHECK note goes
+  with it. Bo's reply is checked too: a slip on one of his pages or in what he says makes him write the reply again
+  with it named (the chat shows the fixed one); out loud, where it was already spoken, he says the correction.
+
+Tests: `tests/mathcheck.test.js` (the same cases through both, `tests/fixtures/mathcheck-cases.json`), the math
+part of `tests/talk-web.test.js` (a call) and of `tests/ai-api.test.js` (the server).
+
 ## On a call
 
 The first version of Bo's call persona told him to "ask more than you tell" and keep every turn to one to three

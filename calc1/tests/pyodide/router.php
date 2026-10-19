@@ -86,6 +86,10 @@ if ($path === '/anthropic/v1/messages') {
     $text = "I see your board, grid $grid. Your first line is right, look at the circle on the second.\nmark: B2:C2 circle sign slip here\nmark: D1 check\n[board: Fixing the sign]\nstep: Take 3 from both sides: $2x = 8$\nmark: E3 note try this\n[/board]\nWhat do you get when you divide by two?";
   } elseif (str_contains($sys, 'THEIR WRITING') && $hasImage) {
     $text = 'I read your writing. The first line is right; check the sign on the second.';
+  } elseif (str_contains($utext, 'SLIPTEST') || str_contains($utext, 'Write your whole reply again')) {
+    // a reply with a slip in it, for the math check; asked to write it again (the MATH CHECK note), the slip is fixed
+    $fixed = str_contains($utext, 'Write your whole reply again');
+    $text = str_contains($sys, 'VOICE MODE') ? 'Seven times eight is fifty four. Easy one.' : "Here it is.\n[board: Seven eights]\nmath: 7 \\cdot 8 = " . ($fixed ? '56' : '54') . "\n[/board]\nSo seven eights make " . ($fixed ? '56' : '54') . '.';
   } elseif (str_contains($sys, 'VOICE MODE')) {
     // talking out loud: a short spoken answer with a line for the whiteboard
     $weak = preg_match('/WEAKEST TOPICS: ([^;\n]+?) \d+%|WEAKEST TOPICS: ([^;\n]+?) not practised/', $sys, $w) ? trim($w[1] ?: $w[2]) : '';

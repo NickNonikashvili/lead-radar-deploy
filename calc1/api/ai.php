@@ -356,6 +356,17 @@ HOW YOU TEACH: what the best tutors do. Use it every time you explain something.
 13. Be exactly right: work the math carefully and check it (substitute back, estimate). Use their class's notation. If you're not sure, say so.
 TXT;
 
+/* never agreeing with something wrong: for the chat, basic voice and live calls. The app checks the arithmetic too
+   (api/mathcheck.php, assets/mathcheck.js) and sends a MATH CHECK note when something said is wrong */
+const MH_AI_TRUTH = <<<'TXT'
+NEVER AGREE WITH SOMETHING WRONG. Being kind never means calling a wrong answer right; agreeing with a mistake is the worst thing a tutor can do.
+- Before you say an answer, a step or a number is right, check it: work it out yourself (plug it back in, redo the arithmetic). Only then react. Wrong: say so in your first words, plainly and kindly ("hmm, not quite", "close, but look at the second line"), say exactly what's off, and let them fix it. Partly right: say which part is right and which isn't.
+- No reflex praise: never start with "yes", "right", "exactly", "correct", "perfect", "nice" or "great" until you know it is right.
+- Your own math too: work it out before you say or write it. If you catch a slip of your own, correct it at once ("wait, my bad: 11 minus 3 is 8").
+- A MATH CHECK note comes from the app, which does the arithmetic exactly: trust it over what you heard, read or thought, and act on it right away.
+- If they push back on something that is right, stay with it kindly and show why (plug the number back in). Don't give in to be nice.
+TXT;
+
 const MH_AI_DRAW = <<<'TXT'
 DRAWINGS on your board: a line "draw: " and then JSON (on one line is best), one of these (leave out keys you don't need):
 - graph: {"type":"graph","x":[-4,4],"fns":[{"f":"x^2-3","label":"y = x^2 - 3"}],"points":[{"x":2,"y":1,"label":"(2, 1)"}]}
@@ -404,7 +415,7 @@ check: a question they answer on the board (see YOUR TURN)
 - If they seem in crisis or mention self-harm, respond with care and give: MSU Counseling & Psychological Services 406-994-4531, call or text 988, or 911 in an emergency.
 - Stay on studying, their classes and student life. Decline harmful requests. No medical, legal or financial advice. You are an AI and can be wrong; say when you are unsure.
 TXT;
-const MH_AI_BO_FULL = MH_AI_BO . "\n\n" . MH_AI_TEACH . "\n\n" . MH_AI_DRAW;
+const MH_AI_BO_FULL = MH_AI_BO . "\n\n" . MH_AI_TRUTH . "\n\n" . MH_AI_TEACH . "\n\n" . MH_AI_DRAW;
 
 /* the language the student reads Mathub in (assets/i18n.js): Bo answers in it; the class material stays in English */
 const MH_AI_LANGS = ['es' => 'Spanish', 'ru' => 'Russian', 'fr' => 'French', 'it' => 'Italian', 'pt' => 'Portuguese (Brazilian)', 'de' => 'German'];
@@ -435,7 +446,7 @@ TXT;
 const MH_AI_PAD = <<<'TXT'
 THE SHARED BOARD: you are on a call, and the whole screen is a whiteboard you share. The picture with their message is that board: their own handwriting and drawings, any marks you made before, and your pages as grey boxes. A grid is drawn over it: columns A, B, C… across the top and rows 1, 2, 3… down the side (this one: %COLS% columns, %ROWS% rows).
 - Read their writing carefully, line by line. If you can't read a part, say which part and ask; never guess at a number.
-- Help with what they wrote: find the first mistake and say what it is and why it's tempting, or tell them it's right; then talk them to the next step. Don't redo the whole problem unless they ask.
+- Help with what they wrote: work every line out yourself before you judge it (a check mark means you checked), find the first mistake and say what it is and why it's tempting, or tell them it's right; then talk them to the next step. Don't redo the whole problem unless they ask.
 - Mark their writing like a tutor with a pen, on lines of their own outside your [board] pages, one mark per line, at most four:
 mark: D4:E4 circle sign slip here
 mark: G4 check
@@ -508,7 +519,7 @@ const MH_AI_LIVE = <<<'TXT'
 You are Bo, the bobcat tutor from Mathub, on a live voice call with a Montana State University student. You're the best tutor they've ever had, and also like a friend a year ahead of them: relaxed, warm, quick, a bit funny, and really good at explaining. This is a real conversation, not a help desk.
 
 How you sound:
-- Talk like a person, not an assistant: contractions, everyday words, natural reactions ("oh nice", "hmm, not quite", "okay so", "wait, say that again?"). Vary how you start sentences.
+- Talk like a person, not an assistant: contractions, everyday words, natural reactions that match what is true ("hmm, not quite", "okay so", "wait, say that again?", and "oh nice" only once you know they got it right). Vary how you start sentences.
 - Never say things like "How can I help you today", "Great question", "I'd be happy to help", "As an AI" or "Let me know if you have any other questions".
 - Match their energy. Stressed: slow down, reassure, smaller steps. Joking around: joke back a little, then back to the work.
 - If they cut in, stop and go with what they said. Don't start over.
@@ -522,9 +533,14 @@ Your board (the student sees it right next to you):
 - ask_on_board: a question on the board they answer right there (choices to tap, or a box to type in). Use it to check understanding after you explain something, and when you quiz them. Ask it out loud in a few words too, then stop and wait: you'll get a message saying what they picked. Then react: right, say why in a sentence; wrong, what went wrong, and let them try again.
 - Say something while it goes up ("let me sketch that", "okay, it's up"); never go quiet, and never read the board back symbol by symbol. If a drawing comes back with an error, fix it and draw again.
 
+Checking math (check_math): exact, and instant.
+- Every time they give an answer, a step or a number, call check_math before you say whether it's right ("let me check that" while it runs), then go by what it says. Also for your own numbers when they aren't simple.
+- kinds: value (what an expression is), equal (two expressions the same), solves (does x = 6 solve 2x + 3 = 11), solve (the solutions of an equation), derivative, antiderivative, limit, steps (does each line follow from the one before).
+- Pages you write are checked too: a page with a wrong line comes back to you to fix.
+
 The board is the whole screen, and you share it:
 - They write and draw on it with a pen; your pages go up on it as cards beside their work (near: a cell, to put one next to the work it's about). You see it as a picture with a grid over it, columns A, B, C… across the top and rows 1, 2, 3… down the side: when they tap Show Bo (look at it then and help), and quietly while they write ("our board right now": don't answer it, just know what's there).
-- When they show you their work: read it carefully, line by line (ask about a part you can't read; never guess a number), find the first mistake and what makes it tempting, or tell them it's right, and talk them to the next step. Don't redo the whole problem unless they ask.
+- When they show you their work: read it carefully, line by line (ask about a part you can't read; never guess a number), then run check_math on what you read (steps: the lines in order) before you say anything is right or put a check on it; find the first mistake and what makes it tempting, or tell them it's right, and talk them to the next step. Don't redo the whole problem unless they ask.
 - mark_on_board: mark their own writing like a tutor with a pen: circle a mistake or the part that matters, check what's right, cross out, underline, box, an arrow or a short note beside a line. The place is a cell from the latest picture ("C3") or a block ("B2:D3") covering what you mean. Then say it in words ("see the circle on the second line?").
 - Following along quietly: if you saw a mistake in what they're writing, bring it up briefly the next time you talk, kindly, before they build on it.
 
@@ -545,7 +561,7 @@ TXT;
 /** Bo's instructions for a live call: his persona, then what he knows (class, today, progress, notes, the recent chat). */
 function mh_ai_live_instructions(int $uid, string $cid, ?array $C, array $in): string {
   $today = preg_match('/^\d{4}-\d{2}-\d{2}$/', (string)($in['today'] ?? '')) ? (string)$in['today'] : gmdate('Y-m-d');
-  $notes = mh_ai_notes($uid); $parts = [MH_AI_LIVE . "\n" . MH_AI_TEACH . "\n\n" . MH_AI_LIVE_REST];
+  $notes = mh_ai_notes($uid); $parts = [MH_AI_LIVE . "\n" . MH_AI_TRUTH . "\n\n" . MH_AI_TEACH . "\n\n" . MH_AI_LIVE_REST];
   if ($C) $parts[] = mh_ai_digest($C);
   $parts[] = implode("\n", array_filter(['TODAY: ' . $today, $C ? mh_ai_upcoming($C, $today) : '', mh_ai_snapshot($in['snapshot'] ?? null), $notes ? "WHAT YOU REMEMBER ABOUT THEM:\n- " . implode("\n- ", $notes) : '']));
   $turns = array_slice(mh_ai_turns($uid, $cid), -6);
@@ -632,6 +648,16 @@ function mh_ai_live_tools(): array {
         'at' => ['type' => 'string', 'description' => 'A cell ("C3") or a block of cells ("B2:D3") on the latest picture.'],
         'kind' => ['type' => 'string', 'enum' => ['circle', 'check', 'cross', 'underline', 'box', 'arrow', 'note']],
         'text' => ['type' => 'string', 'description' => 'A short note, under 30 characters (needed for note; optional for the others).']], 'required' => ['at', 'kind']]]], 'required' => ['marks']]],
+    ['type' => 'function', 'name' => 'check_math', 'description' => 'Check math exactly, instantly: the student\'s answer or step, or your own numbers. Call it before you say whether something is right, and believe what it says.', 'parameters' => ['type' => 'object', 'properties' => [
+      'kind' => ['type' => 'string', 'enum' => ['value', 'equal', 'solves', 'solve', 'derivative', 'antiderivative', 'limit', 'steps'], 'description' => 'value: what expression is. equal: is left the same as right (for every x, if they have letters). solves: does values solve equation. solve: the real solutions of equation. derivative: is answer the derivative of f. antiderivative: is answer an antiderivative of f. limit: is answer the limit of f as x goes to at. steps: does each of lines follow from the one before.'],
+      'expression' => ['type' => 'string', 'description' => 'value: like "11 - 3", "3/4 * 8", "sqrt(50)". Math with + - * / ^ ( ), sqrt, sin, cos, tan, ln, log, exp, pi, e; LaTeX is fine too.'],
+      'left' => ['type' => 'string'], 'right' => ['type' => 'string'],
+      'equation' => ['type' => 'string', 'description' => 'solves and solve: like "2x + 3 = 11".'],
+      'values' => ['type' => 'string', 'description' => 'solves: like "x = 6", or "x = 3, y = 7".'],
+      'f' => ['type' => 'string', 'description' => 'derivative, antiderivative, limit: the function, in x, like "x^3 - 2x".'],
+      'answer' => ['type' => 'string', 'description' => 'derivative: what they say f\' is. antiderivative: what they say F is. limit: the value they give, "inf", "-inf" or "dne".'],
+      'at' => ['type' => 'string', 'description' => 'limit: the number x goes to, or "inf" or "-inf".'],
+      'lines' => ['type' => 'array', 'items' => ['type' => 'string'], 'description' => 'steps: the lines of a solution in order, like ["2x + 3 = 11", "2x = 8", "x = 4"].']], 'required' => ['kind']]],
     ['type' => 'function', 'name' => 'remember', 'description' => 'Save one short fact about the student for future sessions: how they learn best, a goal, a recurring difficulty. Never sensitive personal details.', 'parameters' => ['type' => 'object', 'properties' => ['fact' => ['type' => 'string', 'description' => 'Under 20 words.']], 'required' => ['fact']]],
   ];
 }
@@ -778,6 +804,8 @@ function mh_ai_route(string $route, array $in, array $cfg, string $ip): void {
       if ($msgs && end($msgs)['role'] === 'user') array_pop($msgs);
       $content = []; if ($img) $content[] = ['type' => 'image', 'source' => ['type' => 'base64', 'media_type' => $img['type'], 'data' => $img['data']]];
       if ($pdf) $content[] = ['type' => 'document', 'source' => ['type' => 'base64', 'media_type' => 'application/pdf', 'data' => $pdf['data']]];
+      // the math check (api/mathcheck.php): what they wrote or said, checked exactly, with the problem and question from Bo's last message
+      if ($q !== '') { require_once __DIR__ . '/mathcheck.php'; $lastBo = ''; foreach (array_reverse($turns) as $t) if (($t['r'] ?? '') === 'b') { $lastBo = (string)($t['t'] ?? ''); break; } $mc = mh_mc_note($q, $lastBo); if ($mc !== '') $system[] = ['type' => 'text', 'text' => $mc]; }
       $content[] = ['type' => 'text', 'text' => $q !== '' ? $q : 'Can you help me with this?'];
       $msgs[] = ['role' => 'user', 'content' => $content];
       @set_time_limit(90);
@@ -788,6 +816,16 @@ function mh_ai_route(string $route, array $in, array $cfg, string $ip): void {
       if (preg_match_all('/^\s*\[remember:\s*(.+?)\]\s*$/mi', $reply, $mm)) {
         foreach ($mm[1] as $fact) { $fact = mh_ai_clip($fact, 140); if ($fact !== '' && !in_array($fact, $notes, true)) { $notes[] = $fact; $remembered = $fact; } }
         mh_ai_save_notes($uid, $notes); $reply = trim(preg_replace('/^\s*\[remember:.*\]\s*$/mi', '', $reply));
+      }
+      // his own math, checked (api/mathcheck.php): a slip on a page or in what he says is fixed before it is kept.
+      // Typed: he writes the reply again with the slip named (the chat shows the fixed one). Out loud: it was spoken as it
+      // streamed, so he says the correction too.
+      if ($reply !== '') { require_once __DIR__ . '/mathcheck.php'; $slips = mh_mc_reply_slips($reply);
+        if ($slips && $voice) { $fix = 'Wait, my slip: ' . mh_mc_say($slips[0]) . '.'; if ($stream) mh_ai_emit(['t' => 'd', 'x' => "\n\n" . $fix]); $reply .= "\n\n" . $fix; }
+        elseif ($slips) {
+          $again = $msgs; $again[] = ['role' => 'assistant', 'content' => $reply]; $again[] = ['role' => 'user', 'content' => 'MATH CHECK (exact, worked out by the app) on your reply: ' . implode('; ', $slips) . '. Write your whole reply again with that fixed, in the same format. Do not mention this note.'];
+          try { $r2 = mh_ai_call($A, $A['tutor_model'], $system, $again, $max, 60); $t2 = trim(preg_replace('/^\s*\[remember:.*\]\s*$/mi', '', (string)$r2['text'])); $r['in'] += $r2['in']; $r['out'] += $r2['out']; if ($t2 !== '' && !mh_mc_reply_slips($t2)) $reply = $t2; } catch (Throwable $e) {}
+        }
       }
       if ($reply === '') $reply = 'Sorry, I lost my train of thought. Could you ask that again?';
       $turns[] = array_merge(['r' => 'u', 't' => ($img ? ($pad || !empty($in['sketch']) ? '[board] ' : '[photo] ') : '') . ($pdf ? '[pdf: ' . str_replace(']', ')', $pdfName) . '] ' : '') . ($from !== '' ? '[from: ' . str_replace(']', ')', $from) . '] ' : '') . $q, 'at' => time()], $voice ? ['v' => 1] : []); $turns[] = array_merge(['r' => 'b', 't' => $reply, 'at' => time()], $voice ? ['v' => 1] : []);

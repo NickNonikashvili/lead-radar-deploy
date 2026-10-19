@@ -516,6 +516,10 @@ board stay in one place).
 - **Ask Bo about this**: under a question missed in the Quizzer or the mistakes notebook (`App.askBoButton`), a link
   to `#/tutor/<class>?ask=…` that opens Ask Bo and sends him the question, the choices, what the student answered
   and the right answer, once (the address drops it after).
+- **Bo never agrees with something wrong** (`docs/bo-teaching.md`, `MH_AI_TRUTH`): the app checks the math exactly,
+  in the browser (`assets/mathcheck.js`) and on the server (`api/mathcheck.php`): what the student says, types or
+  answers (spoken numbers and LaTeX too), what Bo says, the pages and questions he puts up, and his chat replies.
+  On a call something wrong stops him and he answers again with an exact note; he also has a `check_math` tool.
 - **How Bo teaches** (`docs/bo-teaching.md`, `MH_AI_TEACH` in `api/ai.php`): the same thirteen rules in the chat,
   voice mode and calls, from research on expert tutors and learning: find out where the student is, the big picture
   first, one idea at a time, concrete before abstract, a worked example then fading, draw it, words and board

@@ -5951,5 +5951,17 @@
 {"id":5950,"en":"Confirm the send first.","files":["api/news.php"]},
 {"id":5951,"en":"An email is still being sent. Let it finish (or stop it) first.","files":["api/news.php"]},
 {"id":5952,"en":"Nobody would get it: no verified member has news emails on.","files":["api/news.php"]},
-{"id":5953,"en":"Nothing is being sent.","files":["api/news.php"]}
+{"id":5953,"en":"Nothing is being sent.","files":["api/news.php"]},
+{"id":5954,"en":"The math check is not loaded.","files":["talk.js"]},
+{"id":5955,"en":"Not written, line {1} is wrong: {2}. Fix the math (check_math helps) and write the page again.","files":["talk.js"]},
+{"id":5956,"en":"ask:","files":["talk.js"]},
+{"id":5957,"en":"Not asked: the answer is wrong: {1}. Fix the answer and ask again.","files":["talk.js"]},
+{"id":5958,"en":"MATH CHECK (exact, worked out by the app from {1}):","files":["talk.js"]},
+{"id":5959,"en":". So that is wrong. Do not agree with it, and do not say \"right\", \"yes\", \"exactly\" or \"nice\" about it. Tell them kindly it's not quite, point at the exact slip, and let them fix it themselves (give the right value only if they ask or are still stuck).{1}","files":["talk.js"]},
+{"id":5960,"en":"what they just typed","files":["talk.js"]},
+{"id":5961,"en":"the transcript of what they just said","files":["talk.js"]},
+{"id":5962,"en":"(If they were talking about a different problem than the one on the board, check that one instead.)","files":["talk.js"]},
+{"id":5963,"en":"MATH CHECK (exact, worked out by the app): you just said","files":["talk.js"]},
+{"id":5964,"en":". That was a slip. Correct yourself out loud right away, in one short sentence (\"wait, my bad: …\"), then carry on.","files":["talk.js"]},
+{"id":5965,"en":"MATH CHECK (exact, worked out by the app): they were right: {1}. You told them it wasn't. Tell them right away that they were right, say why in a sentence, and carry on.","files":["talk.js"]}
 ]

@@ -1,0 +1,241 @@
+[
+ {
+  "say": "x = 11 - 3 so x = 6",
+  "wrong": true
+ },
+ {
+  "say": "x equals eleven minus three, so x equals six",
+  "wrong": true
+ },
+ {
+  "say": "11 minus 3 is 6",
+  "wrong": true
+ },
+ {
+  "say": "eleven minus three is eight",
+  "wrong": false,
+  "right": true
+ },
+ {
+  "say": "2x + 3 = 11 so x = 6",
+  "wrong": true
+ },
+ {
+  "say": "2x + 3 = 11 so x = 4",
+  "wrong": false,
+  "right": true
+ },
+ {
+  "say": "two x plus three equals eleven so x is four",
+  "wrong": false,
+  "right": true
+ },
+ {
+  "say": "x = 6",
+  "eqs": [
+   "Solving 2x + 3 = 11"
+  ],
+  "wrong": true
+ },
+ {
+  "say": "so x is like 6 or something",
+  "eqs": [
+   "2x + 3 = 11"
+  ],
+  "wrong": true
+ },
+ {
+  "say": "I think x is 4",
+  "eqs": [
+   "2x + 3 = 11"
+  ],
+  "wrong": false,
+  "right": true
+ },
+ {
+  "say": "six",
+  "ask": "11 - 3",
+  "wrong": true
+ },
+ {
+  "say": "it's basically 8",
+  "ask": "11 - 3",
+  "wrong": false,
+  "right": true
+ },
+ {
+  "say": "seven times eight is fifty four",
+  "wrong": true
+ },
+ {
+  "say": "7 × 8 = 56",
+  "wrong": false,
+  "right": true
+ },
+ {
+  "say": "$\\frac{3}{4} \\cdot 8 = 6$",
+  "wrong": false,
+  "right": true
+ },
+ {
+  "say": "$\\frac{3}{4} \\cdot 8 = 5$",
+  "wrong": true
+ },
+ {
+  "say": "pi is 3.14",
+  "wrong": false
+ },
+ {
+  "say": "pi is 3.2",
+  "wrong": true
+ },
+ {
+  "say": "15% of 80 is 12",
+  "wrong": false
+ },
+ {
+  "say": "the square root of 49 is 7",
+  "wrong": false,
+  "right": true
+ },
+ {
+  "say": "the square root of 50 is 7",
+  "wrong": true
+ },
+ {
+  "say": "two to the power of 10 is 1024",
+  "wrong": false,
+  "right": true
+ },
+ {
+  "say": "the derivative of x squared is 2x",
+  "wrong": false,
+  "right": true
+ },
+ {
+  "say": "the derivative of x cubed is 2x squared",
+  "wrong": true
+ },
+ {
+  "say": "the derivative of sin x is negative cos x",
+  "wrong": true
+ },
+ {
+  "say": "the antiderivative of 2x is x squared",
+  "wrong": false
+ },
+ {
+  "say": "x squared is 4 so x is 2",
+  "wrong": false
+ },
+ {
+  "say": "the answer is 6",
+  "wrong": false
+ },
+ {
+  "say": "the exam is at 9 and it is worth 20 percent",
+  "wrong": false
+ },
+ {
+  "say": "x = 4 and then for part b x = 5",
+  "wrong": false
+ },
+ {
+  "say": "I got 2 out of 3 right",
+  "wrong": false
+ },
+ {
+  "say": "it is 3 pm",
+  "wrong": false
+ },
+ {
+  "say": "we have 3 exams and 2 quizzes",
+  "wrong": false
+ },
+ {
+  "say": "I like math, is it hard?",
+  "wrong": false
+ },
+ {
+  "say": "f(x) = x^2 so f(3) = 9",
+  "wrong": false
+ },
+ {
+  "say": "is 0.333 the same as a third",
+  "wrong": false
+ },
+ {
+  "say": "a third is 0.33",
+  "wrong": false
+ },
+ {
+  "say": "a third is 0.5",
+  "wrong": true
+ },
+ {
+  "say": "When is my next exam? It is worth 20 percent.",
+  "ask": "11 - 3",
+  "wrong": false
+ },
+ {
+  "say": "I have 3 classes",
+  "ask": "11 - 3",
+  "wrong": false
+ },
+ {
+  "say": "the answer is six",
+  "ask": "11 - 3",
+  "wrong": true
+ },
+ {
+  "say": "is it 6",
+  "ask": "11 - 3",
+  "wrong": true
+ },
+ {
+  "say": "x = 7",
+  "eqs": [
+   "2x + 3 = 11",
+   "2x = 8"
+  ],
+  "wrong": true
+ },
+ {
+  "say": "x = 4",
+  "eqs": [
+   "2x + 3 = 11",
+   "2x = 8"
+  ],
+  "wrong": false,
+  "right": true
+ },
+ {
+  "say": "5! = 120",
+  "wrong": false,
+  "right": true
+ },
+ {
+  "say": "the absolute value of -3 is 3",
+  "wrong": false
+ },
+ {
+  "say": "negative 3 squared is 9",
+  "wrong": false
+ },
+ {
+  "say": "-3^2 = -9",
+  "wrong": false
+ },
+ {
+  "say": "negative 3 squared is 6",
+  "wrong": true
+ },
+ {
+  "say": "is 7 != 8",
+  "wrong": false
+ },
+ {
+  "say": "wow! 2 + 2 is 5!",
+  "wrong": true
+ }
+]
