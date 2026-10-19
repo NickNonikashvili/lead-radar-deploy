@@ -2,7 +2,7 @@
    keyboard, replay from settings, it waits for the welcome) and the print stylesheet/buttons. */
 const T = require('./lib');
 (async () => {
-  const { mk, go, log, check, txt, login } = await T.start({ tour: true });
+  const { mk, go, log, check, txt, login, api } = await T.start({ tour: true });
   const [c, p] = await mk(1360, 900, { serviceWorkers: 'block' });
   // someone who finished the older first-visit tour still gets the tour of the new layout
   await c.addInitScript(() => { try { const s = JSON.parse(localStorage.getItem('studyhub-settings') || '{}'); if (s.tourDone === undefined) { s.tourDone = true; s.courses = ['calc', 'physics']; s.boFloatSeen = 1; localStorage.setItem('studyhub-settings', JSON.stringify(s)); } } catch (e) {} });
@@ -32,14 +32,18 @@ const T = require('./lib');
   check('a phone gets the menu, search and tab bar steps, each card on the screen', pt[0] === 'Everything is in the menu' && pt.includes('Search everything') && pt.includes('Down here') && !pt.includes('(off screen)') && !pt.includes('Everything is in the sidebar'), pt);
   // a new account: the welcome first, then the tour
   const [cw, w] = await mk(1360, 900, { serviceWorkers: 'block' });
-  await go(w, '#/', 800); await login(w, 'alice.a@montana.edu'); await w.evaluate(() => { const s = App.settings(); s.tourLayout = 0; s.prefsUpdated = Date.now() + 60000; localStorage.setItem('studyhub-settings', JSON.stringify(s)); try { sessionStorage.clear(); } catch (e) {} });
-  await w.reload(); await w.waitForTimeout(500); await w.evaluate(() => { if (App.welcome && App.welcome.open) App.welcome.open(); }); await w.waitForTimeout(2600);
+  await go(w, '#/', 800); await login(w, 'alice.a@montana.edu'); await w.reload(); await w.waitForTimeout(1200);
+  await w.evaluate(() => { App.setSetting('tourLayout', 0); try { sessionStorage.clear(); } catch (e) {} }); await w.waitForTimeout(3200);   // as if she had not seen it (saved with her account)
+  await w.reload(); await w.waitForTimeout(500); await w.evaluate(() => { try { sessionStorage.removeItem('mh-tour'); } catch (e) {} if (App.welcome && App.welcome.open) App.welcome.open(); }); await w.waitForTimeout(2600);   // a fresh visit
   const during = await w.evaluate(() => ({ welcome: !!document.querySelector('#welcome'), tour: !!document.querySelector('.tour') }));
   if (during.welcome) {
     check('the tour waits while the welcome is open', !during.tour, during);
     await w.evaluate(() => { const x = document.querySelector('#welcome'); if (App.welcome && App.welcome.close) App.welcome.close(); else if (x) x.remove(); }); await w.evaluate(() => { location.hash = '#/today'; }); await w.waitForTimeout(300); await w.evaluate(() => { location.hash = '#/'; }); await w.waitForTimeout(2600);
     check('and shows after it', !!(await w.$('.tour')), await w.evaluate(() => App.settings().tourLayout));
   } else log('(no welcome to open here; skipped the welcome check)');
+  // leave her account as having seen it, so the tests after this one start without the tour
+  if (await w.$('.tour')) await w.keyboard.press('Escape'); await w.evaluate(() => App.setSetting('tourLayout', App.tour.version)); await w.waitForTimeout(3200);
+  check('closing it is saved with her account', ((await api(w, 'prefs')).json.prefs || {}).tourLayout === 1);
   await cw.close(); await cp.close();
   await go(p, '#/calc/formulas', 1200); check('print button on formulas', !!(await p.$('.page-actions .print-btn')));
   await go(p, '#/calc/notes/1.3', 900); check('print button on notes', !!(await p.$('.note-head .print-btn')));
