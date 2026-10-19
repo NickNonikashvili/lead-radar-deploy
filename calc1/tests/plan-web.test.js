@@ -11,6 +11,7 @@
    RevenueCat (v1 and v2) is a stand-in (tests/pyodide/router.php); mod.user has Max through plan_grants.
    ============================================================ */
 const T = require('./lib');
+const sqlite = q => require('child_process').spawnSync('php', ['-r', '$d = new PDO("sqlite:" . $argv[1]); $d->exec($argv[2]);', path.join(__dirname, '..', 'api', 'data', 'mathub.sqlite'), q]);
 const fs = require('fs'); const path = require('path'); const { spawnSync } = require('child_process');
 const STATE = path.join(__dirname, 'fixtures', 'rc-state.json'); const CANCELS = path.join(__dirname, 'fixtures', 'rc-cancels.json');
 const DB = path.join(__dirname, '..', 'api', 'data', 'mathub.sqlite');
@@ -38,7 +39,13 @@ const sql = (q, arg) => (spawnSync('php', ['-r', '$d = new PDO("sqlite:" . $argv
   await plan(a, aliceId, null);
   await go(a, '#/', 1800);
   const hf = await a.evaluate(() => { const h = document.querySelector('#bo-hub'); return h && { h: h.querySelector('h2').textContent, acts: [...h.querySelectorAll('.bh-act b')].map(b => b.textContent), plan: h.querySelector('.bh-plan').getAttribute('href'), chip: h.querySelector('.bh-plan b').textContent, before: !!(h.compareDocumentPosition(document.querySelector('.land-next, [aria-labelledby="lsec-classes"]')) & Node.DOCUMENT_POSITION_FOLLOWING) }; });
-  check('without a plan, the start page has Meet Bo with Get Pro (Bo on every page), Get Max and Add a class (free), above the classes', hf && hf.h === 'Meet Bo, your tutor' && hf.acts.join() === 'Get Mathub Pro,Get Mathub Max,Add a class' && hf.plan === '#/plan' && hf.chip === 'Free' && hf.before, hf);
+  check('without a plan, the start page has Meet Bo, above the classes: Call Bo free (the free minutes), See what Max does and Add a class', hf && hf.h === 'Meet Bo, your tutor' && hf.acts.join() === 'Call Bo free,See what Max does,Add a class' && hf.plan === '#/plan' && hf.chip === 'Free' && hf.before, hf);
+  check('See what Max does opens the one-minute demo', (await a.getAttribute('#bo-hub a.bh-act[href="#/max"]', 'href')) === '#/max');
+  // once the free minutes are used: Get Pro, Get Max and Add a class
+  sqlite(`INSERT OR REPLACE INTO ai_trial (user_id, used, first) VALUES ((SELECT id FROM users WHERE email = 'alice.a@montana.edu'), 100000, strftime('%s','now'))`);
+  await a.reload(); await a.waitForTimeout(1800);
+  const hu = await a.evaluate(() => [...document.querySelectorAll('#bo-hub .bh-act b')].map(b => b.textContent));
+  check('with the free minutes used, it offers Get Pro (Bo on every page), Get Max and Add a class (free)', hu.join() === 'Get Mathub Pro,Get Mathub Max,Add a class', hu);
   await a.click('#bo-hub [data-bh="max"]'); await a.waitForTimeout(1200);
   check('Get Mathub Max opens the Max checkout card', /Mathub Max/.test(await txt(a, '#paywall h2')) && (await a.$$eval('#paywall [data-plan]', b => b.map(x => x.dataset.plan).join())) === 'max');
   await a.keyboard.press('Escape'); await a.waitForTimeout(300);
@@ -142,5 +149,6 @@ const sql = (q, arg) => (spawnSync('php', ['-r', '$d = new PDO("sqlite:" . $argv
   await cp.close();
 
   fs.writeFileSync(STATE, '{}'); try { fs.unlinkSync(CANCELS); } catch (e) {}
+  sqlite(`DELETE FROM ai_trial WHERE user_id = (SELECT id FROM users WHERE email = 'alice.a@montana.edu')`);   // her free minutes back, for the other tests
   await T.finish();
 })().catch(e => { console.error(e); try { require('fs').writeFileSync(require('path').join(__dirname, 'fixtures', 'rc-state.json'), '{}'); } catch (x) {} process.exit(1); });

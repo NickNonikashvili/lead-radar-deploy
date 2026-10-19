@@ -568,14 +568,52 @@ board stay in one place).
 class cards, the class card (where the class is, its next exam with days left and readiness, the next lesson),
 Today across all classes, the class's study tools, and the labelled path. On the website, students who have
 studied here get them under "Your next step": a tab per class, the class card and the unit they are in, beside
-Today, the tools, where they left off and the quick buttons (two columns on wide screens). A first visit keeps
-the intro and the three steps.
+Today, the tools and where they left off (two columns on wide screens). A first visit keeps the intro and the
+three steps.
+
+**Kept simple (2026.10.19.4).** The start page reads top to bottom in a few groups: the hero (the day, the next
+exam, Today), Bo (the Bo card for members, one line and the one-minute demo for visitors), the next step, Your
+classes, Your day, and More to explore. Class cards show the class, its next exam and one button (the details are
+on the class page). Your day starts with three cards (today's schedule, what is due, the week); Customize brings
+back the rest (`settings.homeHide`; an account that never customized gets `START_HIDE` in `assets/dash.js`). The
+week across classes, classmates and study guides are a closed `<details>` (`#land-more`), remembered open or shut
+(`settings.landMore`) and filled only when opened, so the start page makes no discussion, Canvas or community
+requests until then. Phones get the class cards two to a row. A class page shows no From Canvas box when Canvas
+has nothing coming up.
 
 **Exam week.** From 7 days before an exam (`App.home.examWeek`), the start page (website and apps) and the class
 page show a plan for today (the weakest topic as a 5-minute lesson, flashcards due, a timed practice exam in the
 last three days, the prep checklist) and one for each day until the exam (weak topics spread over the days, the
 practice exam the day before, a light review on exam day). It is built from readiness, so it follows what the
 student has practised. The quizzer takes `?exam=ID&timed=1` to open in exam mode on that exam's topics.
+
+## The Max page and the free minutes with Bo
+
+`assets/max.js`, `assets/max.css`, `#/max`, for everyone (signed in or not). A call with Bo that plays by itself in
+about 27 seconds: you write 2x + 3 = 11 by hand, Bo looks, circles the slip, then puts up a page with the steps and a
+graph (the real board, `App.boBoard`). Captions come word by word; Pause, Replay and "Read what they say" (the whole
+script as text); reduced motion shows the finished call. Under it: how it works (three steps), what Max gives you
+(four tiles), and Try it now. The button calls Bo on the free minutes, asks a visitor to sign up, or opens the
+plans; its small print follows `ai_status` (the free minutes set in the admin panel, what is left, used up, or Max).
+Linked from the visitor's start page, the Bo card, Ask Bo and the Max plan card.
+
+**Free minutes** (`ai_trial_minutes` in Keys & settings, 10 by default, 0 turns them off): every account without
+Max can call Bo once for that long, in a live call or basic voice (`api/ai.php`: `ai_trial`, `ai_live.trial`,
+`ai_call_start` for basic voice; see docs/app-subscriptions.md). The start page's Bo card and Ask Bo show Call Bo
+free; the call's clock shows the minutes left and ends the call when they run out, pointing to Max.
+
+## News emails (Email everyone)
+
+`api/news.php`, the admin panel's Email everyone tab, `#/unsubscribe`. The administrator writes one email (subject,
+paragraphs, a button and its link; `{name}` and `{minutes}` are filled in), sees it as members will, sends a test to
+themselves, then sends it to every verified member who has news on (`users.news_email`, on by default; Settings →
+Account → News from Mathub). It is ready with the email about the free minutes with Bo. Sending goes in batches of
+ten every few seconds while the admin page is open, and a few on every visit to the site otherwise
+(`mh_news_tick` in housekeeping); `news_sent` makes sure nobody gets it twice. Three failures in a row with nothing
+sent pause it with the mail server's error. Each email ends with a link to `#/unsubscribe?u=…&t=…` (a signed link:
+a page with one button, so mail scanners that open links change nothing) and carries `List-Unsubscribe` and
+`List-Unsubscribe-Post` headers, so mail apps can unsubscribe in one click (`news_unsub`, checked by its signature,
+no login).
 
 ## Security, privacy and quality
 

@@ -160,6 +160,16 @@ call settings): the browser hears, the answer streams from Claude, and Bo reads 
 To switch Bo on: create an API key at console.anthropic.com (Settings → API keys; add a payment method and set a
 monthly spend limit there), then put it in `api/config.local.php`.
 
+### Free minutes with Bo
+
+Every account without Max can call Bo once, for `ai_trial_minutes` (Keys & settings, 10 by default; 0 turns it
+off). The server keeps the seconds used in `ai_trial` (one row per account). A live call on the free minutes starts
+with `ai_live_start` as usual (`ai_live.trial = 1`); a basic voice call asks `ai_call_start` for a call id first,
+and its `ai_tutor` (voice), `ai_speak` and `ai_listen` requests carry that id (`lid`). `ai_live_tick` adds the time
+every 30 seconds and at the end, and hangs up when the minutes run out (`trial_over`). `ai_status` says
+`trial_minutes` to everyone and `trial: {minutes, left, used}` to a signed-in account without Max. The cost is at
+most the minutes set here, once per account: at 10 minutes, about the price of one short Max call.
+
 ## 4. Put the keys in
 
 In `calc1/assets/create.js` (public SDK keys, meant to ship inside apps):

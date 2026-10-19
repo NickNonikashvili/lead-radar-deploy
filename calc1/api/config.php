@@ -104,6 +104,7 @@ return [
   'ai_live_monthly'   => 300,        // minutes of live calls per account per month
   'ai_live_daily'     => 90,         // minutes per day
   'ai_live_call'      => 30,         // minutes per call (Bo can be called again right away)
+  'ai_trial_minutes'  => 10,         // free call minutes with Bo, once, for every account without Max (0 turns it off)
 
   // Storage. Keep the database inside api/data (protected by .htaccess) or move it above public_html.
   'db_path'         => __DIR__ . '/data/mathub.sqlite',

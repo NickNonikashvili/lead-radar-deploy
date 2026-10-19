@@ -398,3 +398,6 @@ html[data-motion="off"] .bh-act { transition: none; }
 .mk-bo-checks svg { flex: none; margin-top: 2px; color: var(--pine, var(--good)); }
 .mk-exists { border-color: var(--accent-line); background: var(--accent-soft); }
 .mk-exists p { margin: 4px 0 0; }
+
+/* the Max card: a link to the one-minute demo of a call (assets/max.js) */
+.pl-demo { display: inline-flex; align-items: center; gap: 6px; margin: 2px 0 10px; font-weight: 700; font-size: 14.5px; }

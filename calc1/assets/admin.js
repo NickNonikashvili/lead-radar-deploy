@@ -31,7 +31,7 @@
     if (!json || json.ok === false) { const err = new Error((json && json.error) || 'Request failed.'); err.data = json; throw err; }
     return json;
   }
-  const TABS = [['overview', 'Overview', 'grid', 'admin'], ['members', 'Members', 'info', 'admin'], ['issues', 'Problems', 'bulb', 'mod'], ['packs', 'Add a class', 'book', 'admin'], ['classes', 'Class requests', 'path', 'admin'], ['teach', 'Instructors', 'users', 'admin'], ['errors', 'Site errors', 'zap', 'admin'], ['backups', 'Backups', 'download', 'admin'], ['reports', 'Reports', 'flag', 'mod'], ['contrib', 'Contributions', 'pen', 'mod'], ['mocks', 'Mock exams', 'target', 'mod'], ['growth', 'Growth', 'chart', 'admin'], ['config', 'Keys & settings', 'lock', 'admin'], ['settings', 'Site settings', 'sliders', 'admin'], ['digest', 'Digest & cron', 'clock', 'admin']];
+  const TABS = [['overview', 'Overview', 'grid', 'admin'], ['members', 'Members', 'info', 'admin'], ['issues', 'Problems', 'bulb', 'mod'], ['packs', 'Add a class', 'book', 'admin'], ['classes', 'Class requests', 'path', 'admin'], ['teach', 'Instructors', 'users', 'admin'], ['errors', 'Site errors', 'zap', 'admin'], ['backups', 'Backups', 'download', 'admin'], ['reports', 'Reports', 'flag', 'mod'], ['contrib', 'Contributions', 'pen', 'mod'], ['mocks', 'Mock exams', 'target', 'mod'], ['growth', 'Growth', 'chart', 'admin'], ['config', 'Keys & settings', 'lock', 'admin'], ['settings', 'Site settings', 'sliders', 'admin'], ['digest', 'Digest & cron', 'clock', 'admin'], ['email', 'Email everyone', 'send', 'admin']];
 
   App.views.admin = {
     title: 'Admin panel',
@@ -427,6 +427,50 @@
           btn.disabled = false; const f = x.data && x.data.field; toast(x.message, 5000);
           if (f === 'password') { pass.value = ''; pass.focus(); } else if (f) { const d = $(`.cfg-field[data-f="${f}"]`, el); if (d) { d.classList.add('bad'); const i = $('[data-k]', d); if (i) i.focus(); } }
         }
+      });
+    },
+
+    /* one email to every member (api/news.php): write it, see it, send it to yourself, then to everyone; it goes out in batches while this page is open (and a few on every visit to the site) */
+    async email(el) {
+      let r; try { r = await api('admin_news'); } catch (e) { el.innerHTML = `<div class="empty">${esc(e.message)}</div>`; return; }
+      const d = r.draft; const n = r.recipients;
+      el.innerHTML = `<div class="callout small mb-2">${icon('send', 14)} One email to every member who has a verified account and has not turned news off (<b>${n}</b> right now). Each email has a link to stop them, and mail apps get a one-click unsubscribe. Write it, look at it, send it to yourself, then send it.${r.mail === 'log' ? ' <b>Mail is in log mode:</b> emails are written to api/data/mail.log, not sent.' : ''}</div>
+        <div id="nw-status"></div>
+        <div class="nw-grid"><form class="panel nw-form" id="nw-form" autocomplete="off"><div class="panel-h"><div class="panel-title">${icon('pen')} The email</div><button type="button" class="btn xs ghost" data-action="nw-reset">Start over</button></div>
+          <div class="field"><label for="nw-subject">Subject</label><input class="input" id="nw-subject" name="subject" maxlength="140" required value="${esc(d.subject)}"></div>
+          <div class="field"><label for="nw-body">Message</label><textarea class="input" id="nw-body" name="body" rows="11" maxlength="4000" required>${esc(d.body)}</textarea><small class="muted">A blank line starts a new paragraph. <code>{name}</code> becomes their first name, <code>{minutes}</code> the free minutes with Bo (${r.minutes} now).</small></div>
+          <div class="nw-two"><div class="field"><label for="nw-button">Button</label><input class="input" id="nw-button" name="button" maxlength="40" value="${esc(d.button)}" placeholder="No button"></div><div class="field"><label for="nw-link">It opens</label><input class="input" id="nw-link" name="link" maxlength="300" value="${esc(d.link)}" placeholder="#/max"></div></div>
+          <div class="row gap-sm mt-2" style="flex-wrap:wrap"><button type="button" class="btn" data-action="nw-test">${icon('reply', 13)} Send me a test</button><button type="submit" class="btn primary" id="nw-go">${icon('send', 13)} Send to ${n} member${n === 1 ? '' : 's'}</button></div>
+          <p class="small muted mt-1">The test goes to ${esc(r.me)}.</p></form>
+          <div class="panel nw-prev"><div class="panel-h"><div class="panel-title">${icon('eye')} What they get</div><span class="small muted" id="nw-subj"></span></div><div id="nw-frame" class="nw-frame" role="region" aria-label="Preview of the email"></div></div></div>`;
+      const form = $('#nw-form', el); const val = () => ({ subject: form.subject.value, body: form.body.value, button: form.button.value, link: form.link.value });
+      let t = 0; const preview = async () => { try { const p = await api('admin_news_preview', val()); const host = $('#nw-frame', el); (host.shadowRoot || host.attachShadow({ mode: 'open' })).innerHTML = p.html; /* the server escapes everything in it; its styles stay inside */ $('#nw-subj', el).textContent = p.subject; } catch (e) { $('#nw-subj', el).textContent = e.message; } };
+      form.addEventListener('input', () => { clearTimeout(t); t = setTimeout(preview, 450); }); preview();
+      // the send in progress: a bar, pause, resume, stop; while this page is open it keeps sending
+      let loop = 0;
+      const paint = x => {
+        const box = $('#nw-status', el); if (!box) return; const go = $('#nw-go', el);
+        if (!x) { box.innerHTML = ''; return; }
+        const live = !x.done; const pct = x.total ? Math.min(100, Math.round(100 * (x.sent + x.failed) / x.total)) : 100;
+        box.innerHTML = `<div class="panel mb-2 nw-run"><div class="panel-h"><div class="panel-title">${icon(live ? 'send' : 'check')} ${live ? (x.paused ? 'Paused' : 'Sending') : 'Sent'}: “${esc(x.subject)}”</div><span class="small muted">${new Date(x.created * 1000).toLocaleString()}</span></div>
+          <div class="bar-row"><span><b>${x.sent}</b> of ${x.total} sent${x.failed ? ` · <span style="color:var(--bad)">${x.failed} failed</span>` : ''}</span><span class="mono">${pct}%</span><div class="bar"><div class="bar-fill${live ? '' : ' good'}" style="width:${pct}%"></div></div></div>
+          ${x.error ? `<p class="small" style="color:var(--bad)">The mail server said: ${esc(x.error)}. Check the email settings in Keys &amp; settings, then resume.</p>` : ''}
+          ${live ? `<div class="row gap-sm mt-1">${x.paused ? '<button type="button" class="btn sm primary" data-action="nw-resume">Resume</button>' : '<button type="button" class="btn sm" data-action="nw-pause">Pause</button>'}<button type="button" class="btn sm ghost" data-action="nw-stop">Stop for good</button><span class="small muted">${x.paused ? '' : 'Keep this page open to send faster. It also goes out a few at a time as people use the site.'}</span></div>` : ''}</div>`;
+        if (go) go.disabled = live;
+        clearTimeout(loop); if (live && !x.paused && document.body.contains(box)) loop = setTimeout(async () => { if (!document.body.contains(box)) return; try { paint((await api('admin_news_step', { n: 10 })).news); } catch (e) { toast(e.message, 4000); } }, 2500);
+      };
+      paint(r.news && (!r.news.done || Date.now() / 1000 - r.news.created < 7 * 86400) ? r.news : null);
+      bind(el, {
+        'nw-reset': () => { form.subject.value = d.subject; form.body.value = d.body; form.button.value = d.button; form.link.value = d.link; preview(); },
+        'nw-test': async b => { b.disabled = true; try { toast((await api('admin_news_test', val())).message, 4000); } catch (e) { toast(e.message, 5000); } b.disabled = false; },
+        'nw-pause': async () => { try { paint((await api('admin_news_pause', { paused: 1 })).news); } catch (e) { toast(e.message); } },
+        'nw-resume': async () => { try { paint((await api('admin_news_pause', { paused: 0 })).news); } catch (e) { toast(e.message); } },
+        'nw-stop': async () => { if (!confirm('Stop sending for good? The members who did not get it yet will not get it.')) return; try { paint((await api('admin_news_pause', { stop: 1 })).news); } catch (e) { toast(e.message); } }
+      });
+      form.addEventListener('submit', async e => {
+        e.preventDefault(); if (!confirm(`Send “${form.subject.value}” to ${n} member${n === 1 ? '' : 's'} now? It cannot be unsent.`)) return;
+        const b = $('#nw-go', el); b.disabled = true;
+        try { const x = await api('admin_news_send', Object.assign(val(), { confirm: 'send' })); toast('Sending', 2500); paint(x.news); } catch (e2) { b.disabled = false; toast(e2.message, 5000); }
       });
     },
 

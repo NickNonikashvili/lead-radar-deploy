@@ -481,6 +481,8 @@ html.bt-lock .toast { z-index: 95; }
 .bt-extra:empty { display: none; }
 .bt[data-state="live"] .bt-extra { position: absolute; left: 50%; bottom: calc(var(--bar-h) + 104px + env(safe-area-inset-bottom)); width: auto; max-width: calc(100% - 32px); transform: translateX(-50%); pointer-events: auto; }
 .bt-hello, .bt-msg { width: 100%; padding: 18px 20px 20px; border: 1px solid var(--bt-line); border-radius: 22px; background: rgba(255, 255, 255, .07); text-align: left; }
+.bt-free { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-radius: 14px; background: rgba(255, 198, 41, .14); color: #FFE08A !important; }
+.bt-free b { color: #FFE08A; }
 :root .bt .bt-hello h3 { margin: 0 0 6px; font: 800 21px/1.2 var(--font-display) !important; color: var(--bt-ink); }
 .bt-hello p, .bt-msg p { margin: 0 0 10px; color: rgba(236, 242, 250, .86); line-height: 1.5; }
 .bt-hello b { color: var(--bt-ink); }
@@ -831,3 +833,6 @@ html[data-motion="off"] :is(.bf-fab-av, .bf-dots i, .bf-tip, .bf-sel, .bf-pointb
 html[data-motion="off"] :is(.bf-pop, .bf-fab-l, .bf-hl) { transition: none; }
 @media print { .bf-fab, .bf-pop, .bf-tip, .bf-sel, .bf-back, .bf-pointbar, .bf-hl { display: none !important; } }
 .bf-ic[hidden] { display: none; }
+/* the free minutes with Bo, on Meet Bo */
+.bo-free { display: flex; flex-direction: column; align-items: center; gap: 12px; width: min(460px, 100%); margin: 4px auto 14px; padding: 18px 20px; border: 2px solid var(--gold, #8A5C00); border-radius: 20px; background: var(--gold-soft, #FFF4D1); }
+.bo-free p { margin: 0; color: var(--ink); font-size: 16px; line-height: 1.45; text-align: center; }

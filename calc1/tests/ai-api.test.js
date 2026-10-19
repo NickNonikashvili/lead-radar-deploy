@@ -238,7 +238,36 @@ const snapshot = { name: 'Alice', streak: 4, xpToday: 10, goal: 30, page: 'Calc 
   const db = (sql, arg) => require('child_process').spawnSync('php', ['-r', '$d = new PDO("sqlite:" . $argv[1]); $s = $d->prepare($argv[2]); $s->execute([$argv[3]]);', path.join(__dirname, '..', 'api', 'data', 'mathub.sqlite'), sql, arg]);
   const OFFER = 'v=0\r\no=- 1 2 IN IP4 127.0.0.1\r\ns=test\r\nt=0 0\r\n';
   r = await call('anon', 'ai_status'); ok('live calls are switched on, with the realtime voices (cedar first)', r.voice.live === true && r.voice.live_default === 'cedar' && Object.keys(r.voice.live_voices)[0] === 'cedar' && 'marin' in r.voice.live_voices, r.voice);
-  r = await call('bob', 'ai_live_start', { class: 'calc', sdp: OFFER }); ok('a live call needs Max', r.status === 402 && r.plan === 'max', r);
+  // the free minutes with Bo: everyone without Max can call him for 10 minutes, once
+  const BOB = 'bob.bmu6j92pq@montana.edu'; const sqlite = q => require('child_process').spawnSync('php', ['-r', '$d = new PDO("sqlite:" . $argv[1]); $d->exec($argv[2]);', path.join(__dirname, '..', 'api', 'data', 'mathub.sqlite'), q]);
+  const bobId = `(SELECT id FROM users WHERE email = '${BOB}')`;
+  sqlite(`DELETE FROM ai_trial WHERE user_id = ${bobId}; DELETE FROM ai_live WHERE user_id = ${bobId}; DELETE FROM rate WHERE key LIKE 'ai_live:%'`);
+  r = await call('bob', 'ai_status'); ok('without Max: 10 free minutes with Bo, none used yet', r.trial && r.trial.minutes === 10 && r.trial.left === 600 && r.trial.used === 0 && r.trial_minutes === 10, r.trial);
+  r = await call('mod', 'ai_status'); ok('with Max there are no free minutes to count', !r.trial && r.trial_minutes === 10);
+  r = await call('anon', 'ai_status'); ok('signed out, the page can still say how many minutes are free', r.trial_minutes === 10 && !r.trial);
+  r = await call('bob', 'ai_live_start', { class: 'calc', sdp: OFFER }); ok('without Max, a live call starts on the free minutes, for at most what is left', r.ok && r.trial === true && r.left > 0 && r.left <= 600 && /^v=0/.test(r.sdp), r);
+  const bobLid = r.lid;
+  sqlite(`UPDATE ai_live SET last = strftime('%s','now') - 40 WHERE id = '${bobLid}'`);
+  r = await call('bob', 'ai_live_tick', { lid: bobLid }); ok('the call is counted against the free minutes as it is reported', r.ok && !r.end && r.left <= 560 && r.left >= 555, r);
+  r = await call('bob', 'ai_status'); ok('…and the page sees what is left', r.trial.used >= 40 && r.trial.left <= 560, r.trial);
+  sqlite(`UPDATE ai_trial SET used = 590 WHERE user_id = ${bobId}; UPDATE ai_live SET last = strftime('%s','now') - 30 WHERE id = '${bobLid}'`);
+  const hung = rd('live-hangups.json', []).length;
+  r = await call('bob', 'ai_live_tick', { lid: bobLid }); ok('when the free minutes run out, the call ends, says so and names Max, and is hung up', r.ok && r.end === true && r.trial_over === true && /10 free minutes/.test(r.why) && /Max/.test(r.why) && rd('live-hangups.json', []).length === hung + 1, r);
+  r = await call('bob', 'ai_live_start', { class: 'calc', sdp: OFFER }); ok('after that a call needs Max, and says the free minutes are used', r.status === 402 && r.plan === 'max' && r.trial_over === true && /used your 10 free minutes/.test(r.error), r);
+  r = await call('bob', 'ai_call_start', { class: 'calc' }); ok('basic voice too', r.status === 402 && r.trial_over === true, r);
+  // basic voice on the free minutes: the call is started on the server, and Bo's voice answers carry its id
+  sqlite(`DELETE FROM ai_trial WHERE user_id = ${bobId}`);
+  r = await call('bob', 'ai_call_start', { class: 'calc' }); const bLid = r.lid; ok('a basic voice call starts on the free minutes too', r.ok && r.trial === true && /^[a-f0-9]{24}$/.test(bLid) && r.left === 600, r);
+  r = await call('bob', 'ai_tutor', { class: 'calc', q: 'What is the chain rule?', voice: 1, lid: bLid }); ok('during it Bo answers out loud without Max', r.ok && /chain rule/i.test(r.reply), r);
+  r = await call('bob', 'ai_tutor', { class: 'calc', q: 'What is the chain rule?', voice: 1 }); ok('but not without the call', r.status === 402, r);
+  r = await call('bob', 'ai_tutor', { class: 'calc', q: 'hello', lid: bLid }); ok('and only out loud (the chat stays Max)', r.status === 402, r);
+  sr = await raw('bob', 'ai_speak', { text: 'Hello there', lid: bLid }); ok('his natural voice works on the free call', sr.status === 200 && /^audio\//.test(sr.type));
+  r = await call('bob', 'ai_live_tick', { lid: bLid, end: 1 }); ok('hanging up ends it', r.ok && r.end === true, r);
+  r = await call('bob', 'ai_tutor', { class: 'calc', q: 'More?', voice: 1, lid: bLid }); ok('after which its id no longer works', r.status === 402, r);
+  r = await call('mod', 'ai_call_start', { class: 'calc' }); ok('with Max nothing needs starting', r.ok && r.lid === '' && r.trial === false, r);
+  r = await call('bob', 'data_export'); ok('the free minutes used are in Download my data', Array.isArray((r.tables || {}).ai_trial), Object.keys(r.tables || {}));
+  sqlite(`DELETE FROM ai_trial WHERE user_id = ${bobId}; DELETE FROM ai_live WHERE user_id = ${bobId}`);
+  for (const n of ['live-hangups.json', 'live-tries.json']) try { fs.unlinkSync(FX(n)); } catch (e) {}   // the counts below start from here
   r = await call('mod', 'ai_live_start', { class: 'calc', sdp: 'not sdp' }); ok('an offer that is not SDP is refused', r.status === 400, r);
   r = await call('mod', 'ai_live_start', { class: 'calc', sdp: OFFER, voice: 'marin', speed: 1.1, eagerness: 'high', snapshot, today: '2026-10-13' });
   const live1 = r; const L1 = rd('live-last.json', {}); const ls = L1.session || {};

@@ -1,4 +1,4 @@
-/* Simpler screens: the sidebar in five groups, the start page in four (hero, classes and next step, explore; a first visit sees its classes before the steps), the class dashboard with five tabs, a quiet top bar for newcomers, and the one-line preview note. */
+/* Simpler screens: the sidebar in five groups, a short start page (hero, Bo, classes and the next step, Your day, the rest folded under More to explore; a first visit sees its classes before the steps), short class cards, the class dashboard with five tabs, a quiet top bar for newcomers, and the one-line preview note. */
 const T = require('./lib');
 (async () => {
   const { mk, go, log, check, hscroll } = await T.start({});
@@ -7,21 +7,25 @@ const T = require('./lib');
   // start page, first visit as a guest
   await go(p, '#/', 1200);
   const land = await p.evaluate(() => {
-    const secs = [...document.querySelectorAll('.landing-wrap > .land-sec > .sec-title, .landing-wrap > .land-sec > .sec-h > .sec-title')].map(h => h.textContent.trim());
+    const secs = [...document.querySelectorAll('.landing-wrap > .land-sec > .sec-title, .landing-wrap > .land-sec > .sec-h > .sec-title, .landing-wrap > .land-more .sec-title')].map(h => h.textContent.trim());
     const hero = [...document.querySelectorAll('.landing-top .hero-actions > *')].map(e => e.id || e.className.split(' ').filter(c => c !== 'btn' && c !== 'sm').join('.'));
-    const quick = [...document.querySelectorAll('.land-next .quick-row > *')].map(e => e.textContent.trim());
-    const card = document.querySelector('.course-card.calc');
-    return { secs, hero, quick, focus: !!document.querySelector('.land-next .hero-focus'), dice: !!document.querySelector('.land-next [data-roll="all"]'), steps: document.querySelectorAll('.start-steps .start-step').length, ticker: !!document.querySelector('#landing-ticker'), meta: card.querySelectorAll('.course-meta > div').length, buttons: card.querySelectorAll('.course-foot .btn').length, tabs: [...document.querySelectorAll('.landing-tabs .tab')].map(t => t.dataset.tab), guides: document.querySelectorAll('.pane[data-pane="guides"] .guides-strip .guide-card').length, strip: !!document.querySelector('.pane[data-pane="inside"] .stat-strip'), presence: !!document.querySelector('.pane[data-pane="community"] #landing-presence'), league: !!document.querySelector('.pane[data-pane="community"] .league-slot') };
+    const card = document.querySelector('.course-card.calc'); const more = document.querySelector('#land-more');
+    return { secs, hero, quick: !!document.querySelector('.quick-row, .land-next .hero-focus, .land-next [data-roll="all"]'), bo: (document.querySelector('.landing-wrap > .land-bo') || {}).getAttribute ? document.querySelector('.landing-wrap > .land-bo').getAttribute('href') : '', steps: document.querySelectorAll('.start-steps .start-step').length, ticker: !!document.querySelector('#landing-ticker'), meta: card.querySelectorAll('.course-meta, .cc-stats').length, buttons: card.querySelectorAll('.course-foot .btn').length, h: card.getBoundingClientRect().height, folded: !!more && more.tagName === 'DETAILS' && !more.open, tabs: [...document.querySelectorAll('#land-more .landing-tabs .tab')].map(t => t.dataset.tab), guides: document.querySelectorAll('#land-more .pane[data-pane="guides"] .guides-strip .guide-card').length, strip: !!document.querySelector('#land-more .pane[data-pane="inside"] .stat-strip'), presence: !!document.querySelector('#land-more .pane[data-pane="community"] #landing-presence'), league: !!document.querySelector('#land-more .pane[data-pane="community"] .league-slot') };
   });
   log('start page:', JSON.stringify(land));
-  check('start page reads in five groups: hero, then a first visit sees classes before the steps, then Your day, explore', land.secs.join('|') === 'Your classes|Start here|Your day|Explore', land.secs);
+  check('start page reads in a few groups: a first visit sees its classes, then the steps, Your day, and the rest folded away', land.secs.join('|') === 'Your classes|Start here|Your day|More to explore', land.secs);
   check('the hero keeps Today and For professors; search, focus sounds, the account and the theme are in the header on every page', land.hero.length === 2 && /hero-today/.test(land.hero[0]) && land.hero[1] === 'hero-faculty', land.hero);
-  check('Focus, the d20, GPA and class picking sit together under the next step', land.focus && land.dice && land.quick.length === 4, land.quick);
+  check('visitors get one line on Bo that opens the one-minute demo', land.bo === '#/max', land.bo);
+  check('no row of extra buttons under the next step (the timer and the d20 are in the sidebar and on each class)', !land.quick);
   check('first-time visitors get three numbered steps', land.steps === 3);
   check('no scrolling ticker', !land.ticker);
-  check('class cards show two facts and one button', land.meta === 2 && land.buttons === 1, { meta: land.meta, buttons: land.buttons });
-  check('explore tabs: this week, community, guides, what is inside', land.tabs.join(',') === 'week,community,guides,inside', land.tabs);
-  check('guides, the stat strip, presence and the league moved into tabs', land.guides === 3 && land.strip && land.presence && land.league, land);
+  check('class cards are short: the class, its next exam and one button', land.meta === 0 && land.buttons === 1 && land.h < 360, { meta: land.meta, buttons: land.buttons, h: land.h });
+  check('the extras are folded under More to explore: this week, classmates, guides, what is inside', land.folded && land.tabs.join(',') === 'week,community,guides,inside', land);
+  check('guides, the stat strip, presence and the league are in its tabs', land.guides === 3 && land.strip && land.presence && land.league, land);
+  await p.click('#land-more > summary'); await p.waitForTimeout(500);
+  check('opening it shows the tabs and is remembered', await p.evaluate(() => document.querySelector('#land-more').open && App.settings().landMore === true && !!document.querySelector('#land-more .landing-tabs .tab.on')));
+  await p.reload(); await p.waitForTimeout(1200); check('it stays open after a reload', await p.evaluate(() => document.querySelector('#land-more').open));
+  await p.click('#land-more > summary'); await p.waitForTimeout(300);
 
   // top bar and preview note on a class page
   await go(p, '#/calc', 1500);

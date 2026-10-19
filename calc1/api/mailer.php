@@ -11,7 +11,8 @@ function mh_mail_mode(array $cfg): string {
 }
 
 /** Returns ['ok' => bool, 'error' => string|null]. */
-function mh_send_mail(array $cfg, string $to, string $subject, string $text, string $html): array {
+/** $extra: more headers, like List-Unsubscribe on news emails (api/news.php). */
+function mh_send_mail(array $cfg, string $to, string $subject, string $text, string $html, array $extra = []): array {
   $mode = mh_mail_mode($cfg);
   $from = $cfg['mail_from']; $fromName = $cfg['mail_from_name'] ?? 'Mathub';
   $boundary = 'mh' . bin2hex(random_bytes(8));
@@ -26,6 +27,7 @@ function mh_send_mail(array $cfg, string $to, string $subject, string $text, str
     'Content-Type' => "multipart/alternative; boundary=\"$boundary\"",
     'X-Mailer' => 'Mathub',
   ];
+  foreach ($extra as $k => $v) if (preg_match('/^[A-Za-z-]+$/', (string)$k)) $headers[$k] = str_replace(["\r", "\n"], '', (string)$v);
   if ($mode === 'log') {
     $line = '[' . gmdate('c') . "] to=$to subject=\"$subject\"\n$text\n---\n";
     @file_put_contents(__DIR__ . '/data/mail.log', $line, FILE_APPEND | LOCK_EX);

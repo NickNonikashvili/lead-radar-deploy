@@ -5,7 +5,7 @@ const T = require('./lib');
   const [c, p] = await mk(1360, 900, { serviceWorkers: 'block' }); await go(p, '#/', 700);
   await p.evaluate(() => { const s = App.settings(); s.courses = ['calc', 'physics', 'csci']; localStorage.setItem('studyhub-settings', JSON.stringify(s)); App.store.poke('calc', d => { const r = App.readiness('calc'); const t0 = r && r.ok ? r.topics[0].t : 'velocity'; d.progress = { [t0]: { a: 12, c: 10 }, aroc: { a: 6, c: 2 } }; d.history = [{ t: 'velocity', ok: true, d: App.todayISO() }]; d.activity = { [App.todayISO()]: true }; d.xp = [{ d: App.todayISO(), n: 40 }]; }); });
   await go(p, '#/', 700);
-  check('hero has Focus button and exam countdown', !!(await p.$('.hero-focus')) && /day/.test(await txt(p, '.hero-count')), await txt(p, '.hero-count'));
+  check('the focus timer is in the sidebar and the hero counts down to the exam', !!(await p.$('#sidebar #pomo-toggle')) && /day/.test(await txt(p, '.hero-count')), await txt(p, '.hero-count'));
   // readiness on dashboard + today
   await go(p, '#/calc', 1200); check('dashboard readiness panel', !!(await p.$('.ready-panel')) && (await p.$$('.ready-tip')).length === 3, await txt(p, '.ready-label'));
   const score = await p.evaluate(() => App.readiness('calc')); check('readiness score computed', score && score.ok && score.score > 0 && score.score <= 100, score && score.score);

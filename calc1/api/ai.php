@@ -1,10 +1,12 @@
 <?php
 /* ============================================================
    Mathub account server — Bo, the AI tutor, talking with Bo out loud, and classes Bo writes from a syllabus
-   Routes: ai_status, ai_thread, ai_tutor, ai_forget, ai_class, ai_speak, ai_listen, ai_live_start, ai_live_tick, ai_live_log
+   Routes: ai_status, ai_thread, ai_tutor, ai_forget, ai_class, ai_speak, ai_listen, ai_live_start, ai_call_start, ai_live_tick, ai_live_log
    - Who can do what: any signed-in member can have Bo turn a syllabus into a class, which is checked first and then
      published for everyone (api/community.php); asking Bo from the floating Bo on any page needs Mathub Pro or Max;
-     Ask Bo's own page, talking out loud and calls need Max (plan_grants gives testers a plan).
+     Ask Bo's own page, talking out loud and calls need Max (plan_grants gives testers a plan). Everyone else gets
+     free call time with Bo once (ai_trial_minutes, 10 by default): a live call (ai_live_start) or a basic voice call
+     (ai_call_start, then ai_tutor, ai_speak and ai_listen with that call's lid), counted in ai_trial as it is reported.
    - This server is the only thing that talks to the AI (Anthropic's API; the key lives in config.local.php),
      and it keeps every request small so it costs as little as possible:
        * each class is turned into a compact text summary: its facts, grading, exams and one line per
@@ -76,7 +78,10 @@ function mh_ai_db(): PDO {
     if (!in_array('voice', $cols, true)) $db->exec('ALTER TABLE ai_usage ADD COLUMN voice INTEGER NOT NULL DEFAULT 0');     // characters Bo spoke
     if (!in_array('listen', $cols, true)) $db->exec('ALTER TABLE ai_usage ADD COLUMN listen INTEGER NOT NULL DEFAULT 0');   // seconds of the student heard
     if (!in_array('live', $cols, true)) $db->exec('ALTER TABLE ai_usage ADD COLUMN live INTEGER NOT NULL DEFAULT 0');       // seconds of live calls
+    $db->exec('CREATE TABLE IF NOT EXISTS ai_trial (user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE, used INTEGER NOT NULL DEFAULT 0, first INTEGER NOT NULL DEFAULT 0)');   // the free minutes used
     $db->exec('CREATE TABLE IF NOT EXISTS ai_live (id TEXT PRIMARY KEY, user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE, cid TEXT NOT NULL DEFAULT "", call TEXT NOT NULL DEFAULT "", started INTEGER NOT NULL, last INTEGER NOT NULL, secs INTEGER NOT NULL DEFAULT 0, ended INTEGER NOT NULL DEFAULT 0)');
+    $lc = array_column($db->query('PRAGMA table_info(ai_live)')->fetchAll(), 'name');
+    if (!in_array('trial', $lc, true)) $db->exec('ALTER TABLE ai_live ADD COLUMN trial INTEGER NOT NULL DEFAULT 0');   // a call on the free minutes
     $ready = true;
   }
   return $db;
@@ -123,6 +128,7 @@ function mh_ai_voice_settings(array $cfg): array {
     'live_monthly' => 60 * max(0, (int)($cfg['ai_live_monthly'] ?? 300)),   // seconds
     'live_daily' => 60 * max(1, (int)($cfg['ai_live_daily'] ?? 90)),
     'live_call' => 60 * max(1, (int)($cfg['ai_live_call'] ?? 30)),
+    'trial' => 60 * max(0, (int)($cfg['ai_trial_minutes'] ?? 10)),   // free call time with Bo, once, for everyone without Max
   ];
 }
 /** The voices of live calls (OpenAI's realtime voices); cedar and marin sound the most natural. */
@@ -477,6 +483,26 @@ function mh_ai_live_today(int $uid): int {
 }
 /** What is left of this month's and today's live minutes, in seconds. */
 function mh_ai_live_left(int $uid, array $V): int { return max(0, min($V['live_monthly'] - mh_ai_usage($uid)['live'], $V['live_daily'] - mh_ai_live_today($uid))); }
+/** The free call time with Bo (once, for everyone without Max): seconds used, and seconds left. */
+function mh_ai_trial_used(int $uid): int { $st = mh_ai_db()->prepare('SELECT used FROM ai_trial WHERE user_id = ?'); $st->execute([$uid]); return (int)$st->fetchColumn(); }
+function mh_ai_trial_left(int $uid, array $V): int { return max(0, $V['trial'] - mh_ai_trial_used($uid)); }
+function mh_ai_trial_add(int $uid, int $secs): void {
+  $db = mh_ai_db(); $db->prepare('INSERT OR IGNORE INTO ai_trial (user_id, used, first) VALUES (?, 0, ?)')->execute([$uid, time()]);
+  $db->prepare('UPDATE ai_trial SET used = used + ? WHERE user_id = ?')->execute([max(0, $secs), $uid]);
+}
+/** A basic-voice call on the free minutes that is still on (its lid), so Bo answers out loud without Max. */
+function mh_ai_trial_call(int $uid, $lid, array $V): bool {
+  $lid = preg_replace('/[^a-f0-9]/', '', is_string($lid) ? $lid : ''); if ($lid === '') return false;
+  $st = mh_ai_db()->prepare('SELECT 1 FROM ai_live WHERE id = ? AND user_id = ? AND trial = 1 AND ended = 0 AND last >= ?'); $st->execute([$lid, $uid, time() - 120]);
+  return (bool)$st->fetchColumn() && mh_ai_trial_left($uid, $V) > 0;
+}
+/** Without Max: a call goes on only while free minutes are left; otherwise the answer names Max. */
+function mh_ai_trial_or_fail(int $uid, array $V): void {
+  if ($V['trial'] <= 0) mh_fail('Talking with Bo is part of Mathub Max.', 402, ['plan' => 'max']);
+  if (mh_ai_trial_left($uid, $V) <= 0) mh_fail('You have used your ' . intdiv($V['trial'], 60) . ' free minutes with Bo. Calls with Bo are part of Mathub Max.', 402, ['plan' => 'max', 'trial_over' => true]);
+}
+/** Free minutes as the page shows them, for an account without Max. */
+function mh_ai_trial_public(int $uid, array $V): array { $used = mh_ai_trial_used($uid); return ['minutes' => intdiv($V['trial'], 60), 'left' => max(0, $V['trial'] - $used), 'used' => $used]; }
 
 const MH_AI_LIVE = <<<'TXT'
 You are Bo, the bobcat tutor from Mathub, on a live voice call with a Montana State University student. You're the best tutor they've ever had, and also like a friend a year ahead of them: relaxed, warm, quick, a bit funny, and really good at explaining. This is a real conversation, not a help desk.
@@ -690,12 +716,13 @@ function mh_ai_route(string $route, array $in, array $cfg, string $ip): void {
       mh_method('GET'); $u = mh_current_user();
       $plan = $u ? mh_plan($u, $cfg) : '';
       $out = ['ok' => true, 'enabled' => $A['key'] !== '', 'signed_in' => (bool)$u, 'plan' => $plan, 'pro' => $plan !== '', 'max' => $plan === 'max'];
-      $V = mh_ai_voice_settings($cfg); $out['voice'] = ['natural' => $V['key'] !== '', 'voices' => MH_AI_VOICES, 'default' => $V['voice'], 'live' => $V['key'] !== '', 'live_voices' => MH_AI_LIVE_VOICES, 'live_default' => $V['live_voice']];
+      $V = mh_ai_voice_settings($cfg); $out['trial_minutes'] = $A['key'] !== '' ? intdiv($V['trial'], 60) : 0; $out['voice'] = ['natural' => $V['key'] !== '', 'voices' => MH_AI_VOICES, 'default' => $V['voice'], 'live' => $V['key'] !== '', 'live_voices' => MH_AI_LIVE_VOICES, 'live_default' => $V['live_voice']];
       if ($u) {
         $use = mh_ai_usage((int)$u['id']); $out['notes'] = mh_ai_notes((int)$u['id']);
         $out['usage'] = ['tutor' => $use['tutor'], 'tutor_limit' => $A['tutor_monthly'], 'classes' => $use['classes'], 'class_limit' => $A['class_monthly'], 'voice' => $use['voice'], 'voice_limit' => $V['voice_monthly'], 'listen' => $use['listen'], 'listen_limit' => $V['listen_monthly'], 'live' => $use['live'], 'live_limit' => $V['live_monthly'], 'live_left' => mh_ai_live_left((int)$u['id'], $V)];
         $out['voice']['live'] = $out['voice']['live'] && $out['usage']['live_left'] > 0;
         $out['voice']['natural'] = $out['voice']['natural'] && $use['voice'] < $V['voice_monthly']; $out['voice']['listen'] = $V['key'] !== '' && $use['listen'] < $V['listen_monthly'];
+        if ($plan !== 'max' && $V['trial'] > 0 && $A['key'] !== '') $out['trial'] = mh_ai_trial_public((int)$u['id'], $V);   // free minutes with Bo
       } else $out['voice']['listen'] = $V['key'] !== '';
       mh_json($out);
     }
@@ -716,7 +743,8 @@ function mh_ai_route(string $route, array $in, array $cfg, string $ip): void {
       mh_method('POST'); $u = mh_require_user(); $uid = (int)$u['id'];
       // Bo on every page (the floating Bo) comes with Pro; Ask Bo's own page with Max
       $plan = mh_plan($u, $cfg); $float = !empty($in['float']);
-      if ($plan !== 'max' && !($plan === 'pro' && $float)) mh_fail($float ? 'Bo on every page is part of Mathub Pro.' : 'Ask Bo is part of Mathub Max.', 402, ['plan' => $float ? 'pro' : 'max']);
+      $onTrial = $plan !== 'max' && !empty($in['voice']) && mh_ai_trial_call($uid, $in['lid'] ?? '', mh_ai_voice_settings($cfg));   // a call on the free minutes
+      if ($plan !== 'max' && !($plan === 'pro' && $float) && !$onTrial) mh_fail($float ? 'Bo on every page is part of Mathub Pro.' : 'Ask Bo is part of Mathub Max.', 402, ['plan' => $float ? 'pro' : 'max']);
       $use = mh_ai_usage($uid); if ($use['tutor'] >= $A['tutor_monthly']) mh_fail('You have used this month\'s ' . $A['tutor_monthly'] . ' questions for Bo. They start again on the 1st.', 429);
       $cid = mh_ai_cid($in['class'] ?? ''); $q = mh_ai_clip($in['q'] ?? '', 2000);
       $img = isset($in['image']) ? mh_ai_file($in['image'], ['image/jpeg', 'image/png', 'image/webp', 'image/gif'], MH_AI_IMAGE_BYTES) : null;
@@ -771,8 +799,8 @@ function mh_ai_route(string $route, array $in, array $cfg, string $ip): void {
     case 'ai_speak': {
       // a sentence or two of Bo's reply, spoken in his natural voice; the browser plays it (no audio is kept)
       mh_method('POST'); $u = mh_require_user(); $uid = (int)$u['id'];
-      if (mh_plan($u, $cfg) !== 'max') mh_fail('Talking with Bo is part of Mathub Max.', 402, ['plan' => 'max']);
-      $V = mh_ai_voice_settings($cfg); if ($V['key'] === '') mh_fail('Bo\'s natural voice is not switched on, so your device\'s voice is used.', 503, ['fallback' => true]);
+      $V = mh_ai_voice_settings($cfg);
+      if (mh_plan($u, $cfg) !== 'max' && !mh_ai_trial_call($uid, $in['lid'] ?? '', $V)) mh_fail('Talking with Bo is part of Mathub Max.', 402, ['plan' => 'max']); if ($V['key'] === '') mh_fail('Bo\'s natural voice is not switched on, so your device\'s voice is used.', 503, ['fallback' => true]);
       $text = mh_ai_clip($in['text'] ?? '', 700); if ($text === '') mh_fail('Nothing to say.', 400);
       $voice = is_string($in['voice'] ?? null) && isset(MH_AI_VOICES[$in['voice']]) ? $in['voice'] : $V['voice'];
       $use = mh_ai_usage($uid); if ($use['voice'] + mb_strlen($text) > $V['voice_monthly']) mh_fail('Bo\'s natural voice has been used a lot this month, so your device\'s voice takes over until the 1st.', 429, ['fallback' => true]);
@@ -787,8 +815,8 @@ function mh_ai_route(string $route, array $in, array $cfg, string $ip): void {
     case 'ai_listen': {
       // a short recording of the student, turned into text (for browsers without their own speech recognition)
       mh_method('POST'); $u = mh_require_user(); $uid = (int)$u['id'];
-      if (mh_plan($u, $cfg) !== 'max') mh_fail('Talking with Bo is part of Mathub Max.', 402, ['plan' => 'max']);
-      $V = mh_ai_voice_settings($cfg); if ($V['key'] === '') mh_fail('Listening is not switched on here. Type your question instead.', 503, ['fallback' => true]);
+      $V = mh_ai_voice_settings($cfg);
+      if (mh_plan($u, $cfg) !== 'max' && !mh_ai_trial_call($uid, $in['lid'] ?? '', $V)) mh_fail('Talking with Bo is part of Mathub Max.', 402, ['plan' => 'max']); if ($V['key'] === '') mh_fail('Listening is not switched on here. Type your question instead.', 503, ['fallback' => true]);
       $a = is_array($in['audio'] ?? null) ? $in['audio'] : []; $type = strtolower(trim(explode(';', (string)($a['type'] ?? ''))[0]));
       $ext = ['audio/webm' => 'webm', 'audio/ogg' => 'ogg', 'audio/mp4' => 'mp4', 'audio/x-m4a' => 'm4a', 'audio/aac' => 'm4a', 'audio/mpeg' => 'mp3', 'audio/wav' => 'wav', 'audio/x-wav' => 'wav'][$type] ?? '';
       if ($ext === '') mh_fail('That recording could not be read.', 400);
@@ -812,9 +840,9 @@ function mh_ai_route(string $route, array $in, array $cfg, string $ip): void {
     }
     case 'ai_live_start': {
       // a live call: the browser's WebRTC offer in, OpenAI's answer out, with Bo's instructions added here
-      mh_method('POST'); $u = mh_require_user(); $uid = (int)$u['id'];
-      if (mh_plan($u, $cfg) !== 'max') mh_fail('Talking with Bo is part of Mathub Max.', 402, ['plan' => 'max']);
-      $V = mh_ai_voice_settings($cfg); if ($V['key'] === '') mh_fail('Live calls are not switched on yet.', 503, ['fallback' => true]);
+      mh_method('POST'); $u = mh_require_user(); $uid = (int)$u['id']; $V = mh_ai_voice_settings($cfg);
+      $trial = mh_plan($u, $cfg) !== 'max'; if ($trial) mh_ai_trial_or_fail($uid, $V);   // without Max: the free minutes
+      if ($V['key'] === '') mh_fail('Live calls are not switched on yet.', 503, ['fallback' => true]);
       $left = mh_ai_live_left($uid, $V); if ($left <= 0) mh_fail(mh_ai_usage($uid)['live'] >= $V['live_monthly'] ? 'That is all the live call time for this month. It starts again on the 1st.' : 'That is a lot of calling for one day. Bo is around again tomorrow.', 429, ['fallback' => true]);
       mh_rate_or_fail("ai_live:$uid", 30, 3600, 'That is a lot of calls in an hour. Try again in a bit.');
       $sdp = str_replace("\r\n", "\n", (string)($in['sdp'] ?? '')); if (strncmp($sdp, 'v=0', 3) !== 0 || strlen($sdp) > 30000) mh_fail('The call could not start.', 400);
@@ -839,8 +867,20 @@ function mh_ai_route(string $route, array $in, array $cfg, string $ip): void {
       if ($code >= 400 && $code < 500 && $code !== 401 && $code !== 429) { error_log('mathub live: ' . $code . ' ' . substr($answer, 0, 300)); [$code, $answer, $call] = mh_ai_rtc_call($V, $sdp, $lean); }
       if ($code < 200 || $code >= 300 || strncmp(ltrim($answer), 'v=0', 3) !== 0) { error_log('mathub live: ' . $code . ' ' . substr($answer, 0, 300)); mh_fail($code === 429 ? 'Bo is very busy right now. Try the call again in a minute.' : 'Bo could not pick up just now. Try again, or use basic voice.', 502, ['fallback' => true]); }
       $lid = bin2hex(random_bytes(12)); $now = time();
-      $db->prepare('INSERT INTO ai_live (id, user_id, cid, call, started, last) VALUES (?, ?, ?, ?, ?, ?)')->execute([$lid, $uid, $cid, $call, $now, $now]);
-      mh_json(['ok' => true, 'sdp' => $answer, 'lid' => $lid, 'left' => min($left, $V['live_call']), 'voice' => $voice]);
+      $db->prepare('INSERT INTO ai_live (id, user_id, cid, call, started, last, trial) VALUES (?, ?, ?, ?, ?, ?, ?)')->execute([$lid, $uid, $cid, $call, $now, $now, $trial ? 1 : 0]);
+      mh_json(['ok' => true, 'sdp' => $answer, 'lid' => $lid, 'left' => min($left, $V['live_call'], $trial ? mh_ai_trial_left($uid, $V) : PHP_INT_MAX), 'voice' => $voice, 'trial' => $trial]);
+    }
+    case 'ai_call_start': {
+      // a basic voice call on the free minutes (no Max): Bo answers through ai_tutor, ai_speak and ai_listen with this lid,
+      // and the browser reports it every half minute (ai_live_tick) like a live call. With Max nothing needs starting.
+      mh_method('POST'); $u = mh_require_user(); $uid = (int)$u['id']; $V = mh_ai_voice_settings($cfg);
+      if (mh_plan($u, $cfg) === 'max') mh_json(['ok' => true, 'lid' => '', 'trial' => false]);
+      if ($A['key'] === '') mh_fail('Bo is not switched on yet.', 503);
+      mh_ai_trial_or_fail($uid, $V); mh_rate_or_fail("ai_live:$uid", 30, 3600, 'That is a lot of calls in an hour. Try again in a bit.');
+      $cid = mh_ai_cid($in['class'] ?? ''); $db->prepare('UPDATE ai_live SET ended = 1 WHERE user_id = ? AND ended = 0')->execute([$uid]);
+      $lid = bin2hex(random_bytes(12)); $now = time();
+      $db->prepare('INSERT INTO ai_live (id, user_id, cid, call, started, last, trial) VALUES (?, ?, ?, ?, ?, ?, 1)')->execute([$lid, $uid, $cid, '', $now, $now]);
+      mh_json(['ok' => true, 'lid' => $lid, 'left' => mh_ai_trial_left($uid, $V), 'trial' => true]);
     }
     case 'ai_live_tick': {
       // the browser reports the call every half minute; the minutes are counted here and the limits kept
@@ -849,8 +889,15 @@ function mh_ai_route(string $route, array $in, array $cfg, string $ip): void {
       if (!$r) mh_fail('That call is over.', 404);
       if ((int)$r['ended']) mh_json(['ok' => true, 'left' => 0, 'end' => true]);
       $now = time(); $d = max(0, min(45, $now - (int)$r['last'])); $secs = (int)$r['secs'] + $d;
-      $db->prepare('UPDATE ai_live SET secs = ?, last = ? WHERE id = ?')->execute([$secs, $now, $lid]); mh_ai_add($uid, 'live', $d);
-      $left = min(mh_ai_live_left($uid, $V), $V['live_call'] - $secs);
+      $db->prepare('UPDATE ai_live SET secs = ?, last = ? WHERE id = ?')->execute([$secs, $now, $lid]);
+      $trial = (int)($r['trial'] ?? 0) === 1;
+      if ($trial) { mh_ai_trial_add($uid, $d); if ((string)$r['call'] !== '') mh_ai_add($uid, 'live', $d); } else mh_ai_add($uid, 'live', $d);
+      $left = min(mh_ai_live_left($uid, $V), $V['live_call'] - $secs); if ($trial) $left = (string)$r['call'] === '' ? mh_ai_trial_left($uid, $V) : min($left, mh_ai_trial_left($uid, $V));
+      if ($trial && (string)$r['call'] === '' && !empty($in['end'])) { $db->prepare('UPDATE ai_live SET ended = 1 WHERE id = ?')->execute([$lid]); mh_json(['ok' => true, 'left' => mh_ai_trial_left($uid, $V), 'end' => true]); }   // a basic voice call hung up
+      if ($trial && mh_ai_trial_left($uid, $V) <= 0) {   // the free minutes are up
+        mh_ai_hangup($V, (string)$r['call']); $db->prepare('UPDATE ai_live SET ended = 1 WHERE id = ?')->execute([$lid]);
+        mh_json(['ok' => true, 'left' => 0, 'end' => true, 'trial_over' => true, 'why' => 'That was your ' . intdiv($V['trial'], 60) . ' free minutes with Bo. Get Mathub Max to keep calling him.']);
+      }
       if ($left <= 0) {
         mh_ai_hangup($V, (string)$r['call']); $db->prepare('UPDATE ai_live SET ended = 1 WHERE id = ?')->execute([$lid]);
         mh_json(['ok' => true, 'left' => 0, 'end' => true, 'why' => $V['live_call'] - $secs <= 0 ? 'That was a long one: calls end after ' . round($V['live_call'] / 60) . ' minutes. Call Bo again any time.' : 'That is all the live call time for now. It comes back tomorrow, or on the 1st for the monthly limit.']);

@@ -11,7 +11,8 @@
    - To-dos, reminders and events, habits to tick, this quarter's
      goals, the wheel of life
    - This week: seven days with everything dated on them
-   Customize hides the cards you do not use (settings.homeHide).
+   It starts with today's schedule, what is due and the week; Customize
+   picks the cards (settings.homeHide).
    Data: assets/life.js. Used by the Landing view in assets/app.js.
    ============================================================ */
 (function (global) {
@@ -22,7 +23,9 @@
   const t = (s, ...v) => (App.t ? App.t(s, ...v) : s);
   const tIso = () => L.today();
   const WIDGETS = [['schedule', 'Today’s schedule'], ['due', 'Due this week'], ['clock', 'Clock'], ['pomo', 'Pomodoro'], ['todos', 'To-dos'], ['events', 'Reminders & events'], ['habits', 'Habits'], ['goals', 'Goals this quarter'], ['wheel', 'Wheel of life'], ['week', 'This week']];
-  const hidden = () => new Set(settings().homeHide || []);
+  // a first look shows three cards: today, what is due and the week; Customize brings back the rest
+  const START_HIDE = ['clock', 'pomo', 'todos', 'events', 'habits', 'goals', 'wheel'];
+  const hidden = () => new Set(Array.isArray(settings().homeHide) ? settings().homeHide : START_HIDE);
   const card = (id, title, ic, href, body, extra = '') => `<section class="panel dw dwc-${id}" data-w="${id}" aria-labelledby="dw-${id}-t"><div class="dw-h"><span class="dw-ic">${icon(ic, 16)}</span><h3 id="dw-${id}-t">${esc(t(title))}</h3>${extra}${href ? `<a class="dw-more" href="${href}" aria-label="${esc(t('Open {1}', t(title)))}">${icon('right', 14)}</a>` : ''}</div><div class="dw-b">${body}</div></section>`;
   const none = (txt, action = '') => `<div class="dw-none"><p>${esc(t(txt))}</p>${action}</div>`;
 

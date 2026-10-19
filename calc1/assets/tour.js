@@ -27,7 +27,7 @@
     { sel: '#topbar .topbar-actions', wide: true, title: 'The header, on every page', text: 'Your next exam, search (Ctrl K, or ⌘ K on a Mac), focus sounds, your streak and daily goal, and your account.' },
     { sel: '#topbar [data-action="menu"]', phone: true, title: 'Everything is in the menu', text: 'Your classes with the days until each exam, the planner pages, quick add, the month calendar, the clock and your streak.' },
     { sel: '#topbar .search-btn', phone: true, title: 'Search everything', text: 'Any topic, formula, flashcard, resource or page across all your classes.' },
-    { sel: '#dash .dash-grid, #dash', title: 'Your day', text: 'Today’s classes, what is due, a pomodoro timer, to-dos, events, habits and goals. Customize picks the cards you want here.' },
+    { sel: '#dash .dash-grid, #dash', title: 'Your day', text: 'Today’s classes, what is due and your week. Customize adds more: a timer, to-dos, habits and goals.' },
     { sel: '#bo-fab', title: 'Bo, on every page', text: 'Ask him about whatever you are looking at: tap a question and he walks you through it. Part of Mathub Pro.' },
     { sel: '#tabbar', phone: true, title: 'Down here', text: 'Home, Today, the Focus room, the board and your account, one tap away.' },
     { sel: '#sb-hide', wide: true, title: 'Need more room?', text: 'Tuck the sidebar away here and the clock moves into the header. The menu button brings it back.' }

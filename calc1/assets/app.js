@@ -12,7 +12,7 @@
   const BUILD = global.MATHUB_BUILD || 'dev';
   const Courses = global.Courses || (global.Courses = {});
   const COURSE_ORDER = ['calc', 'physics', 'precalc', 'writ', 'csci', 'biob', 'kin', 'psyx'];
-  const GLOBAL_VIEWS = ['contact', 'forum', 'policy', 'admin', 'meet', 'badges', 'challenge', 'mock', 'people', 'settings', 'leagues', 'gpa', 'today', 'whatsnew', 'resources', 'guides', 'focus', 'recap', 'tools', 'mistakes', 'join', 'sheet', 'request', 'teach', 'class', 'syllabus', 'notfound', 'create', 'c', 'tutor', 'plan', 'tasks', 'timetable', 'agenda', 'timelog', 'projects', 'habits', 'goals', 'wheel', 'journal', 'money', 'career', 'portfolio'];   // pages that work without a course, e.g. #/contact
+  const GLOBAL_VIEWS = ['contact', 'forum', 'policy', 'admin', 'meet', 'badges', 'challenge', 'mock', 'people', 'settings', 'leagues', 'gpa', 'today', 'whatsnew', 'resources', 'guides', 'focus', 'recap', 'tools', 'mistakes', 'join', 'sheet', 'request', 'teach', 'class', 'syllabus', 'notfound', 'create', 'c', 'tutor', 'plan', 'tasks', 'timetable', 'agenda', 'timelog', 'projects', 'habits', 'goals', 'wheel', 'journal', 'money', 'career', 'portfolio', 'max', 'unsubscribe'];   // pages that work without a course, e.g. #/contact
   const SITE = 'Mathub';
   let D = null, QZ = null;        // current course data and quiz module
   const courseHooks = [];
@@ -225,9 +225,9 @@
       if (!el) return; const t = todayISO();
       try { await this.load(); } catch {}
       const d = this.data; if (!d || !d.configured) { el.innerHTML = ''; return; }
-      const evs = this.events(courseId, t).slice(0, count);
+      const evs = this.events(courseId, t).slice(0, count); if (!evs.length) { el.innerHTML = ''; return; }   // nothing coming up: no empty box
       el.innerHTML = `<div class="panel canvas-panel"><div class="panel-h"><div class="panel-title">${icon('canvas')} From Canvas</div><span class="small muted">${d.error ? '<span style="color:var(--warn)">using the last copy</span>' : d.fetched ? `synced ${relTime(d.fetched)}` : ''}</span></div>
-        ${evs.length ? evs.map(e => `<div class="today-ev"><span class="when">${daysBetween(t, e.date) === 0 ? 'Today' : daysBetween(t, e.date) === 1 ? 'Tomorrow' : esc(fmtDate(e.date))}</span><span>${e.url ? `<a href="${esc(e.url)}" target="_blank" rel="noopener">${esc(e.title)}</a>` : esc(e.title)}${e.time ? ` <span class="muted small">· ${esc(e.time)}</span>` : ''}${!courseId ? ` <span class="chip course-${esc(e.course)}" style="margin-left:6px">${esc((Courses[e.course] || { short: e.course }).short)}</span>` : ''}</div>`).join('') : `<div class="empty">Nothing on the Canvas calendar for this class in the next few weeks.</div>`}
+        ${evs.map(e => `<div class="today-ev"><span class="when">${daysBetween(t, e.date) === 0 ? 'Today' : daysBetween(t, e.date) === 1 ? 'Tomorrow' : esc(fmtDate(e.date))}</span><span>${e.url ? `<a href="${esc(e.url)}" target="_blank" rel="noopener">${esc(e.title)}</a>` : esc(e.title)}${e.time ? ` <span class="muted small">· ${esc(e.time)}</span>` : ''}${!courseId ? ` <span class="chip course-${esc(e.course)}" style="margin-left:6px">${esc((Courses[e.course] || { short: e.course }).short)}</span>` : ''}</div>`).join('')}
         <p class="small muted mt-2">Real due dates from the instructor's Canvas calendar, refreshed hourly.</p></div>`;
     }
   };
@@ -578,24 +578,18 @@
     title: SITE,
     render(root) {
       const t = todayISO(); const d = today();
-      const mineIds = App.myCourses(); const showAll = Landing.showAll || mineIds.length === COURSE_ORDER.filter(id => Courses[id]).length;
+      const guest = App.guest(); const mineIds = App.myCourses(); const showAll = Landing.showAll || mineIds.length === COURSE_ORDER.filter(id => Courses[id]).length;
       const cards = COURSE_ORDER.filter(id => Courses[id] && (showAll || mineIds.includes(id))).map(id => {
         const C = Courses[id]; const ex = nextExam(C); const st = ex ? examStatus(ex) : null; const ss = semesterState(C);
-        const cur = currentSection(C);
         const chip = ss.phase === 'after' ? 'Semester complete' : ss.phase === 'before' ? `Starts ${esc(shortDate(C.SEMESTER.start))}` : ex ? `${esc(ex.name)} · ${esc(st.chip)}` : (C.EXAMS || []).length ? 'Exams done' : 'No exams';
         const writing = C.kind === 'writing'; const rp = writing && App.readingProgress ? App.readingProgress(C) : null;
         const nodes = !writing && App.pathNodes ? App.pathNodes(C) : []; const curNode = nodes.find(n => n.state === 'current'); const mastered = writing ? (rp ? rp.done : 0) : nodes.filter(n => n.state === 'done').length; const total = writing ? (rp ? rp.total : 0) : nodes.length; const mpct = total ? Math.round(100 * mastered / total) : 0; const RC = 2 * Math.PI * 15;
         const ctaHref = writing ? (rp && rp.next ? `#/${id}/reading/${rp.next.id}` : `#/${id}/readings`) : `#/${id}/lesson${curNode ? '?topics=' + encodeURIComponent(curNode.t) : ''}`;
         const ctaText = writing ? (rp && rp.next ? `${rp.started ? 'Resume' : 'Listen'}: ${esc(rp.next.title)}` : 'All readings finished') : (curNode ? 'Continue: ' + esc(curNode.label) : 'Start a lesson');
-        const nowLabel = writing ? 'This week' : (ss.phase === 'after' ? 'Last topic' : ss.phase === 'before' ? 'First topic' : 'Now covering');
+        // one look: the class, its next exam and the one thing to do next (the details are on its dashboard)
         return `<div class="course-card ${id}" data-action="open-course" data-c="${id}" role="link" tabindex="0">
           <div class="course-card-head">${App.classSprite ? `<span class="cc-art" aria-hidden="true">${App.classSprite(id, 5)}</span>` : ''}<span class="course-idline"><span class="course-code">${esc(C.code)}</span>${App.archetype ? `<span class="arch-chip" title="${esc(App.archetype(id).line)}">${icon(App.archetype(id).icon, 13)} ${esc(App.archetype(id).name)}</span>` : ''}</span><span class="chip exam">${chip}</span></div>
-          <h2>${esc(C.name)}</h2><p class="muted">${esc(C.tagline || '')}</p>
-          <div class="course-meta">
-            <div><span class="eyebrow">${nowLabel}</span><div>${esc(cur.label)} ${esc(cur.title)}</div></div>
-            <div><span class="eyebrow">${writing ? 'Next deadline' : 'Next exam'}</span><div>${ex ? esc(ex.dateLabel || fmtDate(ex.date, true)) : ss.phase === 'after' ? 'All done' : '—'}</div></div>
-          </div>
-          ${App.dash && App.dash.classStats ? App.dash.classStats(id) : ''}
+          <h2>${esc(C.name)}</h2>${guest && C.tagline ? `<p class="muted cc-tag">${esc(C.tagline)}</p>` : ''}
           <div class="course-foot"><a class="btn course-open" href="${ctaHref}">${icon(writing ? 'book' : 'play', 14)} ${ctaText}</a>${mpct ? `<span class="course-ring" title="${mastered} of ${total} ${writing ? 'readings finished' : 'topics mastered'}"><svg viewBox="0 0 36 36" width="38" height="38"><circle class="ring-bg" cx="18" cy="18" r="15"/><circle class="ring-fg" cx="18" cy="18" r="15" stroke-dasharray="${RC.toFixed(2)}" stroke-dashoffset="${(RC * (1 - mpct / 100)).toFixed(2)}"/></svg><small>${mpct}%</small></span>` : ''}</div></div>`;
       }).join('');
       const merged = COURSE_ORDER.filter(id => Courses[id] && mineIds.includes(id)).flatMap(id => upcomingDeadlines(Courses[id], 8).map(x => Object.assign({ course: Courses[id] }, x))).filter(x => daysBetween(t, x.date) <= 7).sort((a, b) => a.date.localeCompare(b.date));
@@ -603,27 +597,31 @@
       const greeting = d.getHours() < 12 ? 'this morning' : d.getHours() < 18 ? 'this afternoon' : 'tonight';
       const who = App.auth && App.auth.user && !App.auth.user.local ? String(App.auth.user.name || '').trim().split(/\s+/)[0] : '';
       const sub = ss.phase === 'before' ? `Classes start ${esc(fmtDate(first.SEMESTER.start, true))}. Get a head start on the first topics.` : ss.phase === 'after' ? 'The semester is over. Everything stays here for review.' : `Which class is giving you trouble ${greeting}?`;
-      const guest = App.guest(); const fresh = !(App.xpTotal && App.xpTotal()) && !settings().lastVisit;   // someone who has not studied here yet
+      const fresh = !(App.xpTotal && App.xpTotal()) && !settings().lastVisit;   // someone who has not studied here yet
       const hello = who && ss.phase !== 'before' && ss.phase !== 'after' ? `${esc(who)}, which class is giving you trouble ${greeting}?` : sub;
       const startHere = fresh ? `<div class="start-steps">${[['1', 'Pick a class', 'Your classes are just above. Tap one to open it.'], ['2', 'Take a 5-minute lesson', 'A few questions with worked answers. No setup.'], ['3', guest ? 'Sign up to keep it' : 'Come back tomorrow', guest ? 'A free montana.edu account saves your progress everywhere.' : 'Your streak and daily plan pick up where you left off.']].map(([n, h, p]) => `<div class="start-step"><span class="ss-n">${n}</span><div><b>${h}</b><small>${p}</small></div></div>`).join('')}</div>` : '';
-      const tabs = [['week', 'This week', 'calendar'], ['community', 'Community', 'chat'], ['guides', 'Guides', 'book']].concat(guest ? [['inside', 'What is inside', 'grid']] : []);
+      const tabs = [['week', 'This week', 'calendar'], ['community', 'Classmates', 'chat'], ['guides', 'Study guides', 'book']].concat(guest ? [['inside', 'What is inside', 'grid']] : []);
       // students who have studied here get the apps' start page: the class they pick, its next exam, the next lesson and the unit they are in, beside today across all classes (assets/home.js)
       const chosen = Array.isArray(settings().courses) && settings().courses.length; const lv = settings().lastVisit || {};
       const homeIds = !fresh && App.home ? (chosen ? mineIds : [...new Set([lv.course].filter(id => id && Courses[id] && !Courses[id].preview).concat(mineIds))].slice(0, 6)) : [];
-      const quickRow = `<div class="quick-row"><a class="btn sm hero-focus" href="#/focus">${icon('clock', 14)} Focus timer</a><button class="btn sm d20-btn" data-roll="all" title="Roll a d20 and let it pick what to study">${icon('d20', 15)} Roll a quest</button><a class="btn sm" href="#/gpa">${icon('calc', 14)} GPA calculator</a><button class="btn sm" data-action="choose">${icon('sliders', 14)} Choose classes</button></div>`;
-      const nextBody = homeIds.length ? App.home.webHome(homeIds, { side: `${App.resumeCard ? App.resumeCard(mineIds, { noStrip: true }) : ''}${quickRow}` }) : `${fresh ? startHere : (App.todaySummary ? App.todaySummary() : '')}${App.resumeCard ? App.resumeCard(mineIds, { noStrip: true }) : ''}${quickRow}`;
+      const resume = App.resumeCard ? App.resumeCard(mineIds, { noStrip: true }) : '';
+      const nextBody = homeIds.length ? App.home.webHome(homeIds, { side: resume }) : `${fresh ? startHere : (App.todaySummary ? App.todaySummary() : '')}${resume}`;
+      const allN = COURSE_ORDER.filter(id => Courses[id]).length;
+      // someone who is not signed in: one line on Bo, and the one-minute demo of a call (assets/max.js)
+      const boTeaser = guest && App.views.max ? `<a class="land-bo" href="#/max"><span class="lb-av" aria-hidden="true">${App.bobcatSvg ? App.bobcatSvg(46) : ''}</span><span class="lb-t"><b>Stuck on a problem? Call Bo.</b><small>A tutor who talks it through with you and writes on a board you share.</small></span><span class="lb-go">${icon('play', 13)} Watch a 1-minute demo</span></a>` : '';
+      const moreOpen = !!settings().landMore;
       root.innerHTML = `<div class="landing-wrap">
-        <header class="landing-top hero dash-hero"><div><p class="hero-when">${esc(fmtDate(t, true))} · ${esc(first.term)}${ss.phase === 'during' ? ` · Week ${ss.week}` : ''}</p><h1 class="landing-title hero-sub">${hello}</h1>${guest ? '<p class="muted small hero-note">Made by an MSU student from each class’s real syllabus, exam dates and Canvas calendar: what is on your next exam, practice until you are ready, and notes and flashcards for every topic. Free with a montana.edu email.</p>' : ''}${(() => { const soon = mineIds.map(id => ({ C: Courses[id], ex: nextExam(Courses[id]) })).filter(x => x.ex && x.ex.date >= t).sort((a, b) => a.ex.date.localeCompare(b.ex.date))[0]; if (!soon) return ''; const n = daysBetween(t, soon.ex.date); return `<a class="hero-count" href="#/${soon.C.id}/dashboard"><span class="hc-num count" data-count="${n}">${n}</span><span class="hc-body"><small>day${n === 1 ? '' : 's'} until ${esc(soon.ex.name)}</small><b>${esc(soon.C.short)} · ${esc(soon.ex.dateLabel || fmtDate(soon.ex.date, true))}${App.readiness ? (() => { const r = App.readiness(soon.C.id); return r && r.ok && r.score > 0 ? ` · ${r.score}% ready` : ''; })() : ''}</b></span>${icon('right', 14)}</a>`; })()}</div><div class="row gap-sm hero-actions"><a class="btn primary sm hero-today" href="#/today">${icon('flag', 14)} Today</a><a class="btn sm hero-faculty" href="#/teach" title="Mathub Faculty: write your syllabus and run your class">${icon('file', 14)} For professors</a></div><div class="mascot-slot hero-mascot" data-size="96"></div><div class="px-skyline" aria-hidden="true"></div></header>
-        <div id="announcement-slot"></div>
-        ${App.dash ? App.dash.html() : ''}
+        <header class="landing-top hero dash-hero"><div><p class="hero-when">${esc(fmtDate(t, true))} · ${esc(first.term)}${ss.phase === 'during' ? ` · Week ${ss.week}` : ''}</p><h1 class="landing-title hero-sub">${hello}</h1>${guest ? '<p class="muted small hero-note">Every class you take, made simple: what is on the next exam, five-minute lessons and a tutor you can call. Free with a montana.edu email.</p>' : ''}${(() => { const soon = mineIds.map(id => ({ C: Courses[id], ex: nextExam(Courses[id]) })).filter(x => x.ex && x.ex.date >= t).sort((a, b) => a.ex.date.localeCompare(b.ex.date))[0]; if (!soon) return ''; const n = daysBetween(t, soon.ex.date); return `<a class="hero-count" href="#/${soon.C.id}/dashboard"><span class="hc-num count" data-count="${n}">${n}</span><span class="hc-body"><small>day${n === 1 ? '' : 's'} until ${esc(soon.ex.name)}</small><b>${esc(soon.C.short)} · ${esc(soon.ex.dateLabel || fmtDate(soon.ex.date, true))}${App.readiness ? (() => { const r = App.readiness(soon.C.id); return r && r.ok && r.score > 0 ? ` · ${r.score}% ready` : ''; })() : ''}</b></span>${icon('right', 14)}</a>`; })()}</div><div class="row gap-sm hero-actions"><a class="btn primary sm hero-today" href="#/today">${icon('flag', 14)} Today</a><a class="btn sm hero-faculty" href="#/teach" title="Mathub Faculty: write your syllabus and run your class">${icon('file', 14)} For professors</a></div><div class="mascot-slot hero-mascot" data-size="96"></div><div class="px-skyline" aria-hidden="true"></div></header>
+        <div id="announcement-slot"></div>${boTeaser}
         <section class="land-sec land-next" aria-labelledby="lsec-next"><h2 class="sec-title" id="lsec-next">${fresh ? 'Start here' : 'Your next step'}</h2>
           ${App.inviteBanner ? App.inviteBanner() : ''}${App.recapBanner ? App.recapBanner() : ''}${nextBody}
         </section>
-        <section class="land-sec" aria-labelledby="lsec-classes"><div class="sec-h"><h2 class="sec-title" id="lsec-classes">${showAll && mineIds.length < COURSE_ORDER.filter(id => Courses[id]).length ? 'All classes' : 'Your classes'}</h2>${mineIds.length < COURSE_ORDER.filter(id => Courses[id]).length ? `<button class="linkbtn small" data-action="show-all">${showAll ? 'Show only mine' : 'Show all classes'}</button>` : ''}</div>
+        <section class="land-sec" aria-labelledby="lsec-classes"><div class="sec-h"><h2 class="sec-title" id="lsec-classes">${showAll && mineIds.length < allN ? 'All classes' : 'Your classes'}</h2><span class="sec-acts">${guest ? '' : `<button class="linkbtn small" data-action="choose">${icon('sliders', 13)} Choose classes</button>`}${mineIds.length < allN ? `<button class="linkbtn small" data-action="show-all">${showAll ? 'Show only mine' : 'Show all classes'}</button>` : ''}</span></div>
           <div class="course-grid">${cards}</div>
           ${App.requestLink ? `<div class="rq-under">${App.requestLink()}${App.createLink ? App.createLink() : ''}${App.teachLinks ? App.teachLinks() : ''}</div>` : ''}
         </section>
-        <section class="land-sec" aria-labelledby="lsec-more"><h2 class="sec-title" id="lsec-more">Explore</h2>
+        ${App.dash ? App.dash.html() : ''}
+        <details class="land-sec land-more" id="land-more"${moreOpen ? ' open' : ''}><summary><span class="lm-h"><span class="sec-title" id="lsec-more">More to explore</span><small>The week across your classes, your classmates, study guides</small></span><span class="lm-chev" aria-hidden="true">${icon('chevron', 16)}</span></summary>
         <div class="dash-tabs landing-tabs" data-store="landTab" role="tablist">${tabs.map(([k, l, ic]) => `<button class="tab" data-tab="${k}" role="tab">${icon(ic, 14)}<span>${l}</span></button>`).join('')}</div>
         <div class="panes">
         <div class="pane" data-pane="week"><div class="grid cols-2">
@@ -634,18 +632,26 @@
         <div class="pane" data-pane="community"><div class="row gap-sm mb-2" style="flex-wrap:wrap;align-items:center"><div id="landing-presence"></div><div class="league-slot" data-compact="1"></div></div><div id="landing-social"></div>
         <div class="panel mt-2"><div class="panel-h"><div class="panel-title">${icon('chat')} Latest discussions</div><a class="btn sm" href="#/forum">${icon('chat', 13)} Open discussions</a></div><div id="landing-forum"><div class="empty small">Loading…</div></div></div></div>
         <div class="pane" data-pane="guides">${App.guidesStrip ? App.guidesStrip() : ''}</div>
-        <div class="pane" data-pane="inside">${App.resumeCard ? App.resumeCard(mineIds, { stripOnly: true }) : ''}<div class="landing-features grid cols-4">${[['list', 'Endless quizzers', 'Procedurally generated problems with worked explanations, per topic and per exam.'], ['book', 'Notes on every topic', 'Big ideas, formulas, a worked example, pitfalls and an exam tip, linked to the free textbook.'], ['flask', 'Interactive tools', 'Graphers, simulators, solvers, a unit circle, grade calculators and a scratchpad.'], ['chat', 'Community', 'Discussions, daily challenges, study sessions, mock exams and badges with your classmates.']].map(([ic, h, p]) => `<div class="card-link"><div class="eyebrow">${icon(ic, 14)}</div><h4>${h}</h4><p>${p}</p></div>`).join('')}</div></div>
-        </div></section>
-        <p class="small muted mt-2" style="text-align:center">${guest ? 'Preview freely. Sign up with a montana.edu email to unlock every tool and keep your progress on all your devices.' : 'Progress, flashcards and grades are saved for each class and synced to your account.'}</p></div>`;
+        <div class="pane" data-pane="inside">${App.resumeCard ? App.resumeCard(mineIds, { stripOnly: true }) : ''}<div class="landing-features grid cols-4">${[['list', 'Endless quizzes', 'New problems every time, each with a worked answer.'], ['book', 'Notes on every topic', 'The big ideas, the formulas, a worked example and the usual mistakes.'], ['flask', 'Tools to play with', 'Graphers, simulators, solvers, a unit circle and grade calculators.'], ['chat', 'Classmates', 'Discussions, daily challenges, study sessions and mock exams.']].map(([ic, h, p]) => `<div class="card-link"><div class="eyebrow">${icon(ic, 14)}</div><h4>${h}</h4><p>${p}</p></div>`).join('')}</div></div>
+        </div></details>
+        ${guest ? '<p class="small muted mt-2" style="text-align:center">Look around as much as you like. Sign up with a montana.edu email to keep your progress on every device.</p>' : ''}</div>`;
       if (fresh) { const cs = $('[aria-labelledby="lsec-classes"]', root), nx = $('.land-next', root); if (cs && nx) nx.before(cs); }
-      if (App.dash) { App.dash.paint(root); if (fresh) { const dz = $('#dash', root), nx = $('.land-next', root); if (dz && nx) nx.after(dz); } }   // the planner's cards (assets/dash.js); after the first steps on a first visit
+      if (App.dash) App.dash.paint(root);   // the planner's cards (assets/dash.js)
       bind(root, { theme: toggleTheme, search: () => Search.open(), 'open-course': (el, e) => { if (e.target.closest('a')) return; location.hash = '#/' + el.dataset.c + '/dashboard'; }, 'show-all': (el, e) => { e.preventDefault(); Landing.showAll = !Landing.showAll; render(); }, choose: (el, e) => { e.preventDefault(); if (App.auth && App.auth.user) App.auth.onboard(true); else if (App.auth) App.auth.open('signup'); } }); applyTheme();
       const slot = $('#landing-account', root); if (slot && App.auth) App.auth.paintLandingAccount(slot);
-      const lf = $('#landing-forum', root); if (lf) { if (App.forumLatest) { const go = () => App.forumLatest(lf); if (App.auth && App.auth.ready) go(); else if (App.auth) App.auth.onChange(function once() { go(); }); } else lf.innerHTML = ''; }
-      Canvas.fill($('#landing-canvas', root), null, 8); paintAnnouncement(root);
+      // what is folded under "More to explore" loads when it is opened (the discussions, classmates and Canvas each ask the server)
+      const more = $('#land-more', root); let filled = false;
+      const fillMore = () => {
+        if (filled || !more || !more.open) return; filled = true;
+        const lf = $('#landing-forum', root); if (lf) { if (App.forumLatest) { const go = () => App.forumLatest(lf); if (App.auth && App.auth.ready) go(); else if (App.auth) App.auth.onChange(function once() { go(); }); } else lf.innerHTML = ''; }
+        Canvas.fill($('#landing-canvas', root), null, 8);
+        if (App.social) { const goS = () => App.social.fillLanding(root); if (App.auth && App.auth.ready) goS(); else if (App.auth) App.auth.onChange(function once() { goS(); }); }
+      };
+      if (more) more.addEventListener('toggle', () => { setSetting('landMore', more.open); fillMore(); });
+      fillMore(); paintAnnouncement(root);
       if (homeIds.length) App.home.paintWebHome(root);
       if (App.ambient && App.ambient.paint) try { App.ambient.paint(); } catch (e) {}   // the sound button in the hero shows what is playing
-      if (App.social) { const goS = () => { App.social.fillLanding(root); App.social.presencePing(); }; if (App.auth && App.auth.ready) goS(); else if (App.auth) App.auth.onChange(function once() { goS(); }); }
+      if (App.social && App.social.presencePing) { if (App.auth && App.auth.ready) App.social.presencePing(); else if (App.auth) App.auth.onChange(function once() { App.social.presencePing(); }); }
     }
   };
 
@@ -690,7 +696,7 @@
         <div class="dash-tabs" data-store="dashTabW" role="tablist">${[['week', 'This week', 'calendar'], ['check', 'Checklist', 'check'], ['league', 'League', 'gem'], ['community', 'Community', 'chat']].map(([k, l, ic]) => `<button class="tab" data-tab="${k}" role="tab">${icon(ic, 14)}<span>${l}</span></button>`).join('')}</div>
         <div class="panes">
           <div class="pane" data-pane="week"><div class="panel"><div class="panel-h"><div class="panel-title">${icon('calendar')} This week</div><span class="small muted">${esc(shortDate(weekDays[0]))} – ${esc(shortDate(weekDays[4]))}</span></div>
-            <div class="week-strip">${weekDays.map(iso => { const dd = parseISO(iso); const evs = eventsOn(D, iso); return `<div class="week-day${iso === t ? ' today' : iso < t ? ' past' : ''}"><div class="d">${DOW[dd.getDay()]}<span>${dd.getDate()}</span></div>${evs.length ? evs.map(e => `<div class="ev ${e[1]}">${esc(e[2].replace(/^Week \d+ · /, ''))}</div>`).join('') : '<div class="ev muted">—</div>'}</div>`; }).join('')}</div></div><div class="mt-2"><div id="dash-canvas"></div>${Canvas.data && Canvas.data.configured ? '<div class="panel canvas-fallback"><div class="empty small">No upcoming Canvas items for this class.</div></div>' : ''}</div></div>
+            <div class="week-strip">${weekDays.map(iso => { const dd = parseISO(iso); const evs = eventsOn(D, iso); return `<div class="week-day${iso === t ? ' today' : iso < t ? ' past' : ''}"><div class="d">${DOW[dd.getDay()]}<span>${dd.getDate()}</span></div>${evs.length ? evs.map(e => `<div class="ev ${e[1]}">${esc(e[2].replace(/^Week \d+ · /, ''))}</div>`).join('') : '<div class="ev muted">—</div>'}</div>`; }).join('')}</div></div><div class="mt-2"><div id="dash-canvas"></div></div></div>
           <div class="pane" data-pane="check"><div class="panel"><div class="panel-h"><div class="panel-title">${icon('check')} ${ex ? esc(ex.name) + ' checklist' : 'Checklist'}</div>${ex ? `<span class="small muted">${cl.done} of ${cl.items.length} done</span>` : ''}</div>${cl.items.length ? cl.items.map((it, i) => `<label class="check"><input type="checkbox" data-cl="${i}" ${clState[i] ? 'checked' : ''}><span>${esc(it)}</span></label>`).join('') : '<div class="empty small">Nothing to check off right now.</div>'}</div></div>
           <div class="pane" data-pane="league"><div class="panel"><div class="panel-h"><div class="panel-title">${icon('gem')} Your league</div><a class="small" href="${L('leagues')}">All leagues</a></div><div class="league-slot"></div></div></div>
           <div class="pane" data-pane="community"><div class="grid cols-3"><div id="dash-social" class="span-2 stack"></div><div id="dash-social-side"></div></div></div>
@@ -797,7 +803,7 @@
           <div class="dash-tabs" data-store="dashTab" role="tablist">${[['week', 'This week', 'calendar'], ['ready', 'Readiness', 'target'], ['progress', 'Progress', 'fire'], ['plan', 'Planner', 'list'], ['community', 'Community', 'chat']].map(([k, l, ic]) => `<button class="tab" data-tab="${k}" role="tab">${icon(ic, 14)}<span>${l}</span></button>`).join('')}</div>
           <div class="panes">
             <div class="pane" data-pane="week"><div class="panel"><div class="panel-h"><div class="panel-title">${icon('calendar')} This week</div><span class="small muted">${esc(shortDate(weekDays[0]))} – ${esc(shortDate(weekDays[4]))}</span></div>
-              <div class="week-strip">${weekDays.map(iso => { const dd = parseISO(iso); const evs = eventsOn(D, iso); return `<div class="week-day${iso === t ? ' today' : iso < t ? ' past' : ''}"><div class="d">${DOW[dd.getDay()]}<span>${dd.getDate()}</span></div>${evs.length ? evs.map(e => `<div class="ev ${e[1]}">${esc(e[2])}</div>`).join('') : '<div class="ev muted">—</div>'}</div>`; }).join('')}</div></div><div class="mt-2"><div id="dash-canvas"></div>${Canvas.data && Canvas.data.configured ? '<div class="panel canvas-fallback"><div class="empty small">No upcoming Canvas items for this class.</div></div>' : ''}</div></div>
+              <div class="week-strip">${weekDays.map(iso => { const dd = parseISO(iso); const evs = eventsOn(D, iso); return `<div class="week-day${iso === t ? ' today' : iso < t ? ' past' : ''}"><div class="d">${DOW[dd.getDay()]}<span>${dd.getDate()}</span></div>${evs.length ? evs.map(e => `<div class="ev ${e[1]}">${esc(e[2])}</div>`).join('') : '<div class="ev muted">—</div>'}</div>`; }).join('')}</div></div><div class="mt-2"><div id="dash-canvas"></div></div></div>
             <div class="pane" data-pane="ready">${App.readinessPanel ? App.readinessPanel(D.id) : ''}</div>
             <div class="pane" data-pane="progress"><div class="grid cols-2"><div class="panel"><div class="panel-h"><div class="panel-title">${icon('fire')} Your progress</div><a class="small" href="${L('path')}">Learning path</a></div>
               ${goalBlock}

@@ -397,7 +397,8 @@
           ${server ? `<section><div class="eyebrow mb-1">Email me</div>
             <label class="check"><input type="checkbox" id="acct-notify" ${u.notify_email === false ? '' : 'checked'}><span>When someone replies to my posts or comments <span class="muted small">(at most one email per post every few hours)</span></span></label>
             <label class="check"><input type="checkbox" id="acct-reminder" ${u.reminder_email ? 'checked' : ''}><span>The evening before something is due <span class="muted small">(6 pm: tomorrow's Canvas due dates, sessions you joined, and a heads-up if your streak is about to end)</span></span></label>
-            <label class="check"><input type="checkbox" id="acct-digest" ${u.digest_email === false ? '' : 'checked'}><span>The weekly digest <span class="muted small">(Sunday evening: what is due, top posts, your stats vs. the class)</span></span></label></section>
+            <label class="check"><input type="checkbox" id="acct-digest" ${u.digest_email === false ? '' : 'checked'}><span>The weekly digest <span class="muted small">(Sunday evening: what is due, top posts, your stats vs. the class)</span></span></label>
+            <label class="check"><input type="checkbox" id="acct-news" ${u.news_email === false ? '' : 'checked'}><span>News from Mathub <span class="muted small">(a few times a term: new things you can do, like calling Bo)</span></span></label></section>
           ${server ? `<section><div class="eyebrow mb-1">Plan the week</div>
             <label class="check"><input type="checkbox" id="acct-planning" ${u.planning_email ? 'checked' : ''}><span>Sunday planning email <span class="muted small">(4 pm: everything due next week, your week in numbers, one suggested focus block)</span></span></label>
             <label class="check"><input type="checkbox" id="acct-focuspub" ${u.focus_public === false ? '' : 'checked'}><span>Show me in Focus together <span class="muted small">(others in the focus room see your name and task while your timer runs)</span></span></label></section>
@@ -422,7 +423,7 @@
     const pref = (id, key, onMsg, offMsg) => { const el = $('#' + id, panel); if (el) el.addEventListener('change', async () => { try { const r = await call('profile', { [key]: el.checked }); Auth.user = Object.assign(Auth.user, r.user); toast(el.checked ? onMsg : offMsg); } catch (e) { toast(e.message); el.checked = !el.checked; } }); };
     Auth.pushInit(panel); if (server && u) { Auth.devicesInit(panel); Auth.blocksInit(panel); }
     pref('acct-planning', 'planning_email', 'Sunday planning email on', 'Sunday planning email off'); pref('acct-focuspub', 'focus_public', 'You show up in Focus together', 'Hidden from Focus together'); Auth.growthInit(panel);
-    pref('acct-notify', 'notify_email', 'Reply emails on', 'Reply emails off'); pref('acct-reminder', 'reminder_email', 'Evening reminders on', 'Evening reminders off'); pref('acct-digest', 'digest_email', 'Weekly digest on', 'Weekly digest off'); pref('acct-lb', 'show_on_leaderboard', 'Your name shows on leaderboards and the People page', 'You appear as “Anonymous student”');
+    pref('acct-notify', 'notify_email', 'Reply emails on', 'Reply emails off'); pref('acct-reminder', 'reminder_email', 'Evening reminders on', 'Evening reminders off'); pref('acct-digest', 'digest_email', 'Weekly digest on', 'Weekly digest off'); pref('acct-news', 'news_email', 'News emails on', 'News emails off'); pref('acct-lb', 'show_on_leaderboard', 'Your name shows on leaderboards and the People page', 'You appear as “Anonymous student”');
     if (u && server && App.social && App.social.refreshBadges) App.social.refreshBadges().then(r => { const el = $('#acct-badge-count', panel); if (el && r) el.textContent = `${r.badges.length} of ${r.catalog.length} earned`; }).catch(() => {});
     bind(panel, {
       'auth-signup': () => Auth.open('signup'), 'auth-login': () => Auth.open('login'), logout: () => Auth.logout(),
@@ -443,6 +444,24 @@
       }
     });
     return panel;
+  };
+
+  /* #/unsubscribe?u=…&t=… : the link at the bottom of a news email (api/news.php). One button, so a mail scanner that opens the link changes nothing. */
+  App.views.unsubscribe = {
+    title: 'Email settings',
+    async render(root, param, query) {
+      const q = query || {}; const u = String(q.u || ''), t = String(q.t || ''); const qs = `&u=${encodeURIComponent(u)}&t=${encodeURIComponent(t)}`;
+      const shell = inner => `<div class="landing-wrap uns-wrap"><section class="panel uns" aria-labelledby="uns-h"><span class="uns-av" aria-hidden="true">${App.bobcatSvg ? App.bobcatSvg(64) : ''}</span>${inner}</section></div>`;
+      root.innerHTML = shell('<p class="muted">Checking the link…</p>');
+      let r; try { r = await call('news_unsub' + qs); } catch (e) { root.innerHTML = shell(`<h1 id="uns-h">This link does not work</h1><p>${esc(e.message)}</p><a class="btn" href="#/settings">${icon('gear', 14)} Open Settings</a>`); return; }
+      const paint = on => {
+        root.innerHTML = shell(on
+          ? `<h1 id="uns-h">Stop news emails?</h1><p>These are the few emails a term about new things on Mathub, sent to <b>${esc(r.email)}</b>. Reminders and digests you turned on are not affected.</p><div class="row gap-sm"><button type="button" class="btn primary lg" data-uns="0">Stop news emails</button><a class="btn lg" href="#/">Keep them</a></div>`
+          : `<h1 id="uns-h">Done. No more news emails.</h1><p>${esc(r.email)} will not get them. Changed your mind?</p><div class="row gap-sm"><button type="button" class="btn lg" data-uns="1">Turn them back on</button><a class="btn primary lg" href="#/">Go to Mathub</a></div>`);
+        root.querySelectorAll('[data-uns]').forEach(b => b.addEventListener('click', async () => { b.disabled = true; try { const x = await call('news_unsub' + qs, { on: b.dataset.uns === '1' ? 1 : 0 }); r.on = x.on; if (Auth.user && Auth.user.id === +u) Auth.user.news_email = x.on; paint(x.on); toast(x.on ? 'News emails are back on' : 'News emails are off'); } catch (e) { b.disabled = false; toast(e.message, 4000); } }));
+      };
+      paint(r.on);
+    }
   };
 
   document.addEventListener('DOMContentLoaded', () => { Auth.init(); });

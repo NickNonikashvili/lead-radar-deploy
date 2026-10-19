@@ -1099,7 +1099,7 @@ THE SYLLABUS:
     const card = (k, name, price, lines) => {
       const mine = (plan || 'free') === k;
       const act = k === 'free' ? '' : mine ? '' : k === 'pro' ? (plan === 'max' ? '' : `<button type="button" class="btn" data-pl="buy-pro">Get Pro</button>`) : `<button type="button" class="btn primary" data-pl="buy-max">${plan === 'pro' ? 'Move up to Max' : 'Get Max'}</button>`;
-      return `<article class="pl-card${mine ? ' mine' : ''}" aria-label="${name}${mine ? ', your plan' : ''}"><header><h3>${name}</h3>${mine ? '<span class="pl-chip ok">Your plan</span>' : ''}</header><p class="pl-price"><b>${esc(price)}</b>${k === 'free' ? '' : '<small> a month</small>'}</p><ul>${lines.map(l => `<li>${icon('check', 15)}<span>${esc(l)}</span></li>`).join('')}</ul>${act ? `<div class="pl-card-act">${act}</div>` : ''}</article>`;
+      return `<article class="pl-card${mine ? ' mine' : ''}" aria-label="${name}${mine ? ', your plan' : ''}"><header><h3>${name}</h3>${mine ? '<span class="pl-chip ok">Your plan</span>' : ''}</header><p class="pl-price"><b>${esc(price)}</b>${k === 'free' ? '' : '<small> a month</small>'}</p><ul>${lines.map(l => `<li>${icon('check', 15)}<span>${esc(l)}</span></li>`).join('')}</ul>${k === 'max' && App.views.max ? `<a class="pl-demo" href="#/max">${icon('play', 13)} Watch a call with Bo (1 minute)</a>` : ''}${act ? `<div class="pl-card-act">${act}</div>` : ''}</article>`;
     };
     return `<div class="pl-cards">${card('free', 'Free', '$0', FREE_LINES)}${card('pro', PLANS.pro.name, Sub.price('pro') || PLANS.pro.web, PLANS.pro.lines)}${card('max', PLANS.max.name, Sub.price('max') || PLANS.max.web, PLANS.max.lines)}</div>
       <p class="pl-fine">Monthly plans that renew until you cancel. ${NATIVE ? `Bought in ${STORE}, which handles the billing.` : 'On the website the payment is taken by Stripe, through RevenueCat.'} A plan belongs to your Mathub account, so it works on the website and in the apps. <a href="#/policy/create">Terms</a> · <a href="#/policy/privacy">Privacy</a></p>`;
@@ -1200,14 +1200,18 @@ THE SYLLABUS:
       const ends = s.until && !s.renews && !s.granted ? ` Your plan ends ${fmtDate(s.until)}.` : '';
       if (plan === 'max') return (U ? `${num(Math.max(0, U.tutor_limit - U.tutor))} questions${hubStatus.voice && (hubStatus.voice.live || U.live) ? ` and ${Math.floor(Math.max(0, U.live_limit - U.live) / 60)} call minutes` : ''} left this month.` : 'Mathub Max is on.') + ends;
       if (plan === 'pro') return (U ? `${num(Math.max(0, U.tutor_limit - U.tutor))} questions left this month. ` : '') + 'Bo is on every page: tap him in the corner. Max adds Ask Bo’s own page and calls.' + ends;
+      if (trialLeft() > 0) return `Try him free: ${Math.max(1, Math.ceil(trialLeft() / 60))} minutes on a call, on us. Write on the board and he helps you through it.`;
       return 'He knows your syllabus, your exams and where you are stuck. Ask him from any page, call him, or have him turn a syllabus into a class for everyone.';
     };
+    // free call minutes with Bo, for an account without Max (api/ai.php, ai_trial_minutes)
+    const trialLeft = () => (hubStatus && !hubStatus.max && hubStatus.trial ? hubStatus.trial.left : 0);
     const hubHtml = () => {
       const plan = Sub.plan(); const cid = hubCid(); const cname = cid ? (Courses[cid].short || Courses[cid].code) : '';
       const talkOk = !!(App.boTalk && App.boTalk.supported());
       const act = o => { const tag = o.href ? 'a' : 'button'; return `<${tag} ${o.href ? `href="${o.href}"` : `type="button" data-bh="${o.k}"`} class="bh-act${o.main ? ' bh-main' : ''}"><span class="bh-ic" aria-hidden="true">${icon(o.ic, 22)}</span><span class="bh-l"><b>${o.b}</b><small>${o.s}</small></span></${tag}>`; };
-      let acts;
-      if (plan === 'max') acts = [talkOk && cid ? act({ k: 'call', ic: 'phone', b: 'Call Bo', s: `Talk ${esc(cname)} through, out loud`, main: true }) : '', act({ href: cid ? `#/tutor/${cid}` : '#/tutor', ic: 'chat', b: 'Ask Bo', s: 'Chat, photos and his board', main: !(talkOk && cid) }), act({ href: '#/create', ic: 'wand', b: 'Add a class', s: 'From any syllabus, for everyone' })];
+      let acts; const free = talkOk && cid && plan !== 'max' && trialLeft() > 0;
+      if (free) acts = [act({ k: 'trial', ic: 'phone', b: 'Call Bo free', s: `${Math.max(1, Math.ceil(trialLeft() / 60))} minutes on us`, main: true }), plan === 'pro' ? act({ k: 'float', ic: 'chat', b: 'Ask Bo here', s: 'He sees the page you are on' }) : act({ href: '#/max', ic: 'gem', b: 'See what Max does', s: 'A one-minute demo' }), act({ href: '#/create', ic: 'wand', b: 'Add a class', s: 'From any syllabus, free' })];
+      else if (plan === 'max') acts = [talkOk && cid ? act({ k: 'call', ic: 'phone', b: 'Call Bo', s: `Talk ${esc(cname)} through, out loud`, main: true }) : '', act({ href: cid ? `#/tutor/${cid}` : '#/tutor', ic: 'chat', b: 'Ask Bo', s: 'Chat, photos and his board', main: !(talkOk && cid) }), act({ href: '#/create', ic: 'wand', b: 'Add a class', s: 'From any syllabus, for everyone' })];
       else if (plan === 'pro') acts = [act({ k: 'float', ic: 'chat', b: 'Ask Bo here', s: 'He sees the page you are on', main: true }), act({ href: '#/create', ic: 'wand', b: 'Add a class', s: 'From any syllabus, for everyone' }), talkOk ? act({ k: 'max', ic: 'phone', b: 'Call Bo', s: 'Move up to Max' }) : act({ k: 'max', ic: 'gem', b: 'Ask Bo’s page', s: 'Move up to Max' })];
       else acts = [act({ k: 'pro', ic: 'zap', b: 'Get Mathub Pro', s: `Bo on every page · ${esc(Sub.price('pro') || PLANS.pro.web)} a month`, main: true }), act({ k: 'max', ic: 'gem', b: 'Get Mathub Max', s: `Plus Ask Bo’s page and calls · ${esc(Sub.price('max') || PLANS.max.web)} a month` }), act({ href: '#/create', ic: 'wand', b: 'Add a class', s: 'From any syllabus, free' })];
       return `<section class="bh bh-${plan || 'free'}" id="bo-hub" aria-labelledby="bh-h"><div class="bh-who"><span class="bh-av" aria-hidden="true">${App.bobcatSvg ? App.bobcatSvg(58) : ''}</span><div class="bh-t"><h2 id="bh-h">${plan ? 'Bo, your tutor' : 'Meet Bo, your tutor'}</h2><p class="bh-sub" id="bh-sub">${esc(hubLine())}</p><a class="bh-plan" href="#/plan"><span>Your plan</span><b>${plan ? PLANS[plan].short : 'Free'}</b>${icon('right', 14)}</a></div></div><div class="bh-acts">${acts.filter(Boolean).join('')}</div></section>`;
@@ -1220,6 +1224,7 @@ THE SYLLABUS:
         const b = e.target.closest('[data-bh]'); if (!b) return; const k = b.dataset.bh;
         if (k === 'max' || k === 'pro') { if (await paywall(k === 'max' ? { need: 'max', reason: 'bo' } : { reason: 'bo-float' })) App.rerender(); return; }
         if (k === 'float') { if (App.boFloat) App.boFloat.open(); return; }
+        if (k === 'trial') { const cid = hubCid(); if (cid && App.boTalk) App.boTalk.open({ cid, status: hubStatus, gesture: true, onClose: () => { api('ai_status').then(st => { hubStatus = st; repaint(); }).catch(() => {}); } }); return; }
         if (k === 'call') {
           const cid = hubCid(); if (!cid) { location.hash = '#/tutor'; return; }
           // the first time, Bo's page asks for consent first, then the call opens there
@@ -1227,7 +1232,8 @@ THE SYLLABUS:
           App.boTalk.open({ cid, status: hubStatus, gesture: true, onClose: () => { api('ai_status').then(st => { hubStatus = st; const s = $('#bh-sub'); if (s) s.textContent = hubLine(); }).catch(() => {}); } });
         }
       });
-      if (Sub.plan()) api('ai_status').then(st => { hubStatus = st; if (App.boTalk && App.boTalk.setStatus) App.boTalk.setStatus(st); const s = $('#bh-sub'); if (s) s.textContent = hubLine(); }).catch(() => {});
+      const repaint = () => { const h = $('#bo-hub'); if (!h) return; const tmp = document.createElement('div'); tmp.innerHTML = hubHtml(); const nu = tmp.firstElementChild; [...h.childNodes].forEach(n => n.remove()); [...nu.childNodes].forEach(n => h.appendChild(n)); h.className = nu.className; };
+      api('ai_status').then(st => { hubStatus = st; if (App.boTalk && App.boTalk.setStatus) App.boTalk.setStatus(st); if (trialLeft() > 0) repaint(); else { const s = $('#bh-sub'); if (s) s.textContent = hubLine(); } }).catch(() => {});
     });
   }
 

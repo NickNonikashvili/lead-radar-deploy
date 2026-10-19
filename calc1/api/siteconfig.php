@@ -33,6 +33,7 @@ function mh_siteconfig_fields(): array {
     'ai_live_monthly'    => ['ai', 'Call minutes, per student per month', 'int', '', [0, 10000]],
     'ai_live_daily'      => ['ai', 'Call minutes, per student per day', 'int', '', [0, 1440]],
     'ai_live_call'       => ['ai', 'Minutes per call', 'int', '', [1, 240]],
+    'ai_trial_minutes'   => ['ai', 'Free call minutes with Bo, once per account', 'int', 'Everyone without Max can call Bo for this long, once (10 by default). 0 turns the free minutes off.', [0, 120]],
     'ai_tts_voice'       => ['ai', 'Bo’s voice in basic voice and Read aloud', 'select', '', ['ash', 'ballad', 'coral', 'sage', 'verse', 'alloy']],
     'ai_voice_monthly'   => ['ai', 'Characters Bo speaks, per student per month', 'int', '', [0, 10000000]],
     'ai_listen_monthly'  => ['ai', 'Seconds Bo listens (Firefox), per student per month', 'int', '', [0, 1000000]],

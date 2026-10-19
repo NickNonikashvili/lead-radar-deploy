@@ -152,7 +152,7 @@
       this.queue.push(item); this.pump();
     },
     fetchAudio(text, signal) {
-      return fetch(API + 'ai_speak', { method: 'POST', credentials: 'same-origin', headers: HDR, body: JSON.stringify({ text, voice: this.voice }), signal })
+      return fetch(API + 'ai_speak', { method: 'POST', credentials: 'same-origin', headers: HDR, body: JSON.stringify(Object.assign({ text, voice: this.voice }, T.lid ? { lid: T.lid } : {})), signal })
         .then(async r => { if (!r.ok) { const j = await r.json().catch(() => ({})); throw Object.assign(new Error(j.error || 'Bo\'s voice is not available.'), { status: r.status }); } return URL.createObjectURL(await r.blob()); });
     },
     stop() { this.gen++; this.cur = null; this.queue.forEach(q => { if (q.ctl) q.ctl.abort(); }); this.queue = []; this.busy = false; try { if (this.audio) this.audio.pause(); } catch (e) {} try { if (synth) synth.cancel(); } catch (e) {} },
@@ -235,7 +235,7 @@
       h.onHearing();
       try {
         const blob = new Blob(chunks, { type: (rec.mimeType || type || 'audio/webm') }); const data = await new Promise((res, rej) => { const fr = new FileReader(); fr.onload = () => res(String(fr.result).split(',')[1] || ''); fr.onerror = rej; fr.readAsDataURL(blob); });
-        const r = await post('ai_listen', { audio: { type: blob.type, data }, secs: Math.max(1, Math.round(((loud || Date.now()) - t0) / 1000) + 1), class: T.cid });
+        const r = await post('ai_listen', Object.assign({ audio: { type: blob.type, data }, secs: Math.max(1, Math.round(((loud || Date.now()) - t0) / 1000) + 1), class: T.cid }, T.lid ? { lid: T.lid } : {}));
         if ((r.text || '').trim()) h.onFinal(r.text.trim()); else h.onNothing();
       } catch (e) { h.onError(e.message || 'transcribe'); }
     };
@@ -259,7 +259,9 @@
        the chat, and he reads it out sentence by sentence.
      The screen is the board (assets/bo-pad.js); before the call starts a night sky covers it with Bo in the middle.
      ============================================================ */
-  const T = { el: null, mode: 'live', cid: null, status: null, state: 'idle', who: 'listening', onClose: null, back: null, changed: false, lock: null, raf: 0, lvl: 0, pages: [], cards: new Map(), pad: null, photo: null, board: false, muted: false, t0: 0, clock: 0, listener: null, turn: 0, done: true };
+  const T = { el: null, mode: 'live', cid: null, status: null, state: 'idle', who: 'listening', onClose: null, back: null, changed: false, lock: null, raf: 0, lvl: 0, pages: [], cards: new Map(), pad: null, photo: null, board: false, muted: false, t0: 0, clock: 0, listener: null, turn: 0, done: true, trial: false, lid: '', free: 0, freeAt: 0, freeTick: 0 };
+  /* without Max, a call runs on the free minutes (once per account; api/ai.php counts them): how many are left now */
+  const freeLeft = () => Math.max(0, T.free - (Date.now() - T.freeAt) / 1000);
   const liveOn = () => !!(T.status && T.status.voice && T.status.voice.live) && !!global.RTCPeerConnection && !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia) && settings().boMode !== 'basic';
   const canHear = () => !!SR || !!(T.status && T.status.voice && T.status.voice.listen && navigator.mediaDevices && global.MediaRecorder);
   const naturalOn = () => !!(T.status && T.status.voice && T.status.voice.natural) && settings().boVoice !== 'device';
@@ -294,7 +296,8 @@
 
   function open(o = {}) {
     if (NATIVE || T.el) return;
-    Object.assign(T, { cid: o.cid, status: o.status || T.status, onClose: o.onClose || null, changed: false, back: document.activeElement, pages: [], cards: new Map(), photo: null, board: false, muted: false, t0: 0, state: 'idle', who: 'listening' });
+    Object.assign(T, { cid: o.cid || 'calc', status: o.status || T.status, onClose: o.onClose || null, changed: false, back: document.activeElement, pages: [], cards: new Map(), photo: null, board: false, muted: false, t0: 0, state: 'idle', who: 'listening', lid: '' });
+    T.trial = !!(T.status && !T.status.max && T.status.trial && T.status.trial.left > 0); T.free = T.trial ? T.status.trial.left : 0; T.freeAt = Date.now();
     T.mode = liveOn() ? 'live' : 'basic'; CC.cues = []; Pace.reset();
     const el = T.el = document.createElement('div'); el.id = 'bo-talk'; el.className = 'bt'; el.dataset.mode = T.mode; el.dataset.ccSize = ccSize(); el.dataset.ccBg = ccBg();
     el.setAttribute('role', 'dialog'); el.setAttribute('aria-modal', 'true'); el.setAttribute('aria-labelledby', 'bt-h');
@@ -361,7 +364,7 @@
   function setState(s, msg) {
     T.state = s; if (!T.el) return; T.el.dataset.state = s; T.el.dataset.mode = T.mode;
     clearInterval(T.clock);
-    if (s === 'live') { if (!T.t0) T.t0 = Date.now(); const tick = () => { if (T.el) $('#bt-clock-t', T.el).textContent = clockText((Date.now() - T.t0) / 1000) + (Live.soon() ? ` · ${Math.max(1, Math.ceil(Live.leftNow() / 60))} min left` : ''); }; tick(); T.clock = setInterval(tick, 1000); }
+    if (s === 'live') { if (!T.t0) T.t0 = Date.now(); const tick = () => { if (T.el) $('#bt-clock-t', T.el).textContent = clockText((Date.now() - T.t0) / 1000) + (T.trial ? ` · ${Math.max(0, Math.ceil(freeLeft() / 60))} free min left` : Live.soon() ? ` · ${Math.max(1, Math.ceil(Live.leftNow() / 60))} min left` : ''); }; tick(); T.clock = setInterval(tick, 1000); }
     else $('#bt-clock-t', T.el).textContent = s === 'connecting' ? 'Calling…' : s === 'ended' ? 'Call ended' : '';
     paintStatus(msg); paintExtra();
   }
@@ -468,10 +471,14 @@
     $('#bt-status', T.el).textContent = 'couldn’t connect';
     $('#bt-extra', T.el).innerHTML = `<div class="bt-msg" role="alert"><p>${esc(msg)}</p><div class="bt-msg-acts"><button type="button" class="btn primary" data-t="retry">${icon('phone', 16)} Call again</button>${canBasic ? `<button type="button" class="btn" data-t="basic">Use basic voice</button>` : ''}</div></div>`;
   }
-  function ended(msg) {
+  function ended(msg, over) {
     setState('ended'); if (!T.el) return;
-    $('#bt-extra', T.el).innerHTML = `<div class="bt-msg" role="status"><p>${esc(msg)}</p><div class="bt-msg-acts"><button type="button" class="btn primary" data-t="retry">${icon('phone', 16)} Call again</button><button type="button" class="btn" data-t="end">Close</button></div></div>`;
+    // the free minutes are up: what Max is, instead of calling again
+    $('#bt-extra', T.el).innerHTML = over ? `<div class="bt-msg" role="status"><p>${esc(msg)}</p><div class="bt-msg-acts"><a class="btn primary" href="#/max">${icon('zap', 16)} See Mathub Max</a><button type="button" class="btn" data-t="end">Close</button></div></div>`
+      : `<div class="bt-msg" role="status"><p>${esc(msg)}</p><div class="bt-msg-acts"><button type="button" class="btn primary" data-t="retry">${icon('phone', 16)} Call again</button><button type="button" class="btn" data-t="end">Close</button></div></div>`;
   }
+  // a call that may not happen (no Max, or the free minutes are gone)
+  const noPlan = x => { if (x.status !== 402) return false; T.trial = false; ended(x.message, true); return true; };
   function showType(on) { if (!T.el) return; const f = $('#bt-type', T.el); f.hidden = !on; T.el.classList.toggle('typing', !!on); const b = $('[data-t="type"]', T.el); if (b) b.setAttribute('aria-expanded', String(on)); if (on) setTimeout(() => { const q = $('#bt-q', T.el); if (q) q.focus(); }, 30); }
   function micTrouble(code) {
     const msg = code === 'not-allowed' || code === 'service-not-allowed' ? 'Mathub can’t use your microphone. Allow it from the icon in the address bar, then call again. You can also type to Bo.'
@@ -489,6 +496,7 @@
     ex.innerHTML = `<section class="bt-hello" aria-labelledby="bt-hello-h"><h3 id="bt-hello-h">${live ? 'It’s a real call' : 'Talk with Bo out loud'}</h3>
       <p>${live ? 'Just talk. Bo answers right away, waits until you’re done, and you can cut in whenever you want, like with a friend. Mute pauses your mic.' : 'Ask anything and Bo answers out loud, writing the math on the board. Tap Bo to send what you said, or to cut in.'}</p>
       <p>The whole screen is a board you share: write your work on it and tap <b>Show Bo</b>, and he reads it, marks it and helps you through it${live ? '; he also sees it as you write' : ''}.</p>
+      ${T.trial ? `<p class="bt-free">${icon('zap', 16)} <b>${Math.max(1, Math.ceil(T.free / 60))} free minutes</b> with Bo, on us. No card needed.</p>` : ''}
       <p class="bt-fine">${where} ${live ? 'What you both say is saved in your chat with Bo.' : 'As in the chat, your words go to Anthropic’s AI for Bo’s reply, and what you both say is saved in your chat with Bo.'} <a href="#/policy/privacy">Privacy</a></p>
       <button type="button" class="btn primary lg" id="bt-start" data-t="start">${icon(live ? 'phone' : 'mic', 18)} ${live ? 'Start the call' : 'Start talking'}</button></section>`;
     $('#bt-start', T.el).focus();
@@ -534,13 +542,13 @@
         pc.addEventListener('connectionstatechange', () => { if (['failed', 'disconnected'].includes(pc.connectionState) && T.el && T.state === 'live' && !L.ended) { L.stop(); ended('The call dropped. Check your connection and call Bo again.'); } });
         const offer = await pc.createOffer(); await pc.setLocalDescription(offer);
         const r = await post('ai_live_start', { lang: App.lang, class: T.cid, sdp: offer.sdp, voice: liveVoice(), speed: liveRate(), eagerness: eager(), snapshot: snap(), today: App.todayISO() });
-        L.lid = r.lid; L.left = r.left; L.at = Date.now();
+        L.lid = r.lid; L.left = r.left; L.at = Date.now(); if (r.trial) { T.trial = true; T.free = r.left; T.freeAt = Date.now(); }
         if (!T.el || L.ended) return L.stop();
         await pc.setRemoteDescription({ type: 'answer', sdp: r.sdp });
         L.tick = setInterval(() => L.report(), 30000); L.save = setInterval(() => L.flush(false), 40000);
       } catch (x) {
         L.stop();
-        if (x.status === 402) { failed(x.message, false); setTimeout(() => { close(); App.rerender(); }, 2500); return; }
+        if (noPlan(x)) return;
         failed(x.message && !/^Something/.test(x.message) ? x.message : 'Bo couldn’t pick up just now.', true);
       }
     },
@@ -660,7 +668,7 @@
     },
     async report() {
       if (!this.lid || this.ended) return;
-      try { const r = await post('ai_live_tick', { lid: this.lid }); if (r.end) { this.flush(false); this.stop(); ended(r.why || 'The call ended.'); return; } this.left = r.left; this.at = Date.now(); } catch (e) {}
+      try { const r = await post('ai_live_tick', { lid: this.lid }); if (r.end) { this.flush(false); this.stop(); ended(r.why || 'The call ended.', !!r.trial_over); return; } this.left = r.left; this.at = Date.now(); if (T.trial) { T.free = r.left; T.freeAt = Date.now(); } } catch (e) {}
     },
     /* what was said goes into the chat: in order, and only once it is written down (all of it when the call ends) */
     flush(end) {
@@ -689,8 +697,20 @@
 
   /* ---------- basic: the browser hears, the chat answers, Bo reads it out ---------- */
   const Basic = {
-    start() { Speaker.natural = naturalOn(); Speaker.voice = basicVoice(); Speaker.fellBack = false; T.t0 = Date.now(); setState('live'); if (!canHear()) showType(true); greet(); },
-    stop() { T.turn++; stopListening(); Speaker.stop(); },
+    async start() {
+      Speaker.natural = naturalOn(); Speaker.voice = basicVoice(); Speaker.fellBack = false;
+      if (T.trial) {   // without Max: the call runs on the free minutes, so it is started and reported like a live one
+        setState('connecting');
+        try { const r = await post('ai_call_start', { class: T.cid }); T.lid = r.lid || ''; if (r.trial) { T.free = r.left; T.freeAt = Date.now(); } } catch (x) { if (!noPlan(x)) failed(x.message, false); return; }
+        if (!T.el) return; clearInterval(T.freeTick); T.freeTick = setInterval(() => Basic.report(), 30000);
+      }
+      T.t0 = Date.now(); setState('live'); if (!canHear()) showType(true); greet();
+    },
+    async report() {
+      if (!T.lid || !T.el) return;
+      try { const r = await post('ai_live_tick', { lid: T.lid }); if (r.end) { Basic.stop(); ended(r.why || 'The call ended.', !!r.trial_over); return; } T.free = r.left; T.freeAt = Date.now(); } catch (e) {}
+    },
+    stop() { T.turn++; stopListening(); Speaker.stop(); clearInterval(T.freeTick); if (T.lid) { const lid = T.lid; T.lid = ''; post('ai_live_tick', { lid, end: 1 }).catch(() => {}); } },
     orb() { if (T.who === 'bo') return interrupt(); if (T.who === 'listening' && T.listener) return T.listener.send(); if (T.who === 'thinking') { T.turn++; Speaker.stop(); return who('muted'); } T.muted = false; listen(); },
     mute(on) { if (on) { stopListening(); who('muted'); } else listen(); }
   };
@@ -733,7 +753,7 @@
     const sp = splitter(s => { if (turn !== T.turn) return; Speaker.say(s, { i: n++, turn, text: s }); }, (p, isNew) => { if (turn === T.turn) boardPage(p, isNew); }, m => { if (turn === T.turn && T.pad) T.pad.mark([m]); });
     try {
       const look = board && T.pad ? T.pad.state().look : null;
-      const r = await App.boAsk(Object.assign({ class: T.cid, q: text, voice: 1, snapshot: snap(), today: App.todayISO() }, photo ? { image: { type: photo.type, data: photo.data } } : {}, look ? { pad: { cols: look.cols, rows: look.rows } } : {}), d => { if (turn === T.turn) sp.push(d); });
+      const r = await App.boAsk(Object.assign({ class: T.cid, q: text, voice: 1, snapshot: snap(), today: App.todayISO() }, photo ? { image: { type: photo.type, data: photo.data } } : {}, look ? { pad: { cols: look.cols, rows: look.rows } } : {}, T.lid ? { lid: T.lid } : {}), d => { if (turn === T.turn) sp.push(d); });
       T.changed = true; if (turn !== T.turn) return;
       sp.end(); T.done = true;
       if (r.remembered) toast(`Bo will remember: ${r.remembered}`, 3500);
@@ -741,7 +761,7 @@
       if (Speaker.idle()) after();
     } catch (x) {
       if (turn !== T.turn) return; Speaker.stop(); T.done = true;
-      if (x.status === 402) { failed(x.message, false); setTimeout(() => { close(); App.rerender(); }, 2500); return; }
+      if (noPlan(x)) return;
       who('muted'); paintStatus(x.message || 'Bo couldn’t answer just now · tap him to try again');
     }
   }

@@ -141,6 +141,7 @@ function mh_housekeeping(bool $full = false): array {
   if ($full) { try { require_once __DIR__ . '/canvas.php'; $r = mh_canvas_events(false); $did[] = 'canvas: ' . count($r['events']) . ' events'; } catch (Throwable $e) {} }
   $sent = mh_digest_tick($full ? 60 : 2); if ($sent) $did[] = "digest: $sent sent";
   $rem = mh_reminder_tick($full ? 60 : 2); if ($rem) $did[] = "reminders: $rem sent";
+  try { require_once __DIR__ . '/news.php'; $nw = mh_news_tick($full ? 40 : 3); if ($nw) $did[] = "news: $nw sent"; } catch (Throwable $e) {}
   try { mh_league_tick(); } catch (Throwable $e) {}
   try { require_once __DIR__ . '/extras.php'; $b = mh_backup_tick(); if ($b) $did[] = 'backup: ' . $b['name']; } catch (Throwable $e) {}
   if ($full || random_int(1, 20) === 1) { try { require_once __DIR__ . '/myclasses.php'; $n = mh_myclass_prune(); if ($n) $did[] = "classes of deleted accounts: $n removed"; require_once __DIR__ . '/ai.php'; $n = mh_ai_prune(); if ($n) $did[] = "Bo's old chats and drafts: $n removed"; } catch (Throwable $e) {} }

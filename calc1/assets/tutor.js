@@ -391,7 +391,7 @@
     let s; try { s = st.status = await api('ai_status'); } catch (e) { main.innerHTML = gate('Bo cannot be reached', esc(e.message), `<button type="button" class="btn" data-go="retry">Try again</button>`); wireGate(main, () => start(main, query)); return; }
     st.notes = s.notes || []; if (App.boTalk) App.boTalk.setStatus(s);
     if (!s.enabled) { main.innerHTML = gate('Bo is getting ready', 'Bo is not switched on yet. He will be here soon.', ''); return; }
-    if (!s.max) { main.innerHTML = intro(s.plan); wireGate(main, () => start(main, query)); return; }
+    if (!s.max) { main.innerHTML = intro(s.plan, s); wireGate(main, () => start(main, query)); return; }
     if (!settings().aiConsent) { main.innerHTML = consent(); wireGate(main, () => start(main, query)); return; }
     if (!st.cid) { main.innerHTML = gate('Pick a class first', 'Bo helps with a class you take. Choose your classes, or make one from a syllabus.', `<a class="btn primary" href="#/">Your classes</a><a class="btn" href="#/create">Create a class</a>`); return; }
     main.onclick = null; chat(main, query);
@@ -405,13 +405,17 @@
       if (g === 'max') { if (await App.paywall({ need: 'max', reason: 'bo' })) again && again(); return; }
       if (g === 'agree') { setSetting('aiConsent', Date.now()); haptic('success'); again && again(); return; }
       if (g === 'later') { location.hash = '#/'; }
+      if (g === 'trial' && App.boTalk) App.boTalk.open({ cid: st.cid || 'calc', status: st.status, gesture: true, onClose: () => again && again() });   // the free minutes
     };
   }
-  function intro(plan) {
+  function intro(plan, s) {
+    const free = talk() && s && s.trial && s.trial.left > 0 ? Math.max(1, Math.ceil(s.trial.left / 60)) : 0;
+    const tried = talk() && s && s.trial && s.trial.left <= 0;
     return `<section class="bo-gate bo-intro"><span class="bo-gate-av" aria-hidden="true">${bo(96)}</span><h2>Meet Bo, your tutor</h2>
+      ${free ? `<div class="bo-free"><p><b>Talk to him free for ${free} minutes.</b> Write on the board, he helps you through it.</p><button type="button" class="btn primary lg" data-go="trial">${icon('phone', 18)} Call Bo free</button></div>` : tried ? '<p class="small muted">You have used your free minutes with Bo.</p>' : ''}
       <p>Bo knows your classes from their syllabi and keeps up with how you are doing, so his help fits you.</p>
       <ul class="bo-perks"><li>${icon('chat', 18)}<span><b>Ask anything</b> about your classes, any time: “Why is the derivative of $\\sin x$ equal to $\\cos x$?”</span></li><li>${icon('target', 18)}<span><b>He knows where you are stuck</b>: your weakest topics, the questions you missed and your next exam.</span></li>${talk() ? `<li>${icon('phone', 18)}<span><b>Call him</b> and just talk, like with a friend: he answers right away, you can cut in, and he writes the math on his board.</span></li>` : ''}<li>${icon('image', 18)}<span><b>Snap a problem</b> and he walks you through it, step by step.</span></li><li>${icon('flag', 18)}<span><b>Plans and quizzes</b> built on your real exam dates.</span></li></ul>
-      <div class="bo-gate-acts"><button type="button" class="btn primary lg" data-go="max">${plan === 'pro' ? 'Move up to Max' : 'Get Mathub Max'}</button></div>
+      <div class="bo-gate-acts"><button type="button" class="btn ${free ? '' : 'primary '}lg" data-go="max">${plan === 'pro' ? 'Move up to Max' : 'Get Mathub Max'}</button><a class="btn ghost lg" href="#/max">See it in action</a></div>
       <p class="small muted">Mathub Max includes everything in Pro, so Bo is also on every page. <a href="#/plan">Compare the plans</a></p></section>`;
   }
   App.boGateHtml = { consent: () => consent(), intro: plan => intro(plan) };   // the floating Bo (assets/bo-float.js) asks the same way

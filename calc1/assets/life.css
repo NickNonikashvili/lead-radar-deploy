@@ -496,7 +496,7 @@
 @media (max-width: 760px) { :root .landing-top.hero.dash-hero { padding: 20px 18px 96px; } :root .dash-hero h1.hero-sub { font-size: 30px; } }
 .dash .sec-h { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
 .dash-acts { display: inline-flex; gap: 8px; }
-.dash-grid { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 16px; margin-top: 14px; align-items: stretch; }
+.dash-grid { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 16px; margin-top: 14px; align-items: start; }
 .dw { grid-column: span 4; display: flex; flex-direction: column; min-width: 0; padding: 16px 18px 16px !important; }
 .dwc-schedule { grid-column: span 4; } .dwc-due { grid-column: span 5; } .dwc-clock { grid-column: span 3; }
 .dwc-pomo { grid-column: span 4; } .dwc-todos { grid-column: span 4; } .dwc-events { grid-column: span 4; }

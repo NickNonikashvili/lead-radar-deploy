@@ -194,10 +194,13 @@ const T = require('./lib');
 
   /* ---------- the start page ---------- */
   await hop(p, '#/', 1200);
-  const dash = await p.evaluate(() => ({ cards: [...document.querySelectorAll('#dash-grid > .dw')].map(c => c.dataset.w), due: document.querySelector('.dwc-due').textContent.replace(/\s+/g, ' '), sched: document.querySelectorAll('.dw-sched li').length, todo: /Buy a blue book/.test(document.querySelector('.dwc-todos').textContent), ev: /Study group/.test(document.querySelector('.dwc-events').textContent), habit: document.querySelectorAll('.dw-habit').length, goal: /50%/.test(document.querySelector('.dwc-goals').textContent), wheel: !!document.querySelector('.dwc-wheel svg.radar'), week: document.querySelectorAll('.dw-day').length, stats: [...document.querySelectorAll('.course-card .cc-stats')].length }));
-  check('Your day: ten cards', dash.cards.join(',') === 'schedule,due,clock,pomo,todos,events,habits,goals,wheel,week', dash.cards);
+  const first = await p.$$eval('#dash-grid > .dw', cs => cs.map(c => c.dataset.w));
+  check('Your day starts with three cards: today, what is due and the week', first.join(',') === 'schedule,due,week', first);
+  await p.evaluate(() => App.setSetting('homeHide', [])); await hop(p, '#/today', 300); await hop(p, '#/', 1200);
+  const dash = await p.evaluate(() => ({ cards: [...document.querySelectorAll('#dash-grid > .dw')].map(c => c.dataset.w), due: document.querySelector('.dwc-due').textContent.replace(/\s+/g, ' '), sched: document.querySelectorAll('.dw-sched li').length, todo: /Buy a blue book/.test(document.querySelector('.dwc-todos').textContent), ev: /Study group/.test(document.querySelector('.dwc-events').textContent), habit: document.querySelectorAll('.dw-habit').length, goal: /50%/.test(document.querySelector('.dwc-goals').textContent), wheel: !!document.querySelector('.dwc-wheel svg.radar'), week: document.querySelectorAll('.dw-day').length, cardLines: [...document.querySelectorAll('.course-card')].map(c => c.querySelectorAll('.course-meta, .cc-stats').length) }));
+  check('Customize can show all ten cards', dash.cards.join(',') === 'schedule,due,clock,pomo,todos,events,habits,goals,wheel,week', dash.cards);
   check('due this week, today\'s schedule, to-dos, events, habits, goals, the wheel and the week are filled from the planner', /Problem set 7/.test(dash.due) && dash.sched >= 1 && dash.todo && dash.ev && dash.habit === 1 && dash.goal && dash.wheel && dash.week === 7, dash);
-  check('each class card has its numbers', dash.stats >= 3, dash.stats);
+  check('class cards are short: no numbers or meta blocks (they are on the class page)', dash.cardLines.length >= 1 && dash.cardLines.every(n => n === 0), dash.cardLines);
   await p.click('.dwc-pomo [data-dw="mode"][data-m="long"]'); await p.waitForTimeout(200);
   check('the pomodoro has a long break, and the sidebar\'s timer follows', (await txt(p, '#dw-pomo-time')) === '15:00' && (await txt(p, '#pomo-time')) === '15:00' && /Long break/.test(await txt(p, '#pomo-mode')));
   await p.click('.dwc-pomo [data-dw="pomo"]'); await p.waitForTimeout(2200);

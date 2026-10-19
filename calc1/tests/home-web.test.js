@@ -17,7 +17,7 @@ const T = require('./lib');
   check('returning students get the apps\' start page under "Your next step"', !!home && /Your next step/.test(await txt(p, '.land-next .sec-title')), home);
   check('a tab for each of their classes, the last one they studied picked', home && home.tabs.join('|') === 'Calc I|Physics I|Precalc' && home.on === 'Calc I', home && home.tabs);
   check('the class card: its name and the next lesson', home && /Calculus I/.test(home.hero) && /#\/calc\/lesson\?topics=/.test(home.go), home);
-  check('beside it: Today across all classes, the class\'s tools (All tools goes to the class page), where they left off, and the quick buttons', home && home.today && home.tools >= 6 && home.all === '#/calc/dashboard' && home.resume && home.quick === 4, home);
+  check('beside it: Today across all classes, the class\'s tools (All tools goes to the class page), where they left off, and no row of extra buttons', home && home.today && home.tools >= 6 && home.all === '#/calc/dashboard' && home.resume && home.quick === 0, home);
   check('the path shows the unit they are in, with a link to the whole path', home && home.units === 1 && home.whole, home);
   check('two columns on a wide screen', home && home.cols === 2, home && home.cols);
   // exam week on the start page
