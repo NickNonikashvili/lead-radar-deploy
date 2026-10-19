@@ -52,8 +52,12 @@ const T = require('./lib');
   check('the faculty workspace keeps its own frame', !(await shown(p, '#sidebar')) && !(await shown(p, '#topbar')));
   await hop(p, '#/', 800);
   await p.click('#sb-hide'); await p.waitForTimeout(300);
-  const hid = await p.evaluate(() => ({ hidden: document.querySelector('.app').classList.contains('side-hidden'), menu: getComputedStyle(document.querySelector('.menu-btn')).display !== 'none', clock: getComputedStyle(document.querySelector('#tb-clock')).display !== 'none' }));
-  check('the sidebar tucks away; the header brings it back and shows the clock meanwhile', hid.hidden && hid.menu && hid.clock, hid);
+  const hidState = () => p.evaluate(() => { const m = document.querySelector('#topbar .menu-btn').getBoundingClientRect(); return { hidden: document.querySelector('.app').classList.contains('side-hidden'), sidebar: getComputedStyle(document.querySelector('.sidebar')).display, menu: getComputedStyle(document.querySelector('#topbar .menu-btn')).display !== 'none' && m.top >= 0 && m.bottom <= 80, label: document.querySelector('#topbar .menu-btn').getAttribute('aria-label'), clock: getComputedStyle(document.querySelector('#tb-clock')).display !== 'none', page: Math.round(document.querySelector('#view').getBoundingClientRect().top) }; });
+  const hid = await hidState();
+  check('the sidebar tucks away on the start page (gone, not stretched over the page); the menu button at the top brings it back and the header shows the clock meanwhile', hid.hidden && hid.sidebar === 'none' && hid.menu && hid.label === 'Show the sidebar' && hid.clock && hid.page < 120, hid);
+  await hop(p, '#/tasks', 900); const hid2 = await hidState();
+  check('and on a planner page', hid2.sidebar === 'none' && hid2.menu && hid2.page < 140, hid2);
+  await hop(p, '#/', 800);
   await p.click('#topbar .menu-btn'); await p.waitForTimeout(300);
   check('and it comes back', !(await p.evaluate(() => document.querySelector('.app').classList.contains('side-hidden'))));
 

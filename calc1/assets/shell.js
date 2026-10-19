@@ -180,10 +180,13 @@
       if (e.target.closest('a.nav-item, a.sb-day')) closeDrawer();
     });
     const top = $('#topbar'); if (top) top.addEventListener('click', e => { const ck = e.target.closest('[data-action="clock"]'); if (ck) openClock(ck); });
-    const hide = $('#sb-hide'); if (hide) hide.addEventListener('click', () => { setSetting('sideHidden', true); applyHidden(); });
+    const hide = $('#sb-hide'); if (hide) hide.addEventListener('click', () => { setSetting('sideHidden', true); applyHidden(); if (App.toast) App.toast(t('The sidebar is hidden. The menu button at the top left brings it back.'), 4000); const m = $('#topbar .menu-btn'); if (m) m.focus(); });
   }
   function closeDrawer() { const app = $('.app'); if (app) app.classList.remove('nav-open'); }
-  function applyHidden() { const app = $('.app'); if (app) app.classList.toggle('side-hidden', !!settings().sideHidden && innerWidth > 900); }
+  function applyHidden() {
+    const app = $('.app'); if (!app) return; const off = !!settings().sideHidden && innerWidth > 900; app.classList.toggle('side-hidden', off);
+    const m = $('#topbar .menu-btn'); if (m) { const l = off ? t('Show the sidebar') : t('Menu'); m.setAttribute('aria-label', l); m.title = off ? l : ''; }
+  }
   App.toggleSidebar = () => { const app = $('.app'); if (!app) return; if (innerWidth <= 900) { app.classList.toggle('nav-open'); return; } setSetting('sideHidden', !settings().sideHidden); applyHidden(); };
   App.shellApplyHidden = applyHidden;
 

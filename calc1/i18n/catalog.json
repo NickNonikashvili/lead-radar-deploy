@@ -4259,7 +4259,7 @@
 {"id":4258,"en":"Overview","files":["teach.js"]},
 {"id":4259,"en":"Class settings","files":["teach.js"]},
 {"id":4260,"en":"Faculty workspace","files":["teach.js"]},
-{"id":4261,"en":"Menu","files":["teach.js","index.html"]},
+{"id":4261,"en":"Menu","files":["teach.js","shell.js","index.html"]},
 {"id":4262,"en":"Faculty","files":["teach.js"]},
 {"id":4263,"en":"Student site","files":["teach.js"]},
 {"id":4264,"en":"Light or dark","files":["teach.js"]},
@@ -5728,5 +5728,7 @@
 {"id":5727,"en":"Bo on every page of the Mathub website, with this account: ask about whatever you are looking at","files":["create.js"]},
 {"id":5728,"en":") puts Bo on every page{1}, and","files":["create.js"],"gone":true},
 {"id":5729,"en":"of the website","files":["create.js"],"gone":true},
-{"id":5730,"en":") puts Bo on every page of the website, and","files":["create.js"]}
+{"id":5730,"en":") puts Bo on every page of the website, and","files":["create.js"]},
+{"id":5731,"en":"The sidebar is hidden. The menu button at the top left brings it back.","files":["shell.js"]},
+{"id":5732,"en":"Show the sidebar","files":["shell.js"]}
 ]
