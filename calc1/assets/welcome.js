@@ -23,9 +23,9 @@
   const W = { el: null, i: 0, picked: new Set(), plan: '', declined: '', busy: false, back: null, saved: false };
   const ids = () => (App.COURSE_ORDER || []).filter(id => Courses[id] && !Courses[id].preview);
   const PLAN_LINES = {
-    free: ['Every class built into Mathub', 'Practice, flashcards, Today and the Focus room'],
-    pro: ['Bo writes your classes from any syllabus', 'Make and share your own classes'],
-    max: ['Everything in Pro', 'Ask Bo anything, any time', 'Call Bo and talk it through']
+    free: ['Every class on Mathub, and your planner', 'Turn any syllabus into a class for everyone'],
+    pro: ['Bo on every page: ask about what you are looking at', 'Make and share classes of your own'],
+    max: ['Everything in Pro', 'Ask Bo’s own page, any time', 'Call Bo and talk it through']
   };
   const price = k => k === 'free' ? '$0' : ((App.subscription && App.subscription.price(k)) || (App.plans && App.plans[k] && App.plans[k].web) || '');
   const planName = k => k === 'free' ? 'Free' : (App.plans && App.plans[k] ? App.plans[k].name : k);
@@ -73,7 +73,7 @@
       art: `<div class="wa wa-create"><div class="wa-doc"><b>CHMY 121 syllabus</b><i></i><i></i><i></i><i></i><i></i></div><span class="wa-arrow">${icon('right', 22)}</span>
           <span class="wa-bot">${bo(66)}</span><div class="wa-class"><b>CHMY 121</b><span>General Chemistry</span><small>12 topics · 140 questions · 3 exams</small></div></div>`,
       h: 'Any class, from its syllabus',
-      p: 'Taking something Mathub does not have yet? Drop in its syllabus and Bo writes the whole class: notes, practice, flashcards and its calendar. That comes with Mathub Pro or Max.',
+      p: 'Taking something Mathub does not have yet? Drop in its syllabus and Bo writes the whole class: notes, practice, flashcards and its calendar. It goes on Mathub for everyone who takes it, and it is free.',
       next: 'Next'
     }),
     classes: () => ({
@@ -204,7 +204,7 @@
     if (o.at && STEPS.includes(o.at)) W.i = STEPS.indexOf(o.at);
     const el = W.el = document.createElement('div'); el.id = 'welcome'; el.className = 'wl'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-modal', 'true'); el.setAttribute('aria-labelledby', 'wl-h');
     el.innerHTML = shell(); document.body.appendChild(el); document.documentElement.classList.add('wl-lock');
-    if (App.tour && App.tour.stop) App.tour.stop(false);
+    if (App.tour && App.tour.pause) App.tour.pause();   // the tour of the layout comes after the welcome
     el.addEventListener('click', onClick); document.addEventListener('keydown', onKey, true);
     paint(); requestAnimationFrame(() => el.classList.add('open'));
     return true;

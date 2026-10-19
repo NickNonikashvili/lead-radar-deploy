@@ -1,9 +1,10 @@
 <?php
 /* ============================================================
-   Mathub account server — Bo, the AI tutor (Mathub Max), talking with Bo out loud, and classes Bo writes
-   from a syllabus (Pro and Max)
+   Mathub account server — Bo, the AI tutor, talking with Bo out loud, and classes Bo writes from a syllabus
    Routes: ai_status, ai_thread, ai_tutor, ai_forget, ai_class, ai_speak, ai_listen, ai_live_start, ai_live_tick, ai_live_log
-   - Writing a class needs Mathub Pro or Max; talking with Bo needs Max (plan_grants gives testers a plan).
+   - Who can do what: any signed-in member can have Bo turn a syllabus into a class, which is checked first and then
+     published for everyone (api/community.php); asking Bo from the floating Bo on any page needs Mathub Pro or Max;
+     Ask Bo's own page, talking out loud and calls need Max (plan_grants gives testers a plan).
    - This server is the only thing that talks to the AI (Anthropic's API; the key lives in config.local.php),
      and it keeps every request small so it costs as little as possible:
        * each class is turned into a compact text summary: its facts, grading, exams and one line per
@@ -12,8 +13,10 @@
        * the student's progress comes from the device as a short snapshot and is trimmed again here;
        * Bo's chat is kept here: only the last few turns go to the AI, plus up to 12 short notes Bo saved;
        * the parts that do not change (Bo's instructions, the class summary) are marked for prompt caching;
-       * a class from a syllabus is written in steps: the syllabus is read once into an outline that is
-         kept here, then each unit is written from that outline instead of the whole syllabus again.
+       * a class from a syllabus is written in steps: the syllabus is checked (is it a real course, and new
+         to Mathub?) and read into an outline in two requests that share the cached syllabus, the outline is kept
+         here, then each unit is written from that outline instead of the whole syllabus again (each unit is kept
+         too, so the published class can be checked against what Bo wrote).
    - The smallest model that does the job well: claude-haiku-5-5 by default (ai_model_tutor, ai_model_class).
    - Answers can stream (stream: 1): the reply goes out line by line as JSON (NDJSON) while the AI writes it, so
      the chat fills in and Bo starts talking within a second or two. In voice mode (voice: 1) Bo answers the way
@@ -61,6 +64,10 @@ function mh_ai_db(): PDO {
     $db->exec('CREATE TABLE IF NOT EXISTS ai_threads (user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE, cid TEXT NOT NULL, turns TEXT NOT NULL DEFAULT "[]", updated INTEGER NOT NULL, PRIMARY KEY (user_id, cid))');
     $db->exec('CREATE TABLE IF NOT EXISTS ai_notes (user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE, notes TEXT NOT NULL DEFAULT "[]", updated INTEGER NOT NULL)');
     $db->exec('CREATE TABLE IF NOT EXISTS ai_builds (id TEXT PRIMARY KEY, user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE, created INTEGER NOT NULL, outline TEXT NOT NULL, units INTEGER NOT NULL, steps INTEGER NOT NULL DEFAULT 0)');
+    $bc = array_column($db->query('PRAGMA table_info(ai_builds)')->fetchAll(), 'name');
+    if (!in_array('screen', $bc, true)) $db->exec("ALTER TABLE ai_builds ADD COLUMN screen TEXT NOT NULL DEFAULT ''");          // what the check found: the course code, title, school and term
+    if (!in_array('published', $bc, true)) $db->exec("ALTER TABLE ai_builds ADD COLUMN published TEXT NOT NULL DEFAULT ''");    // the pack id once it is on Mathub
+    $db->exec('CREATE TABLE IF NOT EXISTS ai_build_units (build TEXT NOT NULL, n INTEGER NOT NULL, data TEXT NOT NULL, PRIMARY KEY (build, n))');   // each unit as Bo wrote it
     $cols = array_column($db->query('PRAGMA table_info(ai_usage)')->fetchAll(), 'name');
     if (!in_array('voice', $cols, true)) $db->exec('ALTER TABLE ai_usage ADD COLUMN voice INTEGER NOT NULL DEFAULT 0');     // characters Bo spoke
     if (!in_array('listen', $cols, true)) $db->exec('ALTER TABLE ai_usage ADD COLUMN listen INTEGER NOT NULL DEFAULT 0');   // seconds of the student heard
@@ -76,6 +83,7 @@ function mh_ai_prune(): int {
   $db = mh_ai_db(); $n = 0;
   foreach (['ai_usage', 'ai_threads', 'ai_notes', 'ai_builds', 'ai_live'] as $t) $n += (int)$db->exec("DELETE FROM $t WHERE user_id NOT IN (SELECT id FROM users)");
   $n += (int)$db->exec('DELETE FROM ai_builds WHERE created < ' . (time() - 86400));
+  $n += (int)$db->exec('DELETE FROM ai_build_units WHERE build NOT IN (SELECT id FROM ai_builds)');
   // live calls the browser stopped reporting on: hang them up (the limits are counted from the reports)
   $V = mh_ai_voice_settings(mh_config());
   foreach ($db->query('SELECT id, call FROM ai_live WHERE ended = 0 AND last < ' . (time() - 180))->fetchAll() as $r) { if ($V['key'] !== '' && $r['call'] !== '') mh_ai_hangup($V, (string)$r['call']); $db->prepare('UPDATE ai_live SET ended = 1 WHERE id = ?')->execute([$r['id']]); $n++; }
@@ -670,7 +678,9 @@ function mh_ai_route(string $route, array $in, array $cfg, string $ip): void {
     }
     case 'ai_tutor': {
       mh_method('POST'); $u = mh_require_user(); $uid = (int)$u['id'];
-      if (mh_plan($u, $cfg) !== 'max') mh_fail('Talking with Bo is part of Mathub Max.', 402, ['plan' => 'max']);
+      // Bo on every page (the floating Bo) comes with Pro; Ask Bo's own page with Max
+      $plan = mh_plan($u, $cfg); $float = !empty($in['float']);
+      if ($plan !== 'max' && !($plan === 'pro' && $float)) mh_fail($float ? 'Bo on every page is part of Mathub Pro.' : 'Ask Bo is part of Mathub Max.', 402, ['plan' => $float ? 'pro' : 'max']);
       $use = mh_ai_usage($uid); if ($use['tutor'] >= $A['tutor_monthly']) mh_fail('You have used this month\'s ' . $A['tutor_monthly'] . ' questions for Bo. They start again on the 1st.', 429);
       $cid = mh_ai_cid($in['class'] ?? ''); $q = mh_ai_clip($in['q'] ?? '', 2000);
       $img = isset($in['image']) ? mh_ai_file($in['image'], ['image/jpeg', 'image/png', 'image/webp', 'image/gif'], MH_AI_IMAGE_BYTES) : null;
@@ -830,31 +840,50 @@ function mh_ai_route(string $route, array $in, array $cfg, string $ip): void {
     }
     case 'ai_class': {
       mh_method('POST'); $u = mh_require_user(); $uid = (int)$u['id'];
-      if (!in_array(mh_plan($u, $cfg), ['pro', 'max'], true)) mh_fail('Making a class with Bo is part of Mathub Pro and Max.', 402, ['plan' => 'pro']);
       mh_rate_or_fail("ai_class:$uid", 40, 3600, 'Bo is writing a lot of classes for you. Try again in a while.');
       $step = (string)($in['step'] ?? ''); $Z = mh_ai_sizes((string)($in['size'] ?? 'full'));
       @set_time_limit(200);
       if ($step === 'outline') {
-        $use = mh_ai_usage($uid); if ($use['classes'] >= $A['class_monthly']) mh_fail('You have used this month\'s ' . $A['class_monthly'] . ' classes written by Bo. They start again on the 1st, and you can still make classes with your own AI.', 429);
+        $use = mh_ai_usage($uid); if ($use['classes'] >= $A['class_monthly']) mh_fail('You have added this month\'s ' . $A['class_monthly'] . ' classes with Bo. They start again on the 1st, and you can still make a class for yourself with the AI you already use.', 429);
         $S = is_array($in['syllabus'] ?? null) ? $in['syllabus'] : []; $text = trim((string)($S['text'] ?? ''));
         $file = isset($S['file']) ? mh_ai_file($S['file'], ['application/pdf', 'image/jpeg', 'image/png', 'image/webp', 'image/gif', 'text/plain'], MH_AI_FILE_BYTES) : null;
         if ($text === '' && !$file) mh_fail('Paste your syllabus or attach it first.', 400);
         if (mb_strlen($text) > 120000) mh_fail('That syllabus is very long. Paste the parts with the schedule, topics, exams and grading.', 413);
+        require_once __DIR__ . '/community.php';
+        // 1. the file: what it says it is, and nothing harmful in it (it is never kept)
+        if ($file) { $why = mh_cc_scan($file, $cfg); if ($why !== '') mh_fail($why, 422, ['check' => 'file']); }
         $doc = [];
         if ($file && $file['type'] === 'application/pdf') $doc[] = ['type' => 'document', 'source' => ['type' => 'base64', 'media_type' => 'application/pdf', 'data' => $file['data']]];
         elseif ($file && $file['type'] === 'text/plain') $text = trim($text . "\n" . mb_substr((string)base64_decode($file['data']), 0, 120000));
         elseif ($file) $doc[] = ['type' => 'image', 'source' => ['type' => 'base64', 'media_type' => $file['type'], 'data' => $file['data']]];
         if ($text !== '') $doc[] = ['type' => 'text', 'text' => "THE SYLLABUS:\n" . $text];
-        $doc[] = ['type' => 'text', 'text' => 'Today is ' . gmdate('Y-m-d') . ".\n" . mh_ai_outline_prompt($Z)];
-        $r = mh_ai_call($A, $A['class_model'], [['type' => 'text', 'text' => MH_AI_CLASS_SYS]], [['role' => 'user', 'content' => $doc]], 8000, 170);
+        $doc[count($doc) - 1]['cache_control'] = ['type' => 'ephemeral'];   // the two requests below share the syllabus, so the second reads it from the cache
+        $sys = [['type' => 'text', 'text' => MH_AI_CLASS_SYS]];
+        // 2. a real course, with nothing in it that cannot be published, and not on Mathub already
+        mh_rate_or_fail("ai_class_check:$uid", 30, 86400, 'That is a lot of syllabi for one day. Try again tomorrow.');
+        $r0 = mh_ai_call($A, $A['class_model'], $sys, [['role' => 'user', 'content' => array_merge($doc, [['type' => 'text', 'text' => MH_CC_SCREEN]])]], 600, 90);
+        mh_ai_count($uid, '', $r0['in'], $r0['out']);
+        $K = mh_ai_json($r0['text']); if (!$K || !array_key_exists('syllabus', $K)) mh_fail('Bo could not check this syllabus just now. Please try again.', 502);
+        $why = mh_ai_plain($K['reason'] ?? '', 200);
+        if (!($K['syllabus'] === true || $K['syllabus'] === 'true')) mh_fail('This does not look like a course syllabus' . ($why !== '' ? ': ' . rtrim($why, '.') . '.' : '.') . ' Bo makes classes only from the syllabus of a real course.', 422, ['check' => 'syllabus']);
+        $worry = mh_ai_plain($K['concerns'] ?? '', 200); if ($worry !== '') mh_fail('This syllabus has something in it that cannot be published for everyone: ' . rtrim($worry, '.') . '.', 422, ['check' => 'content']);
+        $code = mh_ai_plain($K['code'] ?? '', 40); $school = mh_ai_plain($K['school'] ?? '', 120);
+        if (mh_cc_code($code) === '') mh_fail('Bo could not find the course code (like CHMY 121) in this syllabus. Every class on Mathub has one: add the page that shows it.', 422, ['check' => 'code']);
+        if ($dup = mh_cc_find($code, $school)) mh_fail("{$dup['code']} {$dup['name']} is already on Mathub, so it was not added again.", 409, ['exists' => $dup]);
+        // 3. the outline
+        $r = mh_ai_call($A, $A['class_model'], $sys, [['role' => 'user', 'content' => array_merge($doc, [['type' => 'text', 'text' => 'Today is ' . gmdate('Y-m-d') . ".\n" . mh_ai_outline_prompt($Z)]])]], 8000, 170);
         $O = mh_ai_json($r['text']);
         if (!$O || empty($O['UNITS']) || empty($O['SECTIONS']) || !is_array($O['UNITS']) || !is_array($O['SECTIONS'])) { mh_ai_count($uid, '', $r['in'], $r['out']); mh_fail($r['stop'] === 'max_tokens' ? 'That syllabus made a very long outline. Choose "Shorter class" and try again.' : 'Bo could not find the topics and dates in that. Try the syllabus PDF itself, or paste its text.', 422); }
         $units = array_values(array_filter(array_map(fn($x) => is_array($x) ? (int)($x['n'] ?? 0) : 0, $O['UNITS'])));
         if (!$units || count($units) > 16 || count($O['SECTIONS']) > 40) mh_fail('That syllabus did not split into units Bo could use. Try pasting its schedule and topics.', 422);
+        // the course that was checked: the outline keeps its code, and a different code in it is checked again
+        if (mh_cc_code((string)($O['code'] ?? '')) !== mh_cc_code($code)) { if (mh_cc_code((string)($O['code'] ?? '')) !== '' && ($dup = mh_cc_find((string)$O['code'], $school))) mh_fail("{$dup['code']} {$dup['name']} is already on Mathub, so it was not added again.", 409, ['exists' => $dup]); $O['code'] = $code; if (is_array($O['COURSE'] ?? null)) $O['COURSE']['code'] = $code; }
+        if (trim((string)($O['name'] ?? '')) === '') $O['name'] = mh_ai_plain($K['name'] ?? '', 120);
+        $screen = ['code' => $code, 'name' => mh_ai_plain($K['name'] ?? '', 120), 'school' => $school, 'term' => mh_ai_plain($K['term'] ?? '', 40)];
         $id = bin2hex(random_bytes(12));
-        $db->prepare('INSERT INTO ai_builds (id, user_id, created, outline, units) VALUES (?, ?, ?, ?, ?)')->execute([$id, $uid, time(), json_encode($O, JSON_UNESCAPED_UNICODE), count($units)]);
+        $db->prepare('INSERT INTO ai_builds (id, user_id, created, outline, units, screen) VALUES (?, ?, ?, ?, ?, ?)')->execute([$id, $uid, time(), json_encode($O, JSON_UNESCAPED_UNICODE), count($units), json_encode($screen, JSON_UNESCAPED_UNICODE)]);
         mh_ai_count($uid, 'classes', $r['in'], $r['out']);
-        mh_json(['ok' => true, 'build' => $id, 'outline' => $O, 'units' => $units]);
+        mh_json(['ok' => true, 'build' => $id, 'outline' => $O, 'units' => $units, 'checked' => $screen]);
       }
       if ($step === 'unit') {
         $bid = preg_replace('/[^a-f0-9]/', '', (string)($in['build'] ?? '')); $n = (int)($in['unit'] ?? 0);
@@ -867,6 +896,7 @@ function mh_ai_route(string $route, array $in, array $cfg, string $ip): void {
         mh_ai_count($uid, '', $r['in'], $r['out']);
         $J = mh_ai_json($r['text']);
         if (!$J) mh_fail($r['stop'] === 'max_tokens' ? 'Unit ' . $n . ' came out too long. Choose "Shorter class" and try again.' : 'Bo stumbled writing unit ' . $n . '. Try again.', 422);
+        $db->prepare('INSERT OR REPLACE INTO ai_build_units (build, n, data) VALUES (?, ?, ?)')->execute([$bid, $n, json_encode($J, JSON_UNESCAPED_UNICODE)]);   // the published class is checked against it
         mh_json(['ok' => true, 'unit' => $n, 'data' => $J]);
       }
       mh_fail('Unknown step.', 400);

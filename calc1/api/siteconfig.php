@@ -27,6 +27,7 @@ function mh_siteconfig_fields(): array {
     'ai_tutor_monthly'   => ['ai', 'Questions to Bo, per student per month', 'int', '', [0, 100000]],
     'ai_tutor_daily'     => ['ai', 'Questions to Bo, per student per day', 'int', '', [1, 10000]],
     'ai_class_monthly'   => ['ai', 'Classes Bo writes, per student per month', 'int', '', [0, 1000]],
+    'virustotal_key'     => ['ai', 'VirusTotal API key', 'secret', 'Optional. Each syllabus file someone uploads is also looked up on VirusTotal by its fingerprint (SHA-256); the file itself is never sent (virustotal.com → API key).'],
     'ai_live_model'      => ['ai', 'Model for live calls', 'model', ''],
     'ai_live_voice'      => ['ai', 'Bo’s voice on calls', 'select', '', $voices],
     'ai_live_monthly'    => ['ai', 'Call minutes, per student per month', 'int', '', [0, 10000]],
@@ -203,6 +204,8 @@ function mh_siteconfig_route(string $route, array $in, array $cfg, string $ip): 
         $ok = trim((string)($c['openai_key'] ?? ''));
         if ($ok === '') $out[] = ['name' => 'OpenAI', 'pass' => false, 'message' => 'No key set (calls use basic voice).'];
         else { [$code, $j, $err] = mh_siteconfig_http('GET', rtrim((string)($c['openai_api'] ?? 'https://api.openai.com/v1'), '/') . '/models', ['Authorization: Bearer ' . $ok]); $out[] = ['name' => 'OpenAI', 'pass' => $code >= 200 && $code < 300, 'message' => $code >= 200 && $code < 300 ? 'The key works.' : mh_siteconfig_why($code, $j, $err)]; }
+        $vk = trim((string)($c['virustotal_key'] ?? ''));   // optional: checked with the EICAR test file's fingerprint, which every scanner knows
+        if ($vk !== '') { [$code, $j, $err] = mh_siteconfig_http('GET', rtrim((string)($c['virustotal_api'] ?? 'https://www.virustotal.com/api/v3/files/'), '/') . '/275a021bbfb6489e54d471899f7db9d1663fc695ec2fe2a2c4538aabf651fd0f', ['x-apikey: ' . $vk, 'accept: application/json']); $out[] = ['name' => 'VirusTotal', 'pass' => $code === 200, 'message' => $code === 200 ? 'The key works.' : mh_siteconfig_why($code, $j, $err)]; }
         mh_json(['ok' => true, 'pass' => !in_array(false, array_column($out, 'pass'), true), 'results' => $out]);
       }
       if ($what === 'pay') {

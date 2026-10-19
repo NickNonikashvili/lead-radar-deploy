@@ -4,8 +4,13 @@ Two monthly plans, on the website and in the iPhone, iPad and Android apps:
 
 | Plan | Price | What it unlocks |
 |---|---|---|
-| **Mathub Pro** | $15 a month | **Classes Bo writes** from a syllabus you drop in or paste (PDF, photo or text; up to 15 a month), and making classes any other way: with the AI you already use (copy the instructions, paste the answer), from a class file, or from a class someone shares. |
-| **Mathub Max** | $50 a month | Everything in Pro, plus **Ask Bo, the AI tutor** (`#/tutor`), with photos of problems and, on the website, **voice calls with Bo** (`assets/talk.js`). |
+| **Mathub Pro** | $15 a month | **Bo on every page** of the website (the floating Bo, `assets/bo-float.js`: questions about the page, photos and PDFs of problems), and classes of your own: made with the AI you already use (copy the instructions, paste the answer), from a class file, or from a class someone shares. |
+| **Mathub Max** | $50 a month | Everything in Pro, plus **Ask Bo's own page** (`#/tutor`, the Bo tab in the apps) and, on the website, **voice calls with Bo** (`assets/talk.js`). |
+
+Since 2026.10.19 Bo writing a class from a syllabus is free for any signed-in member (up to 15 a month): the class is
+checked (malware, a real course, not on Mathub yet) and published for everyone (`api/community.php`, README →
+Classes anyone adds from a syllabus). The app store listings and review notes below still describe the earlier split
+and need updating before the apps are submitted again.
 
 Everything else stays free:
 

@@ -41,10 +41,10 @@ const PNG = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwA
   fs.writeFileSync(STATE, JSON.stringify({ [aliceId]: { expires: new Date(Date.now() + 30 * 864e5).toISOString(), plan: 'pro' } }));
   await api(a, 'create_status&refresh=1'); await a.evaluate(() => App.subscription.refresh(true)); await a.waitForTimeout(500);
   await go(a, '#/create', 1500);
-  check('with Pro, the Create page says Pro is on and Bo writes her classes, with the way up to Max for Ask Bo', /Mathub Pro is on: Bo writes your classes/.test(await txt(a, '#mk-sub')) && !!(await a.$('#mk-bo-text')) && /classes left this month/.test(await txt(a, '#mk-bo-left')), await txt(a, '#mk-sub'));
+  check('with Pro, the Create page says Pro is on and Bo is on every page, with the way up to Max for Ask Bo', /Mathub Pro is on: Bo is on every page/.test(await txt(a, '#mk-sub')) && !!(await a.$('#mk-bo-text')) && /classes left this month/.test(await txt(a, '#mk-bo-left')), await txt(a, '#mk-sub'));
   await a.fill('#mk-bo-text', 'TEST 102 Pro writing, Fall 2026. Exam 1 Oct 20. Topics: ratios, percents, rates, growth.');
   await a.click('[data-bo-write]'); await a.waitForTimeout(5000);
-  check('Bo writes a class for a Pro member too: no plans card, the steps run, then the preview with Add', !(await a.$('#paywall')) && (await a.$$eval('#mk-bo-steps li.done', l => l.length)) === 4 && /TEST 101/.test(await txt(a, '#mk-bo-result')) && !!(await a.$('#mk-bo-result [data-add]')) && /Your class is ready/.test(await txt(a, '#mk-prog-now')), await txt(a, '#mk-bo'));
+  check('Bo writes a class for a Pro member too: no plans card, the steps run, then the preview with Add to Mathub', !(await a.$('#paywall')) && (await a.$$eval('#mk-bo-steps li.done', l => l.length)) === 4 && /TEST 102/.test(await txt(a, '#mk-bo-result')) && !!(await a.$('#mk-bo-result [data-publish]')) && /Your class is ready/.test(await txt(a, '#mk-prog-now')), await txt(a, '#mk-bo'));
   await a.click('#mk-sub [data-action="sub-max"]'); await a.waitForTimeout(1200);
   check('the move-up card: Max only, and a note to cancel Pro on the website so she is not billed twice', /Move up to Max/.test(await txt(a, '#paywall h2')) && /cancel Pro/.test(await txt(a, '#paywall .pw-fine')) && /Move up to Max for \$50 a month/.test(await txt(a, '#paywall [data-action="pw-buy"]')));
   await a.keyboard.press('Escape');
@@ -139,17 +139,22 @@ const PNG = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwA
   // Bo writes a class
   await go(m, '#/create', 1500);
   check('with Max, the Create page says so, with the link to ask Bo, and the syllabus form', /Mathub Max is on/.test(await txt(m, '#mk-sub')) && !!(await m.$('#mk-sub a[href="#/tutor"]')) && !!(await m.$('#mk-bo-text')));
-  await m.fill('#mk-bo-text', 'TEST 101 Testing Bo, Fall 2026. Exam 1 Oct 20. Topics: ratios, percents, rates, growth.');
+  const tcode = 'TB ' + (1000 + Math.floor(Math.random() * 8999)); const tid = tcode.toLowerCase().replace(' ', '');
+  await m.fill('#mk-bo-text', `${tcode} Testing Bo, Fall 2026. Exam 1 Oct 20. Topics: ratios, percents, rates, growth.`);
   await m.click('[data-bo-write]'); await m.waitForTimeout(5000);
   const steps = await m.$$eval('#mk-bo-steps li', ls => ls.map(l => [l.textContent.trim(), l.className]));
-  check('Bo shows his steps: reading the syllabus, each unit, checking', steps.length === 4 && steps.every(s => s[1] === 'done') && /Writing unit 1: Numbers/.test(steps[1][0]), steps);
-  check('then the class preview with Add', /TEST 101/.test(await txt(m, '#mk-bo-result')) && /4 topics/.test(await txt(m, '#mk-bo-result')) && !!(await m.$('#mk-bo-result [data-add]')));
-  await m.click('#mk-bo-result [data-add]'); await m.waitForTimeout(2000);
-  check('adding it opens the class (no paywall: Max includes making classes)', !(await m.$('#paywall')) && /#\/my\d{4}\/dashboard/.test(m.url()), m.url());
-  const saved = (await api(m, 'myclasses')).json.classes || [];
-  check('and it is saved with the account', saved.some(c => c.code === 'TEST 101'), saved.map(c => c.code));
-  await go(m, `#/${saved[0].id}/practice`, 1500);
+  check('Bo shows his steps: checking the syllabus, each unit, checking the class', steps.length === 4 && steps.every(s => s[1] === 'done') && /Checking your syllabus/.test(steps[0][0]) && /Writing unit 1: Numbers/.test(steps[1][0]), steps);
+  check('then the class preview with Add to Mathub, for everyone who takes it', new RegExp(tcode).test(await txt(m, '#mk-bo-result')) && /4 topics/.test(await txt(m, '#mk-bo-result')) && !!(await m.$('#mk-bo-result [data-publish]')) && /for everyone who takes/.test(await txt(m, '#mk-bo-result')));
+  await m.click('#mk-bo-result [data-publish]'); await m.waitForTimeout(2600);
+  check('adding it puts it on Mathub and opens the class', !(await m.$('#paywall')) && m.url().endsWith(`#/${tid}/dashboard`), m.url());
+  const pub = (await api(m, 'classpack_list')).json.packs || [];
+  check('it is in everyone\'s list of classes, and in hers', pub.some(p => p.id === tid) && (await m.evaluate(id => (App.settings().courses || []).includes(id), tid)), pub.map(p => p.id));
+  await go(m, `#/${tid}/practice`, 1500);
   check('the class Bo wrote has a working quizzer', /Quizzer/.test(await txt(m, '#view')));
+  await go(m, '#/create', 1500); await m.fill('#mk-bo-text', `${tcode} Testing Bo, Fall 2026. Topics: ratios.`); await m.click('[data-bo-write]'); await m.waitForTimeout(2500);
+  check('a second upload of that syllabus says it is on Mathub already, with Open', /already on Mathub/.test(await txt(m, '#mk-bo-result')) && (await m.$eval('#mk-bo-result .mk-exists a', a => a.getAttribute('href'))) === `#/${tid}/dashboard`, await txt(m, '#mk-bo-result'));
+  check('and the Create page lists the classes she added to Mathub', /Classes you added to Mathub/.test(await txt(m, '#mk-pub-sec')) && new RegExp(tcode).test(await txt(m, '#mk-pub')), await txt(m, '#mk-pub-sec'));
+  require('child_process').spawnSync('php', ['-r', '$d = new PDO("sqlite:" . $argv[1]); $d->prepare("DELETE FROM class_packs WHERE id = ?")->execute([$argv[2]]);', path.join(__dirname, '..', 'api', 'data', 'mathub.sqlite'), tid]);
   await cm.close();
 
   // phones

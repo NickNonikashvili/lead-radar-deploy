@@ -628,3 +628,4 @@ html.bf-pointing, html.bf-pointing * { cursor: crosshair !important; }
 html[data-motion="off"] :is(.bf-fab-av, .bf-dots i, .bf-tip, .bf-sel, .bf-pointbar) { animation: none; }
 html[data-motion="off"] :is(.bf-pop, .bf-fab-l, .bf-hl) { transition: none; }
 @media print { .bf-fab, .bf-pop, .bf-tip, .bf-sel, .bf-back, .bf-pointbar, .bf-hl { display: none !important; } }
+.bf-ic[hidden] { display: none; }

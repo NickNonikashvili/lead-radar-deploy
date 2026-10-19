@@ -7,8 +7,11 @@
    - where classes live: in the apps, on the device (and with the account when signed in); on the website,
      with the account (and cached in this browser). The same account sees the same classes everywhere.
      Server: api/myclasses.php.
-   - the plans: Mathub Pro (Bo writes classes from a syllabus, api/ai.php; making and adding classes; $15 a month)
-     and Mathub Max (Pro, plus Ask Bo, the AI tutor, assets/tutor.js; $50 a month). In the apps they are bought through the
+   - Bo writes a class from a syllabus for any signed-in member, free (api/ai.php): the file is scanned for malware,
+     the syllabus is checked to be a real course that is not on Mathub yet, and the class is published for everyone
+     (api/community.php). The classes below are a student's own (shared with them, from a file or their own AI).
+   - the plans: Mathub Pro (Bo on every page, assets/bo-float.js; classes of your own; $15 a month) and Mathub Max
+     (Pro, plus Ask Bo's own page, talking and calls, assets/tutor.js; $50 a month). In the apps they are bought through the
      App Store or Google Play; on the website through a RevenueCat Web Purchase Link (Stripe). Both go to
      the same RevenueCat customer (mh_<account id>), so one subscription works everywhere.
      The example class is free, and classes made before subscriptions existed stay free. When it ends,
@@ -411,14 +414,15 @@ THE SYLLABUS:
     return { pack: P, notes };
   }
   /* ============================================================
-     The plans: Mathub Pro (Bo writes classes from a syllabus; making and adding classes) and Mathub Max (Pro,
-     plus Ask Bo, the AI tutor). One RevenueCat customer per account (mh_<id>) with the entitlements "pro" and "max";
-     a Max product unlocks both.
+     The plans: Mathub Pro (Bo on every page, the floating Bo; classes of your own: shared, from a file or made with
+     your own AI) and Mathub Max (Pro, plus Ask Bo's own page, talking out loud and calls). Turning a syllabus into a
+     class for everyone needs no plan. One RevenueCat customer per account (mh_<id>) with the entitlements "pro" and
+     "max"; a Max product unlocks both.
      ============================================================ */
   const BILLING = { ios: '', android: '', pro: 'pro', max: 'max' };   // RevenueCat public SDK keys (appl_… and goog_…): public by design, safe in the app
   const PLANS = {
-    pro: { name: 'Mathub Pro', short: 'Pro', web: '$15', lines: ['Drop in any syllabus and Bo writes the whole class: notes, flashcards, practice questions, its calendar and grades', 'Classes your classmates share, class files, and classes made with the AI you already use'] },
-    max: { name: 'Mathub Max', short: 'Max', web: '$50', lines: ['Everything in Pro', 'Ask Bo, your AI tutor, any question, any time. He knows your syllabus, your exams and what you are stuck on', NATIVE ? 'Send him a photo of a problem and he walks you through it' : 'Talk with him out loud, or send a photo of a problem, and he walks you through it'] }
+    pro: { name: 'Mathub Pro', short: 'Pro', web: '$15', lines: [NATIVE ? 'Bo on every page of the Mathub website, with this account: ask about whatever you are looking at' : 'Bo on every page: ask about whatever you are looking at. Tap a question and he walks you through it, or send him a photo or a PDF of a problem', 'Classes of your own: ones your classmates share, class files, and classes made with the AI you already use'] },
+    max: { name: 'Mathub Max', short: 'Max', web: '$50', lines: ['Everything in Pro', 'Ask Bo’s own page: long chats about any class, with his whiteboard beside you. He knows your syllabus, your exams and what you are stuck on', NATIVE ? 'His notes about how you learn, kept from chat to chat' : 'Talk with him out loud, or call him and work through it together'] }
   };
   const RANK = { '': 0, pro: 1, max: 2 };
   const subKey = () => ((global.MATHUB_BILLING_KEYS || BILLING)[ANDROID ? 'android' : 'ios']) || '';
@@ -552,7 +556,7 @@ THE SYLLABUS:
       const old = $('#paywall'); if (old) old.remove();
       const need = o.need === 'max' ? 'max' : 'pro'; const have = Sub.plan();
       const what = o.code ? esc(o.code) : '';
-      const why = o.reason === 'locked' ? `${what} is locked because your plan is off. Everything in it is still saved ${WHERE}.` : o.reason === 'shared' ? `Adding ${what} to your classes needs Mathub Pro or Max.` : o.reason === 'bo' ? (have === 'pro' ? 'Bo is part of Mathub Max. Move up from Pro to talk with him.' : 'Talking with Bo, your AI tutor, is part of Mathub Max.') : o.reason === 'bo-class' ? 'Bo writing your class from the syllabus is part of Mathub Pro and Max.' : what ? `Adding ${what} needs Mathub Pro or Max.` : 'Bo writes your classes with Mathub Pro. Max adds Ask Bo, your AI tutor.';
+      const why = o.reason === 'locked' ? `${what} is locked because your plan is off. Everything in it is still saved ${WHERE}.` : o.reason === 'shared' ? `Adding ${what} to your classes needs Mathub Pro or Max.` : o.reason === 'bo' ? (have === 'pro' ? 'Ask Bo’s own page and calls are part of Mathub Max. Move up from Pro.' : 'Ask Bo’s own page and calls with Bo are part of Mathub Max.') : o.reason === 'bo-float' ? 'Bo on every page is part of Mathub Pro.' : what ? `Adding ${what} needs Mathub Pro or Max.` : 'Mathub Pro puts Bo on every page. Max adds Ask Bo’s own page and calls.';
       const plans = need === 'max' || have === 'pro' ? ['max'] : ['pro', 'max']; let pick = plans[0];
       const el = document.createElement('div'); el.id = 'paywall'; el.className = NATIVE ? 'modal-backdrop sheet-backdrop' : 'modal-backdrop pw-backdrop';
       const cancelWhere = NATIVE ? `your ${ANDROID ? 'Google Play' : 'Apple ID'} subscriptions` : 'Your plan (in your account menu), or with the link in your receipt email';
@@ -654,9 +658,9 @@ THE SYLLABUS:
   /* the plan line under the title: what the plan gives here, and the way up */
   const subLine = () => {
     const p = Sub.plan();
-    if (p === 'max') return `${icon('check', 15)} Mathub Max is on: Bo writes your classes, and you can <a href="#/tutor">ask him anything</a>.`;
-    if (p === 'pro') return `${icon('check', 15)} Mathub Pro is on: Bo writes your classes. <button type="button" class="linkbtn" data-action="sub-max">Max</button> adds Ask Bo, your AI tutor.`;
-    return `Bo writing your class is part of <button type="button" class="linkbtn" data-action="sub">Mathub Pro</button> (<span class="mk-sub-price">${esc(PLANS.pro.web)} a month</span>). <button type="button" class="linkbtn" data-action="sub-max">Max</button> adds Ask Bo, your AI tutor. The example class is free.`;
+    if (p === 'max') return `${icon('check', 15)} Mathub Max is on: Bo is on every page, and you can <a href="#/tutor">ask him anything</a>.`;
+    if (p === 'pro') return `${icon('check', 15)} Mathub Pro is on: Bo is on every page. <button type="button" class="linkbtn" data-action="sub-max">Max</button> adds Ask Bo’s own page and calls.`;
+    return `Turning a syllabus into a class is free. <button type="button" class="linkbtn" data-action="sub">Mathub Pro</button> (<span class="mk-sub-price">${esc(PLANS.pro.web)} a month</span>${NATIVE ? ') puts Bo on every page of the website, and' : ') puts Bo on every page, and'} <button type="button" class="linkbtn" data-action="sub-max">Max</button> adds Ask Bo’s own page and calls.`;
   };
   App.views.create = {
     title: 'Create a class',
@@ -693,11 +697,12 @@ THE SYLLABUS:
           </div>
           <div class="mk-result" id="mk-alt-result" aria-live="polite"></div>
         </section>
+        <section class="land-sec mk-pub-sec" id="mk-pub-sec" aria-labelledby="mk-pub-h" hidden><h2 class="sec-title" id="mk-pub-h">Classes you added to Mathub</h2><div id="mk-pub"></div></section>
         <section class="land-sec mk-mine-sec" aria-labelledby="mk-mine-h"><h2 class="sec-title" id="mk-mine-h">Classes you created</h2><div id="mk-mine"></div></section>
       </div>`;
       const ta = $('#mk-text', root), out = $('#mk-result', root), alt = $('#mk-alt-result', root);
       wireBo($('#mk-bo', root));
-      paintMine($('#mk-mine', root));
+      paintMine($('#mk-mine', root)); paintPublished(root);
       if (!Sub.active()) Sub.offer().then(() => { const p = Sub.price('pro'); const el = $('.mk-sub-price', root); if (p && el) el.textContent = `${p} a month`; }).catch(() => {});
       const check = () => { pending = null; pendingFree = false; out.innerHTML = resultHtml(ta.value); wireResult(out, ta); };
       const showAlt = (text, free) => { pending = null; out.innerHTML = ''; alt.innerHTML = resultHtml(text); pendingFree = !!free; wireResult(alt, null); alt.scrollIntoView({ block: 'nearest', behavior: Plat.reduceMotion() ? 'auto' : 'smooth' }); };
@@ -757,13 +762,14 @@ THE SYLLABUS:
   }
   const savedMsg = code => NATIVE ? `${code} is ready. It is saved on this ${DEVICE}${user() ? ' and with your account' : ''}.` : `${code} is ready. It is saved with your account.`;
   /* ============================================================
-     Mathub Pro and Max: Bo writes the class from the syllabus (api/ai.php, step by step: the outline, then each unit)
+     Bo writes the class from the syllabus, for everyone (api/ai.php, step by step: the checks, the outline, then each
+     unit; then api/community.php publishes it)
      ============================================================ */
   function boCardHtml() {
     const size = settings().mkSize === 'short' ? 'short' : 'full';
     return `<section class="mk-bo" id="mk-bo" aria-labelledby="mk-bo-h">
       <div class="mk-bo-intro"><span class="mk-bo-av" aria-hidden="true">${App.bobcatSvg ? App.bobcatSvg(84) : ''}</span>
-        <div class="mk-bo-t"><h2 class="mk-bo-h" id="mk-bo-h">Bo writes it from your syllabus</h2><p>Give him the syllabus. In a minute or two you have the whole class:</p>
+        <div class="mk-bo-t"><h2 class="mk-bo-h" id="mk-bo-h">Bo writes it from your syllabus</h2><p>Give him the syllabus. In a minute or two the whole class is on Mathub, for you and everyone who takes it:</p>
         <ul class="mk-bo-gets"><li>${icon('book', 16)}<span>Notes and the key ideas of every topic</span></li><li>${icon('cards', 16)}<span>Flashcards and practice questions</span></li><li>${icon('calendar', 16)}<span>Its calendar, exams and your grade calculator</span></li></ul></div></div>
       <div class="mk-bo-form">
         <label class="mk-drop" id="mk-drop"><input type="file" id="mk-bo-file" class="sr-only" accept=".pdf,application/pdf,image/*,.txt,text/plain"><span class="mk-drop-ic" aria-hidden="true">${icon('upload', 22)}</span><span class="mk-drop-t"><b>Drop your syllabus here</b><span>PDF, photo or text file · <u>choose a file</u></span></span></label>
@@ -772,7 +778,8 @@ THE SYLLABUS:
         <label class="sr-only" for="mk-bo-text">The syllabus text</label>
         <textarea class="input mk-bo-text" id="mk-bo-text" rows="4" placeholder="The schedule, topics, exams and grading"></textarea>
         <div class="mk-bo-go"><div class="mk-size" role="radiogroup" aria-label="How big a class?"><button type="button" role="radio" class="chip toggle${size === 'full' ? ' on' : ''}" aria-checked="${size === 'full'}" data-bo-size="full">Full class</button><button type="button" role="radio" class="chip toggle${size === 'short' ? ' on' : ''}" aria-checked="${size === 'short'}" data-bo-size="short">Shorter class</button></div><button type="button" class="btn primary lg mk-bo-write" data-bo-write>${icon('wand', 18)} Write my class</button></div>
-        <p class="small muted mk-bo-note">${icon('shield', 13)} Bo sends your syllabus to Anthropic's AI to write the class; it is not used to train the AI. <a href="#/policy/privacy">Privacy</a></p><p class="small mk-bo-left" id="mk-bo-left"></p>
+        <ul class="mk-bo-checks small"><li>${icon('shield', 13)} The file is scanned for malware and never kept.</li><li>${icon('check', 13)} Bo checks that it is the syllabus of a real course, and that the class is not on Mathub already.</li><li>${icon('users', 13)} The class goes on Mathub for everyone. Your name is not on it.</li></ul>
+        <p class="small muted mk-bo-note">Bo sends your syllabus to Anthropic's AI to check it and write the class; it is not used to train the AI. <a href="#/policy/privacy">Privacy</a> · <a href="#/policy/create">Terms</a></p><p class="small mk-bo-left" id="mk-bo-left"></p>
       </div>
       <div class="mk-prog" id="mk-bo-prog" hidden><div class="mk-prog-h"><span class="mk-prog-av" aria-hidden="true">${App.bobcatSvg ? App.bobcatSvg(40) : ''}</span><div class="mk-prog-t" role="status"><b id="mk-prog-now"></b><span id="mk-prog-of"></span></div></div>
         <div class="mk-prog-bar" aria-hidden="true"><i id="mk-prog-fill"></i></div><ol class="mk-bo-steps" id="mk-bo-steps"></ol></div>
@@ -806,7 +813,7 @@ THE SYLLABUS:
     if (user()) api('ai_status').then(r => {
       if (!left.isConnected) return;
       if (!r.enabled) { left.textContent = 'Bo is not switched on yet: use the AI you already use below for now.'; const d = $('#mk-diy'); if (d) d.open = true; return; }
-      if (r.pro && r.usage) { const n = Math.max(0, r.usage.class_limit - r.usage.classes); left.textContent = `${n} of ${r.usage.class_limit} classes left this month.`; }
+      if (r.usage) { const n = Math.max(0, r.usage.class_limit - r.usage.classes); left.textContent = `${n} of ${r.usage.class_limit} classes left this month.`; }
     }).catch(() => {});
     const setFile = (f, name) => { file = f; build = null; chip.hidden = !f; drop.hidden = !!f; if (f) { $('#mk-bo-fname', box).textContent = name; $('#mk-bo-fsize', box).textContent = `${f.type === 'application/pdf' ? 'PDF' : f.type === 'text/plain' ? 'Text file' : 'Photo'} · ${fmtSize(f.data.length * 0.75)} · ready for Bo`; } };
     const take = async f => { if (!f) return; try { setFile(await readSyllabusFile(f), f.name); } catch (x) { toast(x.message, 4000); } };
@@ -831,16 +838,15 @@ THE SYLLABUS:
       steps.innerHTML = list.map((t, i) => `<li class="${i < at ? 'done' : i === at ? (fail ? 'fail' : 'now') : ''}"><span class="mk-bo-dot" aria-hidden="true">${i < at ? icon('check', 13) : ''}</span>${esc(t)}</li>`).join('');
     };
     async function run(btn) {
-      if (!user()) { toast('Sign in first: Bo writes classes for your Mathub account.', 4000); signIn('login'); return; }
-      if (!Sub.active() && !(await paywall({ need: 'pro', reason: 'bo-class' }))) return;
+      if (!user()) { toast('Sign in first: Bo adds the class with your Mathub account.', 4000); signIn('login'); return; }
       const text = (ta.value || '').trim(); const size = settings().mkSize === 'short' ? 'short' : 'full';
       if (!build && !text && !file) { toast('Drop in your syllabus or paste its text first.', 3500); ta.focus(); return; }
       btn.disabled = true; res.innerHTML = ''; box.classList.add('busy');
-      let list = ['Reading your syllabus']; let at = 0;
+      let list = ['Checking your syllabus']; let at = 0;
       try {
         if (!build) { paint(list, 0); const r = await api('ai_class', { step: 'outline', size, syllabus: Object.assign({}, text ? { text } : {}, file ? { file } : {}) }); build = r.build; outline = r.outline; done = []; }
         const units = (outline.UNITS || []).map(u => u.n);
-        list = ['Reading your syllabus'].concat(units.map(n => { const u = outline.UNITS.find(x => x.n === n); return `Writing unit ${n}: ${u.title}`; })).concat(['Checking the class']);
+        list = ['Checking your syllabus'].concat(units.map(n => { const u = outline.UNITS.find(x => x.n === n); return `Writing unit ${n}: ${u.title}`; })).concat(['Checking the class']);
         for (const n of units) {
           if (done.some(d => d.n === n)) continue; at = 1 + units.indexOf(n); paint(list, at);
           const r = await api('ai_class', { step: 'unit', build, unit: n, size }); done.push({ n, data: r.data });
@@ -848,19 +854,46 @@ THE SYLLABUS:
         at = list.length - 1; paint(list, at);
         const { pack, notes } = repair(assemble(outline, done.sort((a, b) => a.n - b.n)), newId()); const v = Packs.validate(pack);
         if (v.errors.length) throw new Error('Bo\'s class did not pass the checks: ' + v.errors.slice(0, 2).join(' ') + ' Try again, or use “Shorter class”.');
-        paint(list, list.length); pending = pack; pendingFree = false;
-        res.innerHTML = previewHtml(pack, v, notes, `<div class="row gap-sm mt-1"><button type="button" class="btn primary" data-add>${icon('plus', 15)} Add ${esc(pack.code)}</button></div>`);
-        wireResult(res, ta); Plat.haptic('success'); build = null; setFile(null);
+        paint(list, list.length); Plat.haptic('success');
+        const ready = { build, pack }; build = null; setFile(null);
+        res.innerHTML = previewHtml(pack, v, notes, `<div class="row gap-sm mt-1" style="flex-wrap:wrap"><button type="button" class="btn primary" data-publish>${icon('plus', 15)} Add ${esc(pack.code)} to Mathub</button></div><p class="small muted mt-1">${icon('users', 13)} It goes on Mathub for everyone who takes ${esc(pack.code)}, and into your classes. Your name is not on it.</p>`);
+        wirePublish(res, ready);
         if (left.textContent && /left this month/.test(left.textContent)) left.textContent = left.textContent.replace(/\d+(?= of)/, m => Math.max(0, +m - 1));
         res.scrollIntoView({ block: 'nearest', behavior: Plat.reduceMotion() ? 'auto' : 'smooth' });
       } catch (x) {
         paint(list, at, true);
-        if (x.status === 402) { if (await paywall({ need: 'pro', reason: 'bo-class' })) App.rerender(); }
+        const ex = x.data && x.data.exists;
+        if (ex) { build = null; res.innerHTML = existsHtml(ex, x.message); wireExists(res, ex); }
+        else if (x.data && x.data.check) { build = null; res.innerHTML = `<div class="callout warn mk-refused"><b>${esc(x.message)}</b>${x.data.check === 'file' ? '' : ' Nothing was written or added.'}</div>`; }
         else res.innerHTML = `<div class="callout warn"><b>${esc(x.message)}</b>${build ? ' Bo kept what he has written so far: Write my class picks up where he stopped.' : ''}</div>`;
         if (x.status === 404) build = null;
       }
       btn.disabled = false; box.classList.remove('busy');
     }
+  }
+  /* the class is on Mathub already: open it, or put it with your classes */
+  function existsHtml(ex, msg) {
+    const mine = (settings().courses || []).includes(ex.id);
+    return `<div class="callout mk-exists"><b>${esc(msg)}</b><p class="small">Everyone shares one class per course, so its notes, practice and board stay in one place.</p><div class="row gap-sm mt-1" style="flex-wrap:wrap"><a class="btn primary" href="#/${esc(ex.id)}/dashboard">${icon('right', 15)} Open ${esc(ex.code)}</a>${mine ? '' : `<button type="button" class="btn" data-take="${esc(ex.id)}">${icon('plus', 15)} Add it to your classes</button>`}</div></div>`;
+  }
+  function wireExists(out, ex) { const b = $('[data-take]', out); if (b) b.addEventListener('click', () => { addToMine(ex.id); toast(`${ex.code} is in your classes.`); b.remove(); }); }
+  /* puts a class on the student's own list (the classes they picked), when they have picked any */
+  function addToMine(id) { const c = settings().courses; if (Array.isArray(c) && c.length && !c.includes(id)) setSetting('courses', c.concat(id)); }
+  /* Add to Mathub: the server checks the class against what Bo wrote, then everyone can open it */
+  function wirePublish(out, ready) {
+    const b = $('[data-publish]', out); if (!b) return;
+    b.addEventListener('click', async () => {
+      b.disabled = true;
+      try {
+        const r = await api('community_publish', { build: ready.build, pack: ready.pack });
+        if (App.packs && App.packs.sync) await App.packs.sync();
+        addToMine(r.id); Plat.haptic('success'); toast(`${r.code} is on Mathub now, for everyone who takes it.`, 4500);
+        location.hash = `#/${r.id}/dashboard`;
+      } catch (x) {
+        b.disabled = false; const ex = x.data && x.data.exists;
+        if (ex) { out.innerHTML = existsHtml(ex, x.message); wireExists(out, ex); } else toast(x.message, 5000);
+      }
+    });
   }
 
   /* Add: each result adds the class it showed (pending and pendingFree are read when it is wired) */
@@ -875,6 +908,15 @@ THE SYLLABUS:
       try { const entry = await Mine.add(pack, { free }); pending = null; if (ta) ta.value = ''; Plat.haptic('success'); toast(savedMsg(entry.code), 4000); location.hash = `#/${entry.id}/dashboard`; }
       catch (e) { add.disabled = false; toast('The class could not be saved: ' + e.message, 5000); }
     });
+  }
+  /* the classes this student put on Mathub for everyone (api/community.php) */
+  function paintPublished(root) {
+    if (!user()) return;
+    api('community_mine').then(r => {
+      const sec = $('#mk-pub-sec', root), el = $('#mk-pub', root); if (!sec || !el || !r.classes.length) return;
+      sec.hidden = false;
+      el.innerHTML = `<ul class="mk-mine">${r.classes.map(c => `<li class="panel mk-item" style="${classStyle(c.id)}"><span class="mk-item-tile" aria-hidden="true">${esc(c.code)}</span><div class="mk-item-main"><b>${esc(c.code)}</b> <span>${esc(c.name)}</span> ${c.hidden ? `<span class="chip">${icon('eye', 12)} Hidden by Mathub</span>` : `<span class="chip mk-shared">${icon('users', 12)} On Mathub for everyone</span>`}<div class="small muted">Added ${esc(fmtDate(c.created * 1000))}</div></div><div class="row gap-sm mk-item-act">${c.hidden ? '' : `<a class="btn sm primary" href="#/${esc(c.id)}/dashboard">Open</a>`}</div></li>`).join('')}</ul>`;
+    }).catch(() => {});
   }
   function paintMine(el) {
     const list = Mine.list(); const u = user();
@@ -988,10 +1030,10 @@ THE SYLLABUS:
     /* Settings: your plan */
     const panel = () => {
       const s = Sub.status(); const on = Sub.active(); const plan = Sub.plan(); const mine = Mine.list().length; const u = user();
-      const line = !u ? 'Sign in to see your plan.' : on ? `${Sub.planName()}${s.granted ? ' (given to your account)' : ''}. ` + (s.until ? (s.renews ? `Renews ${fmtDate(s.until)}.` : `On until ${fmtDate(s.until)}; it will not renew.`) : '') : `No plan. With Mathub Pro (${PLANS.pro.web} a month) Bo writes your classes from any syllabus; Mathub Max (${PLANS.max.web} a month) adds Ask Bo, your AI tutor. The example class is free.`;
+      const line = !u ? 'Sign in to see your plan.' : on ? `${Sub.planName()}${s.granted ? ' (given to your account)' : ''}. ` + (s.until ? (s.renews ? `Renews ${fmtDate(s.until)}.` : `On until ${fmtDate(s.until)}; it will not renew.`) : '') : `No plan. With Mathub Pro (${PLANS.pro.web} a month) Bo is on every page; Mathub Max (${PLANS.max.web} a month) adds Ask Bo’s own page and calls. Turning a syllabus into a class is free.`;
       return `<div class="panel span-2 create-panel" id="create-panel"><div class="panel-h"><div class="panel-title">${icon('plus')} Your plan</div></div>
         <div class="ap-sub"><div class="ap-sub-t"><b>${on ? esc(Sub.planName()) : 'Mathub Pro and Max'}</b><span class="small muted">${line}</span></div><div class="row gap-sm">${u ? `<a class="btn sm" href="#/plan">${on ? 'Manage your plan' : 'Your plan'}</a>` : ''}${!on ? `<button type="button" class="btn sm primary" data-cp="buy">See the plans</button>` : plan === 'pro' ? `<button type="button" class="btn sm primary" data-cp="max">Move up to Max</button>` : `<a class="btn sm primary" href="#/tutor">Ask Bo</a>`}${u ? `<button type="button" class="btn sm ghost" data-cp="check">Check again</button>` : ''}</div></div>
-        <p class="small mt-1">${mine ? `${mine} class${mine === 1 ? '' : 'es'} you created ${mine === 1 ? 'is' : 'are'} saved with your account.` : 'Classes you create from a syllabus are saved with your account.'} <a href="#/create">Create a class</a></p></div>`;
+        <p class="small mt-1">${mine ? `${mine} class${mine === 1 ? '' : 'es'} you created ${mine === 1 ? 'is' : 'are'} saved with your account.` : 'Turn any syllabus into a class on Mathub, for you and everyone who takes it. It is free.'} <a href="#/create">Create a class</a></p></div>`;
     };
     App.onRender = App.onRender || [];
     App.onRender.push((root, r) => {
@@ -1010,7 +1052,7 @@ THE SYLLABUS:
      side, billing and receipts, cancelling (api: plan_cancel), and answers to the usual questions.
      ============================================================ */
   const STORE_NAME = { app_store: 'the App Store', mac_app_store: 'the App Store', play_store: 'Google Play', rc_billing: 'the website (card, through Stripe)', stripe: 'the website (card, through Stripe)', promotional: 'a gift from Mathub' };
-  const FREE_LINES = ['Every class built into Mathub: lessons, practice, flashcards and exam prep', 'Today, your calendar, the Focus room and the GPA calculator', 'The example class you can make from a syllabus'];
+  const FREE_LINES = ['Every class on Mathub: lessons, practice, flashcards and exam prep', 'Today, your planner, your calendar, the Focus room and the GPA calculator', 'Turn any syllabus into a class for everyone: Bo writes it, after checking it is a real course and new to Mathub'];
   const nextReset = () => { const d = new Date(); return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 1, 12)).toLocaleDateString('en-US', { month: 'long', day: 'numeric' }); };
   const num = n => Number(n || 0).toLocaleString('en-US');
   const P = { use: null, busy: false };
@@ -1018,7 +1060,7 @@ THE SYLLABUS:
   function nowHtml() {
     const u = user(); const s = Sub.status(); const plan = Sub.plan(); const on = !!plan;
     if (!u && !NATIVE) return `<div class="pl-now pl-out"><div class="pl-now-t"><h2 class="pl-name">Sign in to see your plan</h2><p>Your plan belongs to your Mathub account, so it works on the website and in the apps.</p></div><div class="pl-acts"><button type="button" class="btn primary" data-pl="login">Log in</button><button type="button" class="btn" data-pl="signup">Create an account</button></div></div>`;
-    if (!on) return `<div class="pl-now pl-free"><span class="pl-badge" aria-hidden="true">${App.bobcatSvg ? App.bobcatSvg(54) : ''}</span><div class="pl-now-t"><p class="pl-state"><span class="pl-chip">Free</span></p><h2 class="pl-name">You’re on the free plan</h2><p>Everything built into Mathub is free. With <b>Mathub Pro</b> Bo writes your classes from any syllabus, and <b>Mathub Max</b> adds Bo, your AI tutor, in a chat and on calls.</p></div><div class="pl-acts"><button type="button" class="btn primary" data-pl="buy-max">Get Max</button><button type="button" class="btn" data-pl="buy-pro">Get Pro</button>${u ? `<button type="button" class="btn ghost" data-pl="check">I already subscribed</button>` : ''}</div></div>`;
+    if (!on) return `<div class="pl-now pl-free"><span class="pl-badge" aria-hidden="true">${App.bobcatSvg ? App.bobcatSvg(54) : ''}</span><div class="pl-now-t"><p class="pl-state"><span class="pl-chip">Free</span></p><h2 class="pl-name">You’re on the free plan</h2><p>Everything built into Mathub is free, and so is turning a syllabus into a class for everyone. <b>Mathub Pro</b> puts Bo on every page, and <b>Mathub Max</b> adds Ask Bo’s own page and calls.</p></div><div class="pl-acts"><button type="button" class="btn primary" data-pl="buy-max">Get Max</button><button type="button" class="btn" data-pl="buy-pro">Get Pro</button>${u ? `<button type="button" class="btn ghost" data-pl="check">I already subscribed</button>` : ''}</div></div>`;
     const ends = s.until && !s.renews && !s.granted; const store = planStore(s); const where = STORE_NAME[store] || 'the website';
     const paid = s.granted && PLANS[s.paid] ? s.paid : '';   // given a plan, and paying for a smaller one too
     const chip = s.granted ? `<span class="pl-chip gift">Given to your account${s.until ? ` until ${esc(fmtDate(s.until))}` : ''}</span>` : ends ? `<span class="pl-chip warn">Ends ${esc(fmtDate(s.until))}</span>` : '<span class="pl-chip ok">Active</span>';
@@ -1047,7 +1089,7 @@ THE SYLLABUS:
     };
     const mins = s => Math.floor(s / 60); const calls = st.voice && (st.voice.live || U.live > 0) && !NATIVE;
     return `<div class="pl-meters">
-      ${plan === 'max' ? meter('Questions to Bo', U.tutor, U.tutor_limit, 'questions', '') : meter('Questions to Bo', 0, 0, '', 'Part of Mathub Max', true)}
+      ${meter('Questions to Bo', U.tutor, U.tutor_limit, 'questions', plan === 'pro' ? 'from Bo on every page' : '')}
       ${meter('Classes Bo writes', U.classes, U.class_limit, U.class_limit - U.classes === 1 ? 'class' : 'classes', '')}
       ${plan === 'max' && calls ? meter('Calls with Bo', mins(U.live), mins(U.live_limit), 'minutes', '') : ''}
     </div><p class="pl-reset">${icon('rotate', 14)} These start again on ${nextReset()}.</p>`;
@@ -1157,17 +1199,17 @@ THE SYLLABUS:
       const plan = Sub.plan(); const U = hubStatus && hubStatus.usage; const s = Sub.status();
       const ends = s.until && !s.renews && !s.granted ? ` Your plan ends ${fmtDate(s.until)}.` : '';
       if (plan === 'max') return (U ? `${num(Math.max(0, U.tutor_limit - U.tutor))} questions${hubStatus.voice && (hubStatus.voice.live || U.live) ? ` and ${Math.floor(Math.max(0, U.live_limit - U.live) / 60)} call minutes` : ''} left this month.` : 'Mathub Max is on.') + ends;
-      if (plan === 'pro') return (U ? `Bo can write ${num(Math.max(0, U.class_limit - U.classes))} more classes this month. ` : 'Bo writes your classes from any syllabus. ') + 'Max adds Ask Bo and calls.' + ends;
-      return 'He knows your syllabus, your exams and where you are stuck. Call him, ask him anything, or have him write a whole class from a syllabus.';
+      if (plan === 'pro') return (U ? `${num(Math.max(0, U.tutor_limit - U.tutor))} questions left this month. ` : '') + 'Bo is on every page: tap him in the corner. Max adds Ask Bo’s own page and calls.' + ends;
+      return 'He knows your syllabus, your exams and where you are stuck. Ask him from any page, call him, or have him turn a syllabus into a class for everyone.';
     };
     const hubHtml = () => {
       const plan = Sub.plan(); const cid = hubCid(); const cname = cid ? (Courses[cid].short || Courses[cid].code) : '';
       const talkOk = !!(App.boTalk && App.boTalk.supported());
       const act = o => { const tag = o.href ? 'a' : 'button'; return `<${tag} ${o.href ? `href="${o.href}"` : `type="button" data-bh="${o.k}"`} class="bh-act${o.main ? ' bh-main' : ''}"><span class="bh-ic" aria-hidden="true">${icon(o.ic, 22)}</span><span class="bh-l"><b>${o.b}</b><small>${o.s}</small></span></${tag}>`; };
       let acts;
-      if (plan === 'max') acts = [talkOk && cid ? act({ k: 'call', ic: 'phone', b: 'Call Bo', s: `Talk ${esc(cname)} through, out loud`, main: true }) : '', act({ href: cid ? `#/tutor/${cid}` : '#/tutor', ic: 'chat', b: 'Ask Bo', s: 'Chat, photos and his board', main: !(talkOk && cid) }), act({ href: '#/create', ic: 'wand', b: 'Write a class', s: 'From any syllabus' })];
-      else if (plan === 'pro') acts = [act({ href: '#/create', ic: 'wand', b: 'Write a class', s: 'From any syllabus', main: true }), act({ k: 'max', ic: 'chat', b: 'Ask Bo', s: 'Move up to Max' }), talkOk ? act({ k: 'max', ic: 'phone', b: 'Call Bo', s: 'Move up to Max' }) : ''];
-      else acts = [act({ k: 'max', ic: 'gem', b: 'Get Mathub Max', s: `Bo in a chat and on calls · ${esc(Sub.price('max') || PLANS.max.web)} a month`, main: true }), act({ k: 'pro', ic: 'wand', b: 'Get Mathub Pro', s: `Bo writes your classes · ${esc(Sub.price('pro') || PLANS.pro.web)} a month` }), act({ href: '#/plan', ic: 'list', b: 'Compare the plans', s: 'What each one includes' })];
+      if (plan === 'max') acts = [talkOk && cid ? act({ k: 'call', ic: 'phone', b: 'Call Bo', s: `Talk ${esc(cname)} through, out loud`, main: true }) : '', act({ href: cid ? `#/tutor/${cid}` : '#/tutor', ic: 'chat', b: 'Ask Bo', s: 'Chat, photos and his board', main: !(talkOk && cid) }), act({ href: '#/create', ic: 'wand', b: 'Add a class', s: 'From any syllabus, for everyone' })];
+      else if (plan === 'pro') acts = [act({ k: 'float', ic: 'chat', b: 'Ask Bo here', s: 'He sees the page you are on', main: true }), act({ href: '#/create', ic: 'wand', b: 'Add a class', s: 'From any syllabus, for everyone' }), talkOk ? act({ k: 'max', ic: 'phone', b: 'Call Bo', s: 'Move up to Max' }) : act({ k: 'max', ic: 'gem', b: 'Ask Bo’s page', s: 'Move up to Max' })];
+      else acts = [act({ k: 'pro', ic: 'zap', b: 'Get Mathub Pro', s: `Bo on every page · ${esc(Sub.price('pro') || PLANS.pro.web)} a month`, main: true }), act({ k: 'max', ic: 'gem', b: 'Get Mathub Max', s: `Plus Ask Bo’s page and calls · ${esc(Sub.price('max') || PLANS.max.web)} a month` }), act({ href: '#/create', ic: 'wand', b: 'Add a class', s: 'From any syllabus, free' })];
       return `<section class="bh bh-${plan || 'free'}" id="bo-hub" aria-labelledby="bh-h"><div class="bh-who"><span class="bh-av" aria-hidden="true">${App.bobcatSvg ? App.bobcatSvg(58) : ''}</span><div class="bh-t"><h2 id="bh-h">${plan ? 'Bo, your tutor' : 'Meet Bo, your tutor'}</h2><p class="bh-sub" id="bh-sub">${esc(hubLine())}</p><a class="bh-plan" href="#/plan"><span>Your plan</span><b>${plan ? PLANS[plan].short : 'Free'}</b>${icon('right', 14)}</a></div></div><div class="bh-acts">${acts.filter(Boolean).join('')}</div></section>`;
     };
     App.onRender = App.onRender || [];
@@ -1176,7 +1218,8 @@ THE SYLLABUS:
       slot.insertAdjacentHTML('afterend', hubHtml());
       $('#bo-hub', root).addEventListener('click', async e => {
         const b = e.target.closest('[data-bh]'); if (!b) return; const k = b.dataset.bh;
-        if (k === 'max' || k === 'pro') { if (await paywall(k === 'max' ? { need: 'max', reason: 'bo' } : {})) App.rerender(); return; }
+        if (k === 'max' || k === 'pro') { if (await paywall(k === 'max' ? { need: 'max', reason: 'bo' } : { reason: 'bo-float' })) App.rerender(); return; }
+        if (k === 'float') { if (App.boFloat) App.boFloat.open(); return; }
         if (k === 'call') {
           const cid = hubCid(); if (!cid) { location.hash = '#/tutor'; return; }
           // the first time, Bo's page asks for consent first, then the call opens there

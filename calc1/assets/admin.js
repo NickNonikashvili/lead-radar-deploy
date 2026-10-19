@@ -218,7 +218,7 @@
         <div class="adm-plan-h"><h3 id="pl-h-${id}">Membership for ${esc(name)}</h3><span class="mono small muted">${esc(x.email)}</span></div>
         <ul class="adm-plan-now">${lines.map(l => `<li>${esc(l)}</li>`).join('')}</ul>
         <fieldset class="adm-plan-opts"><legend>Give them</legend>
-          ${[['', 'Free', g ? 'Take back what was given' : 'Nothing given'], ['pro', 'Mathub Pro', 'Bo writes classes from any syllabus'], ['max', 'Mathub Max', 'Pro, plus Ask Bo and calls']].map(([v, h, d]) => `<label class="adm-plan-opt${v ? ' is-' + v : ''}"><input type="radio" name="pl-${id}" value="${v}"${(g ? g.plan : '') === v ? ' checked' : ''}><span><b>${h}</b><small>${d}</small></span></label>`).join('')}
+          ${[['', 'Free', g ? 'Take back what was given' : 'Nothing given'], ['pro', 'Mathub Pro', 'Bo on every page, and classes of their own'], ['max', 'Mathub Max', 'Pro, plus Ask Bo’s page and calls']].map(([v, h, d]) => `<label class="adm-plan-opt${v ? ' is-' + v : ''}"><input type="radio" name="pl-${id}" value="${v}"${(g ? g.plan : '') === v ? ' checked' : ''}><span><b>${h}</b><small>${d}</small></span></label>`).join('')}
         </fieldset>
         <div class="adm-plan-grid">
           <div class="field"><label for="pl-for-${id}">For how long</label><select class="select" id="pl-for-${id}"><option value="">No end date</option><option value="30">1 month</option><option value="91">3 months</option><option value="183">6 months</option><option value="365">1 year</option><option value="day"${untilDay ? ' selected' : ''}>Until a day you pick</option></select></div>

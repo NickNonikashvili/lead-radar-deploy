@@ -233,7 +233,7 @@ choices it must make: its classes (at least one) and a membership (Free, Pro or 
 checkout, and closing it leaves the account on Free), then You're all set. `api welcome_done` saves the classes,
 `users.welcomed` and `users.plan_choice`; until then it comes back at every visit (`user.welcomed === false`).
 Accounts from before it count as welcomed. Skip the tour (or Esc) jumps to the choices; Back, the arrow keys and
-Log out work; it is still when motion is off or reduced, and the old coach-mark tour no longer starts after it.
+Log out work; it is still when motion is off or reduced, and the tour of the layout waits until it is closed.
 
 ## Adding members from the admin panel
 
@@ -372,28 +372,31 @@ The Hostinger zip never includes `app/`.
   signed out goes up at the next sign-in. `App.classSync` keeps both sides the same (new ones up, the account's
   down, deleted ones gone everywhere; an id clash gets a new id). Rows go with the account through
   `ON DELETE CASCADE`, and Download my data includes them.
-- **Mathub Pro ($15) and Mathub Max ($50)** (`App.subscription`, `App.paywall({ need })`): with Pro, Bo writes
-  classes from a syllabus (and classes can be made any other way); Max adds Ask Bo, the AI tutor. The apps buy them through the App Store or
+- **Mathub Pro ($15) and Mathub Max ($50)** (`App.subscription`, `App.paywall({ need })`): with Pro, Bo is on every
+  page (the floating Bo, `assets/bo-float.js`) and classes of your own can be added (shared, from a file, made with
+  your own AI); Max adds Ask Bo's own page, talking out loud and calls. Turning a syllabus into a class for everyone
+  needs no plan (below). The apps buy them through the App Store or
   Google Play; the website opens the plan's RevenueCat Web Purchase Link (Stripe) in a new tab and waits for it
   (`create_status`, which asks RevenueCat's REST API and keeps the answer for 10 minutes unless asked to refresh).
   All use the RevenueCat customer `mh_<account id>` and the entitlements `pro` and `max` (a Max product unlocks
   both). `plan_grants` in `config.local.php` gives testers a plan without paying. The example class and classes
   made before the plans existed are free; when a plan ends, classes are kept, locked (`App.courseGate`), until it
   is back. Settings has a Your plan panel (website) or row (apps) leading to **Your plan** (`#/plan`, also in the
-  account menu): the plan and how it is paid, when it renews or ends, this month's use (questions, classes Bo
-  writes, call minutes), the three plans side by side, Manage billing (RevenueCat's customer portal or the store)
+  account menu): the plan and how it is paid, when it renews or ends, this month's use (questions to Bo, classes
+  Bo writes, call minutes), the three plans side by side, Manage billing (RevenueCat's customer portal or the store)
   and **Cancel plan**: one dialog (what changes and when, an optional reason kept in `plan_feedback`, Keep my plan),
   then `plan_cancel` cancels a website plan through RevenueCat's API v2 when `revenuecat_v2_key` and
   `revenuecat_project` are set, or opens its billing page; App Store and Google Play plans go to the store.
 - **Bo on the start page** (website, signed in): one card under the hero with Call Bo (a call right there, about
-  the class you are in), Ask Bo and Write a class with Max; Write a class with Pro; Get Max and Get Pro without a
-  plan; what is left this month, and the plan, a click from Your plan.
+  the class you are in), Ask Bo and Add a class with Max; Ask Bo here (opens the floating Bo) and Add a class with
+  Pro; Get Pro, Get Max and Add a class without a plan; what is left this month, and the plan, a click from Your plan.
 - **Sharing.** Share gives `https://mathub.space/#/c/CODE`, the 8-character code and a QR code
   (`assets/vendor/qrcode.js`, qrcode-generator, MIT, loaded on demand). `#/c/CODE` shows the class to anyone,
   without the owner's name, with Add (a copy; needs Pro or Max) and Report. Moderators can stop a reported
   share from Admin → Problems. The owner can stop sharing at any time.
 - **Create a class** (`#/create`): "Bo writes it from your syllabus" first (drop in a PDF, photo or text file, or
-  paste the text; Full or Shorter class; Write my class, then his steps and the class preview with Add), then
+  paste the text; Full or Shorter class; Write my class, then his steps and the class preview with Add to Mathub;
+  see Classes anyone adds from a syllabus), then Classes you added to Mathub, then
   "Other ways to add a class": the free example class, a share code, a class file, and "Use the AI you already
   use" (the three copy-and-paste steps, folded away).
 - **Server keys** (in `api/config.local.php` only): `revenuecat_secret`, `pro_web_link`, `max_web_link`,
@@ -414,7 +417,40 @@ To add words: `node scripts/i18n-extract.js` (new words get new numbers in `i18n
 follow goes in `i18n/extra.txt`), translate the numbers in `i18n/<lang>.tsv`, then `node scripts/build-i18n.js`.
 French, Italian, Portuguese and German are partly translated and are not in the picker yet.
 
-## Bo, the AI tutor (Mathub Max), classes Bo writes (Pro and Max), and the AI server
+## Classes anyone adds from a syllabus, for everyone
+
+`api/community.php`, `api/ai.php` (`ai_class`), `assets/create.js`. Any signed-in member, with no plan, can have Bo
+turn a syllabus into a class that is published for every student (one class per course, so its notes, practice and
+board stay in one place).
+
+- **The file is checked for malware first** (`mh_cc_scan`): it must be what it says it is by its first bytes (a PDF,
+  a JPEG/PNG/WebP/GIF photo, or UTF-8 text) and is never a program, archive or script under another name; a photo
+  with a script or an archive hidden after the picture is refused; a PDF with active content (JavaScript, launch
+  actions, embedded files, rich media, XFA, submit or import actions) is refused, names written with `#xx` escapes
+  and compressed (FlateDecode) streams included, and a password-protected PDF cannot be read. ClamAV scans it too
+  when the server has `clamdscan`/`clamscan`; with `virustotal_key` (Keys & settings) VirusTotal is asked about
+  its SHA-256 only. The file is never stored.
+- **Then Bo checks the document** (`MH_CC_SCREEN`, one small request): the syllabus of one real course (a course
+  code and title, real content), nothing that must not be published (hateful or sexual content, students' private
+  details, text aimed at the AI), its code, title, school and term. Not a syllabus, or something unpublishable:
+  refused with the reason (422). No course code: refused. The check and the outline share the syllabus through
+  prompt caching (the same system prompt and the syllabus block marked `ephemeral`).
+- **Not on Mathub already** (`mh_cc_find`): the same code (subject letters and number: `M 171`, `M171` and `M 171Q`
+  are one course) at the same school as a built-in class or a published pack is refused (409) with a link to it
+  and Add it to your classes. A different school's course with the same code is a different class.
+- **Publishing** (`community_publish`): Bo writes the outline and each unit as before; each unit is kept
+  (`ai_build_units`) next to the outline and what the check found (`ai_builds.screen`). The browser puts the class
+  together and sends it with its build; the server publishes it only if it is the course that was checked and
+  every piece of its text is text Bo wrote for that build (labels the browser makes up, like "Unit 3" and ids,
+  aside), checks for duplicates again inside a transaction, gives it the pack id of its code (`chmy121`, or with a
+  letter when taken), the tagline "Made with Bo from the syllabus" and `uploaded_by` `community:<account id>`, and
+  stores it as a class pack, published. The students who requested that class are told, it appears in the
+  activity feed, and the browser adds it to the maker's classes and opens it. `community_mine` lists a member's
+  classes on the Create page. Admin → Classes lists them as "A member with Bo · email" (looked up when listed),
+  where they can be hidden, rolled back or deleted like any pack. Limits: 15 classes a month (`ai_class_monthly`),
+  30 checks a day and 20 publishes an hour per account.
+
+## Bo, the AI tutor (Pro and Max), classes Bo writes, and the AI server
 
 `assets/tutor.js`, `assets/tutor.css`, `api/ai.php`; details and costs in `docs/app-subscriptions.md`.
 
@@ -485,11 +521,13 @@ French, Italian, Portuguese and German are partly translated and are not in the 
   and above it, sticky and foldable, on a narrow one; it is never read aloud. The student agrees to what is sent to Anthropic
   before the first question. Bo is a tab in the apps, a button in the website's top bar, and "Ask Bo to quiz you"
   in exam week.
-- **Let Bo write it** (Create a class, Max): paste or attach a syllabus (PDF, photo or text); Bo reads it into an
-  outline, then writes each unit, with the steps shown as they happen; the class is checked like any other and
-  added with Add.
+- **Bo on every page with Pro**: `ai_tutor` answers a Pro member when the question comes from the floating Bo
+  (`float: 1`); Ask Bo's own page, talking and calls stay Max, so the panel's link to the full chat shows for Max only.
+- **Let Bo write it** (Create a class, no plan needed): paste or attach a syllabus (PDF, photo or text); after the
+  checks above Bo reads it into an outline, then writes each unit, with the steps shown as they happen; the class is
+  checked like any other and published with Add to Mathub.
 - **The AI server** (`api/ai.php`, routes `ai_status`, `ai_thread`, `ai_tutor`, `ai_forget`, `ai_class`): the only
-  thing that talks to the AI (Anthropic's Messages API; `anthropic_key` in `config.local.php`). It checks Max,
+  thing that talks to the AI (Anthropic's Messages API; `anthropic_key` in `config.local.php`). It checks the plan,
   enforces limits (1,500 questions and 15 classes a month per account), and keeps requests small: compact class
   summaries (`api/classdata/*.json` from `scripts/build-classdata.js`, packs, or the student's own class), the
   trimmed snapshot, the last 6 turns, prompt caching on the fixed parts, and `claude-haiku-5-5` by default.
@@ -586,7 +624,7 @@ The server copies the SQLite database once a day (SQLite's own `VACUUM INTO`, co
 
 ## Motion, looks, tour, print
 
-`assets/motion.css` and `assets/motion.js` add staggered card entrances, ring and progress-bar fills, a top loading bar while a class downloads, button and chip micro-interactions, feedback on answers, a theme fade, and hover polish. Settings → Appearance offers five looks (Classic, Bobcat, Paper, Forest, Midnight) via `data-skin` on the root, and a Reduce motion switch (`data-motion="off"`, also honored from the OS setting) that turns every animation off. Both are applied before first paint by the inline script in `index.html` and follow the account. A five-step tour runs once on the landing page (`assets/tour.js`, "Show the tour again" in Settings). Notes, formula sheets, calendars, planners, exam prep and the GPA page have a Print button, and the print stylesheet drops the chrome.
+`assets/motion.css` and `assets/motion.js` add staggered card entrances, ring and progress-bar fills, a top loading bar while a class downloads, button and chip micro-interactions, feedback on answers, a theme fade, and hover polish. Settings → Appearance offers five looks (Classic, Bobcat, Paper, Forest, Midnight) via `data-skin` on the root, and a Reduce motion switch (`data-motion="off"`, also honored from the OS setting) that turns every animation off. Both are applied before first paint by the inline script in `index.html` and follow the account. The tour of the layout (`assets/tour.js`) runs once for every account on the start page, people who took the older first-visit tour included (`tourLayout`, the layout version seen, synced with the account): on a computer the sidebar's clock and bars, quick add, the groups, the month calendar, the header, Your day, Bo and hiding the sidebar; on a phone the menu, search, Your day, Bo and the tab bar. Steps whose part is not on screen are left out, the card sits beside sidebar parts and its arrow points at the part, it waits for the welcome and dialogs, and Settings → Show the tour again replays it. Notes, formula sheets, calendars, planners, exam prep and the GPA page have a Print button, and the print stylesheet drops the chrome.
 
 ## Mistakes notebook, streak freezes, cheat sheets, personal notes
 

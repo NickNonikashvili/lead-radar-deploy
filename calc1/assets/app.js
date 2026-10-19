@@ -1050,7 +1050,7 @@
       root.innerHTML = `${standalone ? '<div class="landing-wrap settings-wrap">' : ''}${head}<div class="grid cols-2"><div id="acct-panel" class="span-2"></div>${classesPanel}${prefsPanel}${dataPanel}</div>${standalone ? '</div>' : ''}`;
       const slot = $('#landing-account', root); if (slot && App.auth && App.auth.ready) App.auth.paintLandingAccount(slot);
       $('#s-theme', root).addEventListener('change', e => { setSetting('theme', e.target.value); applyTheme(); });
-      on(root, 'click', '[data-action="tour-again"]', () => { setSetting('tourDone', false); try { sessionStorage.removeItem('mh-tour'); } catch (e) {} location.hash = '#/'; setTimeout(() => { if (App.tour) App.tour.start(true); }, 700); });
+      on(root, 'click', '[data-action="tour-again"]', () => { if (App.tour && App.tour.replay) App.tour.replay(); });
       on(root, 'click', '[data-action="skin"]', el => { setSetting('skin', el.dataset.skin); applyTheme(); $$('.skin-opt', root).forEach(b => { b.classList.toggle('on', b === el); b.setAttribute('aria-pressed', b === el); }); toast(`${el.querySelector('b').textContent} look on.`, 1800); });
       const sl = $('#s-lang', root); if (sl) sl.addEventListener('change', e => I18N.set(e.target.value));
       const sm = $('#s-motion', root); if (sm) sm.addEventListener('change', e => { setSetting('motion', e.target.checked ? 'off' : 'on'); applyTheme(); });

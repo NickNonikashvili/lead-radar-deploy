@@ -2,7 +2,8 @@
    Bo on every page (assets/bo-float.js), in the browser:
    - he floats in a corner of every page (not on Ask Bo itself), says hello once, and can be dragged to the
      other side, where he stays; Alt+B and Esc open and close him; Settings turns him off
-   - guests are asked to sign in, members without Max see what he does; a Max member agrees first
+   - guests are asked to sign in, members without a plan see what he does and are offered Pro; with Pro he answers
+     (Ask Bo's own page stays Max, so its link is not in his panel); a member agrees first
    - he sees the page: the Quizzer's questions as chips (right and wrong marked), what they answered; a question
      goes with the page and the part asked about, and the chat is the class's chat (Ask Bo shows it)
    - the eye turns his seeing off; a page change during a chat brings the ways in for the new page
@@ -58,10 +59,20 @@ const STATE = path.join(__dirname, 'fixtures', 'rc-state.json'); const LAST = pa
   await go(a, '#/calc/practice', 1600);
   await a.click('#bo-fab'); await a.waitForTimeout(900);
   const ag = await txt(a, '#bo-pop .bf-body');
-  check('without Max: what he does on a page (sees it, explains anything, reads problem sets) and Get Mathub Max', /Bo is part of Mathub Max/.test(ag) && /He sees your page/.test(ag) && /Reads your problem sets/.test(ag) && !!(await a.$('#bo-pop [data-go="max"]')) && /Get Mathub Max/.test(await txt(a, '#bo-pop [data-go="max"]')), ag);
-  await a.click('#bo-pop [data-go="max"]'); await a.waitForTimeout(1200);
-  check('which opens the Max paywall', /Mathub Max/.test(await txt(a, '#paywall h2')));
-  await a.keyboard.press('Escape');
+  check('without a plan: what he does on a page (sees it, explains anything, reads problem sets) and Get Mathub Pro', /Bo on every page is part of Mathub Pro/.test(ag) && /He sees your page/.test(ag) && /Reads your problem sets/.test(ag) && !!(await a.$('#bo-pop [data-go="pro"]')) && /Get Mathub Pro/.test(await txt(a, '#bo-pop [data-go="pro"]')), ag);
+  await a.click('#bo-pop [data-go="pro"]'); await a.waitForTimeout(1200);
+  const apw = await a.evaluate(() => { const s = document.querySelector('#paywall'); return s && { why: s.querySelector('.pw-why').textContent, on: (s.querySelector('[data-plan].on') || {}).dataset.plan }; });
+  check('which opens the plans with Pro picked', apw && apw.on === 'pro' && /Bo on every page is part of Mathub Pro/.test(apw.why), apw);
+  await a.keyboard.press('Escape'); await a.waitForTimeout(300);
+  // with Pro he answers here (the $15 plan); Ask Bo's own page is Max, so its link is not offered
+  const aliceId = (await api(a, 'create_status')).json.customer;
+  fs.writeFileSync(STATE, JSON.stringify({ [aliceId]: { expires: new Date(Date.now() + 30 * 864e5).toISOString(), plan: 'pro' } }));
+  await api(a, 'create_status&refresh=1'); await a.evaluate(() => { App.setSetting('aiConsent', Date.now()); if (App.subscription) App.subscription.refresh(true); }); await api(a, 'ai_forget', { what: 'all' });
+  await a.reload(); await a.waitForTimeout(1600); await a.click('#bo-fab'); await a.waitForTimeout(1200);
+  check('with Mathub Pro the panel is open for questions, without the link to Ask Bo’s page', !(await a.$('#bo-pop .bf-gate')) && !!(await a.$('#bo-pop #bf-q')) && !(await shownEl(a, '#bf-full')), await txt(a, '#bo-pop .bf-body'));
+  await a.fill('#bf-q', 'What is a limit?'); await a.keyboard.press('Enter'); await a.waitForTimeout(2600);
+  check('and Bo answers a Pro member here', /Bo here\./.test(await lastBo(a)) && last().messages && /What is a limit\?/.test(JSON.stringify(last().messages)), await lastBo(a));
+  fs.writeFileSync(STATE, '{}'); await api(a, 'create_status&refresh=1'); await api(a, 'ai_forget', { what: 'all' });
   await ca.close();
 
   // a Max member

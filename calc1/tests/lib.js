@@ -32,7 +32,7 @@ async function start(opts = {}) {
     const geek = opts.geek === true || process.env.MATHUB_GEEK === '1';
     if (geek) await c.addInitScript(() => { try { const s = JSON.parse(localStorage.getItem('studyhub-settings') || '{}'); if (s.geek === undefined) { s.geek = true; localStorage.setItem('studyhub-settings', JSON.stringify(s)); } } catch (e) {} });
     if (!geek) await c.addInitScript(() => { try { const s = JSON.parse(localStorage.getItem('studyhub-settings') || '{}'); if (s.geek === undefined) { s.geek = false; localStorage.setItem('studyhub-settings', JSON.stringify(s)); } } catch (e) {} });
-    if (opts.tour !== true) await c.addInitScript(() => { try { const s = JSON.parse(localStorage.getItem('studyhub-settings') || '{}'); if (s.tourDone === undefined) { s.tourDone = true; localStorage.setItem('studyhub-settings', JSON.stringify(s)); } } catch (e) {} });
+    if (opts.tour !== true) await c.addInitScript(() => { try { const s = JSON.parse(localStorage.getItem('studyhub-settings') || '{}'); if (s.tourDone === undefined) s.tourDone = true; if (s.tourLayout === undefined) s.tourLayout = 99; localStorage.setItem('studyhub-settings', JSON.stringify(s)); } catch (e) {} });
     const p = await c.newPage();
     p.on('pageerror', e => errors.push('PAGEERROR ' + e.message + ' @ ' + String(e.stack || '').split('\n').slice(1, 3).join(' ').replace(/\s+/g, ' ').trim().slice(0, 160)));
     p.on('console', m => { if (m.type() === 'error' && !IGNORE.test(m.text())) errors.push('CONSOLE ' + m.text().slice(0, 200)); });

@@ -169,3 +169,21 @@ html[data-app] :is(#sb-now, #sb-quick, #sb-nav, #sb-cal, #tb-clock) { display: n
 @media print { .sb-now, .sb-quick, .sb-nav, .sb-cal, .tb-clock { display: none !important; } }
 /* focus sounds live in the header on every page now (the start page's hero used to hold the button) */
 .topbar .amb-top { display: inline-flex; }
+
+/* ---------- phones: the header keeps the menu, where you are, search, sounds, the inbox and the account.
+   The streak and the daily goal move into the menu (#sb-hub), Bo is the bubble on every page and in the menu,
+   and the title shows the section above the page name instead of losing both to the icons. ---------- */
+.sb-hub { display: none; }
+@media (max-width: 640px) {
+  :root:not([data-app]) .topbar { gap: 6px; }
+  :root:not([data-app]) .topbar #topbar-hub, :root:not([data-app]) .topbar .bo-top, :root:not([data-app]) .topbar .tb-clock { display: none !important; }
+  :root:not([data-app]) .topbar-title { display: flex; flex-direction: column; justify-content: center; gap: 1px; line-height: 1.15; font-size: 17px; }
+  :root:not([data-app]) .topbar-title .crumb { display: block; font-size: 11.5px; letter-spacing: 0.01em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  :root:not([data-app]) .topbar-title .crumb-sep { display: none; }
+  :root:not([data-app]) .topbar-title .crumb-cur { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .sb-hub:not([hidden]) { display: inline-flex; margin-left: auto; }
+}
+
+/* the tour of the layout: a card beside a part of the sidebar points left at it */
+.tour-card::before { left: var(--tx, 50%); }
+.tour-card.side::before { top: 22px; left: -7px; transform: rotate(-45deg); }

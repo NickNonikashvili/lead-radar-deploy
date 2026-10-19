@@ -33,6 +33,14 @@ if (preg_match('#^/revenuecat/v2/projects/([^/]+)/(customers/([^/]+)/subscriptio
   $log = json_decode((string)@file_get_contents(__DIR__ . '/../fixtures/rc-cancels.json'), true) ?: []; $log[] = $id; file_put_contents(__DIR__ . '/../fixtures/rc-cancels.json', json_encode($log));
   echo json_encode(['object' => 'subscription', 'id' => 'sub_' . $id, 'auto_renewal_status' => 'will_not_renew']); exit;
 }
+// a stand-in for VirusTotal's file lookup: a fingerprint listed in tests/fixtures/vt-bad.json is harmful, every other one unknown
+if (preg_match('#^/virustotal/files/([a-f0-9]{64})$#', $path, $vm)) {
+  header('Content-Type: application/json');
+  if (($_SERVER['HTTP_X_APIKEY'] ?? '') === '') { http_response_code(401); echo '{"error":{"code":"WrongCredentialsError"}}'; exit; }
+  $bad = json_decode((string)@file_get_contents(__DIR__ . '/../fixtures/vt-bad.json'), true) ?: [];
+  if ($vm[1] === '275a021bbfb6489e54d471899f7db9d1663fc695ec2fe2a2c4538aabf651fd0f' || in_array($vm[1], $bad, true)) { echo json_encode(['data' => ['attributes' => ['last_analysis_stats' => ['malicious' => 58, 'undetected' => 10]]]]); exit; }
+  http_response_code(404); echo '{"error":{"code":"NotFoundError"}}'; exit;
+}
 // a stand-in for Anthropic's POST /v1/messages, for Bo's tests (config.local.php: anthropic_api, anthropic_key 'sk-ant-test').
 // It keeps the last request in tests/fixtures/ai-last.json so the tests can check what the server sends.
 if ($path === '/anthropic/v1/messages') {
@@ -44,9 +52,19 @@ if ($path === '/anthropic/v1/messages') {
   $last = end($req['messages']); $content = is_array($last['content'] ?? null) ? $last['content'] : [['type' => 'text', 'text' => (string)($last['content'] ?? '')]];
   $utext = implode("\n", array_map(fn($b) => $b['text'] ?? '', array_filter($content, fn($b) => ($b['type'] ?? '') === 'text')));
   $hasImage = (bool)array_filter($content, fn($b) => ($b['type'] ?? '') === 'image');
-  if (str_contains($sys, 'course syllabus') && str_contains($utext, 'Read the syllabus')) {
-    $o = ['code' => 'TEST 101', 'name' => 'Testing Bo', 'term' => 'Fall 2026', 'color' => ['light' => '#0F766E'],
-      'COURSE' => ['code' => 'TEST 101', 'name' => 'Testing Bo', 'term' => 'Fall 2026', 'school' => 'Montana State University', 'instructor' => 'Dr. Stand In', 'officeHours' => 'Mon 2-3'],
+  // the syllabus the tests send: its course code and title (TEST 101 Testing Bo when it has none)
+  $syl = ''; foreach ($content as $b) if (str_starts_with((string)($b['text'] ?? ''), "THE SYLLABUS:\n")) $syl = substr((string)$b['text'], 14);
+  $ccode = preg_match('/\b([A-Z]{1,6} \d{3,4})\b/', $syl, $cm) ? $cm[1] : 'TEST 101';
+  $cname = preg_match('/\b[A-Z]{1,6} \d{3,4}\s+([A-Z][A-Za-z ]{2,40}?)[.,\n]/', $syl, $nm) ? trim($nm[1]) : 'Testing Bo';
+  if (str_contains($sys, 'course syllabus') && str_contains($utext, 'CHECK THIS DOCUMENT')) {
+    // the check before a class is written: a grocery list is not a syllabus, and text aimed at an AI cannot be published
+    $isPdf = (bool)array_filter($content, fn($b) => ($b['type'] ?? '') === 'document');
+    if (preg_match('/grocer|lorem ipsum/i', $syl)) $k = ['syllabus' => false, 'reason' => 'This is a grocery list, not a course syllabus.', 'code' => '', 'name' => '', 'school' => '', 'term' => '', 'concerns' => ''];
+    else $k = ['syllabus' => true, 'reason' => 'A syllabus for ' . $ccode . '.', 'code' => $syl !== '' && !preg_match('/\b[A-Z]{1,6} \d{3,4}\b/', $syl) ? '' : $ccode, 'name' => $cname, 'school' => stripos($syl, 'University of Montana') !== false ? 'University of Montana' : 'Montana State University', 'term' => 'Fall 2026', 'concerns' => stripos($syl, 'ignore your instructions') !== false ? 'It tells an AI to ignore its instructions.' : ''];
+    $text = "```json\n" . json_encode($k) . "\n```";
+  } elseif (str_contains($sys, 'course syllabus') && str_contains($utext, 'Read the syllabus')) {
+    $o = ['code' => $ccode, 'name' => $cname, 'term' => 'Fall 2026', 'color' => ['light' => '#0F766E'],
+      'COURSE' => ['code' => $ccode, 'name' => $cname, 'term' => 'Fall 2026', 'school' => 'Montana State University', 'instructor' => 'Dr. Stand In', 'officeHours' => 'Mon 2-3'],
       'GRADING' => ['categories' => [['id' => 'hw', 'name' => 'Homework', 'weight' => 40], ['id' => 'ex', 'name' => 'Exams', 'weight' => 60]], 'scale' => [['letter' => 'A', 'min' => 90], ['letter' => 'B', 'min' => 80], ['letter' => 'C', 'min' => 70], ['letter' => 'D', 'min' => 60], ['letter' => 'F', 'min' => 0]]],
       'SEMESTER' => ['start' => '2026-08-24', 'end' => '2026-12-18'],
       'EXAMS' => [['id' => 'exam1', 'name' => 'Exam 1', 'date' => '2026-10-20', 'covers' => 'Units 1 and 2', 'units' => [1, 2], 'weight' => 30]],

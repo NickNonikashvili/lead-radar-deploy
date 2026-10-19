@@ -61,9 +61,15 @@ function mh_pack_notify(array $p, string $id): int {
   $code = mh_req_code((string)$p['code']); if (!$code) return 0;
   return max(0, mh_req_set_status($code, 'added', '', $id));
 }
+/** Who uploaded a pack, for the admin panel: a class a member made from a syllabus (api/community.php) names them while their account exists. */
+function mh_pack_by(string $by): string {
+  if (!preg_match('/^community:(\d+)$/', $by, $m)) return $by;
+  static $who = []; if (!array_key_exists($m[1], $who)) { $st = mh_db()->prepare('SELECT email FROM users WHERE id = ?'); $st->execute([(int)$m[1]]); $who[$m[1]] = $st->fetchColumn() ?: ''; }
+  return 'A member with Bo · ' . ($who[$m[1]] !== '' ? $who[$m[1]] : 'account deleted');
+}
 function mh_pack_meta(array $r, array $req): array {
   require_once __DIR__ . '/requests.php'; $code = mh_req_code((string)$r['code']) ?? (string)$r['code'];
-  return ['id' => $r['id'], 'code' => $r['code'], 'name' => $r['name'], 'short' => $r['short'], 'version' => (int)$r['version'], 'enabled' => (bool)$r['enabled'], 'size' => (int)$r['size'], 'uploaded_by' => $r['uploaded_by'], 'created' => (int)$r['created'], 'updated' => (int)$r['updated'], 'has_prev' => $r['prev_json'] !== '', 'requests' => $req[$code] ?? 0];
+  return ['id' => $r['id'], 'code' => $r['code'], 'name' => $r['name'], 'short' => $r['short'], 'version' => (int)$r['version'], 'enabled' => (bool)$r['enabled'], 'size' => (int)$r['size'], 'uploaded_by' => mh_pack_by((string)$r['uploaded_by']), 'community' => str_starts_with((string)$r['uploaded_by'], 'community:'), 'created' => (int)$r['created'], 'updated' => (int)$r['updated'], 'has_prev' => $r['prev_json'] !== '', 'requests' => $req[$code] ?? 0];
 }
 
 /** Writes a checked pack. A new id is inserted as version 1; an existing one is updated and its previous copy kept for rollback.

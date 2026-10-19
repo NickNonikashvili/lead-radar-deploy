@@ -410,7 +410,7 @@
       <p>Bo knows your classes from their syllabi and keeps up with how you are doing, so his help fits you.</p>
       <ul class="bo-perks"><li>${icon('chat', 18)}<span><b>Ask anything</b> about your classes, any time: “Why is the derivative of $\\sin x$ equal to $\\cos x$?”</span></li><li>${icon('target', 18)}<span><b>He knows where you are stuck</b>: your weakest topics, the questions you missed and your next exam.</span></li>${talk() ? `<li>${icon('phone', 18)}<span><b>Call him</b> and just talk, like with a friend: he answers right away, you can cut in, and he writes the math on his board.</span></li>` : ''}<li>${icon('image', 18)}<span><b>Snap a problem</b> and he walks you through it, step by step.</span></li><li>${icon('flag', 18)}<span><b>Plans and quizzes</b> built on your real exam dates.</span></li></ul>
       <div class="bo-gate-acts"><button type="button" class="btn primary lg" data-go="max">${plan === 'pro' ? 'Move up to Max' : 'Get Mathub Max'}</button></div>
-      <p class="small muted">Mathub Max includes everything in Pro: Bo also writes your classes from their syllabi. <a href="#/plan">Compare the plans</a></p></section>`;
+      <p class="small muted">Mathub Max includes everything in Pro, so Bo is also on every page. <a href="#/plan">Compare the plans</a></p></section>`;
   }
   App.boGateHtml = { consent: () => consent(), intro: plan => intro(plan) };   // the floating Bo (assets/bo-float.js) asks the same way
   function consent() {

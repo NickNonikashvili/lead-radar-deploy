@@ -391,3 +391,10 @@ html[data-motion="off"] .pl-wait i { animation: none; }
 @media (max-width: 520px) { .bh { padding: 16px; border-radius: 24px; } .bh-av { width: 62px; height: 62px; border-radius: 19px; } :root .bh-t h2 { font-size: 21px; } .bh-acts { grid-template-columns: minmax(0, 1fr); } .bh-act { min-height: 64px; } }
 @media (prefers-reduced-motion: reduce) { .bh-act { transition: none; } .bh-act:active { transform: none; } }
 html[data-motion="off"] .bh-act { transition: none; }
+
+/* Bo's class from a syllabus goes on Mathub for everyone: what is checked first, and the class that is there already */
+.mk-bo-checks { list-style: none; padding: 0; margin: 12px 0 4px; display: grid; gap: 5px; color: var(--ink-2); }
+.mk-bo-checks li { display: flex; gap: 8px; align-items: flex-start; line-height: 1.45; }
+.mk-bo-checks svg { flex: none; margin-top: 2px; color: var(--pine, var(--good)); }
+.mk-exists { border-color: var(--accent-line); background: var(--accent-soft); }
+.mk-exists p { margin: 4px 0 0; }

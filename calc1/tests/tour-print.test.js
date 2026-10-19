@@ -1,16 +1,46 @@
-/* First-visit tour (steps, keyboard, replay from settings) and the print stylesheet/buttons. */
+/* The tour of the layout (every account once, people who took the older tour too; steps for a computer and for a phone,
+   keyboard, replay from settings, it waits for the welcome) and the print stylesheet/buttons. */
 const T = require('./lib');
 (async () => {
-  const { mk, go, log, check, txt } = await T.start({ tour: true });
-  const [c, p] = await mk(1360, 900, { serviceWorkers: 'block' }); await go(p, '#/', 2600);
-  check('tour appears on first visit', !!(await p.$('.tour')) && (await txt(p, '.tour-card h3')) === 'Start with Today', await txt(p, '.tour-card h3'));
-  check('spotlight positioned on target', await p.$eval('.tour-spot', e => e.style.display !== 'none' && parseFloat(e.style.width) > 40));
-  await p.keyboard.press('ArrowRight'); await p.waitForTimeout(400); check('next step', (await txt(p, '.tour-card h3')) === 'Your classes');
-  await p.click('[data-action="tour-back"]'); await p.waitForTimeout(300); check('back step', (await txt(p, '.tour-card h3')) === 'Start with Today');
-  for (let i = 0; i < 5; i++) { await p.click('[data-action="tour-next"]').catch(() => {}); await p.waitForTimeout(350); }
-  check('tour finishes and is remembered', !(await p.$('.tour')) && (await p.evaluate(() => App.settings().tourDone)) === true);
-  await p.reload(); await p.waitForTimeout(2600); check('tour does not repeat', !(await p.$('.tour')));
-  await go(p, '#/settings', 600); await p.click('[data-action="tour-again"]'); await p.waitForTimeout(1600); check('settings replays the tour', !!(await p.$('.tour')), await p.evaluate(() => location.hash)); await p.keyboard.press('Escape'); await p.waitForTimeout(200); check('escape closes', !(await p.$('.tour')));
+  const { mk, go, log, check, txt, login } = await T.start({ tour: true });
+  const [c, p] = await mk(1360, 900, { serviceWorkers: 'block' });
+  // someone who finished the older first-visit tour still gets the tour of the new layout
+  await c.addInitScript(() => { try { const s = JSON.parse(localStorage.getItem('studyhub-settings') || '{}'); if (s.tourDone === undefined) { s.tourDone = true; s.courses = ['calc', 'physics']; s.boFloatSeen = 1; localStorage.setItem('studyhub-settings', JSON.stringify(s)); } } catch (e) {} });
+  await go(p, '#/', 3400);
+  const first = await txt(p, '.tour-card h3');
+  check('the tour of the layout shows on the start page, also for people who took the older tour', !!(await p.$('.tour')) && first === 'The time, and where you are in the term', first);
+  const spot = await p.$eval('.tour-spot', e => ({ shown: e.style.display !== 'none', w: parseFloat(e.style.width) })); const now = await p.$eval('#sb-now', e => e.getBoundingClientRect().width);
+  check('the spotlight sits on the clock in the sidebar, and the card beside it', spot.shown && Math.abs(spot.w - now - 16) < 3 && !!(await p.$('.tour-card.side')), { spot, now });
+  const n = await p.$$eval('.tour-dots i', d => d.length); const steps = await p.evaluate(() => App.tour.steps.length);
+  check('a computer gets the sidebar, header, Your day and Bo steps, not the phone ones', n >= 7 && n < steps, { n, steps });
+  await p.keyboard.press('ArrowRight'); await p.waitForTimeout(400); check('next step: quick add', (await txt(p, '.tour-card h3')) === 'Add anything, from any page');
+  await p.click('[data-action="tour-back"]'); await p.waitForTimeout(300); check('back step', (await txt(p, '.tour-card h3')) === 'The time, and where you are in the term');
+  const titles = []; for (let i = 0; i < n; i++) { titles.push(await txt(p, '.tour-card h3')); await p.click('[data-action="tour-next"]').catch(() => {}); await p.waitForTimeout(380); }
+  log('steps:', titles.join(' | '));
+  check('it covers the sidebar, the header and Your day', ['Everything is in the sidebar', 'Your month at a glance', 'The header, on every page', 'Your day'].every(x => titles.includes(x)), titles);
+  check('the tour finishes and is remembered with the layout it showed', !(await p.$('.tour')) && (await p.evaluate(() => App.settings().tourLayout === App.tour.version && App.settings().tourDone === true)));
+  await p.reload(); await p.waitForTimeout(3000); check('the tour does not repeat', !(await p.$('.tour')));
+  await go(p, '#/settings', 700); await p.click('[data-action="tour-again"]'); await p.waitForTimeout(2200);
+  check('settings shows the tour again, on the start page', !!(await p.$('.tour')) && /^#\/?$/.test(await p.evaluate(() => location.hash)), await p.evaluate(() => location.hash));
+  await p.keyboard.press('Escape'); await p.waitForTimeout(200); check('escape closes it, and it counts as seen', !(await p.$('.tour')) && (await p.evaluate(() => App.settings().tourLayout)) === (await p.evaluate(() => App.tour.version)));
+  // a phone: the sidebar is the menu, so the steps are the menu, search, Your day and the tab bar
+  const [cp, ph] = await mk(390, 844, { serviceWorkers: 'block', isMobile: true, hasTouch: true });
+  await cp.addInitScript(() => { try { const s = JSON.parse(localStorage.getItem('studyhub-settings') || '{}'); if (!s.courses) { s.courses = ['calc']; s.boFloatSeen = 1; localStorage.setItem('studyhub-settings', JSON.stringify(s)); } } catch (e) {} });
+  await go(ph, '#/', 3400);
+  const pt = []; for (let i = 0; i < 8 && (await ph.$('.tour')); i++) { pt.push(await txt(ph, '.tour-card h3')); const r = await ph.$eval('.tour-card', e => { const b = e.getBoundingClientRect(); return b.left >= 0 && b.right <= innerWidth + 1 && b.top >= 0 && b.bottom <= innerHeight + 1; }); if (!r) pt.push('(off screen)'); await ph.click('[data-action="tour-next"]').catch(() => {}); await ph.waitForTimeout(400); }
+  log('phone steps:', pt.join(' | '));
+  check('a phone gets the menu, search and tab bar steps, each card on the screen', pt[0] === 'Everything is in the menu' && pt.includes('Search everything') && pt.includes('Down here') && !pt.includes('(off screen)') && !pt.includes('Everything is in the sidebar'), pt);
+  // a new account: the welcome first, then the tour
+  const [cw, w] = await mk(1360, 900, { serviceWorkers: 'block' });
+  await go(w, '#/', 800); await login(w, 'alice.a@montana.edu'); await w.evaluate(() => { const s = App.settings(); s.tourLayout = 0; s.prefsUpdated = Date.now() + 60000; localStorage.setItem('studyhub-settings', JSON.stringify(s)); try { sessionStorage.clear(); } catch (e) {} });
+  await w.reload(); await w.waitForTimeout(500); await w.evaluate(() => { if (App.welcome && App.welcome.open) App.welcome.open(); }); await w.waitForTimeout(2600);
+  const during = await w.evaluate(() => ({ welcome: !!document.querySelector('#welcome'), tour: !!document.querySelector('.tour') }));
+  if (during.welcome) {
+    check('the tour waits while the welcome is open', !during.tour, during);
+    await w.evaluate(() => { const x = document.querySelector('#welcome'); if (App.welcome && App.welcome.close) App.welcome.close(); else if (x) x.remove(); }); await w.evaluate(() => { location.hash = '#/today'; }); await w.waitForTimeout(300); await w.evaluate(() => { location.hash = '#/'; }); await w.waitForTimeout(2600);
+    check('and shows after it', !!(await w.$('.tour')), await w.evaluate(() => App.settings().tourLayout));
+  } else log('(no welcome to open here; skipped the welcome check)');
+  await cw.close(); await cp.close();
   await go(p, '#/calc/formulas', 1200); check('print button on formulas', !!(await p.$('.page-actions .print-btn')));
   await go(p, '#/calc/notes/1.3', 900); check('print button on notes', !!(await p.$('.note-head .print-btn')));
   await p.emulateMedia({ media: 'print' }); check('print hides chrome', await p.evaluate(() => getComputedStyle(document.getElementById('sidebar')).display === 'none' && getComputedStyle(document.getElementById('topbar')).display === 'none')); await p.emulateMedia({ media: 'screen' });

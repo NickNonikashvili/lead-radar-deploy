@@ -107,13 +107,15 @@ const STATE = path.join(__dirname, 'fixtures', 'rc-state.json');
   check('Bob adding it gets the plans card (he has no plan)', /Adding WEBT 210 to your classes needs Mathub Pro or Max/.test(await txt(b, '#paywall .pw-why')), await txt(b, '#paywall'));
   check('no sideways scroll with the card open at 390px', await hscroll(b));
   await b.keyboard.press('Escape'); await b.waitForTimeout(400);
-  // Bo writing a class needs Pro (or Max): Bob is offered both plans, Pro first
+  // Bo writing a class for everyone needs no plan: Bob gets the steps and the preview, no plans card
   await go(b, '#/create', 1400);
   check('no sideways scroll on the Create page at 390px', await hscroll(b));
   await b.fill('#mk-bo-text', 'TEST 101, Fall 2026'); await b.click('[data-bo-write]'); await b.waitForTimeout(1200);
-  const bpw = await b.evaluate(() => { const s = document.querySelector('#paywall'); return s && { why: s.querySelector('.pw-why').textContent, plans: [...s.querySelectorAll('[data-plan]')].map(x => x.dataset.plan), on: (s.querySelector('[data-plan].on') || {}).dataset }; });
-  check('Write my class without a plan opens the plans card: Pro (picked) and Max', bpw && /part of Mathub Pro and Max/.test(bpw.why) && bpw.plans.join() === 'pro,max' && bpw.on && bpw.on.plan === 'pro', bpw);
-  await b.keyboard.press('Escape'); await b.waitForTimeout(400);
+  await b.waitForTimeout(3600);
+  check('Write my class without a plan: no plans card, Bo checks the syllabus and writes it, with Add to Mathub', !(await b.$('#paywall')) && (await b.$$eval('#mk-bo-steps li.done', l => l.length)) >= 3 && !!(await b.$('#mk-bo-result [data-publish]')), await txt(b, '#mk-bo'));
+  check('the Create page says what is checked first and that the class is for everyone', /scanned for malware/.test(await txt(b, '.mk-bo-checks')) && /real course/.test(await txt(b, '.mk-bo-checks')) && /for everyone/.test(await txt(b, '.mk-bo-checks')));
+  await b.fill('#mk-bo-text', 'Grocery list: milk, eggs and bread.'); await b.click('[data-bo-write]'); await b.waitForTimeout(1600);
+  check('a grocery list is refused with the reason', /does not look like a course syllabus/.test(await txt(b, '#mk-bo-result')) && !(await b.$('#mk-bo-result [data-publish]')), await txt(b, '#mk-bo-result'));
   // the share code form on the Create page goes to the same place
   await go(b, '#/create', 1200); await b.fill('#mk-code', code.slice(0, 4) + '-' + code.slice(4)); await b.click('#mk-code-form button'); await b.waitForTimeout(1500);
   check('a code typed with a dash on the Create page opens the shared class', new RegExp('#/c/' + code + '$').test(b.url()) && /WEBT 210/.test(await txt(b, '#shared-box')), b.url());

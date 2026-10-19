@@ -1,8 +1,9 @@
 /* ============================================================
    Your plan (#/plan) and Bo on the start page, in the browser (assets/create.js, api plan_cancel):
    - a guest is asked to sign in; without a plan: the free plan, the plans side by side, and the way to each
-   - the start page has Bo and the plan in one card: Call Bo, Ask Bo and Write a class with Max, Write a class
-     with Pro, the two plans without one; the account menu links to Your plan
+   - the start page has Bo and the plan in one card: Call Bo, Ask Bo and Add a class with Max; Ask Bo here (the
+     floating Bo, part of Pro) and Add a class with Pro; the two plans and Add a class (free) without one; the
+     account menu links to Your plan
    - with a website plan: how it is paid, when it renews, this month's use, Manage billing, and Cancel plan:
      an honest dialog (what changes and when, an optional reason, Keep my plan), cancelled right on Mathub through
      RevenueCat's API v2, or the billing page when that cannot be done; an App Store plan is sent to the App Store;
@@ -37,7 +38,7 @@ const sql = (q, arg) => (spawnSync('php', ['-r', '$d = new PDO("sqlite:" . $argv
   await plan(a, aliceId, null);
   await go(a, '#/', 1800);
   const hf = await a.evaluate(() => { const h = document.querySelector('#bo-hub'); return h && { h: h.querySelector('h2').textContent, acts: [...h.querySelectorAll('.bh-act b')].map(b => b.textContent), plan: h.querySelector('.bh-plan').getAttribute('href'), chip: h.querySelector('.bh-plan b').textContent, before: !!(h.compareDocumentPosition(document.querySelector('.land-next, [aria-labelledby="lsec-classes"]')) & Node.DOCUMENT_POSITION_FOLLOWING) }; });
-  check('without a plan, the start page has Meet Bo with Get Max, Get Pro and Compare the plans, above the classes', hf && hf.h === 'Meet Bo, your tutor' && hf.acts.join() === 'Get Mathub Max,Get Mathub Pro,Compare the plans' && hf.plan === '#/plan' && hf.chip === 'Free' && hf.before, hf);
+  check('without a plan, the start page has Meet Bo with Get Pro (Bo on every page), Get Max and Add a class (free), above the classes', hf && hf.h === 'Meet Bo, your tutor' && hf.acts.join() === 'Get Mathub Pro,Get Mathub Max,Add a class' && hf.plan === '#/plan' && hf.chip === 'Free' && hf.before, hf);
   await a.click('#bo-hub [data-bh="max"]'); await a.waitForTimeout(1200);
   check('Get Mathub Max opens the Max checkout card', /Mathub Max/.test(await txt(a, '#paywall h2')) && (await a.$$eval('#paywall [data-plan]', b => b.map(x => x.dataset.plan).join())) === 'max');
   await a.keyboard.press('Escape'); await a.waitForTimeout(300);
@@ -52,20 +53,23 @@ const sql = (q, arg) => (spawnSync('php', ['-r', '$d = new PDO("sqlite:" . $argv
   await plan(a, aliceId, { plan: 'pro', store: 'rc_billing' });
   await go(a, '#/', 1800);
   const hp = await a.evaluate(() => { const h = document.querySelector('#bo-hub'); return { acts: [...h.querySelectorAll('.bh-act b')].map(b => b.textContent), main: h.querySelector('.bh-act.bh-main b').textContent, chip: h.querySelector('.bh-plan b').textContent, sub: h.querySelector('#bh-sub').textContent }; });
-  check('with Pro: Write a class first, and Ask Bo and Call Bo lead up to Max', hp.main === 'Write a class' && hp.acts.join() === 'Write a class,Ask Bo,Call Bo' && hp.chip === 'Pro' && /more classes this month/.test(hp.sub), hp);
+  check('with Pro: Ask Bo here first (Bo on every page), Add a class, and Call Bo leads up to Max', hp.main === 'Ask Bo here' && hp.acts.join() === 'Ask Bo here,Add a class,Call Bo' && hp.chip === 'Pro' && /questions left this month/.test(hp.sub) && /Bo is on every page/.test(hp.sub), hp);
+  await a.click('#bo-hub [data-bh="float"]'); await a.waitForTimeout(1000);
+  check('Ask Bo here opens Bo right on the page', await a.evaluate(() => { const p = document.querySelector('#bo-pop'); return !!p && !p.hidden; }));
+  await a.keyboard.press('Escape'); await a.waitForTimeout(400);
   await a.click('#bo-hub [data-bh="max"]'); await a.waitForTimeout(1200);
   check('Ask Bo with Pro offers the move up to Max', /Move up to Max/.test(await txt(a, '#paywall h2')));
   await a.keyboard.press('Escape'); await a.waitForTimeout(300);
   await go(a, '#/plan', 1800);
   const mp = await a.$$eval('.pl-m', ms => ms.map(m => [m.classList.contains('off'), m.querySelector('b').textContent]));
-  check('Pro\'s month: questions to Bo are part of Max, classes Bo writes are counted', mp.length === 2 && mp[0][0] && mp[0][1] === 'Questions to Bo' && !mp[1][0] && /Classes Bo writes/.test(mp[1][1]), mp);
+  check('Pro\'s month: questions to Bo (on every page) and classes Bo writes are counted', mp.length === 2 && !mp[0][0] && mp[0][1] === 'Questions to Bo' && !mp[1][0] && /Classes Bo writes/.test(mp[1][1]), mp);
   check('with Pro, the plan card has Move up to Max', !!(await a.$('#pl-now [data-pl="buy-max"]')));
 
   // alice with Max, bought on the website
   await plan(a, aliceId, { plan: 'max', store: 'rc_billing' });
   await go(a, '#/', 1800);
   const hm = await a.evaluate(() => { const h = document.querySelector('#bo-hub'); return { acts: [...h.querySelectorAll('.bh-act b')].map(b => b.textContent), main: h.querySelector('.bh-act.bh-main b').textContent, ask: h.querySelector('a.bh-act[href^="#/tutor"]').getAttribute('href'), chip: h.querySelector('.bh-plan b').textContent, sub: h.querySelector('#bh-sub').textContent, row: getComputedStyle(h.querySelector('.bh-act.bh-main')).flexDirection }; });
-  check('with Max: Call Bo, Ask Bo (her class) and Write a class, with what is left this month', hm.acts.join() === 'Call Bo,Ask Bo,Write a class' && hm.main === 'Call Bo' && hm.ask === '#/tutor/calc' && hm.chip === 'Max' && /questions and \d+ call minutes left this month/.test(hm.sub) && hm.row === 'row', hm);
+  check('with Max: Call Bo, Ask Bo (her class) and Add a class, with what is left this month', hm.acts.join() === 'Call Bo,Ask Bo,Add a class' && hm.main === 'Call Bo' && hm.ask === '#/tutor/calc' && hm.chip === 'Max' && /questions and \d+ call minutes left this month/.test(hm.sub) && hm.row === 'row', hm);
   await a.click('#bo-hub [data-bh="call"]'); await a.waitForTimeout(1200);
   check('Call Bo before agreeing to Bo\'s terms goes to Bo first (who asks), with the call to follow', /^#\/tutor\/calc\?talk=1/.test(new URL(a.url()).hash) && /Before you start/.test(await txt(a, '#bo-main')));
   await a.evaluate(() => App.setSetting('aiConsent', Date.now()));

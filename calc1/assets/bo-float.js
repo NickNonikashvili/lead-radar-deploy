@@ -13,7 +13,8 @@
      It is the class's chat with Bo, so Ask Bo (#/tutor) shows it too; "Open the full chat" goes there.
    - Drag him to either side, up or down; he stays where he is put. Alt+B opens him, Esc closes.
      Settings → "Bo on every page" turns him off. Not on Ask Bo itself, during a call, or in the apps (Bo is a tab).
-   Needs tutor.js (App.boAsk, App.boBoard). Answers need Mathub Max, as in Ask Bo.
+   Needs tutor.js (App.boAsk, App.boBoard). Answers need Mathub Pro or Max (the server lets Pro ask from here, flagged
+   float; Ask Bo's own page, linked from the panel, is Max).
    ============================================================ */
 (function (global) {
   'use strict';
@@ -155,7 +156,7 @@
   }
 
   /* ---------- the floating button ---------- */
-  function hidden() { const r = where(); return settings().boFloat === false || HIDE_ON.includes(r.view) || !!$('#bo-talk') || !!$('.tour'); }
+  function hidden() { const r = where(); return settings().boFloat === false || HIDE_ON.includes(r.view) || !!$('#bo-talk'); }   // during the tour he stays under its dim layer (one step points at him)
   function build() {
     if (F.fab) return;
     const fab = F.fab = document.createElement('button'); fab.type = 'button'; fab.id = 'bo-fab'; fab.className = 'bf-fab';
@@ -286,16 +287,16 @@
   }
   const logOf = () => (F.logs[F.cid || '_'] = F.logs[F.cid || '_'] || []);
 
-  /* who can ask: signed in, Mathub Max, agreed to what is sent, and a class */
+  /* who can ask: signed in, Mathub Pro or Max, agreed to what is sent, and a class */
   async function status(force) {
     if (!force && F.status && Date.now() - F.statusAt < 60000) return F.status;
     F.status = await api('ai_status'); F.statusAt = Date.now(); if (App.boTalk && App.boTalk.setStatus) App.boTalk.setStatus(F.status); return F.status;
   }
   async function gate() {
-    if (!user()) return `<div class="bf-gate"><p class="bf-gate-h">Sign in to ask Bo</p><p>Bo is your AI tutor in Mathub Max. He explains any topic, and sees the page you ask from: the questions on it, your answers, the notes you're reading.</p><div class="bf-gate-acts"><button type="button" class="btn primary" data-go="login">Log in</button><button type="button" class="btn" data-go="signup">Create an account</button></div></div>`;
+    if (!user()) return `<div class="bf-gate"><p class="bf-gate-h">Sign in to ask Bo</p><p>Bo is your AI tutor in Mathub Pro. He explains any topic, and sees the page you ask from: the questions on it, your answers, the notes you're reading.</p><div class="bf-gate-acts"><button type="button" class="btn primary" data-go="login">Log in</button><button type="button" class="btn" data-go="signup">Create an account</button></div></div>`;
     let s; try { s = await status(); } catch (e) { return `<div class="bf-gate"><p class="bf-gate-h">Bo can't be reached</p><p>${esc(e.message)}</p><div class="bf-gate-acts"><button type="button" class="btn" data-go="retry">Try again</button></div></div>`; }
     if (!s.enabled) return `<div class="bf-gate"><p class="bf-gate-h">Bo is getting ready</p><p>Bo isn't switched on yet. He'll be here soon.</p></div>`;
-    if (!s.max) return `<div class="bf-gate"><p class="bf-gate-h">Bo is part of Mathub Max</p><ul class="bf-perks"><li>${icon('target', 16)}<span><b>He sees your page</b>: tap a question and he walks you through it, or checks your answers.</span></li><li>${icon('chat', 16)}<span><b>Explains anything</b>, a step at a time, with drawings on his board.</span></li><li>${icon('upload', 16)}<span><b>Reads your problem sets</b>: a photo or a PDF.</span></li></ul><div class="bf-gate-acts"><button type="button" class="btn primary" data-go="max">${s.plan === 'pro' ? 'Move up to Max' : 'Get Mathub Max'}</button><a class="btn ghost" href="#/plan">Compare the plans</a></div></div>`;
+    if (!s.pro) return `<div class="bf-gate"><p class="bf-gate-h">Bo on every page is part of Mathub Pro</p><ul class="bf-perks"><li>${icon('target', 16)}<span><b>He sees your page</b>: tap a question and he walks you through it, or checks your answers.</span></li><li>${icon('chat', 16)}<span><b>Explains anything</b>, a step at a time, with drawings on his board.</span></li><li>${icon('upload', 16)}<span><b>Reads your problem sets</b>: a photo or a PDF.</span></li></ul><div class="bf-gate-acts"><button type="button" class="btn primary" data-go="pro">Get Mathub Pro</button><a class="btn ghost" href="#/plan">Compare the plans</a></div></div>`;
     if (!settings().aiConsent) return `<div class="bf-gate bf-consent">${App.boGateHtml ? App.boGateHtml.consent() : ''}</div>`;
     if (!F.cid) return `<div class="bf-gate"><p class="bf-gate-h">Pick a class first</p><p>Bo helps with a class you take. Choose your classes, or make one from a syllabus.</p><div class="bf-gate-acts"><a class="btn primary" href="#/">Your classes</a><a class="btn" href="#/create">Create a class</a></div></div>`;
     return '';
@@ -303,13 +304,14 @@
   async function gateGo(g) {
     if (g === 'login' || g === 'signup') { closePanel(true); if (App.auth) App.auth.open(g); return; }
     if (g === 'retry') { F.statusAt = 0; paintBody(); return; }
-    if (g === 'max') { closePanel(true); if (App.paywall && await App.paywall({ need: 'max', reason: 'bo' })) { F.statusAt = 0; openPanel(); } return; }
+    if (g === 'pro' || g === 'max') { closePanel(true); if (App.paywall && await App.paywall(g === 'max' ? { need: 'max', reason: 'bo' } : { need: 'pro', reason: 'bo-float' })) { F.statusAt = 0; openPanel(); } return; }
     if (g === 'agree') { setSetting('aiConsent', Date.now()); await paintBody(); const q = $('#bf-q', F.el); if (!phone()) q.focus(); return; }
     if (g === 'later') closePanel();
   }
   async function paintBody() {
     const body = $('#bf-body', F.el); const form = $('#bf-compose', F.el);
     const g = await gate(); F.gated = !!g;
+    const full = $('#bf-full', F.el); if (full) full.hidden = !!(F.status && !F.status.max);   // Ask Bo's own page is Max
     $('#bf-q', F.el).disabled = !!g; $$('.bf-send, [data-bf="point"], #bf-file', F.el).forEach(x => { x.disabled = !!g; });
     form.classList.toggle('off', !!g);
     if (g) { body.innerHTML = g; return; }
@@ -401,7 +403,7 @@
     body.appendChild(me); logOf().push(me); body.scrollTop = body.scrollHeight;
     const flow = $('.bf-flow', me); let sofar = '', frame = 0;
     const paint = () => { frame = 0; if (sofar) me.classList.remove('typing'); paintFlow(flow, sofar, true); stick(body); };
-    const req = { class: cid, q: text || 'Can you help me with this?', snapshot: safe(() => App.tutorSnapshot(cid)) || {}, today: App.todayISO() };
+    const req = { class: cid, q: text || 'Can you help me with this?', snapshot: safe(() => App.tutorSnapshot(cid)) || {}, today: App.todayISO(), float: 1 };
     if (c) req.screen = c.text; if (focus && focus.text) req.focus = String(focus.text).slice(0, 3000); if (tag && (c || focus)) req.where = String(tag).slice(0, 80);
     if (file) { if (file.kind === 'pdf') req.file = { type: file.type, data: file.data, name: file.name }; else req.image = { type: file.type, data: file.data }; }
     try {
