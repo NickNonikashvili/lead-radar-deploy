@@ -279,7 +279,8 @@
   L.fmtDur = fmtDur;
   const hhmmss = s => `${String(Math.floor(s / 3600)).padStart(2, '0')}:${String(Math.floor(s / 60) % 60).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
   L.timerStart = (course, what) => { L.setCfg('timer', { start: Date.now(), course: course || '', what: what || '' }); };
-  L.timerStop = () => { const tm = L.cfg('timer', null); if (!tm || !tm.start) return null; const mins = (Date.now() - tm.start) / 60000; L.setCfg('timer', null); if (mins < 1) { toast(t('Under a minute, so it was not saved.')); return null; } const rec = L.add('timelog', { date: App.toISO(new Date(tm.start)), course: tm.course || '', what: tm.what || '', mins: Math.round(mins) }); toast(t('{1} saved', fmtDur(mins))); return rec; };
+  L.timerStop = () => { const tm = L.cfg('timer', null); if (!tm || !tm.start) return null; const mins = (Date.now() - tm.start) / 60000; L.setCfg('timer', null); if (mins < 1) { toast(t('Under a minute, so it was not saved.')); return null; } const shift = Math.round((App.parseISO(L.today()) - App.parseISO(App.toISO(new Date()))) / 864e5);   // logged on the app’s date, which a date set for testing can move
+    const rec = L.add('timelog', { date: L.addDaysISO(App.toISO(new Date(tm.start)), shift), course: tm.course || '', what: tm.what || '', mins: Math.round(mins) }); toast(t('{1} saved', fmtDur(mins))); return rec; };
   App.views.timelog = {
     title: 'Time tracker', blurb: 'Where your study hours go, class by class. The Focus room’s minutes count too.',
     render(root) {
