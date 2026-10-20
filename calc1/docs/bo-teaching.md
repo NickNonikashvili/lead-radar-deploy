@@ -37,14 +37,16 @@ back on. And the app checks the arithmetic itself, exactly, because a rule alone
   "54"), and derivatives or antiderivatives said in words. A stated rounding is fine ("pi is 3.14"), and so is
   "negative 3 squared is 9" (said aloud it means (−3)²). Anything it cannot read is left alone, so it never cries
   wrong over notation it does not follow; everyday talk ("my exam is at 9, worth 20 percent") is left alone too.
-- **On a call:** what the student says (from its transcript) and types is checked; something wrong stops Bo if he
-  has started, and he answers again with an exact MATH CHECK note. What Bo says is checked too: his own slip, or
-  telling a student who was right that they were not, gets him a note to correct himself. He has a `check_math`
-  tool (a value, two things equal, an equation and values for its letters, its solutions, a derivative, an
-  antiderivative, a limit, the steps of a solution) and is told to use it before he says whether something is
-  right, including on handwriting he reads from the board. Pages he writes are checked before they go up (a false
-  line, or a step that does not follow from the one before, comes back to him to fix), and so are his questions'
-  answers.
+- **On a call:** what the student says (from its transcript) and types is checked, and an exact MATH CHECK note
+  goes in for Bo's next turn ("that is right", or what is wrong and that he must not agree; if the transcript may
+  have misheard them, he checks with them first). He is not cut off for it (that made him stutter), except when his
+  first words start to agree with something wrong, or to tell a student who was right that they were not: then he
+  is stopped and told. What Bo says is checked too: his own slip gets him a note and a turn to correct himself. He
+  has a `check_math` tool (a value, two things equal, an equation and values for its letters, its solutions, a
+  derivative, an antiderivative, a limit, the steps of a solution) and is told to use it before he says whether
+  something is right, including on handwriting he reads from the board. Pages he writes are checked before they go
+  up (a false line, or a step that does not follow from the one before, comes back to him to fix quietly), and so
+  are his questions' answers.
 - **Typed and basic voice** (Claude): the student's message is checked on the server and a MATH CHECK note goes
   with it. Bo's reply is checked too: a slip on one of his pages or in what he says makes him write the reply again
   with it named (the chat shows the fixed one); out loud, where it was already spoken, he says the correction.
@@ -57,20 +59,75 @@ part of `tests/talk-web.test.js` (a call) and of `tests/ai-api.test.js` (the ser
 The first version of Bo's call persona told him to "ask more than you tell" and keep every turn to one to three
 sentences. The result was a tutor who quizzed but didn't explain. The research says that is the wrong default for
 someone meeting an idea for the first time: novices learn more from a clear worked example than from being made to
-search (the worked-example effect), and expert tutors give direct explanations when the student needs them. So
-on a call Bo now:
+search (the worked-example effect), and expert tutors give direct explanations when the student needs them. But a
+voice that talks too long is hard to follow and easy to talk over by accident. So on a call Bo now:
 
-- keeps chatting, checking in and quizzing short, but takes **a proper turn to explain something new**: four to
-  seven sentences, about 20 to 40 seconds, then checks in;
+- keeps most turns to one to three short sentences, and takes **a proper turn to explain something new**: up to
+  about five short sentences, then checks in;
 - explains in the order **big idea → put it on the board → walk through it in words, pointing at the board → one
   question to check**;
-- slows down a little on the key idea;
+- asks the student to say it again when the audio was unclear, instead of guessing what they meant, and asks what
+  "this" or "that one" is when the screen doesn't make it plain;
+- diagnoses a wrong answer (which step, which idea) before he says anything about it; wrong twice, he works a similar
+  problem out loud and gives theirs back; "I don't know" twice, he gives a smaller step or the first move;
 - draws (`draw_on_board`) as well as writes (`write_on_board`), and keeps talking while it goes up;
 - checks with a question on the board (`ask_on_board`, rule 8): the student taps or types the answer right there,
   sees at once whether it's right and why, and Bo is told what they picked, so he reacts to it (rule 10).
 
-Calls can also use more output per turn now (`max_output_tokens` 1600), so a full explanation and a drawing fit
-in one answer.
+The call instructions (`MH_AI_LIVE`) follow the structure of OpenAI's realtime prompting guide: short headed
+sections (role, personality, length and pace, unclear audio, understanding what they mean, getting the math right,
+how you teach, tools, the board, context, language, start of the call), plain rules instead of long paragraphs, and
+"Use when…" at the start of every tool's description. They are about half as long as before (the chat's longer
+teaching rules stay in the chat), and the seven tools' descriptions are half as long too, so Bo follows them better
+on a voice model. A call's answer has no output cap (`max_output_tokens` "inf"), so a page or a drawing is never cut
+off halfway.
+
+## Calls that hold up
+
+Students said Bo "stutters a lot" (stops and starts again mid-sentence), "doesn't know what I'm talking about", "runs
+into errors" and "ends the call when the connection drops". Each had a cause in the call code; what changed
+(`assets/talk.js`, `Live`; `api/ai.php`, `ai_live_start`):
+
+- **Stutter.** The app used to cut Bo off itself: when the math check caught something it cancelled his answer and
+  asked for a new one, and it sometimes asked for an answer while one was still going. Now **the server owns
+  interruptions** (`semantic_vad` with `interrupt_response`, the way LiveKit, Pipecat and OpenAI's Agents SDK do it)
+  and the app never cancels him for a check: a MATH CHECK goes in as a note for his next turn. The one exception is a
+  guard on his first words: if he starts to agree with something the check found wrong ("yes, exactly…"), or to say a
+  right answer is wrong, he is stopped then and told why. **One response at a time:** the app keeps a queue, asks
+  for an answer only when none is going, and treats the server's "already has an active response" as the harmless
+  race it is (it waits, then asks again; nothing is shown). His own voice through the speakers is the other cause:
+  the mic waits while he greets (the browser's echo canceller is weakest in the first seconds), laptops get the
+  far-field noise filter (`far_field`; headphones get `near_field`), a short sound or an "mm-hmm" that cut him off
+  counts as a false start and he carries on without repeating himself, and **My speakers echo** (call settings)
+  keeps the mic closed while he talks (tap him to stop him). On iPhone without headphones it is on by default.
+  Free calls on speakers use the stronger call model, which handles echo better than the small one.
+- **Not understanding.** What the student says is written down by `gpt-live-transcribe` in their language, with the
+  class's words as hints (derivative, integral, the class code, its section titles), so "x squared" and "M171" come
+  through. The instructions now say to ask again instead of guessing, to check what "this" refers to, and that the
+  whole screen is a board they share (he gets a quiet look at it and knows what is on it).
+- **Errors.** A tool that could not do what Bo asked used to answer `{error: …}`, and he read it out ("I ran into an
+  error"). Tools now answer in a shape he can act on: `ok: true` when it worked, or `retry: true` with a hint to fix
+  it quietly and call again (a page with a false line, a drawing he got wrong once, a question whose answer does not
+  hold); a drawing that fails twice becomes words. He is told never to mention tools, errors or notes. After a tool,
+  the app asks for his next turn only when he still has something to say (a check, a retry, or no spoken answer yet),
+  so he doesn't talk twice; `wait_for_user` lets him stay quiet when the audio was not for him.
+- **Dropped calls.** The call used to end the moment the connection said "disconnected", which often heals by itself
+  in a second or two. Now the app watches the audio packets as well as the connection: a blip changes nothing; after
+  about two seconds it shows "reconnecting…" (or "you're offline"), and after about six (or at once on "failed", or
+  when the network comes back) it **rebuilds the call as the same call**: a new connection with `resume` (the last
+  call's id), the board, the clock and the captions kept, and Bo told the call dropped and is back, with his last few
+  messages, so he picks up instead of greeting again. Tries back off (0, 1, 2, 4, 8 s); after a minute with no
+  connection the call ends and says so, with Call again. A mic that stops (unplugged headphones, another app) is
+  picked up again, or a button asks to turn it back on. Calls roll over to a fresh session before the 60-minute
+  limit, at a pause.
+
+Settings on a call (the gear): **I'm wearing headphones** (the near-field filter, from the next call; also guessed
+from the mic's name), **My speakers echo**, and how quickly he answers. The admin can choose the model that writes
+down what is said (Site settings → "Model that writes down what is said on calls").
+
+Tests: `tests/call-resilience.test.js` (on the stand-in call: blips, drops, rebuilds, offline, the greeting gate, the
+echo setting, the queue, tool retries, a lost call), and the call parts of `tests/talk-web.test.js` and
+`tests/ai-api.test.js` (session settings, instructions, tools, resume).
 
 ## Bo's characters
 
@@ -118,7 +175,9 @@ polls once a second, which works on shared hosting and campus Wi-Fi.
 
 The admin's **Bo quality** tab (`ai_admin_quality`) shows, by week: answers, the students' slips the math check
 caught, Bo's own slips caught (rewritten before anyone saw them in the chat, corrected out loud on calls, pages
-held back), calls and recaps; and the answers students marked "not right" with the thumbs down, with their
+held back), calls and recaps; for calls, how they went: reconnects (a dropped connection rebuilt as the same call),
+calls lost to the connection, false starts (a short sound that cut Bo off), times the app stopped him (agreeing with
+something wrong), answers cut by a limit and errors from the call; and the answers students marked "not right" with the thumbs down, with their
 question and what they said was wrong. Read the queue weekly; recurring kinds of mistakes are prompt or
 math-check work.
 
@@ -202,4 +261,9 @@ The student sees what Bo sees ("Bo sees Calc I › Quizzer · 10 questions") and
 - Bastani, H., et al. Generative AI without guardrails can harm learning: [SSRN](https://papers.ssrn.com/abstract=4895486).
 - Wang, R. E., et al. Tutor CoPilot: a human-AI approach for scaling real-time expertise: [NSSA, Stanford](https://nssa.stanford.edu/studies/tutor-copilot-human-ai-approach-scaling-real-time-expertise).
 - Lemov, D. *Teach Like a Champion* (Check for Understanding; wait and think time): [field notes](https://teachlikeachampion.org/?p=5172); [ASCD, think time](https://ascd.org/el/articles/a-new-rhythm-for-responding).
-- OpenAI, prompting realtime voice models (short bullet sections, explicit tool rules): [voice prompting guide](https://developers.openai.com/api/docs/guides/voice-prompting).
+- OpenAI, prompting realtime voice models (short bullet sections, explicit tool rules): [voice prompting guide](https://developers.openai.com/api/docs/guides/voice-prompting); [realtime prompting guide (cookbook)](https://developers.openai.com/cookbook/examples/realtime_prompting_guide).
+- OpenAI Realtime API: [turn detection (VAD)](https://developers.openai.com/api/docs/guides/realtime-vad), [conversations and responses](https://developers.openai.com/api/docs/guides/realtime-conversations), [WebRTC](https://developers.openai.com/api/docs/guides/realtime-webrtc), [transcription](https://developers.openai.com/api/docs/guides/realtime-transcription), [client events](https://developers.openai.com/api/reference/resources/realtime/client-events/) and [server events](https://developers.openai.com/api/reference/resources/realtime/server-events/).
+- How voice-agent frameworks handle turns, interruptions and false starts: [LiveKit Agents](https://github.com/livekit/agents/blob/main/livekit-agents/livekit/agents/voice/agent_session.py), [Pipecat](https://github.com/pipecat-ai/pipecat/blob/main/src/pipecat/services/openai/realtime/llm.py), [OpenAI Agents SDK, realtime](https://github.com/openai/openai-agents-python/blob/main/docs/realtime/guide.md).
+- Echo in the first seconds of a call, and on speakers: [OpenAI community](https://community.openai.com/t/realtimeapi-echo-cancellation-doesn-t-work-for-the-first-10-seconds-of-session/1252805), [and on the mini model](https://community.openai.com/t/speaker-feedback-mitigation-for-gpt-realtime-2-1-mini-with-webrtc/1389657).
+- "Disconnected" is not "failed": [Mozilla, ICE disconnected](https://blog.mozilla.org/webrtc/ice-disconnected-not/); [MDN, restartIce](https://developer.mozilla.org/en-US/docs/Web/API/RTCPeerConnection/restartIce).
+- The full research behind the call fixes: Voice AI tutor reliability (kept with the project's research notes, not shipped).

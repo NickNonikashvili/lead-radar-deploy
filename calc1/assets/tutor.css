@@ -918,3 +918,9 @@ html[data-motion="off"] :is(.bf-pop, .bf-fab-l, .bf-hl) { transition: none; }
 .rm-err { color: var(--bad, #B42318); font-weight: 600; }
 .rm-box .btn.lg { justify-content: center; }
 @media (max-width: 760px) { .rm-t h2 { font-size: 16px; } .rm-av { display: none; } .rm-caps { max-height: 24vh; } .rm-ask .btn span, .rm-ask .btn { padding-inline: 14px; } }
+/* a call picking itself up again after a drop (assets/talk.js, Live.rebuild) */
+.bt[data-rc="1"] .bt-status { color: #FFD27A; }
+.bt[data-rc="1"] .bt-status::before { content: ""; display: inline-block; width: 8px; height: 8px; margin-right: 7px; border-radius: 50%; background: #FFB020; vertical-align: 1px; animation: bt-rc 1s ease-in-out infinite alternate; }
+@keyframes bt-rc { from { opacity: .35; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .bt[data-rc="1"] .bt-status::before { animation: none; } }
+#bt-micfix { margin-top: 10px; }

@@ -30,6 +30,7 @@ function mh_siteconfig_fields(): array {
     'virustotal_key'     => ['ai', 'VirusTotal API key', 'secret', 'Optional. Each syllabus file someone uploads is also looked up on VirusTotal by its fingerprint (SHA-256); the file itself is never sent (virustotal.com → API key).'],
     'ai_live_model'      => ['ai', 'Model for live calls', 'model', ''],
     'ai_live_model_max'  => ['ai', 'Model for Max members’ calls', 'model', 'Max members talk to this one (gpt-realtime-2.1 reasons better than the mini, at several times the price); the free minutes keep the model above. Empty: the same model for everyone. If OpenAI refuses it, calls use the model above.'],
+    'ai_live_transcribe' => ['ai', 'Model that writes down what is said on calls', 'model', 'For the captions and the app’s math check (gpt-live-transcribe by default; gpt-4o-mini-transcribe works until February 2027). If OpenAI refuses it, calls fall back to gpt-4o-mini-transcribe.'],
     'ai_live_voice'      => ['ai', 'Bo’s voice on calls', 'select', '', $voices],
     'ai_live_monthly'    => ['ai', 'Call minutes, per student per month', 'int', '', [0, 10000]],
     'ai_live_daily'      => ['ai', 'Call minutes, per student per day', 'int', '', [0, 1440]],

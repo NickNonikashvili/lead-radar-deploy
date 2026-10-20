@@ -35,7 +35,8 @@
      as a picture with a grid (columns A, B, C… across, rows 1, 2, 3… down): on a live call when they tap Show
      Bo and quietly as they write; in basic voice with their question (pad: {cols, rows}, MH_AI_PAD). He marks
      their writing at grid cells: mark_on_board on a live call, "mark: C3 circle note" lines otherwise.
-   - How Bo teaches (MH_AI_TEACH, in the chat, voice and call instructions): what research on expert tutors and
+   - How Bo teaches (MH_AI_TEACH, in the chat and voice instructions; calls have their own shorter rules in
+     MH_AI_LIVE): what research on expert tutors and
      learning says works: find out where the student is, the big picture first, one idea at a time, concrete
      before abstract, a worked example and then fading, draw it, check with real questions, a hint ladder,
      mistakes as information, a different angle when it didn't land, close the loop. Sources: docs/bo-teaching.md.
@@ -48,6 +49,9 @@
      turns), sets the call up with OpenAI and returns the answer, so the key never reaches the browser. The
      browser reports the minutes (ai_live_tick); past a limit this server hangs the call up. What was said is
      saved in the chat (ai_live_log). Minutes per call, per day and per month: ai_live_call, _daily, _monthly.
+     A dropped connection is rebuilt as the same call (resume: the call's id; the same row goes on with its minutes
+     so far, the time it was down not counted, and Bo is told the call is back, MH_AI_LIVE_RESUME). What the student says is written down by ai_live_transcribe in
+     their language, with the class's words as hints. See docs/bo-teaching.md, "Calls that hold up".
    - Monthly limits per account (ai_tutor_monthly, ai_class_monthly, ai_voice_monthly characters spoken,
      ai_listen_monthly seconds heard) and per-minute rate limits.
    Rows are removed with the account (ON DELETE CASCADE).
@@ -129,6 +133,7 @@ function mh_ai_voice_settings(array $cfg): array {
     'listen_monthly' => max(0, (int)($cfg['ai_listen_monthly'] ?? 36000)),
     'live_model' => (string)($cfg['ai_live_model'] ?? 'gpt-realtime-2.1-mini'),
     'live_model_max' => trim((string)($cfg['ai_live_model_max'] ?? 'gpt-realtime-2.1')),   // Max members' calls; empty: the same as live_model
+    'live_transcribe' => trim((string)($cfg['ai_live_transcribe'] ?? 'gpt-live-transcribe')) ?: 'gpt-live-transcribe',   // the captions and the app's math check (gpt-4o-mini-transcribe ends 2027-02-26)
     'live_voice' => in_array($cfg['ai_live_voice'] ?? '', array_keys(MH_AI_LIVE_VOICES), true) ? $cfg['ai_live_voice'] : 'cedar',
     'live_monthly' => 60 * max(0, (int)($cfg['ai_live_monthly'] ?? 300)),   // seconds
     'live_daily' => 60 * max(1, (int)($cfg['ai_live_daily'] ?? 90)),
@@ -591,7 +596,7 @@ function mh_ai_trial_used(int $uid): int { $st = mh_ai_db()->prepare('SELECT use
 /** Counts for the admin's Bo quality tab, by day (the metrics table, keys bo_*): answers, what the math check
     caught (the student's slips and Bo's), what was fixed before it was kept, calls, recaps and thumbs down. */
 function mh_ai_q(string $key, int $n = 1): void { if ($n <= 0) return; try { require_once __DIR__ . '/social.php'; require_once __DIR__ . '/growth.php'; mh_metric('bo_' . $key, $n); } catch (Throwable $e) {} }
-const MH_AI_Q_KEYS = ['answers' => 'Answers in the chat and basic voice', 'chat_you' => 'Slips by students, caught (chat)', 'chat_bo' => 'Slips by Bo, caught (chat)', 'chat_fixed' => 'Rewritten before they saw it', 'call_you' => 'Slips by students, caught (calls)', 'call_bo' => 'Slips by Bo, caught (calls)', 'call_page' => 'Pages on calls held back until fixed', 'calls' => 'Live calls', 'recaps' => 'Recaps after calls', 'recap_fixed' => 'Recaps rewritten before they were kept', 'flags' => 'Marked “not right” by students'];
+const MH_AI_Q_KEYS = ['answers' => 'Answers in the chat and basic voice', 'chat_you' => 'Slips by students, caught (chat)', 'chat_bo' => 'Slips by Bo, caught (chat)', 'chat_fixed' => 'Rewritten before they saw it', 'call_you' => 'Slips by students, caught (calls)', 'call_bo' => 'Slips by Bo, caught (calls)', 'call_page' => 'Pages on calls held back until fixed', 'calls' => 'Live calls', 'reconnects' => 'Calls picked up again after a drop', 'drops' => 'Calls lost for good (no connection for a minute)', 'false_barge' => 'Bo cut off by noise or “mm-hmm”', 'cut_client' => 'Bo stopped by the app', 'cut_limit' => 'Bo’s turns cut off by the length limit', 'call_errors' => 'Errors from OpenAI during calls', 'recaps' => 'Recaps after calls', 'recap_fixed' => 'Recaps rewritten before they were kept', 'flags' => 'Marked “not right” by students'];
 /** The free seconds an account has: the free minutes everyone gets, plus what invites earned (none while the free minutes are off). */
 function mh_ai_trial_total(int $uid, array $V): int { if ($V['trial'] <= 0) return 0; $st = mh_ai_db()->prepare('SELECT bonus FROM ai_trial WHERE user_id = ?'); $st->execute([$uid]); return $V['trial'] + (int)$st->fetchColumn(); }
 function mh_ai_trial_left(int $uid, array $V): int { return max(0, mh_ai_trial_total($uid, $V) - mh_ai_trial_used($uid)); }
@@ -624,57 +629,93 @@ function mh_ai_trial_public(int $uid, array $V): array { $used = mh_ai_trial_use
 /** The free seconds an invite gives each of you (ai_invite_minutes, 10 by default; 0 turns it off). */
 function mh_ai_invite_secs(array $V): int { return $V['trial'] > 0 ? 60 * max(0, min(60, (int)(mh_config()['ai_invite_minutes'] ?? 10))) : 0; }
 
+/* A live call (OpenAI Realtime): sections as OpenAI's realtime prompting guide lays them out, short rules (the 2.x
+   models follow instructions literally, so fewer and plainer is better), the teaching moves the research behind
+   docs/bo-teaching.md supports, and only the tools that are registered. Then YOUR CHARACTER, HOW YOU OPEN and what he
+   knows about them (mh_ai_live_instructions). */
 const MH_AI_LIVE = <<<'TXT'
-You are Bo, the bobcat tutor from Mathub, on a live voice call with a Montana State University student. You're the best tutor they've ever had and really good at explaining, in your own character (YOUR CHARACTER below). This is a real conversation, not a help desk.
+# Role and objective
+You are Bo, the bobcat tutor on Mathub, on a live voice call with a Montana State University student. Help them understand the math in their class and do it themselves. Success is them doing the next one on their own.
 
-How you sound:
-- Talk like a person, not an assistant, in your character: natural reactions that match what is true, never praise you haven't checked. Vary how you start sentences.
-- Never say things like "How can I help you today", "Great question", "I'd be happy to help", "As an AI" or "Let me know if you have any other questions".
-- Match their energy. Stressed: slow down, reassure, smaller steps. Joking around: joke back a little, then back to the work.
-- If they cut in, stop and go with what they said. Don't start over.
-- Turn length: chatting, checking in and quizzing stay short (one to three sentences). Explaining something new does not: take a proper turn of four to seven sentences, about 20 to 40 seconds, with the board doing the math, then stop and check. Never explain in one-line crumbs, and never go past about 40 seconds without checking in.
-- Pace: a touch slower on the key idea, with a short pause after it. Say math the way people say it out loud ("x squared", "the derivative of sine is cosine", "a half"); never read out symbols or LaTeX.
-- How an explanation goes on a call: the big idea in a sentence, then put it on the board (a drawing or the first steps), then walk them through it in words, pointing at what's on the board ("see the red dot where it crosses zero?"), then one question to check.
+# Personality and tone
+- Your character (YOUR CHARACTER below) sets your manner. It never changes the facts or these rules.
+- Warm but demanding: kind, never fawning. Praise only what you have checked, and name the specific thing they did well.
+- Talk like a person on a call, not an assistant. Not "How can I help you today", "Great question" or "As an AI".
 
-Your board (the student sees it right next to you):
-- write_on_board: the steps of a problem, an equation, a formula, the answer. A short title; one step per line with its math; the answer once at the end. A new problem gets a new page; add to the page while you work through one together.
-- draw_on_board: whenever a picture explains it better. Graph a function (mark points, shade an area, a tangent or secant line with its slope, an asymptote, a Riemann sum, sliders they drag to explore), a number line for an inequality or interval, a triangle or any figure (angles, sides, vectors, forces), the unit circle, a table of values, a bar or pie chart, a scatter plot with its best-fit line, a box plot, a normal curve with the shaded area, a probability tree, a Venn diagram, a flow chart of a process or an algorithm. Draw it first, then talk them through it.
-- ask_on_board: a question on the board they answer right there (choices to tap, or a box to type in). Use it to check understanding after you explain something, and when you quiz them. Ask it out loud in a few words too, then stop and wait: you'll get a message saying what they picked. Then react: right, say why in a sentence; wrong, what went wrong, and let them try again.
-- Say something while it goes up ("let me sketch that", "okay, it's up"); never go quiet, and never read the board back symbol by symbol. If a drawing comes back with an error, fix it and draw again.
+# Length and pace
+- Most turns are one to three short sentences, with at most one question, at the end.
+- Explaining something new: up to about five short sentences while the board shows the math, then one question to check.
+- After you ask them a problem, stop and wait. Silence is them thinking.
+- Say math the way people say it ("x squared", "a half", "the derivative of sine is cosine"), never symbols or LaTeX. Fractions inside fractions, or several steps, go on the board, and you talk through them a line at a time.
+- Vary your wording. Do not repeat the same sentence or the same opening in a call.
 
-Checking math (check_math): exact, and instant.
-- Every time they give an answer, a step or a number, call check_math before you say whether it's right ("let me check that" while it runs), then go by what it says. Also for your own numbers when they aren't simple.
-- kinds: value (what an expression is), equal (two expressions the same), solves (does x = 6 solve 2x + 3 = 11), solve (the solutions of an equation), derivative, antiderivative, limit, steps (does each line follow from the one before).
-- Pages you write are checked too: a page with a wrong line comes back to you to fix.
+# Unclear audio
+- Only respond to clear speech. If you are unsure of the exact words (noise, cut off, mumbled), do not guess: ask them to say it again, in a few words, differently each time.
+- If they cut in, stop and go with what they said. Do not start over from the top.
+- If the audio was not meant for you (someone else talking, a TV), call wait_for_user.
 
-The board is the whole screen, and you share it:
-- They write and draw on it with a pen; your pages go up on it as cards beside their work (near: a cell, to put one next to the work it's about). You see it as a picture with a grid over it, columns A, B, C… across the top and rows 1, 2, 3… down the side: when they tap Show Bo (look at it then and help), and quietly while they write ("our board right now": don't answer it, just know what's there).
-- When they show you their work: read it carefully, line by line (ask about a part you can't read; never guess a number), then run check_math on what you read (steps: the lines in order) before you say anything is right or put a check on it; find the first mistake and what makes it tempting, or tell them it's right, and talk them to the next step. Don't redo the whole problem unless they ask.
-- mark_on_board: mark their own writing like a tutor with a pen: circle a mistake or the part that matters, check what's right, cross out, underline, box, an arrow or a short note beside a line. The place is a cell from the latest picture ("C3") or a block ("B2:D3") covering what you mean. Then say it in words ("see the circle on the second line?").
-- Following along quietly: if you saw a mistake in what they're writing, bring it up briefly the next time you talk, kindly, before they build on it.
+# Understanding what they mean
+- If what they said could mean two things, check with a short question: say it back as a question ("x squared plus three x, all over two?") or ask which line they mean ("your second line, or the answer?").
+- Their work is on the board: refer to it by what is there ("your second line"). If you cannot read a part, ask. Never guess a number.
 
+# Getting the math right
+- Before you tell them an answer, a step or a number is right or wrong, check it with check_math, writing what you understood as math, and go by its verdict. Say "right" or "exactly" only after it passes.
+- A MATH CHECK note from the app is exact: trust it over what you heard or thought. If they push back on something that is right, stay with it kindly and show why.
+- Check your own numbers the same way before you say or write them. If you slip, correct it at once in a few words ("wait, eleven minus three is eight").
+
+# How you teach
+- If you do not know where they are, ask one quick question first.
+- The big idea in one sentence, then one step at a time; a concrete example before the general rule.
+- New to them: work one example fully and say why each step happens, then hand them the next one.
+- A wrong answer: first work out what kind of mistake it is. A slip: point at it and let them fix it. A misunderstanding: one question that goes right at it. Wrong twice: work a similar problem with them, then let them redo theirs.
+- "I don't know" twice, or "just tell me": work a similar example out loud on the board, then give them theirs to try. Do not give their answer away a piece at a time.
+- Check understanding with a real question (do the next step, say why, spot the mistake), never "does that make sense?".
+- Once they have it, stop quizzing and move on. If they ask you to slow down, repeat or skip ahead, do it.
+
+# Tools
+- write_on_board: steps, an equation, the answer. One step per line. Say something short while it goes up; never read it back symbol by symbol.
+- draw_on_board: when a picture explains it better. Draw first, then walk them through it ("see where the curve crosses zero?").
+- ask_on_board: a check question they answer on the board. Ask it out loud in a few words, then stop: you will be told what they picked, then react.
+- mark_on_board: circle, check, cross out, underline, box, an arrow or a short note on their own writing, at a cell of the latest board picture ("C3", or "B2:D3"). Then say it in words.
+- check_math: before you judge an answer or a step, and for your own numbers that are not obvious.
+- remember: something worth remembering for next time (how they learn, a goal, a recurring struggle). Never sensitive personal details.
+- wait_for_user: audio that was not meant for you.
+- Tool results are notes for you. If one says retry, fix it quietly and try once more; otherwise carry on in words. Never mention tools, errors or notes to the student.
+- Use a short lead-in ("one sec") only when a tool takes a moment. When you can just answer, answer.
+
+# The board
+- The whole screen is a board you share. They write with a pen; your pages go up as cards beside their work (near: a cell, to put one next to the work it is about).
+- You see it as a picture with a grid: columns A, B, C… across the top and rows 1, 2, 3… down the side. When they tap Show Bo, look at it and help. Pictures marked "our board right now" come while they write: do not answer those, just know what is there.
+- When they show their work: read it line by line, check it (check_math, kind steps), find the first mistake and why it is tempting (or tell them it is right), and talk them to the next step. Do not redo the whole problem unless they ask.
+- If you notice a mistake while they write, bring it up briefly the next time you talk, before they build on it.
+
+# Context
+- What you know about them below (class, exams, weakest topics, recent mistakes, your notes, your last messages) is background. Bring it up when it fits; never recite it.
+- Graded work or an exam happening right now: help with a similar example, not their answer.
+- Stay on studying, their classes and student life. If you are not sure of something, say so.
+- If they sound really stressed or mention self-harm: be kind and calm, and give MSU Counseling & Psychological Services at 406-994-4531, or call or text 988 (911 in an emergency).
+
+# Language
+- Speak English unless they speak to you in another language. Do not switch because of an accent or a short "mm-hmm".
+
+# Start of the call
+You speak first, in character (HOW YOU OPEN below): their first name if you know it, under about 15 words.
 TXT;
-
-const MH_AI_LIVE_REST = <<<'TXT'
-More:
-- Quizzing: one question, wait for their answer, react, then the next one.
-- Use what you know about them below (exam dates, weakest topics, recent mistakes, your notes) the way a friend who remembers would: bring it up when it fits, never recite it.
-- If they tell you something worth remembering for next time (how they learn best, a goal, a recurring struggle), call remember with a short fact. Never store sensitive personal details.
-- Graded work or an exam happening right now: help them get the idea with a similar example; don't hand over the answer.
-- If they sound really stressed or mention self-harm, be kind and calm, and give them MSU Counseling & Psychological Services at 406-994-4531, or call or text 988 (911 in an emergency).
-- Stay on studying, their classes and student life. If you're not sure about something, say so.
-- Speak English unless they talk to you in another language.
-
-Start of the call: you speak first, in character (HOW YOU OPEN below). Their first name if you know it. Under about 15 words.
+/** After a dropped connection: the same call, picked up again (assets/talk.js rebuilds it). */
+const MH_AI_LIVE_RESUME = <<<'TXT'
+# The call is back
+The connection dropped for a few seconds and the call is back. Do not greet them again or start over. In one short sentence say you lost them for a second, then pick up exactly where you left off (YOUR LAST FEW MESSAGES below).
 TXT;
 /** Bo's instructions for a live call: his persona, then what he knows (class, today, progress, notes, the recent chat). */
 function mh_ai_live_instructions(int $uid, string $cid, ?array $C, array $in): string {
   $today = preg_match('/^\d{4}-\d{2}-\d{2}$/', (string)($in['today'] ?? '')) ? (string)$in['today'] : gmdate('Y-m-d');
-  $notes = mh_ai_notes($uid); $ch = mh_ai_character(mh_ai_character_id($in)); $parts = [MH_AI_LIVE . "\n" . $ch['who'] . "\n\n" . MH_AI_TRUTH . "\n\n" . MH_AI_TEACH . "\n\n" . MH_AI_LIVE_REST . "\nHOW YOU OPEN: " . $ch['hello']];
+  $notes = mh_ai_notes($uid); $ch = mh_ai_character(mh_ai_character_id($in)); $resume = !empty($in['resume']);
+  $parts = [MH_AI_LIVE . "\n\n" . $ch['who'] . "\nHOW YOU OPEN: " . $ch['hello']];
+  if ($resume) $parts[] = MH_AI_LIVE_RESUME;
   if (($in['focus'] ?? '') === 'exam') $parts[] = MH_AI_EXAM_CALL;
   if ($C) $parts[] = mh_ai_digest($C);
   $parts[] = implode("\n", array_filter(['TODAY: ' . $today, $C ? mh_ai_upcoming($C, $today) : '', mh_ai_snapshot($in['snapshot'] ?? null), $notes ? "WHAT YOU REMEMBER ABOUT THEM:\n- " . implode("\n- ", $notes) : '']));
-  $turns = array_slice(mh_ai_turns($uid, $cid), -6);
+  $turns = array_slice(mh_ai_turns($uid, $cid), $resume ? -10 : -6);   // after a drop, a little more of where they were
   if ($turns) { $L = ['YOUR LAST FEW MESSAGES WITH THEM (chat or calls):']; foreach ($turns as $t) $L[] = (($t['r'] ?? '') === 'b' ? 'Bo: ' : 'Them: ') . mh_ai_clip(mh_ai_unboard((string)($t['t'] ?? '')), 240); $parts[] = implode("\n", $L); }
   return implode("\n\n", $parts);
 }
@@ -690,89 +731,42 @@ function mh_ai_unboard(string $t): string {
 }
 /** The tools Bo has on a call: the board (writing, drawing and asking, see assets/board-draw.js; marking the student's writing, assets/bo-pad.js), and his notes. */
 function mh_ai_live_tools(): array {
+  // small and stable (OpenAI's realtime guides: large schemas cost attention and get cut off), each with when to use it.
+  // The page reads the arguments leniently (assets/board-draw.js, assets/talk.js), so the drawing spec is one description.
+  $place = ['near' => ['type' => 'string', 'description' => 'Optional: a cell from the latest board picture ("D2") to put a new page beside that work.'],
+    'page' => ['type' => 'string', 'enum' => ['new', 'add'], 'description' => 'new: a fresh page. add: keep going on the page you are on.'],
+    'title' => ['type' => 'string', 'description' => 'A short title for a new page, like "Solving 2x + 3 = 11".']];
+  $obj = fn(array $props, array $req) => ['type' => 'object', 'properties' => $props, 'required' => $req];
   return [
-    ['type' => 'function', 'name' => 'write_on_board', 'description' => 'Write on the whiteboard next to you, neatly, while you talk: the steps of a problem, an equation, a formula, the answer. The student sees it; you still talk it through in words.', 'parameters' => ['type' => 'object', 'properties' => [
-      'title' => ['type' => 'string', 'description' => 'A short title for the page, like "Solving 2x + 3 = 11" or "The chain rule".'],
-      'near' => ['type' => 'string', 'description' => 'Optional: a cell from the latest picture of the board ("D2") to put a new page beside the work it is about.'],
-      'page' => ['type' => 'string', 'enum' => ['new', 'add'], 'description' => 'new: start a fresh page (a new problem or idea). add: keep writing on the page you are on.'],
-      'items' => ['type' => 'array', 'description' => 'One to six lines, in order.', 'items' => ['type' => 'object', 'properties' => [
+    ['type' => 'function', 'name' => 'write_on_board', 'description' => 'Use when: the steps of a problem, an equation, a formula or the answer should be on the board while you talk. One step per line; a new problem gets a new page.',
+      'parameters' => $obj($place + ['items' => ['type' => 'array', 'description' => 'One to six lines, in order.', 'items' => $obj([
         'kind' => ['type' => 'string', 'enum' => ['step', 'math', 'answer', 'tip', 'text', 'code']],
-        'text' => ['type' => 'string', 'description' => 'step: what you do in a few words, then its math in $...$. math: just the LaTeX. answer: the result, math in $...$. tip and text: one short line, math in $...$. code: the code, lines kept as they are.'],
-        'lang' => ['type' => 'string', 'description' => 'code: its language, like python.']], 'required' => ['kind', 'text']]]], 'required' => ['items']]],
-    ['type' => 'function', 'name' => 'draw_on_board', 'description' => 'Draw on the whiteboard next to you: a graph of functions (with points, a shaded area, segments or vectors, asymptotes, tangent and secant lines, a Riemann sum, sliders the student drags), a number line with points and intervals, a figure (triangles, any shape, angles, vectors, forces, diagrams), the unit circle, a table of values, a bar chart or histogram, a pie chart, a scatter plot with its least-squares line, box plots, a normal curve with a shaded region and its area, a probability tree, a Venn diagram, or a flow chart. The student sees it drawn; you talk them through it.', 'parameters' => ['type' => 'object', 'properties' => [
-      'title' => ['type' => 'string', 'description' => 'A short title for the page, when it starts a new one.'],
-      'near' => ['type' => 'string', 'description' => 'Optional: a cell from the latest picture of the board ("D2") to put a new page beside the work it is about.'],
-      'page' => ['type' => 'string', 'enum' => ['new', 'add'], 'description' => 'new: a fresh page. add: draw on the page you are on, under what is there.'],
-      'caption' => ['type' => 'string', 'description' => 'One short line: what to notice.'],
-      'drawing' => ['type' => 'object', 'description' => 'Give type and the keys that type uses; leave the rest out. Labels are short plain text (x^2, θ, π, 1/2 are fine).', 'properties' => [
-        'type' => ['type' => 'string', 'enum' => ['graph', 'numberline', 'figure', 'unitcircle', 'table', 'bars', 'pie', 'scatter', 'boxplot', 'normal', 'tree', 'venn', 'flow']],
-        'fns' => ['type' => 'array', 'description' => 'graph: the curves. f is in x: + - * / ^ ( ), sqrt, abs, sin, cos, tan, ln, log, exp, pi, e (radians), like "x^2 - 3". A parametric curve has x and y in t instead, with t: [start, end].', 'items' => ['type' => 'object', 'properties' => ['f' => ['type' => 'string'], 'x' => ['type' => 'string'], 'y' => ['type' => 'string'], 't' => ['type' => 'array', 'items' => ['type' => 'number']], 'label' => ['type' => 'string'], 'domain' => ['type' => 'array', 'items' => ['type' => 'number'], 'description' => '[from, to]'], 'dash' => ['type' => 'boolean'], 'color' => ['type' => 'string', 'enum' => ['blue', 'red', 'green', 'purple', 'orange', 'gray']]]]],
-        'x' => ['type' => 'array', 'items' => ['type' => 'number'], 'description' => 'graph: [xmin, xmax].'],
-        'y' => ['type' => 'array', 'items' => ['type' => 'number'], 'description' => 'graph: [ymin, ymax]; found from the curves if left out.'],
-        'points' => ['type' => 'array', 'description' => 'graph and numberline: points to mark (numberline uses only x). open: a hollow dot (a hole, or an excluded endpoint).', 'items' => ['type' => 'object', 'properties' => ['x' => ['type' => 'number'], 'y' => ['type' => 'number'], 'label' => ['type' => 'string'], 'open' => ['type' => 'boolean'], 'color' => ['type' => 'string']]]],
-        'shade' => ['type' => 'object', 'description' => 'graph: shade the area between f and g (default 0, the x-axis) from x = from to x = to.', 'properties' => ['f' => ['type' => 'string'], 'g' => ['type' => 'string'], 'from' => ['type' => 'number'], 'to' => ['type' => 'number']]],
-        'segments' => ['type' => 'array', 'description' => 'graph: straight lines between two points, like a secant or tangent line; arrow: true for a vector.', 'items' => ['type' => 'object', 'properties' => ['from' => ['type' => 'array', 'items' => ['type' => 'number']], 'to' => ['type' => 'array', 'items' => ['type' => 'number']], 'label' => ['type' => 'string'], 'dash' => ['type' => 'boolean'], 'arrow' => ['type' => 'boolean'], 'color' => ['type' => 'string']]]],
-        'vlines' => ['type' => 'array', 'description' => 'graph: dashed vertical lines, like asymptotes.', 'items' => ['type' => 'object', 'properties' => ['x' => ['type' => 'number'], 'label' => ['type' => 'string']]]],
-        'hlines' => ['type' => 'array', 'description' => 'graph: dashed horizontal lines.', 'items' => ['type' => 'object', 'properties' => ['y' => ['type' => 'number'], 'label' => ['type' => 'string']]]],
-        'notes' => ['type' => 'array', 'description' => 'graph: short text at a point.', 'items' => ['type' => 'object', 'properties' => ['x' => ['type' => 'number'], 'y' => ['type' => 'number'], 'text' => ['type' => 'string']]]],
-        'asymptotes' => ['type' => 'array', 'items' => ['type' => 'string'], 'description' => 'graph: dashed asymptotes, like "x = 2" or "y = 1".'],
-        'tangent' => ['type' => 'object', 'description' => 'graph: the tangent line to f at x = at, with its slope.', 'properties' => ['f' => ['type' => 'string'], 'at' => ['type' => 'string', 'description' => 'A number, or a slider\'s name.']]],
-        'secant' => ['type' => 'object', 'description' => 'graph: the secant line of f from x = from to x = to.', 'properties' => ['f' => ['type' => 'string'], 'from' => ['type' => 'number'], 'to' => ['type' => 'number']]],
-        'riemann' => ['type' => 'object', 'description' => 'graph: n rectangles under f from x = from to x = to, and their sum.', 'properties' => ['f' => ['type' => 'string'], 'from' => ['type' => 'number'], 'to' => ['type' => 'number'], 'n' => ['type' => 'string', 'description' => 'A number, or a slider\'s name.'], 'rule' => ['type' => 'string', 'enum' => ['left', 'right', 'mid', 'trap']]]],
-        'sliders' => ['type' => 'array', 'description' => 'graph: letters the student can drag (a, b, k, n…), used in f, at or n, like "a*x^2". To explore what a number does.', 'items' => ['type' => 'object', 'properties' => ['name' => ['type' => 'string'], 'min' => ['type' => 'number'], 'max' => ['type' => 'number'], 'value' => ['type' => 'number'], 'step' => ['type' => 'number']]]],
-        'xlabel' => ['type' => 'string'], 'ylabel' => ['type' => 'string'],
-        'equal' => ['type' => 'boolean', 'description' => 'graph: the same scale on both axes (circles look round).'],
-        'min' => ['type' => 'number', 'description' => 'numberline: left end.'], 'max' => ['type' => 'number', 'description' => 'numberline: right end.'],
-        'intervals' => ['type' => 'array', 'description' => 'numberline: shaded intervals; leave out from or to for one that runs on forever; left and right are open or closed.', 'items' => ['type' => 'object', 'properties' => ['from' => ['type' => 'number'], 'to' => ['type' => 'number'], 'left' => ['type' => 'string', 'enum' => ['open', 'closed']], 'right' => ['type' => 'string', 'enum' => ['open', 'closed']]]]],
-        'shapes' => ['type' => 'array', 'description' => 'figure: shapes in coordinates you choose, y up, the same scale both ways. point (at, label); segment and arrow (from, to, label); polygon and curve (points, labels for the vertices); circle (center, r); angle (at = the vertex, from and to = points on its two sides, label, right: true for a right angle); text (at, text); rect (at = lower-left corner, w, h, text).', 'items' => ['type' => 'object', 'properties' => [
-          'kind' => ['type' => 'string', 'enum' => ['point', 'segment', 'arrow', 'polygon', 'curve', 'circle', 'angle', 'text', 'rect']],
-          'at' => ['type' => 'array', 'items' => ['type' => 'number']], 'from' => ['type' => 'array', 'items' => ['type' => 'number']], 'to' => ['type' => 'array', 'items' => ['type' => 'number']],
-          'points' => ['type' => 'array', 'items' => ['type' => 'array', 'items' => ['type' => 'number']]], 'labels' => ['type' => 'array', 'items' => ['type' => 'string']],
-          'center' => ['type' => 'array', 'items' => ['type' => 'number']], 'r' => ['type' => 'number'], 'w' => ['type' => 'number'], 'h' => ['type' => 'number'],
-          'label' => ['type' => 'string'], 'text' => ['type' => 'string'], 'right' => ['type' => 'boolean'], 'fill' => ['type' => 'boolean'], 'dash' => ['type' => 'boolean'], 'color' => ['type' => 'string']]]],
-        'head' => ['type' => 'array', 'items' => ['type' => 'string'], 'description' => 'table: column headings.'],
-        'rows' => ['type' => 'array', 'items' => ['type' => 'array', 'items' => ['type' => 'string']], 'description' => 'table: the rows (up to 12).'],
-        'bars' => ['type' => 'array', 'description' => 'bars: one per bar.', 'items' => ['type' => 'object', 'properties' => ['label' => ['type' => 'string'], 'value' => ['type' => 'number']]]],
-        'hist' => ['type' => 'boolean', 'description' => 'bars: a histogram (no gaps).'],
-        'mean' => ['type' => 'number', 'description' => 'normal: the mean.'], 'sd' => ['type' => 'number', 'description' => 'normal: the standard deviation.'],
-        'from' => ['type' => 'number', 'description' => 'normal: shade from here (leave it out to shade the whole left tail).'], 'to' => ['type' => 'number', 'description' => 'normal: shade to here (leave it out to shade the whole right tail).'],
-        'label' => ['type' => 'string', 'description' => 'normal: what the values are.'],
-        'branches' => ['type' => 'array', 'description' => 'tree: the first branches; each has label, p (its probability, like "1/2"), children (the same shape, up to three levels) and, at the ends, result (like "HH 1/4").', 'items' => ['type' => 'object', 'properties' => ['label' => ['type' => 'string'], 'p' => ['type' => 'string'], 'result' => ['type' => 'string'], 'children' => ['type' => 'array', 'items' => ['type' => 'object']]]]],
-        'highlight' => ['type' => 'number', 'description' => 'unitcircle: the angle to show its triangle and exact cos and sin (degrees). bars and pie: which one to mark (from 0).'],
-        'slices' => ['type' => 'array', 'description' => 'pie: the slices.', 'items' => ['type' => 'object', 'properties' => ['label' => ['type' => 'string'], 'value' => ['type' => 'number']]]],
-        'fit' => ['type' => 'boolean', 'description' => 'scatter: the least-squares line and r (on unless false). Points are {x, y}.'], 'residuals' => ['type' => 'boolean'], 'predict' => ['type' => 'number', 'description' => 'scatter: mark the prediction at this x.'],
-        'boxes' => ['type' => 'array', 'description' => 'boxplot: up to four, each from its data or from its five numbers.', 'items' => ['type' => 'object', 'properties' => ['label' => ['type' => 'string'], 'data' => ['type' => 'array', 'items' => ['type' => 'number']], 'min' => ['type' => 'number'], 'q1' => ['type' => 'number'], 'median' => ['type' => 'number'], 'q3' => ['type' => 'number'], 'max' => ['type' => 'number']]]],
-        'tails' => ['type' => 'string', 'description' => 'normal: "both" shades both tails beyond to.'],
-        'sets' => ['type' => 'array', 'items' => ['type' => 'string'], 'description' => 'venn: two or three set names.'],
-        'values' => ['type' => 'object', 'description' => 'venn: what goes in each region: {"A": 5, "AB": 2, "B": 3, "none": 4} ("A" is A only).'],
-        'shaded' => ['type' => 'array', 'items' => ['type' => 'string'], 'description' => 'venn: regions to shade, as set expressions: "A ∩ B", "A ∪ B", "A\'", "B - A", "A only".'],
-        'steps' => ['type' => 'array', 'items' => ['type' => 'string'], 'description' => 'flow: the steps in order; one ending in ? is a decision.'],
-        'loops' => ['type' => 'array', 'description' => 'flow: arrows back (steps count from 1).', 'items' => ['type' => 'object', 'properties' => ['from' => ['type' => 'number'], 'to' => ['type' => 'number'], 'label' => ['type' => 'string']]]]
-      ], 'required' => ['type']]], 'required' => ['drawing']]],
-    ['type' => 'function', 'name' => 'ask_on_board', 'description' => 'Put a question on the whiteboard for the student to answer there: choices to tap, or a box to type the answer in. They see right away whether they got it, with your why, and you get a message saying what they picked. Use it to check understanding after you explain, and to quiz them. Then stop and wait.', 'parameters' => ['type' => 'object', 'properties' => [
-      'title' => ['type' => 'string', 'description' => 'A short title for the page, when it starts a new one.'],
-      'near' => ['type' => 'string', 'description' => 'Optional: a cell from the latest picture of the board ("D2") to put a new page beside the work it is about.'],
-      'page' => ['type' => 'string', 'enum' => ['new', 'add'], 'description' => 'new: a fresh page. add: under what is on the page you are on.'],
-      'question' => ['type' => 'string', 'description' => 'The question, short; math in $...$.'],
-      'choices' => ['type' => 'array', 'items' => ['type' => 'string'], 'description' => 'Two to four choices to tap. Leave out to have them type the answer.'],
-      'answer' => ['type' => 'string', 'description' => 'The right choice, written exactly as in choices; or, with no choices, the answer you would accept.'],
-      'why' => ['type' => 'string', 'description' => 'One sentence on why that is the answer, shown once they answer.']], 'required' => ['question', 'answer']]],
-    ['type' => 'function', 'name' => 'mark_on_board', 'description' => 'Mark the student\'s own writing on the board you share, like a tutor with a pen: circle a mistake, check what is right, cross out, underline, box, point with an arrow, or write a short note beside it. Places are cells of the grid on the latest picture of the board (columns A, B, C… across, rows 1, 2, 3… down): "C3", or a block like "B2:D3" covering what you mean.', 'parameters' => ['type' => 'object', 'properties' => [
-      'marks' => ['type' => 'array', 'description' => 'One to four marks.', 'items' => ['type' => 'object', 'properties' => [
-        'at' => ['type' => 'string', 'description' => 'A cell ("C3") or a block of cells ("B2:D3") on the latest picture.'],
-        'kind' => ['type' => 'string', 'enum' => ['circle', 'check', 'cross', 'underline', 'box', 'arrow', 'note']],
-        'text' => ['type' => 'string', 'description' => 'A short note, under 30 characters (needed for note; optional for the others).']], 'required' => ['at', 'kind']]]], 'required' => ['marks']]],
-    ['type' => 'function', 'name' => 'check_math', 'description' => 'Check math exactly, instantly: the student\'s answer or step, or your own numbers. Call it before you say whether something is right, and believe what it says.', 'parameters' => ['type' => 'object', 'properties' => [
-      'kind' => ['type' => 'string', 'enum' => ['value', 'equal', 'solves', 'solve', 'derivative', 'antiderivative', 'limit', 'steps'], 'description' => 'value: what expression is. equal: is left the same as right (for every x, if they have letters). solves: does values solve equation. solve: the real solutions of equation. derivative: is answer the derivative of f. antiderivative: is answer an antiderivative of f. limit: is answer the limit of f as x goes to at. steps: does each of lines follow from the one before.'],
-      'expression' => ['type' => 'string', 'description' => 'value: like "11 - 3", "3/4 * 8", "sqrt(50)". Math with + - * / ^ ( ), sqrt, sin, cos, tan, ln, log, exp, pi, e; LaTeX is fine too.'],
-      'left' => ['type' => 'string'], 'right' => ['type' => 'string'],
-      'equation' => ['type' => 'string', 'description' => 'solves and solve: like "2x + 3 = 11".'],
-      'values' => ['type' => 'string', 'description' => 'solves: like "x = 6", or "x = 3, y = 7".'],
-      'f' => ['type' => 'string', 'description' => 'derivative, antiderivative, limit: the function, in x, like "x^3 - 2x".'],
-      'answer' => ['type' => 'string', 'description' => 'derivative: what they say f\' is. antiderivative: what they say F is. limit: the value they give, "inf", "-inf" or "dne".'],
-      'at' => ['type' => 'string', 'description' => 'limit: the number x goes to, or "inf" or "-inf".'],
-      'lines' => ['type' => 'array', 'items' => ['type' => 'string'], 'description' => 'steps: the lines of a solution in order, like ["2x + 3 = 11", "2x = 8", "x = 4"].']], 'required' => ['kind']]],
-    ['type' => 'function', 'name' => 'remember', 'description' => 'Save one short fact about the student for future sessions: how they learn best, a goal, a recurring difficulty. Never sensitive personal details.', 'parameters' => ['type' => 'object', 'properties' => ['fact' => ['type' => 'string', 'description' => 'Under 20 words.']], 'required' => ['fact']]],
+        'text' => ['type' => 'string', 'description' => 'step: a few words, then its math in $...$. math: just the LaTeX. answer: the result. tip, text: one short line. code: the code.'],
+        'lang' => ['type' => 'string', 'description' => 'code only: its language.']], ['kind', 'text'])]], ['items'])],
+    ['type' => 'function', 'name' => 'draw_on_board', 'description' => 'Use when: a picture explains it better than words: a graph, number line, triangle or figure, unit circle, table, chart, normal curve, probability tree, Venn diagram or flow chart. Draw first, then talk them through it.',
+      'parameters' => $obj($place + ['caption' => ['type' => 'string', 'description' => 'One short line: what to notice.'],
+        'drawing' => ['type' => 'object', 'description' => 'type, plus only the keys that type uses. Labels are short plain text (x^2, θ, π, 1/2). Functions are in x with + - * / ^ ( ) sqrt abs sin cos tan ln log exp pi e.'
+          . ' graph: fns [{f:"x^2 - 3", label, color, dash, domain:[a,b]} or {x:"cos(t)", y:"sin(t)", t:[0,6.28]}], x:[min,max], y:[min,max], points [{x,y,label,open}], shade {f,g,from,to}, segments [{from:[x,y],to:[x,y],label,arrow,dash}], vlines [{x,label}], hlines [{y,label}], notes [{x,y,text}], asymptotes ["x = 2"], tangent {f,at}, secant {f,from,to}, riemann {f,from,to,n,rule:left|right|mid|trap}, sliders [{name,min,max,value,step}] (letters used in f, at or n), xlabel, ylabel, equal.'
+          . ' numberline: min, max, points [{x,label,open}], intervals [{from,to,left:open|closed,right:open|closed}] (leave out from or to for a ray).'
+          . ' figure: shapes [{kind:point|segment|arrow|polygon|curve|circle|angle|text|rect, at, from, to, points, labels, center, r, w, h, label, text, right}] in coordinates you choose, y up.'
+          . ' unitcircle: highlight (degrees). table: head [..], rows [[..]]. bars: bars [{label,value}], hist, highlight. pie: slices [{label,value}], highlight.'
+          . ' scatter: points [{x,y}], fit, residuals, predict. boxplot: boxes [{label, data} or {label,min,q1,median,q3,max}]. normal: mean, sd, from, to, tails:"both", label.'
+          . ' tree: branches [{label, p:"1/2", children:[...], result:"HH 1/4"}]. venn: sets [2 or 3 names], values {"A":5,"AB":2,"B":3,"none":4}, shaded ["A ∩ B"]. flow: steps ["...", "Is it done?"], loops [{from,to,label}].',
+          'properties' => ['type' => ['type' => 'string', 'enum' => ['graph', 'numberline', 'figure', 'unitcircle', 'table', 'bars', 'pie', 'scatter', 'boxplot', 'normal', 'tree', 'venn', 'flow']]], 'required' => ['type']]], ['drawing'])],
+    ['type' => 'function', 'name' => 'ask_on_board', 'description' => 'Use when: you want them to answer a check question right on the board, by tapping a choice or typing. Ask it out loud in a few words too, then stop: you will be told what they picked.',
+      'parameters' => $obj($place + ['question' => ['type' => 'string', 'description' => 'Short; math in $...$.'], 'choices' => ['type' => 'array', 'items' => ['type' => 'string'], 'description' => 'Two to four choices; leave out for a typed answer.'],
+        'answer' => ['type' => 'string', 'description' => 'The right choice exactly as written, or the typed answer you accept.'], 'why' => ['type' => 'string', 'description' => 'One sentence on why, shown once they answer.']], ['question', 'answer'])],
+    ['type' => 'function', 'name' => 'mark_on_board', 'description' => 'Use when: pointing at their own writing, like a tutor with a pen: circle a mistake, check what is right, cross out, underline, box, an arrow, or a short note. Places are cells of the grid on the latest board picture.',
+      'parameters' => $obj(['marks' => ['type' => 'array', 'description' => 'One to four marks.', 'items' => $obj(['at' => ['type' => 'string', 'description' => 'A cell ("C3") or a block ("B2:D3").'],
+        'kind' => ['type' => 'string', 'enum' => ['circle', 'check', 'cross', 'underline', 'box', 'arrow', 'note']], 'text' => ['type' => 'string', 'description' => 'note: under 30 characters.']], ['at', 'kind'])]], ['marks'])],
+    ['type' => 'function', 'name' => 'check_math', 'description' => 'Use when: before you say whether their answer or step is right, and for your own numbers that are not obvious. Write what you understood as math. Exact and instant; go by its verdict.',
+      'parameters' => $obj(['kind' => ['type' => 'string', 'enum' => ['value', 'equal', 'solves', 'solve', 'derivative', 'antiderivative', 'limit', 'steps'], 'description' => 'value: what expression is. equal: left vs right. solves: do values solve equation. solve: the solutions of equation. derivative, antiderivative: is answer that of f. limit: is answer the limit of f as x goes to at. steps: does each of lines follow from the one before.'],
+        'expression' => ['type' => 'string', 'description' => 'value: like "11 - 3" or "sqrt(50)"; LaTeX is fine.'], 'left' => ['type' => 'string'], 'right' => ['type' => 'string'],
+        'equation' => ['type' => 'string', 'description' => 'Like "2x + 3 = 11".'], 'values' => ['type' => 'string', 'description' => 'Like "x = 6".'],
+        'f' => ['type' => 'string', 'description' => 'In x, like "x^3 - 2x".'], 'answer' => ['type' => 'string', 'description' => 'What they say it is; for a limit a number, "inf", "-inf" or "dne".'],
+        'at' => ['type' => 'string', 'description' => 'limit: what x goes to.'], 'lines' => ['type' => 'array', 'items' => ['type' => 'string'], 'description' => 'steps: the lines in order, like ["2x + 3 = 11", "2x = 8", "x = 4"].']], ['kind'])],
+    ['type' => 'function', 'name' => 'remember', 'description' => 'Use when: they tell you something worth remembering next time (how they learn best, a goal, a recurring struggle). Never sensitive personal details.', 'parameters' => $obj(['fact' => ['type' => 'string', 'description' => 'Under 20 words.']], ['fact'])],
+    ['type' => 'function', 'name' => 'wait_for_user', 'description' => 'Use when: the audio was not meant for you (someone else talking, a TV, background noise). Ends your turn without speaking. Do not use it when they talk to you, even if it was unclear: ask them to repeat instead.', 'parameters' => ['type' => 'object', 'properties' => new stdClass()]],
   ];
 }
 
@@ -1001,35 +995,57 @@ function mh_ai_route(string $route, array $in, array $cfg, string $ip): void {
       $trial = mh_plan($u, $cfg) !== 'max'; if ($trial) mh_ai_trial_or_fail($uid, $V);   // without Max: the free minutes
       if ($V['key'] === '') mh_fail('Live calls are not switched on yet.', 503, ['fallback' => true]);
       $left = mh_ai_live_left($uid, $V); if ($left <= 0) mh_fail(mh_ai_usage($uid)['live'] >= $V['live_monthly'] ? 'That is all the live call time for this month. It starts again on the 1st.' : 'That is a lot of calling for one day. Bo is around again tomorrow.', 429, ['fallback' => true]);
-      mh_rate_or_fail("ai_live:$uid", 30, 3600, 'That is a lot of calls in an hour. Try again in a bit.');
+      // a call that dropped and is being picked up again (assets/talk.js): the same call, with its minutes so far
+      $prev = null; $resume = preg_replace('/[^a-f0-9]/', '', (string)($in['resume'] ?? ''));
+      if ($resume !== '') { $st = $db->prepare('SELECT * FROM ai_live WHERE id = ? AND user_id = ? AND started >= ?'); $st->execute([$resume, $uid, time() - 7200]); $prev = $st->fetch() ?: null; }
+      if ($prev && $V['live_call'] - (int)$prev['secs'] <= 30) $prev = null;   // that call had reached its length anyway: a new one
+      if ($prev) mh_rate_or_fail("ai_live_resume:$uid", 40, 3600, 'The connection keeps dropping. Try the call again in a bit.');
+      else mh_rate_or_fail("ai_live:$uid", 30, 3600, 'That is a lot of calls in an hour. Try again in a bit.');
       $sdp = str_replace("\r\n", "\n", (string)($in['sdp'] ?? '')); if (strncmp($sdp, 'v=0', 3) !== 0 || strlen($sdp) > 30000) mh_fail('The call could not start.', 400);
       $sdp = str_replace("\n", "\r\n", $sdp);
       $cid = mh_ai_cid($in['class'] ?? ''); $C = mh_ai_class($u, $cid);
       $ch = mh_ai_character(mh_ai_character_id($in));   // his character: his voice and pace unless they picked others
       $voice = is_string($in['voice'] ?? null) && isset(MH_AI_LIVE_VOICES[$in['voice']]) ? $in['voice'] : $ch['live'];
       $speed = round(max(0.8, min(1.25, (float)($in['speed'] ?? $ch['speed']))), 2); $eager = in_array($in['eagerness'] ?? '', ['low', 'auto', 'high'], true) ? $in['eagerness'] : 'auto';
-      $hint = 'A college student on a call with their tutor about math and their class.';
-      if ($C) { $w = [mh_ai_plain($C['code'] ?? '', 20), mh_ai_plain($C['name'] ?? '', 60)]; foreach (array_slice((array)($C['SECTIONS'] ?? []), 0, 40) as $sec) if (is_array($sec)) $w[] = mh_ai_plain($sec['title'] ?? '', 40); $hint .= ' Topics: ' . mb_substr(implode(', ', array_filter($w)), 0, 600); }
-      $sys = mh_ai_live_instructions($uid, $cid, $C, $in);
+      $headset = ($in['mic'] ?? '') === 'headset';   // the page guesses from the microphone's name, or they said so in the call's settings
+      // what is said is also written down (captions, the app's math check): in their language, with the class's words
+      $lc = is_string($in['lang'] ?? null) && isset(MH_AI_LANGS[$in['lang']]) ? $in['lang'] : 'en';
+      $kw = ['derivative', 'integral', 'limit', 'squared', 'cubed', 'square root', 'fraction', 'denominator', 'numerator', 'exponent', 'logarithm', 'sine', 'cosine', 'tangent', 'slope', 'asymptote', 'chain rule', 'Mathub', 'Bo'];
+      if ($C) { $w = mh_ai_plain($C['code'] ?? '', 20); if ($w !== '') $kw[] = $w; foreach (array_slice((array)($C['SECTIONS'] ?? []), 0, 40) as $sec) if (is_array($sec)) { $w = mh_ai_plain($sec['title'] ?? '', 40); if ($w !== '' && mb_strlen($w) <= 32) $kw[] = $w; } }
+      $kw = array_slice(array_values(array_unique($kw)), 0, 40);
+      $tm = $V['live_transcribe'];
+      $transcribe = str_starts_with($tm, 'gpt-4o') || $tm === 'whisper-1'
+        ? ['model' => $tm, 'language' => $lc, 'prompt' => 'A college student on a call with their tutor about math. ' . implode(', ', $kw)]
+        : ['model' => $tm, 'languages' => array_values(array_unique([$lc, 'en'])), 'keywords' => $kw];
+      $sys = mh_ai_live_instructions($uid, $cid, $C, ['resume' => $prev ? 1 : 0] + $in);
       if (($lang = mh_ai_lang($in)) !== '') $sys .= "\n\n" . $lang . ' On the call, speak it with a natural accent.';
-      $model = !$trial && $V['live_model_max'] !== '' ? $V['live_model_max'] : $V['live_model'];   // the stronger model for Max, the light one for free minutes
-      $full = ['type' => 'realtime', 'model' => $model, 'instructions' => $sys, 'output_modalities' => ['audio'], 'max_output_tokens' => 1600,
-        'audio' => ['input' => ['noise_reduction' => ['type' => 'near_field'], 'transcription' => ['model' => 'gpt-4o-mini-transcribe', 'language' => 'en', 'prompt' => $hint], 'turn_detection' => ['type' => 'semantic_vad', 'eagerness' => $eager, 'create_response' => true, 'interrupt_response' => true]],
+      // Max: the stronger model. Free minutes: the light one, except without headphones, where the light one is more
+      // easily cut off by its own voice coming back from the speakers (docs/bo-teaching.md)
+      $strong = $V['live_model_max'] !== '' ? $V['live_model_max'] : $V['live_model'];
+      $model = !$trial || !$headset ? $strong : $V['live_model'];
+      $noise = ['type' => $headset ? 'near_field' : 'far_field'];   // near_field is for headsets; laptops and phones are far_field
+      $full = ['type' => 'realtime', 'model' => $model, 'instructions' => $sys, 'output_modalities' => ['audio'], 'max_output_tokens' => 'inf',
+        'truncation' => ['type' => 'retention_ratio', 'retention_ratio' => 0.8],
+        'audio' => ['input' => ['noise_reduction' => $noise, 'transcription' => $transcribe,
+                      'turn_detection' => ['type' => 'semantic_vad', 'eagerness' => $eager, 'create_response' => true, 'interrupt_response' => true]],
                     'output' => array_merge(['voice' => $voice], $speed != 1.0 ? ['speed' => $speed] : [])],
         'tools' => mh_ai_live_tools(), 'tool_choice' => 'auto'];
-      // the fewest settings that still make a good call, in case the account's model refuses one of the others
-      $lean = ['type' => 'realtime', 'model' => $model, 'instructions' => $sys, 'audio' => ['input' => ['transcription' => ['model' => 'gpt-4o-mini-transcribe'], 'turn_detection' => ['type' => 'semantic_vad']], 'output' => ['voice' => $voice]], 'tools' => mh_ai_live_tools()];
+      if (str_contains($model, 'realtime-2')) $full['reasoning'] = ['effort' => 'low'];   // what OpenAI says to start with for voice
+      // the fewest settings that still make a good call, in case the account refuses one of the others
+      $lean = ['type' => 'realtime', 'model' => $model, 'instructions' => $sys, 'audio' => ['input' => ['noise_reduction' => $noise, 'transcription' => ['model' => 'gpt-4o-mini-transcribe'], 'turn_detection' => ['type' => 'semantic_vad']], 'output' => ['voice' => $voice]], 'tools' => mh_ai_live_tools()];
       // one call at a time per account
       foreach ($db->query('SELECT id, call FROM ai_live WHERE ended = 0 AND user_id = ' . $uid)->fetchAll() as $r) { mh_ai_hangup($V, (string)$r['call']); $db->prepare('UPDATE ai_live SET ended = 1 WHERE id = ?')->execute([$r['id']]); }
       @set_time_limit(60);
       [$code, $answer, $call] = mh_ai_rtc_call($V, $sdp, $full);
       if ($code >= 400 && $code < 500 && $code !== 401 && $code !== 429) { error_log('mathub live: ' . $code . ' ' . substr($answer, 0, 300)); [$code, $answer, $call] = mh_ai_rtc_call($V, $sdp, $lean); }
       // the account cannot use the Max model: the usual one, so the call still happens
-      if ($code >= 400 && $code < 500 && $code !== 401 && $code !== 429 && $model !== $V['live_model']) { error_log('mathub live: ' . $model . ' refused, using ' . $V['live_model']); $full['model'] = $V['live_model']; [$code, $answer, $call] = mh_ai_rtc_call($V, $sdp, $full); }
+      if ($code >= 400 && $code < 500 && $code !== 401 && $code !== 429 && $model !== $V['live_model']) { error_log('mathub live: ' . $model . ' refused, using ' . $V['live_model']); $full['model'] = $V['live_model']; unset($full['reasoning']); [$code, $answer, $call] = mh_ai_rtc_call($V, $sdp, $full); if ($code >= 400 && $code < 500 && $code !== 401 && $code !== 429) { $lean['model'] = $V['live_model']; [$code, $answer, $call] = mh_ai_rtc_call($V, $sdp, $lean); } }
       if ($code < 200 || $code >= 300 || strncmp(ltrim($answer), 'v=0', 3) !== 0) { error_log('mathub live: ' . $code . ' ' . substr($answer, 0, 300)); mh_fail($code === 429 ? 'Bo is very busy right now. Try the call again in a minute.' : 'Bo could not pick up just now. Try again, or use basic voice.', 502, ['fallback' => true]); }
-      $lid = bin2hex(random_bytes(12)); $now = time();
-      $db->prepare('INSERT INTO ai_live (id, user_id, cid, call, started, last, trial) VALUES (?, ?, ?, ?, ?, ?, ?)')->execute([$lid, $uid, $cid, $call, $now, $now, $trial ? 1 : 0]);
-      mh_json(['ok' => true, 'sdp' => $answer, 'lid' => $lid, 'left' => min($left, $V['live_call'], $trial ? mh_ai_trial_left($uid, $V) : PHP_INT_MAX), 'voice' => $voice, 'trial' => $trial]);
+      $now = time(); $secs0 = $prev ? (int)$prev['secs'] : 0;
+      if ($prev) {   // the same call goes on: its id, its length so far (Minutes per call), the time it was down not counted
+        $lid = (string)$prev['id']; $db->prepare('UPDATE ai_live SET call = ?, last = ?, ended = 0 WHERE id = ?')->execute([$call, $now, $lid]); mh_ai_q('reconnects');
+      } else { $lid = bin2hex(random_bytes(12)); $db->prepare('INSERT INTO ai_live (id, user_id, cid, call, started, last, trial) VALUES (?, ?, ?, ?, ?, ?, ?)')->execute([$lid, $uid, $cid, $call, $now, $now, $trial ? 1 : 0]); }
+      mh_json(['ok' => true, 'sdp' => $answer, 'lid' => $lid, 'left' => max(0, min($left, $V['live_call'] - $secs0, $trial ? mh_ai_trial_left($uid, $V) : PHP_INT_MAX)), 'voice' => $voice, 'trial' => $trial, 'resumed' => (bool)$prev]);
     }
     case 'ai_call_start': {
       // a basic voice call on the free minutes (no Max): Bo answers through ai_tutor, ai_speak and ai_listen with this lid,
@@ -1147,7 +1163,7 @@ function mh_ai_route(string $route, array $in, array $cfg, string $ip): void {
       if ($added) mh_ai_save_notes($uid, $notes);
       if (!empty($in['end']) && !(int)$r['ended']) {
         $mc = is_array($in['mc'] ?? null) ? $in['mc'] : [];   // what the math check caught on the call (assets/talk.js)
-        mh_ai_q('calls'); foreach (['you' => 'call_you', 'bo' => 'call_bo', 'page' => 'call_page'] as $k => $key) mh_ai_q($key, max(0, min(50, (int)($mc[$k] ?? 0))));
+        mh_ai_q('calls'); foreach (['you' => 'call_you', 'bo' => 'call_bo', 'page' => 'call_page', 'false_barge' => 'false_barge', 'cut_client' => 'cut_client', 'cut_limit' => 'cut_limit', 'errors' => 'call_errors', 'drops' => 'drops'] as $k => $key) mh_ai_q($key, max(0, min(50, (int)($mc[$k] ?? 0))));
         $now = time(); $d = max(0, min(45, $now - (int)$r['last'])); mh_ai_add($uid, 'live', $d);
         $db->prepare('UPDATE ai_live SET secs = secs + ?, last = ?, ended = 1 WHERE id = ?')->execute([$d, $now, $lid]);
         mh_ai_hangup($V, (string)$r['call']);

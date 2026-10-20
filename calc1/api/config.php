@@ -100,6 +100,7 @@ return [
   // The mini model keeps it to a few cents a minute; 'gpt-realtime-2.1' sounds the same and reasons better, at
   // several times the price. Without the key, calls fall back to basic voice (the browser hears, Claude answers).
   'ai_live_model'     => 'gpt-realtime-2.1-mini',
+  'ai_live_transcribe' => 'gpt-live-transcribe',   // writes down what is said on calls (captions, the math check)
   'ai_live_model_max' => 'gpt-realtime-2.1',   // Max members' calls (free minutes keep ai_live_model); empty: the same model for everyone
   'ai_live_voice'     => 'cedar',    // cedar, marin, ash, ballad, coral, sage or verse; students can pick another
   'ai_live_monthly'   => 300,        // minutes of live calls per account per month

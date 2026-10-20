@@ -464,6 +464,14 @@ board stay in one place).
   transcript is saved to the chat (`ai_live_log`). Without the speech key, or if a call can't connect, **basic
   voice**: the browser hears, the answer streams from `ai_tutor` in voice mode, and Bo reads it out (`ai_speak` or
   the device's voice). Mute (M), tap Bo to stop him, Show Bo, Photo, Type, captions (C), Esc ends the call.
+  - **Calls that hold up** (`docs/bo-teaching.md`, "Calls that hold up"): the server decides when he's been
+    interrupted and the app never cuts him off for a check (a MATH CHECK goes in as a note), one answer at a time,
+    tools answer "fix it quietly and try again" instead of an error he would read out, the mic waits while he greets,
+    the far-field noise filter on laptops (near-field with headphones). A dropped connection shows "reconnecting…"
+    and comes back as the same call (`ai_live_start` with `resume`: board, clock and captions kept, Bo picks up where
+    he was); a minute with no connection ends it and says so. Call settings: I'm wearing headphones, My speakers echo
+    (the mic stays closed while he talks). What the student says is written down by `gpt-live-transcribe` in their
+    language, with the class's words as hints (`ai_live_transcribe` in Site settings).
   - **The whole screen is a board you share** (`assets/bo-pad.js`, `App.boPad`): squared paper you write on with a
     pen (a stylus's pressure; with a stylus, fingers only move the board), a highlighter, an eraser that takes whole
     strokes, typed text (`x^2` shows as x²) and photos (Photo puts the picture on the board too); five colours,
@@ -519,12 +527,14 @@ board stay in one place).
 - **Bo never agrees with something wrong** (`docs/bo-teaching.md`, `MH_AI_TRUTH`): the app checks the math exactly,
   in the browser (`assets/mathcheck.js`) and on the server (`api/mathcheck.php`): what the student says, types or
   answers (spoken numbers and LaTeX too), what Bo says, the pages and questions he puts up, and his chat replies.
-  On a call something wrong stops him and he answers again with an exact note; he also has a `check_math` tool.
+  On a call an exact note goes in for his next turn (he is stopped only if he starts to agree with something wrong);
+  he also has a `check_math` tool.
 - **How Bo teaches** (`docs/bo-teaching.md`, `MH_AI_TEACH` in `api/ai.php`): the same thirteen rules in the chat,
   voice mode and calls, from research on expert tutors and learning: find out where the student is, the big picture
   first, one idea at a time, concrete before abstract, a worked example then fading, draw it, words and board
   together, real checks instead of "does that make sense?", a hint ladder, mistakes as information, a new angle when
-  it didn't land, close the loop, be exactly right. On a call he takes a proper turn to explain something new.
+  it didn't land, close the loop, be exactly right. On a call (shorter call rules, `MH_AI_LIVE`) most turns are short
+  and he takes a proper turn to explain something new.
 - **Bo's board** (`App.boBoard` in `assets/tutor.js`, also on calls): Bo works problems out on a whiteboard instead
   of in the chat bubble. In his replies a page is a block, `[board: Title]` then `step:`, `math:`, `answer:`,
   `tip:`, `text:`, `draw:`, `check:` and `code:` lines (or a ``` block of code) and `[/board]`. A `draw:` line is a
