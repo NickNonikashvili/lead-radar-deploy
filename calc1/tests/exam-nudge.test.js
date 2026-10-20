@@ -70,6 +70,29 @@ const mailLen = () => (fs.existsSync(LOG) ? fs.readFileSync(LOG, 'utf8').length 
   check('with free minutes left, the review call opens on them', !!(await b.$('#bo-talk .bt-exam')) && /free minutes/.test(await txt(b, '#bo-talk')));
   await b.keyboard.press('Escape'); await cb.close();
 
+  // the administrator's switches (admin → Site settings → Email): off stops them for everyone
+  const [ca, ad] = await mk(1360, 900, { serviceWorkers: 'block' }); await go(ad, '#/', 500); await login(ad, 'admin.user@montana.edu');
+  let sw = await api(ad, 'admin_config_save', { password: 'password123', values: { exam_emails: 'off', recap_emails: 'off' } });
+  const fields = (await api(ad, 'admin_config')).json.groups.flatMap(g => g.fields); const fx = k => fields.find(f => f.key === k) || {};
+  check('Site settings has both switches, under email, and saves them', sw.status === 200 && fx('exam_emails').value === 'off' && fx('recap_emails').value === 'off' && /Exam heads-ups/.test(fx('exam_emails').label) && /Recap emails/.test(fx('recap_emails').label), [fx('exam_emails'), fx('recap_emails')]);
+  sqlite(`DELETE FROM exam_nudges; UPDATE users SET exam_checked = 0, exam_nudge = 1 WHERE email IN ('${BOB}', '${MOD}')`);
+  m0 = mailLen(); n = tick('2026-09-15');
+  check('exam heads-ups off: none go out, even three days before', n === 0 && !/Exam 1 is in/.test(mailSince(m0)) && ask('SELECT COUNT(*) AS n FROM exam_nudges')[0].n === 0, n);
+  const [cs, st] = await mk(1360, 900, { serviceWorkers: 'block' }); await cs.addInitScript(quiet); await cs.addInitScript(live);
+  await go(st, '#/', 500); await login(st, MOD); await st.reload(); await st.waitForTimeout(700);
+  check('the account says both are off for the site', (await api(st, 'me')).json.user.exam_emails_on === false && (await api(st, 'me')).json.user.recap_emails_on === false);
+  await go(st, '#/settings', 1200);
+  check('and Settings no longer offers them', !(await st.$('#acct-exam')) && !(await st.$('#acct-recap')) && !!(await st.$('#acct-news')));
+  sqlite("DELETE FROM rate WHERE key LIKE 'ai_recap:%' OR key LIKE 'ai_live:%'"); await api(st, 'ai_forget', { what: 'all' });
+  const OFFER = 'v=0\r\no=- 1 2 IN IP4 127.0.0.1\r\ns=test\r\nt=0 0\r\n'; const since = Math.floor(Date.now() / 1000) - 2;
+  const lv = (await api(st, 'ai_live_start', { class: 'calc', sdp: OFFER })).json;
+  await api(st, 'ai_live_log', { lid: lv.lid, turns: [{ r: 'b', t: 'Good afternoon.' }, { r: 'u', t: 'x = 11 - 3 so x = 6' }, { r: 'b', t: 'No. Eleven minus three is eight.' }], end: 1 });
+  m0 = mailLen(); const rc = (await api(st, 'ai_recap', { class: 'calc', since })).json;
+  check('recap emails off: the recap is still in the chat, and no email goes out', rc.ok && !!rc.recap && rc.emailed === false && !/Your call with/.test(mailSince(m0)), rc);
+  sw = await api(ad, 'admin_config_save', { password: 'password123', clear: ['exam_emails', 'recap_emails'] });
+  check('cleared, both are back on', sw.status === 200 && (await api(st, 'me')).json.user.exam_emails_on === true && (await api(st, 'me')).json.user.recap_emails_on === true);
+  await api(st, 'ai_forget', { what: 'all' }); await cs.close(); await ca.close();
+
   // put things back
   for (const k of keep) sqlite(`UPDATE users SET courses = ${k.courses === null ? 'NULL' : `'${String(k.courses).replace(/'/g, "''")}'`}, exam_checked = 0, exam_nudge = 1 WHERE id = ${k.id}`);
   sqlite(`DELETE FROM exam_nudges; UPDATE users SET exam_checked = 0; DELETE FROM ai_trial WHERE user_id = (SELECT id FROM users WHERE email = '${BOB}'); DELETE FROM ai_live WHERE user_id IN (SELECT id FROM users WHERE email IN ('${BOB}', '${MOD}'))`);

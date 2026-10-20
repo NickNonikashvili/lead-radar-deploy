@@ -106,6 +106,8 @@ return [
   'ai_live_daily'     => 90,         // minutes per day
   'ai_live_call'      => 30,         // minutes per call (Bo can be called again right away)
   'ai_trial_minutes'  => 10,         // free call minutes with Bo, once, for every account without Max (0 turns it off)
+  'recap_emails'      => 'on',       // Bo's recap by email after a call (off: only in the chat); each member can turn it off too
+  'exam_emails'       => 'on',       // the heads-up 3 days before an exam (off: none are sent); each member can turn it off too
   'ai_invite_minutes' => 10,         // more free minutes for both, when a classmate joins through your invite link (0 turns it off; up to 60 per account)
 
   // Storage. Keep the database inside api/data (protected by .htaccess) or move it above public_html.

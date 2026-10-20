@@ -54,6 +54,8 @@ function mh_siteconfig_fields(): array {
     'smtp_port'          => ['mail', 'SMTP port', 'int', '465 = SSL, 587 = STARTTLS.', [1, 65535]],
     'smtp_user'          => ['mail', 'SMTP user name', 'text', 'Usually the sender address.'],
     'smtp_pass'          => ['mail', 'Email password', 'secret', 'The password of the sender’s mailbox.'],
+    'recap_emails'       => ['mail', 'Recap emails after calls with Bo', 'select', 'on: after a call, members get Bo’s recap by email too (each can turn it off in Settings → Account). off: nobody gets it by email; the recap stays in their chat.', ['on', 'off']],
+    'exam_emails'        => ['mail', 'Exam heads-ups (3 days before)', 'select', 'on: members who picked their classes get one email (and a notification, if they turned those on) per exam, with a review call with Bo. off: none are sent.', ['on', 'off']],
     'allowed_domains'    => ['access', 'Who may sign up (email domains)', 'domains', 'One per line. Subdomains are included (student.montana.edu counts as montana.edu).'],
     'extra_allowed_emails' => ['access', 'Also allowed to sign up', 'emails', 'One email per line, for people outside those domains.'],
     'moderators'         => ['access', 'Moderators', 'emails', 'One email per line. They handle reports, contributions and mock exams.'],

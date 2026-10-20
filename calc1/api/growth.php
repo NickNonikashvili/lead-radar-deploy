@@ -122,6 +122,7 @@ function mh_planning_tick(int $max, bool $force = false): int {
    which ones went out). Its button opens Ask Bo with ?call=exam: a call that starts on their weakest topics. Members
    without Max or free minutes get the class's exam prep page instead. $today is for the tests. */
 function mh_exam_nudge_tick(int $max, bool $force = false, string $today = ''): int {
+  if ((mh_config()['exam_emails'] ?? 'on') === 'off') return 0;   // switched off for everyone (admin → Site settings → Email)
   $tz = mh_tz(); $now = new DateTime('now', $tz); if ((!$force && (int)$now->format('G') < 9) || $max <= 0) return 0;
   $today = preg_match('/^\d{4}-\d{2}-\d{2}$/', $today) ? $today : $now->format('Y-m-d');
   $day0 = $force ? time() + 1 : (new DateTime($today, $tz))->getTimestamp();

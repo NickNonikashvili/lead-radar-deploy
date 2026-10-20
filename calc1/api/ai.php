@@ -1126,7 +1126,7 @@ function mh_ai_route(string $route, array $in, array $cfg, string $ip): void {
       $practice = [];
       foreach ($parts['checks'] as $c) { $v = mh_mc_val(mh_mc_edge(mh_mc_norm($c['answer']), false)); if (is_finite($v)) $practice[] = ['prompt' => $c['q'], 'answer' => $v, 'tex' => mh_mc_fmt_tex($v), 'why' => $c['why']]; }
       $emailed = false;
-      if ((int)($u['recap_email'] ?? 1) === 1 && (int)($u['verified'] ?? 0) === 1 && !str_ends_with((string)$u['email'], '@system.local')) {
+      if (($cfg['recap_emails'] ?? 'on') !== 'off' && (int)($u['recap_email'] ?? 1) === 1 && (int)($u['verified'] ?? 0) === 1 && !str_ends_with((string)$u['email'], '@system.local')) {
         require_once __DIR__ . '/mailer.php'; [$sub, $txt, $html] = mh_ai_recap_mail($u, $parts, $ch['name'], $cid); $emailed = mh_send_mail($cfg, $u['email'], $sub, $txt, $html)['ok'];
       }
       mh_json(['ok' => true, 'recap' => $reply, 'topic' => $parts['topic'], 'practice' => $practice, 'emailed' => $emailed]);

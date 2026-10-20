@@ -622,7 +622,8 @@ gives you both that many more free minutes (`ai_trial.bonus`, up to 60 per accou
   with the slips the app caught on the call, due now.
 - **The heads-up before an exam** (`mh_exam_nudge_tick` in `api/growth.php`, from 9 am, a few members per visit):
   an exam in 2 or 3 days in the classes a member picked gets one email and push (`exam_nudges`;
-  `users.exam_nudge`). Its link, `#/tutor/<class>?call=exam`, opens a review call (MH_AI_EXAM_CALL) for Max members
+  `users.exam_nudge`; admin → Site settings → Email → `exam_emails` turns them off for everyone, and `recap_emails`
+  does the same for the recap emails). Its link, `#/tutor/<class>?call=exam`, opens a review call (MH_AI_EXAM_CALL) for Max members
   and anyone with free minutes; others get the exam prep page.
 - **Max calls use the stronger model** (`ai_live_model_max`, `gpt-realtime-2.1` by default; the free minutes keep
   `ai_live_model`). If OpenAI refuses it, the call goes ahead on `ai_live_model`.
