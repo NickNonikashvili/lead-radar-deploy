@@ -42,7 +42,7 @@ const row = email => JSON.parse(spawnSync('php', ['-r', '$d = new PDO("sqlite:" 
   await next(p);
   check('then Bo, with his board and calls', (await step(p)) === 'bo' && /Meet Bo/.test(await txt(p, '#wl-h')) && /Solving 2x \+ 3 = 11/.test(await txt(p, '.wa-board')));
   await next(p);
-  check('then any class from its syllabus', (await step(p)) === 'create' && /Any class, from its syllabus/.test(await txt(p, '#wl-h')));
+  check('then any class, on request', (await step(p)) === 'create' && /Any class, on request/.test(await txt(p, '#wl-h')));
   await p.click('#welcome [data-w="back"]'); await p.waitForTimeout(450); await p.keyboard.press('Escape'); await p.waitForTimeout(450);
   check('Esc skips the rest of the tour, straight to the classes', (await step(p)) === 'classes' && (await p.$eval('#welcome .wl-skip', b => b.hidden)));
   // the classes: at least one
@@ -59,10 +59,10 @@ const row = email => JSON.parse(spawnSync('php', ['-r', '$d = new PDO("sqlite:" 
   await p.click('#welcome [data-w="skip"]'); await p.waitForTimeout(450);
   await p.click('.wl-class[data-c="calc"]'); await next(p);
   // the membership
-  check('then the membership: Free, Pro and Max, with their prices', (await step(p)) === 'plan' && (await p.$$eval('.wl-plan', bs => bs.map(b => b.dataset.p).join())) === 'free,pro,max' && /\$15/.test(await txt(p, '.wl-plan[data-p="pro"]')) && /\$50/.test(await txt(p, '.wl-plan[data-p="max"]')));
+  check('then the membership: Free, Pro and Max, with their prices', (await step(p)) === 'plan' && (await p.$$eval('.wl-plan', bs => bs.map(b => b.dataset.p).join())) === 'free,pro,max' && /\$15/.test(await txt(p, '.wl-plan[data-p="pro"]')) && /\$20/.test(await txt(p, '.wl-plan[data-p="max"]')));
   check('Continue waits for a choice', (await p.$eval('#welcome .wl-next', b => b.getAttribute('aria-disabled'))) === 'true');
   await p.click('.wl-plan[data-p="max"]');
-  check('picking Max offers its checkout', (await p.$eval('.wl-plan[data-p="max"]', b => b.getAttribute('aria-checked'))) === 'true' && /Get Max · \$50 a month/.test(await txt(p, '#welcome .wl-next')));
+  check('picking Max offers its checkout', (await p.$eval('.wl-plan[data-p="max"]', b => b.getAttribute('aria-checked'))) === 'true' && /Get Max · \$20 a month/.test(await txt(p, '#welcome .wl-next')));
   await next(p); await p.waitForTimeout(900);
   check('which opens the Max checkout card on top', /Mathub Max/.test(await txt(p, '#paywall h2')) && (await step(p)) === 'plan');
   await p.keyboard.press('Escape'); await p.waitForTimeout(700);

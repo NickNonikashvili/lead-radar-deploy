@@ -401,7 +401,7 @@
       st.exam = false; return;
     }
     if (!settings().aiConsent) { main.innerHTML = consent(); wireGate(main, () => start(main, query)); return; }
-    if (!st.cid) { main.innerHTML = gate('Pick a class first', 'Bo helps with a class you take. Choose your classes, or make one from a syllabus.', `<a class="btn primary" href="#/">Your classes</a><a class="btn" href="#/create">Create a class</a>`); return; }
+    if (!st.cid) { main.innerHTML = gate('Pick a class first', 'Bo helps with a class you take. Choose your classes, or request one Mathub does not have yet.', `<a class="btn primary" href="#/">Your classes</a><a class="btn" href="#/request">Request a class</a>`); return; }
     main.onclick = null; chat(main, query);
   }
   const gate = (h, p, acts) => `<section class="bo-gate"><span class="bo-gate-av" aria-hidden="true">${bo(96)}</span><h2>${h}</h2><p>${p}</p>${acts ? `<div class="bo-gate-acts">${acts}</div>` : ''}</section>`;

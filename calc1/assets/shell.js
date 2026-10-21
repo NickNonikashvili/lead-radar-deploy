@@ -110,7 +110,8 @@
     if (!inClass) {
       const ids = App.myCourses().filter(id => Courses[id]); const o = groupOpen('classes', true);
       const rows = ids.map(id => { const C = Courses[id]; let ex = null; try { ex = App.nextExamOf(C); } catch (e) {} const n = ex && ex.date ? App.daysBetween(App.todayISO(), ex.date) : null; return `<a class="nav-item sb-class" style="${Life().ccStyle(id)}" href="#/${esc(id)}/dashboard" title="${esc(C.name)}"><i class="sb-dot"></i><span>${esc(C.short)}</span>${n != null && n >= 0 && n <= 14 ? `<b class="sb-exam${n <= 3 ? ' soon' : ''}" title="${esc(ex.name)}">${n === 0 ? esc(t('today')) : esc(t('{1}d', n))}</b>` : ''}</a>`; }).join('');
-      const add = App.views.create ? `<a class="nav-item sb-add" href="#/create">${icon('plus')}<span>${esc(t('Add a class'))}</span></a>` : '';
+      // administrators add classes; everyone else asks for one (assets/requests.js)
+      const add = App.canMakeClasses && App.canMakeClasses() ? `<a class="nav-item sb-add" href="#/create">${icon('plus')}<span>${esc(t('Add a class'))}</span></a>` : App.views.request ? `<a class="nav-item sb-add" href="#/request">${icon('path')}<span>${esc(t('Request a class'))}</span></a>` : '';
       h += group('classes', t('Your classes'), ids.length, o, rows + add);
     }
     GROUPS.forEach(g => {

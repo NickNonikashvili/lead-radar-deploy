@@ -72,8 +72,8 @@
     create: () => ({
       art: `<div class="wa wa-create"><div class="wa-doc"><b>CHMY 121 syllabus</b><i></i><i></i><i></i><i></i><i></i></div><span class="wa-arrow">${icon('right', 22)}</span>
           <span class="wa-bot">${bo(66)}</span><div class="wa-class"><b>CHMY 121</b><span>General Chemistry</span><small>12 topics · 140 questions · 3 exams</small></div></div>`,
-      h: 'Any class, from its syllabus',
-      p: 'Taking something Mathub does not have yet? Drop in its syllabus and Bo writes the whole class: notes, practice, flashcards and its calendar. It goes on Mathub for everyone who takes it, and it is free.',
+      h: 'Any class, on request',
+      p: 'Taking something Mathub does not have yet? Request it with its syllabus. We check the file, build the whole class (notes, practice, flashcards and its calendar) and tell you when it is ready, for everyone who takes it.',
       next: 'Next'
     }),
     classes: () => ({

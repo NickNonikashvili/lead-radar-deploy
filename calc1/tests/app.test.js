@@ -126,7 +126,7 @@ const { execFileSync } = require('child_process'); const path = require('path');
 
   // Create a class: the instructions
   await go(p, '#/create', 1200);
-  check('#/create opens with Bo writing it from the syllabus, and the three do-it-yourself steps folded away', /Create a class/.test(await txt(p, '#view')) && !!(await p.$('#mk-bo-text')) && (await p.$$('#mk-diy .mk-step')).length === 3);
+  check('#/create opens with the three do-it-yourself steps (Bo writes classes only for Mathub\'s administrators)', /Create a class/.test(await txt(p, '#view')) && !(await p.$('#mk-bo-text')) && (await p.$$('#mk-diy .mk-step')).length === 3);
   check('no sideways scroll on #/create at 390px', await hscroll(p));
   await p.click('#mk-diy summary'); await p.waitForTimeout(200);
   await p.click('[data-action="copy-prompt"]'); await p.waitForTimeout(300);
@@ -292,11 +292,11 @@ const { execFileSync } = require('child_process'); const path = require('path');
   check('Android: reminders go in their own channel and are inexact (no exact-alarm permission needed)', arem.ch.some(c => c.id === 'reminders' && c.importance === 3) && arem.n.length === 1 && arem.n[0].channelId === 'reminders' && arem.n[0].isExactNotification === false, arem);
   check('no sideways scroll on Android at 412px', await hscroll(a));
 
-  // the website has Create a class too (assets/create.js), but none of the app's own code
+  // the website has Create a class too (assets/create.js, for Mathub's administrators: a guest lands on Request a class), but none of the app's own code
   const [cw, w] = await mk(1360, 900, { serviceWorkers: 'block' });
   await goSite(w, '#/create', 1400);
-  const web = await w.evaluate(() => ({ app: document.documentElement.dataset.app || '', create: !!(window.App && App.views.create), scripts: [...document.scripts].map(s => s.src).filter(s => /app-(boot|native)/.test(s)).length, steps: document.querySelectorAll('.mk-step').length }));
-  check('the website has the Create a class page and loads no app code', web.app === '' && web.create && web.scripts === 0 && web.steps === 3, web);
+  const web = await w.evaluate(() => ({ app: document.documentElement.dataset.app || '', create: !!(window.App && App.views.create), scripts: [...document.scripts].map(s => s.src).filter(s => /app-(boot|native)/.test(s)).length, request: /#\/request$/.test(location.hash) }));
+  check('the website has the Create a class page (a guest is sent to Request a class) and loads no app code', web.app === '' && web.create && web.scripts === 0 && web.request, web);
 
   await goSite(w, '#/policy/delete', 1400);
   const del = await txt(w, '#pol-delete') + ' ' + await w.evaluate(() => { const h = document.querySelector('#pol-delete'); let t = ''; for (let n = h && h.nextElementSibling; n && n.tagName !== 'H2'; n = n.nextElementSibling) t += n.textContent + ' '; return t; });

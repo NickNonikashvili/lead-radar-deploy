@@ -51,7 +51,7 @@ const fs = require('fs'); const path = require('path'); const { spawnSync } = re
   check('a direct link works on a first visit', /Data and sampling/.test(await txt(g, '#view')) && await g.evaluate(() => window.Courses.zzp101 && window.Courses.zzp101.loaded));
   check('hostile markup in the pack never runs', await g.evaluate(() => window.__pwned === undefined && !document.querySelector('#view img, #view script')) && /this sentence stays/.test(await txt(g, '#view')));
   check('the sidebar switcher includes the class with its colour', await g.evaluate(() => !!document.querySelector('.switch-btn[data-c="zzp101"]') && getComputedStyle(document.documentElement).getPropertyValue('--accent').trim().toUpperCase() === '#0F766E'));
-  check('the sidebar offers a guest Make a class (requests are for professors and TAs)', !!(await g.$('#course-switch a.req[href="#/create"]')) && !(await g.$('#course-switch a.req[href="#/request"]')));
+  check('the sidebar offers a guest Request a class (classes are added by Mathub\'s team)', !!(await g.$('#course-switch a.req[href="#/request"]')) && !(await g.$('#course-switch a.req[href="#/create"]')));
   await go(g, '#/', 900);
   check('the start page shows the class card', !!(await g.$('.course-card.zzp101')) || /ZZP 101/.test(await txt(g, '.course-grid')));
   await g.keyboard.press('Control+k'); await g.waitForTimeout(300); await g.fill('#search-input', 'z-score'); await g.waitForTimeout(400);

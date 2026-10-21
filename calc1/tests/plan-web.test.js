@@ -39,13 +39,13 @@ const sql = (q, arg) => (spawnSync('php', ['-r', '$d = new PDO("sqlite:" . $argv
   await plan(a, aliceId, null);
   await go(a, '#/', 1800);
   const hf = await a.evaluate(() => { const h = document.querySelector('#bo-hub'); return h && { h: h.querySelector('h2').textContent, acts: [...h.querySelectorAll('.bh-act b')].map(b => b.textContent), plan: h.querySelector('.bh-plan').getAttribute('href'), chip: h.querySelector('.bh-plan b').textContent, before: !!(h.compareDocumentPosition(document.querySelector('.land-next, [aria-labelledby="lsec-classes"]')) & Node.DOCUMENT_POSITION_FOLLOWING) }; });
-  check('without a plan, the start page has Meet Bo, above the classes: Call Bo free (the free minutes), See what Max does and Add a class', hf && hf.h === 'Meet Bo, your tutor' && hf.acts.join() === 'Call Bo free,See what Max does,Add a class' && hf.plan === '#/plan' && hf.chip === 'Free' && hf.before, hf);
+  check('without a plan, the start page has Meet Bo, above the classes: Call Bo free (the free minutes), See what Max does and Add a class', hf && hf.h === 'Meet Bo, your tutor' && hf.acts.join() === 'Call Bo free,See what Max does,Request a class' && hf.plan === '#/plan' && hf.chip === 'Free' && hf.before, hf);
   check('See what Max does opens the one-minute demo', (await a.getAttribute('#bo-hub a.bh-act[href="#/max"]', 'href')) === '#/max');
   // once the free minutes are used: Get Pro, Get Max and Add a class
   sqlite(`INSERT OR REPLACE INTO ai_trial (user_id, used, first) VALUES ((SELECT id FROM users WHERE email = 'alice.a@montana.edu'), 100000, strftime('%s','now'))`);
   await a.reload(); await a.waitForTimeout(1800);
   const hu = await a.evaluate(() => [...document.querySelectorAll('#bo-hub .bh-act b')].map(b => b.textContent));
-  check('with the free minutes used, it offers Get Pro (Bo on every page), Get Max and Add a class (free)', hu.join() === 'Get Mathub Pro,Get Mathub Max,Add a class', hu);
+  check('with the free minutes used, it offers Get Pro (Bo on every page), Get Max and Add a class (free)', hu.join() === 'Get Mathub Pro,Get Mathub Max,Request a class', hu);
   await a.click('#bo-hub [data-bh="max"]'); await a.waitForTimeout(1200);
   check('Get Mathub Max opens the Max checkout card', /Mathub Max/.test(await txt(a, '#paywall h2')) && (await a.$$eval('#paywall [data-plan]', b => b.map(x => x.dataset.plan).join())) === 'max');
   await a.keyboard.press('Escape'); await a.waitForTimeout(300);
@@ -60,7 +60,7 @@ const sql = (q, arg) => (spawnSync('php', ['-r', '$d = new PDO("sqlite:" . $argv
   await plan(a, aliceId, { plan: 'pro', store: 'rc_billing' });
   await go(a, '#/', 1800);
   const hp = await a.evaluate(() => { const h = document.querySelector('#bo-hub'); return { acts: [...h.querySelectorAll('.bh-act b')].map(b => b.textContent), main: h.querySelector('.bh-act.bh-main b').textContent, chip: h.querySelector('.bh-plan b').textContent, sub: h.querySelector('#bh-sub').textContent }; });
-  check('with Pro: Ask Bo here first (Bo on every page), Add a class, and Call Bo leads up to Max', hp.main === 'Ask Bo here' && hp.acts.join() === 'Ask Bo here,Add a class,Call Bo' && hp.chip === 'Pro' && /questions left this month/.test(hp.sub) && /Bo is on every page/.test(hp.sub), hp);
+  check('with Pro: Ask Bo here first (Bo on every page), Add a class, and Call Bo leads up to Max', hp.main === 'Ask Bo here' && hp.acts.join() === 'Ask Bo here,Request a class,Call Bo' && hp.chip === 'Pro' && /questions left this month/.test(hp.sub) && /Bo is on every page/.test(hp.sub), hp);
   await a.click('#bo-hub [data-bh="float"]'); await a.waitForTimeout(1000);
   check('Ask Bo here opens Bo right on the page', await a.evaluate(() => { const p = document.querySelector('#bo-pop'); return !!p && !p.hidden; }));
   await a.keyboard.press('Escape'); await a.waitForTimeout(400);
@@ -76,7 +76,7 @@ const sql = (q, arg) => (spawnSync('php', ['-r', '$d = new PDO("sqlite:" . $argv
   await plan(a, aliceId, { plan: 'max', store: 'rc_billing' });
   await go(a, '#/', 1800);
   const hm = await a.evaluate(() => { const h = document.querySelector('#bo-hub'); return { acts: [...h.querySelectorAll('.bh-act b')].map(b => b.textContent), main: h.querySelector('.bh-act.bh-main b').textContent, ask: h.querySelector('a.bh-act[href^="#/tutor"]').getAttribute('href'), chip: h.querySelector('.bh-plan b').textContent, sub: h.querySelector('#bh-sub').textContent, row: getComputedStyle(h.querySelector('.bh-act.bh-main')).flexDirection }; });
-  check('with Max: Call Bo, Ask Bo (her class) and Add a class, with what is left this month', hm.acts.join() === 'Call Bo,Ask Bo,Add a class' && hm.main === 'Call Bo' && hm.ask === '#/tutor/calc' && hm.chip === 'Max' && /questions and \d+ call minutes left this month/.test(hm.sub) && hm.row === 'row', hm);
+  check('with Max: Call Bo, Ask Bo (her class) and Add a class, with what is left this month', hm.acts.join() === 'Call Bo,Ask Bo,Request a class' && hm.main === 'Call Bo' && hm.ask === '#/tutor/calc' && hm.chip === 'Max' && /questions and \d+ call minutes left this month/.test(hm.sub) && hm.row === 'row', hm);
   await a.click('#bo-hub [data-bh="call"]'); await a.waitForTimeout(1200);
   check('Call Bo before agreeing to Bo\'s terms goes to Bo first (who asks), with the call to follow', /^#\/tutor\/calc\?talk=1/.test(new URL(a.url()).hash) && /Before you start/.test(await txt(a, '#bo-main')));
   await a.evaluate(() => App.setSetting('aiConsent', Date.now()));
@@ -90,7 +90,7 @@ const sql = (q, arg) => (spawnSync('php', ['-r', '$d = new PDO("sqlite:" . $argv
   await a.keyboard.press('Escape');
   await go(a, '#/plan', 1800);
   const now = await txt(a, '#pl-now');
-  check('Your plan: Max, active, $50 a month, when it renews, paid on the website, her account', /Active/.test(now) && /Mathub Max/.test(now) && /\$50 a month/.test(now) && /Renews/.test(now) && /the website \(card, through Stripe\)/.test(now) && /alice\.a@montana\.edu/.test(now), now);
+  check('Your plan: Max, active, $20 a month, when it renews, paid on the website, her account', /Active/.test(now) && /Mathub Max/.test(now) && /\$20 a month/.test(now) && /Renews/.test(now) && /the website \(card, through Stripe\)/.test(now) && /alice\.a@montana\.edu/.test(now), now);
   check('Manage billing opens the billing page in a new tab', (await a.$eval('#pl-now a[target="_blank"]', x => x.href)) === 'https://billing.example/manage');
   const mm = await a.$$eval('.pl-m', ms => ms.map(m => [m.querySelector('b').textContent, m.querySelector('[role="progressbar"]') ? m.querySelector('[role="progressbar"]').getAttribute('aria-valuetext') : '']));
   check('this month: questions, classes and call minutes, each a labelled meter, and when they start again', mm.length === 3 && mm[0][0] === 'Questions to Bo' && /of 1,500 questions used/.test(mm[0][1]) && mm[2][0] === 'Calls with Bo' && /These start again on/.test(await txt(a, '#pl-use')), mm);

@@ -1,12 +1,13 @@
 /* ============================================================
    Mathub — request a class (#/request)
-   Professors and TAs ask for a class Mathub does not have yet (students
-   are pointed to Create a class, where Bo writes it from the syllabus) and attach its
-   syllabus (PDF or Word, up to 10 MB) or paste the text. Requests for
-   the same course code are grouped on the server, so the "most
-   requested" list shows demand and anyone can add their voice with one
-   click. Syllabus files are only ever seen by administrators (admin
-   panel → Class requests); status changes arrive in the inbox.
+   Classes are added by Mathub's team, so this is how a student gets one Mathub
+   does not have yet: the course code and its syllabus (a PDF, a Word file or a
+   photo, up to 10 MB) or its text. The file is checked for malware before it
+   is kept; administrators see it in the admin panel (Class requests), where Bo
+   builds the class from it. Requests for the same course code are grouped on
+   the server, so the "most requested" list shows demand and anyone can add
+   their voice with one click; status changes arrive in the inbox. Classes a
+   student made before (App.paintMyClasses, assets/create.js) are listed here too.
    Server: api/requests.php.
    ============================================================ */
 (function (global) {
@@ -15,6 +16,8 @@
   const { $, $$, esc, icon, bind, toast } = App;
   const API = 'api/index.php?r=';
   const MAX_MB = 10;
+  const ACCEPT = '.pdf,.docx,.jpg,.jpeg,.png,.webp,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,image/jpeg,image/png,image/webp';
+  const FILE_RE = /\.(pdf|docx|jpe?g|png|webp)$/i;
   const STATUS = { new: ['Requested', ''], working: ['Being built', 'warn'], added: ['On Mathub', 'good'], declined: ['Not for now', 'muted'] };
   const statusChip = s => { const [l, c] = STATUS[s] || [s, '']; return `<span class="chip xs ${c}">${esc(l)}</span>`; };
   const CODE_RE = /^([A-Z]{1,5}) ?([0-9]{3}[A-Z]{0,3})$/;
@@ -46,7 +49,7 @@
     render(root, param, query, standalone) {
       const guest = App.guest(); const pre = normCode(query.code || param || '') || '';
       const head = standalone ? `<div class="landing-wrap"><header class="landing-top"><div><div class="eyebrow">Mathub</div><h1 class="landing-title"><span class="logo-mark">${App.logoSvg(44)}</span>Request a class</h1><p class="muted">${this.blurb}</p></div><div class="row gap-sm"><span id="landing-account"></span><a class="btn" href="#/">${icon('left', 14)} All classes</a></div></header>` : App.pageHead('Request a class', this.blurb);
-      const form = !App.canRequest() ? `<div class="panel rq-staff"><div class="rq-staff-t"><h2>${icon('path', 18)} Class requests are for professors and TAs</h2><p>They send the official syllabus, so the class is right from day one. You can make any class yourself, right now: drop in its syllabus and Bo writes the whole thing, notes, practice, flashcards and its calendar.</p></div><div class="row gap-sm" style="flex-wrap:wrap"><a class="btn primary" href="#/create">${icon('plus', 14)} Create a class</a>${guest ? '<button class="btn" data-action="auth-login">Log in</button>' : ''}<a class="btn ghost" href="#/class">${icon('users', 14)} Join your instructor’s class</a></div></div>` : guest ? App.lockCard('Sign in to request a class', 'Requests are for Montana State students, so we can tell you when your class is ready. It takes a minute with your montana.edu email.') : `
+      const form = guest || !App.canRequest() ? App.lockCard('Sign in to request a class', 'Requests are for Montana State students, so we can tell you when your class is ready. It takes a minute with your montana.edu email.') : `
         <form class="panel rq-form" id="rq-form" novalidate>
           <div class="panel-h"><div class="panel-title">${icon('path')} Which class?</div></div>
           <div class="grid cols-2 rq-grid">
@@ -57,20 +60,21 @@
           </div>
           <div class="eyebrow mt-2 mb-1">The syllabus</div>
           <p class="small muted mb-1">We build each class from its syllabus: the schedule, exam dates and grading. Download it from Canvas and attach it here. If someone already sent it, you can skip this.</p>
-          <label class="rq-drop" id="rq-drop" for="rq-file"><input type="file" id="rq-file" name="file" accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"><span class="rq-drop-ic">${icon('download', 22)}</span><span class="rq-drop-t"><b>Choose the syllabus file</b><small>PDF or Word, up to ${MAX_MB} MB. You can also drop it here.</small></span></label>
+          <label class="rq-drop" id="rq-drop" for="rq-file"><input type="file" id="rq-file" name="file" accept="${ACCEPT}"><span class="rq-drop-ic">${icon('download', 22)}</span><span class="rq-drop-t"><b>Choose the syllabus file</b><small>A PDF, a Word file or a photo of it, up to ${MAX_MB} MB. You can also drop it here.</small></span></label>
           <div class="rq-file" id="rq-file-row" hidden></div>
           <button type="button" class="linkbtn small mt-1" data-action="rq-paste">No file? Paste the syllabus text instead</button>
           <div class="field mt-1" id="rq-text-field" hidden><label for="rq-text">Syllabus text</label><textarea class="input" id="rq-text" name="text" rows="6" maxlength="60000" placeholder="Paste the schedule, exam dates and grading policy"></textarea></div>
           <div class="field mt-2"><label for="rq-note">Anything else?</label><textarea class="input" id="rq-note" name="note" rows="2" maxlength="600" placeholder="Optional: which section, what you need most (practice exams, a formula sheet…)"></textarea></div>
-          <label class="check rq-consent" id="rq-consent-row" hidden><input type="checkbox" id="rq-consent" name="consent" value="1"><span>This is the syllabus for a class I am taking. I understand only Mathub's team sees the file, and they use it to build study tools in their own words.</span></label>
+          <p class="small muted mt-1 rq-scan">${icon('shield', 12)} The file is checked for malware before it is kept, and only Mathub's team sees it.</p>
+          <label class="check rq-consent" id="rq-consent-row" hidden><input type="checkbox" id="rq-consent" name="consent" value="1"><span>This is the syllabus for a class I am taking. I understand only Mathub's team sees the file, and they use it to build the class (with Bo, Mathub's AI) in their own words.</span></label>
           <div class="rq-progress" id="rq-progress" hidden><div class="bar"><div class="bar-fill" style="width:0%"></div></div></div>
           <div class="row gap-sm mt-2"><button class="btn primary" type="submit" id="rq-send">${icon('check', 14)} Send request</button><span class="small muted" id="rq-msg" role="status" aria-live="polite"></span></div>
         </form>`;
       root.innerHTML = `${head}<div class="grid cols-3 rq-wrap">
-        <div class="span-2 stack">${form}<div class="panel" id="rq-mine-panel"${guest ? ' hidden' : ''}><div class="panel-h"><div class="panel-title">${icon('list')} Your requests</div></div><div id="rq-mine"><div class="empty small">Loading…</div></div></div></div>
+        <div class="span-2 stack">${form}<div class="panel" id="rq-mine-panel"${guest ? ' hidden' : ''}><div class="panel-h"><div class="panel-title">${icon('list')} Your requests</div></div><div id="rq-mine"><div class="empty small">Loading…</div></div></div><section class="panel rq-own" id="rq-own" data-own hidden><div class="panel-h"><div class="panel-title">${icon('file')} Classes you made before</div></div><p class="small muted">You made these from a syllabus before classes were added by Mathub's team. They stay yours.</p><div id="rq-own-list"></div></section></div>
         <div class="stack">
           <div class="panel rq-how"><div class="panel-h"><div class="panel-title">${icon('bulb')} How it works</div></div>
-            <ol class="rq-steps"><li><b>Send the code and syllabus.</b><span>The syllabus has the schedule, exams and grading we need.</span></li><li><b>We build the class.</b><span>Topic notes, practice questions, flashcards, the calendar and a grade calculator, written in our own words.</span></li><li><b>You hear back.</b><span>Your inbox tells you when we start and when it is ready.</span></li></ol>
+            <ol class="rq-steps"><li><b>Send the code and syllabus.</b><span>The syllabus has the schedule, exams and grading we need. The file is checked for malware first.</span></li><li><b>We build the class.</b><span>Topic notes, practice questions, flashcards, the calendar and a grade calculator, written in our own words.</span></li><li><b>You hear back.</b><span>Your inbox tells you when we start and when it is ready.</span></li></ol>
             <p class="small muted">Syllabus files go only to Mathub's administrators and are never posted. Classes with the most requests and a syllabus are built first.</p></div>
           <div class="panel"><div class="panel-h"><div class="panel-title">${icon('trophy')} Most requested</div></div><div id="rq-top"><div class="empty small">Loading…</div></div></div>
         </div></div>${standalone ? '</div>' : ''}`;
@@ -108,7 +112,7 @@
         const showFile = () => {
           const fl = file.files[0]; drop.classList.toggle('has-file', !!fl);
           if (!fl) { fileRow.hidden = true; fileRow.innerHTML = ''; syncConsent(); return; }
-          const bad = fl.size > MAX_MB * 1048576 ? `Files can be up to ${MAX_MB} MB.` : !/\.(pdf|docx)$/i.test(fl.name) ? 'Use a PDF or a Word (.docx) file.' : '';
+          const bad = fl.size > MAX_MB * 1048576 ? `Files can be up to ${MAX_MB} MB.` : !FILE_RE.test(fl.name) ? 'Use a PDF, a Word (.docx) file or a photo (JPEG, PNG or WebP).' : '';
           fileRow.hidden = false; fileRow.innerHTML = `${icon('file', 14)} <span class="rq-fname">${esc(fl.name)}</span> <span class="small muted">${kb(fl.size)}</span>${bad ? ` <span class="small bad-text">${bad}</span>` : ''} <button type="button" class="btn xs ghost" data-action="rq-clear-file">${icon('x', 11)} Remove</button>`;
           syncConsent();
         };
@@ -121,7 +125,7 @@
         f.addEventListener('submit', async e => {
           e.preventDefault(); msg.textContent = '';
           const n = checkCode(); if (!n) { msg.textContent = normCode(code.value) ? 'That class is already on Mathub.' : 'Enter the course code first.'; code.focus(); return; }
-          const fl = file.files[0]; if (fl && (fl.size > MAX_MB * 1048576 || !/\.(pdf|docx)$/i.test(fl.name))) { msg.textContent = 'Check the file: a PDF or Word file up to 10 MB.'; return; }
+          const fl = file.files[0]; if (fl && (fl.size > MAX_MB * 1048576 || !FILE_RE.test(fl.name))) { msg.textContent = 'Check the file: a PDF, a Word file or a photo, up to 10 MB.'; return; }
           if ((fl || text.value.trim()) && !$('#rq-consent', f).checked) { msg.textContent = 'Please tick the box about the syllabus.'; $('#rq-consent', f).focus(); return; }
           const fd = new FormData(f); fd.set('code', n); if (!fl) fd.delete('file'); if (!$('#rq-consent', f).checked) fd.delete('consent');
           const btn = $('#rq-send', f); const prog = $('#rq-progress', f); btn.disabled = true; prog.hidden = !fl;
@@ -143,12 +147,13 @@
         'auth-signup': () => App.auth && App.auth.open('signup'), 'auth-login': () => App.auth && App.auth.open('login')
       });
       paintTop(); paintMine();
+      const own = $('#rq-own', root); if (own && !guest && App.paintMyClasses && App.paintMyClasses() > 0) { own.hidden = false; App.paintMyClasses($('#rq-own-list', own)); }
       const slot = $('#landing-account', root); if (slot && App.auth && App.auth.ready) App.auth.paintLandingAccount(slot);
     }
   };
 
-  /* who can request a class: professors and TAs (a staff role, set by the server) and administrators */
-  App.canRequest = () => { const u = App.auth && App.auth.user; return !!(u && !u.local && (u.can_request || u.admin || u.role)); };
-  /* a small link for the start page, the class picker and Settings: professors and TAs only */
-  App.requestLink = (cls = '') => App.canRequest() ? `<a class="rq-link ${cls}" href="#/request">${icon('path', 13)} Don’t see your class? Request it</a>` : '';
+  /* who can request a class: every member (classes are added by Mathub's team from the requests) */
+  App.canRequest = () => { const u = App.auth && App.auth.user; return !!(u && !u.local); };
+  /* a small link for the start page, the class picker and Settings (guests sign in on the page) */
+  App.requestLink = (cls = '') => `<a class="rq-link ${cls}" href="#/request">${icon('path', 13)} Don’t see your class? Request it</a>`;
 })(window);

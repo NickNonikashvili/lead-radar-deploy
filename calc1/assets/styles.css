@@ -2465,6 +2465,15 @@ html[data-motion="off"] .px-go-q { animation: none; }
 .rq-link:hover { background: var(--accent-soft); }
 .rq-link.small { font-size: 13px; padding: 4px 10px; margin-top: 8px; }
 .cr-list { display: grid; gap: 0; } .cr-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; padding: 8px 0; border-top: 1px dashed var(--border); flex-wrap: wrap; }
+/* a request's syllabus in the admin panel: the file as sent, what the malware check looked at, and Bo building the class */
+.cr-pv { flex: 1 1 100%; min-width: 0; display: grid; gap: 10px; padding: 12px; margin-top: 4px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface-2, var(--bg)); }
+.cr-pv[hidden] { display: none; }
+.cr-scan { line-height: 1.5; color: var(--ink-2); overflow-wrap: anywhere; }
+.cr-frame { display: block; width: 100%; height: min(70vh, 760px); border: 1px solid var(--border); border-radius: 8px; background: #fff; }
+.cr-img { display: block; max-width: 100%; max-height: 70vh; margin: 0 auto; border-radius: 8px; border: 1px solid var(--border); }
+.cr-text { max-height: 50vh; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; font: 13px/1.5 var(--font-mono, ui-monospace, monospace); background: var(--surface, #fff); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; margin: 4px 0 0; }
+.cr-build { display: grid; gap: 10px; padding-top: 10px; border-top: 1px dashed var(--border); }
+.cr-prog[hidden] { display: none; }
 @media (max-width: 720px) { .rq-grid { grid-template-columns: 1fr; } .rq-wrap > .span-2 { grid-column: auto; } }
 .rq-drop { position: relative; }
 .rq-wrap [hidden] { display: none !important; } .rq-form textarea { font-family: inherit; }

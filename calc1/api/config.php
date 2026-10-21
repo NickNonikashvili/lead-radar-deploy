@@ -70,7 +70,7 @@ return [
   'pro_web_link'      => '',
   'max_web_link'      => '',
   'pro_web_price'     => '$15',
-  'max_web_price'     => '$50',
+  'max_web_price'     => '$20',
   'pro_entitlement'   => 'pro',
   'max_entitlement'   => 'max',
   'plan_grants'       => [],

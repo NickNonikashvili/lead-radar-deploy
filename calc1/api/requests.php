@@ -1,18 +1,22 @@
 <?php
 /* ============================================================
    Mathub account server — class requests
-   Professors and TAs (mh_can_request: an Instructor or TA role, a TA in a
-   Mathub Faculty class, or an administrator) ask for a class Mathub does
-   not have yet; students make their own instead (Create a class). They can attach
-   its syllabus (PDF or Word, up to 10 MB) or paste the text. Files go
-   to data/syllabi, which the web cannot read; only administrators can
-   download them, through admin_classreq_file. Requests for the same
-   course code are grouped, so the admin panel shows demand, and a
-   status change (working on it, added, can't add) reaches everyone
-   who asked, in their inbox.
+   Classes are added by Mathub's team: any signed-in member asks for a class
+   Mathub does not have yet, with its syllabus (a PDF, a Word file or a photo,
+   up to 10 MB) or its text. Each file is checked for malware before it is
+   kept (mh_cc_scan in api/community.php: what it really is, active content in
+   a PDF, macros and embedded objects in a Word file, ClamAV when the server has
+   it, VirusTotal by fingerprint when it is set up); what was checked is kept
+   with the request for the admin panel. Files go to data/syllabi, which the web
+   cannot read; only administrators can see them: a preview in the admin panel
+   (admin_classreq_preview, and admin_classreq_file for the file itself), and
+   from there Bo builds the class from it (api/ai.php ai_class with request)
+   and it is published for everyone. Requests for the same course code are
+   grouped, so the admin panel shows demand, and a status change (working on
+   it, added, can't add) reaches everyone who asked, in their inbox.
    Routes: classreq_create, classreq_mine, classreq_top, classreq_withdraw,
            admin_classreqs, admin_classreq_update, admin_classreq_file,
-           admin_classreq_delete
+           admin_classreq_preview, admin_classreq_delete
    ============================================================ */
 declare(strict_types=1);
 
@@ -26,6 +30,7 @@ function mh_req_db(): PDO {
     $db->exec('CREATE TABLE IF NOT EXISTS class_requests (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, code TEXT NOT NULL, title TEXT NOT NULL DEFAULT "", term TEXT NOT NULL DEFAULT "", instructor TEXT NOT NULL DEFAULT "", note TEXT NOT NULL DEFAULT "", text TEXT NOT NULL DEFAULT "", file TEXT NOT NULL DEFAULT "", file_name TEXT NOT NULL DEFAULT "", file_size INTEGER NOT NULL DEFAULT 0, file_type TEXT NOT NULL DEFAULT "", status TEXT NOT NULL DEFAULT "new", admin_note TEXT NOT NULL DEFAULT "", course_id TEXT NOT NULL DEFAULT "", created INTEGER NOT NULL, updated INTEGER NOT NULL)');
     $db->exec('CREATE INDEX IF NOT EXISTS class_requests_code ON class_requests (code)');
     $db->exec('CREATE INDEX IF NOT EXISTS class_requests_user ON class_requests (user_id)');
+    if (!in_array('scan', array_column($db->query('PRAGMA table_info(class_requests)')->fetchAll(), 'name'), true)) $db->exec("ALTER TABLE class_requests ADD COLUMN scan TEXT NOT NULL DEFAULT ''");   // what the malware check looked at
     $ready = true;
   }
   return $db;
@@ -42,7 +47,9 @@ function mh_req_code(string $raw): ?string {
   if (!preg_match('/^([A-Z]{1,5}) ?([0-9]{3}[A-Z]{0,3})$/', $s, $m)) return null;
   return $m[1] . ' ' . $m[2];
 }
-/** Checks an uploaded file and moves it into data/syllabi under a random name. Returns [stored name, original name, size, kind] or null when nothing was sent. */
+/** The kinds of syllabus file a request takes: what the first bytes must be, the stored extension and the media type. */
+const MH_REQ_KINDS = ['pdf' => 'application/pdf', 'docx' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'jpg' => 'image/jpeg', 'png' => 'image/png', 'webp' => 'image/webp'];
+/** Checks an uploaded file for malware and moves it into data/syllabi under a random name. Returns [stored name, original name, size, kind, scan report] or null when nothing was sent. */
 function mh_req_store_upload(): ?array {
   $f = $_FILES['file'] ?? null; if (!$f || ($f['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_NO_FILE) return null;
   $err = (int)$f['error'];
@@ -50,16 +57,24 @@ function mh_req_store_upload(): ?array {
   if ($err !== UPLOAD_ERR_OK || !is_uploaded_file($f['tmp_name'])) mh_fail('The upload did not finish. Please try again.');
   $size = (int)filesize($f['tmp_name']); if ($size <= 0) mh_fail('That file is empty.'); if ($size > MH_REQ_MAX_BYTES) mh_fail('Files can be up to 10 MB.', 413);
   $head = (string)file_get_contents($f['tmp_name'], false, null, 0, 8); $name = (string)($f['name'] ?? 'syllabus');
-  if (str_starts_with($head, '%PDF-')) $kind = 'pdf';
+  $bin = (string)file_get_contents($f['tmp_name']);
+  if (str_contains(substr($bin, 0, 1024), '%PDF-')) $kind = 'pdf';
   elseif (str_starts_with($head, "PK\x03\x04") && preg_match('/\.docx$/i', $name)) $kind = 'docx';
-  else mh_fail('Attach the syllabus as a PDF or a Word (.docx) file.', 415);
+  elseif (str_starts_with($head, "\xff\xd8\xff")) $kind = 'jpg';
+  elseif (str_starts_with($head, "\x89PNG\r\n\x1a\n")) $kind = 'png';
+  elseif (str_starts_with($head, 'RIFF') && substr($bin, 8, 4) === 'WEBP') $kind = 'webp';
+  else mh_fail('Attach the syllabus as a PDF, a Word (.docx) file or a photo (JPEG, PNG or WebP).', 415);
+  // the malware check, before anything is kept (api/community.php)
+  require_once __DIR__ . '/community.php'; $report = null;
+  $why = mh_cc_scan(['type' => MH_REQ_KINDS[$kind], 'data' => base64_encode($bin)], mh_config(), $report);
+  if ($why !== '') { try { mh_db()->prepare('INSERT INTO metrics (day, key, n) VALUES (?, "classreq_refused", 1) ON CONFLICT(day, key) DO UPDATE SET n = n + 1')->execute([mh_local_date()]); } catch (Throwable $e) {} mh_fail($why, 422, ['check' => 'file']); }
   $stored = bin2hex(random_bytes(16)) . '.' . $kind;
   if (!@move_uploaded_file($f['tmp_name'], mh_req_dir() . '/' . $stored)) mh_fail('The server could not save the file. Make sure api/data is writable.', 500);
   $clean = trim(preg_replace('/[^\w .()\-]+/u', '_', basename($name))) ?: 'syllabus.' . $kind;
-  return [$stored, mb_substr($clean, 0, 120), $size, $kind];
+  return [$stored, mb_substr($clean, 0, 120), $size, $kind, $report];
 }
 function mh_req_file_path(string $stored): ?string {
-  if (!preg_match('/^[a-f0-9]{32}\.(pdf|docx)$/', $stored)) return null;
+  if (!preg_match('/^[a-f0-9]{32}\.(pdf|docx|jpg|png|webp)$/', $stored)) return null;
   $p = mh_req_dir() . '/' . $stored; return is_file($p) ? $p : null;
 }
 function mh_req_remove_file(string $stored): void { if ($p = mh_req_file_path($stored)) @unlink($p); }
@@ -96,7 +111,6 @@ function mh_requests_route(string $route, array $in, array $cfg, string $ip): vo
 
     case 'classreq_create': {
       mh_method('POST'); $u = mh_require_user(); $uid = (int)$u['id'];
-      if (!mh_can_request($u)) mh_fail('Class requests come from professors and TAs. You can make any class yourself: Create a class, drop in its syllabus, and Bo writes it.', 403, ['staff_only' => true]);
       if ($b = mh_banned($uid)) mh_fail('Your account is paused until ' . gmdate('M j, Y', (int)$b['until']) . '.', 403, ['banned' => true]);
       mh_rate_or_fail("classreq:user:$uid", 8, 86400, 'That is a lot of requests for one day. Try again tomorrow.');
       mh_rate_or_fail("classreq:ip:$ip", 30, 86400, 'Too many requests from this network today.');
@@ -112,8 +126,8 @@ function mh_requests_route(string $route, array $in, array $cfg, string $ip): vo
       $file = $hasFile ? mh_req_store_upload() : null;
       $st = $db->prepare('SELECT COUNT(*) AS n, SUM(file <> "" OR text <> "") AS s, MAX(status = "added") AS added FROM class_requests WHERE code = ? AND status <> "withdrawn"'); $st->execute([$code]); $before = $st->fetch();
       $now = time();
-      $db->prepare('INSERT INTO class_requests (user_id, code, title, term, instructor, note, text, file, file_name, file_size, file_type, status, created, updated) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, "new", ?, ?)')
-        ->execute([$uid, $code, $title, $term, $instructor, $note, $text, $file[0] ?? '', $file[1] ?? '', $file[2] ?? 0, $file[3] ?? '', $now, $now]);
+      $db->prepare('INSERT INTO class_requests (user_id, code, title, term, instructor, note, text, file, file_name, file_size, file_type, scan, status, created, updated) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, "new", ?, ?)')
+        ->execute([$uid, $code, $title, $term, $instructor, $note, $text, $file[0] ?? '', $file[1] ?? '', $file[2] ?? 0, $file[3] ?? '', $file ? json_encode($file[4], JSON_UNESCAPED_UNICODE) : '', $now, $now]);
       $id = (int)$db->lastInsertId(); $count = (int)$before['n'] + 1;
       // tell the administrators about a new class, or a syllabus for one that had none
       if ((int)$before['n'] === 0 || ((int)$before['s'] === 0 && ($file || $text !== ''))) foreach (mh_req_admin_users() as $a) if ((int)$a['id'] !== $uid)
@@ -160,7 +174,7 @@ function mh_requests_route(string $route, array $in, array $cfg, string $ip): vo
         if ($r['title'] !== '' && $g['title'] === '') $g['title'] = $r['title'];
         $g['last'] = max($g['last'], (int)$r['created']); if ($r['course_id'] !== '') $g['course_id'] = $r['course_id']; if ($r['admin_note'] !== '') $g['admin_note'] = $r['admin_note'];
         $rank = ['new' => 2, 'working' => 3, 'added' => 4, 'declined' => 1]; if (($rank[$r['status']] ?? 0) > ($rank[$g['status']] ?? 0)) $g['status'] = $r['status'];
-        $g['requests'][] = mh_req_public($r) + ['email' => $r['email'] ?? '', 'name' => $r['name'] ?? '', 'deleted' => $r['email'] === null, 'text' => $r['text']];
+        $g['requests'][] = mh_req_public($r) + ['email' => $r['email'] ?? '', 'name' => $r['name'] ?? '', 'deleted' => $r['email'] === null, 'text' => $r['text'], 'file_type' => $r['file_type'], 'scan' => json_decode((string)($r['scan'] ?? ''), true) ?: null];
         unset($g);
       }
       $list = array_values($groups);
@@ -187,10 +201,22 @@ function mh_requests_route(string $route, array $in, array $cfg, string $ip): vo
       if (!$r) mh_fail('Request not found.', 404);
       if (($_GET['part'] ?? '') === 'text') { if ($r['text'] === '') mh_fail('No pasted text.', 404); header('Content-Type: text/plain; charset=UTF-8'); header('Content-Disposition: attachment; filename="' . str_replace(' ', '-', $r['code']) . '-syllabus.txt"'); header('Cache-Control: no-store'); header('X-Content-Type-Options: nosniff'); echo $r['text']; exit; }
       $path = $r['file'] !== '' ? mh_req_file_path($r['file']) : null; if (!$path) mh_fail('No file for this request.', 404);
-      $type = $r['file_type'] === 'pdf' ? 'application/pdf' : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+      $type = MH_REQ_KINDS[$r['file_type']] ?? 'application/octet-stream';
       $name = str_replace(' ', '-', $r['code']) . '-' . preg_replace('/[^\w.\-]+/', '_', $r['file_name']);
-      header('Content-Type: ' . $type); header('Content-Disposition: attachment; filename="' . $name . '"'); header('Content-Length: ' . filesize($path)); header('Cache-Control: no-store'); header('X-Content-Type-Options: nosniff');
+      // the admin panel shows a PDF or a photo from a copy it fetches (a blob), so the file is never a page of its own on this site
+      header('Content-Type: ' . $type); header('Content-Disposition: ' . (!empty($_GET['inline']) ? 'inline' : 'attachment') . '; filename="' . $name . '"'); header('Content-Length: ' . filesize($path)); header('Cache-Control: no-store'); header('X-Content-Type-Options: nosniff'); header("Content-Security-Policy: default-src 'none'; sandbox");
       readfile($path); exit;
+    }
+
+    /* what the admin panel shows of a request's syllabus: the kind of file, what the malware check looked at, and its
+       text when it has one (a Word file's text, or the text pasted with the request) */
+    case 'admin_classreq_preview': {
+      mh_method('GET'); $u = mh_require_user(); if (!mh_is_admin($u)) mh_fail('Admins only.', 403);
+      $st = $db->prepare('SELECT * FROM class_requests WHERE id = ?'); $st->execute([(int)($_GET['id'] ?? 0)]); $r = $st->fetch(); if (!$r) mh_fail('Request not found.', 404);
+      $path = $r['file'] !== '' ? mh_req_file_path($r['file']) : null; $text = '';
+      if ($path && $r['file_type'] === 'docx') { require_once __DIR__ . '/community.php'; $text = mh_cc_docx_text((string)file_get_contents($path), 60000); }
+      mh_json(['ok' => true, 'id' => (int)$r['id'], 'code' => $r['code'], 'kind' => $path ? $r['file_type'] : ($r['text'] !== '' ? 'text' : ''), 'file_name' => $r['file_name'], 'file_size' => (int)$r['file_size'],
+        'file_text' => $text, 'text' => mb_substr((string)$r['text'], 0, 60000), 'scan' => json_decode((string)($r['scan'] ?? ''), true) ?: null, 'missing' => $r['file'] !== '' && !$path]);
     }
 
     case 'admin_classreq_delete': {

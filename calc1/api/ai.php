@@ -77,6 +77,7 @@ function mh_ai_db(): PDO {
     $bc = array_column($db->query('PRAGMA table_info(ai_builds)')->fetchAll(), 'name');
     if (!in_array('screen', $bc, true)) $db->exec("ALTER TABLE ai_builds ADD COLUMN screen TEXT NOT NULL DEFAULT ''");          // what the check found: the course code, title, school and term
     if (!in_array('published', $bc, true)) $db->exec("ALTER TABLE ai_builds ADD COLUMN published TEXT NOT NULL DEFAULT ''");    // the pack id once it is on Mathub
+    if (!in_array('req_code', $bc, true)) $db->exec("ALTER TABLE ai_builds ADD COLUMN req_code TEXT NOT NULL DEFAULT ''");      // built from a class request: its course code, so those who asked hear it is added
     $db->exec('CREATE TABLE IF NOT EXISTS ai_build_units (build TEXT NOT NULL, n INTEGER NOT NULL, data TEXT NOT NULL, PRIMARY KEY (build, n))');   // each unit as Bo wrote it
     $cols = array_column($db->query('PRAGMA table_info(ai_usage)')->fetchAll(), 'name');
     if (!in_array('voice', $cols, true)) $db->exec('ALTER TABLE ai_usage ADD COLUMN voice INTEGER NOT NULL DEFAULT 0');     // characters Bo spoke
@@ -788,6 +789,14 @@ function mh_ai_save_notes(int $uid, array $notes): void {
 }
 function mh_ai_cid($v): string { $c = is_string($v) ? strtolower(trim($v)) : ''; if (!preg_match('/^[a-z0-9][a-z0-9_-]{0,40}$/', $c)) mh_fail('Pick a class first.', 400); return $c; }
 
+/** A stored photo for the AI: as it is when it is small enough, otherwise made smaller (at most 2000 px, as a JPEG). */
+function mh_ai_photo(string $bin, string $type): array {
+  if (strlen($bin) <= 3500000 || !function_exists('imagecreatefromstring')) return ['type' => $type, 'data' => base64_encode($bin)];
+  $im = @imagecreatefromstring($bin); if (!$im) return ['type' => $type, 'data' => base64_encode($bin)];
+  $w = imagesx($im); $h = imagesy($im); $k = min(1, 2000 / max($w, $h)); $out = imagescale($im, max(1, (int)round($w * $k)), max(1, (int)round($h * $k)));
+  ob_start(); imagejpeg($out ?: $im, null, 85); $jpg = (string)ob_get_clean();
+  return ['type' => 'image/jpeg', 'data' => base64_encode($jpg)];
+}
 /** A file sent as base64: checked against the types the AI reads and the size limit. */
 function mh_ai_file($f, array $types, int $max): ?array {
   if (!is_array($f)) return null;
@@ -1171,15 +1180,29 @@ function mh_ai_route(string $route, array $in, array $cfg, string $ip): void {
       mh_json(['ok' => true, 'saved' => count($new), 'notes' => mh_ai_notes($uid)]);
     }
     case 'ai_class': {
+      // classes are added by Mathub's team: students request them (api/requests.php), and an administrator has Bo build
+      // one from a request's syllabus in the admin panel (request: its id), or from a syllabus given here
       mh_method('POST'); $u = mh_require_user(); $uid = (int)$u['id'];
+      if (!mh_is_admin($u)) mh_fail('Classes are added by the Mathub team now. Request your class with its syllabus, and we will tell you when it is ready.', 403, ['request' => true]);
       mh_rate_or_fail("ai_class:$uid", 40, 3600, 'Bo is writing a lot of classes for you. Try again in a while.');
       $step = (string)($in['step'] ?? ''); $Z = mh_ai_sizes((string)($in['size'] ?? 'full'));
       @set_time_limit(200);
       if ($step === 'outline') {
-        $use = mh_ai_usage($uid); if ($use['classes'] >= $A['class_monthly']) mh_fail('You have added this month\'s ' . $A['class_monthly'] . ' classes with Bo. They start again on the 1st, and you can still make a class for yourself with the AI you already use.', 429);
         $S = is_array($in['syllabus'] ?? null) ? $in['syllabus'] : []; $text = trim((string)($S['text'] ?? ''));
         $file = isset($S['file']) ? mh_ai_file($S['file'], ['application/pdf', 'image/jpeg', 'image/png', 'image/webp', 'image/gif', 'text/plain'], MH_AI_FILE_BYTES) : null;
-        if ($text === '' && !$file) mh_fail('Paste your syllabus or attach it first.', 400);
+        $reqCode = '';
+        if (!empty($in['request'])) {   // the syllabus a student sent with a request (checked for malware when it came in, and again below)
+          require_once __DIR__ . '/requests.php'; $q = mh_req_db()->prepare('SELECT * FROM class_requests WHERE id = ?'); $q->execute([(int)$in['request']]); $R = $q->fetch();
+          if (!$R) mh_fail('That request is not there any more.', 404);
+          $reqCode = (string)$R['code']; $text = trim((string)$R['text']); $path = $R['file'] !== '' ? mh_req_file_path((string)$R['file']) : null;
+          if ($path) {
+            $bin = (string)file_get_contents($path);
+            if ($R['file_type'] === 'docx') { require_once __DIR__ . '/community.php'; $t = mh_cc_docx_text($bin); if ($t === '') mh_fail('Bo could not read that Word file. Download it, save it as a PDF and build the class from the Create page.', 422); $text = trim($text . "\n" . $t); }
+            elseif ($R['file_type'] === 'pdf') $file = ['type' => 'application/pdf', 'data' => base64_encode($bin)];
+            else $file = mh_ai_photo($bin, MH_REQ_KINDS[$R['file_type']] ?? 'image/jpeg');
+          }
+        }
+        if ($text === '' && !$file) mh_fail($reqCode !== '' ? 'That request has no syllabus. Ask the student for it, or find it and build the class from the Create page.' : 'Paste your syllabus or attach it first.', 400);
         if (mb_strlen($text) > 120000) mh_fail('That syllabus is very long. Paste the parts with the schedule, topics, exams and grading.', 413);
         require_once __DIR__ . '/community.php';
         // 1. the file: what it says it is, and nothing harmful in it (it is never kept)
@@ -1213,7 +1236,7 @@ function mh_ai_route(string $route, array $in, array $cfg, string $ip): void {
         if (trim((string)($O['name'] ?? '')) === '') $O['name'] = mh_ai_plain($K['name'] ?? '', 120);
         $screen = ['code' => $code, 'name' => mh_ai_plain($K['name'] ?? '', 120), 'school' => $school, 'term' => mh_ai_plain($K['term'] ?? '', 40)];
         $id = bin2hex(random_bytes(12));
-        $db->prepare('INSERT INTO ai_builds (id, user_id, created, outline, units, screen) VALUES (?, ?, ?, ?, ?, ?)')->execute([$id, $uid, time(), json_encode($O, JSON_UNESCAPED_UNICODE), count($units), json_encode($screen, JSON_UNESCAPED_UNICODE)]);
+        $db->prepare('INSERT INTO ai_builds (id, user_id, created, outline, units, screen, req_code) VALUES (?, ?, ?, ?, ?, ?, ?)')->execute([$id, $uid, time(), json_encode($O, JSON_UNESCAPED_UNICODE), count($units), json_encode($screen, JSON_UNESCAPED_UNICODE), $reqCode]);
         mh_ai_count($uid, 'classes', $r['in'], $r['out']);
         mh_json(['ok' => true, 'build' => $id, 'outline' => $O, 'units' => $units, 'checked' => $screen]);
       }

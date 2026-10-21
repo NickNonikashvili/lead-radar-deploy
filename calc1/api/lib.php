@@ -178,10 +178,8 @@ function mh_user_public(array $u): array {
     'courses' => isset($u['courses']) && $u['courses'] !== null && $u['courses'] !== '' ? (json_decode((string)$u['courses'], true) ?: []) : null, 'sections' => isset($u['sections']) && $u['sections'] ? (json_decode((string)$u['sections'], true) ?: (object)[]) : (object)[], 'reminder_email' => (int)($u['reminder_email'] ?? 0) === 1, 'league' => (int)($u['league'] ?? 0), 'can_request' => mh_can_request($u), 'welcomed' => (int)($u['welcomed'] ?? 1) > 0];
 }
 /** Professors and TAs (an Instructor or TA role, or a TA in a Mathub Faculty class) and administrators: they request new classes. */
-function mh_can_request(array $u): bool {
-  if (mh_is_admin($u) || mh_role((string)$u['email']) !== '') return true;
-  try { $st = mh_db()->prepare("SELECT 1 FROM teach_members WHERE user_id = ? AND role = 'ta' LIMIT 1"); $st->execute([$u['id']]); return (bool)$st->fetchColumn(); } catch (Throwable $e) { return false; }
-}
+/** Who can ask for a class (api/requests.php): every member; classes are added by Mathub's team from the requests. */
+function mh_can_request(array $u): bool { return (int)($u['id'] ?? 0) > 0; }
 /** Display name: the chosen name, else the part of the email before the @. */
 function mh_display_name(array $row, string $prefix = ''): string {
   $name = trim((string)($row[$prefix . 'name'] ?? '')); if ($name !== '') return mb_substr($name, 0, 40);

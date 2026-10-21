@@ -47,7 +47,7 @@ const pack = (id, code, extra = {}) => Object.assign({ format: 'mathub-class-pac
   r = await call('anon', 'shared_class&code=abc'); ok('a malformed code is refused with a reason', r.status === 400 && /8 letters/.test(r.error), r);
 
   // the Pro and Max plans from RevenueCat
-  r = await call('anon', 'create_status'); ok('signed out: no plan, the web prices, and whether web purchase is set up', r.ok && r.active === false && r.plan === '' && r.signed_in === false && r.configured === true && r.prices.pro === '$15' && r.prices.max === '$50', r);
+  r = await call('anon', 'create_status'); ok('signed out: no plan, the web prices, and whether web purchase is set up', r.ok && r.active === false && r.plan === '' && r.signed_in === false && r.configured === true && r.prices.pro === '$15' && r.prices.max === '$20', r);
   r = await call('alice', 'create_status&refresh=1'); ok('alice without a plan: a checkout link for each plan with her customer id', r.ok && r.active === false && r.plan === '' && /^https:\/\/pay\.rev\.cat\/sbx_pro_link\/mh_\d+$/.test(r.buy.pro) && /^https:\/\/pay\.rev\.cat\/sbx_max_link\/mh_\d+$/.test(r.buy.max) && r.customer === r.buy.pro.split('/').pop(), r);
   const aliceId = r.customer;
   fs.writeFileSync(STATE, JSON.stringify({ [aliceId]: { expires: new Date(Date.now() + 30 * 864e5).toISOString(), store: 'rc_billing', plan: 'pro' } }));

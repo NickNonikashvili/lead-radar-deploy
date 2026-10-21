@@ -31,6 +31,10 @@
     if (!json || json.ok === false) { const err = new Error((json && json.error) || 'Request failed.'); err.data = json; throw err; }
     return json;
   }
+  // class requests: the files previewed (blob URLs, let go when the tab is drawn again), Bo's builds in progress by request,
+  // and what the malware check looked at, in a line
+  const BLOBS = [], JOBS = {};
+  const scanLine = sc => [sc.kind, ...(sc.checks || []), `ClamAV: ${sc.clamav}`, `VirusTotal: ${sc.virustotal}`, sc.sha256 ? `SHA-256 ${String(sc.sha256).slice(0, 16)}…` : ''].filter(Boolean).join(' · ');
   const TABS = [['overview', 'Overview', 'grid', 'admin'], ['members', 'Members', 'info', 'admin'], ['issues', 'Problems', 'bulb', 'mod'], ['packs', 'Add a class', 'book', 'admin'], ['classes', 'Class requests', 'path', 'admin'], ['teach', 'Instructors', 'users', 'admin'], ['errors', 'Site errors', 'zap', 'admin'], ['backups', 'Backups', 'download', 'admin'], ['reports', 'Reports', 'flag', 'mod'], ['contrib', 'Contributions', 'pen', 'mod'], ['mocks', 'Mock exams', 'target', 'mod'], ['growth', 'Growth', 'chart', 'admin'], ['config', 'Keys & settings', 'lock', 'admin'], ['settings', 'Site settings', 'sliders', 'admin'], ['digest', 'Digest & cron', 'clock', 'admin'], ['email', 'Email everyone', 'send', 'admin'], ['bo', 'Bo quality', 'chat', 'admin']];
 
   App.views.admin = {
@@ -107,6 +111,7 @@
       } catch (e) { el.innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
     },
     async classes(el, root, status = 'open') {
+      BLOBS.splice(0).forEach(u => URL.revokeObjectURL(u));   // previews from the last time this tab was drawn
       try {
         const r = await api('admin_classreqs&status=' + status); const kb = n => n > 1048576 ? (n / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(n / 1024)) + ' KB';
         const ST = { new: ['New', ''], working: ['Being built', 'warn'], added: ['Added', 'good'], declined: ['Declined', 'muted'] };
@@ -116,12 +121,59 @@
               <div class="row gap-sm">${g.status !== 'working' && g.status !== 'added' ? `<button class="btn xs" data-action="cr-set" data-st="working">Working on it</button>` : ''}${g.status !== 'added' ? `<button class="btn xs primary" data-action="cr-set" data-st="added">Mark added</button>` : ''}${g.status !== 'declined' ? `<button class="btn xs" data-action="cr-set" data-st="declined">Can't add</button>` : ''}${g.status !== 'new' ? `<button class="btn xs ghost" data-action="cr-set" data-st="new">Back to new</button>` : ''}</div></div>
               ${g.admin_note ? `<div class="small muted mt-1">${icon('chat', 11)} Note sent: ${esc(g.admin_note)}</div>` : ''}
               <div class="cr-list mt-1">${g.requests.map(q => `<div class="cr-row"><div><b>${q.deleted ? '<span class="muted">account deleted</span>' : esc(q.name || q.email)}</b>${q.email ? ` <a class="small muted" href="mailto:${esc(q.email)}">${esc(q.email)}</a>` : ''} <span class="small muted">· ${App.ago(q.created * 1000)}${q.term ? ' · ' + esc(q.term) : ''}${q.instructor ? ' · ' + esc(q.instructor) : ''}</span>${q.note ? `<div class="small mt-1">${esc(q.note)}</div>` : ''}</div>
-                <div class="row gap-sm">${q.file_name ? `<a class="btn xs" href="${API}admin_classreq_file&id=${q.id}" download>${icon('download', 12)} ${esc(q.file_name)} · ${kb(q.file_size)}</a>` : ''}${q.has_text ? `<a class="btn xs" href="${API}admin_classreq_file&id=${q.id}&part=text" download>${icon('file', 12)} Pasted text</a>` : ''}${!q.file_name && !q.has_text ? '<span class="small muted">no syllabus</span>' : ''}<button class="btn xs danger" data-action="cr-delete" data-id="${q.id}" title="Delete this request and its file">${icon('trash', 12)}</button></div></div>`).join('')}</div></div>`).join('')}</div>`
+                <div class="row gap-sm">${q.file_name ? `${q.scan ? `<span class="chip xs good" title="${esc(scanLine(q.scan))}">${icon('shield', 11)} Checked</span>` : `<span class="chip xs warn" title="Sent before uploads were checked for malware">${icon('shield', 11)} Not checked</span>`}` : ''}${q.file_name || q.has_text ? `<button class="btn xs primary" data-action="cr-preview" data-id="${q.id}" aria-expanded="false">${icon('eye', 12)} Preview and build</button>` : ''}${q.file_name ? `<a class="btn xs" href="${API}admin_classreq_file&id=${q.id}" download>${icon('download', 12)} ${esc(q.file_name)} · ${kb(q.file_size)}</a>` : ''}${q.has_text ? `<a class="btn xs" href="${API}admin_classreq_file&id=${q.id}&part=text" download>${icon('file', 12)} Pasted text</a>` : ''}${!q.file_name && !q.has_text ? '<span class="small muted">no syllabus</span>' : ''}<button class="btn xs danger" data-action="cr-delete" data-id="${q.id}" title="Delete this request and its file">${icon('trash', 12)}</button></div>
+                <div class="cr-pv" id="cr-pv-${q.id}" hidden></div></div>`).join('')}</div></div>`).join('')}</div>`
             : `<div class="empty">${status === 'open' ? 'No open class requests. Students ask from the start page, the class picker and Settings.' : 'Nothing here.'}</div>`}
-          <p class="small muted mt-2">${icon('book', 12)} Built a class from a syllabus? Upload its class pack under <a href="#/admin/packs">Add a class</a>; it can tell everyone who asked.</p>`;
+          <p class="small muted mt-2">${icon('book', 12)} Preview a request's syllabus, then have Bo build the class from it and add it to Mathub: everyone who asked is told. Or build a class pack yourself and upload it under <a href="#/admin/packs">Add a class</a>.</p>`;
         const groupOf = b => r.groups.find(g => g.code === b.closest('.cr-group').dataset.code);
         bind(el, {
           'cr-filter': b => this.classes(el, root, b.dataset.s),
+          // the syllabus as the student sent it (a PDF or a photo from a copy fetched here, a Word file's text, pasted text),
+          // what the malware check looked at, and Bo building the class from it
+          'cr-preview': async b => {
+            const id = +b.dataset.id; const box = $('#cr-pv-' + id, el); if (!box) return;
+            const open = box.hidden; box.hidden = !open; b.setAttribute('aria-expanded', String(open)); if (!open || box.dataset.ready) return;
+            box.innerHTML = '<div class="small muted">Opening the syllabus…</div>';
+            try {
+              const p = await api('admin_classreq_preview&id=' + id); let view = '';
+              if (p.missing) view = '<div class="callout warn small">The file is missing on the server.</div>';
+              else if (p.kind === 'pdf' || ['jpg', 'png', 'webp'].includes(p.kind)) {
+                const res = await fetch(API + 'admin_classreq_file&inline=1&id=' + id, { credentials: 'same-origin', headers: { 'X-Requested-With': 'MatHub' }, cache: 'no-store' });
+                if (!res.ok) throw new Error('The file could not be opened.');
+                const url = URL.createObjectURL(await res.blob()); BLOBS.push(url);
+                view = p.kind === 'pdf' ? `<iframe class="cr-frame" src="${url}" title="${esc(p.code)} syllabus"></iframe>` : `<img class="cr-img" src="${url}" alt="The ${esc(p.code)} syllabus, as the student sent it">`;
+                view += `<div class="row gap-sm mt-1"><a class="btn xs" href="${url}" target="_blank" rel="noopener">${icon('external', 12)} Open it bigger</a></div>`;
+              } else if (p.kind === 'docx') view = p.file_text ? `<div class="eyebrow">The Word file's text</div><pre class="cr-text">${esc(p.file_text)}</pre>` : '<div class="callout warn small">The Word file\'s text could not be read. Download it to look at it.</div>';
+              if (p.text) view += `<div class="eyebrow mt-1">Pasted with the request</div><pre class="cr-text">${esc(p.text)}</pre>`;
+              const scan = p.scan ? `<div class="cr-scan small"><span class="chip xs good">${icon('shield', 11)} Malware check passed</span> ${esc(scanLine(p.scan))}</div>` : p.kind && p.kind !== 'text' ? `<div class="cr-scan small"><span class="chip xs warn">${icon('shield', 11)} Sent before uploads were checked</span> Download it with care. ${p.kind === 'pdf' || p.kind !== 'docx' ? 'Bo checks it before he reads it.' : ''}</div>` : '';
+              box.innerHTML = `${scan}<div class="cr-view">${view}</div>
+                <div class="cr-build"><div class="row gap-sm" style="flex-wrap:wrap"><button class="btn sm primary" data-action="cr-build" data-id="${id}" data-size="full">${icon('wand', 13)} Build the class with Bo</button><button class="btn sm" data-action="cr-build" data-id="${id}" data-size="short">Shorter class</button><span class="small muted">He checks it is a real course and not on Mathub yet, then writes it unit by unit (a minute or two).</span></div>
+                <div class="cr-prog" hidden><ol class="mk-bo-steps"></ol></div><div class="cr-out" aria-live="polite"></div></div>`;
+              box.dataset.ready = '1';
+            } catch (e) { box.innerHTML = `<div class="callout warn small">${esc(e.message)}</div>`; }
+          },
+          'cr-build': async b => {
+            if (!App.boClass) { App.toast('Reload the page and try again.'); return; }
+            const id = +b.dataset.id; const g = groupOf(b); const box = b.closest('.cr-build'); const prog = $('.cr-prog', box), out = $('.cr-out', box);
+            const job = JOBS[id] || (JOBS[id] = { build: null }); const btns = $$('[data-action="cr-build"]', box);
+            const paint = (list, i, fail) => { $('ol', prog).innerHTML = list.map((t, k) => `<li class="${k < i ? 'done' : k === i ? (fail ? 'fail' : 'now') : ''}"><span class="mk-bo-dot" aria-hidden="true">${k < i ? icon('check', 13) : ''}</span>${esc(t)}</li>`).join(''); };
+            btns.forEach(x => { x.disabled = true; }); out.innerHTML = ''; prog.hidden = false; let at = { list: ['Checking the syllabus'], i: 0 }; paint(at.list, 0);
+            try {
+              const made = await App.boClass.build(job, { request: id, size: b.dataset.size }, (list, i) => { at = { list, i }; paint(list, i); });
+              paint(made.list, made.list.length);
+              out.innerHTML = App.boClass.preview(made.pack, made.v, made.notes, `<div class="row gap-sm mt-1"><button type="button" class="btn primary" data-pub>${icon('plus', 15)} Add ${esc(made.pack.code)} to Mathub</button></div><p class="small muted mt-1">It goes on Mathub for everyone, and the ${g.n} student${g.n === 1 ? '' : 's'} who asked for ${esc(g.code)} ${g.n === 1 ? 'is' : 'are'} told.</p>`);
+              $('[data-pub]', out).addEventListener('click', async e => {
+                const pb = e.currentTarget; pb.disabled = true;
+                try { const res = await App.boClass.publish({ build: made.build, pack: made.pack }); if (App.packs && App.packs.sync) await App.packs.sync(); App.toast(`${res.code} is on Mathub (#/${res.id}) · ${res.notified || 0} told`, 5000); delete JOBS[id]; this.classes(el, root, status); }
+                catch (x) { pb.disabled = false; App.toast(x.message, 5000); }
+              });
+            } catch (x) {
+              paint(at.list, at.i, true); const ex = x.data && x.data.exists;
+              out.innerHTML = `<div class="callout warn small"><b>${esc(x.message)}</b>${ex ? `<div class="mt-1"><button type="button" class="btn xs primary" data-mark="${esc(ex.id)}">Mark ${esc(g.code)} added as #/${esc(ex.id)}</button></div>` : job.build ? ' Build again picks up where Bo stopped.' : ''}</div>`;
+              const mk = $('[data-mark]', out); if (mk) mk.addEventListener('click', async () => { try { const res = await api('admin_classreq_update', { code: g.code, status: 'added', note: '', course_id: ex.id }); App.toast(`${g.code} marked added · ${res.notified} told`); this.classes(el, root, status); } catch (e) { App.toast(e.message); } });
+            }
+            btns.forEach(x => { x.disabled = false; });
+          },
           'cr-set': async b => {
             const g = groupOf(b); const st = b.dataset.st; let courseId = '';
             if (st === 'added') { courseId = prompt(`Class id on Mathub for ${g.code} (the part after #/, for example ${guessId(g.code)}):`, g.course_id || guessId(g.code)); if (courseId === null) return; courseId = courseId.trim().toLowerCase(); if (!global.Courses[courseId] && !confirm(`There is no class "${courseId}" in this build yet, so the link students get will not open until you deploy it. Send anyway?`)) return; }

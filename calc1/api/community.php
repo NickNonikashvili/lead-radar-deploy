@@ -83,32 +83,96 @@ function mh_cc_new_id(PDO $db, string $code): string {
 }
 
 /* ---------- the malware check ---------- */
-/** '' when the file is safe to read, otherwise what to tell the student. $file is ['type', 'data' (base64)] from mh_ai_file. */
-function mh_cc_scan(array $file, array $cfg): string {
+const MH_CC_DOCX = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+/** '' when the file is safe to read, otherwise what to tell the student. $file is ['type', 'data' (base64)] from mh_ai_file
+    (or a stored class request's file); a Word file (.docx) is allowed when $file['type'] says so. $report gets what was
+    checked, for the admin panel: the kind, each check, ClamAV and VirusTotal's answers and the file's SHA-256. */
+function mh_cc_scan(array $file, array $cfg, ?array &$report = null): string {
   $bin = base64_decode((string)$file['data'], true); if ($bin === false || $bin === '') return 'That file could not be read.';
   $type = (string)$file['type'];
+  $report = ['kind' => ['application/pdf' => 'PDF', MH_CC_DOCX => 'Word document', 'text/plain' => 'Text file'][$type] ?? (str_starts_with($type, 'image/') ? 'Photo' : $type), 'sha256' => hash('sha256', $bin), 'bytes' => strlen($bin), 'checks' => [], 'clamav' => 'not on this server', 'virustotal' => 'not set up', 'at' => time()];
   $wrong = 'That file is not a syllabus: it is %s. Upload the syllabus as a PDF, a photo or a text file.';
   foreach (["MZ" => 'a Windows program', "\x7fELF" => 'a program', "\xcf\xfa\xed\xfe" => 'a program', "\xce\xfa\xed\xfe" => 'a program', "\xfe\xed\xfa" => 'a program', "\xca\xfe\xba\xbe" => 'a program',
             "PK\x03\x04" => 'a compressed archive', "Rar!" => 'a compressed archive', "7z\xbc\xaf" => 'a compressed archive', "\x1f\x8b" => 'a compressed archive', "#!" => 'a script', "\xd0\xcf\x11\xe0" => 'an Office document'] as $sig => $what)
-    if (str_starts_with($bin, $sig)) return sprintf($wrong, $what);
-  if ($type === 'application/pdf') {
+    if (str_starts_with($bin, $sig) && !($type === MH_CC_DOCX && $sig === "PK\x03\x04")) return sprintf($wrong, $what);
+  $report['checks'][] = 'Not a program, an archive or a script';
+  if ($type === MH_CC_DOCX) {
+    if (!str_starts_with($bin, "PK\x03\x04")) return 'That is not a real Word file. Save it as a PDF, or paste its text.';
+    $why = mh_cc_docx_check($bin); if ($why !== '') return $why;
+    $report['checks'][] = 'No macros, embedded files or programs, outside templates or links that run things';
+  } elseif ($type === 'application/pdf') {
     if (strpos(substr($bin, 0, 1024), '%PDF-') === false) return 'That file is not a real PDF. Export the syllabus as a PDF again, or paste its text.';
     $act = mh_cc_pdf_active($bin);
     if ($act === 'password') return 'That PDF is protected with a password, so Bo cannot read it. Save a copy without the password, or paste its text.';
     if ($act !== '') return "That PDF was refused: it has $act in it, which a syllabus never needs. Print it to a new PDF, or paste its text.";
+    $report['checks'][] = 'A real PDF, with no JavaScript, launch actions, embedded files, media or forms that send data (inside its compressed parts too), and no password';
   } elseif (str_starts_with($type, 'image/')) {
     $info = @getimagesizefromstring($bin); $want = ['image/jpeg' => IMAGETYPE_JPEG, 'image/png' => IMAGETYPE_PNG, 'image/webp' => IMAGETYPE_WEBP, 'image/gif' => IMAGETYPE_GIF][$type] ?? -1;
     if (!$info || $info[2] !== $want) return 'That photo could not be read. Take the picture again, or upload a PDF.';
     if ($info[0] > 20000 || $info[1] > 20000) return 'That photo is too large to read. Take it again at a normal size.';
     // a picture with a program or a web script hidden in it
     if (preg_match('/<\?php|<%@|<script[\s>]/i', $bin) || (strpos($bin, "PK\x03\x04") !== false && strpos($bin, "PK\x05\x06") !== false)) return 'That photo was refused: it has something hidden inside it. Take the picture again.';
+    $report['checks'][] = 'A real picture, with nothing hidden after it';
   } elseif ($type === 'text/plain') {
     if (strpos($bin, "\0") !== false || !mb_check_encoding($bin, 'UTF-8')) return 'That text file could not be read. Paste the text instead.';
+    $report['checks'][] = 'Plain text';
   }
   $clam = mh_cc_clamav($bin); if ($clam === true) return 'That file was refused: the virus scanner found something in it.';
+  if ($clam === false) $report['clamav'] = 'clean';
   $key = trim((string)($cfg['virustotal_key'] ?? ''));
-  if ($key !== '') { $bad = mh_cc_virustotal(hash('sha256', $bin), $key, $cfg); if ($bad !== null && $bad > 0) return 'That file was refused: virus scanners know it as harmful.'; }
+  if ($key !== '') {
+    $bad = mh_cc_virustotal($report['sha256'], $key, $cfg); if ($bad !== null && $bad > 0) return 'That file was refused: virus scanners know it as harmful.';
+    $report['virustotal'] = $bad === null ? 'not seen before (only its fingerprint was looked up)' : 'clean';
+  }
   return '';
+}
+/** A Word file (.docx is a zip of XML parts): '' when it is only a document, otherwise why it is refused. Macros, embedded
+    files and objects, ActiveX, programs or scripts inside, a template, frame or object loaded from outside (how Word files
+    smuggle code in), DDE fields that run commands and pieces pulled in from elsewhere are refused; so is a zip that
+    unpacks to far more than it is (a zip bomb), or one that is not a Word document. */
+function mh_cc_docx_check(string $bin): string {
+  if (!class_exists('ZipArchive')) return 'This server cannot open Word files to check them. Save the syllabus as a PDF, or paste its text.';
+  $tmp = tempnam(sys_get_temp_dir(), 'mhdocx'); if ($tmp === false || @file_put_contents($tmp, $bin) === false) return 'That Word file could not be read. Save it as a PDF, or paste its text.';
+  $z = new ZipArchive(); $ok = $z->open($tmp, ZipArchive::RDONLY) === true;
+  try {
+    if (!$ok) return 'That Word file could not be opened. Save it as a PDF, or paste its text.';
+    if ($z->numFiles < 3 || $z->numFiles > 3000) return 'That is not a normal Word file. Save it as a PDF, or paste its text.';
+    $total = 0; $names = [];
+    for ($i = 0; $i < $z->numFiles; $i++) {
+      $st = $z->statIndex($i); if (!$st) return 'That Word file could not be read. Save it as a PDF, or paste its text.';
+      $n = (string)$st['name']; $names[] = $n; $total += (int)$st['size'];
+      if ((int)$st['size'] > 60000000 || $total > 150000000 || ((int)$st['comp_size'] > 0 && (int)$st['size'] / (int)$st['comp_size'] > 200 && (int)$st['size'] > 5000000)) return 'That Word file unpacks to far more than it should, so it was refused. Save it as a PDF.';
+      if (preg_match('#(^|/)(vbaProject\.bin|vbaData\.xml)$#i', $n)) return 'That Word file was refused: it has macros in it, which a syllabus never needs. Save it as a PDF, or paste its text.';
+      if (preg_match('#(^|/)(activeX|embeddings)/|oleObject|\.(exe|dll|com|bat|cmd|scr|pif|js|jse|vbs|vbe|wsf|ps1|hta|jar|msi|lnk|sh)$#i', $n)) return 'That Word file was refused: it has an embedded file or program in it, which a syllabus never needs. Save it as a PDF, or paste its text.';
+    }
+    if (!in_array('[Content_Types].xml', $names, true) || !in_array('word/document.xml', $names, true)) return 'That is not a Word document. Upload the syllabus as a PDF, a photo or a Word (.docx) file.';
+    $ct = (string)$z->getFromName('[Content_Types].xml'); if (stripos($ct, 'macroEnabled') !== false || stripos($ct, 'vbaProject') !== false) return 'That Word file was refused: it is made to run macros. Save it as a PDF, or paste its text.';
+    foreach ($names as $n) {
+      if (preg_match('#\.rels$#i', $n)) {
+        $x = (string)$z->getFromName($n);
+        if (preg_match_all('#<Relationship\b[^>]*>#i', $x, $mm)) foreach ($mm[0] as $rel)
+          if (preg_match('#TargetMode\s*=\s*"External"#i', $rel) && preg_match('#Type\s*=\s*"[^"]*/(attachedTemplate|oleObject|frame|subDocument|aFChunk|package|control)"#i', $rel)) return 'That Word file was refused: it loads something from the internet when it opens. Save it as a PDF, or paste its text.';
+      }
+      if (preg_match('#^word/[^/]+\.xml$#i', $n)) {
+        $x = (string)$z->getFromName($n);
+        if (preg_match('#<w:altChunk\b#i', $x)) return 'That Word file was refused: it pulls in content from elsewhere. Save it as a PDF, or paste its text.';
+        if (preg_match('#<w:instrText\b[^>]*>[^<]*\bDDE(AUTO)?\b|\bw:instr\s*=\s*"[^"]*\bDDE(AUTO)?\b#i', $x)) return 'That Word file was refused: it has a field that can run commands. Save it as a PDF, or paste its text.';
+      }
+    }
+    return '';
+  } finally { if ($ok) $z->close(); @unlink($tmp); }
+}
+/** The text of a Word file (.docx), paragraph by paragraph, for the admin's preview and for Bo; '' when it cannot be read. */
+function mh_cc_docx_text(string $bin, int $max = 120000): string {
+  if (!class_exists('ZipArchive')) return '';
+  $tmp = tempnam(sys_get_temp_dir(), 'mhdocx'); if ($tmp === false || @file_put_contents($tmp, $bin) === false) return '';
+  $z = new ZipArchive(); $x = '';
+  if ($z->open($tmp, ZipArchive::RDONLY) === true) { $x = (string)$z->getFromName('word/document.xml'); $z->close(); }
+  @unlink($tmp); if ($x === '') return '';
+  $x = preg_replace(['#</w:p>#', '#<w:(tab|br|cr)\b[^>]*/>#', '#</w:tc>#'], ["\n", "\t", "\t"], $x);
+  $t = html_entity_decode(strip_tags($x), ENT_QUOTES | ENT_XML1, 'UTF-8');
+  $t = preg_replace(["/[ \t]+\n/", "/\n{3,}/"], ["\n", "\n\n"], $t);
+  return mb_substr(trim($t), 0, $max);
 }
 /** What active content a PDF has ('' for none, 'password' when it is encrypted): its names may be written with #xx escapes,
     and its compressed streams (object streams too) are opened and looked through, up to a limit. */
@@ -193,7 +257,8 @@ function mh_community_route(string $route, array $in, array $cfg, string $ip): v
   switch ($route) {
     /* the class Bo wrote, published for everyone */
     case 'community_publish': {
-      mh_method('POST'); $u = mh_require_user(); $uid = (int)$u['id']; mh_rate_or_fail("community_publish:$uid", 20, 3600, 'Please wait a little before adding another class.');
+      mh_method('POST'); $u = mh_require_user(); $uid = (int)$u['id']; if (!mh_is_admin($u)) mh_fail('Classes are added by the Mathub team now. Request your class, and we will tell you when it is ready.', 403, ['request' => true]);
+      mh_rate_or_fail("community_publish:$uid", 20, 3600, 'Please wait a little before adding another class.');
       $bid = preg_replace('/[^a-f0-9]/', '', (string)($in['build'] ?? ''));
       $st = $ai->prepare('SELECT * FROM ai_builds WHERE id = ? AND user_id = ?'); $st->execute([$bid, $uid]); $b = $st->fetch();
       if (!$b || (int)$b['created'] < time() - 6 * 3600) mh_fail('This class is no longer waiting to be added. Write it again.', 404);
@@ -221,6 +286,8 @@ function mh_community_route(string $route, array $in, array $cfg, string $ip): v
       } catch (Throwable $e) { try { $db->exec('ROLLBACK'); } catch (Throwable $x) {} error_log('Mathub community publish: ' . $e->getMessage()); mh_fail('The class could not be added just now. Please try again.', 500); }
       $ai->prepare('UPDATE ai_builds SET published = ? WHERE id = ?')->execute([$id, $bid]);
       $told = 0; try { $told = mh_pack_notify($p, $id); } catch (Throwable $e) {}
+      // built from a request filed under another form of the code ("M 171" for M 171Q): those students hear too
+      if ((string)($b['req_code'] ?? '') !== '') { try { require_once __DIR__ . '/requests.php'; $told += max(0, mh_req_set_status((string)$b['req_code'], 'added', '', $id)); } catch (Throwable $e) {} }
       try { require_once __DIR__ . '/social.php'; mh_activity('class', $id, 'New class on Mathub: ' . $p['code'] . ' ' . $p['name'], '#/' . $id); } catch (Throwable $e) {}
       mh_json(['ok' => true, 'id' => $id, 'code' => $p['code'], 'name' => $p['name'], 'notified' => $told]);
     }

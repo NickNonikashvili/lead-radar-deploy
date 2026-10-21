@@ -271,7 +271,7 @@ function mh_myclass_route(string $route, array $in, array $cfg, string $ip): voi
     case 'create_status': {   // the plan of the account signed in, and the web checkout for each plan
       mh_method('GET'); $u = mh_current_user();
       $links = ['pro' => trim((string)($cfg['pro_web_link'] ?? '')), 'max' => trim((string)($cfg['max_web_link'] ?? ''))]; $secret = trim((string)($cfg['revenuecat_secret'] ?? ''));
-      $out = ['ok' => true, 'configured' => $secret !== '' && $links['pro'] !== '' && $links['max'] !== '', 'prices' => ['pro' => (string)($cfg['pro_web_price'] ?? '$15'), 'max' => (string)($cfg['max_web_price'] ?? '$50')], 'signed_in' => (bool)$u];
+      $out = ['ok' => true, 'configured' => $secret !== '' && $links['pro'] !== '' && $links['max'] !== '', 'prices' => ['pro' => (string)($cfg['pro_web_price'] ?? '$15'), 'max' => (string)($cfg['max_web_price'] ?? '$20')], 'signed_in' => (bool)$u];
       if (!$u) mh_json($out + ['active' => false, 'plan' => '']);
       $s = mh_create_status($u, $cfg, !empty($_GET['refresh']));
       $given = mh_plan_given($u, $cfg); $grant = $given['plan'];

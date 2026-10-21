@@ -304,7 +304,7 @@
     if (!s.enabled) return `<div class="bf-gate"><p class="bf-gate-h">Bo is getting ready</p><p>Bo isn't switched on yet. He'll be here soon.</p></div>`;
     if (!s.pro) return `<div class="bf-gate"><p class="bf-gate-h">Bo on every page is part of Mathub Pro</p><ul class="bf-perks"><li>${icon('target', 16)}<span><b>He sees your page</b>: tap a question and he walks you through it, or checks your answers.</span></li><li>${icon('chat', 16)}<span><b>Explains anything</b>, a step at a time, with drawings on his board.</span></li><li>${icon('upload', 16)}<span><b>Reads your problem sets</b>: a photo or a PDF.</span></li></ul><div class="bf-gate-acts"><button type="button" class="btn primary" data-go="pro">Get Mathub Pro</button><a class="btn ghost" href="#/plan">Compare the plans</a></div></div>`;
     if (!settings().aiConsent) return `<div class="bf-gate bf-consent">${App.boGateHtml ? App.boGateHtml.consent() : ''}</div>`;
-    if (!F.cid) return `<div class="bf-gate"><p class="bf-gate-h">Pick a class first</p><p>Bo helps with a class you take. Choose your classes, or make one from a syllabus.</p><div class="bf-gate-acts"><a class="btn primary" href="#/">Your classes</a><a class="btn" href="#/create">Create a class</a></div></div>`;
+    if (!F.cid) return `<div class="bf-gate"><p class="bf-gate-h">Pick a class first</p><p>Bo helps with a class you take. Choose your classes, or request one Mathub does not have yet.</p><div class="bf-gate-acts"><a class="btn primary" href="#/">Your classes</a><a class="btn" href="#/request">Request a class</a></div></div>`;
     return '';
   }
   async function gateGo(g) {
