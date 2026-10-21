@@ -14,6 +14,9 @@ const T = require('./lib');
   await p.click('#s-motion'); await p.waitForTimeout(200); check('reduce motion applied', await p.evaluate(() => document.documentElement.getAttribute('data-motion')) === 'off');
   await p.reload(); await p.waitForTimeout(600); check('skin + motion applied before paint on reload', await p.evaluate(() => document.documentElement.getAttribute('data-skin') === 'bobcat' && document.documentElement.getAttribute('data-motion') === 'off'));
   await p.click('.skin-opt[data-skin="default"]'); await p.click('#s-motion'); await p.waitForTimeout(100);
-  await p.click('.landing-top .theme-btn, #topbar .theme-btn >> visible=true').catch(() => p.evaluate(() => App.toggleTheme())); await p.waitForTimeout(100); check('theme fade class toggles', await p.evaluate(() => document.documentElement.classList.contains('theme-fade'))); await p.waitForTimeout(500);
+  // watch the class itself: the theme change restyles the whole page, which can take longer than the fade on a slow machine
+  await p.evaluate(() => { window.__fade = []; new MutationObserver(() => window.__fade.push(document.documentElement.classList.contains('theme-fade'))).observe(document.documentElement, { attributes: true, attributeFilter: ['class'] }); });
+  await p.click('.landing-top .theme-btn, #topbar .theme-btn >> visible=true').catch(() => p.evaluate(() => App.toggleTheme())); await p.waitForTimeout(700);
+  const fade = await p.evaluate(() => window.__fade); check('theme fade class toggles', fade.includes(true) && fade[fade.length - 1] === false, fade);
   await c.close(); await T.finish();
 })();
