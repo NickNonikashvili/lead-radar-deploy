@@ -260,6 +260,7 @@
       const unread = u.unread || 0;
       App.popover(btn, `<div class="acct-dd-head"><div class="acct-name">${esc(name)}</div><div class="acct-sub mono">${esc(u.email)}</div>${u.role || u.admin || u.mod ? `<div class="row gap-sm mt-1">${u.role ? `<span class="chip staff">${esc(u.role)}</span>` : ''}${u.admin ? '<span class="chip accent">administrator</span>' : u.mod ? '<span class="chip accent">moderator</span>' : ''}</div>` : ''}</div>
         <a class="acct-dd-item" href="#/plan">${icon('gem', 15)}<span>Your plan</span>${App.subscription && App.subscription.plan() && App.plans ? `<b class="pill plan-pill">${esc(App.plans[App.subscription.plan()].short)}</b>` : ''}</a>
+        <a class="acct-dd-item" href="#/calls">${icon('phone', 15)}<span>Calls with Bo</span></a>
         <a class="acct-dd-item" href="#/today">${icon('flag', 15)}<span>Today</span></a>
         <a class="acct-dd-item" href="#/focus">${icon('clock', 15)}<span>Focus room</span></a>
         <a class="acct-dd-item" href="#/recap">${icon('zap', 15)}<span>Your week</span></a>

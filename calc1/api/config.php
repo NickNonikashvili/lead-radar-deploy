@@ -71,6 +71,13 @@ return [
   'max_web_link'      => '',
   'pro_web_price'     => '$15',
   'max_web_price'     => '$20',
+  // calls with Bo (api/calls.php): Max includes call_included_minutes a month; more is bought ahead, call_hour_minutes
+  // for call_hour_price, a one-time RevenueCat product (call_hour_product) sold through call_hour_link
+  'call_included_minutes' => 60,
+  'call_hour_minutes' => 60,
+  'call_hour_price'   => '$10',
+  'call_hour_product' => 'mathub_call_hour',
+  'call_hour_link'    => '',
   'pro_entitlement'   => 'pro',
   'max_entitlement'   => 'max',
   'plan_grants'       => [],
@@ -103,8 +110,8 @@ return [
   'ai_live_transcribe' => 'gpt-live-transcribe',   // writes down what is said on calls (captions, the math check)
   'ai_live_model_max' => 'gpt-realtime-2.1',   // Max members' calls (free minutes keep ai_live_model); empty: the same model for everyone
   'ai_live_voice'     => 'cedar',    // cedar, marin, ash, ballad, coral, sage or verse; students can pick another
-  'ai_live_monthly'   => 300,        // minutes of live calls per account per month
-  'ai_live_daily'     => 90,         // minutes per day
+  'ai_live_monthly'   => 3000,       // a safety limit: minutes of live calls per account per month (Max pays per hour: api/calls.php)
+  'ai_live_daily'     => 240,        // a safety limit: minutes per day
   'ai_live_call'      => 30,         // minutes per call (Bo can be called again right away)
   'ai_trial_minutes'  => 10,         // free call minutes with Bo, once, for every account without Max (0 turns it off)
   'recap_emails'      => 'on',       // Bo's recap by email after a call (off: only in the chat); each member can turn it off too

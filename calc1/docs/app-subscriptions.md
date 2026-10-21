@@ -5,12 +5,13 @@ Two monthly plans, on the website and in the iPhone, iPad and Android apps:
 | Plan | Price | What it unlocks |
 |---|---|---|
 | **Mathub Pro** | $15 a month | **Bo on every page** of the website (the floating Bo, `assets/bo-float.js`: questions about the page, photos and PDFs of problems), and classes of your own: made with the AI you already use (copy the instructions, paste the answer), from a class file, or from a class someone shares. |
-| **Mathub Max** | $50 a month | Everything in Pro, plus **Ask Bo's own page** (`#/tutor`, the Bo tab in the apps) and, on the website, **voice calls with Bo** (`assets/talk.js`). |
+| **Mathub Max** | $20 a month | Everything in Pro, plus **Ask Bo's own page** (`#/tutor`, the Bo tab in the apps) and, on the website, **voice calls with Bo** (`assets/talk.js`): an hour of calls each month included, and more time bought ahead, $10 an hour (below). |
 
-Since 2026.10.19 Bo writing a class from a syllabus is free for any signed-in member (up to 15 a month): the class is
-checked (malware, a real course, not on Mathub yet) and published for everyone (`api/community.php`, README →
-Classes anyone adds from a syllabus). The app store listings and review notes below still describe the earlier split
-and need updating before the apps are submitted again.
+Since 2026.10.21 classes are added by Mathub's team: students request a class with its syllabus (checked for
+malware), and an administrator has Bo build it from the request in the admin panel (README → Request a class). Max
+is $20 a month with an hour of calls; more call time is a one-time purchase on the website (section 2, step 7). The
+app store listings and review notes below still describe the earlier split and need updating before the apps are
+submitted again (Max at $19.99 in both stores).
 
 Everything else stays free:
 
@@ -53,12 +54,12 @@ Code: `assets/create.js` (plans: `App.subscription`, the paywall `App.paywall({ 
 2. Upload a build with the billing permission to a testing track first (Play only then lets you create subscriptions).
 3. Monetize with Play → Products → Subscriptions: create `mathub_pro` ("Mathub Pro") with a base plan `monthly`,
    auto-renewing, 1 month, US$14.99 (or 15.00), and `mathub_max` ("Mathub Max") with a base plan `monthly`,
-   US$49.99 (or 50.00). Activate both.
+   US$19.99 (or 20.00). Activate both.
 
 **App Store Connect**
 1. Business: sign the **Paid Apps Agreement**, add bank and tax information; enroll in the **Small Business Program** (15%).
 2. Your app → Monetization → Subscriptions: create the group "Mathub", then `mathub_max_monthly` (level 1, "Mathub Max",
-   $49.99) and `mathub_pro_monthly` (level 2, "Mathub Pro", $14.99), 1 month each. Putting Max above Pro in the
+   $19.99) and `mathub_pro_monthly` (level 2, "Mathub Pro", $14.99), 1 month each. Putting Max above Pro in the
    group makes a Pro member's purchase of Max an upgrade. Add display names, descriptions and a screenshot of the paywall.
 3. Submit the subscriptions **together with an app version** (on the version page, under In-App Purchases and Subscriptions).
 4. Add the Terms of Use link to the App Store description: `Terms of Use: https://mathub.space/#/policy/create`.
@@ -70,14 +71,25 @@ Code: `assets/create.js` (plans: `App.subscription`, the paywall `App.paywall({ 
 
 1. Project "Mathub"; add the **App Store** app (bundle `space.mathub.app`, In-App Purchase Key), the **Play Store**
    app (package `space.mathub.app`, service-account JSON) and a **Web Billing** app (Stripe connected) with two
-   products: "Mathub Pro" $15 a month and "Mathub Max" $50 a month.
+   products: "Mathub Pro" $15 a month and "Mathub Max" $20 a month. (Already selling Max at $50? Change the web
+   product's price in RevenueCat; existing subscribers keep their price until you migrate them, following RevenueCat's
+   and Stripe's price-change rules.)
 2. Products: the App Store, Play Store and web products for both plans.
 3. Entitlements: `pro` (attach every Pro **and** Max product) and `max` (attach the Max products).
 4. Offerings: `default` (current) with two custom packages, identifiers **`pro`** and **`max`**, each with its App
    Store and Play product. For the website, two more offerings, `web_pro` and `web_max`, each with its web product.
 5. Web → **Web Purchase Links**: one for `web_pro`, one for `web_max`. Set the success redirect of both to
-   `https://mathub.space/#/create?paid=1`. Copy both links (`https://pay.rev.cat/<token>/`).
+   `https://mathub.space/#/plan?paid=1` (links made earlier to `#/create?paid=1` still land on Your plan). Copy both links (`https://pay.rev.cat/<token>/`).
 6. API keys: copy the public `appl_…` and `goog_…` keys and create a **secret** key (`sk_…`) for the server.
+7. **Call time** (website only, `api/calls.php`): in the Web Billing app create a **one-time, consumable** product,
+   identifier `mathub_call_hour` ("An hour of calls with Bo", $10). Attach it to **no entitlement** (a consumable in
+   an entitlement would unlock it forever). Make an offering `web_call_hour` with that product, then a Web Purchase
+   Link for it with the success redirect `https://mathub.space/#/calls?paid=1`. Put the link in Site settings →
+   Payments → "Call time web purchase link" (`call_hour_link`), without a user id. Each purchase shows on the
+   customer as a `non_subscriptions` transaction; the server adds 60 minutes (`call_hour_minutes`) per transaction,
+   once, and takes them back when a refunded transaction disappears. Change the minutes, price or product id there
+   too. Refunds are made in RevenueCat or Stripe; turn on RevenueCat's platform notifications for Stripe so refunds
+   show up.
 
 ## 3. Bo and the AI server (Anthropic)
 
@@ -187,6 +199,7 @@ never shows them again), or in `api/config.local.php` (never in the repository o
 'revenuecat_secret' => 'sk_xxxxxxxx',
 'pro_web_link'      => 'https://pay.rev.cat/xxxxxxxx/',
 'max_web_link'      => 'https://pay.rev.cat/yyyyyyyy/',
+'call_hour_link'    => 'https://pay.rev.cat/zzzzzzzz/',   // call time, $10 an hour (or set it in Site settings)
 'anthropic_key'     => 'sk-ant-xxxxxxxx',
 'openai_key'        => 'sk-proj-xxxxxxxx',   // live calls with Bo, his natural voice, and listening in Firefox
 'plan_grants'       => ['you@montana.edu' => 'max'],   // testers who get a plan without paying
@@ -208,7 +221,8 @@ on). **Cancel plan** asks first (when it ends, what stops, what is kept, an opti
 - A plan from `plan_grants`, or one given in the admin panel (Members → a member's plan), has nothing to cancel.
   If the member also pays for a smaller plan, Your plan offers Manage billing and Cancel for that one.
 
-`pro_web_price` and `max_web_price` default to `$15` and `$50`. Without the app keys the apps cannot sell the
+`pro_web_price` and `max_web_price` default to `$15` and `$20`; `call_hour_price` to `$10`, `call_hour_minutes` and
+`call_included_minutes` to 60. Without the app keys the apps cannot sell the
 plans; without the server keys the website cannot sell them and plans bought in the apps are not recognised there;
 without `anthropic_key` Bo says he is not switched on yet; without `openai_key` there are no live calls, and calls
 use basic voice (Chrome, Edge and Safari, with the device's own voice).

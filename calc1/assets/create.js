@@ -1111,12 +1111,14 @@ THE SYLLABUS:
       const left = Math.max(0, limit - used); const pct = limit ? Math.min(100, Math.round(used / limit * 100)) : 0;
       return `<div class="pl-m${pct >= 90 ? ' low' : ''}"><div class="pl-m-h"><b>${label}</b><span><b>${num(left)}</b> ${unit} left</span></div><div class="pl-bar" role="progressbar" aria-label="${label}" aria-valuemin="0" aria-valuemax="${limit}" aria-valuenow="${used}" aria-valuetext="${num(used)} of ${num(limit)} ${unit} used"><i style="width:${Math.max(pct, used ? 2 : 0)}%"></i></div><p class="pl-m-f">${num(used)} of ${num(limit)} used${note ? ` · ${note}` : ''}</p></div>`;
     };
-    const mins = s => Math.floor(s / 60); const calls = st.voice && (st.voice.live || U.live > 0) && !NATIVE;
+    const mins = s => Math.floor(s / 60); const CL = st.calls; const calls = plan === 'max' && CL && !NATIVE;
+    // calls: the month's included hour, then the hours bought (api/calls.php; managed on #/calls)
+    const callsM = calls ? `<div class="pl-m${CL.left <= 0 ? ' low' : ''}"><div class="pl-m-h"><b>Calls with Bo</b><span><b>${num(mins(CL.left))}</b> minutes left</span></div><div class="pl-bar" role="progressbar" aria-label="This month’s included hour" aria-valuemin="0" aria-valuemax="${CL.included}" aria-valuenow="${CL.included - CL.included_left}"><i style="width:${CL.included ? Math.min(100, Math.round(100 * (CL.included - CL.included_left) / CL.included)) : 100}%"></i></div><p class="pl-m-f">${num(mins(CL.included_left))} of ${num(mins(CL.included))} included minutes left this month${CL.balance ? `, and ${num(mins(CL.balance))} minutes you bought` : ''}. <a href="#/calls">Call time and history</a></p></div>` : '';
     return `<div class="pl-meters">
       ${meter('Questions to Bo', U.tutor, U.tutor_limit, 'questions', plan === 'pro' ? 'from Bo on every page' : '')}
-      ${meter('Classes Bo writes', U.classes, U.class_limit, U.class_limit - U.classes === 1 ? 'class' : 'classes', '')}
-      ${plan === 'max' && calls ? meter('Calls with Bo', mins(U.live), mins(U.live_limit), 'minutes', '') : ''}
-    </div><p class="pl-reset">${icon('rotate', 14)} These start again on ${nextReset()}.</p>`;
+      ${isAdmin() ? meter('Classes Bo writes', U.classes, U.class_limit, U.class_limit - U.classes === 1 ? 'class' : 'classes', '') : ''}
+      ${callsM}
+    </div><p class="pl-reset">${icon('rotate', 14)} ${calls ? 'Questions and the included call minutes' : 'These'} start again on ${nextReset()}.</p>`;
   }
   function cardsHtml() {
     const plan = Sub.plan();
@@ -1129,7 +1131,7 @@ THE SYLLABUS:
       <p class="pl-fine">Monthly plans that renew until you cancel. ${NATIVE ? `Bought in ${STORE}, which handles the billing.` : 'On the website the payment is taken by Stripe, through RevenueCat.'} A plan belongs to your Mathub account, so it works on the website and in the apps. <a href="#/policy/create">Terms</a> · <a href="#/policy/privacy">Privacy</a></p>`;
   }
   function faqHtml() {
-    const A = P.use && P.use.usage; const lim = A ? `${num(A.tutor_limit)} questions to Bo and ${num(A.class_limit)} classes Bo writes each month${A.live_limit ? `, and ${Math.floor(A.live_limit / 60)} minutes of calls` : ''}` : 'generous monthly limits';
+    const A = P.use && P.use.usage; const lim = A ? `${num(A.tutor_limit)} questions to Bo each month` : 'generous monthly limits';
     const qa = [
       ['How do I cancel?', NATIVE ? `In your ${ANDROID ? 'Google Play' : 'Apple ID'} subscriptions (Manage billing above), at least 24 hours before it renews. Your plan stays on until the end of the month you paid for.` : 'Press <b>Cancel plan</b> above. Your plan stays on until the end of the month you paid for, and you are not charged again. If you bought it in the Mathub app, it is cancelled in the App Store or Google Play instead; the page tells you where.'],
       ['What happens when my plan ends?', `The classes you made are kept, locked, and open again if you subscribe again. Your progress, your chats with Bo and his notes stay with your account. Everything built into Mathub, and the example class, stay free.`],
@@ -1137,6 +1139,7 @@ THE SYLLABUS:
       ['Can I switch between Pro and Max?', NATIVE ? `Yes. Move up any time; ${STORE} handles the change.` : 'Move up to Max any time. On the website, cancel Pro after you get Max so you are not billed for both. To go down to Pro, cancel Max and get Pro when it ends.'],
       ['I subscribed in the app. Does it work here?', 'Yes. A plan belongs to your Mathub account, so it works everywhere you sign in with it. If it does not show up, press Check again.'],
       ['Are there limits?', `Fair-use limits that most students never reach: ${lim}. They start again on the 1st.`],
+      ...(NATIVE ? [] : [['How does call time work?', `Mathub Max includes an hour of calls with Bo every month. If you want more, buy more time on the <a href="#/calls">Calls page</a>: ${esc((P.use && P.use.calls && P.use.calls.price) || '$10')} for an hour, paid ahead, and it never runs out at the end of the month. Calls use the month’s hour first.`]]),
       ['A question about a charge?', `Write to us from the <a href="#/contact">Contact page</a>${NATIVE ? `, or ask ${STORE}` : ''} and a person will answer.`]
     ];
     return `<div class="pl-faq">${qa.map(([q, a]) => `<details><summary>${q}${icon('chevron', 16)}</summary><p>${a}</p></details>`).join('')}</div>`;
@@ -1222,7 +1225,7 @@ THE SYLLABUS:
     const hubLine = () => {
       const plan = Sub.plan(); const U = hubStatus && hubStatus.usage; const s = Sub.status();
       const ends = s.until && !s.renews && !s.granted ? ` Your plan ends ${fmtDate(s.until)}.` : '';
-      if (plan === 'max') return (U ? `${num(Math.max(0, U.tutor_limit - U.tutor))} questions${hubStatus.voice && (hubStatus.voice.live || U.live) ? ` and ${Math.floor(Math.max(0, U.live_limit - U.live) / 60)} call minutes` : ''} left this month.` : 'Mathub Max is on.') + ends;
+      if (plan === 'max') { const CL = hubStatus && hubStatus.calls; return (U ? `${num(Math.max(0, U.tutor_limit - U.tutor))} questions left this month${CL ? `, and ${num(Math.floor(CL.left / 60))} minutes of calls` : ''}.` : 'Mathub Max is on.') + ends; }
       if (plan === 'pro') return (U ? `${num(Math.max(0, U.tutor_limit - U.tutor))} questions left this month. ` : '') + 'Bo is on every page: tap him in the corner. Max adds Ask Bo’s own page and calls.' + ends;
       if (trialLeft() > 0) return `Try him free: ${Math.max(1, Math.ceil(trialLeft() / 60))} minutes on a call, on us. Write on the board and he helps you through it.`;
       return 'He knows your syllabus, your exams and where you are stuck. Ask him from any page, or call him and work it through out loud.';
@@ -1239,7 +1242,7 @@ THE SYLLABUS:
       else if (plan === 'max') acts = [talkOk && cid ? act({ k: 'call', ic: 'phone', b: 'Call Bo', s: `Talk ${esc(cname)} through, out loud`, main: true }) : '', act({ href: cid ? `#/tutor/${cid}` : '#/tutor', ic: 'chat', b: 'Ask Bo', s: 'Chat, photos and his board', main: !(talkOk && cid) }), addAct()];
       else if (plan === 'pro') acts = [act({ k: 'float', ic: 'chat', b: 'Ask Bo here', s: 'He sees the page you are on', main: true }), addAct(), talkOk ? act({ k: 'max', ic: 'phone', b: 'Call Bo', s: 'Move up to Max' }) : act({ k: 'max', ic: 'gem', b: 'Ask Bo’s page', s: 'Move up to Max' })];
       else acts = [act({ k: 'pro', ic: 'zap', b: 'Get Mathub Pro', s: `Bo on every page · ${esc(Sub.price('pro') || PLANS.pro.web)} a month`, main: true }), act({ k: 'max', ic: 'gem', b: 'Get Mathub Max', s: `Plus Ask Bo’s page and calls · ${esc(Sub.price('max') || PLANS.max.web)} a month` }), addAct()];
-      return `<section class="bh bh-${plan || 'free'}" id="bo-hub" aria-labelledby="bh-h"><div class="bh-who"><span class="bh-av" aria-hidden="true">${App.bobcatSvg ? App.bobcatSvg(58) : ''}</span><div class="bh-t"><h2 id="bh-h">${plan ? 'Bo, your tutor' : 'Meet Bo, your tutor'}</h2><p class="bh-sub" id="bh-sub">${esc(hubLine())}</p><a class="bh-plan" href="#/plan"><span>Your plan</span><b>${plan ? PLANS[plan].short : 'Free'}</b>${icon('right', 14)}</a></div></div><div class="bh-acts">${acts.filter(Boolean).join('')}</div></section>`;
+      return `<section class="bh bh-${plan || 'free'}" id="bo-hub" aria-labelledby="bh-h"><div class="bh-who"><span class="bh-av" aria-hidden="true">${App.bobcatSvg ? App.bobcatSvg(58) : ''}</span><div class="bh-t"><h2 id="bh-h">${plan ? 'Bo, your tutor' : 'Meet Bo, your tutor'}</h2><p class="bh-sub" id="bh-sub">${esc(hubLine())}</p><a class="bh-plan" href="#/plan"><span>Your plan</span><b>${plan ? PLANS[plan].short : 'Free'}</b>${icon('right', 14)}</a>${plan === 'max' && hubStatus && hubStatus.calls ? `<a class="bh-plan" href="#/calls"><span>Call time</span><b>${num(Math.floor(hubStatus.calls.left / 60))} min</b>${icon('right', 14)}</a>` : ''}</div></div><div class="bh-acts">${acts.filter(Boolean).join('')}</div></section>`;
     };
     App.onRender = App.onRender || [];
     App.onRender.push((root, r) => {
@@ -1258,7 +1261,7 @@ THE SYLLABUS:
         }
       });
       const repaint = () => { const h = $('#bo-hub'); if (!h) return; const tmp = document.createElement('div'); tmp.innerHTML = hubHtml(); const nu = tmp.firstElementChild; [...h.childNodes].forEach(n => n.remove()); [...nu.childNodes].forEach(n => h.appendChild(n)); h.className = nu.className; };
-      api('ai_status').then(st => { hubStatus = st; if (App.boTalk && App.boTalk.setStatus) App.boTalk.setStatus(st); if (trialLeft() > 0) repaint(); else { const s = $('#bh-sub'); if (s) s.textContent = hubLine(); } }).catch(() => {});
+      api('ai_status').then(st => { hubStatus = st; if (App.boTalk && App.boTalk.setStatus) App.boTalk.setStatus(st); if (trialLeft() > 0 || st.calls) repaint(); else { const s = $('#bh-sub'); if (s) s.textContent = hubLine(); } }).catch(() => {});
     });
   }
 

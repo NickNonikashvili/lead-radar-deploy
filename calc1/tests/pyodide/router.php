@@ -8,10 +8,12 @@ if (preg_match('#^/revenuecat/v1/subscribers/(.+)$#', $path, $m)) {
   header('Content-Type: application/json');
   if (($_SERVER['HTTP_AUTHORIZATION'] ?? '') !== 'Bearer sk_test') { http_response_code(401); echo '{"code":7225,"message":"Invalid API key."}'; exit; }
   $id = rawurldecode($m[1]); $state = json_decode((string)@file_get_contents(__DIR__ . '/../fixtures/rc-state.json'), true) ?: []; $s = $state[$id] ?? null;
+  // call time bought (api/calls.php): "hours" lists the purchases' transaction ids; a customer with only those has no plan
+  $hours = (array)($s['hours'] ?? []); if ($s && !isset($s['expires']) && !isset($s['plan'])) $s = null;
   $plan = $s ? ($s['plan'] ?? 'pro') : ''; $prod = $plan === 'max' ? 'mathub_max_monthly' : 'mathub_pro_monthly';
   $e = ['expires_date' => $s['expires'] ?? null, 'grace_period_expires_date' => null, 'product_identifier' => $prod, 'purchase_date' => gmdate('c')];
   $ent = $s ? ($plan === 'max' ? ['pro' => $e, 'max' => $e] : ['pro' => $e]) : [];
-  echo json_encode(['request_date' => gmdate('c'), 'subscriber' => ['original_app_user_id' => $id, 'entitlements' => $ent, 'subscriptions' => $s ? [$prod => ['store' => $s['store'] ?? 'rc_billing', 'expires_date' => $s['expires'] ?? null, 'unsubscribe_detected_at' => $s['cancelled'] ?? null]] : (object)[], 'management_url' => $s ? 'https://billing.example/manage' : null]]);
+  echo json_encode(['request_date' => gmdate('c'), 'subscriber' => ['original_app_user_id' => $id, 'entitlements' => $ent, 'subscriptions' => $s ? [$prod => ['store' => $s['store'] ?? 'rc_billing', 'expires_date' => $s['expires'] ?? null, 'unsubscribe_detected_at' => $s['cancelled'] ?? null]] : (object)[], 'management_url' => $s ? 'https://billing.example/manage' : null, 'non_subscriptions' => $hours ? ['mathub_call_hour' => array_map(fn($t) => ['id' => $t, 'store_transaction_id' => 'st_' . $t, 'purchase_date' => gmdate('c'), 'store' => 'rc_billing', 'is_sandbox' => true], $hours)] : (object)[]]]);
   exit;
 }
 // a stand-in for RevenueCat's API v2, for cancelling a website plan (config.local.php: revenuecat_v2_api, revenuecat_v2_key

@@ -2085,3 +2085,91 @@
 6113	Bo écoute une voix proche du micro ; prend effet au prochain appel
 6114	Mes haut-parleurs font de l’écho
 6115	Sa propre voix ne peut pas couper Bo pendant qu’il parle. Touche-le pour l’arrêter
+6118	N’importe quel cours, sur demande
+6119	Tu suis un cours que Mathub n’a pas encore ? Demande-le avec son plan de cours. Nous vérifions le fichier, créons tout le cours (notes, exercices, cartes et calendrier) et te prévenons quand il est prêt, pour tous ceux qui le suivent.
+6120	Bo t’aide pour un cours que tu suis. Choisis tes cours, ou demande-en un que Mathub n’a pas encore.
+6121	Obtenir plus de temps d’appel
+6122	Les cours que tu as créés avant restent ouverts
+6123	Appels avec Bo : une heure par mois incluse, et des heures en plus à 10 $ chacune quand tu veux
+6125	Demandes de cours
+6126	Vérification du plan de cours
+6127	Les cours de Mathub sont ajoutés par l’équipe de Mathub. Demande {1} avec son plan de cours et tu sauras quand il est prêt.
+6128	Pas de forfait. Avec Mathub Pro ({1} par mois), Bo est sur chaque page ; Mathub Max ({2} par mois) ajoute la page Demander à Bo et les appels avec lui.
+6129	Il manque un cours ?
+6130	Demande-le
+6131	avec son plan de cours et nous le créons.
+6132	Il manque un cours ? Demande-le avec son plan de cours : nous vérifions le fichier, créons le cours et te prévenons quand il est prêt
+6133	L’heure incluse ce mois-ci
+6134	minutes restantes
+6135	Il te reste {1} des {2} minutes incluses ce mois-ci{3}.
+6136	Temps d’appel et historique
+6137	, et {1} minutes achetées
+6138	{1} repartent à zéro le {2}.
+6139	Les questions et les minutes d’appel incluses
+6140	Ces limites
+6141	{1} questions à Bo par mois
+6142	Comment fonctionne le temps d’appel ?
+6143	Mathub Max inclut une heure d’appels avec Bo chaque mois. Pour en avoir plus, achète du temps sur la
+6144	page Appels
+6145	 : {1} l’heure, payée à l’avance, et elle ne disparaît pas à la fin du mois. Les appels utilisent d’abord l’heure du mois.
+6146	Il te reste {1} questions ce mois-ci{2}.
+6147	Il connaît ton plan de cours, tes examens et ce qui te bloque. Demande-lui depuis n’importe quelle page, ou appelle-le et réfléchis à voix haute.
+6148	Envoie son plan de cours, nous le créons
+6149	Temps d’appel
+6150	Le gérer
+6151	Un PDF, un fichier Word ou une photo, jusqu’à {1} Mo. Tu peux aussi le déposer ici.
+6152	Le fichier est analysé pour détecter les logiciels malveillants avant d’être gardé, et seule l’équipe de Mathub le voit.
+6153	C’est le plan de cours d’un cours que je suis. Je comprends que seule l’équipe de Mathub voit le fichier et qu’elle s’en sert pour créer le cours (avec Bo, l’IA de Mathub) avec ses propres mots.
+6154	Cours que tu as créés avant
+6155	Tu les as créés à partir d’un plan de cours avant que les cours soient ajoutés par l’équipe de Mathub. Ils restent à toi.
+6156	Le plan de cours contient le calendrier, les examens et la notation dont nous avons besoin. Le fichier est d’abord analysé contre les logiciels malveillants.
+6157	Vérifie le fichier : un PDF, un fichier Word ou une photo, jusqu’à 10 Mo.
+6158	Les appels avec Bo sont inclus dans Mathub Max
+6159	{1} par mois, avec
+6160	{1} d’appels chaque mois
+6161	. Du temps en plus coûte {1} pour {2}, et ce que tu achètes ne disparaît pas à la fin du mois.
+6162	Appeler Bo gratuitement : {1} offertes
+6163	Tu as
+6164	de temps d’appel acheté, gardé pour quand tu auras de nouveau Max.
+6165	L’heure de ce mois
+6166	Temps d’appel restant
+6167	sur {1} restantes
+6168	Revient le {1}. Les appels l’utilisent en premier.
+6169	Heures achetées
+6170	Utilisées après l’heure de ce mois. Elles ne disparaissent pas à la fin du mois.
+6171	Termine le paiement dans le nouvel onglet, puis reviens ici.
+6172	Un appel dure jusqu’à {1}, et tu peux rappeler tout de suite. {2}
+6173	Tu n’as plus de temps d’appel
+6174	d’appels avec Bo restantes
+6175	Acheter {1} · {2}
+6176	Paiement par carte via Stripe, sur une page qui s’ouvre dans un nouvel onglet.
+6177	L’achat de temps d’appel n’est pas encore ouvert. Si tu as besoin de plus, écris-nous depuis la
+6178	Au plus {1} par jour.
+6179	appel{1} ce mois-ci
+6180	à parler avec Bo ce mois-ci
+6181	de l’heure de ce mois utilisées
+6182	Pas encore d’appel. Appelle Bo depuis la page d’accueil ou depuis Demander à Bo.
+6183	minutes gratuites
+6184	{1} sur tes heures
+6185	l’heure de ce mois
+6186	Rien d’acheté pour l’instant.
+6187	La façon dont Bo parle pendant les appels
+6188	Sa voix
+6189	Quand il intervient
+6190	Bo écoute une voix proche du micro
+6191	Ce que toi et Bo dites, en bas de l’appel
+6192	Ces réglages s’appliquent dès ton prochain appel. Les e-mails de récapitulatif après les appels sont dans
+6193	Tes appels
+6194	Acheté et offert
+6195	Stripe t’envoie par e-mail les reçus de tes achats. Une question sur un paiement ?
+6196	Écris-nous
+6197	La voix de Bo est réglée pour ton prochain appel.
+6198	Ton temps d’appel, en acheter plus, chaque appel et la façon dont Bo parle.
+6199	Les appels avec Bo sont sur le site de Mathub, avec le même compte.
+6200	Connecte-toi pour voir tes appels
+6201	Ton temps d’appel et tes appels avec Bo sont gardés avec ton compte Mathub.
+6203	{1} ajoutée. Merci !
+6204	Pas encore de nouvel achat. Si tu viens de payer, attends une minute et vérifie à nouveau.
+6205	Tu as utilisé le temps d’appel de ce mois avec Bo. Achète une heure (
+6206	Les cours sont désormais ajoutés par l’équipe de Mathub. Demande ton cours avec son plan de cours, et nous te dirons quand il est prêt.
+6212	Les cours sont désormais ajoutés par l’équipe de Mathub. Demande ton cours, et nous te dirons quand il est prêt.

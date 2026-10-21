@@ -233,6 +233,7 @@ switch ($route) {
   default:
     if (in_array($route, ['ics', 'ics_token', 'ics_token_reset', 'focus_ping', 'focus_stop', 'focus_done', 'focus_room', 'track', 'admin_growth', 'class_goal', 'league_section', 'ann_list', 'ann_post', 'ann_delete', 'mock_official', 'invite_mine', 'invite_info'], true)) { require_once __DIR__ . '/social.php'; require_once __DIR__ . '/growth.php'; mh_growth_route($route, $in, $cfg, $ip); }
     if (str_starts_with($route, 'ai_')) { require_once __DIR__ . '/ai.php'; mh_ai_route($route, $in, $cfg, $ip); }
+    if (str_starts_with($route, 'calls_') || str_starts_with($route, 'admin_calls')) { require_once __DIR__ . '/calls.php'; mh_calls_route($route, $in, $cfg, $ip); }   // calls with Bo: time included with Max, hours bought
     if (str_starts_with($route, 'room_')) { require_once __DIR__ . '/room.php'; mh_room_route($route, $in, $cfg, $ip); }   // study rooms: classmates join a call with Bo   // Bo, the AI tutor, and classes Bo writes (Mathub Max)
     if (str_starts_with($route, 'myclass') || in_array($route, ['shared_class', 'create_status', 'plan_cancel', 'admin_unshare', 'admin_plan'], true)) { require_once __DIR__ . '/myclasses.php'; mh_myclass_route($route, $in, $cfg, $ip); }   // classes students make, sharing them, Mathub Create
     if (str_starts_with($route, 'community_')) { require_once __DIR__ . '/community.php'; mh_community_route($route, $in, $cfg, $ip); }   // classes anyone makes from a syllabus, for everyone

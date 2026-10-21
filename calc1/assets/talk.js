@@ -245,7 +245,7 @@
   }
   async function post(route, body) {
     let res, j; try { res = await fetch(API + route, { method: 'POST', credentials: 'same-origin', headers: HDR, body: JSON.stringify(body) }); j = await res.json(); } catch (e) { throw new Error('Bo cannot be reached right now. Check your connection.'); }
-    if (!j || j.ok === false) throw Object.assign(new Error((j && j.error) || 'Something went wrong.'), { status: res.status });
+    if (!j || j.ok === false) throw Object.assign(new Error((j && j.error) || 'Something went wrong.'), { status: res.status, data: j || {} });
     return j;
   }
 
@@ -557,12 +557,14 @@
   }
   function ended(msg, over) {
     setState('ended'); if (!T.el) return;
+    // Max, out of call time: buy an hour (the Calls page, assets/calls.js)
+    if (over === 'hours') { $('#bt-extra', T.el).innerHTML = `<div class="bt-msg" role="status"><p>${esc(msg)}</p><div class="bt-msg-acts"><a class="btn primary" href="#/calls">${icon('phone', 16)} Get more call time</a><button type="button" class="btn" data-t="end">Close</button></div></div>`; return; }
     // the free minutes are up: what Max is, instead of calling again
     $('#bt-extra', T.el).innerHTML = over ? `<div class="bt-msg" role="status"><p>${esc(msg)}</p><div class="bt-msg-acts"><a class="btn primary" href="#/max">${icon('zap', 16)} See Mathub Max</a><button type="button" class="btn" data-t="end">Close</button></div></div>`
       : `<div class="bt-msg" role="status"><p>${esc(msg)}</p><div class="bt-msg-acts"><button type="button" class="btn primary" data-t="retry">${icon('phone', 16)} Call again</button><button type="button" class="btn" data-t="end">Close</button></div></div>`;
   }
   // a call that may not happen (no Max, or the free minutes are gone)
-  const noPlan = x => { if (x.status !== 402) return false; T.trial = false; ended(x.message, true); return true; };
+  const noPlan = x => { if (x.status !== 402) return false; T.trial = false; ended(x.message, x.data && x.data.hours ? 'hours' : true); return true; };
   function showType(on) { if (!T.el) return; const f = $('#bt-type', T.el); f.hidden = !on; T.el.classList.toggle('typing', !!on); const b = $('[data-t="type"]', T.el); if (b) b.setAttribute('aria-expanded', String(on)); if (on) setTimeout(() => { const q = $('#bt-q', T.el); if (q) q.focus(); }, 30); }
   function micTrouble(code) {
     const msg = code === 'not-allowed' || code === 'service-not-allowed' ? 'Mathub can’t use your microphone. Allow it from the icon in the address bar, then call again. You can also type to Bo.'
@@ -880,7 +882,7 @@
     },
     async report() {
       if (!this.lid || this.ended || this.drop) return;
-      try { const r = await post('ai_live_tick', { lid: this.lid }); if (r.end) { this.flush(false); this.stop(); ended(r.why || 'The call ended.', !!r.trial_over); return; } this.left = r.left; this.at = Date.now(); if (T.trial) { T.free = r.left; T.freeAt = Date.now(); } } catch (e) {}
+      try { const r = await post('ai_live_tick', { lid: this.lid }); if (r.end) { this.flush(false); this.stop(); ended(r.why || 'The call ended.', r.hours ? 'hours' : !!r.trial_over); return; } this.left = r.left; this.at = Date.now(); if (T.trial) { T.free = r.left; T.freeAt = Date.now(); } } catch (e) {}
     },
     /* is the line alive? Every second: the connection's state, audio still arriving, the mic still on, the hour */
     async health() {

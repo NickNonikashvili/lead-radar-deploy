@@ -1858,3 +1858,91 @@
 6113	Bo hört auf eine Stimme nah am Mikrofon; gilt ab deinem nächsten Anruf
 6114	Meine Lautsprecher hallen
 6115	Seine eigene Stimme kann Bo nicht unterbrechen, während er spricht. Tippe ihn an, um ihn zu stoppen
+6118	Jeder Kurs, auf Anfrage
+6119	Belegst du etwas, das Mathub noch nicht hat? Fordere es mit dem Kursplan an. Wir prüfen die Datei, bauen den ganzen Kurs (Notizen, Übungen, Karteikarten und Kalender) und sagen dir Bescheid, wenn er fertig ist – für alle, die ihn belegen.
+6120	Bo hilft dir bei einem Kurs, den du belegst. Wähle deine Kurse oder fordere einen an, den Mathub noch nicht hat.
+6121	Mehr Anrufzeit holen
+6122	Die Kurse, die du vorher erstellt hast, bleiben offen
+6123	Anrufe mit Bo: eine Stunde pro Monat inklusive, und weitere Stunden für je 10 $, wenn du sie willst
+6125	Kursanfragen
+6126	Kursplan wird geprüft
+6127	Kurse auf Mathub fügt das Mathub-Team hinzu. Fordere {1} mit dem Kursplan an, und du erfährst, wenn er fertig ist.
+6128	Kein Abo. Mit Mathub Pro ({1} im Monat) ist Bo auf jeder Seite; Mathub Max ({2} im Monat) bringt die Seite „Frag Bo“ und Anrufe mit ihm dazu.
+6129	Fehlt ein Kurs?
+6130	Fordere ihn an
+6131	mit dem Kursplan, und wir bauen ihn.
+6132	Fehlt ein Kurs? Fordere ihn mit dem Kursplan an: Wir prüfen die Datei, bauen den Kurs und sagen dir Bescheid, wenn er fertig ist
+6133	Die inklusive Stunde dieses Monats
+6134	Minuten übrig
+6135	{1} von {2} inklusiven Minuten sind diesen Monat übrig{3}.
+6136	Anrufzeit und Verlauf
+6137	, und {1} gekaufte Minuten
+6138	{1} beginnen am {2} von vorn.
+6139	Fragen und die inklusiven Anrufminuten
+6140	Diese
+6141	{1} Fragen an Bo pro Monat
+6142	Wie funktioniert die Anrufzeit?
+6143	Mathub Max enthält jeden Monat eine Stunde Anrufe mit Bo. Wenn du mehr willst, kauf mehr Zeit auf der
+6144	Anrufe-Seite
+6145	: {1} für eine Stunde, im Voraus bezahlt, und sie verfällt nicht am Monatsende. Anrufe nutzen zuerst die Stunde des Monats.
+6146	Diesen Monat sind noch {1} Fragen übrig{2}.
+6147	Er kennt deinen Kursplan, deine Prüfungen und wo du hängst. Frag ihn von jeder Seite aus, oder ruf ihn an und arbeite es laut durch.
+6148	Schick den Kursplan, wir bauen den Kurs
+6149	Anrufzeit
+6150	Verwalten
+6151	Ein PDF, eine Word-Datei oder ein Foto, bis {1} MB. Du kannst sie auch hier ablegen.
+6152	Die Datei wird vor dem Speichern auf Schadsoftware geprüft, und nur das Mathub-Team sieht sie.
+6153	Das ist der Kursplan eines Kurses, den ich belege. Ich verstehe, dass nur das Mathub-Team die Datei sieht und sie nutzt, um den Kurs (mit Bo, der KI von Mathub) in eigenen Worten zu bauen.
+6154	Kurse, die du vorher erstellt hast
+6155	Du hast sie aus einem Kursplan erstellt, bevor Kurse vom Mathub-Team hinzugefügt wurden. Sie bleiben deine.
+6156	Der Kursplan enthält den Zeitplan, die Prüfungen und die Bewertung, die wir brauchen. Die Datei wird zuerst auf Schadsoftware geprüft.
+6157	Prüfe die Datei: ein PDF, eine Word-Datei oder ein Foto, bis 10 MB.
+6158	Anrufe mit Bo gibt es mit Mathub Max
+6159	{1} im Monat, mit
+6160	{1} Anrufen jeden Monat
+6161	. Mehr Zeit kostet {1} für {2}, und was du kaufst, verfällt nicht am Monatsende.
+6162	Bo kostenlos anrufen: {1} geschenkt
+6163	Du hast
+6164	gekaufte Anrufzeit, aufgehoben für die Zeit, wenn du wieder Max hast.
+6165	Die Stunde dieses Monats
+6166	Verbleibende Anrufzeit
+6167	von {1} übrig
+6168	Kommt am {1} wieder. Anrufe nutzen sie zuerst.
+6169	Gekaufte Stunden
+6170	Werden nach der Stunde dieses Monats genutzt. Sie verfallen nicht am Monatsende.
+6171	Schließ die Zahlung im neuen Tab ab und komm dann hierher zurück.
+6172	Ein Anruf dauert bis zu {1}, und du kannst sofort wieder anrufen. {2}
+6173	Deine Anrufzeit ist aufgebraucht
+6174	Anrufe mit Bo übrig
+6175	{1} kaufen · {2}
+6176	Bezahlung per Karte über Stripe, auf einer Seite, die sich in einem neuen Tab öffnet.
+6177	Mehr Anrufzeit kann man noch nicht kaufen. Wenn du mehr brauchst, schreib uns über die
+6178	Höchstens {1} pro Tag.
+6179	Anruf{1} diesen Monat
+6180	mit Bo gesprochen diesen Monat
+6181	der Stunde dieses Monats genutzt
+6182	Noch keine Anrufe. Ruf Bo über die Startseite oder über „Frag Bo“ an.
+6183	kostenlose Minuten
+6184	{1} aus deinen Stunden
+6185	die Stunde dieses Monats
+6186	Noch nichts gekauft.
+6187	Wie Bo in Anrufen klingt
+6188	Seine Stimme
+6189	Wann er einsteigt
+6190	Bo hört auf eine Stimme nah am Mikrofon
+6191	Was du und Bo sagt, unten im Anruf
+6192	Das gilt ab deinem nächsten Anruf. Zusammenfassungs-E-Mails nach Anrufen findest du in den
+6193	Deine Anrufe
+6194	Gekauft und geschenkt
+6195	Belege für deine Käufe schickt dir Stripe per E-Mail. Eine Frage zu einer Abbuchung?
+6196	Schreib uns
+6197	Bos Stimme ist für deinen nächsten Anruf eingestellt.
+6198	Deine Anrufzeit, mehr kaufen, jeder Anruf und wie Bo klingt.
+6199	Anrufe mit Bo gibt es auf der Mathub-Website, mit demselben Konto.
+6200	Melde dich an, um deine Anrufe zu sehen
+6201	Deine Anrufzeit und deine Anrufe mit Bo werden mit deinem Mathub-Konto gespeichert.
+6203	{1} hinzugefügt. Danke!
+6204	Noch kein neuer Kauf. Wenn du gerade bezahlt hast, warte eine Minute und prüf noch einmal.
+6205	Du hast die Anrufzeit dieses Monats mit Bo aufgebraucht. Kauf eine Stunde (
+6206	Kurse fügt jetzt das Mathub-Team hinzu. Fordere deinen Kurs mit dem Kursplan an, und wir sagen dir, wenn er fertig ist.
+6212	Kurse fügt jetzt das Mathub-Team hinzu. Fordere deinen Kurs an, und wir sagen dir, wenn er fertig ist.

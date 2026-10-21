@@ -69,14 +69,14 @@ const sql = (q, arg) => (spawnSync('php', ['-r', '$d = new PDO("sqlite:" . $argv
   await a.keyboard.press('Escape'); await a.waitForTimeout(300);
   await go(a, '#/plan', 1800);
   const mp = await a.$$eval('.pl-m', ms => ms.map(m => [m.classList.contains('off'), m.querySelector('b').textContent]));
-  check('Pro\'s month: questions to Bo (on every page) and classes Bo writes are counted', mp.length === 2 && !mp[0][0] && mp[0][1] === 'Questions to Bo' && !mp[1][0] && /Classes Bo writes/.test(mp[1][1]), mp);
+  check('Pro\'s month: questions to Bo (on every page) are counted (classes are added by Mathub\'s team)', mp.length === 1 && !mp[0][0] && mp[0][1] === 'Questions to Bo', mp);
   check('with Pro, the plan card has Move up to Max', !!(await a.$('#pl-now [data-pl="buy-max"]')));
 
   // alice with Max, bought on the website
   await plan(a, aliceId, { plan: 'max', store: 'rc_billing' });
   await go(a, '#/', 1800);
   const hm = await a.evaluate(() => { const h = document.querySelector('#bo-hub'); return { acts: [...h.querySelectorAll('.bh-act b')].map(b => b.textContent), main: h.querySelector('.bh-act.bh-main b').textContent, ask: h.querySelector('a.bh-act[href^="#/tutor"]').getAttribute('href'), chip: h.querySelector('.bh-plan b').textContent, sub: h.querySelector('#bh-sub').textContent, row: getComputedStyle(h.querySelector('.bh-act.bh-main')).flexDirection }; });
-  check('with Max: Call Bo, Ask Bo (her class) and Add a class, with what is left this month', hm.acts.join() === 'Call Bo,Ask Bo,Request a class' && hm.main === 'Call Bo' && hm.ask === '#/tutor/calc' && hm.chip === 'Max' && /questions and \d+ call minutes left this month/.test(hm.sub) && hm.row === 'row', hm);
+  check('with Max: Call Bo, Ask Bo (her class) and Add a class, with what is left this month', hm.acts.join() === 'Call Bo,Ask Bo,Request a class' && hm.main === 'Call Bo' && hm.ask === '#/tutor/calc' && hm.chip === 'Max' && /questions left this month, and \d+ minutes of calls/.test(hm.sub) && hm.row === 'row', hm);
   await a.click('#bo-hub [data-bh="call"]'); await a.waitForTimeout(1200);
   check('Call Bo before agreeing to Bo\'s terms goes to Bo first (who asks), with the call to follow', /^#\/tutor\/calc\?talk=1/.test(new URL(a.url()).hash) && /Before you start/.test(await txt(a, '#bo-main')));
   await a.evaluate(() => App.setSetting('aiConsent', Date.now()));
@@ -93,7 +93,7 @@ const sql = (q, arg) => (spawnSync('php', ['-r', '$d = new PDO("sqlite:" . $argv
   check('Your plan: Max, active, $20 a month, when it renews, paid on the website, her account', /Active/.test(now) && /Mathub Max/.test(now) && /\$20 a month/.test(now) && /Renews/.test(now) && /the website \(card, through Stripe\)/.test(now) && /alice\.a@montana\.edu/.test(now), now);
   check('Manage billing opens the billing page in a new tab', (await a.$eval('#pl-now a[target="_blank"]', x => x.href)) === 'https://billing.example/manage');
   const mm = await a.$$eval('.pl-m', ms => ms.map(m => [m.querySelector('b').textContent, m.querySelector('[role="progressbar"]') ? m.querySelector('[role="progressbar"]').getAttribute('aria-valuetext') : '']));
-  check('this month: questions, classes and call minutes, each a labelled meter, and when they start again', mm.length === 3 && mm[0][0] === 'Questions to Bo' && /of 1,500 questions used/.test(mm[0][1]) && mm[2][0] === 'Calls with Bo' && /These start again on/.test(await txt(a, '#pl-use')), mm);
+  check('this month: questions and call minutes, each a labelled meter, and when they start again', mm.length === 2 && mm[0][0] === 'Questions to Bo' && /of 1,500 questions used/.test(mm[0][1]) && mm[1][0] === 'Calls with Bo' && /start again on/.test(await txt(a, '#pl-use')) && !!(await a.$('#pl-use a[href="#/calls"]')), mm);
   check('the Max card is marked as hers', (await a.$eval('.pl-card.mine h3', h => h.textContent)) === 'Mathub Max');
   await a.click('.pl-faq details:first-child summary'); await a.waitForTimeout(200);
   check('the questions open: how to cancel', /Cancel plan/.test(await txt(a, '.pl-faq details[open]')));

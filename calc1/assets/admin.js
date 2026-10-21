@@ -35,7 +35,7 @@
   // and what the malware check looked at, in a line
   const BLOBS = [], JOBS = {};
   const scanLine = sc => [sc.kind, ...(sc.checks || []), `ClamAV: ${sc.clamav}`, `VirusTotal: ${sc.virustotal}`, sc.sha256 ? `SHA-256 ${String(sc.sha256).slice(0, 16)}…` : ''].filter(Boolean).join(' · ');
-  const TABS = [['overview', 'Overview', 'grid', 'admin'], ['members', 'Members', 'info', 'admin'], ['issues', 'Problems', 'bulb', 'mod'], ['packs', 'Add a class', 'book', 'admin'], ['classes', 'Class requests', 'path', 'admin'], ['teach', 'Instructors', 'users', 'admin'], ['errors', 'Site errors', 'zap', 'admin'], ['backups', 'Backups', 'download', 'admin'], ['reports', 'Reports', 'flag', 'mod'], ['contrib', 'Contributions', 'pen', 'mod'], ['mocks', 'Mock exams', 'target', 'mod'], ['growth', 'Growth', 'chart', 'admin'], ['config', 'Keys & settings', 'lock', 'admin'], ['settings', 'Site settings', 'sliders', 'admin'], ['digest', 'Digest & cron', 'clock', 'admin'], ['email', 'Email everyone', 'send', 'admin'], ['bo', 'Bo quality', 'chat', 'admin']];
+  const TABS = [['overview', 'Overview', 'grid', 'admin'], ['members', 'Members', 'info', 'admin'], ['issues', 'Problems', 'bulb', 'mod'], ['packs', 'Add a class', 'book', 'admin'], ['classes', 'Class requests', 'path', 'admin'], ['teach', 'Instructors', 'users', 'admin'], ['errors', 'Site errors', 'zap', 'admin'], ['backups', 'Backups', 'download', 'admin'], ['reports', 'Reports', 'flag', 'mod'], ['contrib', 'Contributions', 'pen', 'mod'], ['mocks', 'Mock exams', 'target', 'mod'], ['growth', 'Growth', 'chart', 'admin'], ['config', 'Keys & settings', 'lock', 'admin'], ['settings', 'Site settings', 'sliders', 'admin'], ['digest', 'Digest & cron', 'clock', 'admin'], ['email', 'Email everyone', 'send', 'admin'], ['bo', 'Bo quality', 'chat', 'admin'], ['calls', 'Calls', 'phone', 'admin']];
 
   App.views.admin = {
     title: 'Admin panel',
@@ -48,6 +48,35 @@
       if (isMod()) this[tab]($('#adm-body', root), root);
       const on = $('.admin-tab.active', root); const row = on && on.parentElement;   // phones: the tab row scrolls to the open tab
       if (row && row.scrollWidth > row.clientWidth) row.scrollLeft += on.getBoundingClientRect().left - row.getBoundingClientRect().left - 16;
+    },
+
+    /* Calls with Bo (api/calls.php admin_calls): this month, what it cost and earned, everyone who called or has time,
+       giving or taking back time, and every purchase, refund and gift */
+    async calls(el) {
+      let r; try { r = await api('admin_calls'); } catch (e) { el.innerHTML = `<div class="empty">${esc(e.message)}</div>`; return; }
+      const fmt = s => { const m = Math.max(0, Math.round((s || 0) / 60)); const h = Math.floor(m / 60), x = m % 60; return h ? (x ? `${h} h ${x} min` : `${h} h`) : `${m} min`; };
+      const T = r.totals, C = r.settings; const tile = (n, label, sub) => `<div class="bq-tile"><b>${n}</b><span>${esc(label)}</span>${sub ? `<small>${esc(sub)}</small>` : ''}</div>`;
+      const kind = { buy: 'Bought', grant: 'Given', refund: 'Refunded' };
+      el.innerHTML = `<div class="callout small mb-2">Calls with Bo in ${esc(r.month)}. Mathub Max (${esc(C.max_price)} a month) includes ${C.included_minutes} minutes of calls each month; more is ${esc(C.price)} for ${C.pack_minutes} minutes, bought ahead. Calls use the month’s included minutes first, then hours bought (which never expire). Everyone without Max has their free minutes.</div>
+        <div class="bq-tiles">${tile(fmt(T.secs), 'Talked this month', `${T.calls} call${T.calls === 1 ? '' : 's'} · ${T.people} ${T.people === 1 ? 'person' : 'people'}`)}${tile(fmt(T.included_secs), 'From included hours', 'Max members’ monthly hour')}${tile(fmt(T.paid_secs), 'From hours bought', '')}${tile(fmt(T.free_secs), 'Free minutes', 'without Max')}${tile(`${T.hours_sold}`, 'Packs sold this month', `${T.refunds} refunded · ${T.all_hours_sold} in all`)}${tile(esc(C.price.replace(/[0-9.]+/, '') + T.revenue.toFixed(2)), 'From packs this month', 'before Stripe and store fees')}${tile(fmt(T.given_secs), 'Given by Mathub', 'this month')}</div>
+        <div class="grid cols-2 mb-2">
+          <div class="panel"><div class="panel-h"><div class="panel-title">${icon('sliders')} Prices and limits</div><a class="btn xs" href="#/admin/settings">Change</a></div>
+            <ul class="small cl-adm-set"><li>Max: <b>${esc(C.max_price)}</b> a month with <b>${C.included_minutes} minutes</b> of calls</li><li>More time: <b>${C.pack_minutes} minutes for ${esc(C.price)}</b> (product ${C.products.map(esc).join(', ') || 'not set'})</li><li>Purchase link: ${C.link ? '<span class="chip xs good">set</span>' : '<span class="chip xs warn">not set: members cannot buy time yet</span>'} · RevenueCat: ${C.revenuecat ? '<span class="chip xs good">connected</span>' : '<span class="chip xs warn">no secret key</span>'}</li><li>A call lasts up to ${C.per_call_minutes} minutes; at most ${C.daily_minutes} minutes a day each</li></ul></div>
+          <form class="panel cl-give" id="cl-give"><div class="panel-h"><div class="panel-title">${icon('plus')} Give call time</div></div>
+            <div class="grid cols-2"><div class="field"><label for="cl-g-email">Member’s email</label><input class="input" id="cl-g-email" type="email" required placeholder="someone@montana.edu"></div><div class="field"><label for="cl-g-min">Minutes</label><input class="input" id="cl-g-min" type="number" step="1" min="-6000" max="6000" required value="60"><span class="help">A minus sign takes time back.</span></div></div>
+            <div class="field"><label for="cl-g-note">Note (only administrators see it)</label><input class="input" id="cl-g-note" maxlength="200" placeholder="Optional: why"></div>
+            <label class="check"><input type="checkbox" id="cl-g-tell" checked><span>Tell them in their inbox</span></label>
+            <div class="row gap-sm mt-1"><button class="btn primary" type="submit">${icon('check', 14)} Give time</button><span class="small muted" id="cl-g-msg" role="status"></span></div></form></div>
+        <div class="panel mb-2"><div class="panel-h"><div class="panel-title">${icon('users')} Members</div><span class="small muted">who called this month, or has time bought or given</span></div>
+          ${r.people.length ? `<div class="table-wrap"><table class="table small"><thead><tr><th>Member</th><th>Plan</th><th>Calls</th><th>This month</th><th>Included used</th><th>Time left (bought or given)</th><th>Packs bought</th><th></th></tr></thead><tbody>${r.people.map(p => `<tr><td><b>${esc(p.name || p.email)}</b>${p.name ? `<div class="muted">${esc(p.email)}</div>` : ''}</td><td>${p.plan ? `<span class="chip xs${p.plan === 'max' ? ' good' : ''}">${p.plan === 'max' ? 'Max' : 'Pro'}</span>` : '<span class="muted">Free</span>'}</td><td>${p.month_calls}</td><td>${fmt(p.month_secs)}</td><td>${fmt(p.included_used)}</td><td><b>${fmt(p.balance)}</b></td><td>${p.bought}</td><td><button type="button" class="btn xs" data-action="cl-pick" data-email="${esc(p.email)}">Give time</button></td></tr>`).join('')}</tbody></table></div>` : '<div class="empty">No calls yet this month.</div>'}</div>
+        <div class="panel"><div class="panel-h"><div class="panel-title">${icon('list')} Purchases, refunds and gifts</div></div>
+          ${r.log.length ? `<ul class="cl-list">${r.log.map(x => `<li><span class="cl-when">${esc(fmtWhen(x.at))}</span><span class="cl-cls">${esc(x.email || 'account deleted')}</span><span class="cl-len ${x.secs < 0 ? 'neg' : 'pos'}">${x.secs < 0 ? '−' : '+'}${fmt(Math.abs(x.secs))}</span><span class="cl-from">${esc(kind[x.kind] || x.kind)}${x.kind === 'grant' && x.by ? ` by ${esc(x.by)}` : ''}${x.note && x.kind === 'grant' ? ` · ${esc(x.note)}` : ''}</span></li>`).join('')}</ul>` : '<div class="empty small">Nothing yet.</div>'}</div>`;
+      bind(el, { 'cl-pick': b => { const i = $('#cl-g-email', el); i.value = b.dataset.email; $('#cl-g-min', el).focus(); i.scrollIntoView({ block: 'center', behavior: 'smooth' }); } });
+      $('#cl-give', el).addEventListener('submit', async e => {
+        e.preventDefault(); const msg = $('#cl-g-msg', el); const btn = $('#cl-give button[type="submit"]', el); btn.disabled = true; msg.textContent = '';
+        try { const res = await api('admin_calls_grant', { email: $('#cl-g-email', el).value.trim(), minutes: +$('#cl-g-min', el).value, note: $('#cl-g-note', el).value, tell: $('#cl-g-tell', el).checked }); App.toast(`Done: they have ${fmt(res.balance)} of call time now.`, 3500); this.calls(el); }
+        catch (x) { msg.textContent = x.message; btn.disabled = false; }
+      });
     },
 
     /* Bo quality (api/ai.php ai_admin_quality): what the math check caught, by week, and the answers students marked not right */

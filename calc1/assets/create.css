@@ -401,3 +401,47 @@ html[data-motion="off"] .bh-act { transition: none; }
 
 /* the Max card: a link to the one-minute demo of a call (assets/max.js) */
 .pl-demo { display: inline-flex; align-items: center; gap: 6px; margin: 2px 0 10px; font-weight: 700; font-size: 14.5px; }
+
+/* ---------- #/calls: your calls with Bo (assets/calls.js), and the admin's Calls tab ---------- */
+.cl-page { display: grid; gap: 16px; }
+.cl-time { display: grid; gap: 16px; padding: 20px; }
+.cl-big { display: flex; flex-direction: column; gap: 4px; }
+.cl-big-n { font: 800 clamp(34px, 7vw, 48px)/1 var(--font-display); color: var(--ink); font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
+.cl-big-l { color: var(--muted); font-size: 15px; }
+.cl-time.out .cl-big-n { color: var(--coral); }
+.cl-parts { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr)); gap: 12px; }
+.cl-buy { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; }
+.cl-buy p { margin: 0; }
+.cl-wait { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 12px 14px; border-radius: 14px; background: var(--surface-2); }
+.cl-wait[hidden] { display: none; }
+.cl-wait p { margin: 0; display: flex; align-items: center; gap: 6px; }
+.cl-fine { margin: 0; }
+.cl-up h2 { font: 800 22px/1.25 var(--font-display); margin: 0 0 6px; color: var(--ink); }
+.cl-up p { margin: 0; }
+.cl-acts { flex-wrap: wrap; }
+.cl-kept { margin: 0; display: flex; align-items: center; gap: 6px; color: var(--ink-2); }
+.cl-cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr)); gap: 16px; align-items: start; }
+.cl-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-bottom: 12px; }
+.cl-stats div { display: flex; flex-direction: column; gap: 2px; min-width: 0; padding: 10px 12px; border-radius: 14px; background: var(--surface-2); }
+.cl-stats b { font: 800 19px/1.1 var(--font-display); color: var(--ink); font-variant-numeric: tabular-nums; }
+.cl-stats span { font-size: 12.5px; line-height: 1.3; color: var(--muted); }
+.cl-list { list-style: none; margin: 0; padding: 0; display: grid; }
+.cl-list li { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr) auto; gap: 2px 12px; align-items: baseline; padding: 9px 0; border-top: 1px dashed var(--border); font-size: 14px; }
+.cl-list li:first-child { border-top: 0; }
+.cl-when { color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.cl-cls { font-weight: 700; color: var(--ink); overflow-wrap: anywhere; }
+.cl-len { font-weight: 800; font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
+.cl-len.pos { color: var(--pine); }
+.cl-len.neg { color: var(--coral); }
+.cl-from { grid-column: 1 / -1; font-size: 12.5px; color: var(--muted); }
+.cl-set { display: grid; gap: 8px; }
+.cl-set-h { margin: 10px 0 0; font: 800 15px/1.3 var(--font-display); color: var(--ink); }
+.cl-opts, .cl-chips { display: flex; flex-wrap: wrap; gap: 6px 8px; }
+.cl-set .bt-switch { margin-top: 4px; }
+.cl-foot { text-align: center; }
+.cl-adm-set { margin: 0; padding-left: 18px; display: grid; gap: 6px; }
+@media (max-width: 560px) {
+  .cl-stats { grid-template-columns: 1fr 1fr; }
+  .cl-list li { grid-template-columns: minmax(0, 1fr) auto; }
+  .cl-when { grid-column: 1 / -1; order: 2; font-size: 12.5px; }
+}

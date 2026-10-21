@@ -276,13 +276,42 @@ keys, RevenueCat and email (a test email to you).
 
 ## Request a class
 
-`#/request` (`assets/requests.js`, `api/requests.php`), for **professors and TAs** (`mh_can_request`: an Instructor or TA role from the admin panel or a Faculty approval, a TA in a Mathub Faculty class, or an administrator; `user.can_request`). Students and guests do not see the links; they are pointed to Create a class instead, and the server refuses their requests. Staff who don't see their class send its course code (normalised to MSU style, e.g. `chmy121` → `CHMY 121`), optional name, term and instructor, and the syllabus as a PDF or Word file (up to 10 MB) or pasted text, with a consent box. Links lead there from the start page (under Your classes), the class picker, Settings, and search (typing an unknown course code offers "Request CHMY 999"). Codes already on Mathub are caught as you type.
+Classes are added by Mathub's team, so this is how a class gets onto Mathub. `#/request` (`assets/requests.js`,
+`api/requests.php`) is for **every signed-in member** (`mh_can_request`, `user.can_request`; guests are asked to sign
+in). A member sends the course code (normalised to MSU style, e.g. `chmy121` → `CHMY 121`), an optional name, term
+and instructor, and the syllabus as a PDF, a Word file (.docx) or a photo (JPEG, PNG, WebP), up to 10 MB, or pasted
+text, with a consent box. Links lead there from the start page (under Your classes, and the Bo card's Request a
+class), the sidebar (Request a class where administrators see Add a class), the class picker, Settings, Bo's "Pick a
+class first", a shared class link, and search (typing an unknown course code offers "Request CHMY 999"). Codes
+already on Mathub are caught as you type. Classes a student made before (their own classes) are listed there too,
+with Open, Download and Delete (`App.paintMyClasses`).
 
-- **Storage.** Requests live in the `class_requests` table (created on first use). Files go to `api/data/syllabi/` under random names, with `Require all denied`, and are only served to administrators through `admin_classreq_file` as attachments. `api/.user.ini` raises PHP's upload limit to 12 MB for the API.
-- **Demand.** Requests for the same code are grouped. The page shows a public **Most requested** list (codes and counts only, never names or files) with a one-click **Me too**, and each student's own requests with their status.
-- **Admin panel → Class requests.** Groups sorted by demand, with each requester, their note, and the syllabus download. Buttons set the status for everyone who asked: **Working on it**, **Mark added** (asks for the Mathub class id, so the inbox message links to it), **Can't add** (with a reason) or **Back to new**. Each change sends an inbox message (and a push when added); admins get an inbox alert for a new class or a first syllabus. A delete button removes spam.
-- **Limits.** 8 requests per student per day, 10 open at once, one open request per class per student; banned accounts cannot request. Students can withdraw a request while it is new, which deletes the file.
-- **Sidebar.** Inside any class, a full-width **Request a class** link sits under the class switcher.
+- **The malware check** (`mh_cc_scan` in `api/community.php`, before anything is kept): the file must be what its
+  first bytes say (programs, archives, scripts and old Office files are refused); a PDF with active content
+  (JavaScript, launch actions, embedded files, rich media, XFA, submit or import actions, also inside compressed
+  streams and behind `#xx` escapes) or a password is refused; a Word file is opened as the zip it is
+  (`mh_cc_docx_check`): macros (`vbaProject.bin`), ActiveX, embedded files and objects, programs inside, a
+  template, frame or object loaded from outside (`TargetMode="External"`), `altChunk` and DDE fields are refused,
+  and so is a zip that unpacks to far more than it is; a photo must decode as the picture it says, with nothing
+  hidden after it. ClamAV scans it too when the server has it; with `virustotal_key` its SHA-256 is looked up. What
+  was checked is kept with the request (`class_requests.scan`) for the admin panel. A refused file is not kept.
+- **Storage.** Requests live in the `class_requests` table. Files go to `api/data/syllabi/` under random names, with
+  `Require all denied`, and are only served to administrators (`admin_classreq_file`). `api/.user.ini` raises PHP's
+  upload limit to 12 MB for the API.
+- **Demand.** Requests for the same code are grouped. The page shows a public **Most requested** list (codes and
+  counts only, never names or files) with a one-click **Me too**, and each student's own requests with their status.
+- **Admin panel → Class requests.** Groups sorted by demand, with each requester, their note and the syllabus.
+  **Preview and build** shows the syllabus on the page: a PDF in a frame and a photo as a picture (both from a copy
+  fetched by the page, a `blob:` URL, so the file is never a page of its own; the page's CSP allows `frame-src
+  blob:`), a Word file as its text (`admin_classreq_preview`), the pasted text, and what the malware check looked at.
+  **Build the class with Bo** (Full or Shorter) runs `ai_class` with the request's id (the stored file is read on
+  the server; a Word file goes as its text, a big photo is made smaller) and shows his steps and the class; **Add to
+  Mathub** publishes it (`community_publish`), and everyone who asked is told (by the pack's code, and by the
+  request's code when they differ, `ai_builds.req_code`). Already on Mathub: one button marks the request added as
+  that class. The status buttons still work by hand: **Working on it**, **Mark added** (asks for the class id),
+  **Can't add** (with a reason) or **Back to new**; each change sends an inbox message (and a push when added).
+- **Limits.** 8 requests per student per day, 10 open at once, one open request per class per student; banned
+  accounts cannot request. Students can withdraw a request while it is new, which deletes the file.
 
 ## Add a class from the admin panel (class packs)
 
@@ -362,8 +391,10 @@ The Hostinger zip never includes `app/`.
 `assets/create.js`, `assets/create.css`, `api/myclasses.php`; setup and store details in
 `docs/app-subscriptions.md`.
 
-- **Create a class** (`#/create`, website and apps): copy the instructions, give them to any AI with your
-  syllabus, paste the answer back. Mathub finds the JSON in the answer, repairs what it safely can, validates
+- **Create a class** (`#/create`): on the website for **administrators only** (`App.canMakeClasses`; everyone else
+  who opens it lands on Request a class, and the server refuses students `ai_class` and `community_publish`); the
+  apps (on hold) still make a class of your own on the device, without Bo. Copy the instructions, give them to any
+  AI with your syllabus, paste the answer back. Mathub finds the JSON in the answer, repairs what it safely can, validates
   it with the class-pack checker and shows a preview before adding it. Mathub never sends the syllabus anywhere.
   On the website adding a class needs an account; the page itself is open to guests.
 - **Where classes live.** With the account (`my_classes`: the class pack, up to 40 classes of 3 MB each), so
@@ -372,29 +403,30 @@ The Hostinger zip never includes `app/`.
   signed out goes up at the next sign-in. `App.classSync` keeps both sides the same (new ones up, the account's
   down, deleted ones gone everywhere; an id clash gets a new id). Rows go with the account through
   `ON DELETE CASCADE`, and Download my data includes them.
-- **Mathub Pro ($15) and Mathub Max ($50)** (`App.subscription`, `App.paywall({ need })`): with Pro, Bo is on every
-  page (the floating Bo, `assets/bo-float.js`) and classes of your own can be added (shared, from a file, made with
-  your own AI); Max adds Ask Bo's own page, talking out loud and calls. Turning a syllabus into a class for everyone
-  needs no plan (below). The apps buy them through the App Store or
+- **Mathub Pro ($15) and Mathub Max ($20)** (`App.subscription`, `App.paywall({ need })`): with Pro, Bo is on every
+  page (the floating Bo, `assets/bo-float.js`); Max adds Ask Bo's own page, talking out loud and calls, with an hour
+  of calls each month and more time bought ahead (Calls with Bo, below). The apps buy them through the App Store or
   Google Play; the website opens the plan's RevenueCat Web Purchase Link (Stripe) in a new tab and waits for it
   (`create_status`, which asks RevenueCat's REST API and keeps the answer for 10 minutes unless asked to refresh).
   All use the RevenueCat customer `mh_<account id>` and the entitlements `pro` and `max` (a Max product unlocks
   both). `plan_grants` in `config.local.php` gives testers a plan without paying. The example class and classes
   made before the plans existed are free; when a plan ends, classes are kept, locked (`App.courseGate`), until it
   is back. Settings has a Your plan panel (website) or row (apps) leading to **Your plan** (`#/plan`, also in the
-  account menu): the plan and how it is paid, when it renews or ends, this month's use (questions to Bo, classes
-  Bo writes, call minutes), the three plans side by side, Manage billing (RevenueCat's customer portal or the store)
+  account menu): the plan and how it is paid, when it renews or ends, this month's use (questions to Bo, and with
+  Max the call time left, linking to the Calls page), the three plans side by side, Manage billing (RevenueCat's customer portal or the store)
   and **Cancel plan**: one dialog (what changes and when, an optional reason kept in `plan_feedback`, Keep my plan),
   then `plan_cancel` cancels a website plan through RevenueCat's API v2 when `revenuecat_v2_key` and
   `revenuecat_project` are set, or opens its billing page; App Store and Google Play plans go to the store.
 - **Bo on the start page** (website, signed in): one card under the hero with Call Bo (a call right there, about
-  the class you are in), Ask Bo and Add a class with Max; Ask Bo here (opens the floating Bo) and Add a class with
-  Pro; Get Pro, Get Max and Add a class without a plan; what is left this month, and the plan, a click from Your plan.
-- **Sharing.** Share gives `https://mathub.space/#/c/CODE`, the 8-character code and a QR code
-  (`assets/vendor/qrcode.js`, qrcode-generator, MIT, loaded on demand). `#/c/CODE` shows the class to anyone,
-  without the owner's name, with Add (a copy; needs Pro or Max) and Report. Moderators can stop a reported
+  the class you are in), Ask Bo and Request a class with Max; Ask Bo here (opens the floating Bo) and Request a class
+  with Pro; Get Pro, Get Max and Request a class without a plan (administrators see Add a class); what is left this
+  month, the plan a click from Your plan, and with Max the call time a click from the Calls page.
+- **Sharing** (administrators on the website; students no longer share). Share gives `https://mathub.space/#/c/CODE`,
+  the 8-character code and a QR code (`assets/vendor/qrcode.js`, qrcode-generator, MIT, loaded on demand). `#/c/CODE`
+  shows the class to anyone, without the owner's name, with Report, and Request it for students (Add a copy for
+  administrators). Links students shared before keep working until their owner stops sharing. Moderators can stop a reported
   share from Admin → Problems. The owner can stop sharing at any time.
-- **Create a class** (`#/create`): "Bo writes it from your syllabus" first (drop in a PDF, photo or text file, or
+- **Create a class** (`#/create`, administrators): "Bo writes it from your syllabus" first (drop in a PDF, photo or text file, or
   paste the text; Full or Shorter class; Write my class, then his steps and the class preview with Add to Mathub;
   see Classes anyone adds from a syllabus), then Classes you added to Mathub, then
   "Other ways to add a class": the free example class, a share code, a class file, and "Use the AI you already
@@ -417,11 +449,13 @@ To add words: `node scripts/i18n-extract.js` (new words get new numbers in `i18n
 follow goes in `i18n/extra.txt`), translate the numbers in `i18n/<lang>.tsv`, then `node scripts/build-i18n.js`.
 French, Italian, Portuguese and German are partly translated and are not in the picker yet.
 
-## Classes anyone adds from a syllabus, for everyone
+## Classes Bo writes from a syllabus, for everyone
 
-`api/community.php`, `api/ai.php` (`ai_class`), `assets/create.js`. Any signed-in member, with no plan, can have Bo
-turn a syllabus into a class that is published for every student (one class per course, so its notes, practice and
-board stay in one place).
+`api/community.php`, `api/ai.php` (`ai_class`), `assets/create.js` (`App.boClass`, shared with the admin panel).
+Mathub's administrators have Bo turn a syllabus into a class that is published for every student (one class per
+course, so its notes, practice and board stay in one place): from a class request in the admin panel (`ai_class` with
+`request`, the stored syllabus) or from a file or text on the Create page. Students request classes instead (Request a
+class, above); the server refuses them `ai_class` and `community_publish` (403, `request: true`).
 
 - **The file is checked for malware first** (`mh_cc_scan`): it must be what it says it is by its first bytes (a PDF,
   a JPEG/PNG/WebP/GIF photo, or UTF-8 text) and is never a program, archive or script under another name; a photo
@@ -429,7 +463,7 @@ board stay in one place).
   actions, embedded files, rich media, XFA, submit or import actions) is refused, names written with `#xx` escapes
   and compressed (FlateDecode) streams included, and a password-protected PDF cannot be read. ClamAV scans it too
   when the server has `clamdscan`/`clamscan`; with `virustotal_key` (Keys & settings) VirusTotal is asked about
-  its SHA-256 only. The file is never stored.
+  its SHA-256 only. A file given on the Create page is never stored; a request's file is kept with the request.
 - **Then Bo checks the document** (`MH_CC_SCREEN`, one small request): the syllabus of one real course (a course
   code and title, real content), nothing that must not be published (hateful or sexual content, students' private
   details, text aimed at the AI), its code, title, school and term. Not a syllabus, or something unpublishable:
@@ -446,9 +480,9 @@ board stay in one place).
   letter when taken), the tagline "Made with Bo from the syllabus" and `uploaded_by` `community:<account id>`, and
   stores it as a class pack, published. The students who requested that class are told, it appears in the
   activity feed, and the browser adds it to the maker's classes and opens it. `community_mine` lists a member's
-  classes on the Create page. Admin → Classes lists them as "A member with Bo · email" (looked up when listed),
-  where they can be hidden, rolled back or deleted like any pack. Limits: 15 classes a month (`ai_class_monthly`),
-  30 checks a day and 20 publishes an hour per account.
+  classes on the Create page. Admin → Classes lists them as "Made with Bo · email" (looked up when listed),
+  where they can be hidden, rolled back or deleted like any pack. Limits: 30 checks a day and 20 publishes an hour
+  per account.
 
 ## Bo, the AI tutor (Pro and Max), classes Bo writes, and the AI server
 
@@ -619,6 +653,36 @@ free; the call's clock shows the minutes left and ends the call when they run ou
 **Invites** (`ai_invite_minutes`, 10 by default, 0 turns it off): a classmate who joins through your invite link
 gives you both that many more free minutes (`ai_trial.bonus`, up to 60 per account; `mh_invite_reward` in
 `api/growth.php`). Settings, the join page and the invite banner say so.
+
+## Calls with Bo: call time, buying hours, the Calls page
+
+`api/calls.php`, `assets/calls.js`, the admin panel's Calls tab (`assets/admin.js`). **Mathub Max ($20 a month)
+includes an hour of calls each month** (`call_included_minutes`, 60); **more time is bought ahead**, 60 minutes
+(`call_hour_minutes`) for $10 (`call_hour_price`), as a one-time RevenueCat product (`call_hour_product`,
+`mathub_call_hour`) sold on the website through its Web Purchase Link (`call_hour_link`, opened with the member's
+RevenueCat id). All of these are in Site settings → Payments.
+
+- **Using it.** A Max member's calls use the month's included minutes first (`call_month`), then the time bought
+  (`call_credit`: + per purchase and gift, − per refund and, one row per call, the part of that call paid from bought
+  time). `ai_live_start` refuses a call when nothing is left (402, `hours: true`: the call says "Get more call time"
+  and links to the Calls page) and `ai_live_tick` ends a call when time runs out, saying so. Bought time never
+  expires; without Max it is kept for when Max is back. `ai_live_daily` (240) and `ai_live_monthly` (3000) stay as
+  safety limits only. Free minutes for everyone without Max are unchanged (above).
+- **Purchases** (`calls_sync`): the server reads the member's RevenueCat record (`non_subscriptions`) and adds a pack
+  for each transaction it has not seen; a transaction that is gone (refunded) is taken back once. It asks at most
+  once a minute, or at once after the checkout (`#/calls?paid=1`, set as the link's success page) or "I paid".
+- **#/calls** (account menu → Calls with Bo; the Bo card's Call time; Your plan's call meter): what is left as one
+  number, this month's hour and the hours bought, Buy an hour (opens the checkout in a new tab, then I paid), this
+  month, every call (what it used: this month's hour, bought hours or free minutes), what was bought, refunded and
+  given, and how Bo sounds on calls (who he is, his voice, his pace, when he jumps in, headphones, echo, captions:
+  the same settings as the call's own sheet). Without Max: what calls cost, the free minutes, and time kept. In the
+  apps the page only says calls are on the website (no checkout links in the apps).
+- **Admin → Calls** (`admin_calls`): this month's minutes (from included hours, bought time and free minutes),
+  calls and people, packs sold and refunded, what they brought in (before fees), time given; the prices and limits
+  with a link to Site settings and whether the purchase link and RevenueCat are set; every member who called this
+  month or has time, with their plan, minutes, included hour used and time left; **Give call time** (`admin_calls_grant`:
+  minutes, a minus sign takes time back, a note only administrators see, and an inbox message to the member); and
+  every purchase, refund and gift.
 
 ## Bo's characters, recaps, exam review calls, study rooms and Bo quality
 

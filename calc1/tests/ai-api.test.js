@@ -331,7 +331,7 @@ const snapshot = { name: 'Alice', streak: 4, xpToday: 10, goal: 30, page: 'Calc 
   ok('what was said on the call is saved to the chat, and new notes to his notes (once)', r.ok && r.saved === 3 && r.notes.filter(n => n === 'Likes to talk it through').length === 1, r);
   r = await call('mod', 'ai_thread&class=calc'); ok('in order, marked as said out loud', r.turns.length === 3 && r.turns.every(t => t.v === 1) && r.turns[0].r === 'b' && r.turns[1].t === 'The chain rule' && /\[board:/.test(r.turns[2].t), r.turns);
   ok('ending the call hangs it up on OpenAI\'s side', rd('live-hangups.json', []).length === 3);
-  r = await call('mod', 'ai_status'); ok('live minutes are counted, with the monthly limit, and what is left takes today\'s calls into account', typeof r.usage.live === 'number' && r.usage.live_limit === 18000 && r.usage.live_left <= 90 * 60 - 1800, r.usage);
+  r = await call('mod', 'ai_status'); ok('live minutes are counted, with the safety limits, and what is left takes her call time into account (an hour included with Max)', typeof r.usage.live === 'number' && r.usage.live_limit === 180000 && r.usage.live_left <= 3600 && r.calls && r.calls.included === 3600, { usage: r.usage, calls: r.calls });
   // Bo's characters (assets/bo-characters.js): Professor Bo by default, with his voice and pace; others when picked; the student's own voice wins
   db('UPDATE ai_live SET ended = 1 WHERE user_id = (SELECT id FROM users WHERE email = ?)', 'mod.user@montana.edu');
   r = await call('mod', 'ai_live_start', { class: 'calc', sdp: OFFER }); let LS = rd('live-last.json', {}).session;

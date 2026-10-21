@@ -136,8 +136,8 @@ function mh_ai_voice_settings(array $cfg): array {
     'live_model_max' => trim((string)($cfg['ai_live_model_max'] ?? 'gpt-realtime-2.1')),   // Max members' calls; empty: the same as live_model
     'live_transcribe' => trim((string)($cfg['ai_live_transcribe'] ?? 'gpt-live-transcribe')) ?: 'gpt-live-transcribe',   // the captions and the app's math check (gpt-4o-mini-transcribe ends 2027-02-26)
     'live_voice' => in_array($cfg['ai_live_voice'] ?? '', array_keys(MH_AI_LIVE_VOICES), true) ? $cfg['ai_live_voice'] : 'cedar',
-    'live_monthly' => 60 * max(0, (int)($cfg['ai_live_monthly'] ?? 300)),   // seconds
-    'live_daily' => 60 * max(1, (int)($cfg['ai_live_daily'] ?? 90)),
+    'live_monthly' => 60 * max(0, (int)($cfg['ai_live_monthly'] ?? 3000)),   // seconds
+    'live_daily' => 60 * max(1, (int)($cfg['ai_live_daily'] ?? 240)),
     'live_call' => 60 * max(1, (int)($cfg['ai_live_call'] ?? 30)),
     'trial' => 60 * max(0, (int)($cfg['ai_trial_minutes'] ?? 10)),   // free call time with Bo, once, for everyone without Max
   ];
@@ -863,7 +863,11 @@ function mh_ai_route(string $route, array $in, array $cfg, string $ip): void {
       if ($u) {
         $use = mh_ai_usage((int)$u['id']); $out['notes'] = mh_ai_notes((int)$u['id']);
         $out['usage'] = ['tutor' => $use['tutor'], 'tutor_limit' => $A['tutor_monthly'], 'classes' => $use['classes'], 'class_limit' => $A['class_monthly'], 'voice' => $use['voice'], 'voice_limit' => $V['voice_monthly'], 'listen' => $use['listen'], 'listen_limit' => $V['listen_monthly'], 'live' => $use['live'], 'live_limit' => $V['live_monthly'], 'live_left' => mh_ai_live_left((int)$u['id'], $V)];
-        $out['voice']['live'] = $out['voice']['live'] && $out['usage']['live_left'] > 0;
+        if ($plan === 'max') {   // calls: the month's included minutes and the hours bought (api/calls.php)
+          require_once __DIR__ . '/calls.php'; $CL = mh_calls_left((int)$u['id'], $cfg); $CC = mh_calls_cfg($cfg);
+          $out['calls'] = $CL + ['price' => $CC['price'], 'pack' => $CC['pack']]; $out['usage']['live_left'] = min($out['usage']['live_left'], $CL['left']);
+        }
+        $out['voice']['live'] = $out['voice']['live'] && ($out['usage']['live_left'] > 0 || $plan === 'max');   // out of time: the call says how to get more
         $out['voice']['natural'] = $out['voice']['natural'] && $use['voice'] < $V['voice_monthly']; $out['voice']['listen'] = $V['key'] !== '' && $use['listen'] < $V['listen_monthly'];
         if ($plan !== 'max' && $V['trial'] > 0 && $A['key'] !== '') $out['trial'] = mh_ai_trial_public((int)$u['id'], $V);   // free minutes with Bo
       } else $out['voice']['listen'] = $V['key'] !== '';
@@ -1004,6 +1008,12 @@ function mh_ai_route(string $route, array $in, array $cfg, string $ip): void {
       $trial = mh_plan($u, $cfg) !== 'max'; if ($trial) mh_ai_trial_or_fail($uid, $V);   // without Max: the free minutes
       if ($V['key'] === '') mh_fail('Live calls are not switched on yet.', 503, ['fallback' => true]);
       $left = mh_ai_live_left($uid, $V); if ($left <= 0) mh_fail(mh_ai_usage($uid)['live'] >= $V['live_monthly'] ? 'That is all the live call time for this month. It starts again on the 1st.' : 'That is a lot of calling for one day. Bo is around again tomorrow.', 429, ['fallback' => true]);
+      if (!$trial) {   // Max: the month's included minutes, then the hours bought (api/calls.php)
+        require_once __DIR__ . '/calls.php'; $CL = mh_calls_left($uid, $cfg);
+        if ($CL['left'] <= 0 && mh_calls_sync($u, $cfg) > 0) $CL = mh_calls_left($uid, $cfg);   // an hour bought a moment ago
+        if ($CL['left'] <= 0) mh_fail('You have used this month’s call time with Bo. Buy an hour (' . mh_calls_cfg($cfg)['price'] . ') on the Calls page to keep calling, or wait for the 1st, when your included hour comes back.', 402, ['hours' => true]);
+        $left = min($left, $CL['left']);
+      }
       // a call that dropped and is being picked up again (assets/talk.js): the same call, with its minutes so far
       $prev = null; $resume = preg_replace('/[^a-f0-9]/', '', (string)($in['resume'] ?? ''));
       if ($resume !== '') { $st = $db->prepare('SELECT * FROM ai_live WHERE id = ? AND user_id = ? AND started >= ?'); $st->execute([$resume, $uid, time() - 7200]); $prev = $st->fetch() ?: null; }
@@ -1077,8 +1087,11 @@ function mh_ai_route(string $route, array $in, array $cfg, string $ip): void {
       $now = time(); $d = max(0, min(45, $now - (int)$r['last'])); $secs = (int)$r['secs'] + $d;
       $db->prepare('UPDATE ai_live SET secs = ?, last = ? WHERE id = ?')->execute([$secs, $now, $lid]);
       $trial = (int)($r['trial'] ?? 0) === 1;
-      if ($trial) { mh_ai_trial_add($uid, $d); if ((string)$r['call'] !== '') mh_ai_add($uid, 'live', $d); } else mh_ai_add($uid, 'live', $d);
+      if ($trial) { mh_ai_trial_add($uid, $d); if ((string)$r['call'] !== '') mh_ai_add($uid, 'live', $d); }
+      else { mh_ai_add($uid, 'live', $d); require_once __DIR__ . '/calls.php'; mh_calls_charge($uid, $lid, $d, $cfg); }   // Max: included minutes first, then the hours bought
       $left = min(mh_ai_live_left($uid, $V), $V['live_call'] - $secs); if ($trial) $left = (string)$r['call'] === '' ? mh_ai_trial_left($uid, $V) : min($left, mh_ai_trial_left($uid, $V));
+      $outOfTime = false;
+      if (!$trial) { $CL = mh_calls_left($uid, $cfg); if ($CL['left'] <= 0 && mh_calls_sync($u, $cfg) > 0) $CL = mh_calls_left($uid, $cfg); $outOfTime = $CL['left'] <= 0; $left = min($left, $CL['left']); }
       if ($trial && (string)$r['call'] === '' && !empty($in['end'])) { $db->prepare('UPDATE ai_live SET ended = 1 WHERE id = ?')->execute([$lid]); mh_json(['ok' => true, 'left' => mh_ai_trial_left($uid, $V), 'end' => true]); }   // a basic voice call hung up
       if ($trial && mh_ai_trial_left($uid, $V) <= 0) {   // the free minutes are up
         mh_ai_hangup($V, (string)$r['call']); $db->prepare('UPDATE ai_live SET ended = 1 WHERE id = ?')->execute([$lid]);
@@ -1086,7 +1099,7 @@ function mh_ai_route(string $route, array $in, array $cfg, string $ip): void {
       }
       if ($left <= 0) {
         mh_ai_hangup($V, (string)$r['call']); $db->prepare('UPDATE ai_live SET ended = 1 WHERE id = ?')->execute([$lid]);
-        mh_json(['ok' => true, 'left' => 0, 'end' => true, 'why' => $V['live_call'] - $secs <= 0 ? 'That was a long one: calls end after ' . round($V['live_call'] / 60) . ' minutes. Call Bo again any time.' : 'That is all the live call time for now. It comes back tomorrow, or on the 1st for the monthly limit.']);
+        mh_json(['ok' => true, 'left' => 0, 'end' => true, 'hours' => $outOfTime, 'why' => $V['live_call'] - $secs <= 0 ? 'That was a long one: calls end after ' . round($V['live_call'] / 60) . ' minutes. Call Bo again any time.' : ($outOfTime ? 'That was all your call time with Bo. Buy another hour on the Calls page to keep talking.' : 'That is all the live call time for now. It comes back tomorrow, or on the 1st for the monthly limit.')]);
       }
       mh_json(['ok' => true, 'left' => $left]);
     }
@@ -1174,6 +1187,7 @@ function mh_ai_route(string $route, array $in, array $cfg, string $ip): void {
         $mc = is_array($in['mc'] ?? null) ? $in['mc'] : [];   // what the math check caught on the call (assets/talk.js)
         mh_ai_q('calls'); foreach (['you' => 'call_you', 'bo' => 'call_bo', 'page' => 'call_page', 'false_barge' => 'false_barge', 'cut_client' => 'cut_client', 'cut_limit' => 'cut_limit', 'errors' => 'call_errors', 'drops' => 'drops'] as $k => $key) mh_ai_q($key, max(0, min(50, (int)($mc[$k] ?? 0))));
         $now = time(); $d = max(0, min(45, $now - (int)$r['last'])); mh_ai_add($uid, 'live', $d);
+        if (!(int)($r['trial'] ?? 0) && (string)$r['call'] !== '') { require_once __DIR__ . '/calls.php'; mh_calls_charge($uid, $lid, $d, $cfg); }   // the last seconds of a Max call
         $db->prepare('UPDATE ai_live SET secs = secs + ?, last = ?, ended = 1 WHERE id = ?')->execute([$d, $now, $lid]);
         mh_ai_hangup($V, (string)$r['call']);
       }
