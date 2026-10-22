@@ -161,6 +161,9 @@ components:
 > instead of the 3–4px lip, headings at 700 and smaller (page titles 32px, the start page's 36px), borderless icons
 > in the top bar with Call Bo as its one coloured button (Ask Bo leaves the top bar), the sidebar clock as one line
 > and New without its six shortcut tiles. Where this file and clean.css disagree, clean.css wins.
+> Dark mode (2026.10.22.4): clean.css loads after world.css at the same specificity, so its dark blocks must restate
+> every text token it sets (--ink, --ink-2, --muted), and the start page's hero swaps to a night sky; tests/dark-mode.test.js
+> checks 4.5:1 text contrast on the main pages in both the dark setting and the device's own dark mode.
 
 ## Overview
 

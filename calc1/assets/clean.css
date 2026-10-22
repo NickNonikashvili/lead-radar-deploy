@@ -5,7 +5,7 @@
    lighter headings, fewer things in the top bar and the sidebar, more room. Loaded after every other stylesheet.
    ============================================================ */
 
-/* ---------- tokens ---------- */
+/* ---------- tokens (light; dark mode below sets every one of them again, text colours included) ---------- */
 :root:not([data-skin]):not([data-app]) {
   --bg: #F5F8FC; --surface-2: #F2F5FA; --surface-3: #E7ECF3;
   --border: #E2E8F0; --border-strong: #CDD6E2; --lip: rgba(20, 33, 61, 0.07);
@@ -13,8 +13,8 @@
   --shadow: 0 14px 34px -18px rgba(20, 33, 61, 0.28), 0 2px 6px -2px rgba(20, 33, 61, 0.08);
   --radius: 16px; --radius-sm: 10px;
 }
-:root:not([data-skin]):not([data-app])[data-theme="dark"] { --bg: #0C1424; --surface-2: #17243B; --surface-3: #1F2F49; --border: #22334F; --border-strong: #31476B; --lip: rgba(0, 0, 0, 0.28); }
-@media (prefers-color-scheme: dark) { :root:not([data-skin]):not([data-app]):not([data-theme="light"]) { --bg: #0C1424; --surface-2: #17243B; --surface-3: #1F2F49; --border: #22334F; --border-strong: #31476B; --lip: rgba(0, 0, 0, 0.28); } }
+:root:not([data-skin]):not([data-app])[data-theme="dark"] { --bg: #0C1424; --surface-2: #17243B; --surface-3: #1F2F49; --border: #22334F; --border-strong: #31476B; --lip: rgba(0, 0, 0, 0.28); --ink: #EEF3FA; --ink-2: #C3D0E2; --muted: #9AABC4; --shadow: 0 14px 34px -18px rgba(0, 0, 0, 0.6), 0 2px 6px -2px rgba(0, 0, 0, 0.35); }
+@media (prefers-color-scheme: dark) { :root:not([data-skin]):not([data-app]):not([data-theme="light"]) { --bg: #0C1424; --surface-2: #17243B; --surface-3: #1F2F49; --border: #22334F; --border-strong: #31476B; --lip: rgba(0, 0, 0, 0.28); --ink: #EEF3FA; --ink-2: #C3D0E2; --muted: #9AABC4; --shadow: 0 14px 34px -18px rgba(0, 0, 0, 0.6), 0 2px 6px -2px rgba(0, 0, 0, 0.35); } }
 
 /* ---------- type: the same faces, lighter and smaller ---------- */
 :root:not([data-skin]):not([data-app]) body { font-size: 15.5px; }
@@ -141,6 +141,10 @@
 :root:not([data-skin]):not([data-app]) .wh-tab, :root:not([data-skin]):not([data-app]) .wh-tab.on { box-shadow: none; }
 :root:not([data-skin]):not([data-app]) .wh-tab:active { transform: none; }
 :root:not([data-skin]):not([data-app]) .bo-class { font-size: 13.5px; }
+
+/* ---------- dark mode: the start page's sky at night (the day drawing's white clouds sat behind the white heading) ---------- */
+:root:not([data-skin]):not([data-app])[data-theme="dark"] .landing-top.hero { background-color: #12213C; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 320' preserveAspectRatio='xMidYMax slice'%3E%3Ccircle cx='1010' cy='70' r='34' fill='%23F3EBD3'/%3E%3Ccircle cx='1024' cy='60' r='30' fill='%2316294A'/%3E%3Cpath d='M120 92h120a22 22 0 0 0-20-33 30 30 0 0 0-55-8 21 21 0 0 0-45 41z' fill='%2322385E' opacity='.7'/%3E%3Cpath d='M640 60h90a17 17 0 0 0-15-25 23 23 0 0 0-42-6 16 16 0 0 0-33 31z' fill='%2322385E' opacity='.7'/%3E%3Cpath d='M0 240l90-70 70 40 120-120 90 90 80-60 110 100 100-90 120 110 90-70 130 100 110-80 90 60v170H0z' fill='%231E3254'/%3E%3Cpath d='M360 320l150-190 60-70 70 80 90 90 120 90H360z' fill='%23284270'/%3E%3Cpath d='M510 130l60-70 70 80-30-10-20 22-26-26-22 20z' fill='%23B9C8E0'/%3E%3Cpath d='M0 300c120-40 260-50 400-30s300 20 420 0 260-30 380-10v60H0z' fill='%23173A35'/%3E%3C/svg%3E"); }
+@media (prefers-color-scheme: dark) { :root:not([data-skin]):not([data-app]):not([data-theme="light"]) .landing-top.hero { background-color: #12213C; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 320' preserveAspectRatio='xMidYMax slice'%3E%3Ccircle cx='1010' cy='70' r='34' fill='%23F3EBD3'/%3E%3Ccircle cx='1024' cy='60' r='30' fill='%2316294A'/%3E%3Cpath d='M120 92h120a22 22 0 0 0-20-33 30 30 0 0 0-55-8 21 21 0 0 0-45 41z' fill='%2322385E' opacity='.7'/%3E%3Cpath d='M640 60h90a17 17 0 0 0-15-25 23 23 0 0 0-42-6 16 16 0 0 0-33 31z' fill='%2322385E' opacity='.7'/%3E%3Cpath d='M0 240l90-70 70 40 120-120 90 90 80-60 110 100 100-90 120 110 90-70 130 100 110-80 90 60v170H0z' fill='%231E3254'/%3E%3Cpath d='M360 320l150-190 60-70 70 80 90 90 120 90H360z' fill='%23284270'/%3E%3Cpath d='M510 130l60-70 70 80-30-10-20 22-26-26-22 20z' fill='%23B9C8E0'/%3E%3Cpath d='M0 300c120-40 260-50 400-30s300 20 420 0 260-30 380-10v60H0z' fill='%23173A35'/%3E%3C/svg%3E"); } }
 
 @media (max-width: 640px) {
   :root:not([data-skin]):not([data-app]) .page-title { font-size: 26px; }
