@@ -90,11 +90,11 @@ function mh_invite_reward(array $newUser): void {
     $db->prepare('INSERT INTO notifications (user_id, kind, post_id, comment_id, actor_id, actor, title, snippet, link, created) VALUES (?, "badge", 0, NULL, ?, ?, ?, ?, ?, ?)')->execute([$inv, (int)$newUser['id'], mh_display_name($newUser), 'joined through your invite link', 'You both earned a badge. Study together on the class board.', '#/people', $now]);
     mh_activity('badge', '', 'A student joined through a classmate\'s invite', '#/people');
   } catch (Throwable $e) {}
-  // and more free minutes with Bo, for both (api/ai.php)
+  // and credits for Bo, for both (api/credits.php): ai_invite_credits each (100), up to 1,000 in all per account
   try {
-    require_once __DIR__ . '/ai.php'; $secs = mh_ai_invite_secs(mh_ai_voice_settings(mh_config())); if ($secs <= 0) return;
-    mh_ai_trial_bonus((int)$newUser['id'], $secs); $theirs = mh_ai_trial_bonus($inv, $secs);
-    if ($theirs > 0) $db->prepare('INSERT INTO notifications (user_id, kind, post_id, comment_id, actor_id, actor, title, snippet, link, created) VALUES (?, "badge", 0, NULL, ?, ?, ?, ?, ?, ?)')->execute([$inv, (int)$newUser['id'], mh_display_name($newUser), intdiv($theirs, 60) . ' more free minutes with Bo', 'They joined through your invite, so you both get ' . intdiv($theirs, 60) . ' more minutes to call Bo.', '#/tutor', $now]);
+    $n = max(0, (int)(mh_config()['ai_invite_credits'] ?? 100)); if ($n <= 0) return;
+    require_once __DIR__ . '/credits.php'; mh_credits_gift((int)$newUser['id'], $n, 'invite:joined', 'Joined through an invite', 1000, 'invite:'); $theirs = mh_credits_gift($inv, $n, 'invite:' . (int)$newUser['id'], 'A classmate joined through your invite', 1000, 'invite:');
+    if ($theirs > 0) $db->prepare('INSERT INTO notifications (user_id, kind, post_id, comment_id, actor_id, actor, title, snippet, link, created) VALUES (?, "badge", 0, NULL, ?, ?, ?, ?, ?, ?)')->execute([$inv, (int)$newUser['id'], mh_display_name($newUser), $theirs . ' credits for Bo', 'They joined through your invite, so you both get ' . $theirs . ' credits to use with Bo.', '#/usage', $now]);
   } catch (Throwable $e) {}
 }
 /* ---------- Sunday planning email ---------- */
@@ -120,7 +120,8 @@ function mh_planning_tick(int $max, bool $force = false): int {
    Once a day from 9 am (a few members on each visit), for members who picked their classes and kept it on
    (users.exam_nudge, Settings → Account): an exam in 2 or 3 days gets one email and one push (exam_nudges keeps
    which ones went out). Its button opens Ask Bo with ?call=exam: a call that starts on their weakest topics. Members
-   without Max or free minutes get the class's exam prep page instead. $today is for the tests. */
+   without enough credits for a call (about five minutes' worth, api/credits.php) get the class's exam prep page
+   instead. $today is for the tests. */
 function mh_exam_nudge_tick(int $max, bool $force = false, string $today = ''): int {
   if ((mh_config()['exam_emails'] ?? 'on') === 'off') return 0;   // switched off for everyone (admin → Site settings → Email)
   $tz = mh_tz(); $now = new DateTime('now', $tz); if ((!$force && (int)$now->format('G') < 9) || $max <= 0) return 0;
@@ -144,7 +145,8 @@ function mh_exam_nudge_tick(int $max, bool $force = false, string $today = ''): 
       }
       if (!$soon) continue;
       $e = $soon[0]; $cid = (string)$e['course']; $short = (string)$e['short']; $exam = $e['name']; $when = (new DateTime($e['date'], $tz))->format('l, M j') . ($e['time'] !== '' ? ', ' . $e['time'] : '');
-      $call = $V['key'] !== '' && (mh_plan($u, $cfg) === 'max' || ($V['trial'] > 0 && mh_ai_trial_left($uid, $V) > 0));
+      require_once __DIR__ . '/credits.php'; $plan = mh_plan($u, $cfg); $CC = mh_credits_cfg($cfg); $CL = mh_credits_left($u, $cfg, $plan);
+      $call = $V['key'] !== '' && ($CL['admin'] || $CL['left'] >= 5000 * ($plan === 'max' ? $CC['call_strong'] : $CC['call_light']));   // credits for a call of about five minutes
       $link = $call ? "#/tutor/$cid?call=exam" : "#/$cid/exam"; $go = $url . '/' . $link; $name = mh_display_name($u);
       $title = "$short $exam is in {$e['days']} days";
       $pitch = $call ? 'Bo has a review call ready. He starts with your weakest topics, asks you exam-style questions one at a time and checks your work on the board as you go. Fifteen minutes is plenty.' : 'Your exam prep page has the topics it covers, how ready you are and a practice exam. Start with your weakest topic.';
@@ -247,12 +249,12 @@ function mh_growth_route(string $route, array $in, array $cfg, string $ip): void
     }
 
     /* --- invites --- */
-    case 'invite_mine': { mh_method('GET'); $u = mh_require_user(); $st = $db->prepare('SELECT COUNT(*) FROM users WHERE invited_by = ? AND verified = 1'); $st->execute([$u['id']]); require_once __DIR__ . '/ai.php'; mh_json(['ok' => true, 'code' => mh_invite_code($u), 'joined' => (int)$st->fetchColumn(), 'minutes' => intdiv(mh_ai_invite_secs(mh_ai_voice_settings($cfg)), 60)]); }
+    case 'invite_mine': { mh_method('GET'); $u = mh_require_user(); $st = $db->prepare('SELECT COUNT(*) FROM users WHERE invited_by = ? AND verified = 1'); $st->execute([$u['id']]); require_once __DIR__ . '/ai.php'; mh_json(['ok' => true, 'code' => mh_invite_code($u), 'joined' => (int)$st->fetchColumn(), 'credits' => max(0, (int)($cfg['ai_invite_credits'] ?? 100)), 'minutes' => 0]); }
     case 'invite_info': {
       mh_method('GET'); $code = strtoupper(preg_replace('/[^A-Za-z0-9]/', '', (string)($_GET['ref'] ?? ''))); if (strlen($code) !== 6) mh_fail('Not found.', 404);
       $st = $db->prepare('SELECT name, email, courses FROM users WHERE invite_code = ? AND verified = 1'); $st->execute([$code]); $r = $st->fetch(); if (!$r) mh_fail('Not found.', 404);
       $first = trim(explode(' ', trim((string)$r['name']))[0] ?: explode('@', $r['email'])[0]); $courses = $r['courses'] ? (json_decode((string)$r['courses'], true) ?: []) : [];
-      header('Cache-Control: private, max-age=300'); require_once __DIR__ . '/ai.php'; mh_json(['ok' => true, 'name' => $first, 'courses' => array_values(array_filter($courses, fn($c) => isset(mh_course_names()[$c]))), 'minutes' => intdiv(mh_ai_invite_secs(mh_ai_voice_settings($cfg)), 60)]);
+      header('Cache-Control: private, max-age=300'); require_once __DIR__ . '/ai.php'; mh_json(['ok' => true, 'name' => $first, 'courses' => array_values(array_filter($courses, fn($c) => isset(mh_course_names()[$c]))), 'credits' => max(0, (int)($cfg['ai_invite_credits'] ?? 100)), 'minutes' => 0]);
     }
   }
   mh_fail('Not found.', 404);

@@ -8,12 +8,13 @@ if (preg_match('#^/revenuecat/v1/subscribers/(.+)$#', $path, $m)) {
   header('Content-Type: application/json');
   if (($_SERVER['HTTP_AUTHORIZATION'] ?? '') !== 'Bearer sk_test') { http_response_code(401); echo '{"code":7225,"message":"Invalid API key."}'; exit; }
   $id = rawurldecode($m[1]); $state = json_decode((string)@file_get_contents(__DIR__ . '/../fixtures/rc-state.json'), true) ?: []; $s = $state[$id] ?? null;
-  // call time bought (api/calls.php): "hours" lists the purchases' transaction ids; a customer with only those has no plan
-  $hours = (array)($s['hours'] ?? []); if ($s && !isset($s['expires']) && !isset($s['plan'])) $s = null;
+  // credits bought (api/credits.php): "credits" lists the packs' transaction ids, "hours" the call hours bought before
+  // credits; a customer with only those has no plan
+  $hours = (array)($s['hours'] ?? []); $packs = (array)($s['credits'] ?? []); if ($s && !isset($s['expires']) && !isset($s['plan'])) $s = null;
   $plan = $s ? ($s['plan'] ?? 'pro') : ''; $prod = $plan === 'max' ? 'mathub_max_monthly' : 'mathub_pro_monthly';
   $e = ['expires_date' => $s['expires'] ?? null, 'grace_period_expires_date' => null, 'product_identifier' => $prod, 'purchase_date' => gmdate('c')];
   $ent = $s ? ($plan === 'max' ? ['pro' => $e, 'max' => $e] : ['pro' => $e]) : [];
-  echo json_encode(['request_date' => gmdate('c'), 'subscriber' => ['original_app_user_id' => $id, 'entitlements' => $ent, 'subscriptions' => $s ? [$prod => ['store' => $s['store'] ?? 'rc_billing', 'expires_date' => $s['expires'] ?? null, 'unsubscribe_detected_at' => $s['cancelled'] ?? null]] : (object)[], 'management_url' => $s ? 'https://billing.example/manage' : null, 'non_subscriptions' => $hours ? ['mathub_call_hour' => array_map(fn($t) => ['id' => $t, 'store_transaction_id' => 'st_' . $t, 'purchase_date' => gmdate('c'), 'store' => 'rc_billing', 'is_sandbox' => true], $hours)] : (object)[]]]);
+  echo json_encode(['request_date' => gmdate('c'), 'subscriber' => ['original_app_user_id' => $id, 'entitlements' => $ent, 'subscriptions' => $s ? [$prod => ['store' => $s['store'] ?? 'rc_billing', 'expires_date' => $s['expires'] ?? null, 'unsubscribe_detected_at' => $s['cancelled'] ?? null]] : (object)[], 'management_url' => $s ? 'https://billing.example/manage' : null, 'non_subscriptions' => ($hours || $packs) ? array_filter(['mathub_call_hour' => array_map(fn($t) => ['id' => $t, 'store_transaction_id' => 'st_' . $t, 'purchase_date' => gmdate('c'), 'store' => 'rc_billing', 'is_sandbox' => true], $hours), 'mathub_credits' => array_map(fn($t) => ['id' => $t, 'store_transaction_id' => 'st_' . $t, 'purchase_date' => gmdate('c'), 'store' => 'rc_billing', 'is_sandbox' => true], $packs)]) : (object)[]]]);
   exit;
 }
 // a stand-in for RevenueCat's API v2, for cancelling a website plan (config.local.php: revenuecat_v2_api, revenuecat_v2_key
@@ -158,6 +159,16 @@ if (preg_match('#^/openai/v1/realtime/calls(?:/([A-Za-z0-9_-]+)/hangup)?$#', $pa
   @file_put_contents(__DIR__ . '/../fixtures/live-last.json', json_encode(['sdp' => $_POST['sdp'] ?? '', 'session' => $sess, 'accept' => $_SERVER['HTTP_ACCEPT'] ?? '']));
   http_response_code(201); header('Content-Type: application/sdp'); header('Location: /v1/realtime/calls/rtc_test' . substr(md5((string)microtime(true)), 0, 8));
   echo "v=0\r\no=- 4611 2 IN IP4 127.0.0.1\r\ns=stand-in\r\nt=0 0\r\nm=audio 9 UDP/TLS/RTP/SAVPF 111\r\n"; exit;
+}
+// pictures Bo draws (api/images.php): a tiny WebP circle; what was asked goes to tests/fixtures/image-last.json, and a
+// prompt with REFUSE-SAFETY is turned down like the image model's safety check would
+if ($path === '/openai/v1/images/generations') {
+  header('Content-Type: application/json');
+  if (($_SERVER['HTTP_AUTHORIZATION'] ?? '') !== 'Bearer sk-openai-test') { http_response_code(401); echo '{"error":{"message":"Incorrect API key"}}'; exit; }
+  $raw = (string)file_get_contents('php://input'); @file_put_contents(__DIR__ . '/../fixtures/image-last.json', $raw); $j = json_decode($raw, true) ?: [];
+  $n = (int)@file_get_contents(__DIR__ . '/../fixtures/image-count.txt'); @file_put_contents(__DIR__ . '/../fixtures/image-count.txt', (string)($n + 1));
+  if (str_contains((string)($j['prompt'] ?? ''), 'REFUSE-SAFETY')) { http_response_code(400); echo '{"error":{"message":"Your request was rejected by the safety system.","code":"moderation_blocked"}}'; exit; }
+  echo json_encode(['created' => time(), 'data' => [['b64_json' => 'UklGRo4BAABXRUJQVlA4IIIBAADwCgCdASogACAAPrVSoU0nJKMiKAgA4BaJbACxJUFQFMHXg0wH4d3gHmA6FfnAfwDrQN5H8jMwAUuzxF/jXqC/qR1Gv1V9gD9dEva9lLNdCyLGQzSwFIIlX+F5aCHmSAAA/v56ebaUcSR88IJtz5+hCpQDMPkGgZeD4ONkeQwrlY6TnBpyvIly4ZlAfXXIse0i9O5PG5PqmhbjAIeHk/iZ8MPUjGftFc0kL3w75Bb0jBqpl15zVwUTDgsniZ2mRkk05SZHCN2kbTbHm7jwHwuBQ5mIxuVKvNjlaaDHkLuAU19V3ddGe8k5aKtm5kmWO3bp3IzmjQU39lxqh/WmPeoszBj/3BKuR3O9u355yrDCF27yQET3YwaoQIoHX1rWPe7y6dB9GggO4lq/n/jADPpLcV9e/MRJehdJMcfiQfmNjQ7tcgQ/CmKn3s2sF42YJvxQrlZ4pFoqaMt1NNTxKeuO7dVhONB+VqyKKmzCs7wMHmht6ssj/V9rxCK5Luzh+kAAAA==']]]); exit;
 }
 if (preg_match('#^/openai/v1/audio/(speech|transcriptions)$#', $path, $m)) {
   if (($_SERVER['HTTP_AUTHORIZATION'] ?? '') !== 'Bearer sk-openai-test') { http_response_code(401); header('Content-Type: application/json'); echo '{"error":{"message":"Incorrect API key"}}'; exit; }

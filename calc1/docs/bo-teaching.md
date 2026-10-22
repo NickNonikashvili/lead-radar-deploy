@@ -62,8 +62,10 @@ someone meeting an idea for the first time: novices learn more from a clear work
 search (the worked-example effect), and expert tutors give direct explanations when the student needs them. But a
 voice that talks too long is hard to follow and easy to talk over by accident. So on a call Bo now:
 
-- keeps most turns to one to three short sentences, and takes **a proper turn to explain something new**: up to
-  about five short sentences, then checks in;
+- keeps most turns to one or two short sentences (under about 30 words), with no padding (no warm-up, no repeating
+  back what they said, no summing up the board), and takes **a proper turn to explain something new**: up to about
+  four short sentences (about 50 words), then checks in. In the chat he stays under about 80 words and closes the
+  loop only when a topic is done, not every message;
 - explains in the order **big idea → put it on the board → walk through it in words, pointing at the board → one
   question to check**;
 - asks the student to say it again when the audio was unclear, instead of guessing what they meant, and asks what
@@ -143,7 +145,7 @@ student picks (`assets/bo-characters.js`; the words he is given are in `api/ai.p
 
 | Character | Manner | Live voice, pace |
 |---|---|---|
-| **Professor Bo** (default) | An 80-year-old Harvard professor: exacting, dry, hard to impress; praise is rare and earned; precise language; an occasional story from fifty years of teaching | ash, 0.9 |
+| **Professor Bo** (default) | An 80-year-old Harvard professor: exacting, dry, hard to impress; praise is rare and earned; brisk, precise language; at most one short line from fifty years of teaching in a call, never a story | ash, 1.0 |
 | Coach Bo | Practice like training: short, loud, fast, no excuses, reps | verse, 1.1 |
 | Detective Bo | Every problem a case, every mistake a clue; asks what the evidence says | sage, 1.0 |
 | Zen Bo | Calm and patient, for stressful days | ballad, 0.9 |
@@ -274,3 +276,13 @@ The student sees what Bo sees ("Bo sees Calc I › Quizzer · 10 questions") and
 - Echo in the first seconds of a call, and on speakers: [OpenAI community](https://community.openai.com/t/realtimeapi-echo-cancellation-doesn-t-work-for-the-first-10-seconds-of-session/1252805), [and on the mini model](https://community.openai.com/t/speaker-feedback-mitigation-for-gpt-realtime-2-1-mini-with-webrtc/1389657).
 - "Disconnected" is not "failed": [Mozilla, ICE disconnected](https://blog.mozilla.org/webrtc/ice-disconnected-not/); [MDN, restartIce](https://developer.mozilla.org/en-US/docs/Web/API/RTCPeerConnection/restartIce).
 - The full research behind the call fixes: Voice AI tutor reliability (kept with the project's research notes, not shipped).
+
+## Memory that stays sharp
+
+Long conversations make any model slower and vaguer. So Bo does what the best long-running assistants do: he keeps
+the recent part word for word and folds the older part into a summary (api/students.php). A chat sends its last 10
+turns and the summary of the ones before; when 14 more have piled up, the cheap model folds them in after the answer
+has gone out. A live call does it in the browser: past 24 turns, the older ones are summarised, the summary goes
+first in the call and the old turns are taken out. The summaries, his notes about the student and a line per call
+live in one student file, which also tells his pictures who they are for (class and level, never a name).
+

@@ -2,8 +2,8 @@
    Bo on every page (assets/bo-float.js), in the browser:
    - he floats in a corner of every page (not on Ask Bo itself), says hello once, and can be dragged to the
      other side, where he stays; Alt+B and Esc open and close him; Settings turns him off
-   - guests are asked to sign in, members without a plan see what he does and are offered Pro; with Pro he answers
-     (Ask Bo's own page stays Max, so its link is not in his panel); a member agrees first
+   - guests are asked to sign in; members on any plan ask him, paid in credits (out of credits, the panel says how to
+     get more); a member agrees first
    - he sees the page: the Quizzer's questions as chips (right and wrong marked), what they answered; a question
      goes with the page and the part asked about, and the chat is the class's chat (Ask Bo shows it)
    - the eye turns his seeing off; a page change during a chat brings the ways in for the new page
@@ -14,6 +14,7 @@
 const T = require('./lib');
 const fs = require('fs'); const path = require('path');
 const STATE = path.join(__dirname, 'fixtures', 'rc-state.json'); const LAST = path.join(__dirname, 'fixtures', 'ai-last.json');
+const sqlite = q => require('child_process').spawnSync('php', ['-r', '$d = new PDO("sqlite:" . $argv[1]); $d->exec($argv[2]);', path.join(__dirname, '..', 'api', 'data', 'mathub.sqlite'), q]);
 (async () => {
   const { mk, txt, login, api, go, hscroll, check } = await T.start();
   fs.writeFileSync(STATE, '{}');
@@ -59,17 +60,20 @@ const STATE = path.join(__dirname, 'fixtures', 'rc-state.json'); const LAST = pa
   await go(a, '#/calc/practice', 1600);
   await a.click('#bo-fab'); await a.waitForTimeout(900);
   const ag = await txt(a, '#bo-pop .bf-body');
-  check('without a plan: what he does on a page (sees it, explains anything, reads problem sets) and Get Mathub Pro', /Bo on every page is part of Mathub Pro/.test(ag) && /He sees your page/.test(ag) && /Reads your problem sets/.test(ag) && !!(await a.$('#bo-pop [data-go="pro"]')) && /Get Mathub Pro/.test(await txt(a, '#bo-pop [data-go="pro"]')), ag);
-  await a.click('#bo-pop [data-go="pro"]'); await a.waitForTimeout(1200);
-  const apw = await a.evaluate(() => { const s = document.querySelector('#paywall'); return s && { why: s.querySelector('.pw-why').textContent, on: (s.querySelector('[data-plan].on') || {}).dataset.plan }; });
-  check('which opens the plans with Pro picked', apw && apw.on === 'pro' && /Bo on every page is part of Mathub Pro/.test(apw.why), apw);
+  check('without a plan, Bo on every page works on her credits: she is asked to agree first, no plan wall', /Before you start/.test(ag) && !/Get Mathub Pro|part of Mathub Pro/.test(ag), ag.slice(0, 160));
+  // out of credits: the panel says so, with Get credits
+  const ALICE = "(SELECT id FROM users WHERE email = 'alice.a@montana.edu')";
+  sqlite(`INSERT INTO credit_use (user_id, at, feature, mc, month_mc, paid_mc, ref, detail) VALUES (${ALICE}, strftime('%s','now'), 'other', 100000, 100000, 0, 'test-out', 'test')`);
+  await a.evaluate(() => App.setSetting('aiConsent', Date.now())); await a.reload(); await a.waitForTimeout(1500); await a.click('#bo-fab'); await a.waitForTimeout(1200);
+  check('out of credits, the panel says so, with Get credits', /out of credits/.test(await txt(a, '#bo-pop .bf-body')) && !!(await a.$('#bo-pop .bf-gate a[href="#/usage"]')), await txt(a, '#bo-pop .bf-body'));
+  sqlite(`DELETE FROM credit_use WHERE ref = 'test-out'`);
   await a.keyboard.press('Escape'); await a.waitForTimeout(300);
-  // with Pro he answers here (the $15 plan); Ask Bo's own page is Max, so its link is not offered
+  // with Pro he answers here, with the link to Ask Bo's own page (every plan has it now)
   const aliceId = (await api(a, 'create_status')).json.customer;
   fs.writeFileSync(STATE, JSON.stringify({ [aliceId]: { expires: new Date(Date.now() + 30 * 864e5).toISOString(), plan: 'pro' } }));
   await api(a, 'create_status&refresh=1'); await a.evaluate(() => { App.setSetting('aiConsent', Date.now()); if (App.subscription) App.subscription.refresh(true); }); await api(a, 'ai_forget', { what: 'all' });
   await a.reload(); await a.waitForTimeout(1600); await a.click('#bo-fab'); await a.waitForTimeout(1200);
-  check('with Mathub Pro the panel is open for questions, without the link to Ask Bo’s page', !(await a.$('#bo-pop .bf-gate')) && !!(await a.$('#bo-pop #bf-q')) && !(await shownEl(a, '#bf-full')), await txt(a, '#bo-pop .bf-body'));
+  check('with Mathub Pro the panel is open for questions, with the link to Ask Bo’s page', !(await a.$('#bo-pop .bf-gate')) && !!(await a.$('#bo-pop #bf-q')) && !!(await shownEl(a, '#bf-full')), await txt(a, '#bo-pop .bf-body'));
   await a.fill('#bf-q', 'What is a limit?'); await a.keyboard.press('Enter'); await a.waitForTimeout(2600);
   check('and Bo answers a Pro member here', /Bo here\./.test(await lastBo(a)) && last().messages && /What is a limit\?/.test(JSON.stringify(last().messages)), await lastBo(a));
   fs.writeFileSync(STATE, '{}'); await api(a, 'create_status&refresh=1'); await api(a, 'ai_forget', { what: 'all' });

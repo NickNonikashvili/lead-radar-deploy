@@ -81,15 +81,17 @@ Code: `assets/create.js` (plans: `App.subscription`, the paywall `App.paywall({ 
 5. Web → **Web Purchase Links**: one for `web_pro`, one for `web_max`. Set the success redirect of both to
    `https://mathub.space/#/plan?paid=1` (links made earlier to `#/create?paid=1` still land on Your plan). Copy both links (`https://pay.rev.cat/<token>/`).
 6. API keys: copy the public `appl_…` and `goog_…` keys and create a **secret** key (`sk_…`) for the server.
-7. **Call time** (website only, `api/calls.php`): in the Web Billing app create a **one-time, consumable** product,
-   identifier `mathub_call_hour` ("An hour of calls with Bo", $10). Attach it to **no entitlement** (a consumable in
-   an entitlement would unlock it forever). Make an offering `web_call_hour` with that product, then a Web Purchase
-   Link for it with the success redirect `https://mathub.space/#/calls?paid=1`. Put the link in Site settings →
-   Payments → "Call time web purchase link" (`call_hour_link`), without a user id. Each purchase shows on the
-   customer as a `non_subscriptions` transaction; the server adds 60 minutes (`call_hour_minutes`) per transaction,
-   once, and takes them back when a refunded transaction disappears. Change the minutes, price or product id there
-   too. Refunds are made in RevenueCat or Stripe; turn on RevenueCat's platform notifications for Stripe so refunds
-   show up.
+7. **Credits** (website only, `api/credits.php`): in the Web Billing app create a **one-time, consumable** product,
+   identifier `mathub_credits` ("1,000 credits for Bo", $10). Attach it to **no entitlement** (a consumable in an
+   entitlement would unlock it forever). Make an offering `web_credits` with that product, then a Web Purchase Link
+   for it with the success redirect `https://mathub.space/#/usage?paid=1`. Put the link in Site settings → Payments →
+   "Credits web purchase link" (`credits_link`), without a user id. Each purchase shows on the customer as a
+   `non_subscriptions` transaction; the server adds a pack (`credits_pack`, 1,000) per transaction, once, and takes
+   it back when a refunded transaction disappears. Change the pack, its price or the product id there too, and the
+   credits each plan gets (`credits_free` 100, `credits_pro` 1,000, `credits_max` 2,000) and what things cost
+   (`credits_call_strong`, `credits_call_light`, `credits_image`, `credits_image_big`, `credits_markup`). Hours of
+   call time bought before (`mathub_call_hour`) still count, as 1,000 credits each. Refunds are made in RevenueCat
+   or Stripe; turn on RevenueCat's platform notifications for Stripe so refunds show up.
 
 ## 3. Bo and the AI server (Anthropic)
 
@@ -172,15 +174,13 @@ call settings): the browser hears, the answer streams from Claude, and Bo reads 
 To switch Bo on: create an API key at console.anthropic.com (Settings → API keys; add a payment method and set a
 monthly spend limit there), then put it in `api/config.local.php`.
 
-### Free minutes with Bo
+### Credits pay for Bo
 
-Every account without Max can call Bo once, for `ai_trial_minutes` (Keys & settings, 10 by default; 0 turns it
-off). The server keeps the seconds used in `ai_trial` (one row per account). A live call on the free minutes starts
-with `ai_live_start` as usual (`ai_live.trial = 1`); a basic voice call asks `ai_call_start` for a call id first,
-and its `ai_tutor` (voice), `ai_speak` and `ai_listen` requests carry that id (`lid`). `ai_live_tick` adds the time
-every 30 seconds and at the end, and hangs up when the minutes run out (`trial_over`). `ai_status` says
-`trial_minutes` to everyone and `trial: {minutes, left, used}` to a signed-in account without Max. The cost is at
-most the minutes set here, once per account: at 10 minutes, about the price of one short Max call.
+Bo works on every plan; credits pay for him (`api/credits.php`, README → Credits). Each answer costs what its tokens
+cost Mathub at Anthropic's prices, times `credits_markup` (2); a live call is paid by the minute (`credits_call_strong`
+on Max's stronger model, `credits_call_light` otherwise); a picture from OpenAI's image model (`ai_image_model`,
+gpt-image-2) costs `credits_image`. 1 credit is about 1¢, so a free account's 100 credits a month cost Mathub at most
+about 50¢ at the default markup. The free minutes (`ai_trial_minutes`) are retired.
 
 ## 4. Put the keys in
 
@@ -199,7 +199,7 @@ never shows them again), or in `api/config.local.php` (never in the repository o
 'revenuecat_secret' => 'sk_xxxxxxxx',
 'pro_web_link'      => 'https://pay.rev.cat/xxxxxxxx/',
 'max_web_link'      => 'https://pay.rev.cat/yyyyyyyy/',
-'call_hour_link'    => 'https://pay.rev.cat/zzzzzzzz/',   // call time, $10 an hour (or set it in Site settings)
+'credits_link'      => 'https://pay.rev.cat/zzzzzzzz/',   // credits, 1,000 for $10 (or set it in Site settings)
 'anthropic_key'     => 'sk-ant-xxxxxxxx',
 'openai_key'        => 'sk-proj-xxxxxxxx',   // live calls with Bo, his natural voice, and listening in Firefox
 'plan_grants'       => ['you@montana.edu' => 'max'],   // testers who get a plan without paying
@@ -221,8 +221,8 @@ on). **Cancel plan** asks first (when it ends, what stops, what is kept, an opti
 - A plan from `plan_grants`, or one given in the admin panel (Members → a member's plan), has nothing to cancel.
   If the member also pays for a smaller plan, Your plan offers Manage billing and Cancel for that one.
 
-`pro_web_price` and `max_web_price` default to `$15` and `$20`; `call_hour_price` to `$10`, `call_hour_minutes` and
-`call_included_minutes` to 60. Without the app keys the apps cannot sell the
+`pro_web_price` and `max_web_price` default to `$15` and `$20`; `credits_pack_price` to `$10` and `credits_pack` to
+1,000. Without the app keys the apps cannot sell the
 plans; without the server keys the website cannot sell them and plans bought in the apps are not recognised there;
 without `anthropic_key` Bo says he is not switched on yet; without `openai_key` there are no live calls, and calls
 use basic voice (Chrome, Edge and Safari, with the device's own voice).

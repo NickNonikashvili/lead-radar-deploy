@@ -2,7 +2,7 @@
    Mathub — Max, shown (#/max): what a call with Bo is like, for everyone, in under a minute.
    A short demo that plays by itself (no AI, no sound): a student writes a problem on the board, Bo
    circles the slip, says why in captions, puts the steps up and a graph you can move. Then one
-   button: call Bo free (the free minutes, api/ai.php ai_trial_minutes), or sign up first.
+   button: call Bo (the Call Bo sheet, assets/call-launch.js; every account gets credits each month), or sign up first.
    Plain, short words on purpose: one idea per block, big type, nothing to read twice.
    Reduce motion shows the end of the demo at once, with what was said written out.
    ============================================================ */
@@ -116,30 +116,25 @@
   function pause() { clear(); P.playing = false; paintPlay(); if (P.el) P.el.classList.add('mx-paused'); }
   function paintPlay() { const b = $('[data-mx="toggle"]'); if (!b) return; b.innerHTML = P.playing ? `${icon('pause', 16)} Pause` : `${icon('play', 16)} Play`; b.setAttribute('aria-pressed', String(!P.playing)); }
 
-  /* ---------- the button: call Bo free (or sign up first, or Max when the free minutes are used) ---------- */
-  async function callFree(b) {
+  /* ---------- the button: call Bo (or sign up first); the Call Bo sheet picks the class and shows the credits ---------- */
+  function callFree() {
     if (!user()) { if (App.auth) App.auth.open('signup'); return; }
-    if (!(App.boTalk && App.boTalk.supported())) { toast('Calls with Bo are on the website. Open mathub.space on a computer or phone browser.', 4500); return; }
-    if (b) b.disabled = true; const s = await status(); if (b) b.disabled = false;
-    if (!s || !s.enabled) { toast('Bo is not switched on yet. Try again soon.', 3500); return; }
-    if (!s.max && !(s.trial && s.trial.left > 0)) { if (App.paywall) App.paywall({ need: 'max', reason: 'bo' }); return; }
+    if (!(App.boTalk && App.boTalk.supported()) || !App.callBo) { toast('Calls with Bo are on the website. Open mathub.space on a computer or phone browser.', 4500); return; }
     let cid = settings().boClass; try { const ids = App.home.myIds() || []; if (!ids.includes(cid)) cid = App.home.curClass() || ids[0]; } catch (e) {}
-    if (App.boTalk.setStatus) App.boTalk.setStatus(s);
-    App.boTalk.open({ cid: cid || 'calc', status: s, gesture: true, onClose: () => App.rerender && App.rerender() });
+    App.callBo({ cid: cid || '', onClose: () => App.rerender && App.rerender() });
   }
 
   App.views.max = {
     title: 'Mathub Max',
     render(root) {
-      const price = App.subscription && App.subscription.price ? App.subscription.price('max') : '';
       root.innerHTML = `<div class="mx">
         <section class="mx-hero" aria-labelledby="mx-h">
           <div class="mx-copy">
-            <p class="mx-kicker">${icon('gem', 16)} Mathub Max</p>
+            <p class="mx-kicker">${icon('phone', 16)} Calls with Bo</p>
             <h1 id="mx-h">Stuck? <span>Call Bo.</span></h1>
             <p class="mx-lede">Talk to him like a friend. Write on the board. He shows you what went wrong.</p>
-            <div class="mx-acts"><button type="button" class="btn primary lg mx-free" data-mx="free">${icon('phone', 18)} <span data-mx-free>Call Bo free</span></button></div>
-            <p class="mx-fine" data-mx-fine>10 minutes free. No card.</p>
+            <div class="mx-acts"><button type="button" class="btn primary lg mx-free" data-mx="free">${icon('phone', 18)} <span data-mx-free>Call Bo</span></button></div>
+            <p class="mx-fine" data-mx-fine>Every account gets free credits each month. No card.</p>
           </div>
           <figure class="mx-demo" aria-labelledby="mx-cap">
             <div class="mx-stage" id="mx-stage"></div>
@@ -149,15 +144,15 @@
         </section>
         <section class="mx-how" aria-labelledby="mx-how-h"><h2 class="mx-h2" id="mx-how-h">How it works</h2>
           <ol class="mx-steps"><li><span class="mx-n">1</span><b>Call him.</b><span>One tap. Just talk.</span></li><li><span class="mx-n">2</span><b>Write it out.</b><span>The whole screen is your board.</span></li><li><span class="mx-n">3</span><b>He helps.</b><span>He circles the slip and shows the steps.</span></li></ol></section>
-        <section class="mx-get" aria-labelledby="mx-get-h"><h2 class="mx-h2" id="mx-get-h">What Max gives you</h2>
+        <section class="mx-get" aria-labelledby="mx-get-h"><h2 class="mx-h2" id="mx-get-h">What you get</h2>
           <ul class="mx-tiles">
             <li>${icon('phone', 26)}<b>Calls with Bo</b><span>Any time, about any class.</span></li>
             <li>${icon('pen', 26)}<b>A board you share</b><span>You write. He marks it.</span></li>
             <li>${icon('chart', 26)}<b>Graphs you can move</b><span>Drag, zoom, add your own.</span></li>
             <li>${icon('chat', 26)}<b>Bo on every page</b><span>Ask about what you see.</span></li>
           </ul></section>
-        <section class="mx-end" aria-labelledby="mx-end-h"><span class="mx-end-av" aria-hidden="true">${bo(84)}</span><h2 class="mx-h2" id="mx-end-h" data-mx-endh>Try it now. It’s free.</h2><p data-mx-endp>Your first 10 minutes with Bo are on us.</p>
-          <div class="mx-acts"><button type="button" class="btn primary lg" data-mx="free">${icon('phone', 18)} Call Bo free</button><a class="btn lg" href="#/plan">See the plans${price ? ` · Max ${esc(price)}/month` : ''}</a></div></section>
+        <section class="mx-end" aria-labelledby="mx-end-h"><span class="mx-end-av" aria-hidden="true">${bo(84)}</span><h2 class="mx-h2" id="mx-end-h" data-mx-endh>Try it now. It’s free.</h2><p data-mx-endp>Every account gets credits for Bo each month, free.</p>
+          <div class="mx-acts"><button type="button" class="btn primary lg" data-mx="free">${icon('phone', 18)} Call Bo</button><a class="btn lg" href="#/usage">Credits and plans</a></div></section>
       </div>`;
       root.onclick = e => {
         const b = e.target.closest('[data-mx]'); if (!b) return; const k = b.dataset.mx;
@@ -169,15 +164,12 @@
         play();
         const st = $('#mx-stage'); if (st && global.ResizeObserver) { let w = st.clientWidth; new ResizeObserver(() => { if (!$('#mx-stage')) return; const tall = st.clientWidth < 540; if (P.F && tall !== P.F.tall) { if (P.playing || still()) play(); else build(); } else if (st._fit) st._fit(); w = st.clientWidth; }).observe(st); }
       });
-      // what the button says: the free minutes (set in the admin panel; none at all is possible), Max already, or used up
+      // what the line under the button says: about how long their credits last on a call (api/credits.php, through ai_status)
       status().then(s => {
-        const fine = $$('[data-mx-fine]'), lab = $$('[data-mx-free]'); if (!s) return;
-        const n = s.trial ? s.trial.minutes : +s.trial_minutes || 0; const mins = k => `${k} minute${k === 1 ? '' : 's'}`;
-        const noFree = () => { lab.forEach(x => { x.textContent = 'Get Mathub Max'; }); $$('[data-mx-endh]').forEach(x => { x.textContent = 'Ready when you are.'; }); $$('[data-mx-endp]').forEach(x => { x.textContent = 'Calls with Bo are part of Mathub Max.'; }); };
-        if (s.max) { lab.forEach(x => { x.textContent = 'Call Bo'; }); fine.forEach(x => { x.textContent = 'You have Max: call him any time.'; }); $$('[data-mx-endh]').forEach(x => { x.textContent = 'He is one tap away.'; }); $$('[data-mx-endp]').forEach(x => { x.textContent = 'You have Max: call him about any class.'; }); }
-        else if (!n) { noFree(); fine.forEach(x => { x.textContent = 'Calls with Bo are part of Mathub Max.'; }); }
-        else if (s.trial && s.trial.left <= 0) { noFree(); fine.forEach(x => { x.textContent = 'You have used your free minutes.'; }); }
-        else { const left = s.trial ? Math.max(1, Math.ceil(s.trial.left / 60)) : n; fine.forEach(x => { x.textContent = s.trial && s.trial.used ? `${mins(left)} free left. No card.` : `${mins(n)} free. No card.`; }); $$('[data-mx-endp]').forEach(x => { x.textContent = `Your first ${mins(n)} with Bo are on us.`; }); }
+        const K = s && s.credits; if (!K) return; const fine = $$('[data-mx-fine]');
+        if (s.admin) { fine.forEach(x => { x.textContent = 'Administrators are never charged.'; }); return; }
+        const mins = Math.floor((K.left || 0) / (K.call_rate || 6)); const f = n => App.credits ? App.credits.fmt(n) : String(Math.floor(n));
+        fine.forEach(x => { x.textContent = mins >= 1 ? `You have ${f(K.left)} credits: about ${mins} minute${mins === 1 ? '' : 's'} on a call.` : `You’re out of credits. They come back on the 1st.`; });
       });
     }
   };

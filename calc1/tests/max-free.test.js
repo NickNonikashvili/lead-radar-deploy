@@ -1,15 +1,16 @@
-/* The Max page (#/max) and the free minutes with Bo. The page: the self-playing call (captions word by word,
-   pause and replay, what they say as text, the still version for reduced motion), phones, and its button for
-   each kind of visitor. The free minutes, in the browser, for an account without Max: the start page's Call Bo
-   free, Ask Bo's free box, a real call on them (the call is the stand-in from tests/talk-fakes.js) with the
-   minutes left on its clock, and what changes once they are used. The server side is in ai-api.test.js. */
+/* The call demo page (#/max) and calling Bo on credits without a plan. The page: the self-playing call (captions
+   word by word, pause and replay, what they say as text, the still version for reduced motion), phones, and its
+   button for each kind of visitor. Calls on credits, in the browser, for an account without a plan: the start page's
+   Call Bo (the Call Bo sheet, assets/call-launch.js), what the call costs on its first screen, a real call (the
+   stand-in from tests/talk-fakes.js) paid by the minute, and what changes once the credits are used. The server
+   side is in ai-api.test.js and credits.test.js. */
 const T = require('./lib'); const path = require('path');
 const { live, quiet } = require('./talk-fakes');
 const sqlite = q => require('child_process').spawnSync('php', ['-r', '$d = new PDO("sqlite:" . $argv[1]); $d->exec($argv[2]);', path.join(__dirname, '..', 'api', 'data', 'mathub.sqlite'), q]);
 const ALICE = "(SELECT id FROM users WHERE email = 'alice.a@montana.edu')";
 (async () => {
   const { mk, txt, login, api, go, hscroll, log, check } = await T.start({ audio: true });
-  const fresh = () => sqlite(`DELETE FROM ai_trial WHERE user_id = ${ALICE}; DELETE FROM ai_live WHERE user_id = ${ALICE}; DELETE FROM rate WHERE key LIKE 'ai_live:%'`);
+  const fresh = () => sqlite(`DELETE FROM ai_trial WHERE user_id = ${ALICE}; DELETE FROM ai_live WHERE user_id = ${ALICE}; DELETE FROM credit_use WHERE user_id = ${ALICE}; DELETE FROM credit_add WHERE user_id = ${ALICE}; DELETE FROM rate WHERE key LIKE 'ai_live:%'`);
   fresh();
 
   // a visitor on a laptop
@@ -28,11 +29,11 @@ const ALICE = "(SELECT id FROM users WHERE email = 'alice.a@montana.edu')";
   check('Replay starts it over', /Pause/.test(await txt(p, '[data-mx="toggle"]')) && !(await p.evaluate(() => document.querySelector('#mx-stage .mx-call').classList.contains('mx-l3'))));
   check('what they say is also there as text', (await p.$$('.mx-script li')).length >= 6);
   const sec = await p.$$eval('.mx-h2', hs => hs.map(h => h.textContent.trim()));
-  check('then three short parts: how it works, what Max gives you, try it', sec.join('|') === 'How it works|What Max gives you|Try it now. It’s free.' || sec.length === 3, sec);
+  check('then three short parts: how it works, what you get, try it', sec.join('|') === 'How it works|What you get|Try it now. It’s free.', sec);
   const st = await api(p, 'ai_status'); log('visitor status:', JSON.stringify({ trial_minutes: st.json.trial_minutes }));
-  check('the small print follows the free minutes set in the admin panel', st.json.trial_minutes ? new RegExp(`^${st.json.trial_minutes} minutes free`).test(await txt(p, '[data-mx-fine]')) : /part of Mathub Max/.test(await txt(p, '[data-mx-fine]')), await txt(p, '[data-mx-fine]'));
+  check('the small print: every account gets free credits each month', /free credits each month\. No card\./.test(await txt(p, '[data-mx-fine]')) && /^Call Bo$/.test(await txt(p, '.mx-hero [data-mx-free]')), await txt(p, '[data-mx-fine]'));
   await p.click('.mx-hero [data-mx="free"]'); await p.waitForTimeout(500);
-  check('a visitor who taps Call Bo free is asked to sign up first', !!(await p.$('#auth-modal')));
+  check('a visitor who taps Call Bo is asked to sign up first', !!(await p.$('#auth-modal')));
   await p.keyboard.press('Escape'); await p.waitForTimeout(200);
   // the plans say where to see it, and so does the start page
   await go(p, '#/', 900); check('the start page has one line on Bo that opens the demo', (await p.getAttribute('.land-bo', 'href')) === '#/max');
@@ -50,35 +51,36 @@ const ALICE = "(SELECT id FROM users WHERE email = 'alice.a@montana.edu')";
   check('less motion: the call is shown finished and still', await r.evaluate(() => { const e = document.querySelector('#mx-stage .mx-call'); return !!e && e.classList.contains('mx-still') && e.classList.contains('mx-l3'); }));
   await cr.close();
 
-  // Alice has no plan: her free minutes
+  // Alice has no plan: calls on her monthly credits
   const [ca, a] = await mk(1360, 900, { serviceWorkers: 'block' }); await ca.addInitScript(quiet); await ca.addInitScript(live);
   await go(a, '#/', 600); await login(a, 'alice.a@montana.edu'); await a.reload(); await a.waitForTimeout(1500);
   await a.evaluate(() => { App.setSetting('aiConsent', Date.now()); App.setSetting('boTalkOk', 0); App.setSetting('boMode', ''); });
-  const s0 = (await api(a, 'ai_status')).json; log('alice status:', JSON.stringify(s0.trial));
-  check('an account without Max has its free minutes, none used', !!s0.trial && s0.trial.minutes === s0.trial_minutes && s0.trial.used === 0 && s0.trial.left === 60 * s0.trial.minutes, s0.trial);
+  const s0 = (await api(a, 'ai_status')).json; log('alice credits:', JSON.stringify(s0.credits));
+  check('an account without a plan has its monthly credits, and no free minutes', s0.credits && s0.credits.allowance === 100 && s0.credits.left === 100 && s0.credits.call_rate === 6 && !s0.trial, s0.credits);
   await go(a, '#/', 1500);
-  check('the start page offers Call Bo free', /Call Bo free/.test(await txt(a, '#bo-hub [data-bh="trial"]')), await txt(a, '#bo-hub'));
-  await go(a, '#/max', 1200); check('the Max page says how many free minutes she has', /free\. No card\./.test(await txt(a, '[data-mx-fine]')), await txt(a, '[data-mx-fine]'));
-  await go(a, '#/tutor/calc', 1800);
-  check('Ask Bo shows the free minutes and a Call Bo free button', /Talk to him free for \d+ minutes/.test(await txt(a, '.bo-free')) && !!(await a.$('.bo-free [data-go="trial"]')));
-  await a.click('.bo-free [data-go="trial"]'); await a.waitForTimeout(700);
-  check('it opens the call, which says the minutes are on us', !!(await a.$('#bo-talk')) && /free minutes with Bo, on us/.test(await txt(a, '.bt-free')), await txt(a, '#bo-talk .bt-free'));
+  check('the start page offers Call Bo', /Call Bo/.test(await txt(a, '#bo-hub [data-bh="call"]')) && !/free/i.test(await txt(a, '#bo-hub [data-bh="call"]')), await txt(a, '#bo-hub'));
+  await go(a, '#/max', 1200); check('the demo page says how long her credits last on a call', /You have 100 credits: about 16 minutes on a call\./.test(await txt(a, '[data-mx-fine]')), await txt(a, '[data-mx-fine]'));
+  await a.click('.mx-hero [data-mx="free"]'); await a.waitForTimeout(1300);
+  check('its Call Bo opens the Call Bo sheet', !!(await a.$('.cb .cb-classes')) && /about 16 minutes at 6 a minute/.test(await txt(a, '.cb-credits')), await txt(a, '.cb-credits'));
+  await a.click('[data-cb-go]'); await a.waitForTimeout(800);
+  check('Start the call opens the call, which says what it costs', !!(await a.$('#bo-talk')) && /100 credits · about 16 minutes at 6 a minute/.test(await txt(a, '.bt-free')), await txt(a, '#bo-talk .bt-free'));
   await a.click('#bt-start'); const t0 = Date.now(); let state = ''; while (Date.now() - t0 < 6000) { state = await a.evaluate(() => (document.querySelector('#bo-talk') || { dataset: {} }).dataset.state || ''); if (state === 'live') break; await a.waitForTimeout(80); }
-  check('the call starts on the free minutes', state === 'live', state);
-  await a.waitForTimeout(1200); check('its clock shows the free minutes left', /free min left/.test(await txt(a, '#bt-clock')), await txt(a, '#bt-clock'));
+  check('the call starts, on the light model', state === 'live', state);
+  await a.waitForTimeout(1200); check('its clock runs (minutes left show only near the end)', /^\d+:\d\d$/.test((await txt(a, '#bt-clock')).replace(/\s/g, '')) || /\d:\d\d/.test(await txt(a, '#bt-clock')), await txt(a, '#bt-clock'));
   await a.click('#bo-talk [data-t="end"]'); await a.waitForTimeout(900);
-  const row = (await api(a, 'ai_status')).json.trial; log('after the call:', JSON.stringify(row));
-  check('after the call the minutes are still there (a few seconds used at most)', row && row.left > 60 * (row.minutes - 1), row);
-  // the minutes run out
-  sqlite(`INSERT OR REPLACE INTO ai_trial (user_id, used, first) VALUES (${ALICE}, 100000, strftime('%s','now'))`);
-  await a.reload(); await a.waitForTimeout(1800);
-  check('used up: no free box in Ask Bo', !(await a.$('.bo-free')));
+  const after = (await api(a, 'ai_status')).json.credits; log('after the call:', JSON.stringify(after));
+  check('after the call her credits are still there (a few seconds used at most)', after && after.left > 98 && after.left <= 100, after);
+  // the credits run out
+  sqlite(`INSERT INTO credit_use (user_id, at, feature, mc, month_mc, paid_mc, ref, detail) VALUES (${ALICE}, strftime('%s','now'), 'other', 100000, 100000, 0, 'test-out', 'test')`);
+  await go(a, '#/tutor/calc', 1800);
+  check('used up: Ask Bo says so, with Get credits', /out of credits/.test(await txt(a, '.bo-gate')) && !!(await a.$('.bo-gate a[href="#/usage"]')), await txt(a, '.bo-gate'));
   await go(a, '#/max', 1400);
-  check('used up: the Max page says so, and the button is Get Mathub Max', /used your free minutes/.test(await txt(a, '[data-mx-fine]')) && /Get Mathub Max/.test(await txt(a, '.mx-hero [data-mx="free"]')));
-  await a.click('.mx-hero [data-mx="free"]'); await a.waitForTimeout(600);
-  check('and it opens the plans', !!(await a.$('#paywall')));
+  check('used up: the demo page says so', /out of credits/.test(await txt(a, '[data-mx-fine]')), await txt(a, '[data-mx-fine]'));
+  await a.click('.mx-hero [data-mx="free"]'); await a.waitForTimeout(1300);
+  check('and its Call Bo sheet offers Get credits instead of Start', !!(await a.$('.cb-acts a[href="#/usage"]')) && !(await a.$('[data-cb-go]')));
+  await a.keyboard.press('Escape');
   const over = await api(a, 'ai_call_start', {});
-  check('the server says no to another free call', over.status === 402 && over.json.trial_over === true, over.json);
+  check('the server says no to another call (402, credits)', over.status === 402 && over.json.credits === true, over.json);
   await ca.close();
   fresh();
   await T.finish();

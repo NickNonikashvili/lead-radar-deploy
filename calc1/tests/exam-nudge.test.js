@@ -1,7 +1,7 @@
 /* The heads-up a few days before an exam (api/growth.php, mh_exam_nudge_tick) and the review call it opens
    (Ask Bo's ?call=exam, assets/talk.js). Covered: one email per member and exam, 2 or 3 days before it, only in the
-   classes they picked; its button opens a review call with Bo for Max members and anyone with free minutes, and the
-   exam prep page for everyone else; the setting turns it off; the link opens the call with the exam card, and Bo is
+   classes they picked; its button opens a review call with Bo for anyone with credits for one (about five minutes'
+   worth, api/credits.php), and the exam prep page for everyone else; the setting turns it off; the link opens the call with the exam card, and Bo is
    told it is an exam review (live and basic voice). The tick runs with a made-up "today"; mail is in log mode. */
 const T = require('./lib'); const fs = require('fs'); const path = require('path');
 const { live, quiet } = require('./talk-fakes');
@@ -17,7 +17,8 @@ const mailLen = () => (fs.existsSync(LOG) ? fs.readFileSync(LOG, 'utf8').length 
   const { mk, login, api, go, txt, check, log } = await T.start({ audio: true });
   const [c0, p0] = await mk(1360, 900, { serviceWorkers: 'block' }); await go(p0, '#/', 500); await login(p0, MOD); await api(p0, 'me'); await c0.close();   // the columns and table exist
   const keep = ask(`SELECT id, courses, exam_checked FROM users WHERE email IN ('${BOB}', '${MOD}')`);
-  sqlite(`DELETE FROM exam_nudges; UPDATE users SET exam_checked = 9999999999; UPDATE users SET courses = '["calc"]', exam_checked = 0, exam_nudge = 1 WHERE email IN ('${BOB}', '${MOD}'); DELETE FROM ai_trial WHERE user_id = (SELECT id FROM users WHERE email = '${BOB}')`);
+  sqlite(`DELETE FROM exam_nudges; UPDATE users SET exam_checked = 9999999999; UPDATE users SET courses = '["calc"]', exam_checked = 0, exam_nudge = 1 WHERE email IN ('${BOB}', '${MOD}'); DELETE FROM credit_use WHERE ref = 'test-out'`);
+  const OUT = `INSERT INTO credit_use (user_id, at, feature, mc, month_mc, paid_mc, ref, detail) VALUES ((SELECT id FROM users WHERE email = '${BOB}'), strftime('%s','now'), 'other', 100000, 100000, 0, 'test-out', 'test')`;   // his month's credits, used up
 
   // Calc I's Exam 1 is on Friday, September 18
   let m0 = mailLen(); let n = tick('2026-09-10');
@@ -27,18 +28,18 @@ const mailLen = () => (fs.existsSync(LOG) ? fs.readFileSync(LOG, 'utf8').length 
   const to = (mail.match(/^\[[^\]]+\] to=\S+ subject="Calc I Exam 1 is in 3 days"/gm) || []).map(x => x.split('to=')[1].split(' ')[0]);
   check('three days before: one email each, with the exam in the subject', n === 2 && to.length === 2 && to.includes(BOB) && to.includes(MOD), { n, to });
   const part = who => mail.split(/^\[[^\]]+\] to=/m).find(x => x.startsWith(who)) || '';
-  check('with the day, and a button that starts a review call with Bo on the free minutes', /Calc I Exam 1 is on Friday, Sep 18\./.test(part(BOB)) && /weakest topics/.test(part(BOB)) && /Start the review call with Bo: https?:\/\/\S+\/#\/tutor\/calc\?call=exam/.test(part(BOB)) && /Turn it off in Settings → Account/.test(part(BOB)), part(BOB).slice(0, 500));
+  check('with the day, and a button that starts a review call with Bo (he has credits for one)', /Calc I Exam 1 is on Friday, Sep 18\./.test(part(BOB)) && /weakest topics/.test(part(BOB)) && /Start the review call with Bo: https?:\/\/\S+\/#\/tutor\/calc\?call=exam/.test(part(BOB)) && /Turn it off in Settings → Account/.test(part(BOB)), part(BOB).slice(0, 500));
   check('and for a Max member too', /#\/tutor\/calc\?call=exam/.test(part(MOD)));
   check('each exam once: the calendar row and the exam itself are one heads-up', ask('SELECT COUNT(*) AS n FROM exam_nudges')[0].n === 2);
   sqlite(`UPDATE users SET exam_checked = 0 WHERE email IN ('${BOB}', '${MOD}')`);
   m0 = mailLen(); n = tick('2026-09-16');
   check('the next day: not again', n === 0 && !/Exam 1 is in/.test(mailSince(m0)), n);
-  // used free minutes: the exam prep page instead; the setting off: nothing
-  sqlite(`DELETE FROM exam_nudges; UPDATE users SET exam_checked = 0 WHERE email IN ('${BOB}', '${MOD}'); INSERT OR REPLACE INTO ai_trial (user_id, used) VALUES ((SELECT id FROM users WHERE email = '${BOB}'), 100000); UPDATE users SET exam_nudge = 0 WHERE email = '${MOD}'`);
+  // out of credits: the exam prep page instead; the setting off: nothing
+  sqlite(`DELETE FROM exam_nudges; UPDATE users SET exam_checked = 0 WHERE email IN ('${BOB}', '${MOD}'); ${OUT}; UPDATE users SET exam_nudge = 0 WHERE email = '${MOD}'`);
   m0 = mailLen(); n = tick('2026-09-16'); const mail2 = mailSince(m0);
-  check('two days before, without Max or free minutes: the exam prep page', n === 1 && /subject="Calc I Exam 1 is in 2 days"/.test(mail2) && /Open exam prep: https?:\/\/\S+\/#\/calc\/exam/.test(mail2) && !/call=exam/.test(mail2), mail2.slice(0, 400));
+  check('two days before, without credits for a call: the exam prep page', n === 1 && /subject="Calc I Exam 1 is in 2 days"/.test(mail2) && /Open exam prep: https?:\/\/\S+\/#\/calc\/exam/.test(mail2) && !/call=exam/.test(mail2), mail2.slice(0, 400));
   check('and nobody who turned it off', !new RegExp(`to=${MOD.replace('.', '\\.')}`).test(mail2));
-  sqlite(`DELETE FROM ai_trial WHERE user_id = (SELECT id FROM users WHERE email = '${BOB}')`);
+  sqlite(`DELETE FROM credit_use WHERE ref = 'test-out'`);
 
   // the link: Ask Bo opens the call with the exam card; Start, and Bo is told it is an exam review
   const [c, p] = await mk(1360, 900, { serviceWorkers: 'block' }); await c.addInitScript(quiet); await c.addInitScript(live);
@@ -59,15 +60,16 @@ const mailLen = () => (fs.existsSync(LOG) ? fs.readFileSync(LOG, 'utf8').length 
   check('an ordinary call has no exam card', !!(await p.$('#bo-talk')) && !(await p.$('#bo-talk .bt-exam')));
   await p.keyboard.press('Escape'); await c.close();
 
-  // without Max and without free minutes: the link says so and points to the exam prep page
-  sqlite(`INSERT OR REPLACE INTO ai_trial (user_id, used) VALUES ((SELECT id FROM users WHERE email = '${BOB}'), 100000)`);
+  // out of credits: the link says so and points to the exam prep page
+  sqlite(OUT);
   const [cb, b] = await mk(390, 844, { serviceWorkers: 'block' }); await cb.addInitScript(quiet); await cb.addInitScript(live);
   await go(b, '#/', 500); await login(b, BOB); await b.reload(); await b.waitForTimeout(700);
   await go(b, '#/tutor/calc?call=exam', 2000);
-  check('without Max or free minutes: no call, a note that points to the exam prep page', !(await b.$('#bo-talk')) && /Your exam is close/.test(await txt(b, '.bo-exam-note')) && (await b.getAttribute('.bo-exam-note a', 'href')) === '#/calc/exam');
-  sqlite(`DELETE FROM ai_trial WHERE user_id = (SELECT id FROM users WHERE email = '${BOB}')`);
+  check('out of credits: no call, a note that points to the exam prep page', !(await b.$('#bo-talk')) && /Your exam is close/.test(await txt(b, '.bo-exam-note')) && (await b.getAttribute('.bo-exam-note a', 'href')) === '#/calc/exam');
+  sqlite(`DELETE FROM credit_use WHERE ref = 'test-out'`);
   await go(b, '#/tutor/calc?call=exam', 2000);
-  check('with free minutes left, the review call opens on them', !!(await b.$('#bo-talk .bt-exam')) && /free minutes/.test(await txt(b, '#bo-talk')));
+  if (await b.$('.bo-consent [data-go="agree"]')) { await b.click('.bo-consent [data-go="agree"]'); await b.waitForTimeout(2200); }   // his first time with Bo: he agrees, then the call opens
+  check('with credits, the review call opens, saying what it costs', !!(await b.$('#bo-talk .bt-exam')) && /credits · about \d+ minutes at 6 a minute/.test(await txt(b, '#bo-talk')), await txt(b, '#bo-talk .bt-free'));
   await b.keyboard.press('Escape'); await cb.close();
 
   // the administrator's switches (admin → Site settings → Email): off stops them for everyone

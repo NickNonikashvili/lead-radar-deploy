@@ -7,7 +7,8 @@
    - Sending: news (one row per email), news_sent (one row per member it went to, so nobody gets it twice). The admin
      page sends a batch every few seconds while it is open; housekeeping (api/social.php) sends a few on every visit.
      Many failures in a row pause it, with the mail server's error.
-   - Placeholders: {name} (first name, or "there"), {minutes} (the free minutes with Bo, ai_trial_minutes).
+   - Placeholders: {name} (first name, or "there"), {credits} (the credits every free account gets each month,
+     credits_free) and {minutes} (about how many minutes of calls those make, at credits_call_light a minute).
    Routes: news_unsub (GET: is this link good; POST: stop or start news), admin_news (GET: the draft, how many get it,
    the last send), admin_news_preview, admin_news_test, admin_news_send, admin_news_step, admin_news_pause.
    ============================================================ */
@@ -20,18 +21,18 @@ function mh_news_db(): PDO {
 }
 function mh_news_url(): string { $cfg = mh_config(); return rtrim((string)(($cfg['site_url'] ?? '') ?: ('https://' . ($_SERVER['HTTP_HOST'] ?? 'mathub.space'))), '/'); }
 function mh_news_token(int $uid): string { return substr(hash_hmac('sha256', 'news-unsub:' . $uid, mh_secret()), 0, 32); }
-function mh_news_minutes(): int { $cfg = mh_config(); return max(0, (int)($cfg['ai_trial_minutes'] ?? 10)); }
+function mh_news_credits(): int { require_once __DIR__ . '/credits.php'; return (int)mh_credits_cfg(mh_config())['free']; }
+function mh_news_minutes(): int { require_once __DIR__ . '/credits.php'; $C = mh_credits_cfg(mh_config()); return $C['call_light'] > 0 ? (int)floor($C['free'] / $C['call_light']) : 0; }
 
-/** The email that tells everyone about the free minutes with Bo, ready to send as it is. */
+/** The email that tells everyone Bo is on every account now, paid in free monthly credits, ready to send as it is. */
 function mh_news_default(): array {
-  $m = mh_news_minutes();
-  return $m > 0 ? [
-    'subject' => 'Call Bo free: {minutes} minutes on us',
-    'body' => "Hi {name},\n\nStuck on a problem? Now you can call Bo, the tutor on Mathub.\n\nYou talk. You write on a board you share. He shows you where it went wrong, like a tutor with a pen.\n\nYour first {minutes} minutes are free. No card needed.",
-    'button' => 'Call Bo free', 'link' => '#/max',
+  return mh_news_credits() > 0 ? [
+    'subject' => 'Bo is on every account now: {credits} free credits a month',
+    'body' => "Hi {name},\n\nStuck on a problem? Bo, the tutor on Mathub, is now on every account.\n\nAsk him anything, call him and talk it through, or have him draw it: graphs, 3D surfaces, diagrams, even pictures.\n\nEvery month you get {credits} credits for him, free. That is about {minutes} minutes on a call, or plenty of questions. No card needed.",
+    'button' => 'Call Bo', 'link' => '#/max',
   ] : [
     'subject' => 'New on Mathub: call Bo',
-    'body' => "Hi {name},\n\nStuck on a problem? Now you can call Bo, the tutor on Mathub.\n\nYou talk. You write on a board you share. He shows you where it went wrong, like a tutor with a pen.\n\nCalls with Bo are part of Mathub Max. See one in a minute:",
+    'body' => "Hi {name},\n\nStuck on a problem? Now you can call Bo, the tutor on Mathub.\n\nYou talk. You write on a board you share. He shows you where it went wrong, like a tutor with a pen.\n\nSee a call in a minute:",
     'button' => 'Watch a call with Bo', 'link' => '#/max',
   ];
 }
@@ -47,7 +48,7 @@ function mh_news_draft(array $in): array {
 function mh_news_render(array $n, array $u): array {
   $cfg = mh_config(); $site = $cfg['site_name'] ?? 'Mathub'; $url = mh_news_url();
   $first = trim(explode(' ', trim((string)($u['name'] ?? '')))[0] ?? ''); if ($first === '' || str_contains($first, '@')) $first = 'there';
-  $fill = fn(string $s) => strtr($s, ['{name}' => $first, '{minutes}' => (string)mh_news_minutes()]);
+  $fill = fn(string $s) => strtr($s, ['{name}' => $first, '{credits}' => number_format(mh_news_credits()), '{minutes}' => (string)mh_news_minutes()]);
   $subject = $fill($n['subject']); $body = $fill($n['body']);
   $link = (string)($n['link'] ?? ''); if ($link !== '' && $link[0] === '#') $link = $url . '/' . $link; elseif ($link !== '' && $link[0] === '/') $link = $url . $link;
   $unsub = $url . '/#/unsubscribe?u=' . (int)$u['id'] . '&t=' . mh_news_token((int)$u['id']);
@@ -111,7 +112,7 @@ function mh_news_route(string $route, array $in, array $cfg, string $ip): void {
   switch ($route) {
     case 'admin_news':
       mh_method('GET');
-      mh_json(['ok' => true, 'draft' => mh_news_default(), 'recipients' => mh_news_count(), 'minutes' => mh_news_minutes(), 'news' => mh_news_public(mh_news_current()), 'mail' => (function () use ($cfg) { require_once __DIR__ . '/mailer.php'; return mh_mail_mode($cfg); })(), 'me' => $u['email']]);
+      mh_json(['ok' => true, 'draft' => mh_news_default(), 'recipients' => mh_news_count(), 'minutes' => mh_news_minutes(), 'credits' => mh_news_credits(), 'news' => mh_news_public(mh_news_current()), 'mail' => (function () use ($cfg) { require_once __DIR__ . '/mailer.php'; return mh_mail_mode($cfg); })(), 'me' => $u['email']]);
     case 'admin_news_preview': {
       mh_method('POST'); $d = mh_news_draft($in); [$s, $t, $h] = mh_news_render($d, $u);
       mh_json(['ok' => true, 'subject' => $s, 'text' => $t, 'html' => $h]);

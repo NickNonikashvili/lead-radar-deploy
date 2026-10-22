@@ -32,11 +32,12 @@ function mh_siteconfig_fields(): array {
     'ai_live_model_max'  => ['ai', 'Model for Max members’ calls', 'model', 'Max members talk to this one (gpt-realtime-2.1 reasons better than the mini, at several times the price); the free minutes keep the model above. Empty: the same model for everyone. If OpenAI refuses it, calls use the model above.'],
     'ai_live_transcribe' => ['ai', 'Model that writes down what is said on calls', 'model', 'For the captions and the app’s math check (gpt-live-transcribe by default; gpt-4o-mini-transcribe works until February 2027). If OpenAI refuses it, calls fall back to gpt-4o-mini-transcribe.'],
     'ai_live_voice'      => ['ai', 'Bo’s voice on calls', 'select', '', $voices],
-    'ai_live_monthly'    => ['ai', 'Most call minutes per student per month (a safety limit)', 'int', 'Max members pay for their time (an hour a month included, then hours they buy: Calls in the admin panel); this only stops runaway use (3000 by default).', [0, 100000]],
+    'ai_live_monthly'    => ['ai', 'Most call minutes per student per month (a safety limit)', 'int', 'Calls are paid in credits (Credits in the admin panel); this only stops runaway use (3000 by default).', [0, 100000]],
     'ai_live_daily'      => ['ai', 'Most call minutes per student per day (a safety limit)', 'int', '240 by default.', [0, 1440]],
     'ai_live_call'       => ['ai', 'Minutes per call', 'int', '', [1, 240]],
-    'ai_trial_minutes'   => ['ai', 'Free call minutes with Bo, once per account', 'int', 'Everyone without Max can call Bo for this long, once (10 by default). 0 turns the free minutes off.', [0, 120]],
-    'ai_invite_minutes'  => ['ai', 'More free minutes per invite', 'int', 'When a classmate joins through an invite link, both get this many more free minutes with Bo (10 by default; up to 60 in all per account). 0 turns it off.', [0, 60]],
+    'ai_invite_credits'  => ['ai', 'Credits per invite', 'int', 'When a classmate joins through an invite link, both get this many credits (100 by default; up to 1,000 in all per account). 0 turns it off.', [0, 1000]],
+    'ai_image_model'     => ['ai', 'Model for Bo’s pictures', 'model', 'gpt-image-2 by default (gpt-image-1 is used when the account cannot use it).'],
+    'ai_image_quality'   => ['ai', 'Quality of Bo’s pictures', 'select', 'medium by default; high looks better and costs OpenAI more (raise the credits per picture too).', ['low', 'medium', 'high']],
     'ai_tts_voice'       => ['ai', 'Bo’s voice in basic voice and Read aloud', 'select', '', ['ash', 'ballad', 'coral', 'sage', 'verse', 'alloy']],
     'ai_voice_monthly'   => ['ai', 'Characters Bo speaks, per student per month', 'int', '', [0, 10000000]],
     'ai_listen_monthly'  => ['ai', 'Seconds Bo listens (Firefox), per student per month', 'int', '', [0, 1000000]],
@@ -47,11 +48,18 @@ function mh_siteconfig_fields(): array {
     'max_web_link'       => ['pay', 'Mathub Max web purchase link', 'url', ''],
     'pro_web_price'      => ['pay', 'Mathub Pro price shown on the website', 'price', ''],
     'max_web_price'      => ['pay', 'Mathub Max price shown on the website', 'price', '$20 by default.'],
-    'call_included_minutes' => ['pay', 'Call minutes included with Max each month', 'int', '60 by default. Calls use these first, then the hours a member bought.', [0, 6000]],
-    'call_hour_minutes'  => ['pay', 'Minutes in a pack of call time', 'int', '60 by default (an hour).', [1, 6000]],
-    'call_hour_price'    => ['pay', 'Price of a pack of call time, shown on the website', 'price', '$10 by default. Set the real price on the product in RevenueCat.'],
-    'call_hour_link'     => ['pay', 'Call time web purchase link', 'url', 'RevenueCat → Web → Web Purchase Links, for an offering with the one-time (consumable) call time product, without a user id. Its success page: https://mathub.space/#/calls?paid=1'],
-    'call_hour_product'  => ['pay', 'Call time product id in RevenueCat', 'text', 'mathub_call_hour by default. Each purchase of it adds a pack; a refunded one is taken back. More than one: separate with commas.'],
+    'credits_free'       => ['pay', 'Credits a month without a plan', 'int', '100 by default. 1 credit is about 1¢. They come back on the 1st.', [0, 100000]],
+    'credits_pro'        => ['pay', 'Credits a month with Mathub Pro', 'int', '1,000 by default.', [0, 1000000]],
+    'credits_max'        => ['pay', 'Credits a month with Mathub Max', 'int', '2,000 by default. Max also gets the stronger call model.', [0, 1000000]],
+    'credits_pack'       => ['pay', 'Credits in a pack to buy', 'int', '1,000 by default. Bought credits never expire; a member uses the month’s credits first.', [1, 1000000]],
+    'credits_pack_price' => ['pay', 'Price of a pack, shown on the website', 'price', '$10 by default. Set the real price on the product in RevenueCat.'],
+    'credits_link'       => ['pay', 'Credits web purchase link', 'url', 'RevenueCat → Web → Web Purchase Links, for an offering with the one-time (consumable) credits product, without a user id. Its success page: https://mathub.space/#/usage?paid=1.'],
+    'credits_product'    => ['pay', 'Credits product id in RevenueCat', 'text', 'mathub_credits by default. Each purchase adds a pack; a refunded one is taken back. (Call hours bought before, mathub_call_hour, count as 1,000 credits each.)'],
+    'credits_markup'     => ['pay', 'Credits markup on what the AI costs', 'num', '2 by default: a chat answer that costs Mathub 1¢ in tokens costs 2 credits.', [1, 10]],
+    'credits_call_strong' => ['pay', 'Credits a minute, calls on Max’s model', 'num', '17 by default (about what gpt-realtime-2.1 costs, with the markup).', [0, 1000]],
+    'credits_call_light' => ['pay', 'Credits a minute, calls on the light model', 'num', '6 by default (everyone without Max).', [0, 1000]],
+    'credits_image'      => ['pay', 'Credits per picture', 'num', '15 by default; credits_image_big for wide or tall ones.', [0, 1000]],
+    'credits_image_big'  => ['pay', 'Credits per wide or tall picture', 'num', '22 by default.', [0, 1000]],
     'plan_grants'        => ['pay', 'Tester plans', 'grants', 'One per line: someone@montana.edu = pro (or max), for testing. To give a member a membership, use Membership in Members.'],
     'mail_mode'          => ['mail', 'How email is sent', 'select', 'auto: SMTP when the password is set, otherwise PHP mail(). log: nothing is sent (testing).', ['auto', 'smtp', 'mail', 'log']],
     'mail_from'          => ['mail', 'Sender address', 'email', 'A mailbox that exists on your domain.'],
@@ -113,6 +121,7 @@ function mh_siteconfig_clean(string $key, array $def, $v) {
     case 'url': if ($s !== '' && (!filter_var($s, FILTER_VALIDATE_URL) || !preg_match('#^https://#i', $s))) throw new RuntimeException("$label: an https:// address."); return $s;
     case 'email': if (!filter_var($s, FILTER_VALIDATE_EMAIL)) throw new RuntimeException("$label: an email address."); return strtolower($s);
     case 'host': if (!preg_match('/^[a-z0-9.-]{3,120}$/i', $s)) throw new RuntimeException("$label: a server name, like smtp.hostinger.com."); return strtolower($s);
+    case 'num': { if (!is_numeric($s)) throw new RuntimeException("$label: a number."); $n = (float)$s; [$lo, $hi] = $def[4]; if ($n < $lo || $n > $hi) throw new RuntimeException("$label: between $lo and $hi."); return $n; }
     case 'int': { if (!preg_match('/^-?\d+$/', $s)) throw new RuntimeException("$label: a whole number."); $n = (int)$s; [$lo, $hi] = $def[4]; if ($n < $lo || $n > $hi) throw new RuntimeException("$label: between $lo and $hi."); return $n; }
     case 'select': { $opts = array_map('strval', $def[4]); if (!in_array($s, $opts, true)) throw new RuntimeException("$label: pick one of the choices."); return in_array($key, ['digest_day'], true) ? (int)$s : $s; }
     case 'tz': if (!in_array($s, timezone_identifiers_list(), true)) throw new RuntimeException("$label: a time zone like America/Denver."); return $s;
@@ -165,7 +174,7 @@ function mh_siteconfig_route(string $route, array $in, array $cfg, string $ip): 
       foreach ($F as $k => $def) {
         $has = array_key_exists($k, $saved); $v = $has ? $saved[$k] : ($files[$k] ?? null);
         $fromFile = !$has && isset($files[$k]) && $files[$k] !== '' && $files[$k] !== [];
-        $groups[$def[0]]['fields'][] = ['key' => $k, 'label' => $def[1], 'type' => $def[2], 'help' => $def[3], 'options' => $def[2] === 'select' ? array_map('strval', $def[4]) : null, 'range' => $def[2] === 'int' ? $def[4] : null, 'from' => $has ? 'panel' : ($fromFile ? 'file' : 'none')] + mh_siteconfig_view($k, $def, $v);
+        $groups[$def[0]]['fields'][] = ['key' => $k, 'label' => $def[1], 'type' => $def[2], 'help' => $def[3], 'options' => $def[2] === 'select' ? array_map('strval', $def[4]) : null, 'range' => in_array($def[2], ['int', 'num'], true) ? $def[4] : null, 'from' => $has ? 'panel' : ($fromFile ? 'file' : 'none')] + mh_siteconfig_view($k, $def, $v);
       }
       $log = $db->query('SELECT l.key, l.action, l.at, u.email FROM config_log l LEFT JOIN users u ON u.id = l.user_id ORDER BY l.id DESC LIMIT 25')->fetchAll();
       mh_json(['ok' => true, 'groups' => array_values($groups), 'me' => $u['email'], 'writable' => is_writable(dirname(mh_siteconfig_file($files))), 'log' => array_map(fn($r) => ['key' => $r['key'], 'label' => $F[$r['key']][1] ?? $r['key'], 'action' => $r['action'], 'at' => (int)$r['at'], 'by' => (string)($r['email'] ?? '')], $log)]);

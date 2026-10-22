@@ -13,8 +13,8 @@
      It is the class's chat with Bo, so Ask Bo (#/tutor) shows it too; "Open the full chat" goes there.
    - Drag him to either side, up or down; he stays where he is put. Alt+B opens him, Esc closes.
      Settings → "Bo on every page" turns him off. Not on Ask Bo itself, during a call, or in the apps (Bo is a tab).
-   Needs tutor.js (App.boAsk, App.boBoard). Answers need Mathub Pro or Max (the server lets Pro ask from here, flagged
-   float; Ask Bo's own page, linked from the panel, is Max).
+   Needs tutor.js (App.boAsk, App.boBoard). Answers use credits, on any plan (api/credits.php); out of them, the panel
+   says how to get more.
    ============================================================ */
 (function (global) {
   'use strict';
@@ -299,10 +299,10 @@
     F.status = await api('ai_status'); F.statusAt = Date.now(); if (App.boTalk && App.boTalk.setStatus) App.boTalk.setStatus(F.status); return F.status;
   }
   async function gate() {
-    if (!user()) return `<div class="bf-gate"><p class="bf-gate-h">Sign in to ask Bo</p><p>Bo is your AI tutor in Mathub Pro. He explains any topic, and sees the page you ask from: the questions on it, your answers, the notes you're reading.</p><div class="bf-gate-acts"><button type="button" class="btn primary" data-go="login">Log in</button><button type="button" class="btn" data-go="signup">Create an account</button></div></div>`;
+    if (!user()) return `<div class="bf-gate"><p class="bf-gate-h">Sign in to ask Bo</p><p>Bo is your AI tutor. He explains any topic, and sees the page you ask from: the questions on it, your answers, the notes you're reading. Every account gets credits for him each month, free.</p><div class="bf-gate-acts"><button type="button" class="btn primary" data-go="login">Log in</button><button type="button" class="btn" data-go="signup">Create an account</button></div></div>`;
     let s; try { s = await status(); } catch (e) { return `<div class="bf-gate"><p class="bf-gate-h">Bo can't be reached</p><p>${esc(e.message)}</p><div class="bf-gate-acts"><button type="button" class="btn" data-go="retry">Try again</button></div></div>`; }
     if (!s.enabled) return `<div class="bf-gate"><p class="bf-gate-h">Bo is getting ready</p><p>Bo isn't switched on yet. He'll be here soon.</p></div>`;
-    if (!s.pro) return `<div class="bf-gate"><p class="bf-gate-h">Bo on every page is part of Mathub Pro</p><ul class="bf-perks"><li>${icon('target', 16)}<span><b>He sees your page</b>: tap a question and he walks you through it, or checks your answers.</span></li><li>${icon('chat', 16)}<span><b>Explains anything</b>, a step at a time, with drawings on his board.</span></li><li>${icon('upload', 16)}<span><b>Reads your problem sets</b>: a photo or a PDF.</span></li></ul><div class="bf-gate-acts"><button type="button" class="btn primary" data-go="pro">Get Mathub Pro</button><a class="btn ghost" href="#/plan">Compare the plans</a></div></div>`;
+    if (s.credits && s.credits.out && !s.admin) return `<div class="bf-gate"><p class="bf-gate-h">You’re out of credits</p><p>Questions, calls and Bo’s pictures all use credits. Yours come back on ${esc(App.fmtDate ? App.fmtDate(s.credits.resets) : s.credits.resets)}, or get more now.</p><div class="bf-gate-acts"><a class="btn primary" href="#/usage">${icon('plus', 15)} Get credits</a><button type="button" class="btn" data-go="pro">${s.plan === 'max' ? 'Your plan' : 'More every month'}</button></div></div>`;
     if (!settings().aiConsent) return `<div class="bf-gate bf-consent">${App.boGateHtml ? App.boGateHtml.consent() : ''}</div>`;
     if (!F.cid) return `<div class="bf-gate"><p class="bf-gate-h">Pick a class first</p><p>Bo helps with a class you take. Choose your classes, or request one Mathub does not have yet.</p><div class="bf-gate-acts"><a class="btn primary" href="#/">Your classes</a><a class="btn" href="#/request">Request a class</a></div></div>`;
     return '';
@@ -317,7 +317,6 @@
   async function paintBody() {
     const body = $('#bf-body', F.el); const form = $('#bf-compose', F.el);
     const g = await gate(); F.gated = !!g;
-    const full = $('#bf-full', F.el); if (full) full.hidden = !!(F.status && !F.status.max);   // Ask Bo's own page is Max
     $('#bf-q', F.el).disabled = !!g; $$('.bf-send, [data-bf="point"], #bf-file', F.el).forEach(x => { x.disabled = !!g; });
     form.classList.toggle('off', !!g);
     if (g) { body.innerHTML = g; return; }
@@ -325,7 +324,7 @@
     if (!log.length) paintWelcome(); else { if (body.dataset.cid !== F.cid || !body.querySelector('.bf-msg')) { body.innerHTML = ''; log.forEach(m => body.appendChild(m)); F.cardAt = F.lastWhere; } pageCard(); }
     body.dataset.cid = F.cid; paintFoot(); body.scrollTop = log.length ? body.scrollHeight : 0;
   }
-  function paintFoot() { const u = F.status && F.status.usage; $('#bf-foot', F.el).textContent = `Bo is an AI and can be wrong.${u ? ` ${Math.max(0, u.tutor_limit - u.tutor)} of ${u.tutor_limit} questions left this month.` : ''}`; }
+  function paintFoot() { const K = F.status && !F.status.admin && F.status.credits; $('#bf-foot', F.el).textContent = `Bo is an AI and can be wrong.${K ? ` ${App.credits ? App.credits.fmt(K.left) : Math.floor(K.left)} credits left.` : ''}`; }
 
   /* the first thing in the panel: what he sees, and the ways in that fit this page */
   function paintWelcome() {
@@ -419,7 +418,7 @@
       $('.bf-dots', me) && $('.bf-dots', me).remove();
       $('.bf-bub', me).insertAdjacentHTML('beforeend', `<div class="bf-tools"><button type="button" class="bf-tool" data-bf="copy" aria-label="Copy" title="Copy">${icon('copy', 14)}</button>${r.at ? `<button type="button" class="bf-tool" data-bf="bad" aria-label="Not right? Tell us" title="Not right?" aria-pressed="false">${icon('thumbdown', 14)}</button>` : ''}</div>`);
       if (r.remembered) $('.bf-bub', me).insertAdjacentHTML('beforeend', `<p class="bf-note">${icon('bulb', 13)} Bo will remember: ${esc(r.remembered)}</p>`);
-      if (r.usage && F.status) { F.status.usage = r.usage; paintFoot(); }
+      if (r.credits && F.status && F.status.credits) { F.status.credits.left = r.credits.left; paintFoot(); }
       const next = App.boFollowups ? App.boFollowups(r.reply) : []; if (next.length) { const n = document.createElement('div'); n.className = 'bf-next'; n.innerHTML = next.map(t => `<button type="button" class="bf-mini" data-say="${esc(t)}">${esc(t)}</button>`).join(''); body.appendChild(n); }
       stick(body, true);
       if (!F.open) { F.unread = true; F.fab.classList.add('unread'); const tip = $('#bf-tip'); tip.innerHTML = `<button type="button" class="bf-tip-b"><span>Bo answered. Tap to read it.</span></button>`; tip.hidden = false; clearTimeout(F.tipT2); F.tipT2 = setTimeout(() => { tip.hidden = true; }, 8000); }

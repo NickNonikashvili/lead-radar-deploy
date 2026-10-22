@@ -1,5 +1,5 @@
 /* An email to every member (api/news.php, admin Email everyone, #/unsubscribe, Settings → Account → News from Mathub).
-   Covered: only admins, the draft about the free minutes with Bo, the preview ({name}, {minutes}, the button's link,
+   Covered: only admins, the draft about Bo on every account (free monthly credits), the preview ({name}, {credits}, {minutes}, the button's link,
    the way out), a test to yourself, the send itself (confirmed, once per member, in batches, nobody twice, not to
    members who turned news off or are not verified), a mail server that refuses (it pauses and says why), stop,
    the unsubscribe link (a page with one button; mail apps' one-click POST without the site's header; a bad
@@ -21,17 +21,17 @@ const ask = q => { const r = require('child_process').spawnSync('php', ['-r', '$
   await cm.close();
 
   let r = (await api(a, 'admin_news')).json; const d = r.draft; log('draft:', JSON.stringify({ subject: d.subject, recipients: r.recipients, minutes: r.minutes, mail: r.mail }));
-  check('the draft is the email about the free minutes with Bo, with a button to the demo', /\{minutes\}/.test(d.subject) && /Call Bo/.test(d.subject) && /\{name\}/.test(d.body) && d.button === 'Call Bo free' && d.link === '#/max', d);
+  check('the draft is the email about Bo on every account and the free monthly credits, with a button to the demo', /\{credits\}/.test(d.subject) && /Bo is on every account/.test(d.subject) && /\{name\}/.test(d.body) && /\{minutes\} minutes on a call/.test(d.body) && d.button === 'Call Bo' && d.link === '#/max', d);
   const who = ask("SELECT COUNT(*) AS n FROM users WHERE verified = 1 AND news_email = 1 AND email NOT LIKE '%@system.local'")[0].n;
   check('it goes to every verified member with news on', r.recipients === +who && r.recipients > 2, { api: r.recipients, db: who });
   r = (await api(a, 'admin_news_preview', d)).json;
-  check('the preview fills in the minutes and the name', r.subject === `Call Bo free: ${(await api(a, 'admin_news')).json.minutes} minutes on us` && /Hi [A-Z][a-z]+,/.test(r.text) && !/\{name\}|\{minutes\}/.test(r.html + r.text), r.subject);
+  check('the preview fills in the credits, the minutes and the name', r.subject === `Bo is on every account now: ${(await api(a, 'admin_news')).json.credits} free credits a month` && /about \d+ minutes on a call/.test(r.text) && /Hi [A-Z][a-z]+,/.test(r.text) && !/\{name\}|\{minutes\}|\{credits\}/.test(r.html + r.text), r.subject);
   check('its button opens the demo on the site, and the bottom has a way out', /href="https?:\/\/[^"]+\/#\/max"/.test(r.html) && /#\/unsubscribe\?u=\d+&amp;t=[0-9a-f]{32}/.test(r.html) && /Stop these emails: https?:\/\/\S+#\/unsubscribe\?u=\d+&t=[0-9a-f]{32}/.test(r.text), r.text.slice(-200));
   check('a link that is not on Mathub or https is refused', (await api(a, 'admin_news_preview', Object.assign({}, d, { link: 'javascript:alert(1)' }))).status === 400);
   const before = fs.existsSync(LOG) ? fs.readFileSync(LOG, 'utf8').length : 0;
   r = await api(a, 'admin_news_test', d);
   const tail = () => fs.readFileSync(LOG, 'utf8').slice(before);
-  check('Send me a test goes to the admin only', r.status === 200 && /to=admin\.user@montana\.edu subject="Call Bo free/.test(tail()) && (tail().match(/^\[.*\] to=/gm) || []).length === 1, r.json);
+  check('Send me a test goes to the admin only', r.status === 200 && /to=admin\.user@montana\.edu subject="Bo is on every account/.test(tail()) && (tail().match(/^\[.*\] to=/gm) || []).length === 1, r.json);
 
   // the send
   sqlite("UPDATE users SET news_email = 0 WHERE email = 'alice.a@montana.edu'");
@@ -43,7 +43,7 @@ const ask = q => { const r = require('child_process').spawnSync('php', ['-r', '$
   check('a second send waits for this one', (await api(a, 'admin_news_send', Object.assign({}, d, { confirm: 'send' }))).status === 409);
   for (let i = 0; i < 30; i++) { r = await api(a, 'admin_news_step', { n: 25 }); if (r.json.news.done) break; }
   r = (await api(a, 'admin_news_step', { n: 25 })).json.news; log('sent:', JSON.stringify(r));
-  const sentTo = (fs.readFileSync(LOG, 'utf8').slice(mark).match(/^\[[^\]]+\] to=(\S+) subject="Call Bo free/gm) || []).map(x => x.split('to=')[1].split(' ')[0]);
+  const sentTo = (fs.readFileSync(LOG, 'utf8').slice(mark).match(/^\[[^\]]+\] to=(\S+) subject="Bo is on every account/gm) || []).map(x => x.split('to=')[1].split(' ')[0]);
   check('every member got it once, and it is done', r.done && r.sent === total && r.failed === 0 && sentTo.length === total && new Set(sentTo).size === total, { r, n: sentTo.length });
   check('not members who turned news off', !sentTo.includes('alice.a@montana.edu'));
   check('each one is written to news_sent', ask('SELECT COUNT(*) AS n FROM news_sent WHERE ok = 1')[0].n === total);
@@ -87,7 +87,7 @@ const ask = q => { const r = require('child_process').spawnSync('php', ['-r', '$
   clean();
   await go(a, '#/admin/email', 1800);
   const page = await a.evaluate(() => ({ subj: document.querySelector('#nw-subject').value, go: document.querySelector('#nw-go').textContent.trim(), frame: ((document.querySelector('#nw-frame').shadowRoot || {}).innerHTML || '').length, shown: document.querySelector('#nw-subj').textContent }));
-  check('the admin page: the draft, what they get beside it, and Send to N members', /\{minutes\}/.test(page.subj) && /^Send to \d+ members$/.test(page.go) && page.frame > 500 && /^Call Bo free: \d+ minutes on us$/.test(page.shown), page);
+  check('the admin page: the draft, what they get beside it, and Send to N members', /\{credits\}/.test(page.subj) && /^Send to \d+ members$/.test(page.go) && page.frame > 500 && /^Bo is on every account now: \d+ free credits a month$/.test(page.shown), page);
   await a.fill('#nw-subject', 'Hello {name}'); await a.waitForTimeout(1200);
   check('the preview follows what you type', /^Hello [A-Z]/.test(await txt(a, '#nw-subj')), await txt(a, '#nw-subj'));
   await c.close(); clean();

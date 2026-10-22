@@ -54,11 +54,11 @@ const { live, basic, quiet } = require('./talk-fakes');
   const s1 = await waitFor(m, 'state', ['live'], 6000);
   const setupReq = readJ('live-last.json', {}); const sess = setupReq.session || {};
   check('Start: the page sends its offer to Mathub, which sets the call up with OpenAI and hands the answer back', s1 === 'live' && /browser-offer/.test(setupReq.sdp || '') && setupReq.accept === 'application/sdp' && /s=stand-in/.test(await m.evaluate(() => window.__rt.answer)) && (await m.evaluate(() => window.__rt.channel)) === 'oai-events', { s1, accept: setupReq.accept });
-  check('the call is speech to speech, with semantic turn-taking (the page answers and cuts in, not the server), the laptop noise filter and Professor Bo’s voice (ash, a little slower)', sess.type === 'realtime' && sess.model === 'gpt-realtime-2.1' && sess.audio.input.turn_detection.type === 'semantic_vad' && sess.audio.input.turn_detection.interrupt_response === false && sess.audio.input.turn_detection.create_response === false && sess.audio.input.noise_reduction.type === 'far_field' && sess.audio.output.voice === 'ash' && sess.audio.output.speed === 0.9 && sess.audio.input.transcription.keywords.includes('M171') && sess.max_output_tokens === 'inf', sess.audio);
+  check('the call is speech to speech, with semantic turn-taking (the page answers and cuts in, not the server), the laptop noise filter and Professor Bo’s voice (ash, at a normal pace)', sess.type === 'realtime' && sess.model === 'gpt-realtime-2.1' && sess.audio.input.turn_detection.type === 'semantic_vad' && sess.audio.input.turn_detection.interrupt_response === false && sess.audio.input.turn_detection.create_response === false && sess.audio.input.noise_reduction.type === 'far_field' && sess.audio.output.voice === 'ash' && (sess.audio.output.speed == null || sess.audio.output.speed === 1) && sess.audio.input.transcription.keywords.includes('M171') && sess.max_output_tokens === 'inf', sess.audio);
   const ins = sess.instructions || '';
   check('Bo is told to talk like a person on a call, not an assistant, and knows the class and the student', /not an assistant/.test(ins) && /Not "How can I help you today"/.test(ins) && /If they cut in, stop and go with what they said/.test(ins) && /CLASS:/.test(ins) && /WEAKEST TOPICS/.test(ins) && /You speak first/.test(ins), ins.slice(0, 200));
   check('he has seven tools: writing, drawing and asking on the board, marking their writing, checking math exactly, his notes, and waiting when the audio was not for him', (sess.tools || []).map(t => t.name).join() === 'write_on_board,draw_on_board,ask_on_board,mark_on_board,check_math,remember,wait_for_user' && (sess.tools || []).filter(t => t.parameters.properties.near).length === 3);
-  check('and he is told how to teach: short turns, a proper explanation of something new with the board, check with a real question', /# How you teach/.test(ins) && /Most turns are one to three short sentences/.test(ins) && /never "does that make sense\?"/.test(ins) && !/Ask more than you tell/.test(ins));
+  check('and he is told how to teach: short turns, a proper explanation of something new with the board, check with a real question', /# How you teach/.test(ins) && /Most turns are one or two short sentences, under about 30 words/.test(ins) && /No padding/.test(ins) && /never "does that make sense\?"/.test(ins) && !/Ask more than you tell/.test(ins));
   check('and about the board you share: their writing comes as a picture with a grid, and he marks it at its cells', /The whole screen is a board you share/.test(ins) && /columns A, B, C… across the top and rows 1, 2, 3… down/.test(ins) && /mark_on_board: circle, check/.test(ins) && /find the first mistake/.test(ins) && /do not answer those, just know what is there/.test(ins));
   check('Bo speaks first: the page asks for a response as soon as the call opens', (await sent(m)).some(x => x.type === 'response.create'));
   check('the clock runs', /\d:\d\d/.test(await txt(m, '#bt-clock'))); await m.waitForTimeout(700);
@@ -412,10 +412,10 @@ const { live, basic, quiet } = require('./talk-fakes');
   check('phone: no sideways scroll in the call', await hscroll(ph));
   await ph.keyboard.press('Escape'); await cp.close();
 
-  // no Max: no call
+  // no plan: calls on credits
   const [ca, a] = await mk(1360, 900); await a.addInitScript(quiet); await go(a, '#/'); await login(a, 'alice.a@montana.edu'); await a.reload(); await a.waitForTimeout(600);
-  await api(a, 'create_status&refresh=1'); await go(a, '#/tutor/calc', 1800);
-  check('without Max, Ask Bo shows Meet Bo and no way to call him', /Meet Bo/.test(await txt(a, '#bo-main')) && !(await a.$('.bo-talk-btn:not([hidden])')) && !(await a.$('.bo-mic')));
+  await api(a, 'create_status&refresh=1'); await a.evaluate(() => App.setSetting('aiConsent', Date.now())); await go(a, '#/tutor/calc', 1800);
+  check('without a plan, Ask Bo can call him too, on her credits', !/Get Mathub Max/.test(await txt(a, '#bo-main')) && !!(await a.$('.bo-talk-btn:not([hidden]), .bo-mic')));
   await ca.close();
 
   const [cc, cl] = await mk(1360, 900); await go(cl, '#/'); await login(cl, 'mod.user@montana.edu'); await api(cl, 'ai_forget', { what: 'all' }); await cl.evaluate(() => localStorage.removeItem('mh-pad:calc')); await cc.close();

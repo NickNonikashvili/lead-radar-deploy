@@ -17,6 +17,9 @@
      tree        a probability tree, up to three levels
      venn        two or three sets, counts in the regions, any region shaded ("A ∩ B'", "A ∪ B", "A only")
      flow        a process or an algorithm: boxes and decisions in order, arrows that loop back
+   More kinds come from assets/board-draw-more.js through kind() and graphPart(): any diagram as SVG, a picture
+   made by an image model, 3D surfaces and curves, and on a graph implicit curves, polar curves, slope and vector
+   fields and contour maps.
    It is data, never code: functions are read by App.compileExpr (no eval), counts and sizes are capped, every
    label is escaped, and anything that does not make sense is left out. A model does not always write clean JSON,
    so what he writes is read the way he meant it (json() below: smart quotes, unquoted keys, trailing commas,
@@ -24,7 +27,8 @@
    [x, y] or {x, y}, ranges as [a, b] or {min, max}, "y = \frac{1}{x}", "x²", "sin^2 x"…). He "draws" it like a
    marker on a whiteboard (stroke by stroke), unless motion is reduced.
    App.boDraw: parse(text | object) → a clean spec or null; html(spec, animate) → markup; plain(spec) → words;
-   json(text) → the object he meant, or null; depth(text) → how many brackets are still open; value(text) → a number.
+   json(text) → the object he meant, or null; depth(text) → how many brackets are still open; value(text) → a number;
+   kind(type, {make, draw | html, plain, alias, test}) and graphPart({make, extent, draw}) add kinds (above).
    ============================================================ */
 (function (global) {
   'use strict';
@@ -44,7 +48,7 @@
   const ENDQ = { '"': '"', "'": "'", '“': '”“"', '”': '”“"', '‘': '’‘\'', '’': '’‘\'' };
   function json(text) {
     if (text && typeof text === 'object') return Array.isArray(text) ? null : text;
-    const s = typeof text === 'string' ? text : ''; if (!s || s.length > 20000) return null;
+    const s = typeof text === 'string' ? text : ''; if (!s || s.length > 80000) return null;   // an SVG drawing can be long
     let i = s.indexOf('{'); if (i < 0) return null;
     const out = [], stack = []; let prev = '';   // prev: what came last (open, key, colon, value, comma)
     const top = () => { for (let k = stack.length - 1; k >= 0; k--) if (stack[k] !== 'x') return stack[k]; return ''; };
@@ -218,6 +222,8 @@
   function typeOf(o) {
     const t = String(typeof o.type === 'string' ? o.type : typeof o.kind === 'string' ? o.kind : typeof o.chart === 'string' ? o.chart : '').toLowerCase().replace(/[^a-z]/g, '');
     if (TYPES.includes(t)) return t; if (ALIAS[t]) return ALIAS[t];
+    for (const k in EXTRA) if (EXTRA[k].test && EXTRA[k].test(o, t)) return k;
+    for (const g of GX) if (g.test && g.test(o, t)) return 'graph';
     const u = t.replace(/(diagram|chart|plot|graph|curve|line)s?$/, ''); if (u && TYPES.includes(u)) return u; if (u && ALIAS[u]) return ALIAS[u];
     if (o.slices) return 'pie'; if (o.sets) return 'venn'; if (o.boxes || o.q1 != null) return 'boxplot'; if (o.branches) return 'tree'; if (o.steps || o.nodes) return 'flow';
     if (o.intervals || o.interval || o.inequality) return 'numberline'; if (o.shapes) return 'figure'; if (o.rows) return 'table'; if (o.bars) return 'bars';
@@ -239,6 +245,7 @@
 
   /* ---------- reading each kind ---------- */
   const MAKE = {};
+  const EXTRA = {}, GX = [];   // kinds and graph parts from assets/board-draw-more.js
   function pts(v, n, dc) {   // [[x, y], …], [{x, y, label}], {"A": [x, y]}, ["(1, 2)"]
     if (v && typeof v === 'object' && !Array.isArray(v)) v = v.x != null || v.at != null || v.xy != null ? [v] : named(v, 'label');
     if (v != null && !Array.isArray(v)) v = [v]; if (!Array.isArray(v)) return [];
@@ -375,8 +382,9 @@
     sp.x = span(o.x ?? o.xrange ?? o.xRange ?? o.xaxis ?? (o.window && o.window.x), o.xmin ?? o.xMin ?? o.x_min, o.xmax ?? o.xMax ?? o.x_max) || (hasF(o) ? null : span(o.domain));
     sp.y = span(o.y ?? o.yrange ?? o.yRange ?? o.yaxis ?? o.range ?? (o.window && o.window.y), o.ymin ?? o.yMin ?? o.y_min, o.ymax ?? o.yMax ?? o.y_max);
     sp.equal = !!(o.equal || o.square || o.aspect === 'equal'); sp.xlabel = str(o.xlabel ?? o.xLabel ?? o.x_label, 24); sp.ylabel = str(o.ylabel ?? o.yLabel ?? o.y_label, 24);
+    let more = false; GX.forEach(g => { try { if (g.make && g.make(o, sp, P)) more = true; } catch (e) {} });   // implicit and polar curves, fields, contours
     if (sp.fns.length > 1 && sp.fns.length <= 3) sp.fns.forEach(g => { if (!g.label && g.f && g.f.length <= 22) g.label = `y = ${g.f}`; });   // two or three curves: which is which
-    return sp.fns.length || sp.points.length || sp.segments.length;
+    return sp.fns.length || sp.points.length || sp.segments.length || more;
   };
   MAKE.numberline = (o, sp) => {
     let I = o.intervals ?? o.interval ?? o.ranges ?? o.inequality ?? o.inequalities ?? o.solution;
@@ -689,6 +697,7 @@
     // the x range: what he asked for, or what holds his points, segments, shading and lines
     const xs = [].concat(sp.points.map(p => p.x), ...sp.segments.map(s => [s.from[0], s.to[0]]), sh ? [sh.from, sh.to].filter(Number.isFinite) : [], sp.vlines.map(v => v.v), ...fns.filter(g => g.domain).map(g => g.domain.filter(v => Math.abs(v) < 1e8)), tans.map(t => t.a), ...secs.map(s => [s.a, s.b]), rs ? [rs.a, rs.b] : []);
     fns.filter(g => g.par).forEach(g => { const [t0, t1] = g.t || [0, 2 * Math.PI]; for (let k = 0; k <= 240; k++) { const t = t0 + (t1 - t0) * k / 240; const X = g.fx(t), Y = g.fy(t); if (Number.isFinite(X) && Number.isFinite(Y)) xs.push(X); } });
+    const ext = { xs: [], ys: [] }; GX.forEach(g => { try { const e = g.extent && g.extent(sp, P); if (e) { ext.xs.push(...(e.xs || [])); ext.ys.push(...(e.ys || [])); } } catch (x) {} }); xs.push(...ext.xs);
     let x0, x1;
     if (sp.x) [x0, x1] = sp.x;
     else {
@@ -705,7 +714,7 @@
       return pts;
     });
     let [y0, y1] = sp.y || (() => {
-      const ys = [].concat(...curves.map(c => c.filter(p => Number.isFinite(p[0]) && Number.isFinite(p[1]) && p[0] >= x0 && p[0] <= x1).map(p => p[1])), sp.points.map(p => p.y), ...sp.segments.map(s => [s.from[1], s.to[1]]), sp.hlines.map(h => h.v), sp.notes.map(n => n.y), tans.map(t => t.y), ...secs.map(s => [s.ya, s.yb]), rs ? [0] : []);
+      const ys = [].concat(...curves.map(c => c.filter(p => Number.isFinite(p[0]) && Number.isFinite(p[1]) && p[0] >= x0 && p[0] <= x1).map(p => p[1])), ext.ys, sp.points.map(p => p.y), ...sp.segments.map(s => [s.from[1], s.to[1]]), sp.hlines.map(h => h.v), sp.notes.map(n => n.y), tans.map(t => t.y), ...secs.map(s => [s.ya, s.yb]), rs ? [0] : []);
       if (!ys.length) return [-5, 5];
       const s = ys.slice().sort((a, b) => a - b); const q = p => s[Math.min(s.length - 1, Math.max(0, Math.round(p * (s.length - 1))))];
       let lo = s.length > 40 ? q(0.03) : s[0], hi = s.length > 40 ? q(0.97) : s[s.length - 1];
@@ -758,6 +767,8 @@
       ink.raw(`<g clip-path="url(#${clip})">`); ink.path(d, 'bd-curve', g.c, { i: n, dash: g.dash }); ink.raw('</g>');
       if (g.label) { const vis = pts.filter(p => Number.isFinite(p[1]) && p[1] > y0 && p[1] < y1 && p[0] >= x0 && p[0] <= x1); const at = [0.88, 0.78, 0.66, 0.54, 0.42, 0.3, 0.18, 0.08].map(f => vis[Math.floor(vis.length * f)]).filter(Boolean).map(p => [X(p[0]), Y(p[1])]); if (at.length) labels.push({ at, t: g.label, c: g.c, n }); }
     });
+    // what the other parts draw (assets/board-draw-more.js): contour maps and fields under, implicit curves over
+    GX.forEach(g => { try { if (g.draw) g.draw(sp, { X, Y, x0, x1, y0, y1, W, H, pl, pr, pt, pb, ink, clip, labels, P, id }); } catch (e) {} });
     // tangent and secant lines: straight across the plot
     const across = (a, y, m) => clipTo(box, X(x0), Y(y + m * (x0 - a)), X(x1), Y(y + m * (x1 - a)));
     const straight = []; tans.forEach(t => { const s = across(t.a, t.y, t.m); if (s) straight.push({ s, c: t.c, n: ink.next(), t }); }); secs.forEach(t => { const s = across(t.a, t.ya, t.m); if (s) straight.push({ s, c: t.c, n: ink.next(), sec: t }); });
@@ -1120,7 +1131,7 @@
     const pv = v => { const x = value(v, sp.params); return Number.isFinite(x) ? fmt(x) : String(v); };
     let s = '';
     if (sp.type === 'graph') {
-      s = `Graph of ${sp.fns.length ? sp.fns.map(g => P(g.label || (g.f ? 'y = ' + g.f : `x = ${g.xt}, y = ${g.yt}`))).join(' and ') : sp.points.length ? 'points' : 'lines'}${sp.x && !(sp.sliders && sp.sliders.length) ? ` for x from ${fmt(sp.x[0])} to ${fmt(sp.x[1])}` : ''}${sp.points.length ? `; points ${sp.points.map(pt).join(', ')}` : ''}${sp.shade ? `; shaded${sp.shade.from != null ? ` from x = ${pv(sp.shade.from)}` : ''}${sp.shade.to != null ? ` to ${pv(sp.shade.to)}` : ''}` : ''}${sp.vlines.length ? `; dashed line${sp.vlines.length > 1 ? 's' : ''} at x = ${sp.vlines.map(v => fmt(v.v)).join(', ')}` : ''}`;
+      s = `Graph of ${sp.fns.length ? sp.fns.map(g => P(g.label || (g.f ? 'y = ' + g.f : `x = ${g.xt}, y = ${g.yt}`))).join(' and ') : sp.points.length ? 'points' : (sp.implicit && sp.implicit.length) || sp.field || sp.contour ? 'a plane' : 'lines'}${sp.x && !(sp.sliders && sp.sliders.length) ? ` for x from ${fmt(sp.x[0])} to ${fmt(sp.x[1])}` : ''}${sp.points.length ? `; points ${sp.points.map(pt).join(', ')}` : ''}${sp.shade ? `; shaded${sp.shade.from != null ? ` from x = ${pv(sp.shade.from)}` : ''}${sp.shade.to != null ? ` to ${pv(sp.shade.to)}` : ''}` : ''}${sp.vlines.length ? `; dashed line${sp.vlines.length > 1 ? 's' : ''} at x = ${sp.vlines.map(v => fmt(v.v)).join(', ')}` : ''}`;
       (sp.tangents || []).forEach(t => { const f = compile(t.f, sp.params), a = value(t.at, sp.params); if (f && Number.isFinite(a)) s += `; tangent line at x = ${fmt(a)}, slope ${approx(slope(f, a))}`; });
       (sp.secants || []).forEach(t => { const f = compile(t.f, sp.params), a = value(t.from, sp.params), b = value(t.to, sp.params); if (f && Number.isFinite(a) && Number.isFinite(b) && a !== b) s += `; secant line from x = ${fmt(a)} to ${fmt(b)}, slope ${approx((f(b) - f(a)) / (b - a))}`; });
       if (sp.riemann) { const r = riemann(sp.riemann, sp.params); if (r) s += `; ${r.rule === 'trap' ? 'trapezoid' : r.rule === 'mid' ? 'midpoint' : r.rule} Riemann sum with ${r.n} ${r.rule === 'trap' ? 'trapezoids' : 'rectangles'} from ${fmt(r.a)} to ${fmt(r.b)}, sum ${approx(r.sum, 4)}`; }
@@ -1137,7 +1148,9 @@
     else if (sp.type === 'normal') s = `Normal curve, mean ${fmt(sp.mean)}, standard deviation ${fmt(sp.sd)}${sp.shade ? (sp.both ? `, both tails shaded beyond ${fmt(sp.to !== null ? sp.to : sp.from)}` : `, shaded ${sp.from === null ? 'below' : 'from ' + fmt(sp.from)} ${sp.to === null ? (sp.from === null ? '' : 'up') : (sp.from === null ? fmt(sp.to) : 'to ' + fmt(sp.to))}`) : ''}`;
     else if (sp.type === 'tree') { const walk = (n, pre) => n.children.length ? n.children.map(c => walk(c, pre.concat(n))).join('; ') : pre.concat(n).map(x => `${P(x.label)}${x.p ? ' (' + P(x.p) + ')' : ''}`).join(' then ') + (n.result ? ` = ${P(n.result)}` : ''); s = `Probability tree: ${sp.branches.map(b => walk(b, [])).join('; ')}`; }
     else if (sp.type === 'venn') s = `Venn diagram of ${sp.sets.map(P).join(', ')}${sp.shade.length ? `; shaded: ${sp.shade.map(m => regionName(m, sp.sets.map(P))).join(', ')}` : ''}${Object.keys(sp.values).length ? `; ${Object.keys(sp.values).map(m => `${regionName(+m, sp.sets.map(P))}: ${P(sp.values[m])}`).join(', ')}` : ''}`;
+    else if (EXTRA[sp.type] && EXTRA[sp.type].plain) s = EXTRA[sp.type].plain(sp);
     else if (sp.type === 'flow') s = `Flow chart: ${sp.steps.map((x, k) => `${k + 1}. ${P(x.text)}`).join(' → ')}${sp.loops.map(l => `; from step ${l.from + 1} back to step ${l.to + 1}${l.label ? ` (${P(l.label)})` : ''}`).join('')}`;
+    if (sp.type === 'graph') GX.forEach(g => { try { const w = g.plain && g.plain(sp); if (w) s += '; ' + w; } catch (e) {} });
     return (s + (sp.caption ? `. ${P(sp.caption)}` : '')).replace(/\s+/g, ' ').trim();
   }
 
@@ -1157,13 +1170,15 @@
     const id = o.id || `bd${++uid}`; let inner;
     try {
       if (sp.type === 'table') inner = table(sp);
-      else { const g = R[sp.type](sp, id); inner = `${svgOpen(g.w, g.h, plain(sp), id)}${g.body}</svg>`; }
+      else if (EXTRA[sp.type] && EXTRA[sp.type].html) inner = EXTRA[sp.type].html(sp, id, animate);
+      else { const g = (R[sp.type] || EXTRA[sp.type].draw)(sp, id); inner = `${svgOpen(g.w, g.h, plain(sp), id)}${g.body}</svg>`; }
     } catch (e) { return `<p class="bd-bad">This drawing could not be shown.</p>`; }
     const moves = MOVES.has(sp.type) && !!sp._map;
     const live = (sp.sliders && sp.sliders.length) || moves; if (live) { LIVE.set(id, sp); if (LIVE.size > 160) LIVE.delete(LIVE.keys().next().value); }
     const F = sp.type === 'scatter' && sp.showR && sp.fit; const stat = F && Number.isFinite(F.r) ? `<p class="bd-stat">r = ${F.r.toFixed(3).replace('-', '−')} · r² = ${(F.r * F.r).toFixed(3)} · n = ${F.n}</p>` : '';
     const attrs = moves ? ' tabindex="0" role="group" aria-roledescription="graph you can move" aria-label="Drag to move it, scroll or pinch to zoom, point at a curve to read it; arrow keys move it, + and − zoom, 0 goes back"' : '';
-    return `<div class="bd bd-${sp.type}${animate ? ' bd-anim' : ''}${moves ? ' bd-live' : ''}" data-bd="${id}"${attrs}>${inner}${moves ? toolsHtml(o.big) : ''}</div>${stat}${sp.sliders && sp.sliders.length && !o.bare ? sliderHtml(sp, id) : ''}${sp.caption && !o.bare ? `<figcaption class="bd-cap">${esc(sp.caption).replace(/\$([^$]+)\$/g, '\\($1\\)')}</figcaption>` : ''}`;
+    const view = !moves && !o.big && !o.bare && sp.type !== 'table' ? `<button type="button" class="bd-view" data-bdv="${id}" aria-label="View large" title="View large">${ic('expand', 15)}</button>` : '';   // assets/board-draw-more.js opens it
+    return `<div class="bd bd-${sp.type}${animate ? ' bd-anim' : ''}${moves ? ' bd-live' : ''}" data-bd="${id}"${attrs}>${inner}${moves ? toolsHtml(o.big) : view}</div>${stat}${sp.sliders && sp.sliders.length && !o.bare ? sliderHtml(sp, id) : ''}${sp.caption && !o.bare ? `<figcaption class="bd-cap">${esc(sp.caption).replace(/\$([^$]+)\$/g, '\\($1\\)')}</figcaption>` : ''}`;
   }
   let raf = 0; const dirty = new Set();
   const boxOf = id => document.querySelector(`.bd[data-bd="${id}"]`);
@@ -1376,5 +1391,10 @@
     return true;
   }
 
-  App.boDraw = { parse, html, plain, pretty, json, depth, value, TYPES, open, isOpen: () => !!X0.el };
+  /* ---------- more kinds (assets/board-draw-more.js) ---------- */
+  function kind(type, k) { if (!TYPES.includes(type)) TYPES.push(type); EXTRA[type] = k; MAKE[type] = k.make; (k.alias || []).forEach(a => { ALIAS[a] = type; }); }
+  function graphPart(g) { GX.push(g); (g.alias || []).forEach(a => { ALIAS[a] = 'graph'; }); }
+  const H_ = { Ink, M, L, esc, pretty, lab, fmt, sig, ticks, niceStep, value, str, list, col, pts, head, svgOpen, tw, r1, compile, COLORS };
+
+  App.boDraw = { parse, html, plain, pretty, json, depth, value, TYPES, open, isOpen: () => !!X0.el, kind, graphPart, h: H_ };
 })(window);

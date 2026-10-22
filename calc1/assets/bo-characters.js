@@ -13,7 +13,7 @@
   const { esc, settings, setSetting } = App;
   const t = (s, ...v) => (App.t ? App.t(s, ...v) : s.replace(/\{(\d)\}/g, (m, i) => v[i - 1]));
   const CHARS = [
-    { id: 'professor', name: 'Professor Bo', line: 'An 80-year-old Harvard professor. Exacting, dry, and very hard to impress.', sample: '“Hmm. No. Eleven minus three has been eight since before I was born. Read me your second line again, slowly.”', live: 'ash', basic: 'ash', rate: 0.9 },
+    { id: 'professor', name: 'Professor Bo', line: 'An 80-year-old Harvard professor. Exacting, dry, and very hard to impress.', sample: '“Hmm. No. Eleven minus three has been eight since before I was born. Read me your second line again, slowly.”', live: 'ash', basic: 'ash', rate: 1 },
     { id: 'coach', name: 'Coach Bo', line: 'Treats every problem like practice. Loud, fast, no excuses.', sample: '“Nope! Again. Take the three away first. That’s the rep. Go!”', live: 'verse', basic: 'verse', rate: 1.1 },
     { id: 'detective', name: 'Detective Bo', line: 'Every problem is a case and every mistake a clue.', sample: '“Interesting. The trail goes cold on line two. Who moved that three?”', live: 'sage', basic: 'sage', rate: 1 },
     { id: 'zen', name: 'Zen Bo', line: 'Calm and patient. Good for stressful days.', sample: '“Let’s breathe. One line at a time. Look gently at line two.”', live: 'ballad', basic: 'ballad', rate: 0.9 },

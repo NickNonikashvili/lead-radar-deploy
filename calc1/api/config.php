@@ -71,13 +71,22 @@ return [
   'max_web_link'      => '',
   'pro_web_price'     => '$15',
   'max_web_price'     => '$20',
-  // calls with Bo (api/calls.php): Max includes call_included_minutes a month; more is bought ahead, call_hour_minutes
-  // for call_hour_price, a one-time RevenueCat product (call_hour_product) sold through call_hour_link
-  'call_included_minutes' => 60,
-  'call_hour_minutes' => 60,
-  'call_hour_price'   => '$10',
-  'call_hour_product' => 'mathub_call_hour',
-  'call_hour_link'    => '',
+  // credits (api/credits.php): everything with Bo is paid in credits (1 credit ≈ 1¢). Each plan gets some every month;
+  // more are bought ahead, credits_pack for credits_pack_price, a one-time RevenueCat product (credits_product) sold
+  // through credits_link. What things cost: tokens at the model's price × credits_markup, calls per minute, pictures each.
+  'credits_free'      => 100,
+  'credits_pro'       => 1000,
+  'credits_max'       => 2000,
+  'credits_pack'      => 1000,
+  'credits_pack_price' => '$10',
+  'credits_product'   => 'mathub_credits',
+  'credits_link'      => '',
+  'credits_markup'    => 2,
+  'credits_call_strong' => 17,       // a minute on Max's call model
+  'credits_call_light' => 6,         // a minute on the light call model (everyone else)
+  'credits_image'     => 15,         // a picture (credits_image_big wide or tall)
+  'credits_image_big' => 22,
+  'call_hour_product' => 'mathub_call_hour',   // call hours bought before credits: 1,000 credits each
   'pro_entitlement'   => 'pro',
   'max_entitlement'   => 'max',
   'plan_grants'       => [],
@@ -108,15 +117,17 @@ return [
   // several times the price. Without the key, calls fall back to basic voice (the browser hears, Claude answers).
   'ai_live_model'     => 'gpt-realtime-2.1-mini',
   'ai_live_transcribe' => 'gpt-live-transcribe',   // writes down what is said on calls (captions, the math check)
-  'ai_live_model_max' => 'gpt-realtime-2.1',   // Max members' calls (free minutes keep ai_live_model); empty: the same model for everyone
+  'ai_live_model_max' => 'gpt-realtime-2.1',   // Max members' calls (everyone else: ai_live_model); empty: the same model for everyone
   'ai_live_voice'     => 'cedar',    // cedar, marin, ash, ballad, coral, sage or verse; students can pick another
-  'ai_live_monthly'   => 3000,       // a safety limit: minutes of live calls per account per month (Max pays per hour: api/calls.php)
+  'ai_live_monthly'   => 3000,       // a safety limit: minutes of live calls per account per month (calls are paid in credits)
   'ai_live_daily'     => 240,        // a safety limit: minutes per day
   'ai_live_call'      => 30,         // minutes per call (Bo can be called again right away)
-  'ai_trial_minutes'  => 10,         // free call minutes with Bo, once, for every account without Max (0 turns it off)
+
   'recap_emails'      => 'on',       // Bo's recap by email after a call (off: only in the chat); each member can turn it off too
   'exam_emails'       => 'on',       // the heads-up 3 days before an exam (off: none are sent); each member can turn it off too
-  'ai_invite_minutes' => 10,         // more free minutes for both, when a classmate joins through your invite link (0 turns it off; up to 60 per account)
+  'ai_invite_credits' => 100,        // credits for both, when a classmate joins through your invite link (0 turns it off; up to 1,000 per account)
+  'ai_image_model'    => 'gpt-image-2',   // the pictures Bo makes (api/images.php); gpt-image-1 when the account cannot use it
+  'ai_image_quality'  => 'medium',   // low, medium or high
 
   // Storage. Keep the database inside api/data (protected by .htaccess) or move it above public_html.
   'db_path'         => __DIR__ . '/data/mathub.sqlite',

@@ -282,6 +282,8 @@ function mh_export_user(array $u): array {
   }
   // classes this member had Bo write from a syllabus and published for everyone (api/community.php)
   try { $st = mh_pack_db()->prepare('SELECT id, code, name, enabled, created FROM class_packs WHERE uploaded_by = ?'); $st->execute(['community:' . $u['id']]); $added = $st->fetchAll(); if ($added) $out['classes_added_to_mathub'] = array_map(fn($r) => ['id' => $r['id'], 'code' => $r['code'], 'name' => $r['name'], 'published' => (bool)$r['enabled'], 'added' => gmdate('c', (int)$r['created'])], $added); } catch (Throwable $e) {}
+  // what Bo knows about this member (api/students.php): their student file
+  $sf = __DIR__ . '/data/students/' . (int)$u['id'] . '.json'; if (is_file($sf)) { $sj = json_decode((string)@file_get_contents($sf), true); if (is_array($sj)) $out['what_bo_knows'] = $sj; }
   $st = $db->prepare('SELECT created, expires, ua FROM tokens WHERE user_id = ? AND expires > ?'); $st->execute([$u['id'], time()]);
   $out['signed_in_devices'] = array_map(fn($r) => ['device' => mh_ua_label((string)$r['ua']), 'signed_in' => gmdate('c', (int)$r['created']), 'expires' => gmdate('c', (int)$r['expires'])], $st->fetchAll());
   return $out;

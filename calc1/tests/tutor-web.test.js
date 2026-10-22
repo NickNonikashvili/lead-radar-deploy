@@ -32,10 +32,10 @@ const PNG = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwA
   const [ca, a] = await open(1360, 900, 'alice.a@montana.edu');
   await api(a, 'create_status&refresh=1');
   await go(a, '#/tutor', 1800);
-  check('without Max: Meet Bo, what he does, and Get Mathub Max', /Meet Bo, your tutor/.test(await txt(a, '#bo-main')) && (await a.$$('.bo-perks li')).length === 5 && /Call him/.test(await txt(a, '.bo-perks')) && /Get Mathub Max/.test(await txt(a, '[data-go="max"]')));
-  await a.click('[data-go="max"]'); await a.waitForTimeout(1500);
+  check('without a plan, Ask Bo works on her monthly credits: no plan wall', !/Get Mathub Max|part of Mathub Max/.test(await txt(a, '#bo-main')) && /Before you start|Pick a class first|Ask Bo about|I'm Bo/.test(await txt(a, '#bo-main')), (await txt(a, '#bo-main')).slice(0, 200));
+  await a.evaluate(() => { App.paywall({ need: 'max', reason: 'bo' }); }); await a.waitForTimeout(1500);
   const pw = await a.evaluate(() => { const s = document.querySelector('#paywall'); return s && { h: s.querySelector('h2').textContent, plans: [...s.querySelectorAll('[data-plan]')].map(b => b.dataset.plan), buy: (s.querySelector('[data-action="pw-buy"]') || {}).textContent, href: (s.querySelector('[data-action="pw-buy"]') || {}).getAttribute && s.querySelector('[data-action="pw-buy"]').getAttribute('href'), why: s.querySelector('.pw-why').textContent }; });
-  check('Bo\'s paywall offers Max only, at $20, with her Max checkout', pw && pw.h === 'Mathub Max' && pw.plans.join() === 'max' && /Get Max for \$20 a month/.test(pw.buy) && /^https:\/\/pay\.rev\.cat\/sbx_max_link\/mh_\d+$/.test(pw.href) && /part of Mathub Max/.test(pw.why), pw);
+  check('Bo\'s paywall offers Max only, at $20, with her Max checkout', pw && pw.h === 'Mathub Max' && pw.plans.join() === 'max' && /Get Max for \$20 a month/.test(pw.buy) && /^https:\/\/pay\.rev\.cat\/sbx_max_link\/mh_\d+$/.test(pw.href) && /2,000 credits a month/.test(pw.why), pw);
   await a.keyboard.press('Escape'); await a.waitForTimeout(300);
   const aliceId = (await api(a, 'create_status')).json.customer;
   fs.writeFileSync(STATE, JSON.stringify({ [aliceId]: { expires: new Date(Date.now() + 30 * 864e5).toISOString(), plan: 'pro' } }));
@@ -100,7 +100,9 @@ const PNG = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwA
   // What Bo knows: a sheet from the i button
   await m.click('[data-bo="knows"]'); await m.waitForTimeout(500);
   const k = await txt(m, '#bo-knows');
-  check('What Bo knows: the class, the next exam, weakest topics, his notes and questions left', /The class/.test(k) && /Exam 2, in 3 days/.test(k) && /Weakest topics/.test(k) && /Likes worked examples first/.test(k) && /questions left/.test(k), k.slice(0, 300));
+  check('What Bo knows: the class, the next exam, weakest topics, his notes and the student file (administrators have no credits to count)', /The class/.test(k) && /Exam 2, in 3 days/.test(k) && /Weakest topics/.test(k) && /Likes worked examples first/.test(k) && /Your student file/.test(k), k.slice(0, 300));
+  await m.click('#bo-knows [data-kf="see"]'); await m.waitForTimeout(900);
+  check('See it shows her whole student file', /"classes"/.test(await txt(m, '#bo-k-file pre')) && /"memory"/.test(await txt(m, '#bo-k-file pre')), (await txt(m, '#bo-k-file')).slice(0, 200));
   await m.click('#bo-knows [data-k-note="0"]'); await m.waitForTimeout(700);
   check('a note can be deleted there', !/Likes worked examples first/.test(await txt(m, '#bo-knows .bo-k-notes')) && ((await api(m, 'ai_status')).json.notes || []).length === 0);
   await m.keyboard.press('Escape'); await m.waitForTimeout(300);

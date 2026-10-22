@@ -260,9 +260,8 @@
        the chat, and he reads it out sentence by sentence.
      The screen is the board (assets/bo-pad.js); before the call starts a night sky covers it with Bo in the middle.
      ============================================================ */
+  const SQUEEZE_AT = 24, SQUEEZE_KEEP = 10;   // a long call's turns: when the older ones are folded into a summary (Live.squeeze)
   const T = { el: null, mode: 'live', cid: null, status: null, state: 'idle', who: 'listening', onClose: null, back: null, changed: false, lock: null, raf: 0, lvl: 0, pages: [], cards: new Map(), pad: null, photo: null, board: false, muted: false, t0: 0, clock: 0, listener: null, turn: 0, done: true, trial: false, lid: '', free: 0, freeAt: 0, freeTick: 0 };
-  /* without Max, a call runs on the free minutes (once per account; api/ai.php counts them): how many are left now */
-  const freeLeft = () => Math.max(0, T.free - (Date.now() - T.freeAt) / 1000);
   const liveOn = () => !!(T.status && T.status.voice && T.status.voice.live) && !!global.RTCPeerConnection && !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia) && settings().boMode !== 'basic';
   const canHear = () => !!SR || !!(T.status && T.status.voice && T.status.voice.listen && navigator.mediaDevices && global.MediaRecorder);
   const naturalOn = () => !!(T.status && T.status.voice && T.status.voice.natural) && settings().boVoice !== 'device';
@@ -299,7 +298,6 @@
   function open(o = {}) {
     if (NATIVE || T.el) return;
     Object.assign(T, { cid: o.cid || 'calc', status: o.status || T.status, onClose: o.onClose || null, changed: false, back: document.activeElement, pages: [], cards: new Map(), photo: null, board: false, muted: false, t0: 0, state: 'idle', who: 'listening', lid: '', slips: [], practice: [], asked: 0, mc: { you: 0, bo: 0, page: 0, false_barge: 0, barge: 0, echo: 0, cut_client: 0, cut_limit: 0, errors: 0, drops: 0 }, focus: o.focus === 'exam' ? 'exam' : '' });
-    T.trial = !!(T.status && !T.status.max && T.status.trial && T.status.trial.left > 0); T.free = T.trial ? T.status.trial.left : 0; T.freeAt = Date.now();
     T.mode = liveOn() ? 'live' : 'basic'; CC.cues = []; Pace.reset();
     const el = T.el = document.createElement('div'); el.id = 'bo-talk'; el.className = 'bt'; el.dataset.mode = T.mode; el.dataset.ccSize = ccSize(); el.dataset.ccBg = ccBg();
     el.setAttribute('role', 'dialog'); el.setAttribute('aria-modal', 'true'); el.setAttribute('aria-labelledby', 'bt-h');
@@ -445,7 +443,7 @@
   function setState(s, msg) {
     T.state = s; if (!T.el) return; T.el.dataset.state = s; T.el.dataset.mode = T.mode;
     clearInterval(T.clock);
-    if (s === 'live') { if (!T.t0) T.t0 = Date.now(); const tick = () => { if (T.el) $('#bt-clock-t', T.el).textContent = clockText((Date.now() - T.t0) / 1000) + (T.trial ? ` · ${Math.max(0, Math.ceil(freeLeft() / 60))} free min left` : Live.soon() ? ` · ${Math.max(1, Math.ceil(Live.leftNow() / 60))} min left` : ''); }; tick(); T.clock = setInterval(tick, 1000); }
+    if (s === 'live') { if (!T.t0) T.t0 = Date.now(); const tick = () => { if (T.el) $('#bt-clock-t', T.el).textContent = clockText((Date.now() - T.t0) / 1000) + (Live.soon() ? ` · ${Math.max(1, Math.ceil(Live.leftNow() / 60))} min left` : ''); }; tick(); T.clock = setInterval(tick, 1000); }
     else $('#bt-clock-t', T.el).textContent = s === 'connecting' ? 'Calling…' : s === 'ended' ? 'Call ended' : '';
     paintStatus(msg); paintExtra();
   }
@@ -558,14 +556,12 @@
   }
   function ended(msg, over) {
     setState('ended'); if (!T.el) return;
-    // Max, out of call time: buy an hour (the Calls page, assets/calls.js)
-    if (over === 'hours') { $('#bt-extra', T.el).innerHTML = `<div class="bt-msg" role="status"><p>${esc(msg)}</p><div class="bt-msg-acts"><a class="btn primary" href="#/calls">${icon('phone', 16)} Get more call time</a><button type="button" class="btn" data-t="end">Close</button></div></div>`; return; }
-    // the free minutes are up: what Max is, instead of calling again
-    $('#bt-extra', T.el).innerHTML = over ? `<div class="bt-msg" role="status"><p>${esc(msg)}</p><div class="bt-msg-acts"><a class="btn primary" href="#/max">${icon('zap', 16)} See Mathub Max</a><button type="button" class="btn" data-t="end">Close</button></div></div>`
+    // out of credits: where to get more (the Usage page, assets/usage.js), instead of calling again
+    $('#bt-extra', T.el).innerHTML = over ? `<div class="bt-msg" role="status"><p>${esc(msg)}</p><div class="bt-msg-acts"><a class="btn primary" href="#/usage">${icon('plus', 16)} Get credits</a><button type="button" class="btn" data-t="end">Close</button></div></div>`
       : `<div class="bt-msg" role="status"><p>${esc(msg)}</p><div class="bt-msg-acts"><button type="button" class="btn primary" data-t="retry">${icon('phone', 16)} Call again</button><button type="button" class="btn" data-t="end">Close</button></div></div>`;
   }
-  // a call that may not happen (no Max, or the free minutes are gone)
-  const noPlan = x => { if (x.status !== 402) return false; T.trial = false; ended(x.message, x.data && x.data.hours ? 'hours' : true); return true; };
+  // a call that may not happen: not enough credits left (api/credits.php answers 402)
+  const noPlan = x => { if (x.status !== 402) return false; ended(x.message, true); return true; };
   function showType(on) { if (!T.el) return; const f = $('#bt-type', T.el); f.hidden = !on; T.el.classList.toggle('typing', !!on); const b = $('[data-t="type"]', T.el); if (b) b.setAttribute('aria-expanded', String(on)); if (on) setTimeout(() => { const q = $('#bt-q', T.el); if (q) q.focus(); }, 30); }
   function micTrouble(code) {
     const msg = code === 'not-allowed' || code === 'service-not-allowed' ? 'Mathub can’t use your microphone. Allow it from the icon in the address bar, then call again. You can also type to Bo.'
@@ -574,6 +570,12 @@
     who('muted'); paintStatus(msg); if (code === 'not-allowed' || code === 'service-not-allowed' || code === 'audio-capture') showType(true);
   }
 
+  // what the call costs and about how long the credits last (api/credits.php, through ai_status)
+  function creditsLine() {
+    const K = T.status && T.status.credits; if (!K || T.status.admin) return '';
+    const rate = T.mode === 'live' ? (K.call_rate || 6) : 0; const mins = rate ? Math.floor((K.left || 0) / rate) : 0;
+    return `<p class="bt-free">${icon('zap', 16)} <b>${App.credits ? App.credits.fmt(K.left || 0) : Math.floor(K.left || 0)} credits</b>${rate ? ` · about ${mins} ${mins === 1 ? 'minute' : 'minutes'} at ${App.credits ? App.credits.fmt(rate) : rate} a minute` : ' · each answer uses a few'}. <a href="#/usage">Usage</a></p>`;
+  }
   /* first call: how it works and where your voice goes; the tap on Start lets audio play */
   function hello() {
     if (!T.el) return; const ex = $('#bt-extra', T.el);
@@ -584,7 +586,7 @@
       ${T.focus === 'exam' ? examCard(false) : ''}${ch() ? `<p class="bt-char-line">You’re talking with <b>${esc(ch().name)}</b> · <button type="button" class="linkbtn" data-t="settings">Change</button></p>` : ''}
       <p>${live ? 'Just talk. Bo answers right away, waits until you’re done, and you can cut in whenever you want, like with a friend. Mute pauses your mic.' : 'Ask anything and Bo answers out loud, writing the math on the board. Tap Bo to send what you said, or to cut in.'}</p>
       <p>The whole screen is a board you share: write your work on it and tap <b>Show Bo</b>, and he reads it, marks it and helps you through it${live ? '; he also sees it as you write' : ''}.</p>
-      ${T.trial ? `<p class="bt-free">${icon('zap', 16)} <b>${Math.max(1, Math.ceil(T.free / 60))} free minutes</b> with Bo, on us. No card needed.</p>` : ''}
+      ${creditsLine()}
       <p class="bt-fine">${where} ${live ? 'What you both say is saved in your chat with Bo.' : 'As in the chat, your words go to Anthropic’s AI for Bo’s reply, and what you both say is saved in your chat with Bo.'} <a href="#/policy/privacy">Privacy</a></p>
       <button type="button" class="btn primary lg" id="bt-start" data-t="start">${icon(live ? 'phone' : 'mic', 18)} ${live ? 'Start the call' : 'Start talking'}</button></section>`;
     $('#bt-start', T.el).focus();
@@ -636,7 +638,7 @@
     pc: null, dc: null, mic: null, audio: null, anBo: null, anYou: null, lid: null, left: 0, at: 0, tick: 0, save: 0, watchT: 0, items: new Map(), order: [], notes: [], boards: [], boText: '', youText: '', talking: false, ended: true, fns: new Map(), ran: new Set(), auto: 0, toolRetry: false, looks: 0, lookAt: 0, lastLook: '', glanceT: 0,
     // the math check (assets/mathcheck.js): the problem being worked and a question just asked, what was right, what was wrong, pages refused
     active: null, queued: false, ctx: { eqs: [], ask: '', at: 0 }, lastRight: null, lastWrong: null, guarded: 0, refused: new Map(), drawFails: 0,
-    reset() { Object.assign(this, { pc: null, dc: null, mic: null, anBo: null, anYou: null, lid: null, left: 0, at: 0, items: new Map(), order: [], notes: [], boards: [], boText: '', youText: '', talking: false, ended: false, fns: new Map(), ran: new Set(), auto: 0, toolRetry: false, looks: 0, lookAt: 0, lastLook: '', active: null, queued: false, ctx: { eqs: [], ask: '', at: 0 }, lastRight: null, lastWrong: null, guarded: 0, refused: new Map(), drawFails: 0, drop: null, building: false, cut: null, eagerNow: '', bc: null, echo: new Set(), kq: [], pend: null, opened: false, respAt: 0, youAt: 0 }); clearTimeout(this.glanceT); },
+    reset() { Object.assign(this, { pc: null, dc: null, mic: null, anBo: null, anYou: null, lid: null, left: 0, at: 0, items: new Map(), order: [], notes: [], boards: [], boText: '', youText: '', talking: false, ended: false, fns: new Map(), ran: new Set(), auto: 0, toolRetry: false, looks: 0, lookAt: 0, lastLook: '', active: null, queued: false, ctx: { eqs: [], ask: '', at: 0 }, lastRight: null, lastWrong: null, guarded: 0, refused: new Map(), drawFails: 0, drop: null, building: false, cut: null, eagerNow: '', bc: null, echo: new Set(), kq: [], pend: null, opened: false, respAt: 0, youAt: 0, all: [], gone: new Set(), sumId: '', summary: '', squeezing: false }); clearTimeout(this.glanceT); },
     leftNow() { return this.left - (Date.now() - this.at) / 1000; },
     soon() { return T.mode === 'live' && !!this.lid && this.at > 0 && this.leftNow() < 180; },
     headset() { const t = this.mic && this.mic.getAudioTracks()[0]; const s = settings().boHeadset; return s === true || (s !== false && !!t && /head(?:set|phone)|air ?pods|buds|earbud|earphone|bose|beats|jabra|plantronics|poly|sennheiser|sony wh|bluetooth/i.test(t.label || '')); },
@@ -660,7 +662,7 @@
     /* one connection to OpenAI: a new one for a new call, or to pick a dropped one up again (resume) */
     async connect(resume) {
       const L = this; L.closeConn();
-      const pc = L.pc = new RTCPeerConnection(); L.opened = false; L.connAt = Date.now(); L.rx = { n: -1, at: Date.now() };
+      const pc = L.pc = new RTCPeerConnection(); L.opened = false; L.connAt = Date.now(); L.rx = { n: -1, at: Date.now() }; L.all = []; L.gone = new Set(); L.sumId = '';
       L.audio = L.audio || new Audio(); L.audio.autoplay = true;
       pc.ontrack = e => { if (L.pc !== pc) return; const s = e.streams[0]; L.audio.srcObject = s; const p = L.audio.play && L.audio.play(); if (p && p.catch) p.catch(() => {}); L.anBo = meter(s); };
       L.mic.getTracks().forEach(t => pc.addTrack(t, L.mic)); if (!L.anYou) L.anYou = meter(L.mic);
@@ -673,7 +675,7 @@
       const r = await post('ai_live_start', { lang: App.lang, class: T.cid, sdp: offer.sdp, voice: liveVoice(), speed: liveRate(), eagerness: eager(), snapshot: snap(), today: App.todayISO(), persona: App.boChar ? App.boChar() : '', focus: T.focus, mic: L.headset() ? 'headset' : 'speaker', resume: resume ? L.lid : '' });
       if (L.pc !== pc) return;
       if (!T.el || L.ended) return L.stop();
-      L.lid = r.lid; L.left = r.left; L.at = Date.now(); if (r.trial) { T.trial = true; T.free = r.left; T.freeAt = Date.now(); }
+      L.lid = r.lid; L.left = r.left; L.at = Date.now();
       await pc.setRemoteDescription({ type: 'answer', sdp: r.sdp });
     },
     closeConn() {
@@ -686,6 +688,7 @@
       L.opened = true; L.rx = { n: -1, at: Date.now() };
       if (!T.t0) T.t0 = Date.now(); setState('live'); who(T.muted ? 'muted' : 'listening');
       if (L.drop) L.healed(true);
+      if (resume && L.summary) L.putSummary();   // picked up again: the summary of the older part goes back in first
       if (T.pad && T.pad.hasInk() && watching()) L.look(false);   // he sees what is already on the board
       L.want();   // Bo speaks first: hello, or that he lost them for a second
     },
@@ -745,8 +748,10 @@
     on(ev) {
       const L = this; if (!T.el || L.ended) return;
       const fn = ev.item && ev.item.type === 'function_call' ? ev.item : null;
+      if ((ev.type === 'conversation.item.added' || ev.type === 'conversation.item.created') && ev.item && ev.item.id && !/^(look_|sum_)/.test(ev.item.id) && !L.all.includes(ev.item.id)) L.all.push(ev.item.id);   // for squeeze()
       if (fn) { if (fn.name) { if (fn.id) L.fns.set(fn.id, fn.name); if (fn.call_id) L.fns.set(fn.call_id, fn.name); } if (ev.type === 'response.output_item.done' || ev.type === 'conversation.item.done') L.call(fn.name, fn.call_id, fn.arguments); return; }
       switch (ev.type) {
+        case 'conversation.item.deleted': L.all = L.all.filter(x => x !== ev.item_id); break;
         case 'conversation.item.added': case 'conversation.item.created': {
           const it = ev.item || {}; if (it.type !== 'message' || !it.id || L.items.has(it.id) || /^look_/.test(it.id) || L.echo.has(it.id)) break;   // a quiet look at the board is not part of the chat
           const r = it.role === 'assistant' ? 'b' : it.role === 'user' ? 'u' : ''; if (!r) break;
@@ -781,11 +786,11 @@
           L.talking = false; Pace.stop(ev.type === 'output_audio_buffer.cleared');
           if (T.who === 'bo' || T.who === 'thinking') who(T.muted ? 'muted' : 'listening'); break;
         case 'response.function_call_arguments.done': { const name = ev.name || L.fns.get(ev.item_id) || L.fns.get(ev.call_id); if (name || !ev.item_id) L.call(name, ev.call_id, ev.arguments); break; }   // without a name yet: response.output_item.done brings it
-        case 'response.done': L.done(ev.response || {}); break;
+        case 'response.done': L.done(ev.response || {}); L.squeeze(); break;
         case 'error': {   // most are recoverable and the call goes on; none is ever passed to Bo or read out
           const code = (ev.error && ev.error.code) || '';
           if (code === 'conversation_already_has_active_response') { L.queued = true; if (L.active === 'asked') L.active = null; clearTimeout(L.retryT); L.retryT = setTimeout(() => { if (L.queued && !L.active && !L.ended) { L.queued = false; L.want(); } }, 1200); break; }
-          if (code === 'response_cancel_not_active') break;
+          if (code === 'response_cancel_not_active' || code === 'item_not_found' || /item.*(not found|does not exist)/i.test((ev.error && ev.error.message) || '')) break;   // a turn already taken out (squeeze) is not a problem
           T.mc.errors++; if (ev.error && ev.error.message) console.warn('Bo live:', code, ev.error.message); break;
         }
       }
@@ -884,7 +889,8 @@
         if (ds.length === 1 && a.caption && !ds[0].o.caption) { ds[0].o = Object.assign({}, ds[0].o, { caption: a.caption }); ds[0].json = JSON.stringify(ds[0].o); }
         if (ds.length) { put(ds.map(d => ({ k: 'draw', t: d.json }))); out = { ok: true, drawn: ds.map(d => d.sp.type).join(', '), page: T.pages.length }; this.drawFails = 0; }
         else if (++this.drawFails < 2) out = fix(`That drawing could not be drawn. Give drawing.type (one of ${(D ? D.TYPES : ['graph']).join(', ')}) and its numbers; functions use x, like "x^2 - 3".`);
-        else { this.drawFails = 0; out = { ok: true, drawn: 'nothing', hint: 'Skip the drawing and explain it in words. Do not mention this to the student.' }; }
+        else if (this.drawFails < 3) out = fix('That drawing still could not be drawn. Draw it as type "svg" instead (any diagram, written as SVG), or as a simpler drawing. You can draw anything.');
+        else { this.drawFails = 0; out = { ok: true, drawn: 'nothing this time', hint: 'Talk it through for now; your next drawing works as usual (you can draw anything). Do not mention this to the student.' }; }
       }
       else if (name === 'ask_on_board') {
         // a question on the board for the student to answer there; what they pick comes back to him as a message
@@ -925,7 +931,7 @@
     },
     async report() {
       if (!this.lid || this.ended || this.drop) return;
-      try { const r = await post('ai_live_tick', { lid: this.lid }); if (r.end) { this.flush(false); this.stop(); ended(r.why || 'The call ended.', r.hours ? 'hours' : !!r.trial_over); return; } this.left = r.left; this.at = Date.now(); if (T.trial) { T.free = r.left; T.freeAt = Date.now(); } } catch (e) {}
+      try { const r = await post('ai_live_tick', { lid: this.lid }); if (r.end) { this.flush(false); this.stop(); ended(r.why || 'The call ended.', !!(r.credits || r.hours || r.trial_over)); return; } this.left = r.left; this.at = Date.now(); if (T.trial) { T.free = r.left; T.freeAt = Date.now(); } } catch (e) {}
     },
     /* is the line alive? Every second: the connection's state, audio still arriving, the mic still on, the hour */
     async health() {
@@ -981,6 +987,28 @@
         if (s && s.replaceTrack) await s.replaceTrack(t); L.mic = m; L.anYou = meter(m); L.applyMic(); const c = T.el && $('#bt-micfix', T.el); if (c) c.remove();
       } catch (e) { if (T.el && !$('#bt-micfix', T.el)) $('#bt-extra', T.el).insertAdjacentHTML('beforeend', `<button type="button" class="btn primary" id="bt-micfix" data-t="micfix">${icon('mic', 16)} Tap to turn your mic back on</button>`); }
       L.fixingMic = false;
+    },
+    /* a long call: once SQUEEZE_AT turns are in the conversation, all but the last SQUEEZE_KEEP are folded into a summary
+       (api/students.php ai_compact, kept in the student file too) and taken out, with the tool calls between them, so Bo
+       keeps the thread without the call getting slow or muddled. The chat still gets every word (flush). */
+    squeeze() {
+      const L = this; if (L.squeezing || L.ended || !L.lid || !L.dc) return;
+      const msgs = L.order.filter(id => { const t = L.items.get(id); return t && t.done && t.t && L.all.includes(id); });
+      if (msgs.length < SQUEEZE_AT) return;
+      const cut = msgs.slice(0, msgs.length - SQUEEZE_KEEP), keepFrom = msgs[msgs.length - SQUEEZE_KEEP];
+      L.squeezing = true; const dc = L.dc;
+      post('ai_compact', { class: T.cid, summary: L.summary, items: cut.map(id => { const t = L.items.get(id); return { r: t.r, t: t.t }; }) }).then(r => {
+        if (!r || !r.summary || L.ended || L.dc !== dc) return;
+        L.summary = r.summary;
+        const k = L.all.indexOf(keepFrom); const drop = k > 0 ? L.all.slice(0, k) : cut;
+        drop.forEach(id => { L.gone.add(id); L.send({ type: 'conversation.item.delete', item_id: id }); });
+        L.all = L.all.filter(id => !L.gone.has(id)); L.putSummary(); T.mc.squeeze = (T.mc.squeeze || 0) + 1;
+      }).catch(() => {}).then(() => { L.squeezing = false; });
+    },
+    putSummary() {
+      const L = this; if (!L.summary) return; if (L.sumId) L.send({ type: 'conversation.item.delete', item_id: L.sumId });
+      L.sumId = 'sum_' + Date.now().toString(36);
+      L.send({ type: 'conversation.item.create', previous_item_id: 'root', item: { id: L.sumId, type: 'message', role: 'system', content: [{ type: 'input_text', text: 'SUMMARY OF THIS CALL SO FAR (the older part, folded so the call stays quick; the newer turns follow it). Keep using it: what they are working on, what they got right and wrong, what you promised. ' + L.summary }] } });
     },
     /* what was said goes into the chat: in order, and only once it is written down (all of it when the call ends) */
     flush(end) {
@@ -1047,18 +1075,11 @@
   const Basic = {
     async start() {
       Speaker.natural = naturalOn(); Speaker.voice = basicVoice(); Speaker.fellBack = false;
-      if (T.trial) {   // without Max: the call runs on the free minutes, so it is started and reported like a live one
-        setState('connecting');
-        try { const r = await post('ai_call_start', { class: T.cid }); T.lid = r.lid || ''; if (r.trial) { T.free = r.left; T.freeAt = Date.now(); } } catch (x) { if (!noPlan(x)) failed(x.message, false); return; }
-        if (!T.el) return; clearInterval(T.freeTick); T.freeTick = setInterval(() => Basic.report(), 30000);
-      }
+      // credits pay for each answer, his voice and listening as they happen; this only checks some are left
+      if (!(T.status && T.status.admin)) { setState('connecting'); try { await post('ai_call_start', { class: T.cid }); } catch (x) { if (!noPlan(x)) failed(x.message, false); return; } if (!T.el) return; }
       T.t0 = Date.now(); setState('live'); if (!canHear()) showType(true); greet();
     },
-    async report() {
-      if (!T.lid || !T.el) return;
-      try { const r = await post('ai_live_tick', { lid: T.lid }); if (r.end) { Basic.stop(); ended(r.why || 'The call ended.', !!r.trial_over); return; } T.free = r.left; T.freeAt = Date.now(); } catch (e) {}
-    },
-    stop() { T.turn++; stopListening(); Speaker.stop(); clearInterval(T.freeTick); if (T.lid) { const lid = T.lid; T.lid = ''; post('ai_live_tick', { lid, end: 1 }).catch(() => {}); } },
+    stop() { T.turn++; stopListening(); Speaker.stop(); },
     orb() { if (T.who === 'bo') return interrupt(); if (T.who === 'listening' && T.listener) return T.listener.send(); if (T.who === 'thinking') { T.turn++; Speaker.stop(); return who('muted'); } T.muted = false; listen(); },
     mute(on) { if (on) { stopListening(); who('muted'); } else listen(); }
   };

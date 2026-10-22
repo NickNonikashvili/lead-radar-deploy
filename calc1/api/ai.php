@@ -3,10 +3,10 @@
    Mathub account server — Bo, the AI tutor, talking with Bo out loud, and classes Bo writes from a syllabus
    Routes: ai_status, ai_thread, ai_tutor, ai_forget, ai_class, ai_speak, ai_listen, ai_live_start, ai_call_start, ai_live_tick, ai_live_log
    - Who can do what: any signed-in member can have Bo turn a syllabus into a class, which is checked first and then
-     published for everyone (api/community.php); asking Bo from the floating Bo on any page needs Mathub Pro or Max;
-     Ask Bo's own page, talking out loud and calls need Max (plan_grants gives testers a plan). Everyone else gets
-     free call time with Bo once (ai_trial_minutes, 10 by default): a live call (ai_live_start) or a basic voice call
-     (ai_call_start, then ai_tutor, ai_speak and ai_listen with that call's lid), counted in ai_trial as it is reported.
+     published for everyone (api/community.php). Everything else with Bo (asking him on any page or on his own page,
+     talking out loud, calls, his pictures) works on any plan and is paid in credits (api/credits.php): each month's
+     credits by plan, then credits bought. Max calls use the stronger model. (The free minutes, ai_trial, are retired;
+     a call already on them when this changed finishes on them.)
    - This server is the only thing that talks to the AI (Anthropic's API; the key lives in config.local.php),
      and it keeps every request small so it costs as little as possible:
        * each class is turned into a compact text summary: its facts, grading, exams and one line per
@@ -59,7 +59,7 @@
 
 require_once __DIR__ . '/myclasses.php';
 
-const MH_AI_TURNS_SENT = 6;      // chat turns sent to the AI with each question
+const MH_AI_TURNS_SENT = 10;     // chat turns sent to the AI with each question; older ones are in the summary (api/students.php)
 const MH_AI_TURNS_KEPT = 40;     // chat turns kept for the screen
 const MH_AI_NOTES = 12;          // notes Bo keeps about a student
 const MH_AI_FILE_BYTES = 7000000; // a syllabus file (PDF or photo)
@@ -87,6 +87,7 @@ function mh_ai_db(): PDO {
     $db->exec('CREATE TABLE IF NOT EXISTS ai_live (id TEXT PRIMARY KEY, user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE, cid TEXT NOT NULL DEFAULT "", call TEXT NOT NULL DEFAULT "", started INTEGER NOT NULL, last INTEGER NOT NULL, secs INTEGER NOT NULL DEFAULT 0, ended INTEGER NOT NULL DEFAULT 0)');
     $lc = array_column($db->query('PRAGMA table_info(ai_live)')->fetchAll(), 'name');
     if (!in_array('trial', $lc, true)) $db->exec('ALTER TABLE ai_live ADD COLUMN trial INTEGER NOT NULL DEFAULT 0');   // a call on the free minutes
+    if (!in_array('rate', $lc, true)) $db->exec('ALTER TABLE ai_live ADD COLUMN rate REAL NOT NULL DEFAULT 0');   // credits a minute (api/credits.php)
     // answers a student marked as not right (the thumbs down under Bo's answers), for the admin's Bo quality tab
     $db->exec('CREATE TABLE IF NOT EXISTS ai_flags (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE, cid TEXT NOT NULL DEFAULT "", at INTEGER NOT NULL DEFAULT 0, q TEXT NOT NULL DEFAULT "", answer TEXT NOT NULL, why TEXT NOT NULL DEFAULT "", voice INTEGER NOT NULL DEFAULT 0, created INTEGER NOT NULL, status TEXT NOT NULL DEFAULT "open", UNIQUE (user_id, cid, at, answer))');
     $tc = array_column($db->query('PRAGMA table_info(ai_trial)')->fetchAll(), 'name');
@@ -139,7 +140,7 @@ function mh_ai_voice_settings(array $cfg): array {
     'live_monthly' => 60 * max(0, (int)($cfg['ai_live_monthly'] ?? 3000)),   // seconds
     'live_daily' => 60 * max(1, (int)($cfg['ai_live_daily'] ?? 240)),
     'live_call' => 60 * max(1, (int)($cfg['ai_live_call'] ?? 30)),
-    'trial' => 60 * max(0, (int)($cfg['ai_trial_minutes'] ?? 10)),   // free call time with Bo, once, for everyone without Max
+    'trial' => 0,   // the free minutes are retired: every account gets credits each month (api/credits.php)
   ];
 }
 /** The voices of live calls (OpenAI's realtime voices); cedar and marin sound the most natural. */
@@ -176,8 +177,12 @@ function mh_ai_call(array $A, string $model, array $system, array $messages, int
   if ($raw === false || $code < 200 || $code >= 300 || !is_array($j)) { [$msg, $status] = mh_ai_trouble($raw === false ? null : (string)$raw, $code, $err); mh_fail($msg, $status); }
   $text = ''; foreach (($j['content'] ?? []) as $b) if (($b['type'] ?? '') === 'text') $text .= (string)$b['text'];
   $u = $j['usage'] ?? [];
-  return ['text' => $text, 'stop' => (string)($j['stop_reason'] ?? ''), 'in' => (int)($u['input_tokens'] ?? 0) + (int)($u['cache_creation_input_tokens'] ?? 0) + (int)($u['cache_read_input_tokens'] ?? 0), 'out' => (int)($u['output_tokens'] ?? 0)];
+  $use = ['plain' => (int)($u['input_tokens'] ?? 0), 'cw' => (int)($u['cache_creation_input_tokens'] ?? 0), 'cr' => (int)($u['cache_read_input_tokens'] ?? 0), 'out' => (int)($u['output_tokens'] ?? 0)];
+  mh_ai_meter($model, $use);
+  return ['text' => $text, 'stop' => (string)($j['stop_reason'] ?? ''), 'in' => $use['plain'] + $use['cw'] + $use['cr'], 'out' => $use['out']];
 }
+/** Every answer from the AI is paid in credits by whoever it was for (mh_credits_for; api/credits.php). */
+function mh_ai_meter(string $model, array $use): void { if (!empty($GLOBALS['mh_credit_ctx'])) { require_once __DIR__ . '/credits.php'; mh_credits_ai($model, $use); } }
 /** What to tell the student when the AI did not answer: [message, HTTP status]. */
 function mh_ai_trouble(?string $raw, int $code, int $err): array {
   if ($raw === null) return [$err === CURLE_OPERATION_TIMEDOUT ? 'Bo took too long to answer. Please try again.' : 'Bo could not be reached. Please try again in a minute.', 504];
@@ -213,7 +218,7 @@ function mh_ai_stream(array $A, string $model, array $system, array $messages, i
   if ($A['key'] === '') mh_fail('Bo is not switched on yet. Please try again later.', 503);
   if (!function_exists('curl_init')) mh_fail('Bo cannot reach the AI from this server.', 503);
   $body = json_encode(['model' => $model, 'max_tokens' => $maxTokens, 'system' => $system, 'messages' => $messages, 'stream' => true], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
-  $S = ['buf' => '', 'raw' => '', 'text' => '', 'in' => 0, 'out' => 0, 'stop' => '', 'err' => ''];
+  $S = ['buf' => '', 'raw' => '', 'text' => '', 'in' => 0, 'plain' => 0, 'cw' => 0, 'cr' => 0, 'out' => 0, 'stop' => '', 'err' => ''];
   $ch = curl_init($A['url']);
   curl_setopt_array($ch, [CURLOPT_POST => true, CURLOPT_POSTFIELDS => $body, CURLOPT_TIMEOUT => $timeout, CURLOPT_CONNECTTIMEOUT => 8,
     CURLOPT_HTTPHEADER => ['x-api-key: ' . $A['key'], 'anthropic-version: 2023-06-01', 'content-type: application/json', 'accept: text/event-stream'],
@@ -226,7 +231,7 @@ function mh_ai_stream(array $A, string $model, array $system, array $messages, i
         foreach (explode("\n", $ev) as $line) if (strncmp($line, 'data:', 5) === 0) $data .= ltrim(substr($line, 5));
         $j = json_decode($data, true); if (!is_array($j)) continue;
         $type = (string)($j['type'] ?? '');
-        if ($type === 'message_start') { $u = $j['message']['usage'] ?? []; $S['in'] = (int)($u['input_tokens'] ?? 0) + (int)($u['cache_creation_input_tokens'] ?? 0) + (int)($u['cache_read_input_tokens'] ?? 0); $S['out'] = (int)($u['output_tokens'] ?? 0); }
+        if ($type === 'message_start') { $u = $j['message']['usage'] ?? []; $S['plain'] = (int)($u['input_tokens'] ?? 0); $S['cw'] = (int)($u['cache_creation_input_tokens'] ?? 0); $S['cr'] = (int)($u['cache_read_input_tokens'] ?? 0); $S['in'] = $S['plain'] + $S['cw'] + $S['cr']; $S['out'] = (int)($u['output_tokens'] ?? 0); }
         elseif ($type === 'content_block_delta' && ($j['delta']['type'] ?? '') === 'text_delta') { $t = (string)($j['delta']['text'] ?? ''); if ($t !== '') { $S['text'] .= $t; $onText($t); } }
         elseif ($type === 'message_delta') { $S['stop'] = (string)($j['delta']['stop_reason'] ?? $S['stop']); if (isset($j['usage']['output_tokens'])) $S['out'] = (int)$j['usage']['output_tokens']; }
         elseif ($type === 'error') { $S['err'] = (string)($j['error']['type'] ?? 'error'); }
@@ -238,6 +243,7 @@ function mh_ai_stream(array $A, string $model, array $system, array $messages, i
   if ($code < 200 || $code >= 300) { [$msg, $status] = mh_ai_trouble($S['raw'], $code, $err); mh_ai_fail($msg, $status); }
   if ($S['err'] !== '' && $S['text'] === '') { [$msg, $status] = mh_ai_trouble('', $S['err'] === 'overloaded_error' ? 529 : 500, 0); mh_ai_fail($msg, $status); }
   if (($ok === false || $S['err'] !== '') && $S['stop'] === '') $S['stop'] = 'cut';
+  mh_ai_meter($model, ['plain' => $S['plain'], 'cw' => $S['cw'], 'cr' => $S['cr'], 'out' => $S['out']]);
   return ['text' => $S['text'], 'stop' => $S['stop'], 'in' => $S['in'], 'out' => $S['out']];
 }
 
@@ -289,6 +295,11 @@ function mh_ai_class(array $u, string $cid): ?array {
   return null;
 }
 
+/** A class's short name ("M 171 Calculus I"), for the Usage page and the student file. */
+function mh_ai_class_name(?array $C, string $cid): string {
+  if (!$C) return $cid; $co = is_array($C['COURSE'] ?? null) ? $C['COURSE'] : [];
+  return trim(mh_ai_plain($C['code'] ?? ($co['code'] ?? ''), 30) . ' ' . mh_ai_plain($C['name'] ?? ($co['name'] ?? ''), 60)) ?: $cid;
+}
 /** About 1,500 tokens for a whole class: facts, grading, exams, then every unit with one line per topic. */
 function mh_ai_digest(array $C): string {
   $co = is_array($C['COURSE'] ?? null) ? $C['COURSE'] : [];
@@ -363,7 +374,7 @@ HOW YOU TEACH: what the best tutors do. Use it every time you explain something.
 9. Let them do the thinking. Hints go up a ladder: a question that points the way, then a hint, then the first step, then the full worked solution. Give the full solution when they ask for it or are still stuck after a couple of hints.
 10. Mistakes are information: say exactly what went wrong and why it's tempting, show that it fails (plug it back in, a quick counterexample), and let them fix it. Praise the specific thinking ("nice, you checked the sign"), not "great job".
 11. Didn't land? Change the angle: a simpler example, a picture, a different comparison. Never repeat the same words louder.
-12. Close the loop: end with the key idea in one sentence and what to do next (a practice problem, a section, a flashcard set).
+12. Close the loop when a topic is done (not every message): the key idea in one sentence and what to do next (a practice problem, a section, a flashcard set). In the middle of working something out, just ask the next question.
 13. Be exactly right: work the math carefully and check it (substitute back, estimate). Use their class's notation. If you're not sure, say so.
 TXT;
 
@@ -397,6 +408,11 @@ DRAWINGS on your board: a line "draw: " and then JSON (on one line is best), one
 - tree: {"type":"tree","branches":[{"label":"H","p":"1/2","children":[{"label":"H","p":"1/2","result":"HH 1/4"},{"label":"T","p":"1/2","result":"HT 1/4"}]},{"label":"T","p":"1/2"}]}
 - venn: {"type":"venn","sets":["A","B"],"values":{"A":5,"AB":2,"B":3,"none":4},"shade":["A ∩ B'"]} (two or three sets; in values "A" means A only, "AB" both, "none" neither; shade any set expression: A ∪ B, A ∩ B, A', B - A, A only)
 - flow: {"type":"flow","steps":["Read the problem","Pick a method","Does it check out?","Done"],"loops":[{"from":3,"to":2,"label":"no"}]} (a process or an algorithm; a step ending in ? is a decision; steps count from 1)
+- on a graph, also: "implicit":"x^2 + y^2 = 25" (any equation in x and y), polar curves "fns":[{"r":"1 + cos(t)"}] (t is θ), "slopefield":{"dy":"x - y","through":[[0,1]]} (a slope field with solution curves through those points), "vectorfield":{"vx":"-y","vy":"x"}, "contour":{"z":"x^2 + y^2","levels":8} (a contour map, filled; "fill":false for lines only)
+- surface, 3D: {"type":"surface","z":"x^2 - y^2","x":[-2,2],"y":[-2,2]}; or "curves":[{"x":"cos(t)","y":"sin(t)","z":"t/4","t":[0,12.6]}] and "points":[[1,0,1,"P"]]. The student drags it to turn it.
+- svg, for any diagram the other kinds don't cover (a cell, an organ, a circuit, a map, a timeline, a molecule, a free-body sketch, apparatus): {"type":"svg","svg":"<svg viewBox='0 0 400 260'>…shapes, paths, text…</svg>","alt":"what it shows"}. Plain shapes, paths, text, gradients and markers (no scripts, images or links), clear labels, colours that read on white.
+- image, a picture made by an image model, when a realistic or illustrated picture helps more than a diagram (an animal, a place, an object, a historical scene, a labelled illustration): {"type":"image","prompt":"what to draw, in detail, with the labels it needs","shape":"square","style":"illustration"} (shape square, wide or tall; style diagram, illustration or photo). It costs the student credits and takes a few seconds: use it when it really helps, never for math you can draw.
+YOU CAN DRAW ANYTHING. Never tell the student you can't draw or show something: pick the closest kind above, svg for any diagram, or image for a picture.
 Any drawing can have "caption":"what to notice". Labels are short plain text (x^2, θ, π and 1/2 are fine). At most two drawings on a page, the steps under them. Colors: blue, red, green, purple, orange, gray.
 YOUR TURN: a line "check: " and JSON puts a question on the board that they answer right there (they tap a choice or type the answer, and see at once whether it's right, with your why): {"q":"What is the slope of the tangent at x = 1?","choices":["1","2","4"],"answer":"2","why":"f'(x) = 2x, so f'(1) = 2."}. Leave out choices to have them type it ("answer" is what you'd accept). Use it to check understanding after you explain and when you quiz them, one at a time, then stop and wait.
 CODE: a block in ``` with its language (```python … ```) on the page, for programming and anything written as code.
@@ -405,7 +421,7 @@ TXT;
 const MH_AI_BO = <<<'TXT'
 You are Bo, the bobcat who tutors students on Mathub, a study app for Montana State University students. You talk with one student. Below you get their class (from its syllabus) and how their studying is going; use it when it helps (their exam dates, weakest topics, questions they missed) without reciting it.
 How you help:
-- Direct and clear, like the best tutor they've had, in your character (YOUR CHARACTER below). Keep the chat itself short (under about 150 words): your board carries the worked math and the pictures, so the chat is the talking around them. Go longer only when they ask for more.
+- Direct and clear, like the best tutor they've had, in your character (YOUR CHARACTER below). Keep the chat itself short: usually under about 80 words, never padding (no "Great question", no recap of what they just said, no summary of the board). Your board carries the worked math and the pictures, so the chat is the talking around them. Go longer only when they ask for more.
 - Teach the way the HOW YOU TEACH rules below say.
 - Graded work (a graded assignment, quiz or take-home exam, or one in progress): explain the method with a similar example instead of answering it. Never help during an exam.
 - Use the class facts exactly. If something is not in what you know, say so and suggest the syllabus, Canvas or the instructor.
@@ -434,8 +450,8 @@ const MH_AI_BO_FULL = MH_AI_BO . "\n\n" . MH_AI_TRUTH . "\n\n" . MH_AI_TEACH . "
 const MH_AI_CHAR_DEFAULT = 'professor';
 function mh_ai_character(string $id): array {
   $C = [
-    'professor' => ['name' => 'Professor Bo', 'live' => 'ash', 'speed' => 0.9,
-      'who' => "YOUR CHARACTER: Professor Bo. You are an 80-year-old professor who taught mathematics at Harvard for fifty years and has seen every mistake there is. Exacting, dry and witty; old-fashioned, unhurried and precise with words. You do not gush: praise is rare, short and earned (\"Correct. Good.\", \"Now that is a proper argument.\"), and a wrong answer gets a plain \"No.\" or \"Not quite.\" before you say why. You hold high standards because you believe in your students; underneath it you care a great deal, and it shows in your patience. Now and then, not every turn, one sentence from a long career: a student in 1974 who made the very same slip, chalk and slide rules, a colleague's famous blunder. You call the student by their first name, or \"my friend\". Dry about mistakes, never about the person: you never mock, belittle or lose your temper.",
+    'professor' => ['name' => 'Professor Bo', 'live' => 'ash', 'speed' => 1.0,
+      'who' => "YOUR CHARACTER: Professor Bo. You are an 80-year-old professor who taught mathematics at Harvard for fifty years and has seen every mistake there is. Exacting, dry and witty; old-fashioned, brisk and precise with words: you never use ten words where five will do. You do not gush: praise is rare, short and earned (\"Correct. Good.\", \"Now that is a proper argument.\"), and a wrong answer gets a plain \"No.\" or \"Not quite.\" before you say why. You hold high standards because you believe in your students; underneath it you care a great deal, and it shows in your patience. Rarely (at most once in a call or chat, and only when it fits), one short line from a long career: a student in 1974 who made the very same slip, a colleague's famous blunder. Never a story. You call the student by their first name, or \"my friend\". Dry about mistakes, never about the person: you never mock, belittle or lose your temper.",
       'hello' => 'Open like an old professor greeting a student at his office door: dry, brief, a little formal, maybe their name and what they are working on.'],
     'coach' => ['name' => 'Coach Bo', 'live' => 'verse', 'speed' => 1.1,
       'who' => "YOUR CHARACTER: Coach Bo. A sports coach who treats studying like training. Energetic and direct, short punchy sentences, always pushing for one more rep. Practice is reps and drills, the exam is game day, a review is film study. Wrong: \"Nope! Again.\" then the fix. Right: \"Yes! That's the form.\" Tough on the work, always on their side: never insulting, and when they are really stressed you drop the volume and steady them.",
@@ -498,7 +514,7 @@ TXT;
 
 const MH_AI_VOICE = <<<'TXT'
 VOICE MODE: the student is talking with you out loud, and your reply is read aloud to them in your voice.
-- Talk like a tutor sitting next to them: usually 1 to 4 short sentences, under about 70 words. When you explain something new, take up to about 120 words to do it properly (the big idea, the example on the board, why it works), then check with one question. Plain spoken English: no lists, headings, markdown, emoji or LaTeX in what you say.
+- Talk like a tutor sitting next to them: usually 1 to 3 short sentences, under about 45 words. When you explain something new, take up to about 90 words to do it properly (the big idea, the example on the board, why it works), then check with one question. Plain spoken English: no lists, headings, markdown, emoji or LaTeX in what you say.
 - Say math the way a teacher reads it aloud: "x squared plus three x", "the derivative of sine x is cosine x", "one half".
 - When seeing it helps (a formula, an equation, the steps of a problem, a graph or a figure), also put it on your whiteboard, as a block on lines of its own: [board: A short title], then lines like "draw: {…}" (see DRAWINGS), "check: {…}" (a question they answer on the board, see YOUR TURN), "step: what you do: $math$", "math: LaTeX", "answer: $result$" or "tip: a short note", then [/board]. At most one page per reply, about six lines. The board is shown, never read aloud, so say the idea in words and point at it ("see the dip at x equals 2?").
 - One question at a time, then stop and let them answer. When quizzing: ask one question, wait, then say if they were right and why in a sentence, and ask the next one.
@@ -627,6 +643,13 @@ function mh_ai_trial_or_fail(int $uid, array $V): void {
 }
 /** Free minutes as the page shows them, for an account without Max. */
 function mh_ai_trial_public(int $uid, array $V): array { $used = mh_ai_trial_used($uid); $all = mh_ai_trial_total($uid, $V); return ['minutes' => intdiv($all, 60), 'left' => max(0, $all - $used), 'used' => $used, 'bonus' => intdiv($all - $V['trial'], 60), 'invite' => intdiv(mh_ai_invite_secs($V), 60)]; }
+/** A call's seconds in credits, at the rate it started with; one row a call on the Usage page ("Calc I · 12 min"). */
+function mh_ai_call_charge(array $u, array $r, int $d, int $secs, array $cfg): void {
+  if ($d <= 0) return; require_once __DIR__ . '/credits.php';
+  $rate = (float)($r['rate'] ?? 0) ?: (float)mh_credits_cfg($cfg)['call_strong'];
+  $name = (string)$r['cid'] !== '' ? mh_ai_class_name(mh_ai_class($u, (string)$r['cid']), (string)$r['cid']) : 'A call';
+  mh_credits_spend($u, 'call', (int)round($d * $rate * 1000 / 60), (string)$r['id'], $name . ' · ' . max(1, (int)round($secs / 60)) . ' min · ' . rtrim(rtrim(number_format($rate, 1), '0'), '.') . ' credits a minute', $cfg);
+}
 /** The free seconds an invite gives each of you (ai_invite_minutes, 10 by default; 0 turns it off). */
 function mh_ai_invite_secs(array $V): int { return $V['trial'] > 0 ? 60 * max(0, min(60, (int)(mh_config()['ai_invite_minutes'] ?? 10))) : 0; }
 
@@ -644,8 +667,9 @@ You are Bo, the bobcat tutor on Mathub, on a live voice call with a Montana Stat
 - Talk like a person on a call, not an assistant. Not "How can I help you today", "Great question" or "As an AI".
 
 # Length and pace
-- Most turns are one to three short sentences, with at most one question, at the end.
-- Explaining something new: up to about five short sentences while the board shows the math, then one question to check.
+- Most turns are one or two short sentences, under about 30 words, with at most one question, at the end. Short turns keep it a conversation: they can always ask for more.
+- Explaining something new: up to about four short sentences (about 50 words) while the board shows the math, then one question to check.
+- No padding: no warm-up ("So,", "Alright, so", "Great question"), no repeating back what they just said unless you are checking what they meant, no summing up what is on the board.
 - After you ask them a problem, stop and wait. Silence is them thinking.
 - Say math the way people say it ("x squared", "a half", "the derivative of sine is cosine"), never symbols or LaTeX. Fractions inside fractions, or several steps, go on the board, and you talk through them a line at a time.
 - Vary your wording. Do not repeat the same sentence or the same opening in a call.
@@ -675,7 +699,7 @@ You are Bo, the bobcat tutor on Mathub, on a live voice call with a Montana Stat
 
 # Tools
 - write_on_board: steps, an equation, the answer. One step per line. Say something short while it goes up; never read it back symbol by symbol.
-- draw_on_board: when a picture explains it better. Draw first, then walk them through it ("see where the curve crosses zero?").
+- draw_on_board: when a picture explains it better. You can draw anything: graphs, figures, charts, 3D surfaces, contour maps, slope fields, any diagram as SVG, or a picture from the image model. Never say you can't draw something. Draw first, then walk them through it ("see where the curve crosses zero?").
 - ask_on_board: a check question they answer on the board. Ask it out loud in a few words, then stop: you will be told what they picked, then react.
 - mark_on_board: circle, check, cross out, underline, box, an arrow or a short note on their own writing, at a cell of the latest board picture ("C3", or "B2:D3"). Then say it in words.
 - check_math: before you judge an answer or a step, and for your own numbers that are not obvious.
@@ -715,7 +739,8 @@ function mh_ai_live_instructions(int $uid, string $cid, ?array $C, array $in): s
   if ($resume) $parts[] = MH_AI_LIVE_RESUME;
   if (($in['focus'] ?? '') === 'exam') $parts[] = MH_AI_EXAM_CALL;
   if ($C) $parts[] = mh_ai_digest($C);
-  $parts[] = implode("\n", array_filter(['TODAY: ' . $today, $C ? mh_ai_upcoming($C, $today) : '', mh_ai_snapshot($in['snapshot'] ?? null), $notes ? "WHAT YOU REMEMBER ABOUT THEM:\n- " . implode("\n- ", $notes) : '']));
+  require_once __DIR__ . '/students.php';
+  $parts[] = implode("\n", array_filter(['TODAY: ' . $today, $C ? mh_ai_upcoming($C, $today) : '', mh_ai_snapshot($in['snapshot'] ?? null), $notes ? "WHAT YOU REMEMBER ABOUT THEM:\n- " . implode("\n- ", $notes) : '', mh_student_context(mh_student_load($uid), $cid)]));
   $turns = array_slice(mh_ai_turns($uid, $cid), $resume ? -10 : -6);   // after a drop, a little more of where they were
   if ($turns) { $L = ['YOUR LAST FEW MESSAGES WITH THEM (chat or calls):']; foreach ($turns as $t) $L[] = (($t['r'] ?? '') === 'b' ? 'Bo: ' : 'Them: ') . mh_ai_clip(mh_ai_unboard((string)($t['t'] ?? '')), 240); $parts[] = implode("\n", $L); }
   return implode("\n\n", $parts);
@@ -744,7 +769,7 @@ function mh_ai_live_tools(): array {
         'kind' => ['type' => 'string', 'enum' => ['step', 'math', 'answer', 'tip', 'text', 'code']],
         'text' => ['type' => 'string', 'description' => 'step: a few words, then its math in $...$. math: just the LaTeX. answer: the result. tip, text: one short line. code: the code.'],
         'lang' => ['type' => 'string', 'description' => 'code only: its language.']], ['kind', 'text'])]], ['items'])],
-    ['type' => 'function', 'name' => 'draw_on_board', 'description' => 'Use when: a picture explains it better than words: a graph, number line, triangle or figure, unit circle, table, chart, normal curve, probability tree, Venn diagram or flow chart. Draw first, then talk them through it.',
+    ['type' => 'function', 'name' => 'draw_on_board', 'description' => 'Use when: a picture explains it better than words. You can draw anything: a graph, number line, triangle or figure, unit circle, table, chart, normal curve, probability tree, Venn diagram, flow chart, a 3D surface, a contour map, a slope field, any diagram as SVG (a cell, a circuit, a map, a timeline, a molecule), or a picture made by an image model. Draw first, then talk them through it. Never say you cannot draw something.',
       'parameters' => $obj($place + ['caption' => ['type' => 'string', 'description' => 'One short line: what to notice.'],
         'drawing' => ['type' => 'object', 'description' => 'type, plus only the keys that type uses. Labels are short plain text (x^2, θ, π, 1/2). Functions are in x with + - * / ^ ( ) sqrt abs sin cos tan ln log exp pi e.'
           . ' graph: fns [{f:"x^2 - 3", label, color, dash, domain:[a,b]} or {x:"cos(t)", y:"sin(t)", t:[0,6.28]}], x:[min,max], y:[min,max], points [{x,y,label,open}], shade {f,g,from,to}, segments [{from:[x,y],to:[x,y],label,arrow,dash}], vlines [{x,label}], hlines [{y,label}], notes [{x,y,text}], asymptotes ["x = 2"], tangent {f,at}, secant {f,from,to}, riemann {f,from,to,n,rule:left|right|mid|trap}, sliders [{name,min,max,value,step}] (letters used in f, at or n), xlabel, ylabel, equal.'
@@ -752,8 +777,12 @@ function mh_ai_live_tools(): array {
           . ' figure: shapes [{kind:point|segment|arrow|polygon|curve|circle|angle|text|rect, at, from, to, points, labels, center, r, w, h, label, text, right}] in coordinates you choose, y up.'
           . ' unitcircle: highlight (degrees). table: head [..], rows [[..]]. bars: bars [{label,value}], hist, highlight. pie: slices [{label,value}], highlight.'
           . ' scatter: points [{x,y}], fit, residuals, predict. boxplot: boxes [{label, data} or {label,min,q1,median,q3,max}]. normal: mean, sd, from, to, tails:"both", label.'
-          . ' tree: branches [{label, p:"1/2", children:[...], result:"HH 1/4"}]. venn: sets [2 or 3 names], values {"A":5,"AB":2,"B":3,"none":4}, shaded ["A ∩ B"]. flow: steps ["...", "Is it done?"], loops [{from,to,label}].',
-          'properties' => ['type' => ['type' => 'string', 'enum' => ['graph', 'numberline', 'figure', 'unitcircle', 'table', 'bars', 'pie', 'scatter', 'boxplot', 'normal', 'tree', 'venn', 'flow']]], 'required' => ['type']]], ['drawing'])],
+          . ' tree: branches [{label, p:"1/2", children:[...], result:"HH 1/4"}]. venn: sets [2 or 3 names], values {"A":5,"AB":2,"B":3,"none":4}, shaded ["A ∩ B"]. flow: steps ["...", "Is it done?"], loops [{from,to,label}].'
+          . ' A graph can also have: implicit "x^2 + y^2 = 25" (any equation in x and y), polar curves in fns [{r:"1 + cos(t)"}] (t is θ), slopefield {dy:"x - y", through:[[0,1]]} (solution curves through those points), vectorfield {vx:"-y", vy:"x"}, contour {z:"x^2 + y^2", levels:8, fill:true}.'
+          . ' surface (3D): z:"x^2 - y^2", x:[a,b], y:[a,b], curves [{x:"cos(t)", y:"sin(t)", z:"t/4", t:[0,12.6]}], points [[x,y,z,"label"]]; they can turn it.'
+          . ' svg: any diagram the other types do not cover: svg:"<svg viewBox=\'0 0 400 260\'>shapes, paths, text, gradients, markers</svg>", alt; no scripts, images or links; clear labels; it sits on white.'
+          . ' image: a picture made by an image model, when a realistic or illustrated picture helps more than a diagram (an animal, a scene, an object, a labelled illustration): prompt (what to draw, in detail), shape square|wide|tall, style diagram|illustration|photo. It costs the student credits and takes a few seconds, so only when it really helps.',
+          'properties' => ['type' => ['type' => 'string', 'enum' => ['graph', 'numberline', 'figure', 'unitcircle', 'table', 'bars', 'pie', 'scatter', 'boxplot', 'normal', 'tree', 'venn', 'flow', 'surface', 'svg', 'image']]], 'required' => ['type']]], ['drawing'])],
     ['type' => 'function', 'name' => 'ask_on_board', 'description' => 'Use when: you want them to answer a check question right on the board, by tapping a choice or typing. Ask it out loud in a few words too, then stop: you will be told what they picked.',
       'parameters' => $obj($place + ['question' => ['type' => 'string', 'description' => 'Short; math in $...$.'], 'choices' => ['type' => 'array', 'items' => ['type' => 'string'], 'description' => 'Two to four choices; leave out for a typed answer.'],
         'answer' => ['type' => 'string', 'description' => 'The right choice exactly as written, or the typed answer you accept.'], 'why' => ['type' => 'string', 'description' => 'One sentence on why, shown once they answer.']], ['question', 'answer'])],
@@ -853,6 +882,9 @@ TXT;
 
 /* ---------- routes ---------- */
 function mh_ai_route(string $route, array $in, array $cfg, string $ip): void {
+  if ($route === 'ai_image' || $route === 'ai_image_file') { require_once __DIR__ . '/images.php'; mh_img_route($route, $in, $cfg); }   // Bo's pictures
+  if ($route === 'ai_compact' || $route === 'ai_student') { require_once __DIR__ . '/students.php'; mh_student_route($route, $in, $cfg); }   // the student file, and long calls kept short
+  require_once __DIR__ . '/credits.php'; require_once __DIR__ . '/students.php';   // everything with Bo is paid in credits, and reads the student file
   $A = mh_ai_settings($cfg); $db = mh_ai_db();
   switch ($route) {
     case 'ai_status': {
@@ -863,13 +895,13 @@ function mh_ai_route(string $route, array $in, array $cfg, string $ip): void {
       if ($u) {
         $use = mh_ai_usage((int)$u['id']); $out['notes'] = mh_ai_notes((int)$u['id']);
         $out['usage'] = ['tutor' => $use['tutor'], 'tutor_limit' => $A['tutor_monthly'], 'classes' => $use['classes'], 'class_limit' => $A['class_monthly'], 'voice' => $use['voice'], 'voice_limit' => $V['voice_monthly'], 'listen' => $use['listen'], 'listen_limit' => $V['listen_monthly'], 'live' => $use['live'], 'live_limit' => $V['live_monthly'], 'live_left' => mh_ai_live_left((int)$u['id'], $V)];
-        if ($plan === 'max') {   // calls: the month's included minutes and the hours bought (api/calls.php)
-          require_once __DIR__ . '/calls.php'; $CL = mh_calls_left((int)$u['id'], $cfg); $CC = mh_calls_cfg($cfg);
-          $out['calls'] = $CL + ['price' => $CC['price'], 'pack' => $CC['pack']]; $out['usage']['live_left'] = min($out['usage']['live_left'], $CL['left']);
-        }
-        $out['voice']['live'] = $out['voice']['live'] && ($out['usage']['live_left'] > 0 || $plan === 'max');   // out of time: the call says how to get more
+        // credits (api/credits.php): everything with Bo is paid from them, on any plan
+        require_once __DIR__ . '/credits.php'; $CL = mh_credits_left($u, $cfg, $plan); $CC = mh_credits_cfg($cfg);
+        $out['admin'] = $CL['admin'];
+        $out['credits'] = ['left' => round($CL['left'] / 1000, 1), 'allowance' => round($CL['allowance'] / 1000), 'month_left' => round($CL['month_left'] / 1000, 1), 'paid' => round(max(0, $CL['paid']) / 1000, 1), 'resets' => gmdate('Y-m-d', (int)strtotime('first day of next month 00:00 UTC')), 'call_rate' => $plan === 'max' ? $CC['call_strong'] : $CC['call_light'], 'image' => $CC['image'], 'pack' => $CC['pack'], 'price' => $CC['price'], 'plans' => ['free' => $CC['free'], 'pro' => $CC['pro'], 'max' => $CC['max']], 'out' => !$CL['admin'] && $CL['left'] < 1000];
+        $out['voice']['live'] = $out['voice']['live'] && $out['usage']['live_left'] > 0;   // out of credits: the call says how to get more
         $out['voice']['natural'] = $out['voice']['natural'] && $use['voice'] < $V['voice_monthly']; $out['voice']['listen'] = $V['key'] !== '' && $use['listen'] < $V['listen_monthly'];
-        if ($plan !== 'max' && $V['trial'] > 0 && $A['key'] !== '') $out['trial'] = mh_ai_trial_public((int)$u['id'], $V);   // free minutes with Bo
+
       } else $out['voice']['listen'] = $V['key'] !== '';
       mh_json($out);
     }
@@ -879,10 +911,11 @@ function mh_ai_route(string $route, array $in, array $cfg, string $ip): void {
     }
     case 'ai_forget': {
       mh_method('POST'); $u = mh_require_user(); $uid = (int)$u['id']; $what = (string)($in['what'] ?? '');
-      if ($what === 'chat') { $db->prepare('DELETE FROM ai_threads WHERE user_id = ? AND cid = ?')->execute([$uid, mh_ai_cid($in['class'] ?? '')]); }
+      require_once __DIR__ . '/students.php'; $SF = mh_student_load($uid);
+      if ($what === 'chat') { $c0 = mh_ai_cid($in['class'] ?? ''); $db->prepare('DELETE FROM ai_threads WHERE user_id = ? AND cid = ?')->execute([$uid, $c0]); unset($SF['memory']['chat'][$c0]); mh_student_save($uid, $SF); }
       elseif ($what === 'note') { $notes = mh_ai_notes($uid); $i = (int)($in['i'] ?? -1); if (isset($notes[$i])) { array_splice($notes, $i, 1); mh_ai_save_notes($uid, $notes); } }
       elseif ($what === 'notes') { $db->prepare('DELETE FROM ai_notes WHERE user_id = ?')->execute([$uid]); }
-      elseif ($what === 'all') { foreach (['ai_threads', 'ai_notes', 'ai_flags'] as $t) $db->prepare("DELETE FROM $t WHERE user_id = ?")->execute([$uid]); }
+      elseif ($what === 'all') { foreach (['ai_threads', 'ai_notes', 'ai_flags'] as $t) $db->prepare("DELETE FROM $t WHERE user_id = ?")->execute([$uid]); mh_student_save($uid, mh_student_blank()); }
       else mh_fail('Nothing to forget.', 400);
       mh_json(['ok' => true, 'notes' => mh_ai_notes($uid)]);
     }
@@ -890,8 +923,7 @@ function mh_ai_route(string $route, array $in, array $cfg, string $ip): void {
       mh_method('POST'); $u = mh_require_user(); $uid = (int)$u['id'];
       // Bo on every page (the floating Bo) comes with Pro; Ask Bo's own page with Max
       $plan = mh_plan($u, $cfg); $float = !empty($in['float']);
-      $onTrial = $plan !== 'max' && !empty($in['voice']) && mh_ai_trial_call($uid, $in['lid'] ?? '', mh_ai_voice_settings($cfg));   // a call on the free minutes
-      if ($plan !== 'max' && !($plan === 'pro' && $float) && !$onTrial) mh_fail($float ? 'Bo on every page is part of Mathub Pro.' : 'Ask Bo is part of Mathub Max.', 402, ['plan' => $float ? 'pro' : 'max']);
+      require_once __DIR__ . '/credits.php'; mh_credits_need($u, 1000, $cfg, 'a message');   // any plan: paid in credits
       $use = mh_ai_usage($uid); if ($use['tutor'] >= $A['tutor_monthly']) mh_fail('You have used this month\'s ' . $A['tutor_monthly'] . ' questions for Bo. They start again on the 1st.', 429);
       $cid = mh_ai_cid($in['class'] ?? ''); $q = mh_ai_clip($in['q'] ?? '', 2000);
       $img = isset($in['image']) ? mh_ai_file($in['image'], ['image/jpeg', 'image/png', 'image/webp', 'image/gif'], MH_AI_IMAGE_BYTES) : null;
@@ -905,13 +937,15 @@ function mh_ai_route(string $route, array $in, array $cfg, string $ip): void {
       mh_rate_or_fail("ai_tutor:$uid", 12, 60, 'Slow down a little: Bo answers up to 12 questions a minute.');
       mh_rate_or_fail("ai_tutor_day:$uid", $A['tutor_daily'], 86400, 'That is a lot of questions for one day. Bo will be back tomorrow.');
       $C = mh_ai_class($u, $cid);
+      mh_credits_for($u, $cfg, 'chat', mh_ai_class_name($C, $cid) . ' · ' . (!empty($in['voice']) ? 'voice' : ($float ? 'on a page' : 'chat')));
       $today = preg_match('/^\d{4}-\d{2}-\d{2}$/', (string)($in['today'] ?? '')) ? (string)$in['today'] : gmdate('Y-m-d');
       $system = [['type' => 'text', 'text' => MH_AI_BO_FULL]];
       if ($C) $system[] = ['type' => 'text', 'text' => mh_ai_digest($C), 'cache_control' => ['type' => 'ephemeral']];
       else $system[0]['cache_control'] = ['type' => 'ephemeral'];
       $voice = !empty($in['voice']); $stream = !empty($in['stream']);
       $notes = mh_ai_notes($uid);
-      $now = array_filter(['TODAY: ' . $today, $C ? mh_ai_upcoming($C, $today) : '', mh_ai_snapshot($in['snapshot'] ?? null), $notes ? "WHAT BO REMEMBERS ABOUT THEM:\n- " . implode("\n- ", $notes) : '']);
+      require_once __DIR__ . '/students.php'; $SF = mh_student_update($u, $cfg, $in, $cid, $C);   // the student file: kept up to date, and read
+      $now = array_filter(['TODAY: ' . $today, $C ? mh_ai_upcoming($C, $today) : '', mh_ai_snapshot($in['snapshot'] ?? null), $notes ? "WHAT BO REMEMBERS ABOUT THEM:\n- " . implode("\n- ", $notes) : '', mh_student_context($SF, $cid)]);
       $system[] = ['type' => 'text', 'text' => implode("\n", $now)];
       $system[] = ['type' => 'text', 'text' => mh_ai_character(mh_ai_character_id($in))['who']];   // who he is (assets/bo-characters.js)
       if ($voice) $system[] = ['type' => 'text', 'text' => MH_AI_VOICE];
@@ -956,7 +990,10 @@ function mh_ai_route(string $route, array $in, array $cfg, string $ip): void {
       $turns[] = array_merge(['r' => 'u', 't' => ($img ? ($pad || !empty($in['sketch']) ? '[board] ' : '[photo] ') : '') . ($pdf ? '[pdf: ' . str_replace(']', ')', $pdfName) . '] ' : '') . ($from !== '' ? '[from: ' . str_replace(']', ')', $from) . '] ' : '') . $q, 'at' => time()], $voice ? ['v' => 1] : []); $turns[] = array_merge(['r' => 'b', 't' => $reply, 'at' => time()], $voice ? ['v' => 1] : []);
       mh_ai_save_turns($uid, $cid, $turns); mh_ai_count($uid, 'tutor', $r['in'], $r['out']); mh_ai_q('answers');
       $out = ['ok' => true, 'reply' => $reply, 'at' => $turns[count($turns) - 1]['at'], 'remembered' => $remembered, 'cut' => in_array($r['stop'], ['max_tokens', 'cut'], true), 'usage' => ['tutor' => $use['tutor'] + 1, 'tutor_limit' => $A['tutor_monthly']]];
+      try { $CLx = mh_credits_left($u, $cfg, $plan); $out['credits'] = ['left' => round($CLx['left'] / 1000, 1), 'admin' => $CLx['admin']]; } catch (Throwable $e) {}   // what is left after this answer
       if (!empty($mcWrong)) { $out['slips'] = array_column($mcWrong, 'msg'); $out['practice'] = mh_mc_practice($mcWrong); }   // what the math check caught: for the call's recap and the mistakes notebook
+      // once the answer is out: a long chat's older turns are folded into its summary (api/students.php)
+      register_shutdown_function(function () use ($u, $cfg, $cid) { if (function_exists('fastcgi_finish_request')) @fastcgi_finish_request(); elseif (function_exists('litespeed_finish_request')) @litespeed_finish_request(); try { mh_student_compact_chat($u, $cfg, $cid); } catch (Throwable $e) { error_log('mathub compact: ' . $e->getMessage()); } });
       if ($stream) { mh_ai_emit(['t' => 'done'] + $out); exit; }
       mh_json($out);
     }
@@ -964,7 +1001,7 @@ function mh_ai_route(string $route, array $in, array $cfg, string $ip): void {
       // a sentence or two of Bo's reply, spoken in his natural voice; the browser plays it (no audio is kept)
       mh_method('POST'); $u = mh_require_user(); $uid = (int)$u['id'];
       $V = mh_ai_voice_settings($cfg);
-      if (mh_plan($u, $cfg) !== 'max' && !mh_ai_trial_call($uid, $in['lid'] ?? '', $V)) mh_fail('Talking with Bo is part of Mathub Max.', 402, ['plan' => 'max']); if ($V['key'] === '') mh_fail('Bo\'s natural voice is not switched on, so your device\'s voice is used.', 503, ['fallback' => true]);
+      require_once __DIR__ . '/credits.php'; mh_credits_need($u, 1000, $cfg, 'Bo’s voice'); if ($V['key'] === '') mh_fail('Bo\'s natural voice is not switched on, so your device\'s voice is used.', 503, ['fallback' => true]);
       $text = mh_ai_clip($in['text'] ?? '', 700); if ($text === '') mh_fail('Nothing to say.', 400);
       $voice = is_string($in['voice'] ?? null) && isset(MH_AI_VOICES[$in['voice']]) ? $in['voice'] : $V['voice'];
       $use = mh_ai_usage($uid); if ($use['voice'] + mb_strlen($text) > $V['voice_monthly']) mh_fail('Bo\'s natural voice has been used a lot this month, so your device\'s voice takes over until the 1st.', 429, ['fallback' => true]);
@@ -972,7 +1009,7 @@ function mh_ai_route(string $route, array $in, array $cfg, string $ip): void {
       @set_time_limit(45);
       [, $audio, $type] = mh_ai_openai($V, '/audio/speech', json_encode(['model' => $V['tts_model'], 'voice' => $voice, 'input' => $text, 'response_format' => 'mp3',
         'instructions' => 'You are Bo, a friendly bobcat who tutors college students. Voice: warm, upbeat and encouraging, like a favourite tutor. Pace: natural and relaxed, a little slower through math. Read math the way a teacher says it aloud. Never sound robotic.'], JSON_UNESCAPED_UNICODE), 40);
-      mh_ai_add($uid, 'voice', mb_strlen($text));
+      mh_ai_add($uid, 'voice', mb_strlen($text)); mh_credits_spend($u, 'voice', (int)ceil(mb_strlen($text) * mh_credits_cfg($cfg)['tts']), 'speak-' . gmdate('YmdH'), 'Bo’s voice, read out', $cfg);   // per 1,000 characters
       http_response_code(200); header('Content-Type: ' . (preg_match('#^audio/[a-z0-9.+-]+$#i', $type) ? $type : 'audio/mpeg')); header('Cache-Control: no-store'); header('Content-Length: ' . strlen($audio));
       echo $audio; exit;
     }
@@ -980,7 +1017,7 @@ function mh_ai_route(string $route, array $in, array $cfg, string $ip): void {
       // a short recording of the student, turned into text (for browsers without their own speech recognition)
       mh_method('POST'); $u = mh_require_user(); $uid = (int)$u['id'];
       $V = mh_ai_voice_settings($cfg);
-      if (mh_plan($u, $cfg) !== 'max' && !mh_ai_trial_call($uid, $in['lid'] ?? '', $V)) mh_fail('Talking with Bo is part of Mathub Max.', 402, ['plan' => 'max']); if ($V['key'] === '') mh_fail('Listening is not switched on here. Type your question instead.', 503, ['fallback' => true]);
+      require_once __DIR__ . '/credits.php'; mh_credits_need($u, 500, $cfg, 'listening'); if ($V['key'] === '') mh_fail('Listening is not switched on here. Type your question instead.', 503, ['fallback' => true]);
       $a = is_array($in['audio'] ?? null) ? $in['audio'] : []; $type = strtolower(trim(explode(';', (string)($a['type'] ?? ''))[0]));
       $ext = ['audio/webm' => 'webm', 'audio/ogg' => 'ogg', 'audio/mp4' => 'mp4', 'audio/x-m4a' => 'm4a', 'audio/aac' => 'm4a', 'audio/mpeg' => 'mp3', 'audio/wav' => 'wav', 'audio/x-wav' => 'wav'][$type] ?? '';
       if ($ext === '') mh_fail('That recording could not be read.', 400);
@@ -999,21 +1036,22 @@ function mh_ai_route(string $route, array $in, array $cfg, string $ip): void {
       try { [, $raw] = mh_ai_openai($V, '/audio/transcriptions', ['model' => $V['stt_model'], 'file' => $file, 'language' => 'en', 'prompt' => $hint, 'response_format' => 'json'], 50); }
       finally { if ($tmp) @unlink($tmp); }
       $j = json_decode($raw, true); $text = mh_ai_clip(is_array($j) ? ($j['text'] ?? '') : '', 2000);
-      mh_ai_add($uid, 'listen', $secs);
+      mh_ai_add($uid, 'listen', $secs); mh_credits_spend($u, 'voice', (int)ceil($secs * mh_credits_cfg($cfg)['stt'] * 1000 / 60), 'listen-' . gmdate('YmdH'), 'Bo listening', $cfg);
       mh_json(['ok' => true, 'text' => $text]);
     }
     case 'ai_live_start': {
       // a live call: the browser's WebRTC offer in, OpenAI's answer out, with Bo's instructions added here
       mh_method('POST'); $u = mh_require_user(); $uid = (int)$u['id']; $V = mh_ai_voice_settings($cfg);
-      $trial = mh_plan($u, $cfg) !== 'max'; if ($trial) mh_ai_trial_or_fail($uid, $V);   // without Max: the free minutes
+      $plan = mh_plan($u, $cfg); $trial = false;   // every call is paid in credits (api/credits.php), on any plan
       if ($V['key'] === '') mh_fail('Live calls are not switched on yet.', 503, ['fallback' => true]);
       $left = mh_ai_live_left($uid, $V); if ($left <= 0) mh_fail(mh_ai_usage($uid)['live'] >= $V['live_monthly'] ? 'That is all the live call time for this month. It starts again on the 1st.' : 'That is a lot of calling for one day. Bo is around again tomorrow.', 429, ['fallback' => true]);
-      if (!$trial) {   // Max: the month's included minutes, then the hours bought (api/calls.php)
-        require_once __DIR__ . '/calls.php'; $CL = mh_calls_left($uid, $cfg);
-        if ($CL['left'] <= 0 && mh_calls_sync($u, $cfg) > 0) $CL = mh_calls_left($uid, $cfg);   // an hour bought a moment ago
-        if ($CL['left'] <= 0) mh_fail('You have used this month’s call time with Bo. Buy an hour (' . mh_calls_cfg($cfg)['price'] . ') on the Calls page to keep calling, or wait for the 1st, when your included hour comes back.', 402, ['hours' => true]);
-        $left = min($left, $CL['left']);
-      }
+      // credits: at least a minute's worth, and the call ends when they run out (ai_live_tick)
+      require_once __DIR__ . '/credits.php'; $CC = mh_credits_cfg($cfg);
+      $strong = $V['live_model_max'] !== '' ? $V['live_model_max'] : $V['live_model'];
+      $model = $plan === 'max' ? $strong : $V['live_model'];   // Max: the stronger model; the others: the light one
+      $rate = mh_credits_call_rate($model, $V, $CC);
+      mh_credits_need($u, (int)ceil($rate * 1000), $cfg, 'a call (' . rtrim(rtrim(number_format($rate, 1), '0'), '.') . ' credits a minute)');
+      if (!mh_is_admin($u)) $left = min($left, (int)floor(mh_credits_left($u, $cfg, $plan)['left'] / ($rate * 1000) * 60));
       // a call that dropped and is being picked up again (assets/talk.js): the same call, with its minutes so far
       $prev = null; $resume = preg_replace('/[^a-f0-9]/', '', (string)($in['resume'] ?? ''));
       if ($resume !== '') { $st = $db->prepare('SELECT * FROM ai_live WHERE id = ? AND user_id = ? AND started >= ?'); $st->execute([$resume, $uid, time() - 7200]); $prev = $st->fetch() ?: null; }
@@ -1036,12 +1074,12 @@ function mh_ai_route(string $route, array $in, array $cfg, string $ip): void {
       $transcribe = str_starts_with($tm, 'gpt-4o') || $tm === 'whisper-1'
         ? ['model' => $tm, 'language' => $lc, 'prompt' => 'A college student on a call with their tutor about math. ' . implode(', ', $kw)]
         : ['model' => $tm, 'languages' => array_values(array_unique([$lc, 'en'])), 'keywords' => $kw];
+      require_once __DIR__ . '/students.php'; mh_student_update($u, $cfg, $in, $cid, $C);
       $sys = mh_ai_live_instructions($uid, $cid, $C, ['resume' => $prev ? 1 : 0] + $in);
       if (($lang = mh_ai_lang($in)) !== '') $sys .= "\n\n" . $lang . ' On the call, speak it with a natural accent.';
       // Max: the stronger model. Free minutes: the light one, except without headphones, where the light one is more
       // easily cut off by its own voice coming back from the speakers (docs/bo-teaching.md)
-      $strong = $V['live_model_max'] !== '' ? $V['live_model_max'] : $V['live_model'];
-      $model = !$trial || !$headset ? $strong : $V['live_model'];
+      // ($model was chosen above, with what a minute costs)
       $noise = ['type' => $headset ? 'near_field' : 'far_field'];   // near_field is for headsets; laptops and phones are far_field
       $full = ['type' => 'realtime', 'model' => $model, 'instructions' => $sys, 'output_modalities' => ['audio'], 'max_output_tokens' => 'inf',
         'truncation' => ['type' => 'retention_ratio', 'retention_ratio' => 0.8],
@@ -1063,20 +1101,16 @@ function mh_ai_route(string $route, array $in, array $cfg, string $ip): void {
       $now = time(); $secs0 = $prev ? (int)$prev['secs'] : 0;
       if ($prev) {   // the same call goes on: its id, its length so far (Minutes per call), the time it was down not counted
         $lid = (string)$prev['id']; $db->prepare('UPDATE ai_live SET call = ?, last = ?, ended = 0 WHERE id = ?')->execute([$call, $now, $lid]); mh_ai_q('reconnects');
-      } else { $lid = bin2hex(random_bytes(12)); $db->prepare('INSERT INTO ai_live (id, user_id, cid, call, started, last, trial) VALUES (?, ?, ?, ?, ?, ?, ?)')->execute([$lid, $uid, $cid, $call, $now, $now, $trial ? 1 : 0]); }
+      } else { $lid = bin2hex(random_bytes(12)); $db->prepare('INSERT INTO ai_live (id, user_id, cid, call, started, last, trial, rate) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')->execute([$lid, $uid, $cid, $call, $now, $now, 0, $rate]); }
+      if ($prev) $db->prepare('UPDATE ai_live SET rate = ? WHERE id = ?')->execute([$rate, $lid]);
       mh_json(['ok' => true, 'sdp' => $answer, 'lid' => $lid, 'left' => max(0, min($left, $V['live_call'] - $secs0, $trial ? mh_ai_trial_left($uid, $V) : PHP_INT_MAX)), 'voice' => $voice, 'trial' => $trial, 'resumed' => (bool)$prev]);
     }
     case 'ai_call_start': {
-      // a basic voice call on the free minutes (no Max): Bo answers through ai_tutor, ai_speak and ai_listen with this lid,
-      // and the browser reports it every half minute (ai_live_tick) like a live call. With Max nothing needs starting.
+      // a basic voice call: Bo answers through ai_tutor, ai_speak and ai_listen, and credits pay for each of those as it
+      // happens (api/credits.php), so this only checks there are some left before the call opens.
       mh_method('POST'); $u = mh_require_user(); $uid = (int)$u['id']; $V = mh_ai_voice_settings($cfg);
-      if (mh_plan($u, $cfg) === 'max') mh_json(['ok' => true, 'lid' => '', 'trial' => false]);
-      if ($A['key'] === '') mh_fail('Bo is not switched on yet.', 503);
-      mh_ai_trial_or_fail($uid, $V); mh_rate_or_fail("ai_live:$uid", 30, 3600, 'That is a lot of calls in an hour. Try again in a bit.');
-      $cid = mh_ai_cid($in['class'] ?? ''); $db->prepare('UPDATE ai_live SET ended = 1 WHERE user_id = ? AND ended = 0')->execute([$uid]);
-      $lid = bin2hex(random_bytes(12)); $now = time();
-      $db->prepare('INSERT INTO ai_live (id, user_id, cid, call, started, last, trial) VALUES (?, ?, ?, ?, ?, ?, 1)')->execute([$lid, $uid, $cid, '', $now, $now]);
-      mh_json(['ok' => true, 'lid' => $lid, 'left' => mh_ai_trial_left($uid, $V), 'trial' => true]);
+      require_once __DIR__ . '/credits.php'; mh_credits_need($u, 1000, $cfg, 'talking with Bo');
+      mh_json(['ok' => true, 'lid' => '', 'trial' => false]);   // credits pay for each answer, his voice and listening
     }
     case 'ai_live_tick': {
       // the browser reports the call every half minute; the minutes are counted here and the limits kept
@@ -1088,10 +1122,14 @@ function mh_ai_route(string $route, array $in, array $cfg, string $ip): void {
       $db->prepare('UPDATE ai_live SET secs = ?, last = ? WHERE id = ?')->execute([$secs, $now, $lid]);
       $trial = (int)($r['trial'] ?? 0) === 1;
       if ($trial) { mh_ai_trial_add($uid, $d); if ((string)$r['call'] !== '') mh_ai_add($uid, 'live', $d); }
-      else { mh_ai_add($uid, 'live', $d); require_once __DIR__ . '/calls.php'; mh_calls_charge($uid, $lid, $d, $cfg); }   // Max: included minutes first, then the hours bought
+      else { mh_ai_add($uid, 'live', $d); mh_ai_call_charge($u, $r, $d, $secs, $cfg); }   // credits, per second at the call's rate
       $left = min(mh_ai_live_left($uid, $V), $V['live_call'] - $secs); if ($trial) $left = (string)$r['call'] === '' ? mh_ai_trial_left($uid, $V) : min($left, mh_ai_trial_left($uid, $V));
       $outOfTime = false;
-      if (!$trial) { $CL = mh_calls_left($uid, $cfg); if ($CL['left'] <= 0 && mh_calls_sync($u, $cfg) > 0) $CL = mh_calls_left($uid, $cfg); $outOfTime = $CL['left'] <= 0; $left = min($left, $CL['left']); }
+      if (!$trial && !mh_is_admin($u)) {   // out of credits: the call ends (a pack bought a moment ago counts)
+        $rate = (float)($r['rate'] ?? 0) ?: (float)mh_credits_cfg($cfg)['call_strong']; $CL = mh_credits_left($u, $cfg);
+        if ($CL['left'] < 1000 && mh_credits_sync($u, $cfg) > 0) $CL = mh_credits_left($u, $cfg);
+        $can = (int)floor($CL['left'] / ($rate * 1000) * 60); $outOfTime = $can <= 0; $left = min($left, $can);
+      }
       if ($trial && (string)$r['call'] === '' && !empty($in['end'])) { $db->prepare('UPDATE ai_live SET ended = 1 WHERE id = ?')->execute([$lid]); mh_json(['ok' => true, 'left' => mh_ai_trial_left($uid, $V), 'end' => true]); }   // a basic voice call hung up
       if ($trial && mh_ai_trial_left($uid, $V) <= 0) {   // the free minutes are up
         mh_ai_hangup($V, (string)$r['call']); $db->prepare('UPDATE ai_live SET ended = 1 WHERE id = ?')->execute([$lid]);
@@ -1099,7 +1137,7 @@ function mh_ai_route(string $route, array $in, array $cfg, string $ip): void {
       }
       if ($left <= 0) {
         mh_ai_hangup($V, (string)$r['call']); $db->prepare('UPDATE ai_live SET ended = 1 WHERE id = ?')->execute([$lid]);
-        mh_json(['ok' => true, 'left' => 0, 'end' => true, 'hours' => $outOfTime, 'why' => $V['live_call'] - $secs <= 0 ? 'That was a long one: calls end after ' . round($V['live_call'] / 60) . ' minutes. Call Bo again any time.' : ($outOfTime ? 'That was all your call time with Bo. Buy another hour on the Calls page to keep talking.' : 'That is all the live call time for now. It comes back tomorrow, or on the 1st for the monthly limit.')]);
+        mh_json(['ok' => true, 'left' => 0, 'end' => true, 'credits' => $outOfTime, 'hours' => $outOfTime, 'why' => $V['live_call'] - $secs <= 0 ? 'That was a long one: calls end after ' . round($V['live_call'] / 60) . ' minutes. Call Bo again any time.' : ($outOfTime ? 'That was all your credits. Get more on the Usage page to keep talking.' : 'That is all the live call time for now. It comes back tomorrow, or on the 1st for the monthly limit.')]);
       }
       mh_json(['ok' => true, 'left' => $left]);
     }
@@ -1138,9 +1176,10 @@ function mh_ai_route(string $route, array $in, array $cfg, string $ip): void {
       // after a call (live or basic voice): Bo writes the recap they keep, saves it in the chat, emails it, and hands back
       // its practice problems for the mistakes notebook
       mh_method('POST'); $u = mh_require_user(); $uid = (int)$u['id']; $now = time();
-      if (mh_plan($u, $cfg) !== 'max') { $st = $db->prepare('SELECT 1 FROM ai_live WHERE user_id = ? AND trial = 1 AND started >= ?'); $st->execute([$uid, $now - 10800]); if (!$st->fetchColumn()) mh_fail('Call recaps come with calls with Bo.', 402, ['plan' => 'max']); }
+      require_once __DIR__ . '/credits.php'; mh_credits_need($u, 500, $cfg, 'a recap');   // paid in credits, like everything with Bo
       mh_rate_or_fail("ai_recap:$uid", 24, 86400, 'That is a lot of recaps for one day.');
       $cid = mh_ai_cid($in['class'] ?? ''); $C = mh_ai_class($u, $cid); $since = max($now - 10800, (int)($in['since'] ?? 0)) - 5;
+      mh_credits_for($u, $cfg, 'recap', mh_ai_class_name($C, $cid) . ' · recap after a call');
       $turns = mh_ai_turns($uid, $cid); $call = array_values(array_filter($turns, fn($t) => !empty($t['v']) && (int)($t['at'] ?? 0) >= $since && empty($t['recap'])));
       if (count(array_filter($call, fn($t) => ($t['r'] ?? '') === 'u')) < 1 || count($call) < 2) mh_json(['ok' => true, 'recap' => null]);
       $slips = array_values(array_filter(array_map(fn($x) => mh_ai_clip(is_string($x) ? $x : '', 200), array_slice((array)($in['slips'] ?? []), 0, 6)), 'strlen'));
@@ -1160,6 +1199,7 @@ function mh_ai_route(string $route, array $in, array $cfg, string $ip): void {
       mh_ai_q('recaps');
       $turns[] = ['r' => 'b', 't' => $reply, 'at' => $now, 'v' => 1, 'recap' => 1]; mh_ai_save_turns($uid, $cid, $turns); mh_ai_count($uid, 'tutor', $r['in'], $r['out']);
       $parts = mh_ai_recap_parts($reply);
+      try { require_once __DIR__ . '/students.php'; mh_student_note_call($u, $cid, trim((string)($parts['topic'] ?? '') . ': ' . mb_substr(preg_replace('/\s+/u', ' ', mh_ai_unboard($reply)), 0, 220), ': ')); } catch (Throwable $e) {}   // the student file keeps a line per call
       // the practice problems with an answer that is a number, for the mistakes notebook
       $practice = [];
       foreach ($parts['checks'] as $c) { $v = mh_mc_val(mh_mc_edge(mh_mc_norm($c['answer']), false)); if (is_finite($v)) $practice[] = ['prompt' => $c['q'], 'answer' => $v, 'tex' => mh_mc_fmt_tex($v), 'why' => $c['why']]; }
@@ -1187,7 +1227,7 @@ function mh_ai_route(string $route, array $in, array $cfg, string $ip): void {
         $mc = is_array($in['mc'] ?? null) ? $in['mc'] : [];   // what the math check caught on the call (assets/talk.js)
         mh_ai_q('calls'); foreach (['you' => 'call_you', 'bo' => 'call_bo', 'page' => 'call_page', 'false_barge' => 'false_barge', 'barge' => 'call_barge', 'echo' => 'call_echo', 'cut_client' => 'cut_client', 'cut_limit' => 'cut_limit', 'errors' => 'call_errors', 'drops' => 'drops'] as $k => $key) mh_ai_q($key, max(0, min(50, (int)($mc[$k] ?? 0))));
         $now = time(); $d = max(0, min(45, $now - (int)$r['last'])); mh_ai_add($uid, 'live', $d);
-        if (!(int)($r['trial'] ?? 0) && (string)$r['call'] !== '') { require_once __DIR__ . '/calls.php'; mh_calls_charge($uid, $lid, $d, $cfg); }   // the last seconds of a Max call
+        if (!(int)($r['trial'] ?? 0) && (string)$r['call'] !== '') mh_ai_call_charge($u, $r, $d, (int)$r['secs'] + $d, $cfg);   // the last seconds of the call
         $db->prepare('UPDATE ai_live SET secs = secs + ?, last = ?, ended = 1 WHERE id = ?')->execute([$d, $now, $lid]);
         mh_ai_hangup($V, (string)$r['call']);
       }
@@ -1198,6 +1238,7 @@ function mh_ai_route(string $route, array $in, array $cfg, string $ip): void {
       // one from a request's syllabus in the admin panel (request: its id), or from a syllabus given here
       mh_method('POST'); $u = mh_require_user(); $uid = (int)$u['id'];
       if (!mh_is_admin($u)) mh_fail('Classes are added by the Mathub team now. Request your class with its syllabus, and we will tell you when it is ready.', 403, ['request' => true]);
+      require_once __DIR__ . '/credits.php'; mh_credits_for($u, $cfg, 'class', 'Building a class');   // written down at 0 for administrators
       mh_rate_or_fail("ai_class:$uid", 40, 3600, 'Bo is writing a lot of classes for you. Try again in a while.');
       $step = (string)($in['step'] ?? ''); $Z = mh_ai_sizes((string)($in['size'] ?? 'full'));
       @set_time_limit(200);

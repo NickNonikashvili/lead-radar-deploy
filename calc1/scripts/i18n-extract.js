@@ -14,7 +14,7 @@ const ROOT = path.resolve(__dirname, '..'); const OUT = path.join(ROOT, 'i18n', 
 // the interface; not the course material (*-data.js, *-quiz.js, ladders.js, courses-index.js), the admin panel, the apps' own files,
 // class-pack checks (classpacks.js, for authors), What's new (changelog.js) or the legal text (policy.js: a note says it is in English)
 const FILES = ['app.js', 'home.js', 'welcome.js', 'auth.js', 'tutor.js', 'bo-float.js', 'talk.js', 'create.js', 'forum.js', 'social.js', 'gami.js', 'quests.js', 'realm.js',
-  'tools.js', 'utils.js', 'ambient.js', 'focus.js', 'today.js', 'planner.js', 'gpa.js', 'report.js', 'pwa.js', 'resources.js', 'requests.js', 'calls.js', 'classpacks.js', 'readiness.js',
+  'tools.js', 'utils.js', 'ambient.js', 'focus.js', 'today.js', 'planner.js', 'gpa.js', 'report.js', 'pwa.js', 'resources.js', 'requests.js', 'usage.js', 'board-draw-more.js', 'call-launch.js', 'classpacks.js', 'readiness.js',
   'mistakes.js', 'cheatsheet.js', 'mynotes.js', 'blitz.js', 'recap.js', 'tour.js', 'motion.js', 'pixel.js', 'geek.js', 'lesson.js', 'reader.js', 'board-draw.js', 'bo-pad.js', 'max.js',
   'calc-tools.js', 'precalc-tools.js', 'physics-tools.js', 'phonetics.js', 'pylab.js', 'teach.js', 'boot.js',
   'life.js', 'shell.js', 'life-school.js', 'life-self.js', 'dash.js', 'bo-characters.js', 'room.js'];

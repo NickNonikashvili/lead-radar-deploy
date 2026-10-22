@@ -13,3 +13,5 @@ fixtures/live-tries.json
 fixtures/tts-all.json
 fixtures/rc-cancels.json
 fixtures/vt-bad.json
+fixtures/image-last.json
+fixtures/image-count.txt

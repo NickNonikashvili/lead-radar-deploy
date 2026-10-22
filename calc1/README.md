@@ -412,15 +412,15 @@ The Hostinger zip never includes `app/`.
   both). `plan_grants` in `config.local.php` gives testers a plan without paying. The example class and classes
   made before the plans existed are free; when a plan ends, classes are kept, locked (`App.courseGate`), until it
   is back. Settings has a Your plan panel (website) or row (apps) leading to **Your plan** (`#/plan`, also in the
-  account menu): the plan and how it is paid, when it renews or ends, this month's use (questions to Bo, and with
-  Max the call time left, linking to the Calls page), the three plans side by side, Manage billing (RevenueCat's customer portal or the store)
+  account menu): the plan and how it is paid, when it renews or ends, their credits (this month's, as a meter, and the bought
+  ones, linking to Usage), the three plans side by side, Manage billing (RevenueCat's customer portal or the store)
   and **Cancel plan**: one dialog (what changes and when, an optional reason kept in `plan_feedback`, Keep my plan),
   then `plan_cancel` cancels a website plan through RevenueCat's API v2 when `revenuecat_v2_key` and
   `revenuecat_project` are set, or opens its billing page; App Store and Google Play plans go to the store.
-- **Bo on the start page** (website, signed in): one card under the hero with Call Bo (a call right there, about
-  the class you are in), Ask Bo and Request a class with Max; Ask Bo here (opens the floating Bo) and Request a class
-  with Pro; Get Pro, Get Max and Request a class without a plan (administrators see Add a class); what is left this
-  month, the plan a click from Your plan, and with Max the call time a click from the Calls page.
+- **Bo on the start page** (website, signed in): one card under the hero with Call Bo (the Call Bo sheet), Ask Bo
+  and Request a class on every plan (administrators see Add a class); out of credits, Get credits comes first. It
+  says how many credits are left and about how many minutes on a call they make, the plan a click from Your plan
+  and the credits a click from Usage.
 - **Sharing** (administrators on the website; students no longer share). Share gives `https://mathub.space/#/c/CODE`,
   the 8-character code and a QR code (`assets/vendor/qrcode.js`, qrcode-generator, MIT, loaded on demand). `#/c/CODE`
   shows the class to anyone, without the owner's name, with Report, and Request it for students (Add a copy for
@@ -635,54 +635,85 @@ last three days, the prep checklist) and one for each day until the exam (weak t
 practice exam the day before, a light review on exam day). It is built from readiness, so it follows what the
 student has practised. The quizzer takes `?exam=ID&timed=1` to open in exam mode on that exam's topics.
 
-## The Max page and the free minutes with Bo
+## The call demo page (#/max)
 
 `assets/max.js`, `assets/max.css`, `#/max`, for everyone (signed in or not). A call with Bo that plays by itself in
 about 27 seconds: you write 2x + 3 = 11 by hand, Bo looks, circles the slip, then puts up a page with the steps and a
 graph (the real board, `App.boBoard`). Captions come word by word; Pause, Replay and "Read what they say" (the whole
-script as text); reduced motion shows the finished call. Under it: how it works (three steps), what Max gives you
-(four tiles), and Try it now. The button calls Bo on the free minutes, asks a visitor to sign up, or opens the
-plans; its small print follows `ai_status` (the free minutes set in the admin panel, what is left, used up, or Max).
-Linked from the visitor's start page, the Bo card, Ask Bo and the Max plan card.
+script as text); reduced motion shows the finished call. Under it: how it works (three steps), what you get (four
+tiles), and Try it now. Its Call Bo opens the Call Bo sheet (below), or asks a visitor to sign up; the small print says
+how long the member's credits last on a call (`ai_status`). Linked from the visitor's start page and Ask Bo.
 
-**Free minutes** (`ai_trial_minutes` in Keys & settings, 10 by default, 0 turns them off): every account without
-Max can call Bo once for that long, in a live call or basic voice (`api/ai.php`: `ai_trial`, `ai_live.trial`,
-`ai_call_start` for basic voice; see docs/app-subscriptions.md). The start page's Bo card and Ask Bo show Call Bo
-free; the call's clock shows the minutes left and ends the call when they run out, pointing to Max.
+## Credits: everything with Bo is paid in them
 
-**Invites** (`ai_invite_minutes`, 10 by default, 0 turns it off): a classmate who joins through your invite link
-gives you both that many more free minutes (`ai_trial.bonus`, up to 60 per account; `mh_invite_reward` in
-`api/growth.php`). Settings, the join page and the invite banner say so.
+`api/credits.php`, `assets/usage.js` (`#/usage`; `#/calls` opens it too), the admin panel's Credits tab
+(`assets/admin.js`). Like Claude's plans: **every account gets credits each month** (`credits_free` 100, `credits_pro`
+1,000, `credits_max` 2,000) and **more are bought ahead**, 1,000 (`credits_pack`) for $10 (`credits_pack_price`), as a
+one-time RevenueCat product (`credits_product`, `mathub_credits`) sold on the website through its Web Purchase Link
+(`credits_link`, opened with the member's RevenueCat id). All of these are in Site settings → Payments. 1 credit is
+about 1¢; the server counts thousandths.
 
-## Calls with Bo: call time, buying hours, the Calls page
+- **What uses them.** Every answer (chat, the floating Bo, basic voice, recaps, building a class, keeping long chats
+  short) by the tokens it took (`mh_ai_meter` → `mh_credits_ai`: Anthropic's price for the model × `credits_markup`, 2);
+  a live call by the minute at its rate (`credits_call_strong` 17 on Max's stronger model, `credits_call_light` 6
+  otherwise, kept on the call as `ai_live.rate`, one row per call that grows as `ai_live_tick` reports it); Bo's
+  voice and listening; a picture (`credits_image` 15, `credits_image_big` 22 wide or tall). `credit_use` keeps each
+  use (feature, credits, how much came from the month's and the bought ones, a short description), about 13 months.
+- **Order and limits.** The month's credits first, then the bought ones (`credit_add`: + per purchase and gift, − per
+  refund). `mh_credits_need` refuses anything that cannot be paid (402, `credits: true`; the page says how to get
+  more); a call ends when the credits run out ("That was all your credits…"). `ai_live_daily` (240) and
+  `ai_live_monthly` (3000) stay as safety limits only. Administrators are never charged (their use is written down at
+  zero). Call hours bought before credits became credits once, 1,000 an hour (`mh_credits_migrate`). The free
+  minutes (`ai_trial`) are retired; invites give both members `ai_invite_credits` (100, up to 1,000 per account).
+- **Purchases** (`credits_sync`): the server reads the member's RevenueCat record (`non_subscriptions`) and adds a
+  pack for each transaction it has not seen (old `mathub_call_hour` ones are 1,000 each); a transaction that is gone
+  (refunded) is taken back once. It asks at most once a minute, or at once after the checkout (`#/usage?paid=1`, set
+  as the link's success page) or "I paid", and when someone runs out mid-call.
+- **#/usage** (account menu → Usage & credits; the Bo card's Credits; Your plan): credits left as one big number, the
+  month's (a meter, and when they come back) and the bought ones, Buy 1,000 credits (opens the checkout in a new tab,
+  then I paid), this month by feature, the last 30 days as bars, what things cost, everything used, what was bought,
+  refunded and given, and how Bo sounds on calls (the same settings as the call's own sheet). In the apps the page
+  only says credits are bought on the website.
+- **Admin → Credits** (`admin_credits`): this month by feature, from the monthly and the bought credits, about what
+  it cost, packs sold and refunded and what they brought in (before fees), credits given; what things cost with a
+  link to Site settings and whether the purchase link and RevenueCat are set; every member who used or has credits;
+  **Give credits** (`admin_credits_grant`: a minus sign takes them back, a note only administrators see, and an inbox
+  message to the member); and every purchase, refund and gift.
 
-`api/calls.php`, `assets/calls.js`, the admin panel's Calls tab (`assets/admin.js`). **Mathub Max ($20 a month)
-includes an hour of calls each month** (`call_included_minutes`, 60); **more time is bought ahead**, 60 minutes
-(`call_hour_minutes`) for $10 (`call_hour_price`), as a one-time RevenueCat product (`call_hour_product`,
-`mathub_call_hour`) sold on the website through its Web Purchase Link (`call_hour_link`, opened with the member's
-RevenueCat id). All of these are in Site settings → Payments.
+## Call Bo: one clear way to start a call
 
-- **Using it.** A Max member's calls use the month's included minutes first (`call_month`), then the time bought
-  (`call_credit`: + per purchase and gift, − per refund and, one row per call, the part of that call paid from bought
-  time). `ai_live_start` refuses a call when nothing is left (402, `hours: true`: the call says "Get more call time"
-  and links to the Calls page) and `ai_live_tick` ends a call when time runs out, saying so. Bought time never
-  expires; without Max it is kept for when Max is back. `ai_live_daily` (240) and `ai_live_monthly` (3000) stay as
-  safety limits only. Free minutes for everyone without Max are unchanged (above).
-- **Purchases** (`calls_sync`): the server reads the member's RevenueCat record (`non_subscriptions`) and adds a pack
-  for each transaction it has not seen; a transaction that is gone (refunded) is taken back once. It asks at most
-  once a minute, or at once after the checkout (`#/calls?paid=1`, set as the link's success page) or "I paid".
-- **#/calls** (account menu → Calls with Bo; the Bo card's Call time; Your plan's call meter): what is left as one
-  number, this month's hour and the hours bought, Buy an hour (opens the checkout in a new tab, then I paid), this
-  month, every call (what it used: this month's hour, bought hours or free minutes), what was bought, refunded and
-  given, and how Bo sounds on calls (who he is, his voice, his pace, when he jumps in, headphones, echo, captions:
-  the same settings as the call's own sheet). Without Max: what calls cost, the free minutes, and time kept. In the
-  apps the page only says calls are on the website (no checkout links in the apps).
-- **Admin → Calls** (`admin_calls`): this month's minutes (from included hours, bought time and free minutes),
-  calls and people, packs sold and refunded, what they brought in (before fees), time given; the prices and limits
-  with a link to Site settings and whether the purchase link and RevenueCat are set; every member who called this
-  month or has time, with their plan, minutes, included hour used and time left; **Give call time** (`admin_calls_grant`:
-  minutes, a minus sign takes time back, a note only administrators see, and an inbox message to the member); and
-  every purchase, refund and gift.
+`assets/call-launch.js` (`App.callBo`). The phone button in the top bar (every page, signed in, on the website), the
+start page's Bo card, each class page ("Call Bo about Calc I") and the demo page open one sheet: pick the class to
+talk about (the member's classes as radio cards in their colours, or Anything else), see the credits and about how
+many minutes they make at their rate, who Bo is today (Change goes to his settings), and Start. The first time it
+also says what a call sends where, and Start counts as agreeing; the first call then opens on how a call works. Out
+of credits, Get credits takes Start's place. On a phone the sheet comes up from the bottom.
+
+## The student file, and long chats kept short
+
+`api/students.php`. One JSON file per member in `api/data/students/<id>.json` (denied to the web like the rest of
+`api/data`): their classes and how they are doing in each (from the progress summaries the devices send), how they
+like to learn (Bo's notes), short summaries of long chats per class and of long calls, a line per recent call and the
+pictures Bo made. A short part of it goes with every question and call (`mh_student_context`), and the picture model
+gets one line from it (class and level, never a name or email). **Compaction:** a chat sends its last 10 turns
+(`MH_AI_TURNS_SENT`) plus its summary; once 14 or more turns (`MH_STUDENT_COMPACT_AT`) pile up behind them, the
+cheap model folds them into the summary after the answer has gone out (a shutdown function). A live call does the
+same in the browser: past 24 turns, all but the last 10 go to `ai_compact`, the summary is put first in the call
+(`conversation.item.create`, `previous_item_id: root`) and the old turns are taken out (`conversation.item.delete`);
+the chat still gets every word. Ask Bo → What Bo knows shows the file (See it) and downloads it; Forget everything
+empties it; it is in Download my data; files of deleted accounts are removed by housekeeping.
+
+## Bo draws anything
+
+`assets/board-draw-more.js` adds to `assets/board-draw.js` (`App.boDraw.kind` for new kinds, `graphPart` for new
+parts of a graph): **implicit curves** (an equation in x and y, marching squares), **polar curves**, **slope and
+vector fields** with solution curves (RK4), **contour and heat maps**, **3D surfaces and curves** (painter's
+algorithm, turned by dragging or the arrow keys), **his own SVG** (parsed and rebuilt from an allowlist of elements,
+attributes and styles: no scripts, handlers, links out or foreign content; ids made unique) and **pictures**
+(`api/images.php`: `ai_image` asks OpenAI's image model, `ai_image_model` gpt-image-2, falling back to gpt-image-1;
+the picture is kept in `api/data/ai-img/` under a hash of what was asked, so the same one is never made or paid for
+twice, and served to members by `ai_image_file`). Any drawing that does not move has View large (zoom, pan, Escape).
+The prompts tell Bo he can draw anything and how (MH_AI_DRAW, the draw_on_board tool).
 
 ## Bo's characters, recaps, exam review calls, study rooms and Bo quality
 
@@ -697,10 +728,11 @@ RevenueCat id). All of these are in Site settings → Payments.
 - **The heads-up before an exam** (`mh_exam_nudge_tick` in `api/growth.php`, from 9 am, a few members per visit):
   an exam in 2 or 3 days in the classes a member picked gets one email and push (`exam_nudges`;
   `users.exam_nudge`; admin → Site settings → Email → `exam_emails` turns them off for everyone, and `recap_emails`
-  does the same for the recap emails). Its link, `#/tutor/<class>?call=exam`, opens a review call (MH_AI_EXAM_CALL) for Max members
-  and anyone with free minutes; others get the exam prep page.
-- **Max calls use the stronger model** (`ai_live_model_max`, `gpt-realtime-2.1` by default; the free minutes keep
-  `ai_live_model`). If OpenAI refuses it, the call goes ahead on `ai_live_model`.
+  does the same for the recap emails). Its link, `#/tutor/<class>?call=exam`, opens a review call (MH_AI_EXAM_CALL) for anyone
+  with credits for about five minutes of it; others get the exam prep page.
+- **Max calls use the stronger model** (`ai_live_model_max`, `gpt-realtime-2.1` by default, at `credits_call_strong`
+  a minute; everyone else gets `ai_live_model` at `credits_call_light`). If OpenAI refuses it, the call goes ahead on
+  `ai_live_model`.
 - **Study rooms** (`api/room.php`, `assets/room.js`, `#/room/CODE`): on a call, the people button opens a room;
   up to three classmates join with its code, see the board (both ways, `App.boPad` `onOp`/`remote`/`snap`), Bo's
   pages and the captions, and type questions Bo hears with their name. Each side posts changes and polls once a
@@ -712,9 +744,9 @@ RevenueCat id). All of these are in Site settings → Payments.
 ## News emails (Email everyone)
 
 `api/news.php`, the admin panel's Email everyone tab, `#/unsubscribe`. The administrator writes one email (subject,
-paragraphs, a button and its link; `{name}` and `{minutes}` are filled in), sees it as members will, sends a test to
+paragraphs, a button and its link; `{name}`, `{credits}` and `{minutes}` are filled in), sees it as members will, sends a test to
 themselves, then sends it to every verified member who has news on (`users.news_email`, on by default; Settings →
-Account → News from Mathub). It is ready with the email about the free minutes with Bo. Sending goes in batches of
+Account → News from Mathub). It is ready with the email about Bo on every account and the free monthly credits. Sending goes in batches of
 ten every few seconds while the admin page is open, and a few on every visit to the site otherwise
 (`mh_news_tick` in housekeeping); `news_sent` makes sure nobody gets it twice. Three failures in a row with nothing
 sent pause it with the mail server's error. Each email ends with a link to `#/unsubscribe?u=…&t=…` (a signed link:

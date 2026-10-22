@@ -105,7 +105,10 @@
   const kindOf = k => { k = String(k || '').toLowerCase(); return k === 'note' ? 'tip' : ['text', 'math', 'step', 'answer', 'tip', 'draw', 'check', 'code'].includes(k) ? k : 'text'; };
   const allTex = s => /^\s*\$\$?[^$]+\$\$?\s*\.?\s*$/.test(s);
   const unTex = s => String(s).trim().replace(/\.$/, '').replace(/^\$\$?|\$\$?$/g, '').trim();
-  const looksTex = s => !/\$/.test(s) && /[=\\^_{}<>]/.test(s) && !/[a-z]{4,}/i.test(s.replace(/\\[a-z]+/gi, ''));
+  // bare LaTeX, no $: math symbols, and no English words around them ("x = 3 or x = -2" is words with math, not a formula)
+  const looksTex = s => !/\$/.test(s) && /[=\\^_{}<>]/.test(s) && !/[a-z]{4,}/i.test(s.replace(/\\[a-z]+/gi, '')) && !/(^|\s)(or|and|if|so|is|the|for|then|with|at|to|of|in|on|as|by|be|are|not|but|all|each|any|we|it)(?=[\s,.;:]|$)/i.test(s);
+  // one line of the board that is math: a single formula is shown big; words with $math$ in them stay one line, the math inline
+  const mathLine = t => allTex(t) ? disp(t) : /\$/.test(t) ? `<p class="bb-mixed">${words(t)}</p>` : looksTex(t) ? disp(t) : `<p>${words(t)}</p>`;
   const oneLine = x => ({ k: allTex(x) || looksTex(x) ? 'math' : 'text', t: x });
   /* a draw: or check: line whose JSON goes on over the next lines, or sits in a ``` block under it: all of it, the
      line it ends on, and whether its brackets have closed */
@@ -236,13 +239,13 @@
   const badItem = (cls, st, t) => `<div class="${cls} bb-draw-bad"${st}>${icon('pen', 15)}<p>${t}</p></div>`;
   function itemHtml(it, n, fresh, d, idx) {
     const t = String(it.t || ''); const cls = `bb-item bb-${it.k}${fresh ? ' bb-new' : ''}`; const st = fresh ? ` style="--d:${d}ms"` : '';
-    if (it.k === 'math') return `<div class="${cls}"${st}>${allTex(t) || looksTex(t) || !/\s\w{4,}\s/.test(t) ? disp(t) : `<p>${words(t)}</p>`}</div>`;
+    if (it.k === 'math') return `<div class="${cls}"${st}>${!/\$/.test(t) && !looksTex(t) && !/\s[a-z]{2,}\s/i.test(t) ? disp(t) : mathLine(t)}</div>`;
     if (it.k === 'step') {
       // what to do, then its math on a line of its own: "Take 3 from both sides: $2x = 8$"
       const m = /^(.*?)[\s:;,—–-]*\$\$?([^$]+?)\$\$?\s*\.?\s*$/.exec(t); const say = m ? m[1].trim() : t; const tex = m ? m[2] : (looksTex(t) ? t : '');
       return `<div class="${cls}"${st}><span class="bb-n" aria-hidden="true">${n}</span><div class="bb-step-b"><span class="sr-only">Step ${n}: </span>${say && !(tex && say === t) ? `<p>${words(say)}</p>` : ''}${tex ? disp(tex) : ''}</div></div>`;
     }
-    if (it.k === 'answer') return `<div class="${cls}"${st}><span class="bb-answer-l">${icon('check', 14)} Answer</span>${allTex(t) || looksTex(t) ? disp(t) : `<p>${words(t)}</p>`}</div>`;
+    if (it.k === 'answer') return `<div class="${cls}"${st}><span class="bb-answer-l">${icon('check', 14)} Answer</span>${mathLine(t)}</div>`;
     if (it.k === 'tip') return `<div class="${cls}"${st}><span class="bb-tip-i" aria-hidden="true">${icon('bulb', 15)}</span><p><span class="sr-only">Tip: </span>${words(t)}</p></div>`;
     if (it.k === 'draw') { const D = App.boDraw; const sp = D && D.parse(t); return sp ? `<figure class="${cls}"${st}>${D.html(sp, fresh)}</figure>` : badItem(cls, st, 'This drawing didn’t come out. Ask Bo to draw it again.'); }   // a graph, figure, table, chart…
     if (it.k === 'check') return checkHtml(it, cls, st, idx);
@@ -319,7 +322,7 @@
     });
   }
   const still = () => (global.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) || document.documentElement.dataset.motion === 'off';
-  App.boBoard = { KIND: B_KIND, OPEN: B_OPEN, CLOSE: B_CLOSE, kind: kindOf, oneLine, split: boardSplit, merge: boardMerge, shell: boardShell, paint: boardPaint, wire: boardWire, plain: pagePlain, add: addItem, check: checkOf, fmt: (sp, ids) => fmt(sp, ids), userHtml: (t, v) => userHtml(t, v), plainOf: src => plainOf(src) };
+  App.boBoard = { KIND: B_KIND, OPEN: B_OPEN, CLOSE: B_CLOSE, kind: kindOf, pageHtml: p => pageHtml(p, false), oneLine, split: boardSplit, merge: boardMerge, shell: boardShell, paint: boardPaint, wire: boardWire, plain: pagePlain, add: addItem, check: checkOf, fmt: (sp, ids) => fmt(sp, ids), userHtml: (t, v) => userHtml(t, v), plainOf: src => plainOf(src) };
 
   /* ---------- Bo's answers: plain text with **bold**, lists and LaTeX, and a link to each page he wrote on the board ---------- */
   function fmt(sp, ids) {
@@ -389,15 +392,14 @@
   };
 
   async function start(main, query) {
-    if (!user()) { main.innerHTML = gate('Sign in to talk with Bo', 'Bo is part of Mathub Max and works with your account, so he can follow your classes and progress on every device.', `<button type="button" class="btn primary lg" data-go="login">Log in</button><button type="button" class="btn" data-go="signup">Create an account</button>`); wireGate(main); return; }
+    if (!user()) { main.innerHTML = gate('Sign in to talk with Bo', 'Bo works with your account, so he can follow your classes and progress on every device. Every account gets credits for him each month, free.', `<button type="button" class="btn primary lg" data-go="login">Log in</button><button type="button" class="btn" data-go="signup">Create an account</button>`); wireGate(main); return; }
     let s; try { s = st.status = await api('ai_status'); } catch (e) { main.innerHTML = gate('Bo cannot be reached', esc(e.message), `<button type="button" class="btn" data-go="retry">Try again</button>`); wireGate(main, () => start(main, query)); return; }
     st.notes = s.notes || []; if (App.boTalk) App.boTalk.setStatus(s);
     if (!s.enabled) { main.innerHTML = gate('Bo is getting ready', 'Bo is not switched on yet. He will be here soon.', ''); return; }
     st.exam = query.call === 'exam' && talk();   // from the heads-up before an exam: a review call
     if (st.exam) { try { history.replaceState(history.state, '', `${location.pathname}${location.search}#/tutor/${st.cid || ''}`); } catch (e) {} }
-    if (!s.max) {
+    if (s.credits && s.credits.out && !s.admin) {   // any plan, credits decide (api/credits.php): out of them, how to get more
       main.innerHTML = intro(s.plan, s, st.exam); wireGate(main, () => start(main, query));
-      if (st.exam && s.trial && s.trial.left > 0 && App.boTalk) setTimeout(() => App.boTalk.open({ cid: st.cid || 'calc', status: s, gesture: false, focus: 'exam' }), 300);   // on the free minutes
       st.exam = false; return;
     }
     if (!settings().aiConsent) { main.innerHTML = consent(); wireGate(main, () => start(main, query)); return; }
@@ -413,19 +415,17 @@
       if (g === 'max') { if (await App.paywall({ need: 'max', reason: 'bo' })) again && again(); return; }
       if (g === 'agree') { setSetting('aiConsent', Date.now()); haptic('success'); again && again(); return; }
       if (g === 'later') { location.hash = '#/'; }
-      if (g === 'trial' && App.boTalk) App.boTalk.open({ cid: st.cid || 'calc', status: st.status, gesture: true, onClose: () => again && again() });   // the free minutes
     };
   }
+  // out of credits (or, from the floating Bo, before the first question): who Bo is, and how to get credits
   function intro(plan, s, exam) {
-    const free = talk() && s && s.trial && s.trial.left > 0 ? Math.max(1, Math.ceil(s.trial.left / 60)) : 0;
-    const tried = talk() && s && s.trial && s.trial.left <= 0;
-    const prep = exam && !free && st.cid && Courses[st.cid] ? `<div class="bo-exam-note" role="note">${icon('target', 18)}<p><b>Your exam is close.</b> Review calls with Bo come with Max. Your <a href="#/${esc(st.cid)}/exam">exam prep page</a> has the topics, how ready you are and a practice exam.</p></div>` : '';
-    return `<section class="bo-gate bo-intro">${prep}<span class="bo-gate-av" aria-hidden="true">${bo(96)}</span><h2>Meet Bo, your tutor</h2>
-      ${free ? `<div class="bo-free"><p><b>Talk to him free for ${free} minutes.</b> Write on the board, he helps you through it.</p><button type="button" class="btn primary lg" data-go="trial">${icon('phone', 18)} Call Bo free</button></div>` : tried ? '<p class="small muted">You have used your free minutes with Bo.</p>' : ''}
-      <p>Bo knows your classes from their syllabi and keeps up with how you are doing, so his help fits you.</p>
-      <ul class="bo-perks"><li>${icon('chat', 18)}<span><b>Ask anything</b> about your classes, any time: “Why is the derivative of $\\sin x$ equal to $\\cos x$?”</span></li><li>${icon('target', 18)}<span><b>He knows where you are stuck</b>: your weakest topics, the questions you missed and your next exam.</span></li>${talk() ? `<li>${icon('phone', 18)}<span><b>Call him</b> and just talk, like with a friend: he answers right away, you can cut in, and he writes the math on his board.</span></li>` : ''}<li>${icon('image', 18)}<span><b>Snap a problem</b> and he walks you through it, step by step.</span></li><li>${icon('flag', 18)}<span><b>Plans and quizzes</b> built on your real exam dates.</span></li></ul>
-      <div class="bo-gate-acts"><button type="button" class="btn ${free ? '' : 'primary '}lg" data-go="max">${plan === 'pro' ? 'Move up to Max' : 'Get Mathub Max'}</button><a class="btn ghost lg" href="#/max">See it in action</a></div>
-      <p class="small muted">Mathub Max includes everything in Pro, so Bo is also on every page. <a href="#/plan">Compare the plans</a></p>${talk() ? `<p class="small muted">A classmate on a call with Bo gave you a code? <a href="#/room">Join their study room</a></p>` : ''}</section>`;
+    const K = s && s.credits; const out = !!(K && K.out);
+    const prep = exam && out && st.cid && Courses[st.cid] ? `<div class="bo-exam-note" role="note">${icon('target', 18)}<p><b>Your exam is close.</b> Your <a href="#/${esc(st.cid)}/exam">exam prep page</a> has the topics, how ready you are and a practice exam, and none of it uses credits.</p></div>` : '';
+    return `<section class="bo-gate bo-intro">${prep}<span class="bo-gate-av" aria-hidden="true">${bo(96)}</span><h2>${out ? 'You’re out of credits' : 'Meet Bo, your tutor'}</h2>
+      ${out ? `<p>Everything with Bo uses credits: questions, calls and the pictures he draws. Yours come back on ${esc(App.fmtDate ? App.fmtDate(K.resets) : K.resets)}, or get more now.</p>` : '<p>Bo knows your classes from their syllabi and keeps up with how you are doing, so his help fits you.</p>'}
+      <ul class="bo-perks"><li>${icon('chat', 18)}<span><b>Ask anything</b> about your classes, any time: “Why is the derivative of $\\sin x$ equal to $\\cos x$?”</span></li><li>${icon('target', 18)}<span><b>He knows where you are stuck</b>: your weakest topics, the questions you missed and your next exam.</span></li>${talk() ? `<li>${icon('phone', 18)}<span><b>Call him</b> and just talk, like with a friend: he answers right away, you can cut in, and he writes the math on his board.</span></li>` : ''}<li>${icon('image', 18)}<span><b>Snap a problem</b> and he walks you through it, step by step.</span></li><li>${icon('pen', 18)}<span><b>He draws anything</b>: graphs, 3D surfaces, diagrams and pictures.</span></li></ul>
+      <div class="bo-gate-acts">${out ? `<a class="btn primary lg" href="#/usage">${icon('plus', 17)} Get credits</a>` : ''}<button type="button" class="btn ${out ? '' : 'primary '}lg" data-go="max">${plan === 'max' ? 'Your plan' : 'More credits every month'}</button></div>
+      ${(() => { const P = (K && K.plans) || { free: 100, pro: 1000, max: 2000 }; const f = n => App.credits ? App.credits.fmt(n) : String(n); return `<p class="small muted">Every month, free accounts get ${f(P.free)} credits, Pro ${f(P.pro)} and Max ${f(P.max)}. <a href="#/usage">What things cost</a></p>`; })()}${talk() ? `<p class="small muted">A classmate on a call with Bo gave you a code? <a href="#/room">Join their study room</a></p>` : ''}</section>`;
   }
   App.boGateHtml = { consent: () => consent(), intro: plan => intro(plan) };   // the floating Bo (assets/bo-float.js) asks the same way
   function consent() {
@@ -472,7 +472,7 @@
   }
   /* the voice call; when it ends, the chat shows what was said */
   function openTalk(gesture, focus) {
-    if (!talk() || !st.cid || !st.status || !st.status.max) return;
+    if (!talk() || !st.cid || !st.status) return;
     App.boTalk.open({ cid: st.cid, status: st.status, gesture, focus, onClose: changed => { if (changed && /^#\/tutor/.test(location.hash)) App.rerender(); } });
   }
   function greeting(id) {
@@ -494,8 +494,8 @@
     const log = $('#bo-log', main), q = $('#bo-q', main), form = $('#bo-compose', main), sug = $('#bo-suggest', main);
     const scroll = () => { const last = log.lastElementChild; if (last) last.scrollIntoView({ block: 'end', behavior: 'auto' }); };
     const typeset = el => { if (App.typeset) safe(() => App.typeset(el)); };
-    const paintFoot = u => { if (!u) return; const left = Math.max(0, u.tutor_limit - u.tutor); $('#bo-foot', main).textContent = `Bo is an AI and can be wrong. Check important answers against your notes or your instructor. ${left} of ${u.tutor_limit} questions left this month.`; };
-    paintFoot(st.status && st.status.usage);
+    const paintFoot = c => { if (!c || c.admin || c.left == null) return; $('#bo-foot', main).textContent = `Bo is an AI and can be wrong. Check important answers against your notes or your instructor. ${App.credits ? App.credits.fmt(c.left) : Math.floor(c.left)} credits left.`; if (st.status && st.status.credits) st.status.credits.left = c.left; };
+    paintFoot(st.status && st.status.credits && Object.assign({ admin: st.status.admin }, st.status.credits));
     try { await App.loadCourse(id); } catch (e) {}
     let turns = []; try { turns = (await api('ai_thread&class=' + encodeURIComponent(id))).turns || []; } catch (e) {}
     // the board: every page Bo wrote in this chat, in order, the last one showing
@@ -566,7 +566,7 @@
         const ids = add(r.reply);
         log.insertAdjacentHTML('beforeend', msgHtml('b', r.reply, r.remembered ? `<p class="bo-remember">${icon('bulb', 13)} Bo will remember: ${esc(r.remembered)} <button type="button" class="linkbtn small" data-bo-forget="${esc(r.remembered)}">Forget it</button></p>` : '', false, ids, r.at));
         if (ids.length && board) boardPaint(board, pages, ids[ids.length - 1], true);
-        typeset(log.lastElementChild); haptic('light'); paintFoot(r.usage);
+        typeset(log.lastElementChild); haptic('light'); paintFoot(r.credits);
         sug.innerHTML = chips(followups(r.reply)); sug.hidden = false; sug.classList.add('bo-next');
       } catch (x) {
         cancelAnimationFrame(frame); if (live) live.remove();
@@ -593,10 +593,10 @@
 
   /* ---------- What Bo knows: the snapshot in words, Bo's notes, and clearing, in a sheet (the i button) ---------- */
   function knowsHtml(id) {
-    const s = id ? snapshot(id) : {}; const u = st.status && st.status.usage;
+    const s = id ? snapshot(id) : {};
     const li = (h, v) => v ? `<li><b>${h}</b><span>${v}</span></li>` : '';
     const ready = s.readiness && s.readiness.exam ? `${esc(s.readiness.exam)}, ${s.readiness.days === 0 ? 'today' : s.readiness.days === 1 ? 'tomorrow' : `in ${s.readiness.days} days`}${s.readiness.score ? `<span class="bo-k-meter" aria-hidden="true"><i style="width:${Math.max(4, Math.min(100, s.readiness.score))}%"></i></span><small>${s.readiness.score}% ready</small>` : ''}` : '';
-    const left = u ? Math.max(0, u.tutor_limit - u.tutor) : null;
+    const K = st.status && st.status.credits; const left = K && !st.status.admin ? K.left : null;
     return `${id ? `<h3 class="bo-k-h">About ${esc(short(id))}</h3><p class="bo-k-sub">Sent with each question, so Bo's help fits you.</p><ul class="bo-k-list">
         ${li('The class', 'Its syllabus: dates, exams, grading and topics')}
         ${li('Next exam', ready)}
@@ -605,7 +605,10 @@
         ${li('To do', `${s.due || 0} flashcards due, ${s.mistakes || 0} missed questions to retry`)}
         ${li('Due soon', s.deadlines && s.deadlines.length ? esc(s.deadlines.slice(0, 3).map(d => d.t).join('; ')) : '')}</ul>` : ''}
       <h3 class="bo-k-h">Bo's notes about you</h3><div class="bo-k-notes">${st.notes.length ? `<ul class="bo-notes">${st.notes.map((n, i) => `<li><span>${esc(n)}</span><button type="button" class="icon-btn" data-k-note="${i}" aria-label="Delete this note">${icon('x', 14)}</button></li>`).join('')}</ul>` : '<p class="small muted">Nothing yet. When you tell Bo how you like to learn, he writes it down here.</p>'}</div>
-      ${left !== null ? `<h3 class="bo-k-h">This month</h3><p class="bo-k-use"><span class="bo-k-meter" aria-hidden="true"><i style="width:${Math.round(left / Math.max(1, u.tutor_limit) * 100)}%"></i></span>${left} of ${u.tutor_limit} questions left · <a href="#/plan">Your plan</a></p>` : ''}
+      ${left !== null ? `<h3 class="bo-k-h">Credits</h3><p class="bo-k-use"><span class="bo-k-meter" aria-hidden="true"><i style="width:${Math.max(0, Math.min(100, Math.round(K.month_left / Math.max(1, K.allowance) * 100)))}%"></i></span>${App.credits ? App.credits.fmt(left) : Math.floor(left)} left · <a href="#/usage">Usage</a></p>` : ''}
+      <h3 class="bo-k-h">Your student file</h3><p class="bo-k-sub">One file with your classes, how you are doing, how you like to learn and short summaries of your longer chats and calls. Bo, and the pictures he draws, read it so they fit you, and when a chat gets long he folds the older part into a summary so he stays sharp.</p>
+      <div class="bo-k-file" id="bo-k-file" hidden></div>
+      <div class="bo-gate-acts"><button type="button" class="btn sm" data-kf="see" aria-expanded="false" aria-controls="bo-k-file">${icon('eye', 14)} See it</button><button type="button" class="btn sm ghost" data-kf="dl">${icon('download', 14)} Download</button></div>
       <div class="bo-gate-acts">${id ? `<button type="button" class="btn sm" data-k="chat">Clear this chat</button>` : ''}<button type="button" class="btn sm ghost" data-k="all">Forget everything</button></div>`;
   }
   /* note deletes and clearing, for the panel and the sheet; after() repaints whichever asked */
@@ -613,6 +616,15 @@
     if (!el) return;
     el.addEventListener('click', async e => {
       const n = e.target.closest('[data-k-note]'); if (n) { try { const r = await api('ai_forget', { what: 'note', i: +n.dataset.kNote }); st.notes = r.notes || []; after(); } catch (x) { toast(x.message); } return; }
+      const f = e.target.closest('[data-kf]');
+      if (f) {   // the student file (api/students.php ai_student): shown as plain JSON, or saved
+        try {
+          const r = await api('ai_student'); const txt = JSON.stringify(r.file || {}, null, 2);
+          if (f.dataset.kf === 'dl') { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([txt], { type: 'application/json' })); a.download = `mathub-bo-file-${App.todayISO ? App.todayISO() : 'today'}.json`; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000); return; }
+          const box = $('#bo-k-file', el); const open = box.hidden; box.hidden = !open; f.setAttribute('aria-expanded', String(open)); if (open) box.innerHTML = `<pre tabindex="0" aria-label="Your student file">${esc(txt)}</pre>`;
+        } catch (x) { toast(x.message); }
+        return;
+      }
       const k = e.target.closest('[data-k]'); if (!k) return; const id = st.cid;
       if (!confirm(k.dataset.k === 'chat' ? `Clear your chat with Bo about ${short(id)}?` : 'Forget everything Bo knows about you: every chat and every note? Your classes and progress stay.')) return;
       try { await api('ai_forget', k.dataset.k === 'chat' ? { what: 'chat', class: id } : { what: 'all' }); if (k.dataset.k === 'all') st.notes = []; toast(k.dataset.k === 'chat' ? 'Chat cleared.' : 'Bo forgot everything.'); if (close) close(); App.rerender(); } catch (x) { toast(x.message); }
