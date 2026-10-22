@@ -6,3 +6,6 @@ calc1/app/www/
 
 # written and removed by tests/class-packs.test.js while it runs
 calc1/tests/fixtures/zzp101-broken.mathub.json
+
+# Hostinger upload zips built from calc1/ (sent to the owner, not kept in the repository)
+calc1-deploy-*.zip
