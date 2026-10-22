@@ -2,9 +2,11 @@
    Covered, on the stand-in call from tests/talk-fakes.js: a blip ("disconnected" that heals) changes nothing; one that
    lasts shows Reconnecting… and the call is rebuilt as the same call (resume: the last call's id, the board and the
    clock kept, Bo picks up instead of greeting); "failed" rebuilds at once; offline waits for the network; a minute
-   without any connection ends the call, saying so; his greeting can't be cut off by his own voice (the mic waits);
-   with "My speakers echo" the mic waits while he talks; the response queue (no two at once, a harmless race is not
-   shown); a tool to retry quietly brings him back, wait_for_user does not. */
+   without any connection ends the call, saying so; cutting in: the mic is always open, a voice over his stops him
+   within a quarter second and is answered, his own voice coming back from the speakers is not a turn (taken out of
+   the conversation), an "mm-hmm" that stopped him makes him carry on, headphones stop him at once, and "My speakers
+   echo" asks for a louder voice; the response queue (no two at once, a harmless race is not shown); a tool to retry
+   quietly brings him back, wait_for_user does not. */
 const T = require('./lib'); const path = require('path');
 const { live, quiet } = require('./talk-fakes');
 const sqlite = q => require('child_process').spawnSync('php', ['-r', '$d = new PDO("sqlite:" . $argv[1]); $d->exec($argv[2]);', path.join(__dirname, '..', 'api', 'data', 'mathub.sqlite'), q]);
@@ -23,11 +25,38 @@ const sqlite = q => require('child_process').spawnSync('php', ['-r', '$d = new P
   await until(p, () => document.querySelector('#bo-talk') && document.querySelector('#bo-talk').dataset.state === 'live');
   const mic = () => p.evaluate(() => window.__rt.mic.getAudioTracks()[0].enabled);
 
-  // his greeting: the mic waits until he has said it (the echo canceller is weakest in the first seconds)
-  check('as the call opens, he speaks first, and the mic waits while he greets', (await sent(p)).some(x => x.type === 'response.create') && (await mic()) === false);
-  await E(p, { type: 'response.created', response: { id: 'g1' } }); await E(p, { type: 'output_audio_buffer.started' });
-  await E(p, { type: 'response.done', response: { id: 'g1', status: 'completed', output: [{ type: 'message' }] } }); await E(p, { type: 'output_audio_buffer.stopped' });
-  check('and opens when he is done', !!(await until(p, () => window.__rt.mic.getAudioTracks()[0].enabled === true)));
+  // cutting in. His voice (boGain) and theirs (micGain) are tones on the stand-in call; an echo is a little of his in the mic
+  const bo = v => p.evaluate(v => { if (window.__rt.boGain) window.__rt.boGain.gain.value = v; }, v), you = v => p.evaluate(v => { window.__rt.micGain.gain.value = v; }, v);
+  const since = async n => (await sent(p)).slice(n), n0 = async () => (await sent(p)).length;
+  check('as the call opens, he speaks first, and the mic is open while he greets (you can cut in)', (await sent(p)).some(x => x.type === 'response.create') && (await mic()) === true);
+  await E(p, { type: 'response.created', response: { id: 'g1' } }); await E(p, { type: 'output_audio_buffer.started' }); await bo(0.3); await you(0.05); await p.waitForTimeout(900);
+  let k = await n0();
+  await E(p, { type: 'input_audio_buffer.speech_started', item_id: 'e1' }); await p.waitForTimeout(1200);
+  await E(p, { type: 'input_audio_buffer.speech_stopped', item_id: 'e1' }); await E(p, { type: 'input_audio_buffer.committed', item_id: 'e1' }); await p.waitForTimeout(150);
+  let after = await since(k);
+  check('his own voice coming back from the speakers does not stop him', !after.some(x => x.type === 'output_audio_buffer.clear' || x.type === 'response.cancel'), after.map(x => x.type));
+  check('and it is not a turn: it is taken out of the conversation and not answered', after.some(x => x.type === 'conversation.item.delete' && x.item_id === 'e1') && !after.some(x => x.type === 'response.create'), after.map(x => x.type));
+  k = await n0(); await you(0.35);
+  await E(p, { type: 'input_audio_buffer.speech_started', item_id: 'u1' }); await p.waitForTimeout(450);
+  after = await since(k);
+  check('a voice over his stops him within about a quarter second', after.some(x => x.type === 'output_audio_buffer.clear') && after.some(x => x.type === 'response.cancel') && (await p.$eval('#bo-talk', e => e.dataset.who)) === 'you', after.map(x => x.type));
+  await E(p, { type: 'output_audio_buffer.cleared' }); await E(p, { type: 'response.done', response: { id: 'g1', status: 'cancelled', output: [] } }); await bo(0); await p.waitForTimeout(400); await you(0);
+  await E(p, { type: 'input_audio_buffer.speech_stopped', item_id: 'u1' }); k = await n0(); await E(p, { type: 'input_audio_buffer.committed', item_id: 'u1' });
+  await E(p, { type: 'conversation.item.input_audio_transcription.completed', item_id: 'u1', transcript: 'Wait, why is it eight?' }); await p.waitForTimeout(200);
+  check('and what they said is answered', (await since(k)).some(x => x.type === 'response.create'));
+  await E(p, { type: 'response.created', response: { id: 'g2' } }); await E(p, { type: 'output_audio_buffer.started' }); await bo(0.3); await p.waitForTimeout(500);
+  k = await n0(); await you(0.35); await E(p, { type: 'input_audio_buffer.speech_started', item_id: 'u2' }); await p.waitForTimeout(450); await you(0);
+  await E(p, { type: 'output_audio_buffer.cleared' }); await E(p, { type: 'response.done', response: { id: 'g2', status: 'cancelled', output: [] } }); await bo(0);
+  await E(p, { type: 'input_audio_buffer.speech_stopped', item_id: 'u2' }); await E(p, { type: 'input_audio_buffer.committed', item_id: 'u2' }); await p.waitForTimeout(200);
+  check('a short sound that stopped him is not answered before its words are known', !(await since(k)).some(x => x.type === 'response.create'));
+  await E(p, { type: 'conversation.item.input_audio_transcription.completed', item_id: 'u2', transcript: 'Mm-hmm.' }); await p.waitForTimeout(200);
+  after = await since(k);
+  check('an "mm-hmm" that stopped him: he carries on from where he stopped', after.some(x => x.type === 'conversation.item.create' && /Carry on from where you stopped/.test(JSON.stringify(x))) && after.some(x => x.type === 'response.create'));
+  await E(p, { type: 'response.created', response: { id: 'g3' } }); await E(p, { type: 'response.done', response: { id: 'g3', status: 'completed', output: [{ type: 'message' }] } }); await p.waitForTimeout(100);
+  k = await n0(); await E(p, { type: 'input_audio_buffer.speech_started', item_id: 'u3' }); await E(p, { type: 'input_audio_buffer.speech_stopped', item_id: 'u3' }); await p.waitForTimeout(1700);
+  await E(p, { type: 'input_audio_buffer.committed', item_id: 'u3' }); await p.waitForTimeout(150);
+  check('when he is quiet, their turn is answered as soon as it is over', (await since(k)).some(x => x.type === 'response.create'));
+  await E(p, { type: 'response.created', response: { id: 'g4' } }); await E(p, { type: 'response.done', response: { id: 'g4', status: 'completed', output: [{ type: 'message' }] } }); await p.waitForTimeout(100);
   check('the call starts as a new call, on the laptop noise filter', (await p.evaluate(() => window.__starts)).length === 1 && (await p.evaluate(() => window.__starts[0].resume)) === '' && (await p.evaluate(() => window.__starts[0].mic)) === 'speaker');
 
   // the queue: one response at a time; the harmless race the server reports is not shown
@@ -80,17 +109,26 @@ const sqlite = q => require('child_process').spawnSync('php', ['-r', '$d = new P
   await c.setOffline(false);
   check('back online: the call comes back by itself', !!(await until(p, () => window.__starts.length >= 4 && window.__rt.pc !== window.__rt.oldPc && !document.querySelector('#bo-talk[data-rc="1"]'), null, 15000)));
 
-  // echo: "My speakers echo" keeps the mic closed while he talks, and opens it after
+  // echo-prone speakers ("My speakers echo", on by default on iPhones): the mic stays open, a louder voice is needed
   await p.evaluate(() => App.setSetting('boHalf', true));
-  await E(p, { type: 'response.created', response: { id: 'h1' } }); await E(p, { type: 'output_audio_buffer.started' }); await p.waitForTimeout(100);
-  check('with "My speakers echo", the mic is closed while he talks', (await mic()) === false);
-  await E(p, { type: 'output_audio_buffer.stopped' }); await E(p, { type: 'response.done', response: { id: 'h1', status: 'completed', output: [{ type: 'message' }] } });
-  check('and opens again a moment after he stops', !!(await until(p, () => window.__rt.mic.getAudioTracks()[0].enabled === true, null, 3000)));
+  await E(p, { type: 'response.created', response: { id: 'h1' } }); await E(p, { type: 'output_audio_buffer.started' }); await bo(0.3); await you(0.05); await p.waitForTimeout(900);
+  check('with "My speakers echo", the mic stays open while he talks', (await mic()) === true);
+  let h = (await sent(p)).length; await you(0.45); await E(p, { type: 'input_audio_buffer.speech_started', item_id: 'h1u' }); await p.waitForTimeout(500); await you(0);
+  check('and a clearly louder voice still stops him', (await sent(p)).slice(h).some(x => x.type === 'output_audio_buffer.clear'));
+  await E(p, { type: 'output_audio_buffer.cleared' }); await E(p, { type: 'response.done', response: { id: 'h1', status: 'cancelled', output: [] } }); await bo(0);
+  await E(p, { type: 'input_audio_buffer.committed', item_id: 'h1u' }); await E(p, { type: 'conversation.item.input_audio_transcription.completed', item_id: 'h1u', transcript: 'Hold on, go back.' }); await p.waitForTimeout(200);
   await E(p, { type: 'response.created', response: { id: 'h2' } }); await E(p, { type: 'output_audio_buffer.started' }); await p.waitForTimeout(100);
   await p.click('#bt-orb'); await p.waitForTimeout(150);
-  check('tapping Bo stops him (the manual stop) and opens the mic', (await sent(p)).slice(-3).some(x => x.type === 'output_audio_buffer.clear') && (await mic()) === true);
+  check('tapping Bo stops him too (the manual stop)', (await sent(p)).slice(-3).some(x => x.type === 'output_audio_buffer.clear') && (await mic()) === true);
   await E(p, { type: 'output_audio_buffer.cleared' }); await E(p, { type: 'response.done', response: { id: 'h2', status: 'cancelled', output: [] } });
-  await p.evaluate(() => App.setSetting('boHalf', false));
+  await p.evaluate(() => { App.setSetting('boHalf', false); App.setSetting('boHeadset', true); });
+  await E(p, { type: 'response.created', response: { id: 'h3' } }); await E(p, { type: 'output_audio_buffer.started' }); await p.waitForTimeout(100);
+  h = (await sent(p)).length; await E(p, { type: 'input_audio_buffer.speech_started', item_id: 'h3u' }); await p.waitForTimeout(100);
+  check('with headphones (no echo), any speech over him stops him at once', (await sent(p)).slice(h).some(x => x.type === 'output_audio_buffer.clear'));
+  await E(p, { type: 'output_audio_buffer.cleared' }); await E(p, { type: 'response.done', response: { id: 'h3', status: 'cancelled', output: [] } });
+  await E(p, { type: 'input_audio_buffer.committed', item_id: 'h3u' }); await E(p, { type: 'conversation.item.input_audio_transcription.completed', item_id: 'h3u', transcript: 'What about the second one?' }); await p.waitForTimeout(200);
+  await E(p, { type: 'response.created', response: { id: 'h4' } }); await E(p, { type: 'response.done', response: { id: 'h4', status: 'completed', output: [{ type: 'message' }] } });
+  await p.evaluate(() => App.setSetting('boHeadset', null));
   await p.click('[data-t="settings"]'); await p.waitForTimeout(200);
   check('the call\'s settings have "I’m wearing headphones" and "My speakers echo"', !!(await p.$('#bt-hs')) && !!(await p.$('#bt-hd')));
   await p.keyboard.press('Escape'); await p.waitForTimeout(150);

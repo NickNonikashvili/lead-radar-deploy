@@ -54,7 +54,7 @@ const { live, basic, quiet } = require('./talk-fakes');
   const s1 = await waitFor(m, 'state', ['live'], 6000);
   const setupReq = readJ('live-last.json', {}); const sess = setupReq.session || {};
   check('Start: the page sends its offer to Mathub, which sets the call up with OpenAI and hands the answer back', s1 === 'live' && /browser-offer/.test(setupReq.sdp || '') && setupReq.accept === 'application/sdp' && /s=stand-in/.test(await m.evaluate(() => window.__rt.answer)) && (await m.evaluate(() => window.__rt.channel)) === 'oai-events', { s1, accept: setupReq.accept });
-  check('the call is speech to speech, with semantic turn-taking, interruptions, the laptop noise filter and Professor Bo’s voice (ash, a little slower)', sess.type === 'realtime' && sess.model === 'gpt-realtime-2.1' && sess.audio.input.turn_detection.type === 'semantic_vad' && sess.audio.input.turn_detection.interrupt_response === true && sess.audio.input.noise_reduction.type === 'far_field' && sess.audio.output.voice === 'ash' && sess.audio.output.speed === 0.9 && sess.audio.input.transcription.keywords.includes('M171') && sess.max_output_tokens === 'inf', sess.audio);
+  check('the call is speech to speech, with semantic turn-taking (the page answers and cuts in, not the server), the laptop noise filter and Professor Bo’s voice (ash, a little slower)', sess.type === 'realtime' && sess.model === 'gpt-realtime-2.1' && sess.audio.input.turn_detection.type === 'semantic_vad' && sess.audio.input.turn_detection.interrupt_response === false && sess.audio.input.turn_detection.create_response === false && sess.audio.input.noise_reduction.type === 'far_field' && sess.audio.output.voice === 'ash' && sess.audio.output.speed === 0.9 && sess.audio.input.transcription.keywords.includes('M171') && sess.max_output_tokens === 'inf', sess.audio);
   const ins = sess.instructions || '';
   check('Bo is told to talk like a person on a call, not an assistant, and knows the class and the student', /not an assistant/.test(ins) && /Not "How can I help you today"/.test(ins) && /If they cut in, stop and go with what they said/.test(ins) && /CLASS:/.test(ins) && /WEAKEST TOPICS/.test(ins) && /You speak first/.test(ins), ins.slice(0, 200));
   check('he has seven tools: writing, drawing and asking on the board, marking their writing, checking math exactly, his notes, and waiting when the audio was not for him', (sess.tools || []).map(t => t.name).join() === 'write_on_board,draw_on_board,ask_on_board,mark_on_board,check_math,remember,wait_for_user' && (sess.tools || []).filter(t => t.parameters.properties.near).length === 3);
@@ -75,8 +75,8 @@ const { live, basic, quiet } = require('./talk-fakes');
   check('and the rest follows at his pace', !!all1, await capBo(m));
   const look1 = await m.evaluate(() => { const t = [...document.querySelectorAll('#bt-cc .cc-t')].pop(); const cs = getComputedStyle(t); const r = t.getBoundingClientRect(); const bar = document.querySelector('.bt-bar').getBoundingClientRect(); return { bg: cs.backgroundColor, color: cs.color, centred: Math.abs((r.left + r.right) / 2 - innerWidth / 2) < 40, above: r.bottom <= bar.top, events: getComputedStyle(document.querySelector('#bt-caps')).pointerEvents }; });
   check('the captions look like a video player\'s: white on see-through black, centred above the buttons, never in the way of the board', /rgba\(8, 8, 8, 0\.75\)/.test(look1.bg) && look1.color === 'rgb(255, 255, 255)' && look1.centred && look1.above && look1.events === 'none', look1);
-  // you cut in by talking: the server stops him (interrupt_response); the page follows
-  await E(m, { type: 'input_audio_buffer.speech_started' });
+  // you cut in by talking: the page hears a voice over his and stops him
+  await m.evaluate(() => { window.__rt.micGain.gain.value = 0.35; }); await E(m, { type: 'input_audio_buffer.speech_started', item_id: 'u1' }); await m.waitForTimeout(450); await m.evaluate(() => { window.__rt.micGain.gain.value = 0; });
   await E(m, { type: 'conversation.item.added', item: { id: 'u1', type: 'message', role: 'user', content: [{ type: 'input_audio' }] } });
   await E(m, { type: 'output_audio_buffer.cleared' }); await voice(m, false);
   await E(m, { type: 'response.output_audio_transcript.done', item_id: 'b1', transcript: 'Hey! Exam two is Friday. Want to hit the chain rule?' });
@@ -141,7 +141,9 @@ const { live, basic, quiet } = require('./talk-fakes');
   // what he did not get to say never shows: he is cut off a few words in
   await E(m, { type: 'response.created', response: { id: 'r7b' } }); await E(m, { type: 'output_audio_buffer.started' }); await voice(m, true);
   await E(m, { type: 'response.output_audio_transcript.delta', item_id: 'b7', delta: 'So the outside function here is sine, and the inside is x squared, which means' });
-  await m.waitForTimeout(700); await E(m, { type: 'input_audio_buffer.speech_started' }); await E(m, { type: 'output_audio_buffer.cleared' }); await voice(m, false);
+  await m.waitForTimeout(700); await m.evaluate(() => { window.__rt.micGain.gain.value = 0.35; }); await E(m, { type: 'input_audio_buffer.speech_started', item_id: 'u7' }); await m.waitForTimeout(450);
+  check('speaking over him stops him (the page cuts in)', (await sent(m)).slice(-4).some(x => x.type === 'output_audio_buffer.clear'));
+  await m.evaluate(() => { window.__rt.micGain.gain.value = 0; }); await E(m, { type: 'output_audio_buffer.cleared' }); await voice(m, false);
   await E(m, { type: 'response.output_audio_transcript.done', item_id: 'b7', transcript: 'So the outside function here is sine, and the inside is x squared, which means' });
   const cutBo = await m.evaluate(() => { const c = [...document.querySelectorAll('#bt-cc .cc-bo')].pop(); return c ? c.textContent : ''; });
   check('when you cut him off, the captions keep only what he got to say', /So the/.test(cutBo) && !/which means/.test(cutBo), cutBo);
@@ -297,9 +299,11 @@ const { live, basic, quiet } = require('./talk-fakes');
   await E(m, { type: 'conversation.item.input_audio_transcription.completed', item_id: 'um6', transcript: 'My exam is on Friday at 9 and it is worth 20 percent.' });
   await E(m, { type: 'response.output_audio_transcript.done', item_id: 'bm6', transcript: 'Got it, Friday at 9. We have time.' }); await m.waitForTimeout(150);
   check('plain talk about days, times and percents is left alone', (await notes()).length === n0 + 6);
-  // a cough or an "mm-hmm" over him that the server took for a turn: he carries on instead of starting over
-  await E(m, { type: 'response.created', response: { id: 'rm7' } });
-  await E(m, { type: 'response.done', response: { id: 'rm7', status: 'cancelled', status_details: { reason: 'turn_detected' }, output: [] } });
+  // a cough or an "mm-hmm" over him that stopped him: he carries on instead of starting over
+  await E(m, { type: 'response.created', response: { id: 'rm7' } }); await E(m, { type: 'output_audio_buffer.started' }); await voice(m, true); await m.waitForTimeout(300);
+  await m.evaluate(() => { window.__rt.micGain.gain.value = 0.35; }); await E(m, { type: 'input_audio_buffer.speech_started', item_id: 'um7' }); await m.waitForTimeout(450); await m.evaluate(() => { window.__rt.micGain.gain.value = 0; });
+  await E(m, { type: 'output_audio_buffer.cleared' }); await voice(m, false);
+  await E(m, { type: 'response.done', response: { id: 'rm7', status: 'cancelled', output: [] } }); await E(m, { type: 'input_audio_buffer.committed', item_id: 'um7' });
   await E(m, { type: 'conversation.item.input_audio_transcription.completed', item_id: 'um7', transcript: 'Mm-hmm.' }); await m.waitForTimeout(150);
   check('an "mm-hmm" that cut him off: he is told to carry on from where he stopped, without repeating', /Carry on from where you stopped, without repeating/.test((await notes()).pop()));
   await E(m, { type: 'response.done', response: { output: [] } }); await m.waitForTimeout(600);

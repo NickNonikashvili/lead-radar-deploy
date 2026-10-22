@@ -95,12 +95,19 @@ into errors" and "ends the call when the connection drops". Each had a cause in 
   guard on his first words: if he starts to agree with something the check found wrong ("yes, exactly…"), or to say a
   right answer is wrong, he is stopped then and told why. **One response at a time:** the app keeps a queue, asks
   for an answer only when none is going, and treats the server's "already has an active response" as the harmless
-  race it is (it waits, then asks again; nothing is shown). His own voice through the speakers is the other cause:
-  the mic waits while he greets (the browser's echo canceller is weakest in the first seconds), laptops get the
-  far-field noise filter (`far_field`; headphones get `near_field`), a short sound or an "mm-hmm" that cut him off
-  counts as a false start and he carries on without repeating himself, and **My speakers echo** (call settings)
-  keeps the mic closed while he talks (tap him to stop him). On iPhone without headphones it is on by default.
-  Free calls on speakers use the stronger call model, which handles echo better than the small one.
+  race it is (it waits, then asks again; nothing is shown). His own voice through the speakers is the other cause.
+  The page, not the server, decides turns (`create_response` and `interrupt_response` are off): the server's
+  semantic VAD only says when it hears speech. The mic is open for the whole call, so students can always cut in.
+  Speech heard while he talks is judged on the page (`Live.listen`, every 50 ms): it learns how much of his voice
+  comes back into the mic while nobody else talks, and a voice clearly above that for about a quarter second stops
+  him (`response.cancel` and `output_audio_buffer.clear`); his own voice is not a turn and is deleted from the
+  conversation (`conversation.item.delete`). With headphones any speech stops him at once. A short sound that
+  stopped him waits for its words: an "mm-hmm" or a cough makes him carry on without repeating himself. Laptops get
+  the far-field noise filter (`far_field`; headphones get `near_field`), and **My speakers echo** (call settings,
+  on by default on iPhones without headphones) asks for a louder voice before he stops; tapping him always stops
+  him. (Until build 2026.10.22.1 the mic was closed while he greeted, and on iPhones while he talked, which kept
+  students from cutting in.) Free calls on speakers use the stronger call model, which handles echo better than the
+  small one.
 - **Not understanding.** What the student says is written down by `gpt-live-transcribe` in their language, with the
   class's words as hints (derivative, integral, the class code, its section titles), so "x squared" and "M171" come
   through. The instructions now say to ask again instead of guessing, to check what "this" refers to, and that the

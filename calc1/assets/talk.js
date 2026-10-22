@@ -284,6 +284,7 @@
   let ACX = null;
   function audioCtx() { const AC = global.AudioContext || global.webkitAudioContext; if (!AC) return null; if (!ACX) { try { ACX = new AC(); } catch (e) { return null; } } if (ACX.state === 'suspended') ACX.resume().catch(() => {}); return ACX; }
   function meter(stream) { const ctx = audioCtx(); if (!ctx) return null; try { const an = ctx.createAnalyser(); an.fftSize = 512; ctx.createMediaStreamSource(stream).connect(an); return an; } catch (e) { return null; } }
+  function rmsOf(an) { if (!an || !an.getFloatTimeDomainData) return 0; const d = new Float32Array(an.fftSize); an.getFloatTimeDomainData(d); let s = 0; for (const x of d) s += x * x; return Math.sqrt(s / d.length); }
   function levelOf(an) { if (!an) return 0; const d = new Uint8Array(an.fftSize); an.getByteTimeDomainData(d); let s = 0; for (const x of d) { const v = (x - 128) / 128; s += v * v; } return Math.min(1, Math.sqrt(s / d.length) * 4.5); }
 
   /* where the board's edges are hidden behind the call's bars, tile and captions (for placing Bo's pages) */
@@ -297,7 +298,7 @@
 
   function open(o = {}) {
     if (NATIVE || T.el) return;
-    Object.assign(T, { cid: o.cid || 'calc', status: o.status || T.status, onClose: o.onClose || null, changed: false, back: document.activeElement, pages: [], cards: new Map(), photo: null, board: false, muted: false, t0: 0, state: 'idle', who: 'listening', lid: '', slips: [], practice: [], asked: 0, mc: { you: 0, bo: 0, page: 0, false_barge: 0, cut_client: 0, cut_limit: 0, errors: 0, drops: 0 }, focus: o.focus === 'exam' ? 'exam' : '' });
+    Object.assign(T, { cid: o.cid || 'calc', status: o.status || T.status, onClose: o.onClose || null, changed: false, back: document.activeElement, pages: [], cards: new Map(), photo: null, board: false, muted: false, t0: 0, state: 'idle', who: 'listening', lid: '', slips: [], practice: [], asked: 0, mc: { you: 0, bo: 0, page: 0, false_barge: 0, barge: 0, echo: 0, cut_client: 0, cut_limit: 0, errors: 0, drops: 0 }, focus: o.focus === 'exam' ? 'exam' : '' });
     T.trial = !!(T.status && !T.status.max && T.status.trial && T.status.trial.left > 0); T.free = T.trial ? T.status.trial.left : 0; T.freeAt = Date.now();
     T.mode = liveOn() ? 'live' : 'basic'; CC.cues = []; Pace.reset();
     const el = T.el = document.createElement('div'); el.id = 'bo-talk'; el.className = 'bt'; el.dataset.mode = T.mode; el.dataset.ccSize = ccSize(); el.dataset.ccBg = ccBg();
@@ -609,13 +610,17 @@
 
   /* ---------- live: the real-time call ----------
      How it holds together (the research is in docs/bo-teaching.md: OpenAI's realtime guides, LiveKit, Pipecat, Vapi):
-     - Interruptions are the server's (semantic VAD, interrupt_response). The page never cuts Bo off for one, and never
-       cancels him to correct him: the math check's verdicts go in as notes he uses on his next turn. Only when he
-       starts to agree with something it found wrong (or to reject something right) is he stopped, in his first words.
+     - Turns are the page's: the server hears when someone speaks (semantic VAD) but neither cuts Bo off nor answers by
+       itself. The mic is always open. When it hears speech while Bo talks, the page compares the mic with his voice
+       (listen): a voice clearly louder than his echo stops him within about a quarter second; his own voice coming back
+       from the speakers does not, and that "turn" is taken out of the conversation. A short sound that stopped him
+       ("mm-hmm", a cough) makes him carry on. The page never cancels him to correct him: the math check's verdicts go
+       in as notes he uses on his next turn. Only when he starts to agree with something it found wrong (or to reject
+       something right) is he stopped, in his first words.
      - Every response the page asks for goes through one queue (want), so two never collide.
      - Tool results read as success, or "retry quietly": never an error for him to read out.
-     - His greeting can't be cut off by his own voice coming back from the speakers (echo is worst in the first seconds),
-       and on speakers that echo badly (iPhones, or the setting) he can't be cut off while he talks: tap him instead.
+     - Echo is worst in the first seconds and on phone speakers: there (iPhones without headphones, or the setting) the
+       page asks for a clearly louder voice before it stops him; with headphones any speech stops him at once.
      - A blip in the connection is waited out; a dead one is rebuilt as the same call (what was said, the board and the
        minutes kept), and a call is only lost after a minute without any connection. */
   const BACKCHANNEL = /^(?:mm+[- ]?h?m+|m+h+m+|uh+[- ]?huh|hmm+|uh+|um+|ok(?:ay)?|right|yeah|yep|sure|got it|i see|cool|alright)[\s.!?,]*$/i;
@@ -631,11 +636,11 @@
     pc: null, dc: null, mic: null, audio: null, anBo: null, anYou: null, lid: null, left: 0, at: 0, tick: 0, save: 0, watchT: 0, items: new Map(), order: [], notes: [], boards: [], boText: '', youText: '', talking: false, ended: true, fns: new Map(), ran: new Set(), auto: 0, toolRetry: false, looks: 0, lookAt: 0, lastLook: '', glanceT: 0,
     // the math check (assets/mathcheck.js): the problem being worked and a question just asked, what was right, what was wrong, pages refused
     active: null, queued: false, ctx: { eqs: [], ask: '', at: 0 }, lastRight: null, lastWrong: null, guarded: 0, refused: new Map(), drawFails: 0,
-    reset() { Object.assign(this, { pc: null, dc: null, mic: null, anBo: null, anYou: null, lid: null, left: 0, at: 0, items: new Map(), order: [], notes: [], boards: [], boText: '', youText: '', talking: false, ended: false, fns: new Map(), ran: new Set(), auto: 0, toolRetry: false, looks: 0, lookAt: 0, lastLook: '', active: null, queued: false, ctx: { eqs: [], ask: '', at: 0 }, lastRight: null, lastWrong: null, guarded: 0, refused: new Map(), drawFails: 0, drop: null, building: false, gated: false, cut: null, eagerNow: '', opened: false, respAt: 0, youAt: 0 }); clearTimeout(this.glanceT); },
+    reset() { Object.assign(this, { pc: null, dc: null, mic: null, anBo: null, anYou: null, lid: null, left: 0, at: 0, items: new Map(), order: [], notes: [], boards: [], boText: '', youText: '', talking: false, ended: false, fns: new Map(), ran: new Set(), auto: 0, toolRetry: false, looks: 0, lookAt: 0, lastLook: '', active: null, queued: false, ctx: { eqs: [], ask: '', at: 0 }, lastRight: null, lastWrong: null, guarded: 0, refused: new Map(), drawFails: 0, drop: null, building: false, cut: null, eagerNow: '', bc: null, echo: new Set(), kq: [], pend: null, opened: false, respAt: 0, youAt: 0 }); clearTimeout(this.glanceT); },
     leftNow() { return this.left - (Date.now() - this.at) / 1000; },
     soon() { return T.mode === 'live' && !!this.lid && this.at > 0 && this.leftNow() < 180; },
     headset() { const t = this.mic && this.mic.getAudioTracks()[0]; const s = settings().boHeadset; return s === true || (s !== false && !!t && /head(?:set|phone)|air ?pods|buds|earbud|earphone|bose|beats|jabra|plantronics|poly|sennheiser|sony wh|bluetooth/i.test(t.label || '')); },
-    // speakers that echo (iPhones, unless headphones; or the setting): Bo can't be cut off by his own voice while he talks
+    // speakers that echo (iPhones, unless headphones; or the setting): a clearly louder voice is needed to stop him
     half() { const s = settings().boHalf; return s === true || (s !== false && IOS && !this.headset()); },
     async start() {
       const L = this; L.reset(); T.t0 = 0; setState('connecting'); who('listening');
@@ -644,7 +649,7 @@
       if (!T.el) return L.stop();
       L.onNet = () => { if (L.ended) return; if (!navigator.onLine) L.trouble('offline'); else if (L.drop) L.rebuild(); };
       addEventListener('offline', L.onNet); addEventListener('online', L.onNet);
-      L.tick = setInterval(() => L.report(), 30000); L.save = setInterval(() => L.flush(false), 40000); L.watchT = setInterval(() => L.health(), 1000);
+      L.tick = setInterval(() => L.report(), 30000); L.save = setInterval(() => L.flush(false), 40000); L.watchT = setInterval(() => L.health(), 1000); L.earT = setInterval(() => L.listen(), 50);
       try { await L.connect(false); }
       catch (x) {
         L.stop();
@@ -682,7 +687,6 @@
       if (!T.t0) T.t0 = Date.now(); setState('live'); who(T.muted ? 'muted' : 'listening');
       if (L.drop) L.healed(true);
       if (T.pad && T.pad.hasInk() && watching()) L.look(false);   // he sees what is already on the board
-      if (!resume) L.gate(true, 9000);   // his greeting: not cut off by his own voice while the echo canceller warms up
       L.want();   // Bo speaks first: hello, or that he lost them for a second
     },
     send(o) { const dc = this.dc; if (dc && dc.readyState === 'open') { try { dc.send(JSON.stringify(o)); } catch (e) {} } },
@@ -695,12 +699,39 @@
       clearTimeout(L.askT); L.askT = setTimeout(() => { if (L.active === 'asked') { L.active = null; if (L.queued) { L.queued = false; L.want(); } } }, 3000);
     },
     note(text) { this.send({ type: 'conversation.item.create', item: { type: 'message', role: 'system', content: [{ type: 'input_text', text }] } }); },
-    // the mic: off while muted, and while he must not be cut off (his greeting, or speakers that echo)
-    gate(on, ms) {
-      const L = this; clearTimeout(L.gateT); L.gated = !!on; L.applyMic();
-      if (on && ms) L.gateT = setTimeout(() => L.gate(false), ms);
+    // the mic: on for the whole call, off only while muted
+    applyMic() { if (this.mic) this.mic.getAudioTracks().forEach(t => { t.enabled = !T.muted; }); },
+    /* every 50 ms: how much of his voice comes back into the mic (learned while he talks and nobody else does), and,
+       while speech heard over him is being judged (bc), whether it is a voice clearly above that echo */
+    listen() {
+      const L = this; if (L.ended || !L.anYou || T.muted) return;
+      const you = rmsOf(L.anYou), bo = L.talking ? rmsOf(L.anBo) : 0;
+      if (L.talking && !L.bc && bo > 0.008) { L.kq.push(you / bo); if (L.kq.length > 120) L.kq.shift(); }
+      const b = L.bc; if (!b || b.done) return;
+      b.n++; if (you > L.voiceAt(bo)) b.hits++;
+      if (b.hits >= (L.half() ? 5 : 4)) return L.barge();   // about a quarter second of a voice over his
+      if (b.n >= 18 && b.hits < 3) L.isEcho(b);             // most of a second with nothing above his echo
     },
-    applyMic() { if (this.mic) this.mic.getAudioTracks().forEach(t => { t.enabled = !T.muted && !this.gated; }); },
+    // the level a voice must pass while he talks: well above how much of him the mic picks up (most of the learned ratios)
+    voiceAt(bo) {
+      const q = this.kq.slice().sort((a, b) => a - b); const k = q.length >= 10 ? q[Math.floor(q.length * 0.8)] : 0.5;
+      return Math.max(0.02, (this.half() ? 3 : 2) * k * bo + 0.006);
+    },
+    // they spoke over him: he stops now, and their turn is answered when it is over (answer)
+    barge() {
+      const L = this, b = L.bc; if (b) { b.done = true; b.real = true; }
+      T.mc.barge++; L.cut = { at: Date.now() }; L.auto = 0; L.youText = ''; L.youAt = Date.now();
+      L.hush(); caption('you', '…'); who('you');
+    },
+    // it was his own voice (or a noise): not a turn; it is taken out of the conversation when the server commits it
+    isEcho(b) { b.done = true; b.echo = true; this.echo.add(b.item); T.mc.echo++; if (T.who === 'you') who('bo'); },
+    /* their turn is over: he answers. A short one that stopped him waits for its words first (heard), so an "mm-hmm"
+       or a cough makes him carry on instead of answering it */
+    answer(id) {
+      const L = this;
+      if (L.cut && Date.now() - L.youAt < 1500) { L.pend = id; clearTimeout(L.pendT); L.pendT = setTimeout(() => { if (L.pend === id) { L.pend = null; L.want(); } }, 1500); return; }
+      L.want();
+    },
     turn(id, r) { let t = this.items.get(id); if (!t) { t = { r, t: '', done: false, saved: false }; this.items.set(id || 'x' + Math.random(), t); this.order.push(id); } return t; },
     /* the pages written while Bo said this, as text for the chat ([board+: …] for more on a page from before) */
     takeBoards() { const b = this.boards.splice(0).reduce((a, x) => { const prev = a[a.length - 1]; if (x.cont && prev && prev.title === x.title) prev.items = prev.items.concat(x.items); else a.push(Object.assign({}, x)); return a; }, []); const one = x => String(x || '').replace(/\s+/g, ' ').trim(); return b.map(x => `\n[board${x.cont ? '+' : ''}: ${one(x.title)}]\n${x.items.map(it => it.k === 'code' ? `\`\`\`${it.lang || ''}\n${String(it.t || '').replace(/```/g, "'''")}\n\`\`\`` : `${it.k}: ${one(it.t)}`).join('\n')}\n[/board]`).join(''); },
@@ -717,25 +748,37 @@
       if (fn) { if (fn.name) { if (fn.id) L.fns.set(fn.id, fn.name); if (fn.call_id) L.fns.set(fn.call_id, fn.name); } if (ev.type === 'response.output_item.done' || ev.type === 'conversation.item.done') L.call(fn.name, fn.call_id, fn.arguments); return; }
       switch (ev.type) {
         case 'conversation.item.added': case 'conversation.item.created': {
-          const it = ev.item || {}; if (it.type !== 'message' || !it.id || L.items.has(it.id) || /^look_/.test(it.id)) break;   // a quiet look at the board is not part of the chat
+          const it = ev.item || {}; if (it.type !== 'message' || !it.id || L.items.has(it.id) || /^look_/.test(it.id) || L.echo.has(it.id)) break;   // a quiet look at the board is not part of the chat
           const r = it.role === 'assistant' ? 'b' : it.role === 'user' ? 'u' : ''; if (!r) break;
           const c = Array.isArray(it.content) ? it.content : []; const spoken = c.some(x => x.type === 'input_audio');
           let typed = c.map(x => x.type === 'input_text' ? x.text : x.type === 'input_image' ? '[photo]' : '').filter(Boolean).join(' ').trim();
           if (/^show_/.test(it.id)) typed = '[board] ' + c.filter(x => x.type === 'input_text').map(x => x.text).join(' ').replace(/\s*\(The picture has a grid[^)]*\)\s*$/, '').trim();
           L.items.set(it.id, { r, t: r === 'u' && !spoken ? typed : '', done: r === 'u' && !spoken, saved: false }); L.order.push(it.id); break;
         }
-        case 'input_audio_buffer.speech_started': L.auto = 0; L.youText = ''; L.youAt = Date.now(); if (L.talking) Pace.stop(true); caption('you', '…'); who('you'); break;
-        case 'input_audio_buffer.speech_stopped': if (!T.muted) who('thinking'); break;
-        case 'conversation.item.input_audio_transcription.delta': L.youText += ev.delta || ''; caption('you', L.youText); break;
-        case 'conversation.item.input_audio_transcription.completed': { const t = L.turn(ev.item_id, 'u'); t.t = String(ev.transcript || '').trim(); t.done = true; caption('you', t.t || L.youText); L.heard(t.t); Room.cap('you', t.t); break; }
+        case 'input_audio_buffer.speech_started': {
+          // over his voice (not on headphones): them, or him coming back from the speakers? listen() decides
+          if (L.talking && !L.headset()) { L.bc = { item: ev.item_id, at: Date.now(), n: 0, hits: 0, done: false }; break; }
+          L.bc = { item: ev.item_id, done: true, real: true };
+          if (L.talking) L.barge();
+          else { if (L.active) L.hush(); L.auto = 0; L.youText = ''; L.youAt = Date.now(); caption('you', '…'); who('you'); }   // an answer he was about to give to an unfinished thought is dropped
+          break;
+        }
+        case 'input_audio_buffer.speech_stopped': if (!T.muted && !(L.bc && L.bc.echo) && !(L.bc && !L.bc.done)) who('thinking'); break;
+        case 'input_audio_buffer.committed': {
+          const b = L.bc && L.bc.item === ev.item_id ? L.bc : null;
+          if (b && !b.done) { if (b.hits >= 2) L.barge(); else L.isEcho(b); }   // a short sound over him: judged on what was heard
+          if (L.echo.has(ev.item_id)) { L.send({ type: 'conversation.item.delete', item_id: ev.item_id }); break; }
+          L.answer(ev.item_id); break;
+        }
+        case 'conversation.item.input_audio_transcription.delta': if (L.echo.has(ev.item_id)) break; L.youText += ev.delta || ''; caption('you', L.youText); break;
+        case 'conversation.item.input_audio_transcription.completed': { if (L.echo.has(ev.item_id)) break; const t = L.turn(ev.item_id, 'u'); t.t = String(ev.transcript || '').trim(); t.done = true; caption('you', t.t || L.youText); L.heard(t.t); Room.cap('you', t.t); break; }
         case 'conversation.item.input_audio_transcription.failed': L.turn(ev.item_id, 'u').done = true; break;
         case 'response.created': L.active = (ev.response && ev.response.id) || 'asked'; L.respAt = Date.now(); L.boText = ''; L.guarded = 0; Pace.start(); break;
         case 'response.output_audio_transcript.delta': case 'response.audio_transcript.delta': L.boText += ev.delta || ''; Pace.add(); L.guard(); break;
         case 'response.output_audio_transcript.done': case 'response.audio_transcript.done': { const said = String(ev.transcript || L.boText).trim(); L.boText = said; const t = L.turn(ev.item_id, 'b'); t.t = said + L.takeBoards(); t.done = !!said; Pace.done(said); T.changed = true; L.checkBo(said); Room.cap('bo', said); L.paceTurns(said); break; }
-        case 'output_audio_buffer.started': L.talking = true; Pace.began = performance.now(); Pace.t = 0; who('bo'); if (L.half()) L.gate(true, 45000); break;
+        case 'output_audio_buffer.started': L.talking = true; Pace.began = performance.now(); Pace.t = 0; who('bo'); break;
         case 'output_audio_buffer.stopped': case 'output_audio_buffer.cleared':
           L.talking = false; Pace.stop(ev.type === 'output_audio_buffer.cleared');
-          if (L.gated) { clearTimeout(L.gateT); L.gateT = setTimeout(() => L.gate(false), 500); }   // a breath after he stops, so the tail of his voice is not heard as theirs
           if (T.who === 'bo' || T.who === 'thinking') who(T.muted ? 'muted' : 'listening'); break;
         case 'response.function_call_arguments.done': { const name = ev.name || L.fns.get(ev.item_id) || L.fns.get(ev.call_id); if (name || !ev.item_id) L.call(name, ev.call_id, ev.arguments); break; }   // without a name yet: response.output_item.done brings it
         case 'response.done': L.done(ev.response || {}); break;
@@ -751,7 +794,6 @@
     done(resp) {
       const L = this; const status = resp.status || 'completed', reason = (resp.status_details && resp.status_details.reason) || '';
       if (!resp.id || L.active === resp.id) L.active = null;
-      if (status === 'cancelled' && reason === 'turn_detected') L.cut = { at: Date.now() };   // they spoke over him: was it a real turn? (heard)
       if (status === 'incomplete' && reason === 'max_output_tokens') T.mc.cut_limit++;
       const out = resp.output || []; const calls = out.filter(o => o.type === 'function_call');
       // his piece said? The 2.x models mark a lead-in as commentary; for the others, a few words ("let me sketch that") are one
@@ -770,9 +812,10 @@
     heard(text) {
       const L = this; const t = String(text || '').trim();
       if (L.cut && Date.now() - L.cut.at < 8000) {
-        if (!t || BACKCHANNEL.test(t)) { T.mc.false_barge++; if (!L.active && !L.talking) { L.note('(That was only a short sound or an "mm-hmm" from them, not a question. Carry on from where you stopped, without repeating what you already said.)'); L.want(); } }
+        if (!t || BACKCHANNEL.test(t)) { T.mc.false_barge++; if (!L.active && !L.talking) { L.note('(That was only a short sound or an "mm-hmm" from them, not a question. Carry on from where you stopped, without repeating what you already said.)'); L.pend = null; L.want(); } }
         L.cut = null;
       }
+      if (L.pend) { L.pend = null; clearTimeout(L.pendT); L.want(); }   // a short turn that stopped him, and it was a real one: he answers it
       // the verdict goes in for his next words; if his answer to it has already begun with the wrong verdict, he is stopped now
       const note = L.checkYou(t); if (note && !L.guard()) L.note(note);
     },
@@ -917,7 +960,7 @@
       if (!L.drop) L.drop = { since: Date.now(), tries: 0 };
       if (!L.drop.quiet && !L.drop.shown) { L.drop.shown = true; T.el.dataset.rc = '1'; paintStatus(navigator.onLine ? 'reconnecting…' : 'you’re offline · Bo will be back when you are'); }
       L.flush(false); try { await Promise.race([L.saving, sleep(2500)]); } catch (e) {}
-      L.closeConn(); L.gate(false); L.talking = false; Pace.stop(true);
+      L.closeConn(); L.bc = null; L.talking = false; Pace.stop(true);
       while (!L.ended && T.el) {
         const wait = [0, 1000, 2000, 4000, 8000][Math.min(L.drop.tries, 4)]; if (wait) await sleep(wait);
         if (L.ended || !T.el) break;
@@ -949,16 +992,16 @@
       if (turns.length) T.changed = true;
     },
     stop() {
-      const L = this; clearInterval(L.tick); clearInterval(L.save); clearInterval(L.watchT); clearTimeout(L.glanceT); clearTimeout(L.gateT); clearTimeout(L.askT); clearTimeout(L.retryT);
+      const L = this; clearInterval(L.tick); clearInterval(L.save); clearInterval(L.watchT); clearInterval(L.earT); clearTimeout(L.glanceT); clearTimeout(L.pendT); clearTimeout(L.askT); clearTimeout(L.retryT);
       if (L.onNet) { removeEventListener('offline', L.onNet); removeEventListener('online', L.onNet); L.onNet = null; }
       if (!L.ended) { L.ended = true; if (L.lid) L.flush(true); }
       L.closeConn();
       if (L.mic) L.mic.getTracks().forEach(t => t.stop()); if (L.audio) { try { L.audio.pause(); } catch (e) {} L.audio.srcObject = null; }
-      L.mic = null; L.anBo = L.anYou = null; L.talking = false; L.gated = false; if (T.el) delete T.el.dataset.rc;
+      L.mic = null; L.anBo = L.anYou = null; L.talking = false; L.bc = null; if (T.el) delete T.el.dataset.rc;
     },
     mute(on) { this.applyMic(); },
     // a stop the student asked for (tap Bo, Show Bo, an answer on the board): the documented manual stop
-    hush() { if (this.active) this.send({ type: 'response.cancel' }); this.send({ type: 'output_audio_buffer.clear' }); this.active = null; this.queued = false; this.gate(false); },
+    hush() { if (this.active) this.send({ type: 'response.cancel' }); this.send({ type: 'output_audio_buffer.clear' }); this.active = null; this.queued = false; },
     /* ---------- the math check: Bo never agrees with something wrong (assets/mathcheck.js) ----------
        What the student says is checked from its transcript (with the problem on the board, or a question he just
        asked, for a bare answer), and the verdict goes to him as a note for his next words; what Bo says is checked
@@ -997,7 +1040,7 @@
     /* what the student did on the board (answered his question), for Bo to pick up from; not shown as a caption */
     tell(text) { this.auto = 0; if (this.talking || this.active) this.hush(); this.send({ type: 'conversation.item.create', item: { type: 'message', role: 'user', content: [{ type: 'input_text', text }] } }); this.want(); who('thinking'); },
     photo(p) { this.auto = 0; this.send({ type: 'conversation.item.create', item: { type: 'message', role: 'user', content: [{ type: 'input_image', image_url: `data:${p.type};base64,${p.data}` }, { type: 'input_text', text: 'Take a look at this. (I put it on our board too.)' }] } }); this.want(); caption('you', 'Sent a photo'); who('thinking'); },
-    tune(e) { this.send({ type: 'session.update', session: { type: 'realtime', audio: { input: { turn_detection: { type: 'semantic_vad', eagerness: e || eager(), create_response: true, interrupt_response: true } }, output: { speed: liveRate() } } } }); }
+    tune(e) { this.send({ type: 'session.update', session: { type: 'realtime', audio: { input: { turn_detection: { type: 'semantic_vad', eagerness: e || eager(), create_response: false, interrupt_response: false } }, output: { speed: liveRate() } } } }); }
   };
 
   /* ---------- basic: the browser hears, the chat answers, Bo reads it out ---------- */
@@ -1161,7 +1204,7 @@
         <h3 class="bt-set-h">How fast he talks</h3><div class="bt-speed" role="radiogroup" aria-label="Speed">${chips(LIVE_RATES, liveRate(), 'data-lrate', r => r === 1 ? 'Normal' : r + '×')}</div>
         <h3 class="bt-set-h">When Bo jumps in</h3><div class="bt-speed" role="radiogroup" aria-label="When Bo jumps in">${chips(['low', 'auto', 'high'], eager(), 'data-eager', r => ({ low: 'Lets me finish', auto: 'Normal', high: 'Quick' })[r])}</div>
         <label class="bt-switch"><input type="checkbox" id="bt-hs"${Live.headset() ? ' checked' : ''}><span><b>I’m wearing headphones</b> Bo listens for a voice close to the mic; takes effect on your next call</span></label>
-        <label class="bt-switch"><input type="checkbox" id="bt-hd"${Live.half() ? ' checked' : ''}><span><b>My speakers echo</b> Bo can’t be cut off by his own voice while he talks. Tap him to stop him</span></label>`;
+        <label class="bt-switch"><input type="checkbox" id="bt-hd"${Live.half() ? ' checked' : ''}><span><b>My speakers echo</b> Bo waits for a clearly louder voice before he stops for you. You can always tap him to stop him</span></label>`;
     } else {
       const cur = settings().boVoice === 'device' || !V.natural ? 'device' : basicVoice();
       const dv = deviceVoices(); const best = bestVoice();
@@ -1190,7 +1233,7 @@
       if (t.id === 'bt-ccn') { setSetting('boCcNames', t.checked); paintCC(); }
       if (t.id === 'bt-bw') setSetting('boWatch', t.checked);
       if (t.id === 'bt-hs') setSetting('boHeadset', t.checked);
-      if (t.id === 'bt-hd') { setSetting('boHalf', t.checked); if (!t.checked && Live.gated && !Live.talking) Live.gate(false); }
+      if (t.id === 'bt-hd') setSetting('boHalf', t.checked);
       if (t.id === 'bt-bd') { setSetting('boBoardDark', t.checked); if (T.pad) T.pad.dark(t.checked); }
       if (t.id === 'bt-bm') setSetting('boMode', t.checked ? 'basic' : '');
     };

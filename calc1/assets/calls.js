@@ -76,7 +76,7 @@
       <h3 class="cl-set-h">How fast he talks</h3><div class="cl-chips" role="radiogroup" aria-label="Speed">${chips(RATES.map(String), String(rate), 'data-cl-rate', r => +r === 1 ? 'Normal' : r + '×')}</div>
       <h3 class="cl-set-h">When he jumps in</h3><div class="cl-chips" role="radiogroup" aria-label="When Bo jumps in">${chips(['low', 'auto', 'high'], eager, 'data-cl-eager', v => ({ low: 'Lets me finish', auto: 'Normal', high: 'Quick' })[v])}</div>
       <label class="bt-switch"><input type="checkbox" id="cl-hs"${s.boHeadset === true ? ' checked' : ''}><span><b>I’m wearing headphones</b> Bo listens for a voice close to the mic</span></label>
-      <label class="bt-switch"><input type="checkbox" id="cl-hd"${s.boHalf === true ? ' checked' : ''}><span><b>My speakers echo</b> Bo can’t be cut off by his own voice while he talks. Tap him to stop him</span></label>
+      <label class="bt-switch"><input type="checkbox" id="cl-hd"${s.boHalf === true ? ' checked' : ''}><span><b>My speakers echo</b> Bo waits for a clearly louder voice before he stops for you. You can always tap him to stop him</span></label>
       <label class="bt-switch"><input type="checkbox" id="cl-cp"${s.boCaptions !== false ? ' checked' : ''}><span><b>Captions</b> What you and Bo say, at the bottom of the call</span></label>
       <p class="small muted">These apply from your next call. Recap emails after calls are in <a href="#/settings">Settings</a>.</p></section>`;
   }

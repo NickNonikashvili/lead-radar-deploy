@@ -597,7 +597,7 @@ function mh_ai_trial_used(int $uid): int { $st = mh_ai_db()->prepare('SELECT use
 /** Counts for the admin's Bo quality tab, by day (the metrics table, keys bo_*): answers, what the math check
     caught (the student's slips and Bo's), what was fixed before it was kept, calls, recaps and thumbs down. */
 function mh_ai_q(string $key, int $n = 1): void { if ($n <= 0) return; try { require_once __DIR__ . '/social.php'; require_once __DIR__ . '/growth.php'; mh_metric('bo_' . $key, $n); } catch (Throwable $e) {} }
-const MH_AI_Q_KEYS = ['answers' => 'Answers in the chat and basic voice', 'chat_you' => 'Slips by students, caught (chat)', 'chat_bo' => 'Slips by Bo, caught (chat)', 'chat_fixed' => 'Rewritten before they saw it', 'call_you' => 'Slips by students, caught (calls)', 'call_bo' => 'Slips by Bo, caught (calls)', 'call_page' => 'Pages on calls held back until fixed', 'calls' => 'Live calls', 'reconnects' => 'Calls picked up again after a drop', 'drops' => 'Calls lost for good (no connection for a minute)', 'false_barge' => 'Bo cut off by noise or “mm-hmm”', 'cut_client' => 'Bo stopped by the app', 'cut_limit' => 'Bo’s turns cut off by the length limit', 'call_errors' => 'Errors from OpenAI during calls', 'recaps' => 'Recaps after calls', 'recap_fixed' => 'Recaps rewritten before they were kept', 'flags' => 'Marked “not right” by students'];
+const MH_AI_Q_KEYS = ['answers' => 'Answers in the chat and basic voice', 'chat_you' => 'Slips by students, caught (chat)', 'chat_bo' => 'Slips by Bo, caught (chat)', 'chat_fixed' => 'Rewritten before they saw it', 'call_you' => 'Slips by students, caught (calls)', 'call_bo' => 'Slips by Bo, caught (calls)', 'call_page' => 'Pages on calls held back until fixed', 'calls' => 'Live calls', 'reconnects' => 'Calls picked up again after a drop', 'drops' => 'Calls lost for good (no connection for a minute)', 'false_barge' => 'Bo cut off by noise or “mm-hmm”', 'call_barge' => 'Times students cut in on Bo (calls)', 'call_echo' => 'Bo’s own voice heard back and ignored (calls)', 'cut_client' => 'Bo stopped by the app', 'cut_limit' => 'Bo’s turns cut off by the length limit', 'call_errors' => 'Errors from OpenAI during calls', 'recaps' => 'Recaps after calls', 'recap_fixed' => 'Recaps rewritten before they were kept', 'flags' => 'Marked “not right” by students'];
 /** The free seconds an account has: the free minutes everyone gets, plus what invites earned (none while the free minutes are off). */
 function mh_ai_trial_total(int $uid, array $V): int { if ($V['trial'] <= 0) return 0; $st = mh_ai_db()->prepare('SELECT bonus FROM ai_trial WHERE user_id = ?'); $st->execute([$uid]); return $V['trial'] + (int)$st->fetchColumn(); }
 function mh_ai_trial_left(int $uid, array $V): int { return max(0, mh_ai_trial_total($uid, $V) - mh_ai_trial_used($uid)); }
@@ -1046,12 +1046,12 @@ function mh_ai_route(string $route, array $in, array $cfg, string $ip): void {
       $full = ['type' => 'realtime', 'model' => $model, 'instructions' => $sys, 'output_modalities' => ['audio'], 'max_output_tokens' => 'inf',
         'truncation' => ['type' => 'retention_ratio', 'retention_ratio' => 0.8],
         'audio' => ['input' => ['noise_reduction' => $noise, 'transcription' => $transcribe,
-                      'turn_detection' => ['type' => 'semantic_vad', 'eagerness' => $eager, 'create_response' => true, 'interrupt_response' => true]],
+                      'turn_detection' => ['type' => 'semantic_vad', 'eagerness' => $eager, 'create_response' => false, 'interrupt_response' => false]],   // the page answers and cuts in (assets/talk.js, Live.listen)
                     'output' => array_merge(['voice' => $voice], $speed != 1.0 ? ['speed' => $speed] : [])],
         'tools' => mh_ai_live_tools(), 'tool_choice' => 'auto'];
       if (str_contains($model, 'realtime-2')) $full['reasoning'] = ['effort' => 'low'];   // what OpenAI says to start with for voice
       // the fewest settings that still make a good call, in case the account refuses one of the others
-      $lean = ['type' => 'realtime', 'model' => $model, 'instructions' => $sys, 'audio' => ['input' => ['noise_reduction' => $noise, 'transcription' => ['model' => 'gpt-4o-mini-transcribe'], 'turn_detection' => ['type' => 'semantic_vad']], 'output' => ['voice' => $voice]], 'tools' => mh_ai_live_tools()];
+      $lean = ['type' => 'realtime', 'model' => $model, 'instructions' => $sys, 'audio' => ['input' => ['noise_reduction' => $noise, 'transcription' => ['model' => 'gpt-4o-mini-transcribe'], 'turn_detection' => ['type' => 'semantic_vad', 'create_response' => false, 'interrupt_response' => false]], 'output' => ['voice' => $voice]], 'tools' => mh_ai_live_tools()];
       // one call at a time per account
       foreach ($db->query('SELECT id, call FROM ai_live WHERE ended = 0 AND user_id = ' . $uid)->fetchAll() as $r) { mh_ai_hangup($V, (string)$r['call']); $db->prepare('UPDATE ai_live SET ended = 1 WHERE id = ?')->execute([$r['id']]); }
       @set_time_limit(60);
@@ -1185,7 +1185,7 @@ function mh_ai_route(string $route, array $in, array $cfg, string $ip): void {
       if ($added) mh_ai_save_notes($uid, $notes);
       if (!empty($in['end']) && !(int)$r['ended']) {
         $mc = is_array($in['mc'] ?? null) ? $in['mc'] : [];   // what the math check caught on the call (assets/talk.js)
-        mh_ai_q('calls'); foreach (['you' => 'call_you', 'bo' => 'call_bo', 'page' => 'call_page', 'false_barge' => 'false_barge', 'cut_client' => 'cut_client', 'cut_limit' => 'cut_limit', 'errors' => 'call_errors', 'drops' => 'drops'] as $k => $key) mh_ai_q($key, max(0, min(50, (int)($mc[$k] ?? 0))));
+        mh_ai_q('calls'); foreach (['you' => 'call_you', 'bo' => 'call_bo', 'page' => 'call_page', 'false_barge' => 'false_barge', 'barge' => 'call_barge', 'echo' => 'call_echo', 'cut_client' => 'cut_client', 'cut_limit' => 'cut_limit', 'errors' => 'call_errors', 'drops' => 'drops'] as $k => $key) mh_ai_q($key, max(0, min(50, (int)($mc[$k] ?? 0))));
         $now = time(); $d = max(0, min(45, $now - (int)$r['last'])); mh_ai_add($uid, 'live', $d);
         if (!(int)($r['trial'] ?? 0) && (string)$r['call'] !== '') { require_once __DIR__ . '/calls.php'; mh_calls_charge($uid, $lid, $d, $cfg); }   // the last seconds of a Max call
         $db->prepare('UPDATE ai_live SET secs = secs + ?, last = ?, ended = 1 WHERE id = ?')->execute([$d, $now, $lid]);

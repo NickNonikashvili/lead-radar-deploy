@@ -6113,7 +6113,7 @@
 {"id":6112,"en":"I’m wearing headphones","files":["talk.js","calls.js"]},
 {"id":6113,"en":"Bo listens for a voice close to the mic; takes effect on your next call","files":["talk.js"]},
 {"id":6114,"en":"My speakers echo","files":["talk.js","calls.js"]},
-{"id":6115,"en":"Bo can’t be cut off by his own voice while he talks. Tap him to stop him","files":["talk.js","calls.js"]},
+{"id":6115,"en":"Bo can’t be cut off by his own voice while he talks. Tap him to stop him","files":["talk.js","calls.js"],"gone":true},
 {"id":6116,"en":"{1} Fix it quietly and call the tool once more. Do not mention this to the student.","files":["talk.js"]},
 {"id":6117,"en":"{1} Carry on in words. Do not mention this to the student.","files":["talk.js"]},
 {"id":6118,"en":"Any class, on request","files":["welcome.js"]},
@@ -6210,5 +6210,6 @@
 {"id":6209,"en":"Give between 1 and 6000 minutes (or take some back with a minus sign).","files":["api/calls.php"]},
 {"id":6210,"en":"No member with that email.","files":["api/calls.php"]},
 {"id":6211,"en":"They do not have that much time to take back.","files":["api/calls.php"]},
-{"id":6212,"en":"Classes are added by the Mathub team now. Request your class, and we will tell you when it is ready.","files":["api/community.php"]}
+{"id":6212,"en":"Classes are added by the Mathub team now. Request your class, and we will tell you when it is ready.","files":["api/community.php"]},
+{"id":6213,"en":"Bo waits for a clearly louder voice before he stops for you. You can always tap him to stop him","files":["talk.js","calls.js"]}
 ]

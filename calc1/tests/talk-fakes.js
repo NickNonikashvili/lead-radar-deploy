@@ -15,7 +15,7 @@ const live = () => {
     addEventListener(t, f) { (this.ls[t] = this.ls[t] || []).push(f); } close() { this.connectionState = 'closed'; window.__rt.closed = true; }
   }
   window.RTCPeerConnection = FakePC;
-  navigator.mediaDevices.getUserMedia = async () => { if (window.__micDenied) { const e = new Error('denied'); e.name = 'NotAllowedError'; throw e; } const t = tone(); window.__rt.mic = t.stream; return t.stream; };
+  navigator.mediaDevices.getUserMedia = async () => { if (window.__micDenied) { const e = new Error('denied'); e.name = 'NotAllowedError'; throw e; } const t = tone(); window.__rt.mic = t.stream; window.__rt.micGain = t.g; return t.stream; };
 };
 const basic = () => {
   window.__say = []; window.__spoken = [];
