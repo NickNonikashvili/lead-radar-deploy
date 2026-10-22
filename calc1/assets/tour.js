@@ -20,8 +20,8 @@
   const LAYOUT = 1;   // the layout of 2026.10.18 (the sidebar and header on every page)
   const t = (s, ...v) => (App.t ? App.t(s, ...v) : s);
   const STEPS = [
-    { sel: '#sb-now', wide: true, title: 'The time, and where you are in the term', text: 'Today’s date and a live clock: tap the time for clock faces and the time back home. The bars show how far you are through the semester, the month and the week.' },
-    { sel: '#sb-quick', wide: true, title: 'Add anything, from any page', text: 'New opens one box for a task, an assignment, an exam, an event, a to-do or a class time; the small buttons go straight to one. Alt+N works anywhere.' },
+    { sel: '#sb-now', wide: true, title: 'The date, and where you are in the term', text: 'Today’s date and a live clock: tap the time for clock faces, the time back home and how far you are through the semester, the month and the week.' },
+    { sel: '#sb-quick', wide: true, title: 'Add anything, from any page', text: 'New opens one box for anything you want to add: a task, an assignment, an exam, an event, a to-do or a class time. Alt+N works anywhere.' },
     { sel: '#sb-nav', wide: true, title: 'Everything is in the sidebar', text: 'Your classes, with the days left until each exam, then School (tasks, timetable, calendar, projects), Life (habits, goals, journal, money), Future (internships and your portfolio) and Explore. Groups fold and stay the way you leave them.' },
     { sel: '#sb-cal', wide: true, title: 'Your month at a glance', text: 'Dots mark busy days and exams. Tap a day to see everything on it.' },
     { sel: '#topbar .topbar-actions', wide: true, title: 'The header, on every page', text: 'Your next exam, search (Ctrl K, or ⌘ K on a Mac), focus sounds, your streak and daily goal, and your account.' },

@@ -5691,10 +5691,10 @@
 {"id":5690,"en":"Plus Ask Bo’s page and calls · {1} a month","files":["create.js"],"gone":true},
 {"id":5691,"en":"From any syllabus, free","files":["create.js"],"gone":true},
 {"id":5692,"en":"{1}Bo is on every page: tap him in the corner. Max adds Ask Bo’s own page and calls.{2}","files":["create.js"],"gone":true},
-{"id":5693,"en":"The time, and where you are in the term","files":["tour.js"]},
-{"id":5694,"en":"Today’s date and a live clock: tap the time for clock faces and the time back home. The bars show how far you are through the semester, the month and the week.","files":["tour.js"]},
+{"id":5693,"en":"The time, and where you are in the term","files":["tour.js"],"gone":true},
+{"id":5694,"en":"Today’s date and a live clock: tap the time for clock faces and the time back home. The bars show how far you are through the semester, the month and the week.","files":["tour.js"],"gone":true},
 {"id":5695,"en":"Add anything, from any page","files":["tour.js"]},
-{"id":5696,"en":"New opens one box for a task, an assignment, an exam, an event, a to-do or a class time; the small buttons go straight to one. Alt+N works anywhere.","files":["tour.js"]},
+{"id":5696,"en":"New opens one box for a task, an assignment, an exam, an event, a to-do or a class time; the small buttons go straight to one. Alt+N works anywhere.","files":["tour.js"],"gone":true},
 {"id":5697,"en":"Everything is in the sidebar","files":["tour.js"]},
 {"id":5698,"en":"Your classes, with the days left until each exam, then School (tasks, timetable, calendar, projects), Life (habits, goals, journal, money), Future (internships and your portfolio) and Explore. Groups fold and stay the way you leave them.","files":["tour.js"]},
 {"id":5699,"en":"Your month at a glance","files":["tour.js"]},
@@ -6353,5 +6353,8 @@
 {"id":6352,"en":"Describe the picture first.","files":["api/images.php"]},
 {"id":6353,"en":"That picture could not be made: it was turned down by the image model’s safety check. Bo can draw it as a diagram instead.","files":["api/images.php"]},
 {"id":6354,"en":"That picture is gone.","files":["api/images.php"]},
-{"id":6355,"en":"Nothing to clear.","files":["api/students.php"]}
+{"id":6355,"en":"Nothing to clear.","files":["api/students.php"]},
+{"id":6356,"en":"The date, and where you are in the term","files":["tour.js"]},
+{"id":6357,"en":"Today’s date and a live clock: tap the time for clock faces, the time back home and how far you are through the semester, the month and the week.","files":["tour.js"]},
+{"id":6358,"en":"New opens one box for anything you want to add: a task, an assignment, an exam, an event, a to-do or a class time. Alt+N works anywhere.","files":["tour.js"]}
 ]

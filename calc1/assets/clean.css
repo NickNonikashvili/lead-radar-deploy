@@ -1,0 +1,150 @@
+/* ============================================================
+   Mathub — Big Sky, calmer (the website's default look; the apps and the other looks are left alone)
+   Big Sky's character stays: the sky and the mountains, Bo, every class in its own colour. What changes is the
+   chrome around them: thin borders instead of thick ones, a faint edge under buttons instead of a chunky lip,
+   lighter headings, fewer things in the top bar and the sidebar, more room. Loaded after every other stylesheet.
+   ============================================================ */
+
+/* ---------- tokens ---------- */
+:root:not([data-skin]):not([data-app]) {
+  --bg: #F5F8FC; --surface-2: #F2F5FA; --surface-3: #E7ECF3;
+  --border: #E2E8F0; --border-strong: #CDD6E2; --lip: rgba(20, 33, 61, 0.07);
+  --ink: #15213A; --ink-2: #3D4A63; --muted: #56647B;
+  --shadow: 0 14px 34px -18px rgba(20, 33, 61, 0.28), 0 2px 6px -2px rgba(20, 33, 61, 0.08);
+  --radius: 16px; --radius-sm: 10px;
+}
+:root:not([data-skin]):not([data-app])[data-theme="dark"] { --bg: #0C1424; --surface-2: #17243B; --surface-3: #1F2F49; --border: #22334F; --border-strong: #31476B; --lip: rgba(0, 0, 0, 0.28); }
+@media (prefers-color-scheme: dark) { :root:not([data-skin]):not([data-app]):not([data-theme="light"]) { --bg: #0C1424; --surface-2: #17243B; --surface-3: #1F2F49; --border: #22334F; --border-strong: #31476B; --lip: rgba(0, 0, 0, 0.28); } }
+
+/* ---------- type: the same faces, lighter and smaller ---------- */
+:root:not([data-skin]):not([data-app]) body { font-size: 15.5px; }
+:root:not([data-skin]):not([data-app]) h1, :root:not([data-skin]):not([data-app]) h2, :root:not([data-skin]):not([data-app]) h3, :root:not([data-skin]):not([data-app]) h4 { font-weight: 700; letter-spacing: -0.012em; }
+:root:not([data-skin]):not([data-app]) h3 { font-size: 18px; } :root:not([data-skin]):not([data-app]) h4 { font-size: 16px; }
+:root:not([data-skin]):not([data-app]) .page-title { font-size: 32px; font-weight: 700; letter-spacing: -0.02em; }
+:root:not([data-skin]):not([data-app]) .page-sub, :root:not([data-skin]):not([data-app]) .page-head p { font-size: 15.5px; }
+:root:not([data-skin]):not([data-app]) .sec-title { font-size: 21px; font-weight: 700; }
+:root:not([data-skin]):not([data-app]) .panel-title { font-size: 18px; font-weight: 700; }
+
+/* ---------- frame ---------- */
+:root:not([data-skin]):not([data-app]) .sidebar { border-right: 1px solid var(--border); }
+:root:not([data-skin]):not([data-app]) .brand { border-bottom: 1px solid var(--border); }
+:root:not([data-skin]):not([data-app]) .brand-code { font-size: 24px; font-weight: 700; }
+:root:not([data-skin]):not([data-app]) .nav-item { font-size: 14.5px; font-weight: 600; border-radius: 10px; padding: 7px 10px; border: 0; }
+:root:not([data-skin]):not([data-app]) .nav-item:hover:not(.active) { padding-left: 10px; }
+:root:not([data-skin]):not([data-app]) .nav-item.active { border: 0; font-weight: 700; }
+:root:not([data-skin]):not([data-app]) .nav-toggle { font-size: 13px; font-weight: 700; color: var(--muted); padding: 14px 10px 4px; }
+:root:not([data-skin]):not([data-app]) .switch-btn { border-width: 1px; border-radius: 10px; box-shadow: none; font-weight: 600; }
+:root:not([data-skin]):not([data-app]) .switch-btn:active { transform: none; }
+:root:not([data-skin]):not([data-app]) .switch-btn.on { box-shadow: none; }
+/* the clock card becomes one quiet line (the week's bars are in the clock it opens) */
+:root:not([data-skin]):not([data-app]) .sb-now { background: transparent; border-radius: 0; padding: 2px 10px 0; gap: 0; }
+:root:not([data-skin]):not([data-app]) .sb-now .sb-bars { display: none; }
+:root:not([data-skin]):not([data-app]) .sb-now .sb-date { font-size: 13.5px; font-weight: 600; color: var(--ink-2); }
+:root:not([data-skin]):not([data-app]) .sb-now .sb-time { border: 0; box-shadow: none; background: transparent; padding: 0; font-size: 13.5px; font-weight: 600; color: var(--muted); min-height: 0; }
+/* New opens one dialog with every kind of thing to add, so the six small buttons go */
+:root:not([data-skin]):not([data-app]) .sb-qa { display: none !important; }
+:root:not([data-skin]):not([data-app]) .sb-new { border-radius: 10px; min-height: 38px; }
+:root:not([data-skin]):not([data-app]) .sb-cal { border-top-width: 1px; }
+:root:not([data-skin]):not([data-app]) .topbar { border-bottom: 1px solid var(--border); }
+:root:not([data-skin]):not([data-app]) .topbar-title, :root:not([data-skin]):not([data-app]) .crumb-cur { font-size: 18px; font-weight: 700; }
+/* the top bar: icons without boxes, one coloured button (Call Bo); Ask Bo is in the sidebar and in the corner */
+:root:not([data-skin]):not([data-app]) .topbar .icon-btn, :root:not([data-skin]):not([data-app]) .topbar .search-btn, :root:not([data-skin]):not([data-app]) .topbar .tb-clock, :root:not([data-skin]):not([data-app]) .topbar .acct-btn { background: transparent; border-color: transparent; box-shadow: none; }
+:root:not([data-skin]):not([data-app]) .topbar .icon-btn:hover, :root:not([data-skin]):not([data-app]) .topbar .search-btn:hover, :root:not([data-skin]):not([data-app]) .topbar .tb-clock:hover, :root:not([data-skin]):not([data-app]) .topbar .acct-btn:hover { background: var(--surface-2); }
+:root:not([data-skin]):not([data-app]) .topbar .icon-btn:active, :root:not([data-skin]):not([data-app]) .topbar .tb-clock:active { transform: none; }
+:root:not([data-skin]):not([data-app]) .topbar .search-btn { border: 1px solid var(--border); }
+:root:not([data-skin]):not([data-app]) .topbar .bo-top { display: none; }
+:root:not([data-skin]):not([data-app]) .exam-chip { border: 0; font-weight: 700; font-size: 13px; padding: 5px 11px; }
+:root:not([data-skin]):not([data-app]) .call-top { box-shadow: 0 1px 2px color-mix(in srgb, var(--accent) 35%, transparent); height: 34px; }
+:root:not([data-skin]):not([data-app]) .call-top:active { transform: none; box-shadow: none; }
+:root:not([data-skin]):not([data-app]) #tabbar { border-top-width: 1px; }
+
+/* ---------- controls: flat, with a faint edge ---------- */
+:root:not([data-skin]):not([data-app]) .btn { font-weight: 600; font-size: 14.5px; border-radius: 10px; padding: 8px 14px; border-width: 1px; box-shadow: 0 1px 0 var(--lip); }
+:root:not([data-skin]):not([data-app]) .btn:not(:disabled):hover { box-shadow: 0 1px 0 var(--lip); }
+:root:not([data-skin]):not([data-app]) .btn:not(:disabled):active { transform: translateY(1px); box-shadow: none; }
+:root:not([data-skin]):not([data-app]) .btn.primary, :root:not([data-skin]):not([data-app]) .btn.primary:not(:disabled):hover { box-shadow: 0 1px 2px color-mix(in srgb, var(--accent) 40%, transparent); }
+:root:not([data-skin]):not([data-app]) .btn.primary:not(:disabled):active { transform: translateY(1px); box-shadow: none; }
+:root:not([data-skin]):not([data-app]) .btn.ghost, :root:not([data-skin]):not([data-app]) .btn.ghost:not(:disabled):hover { box-shadow: none; }
+:root:not([data-skin]):not([data-app]) .btn.sm { padding: 6px 11px; font-size: 13.5px; border-radius: 9px; box-shadow: 0 1px 0 var(--lip); }
+:root:not([data-skin]):not([data-app]) .btn.sm.primary { box-shadow: 0 1px 2px color-mix(in srgb, var(--accent) 40%, transparent); }
+:root:not([data-skin]):not([data-app]) .btn.xs { border-radius: 8px; box-shadow: none; }
+:root:not([data-skin]):not([data-app]) .btn.lg { padding: 11px 20px; font-size: 16px; border-radius: 12px; }
+:root:not([data-skin]):not([data-app]) .icon-btn { border-width: 1px; border-radius: 10px; box-shadow: none; }
+:root:not([data-skin]):not([data-app]) .icon-btn:active { transform: translateY(1px); box-shadow: none; }
+:root:not([data-skin]):not([data-app]) .chip.toggle { border-width: 1px; box-shadow: none; }
+:root:not([data-skin]):not([data-app]) .chip.toggle.on, :root:not([data-skin]):not([data-app]) .chip.on { box-shadow: none; }
+:root:not([data-skin]):not([data-app]) .input, :root:not([data-skin]):not([data-app]) .select, :root:not([data-skin]):not([data-app]) textarea.input { border-width: 1px; border-radius: 10px; font-size: 15.5px; }
+:root:not([data-skin]):not([data-app]) .input:focus, :root:not([data-skin]):not([data-app]) .select:focus { box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent); }
+:root:not([data-skin]):not([data-app]) :focus-visible { outline-width: 2px; }
+:root:not([data-skin]):not([data-app]) .kbd, :root:not([data-skin]):not([data-app]) kbd { border-width: 1px; border-bottom-width: 2px; }
+
+/* ---------- surfaces: thin borders, more room ---------- */
+:root:not([data-skin]):not([data-app]) .panel { border-width: 1px; padding: 20px; }
+:root:not([data-skin]):not([data-app]) .callout { border-radius: 12px; }
+:root:not([data-skin]):not([data-app]) .announce, :root:not([data-skin]):not([data-app]) .ann-panel { border-width: 1px; border-radius: 14px; }
+:root:not([data-skin]):not([data-app]) .card-link, :root:not([data-skin]):not([data-app]) .tile, :root:not([data-skin]):not([data-app]) .today-card, :root:not([data-skin]):not([data-app]) .resume-card, :root:not([data-skin]):not([data-app]) .rs-item, :root:not([data-skin]):not([data-app]) .guide-card, :root:not([data-skin]):not([data-app]) .link-tile { border-width: 1px; }
+:root:not([data-skin]):not([data-app]) .card-link:active, :root:not([data-skin]):not([data-app]) .tile:active, :root:not([data-skin]):not([data-app]) .today-card:active, :root:not([data-skin]):not([data-app]) .resume-card:active, :root:not([data-skin]):not([data-app]) .guide-card:active { transform: translateY(1px); box-shadow: none; }
+:root:not([data-skin]):not([data-app]) .modal { border-width: 1px; border-radius: 20px; }
+:root:not([data-skin]):not([data-app]) .popover, :root:not([data-skin]):not([data-app]) .acct-dd { border-width: 1px; border-radius: 14px; }
+:root:not([data-skin]):not([data-app]) .tab-pill { box-shadow: 0 1px 2px rgba(20, 33, 61, 0.1); }
+:root:not([data-skin]):not([data-app]) .empty { border-width: 1px; }
+:root:not([data-skin]):not([data-app]) .bar { height: 10px; }
+:root:not([data-skin]):not([data-app]) .bar-fill, :root:not([data-skin]):not([data-app]) .bar-fill.gold { background-image: none; }
+
+/* ---------- start page: the sky stays, the clutter goes ---------- */
+:root:not([data-skin]):not([data-app]) .landing-top.hero { border-width: 1px; border-radius: 22px; padding: 26px 34px 92px; }
+:root:not([data-skin]):not([data-app]) .hero-sub { font-size: 36px; font-weight: 700; max-width: 22ch; margin: 10px 0 4px; }
+:root:not([data-skin]):not([data-app]) .hero-count { border-width: 1px; border-radius: 14px; box-shadow: 0 1px 0 var(--lip); padding: 8px 14px 8px 10px; }
+:root:not([data-skin]):not([data-app]) .hero-count:active { transform: translateY(1px); box-shadow: none; }
+:root:not([data-skin]):not([data-app]) .hero-count .hc-num { min-width: 44px; height: 44px; border-radius: 12px; font-size: 24px; }
+:root:not([data-skin]):not([data-app]) .hero-mascot .bubble { display: none; }
+:root:not([data-skin]):not([data-app]) .landing-top.hero .hero-actions .btn { box-shadow: 0 1px 2px rgba(20, 33, 61, 0.12); }
+:root:not([data-skin]):not([data-app]) .course-card { border-width: 1px; border-radius: 16px; }
+:root:not([data-skin]):not([data-app]) .course-card:hover { box-shadow: 0 6px 18px -10px rgba(20, 33, 61, 0.25); }
+:root:not([data-skin]):not([data-app]) .course-card:active { transform: none; box-shadow: none; }
+:root:not([data-skin]):not([data-app]) .course-card-head { min-height: 92px; }
+:root:not([data-skin]):not([data-app]) .course-card-head .cc-art svg { height: 50px; filter: none; }
+:root:not([data-skin]):not([data-app]) .course-card .course-code { font-size: 26px; font-weight: 700; }
+:root:not([data-skin]):not([data-app]) .course-card h2 { font-size: 18px; font-weight: 700; }
+:root:not([data-skin]):not([data-app]) .course-card .course-meta { border-top-width: 1px; }
+:root:not([data-skin]):not([data-app]) .course-card .course-open { border-width: 1px; box-shadow: none; }
+:root:not([data-skin]):not([data-app]) .course-card .course-open:not(:disabled):hover { box-shadow: none; }
+/* Bo's card on the start page */
+:root:not([data-skin]):not([data-app]) .bh { border-width: 1px; border-radius: 20px; box-shadow: none; padding: 16px 18px; }
+:root:not([data-skin]):not([data-app]) .bh-av { width: 64px; height: 64px; border-radius: 18px; border-width: 1px; box-shadow: none; }
+:root:not([data-skin]):not([data-app]) .bh-plan { border-width: 1px; }
+:root:not([data-skin]):not([data-app]) .bh-act { border-width: 1px; border-radius: 14px; min-height: 64px; box-shadow: 0 1px 0 var(--lip); }
+:root:not([data-skin]):not([data-app]) .bh-act.bh-main { box-shadow: 0 1px 2px color-mix(in srgb, var(--accent) 40%, transparent); }
+:root:not([data-skin]):not([data-app]) .bh-act:active { transform: translateY(1px); box-shadow: none; }
+
+/* ---------- a class: the trail board keeps its mountain ---------- */
+:root:not([data-skin]):not([data-app]) .trail-board { border-width: 1px; border-radius: 20px; }
+:root:not([data-skin]):not([data-app]) .tb-next { box-shadow: 0 1px 2px color-mix(in srgb, var(--accent) 40%, transparent); }
+
+/* ---------- Ask Bo, Usage and the Call Bo sheet ---------- */
+:root:not([data-skin]):not([data-app]) .cb-sheet { border-width: 1px; box-shadow: var(--shadow); }
+:root:not([data-skin]):not([data-app]) .cb-class { border-width: 1px; box-shadow: none; }
+:root:not([data-skin]):not([data-app]) .cb-class.on { box-shadow: none; }
+:root:not([data-skin]):not([data-app]) .call-top { border-radius: 10px; }
+:root:not([data-skin]):not([data-app]) .us-m { border-width: 1px; }
+:root:not([data-skin]):not([data-app]) .pw-plan { border-width: 1px; box-shadow: none; }
+:root:not([data-skin]):not([data-app]) .modal.pw { border-width: 1px; box-shadow: var(--shadow); }
+
+/* ---------- every other 2px border in the stylesheets becomes 1px in this look (generated from the stylesheets) ---------- */
+:root:not([data-skin]):not([data-app]) :is(.acct-dd, .admin-tab, .ag-add, .ag-cell, .ag-lday, .ag-month, .ag-slot, .ag-wday, .ah .ap-pop .btn:not(.primary), .ah-add, .ah-hero, .ah-today, .ah-tool, .ann-panel, .announce, .ap-guide, .ap-start, .ap-sub, .bb, .bb-answer, .bb-check, .bb-chk-o, .bb-draw-bad, .bb-n, .bc-card, .bf-act, .bf-board, .bf-dot, .bf-fab, .bf-hi p, .bf-item, .bf-item i, .bf-mini, .bf-msg.bo .bf-bub, .bf-page, .bf-pointer, .bf-pop, .bf-q, .bf-see, .bf-tip, .bh, .bh-act, .bh-av, .bh-plan, .bo-char-btn, .bo-exam-note, .bo-free, .bo-msg.bo .bo-bubble, .bo-onb, .bo-perks li, .bo-photo-prev .icon-btn, .bo-photo-prev img, .bo-row, .bo-top, .btn, .card-link, .cb-class, .cb-dot2, .cb-sheet, .cfg-bar, .chip.toggle, .ck-zone select, .course-card, .dw-day, .dw-habit, .dw-more, .dw-zone select, .empty, .exam-chip, .fa-post, .fc-face, .fz-preset, .gl-goal, .gs-check, .gs-item, .guide-card, .hb-idea, .hb-sq, .hb-tile, .hero-count, .hero-exam, .hero-mascot .bubble, .icon-btn, .input, .jr-g input, .jr-mood span, .jr-row, .kb-card, .land-bo, .land-more > summary, .landing-top.hero, .lesson .q-opt, .lf-day span, .lf-empty, .lf-fchip, .lf-inline, .lf-modal input:not([type="checkbox"]):not([type="radio"]):not([type="range"]), .lf-modal select, .lf-modal textarea, .lf-page textarea, .lf-pick, .lf-search, .lf-seg-btns, .lf-seg-opt span, .lf-stat, .lf-type, .link-tile, .lock-card, .mk-bo, .mk-bo-av, .mk-bo-dot, .mk-drop, .mk-drop-file, .mk-none, .mk-preview, .mk-prog, .mn-cur select, .modal, .modal.pw, .nav-item, .node-start, .panel, .pf-work, .pj-notes, .pl-card, .pl-m, .pl-now, .popover, .pw-plan, .q-card, .q-opt, .q-opt .letter, .recap-slide, .recap-slide.end, .recap-slide.focus, .recap-slide.q, .recap-slide.xp, .resume-card, .rm-box, .rq-drop, .rs-item, .sb-qa-btn, .sb-time, .search-btn, .select, .share-qr, .skin-opt, .start-step, .sublock, .swatch, .switch-btn, .tb-clock, .tb-label, .tb-summit-text, .tile, .tk-check, .tk-row, .tl-fields input, .tl-fields select, .today-card, .totop, .tt-block, .tt-imp, .tt-li, .tt-wrap, .wa-board, .wa-board .ans, .wa-board .l em, .wa-bot, .wa-bubble, .wa-cards i, .wa-chip, .wa-doc, .wa-quiz, .wa-quiz .o, .wa-say, .wb-sz, .wb-tin textarea, .week-day, .wh-tab, .wl-class, .wl-dot, .wl-plan, .wl-skip, .wl-sum, .wl-tick, .wl[data-kind="choose"] .wl-acts, .xw, textarea.input) { border-width: 1px; }
+
+/* ---------- class pickers: rows and pills without lips ---------- */
+:root:not([data-skin]):not([data-app]) .switch-btn { background: transparent; border-color: transparent; color: var(--ink-2); }
+:root:not([data-skin]):not([data-app]) .switch-btn:hover { background: var(--surface-2); }
+:root:not([data-skin]):not([data-app]) .switch-btn.on { background: var(--accent-soft); border-color: transparent; color: var(--accent-deep); }
+:root:not([data-skin]):not([data-app]) .switch-btn.on::before { background: var(--accent); }
+:root:not([data-skin]):not([data-app]) .wh-tab, :root:not([data-skin]):not([data-app]) .wh-tab.on { box-shadow: none; }
+:root:not([data-skin]):not([data-app]) .wh-tab:active { transform: none; }
+:root:not([data-skin]):not([data-app]) .bo-class { font-size: 13.5px; }
+
+@media (max-width: 640px) {
+  :root:not([data-skin]):not([data-app]) .page-title { font-size: 26px; }
+  :root:not([data-skin]):not([data-app]) .hero-sub { font-size: 27px; }
+  :root:not([data-skin]):not([data-app]) .landing-top.hero { padding: 20px 18px 78px; border-radius: 18px; }
+  :root:not([data-skin]):not([data-app]) .sec-title { font-size: 19px; }
+}

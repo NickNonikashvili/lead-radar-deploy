@@ -8,13 +8,13 @@ const T = require('./lib');
   await c.addInitScript(() => { try { const s = JSON.parse(localStorage.getItem('studyhub-settings') || '{}'); if (s.tourDone === undefined) { s.tourDone = true; s.courses = ['calc', 'physics']; s.boFloatSeen = 1; localStorage.setItem('studyhub-settings', JSON.stringify(s)); } } catch (e) {} });
   await go(p, '#/', 3400);
   const first = await txt(p, '.tour-card h3');
-  check('the tour of the layout shows on the start page, also for people who took the older tour', !!(await p.$('.tour')) && first === 'The time, and where you are in the term', first);
+  check('the tour of the layout shows on the start page, also for people who took the older tour', !!(await p.$('.tour')) && first === 'The date, and where you are in the term', first);
   const spot = await p.$eval('.tour-spot', e => ({ shown: e.style.display !== 'none', w: parseFloat(e.style.width) })); const now = await p.$eval('#sb-now', e => e.getBoundingClientRect().width);
   check('the spotlight sits on the clock in the sidebar, and the card beside it', spot.shown && Math.abs(spot.w - now - 16) < 3 && !!(await p.$('.tour-card.side')), { spot, now });
   const n = await p.$$eval('.tour-dots i', d => d.length); const steps = await p.evaluate(() => App.tour.steps.length);
   check('a computer gets the sidebar, header, Your day and Bo steps, not the phone ones', n >= 7 && n < steps, { n, steps });
   await p.keyboard.press('ArrowRight'); await p.waitForTimeout(400); check('next step: quick add', (await txt(p, '.tour-card h3')) === 'Add anything, from any page');
-  await p.click('[data-action="tour-back"]'); await p.waitForTimeout(300); check('back step', (await txt(p, '.tour-card h3')) === 'The time, and where you are in the term');
+  await p.click('[data-action="tour-back"]'); await p.waitForTimeout(300); check('back step', (await txt(p, '.tour-card h3')) === 'The date, and where you are in the term');
   const titles = []; for (let i = 0; i < n; i++) { titles.push(await txt(p, '.tour-card h3')); await p.click('[data-action="tour-next"]').catch(() => {}); await p.waitForTimeout(380); }
   log('steps:', titles.join(' | '));
   check('it covers the sidebar, the header and Your day', ['Everything is in the sidebar', 'Your month at a glance', 'The header, on every page', 'Your day'].every(x => titles.includes(x)), titles);

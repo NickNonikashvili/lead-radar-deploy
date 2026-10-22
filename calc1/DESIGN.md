@@ -155,6 +155,13 @@ components:
 
 # Design System: Mathub
 
+> **2026.10.22.3, Big Sky, calmer** (`assets/clean.css`, loaded last, website default look only): the owner asked
+> for a clean, modern, uncluttered site that is still Big Sky. The sky, mountains, Bo and class colours stay; the
+> chrome changes: 1px borders everywhere (a generated rule thins every 2px border), a faint 1px edge under buttons
+> instead of the 3–4px lip, headings at 700 and smaller (page titles 32px, the start page's 36px), borderless icons
+> in the top bar with Call Bo as its one coloured button (Ask Bo leaves the top bar), the sidebar clock as one line
+> and New without its six shortcut tiles. Where this file and clean.css disagree, clean.css wins.
+
 ## Overview
 
 **Creative North Star: "Big Sky"**
