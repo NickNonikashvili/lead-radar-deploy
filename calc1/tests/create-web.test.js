@@ -95,7 +95,7 @@ const STATE = path.join(__dirname, 'fixtures', 'rc-state.json');
   // the Pro checkout on the website: the plans card from Settings, with her own RevenueCat link
   setRc({ [aliceId]: { expires: new Date(Date.now() - 864e5).toISOString(), store: 'rc_billing' } });
   await go(a, '#/settings', 1400); await a.click('#create-panel [data-cp="check"]'); await a.waitForTimeout(1800);
-  check('after her plan ends, Settings says there is no plan', /No plan\./.test(await txt(a, '#create-panel')), await txt(a, '#create-panel'));
+  check('after her plan ends, Settings says she is on the free plan (100 credits a month)', /Free: 100 credits a month for Bo\./.test(await txt(a, '#create-panel')), await txt(a, '#create-panel'));
   await go(a, '#/my4242/dashboard', 1500);
   check('her class is locked, kept with the account', !!(await a.$('.sublock')) && /saved with your account/.test(await txt(a, '.sublock')) && /I already subscribed/.test(await txt(a, '.sublock')));
   await a.click('[data-lock="buy"]'); await a.waitForTimeout(800);
