@@ -594,7 +594,7 @@ canvas.pad.grid { background-image: linear-gradient(var(--grid) 1px, transparent
 .lang-menu .lm-name + .lm-check { margin-left: auto; }
 .lang-menu [aria-checked="true"] { background: var(--surface-2); }
 .lang-menu [aria-checked="true"] .lm-check { visibility: visible; }
-@media (max-width: 420px) { .lang-top-btn { padding: 0; width: 32px; } .lang-top-code { display: none; } .topbar .amb-top:not(.on):not(.open) { display: none; } }   /* room for the page's name: focus sounds are on the Focus page too, and stay here while they play */
+@media (max-width: 420px) { .lang-top-btn { padding: 0; width: 32px; } .lang-top-code { display: none; } .topbar .search-btn { width: 32px; padding: 0; justify-content: center; } .topbar .acct-btn { gap: 0; padding: 3px; } .topbar .acct-btn > svg { display: none; } }   /* phones: the globe without its code, and the account as its avatar, so the page's name keeps its room */
 @media (pointer: coarse) { .lang-menu button { min-height: 44px; } }
 .app.landing .site-foot { border-top: 0; padding-top: 0; }
 
@@ -2557,7 +2557,7 @@ p, li, .muted { text-wrap: pretty; }
 .q-flag::after { content: ''; position: absolute; inset: -8px; }
 @media (pointer: coarse) { .topbar .icon-btn, .topbar .search-btn { min-width: 40px; min-height: 40px; } }
 /* those bigger buttons on a narrow phone ran 4px past the screen: closer together (each still 40px to tap) */
-@media (pointer: coarse) and (max-width: 420px) { .topbar { gap: 6px; } .topbar-actions { gap: 2px; } }
+@media (pointer: coarse) and (max-width: 420px) { .topbar { gap: 6px; } .topbar-actions { gap: 2px; } .topbar .icon-btn, .topbar .search-btn { min-width: 36px; min-height: 36px; } }   /* 36px targets on a phone's top bar, so six fit beside the page's name */
 
 /* "Walk me through it" was stretched across the whole question */
 .ladder > .btn { align-self: flex-start; }
