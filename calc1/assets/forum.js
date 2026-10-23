@@ -299,15 +299,18 @@
         },
         report: async el => {
           if (!user()) { auth().open('signup'); return; }
-          const reason = prompt('What is wrong with this ' + (el.dataset.kind === 'p' ? 'post' : 'comment') + '? (harassment, illegal content, spam, exam cheating, other)'); if (!reason) return;
+          const reason = prompt(el.dataset.kind === 'p' ? 'What is wrong with this post? (harassment, illegal content, spam, exam cheating, other)' : 'What is wrong with this comment? (harassment, illegal content, spam, exam cheating, other)'); if (!reason) return;
           try { const r = await api('forum_report', { kind: el.dataset.kind, id: +el.dataset.id, reason }); toast(r.message || 'Reported'); } catch (e) { toast(e.message, 3000); }
         },
         /* App Store guideline 1.2: blocking hides the member's posts, comments and notifications at once and tells the moderators */
         block: async el => {
           if (!user()) { auth().open('signup'); return; }
-          const what = el.dataset.kind === 'p' ? 'post' : 'comment';
-          const msg = el.dataset.anon ? `Block the anonymous member who wrote this ${what}?\n\nYou will stop seeing what they post anonymously, and their anonymous replies will not notify you. Their name stays hidden, from you too. The ${what} also goes to the moderators to check. You can unblock any time in Settings.`
-            : `Block the member who wrote this ${what}?\n\nYou will stop seeing their posts, comments, study sessions and notifications. They are not told. The ${what} also goes to the moderators to check. You can unblock them any time in Settings.`;
+          const post = el.dataset.kind === 'p';
+          const msg = el.dataset.anon
+            ? (post ? 'Block the anonymous member who wrote this post?\n\nYou will stop seeing what they post anonymously, and their anonymous replies will not notify you. Their name stays hidden, from you too. The post also goes to the moderators to check. You can unblock any time in Settings.'
+              : 'Block the anonymous member who wrote this comment?\n\nYou will stop seeing what they post anonymously, and their anonymous replies will not notify you. Their name stays hidden, from you too. The comment also goes to the moderators to check. You can unblock any time in Settings.')
+            : (post ? 'Block the member who wrote this post?\n\nYou will stop seeing their posts, comments, study sessions and notifications. They are not told. The post also goes to the moderators to check. You can unblock them any time in Settings.'
+              : 'Block the member who wrote this comment?\n\nYou will stop seeing their posts, comments, study sessions and notifications. They are not told. The comment also goes to the moderators to check. You can unblock them any time in Settings.');
           if (!confirm(msg)) return;
           try {
             const r = await api('forum_block', { kind: el.dataset.kind, id: +el.dataset.id }); toast(r.message || 'Blocked', 3500);
@@ -338,17 +341,16 @@
         'delete-comment': async el => { if (!confirm('Delete this comment?')) return; try { await api('forum_comment_delete', { id: +el.dataset.id }); await refreshThread(); } catch (e) { toast(e.message, 3000); } },
         mod: async el => {
           const a = el.dataset.a; const body = { action: a, kind: el.dataset.kind, id: +el.dataset.id || 0 }; if (el.dataset.report) body.report_id = +el.dataset.report; if (el.dataset.user) body.user_id = +el.dataset.user;
-          if (a === 'remove' && !confirm('Remove this ' + (el.dataset.kind === 'p' ? 'post' : 'comment') + '? Members will see "[removed by a moderator]".')) return;
+          if (a === 'remove' && !confirm(el.dataset.kind === 'p' ? 'Remove this post? Members will see "[removed by a moderator]".' : 'Remove this comment? Members will see "[removed by a moderator]".')) return;
           try { await api('forum_mod', body); toast('Done'); if (el.dataset.refresh === 'reports') self.reports(V()); else await refreshThread(); } catch (e) { toast(e.message, 3000); }
         },
         purge: async el => {
-          const what = el.dataset.kind === 'p' ? 'post (with all its comments)' : 'comment';
-          if (!confirm('Permanently delete this ' + what + '? This cannot be undone.')) return;
+          if (!confirm(el.dataset.kind === 'p' ? 'Permanently delete this post (with all its comments)? This cannot be undone.' : 'Permanently delete this comment? This cannot be undone.')) return;
           try { await api('admin_purge', { kind: el.dataset.kind, id: +el.dataset.id }); toast('Deleted permanently'); if (el.dataset.refresh === 'reports') self.reports(V()); else if (el.dataset.kind === 'p') location.hash = base(); else await refreshThread(); } catch (e) { toast(e.message, 3000); }
         },
         'admin-user': async el => {
           const a = el.dataset.a, body = { action: a, user_id: +el.dataset.u };
-          if (a === 'delete' && !confirm('Delete the account ' + el.dataset.e + ' and everything they posted? This cannot be undone.')) return;
+          if (a === 'delete' && !confirm(`Delete the account ${el.dataset.e} and everything they posted? This cannot be undone.`)) return;
           if (a === 'ban') { const days = prompt('Ban for how many days?', '30'); if (!days) return; body.days = +days; body.reason = prompt('Reason (shown to the user):', 'Breaking the community rules') || ''; }
           try { await api('admin_user', body); toast('Done'); self.admin(V(), $('#fa-admin-q', root) ? $('#fa-admin-q', root).value.trim() : ''); } catch (e) { toast(e.message, 3500); }
         },

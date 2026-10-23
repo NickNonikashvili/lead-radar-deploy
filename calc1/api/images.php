@@ -46,7 +46,8 @@ function mh_img_route(string $route, array $in, array $cfg): void {
       $style = isset(MH_IMG_STYLE[(string)($in['style'] ?? '')]) ? (string)$in['style'] : 'illustration';
       $shape = in_array($in['shape'] ?? '', ['wide', 'tall'], true) ? (string)$in['shape'] : 'square';
       $size = ['square' => '1024x1024', 'wide' => '1536x1024', 'tall' => '1024x1536'][$shape];
-      $key = hash('sha256', json_encode([$I['model'], $I['quality'], $size, $style, $prompt]));
+      $ln = defined('MH_AI_LANGS') ? (MH_AI_LANGS[is_string($in['lang'] ?? null) ? $in['lang'] : ''] ?? '') : '';   // words in the picture in their language (assets/i18n.js)
+      $key = hash('sha256', json_encode(array_merge([$I['model'], $I['quality'], $size, $style, $prompt], $ln !== '' ? [$ln] : [])));
       $file = mh_img_dir() . "/$key.webp"; $url = 'api/index.php?r=ai_image_file&id=' . $key;
       if (is_file($file) && filesize($file) > 0) mh_json(['ok' => true, 'url' => $url, 'id' => $key, 'kept' => true]);   // made before: free
       $C = mh_credits_cfg($cfg); $cost = (int)round(1000 * ($shape === 'square' ? $C['image'] : $C['image_big']));
@@ -56,7 +57,7 @@ function mh_img_route(string $route, array $in, array $cfg): void {
       // what Bo knows about them and the class, so the picture fits (api/students.php)
       $cid = is_string($in['cid'] ?? null) && preg_match('/^[a-z0-9][a-z0-9_-]{0,40}$/', $in['cid']) ? $in['cid'] : '';
       $who = ''; try { require_once __DIR__ . '/students.php'; $who = mh_student_image_context($u, $cid, $cfg); } catch (Throwable $e) {}
-      $full = 'For a university student\'s study board on Mathub (Montana State University)' . ($who !== '' ? ": $who" : '') . ".\n" . MH_IMG_STYLE[$style] . "\n\nThe picture: " . $prompt;
+      $full = 'For a university student\'s study board on Mathub (Montana State University)' . ($who !== '' ? ": $who" : '') . ".\n" . MH_IMG_STYLE[$style] . ($ln !== '' ? "\nAny words or labels in the picture are in $ln; math notation stays as it is." : '') . "\n\nThe picture: " . $prompt;
       @set_time_limit(190); @ignore_user_abort(true);   // kept even if they leave: next time it is there
       [$code, $bin, $why] = mh_img_make($I, $I['model'], $full, $size);
       if ($code >= 400 && $code < 500 && $code !== 429 && $I['model'] !== 'gpt-image-1' && !preg_match('/safety|moderation|policy/i', $why)) { error_log('mathub image: ' . $I['model'] . ' refused (' . $code . ' ' . substr($why, 0, 120) . '), using gpt-image-1'); [$code, $bin, $why] = mh_img_make($I, 'gpt-image-1', $full, $size); }

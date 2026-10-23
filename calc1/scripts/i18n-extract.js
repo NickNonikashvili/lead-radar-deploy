@@ -139,6 +139,10 @@ function chains(toks, f) {
   for (const t of toks) if (t.k === 'tpl') t.v.exprs.forEach(e => chains(e.toks, f));
 }
 for (const f of FILES) { const p = path.join(ROOT, 'assets', f); if (fs.existsSync(p)) { const toks = lex(fs.readFileSync(p, 'utf8')); walk(toks, f); chains(toks, f); } }
+// a class's sidebar ({ label: 'Learn', items: [['notes', 'Section notes', 'book'], …] }) is interface, though the rest of its *-data.js is course material
+for (const f of fs.readdirSync(path.join(ROOT, 'assets')).filter(x => x.endsWith('-data.js'))) {
+  for (const m of fs.readFileSync(path.join(ROOT, 'assets', f), 'utf8').matchAll(/\{\s*label:\s*'([^']+)',\s*items:\s*\[(.*?)\]\s*\}/g)) [m[1], ...[...m[2].matchAll(/\[\s*'[^']*',\s*'([^']+)'/g)].map(x => x[1])].forEach(k => add(norm(k), f));
+}
 fromHtml(fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8').split('<body>')[1] || '', 'index.html');
 add('Mathub · Free study hub for Montana State classes', 'index.html');
 // the API's messages (shown in toasts and forms): mh_fail('…') and 'error' => '…'

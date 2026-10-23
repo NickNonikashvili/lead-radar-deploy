@@ -475,11 +475,14 @@
     if (!talk() || !st.cid || !st.status) return;
     App.boTalk.open({ cid: st.cid, status: st.status, gesture, focus, onClose: changed => { if (changed && /^#\/tutor/.test(location.hash)) App.rerender(); } });
   }
-  function greeting(id) {
-    const s = snapshot(id); const name = s.name ? `Hi ${esc(s.name)}! ` : 'Hi! ';
-    const ex = s.readiness && s.readiness.exam && s.readiness.days >= 0 ? `${s.readiness.exam} is ${s.readiness.days === 0 ? 'today' : s.readiness.days === 1 ? 'tomorrow' : `in ${s.readiness.days} days`}${s.readiness.score ? ` and you are ${s.readiness.score}% ready` : ''}. ` : '';
-    const weak = s.weak && s.weak[0] ? `Your weakest topic right now is ${s.weak[0].t}. Want to start there? ` : '';
-    return `${name}I'm Bo. I know ${short(id)} from its syllabus and how your studying is going. ${ex}${weak}Ask me anything, or snap a photo of a problem.`;
+  function greeting(id) {   // in his bubble, which the page's translator leaves alone (assets/i18n.js), so in their language here
+    const t = App.t; const s = snapshot(id); const r = s.readiness;
+    const hi = s.name ? t('Hi {1}! I’m Bo. I know {2} from its syllabus and how your studying is going.', esc(s.name), short(id)) : t('Hi! I’m Bo. I know {1} from its syllabus and how your studying is going.', short(id));
+    const ex = !(r && r.exam && r.days >= 0) ? '' : ' ' + (r.score
+      ? (r.days === 0 ? t('{1} is today and you are {2}% ready.', r.exam, r.score) : r.days === 1 ? t('{1} is tomorrow and you are {2}% ready.', r.exam, r.score) : t('{1} is in {2} days and you are {3}% ready.', r.exam, r.days, r.score))
+      : (r.days === 0 ? t('{1} is today.', r.exam) : r.days === 1 ? t('{1} is tomorrow.', r.exam) : t('{1} is in {2} days.', r.exam, r.days)));
+    const weak = s.weak && s.weak[0] ? ' ' + t('Your weakest topic right now is {1}. Want to start there?', s.weak[0].t) : '';
+    return `${hi}${ex}${weak} ${t('Ask me anything, or snap a photo of a problem.')}`;
   }
 
   async function chat(main, query) {

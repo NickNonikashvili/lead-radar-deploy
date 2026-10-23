@@ -127,6 +127,9 @@ const NOW = () => Math.floor(Date.now() / 1000);
   await co.close();
   r = await api(a, 'ai_image', { prompt: 'REFUSE-SAFETY something', style: 'photo', shape: 'wide' });
   check('a picture the safety check turns down says so, and costs nothing', r.status === 422 && /safety check/.test(r.error || '') && rows("SELECT COUNT(*) AS n FROM credit_use WHERE user_id = ? AND feature = 'image'", aliceId)[0].n === 1, r);
+  try { fs.unlinkSync(path.join(path.dirname(kept), require('crypto').createHash('sha256').update(JSON.stringify(['gpt-image-2', 'medium', '1024x1024', 'diagram', pic.prompt, 'Italian'])).digest('hex') + '.webp')); } catch (e) {}
+  const it = await api(a, 'ai_image', Object.assign({}, pic, { lang: 'it' })); const sentIt = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures', 'image-last.json'), 'utf8'));
+  check('in Italian, the words in the picture are Italian: its own picture, not the English one', it.ok && it.url !== again.url && /Any words or labels in the picture are in Italian/.test(sentIt.prompt), { url: it.url, prompt: sentIt.prompt.slice(-200) });
   r = await api(b, 'ai_image', { prompt: 'A unit circle', style: 'diagram' });
   check('out of credits, no picture (402)', r.status === 402 && r.credits === true, { status: r.status });
 

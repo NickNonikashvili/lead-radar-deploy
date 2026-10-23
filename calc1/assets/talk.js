@@ -35,18 +35,19 @@
   const RATES = [0.9, 1, 1.15, 1.3];
 
   /* ---------- what Bo says out loud: his words without the board, notes, markdown or LaTeX ---------- */
+  const say = w => ' ' + (App.t ? App.t(w) : w) + ' ';   // math read out in the language Mathub is in (i18n/<lang>.tsv)
   const FN = { sin: 'sine', cos: 'cosine', tan: 'tangent', sec: 'secant', csc: 'cosecant', cot: 'cotangent', ln: 'natural log of', log: 'log of', arcsin: 'arc sine', arccos: 'arc cosine', arctan: 'arc tangent' };
-  const MATH = [
-    [/\\left|\\right|\\,|\\;|\\!|\\quad/g, ' '], [/\\lim_\{([^{}]+)\}/g, ' the limit as $1 of '], [/\\d?frac\{([^{}]+)\}\{([^{}]+)\}/g, ' $1 over $2 '], [/\\sqrt\{([^{}]+)\}/g, ' the square root of $1 '],
-    [/\^(?:\{2\}|2)/g, ' squared '], [/\^(?:\{3\}|3)/g, ' cubed '], [/\^\{([^{}]+)\}/g, ' to the $1 '], [/\^(\w)/g, ' to the $1 '], [/_\{([^{}]+)\}|_(\w)/g, ' sub $1$2 '],
-    [/\\(?:cdot|times)/g, ' times '], [/\\div/g, ' divided by '], [/\\pm/g, ' plus or minus '], [/\\leq?\b/g, ' is at most '], [/\\geq?\b/g, ' is at least '],
-    [/\\neq?\b/g, ' is not equal to '], [/\\approx/g, ' is about '], [/\\infty/g, ' infinity '], [/\\to\b|\\rightarrow/g, ' goes to '], [/\\lim/g, ' the limit '],
-    [/\\int/g, ' the integral of '], [/\\sum/g, ' the sum of '], [/\\Delta\s*/g, ' change in '], [/\\(pi|theta|alpha|beta|lambda|mu|sigma|omega)\b/g, ' $1 '],
-    [/\\(arcsin|arccos|arctan|sin|cos|tan|sec|csc|cot|ln|log)\b/g, (m, f) => ` ${FN[f]} `], [/\\[a-zA-Z]+/g, ' '], [/\b([a-zA-Z]'*)\(/g, '$1 of ('], [/[{}()]/g, ' '],
-    [/'/g, ' prime '], [/</g, ' is less than '], [/>/g, ' is greater than '], [/=/g, ' equals '], [/\+/g, ' plus '], [/(\w)\s*-\s*/g, '$1 minus '], [/-/g, ' negative '],
-    [/\//g, ' over '], [/\*/g, ' times ']
-  ];
-  const mathWords = x => ' ' + MATH.reduce((s, [re, to]) => s.replace(re, to), String(x)).replace(/\s+/g, ' ').trim() + ' ';
+  let MATHS = null; const MATH = () => MATHS || (MATHS = [
+    [/\\left|\\right|\\,|\\;|\\!|\\quad/g, ' '], [/\\lim_\{([^{}]+)\}/g, say('the limit as $1 of')], [/\\d?frac\{([^{}]+)\}\{([^{}]+)\}/g, say('$1 over $2')], [/\\sqrt\{([^{}]+)\}/g, say('the square root of $1')],
+    [/\^(?:\{2\}|2)/g, say('squared')], [/\^(?:\{3\}|3)/g, say('cubed')], [/\^\{([^{}]+)\}/g, say('to the $1')], [/\^(\w)/g, say('to the $1')], [/_\{([^{}]+)\}|_(\w)/g, say('sub $1$2')],
+    [/\\(?:cdot|times)/g, say('times')], [/\\div/g, say('divided by')], [/\\pm/g, say('plus or minus')], [/\\leq?\b/g, say('is at most')], [/\\geq?\b/g, say('is at least')],
+    [/\\neq?\b/g, say('is not equal to')], [/\\approx/g, say('is about')], [/\\infty/g, say('infinity')], [/\\to\b|\\rightarrow/g, say('goes to')], [/\\lim/g, say('the limit')],
+    [/\\int/g, say('the integral of')], [/\\sum/g, say('the sum of')], [/\\Delta\s*/g, say('change in')], [/\\(pi|theta|alpha|beta|lambda|mu|sigma|omega)\b/g, ' $1 '],
+    [/\\(arcsin|arccos|arctan|sin|cos|tan|sec|csc|cot|ln|log)\b/g, (m, f) => say(FN[f])], [/\\[a-zA-Z]+/g, ' '], [/\b([a-zA-Z]'*)\(/g, (m, f) => f + say('of') + '('], [/[{}()]/g, ' '],
+    [/'/g, say('prime')], [/</g, say('is less than')], [/>/g, say('is greater than')], [/=/g, say('equals')], [/\+/g, say('plus')], [/(\w)\s*-\s*/g, (m, a) => a + say('minus')], [/-/g, say('negative')],
+    [/\//g, say('over')], [/\*/g, say('times')]
+  ]);
+  const mathWords = x => ' ' + MATH().reduce((s, [re, to]) => s.replace(re, to), String(x)).replace(/\s+/g, ' ').trim() + ' ';
   const sayable = t => String(t || '').replace(/^\s*mark\s*:.*$/gim, ' ').replace(/\[\/?(board\+?|remember)(:[^\]]*)?\]/gi, ' ').replace(/\$\$?([^$]+)\$\$?/g, (m, x) => mathWords(x))
     .replace(/\*\*|__|`/g, '').replace(/^\s*(?:[-*•]|\d+[.)])\s+/gm, '').replace(/\s+/g, ' ').trim();
   const shown = t => String(t || '').replace(/\[\/?(board\+?|remember)(:[^\]]*)?\]/gi, ' ').replace(/\*\*/g, '').replace(/\s+/g, ' ').trim();
@@ -121,13 +122,13 @@
   }
 
   /* ---------- the voices this device has: the most natural-sounding English one first ---------- */
-  const deviceVoices = () => (synth ? synth.getVoices().filter(v => /^en([-_]|$)/i.test(v.lang)) : []);
+  const deviceVoices = () => (synth ? synth.getVoices().filter(v => String(v.lang || '').toLowerCase().replace('_', '-').split('-')[0] === (SPEECH[App.lang] ? App.lang : 'en')) : []);   // voices in the language Mathub is in
   const NOVELTY = /(albert|bad news|bahh|bells|boing|bubbles|cellos|deranged|good news|hysterical|jester|organ|superstar|trinoids|whisper|wobble|zarvox|junior|ralph|kathy|princess|fred)/i;
   function bestVoice() {
     const vs = deviceVoices(); if (!vs.length) return null;
     const want = vs.find(v => v.name === settings().boDeviceVoice); if (want) return want;
     const score = v => (/natural|neural/i.test(v.name) ? 60 : 0) + (/online/i.test(v.name) ? 15 : 0) + (/premium|enhanced/i.test(v.name) ? 45 : 0) + (/google us english/i.test(v.name) ? 35 : 0)
-      + (/(andrew|guy|christopher|eric|davis|brian|aaron|evan|alex|daniel|tom|samantha|aria|jenny|ava|zoe|emma|michelle)/i.test(v.name) ? 12 : 0) + (/en-US/i.test(v.lang) ? 8 : 0) + (v.default ? 2 : 0) - (NOVELTY.test(v.name) ? 200 : 0);
+      + (/(andrew|guy|christopher|eric|davis|brian|aaron|evan|alex|daniel|tom|samantha|aria|jenny|ava|zoe|emma|michelle)/i.test(v.name) ? 12 : 0) + (String(v.lang || '').replace('_', '-').toLowerCase() === (SPEECH[App.lang] || 'en-US').toLowerCase() ? 8 : 0) + (v.default ? 2 : 0) - (NOVELTY.test(v.name) ? 200 : 0);
     return vs.slice().sort((a, b) => score(b) - score(a))[0];
   }
   /* ---------- Bo's mouth: one sentence after another, in his natural voice or this device's ---------- */
@@ -153,7 +154,7 @@
       this.queue.push(item); this.pump();
     },
     fetchAudio(text, signal) {
-      return fetch(API + 'ai_speak', { method: 'POST', credentials: 'same-origin', headers: HDR, body: JSON.stringify(Object.assign({ text, voice: this.voice }, T.lid ? { lid: T.lid } : {})), signal })
+      return fetch(API + 'ai_speak', { method: 'POST', credentials: 'same-origin', headers: HDR, body: JSON.stringify(Object.assign({ text, voice: this.voice, lang: App.lang || 'en' }, T.lid ? { lid: T.lid } : {})), signal })
         .then(async r => { if (!r.ok) { const j = await r.json().catch(() => ({})); throw Object.assign(new Error(j.error || 'Bo\'s voice is not available.'), { status: r.status }); } return URL.createObjectURL(await r.blob()); });
     },
     stop() { this.gen++; this.cur = null; this.queue.forEach(q => { if (q.ctl) q.ctl.abort(); }); this.queue = []; this.busy = false; try { if (this.audio) this.audio.pause(); } catch (e) {} try { if (synth) synth.cancel(); } catch (e) {} },
@@ -236,7 +237,7 @@
       h.onHearing();
       try {
         const blob = new Blob(chunks, { type: (rec.mimeType || type || 'audio/webm') }); const data = await new Promise((res, rej) => { const fr = new FileReader(); fr.onload = () => res(String(fr.result).split(',')[1] || ''); fr.onerror = rej; fr.readAsDataURL(blob); });
-        const r = await post('ai_listen', Object.assign({ audio: { type: blob.type, data }, secs: Math.max(1, Math.round(((loud || Date.now()) - t0) / 1000) + 1), class: T.cid }, T.lid ? { lid: T.lid } : {}));
+        const r = await post('ai_listen', Object.assign({ lang: App.lang || 'en', audio: { type: blob.type, data }, secs: Math.max(1, Math.round(((loud || Date.now()) - t0) / 1000) + 1), class: T.cid }, T.lid ? { lid: T.lid } : {}));
         if ((r.text || '').trim()) h.onFinal(r.text.trim()); else h.onNothing();
       } catch (e) { h.onError(e.message || 'transcribe'); }
     };
@@ -1264,7 +1265,7 @@
       if (pick('data-eager', 'boEager', String)) { Live.tune(); return; }
       if (pick('data-rate', 'boRate', Number)) return;
       if (pick('data-ccsize', 'boCcSize', String) || pick('data-ccbg', 'boCcBg', String)) { paintCaps(); if (!CC.cues.length) cue('bo', 'This is how captions look.', null, true); return; }
-      if (e.target.closest('#bt-try')) { Speaker.unlock(); Speaker.stop(); Speaker.say('Hi, I’m Bo. This is how I sound.', { i: -1, turn: -1 }); }
+      if (e.target.closest('#bt-try')) { Speaker.unlock(); Speaker.stop(); Speaker.say(App.t('Hi, I’m Bo. This is how I sound.'), { i: -1, turn: -1 }); }
     };
   }
   if (synth && synth.addEventListener) synth.addEventListener('voiceschanged', () => { if (T.el) paintSettings(); });

@@ -471,6 +471,7 @@ function mh_ai_character(string $id): array {
 function mh_ai_character_id(array $in): string { $p = is_string($in['persona'] ?? null) ? $in['persona'] : ''; return in_array($p, ['professor', 'coach', 'detective', 'zen', 'buddy'], true) ? $p : MH_AI_CHAR_DEFAULT; }
 
 /* the language the student reads Mathub in (assets/i18n.js): Bo answers in it; the class material stays in English */
+const MH_AI_LIVE_SPEAK_EN = '- Speak English unless they speak to you in another language. Do not switch because of an accent or a short "mm-hmm".';   // MH_AI_LIVE's language line, for English; mh_ai_live_instructions swaps it for theirs
 const MH_AI_LANGS = ['es' => 'Spanish', 'ru' => 'Russian', 'fr' => 'French', 'it' => 'Italian', 'pt' => 'Portuguese (Brazilian)', 'de' => 'German'];
 function mh_ai_lang(array $in): string {
   $l = is_string($in['lang'] ?? null) ? $in['lang'] : ''; if (!isset(MH_AI_LANGS[$l])) return '';
@@ -514,7 +515,7 @@ TXT;
 
 const MH_AI_VOICE = <<<'TXT'
 VOICE MODE: the student is talking with you out loud, and your reply is read aloud to them in your voice.
-- Talk like a tutor sitting next to them: usually 1 to 3 short sentences, under about 45 words. When you explain something new, take up to about 90 words to do it properly (the big idea, the example on the board, why it works), then check with one question. Plain spoken English: no lists, headings, markdown, emoji or LaTeX in what you say.
+- Talk like a tutor sitting next to them: usually 1 to 3 short sentences, under about 45 words. When you explain something new, take up to about 90 words to do it properly (the big idea, the example on the board, why it works), then check with one question. Plain speech: no lists, headings, markdown, emoji or LaTeX in what you say.
 - Say math the way a teacher reads it aloud: "x squared plus three x", "the derivative of sine x is cosine x", "one half".
 - When seeing it helps (a formula, an equation, the steps of a problem, a graph or a figure), also put it on your whiteboard, as a block on lines of its own: [board: A short title], then lines like "draw: {…}" (see DRAWINGS), "check: {…}" (a question they answer on the board, see YOUR TURN), "step: what you do: $math$", "math: LaTeX", "answer: $result$" or "tip: a short note", then [/board]. At most one page per reply, about six lines. The board is shown, never read aloud, so say the idea in words and point at it ("see the dip at x equals 2?").
 - One question at a time, then stop and let them answer. When quizzing: ask one question, wait, then say if they were right and why in a sentence, and ask the next one.
@@ -735,7 +736,9 @@ TXT;
 function mh_ai_live_instructions(int $uid, string $cid, ?array $C, array $in): string {
   $today = preg_match('/^\d{4}-\d{2}-\d{2}$/', (string)($in['today'] ?? '')) ? (string)$in['today'] : gmdate('Y-m-d');
   $notes = mh_ai_notes($uid); $ch = mh_ai_character(mh_ai_character_id($in)); $resume = !empty($in['resume']);
-  $parts = [MH_AI_LIVE . "\n\n" . $ch['who'] . "\nHOW YOU OPEN: " . $ch['hello']];
+  $base = MH_AI_LIVE; $ln = MH_AI_LANGS[is_string($in['lang'] ?? null) ? $in['lang'] : ''] ?? '';
+  if ($ln !== '') $base = str_replace(MH_AI_LIVE_SPEAK_EN, "- Speak $ln the whole call, from your first words, with a natural accent, even when they or the page use an English term. Switch only if they ask for another language.", $base);   // their language (assets/i18n.js), never English first
+  $parts = [$base . "\n\n" . $ch['who'] . "\nHOW YOU OPEN: " . $ch['hello'] . ($ln !== '' ? " Say it in $ln." : '')];
   if ($resume) $parts[] = MH_AI_LIVE_RESUME;
   if (($in['focus'] ?? '') === 'exam') $parts[] = MH_AI_EXAM_CALL;
   if ($C) $parts[] = mh_ai_digest($C);
@@ -1008,7 +1011,7 @@ function mh_ai_route(string $route, array $in, array $cfg, string $ip): void {
       mh_rate_or_fail("ai_speak:$uid", 90, 60, 'Bo is talking a lot. Your device\'s voice takes over for a minute.');
       @set_time_limit(45);
       [, $audio, $type] = mh_ai_openai($V, '/audio/speech', json_encode(['model' => $V['tts_model'], 'voice' => $voice, 'input' => $text, 'response_format' => 'mp3',
-        'instructions' => 'You are Bo, a friendly bobcat who tutors college students. Voice: warm, upbeat and encouraging, like a favourite tutor. Pace: natural and relaxed, a little slower through math. Read math the way a teacher says it aloud. Never sound robotic.'], JSON_UNESCAPED_UNICODE), 40);
+        'instructions' => 'You are Bo, a friendly bobcat who tutors college students. Voice: warm, upbeat and encouraging, like a favourite tutor. Pace: natural and relaxed, a little slower through math. Read math the way a teacher says it aloud. Never sound robotic.' . (isset(MH_AI_LANGS[$in['lang'] ?? '']) ? ' Speak ' . MH_AI_LANGS[$in['lang']] . ' with a natural native accent.' : '')], JSON_UNESCAPED_UNICODE), 40);
       mh_ai_add($uid, 'voice', mb_strlen($text)); mh_credits_spend($u, 'voice', (int)ceil(mb_strlen($text) * mh_credits_cfg($cfg)['tts']), 'speak-' . gmdate('YmdH'), 'Bo’s voice, read out', $cfg);   // per 1,000 characters
       http_response_code(200); header('Content-Type: ' . (preg_match('#^audio/[a-z0-9.+-]+$#i', $type) ? $type : 'audio/mpeg')); header('Cache-Control: no-store'); header('Content-Length: ' . strlen($audio));
       echo $audio; exit;
@@ -1033,7 +1036,7 @@ function mh_ai_route(string $route, array $in, array $cfg, string $ip): void {
       $bin = base64_decode($data); @set_time_limit(60);
       $file = class_exists('CURLStringFile') ? new CURLStringFile($bin, 'speech.' . $ext, $type) : null;
       $tmp = null; if (!$file) { $tmp = tempnam(sys_get_temp_dir(), 'mhs'); file_put_contents($tmp, $bin); $file = new CURLFile($tmp, $type, 'speech.' . $ext); }
-      try { [, $raw] = mh_ai_openai($V, '/audio/transcriptions', ['model' => $V['stt_model'], 'file' => $file, 'language' => 'en', 'prompt' => $hint, 'response_format' => 'json'], 50); }
+      try { [, $raw] = mh_ai_openai($V, '/audio/transcriptions', ['model' => $V['stt_model'], 'file' => $file, 'language' => is_string($in['lang'] ?? null) && isset(MH_AI_LANGS[$in['lang']]) ? $in['lang'] : 'en', 'prompt' => $hint, 'response_format' => 'json'], 50); }
       finally { if ($tmp) @unlink($tmp); }
       $j = json_decode($raw, true); $text = mh_ai_clip(is_array($j) ? ($j['text'] ?? '') : '', 2000);
       mh_ai_add($uid, 'listen', $secs); mh_credits_spend($u, 'voice', (int)ceil($secs * mh_credits_cfg($cfg)['stt'] * 1000 / 60), 'listen-' . gmdate('YmdH'), 'Bo listening', $cfg);

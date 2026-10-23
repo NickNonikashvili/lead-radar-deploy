@@ -1946,3 +1946,4239 @@
 6205	Hai usato il tempo di chiamata di questo mese con Bo. Acquista un’ora (
 6206	Ora i corsi li aggiunge il team di Mathub. Richiedi il tuo corso con il suo programma e ti diremo quando è pronto.
 6212	Ora i corsi li aggiunge il team di Mathub. Richiedi il tuo corso e ti diremo quando è pronto.
+1	Mathub
+133	Ctrl / ⌘ + K
+143	Ctrl / ⌘ + Enter
+175	plan for today due cards lesson challenge
+177	character sheet abilities level class d20 dnd stats
+179	focus timer pomodoro study session sounds
+181	resources links tutoring textbook videos help
+183	guides how to study exam anxiety notes office hours
+185	calculator unit converter citation word counter significant figures
+187	weekly recap stats share
+188	gpa grade point average semester cumulative
+189	board forum posts questions classmates
+190	classmates members badges
+191	weekly league xp rank
+193	badges achievements
+195	account settings classes notifications theme email
+197	changelog updates releases news
+199	contact creator nikoloz nonikashvili phone email help feedback
+204	notes practice flashcards calendar
+479	input, textarea, select
+631	exam/
+795	webcal://
+829	data&course=
+1086	ai_thread&class=
+1089	(pointer: coarse)
+1121	[A drawing: {1}]
+1122	the code editor
+1123	a box
+1124	[they typed: {1}]
+1127	[{1}] Front: {2} Back{3}: {4}
+1128	Flashcard
+1129	(not flipped yet, so they have not seen it)
+1132	Choices:
+1133	Not answered yet.
+1134	They answered {1} (not checked yet).
+1135	They answered {1}: right.
+1136	They answered {1}: wrong{2}.
+1137	; the answer is {1}) {2}
+1138	What the page tells them:
+1139	Worked solution (open on the page):
+1140	Worked solution (hidden from them; use it to be right, do not give it away unless they ask):
+1141	HIDDEN ON THE PAGE (a worked solution they haven't opened; use it to be right, don't give it away unless they ask): {1}
+1142	PAGE: {1}{2}
+1143	{1} ON IT (numbered as they see them):
+1144	WHAT IS ON IT:
+1243	[pdf: {1}]
+1244	[from: {1}]
+1252	They selected: «{1}» In: {2}
+1253	They selected: «{1}»
+1255	logaritmo naturale di
+1256	logaritmo di
+1257	arcoseno
+1258	arcocoseno
+1259	arcotangente
+1260	il limite per $1 di
+1261	$1 fratto $2
+1262	la radice quadrata di $1
+1263	alla $1
+1264	pedice $1$2
+1265	diviso
+1266	più o meno
+1267	è al massimo
+1268	è almeno
+1269	è diverso da
+1270	è circa
+1271	tende a
+1272	il limite
+1273	l’integrale di
+1274	la somma di
+1275	variazione di
+1277	è minore di
+1278	è maggiore di
+1337	[board{1}: {2}]
+1338	[/board]
+1339	Bo live:
+1341	That drawing could not be drawn. Give drawing.type (one of {1}) and its numbers; functions use x, like "x^2 - 3".
+1342	It is on the board. Stop talking and let them answer; you will be told what they picked.
+1344	There is no such tool.
+1358	input, select, button
+1383	myclass&id=
+1387	Mathub: a class could not be saved to the account
+1388	Mathub: syncing your classes stopped:
+1389	8 to 16
+1390	3 to 5
+1391	about 60
+1392	6 to 8
+1393	6 to 10
+1394	2 or 3
+1395	about 25
+1396	The JSON you wrote for Mathub has problems. Fix them and send the complete corrected JSON again, in one ```json code block and nothing else:
+1397	Your answer was cut off before the JSON ended, so Mathub cannot read it. Write the whole class again, shorter this time: 6 to 10 SECTIONS with 2 ideas each, about 25 FLASHCARDS and 4 questions per topic. Send only the JSON, in one ```json code block, and make sure it is complete.
+1402	MY CLASS
+1409	s had
+1418	s were
+1544	Mathub could not read your JSON: {1}{2}. Send the complete corrected JSON again, in one ```json code block and nothing else.
+1589	Il corso di Bo non ha superato i controlli:
+1590	Riprova, oppure usa “Corso più breve”.
+1593	Non è stato possibile salvare il corso:
+1606	Non è stato possibile inviare il corso:
+1647	Non è stato possibile aggiungere il corso:
+1810	How do you know when to use the chain rule vs the product rule?
+1811	I keep mixing these up on the WebWork. For $\frac{d}{dx}\,x^2\sin(3x)$ I know it is product rule, but then $\sin(3x)$ needs chain rule inside it too? How do you keep this straight under exam pressure?
+1812	Exam 1 study group, Sunday 4 pm, Roberts Hall lobby
+1813	A few of us from the Tuesday lab are meeting to go through the practice problems and the projectile stuff. Bring the formula sheet you made. Anyone welcome.
+1814	Priya
+1815	Does anyone else find the log properties easier once you write them as exponent rules?
+1816	Writing $\log_b(xy) = \log_b x + \log_b y$ as "multiplying means adding exponents" finally made it click for me. Curious if that helps anyone else or if I am just weird.
+1817	Math & Stat Center hours changed this week
+1818	Romney 220 is closing at 6 instead of 8 on Thursday and Friday because of the career fair. Plan accordingly if you were going to get WebWork help there.
+1819	Think of it as layers. Product rule when two things are *multiplied*. Chain rule whenever there is a function *inside* another one. So $x^2\sin(3x)$: product rule on the outside, and the derivative of $\sin(3x)$ is $3\cos(3x)$ by chain rule.
+1820	This is the way. Write "outside times derivative of inside" on the top of your exam paper.
+1821	Thanks, the layers idea helps a lot.
+1871	forum_post&id=
+1969	admin_users&q=
+2030	forum_posts&course=all&sort=new
+2031	Calc I
+2032	Physics I
+2033	Precalc
+2034	WRIT 101
+2035	CSCI 127
+2036	BIOB 160
+2037	KIN 322
+2038	PSYX 340
+2076	challenge_stats&course=
+2127	meet_list&course=
+2144	mock_list&course=
+2162	mock_results&id=
+2185	contrib_list&course=
+2222	meet_list&course=all
+2224	mock_list&course=all
+2226	ann_list&course=
+2255	dy/dx
+2256	½mv²
+2257	kg·m/s
+2258	Aa
+2259	CO₂
+2260	Na⁺
+2261	DC 15
+2262	nat 20
+2276	Popolano
+2277	Apprendista
+2278	Iniziato
+2279	Adepto
+2280	Incantatore
+2281	Saggio
+2282	Maestro del sapere
+2283	Arcimago
+2284	Mitico
+2285	Leggenda
+2346	quest:
+2365	league&xp=
+2397	600 16px Cinzel
+2398	16px "Mathub Runes"
+2399	ᚠAa20
+2400	Mago
+2401	Piega limiti e tassi di variazione al suo volere.
+2402	Artefice
+2403	Costruisce con forza, moto ed energia.
+2404	Ranger
+2405	Si orienta con angoli, rotte e curve.
+2406	Bardo
+2407	Vince la discussione con le parole.
+2408	Warlock
+2409	Ha stretto un patto con Python.
+2410	Druido
+2411	Parla la lingua delle cellule e dei geni.
+2412	Paladino
+2413	Conosce ogni articolazione, leva e muscolo in battaglia.
+2414	Veggente
+2415	Legge gli schemi dietro i comportamenti.
+2416	Avventuriero
+2417	Pronto per qualsiasi missione.
+2419	I dadi tacciono
+2420	Nessuno dei tuoi corsi ha ancora domande di esercizio. Scegli corsi con esercizi nelle Impostazioni.
+2421	20 naturale!
+2422	Successo critico. I dadi ti concedono un Blitz in {1}: novanta secondi, le combo moltiplicano il punteggio.
+2423	Inizia il Blitz
+2424	1 naturale…
+2425	Fallimento critico. I dadi ti mandano ad affrontare la tua nemesi{1}.
+2426	({1}% finora)
+2427	Affronta la nemesi
+2428	{1} supera la CD {2}
+2429	{1} contro CD {2}
+2430	Successo. La strada è libera: una lezione veloce su questo argomento.
+2431	La missione resiste, quindi vale la pena esercitarsi: una breve lezione su questo argomento.
+2432	Accetta la missione
+2433	Tira per una missione
+2434	Tutti i tuoi corsi
+2435	Tiro in corso…
+2436	Tira di nuovo
+2437	{1} · missione di {2}
+2438	Non ancora provato
+2439	{1}% su {2} {2|domanda|domande} finora{3|}
+2440	Grinta
+2441	Studia ogni giorno per mantenere la serie.
+2442	Miglior Blitz: {1}
+2443	Ancora nessun Blitz
+2444	Gioca un round di Blitz e batti il tuo record.
+2445	Resistenza
+2446	{1} min di concentrazione questa settimana
+2447	Fai sessioni nella stanza Concentrazione.
+2448	Precisione
+2449	{1}% su {2} risposte
+2450	{1} risposte in 30 giorni
+2451	Rispondi con attenzione; dieci risposte sbloccano questo punteggio.
+2452	Memoria
+2453	{1} flashcard in 2 settimane
+2454	Ripassa le flashcard in scadenza.
+2455	Presenza
+2456	{1} giorni di studio su 30
+2457	Fatti vedere spesso, anche per poco.
+2458	Legale
+2459	Neutrale
+2460	Caotico
+2461	Neutrale puro
+2462	Mathub · scheda del personaggio
+2463	Le tue abitudini di studio come un eroe da gioco di ruolo. Ogni numero viene da quello che hai fatto davvero su Mathub.
+2464	Livello {1}{2}
+2465	Background
+2466	Allineamento
+2467	Esperienza
+2468	Livello {1} tra
+2469	Il piano di oggi
+2470	Stampa la scheda
+2471	Corsi
+2472	I livelli vengono dagli XP di ogni corso
+2473	Punteggi di caratteristica
+2474	Da 3 a 20, come nel gioco di ruolo; passa sopra per vedere come alzarne uno
+2475	Competenze
+2476	Argomenti all’80% o più su 5+ risposte
+2477	Nemesi
+2478	Inventario
+2479	{1?Pozioni:Pozione} di tregua
+2480	Protezioni della serie; ognuna copre un giorno saltato
+2481	{1?Mostri:Mostro} da sconfiggere
+2482	Voci aperte nel tuo quaderno degli errori
+2483	{1?Pergamene:Pergamena}
+2484	Righe nei tuoi bigini
+2485	{1?Tomi:Tomo}
+2486	Argomenti con i tuoi appunti
+2487	Nessun corso scelto
+2488	Liv. {1}
+2489	Scegli i tuoi corsi nelle Impostazioni.
+2490	{1}% su {2}
+2491	Ancora nessuno. Padroneggia un argomento per vederlo qui.
+2492	{1} · {2}% su {3} risposte. Vai ad affrontarla.
+2493	Ancora nessuna nemesi. Rispondi a qualche domanda e ne apparirà una.
+2494	Suggerimento {1} di 3
+2495	Primo passo
+2496	Soluzione completa
+2497	Guidami passo passo
+2498	Suggerimento successivo
+2499	Mostra il primo passo
+2500	Mostra la soluzione completa
+2501	Se guardi prima la soluzione, questa domanda non conta per la tua precisione.
+2502	mai esercitato
+2503	{1}% di precisione
+2504	ultimo esercizio {1} {1|giorno|giorni} fa{2|}
+2505	Serie a tempo
+2506	Serie a tempo di {1} domande, {2} minuti. Tutti ricevono le stesse domande. La correzione appare quando consegni.
+2507	Problemi generati all’infinito, con spiegazioni svolte. La modalità esercizio corregge man mano; la modalità esame nasconde la correzione finché non consegni.
+2508	Tempo scaduto. Serie consegnata.
+2509	Niente da ripassare per ora: prima lavora su un argomento.
+2510	Crea una serie dai tuoi argomenti più deboli e meno recenti
+2511	Prepara una serie di esercizi
+2512	Unità
+2513	Modalità
+2514	Esercizio (correzione immediata)
+2515	Esame a tempo (correzione alla fine)
+2516	Limite di tempo (modalità esame)
+2517	Argomenti
+2518	seleziona tutti
+2519	Genera la serie
+2520	Modalità lezione
+2521	{1} {1|argomento selezionato|argomenti selezionati}{2|}. Le percentuali sono la tua precisione finora.
+2522	Serie attuale: {1?Unità:Unità} {2} · {3} {3|argomento|argomenti}{4|} · {5} domande · modalità {6}
+2523	esame a tempo
+2525	Ripasso intelligente · perché questi argomenti
+2526	Gli argomenti deboli, trascurati o mai provati ricevono più domande. Rispondi a una serie e il mix si aggiorna.
+2527	Tempo scaduto. Esame consegnato.
+2528	Nessun errore. Ottimo.
+2529	corrette finora · {1} domande
+2530	Ripeti gli argomenti sbagliati
+2531	Nuova serie
+2532	{1} / {2} risposte · nessuna correzione finché non consegni
+2533	Consegna l’esame
+2534	Questa è l’anteprima:
+2535	domande per serie
+2536	I membri hanno serie fino a 30 domande, modalità esame a tempo, esercizi sugli errori e precisione per argomento che ti segue su tutti i dispositivi.
+2537	Salva la risposta
+2538	✕ Non proprio{1}
+2539	— la risposta è ${1}$
+2540	— la risposta è {1}
+2541	Senza risposta{1}
+2542	Risolta con la soluzione completa visibile (non conta per la precisione).
+2543	Hai usato {1} {1|suggerimento|suggerimenti}{2|}.
+2544	Inserisci un numero, una frazione o un’espressione come 2pi
+2545	{1} di fila! +5 XP bonus
+2546	{1}% corrette · {2} usati
+2548	{1} non ha esami.
+2549	Questo corso è valutato su compiti e quiz, quindi qui non c’è niente da preparare. Usa il quiz e le flashcard per ripassare gli argomenti.
+2550	{1} · {2} · {3} · copre {4}.
+2551	{1}/{2} fatti
+2552	{1}Risolvi ogni problema prima su carta, poi mostra la soluzione.
+2553	Di calcolo
+2554	I problemi con grafici si riferiscono alle figure nel PDF; per quelli, la soluzione descrive esattamente cosa leggere sul grafico e come giustificarlo.
+2555	Problema {1}
+2556	grafico nel PDF
+2557	Soluzione (membri)
+2558	Soluzione
+2559	· {1} passaggi
+2560	Passaggio successivo
+2561	Mostra tutto
+2562	Le soluzioni svolte sono per i membri
+2563	L’anteprima mostra le soluzioni dei primi due problemi. Iscriviti gratis per tutte le {1} soluzioni svolte e una checklist che si sincronizza tra i dispositivi.
+2564	Non c’è ancora una serie di esercizi per {1}. Usa la checklist, allenati sugli argomenti dell’esame nel quiz e rifai i compiti indicati nel programma. Quando verrà pubblicata una serie, si potrà aggiungere qui.
+2565	Argomenti di questo esame
+2566	Inchiostro
+2567	Blu
+2568	Verde
+2569	Rosso
+2570	Brutta copia
+2571	Risolvi un problema a mano con mouse, trackpad o pennino. I tratti restano salvati in questo browser finché non li cancelli.
+2572	Gomma
+2574	Griglia
+2575	Salva PNG
+2576	Penna {1}px
+2577	Cancellare la brutta copia?
+2579	PNG salvato
+2580	Impossibile salvare in questo browser
+2583	Questo non è un numero (divisione per zero o fuori intervallo).
+2584	2*sin(30) + sqrt(16)
+2585	Espressione
+2586	Invio calcola · funzioni: sin cos tan asin acos atan ln log log2 sqrt abs floor ceil exp · pi, e, ans
+2587	fn danger
+2588	I risultati appaiono qui. Clicca su uno per riusarlo.
+2589	sqrt(
+2590	sin(
+2591	cos(
+2592	tan(
+2593	asin(
+2594	acos(
+2595	atan(
+2596	ln(
+2597	log(
+2598	Il fattoriale richiede un numero intero da 0 a 170.
+2599	Massa
+2600	tonnellata metrica
+2601	km/h
+2602	ft/s
+2603	Accelerazione
+2604	ft/s²
+2605	km/h/s
+2606	Forza
+2607	Energia
+2608	ft·lb
+2609	Potenza
+2610	ft·lb/s
+2611	Pressione
+2612	Pa
+2613	Angolo
+2614	Area
+2615	mm²
+2616	cm²
+2617	km²
+2618	in²
+2619	ft²
+2620	Volume
+2621	cm³
+2622	fl oz (USA)
+2623	tazza (USA)
+2624	gal (USA)
+2625	in³
+2626	Temperatura
+2627	Dati
+2628	Inverti
+2629	Inverti le unità
+2630	Grandezza
+2631	Valore
+2632	In
+2633	Inserisci un numero (vanno bene anche frazioni e 2pi).
+2634	Jan.
+2635	Feb.
+2636	Mar.
+2637	Apr.
+2638	Aug.
+2639	Sept.
+2640	Oct.
+2641	Nov.
+2642	Dec.
+2643	{1}, and {2}
+2644	{1}, et al.
+2645	Web
+2646	({1} ed.)
+2647	Editore
+2648	ed.,
+2649	, vol. {1}
+2650	, no. {1}
+2651	, pp. {1}
+2652	Tommy Orange
+2653	Sito, editore o rivista
+2654	Autore/i
+2655	(Nome Cognome; Nome Cognome)
+2656	Titolo della pagina
+2657	Nome del sito
+2658	URL o DOI
+2659	Edizione
+2660	Numero
+2661	Pagine
+2662	MLA 9
+2663	APA 7
+2664	Il corsivo è mostrato; quando incolli in un documento, metti in corsivo la stessa parte. Controlla le maiuscole con
+2665	Purdue OWL
+2666	per i casi particolari.
+2667	Sito web
+2669	Articolo di rivista
+2670	Titolo del libro
+2671	Titolo dell’articolo
+2672	Nome della rivista
+2673	Copiato. Metti il titolo in corsivo dove indicato.
+2674	Seleziona il testo e copialo.
+2675	Niente esce dal tuo browser.
+2676	Incolla la tua bozza
+2677	Parole obiettivo
+2678	{1} · facile
+2679	{1} · abbastanza leggibile
+2680	{1} · denso
+2681	{1} · molto denso
+2683	Caratteri
+2684	Frasi
+2685	Paragrafi
+2686	Parole per frase
+2687	Frase più lunga
+2688	Tempo di lettura
+2689	Tempo di esposizione
+2690	Facilità di lettura
+2691	Parole più usate
+2692	Per convenzione lo zero ha una cifra significativa.
+2693	Gli zeri finali senza virgola sono ambigui: scrivi {1} per chiarirlo.
+2694	Numero
+2695	Arrotonda a
+2696	Regole: le cifre diverse da zero contano sempre; gli zeri tra di esse contano; gli zeri iniziali non contano mai; gli zeri finali contano solo con la virgola. Moltiplicando o dividendo si tengono le cifre significative del dato che ne ha meno; sommando, i decimali del dato che ne ha meno.
+2697	Inserisci un numero semplice come 0.004500 o 6.02e23.
+2698	Cifre significative
+2699	Arrotondato a {1}
+2700	Notazione scientifica
+2701	(o più)
+2702	Calcolatrice
+2703	Citazioni
+2704	Conta parole
+2705	Cifre sig.
+2706	Calcolatrice, convertitore di unità, generatore di citazioni, conta parole e cifre significative. Tutto funziona nel tuo browser, anche offline.
+2707	Pioggia
+2708	Pioggia costante con gocce sul vetro
+2709	Temporale
+2710	Pioggia con tuoni in lontananza
+2711	Onde del mare
+2712	Onde lente che crescono e si ritirano
+2713	Vento
+2714	Raffiche su un campo aperto
+2715	Camino
+2716	Crepitii, schiocchi e un calore che rimbomba
+2717	Foresta
+2718	Canti di uccelli e foglie che frusciano
+2719	Notte d’estate
+2720	Grilli, un gufo, aria ferma
+2721	Caffetteria
+2722	Brusio, tazze e una tastiera
+2723	Beat lo-fi
+2724	Accordi caldi su un beat polveroso
+2725	Piano dolce
+2726	Piano generativo e lento
+2727	Drone ambient
+2728	Un tappeto sonoro che cambia piano piano
+2729	Rumore marrone
+2730	Un fruscio profondo e morbido
+2731	Rumore rosa
+2732	Un fruscio equilibrato
+2733	Rumore bianco
+2734	Un fruscio brillante
+2735	Questo browser non può riprodurre suoni generati.
+2736	Non è stato possibile avviare quel suono.
+2737	I suoni si spengono. Buonanotte.
+2738	no idb
+2739	Non è stato possibile riprodurre quel file.
+2740	Ci stanno solo {1} brani; rimuovine uno per aggiungerne altri.
+2741	{1}: solo file MP3.
+2742	{1}: troppo grande (max 30 MB).
+2743	{1}: impossibile leggere questo file.
+2744	{1}: {2} dura più di 8 minuti.
+2745	{1}: impossibile salvarlo (spazio pieno?).
+2746	{1} {1|brano aggiunto|brani aggiunti}{2|}
+2747	Aggiungi prima un MP3.
+2748	Tocca di nuovo play per far partire la musica.
+2749	Musica di Mathub
+2750	La mia musica · Mathub
+2751	Scegli prima un suono.
+2752	Tutto si ferma tra {1} minuti
+2753	Timer spento
+2754	Hai già {1} brani. Rimuovine uno prima.
+2755	Rimuovere “{1}” dalla tua musica?
+2756	Volume generale
+2757	Generato sul tuo dispositivo mentre ascolti, niente in streaming. Sovrapponine quanti vuoi; ognuno ha il suo volume.
+2758	Ferma tutto
+2759	Riprendi il mix
+2760	Posizione
+2761	Casuale
+2762	Precedente
+2763	Ripeti: {1}
+2764	Volume della musica
+2765	Aggiungi MP3
+2766	I file vengono salvati solo su questo dispositivo (mai caricati), quindi la tua musica resta privata e rimane dopo un ricaricamento. Cancellare i dati del sito la elimina.
+2767	Scegli un brano
+2768	Ancora nessuna musica
+2769	Caricamento della tua musica…
+2771	Sposta su
+2772	Sposta giù
+2773	Porta la tua playlist: fino a
+2774	, ciascuno fino a
+2775	8 minuti
+2776	. Restano solo in questo browser e continuano a suonare mentre ti muovi su Mathub.
+2777	· {1} in tutto
+2778	Suoni per concentrarsi
+2779	La mia musica
+2780	Abbassa tutto in dissolvenza dopo {1} minuti
+2781	Inizia prima di sentirti pronto.
+2782	Venticinque minuti sono una decisione, non una sensazione.
+2783	I primi cinque minuti sono tutta la battaglia.
+2784	Al traguardo ci si arriva iniziando.
+2785	Sei una sessione più vicino di un’ora fa.
+2786	Piccoli blocchi ogni giorno battono i grandi piani.
+2787	Nessuno ricorda lo scroll. Tutti ricordano il voto.
+2788	L’esame lo scrive qualcuno che si aspetta che ti eserciti. Dagli ragione.
+2789	Lo slancio si costruisce, non si trova.
+2790	La concentrazione è un muscolo. Questa è la palestra.
+2791	Studiare con il telefono in un’altra stanza vale doppio.
+2792	Un cervello stanco che dorme batte un cervello agitato che studia tutta la notte.
+2793	Sprint
+2794	una serie di esercizi o una lezione
+2795	Profondo
+2796	un capitolo o un problema lungo
+2797	Maratona
+2798	un blocco di preparazione all’esame
+2799	Concentrarsi insieme
+2800	{1} {1|sessione|sessioni}{2|} · {3} min sul sito oggi
+2801	oggi nessuno si è ancora concentrato
+2802	(tu)
+2803	Nessuno è in un blocco di concentrazione adesso. Avviane uno e sarai il primo della lista.
+2804	Accedi per vedere chi si sta concentrando adesso e per essere contato.
+2805	{1} {1|compagno|compagni}{2|} in un blocco adesso. Stessa stanza, scrivanie diverse.
+2806	s are
+2807	Blocco di concentrazione finito
+2808	{1} minuti su {2}. Fai una breve pausa.
+2809	il tuo lavoro
+2810	Blocco finito: {1} minuti registrati. Prenditi cinque minuti.
+2811	Pausa finita. Pronto per un altro blocco?
+2812	Sessione di concentrazione in corso; apri la stanza Concentrazione
+2813	Pausa · allungati, bevi acqua, niente telefono
+2814	In pausa
+2815	Pronto
+2816	{1} · Concentrazione · Mathub
+2817	Concentrazione · Mathub
+2818	Ripassa {1} flashcard in scadenza
+2819	Lezione: {1} ({2})
+2820	Serie di esercizi · {1}
+2821	Scrivi la bozza del prossimo testo di WRIT 101
+2822	minuti di concentrazione oggi
+2823	{1} questa settimana ·
+2824	cambia obiettivo
+2825	Quando vuoi tu
+2826	su {1} oggi
+2827	{1?sessioni:sessione} oggi
+2828	Un altro blocco
+2829	Pausa di 5 minuti
+2830	Torna a Oggi
+2831	Blocco completato
+2832	Sessione interrotta
+2833	es. serie sulla regola della catena
+2834	Minuti personalizzati
+2836	Quanto tempo?
+2837	Personalizzato
+2838	Da 5 a 180 min
+2839	Inizia a concentrarti
+2840	Suoni
+2841	Schermo intero
+2842	Spazio mette in pausa. Esci da questa pagina e una pillola tiene il tempo; torna quando vuoi.
+2843	Salta la pausa
+2844	Ferma
+2845	Timer avviato. Apro {1}…
+2846	la lezione
+2847	il tuo compito
+2848	Fermare questa sessione? I minuti fatti finora vengono registrati.
+2849	I suoni per concentrarsi sono nella bolla in basso a destra.
+2850	Lo schermo intero non è disponibile qui.
+2851	Obiettivo giornaliero di concentrazione in minuti:
+2852	Un compito, un timer, niente telefono.
+2853	Mathub · stanza della concentrazione
+2904	Leggi gli appunti: {1} {2}
+2905	Esercitati su {1} ({2} {2|argomento|argomenti}{3|})
+2906	Flashcard: unità {1}
+2907	Ripasso intelligente di tutto finora
+2908	Scorri gli appunti: {1} {2}
+2909	Serie di esercizi di {1}: parte {2} di {3}
+2910	Ripasso intelligente: gli argomenti più deboli
+2911	Riscrivi il formulario a memoria
+2912	Flashcard: tutto quello che c’è all’esame
+2913	Completa la checklist di preparazione per {1}
+2914	Smetti alle 21. Dormire batte studiare all’ultimo.
+2915	Serie a tempo in modalità esame su {1} argomenti
+2916	Scegli un esame e i giorni in cui puoi studiare. Il pianificatore distribuisce argomenti, flashcard ed esercizi su quei giorni come una checklist.
+2918	Appunti, esercizi e mazzi assegnati a giorni precisi
+2919	Ripasso finale
+2920	Serie di esercizi, allenamento a tempo, formule e checklist prima dell’esame
+2921	Sincronizzato
+2922	Le spunte ti seguono su tutti i dispositivi
+2923	Nessun esame rimasto in questo semestre. Ottimo lavoro.
+2924	Inizia il
+2925	Giorni di studio
+2926	Rigenera il piano
+2927	Crea il mio piano
+2928	Cancella il piano
+2929	{1} {1|giorno|giorni} a {2}.
+2930	Imposta
+2931	Sostituire il piano attuale? Le spunte verranno azzerate.
+2932	Nessun giorno di studio tra la data di inizio e l’esame. Scegli più giorni.
+2933	Piano creato: {1} attività in {2} giorni
+2934	Eliminare questo piano?
+2935	Nessun piano ancora. Scegli un esame e i giorni di studio qui sopra, poi crealo. Puoi spuntare le attività anche dalla panoramica.
+2936	{1} · {2} giorni di studio
+2937	{1} / {2} fatte
+2938	Spunta le attività qui o nella panoramica. Ricreare il piano azzera le spunte.
+2939	{1} {1|attività in ritardo|attività in ritardo}{2|}
+2940	Giorno di riposo
+2941	non conta
+2942	GPA del semestre
+2943	ritmo da Dean's List
+2944	sotto la soglia di buona posizione (2.00)
+2945	Scegli un voto per almeno un corso.
+2946	crediti valutati{1}
+2947	punti qualità
+2948	· {1} non contano
+2949	Inserisci il GPA e i crediti valutati di prima di questo semestre (sono entrambi nel tuo libretto su MyInfo) per vedere dove arrivi dopo.
+2950	cumulativo dopo questo semestre
+2951	crediti in totale
+2952	variazione da {1}
+2953	Aggiungi qui sopra i voti del semestre per vedere la variazione.
+2954	Imposta un obiettivo qui sopra.
+2955	Senza crediti precedenti, il tuo GPA cumulativo è il GPA di questo semestre. Per finire a
+2956	ti serve una media di
+2957	o più su {1} crediti valutati.
+2958	Le tue scelte attuali ({1}) ti portano lì.
+2959	Le tue scelte attuali danno {1}, mancano {2}.
+2960	Aggiungi prima dei crediti a questo semestre.
+2961	Sei già sopra
+2962	; qualsiasi voto sufficiente in questo semestre ti tiene lì.
+2963	Per arrivare a un cumulativo di
+2964	ti serve un
+2965	in questo semestre su {1} crediti: più o meno
+2966	in ogni corso.
+2967	Le tue scelte attuali danno
+2968	quindi sei in linea.
+2969	quindi ti mancano {1}.
+2970	Un cumulativo di
+2971	è fuori portata in questo semestre (servirebbe un {1}). Anche con tutte A ti servirebbero circa
+2972	{1} crediti in più
+2973	dopo questo semestre, tutti a 4.0.
+2974	Regola pratica: ogni credito a 4.0 alza un {1} di circa {2}.
+2975	Un gradino di voto in ogni corso{1}
+2976	Ora
+2977	Un gradino su
+2978	Un gradino giù
+2979	(cumulativo)
+2980	Calcolatore dei voti:
+2981	usalo
+2982	Inserisci i punteggi nel calcolatore dei voti di {1}
+2983	per stimare questo voto.
+2984	Nome del corso
+2985	Crediti
+2986	P / W (non contano)
+2987	Ancora nessun corso. Aggiungine uno qui sotto.
+2988	GPA del semestre, GPA cumulativo e cosa serve per raggiungere un obiettivo, sulla scala 4.0 della Montana State.
+2989	GPA del semestre, GPA cumulativo e cosa serve per raggiungere un obiettivo, sulla scala 4.0 della Montana State. I tuoi corsi e crediti sono già inseriti; le lettere vengono dal calcolatore dei voti di ogni corso quando ci hai inserito dei punteggi.
+2990	Ripristina i miei corsi
+2991	Questo semestre
+2992	Punti
+2993	Punti = crediti × valore del voto. P, W e I non contano.
+2994	GPA cumulativo
+2995	prima + questo semestre
+2996	GPA prima di questo semestre
+2997	Crediti valutati prima di questo semestre
+2998	Raggiungi un obiettivo
+2999	GPA cumulativo che voglio
+3000	Come lo calcola la MSU
+3001	GPA = punti qualità ÷ crediti valutati. Un corso da 4 crediti lo sposta quattro volte più di uno da 1 credito.
+3002	La Dean's List richiede un GPA del semestre di {1} su {2}+ crediti valutati; la buona posizione è {3} cumulativo.
+3003	Promosso/bocciato, ritiri e incompleti non danno punti. Ripetere un corso sostituisce il tentativo precedente nel GPA cumulativo.
+3004	Questi numeri sono stime; il dato ufficiale è nel libretto su MyInfo. Salvato in questo browser.
+3005	input, select
+3006	Ripristina i tuoi corsi e i voti stimati
+3007	La risposta o la soluzione è sbagliata
+3008	Refuso o problema di formattazione
+3009	La domanda o l’appunto non è chiaro
+3010	Qualcosa non ha funzionato
+3011	Un link non funziona o è cambiato
+3012	Suggerisci una risorsa
+3013	Segnala un problema con questo
+3014	Segnala un problema
+3015	Cosa c’è che non va?
+3016	Raccontaci di più
+3017	Invia la segnalazione
+3018	Cosa ti aspettavi invece?
+3019	Includi la mia risposta ({1})
+3020	Inviata con il tuo account, così possiamo risponderti nella posta in arrivo.
+3021	Inviata in forma anonima. Accedi se vuoi una risposta.
+3022	Invio…
+3023	Invio non riuscito.
+3024	Grazie, la segnalazione è arrivata. {1}
+3025	Anche altri l’hanno segnalato.
+3026	Le guardiamo tutte.
+3027	Impossibile inviare la segnalazione. Sei online?
+3028	(display-mode: standalone)
+3048	su Mathub
+3049	Togli dai salvati
+3050	Salva per dopo
+3051	{1} min di lettura
+3052	Il miglior aiuto gratuito per ogni corso, in campus e online.
+3053	{1} I link si aprono in una nuova scheda; se uno è cambiato, tocca la sua bandierina. Le risorse salvate seguono il tuo account.
+3054	Se un link è cambiato, tocca la sua bandierina.
+3055	Cerca risorse (es. video, citazioni, tutoraggio)
+3056	Cerca risorse
+3057	Tutto quello che hai fissato, in tutti i corsi.
+3058	Ancora niente di salvato. Fissa una risorsa e apparirà qui su ogni dispositivo.
+3059	Tutte le {1} guide
+3060	Link
+3061	Nessuna risorsa corrisponde. Prova un’altra parola o suggeriscine una.
+3062	Ancora niente qui.
+3063	Salvato. Lo trovi in Salvati su qualsiasi dispositivo.
+3064	Tolto dai salvati.
+3065	Incolla il link e di’ a cosa serve.
+3066	Guide brevi e pratiche scritte per questi corsi.
+3067	Mathub · guide allo studio
+3068	Tutte le guide
+3070	Altre guide
+3071	Rileggi, conta lo stesso
+3072	Segna come letta · +5 XP
+3073	Bene. {1} guide lette su {2}.
+3074	Già contata. Ma rileggerla fa bene.
+3075	I miei corsi
+3076	{1} guide su studio, esami, concentrazione, scrittura e codice, ognuna sotto i sei minuti. Leggine una e usa una cosa questa settimana.
+3077	Studia meglio
+3078	Richiesto
+3079	In costruzione
+3080	Su Mathub
+3081	Non per ora
+3082	Impossibile raggiungere il server.
+3083	Il file è troppo grande per il server.
+3084	La richiesta non è andata a buon fine.
+3085	Autunno
+3086	Primavera
+3087	Estate
+3088	Non trovi il tuo corso? Invia il codice e il programma e lo creiamo: appunti, esercizi, calendario e calcolatore dei voti.
+3092	Accedi per richiedere un corso
+3093	Le richieste sono per gli studenti della Montana State, così possiamo avvisarti quando il corso è pronto. Ci vuole un minuto con la tua email montana.edu.
+3094	es. CHMY 121
+3095	es. Introduction to General Chemistry
+3096	Facoltativo
+3097	Incolla il calendario, le date degli esami e i criteri di valutazione
+3098	Facoltativo: quale sezione, cosa ti serve di più (esami di prova, un formulario…)
+3099	Quale corso?
+3100	Codice del corso
+3101	Come lo scrive la MSU: sigla e numero.
+3102	Nome del corso
+3103	Periodo
+3104	Docente
+3105	Il programma
+3106	Creiamo ogni corso dal suo programma: calendario, date degli esami e valutazione. Scaricalo da Canvas e allegalo qui. Se qualcuno l’ha già inviato, puoi saltare questo passaggio.
+3107	Scegli il file del programma
+3109	Niente file? Incolla il testo del programma
+3110	Testo del programma
+3111	Altro?
+3113	Invia la richiesta
+3114	Le tue richieste
+3115	Come funziona
+3116	Invia il codice e il programma.
+3118	Creiamo il corso.
+3119	Appunti per argomento, domande di esercizio, flashcard, il calendario e un calcolatore dei voti, scritti con parole nostre.
+3120	Ti avvisiamo.
+3121	La posta in arrivo ti dice quando iniziamo e quando è pronto.
+3122	I file dei programmi arrivano solo agli amministratori di Mathub e non vengono mai pubblicati. I corsi con più richieste e un programma vengono creati per primi.
+3123	I più richiesti
+3124	{1} {1|studente|studenti}{2|} · {3}
+3125	programma ricevuto
+3126	serve il programma
+3127	Anch’io
+3128	Ancora nessuna richiesta. Sii il primo.
+3129	· programma incollato
+3130	· nessun programma allegato
+3131	· {1} studenti l’hanno chiesto
+3132	Ritira
+3133	Non hai ancora richiesto nessun corso.
+3134	Non sembra un codice di corso. Prova qualcosa come CHMY 121.
+3135	{1} è già su Mathub.
+3136	Lo registreremo come
+3137	I file possono arrivare a {1} MB.
+3138	Quel corso è già su Mathub.
+3139	Inserisci prima il codice del corso.
+3141	Spunta la casella sul programma.
+3142	Richiesta inviata per {1}{2}
+3143	. L’hanno chiesto {1} studenti.
+3144	. Ti avviseremo nella posta in arrivo quando cambia qualcosa.
+3145	Ritirare questa richiesta? Il programma che hai inviato viene eliminato.
+3146	Richiesta ritirata.
+3147	Aggiunto il tuo voto per {1}: ora sono {2} studenti.
+3148	Non trovi il tuo corso? Richiedilo
+3149	Escludi prima le opzioni che descrivono un’altra struttura, un altro processo o un’altra idea.
+3150	\lt
+3151	\gt
+3152	una virgoletta non è chiusa in: {1}
+3153	"{1}" inatteso in: {2}
+3154	atteso "{1}" in: {2}
+3155	l’espressione finisce troppo presto: {1}
+3156	nome sconosciuto "{1}" in: {2}
+3157	domanda a tabella: "{1}" non è una delle sue colonne
+3158	domanda a tabella: nessuna riga ha le colonne che servono a questa domanda
+3159	"{1}" non può essere un nome di variabile
+3160	una domanda calcolata ha bisogno di almeno una variabile in "vars"
+3161	a calc answer must be a number; use calc-mc for words
+3162	no values satisfied the conditions after 300 tries; loosen "where" or the ranges
+3163	the distractors kept matching the answer; check their expressions
+3164	unknown question type "{1}"
+3165	empty question
+3166	fewer than two options
+3167	answer missing from options
+3168	answer is not a number
+3169	bad type
+3170	Formule e termini chiave
+3171	Montana State University
+3172	Materiali del corso su Canvas
+3173	This is not a class pack: the file should hold one JSON object.
+3174	"format" should be "{1}".
+3175	"version" should be 1.
+3176	"id" must be letters then a course number, all lowercase, like chmy121 or m273 (got "{1}").
+3177	"{1}" is a built-in class.
+3178	"{1}" is required.
+3179	"short" is long; it is the label in the sidebar switcher, so keep it under about 12 characters.
+3180	Unknown key "{1}" is ignored.
+3181	"color.light" must be a hex colour like #0F766E.
+3182	The light colour {1} is pale for white text (contrast {2}:1); dark text will be used on it. A deeper shade reads better.
+3183	"color.dark" must be a hex colour.
+3184	"archetype" needs a name and one of the icon names; the default is used.
+3185	"SECTIONS" needs at least one topic.
+3186	SECTIONS[{1}] needs an id of letters, digits, dashes or dots.
+3187	Section id "{1}" is used twice.
+3188	Section "{1}" needs a title.
+3189	Section "{1}" is in unit {2}, which is not in UNITS.
+3190	Section "{1}" has no notes ("ideas").
+3191	"UNITS" needs at least one unit.
+3192	Every unit needs a number "n".
+3193	Unit {1} lists section "{2}", which does not exist.
+3194	EXAMS[{1}] needs an id.
+3195	Exam id "{1}" is used twice.
+3196	Exam "{1}" needs a real date as YYYY-MM-DD.
+3197	Exam "{1}" endDate must be YYYY-MM-DD.
+3198	Exam "{1}" covers section "{2}", which does not exist.
+3199	Exam "{1}" covers unit {2}, which does not exist.
+3200	Exam "{1}" needs a name.
+3201	"VARIANTS" needs options.
+3202	"VARIANTS.default" must be one of its options.
+3203	Variant id "{1}" must be letters or digits.
+3204	"CALENDAR" is empty: the calendar, Today and the current topic will be blank.
+3205	CALENDAR[{1}] must be ["YYYY-MM-DD", type, title, sectionId?, variantId?].
+3206	CALENDAR[{1}] type "{2}" must be one of {3}.
+3207	CALENDAR[{1}] needs a title.
+3208	CALENDAR {1} points to section "{2}", which does not exist.
+3209	CALENDAR {1} is tagged for variant "{2}", which is not in VARIANTS.
+3210	Exam "{1}" {2} has variant "{3}", which is not in VARIANTS.
+3211	Exam "{1}" date for "{2}" must be YYYY-MM-DD.
+3212	"GRADING.categories" is required (the grade calculator and GPA use it).
+3213	Every grading category needs an id.
+3214	Grading weights add to {1}, not 100.
+3215	Grading option "{1}" weights "{2}", which is not a category.
+3216	"GRADING.scale" (letter cut-offs) is required.
+3217	FLASHCARDS[{1}] needs an id.
+3218	Flashcard id "{1}" is used twice.
+3219	Flashcard "{1}" needs a front (f) and a back (b).
+3220	Flashcard "{1}" points to section "{2}", which does not exist.
+3221	Flashcard "{1}" has unit {2}, which does not exist.
+3222	FORMULAS[{1}] needs a group name and items.
+3223	A formula in "{1}" needs a name (n) and one of t (TeX), d (definition) or c (code).
+3224	PRACTICE "{1}" is not an exam id.
+3225	PRACTICE "{1}" needs problems.
+3226	PRACTICE "{1}" problem {2} needs a number n.
+3227	PRACTICE "{1}" problem {2} needs a question (q) and a solution (s).
+3228	CHECKLISTS "{1}" is not an exam id.
+3229	NAV item "{1}" is not available to uploaded classes and is left out.
+3230	resources[{1}] needs a title (t) and a link (u).
+3231	resources[{1}] link is not http, https or a Mathub path, so it is left out.
+3232	No "QUIZ": the class gets no quizzer, daily challenge or mock exams.
+3233	"QUIZ.topics" is empty.
+3234	Quiz topic "{1}" must be letters, digits or dashes.
+3235	Quiz topic "{1}" is in unit {2}, which does not exist.
+3236	Quiz topic "{1}" points to section "{2}", which does not exist.
+3237	Quiz topic "{1}" needs a label.
+3238	QUIZ.questions[{1}] ({2}, {3})
+3239	no topic
+3240	{1}: topic "{2}" is not in QUIZ.topics.
+3241	{1}: "items" is empty.
+3242	{1} item {2}: use [prompt, correct, [wrong answers], explanation, hint?].
+3243	{1} item {2}: a wrong answer repeats the correct one.
+3244	{1} item {2}: no explanation.
+3245	{1}: needs columns, rows and asks.
+3246	{1}: fewer than 3 rows leaves too few wrong answers.
+3247	{1}: needs a prompt and an answer expression.
+3248	{1}: calc-mc needs distractor expressions.
+3249	{1}: no explanation.
+3250	{1}: needs prompt, answer and distractors.
+3251	{1}: type must be bank, table, calc, calc-mc or mc.
+3252	Quiz topic "{1}" has no questions.
+3253	QUIZ.questions[{1}] ({2}): {3}
+3254	Non è stato possibile creare il quiz:
+3255	background:linear-gradient(135deg,{1} 0%,{2} 100%)
+3256	packs/index.json
+3257	packs/
+3258	Link per {1}: il sito del corso, letture gratuite ed esercizi.
+3259	Quiz di {1} su Mathub
+3260	Domande su ogni argomento, con spiegazioni.
+3261	Questo file del corso non corrisponde al corso.
+3263	Sei offline e questo corso non è ancora stato salvato su questo dispositivo.
+3303	input, textarea
+3304	Crea un foglio di una pagina con le formule e gli appunti che cerchi sempre, poi stampalo. Prepararlo è già studiare.
+3305	Questo corso non ha ancora formule o appunti da scegliere.
+3306	Suggerisci per il prossimo esame
+3307	Stampa / PDF
+3308	Filtra (catena, momento, limite…)
+3309	Una per riga. Il TeX funziona tra simboli del dollaro: $\frac{dy}{dx}$
+3310	Titolo del foglio
+3311	Scegli le righe
+3312	Trappole
+3313	Cancella tutto
+3314	Le tue righe
+3315	Colonne
+3316	Dimensione
+3317	bigino
+3318	Nessun risultato.
+3319	Scegli le righe a sinistra. Il foglio si riempie qui.
+3320	Nessun esame in arrivo per cui suggerire.
+3321	Aggiunte le formule per {1}. Togli quello che sai già.
+3322	Clicca per togliere questa evidenziazione
+3323	panel mynotes
+3324	Con parole tue: cosa ti è diventato chiaro, cosa chiedere al ricevimento, l’errore che continui a fare.
+3325	Seleziona un testo qui sopra e tocca Evidenzia. Le evidenziazioni compaiono in
+3326	Tutti i miei appunti
+3327	Privati, sincronizzati con il tuo account
+3328	Salvataggio…
+3329	Evidenzia
+3330	Evidenziato. È salvato con i tuoi appunti.
+3331	Togliere questa evidenziazione?
+3332	Tutto quello che hai scritto ed evidenziato in questo corso, per argomento.
+3333	Esporta il testo
+3334	Apri l’argomento
+3335	Evidenziazioni
+3336	Ancora niente. Apri un argomento negli appunti per sezione, scrivi nel riquadro I miei appunti in fondo, oppure seleziona del testo e tocca Evidenzia.
+3354	Una settimana tranquilla.
+3355	Ogni serie inizia con un giorno. Apri Oggi e fai tre flashcard.
+3356	Inarrestabile.
+3357	{1} giorni su 7. Ecco come si vede un voto alto da dentro.
+3358	Obiettivo stracciato.
+3359	{1} XP su un obiettivo settimanale di {2}. Alza l’obiettivo giornaliero nelle Impostazioni se è stato facile.
+3360	Costante.
+3361	{1} giorni di studio. La costanza batte l’intensità, e tu l’hai avuta.
+3362	Preciso.
+3363	{1}% su {2} domande. È ora di provare argomenti più difficili o un Blitz.
+3364	Lavoro profondo.
+3365	{1} minuti di concentrazione. Tempo vero e registrato, non sensazioni.
+3366	Un inizio.
+3367	{1} {1|giorno|giorni}{2|} questa settimana. Altri due la prossima e raddoppi.
+3368	LA MIA SETTIMANA ·
+3369	XP guadagnati
+3370	giorni di studio
+3371	minuti di concentrazione
+3372	flashcard ripassate
+3373	mathub.space · spazio di studio gratuito per i corsi della Montana State
+3375	La mia settimana su Mathub
+3376	{1} XP, {2} giorni di studio, {3} domande su Mathub questa settimana.
+3377	Salvata come immagine. Pubblicala o mandala a un amico che ha bisogno di una spinta.
+3378	La tua settimana · {1}
+3379	{1} {1|giorno|giorni}{2|} di studio.
+3381	Questa è un’abitudine, non uno sprint.
+3382	Ogni punto è un giorno per cui il te del futuro ti ringrazierà.
+3383	Apri Oggi e fai tre flashcard per accendere il primo punto.
+3384	{1} Obiettivo settimanale: {2}{3}.
+3385	Giorno migliore: {1} con {2} XP.
+3386	Ancora nessun XP questa settimana.
+3387	· raggiunto
+3388	{1}% giuste
+3389	Più esercitato: {1}
+3390	Qui contano serie di esercizi, lezioni, la sfida del giorno e il Blitz.
+3391	La maggior parte del tempo è andata a
+3392	Flashcard e concentrazione
+3393	flashcard ripassate
+3394	{1} ore registrate, con il telefono lontano.
+3395	Registra tempo nella stanza Concentrazione e comparirà qui.
+3396	Le flashcard giuste torneranno più avanti; quelle sbagliate tornano domani.
+3397	giorni di serie in questo momento
+3398	Condividi questa settimana
+3399	Pianifica la prossima settimana
+3400	La settimana scorsa
+3401	Tocca, scorri o usa le frecce. Tieni premuto per mettere in pausa. I numeri vengono da questo dispositivo e dal tuo account.
+3402	a, button
+3403	blur(6px)
+3404	blur(10px)
+3405	blur(4px)
+3406	Sette giorni, in numeri di cui andare fiero.
+3407	La tua settimana è pronta
+3408	{1} XP · {2} {2|giorno|giorni}{3|} · {4} domande
+3409	Guardala
+3423	Big Sky
+3424	Luminoso e cordiale: ogni corso ha il suo colore, Bo sulla montagna
+3425	Regno
+3426	Pergamena, rune e dadi
+3427	Bobcat
+3428	Blu e oro della MSU
+3429	Carta
+3430	Caldo e riposante per gli occhi
+3431	Verdi tranquilli
+3432	Mezzanotte
+3433	Una modalità scura più profonda
+3434	0px 0px -8% 0px
+3435	..oo....
+3436	..oko...
+3437	..okfo..
+3438	..oooooo
+3439	..xxx..
+3440	..oooo..
+3441	..rr...
+3442	..ryr..
+3443	..oooo
+3444	..oyyy
+3445	...oyy
+3446	....oy
+3447	...ooo
+3448	..obbb
+3449	...yYy...
+3450	..yyYyy..
+3451	..yy.yy..
+3452	..xxxxxxx..
+3453	...xx.xx...
+3454	ooooooooo.
+3455	...ooo...
+3456	...oco...
+3457	..ogggo..
+3458	..ooooo..
+3459	oBBBBBBBo.
+3460	oBBwwwBBo.
+3461	......oo......
+3462	....oooooo....
+3463	.....ooooo.
+3464	....ooWWWoo
+3465	....oWWooWo
+3466	....oWWoooo
+3467	...ooWWo...
+3468	...oWWoo...
+3469	...oWWo....
+3470	ooooWWo....
+3471	oWoWWoo....
+3472	ooWWWo.....
+3473	...oooooooo...
+3474	........oooo..
+3475	......oooGGo..
+3476	......oBGGGo..
+3477	...ooooBGooo..
+3478	..ooRRoBRRoo..
+3479	..oooooooooo..
+3481	Fatto a mano con
+3482	a Bozeman
+3483	0101010110ABCDEF∑∫∂πλΔ√∞≈≠±θΩμσφ
+3484	mjx-container, .MathJax, input, textarea, select
+3485	~/mathub
+3486	~/realm
+3487	✓ {1} ms
+3488	cd ~
+3489	unrolling {1} scroll{2}…
+3490	resolving {1} module{2}…
+3491	✓ {1}.js
+3492	the tome is open.
+3493	ready.
+3494	Trucco accettato. Vale esattamente 0 XP.
+3495	Trucco accettato. Hai fatto 20 naturale su una prova che vale 0 XP.
+3524	Voce di sistema
+3525	La voce si è fermata (
+3526	). Premi play per continuare.
+3527	Questo browser non sa leggere ad alta voce. Puoi comunque leggere qui sotto.
+3528	Finito “{1}” · +20 XP
+3529	Paragrafo precedente
+3530	Paragrafo successivo
+3531	Scorri fino alla frase letta
+3532	Voce
+3533	Riascolta
+3534	Finito
+3535	Paragrafo {1} di {2} · circa {3} min rimasti
+3536	di {1} · circa {2} min
+3537	· finito
+3538	{1} domande di discussione
+3539	I testi distribuiti per il Progetto 1, come audiolibri da seguire. Il browser li legge ad alta voce una frase alla volta, evidenzia mentre legge e ricorda dove ti sei fermato. Ogni paragrafo vale 1 XP; finire una lettura, 20.
+3540	{1} di {2} finiti
+3541	Ogni lettura resta protetta dal diritto d’autore del suo autore ed è qui solo per gli studenti di questo corso. La voce viene dal tuo dispositivo, quindi suona diversa su Chrome, Safari ed Edge; scegli un’altra voce dal menu del lettore.
+3542	I testi completi sono per i membri
+3543	Queste letture sono state distribuite a lezione. Iscriviti con la tua email montana.edu per leggerle e ascoltarle tutte.
+3545	Tutte le letture
+3546	{1} · {2} · circa {3} min
+3547	Questa è l’anteprima
+3548	Iscriviti con la tua email montana.edu per leggere e ascoltare tutto il testo.
+3549	Pensaci
+3550	per il tuo quaderno
+3551	Segna come finito
+3552	Ricomincia
+3553	Iscriviti per ascoltare. Il lettore legge tutto il testo ad alta voce e lo segue.
+3554	Scorrimento automatico attivo
+3555	Scorrimento automatico disattivato
+3556	Torna all’inizio
+3557	frac tfrac dfrac theta tau times tan tanh text textbf textit textrm to top triangle tilde beta bar binom big bigg bigl bigr bigcup bigcap bmod boxed nu neq ne nabla neg not notin ni rho right rightarrow rangle rm rfloor rceil rvert forall flat
+3558	:null
+3559	sqrt($1)
+3561	{1} sum (n = {2}) {3}
+3563	Right
+3564	Midpoint
+3565	Trapezoid
+3566	area ≈ {1}
+3567	all of them
+3568	A drawing
+3569	Graph of
+3570	for x from {1} to {2}
+3571	; points
+3572	; shaded{1}{2}
+3573	from x = {1}
+3574	; dashed line{1} at x =
+3575	; tangent line at x = {1}, slope {2}
+3576	; secant line from x = {1} to {2}, slope {3}
+3577	; {1} Riemann sum with {2} {3} from {4} to {5}, sum {6}
+3578	; slider{1} for
+3579	{1} (now {2}, from {3} to {4})
+3580	Number line
+3581	; points at
+3582	(open)
+3583	Figure:
+3584	Unit circle
+3585	with the angles
+3586	at {1}: cos = {2}, sin = {3}
+3587	Table
+3588	Histogram
+3589	Bar chart
+3590	Pie chart:
+3591	Scatter plot of {1} points{2}{3}{4}
+3592	({1} and {2})
+3593	; least-squares line ŷ = {1} {2} {3}x{4}
+3594	; at x = {1} it predicts {2}
+3595	Box plot{1}:
+3596	{1}min {2}, Q1 {3}, median {4}, Q3 {5}, max {6}
+3597	, outliers
+3598	Normal curve, mean {1}, standard deviation {2}{3}
+3599	, both tails shaded beyond {1}
+3600	, shaded {1} {2}
+3601	Probability tree:
+3602	Venn diagram of
+3603	; shaded:
+3604	Flow chart:
+3605	; from step {1} back to step {2}{3}
+3606	Cambia i numeri nel disegno
+3607	Non è stato possibile mostrare questo disegno.
+3608	Parabola
+3609	Cubica
+3610	sin(x)
+3611	sin x
+3612	cos(x)
+3613	ln(x)
+3614	ln x
+3615	Esame 1 n. 15a
+3616	sqrt(2x-1)
+3617	Esame 1 n. 15b: √(2x−1)
+3618	Esame 1 n. 15c: 9/(2−x)
+3619	5 + sqrt(x)
+3620	Esame 1 n. 5: 5+√x
+3621	Esame 1 n. 6: |2t−1|
+3622	Esame 1 n. 11 (buco in 5)
+3623	sin(x)/x
+3624	sin x / x
+3625	arctan(x)
+3626	arctan x
+3627	Grafico
+3628	Scrivi qualsiasi funzione. Trascina per spostarti, usa la rotellina per lo zoom, clicca sul grafico per spostare il punto a. La retta tangente è la derivata resa visibile; la secante è il tasso di variazione medio.
+3629	Usa ^ per le potenze, sqrt, abs o |…|, sin, cos, tan, e^x, ln, log, pi.
+3630	Esempi
+3631	Scegli…
+3632	Punto a
+3633	Secondo punto b (secante)
+3634	Tangente in a
+3635	Secante a→b
+3636	Mostra f′
+3637	Mostra f″
+3638	Ripristina la vista
+3639	In x = a
+3640	AV[a,b]
+3641	ha una tangente orizzontale (f′ = 0)
+3642	è crescente (f′ > 0)
+3643	è decrescente (f′ < 0)
+3644	e f″ ≈ 0 (possibile punto di flesso)
+3645	e concava verso l’alto (f″ > 0)
+3646	e concava verso il basso (f″ < 0)
+3647	In
+3648	La retta tangente è L(x) = {1} + {2}(x − {3}){4}
+3649	; sta sotto la curva, quindi sottostima f lì vicino.
+3650	; sta sopra la curva, quindi sovrastima f lì vicino.
+3651	La secante da a a b = {1} ha pendenza AV = {2}, il tasso di variazione medio.
+3652	f non è definita in questo a.
+3653	Laboratori
+3654	Tabella dei limiti
+3655	Rapporto incrementale
+3656	Somme di Riemann
+3657	Derivata dai dati
+3658	Tasso di variazione medio
+3659	Esperimenti numerici come i laboratori del corso. Scrivi una funzione, premi Calcola e leggi lo schema.
+3660	Calcola
+3661	I risultati appaiono qui.
+3662	Prova (sqrt(x+7)-3)/(x-2) in 2, o (x+4)/x in 0.
+3663	x → a, con a =
+3664	Guarda $\dfrac{f(a+h)-f(a)}{h}$ stabilizzarsi per $h \to 0$. Quel limite è $f'(a)$.
+3665	Disegna
+3666	Somma sinistra Lₙ
+3667	Somma destra Rₙ
+3668	Somma del punto medio Mₙ
+3669	Trapezi
+3670	Esattamente il problema 17 dell’Esame 1: stima $f'(t)$ da una tabella con differenze in avanti, all’indietro e centrate.
+3671	Valori di t (separati da virgole)
+3672	Valori di f(t)
+3673	a deve essere un numero.
+3674	Illimitata
+3675	I valori esplodono vicino a $x = {1}$: un asintoto verticale, quindi $\lim_{x\to {2}} f(x)$ non esiste (scrivi $+\infty$ o $-\infty$ per ogni lato).
+3676	Il limite esiste
+3677	Entrambi i lati si avvicinano a ${1}$, quindi $\lim_{x\to {2}} f(x) \approx {3}$. {4}
+3678	Siccome $f({1}) = {2}$ coincide, $f$ è continua lì.
+3679	Nota che $f({1}) = {2}$ è diverso: una discontinuità eliminabile.
+3680	$f({1})$ non è definita (un buco), ma il limite esiste comunque.
+3681	Non esiste
+3682	Limite sinistro $\approx {1}$, limite destro $\approx {2}$. Sono diversi, quindi il limite bilatero non esiste (un salto).
+3683	Da sinistra (x → a⁻)
+3684	Da destra (x → a⁺)
+3685	f(a) non è definita; la derivata lì non esiste.
+3686	I rapporti incrementali da entrambi i lati tendono a
+3687	$f'({1}) \approx {2}$
+3688	. Ogni riga è la pendenza di una secante per $({1}, {2})$ e un punto vicino; il limite è la pendenza della tangente.
+3689	Servono numeri con a < b e n ≥ 1.
+3690	Valore di riferimento (Simpson, 2000 intervalli):
+3691	. Δx = {1}. La somma {2} disegnata si discosta di {3}. {4}
+3692	Sinistra L
+3693	Destra R
+3694	Punto medio M
+3695	Trapezio T
+3696	Aumenta n e guarda tutte le somme convergere allo stesso numero: quello è l’integrale definito.
+3697	f(mid)
+3698	Inserisci lo stesso numero di valori di t e di f (almeno due).
+3699	In avanti
+3700	All’indietro
+3701	Centrata
+3702	In avanti: $\frac{f(t_{i+1})-f(t_i)}{t_{i+1}-t_i}$. All’indietro: $\frac{f(t_i)-f(t_{i-1})}{t_i-t_{i-1}}$. Centrata (di solito la migliore): $\frac{f(t_{i+1})-f(t_{i-1})}{t_{i+1}-t_{i-1}}$. Agli estremi esistono solo stime unilaterali. Metti sempre le unità: (unità di f) per (unità di t).
+3703	Servono due numeri a e b diversi.
+3704	AV[{1}, {2}]
+3705	$AV_{[{1},{2}]} = \dfrac{f({3}) - f({4})}{{5} - {6}} = \dfrac{{7} - {8}}{{9}} = {10}$. Retta secante: $y = {11} + {12}(x - {13})$. Per confronto, i tassi istantanei sono $f'({14}) \approx {15}$ e $f'({16}) \approx {17}$.
+3706	Guardalo nel grafico
+3707	con la secante attiva.
+3708	\ln x
+3709	y = ln x
+3710	\sin x
+3711	y = sin x
+3712	\cos x
+3713	y = cos x
+3714	{1} tranne x = {2}
+3715	tranne x =
+3716	tranne y =
+3717	comprimi in orizzontale di un fattore {1}
+3718	allunga in orizzontale di un fattore {1}
+3719	allunga in verticale di {1}
+3720	comprimi in verticale di {1}
+3721	Nessuna trasformazione: questa è la funzione madre.
+3722	\left|{1}\right|
+3723	\ln{1}
+3724	\sin{1}
+3725	\cos{1}
+3726	Esploratore di funzioni
+3727	Scegli una funzione madre e muovi i quattro cursori di y = a·f(b(x − h)) + k. La curva tratteggiata è la madre; quella piena è il risultato. Dominio, codominio e una descrizione a parole si aggiornano mentre muovi.
+3728	Funzione madre f(x)
+3730	Esame 1 n. 10
+3731	Esame 1 n. 11
+3732	Sinusoide
+3733	Risultato
+3734	Allungamento verticale a
+3735	Fattore orizzontale b
+3736	Traslazione orizzontale h
+3737	Traslazione verticale k
+3738	punto di ancoraggio
+3739	Dominio
+3740	Immagine
+3741	Partendo da
+3742	Attenzione: il fattore b si applica a (x − h), quindi la traslazione è h, non bh.
+3743	\tfrac12
+3744	\sqrt3
+3745	Circonferenza unitaria e triangoli
+3746	Trascina l’angolo sulla circonferenza unitaria per vedere angoli di riferimento, segni nei quadranti e valori esatti. Risolvi qualsiasi triangolo rettangolo o qualunque e guarda quale teorema ha fatto il lavoro.
+3747	Risolutore di triangoli rettangoli
+3748	Risolutore con teorema dei seni / del coseno
+3749	Angolo θ (gradi) =
+3750	A questo angolo
+3751	Triangolo rettangolo
+3752	Inserisci due dei quattro valori (almeno un lato). θ è l’angolo acuto opposto al lato "opp".
+3753	θ (gradi)
+3754	Due lati
+3755	Scala, 68°
+3756	Triangolo qualsiasi
+3757	Il lato a è opposto all’angolo A, e così via. Inserisci tre valori di cui almeno un lato (LLL, LAL, ALA, AAL o LLA).
+3758	LLA (due triangoli)
+3759	cos θ
+3760	sin θ
+3761	{1}° = {2} rad = {3}
+3762	Quadrante
+3763	Angolo di riferimento
+3764	tan θ
+3765	Valori esatti: $\sin\theta = {1},\ \cos\theta = {2},\ \tan\theta = {3}$. {4}
+3766	Quadrante {1}: {2}.
+3767	tutto positivo
+3768	seno positivo, coseno e tangente negativi
+3769	tangente positiva, seno e coseno negativi
+3770	coseno positivo, seno e tangente negativi
+3771	Non è un angolo notevole: niente forma esatta con radicali. Il punto sulla circonferenza unitaria è (cos θ, sin θ) e tan θ = sin θ / cos θ.
+3772	Inserisci due valori.
+3773	Inserisci almeno un lato.
+3774	θ deve essere tra 0 e 90.
+3775	opp = hyp·sin θ = {1}
+3776	adj = hyp·cos θ = {1}
+3777	hyp = opp / sin θ = {1}
+3778	adj = opp / tan θ = {1}
+3779	hyp = adj / cos θ = {1}
+3780	opp = adj·tan θ = {1}
+3781	hyp = √(opp² + adj²) = {1}
+3782	θ = tan⁻¹(opp/adj) = {1}°
+3783	L’ipotenusa deve essere il lato più lungo.
+3784	adj = √(hyp² − opp²) = {1}
+3785	θ = sin⁻¹(opp/hyp) = {1}°
+3786	opp = √(hyp² − adj²) = {1}
+3787	θ = cos⁻¹(adj/hyp) = {1}°
+3788	Verifica: {1}² + {2}² = {3} ≈ {4}² = {5} ✓
+3789	altro angolo
+3790	Area = ½·a·b·sin C = {1}
+3791	Triangolo {1} di {2} (caso ambiguo)
+3792	Soluzione ({1})
+3793	Inserisci tre valori.
+3794	Serve almeno un lato (gli angoli da soli fissano solo la forma).
+3795	Gli angoli devono essere tra 0° e 180°.
+3796	Due angoli devono sommare meno di 180°.
+3797	Questi lati violano la disuguaglianza triangolare.
+3798	LLL, teorema del coseno
+3799	cos C = (a² + b² − c²)/(2ab) = {1} ⇒ C = {2}°
+3800	cos A = (b² + c² − a²)/(2bc) ⇒ A = {1}°
+3801	LAL, teorema del coseno e poi dei seni
+3802	{1}² = {2}² + {3}² − 2·{4}·{5}·cos {6} = {7} ⇒ {8} = {9}
+3803	sin {1} = {2}·sin {3} / {4} ⇒ {5} = {6}°
+3804	Nessun triangolo: {1}·sin {2} / {3} = {4} > 1.
+3805	LLA, teorema dei seni
+3806	sin {1} = {2}·sin {3} / {4} = {5} ⇒ {6} = {7}°{8}
+3807	(il supplementare della prima soluzione)
+3808	(o il suo supplementare: vedi Triangolo 2)
+3809	{1} = {2}·sin {3} / sin {4} = {5}
+3810	AAL/ALA, teorema dei seni
+3811	{1} = {2}·sin {3} = {4}
+3812	adj = {1}
+3813	opp = {1}
+3814	hyp = {1}
+3815	Proiettili e moto
+3816	Guarda separarsi i due assi del moto di un proiettile, oppure scrivi una funzione posizione e leggi velocità e accelerazione dai grafici.
+3817	Simulatore di proiettili
+3818	Grafici del moto x(t) → v(t) → a(t)
+3819	Posizione e velocità ogni {1} del volo
+3820	Confronta con l’angolo complementare (90° − θ)
+3821	Lancia
+3822	Riepilogo del volo
+3823	Velocità di lancio v₀ (m/s)
+3824	Angolo θ (° sopra l’orizzontale)
+3825	Altezza di lancio (m)
+3826	Luna 1.62 · Marte 3.71
+3827	Tempo di volo
+3828	Altezza massima
+3829	{1} m a t = {2} s
+3830	Velocità d’impatto
+3831	Angolo d’impatto
+3832	{1}° sotto l’orizzontale
+3833	Gittata a {1}°
+3834	Orizzontale: $x = {1}\,t$ (nessuna accelerazione). Verticale: $y = {2} + {3}\,t - {4}\,t^2$. {5}{6}
+3835	Su terreno piano le scorciatoie danno $T = 2v_0\sin\theta/g = {1}$ s e $R = v_0^2\sin2\theta/g = {2}$ m.
+3836	Con un punto di lancio rialzato la formula della gittata su terreno piano non vale; il tempo si trova risolvendo la quadratica verticale.
+3837	Angoli complementari hanno la stessa gittata su terreno piano{1}.
+3838	(ma non da un’altezza, come mostra la traiettoria tratteggiata)
+3839	vx (m/s)
+3840	vy (m/s)
+3841	Passa sopra i grafici
+3842	Muovi il mouse su un grafico qualsiasi. Lo stesso istante viene segnato su tutti e tre.
+3843	Posizione in metri in funzione di t in secondi. Prova 5t, 20t - 4.9t^2, 3sin(2t) o 2t^3 - 9t^2.
+3844	Mostra t da 0 a
+3845	Lanciato in alto
+3846	a costante = 3
+3847	Velocità costante
+3848	3sin(2t)
+3849	Inverte due volte
+3850	v = dx/dt
+3851	a = dv/dt
+3852	momentaneamente fermo
+3853	in moto nella direzione +x
+3854	in moto nella direzione −x
+3855	e sta accelerando (v e a hanno lo stesso segno)
+3856	e sta rallentando (v e a hanno segni opposti)
+3857	A t = {1} s l’oggetto è {2}{3}. La pendenza del grafico x–t qui è {4}; quella del grafico v–t è {5}.
+3858	km/h al s
+3859	ft·lbf
+3860	ft·lbf/s
+3861	velocità angolare
+3862	rad/s
+3863	deg/s
+3864	rev/s
+3865	ft³
+3866	kg/m³
+3867	g/cm³
+3868	g/mL
+3869	lb/ft³
+3870	Risolutori
+3871	Cinematica
+3872	Vettori
+3873	Piano inclinato e attrito
+3874	Convertitore di unità
+3875	Inserisci quello che sai, guarda cosa ne segue e controlla quale equazione ha fatto il lavoro. Usali per controllare i compiti, non per saltarli.
+3876	Accelerazione costante
+3877	Compila tre
+3878	delle cinque grandezze (lascia vuote le altre). I segni contano: scegli un verso positivo.
+3879	Spostamento Δx (m)
+3880	Velocità iniziale v₀ (m/s)
+3881	Velocità finale v (m/s)
+3882	Accelerazione a (m/s²)
+3883	Tempo t (s)
+3884	Lasciato cadere, 3 s
+3885	Lanciato in alto a 25
+3886	Frenata in 40 m
+3887	Da fermo, 100 m
+3888	Somma di vettori
+3889	Fino a tre vettori per modulo e angolo (gradi in senso antiorario da +x). Lascia vuota una riga per saltarla.
+3890	Somma i vettori
+3891	angolo di {1} (°)
+3892	Esame 1 n. 2
+3893	Due forze
+3894	Barca e fiume
+3895	Blocco su un piano inclinato
+3896	Analizza
+3897	Massa (kg)
+3898	Angolo d’inclinazione θ (°)
+3899	Forza applicata lungo il pendio (N, + verso l’alto)
+3900	Metti 0 se non c’è.
+3901	Converti
+3902	Costanti che userai tutto il semestre
+3903	g (superficie terrestre)
+3904	6.67 × 10⁻¹¹ N·m²/kg²
+3905	Massa / raggio della Terra
+3906	5.97 × 10²⁴ kg / 6.37 × 10⁶ m
+3907	Massa / raggio della Luna
+3908	7.35 × 10²² kg / 1.74 × 10⁶ m
+3909	Velocità del suono (20 °C)
+3910	Velocità della luce
+3911	Densità dell’acqua
+3912	1000 kg/m³
+3913	Densità dell’aria
+3914	1.2 kg/m³
+3915	Pressione atmosferica
+3916	1.013 × 10⁵ Pa
+3917	1 hp
+3918	Inserisci esattamente tre grandezze (ne hai inserite {1}).
+3919	Soluzione {1}
+3920	· dato
+3921	Inserisci almeno un vettore.
+3922	$\vec A\cdot\vec B = A_xB_x + A_yB_y = {1}$; l’angolo tra $\vec A$ e $\vec B$ è ${2}^\circ$. $|\vec A\times\vec B| = AB\sin\theta = {3}$.
+3923	Risultante
+3924	$R_x = \sum A_x = {1}$, $R_y = \sum A_y = {2}$; $|\vec R| = \sqrt{R_x^2 + R_y^2} = {3}$ a ${4}^\circ$ in senso antiorario da $+x${5}.
+3925	(cioè ${1}^\circ$)
+3926	Inserisci massa, angolo ed entrambi i coefficienti.
+3927	Resta fermo
+3928	Le forze lungo il pendio, attrito escluso, sommano ${1}$ N, entro il limite statico $\mu_sN = {2}$ N. L’attrito statico fornisce esattamente ${3}$ N {4} il pendio.
+3929	Scivola {1} il pendio
+3930	$|{1}| > \mu_sN = {2}$ N, quindi si muove; l’attrito dinamico $\mu_kN = {3}$ N agisce {4} il pendio. $a = \dfrac{{5} {6} {7}}{{8}} = {9}\ \text{m/s}^2$ (positivo verso {10}).
+3931	Assi inclinati lungo il pendio: $N = mg\cos\theta$, componente della gravità lungo il pendio $mg\sin\theta$, forza applicata $F$ lungo il pendio, attrito opposto al moto (o alla tendenza a muoversi).
+3932	Forza normale
+3933	mg sin θ (giù per il pendio)
+3934	μs N (statico max)
+3935	μk N (dinamico)
+3936	Inserisci un numero da convertire.
+3937	v = v_0 + at
+3938	Delta x = v_0t + tfrac12at^2
+3939	Delta x = tfrac12(v_0 + v)t
+3940	Con a = 0 e v ≠ v₀ non c’è soluzione; con v = v₀ il tempo è indeterminato.
+3941	t = Delta x / v_0
+3942	Nessuna soluzione reale: v² sarebbe negativo. Controlla i segni.
+3943	Nessuna soluzione con t ≥ 0. Controlla i segni.
+3944	v₀ + v = 0: il tempo è indeterminato.
+3945	v_0 = v - at
+3946	Delta x = vt - tfrac12at^2
+3947	v_0 = frac{2Delta x}{t} - v
+3948	t = Delta x / v
+3949	Nessuna soluzione reale: v₀² sarebbe negativo. Controlla i segni.
+3950	Combinazione non supportata.
+3951	mg = {1} N
+3952	Diagramma di corpo libero (frecce in scala)
+3953	Parola → IPA
+3954	IPA → parola
+3955	Frase → IPA
+3956	IPA → frase
+3957	Sillabe
+3958	Accento di parola
+3959	Tratti dei fonemi
+3960	Coppie minime
+3961	Simboli
+3962	Tabelle
+3963	Trascrivi
+3964	Esploratore di parole
+3965	Britannico (RP)
+3966	Americano
+3967	Facile
+3969	Difficile
+3970	Velocità della voce
+3971	Questo browser non sa parlare. Prova Chrome, Edge o Safari.
+3972	Tastiera IPA
+3973	{1} su {2} giuste · {3}%
+3974	Ancora nessuna risposta
+3975	Giusto.
+3976	Nuova domanda
+3977	Azzera la sessione
+3978	Come funziona questa modalità
+3979	Esempio
+3980	5 XP per una risposta giusta, 1 XP per un tentativo, +5 ogni 5 di fila.{1}
+3981	Accento
+3982	Simbolo → tratti
+3983	Tratti → simbolo
+3984	Direzione
+3985	Consonanti
+3986	Vocali
+3987	Livello
+3988	Qui tocchi la sillaba accentata invece di scriverne il numero.
+3989	In tutto: {1}.
+3990	Ancora niente da esercitare a questo livello.
+3991	questa sessione
+3992	Tocca la sillaba con l’accento principale
+3993	La sillaba accentata di solito è più forte, più lunga e più chiara.
+3994	/ˈbjuːtɪfəl/
+3995	ˈbjuː.tɪ.fəl
+3996	Passo 1 · trascrivi la parola
+3997	Passo 2 · dividi l’IPA in sillabe
+3998	(si sblocca dopo il passo 1)
+3999	Controlla la trascrizione
+4000	Scegli i tratti di {1}
+4001	Altezza
+4002	Anteriorità
+4003	Arrotondamento
+4004	Luogo
+4005	Modo
+4006	Sonorità
+4007	Le vocali si descrivono per altezza, anteriorità e arrotondamento delle labbra.
+4008	Le consonanti si descrivono per luogo, modo e sonorità.
+4009	Scrivi la trascrizione IPA
+4010	Le barre sono facoltative. Usa la tastiera qui sotto per i simboli.
+4011	Scrivi la parola inglese
+4012	Cerca il segno d’accento e i suoni vocalici.
+4013	Scrivi la frase in IPA
+4014	Metti uno spazio tra le parole in IPA.
+4015	Scrivi la frase in inglese
+4016	I love you.
+4017	Maiuscole e punteggiatura sono facoltative.
+4018	Scrivi il simbolo IPA
+4019	Le barre sono facoltative.
+4020	RP britannico
+4021	Ascoltala (rivela la risposta)
+4022	Controlla la trascrizione prima di dividere in sillabe.
+4023	IPA attesa:
+4024	Controlla le sillabe
+4025	Trascrizione corretta. Ora segna i confini di sillaba con dei punti.
+4026	La tua risposta: {1}
+4027	(vuoto)
+4028	IPA:
+4029	· in sillabe:
+4030	Sillabe: {1}
+4031	Simbolo corretto:
+4032	Suona come: {1}
+4033	Giusto: {1}
+4034	IPA {1}:
+4035	Atteso:
+4036	Accento principale: sillaba {1} ({2})
+4037	Controlla sul Cambridge Dictionary
+4038	{1}Ipa{2}
+4039	Coppia successiva
+4040	Laboratorio delle coppie minime
+4041	A un suono di distanza
+4042	Una coppia minima sono due parole che differiscono per un solo suono. Ascoltale entrambe, trascrivi ognuna in IPA, poi controlla quale suono cambia esattamente.
+4043	Ascolta le due parole.
+4044	Scrivi l’IPA di ognuna (tastiera qui sotto).
+4045	Controlla, poi leggi la differenza di suono.
+4046	5 XP quando entrambe le parole sono giuste, 1 XP per un tentativo.{1}
+4047	Coppie di vocali
+4048	Coppie di consonanti
+4049	Categoria di suono
+4050	Ancora nessuna coppia a questo livello.
+4051	Coppia: {1} · {2} · {3}
+4052	Controlla entrambe
+4053	Vocale
+4054	Consonante
+4055	{1?coppie:coppia} in questa sessione
+4056	non proprio
+4057	Differenza di suono:
+4058	Monottonghi
+4059	Dittonghi
+4060	Segni di accento e di durata
+4061	{1} simboli esplorati su {2}
+4062	{1} · {2} di {3}
+4063	Riproduci il suono
+4064	Riproduci {1}
+4065	Tutti i {1}
+4066	I simboli che hai aperto sono spuntati. Aprili tutti e {1} per finire il giro dei simboli.
+4067	Gruppo di simboli
+4068	Ascolta {1}
+4069	Ogni simbolo è un pulsante: toccalo per sentire il suono con l’accento scelto in Simboli ({1}).
+4070	Tabella delle consonanti inglesi
+4071	luogo in orizzontale, modo in verticale
+4072	Posizioni delle vocali
+4073	Descrizione della vocale
+4074	tocca per sentire la parola
+4075	Luogo di articolazione
+4076	Modo di articolazione
+4077	Britannico
+4078	Scrivi o incolla un testo inglese. Ogni riga viene trascritta da sola.
+4079	Layout
+4080	IPA modificabile
+4081	Testo in IPA
+4082	Forme deboli (the, to, have, and…)
+4083	Copia l’IPA
+4084	Modifica l’IPA
+4085	Trascrizione
+4086	(RP)
+4087	Inglese sopra l’IPA
+4088	Affiancati
+4089	Solo IPA
+4090	Scrivi un testo inglese per iniziare.
+4091	Trascrizione in corso…
+4092	Non è nel dizionario
+4093	{1} {1|parola non trovata|parole non trovate}{2|}.
+4094	{1} {1|trascrizione|trascrizioni}{2|}.
+4095	con forme deboli
+4096	es. knowledge
+4097	Cerca una parola
+4098	Cerca
+4099	Parola a caso
+4100	Cambridge
+4101	Esercitati su parole come questa
+4102	Leggere una trascrizione
+4103	indica l’accento secondario.
+4104	allunga una vocale: /iː/ in
+4105	contro /ɪ/ in
+4106	Un punto
+4107	separa le sillabe quando aiuta.
+4108	Le trascrizioni americane spesso scrivono
+4109	dove il britannico ha
+4110	Nel dizionario del laboratorio ci sono {1} parole. Cercane una qui sopra o aprine una a caso.
+4111	Dalla banca delle parole
+4112	Dal dizionario
+4113	· forma debole:
+4114	Accento principale
+4115	sillaba {1} ·
+4116	Categoria grammaticale
+4117	Categoria grammaticale: {1}
+4118	Forse intendevi
+4119	“{1}” non è nel dizionario del laboratorio. Prova la scheda Trascrivi, che cerca le parole anche online.
+4120	Laboratorio di fonetica inglese
+4121	Trascrivi con l’Alfabeto fonetico internazionale, ascolta ogni suono, distingui le coppie minime, segna sillabe e accenti e descrivi i fonemi per tratti. Ogni risposta valutata dà XP.
+4122	{1} risposte · {2}%
+4123	Sezioni del laboratorio
+4124	Punteggio della sessione azzerato
+4125	Scrivi prima un testo inglese.
+4126	IPA copiata
+4127	Copia non riuscita. Usa Modifica l’IPA e copia da lì.
+4128	noopener,noreferrer
+4129	textarea, select
+4130	figura matplotlib
+4131	Caricamento di Python… (circa 12 MB, una volta sola)
+4132	Python non si è caricato
+4133	Impossibile avviare Python:
+4134	worker error
+4135	Controlla la connessione; al primo caricamento Python viene scaricato dalla CDN di jsDelivr.
+4136	· Pyodide
+4137	Fatto in {1}
+4138	Fermato da un errore dopo {1}
+4139	(nessun output)
+4140	Errore
+4141	In esecuzione…
+4142	Ancora in esecuzione… premi Ferma se è bloccato
+4143	Scrivi prima un po’ di Python.
+4144	Caricamento di Python… il codice parte appena è pronto
+4145	Fermato · Python si ricarica alla prossima esecuzione
+4146	Premi Esegui (o Ctrl+Invio). Output, disegni e grafici appaiono qui.
+4147	Area di prova del codice
+4148	Codice condiviso
+4149	print("Hello, world!")
+4150	Scrivi Python ed eseguilo qui, come nei laboratori. I disegni turtle e i grafici matplotlib compaiono nell’output. Non viene caricato niente: Python gira nel tuo browser.
+4151	Python si carica alla prima esecuzione (circa 12 MB, una volta sola)
+4152	Carica un esempio
+4153	Esegui (Ctrl+Invio)
+4154	Salva come snippet
+4155	Copia un link a questo codice
+4156	Editor vuoto
+4157	Codice Python
+4158	print('Hello, Bobcats!')
+4159	Esempi…
+4160	Esegui
+4161	Input del programma
+4162	Gira sul tuo dispositivo con Pyodide (CPython compilato per i browser), scaricato dalla CDN di jsDelivr la prima volta. NumPy, pandas e matplotlib si caricano la prima volta che li importi. I programmi turtle vengono disegnati come immagine finita; gli eventi di tastiera e mouse richiedono una finestra vera. I file che scrivi esistono solo durante l’esecuzione. 2 XP per ogni esecuzione riuscita, fino a 10 al giorno.
+4163	I miei snippet
+4164	Elimina lo snippet
+4165	Dai un nome a questo snippet:
+4166	Snippet
+4167	Snippet salvato
+4168	Link copiato. Chi lo apre vede questo codice nell’area di prova.
+4169	Sei offline.
+4170	Nessuna scadenza
+4171	America/Denver
+4173	Labor Day (Festa del lavoro)
+4174	Veterans Day (Giornata dei veterani)
+4175	Vacanze del Ringraziamento
+4176	Giorno del Ringraziamento
+4177	Martin Luther King Jr. Day
+4178	Presidents’ Day
+4179	Memorial Day
+4180	Festa dell’Indipendenza (osservata)
+4182	Primavera 2027
+4183	Estate 2027
+4185	{1}{2}{3} · Montana State University
+4186	Made with Mathub · mathub.space
+4187	· Section {1}
+4188	· {1} credits
+4189	Meetings
+4190	Prerequisites:
+4191	When and where the class meets.
+4192	Instructors
+4193	Office hours: {1}
+4194	Who teaches the course and when their office hours are.
+4195	Course description
+4196	What the course is about and how it is taught.
+4197	Learning outcomes
+4198	By the end of the course you will be able to:
+4199	What students will be able to do by the end.
+4200	Materials
+4201	The textbook, software and anything else students need.
+4202	Grading
+4203	Letter grades:
+4204	How the course grade is made up.
+4205	Exams
+4206	date to be announced
+4207	Exams and their dates.
+4208	Schedule
+4209	The schedule may change; changes are announced in class and on Mathub.
+4210	The class meetings, day by day.
+4211	Policies
+4212	Attendance
+4213	Late work
+4214	AI tools
+4215	Academic integrity
+4216	Accommodations
+4217	Wellbeing and support
+4218	Communication
+4219	Policy
+4220	Attendance, late work, AI tools and the statements students need.
+4221	Dialog
+4222	Text to copy
+4223	Copy this
+4224	Calculus I
+4225	In person
+4226	Wilson 1-112
+4228	Reid 105
+4229	M 151Q or placement
+4230	Limits, derivatives and integrals of functions of one variable, with applications to rates of change, optimization and area. Lectures introduce each idea; recitations are for working problems in small groups.
+4231	Compute limits and derivatives with the rules of differentiation
+4232	Model rates of change and solve optimization problems
+4233	Evaluate definite integrals with the Fundamental Theorem of Calculus
+4234	Wilson 2-240
+4235	Tue 2–3 pm, Thu 11 am–noon, or by appointment
+4236	Active Calculus, 2nd edition (free online)
+4237	Homework
+4238	lowest two dropped
+4239	Quizzes
+4240	Midterms (2)
+4241	Final exam
+4242	Midterm 1
+4243	Limits and the derivative
+4245	Rules of differentiation and applications
+4246	Velocity and limits
+4247	Computing limits
+4248	The derivative at a point
+4249	You may use generative AI tools to brainstorm or check your understanding, but the work you hand in must be your own. If you use AI on an assignment, say how in a short note at the end.
+4250	Homework is accepted up to two days late for half credit.
+4251	Dettagli del corso
+4252	Docenti e ricevimento
+4253	Descrizione e obiettivi
+4254	Studenti
+4255	Annunci
+4256	Compiti
+4257	Statistiche
+4258	Panoramica
+4259	Impostazioni del corso
+4260	Area docenti
+4262	Docenti
+4263	Sito per studenti
+4264	Chiaro o scuro
+4265	{1}: impostazioni dell’account
+4266	Accedi
+4267	{1} · Mathub Docenti
+4268	I tuoi programmi
+4269	Nuovo programma
+4270	Stato di docente
+4271	In verifica
+4272	Non ancora confermato
+4273	{1} da sistemare
+4274	da sistemare
+4275	Modifiche non pubblicate
+4276	Pubblicato
+4277	Bozza
+4278	Nessun periodo
+4279	Si attiva quando il tuo stato di docente viene confermato
+4280	Pubblica
+4281	Pubblica le modifiche
+4282	Mathub Docenti
+4283	Scrivi il tuo programma
+4284	Scrivi il programma una volta. Gestisci il corso da lì.
+4285	Un editor di programmi per i docenti della Montana State. La pagina finita sta accanto al modulo e si aggiorna mentre scrivi; stampala, salvala in PDF o pubblicala per i tuoi studenti su Mathub.
+4286	Accedi con montana.edu
+4287	Gratis. Scrivere, stampare e i PDF funzionano appena accedi. Per pubblicare agli studenti serve la conferma del tuo stato di docente, di solito entro un giorno.
+4288	La pagina, mentre la scrivi
+4289	Dati del corso, ricevimento, calendario, esami, valutazione e regole, ognuno nella sua pagina, con il programma impaginato accanto.
+4290	Controllato prima di uscire
+4291	Una checklist segnala ciò che cercano gli studenti: orari di ricevimento, pesi che sommano a 100%, date d’esame, una regola sull’IA, una dichiarazione sugli adattamenti.
+4292	Pubblicato per i tuoi studenti
+4293	Gli studenti si iscrivono con un codice di sei caratteri. Il loro calendario, i conti alla rovescia degli esami e il calcolatore dei voti seguono il tuo programma, con annunci, serie di esercizi e presenze nello stesso posto.
+4294	Caricamento dei tuoi programmi…
+4295	Ultima modifica
+4296	Ancora nessun programma
+4297	Parti dal modello della Montana State: le dichiarazioni su adattamenti, integrità accademica e benessere ci sono già, e il calendario si compila da solo dai tuoi giorni di lezione. Ci vogliono circa dieci minuti.
+4298	Aprine uno per continuare a scrivere, vedere cosa manca, stamparlo o pubblicarlo per i tuoi studenti.
+4299	Tutto quello che scrivi qui resta privato finché non pubblichi.
+4300	Ti sei anche iscritto a {1} {1|corso|corsi}{2|} come studente.
+4301	Apri {1} sul sito per studenti
+4302	Il tuo stato di docente è in verifica
+4303	(richiesto {1}). Continua a scrivere; potrai pubblicare quando un amministratore lo confermerà. Riceverai un messaggio nella posta di Mathub.
+4304	Scrivi, visualizza in anteprima, stampa e salva programmi in PDF già ora.
+4305	Per pubblicare ai tuoi studenti
+4306	, conferma che insegni alla Montana State.
+4307	Conferma lo stato di docente
+4308	Prima le basi. Il resto si compila pagina per pagina, con il programma finito accanto al modulo.
+4309	Titolo del corso
+4310	Parti da
+4311	Il modello della Montana State
+4312	Una copia mantiene regole, valutazione e materiali; le date ripartono vuote.
+4313	Domande di esercizio
+4315	Per i compiti di esercizio.
+4316	Crea il programma
+4317	Una copia di {1} {2}{3}
+4318	Creazione…
+4319	Gli studenti si fidano che un corso su Mathub venga dal loro docente, quindi un amministratore verifica a mano ogni docente prima che un corso arrivi agli studenti.
+4320	Confermato.
+4321	Puoi pubblicare programmi e usare elenco studenti, annunci, compiti, presenze e statistiche dei tuoi corsi.
+4322	, richiesto {1}. Riceverai un messaggio nella posta di Mathub. Nel frattempo funziona tutto tranne la pubblicazione.
+4323	Continua a scrivere
+4324	Dr. Jane Smith
+4325	Ricercatore, docente a contratto, tutor…
+4326	Mathematical Sciences
+4327	M 171 sections 3 and 5
+4328	Facoltativo: un link alla pagina del tuo dipartimento aiuta.
+4329	Il tuo nome, come ti conoscono gli studenti
+4330	Dipartimento
+4331	Corsi che insegni
+4332	Hai effettuato l’accesso come
+4333	Invia per la conferma
+4334	Una richiesta precedente non è stata approvata. Se è stato un errore, inviane una nuova con qualche dettaglio in più.
+4335	. Sembra un indirizzo da studente; i docenti di solito usano il loro indirizzo istituzionale.
+4336	Inviato. Riceverai la risposta nella posta di Mathub.
+4337	teach_class_get&id=
+4338	Torna ai tuoi programmi
+4339	Anteprima del programma
+4340	Stampa, oppure scegli Salva come PDF nella finestra di stampa
+4341	Non ancora salvato
+4342	Tutte le modifiche salvate
+4343	Anteprima del programma
+4344	Salvataggio a breve…
+4345	Non salvato:
+4346	Una modifica non è stata salvata:
+4347	input, select, textarea
+4348	Conferma prima il tuo stato di docente
+4349	Pubblicare mette il corso davanti agli studenti, quindi un amministratore controlla prima che tu insegni alla Montana State, di solito entro un giorno. Tutto il resto (scrittura, anteprima, stampa e PDF) funziona già.
+4350	{1} {1|cosa|cose}{2|} da sistemare prima
+4351	Sistema
+4352	Da sistemare prima di pubblicare
+4353	Pubblica ai tuoi studenti
+4354	Pubblica le modifiche
+4355	Gli studenti che si iscrivono con il codice
+4356	hanno questo corso su Mathub: il calendario, i conti alla rovescia degli esami, il calcolatore dei voti con i tuoi pesi, il programma e un forum del corso.
+4357	Tutti nel corso ricevono subito il programma e il calendario aggiornati.
+4358	Il parziale 2 spostato al 12 nov.
+4359	Di’ agli studenti cosa è cambiato (facoltativo)
+4360	Inviato alla loro posta e al telefono.
+4361	Pubblicazione…
+4362	Pubblicato. Condividi il codice del corso con i tuoi studenti.
+4364	; {1} {1|studente avvisato|studenti avvisati}{2|}
+4365	Non manca niente. Gli studenti troveranno tutto quello che di solito cercano.
+4366	prima di poter pubblicare
+4367	Pronto da pubblicare.
+4368	{1} {1|suggerimento|suggerimenti}{2|}.
+4369	Anteprima dal vivo del programma
+4370	Anteprima dal vivo
+4371	Cosa vedono gli studenti e cosa si stampa
+4372	Rimuovi {1}
+4373	Pagine del programma
+4374	Torna a
+4375	Finito?
+4376	Rivedi e pubblica
+4377	Condividi con gli studenti
+4378	Scrivilo pagina per pagina
+4379	Ancora nessun periodo
+4380	· di {1}
+4381	Pubblicato, con modifiche successive.
+4382	Gli studenti vedono la versione del {1} finché non pubblichi di nuovo.
+4383	{1}. Gli studenti che si iscrivono vedono questo programma.
+4384	Bozza.
+4385	Puoi vederlo solo tu{1}.
+4386	e il team docente
+4387	Prima di pubblicare
+4388	Codice del corso
+4389	Copia il link di iscrizione
+4390	Gli studenti aprono mathub.space, scelgono
+4392	e scrivono il codice, oppure aprono il link. {1}
+4393	Pagina pubblica del programma
+4394	Guardalo come uno studente
+4395	Il corso compare subito nella loro pagina iniziale.
+4396	Possono iscriversi ora; il corso compare loro appena pubblichi.
+4397	Gli studenti potranno iscriversi quando il tuo stato di docente sarà confermato. Fino ad allora puoi scrivere, visualizzare in anteprima, stampare e salvare il programma in PDF.
+4398	Link di iscrizione copiato.
+4399	I dati in testa al programma: cos’è il corso e quando e dove si tiene.
+4400	Quando e dove
+4401	Giorni in lettere: M T W R F, dove R è giovedì. La pagina Calendario aggiunge una riga per ogni lezione.
+4402	Formato
+4403	Ibrido
+4404	Online, con orario
+4405	Online, al proprio ritmo
+4406	Prerequisiti
+4407	Pagina Canvas
+4408	Facoltativo. Gli studenti ricevono un link.
+4414	Tipo di incontro
+4416	Giorni (M T W R F)
+4420	questo incontro
+4421	Ancora nessun incontro.
+4422	Aggiungi un incontro
+4423	Chi insegna il corso e come contattarti. Il ricevimento è ciò che gli studenti cercano di più.
+4426	Correttore
+4427	Assistente all’apprendimento
+4430	Pronomi
+4433	Ufficio
+4437	Tue 2–3 pm, Wed 1–2 pm, or by appointment
+4438	questa persona
+4439	Aggiungi almeno te stesso.
+4440	Aggiungi una persona
+4441	Cosa copre il corso e cosa gli studenti sapranno fare alla fine.
+4442	Mostrato come “By the end of the course you will be able to:”.
+4443	Separa i paragrafi con una riga vuota. Gli indirizzi web diventano link.
+4445	Compute derivatives with the rules of differentiation
+4446	Obiettivo {1}
+4447	Ancora niente.
+4448	Aggiungi un obiettivo
+4449	Il libro di testo, il software, la calcolatrice o qualsiasi altra cosa serva agli studenti, con un link se è online.
+4450	Obbligatorio
+4452	Active Calculus, 2nd edition
+4455	Free online; print copies at the bookstore
+4457	questo materiale
+4458	Ancora niente in elenco.
+4459	Aggiungi un materiale
+4460	Scadenza
+4461	Le lezioni giorno per giorno. Parti dai tuoi giorni di lezione, poi aggiungi argomenti, laboratori e scadenze.
+4462	Velocity and limits Computing limits The derivative at a point
+4463	Il corso si tiene
+4464	Compila le lezioni
+4465	Incolla gli argomenti
+4466	Svuota il calendario
+4467	Aggiunge una riga per ogni lezione tra il primo e l’ultimo giorno e segna Labor Day, Veterans Day, la settimana del Ringraziamento e i lunedì festivi come giorni senza lezione. Controlla il calendario accademico della MSU per il resto. Le righe che hai già restano.
+4468	Argomenti, uno per riga, in ordine
+4469	Riempiono le lezioni che non hanno ancora un argomento; i festivi vengono saltati.
+4470	Compila gli argomenti
+4471	Primo giorno di lezione
+4472	Ultimo giorno di lezione
+4473	Imposta prima i giorni di lezione
+4474	Argomento o titolo
+4478	Homework 3
+4479	Festivo
+4481	Note: letture, cosa portare…
+4482	questo giorno
+4483	Ancora nessuna riga. Compila le lezioni qui sopra o aggiungi righe una alla volta.
+4484	Aggiungi una riga
+4485	Imposta prima il primo e l’ultimo giorno di lezione.
+4486	{1} {1|lezione aggiunta|lezioni aggiunte}{2|}. Ora aggiungi gli argomenti.
+4487	Tutte le lezioni sono già nel calendario.
+4488	{1} {1|argomento inserito|argomenti inseriti}{2|}{3}.
+4489	; {1} avanzati (aggiungi altre lezioni)
+4490	Togliere tutte le righe dal calendario? Gli esami restano.
+4491	Ogni esame con data ha un conto alla rovescia e una pagina di preparazione per i tuoi studenti.
+4496	Cosa copre
+4498	questo esame
+4499	Ancora nessun esame.
+4500	Aggiungi un esame
+4501	Di cosa è fatto il voto del corso. Gli studenti hanno un calcolatore dei voti con esattamente questi pesi.
+4502	Categorie
+4503	Voti in lettere
+4504	Da A a F con + e −
+4505	Peso in percentuale
+4509	Nota facoltativa
+4510	Le due più basse scartate
+4511	questa categoria
+4512	Ancora nessuna categoria.
+4513	Aggiungi una categoria
+4514	Percentuale minima per {1}
+4515	almeno
+4517	Lettera
+4519	questa lettera
+4520	Ancora nessun voto in lettere.
+4521	Aggiungi una lettera
+4522	Note sulla valutazione
+4523	Arrotondamenti, curve, come l’esame finale può sostituire un parziale…
+4524	Totale {1}%
+4525	Non consentito
+4526	Consentito se dichiarato
+4527	Consentito
+4528	Testo mio
+4529	Modello della MSU
+4530	Come funziona il corso e le dichiarazioni che servono agli studenti. Le dichiarazioni della Montana State su adattamenti, integrità e benessere sono già compilate; modificale per il tuo corso.
+4531	IA generativa in questo corso
+4532	Scegliere un’opzione sostituisce questo testo con una base che puoi modificare.
+4533	Regole del corso
+4534	Dichiarazioni
+4535	Altre regole
+4536	Calcolatrici, revisioni dei voti, registrazioni, sicurezza in laboratorio…
+4537	Testo della regola sull’IA
+4538	Cosa ti aspetti e come vengono gestite le assenze.
+4539	Scadenze, proroghe, penalità.
+4540	Come contattarti e quanto rapidamente rispondi.
+4541	regole.
+4543	Calcolatrici
+4545	questa regola
+4546	Aggiungi una regola
+4547	Chi si è iscritto, come si iscrivono gli studenti e il team docente.
+4548	teach_roster&id=
+4549	Come si iscrivono gli studenti
+4550	Gli studenti aprono
+4551	, scelgono
+4552	e scrivono questo codice, oppure usano il link.
+4553	Nuovo codice
+4554	{1} Un nuovo codice disattiva quello vecchio; nessuno viene rimosso.
+4555	Team docente
+4556	Vedi nome, email, risultati dei compiti e presenze di ogni studente solo per questo corso. Il resto della sua attività su Mathub resta privato. I voti ufficiali restano su Canvas.
+4557	Gli studenti che si iscrivono hanno subito il corso nella pagina iniziale.
+4558	Gli studenti possono iscriversi ora; il corso compare loro quando pubblichi.
+4559	Email di un co-docente o di un TA
+4560	Co-docenti e TA possono modificare il programma, pubblicare, assegnare compiti e vedere i risultati. Serve loro un account Mathub.
+4561	Scarica CSV
+4562	Media
+4563	Ancora nessun iscritto. Condividi il codice a lezione o su Canvas.
+4564	Creare un nuovo codice del corso? Quello vecchio smetterà di funzionare.
+4565	Rimuovere {1} dal corso? I suoi risultati per questo corso restano finché non elimini il corso.
+4566	Compiti fatti
+4567	% medio
+4568	Aggiunto al team docente.
+4569	Post nello spazio del corso. Ogni studente li riceve nella posta di Mathub, e sul telefono se ha attivato le notifiche.
+4570	teach_hub&id=
+4571	Il ricevimento cambia questa settimana
+4572	Dettagli, link…
+4573	Nuovo annuncio
+4574	Messaggio
+4575	Fissa in alto nello spazio del corso
+4576	Ancora niente di pubblicato.
+4577	Pubblicazione…
+4578	Pubblicato e inviato a {1} {1|studente|studenti}{2|}.
+4579	Pubblicato.
+4580	Esercizio per imparare, non per il registro: ogni studente riceve la sua versione delle domande, può ripeterla e tu vedi il punteggio migliore. I voti ufficiali restano su Canvas.
+4581	Esercizi sui limiti
+4583	Domande da
+4584	Caricamento degli argomenti…
+4585	Limite di tempo (min)
+4586	0 = solo tempo suggerito
+4587	Scadenza (ora del Montana)
+4588	Nota per gli studenti
+4589	Assegna
+4590	{1} domande · {2} · {3}{4}
+4592	· {1} min
+4593	Ancora nessun compito. Creane uno con il modulo.
+4594	Questo corso non ha una banca di domande.
+4595	Scegli almeno un argomento.
+4596	Assegnazione…
+4597	Assegnato; {1} {1|studente avvisato|studenti avvisati}{2|}.
+4598	Assegnato.
+4599	Eliminare questo compito e i suoi risultati?
+4600	teach_results&assignment_id=
+4601	Tentativi
+4604	non ancora
+4605	Ancora nessuno studente.
+4606	Apri un codice di 4 cifre per qualche minuto; gli studenti in aula lo scrivono nello spazio del corso.
+4607	teach_insights&id=
+4608	Sessioni precedenti
+4609	Le presenze di ogni studente sono nella pagina Studenti.
+4610	Fai l’appello
+4611	Mostralo sullo schermo. Gli studenti aprono il corso su Mathub e lo scrivono.
+4612	rimasti ·
+4613	su {1} presenti
+4614	Mostra sul proiettore
+4615	Chiudi l’appello
+4616	Facoltativo, es. Settimana 6 lunedì
+4617	Etichetta
+4618	Aperto per
+4619	3 minuti
+4620	5 minuti
+4621	10 minuti
+4622	15 minuti
+4623	Apri l’appello
+4624	Sessione
+4625	Presenti
+4626	Ancora nessuna sessione.
+4627	Come va il corso, dai suoi compiti e dalle presenze.
+4628	Dove il corso fa fatica
+4629	Iscritti questa settimana
+4630	Compiti completati
+4631	Punteggio migliore medio
+4632	· {1} in ritardo
+4633	Ancora nessun compito.
+4634	Percentuale di risposte giuste sull’ultimo tentativo di ogni studente, per gli argomenti con 5 o più risposte. Vale qualche minuto a lezione quando un argomento resta sotto il 60%.
+4635	Compare quando gli studenti finiscono i compiti.
+4636	I compiti prendono le domande da
+4637	L’impostazione predefinita nella pagina Compiti. Ogni compito può comunque scegliere la sua.
+4638	Ritira il corso
+4639	Annullare la pubblicazione nasconde il corso agli studenti finché non pubblichi di nuovo. Risultati, annunci e presenze restano.
+4640	Annulla pubblicazione
+4641	Scrivi {1} per confermare
+4642	Elimina questo corso
+4643	Elimina il programma, il corso pubblicato, i suoi annunci, compiti, risultati e presenze. Gli account degli studenti non vengono toccati. Non si può annullare.
+4644	Elimina il corso
+4645	Salvato.
+4646	Annullare la pubblicazione di questo corso? Gli studenti non lo vedranno più finché non pubblichi di nuovo.
+4647	Pubblicazione annullata.
+4648	Scrivi {1} per confermare.
+4649	Eliminato.
+4650	Gli strumenti del corso si attivano quando il tuo stato di docente è confermato: un amministratore controlla che tu insegni alla Montana State, di solito entro un giorno.
+4651	Gli strumenti del corso si attivano quando lo stato di docente del titolare del corso è confermato.
+4652	Codice presenze
+4653	Apri il corso su Mathub e scrivi questo codice ·
+4654	Spazio del corso
+4655	I tuoi corsi con un docente
+4656	Accedi per vedere i tuoi corsi
+4657	Il tuo docente ti ha dato un codice del corso. Accedi con la tua email montana.edu per iscriverti.
+4658	Iscriviti con un codice del corso
+4659	Sei lettere e numeri, dal tuo docente.
+4660	I codici dei corsi hanno 6 lettere e numeri.
+4661	programma in arrivo
+4662	Non ti sei ancora iscritto a nessun corso.
+4663	Insegni? I tuoi corsi sono in
+4664	teach_join_info&code=
+4665	Tenuto da
+4666	Cosa vede il tuo docente:
+4667	il tuo nome e la tua email, i tuoi risultati nei compiti di esercizio di questo corso e le tue presenze. Nient’altro di quello che fai su Mathub viene condiviso, e puoi lasciare il corso quando vuoi.
+4668	· {1} {1|studente iscritto|studenti iscritti}{2|}
+4669	Insegni in questo corso
+4670	Questo corso non è ancora aperto agli studenti. Chiedi al tuo docente.
+4671	Accedi per iscriverti
+4672	Usa la tua email montana.edu. Ci vuole un minuto.
+4673	Iscriviti a {1}
+4674	Leggi il programma completo
+4675	Il tuo docente non ha ancora pubblicato il programma. Iscriviti ora e comparirà quando sarà pronto.
+4676	Ti sei iscritto a {1}.
+4677	· insegni in questo corso
+4678	Pagine del corso
+4679	Forum del corso
+4680	Il programma non è ancora pubblicato. Annunci e compiti compaiono comunque qui.
+4681	Presenza registrata
+4682	Registra la presenza:
+4683	Ci vediamo alla prossima lezione.
+4684	Codice sullo schermo
+4685	Ci sono
+4686	{1} domande · {2}{3}
+4687	migliore {1}/{2}
+4688	scaduto
+4689	Nessun compito per ora.
+4690	Ancora niente.
+4691	Gestisci questo corso in Mathub Docenti
+4692	Il tuo docente vede i tuoi risultati in questi compiti e le tue presenze, nient’altro.
+4693	Lascia questo corso
+4694	Presenza registrata.
+4695	Lasciare {1}? Puoi rientrare con il codice.
+4696	Il corso da cui vengono queste domande non è disponibile.
+4697	Quel corso non ha una banca di domande.
+4698	Impossibile preparare le domande.
+4699	Inviato a {1}: {2}/{3}{4}.
+4700	(dopo la scadenza)
+4701	Il tuo punteggio non è stato inviato:
+4702	Iscriviti a questo corso
+4703	Il docente non ha ancora pubblicato questo programma.
+4704	{1} {2} · Programma · Mathub
+4705	Hai un codice del corso? Iscriviti al tuo corso
+4706	· {1} come lo vedono i tuoi studenti. Torna a Mathub Docenti
+4707	· annunci, compiti e presenze dal tuo docente
+4708	{1} · insegna {2}
+4709	Conferma
+4710	Rifiuta
+4711	Conferma solo persone di cui puoi verificare che insegnano alla Montana State (una pagina docente, un elenco del dipartimento o una risposta dal loro indirizzo montana.edu). Chiunque abbia effettuato l’accesso può scrivere programmi in Mathub Docenti; i docenti confermati possono anche pubblicarli agli studenti che si iscrivono, pubblicare in quei corsi, assegnare esercizi e fare l’appello. Niente a livello di tutto il sito.
+4712	In attesa di conferma
+4713	Docenti confermati
+4714	Nessuna richiesta in attesa.
+4715	Revoca
+4716	tutti i corsi
+4717	Ancora nessun corso.
+4718	Richieste precedenti
+4719	Confermato. Ora può pubblicare i suoi corsi.
+4720	Rifiutare questa richiesta?
+4721	Togliere lo stato di docente confermato a {1}? I suoi programmi restano; non potrà più pubblicare né usare gli strumenti del corso.
+4722	sw.js?v=
+4729	Topic notes, endless practice questions, flashcards, deadline calendars, simulators, a Python playground and a class board for M171 Calculus I, PHSX 220 Physics I, M151Q Precalculus, WRIT 101 College Writing I, CSCI 127 Joy and Beauty of Data, BIOB 160 Principles of Living Systems, KIN 322 Kinesiology and PSYX 340 Psychological Disorders. The app needs JavaScript; the study guides do not:
+4731	M171 Calculus I
+4732	PHSX 220 Physics I
+4733	M151Q Precalculus
+4734	WRIT 101 College Writing I
+4735	CSCI 127 Joy and Beauty of Data
+4736	BIOB 160 Principles of Living Systems
+4737	KIN 322 Kinesiology
+4738	PSYX 340 Psychological Disorders
+4743	Bo non è ancora attivo. Riprova più tardi.
+4744	Bo non riesce a raggiungere l’IA da questo server.
+4745	La voce non è disponibile su questo server.
+4746	La voce di Bo non è disponibile ora, quindi si usa la voce del tuo dispositivo.
+4747	Scegli prima un corso.
+4748	Bo legge PDF, foto (JPEG, PNG, WebP) e testo semplice.
+4749	Impossibile leggere quel file.
+4750	That file is too large. Keep it under
+4751	Quell’unità non è nel programma.
+4752	Niente da dimenticare.
+4753	Parlare con Bo fa parte di Mathub Max.
+4754	You have used this month's
+4755	Prima chiedi qualcosa a Bo.
+4756	La voce naturale di Bo non è attiva, quindi si usa la voce del tuo dispositivo.
+4757	Niente da dire.
+4758	La voce naturale di Bo è stata usata molto questo mese, quindi la voce del tuo dispositivo la sostituisce fino al 1°.
+4759	L’ascolto non è attivo qui. Scrivi la tua domanda.
+4760	Impossibile leggere quella registrazione.
+4761	Era lunga. Resta sotto i due minuti.
+4762	Bo ha ascoltato molto questo mese. Scrivi le tue domande fino al 1°.
+4763	Le chiamate dal vivo non sono ancora attive.
+4764	La chiamata non è potuta partire.
+4765	Quella chiamata è finita.
+4768	Il programma è molto lungo. Incolla le parti con calendario, argomenti, esami e valutazione.
+4769	Il programma non si è diviso in unità utilizzabili da Bo. Prova a incollare il calendario e gli argomenti.
+4770	Questo corso non è più in scrittura. Ricomincia.
+4771	Bo ha già scritto questo corso. Iniziane uno nuovo.
+4772	Passaggio sconosciuto.
+4773	Non trovato.
+4774	Dicci qual è il problema.
+4775	Solo per lo staff.
+4776	Solo per gli amministratori.
+4777	Azione sconosciuta.
+4778	Backup failed:
+4779	Backup sconosciuto.
+4780	Le preferenze sono troppo grandi.
+4781	Accetta le regole della community prima di pubblicare.
+4782	Your posting access is paused until
+4783	Quel post non è disponibile.
+4784	Hai bloccato chi ha scritto questo post. Puoi sbloccarlo nelle Impostazioni, in Membri bloccati.
+4785	Scegli un corso per il post.
+4786	Dai un titolo al post (almeno 3 caratteri).
+4787	Impossibile salvare il sondaggio. Riprova.
+4788	Puoi modificare solo i tuoi post.
+4789	Servono un titolo e un testo.
+4790	Post non trovato.
+4791	Puoi eliminare solo i tuoi post.
+4792	Questo post è bloccato; niente nuovi commenti.
+4793	Il messaggio a cui rispondi non è stato trovato.
+4794	Puoi modificare solo i tuoi commenti.
+4795	Commento non trovato.
+4796	Puoi eliminare solo i tuoi commenti.
+4797	Non disponibile.
+4798	Di’ in breve qual è il problema.
+4799	Grazie. Un moderatore darà un’occhiata.
+4800	È un tuo post.
+4801	I post di Mathub stesso non si possono bloccare. Se qualcosa non va, segnalali.
+4802	Bloccato. Non vedrai i suoi post, commenti o notifiche, e i moderatori sono stati avvisati.
+4803	Puoi fissare e bloccare i post solo nei forum dei corsi che insegni.
+4804	Chi va sospeso?
+4805	Non puoi sospendere te stesso.
+4806	Azione di moderazione sconosciuta.
+4807	Solo chi ha fatto la domanda può accettare una risposta.
+4808	Invio non riuscito:
+4809	Test digest sent to
+4810	Inserisci un’email valida.
+4811	Il ruolo deve essere Instructor, TA o vuoto.
+4812	Inserisci un indirizzo email valido.
+4813	Scegli studente, TA o docente.
+4814	Scegli nessun piano, Pro o Max.
+4815	Quell’indirizzo ha già un account. Lo trovi nell’elenco qui sotto.
+4816	Impostazione sconosciuta.
+4817	Non sembra l’URL di un calendario Canvas (…/feeds/calendars/user_….ics).
+4818	Utente non trovato.
+4819	Badge sconosciuto.
+4820	You cannot
+4821	Finestra di sessione non valida.
+4822	Solo docenti, TA e moderatori.
+4823	Scegli un corso.
+4824	Scrivi l’annuncio.
+4825	Non è tuo.
+4826	Simulazione d’esame non trovata.
+4827	Puoi segnare le simulazioni come ufficiali solo nei corsi che insegni.
+4847	Impossibile creare un link di condivisione. Riprova.
+4848	Questo corso non è nel tuo account.
+4849	Non è un corso di Mathub.
+4850	Il corso ha bisogno di un codice e di un nome.
+4851	Questo corso è troppo grande da salvare (il limite è 3 MB).
+4852	Your account already has
+4853	Salva prima questo corso nel tuo account.
+4854	Quel codice di condivisione non è giusto. Ha 8 lettere e numeri.
+4855	Questo corso non è più condiviso, oppure il codice è sbagliato.
+4856	Impossibile leggere questo corso.
+4857	Scegli Gratis, Pro o Max.
+4858	Membro non trovato.
+4859	Scegli l’ultimo giorno come data.
+4860	L’ultimo giorno deve essere oggi o dopo.
+4861	Scegli un ultimo giorno entro cinque anni, o nessuna data di fine.
+4862	Questo corso non è su Mathub.
+4863	Iscriviti a questo corso con il codice del tuo docente per aprirlo.
+4864	Scegli un file del corso.
+4865	Class packs can be up to
+4866	Questo file non è JSON valido:
+4867	File del corso non trovato.
+4868	Non c’è una versione precedente a cui tornare.
+4869	La versione precedente è danneggiata.
+4870	Type the course code (
+4871	Percorso sconosciuto.
+4872	Le notifiche push non sono disponibili su questo server al momento.
+4873	Quell’iscrizione sembra incompleta.
+4874	Il file è più grande di quanto accetta il server. Prova un PDF più piccolo o incolla il testo del programma.
+4875	Il caricamento non è finito. Riprova.
+4876	Il file è vuoto.
+4877	I file possono arrivare a 10 MB.
+4879	Your account is paused until
+4880	Inserisci il codice del corso come lo scrive la MSU, per esempio CHMY 121 o M 172.
+4881	Hai 10 richieste aperte. Ritirane una per chiedere un altro corso.
+4882	Conferma la casella sul programma prima di inviarlo.
+4883	Richiesta non trovata.
+4884	Ci stiamo già lavorando, quindi questa richiesta non si può più ritirare.
+4885	Codice del corso sconosciuto.
+4886	Stato sconosciuto.
+4887	Indica l’id del corso su Mathub (per esempio chmy) così gli studenti possono aprirlo.
+4888	Nessuna richiesta per quel corso.
+4889	Nessun testo incollato.
+4890	Nessun file per questa richiesta.
+4891	The settings could not be saved: the data folder is not writable.
+4892	The settings could not be saved.
+4893	That is not your password. Saving keys and settings needs your Mathub password.
+4894	Unknown setting:
+4895	Keep your own address in Administrators, or you would lose this page.
+4896	Sending failed:
+4897	No key set.
+4898	No key set (calls use basic voice).
+4899	No secret key set.
+4900	Set both the v2 key and the project id.
+4901	Not set, so the website cannot sell it.
+4902	Niente da controllare.
+4903	Il giorno di quella sfida è passato.
+4904	Hai già fatto la sfida di oggi.
+4905	Dai alla sessione un titolo e un luogo.
+4906	Scegli un orario di inizio nei prossimi 45 giorni.
+4907	Solo chi organizza può annullare.
+4908	Sondaggio non trovato.
+4909	Scegli un’opzione.
+4910	Quell’esame non c’è ancora stato.
+4911	Impossibile creare il sondaggio.
+4912	Scegli un esame e un orario di inizio futuro.
+4913	Questa simulazione non è aperta.
+4914	Hai già consegnato questa simulazione.
+4915	Consegnato. Un moderatore lo controllerà presto.
+4916	Solo i docenti di questo corso possono farlo.
+4917	La pubblicazione e gli strumenti del corso si attivano quando il tuo stato di docente è confermato.
+4918	Corso non trovato.
+4919	Nessun id di corso libero trovato. Contatta l’amministratore del sito.
+4920	Impossibile creare un codice del corso. Riprova.
+4921	Hai già l’accesso da docente.
+4922	Aggiungi il tuo nome come ti conoscono gli studenti.
+4923	Aggiungi il tuo dipartimento.
+4924	Aggiungi il corso o i corsi che insegni.
+4925	La tua richiesta sta già aspettando un amministratore.
+4926	Quale docente?
+4927	Approvare o rifiutare?
+4928	Sono già 15 bozze. Conferma il tuo stato di docente per crearne altre, o eliminane una che non ti serve più.
+4929	Inserisci il codice come M 171 o WRIT 101.
+4930	Aggiungi il titolo del corso.
+4931	Puoi copiare solo i tuoi corsi.
+4932	Questo programma è troppo lungo da salvare. Accorcia le note del calendario o le regole.
+4933	Sistema prima queste cose:
+4934	Non è stato possibile creare il corso:
+4935	Questo corso è troppo grande da pubblicare.
+4936	Solo il titolare del corso può eliminarlo.
+4937	Scrivi il codice del corso per confermare.
+4938	Nessun corso ha quel codice. Controllalo con il tuo docente.
+4939	Insegni in questo corso.
+4940	Iscriviti prima a questo corso con il suo codice.
+4941	Solo il titolare del corso può aggiungere co-docenti e TA.
+4942	Inserisci il suo indirizzo email.
+4943	Quella persona ha prima bisogno di un account Mathub: chiedile di iscriversi con il suo indirizzo montana.edu.
+4944	È il titolare del corso.
+4945	Dai un titolo all’annuncio.
+4946	Dai un titolo al compito.
+4947	Scegli il corso Mathub di cui usare le domande.
+4948	La scadenza deve essere una data reale.
+4949	Compito non trovato.
+4950	Solo gli studenti di questo corso possono consegnare.
+4951	Iscriviti prima a questo corso.
+4952	L’appello è chiuso in questo momento.
+4953	Non è il codice sullo schermo.
+4958	{1} {2} {3} notes practice flashcards calendar
+4959	practice quiz {1} {2} {3}
+4965	Choices: {1}
+4966	What the page tells them: {1}
+4967	Worked solution (open on the page): {1}
+4968	Worked solution (hidden from them; use it to be right, do not give it away unless they ask): {1}
+4969	WHAT IS ON IT: {1}
+4972	create_status&refresh=1
+4985	solo {1} ci hanno provato
+4986	Problemi generati all’infinito, con spiegazioni svolte. La modalità esercizio corregge man mano; la modalità esame nasconde la correzione finché non consegni.{1}
+4987	Questa è l’anteprima: {1} domande per serie
+4988	{1} ed.,
+4989	{1} Riprendi
+4990	{1} Pausa
+4991	{1} Se un link è cambiato, tocca la sua bandierina.
+4992	Non è stato possibile creare il quiz: {1}
+4993	Bigino di {1}
+4994	LA MIA SETTIMANA · {1}
+4995	La voce si è fermata ({1}). Premi play per continuare.
+4996	{1} (aperto)
+4997	Sinistra L{1}
+4998	Destra R{1}
+4999	Punto medio M{1}
+5000	Trapezio T{1}
+5001	Partendo da {1}: {2} Attenzione: il fattore b si applica a (x − h), quindi la traslazione è h, non bh.
+5002	Partendo da {1}: {2}
+5003	{1} Attenzione: il fattore b si applica a (x − h), quindi la traslazione è h, non bh.
+5004	Impossibile avviare Python: {1} Controlla la connessione; al primo caricamento Python viene scaricato dalla CDN di jsDelivr.
+5005	Pronto{1}
+5006	· Pyodide {1}
+5007	Scadenza {1}, {2} MT
+5008	{1}, {2} MT
+5009	Non salvato: {1}
+5010	Una modifica non è stata salvata: {1}
+5011	Il tuo punteggio non è stato inviato: {1}
+5012	Registra la presenza: {1}
+5054	English
+5055	Español
+5056	Français
+5057	Italiano
+5058	Português
+5059	Deutsch
+5065	tasks assignments homework to do task manager priority board kanban due
+5067	timetable schedule builder class times weekly week lectures labs shifts
+5068	calendar month week agenda deadlines exams events academic
+5070	time tracker hours study timer log
+5072	projects thesis paper lab report milestones word count sources
+5074	habits habit tracker streak routine
+5076	goals quarterly quarter key results
+5078	wheel of life balance scores areas
+5080	journal diary daily reflection mood gratitude
+5082	money finance budget spending expenses income tracker
+5084	career internships jobs applications research scholarships
+5086	portfolio resume cv projects skills
+5183	America/Los_Angeles
+5186	America/Chicago
+5188	America/New_York
+5190	America/Mexico_City
+5192	America/Bogota
+5194	America/Sao_Paulo
+5196	America/Argentina/Buenos_Aires
+5198	Europe/London
+5200	Europe/Madrid
+5202	Europe/Paris
+5204	Europe/Berlin
+5206	Europe/Rome
+5208	Europe/Lisbon
+5210	Europe/Kyiv
+5212	Europe/Moscow
+5214	Asia/Tbilisi
+5216	Asia/Yerevan
+5218	Asia/Baku
+5220	Europe/Istanbul
+5222	Asia/Dubai
+5224	Africa/Lagos
+5226	Africa/Nairobi
+5228	Asia/Kolkata
+5230	Asia/Dhaka
+5232	Asia/Kathmandu
+5234	Asia/Almaty
+5236	Asia/Bangkok
+5238	Asia/Shanghai
+5240	Asia/Seoul
+5242	Asia/Tokyo
+5244	Asia/Manila
+5246	Australia/Sydney
+5248	Pacific/Auckland
+5250	Pacific/Honolulu
+5264	a.nav-item, a.sb-day
+5282	@none
+5307	VERSION:2.0
+5308	PRODID:-//Mathub//Timetable//EN
+5340	@focus
+5466	Fare tutti i WebWork in tempo · Andare due volte al ricevimento · Prendere 85% all’Esame 2
+5546	Boeing
+5738	mh-pad:
+5762	The board is not open.
+5763	Nothing to mark: give marks, each with at (a place like "C3") and kind.
+5765	{1} (The picture has a grid: {2}.)
+5766	Guarda cosa ho scritto sulla nostra lavagna e aiutami.
+5767	(Our board right now, as I write. The picture has a grid: {1}.)
+5769	Guarda qui. (L’ho messo anche sulla nostra lavagna.)
+5830	600 {1}px {2}
+5831	italic 800 {1}px {2}
+5835	700 18px {1}
+5836	La pagina di Bo{1}
+5837	800 17px {1}
+5838	columns A–{1}, rows 1–{2}
+5839	There is no picture of the board yet, so there is nothing to mark. Look at it first.
+5840	These places are not on the picture: {1}. Use {2}, like "C3" or "B2:D3".
+5845	wb dark
+5956	ask:
+5960	what they just typed
+5961	the transcript of what they just said
+5962	(If they were talking about a different problem than the one on the board, check that one instead.)
+5963	MATH CHECK (exact, worked out by the app): you just said
+6094	(That was only a short sound or an "mm-hmm" from them, not a question. Carry on from where you stopped, without repeating what you already said.)
+6095	MATH CHECK (exact, worked out by the app): {1}. So what they said is wrong, and you just started to agree. Say right away, kindly, that you misspoke and it is not quite right, point at the exact slip, and let them fix it. Do not mention this note.
+6096	MATH CHECK (exact, worked out by the app): they were right: {1}. You just started to say they were not. Say right away that they were right, and why in a sentence. Do not mention this note.
+6097	Fix it quietly and call the tool once more. Do not mention this to the student.
+6098	Carry on in words. Do not mention this to the student.
+6099	The checker is not available; work it out carefully yourself.
+6100	That could not be read as math. If it was theirs, ask them to say it again or write it on the board; if it was yours, write it more simply and check again.
+6101	Not written yet: line {1} does not hold: {2}. Write the page again with that fixed.
+6102	Nothing to write: give one to six items, each with kind and text.
+6104	Not asked yet: its answer does not hold: {1}. Fix the answer and ask again.
+6105	Nothing to ask yet: give question, and choices with the right answer (or just answer, for them to type).
+6109	MATH CHECK (exact, worked out by the app from {1}): {2}. That is right.
+6110	MATH CHECK (exact, worked out by the app from {1}): {2}. So that is wrong. Do not agree with it, and do not say "right", "yes", "exactly" or "nice" about it. Tell them kindly it's not quite, point at the exact slip, and let them fix it themselves (give the right value only if they ask or are still stuck).{3} If the transcript may have misheard them, check with them first.
+6111	. That was a slip. Correct yourself out loud in one short sentence ("wait, my bad: …"), then carry on. Do not mention this note.
+6116	{1} Fix it quietly and call the tool once more. Do not mention this to the student.
+6117	{1} Carry on in words. Do not mention this to the student.
+6124	For Mathub’s team. A class Bo writes here goes on Mathub for everyone. Students ask for classes on Request a class, and you build them from
+6207	Quella richiesta non c’è più.
+6208	Bo non è riuscito a leggere quel file Word. Scaricalo, salvalo come PDF e crea il corso dalla pagina Crea.
+6210	Nessun membro con quell’email.
+6213	Bo aspetta una voce chiaramente più forte prima di fermarsi per te. Puoi sempre toccarlo per fermarlo
+6214	Iscriviti con la tua email montana.edu e ricevete entrambi {1} crediti per Bo, il tutor che puoi chiamare e con cui risolvi problemi su una lavagna, più i badge Invitato e Reclutatore.
+6215	Chiama Bo su {1}
+6216	Iscriviti con il mio link e riceviamo entrambi {1} crediti per Bo, il tutor che ti aiuta su una lavagna.
+6217	Condividi il tuo link. Quando un compagno si iscrive con quello, ricevete entrambi {1} crediti per Bo e un badge.
+6218	Iscriviti con la tua email montana.edu e ricevete entrambi {1} crediti per Bo.
+6219	Utilizzo e crediti
+6220	Bo funziona con il tuo account, così segue i tuoi corsi e i tuoi progressi su ogni dispositivo. Ogni account riceve crediti per lui ogni mese, gratis.
+6221	La tua
+6222	ha gli argomenti, quanto sei pronto e un esame di prova, e niente di tutto questo usa crediti.
+6223	Disegna di tutto
+6224	: grafici, superfici 3D, schemi e immagini.
+6225	Hai finito i crediti
+6226	Tutto con Bo usa crediti: domande, chiamate e le immagini che disegna. I tuoi tornano il {1}, oppure prendine altri ora.
+6227	Ottieni crediti
+6228	Più crediti ogni mese
+6229	Ogni mese gli account gratuiti ricevono {1} crediti, Pro {2} e Max {3}.
+6230	Quanto costa cosa
+6231	Bo è un’IA e può sbagliare. Controlla le risposte importanti con i tuoi appunti o il docente. Ti restano {1} crediti.
+6232	La tua scheda studente
+6233	Un file con i tuoi corsi, come stai andando, come ti piace imparare e brevi riassunti delle chat e chiamate più lunghe. Bo, e le immagini che disegna, lo leggono per adattarsi a te, e quando una chat si allunga riassume la parte vecchia per restare lucido.
+6234	Ne restano {1} ·
+6235	Utilizzo
+6236	Bo è il tuo tutor IA. Spiega qualsiasi argomento e vede la pagina da cui chiedi: le sue domande, le tue risposte, gli appunti che stai leggendo. Ogni account riceve crediti per lui ogni mese, gratis.
+6237	Domande, chiamate e immagini di Bo usano crediti. I tuoi tornano il {1}, oppure prendine altri ora.
+6238	Di più ogni mese
+6239	Ti restano {1} crediti.
+6240	· circa {1} {2} a {3} al minuto
+6241	· ogni risposta ne usa pochi
+6242	That drawing still could not be drawn. Draw it as type "svg" instead (any diagram, written as SVG), or as a simpler drawing. You can draw anything.
+6243	niente questa volta
+6244	Talk it through for now; your next drawing works as usual (you can draw anything). Do not mention this to the student.
+6245	SUMMARY OF THIS CALL SO FAR (the older part, folded so the call stays quick; the newer turns follow it). Keep using it: what they are working on, what they got right and wrong, what you promised.
+6246	SUMMARY OF THIS CALL SO FAR (the older part, folded so the call stays quick; the newer turns follow it). Keep using it: what they are working on, what they got right and wrong, what you promised. {1}
+6247	1.000 crediti al mese per Bo, dieci volte il gratuito: domande, chiamate, disegni e immagini
+6248	2.000 crediti al mese, il massimo di tutti i piani
+6249	Il modello vocale più potente di Bo nelle chiamate sul sito
+6250	Il modello vocale più potente di Bo nelle chiamate: ti segue più in fretta ed è più preciso in matematica
+6251	Max raddoppia i tuoi crediti per Bo, a 2.000 al mese, con il suo modello vocale più potente nelle chiamate. Passa da Pro.
+6252	Max ti dà 2.000 crediti al mese per Bo e il suo modello vocale più potente nelle chiamate.
+6253	Più crediti per Bo ogni mese: 1.000 con Pro, 2.000 con Max.
+6254	100 crediti al mese per Bo: chiedigli qualsiasi cosa, chiamalo, fagli disegnare
+6255	Crediti di questo mese
+6256	Crediti acquistati
+6257	Usati dopo quelli mensili; non scadono mai.
+6258	I tuoi crediti mensili tornano il {1}. Un minuto di chiamata costa {2} crediti, un’immagine {3}.
+6259	Utilizzo e acquisto
+6260	Come funzionano i crediti?
+6261	Tutto con Bo usa crediti: un messaggio circa uno o due, un minuto di chiamata {1}, un’immagine {2}. Ogni piano riceve crediti ogni mese (Gratis 100, Pro 1.000, Max 2.000), di nuovo il 1°.
+6262	Se te ne servono altri, comprane {1} per {2} nella
+6263	pagina Utilizzo
+6264	; i crediti acquistati non scadono mai.
+6265	Solo limiti di uso corretto che tengono Bo veloce per tutti: {1}. Ripartono il 1°.
+6266	I tuoi crediti
+6267	Da quel momento ricevi ogni mese i crediti del piano gratuito. I crediti acquistati restano tuoi.
+6268	Agli amministratori non viene mai addebitato nulla. Chiamalo, chiedigli, fagli disegnare qualsiasi cosa.
+6269	Ti restano {1} crediti: circa {2} minuti di chiamata, o tante domande. Altri il 1°.
+6270	Hai finito i crediti fino al 1°. Prendine altri per continuare.
+6271	Conosce il tuo programma, i tuoi esami e dove sei bloccato. Chiamalo o chiedigli da qualsiasi pagina.
+6272	I tuoi tornano il 1°
+6273	Scegli un corso e parlane
+6274	Parlane ad alta voce
+6275	Crediti mensili usati
+6276	Crediti rimasti
+6277	{1} · crediti mensili
+6278	su {1} usati
+6279	Di nuovo {1} il {2}.
+6280	Usati dopo quelli mensili. Non scadono mai.
+6281	Agli amministratori non viene mai addebitato nulla
+6282	crediti rimasti
+6283	I crediti si comprano sul sito di Mathub, con lo stesso account.
+6284	Compra {1} crediti · {2}
+6285	Pagamento con carta, in una pagina che si apre in una nuova scheda.
+6286	L’acquisto di crediti apre presto. Domande?
+6287	Niente usato questo mese.
+6288	{1}: {2} crediti
+6289	Crediti usati ogni giorno, ultimi 30 giorni
+6290	Un messaggio in chat dipende da quanto è lungo e da quanta parte del corso Bo legge per rispondere. Le immagini che Bo ha già fatto per te si rivedono gratis.
+6291	Ancora niente. Chiedi qualcosa a Bo o chiamalo.
+6292	Niente acquistato o regalato finora.
+6293	{1} crediti al mese
+6294	al mese · il modello di chiamata più potente
+6295	Ultimi 30 giorni
+6296	Le ricevute di quello che compri ti arrivano per email.
+6297	Tutto quello che hai usato
+6298	I tuoi crediti, su cosa li hai usati e come comprarne altri.
+6299	Accedi per vedere i tuoi crediti
+6300	I crediti arrivano con il tuo account Mathub: alcuni ogni mese, e altri quando li compri.
+6301	credits_status&refresh=1
+6302	{1} crediti aggiunti. Grazie!
+6303	{1} al mese · il modello di chiamata più potente
+6304	({1})*cos(t)
+6305	({1})*sin(t)
+6306	dy/dx = {1}
+6307	the curve {1}
+6308	slope field
+6309	vector field
+6310	, with solution curves through
+6311	heat map
+6312	contour map
+6313	url(#{1})
+6314	Drawing{1}{2}
+6315	(a diagram)
+6316	; labels: {1}
+6317	Non è stato possibile creare l’immagine: nessuna connessione.
+6318	Non è stato possibile creare l’immagine.
+6319	Non è stato possibile caricare l’immagine.
+6320	Bo sta disegnando questa immagine…
+6321	Immagine: {1}
+6322	Non è stato possibile creare questa immagine.
+6323	Trascina per ruotarlo (o usa le frecce)
+6324	surface {1} for x from {2} to {3} and y from {4} to {5}
+6325	a curve
+6326	Il disegno, in grande
+6327	Disegno
+6328	Bo non è raggiungibile in questo momento.
+6329	Sto chiamando Bo…
+6330	Le chiamate con Bo non sono ancora attive. Arriverà presto.
+6331	Di cosa vuoi parlare?
+6332	Altro
+6333	Piani di studio, un’altra materia, qualsiasi domanda
+6334	Aggiungi i tuoi corsi nella pagina iniziale e compariranno qui.
+6335	Agli amministratori non viene mai addebitato nulla.
+6336	non basta per una chiamata
+6337	un minuto
+6338	In una chiamata, quello che dici, la tua lavagna e le risposte di Bo vanno a OpenAI, così Bo può sentirti e risponderti. Niente viene usato per addestrare i loro modelli.
+6339	Le chiamate con Bo sono sul sito di Mathub. Apri mathub.space in un browser.
+6340	Parlatene ad alta voce e scrivete insieme sulla lavagna.
+6341	a plane
+6342	Guarda in grande
+6343	Ogni account riceve crediti gratis ogni mese. Senza carta.
+6344	Cosa ottieni
+6345	Ogni account riceve crediti per Bo ogni mese, gratis.
+6346	Crediti e piani
+6347	Hai {1} crediti: circa {2} {2|minuto|minuti}{3|} di chiamata.
+6348	Hai finito i crediti. Tornano il 1°.
+6349	Dai tra 1 e 100.000 crediti (o toglili con un segno meno).
+6350	Non ha così tanti crediti acquistati o regalati da togliere.
+6351	Le immagini non sono ancora attive.
+6352	Descrivi prima l’immagine.
+6353	Non è stato possibile creare quell’immagine: il controllo di sicurezza del modello di immagini l’ha rifiutata. Bo può disegnarla come schema.
+6354	Quell’immagine non c’è più.
+6355	Niente da cancellare.
+6356	La data, e a che punto sei del semestre
+6357	La data di oggi e un orologio dal vivo: tocca l’ora per i quadranti, l’ora a casa e quanto hai fatto del semestre, del mese e della settimana.
+6358	Nuovo apre un unico riquadro per tutto quello che vuoi aggiungere: un’attività, un compito, un esame, un evento, una cosa da fare o un orario di lezione. Alt+N funziona ovunque.
+6359	Mathub Pro è attivo: 1.000 crediti al mese per Bo.
+6360	dà 2.000 e il suo modello vocale più potente nelle chiamate.
+6361	) ti dà 1.000 crediti al mese per Bo, e
+6362	2.000 con il suo modello vocale più potente nelle chiamate.
+6363	Gratis: 100 crediti al mese per Bo. Mathub Pro ({1} al mese) ne dà 1.000; Mathub Max ({2} al mese) 2.000, con il suo modello vocale più potente nelle chiamate.
+6364	Tutto quello che c’è in Mathub è gratis, e ricevi 100 crediti al mese per Bo: chiedigli qualsiasi cosa, chiamalo, fagli disegnare.
+6365	ti dà 1.000 crediti al mese, e
+6366	Ciao {1}! Sono Bo. Conosco {2} dal suo programma e so come sta andando il tuo studio.
+6367	Ciao! Sono Bo. Conosco {1} dal suo programma e so come sta andando il tuo studio.
+6368	{1} è oggi e sei pronto al {2}%.
+6369	{1} è domani e sei pronto al {2}%.
+6370	{1} è tra {2} {2|giorno|giorni} e sei pronto al {3}%.
+6371	{1} è oggi.
+6372	{1} è domani.
+6373	{1} è tra {2} {2|giorno|giorni}.
+6374	Chiedimi qualsiasi cosa, o fai una foto a un problema.
+6375	Eliminare per sempre questo post (con tutti i suoi commenti)? Non si può annullare.
+6376	Eliminare per sempre questo commento? Non si può annullare.
+2247	{1} · {2} pts
+2286	+{1} XP
+2884	Mathub · {1}
+3037	Safari
+4739	Ctrl K
+4964	Bo · {1}
+5140	Wilson 1-122
+5185	Bozeman
+5187	Chicago
+5193	Bogotá
+5195	São Paulo
+5197	Buenos Aires
+5201	Madrid
+5225	Lagos
+5227	Nairobi
+5229	Delhi
+5235	Almaty
+5237	Bangkok
+5245	Manila
+5249	Auckland
+5251	Honolulu
+5333	{1} h {2} min
+5578	Bozeman, MT
+5592	Pomodoro
+6002	mathub:bo-character
+6010	({1}, a classmate watching this call in the study room, typed a question for you:) {2}
+2251	· in testa: {1} ({2})
+2252	Sondaggio sull’esame
+2253	Com’è andato {1}?
+2254	Anonimo. Guarda come è andata la classe e condividi cosa ha funzionato.
+2263	Tranquillo
+2264	Serio
+2265	Intenso
+2266	Nuovo arrivato
+2267	Esploratore
+2268	Studente
+2269	Erudito
+2270	Risolutore di problemi
+2271	Analista
+2272	Stratega
+2273	Esperto
+2274	Maestro
+2275	Gran maestro
+2287	Obiettivo del giorno raggiunto: {1} XP oggi. Ottimo lavoro!
+2288	{1} Livello superiore! Livello {2} · {3}
+2289	Protezione della serie usata per {1}. Ne restano {2}.
+2290	Protezione della serie guadagnata: tre giorni di obiettivo questa settimana. Copre in automatico un giorno saltato.
+2291	{1} di {2} XP oggi · Livello {3} {4}
+2292	Serie di {1} giorni, allungata oggi
+2293	Serie di {1} giorni: studia oggi per mantenerla
+2294	Studia oggi per iniziare una serie
+2295	{1} XP · {2} XP al livello {3}
+2296	Una protezione copre da sola un giorno saltato. Raggiungi l’obiettivo giornaliero in tre giorni della settimana per guadagnarne una (puoi tenerne due).
+2297	Serie di {1} giorni
+2298	Record:
+2299	{1?protezioni:protezione} · {2}/3 giorni di obiettivo questa settimana
+2300	Allungata oggi. A domani.
+2301	Rispondi a una domanda oggi per continuare.
+2302	Studia oggi per accendere la prima fiamma.
+2303	Una serie veloce per tenerla viva
+2304	· {1} XP in totale
+2305	{1} XP al livello {2}
+2306	Guadagna XP: risposta giusta +10 · tentativo +2 · flashcard che sai +2 · minuto di concentrazione +1 · sfida del giorno = i suoi punti · 5 di fila +5
+2307	Obiettivo del giorno fatto. Il resto è un bonus.
+2308	Mancano {1} XP. Una risposta giusta vale 10 XP.
+2309	Obiettivo del giorno fatto: {1} XP. {2}
+2310	Sono {1} giorni di fila.
+2311	Torna domani per costruire una serie.
+2312	La tua serie di {1} giorni finisce a mezzanotte. Una serie veloce la tiene viva.
+2313	Ciao, sono Bo. Iscriviti gratis e la tua serie, gli XP e i progressi ti seguono su ogni dispositivo.
+2314	Buongiorno! {1} XP oggi: sono circa {2} risposte giuste.
+2315	Ancora niente oggi. {1} XP sono circa {2} risposte giuste.
+2316	Mancano {1} XP all’obiettivo di oggi. Continua così.
+2317	Account creato
+2318	Crea il tuo account gratuito
+2319	Scegli i tuoi corsi e le sezioni
+2320	Scegli un obiettivo giornaliero di XP
+2321	Finisci la tua prima lezione
+2322	Saluta nelle Discussioni
+2323	Una tappa per argomento, nell’ordine in cui li fa il corso. Guadagna corone rispondendo alle domande di un argomento: cinque corone sono 40 domande al 90% di precisione.
+2324	Continua: {1}
+2325	padroneggiati (3+ corone) ·
+2326	fatti a lezione ·
+2327	in arrivo ·
+2328	Unità {1}{2}
+2329	{1} / {2} padroneggiati
+2330	Esercita l’unità
+2331	· il {1}
+2332	{1} · {2} {2|corona|corone}{3|} · {4} risposte
+2333	{1} corone su 5
+2334	Festa
+2335	Ottimo!
+2336	Rispondi a {1} domande
+2337	Dai {1} risposte giuste
+2338	Fanne {1} di fila
+2339	Ripassa {1} flashcard
+2340	Fai {1} minuti di concentrazione
+2341	Risolvi la sfida del giorno
+2342	Esercitati su {1} argomenti diversi
+2343	Finisci {1} {1|lezione|lezioni}{2|}
+2344	Guadagna 300 XP questa settimana
+2345	Studia in 5 giorni diversi questa settimana
+2347	Missione completata: {1} · +{2} XP
+2348	Tutte le missioni completate!
+2349	XP doppi per i prossimi 15 minuti. Sfruttali.
+2350	XP doppi
+2351	fino alle {1}.
+2352	Le missioni si azzerano a mezzanotte. Completale tutte e tre per 15 minuti di XP doppi.
+2353	Piccoli obiettivi, XP veri.
+2354	XP doppi attivi · {1} missioni su 3 completate
+2355	Bronzo
+2356	Argento
+2357	Oro
+2358	Zaffiro
+2359	Rubino
+2360	Smeraldo
+2361	Ametista
+2362	Perla
+2363	Ossidiana
+2364	Diamante
+2366	Nessuno ha ancora guadagnato XP in questa lega questa settimana. Sii il primo.
+2367	Zona promozione · primi {1}
+2368	Zona retrocessione · ultimi {1}
+2369	Tu
+2370	Promosso alla lega {1}!
+2371	Hai chiuso al n. {1} in {2} la settimana scorsa con {3} XP.
+2372	Sei sceso nella lega {1}. Risali questa settimana.
+2373	Ogni lunedì le classifiche ripartono. Guadagna XP tutta la settimana: i primi di ogni lega salgono, gli ultimi scendono.
+2374	Le leghe sono per i membri
+2375	Iscriviti gratis per sfidare ogni settimana in XP i compagni del tuo livello. I migliori salgono di lega ogni lunedì.
+2376	Le leghe hanno bisogno di una connessione al server.
+2377	Impossibile caricare la lega in questo momento.
+2378	Lega {1}
+2379	{1} {1|membro|membri}{2|} · finisce tra
+2380	la tua posizione
+2381	XP questa settimana
+2382	Gli XP contano in tutti i tuoi corsi e si sincronizzano da ogni dispositivo. Nascondi il tuo nome nelle Impostazioni e comparirai come “Studente anonimo”.
+2383	· i primi {1} salgono in {2}
+2384	· la lega più alta
+2385	· gli ultimi {1} scendono
+2386	Nessun server.
+2387	Imposta la tua sezione di {1} in
+2388	Impostazioni → corsi e sezioni
+2389	per sfidare chi ti siede accanto.
+2390	Sezione {1} · {2} {2|membro|membri}{3|} questa settimana
+2391	Iscriviti per entrare in una lega settimanale.
+2392	{1} XP · finisce tra {2}
+2393	{1} · finisce tra {2}
+2394	Classifica completa
+2395	Sei n. {1}
+2396	Ancora nessun XP questa settimana
+2524	Mostra
+2547	Nuovo esame
+2573	Annulla
+2668	Libro
+2682	Parole
+2770	Pausa
+2835	Su cosa stai lavorando?
+2854	{1}% giuste su {2} domande
+2855	dove si trova il corso adesso
+2856	{1} {1|flashcard ripassata|flashcard ripassate}{2|}, {3} giuste.
+2857	Niente da ripassare adesso.
+2858	Le flashcard giuste tornano tra qualche giorno; quelle sbagliate tornano domani.
+2859	Torna domani, o apri un corso per ripassare in anticipo.
+2860	Gira la flashcard
+2861	Ripasso · {1} di {2}
+2862	scatola {1} · {2}
+2863	Mostra la risposta
+2864	Ripassa {1} {1|flashcard|flashcard}{2|} in scadenza
+2865	Flashcard fatte: {1} ripassate oggi
+2866	Nessuna flashcard in scadenza
+2867	Le flashcard tornano secondo un calendario: domani dopo un errore, tra qualche giorno dopo una risposta giusta.
+2868	Lezione: {1}
+2869	Lezione
+2870	Scegli un corso per iniziare una lezione.
+2871	Un’altra
+2872	Riprova {1} {1|errore|errori}{2|}
+2873	Quaderno degli errori: {1} aperti, nessuno da rifare oggi
+2874	Le domande sbagliate tornano con le loro spiegazioni. Due risposte giuste di fila ne cancellano una.
+2875	Le domande sbagliate tornano il giorno dopo; le risposte giuste tornano dopo tre giorni.
+2876	Riprova
+2877	Sfida del giorno risolta
+2878	Sfida del giorno · {1}
+2879	Un problema al giorno, uguale per tutti. Chi risolve in fretta sale nella classifica della settimana.
+2880	Risolvi
+2881	{1} {1|scadenza|scadenze}{2|} nelle prossime 48 ore
+2882	Niente in scadenza nelle prossime 48 ore
+2883	Guarda i calendari dei corsi per le cose più lontane.
+2885	Buon {1}. Il tuo piano su {2} {2|corso|corsi}{3|}: qualche flashcard, una lezione, la sfida e quello che scade presto.
+2886	Il tuo piano per tutti i corsi.
+2887	Adesso
+2888	Missioni
+2889	Serie
+2890	Argomento più debole
+2891	{1} flashcard ripassate oggi
+2892	si azzera ogni mattina
+2893	{1} {1|flashcard|flashcard}{2|} in scadenza
+2894	flashcard fatte
+2895	nessuna flashcard in scadenza
+2896	lezione fatta
+2897	una lezione
+2898	sfida risolta
+2899	la sfida del giorno
+2900	{1} {1|scadenza|scadenze}{2|} a breve
+2901	Il piano di oggi{1}
+2902	· ne mancano {1}
+2903	· tutto fatto
+2917	Giorno per giorno
+3029	Installa Mathub
+3030	Metti Mathub nella schermata Home
+3031	Si apre a schermo intero, carica più in fretta, funziona offline.
+3032	Tocca Condividi, poi “Aggiungi alla schermata Home”.
+3033	Installa
+3034	Come
+3035	Aggiungi Mathub alla schermata Home
+3036	Apri questa pagina in
+3038	(gli altri browser su iPhone non possono installare).
+3039	Tocca il
+3040	in fondo allo schermo.
+3041	Scorri e tocca
+3042	Aggiungi alla schermata Home
+3043	, poi
+3044	Aggiungi
+3045	Poi Mathub si apre a schermo intero come un’app, resta connesso e può mandarti promemoria quando li attivi nelle Impostazioni.
+3046	Usa il menu del browser e scegli “Installa app” o “Aggiungi alla schermata Home”.
+3047	Mathub è installato. Lo trovi con le altre app.
+3069	Successivo: {1}
+3264	Nessun esame in arrivo.
+3265	Nessun argomento di esercizio per questo corso.
+3266	Nessun argomento corrisponde.
+3267	In linea
+3268	Ci stai arrivando
+3269	Appena iniziato
+3270	Pronto al {1}% per {2}
+3271	% pronto
+3272	{1} {1|domanda|domande}{2|} finora · {3}
+3273	fai la lezione
+3274	esercitati qui
+3275	non ancora esercitato · inizia dalla lezione
+3276	Preparazione all’esame
+3277	Esercizi · {1} di {2} argomenti
+3278	Alzalo più in fretta
+3279	Esercizi misti
+3280	{1} riprovate, {2} giuste{3}.
+3281	, {1} cancellate per sempre
+3282	Le risposte giuste tornano dopo tre giorni; due di fila e l’errore sparisce.
+3283	Gli errori tornano il giorno dopo.
+3284	Riprova · {1} di {2}
+3285	1 giusta su 2
+3286	sbagliata {1}×
+3287	✓ Cancellato per sempre
+3288	✓ Giusta, ancora una volta e sparisce
+3289	✕ Non ancora{1}
+3290	I tasti da 1 a 4 rispondono.
+3291	Invio controlla.
+3292	da rifare ora
+3293	cancellato per sempre
+3294	Riprova {1} da rifare
+3295	Ancora nessun errore salvato. Sbaglia una domanda negli esercizi, in una lezione, nel Blitz o nella sfida del giorno e finisce qui con la sua spiegazione.
+3296	sbagliata {1}×{2}
+3297	· 1 giusta
+3298	Ogni domanda sbagliata, con la sua spiegazione, finché non la fai giusta due volte.
+3299	{1} In tutti i corsi.
+3300	Quaderno degli errori
+3301	Riprova tutto
+3302	Rimosso.
+3337	combo migliore
+3338	Gioca ancora
+3339	Esercizio lento
+3340	Nuovo record!
+3341	Tempo scaduto
+3342	Da ripassare
+3343	Nessun argomento debole stavolta. Ottimo.
+3344	Condividi il punteggio
+3345	Novanta secondi. Più risposte giuste che puoi. Le combo moltiplicano il punteggio.
+3346	Il Blitz ha bisogno di un corso con domande di esercizio.
+3347	Questo corso non ha ancora generatori di quiz.
+3348	{1} Le domande vengono dai {2} argomenti fatti finora in {3}. I tasti da 1 a 4 rispondono.
+3349	Record
+3350	Pronto?
+3351	Solo scelta multipla, una raffica di punti per ogni risposta giusta, ×2 dopo tre di fila, ×3 dopo sei, ×4 dopo nove. Un errore azzera la combo ma il tempo continua. Ogni risposta conta per i progressi sull’argomento.
+3352	Avvia 90 secondi
+3353	Punteggio copiato. Incollalo dove vuoi.
+3380	Ancora niente registrato.
+3413	Cerca ovunque
+3420	Salta
+3496	Ancora niente da esercitare qui.
+3497	Nessun generatore per questi argomenti.
+3498	Giusto!
+3499	Bene.
+3500	Esatto.
+3501	Ci sei.
+3502	Non proprio{1}
+3503	, la risposta è ${1}$
+3504	, la risposta è {1}
+3505	Fine
+3506	Scegli una risposta, poi controlla. Funzionano anche i tasti 1–4 e Invio.
+3507	Scrivi la risposta e premi Invio.
+3508	Esci dalla lezione
+3509	{1} · {2} di {3} · {4} {5}{6}
+3510	Audio disattivato
+3511	Audio attivato
+3512	Lezione perfetta.
+3513	Ottimo lavoro.
+3514	Solido. Rivedi gli errori e riprova.
+3515	Ogni tentativo insegna qualcosa. Prova poi gli argomenti sbagliati.
+3516	Lezione completata!
+3517	{1} giuste su {2}
+3518	Un’altra lezione
+3519	Torna al percorso
+3520	Sbagliate:
+3521	Rivedi le sbagliate
+3522	Era una lezione di anteprima
+3523	I membri hanno lezioni complete da 10 domande, XP sincronizzati ovunque, missioni, leghe e badge.
+3544	Lettura
+3562	Sinistra
+3729	Ripristina
+3968	Medio
+4172	Scadenza
+4181	Autunno 2026
+4184	Nota
+4227	Recitation
+4244	Midterm 2
+4261	Menu
+4314	Nessuno
+4391	Iscriviti a un corso
+4409	Tipo
+4410	Giorni
+4411	Inizio
+4412	Aula
+4424	Ruolo
+4428	Nome
+4435	Ricevimento
+4582	Nuovo compito
+4591	Risultati
+4602	Minuti
+4603	Quando
+4723	Mathub è stato aggiornato. Ricarica per avere l’ultima versione.
+4724	Navigazione
+4725	Avvia / pausa
+4726	Passa da concentrazione a pausa
+4727	Vai al contenuto
+4728	Mathub: spazio di studio gratuito per i corsi della Montana State
+4730	Tutte le guide allo studio
+4740	Termini e privacy
+4741	Mathub · Montana State · Autunno 2026
+4742	Mathub · Spazio di studio gratuito per i corsi della Montana State
+4828	Quell’indirizzo ha già un account. Accedi invece.
+4829	Nessuna iscrizione in sospeso per quell’indirizzo. Prima iscriviti.
+4830	Quell’indirizzo è già verificato. Accedi invece.
+4831	Nessuna iscrizione in sospeso per quell’indirizzo.
+4832	Email o password sbagliate.
+4833	Quell’indirizzo non è ancora verificato. Ti abbiamo mandato un nuovo codice.
+4834	Se quell’indirizzo ha un account, sta arrivando un codice per reimpostare la password.
+4835	Quel codice non è giusto.
+4836	Scegli un piano: Gratis, Pro o Max.
+4837	Corso mancante.
+4838	Dati mancanti.
+4839	I dati dei progressi sono troppo grandi da salvare.
+4840	Password sbagliata.
+4841	Messaggio mancante.
+4842	Accedi, per favore.
+4843	Richiesta non valida.
+4844	Richiesta da altro sito bloccata.
+4845	Metodo non consentito.
+4846	Non è stato possibile inviare il codice per email adesso. Riprova tra qualche minuto.
+4954	{1} ora fa
+4955	{1} ore fa
+4956	{1} giorno fa
+4957	{1} giorni fa
+4960	Importazione non riuscita: {1}
+4961	· sez. {1}
+4962	Il server degli account ha mandato una risposta inattesa ({1}).
+4963	Salvato. Ora Mathub mostra {1}.
+4970	{1} La voce di Bo è creata da OpenAI a partire dalla sua risposta scritta.
+4973	Il corso di Bo non ha superato i controlli: {1} Riprova, oppure usa “Corso più breve”.
+4974	{1} Riprova, oppure usa “Corso più breve”.
+4975	Non è stato possibile salvare il corso: {1}
+4976	Non è stato possibile inviare il corso: {1}
+4977	Non è stato possibile aggiungere il corso: {1}
+4979	Cosa c’è che non va in questo post? (molestie, contenuti illegali, spam, imbrogli all’esame, altro)
+4980	Cosa c’è che non va in questo commento? (molestie, contenuti illegali, spam, imbrogli all’esame, altro)
+4981	Rimuovere questo post? I membri vedranno "[rimosso da un moderatore]".
+4982	Rimuovere questo commento? I membri vedranno "[rimosso da un moderatore]".
+4984	Eliminare l’account {1} e tutto quello che ha pubblicato? Non si può annullare.
+5013	Lingua
+5014	L’interfaccia e Bo. Appunti e domande del corso restano nella lingua del corso.
+5015	Ne hai sbagliata una? Toccami e la rivediamo insieme.
+5016	Ne hai sbagliate alcune? Toccami e le rivediamo insieme.
+5017	Bloccato su uno di questi problemi? Toccami.
+5018	Bloccato su una di queste domande? Toccami.
+5019	1 problema
+5020	1 domanda
+5021	Chiedimi qualsiasi cosa su {1}, oppure attiva “Bo vede” qui sopra e guarderò questa pagina con te.
+5022	Vedo questo problema ({1} con risposta, {2} sbagliati). Quale?
+5023	Vedo questa domanda ({1} con risposta, {2} sbagliate). Quale?
+5024	Vedo questi {3} problemi ({1} con risposta, {2} sbagliati). Quale?
+5025	Vedo queste {3} domande ({1} con risposta, {2} sbagliate). Quale?
+5026	Vedo questo problema ({1} con risposta). Quale?
+5027	Vedo questa domanda ({1} con risposta). Quale?
+5028	Vedo questi {3} problemi ({1} con risposta). Quale?
+5029	Vedo queste {3} domande ({1} con risposta). Quale?
+5030	Vedo questo problema. Quale?
+5031	Vedo questa domanda. Quale?
+5032	Vedo questi {3} problemi. Quale?
+5033	Vedo queste {3} domande. Quale?
+5034	Stai leggendo “{1}”. Posso spiegarlo in un altro modo, fare un esempio o interrogarti.
+5035	Sei su {1}. Chiedimi qualsiasi cosa qui, o su qualsiasi argomento.
+5036	Rivedi con me il problema che ho sbagliato in questa pagina: cosa è andato storto e come si fa.
+5037	Rivedi con me la domanda che ho sbagliato in questa pagina: cosa è andato storto e come si fa.
+5038	Rivedi con me i problemi che ho sbagliato in questa pagina: cosa è andato storto e come si fanno.
+5039	Rivedi con me le domande che ho sbagliato in questa pagina: cosa è andato storto e come si fanno.
+5040	Spiegami in modo semplice l’argomento di questi problemi prima che li provi.
+5041	Spiegami in modo semplice l’argomento di queste domande prima che le provi.
+5042	Un problema come questi
+5043	Una domanda come queste
+5044	Dammi un problema come questi per esercitarmi, e aiutami se mi blocco.
+5045	Dammi una domanda come queste per esercitarmi, e aiutami se mi blocco.
+5046	Spiega “{1}” in modo più semplice, con un esempio.
+5047	Spiega in modo più semplice quello che sto leggendo, con un esempio.
+5048	Disegna “{1}” sulla tua lavagna e spiegamelo passo passo.
+5049	Disegnalo sulla tua lavagna e spiegamelo passo passo.
+5050	Interrogami su “{1}”, una domanda alla volta.
+5051	Interrogami su quello che sto leggendo, una domanda alla volta.
+5052	I problemi di questa pagina
+5053	Le domande di questa pagina
+5060	{1} domande
+5061	{1} problemi
+5062	Pausa lunga
+5063	Quattro blocchi di concentrazione fatti. Fai una pausa di 15 minuti.
+5064	Attività
+5066	Orario
+5069	Registro del tempo
+5071	Progetti e tesi
+5073	Abitudini
+5075	Obiettivi
+5077	Ruota della vita
+5079	Diario
+5081	Soldi
+5083	Tirocini e lavoro
+5085	Portfolio
+5087	Attività{1}
+5088	Evento · {1}
+5089	Candidatura
+5090	{1}, quale corso ti sta mettendo in difficoltà {2}?
+5091	Questo browser non ha più spazio per il tuo planner. Accedi per tenerlo nel tuo account.
+5092	Eliminato
+5093	Planner di Mathub
+5094	Non è un file del planner
+5095	Impossibile raggiungere il tuo account.
+5096	Domenica
+5097	Sabato
+5098	Ieri
+5099	Consegna del progetto
+5100	Scadenza della candidatura
+5101	{1} è obbligatorio.
+5102	{1} deve essere un numero.
+5103	Bassa
+5104	Alta
+5105	In corso
+5106	Attività
+5107	Compito
+5108	Esame o quiz
+5109	Seminario
+5110	Blocco di studio
+5111	Turno di lavoro
+5112	Club o squadra
+5113	Nessun promemoria
+5114	All’ora esatta
+5115	10 minuti prima
+5116	1 ora prima
+5117	Il giorno prima
+5118	Cibo
+5119	Affitto
+5120	Libri e materiali
+5121	Trasporti
+5122	Svago
+5123	Bollette
+5124	Salute
+5125	Shopping
+5126	Lavoro
+5127	Famiglia
+5128	Borsa di studio
+5129	Prestito
+5130	Quale esame o quiz
+5131	Cosa c’è da fare
+5132	Serie di esercizi 4
+5133	Scrivere al mio tutor accademico
+5134	Priorità
+5135	Gruppo di studio in biblioteca
+5136	Renne Library, 2° piano
+5137	Promemoria
+5138	Lezione di Calculus I
+5139	Non è un corso
+5141	Con
+5142	Docente o TA
+5143	Spesi
+5144	Ricevuti
+5145	Importo
+5146	Spesa da Town & Country
+5147	Modifica attività
+5148	Attività eliminata
+5149	Modifica evento
+5150	Evento eliminato
+5151	Modifica lezione
+5152	Deve finire dopo l’inizio.
+5153	Tolto dal tuo orario
+5154	Evento
+5155	Orario di lezione
+5156	Spese
+5157	Cosa aggiungere
+5158	Nuova attività
+5159	Aggiunta alle tue attività
+5160	Nuovo evento
+5161	Aggiunto al tuo calendario
+5162	Nuova cosa da fare
+5163	Comprare un quaderno d’esame
+5164	Per
+5165	Aggiunto alle tue cose da fare
+5166	Aggiungi al tuo orario
+5167	Aggiunto al tuo orario
+5168	Aggiungi spesa o entrata
+5169	Salvato in Soldi
+5170	Nota veloce
+5171	Qualsiasi cosa tu voglia ricordare
+5172	Salva nel diario
+5173	Salvato nella giornata di oggi del diario
+5174	Studio
+5175	Vita
+5176	Futuro
+5177	Novità
+5178	Termini e privacy
+5179	Semestre
+5180	Anno
+5181	Mese
+5182	Orologio
+5184	Los Angeles
+5189	New York
+5191	Città del Messico
+5199	Londra
+5203	Parigi
+5205	Berlino
+5207	Roma
+5209	Lisbona
+5211	Kyiv
+5213	Mosca
+5215	Tbilisi
+5217	Erevan
+5219	Baku
+5221	Istanbul
+5223	Dubai
+5231	Dacca
+5233	Kathmandu
+5239	Pechino
+5241	Seul
+5243	Tokyo
+5247	Sydney
+5252	stessa ora di qui
+5253	{1} h avanti
+5254	{1} h indietro
+5255	Apri l’orologio
+5256	Aggiungi qualsiasi cosa: un’attività, un esame, un evento… (Alt+N)
+5257	Aggiunta rapida
+5258	Nuovo: {1}
+5259	Mese precedente
+5260	Mese successivo
+5261	Qui
+5262	L’ora a casa
+5263	Non mostrato
+5265	Progetto
+5266	Quiz
+5267	Senza data
+5268	{1} giorni di ritardo
+5269	Segna come non fatta
+5270	Segna come fatta
+5271	Fatto. Ne restano {1} questa settimana.
+5272	Fatto. Nient’altro in scadenza questa settimana.
+5273	Tutte le scadenze delle prossime tre settimane sono già nelle tue attività.
+5274	Aggiungi le scadenze dei tuoi corsi
+5275	Dal programma di ogni corso e dal calendario Canvas, le prossime tre settimane. Scegli quali seguire come attività.
+5276	Aggiungi alle mie attività
+5277	{1} aggiunte alle tue attività
+5278	Tutto quello che devi consegnare o fare, da ogni corso.
+5279	Scadenze dei tuoi corsi
+5280	Aggiungi un’attività e premi Invio
+5281	Tutto l’aperto
+5283	In ritardo
+5284	Scade oggi
+5285	Scade nei prossimi 7 giorni
+5286	Fatto questa settimana
+5287	Altre {1} senza data o con scadenza più avanti. Vedi Tutto l’aperto.
+5288	Niente in scadenza questa settimana
+5289	Aggiungi un’attività qui sopra, o importa le scadenze dei tuoi corsi.
+5290	Niente di aperto. Goditela.
+5291	Sposta indietro
+5292	Sposta avanti
+5293	Trascina qui un’attività
+5294	Cancella ciò che è stato fatto più di un mese fa
+5295	Ancora niente di fatto
+5296	Spunta un’attività e finisce qui.
+5297	Il suo programma non dice quando si tiene. Aggiungi tu gli orari.
+5298	già nel tuo orario
+5299	I tuoi corsi nel tuo orario
+5300	Letto dal programma di ogni corso. Controlla giorni e orari della tua sezione, poi aggiungili.
+5301	Scegli prima i tuoi corsi.
+5302	Aggiungi al mio orario
+5303	Controlla giorni e orari di {1}.
+5304	{1} aggiunto al tuo orario
+5305	Aggiungi qualcosa {1} alle {2}
+5306	si sovrappone a un altro
+5309	La tua settimana: lezioni, laboratori, turni di lavoro e blocchi di studio. Clicca su un’ora libera per aggiungere qualcosa.
+5310	Dai tuoi corsi
+5311	Un file di calendario per Google, Apple o Outlook Calendar
+5312	Aggiungi al telefono
+5313	Apri il file per aggiungere l’orario al tuo calendario
+5314	Costruisci la tua settimana
+5315	Mathub può leggere dai programmi quando si tengono i tuoi corsi. Poi aggiungi laboratori, turni di lavoro e blocchi di studio, e vedi tutta la settimana a colpo d’occhio.
+5316	Importa i miei corsi
+5317	Aggiungo qualcosa io
+5318	tra {1} min
+5319	Niente nel tuo orario oggi.
+5320	ore pianificate
+5321	Nascondi il fine settimana
+5322	Mostra il fine settimana
+5323	Scadenza
+5324	Ogni esame, scadenza, attività ed evento, da tutti i tuoi corsi e dal tuo planner.
+5325	Vista
+5326	Elenco
+5327	Prima
+5328	Dopo
+5329	Aggiungi il {1}
+5330	Cinque settimane tranquille
+5331	Ancora niente con data. Aggiungi un evento, o scegli i tuoi corsi per vedere esami e scadenze.
+5332	Niente in scadenza. Una buona giornata per portarsi avanti.
+5334	Meno di un minuto, quindi non è stato salvato.
+5335	Dove vanno le tue ore di studio, corso per corso. Contano anche i minuti della stanza Concentrazione.
+5336	Aggiungi tempo a mano
+5337	Aggiungi tempo di studio
+5338	Cosa hai fatto
+5339	Voce eliminata
+5341	Sto studiando
+5342	Ferma e salva
+5343	Non per un corso
+5344	Avvia il timer
+5345	Il timer continua anche se chiudi la pagina.
+5346	Per corso, questa settimana
+5347	Avvia il timer quando ti siedi a studiare.
+5348	Recenti
+5349	Tempo di studio
+5350	Scegliere un argomento e una domanda
+5351	Incontrare il relatore
+5352	Proposta
+5353	Rassegna della letteratura
+5354	Metodi
+5355	Raccogliere i dati
+5356	Bozza completa
+5357	Revisioni con il relatore
+5358	Consegna finale
+5359	Scegliere un argomento
+5360	Trovare 5 fonti
+5361	Scaletta
+5362	Prima bozza
+5363	Revisione tra pari o writing center
+5364	Rivedere
+5365	Citare e formattare
+5366	Leggere la scheda di laboratorio
+5367	Raccogliere i dati
+5368	Analisi e grafici
+5369	Bozza: metodi e risultati
+5370	Discussione e conclusione
+5371	Rileggere e consegnare
+5372	Scegliere il messaggio principale
+5373	Fare la scaletta delle slide
+5374	Fare le slide
+5375	Provare due volte
+5376	Presentare
+5377	Tesi
+5378	Articolo di ricerca
+5379	Relazione di laboratorio
+5380	Presentazione
+5381	I lavori grandi, divisi in passi che puoi finire, con conteggio parole e fonti.
+5382	Nuovo progetto
+5383	Tesi di laurea
+5384	Obiettivo di parole
+5385	Parti dai passi tipici per questo tipo
+5386	Crea
+5387	Progetto creato
+5388	Modifica progetto
+5389	Progetto eliminato
+5390	{1} parole. Continua così.
+5391	Ancora nessun progetto
+5392	Una tesi, un articolo di ricerca o una relazione di laboratorio: rendilo un progetto e Mathub distribuisce i passi fino alla scadenza.
+5393	scade oggi
+5394	{1} giorni rimasti
+5395	{1} di {2} passi
+5396	Tutti i passi fatti
+5397	Passi
+5398	Aggiungi un passo
+5399	Parole scritte finora
+5400	Aggiorna
+5401	Fonti
+5402	Ancora nessuna
+5403	Autore, titolo, anno
+5404	Fonte
+5405	Idee, feedback del relatore, cosa sistemare
+5406	Ciclo
+5407	Cuore
+5408	Fiamma
+5409	Luna
+5410	Penna
+5411	Timer
+5412	Sorriso
+5413	Leggere 20 minuti
+5414	Allenarsi
+5415	Ripassare le flashcard
+5416	A letto entro mezzanotte
+5417	Camminare all’aperto
+5418	Chiamare casa
+5419	Niente telefono a lezione
+5420	Scrivere nel diario
+5421	Abitudine
+5422	Giorni a settimana
+5423	Ogni giorno
+5424	{1} giorni a settimana
+5425	Segna
+5426	Piccole cose, quasi ogni giorno. Spuntale e guarda crescere la serie.
+5427	Nuova abitudine
+5428	Abitudine aggiunta
+5429	Fatto per oggi
+5430	Modifica abitudine
+5431	Mettila in pausa (nascondila da oggi)
+5432	Abitudine eliminata
+5433	Scegli una prima abitudine
+5434	Inizia con una o due. Puoi cambiarle quando vuoi.
+5435	Inizia una serie
+5436	{1} di {2} questa settimana
+5437	settimane di serie
+5438	serie migliore
+5439	Le ultime dodici settimane
+5440	Salute e forma
+5441	Mente e umore
+5442	Studio
+5443	Carriera
+5444	Amici e svago
+5445	Crescita
+5446	Dai un voto da 1 a 10 a ogni parte della tua vita, una volta al mese. La più bassa è dove un obiettivo aiuta di più.
+5447	questo mese
+5448	l’ultima volta
+5449	I tuoi voti questo mese
+5450	Parti dall’ultima volta, poi sposta ciò che è cambiato
+5451	Come va ogni parte della vita?
+5452	Salvato mentre li sposti. 1 è il peggio possibile, 10 il meglio.
+5453	Più bassa adesso: {1} ({2})
+5454	Fissa un obiettivo
+5455	Mese per mese
+5456	gen – mar
+5457	apr – giu
+5458	lug – set
+5459	ott – dic
+5460	Obiettivo
+5461	Prendere B+ o più in Calculus I
+5462	Trimestre
+5463	Parte della vita
+5464	Perché conta
+5465	Passi, uno per riga
+5467	Nuovo obiettivo
+5468	Obiettivo aggiunto
+5469	Qualche obiettivo per trimestre, ognuno diviso in passi da spuntare.
+5470	Anno precedente
+5471	Anno successivo
+5472	Tutti i passi fatti. Ottimo lavoro.
+5473	Obiettivo raggiunto
+5474	Modifica obiettivo
+5475	Obiettivo eliminato
+5476	Nessun obiettivo in questo trimestre.
+5477	Ancora nessun obiettivo.
+5478	Aggiungi un obiettivo
+5479	Dura
+5480	Mah
+5481	Ok
+5482	Bene
+5483	Benissimo
+5484	Cosa ha reso oggi migliore di ieri?
+5485	Cosa hai imparato oggi che ti ha sorpreso?
+5486	Qual è una cosa che non vedi l’ora di fare?
+5487	Chi ti ha aiutato oggi, e come?
+5488	Cosa renderebbe fantastico domani?
+5489	Cosa ti ha tolto energia oggi?
+5490	Di cosa sei orgoglioso questa settimana?
+5491	Una pagina al giorno: com’è andata e tre cose belle. Salvato nel tuo account; nessun altro su Mathub lo vede.
+5492	La pagina di oggi
+5493	Riflessione settimanale
+5494	Tutte le pagine
+5495	Il giorno dopo
+5496	Com’è andata?
+5497	Cosa è successo
+5498	Scrivi quello che vuoi. Basta una frase.
+5499	Dammi una domanda
+5500	Tre cose belle
+5501	Cosa bella {1}
+5502	{1} pagine finora.
+5503	attività fatte
+5504	abitudini spuntate
+5505	umore medio
+5506	Cosa è andato bene?
+5507	Cosa è stato difficile?
+5508	Cosa farai di diverso la prossima settimana?
+5509	Cosa hai imparato su di te?
+5510	Settimane precedenti
+5511	Andato bene
+5512	Difficile
+5513	Da cambiare
+5514	Imparato
+5515	Nessuna pagina contiene queste parole.
+5516	Ancora nessuna pagina
+5517	Scrivi oggi la tua prima pagina. Una frase è un buon inizio.
+5518	Umore, ultimi 30 giorni
+5519	Cerca nelle tue pagine
+5520	Cosa è entrato, cosa è uscito e quanto resta questo mese.
+5521	Valuta
+5522	Budget
+5523	Budget mensili
+5524	Budget salvati
+5525	Entrate
+5526	Uscite
+5527	In rosso questo mese
+5528	Oltre il budget
+5529	Budget rimasto
+5530	In media al giorno
+5531	Dove sono andati
+5532	Imposta i budget
+5533	Budget
+5534	Niente speso questo mese.
+5535	Sei mesi
+5536	Entrate
+5537	Aggiungi le spese man mano; ci vogliono cinque secondi.
+5538	Lista dei desideri
+5539	Candidato
+5540	Colloquio
+5541	Offerta
+5542	Non stavolta
+5543	Tirocinio
+5544	Ricerca
+5545	Laurea magistrale / dottorato
+5547	Tirocinante in ingegneria del software
+5548	Fase
+5549	Prossima data (colloquio, follow-up)
+5550	Link all’annuncio
+5551	Nome o email del recruiter
+5552	Tutte le candidature in un posto, dalla lista dei desideri all’offerta.
+5553	Il tuo portfolio
+5554	Nuova candidatura
+5555	Candidatura eliminata
+5556	Un’offerta. Congratulazioni!
+5557	Tieni traccia delle candidature
+5558	Aggiungi tirocini, lavori, posti di ricerca e borse di studio che ti interessano. Falli avanzare man mano che ricevi risposte, e non perdere nessuna scadenza: compaiono nel tuo calendario.
+5559	Aggiungi la prima
+5560	Costruisci il tuo portfolio
+5561	prossimo: {1}
+5562	Apri l’annuncio
+5563	Niente qui
+5564	scadenza della candidatura
+5565	prossimo passo
+5566	Simulatore di carico su un ponte
+5567	Cos’è e cosa hai fatto
+5568	Competenze, separate da virgole
+5569	Python, lavoro di squadra, CAD
+5570	I tuoi lavori migliori in una pagina da stampare, salvare in PDF o allegare a una candidatura.
+5571	Modifica i tuoi dati
+5572	Stampa o PDF
+5573	Aggiungi un progetto
+5574	I tuoi dati
+5575	Una riga su di te
+5576	Studente di ingegneria meccanica a cui piace costruire cose
+5577	Chi sono
+5579	Università e laurea
+5580	Montana State University · B.S. Mechanical Engineering, 2029
+5581	Link, uno per riga
+5582	Progetto rimosso
+5583	Inizia con il tuo nome e una riga su di te.
+5584	Aggiungi i tuoi dati
+5585	Formazione
+5586	Questo semestre: {1}
+5587	Competenze
+5588	Progetti
+5589	Aggiungi un progetto di un corso, un laboratorio, un progetto di club o qualsiasi cosa tu abbia costruito. Due o tre buoni bastano.
+5590	Il programma di oggi
+5591	In scadenza questa settimana
+5593	Promemoria ed eventi
+5594	Obiettivi del trimestre
+5595	Lezioni, laboratori e turni compaiono qui quando imposti l’orario.
+5596	Costruisci il tuo orario
+5597	Tutto il giorno
+5598	dal programma
+5599	Altri {1} questa settimana
+5600	Niente in scadenza nei prossimi sette giorni.
+5601	Aggiungi un’attività per oggi
+5602	Aggiungi l’ora a casa
+5603	Scegli una città
+5604	Pausa breve
+5605	Piccole cose da ricordare: un quaderno d’esame, un modulo, una telefonata.
+5606	Aggiungi una cosa da fare
+5607	Promemoria attivo
+5608	Gruppi di studio, ricevimento, un concerto: aggiungili qui.
+5609	Un’abitudine spuntata ogni giorno fa crescere una serie.
+5610	Scegli un’abitudine
+5611	non ancora oggi
+5612	Due o tre obiettivi per questo trimestre tengono il semestre nella giusta direzione.
+5613	Fissa un obiettivo
+5614	Dai un voto a otto parti della tua vita una volta al mese e vedi dove mettere le energie.
+5615	Dai i voti
+5616	La tua giornata
+5617	Personalizza
+5618	Tutte le schede sono nascoste
+5619	Usa Personalizza per mostrarne di nuovo qualcuna.
+5620	Cosa da fare eliminata
+5621	Fermare il timer e cambiare?
+5622	Personalizza la tua giornata
+5623	Questo corso in numeri
+5624	in scadenza questa settimana
+5625	esame rimasto
+5626	esami rimasti
+5627	{1} attività fatte su {2}
+5628	Nascondi la barra laterale
+5629	Tutto su Mathub
+5630	Salvataggi troppo frequenti. Riprova tra qualche minuto.
+5631	Dati del planner mancanti.
+5632	Il tuo planner è troppo grande da salvare. Elimina vecchie pagine del diario o spese per fare spazio.
+5633	Tutti i corsi su Mathub, e il tuo planner
+5634	Trasforma qualsiasi programma in un corso per tutti
+5635	Bo su ogni pagina: chiedigli di quello che stai guardando
+5636	Crea e condividi i tuoi corsi
+5637	La pagina di Bo, quando vuoi
+5643	Corsi tuoi: quelli che condividono i compagni, file di corso e corsi creati con l’IA che usi già
+5651	Mathub Max è attivo: Bo è su ogni pagina, e puoi
+5654	Trasformare un programma in un corso è gratis.
+5656	Corsi che hai aggiunto a Mathub
+5657	Dagli il programma. In un minuto o due tutto il corso è su Mathub, per te e per chiunque lo segua:
+5658	Il file viene controllato contro i malware e non viene mai conservato.
+5659	Bo controlla che sia il programma di un corso vero e che il corso non sia già su Mathub.
+5660	Il corso va su Mathub per tutti. Il tuo nome non compare.
+5661	Bo invia il tuo programma all’IA di Anthropic per controllarlo e scrivere il corso; non viene usato per addestrare l’IA.
+5662	Accedi prima: Bo aggiunge il corso con il tuo account Mathub.
+5663	Controllo del programma
+5664	Aggiungi {1} a Mathub
+5665	Va su Mathub per chiunque segua {1}, e tra i tuoi corsi. Il tuo nome non compare.
+5666	Non è stato scritto né aggiunto niente.
+5667	Tutti condividono un solo corso per materia, così appunti, esercizi e forum restano in un unico posto.
+5668	Aggiungilo ai tuoi corsi
+5669	{1} è tra i tuoi corsi.
+5670	{1} ora è su Mathub, per chiunque lo segua.
+5671	{1} aggiunto
+5672	Nascosto da Mathub
+5673	Su Mathub per tutti
+5676	Tutti i corsi su Mathub: lezioni, esercizi, flashcard e preparazione agli esami
+5677	Oggi, il tuo planner, il calendario, la stanza Concentrazione e il calcolatore del GPA
+5685	Da qualsiasi programma, per tutti
+5695	Aggiungi qualsiasi cosa, da qualsiasi pagina
+5697	È tutto nella barra laterale
+5698	I tuoi corsi, con i giorni che mancano a ogni esame, poi Studio (attività, orario, calendario, progetti), Vita (abitudini, obiettivi, diario, soldi), Futuro (tirocini e portfolio) ed Esplora. I gruppi si chiudono e restano come li lasci.
+5699	Il tuo mese a colpo d’occhio
+5700	I puntini segnano i giorni pieni e gli esami. Tocca un giorno per vedere tutto.
+5701	L’intestazione, su ogni pagina
+5702	Il prossimo esame, la ricerca (Ctrl K, o ⌘ K su Mac), i suoni per concentrarsi, la serie e l’obiettivo del giorno, e il tuo account.
+5703	È tutto nel menu
+5704	I tuoi corsi con i giorni a ogni esame, le pagine del planner, l’aggiunta rapida, il calendario del mese, l’orologio e la serie.
+5705	Qualsiasi argomento, formula, flashcard, risorsa o pagina in tutti i tuoi corsi.
+5707	Bo, su ogni pagina
+5708	Chiedigli di quello che stai guardando: tocca una domanda e te la spiega passo passo. Incluso in Mathub Pro.
+5709	Qui in basso
+5710	Home, Oggi, la stanza Concentrazione, il forum e il tuo account, a un tocco.
+5711	Ti serve più spazio?
+5712	Nascondi qui la barra laterale e l’orologio passa nell’intestazione. Il pulsante del menu la riporta.
+5713	Il tour è finito. Puoi rivederlo dalle Impostazioni.
+5715	Bo non è riuscito a controllare questo programma ora. Riprova.
+5716	Non sembra il programma di un corso
+5717	Questo programma contiene qualcosa che non si può pubblicare per tutti:
+5718	Bo non ha trovato il codice del corso (tipo CHMY 121) in questo programma. Ogni corso su Mathub ne ha uno: aggiungi la pagina che lo mostra.
+5719	Questo corso non è più in attesa di essere aggiunto. Riscrivilo.
+5720	Questo corso non è stato controllato, quindi non si può aggiungere. Riscrivilo.
+5721	Questo corso è troppo grande da aggiungere (il limite è 3 MB). Riscrivilo come corso più breve.
+5722	Non è il corso che è stato controllato. Riscrivilo.
+5723	Questo corso contiene testo che Bo non ha scritto, quindi non si può aggiungere. Riscrivilo.
+5724	Questo corso ha bisogno di un codice tipo CHMY 121.
+5725	Questo corso non ha superato i controlli:
+5726	Non è stato possibile aggiungere il corso ora. Riprova.
+5731	La barra laterale è nascosta. Il pulsante del menu in alto a sinistra la riporta.
+5732	Mostra la barra laterale
+5733	La lavagna
+5734	Scrivilo su una lavagna
+5735	Quello che hai scritto
+5736	quello che hai scritto
+5737	la foto
+5739	Le pagine di Bo
+5740	Sottotitoli (C)
+5741	Bo guarda quello che hai scritto e ti aiuta
+5742	Metti sulla lavagna la foto di un problema e mostrala a Bo
+5743	Mostra a Bo
+5744	Pagina {1} di Bo
+5745	Bo · pagina {1}
+5746	Chiudi questa pagina
+5747	Chiudi
+5748	Metti via questa pagina
+5749	Metti via (Le pagine di Bo la riporta)
+5750	Apri questa pagina
+5751	Una domanda per te
+5752	Pagina {1}
+5753	messa via
+5754	Bo vede {1} insieme a quello che dici dopo
+5755	La tua lavagna
+5756	la lavagna
+5757	La tua voce va direttamente a OpenAI, il cui modello vocale in tempo reale è quello con cui Bo parla, insieme a ciò che Bo sa del tuo corso e di come stai andando, e alle immagini della lavagna. Niente viene registrato.
+5758	Tutto lo schermo è una lavagna condivisa: scrivi il tuo lavoro e tocca
+5759	, e lui lo legge, lo corregge e ti aiuta ad andare avanti{1}.
+5760	Chiedi qualsiasi cosa e Bo risponde ad alta voce, scrivendo la matematica sulla lavagna. Tocca Bo per inviare quello che hai detto, o per interromperlo.
+5761	; lo vede anche mentre scrivi
+5764	Scrivi prima qualcosa sulla lavagna, poi mostralo a Bo.
+5768	Guarda quello che ho scritto
+5770	Con la lavagna:
+5771	Dimensione dei sottotitoli
+5772	Sfondo dei sottotitoli
+5773	Quello che dite tu e Bo, in basso (C)
+5774	Nomi
+5775	Mostra chi sta parlando
+5776	Lavagna scura
+5777	Inchiostro chiaro su lavagna scura
+5778	Piccoli
+5779	Grandi
+5780	Enormi
+5781	Pieno
+5782	Bo lo vede mentre scrivo
+5783	Un’immagine della lavagna va a Bo quando smetti di scrivere per un attimo, così può seguirti
+5784	La chiamata
+5785	Ecco come appaiono i sottotitoli.
+5786	Grafico
+5787	Ingrandisci
+5788	Riduci
+5789	Torna alla prima vista
+5790	Apri nel grafico
+5791	grafico che puoi spostare
+5792	Trascina per spostarlo, scorri o pizzica per lo zoom, punta una curva per leggerla; le frecce lo spostano, + e − fanno lo zoom, 0 torna all’inizio
+5793	Clicca sul grafico, poi scorri per lo zoom
+5794	Chiudi il grafico
+5795	Cosa è disegnato
+5796	Dove tocca la tangente
+5797	Trascina per spostare · scorri o pizzica per lo zoom · punta una curva per leggerla
+5798	Curve
+5799	Aggiungi la tua
+5800	Analisi
+5801	La sua derivata,
+5802	Una tangente da far scorrere lungo la curva
+5803	I cursori di Bo
+5804	Ancora nessuna curva. Aggiungine una qui sotto.
+5805	Per {1}
+5806	f′(x), la derivata di {1}
+5807	{1}: in x = {2}, y = {3}{4}
+5808	, pendenza {1}
+5809	Quattro tue alla volta. Rimuovine prima una.
+5810	Non si legge come una funzione di x. Prova qualcosa come x^2 - 3, sin(x) o sqrt(x + 1).
+5811	Sposta la lavagna (funziona anche con due dita)
+5812	Penna (P)
+5813	Evidenziatore (H)
+5814	Gomma (E)
+5815	Scrivi sulla lavagna con la tastiera (T)
+5816	Colore e dimensione
+5817	Annulla (Ctrl Z)
+5818	Ripeti (Ctrl Maiusc Z)
+5819	Mostra tutto
+5820	Cancella quello che hai scritto
+5821	Colore
+5822	Sposta
+5823	Cancella
+5824	Ripeti
+5825	Adatta
+5826	Nero
+5827	Viola
+5828	Sottile
+5829	Spesso
+5832	Scrivi, poi Invio
+5833	Scrivi sulla lavagna con la tastiera
+5834	Lavagna cancellata. Annulla la riporta.
+5841	Scrivilo per Bo
+5842	I tuoi passaggi, un problema, uno schizzo: Bo li vede con la tua domanda.
+5843	Aggiungi alla mia domanda
+5844	Scrivi prima qualcosa sulla lavagna.
+5846	Compagni
+5847	Bloccato su un problema? Chiama Bo.
+5848	Un tutor che ne parla con te e scrive su una lavagna condivisa.
+5849	Guarda una demo di 1 minuto
+5850	Altro da esplorare
+5851	La settimana in tutti i tuoi corsi, i compagni, le guide allo studio
+5852	Ogni corso che segui, reso semplice: cosa c’è nel prossimo esame, lezioni da cinque minuti e un tutor che puoi chiamare. Gratis con un’email montana.edu.
+5853	Quiz infiniti
+5854	Problemi nuovi ogni volta, ognuno con la soluzione svolta.
+5855	Le idee principali, le formule, un esempio svolto e gli errori tipici.
+5856	Strumenti con cui giocare
+5857	Grafici, simulatori, risolutori, una circonferenza unitaria e calcolatori dei voti.
+5858	Discussioni, sfide del giorno, sessioni di studio e simulazioni d’esame.
+5859	Guardati intorno quanto vuoi. Iscriviti con un’email montana.edu per tenere i progressi su ogni dispositivo.
+5860	Novità da Mathub
+5861	(qualche volta a semestre: cose nuove che puoi fare, come chiamare Bo)
+5862	Email di novità attive
+5863	Email di novità disattivate
+5864	Impostazioni email
+5865	Controllo del link…
+5866	Questo link non funziona
+5867	Apri le Impostazioni
+5868	Fermare le email di novità?
+5869	Sono le poche email a semestre sulle novità di Mathub, inviate a
+5870	. I promemoria e i riepiloghi che hai attivato non cambiano.
+5871	Ferma le email di novità
+5872	Tienile
+5873	Fatto. Niente più email di novità.
+5874	{1} non le riceverà più. Hai cambiato idea?
+5875	Riattivale
+5876	Vai su Mathub
+5877	Le email di novità sono di nuovo attive
+5878	Le email di novità sono disattivate
+5882	Chiama Bo gratis
+5888	Guarda una chiamata con Bo (1 minuto)
+5892	Le lezioni di oggi, cosa scade e la tua settimana. Personalizza ne aggiunge altre: un timer, cose da fare, abitudini e obiettivi.
+5893	Puoi controllare il mio lavoro?
+5894	Mi viene x = 7.
+5895	Oh, quasi! Guarda la seconda riga.
+5896	Prima togli il 3. 11 meno 3 fa 8.
+5897	Poi dividi a metà. Quindi x è 4.
+5898	Eccola come immagine: le rette si incontrano in x = 4.
+5899	Trascina il grafico per guardarti intorno. Vuoi provarne uno da solo?
+5900	Togli 3 da entrambi i lati: $2x = 8$
+5901	Dividi entrambi i lati a metà: $x = 4$
+5902	Entrambi i lati come rette
+5903	La pagina di Bo
+5904	Il grafico di Bo
+5905	Ecco una chiamata con Bo.
+5906	Guarda di nuovo
+5907	Bo · pagina 1
+5908	Bo · pagina 2
+5909	Le chiamate con Bo sono sul sito. Apri mathub.space nel browser di un computer o di un telefono.
+5911	Bloccato?
+5912	Chiama Bo.
+5913	Parlagli come a un amico. Scrivi sulla lavagna. Ti mostra dove hai sbagliato.
+5915	Una chiamata con Bo, in 25 secondi. Senza audio, solo sottotitoli.
+5916	Riguarda
+5917	Leggi cosa dicono
+5918	Chiamalo.
+5919	Un tocco. Parla e basta.
+5920	Scrivilo.
+5921	Tutto lo schermo è la tua lavagna.
+5922	Ti aiuta.
+5923	Cerchia l’errore e mostra i passaggi.
+5925	Quando vuoi, per qualsiasi corso.
+5926	Una lavagna condivisa
+5927	Tu scrivi. Lui corregge.
+5928	Grafici che si muovono
+5929	Trascina, ingrandisci, aggiungi i tuoi.
+5930	Chiedi di quello che vedi.
+5931	Provalo ora. È gratis.
+5944	You have used your
+5946	Write a subject.
+5947	Write the message.
+5948	This link does not work any more. Turn emails off in Settings → Account instead.
+5949	Test sent to
+5950	Confirm the send first.
+5951	An email is still being sent. Let it finish (or stop it) first.
+5952	Nobody would get it: no verified member has news emails on.
+5953	Nothing is being sent.
+5970	Il personaggio di Bo
+5971	Chi è Bo quando ti fa da tutor: in chat, ad alta voce e nelle chiamate. Ognuno ha la sua voce.
+5972	Studia con me su Mathub: appunti gratis, esercizi infiniti e un forum per i nostri corsi della Montana State.{1} {2}
+5978	Un riepilogo dopo ogni chiamata con Bo
+5979	(cosa avete fatto, l’errore da tenere d’occhio e tre esercizi)
+5980	Un avviso 3 giorni prima di ogni esame
+5981	(per email, e su questo dispositivo se le notifiche sono attive, con una chiamata di ripasso con Bo)
+5982	Riepiloghi delle chiamate per email attivi
+5983	Riepiloghi delle chiamate per email disattivati
+5984	Avvisi d’esame attivi
+5985	Avvisi d’esame disattivati
+5986	Non va bene? Diccelo
+5987	Non va bene?
+5988	Cambia chi è Bo
+5989	Il tuo esame è vicino.
+5991	pagina di preparazione all’esame
+5993	Un compagno in chiamata con Bo ti ha dato un codice?
+5994	Entra nella sua stanza di studio
+5995	Un passaggio sbagliato, una risposta sbagliata, non quello che ho chiesto…
+5996	Grazie. Il team di Mathub darà un’occhiata a questa risposta. Cosa non andava?
+5997	Cosa non andava
+5998	Qualcosa di inappropriato? Segnalalo
+5999	Ricevuto. Grazie.
+6000	Chi è Bo
+6001	In chat, ad alta voce e nelle chiamate. Ognuno ha la sua voce; in chiamata cambia dalla prossima.
+6003	Grazie. Il team di Mathub darà un’occhiata a questa risposta.
+6004	Non è andato a buon fine.
+6005	Stanza di studio: i compagni entrano in questa chiamata
+6006	Stanza di studio
+6007	Un compagno
+6008	{1} è entrato nella tua stanza di studio.
+6009	{1} ha lasciato la stanza di studio.
+6011	Codice {1}
+6012	I compagni entrano con questo codice, o con il link:
+6013	Copia il link
+6014	Chiudi la stanza
+6015	Nella stanza:
+6016	Non è ancora entrato nessuno.
+6017	Fino a tre compagni possono entrare in questa chiamata. Vedono la lavagna e i sottotitoli, scrivono sulla lavagna e scrivono domande a cui Bo risponde ad alta voce. Non sentono te e tu non senti loro.
+6018	Apri una stanza di studio
+6019	La stanza di studio è chiusa.
+6020	Link copiato. Mandalo ai tuoi compagni.
+6021	Dalla tua chiamata con Bo
+6025	Ripasso per l’esame.
+6026	Bo parte dagli argomenti più deboli e ti fa domande in stile esame, una alla volta. Le risolvi sulla lavagna.
+6027	Inizia il ripasso
+6028	Stai parlando con
+6029	Cambia
+6030	Durante una chiamata, un nuovo personaggio arriva dalla prossima chiamata.
+6031	Quella risposta non è più nella tua chat.
+6033	Bo non è riuscito a scrivere il riepilogo ora.
+6034	Prima conferma la tua email.
+6035	Quella stanza di studio non è aperta. Controlla il codice o chiedine uno nuovo.
+6036	È la tua stanza di studio: sei in chiamata.
+6037	Questa stanza di studio è piena:
+6038	Quella stanza di studio non è aperta.
+6039	Non sei in questa stanza di studio.
+6040	Richiesta sconosciuta.
+6041	Professor Bo
+6042	Un professore di Harvard di 80 anni. Esigente, asciutto e difficilissimo da impressionare.
+6043	“Mmh. No. Undici meno tre fa otto da prima che nascessi. Rileggimi la seconda riga, piano.”
+6044	Coach Bo
+6045	Tratta ogni problema come un allenamento. Forte, veloce, niente scuse.
+6046	“No! Di nuovo. Prima togli il tre. Questa è la ripetizione. Vai!”
+6047	Detective Bo
+6048	Ogni problema è un caso e ogni errore un indizio.
+6049	“Interessante. La pista si perde alla riga due. Chi ha spostato quel tre?”
+6050	Bo Zen
+6051	Calmo e paziente. Ideale per i giorni stressanti.
+6052	“Respiriamo. Una riga alla volta. Guarda con calma la riga due.”
+6053	Bo l’amico
+6054	Un amico un anno avanti a te. Rilassato, caloroso, un po’ buffo.
+6055	“Oh, quasi! Però controlla la seconda riga, il tre se l’è svignata.”
+6056	Vada per {1}.
+6057	Mathub non è raggiungibile al momento. Controlla la connessione.
+6058	Cosa si dice nella chiamata
+6059	Scrivi una domanda per Bo…
+6060	Stanza di studio con {1}
+6061	Esci
+6062	Una domanda per Bo
+6063	un compagno
+6064	Il tuo compagno
+6065	Hai chiesto a Bo: {1}
+6066	{1} ha chiesto a Bo: {2}
+6067	Quello che dicono Bo e {1} compare qui.
+6068	Con te: {1}
+6069	Sei il primo qui
+6070	La chiamata è finita
+6071	La chiamata di {1} con Bo è finita, quindi la stanza di studio si è chiusa.
+6072	Chiedi tu a Bo
+6073	Accedi per entrare nella stanza di studio
+6074	Un compagno in chiamata con Bo ha condiviso questa stanza. Accedi o iscriviti con l’email della tua università per unirti.
+6075	Entra in una stanza di studio
+6076	Un compagno in chiamata con Bo ti dà un codice. Vedi la lavagna e cosa si dice, scrivi sulla lavagna con lui e scrivi domande per Bo.
+6077	Il codice
+6078	Entra
+6079	Un codice ha sei lettere e numeri.
+6080	Ingresso…
+6081	Nella stanza di studio
+6082	Con {1} e Bo.
+6083	il tuo compagno
+6084	Appunti gratis per argomento, esercizi infiniti, flashcard programmate, calendari delle scadenze, una stanza della concentrazione e un forum per i corsi della Montana State. {1}
+6086	Iscriviti con la tua email montana.edu e guadagnate entrambi i badge Invitato e Reclutatore.
+6088	{1} ti ha lasciato un riepilogo in chat e per email, con tre esercizi.
+6089	{1} ti ha lasciato un riepilogo in chat e per email.
+6090	{1} ti ha lasciato un riepilogo in chat, con tre esercizi.
+6091	{1} ti ha lasciato un riepilogo in chat.
+1633	shared_class&code=
+2001	Bloccare il membro anonimo che ha scritto questo {1}? Non vedrai più quello che pubblica in forma anonima, e le sue risposte anonime non ti notificheranno. Il suo nome resta nascosto, anche a te. Il {2} va anche ai moderatori per un controllo. Puoi sbloccarlo quando vuoi nelle Impostazioni.
+2002	Bloccare il membro che ha scritto questo {1}? Non vedrai più i suoi post, commenti, sessioni di studio e notifiche. Non viene avvisato. Il {2} va anche ai moderatori per un controllo. Puoi sbloccarlo quando vuoi nelle Impostazioni.
+2003	Bloccato
+2004	Dai un titolo al post.
+2005	Scrivi qualcosa nel testo.
+2006	Un sondaggio ha bisogno di almeno due opzioni.
+2007	Pubblicato
+2008	Senza titolo
+2009	Rispondi…
+2010	In forma anonima
+2011	Salvato
+2012	Eliminare questo post?
+2013	Post eliminato
+2014	Eliminare questo commento?
+2018	Eliminato definitivamente
+2021	Sospendere per quanti giorni?
+2022	Motivo (mostrato all’utente):
+2023	Violazione delle regole della community
+2024	Sincronizzati {1} eventi di Canvas
+2025	Sospendere l’autore di questo elemento per quanti giorni?
+2026	Utente sospeso
+2027	Scrivi prima un commento.
+2028	Commento pubblicato
+2029	Ancora nessuna discussione. Iniziane una.
+2039	Impossibile raggiungere il server in questo momento.
+2040	Badge ottenuto: {1}
+2041	Badge
+2042	Si ottengono studiando, aiutando i compagni ed esserci.
+2043	I badge sono per i membri
+2044	Iscriviti gratis per collezionare badge per serie, domande risposte, risposte accettate, sfide del giorno e altro.
+2045	I badge hanno bisogno di una connessione al server.
+2046	Impossibile caricare i badge.
+2047	La tua bacheca
+2048	Guarda i badge di tutti
+2049	Tutti su Mathub e i badge che hanno ottenuto. I nomi seguono le impostazioni di privacy di ciascuno.
+2050	La pagina Persone è per i membri
+2051	Iscriviti gratis con la tua email montana.edu per vedere chi studia con te e i badge che ha ottenuto.
+2052	La pagina Persone ha bisogno di una connessione al server.
+2053	Cerca per nome
+2054	Cerca persone
+2055	Ordina
+2056	Più badge
+2057	Online ora
+2058	Iscritti più recenti
+2059	Nome A–Z
+2061	{1?membri:membro} ·
+2062	{1} online ora
+2063	Nessuno corrisponde a quel nome.
+2064	Ancora nessun membro.
+2065	Iscritto {1}
+2066	{1} {1|post|post}{2|} · {3} {3|risposta|risposte}{4|} · {5} {5|risposta accettata|risposte accettate}{6|}
+2067	mostra meno
+2068	+{1} altri
+2069	Ancora nessun badge
+2070	Mostra di più
+2071	{1} studiano{2} adesso
+2072	{1} online su Mathub
+2073	{1} stanno studiando adesso
+2074	{1} persone stanno leggendo questa pagina
+2075	Un problema per corso al giorno, uguale per tutti. Risolvilo in fretta per punti bonus e sali nella classifica della settimana.
+2077	Ancora nessuna sfida per questo corso.
+2078	Il problema di oggi
+2079	{1} {1|studente ci ha provato|studenti ci hanno provato} oggi{3}.{2|}
+2080	· {1}% l’ha fatto giusto
+2081	Torna domani per uno nuovo.
+2082	✓ Giusto
+2083	✕ Non proprio
+2084	· {1} punti · {2}
+2085	· la risposta è ${1}$
+2086	· la risposta è {1}
+2087	es. 3/8, -0.375, 2pi
+2088	Invia
+2089	Suggerimento
+2090	Il tempo parte alla prima risposta. Le risposte giuste più veloci valgono fino a 5 punti bonus.
+2091	Accedi per registrare la risposta e guadagnare punti.
+2092	Offline: la tua risposta non è stata registrata in classifica.
+2093	Giusto! +{1} punti
+2094	+2 punti per averci provato
+2095	Inserisci un numero, una frazione o un’espressione come 2pi
+2096	Suggerimento {1} di {2}
+2097	Le classifiche hanno bisogno di una connessione al server.
+2098	Entra in classifica
+2099	I membri guadagnano punti con ogni sfida del giorno e compaiono nella classifica settimanale.
+2100	Ancora nessuno. Sii il primo.
+2101	I più veloci oggi
+2102	Questa settimana · {1}
+2103	Questa settimana · tutti i corsi
+2104	10 punti per una risposta giusta, fino a 5 in più per la velocità, 2 per averci provato. Nascondi il tuo nome nelle Impostazioni.
+2105	tu: {1} pt
+2106	{1} pt · {2} g
+2107	Pubblica dove e quando studi e lascia che i compagni si uniscano. Le sessioni spariscono un’ora dopo la fine.
+2108	es. WebWork 3.2 + esercizi per l’Esame 2
+2109	es. Romney 220, il tavolo vicino alla finestra
+2110	Porta il formulario. Cerca l’adesivo di Mathub.
+2111	Pubblica una sessione
+2112	Cosa
+2113	Dove
+2114	Data
+2115	Durata
+2116	Nota (facoltativa)
+2117	Pubblica la sessione
+2118	Risulti automaticamente tra i partecipanti.
+2119	Accedi per pubblicare o partecipare alle sessioni
+2120	I membri possono pubblicare sessioni di studio e iscriversi.
+2121	Scegli data e ora.
+2122	Sessione pubblicata
+2123	Partecipi
+2124	Partecipazione annullata
+2125	Annullare questa sessione?
+2126	Le sessioni di studio hanno bisogno di una connessione al server.
+2128	organizzata da {1}
+2129	in corso
+2130	Partecipano
+2131	Ci sono
+2132	Ancora nessuna sessione pubblicata. Pubblicane una e vedi chi arriva.
+2133	Una serie a tempo che tutti fanno nello stesso momento, con la classifica alla fine. Stesse domande per tutti.
+2134	In programma
+2135	I moderatori programmano una simulazione prima di ogni esame
+2136	A tempo
+2137	Si fa nel quiz con il cronometro e senza correzioni finché non consegni
+2138	Con classifica
+2139	Guarda dove sei arrivato quando la finestra si chiude
+2140	Simulazioni d’esame della community
+2141	Le simulazioni hanno bisogno di una connessione al server.
+2142	Le simulazioni sono per i membri
+2143	Iscriviti gratis per registrarti, fare la serie a tempo con tutti e vedere la classifica.
+2145	Ancora nessuna simulazione in programma{1}. {2}
+2146	per questo corso
+2147	Programmane una dal pannello di amministrazione.
+2148	I moderatori le programmano prima di ogni esame; tieni d’occhio le attività.
+2149	{1} · {2} min · {3} domande
+2150	Ufficiale
+2151	Segna come simulazione ufficiale per questo corso
+2152	Togli ufficiale
+2153	Segna come ufficiale
+2154	· {1} completate
+2155	· hai fatto {1}/{2}
+2156	Inizia ora
+2157	Registrato
+2158	Registrati
+2159	Classifica
+2160	Impossibile creare la serie.
+2161	Consegnato: {1}/{2}. La classifica compare quando la finestra si chiude.
+2163	Tutte le simulazioni
+2164	· media {1}%
+2165	· la classifica si sblocca quando la finestra si chiude
+2166	Studente
+2167	Punteggio
+2168	Tempo
+2169	Ancora nessun risultato da mostrare.
+2170	Scrivi un problema di esercizio o una flashcard per i compagni. Un moderatore lo approva, poi tutti possono usarlo e votarlo.
+2171	Problemi
+2172	Problemi della community con risposte e spiegazioni
+2173	Flashcard da aggiungere ai tuoi mazzi
+2174	Voti
+2175	I migliori salgono in cima
+2176	Problemi della community
+2177	Flashcard della community
+2178	Inviane uno
+2179	I miei invii
+2180	I contenuti della community hanno bisogno di una connessione al server.
+2181	I contenuti della community sono per i membri
+2182	Iscriviti gratis per leggere, votare e aggiungere problemi e flashcard della community.
+2183	Risposta: {1}
+2184	Non hai ancora inviato niente.
+2186	Gira
+2187	Ancora niente di approvato per {1}. Sii il primo a proporne uno.{2|}
+2188	Accedi per contribuire
+2189	I membri possono inviare problemi e flashcard da revisionare.
+2190	Scrivi il problema in modo chiaro. $…$ mostra la matematica.
+2191	La risposta finale
+2192	Come arrivarci, passo per passo
+2193	Problema di esercizio
+2194	Argomento
+2195	Problema
+2196	Spiegazione (facoltativa ma apprezzata)
+2197	Invia in forma anonima
+2198	Invia per la revisione
+2199	Un moderatore lo controlla prima che vada online. Le parolacce vengono censurate.
+2200	Buoni invii
+2201	Una domanda chiara con una sola risposta giusta.
+2202	Indica a quale sezione appartiene.
+2203	Per le flashcard tieni corti entrambi i lati.
+2204	Usa $…$ per la matematica: $\frac{d}{dx}x^2 = 2x$.
+2205	Fronte
+2206	Le sfide di oggi
+2207	Gioca
+2208	In corso
+2209	Pubblicane una
+2210	Vedi tutto
+2211	Stesso problema per tutti · batti il tempo
+2212	Serve il server.
+2213	Il problema di oggi è pronto
+2214	Ancora nessuna sfida
+2215	{1} · {2} {2|studente|studenti}{3|} oggi
+2216	✓ Risolto
+2217	Provato
+2218	{1} ci hanno provato oggi{2}
+2219	· {1}% giuste
+2220	obiettivo della classe questa settimana · {1} si esercitano
+2221	Tranquillo finora, oggi.
+2223	Nessuna sessione pubblicata. Stai studiando da qualche parte? Pubblicalo.
+2225	Nessuna in programma.
+2227	Dai tuoi docenti
+2228	Pubblica un annuncio in {1}
+2229	Eliminare questo annuncio?
+2230	{1} questa settimana, tutti insieme
+2231	{1} {1|studente si esercita|studenti si esercitano}{2|}
+2232	su {1} domande risposte insieme
+2233	la settimana scorsa {1}
+2234	Obiettivo raggiunto. Ogni risposta conta comunque per la prossima settimana.
+2235	Ne mancano {1}. Contano le serie di esercizi, le lezioni e i round di Blitz.
+2236	· {1} flashcard
+2237	· {1} h di concentrazione
+2238	Pubblica un annuncio
+2239	Questa settimana il ricevimento si sposta a giovedì alle 14.
+2240	Annuncio
+2241	Tutti i corsi
+2242	Link (facoltativo)
+2243	Mostra per
+2244	Pubblicato. Gli studenti lo vedono nella loro panoramica.
+2245	Oggi: {1}. Stesso problema per tutti, punti per la velocità.
+2246	Ancora nessuna sfida.
+2248	✓ Risolto oggi
+2249	Provato oggi
+2250	{1} {1|studente ci ha provato|studenti ci hanno provato} oggi{3}. La tua settimana: {4} pt{5}.{2|}
+6377	Bloccare il membro anonimo che ha scritto questo post? Non vedrai più quello che pubblica in forma anonima, e le sue risposte anonime non ti notificheranno. Il suo nome resta nascosto, anche a te. Il post va anche ai moderatori per un controllo. Puoi sbloccarlo quando vuoi nelle Impostazioni.
+6378	Bloccare il membro anonimo che ha scritto questo commento? Non vedrai più quello che pubblica in forma anonima, e le sue risposte anonime non ti notificheranno. Il suo nome resta nascosto, anche a te. Il commento va anche ai moderatori per un controllo. Puoi sbloccarlo quando vuoi nelle Impostazioni.
+6379	Bloccare il membro che ha scritto questo post? Non vedrai più i suoi post, commenti, sessioni di studio e notifiche. Non viene avvisato. Il post va anche ai moderatori per un controllo. Puoi sbloccarlo quando vuoi nelle Impostazioni.
+6380	Bloccare il membro che ha scritto questo commento? Non vedrai più i suoi post, commenti, sessioni di studio e notifiche. Non viene avvisato. Il commento va anche ai moderatori per un controllo. Puoi sbloccarlo quando vuoi nelle Impostazioni.
+6381	Appunti per sezione
+6382	Sito del corso e link
+6383	Libri di testo e link
+6384	Criteri e termini chiave

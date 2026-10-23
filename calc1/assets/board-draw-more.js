@@ -318,7 +318,7 @@
       const key = box.dataset.img; let [prompt, style, shape] = []; try { [prompt, style, shape] = JSON.parse(key); } catch (e) { return; }
       box.classList.add('busy');
       let job = IMG.get(key);
-      if (!job || job.err) { job = post('ai_image', { prompt, style, shape, cid: cidNow() }).then(r => blobOf(r.url)).then(url => { const v = { url }; IMG.set(key, v); return v; }).catch(e => { const v = { err: (e && e.message) || 'This picture could not be made.', credits: !!(e && e.data && e.data.credits) }; IMG.set(key, v); return v; }); IMG.set(key, job); }
+      if (!job || job.err) { job = post('ai_image', { prompt, style, shape, cid: cidNow(), lang: App.lang || 'en' }).then(r => blobOf(r.url)).then(url => { const v = { url }; IMG.set(key, v); return v; }).catch(e => { const v = { err: (e && e.message) || 'This picture could not be made.', credits: !!(e && e.data && e.data.credits) }; IMG.set(key, v); return v; }); IMG.set(key, job); }
       Promise.resolve(job).then(v => {
         document.querySelectorAll(`.bd-imgbox[data-img="${CSS.escape(key)}"]`).forEach(b => {
           b.classList.remove('busy');

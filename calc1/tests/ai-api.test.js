@@ -240,14 +240,18 @@ const snapshot = { name: 'Alice', streak: 4, xpToday: 10, goal: 30, page: 'Calc 
   const tts = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures', 'tts-last.json'), 'utf8'));
   ok('ai_speak answers with audio in the voice picked, from the speech model with Bo\'s speaking style', sr.status === 200 && /^audio\//.test(sr.type) && sr.buf.slice(0, 4).toString() === 'RIFF' && tts.voice === 'coral' && tts.model === 'gpt-4o-mini-tts' && /warm/.test(tts.instructions) && /chain rule/.test(tts.input), { status: sr.status, type: sr.type, tts });
   sr = await raw('mod', 'ai_speak', { text: 'Hello there', voice: 'not-a-voice' }); ok('an unknown voice falls back to the default', sr.status === 200 && JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures', 'tts-last.json'), 'utf8')).voice === 'ash');
+  sr = await raw('mod', 'ai_speak', { text: 'Die Kettenregel', voice: 'coral', lang: 'de' }); const ttsDe = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures', 'tts-last.json'), 'utf8'));
+  ok('in German, Bo reads aloud with a German accent', sr.status === 200 && /Speak German with a natural native accent/.test(ttsDe.instructions), ttsDe.instructions);
   r = await call('mod', 'ai_speak', { text: '' }); ok('nothing to say is refused', r.status === 400, r);
   sr = await raw('bob', 'ai_speak', { text: 'hi' }); ok('Bo\'s voice works on any plan, paid in credits', sr.status === 200 && /^audio\//.test(sr.type), { status: sr.status });
   r = await call('anon', 'ai_speak', { text: 'hi' }); ok('and an account', r.status === 401, r);
   r = await call('mod', 'ai_listen', { audio: { type: 'audio/webm;codecs=opus', data: Buffer.from('fake opus audio '.repeat(40)).toString('base64') }, secs: 3, class: 'calc' });
   const stt = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures', 'stt-last.json'), 'utf8'));
   ok('ai_listen turns a recording into text, with the class\'s topics as a hint', r.ok && r.text === 'What is the chain rule?' && stt.post.model === 'gpt-4o-mini-transcribe' && stt.post.language === 'en' && /Calculus I/.test(stt.post.prompt) && /speech\.webm$/.test(stt.file.name) && stt.file.size > 100, { r, stt });
+  r = await call('mod', 'ai_listen', { audio: { type: 'audio/webm;codecs=opus', data: Buffer.from('fake opus audio '.repeat(40)).toString('base64') }, secs: 3, class: 'calc', lang: 'fr' });
+  ok('in French, Bo listens for French', r.ok && JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures', 'stt-last.json'), 'utf8')).post.language === 'fr');
   r = await call('mod', 'ai_listen', { audio: { type: 'video/mp4', data: 'AAAA' }, secs: 3 }); ok('a recording of another kind is refused', r.status === 400, r);
-  r = await call('mod', 'ai_status'); ok('this month\'s voice use is counted: characters spoken and seconds heard', r.usage.voice >= 90 && r.usage.voice_limit === 300000 && r.usage.listen === 3 && r.usage.listen_limit === 36000, r.usage);
+  r = await call('mod', 'ai_status'); ok('this month\'s voice use is counted: characters spoken and seconds heard', r.usage.voice >= 90 && r.usage.voice_limit === 300000 && r.usage.listen === 6 && r.usage.listen_limit === 36000, r.usage);
   await call('mod', 'ai_forget', { what: 'all' });
 
   // live calls: set up here with OpenAI (the stand-in), counted in minutes, hung up past a limit, saved to the chat
@@ -348,6 +352,7 @@ const snapshot = { name: 'Alice', streak: 4, xpToday: 10, goal: 30, page: 'Calc 
   const same = JSON.parse(liveRows(before) || '[]'); const n1 = same.length; const kept = same.find(x => x.id === before);
   ok('it goes on as the same call: the same id and row, its minutes so far counted once (no new row)', r.lid === before && n1 === n0 && !!kept && +kept.secs === 600 && +kept.ended === 0, { lid: r.lid, before, n0, n1, kept });
   ok('and what is said is written down in their language, with English for the math words', LS.audio.input.transcription.languages.join() === 'es,en', LS.audio.input.transcription);
+  ok('and he speaks Spanish the whole call, hello included', /Speak Spanish the whole call, from your first words/.test(LS.instructions) && !/Speak English unless/.test(LS.instructions) && /Say it in Spanish\./.test(LS.instructions), LS.instructions.slice(0, 600));
   r = await call('mod', 'ai_live_start', { class: 'calc', sdp: OFFER, resume: 'f'.repeat(24) }); LS = rd('live-last.json', {}).session;
   ok('a resume of a call that is not theirs is just a new call', r.ok && r.resumed === false && !/# The call is back/.test(LS.instructions));
   r = await call('mod', 'ai_live_start', { class: 'calc', sdp: OFFER, snapshot: Object.assign({}, snapshot, { name: 'REFUSE-MAXMODEL' }) }); LS = rd('live-last.json', {}).session;

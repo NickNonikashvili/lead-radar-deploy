@@ -434,20 +434,25 @@ The Hostinger zip never includes `app/`.
 - **Server keys** (in `api/config.local.php` only): `revenuecat_secret`, `pro_web_link`, `max_web_link`,
   `anthropic_key`, `openai_key` (optional: Bo's natural voice), and `plan_grants` for testers.
 
-## Languages (English, Español, Русский)
+## Languages (English, Español, Русский, Français, Italiano, Português, Deutsch)
 
 `assets/i18n.js`, `assets/i18n/<lang>.js`, `i18n/`, `scripts/i18n-extract.js`, `scripts/build-i18n.js`. The interface
-is shown in the language picked at the foot of every page or in Settings (kept with the account, `lang` in the
-preferences), else the browser's language if Mathub has it, else English. The code stays in English: `assets/i18n.js`
+is shown in the language picked from the globe in the top bar (EN, ES… with a menu of all seven, each in its own
+words; arrow keys, Home/End and Escape work), at the foot of every page or in Settings (kept with the account, `lang`
+in the preferences), else the browser's language if Mathub has it, else English. The code stays in English: `assets/i18n.js`
 loads the language's dictionary before the page and swaps the words as the page is drawn (text, title, aria-label,
 placeholder, alt, confirm/prompt/alert, the tab's title), so nothing a page does changes. An entry with `{1}` is a
 pattern ("{1} questions left"); `{1|вопрос|вопроса|вопросов}` picks a plural; text that fits no entry stays English.
 Dates and numbers follow the language. Class material (notes, questions, flashcards) stays in the class's language.
 Bo is told the language (`lang` with each question, `MH_AI_LANGS` in `api/ai.php`) and answers in it, with the English
-term for key words; calls and basic voice listen and speak in it.
+term for key words. Calls speak it from the first word (`MH_AI_LIVE_SPEAK_EN` is swapped for the language, and his
+hello is said in it) and write down what is said in it; reading aloud (`ai_speak`) asks for a native accent, listening
+(`ai_listen`) expects the language, the device voice is one for the language, and math is read out in its words
+(`assets/talk.js`). A picture he makes (`ai_image`) has its words and labels in the language, kept apart from the
+English one. A class's sidebar labels come from its `*-data.js` and are read by the extractor too.
 To add words: `node scripts/i18n-extract.js` (new words get new numbers in `i18n/catalog.json`; text the reader can't
 follow goes in `i18n/extra.txt`), translate the numbers in `i18n/<lang>.tsv`, then `node scripts/build-i18n.js`.
-French, Italian, Portuguese and German are partly translated and are not in the picker yet.
+Every language has every entry; `node scripts/build-i18n.js` says how many each has and checks each `{1}`.
 
 ## Classes Bo writes from a syllabus, for everyone
 

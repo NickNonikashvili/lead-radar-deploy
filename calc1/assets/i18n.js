@@ -1,7 +1,7 @@
 /* ============================================================
-   Mathub — the interface in English, Español and Русский (French, Italian, Portuguese and German are on the way).
-   Loaded in <head> right after boot.js. The language is the one picked (Settings, the page footer, the welcome
-   page), else the browser's first language that Mathub has, else English. For any language but English, its
+   Mathub — the interface in English, Español, Русский, Français, Italiano, Português and Deutsch.
+   Loaded in <head> right after boot.js. The language is the one picked (the globe in the top bar, Settings, the page
+   footer), else the browser's first language that Mathub has, else English. For any language but English, its
    dictionary (assets/i18n/<lang>.js, built from i18n/<lang>.tsv by scripts/build-i18n.js) loads before the page,
    and the interface is shown in it as it is drawn: the text, the words in title, aria-label, placeholder and alt,
    confirm() / prompt() / alert(), the tab's title, dates and numbers. The code itself stays in English, so nothing
@@ -17,8 +17,7 @@
    ============================================================ */
 (function (global) {
   'use strict';
-  // French, Italian, Portuguese and German are partly translated (i18n/fr.tsv …) and join the list when they are done
-  var LANGS = [['en', 'English'], ['es', 'Español'], ['ru', 'Русский']];
+  var LANGS = [['en', 'English'], ['es', 'Español'], ['ru', 'Русский'], ['fr', 'Français'], ['it', 'Italiano'], ['pt', 'Português'], ['de', 'Deutsch']];
   var CODES = LANGS.map(function (l) { return l[0]; });
   var KEY = 'studyhub-settings'; var html = document.documentElement;
   function stored() { try { var s = JSON.parse(localStorage.getItem(KEY) || '{}'); return s && s.lang; } catch (e) { return null; } }
@@ -146,6 +145,40 @@
     document.write('<script src="assets/i18n/' + lang + '.js?v=' + encodeURIComponent(global.MATHUB_BUILD || '') + '"><\/script>');
     document.addEventListener('DOMContentLoaded', function () { if (ready) walk(document.body); });
   }
-  // the picker at the foot of the page (index.html)
-  document.addEventListener('DOMContentLoaded', function () { var p = document.getElementById('lang-pick'); if (!p) return; p.value = CODES.indexOf(lang) >= 0 ? lang : 'en'; p.addEventListener('change', function () { I.set(p.value); }); });
+  // the pickers: the globe in the top bar and the one at the foot of the page (index.html)
+  document.addEventListener('DOMContentLoaded', function () {
+    var cur = CODES.indexOf(lang) >= 0 ? lang : 'en';
+    var p = document.getElementById('lang-pick');
+    if (p) { p.innerHTML = LANGS.map(function (l) { return '<option value="' + l[0] + '" lang="' + l[0] + '">' + l[1] + '</option>'; }).join(''); p.value = cur; p.addEventListener('change', function () { I.set(p.value); }); }
+    topPicker(cur);
+  });
+  /* the globe in the top bar: a menu of the languages, each in its own words, with its name in the current language
+     under it. The label says "Language" in English too, for someone who landed in a language they cannot read. */
+  function topPicker(cur) {
+    var btn = document.getElementById('lang-top-btn'), menu = document.getElementById('lang-menu'), code = document.getElementById('lang-top-code');
+    if (!btn || !menu) return;
+    var dn = null; try { dn = new Intl.DisplayNames([cur], { type: 'language' }); } catch (e) {}
+    var word = cur === 'en' ? 'Language' : I.t('Language') + ' (Language)';
+    btn.setAttribute('aria-label', word + ': ' + I.name(cur)); btn.title = word; menu.setAttribute('aria-label', word);
+    if (code) code.textContent = cur.toUpperCase();
+    var tick = '<svg class="lm-check" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
+    menu.innerHTML = LANGS.map(function (l) {
+      var sub = ''; try { sub = dn ? dn.of(l[0]) : ''; } catch (e) {} sub = sub ? sub.charAt(0).toLocaleUpperCase(cur) + sub.slice(1) : '';
+      return '<button type="button" role="menuitemradio" tabindex="-1" aria-checked="' + (l[0] === cur) + '" data-lang="' + l[0] + '"><span class="lm-name" lang="' + l[0] + '">' + l[1] + '</span>' + (sub && sub !== l[1] ? '<span class="lm-sub">' + sub + '</span>' : '') + tick + '</button>';
+    }).join('');
+    var items = function () { return [].slice.call(menu.querySelectorAll('[data-lang]')); };
+    var open = function (focusCur) { menu.hidden = false; btn.setAttribute('aria-expanded', 'true'); var it = items(); var f = focusCur ? it.filter(function (b) { return b.getAttribute('aria-checked') === 'true'; })[0] || it[0] : null; if (f) f.focus(); };
+    var close = function (back) { if (menu.hidden) return; menu.hidden = true; btn.setAttribute('aria-expanded', 'false'); if (back) btn.focus(); };
+    btn.addEventListener('click', function () { if (menu.hidden) open(true); else close(false); });
+    btn.addEventListener('keydown', function (e) { if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); open(true); } });
+    menu.addEventListener('click', function (e) { var b = e.target.closest('[data-lang]'); if (!b) return; var c = b.getAttribute('data-lang'); close(true); if (c !== cur) I.set(c); });
+    menu.addEventListener('keydown', function (e) {
+      var it = items(), k = it.indexOf(document.activeElement);
+      if (e.key === 'Escape') { e.preventDefault(); close(true); }
+      else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); it[(k + (e.key === 'ArrowDown' ? 1 : it.length - 1)) % it.length].focus(); }
+      else if (e.key === 'Home' || e.key === 'End') { e.preventDefault(); it[e.key === 'Home' ? 0 : it.length - 1].focus(); }
+      else if (e.key === 'Tab') close(false);
+    });
+    document.addEventListener('click', function (e) { if (!menu.hidden && !e.target.closest('#lang-top')) close(false); });
+  }
 })(window);
