@@ -159,7 +159,7 @@
     if (!btn || !menu) return;
     var dn = null; try { dn = new Intl.DisplayNames([cur], { type: 'language' }); } catch (e) {}
     var word = cur === 'en' ? 'Language' : I.t('Language') + ' (Language)';
-    btn.setAttribute('aria-label', word + ': ' + I.name(cur)); btn.title = word; menu.setAttribute('aria-label', word);
+    btn.setAttribute('aria-label', word + ': ' + I.name(cur) + ' (' + cur.toUpperCase() + ')'); btn.title = word;   // the name holds the code it shows (EN), for voice control (WCAG 2.5.3) menu.setAttribute('aria-label', word);
     if (code) code.textContent = cur.toUpperCase();
     var tick = '<svg class="lm-check" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
     menu.innerHTML = LANGS.map(function (l) {

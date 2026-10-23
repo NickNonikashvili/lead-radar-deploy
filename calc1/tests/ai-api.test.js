@@ -242,6 +242,7 @@ const snapshot = { name: 'Alice', streak: 4, xpToday: 10, goal: 30, page: 'Calc 
   sr = await raw('mod', 'ai_speak', { text: 'Hello there', voice: 'not-a-voice' }); ok('an unknown voice falls back to the default', sr.status === 200 && JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures', 'tts-last.json'), 'utf8')).voice === 'ash');
   sr = await raw('mod', 'ai_speak', { text: 'Die Kettenregel', voice: 'coral', lang: 'de' }); const ttsDe = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures', 'tts-last.json'), 'utf8'));
   ok('in German, Bo reads aloud with a German accent', sr.status === 200 && /Speak German with a natural native accent/.test(ttsDe.instructions), ttsDe.instructions);
+  sr = await raw('mod', 'ai_speak', { text: 'Hi', lang: ['de'] }); ok('a language that is not a word is ignored (English), not an error', sr.status === 200 && !/Speak German/.test(JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures', 'tts-last.json'), 'utf8')).instructions), { status: sr.status });
   r = await call('mod', 'ai_speak', { text: '' }); ok('nothing to say is refused', r.status === 400, r);
   sr = await raw('bob', 'ai_speak', { text: 'hi' }); ok('Bo\'s voice works on any plan, paid in credits', sr.status === 200 && /^audio\//.test(sr.type), { status: sr.status });
   r = await call('anon', 'ai_speak', { text: 'hi' }); ok('and an account', r.status === 401, r);

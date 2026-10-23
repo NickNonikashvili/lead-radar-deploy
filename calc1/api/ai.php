@@ -1011,7 +1011,7 @@ function mh_ai_route(string $route, array $in, array $cfg, string $ip): void {
       mh_rate_or_fail("ai_speak:$uid", 90, 60, 'Bo is talking a lot. Your device\'s voice takes over for a minute.');
       @set_time_limit(45);
       [, $audio, $type] = mh_ai_openai($V, '/audio/speech', json_encode(['model' => $V['tts_model'], 'voice' => $voice, 'input' => $text, 'response_format' => 'mp3',
-        'instructions' => 'You are Bo, a friendly bobcat who tutors college students. Voice: warm, upbeat and encouraging, like a favourite tutor. Pace: natural and relaxed, a little slower through math. Read math the way a teacher says it aloud. Never sound robotic.' . (isset(MH_AI_LANGS[$in['lang'] ?? '']) ? ' Speak ' . MH_AI_LANGS[$in['lang']] . ' with a natural native accent.' : '')], JSON_UNESCAPED_UNICODE), 40);
+        'instructions' => 'You are Bo, a friendly bobcat who tutors college students. Voice: warm, upbeat and encouraging, like a favourite tutor. Pace: natural and relaxed, a little slower through math. Read math the way a teacher says it aloud. Never sound robotic.' . (is_string($in['lang'] ?? null) && isset(MH_AI_LANGS[$in['lang']]) ? ' Speak ' . MH_AI_LANGS[$in['lang']] . ' with a natural native accent.' : '')], JSON_UNESCAPED_UNICODE), 40);
       mh_ai_add($uid, 'voice', mb_strlen($text)); mh_credits_spend($u, 'voice', (int)ceil(mb_strlen($text) * mh_credits_cfg($cfg)['tts']), 'speak-' . gmdate('YmdH'), 'Bo’s voice, read out', $cfg);   // per 1,000 characters
       http_response_code(200); header('Content-Type: ' . (preg_match('#^audio/[a-z0-9.+-]+$#i', $type) ? $type : 'audio/mpeg')); header('Cache-Control: no-store'); header('Content-Length: ' . strlen($audio));
       echo $audio; exit;
