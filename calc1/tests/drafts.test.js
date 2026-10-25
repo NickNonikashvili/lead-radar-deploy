@@ -71,6 +71,7 @@ const DOCX = zip([{ name: '[Content_Types].xml', data: '<?xml version="1.0"?><Ty
   const req2 = last(); const sys2 = req2.system.map(b => b.text).join('\n'); const u2 = userText(req2); const v2 = r.review || {};
   check('the revised draft is version 2, and knows version 1 came before it', r.ok && v2.version === 2 && v2.stage === 'revised' && v2.before === v1.id, { version: v2.version, before: v2.before });
   check('Bo is given his earlier feedback, what she wants to know and what her peers said', /EARLIER FEEDBACK \(version 1, 0 days ago\)/.test(u2) && /1\. Show the storm:/.test(u2) && /WHAT THEY WANT FEEDBACK ON: Does my ending land\?/.test(u2) && /PEER REVIEW COMMENTS THEY GOT[^\n]*\nSam: I wanted more/.test(u2) && /THE STAGE: the revised draft/.test(u2), u2.slice(0, 700));
+  check('Bo may quote her peer review comments (only wording of his own is left out)', (v2.feedback.revisions || []).some(x => x.title === 'Bring her closer' && /"I wanted more about your grandmother"/.test(x.why)), v2.feedback.revisions);
   check('and says what changed since then', (v2.feedback.since || []).length === 1 && v2.feedback.since[0].status === 'partly' && /thunder/.test(v2.feedback.since[0].note), v2.feedback.since);
   check('in her language, with the quotes as the draft has them', /LANGUAGE: the student uses Mathub in Spanish/.test(sys2) && /The quotes stay exactly as the draft has them/.test(sys2));
   r = await api(a, 'ai_draft_review', { class: 'writ', project: 'p2', stage: 'draft', text: DRAFT1 + ' BADJSON' });

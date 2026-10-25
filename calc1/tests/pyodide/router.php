@@ -100,6 +100,8 @@ if ($path === '/anthropic/v1/messages') {
         ['quote' => $q(0), 'kind' => 'revise', 'note' => 'You could write: "The storm rolled over the barn like a slow freight train at dusk."']],
       'since' => str_contains($allu, 'EARLIER FEEDBACK') ? [['point' => 'Show the storm', 'status' => 'partly', 'note' => 'The thunder is there now; the rain still is not.']] : [],
       'next' => ['Reread the middle and mark every summary', 'Add one moment from the storm', 'Read it aloud once']];
+    // with peer review comments: a revision quoting one (words not in the draft, but theirs to quote)
+    if (preg_match('/PEER REVIEW COMMENTS THEY GOT[^\n]*\n(?:[A-Z][a-z]+: )?([^\n]+)/', $allu, $pm)) $j['revisions'][] = ['title' => 'Bring her closer', 'why' => 'Your classmate wrote "' . rtrim($pm[1], '.') . '" and a reader feels that gap too.', 'where' => '', 'ask' => 'What did she do that only she would do?'];
     $text = str_contains($draft, 'BADJSON') && !str_contains($utext, 'That was not the JSON object') ? 'Let me think about this draft for a moment.' : "```json\n" . json_encode($j) . "\n```";
   } elseif (str_contains($sys, 'THE CALL RECAP')) {
     // the recap after a call: one line, a page with three practice problems, the next step. RECAPSLIP in the call

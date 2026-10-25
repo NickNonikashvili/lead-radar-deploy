@@ -80,29 +80,30 @@ function mh_draft_unwrite(string $t, string $draftN, int &$cut): string {
   }
   return trim(implode(' ', $keep));
 }
-/** Bo's JSON, made safe to show: the right shapes and lengths, each quote checked against the draft, his own wording left out. */
-function mh_draft_clean(array $j, string $text, bool $earlier): array {
-  $N = mh_draft_norm($text); $cut = 0;
+/** Bo's JSON, made safe to show: the right shapes and lengths, each quote checked against the draft, his own wording
+    left out. $also: other words he may quote (their peer review comments, what they asked, the project's goals). */
+function mh_draft_clean(array $j, string $text, bool $earlier, string $also = ''): array {
+  $N = mh_draft_norm($text); $NQ = $N . "\n" . mh_draft_norm($also); $cut = 0;
   $s = fn($v, int $n) => mh_ai_plain($v, $n);
   $quote = function ($v) use ($N, $s): array { $q = (string)preg_replace('/^[\s"“”]+|[\s"“”]+$/u', '', $s($v, 400)); return [$q, $q !== '' && mb_strlen($q) >= 4 && str_contains($N, mh_draft_norm($q))]; };
   $list = fn($v) => is_array($v) ? array_values(array_filter($v, 'is_array')) : [];
-  $out = ['overall' => mh_draft_unwrite($s($j['overall'] ?? '', 700), $N, $cut), 'strengths' => [], 'revisions' => [], 'comments' => [], 'since' => [], 'next' => []];
-  foreach (array_slice($list($j['strengths'] ?? null), 0, 3) as $x) { [$q, $ok] = $quote($x['quote'] ?? ''); $why = mh_draft_unwrite($s($x['why'] ?? '', 400), $N, $cut); if ($why !== '') $out['strengths'][] = ['quote' => $ok ? $q : '', 'found' => $ok, 'why' => $why]; }
+  $out = ['overall' => mh_draft_unwrite($s($j['overall'] ?? '', 700), $NQ, $cut), 'strengths' => [], 'revisions' => [], 'comments' => [], 'since' => [], 'next' => []];
+  foreach (array_slice($list($j['strengths'] ?? null), 0, 3) as $x) { [$q, $ok] = $quote($x['quote'] ?? ''); $why = mh_draft_unwrite($s($x['why'] ?? '', 400), $NQ, $cut); if ($why !== '') $out['strengths'][] = ['quote' => $ok ? $q : '', 'found' => $ok, 'why' => $why]; }
   foreach (array_slice($list($j['revisions'] ?? null), 0, 4) as $x) {
-    $title = $s($x['title'] ?? '', 80); $why = mh_draft_unwrite($s($x['why'] ?? '', 600), $N, $cut); $ask = mh_draft_unwrite($s($x['ask'] ?? '', 300), $N, $cut);
+    $title = $s($x['title'] ?? '', 80); $why = mh_draft_unwrite($s($x['why'] ?? '', 600), $NQ, $cut); $ask = mh_draft_unwrite($s($x['ask'] ?? '', 300), $NQ, $cut);
     [$q, $ok] = $quote($x['where'] ?? ''); if ($title === '' || $why === '') continue;
     $out['revisions'][] = ['title' => $title, 'why' => $why, 'where' => $ok ? $q : '', 'found' => $ok, 'ask' => $ask];
   }
   foreach (array_slice($list($j['comments'] ?? null), 0, 14) as $x) {
-    [$q, $ok] = $quote($x['quote'] ?? ''); $before = $cut; $note = mh_draft_unwrite($s($x['note'] ?? '', 500), $N, $cut);
+    [$q, $ok] = $quote($x['quote'] ?? ''); $before = $cut; $note = mh_draft_unwrite($s($x['note'] ?? '', 500), $NQ, $cut);
     if ($cut > $before || $note === '' || !$ok) continue;   // a comment that writes for them, or that points at words the draft does not have
     $kind = in_array($x['kind'] ?? '', ['praise', 'question', 'revise', 'source'], true) ? $x['kind'] : 'revise';
     $out['comments'][] = ['quote' => $q, 'kind' => $kind, 'note' => $note];
   }
   // in the order they come in the draft
   usort($out['comments'], fn($a, $b) => (mb_strpos($N, mh_draft_norm($a['quote'])) ?: 0) <=> (mb_strpos($N, mh_draft_norm($b['quote'])) ?: 0));
-  if ($earlier) foreach (array_slice($list($j['since'] ?? null), 0, 4) as $x) { $p = $s($x['point'] ?? '', 80); if ($p === '') continue; $out['since'][] = ['point' => $p, 'status' => in_array($x['status'] ?? '', ['done', 'partly', 'not yet'], true) ? $x['status'] : 'partly', 'note' => mh_draft_unwrite($s($x['note'] ?? '', 300), $N, $cut)]; }
-  foreach (array_slice(is_array($j['next'] ?? null) ? $j['next'] : [], 0, 4) as $x) { $t = mh_draft_unwrite($s($x, 200), $N, $cut); if ($t !== '') $out['next'][] = $t; }
+  if ($earlier) foreach (array_slice($list($j['since'] ?? null), 0, 4) as $x) { $p = $s($x['point'] ?? '', 80); if ($p === '') continue; $out['since'][] = ['point' => $p, 'status' => in_array($x['status'] ?? '', ['done', 'partly', 'not yet'], true) ? $x['status'] : 'partly', 'note' => mh_draft_unwrite($s($x['note'] ?? '', 300), $NQ, $cut)]; }
+  foreach (array_slice(is_array($j['next'] ?? null) ? $j['next'] : [], 0, 4) as $x) { $t = mh_draft_unwrite($s($x, 200), $NQ, $cut); if ($t !== '') $out['next'][] = $t; }
   $out['left_out'] = $cut;
   return $out;
 }
@@ -166,7 +167,7 @@ function mh_draft_route(string $route, array $in, array $cfg): void {
       $r = mh_ai_call($A, $model, $system, $msgs, 2600, 100); $j = mh_ai_json($r['text']);
       if (!$j) { $msgs[] = ['role' => 'assistant', 'content' => $r['text']]; $msgs[] = ['role' => 'user', 'content' => 'That was not the JSON object. Send only the JSON object, in the format asked.']; $r = mh_ai_call($A, $model, $system, $msgs, 2600, 100); $j = mh_ai_json($r['text']); }
       if (!$j) mh_fail('Bo could not finish reading your draft. Please try again.', 502);
-      $fb = mh_draft_clean($j, $text, (bool)$last);
+      $fb = mh_draft_clean($j, $text, (bool)$last, implode("\n", array_merge([$peer, $ask], $goals)));
       if (!$fb['revisions'] && !$fb['comments']) mh_fail('Bo could not finish reading your draft. Please try again.', 502);
       $db->prepare('INSERT INTO draft_reviews (user_id, course, project, version, stage, words, text, ask, peer, feedback, created) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
         ->execute([$uid, $cid, $pid, $version, $stage, $words, $text, $ask, $peer, json_encode($fb, JSON_UNESCAPED_UNICODE), time()]);

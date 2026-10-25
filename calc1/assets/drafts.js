@@ -250,7 +250,7 @@
     let before = null; if (r.before) { try { before = await getReview(r.before); } catch (e) {} }
     const nextKey = 'mathub-draft-next-' + r.id; let ticks = {}; try { ticks = JSON.parse(localStorage.getItem(nextKey) || '{}') || {}; } catch (e) {}
     const jump = key => (P.marked.has(key) ? key : P.alias[key] && P.marked.has(P.alias[key]) ? P.alias[key] : null);
-    const quoteBtn = (key, q) => { const k = jump(key); return k ? `<button type="button" class="df-where" data-action="df-show" data-k="${k}" aria-label="${esc(t('Show it in the draft'))}" translate="no">“${esc(q)}”</button>` : `<q class="df-where off" translate="no">${esc(q)}</q>`; };
+    const quoteBtn = (key, q) => { const k = jump(key); return k ? `<button type="button" class="df-where" data-action="df-show" data-k="${k}" title="${esc(t('Show it in the draft'))}"><span translate="no">“${esc(q)}”</span><span class="sr-only"> (${esc(t('Show it in the draft'))})</span></button>` : `<q class="df-where off" translate="no">${esc(q)}</q>`; };
     root.innerHTML = `<div class="df-review">
       <div class="df-top"><a class="btn sm" href="${App.link('drafts')}">${icon('left', 13)} All drafts</a>
         <div class="eyebrow mt-2">${esc(p ? p.short : r.project)} · ${r.stage === 'revised' ? 'Revised draft' : 'First draft'} · version ${r.version}</div>
