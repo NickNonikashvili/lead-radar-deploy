@@ -888,6 +888,7 @@ function mh_ai_route(string $route, array $in, array $cfg, string $ip): void {
   if ($route === 'ai_image' || $route === 'ai_image_file') { require_once __DIR__ . '/images.php'; mh_img_route($route, $in, $cfg); }   // Bo's pictures
   if ($route === 'ai_compact' || $route === 'ai_student') { require_once __DIR__ . '/students.php'; mh_student_route($route, $in, $cfg); }   // the student file, and long calls kept short
   require_once __DIR__ . '/credits.php'; require_once __DIR__ . '/students.php';   // everything with Bo is paid in credits, and reads the student file
+  if (str_starts_with($route, 'ai_draft_')) { require_once __DIR__ . '/drafts.php'; mh_draft_route($route, $in, $cfg); }   // feedback on a project draft (assets/drafts.js)
   $A = mh_ai_settings($cfg); $db = mh_ai_db();
   switch ($route) {
     case 'ai_status': {

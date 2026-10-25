@@ -22,7 +22,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/ai.php';
 
-const MH_CREDIT_FEATURES = ['chat' => 'Chat with Bo', 'call' => 'Calls with Bo', 'image' => 'Pictures', 'voice' => 'Bo’s voice and listening', 'recap' => 'Recaps after calls', 'memory' => 'Keeping Bo’s memory short', 'class' => 'Building classes', 'other' => 'Other'];
+const MH_CREDIT_FEATURES = ['chat' => 'Chat with Bo', 'call' => 'Calls with Bo', 'image' => 'Pictures', 'voice' => 'Bo’s voice and listening', 'recap' => 'Recaps after calls', 'memory' => 'Keeping Bo’s memory short', 'class' => 'Building classes', 'draft' => 'Draft feedback', 'other' => 'Other'];
 
 function mh_credits_db(): PDO {
   static $ready = false; $db = mh_ai_db();

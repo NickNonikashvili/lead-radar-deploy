@@ -83,6 +83,24 @@ if ($path === '/anthropic/v1/messages') {
       $qs[] = ['topic' => $sid, 'items' => [["Which one is $sid?", 'This one', ['That one', 'Neither', 'Both'], "Because it is $sid."], ["Is $sid useful?", 'Yes', ['No', 'Never', 'Only on Sundays'], 'It is.']]];
     }
     $text = "Here you go:\n```json\n" . json_encode(['SECTIONS' => $secs, 'FLASHCARDS' => $cards, 'QUIZ' => ['questions' => $qs]]) . "\n```";
+  } elseif (str_contains($sys, 'THE DRAFT REVIEW')) {
+    // feedback on a draft (api/drafts.php): quotes from the draft, one quote it does not have and one note that writes
+    // for the student (both must be left out), and what changed since the earlier feedback when there is one.
+    // BADJSON in the draft: the first answer is not JSON, the second (asked again) is.
+    $allu = implode("\n", array_map(fn($m) => is_string($m['content'] ?? null) ? $m['content'] : implode("\n", array_map(fn($b) => $b['text'] ?? '', (array)($m['content'] ?? []))), array_filter($req['messages'], fn($m) => ($m['role'] ?? '') === 'user')));
+    $draft = preg_match('/-----\n([\s\S]*?)\n-----/', $allu, $dm) ? $dm[1] : '';
+    $sents = array_values(array_filter(array_map('trim', preg_split('/(?<=[.!?])\s+/', $draft)), fn($x) => str_word_count($x) >= 4));
+    $q = fn($i) => implode(' ', array_slice(preg_split('/\s+/', $sents[$i % max(1, count($sents))] ?? ''), 0, 8));
+    $j = ['overall' => (str_contains($sys, 'Professor Bo') ? 'Hm. ' : '') . 'Your place comes through in the details; the middle tells more than it shows.',
+      'strengths' => [['quote' => $q(0), 'why' => 'A reader is in the place from the first line.']],
+      'revisions' => [['title' => 'Show the storm', 'why' => 'The middle summarizes the storm instead of putting the reader in it, so the showing-not-telling goal slips.', 'where' => $q(2), 'ask' => 'What did you hear first when the storm came?'],
+        ['title' => 'Say why it matters', 'why' => 'A reader who has never been there cannot yet tell why the place matters to you.', 'where' => '', 'ask' => 'What would be lost if the farmhouse were gone?']],
+      'comments' => [['quote' => $q(1), 'kind' => 'question', 'note' => 'Whose memory is this? Say it.'], ['quote' => $q(3), 'kind' => 'revise', 'note' => 'This line tells the feeling; what detail could show it?'],
+        ['quote' => 'words that this draft does not have anywhere', 'kind' => 'revise', 'note' => 'A comment on words that are not there.'],
+        ['quote' => $q(0), 'kind' => 'revise', 'note' => 'You could write: "The storm rolled over the barn like a slow freight train at dusk."']],
+      'since' => str_contains($allu, 'EARLIER FEEDBACK') ? [['point' => 'Show the storm', 'status' => 'partly', 'note' => 'The thunder is there now; the rain still is not.']] : [],
+      'next' => ['Reread the middle and mark every summary', 'Add one moment from the storm', 'Read it aloud once']];
+    $text = str_contains($draft, 'BADJSON') && !str_contains($utext, 'That was not the JSON object') ? 'Let me think about this draft for a moment.' : "```json\n" . json_encode($j) . "\n```";
   } elseif (str_contains($sys, 'THE CALL RECAP')) {
     // the recap after a call: one line, a page with three practice problems, the next step. RECAPSLIP in the call
     // makes the first answer wrong until he is asked to write it again (the math check on his recap)

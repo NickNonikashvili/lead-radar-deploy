@@ -2,3 +2,5 @@
 # run time). One English key per line, with {1}, {2} for the values; they go into i18n/catalog.json like the rest.
 {1} questions
 {1} problems
+# the word count on the draft feedback page (assets/drafts.js)
+{1} words

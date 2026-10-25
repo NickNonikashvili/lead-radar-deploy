@@ -21,7 +21,7 @@ for (const id of Object.keys(Courses)) {
   const C = Courses[id]; if (!C || !C.COURSE || !Array.isArray(C.SECTIONS)) continue;
   const data = {
     id, code: C.code, name: C.name, short: C.short, term: C.term, kind: C.kind || '',
-    COURSE: pick(C.COURSE, ['code', 'name', 'term', 'school', 'credits', 'instructor', 'instructors', 'instructorEmail', 'officeHours', 'lectures', 'meets', 'classDays', 'textbook', 'deadlines']),
+    COURSE: pick(C.COURSE, ['code', 'name', 'term', 'school', 'credits', 'instructor', 'instructors', 'instructorEmail', 'email', 'officeHours', 'lectures', 'meets', 'classDays', 'textbook', 'deadlines']),
     GRADING: C.GRADING ? pick(C.GRADING, ['categories', 'scale']) : null,
     EXAMS: (C.EXAMS || []).map(e => pick(e, ['id', 'name', 'date', 'endDate', 'dateLabel', 'covers', 'units', 'weight', 'cumulative'])),
     CALENDAR: (C.CALENDAR || []).map(r => r.slice(0, 3)),
@@ -29,6 +29,7 @@ for (const id of Object.keys(Courses)) {
     SECTIONS: C.SECTIONS.map(s => pick(s, ['id', 'label', 'title', 'unit', 'ideas'])),
     READINGS: (C.READINGS || []).map(r => pick(r, ['id', 'title', 'author']))
   };
+  if (Array.isArray(C.DRAFTS) && C.DRAFTS.length) data.DRAFTS = C.DRAFTS.map(d => pick(d, ['id', 'short', 'name', 'draft', 'revised', 'brief', 'goals']));   // projects Bo gives draft feedback on (api/drafts.php)
   fs.writeFileSync(path.join(OUT, id + '.json'), JSON.stringify(data));
   n++;
 }

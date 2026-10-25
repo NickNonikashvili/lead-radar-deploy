@@ -6182,3 +6182,93 @@
 6382	Site du cours et liens
 6383	Manuels et liens
 6384	Critères et termes clés
+6385	Avoir un retour sur ton brouillon
+6386	Ce fichier est trop gros. Colle plutôt le texte.
+6387	word/document.xml
+6388	Ce navigateur ne peut pas ouvrir ce fichier. Copie son texte et colle-le ici.
+6389	Ce fichier n’a pas pu être lu. Copie son texte et colle-le ici.
+6390	Révision {1}
+6391	Commentaire {1}
+6392	Retours sur les brouillons
+6393	Partage le brouillon d’un projet et Bo le lit comme un tuteur d’écriture : il marque des passages, nomme les révisions les plus importantes pour le projet et te pose des questions. Il ne l’écrit jamais à ta place : les mots restent les tiens.
+6394	Ce que Bo regarde en lisant
+6395	Les retours sur les brouillons sont réservés aux membres
+6396	Inscris-toi avec ton e-mail montana.edu pour avoir les retours de Bo sur tes brouillons. Chaque compte reçoit des crédits pour Bo chaque mois, gratuitement.
+6397	Colle ton brouillon ici, ou ouvre un fichier.
+6398	Par exemple : est-ce que ma fin fonctionne ?
+6399	Commentaires de la relecture entre pairs
+6400	Colle ce que tes camarades ont dit. Bo en tient compte avec sa propre lecture.
+6401	Un nouveau brouillon
+6402	Quel projet ?
+6403	Quel brouillon est-ce ?
+6404	Brouillon révisé
+6405	Ton brouillon
+6406	Ouvrir un fichier
+6407	Sur quoi veux-tu un retour ?
+6408	Ajouter les commentaires de la relecture entre pairs
+6409	Avoir le retour de Bo
+6410	Utilise quelques crédits, plus pour un brouillon long. Ton brouillon est gardé avec ton compte pour que Bo puisse dire ce qui a changé la prochaine fois ; tu peux le supprimer quand tu veux.
+6411	Ensuite : {1} · {2}
+6412	1 mot
+6413	Ce fichier n’a pas de texte que Bo puisse lire. Copie son texte et colle-le ici.
+6414	{1} ouvert : {2} mots
+6415	Colle d’abord le brouillon : Bo a besoin d’au moins 60 mots pour donner un retour utile.
+6416	Bo lit ton brouillon
+6417	{1} Reste sur cette page.
+6418	Un long brouillon lui prend environ une minute.
+6419	Cela lui prend environ une demi-minute.
+6420	input, textarea, button
+6421	ai_draft_list&class=
+6422	Les retours de Bo sur les brouillons sont désactivés pour ce cours. Les étudiants voient une note à la place du formulaire.
+6423	Les activer
+6424	Tu enseignes ce cours : les retours de Bo sur les brouillons sont activés pour tes étudiants.
+6425	Les désactiver pour le cours
+6426	Ton enseignant a désactivé les retours de Bo sur les brouillons pour ce cours. Tes retours précédents sont toujours là.
+6427	Tes brouillons
+6428	Tout supprimer
+6429	Supprimer la version {1}
+6430	{1} · version {2}
+6431	Pas encore de brouillons. Bo garde ici chaque retour, version après version, pour que tu voies un projet grandir.
+6432	Supprimer cette version de ton brouillon et le retour de Bo ? C’est définitif.
+6433	Supprimer tous les brouillons que tu as partagés pour ce cours, avec les retours de Bo ? C’est définitif.
+6434	Les retours sur les brouillons sont désactivés pour le cours
+6435	Les retours sur les brouillons sont activés pour le cours
+6436	Ça marche bien
+6437	En partie
+6438	Pas encore
+6439	{1} mots de plus
+6440	{1} mots de moins
+6441	la même longueur
+6442	Depuis la version {1} : {2} paragraphes sur {3} nouveaux ou modifiés, {4}.
+6443	{1} · {2} · version {3}
+6444	brouillon révisé
+6445	premier brouillon
+6446	Les révisions les plus importantes :
+6447	Dans les marges :
+6448	Prochaines étapes :
+6449	Tous les brouillons
+6450	Ouverture du retour de Bo…
+6451	Le montrer dans le brouillon
+6452	La lecture de Bo
+6453	Les révisions les plus importantes
+6454	Envoyer une version révisée
+6455	Copier le retour
+6456	Le retour de Bo est celui d’un second lecteur, pas une note. Les commentaires de ton enseignant et le sujet sur Canvas passent en premier.
+6457	Depuis la dernière fois
+6458	Où : {1}
+6459	Dans les marges
+6460	Ce qui marche
+6461	Prochaines étapes
+6462	Retour copié
+6463	La copie est bloquée ici. Sélectionne le retour et copie-le toi-même.
+6464	EN, Language: English
+6465	Ce cours n’a pas de projets pour les retours sur les brouillons.
+6466	Ce retour n’est pas dans tes brouillons.
+6467	Choisis le projet auquel correspond ce brouillon.
+6468	Ton enseignant a désactivé les retours de Bo sur les brouillons pour ce cours.
+6469	Ce brouillon est trop long pour un seul retour (environ 10 000 mots). Partage la partie sur laquelle tu veux un retour.
+6471	Bo n’a pas pu finir de lire ton brouillon. Réessaie.
+6472	Seul l’enseignant du cours peut modifier cela.
+6473	1 mot de plus
+6474	1 mot de moins
+6475	{1} mots

@@ -127,7 +127,7 @@
 
   const NAV = [
     { label: 'Today', items: [['dashboard', 'Dashboard', 'home'], ['calendar', 'Calendar', 'calendar']] },
-    { label: 'Learn', items: [['readings', 'Readings', 'book'], ['phonetics', 'Phonetics lab', 'mic']] },
+    { label: 'Learn', items: [['readings', 'Readings', 'book'], ['drafts', 'Draft feedback', 'pen'], ['phonetics', 'Phonetics lab', 'mic']] },
     { label: 'Course', items: [['course', 'Syllabus & policies', 'info'], ['grades', 'Grade calculator', 'calc'], ['settings', 'Settings', 'sliders']] }
   ];
 
@@ -211,10 +211,27 @@
     }
   ];
 
+  /* ---------- the projects Bo gives draft feedback on (assets/drafts.js, api/drafts.php): what each one asks for,
+     from the syllabus. Bo reads a draft against these goals and only comments: the words stay the student's. ---------- */
+  const DRAFTS = [
+    { id: 'p1', short: 'Project 1', name: 'Project 1: Writing in Place, the narrative essay', draft: 'p1draft', revised: 'p1rev',
+      brief: 'A narrative essay about your connection to a place: home, a city that matters, or somewhere new at MSU, in your own voice, home language and tone.',
+      goals: ['A place at the center, and what it means to you', 'Showing rather than telling: concrete sensory detail and specific moments', 'Your own voice, home language and tone', 'A reader who has never been there can see the place and feel why it matters', 'Each description does work for the story'] },
+    { id: 'p2', short: 'Project 2', name: 'Project 2: Research essay', draft: 'p2draft', revised: 'p2rev',
+      brief: 'A research essay that investigates a narrow question: sources synthesized and analyzed, cited carefully, with your voice in balance with the scholarship.',
+      goals: ['A narrow research question the essay really investigates', 'Writing that explores the question instead of starting from the answer', 'Sources put in conversation with each other, not summarized one by one', 'Your own thinking alongside the scholarship', 'Every source cited so a reader can find it'] },
+    { id: 'p3', short: 'Project 3', name: 'Project 3: A public argument remix', draft: 'p3draft', revised: 'p3rev',
+      brief: 'Your research remixed into an argument for the public in a real venue: an op-ed, a photo essay, a podcast or a video essay. For audio or video, share the script or transcript.',
+      goals: ['A clear argument for a public reader, not an academic one', 'A real venue, and writing that fits its genre and conventions', 'A hook and stakes for someone who did not ask to read it', 'The research still holds the argument up, used fairly', 'Design and media chosen for the audience and the venue'] },
+    { id: 'pf', short: 'Portfolio', name: 'Final portfolio: the reflective essay', draft: 'pfdraft', revised: 'portfolio',
+      brief: 'A short reflective essay, written to an outside audience, that gives your major assignments and their revisions context.',
+      goals: ['Written for an outside reader who was not in the class', 'Specific evidence of revision: what changed between drafts and why', 'What you tried, what worked and what you learned as a writer', 'Connections to the course outcomes in your own words'] }
+  ];
+
   global.Courses = global.Courses || {};
   global.Courses.writ = Object.assign(global.Courses.writ || {}, {
     id: 'writ', kind: 'writing', code: 'WRIT 101', name: 'College Writing I', short: 'Writing', term: 'Fall 2026', tagline: 'Think like a writer: place, research, public argument and a reflective portfolio',
-    COURSE, GRADING, EXAMS, CALENDAR, RECURRING, SEMESTER, UNITS, SECTIONS, FORMULAS: [], FLASHCARDS: [], PRACTICE: {}, CHECKLISTS, INFO, NAV, READINGS,
+    COURSE, GRADING, EXAMS, CALENDAR, RECURRING, SEMESTER, UNITS, SECTIONS, FORMULAS: [], FLASHCARDS: [], PRACTICE: {}, CHECKLISTS, INFO, NAV, READINGS, DRAFTS,
     CALENDAR_NOTE: 'Exact due dates and times are announced on Canvas and in class; deadlines here sit on the Friday of the week the syllabus lists.'
   });
 })(window);

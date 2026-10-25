@@ -299,6 +299,9 @@ Where Bo appears as the tutor (Ask Bo, calls, the floating Bo, study rooms) he w
 ### Study rooms
 A classmate in a study room gets the call's whiteboard on the whole screen in the light surface (not the call's night sky: they are watching and writing, not on the call): a top bar with Bo's face, "Study room with {name}" and Leave; the board with its usual tools; the captions in a quiet band above a full-width "Type a question for Bo" box. The host's room panel matches the call's settings panel; the code is set large in mono, in two groups of three.
 
+### Draft feedback (writing classes)
+A review reads like a marked-up paper, not a report card. On a computer the draft sits on the left on a white sheet in the display face (17.5px, line height 1.8), Bo's notes on the right; on a phone his read and the biggest revisions come first, then the paper, then the margin comments. A commented passage gets a soft tint by kind (praise on Good Soft, a question on Accent Soft, a revision on Warn Soft, a source on Gold Soft) and a small round pin with its number in front of it; the two or three biggest revisions are lettered and underlined with a dashed Warn line instead of tinted, so they read as the larger moves. Pins and the numbers beside the notes are outlined in the kind's colour on the surface, with ink text, so they pass contrast in both themes. Bo's read opens on Accent Soft with his face. The form uses pill radios (selected: Accent Soft with an Accent ring and ink text) and a tall textarea in the display face, so pasting a draft already looks like the paper it becomes.
+
 ## Do's and Don'ts
 
 ### Do:
