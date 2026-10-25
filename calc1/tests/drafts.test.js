@@ -111,11 +111,12 @@ const DOCX = zip([{ name: '[Content_Types].xml', data: '<?xml version="1.0"?><Ty
   await a.fill('#df-text', DRAFT1); await a.fill('#df-ask', 'Is the middle too vague?'); await a.waitForTimeout(500);
   await a.reload(); await a.waitForTimeout(1500);
   check('what she was writing is kept on this device until she sends it', (await a.inputValue('#df-text')) === DRAFT1 && (await a.inputValue('#df-ask')) === 'Is the middle too vague?' && await a.evaluate(() => document.querySelector('[name="df-p"]:checked').value === 'p1'));
+  await a.evaluate(() => { window.__sawReading = false; new MutationObserver(() => { if (document.querySelector('.df-reading')) window.__sawReading = true; }).observe(document.body, { childList: true, subtree: true }); });   // the stand-in answers fast: watch for the reading note as it appears
   await a.click('#df-send');
-  const reading = await a.waitForSelector('.df-reading', { timeout: 3000 }).then(() => true).catch(() => false);
   await a.waitForFunction(() => /#\/writ\/drafts\/\d+$/.test(location.hash) && document.querySelector('.df-paper'), null, { timeout: 15000 }).catch(() => {}); await a.waitForTimeout(600);
   const view = await a.evaluate(() => ({ hash: location.hash, eyebrow: (document.querySelector('.df-top .eyebrow') || {}).textContent, marks: document.querySelectorAll('.df-paper .df-mark').length, pins: [...document.querySelectorAll('.df-paper .df-pin')].map(x => x.textContent).join(), notes: document.querySelectorAll('.df-notes li').length, revs: document.querySelectorAll('.df-revs li').length, paras: document.querySelectorAll('.df-paper p').length, paperNoTranslate: document.querySelector('.df-paper').getAttribute('translate'), overall: (document.querySelector('.df-overall p') || {}).textContent }));
-  check('while Bo reads, it says so; then his feedback opens', reading && /#\/writ\/drafts\/\d+$/.test(view.hash) && /Project 1 · First draft · version 3/.test(view.eyebrow), view);
+  const reading = await a.evaluate(() => window.__sawReading).catch(() => false);
+  check('while Bo reads, it says so; then his feedback opens', reading === true && /#\/writ\/drafts\/\d+$/.test(view.hash) && /Project 1 · First draft · version 3/.test(view.eyebrow), view);
   check('the draft is on the page, its paragraphs kept, with the passages he commented on marked: numbers for comments, a letter for a revision', view.paras === 3 && view.marks >= 3 && view.pins === '1,A,2' && view.notes === 2 && view.revs === 2 && view.paperNoTranslate === 'no' && /details/.test(view.overall), view);
   await a.click('.df-paper .df-pin:text("2")'); await a.waitForTimeout(500);
   check('a number in the draft goes to its comment', await a.evaluate(() => document.activeElement && document.activeElement.id === 'dfc-c2'));
