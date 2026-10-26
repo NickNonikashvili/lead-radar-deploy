@@ -249,6 +249,9 @@ switch ($route) {
     if (str_starts_with($route, 'teach_') || str_starts_with($route, 'admin_teach')) { require_once __DIR__ . '/teach.php'; mh_teach_route($route, $in, $cfg, $ip); }
     if ($route === 'news_unsub' || str_starts_with($route, 'admin_news')) { require_once __DIR__ . '/news.php'; mh_news_route($route, $in, $cfg, $ip); }   // an email to every member, and the way out of it
     if (str_starts_with($route, 'admin_config')) { require_once __DIR__ . '/siteconfig.php'; mh_siteconfig_route($route, $in, $cfg, $ip); }   // keys and settings from the admin panel
+    if (str_starts_with($route, 'admin_offsite')) { require_once __DIR__ . '/offsite.php'; mh_offsite_route($route, $in, $cfg); }   // off-site backups: sent, checked, restored as a test
+    if (str_starts_with($route, 'admin_eval')) { require_once __DIR__ . '/evals.php'; mh_eval_route($route, $in, $cfg); }   // answer tests for Bo
+    if (str_starts_with($route, 'admin_ops')) { require_once __DIR__ . '/ops.php'; mh_ops_route($route, $in, $cfg); }   // cost alerts and the weekly report
     if (str_starts_with($route, 'forum_') || str_starts_with($route, 'admin_') || str_starts_with($route, 'notif_') || $route === 'terms_accept') { require_once __DIR__ . '/forum.php'; mh_forum_route($route, $in, $cfg, $ip); }
     foreach (['challenge_', 'badges', 'presence', 'meet_', 'poll_', 'mock_', 'contrib_', 'activity', 'cron', 'helpers', 'people', 'league', 'stats_'] as $pre) if (str_starts_with($route, $pre)) { require_once __DIR__ . '/social.php'; mh_social_route($route, $in, $cfg, $ip); }
     mh_fail('Not found.', 404);

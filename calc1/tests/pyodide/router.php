@@ -44,6 +44,44 @@ if (preg_match('#^/virustotal/files/([a-f0-9]{64})$#', $path, $vm)) {
   if ($vm[1] === '275a021bbfb6489e54d471899f7db9d1663fc695ec2fe2a2c4538aabf651fd0f' || in_array($vm[1], $bad, true)) { echo json_encode(['data' => ['attributes' => ['last_analysis_stats' => ['malicious' => 58, 'undetected' => 10]]]]); exit; }
   http_response_code(404); echo '{"error":{"code":"NotFoundError"}}'; exit;
 }
+// a stand-in for an S3-compatible bucket, for the off-site backups (api/offsite.php; tests/offsite.test.js sets offsite_endpoint
+// http://127.0.0.1:8767/s3 and key id AKIATEST): path-style /s3/<bucket>/<key>, the objects in tests/fixtures/s3. It refuses
+// what a real bucket refuses: another key id, an Authorization that is not SigV4 or leaves host, x-amz-date or
+// x-amz-content-sha256 unsigned, and a PUT whose body does not have the SHA-256 it was signed with. tests/fixtures/s3-fail.json
+// makes requests fail ({"put": 500}) or hands back a changed copy ({"corrupt": true}).
+if (preg_match('#^/s3/([a-z0-9.-]+)(?:/(.*))?$#', $path, $sm)) {
+  $bucket = $sm[1]; $key = isset($sm[2]) ? rawurldecode($sm[2]) : ''; $method = $_SERVER['REQUEST_METHOD'];
+  $dir = __DIR__ . '/../fixtures/s3/' . $bucket; if (!is_dir($dir)) @mkdir($dir, 0777, true);
+  $xml = function (int $code, string $c, string $m): void { http_response_code($code); header('Content-Type: application/xml'); echo "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<Error><Code>$c</Code><Message>$m</Message></Error>"; exit; };
+  if (!preg_match('#^AWS4-HMAC-SHA256 Credential=([^/]+)/(\d{8})/([a-z0-9-]+)/s3/aws4_request, SignedHeaders=([a-z0-9;-]+), Signature=[0-9a-f]{64}$#', $_SERVER['HTTP_AUTHORIZATION'] ?? '', $am)) $xml(403, 'AccessDenied', 'Malformed authorization.');
+  if ($am[1] !== 'AKIATEST') $xml(403, 'InvalidAccessKeyId', 'The AWS Access Key Id you provided does not exist in our records.');
+  foreach (['host', 'x-amz-content-sha256', 'x-amz-date'] as $h) if (!in_array($h, explode(';', $am[4]), true)) $xml(403, 'AccessDenied', "$h is not signed.");
+  $fail = json_decode((string)@file_get_contents(__DIR__ . '/../fixtures/s3-fail.json'), true) ?: [];
+  $op = $method === 'GET' && $key === '' ? 'list' : strtolower($method);
+  if (!empty($fail[$op])) $xml((int)$fail[$op], 'InternalError', 'We encountered an internal error. Please try again.');
+  $file = $dir . '/' . str_replace('/', '%2F', $key); $meta = $file . '.meta.json';
+  if ($op === 'put') {
+    $body = (string)file_get_contents('php://input');
+    if (hash('sha256', $body) !== ($_SERVER['HTTP_X_AMZ_CONTENT_SHA256'] ?? '')) $xml(400, 'XAmzContentSHA256Mismatch', 'The provided x-amz-content-sha256 header does not match what was computed.');
+    file_put_contents($file, $body); $m = []; foreach ($_SERVER as $k => $v) if (str_starts_with($k, 'HTTP_X_AMZ_META_')) $m[strtolower(str_replace('_', '-', substr($k, 5)))] = $v;
+    file_put_contents($meta, json_encode($m)); header('ETag: "' . md5($body) . '"'); exit;
+  }
+  if ($op === 'list') {
+    $prefix = (string)($_GET['prefix'] ?? ''); $items = [];
+    foreach (glob($dir . '/*') ?: [] as $f) { if (str_ends_with($f, '.meta.json')) continue; $k = str_replace('%2F', '/', basename($f)); if ($prefix === '' || str_starts_with($k, $prefix)) $items[$k] = [filesize($f), filemtime($f)]; }
+    ksort($items); header('Content-Type: application/xml');
+    echo '<?xml version="1.0" encoding="UTF-8"?><ListBucketResult xmlns="http://s3.amazonaws.com/doc/2006-03-01/"><Name>' . $bucket . '</Name><Prefix>' . htmlspecialchars($prefix) . '</Prefix><KeyCount>' . count($items) . '</KeyCount><IsTruncated>false</IsTruncated>';
+    foreach ($items as $k => [$sz, $mt]) echo '<Contents><Key>' . htmlspecialchars($k) . '</Key><LastModified>' . gmdate('Y-m-d\TH:i:s.000\Z', (int)$mt) . '</LastModified><Size>' . $sz . '</Size><StorageClass>STANDARD</StorageClass></Contents>';
+    echo '</ListBucketResult>'; exit;
+  }
+  if (!is_file($file)) { if ($method === 'HEAD') { http_response_code(404); exit; } $xml(404, 'NoSuchKey', 'The specified key does not exist.'); }
+  if ($op === 'delete') { @unlink($file); @unlink($meta); http_response_code(204); exit; }
+  foreach (json_decode((string)@file_get_contents($meta), true) ?: [] as $k => $v) header("$k: $v");
+  header('Content-Type: application/octet-stream'); header('Content-Length: ' . filesize($file)); header('Last-Modified: ' . gmdate('D, d M Y H:i:s', filemtime($file)) . ' GMT');
+  if ($op === 'head') exit;
+  $body = (string)file_get_contents($file); if (!empty($fail['corrupt']) && $body !== '') $body[strlen($body) - 1] = chr(ord($body[strlen($body) - 1]) ^ 1);
+  echo $body; exit;
+}
 // a stand-in for Anthropic's POST /v1/messages, for Bo's tests (config.local.php: anthropic_api, anthropic_key 'sk-ant-test').
 // It keeps the last request in tests/fixtures/ai-last.json so the tests can check what the server sends.
 if ($path === '/anthropic/v1/messages') {
@@ -83,6 +121,11 @@ if ($path === '/anthropic/v1/messages') {
       $qs[] = ['topic' => $sid, 'items' => [["Which one is $sid?", 'This one', ['That one', 'Neither', 'Both'], "Because it is $sid."], ["Is $sid useful?", 'Yes', ['No', 'Never', 'Only on Sundays'], 'It is.']]];
     }
     $text = "Here you go:\n```json\n" . json_encode(['SECTIONS' => $secs, 'FLASHCARDS' => $cards, 'QUIZ' => ['questions' => $qs]]) . "\n```";
+  } elseif (str_contains($sys, 'THE ANSWER TEST JUDGE')) {
+    // the answer tests' judge (api/evals.php): a requirement with FAILME in it fails, any other passes
+    preg_match("/THE REQUIREMENT:\n(.*?)\n\nBO'S ANSWER:\n(.*)$/s", $utext, $jm);
+    $fails = str_contains($jm[1] ?? '', 'FAILME');
+    $text = json_encode(['pass' => !$fails, 'why' => $fails ? 'The stand-in judge says it does not: ' . trim($jm[1] ?? '') : 'The stand-in judge says it does.']);
   } elseif (str_contains($sys, 'THE WORK CHECK')) {
     // checking handwritten work (api/learn.php): a slip in the second line; Bo names the third until the math check
     // asks him again about the second. ALLRIGHT in the typed problem: every line right. UNREADABLE: he cannot read it.

@@ -29,7 +29,7 @@ const FILE = path.join(__dirname, '..', 'api', 'data', 'site-config.json');
   const [ca, a] = await open(1360, 900, 'admin.user@montana.edu');
   await reset(a);
   const r = await api(a, 'admin_config'); const all = (r.json.groups || []).flatMap(g => g.fields); const F = k => all.find(f => f.key === k) || {};
-  check('every group is there: Bo and the AI, plans and payments, email, sign-up and staff, the site', (r.json.groups || []).map(g => g.id).join() === 'ai,pay,mail,access,site', (r.json.groups || []).map(g => g.id));
+  check('every group is there: Bo and the AI, plans and payments, email, sign-up and staff, the site, off-site backups', (r.json.groups || []).map(g => g.id).join() === 'ai,pay,mail,access,site,backup', (r.json.groups || []).map(g => g.id));
   check('keys are never sent to the browser: only set, where from, and the last four characters', F('anthropic_key').set === true && F('anthropic_key').hint === '…test' && F('anthropic_key').from === 'file' && !('value' in F('anthropic_key')) && !JSON.stringify(r.json).includes('sk-ant-test') && !JSON.stringify(r.json).includes('sk_test'), F('anthropic_key'));
   check('the email password shows as not set yet', F('smtp_pass').set === false && F('smtp_pass').from === 'none');
   await go(a, '#/admin/config', 1500);

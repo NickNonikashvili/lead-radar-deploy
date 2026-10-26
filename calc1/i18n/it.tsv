@@ -6735,3 +6735,15 @@
 6936	.docx, .pdf, .odt o .txt
 6937	1 suggerimento
 6938	{1} suggerimenti
+5945	Bo non è ancora attivo.
+6939	Quel test non c’è più.
+6940	Sono
+6941	Bo non è configurato: aggiungi la chiave Anthropic in Chiavi e impostazioni.
+6942	Non ci sono test da eseguire. Aggiungine prima qualcuno.
+6943	Quell’esecuzione non c’è più.
+6944	Quell’esecuzione è terminata.
+6945	Quel test non fa parte di questa esecuzione.
+6946	Una copia è in fase di invio o di verifica proprio ora. Riprova tra qualche minuto.
+6947	Il test di ripristino non è riuscito:
+6948	Imposta prima l’indirizzo, il bucket, l’ID della chiave di accesso e il segreto.
+6949	Il bucket si può elencare (per tenere le copie più recenti).

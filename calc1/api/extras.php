@@ -4,7 +4,9 @@
    Routes: issue_report, admin_issues, admin_issue, admin_backups,
            admin_backup_now, admin_backup_download, prefs
    mh_backup_tick() runs from housekeeping once a day and keeps the
-   last 14 copies of the database in data/backups (denied to the web).
+   last 14 copies of the database in data/backups (denied to the web);
+   copies made by hand are kept 90 days. api/offsite.php sends them
+   off-site, encrypted.
    ============================================================ */
 declare(strict_types=1);
 
@@ -20,6 +22,7 @@ function mh_backup_make(string $why = 'auto'): array {
   try { $db->exec("VACUUM INTO '" . str_replace("'", "''", $path) . "'"); }
   catch (Throwable $e) { $db->exec('PRAGMA wal_checkpoint(TRUNCATE)'); if (!@copy(mh_config()['db_path'], $path)) throw new RuntimeException('Could not write the backup file.'); }
   $keep = 14; $list = mh_backup_list(); foreach (array_slice($list, $keep) as $old) if (strpos($old['name'], '-manual') === false) @unlink("$dir/{$old['name']}");
+  foreach ($list as $old) if (strpos($old['name'], '-manual') !== false && $old['mtime'] < time() - 90 * 86400) @unlink("$dir/{$old['name']}");   // the privacy policy: no copy older than 90 days
   return ['name' => $name, 'size' => filesize($path)];
 }
 function mh_backup_tick(): ?array {

@@ -60,6 +60,8 @@ function mh_siteconfig_fields(): array {
     'credits_call_light' => ['pay', 'Credits a minute, calls on the light model', 'num', '6 by default (everyone without Max).', [0, 1000]],
     'credits_image'      => ['pay', 'Credits per picture', 'num', '15 by default; credits_image_big for wide or tall ones.', [0, 1000]],
     'credits_image_big'  => ['pay', 'Credits per wide or tall picture', 'num', '22 by default.', [0, 1000]],
+    'cost_alert_daily'   => ['pay', 'Cost alert: a day over (dollars)', 'num', 'Administrators get one email when Bo’s estimated AI cost for a day passes this. 0: off. While either alert is set, a day costing over three times the usual (and over $1) sends one too.', [0, 1000000]],
+    'cost_alert_monthly' => ['pay', 'Cost alert: a month over (dollars)', 'num', 'The same for the month so far. 0: off.', [0, 10000000]],
     'plan_grants'        => ['pay', 'Tester plans', 'grants', 'One per line: someone@montana.edu = pro (or max), for testing. To give a member a membership, use Membership in Members.'],
     'mail_mode'          => ['mail', 'How email is sent', 'select', 'auto: SMTP when the password is set, otherwise PHP mail(). log: nothing is sent (testing).', ['auto', 'smtp', 'mail', 'log']],
     'mail_from'          => ['mail', 'Sender address', 'email', 'A mailbox that exists on your domain.'],
@@ -70,6 +72,8 @@ function mh_siteconfig_fields(): array {
     'smtp_pass'          => ['mail', 'Email password', 'secret', 'The password of the sender’s mailbox.'],
     'recap_emails'       => ['mail', 'Recap emails after calls with Bo', 'select', 'on: after a call, members get Bo’s recap by email too (each can turn it off in Settings → Account). off: nobody gets it by email; the recap stays in their chat.', ['on', 'off']],
     'exam_emails'        => ['mail', 'Exam heads-ups (3 days before)', 'select', 'on: members who picked their classes get one email (and a notification, if they turned those on) per exam, with a review call with Bo. off: none are sent.', ['on', 'off']],
+    'admin_report'       => ['mail', 'Weekly report to administrators', 'select', 'on: each administrator gets the week in one email (members, Bo’s use and cost, class requests, what to look at, backups, answer tests). off: none is sent; it stays on the admin panel’s Overview.', ['on', 'off']],
+    'admin_report_day'   => ['mail', 'Weekly report day', 'select', 'It goes from 8:00 that morning (site time).', ['0', '1', '2', '3', '4', '5', '6']],
     'allowed_domains'    => ['access', 'Who may sign up (email domains)', 'domains', 'One per line. Subdomains are included (student.montana.edu counts as montana.edu).'],
     'extra_allowed_emails' => ['access', 'Also allowed to sign up', 'emails', 'One email per line, for people outside those domains.'],
     'moderators'         => ['access', 'Moderators', 'emails', 'One email per line. They handle reports, contributions and mock exams.'],
@@ -84,9 +88,17 @@ function mh_siteconfig_fields(): array {
     'admin_key'          => ['site', 'Stats key', 'secret', 'Optional: lets api/index.php?r=stats answer with an X-Admin-Key header.'],
     'code_ttl_minutes'   => ['site', 'Email codes last (minutes)', 'int', '', [5, 120]],
     'session_days'       => ['site', 'Stay signed in for (days)', 'int', '', [1, 730]],
+    'offsite_endpoint'   => ['backup', 'Storage address (S3 endpoint)', 'endpoint', 'Amazon S3: https://s3.us-west-2.amazonaws.com. Cloudflare R2: https://<account id>.r2.cloudflarestorage.com. Backblaze B2: https://s3.us-west-004.backblazeb2.com.'],
+    'offsite_region'     => ['backup', 'Region', 'text', 'us-west-2 on Amazon; auto on Cloudflare R2; on Backblaze the part after s3. in the address (us-west-004).'],
+    'offsite_bucket'     => ['backup', 'Bucket', 'text', 'A private bucket for Mathub’s copies.'],
+    'offsite_prefix'     => ['backup', 'Folder in the bucket', 'text', 'Optional, like mathub.'],
+    'offsite_key_id'     => ['backup', 'Access key ID', 'text', 'Best a key that may only read, write, list and delete in that bucket.'],
+    'offsite_secret'     => ['backup', 'Secret access key', 'secret', ''],
+    'offsite_passphrase' => ['backup', 'Encryption passphrase', 'secret', 'At least 12 characters. Copies are encrypted with it before they leave this server. Write it down somewhere else: without it nobody can open the copies, you included.'],
+    'offsite_keep'       => ['backup', 'Copies to keep in the bucket', 'int', '30 by default. None is kept longer than 90 days.', [1, 90]],
   ];
 }
-const MH_SITECONFIG_GROUPS = ['ai' => 'Bo and the AI', 'pay' => 'Plans and payments', 'mail' => 'Email', 'access' => 'Sign-up and staff', 'site' => 'Site'];
+const MH_SITECONFIG_GROUPS = ['ai' => 'Bo and the AI', 'pay' => 'Plans and payments', 'mail' => 'Email', 'access' => 'Sign-up and staff', 'site' => 'Site', 'backup' => 'Off-site backups'];
 
 function mh_siteconfig_file(array $base): string { return dirname((string)($base['db_path'] ?? (__DIR__ . '/data/mathub.sqlite'))) . '/site-config.json'; }
 /** What the admin panel saved, only the fields it may set. */
@@ -119,11 +131,12 @@ function mh_siteconfig_clean(string $key, array $def, $v) {
     case 'model': if ($s !== '' && !preg_match('/^[A-Za-z0-9._:-]{2,80}$/', $s)) throw new RuntimeException("$label: a model name has letters, numbers, dots and dashes."); return $s;
     case 'price': if (!preg_match('/^.{1,20}$/u', $s)) throw new RuntimeException("$label: like \$15."); return $s;
     case 'url': if ($s !== '' && (!filter_var($s, FILTER_VALIDATE_URL) || !preg_match('#^https://#i', $s))) throw new RuntimeException("$label: an https:// address."); return $s;
+    case 'endpoint': if ($s !== '' && (!filter_var($s, FILTER_VALIDATE_URL) || !preg_match('#^(https://|http://(127\.0\.0\.1|localhost)(:\d+)?(/|$))#i', $s))) throw new RuntimeException("$label: an https:// address."); return rtrim($s, '/');
     case 'email': if (!filter_var($s, FILTER_VALIDATE_EMAIL)) throw new RuntimeException("$label: an email address."); return strtolower($s);
     case 'host': if (!preg_match('/^[a-z0-9.-]{3,120}$/i', $s)) throw new RuntimeException("$label: a server name, like smtp.hostinger.com."); return strtolower($s);
     case 'num': { if (!is_numeric($s)) throw new RuntimeException("$label: a number."); $n = (float)$s; [$lo, $hi] = $def[4]; if ($n < $lo || $n > $hi) throw new RuntimeException("$label: between $lo and $hi."); return $n; }
     case 'int': { if (!preg_match('/^-?\d+$/', $s)) throw new RuntimeException("$label: a whole number."); $n = (int)$s; [$lo, $hi] = $def[4]; if ($n < $lo || $n > $hi) throw new RuntimeException("$label: between $lo and $hi."); return $n; }
-    case 'select': { $opts = array_map('strval', $def[4]); if (!in_array($s, $opts, true)) throw new RuntimeException("$label: pick one of the choices."); return in_array($key, ['digest_day'], true) ? (int)$s : $s; }
+    case 'select': { $opts = array_map('strval', $def[4]); if (!in_array($s, $opts, true)) throw new RuntimeException("$label: pick one of the choices."); return in_array($key, ['digest_day', 'admin_report_day'], true) ? (int)$s : $s; }
     case 'tz': if (!in_array($s, timezone_identifiers_list(), true)) throw new RuntimeException("$label: a time zone like America/Denver."); return $s;
     case 'domains': { $out = $lines(); foreach ($out as $d) if (!preg_match('/^(?=.{3,120}$)[a-z0-9-]+(\.[a-z0-9-]+)+$/', $d)) throw new RuntimeException("$label: “$d” is not a domain."); if (!$out) throw new RuntimeException("$label: at least one domain."); return $out; }
     case 'emails': { $out = $lines(); foreach ($out as $e) if (!filter_var($e, FILTER_VALIDATE_EMAIL)) throw new RuntimeException("$label: “$e” is not an email address."); return $out; }
@@ -226,6 +239,21 @@ function mh_siteconfig_route(string $route, array $in, array $cfg, string $ip): 
         else { [$code, $j, $err] = mh_siteconfig_http('GET', rtrim((string)($c['openai_api'] ?? 'https://api.openai.com/v1'), '/') . '/models', ['Authorization: Bearer ' . $ok]); $out[] = ['name' => 'OpenAI', 'pass' => $code >= 200 && $code < 300, 'message' => $code >= 200 && $code < 300 ? 'The key works.' : mh_siteconfig_why($code, $j, $err)]; }
         $vk = trim((string)($c['virustotal_key'] ?? ''));   // optional: checked with the EICAR test file's fingerprint, which every scanner knows
         if ($vk !== '') { [$code, $j, $err] = mh_siteconfig_http('GET', rtrim((string)($c['virustotal_api'] ?? 'https://www.virustotal.com/api/v3/files/'), '/') . '/275a021bbfb6489e54d471899f7db9d1663fc695ec2fe2a2c4538aabf651fd0f', ['x-apikey: ' . $vk, 'accept: application/json']); $out[] = ['name' => 'VirusTotal', 'pass' => $code === 200, 'message' => $code === 200 ? 'The key works.' : mh_siteconfig_why($code, $j, $err)]; }
+        mh_json(['ok' => true, 'pass' => !in_array(false, array_column($out, 'pass'), true), 'results' => $out]);
+      }
+      if ($what === 'backup') {   // a small file written, read, listed and deleted in the bucket, with the settings as they would be saved
+        require_once __DIR__ . '/offsite.php'; $O = mh_offsite_cfg($c); $out = [];
+        if ($O['endpoint'] === '' || $O['bucket'] === '' || $O['key'] === '' || $O['secret'] === '') mh_json(['ok' => true, 'pass' => false, 'results' => [['name' => 'Storage', 'pass' => false, 'message' => 'Set the address, bucket, access key ID and secret first.']]]);
+        $key = mh_offsite_key($O, 'mathub-check.txt'); $body = 'Mathub checked it can write here, ' . gmdate('Y-m-d H:i') . ' UTC. It deletes this file right after.';
+        $tmp = mh_offsite_tmp() . '/check-' . bin2hex(random_bytes(4)) . '.txt'; file_put_contents($tmp, $body);
+        $r = mh_s3($O, 'PUT', $key, [], ['upload' => $tmp, 'sha256' => hash('sha256', $body), 'headers' => ['content-type' => 'text/plain'], 'timeout' => 30]); @unlink($tmp);
+        $out[] = ['name' => 'Write', 'pass' => $r['code'] === 200, 'message' => $r['code'] === 200 ? 'A test file went in.' : mh_s3_why($r)];
+        if ($r['code'] === 200) {
+          $h = mh_s3($O, 'HEAD', $key, [], ['timeout' => 30]); $out[] = ['name' => 'Read', 'pass' => $h['code'] === 200 && (int)($h['headers']['content-length'] ?? -1) === strlen($body), 'message' => $h['code'] === 200 ? 'It is there, the right size.' : mh_s3_why($h)];
+          try { mh_s3_list($O); $out[] = ['name' => 'List', 'pass' => true, 'message' => 'The bucket can be listed (for keeping the newest copies).']; } catch (Throwable $e) { $out[] = ['name' => 'List', 'pass' => false, 'message' => $e->getMessage()]; }
+          $d = mh_s3($O, 'DELETE', $key, [], ['timeout' => 30]); $out[] = ['name' => 'Delete', 'pass' => $d['code'] === 204 || $d['code'] === 200, 'message' => $d['code'] === 204 || $d['code'] === 200 ? 'And deleted again (for removing old copies).' : mh_s3_why($d)];
+        }
+        $pl = mb_strlen($O['pass']); $out[] = ['name' => 'Passphrase', 'pass' => $pl >= 12, 'message' => $pl >= 12 ? 'Set. Keep a copy somewhere other than this server.' : ($pl ? 'Too short: at least 12 characters.' : 'Not set: copies are not sent without one.')];
         mh_json(['ok' => true, 'pass' => !in_array(false, array_column($out, 'pass'), true), 'results' => $out]);
       }
       if ($what === 'pay') {

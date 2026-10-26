@@ -104,7 +104,7 @@ const fs = require('fs'); const path = require('path'); const os = require('os')
   // ---- the admin: the group, a preview of each syllabus, what the malware check looked at ----
   await go(a, '#/admin/classes', 1200);
   const grp = await txt(a, `.cr-group[data-code="${CODE}"]`);
-  check('admin tab groups the requests by class', /2 students/.test(grp) && /1 syllabus/.test(grp) && grp.includes('bob.bmu6j92pq@montana.edu'), grp.slice(0, 160));
+  check('admin tab groups the requests by class', /2 people/.test(grp) && /1 syllabus/.test(grp) && grp.includes('bob.bmu6j92pq@montana.edu'), grp.slice(0, 160));
   check('a checked file says so', !!(await a.$(`.cr-group[data-code="${CODE}"] .chip.good`)) && /Checked/.test(grp));
   const pdfReq = (await api(a, 'admin_classreqs&status=all')).groups.find(x => x.code === CODE).requests.find(q => q.file_name);
   await a.click(`[data-action="cr-preview"][data-id="${pdfReq.id}"]`); await a.waitForTimeout(1200);

@@ -15,3 +15,5 @@ fixtures/rc-cancels.json
 fixtures/vt-bad.json
 fixtures/image-last.json
 fixtures/image-count.txt
+fixtures/s3/
+fixtures/s3-fail.json

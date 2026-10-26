@@ -1,0 +1,48 @@
+/* ============================================================
+   Mathub — running the site in the admin panel (assets/admin-ops.js): off-site backups, answer tests, cost alerts,
+   the weekly report and usage.
+   ============================================================ */
+.ops-off-grid, .ops-cost { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr)); gap: 12px; margin-top: 10px; }
+.ops-fact { display: flex; flex-direction: column; gap: 3px; padding: 12px 14px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface-2); min-width: 0; }
+.ops-fact b { font-size: 18px; font-variant-numeric: tabular-nums; }
+.ops-fact small { color: var(--muted); font-size: 12.5px; overflow-wrap: anywhere; }
+.ops-cost > p { grid-column: 1 / -1; margin: 0; }
+.ops-bad, .ops-alert { border-color: var(--bad); background: var(--bad-soft); }
+.ops-alert { display: flex; gap: 10px; align-items: flex-start; }
+.ops-alert p { margin: 0 0 4px; }
+.ops-sections { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); gap: 14px 20px; }
+.ops-sec h3 { font-size: 14px; margin: 0 0 4px; }
+.ops-sec ul { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 3px; font-size: 14px; }
+.ops-meter { display: inline-block; width: 100%; max-width: 220px; height: 8px; border-radius: 999px; background: var(--surface); border: 1px solid var(--border); overflow: hidden; vertical-align: middle; }
+.ops-meter.sm { width: 60px; }
+.ops-meter i { display: block; height: 100%; background: var(--accent); border-radius: 999px; }
+.ops-meter i.over { background: var(--bad); }
+.ops-funnel { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.ops-funnel li { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(70px, 1fr) auto 44px; gap: 10px; align-items: center; font-size: 14px; }
+.ops-funnel .ops-meter { max-width: none; }
+.ops-funnel b, .ops-funnel small { font-variant-numeric: tabular-nums; text-align: right; }
+.ops-funnel small { color: var(--muted); }
+
+/* answer tests */
+.ev-list, .ev-results { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.ev-case { display: grid; grid-template-columns: 96px minmax(0, 1fr) auto; gap: 12px; align-items: start; padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); }
+.ev-q { margin: 2px 0 6px; overflow-wrap: anywhere; }
+.ev-chips { display: flex; gap: 6px; flex-wrap: wrap; }
+.ev-chips .chip { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ev-why { margin: 6px 0 0; color: var(--bad); }
+.ev-edit .field { margin-bottom: 10px; }
+.ev-check { display: flex; align-items: center; gap: 8px; align-self: end; padding-bottom: 12px; }
+.ev-num .field { min-width: 140px; }
+.ev-bar { height: 8px; margin: 10px 0; border-radius: 999px; background: var(--surface-2); border: 1px solid var(--border); overflow: hidden; }
+.ev-bar i { display: block; height: 100%; background: var(--accent); transition: width 0.3s ease; }
+.ev-results li { padding: 8px 10px; border-left: 3px solid var(--border); background: var(--surface-2); border-radius: 0 var(--radius-sm) var(--radius-sm) 0; overflow-wrap: anywhere; }
+.ev-results li.ok { border-left-color: var(--good); }
+.ev-results li.no { border-left-color: var(--bad); }
+.ev-results .bq-a { max-height: 320px; overflow: auto; }
+.ev-run-h { font-size: 15px; margin: 0; }
+@media (max-width: 720px) {
+  .ev-case { grid-template-columns: minmax(0, 1fr); gap: 6px; }
+  .ops-funnel li { grid-template-columns: minmax(0, 1fr) auto 40px; }
+  .ops-funnel .ops-meter { grid-column: 1 / -1; grid-row: 2; }
+}
+@media (prefers-reduced-motion: reduce) { .ev-bar i { transition: none; } }

@@ -6735,3 +6735,15 @@
 6936	.docx, .pdf, .odt oder .txt
 6937	1 Hinweis
 6938	{1} Hinweise
+5945	Bo ist noch nicht eingeschaltet.
+6939	Diesen Test gibt es nicht mehr.
+6940	Das sind
+6941	Bo ist nicht eingerichtet: Füge den Anthropic-Schlüssel unter Schlüssel & Einstellungen hinzu.
+6942	Es gibt keine Tests zum Ausführen. Füge zuerst welche hinzu.
+6943	Diesen Durchlauf gibt es nicht mehr.
+6944	Dieser Durchlauf ist beendet.
+6945	Dieser Test gehört nicht zu diesem Durchlauf.
+6946	Gerade wird eine Kopie gesendet oder getestet. Versuche es in ein paar Minuten noch einmal.
+6947	Der Wiederherstellungstest ist fehlgeschlagen:
+6948	Gib zuerst die Adresse, den Bucket, die Zugriffsschlüssel-ID und das Secret an.
+6949	Der Bucket lässt sich auflisten (um die neuesten Kopien zu behalten).

@@ -51,6 +51,9 @@ return [
   'digest_day'      => 0,    // 0 = Sunday … 6 = Saturday (local time, see 'timezone')
   'digest_hour'     => 17,   // send from 5 pm local time
   'reminder_hour'   => 18,   // evening reminders ("tomorrow: … due") go out from 6 pm local time to members who opted in
+  // The weekly report to the administrators (api/ops.php): 'on' or 'off', and its day (0 = Sunday … 6; it goes from 8 am).
+  'admin_report'    => 'on',
+  'admin_report_day' => 1,
 
   // Optional. If set, GET api/index.php?r=stats with header X-Admin-Key: <this value> returns sign-up counts.
   'admin_key'       => '',

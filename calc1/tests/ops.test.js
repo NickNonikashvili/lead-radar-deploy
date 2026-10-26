@@ -1,0 +1,90 @@
+/* Running the site (api/ops.php, the demand ranking in api/requests.php; the Overview, Credits, Growth and Class requests tabs,
+   assets/admin-ops.js). Mail is in log mode here (api/data/mail.log).
+   Covered: Bo's cost today and this month from the credits used; the daily, monthly and spike alerts, emailed to the
+   administrators once each with who used most, and shown in the panel; the weekly report: what it says, emailed by
+   housekeeping once from its day and hour, not when it is off, and to me on demand; class requests ranked by how many
+   people asked and how recently; how far the last 30 days' sign-ups got and Bo's cost by week; administrators only. */
+const T = require('./lib'); const fs = require('fs'); const path = require('path'); const cp = require('child_process');
+const API = path.join(__dirname, '..', 'api'); const DB = path.join(API, 'data', 'mathub.sqlite'); const LOG = path.join(API, 'data', 'mail.log');
+const sql = (q, ...a) => cp.spawnSync('php', ['-r', '$d = new PDO("sqlite:" . $argv[1]); $s = $d->prepare($argv[2]); $s->execute(array_slice($argv, 3)); echo json_encode($s->fetchAll(PDO::FETCH_ASSOC));', DB, q, ...a.map(String)]).stdout.toString();
+const rows = (q, ...a) => { try { return JSON.parse(sql(q, ...a) || '[]'); } catch (e) { return []; } };
+const mailLen = () => (fs.existsSync(LOG) ? fs.readFileSync(LOG, 'utf8').length : 0);
+const mailSince = n => (fs.existsSync(LOG) ? fs.readFileSync(LOG, 'utf8').slice(n) : '');
+const idOf = email => +rows('SELECT id FROM users WHERE email = ?', email)[0].id;
+(async () => {
+  const { mk, login, go, txt, check, api } = await T.start({});
+  const [c, a] = await mk(1360, 900); await go(a, '#/'); await login(a, 'admin.user@montana.edu');
+  const KEY = 'ops-test-cron-key'; const cron = () => a.evaluate(async k => (await fetch('api/index.php?r=cron&key=' + k)).json(), KEY);
+  const settings = v => api(a, 'admin_config_save', { password: 'password123', values: v });
+  const unset = () => api(a, 'admin_config_save', { password: 'password123', clear: ['cost_alert_daily', 'cost_alert_monthly', 'admin_report', 'admin_report_day', 'cron_key'] });
+  await api(a, 'admin_ops');   // the tables
+  const clean = () => { sql('DELETE FROM ops_alerts'); sql('DELETE FROM credit_use'); sql("DELETE FROM class_requests WHERE code IN ('CHEM 121', 'HIST 101', 'ART 100')"); };
+  clean(); await unset(); await settings({ cron_key: KEY });
+  sql("INSERT OR REPLACE INTO ops_state (k, v) VALUES ('report_sent', ?)", Math.floor(Date.now() / 1000));   // not this week's yet
+
+  // what Bo cost: $12 today, mostly Alice's; $1 a day the 14 days before (credits_markup 2: $1 = 200 credits)
+  const now = Math.floor(Date.now() / 1000); const alice = idOf('alice.a@montana.edu'), bob = idOf('bob.bmu6j92pq@montana.edu');
+  const use = (uid, at, feature, dollars) => sql('INSERT INTO credit_use (user_id, at, feature, mc, month_mc, paid_mc, ref, detail) VALUES (?, ?, ?, ?, 0, 0, "", "test")', uid, at, feature, Math.round(dollars * 200000));
+  use(alice, now - 30, 'chat', 9); use(bob, now - 40, 'call', 3); for (let k = 1; k <= 14; k++) use(bob, now - k * 86400, 'chat', 1);
+  let r = await api(a, 'admin_ops');
+  check('Bo’s cost today and this month, from the credits used', r.json && r.json.ok && Math.abs(r.json.cost.today - 12) < 0.01 && r.json.cost.month >= 12 && r.json.cost.limit_day === 0 && r.json.alerts.length === 0, r.json.cost);
+
+  // alerts
+  let m0 = mailLen(); r = await cron();
+  check('with no alerts set, none goes', r.ok && !r.did.some(x => /cost alert/.test(x)) && mailSince(m0) === '', r.did);
+  await settings({ cost_alert_daily: '10', cost_alert_monthly: '5' });
+  m0 = mailLen(); r = await cron(); const mail = mailSince(m0);
+  check('a day over its alert, a month over its alert, and a spike: one alert each', ['cost alert: day', 'cost alert: month', 'cost alert: spike'].every(k => r.did.includes(k)), r.did);
+  check('each emailed to the administrators, saying what and who used most', /to=admin\.user@montana\.edu subject="Mathub: Bo has cost \$12\.00 today \(your alert: \$10\.00\)"/.test(mail) && /Most of it: alice\.a@montana\.edu \$9\.00 \(75%\)/.test(mail) && /three times a usual day/.test(mail) && /The 14 days before cost \$1\.00 a day on average/.test(mail) && /#\/admin\/credits/.test(mail), mail.slice(0, 900));
+  m0 = mailLen(); r = await cron(); check('and only once a day (and month)', !r.did.some(x => /cost alert/.test(x)) && mailSince(m0) === '', r.did);
+  r = await api(a, 'admin_ops'); check('the panel lists them while they stand', r.json.alerts.length === 3 && r.json.alerts.find(x => x.kind === 'day').limit === 10 && r.json.cost.limit_month === 5, r.json.alerts);
+
+  // the weekly report
+  r = await api(a, 'admin_ops'); const W = r.json.report.sections;
+  check('this week’s report: people, Bo’s use and cost by feature, credits, class requests, what to look at, backups, answer tests, alerts', ['People', 'Bo', 'Credits sold', 'Class requests', 'To look at', 'Backups', 'Answer tests', 'Cost alerts'].every(k => Array.isArray(W[k])) && /costing about \$18\.00/.test(W.Bo[0]) && W.Bo.some(l => l === 'Chat with Bo: $15.00, 7 uses by 2 people') && W.Bo.some(l => l === 'Calls with Bo: $3.00, 1 use by 1 person'), W);
+  check('it says when the off-site copies are not set up, and how to run the answer tests', W.Backups.some(l => /Off-site copies are not set up/.test(l)) && /Answer tests tab|No run yet/.test(W['Answer tests'][0]), [W.Backups, W['Answer tests']]);
+  m0 = mailLen(); r = await api(a, 'admin_ops_send', {});
+  check('Email me this report: to me', r.json && r.json.ok && r.json.to === 'admin.user@montana.edu' && r.json.logged === true && /to=admin\.user@montana\.edu subject="Mathub this week \([A-Z][a-z]{2} \d+ – [A-Z][a-z]{2} \d+\): \d+ sign-ups, \d+ active, Bo \$18\.00"/.test(mailSince(m0)) && /BACKUPS\n- /.test(mailSince(m0)), mailSince(m0).slice(0, 300));
+  sql("UPDATE ops_state SET v = '0' WHERE k = 'report_sent'"); sql("DELETE FROM rate WHERE key = 'ops:report'");
+  m0 = mailLen(); r = await cron();
+  check('housekeeping sends it to every administrator once its day and hour have come', r.did.includes('weekly report: 1 sent') && /subject="Mathub this week/.test(mailSince(m0)), r.did);
+  m0 = mailLen(); sql("DELETE FROM rate WHERE key = 'ops:report'"); r = await cron(); check('and not again that week', !r.did.some(x => /weekly report/.test(x)) && !/Mathub this week/.test(mailSince(m0)), r.did);
+  await settings({ admin_report: 'off' }); sql("UPDATE ops_state SET v = '0' WHERE k = 'report_sent'"); sql("DELETE FROM rate WHERE key = 'ops:report'");
+  m0 = mailLen(); r = await cron(); check('not when it is turned off', !r.did.some(x => /weekly report/.test(x)) && !/Mathub this week/.test(mailSince(m0)), r.did);
+  r = await api(a, 'admin_ops'); check('the panel says it is off', r.json.report.on === false);
+  await settings({ admin_report: 'on' }); sql("INSERT OR REPLACE INTO ops_state (k, v) VALUES ('report_sent', ?)", Math.floor(Date.now() / 1000));
+
+  // class requests by demand
+  const req = (uid, code, title, daysAgo, syllabus) => sql('INSERT INTO class_requests (user_id, code, title, text, created, updated) VALUES (?, ?, ?, ?, ?, ?)', uid, code, title, syllabus ? 'A syllabus.' : '', now - daysAgo * 86400, now - daysAgo * 86400);
+  const mod = idOf('mod.user@montana.edu');
+  req(alice, 'CHEM 121', 'College Chemistry I', 2, true); req(bob, 'CHEM 121', '', 5, false); req(mod, 'CHEM 121', '', 60, false);
+  req(alice, 'ART 100', 'Drawing', 50, false); req(bob, 'ART 100', '', 45, false); req(mod, 'ART 100', '', 40, false);
+  req(alice, 'HIST 101', 'World History', 1, false); req(bob, 'HIST 101', '', 1, false);
+  r = await api(a, 'admin_classreqs&status=open'); const G = r.json.groups.filter(g => ['CHEM 121', 'HIST 101', 'ART 100'].includes(g.code));
+  check('class requests: most wanted first, by people, then by how many asked in the last 30 days', G.map(g => g.code).join() === 'CHEM 121,ART 100,HIST 101' && G[0].people === 3 && G[0].recent === 2 && G[1].recent === 0 && G[2].people === 2, G.map(g => [g.code, g.people, g.recent]));
+  r = await api(a, 'admin_ops'); const CR = r.json.report.sections['Class requests'];
+  check('the weekly report lists them the same way', CR.some(l => l === 'CHEM 121 College Chemistry I: 3 people, 2 in the last 30 days') && CR.some(l => l === 'HIST 101 World History: 2 people, 2 in the last 30 days, no syllabus yet') && CR.findIndex(l => /^CHEM 121/.test(l)) < CR.findIndex(l => /^ART 100/.test(l)), CR);
+
+  // usage
+  r = await api(a, 'admin_growth'); const U = r.json.usage;
+  check('Growth: how far the last 30 days’ sign-ups got, and Bo’s cost by week', U && ['signed_up', 'confirmed', 'returned', 'asked_bo', 'paid'].every(k => Number.isInteger(U.funnel[k])) && U.funnel.confirmed <= U.funnel.signed_up && U.weeks.length === 8 && U.weeks.reduce((s, w) => s + w.usd, 0) >= 25.99 && U.weeks[7].usd >= 12, U);
+
+  // administrators only
+  const [c2, b] = await mk(1000, 800); await go(b, '#/'); await login(b, 'alice.a@montana.edu');
+  check('members cannot see the costs or the report', (await api(b, 'admin_ops')).status === 403 && (await api(b, 'admin_ops_send', {})).status === 403);
+  await c2.close();
+
+  // the tabs
+  await a.reload(); await a.waitForTimeout(800); await go(a, '#/admin/overview', 2000);
+  let t = await txt(a, '#adm-body');
+  check('Overview: the alerts standing, and the week', /Bo has cost \$12\.00 today \(your alert: \$10\.00\)/.test(t) && /The last seven days/.test(t) && /To look at/.test(t) && /Email me this report/.test(t), t.slice(0, 500));
+  await go(a, '#/admin/credits', 2000); t = await txt(a, '#ops-cost');
+  check('Credits: today and this month against the alerts', /Bo’s cost today/.test(t) && /\$12\.00/.test(t) && /alert at \$10\.00/.test(t) && /alert at \$5\.00/.test(t), t);
+  await go(a, '#/admin/growth', 2000); t = await txt(a, '#ops-usage');
+  check('Growth: how far new members get, and what Bo cost by week', /How far new members get/.test(t) && /Asked Bo something/.test(t) && /What Bo cost, by week/.test(t), t.slice(0, 300));
+  await go(a, '#/admin/classes', 2000); t = await txt(a, '#adm-body');
+  check('Class requests: who wants each, and how recently', /Most wanted first/.test(t) && /3 people/.test(t) && /2 in the last 30 days/.test(t), t.slice(0, 400));
+  check('the tabs fit and have no errors', await a.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
+
+  clean(); await unset(); await c.close(); await T.finish();
+})();

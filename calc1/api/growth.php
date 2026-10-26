@@ -198,7 +198,7 @@ function mh_growth_route(string $route, array $in, array $cfg, string $ip): void
       foreach ($ev as $key => $n) { if (!is_string($key) || !preg_match('/^[a-z]+:[a-z0-9_-]{1,30}$/', $key) || $k++ > 40) continue; mh_metric($key, max(1, min(500, (int)$n))); }
       if ($me) mh_track_day((int)$me['id']); mh_json(['ok' => true]);
     }
-    case 'admin_growth': { mh_method('GET'); $u = mh_require_user(); if (!mh_is_admin($u)) mh_fail('Admins only.', 403); mh_json(['ok' => true] + mh_growth_report()); }
+    case 'admin_growth': { mh_method('GET'); $u = mh_require_user(); if (!mh_is_admin($u)) mh_fail('Admins only.', 403); require_once __DIR__ . '/ops.php'; mh_json(['ok' => true] + mh_growth_report() + ['usage' => mh_ops_usage()]); }
 
     /* --- class goals and section leagues --- */
     case 'class_goal': {

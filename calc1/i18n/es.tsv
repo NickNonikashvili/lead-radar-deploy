@@ -6832,3 +6832,14 @@
 6936	.docx, .pdf, .odt o .txt
 6937	1 sugerencia
 6938	{1} sugerencias
+6939	Esa prueba ya no existe.
+6940	Eso es
+6941	Bo no está configurado: añade la clave de Anthropic en Claves y ajustes.
+6942	No hay pruebas que ejecutar. Añade algunas primero.
+6943	Esa ejecución ya no existe.
+6944	Esa ejecución ha terminado.
+6945	Esa prueba no está en esta ejecución.
+6946	Ahora mismo se está enviando o probando una copia. Inténtalo de nuevo en unos minutos.
+6947	La prueba de restauración falló:
+6948	Primero pon la dirección, el bucket, el ID de la clave de acceso y el secreto.
+6949	Se puede listar el bucket (para conservar las copias más recientes).

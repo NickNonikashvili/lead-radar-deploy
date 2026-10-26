@@ -24,6 +24,14 @@ const MH_REQ_MAX_BYTES = 10 * 1024 * 1024;
 const MH_REQ_STATUSES = ['new', 'working', 'added', 'declined'];
 const MH_REQ_OPEN = ['new', 'working'];
 
+/** Open requests by course code, most wanted first: by how many people asked, then how many asked in the last 30 days. */
+function mh_req_demand(): array {
+  $db = mh_req_db(); $recent = time() - 30 * 86400;
+  $rows = $db->query('SELECT code, MAX(title) AS title, COUNT(DISTINCT user_id) AS people, COUNT(DISTINCT CASE WHEN created >= ' . $recent . ' THEN user_id END) AS recent, SUM(file <> "" OR text <> "") AS syllabi, MIN(created) AS first FROM class_requests WHERE status IN ("new", "working") GROUP BY code')->fetchAll();
+  $out = array_map(fn($r) => ['code' => (string)$r['code'], 'title' => (string)$r['title'], 'people' => (int)$r['people'], 'recent' => (int)$r['recent'], 'syllabus' => (int)$r['syllabi'] > 0, 'first' => (int)$r['first']], $rows);
+  usort($out, fn($a, $b) => [$b['people'], $b['recent'], $a['first']] <=> [$a['people'], $a['recent'], $b['first']]);
+  return $out;
+}
 function mh_req_db(): PDO {
   static $ready = false; $db = mh_db();
   if (!$ready) {
@@ -174,14 +182,16 @@ function mh_requests_route(string $route, array $in, array $cfg, string $ip): vo
         if ($r['title'] !== '' && $g['title'] === '') $g['title'] = $r['title'];
         $g['last'] = max($g['last'], (int)$r['created']); if ($r['course_id'] !== '') $g['course_id'] = $r['course_id']; if ($r['admin_note'] !== '') $g['admin_note'] = $r['admin_note'];
         $rank = ['new' => 2, 'working' => 3, 'added' => 4, 'declined' => 1]; if (($rank[$r['status']] ?? 0) > ($rank[$g['status']] ?? 0)) $g['status'] = $r['status'];
-        $g['requests'][] = mh_req_public($r) + ['email' => $r['email'] ?? '', 'name' => $r['name'] ?? '', 'deleted' => $r['email'] === null, 'text' => $r['text'], 'file_type' => $r['file_type'], 'scan' => json_decode((string)($r['scan'] ?? ''), true) ?: null];
+        $g['requests'][] = mh_req_public($r) + ['uid' => (int)$r['user_id'], 'email' => $r['email'] ?? '', 'name' => $r['name'] ?? '', 'deleted' => $r['email'] === null, 'text' => $r['text'], 'file_type' => $r['file_type'], 'scan' => json_decode((string)($r['scan'] ?? ''), true) ?: null];
         unset($g);
       }
       $list = array_values($groups);
-      foreach ($list as &$g) { $g['n'] = count($g['requests']); $g['syllabi'] = count(array_filter($g['requests'], fn($x) => $x['file_name'] !== '' || $x['has_text'])); } unset($g);
+      $recent = time() - 30 * 86400;
+      foreach ($list as &$g) { $g['n'] = count($g['requests']); $g['syllabi'] = count(array_filter($g['requests'], fn($x) => $x['file_name'] !== '' || $x['has_text']));
+        $g['people'] = count(array_unique(array_map(fn($x) => $x['uid'], $g['requests']))); $g['recent'] = count(array_unique(array_map(fn($x) => $x['uid'], array_filter($g['requests'], fn($x) => $x['created'] >= $recent)))); } unset($g);
       $counts = ['open' => 0, 'added' => 0, 'declined' => 0, 'all' => count($list)]; foreach ($list as $g) $counts[in_array($g['status'], MH_REQ_OPEN, true) ? 'open' : $g['status']]++;
       $list = array_values(array_filter($list, fn($g) => $filter === 'all' || ($filter === 'open' ? in_array($g['status'], MH_REQ_OPEN, true) : $g['status'] === $filter)));
-      usort($list, fn($a, $b) => [$b['n'], $a['first']] <=> [$a['n'], $b['first']]);
+      usort($list, fn($a, $b) => [$b['people'], $b['recent'], $a['first']] <=> [$a['people'], $a['recent'], $b['first']]);   // most wanted first
       mh_json(['ok' => true, 'groups' => $list, 'counts' => $counts, 'max_mb' => MH_REQ_MAX_BYTES / 1048576]);
     }
 

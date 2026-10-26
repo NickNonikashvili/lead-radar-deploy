@@ -165,8 +165,9 @@ function mh_ai_count(int $uid, string $what, int $tin, int $tout): void {
 
 /* ---------- talking to the AI ---------- */
 /** One request to Anthropic's Messages API. Returns text, why it stopped, and the tokens used. */
-function mh_ai_call(array $A, string $model, array $system, array $messages, int $maxTokens, int $timeout): array {
-  if ($A['key'] === '') mh_fail('Bo is not switched on yet. Please try again later.', 503);
+/** One answer from Claude. $soft: a failure comes back as ['error' => why, 'status' => code] instead of ending the request (the answer tests, api/evals.php). */
+function mh_ai_call(array $A, string $model, array $system, array $messages, int $maxTokens, int $timeout, bool $soft = false): array {
+  if ($A['key'] === '') { if ($soft) return ['error' => 'Bo is not switched on yet.', 'status' => 503]; mh_fail('Bo is not switched on yet. Please try again later.', 503); }
   if (!function_exists('curl_init')) mh_fail('Bo cannot reach the AI from this server.', 503);
   $body = json_encode(['model' => $model, 'max_tokens' => $maxTokens, 'system' => $system, 'messages' => $messages], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
   $ch = curl_init($A['url']);
@@ -174,12 +175,26 @@ function mh_ai_call(array $A, string $model, array $system, array $messages, int
     CURLOPT_HTTPHEADER => ['x-api-key: ' . $A['key'], 'anthropic-version: 2023-06-01', 'content-type: application/json', 'accept: application/json']]);
   $raw = curl_exec($ch); $code = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE); $err = curl_errno($ch); curl_close($ch);
   $j = $raw === false ? null : json_decode((string)$raw, true);
-  if ($raw === false || $code < 200 || $code >= 300 || !is_array($j)) { [$msg, $status] = mh_ai_trouble($raw === false ? null : (string)$raw, $code, $err); mh_fail($msg, $status); }
+  if ($raw === false || $code < 200 || $code >= 300 || !is_array($j)) { [$msg, $status] = mh_ai_trouble($raw === false ? null : (string)$raw, $code, $err); if ($soft) return ['error' => $msg, 'status' => $status]; mh_fail($msg, $status); }
   $text = ''; foreach (($j['content'] ?? []) as $b) if (($b['type'] ?? '') === 'text') $text .= (string)$b['text'];
   $u = $j['usage'] ?? [];
   $use = ['plain' => (int)($u['input_tokens'] ?? 0), 'cw' => (int)($u['cache_creation_input_tokens'] ?? 0), 'cr' => (int)($u['cache_read_input_tokens'] ?? 0), 'out' => (int)($u['output_tokens'] ?? 0)];
   mh_ai_meter($model, $use);
   return ['text' => $text, 'stop' => (string)($j['stop_reason'] ?? ''), 'in' => $use['plain'] + $use['cw'] + $use['cr'], 'out' => $use['out']];
+}
+/** Bo's instructions for a chat answer: who he is, the class (cached), $now (the date and what he knows of the student), his
+    character, a writing class's rules, and the class instructor's settings ($classAi; null: the class's own). ai_tutor and
+    the answer tests (api/evals.php) both build them here, so the tests ask the Bo students get. */
+function mh_ai_tutor_system(?array $C, string $cid, array $in, array $now, ?string $classAi = null): array {
+  $system = [['type' => 'text', 'text' => MH_AI_BO_FULL]];
+  if ($C) $system[] = ['type' => 'text', 'text' => mh_ai_digest($C), 'cache_control' => ['type' => 'ephemeral']];
+  else $system[0]['cache_control'] = ['type' => 'ephemeral'];
+  $system[] = ['type' => 'text', 'text' => implode("\n", $now)];
+  $system[] = ['type' => 'text', 'text' => mh_ai_character(mh_ai_character_id($in))['who']];   // who he is (assets/bo-characters.js)
+  if (mh_ai_writing_class($C)) $system[] = ['type' => 'text', 'text' => MH_AI_WRITING];
+  if ($classAi === null) { require_once __DIR__ . '/instruct.php'; $classAi = mh_class_ai_prompt($cid); }   // the class's instructor: hints only, notes for Bo
+  if ($classAi !== '') $system[] = ['type' => 'text', 'text' => $classAi];
+  return $system;
 }
 /** Every answer from the AI is paid in credits by whoever it was for (mh_credits_for; api/credits.php). */
 function mh_ai_meter(string $model, array $use): void { if (!empty($GLOBALS['mh_credit_ctx'])) { require_once __DIR__ . '/credits.php'; mh_credits_ai($model, $use); } }
@@ -965,17 +980,11 @@ function mh_ai_route(string $route, array $in, array $cfg, string $ip): void {
       $C = mh_ai_class($u, $cid);
       mh_credits_for($u, $cfg, 'chat', mh_ai_class_name($C, $cid) . ' · ' . (!empty($in['voice']) ? 'voice' : ($float ? 'on a page' : 'chat')));
       $today = preg_match('/^\d{4}-\d{2}-\d{2}$/', (string)($in['today'] ?? '')) ? (string)$in['today'] : gmdate('Y-m-d');
-      $system = [['type' => 'text', 'text' => MH_AI_BO_FULL]];
-      if ($C) $system[] = ['type' => 'text', 'text' => mh_ai_digest($C), 'cache_control' => ['type' => 'ephemeral']];
-      else $system[0]['cache_control'] = ['type' => 'ephemeral'];
       $voice = !empty($in['voice']); $stream = !empty($in['stream']);
       $notes = mh_ai_notes($uid);
       require_once __DIR__ . '/students.php'; $SF = mh_student_update($u, $cfg, $in, $cid, $C);   // the student file: kept up to date, and read
       $now = array_filter(['TODAY: ' . $today, $C ? mh_ai_upcoming($C, $today) : '', mh_ai_snapshot($in['snapshot'] ?? null), $notes ? "WHAT BO REMEMBERS ABOUT THEM:\n- " . implode("\n- ", $notes) : '', mh_student_context($SF, $cid)]);
-      $system[] = ['type' => 'text', 'text' => implode("\n", $now)];
-      $system[] = ['type' => 'text', 'text' => mh_ai_character(mh_ai_character_id($in))['who']];   // who he is (assets/bo-characters.js)
-      if (mh_ai_writing_class($C)) $system[] = ['type' => 'text', 'text' => MH_AI_WRITING];
-      require_once __DIR__ . '/instruct.php'; if (($ci = mh_class_ai_prompt($cid)) !== '') $system[] = ['type' => 'text', 'text' => $ci];   // the class's instructor: hints only, notes for Bo
+      $system = mh_ai_tutor_system($C, $cid, $in, $now);
       if ($voice) $system[] = ['type' => 'text', 'text' => MH_AI_VOICE];
       if ($voice && ($in['focus'] ?? '') === 'exam') $system[] = ['type' => 'text', 'text' => MH_AI_EXAM_CALL];
       if ($pad) $system[] = ['type' => 'text', 'text' => str_replace(['%COLS%', '%ROWS%'], [(string)$pad['cols'], (string)$pad['rows']], MH_AI_PAD)];
