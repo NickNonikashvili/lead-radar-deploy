@@ -6369,3 +6369,111 @@
 6473	1 palabra más
 6474	1 palabra menos
 6475	{1} palabras
+6476	Cuaderno de escritura
+6477	Tus {1} entradas
+6478	Escribe aquí la entrada de cada semana. Se guardan con tu cuenta y se descargan como un solo archivo de Word para entregarlas.
+6479	"DRAFTS" debe ser una lista de proyectos.
+6480	DRAFTS[{1}] necesita un id de hasta 12 letras minúsculas o dígitos.
+6481	El id de proyecto "{1}" se usa dos veces.
+6482	El proyecto "{1}" necesita un nombre.
+6483	El proyecto "{1}" no tiene "brief": Bo lee los borradores según él, así que di qué pide la tarea.
+6484	El proyecto "{1}" no tiene "goals": Bo lee los borradores según ellos.
+6485	El proyecto "{1}" {2} "{3}" no es un id de examen.
+6486	"NOTEBOOK" necesita un "count" de entradas.
+6487	La entrada {1} del cuaderno pasa de su número ({2}).
+6488	La entrada {1} del cuaderno reflexiona sobre "{2}", que no es un proyecto.
+6489	La voz se detuvo. Pulsa Leer en voz alta para seguir.
+6490	Leer en voz alta
+6491	Este navegador no puede leer en voz alta.
+6492	Historial de revisiones
+6493	No estoy de acuerdo
+6494	¿Por qué? Bo lo lee la próxima vez (opcional)
+6495	Oírlo te ayuda a notar lo que suena raro. Mientras lee, haz clic en un párrafo para saltar allí.
+6496	Your note on my draft ({1}, version {2}){3}: {4}
+6497	at "{1}"
+6498	Tu nota
+6499	¿Qué quieres decir aquí?
+6500	No estoy de acuerdo. Te explico por qué.
+6501	Muéstrame un ejemplo de las lecturas.
+6502	Activa a Bo en todas las páginas en Ajustes para preguntarle sobre una nota.
+6503	Abriendo tus versiones…
+6504	{1} · Historial de revisiones
+6505	Aún no hay versiones de este proyecto. Comparte un borrador con Bo y cada versión que envíes se guarda aquí.
+6506	Compartir un borrador
+6507	Versión {1}
+6508	Cada versión que compartiste, qué cambió entre ellas y qué pasó con las notas de Bo. Úsalo como prueba de revisión para tu portafolio; la reflexión la escribes tú.
+6509	Preguntas para tu reflexión
+6510	sin IA: las respuestas son tuyas
+6511	¿Qué cambio marcó la mayor diferencia y por qué lo hiciste?
+6512	¿Qué comentario no seguiste y por qué?
+6513	¿Qué hace el primer borrador que el último hace mejor?
+6514	¿Qué cambiarías después si tuvieras otra semana?
+6515	Descargar como Word
+6516	Cómo mostrar los cambios
+6517	En un solo texto
+6518	quitado
+6519	Una versión por ahora. Envía a Bo un borrador revisado y esta página muestra qué cambió.
+6520	Qué pasó con las notas de Bo
+6521	Bo: {1}
+6522	Tú: hecho
+6523	Tú: en desacuerdo
+6524	Elige dos versiones distintas.
+6525	De la versión {1} a la versión {2}: {3} de {4} párrafos nuevos o cambiados, {5} {5|palabra añadida|palabras añadidas} y {6} {6|quitada|quitadas}.
+6526	Historial de revisiones de Mathub: cada versión compartida con Bo y qué pasó con sus notas.
+6527	· revision history
+6528	{1} revision history
+6529	Ese archivo no se pudo crear aquí. Usa Imprimir o guardar como PDF.
+6530	{1} · revision history
+6531	Elige un proyecto.
+6532	Nota desconocida.
+6533	Esta clase no tiene cuaderno de escritura.
+6534	Esa entrada no está en este cuaderno.
+6535	Esa entrada es demasiado larga para guardarla (unas 7.000 palabras). Divídela en dos.
+6536	Esta entrada se cambió en otro dispositivo.
+6537	No se puede conectar con Mathub ahora mismo.
+6538	Cuaderno {1}: {2}
+6539	Cuaderno {1}
+6540	notebook_list&class=
+6541	Sin conexión: guardado en este dispositivo, se guardará cuando vuelvas
+6542	Editando…
+6543	{1} de {2} escritas · {3}
+6544	Copia la consigna de clase o de Canvas para que quede con tu entrada.
+6545	Escribe aquí. Se guarda mientras escribes.
+6546	Todas las entradas
+6547	La consigna
+6548	Tu entrada
+6549	Tu historial de revisiones de {1} muestra cada versión que compartiste y qué cambió, por si lo quieres a mano.
+6550	Abrirlo
+6551	Usar la versión de este dispositivo
+6552	Quedarme con la guardada
+6553	Esta entrada se cambió en otro dispositivo, así que lo que escribiste aquí ({1}) no se guardó encima. La de abajo es la guardada.
+6554	{1} entradas en el archivo; {2} {2|aún vacía|aún vacías}.
+6555	Las {1} entradas están en el archivo.
+6556	Escribe una entrada primero.
+6557	{1} writer's notebook
+6558	Ese archivo no se pudo crear aquí. Descárgalo como texto.
+6559	Tus entradas, revisadas cada semana y entregadas juntas al final. Privado: solo tú puedes leerlas, y Bo no forma parte de tu cuaderno.
+6560	Word
+6561	El cuaderno es para miembros
+6562	Regístrate con tu correo montana.edu para guardar tu cuaderno con tu cuenta, en todos tus dispositivos.
+6563	Abriendo tu cuaderno…
+6564	(min-width: 821px)
+6565	entrégalas todas con {1}, {2}
+6566	Entradas
+6567	Elige una entrada para escribir.
+6568	Ese PDF está protegido con contraseña. Ábrelo, copia el texto y pégalo aquí.
+6569	Ese PDF no tiene texto que leer (puede ser un escaneo). Copia el texto del documento original y pégalo aquí.
+6570	Times New Roman
+6571	xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+6572	_rels/.rels
+6573	word/_rels/document.xml.rels
+6574	word/styles.xml
+6575	heading 1
+6576	heading 2
+6577	docProps/core.xml
+6578	docProps/app.xml
+6579	Comparar
+6580	Texto plano
+6581	con
+6582	añadido
+6583	1 entrada en el archivo; {1} {1|aún vacía|aún vacías}.

@@ -6272,3 +6272,111 @@
 6473	1 mot de plus
 6474	1 mot de moins
 6475	{1} mots
+6476	Carnet d’écriture
+6477	Tes {1} entrées
+6478	Écris ici l’entrée de chaque semaine. Elles sont gardées avec ton compte et se téléchargent en un seul fichier Word à rendre.
+6479	"DRAFTS" doit être une liste de projets.
+6480	DRAFTS[{1}] a besoin d’un id de 12 lettres minuscules ou chiffres au plus.
+6481	L’id de projet "{1}" est utilisé deux fois.
+6482	Le projet "{1}" a besoin d’un nom.
+6483	Le projet "{1}" n’a pas de "brief" : Bo lit les brouillons à partir de lui, alors dis ce que demande le devoir.
+6484	Le projet "{1}" n’a pas de "goals" : Bo lit les brouillons à partir d’eux.
+6485	Projet "{1}" : {2} "{3}" n’est pas un id d’examen.
+6486	"NOTEBOOK" a besoin d’un "count" d’entrées.
+6487	L’entrée {1} du carnet dépasse son nombre ({2}).
+6488	L’entrée {1} du carnet porte sur "{2}", qui n’est pas un projet.
+6489	La voix s’est arrêtée. Appuie sur Lire à voix haute pour continuer.
+6490	Lire à voix haute
+6491	Ce navigateur ne peut pas lire à voix haute.
+6492	Historique des révisions
+6493	Je ne suis pas d’accord
+6494	Pourquoi ? Bo le lira la prochaine fois (facultatif)
+6495	L’entendre aide à repérer ce qui sonne bizarre. Pendant la lecture, clique sur un paragraphe pour y aller.
+6496	Your note on my draft ({1}, version {2}){3}: {4}
+6497	at "{1}"
+6498	Ta remarque
+6499	Que veux-tu dire ici ?
+6500	Je ne suis pas d’accord. Voici pourquoi.
+6501	Montre-moi un exemple tiré des lectures.
+6502	Active Bo sur toutes les pages dans les Paramètres pour lui poser une question sur une remarque.
+6503	Ouverture de tes versions…
+6504	{1} · Historique des révisions
+6505	Pas encore de version de ce projet. Partage un brouillon avec Bo et chaque version envoyée est gardée ici.
+6506	Partager un brouillon
+6507	Version {1}
+6508	Chaque version partagée, ce qui a changé entre elles et ce que sont devenues les remarques de Bo. Utilise-le comme preuve de révision pour ton portfolio ; la réflexion, c’est à toi de l’écrire.
+6509	Questions pour ta réflexion
+6510	sans IA : les réponses sont à toi
+6511	Quel changement a fait la plus grande différence, et pourquoi l’as-tu fait ?
+6512	Quel retour n’as-tu pas suivi, et pourquoi ?
+6513	Que fait le dernier brouillon mieux que le premier ?
+6514	Que changerais-tu ensuite si tu avais une semaine de plus ?
+6515	Télécharger en Word
+6516	Comment montrer les changements
+6517	En un seul texte
+6518	retiré
+6519	Une seule version pour l’instant. Envoie à Bo un brouillon révisé et cette page montrera ce qui a changé.
+6520	Ce que sont devenues les remarques de Bo
+6521	Bo : {1}
+6522	Toi : fait
+6523	Toi : pas d’accord
+6524	Choisis deux versions différentes.
+6525	De la version {1} à la version {2} : {3} paragraphes sur {4} nouveaux ou modifiés, {5} {5|mot ajouté|mots ajoutés} et {6} {6|retiré|retirés}.
+6526	Historique des révisions de Mathub : chaque version partagée avec Bo, et ce que sont devenues ses remarques.
+6527	· revision history
+6528	{1} revision history
+6529	Ce fichier n’a pas pu être créé ici. Utilise Imprimer ou enregistrer en PDF.
+6530	{1} · revision history
+6531	Choisis un projet.
+6532	Remarque inconnue.
+6533	Ce cours n’a pas de carnet d’écriture.
+6534	Cette entrée n’est pas dans ce carnet.
+6535	Cette entrée est trop longue pour être gardée (environ 7 000 mots). Coupe-la en deux.
+6536	Cette entrée a été modifiée sur un autre appareil.
+6537	Impossible de joindre Mathub pour le moment.
+6538	Carnet {1} : {2}
+6539	Carnet {1}
+6540	notebook_list&class=
+6541	Hors ligne : gardé sur cet appareil, enregistré à ton retour
+6542	Modification…
+6543	{1} sur {2} écrites · {3}
+6544	Copie la consigne du cours ou de Canvas, pour qu’elle reste avec ton entrée.
+6545	Écris ici. C’est enregistré au fil de la frappe.
+6546	Toutes les entrées
+6547	La consigne
+6548	Ton entrée
+6549	Ton historique des révisions pour {1} montre chaque version partagée et ce qui a changé, si tu veux l’avoir sous la main.
+6550	L’ouvrir
+6551	Garder la version de cet appareil
+6552	Garder celle enregistrée
+6553	Cette entrée a été modifiée sur un autre appareil, donc ce que tu as tapé ici ({1}) n’a pas été enregistré par-dessus. Celle ci-dessous est la version enregistrée.
+6554	{1} entrées dans le fichier ; {2} encore {2|vide|vides}.
+6555	Les {1} entrées sont dans le fichier.
+6556	Écris d’abord une entrée.
+6557	{1} writer's notebook
+6558	Ce fichier n’a pas pu être créé ici. Télécharge-le plutôt en texte.
+6559	Tes entrées, revues chaque semaine et rendues ensemble à la fin. Privé : toi seul peux les lire, et Bo ne fait pas partie de ton carnet.
+6560	Word
+6561	Le carnet est réservé aux membres
+6562	Inscris-toi avec ton adresse montana.edu pour garder ton carnet avec ton compte, sur tous tes appareils.
+6563	Ouverture de ton carnet…
+6564	(min-width: 821px)
+6565	à rendre toutes avec {1}, {2}
+6566	Entrées
+6567	Choisis une entrée à écrire.
+6568	Ce PDF est protégé par un mot de passe. Ouvre-le, copie le texte et colle-le ici.
+6569	Ce PDF n’a pas de texte à lire (c’est peut-être un scan). Copie le texte du document d’origine et colle-le ici.
+6570	Times New Roman
+6571	xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+6572	_rels/.rels
+6573	word/_rels/document.xml.rels
+6574	word/styles.xml
+6575	heading 1
+6576	heading 2
+6577	docProps/core.xml
+6578	docProps/app.xml
+6579	Comparer
+6580	Texte brut
+6581	avec
+6582	ajouté
+6583	1 entrée dans le fichier ; {1} encore {1|vide|vides}.

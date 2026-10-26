@@ -242,6 +242,7 @@ switch ($route) {
     if (str_starts_with($route, 'push_')) { require_once __DIR__ . '/social.php'; require_once __DIR__ . '/push.php'; mh_push_route($route, $in, $cfg, $ip); }
     if (str_starts_with($route, 'issue_') || str_starts_with($route, 'admin_issue') || str_starts_with($route, 'admin_backup') || $route === 'prefs') { require_once __DIR__ . '/social.php'; require_once __DIR__ . '/extras.php'; mh_extras_route($route, $in, $cfg, $ip); }
     if ($route === 'life') { require_once __DIR__ . '/life.php'; mh_life_route($route, $in, $cfg, $ip); }   // tasks, timetable, habits, journal… (assets/life.js)
+    if (str_starts_with($route, 'notebook_')) { require_once __DIR__ . '/ai.php'; require_once __DIR__ . '/notebook.php'; mh_notebook_route($route, $in, $cfg, $ip); }   // the writer's notebook (assets/notebook.js)
     if (str_starts_with($route, 'teach_') || str_starts_with($route, 'admin_teach')) { require_once __DIR__ . '/teach.php'; mh_teach_route($route, $in, $cfg, $ip); }
     if ($route === 'news_unsub' || str_starts_with($route, 'admin_news')) { require_once __DIR__ . '/news.php'; mh_news_route($route, $in, $cfg, $ip); }   // an email to every member, and the way out of it
     if (str_starts_with($route, 'admin_config')) { require_once __DIR__ . '/siteconfig.php'; mh_siteconfig_route($route, $in, $cfg, $ip); }   // keys and settings from the admin panel

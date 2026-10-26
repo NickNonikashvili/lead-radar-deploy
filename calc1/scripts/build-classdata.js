@@ -30,6 +30,7 @@ for (const id of Object.keys(Courses)) {
     READINGS: (C.READINGS || []).map(r => pick(r, ['id', 'title', 'author']))
   };
   if (Array.isArray(C.DRAFTS) && C.DRAFTS.length) data.DRAFTS = C.DRAFTS.map(d => pick(d, ['id', 'short', 'name', 'draft', 'revised', 'brief', 'goals']));   // projects Bo gives draft feedback on (api/drafts.php)
+  if (C.NOTEBOOK && C.NOTEBOOK.count) data.NOTEBOOK = { count: C.NOTEBOOK.count };   // how many notebook entries (api/notebook.php)
   fs.writeFileSync(path.join(OUT, id + '.json'), JSON.stringify(data));
   n++;
 }

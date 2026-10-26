@@ -6272,3 +6272,111 @@
 6473	1 Wort mehr
 6474	1 Wort weniger
 6475	{1} Wörter
+6476	Schreibheft
+6477	Deine {1} Einträge
+6478	Schreib hier den Eintrag jeder Woche. Sie bleiben in deinem Konto und lassen sich als eine Word-Datei zum Abgeben herunterladen.
+6479	"DRAFTS" muss eine Liste von Projekten sein.
+6480	DRAFTS[{1}] braucht eine id aus bis zu 12 Kleinbuchstaben oder Ziffern.
+6481	Die Projekt-id "{1}" kommt zweimal vor.
+6482	Projekt "{1}" braucht einen Namen.
+6483	Projekt "{1}" hat kein "brief": Bo liest Entwürfe danach, also schreib, was die Aufgabe verlangt.
+6484	Projekt "{1}" hat keine "goals": Bo liest Entwürfe danach.
+6485	Projekt "{1}": {2} "{3}" ist keine Prüfungs-id.
+6486	"NOTEBOOK" braucht eine Anzahl ("count") von Einträgen.
+6487	Eintrag {1} im Schreibheft liegt über der Anzahl ({2}).
+6488	Eintrag {1} im Schreibheft reflektiert über "{2}", das kein Projekt ist.
+6489	Die Stimme hat aufgehört. Tippe auf Vorlesen, um weiterzumachen.
+6490	Vorlesen
+6491	Dieser Browser kann nicht vorlesen.
+6492	Überarbeitungsverlauf
+6493	Sehe ich anders
+6494	Warum? Bo liest das beim nächsten Mal (optional)
+6495	Beim Hören merkst du, was sich seltsam liest. Während des Vorlesens kannst du auf einen Absatz klicken, um dorthin zu springen.
+6496	Your note on my draft ({1}, version {2}){3}: {4}
+6497	at "{1}"
+6498	Deine Anmerkung
+6499	Was meinst du hier?
+6500	Das sehe ich anders. Hier ist der Grund.
+6501	Zeig mir ein Beispiel aus den Lektüren.
+6502	Schalte Bo auf jeder Seite in den Einstellungen ein, um ihn zu einer Anmerkung zu fragen.
+6503	Deine Versionen werden geöffnet …
+6504	{1} · Überarbeitungsverlauf
+6505	Noch keine Versionen dieses Projekts. Teile einen Entwurf mit Bo, und jede Version, die du schickst, wird hier aufbewahrt.
+6506	Einen Entwurf teilen
+6507	Version {1}
+6508	Jede Version, die du geteilt hast, was sich dazwischen geändert hat und was aus Bos Anmerkungen wurde. Nutze es als Beleg der Überarbeitung für dein Portfolio; die Reflexion schreibst du selbst.
+6509	Fragen für deine Reflexion
+6510	keine KI: die Antworten sind deine
+6511	Welche Änderung hat am meisten bewirkt, und warum hast du sie gemacht?
+6512	Welches Feedback hast du nicht übernommen, und warum?
+6513	Was macht der letzte Entwurf besser als der erste?
+6514	Was würdest du als Nächstes ändern, wenn du noch eine Woche hättest?
+6515	Als Word herunterladen
+6516	Wie die Änderungen gezeigt werden
+6517	In einem Text
+6518	entfernt
+6519	Bisher eine Version. Schick Bo einen überarbeiteten Entwurf, und diese Seite zeigt, was sich geändert hat.
+6520	Was aus Bos Anmerkungen wurde
+6521	Bo: {1}
+6522	Du: erledigt
+6523	Du: anders gesehen
+6524	Wähle zwei verschiedene Versionen.
+6525	Von Version {1} zu Version {2}: {3} von {4} Absätzen neu oder geändert, {5} {5|Wort hinzugefügt|Wörter hinzugefügt} und {6} entfernt.
+6526	Überarbeitungsverlauf aus Mathub: jede mit Bo geteilte Version und was aus seinen Anmerkungen wurde.
+6527	· revision history
+6528	{1} revision history
+6529	Die Datei konnte hier nicht erstellt werden. Nutze stattdessen Drucken oder als PDF speichern.
+6530	{1} · revision history
+6531	Wähle ein Projekt.
+6532	Unbekannte Anmerkung.
+6533	Dieser Kurs hat kein Schreibheft.
+6534	Dieser Eintrag ist nicht in diesem Schreibheft.
+6535	Dieser Eintrag ist zu lang zum Speichern (etwa 7.000 Wörter). Teile ihn in zwei.
+6536	Dieser Eintrag wurde auf einem anderen Gerät geändert.
+6537	Mathub ist gerade nicht erreichbar.
+6538	Eintrag {1}: {2}
+6539	Eintrag {1}
+6540	notebook_list&class=
+6541	Offline: auf diesem Gerät gesichert, wird gespeichert, sobald du wieder online bist
+6542	Wird bearbeitet …
+6543	{1} von {2} geschrieben · {3}
+6544	Kopiere die Aufgabenstellung aus dem Kurs oder aus Canvas, damit sie bei deinem Eintrag bleibt.
+6545	Schreib hier. Es wird beim Tippen gespeichert.
+6546	Alle Einträge
+6547	Die Aufgabenstellung
+6548	Dein Eintrag
+6549	Dein Überarbeitungsverlauf für {1} zeigt jede geteilte Version und was sich geändert hat, falls du ihn daneben haben willst.
+6550	Öffnen
+6551	Version dieses Geräts verwenden
+6552	Die gespeicherte behalten
+6553	Dieser Eintrag wurde auf einem anderen Gerät geändert, deshalb wurde das, was du hier getippt hast ({1}), nicht darüber gespeichert. Unten steht die gespeicherte Version.
+6554	{1} Einträge in der Datei; {2} noch leer.
+6555	Alle {1} Einträge sind in der Datei.
+6556	Schreib zuerst einen Eintrag.
+6557	{1} writer's notebook
+6558	Die Datei konnte hier nicht erstellt werden. Lade sie stattdessen als Text herunter.
+6559	Deine Einträge, jede Woche angeschaut und am Ende zusammen abgegeben. Privat: Nur du kannst sie lesen, und Bo ist nicht Teil deines Schreibhefts.
+6560	Word
+6561	Das Schreibheft ist für Mitglieder
+6562	Registriere dich mit deiner montana.edu-Adresse, um dein Schreibheft in deinem Konto zu behalten, auf jedem Gerät.
+6563	Dein Schreibheft wird geöffnet …
+6564	(min-width: 821px)
+6565	alle zusammen abgeben mit {1}, {2}
+6566	Einträge
+6567	Wähle einen Eintrag zum Schreiben.
+6568	Dieses PDF ist mit einem Passwort geschützt. Öffne es, kopiere den Text und füge ihn hier ein.
+6569	Dieses PDF hat keinen lesbaren Text (vielleicht ein Scan). Kopiere den Text aus dem Originaldokument und füge ihn hier ein.
+6570	Times New Roman
+6571	xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+6572	_rels/.rels
+6573	word/_rels/document.xml.rels
+6574	word/styles.xml
+6575	heading 1
+6576	heading 2
+6577	docProps/core.xml
+6578	docProps/app.xml
+6579	Vergleichen
+6580	Nur Text
+6581	mit
+6582	hinzugefügt
+6583	1 Eintrag in der Datei; {1} noch leer.

@@ -44,7 +44,7 @@
     const course = parts[0] && Courses[parts[0]] ? parts[0] : null;
     return { course, view: course ? parts[1] || 'dashboard' : parts[0] || 'home' };
   }
-  const HIDE_ON = ['tutor', 'welcome', 'admin', 'teach', 'faculty'];
+  const HIDE_ON = ['tutor', 'welcome', 'admin', 'teach', 'faculty', 'notebook'];   // the writer's notebook is private, with no AI (assets/notebook.js)
   function pageName() {
     const r = where(); const V = App.current; const t = (V && V.title) || '';
     if (r.course) return `${short(r.course)} › ${t || r.view}`;
@@ -273,8 +273,9 @@
     paintCtx(); await paintBody();
     if (o.focus) { F.focus = o.focus; paintChips(); }
     const q = $('#bf-q', el); if (!q.value) q.placeholder = phone() ? 'Ask Bo anything…' : 'Ask about this page, or any topic…';
+    if (o.q && !q.disabled && !q.value) { q.value = o.q; if (F.grow) F.grow(); }   // a question to start from (draft feedback's "Ask Bo about this"), selected so typing replaces it
     // focus goes into the panel: the box to type in, or (signed out, or on a phone, where the keyboard would hide the ways in) its first button
-    if (!o.noFocus) setTimeout(() => { const t = !q.disabled && !phone() ? q : $('.bf-gate .btn.primary, .bf-gate .btn, .bf-item, .bf-act', el) || $('[data-bf="close"]', el); if (t && F.open) t.focus({ preventScroll: true }); }, 30);
+    if (!o.noFocus) setTimeout(() => { const t = !q.disabled && (!phone() || o.q) ? q : $('.bf-gate .btn.primary, .bf-gate .btn, .bf-item, .bf-act', el) || $('[data-bf="close"]', el); if (t && F.open) { t.focus({ preventScroll: true }); if (t === q && o.q) q.select(); } }, 30);
   }
   function closePanel(quiet) {
     if (!F.open) return; F.open = false; const el = F.el; el.classList.remove('open'); $('#bf-back').hidden = true;
@@ -379,7 +380,7 @@
     const box = $('#bf-chips', F.el); const parts = [];
     if (F.focus) parts.push(`<span class="bf-chip focus">${icon('target', 14)}<span><b>${esc(F.focus.tag || 'This')}</b> ${esc(clip(F.focus.short || F.focus.text, 90))}</span><button type="button" data-bf="unfocus" aria-label="Don't send this">${icon('x', 13)}</button></span>`);
     if (F.file) parts.push(`<span class="bf-chip file">${F.file.preview ? `<img src="${F.file.preview}" alt="">` : icon('file', 14)}<span>${esc(F.file.name)}</span><button type="button" data-bf="unfile" aria-label="Remove the file">${icon('x', 13)}</button></span>`);
-    if (F.focus) parts.push(`<span class="bf-quick">${['Explain this', 'Give me a hint', 'Show me the steps', 'Why is that the answer?'].slice(0, F.focus.answered ? 4 : 3).map(t => `<button type="button" class="bf-mini" data-say="${esc(t + '.')}">${esc(t)}</button>`).join('')}</span>`);
+    if (F.focus) parts.push(`<span class="bf-quick">${(Array.isArray(F.focus.quick) ? F.focus.quick : ['Explain this', 'Give me a hint', 'Show me the steps', 'Why is that the answer?'].slice(0, F.focus.answered ? 4 : 3)).map(t => `<button type="button" class="bf-mini" data-say="${esc(/[.?!]$/.test(t) ? t : t + '.')}">${esc(t)}</button>`).join('')}</span>`);
     box.innerHTML = parts.join(''); box.hidden = !parts.length;
   }
   async function addFile(f) {

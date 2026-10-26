@@ -289,9 +289,18 @@ function mh_ai_class(array $u, string $cid): ?array {
     $j = $p ? json_decode((string)$p, true) : null; return is_array($j) ? $j : null;
   }
   if (!preg_match('/^[a-z0-9][a-z0-9_-]{0,40}$/', $cid)) return null;
-  foreach ([__DIR__ . "/classdata/$cid.json", dirname(__DIR__) . "/packs/$cid.mathub.json"] as $f) {
-    if (is_file($f)) { $j = json_decode((string)file_get_contents($f), true); if (is_array($j)) return $j; }
+  $f = __DIR__ . "/classdata/$cid.json";
+  if (is_file($f)) { $j = json_decode((string)file_get_contents($f), true); if (is_array($j)) return $j; }
+  // a class uploaded in the admin panel or built in #/teach (api/packs.php), to whoever classpack_get gives it to
+  require_once __DIR__ . '/packs.php';
+  if ($r = mh_pack_get($cid)) {
+    $admin = mh_is_admin($u);
+    if (!(int)$r['enabled'] && !$admin) return null;
+    if (str_starts_with((string)$r['uploaded_by'], 'teach:') && !$admin && !in_array($cid, mh_pack_teach_visible(), true)) return null;
+    $j = json_decode((string)$r['json'], true); return is_array($j) ? $j : null;
   }
+  $f = dirname(__DIR__) . "/packs/$cid.mathub.json";
+  if (is_file($f)) { $j = json_decode((string)file_get_contents($f), true); if (is_array($j)) return $j; }
   return null;
 }
 
@@ -512,6 +521,17 @@ TXT;
 const MH_AI_SKETCH = <<<'TXT'
 THEIR WRITING: the picture is what they wrote out by hand on a board for you (their working, a problem or a sketch). Read it carefully, line by line; if you can't read a part, say which and ask, and never guess a number. Help with what they wrote: find the first mistake and why it's tempting, or tell them it's right, then take them to the next step instead of redoing it all.
 TXT;
+
+/* a writing class (a class with projects for draft feedback, or kind "writing"): the words in their papers stay theirs,
+   in the chat and on calls as in draft feedback (api/drafts.php). WRIT 101 allows AI only where the instructor says so. */
+const MH_AI_WRITING = <<<'TXT'
+WRITING CLASS: the words in their papers stay theirs.
+- Never write, rewrite, edit or proofread any part of their paper or notebook, and never give sample sentences, openings, endings, thesis statements, titles or transitions for it.
+- Teach instead: explain the idea, point at the passage they mean, show the move with an example from the class readings or published writing (never on their topic), and ask questions that help them decide.
+- When they ask about one of your notes on their draft (WHAT THEY POINTED AT gives it), say plainly what you meant and why, accept a good reason to disagree, and suggest how they could test it, without writing it for them.
+- If they ask you to write it, say kindly that the writing is theirs, then help them get there.
+TXT;
+function mh_ai_writing_class(?array $C): bool { return $C && (($C['kind'] ?? '') === 'writing' || !empty($C['DRAFTS'])); }
 
 const MH_AI_VOICE = <<<'TXT'
 VOICE MODE: the student is talking with you out loud, and your reply is read aloud to them in your voice.
@@ -742,6 +762,7 @@ function mh_ai_live_instructions(int $uid, string $cid, ?array $C, array $in): s
   if ($resume) $parts[] = MH_AI_LIVE_RESUME;
   if (($in['focus'] ?? '') === 'exam') $parts[] = MH_AI_EXAM_CALL;
   if ($C) $parts[] = mh_ai_digest($C);
+  if (mh_ai_writing_class($C)) $parts[] = MH_AI_WRITING;
   require_once __DIR__ . '/students.php';
   $parts[] = implode("\n", array_filter(['TODAY: ' . $today, $C ? mh_ai_upcoming($C, $today) : '', mh_ai_snapshot($in['snapshot'] ?? null), $notes ? "WHAT YOU REMEMBER ABOUT THEM:\n- " . implode("\n- ", $notes) : '', mh_student_context(mh_student_load($uid), $cid)]));
   $turns = array_slice(mh_ai_turns($uid, $cid), $resume ? -10 : -6);   // after a drop, a little more of where they were
@@ -952,6 +973,7 @@ function mh_ai_route(string $route, array $in, array $cfg, string $ip): void {
       $now = array_filter(['TODAY: ' . $today, $C ? mh_ai_upcoming($C, $today) : '', mh_ai_snapshot($in['snapshot'] ?? null), $notes ? "WHAT BO REMEMBERS ABOUT THEM:\n- " . implode("\n- ", $notes) : '', mh_student_context($SF, $cid)]);
       $system[] = ['type' => 'text', 'text' => implode("\n", $now)];
       $system[] = ['type' => 'text', 'text' => mh_ai_character(mh_ai_character_id($in))['who']];   // who he is (assets/bo-characters.js)
+      if (mh_ai_writing_class($C)) $system[] = ['type' => 'text', 'text' => MH_AI_WRITING];
       if ($voice) $system[] = ['type' => 'text', 'text' => MH_AI_VOICE];
       if ($voice && ($in['focus'] ?? '') === 'exam') $system[] = ['type' => 'text', 'text' => MH_AI_EXAM_CALL];
       if ($pad) $system[] = ['type' => 'text', 'text' => str_replace(['%COLS%', '%ROWS%'], [(string)$pad['cols'], (string)$pad['rows']], MH_AI_PAD)];

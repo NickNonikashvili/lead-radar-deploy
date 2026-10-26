@@ -283,6 +283,10 @@
     if (pg && C.quiz && App.views.mistakes && !pg.items.some(x => x[0] === 'mistakes')) pg.items.push(['mistakes', 'Mistakes', 'undo']);
     const lg = C.NAV.find(g => g.label === 'Learn'); if (lg && App.views.cheatsheet && (C.FORMULAS || []).length && !lg.items.some(x => x[0] === 'cheatsheet')) lg.items.push(['cheatsheet', 'Cheat sheet', 'sigma']);
     if (lg && App.views.mynotes && (C.SECTIONS || []).length && (C.SECTIONS[0].ideas || C.SECTIONS[0].bullets) && !lg.items.some(x => x[0] === 'mynotes')) lg.items.push(['mynotes', 'My notes', 'pen']);
+    // a class with projects for Bo's draft feedback, or a writer's notebook (its data: DRAFTS, NOTEBOOK; assets/drafts.js, assets/notebook.js)
+    const has = id => C.NAV.some(g => g.items.some(x => x[0] === id)); const wg = lg || C.NAV[0];
+    if ((C.DRAFTS || []).length && App.views.drafts && !has('drafts')) wg.items.push(['drafts', 'Draft feedback', 'pen']);
+    if (C.NOTEBOOK && C.NOTEBOOK.count && App.views.notebook && !has('notebook')) wg.items.push(['notebook', 'Writer’s notebook', 'quill']);
   }
   function setCourse(id) {
     if (D && D.id === id) return;
@@ -473,7 +477,7 @@
   function toggleTheme() { if (App.themeFade) App.themeFade(); const isDark = document.documentElement.getAttribute('data-theme') === 'dark' || (!document.documentElement.getAttribute('data-theme') && matchMedia('(prefers-color-scheme: dark)').matches); setSetting('theme', isDark ? 'light' : 'dark'); applyTheme(); }
   /* The sidebar groups pages by what you are doing, not by where they came from: the everyday pages (Study,
      Plan) are open, everything else waits in collapsed groups. C.NAV stays the source list; this is only the view. */
-  const NAV_PLAN = [['Study', ['dashboard', 'notes', 'readings', 'drafts', 'playground', 'formulas', 'flashcards', 'practice', 'exam']], ['Plan', ['calendar', 'path', 'planner', 'grades', 'gpa']], ['More tools', ['mistakes', 'blitz', 'cheatsheet', 'mynotes', 'textbook', 'phonetics']], ['Community', ['forum', 'challenge', 'meet', 'mock', 'contribute', 'leagues', 'people']], ['Class info', ['course', 'resources', 'settings']]];
+  const NAV_PLAN = [['Study', ['dashboard', 'notes', 'readings', 'drafts', 'notebook', 'playground', 'formulas', 'flashcards', 'practice', 'exam']], ['Plan', ['calendar', 'path', 'planner', 'grades', 'gpa']], ['More tools', ['mistakes', 'blitz', 'cheatsheet', 'mynotes', 'textbook', 'phonetics']], ['Community', ['forum', 'challenge', 'meet', 'mock', 'contribute', 'leagues', 'people']], ['Class info', ['course', 'resources', 'settings']]];
   function groupNav(NAV) {
     const all = NAV.flatMap(g => g.items); const used = new Set();
     const groups = NAV_PLAN.map(([label, ids]) => ({ label, items: ids.map(id => all.find(x => x[0] === id)).filter(x => x && !used.has(x[0]) && used.add(x[0])) }));
@@ -691,6 +695,7 @@
           <div class="panel keep-going"><div class="panel-h"><div class="panel-title">${icon('book')} Keep going</div>${rp.next ? '<span class="small muted">next reading</span>' : ''}</div>
             <a class="btn keep-cta" href="${rp.next ? L('reading', rp.next.id, rprog[rp.next.id] && rprog[rp.next.id].i ? {} : { play: 1 }) : L('readings')}">${icon(rp.next ? 'play' : 'book', 15)} ${rp.next ? `${rp.started ? 'Resume' : 'Listen'}: ${esc(rp.next.title)}` : 'Browse the readings'}</a>
             <div class="eyebrow mt-3 mb-1">Readings</div>${(D.READINGS || []).map(r => { const pr = rprog[r.id] || {}; const n = r.parts.reduce((a, pt) => a + pt.p.length + (pt.h ? 1 : 0), 0); const pct = pr.done ? 100 : Math.round(100 * Math.min(pr.i || 0, n) / n); return `<a class="bar-row rd-row" href="${L('reading', r.id)}"><span>${esc(r.title)}<small class="muted"> · ${esc(r.author)}</small></span><span class="mono">${pr.done ? '✓' : pct + '%'}</span><div class="bar"><div class="bar-fill${pr.done ? ' good' : ''}" style="width:${pct}%"></div></div></a>`; }).join('')}
+            ${D.NOTEBOOK && App.views.notebook ? `<a class="card-link mt-2" href="${L('notebook')}"><div class="eyebrow">${icon('quill', 13)} Writer’s notebook</div><h4>Your ${D.NOTEBOOK.count} entries</h4><p>Write each week’s entry here. They are kept with your account and download as one Word file for handing in.</p></a>` : ''}
             <a class="card-link mt-2" href="${L('phonetics')}"><div class="eyebrow">${icon('mic', 13)} Phonetics lab</div><h4>Sounds, IPA and stress</h4><p>${(() => { const pp = App.phoneticsProgress ? App.phoneticsProgress(D) : null; return pp && pp.answered ? `${pp.answered} answered · ${pp.pct}% right · ${pp.seen} of ${pp.symbols} symbols explored.` : 'Practice transcription, minimal pairs, syllables and stress. XP for every answer.'; })()}</p></a>
             <div class="eyebrow mt-3 mb-1">Daily quests</div><div class="quests-slot" data-compact="1"></div></div>
         </div>

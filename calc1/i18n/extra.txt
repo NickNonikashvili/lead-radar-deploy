@@ -4,3 +4,6 @@
 {1} problems
 # the word count on the draft feedback page (assets/drafts.js)
 {1} words
+# the revision history (assets/drafts.js): "Compare [version] with [version]", and its key to the changes
+with
+added

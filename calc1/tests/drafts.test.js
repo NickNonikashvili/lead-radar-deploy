@@ -6,7 +6,10 @@
    versions with what changed since the earlier feedback, the language, credits, someone else's review, deleting, the
    instructor's off switch, out of credits); the page (the form starting on the project due next, opening a .docx and a
    .txt, the review with the passages marked and the notes beside them, ticking next steps, sending a revised version,
-   past versions, the consent and member gates, a phone), and the writing dashboard's button. */
+   past versions, the consent and member gates, a phone), and the writing dashboard's button. Then the extras: answering a
+   note (Done, I disagree and why, carried into the next review), Ask Bo about a note (the floating panel), reading the
+   draft aloud (a stand-in voice), a PDF opened into the box, the revision history (what changed between versions, what
+   became of Bo's notes, a Word file of it), and Bo's writing-class rule in a writing class's chat. */
 const T = require('./lib'); const fs = require('fs'); const path = require('path'); const zlib = require('zlib');
 const DB = path.join(__dirname, '..', 'api', 'data', 'mathub.sqlite'); const LAST = path.join(__dirname, 'fixtures', 'ai-last.json');
 const sql = (q, ...a) => require('child_process').spawnSync('php', ['-r', '$d = new PDO("sqlite:" . $argv[1]); $s = $d->prepare($argv[2]); $s->execute(array_slice($argv, 3)); echo json_encode($s->fetchAll(PDO::FETCH_ASSOC));', DB, q, ...a.map(String)]).stdout.toString();
@@ -28,6 +31,28 @@ function zip(files) {
 }
 const DOCX = zip([{ name: '[Content_Types].xml', data: '<?xml version="1.0"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"/>' },
   { name: 'word/document.xml', data: '<?xml version="1.0" encoding="UTF-8"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r><w:t>The bridge over the Gallatin</w:t></w:r><w:r><w:tab/><w:t xml:space="preserve">hums in January.</w:t></w:r></w:p><w:p><w:r><w:t>Ice on the rail,</w:t></w:r><w:r><w:br/><w:t>and my breath on the glass.</w:t></w:r><w:r><w:delText>deleted words</w:delText></w:r></w:p></w:body></w:document>' }]);
+/* a PDF of lines [x, y, text] per page, in Helvetica: what a word processor's "Save as PDF" gives, in miniature */
+function pdf(pages) {
+  const o = []; const kids = pages.map((_, i) => `${4 + i * 2} 0 R`).join(' ');
+  o[1] = '<< /Type /Catalog /Pages 2 0 R >>'; o[2] = `<< /Type /Pages /Kids [${kids}] /Count ${pages.length} >>`; o[3] = '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>';
+  pages.forEach((lines, i) => {
+    const s = lines.map(([x, y, t]) => `BT /F1 12 Tf ${x} ${y} Td (${t.replace(/[\\()]/g, '\\$&')}) Tj ET`).join('\n');
+    o[4 + i * 2] = `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R >> >> /Contents ${5 + i * 2} 0 R >>`;
+    o[5 + i * 2] = `<< /Length ${Buffer.byteLength(s)} >>\nstream\n${s}\nendstream`;
+  });
+  let out = '%PDF-1.4\n'; const at = [];
+  for (let n = 1; n < o.length; n++) { at[n] = Buffer.byteLength(out); out += `${n} 0 obj\n${o[n]}\nendobj\n`; }
+  const x = Buffer.byteLength(out);
+  out += `xref\n0 ${o.length}\n0000000000 65535 f \n` + at.slice(1).map(a => String(a).padStart(10, '0') + ' 00000 n \n').join('') + `trailer\n<< /Size ${o.length} /Root 1 0 R >>\nstartxref\n${x}\n%%EOF\n`;
+  return Buffer.from(out, 'latin1');
+}
+/* two pages: a paragraph break by the space between lines, a page number, a running head ("Smith 2"), a paragraph
+   that starts indented on the next page, and a hyphen at the end of a line */
+const PDF = pdf([
+  [[72, 700, 'The river was loud that spring, louder than'], [72, 684, 'anyone in town could remember.'], [72, 644, 'My father drove the well-'], [72, 628, 'worn road anyway, and we laughed all the way home.'], [300, 40, '1']],
+  [[480, 750, 'Smith 2'], [108, 700, 'The truck still smells like that river.'], [72, 684, 'I think about it every spring.']]
+]);
+const PDF_TEXT = 'The river was loud that spring, louder than anyone in town could remember.\n\nMy father drove the well-worn road anyway, and we laughed all the way home.\n\nThe truck still smells like that river. I think about it every spring.';
 (async () => {
   const { mk, go, txt, login, api: raw, hscroll, check } = await T.start();
   const api = async (...a) => { const r = await raw(...a); return Object.assign(r.json || {}, { status: r.status }); };
@@ -67,6 +92,18 @@ const DOCX = zip([{ name: '[Content_Types].xml', data: '<?xml version="1.0"?><Ty
   const used = rows("SELECT mc, detail FROM credit_use WHERE feature = 'draft' AND user_id = (SELECT id FROM users WHERE email = ?)", ALICE);
   check('it is paid in credits, as Draft feedback for that project and version', used.length === 1 && +used[0].mc > 0 && /WRIT 101 College Writing I · Project 1 draft, version 1/.test(used[0].detail), used);
 
+  /* answering his notes: Done, I disagree (and why); the next review reads both */
+  r = await api(a, 'ai_draft_respond', { class: 'writ', id: v1.id, key: 'c1', state: 'done' });
+  check('she marks a margin comment done', r.ok && r.responses.c1 && r.responses.c1.s === 'done' && r.responses.c1.why === '', r);
+  r = await api(a, 'ai_draft_respond', { class: 'writ', id: v1.id, key: 'r0', state: 'disagree', why: 'The storm is told on purpose: the quiet after it is the point.' });
+  check('and disagrees with a revision, saying why', r.ok && r.responses.r0.s === 'disagree' && /quiet after it/.test(r.responses.r0.why) && r.responses.c1.s === 'done', r);
+  r = await api(a, 'ai_draft_respond', { class: 'writ', id: v1.id, key: 'c2', state: 'done' });
+  r = await api(a, 'ai_draft_respond', { class: 'writ', id: v1.id, key: 'c2', state: '' });
+  check('marking it again takes it back', r.ok && !r.responses.c2 && Object.keys(r.responses).sort().join() === 'c1,r0', r);
+  check('only notes there can be: a comment or a revision, done or disagree', (await api(a, 'ai_draft_respond', { class: 'writ', id: v1.id, key: 'x1', state: 'done' })).status === 400 && (await api(a, 'ai_draft_respond', { class: 'writ', id: v1.id, key: 'c1', state: 'maybe' })).status === 400);
+  r = await api(a, `ai_draft_get&class=writ&id=${v1.id}`);
+  check('her answers are kept with the version', r.review.responses && r.review.responses.r0 && r.review.responses.r0.s === 'disagree' && r.review.responses.c1.s === 'done', r.review && r.review.responses);
+
   r = await api(a, 'ai_draft_review', { class: 'writ', project: 'p1', stage: 'revised', text: DRAFT2, ask: 'Does my ending land?', peer: 'Sam: I wanted more about your grandmother.', lang: 'es' });
   const req2 = last(); const sys2 = req2.system.map(b => b.text).join('\n'); const u2 = userText(req2); const v2 = r.review || {};
   check('the revised draft is version 2, and knows version 1 came before it', r.ok && v2.version === 2 && v2.stage === 'revised' && v2.before === v1.id, { version: v2.version, before: v2.before });
@@ -74,6 +111,12 @@ const DOCX = zip([{ name: '[Content_Types].xml', data: '<?xml version="1.0"?><Ty
   check('Bo may quote her peer review comments (only wording of his own is left out)', (v2.feedback.revisions || []).some(x => x.title === 'Bring her closer' && /"I wanted more about your grandmother"/.test(x.why)), v2.feedback.revisions);
   check('and says what changed since then', (v2.feedback.since || []).length === 1 && v2.feedback.since[0].status === 'partly' && /thunder/.test(v2.feedback.since[0].note), v2.feedback.since);
   check('in her language, with the quotes as the draft has them', /LANGUAGE: the student uses Mathub in Spanish/.test(sys2) && /The quotes stay exactly as the draft has them/.test(sys2));
+  const said = u2.slice(u2.indexOf('THEIR ANSWERS TO YOUR EARLIER NOTES:'));
+  check('Bo is told what she did with his notes: one done, one she disagrees with and why', /THEIR ANSWERS TO YOUR EARLIER NOTES:\n- Comment 1 on "[^"]+": they say it is done\n- A\. Show the storm: they disagree, because: The storm is told on purpose: the quiet after it is the point\./.test(u2) && u2.indexOf('THEIR ANSWERS') < u2.indexOf('THE DRAFT ('), said.slice(0, 300));
+  check('and to weigh a reason to disagree, and that done is not done until the draft shows it', /weigh their reason\. If it holds, drop the point/.test(sys2) && /not done until the draft shows it/.test(sys2));
+  r = await api(a, 'ai_draft_history&class=writ&project=p1');
+  check('the revision history: every version of the project, oldest first, in full', r.ok && r.versions.map(x => x.version).join() === '1,2' && r.versions[0].text === DRAFT1 && r.versions[1].text === DRAFT2 && r.versions[0].responses.r0.s === 'disagree' && r.versions[1].feedback.since.length === 1, r.versions && r.versions.map(x => x.version));
+  check('a project id is checked', (await api(a, 'ai_draft_history&class=writ&project=P%201')).status === 400 && (await api(a, 'ai_draft_history&class=writ&project=p3')).versions.length === 0);
   r = await api(a, 'ai_draft_review', { class: 'writ', project: 'p2', stage: 'draft', text: DRAFT1 + ' BADJSON' });
   check('when his first answer is not the JSON asked for, he is asked once more, and it is read', r.ok && r.review.version === 1 && last().messages.length === 3 && /That was not the JSON object/.test(JSON.stringify(last().messages[2])), r.error || r.review.version);
   const p2id = r.review && r.review.id;
@@ -83,7 +126,7 @@ const DOCX = zip([{ name: '[Content_Types].xml', data: '<?xml version="1.0"?><Ty
   r = await api(a, `ai_draft_get&class=writ&id=${v1.id}`);
   check('one review in full: the draft and the feedback', r.ok && r.review.text === DRAFT1 && r.review.feedback.revisions.length === 2 && r.review.before === null, r.review && Object.keys(r.review));
   const [cb, b] = await open(BOB);
-  check('nobody else can open it', (await api(b, `ai_draft_get&class=writ&id=${v1.id}`)).status === 404 && (await api(b, 'ai_draft_delete', { class: 'writ', id: v1.id })).status === 404);
+  check('nobody else can open it, answer its notes or see it in a history', (await api(b, `ai_draft_get&class=writ&id=${v1.id}`)).status === 404 && (await api(b, 'ai_draft_delete', { class: 'writ', id: v1.id })).status === 404 && (await api(b, 'ai_draft_respond', { class: 'writ', id: v1.id, key: 'c1', state: 'disagree' })).status === 404 && (await api(b, 'ai_draft_history&class=writ&project=p1')).versions.length === 0);
   sql("INSERT INTO credit_use (user_id, at, feature, mc, month_mc, paid_mc, ref, detail) VALUES ((SELECT id FROM users WHERE email = ?), ?, 'other', 99000000, 99000000, 0, 'test', 'all used')", BOB, Math.floor(Date.now() / 1000));
   r = await api(b, 'ai_draft_review', { class: 'writ', project: 'p1', text: DRAFT1 });
   check('out of credits, no review (402), and it says how to get more', r.status === 402 && r.credits === true && /credits/.test(r.error), r);
@@ -91,6 +134,11 @@ const DOCX = zip([{ name: '[Content_Types].xml', data: '<?xml version="1.0"?><Ty
   await cb.close();
   r = await api(a, 'ai_draft_delete', { class: 'writ', id: p2id });
   check('she can delete a version', r.ok && (await api(a, `ai_draft_get&class=writ&id=${p2id}`)).status === 404);
+
+  r = await api(a, 'ai_tutor', { class: 'calc', q: 'hi' });
+  check('a math class’s chat does not get the writing-class rule', r.ok && !/WRITING CLASS/.test(last().system.map(b => b.text).join('\n')));
+  r = await api(a, 'ai_tutor', { class: 'writ', q: 'Can you write my opening line?' });
+  check('a writing class’s chat does', r.ok && /WRITING CLASS: the words in their papers stay theirs/.test(last().system.map(b => b.text).join('\n')));
 
   /* ---------- the page ---------- */
   await go(a, '#/writ/dashboard', 1400);
@@ -106,8 +154,11 @@ const DOCX = zip([{ name: '[Content_Types].xml', data: '<?xml version="1.0"?><Ty
   check('a .docx opens into the box: its paragraphs, tabs and line breaks, not its deleted words', (await a.inputValue('#df-text')) === 'The bridge over the Gallatin hums in January.\n\nIce on the rail,\nand my breath on the glass.' && /18 words/.test(await txt(a, '#df-count')), await a.inputValue('#df-text'));
   await a.setInputFiles('#df-file', { name: 'notes.txt', mimeType: 'text/plain', buffer: Buffer.from('A plain text draft,\r\nwith Windows line ends.') }); await a.waitForTimeout(400);
   check('so does a .txt', (await a.inputValue('#df-text')) === 'A plain text draft,\nwith Windows line ends.');
-  await a.setInputFiles('#df-file', { name: 'essay.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4 hi') }); await a.waitForTimeout(400);
-  check('a PDF is not read: it says to paste the text', /copy the text and paste it here/i.test(await txt(a, '.toast')) && (await a.inputValue('#df-text')) === 'A plain text draft,\nwith Windows line ends.');
+  await a.setInputFiles('#df-file', { name: 'essay.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4 hi') }); await a.waitForTimeout(1500);
+  check('a broken PDF: it says so, and the box keeps what was there', /That file could not be read\. Copy the text from it and paste it here/.test(await txt(a, '.toast')) && (await a.inputValue('#df-text')) === 'A plain text draft,\nwith Windows line ends.', await txt(a, '.toast'));
+  await a.setInputFiles('#df-file', { name: 'Smith essay.pdf', mimeType: 'application/pdf', buffer: PDF });
+  await a.waitForFunction(() => /river/.test(document.querySelector('#df-text').value), null, { timeout: 15000 }).catch(() => {});
+  check('a PDF opens into the box: paragraphs by the space between lines and an indent, without the page number or running head, a hyphen kept', (await a.inputValue('#df-text')) === PDF_TEXT && /40 words/.test(await txt(a, "#df-count")), await a.inputValue('#df-text'));
   await a.fill('#df-text', DRAFT1); await a.fill('#df-ask', 'Is the middle too vague?'); await a.waitForTimeout(500);
   await a.reload(); await a.waitForTimeout(1500);
   check('what she was writing is kept on this device until she sends it', (await a.inputValue('#df-text')) === DRAFT1 && (await a.inputValue('#df-ask')) === 'Is the middle too vague?' && await a.evaluate(() => document.querySelector('[name="df-p"]:checked').value === 'p1'));
@@ -124,11 +175,93 @@ const DOCX = zip([{ name: '[Content_Types].xml', data: '<?xml version="1.0"?><Ty
   check('and a comment’s quote goes back to the passage, highlighted', await a.evaluate(() => document.querySelector('.df-mark[data-k="c1"]').classList.contains('df-flash') && document.activeElement.classList.contains('df-pin')));
   await a.check('.df-side input[data-n="1"]'); await a.reload(); await a.waitForTimeout(1500);
   check('next steps she ticks stay ticked', await a.evaluate(() => document.querySelector('.df-side input[data-n="1"]').checked && !document.querySelector('.df-side input[data-n="0"]').checked));
+
+  /* her answers to his notes, on the page */
+  const vNow = +a.url().split('/').pop();
+  await a.click('#dfc-c1 [data-action="df-resp"][data-state="done"]'); await a.waitForTimeout(700);
+  check('Done: the comment is marked done, the button pressed', await a.evaluate(() => document.querySelector('#dfc-c1 [data-state="done"]').getAttribute('aria-pressed') === 'true' && document.querySelector('#dfc-c1').classList.contains('is-done') && document.querySelector('#dfc-c1 .df-why').hidden));
+  await a.click('#dfr-r0 [data-action="df-resp"][data-state="disagree"]'); await a.waitForTimeout(500);
+  check('I disagree asks why, ready to type', await a.evaluate(() => !document.querySelector('#dfr-r0 .df-why').hidden && document.activeElement === document.querySelector('#dfw-r0') && /Bo reads this next time/.test(document.querySelector('#dfr-r0 .df-why label').textContent)));
+  await a.keyboard.type('The storm is told on purpose.'); await a.keyboard.press('Tab'); await a.waitForTimeout(800);
+  await a.reload(); await a.waitForTimeout(1600);
+  check('both stay after a reload, with her reason', await a.evaluate(() => document.querySelector('#dfc-c1 [data-state="done"]').getAttribute('aria-pressed') === 'true' && document.querySelector('#dfr-r0 [data-state="disagree"]').getAttribute('aria-pressed') === 'true' && document.querySelector('#dfw-r0').value === 'The storm is told on purpose.'));
+  r = await api(a, `ai_draft_get&class=writ&id=${vNow}`);
+  check('and are kept with the version', r.review.responses.r0.s === 'disagree' && r.review.responses.r0.why === 'The storm is told on purpose.' && r.review.responses.c1.s === 'done', r.review.responses);
+  await a.click('#dfc-c1 [data-action="df-resp"][data-state="done"]'); await a.waitForTimeout(700);
+  check('pressing Done again takes it back', await a.evaluate(() => document.querySelector('#dfc-c1 [data-state="done"]').getAttribute('aria-pressed') === 'false' && !document.querySelector('#dfc-c1').classList.contains('is-done')) && !(await api(a, `ai_draft_get&class=writ&id=${vNow}`)).review.responses.c1);
+
+  /* Ask Bo about a note: the floating panel, on that note, with questions to start from */
+  await a.click('#dfc-c2 [data-action="df-ask"]'); await a.waitForTimeout(900);
+  const asked = await a.evaluate(() => ({ open: !document.querySelector('#bo-pop').hidden, chip: (document.querySelector('#bf-chips .bf-chip.focus') || {}).textContent || '', quick: [...document.querySelectorAll('#bf-chips .bf-mini')].map(x => x.textContent + '=' + x.dataset.say).join('|'), q: document.querySelector('#bf-q').value, sel: document.activeElement && document.activeElement.id === 'bf-q' ? document.activeElement.selectionEnd - document.activeElement.selectionStart : -1 }));
+  check('Ask Bo about this: the panel opens on the note, with the question ready (selected, so typing replaces it)', asked.open && asked.chip.trim() === 'Your note “The storm was really scary and it was”' && asked.quick === 'What do you mean here?=What do you mean here?|I disagree. Here is why.=I disagree. Here is why.|Show me an example from the readings.=Show me an example from the readings.' && asked.q === 'What do you mean here?' && asked.sel === asked.q.length, asked);
+  await a.keyboard.press('Enter');
+  await a.waitForFunction(() => document.querySelectorAll('#bf-body .bf-msg').length >= 2 && !document.querySelector("#bf-body .bf-msg.typing"), null, { timeout: 15000 }).catch(() => {}); await a.waitForTimeout(400);
+  const askReq = last(); const askSys = askReq.system.map(b => b.text).join('\n');
+  check('Bo gets the note and the passage, and the writing-class rule: the words in her paper stay hers', /Your note on my draft \(Project 1: Writing in Place, the narrative essay, version 3\) at "The storm was really scary and it was": This line tells the feeling/.test(askSys) && /WRITING CLASS: the words in their papers stay theirs/.test(askSys) && /When they ask about one of your notes on their draft/.test(askSys) && /What do you mean here\?/.test(userText(askReq)), askSys.slice(-900));
+  await a.click('[data-bf="close"]'); await a.waitForTimeout(400);
+
+  /* reading the draft aloud, with a stand-in voice that says each sentence and then ends it */
+  await a.evaluate(() => {
+    window.__said = []; window.__hold = false; window.__cancels = 0;
+    const S = { q: null, getVoices: () => [], cancel() { window.__cancels++; this.q = null; }, pause() {}, resume() {},
+      speak(u) { window.__said.push({ text: u.text, rate: u.rate }); this.q = u; setTimeout(() => { if (S.q === u && !window.__hold && u.onend) u.onend(); }, 30); } };
+    Object.defineProperty(window, 'speechSynthesis', { value: S, configurable: true });
+    window.__hold = true;
+  });
+  await a.click('[data-action="df-listen"]'); await a.waitForTimeout(300);
+  const ra = await a.evaluate(() => { const h = CSS.highlights && CSS.highlights.get('df-read'); const rg = h ? [...h][0] : null; const b = document.querySelector('[data-action="df-listen"]'); return { said: window.__said.map(x => x.text), hl: rg ? rg.toString() : '', pressed: b.getAttribute('aria-pressed'), label: b.textContent.trim() }; });
+  check('Read it aloud: the first sentence is said and marked in the draft, and the button now pauses', ra.said.length === 1 && ra.said[0] === "My grandmother's farmhouse sat at the end of a gravel road outside Big Timber." && ra.hl === ra.said[0] && ra.pressed === 'true' && ra.label === 'Pause', ra);
+  await a.selectOption('#df-rate', '1.25'); await a.waitForTimeout(200);
+  check('a new speed says the sentence again at that speed, and is remembered', await a.evaluate(() => { const l = window.__said[window.__said.length - 1]; return l.rate === 1.25 && /Big Timber\.$/.test(l.text) && JSON.parse(localStorage.getItem('studyhub-settings')).readerRate === 1.25; }));
+  await a.click('.df-paper p[data-p="2"]'); await a.waitForTimeout(200);
+  check('clicking a paragraph while it reads goes there', await a.evaluate(() => /^Now the house is sold/.test(window.__said[window.__said.length - 1].text)));
+  await a.click('[data-action="df-listen"]'); await a.waitForTimeout(200);
+  check('Pause stops the voice and the mark', await a.evaluate(() => window.__cancels > 0 && window.speechSynthesis.q === null && !(CSS.highlights.get('df-read')) && document.querySelector('[data-action="df-listen"]').getAttribute('aria-pressed') === 'false'));
+  await a.evaluate(() => { window.__said = []; window.__hold = false; });
+  await a.click('.df-paper p[data-p="0"]'); await a.waitForTimeout(150);
+  check('a click on the draft does nothing when it is not reading (it is for picking text)', await a.evaluate(() => window.__said.length === 0));
+  await a.click('[data-action="df-listen"]');
+  await a.waitForFunction(() => document.querySelector('[data-action="df-listen"]').getAttribute('aria-pressed') === 'false', null, { timeout: 10000 }).catch(() => {});
+  const heard = await a.evaluate(() => window.__said.map(x => x.text));
+  check('it reads on from where it paused, sentence by sentence, without the comment numbers, then stops at the end', heard.length === 2 && /^Now the house is sold/.test(heard[0]) && /hold the people in it\.$/.test(heard[1]) && await a.evaluate(() => !CSS.highlights.get('df-read')), heard);
+  await a.evaluate(() => { window.__said = []; });
+  await a.click('[data-action="df-listen"]');
+  await a.waitForFunction(() => document.querySelector('[data-action="df-listen"]').getAttribute('aria-pressed') === 'false', null, { timeout: 10000 }).catch(() => {});
+  const whole = await a.evaluate(() => window.__said.map(x => x.text));
+  check('from the end it starts again at the top: the whole draft, 8 sentences, as written', whole.length === 8 && whole.join(' ') === DRAFT1.replace(/\n\s*\n/g, ' '), whole);
+  await a.evaluate(() => { window.__hold = true; window.__cancels = 0; }); await a.click('[data-action="df-listen"]'); await a.waitForTimeout(150);
+  await a.click('.df-top a.btn[href$="/drafts"]'); await a.waitForTimeout(900);
+  check('leaving the page stops the voice', await a.evaluate(() => window.__cancels > 0 && window.speechSynthesis.q === null));
+  await go(a, `#/writ/drafts/${vNow}`, 1600);
   await a.click('[data-action="df-again"]'); await a.waitForTimeout(1500);
   check('Send a revised version: the form on the same project, revised, with this version’s text to work on', await a.evaluate(d => document.querySelector('[name="df-p"]:checked').value === 'p1' && document.querySelector('[name="df-stage"]:checked').value === 'revised' && document.querySelector('#df-text').value === d, DRAFT1));
   const past = await a.evaluate(() => [...document.querySelectorAll('#df-past .df-ver-link b')].map(x => x.textContent.trim()));
   check('her drafts below, newest version first', past.length === 3 && /First draft · version 3/.test(past[0]) && /Revised draft · version 2/.test(past[1]), past);
   check('the page fits and has no errors', await hscroll(a));
+
+  /* the revision history of Project 1: three versions now */
+  check('her drafts link to each project’s revision history', await a.evaluate(() => [...document.querySelectorAll('#df-past .df-proj-row a')].map(x => x.getAttribute('href')).join() === '#/writ/draft-history/p1'));
+  await go(a, '#/writ/draft-history/p1', 1800);
+  const hist = await a.evaluate(() => ({ time: [...document.querySelectorAll('.dh-time li b')].map(x => x.textContent).join(), links: [...document.querySelectorAll('.dh-time a')].every(x => /#\/writ\/drafts\/\d+$/.test(x.getAttribute('href'))), stats: document.querySelector('#dh-stats').textContent, title: document.querySelector('.page-title').textContent }));
+  check('every version, oldest first, each opening its review; first and last compared', hist.time === 'Version 1,Version 2,Version 3' && hist.links && hist.title === 'Project 1: Writing in Place, the narrative essay' && hist.stats === 'From version 1 to version 3: 0 of 3 paragraphs new or changed, 0 words added and 0 taken out.', hist);
+  await a.selectOption('#dh-b', '1'); await a.waitForTimeout(300);
+  const dd = await a.evaluate(() => ({ stats: document.querySelector('#dh-stats').textContent, ins: [...document.querySelectorAll('#dh-diff .dh-new ins')].map(x => x.textContent).join('|'), del: [...document.querySelectorAll('#dh-diff .dh-old del')].map(x => x.textContent).join('|'), rows: [...document.querySelectorAll('#dh-diff .dh-row')].map(x => x.className.replace('dh-row dh-', '')).join(), heads: [...document.querySelectorAll('.dh-heads b')].map(x => x.textContent).join('|') }));
+  check('version 1 to 2 side by side: the changed paragraph word by word, the new one added', /^From version 1 to version 2: 2 of 4 paragraphs new or changed, \d+ words added and \d+ taken out\.$/.test(dd.stats) && dd.rows === 'same,changed,same,add' && /Mississippi/.test(dd.ins) && /seconds/.test(dd.del) && /The brook is still there, under the new bridge\./.test(dd.ins) && !/grandmother/.test(dd.ins + dd.del) && dd.heads === 'Version 1 · First draft|Version 2 · Revised draft', dd);
+  await a.click('.dh-mode label:has(input[value="inline"])'); await a.waitForTimeout(300);
+  check('or in one text', await a.evaluate(() => document.querySelectorAll('.dh-inline p').length === 4 && /Mississippi/.test([...document.querySelectorAll('.dh-inline ins')].map(x => x.textContent).join()) && !document.querySelector('.dh-sides')));
+  await a.selectOption('#dh-a', '1'); await a.waitForTimeout(200);
+  check('the same version twice: it asks for two different ones', /Pick two different versions/.test(await txt(a, '#dh-diff')));
+  const fate = await a.evaluate(() => [...document.querySelectorAll('.dh-fate')].map(f => f.querySelector('h2').textContent + ': ' + [...f.querySelectorAll('li')].map(li => li.querySelector('b').textContent + ' [' + [...li.querySelectorAll('.df-st')].map(x => x.textContent).join(', ') + ']').join('; ')));
+  check('what became of Bo’s notes: his word at the next version and hers', fate.length === 2 && fate[0] === 'Version 1 → Version 2: Show the storm [Bo: Partly, You: disagreed]; Say why it matters []' && /^Version 2 → Version 3: Show the storm \[Bo: Partly\]; Say why it matters \[\]; Bring her closer \[\]$/.test(fate[1]), fate);
+  check('questions for her reflection, with no AI', /Which piece of feedback did you not take, and why\?/.test(await txt(a, '.dh-reflect')));
+  const [dl] = await Promise.all([a.waitForEvent('download', { timeout: 10000 }), a.click('[data-action="dh-word"]')]);
+  const docPath = await dl.path(); const unz = n => require('child_process').execFileSync('unzip', ['-p', docPath, n]).toString();
+  const docXml = unz('word/document.xml'); const wellFormed = require('child_process').spawnSync('python3', ['-I', '-c', 'import sys, zipfile, xml.dom.minidom as m\nz = zipfile.ZipFile(sys.argv[1])\nassert z.testzip() is None\n[m.parseString(z.read(n)) for n in z.namelist()]\nprint(",".join(sorted(z.namelist())))', docPath]).stdout.toString().trim();
+  check('Download as Word: a .docx of the versions, the comparison and what became of the notes', dl.suggestedFilename() === 'Project 1 revision history.docx' && wellFormed === '[Content_Types].xml,_rels/.rels,docProps/app.xml,docProps/core.xml,word/_rels/document.xml.rels,word/document.xml,word/styles.xml' && /<w:pStyle w:val="Title"\/><\/w:pPr><w:r><w:t xml:space="preserve">Project 1: Writing in Place, the narrative essay</.test(docXml) && /From version 1 to version 3/.test(docXml) && /Bo: Partly/.test(docXml) && /You: disagreed/.test(docXml) && (docXml.match(/w:type="page"/g) || []).length === 3 && /Mississippi/.test(docXml) && /Version 3 · First draft/.test(docXml) && /<dc:title>Project 1: Writing in Place, the narrative essay · revision history<\/dc:title>/.test(unz('docProps/core.xml')), { name: dl.suggestedFilename(), wellFormed, doc: docXml.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').slice(0, 600), pages: (docXml.match(/w:type="page"/g) || []).length });
+  check('the history fits and has no errors', await hscroll(a));
+  check('App.draftDiff: a word put in, a paragraph added, a paragraph taken out', await a.evaluate(() => { const d = App.draftDiff('One two three.\n\nFour five.', 'One two four three.\n\nFour five.\n\nSix.'); const e = App.draftDiff('A b c.\n\nGone for good.', 'A b c.'); return d.rows.map(r => r.t).join() === 'changed,same,add' && d.added === 2 && d.removed === 0 && d.changed === 2 && d.paras === 3 && d.rows[0].d.ops.map(o => o.t + o.s).join('') === '=One two +four =three.' && e.rows.map(r => r.t).join() === 'same,del' && e.removed === 3 && e.paras === 1; }));
+  await go(a, '#/writ/draft-history/p3', 1400);
+  check('a project with no versions yet says so, with a way to share one', /No versions of this project yet/.test(await txt(a, '.dh')) && await a.evaluate(() => /#\/writ\/drafts\?p=p3/.test(document.querySelector('.dh a.btn.primary').getAttribute('href'))));
 
   /* the instructor's switch, from the page (an administrator can use it too) */
   const [cd, d] = await open(ADMIN);
@@ -151,6 +284,8 @@ const DOCX = zip([{ name: '[Content_Types].xml', data: '<?xml version="1.0"?><Ty
   check('on a phone the review reads top to bottom: Bo’s read and the revisions, the draft, the comments', order.top < order.paper && order.paper < order.rest && order.since && order.changed.includes(`Since version 1: 2 of 4 paragraphs new or changed, ${DRAFT2.split(/\s+/).length - DRAFT1.split(/\s+/).length} more words.`) && await hscroll(ph), order);
   await go(ph, '#/writ/drafts', 1600);
   check('the form fits on a phone too', await hscroll(ph));
+  await go(ph, '#/writ/draft-history/p1', 1800);
+  check('and the revision history, its two versions one above the other', await hscroll(ph) && await ph.evaluate(() => { const r = document.querySelector('.dh-row'); if (!r) return false; const [o, n] = r.querySelectorAll('p'); return n.getBoundingClientRect().top >= o.getBoundingClientRect().bottom - 1; }));
   await cp.close();
 
   /* gates: someone signed out, and before agreeing to what is sent to the AI */

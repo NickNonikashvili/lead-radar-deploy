@@ -6272,3 +6272,111 @@
 6473	1 palavra a mais
 6474	1 palavra a menos
 6475	{1} palavras
+6476	Caderno de escrita
+6477	Suas {1} entradas
+6478	Escreva aqui a entrada de cada semana. Elas ficam na sua conta e são baixadas como um único arquivo do Word para entregar.
+6479	"DRAFTS" deve ser uma lista de projetos.
+6480	DRAFTS[{1}] precisa de um id de até 12 letras minúsculas ou dígitos.
+6481	O id de projeto "{1}" é usado duas vezes.
+6482	O projeto "{1}" precisa de um nome.
+6483	O projeto "{1}" não tem "brief": o Bo lê os rascunhos com base nele, então diga o que a tarefa pede.
+6484	O projeto "{1}" não tem "goals": o Bo lê os rascunhos com base neles.
+6485	Projeto "{1}": {2} "{3}" não é um id de prova.
+6486	"NOTEBOOK" precisa de um "count" de entradas.
+6487	A entrada {1} do caderno passa do número previsto ({2}).
+6488	A entrada {1} do caderno reflete sobre "{2}", que não é um projeto.
+6489	A voz parou. Toque em Ler em voz alta para continuar.
+6490	Ler em voz alta
+6491	Este navegador não consegue ler em voz alta.
+6492	Histórico de revisões
+6493	Discordo
+6494	Por quê? O Bo lê isto na próxima vez (opcional)
+6495	Ouvir ajuda a perceber o que soa estranho. Enquanto lê, clique em um parágrafo para ir até ele.
+6496	Your note on my draft ({1}, version {2}){3}: {4}
+6497	at "{1}"
+6498	Sua nota
+6499	O que você quer dizer aqui?
+6500	Discordo. Veja por quê.
+6501	Me mostre um exemplo das leituras.
+6502	Ative o Bo em todas as páginas nas Configurações para perguntar a ele sobre uma nota.
+6503	Abrindo suas versões…
+6504	{1} · Histórico de revisões
+6505	Ainda não há versões deste projeto. Compartilhe um rascunho com o Bo e cada versão enviada fica guardada aqui.
+6506	Compartilhar um rascunho
+6507	Versão {1}
+6508	Cada versão que você compartilhou, o que mudou entre elas e o que aconteceu com as notas do Bo. Use como prova de revisão para o seu portfólio; a reflexão é você quem escreve.
+6509	Perguntas para a sua reflexão
+6510	sem IA: as respostas são suas
+6511	Qual mudança fez a maior diferença, e por que você a fez?
+6512	Qual comentário você não seguiu, e por quê?
+6513	O que o último rascunho faz melhor que o primeiro?
+6514	O que você mudaria em seguida se tivesse mais uma semana?
+6515	Baixar como Word
+6516	Como mostrar as mudanças
+6517	Em um só texto
+6518	retirado
+6519	Uma versão até agora. Envie ao Bo um rascunho revisado e esta página mostra o que mudou.
+6520	O que aconteceu com as notas do Bo
+6521	Bo: {1}
+6522	Você: feito
+6523	Você: discordou
+6524	Escolha duas versões diferentes.
+6525	Da versão {1} para a versão {2}: {3} de {4} parágrafos novos ou alterados, {5} {5|palavra adicionada|palavras adicionadas} e {6} {6|retirada|retiradas}.
+6526	Histórico de revisões do Mathub: cada versão compartilhada com o Bo, e o que aconteceu com as notas dele.
+6527	· revision history
+6528	{1} revision history
+6529	Não foi possível criar esse arquivo aqui. Use Imprimir ou salvar como PDF.
+6530	{1} · revision history
+6531	Escolha um projeto.
+6532	Nota desconhecida.
+6533	Esta turma não tem caderno de escrita.
+6534	Essa entrada não está neste caderno.
+6535	Essa entrada é longa demais para guardar (cerca de 7.000 palavras). Divida-a em duas.
+6536	Esta entrada foi alterada em outro dispositivo.
+6537	Não é possível acessar o Mathub agora.
+6538	Caderno {1}: {2}
+6539	Caderno {1}
+6540	notebook_list&class=
+6541	Offline: guardado neste dispositivo, será salvo quando você voltar
+6542	Editando…
+6543	{1} de {2} escritas · {3}
+6544	Copie a proposta da aula ou do Canvas, para que fique com a sua entrada.
+6545	Escreva aqui. Salva enquanto você digita.
+6546	Todas as entradas
+6547	A proposta
+6548	Sua entrada
+6549	Seu histórico de revisões de {1} mostra cada versão que você compartilhou e o que mudou, se quiser tê-lo ao lado.
+6550	Abrir
+6551	Usar a versão deste dispositivo
+6552	Manter a salva
+6553	Esta entrada foi alterada em outro dispositivo, então o que você digitou aqui ({1}) não foi salvo por cima. A de baixo é a salva.
+6554	{1} entradas no arquivo; {2} ainda {2|vazia|vazias}.
+6555	Todas as {1} entradas estão no arquivo.
+6556	Escreva uma entrada primeiro.
+6557	{1} writer's notebook
+6558	Não foi possível criar esse arquivo aqui. Baixe-o como texto.
+6559	Suas entradas, revisadas toda semana e entregues juntas no final. Privado: só você pode lê-las, e o Bo não faz parte do seu caderno.
+6560	Word
+6561	O caderno é para membros
+6562	Cadastre-se com seu e-mail montana.edu para manter seu caderno na sua conta, em todos os dispositivos.
+6563	Abrindo seu caderno…
+6564	(min-width: 821px)
+6565	entregue todas com {1}, {2}
+6566	Entradas
+6567	Escolha uma entrada para escrever.
+6568	Esse PDF está protegido por senha. Abra-o, copie o texto e cole aqui.
+6569	Esse PDF não tem texto para ler (pode ser uma digitalização). Copie o texto do documento original e cole aqui.
+6570	Times New Roman
+6571	xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+6572	_rels/.rels
+6573	word/_rels/document.xml.rels
+6574	word/styles.xml
+6575	heading 1
+6576	heading 2
+6577	docProps/core.xml
+6578	docProps/app.xml
+6579	Comparar
+6580	Texto simples
+6581	com
+6582	adicionado
+6583	1 entrada no arquivo; {1} ainda {1|vazia|vazias}.

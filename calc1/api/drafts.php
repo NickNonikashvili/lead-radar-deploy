@@ -8,7 +8,9 @@
    the next one says what changed since the last. The class's instructor (its syllabus email) or an administrator
    can switch it off for the class. The projects and their goals come from the class (DRAFTS in assets/writ-data.js,
    copied to api/classdata by scripts/build-classdata.js).
-   Routes (from mh_ai_route): ai_draft_list, ai_draft_get, ai_draft_review, ai_draft_delete, ai_draft_switch.
+   They can mark each of his notes done or say they disagree (and why); the next review is told, and weighs it.
+   Routes (from mh_ai_route): ai_draft_list, ai_draft_get, ai_draft_history, ai_draft_review, ai_draft_respond,
+   ai_draft_delete, ai_draft_switch.
    ============================================================ */
 
 const MH_DRAFT_MAX = 60000;      // characters, about 10,000 words
@@ -21,6 +23,7 @@ THE RULE THAT COMES FIRST: the words stay theirs.
 - Never write any of it for them: no rewritten sentences, no new sentences, openings, endings, thesis statements, titles, transitions or sample wording, not even "for example, you could say ...". The class allows AI only where the instructor says so, and this review is allowed because it only comments.
 - Instead: point at a passage, say what a reader experiences there, name the choice they could make, and ask a question that helps them decide.
 - If they ask you to write or fix it for them, say kindly that you can show where and why, and that the revision is theirs to write.
+- When THEIR ANSWERS TO YOUR EARLIER NOTES say they disagree with one, weigh their reason. If it holds, drop the point. If it still matters, say why in one sentence, without repeating the note. A note they marked done is not done until the draft shows it.
 
 HOW TO READ IT
 - Read the whole draft first. Judge it against THE PROJECT's goals and its stage: a first draft needs direction, a revised draft needs finishing.
@@ -47,6 +50,8 @@ function mh_draft_db(): PDO {
     $db->exec('CREATE TABLE IF NOT EXISTS draft_reviews (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE, course TEXT NOT NULL, project TEXT NOT NULL, version INTEGER NOT NULL, stage TEXT NOT NULL, words INTEGER NOT NULL, text TEXT NOT NULL, ask TEXT NOT NULL DEFAULT "", peer TEXT NOT NULL DEFAULT "", feedback TEXT NOT NULL, created INTEGER NOT NULL)');
     $db->exec('CREATE INDEX IF NOT EXISTS draft_reviews_mine ON draft_reviews (user_id, course, project, version)');
     $db->exec('CREATE TABLE IF NOT EXISTS draft_switch (course TEXT PRIMARY KEY, off INTEGER NOT NULL DEFAULT 0, user_id INTEGER NOT NULL DEFAULT 0, updated INTEGER NOT NULL)');   // the instructor's off switch
+    $cols = array_column($db->query('PRAGMA table_info(draft_reviews)')->fetchAll(), 'name');
+    if (!in_array('responses', $cols, true)) $db->exec("ALTER TABLE draft_reviews ADD COLUMN responses TEXT NOT NULL DEFAULT '{}'");   // their answers to his notes: { c1: { s: done|disagree, why } }
     $ready = true;
   }
   return $db;
@@ -112,8 +117,21 @@ function mh_draft_row(array $r, bool $full): array {
   $f = json_decode((string)$r['feedback'], true) ?: [];
   $o = ['id' => (int)$r['id'], 'project' => (string)$r['project'], 'version' => (int)$r['version'], 'stage' => (string)$r['stage'], 'words' => (int)$r['words'], 'created' => (int)$r['created'],
     'overall' => mh_ai_plain($f['overall'] ?? '', $full ? 700 : 160), 'revisions' => count($f['revisions'] ?? [])];
-  if ($full) $o += ['text' => (string)$r['text'], 'ask' => (string)$r['ask'], 'peer' => (string)$r['peer'], 'feedback' => $f];
+  if ($full) $o += ['text' => (string)$r['text'], 'ask' => (string)$r['ask'], 'peer' => (string)$r['peer'], 'feedback' => $f, 'responses' => (object)(json_decode((string)($r['responses'] ?? '{}'), true) ?: [])];
   return $o;
+}
+/** Their answers to the notes of a review, as lines for Bo's next one ("A. Show the storm: they say it is done"). */
+function mh_draft_answers(array $last): string {
+  $f = json_decode((string)$last['feedback'], true) ?: []; $R = json_decode((string)($last['responses'] ?? '{}'), true) ?: []; $L = [];
+  foreach ($R as $k => $x) {
+    if (!is_array($x) || !in_array($x['s'] ?? '', ['done', 'disagree'], true)) continue;
+    if (preg_match('/^r(\d)$/', (string)$k, $m) && isset($f['revisions'][(int)$m[1]])) $what = 'ABCD'[(int)$m[1]] . '. ' . mh_ai_plain($f['revisions'][(int)$m[1]]['title'] ?? '', 80);
+    elseif (preg_match('/^c(\d{1,2})$/', (string)$k, $m) && isset($f['comments'][(int)$m[1] - 1])) $what = 'Comment ' . (int)$m[1] . ' on "' . mh_ai_plain($f['comments'][(int)$m[1] - 1]['quote'] ?? '', 90) . '"';
+    else continue;
+    $why = mh_ai_plain($x['why'] ?? '', 300);
+    $L[] = '- ' . $what . ': ' . ($x['s'] === 'done' ? 'they say it is done' : 'they disagree' . ($why !== '' ? ', because: ' . $why : ''));
+  }
+  return implode("\n", $L);
 }
 
 function mh_draft_route(string $route, array $in, array $cfg): void {
@@ -132,6 +150,23 @@ function mh_draft_route(string $route, array $in, array $cfg): void {
       if (!$r) mh_fail('That review is not in your drafts.', 404);
       $pv = $db->prepare('SELECT id FROM draft_reviews WHERE user_id = ? AND course = ? AND project = ? AND version < ? ORDER BY version DESC LIMIT 1'); $pv->execute([$u['id'], $cid, $r['project'], $r['version']]);
       mh_json(['ok' => true, 'review' => mh_draft_row($r, true) + ['before' => (int)$pv->fetchColumn() ?: null]]);
+    }
+    case 'ai_draft_history': {   // every version of one project, oldest first: the revision history (assets/drafts.js)
+      mh_method('GET'); $u = mh_require_user(); $pid = (string)($_GET['project'] ?? '');
+      if (!preg_match('/^[a-z0-9]{1,12}$/', $pid)) mh_fail('Pick a project.', 400);
+      $st = $db->prepare('SELECT * FROM draft_reviews WHERE user_id = ? AND course = ? AND project = ? ORDER BY version'); $st->execute([$u['id'], $cid, $pid]);
+      mh_json(['ok' => true, 'versions' => array_map(fn($r) => mh_draft_row($r, true), $st->fetchAll())]);
+    }
+    case 'ai_draft_respond': {   // a note marked done, or disagreed with (and why); '' takes it back
+      mh_method('POST'); $u = mh_require_user(); $key = (string)($in['key'] ?? ''); $s = (string)($in['state'] ?? '');
+      if (!preg_match('/^(c\d{1,2}|r\d)$/', $key) || !in_array($s, ['', 'done', 'disagree'], true)) mh_fail('Unknown note.', 400);
+      $st = $db->prepare('SELECT responses FROM draft_reviews WHERE id = ? AND user_id = ? AND course = ?'); $st->execute([(int)($in['id'] ?? 0), $u['id'], $cid]); $cur = $st->fetchColumn();
+      if ($cur === false) mh_fail('That review is not in your drafts.', 404);
+      mh_rate_or_fail("ai_draft_respond:{$u['id']}", 600, 3600, 'Slow down a little.');
+      $R = json_decode((string)$cur, true) ?: [];
+      if ($s === '') unset($R[$key]); else $R[$key] = ['s' => $s, 'why' => $s === 'disagree' ? mh_ai_clip($in['why'] ?? '', 300) : '', 'at' => time()];
+      $db->prepare('UPDATE draft_reviews SET responses = ? WHERE id = ?')->execute([json_encode((object)$R, JSON_UNESCAPED_UNICODE), (int)$in['id']]);
+      mh_json(['ok' => true, 'responses' => (object)$R]);
     }
     case 'ai_draft_review': {
       mh_method('POST'); $u = mh_require_user(); $uid = (int)$u['id'];
@@ -158,7 +193,8 @@ function mh_draft_route(string $route, array $in, array $cfg): void {
       if ($ask !== '') $lines[] = 'WHAT THEY WANT FEEDBACK ON: ' . $ask;
       if ($peer !== '') $lines[] = "PEER REVIEW COMMENTS THEY GOT (weigh them; say which you agree with):\n" . $peer;
       if ($last) { $lf = json_decode((string)$last['feedback'], true) ?: []; $rv = array_map(fn($x, $i) => ($i + 1) . '. ' . mh_ai_plain($x['title'] ?? '', 80) . ': ' . mh_ai_plain($x['why'] ?? '', 300), $lf['revisions'] ?? [], array_keys($lf['revisions'] ?? []));
-        if ($rv) $lines[] = 'EARLIER FEEDBACK (version ' . (int)$last['version'] . ', ' . max(0, (int)floor((time() - (int)$last['created']) / 86400)) . " days ago). The biggest revisions you named were:\n" . implode("\n", $rv); }
+        if ($rv) $lines[] = 'EARLIER FEEDBACK (version ' . (int)$last['version'] . ', ' . max(0, (int)floor((time() - (int)$last['created']) / 86400)) . " days ago). The biggest revisions you named were:\n" . implode("\n", $rv);
+        if (($ans = mh_draft_answers($last)) !== '') $lines[] = "THEIR ANSWERS TO YOUR EARLIER NOTES:\n" . $ans; }
       $lines[] = "THE DRAFT ($words words), between the lines:\n-----\n" . $text . "\n-----";
       $system = [['type' => 'text', 'text' => MH_DRAFT_SYS], ['type' => 'text', 'text' => mh_ai_character(mh_ai_character_id($in))['who'] . "\nKeep your character's voice light here: the rule, the reading and the format above come first."]];
       if (($lang = mh_ai_lang($in)) !== '') $system[] = ['type' => 'text', 'text' => $lang . ' The quotes stay exactly as the draft has them.'];

@@ -228,10 +228,23 @@
       goals: ['Written for an outside reader who was not in the class', 'Specific evidence of revision: what changed between drafts and why', 'What you tried, what worked and what you learned as a writer', 'Connections to the course outcomes in your own words'] }
   ];
 
+  /* ---------- the writer's notebook (assets/notebook.js): fifteen entries, reviewed weekly and handed in together at the
+     end. The syllabus names the entries by week; most prompts are given in class, so the student copies the prompt in.
+     A reflection entry links to that project's revision history (assets/drafts.js). ---------- */
+  const NOTEBOOK = { count: 15, due: 'pfdraft', entries: [
+    { n: 1, week: 'w1', title: '“Get Out(side)”', prompt: 'Get outside and write about what you notice. The full prompt is on Canvas.' },
+    { n: 2, week: 'w2' }, { n: 3, week: 'w2' }, { n: 4, week: 'w3' },
+    { n: 5, week: 'w4', title: 'Project 1 reflection', reflect: 'p1' },
+    { n: 6, week: 'w5' }, { n: 7, week: 'w5' }, { n: 8, week: 'w6' }, { n: 9, week: 'w6' }, { n: 10, week: 'w7' },
+    { n: 11, week: 'w9', title: 'Project 2 reflection', reflect: 'p2' },
+    { n: 12, week: 'w10' }, { n: 13, week: 'w11' }, { n: 14, week: 'w12' },
+    { n: 15, week: 'w13', title: 'Project 3 reflection', reflect: 'p3' }
+  ] };
+
   global.Courses = global.Courses || {};
   global.Courses.writ = Object.assign(global.Courses.writ || {}, {
     id: 'writ', kind: 'writing', code: 'WRIT 101', name: 'College Writing I', short: 'Writing', term: 'Fall 2026', tagline: 'Think like a writer: place, research, public argument and a reflective portfolio',
-    COURSE, GRADING, EXAMS, CALENDAR, RECURRING, SEMESTER, UNITS, SECTIONS, FORMULAS: [], FLASHCARDS: [], PRACTICE: {}, CHECKLISTS, INFO, NAV, READINGS, DRAFTS,
+    COURSE, GRADING, EXAMS, CALENDAR, RECURRING, SEMESTER, UNITS, SECTIONS, FORMULAS: [], FLASHCARDS: [], PRACTICE: {}, CHECKLISTS, INFO, NAV, READINGS, DRAFTS, NOTEBOOK,
     CALENDAR_NOTE: 'Exact due dates and times are announced on Canvas and in class; deadlines here sit on the Friday of the week the syllabus lists.'
   });
 })(window);

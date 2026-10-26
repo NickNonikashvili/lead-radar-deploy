@@ -115,6 +115,22 @@ const fs = require('fs'); const path = require('path'); const { spawnSync } = re
   await go(g, '#/', 900); check('its start page card says No exams', /No exams/.test(await txt(g, '.course-card.zzp101')));
   await api(a, 'admin_classpack_delete', { id: 'zzp101', confirm: 'ZZP 101' });
 
+  // ---- a class with papers: projects for Bo's draft feedback and a writer's notebook come from the pack ----
+  const wr = JSON.parse(JSON.stringify(pack));
+  wr.DRAFTS = [{ id: 'e1', short: 'Essay 1', name: 'Essay 1: A study, explained', brief: 'Explain one study for a general reader.', goals: ['A clear claim', 'The study in plain words'] }];
+  wr.NOTEBOOK = { count: 6, entries: [{ n: 6, title: 'Essay 1 reflection', reflect: 'e1' }] };
+  check('a pack with projects and a notebook passes the checker', P.validate(wr).errors.length === 0, P.validate(wr).errors);
+  check('and installs', (await api(a, 'admin_classpack_install', { json: JSON.stringify(wr), publish: true })).ok === true);
+  await go(a, '#/zzp101/drafts', 1600);
+  const side = await a.evaluate(() => [...document.querySelectorAll('#sidebar-nav [data-view]')].map(x => x.dataset.view).filter(v => /drafts|notebook/.test(v)).join());
+  if (await a.$('.df-gate [data-go="agree"]')) { await a.click('.df-gate [data-go="agree"]'); await a.waitForTimeout(900); }
+  check('its sidebar has Draft feedback and the writer’s notebook, and the page its project', side === 'drafts,notebook' && /Essay 1/.test(await txt(a, '#df-form')) && /Explain one study for a general reader/.test(await txt(a, '#df-brief')), { side, form: (await txt(a, '#view')).slice(0, 300) });
+  const dl2 = await api(a, 'ai_draft_list&class=zzp101'), nb = await api(a, 'notebook_list&class=zzp101');
+  check('and the server knows its projects and its notebook of 6', dl2.ok === true && dl2.reviews.length === 0 && nb.ok === true && nb.count === 6, { dl2, nb });
+  await go(a, '#/zzp101/notebook/6', 1400);
+  check('its reflection entry links to the essay’s revision history', /#\/zzp101\/draft-history\/e1$/.test(await a.evaluate(() => (document.querySelector('.nb-reflect a') || {}).getAttribute ? document.querySelector('.nb-reflect a').getAttribute('href') : '')));
+  await api(a, 'admin_classpack_delete', { id: 'zzp101', confirm: 'ZZP 101' });
+
   // ---- clean up ----
   const all = await api(a, 'admin_classreqs&status=all'); for (const gr of (all.groups || []).filter(x => x.code === 'ZZP 101')) for (const q of gr.requests) await api(a, 'admin_classreq_delete', { id: q.id });
   await api(a, 'admin_role', { email: 'alice.a@montana.edu', role: '' });

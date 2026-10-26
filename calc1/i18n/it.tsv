@@ -6272,3 +6272,111 @@
 6473	1 parola in più
 6474	1 parola in meno
 6475	{1} parole
+6476	Quaderno di scrittura
+6477	Le tue {1} voci
+6478	Scrivi qui la voce di ogni settimana. Restano nel tuo account e si scaricano come un unico file Word da consegnare.
+6479	"DRAFTS" deve essere un elenco di progetti.
+6480	DRAFTS[{1}] richiede un id di massimo 12 lettere minuscole o cifre.
+6481	L’id di progetto "{1}" è usato due volte.
+6482	Il progetto "{1}" richiede un nome.
+6483	Il progetto "{1}" non ha "brief": Bo legge le bozze in base a esso, quindi indica cosa chiede il compito.
+6484	Il progetto "{1}" non ha "goals": Bo legge le bozze in base a essi.
+6485	Progetto "{1}": {2} "{3}" non è un id di esame.
+6486	"NOTEBOOK" richiede un "count" di voci.
+6487	La voce {1} del quaderno supera il numero previsto ({2}).
+6488	La voce {1} del quaderno riflette su "{2}", che non è un progetto.
+6489	La voce si è fermata. Premi Leggi ad alta voce per continuare.
+6490	Leggi ad alta voce
+6491	Questo browser non può leggere ad alta voce.
+6492	Cronologia delle revisioni
+6493	Non sono d’accordo
+6494	Perché? Bo lo legge la prossima volta (facoltativo)
+6495	Ascoltarlo aiuta a notare ciò che suona strano. Mentre legge, fai clic su un paragrafo per andarci.
+6496	Your note on my draft ({1}, version {2}){3}: {4}
+6497	at "{1}"
+6498	La tua nota
+6499	Cosa intendi qui?
+6500	Non sono d’accordo. Ecco perché.
+6501	Mostrami un esempio dalle letture.
+6502	Attiva Bo su ogni pagina nelle Impostazioni per chiedergli di una nota.
+6503	Apertura delle tue versioni…
+6504	{1} · Cronologia delle revisioni
+6505	Ancora nessuna versione di questo progetto. Condividi una bozza con Bo e ogni versione che invii resta qui.
+6506	Condividi una bozza
+6507	Versione {1}
+6508	Ogni versione condivisa, cosa è cambiato tra una e l’altra e che fine hanno fatto le note di Bo. Usala come prova della revisione per il tuo portfolio; la riflessione la scrivi tu.
+6509	Domande per la tua riflessione
+6510	niente IA: le risposte sono tue
+6511	Quale modifica ha fatto la differenza più grande, e perché l’hai fatta?
+6512	Quale commento non hai seguito, e perché?
+6513	Cosa fa meglio l’ultima bozza rispetto alla prima?
+6514	Cosa cambieresti dopo, se avessi un’altra settimana?
+6515	Scarica come Word
+6516	Come mostrare le modifiche
+6517	In un unico testo
+6518	tolto
+6519	Per ora una sola versione. Invia a Bo una bozza rivista e questa pagina mostra cosa è cambiato.
+6520	Che fine hanno fatto le note di Bo
+6521	Bo: {1}
+6522	Tu: fatto
+6523	Tu: in disaccordo
+6524	Scegli due versioni diverse.
+6525	Dalla versione {1} alla versione {2}: {3} paragrafi su {4} nuovi o modificati, {5} {5|parola aggiunta|parole aggiunte} e {6} {6|tolta|tolte}.
+6526	Cronologia delle revisioni da Mathub: ogni versione condivisa con Bo, e che fine hanno fatto le sue note.
+6527	· revision history
+6528	{1} revision history
+6529	Non è stato possibile creare il file qui. Usa Stampa o salva come PDF.
+6530	{1} · revision history
+6531	Scegli un progetto.
+6532	Nota sconosciuta.
+6533	Questo corso non ha un quaderno di scrittura.
+6534	Questa voce non è in questo quaderno.
+6535	Questa voce è troppo lunga da salvare (circa 7.000 parole). Dividila in due.
+6536	Questa voce è stata modificata su un altro dispositivo.
+6537	Mathub non è raggiungibile in questo momento.
+6538	Quaderno {1}: {2}
+6539	Quaderno {1}
+6540	notebook_list&class=
+6541	Offline: salvato su questo dispositivo, verrà inviato al tuo ritorno
+6542	Modifica in corso…
+6543	{1} di {2} scritte · {3}
+6544	Copia la traccia dalla lezione o da Canvas, così resta con la tua voce.
+6545	Scrivi qui. Si salva mentre scrivi.
+6546	Tutte le voci
+6547	La traccia
+6548	La tua voce
+6549	La tua cronologia delle revisioni per {1} mostra ogni versione condivisa e cosa è cambiato, se vuoi averla accanto.
+6550	Aprila
+6551	Usa la versione di questo dispositivo
+6552	Tieni quella salvata
+6553	Questa voce è stata modificata su un altro dispositivo, quindi ciò che hai scritto qui ({1}) non è stato salvato sopra. Quella qui sotto è la versione salvata.
+6554	{1} voci nel file; {2} ancora {2|vuota|vuote}.
+6555	Tutte le {1} voci sono nel file.
+6556	Scrivi prima una voce.
+6557	{1} writer's notebook
+6558	Non è stato possibile creare il file qui. Scaricalo invece come testo.
+6559	Le tue voci, riviste ogni settimana e consegnate insieme alla fine. Privato: solo tu puoi leggerle, e Bo non fa parte del tuo quaderno.
+6560	Word
+6561	Il quaderno è per i membri
+6562	Registrati con la tua email montana.edu per tenere il quaderno nel tuo account, su ogni dispositivo.
+6563	Apertura del tuo quaderno…
+6564	(min-width: 821px)
+6565	da consegnare tutte con {1}, {2}
+6566	Voci
+6567	Scegli una voce da scrivere.
+6568	Questo PDF è protetto da password. Aprilo, copia il testo e incollalo qui.
+6569	Questo PDF non ha testo da leggere (potrebbe essere una scansione). Copia il testo dal documento originale e incollalo qui.
+6570	Times New Roman
+6571	xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+6572	_rels/.rels
+6573	word/_rels/document.xml.rels
+6574	word/styles.xml
+6575	heading 1
+6576	heading 2
+6577	docProps/core.xml
+6578	docProps/app.xml
+6579	Confronta
+6580	Testo semplice
+6581	con
+6582	aggiunto
+6583	1 voce nel file; {1} ancora {1|vuota|vuote}.

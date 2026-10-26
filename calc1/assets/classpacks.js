@@ -31,7 +31,7 @@
   /* the class views a pack can use; anything else in its NAV is dropped */
   const PACK_VIEWS = ['dashboard', 'calendar', 'notes', 'formulas', 'flashcards', 'textbook', 'practice', 'exam', 'planner', 'grades', 'scratchpad', 'forum', 'course', 'settings'];
   const ICON_NAMES = ['d20', 'wand', 'compass', 'orb', 'sword', 'potion', 'scroll', 'quill', 'crown', 'home', 'calendar', 'book', 'sigma', 'cards', 'list', 'file', 'chart', 'flask', 'calc', 'pen', 'link', 'info', 'search', 'flag', 'clock', 'bulb', 'fire', 'eye', 'target', 'chat', 'pin', 'bell', 'lock', 'shield', 'grid', 'users', 'award', 'gear', 'user', 'zap', 'mic', 'gem', 'trophy', 'path', 'sliders'];
-  const DATA_KEYS = ['code', 'name', 'short', 'term', 'tagline', 'kind', 'quizNote', 'formulasNote', 'filterExample', 'COURSE', 'GRADING', 'EXAMS', 'CALENDAR', 'CALENDAR_NOTE', 'RECURRING', 'SEMESTER', 'VARIANTS', 'UNITS', 'SECTIONS', 'FORMULAS', 'FLASHCARDS', 'PRACTICE', 'CHECKLISTS', 'INFO', 'NAV'];
+  const DATA_KEYS = ['code', 'name', 'short', 'term', 'tagline', 'kind', 'quizNote', 'formulasNote', 'filterExample', 'COURSE', 'GRADING', 'EXAMS', 'CALENDAR', 'CALENDAR_NOTE', 'RECURRING', 'SEMESTER', 'VARIANTS', 'UNITS', 'SECTIONS', 'FORMULAS', 'FLASHCARDS', 'PRACTICE', 'CHECKLISTS', 'INFO', 'NAV', 'DRAFTS', 'NOTEBOOK'];
   const META_KEYS = ['format', 'version', 'id', 'color', 'archetype', 'resources', 'resourcesBlurb', 'guides', 'canvasMatch', 'QUIZ', 'notes'];
   const DEFAULT_HINT = 'Rule out the options that describe a different structure, process or idea first.';
 
@@ -349,6 +349,11 @@
     P.NAV = nav.map(g => ({ label: String(g.label || ''), items: (g.items || []).filter(it => Array.isArray(it) && PACK_VIEWS.includes(it[0]) && (it[0] !== 'practice' || P.QUIZ || P.hasQuiz)).map(it => [it[0], String(it[1] || it[0]), ICON_NAMES.includes(it[2]) ? it[2] : 'file']) })).filter(g => g.items.length);
     if (!P.NAV.some(g => g.items.some(it => it[0] === 'dashboard'))) P.NAV.unshift({ label: 'Today', items: [['dashboard', 'Dashboard', 'home']] });
     P.INFO = P.INFO.map(x => Object.assign({}, x, { icon: ICON_NAMES.includes(x.icon) ? x.icon : 'info' }));
+    // projects for Bo's draft feedback (assets/drafts.js) and a writer's notebook (assets/notebook.js), when the class has them
+    if (Array.isArray(P.DRAFTS)) P.DRAFTS = P.DRAFTS.filter(d => d && typeof d === 'object').map(d => ({ id: String(d.id || ''), short: String(d.short || d.name || d.id || ''), name: String(d.name || d.short || d.id || ''), brief: String(d.brief || ''), goals: (Array.isArray(d.goals) ? d.goals : []).map(String).slice(0, 8), draft: d.draft ? String(d.draft) : '', revised: d.revised ? String(d.revised) : '' }));
+    else delete P.DRAFTS;
+    if (P.NOTEBOOK && typeof P.NOTEBOOK === 'object' && Number(P.NOTEBOOK.count) > 0) P.NOTEBOOK = { count: Math.min(40, Math.floor(Number(P.NOTEBOOK.count))), due: P.NOTEBOOK.due ? String(P.NOTEBOOK.due) : '', entries: (Array.isArray(P.NOTEBOOK.entries) ? P.NOTEBOOK.entries : []).filter(e => e && Number(e.n) >= 1).map(e => ({ n: Math.floor(Number(e.n)), week: e.week ? String(e.week) : '', title: e.title ? String(e.title) : '', prompt: e.prompt ? String(e.prompt) : '', reflect: e.reflect ? String(e.reflect) : '' })) };
+    else delete P.NOTEBOOK;
     return P;
   }
   const contrast = (a, b) => { const L = h => { const c = [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16) / 255).map(v => v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4); return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]; }; const x = L(a), y = L(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); };
@@ -394,6 +399,15 @@
     P.FORMULAS.forEach((g, i) => { if (!g.group || !Array.isArray(g.items)) E(`FORMULAS[${i}] needs a group name and items.`); else g.items.forEach(it => { if (!it.n || !(it.t || it.d || it.c)) E(`A formula in "${g.group}" needs a name (n) and one of t (TeX), d (definition) or c (code).`); }); });
     Object.entries(P.PRACTICE).forEach(([k, v]) => { if (!exIds.has(k)) W(`PRACTICE "${k}" is not an exam id.`); if (!v || !Array.isArray(v.problems)) E(`PRACTICE "${k}" needs problems.`); else v.problems.forEach((p, i) => { if (typeof p.n !== 'number') E(`PRACTICE "${k}" problem ${i + 1} needs a number n.`); if (!p.q || !p.s) E(`PRACTICE "${k}" problem ${i + 1} needs a question (q) and a solution (s).`); }); });
     Object.keys(P.CHECKLISTS).forEach(k => { if (!exIds.has(k)) W(`CHECKLISTS "${k}" is not an exam id.`); });
+    if (raw.DRAFTS !== undefined && !Array.isArray(raw.DRAFTS)) E('"DRAFTS" must be a list of projects.');
+    const draftIds = new Set();
+    (P.DRAFTS || []).forEach((d, i) => {
+      if (!/^[a-z0-9]{1,12}$/.test(d.id)) E(`DRAFTS[${i}] needs an id of up to 12 lowercase letters or digits.`); else if (draftIds.has(d.id)) E(`Project id "${d.id}" is used twice.`); draftIds.add(d.id);
+      const rd = (Array.isArray(raw.DRAFTS) ? raw.DRAFTS.filter(x => x && typeof x === 'object') : [])[i] || {}; if (!rd.name && !rd.short) E(`Project "${d.id}" needs a name.`); if (!d.brief) W(`Project "${d.id}" has no "brief": Bo reads drafts against it, so say what the assignment asks for.`); if (!d.goals.length) W(`Project "${d.id}" has no "goals": Bo reads drafts against them.`);
+      ['draft', 'revised'].forEach(k => { if (d[k] && !exIds.has(d[k])) W(`Project "${d.id}" ${k} "${d[k]}" is not an exam id.`); });
+    });
+    if (raw.NOTEBOOK !== undefined && !P.NOTEBOOK) E('"NOTEBOOK" needs a "count" of entries.');
+    if (P.NOTEBOOK) P.NOTEBOOK.entries.forEach(e => { if (e.n > P.NOTEBOOK.count) W(`Notebook entry ${e.n} is past its count (${P.NOTEBOOK.count}).`); if (e.reflect && !draftIds.has(e.reflect)) W(`Notebook entry ${e.n} reflects on "${e.reflect}", which is not a project.`); });
     (raw.NAV || []).forEach(g => (g.items || []).forEach(it => { if (Array.isArray(it) && !PACK_VIEWS.includes(it[0])) W(`NAV item "${it[0]}" is not available to uploaded classes and is left out.`); }));
     (raw.resources || []).forEach((r, i) => { if (!r.t || !r.u) E(`resources[${i}] needs a title (t) and a link (u).`); else if (!safeUrl(r.u)) W(`resources[${i}] link is not http, https or a Mathub path, so it is left out.`); });
     const stats = { sections: P.SECTIONS.length, units: P.UNITS.length, exams: P.EXAMS.length, calendar: P.CALENDAR.length, flashcards: P.FLASHCARDS.length, formulas: P.FORMULAS.reduce((n, g) => n + ((g.items || []).length), 0), practice: Object.values(P.PRACTICE).reduce((n, v) => n + ((v && v.problems) || []).length, 0), topics: 0, questions: 0, bankItems: 0 };

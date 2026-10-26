@@ -10,6 +10,11 @@ const T = require('./lib'); const fs = require('fs'); const path = require('path
   // a draft review (assets/drafts.js), written by the AI stand-in, so the review page is checked too
   const DRAFT = 'The bridge over the Gallatin hums in January when the ice comes down the river. I walked it every morning on the way to class that first winter. My hands were always cold and my bag was always too heavy for the wind.\n\nThe river was loud and it made me feel small in a good way. I stopped in the middle every time and looked upstream at the mountains. Nobody else stopped, but I did, and it became the place I think about when I think about Bozeman.';
   { const dr = await api(p, 'ai_draft_review', { class: 'writ', project: 'p1', stage: 'draft', text: DRAFT }); if (dr.json && dr.json.review) PAGES.push(['#/writ/drafts/' + dr.json.review.id, 'draft-review']); else console.log('no draft review:', dr.status, dr.json && dr.json.error); }
+  // a revised version, so the revision history compares two; and a notebook entry
+  await api(p, 'ai_draft_review', { class: 'writ', project: 'p1', stage: 'revised', text: DRAFT.replace('every morning', 'every grey morning') + '\n\nThe ice is gone by March.' });
+  PAGES.push(['#/writ/draft-history/p1', 'draft-history']);
+  await api(p, 'notebook_save', { class: 'writ', n: 5, prompt: 'Reflect on Project 1.', text: 'I changed the opening twice before it sounded like me.' });
+  PAGES.push(['#/writ/notebook/5', 'notebook']);
   const totals = {}; const serious = [];
   for (const [hash, name] of PAGES) {
     await go(p, hash, 900); await p.addScriptTag({ content: axe });
@@ -44,6 +49,7 @@ const T = require('./lib'); const fs = require('fs'); const path = require('path
   await p.keyboard.press('Control+k'); await p.waitForTimeout(200); check('search modal takes focus', await p.evaluate(() => document.activeElement && document.activeElement.id === 'search-input')); await p.keyboard.press('Escape'); await p.waitForTimeout(150); check('escape closes search', !(await p.$('#search-modal')));
   serious.forEach(s => log('  ! ' + s));
   check('no serious or critical axe violations', serious.length === 0, serious.length);
-  await api(p, 'ai_draft_delete', { class: 'writ', all: 1 });   // the review made above
+  await api(p, 'ai_draft_delete', { class: 'writ', all: 1 });   // the reviews made above
+  await api(p, 'notebook_delete', { class: 'writ', n: 5 });   // and the notebook entry
   await c.close(); await T.finish();
 })();
