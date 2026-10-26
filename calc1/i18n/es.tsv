@@ -6477,3 +6477,358 @@
 6581	con
 6582	añadido
 6583	1 entrada en el archivo; {1} {1|aún vacía|aún vacías}.
+6584	Apuntes de diapositivas
+6585	Revisa mi trabajo
+6586	Preparar las horas de consulta
+6587	Docencia
+6588	borrador de revisión entre compañeros
+6589	compartió un borrador contigo:
+6590	respondió sobre tu borrador
+6591	es tu compañero de revisión para
+6592	te dio créditos para
+6593	Trabajos y cuaderno
+6594	Qué hace Bo en tu clase y qué controlas tú
+6595	Los trabajos que tus estudiantes escriben y revisan. Cada uno recibe los comentarios de Bo sobre el borrador, donde comenta como un tutor de escritura y nunca escribe nada por ellos, y un historial de revisiones. Déjalo vacío si tu clase no tiene ninguno.
+6596	Trabajo 1: Un lugar que importa
+6597	Entrega del primer borrador
+6598	Qué pide
+6599	La tarea en pocas frases.
+6600	Entrega del borrador revisado
+6601	Sus metas, una por línea
+6602	Una tesis clara\nEvidencia de al menos dos fuentes
+6603	Bo lee cada borrador con ellas en mente.
+6604	este trabajo
+6605	Aún no hay trabajos.
+6606	Añadir un trabajo
+6607	0 si no hay. Los estudiantes escriben cada entrada en Mathub, en privado y sin IA, y las descargan todas para entregarlas.
+6608	Fecha de entrega
+6609	Deja que este borrador cuente, sin tu nombre, en las tendencias que tu profesor ve en la clase
+6610	(solo cuando lo hayan hecho cinco estudiantes; nunca tus palabras)
+6611	Página del profesor
+6612	Revisión entre compañeros
+6613	De la revisión entre compañeros
+6614	Envía una versión revisada y estos comentarios irán a Bo con ella, como comentarios de revisión entre compañeros.
+6615	Intercambiar con un compañero
+6616	Compartido con {1}
+6617	¿Dejar de compartir esta versión con {1}? Su respuesta también se borra.
+6618	Ya no se comparte
+6619	tu profesor
+6620	Tu profesor
+6621	Compartido con {1} el {2}.
+6622	Tu nota:
+6623	Comparte esta versión con {1}: verá tu borrador, los comentarios de Bo y tus respuestas a sus notas, y podrá responder.
+6624	Compartir con tu profesor
+6625	Una nota para tu profesor
+6626	Por ejemplo: ¿mi final es demasiado tranquilo?
+6627	_rels/$1.rels
+6628	Relationship
+6629	Id
+6630	ppt/presentation.xml
+6631	Notes:
+6632	Ese archivo es demasiado grande. Guarda las diapositivas como PDF sin las imágenes o divide la clase.
+6633	Este navegador no puede abrir ese archivo. Prueba con otro navegador o guarda las diapositivas como PDF.
+6634	Ese PDF está protegido con contraseña. Guárdalo sin ella y vuelve a intentarlo.
+6635	Notes: {1}
+6636	Para los profesores de esta clase: cómo funciona Bo en ella, los borradores que los estudiantes compartieron contigo, las tendencias de la clase y créditos para tus estudiantes.
+6637	Esta página es para los profesores de la clase. Si das esta clase, inicia sesión con el correo que figura en su programa, o añade la clase en
+6638	Qué pueden hacer los profesores en Mathub
+6639	Pega la hoja de la tarea o abre el archivo que das a los estudiantes.
+6640	Hoja de la tarea
+6641	Rúbrica
+6642	(opcional, hasta 12 criterios)
+6643	Añadir un criterio
+6644	Sus metas, según el programa
+6645	Por ejemplo: Usamos MLA 9. No se habla del examen para casa antes de la fecha de entrega.
+6646	Bo en esta clase
+6647	Solo pistas
+6648	Bo da una pista a la vez y revisa los pasos de los estudiantes, y nunca da la respuesta final de un problema de esta clase.
+6649	Notas para Bo
+6650	Bo las lee en cada chat y llamada de esta clase. Sus propias reglas van primero: las notas no pueden hacer que escriba el trabajo de los estudiantes por ellos.
+6651	Los estudiantes comparten un borrador y Bo lo comenta como un tutor de escritura: marca pasajes, nombra las revisiones más importantes y hace preguntas. Nunca escribe nada por ellos.
+6652	Los estudiantes pueden compartir una versión contigo
+6653	Eligen una versión para compartir, con una nota; tú la lees, con los comentarios de Bo, en Compartido contigo.
+6654	Intercambios de revisión entre compañeros
+6655	Un estudiante ofrece un borrador y se le empareja con un compañero que ofrece uno del mismo proyecto; cada uno lee el del otro y le responde.
+6656	Días para responder
+6657	Hojas de tarea y rúbricas
+6658	Bo lee cada borrador con ellas y con las metas del proyecto en mente. Nunca pone una nota, una puntuación ni un nivel.
+6659	Desactivado
+6660	Activado
+6661	Desactivar
+6662	Guardado {1}
+6663	Criterio, como Enfoque
+6664	Criterio
+6665	Cómo se ve cuando está bien hecho
+6666	Quitar este criterio
+6667	hoja de la tarea
+6668	1 criterio
+6669	aún no se ha añadido nada
+6670	{1} de 1500 caracteres
+6671	Sin guardar: tus cambios de la última vez
+6672	Ese archivo no tiene texto para leer. Copia el texto y pégalo aquí.
+6673	Abierto: {1}
+6674	Hasta 12 criterios.
+6675	¿Desactivar los comentarios de Bo sobre borradores para toda la clase? Los estudiantes conservan sus revisiones anteriores.
+6676	instruct_shares&class=
+6677	Aún no hay borradores compartidos. Cuando un estudiante comparta contigo una versión de un borrador, aparecerá aquí, con los comentarios de Bo y su nota.
+6678	share/
+6679	Respondido
+6680	Solo de estudiantes que eligieron dejar que sus borradores cuenten, sin nombres, citas ni borradores, y solo cuando lo han hecho {1} estudiantes. Lo que dijo Bo, no una calificación.
+6681	Hasta ahora, 1 estudiante ha dejado que sus borradores cuenten. Las tendencias se muestran cuando lo hayan hecho {1}, para que nunca señalen a nadie.
+6682	Hasta ahora, {1} estudiantes han dejado que sus borradores cuenten. Las tendencias se muestran cuando lo hayan hecho {2}, para que nunca señalen a nadie.
+6683	Lo que Bo nombró entre las revisiones más importantes
+6684	{1} borradores de {2} estudiantes: {3} primeros borradores y {4} revisados. Extensión mediana: {5} palabras.
+6685	Algo fuera de las metas
+6686	En la versión siguiente, las revisiones anteriores de Bo estaban
+6687	hechas {1} · en parte {2} · aún no {3}
+6688	Respuestas de los estudiantes a las notas de Bo
+6689	marcadas como hechas {1} · en desacuerdo {2}
+6690	Para dar créditos a tus estudiantes, añade esta clase en
+6691	y dales su código para unirse. Los estudiantes que se unan aparecerán aquí.
+6692	1 estudiante se ha unido a {1}.
+6693	{1} estudiantes se han unido a {2}.
+6694	Créditos para cada estudiante
+6695	Dar créditos
+6696	Ver quiénes
+6697	Como administrador, los das desde Mathub.
+6698	Salen de los créditos que compraste o te dieron (no de los gratuitos del mes): tienes {1}.
+6699	Los estudiantes los conservan y nunca caducan.
+6700	Dados hasta ahora
+6701	1 estudiante × {1} créditos = {2} créditos en total.
+6702	{1} estudiantes × {2} créditos = {3} créditos en total.
+6703	Da a cada estudiante entre 1 y {1} créditos.
+6704	¿Dar {1} créditos a cada uno de tus {2} estudiantes ({3} en total)? No se puede deshacer.
+6705	Diste {1} créditos a cada uno de {2} estudiantes
+6706	Compartido contigo ({1})
+6707	Compartido contigo
+6708	Tendencias
+6709	Abriendo…
+6710	instruct_patterns&class=
+6711	instruct_roster&class=
+6712	Lo marcó como hecho
+6713	No está de acuerdo
+6714	Tu respuesta
+6715	Su nota
+6716	Su borrador
+6717	{1} la verá en esta versión y en su bandeja de entrada.
+6718	Actualizar la respuesta
+6719	Enviar la respuesta
+6720	Enviada {1}
+6721	Otras versiones que compartió
+6722	Respuesta eliminada
+6723	Respuesta enviada
+6724	Para los profesores de la clase
+6725	Inicia sesión con el correo que figura en el programa de tu clase.
+6726	instruct_get&class=
+6727	Para profesores
+6728	Mathub para profesores
+6729	Un sitio de estudio para tu clase, con Bo, un tutor de IA que enseña en lugar de hacer el trabajo. Esto es lo que hace, lo que controlas y lo que ves.
+6730	Qué hace Bo
+6731	Averigua en qué punto está un estudiante, explica una idea a la vez, muestra un ejemplo resuelto y luego le deja el siguiente paso.
+6732	Comprueba las matemáticas antes de dar por buena una respuesta, y lo dice con amabilidad cuando está mal.
+6733	En una clase de escritura solo comenta borradores: marca pasajes, nombra las revisiones más importantes y hace preguntas. Nunca escribe una frase del trabajo de un estudiante, y el servidor descarta cualquier comentario que lo haga.
+6734	Lo que controlas
+6735	Cada clase tiene una página del profesor para sus profesores:
+6736	Solo pistas:
+6737	Bo da pistas y revisa pasos, nunca respuestas finales.
+6738	Notas para Bo:
+6739	lo que debe saber de tu clase, como tu estilo de citas.
+6740	activados o desactivados para la clase, con la hoja de la tarea y la rúbrica de cada proyecto para que Bo las tenga en cuenta. Nunca califica.
+6741	Compartir
+6742	intercambios de revisión entre compañeros
+6743	activados o desactivados.
+6744	Lo que ves
+6745	Un borrador solo cuando un estudiante elige compartirlo contigo, con los comentarios de Bo, sus respuestas a sus notas y su nota para ti. Puedes responder.
+6746	Tendencias de la clase: qué metas nombra Bo con más frecuencia entre las revisiones más importantes. Solo de estudiantes que dejan que sus borradores cuenten, solo cuando lo han hecho cinco, y nunca un nombre, una cita ni un borrador.
+6747	Nunca los chats de un estudiante con Bo, su cuaderno ni nada que no haya compartido.
+6748	Créditos para tus estudiantes
+6749	Bo funciona con créditos, y cada cuenta recibe algunos gratis cada mes. Añade tu clase en Mathub Profesorado y da a los estudiantes su código; después puedes darle créditos a cada uno desde tu página del profesor, de los créditos que compraste. Nunca caducan.
+6750	Los borradores, chats y cuadernos de los estudiantes son privados. Los borradores se envían a Anthropic, que crea la IA detrás de Bo, para que se lean, y no se usan para entrenarla. Todo se borra cuando un estudiante elimina su cuenta. La
+6751	política de privacidad
+6752	completa dice exactamente qué se guarda.
+6753	Para empezar
+6754	Regístrate con el correo de tu universidad.
+6755	Si tu clase está en Mathub y su programa incluye tu correo, la página del profesor está en su barra lateral.
+6756	Si no, añádela en Mathub Profesorado: escribe allí el programa y publícalo como clase.
+6757	Abrir Mathub Profesorado
+6758	Escríbenos
+6759	chip bad
+6760	chip good
+6761	venció {1}
+6762	Intercambia borradores con un compañero que trabaja en el mismo proyecto: cada uno lee el del otro y le responde, como en clase.
+6763	peer_status&class=
+6764	Tus intercambios
+6765	Tu profesor no ha activado los intercambios de revisión entre compañeros en esta clase.
+6766	Das esta clase: actívalos en la
+6767	Ofrecer un borrador
+6768	Búscame un compañero
+6769	Te emparejan con un compañero que ofrece un borrador del mismo proyecto. Cada uno lee el borrador del otro (no los comentarios de Bo) y responde en {1} días. Tu compañero ve tu nombre.
+6770	Cada uno de tus proyectos ya está en un intercambio o esperando uno.
+6771	Comparte primero un borrador con Bo: un intercambio ofrece la versión que compartiste.
+6772	Esperando compañero
+6773	Recibirás una notificación cuando te emparejen con un compañero.
+6774	Dejar de esperar
+6775	Enviaste el tuyo
+6776	El tuyo está empezado
+6777	El tuyo: sin empezar
+6778	El suyo llegó
+6779	El suyo: aún no
+6780	Ver lo que enviaste
+6781	Leer su borrador
+6782	Ver lo que escribió
+6783	Aún no hay intercambios.
+6784	Tienes compañero
+6785	Esperando a un compañero
+6786	Terminaste este intercambio. No volverán a emparejarte con {1}.
+6787	Este intercambio ha terminado.
+6788	El borrador de {1}
+6789	Enviaste tu revisión {1}.
+6790	Selecciona palabras del borrador para comentarlas; luego escribe una nota sobre todo el borrador y envíala.
+6791	Comentar las palabras seleccionadas
+6792	Primero selecciona un pasaje.
+6793	Tus comentarios
+6794	Aún ninguno. Selecciona un pasaje del borrador y pulsa Comentar.
+6795	Sobre todo el borrador
+6796	¿Qué funciona mejor para ti como lector? ¿Dónde te perdiste o querías más? Una cosa que probarías a continuación.
+6797	Enviar a {1}
+6798	Lo que {1} escribió sobre el tuyo
+6799	Ábrelo junto a tu borrador
+6800	¿Algo va mal?
+6801	Si este borrador es ofensivo o no es un borrador, repórtalo: los moderadores lo leen y el intercambio termina. O termina el intercambio para que nunca vuelvan a emparejarte con {1}.
+6802	Reportar este borrador
+6803	No volver a emparejarnos
+6804	Tu comentario sobre “{1}”
+6805	¿Qué notas aquí como lector?
+6806	Aún sin enviar
+6807	Hasta 30 comentarios.
+6808	Escribe primero un comentario o una nota sobre todo el borrador.
+6809	¿Enviar tu revisión a {1}? No podrás cambiarla después.
+6810	Enviada a {1}
+6811	¿Qué le pasa a este borrador? Los moderadores leen tu nota y el borrador.
+6812	Reportado. Gracias.
+6813	¿Terminar este intercambio? No volverán a emparejarte con {1}.
+6814	Enviado
+6815	La revisión entre compañeros es para miembros
+6816	Regístrate con tu correo de montana.edu para intercambiar borradores con tus compañeros.
+6817	Esto es para miembros
+6818	Regístrate con tu correo de montana.edu. Cada cuenta recibe créditos gratis para Bo cada mes.
+6819	Haz una foto de tu trabajo en un problema. Bo encuentra la primera línea que falla, explica por qué y te da una pista para que lo corrijas tú. Nunca escribe la respuesta.
+6820	¿Cuál era el problema?
+6821	Hacer o elegir una foto
+6822	Un problema, escrito con claridad, de arriba abajo. También sirve una foto de una pantalla.
+6823	Por ejemplo: resuelve 2x + 3 = 11
+6824	Revisarlo
+6825	Usa unos pocos créditos. La foto no se guarda.
+6826	Elige una foto (JPEG, PNG o WebP).
+6827	Tu foto: {1}
+6828	No se pudo abrir esa foto. Prueba con otra.
+6829	Bo está leyendo tu trabajo
+6830	Unos veinte segundos. Quédate en esta página.
+6831	Bo no pudo leerlo
+6832	Prueba con una foto con más luz, más de cerca y con un solo problema, o escribe también el problema.
+6833	El problema
+6834	la primera línea que falla
+6835	después del fallo
+6836	Todas las líneas son correctas.
+6837	Línea {1}
+6838	comprobado con exactitud
+6839	Pregúntale a Bo por esta línea
+6840	Revisar otro
+6841	Mi trabajo en {1}:
+6842	Dijiste que la línea {1} falla: {2}
+6843	un problema
+6844	¿Por qué está mal?
+6845	Dame otra pista.
+6846	Muéstrame un ejemplo parecido.
+6847	Activa Bo en todas las páginas en Ajustes para preguntarle por una línea.
+6848	Abre las diapositivas de tu clase y Bo las convierte en apuntes y tarjetas, a partir de lo que dicen. Se guardan en tu cuenta.
+6849	Nuevos apuntes
+6850	Abrir diapositivas
+6851	Esas diapositivas no tienen texto para leer. Si son solo imágenes, hay que escribir las palabras.
+6852	Bo está leyendo {1} diapositivas ({2} palabras)
+6853	Esto le lleva como un minuto. Quédate en esta página.
+6854	{1} tarjetas creadas
+6855	learn_slides_list&class=
+6856	Tus apuntes
+6857	{1} diapositivas · {2} tarjetas · {3}
+6858	Aún no hay apuntes. Abre las diapositivas de una clase para empezar.
+6859	¿Eliminar estos apuntes y sus tarjetas?
+6860	Todos los apuntes
+6861	{1} diapositivas · {2}
+6862	Tarjetas para Anki o Quizlet
+6863	Mostrar la respuesta
+6864	Toca la tarjeta o pulsa Espacio para darle la vuelta; las flechas van atrás y adelante.
+6865	Mostrar la pregunta
+6866	Ese archivo no se pudo crear aquí. Usa Imprimir.
+6867	Tres preguntas que vale la pena hacer en las horas de consulta, elegidas de lo que fallaste últimamente en esta clase. Llévalas, con tus intentos.
+6868	De tus errores
+6869	1 pregunta que fallaste
+6870	{1} preguntas que fallaste
+6871	Aún no hay errores guardados en esta clase. Di en qué estás atascado o practica primero.
+6872	¿Algo más en lo que estés atascado?
+6873	Por ejemplo: cuándo usar la regla de la cadena
+6874	Elegir mis tres preguntas
+6875	Primero di en qué estás atascado, o practica un poco: Bo elige las preguntas a partir de lo que salió mal.
+6876	Bo está eligiendo tus preguntas
+6877	Tus preguntas
+6878	Lleva
+6879	Aquí no se puede copiar. Selecciona las preguntas y cópialas tú.
+6880	Compartir borradores con el profesor no está activado en esta clase.
+6881	Aquí solo se pueden eliminar publicaciones y comentarios.
+6882	Solo los profesores de esta clase pueden ver esto.
+6883	Esa clase no está en Mathub.
+6884	Ese borrador no está compartido contigo.
+6885	Da a cada estudiante entre 1 y
+6886	Aún no se ha unido ningún estudiante a tu clase de Mathub Profesorado para este curso.
+6887	La lista de la clase cambió. Comprueba el número de estudiantes y vuelve a intentarlo.
+6888	Eso cuesta
+6889	Primero haz una foto de tu trabajo.
+6890	Bo no pudo terminar de revisar tu trabajo. Inténtalo de nuevo.
+6891	Es demasiado para un solo conjunto (unas 13 000 palabras). Divide la clase en dos.
+6892	Bo no pudo terminar los apuntes. Inténtalo de nuevo.
+6893	Esos apuntes no son tuyos.
+6894	Practica un poco primero, o di en qué estás atascado: Bo elige las preguntas a partir de lo que salió mal.
+6895	Bo no pudo terminar. Inténtalo de nuevo.
+6896	Esta clase no tiene proyectos para revisión entre compañeros.
+6897	Elige uno de tus borradores de esta clase.
+6898	Ya tienes un intercambio de revisión en curso para
+6899	Esa revisión no es tuya.
+6900	Esta revisión entre compañeros ha terminado.
+6901	Ya enviaste esta revisión.
+6902	Uno de tus comentarios señala palabras que no están en su borrador. Vuelve a seleccionar el pasaje.
+6903	Di brevemente qué está mal, para los moderadores.
+6904	Eso cuesta {1} créditos, y tienes {2} que compraste o te dieron (los créditos gratuitos del mes no se pueden dar). Consigue más en la página de Uso.
+6905	Ya tienes un intercambio de revisión en curso para {1}. Termínalo primero.
+6906	{1} criterios
+6907	{1} créditos
+6908	{1} de {2}
+6909	{1} respondió
+6910	vence {1}
+6911	versión {1}
+6912	compartido {1}
+6913	desde {1}
+6914	con {1}
+6915	terminado
+6916	hecho
+6917	foto
+6918	correcta
+6919	.pptx o .pdf. Se lee en este dispositivo; solo el texto se envía a Bo.
+6920	({1})
+6921	dominado
+6922	sin intentar
+6923	lo siguiente en tu camino
+6924	cambiar
+6925	nuevo
+6926	tú
+6927	{1} XP
+6928	clase
+6929	clase
+6930	trámite
+6931	examen
+6932	festivo
+6933	laboratorio
+6934	repaso
+6935	y
+6936	.docx, .pdf, .odt o .txt
+6937	1 sugerencia
+6938	{1} sugerencias

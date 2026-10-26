@@ -15,6 +15,10 @@ const T = require('./lib'); const fs = require('fs'); const path = require('path
   PAGES.push(['#/writ/draft-history/p1', 'draft-history']);
   await api(p, 'notebook_save', { class: 'writ', n: 5, prompt: 'Reflect on Project 1.', text: 'I changed the opening twice before it sounded like me.' });
   PAGES.push(['#/writ/notebook/5', 'notebook']);
+  // the learning tools (assets/learn.js), a set of notes from slides among them; the instructors' explainer; peer review
+  { const sl = await api(p, 'learn_slides', { class: 'calc', source: 'Lecture 1.pptx', slides: [{ n: 1, text: 'Limits\nA limit is the value a function approaches.' }, { n: 2, text: 'One-sided limits\nFrom the left and from the right.' }] });
+    PAGES.push(['#/calc/checkwork', 'checkwork'], ['#/calc/slides', 'slides'], ['#/calc/officehours', 'officehours'], ['#/instructors', 'instructors'], ['#/writ/peer', 'peer']);
+    if (sl.json && sl.json.set) PAGES.push(['#/calc/slides/' + sl.json.set.id, 'slide-notes']); else console.log('no slide notes:', sl.status, sl.json && sl.json.error); }
   const totals = {}; const serious = [];
   for (const [hash, name] of PAGES) {
     await go(p, hash, 900); await p.addScriptTag({ content: axe });
@@ -31,7 +35,7 @@ const T = require('./lib'); const fs = require('fs'); const path = require('path
     syl.schedule = { start: '2026-08-24', end: '2026-09-11', rows: [{ date: '2026-08-24', type: 'lecture', title: 'Limits', notes: 'Read 1.1' }, { date: '2026-08-28', type: 'due', title: 'Homework 1', notes: '' }, { date: '2026-09-07', type: 'holiday', title: 'Labor Day', notes: '' }] };
     syl.exams = [{ name: 'Midterm 1', date: '2026-09-30', time: '18:00', place: 'Reid 108', covers: 'Chapter 1' }];
     await api(pi, 'teach_class_save', { id: cid, syllabus: syl }); await api(pi, 'teach_class_publish', { id: cid }); const jc = (await api(pi, 'teach_class_get&id=' + cid)).json.class.join_code;
-    for (const [hash, name] of [['#/teach', 'teach-home'], ['#/teach/new', 'teach-new'], ['#/teach/verify', 'teach-verify'], [`#/teach/${cid}`, 'teach-overview'], [`#/teach/${cid}/course`, 'teach-course'], [`#/teach/${cid}/people`, 'teach-people'], [`#/teach/${cid}/schedule`, 'teach-schedule'], [`#/teach/${cid}/exams`, 'teach-exams'], [`#/teach/${cid}/grading`, 'teach-grading'], [`#/teach/${cid}/policies`, 'teach-policies'], [`#/teach/${cid}/students`, 'teach-students'], [`#/teach/${cid}/attendance`, 'teach-attendance'], [`#/teach/${cid}/settings`, 'teach-settings'], [`#/teach/${cid}/assign`, 'teach-assign'], [`#/teach/${cid}/insights`, 'teach-insights'], [`#/syllabus/${jc}`, 'syllabus-page'], ['#/admin/teach', 'admin-teach']]) {
+    for (const [hash, name] of [['#/calc/instructor', 'instructor'], ['#/teach', 'teach-home'], ['#/teach/new', 'teach-new'], ['#/teach/verify', 'teach-verify'], [`#/teach/${cid}`, 'teach-overview'], [`#/teach/${cid}/course`, 'teach-course'], [`#/teach/${cid}/people`, 'teach-people'], [`#/teach/${cid}/schedule`, 'teach-schedule'], [`#/teach/${cid}/exams`, 'teach-exams'], [`#/teach/${cid}/papers`, 'teach-papers'], [`#/teach/${cid}/grading`, 'teach-grading'], [`#/teach/${cid}/policies`, 'teach-policies'], [`#/teach/${cid}/students`, 'teach-students'], [`#/teach/${cid}/attendance`, 'teach-attendance'], [`#/teach/${cid}/settings`, 'teach-settings'], [`#/teach/${cid}/assign`, 'teach-assign'], [`#/teach/${cid}/insights`, 'teach-insights'], [`#/syllabus/${jc}`, 'syllabus-page'], ['#/admin/teach', 'admin-teach']]) {
       await go(pi, hash, 1400); await pi.evaluate(() => document.querySelectorAll('.celebrate').forEach(e => e.remove())); await pi.addScriptTag({ content: axe });
       const r = await pi.evaluate(async () => { const res = await axe.run(document, { runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa', 'best-practice'] }, resultTypes: ['violations'] }); return res.violations.map(v => ({ id: v.id, impact: v.impact, help: v.help, n: v.nodes.length, sample: v.nodes.slice(0, 2).map(x => x.target.join(' ')) })); });
       log(`${name.padEnd(15)} ${r.length ? r.map(v => `${v.impact[0]}:${v.id}(${v.n})`).join(' ') : 'clean'}`);
@@ -51,5 +55,6 @@ const T = require('./lib'); const fs = require('fs'); const path = require('path
   check('no serious or critical axe violations', serious.length === 0, serious.length);
   await api(p, 'ai_draft_delete', { class: 'writ', all: 1 });   // the reviews made above
   await api(p, 'notebook_delete', { class: 'writ', n: 5 });   // and the notebook entry
+  await api(p, 'learn_slides_delete', { class: 'calc', all: 1 });   // and the notes from slides
   await c.close(); await T.finish();
 })();

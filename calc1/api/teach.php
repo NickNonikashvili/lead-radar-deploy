@@ -172,6 +172,10 @@ function mh_teach_clean_syllabus($in): array {
     'notes' => mh_teach_text($g['notes'] ?? '', 1500),
   ];
   $out['exams'] = array_map(fn($e) => ['name' => mh_teach_line($e['name'] ?? '', 60), 'date' => mh_teach_date($e['date'] ?? ''), 'time' => mh_teach_time($e['time'] ?? ''), 'place' => mh_teach_line($e['place'] ?? '', 80), 'covers' => mh_teach_text($e['covers'] ?? '', 400)], mh_teach_list($in['exams'] ?? null, 10));
+  // papers students write and revise (Bo's draft feedback, api/drafts.php), and a writer's notebook (api/notebook.php)
+  $out['papers'] = array_map(fn($x) => ['name' => mh_teach_line($x['name'] ?? '', 120), 'brief' => mh_teach_text($x['brief'] ?? '', 1500), 'goals' => mh_teach_text($x['goals'] ?? '', 1500), 'draft' => mh_teach_date($x['draft'] ?? ''), 'revised' => mh_teach_date($x['revised'] ?? '')], mh_teach_list($in['papers'] ?? null, 8));
+  $nb = is_array($in['notebook'] ?? null) ? $in['notebook'] : [];
+  $out['notebook'] = ['count' => max(0, min(40, (int)($nb['count'] ?? 0))), 'due' => mh_teach_date($nb['due'] ?? '')];
   $s = is_array($in['schedule'] ?? null) ? $in['schedule'] : [];
   $rows = array_map(fn($r) => ['date' => mh_teach_date($r['date'] ?? ''), 'type' => in_array($r['type'] ?? '', MH_TEACH_CAL_TYPES, true) ? $r['type'] : 'lecture', 'title' => mh_teach_line($r['title'] ?? '', 140), 'notes' => mh_teach_text($r['notes'] ?? '', 400)], mh_teach_list($s['rows'] ?? null, 220));
   $rows = array_values(array_filter($rows, fn($r) => $r['date'] !== '')); usort($rows, fn($a, $b) => strcmp($a['date'], $b['date']));
@@ -206,6 +210,7 @@ function mh_teach_lint(array $s): array {
   else { $mins = array_column($s['grading']['scale'], 'min'); $sorted = $mins; rsort($sorted); if ($mins !== $sorted) $W('List the letter grades from highest to lowest cut-off.'); }
   $sec = 'exams'; foreach ($s['exams'] as $i => $e) { if ($e['name'] === '') $E('Exam ' . ($i + 1) . ' needs a name.'); if ($e['date'] === '') $W(($e['name'] ?: 'Exam ' . ($i + 1)) . ' has no date yet; students will not see a countdown for it.'); }
   $sec = 'schedule'; if (!$s['schedule']['rows']) $W('The schedule is empty. Use "Fill in class meetings" on the Schedule page to start from your meeting days.');
+  $sec = 'papers'; foreach ($s['papers'] ?? [] as $i => $pp) { if ($pp['name'] === '' && ($pp['brief'] !== '' || $pp['goals'] !== '')) $W('Paper ' . ($i + 1) . ' needs a name.'); elseif ($pp['name'] !== '' && $pp['goals'] === '') $T('Give ' . $pp['name'] . ' a few goals, one per line: Bo reads drafts against them.'); }
   $sec = 'policies'; $p = $s['policies'];
   if ($p['accommodations'] === '') $E('Keep an accommodations statement (students with disabilities need to know who to contact).');
   if ($p['integrity'] === '') $W('Add an academic integrity statement.');
@@ -266,6 +271,16 @@ function mh_teach_pack(array $c, array $s, string $pid): array {
   foreach ($rows as $r) { $t = $r['title'] !== '' ? $r['title'] : ucfirst($r['type']); if ($r['type'] === 'due') $t = 'Due: ' . $t; $CAL[] = [$r['date'], $map[$r['type']], mb_substr($t, 0, 160), $secOfWeek[$weekOf($r['date'])] ?? ''];
     $CAL[count($CAL) - 1] = array_values(array_filter($CAL[count($CAL) - 1], fn($v) => $v !== '')); }
   foreach ($EXAMS as $e) if (!array_filter($CAL, fn($x) => $x[0] === $e['date'] && $x[1] === 'exam')) $CAL[] = [$e['date'], 'exam', $e['name'] . ($e['dateLabel'] ? ' (' . $e['dateLabel'] . ')' : '')];
+  // papers: Bo's draft feedback for each (DRAFTS; assets/drafts.js), with their due dates on the calendar; and a writer's notebook
+  $DRAFTS = []; $pn = 0;
+  foreach ($s['papers'] ?? [] as $pp) {
+    if ($pp['name'] === '') continue; $pn++;
+    $goals = array_slice(array_values(array_filter(array_map(fn($g) => trim((string)preg_replace('/^[-•*\d.)\s]+/u', '', $g)), preg_split('/\n+/', $pp['goals'])), fn($g) => $g !== '')), 0, 8);
+    $DRAFTS[] = ['id' => 'p' . $pn, 'short' => 'Paper ' . $pn, 'name' => $pp['name'], 'brief' => $pp['brief'], 'goals' => $goals];
+    if ($pp['draft'] !== '') $CAL[] = [$pp['draft'], 'admin', mb_substr('Due: ' . $pp['name'] . ' (first draft)', 0, 160)];
+    if ($pp['revised'] !== '') $CAL[] = [$pp['revised'], 'admin', mb_substr('Due: ' . $pp['name'] . ' (revised draft)', 0, 160)];
+  }
+  $nbCount = (int)($s['notebook']['count'] ?? 0); if ($nbCount > 0 && ($s['notebook']['due'] ?? '') !== '') $CAL[] = [$s['notebook']['due'], 'admin', 'Due: writer’s notebook'];
   usort($CAL, fn($a, $b) => strcmp($a[0], $b[0]));
   // grading
   $cats = array_values(array_filter($s['grading']['categories'], fn($x) => $x['name'] !== '')); $GR = ['categories' => [], 'scale' => []];
@@ -311,6 +326,8 @@ function mh_teach_pack(array $c, array $s, string $pid): array {
     'NAV' => [['label' => 'Class', 'items' => array_values(array_filter([['dashboard', 'Class home', 'home'], ['course', 'Syllabus', 'file'], ['calendar', 'Schedule', 'calendar'], ['notes', 'Week by week', 'book'], $EXAMS ? ['exam', 'Exam prep', 'flag'] : null, ['grades', 'Grade calculator', 'calc'], ['planner', 'Study planner', 'path']]))], ['label' => 'Community', 'items' => [['forum', 'Class board', 'chat']]], ['label' => 'More', 'items' => [['settings', 'Settings', 'gear']]]],
     'resources' => array_slice($resources, 0, 12), 'canvasMatch' => array_values(array_unique([$code, str_replace(' ', '', $code)]))];
   if ($start !== '' && $end !== '') $pack['SEMESTER'] = ['start' => $start, 'end' => $end];
+  if ($DRAFTS) $pack['DRAFTS'] = $DRAFTS;
+  if ($nbCount > 0) $pack['NOTEBOOK'] = ['count' => $nbCount];
   return $pack;
 }
 

@@ -6380,3 +6380,358 @@
 6581	avec
 6582	ajouté
 6583	1 entrée dans le fichier ; {1} encore {1|vide|vides}.
+6584	Notes à partir des diapos
+6585	Vérifier mon travail
+6586	Préparer la permanence
+6587	Enseignement
+6588	brouillon de relecture entre pairs
+6589	a partagé un brouillon avec toi :
+6590	a répondu à propos de ton brouillon
+6591	est ton binôme de relecture pour
+6592	t’a donné des crédits pour
+6593	Travaux et carnet
+6594	Ce que fait Bo dans ton cours, et ce que tu décides
+6595	Les travaux que tes étudiants écrivent et révisent. Chacun reçoit les retours de Bo sur le brouillon, où il commente comme un tuteur d’écriture sans jamais rien écrire à leur place, et un historique des révisions. Laisse vide si ton cours n’en a pas.
+6596	Travail 1 : Un lieu qui compte
+6597	Remise du premier brouillon
+6598	Ce qui est demandé
+6599	Le sujet en quelques phrases.
+6600	Remise du brouillon révisé
+6601	Ses objectifs, un par ligne
+6602	Une thèse claire\nDes preuves tirées d’au moins deux sources
+6603	Bo lit chaque brouillon à l’aune de ces objectifs.
+6604	ce travail
+6605	Pas encore de travaux.
+6606	Ajouter un travail
+6607	0 pour aucun. Les étudiants écrivent chaque entrée sur Mathub, en privé et sans IA, et les téléchargent toutes pour les rendre.
+6608	Date de remise
+6609	Laisser ce brouillon compter, sans ton nom, dans les tendances que ton enseignant voit pour le cours
+6610	(seulement quand cinq étudiants l’ont fait ; jamais tes mots)
+6611	Page de l’enseignant
+6612	Relecture entre pairs
+6613	De la relecture entre pairs
+6614	Envoie une version révisée et ces commentaires partiront avec elle à Bo, comme commentaires de relecture entre pairs.
+6615	Échanger avec un camarade
+6616	Partagé avec {1}
+6617	Ne plus partager cette version avec {1} ? Sa réponse sera aussi supprimée.
+6618	N’est plus partagé
+6619	ton enseignant
+6620	Ton enseignant
+6621	Partagé avec {1} le {2}.
+6622	Ta note :
+6623	Partage cette version avec {1} : il ou elle verra ton brouillon, les retours de Bo et tes réponses à ses notes, et pourra répondre.
+6624	Partager avec ton enseignant
+6625	Un mot pour ton enseignant
+6626	Par exemple : ma fin est-elle trop discrète ?
+6627	_rels/$1.rels
+6628	Relationship
+6629	Id
+6630	ppt/presentation.xml
+6631	Notes:
+6632	Ce fichier est trop lourd. Enregistre les diapos en PDF sans les images, ou découpe le cours.
+6633	Ce navigateur ne peut pas ouvrir ce fichier. Essaie un autre navigateur, ou enregistre les diapos en PDF.
+6634	Ce PDF est protégé par un mot de passe. Enregistre-le sans mot de passe et réessaie.
+6635	Notes: {1}
+6636	Pour les enseignants du cours : comment Bo y fonctionne, les brouillons que les étudiants t’ont partagés, les tendances du cours et des crédits pour tes étudiants.
+6637	Cette page est réservée aux enseignants du cours. Si tu enseignes ce cours, connecte-toi avec l’adresse e-mail indiquée dans son plan de cours, ou ajoute le cours dans
+6638	Ce que les enseignants peuvent faire sur Mathub
+6639	Colle la consigne, ou ouvre le fichier que tu donnes aux étudiants.
+6640	Consigne
+6641	Grille d’évaluation
+6642	(facultatif, jusqu’à 12 critères)
+6643	Ajouter un critère
+6644	Ses objectifs, d’après le plan de cours
+6645	Par exemple : Nous utilisons MLA 9. On ne parle pas de l’examen maison avant la date de remise.
+6646	Bo dans ce cours
+6647	Indices seulement
+6648	Bo donne un indice à la fois et vérifie les étapes des étudiants, sans jamais donner la réponse finale d’un exercice de ce cours.
+6649	Notes pour Bo
+6650	Bo les lit dans chaque discussion et chaque appel de ce cours. Ses propres règles passent d’abord : les notes ne peuvent pas lui faire écrire le travail des étudiants à leur place.
+6651	Les étudiants partagent un brouillon et Bo le commente comme un tuteur d’écriture : il marque des passages, nomme les révisions les plus importantes et pose des questions. Il n’écrit jamais rien à leur place.
+6652	Les étudiants peuvent te partager une version
+6653	Ils choisissent une version à partager, avec un mot ; tu la lis, avec les retours de Bo, dans Partagé avec toi.
+6654	Échanges de relecture entre pairs
+6655	Un étudiant propose un brouillon et forme un binôme avec un camarade qui en propose un pour le même projet ; chacun lit celui de l’autre et lui répond.
+6656	Jours pour répondre
+6657	Consignes et grilles d’évaluation
+6658	Bo lit chaque brouillon à l’aune de ces documents et des objectifs du projet. Il ne donne jamais de note, de score ni de niveau.
+6659	Désactivé
+6660	Activé
+6661	Désactiver
+6662	Enregistré {1}
+6663	Critère, comme Clarté du propos
+6664	Critère
+6665	À quoi cela ressemble quand c’est bien fait
+6666	Retirer ce critère
+6667	consigne
+6668	1 critère
+6669	rien d’ajouté pour l’instant
+6670	{1} sur 1 500 caractères
+6671	Pas encore enregistré : tes modifications de la dernière fois
+6672	Ce fichier ne contient pas de texte lisible. Copie son texte et colle-le ici.
+6673	Ouvert : {1}
+6674	12 critères au maximum.
+6675	Désactiver les retours de Bo sur les brouillons pour tout le cours ? Les étudiants gardent leurs retours passés.
+6676	instruct_shares&class=
+6677	Aucun brouillon partagé pour l’instant. Quand un étudiant te partage une version d’un brouillon, elle s’affiche ici, avec les retours de Bo et son mot.
+6678	share/
+6679	Répondu
+6680	Uniquement à partir des étudiants qui ont choisi de laisser compter leurs brouillons, sans noms, citations ni brouillons, et seulement une fois que {1} étudiants l’ont fait. Ce que Bo a dit, pas une note.
+6681	Pour l’instant, 1 étudiant a laissé compter ses brouillons. Les tendances s’affichent quand {1} l’ont fait, pour ne jamais désigner personne.
+6682	Pour l’instant, {1} étudiants ont laissé compter leurs brouillons. Les tendances s’affichent quand {2} l’ont fait, pour ne jamais désigner personne.
+6683	Ce que Bo a cité parmi les révisions les plus importantes
+6684	{1} brouillons de {2} étudiants : {3} premiers brouillons et {4} révisés. Longueur médiane : {5} mots.
+6685	Autre chose que les objectifs
+6686	À la version suivante, les révisions précédentes de Bo étaient
+6687	faites {1} · en partie {2} · pas encore {3}
+6688	Réponses des étudiants aux notes de Bo
+6689	marquées comme faites {1} · désaccords {2}
+6690	Pour donner des crédits à tes étudiants, ajoute ce cours dans
+6691	et donne-leur son code d’accès. Les étudiants qui le rejoignent apparaissent ici.
+6692	1 étudiant a rejoint {1}.
+6693	{1} étudiants ont rejoint {2}.
+6694	Crédits pour chaque étudiant
+6695	Donner des crédits
+6696	Voir qui
+6697	En tant qu’administrateur, tu les donnes au nom de Mathub.
+6698	Ils sont pris sur les crédits que tu as achetés ou reçus (pas sur ceux gratuits du mois) : tu en as {1}.
+6699	Les étudiants les gardent, et ils n’expirent jamais.
+6700	Donnés jusqu’ici
+6701	1 étudiant × {1} crédits = {2} crédits au total.
+6702	{1} étudiants × {2} crédits = {3} crédits au total.
+6703	Donne à chaque étudiant entre 1 et {1} crédits.
+6704	Donner {1} crédits à chacun de tes {2} étudiants ({3} au total) ? C’est irréversible.
+6705	{1} crédits donnés à chacun des {2} étudiants
+6706	Partagé avec toi ({1})
+6707	Partagé avec toi
+6708	Tendances
+6709	Ouverture…
+6710	instruct_patterns&class=
+6711	instruct_roster&class=
+6712	Marqué comme fait
+6713	Pas d’accord
+6714	Ta réponse
+6715	Son mot
+6716	Son brouillon
+6717	{1} la verra sur cette version et dans sa boîte de réception.
+6718	Mettre à jour la réponse
+6719	Envoyer la réponse
+6720	Envoyée {1}
+6721	Autres versions partagées
+6722	Réponse supprimée
+6723	Réponse envoyée
+6724	Pour les enseignants du cours
+6725	Connecte-toi avec l’adresse e-mail indiquée dans le plan de ton cours.
+6726	instruct_get&class=
+6727	Pour les enseignants
+6728	Mathub pour les enseignants
+6729	Un site d’étude pour ton cours, avec Bo, un tuteur IA qui enseigne au lieu de faire le travail. Voici ce qu’il fait, ce que tu décides et ce que tu vois.
+6730	Ce que fait Bo
+6731	Il cerne où en est l’étudiant, explique une idée à la fois, montre un exemple corrigé, puis lui laisse l’étape suivante.
+6732	Il vérifie les calculs avant d’accepter une réponse, et le dit avec bienveillance quand elle est fausse.
+6733	Dans un cours d’écriture, il ne fait que commenter les brouillons : il marque des passages, nomme les révisions les plus importantes et pose des questions. Il n’écrit jamais une phrase du travail d’un étudiant, et le serveur écarte tout commentaire qui le ferait.
+6734	Ce que tu décides
+6735	Chaque cours a une page de l’enseignant pour ses enseignants :
+6736	Indices seulement :
+6737	Bo donne des indices et vérifie les étapes, jamais les réponses finales.
+6738	Notes pour Bo :
+6739	ce qu’il doit savoir de ton cours, comme ton style de citation.
+6740	activés ou non pour le cours, avec la consigne et la grille de chaque projet, que Bo prend en compte. Il ne note jamais.
+6741	Le partage
+6742	les échanges de relecture entre pairs
+6743	activés ou non.
+6744	Ce que tu vois
+6745	Un brouillon uniquement quand un étudiant choisit de te le partager, avec les retours de Bo, ses réponses à ses notes et son mot pour toi. Tu peux répondre.
+6746	Les tendances du cours : les objectifs que Bo cite le plus souvent parmi les révisions les plus importantes. Uniquement à partir des étudiants qui laissent compter leurs brouillons, seulement une fois que cinq l’ont fait, et jamais un nom, une citation ou un brouillon.
+6747	Jamais les discussions d’un étudiant avec Bo, son carnet, ni rien qu’il n’a pas partagé.
+6748	Des crédits pour tes étudiants
+6749	Bo fonctionne avec des crédits, et chaque compte en reçoit gratuitement chaque mois. Ajoute ton cours dans Mathub Enseignants et donne son code aux étudiants ; tu pourras ensuite donner des crédits à chacun depuis ta page de l’enseignant, sur les crédits que tu as achetés. Ils n’expirent jamais.
+6750	Les brouillons, discussions et carnets des étudiants leur sont privés. Les brouillons sont envoyés à Anthropic, qui fait l’IA derrière Bo, pour être lus, et ne servent pas à l’entraîner. Tout disparaît quand un étudiant supprime son compte. La
+6751	politique de confidentialité
+6752	complète dit exactement ce qui est conservé.
+6753	Pour commencer
+6754	Inscris-toi avec ton e-mail universitaire.
+6755	Si ton cours est sur Mathub et que son plan de cours indique ton e-mail, la page de l’enseignant est dans sa barre latérale.
+6756	Sinon, ajoute-le dans Mathub Enseignants : écris-y le plan de cours et publie-le comme cours.
+6757	Ouvrir Mathub Enseignants
+6758	Nous écrire
+6759	chip bad
+6760	chip good
+6761	était à rendre {1}
+6762	Échange tes brouillons avec un camarade qui travaille sur le même projet : chacun lit celui de l’autre et lui répond, comme en cours.
+6763	peer_status&class=
+6764	Tes échanges
+6765	Ton enseignant n’a pas activé les échanges de relecture entre pairs pour ce cours.
+6766	Tu enseignes ce cours : active-les sur la
+6767	Proposer un brouillon
+6768	Trouve-moi un binôme
+6769	Tu formes un binôme avec un camarade qui propose un brouillon du même projet. Vous lisez le brouillon l’un de l’autre (pas les retours de Bo) et répondez sous {1} jours. Ton binôme voit ton nom.
+6770	Chacun de tes projets est déjà dans un échange, ou en attend un.
+6771	Partage d’abord un brouillon avec Bo : un échange propose la version que tu as partagée.
+6772	En attente d’un binôme
+6773	Tu recevras une notification quand un camarade sera associé à toi.
+6774	Arrêter d’attendre
+6775	Tu as envoyé le tien
+6776	Le tien est commencé
+6777	Le tien : pas commencé
+6778	Le sien est arrivé
+6779	Le sien : pas encore
+6780	Voir ce que tu as envoyé
+6781	Lire son brouillon
+6782	Voir ce qu’il ou elle a écrit
+6783	Pas encore d’échanges.
+6784	Tu as un binôme
+6785	En attente d’un camarade
+6786	Tu as mis fin à cet échange. Tu ne seras plus associé à {1}.
+6787	Cet échange est terminé.
+6788	Brouillon de {1}
+6789	Tu as envoyé ta relecture {1}.
+6790	Sélectionne des mots du brouillon pour les commenter, puis écris un mot sur l’ensemble du brouillon et envoie-le.
+6791	Commenter les mots sélectionnés
+6792	Sélectionne d’abord un passage.
+6793	Tes commentaires
+6794	Aucun pour l’instant. Sélectionne un passage du brouillon et appuie sur Commenter.
+6795	Sur l’ensemble du brouillon
+6796	Qu’est-ce qui marche le mieux pour toi en tant que lecteur ? Où t’es-tu perdu ou en voulais-tu plus ? Une chose que tu essaierais ensuite.
+6797	Envoyer à {1}
+6798	Ce que {1} a écrit sur le tien
+6799	L’ouvrir à côté de ton brouillon
+6800	Un problème ?
+6801	Si ce brouillon est offensant ou n’est pas du tout un brouillon, signale-le : les modérateurs le lisent et l’échange prend fin. Ou mets fin à l’échange pour ne plus jamais être associé à {1}.
+6802	Signaler ce brouillon
+6803	Ne plus nous associer
+6804	Ton commentaire sur « {1} »
+6805	Que remarques-tu ici en tant que lecteur ?
+6806	Pas encore envoyé
+6807	30 commentaires au maximum.
+6808	Écris d’abord un commentaire ou un mot sur l’ensemble du brouillon.
+6809	Envoyer ta relecture à {1} ? Tu ne pourras plus la modifier.
+6810	Envoyée à {1}
+6811	Quel est le problème avec ce brouillon ? Les modérateurs lisent ton mot et le brouillon.
+6812	Signalé. Merci.
+6813	Mettre fin à cet échange ? Tu ne seras plus associé à {1}.
+6814	Envoyé
+6815	La relecture entre pairs est réservée aux membres
+6816	Inscris-toi avec ton e-mail montana.edu pour échanger des brouillons avec tes camarades.
+6817	C’est réservé aux membres
+6818	Inscris-toi avec ton e-mail montana.edu. Chaque compte reçoit des crédits gratuits pour Bo chaque mois.
+6819	Prends en photo ton travail sur un exercice. Bo trouve la première ligne qui déraille, explique pourquoi et te donne un indice pour corriger toi-même. Il n’écrit jamais la réponse.
+6820	Quel était l’exercice ?
+6821	Prendre ou choisir une photo
+6822	Un seul exercice, écrit lisiblement, de haut en bas. Une photo d’écran marche aussi.
+6823	Par exemple : résoudre 2x + 3 = 11
+6824	Vérifier
+6825	Utilise quelques crédits. La photo n’est pas conservée.
+6826	Choisis une photo (JPEG, PNG ou WebP).
+6827	Ta photo : {1}
+6828	Impossible d’ouvrir cette photo. Essaies-en une autre.
+6829	Bo lit ton travail
+6830	Une vingtaine de secondes. Reste sur cette page.
+6831	Bo n’a pas pu le lire
+6832	Essaie une photo plus lumineuse, plus proche, avec un seul exercice, ou tape aussi l’énoncé.
+6833	L’exercice
+6834	la première ligne qui déraille
+6835	après l’erreur
+6836	Chaque ligne découle de la précédente.
+6837	Ligne {1}
+6838	vérifié exactement
+6839	Demander à Bo pour cette ligne
+6840	En vérifier un autre
+6841	Mon travail sur {1} :
+6842	Tu as dit que la ligne {1} déraille : {2}
+6843	un exercice
+6844	Pourquoi c’est faux ?
+6845	Donne-moi un autre indice.
+6846	Montre-moi un exemple similaire.
+6847	Active Bo sur toutes les pages dans les Paramètres pour lui poser une question sur une ligne.
+6848	Ouvre les diapos de ton cours et Bo en fait des notes et des cartes, à partir de ce qu’elles disent. Elles sont gardées dans ton compte.
+6849	Nouvelles notes
+6850	Ouvrir des diapos
+6851	Ces diapos n’ont pas de texte à lire. Pour des diapos qui ne sont que des images, il faut taper les mots.
+6852	Bo lit {1} diapos ({2} mots)
+6853	Cela lui prend environ une minute. Reste sur cette page.
+6854	{1} cartes créées
+6855	learn_slides_list&class=
+6856	Tes notes
+6857	{1} diapos · {2} cartes · {3}
+6858	Pas encore de notes. Ouvre les diapos d’un cours pour commencer.
+6859	Supprimer ces notes et leurs cartes ?
+6860	Toutes les notes
+6861	{1} diapos · {2}
+6862	Cartes pour Anki ou Quizlet
+6863	Afficher la réponse
+6864	Touche la carte ou appuie sur Espace pour la retourner ; les flèches reculent et avancent.
+6865	Afficher la question
+6866	Ce fichier n’a pas pu être créé ici. Utilise plutôt Imprimer.
+6867	Trois questions à poser à la permanence, choisies parmi ce que tu as raté récemment dans ce cours. Apporte-les, avec tes tentatives.
+6868	À partir de tes erreurs
+6869	1 question ratée
+6870	{1} questions ratées
+6871	Aucune erreur enregistrée dans ce cours pour l’instant. Dis plutôt ce qui te bloque, ou entraîne-toi d’abord.
+6872	Autre chose qui te bloque ?
+6873	Par exemple : quand utiliser la dérivée d’une composée
+6874	Choisir mes trois questions
+6875	Dis d’abord ce qui te bloque, ou entraîne-toi un peu : Bo choisit les questions à partir de ce qui n’a pas marché.
+6876	Bo choisit tes questions
+6877	Tes questions
+6878	Apporter
+6879	La copie est bloquée ici. Sélectionne les questions et copie-les toi-même.
+6880	Le partage des brouillons avec l’enseignant n’est pas activé pour ce cours.
+6881	Seuls les messages et les commentaires peuvent être supprimés ici.
+6882	Seuls les enseignants de ce cours peuvent voir ceci.
+6883	Ce cours n’est pas sur Mathub.
+6884	Ce brouillon ne t’est pas partagé.
+6885	Donne à chaque étudiant entre 1 et
+6886	Aucun étudiant n’a encore rejoint ton cours Mathub Enseignants pour cette matière.
+6887	La liste du cours a changé. Vérifie le nombre d’étudiants et réessaie.
+6888	Il faut
+6889	Prends d’abord ton travail en photo.
+6890	Bo n’a pas pu finir de vérifier ton travail. Réessaie.
+6891	C’est trop pour un seul ensemble (environ 13 000 mots). Découpe le cours en deux.
+6892	Bo n’a pas pu finir les notes. Réessaie.
+6893	Ces notes ne sont pas à toi.
+6894	Entraîne-toi d’abord un peu, ou dis ce qui te bloque : Bo choisit les questions à partir de ce qui n’a pas marché.
+6895	Bo n’a pas pu finir. Réessaie.
+6896	Ce cours n’a pas de projets pour la relecture entre pairs.
+6897	Choisis un de tes brouillons pour ce cours.
+6898	Tu as déjà un échange de relecture en cours pour
+6899	Cette relecture n’est pas la tienne.
+6900	Cette relecture entre pairs est terminée.
+6901	Tu as déjà envoyé cette relecture.
+6902	Un de tes commentaires vise des mots qui ne sont pas dans son brouillon. Sélectionne à nouveau le passage.
+6903	Dis brièvement ce qui ne va pas, pour les modérateurs.
+6904	Il faut {1} crédits, et tu en as {2} achetés ou reçus (les crédits gratuits du mois ne peuvent pas être donnés). Obtiens-en plus sur la page Utilisation.
+6905	Tu as déjà un échange de relecture en cours pour {1}. Termine-le d’abord.
+6906	{1} critères
+6907	{1} crédits
+6908	{1} sur {2}
+6909	{1} a répondu
+6910	à rendre {1}
+6911	version {1}
+6912	partagé {1}
+6913	depuis {1}
+6914	avec {1}
+6915	terminé
+6916	fini
+6917	photo
+6918	correcte
+6919	.pptx ou .pdf. Lu sur cet appareil ; seul le texte est envoyé à Bo.
+6920	({1})
+6921	maîtrisé
+6922	pas essayé
+6923	prochaine étape de ton parcours
+6924	changer
+6925	nouveau
+6926	toi
+6927	{1} XP
+6928	cours
+6929	cours magistral
+6930	administratif
+6931	examen
+6932	férié
+6933	TP
+6934	révision
+6935	et
+6936	.docx, .pdf, .odt ou .txt
+6937	1 suggestion
+6938	{1} suggestions

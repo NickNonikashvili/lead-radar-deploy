@@ -7,3 +7,43 @@
 # the revision history (assets/drafts.js): "Compare [version] with [version]", and its key to the changes
 with
 added
+# messages the API puts a number or a project's name into (api/instruct.php, api/peer.php)
+That takes {1} credits, and you have {2} you bought or were given (the month’s free credits cannot be given). Get more on the Usage page.
+You already have a peer review swap going for {1}. Finish it first.
+# instructors, peer review and the learning tools (assets/instruct.js, peer.js, learn.js, drafts.js): counts, dates and names in short words
+{1} criteria
+{1} credits
+{1} of {2}
+{1} replied
+due {1}
+version {1}
+shared {1}
+since {1}
+with {1}
+ended
+done
+photo
+follows
+.pptx or .pdf. Read on this device; only the text is sent to Bo.
+# the class dashboard (assets/app.js): words put around a value ("76% · solid", "(green circle, solid)"), its chips and tags
+({1})
+solid
+not tried
+next on your path
+change
+new
+you
+{1} XP
+class
+lecture
+admin
+exam
+holiday
+lab
+review
+# a word between two bold labels; the files a draft opens from (assets/drafts.js, instruct.js)
+and
+.docx, .pdf, .odt or .txt
+# Mathub Faculty (assets/teach.js): how many suggestions a part of the syllabus has
+1 suggestion
+{1} suggestions

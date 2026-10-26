@@ -6380,3 +6380,358 @@
 6581	con
 6582	aggiunto
 6583	1 voce nel file; {1} ancora {1|vuota|vuote}.
+6584	Appunti dalle slide
+6585	Controlla il mio lavoro
+6586	Prepara il ricevimento
+6587	Insegnamento
+6588	bozza della revisione tra pari
+6589	ha condiviso una bozza con te:
+6590	ha risposto sulla tua bozza
+6591	è il tuo compagno di revisione per
+6592	ti ha dato crediti per
+6593	Elaborati e quaderno
+6594	Cosa fa Bo nel tuo corso e cosa decidi tu
+6595	Gli elaborati che i tuoi studenti scrivono e rivedono. Per ognuno ricevono i commenti di Bo sulla bozza, dove commenta come un tutor di scrittura senza mai scrivere nulla al posto loro, e una cronologia delle revisioni. Lascia vuoto se il tuo corso non ne ha.
+6596	Elaborato 1: Un luogo che conta
+6597	Consegna della prima bozza
+6598	Cosa chiede
+6599	La consegna in poche frasi.
+6600	Consegna della bozza rivista
+6601	I suoi obiettivi, uno per riga
+6602	Una tesi chiara\nProve da almeno due fonti
+6603	Bo legge ogni bozza alla luce di questi.
+6604	questo elaborato
+6605	Ancora nessun elaborato.
+6606	Aggiungi un elaborato
+6607	0 se non c’è. Gli studenti scrivono ogni voce su Mathub, in privato e senza IA, e le scaricano tutte per consegnarle.
+6608	Data di consegna
+6609	Fai contare questa bozza, senza il tuo nome, nelle tendenze che il tuo docente vede nel corso
+6610	(solo quando l’hanno fatto cinque studenti; mai le tue parole)
+6611	Pagina del docente
+6612	Revisione tra pari
+6613	Dalla revisione tra pari
+6614	Invia una versione rivista e questi commenti andranno a Bo insieme a lei, come commenti della revisione tra pari.
+6615	Scambia con un compagno
+6616	Condivisa con {1}
+6617	Smettere di condividere questa versione con {1}? Anche la risposta verrà eliminata.
+6618	Non più condivisa
+6619	il tuo docente
+6620	Il tuo docente
+6621	Condivisa con {1} il {2}.
+6622	La tua nota:
+6623	Condividi questa versione con {1}: vedrà la tua bozza, i commenti di Bo e le tue risposte alle sue note, e potrà rispondere.
+6624	Condividi con il tuo docente
+6625	Una nota per il docente
+6626	Per esempio: il mio finale è troppo sommesso?
+6627	_rels/$1.rels
+6628	Relationship
+6629	Id
+6630	ppt/presentation.xml
+6631	Notes:
+6632	Il file è troppo grande. Salva le slide come PDF senza le immagini, oppure dividi la lezione.
+6633	Questo browser non riesce ad aprire il file. Prova un altro browser, oppure salva le slide come PDF.
+6634	Il PDF è protetto da password. Salvalo senza password e riprova.
+6635	Notes: {1}
+6636	Per i docenti del corso: come funziona Bo nel corso, le bozze che gli studenti ti hanno condiviso, le tendenze del corso e i crediti per i tuoi studenti.
+6637	Questa pagina è per i docenti del corso. Se insegni questo corso, accedi con l’indirizzo email riportato nel programma, oppure aggiungi il corso in
+6638	Cosa possono fare i docenti su Mathub
+6639	Incolla la consegna, oppure apri il file che dai agli studenti.
+6640	Consegna
+6641	Griglia di valutazione
+6642	(facoltativa, fino a 12 criteri)
+6643	Aggiungi un criterio
+6644	I suoi obiettivi, dal programma
+6645	Per esempio: Usiamo MLA 9. Non si parla dell’esame da casa prima della scadenza.
+6646	Bo in questo corso
+6647	Solo suggerimenti
+6648	Bo dà un suggerimento alla volta e controlla i passaggi degli studenti, senza mai dare la risposta finale a un esercizio di questo corso.
+6649	Note per Bo
+6650	Bo le legge in ogni chat e chiamata di questo corso. Le sue regole vengono prima: le note non possono fargli scrivere il lavoro al posto degli studenti.
+6651	Gli studenti condividono una bozza e Bo la commenta come un tutor di scrittura: segna dei passaggi, indica le revisioni più importanti e fa domande. Non scrive mai nulla al posto loro.
+6652	Gli studenti possono condividere una versione con te
+6653	Scelgono una versione da condividere, con una nota; tu la leggi, con i commenti di Bo, in Condivise con te.
+6654	Scambi di revisione tra pari
+6655	Uno studente propone una bozza e viene abbinato a un compagno che ne propone una dello stesso progetto; ognuno legge quella dell’altro e gli risponde.
+6656	Giorni per rispondere
+6657	Consegne e griglie di valutazione
+6658	Bo legge ogni bozza alla luce di questi materiali e degli obiettivi del progetto. Non dà mai un voto, un punteggio o un livello.
+6659	Disattivato
+6660	Attivato
+6661	Disattiva
+6662	Salvato {1}
+6663	Criterio, ad esempio Focus
+6664	Criterio
+6665	Come appare quando è fatto bene
+6666	Rimuovi questo criterio
+6667	consegna
+6668	1 criterio
+6669	ancora niente di aggiunto
+6670	{1} di 1.500 caratteri
+6671	Non ancora salvate: le tue modifiche dell’ultima volta
+6672	Il file non contiene testo da leggere. Copia il testo e incollalo qui.
+6673	Aperto: {1}
+6674	Al massimo 12 criteri.
+6675	Disattivare i commenti di Bo sulle bozze per tutto il corso? Gli studenti mantengono le revisioni passate.
+6676	instruct_shares&class=
+6677	Ancora nessuna bozza condivisa. Quando uno studente condivide con te una versione di una bozza, compare qui, con i commenti di Bo e la sua nota.
+6678	share/
+6679	Risposto
+6680	Solo dagli studenti che hanno scelto di far contare le proprie bozze, senza nomi, citazioni o bozze, e solo quando l’hanno fatto {1} studenti. Ciò che ha detto Bo, non un voto.
+6681	Finora 1 studente ha fatto contare le proprie bozze. Le tendenze compaiono quando l’hanno fatto in {1}, così non indicano mai nessuno.
+6682	Finora {1} studenti hanno fatto contare le proprie bozze. Le tendenze compaiono quando l’hanno fatto in {2}, così non indicano mai nessuno.
+6683	Cosa Bo ha indicato tra le revisioni più importanti
+6684	{1} bozze di {2} studenti: {3} prime bozze e {4} riviste. Lunghezza mediana: {5} parole.
+6685	Qualcosa al di fuori degli obiettivi
+6686	Nella versione successiva, le revisioni precedenti di Bo erano
+6687	fatte {1} · in parte {2} · non ancora {3}
+6688	Risposte degli studenti alle note di Bo
+6689	segnate come fatte {1} · in disaccordo {2}
+6690	Per dare crediti ai tuoi studenti, aggiungi questo corso in
+6691	e dai loro il codice di iscrizione. Gli studenti che si iscrivono compaiono qui.
+6692	1 studente si è iscritto a {1}.
+6693	{1} studenti si sono iscritti a {2}.
+6694	Crediti per ogni studente
+6695	Dai crediti
+6696	Vedi chi
+6697	Come amministratore, li dai a nome di Mathub.
+6698	Vengono presi dai crediti che hai comprato o ricevuto (non da quelli gratuiti del mese): ne hai {1}.
+6699	Gli studenti li tengono, e non scadono mai.
+6700	Dati finora
+6701	1 studente × {1} crediti = {2} crediti in tutto.
+6702	{1} studenti × {2} crediti = {3} crediti in tutto.
+6703	Dai a ogni studente tra 1 e {1} crediti.
+6704	Dare {1} crediti a ciascuno dei tuoi {2} studenti ({3} in tutto)? Non si può annullare.
+6705	Dati {1} crediti a ciascuno dei {2} studenti
+6706	Condivise con te ({1})
+6707	Condivise con te
+6708	Tendenze
+6709	Apertura…
+6710	instruct_patterns&class=
+6711	instruct_roster&class=
+6712	L’ha segnata come fatta
+6713	Non è d’accordo
+6714	La tua risposta
+6715	La sua nota
+6716	La sua bozza
+6717	{1} la vede in questa versione e nella sua posta in arrivo.
+6718	Aggiorna la risposta
+6719	Invia la risposta
+6720	Inviata {1}
+6721	Altre versioni condivise
+6722	Risposta rimossa
+6723	Risposta inviata
+6724	Per i docenti del corso
+6725	Accedi con l’indirizzo email riportato nel programma del tuo corso.
+6726	instruct_get&class=
+6727	Per i docenti
+6728	Mathub per i docenti
+6729	Un sito di studio per il tuo corso, con Bo, un tutor IA che insegna invece di fare il lavoro. Ecco cosa fa, cosa decidi tu e cosa vedi.
+6730	Cosa fa Bo
+6731	Capisce a che punto è uno studente, spiega un’idea alla volta, mostra un esempio svolto e poi gli lascia il passo successivo.
+6732	Controlla i calcoli prima di accettare una risposta, e lo dice con gentilezza quando è sbagliata.
+6733	In un corso di scrittura commenta soltanto le bozze: segna dei passaggi, indica le revisioni più importanti e fa domande. Non scrive mai una frase dell’elaborato di uno studente, e il server scarta qualsiasi commento che lo faccia.
+6734	Cosa decidi tu
+6735	Ogni corso ha una pagina del docente per i suoi docenti:
+6736	Solo suggerimenti:
+6737	Bo dà suggerimenti e controlla i passaggi, mai le risposte finali.
+6738	Note per Bo:
+6739	ciò che deve sapere del tuo corso, come il tuo stile di citazione.
+6740	attivi o no per il corso, con la consegna e la griglia di ogni progetto da tenere presenti. Non dà mai voti.
+6741	La condivisione
+6742	gli scambi di revisione tra pari
+6743	attivi o no.
+6744	Cosa vedi
+6745	Una bozza solo quando uno studente sceglie di condividerla con te, con i commenti di Bo, le sue risposte alle note e la sua nota per te. Puoi rispondere.
+6746	Le tendenze del corso: quali obiettivi Bo indica più spesso tra le revisioni più importanti. Solo dagli studenti che fanno contare le proprie bozze, solo quando l’hanno fatto in cinque, e mai un nome, una citazione o una bozza.
+6747	Mai le chat di uno studente con Bo, il suo quaderno o qualcosa che non ha condiviso.
+6748	Crediti per i tuoi studenti
+6749	Bo funziona a crediti, e ogni account ne riceve alcuni gratis ogni mese. Aggiungi il tuo corso in Mathub Docenti e dai agli studenti il suo codice; poi puoi dare crediti a ciascuno dalla tua pagina del docente, dai crediti che hai comprato. Non scadono mai.
+6750	Bozze, chat e quaderni degli studenti sono privati. Le bozze vengono inviate ad Anthropic, che crea l’IA dietro Bo, per essere lette, e non vengono usate per addestrarla. Tutto sparisce quando uno studente elimina il suo account. La
+6751	privacy policy
+6752	completa dice esattamente cosa viene conservato.
+6753	Per iniziare
+6754	Registrati con l’email della tua università.
+6755	Se il tuo corso è su Mathub e il suo programma riporta la tua email, la pagina del docente è nella sua barra laterale.
+6756	Altrimenti aggiungilo in Mathub Docenti: scrivi lì il programma e pubblicalo come corso.
+6757	Apri Mathub Docenti
+6758	Scrivici
+6759	chip bad
+6760	chip good
+6761	scadeva {1}
+6762	Scambia le bozze con un compagno che lavora allo stesso progetto: ognuno legge quella dell’altro e gli risponde, come faresti in classe.
+6763	peer_status&class=
+6764	I tuoi scambi
+6765	Il tuo docente non ha attivato gli scambi di revisione tra pari per questo corso.
+6766	Insegni questo corso: attivali nella
+6767	Proponi una bozza
+6768	Trovami un compagno
+6769	Vieni abbinato a un compagno che propone una bozza dello stesso progetto. Leggete l’uno la bozza dell’altro (non i commenti di Bo) e rispondete entro {1} giorni. Il tuo nome è visibile al compagno.
+6770	Ognuno dei tuoi progetti è già in uno scambio, o in attesa di uno.
+6771	Prima condividi una bozza con Bo: uno scambio propone la versione che hai condiviso.
+6772	In attesa di un compagno
+6773	Riceverai una notifica quando un compagno verrà abbinato a te.
+6774	Smetti di aspettare
+6775	Hai inviato il tuo
+6776	Il tuo è iniziato
+6777	Il tuo: non iniziato
+6778	Il suo è arrivato
+6779	Il suo: non ancora
+6780	Vedi cosa hai inviato
+6781	Leggi la sua bozza
+6782	Vedi cosa ha scritto
+6783	Ancora nessuno scambio.
+6784	Hai un compagno
+6785	In attesa di un compagno di corso
+6786	Hai chiuso questo scambio. Non verrai più abbinato a {1}.
+6787	Questo scambio è terminato.
+6788	La bozza di {1}
+6789	Hai inviato la tua revisione {1}.
+6790	Seleziona delle parole nella bozza per commentarle, poi scrivi una nota sull’intera bozza e inviala.
+6791	Commenta le parole selezionate
+6792	Seleziona prima un passaggio.
+6793	I tuoi commenti
+6794	Ancora nessuno. Seleziona un passaggio nella bozza e premi Commenta.
+6795	Sull’intera bozza
+6796	Cosa funziona meglio per te come lettore? Dove ti sei perso o avresti voluto di più? Una cosa che proveresti dopo.
+6797	Invia a {1}
+6798	Cosa ha scritto {1} sulla tua
+6799	Aprila accanto alla tua bozza
+6800	Qualcosa non va?
+6801	Se questa bozza è offensiva o non è affatto una bozza, segnalala: i moderatori la leggono e lo scambio termina. Oppure chiudi lo scambio per non essere mai più abbinato a {1}.
+6802	Segnala questa bozza
+6803	Non abbinarci più
+6804	Il tuo commento su “{1}”
+6805	Cosa noti qui come lettore?
+6806	Non ancora inviato
+6807	Al massimo 30 commenti.
+6808	Scrivi prima un commento o una nota sull’intera bozza.
+6809	Inviare la tua revisione a {1}? Dopo non potrai modificarla.
+6810	Inviata a {1}
+6811	Che problema ha questa bozza? I moderatori leggono la tua nota e la bozza.
+6812	Segnalata. Grazie.
+6813	Chiudere questo scambio? Non verrai più abbinato a {1}.
+6814	Inviato
+6815	La revisione tra pari è per i membri
+6816	Registrati con la tua email montana.edu per scambiare bozze con i compagni.
+6817	È per i membri
+6818	Registrati con la tua email montana.edu. Ogni account riceve ogni mese crediti gratuiti per Bo.
+6819	Fai una foto del tuo lavoro su un esercizio. Bo trova la prima riga che sbaglia, spiega perché e ti dà un suggerimento per correggerla da solo. Non scrive mai la risposta.
+6820	Qual era l’esercizio?
+6821	Scatta o scegli una foto
+6822	Un solo esercizio, scritto chiaramente, dall’alto in basso. Va bene anche la foto di uno schermo.
+6823	Per esempio: risolvi 2x + 3 = 11
+6824	Controlla
+6825	Usa pochi crediti. La foto non viene conservata.
+6826	Scegli una foto (JPEG, PNG o WebP).
+6827	La tua foto: {1}
+6828	Impossibile aprire questa foto. Provane un’altra.
+6829	Bo sta leggendo il tuo lavoro
+6830	Circa venti secondi. Resta su questa pagina.
+6831	Bo non è riuscito a leggerlo
+6832	Prova una foto più luminosa, più da vicino, con un solo esercizio, oppure scrivi anche il testo dell’esercizio.
+6833	L’esercizio
+6834	la prima riga che sbaglia
+6835	dopo l’errore
+6836	Ogni riga segue dalla precedente.
+6837	Riga {1}
+6838	verificato con esattezza
+6839	Chiedi a Bo di questa riga
+6840	Controllane un altro
+6841	Il mio lavoro su {1}:
+6842	Hai detto che la riga {1} sbaglia: {2}
+6843	un esercizio
+6844	Perché è sbagliato?
+6845	Dammi un altro suggerimento.
+6846	Mostrami un esempio simile.
+6847	Attiva Bo su ogni pagina nelle Impostazioni per chiedergli di una riga.
+6848	Apri le slide della tua lezione e Bo le trasforma in appunti e flashcard, partendo da ciò che dicono. Vengono conservati nel tuo account.
+6849	Nuovi appunti
+6850	Apri le slide
+6851	Queste slide non hanno testo da leggere. Per slide fatte solo di immagini bisogna scrivere le parole.
+6852	Bo sta leggendo {1} slide ({2} parole)
+6853	Gli ci vuole circa un minuto. Resta su questa pagina.
+6854	{1} flashcard create
+6855	learn_slides_list&class=
+6856	I tuoi appunti
+6857	{1} slide · {2} flashcard · {3}
+6858	Ancora nessun appunto. Apri le slide di una lezione per iniziare.
+6859	Eliminare questi appunti e le loro flashcard?
+6860	Tutti gli appunti
+6861	{1} slide · {2}
+6862	Flashcard per Anki o Quizlet
+6863	Mostra la risposta
+6864	Tocca la carta o premi Spazio per girarla; le frecce vanno avanti e indietro.
+6865	Mostra la domanda
+6866	Impossibile creare il file qui. Usa Stampa.
+6867	Tre domande da fare al ricevimento, scelte tra ciò che hai sbagliato di recente in questo corso. Portale, con i tuoi tentativi.
+6868	Dai tuoi errori
+6869	1 domanda sbagliata
+6870	{1} domande sbagliate
+6871	Ancora nessun errore salvato in questo corso. Di’ invece dove sei bloccato, oppure esercitati prima.
+6872	C’è altro su cui sei bloccato?
+6873	Per esempio: quando usare la regola della catena
+6874	Scegli le mie tre domande
+6875	Prima di’ dove sei bloccato, oppure esercitati un po’: Bo sceglie le domande da ciò che è andato storto.
+6876	Bo sta scegliendo le tue domande
+6877	Le tue domande
+6878	Porta
+6879	Qui la copia è bloccata. Seleziona le domande e copiale tu.
+6880	La condivisione delle bozze con il docente non è attiva per questo corso.
+6881	Qui si possono eliminare solo post e commenti.
+6882	Solo i docenti di questo corso possono vederlo.
+6883	Questo corso non è su Mathub.
+6884	Questa bozza non è condivisa con te.
+6885	Dai a ogni studente tra 1 e
+6886	Nessuno studente si è ancora iscritto al tuo corso di Mathub Docenti per questo insegnamento.
+6887	L’elenco del corso è cambiato. Controlla il numero di studenti e riprova.
+6888	Servono
+6889	Prima fai una foto del tuo lavoro.
+6890	Bo non è riuscito a finire di controllare il tuo lavoro. Riprova.
+6891	È troppo per un solo set (circa 13.000 parole). Dividi la lezione in due.
+6892	Bo non è riuscito a finire gli appunti. Riprova.
+6893	Questi appunti non sono tuoi.
+6894	Esercitati prima un po’, oppure di’ dove sei bloccato: Bo sceglie le domande da ciò che è andato storto.
+6895	Bo non è riuscito a finire. Riprova.
+6896	Questo corso non ha progetti per la revisione tra pari.
+6897	Scegli una delle tue bozze per questo corso.
+6898	Hai già uno scambio di revisione in corso per
+6899	Questa revisione non è tua.
+6900	Questa revisione tra pari è terminata.
+6901	Hai già inviato questa revisione.
+6902	Uno dei tuoi commenti indica parole che non sono nella sua bozza. Seleziona di nuovo il passaggio.
+6903	Di’ in breve cosa non va, per i moderatori.
+6904	Servono {1} crediti, e ne hai {2} comprati o ricevuti (i crediti gratuiti del mese non si possono dare). Prendine altri nella pagina Utilizzo.
+6905	Hai già uno scambio di revisione in corso per {1}. Prima finiscilo.
+6906	{1} criteri
+6907	{1} crediti
+6908	{1} di {2}
+6909	{1} ha risposto
+6910	scade {1}
+6911	versione {1}
+6912	condivisa {1}
+6913	da {1}
+6914	con {1}
+6915	terminato
+6916	fatto
+6917	foto
+6918	corretta
+6919	.pptx o .pdf. Letto su questo dispositivo; a Bo viene inviato solo il testo.
+6920	({1})
+6921	solido
+6922	non provato
+6923	il prossimo sul tuo percorso
+6924	cambia
+6925	nuovo
+6926	tu
+6927	{1} XP
+6928	lezione
+6929	lezione
+6930	amministrativo
+6931	esame
+6932	festivo
+6933	laboratorio
+6934	ripasso
+6935	e
+6936	.docx, .pdf, .odt o .txt
+6937	1 suggerimento
+6938	{1} suggerimenti

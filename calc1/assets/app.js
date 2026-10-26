@@ -12,7 +12,7 @@
   const BUILD = global.MATHUB_BUILD || 'dev';
   const Courses = global.Courses || (global.Courses = {});
   const COURSE_ORDER = ['calc', 'physics', 'precalc', 'writ', 'csci', 'biob', 'kin', 'psyx'];
-  const GLOBAL_VIEWS = ['contact', 'forum', 'policy', 'admin', 'meet', 'badges', 'challenge', 'mock', 'people', 'settings', 'leagues', 'gpa', 'today', 'whatsnew', 'resources', 'guides', 'focus', 'recap', 'tools', 'mistakes', 'join', 'sheet', 'request', 'teach', 'class', 'syllabus', 'notfound', 'create', 'c', 'tutor', 'plan', 'tasks', 'timetable', 'agenda', 'timelog', 'projects', 'habits', 'goals', 'wheel', 'journal', 'money', 'career', 'portfolio', 'max', 'unsubscribe', 'room', 'calls', 'usage'];   // pages that work without a course, e.g. #/contact
+  const GLOBAL_VIEWS = ['instructors', 'contact', 'forum', 'policy', 'admin', 'meet', 'badges', 'challenge', 'mock', 'people', 'settings', 'leagues', 'gpa', 'today', 'whatsnew', 'resources', 'guides', 'focus', 'recap', 'tools', 'mistakes', 'join', 'sheet', 'request', 'teach', 'class', 'syllabus', 'notfound', 'create', 'c', 'tutor', 'plan', 'tasks', 'timetable', 'agenda', 'timelog', 'projects', 'habits', 'goals', 'wheel', 'journal', 'money', 'career', 'portfolio', 'max', 'unsubscribe', 'room', 'calls', 'usage'];   // pages that work without a course, e.g. #/contact
   const SITE = 'Mathub';
   let D = null, QZ = null;        // current course data and quiz module
   const courseHooks = [];
@@ -287,6 +287,10 @@
     const has = id => C.NAV.some(g => g.items.some(x => x[0] === id)); const wg = lg || C.NAV[0];
     if ((C.DRAFTS || []).length && App.views.drafts && !has('drafts')) wg.items.push(['drafts', 'Draft feedback', 'pen']);
     if (C.NOTEBOOK && C.NOTEBOOK.count && App.views.notebook && !has('notebook')) wg.items.push(['notebook', 'Writer’s notebook', 'quill']);
+    // Bo's learning tools (assets/learn.js): notes from slides and office-hours prep in every class; checking work in math and science classes
+    if (App.views.slides && !has('slides')) wg.items.push(['slides', 'Notes from slides', 'file']);
+    if (App.views.checkwork && (!C.kind || C.kind === 'science') && !has('checkwork')) wg.items.push(['checkwork', 'Check my work', 'check']);
+    if (App.views.officehours && !has('officehours')) wg.items.push(['officehours', 'Office-hours prep', 'users']);
   }
   function setCourse(id) {
     if (D && D.id === id) return;
@@ -477,7 +481,7 @@
   function toggleTheme() { if (App.themeFade) App.themeFade(); const isDark = document.documentElement.getAttribute('data-theme') === 'dark' || (!document.documentElement.getAttribute('data-theme') && matchMedia('(prefers-color-scheme: dark)').matches); setSetting('theme', isDark ? 'light' : 'dark'); applyTheme(); }
   /* The sidebar groups pages by what you are doing, not by where they came from: the everyday pages (Study,
      Plan) are open, everything else waits in collapsed groups. C.NAV stays the source list; this is only the view. */
-  const NAV_PLAN = [['Study', ['dashboard', 'notes', 'readings', 'drafts', 'notebook', 'playground', 'formulas', 'flashcards', 'practice', 'exam']], ['Plan', ['calendar', 'path', 'planner', 'grades', 'gpa']], ['More tools', ['mistakes', 'blitz', 'cheatsheet', 'mynotes', 'textbook', 'phonetics']], ['Community', ['forum', 'challenge', 'meet', 'mock', 'contribute', 'leagues', 'people']], ['Class info', ['course', 'resources', 'settings']]];
+  const NAV_PLAN = [['Study', ['dashboard', 'notes', 'slides', 'readings', 'drafts', 'notebook', 'playground', 'formulas', 'flashcards', 'practice', 'checkwork', 'exam']], ['Plan', ['calendar', 'path', 'planner', 'grades', 'gpa']], ['More tools', ['mistakes', 'officehours', 'blitz', 'cheatsheet', 'mynotes', 'textbook', 'phonetics']], ['Community', ['forum', 'challenge', 'meet', 'mock', 'contribute', 'leagues', 'people']], ['Class info', ['course', 'resources', 'settings']]];
   function groupNav(NAV) {
     const all = NAV.flatMap(g => g.items); const used = new Set();
     const groups = NAV_PLAN.map(([label, ids]) => ({ label, items: ids.map(id => all.find(x => x[0] === id)).filter(x => x && !used.has(x[0]) && used.add(x[0])) }));
@@ -490,8 +494,10 @@
     const mine = App.myCourses(); if (D && !mine.includes(D.id)) mine.push(D.id);
     $('#course-switch').innerHTML = COURSE_ORDER.filter(id => Courses[id] && mine.includes(id)).map(id => `<a class="switch-btn${id === D.id ? ' on' : ''}" data-c="${id}" href="#/${id}/dashboard" title="${esc(Courses[id].name)}">${esc(Courses[id].short)}</a>`).join('') + `<a class="switch-btn home" href="#/" title="All courses">${icon('grid', 14)}</a>` + (App.canMakeClasses && App.canMakeClasses() && App.views.create ? `<a class="switch-btn req" href="#/create" title="Make a class that is not on Mathub yet from its syllabus">${icon('plus', 13)} Make a class</a>` : App.views.request ? `<a class="switch-btn req" href="#/request" title="Send us the syllabus of a class that is not on Mathub yet">${icon('file', 13)} Request a class</a>` : '');
     const staff = App.auth && App.auth.user && App.auth.user.mod ? [{ label: App.auth.user.admin ? 'Admin' : 'Moderation', items: [['admin', 'Admin panel', 'shield']] }] : [];
+    // the class's instructors (assets/instruct.js asks the server which classes this account teaches)
+    const tch = App.teaches; if (tch && App.views.instructor && (tch.admin || (tch.courses || []).includes(D.id))) staff.unshift({ label: 'Teaching', items: [['instructor', 'Instructor', 'gear']] });
     const cur = (location.hash.replace(/^#\/?/, '').split('?')[0].split('/')[1]) || 'dashboard';
-    const openMap = Object.assign({ Study: true, Plan: true, Admin: true, Moderation: true }, settings().navOpen || {});
+    const openMap = Object.assign({ Study: true, Plan: true, Admin: true, Moderation: true, Teaching: true }, settings().navOpen || {});
     $('#sidebar-nav').innerHTML = groupNav(D.NAV).concat(staff).map(gp => { const o = !!openMap[gp.label] || gp.items.some(x => x[0] === cur); return `<button class="nav-label nav-toggle${o ? ' open' : ''}" data-action="navgroup" data-g="${esc(gp.label)}" aria-expanded="${o}"><span>${gp.label}</span><small>${gp.items.length}</small>${icon('chevron', 12)}</button><div class="nav-group${o ? '' : ' closed'}" data-g="${esc(gp.label)}"><div class="nav-group-in">` + gp.items.map(([id, label, ic]) => `<button class="nav-item" data-view="${id}" data-action="nav">${icon(NAV_ICON[id] || ic)}<span>${label}</span></button>`).join('') + '</div></div>'; }).join('');
     $$('.nav-item').forEach(b => b.classList.toggle('active', b.dataset.view === cur));
   }

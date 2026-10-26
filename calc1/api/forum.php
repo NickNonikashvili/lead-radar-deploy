@@ -234,6 +234,12 @@ function mh_forum_route(string $route, array $in, array $cfg, string $ip): void 
       mh_method('GET'); $u = mh_require_user(); if (!$mod) mh_fail('Moderators only.', 403);
       $st = $db->query('SELECT r.*, u.email AS reporter FROM reports r JOIN users u ON u.id = r.user_id WHERE r.status = "open" ORDER BY r.created DESC LIMIT 200'); $out = [];
       foreach ($st->fetchAll() as $r) {
+        if ($r['kind'] === 'peer') {   // a draft reported in a peer review swap (api/peer.php): the draft and who wrote it, never a forum post
+          require_once __DIR__ . '/peer.php'; $sw = mh_peer_db()->prepare('SELECT * FROM peer_swaps WHERE id = ?'); $sw->execute([(int)$r['item_id']]); $s = $sw->fetch(); if (!$s) continue;
+          $side = (int)$s['a_user'] === (int)$r['user_id'] ? 'b' : 'a'; $dr = mh_peer_db()->prepare('SELECT r.text, u.id AS uid, u.name, u.email FROM draft_reviews r JOIN users u ON u.id = r.user_id WHERE r.id = ?'); $dr->execute([(int)$s[$side . '_review']]); $d = $dr->fetch(); if (!$d) continue;
+          $out[] = ['id' => (int)$r['id'], 'kind' => 'peer', 'item_id' => (int)$r['item_id'], 'post_id' => 0, 'reason' => $r['reason'], 'reporter' => $r['reporter'], 'created' => (int)$r['created'], 'snippet' => mb_substr((string)$d['text'], 0, 600), 'author' => mh_display_name($d) . ' <' . $d['email'] . '>', 'author_id' => (int)$d['uid'], 'removed' => 0];
+          continue;
+        }
         $item = $r['kind'] === 'p' ? mh_get_post((int)$r['item_id']) : mh_get_comment((int)$r['item_id']); if (!$item) continue;
         $out[] = ['id' => (int)$r['id'], 'kind' => $r['kind'], 'item_id' => (int)$r['item_id'], 'post_id' => (int)($r['kind'] === 'p' ? $r['item_id'] : $item['post_id']), 'reason' => $r['reason'], 'reporter' => $r['reporter'], 'created' => (int)$r['created'],
           'snippet' => mb_substr($r['kind'] === 'p' ? $item['title'] . ' — ' . $item['body'] : $item['body'], 0, 200), 'author' => mh_display_name($item, 'u_') . ' <' . $item['u_email'] . '>', 'removed' => (int)$item['removed']];
@@ -244,8 +250,8 @@ function mh_forum_route(string $route, array $in, array $cfg, string $ip): void 
     case 'forum_mod':
       mh_method('POST'); $u = mh_require_user(); $action = (string)($in['action'] ?? ''); $staffOnly = in_array($action, ['pin', 'unpin', 'lock', 'unlock'], true) && mh_role($u['email']) !== '';
       if (!$mod && !$staffOnly) mh_fail('Moderators only.', 403);
-      $kind = ($in['kind'] ?? '') === 'c' ? 'c' : 'p'; $id = (int)($in['id'] ?? 0);
-      $item = $kind === 'p' ? mh_get_post($id) : mh_get_comment($id);
+      $kind = in_array($in['kind'] ?? '', ['c', 'peer'], true) ? (string)$in['kind'] : 'p'; $id = (int)($in['id'] ?? 0);
+      $item = $kind === 'p' ? mh_get_post($id) : ($kind === 'c' ? mh_get_comment($id) : null);   // a peer review report has no post or comment: only a ban (by user_id) or dismiss
       if (!$mod && $item && $kind === 'p') { require_once __DIR__ . '/teach.php'; if (!mh_staff_can_course($u, (string)$item['course'])) mh_fail('You can pin and lock posts only on the boards of the classes you teach.', 403); }
       if (in_array($action, ['pin', 'unpin', 'lock', 'unlock'], true)) { if (!$item || $kind !== 'p') mh_fail('Post not found.', 404); $col = in_array($action, ['pin', 'unpin'], true) ? 'pinned' : 'locked'; $db->prepare("UPDATE posts SET $col = ? WHERE id = ?")->execute([in_array($action, ['pin', 'lock'], true) ? 1 : 0, $id]); }
       elseif ($action === 'remove' || $action === 'restore') { if (!$item) mh_fail('Not found.', 404); $db->prepare(($kind === 'p' ? 'UPDATE posts' : 'UPDATE comments') . ' SET removed = ? WHERE id = ?')->execute([$action === 'remove' ? 2 : 0, $id]); if ($kind === 'c') $db->prepare('UPDATE posts SET ncomments = (SELECT COUNT(*) FROM comments WHERE post_id = ? AND removed = 0) WHERE id = ?')->execute([$item['post_id'], $item['post_id']]); }
@@ -422,7 +428,7 @@ Then pick your classes and you are in.
 
     case 'admin_purge':
       mh_method('POST'); $u = mh_require_user(); if (!mh_is_admin($u)) mh_fail('Administrators only.', 403);
-      $kind = ($in['kind'] ?? '') === 'c' ? 'c' : 'p'; $id = (int)($in['id'] ?? 0);
+      if (!in_array($in['kind'] ?? 'p', ['p', 'c'], true)) mh_fail('Only posts and comments can be deleted here.', 400); $kind = ($in['kind'] ?? '') === 'c' ? 'c' : 'p'; $id = (int)($in['id'] ?? 0);
       if ($kind === 'p') { if (!mh_get_post($id)) mh_fail('Post not found.', 404); $db->prepare('DELETE FROM votes WHERE kind = "c" AND item_id IN (SELECT id FROM comments WHERE post_id = ?)')->execute([$id]); $db->prepare('DELETE FROM reports WHERE kind = "c" AND item_id IN (SELECT id FROM comments WHERE post_id = ?)')->execute([$id]); $db->prepare('DELETE FROM comments WHERE post_id = ?')->execute([$id]); $db->prepare('DELETE FROM votes WHERE kind = "p" AND item_id = ?')->execute([$id]); $db->prepare('DELETE FROM reports WHERE kind = "p" AND item_id = ?')->execute([$id]); $db->prepare('DELETE FROM posts WHERE id = ?')->execute([$id]); }
       else { $c = mh_get_comment($id); if (!$c) mh_fail('Comment not found.', 404); $db->prepare('UPDATE comments SET parent_id = ? WHERE parent_id = ?')->execute([$c['parent_id'], $id]); $db->prepare('DELETE FROM votes WHERE kind = "c" AND item_id = ?')->execute([$id]); $db->prepare('DELETE FROM reports WHERE kind = "c" AND item_id = ?')->execute([$id]); $db->prepare('DELETE FROM comments WHERE id = ?')->execute([$id]); $db->prepare('UPDATE posts SET ncomments = (SELECT COUNT(*) FROM comments WHERE post_id = ? AND removed = 0) WHERE id = ?')->execute([$c['post_id'], $c['post_id']]); }
       mh_json(['ok' => true]);

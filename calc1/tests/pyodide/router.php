@@ -83,6 +83,21 @@ if ($path === '/anthropic/v1/messages') {
       $qs[] = ['topic' => $sid, 'items' => [["Which one is $sid?", 'This one', ['That one', 'Neither', 'Both'], "Because it is $sid."], ["Is $sid useful?", 'Yes', ['No', 'Never', 'Only on Sundays'], 'It is.']]];
     }
     $text = "Here you go:\n```json\n" . json_encode(['SECTIONS' => $secs, 'FLASHCARDS' => $cards, 'QUIZ' => ['questions' => $qs]]) . "\n```";
+  } elseif (str_contains($sys, 'THE WORK CHECK')) {
+    // checking handwritten work (api/learn.php): a slip in the second line; Bo names the third until the math check
+    // asks him again about the second. ALLRIGHT in the typed problem: every line right. UNREADABLE: he cannot read it.
+    $again = str_contains($utext, 'MATH CHECK (exact arithmetic): line');
+    if (str_contains($utext, 'UNREADABLE')) $j = ['problem' => '', 'lines' => [], 'first_wrong' => 0, 'why' => '', 'hint' => '', 'unreadable' => true];
+    elseif (str_contains($utext, 'ALLRIGHT')) $j = ['problem' => '2x + 3 = 11', 'lines' => ['2x + 3 = 11', '2x = 8', 'x = 4'], 'first_wrong' => 0, 'why' => '', 'hint' => 'Put x = 4 back into the first line to be sure.', 'unreadable' => false];
+    else $j = ['problem' => '2x + 3 = 11', 'lines' => ['2x + 3 = 11', '2x = 14', 'x = 7'], 'first_wrong' => $again ? 2 : 3, 'why' => $again ? 'You added 3 to the right side instead of taking it away.' : 'x = 7 does not solve it.', 'hint' => $again ? 'What happens to the +3 when you take 3 from both sides?' : 'Check by putting 7 back in.', 'unreadable' => false];
+    $text = json_encode($j);
+  } elseif (str_contains($sys, 'THE SLIDE NOTES')) {
+    // notes from slides: a section and a card for each slide, its first line the heading
+    preg_match_all('/SLIDE (\d+):\n([^\n]*)/', $utext, $sm, PREG_SET_ORDER);
+    $text = json_encode(['title' => 'Cell respiration', 'summary' => 'How cells turn glucose into ATP.', 'sections' => array_map(fn($m) => ['heading' => $m[2], 'points' => ['A point from slide ' . $m[1] . '.'], 'terms' => [['term' => 'ATP', 'def' => 'the cell’s energy currency']]], $sm), 'cards' => array_map(fn($m) => ['front' => 'What is on slide ' . $m[1] . '?', 'back' => $m[2]], $sm)]);
+  } elseif (str_contains($sys, 'THE OFFICE HOURS PREP')) {
+    $n = preg_match_all('/^- /m', $utext);
+    $text = json_encode(['opener' => 'Hi, I have three questions from my practice.', 'questions' => [['topic' => 'Limits', 'q' => "When I factor, I lose a term ($n mistakes).", 'why' => 'It keeps coming back.', 'bring' => 'Your attempt'], ['topic' => 'Derivatives', 'q' => 'Why does the inside function matter?', 'why' => 'A person can draw it.', 'bring' => 'Problem 4'], ['topic' => 'Chain rule', 'q' => 'How do I spot a composition?', 'why' => 'It is on the exam.', 'bring' => 'Your notes']]]);
   } elseif (str_contains($sys, 'THE DRAFT REVIEW')) {
     // feedback on a draft (api/drafts.php): quotes from the draft, one quote it does not have and one note that writes
     // for the student (both must be left out), and what changed since the earlier feedback when there is one.
@@ -93,8 +108,8 @@ if ($path === '/anthropic/v1/messages') {
     $q = fn($i) => implode(' ', array_slice(preg_split('/\s+/', $sents[$i % max(1, count($sents))] ?? ''), 0, 8));
     $j = ['overall' => (str_contains($sys, 'Professor Bo') ? 'Hm. ' : '') . 'Your place comes through in the details; the middle tells more than it shows.',
       'strengths' => [['quote' => $q(0), 'why' => 'A reader is in the place from the first line.']],
-      'revisions' => [['title' => 'Show the storm', 'why' => 'The middle summarizes the storm instead of putting the reader in it, so the showing-not-telling goal slips.', 'where' => $q(2), 'ask' => 'What did you hear first when the storm came?'],
-        ['title' => 'Say why it matters', 'why' => 'A reader who has never been there cannot yet tell why the place matters to you.', 'where' => '', 'ask' => 'What would be lost if the farmhouse were gone?']],
+      'revisions' => [['title' => 'Show the storm', 'why' => 'The middle summarizes the storm instead of putting the reader in it, so the showing-not-telling goal slips.', 'where' => $q(2), 'ask' => 'What did you hear first when the storm came?', 'goal' => 2],
+        ['title' => 'Say why it matters', 'why' => 'A reader who has never been there cannot yet tell why the place matters to you.', 'where' => '', 'ask' => 'What would be lost if the farmhouse were gone?', 'goal' => '1']],
       'comments' => [['quote' => $q(1), 'kind' => 'question', 'note' => 'Whose memory is this? Say it.'], ['quote' => $q(3), 'kind' => 'revise', 'note' => 'This line tells the feeling; what detail could show it?'],
         ['quote' => 'words that this draft does not have anywhere', 'kind' => 'revise', 'note' => 'A comment on words that are not there.'],
         ['quote' => $q(0), 'kind' => 'revise', 'note' => 'You could write: "The storm rolled over the barn like a slow freight train at dusk."']],

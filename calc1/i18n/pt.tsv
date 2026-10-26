@@ -6380,3 +6380,358 @@
 6581	com
 6582	adicionado
 6583	1 entrada no arquivo; {1} ainda {1|vazia|vazias}.
+6584	Anotações dos slides
+6585	Verificar meu trabalho
+6586	Preparar o atendimento
+6587	Ensino
+6588	rascunho da revisão entre colegas
+6589	compartilhou um rascunho com você:
+6590	respondeu sobre seu rascunho
+6591	é sua dupla de revisão para
+6592	deu créditos a você em
+6593	Trabalhos e caderno
+6594	O que o Bo faz na sua disciplina e o que você controla
+6595	Os trabalhos que seus alunos escrevem e revisam. Cada um recebe os comentários do Bo sobre o rascunho, em que ele comenta como um tutor de escrita e nunca escreve nada por eles, e um histórico de revisões. Deixe em branco se sua disciplina não tiver nenhum.
+6596	Trabalho 1: Um lugar que importa
+6597	Entrega do primeiro rascunho
+6598	O que pede
+6599	A tarefa em poucas frases.
+6600	Entrega do rascunho revisado
+6601	Os objetivos, um por linha
+6602	Uma tese clara\nEvidências de pelo menos duas fontes
+6603	O Bo lê cada rascunho com base neles.
+6604	este trabalho
+6605	Ainda não há trabalhos.
+6606	Adicionar um trabalho
+6607	0 para nenhum. Os alunos escrevem cada entrada no Mathub, em particular e sem IA, e baixam todas para entregar.
+6608	Data de entrega
+6609	Deixe este rascunho contar, sem seu nome, nas tendências que seu professor vê na disciplina
+6610	(só quando cinco alunos tiverem feito isso; nunca suas palavras)
+6611	Página do professor
+6612	Revisão entre colegas
+6613	Da revisão entre colegas
+6614	Envie uma versão revisada e estes comentários vão para o Bo junto com ela, como comentários da revisão entre colegas.
+6615	Trocar com um colega
+6616	Compartilhado com {1}
+6617	Parar de compartilhar esta versão com {1}? A resposta também será apagada.
+6618	Não está mais compartilhado
+6619	seu professor
+6620	Seu professor
+6621	Compartilhado com {1} em {2}.
+6622	Sua nota:
+6623	Compartilhe esta versão com {1}: verá seu rascunho, os comentários do Bo e suas respostas às notas dele, e poderá responder.
+6624	Compartilhar com seu professor
+6625	Uma nota para o professor
+6626	Por exemplo: meu final está discreto demais?
+6627	_rels/$1.rels
+6628	Relationship
+6629	Id
+6630	ppt/presentation.xml
+6631	Notes:
+6632	Esse arquivo é grande demais. Salve os slides como PDF sem as imagens ou divida a aula.
+6633	Este navegador não consegue abrir esse arquivo. Tente outro navegador ou salve os slides como PDF.
+6634	Esse PDF está protegido por senha. Salve-o sem senha e tente de novo.
+6635	Notes: {1}
+6636	Para os professores desta disciplina: como o Bo funciona nela, os rascunhos que os alunos compartilharam com você, as tendências da turma e créditos para seus alunos.
+6637	Esta página é para os professores da disciplina. Se você dá esta disciplina, entre com o e-mail que consta no programa, ou adicione a disciplina no
+6638	O que os professores podem fazer no Mathub
+6639	Cole o enunciado da tarefa ou abra o arquivo que você entrega aos alunos.
+6640	Enunciado da tarefa
+6641	Rubrica
+6642	(opcional, até 12 critérios)
+6643	Adicionar um critério
+6644	Os objetivos, segundo o programa
+6645	Por exemplo: Usamos MLA 9. Não se fala da prova para casa antes do prazo.
+6646	O Bo nesta disciplina
+6647	Só dicas
+6648	O Bo dá uma dica de cada vez e confere os passos dos alunos, e nunca dá a resposta final de um exercício desta disciplina.
+6649	Notas para o Bo
+6650	O Bo as lê em cada chat e chamada desta disciplina. As regras dele vêm primeiro: as notas não podem fazê-lo escrever o trabalho dos alunos por eles.
+6651	Os alunos compartilham um rascunho e o Bo o comenta como um tutor de escrita: marca trechos, aponta as revisões mais importantes e faz perguntas. Ele nunca escreve nada por eles.
+6652	Os alunos podem compartilhar uma versão com você
+6653	Eles escolhem uma versão para compartilhar, com uma nota; você a lê, com os comentários do Bo, em Compartilhados com você.
+6654	Trocas de revisão entre colegas
+6655	Um aluno oferece um rascunho e forma dupla com um colega que oferece um do mesmo projeto; cada um lê o do outro e responde.
+6656	Dias para responder
+6657	Enunciados e rubricas
+6658	O Bo lê cada rascunho com base neles e nos objetivos do projeto. Ele nunca dá nota, pontuação ou nível.
+6659	Desativado
+6660	Ativado
+6661	Desativar
+6662	Salvo {1}
+6663	Critério, como Foco
+6664	Critério
+6665	Como fica quando está bem feito
+6666	Remover este critério
+6667	enunciado da tarefa
+6668	1 critério
+6669	nada adicionado ainda
+6670	{1} de 1.500 caracteres
+6671	Não salvo: suas alterações da última vez
+6672	Esse arquivo não tem texto para ler. Copie o texto dele e cole aqui.
+6673	Aberto: {1}
+6674	No máximo 12 critérios.
+6675	Desativar os comentários do Bo sobre rascunhos para toda a disciplina? Os alunos mantêm as revisões anteriores.
+6676	instruct_shares&class=
+6677	Ainda não há rascunhos compartilhados. Quando um aluno compartilhar com você uma versão de um rascunho, ela aparece aqui, com os comentários do Bo e a nota dele.
+6678	share/
+6679	Respondido
+6680	Só de alunos que escolheram deixar seus rascunhos contarem, sem nomes, citações ou rascunhos, e só depois que {1} alunos tiverem feito isso. O que o Bo disse, não uma nota.
+6681	Até agora 1 aluno deixou seus rascunhos contarem. As tendências aparecem quando {1} tiverem feito isso, para nunca apontarem para ninguém.
+6682	Até agora {1} alunos deixaram seus rascunhos contarem. As tendências aparecem quando {2} tiverem feito isso, para nunca apontarem para ninguém.
+6683	O que o Bo apontou entre as revisões mais importantes
+6684	{1} rascunhos de {2} alunos: {3} primeiros rascunhos e {4} revisados. Tamanho mediano: {5} palavras.
+6685	Algo fora dos objetivos
+6686	Na versão seguinte, as revisões anteriores do Bo estavam
+6687	feitas {1} · em parte {2} · ainda não {3}
+6688	Respostas dos alunos às notas do Bo
+6689	marcadas como feitas {1} · discordâncias {2}
+6690	Para dar créditos aos seus alunos, adicione esta disciplina no
+6691	e passe a eles o código de entrada. Os alunos que entrarem aparecem aqui.
+6692	1 aluno entrou em {1}.
+6693	{1} alunos entraram em {2}.
+6694	Créditos para cada aluno
+6695	Dar créditos
+6696	Ver quem
+6697	Como administrador, você os dá pelo Mathub.
+6698	Eles saem dos créditos que você comprou ou recebeu (não dos gratuitos do mês): você tem {1}.
+6699	Os alunos ficam com eles, e eles nunca expiram.
+6700	Dados até agora
+6701	1 aluno × {1} créditos = {2} créditos no total.
+6702	{1} alunos × {2} créditos = {3} créditos no total.
+6703	Dê a cada aluno entre 1 e {1} créditos.
+6704	Dar {1} créditos a cada um dos seus {2} alunos ({3} no total)? Não dá para desfazer.
+6705	Você deu {1} créditos a cada um dos {2} alunos
+6706	Compartilhados com você ({1})
+6707	Compartilhados com você
+6708	Tendências
+6709	Abrindo…
+6710	instruct_patterns&class=
+6711	instruct_roster&class=
+6712	Marcou como feito
+6713	Discorda
+6714	Sua resposta
+6715	A nota do aluno
+6716	O rascunho do aluno
+6717	{1} verá nesta versão e na caixa de entrada.
+6718	Atualizar a resposta
+6719	Enviar a resposta
+6720	Enviada {1}
+6721	Outras versões compartilhadas
+6722	Resposta removida
+6723	Resposta enviada
+6724	Para os professores da disciplina
+6725	Entre com o e-mail que consta no programa da sua disciplina.
+6726	instruct_get&class=
+6727	Para professores
+6728	Mathub para professores
+6729	Um site de estudo para sua disciplina, com o Bo, um tutor de IA que ensina em vez de fazer o trabalho. Veja o que ele faz, o que você controla e o que você vê.
+6730	O que o Bo faz
+6731	Ele descobre em que ponto o aluno está, explica uma ideia de cada vez, mostra um exemplo resolvido e depois passa o próximo passo para o aluno.
+6732	Ele confere a matemática antes de concordar com uma resposta, e diz com gentileza quando ela está errada.
+6733	Numa disciplina de escrita ele só comenta rascunhos: marca trechos, aponta as revisões mais importantes e faz perguntas. Ele nunca escreve uma frase do trabalho de um aluno, e o servidor descarta qualquer comentário que faça isso.
+6734	O que você controla
+6735	Cada disciplina tem uma página do professor para seus professores:
+6736	Só dicas:
+6737	o Bo dá dicas e confere passos, nunca respostas finais.
+6738	Notas para o Bo:
+6739	o que ele deve saber da sua disciplina, como seu estilo de citação.
+6740	ativados ou não para a disciplina, com o enunciado e a rubrica de cada projeto para o Bo levar em conta. Ele nunca dá nota.
+6741	O compartilhamento
+6742	as trocas de revisão entre colegas
+6743	ativados ou não.
+6744	O que você vê
+6745	Um rascunho só quando um aluno escolhe compartilhá-lo com você, com os comentários do Bo, as respostas do aluno às notas dele e a nota para você. Você pode responder.
+6746	Tendências da turma: quais objetivos o Bo aponta com mais frequência entre as revisões mais importantes. Só de alunos que deixam seus rascunhos contarem, só depois que cinco fizeram isso, e nunca um nome, uma citação ou um rascunho.
+6747	Nunca os chats de um aluno com o Bo, o caderno dele ou qualquer coisa que ele não tenha compartilhado.
+6748	Créditos para seus alunos
+6749	O Bo funciona com créditos, e cada conta recebe alguns grátis por mês. Adicione sua disciplina no Mathub Professores e passe o código aos alunos; depois você pode dar créditos a cada um pela sua página do professor, dos créditos que você comprou. Eles nunca expiram.
+6750	Rascunhos, chats e cadernos dos alunos são privados. Os rascunhos são enviados à Anthropic, que faz a IA por trás do Bo, para serem lidos, e não são usados para treiná-la. Tudo é apagado quando um aluno exclui a conta. A
+6751	política de privacidade
+6752	completa diz exatamente o que é guardado.
+6753	Para começar
+6754	Cadastre-se com o e-mail da sua universidade.
+6755	Se sua disciplina está no Mathub e o programa traz seu e-mail, a página do professor está na barra lateral dela.
+6756	Se não, adicione-a no Mathub Professores: escreva lá o programa e publique-o como disciplina.
+6757	Abrir o Mathub Professores
+6758	Fale conosco
+6759	chip bad
+6760	chip good
+6761	venceu {1}
+6762	Troque rascunhos com um colega que trabalha no mesmo projeto: cada um lê o do outro e responde, como faria em aula.
+6763	peer_status&class=
+6764	Suas trocas
+6765	Seu professor não ativou as trocas de revisão entre colegas nesta disciplina.
+6766	Você dá esta disciplina: ative-as na
+6767	Oferecer um rascunho
+6768	Encontre uma dupla para mim
+6769	Você forma dupla com um colega que oferece um rascunho do mesmo projeto. Cada um lê o rascunho do outro (não os comentários do Bo) e responde em até {1} dias. Sua dupla vê seu nome.
+6770	Cada um dos seus projetos já está numa troca ou esperando uma.
+6771	Compartilhe primeiro um rascunho com o Bo: a troca oferece a versão que você compartilhou.
+6772	Esperando uma dupla
+6773	Você recebe uma notificação quando um colega formar dupla com você.
+6774	Parar de esperar
+6775	Você enviou a sua
+6776	A sua está começada
+6777	A sua: não começada
+6778	A dele chegou
+6779	A dele: ainda não
+6780	Ver o que você enviou
+6781	Ler o rascunho do colega
+6782	Ver o que o colega escreveu
+6783	Ainda não há trocas.
+6784	Você tem uma dupla
+6785	Esperando um colega
+6786	Você encerrou esta troca. Você não vai mais formar dupla com {1}.
+6787	Esta troca foi encerrada.
+6788	Rascunho de {1}
+6789	Você enviou sua revisão {1}.
+6790	Selecione palavras no rascunho para comentar, depois escreva uma nota sobre o rascunho inteiro e envie.
+6791	Comentar as palavras selecionadas
+6792	Selecione um trecho primeiro.
+6793	Seus comentários
+6794	Nenhum ainda. Selecione um trecho no rascunho e toque em Comentar.
+6795	Sobre o rascunho inteiro
+6796	O que funciona melhor para você como leitor? Onde você se perdeu ou queria mais? Uma coisa que você tentaria a seguir.
+6797	Enviar para {1}
+6798	O que {1} escreveu sobre o seu
+6799	Abrir ao lado do seu rascunho
+6800	Algo errado?
+6801	Se este rascunho for ofensivo ou nem for um rascunho, denuncie: os moderadores o leem e a troca termina. Ou encerre a troca para nunca mais formar dupla com {1}.
+6802	Denunciar este rascunho
+6803	Não nos juntar de novo
+6804	Seu comentário sobre “{1}”
+6805	O que você nota aqui como leitor?
+6806	Ainda não enviado
+6807	No máximo 30 comentários.
+6808	Escreva primeiro um comentário ou uma nota sobre o rascunho inteiro.
+6809	Enviar sua revisão para {1}? Depois não dá para mudar.
+6810	Enviada para {1}
+6811	O que há de errado com este rascunho? Os moderadores leem sua nota e o rascunho.
+6812	Denunciado. Obrigado.
+6813	Encerrar esta troca? Você não vai mais formar dupla com {1}.
+6814	Enviado
+6815	A revisão entre colegas é para membros
+6816	Cadastre-se com seu e-mail montana.edu para trocar rascunhos com colegas.
+6817	Isto é para membros
+6818	Cadastre-se com seu e-mail montana.edu. Toda conta recebe créditos grátis para o Bo todo mês.
+6819	Tire uma foto do seu trabalho em um exercício. O Bo encontra a primeira linha que dá errado, explica por quê e dá uma dica para você mesmo corrigir. Ele nunca escreve a resposta.
+6820	Qual era o exercício?
+6821	Tirar ou escolher uma foto
+6822	Um exercício, escrito com clareza, de cima para baixo. Foto de uma tela também serve.
+6823	Por exemplo: resolva 2x + 3 = 11
+6824	Verificar
+6825	Usa alguns créditos. A foto não é guardada.
+6826	Escolha uma foto (JPEG, PNG ou WebP).
+6827	Sua foto: {1}
+6828	Não foi possível abrir essa foto. Tente outra.
+6829	O Bo está lendo seu trabalho
+6830	Uns vinte segundos. Fique nesta página.
+6831	O Bo não conseguiu ler
+6832	Tente uma foto mais clara, mais de perto, com um só exercício, ou digite também o enunciado.
+6833	O exercício
+6834	a primeira linha que dá errado
+6835	depois do erro
+6836	Todas as linhas estão certas.
+6837	Linha {1}
+6838	verificado com exatidão
+6839	Perguntar ao Bo sobre esta linha
+6840	Verificar outro
+6841	Meu trabalho em {1}:
+6842	Você disse que a linha {1} dá errado: {2}
+6843	um exercício
+6844	Por que está errado?
+6845	Me dê outra dica.
+6846	Mostre um exemplo parecido.
+6847	Ative o Bo em todas as páginas nas Configurações para perguntar sobre uma linha.
+6848	Abra os slides da sua aula e o Bo os transforma em anotações e flashcards, a partir do que os slides dizem. Ficam guardados na sua conta.
+6849	Novas anotações
+6850	Abrir slides
+6851	Esses slides não têm texto para ler. Slides que são só imagens precisam que as palavras sejam digitadas.
+6852	O Bo está lendo {1} slides ({2} palavras)
+6853	Isso leva cerca de um minuto. Fique nesta página.
+6854	{1} flashcards criados
+6855	learn_slides_list&class=
+6856	Suas anotações
+6857	{1} slides · {2} flashcards · {3}
+6858	Ainda não há anotações. Abra os slides de uma aula para começar.
+6859	Excluir estas anotações e os flashcards delas?
+6860	Todas as anotações
+6861	{1} slides · {2}
+6862	Flashcards para Anki ou Quizlet
+6863	Mostrar a resposta
+6864	Toque no cartão ou aperte Espaço para virá-lo; as setas voltam e avançam.
+6865	Mostrar a pergunta
+6866	Não foi possível criar esse arquivo aqui. Use Imprimir.
+6867	Três perguntas que valem a pena levar ao atendimento, escolhidas entre o que você errou recentemente nesta disciplina. Leve-as, com suas tentativas.
+6868	Dos seus erros
+6869	1 questão que você errou
+6870	{1} questões que você errou
+6871	Ainda não há erros salvos nesta disciplina. Diga em que você está travado ou pratique antes.
+6872	Mais alguma coisa em que você está travado?
+6873	Por exemplo: quando usar a regra da cadeia
+6874	Escolher minhas três perguntas
+6875	Diga primeiro em que você está travado, ou pratique um pouco: o Bo escolhe as perguntas a partir do que deu errado.
+6876	O Bo está escolhendo suas perguntas
+6877	Suas perguntas
+6878	Leve
+6879	Copiar está bloqueado aqui. Selecione as perguntas e copie você mesmo.
+6880	Compartilhar rascunhos com o professor não está ativado nesta disciplina.
+6881	Aqui só é possível excluir publicações e comentários.
+6882	Só os professores desta disciplina podem ver isto.
+6883	Essa disciplina não está no Mathub.
+6884	Esse rascunho não foi compartilhado com você.
+6885	Dê a cada aluno entre 1 e
+6886	Nenhum aluno entrou ainda na sua disciplina do Mathub Professores para este curso.
+6887	A lista da turma mudou. Confira o número de alunos e tente de novo.
+6888	Isso custa
+6889	Tire primeiro uma foto do seu trabalho.
+6890	O Bo não conseguiu terminar de verificar seu trabalho. Tente de novo.
+6891	É coisa demais para um só conjunto (cerca de 13.000 palavras). Divida a aula em duas.
+6892	O Bo não conseguiu terminar as anotações. Tente de novo.
+6893	Essas anotações não são suas.
+6894	Pratique um pouco antes, ou diga em que você está travado: o Bo escolhe as perguntas a partir do que deu errado.
+6895	O Bo não conseguiu terminar. Tente de novo.
+6896	Esta disciplina não tem projetos para revisão entre colegas.
+6897	Escolha um dos seus rascunhos desta disciplina.
+6898	Você já tem uma troca de revisão em andamento para
+6899	Essa revisão não é sua.
+6900	Esta revisão entre colegas foi encerrada.
+6901	Você já enviou esta revisão.
+6902	Um dos seus comentários aponta para palavras que não estão no rascunho do colega. Selecione o trecho de novo.
+6903	Diga brevemente o que está errado, para os moderadores.
+6904	Isso custa {1} créditos, e você tem {2} comprados ou recebidos (os créditos gratuitos do mês não podem ser dados). Consiga mais na página Uso.
+6905	Você já tem uma troca de revisão em andamento para {1}. Termine-a primeiro.
+6906	{1} critérios
+6907	{1} créditos
+6908	{1} de {2}
+6909	{1} respondeu
+6910	vence {1}
+6911	versão {1}
+6912	compartilhado {1}
+6913	desde {1}
+6914	com {1}
+6915	encerrada
+6916	concluída
+6917	foto
+6918	certa
+6919	.pptx ou .pdf. Lido neste dispositivo; só o texto é enviado ao Bo.
+6920	({1})
+6921	firme
+6922	não tentado
+6923	o próximo no seu caminho
+6924	mudar
+6925	novo
+6926	você
+6927	{1} XP
+6928	aula
+6929	aula
+6930	administrativo
+6931	prova
+6932	feriado
+6933	laboratório
+6934	revisão
+6935	e
+6936	.docx, .pdf, .odt ou .txt
+6937	1 sugestão
+6938	{1} sugestões

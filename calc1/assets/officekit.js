@@ -1,7 +1,8 @@
 /* ============================================================
    Mathub — Office files in the browser (App.Office). Zip and unzip (a .docx, .pptx, .xlsx or .odt is a zip of XML),
-   the text of a .docx, .odt or PDF, and a simple .docx written from paragraphs. Used by draft feedback
-   (assets/drafts.js) and the writer's notebook (assets/notebook.js). PDFs are read with pdf.js
+   the text of a .docx, .odt or PDF, the text of each slide of a .pptx or page of a PDF, and a simple .docx written
+   from paragraphs. Used by draft feedback (assets/drafts.js), the writer's notebook (assets/notebook.js), the
+   instructor's assignment sheets (assets/instruct.js) and notes from slides (assets/learn.js). PDFs are read with pdf.js
    (assets/vendor/pdfjs, Apache-2.0, its legacy build), loaded only when a PDF is opened.
    Nothing leaves the device: files are read and written here.
    ============================================================ */
@@ -98,7 +99,7 @@
     const lib = await import(base + 'pdf.min.js'); lib.GlobalWorkerOptions.workerSrc = base + 'pdf.worker.min.js';
     return (PDF = lib);
   }
-  async function pdfText(buf) {
+  async function pdfLines(buf) {
     let lib; try { lib = await pdfLib(); } catch (e) { throw new Error('pdflib'); }
     let doc; try { doc = await lib.getDocument({ data: new Uint8Array(buf), isEvalSupported: false, disableFontFace: true, useSystemFonts: false }).promise; }
     catch (e) { throw new Error(e && e.name === 'PasswordException' ? 'pdfpass' : 'bad'); }
@@ -118,6 +119,10 @@
       while (L.length && runner(L[L.length - 1].s)) L.pop();
       pages.push(L);
     }
+    return pages;
+  }
+  async function pdfText(buf) {
+    const pages = await pdfLines(buf);
     const all = pages.flat(); if (!all.length) return '';
     const gaps = []; for (let i = 1; i < all.length; i++) { const g = all[i - 1].y - all[i].y; if (g > 0) gaps.push(g); }
     gaps.sort((a, b) => a - b); const step = gaps.length ? gaps[Math.floor((gaps.length - 1) / 2)] : 14;   // the lower median: a short page still finds its line spacing
@@ -132,6 +137,47 @@
     }));
     if (p) paras.push(p);
     return paras.join('\n\n');
+  }
+  /* a PDF of slides: each page's lines, as they are */
+  async function pdfPages(buf) { return (await pdfLines(buf)).map((L, i) => ({ n: i + 1, text: L.map(l => l.s).join('\n') })).filter(p => p.text.trim()); }
+  /* a .pptx: each slide's text in the presentation's order, with its speaker notes */
+  const A_NS = 'http://schemas.openxmlformats.org/drawingml/2006/main', R_NS = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships';
+  const parseXml = xml => { const d = new DOMParser().parseFromString(xml, 'application/xml'); if (d.getElementsByTagName('parsererror').length) throw new Error('bad'); return d; };
+  const paras = doc => [...doc.getElementsByTagNameNS(A_NS, 'p')].map(p => [...p.getElementsByTagNameNS(A_NS, 't')].map(t => t.textContent).join('').replace(/\s+/g, ' ').trim()).filter(Boolean);
+  const relsOf = async (z, path) => { const x = await readText(z, path.replace(/([^/]+)$/, '_rels/$1.rels')); const m = {}; if (x) [...parseXml(x).getElementsByTagName('Relationship')].forEach(r => { m[r.getAttribute('Id')] = { target: r.getAttribute('Target') || '', type: r.getAttribute('Type') || '' }; }); return m; };
+  const resolve = (from, target) => { if (target.startsWith('/')) return target.slice(1); const parts = from.split('/').slice(0, -1); target.split('/').forEach(s => { if (s === '..') parts.pop(); else if (s && s !== '.') parts.push(s); }); return parts.join('/'); };
+  async function pptxSlides(buf) {
+    const z = entries(buf); let order = [];
+    try {
+      const pres = await readText(z, 'ppt/presentation.xml'); const rels = await relsOf(z, 'ppt/presentation.xml');
+      if (pres) order = [...parseXml(pres).getElementsByTagName('*')].filter(e => e.localName === 'sldId').map(e => rels[e.getAttributeNS(R_NS, 'id') || e.getAttribute('r:id')]).filter(Boolean).map(r => resolve('ppt/presentation.xml', r.target));
+    } catch (e) { order = []; }
+    if (!order.length) order = [...z.list.keys()].filter(n => /^ppt\/slides\/slide\d+\.xml$/.test(n)).sort((a, b) => +a.match(/(\d+)\.xml$/)[1] - +b.match(/(\d+)\.xml$/)[1]);
+    if (!order.length) throw new Error('bad');
+    const out = [];
+    for (let i = 0; i < order.length; i++) {
+      const xml = await readText(z, order[i]); if (xml == null) continue;
+      const lines = paras(parseXml(xml)); let notes = [];
+      const rels = await relsOf(z, order[i]); const nr = Object.values(rels).find(r => /notesSlide$/.test(r.type));
+      if (nr) { const nx = await readText(z, resolve(order[i], nr.target)); if (nx) notes = paras(parseXml(nx)).filter(l => !/^\d{1,3}$/.test(l)); }
+      const text = lines.join('\n') + (notes.length ? '\nNotes: ' + notes.join(' ') : '');
+      if (text.trim()) out.push({ n: i + 1, text });
+    }
+    return out;
+  }
+  /* lecture slides a student opens: .pptx or .pdf → [{ n, text }]; an Error whose message says what to do */
+  async function slideText(f) {
+    const ext = (f.name.split('.').pop() || '').toLowerCase();
+    if (f.size > 60 * 1024 * 1024) throw new Error('That file is too big. Save the slides as a PDF without the pictures, or split the lecture.');
+    if (!['pptx', 'pdf'].includes(ext) && f.type !== 'application/pdf') throw new Error('Mathub reads slides as .pptx or .pdf. From Google Slides or Keynote, download them as PowerPoint or PDF.');
+    const buf = await f.arrayBuffer();
+    try { return ext === 'pptx' ? await pptxSlides(buf) : await pdfPages(buf); }
+    catch (e) {
+      const m = e && e.message;
+      if (m === 'inflate' || m === 'pdflib') throw new Error('This browser cannot open that file. Try another browser, or save the slides as a PDF.');
+      if (m === 'pdfpass') throw new Error('That PDF is locked with a password. Save it without one and try again.');
+      throw new Error('Those slides could not be read. Save them again as .pptx or .pdf and try again.');
+    }
   }
   /* any file a student opens: .txt/.md, .docx, .odt or .pdf → its text; an Error whose message says what to do */
   async function fileText(f, what = 'text') {
@@ -188,5 +234,5 @@
   }
   const safeName = s => String(s || 'Mathub').replace(/[\\/:*?"<>|\u0000-\u001F]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 80) || 'Mathub';
 
-  App.Office = { crc32, zip, entries, read, readText, docxText, odtText, pdfText, fileText, docx, download, safeName, DOCX: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' };
+  App.Office = { crc32, zip, entries, read, readText, docxText, odtText, pdfText, pdfPages, pptxSlides, slideText, fileText, docx, download, safeName, DOCX: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' };
 })(window);

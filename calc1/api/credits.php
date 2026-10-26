@@ -22,7 +22,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/ai.php';
 
-const MH_CREDIT_FEATURES = ['chat' => 'Chat with Bo', 'call' => 'Calls with Bo', 'image' => 'Pictures', 'voice' => 'Bo’s voice and listening', 'recap' => 'Recaps after calls', 'memory' => 'Keeping Bo’s memory short', 'class' => 'Building classes', 'draft' => 'Draft feedback', 'other' => 'Other'];
+const MH_CREDIT_FEATURES = ['chat' => 'Chat with Bo', 'call' => 'Calls with Bo', 'image' => 'Pictures', 'voice' => 'Bo’s voice and listening', 'recap' => 'Recaps after calls', 'memory' => 'Keeping Bo’s memory short', 'class' => 'Building classes', 'draft' => 'Draft feedback', 'check' => 'Checking your work', 'slides' => 'Notes from slides', 'officehours' => 'Office-hours prep', 'other' => 'Other'];
 
 function mh_credits_db(): PDO {
   static $ready = false; $db = mh_ai_db();
@@ -190,8 +190,8 @@ function mh_credits_status(array $u, array $cfg): array {
   $days = array_map(fn($r) => ['d' => (string)$r['d'], 'credits' => $k((int)$r['mc'])], $st->fetchAll());
   $st = $db->prepare('SELECT at, feature, mc, detail FROM credit_use WHERE user_id = ? ORDER BY at DESC, id DESC LIMIT 60'); $st->execute([$uid]);
   $recent = array_map(fn($r) => ['at' => (int)$r['at'], 'k' => (string)$r['feature'], 't' => MH_CREDIT_FEATURES[(string)$r['feature']] ?? 'Other', 'detail' => (string)$r['detail'], 'credits' => $k((int)$r['mc'])], $st->fetchAll());
-  $st = $db->prepare("SELECT kind, mc, note, created FROM credit_add WHERE user_id = ? AND kind <> 'used' ORDER BY created DESC LIMIT 40"); $st->execute([$uid]);
-  $label = fn($r) => (string)$r['kind'] === 'buy' ? 'Bought' : ((string)$r['kind'] === 'refund' ? 'Refunded' : ((string)$r['note'] === 'Call time bought before, as credits' ? (string)$r['note'] : 'From Mathub'));
+  $st = $db->prepare("SELECT kind, mc, ref, note, created FROM credit_add WHERE user_id = ? AND kind <> 'used' AND NOT (kind = 'sponsor' AND mc = 0) ORDER BY created DESC LIMIT 40"); $st->execute([$uid]);
+  $label = fn($r) => (string)$r['kind'] === 'buy' ? 'Bought' : ((string)$r['kind'] === 'refund' ? 'Refunded' : ((string)$r['kind'] === 'sponsor' ? 'Given to your students: ' . (string)$r['note'] : (str_starts_with((string)$r['ref'], 'sponsor:') || (string)$r['note'] === 'Call time bought before, as credits' ? (string)$r['note'] : 'From Mathub')));
   $adds = array_map(fn($r) => ['kind' => (string)$r['kind'], 'credits' => $k((int)$r['mc']), 'note' => $label($r), 'at' => (int)$r['created']], $st->fetchAll());
   $customer = 'mh_' . $uid;
   return ['ok' => true, 'plan' => $L['plan'], 'admin' => $L['admin'],

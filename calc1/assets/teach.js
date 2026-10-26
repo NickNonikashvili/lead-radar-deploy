@@ -115,7 +115,7 @@
   /* ============================================================
      The faculty workspace: frame, rail, top bar
      ============================================================ */
-  const SYL = [['course', 'Course details', 'info'], ['people', 'People and office hours', 'users'], ['about', 'Description and outcomes', 'book'], ['materials', 'Materials', 'scroll'], ['schedule', 'Schedule', 'calendar'], ['exams', 'Exams', 'flag'], ['grading', 'Grading', 'calc'], ['policies', 'Policies', 'shield']];
+  const SYL = [['course', 'Course details', 'info'], ['people', 'People and office hours', 'users'], ['about', 'Description and outcomes', 'book'], ['materials', 'Materials', 'scroll'], ['schedule', 'Schedule', 'calendar'], ['exams', 'Exams', 'flag'], ['papers', 'Papers and notebook', 'pen'], ['grading', 'Grading', 'calc'], ['policies', 'Policies', 'shield']];
   const TOOLS = [['students', 'Students', 'users'], ['announce', 'Announcements', 'megaphone'], ['assign', 'Assignments', 'target'], ['attendance', 'Attendance', 'check'], ['insights', 'Insights', 'chart']];
   const PAGES = ['overview'].concat(SYL.map(x => x[0]), TOOLS.map(x => x[0]), ['settings']);
   const LEGACY = { syllabus: 'course' };   // links made before the editor was split into pages
@@ -196,6 +196,7 @@
         <p class="fx-lede lg">A syllabus editor for Montana State instructors. The finished page sits beside the form and updates as you type; print it, save it as a PDF, or publish it to your students on Mathub.</p>
         <div class="fx-actions"><button type="button" class="fx-btn primary lg" data-action="auth-login">Sign in with montana.edu</button><button type="button" class="fx-btn lg" data-action="auth-signup">Create an account</button></div>
         <p class="fx-help">Free. Writing, printing and PDFs work as soon as you sign in. Publishing to students needs your faculty status confirmed, usually within a day.</p>
+        <p class="fx-help"><a href="#/instructors">What Bo does in your class, and what you control</a></p>
         <dl class="fx-facts">${fact('The page, as you write it', 'Course facts, office hours, schedule, exams, grading and policies, each on its own page, with the typeset syllabus next to it.')}${fact('Checked before it goes out', 'A checklist flags what students look for: office hours, weights that add up to 100%, exam dates, an AI policy, an accommodations statement.')}${fact('Published to your students', 'Students join with a six-character code. Their calendar, exam countdowns and grade calculator follow your syllabus, with announcements, practice sets and attendance in the same place.')}</dl>
       </div>
       <figure class="fx-intro-paper"><figcaption class="fx-paper-tag">Example</figcaption><div class="fx-paper">${docHtml(SAMPLE)}</div></figure>
@@ -301,7 +302,7 @@
     const on = e => { const el = e.target.closest('[data-k]'); if (!el || !S) return; let v = el.type === 'checkbox' ? el.checked : el.value; if (el.dataset.num !== undefined) v = v === '' ? 0 : Number(v); setP(S.syl, el.dataset.k, v); changed(); if (pane.__after) pane.__after(el); };
     pane.addEventListener('input', e => { if (!e.target.matches('select, input[type=checkbox]')) on(e); }); pane.addEventListener('change', e => { if (e.target.matches('select, input[type=checkbox]')) on(e); });
   }
-  const BLANK = { 'course.meets': () => ({ days: '', start: '', end: '', room: '', kind: 'Lecture' }), people: () => ({ role: 'TA', name: '', email: '', office: '', hours: '', pronouns: '' }), 'course.outcomes': () => '', materials: () => ({ title: '', url: '', required: true, note: '' }), 'policies.other': () => ({ title: '', text: '' }), exams: () => ({ name: '', date: '', time: '', place: '', covers: '' }), 'schedule.rows': () => ({ date: '', type: 'lecture', title: '', notes: '' }), 'grading.categories': () => ({ name: '', weight: 0, note: '' }), 'grading.scale': () => ({ letter: '', min: 0 }) };
+  const BLANK = { papers: () => ({ name: '', brief: '', goals: '', draft: '', revised: '' }), 'course.meets': () => ({ days: '', start: '', end: '', room: '', kind: 'Lecture' }), people: () => ({ role: 'TA', name: '', email: '', office: '', hours: '', pronouns: '' }), 'course.outcomes': () => '', materials: () => ({ title: '', url: '', required: true, note: '' }), 'policies.other': () => ({ title: '', text: '' }), exams: () => ({ name: '', date: '', time: '', place: '', covers: '' }), 'schedule.rows': () => ({ date: '', type: 'lecture', title: '', notes: '' }), 'grading.categories': () => ({ name: '', weight: 0, note: '' }), 'grading.scale': () => ({ letter: '', min: 0 }) };
   /** "Add" and "remove" buttons on the list editors (data-act add/del, data-path). */
   function listActions(pane, rerender) {
     pane.__rerender = rerender; if (pane.__listWired) return; pane.__listWired = true;
@@ -448,6 +449,12 @@
       const E = S.syl.exams;
       sylPage(pane, 'exams', 'Each dated exam gets a countdown and an exam prep page for your students.', `
         <section class="fx-sec"><div class="fx-list" data-list="exams">${E.map((e, i) => `<div class="fx-item" data-item><div class="fx-grid g3">${F('Name', I(`exams.${i}.name`, 'Midterm 1'))}${F('Date', I(`exams.${i}.date`, '', '', 'date'))}${F('Time', I(`exams.${i}.time`, '', '', 'time'))}${F('Room', I(`exams.${i}.place`, 'Wilson 1-112'))}${F('What it covers', I(`exams.${i}.covers`, 'Limits and the derivative'), '', 'span2')}</div>${DEL('exams', i, (e.name || 'this exam'))}</div>`).join('') || EMPTY('No exams yet.')}${ADD('exams', 'Add an exam')}</div></section>`);
+    },
+    papers(pane) {
+      const P = S.syl.papers || (S.syl.papers = []); if (!S.syl.notebook) S.syl.notebook = { count: 0, due: '' };
+      sylPage(pane, 'papers', 'Papers your students write and revise. Each gets Bo’s draft feedback, where he comments like a writing tutor and never writes any of it for them, and a revision history. Leave it empty if your class has none.', `
+        <section class="fx-sec"><div class="fx-list" data-list="papers">${P.map((x, i) => `<div class="fx-item" data-item><div class="fx-grid g3">${F('Name', I(`papers.${i}.name`, 'Paper 1: A place that matters'), '', 'span2')}${F('First draft due', I(`papers.${i}.draft`, '', '', 'date'))}${F('What it asks for', TA(`papers.${i}.brief`, 3, 'The assignment in a few sentences.'), '', 'span2')}${F('Revised draft due', I(`papers.${i}.revised`, '', '', 'date'))}${F('Its goals, one per line', TA(`papers.${i}.goals`, 4, 'A clear claim\nEvidence from at least two sources'), 'Bo reads each draft against these.', 'span2')}</div>${DEL('papers', i, (x.name || 'this paper'))}</div>`).join('') || EMPTY('No papers yet.')}${ADD('papers', 'Add a paper')}</div></section>
+        <section class="fx-sec"><h2 class="fx-h2">Writer’s notebook</h2><div class="fx-grid g3">${F('Entries', `<input class="fx-input num" type="number" min="0" max="40" step="1" ${val('notebook.count', 'data-num')} value="${esc(String(S.syl.notebook.count || 0))}">`, '0 for none. Students write each entry on Mathub, privately and with no AI, and download them all for handing in.')}${F('Handed in', I('notebook.due', '', '', 'date'))}</div></section>`);
     },
     grading(pane) {
       const g = S.syl.grading; const sum = () => g.categories.filter(x => x.name).reduce((a, x) => a + (Number(x.weight) || 0), 0);

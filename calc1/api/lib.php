@@ -282,6 +282,9 @@ function mh_export_user(array $u): array {
   }
   // classes this member had Bo write from a syllabus and published for everyone (api/community.php)
   try { $st = mh_pack_db()->prepare('SELECT id, code, name, enabled, created FROM class_packs WHERE uploaded_by = ?'); $st->execute(['community:' . $u['id']]); $added = $st->fetchAll(); if ($added) $out['classes_added_to_mathub'] = array_map(fn($r) => ['id' => $r['id'], 'code' => $r['code'], 'name' => $r['name'], 'published' => (bool)$r['enabled'], 'added' => gmdate('c', (int)$r['created'])], $added); } catch (Throwable $e) {}
+  // peer review swaps they were in and what they wrote (api/peer.php; the tables name both people, so they are not in the loop above)
+  try { $st = $db->prepare('SELECT id, course, project, created, due, closed FROM peer_swaps WHERE a_user = ? OR b_user = ?'); $st->execute([$u['id'], $u['id']]); if ($sw = $st->fetchAll()) $out['peer_review_swaps'] = $sw;
+    $st = $db->prepare('SELECT swap_id, overall, comments, sent, updated FROM peer_notes WHERE from_user = ?'); $st->execute([$u['id']]); if ($pn = $st->fetchAll()) $out['peer_reviews_you_wrote'] = $pn; } catch (Throwable $e) {}
   // what Bo knows about this member (api/students.php): their student file
   $sf = __DIR__ . '/data/students/' . (int)$u['id'] . '.json'; if (is_file($sf)) { $sj = json_decode((string)@file_get_contents($sf), true); if (is_array($sj)) $out['what_bo_knows'] = $sj; }
   $st = $db->prepare('SELECT created, expires, ua FROM tokens WHERE user_id = ? AND expires > ?'); $st->execute([$u['id'], time()]);

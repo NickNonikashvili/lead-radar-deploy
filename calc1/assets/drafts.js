@@ -172,6 +172,7 @@
           <div class="df-tools"><label class="btn sm" for="df-file">${icon('upload', 14)} Open a file</label><input type="file" id="df-file" class="sr-only" accept=".docx,.pdf,.odt,.txt,.md,text/plain,application/pdf"><span class="small muted">.docx, .pdf, .odt or .txt</span><span class="df-count small" id="df-count" aria-live="polite"></span></div></div>
         <div class="field"><label for="df-ask">What do you want feedback on? <span class="muted">(optional)</span></label><input class="input" id="df-ask" maxlength="600" placeholder="For example: does my ending land?"></div>
         <details class="df-peer"${f.peer ? ' open' : ''}><summary>Add comments from peer review <span class="muted">(optional)</span></summary><textarea class="input mt-1" id="df-peer" rows="4" maxlength="4000" aria-label="Comments from peer review" placeholder="Paste what your classmates said. Bo weighs it with his own reading." translate="no"></textarea></details>
+        <label class="check df-count-row" id="df-count-row" hidden><input type="checkbox" id="df-counted"${settings().draftCount ? ' checked' : ''}><span class="small">Let this draft count, without your name, in the patterns your instructor sees across the class <span class="muted">(only once five students have; never your words)</span></span></label>
         <div class="df-go" id="df-go"><button type="submit" class="btn primary lg" id="df-send">${icon('send', 15)} Get Bo’s feedback</button><p class="small muted">Uses a few credits, more for a longer draft. Your draft is kept with your account so Bo can say what changed next time; you can delete it any time.</p></div>
       </form>
       <div id="df-past" class="mt-3"></div>`;
@@ -196,7 +197,8 @@
       go.innerHTML = `<div class="df-reading" role="status"><span class="df-bo" aria-hidden="true">${bo(52)}</span><div><b>Bo is reading your draft</b><p class="small muted">${wordsOf(v.text) > 2500 ? 'A long draft takes him about a minute.' : 'This takes him about half a minute.'} Stay on this page.</p><div class="df-reading-bar"><span></span></div></div></div>`;
       $$('input, textarea, button', form).forEach(el => { el.disabled = true; });
       try {
-        const r = await api('ai_draft_review', { class: cid(), project: v.project, stage: v.stage, text: v.text, ask: v.ask, peer: v.peer, lang: App.lang || 'en', persona: App.boChar ? App.boChar() : '' });
+        const cnt = $('#df-counted', root); const counted = !!(cnt && !cnt.closest('[hidden]') && cnt.checked);
+        const r = await api('ai_draft_review', { class: cid(), project: v.project, stage: v.stage, text: v.text, ask: v.ask, peer: v.peer, count: counted ? 1 : 0, lang: App.lang || 'en', persona: App.boChar ? App.boChar() : '' });
         ST.cache[r.review.id] = r.review; ST.list = null; clearForm();
         if (App.sfx) App.sfx.play('complete'); location.hash = App.link('drafts', r.review.id);
       } catch (err) {
@@ -206,6 +208,7 @@
       }
     });
     bind(root, { 'df-del': el => del(root, +el.dataset.id, () => past(root)), 'df-del-all': () => delAll(root), 'df-switch': el => toggle(root, el.dataset.off === '1') });
+    on(root, 'change', '#df-counted', el => setSetting('draftCount', el.checked));
     past(root);
   }
   /* the reviews they have, by project, newest version first; and the instructor's switch */
@@ -216,9 +219,11 @@
     if (staff) staff.innerHTML = L.staff ? `<div class="callout df-switch row between">${L.off ? `<span>${icon('lock', 14)} Bo’s draft feedback is off for this class. Students see a note instead of the form.</span><button type="button" class="btn sm" data-action="df-switch" data-off="0">Turn it on</button>` : `<span>${icon('shield', 14)} You teach this class: Bo’s draft feedback is on for your students.</span><button type="button" class="btn sm" data-action="df-switch" data-off="1">Turn it off for the class</button>`}</div>`
       : L.off ? `<div class="callout df-switch">${icon('lock', 14)} Your instructor has turned off Bo’s draft feedback for this class. Your past reviews are still here.</div>` : '';
     if (L.off && !L.staff) { const fm = $('#df-form', root); if (fm) fm.hidden = true; }
+    if (L.staff && staff) staff.firstElementChild.insertAdjacentHTML('beforeend', `<a class="btn sm" href="${App.link('instructor')}">${icon('gear', 13)} ${esc(t('Instructor page'))}</a>`);
+    const cr = $('#df-count-row', root); if (cr) cr.hidden = !L.count_ok;
     const by = {}; L.reviews.forEach(r => { (by[r.project] = by[r.project] || []).push(r); });
     const have = projects().filter(p => by[p.id]);
-    box.innerHTML = `<section class="panel"><div class="panel-h"><div class="panel-title">${icon('file')} Your drafts</div>${L.reviews.length ? '<button type="button" class="btn xs ghost" data-action="df-del-all">Delete all</button>' : ''}</div>
+    box.innerHTML = `<section class="panel"><div class="panel-h"><div class="panel-title">${icon('file')} Your drafts</div><div class="row gap-sm">${L.peer_on ? `<a class="btn xs" href="${App.link('peer')}">${icon('swap', 13)} Peer review</a>` : ''}${L.reviews.length ? '<button type="button" class="btn xs ghost" data-action="df-del-all">Delete all</button>' : ''}</div></div>
       ${have.length ? have.map(p => `<div class="df-proj"><div class="df-proj-row"><h3 class="df-proj-h">${esc(p.short)} <span class="muted">· ${esc(p.name.replace(/^[^:]*:\s*/, ''))}</span></h3><a class="btn xs" href="${App.link('draft-history', p.id)}">${icon('rotate', 13)} Revision history</a></div><ul class="df-vers">${by[p.id].map(r => `<li class="df-ver">
           <a class="df-ver-link" href="${App.link('drafts', r.id)}"><span class="df-vn" aria-hidden="true">v${r.version}</span><span class="df-ver-body"><b>${stageLabel(r.stage)} · version ${r.version}</b><small>${wordsLabel(r.words)} · ${esc(dateOf(r.created))}</small><span class="df-ver-ov small muted" translate="no">${esc(r.overall)}</span></span></a>
           <button type="button" class="icon-btn" data-action="df-del" data-id="${r.id}" aria-label="Delete version ${r.version}" title="Delete">${icon('trash', 15)}</button></li>`).join('')}</ul></div>`).join('')
@@ -239,7 +244,12 @@
   /* ---------- one review ---------- */
   const KIND = { praise: 'Works well', question: 'Question', revise: 'Revise', source: 'Sources' };
   const STATUS = { done: 'Done', partly: 'Partly', 'not yet': 'Not yet' };
-  async function getReview(id) { if (ST.cache[id] && ST.cache[id].text != null) return ST.cache[id]; const j = await api(`ai_draft_get&class=${encodeURIComponent(cid())}&id=${encodeURIComponent(id)}`); return (ST.cache[id] = j.review); }
+  async function getReview(id, fresh) {
+    if (!fresh && ST.cache[id] && ST.cache[id].text != null) return ST.cache[id];
+    const j = await api(`ai_draft_get&class=${encodeURIComponent(cid())}&id=${encodeURIComponent(id)}`);
+    ST.flags = { can_share: !!j.can_share, staff_name: j.staff_name || '', peer_on: !!j.peer_on };   // what the class allows (api/drafts.php mh_draft_flags)
+    return (ST.cache[id] = j.review);
+  }
   /* how a version changed from the one before: paragraphs rewritten or new, and words */
   function changed(now, before) {
     const ps = s => String(s).split(/\n\s*\n/).map(x => plain(x).s.trim()).filter(Boolean);
@@ -254,6 +264,8 @@
     if ((fb.next || []).length) { L.push('', t('Next steps:')); fb.next.forEach(x => L.push('- ' + x)); }
     return L.join('\n');
   }
+  /* what classmates wrote in a peer review swap, as the peer review comments a revised version sends Bo */
+  const peerText = list => (list || []).map(x => [x.overall ? `${x.name}: ${x.overall}` : `${x.name}:`].concat((x.comments || []).map(c => `- ${c.quote ? `“${c.quote}”: ` : ''}${c.note}`)).join('\n')).join('\n\n');
   /* their answer to one note: Done, I disagree (with a reason Bo reads next time), and Ask Bo about it */
   function respHtml(key, resp, what) {
     const s = resp && resp.s || '';
@@ -267,7 +279,7 @@
   async function reviewView(root, id) {
     if (!user()) { formView(root, {}); return; }
     root.innerHTML = `<div class="df-review"><a class="btn sm" href="${App.link('drafts')}">${icon('left', 13)} All drafts</a><div class="empty mt-3">Opening Bo’s feedback…</div></div>`;
-    let r; try { r = await getReview(id); } catch (e) { root.innerHTML = `<div class="df-review"><a class="btn sm" href="${App.link('drafts')}">${icon('left', 13)} All drafts</a><div class="empty mt-3">${esc(e.message)}</div></div>`; return; }
+    let r; try { r = await getReview(id, true); } catch (e) { root.innerHTML = `<div class="df-review"><a class="btn sm" href="${App.link('drafts')}">${icon('left', 13)} All drafts</a><div class="empty mt-3">${esc(e.message)}</div></div>`; return; }
     if (App.current !== App.views.drafts) return;
     const p = projectOf(r.project); const fb = r.feedback || {}; const P = paperHtml(r.text, fb); const R = r.responses || (r.responses = {});
     let before = null; if (r.before) { try { before = await getReview(r.before); } catch (e) {} }
@@ -294,7 +306,9 @@
           ${(fb.comments || []).length ? `<section class="df-card"><h2 class="df-h">${icon('chat', 15)} In the margins</h2><ol class="df-notes">${fb.comments.map((c, i) => `<li id="dfc-c${i + 1}" tabindex="-1" class="k-${c.kind}${R['c' + (i + 1)] && R['c' + (i + 1)].s === 'done' ? ' is-done' : ''}"><span class="df-num" aria-hidden="true">${i + 1}</span><div><span class="df-kind">${esc(KIND[c.kind] || c.kind)}</span><p class="df-q">${quoteBtn('c' + (i + 1), c.quote)}</p><p translate="no">${esc(c.note)}</p>${respHtml('c' + (i + 1), R['c' + (i + 1)], t('Comment {1}', i + 1))}</div></li>`).join('')}</ol></section>` : ''}
           ${(fb.strengths || []).length ? `<section class="df-card"><h2 class="df-h">${icon('check', 15)} What works</h2><ul class="df-good">${fb.strengths.map(x => `<li>${x.quote ? `<q translate="no">${esc(x.quote)}</q>` : ''}<p translate="no">${esc(x.why)}</p></li>`).join('')}</ul></section>` : ''}
           ${(fb.next || []).length ? `<section class="df-card"><h2 class="df-h">${icon('list', 15)} Next steps</h2>${fb.next.map((x, i) => `<label class="check"><input type="checkbox" data-n="${i}"${ticks[i] ? ' checked' : ''}><span translate="no">${esc(x)}</span></label>`).join('')}</section>` : ''}
-          <div class="df-acts"><a class="btn primary" href="${App.link('drafts', null, { p: r.project, stage: 'revised' })}" data-action="df-again">${icon('pen', 14)} Send a revised version</a><button type="button" class="btn" data-action="df-copy">${icon('copy', 14)} Copy the feedback</button><button type="button" class="btn ghost" data-action="df-del" data-id="${r.id}">${icon('trash', 14)} Delete</button></div>
+          ${(r.peers || []).length ? `<section class="df-card df-peer-got"><h2 class="df-h">${icon('users', 15)} From peer review</h2>${r.peers.map(x => `<div class="df-peer-one"><b>${esc(x.name)}</b>${x.overall ? `<blockquote translate="no">${esc(x.overall).replace(/\n/g, '<br>')}</blockquote>` : ''}${x.comments.length ? `<ol>${x.comments.map(c => `<li>${c.quote ? `<q translate="no">${esc(c.quote)}</q> ` : ''}<span translate="no">${esc(c.note)}</span></li>`).join('')}</ol>` : ''}</div>`).join('')}<p class="small muted">Send a revised version and these go to Bo with it, as peer review comments.</p></section>` : ''}
+          ${(ST.flags || {}).can_share || r.share ? `<section class="df-card df-share-box" id="df-share-box"></section>` : ''}
+          <div class="df-acts"><a class="btn primary" href="${App.link('drafts', null, { p: r.project, stage: 'revised' })}" data-action="df-again">${icon('pen', 14)} Send a revised version</a>${(ST.flags || {}).peer_on ? `<a class="btn" href="${App.link('peer', null, { review: r.id })}">${icon('swap', 14)} Swap with a classmate</a>` : ''}<button type="button" class="btn" data-action="df-copy">${icon('copy', 14)} Copy the feedback</button><button type="button" class="btn ghost" data-action="df-del" data-id="${r.id}">${icon('trash', 14)} Delete</button></div>
           <p class="small muted">Bo’s feedback is a second reader, not a grade. Your instructor’s comments and the assignment on Canvas come first.</p>
         </div>
       </div></div>`;
@@ -329,9 +343,33 @@
       },
       'df-listen': () => { if (RA.on) stopReading(); else startReading(root); },
       'df-copy': async () => { try { await navigator.clipboard.writeText(copyText(r, p)); toast('Feedback copied'); } catch (e) { toast('Copying is blocked here. Select the feedback and copy it instead.', 4000); } },
-      'df-again': (el, e) => { e.preventDefault(); stopReading(); saveForm({ project: r.project, stage: 'revised', text: r.text, ask: '', peer: '' }); location.hash = el.getAttribute('href'); },
+      'df-again': (el, e) => { e.preventDefault(); stopReading(); saveForm({ project: r.project, stage: 'revised', text: r.text, ask: '', peer: peerText(r.peers).slice(0, 4000) }); location.hash = el.getAttribute('href'); },
+      'df-share': () => { const f = $('#df-share-form', root); f.hidden = false; $('#df-share-note', root).focus(); },
+      'df-share-cancel': () => { $('#df-share-form', root).hidden = true; $('[data-action="df-share"]', root).focus(); },
+      'df-share-send': async el => {
+        el.disabled = true;
+        try { const j = await api('ai_draft_share', { class: cid(), id: r.id, note: $('#df-share-note', root).value.trim() }); r.share = j.share; paintShare(); toast(t('Shared with {1}', who())); }
+        catch (e) { el.disabled = false; toast(e.message, 4500); }
+      },
+      'df-unshare': async () => {
+        if (!confirm(t('Stop sharing this version with {1}? Their reply goes too.', who()))) return;
+        try { await api('ai_draft_unshare', { class: cid(), id: r.id }); r.share = null; paintShare(); toast('No longer shared'); } catch (e) { toast(e.message, 4500); }
+      },
       'df-del': el => del(root, +el.dataset.id, () => App.go('drafts'))
     });
+    const who = () => (ST.flags && ST.flags.staff_name) || t('your instructor');
+    function paintShare() {
+      const box = $('#df-share-box', root); if (!box) return; const s = r.share;
+      box.innerHTML = `<h2 class="df-h">${icon('users', 15)} ${esc(t('Your instructor'))}</h2>` + (s
+        ? `<p class="small">${esc(t('Shared with {1} on {2}.', who(), dateOf(s.created)))}${s.note ? ` ${esc(t('Your note:'))} <span translate="no">“${esc(s.note)}”</span>` : ''}</p>
+           ${s.reply ? `<div class="callout df-reply"><span><b>${esc(t('{1} replied', who()))}</b> <span translate="no">${esc(s.reply).replace(/\n/g, '<br>')}</span></span></div>` : ''}
+           <button type="button" class="btn sm ghost" data-action="df-unshare">${esc(t('Stop sharing'))}</button>`
+        : `<p class="small muted">${esc(t('Share this version with {1}: they see your draft, Bo’s feedback and your answers to his notes, and can reply.', who()))}</p>
+           <button type="button" class="btn sm" data-action="df-share">${icon('send', 13)} ${esc(t('Share with your instructor'))}</button>
+           <div class="df-share-form mt-2" id="df-share-form" hidden><label class="small" for="df-share-note">${esc(t('A note for them'))} <span class="muted">${esc(t('(optional)'))}</span></label><textarea class="input" id="df-share-note" rows="3" maxlength="1000" placeholder="${esc(t('For example: is my ending too quiet?'))}" translate="no"></textarea>
+             <div class="row gap-sm mt-1"><button type="button" class="btn primary sm" data-action="df-share-send">${esc(t('Share'))}</button><button type="button" class="btn ghost sm" data-action="df-share-cancel">${esc(t('Cancel'))}</button></div></div>`);
+    }
+    paintShare();
     on(root, 'change', '.df-side input[type="checkbox"][data-n]', cb => { ticks[cb.dataset.n] = cb.checked; try { localStorage.setItem(nextKey, JSON.stringify(ticks)); } catch (x) {} });
     on(root, 'change', '[data-why]', el => { const key = el.dataset.why; if ((R[key] || {}).s === 'disagree') respond(key, 'disagree', el.value.trim()); });
     on(root, 'change', '#df-rate', el => { setSetting('readerRate', +el.value); if (RA.on) { const sy = synth(); RA.u = null; if (sy) sy.cancel(); speakNext(); } });
@@ -443,5 +481,7 @@
   };
   App.draftsNext = nextUp;   // the writing dashboard's button (assets/app.js)
   App.draftDiff = diffTexts;  // the tests check it
+  App.draftPaper = (text, fb) => paperHtml(text, fb || {}).html;   // a shared draft on the instructor's page (assets/instruct.js)
+  App.draftDiffHtml = diffHtml;
   global.addEventListener('beforeunload', () => { const sy = synth(); if (sy && RA.on) sy.cancel(); });
 })(window);

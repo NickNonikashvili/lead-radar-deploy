@@ -9,8 +9,11 @@
    can switch it off for the class. The projects and their goals come from the class (DRAFTS in assets/writ-data.js,
    copied to api/classdata by scripts/build-classdata.js).
    They can mark each of his notes done or say they disagree (and why); the next review is told, and weighs it.
+   The class's instructors (api/instruct.php) can give each project an assignment sheet and a rubric, which Bo reads
+   too; a student can share a version with them (draft_shares) and let their drafts count, without their name, in the
+   patterns the instructors see (counted); what a classmate sent in a peer review swap shows on the version (peer.php).
    Routes (from mh_ai_route): ai_draft_list, ai_draft_get, ai_draft_history, ai_draft_review, ai_draft_respond,
-   ai_draft_delete, ai_draft_switch.
+   ai_draft_share, ai_draft_unshare, ai_draft_delete, ai_draft_switch.
    ============================================================ */
 
 const MH_DRAFT_MAX = 60000;      // characters, about 10,000 words
@@ -37,7 +40,7 @@ WHAT YOU SEND BACK: only this JSON object, no other text.
 {"overall": "...", "strengths": [...], "revisions": [...], "comments": [...], "since": [...], "next": [...]}
 - overall: 2 or 3 sentences: what the draft does well as a whole, and the one change that would help it most for this project.
 - strengths: 1 or 2 of {"quote": "...", "why": "why this works for a reader"}.
-- revisions: the 2 or 3 biggest revisions, most important first: {"title": "a few words", "why": "what a reader experiences now, and which goal of the project it touches", "where": "an exact quote where it shows, or \"\" when it is about the whole draft", "ask": "one question that helps them decide how to revise"}.
+- revisions: the 2 or 3 biggest revisions, most important first: {"title": "a few words", "why": "what a reader experiences now, and which goal of the project it touches", "where": "an exact quote where it shows, or \"\" when it is about the whole draft", "ask": "one question that helps them decide how to revise", "goal": the number of the goal in ITS GOALS it touches most (1 for the first), or 0 when it is about none of them}.
 - comments: 4 to 10 margin comments, in the order they come in the draft: {"quote": "...", "kind": "praise" or "question" or "revise" or "source", "note": "one or two sentences"}. "source" is about how a source is used or cited.
 - since: only when EARLIER FEEDBACK is given: for each revision it named, {"point": "its title", "status": "done" or "partly" or "not yet", "note": "one sentence on what changed"}. Otherwise [].
 - next: 3 short revision steps in the order to do them, each starting with a verb.
@@ -52,6 +55,9 @@ function mh_draft_db(): PDO {
     $db->exec('CREATE TABLE IF NOT EXISTS draft_switch (course TEXT PRIMARY KEY, off INTEGER NOT NULL DEFAULT 0, user_id INTEGER NOT NULL DEFAULT 0, updated INTEGER NOT NULL)');   // the instructor's off switch
     $cols = array_column($db->query('PRAGMA table_info(draft_reviews)')->fetchAll(), 'name');
     if (!in_array('responses', $cols, true)) $db->exec("ALTER TABLE draft_reviews ADD COLUMN responses TEXT NOT NULL DEFAULT '{}'");   // their answers to his notes: { c1: { s: done|disagree, why } }
+    if (!in_array('counted', $cols, true)) $db->exec('ALTER TABLE draft_reviews ADD COLUMN counted INTEGER NOT NULL DEFAULT 0');   // let count, without their name, in the class's patterns (api/instruct.php)
+    $db->exec('CREATE TABLE IF NOT EXISTS draft_shares (review_id INTEGER PRIMARY KEY REFERENCES draft_reviews(id) ON DELETE CASCADE, user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE, course TEXT NOT NULL, note TEXT NOT NULL DEFAULT \'\', created INTEGER NOT NULL, seen INTEGER NOT NULL DEFAULT 0, reply TEXT NOT NULL DEFAULT \'\', reply_by INTEGER NOT NULL DEFAULT 0, replied INTEGER NOT NULL DEFAULT 0)');   // a version shared with the instructors
+    $db->exec('CREATE INDEX IF NOT EXISTS draft_shares_course ON draft_shares (course, created)');
     $ready = true;
   }
   return $db;
@@ -62,7 +68,8 @@ function mh_draft_projects(?array $C): array {
   return $out;
 }
 /** Who can switch draft feedback off for a class: an administrator, or the instructor whose email the syllabus gives. */
-function mh_draft_staff(array $u, ?array $C): bool {
+function mh_draft_staff(array $u, ?array $C, string $cid = ''): bool {
+  if ($cid !== '') { require_once __DIR__ . '/instruct.php'; return mh_course_staff($u, $cid, $C); }   // also a Mathub Faculty class's teaching team
   if (mh_is_admin($u)) return true;
   $co = is_array($C['COURSE'] ?? null) ? $C['COURSE'] : []; $mail = strtolower(trim((string)($co['email'] ?? ($co['instructorEmail'] ?? ''))));
   return $mail !== '' && strtolower((string)$u['email']) === $mail;
@@ -87,7 +94,7 @@ function mh_draft_unwrite(string $t, string $draftN, int &$cut): string {
 }
 /** Bo's JSON, made safe to show: the right shapes and lengths, each quote checked against the draft, his own wording
     left out. $also: other words he may quote (their peer review comments, what they asked, the project's goals). */
-function mh_draft_clean(array $j, string $text, bool $earlier, string $also = ''): array {
+function mh_draft_clean(array $j, string $text, bool $earlier, string $also = '', int $ngoals = 0): array {
   $N = mh_draft_norm($text); $NQ = $N . "\n" . mh_draft_norm($also); $cut = 0;
   $s = fn($v, int $n) => mh_ai_plain($v, $n);
   $quote = function ($v) use ($N, $s): array { $q = (string)preg_replace('/^[\s"“”]+|[\s"“”]+$/u', '', $s($v, 400)); return [$q, $q !== '' && mb_strlen($q) >= 4 && str_contains($N, mh_draft_norm($q))]; };
@@ -97,7 +104,7 @@ function mh_draft_clean(array $j, string $text, bool $earlier, string $also = ''
   foreach (array_slice($list($j['revisions'] ?? null), 0, 4) as $x) {
     $title = $s($x['title'] ?? '', 80); $why = mh_draft_unwrite($s($x['why'] ?? '', 600), $NQ, $cut); $ask = mh_draft_unwrite($s($x['ask'] ?? '', 300), $NQ, $cut);
     [$q, $ok] = $quote($x['where'] ?? ''); if ($title === '' || $why === '') continue;
-    $out['revisions'][] = ['title' => $title, 'why' => $why, 'where' => $ok ? $q : '', 'found' => $ok, 'ask' => $ask];
+    $out['revisions'][] = ['title' => $title, 'why' => $why, 'where' => $ok ? $q : '', 'found' => $ok, 'ask' => $ask, 'goal' => max(0, min($ngoals, is_numeric($x['goal'] ?? null) ? (int)$x['goal'] : 0))];
   }
   foreach (array_slice($list($j['comments'] ?? null), 0, 14) as $x) {
     [$q, $ok] = $quote($x['quote'] ?? ''); $before = $cut; $note = mh_draft_unwrite($s($x['note'] ?? '', 500), $NQ, $cut);
@@ -117,8 +124,16 @@ function mh_draft_row(array $r, bool $full): array {
   $f = json_decode((string)$r['feedback'], true) ?: [];
   $o = ['id' => (int)$r['id'], 'project' => (string)$r['project'], 'version' => (int)$r['version'], 'stage' => (string)$r['stage'], 'words' => (int)$r['words'], 'created' => (int)$r['created'],
     'overall' => mh_ai_plain($f['overall'] ?? '', $full ? 700 : 160), 'revisions' => count($f['revisions'] ?? [])];
-  if ($full) $o += ['text' => (string)$r['text'], 'ask' => (string)$r['ask'], 'peer' => (string)$r['peer'], 'feedback' => $f, 'responses' => (object)(json_decode((string)($r['responses'] ?? '{}'), true) ?: [])];
+  $sh = mh_draft_db()->prepare('SELECT note, created, reply, replied FROM draft_shares WHERE review_id = ?'); $sh->execute([(int)$r['id']]); $share = $sh->fetch();
+  $o['shared'] = (bool)$share;
+  if ($full) $o += ['text' => (string)$r['text'], 'ask' => (string)$r['ask'], 'peer' => (string)$r['peer'], 'feedback' => $f, 'responses' => (object)(json_decode((string)($r['responses'] ?? '{}'), true) ?: []),
+    'share' => $share ? ['note' => (string)$share['note'], 'created' => (int)$share['created'], 'reply' => (string)$share['reply'], 'replied' => (int)$share['replied']] : null];
   return $o;
+}
+/** What the student's page needs to know about the class: whether a version can go to the instructors (and their name), whether swaps are on. */
+function mh_draft_flags(string $cid, ?array $C): array {
+  require_once __DIR__ . '/instruct.php'; $S = mh_class_ai($cid); $staff = mh_course_has_staff($cid, $C);
+  return ['can_share' => $staff && $S['share'], 'count_ok' => $staff, 'staff_name' => mh_course_staff_name($C), 'peer_on' => (bool)$S['peer']];
 }
 /** Their answers to the notes of a review, as lines for Bo's next one ("A. Show the storm: they say it is done"). */
 function mh_draft_answers(array $last): string {
@@ -142,14 +157,15 @@ function mh_draft_route(string $route, array $in, array $cfg): void {
       mh_method('GET'); $u = mh_require_user(); $C = mh_ai_class($u, $cid); $P = mh_draft_projects($C);
       if (!$P) mh_fail('This class has no projects for draft feedback.', 404);
       $st = $db->prepare('SELECT * FROM draft_reviews WHERE user_id = ? AND course = ? ORDER BY project, version DESC'); $st->execute([$u['id'], $cid]);
-      mh_json(['ok' => true, 'off' => mh_draft_off($cid), 'staff' => mh_draft_staff($u, $C), 'reviews' => array_map(fn($r) => mh_draft_row($r, false), $st->fetchAll())]);
+      mh_json(['ok' => true, 'off' => mh_draft_off($cid), 'staff' => mh_draft_staff($u, $C, $cid), 'reviews' => array_map(fn($r) => mh_draft_row($r, false), $st->fetchAll())] + mh_draft_flags($cid, $C));
     }
     case 'ai_draft_get': {
       mh_method('GET'); $u = mh_require_user();
       $st = $db->prepare('SELECT * FROM draft_reviews WHERE id = ? AND user_id = ? AND course = ?'); $st->execute([(int)($_GET['id'] ?? 0), $u['id'], $cid]); $r = $st->fetch();
       if (!$r) mh_fail('That review is not in your drafts.', 404);
       $pv = $db->prepare('SELECT id FROM draft_reviews WHERE user_id = ? AND course = ? AND project = ? AND version < ? ORDER BY version DESC LIMIT 1'); $pv->execute([$u['id'], $cid, $r['project'], $r['version']]);
-      mh_json(['ok' => true, 'review' => mh_draft_row($r, true) + ['before' => (int)$pv->fetchColumn() ?: null]]);
+      require_once __DIR__ . '/peer.php';
+      mh_json(['ok' => true, 'review' => mh_draft_row($r, true) + ['before' => (int)$pv->fetchColumn() ?: null, 'peers' => mh_peer_for_review((int)$u['id'], (int)$r['id'])]] + mh_draft_flags($cid, mh_ai_class($u, $cid)));
     }
     case 'ai_draft_history': {   // every version of one project, oldest first: the revision history (assets/drafts.js)
       mh_method('GET'); $u = mh_require_user(); $pid = (string)($_GET['project'] ?? '');
@@ -167,6 +183,24 @@ function mh_draft_route(string $route, array $in, array $cfg): void {
       if ($s === '') unset($R[$key]); else $R[$key] = ['s' => $s, 'why' => $s === 'disagree' ? mh_ai_clip($in['why'] ?? '', 300) : '', 'at' => time()];
       $db->prepare('UPDATE draft_reviews SET responses = ? WHERE id = ?')->execute([json_encode((object)$R, JSON_UNESCAPED_UNICODE), (int)$in['id']]);
       mh_json(['ok' => true, 'responses' => (object)$R]);
+    }
+    case 'ai_draft_share': {   // a version shared with the class's instructors, with a note (sharing again replaces the note)
+      mh_method('POST'); $u = mh_require_user(); require_once __DIR__ . '/instruct.php';
+      $st = $db->prepare('SELECT id, project, version FROM draft_reviews WHERE id = ? AND user_id = ? AND course = ?'); $st->execute([(int)($in['id'] ?? 0), $u['id'], $cid]); $r = $st->fetch();
+      if (!$r) mh_fail('That review is not in your drafts.', 404);
+      $C = mh_ai_class($u, $cid); if (!mh_draft_flags($cid, $C)['can_share']) mh_fail('Sharing drafts with the instructor is not on for this class.', 403);
+      mh_rate_or_fail("ai_draft_share:{$u['id']}", 60, 3600, 'Slow down a little.');
+      $note = mh_ai_clip($in['note'] ?? '', 1000); $now = time(); $id = (int)$r['id'];
+      $db->prepare('INSERT INTO draft_shares (review_id, user_id, course, note, created) VALUES (?, ?, ?, ?, ?) ON CONFLICT(review_id) DO UPDATE SET note = excluded.note, created = excluded.created, seen = 0')->execute([$id, $u['id'], $cid, $note, $now]);
+      $what = mh_ai_plain(mh_draft_projects($C)[$r['project']]['short'] ?? $r['project'], 40) . ', version ' . (int)$r['version'];
+      foreach (mh_course_staff_ids($cid, $C) as $to) if ($to !== (int)$u['id']) mh_instruct_notify($to, 'draft_share', $u, $what, $note, '#/' . $cid . '/instructor/share/' . $id);
+      $sh = $db->prepare('SELECT note, created, reply, replied FROM draft_shares WHERE review_id = ?'); $sh->execute([$id]); $x = $sh->fetch();
+      mh_json(['ok' => true, 'share' => ['note' => (string)$x['note'], 'created' => (int)$x['created'], 'reply' => (string)$x['reply'], 'replied' => (int)$x['replied']]]);
+    }
+    case 'ai_draft_unshare': {
+      mh_method('POST'); $u = mh_require_user();
+      $db->prepare('DELETE FROM draft_shares WHERE review_id = ? AND user_id = ? AND course = ?')->execute([(int)($in['id'] ?? 0), $u['id'], $cid]);
+      mh_json(['ok' => true]);
     }
     case 'ai_draft_review': {
       mh_method('POST'); $u = mh_require_user(); $uid = (int)$u['id'];
@@ -189,6 +223,7 @@ function mh_draft_route(string $route, array $in, array $cfg): void {
       $lines = ['THE PROJECT: ' . mh_ai_plain($pj['name'] ?? $pid, 120), 'WHAT IT ASKS FOR: ' . mh_ai_plain($pj['brief'] ?? '', 500)];
       $goals = array_slice(array_values(array_filter(is_array($pj['goals'] ?? null) ? $pj['goals'] : [], 'is_string')), 0, 8); if ($goals) $lines[] = "ITS GOALS:\n- " . implode("\n- ", array_map(fn($g) => mh_ai_plain($g, 160), $goals));
       $lines[] = 'THE STAGE: ' . ($stage === 'revised' ? 'the revised draft' : 'the first draft, before peer review') . ($exam && !empty($exam['date']) ? ' (due ' . mh_ai_plain($exam['dateLabel'] ?? $exam['date'], 60) . ')' : '');
+      require_once __DIR__ . '/instruct.php'; foreach (mh_class_ai_project($cid, $pid) as $l) $lines[] = $l;   // the instructor's assignment sheet and rubric
       $lines[] = 'VERSION: ' . $version . ' of this project they have shared with you';
       if ($ask !== '') $lines[] = 'WHAT THEY WANT FEEDBACK ON: ' . $ask;
       if ($peer !== '') $lines[] = "PEER REVIEW COMMENTS THEY GOT (weigh them; say which you agree with):\n" . $peer;
@@ -203,10 +238,10 @@ function mh_draft_route(string $route, array $in, array $cfg): void {
       $r = mh_ai_call($A, $model, $system, $msgs, 2600, 100); $j = mh_ai_json($r['text']);
       if (!$j) { $msgs[] = ['role' => 'assistant', 'content' => $r['text']]; $msgs[] = ['role' => 'user', 'content' => 'That was not the JSON object. Send only the JSON object, in the format asked.']; $r = mh_ai_call($A, $model, $system, $msgs, 2600, 100); $j = mh_ai_json($r['text']); }
       if (!$j) mh_fail('Bo could not finish reading your draft. Please try again.', 502);
-      $fb = mh_draft_clean($j, $text, (bool)$last, implode("\n", array_merge([$peer, $ask], $goals)));
+      $fb = mh_draft_clean($j, $text, (bool)$last, implode("\n", array_merge([$peer, $ask], $goals)), count($goals));
       if (!$fb['revisions'] && !$fb['comments']) mh_fail('Bo could not finish reading your draft. Please try again.', 502);
-      $db->prepare('INSERT INTO draft_reviews (user_id, course, project, version, stage, words, text, ask, peer, feedback, created) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
-        ->execute([$uid, $cid, $pid, $version, $stage, $words, $text, $ask, $peer, json_encode($fb, JSON_UNESCAPED_UNICODE), time()]);
+      $db->prepare('INSERT INTO draft_reviews (user_id, course, project, version, stage, words, text, ask, peer, feedback, created, counted) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
+        ->execute([$uid, $cid, $pid, $version, $stage, $words, $text, $ask, $peer, json_encode($fb, JSON_UNESCAPED_UNICODE), time(), !empty($in['count']) ? 1 : 0]);
       $id = (int)$db->lastInsertId();
       $db->prepare('DELETE FROM draft_reviews WHERE user_id = ? AND course = ? AND project = ? AND id NOT IN (SELECT id FROM draft_reviews WHERE user_id = ? AND course = ? AND project = ? ORDER BY version DESC LIMIT ' . MH_DRAFT_KEEP . ')')->execute([$uid, $cid, $pid, $uid, $cid, $pid]);
       mh_ai_count($uid, 'draft', $r['in'], $r['out']);   // Bo's tokens this month (not one of their questions)
@@ -225,7 +260,7 @@ function mh_draft_route(string $route, array $in, array $cfg): void {
     case 'ai_draft_switch': {
       mh_method('POST'); $u = mh_require_user(); $C = mh_ai_class($u, $cid);
       if (!mh_draft_projects($C)) mh_fail('This class has no projects for draft feedback.', 404);
-      if (!mh_draft_staff($u, $C)) mh_fail('Only the class’s instructor can change this.', 403);
+      if (!mh_draft_staff($u, $C, $cid)) mh_fail('Only the class’s instructor can change this.', 403);
       $off = !empty($in['off']) ? 1 : 0;
       $db->prepare('INSERT INTO draft_switch (course, off, user_id, updated) VALUES (?, ?, ?, ?) ON CONFLICT(course) DO UPDATE SET off = excluded.off, user_id = excluded.user_id, updated = excluded.updated')->execute([$cid, $off, $u['id'], time()]);
       mh_json(['ok' => true, 'off' => (bool)$off]);

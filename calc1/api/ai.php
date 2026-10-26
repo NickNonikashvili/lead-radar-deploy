@@ -763,6 +763,7 @@ function mh_ai_live_instructions(int $uid, string $cid, ?array $C, array $in): s
   if (($in['focus'] ?? '') === 'exam') $parts[] = MH_AI_EXAM_CALL;
   if ($C) $parts[] = mh_ai_digest($C);
   if (mh_ai_writing_class($C)) $parts[] = MH_AI_WRITING;
+  require_once __DIR__ . '/instruct.php'; if (($ci = mh_class_ai_prompt($cid)) !== '') $parts[] = $ci;   // the class's instructor: hints only, notes for Bo
   require_once __DIR__ . '/students.php';
   $parts[] = implode("\n", array_filter(['TODAY: ' . $today, $C ? mh_ai_upcoming($C, $today) : '', mh_ai_snapshot($in['snapshot'] ?? null), $notes ? "WHAT YOU REMEMBER ABOUT THEM:\n- " . implode("\n- ", $notes) : '', mh_student_context(mh_student_load($uid), $cid)]));
   $turns = array_slice(mh_ai_turns($uid, $cid), $resume ? -10 : -6);   // after a drop, a little more of where they were
@@ -974,6 +975,7 @@ function mh_ai_route(string $route, array $in, array $cfg, string $ip): void {
       $system[] = ['type' => 'text', 'text' => implode("\n", $now)];
       $system[] = ['type' => 'text', 'text' => mh_ai_character(mh_ai_character_id($in))['who']];   // who he is (assets/bo-characters.js)
       if (mh_ai_writing_class($C)) $system[] = ['type' => 'text', 'text' => MH_AI_WRITING];
+      require_once __DIR__ . '/instruct.php'; if (($ci = mh_class_ai_prompt($cid)) !== '') $system[] = ['type' => 'text', 'text' => $ci];   // the class's instructor: hints only, notes for Bo
       if ($voice) $system[] = ['type' => 'text', 'text' => MH_AI_VOICE];
       if ($voice && ($in['focus'] ?? '') === 'exam') $system[] = ['type' => 'text', 'text' => MH_AI_EXAM_CALL];
       if ($pad) $system[] = ['type' => 'text', 'text' => str_replace(['%COLS%', '%ROWS%'], [(string)$pad['cols'], (string)$pad['rows']], MH_AI_PAD)];
