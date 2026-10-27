@@ -277,7 +277,7 @@ function mh_export_user(array $u): array {
     if (in_array($t, $skip, true) || !preg_match('/^[a-z_0-9]+$/', $t)) continue;
     $cols = array_column($db->query("PRAGMA table_info($t)")->fetchAll(), 'name'); $who = in_array('user_id', $cols, true) ? 'user_id' : (in_array('owner_id', $cols, true) ? 'owner_id' : ''); if ($who === '') continue;
     $st = $db->prepare("SELECT * FROM $t WHERE $who = ? LIMIT 5000"); $st->execute([$u['id']]); $rows = $st->fetchAll(); if (!$rows) continue;
-    foreach ($rows as &$r) { foreach ($hide as $k) unset($r[$k]); if ($t === 'progress' && isset($r['json'])) { $r['data'] = json_decode((string)$r['json'], true); unset($r['json']); } } unset($r);
+    foreach ($rows as &$r) { foreach ($hide as $k) unset($r[$k]); if ($t === 'progress' && isset($r['json'])) { $r['data'] = json_decode((string)$r['json'], true); unset($r['json']); } if ($t === 'office_files' && isset($r['body'])) { $r['body'] = json_decode((string)$r['body'], true); unset($r['dev']); } } unset($r);
     $out['tables'][$t] = $rows;
   }
   // classes this member had Bo write from a syllabus and published for everyone (api/community.php)

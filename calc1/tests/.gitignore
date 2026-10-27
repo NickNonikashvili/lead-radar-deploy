@@ -17,3 +17,4 @@ fixtures/image-last.json
 fixtures/image-count.txt
 fixtures/s3/
 fixtures/s3-fail.json
+fixtures/office-out/

@@ -47,3 +47,31 @@ and
 # Mathub Faculty (assets/teach.js): how many suggestions a part of the syllabus has
 1 suggestion
 {1} suggestions
+# Docs, Slides and Sheets (assets/office-*.js): the slide themes (assets/office-pptx.js), shown with t(name)
+Paper
+Night
+Chalkboard
+Sand
+Ocean
+Bold
+# Docs, Slides and Sheets: words the reader takes for code (one word with a capital inside, a file type in brackets, a count and a word)
+OK
+AutoSum
+Sheet1
+Shift
+{1} slides
+{1} cells
+{1} matches
+{1} by {2}
+{1} KB
+{1} MB
+slide
+chart
+empty
+Download as Word (.docx)
+Download as text (.txt)
+Download as PowerPoint (.pptx)
+Download as Excel (.xlsx)
+Docs opens Word files (.docx) and text files. For an old .doc file, save it as .docx in Word first.
+Slides opens PowerPoint files (.pptx). For an old .ppt file, save it as .pptx in PowerPoint first.
+Sheets opens Excel files (.xlsx) and CSV files. For an old .xls file, save it as .xlsx in Excel first.

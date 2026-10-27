@@ -31,6 +31,7 @@
   const TOP = [['home', '#/', 'Home', 'home'], ['today', '#/today', 'Today', 'flag'], ['tutor', '#/tutor', 'Ask Bo', 'bo']];
   const GROUPS = [
     { id: 'school', label: 'School', items: [['tasks', 'Tasks', 'todo'], ['timetable', 'Timetable', 'table'], ['agenda', 'Calendar', 'calendar'], ['timelog', 'Time tracker', 'timer'], ['projects', 'Projects & thesis', 'folder'], ['focus', 'Focus room', 'clock'], ['gpa', 'GPA calculator', 'calc']] },
+    { id: 'office', label: 'Office', items: [['docs', 'Docs', 'docpage'], ['decks', 'Slides', 'present'], ['sheets', 'Sheets', 'grid3']] },
     { id: 'life', label: 'Life', items: [['habits', 'Habits', 'repeat'], ['goals', 'Goals', 'target'], ['wheel', 'Wheel of life', 'wheel'], ['journal', 'Journal', 'note'], ['money', 'Money', 'wallet']] },
     { id: 'future', label: 'Future', items: [['career', 'Internships & jobs', 'briefcase'], ['portfolio', 'Portfolio', 'star']] },
     { id: 'explore', label: 'Explore', items: [['resources', 'Resources', 'link'], ['guides', 'Study guides', 'book'], ['tools', 'Tools', 'sliders'], ['forum', 'Discussions', 'chat'], ['leagues', 'Leagues', 'gem'], ['badges', 'Badges', 'award'], ['whatsnew', 'What’s new', 'zap']] }

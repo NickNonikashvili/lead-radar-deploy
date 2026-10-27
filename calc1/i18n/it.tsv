@@ -3094,7 +3094,7 @@
 3584	Unit circle
 3585	with the angles
 3586	at {1}: cos = {2}, sin = {3}
-3587	Table
+3587	Tabella
 3588	Histogram
 3589	Bar chart
 3590	Pie chart:
@@ -6747,3 +6747,405 @@
 6947	Il test di ripristino non è riuscito:
 6948	Imposta prima l’indirizzo, il bucket, l’ID della chiave di accesso e il segreto.
 6949	Il bucket si può elencare (per tenere le copie più recenti).
+6950	Documenti
+6951	Presentazioni
+6952	Fogli di calcolo
+6953	Scrivi e formatta documenti, con immagini, tabelle ed elenchi. Apre e salva file Word.
+6954	Nuovo documento
+6955	Apri un file Word
+6956	Tutti i documenti
+6957	Ancora nessun documento. Iniziane uno qui sopra, o apri un file Word.
+6958	Crea presentazioni con temi, immagini, forme e note del relatore, e presentale a schermo intero. Apre e salva file PowerPoint.
+6959	Nuova presentazione
+6960	Apri un file PowerPoint
+6961	Tutte le presentazioni
+6962	Ancora nessuna presentazione. Iniziane una qui sopra, o apri un file PowerPoint.
+6963	Fogli di calcolo con formule, formati, ordinamento e grafici. Apre e salva file Excel e CSV.
+6964	Nuovo foglio di calcolo
+6965	Apri un file Excel o CSV
+6966	Tutti i fogli di calcolo
+6967	Ancora nessun foglio di calcolo. Iniziane uno qui sopra, o apri un file Excel o CSV.
+6968	Impossibile caricare questa pagina. Controlla la connessione e riprova.
+6969	Questa immagine non si può usare. Usa un PNG, JPEG, GIF o WebP.
+6970	Questa immagine è troppo grande. Usane una sotto i 25 MB.
+6971	Impossibile leggere questa immagine.
+6972	Documento vuoto
+6973	Saggio (MLA)
+6974	Cognome
+6975	Nome del docente
+6976	Titolo del tuo saggio
+6977	Inizia a scrivere qui. I numeri di pagina e il tuo cognome vanno in alto a destra di ogni pagina, e le righe hanno interlinea doppia, come chiede MLA.
+6978	Titolo della relazione di laboratorio
+6979	Introduzione
+6980	Quale domanda pone l’esperimento, e perché è importante.
+6981	Cosa hai fatto, con abbastanza dettagli perché qualcuno possa ripeterlo.
+6982	Cosa hai misurato: tabelle e grafici, con le unità.
+6983	Cosa significano i risultati, quanto ne sei sicuro, e cosa è andato storto.
+6984	Bibliografia
+6985	Appunti della lezione
+6986	Idee chiave
+6987	Esempi
+6988	Domande da fare
+6989	Riepilogo
+6990	Presentazione vuota
+6991	Fai clic per aggiungere un titolo
+6992	Presentazione per il corso
+6993	Titolo della presentazione
+6994	Cosa vedremo
+6995	Cosa abbiamo scoperto
+6996	L’idea chiave, in una riga
+6997	Un dettaglio che la sostiene
+6998	Da una parte
+6999	Dall’altra parte
+7000	Domande?
+7001	Grazie
+7002	Presentazione di laboratorio
+7003	Titolo della presentazione di laboratorio
+7004	Cosa volevamo scoprire
+7005	Metodo
+7006	Allestimento
+7007	Cosa abbiamo misurato, e come
+7008	Il numero principale, con la sua incertezza
+7009	Conclusione
+7010	Cosa significa
+7011	Cosa faremmo dopo
+7012	Foglio di calcolo vuoto
+7013	Registro dei voti
+7014	Dati di laboratorio
+7015	Budget mensile
+7016	Il mio voto
+7017	Conta per
+7018	Esami intermedi
+7019	Totale finora
+7020	Voto finora
+7021	Prova
+7022	x (unità)
+7023	y (unità)
+7024	Retta: y = m·x + b
+7025	Pendenza m
+7026	Intercetta b
+7027	Media di y
+7028	Dev. standard di y
+7029	y in funzione di x
+7030	Previsto
+7031	Libri e materiale
+7032	Totale
+7033	Previsto e speso
+7034	1 diapositiva
+7035	1 cella
+7036	Questo file è troppo grande per aprirlo qui.
+7037	Impossibile leggere questo file. Potrebbe essere danneggiato, o non essere davvero un file {1}.
+7038	Questo file supera gli 8 MB, il massimo possibile. Rimpicciolisci le immagini che contiene, o dividilo in due.
+7039	Iscriviti con la tua email montana.edu per tenere documenti, presentazioni e fogli di calcolo nel tuo account.
+7040	Iniziane uno nuovo
+7041	I tuoi file
+7042	Cerca un file
+7043	Nessun file si chiama così.
+7044	Modificato {1}
+7045	Altro per {1}
+7046	{1} di {2} file · {3} di {4} usati
+7047	Rinomina
+7048	Scrivi un nome.
+7049	Crea una copia
+7050	Copia di {1}
+7051	Scarica come {1}
+7052	Impossibile creare questo file qui.
+7053	Eliminare «{1}»?
+7054	Sparisce per sempre: non si può recuperare.
+7055	Aperto. {1} celle oltre la riga 10.000 o la colonna ZZ sono state escluse.
+7056	Impossibile mostrare questo file. Potrebbe essere danneggiato.
+7057	Recuperato quello che avevi cambiato prima di uscire
+7058	{1} · Mathub
+7059	Non salvato: questo file supera gli 8 MB, il massimo possibile. Rimpicciolisci le immagini o togline qualcuna.
+7060	Questo dispositivo ha modifiche fatte prima ({1}) che non sono mai state salvate, e da allora il file è cambiato.
+7061	Questo file è stato modificato su un altro dispositivo da quando l’hai aperto.
+7062	Ora è aperta la versione salvata. Scegli cosa tenere.
+7063	Quello che hai cambiato qui è ancora in questa pagina. Scegli cosa tenere.
+7064	Tieni entrambe: salva la mia come copia
+7065	Usa le modifiche di questo dispositivo
+7066	Tieni la mia, sostituisci l’altra
+7067	Tieni la versione salvata
+7068	Apri l’altra (perdo la mia)
+7069	{1} (la mia copia)
+7070	Salvato come «{1}»
+7071	Elimina questo file
+7072	Testo normale
+7073	Titolo 1
+7074	Titolo 2
+7075	Titolo 3
+7076	Citazione
+7077	Singola
+7078	Doppia
+7079	Formattazione
+7080	Ctrl+Z
+7081	Ctrl+Y
+7082	Stile
+7083	Carattere
+7084	Dimensione carattere
+7085	Grassetto
+7086	Ctrl+B
+7087	Corsivo
+7088	Ctrl+I
+7089	Sottolineato
+7090	Ctrl+U
+7091	Barrato
+7092	Apice
+7093	Ctrl+.
+7094	Pedice
+7095	Ctrl+,
+7096	Colore del testo
+7097	Allinea a sinistra
+7098	Centra
+7099	Allinea a destra
+7100	Giustifica
+7101	Elenco puntato
+7102	Ctrl+Shift+8
+7103	Elenco numerato
+7104	Ctrl+Shift+7
+7105	Riduci rientro
+7106	Shift+Tab
+7107	Aumenta rientro
+7108	Ctrl+K
+7109	Immagine
+7110	Interruzione di pagina
+7111	Ctrl+Enter
+7112	Cancella formattazione
+7113	Ctrl+\
+7114	Trova e sostituisci
+7115	Ctrl+F
+7116	Sostituisci con
+7117	Sostituisci
+7118	Sostituisci tutto
+7119	Maiuscole/minuscole
+7120	Riga sopra
+7121	Riga sotto
+7122	Colonna a sinistra
+7123	Colonna a destra
+7124	Elimina riga
+7125	Elimina colonna
+7126	Riga di intestazione
+7127	Elimina tabella
+7128	Larghezza piena
+7129	Descrivila
+7130	Documento
+7131	Pagina
+7132	Interlinea
+7133	Numeri di pagina
+7134	In alto a destra, dopo un nome
+7135	In basso
+7136	Nome prima del numero
+7137	Niente da annullare
+7138	Metti prima il cursore in un paragrafo (non in un elenco o in una tabella).
+7139	Modifica link
+7140	Aggiungi un link
+7141	Testo da mostrare
+7142	Indirizzo web
+7143	Rimuovi il link
+7144	Scrivi un indirizzo web, come https://www.montana.edu
+7145	Dimensioni della tabella
+7146	td, th
+7147	li, td, th
+7148	Calibri
+7149	{1} di {2} parole
+7150	1 risultato
+7151	1 sostituzione
+7152	{1} sostituzioni
+7153	Automatico
+7154	Nessuna evidenziazione
+7155	Descrivi l’immagine
+7156	Una frase per chi non può vederla: i lettori di schermo la leggono ad alta voce, e Word la conserva.
+7157	Descrizione
+7158	Backspace
+7159	Scrivi ancora un po’ prima: Bo ha bisogno di almeno 60 parole per dare commenti utili.
+7160	Aggiungi prima un corso.
+7161	Bo lo legge come tutor di scrittura, sulla base di un elaborato di uno dei tuoi corsi: segnala passaggi e fa domande, e non lo scrive mai al posto tuo. Il testo va ai commenti sulle bozze, dove scegli l’elaborato.
+7162	Per quale corso è?
+7163	{1} non ha elaborati per i commenti sulle bozze.
+7164	Questo documento è troppo lungo da passare. Copia invece il suo testo nei commenti sulle bozze.
+7165	Impossibile aprire questo corso.
+7166	File
+7167	Ctrl+P
+7168	Courier New
+7169	Diapositiva titolo
+7170	Titolo e contenuto
+7171	Due colonne
+7172	Intestazione di sezione
+7173	Solo titolo
+7174	Vuota
+7175	Rettangolo
+7176	Rettangolo arrotondato
+7177	Ellisse
+7178	Triangolo
+7179	Linea
+7180	Freccia
+7181	Alt
+7182	Strumenti diapositiva
+7183	Nuova diapositiva
+7184	Casella di testo
+7185	Forma
+7186	data-menu aria-haspopup="menu" aria-expanded="false"
+7187	Elenco puntato
+7188	Numerazione
+7189	Abbassa livello
+7190	Alza livello
+7191	Riempimento
+7192	Porta in primo piano
+7193	Porta in fondo
+7194	Canc
+7195	Sfondo della diapositiva
+7196	Diapositiva
+7197	Note del relatore
+7198	Cosa dire su questa diapositiva. Le vedi solo tu.
+7199	Diapositiva {1} di {2}
+7200	Casella di testo: {1}
+7201	Diapositiva {1}
+7202	Diapositiva duplicata
+7203	Diapositiva eliminata. Ctrl+Z la riporta.
+7204	Spostata in {1}
+7205	Duplica diapositiva
+7206	Ctrl+D
+7207	Elimina diapositiva
+7208	Aggiunto: {1}
+7209	Eliminato. Ctrl+Z lo riporta.
+7210	Scegli prima una casella di testo.
+7211	Spostato
+7212	In {1}, {2}; {3} per {4}
+7213	Una frase per chi non può vederla: i lettori di schermo la leggono ad alta voce, e PowerPoint la conserva.
+7214	Colore del tema
+7215	Nessun riempimento
+7216	Nessun contorno
+7217	Sfondo del tema
+7218	Presentazione in corso
+7219	{1} (Esc)
+7220	Diapositiva precedente
+7221	Diapositiva successiva
+7222	Termina presentazione
+7223	Nessuna nota su questa diapositiva.
+7224	Presenta dall’inizio
+7225	Presenta da questa diapositiva
+7226	Numero (1,234.56)
+7227	Numero intero (1,235)
+7228	Percentuale (12.5%)
+7229	Valuta ($1,234.56)
+7230	Data (2026-10-26)
+7231	Foglio
+7232	Strumenti del foglio di calcolo
+7233	Formato numero
+7234	Colore di riempimento
+7235	Testo a capo
+7236	Righe e colonne
+7237	Blocca la riga superiore
+7238	Grafico
+7239	Indirizzo della cella
+7240	Contenuto della cella
+7241	Trascina per riempire
+7242	Modifica la cella
+7243	Le frecce spostano; scrivi per riempire una cella; F2 la modifica; Invio e Tab concludono. F6 porta alla barra della formula e alle schede dei fogli.
+7244	Aggiungi un foglio
+7245	Scegli tutto
+7246	Aggiungi altre 1.000 righe
+7247	Somma {1} · Media {2} · Conteggio {3}
+7248	Conteggio {1}
+7249	Annullato
+7250	Ripetuto
+7251	Sono troppe celle in una volta.
+7252	Cancellato
+7253	Tagliato
+7254	Incollato {1} per {2}
+7255	Riga aggiunta
+7256	Colonna aggiunta
+7257	Righe eliminate
+7258	Colonne eliminate
+7259	Qui non c’è niente da ordinare.
+7260	Righe {1}–{2} ordinate per colonna {3} (la riga {4} resta l’intestazione)
+7261	Righe {1}–{2} ordinate per colonna {3}
+7262	Foglio {1}
+7263	Rinomina il foglio
+7264	Un altro foglio ha già questo nome.
+7265	Foglio{1}
+7266	Un foglio di calcolo ha bisogno di almeno un foglio.
+7267	Eliminare il foglio «{1}»?
+7268	Le formule degli altri fogli che lo usano mostreranno #REF!. Ctrl+Z lo riporta.
+7269	Sposta a sinistra
+7270	Sposta a destra
+7271	Ancora nessun numero in questo intervallo
+7272	Crea un grafico
+7273	Celle (la prima colonna sono le etichette o i valori di x)
+7274	Titolo sotto l’asse inferiore
+7275	Titolo accanto all’asse laterale
+7276	Retta di regressione (grafici a dispersione)
+7277	No
+7278	Sì, con la sua equazione e R²
+7279	Aggiungi il grafico
+7280	Elimina il grafico
+7281	Scrivi celle come A1:B10.
+7282	Grafico: {1}
+7283	Scegli prima le celle del grafico: una colonna di etichette o valori di x, poi i numeri.
+7284	Colonna {1}: {2} pixel
+7285	Riga {1}: {2} pixel
+7286	Tutte le celle scelte
+7287	Uguale
+7288	Scrivi una cella come B4, o celle come A1:C10.
+7289	Somma
+7290	Conta numeri
+7291	Minimo
+7292	Massimo
+7293	Ordina A → Z (dal più piccolo)
+7294	Ordina Z → A (dal più grande)
+7295	Inserisci una riga sopra
+7296	Inserisci una riga sotto
+7297	Inserisci una colonna a sinistra
+7298	Inserisci una colonna a destra
+7299	Elimina le righe
+7300	Elimina le colonne
+7301	Adatta la colonna al testo
+7302	Riga superiore bloccata
+7303	Riga superiore sbloccata
+7304	Aggiunto il foglio «{1}»
+7305	Scarica questo foglio come CSV
+7306	Aggiungi un foglio da un file CSV
+7307	Istogramma
+7308	Dispersione (x e y)
+7309	Torta
+7310	istogramma
+7311	grafico a linee
+7312	grafico a dispersione
+7313	grafico a torta
+7314	Serie {1}
+7315	{1} di {2}, {3} punti, da {4}.
+7316	Retta di regressione per {1}: y = {2}x + {3}, R² {4}.
+7317	Questo file non è qui. Potrebbe essere stato eliminato.
+7318	I tuoi file occupano 200 MB, il massimo disponibile. Eliminane qualcuno, o rimpicciolisci le immagini.
+7319	Scegli un documento, una presentazione o un foglio di calcolo.
+7320	Notte
+7321	Lavagna
+7322	Sabbia
+7323	Oceano
+7324	Contesto
+7325	Quiz e laboratori
+7326	Esame finale
+7327	Rimasto
+7328	{1} della larghezza della pagina
+7329	Lettera US
+7330	Allineamento del testo
+7331	Colore del contorno
+7332	OK
+7333	Somma automatica
+7334	Foglio1
+7335	Maiusc
+7336	{1} diapositive
+7337	{1} celle
+7338	{1} risultati
+7339	{1} × {2}
+7340	{1} KB
+7341	{1} MB
+7342	diapositiva
+7343	grafico
+7344	vuoto
+7345	Scarica come Word (.docx)
+7346	Scarica come testo (.txt)
+7347	Scarica come PowerPoint (.pptx)
+7348	Scarica come Excel (.xlsx)
+7349	Documenti apre file Word (.docx) e file di testo. Per un vecchio file .doc, salvalo prima come .docx in Word.
+7350	Presentazioni apre file PowerPoint (.pptx). Per un vecchio file .ppt, salvalo prima come .pptx in PowerPoint.
+7351	Fogli di calcolo apre file Excel (.xlsx) e CSV. Per un vecchio file .xls, salvalo prima come .xlsx in Excel.
