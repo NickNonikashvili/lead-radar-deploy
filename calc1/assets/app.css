@@ -21,7 +21,6 @@ html[data-app] :is(button, .btn, .chip, .nav-item, .tab-item) { -webkit-user-sel
 html[data-app] #preview-banner { display: none; }
 /* website-only: the instructors' workspace is on the web */
 html[data-app] :is(.hero-faculty, .site-foot a[href="#/teach"]) { display: none; }
-html[data-app] .site-foot a[href="#/teach"] + .sep { display: none; }
 
 /* ---------- #/create (shared styles in create.css) ---------- */
 html[data-app] .mk-text { font-size: 16px !important; }

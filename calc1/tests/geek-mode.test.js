@@ -83,7 +83,7 @@ const T = require('./lib');
   // phone: the status line clears the tab bar
   const [cm, m] = await mk(390, 800, { serviceWorkers: 'block' }); await go(m, '#/', 700); await m.evaluate(() => { location.hash = '#/today'; }); await m.waitForTimeout(500);
   const mob = await m.evaluate(() => { const s = document.querySelector('#gk-status'); const t = document.querySelector('#tabbar'); return { bottom: s ? parseFloat(s.style.bottom) : 0, tab: t ? t.offsetHeight : 0, left: s ? parseFloat(s.style.left) : 0, noScroll: document.documentElement.scrollWidth <= innerWidth + 1 }; });
-  check('status line sits above the phone tab bar', mob.bottom > mob.tab && mob.left === 16, mob);
+  check('status line sits at the foot of a phone screen, clear of any bar', mob.bottom > mob.tab && mob.left === 16, mob);
   check('no sideways scroll on phones', mob.noScroll, mob);
   await cm.close();
   await T.finish();

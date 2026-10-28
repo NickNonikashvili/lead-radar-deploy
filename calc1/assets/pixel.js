@@ -91,7 +91,7 @@
   // footer signature
   function signFooter() {
     const f = $('.site-foot'); if (!f || $('.px-sig', f)) return;
-    f.insertAdjacentHTML('afterbegin', `<span class="px-sig">${App.pixel('invader', 2, { cls: 'px-foot-inv' })}<span>Handmade with</span>${App.pixel('heart', 2)}<span class="sr-only"> love </span><span>in Bozeman</span></span><span class="sep">·</span>`);
+    ($('.sf-base', f) || f).insertAdjacentHTML('afterbegin', `<span class="px-sig">${App.pixel('invader', 2, { cls: 'px-foot-inv' })}<span>Handmade with</span>${App.pixel('heart', 2)}<span class="sr-only"> love </span><span>in Bozeman</span></span>`);
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', signFooter); else signFooter();
 })(window);

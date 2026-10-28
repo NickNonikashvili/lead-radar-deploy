@@ -162,7 +162,7 @@ const PNG = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwA
   await go(ph, '#/tutor/calc', 2200);
   check('phone: Ask Bo does not scroll sideways', await hscroll(ph));
   const pos = await ph.evaluate(() => { const c = document.querySelector('.bo-compose').getBoundingClientRect(); const t = document.querySelector('#tabbar'); return { composer: Math.round(c.bottom), tabbar: t ? Math.round(t.getBoundingClientRect().top) : innerHeight }; });
-  check('phone: the message box sits above the tab bar', pos.composer <= pos.tabbar + 1, pos);
+  check('phone: the message box sits on the screen, with no bar over it', pos.composer <= pos.tabbar + 1, pos);
   const pb = await ph.evaluate(() => { const b = document.querySelector('#bo-board'); const r = b.getBoundingClientRect(); const l = document.querySelector('#bo-log').getBoundingClientRect(); return { above: !!(b.compareDocumentPosition(document.querySelector('#bo-log')) & Node.DOCUMENT_POSITION_FOLLOWING), w: r.width, sticky: getComputedStyle(b).position, sheet: b.querySelector('.bb-sheet').getBoundingClientRect().height }; });
   check('phone: the board is above the chat, sticky, and not too tall', pb.above && pb.w > 300 && pb.sticky === 'sticky' && pb.sheet > 80 && pb.sheet <= 320, pb);
   await ph.evaluate(() => scrollTo(0, document.body.scrollHeight)); await ph.waitForTimeout(300);

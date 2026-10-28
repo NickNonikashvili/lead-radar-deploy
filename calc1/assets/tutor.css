@@ -74,7 +74,6 @@ html[data-app] .bo-nav { display: none; }   /* the apps have their tab bar and b
 /* ---------- the composer ---------- */
 .bo-compose { position: sticky; bottom: 0; z-index: 5; margin: 0 -16px; padding: 10px 16px calc(12px + env(safe-area-inset-bottom)); background: linear-gradient(to top, var(--bg) 80%, transparent); }
 html[data-app] .bo-compose { bottom: calc(var(--tab-h) + env(safe-area-inset-bottom)); padding-bottom: 10px; }
-@media (max-width: 900px) { html:not([data-app]) .bo-compose { bottom: calc(70px + env(safe-area-inset-bottom)); padding-bottom: 10px; } }   /* above the website's phone tab bar */
 .bo-row { display: flex; align-items: flex-end; gap: 6px; padding: 5px; border: 2px solid var(--border); border-radius: 22px; background: var(--surface); box-shadow: 0 3px 0 var(--lip, var(--border-strong)); }
 .bo-row:focus-within { border-color: var(--accent); }
 .bo-q { flex: 1; min-width: 0; min-height: 44px; max-height: 168px; padding: 10px 6px; border: 0 !important; background: none !important; box-shadow: none !important; color: var(--ink); font-size: 16px !important; line-height: 1.4; resize: none; }
@@ -728,6 +727,7 @@ html.wb-lock, html.wb-lock body { overflow: hidden; }
 .bf-fab.unread .bf-dot { transform: scale(1); }
 @keyframes bf-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
 @media (max-width: 900px) { .bf-fab { bottom: calc(80px + env(safe-area-inset-bottom)); right: 14px; height: 58px; min-width: 58px; } .bf-fab.left { left: 14px; } .bf-fab-av { width: 54px; height: 54px; } .bf-fab-av .bobcat { width: 48px; height: 48px; } }
+@media (max-width: 900px) { html:not([data-app]) .bf-fab { bottom: calc(14px + env(safe-area-inset-bottom)); } }   /* no tab bar to clear on the website */
 body:has(.lesson-foot) .bf-fab { bottom: 108px; }
 @media (max-width: 640px) { body:has(.lesson-foot) .bf-fab { bottom: 162px; } }
 html.bt-lock .bf-fab, html.bt-lock .bf-pop, html.bt-lock .bf-tip, html.bt-lock .bf-sel { display: none !important; }
@@ -739,6 +739,7 @@ html.bt-lock .bf-fab, html.bt-lock .bf-pop, html.bt-lock .bf-tip, html.bt-lock .
 .bf-tip-x { display: grid; place-items: center; flex: none; width: 30px; height: 30px; border: 0; border-radius: 10px; background: none; color: var(--muted); cursor: pointer; }
 .bf-tip-x:hover { background: var(--surface-2); color: var(--ink); }
 @media (max-width: 900px) { .bf-tip { bottom: calc(92px + env(safe-area-inset-bottom)); right: 82px; } .bf-tip.left { left: 82px; } }
+@media (max-width: 900px) { html:not([data-app]) .bf-tip { bottom: calc(24px + env(safe-area-inset-bottom)); } }
 @keyframes bf-in { from { opacity: 0; transform: translateY(8px) scale(.97); } }
 /* the panel: a card in the corner, or a sheet on a phone */
 .bf-back { position: fixed; inset: 0; z-index: 74; background: color-mix(in srgb, var(--ink) 35%, transparent); }

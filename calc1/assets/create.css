@@ -723,7 +723,7 @@ html.cb-lock { overflow: hidden; }
 body:has(#bo-fab:not([hidden])) .mkr-bar { margin-right: 78px; }
 @media (max-width: 620px) { body:has(#bo-fab:not([hidden])) .mkr-bar { margin-right: 66px; } }
 /* on a phone the bottom tab bar is there too: the save bar sits above it */
-@media (max-width: 900px) { .mkr-bar { bottom: calc(76px + env(safe-area-inset-bottom, 0px)); } .mkr-ed { padding-bottom: 150px; } }
+@media (max-width: 900px) { html[data-app] .mkr-bar { bottom: calc(76px + env(safe-area-inset-bottom, 0px)); } html[data-app] .mkr-ed { padding-bottom: 150px; } }   /* above the app's tab bar */
 
 /* the class maker's Tools tab: one row per tool on the class's Tools page */
 .mkr-tool { display: flex; flex-direction: column; gap: 8px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 12px; margin-bottom: 8px; background: var(--surface); }

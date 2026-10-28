@@ -23,13 +23,13 @@ const T = require('./lib');
   await go(p, '#/settings', 700); await p.click('[data-action="tour-again"]'); await p.waitForTimeout(2200);
   check('settings shows the tour again, on the start page', !!(await p.$('.tour')) && /^#\/?$/.test(await p.evaluate(() => location.hash)), await p.evaluate(() => location.hash));
   await p.keyboard.press('Escape'); await p.waitForTimeout(200); check('escape closes it, and it counts as seen', !(await p.$('.tour')) && (await p.evaluate(() => App.settings().tourLayout)) === (await p.evaluate(() => App.tour.version)));
-  // a phone: the sidebar is the menu, so the steps are the menu, search, Your home and the tab bar
+  // a phone: the sidebar is the menu, so the steps are the menu, Your home and Bo
   const [cp, ph] = await mk(390, 844, { serviceWorkers: 'block', isMobile: true, hasTouch: true });
   await cp.addInitScript(() => { try { const s = JSON.parse(localStorage.getItem('studyhub-settings') || '{}'); if (!s.courses) { s.courses = ['calc']; s.boFloatSeen = 1; localStorage.setItem('studyhub-settings', JSON.stringify(s)); } } catch (e) {} });
   await go(ph, '#/', 3400);
   const pt = []; for (let i = 0; i < 8 && (await ph.$('.tour')); i++) { pt.push(await txt(ph, '.tour-card h3')); const r = await ph.$eval('.tour-card', e => { const b = e.getBoundingClientRect(); return b.left >= 0 && b.right <= innerWidth + 1 && b.top >= 0 && b.bottom <= innerHeight + 1; }); if (!r) pt.push('(off screen)'); await ph.click('[data-action="tour-next"]').catch(() => {}); await ph.waitForTimeout(400); }
   log('phone steps:', pt.join(' | '));
-  check('a phone gets the menu, search and tab bar steps, each card on the screen', pt[0] === 'Everything is in the menu' && pt.includes('Search everything') && pt.includes('Down here') && !pt.includes('(off screen)') && !pt.includes('Everything is in the sidebar'), pt);
+  check('a phone gets the menu step first, no search or tab bar steps (both are gone), each card on the screen', pt[0] === 'Everything is in the menu' && !pt.includes('Search everything') && !pt.includes('Down here') && !pt.includes('(off screen)') && !pt.includes('Everything is in the sidebar'), pt);
   // a new account: the welcome first, then the tour
   const [cw, w] = await mk(1360, 900, { serviceWorkers: 'block' });
   await go(w, '#/', 800); await login(w, 'alice.a@montana.edu'); await w.reload(); await w.waitForTimeout(1200);

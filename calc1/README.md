@@ -210,7 +210,7 @@ The app is a hash-routed single page, which search engines index as one URL. `no
 
 ## UI polish
 
-A mobile tab bar (Home, Learn, Practice or Code, Board, Me) appears under 900 px, adapting to the class; the top bar shows a breadcrumb (class › page); the landing page has a "pick up where you left off" card that remembers the last page visited in any of your classes and a stats strip; class switcher buttons carry their class color; `?` opens a keyboard-shortcuts dialog; a back-to-top button appears after scrolling; pages fade in; keyboard focus rings are visible.
+The website has no tab bar on phones (the menu and the header carry the navigation; the apps keep their own tab bar, drawn by `paintTabbar` only under `<html data-app>`), so Bo's button, toasts and the save bars sit at the foot of the screen; the footer under every page holds the logo, a line about StudyCat and the language pill, two columns of links (Study: study guides, discussions, for professors; Help: contact, terms and privacy) and a base line with the pixel signature, the author and the term; the top bar shows a breadcrumb (class › page); the landing page has a "pick up where you left off" card that remembers the last page visited in any of your classes and a stats strip; class switcher buttons carry their class color; `?` opens a keyboard-shortcuts dialog; a back-to-top button appears after scrolling; pages fade in; keyboard focus rings are visible.
 
 ### Big Sky (default look since 2026.10.02.3)
 
@@ -293,8 +293,8 @@ accounts and ones that ended three months ago.
 ## Floating buttons
 
 The focus-sounds bubble floats only while something plays (or its panel is open); the sounds start from the top
-bar's button on class pages, the start page's button next to search, or the Focus room. Back to top is hidden on
-phones and tablets and keeps clear of the sidebar on wide screens. The admin panel's tabs are one scrolling row on
+bar's button on class pages, the start page's sounds button, or the Focus room. Back to top is hidden on
+phones and tablets and keeps clear of the sidebar on wide screens; while Bo's button is in a corner it stacks above him. The admin panel's tabs are one scrolling row on
 narrow screens. Ask Bo has "Your classes" and "Open <class>" at the top.
 
 ## Keys and settings from the admin panel
@@ -468,7 +468,7 @@ search (an unknown course code offers "Make CODE").
   colour), Schedule (meeting days, times and room, lectures on the calendar, your own dates), Exams, Grading (the
   weights add up to 100%), Topics (units and numbered topics) and Lessons. Save repairs and validates the class
   (the class-pack checker), puts each exam on the calendar and adds it (`App.myClasses.add`); the save bar sits
-  above the tab bar on phones. **Lessons**: Bo writes a unit's lessons, or all of them (`ai_class` step `unit`, sent
+  at the foot of the screen (above the tab bar in the apps). **Lessons**: Bo writes a unit's lessons, or all of them (`ai_class` step `unit`, sent
   the class's outline, `mh_ai_own_outline`, not the file), in the lesson format below, with flashcards and
   questions; each topic's lesson can be edited or its picture removed.
 - **Picking classes**: after a student adds classes from the list, `App.promptCustomize(ids)` asks them to make
@@ -601,7 +601,7 @@ each kind, a student's own changes, a class with tools from Bo, the maker's Tool
   Bo, so Ask Bo shows it, each question tagged with where it came from (`[from: Calc I › Quizzer · Q2]`). When the
   page changes during a chat, a small card offers the ways in for the new page. A one-time hello, and now and then
   (at most three a visit, never twice for a page; Settings → "Tips from Bo") a short nudge on a page of questions.
-  Drag him to either side (or Alt+arrows); he stays where he is put. On a phone he sits above the tab bar and opens
+  Drag him to either side (or Alt+arrows); he stays where he is put. On a phone he sits in the bottom corner and opens
   as a sheet. The apps keep Bo as a tab.
 - **Ask Bo about this**: under a question missed in the Quizzer or the mistakes notebook (`App.askBoButton`), a link
   to `#/tutor/<class>?ask=…` that opens Ask Bo and sends him the question, the choices, what the student answered
@@ -823,7 +823,7 @@ The October 2026 audit against what careful, large sites do (and where AI-built 
 
 ## Today: one plan across every class
 
-`#/today` (Today in the account menu, the mobile tab bar and the hero button) builds one checklist for the day from all your classes: flashcards that are due on a spacing schedule (a card you get right comes back after 1, 3 and then 14 days; one you miss returns tomorrow; up to ten new cards per class), a lesson on your weakest topic (lowest accuracy over at least four questions, otherwise where the class is right now), the daily challenge, and anything due in the next 48 hours. The review player runs across classes inline (space flips, 1 = again, 2 = got it) and counts toward XP, quests and the streak. A summary card on the landing page shows what is left. Today's counts work from the light class index even before a class has been downloaded; pressing Start downloads what it needs.
+`#/today` (Today in the account menu, the sidebar and the hero button) builds one checklist for the day from all your classes: flashcards that are due on a spacing schedule (a card you get right comes back after 1, 3 and then 14 days; one you miss returns tomorrow; up to ten new cards per class), a lesson on your weakest topic (lowest accuracy over at least four questions, otherwise where the class is right now), the daily challenge, and anything due in the next 48 hours. The review player runs across classes inline (space flips, 1 = again, 2 = got it) and counts toward XP, quests and the streak. A summary card on the landing page shows what is left. Today's counts work from the light class index even before a class has been downloaded; pressing Start downloads what it needs.
 
 ## The planner: school, life and what's next
 
@@ -851,7 +851,7 @@ Settings → Account → "Notifications on this device" turns on web push (Chrom
 ## Install prompt, global search, synced preferences
 
 - **Add to home screen.** From the second visit a banner offers to install StudyCat: the native prompt on Chrome and Edge (Android and desktop), and step-by-step Share → Add to Home Screen instructions on iPhone and iPad. Dismissing hides it for a month; "Install the app" also lives in the account menu whenever installing is possible. The manifest has shortcuts (Today, Discussions, GPA) and a maskable icon.
-- **Search everywhere.** Ctrl/⌘ K (or the search icon on the landing page) searches notes, formulas, flashcards, calendars, practice topics and pages across every class, with class chips to narrow it; each result shows its class.
+- **Search everywhere.** Ctrl/⌘ K searches (the header has no search button since 2026.10.28.3; the apps keep Search in their menu) notes, formulas, flashcards, calendars, practice topics and pages across every class, with class chips to narrow it; each result shows its class.
 - **Preferences follow your account.** GPA calculator entries, focus-sound choices, daily goal, theme, phonetics and reader voices, seen-changelog, Today state and the start page's hidden cards sync through `prefs` (newest wins). The planner syncs through `life` (see The planner). Course progress already synced.
 
 ## Backups
@@ -888,7 +888,7 @@ The server copies the SQLite database once a day (SQLite's own `VACUUM INTO`, co
 
 ## Focus room, resources, guides, readiness, your week, tools
 
-- **Focus room** (`#/focus`, the hero button, the account menu, the mobile tab bar). One task, one timer (25, 50, 90 minutes or custom), the sound bubble one tap away, full-screen option, space to pause. Leave the page and a pill keeps the time; finish and the block is logged into the class's `sessions` (synced), your streak, the focus quest and XP (one per minute, up to 90). A daily focus goal (Settings or "change goal") shows as a bar. Sessions per day live in `settings.focusLog` and `focusSessions` (synced).
+- **Focus room** (`#/focus`, the hero button, the account menu, the sidebar). One task, one timer (25, 50, 90 minutes or custom), the sound bubble one tap away, full-screen option, space to pause. Leave the page and a pill keeps the time; finish and the block is logged into the class's `sessions` (synced), your streak, the focus quest and XP (one per minute, up to 90). A daily focus goal (Settings or "change goal") shows as a bar. Sessions per day live in `settings.focusLog` and `focusSessions` (synced).
 - **Resources** (`#/resources`, `#/<class>/resources`, "Resources & guides" in every class sidebar). `assets/resources-data.js` holds about 130 curated links in groups (every class, Montana State, one per class, wellbeing) with a kind (videos, practice, tools, free books, reference, MSU, community, apps, wellbeing) and tags. Search, kind chips, and a pin on every item saves it to `settings.savedResources` (synced). Links open in a new tab; every item carries a flag ("A link is broken or has moved") and "Suggest a resource" opens the report form with that reason, so suggestions land under Problems in the admin panel. Links could not be verified from the build environment, so the flag matters: fix a moved link in the data file.
 - **Study guides** (`#/guides`, `#/guides/<id>`). Sixteen original guides in `assets/guides-data.js` as simple blocks (heading, paragraph, lists, tip, quote, with **bold** and [links]). "Mark as read" gives 5 XP once and shows a check; three guides rotate daily on the landing page; the search index includes them; each guide is also a static page under `learn/guides/` for search engines.
 - **Exam readiness** (`assets/readiness.js`). `App.readiness(class)` scores the next exam from practice accuracy and volume per topic on that exam (60%), flashcard boxes for those sections (25%) and the prep checklist (15%), and names the three weakest topics with a link to the lesson (under five questions) or practice. Shown as a gauge and panel on the class dashboard, as a column in Today and on the landing countdown.
@@ -943,7 +943,7 @@ The whole site is set in Helvetica Neue (`--font-sans` in `styles.css`, also use
 
 The layout is built for someone opening StudyCat for the first time: a few groups per screen, the rest one tap away.
 
-- **Header.** Class title, next-exam chip, search, theme and the account menu. The streak flame and the daily goal ring (level inside; tap it for XP, level, goal and today's quests) appear after your first bit of studying; the inbox bell only for signed-in members. Double XP shows as a chip only while it is on. Visitors get a one-line preview note with a sign-up link; closing it is remembered on that device.
+- **Header.** Class title, next-exam chip, focus sounds, the language, theme and the account menu (search is Ctrl/⌘ K). The streak flame and the daily goal ring (level inside; tap it for XP, level, goal and today's quests) appear after your first bit of studying; the inbox bell only for signed-in members. Double XP shows as a chip only while it is on. Visitors get a one-line preview note with a sign-up link; closing it is remembered on that device.
 - **On every page.** Outside a class the same sidebar and header frame the start page and the planner pages: the clock and time bars, quick add, the planner's groups and the month calendar (see The planner).
 - **Sidebar.** Inside a class, five groups: Learn, Practice, Plan, Explore and Class (see The layout), each page with its own icon; the student can rearrange it in Customize.
 - **Dashboard.** The page head with the d20, a Getting started checklist for new users, a streak warning when one is at risk, then the exam card with a one-line readiness summary ("How to raise it" opens the Readiness tab). Below it two panels: Today (classes, due soon, current topic) and Keep going (continue on your path, smart review). Five tabs hold the rest: This week (with Canvas), Readiness, Progress (goal, streak, hours, accuracy, cards, unit mastery, daily quests and your league), Planner and Community. The tab you pick is remembered.

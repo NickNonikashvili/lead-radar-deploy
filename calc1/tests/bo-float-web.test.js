@@ -200,8 +200,8 @@ const sqlite = q => require('child_process').spawnSync('php', ['-r', '$d = new P
   const [cp, ph] = await open(390, 844, 'mod.user@montana.edu', { colorScheme: 'dark', hasTouch: true });
   await ph.evaluate(() => { App.setSetting('aiConsent', Date.now()); App.setSetting('boFloatSeen', Date.now()); });
   await go(ph, '#/calc/practice', 2000);
-  const pf = await ph.evaluate(() => { const f = document.querySelector('#bo-fab').getBoundingClientRect(); const t = document.querySelector('#tabbar'); const tb = t ? t.getBoundingClientRect() : null; return { above: tb ? f.bottom <= tb.top + 1 : false, right: innerWidth - f.right < 30, size: f.width >= 48 }; });
-  check('on a phone he sits above the tab bar, big enough to tap', pf.above && pf.right && pf.size, pf);
+  const pf = await ph.evaluate(() => { const f = document.querySelector('#bo-fab').getBoundingClientRect(); return { noTabs: !document.querySelector('#tabbar'), low: innerHeight - f.bottom < 40, right: innerWidth - f.right < 30, size: f.width >= 48 }; });
+  check('on a phone he sits in the bottom corner (the website has no tab bar), big enough to tap', pf.noTabs && pf.low && pf.right && pf.size, pf);
   await ph.tap('#bo-fab'); await ph.waitForTimeout(800);
   const sh = await ph.evaluate(() => { const p = document.querySelector('#bo-pop').getBoundingClientRect(); const bk = document.querySelector('#bf-back'); return { full: p.left <= 1 && p.right >= innerWidth - 1, bottom: Math.abs(p.bottom - innerHeight) < 2, tall: p.height > 300 && p.top > 40, back: !bk.hidden, ph: document.querySelector('#bf-q').placeholder, kb: document.activeElement && document.activeElement.id === 'bf-q', chips: document.querySelectorAll('#bo-pop .bf-item').length }; });
   check('it opens as a sheet from the bottom, over a dimmed page, with the questions to tap (no keyboard in the way)', sh.full && sh.bottom && sh.tall && sh.back && sh.ph === 'Ask Bo anything…' && !sh.kb && sh.chips > 0, sh);

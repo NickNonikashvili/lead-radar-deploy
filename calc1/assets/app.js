@@ -436,8 +436,7 @@
     render(root, param) {
       const first = String(param || '').split('/')[0]; const classy = /^[a-z]{1,6}\d{2,4}[a-z]?$/.test(first);
       root.innerHTML = `<div class="landing-wrap"><header class="landing-top"><div><div class="eyebrow">${SITE}</div><h1 class="landing-title"><span class="logo-mark">${App.logoSvg(44)}</span>${classy ? 'This class is not open to you' : 'Page not found'}</h1><p class="muted">${classy ? `There is no class <b>${esc(first)}</b> on StudyCat that you can open. If your instructor set it up, join it with the class code they gave you.` : 'The link may be old or mistyped. Nothing was lost; pick where to go from here.'}</p></div></header>
-        <div class="row gap-sm" style="flex-wrap:wrap"><a class="btn primary" href="#/">${icon('home', 14)} Start page</a>${classy ? `<a class="btn" href="#/class">${icon('users', 14)} Join a class with a code</a>${App.canRequest && App.canRequest() ? `<a class="btn" href="#/request?code=${encodeURIComponent(first.toUpperCase())}">${icon('path', 14)} Request this class</a>` : `<a class="btn" href="#/create">${icon('plus', 14)} Make it from its syllabus</a>`}` : `<button class="btn" data-action="search">${icon('search', 14)} Search StudyCat</button>`}</div></div>`;
-      bind(root, { search: () => { const b = $('.search-btn'); if (b) b.click(); } });
+        <div class="row gap-sm" style="flex-wrap:wrap"><a class="btn primary" href="#/">${icon('home', 14)} Start page</a>${classy ? `<a class="btn" href="#/class">${icon('users', 14)} Join a class with a code</a>${App.canRequest && App.canRequest() ? `<a class="btn" href="#/request?code=${encodeURIComponent(first.toUpperCase())}">${icon('path', 14)} Request this class</a>` : `<a class="btn" href="#/create">${icon('plus', 14)} Make it from its syllabus</a>`}` : `<a class="btn" href="#/contact">${icon('chat', 14)} Tell us about the broken link</a>`}</div></div>`;
     }
   };
   /* ---------- invite landing: #/join?ref=CODE ---------- */
@@ -472,6 +471,8 @@
   };
   const TABS_GLOBAL = [['#/', 'Home', 'home', 'home'], ['#/today', 'Today', 'flag', 'today'], ['#/focus', 'Focus', 'clock', 'focus'], ['#/forum', 'Board', 'chat', 'forum'], ['#/settings', 'Me', 'user', 'settings']];
   function paintTabbar(course, view) {
+    // the website has no tab bar (the menu and the header carry it); the apps draw their own over this one
+    if (!document.documentElement.hasAttribute('data-app')) { const old = $('#tabbar'); if (old) old.remove(); return; }
     let bar = $('#tabbar'); if (!bar) { bar = document.createElement('nav'); bar.id = 'tabbar'; bar.setAttribute('aria-label', 'Quick navigation'); document.body.appendChild(bar); }
     let tabs;
     if (course && D) { const learn = D.kind === 'writing' ? ['readings', 'Learn', 'book'] : ['notes', 'Learn', 'book']; const prac = D.quiz ? ['practice', 'Practice', 'list'] : D.kind === 'code' ? ['playground', 'Code', 'flask'] : ['calendar', 'Calendar', 'calendar']; tabs = [['dashboard', 'Home', 'home'], learn, prac, ['forum', 'Board', 'chat'], ['settings', 'Me', 'user']].map(([v, l, ic]) => [App.link(v), l, ic, v]); }

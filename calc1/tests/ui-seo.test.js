@@ -4,7 +4,7 @@ const T = require('./lib');
 
   const [c, p] = await mk(); await go(p, '#/'); await login(p, 'alice.a@montana.edu'); await p.reload(); await p.waitForTimeout(1500); if (await p.$('.celebrate')) await p.keyboard.press('Escape');
   await p.evaluate(() => { const s = App.settings(); delete s.lastVisit; s.courses = ['calc', 'physics', 'precalc', 'writ', 'csci']; localStorage.setItem('studyhub-settings', JSON.stringify(s)); });
-  await go(p, '#/'); await p.waitForTimeout(400); log('landing: stat strip (guests only):', !!(await p.$('.stat-strip')), '| resume card (none yet):', !(await p.$('.resume-card')), '| tabbar hidden on desktop:', await p.$eval('#tabbar', e => getComputedStyle(e).display === 'none'));
+  await go(p, '#/'); await p.waitForTimeout(400); log('landing: stat strip (guests only):', !!(await p.$('.stat-strip')), '| resume card (none yet):', !(await p.$('.resume-card')), '| no tab bar:', !(await p.$('#tabbar')));
   await go(p, '#/calc/notes/1.3'); await p.waitForTimeout(600); log('breadcrumb:', await txt(p, '#topbar-title'), '| crumb link:', await p.$eval('#topbar-title .crumb', e => e.getAttribute('href')), '| lastVisit:', JSON.stringify(await p.evaluate(() => { const l = App.settings().lastVisit; return { hash: l.hash, label: l.label, detail: l.detail }; })));
   log('switcher dots:', await p.$$eval('.switch-btn', b => b.map(x => x.dataset.c || 'home').join(',')));
   // "Pick up where you left off" is a widget a student adds to their home (it is not in the first layout)
@@ -18,16 +18,13 @@ const T = require('./lib');
   await go(p, '#/writ/readings'); await p.waitForTimeout(400); log('writ breadcrumb:', await txt(p, '#topbar-title'));
   await c.close();
 
-  // mobile: tab bar
+  // mobile: no tab bar on the website (the menu and the header carry it); the footer is never under a bar
   const [cm, m] = await mk(390, 760); await m.goto(base + '#/'); await m.waitForTimeout(700); await m.evaluate(() => { const s = App.settings(); s.courses = ['calc', 'writ', 'csci']; localStorage.setItem('studyhub-settings', JSON.stringify(s)); }); await m.reload(); await m.waitForTimeout(900);
-  log('mobile landing tabs:', await m.$$eval('#tabbar .tab-item', t => t.map(x => x.textContent.trim() + (x.classList.contains('active') ? '*' : '')).join(',')), '| visible:', await m.$eval('#tabbar', e => getComputedStyle(e).display !== 'none'), '| no hscroll:', await hscroll(m));
-  const geo = await m.evaluate(() => { const tb = document.getElementById('tabbar').getBoundingClientRect(); const b = document.querySelector('#ambient .amb-bubble'); return { tabTop: Math.round(tb.top), bubbleHidden: getComputedStyle(b).display === 'none', vh: innerHeight }; }); log('no floating bubble over the page until something plays:', geo.bubbleHidden, JSON.stringify(geo));
-  await m.goto(base + '#/calc'); await m.waitForTimeout(600); log('calc tabs:', await m.$$eval('#tabbar .tab-item', t => t.map(x => x.textContent.trim() + (x.classList.contains('active') ? '*' : '')).join(',')));
-  await m.click('#tabbar .tab-item:nth-child(2)'); await m.waitForTimeout(500); log('tap Learn ->', location => null, await txt(m, '.note-title'), '| active:', await m.$$eval('#tabbar .tab-item.active', t => t.map(x => x.textContent.trim()).join(',')));
-  await m.goto(base + '#/csci'); await m.waitForTimeout(600); log('csci tabs:', await m.$$eval('#tabbar .tab-item', t => t.map(x => x.textContent.trim()).join(',')));
-  await m.goto(base + '#/writ'); await m.waitForTimeout(600); log('writ tabs:', await m.$$eval('#tabbar .tab-item', t => t.map(x => x.textContent.trim()).join(',')));
-  await m.goto(base + '#/calc/lesson?n=3'); await m.waitForTimeout(700); log('lesson hides tabbar:', await m.$eval('#tabbar', e => getComputedStyle(e).display === 'none'), '| lesson foot present:', !!(await m.$('.lesson-foot')));
-  log('mobile footer not covered:', await m.evaluate(() => { const f = document.querySelector('.site-foot'); if (!f) return 'no footer'; return parseInt(getComputedStyle(f).paddingBottom) >= 60; }));
+  log('mobile landing: no tab bar:', !(await m.$('#tabbar')), '| no hscroll:', await hscroll(m));
+  const geo = await m.evaluate(() => { const b = document.querySelector('#ambient .amb-bubble'); return { bubbleHidden: !b || getComputedStyle(b).display === 'none', vh: innerHeight }; }); log('no floating bubble over the page until something plays:', geo.bubbleHidden, JSON.stringify(geo));
+  for (const h of ['#/calc', '#/csci', '#/writ']) { await m.goto(base + h); await m.waitForTimeout(600); log(h, 'no tab bar:', !(await m.$('#tabbar')), '| no hscroll:', await hscroll(m)); }
+  await m.goto(base + '#/calc/lesson?n=3'); await m.waitForTimeout(700); log('lesson foot present:', !!(await m.$('.lesson-foot')));
+  log('mobile footer ends above the lesson bar:', await m.evaluate(() => { const f = document.querySelector('.sf-base'), lf = document.querySelector('.lesson-foot'); if (!f || !lf) return 'missing'; window.scrollTo(0, 1e6); return f.getBoundingClientRect().bottom <= lf.getBoundingClientRect().top + 1; }));
   await cm.close();
 
   // static SEO pages
