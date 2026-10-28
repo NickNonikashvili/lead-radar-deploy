@@ -9,7 +9,7 @@
    Used in: the start page skyline (Bridger Range at 8 bits), empty
    states, the XP pop-up, the streak flame, level-ups, lesson ends and
    quest celebrations, class loading, the "game over" load error, the
-   footer signature, Blitz's arcade HUD and the character sheet.
+   footer signature and the character sheet.
    ============================================================ */
 (function (global) {
   'use strict';

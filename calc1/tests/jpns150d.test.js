@@ -37,8 +37,8 @@ const T = require('./lib');
 
   await go(p, '#/jpns150d/exam/exam2', 900);
   check('Exam 2 prep covers the samurai to the Bakumatsu', /Exam prep/.test(await txt(p, '.page-title')) && /Heike/.test(await txt(p, '#view')) && /Bakumatsu/.test(await txt(p, '#view')));
-  await go(p, '#/jpns150d/grades', 900);
-  check('the grade calculator has the six point categories', (await p.$$('.grade-row')).length === 6 && /380 points/.test(await txt(p, '#view')));
+  await go(p, '#/jpns150d/course', 900);
+  check('the syllabus page has the six point categories and the letter scale', (await p.evaluate(() => { const g = [...document.querySelectorAll('#view .panel')].find(x => /^\s*(Grading|How the grade is made)/.test((x.querySelector('.panel-title') || {}).textContent || '')); const tb = g && g.querySelector('tbody'); return tb ? tb.querySelectorAll('tr').length : 0; })) === 7 && /380/.test(await txt(p, '#view')) && (await p.$$('.grade-scale tbody tr')).length === 12);
   await go(p, '#/jpns150d/course', 900);
   const course = await txt(p, '#view');
   check('the syllabus page has the professor, presentations and exam rules', /Tillack/.test(course) && /10 pm the day before/.test(course) && /closed book/.test(course) && (await p.$$('#view .panel')).length >= 5);

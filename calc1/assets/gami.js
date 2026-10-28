@@ -37,7 +37,7 @@
 
   /* ---------- confetti ---------- */
   function confetti(opts = {}) {
-    if (reduced()) return;
+    if (reduced() || (App.moduleOn && !App.moduleOn('celebrate'))) return;   // Celebrations turned off in Customize
     const c = document.createElement('canvas'); c.className = 'confetti'; c.setAttribute('aria-hidden', 'true'); document.body.appendChild(c); const ctx = c.getContext('2d');
     const dpr = Math.min(2, devicePixelRatio || 1); c.width = innerWidth * dpr; c.height = innerHeight * dpr; ctx.scale(dpr, dpr);
     const colors = opts.colors || ['#2B55B8', '#0E7C86', '#F2C14E', '#E4572E', '#7B61FF', '#2FB36B', '#FF7AB6'];
@@ -224,13 +224,12 @@
   /* ---------- getting started checklist (dashboard, new users) ---------- */
   App.gettingStarted = function () {
     if (settings().gsDismissed) return null; const s = settings(); const u = App.auth && App.auth.user; let onboarded = false; try { onboarded = localStorage.getItem('mathub-onboarded') === '1'; } catch {}
-    const badges = App.social && App.social.badges ? App.social.badges.badges.map(b => b.code) : [];
     const items = [
       { label: u ? 'Account created' : 'Create your free account', done: !!u, href: '#', action: u ? '' : 'gs-signup' },
       { label: 'Pick your classes and sections', done: onboarded || Array.isArray(s.courses), href: App.inCourse() ? App.link('settings') : '#/settings' },
       { label: 'Choose a daily XP goal', done: s.dailyGoal !== undefined, href: App.inCourse() ? App.link('settings') : '#/settings' },
       { label: 'Finish your first lesson', done: (s.lessonsDone || 0) >= 1, href: App.inCourse() ? App.link('lesson', null, { smart: 1 }) : '#/' },
-      { label: 'Say hi in Discussions', done: badges.includes('first_post') || badges.includes('first_answer'), href: App.inCourse() ? App.link('forum') : '#/forum' }
+      { label: 'Say hi in Discussions', done: !!s.forumPosted, href: App.inCourse() ? App.link('forum') : '#/forum' }
     ].map(i => Object.assign(i, { action: i.done ? '' : (i.action || '') }));
     const done = items.filter(i => i.done).length; if (done === items.length) return null;
     return { items, done, total: items.length };

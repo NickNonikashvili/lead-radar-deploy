@@ -40,8 +40,8 @@ const T = require('./lib');
   await go(p, '#/m172/exam/exam4', 900);
   check('Exam 4 says finals week and that its sections are not listed', /Finals week/i.test(await txt(p, '#view')) && /does not list/.test(await txt(p, '#view')));
 
-  await go(p, '#/m172/grades', 900);
-  check('the grade calculator has the 8 syllabus categories', (await p.$$('.grade-row')).length === 8);
+  await go(p, '#/m172/course', 900);
+  check('the syllabus page has the syllabus categories', (await p.evaluate(() => { const g = [...document.querySelectorAll('#view .panel')].find(x => /^\s*(Grading|How the grade is made)/.test((x.querySelector('.panel-title') || {}).textContent || '')); const tb = g && g.querySelector('tbody'); return tb ? tb.querySelectorAll('tr').length : 0; })) === 5 && /Four exams/.test(await txt(p, '#view')));
   const g = await txt(p, '#view');
   check('it shows the 4-point scale and the rubric', /3\.75 – 4\.00/.test(g) && /Substantial/.test(g) && /4-point/.test(g));
 

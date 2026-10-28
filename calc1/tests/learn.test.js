@@ -2,9 +2,9 @@
    Covered: Check my work (members only, a photo needed, the lines as written, the math check finding the first wrong
    line exactly and Bo asked again about it, every line right, a photo he cannot read, credits); Notes from slides
    (a .pptx read in its presentation order with speaker notes, a PDF page by page, notes and flashcards kept,
-   someone else's set, deleting, too much text); Office-hours prep (from the mistakes saved in a class, or what they
-   are stuck on); and the pages: the sidebar, a photo checked with the slip marked and Ask Bo about it, slides opened
-   into notes with cards to flip, Word and a CSV for Anki, the office-hours questions kept on the device, a phone. */
+   someone else's set, deleting, too much text); Office-hours prep is gone (its route answers 404, no page); and the
+   pages: the sidebar, a photo checked with the slip marked and Ask Bo about it, slides opened into notes with cards
+   to flip, Word and a CSV for Anki, a phone. */
 const T = require('./lib'); const fs = require('fs'); const path = require('path');
 const DB = path.join(__dirname, '..', 'api', 'data', 'mathub.sqlite'); const LAST = path.join(__dirname, 'fixtures', 'ai-last.json');
 const sql = (q, ...a) => require('child_process').spawnSync('php', ['-r', '$d = new PDO("sqlite:" . $argv[1]); $s = $d->prepare($argv[2]); $s->execute(array_slice($argv, 3)); echo json_encode($s->fetchAll(PDO::FETCH_ASSOC));', DB, q, ...a.map(String)]).stdout.toString();
@@ -85,18 +85,16 @@ const PDF = pdf([[[72, 700, 'Photosynthesis'], [72, 680, 'Light makes sugar.']],
   check('nobody else can open or delete them', (await api(b, `learn_slides_get&class=calc&id=${sid}`)).status === 404 && (await api(b, 'learn_slides_delete', { class: 'calc', id: sid })).status === 404 && (await api(b, 'learn_slides_list&class=calc')).sets.length === 0);
   await cb.close();
 
-  /* ---------- office-hours prep ---------- */
-  check('with no mistakes and nothing they are stuck on, Bo has nothing to go on', (await api(a, 'learn_officehours', { class: 'calc', mistakes: [] })).status === 400);
-  r = await api(a, 'learn_officehours', { class: 'calc', mistakes: [{ topic: 'Limits', q: 'Find the limit of (x^2 - 1)/(x - 1) as x goes to 1.', right: '2' }], stuck: 'when to use the chain rule' });
-  check('three questions from the mistakes and what they are stuck on', r.ok && r.questions.length === 3 && /THEIR RECENT MISTAKES:\n- \[Limits\] Find the limit/.test(userText(last())) && /WHAT THEY SAY THEY ARE STUCK ON: when to use the chain rule/.test(userText(last())) && /Do not answer the questions/.test(last().system[0].text), r);
+  /* ---------- office-hours prep: retired ---------- */
+  check('office-hours prep is gone from the server', (await api(a, 'learn_officehours', { class: 'calc', mistakes: [{ topic: 'Limits', q: 'x', right: '2' }] })).status === 404);
 
   /* ---------- the pages ---------- */
   await go(a, '#/calc/dashboard', 1400);
   const nav = await a.evaluate(() => [...document.querySelectorAll('#sidebar-nav [data-view]')].map(x => x.dataset.view.split('/').pop()));
-  check('a math class’s sidebar has Check my work, Notes from slides and Office-hours prep', ['checkwork', 'slides', 'officehours'].every(v => nav.includes(v)), nav);
+  check('a math class’s sidebar has Check my work and Notes from slides, and no Office-hours prep', ['checkwork', 'slides'].every(v => nav.includes(v)) && !nav.includes('officehours'), nav);
   await go(a, '#/writ/dashboard', 1400);
   const navW = await a.evaluate(() => [...document.querySelectorAll('#sidebar-nav [data-view]')].map(x => x.dataset.view.split('/').pop()));
-  check('a writing class has the notes and the office hours, not Check my work', navW.includes('slides') && navW.includes('officehours') && !navW.includes('checkwork'), navW);
+  check('a writing class has the notes, not Check my work', navW.includes('slides') && !navW.includes('checkwork'), navW);
   await go(a, '#/calc/checkwork', 1400);
   check('Check it waits for a photo', await a.$eval('#lw-go', el => el.disabled));
   await a.setInputFiles('#lw-file', { name: 'work.png', mimeType: 'image/png', buffer: PNG }); await a.waitForTimeout(600);
@@ -126,20 +124,8 @@ const PDF = pdf([[[72, 700, 'Photosynthesis'], [72, 680, 'Light makes sugar.']],
   check('and the notes as a Word file', dw.suggestedFilename() === 'Cell respiration.docx' && /Photosynthesis/.test(docXml) && /What is on slide 2\?/.test(docXml));
   check('the notes fit and have no errors', await hscroll(a));
 
-  await go(a, '#/precalc/officehours', 1400);
-  const ohp = await a.evaluate(() => (document.querySelector('.oh-wrap') || document.body).textContent.replace(/\s+/g, ' '));
-  check('Office-hours prep: when and where, from the syllabus', /Office hours.*Tue & Thu 10–11 am/.test(ohp), ohp.slice(0, 300));
-  await a.evaluate(() => { App.store.poke('calc', d => { d.mistakes = []; }); ['Find the limit of (x^2 - 1)/(x - 1) as x goes to 1.', 'Differentiate sin(x^2).'].forEach((p, i) => App.recordMistake({ type: 'num', prompt: p, answer: i ? '2x cos(x^2)' : '2', topic: '1.3' }, 'calc')); });
-  await go(a, '#/calc/officehours', 1400);
-  const oh = await a.evaluate(() => ({ n: document.querySelectorAll('.oh-m li').length, text: (document.querySelector('.oh-wrap') || document.body).textContent.slice(0, 400) }));
-  check('and the mistakes it starts from', oh.n === 2 && /2 questions you missed/.test(oh.text), oh);
-  await a.click('[data-action="oh-go"]'); await a.waitForSelector('.oh-qs', { timeout: 15000 }).catch(() => {});
-  const oq = { n: (await a.$$('.oh-qs li')).length, text: await txt(a, '#oh-out'), sent: userText(last()).slice(0, 600) };
-  check('three questions, from her two mistakes', oq.n === 3 && /2 mistakes/.test(oq.text) && /Differentiate sin\(x\^2\)/.test(oq.sent), oq);
-  await a.reload(); await a.waitForTimeout(1500);
-  check('and they are still there after a reload', (await a.$$('.oh-qs li')).length === 3);
   const [cp, ph] = await open(ALICE, 390, 844);
-  for (const h of ['#/calc/checkwork', '#/calc/slides', `#/calc/slides/${sid}`, '#/calc/officehours']) { await go(ph, h, 1500); check(`fits a phone: ${h}`, await hscroll(ph)); }
+  for (const h of ['#/calc/checkwork', '#/calc/slides', `#/calc/slides/${sid}`]) { await go(ph, h, 1500); check(`fits a phone: ${h}`, await hscroll(ph)); }
   await cp.close();
   r = await api(a, 'learn_slides_delete', { class: 'calc', all: 1 }); check('she can delete all her notes', r.ok && (await api(a, 'learn_slides_list&class=calc')).sets.length === 0);
   await a.evaluate(() => { App.store.poke('calc', d => { d.mistakes = []; }); });

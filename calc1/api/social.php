@@ -1,26 +1,14 @@
 <?php
 /* ============================================================
    Mathub — community features
-   Daily challenge + leaderboards, badges, live presence, study
-   sessions (meetups), polls, helper rankings, community mock exams,
-   student contributions, activity feed, weekly digest, cron.
+   Daily challenge + leaderboards, live presence, polls, helper
+   rankings, the people directory, activity feed, weekly digest, cron.
+   (Badges were retired on October 27, 2026: none are awarded or shown;
+   the badges table is left as it was.)
    ============================================================ */
 declare(strict_types=1);
 require_once __DIR__ . '/filter.php';
 require_once __DIR__ . '/canvas.php';
-
-const MH_BADGES = [
-  'first_post' => ['First post', 'Started a discussion', 'chat'], 'first_answer' => ['First reply', 'Replied to a classmate', 'reply'],
-  'helper_5' => ['Helper', '5 accepted answers', 'shield'], 'helper_25' => ['Mentor', '25 accepted answers', 'shield'],
-  'upvoted_10' => ['Crowd favorite', 'A post or comment reached +10', 'up'],
-  'streak_7' => ['One-week streak', 'Studied 7 days in a row', 'fire'], 'streak_30' => ['One-month streak', 'Studied 30 days in a row', 'fire'],
-  'q_100' => ['Century', '100 quiz questions answered', 'list'], 'q_500' => ['Grinder', '500 quiz questions answered', 'list'],
-  'unit_master' => ['Unit master', 'Every flashcard in a unit mastered', 'cards'],
-  'challenge_7' => ['Daily regular', '7 daily challenges', 'target'], 'challenge_30' => ['Daily legend', '30 daily challenges', 'target'],
-  'mock_1' => ['Mock examinee', 'Took a community mock exam', 'flag'], 'contributor' => ['Contributor', 'A submitted problem or card was approved', 'pen'],
-  'founder' => ['Founder', 'Joined Mathub in its first weeks', 'bulb'],
-  'recruiter' => ['Recruiter', 'Brought a classmate to Mathub', 'users'], 'invited' => ['Invited', 'Joined through a classmate\'s link', 'users']
-];
 
 /* ---------- small helpers ---------- */
 function mh_tz(): DateTimeZone { return new DateTimeZone(mh_config()['timezone'] ?? 'America/Denver'); }
@@ -46,40 +34,6 @@ function mh_current_streak(array $days): array {
   return ['streak' => $n, 'active_today' => $activeToday];
 }
 function mh_week_minutes(array $blobs, int $since): int { $from = mh_local_date($since); $m = 0; foreach ($blobs as $b) foreach ($b['sessions'] ?? [] as $sn) if (($sn['d'] ?? '') >= $from) $m += (int)($sn['m'] ?? 0); return $m; }
-function mh_longest_streak(array $days): int {
-  if (!$days) return 0; sort($days); $best = 1; $run = 1;
-  for ($i = 1; $i < count($days); $i++) { $diff = (strtotime($days[$i]) - strtotime($days[$i - 1])) / 86400; if ($diff === 1.0) { $run++; $best = max($best, $run); } elseif ($diff > 1) $run = 1; }
-  return $best;
-}
-
-/* ---------- badges ---------- */
-function mh_compute_badges(int $uid, array $clientCodes = []): array {
-  $db = mh_db(); $have = [];
-  $n = function (string $sql, array $args = []) use ($db) { $st = $db->prepare($sql); $st->execute($args); return (int)$st->fetchColumn(); };
-  if ($n('SELECT COUNT(*) FROM posts WHERE user_id = ? AND removed = 0', [$uid]) >= 1) $have[] = 'first_post';
-  if ($n('SELECT COUNT(*) FROM comments WHERE user_id = ? AND removed = 0', [$uid]) >= 1) $have[] = 'first_answer';
-  $acc = $n('SELECT COUNT(*) FROM posts p JOIN comments c ON c.id = p.accepted_id WHERE c.user_id = ? AND c.removed = 0', [$uid]);
-  if ($acc >= 5) $have[] = 'helper_5'; if ($acc >= 25) $have[] = 'helper_25';
-  if (max($n('SELECT COALESCE(MAX(score),0) FROM posts WHERE user_id = ?', [$uid]), $n('SELECT COALESCE(MAX(score),0) FROM comments WHERE user_id = ?', [$uid])) >= 10) $have[] = 'upvoted_10';
-  $days = []; $answered = 0;
-  foreach (mh_user_progress($uid) as $blob) { foreach (array_keys($blob['activity'] ?? []) as $d) $days[$d] = true; foreach ($blob['progress'] ?? [] as $t) $answered += (int)($t['a'] ?? 0); }
-  $streak = mh_longest_streak(array_keys($days)); if ($streak >= 7) $have[] = 'streak_7'; if ($streak >= 30) $have[] = 'streak_30';
-  if ($answered >= 100) $have[] = 'q_100'; if ($answered >= 500) $have[] = 'q_500';
-  $ch = $n('SELECT COUNT(*) FROM challenge_attempts WHERE user_id = ?', [$uid]); if ($ch >= 7) $have[] = 'challenge_7'; if ($ch >= 30) $have[] = 'challenge_30';
-  if ($n('SELECT COUNT(*) FROM mock_results WHERE user_id = ?', [$uid]) >= 1) $have[] = 'mock_1';
-  if ($n('SELECT COUNT(*) FROM contributions WHERE user_id = ? AND status = "approved"', [$uid]) >= 1) $have[] = 'contributor';
-  $st = $db->prepare('SELECT created FROM users WHERE id = ?'); $st->execute([$uid]); if ((int)$st->fetchColumn() < strtotime(mh_config()['founder_until'] ?? '2026-10-15')) $have[] = 'founder';
-  foreach ($clientCodes as $c) if ($c === 'unit_master') $have[] = 'unit_master';   // the client knows the unit membership of each card
-  return array_values(array_unique($have));
-}
-function mh_award_badges(int $uid, array $clientCodes = [], string $course = ''): array {
-  $db = mh_db(); $now = time(); $codes = mh_compute_badges($uid, $clientCodes);
-  $st = $db->prepare('SELECT code, earned, seen FROM badges WHERE user_id = ?'); $st->execute([$uid]); $had = []; foreach ($st->fetchAll() as $r) $had[$r['code']] = $r;
-  $new = [];
-  foreach ($codes as $c) if (!isset($had[$c])) { $db->prepare('INSERT OR IGNORE INTO badges (user_id, code, earned) VALUES (?, ?, ?)')->execute([$uid, $c, $now]); $new[] = $c; $had[$c] = ['code' => $c, 'earned' => $now, 'seen' => 0]; mh_activity('badge', $course, 'A student earned the “' . MH_BADGES[$c][0] . '” badge', '#/badges'); }
-  $all = []; foreach ($had as $c => $r) if (isset(MH_BADGES[$c])) $all[] = ['code' => $c, 'name' => MH_BADGES[$c][0], 'desc' => MH_BADGES[$c][1], 'icon' => MH_BADGES[$c][2], 'earned' => (int)$r['earned'], 'seen' => (int)$r['seen'] === 1];
-  return ['all' => $all, 'new' => $new];
-}
 
 /* ---------- leagues: weekly XP boards; the top of each league moves up on Monday, the bottom moves down ---------- */
 const MH_LEAGUES = ['Bronze', 'Silver', 'Gold', 'Sapphire', 'Ruby', 'Emerald', 'Amethyst', 'Pearl', 'Obsidian', 'Diamond'];
@@ -151,15 +105,13 @@ function mh_housekeeping(bool $full = false): array {
   try { require_once __DIR__ . '/growth.php'; $pl = mh_planning_tick($full ? 60 : 2); if ($pl) $did[] = "planning: $pl sent"; $ex = mh_exam_nudge_tick($full ? 60 : 2); if ($ex) $did[] = "exam heads-ups: $ex sent"; if ($full || random_int(1, 20) === 1) { $db->exec('DELETE FROM focus_live WHERE seen < ' . (time() - 600)); $db->exec('DELETE FROM metrics WHERE day < "' . mh_local_date(time() - 120 * 86400) . '"'); } } catch (Throwable $e) {}
   return $did;
 }
-/** What an evening reminder is about for one user: Canvas events due tomorrow in their classes, a streak at risk, sessions they joined. Shared by the email and the push. */
+/** What an evening reminder is about for one user: Canvas events due tomorrow in their classes and a streak at risk. Shared by the email and the push. */
 function mh_reminder_items(array $u, array $events, string $tomorrow): array {
   $db = mh_db(); $names = mh_course_names() + ['general' => 'General'];
   $mine = mh_user_courses($u); $due = array_values(array_filter($events, fn($e) => $e['date'] === $tomorrow && in_array($e['course'], $mine, true)));
   $days = []; foreach (mh_user_progress((int)$u['id']) as $b) foreach (array_keys($b['activity'] ?? []) as $d) $days[$d] = true; $sk = mh_current_streak(array_keys($days));
   $atRisk = !$sk['active_today'] && $sk['streak'] >= 3;
-  $s2 = $db->prepare('SELECT m.title, m.place, m.start FROM meets m JOIN meet_rsvp r ON r.meet_id = m.id WHERE r.user_id = ? AND m.cancelled = 0 AND m.start > ? AND m.start < ? ORDER BY m.start'); $s2->execute([$u['id'], time(), time() + 36 * 3600]);
-  $meets = array_map(fn($m) => ['title' => $m['title'], 'place' => $m['place'], 'when' => (new DateTime('@' . $m['start']))->setTimezone(mh_tz())->format('D g:i a')], $s2->fetchAll());
-  return ['due' => $due, 'atRisk' => $atRisk, 'streak' => $sk['streak'], 'meets' => $meets, 'names' => $names];
+  return ['due' => $due, 'atRisk' => $atRisk, 'streak' => $sk['streak'], 'names' => $names];
 }
 /* ---------- evening reminders: "tomorrow: … due" + streak at risk ---------- */
 function mh_reminder_window_start(): ?int {
@@ -180,13 +132,11 @@ function mh_reminder_tick(int $max): int {
       $mine = mh_user_courses($u); $due = array_values(array_filter($events, fn($e) => $e['date'] === $tomorrow && in_array($e['course'], $mine, true)));
       $days = []; foreach (mh_user_progress((int)$u['id']) as $b) foreach (array_keys($b['activity'] ?? []) as $d) $days[$d] = true; $sk = mh_current_streak(array_keys($days));
       $atRisk = !$sk['active_today'] && $sk['streak'] >= 3;
-      $s2 = $db->prepare('SELECT m.title, m.place, m.start FROM meets m JOIN meet_rsvp r ON r.meet_id = m.id WHERE r.user_id = ? AND m.cancelled = 0 AND m.start > ? AND m.start < ? ORDER BY m.start'); $s2->execute([$u['id'], time(), time() + 36 * 3600]); $meets = $s2->fetchAll();
-      if (!$due && !$atRisk && !$meets) continue;
+      if (!$due && !$atRisk) continue;
       $lines = []; $h = [];
       if ($due) { $lines[] = 'Due tomorrow:'; $h[] = '<h3 style="margin:0 0 6px;font-size:15px">Due tomorrow</h3><ul style="padding-left:18px;margin:0 0 14px">'; foreach ($due as $e) { $row = ($names[$e['course']] ?? $e['course']) . ': ' . $e['title'] . ($e['time'] ? ' · ' . $e['time'] : ''); $lines[] = '  - ' . $row; $h[] = '<li>' . htmlspecialchars($row) . '</li>'; } $h[] = '</ul>'; }
-      if ($meets) { $lines[] = ''; $lines[] = 'Study sessions you joined:'; $h[] = '<h3 style="margin:0 0 6px;font-size:15px">Study sessions you joined</h3><ul style="padding-left:18px;margin:0 0 14px">'; foreach ($meets as $m) { $row = $m['title'] . ' at ' . $m['place'] . ' · ' . (new DateTime('@' . $m['start']))->setTimezone(mh_tz())->format('D g:i a'); $lines[] = '  - ' . $row; $h[] = '<li>' . htmlspecialchars($row) . '</li>'; } $h[] = '</ul>'; }
       if ($atRisk) { $row = "Your {$sk['streak']}-day streak ends at midnight. Answer one quiz question to keep it going."; $lines[] = ''; $lines[] = $row; $h[] = '<p style="padding:10px 12px;background:#FCEEDB;border-radius:8px;margin:0 0 14px"><b>' . htmlspecialchars($row) . '</b></p>'; }
-      $subject = $due ? 'Tomorrow: ' . implode(', ', array_map(fn($e) => $e['title'], array_slice($due, 0, 2))) . (count($due) > 2 ? ' +' . (count($due) - 2) . ' more' : '') : ($atRisk ? "Your {$sk['streak']}-day streak ends tonight" : 'Study session tomorrow');
+      $subject = $due ? 'Tomorrow: ' . implode(', ', array_map(fn($e) => $e['title'], array_slice($due, 0, 2))) . (count($due) > 2 ? ' +' . (count($due) - 2) . ' more' : '') : "Your {$sk['streak']}-day streak ends tonight";
       $text = implode("\n", $lines) . "\n\nOpen $site: $url\nTurn these reminders off in Settings → Account.";
       $html = '<div style="font-family:Helvetica Neue,Helvetica,Arial,sans-serif;max-width:520px;margin:0 auto;padding:24px;color:#0F172A">' . implode('', $h) . '<p><a href="' . $url . '" style="display:inline-block;background:#4F46E5;color:#fff;text-decoration:none;padding:9px 14px;border-radius:8px">Open ' . htmlspecialchars($site) . '</a></p><p style="font-size:12px;color:#64748B">Turn these reminders off in Settings → Account.</p></div>';
       $r = mh_send_mail($cfg, $u['email'], $subject, $text, $html); if ($r['ok']) $sent++;
@@ -215,14 +165,12 @@ function mh_digest_tick(int $max): int {
   return $sent;
 }
 function mh_digest_context(): array {
-  $db = mh_db(); $now = time(); $week = $now - 7 * 86400; $ctx = ['canvas' => [], 'top' => [], 'avg' => null, 'meets' => [], 'mocks' => []];
+  $db = mh_db(); $now = time(); $week = $now - 7 * 86400; $ctx = ['canvas' => [], 'top' => [], 'avg' => null];
   try { require_once __DIR__ . '/canvas.php'; $c = mh_canvas_events(false); $from = mh_local_date(); $to = mh_local_date($now + 7 * 86400); $ctx['canvas'] = array_values(array_filter($c['events'], fn($e) => $e['date'] >= $from && $e['date'] <= $to)); } catch (Throwable $e) {}
   $st = $db->prepare('SELECT id, title, course, score, ncomments FROM posts WHERE removed = 0 AND created > ? ORDER BY score DESC, ncomments DESC LIMIT 5'); $st->execute([$week]); $ctx['top'] = $st->fetchAll();
   $key = 'digest_avg:' . mh_week_start(); $cached = mh_setting($key);
   if ($cached !== null) $ctx['avg'] = json_decode($cached, true);
   else { $ctx['avg'] = mh_class_week_stats($week); mh_setting_set($key, json_encode($ctx['avg'])); }
-  $st = $db->prepare('SELECT title, place, start, course FROM meets WHERE cancelled = 0 AND start > ? AND start < ? ORDER BY start LIMIT 5'); $st->execute([$now, $now + 7 * 86400]); $ctx['meets'] = $st->fetchAll();
-  $st = $db->prepare('SELECT title, start, course FROM mocks WHERE cancelled = 0 AND start > ? AND start < ? ORDER BY start LIMIT 3'); $st->execute([$now, $now + 7 * 86400]); $ctx['mocks'] = $st->fetchAll();
   return $ctx;
 }
 function mh_digest_content(array $u, array $ctx): array {
@@ -233,17 +181,14 @@ function mh_digest_content(array $u, array $ctx): array {
   $mine = mh_user_courses($u); $ctx['canvas'] = array_values(array_filter($ctx['canvas'], fn($e) => in_array($e['course'], $mine, true)));
   $mins = mh_week_minutes(mh_user_progress((int)$u['id']), time() - 7 * 86400);
   $db = mh_db(); $st = $db->prepare('SELECT COALESCE(SUM(points),0) FROM challenge_attempts WHERE user_id = ? AND created > ?'); $st->execute([$u['id'], time() - 7 * 86400]); $cpts = (int)$st->fetchColumn();
-  $st = $db->prepare('SELECT code FROM badges WHERE user_id = ? AND earned > ?'); $st->execute([$u['id'], time() - 7 * 86400]); $newBadges = array_map(fn($c) => MH_BADGES[$c][0] ?? $c, array_column($st->fetchAll(), 'code'));
   $acc = $answered ? round(100 * $correct / $answered) : null; $avg = $ctx['avg'];
   $lines = []; $h = [];
   $lines[] = "Your week on $site"; $lines[] = '';
   $me = "You answered $answered quiz questions" . ($acc !== null ? " at $acc% accuracy" : '') . ", studied on " . count($days) . " day" . (count($days) === 1 ? '' : 's') . ($mins ? ' for ' . round($mins / 60, 1) . ' h of focused time' : '') . ($cpts ? ", and earned $cpts daily-challenge points" : '') . '.';
   if ($avg && $avg['acc'] !== null && $avg['users'] > 1) $me .= " The class averaged {$avg['acc']}% across {$avg['users']} active students" . (isset($avg['median_hours']) && $avg['median_hours'] !== null ? " and a median of {$avg['median_hours']} h of focus time" : '') . '.';
-  if ($newBadges) $me .= ' New badges: ' . implode(', ', $newBadges) . '.';
   $lines[] = $me; $h[] = '<p>' . htmlspecialchars($me) . '</p>';
   if ($ctx['canvas']) { $lines[] = ''; $lines[] = 'Due in the next 7 days (from Canvas):'; $h[] = '<h3 style="margin:18px 0 6px;font-size:15px">Due in the next 7 days</h3><ul style="padding-left:18px;margin:0">'; foreach ($ctx['canvas'] as $e) { $row = ($names[$e['course']] ?? $e['course']) . ': ' . $e['title'] . ' · ' . date('D M j', strtotime($e['date'])) . ($e['time'] ? ' ' . $e['time'] : ''); $lines[] = '  - ' . $row; $h[] = '<li>' . htmlspecialchars($row) . '</li>'; } $h[] = '</ul>'; }
   if ($ctx['top']) { $lines[] = ''; $lines[] = 'Most upvoted this week:'; $h[] = '<h3 style="margin:18px 0 6px;font-size:15px">Most upvoted this week</h3><ul style="padding-left:18px;margin:0">'; foreach ($ctx['top'] as $p) { $row = ($names[$p['course']] ?? $p['course']) . ': ' . $p['title'] . " (+{$p['score']}, {$p['ncomments']} comments)"; $lines[] = '  - ' . $row . " $url/#/forum/{$p['id']}"; $h[] = '<li><a href="' . $url . '/#/forum/' . (int)$p['id'] . '">' . htmlspecialchars($p['title']) . '</a> <span style="color:#64748B">' . htmlspecialchars(($names[$p['course']] ?? $p['course']) . " · +{$p['score']} · {$p['ncomments']} comments") . '</span></li>'; } $h[] = '</ul>'; }
-  if ($ctx['meets'] || $ctx['mocks']) { $lines[] = ''; $lines[] = 'Coming up:'; $h[] = '<h3 style="margin:18px 0 6px;font-size:15px">Coming up</h3><ul style="padding-left:18px;margin:0">'; foreach ($ctx['mocks'] as $m) { $row = 'Mock exam: ' . $m['title'] . ' · ' . (new DateTime('@' . $m['start']))->setTimezone(mh_tz())->format('D M j, g:i a'); $lines[] = '  - ' . $row; $h[] = '<li>' . htmlspecialchars($row) . '</li>'; } foreach ($ctx['meets'] as $m) { $row = 'Study session: ' . $m['title'] . ' at ' . $m['place'] . ' · ' . (new DateTime('@' . $m['start']))->setTimezone(mh_tz())->format('D M j, g:i a'); $lines[] = '  - ' . $row; $h[] = '<li>' . htmlspecialchars($row) . '</li>'; } $h[] = '</ul>'; }
   $lines[] = ''; $lines[] = "Open $site: $url"; $lines[] = "Turn these emails off in Settings → Account.";
   $html = '<div style="font-family:Helvetica Neue,Helvetica,Arial,sans-serif;max-width:560px;margin:0 auto;padding:24px;color:#0F172A"><h2 style="margin:0 0 12px;font-size:20px">Your week on ' . htmlspecialchars($site) . '</h2>' . implode('', $h) . '<p style="margin-top:20px"><a href="' . $url . '" style="display:inline-block;background:#4F46E5;color:#fff;text-decoration:none;padding:9px 14px;border-radius:8px">Open ' . htmlspecialchars($site) . '</a></p><p style="font-size:12px;color:#64748B">Turn these emails off in Settings → Account.</p></div>';
   return ["Your week on $site" . ($ctx['canvas'] ? ' · ' . count($ctx['canvas']) . ' things due' : ''), implode("\n", $lines), $html];
@@ -292,20 +237,9 @@ function mh_social_route(string $route, array $in, array $cfg, string $ip): void
       $st = $db->prepare('INSERT OR IGNORE INTO challenge_attempts (user_id, course, date, ok, ms, points, topic, created) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'); $st->execute([$u['id'], $course, $date, $ok, $ms, $points, mh_str($in, 'topic', 40), $now]);
       if ($st->rowCount() === 0) mh_fail('You already did today’s challenge.', 409);
       if ($ok) mh_activity('challenge', $course, 'A student solved today’s ' . (['calc' => 'Calc I', 'physics' => 'Physics I', 'precalc' => 'Precalc', 'general' => ''][$course] ?? '') . ' daily challenge', '#/' . $course . '/challenge');
-      $b = mh_award_badges((int)$u['id'], [], $course);
-      mh_json(['ok' => true, 'points' => $points, 'badges_new' => $b['new']]);
+      mh_json(['ok' => true, 'points' => $points]);
     }
 
-    /* --- badges --- */
-    case 'badges': {
-      mh_method('GET', 'POST'); $u = mh_require_user();
-      $client = array_values(array_filter((array)($in['client'] ?? []), 'is_string'));
-      $b = mh_award_badges((int)$u['id'], $client);
-      if (!empty($in['seen'])) $db->prepare('UPDATE badges SET seen = 1 WHERE user_id = ?')->execute([$u['id']]);
-      mh_json(['ok' => true, 'badges' => $b['all'], 'new' => $b['new'], 'catalog' => array_map(fn($c, $v) => ['code' => $c, 'name' => $v[0], 'desc' => $v[1], 'icon' => $v[2]], array_keys(MH_BADGES), MH_BADGES)]);
-    }
-
-    /* --- presence --- */
     case 'presence': {
       mh_method('GET', 'POST');
       if ($_SERVER['REQUEST_METHOD'] === 'POST' && $me) { $db->prepare('INSERT INTO presence (user_id, course, view, post_id, seen) VALUES (?, ?, ?, ?, ?) ON CONFLICT(user_id) DO UPDATE SET course = excluded.course, view = excluded.view, post_id = excluded.post_id, seen = excluded.seen')->execute([$me['id'], mh_str($in, 'course', 20), mh_str($in, 'view', 30), (int)($in['post_id'] ?? 0), $now]); }
@@ -315,35 +249,6 @@ function mh_social_route(string $route, array $in, array $cfg, string $ip): void
     }
 
     /* --- study sessions --- */
-    case 'meet_list': {
-      mh_method('GET');
-      $st = $db->prepare('SELECT m.*, u.name AS u_name, u.email AS u_email, (SELECT COUNT(*) FROM meet_rsvp r WHERE r.meet_id = m.id) AS going FROM meets m JOIN users u ON u.id = m.user_id WHERE m.cancelled = 0 AND m.end > ? ' . ($me ? 'AND m.user_id NOT IN (SELECT blocked_id FROM member_blocks WHERE anon = 0 AND user_id = ' . (int)$me['id'] . ') ' : '') . ($course && $course !== 'all' ? 'AND m.course = ? ' : '') . 'ORDER BY m.start ASC LIMIT 60'); $st->execute($course && $course !== 'all' ? [$now - 3600, $course] : [$now - 3600]);
-      $mine = []; if ($me) { $st2 = $db->prepare('SELECT meet_id FROM meet_rsvp WHERE user_id = ?'); $st2->execute([$me['id']]); $mine = array_map('intval', array_column($st2->fetchAll(), 'meet_id')); }
-      mh_json(['ok' => true, 'meets' => array_map(fn($m) => ['id' => (int)$m['id'], 'course' => $m['course'], 'title' => $m['title'], 'place' => $m['place'], 'start' => (int)$m['start'], 'end' => (int)$m['end'], 'note' => $m['note'], 'host' => mh_display_name($m, 'u_'), 'mine' => $me && (int)$m['user_id'] === (int)$me['id'], 'going' => (int)$m['going'], 'im_going' => in_array((int)$m['id'], $mine, true), 'live' => (int)$m['start'] <= $now && (int)$m['end'] >= $now], $st->fetchAll())]);
-    }
-    case 'meet_create': {
-      mh_method('POST'); $u = mh_require_user(); require_once __DIR__ . '/forum.php'; mh_can_post($u);
-      mh_rate_or_fail("meet:user:{$u['id']}", 10, 86400);
-      if (!mh_is_course($course, true)) mh_fail('Pick a class.');
-      $title = mh_censor(mh_str($in, 'title', 80)); $place = mh_censor(mh_str($in, 'place', 80)); $note = mh_censor(mb_substr(trim((string)($in['note'] ?? '')), 0, 300));
-      $start = (int)($in['start'] ?? 0); $minutes = max(30, min(480, (int)($in['minutes'] ?? 90)));
-      if (mb_strlen($title) < 3 || mb_strlen($place) < 2) mh_fail('Give the session a title and a place.'); if ($start < $now - 1800 || $start > $now + 45 * 86400) mh_fail('Pick a start time in the next 45 days.');
-      $db->prepare('INSERT INTO meets (user_id, course, title, place, start, end, note, created) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')->execute([$u['id'], $course, $title, $place, $start, $start + $minutes * 60, $note, $now]); $id = (int)$db->lastInsertId();
-      $db->prepare('INSERT OR IGNORE INTO meet_rsvp (meet_id, user_id, created) VALUES (?, ?, ?)')->execute([$id, $u['id'], $now]);
-      mh_activity('meet', $course, 'Study session posted: ' . $title . ' at ' . $place . ' · ' . (new DateTime('@' . $start))->setTimezone(mh_tz())->format('D g:i a'), '#/meet');
-      mh_json(['ok' => true, 'id' => $id]);
-    }
-    case 'meet_cancel': {
-      mh_method('POST'); $u = mh_require_user(); $st = $db->prepare('SELECT * FROM meets WHERE id = ?'); $st->execute([(int)($in['id'] ?? 0)]); $m = $st->fetch(); if (!$m) mh_fail('Not found.', 404);
-      if ((int)$m['user_id'] !== (int)$u['id'] && !$mod) mh_fail('Only the host can cancel this.', 403);
-      $db->prepare('UPDATE meets SET cancelled = 1 WHERE id = ?')->execute([$m['id']]); mh_json(['ok' => true]);
-    }
-    case 'meet_rsvp': {
-      mh_method('POST'); $u = mh_require_user(); $id = (int)($in['id'] ?? 0);
-      if (!empty($in['going'])) $db->prepare('INSERT OR IGNORE INTO meet_rsvp (meet_id, user_id, created) VALUES (?, ?, ?)')->execute([$id, $u['id'], $now]); else $db->prepare('DELETE FROM meet_rsvp WHERE meet_id = ? AND user_id = ?')->execute([$id, $u['id']]);
-      $st = $db->prepare('SELECT COUNT(*) FROM meet_rsvp WHERE meet_id = ?'); $st->execute([$id]); mh_json(['ok' => true, 'going' => (int)$st->fetchColumn()]);
-    }
-
     /* --- polls --- */
     case 'poll_vote': {
       mh_method('POST'); $u = mh_require_user(); $pid = (int)($in['poll_id'] ?? 0); $st = $db->prepare('SELECT * FROM polls WHERE id = ?'); $st->execute([$pid]); $p = $st->fetch(); if (!$p) mh_fail('Poll not found.', 404);
@@ -390,15 +295,14 @@ function mh_social_route(string $route, array $in, array $cfg, string $ip): void
         'last' => $last ? ['week' => (int)$last['week'], 'league' => (int)$last['league'], 'rank' => (int)$last['rank'], 'xp' => (int)$last['xp'], 'result' => $last['result']] : null]);
     }
 
-    /* --- people directory: every verified member with the badges they have earned --- */
+    /* --- people directory: every verified member, with what they have done on the board --- */
     case 'people': {
       mh_method('GET'); $u = mh_require_user();
-      $q = trim((string)($_GET['q'] ?? '')); $sort = (string)($_GET['sort'] ?? 'badges'); $page = max(0, (int)($_GET['page'] ?? 0)); $per = 48; $cut = $now - 150;
+      $q = trim((string)($_GET['q'] ?? '')); $sort = (string)($_GET['sort'] ?? 'helpful'); $page = max(0, (int)($_GET['page'] ?? 0)); $per = 48; $cut = $now - 150;
       $where = 'u.verified = 1 AND u.email NOT LIKE "%@system.local"'; $args = [];
       if ($q !== '') { $like = '%' . str_replace(['%', '_'], ['\\%', '\\_'], mb_substr($q, 0, 60)) . '%'; $where .= ' AND u.show_on_leaderboard = 1 AND (u.name LIKE ? OR (u.name = "" AND substr(u.email, 1, instr(u.email, "@") - 1) LIKE ?))'; $args = [$like, $like]; }
-      $order = ['new' => 'u.created DESC', 'name' => 'u.show_on_leaderboard DESC, LOWER(CASE WHEN u.name <> "" THEN u.name ELSE u.email END) ASC', 'active' => 'online DESC, last_seen DESC, nbadges DESC'][$sort] ?? 'nbadges DESC, accepted DESC, u.created ASC';
+      $order = ['new' => 'u.created DESC', 'name' => 'u.show_on_leaderboard DESC, LOWER(CASE WHEN u.name <> "" THEN u.name ELSE u.email END) ASC', 'active' => 'online DESC, last_seen DESC, accepted DESC'][$sort] ?? 'accepted DESC, nposts + ncomments DESC, u.created ASC';
       $sql = "SELECT u.id, u.name, u.email, u.created, u.show_on_leaderboard, u.courses,
-          (SELECT COUNT(*) FROM badges b WHERE b.user_id = u.id) AS nbadges,
           (SELECT COUNT(*) FROM posts p WHERE p.user_id = u.id AND p.removed = 0) AS nposts,
           (SELECT COUNT(*) FROM comments c WHERE c.user_id = u.id AND c.removed = 0) AS ncomments,
           (SELECT COUNT(*) FROM posts p JOIN comments c2 ON c2.id = p.accepted_id WHERE c2.user_id = u.id AND c2.removed = 0) AS accepted,
@@ -408,101 +312,16 @@ function mh_social_route(string $route, array $in, array $cfg, string $ip): void
       $st = $db->prepare($sql); $st->execute($args); $rows = $st->fetchAll(); $more = count($rows) > $per; $rows = array_slice($rows, 0, $per);
       $st = $db->prepare("SELECT COUNT(*) FROM users u WHERE $where"); $st->execute($args); $total = (int)$st->fetchColumn();
       $st = $db->prepare('SELECT COUNT(*) FROM presence WHERE seen > ?'); $st->execute([$cut]); $online = (int)$st->fetchColumn();
-      $byUser = []; if ($rows) { $ids = array_map(fn($r) => (int)$r['id'], $rows); $st = $db->prepare('SELECT user_id, code, earned FROM badges WHERE user_id IN (' . implode(',', array_fill(0, count($ids), '?')) . ') ORDER BY earned DESC'); $st->execute($ids); foreach ($st->fetchAll() as $b) if (isset(MH_BADGES[$b['code']])) $byUser[(int)$b['user_id']][] = ['code' => $b['code'], 'earned' => (int)$b['earned']]; }
-      $people = array_map(function ($r) use ($byUser, $u) {
+      $people = array_map(function ($r) use ($u) {
         $shown = (int)$r['show_on_leaderboard'] === 1; $name = $shown ? mh_display_name($r) : 'Anonymous student';
         return ['id' => (int)$r['id'], 'name' => $name, 'anon' => !$shown, 'role' => mh_role($r['email']), 'mod' => mh_is_mod(['email' => $r['email']]), 'admin' => mh_is_admin(['email' => $r['email']]),
-          'online' => (int)$r['online'] === 1, 'joined' => (int)$r['created'], 'courses' => $shown ? mh_user_courses($r) : [], 'badges' => $byUser[(int)$r['id']] ?? [],
+          'online' => (int)$r['online'] === 1, 'joined' => (int)$r['created'], 'courses' => $shown ? mh_user_courses($r) : [],
           'posts' => (int)$r['nposts'], 'comments' => (int)$r['ncomments'], 'accepted' => (int)$r['accepted'], 'me' => (int)$r['id'] === (int)$u['id']];
       }, $rows);
-      mh_json(['ok' => true, 'people' => $people, 'total' => $total, 'online' => $online, 'more' => $more, 'page' => $page, 'catalog' => array_map(fn($c, $v) => ['code' => $c, 'name' => $v[0], 'desc' => $v[1], 'icon' => $v[2]], array_keys(MH_BADGES), MH_BADGES)]);
+      mh_json(['ok' => true, 'people' => $people, 'total' => $total, 'online' => $online, 'more' => $more, 'page' => $page]);
     }
 
     /* --- community mock exams --- */
-    case 'mock_list': {
-      mh_method('GET');
-      $st = $db->prepare('SELECT m.*, (SELECT COUNT(*) FROM mock_reg r WHERE r.mock_id = m.id) AS registered, (SELECT COUNT(*) FROM mock_results x WHERE x.mock_id = m.id) AS results FROM mocks m WHERE m.cancelled = 0 AND m.start + m.minutes * 60 > CAST(? AS INTEGER) ' . ($course && $course !== 'all' ? 'AND m.course = ? ' : '') . 'ORDER BY m.start ASC LIMIT 20'); $st->execute($course && $course !== 'all' ? [$now - 14 * 86400, $course] : [$now - 14 * 86400]);
-      $out = [];
-      foreach ($st->fetchAll() as $m) {
-        $end = (int)$m['start'] + (int)$m['minutes'] * 60; $open = $now >= (int)$m['start'] - 60 && $now <= $end + 900; $ended = $now > $end;
-        $reg = false; $res = null; if ($me) { $s2 = $db->prepare('SELECT 1 FROM mock_reg WHERE mock_id = ? AND user_id = ?'); $s2->execute([$m['id'], $me['id']]); $reg = (bool)$s2->fetchColumn(); $s3 = $db->prepare('SELECT score, total, ms FROM mock_results WHERE mock_id = ? AND user_id = ?'); $s3->execute([$m['id'], $me['id']]); $r = $s3->fetch(); if ($r) $res = ['score' => (int)$r['score'], 'total' => (int)$r['total'], 'ms' => (int)$r['ms']]; }
-        $out[] = ['id' => (int)$m['id'], 'course' => $m['course'], 'exam_id' => $m['exam_id'], 'title' => $m['title'], 'start' => (int)$m['start'], 'minutes' => (int)$m['minutes'], 'count' => (int)$m['count'], 'official' => (int)($m['official'] ?? 0) === 1, 'registered' => (int)$m['registered'], 'results' => (int)$m['results'], 'im_registered' => $reg, 'my_result' => $res, 'open' => $open, 'ended' => $ended, 'seed' => ($open || $ended) ? (int)$m['seed'] : null];
-      }
-      mh_json(['ok' => true, 'mocks' => $out]);
-    }
-    case 'mock_create': {
-      mh_method('POST'); $u = mh_require_user(); if (!$mod) mh_fail('Moderators only.', 403);
-      if (!mh_is_course($course, true) || $course === 'general') mh_fail('Pick a class.');
-      $title = mh_str($in, 'title', 80) ?: 'Community mock exam'; $examId = preg_replace('/[^a-z0-9_-]/i', '', (string)($in['exam_id'] ?? '')); $start = (int)($in['start'] ?? 0); $minutes = max(15, min(180, (int)($in['minutes'] ?? 50))); $count = max(5, min(30, (int)($in['count'] ?? 15)));
-      if ($examId === '' || $start < $now) mh_fail('Pick an exam and a future start time.');
-      $db->prepare('INSERT INTO mocks (course, exam_id, title, start, minutes, count, seed, created_by, created) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)')->execute([$course, $examId, $title, $start, $minutes, $count, random_int(1000, 2147483000), $u['id'], $now]); $id = (int)$db->lastInsertId();
-      mh_activity('mock', $course, 'Community mock exam scheduled: ' . $title . ' · ' . (new DateTime('@' . $start))->setTimezone(mh_tz())->format('D M j, g:i a'), '#/' . $course . '/mock');
-      mh_json(['ok' => true, 'id' => $id]);
-    }
-    case 'mock_cancel': { mh_method('POST'); $u = mh_require_user(); if (!$mod) mh_fail('Moderators only.', 403); $db->prepare('UPDATE mocks SET cancelled = 1 WHERE id = ?')->execute([(int)($in['id'] ?? 0)]); mh_json(['ok' => true]); }
-    case 'mock_register': {
-      mh_method('POST'); $u = mh_require_user(); $id = (int)($in['id'] ?? 0);
-      if (!empty($in['going'])) $db->prepare('INSERT OR IGNORE INTO mock_reg (mock_id, user_id, created) VALUES (?, ?, ?)')->execute([$id, $u['id'], $now]); else $db->prepare('DELETE FROM mock_reg WHERE mock_id = ? AND user_id = ?')->execute([$id, $u['id']]);
-      $st = $db->prepare('SELECT COUNT(*) FROM mock_reg WHERE mock_id = ?'); $st->execute([$id]); mh_json(['ok' => true, 'registered' => (int)$st->fetchColumn()]);
-    }
-    case 'mock_submit': {
-      mh_method('POST'); $u = mh_require_user(); $id = (int)($in['id'] ?? 0); $st = $db->prepare('SELECT * FROM mocks WHERE id = ? AND cancelled = 0'); $st->execute([$id]); $m = $st->fetch(); if (!$m) mh_fail('Mock exam not found.', 404);
-      $end = (int)$m['start'] + (int)$m['minutes'] * 60; if ($now < (int)$m['start'] - 60 || $now > $end + 900) mh_fail('This mock exam is not open.', 403);
-      $score = max(0, (int)($in['score'] ?? 0)); $total = max(1, (int)($in['total'] ?? $m['count'])); $ms = max(1000, (int)($in['ms'] ?? 0));
-      $st = $db->prepare('INSERT OR IGNORE INTO mock_results (mock_id, user_id, score, total, ms, created) VALUES (?, ?, ?, ?, ?, ?)'); $st->execute([$id, $u['id'], min($score, $total), $total, $ms, $now]);
-      if ($st->rowCount() === 0) mh_fail('You already submitted this mock exam.', 409);
-      $b = mh_award_badges((int)$u['id'], [], $m['course']); mh_json(['ok' => true, 'badges_new' => $b['new']]);
-    }
-    case 'mock_results': {
-      mh_method('GET'); $id = (int)($_GET['id'] ?? 0); $st = $db->prepare('SELECT * FROM mocks WHERE id = ?'); $st->execute([$id]); $m = $st->fetch(); if (!$m) mh_fail('Not found.', 404);
-      $ended = $now > (int)$m['start'] + (int)$m['minutes'] * 60;
-      $st = $db->prepare('SELECT u.id, u.name, u.email, u.show_on_leaderboard, x.score, x.total, x.ms FROM mock_results x JOIN users u ON u.id = x.user_id WHERE x.mock_id = ? ORDER BY x.score DESC, x.ms ASC LIMIT 100'); $st->execute([$id]); $rows = $st->fetchAll();
-      $rank = array_map(fn($r, $i) => ['rank' => $i + 1, 'name' => mh_lb_name($r), 'score' => (int)$r['score'], 'total' => (int)$r['total'], 'ms' => (int)$r['ms'], 'me' => $me && (int)$r['id'] === (int)$me['id']], $rows, array_keys($rows));
-      $avg = $rows ? round(100 * array_sum(array_map(fn($r) => $r['score'] / max(1, $r['total']), $rows)) / count($rows)) : null;
-      mh_json(['ok' => true, 'ended' => $ended, 'count' => count($rows), 'average' => $avg, 'rankings' => ($ended || $admin) ? $rank : array_values(array_filter($rank, fn($r) => $r['me']))]);
-    }
-
-    /* --- student contributions --- */
-    case 'contrib_list': {
-      mh_method('GET'); $kind = ($_GET['kind'] ?? 'problem') === 'card' ? 'card' : 'problem';
-      $st = $db->prepare('SELECT c.*, u.name AS u_name, u.email AS u_email FROM contributions c JOIN users u ON u.id = c.user_id WHERE c.status = "approved" AND c.kind = ? ' . ($course && $course !== 'all' ? 'AND c.course = ? ' : '') . 'ORDER BY c.score DESC, c.created DESC LIMIT 200'); $st->execute($course && $course !== 'all' ? [$kind, $course] : [$kind]);
-      $rows = $st->fetchAll(); $votes = []; if ($me && $rows) { $q = implode(',', array_fill(0, count($rows), '?')); $s2 = $db->prepare("SELECT item_id, value FROM votes WHERE user_id = ? AND kind = 's' AND item_id IN ($q)"); $s2->execute(array_merge([$me['id']], array_map(fn($r) => (int)$r['id'], $rows))); foreach ($s2->fetchAll() as $v) $votes[(int)$v['item_id']] = (int)$v['value']; }
-      mh_json(['ok' => true, 'items' => array_map(fn($r) => ['id' => (int)$r['id'], 'course' => $r['course'], 'kind' => $r['kind'], 'unit' => (int)$r['unit'], 'sec' => $r['sec'], 'front' => $r['front'], 'back' => $r['back'], 'explanation' => $r['explanation'], 'score' => (int)$r['score'], 'vote' => $votes[(int)$r['id']] ?? 0, 'author' => (int)$r['anon'] ? 'Anonymous' : mh_display_name($r, 'u_'), 'mine' => $me && (int)$r['user_id'] === (int)$me['id'], 'created' => (int)$r['created']], $rows)]);
-    }
-    case 'contrib_mine': {
-      mh_method('GET'); $u = mh_require_user(); $st = $db->prepare('SELECT * FROM contributions WHERE user_id = ? ORDER BY created DESC LIMIT 50'); $st->execute([$u['id']]);
-      mh_json(['ok' => true, 'items' => array_map(fn($r) => ['id' => (int)$r['id'], 'course' => $r['course'], 'kind' => $r['kind'], 'unit' => (int)$r['unit'], 'sec' => $r['sec'], 'front' => $r['front'], 'back' => $r['back'], 'status' => $r['status'], 'score' => (int)$r['score'], 'created' => (int)$r['created']], $st->fetchAll())]);
-    }
-    case 'contrib_create': {
-      mh_method('POST'); $u = mh_require_user(); require_once __DIR__ . '/forum.php'; mh_can_post($u);
-      mh_rate_or_fail("contrib:user:{$u['id']}", 25, 86400, 'That is a lot of submissions for one day. Try again tomorrow.');
-      if (!mh_is_course($course, true) || $course === 'general') mh_fail('Pick a class.');
-      $kind = ($in['kind'] ?? 'problem') === 'card' ? 'card' : 'problem'; $front = trim(mb_substr((string)($in['front'] ?? ''), 0, 2000)); $back = trim(mb_substr((string)($in['back'] ?? ''), 0, 2000)); $expl = trim(mb_substr((string)($in['explanation'] ?? ''), 0, 3000));
-      if (mb_strlen($front) < 5 || mb_strlen($back) < 1) mh_fail($kind === 'card' ? 'Write both sides of the card.' : 'Write the problem and its answer.');
-      $db->prepare('INSERT INTO contributions (user_id, course, kind, unit, sec, front, back, explanation, anon, created) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')->execute([$u['id'], $course, $kind, max(0, min(9, (int)($in['unit'] ?? 0))), mh_str($in, 'sec', 20), mh_censor($front), mh_censor($back), mh_censor($expl), !empty($in['anon']) ? 1 : 0, $now]);
-      mh_json(['ok' => true, 'id' => (int)$db->lastInsertId(), 'message' => 'Submitted. A moderator will review it soon.']);
-    }
-    case 'contrib_vote': {
-      mh_method('POST'); $u = mh_require_user(); $id = (int)($in['id'] ?? 0); $value = max(-1, min(1, (int)($in['value'] ?? 0)));
-      if ($value === 0) $db->prepare('DELETE FROM votes WHERE user_id = ? AND kind = "s" AND item_id = ?')->execute([$u['id'], $id]); else $db->prepare('INSERT OR REPLACE INTO votes (user_id, kind, item_id, value) VALUES (?, "s", ?, ?)')->execute([$u['id'], $id, $value]);
-      $st = $db->prepare('SELECT COALESCE(SUM(value),0) FROM votes WHERE kind = "s" AND item_id = ?'); $st->execute([$id]); $score = (int)$st->fetchColumn(); $db->prepare('UPDATE contributions SET score = ? WHERE id = ?')->execute([$score, $id]);
-      mh_json(['ok' => true, 'score' => $score, 'vote' => $value]);
-    }
-    case 'contrib_queue': {
-      mh_method('GET'); $u = mh_require_user(); if (!$mod) mh_fail('Moderators only.', 403);
-      $st = $db->query('SELECT c.*, u.name AS u_name, u.email AS u_email FROM contributions c JOIN users u ON u.id = c.user_id WHERE c.status = "pending" ORDER BY c.created ASC LIMIT 100');
-      mh_json(['ok' => true, 'items' => array_map(fn($r) => ['id' => (int)$r['id'], 'course' => $r['course'], 'kind' => $r['kind'], 'unit' => (int)$r['unit'], 'sec' => $r['sec'], 'front' => $r['front'], 'back' => $r['back'], 'explanation' => $r['explanation'], 'author' => mh_display_name($r, 'u_') . ' <' . $r['u_email'] . '>', 'created' => (int)$r['created']], $st->fetchAll())]);
-    }
-    case 'contrib_mod': {
-      mh_method('POST'); $u = mh_require_user(); if (!$mod) mh_fail('Moderators only.', 403); $id = (int)($in['id'] ?? 0); $action = (string)($in['action'] ?? '');
-      $st = $db->prepare('SELECT * FROM contributions WHERE id = ?'); $st->execute([$id]); $c = $st->fetch(); if (!$c) mh_fail('Not found.', 404);
-      if ($action === 'approve') { $db->prepare('UPDATE contributions SET status = "approved" WHERE id = ?')->execute([$id]); mh_award_badges((int)$c['user_id'], [], $c['course']); mh_activity('contrib', $c['course'], 'A student-made ' . ($c['kind'] === 'card' ? 'flashcard' : 'practice problem') . ' was approved', '#/' . $c['course'] . '/contribute'); }
-      elseif ($action === 'reject') $db->prepare('UPDATE contributions SET status = "rejected" WHERE id = ?')->execute([$id]);
-      elseif ($action === 'delete') { $db->prepare('DELETE FROM contributions WHERE id = ?')->execute([$id]); $db->prepare('DELETE FROM votes WHERE kind = "s" AND item_id = ?')->execute([$id]); }
-      else mh_fail('Unknown action.');
-      mh_json(['ok' => true]);
-    }
-
     /* --- class-wide weekly stats (public; cached an hour) --- */
     case 'stats_week': {
       mh_method('GET'); $key = 'stats_week:' . intdiv($now, 3600); $cached = mh_setting($key);

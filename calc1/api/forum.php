@@ -131,7 +131,7 @@ function mh_forum_route(string $route, array $in, array $cfg, string $ip): void 
       $id = (int)$db->lastInsertId();
       $db->prepare('INSERT OR REPLACE INTO votes (user_id, kind, item_id, value) VALUES (?, "p", ?, 1)')->execute([$u['id'], $id]); mh_recount('p', $id);
       if (!empty($in['poll']) && is_array($in['poll']) && !empty($in['poll']['options'])) { try { mh_poll_create($id, (array)$in['poll']['options'], (string)($in['poll']['question'] ?? ''), !empty($in['poll']['multi']) ? 1 : 0); } catch (Throwable $e) { $db->prepare('DELETE FROM posts WHERE id = ?')->execute([$id]); if (!($e instanceof RuntimeException) || $e instanceof PDOException) { error_log('Mathub poll: ' . $e->getMessage()); mh_fail('The poll could not be saved. Please try again.', 500); } mh_fail($e->getMessage()); } }
-      mh_activity('post', $course, ($flair === 'question' ? 'New question: ' : 'New post: ') . $title, '#/forum/' . $id); mh_award_badges((int)$u['id'], [], $course);
+      mh_activity('post', $course, ($flair === 'question' ? 'New question: ' : 'New post: ') . $title, '#/forum/' . $id);
       mh_json(['ok' => true, 'post' => mh_post_row(mh_get_post($id), $u, $mod, ['p' . $id => 1])]);
 
     case 'forum_post_edit':
@@ -163,7 +163,7 @@ function mh_forum_route(string $route, array $in, array $cfg, string $ip): void 
       $id = (int)$db->lastInsertId();
       $db->prepare('INSERT OR REPLACE INTO votes (user_id, kind, item_id, value) VALUES (?, "c", ?, 1)')->execute([$u['id'], $id]); mh_recount('c', $id);
       $db->prepare('UPDATE posts SET ncomments = (SELECT COUNT(*) FROM comments WHERE post_id = ? AND removed = 0) WHERE id = ?')->execute([$p['id'], $p['id']]);
-      mh_notify_reply($p, $parent ? mh_get_comment($parent) : null, $u, $id, $body, $anon); mh_award_badges((int)$u['id'], [], $p['course']);
+      mh_notify_reply($p, $parent ? mh_get_comment($parent) : null, $u, $id, $body, $anon);
       mh_json(['ok' => true, 'comment' => mh_comment_row(mh_get_comment($id), $u, $mod, (int)$p['user_id'], ['c' . $id => 1])]);
 
     case 'forum_comment_edit':
@@ -270,7 +270,7 @@ function mh_forum_route(string $route, array $in, array $cfg, string $ip): void 
       $cid = (int)($in['comment_id'] ?? 0); $c = mh_get_comment($cid); if (!$c || (int)$c['post_id'] !== (int)$p['id']) mh_fail('Comment not found.', 404);
       $newVal = (int)$p['accepted_id'] === $cid ? null : $cid;
       $db->prepare('UPDATE posts SET accepted_id = ? WHERE id = ?')->execute([$newVal, $p['id']]);
-      if ($newVal) { mh_award_badges((int)$c['user_id'], [], $p['course']); mh_activity('solved', $p['course'], 'A question was solved: ' . $p['title'], '#/forum/' . $p['id']); if ((int)$c['user_id'] !== (int)$u['id']) { $db->prepare('INSERT INTO notifications (user_id, kind, post_id, comment_id, actor_id, actor, title, snippet, created) VALUES (?, "accepted", ?, ?, ?, ?, ?, ?, ?)')->execute([$c['user_id'], $p['id'], $cid, $u['id'], mh_display_name($u), mb_substr($p['title'], 0, 120), 'Your answer was accepted', time()]); } }
+      if ($newVal) { mh_activity('solved', $p['course'], 'A question was solved: ' . $p['title'], '#/forum/' . $p['id']); if ((int)$c['user_id'] !== (int)$u['id']) { $db->prepare('INSERT INTO notifications (user_id, kind, post_id, comment_id, actor_id, actor, title, snippet, created) VALUES (?, "accepted", ?, ?, ?, ?, ?, ?, ?)')->execute([$c['user_id'], $p['id'], $cid, $u['id'], mh_display_name($u), mb_substr($p['title'], 0, 120), 'Your answer was accepted', time()]); } }
       mh_json(['ok' => true, 'accepted_id' => $newVal]);
 
     case 'admin_digest_test':
@@ -368,7 +368,7 @@ Then pick your classes and you are in.
       mh_json(['ok' => true, 'issues_open' => $n('SELECT COUNT(*) FROM issues WHERE status = "open"'), 'users' => $n('SELECT COUNT(*) FROM users WHERE verified = 1'), 'pending' => $n('SELECT COUNT(*) FROM users WHERE verified = 0'), 'active_7d' => $n('SELECT COUNT(*) FROM users WHERE last_login > ' . ($now - 7 * 86400)),
         'posts' => $n('SELECT COUNT(*) FROM posts WHERE removed = 0'), 'comments' => $n('SELECT COUNT(*) FROM comments WHERE removed = 0'), 'removed' => $n('SELECT COUNT(*) FROM posts WHERE removed > 0') + $n('SELECT COUNT(*) FROM comments WHERE removed > 0'),
         'reports' => $n('SELECT COUNT(*) FROM reports WHERE status = "open"'), 'bans' => $n('SELECT COUNT(*) FROM bans WHERE until > ' . $now), 'moderators' => array_values(array_unique(array_merge($cfg['admins'] ?? [], $cfg['moderators'] ?? []))), 'admins' => $cfg['admins'] ?? [],
-        'meets' => $n('SELECT COUNT(*) FROM meets WHERE cancelled = 0 AND end > ' . $now), 'mocks' => $n('SELECT COUNT(*) FROM mocks WHERE cancelled = 0 AND start > ' . $now), 'contrib_pending' => $n('SELECT COUNT(*) FROM contributions WHERE status = "pending"'), 'challenges_today' => $n('SELECT COUNT(*) FROM challenge_attempts WHERE date = "' . mh_local_date() . '"'), 'online' => $n('SELECT COUNT(*) FROM presence WHERE seen > ' . ($now - 150)),
+        'challenges_today' => $n('SELECT COUNT(*) FROM challenge_attempts WHERE date = "' . mh_local_date() . '"'), 'online' => $n('SELECT COUNT(*) FROM presence WHERE seen > ' . ($now - 150)),
         'roles' => array_map(fn($r) => ['email' => $r['email'], 'role' => $r['role']], $db->query('SELECT email, role FROM roles ORDER BY email')->fetchAll()), 'staff_config' => $cfg['staff'] ?? [], 'digest_window' => mh_digest_window_start(), 'digest_sent_week' => $n('SELECT COUNT(*) FROM users WHERE digest_sent >= ' . mh_week_start()), 'cron_configured' => (string)($cfg['cron_key'] ?? '') !== '',
         'settings' => (function () use ($cfg) { require_once __DIR__ . '/canvas.php'; $r = mh_canvas_events(false); return ['canvas_feed' => mh_canvas_feed_url(), 'canvas_from_config' => trim((string)($cfg['canvas_feed'] ?? '')) !== '', 'canvas' => ['configured' => $r['configured'], 'fetched' => $r['fetched'], 'error' => $r['error'], 'count' => count($r['events'])], 'announcement' => (string)mh_setting('announcement', '')]; })()]);
 
@@ -380,37 +380,11 @@ Then pick your classes and you are in.
       if (($_GET['show'] ?? '') === 'plan') { $ids = mh_plan_member_ids($cfg); $where .= $ids ? ' AND u.id IN (' . implode(',', $ids) . ')' : ' AND 0'; }   // members with Pro or Max
       $st = $db->prepare("SELECT u.id, u.email, u.name, u.verified, u.created, u.last_login, u.terms_accepted,
           (SELECT COUNT(*) FROM posts p WHERE p.user_id = u.id AND p.removed = 0) AS nposts, (SELECT COUNT(*) FROM comments c WHERE c.user_id = u.id AND c.removed = 0) AS ncomments,
-          (SELECT until FROM bans b WHERE b.user_id = u.id AND b.until > $now) AS banned_until, (SELECT COUNT(*) FROM badges bd WHERE bd.user_id = u.id) AS nbadges
+          (SELECT until FROM bans b WHERE b.user_id = u.id AND b.until > $now) AS banned_until
         FROM users u WHERE $where ORDER BY u.created DESC LIMIT 51 OFFSET " . ($page * 50)); $st->execute($args); $rows = $st->fetchAll();
       $more = count($rows) > 50; $rows = array_slice($rows, 0, 50); $plans = mh_plan_admin_rows($rows, $cfg);
       mh_json(['ok' => true, 'more' => $more, 'users' => array_map(fn($r) => ['id' => (int)$r['id'], 'email' => $r['email'], 'name' => $r['name'], 'verified' => (int)$r['verified'] === 1, 'created' => (int)$r['created'], 'last_login' => (int)$r['last_login'], 'terms' => (int)$r['terms_accepted'] > 0,
-        'posts' => (int)$r['nposts'], 'comments' => (int)$r['ncomments'], 'badges' => (int)$r['nbadges'], 'banned_until' => $r['banned_until'] ? (int)$r['banned_until'] : 0, 'mod' => mh_is_mod(['email' => $r['email']]), 'admin' => mh_is_admin(['email' => $r['email']]), 'plan' => $plans[(int)$r['id']] ?? null], $rows)]);
-
-    case 'admin_badges':
-      // Administrators can award or remove any badge for any member (themselves included). Manual awards are never undone by the automatic check.
-      mh_method('GET', 'POST'); $u = mh_require_user(); if (!mh_is_admin($u)) mh_fail('Administrators only.', 403);
-      $target = (int)($in['user_id'] ?? $_GET['user_id'] ?? 0); $st = $db->prepare('SELECT id, email, name FROM users WHERE id = ?'); $st->execute([$target]); $t = $st->fetch(); if (!$t) mh_fail('User not found.', 404);
-      if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-        $action = (string)($in['action'] ?? ''); $code = (string)($in['code'] ?? ''); $codes = [];
-        if (in_array($action, ['award', 'remove'], true)) { if (!isset(MH_BADGES[$code])) mh_fail('Unknown badge.'); $codes = [$code]; }
-        elseif (in_array($action, ['award_all', 'remove_all'], true)) $codes = array_keys(MH_BADGES);
-        else mh_fail('Unknown action.');
-        $given = [];
-        if ($action === 'award' || $action === 'award_all') {
-          foreach ($codes as $c) { $st = $db->prepare('INSERT OR IGNORE INTO badges (user_id, code, earned, seen, manual) VALUES (?, ?, ?, 0, 1)'); $st->execute([$target, $c, $now]); if ($st->rowCount() > 0) $given[] = $c; }
-          if ($given && (int)$t['id'] !== (int)$u['id']) {
-            $what = count($given) === 1 ? 'the “' . MH_BADGES[$given[0]][0] . '” badge' : count($given) . ' badges';
-            $db->prepare('INSERT INTO notifications (user_id, kind, post_id, comment_id, actor_id, actor, title, snippet, created) VALUES (?, "badge", 0, NULL, ?, ?, ?, ?, ?)')->execute([$target, $u['id'], mh_display_name($u), $what, 'Open your badge shelf to see it.', $now]);
-          }
-          if ($given) mh_activity('badge', '', count($given) === 1 ? 'A student earned the “' . MH_BADGES[$given[0]][0] . '” badge' : 'A student was awarded ' . count($given) . ' badges', '#/badges');
-        } else {
-          $db->prepare('DELETE FROM badges WHERE user_id = ? AND code IN (' . implode(',', array_fill(0, count($codes), '?')) . ')')->execute(array_merge([$target], $codes));
-        }
-      }
-      $st = $db->prepare('SELECT code, earned, manual FROM badges WHERE user_id = ?'); $st->execute([$target]); $have = [];
-      foreach ($st->fetchAll() as $b) if (isset(MH_BADGES[$b['code']])) $have[$b['code']] = ['earned' => (int)$b['earned'], 'manual' => (int)$b['manual'] === 1];
-      mh_json(['ok' => true, 'user' => ['id' => (int)$t['id'], 'name' => mh_display_name($t), 'email' => $t['email']], 'have' => $have,
-        'catalog' => array_map(fn($c, $v) => ['code' => $c, 'name' => $v[0], 'desc' => $v[1], 'icon' => $v[2]], array_keys(MH_BADGES), MH_BADGES)]);
+        'posts' => (int)$r['nposts'], 'comments' => (int)$r['ncomments'], 'banned_until' => $r['banned_until'] ? (int)$r['banned_until'] : 0, 'mod' => mh_is_mod(['email' => $r['email']]), 'admin' => mh_is_admin(['email' => $r['email']]), 'plan' => $plans[(int)$r['id']] ?? null], $rows)]);
 
     case 'admin_user':
       mh_method('POST'); $u = mh_require_user(); if (!mh_is_admin($u)) mh_fail('Administrators only.', 403);

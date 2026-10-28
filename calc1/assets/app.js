@@ -12,7 +12,7 @@
   const BUILD = global.MATHUB_BUILD || 'dev';
   const Courses = global.Courses || (global.Courses = {});
   const COURSE_ORDER = ['calc', 'physics', 'precalc', 'writ', 'csci', 'biob', 'kin', 'psyx'];
-  const GLOBAL_VIEWS = ['instructors', 'contact', 'forum', 'policy', 'admin', 'meet', 'badges', 'challenge', 'mock', 'people', 'settings', 'leagues', 'gpa', 'today', 'whatsnew', 'resources', 'guides', 'focus', 'recap', 'tools', 'mistakes', 'join', 'sheet', 'request', 'teach', 'class', 'syllabus', 'notfound', 'create', 'c', 'tutor', 'plan', 'tasks', 'timetable', 'agenda', 'timelog', 'projects', 'habits', 'goals', 'wheel', 'journal', 'money', 'career', 'portfolio', 'max', 'unsubscribe', 'room', 'calls', 'usage', 'docs', 'decks', 'sheets'];   // pages that work without a course, e.g. #/contact
+  const GLOBAL_VIEWS = ['instructors', 'contact', 'forum', 'policy', 'admin', 'challenge', 'people', 'settings', 'leagues', 'gpa', 'today', 'whatsnew', 'resources', 'guides', 'focus', 'recap', 'tools', 'mistakes', 'join', 'sheet', 'request', 'teach', 'class', 'syllabus', 'notfound', 'create', 'c', 'tutor', 'plan', 'tasks', 'timetable', 'agenda', 'timelog', 'projects', 'habits', 'goals', 'wheel', 'journal', 'money', 'career', 'portfolio', 'max', 'unsubscribe', 'room', 'calls', 'usage', 'customize', 'off'];   // pages that work without a course, e.g. #/contact
   const SITE = 'Mathub';
   let D = null, QZ = null;        // current course data and quiz module
   const courseHooks = [];
@@ -60,7 +60,9 @@
     users: '<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><circle cx="17" cy="9" r="2.6"/><path d="M15.5 14.2a5 5 0 0 1 6 4.8"/>', award: '<circle cx="12" cy="9" r="5.5"/><path d="M8.5 13.5L7 22l5-3 5 3-1.5-8.5"/><path d="M12 6.5l.9 1.9 2.1.3-1.5 1.5.4 2.1-1.9-1-1.9 1 .4-2.1L9 8.7l2.1-.3z"/>',
     gear: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>',
     logout: '<path d="M10 4H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h5"/><path d="M15 16l4-4-4-4M19 12H9"/>', chevron: '<path d="M6 9l6 6 6-6"/>', user: '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',
-    zap: '<path d="M13 2L4 14h7l-1 8 9-12h-7z"/>', mic: '<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3M8 21h8"/>', gem: '<path d="M6 3h12l4 6-10 12L2 9z"/><path d="M2 9h20M9 3l3 6 3-6M6 9l6 12M18 9l-6 12"/>', trophy: '<path d="M8 4h8v5a4 4 0 0 1-8 0z"/><path d="M8 5H5a3 3 0 0 0 3 4M16 5h3a3 3 0 0 1-3 4M12 13v4M8 21h8M9 17h6"/>', path: '<path d="M5 5c9 0 9 7 0 7s-9 7 0 7h14"/><circle cx="5" cy="5" r="1.8"/><circle cx="19" cy="19" r="1.8"/>'
+    zap: '<path d="M13 2L4 14h7l-1 8 9-12h-7z"/>', mic: '<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3M8 21h8"/>', gem: '<path d="M6 3h12l4 6-10 12L2 9z"/><path d="M2 9h20M9 3l3 6 3-6M6 9l6 12M18 9l-6 12"/>', trophy: '<path d="M8 4h8v5a4 4 0 0 1-8 0z"/><path d="M8 5H5a3 3 0 0 0 3 4M16 5h3a3 3 0 0 1-3 4M12 13v4M8 21h8M9 17h6"/>', path: '<path d="M5 5c9 0 9 7 0 7s-9 7 0 7h14"/><circle cx="5" cy="5" r="1.8"/><circle cx="19" cy="19" r="1.8"/>',
+    planner: '<rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 2.5h6v3H9z"/><path d="M9 10.5h6M9 14h6M9 17.5h3.5"/>',   // the study planner: a clipboard of days, not the learning path's trail
+    reportcard: '<rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 7.5h8M8 11h5"/><path d="M12.5 17.5l1.75-4.5 1.75 4.5M13.2 16h2.1"/>'   // the GPA calculator: a report card with its A
   };
   const icon = (name, size = 18) => `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[name] || ''}</svg>`;
 
@@ -245,7 +247,24 @@
   // the interface's language (assets/i18n.js): App.t('…', a, b) for words that never reach the page; the page itself is translated as it is drawn
   const I18N = global.MathubI18n; App.lang = I18N ? I18N.lang : 'en'; App.t = I18N ? I18N.t : ((x, ...v) => String(x).replace(/\{(\d+)\}/g, (m, n) => v[n - 1] != null ? v[n - 1] : m));
   App.toggleTheme = () => toggleTheme();
+  App.applyTheme = () => applyTheme();   // after the theme, the look or synced preferences change (assets/modules.js, assets/auth.js)
   App.ICONS = ICONS;   // other files add their own marks (assets/life.js)
+  /* One mark per page, everywhere a page is listed (the sidebar, a class's menu, the account menu, the Tools page,
+     home): two pages never share one, so the Study planner and the Learning path, or Notes and Readings, are told
+     apart at a glance. A class's own data may name an icon; this list wins. (The class calendar and your own
+     calendar are the same thing and share the calendar.) */
+  const VIEW_ICON = {
+    home: 'home', today: 'sun', tasks: 'todo', agenda: 'calendar', timetable: 'table', timelog: 'timer', projects: 'folder', focus: 'clock',
+    tools: 'grid', gpa: 'reportcard', habits: 'repeat', goals: 'target', wheel: 'wheel', journal: 'note', money: 'wallet', career: 'briefcase', portfolio: 'star',
+    forum: 'chat', leagues: 'gem', people: 'users', challenge: 'trophy', resources: 'globe', guides: 'bulb', whatsnew: 'megaphone',
+    plan: 'crown', usage: 'pie', settings: 'gear', customize: 'sliders', inbox: 'bell', install: 'download', admin: 'shield', instructor: 'user', recap: 'fire', sheet: 'd20',
+    dashboard: 'cap', path: 'path', notes: 'book', readings: 'scroll', formulas: 'sigma', textbook: 'link', slides: 'layers', mynotes: 'marker',
+    playground: 'keyboard', phonetics: 'mic', drafts: 'pen', notebook: 'quill', practice: 'list', flashcards: 'cards', exam: 'flag', checkwork: 'check',
+    mistakes: 'undo', calendar: 'calendar', planner: 'planner', course: 'info', grapher: 'chart', labs: 'flask', motion: 'zap', solvers: 'wand',
+    explorer: 'eye', unitcircle: 'compass'
+  };
+  App.VIEW_ICON = VIEW_ICON;
+  App.viewIcon = (id, fallback) => VIEW_ICON[id] || fallback || 'file';
   App.pomo = () => Pomo;   // the sidebar's pomodoro, shared with the start page (assets/dash.js)
   App.myCourses = () => { const c = settings().courses; const mine = Array.isArray(c) ? c.filter(id => Courses[id] && !Courses[id].preview) : []; return mine.length ? mine : COURSE_ORDER.filter(id => Courses[id]); };
   App.isoWeek = d => { const x = new Date(d); x.setHours(0, 0, 0, 0); x.setDate(x.getDate() + 3 - ((x.getDay() + 6) % 7)); const w1 = new Date(x.getFullYear(), 0, 4); return x.getFullYear() + '-W' + String(1 + Math.round(((x - w1) / 86400000 - 3 + ((w1.getDay() + 6) % 7)) / 7)).padStart(2, '0'); };
@@ -272,28 +291,25 @@
   const L = App.link;
 
   /* ---------- course selection / routing ---------- */
-  const COMMUNITY_NAV = [['challenge', 'Daily challenge', 'target'], ['meet', 'Study sessions', 'clock'], ['mock', 'Mock exams', 'flag'], ['contribute', 'Contribute', 'pen'], ['leagues', 'Leagues', 'gem'], ['people', 'People', 'users']];
+  /* Pages every class gets on top of its own list (C.NAV, from its data): the learning path, the mistakes notebook,
+     the daily challenge, Bo's learning tools (assets/learn.js), a writing class's drafts and notebook, Discussions
+     and resources. Where each one sits in the menu is NAV_PLAN's job, not this list's order. */
   function augmentNav(C) {
-    const today = C.NAV[0]; if (C.quiz && App.views.path && today && !today.items.some(x => x[0] === 'path')) today.items.splice(1, 0, ['path', 'Learning path', 'path']);
-    let gp = C.NAV.find(g => g.label === 'Community'); if (!gp) { gp = { label: 'Community', items: [['forum', 'Discussions', 'chat']] }; C.NAV.splice(C.NAV.length - 1, 0, gp); }
-    COMMUNITY_NAV.forEach(it => { if (!C.quiz && ['challenge', 'mock', 'contribute'].includes(it[0])) return; if (App.views[it[0]] && !gp.items.some(x => x[0] === it[0])) gp.items.push(it); });
-    const cg = C.NAV.find(g => g.label === 'Course'); if (cg && App.views.gpa && !cg.items.some(x => x[0] === 'gpa')) { const gi = cg.items.findIndex(x => x[0] === 'grades'); cg.items.splice(gi >= 0 ? gi + 1 : 1, 0, ['gpa', 'GPA calculator', 'calc']); }
-    if (cg && App.views.resources && !cg.items.some(x => x[0] === 'resources')) cg.items.splice(Math.max(1, cg.items.length - 1), 0, ['resources', 'Resources & guides', 'link']);
-    const pg = C.NAV.find(g => g.label === 'Practice'); if (pg && C.quiz && App.views.blitz && !pg.items.some(x => x[0] === 'blitz')) pg.items.push(['blitz', 'Blitz', 'zap']);
-    if (pg && C.quiz && App.views.mistakes && !pg.items.some(x => x[0] === 'mistakes')) pg.items.push(['mistakes', 'Mistakes', 'undo']);
-    const lg = C.NAV.find(g => g.label === 'Learn'); if (lg && App.views.cheatsheet && (C.FORMULAS || []).length && !lg.items.some(x => x[0] === 'cheatsheet')) lg.items.push(['cheatsheet', 'Cheat sheet', 'sigma']);
-    if (lg && App.views.mynotes && (C.SECTIONS || []).length && (C.SECTIONS[0].ideas || C.SECTIONS[0].bullets) && !lg.items.some(x => x[0] === 'mynotes')) lg.items.push(['mynotes', 'My notes', 'pen']);
-    // a class with projects for Bo's draft feedback, or a writer's notebook (its data: DRAFTS, NOTEBOOK; assets/drafts.js, assets/notebook.js)
-    const has = id => C.NAV.some(g => g.items.some(x => x[0] === id)); const wg = lg || C.NAV[0];
-    if ((C.DRAFTS || []).length && App.views.drafts && !has('drafts')) wg.items.push(['drafts', 'Draft feedback', 'pen']);
-    if (C.NOTEBOOK && C.NOTEBOOK.count && App.views.notebook && !has('notebook')) wg.items.push(['notebook', 'Writer’s notebook', 'quill']);
-    // Bo's learning tools (assets/learn.js): notes from slides and office-hours prep in every class; checking work in math and science classes
-    if (App.views.slides && !has('slides')) wg.items.push(['slides', 'Notes from slides', 'file']);
-    if (App.views.checkwork && (!C.kind || C.kind === 'science') && !has('checkwork')) wg.items.push(['checkwork', 'Check my work', 'check']);
-    if (App.views.officehours && !has('officehours')) wg.items.push(['officehours', 'Office-hours prep', 'users']);
+    const has = id => C.NAV.some(g => g.items.some(x => x[0] === id));
+    const add = (id, label, ok = true) => { if (ok && App.views[id] && !has(id)) C.NAV[0].items.push([id, label, VIEW_ICON[id] || 'file']); };
+    add('path', 'Learning path', !!C.quiz);
+    add('mistakes', 'Mistakes', !!C.quiz);
+    add('challenge', 'Daily challenge', !!C.quiz);
+    add('mynotes', 'My notes', !!((C.SECTIONS || []).length && (C.SECTIONS[0].ideas || C.SECTIONS[0].bullets)));
+    add('drafts', 'Draft feedback', !!(C.DRAFTS || []).length);
+    add('notebook', 'Writer’s notebook', !!(C.NOTEBOOK && C.NOTEBOOK.count));
+    add('slides', 'Notes from slides');
+    add('checkwork', 'Check my work', !C.kind || C.kind === 'science');
+    add('forum', 'Discussions');
+    add('resources', 'Resources & guides');
   }
   function setCourse(id) {
-    if (D && D.id === id) return;
+    if (D && D.id === id) { document.documentElement.setAttribute('data-course', id); return; }   // back into the same class from a page outside it: its colour again
     D = Courses[id]; QZ = D.quiz; store.load(id); augmentNav(D);
     document.documentElement.setAttribute('data-course', id);
     Search.index = null; buildNav(); courseHooks.forEach(fn => { try { fn(D); } catch (e) { console.error(e); } });
@@ -347,6 +363,8 @@
     if (query.asof !== undefined) { setSetting('asof', /^\d{4}-\d{2}-\d{2}$/.test(query.asof) ? query.asof : ''); }
     if (!course) {
       app.classList.add('landing'); app.classList.remove('nav-open'); document.documentElement.removeAttribute('data-course');
+      if (view === 'home' && App.startRedirect && App.startRedirect()) { render(); return; }   // the start page picked in Customize, once per visit
+      if (view !== 'home' && App.moduleOn && !App.moduleOn(view)) { App.current = App.views.off; document.title = `${App.views.off.title} · ${SITE}`; App.views.off.render(root, view); applyTheme(); typeset(root); afterRender(root); return; }
       if (view !== 'home') { const V = App.views[view]; App.current = V; document.title = `${V.title} · ${SITE}`; V.render(root, param, query, true); applyTheme(); }
       else { App.current = App.homeView || Landing; document.title = `${SITE} · Fall 2026`; App.current.render(root); }   // App.homeView: the iOS and Android apps' own start page (assets/app-native.js)
       typeset(root); if (App.auth) App.auth.bindLocks(root); afterRender(root); return;
@@ -355,6 +373,7 @@
     if (!Courses[course].loaded) { App.current = null; renderLoading(root, course); App.loadCourse(course).then(() => { if (route().course === course && $('#view') === root) render(); }).catch(err => { if ($('#view') === root) renderLoadError(root, course, err); }); afterRender(root); return; }
     setCourse(course);
     if (App.courseGate && App.courseGate(course, root, view)) { App.current = null; afterRender(root); return; }   // a class made from a syllabus is locked while the student has no plan (assets/create.js)
+    if (App.moduleOn && !App.moduleOn(view)) { App.current = App.views.off; document.title = `${App.views.off.title} · ${D.code} · ${SITE}`; App.views.off.render(root, view); updateExamChip(); afterRender(root); return; }   // a feature turned off in Customize
     const V = App.views[view]; App.current = V;
     $$('.nav-item').forEach(b => b.classList.toggle('active', b.dataset.view === view));
     const actNav = $('.nav-item.active'); if (actNav) { const g = actNav.closest('.nav-group'); if (g && g.classList.contains('closed')) { g.classList.remove('closed'); const tg = g.previousElementSibling; if (tg) { tg.classList.add('open'); tg.setAttribute('aria-expanded', 'true'); } } }
@@ -386,7 +405,7 @@
       fetch(`api/index.php?r=invite_info&ref=${ref}`, { credentials: 'same-origin', headers: { 'X-Requested-With': 'MatHub' } }).then(r => r.json()).then(j => {
         const name = j && j.ok ? j.name : ''; try { sessionStorage.setItem('mathub-ref-name', name || ''); sessionStorage.setItem('mathub-ref-min', String(j && j.ok && (j.credits || 0) || '')); } catch (e) {}
         sub.textContent = name ? `${name} uses Mathub for ${(j.courses || []).map(c => Courses[c] ? Courses[c].short : c).join(', ') || 'their classes'} and wants you in.` : 'A classmate wants you to study on Mathub.';
-        card.innerHTML = `<div class="grid cols-2" style="align-items:center"><div><h2 style="margin-top:0">${name ? `Study with ${esc(name)}` : 'Study together'}</h2><p>Free topic notes, endless practice, flashcards on a schedule, deadline calendars, a focus room and a class board for Montana State classes. ${j && j.ok && j.credits ? `Sign up with your montana.edu email and you both get ${j.credits} credits for Bo, the tutor you can call and work through problems with on a whiteboard, and earn the Invited and Recruiter badges.` : 'Sign up with your montana.edu email and you both earn the Invited and Recruiter badges.'}</p><div class="row gap-sm" style="flex-wrap:wrap">${App.auth && App.auth.user ? `<a class="btn primary" href="#/">You are already signed in · open Mathub</a>` : `<button class="btn primary lg" data-action="auth-signup">${icon('fire', 14)} Sign up free</button><button class="btn" data-action="auth-login">Log in</button>`}<a class="btn" href="#/">Look around first</a></div></div><div class="mascot-slot" data-size="120"></div></div>`;
+        card.innerHTML = `<div class="grid cols-2" style="align-items:center"><div><h2 style="margin-top:0">${name ? `Study with ${esc(name)}` : 'Study together'}</h2><p>Free topic notes, endless practice, flashcards on a schedule, deadline calendars, a focus room and a class board for Montana State classes. ${j && j.ok && j.credits ? `Sign up with your montana.edu email and you both get ${j.credits} credits for Bo, the tutor you can call and work through problems with on a whiteboard.` : 'Sign up with your montana.edu email and you both get credits to use with Bo.'}</p><div class="row gap-sm" style="flex-wrap:wrap">${App.auth && App.auth.user ? `<a class="btn primary" href="#/">You are already signed in · open Mathub</a>` : `<button class="btn primary lg" data-action="auth-signup">${icon('fire', 14)} Sign up free</button><button class="btn" data-action="auth-login">Log in</button>`}<a class="btn" href="#/">Look around first</a></div></div><div class="mascot-slot" data-size="120"></div></div>`;
         if (App.auth) App.auth.bindLocks(card); if (App.paintMascots) App.paintMascots();
       }).catch(() => { sub.textContent = 'Could not check the invite, but you can still sign up.'; card.innerHTML = `<div class="row gap-sm"><button class="btn primary" data-action="auth-signup">Sign up free</button><a class="btn" href="#/">Open Mathub</a></div>`; if (App.auth) App.auth.bindLocks(card); });
       const slot = $('#landing-account', root); if (slot && App.auth && App.auth.ready) App.auth.paintLandingAccount(slot);
@@ -420,7 +439,6 @@
   };
   document.addEventListener('keydown', e => { if (e.key === '?' && !e.ctrlKey && !e.metaKey && !e.altKey && !e.target.matches('input, textarea, select, [contenteditable]')) { e.preventDefault(); App.showShortcuts(); } });
   function initToTop() { if ($('#totop')) return; const b = document.createElement('button'); b.id = 'totop'; b.className = 'totop'; b.title = 'Back to top'; b.setAttribute('aria-label', 'Back to top'); b.innerHTML = icon('up', 16); b.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' })); document.body.appendChild(b); let t = 0; window.addEventListener('scroll', () => { if (t) return; t = setTimeout(() => { t = 0; b.classList.toggle('show', window.scrollY > 400); }, 120); }, { passive: true }); }
-  const NAV_ICON = { planner: 'path', gpa: 'award' };   // their own marks instead of a second calendar and a second calculator
   const trailSeen = new Set();
   // the winding trail between the run nodes: measured after layout so it follows the nodes at any width
   function drawTrail(root) {
@@ -472,23 +490,27 @@
     const st = examStatus(ex); chip.innerHTML = `${icon('flag', 14)} <span>${esc(ex.name)} ·</span> <b>${esc(st.chip)}</b>`;
   }
   function applyTheme() {
-    if (App.applySkin) App.applySkin(); if (App.applyMotion) App.applyMotion();
+    if (App.applySkin) App.applySkin(); if (App.applyMotion) App.applyMotion(); if (App.applyLook) App.applyLook();
     const t = settings().theme || 'system';
     if (t === 'system') document.documentElement.removeAttribute('data-theme'); else document.documentElement.setAttribute('data-theme', t);
     const dark = document.documentElement.getAttribute('data-theme') === 'dark' || (t === 'system' && matchMedia('(prefers-color-scheme: dark)').matches);
     $$('.theme-btn').forEach(b => b.innerHTML = icon(dark ? 'sun' : 'moon', 16));
   }
   function toggleTheme() { if (App.themeFade) App.themeFade(); const isDark = document.documentElement.getAttribute('data-theme') === 'dark' || (!document.documentElement.getAttribute('data-theme') && matchMedia('(prefers-color-scheme: dark)').matches); setSetting('theme', isDark ? 'light' : 'dark'); applyTheme(); }
-  /* The sidebar groups pages by what you are doing, not by where they came from: the everyday pages (Study,
-     Plan) are open, everything else waits in collapsed groups. C.NAV stays the source list; this is only the view. */
-  const NAV_PLAN = [['Study', ['dashboard', 'notes', 'slides', 'readings', 'drafts', 'notebook', 'playground', 'formulas', 'flashcards', 'practice', 'checkwork', 'exam']], ['Plan', ['calendar', 'path', 'planner', 'grades', 'gpa']], ['More tools', ['mistakes', 'officehours', 'blitz', 'cheatsheet', 'mynotes', 'textbook', 'phonetics']], ['Community', ['forum', 'challenge', 'meet', 'mock', 'contribute', 'leagues', 'people']], ['Class info', ['course', 'resources', 'settings']]];
-  function groupNav(NAV) {
+  /* A class's menu, the same in every class: Learn (the overview, the learning path, the lessons and the class's
+     reading), Practice, Plan (its calendar and the study planner), Explore (the class's own grapher, labs and
+     simulators, and anything new) and Class (the syllabus, Discussions, resources, settings). Learn, Practice and
+     Plan are open; the other two fold away. C.NAV stays the source list; this is only the view. */
+  const NAV_PLAN = [['Learn', ['dashboard', 'path', 'notes', 'readings', 'formulas', 'textbook', 'slides', 'mynotes', 'playground', 'phonetics', 'drafts', 'notebook']], ['Practice', ['practice', 'flashcards', 'exam', 'checkwork', 'mistakes', 'challenge']], ['Plan', ['calendar', 'planner']], ['Explore', []], ['Class', ['course', 'forum', 'resources', 'settings']]];
+  function groupNavBase(NAV) {
     const all = NAV.flatMap(g => g.items); const used = new Set();
     const groups = NAV_PLAN.map(([label, ids]) => ({ label, items: ids.map(id => all.find(x => x[0] === id)).filter(x => x && !used.has(x[0]) && used.add(x[0])) }));
-    groups.find(g => g.label === 'More tools').items.push(...all.filter(x => !used.has(x[0]) && used.add(x[0])));   // course tools (grapher, labs, solvers, scratchpad…) and anything new
+    groups.find(g => g.label === 'Explore').items.push(...all.filter(x => !used.has(x[0]) && used.add(x[0])));   // the class's own tools (grapher, labs, solvers…) and anything new
     return groups.filter(g => g.items.length);
   }
-  App.groupNav = groupNav;
+  // then the student's own arrangement: order, groups, pages hidden, features turned off (assets/modules.js)
+  const groupNav = (NAV, cid) => { const base = groupNavBase(NAV); return App.arrangeClassMenu ? App.arrangeClassMenu(base, cid || '') : base; };
+  App.groupNav = groupNav; App.groupNavBase = groupNavBase;
   function buildNav() {
     $('#brand-code').textContent = D.code; $('#brand-name').innerHTML = `${esc(D.name)}<small>${esc(D.term)}</small>`;
     const mine = App.myCourses(); if (D && !mine.includes(D.id)) mine.push(D.id);
@@ -497,11 +519,12 @@
     // the class's instructors (assets/instruct.js asks the server which classes this account teaches)
     const tch = App.teaches; if (tch && App.views.instructor && (tch.admin || (tch.courses || []).includes(D.id))) staff.unshift({ label: 'Teaching', items: [['instructor', 'Instructor', 'gear']] });
     const cur = (location.hash.replace(/^#\/?/, '').split('?')[0].split('/')[1]) || 'dashboard';
-    const openMap = Object.assign({ Study: true, Plan: true, Admin: true, Moderation: true, Teaching: true }, settings().navOpen || {});
-    $('#sidebar-nav').innerHTML = groupNav(D.NAV).concat(staff).map(gp => { const o = !!openMap[gp.label] || gp.items.some(x => x[0] === cur); return `<button class="nav-label nav-toggle${o ? ' open' : ''}" data-action="navgroup" data-g="${esc(gp.label)}" aria-expanded="${o}"><span>${gp.label}</span><small>${gp.items.length}</small>${icon('chevron', 12)}</button><div class="nav-group${o ? '' : ' closed'}" data-g="${esc(gp.label)}"><div class="nav-group-in">` + gp.items.map(([id, label, ic]) => `<button class="nav-item" data-view="${id}" data-action="nav">${icon(NAV_ICON[id] || ic)}<span>${label}</span></button>`).join('') + '</div></div>'; }).join('');
+    const openMap = Object.assign({ Learn: true, Practice: true, Plan: true, Admin: true, Moderation: true, Teaching: true }, settings().navOpen || {});
+    $('#sidebar-nav').innerHTML = groupNav(D.NAV, D.id).concat(staff).map(gp => { const o = !!openMap[gp.label] || gp.items.some(x => x[0] === cur); return `<button class="nav-label nav-toggle${o ? ' open' : ''}" data-action="navgroup" data-g="${esc(gp.label)}" aria-expanded="${o}"><span>${gp.label}</span><small>${gp.items.length}</small>${icon('chevron', 12)}</button><div class="nav-group${o ? '' : ' closed'}" data-g="${esc(gp.label)}"><div class="nav-group-in">` + gp.items.map(([id, label, ic]) => `<button class="nav-item" data-view="${id}" data-action="nav">${icon(VIEW_ICON[id] || ic)}<span>${label}</span></button>`).join('') + '</div></div>'; }).join('');
     $$('.nav-item').forEach(b => b.classList.toggle('active', b.dataset.view === cur));
   }
   App.rebuildNav = () => { if (D) buildNav(); };
+  App.searchReset = () => { Search.index = null; };
   App.forgetCourse = () => { D = null; QZ = null; };   // the next render sets the class up again (a class pack that changed under the open page)
   function buildLayout() {
     const app = $('.app');
@@ -539,13 +562,13 @@
     strip(str) { return String(str).replace(/<[^>]+>/g, '').replace(/\$[^$]*\$/g, m => m.replace(/\\[a-zA-Z]+|[{}$^_\\]/g, ' ')); },
     build() {
       const strip = this.strip; const ix = []; const goC = (c, view, param, query) => () => { location.hash = '#/' + c + '/' + view + (param ? '/' + encodeURIComponent(param) : '') + (query ? '?' + new URLSearchParams(query).toString() : ''); };
-      [['today', 'Today', 'plan for today due cards lesson challenge'], ['sheet', 'Character sheet', 'character sheet abilities level class d20 dnd stats'], ['focus', 'Focus room', 'focus timer pomodoro study session sounds'], ['resources', 'Resources', 'resources links tutoring textbook videos help'], ['guides', 'Study guides', 'guides how to study exam anxiety notes office hours'], ['tools', 'Tools', 'calculator unit converter citation word counter significant figures'], ['recap', 'Your week', 'weekly recap stats share'], ['gpa', 'GPA calculator', 'gpa grade point average semester cumulative'], ['forum', 'Discussions', 'board forum posts questions classmates'], ['people', 'People', 'classmates members badges'], ['leagues', 'Leagues', 'weekly league xp rank'], ['badges', 'Your badges', 'badges achievements'], ['settings', 'Settings', 'account settings classes notifications theme email'], ['whatsnew', "What's new", 'changelog updates releases news'], ['contact', 'Contact', 'contact creator nikoloz nonikashvili phone email help feedback'], ['tasks', 'Tasks', 'tasks assignments homework to do task manager priority board kanban due'], ['timetable', 'Timetable', 'timetable schedule builder class times weekly week lectures labs shifts'], ['agenda', 'Calendar', 'calendar month week agenda deadlines exams events academic'], ['timelog', 'Time tracker', 'time tracker hours study timer log'], ['projects', 'Projects & thesis', 'projects thesis paper lab report milestones word count sources'], ['habits', 'Habits', 'habits habit tracker streak routine'], ['goals', 'Goals', 'goals quarterly quarter key results'], ['wheel', 'Wheel of life', 'wheel of life balance scores areas'], ['journal', 'Journal', 'journal diary daily reflection mood gratitude'], ['money', 'Money', 'money finance budget spending expenses income tracker'], ['career', 'Internships & jobs', 'career internships jobs applications research scholarships'], ['portfolio', 'Portfolio', 'portfolio resume cv projects skills']].forEach(([id, label, key]) => ix.push({ type: 'page', c: '', t: label, s: SITE, go: () => { location.hash = '#/' + id; }, key: (label + ' ' + key).toLowerCase() }));
+      [['today', 'Today', 'plan for today due cards lesson challenge'], ['sheet', 'Character sheet', 'character sheet abilities level class d20 dnd stats'], ['focus', 'Focus room', 'focus timer pomodoro study session sounds'], ['resources', 'Resources', 'resources links tutoring textbook videos help'], ['guides', 'Study guides', 'guides how to study exam anxiety notes office hours'], ['tools', 'Tools', 'calculator unit converter citation word counter significant figures'], ['recap', 'Your week', 'weekly recap stats share'], ['gpa', 'GPA calculator', 'gpa grade point average semester cumulative'], ['forum', 'Discussions', 'board forum posts questions classmates'], ['people', 'People', 'classmates members'], ['leagues', 'Leagues', 'weekly league xp rank'], ['settings', 'Settings', 'account settings classes notifications theme email'], ['whatsnew', "What's new", 'changelog updates releases news'], ['contact', 'Contact', 'contact creator nikoloz nonikashvili phone email help feedback'], ['tasks', 'Tasks', 'tasks assignments homework to do task manager priority board kanban due'], ['timetable', 'Timetable', 'timetable schedule builder class times weekly week lectures labs shifts'], ['agenda', 'Calendar', 'calendar month week agenda deadlines exams events academic'], ['timelog', 'Time tracker', 'time tracker hours study timer log'], ['projects', 'Projects & thesis', 'projects thesis paper lab report milestones word count sources'], ['habits', 'Habits', 'habits habit tracker streak routine'], ['goals', 'Goals', 'goals quarterly quarter key results'], ['wheel', 'Wheel of life', 'wheel of life balance scores areas'], ['journal', 'Journal', 'journal diary daily reflection mood gratitude'], ['money', 'Money', 'money finance budget spending expenses income tracker'], ['career', 'Internships & jobs', 'career internships jobs applications research scholarships'], ['portfolio', 'Portfolio', 'portfolio resume cv projects skills'], ['customize', 'Customize', 'customize features modules sidebar menu order hide pin look theme colour color accent text size font spacing corners start page']].filter(([id]) => !App.moduleOn || App.moduleOn(id)).forEach(([id, label, key]) => ix.push({ type: 'page', c: '', t: label, s: SITE, go: () => { location.hash = '#/' + id; }, key: (label + ' ' + key).toLowerCase() }));
       if (App.life) { const Lf = App.life; Lf.all('tasks').forEach(x => ix.push({ type: 'page', c: x.course || '', t: x.title, s: `Task${x.due ? ' · ' + fmtDate(x.due) : ''}`, go: () => { location.hash = '#/tasks'; setTimeout(() => Lf.editTask(x.id), 300); }, key: (x.title + ' ' + (x.notes || '') + ' task').toLowerCase() })); Lf.all('events').forEach(x => ix.push({ type: 'calendar', c: x.course || '', t: x.title, s: `Event · ${fmtDate(x.date)}`, go: () => { location.hash = '#/agenda?d=' + x.date; }, key: (x.title + ' ' + (x.place || '') + ' event').toLowerCase() })); Lf.all('apps').forEach(x => ix.push({ type: 'page', c: '', t: x.company + (x.role ? ' · ' + x.role : ''), s: 'Application', go: () => { location.hash = '#/career'; }, key: (x.company + ' ' + (x.role || '') + ' application').toLowerCase() })); }   // your own planner (assets/life.js)
       (global.MATHUB_RESOURCES ? global.MATHUB_RESOURCES.ITEMS : []).forEach(it => ix.push({ type: 'resource', c: Courses[it.g] ? it.g : '', t: it.t, s: `Resource · ${it.g === 'general' ? 'every class' : it.g === 'msu' ? 'Montana State' : Courses[it.g] ? Courses[it.g].short : it.g}`, go: () => { if (/^https?:/.test(it.u)) global.open(it.u, '_blank', 'noopener'); else location.hash = it.u; }, key: (it.t + ' ' + it.d + ' ' + (it.tags || []).join(' ')).toLowerCase() }));
       (global.MATHUB_GUIDES || []).forEach(g => ix.push({ type: 'guide', c: '', t: g.title, s: `Guide · ${g.minutes} min`, go: () => { location.hash = '#/guides/' + g.id; }, key: (g.title + ' ' + g.blurb + ' ' + g.tags.join(' ')).toLowerCase() }));
       COURSE_ORDER.filter(id => Courses[id]).forEach(id => {
         const C = Courses[id]; const secLabelC = sid => { const x = (C.SECTIONS || []).find(z => z.id === sid); return x ? x.label : sid; };
-        if (C.NAV) C.NAV.forEach(gp => gp.items.forEach(([v, label]) => ix.push({ type: 'page', c: id, t: label, s: `${C.short} · ${gp.label}`, go: goC(id, v), key: (label + ' ' + C.short + ' ' + C.code).toLowerCase() })));
+        if (C.NAV) C.NAV.forEach(gp => gp.items.filter(([v]) => !App.moduleOn || App.moduleOn(v)).forEach(([v, label]) => ix.push({ type: 'page', c: id, t: label, s: `${C.short} · ${gp.label}`, go: goC(id, v), key: (label + ' ' + C.short + ' ' + C.code).toLowerCase() })));
         else ix.push({ type: 'page', c: id, t: `${C.short} dashboard`, s: C.name, go: goC(id, 'dashboard'), key: (C.short + ' ' + C.code + ' ' + C.name + ' notes practice flashcards calendar').toLowerCase() });
         (C.SECTIONS || []).forEach(sec => ix.push({ type: 'notes', c: id, t: `${sec.label} ${sec.title}`, s: `${C.short} · Unit ${sec.unit}`, go: goC(id, 'notes', sec.id), key: (`${sec.label} ${sec.title} ` + (sec.ideas || []).map(strip).join(' ') + ' ' + (sec.pitfalls || []).map(strip).join(' ')).toLowerCase() }));
         (C.FORMULAS || []).forEach(gp => gp.items.forEach(f => ix.push({ type: 'formula', c: id, t: f.n, s: `${C.short} · ${gp.group}`, go: goC(id, 'formulas', null, { q: f.n }), key: (f.n + ' ' + gp.group + ' ' + strip(f.t ? '$' + f.t + '$' : (f.c || ''))).toLowerCase() })));
@@ -693,7 +716,7 @@
             ${todayEv.length ? todayEv.map(e => `<div class="today-ev"><span class="chip ${e[1]}">${e[1] === 'lecture' ? 'class' : e[1]}</span><span>${esc(e[2])}</span></div>`).join('') : `<div class="empty small">No class today.${(() => { const nx = D.CALENDAR.find(e => e[0] > t && e[1] === 'lecture'); return nx ? ` Next: ${esc(fmtDate(nx[0]))}, ${esc(D.COURSE.meets.split(',')[1] || '9 am')}.` : ''; })()}</div>`}
             <div class="divider"></div><div class="eyebrow mb-1">${esc(cur.label)} · ${esc(cur.title)}</div><ul class="list-plain small">${(cur.bullets || []).map(b => `<li>${esc(b)}</li>`).join('')}</ul>
             <div class="divider"></div><div class="eyebrow mb-1">Due soon</div>${dl.length ? dl.slice(0, 4).map(x => `<div class="today-ev"><span class="when">${daysBetween(t, x.date) === 0 ? 'Today' : daysBetween(t, x.date) === 1 ? 'Tomorrow' : esc(fmtDate(x.date))}</span><span>${esc(x.title)}${x.time ? ` <span class="muted small">· ${esc(x.time)}</span>` : ''}</span></div>`).join('') : '<div class="empty small">Nothing scheduled.</div>'}</div>
-          <div class="panel"><div class="panel-h"><div class="panel-title">${icon('fire')} Your progress</div><a class="small" href="${L('grades')}">Grade calculator</a></div>
+          <div class="panel"><div class="panel-h"><div class="panel-title">${icon('fire')} Your progress</div></div>
             ${goalBlock}
             <div class="grid cols-2" style="gap:10px"><div class="stat"><div class="stat-num" data-count="${st}">${st}</div><div class="stat-label">day streak</div></div><div class="stat"><div class="stat-num" data-count="${rp.done}">${rp.done}<span class="muted" style="font-size:15px">/${rp.total}</span></div><div class="stat-label">readings finished</div></div></div>
             <div class="divider"></div>
@@ -914,8 +937,8 @@
       const st = this.state[D.id] = this.state[D.id] || { unit: 0, sec: null, deck: [], i: 0, flipped: false, mode: 'due' };
       if (query.unit) st.unit = +query.unit; if (query.sec) st.sec = query.sec; else if (!param) st.sec = null;
       const boxes = () => store.get('flashcards', {});
-      const freeC = App.limit('cards'); const useCommunity = courseSetting(D.id, 'communityCards', false);
-      const buildDeck = () => { const b = boxes(); let cards = D.FLASHCARDS.concat(useCommunity ? (st.community || []) : []).filter(c => (!st.unit || c.unit === st.unit) && (!st.sec || c.sec === st.sec)); st.total = cards.length; cards = QZ.helpers.shuffle(cards); if (st.mode === 'due') cards.sort((x, y) => (b[x.id] || 0) - (b[y.id] || 0)); if (cards.length > freeC) cards = cards.slice(0, freeC); st.deck = cards; st.i = 0; st.flipped = false; if (param) { const k = cards.findIndex(c => c.id === param); if (k >= 0) st.i = k; } };
+      const freeC = App.limit('cards');
+      const buildDeck = () => { const b = boxes(); let cards = D.FLASHCARDS.filter(c => (!st.unit || c.unit === st.unit) && (!st.sec || c.sec === st.sec)); st.total = cards.length; cards = QZ.helpers.shuffle(cards); if (st.mode === 'due') cards.sort((x, y) => (b[x.id] || 0) - (b[y.id] || 0)); if (cards.length > freeC) cards = cards.slice(0, freeC); st.deck = cards; st.i = 0; st.flipped = false; if (param) { const k = cards.findIndex(c => c.id === param); if (k >= 0) st.i = k; } };
       buildDeck();
       const paint = () => {
         const b = boxes(); const c = st.deck[st.i]; const mastered = st.deck.filter(x => (b[x.id] || 0) >= 3).length;
@@ -923,16 +946,15 @@
         const lk = $('#fc-lock', root); if (lk) lk.innerHTML = st.total > st.deck.length ? App.lockCard(`${st.total - st.deck.length} more cards for members`, `Preview shows ${st.deck.length} cards per deck. Sign up free for all ${D.FLASHCARDS.length} ${D.short} flashcards and saved mastery boxes.`, { compact: true }) : '';
         const stage = $('#fc-stage', root); if (!c) { stage.innerHTML = '<div class="empty">No cards match this filter.</div>'; $('#fc-controls', root).innerHTML = ''; return; }
         const box = b[c.id] || 0;
-        stage.innerHTML = `<div class="fc-card${st.flipped ? ' flipped' : ''}" id="fc-card" tabindex="0" role="button"><span class="sr-only">Flip card: </span><div class="fc-face fc-front"><span class="eyebrow">Card ${st.i + 1} / ${st.deck.length} · box ${box}${c.community ? ` · <span style="color:var(--accent)">community · ${esc(c.author)}</span>` : ''}</span><span class="sec chip">${esc(c.sec ? secLabel(c.sec) : 'Unit ' + c.unit)}</span><div>${c.f}</div><div class="fc-hint">Tap or press space to flip</div></div><div class="fc-face fc-back"><span class="eyebrow">Answer</span><span class="sec chip">${esc(c.sec ? secLabel(c.sec) : 'Unit ' + c.unit)}</span><div>${c.b}</div></div></div>`;
+        stage.innerHTML = `<div class="fc-card${st.flipped ? ' flipped' : ''}" id="fc-card" tabindex="0" role="button"><span class="sr-only">Flip card: </span><div class="fc-face fc-front"><span class="eyebrow">Card ${st.i + 1} / ${st.deck.length} · box ${box}</span><span class="sec chip">${esc(c.sec ? secLabel(c.sec) : 'Unit ' + c.unit)}</span><div>${c.f}</div><div class="fc-hint">Tap or press space to flip</div></div><div class="fc-face fc-back"><span class="eyebrow">Answer</span><span class="sec chip">${esc(c.sec ? secLabel(c.sec) : 'Unit ' + c.unit)}</span><div>${c.b}</div></div></div>`;
         $('#fc-controls', root).innerHTML = `${App.flagButton ? App.flagButton({ course: D.id, view: 'Flashcards', ref: c.id, prompt: c.f }) : ''}<button class="btn" data-action="prev" ${st.i === 0 ? 'disabled' : ''}>${icon('left', 14)} Prev</button><button class="btn danger" data-action="again">Again <span class="kbd">1</span></button><button class="btn primary" data-action="good">Got it <span class="kbd">2</span></button><button class="btn" data-action="next" ${st.i >= st.deck.length - 1 ? 'disabled' : ''}>Next ${icon('right', 14)}</button>`;
         typeset(stage);
       };
-      root.innerHTML = pageHead('Flashcards', 'Definitions, laws and formulas. "Got it" moves a card up a box; three boxes means mastered. "Again" sends it back to the start.') + `<div class="panel"><div class="row between mb-2"><div class="chips">${[0, 1, 2, 3, 4].map(u => `<span class="chip toggle${st.unit === u ? ' on' : ''}" data-action="unit" data-u="${u}">${u ? 'Unit ' + u : 'All units'}</span>`).join('')}${st.sec ? `<span class="chip accent">${esc(secLabel(st.sec))} <span data-action="clearsec" style="cursor:pointer">✕</span></span>` : ''}</div><div class="row"><span id="fc-stats" class="row gap-sm"></span><button class="btn sm" data-action="mode">${st.mode === 'due' ? 'Order: weakest first' : 'Order: shuffled'}</button><button class="btn sm" data-action="reshuffle">${icon('rotate', 13)} Reshuffle</button><button class="btn sm${useCommunity ? ' active' : ''}" data-action="community" title="Include flashcards written by classmates">${icon('pen', 13)} Community cards</button><button class="btn sm ghost" data-action="reset">Reset progress</button></div></div><div class="fc-stage" id="fc-stage"></div><div class="fc-controls" id="fc-controls"></div><div id="fc-lock" class="mt-2"></div></div>`;
+      root.innerHTML = pageHead('Flashcards', 'Definitions, laws and formulas. "Got it" moves a card up a box; three boxes means mastered. "Again" sends it back to the start.') + `<div class="panel"><div class="row between mb-2"><div class="chips">${[0, 1, 2, 3, 4].map(u => `<span class="chip toggle${st.unit === u ? ' on' : ''}" data-action="unit" data-u="${u}">${u ? 'Unit ' + u : 'All units'}</span>`).join('')}${st.sec ? `<span class="chip accent">${esc(secLabel(st.sec))} <span data-action="clearsec" style="cursor:pointer">✕</span></span>` : ''}</div><div class="row"><span id="fc-stats" class="row gap-sm"></span><button class="btn sm" data-action="mode">${st.mode === 'due' ? 'Order: weakest first' : 'Order: shuffled'}</button><button class="btn sm" data-action="reshuffle">${icon('rotate', 13)} Reshuffle</button><button class="btn sm ghost" data-action="reset">Reset progress</button></div></div><div class="fc-stage" id="fc-stage"></div><div class="fc-controls" id="fc-controls"></div><div id="fc-lock" class="mt-2"></div></div>`;
       paint();
       const grade = up => { const c = st.deck[st.i]; if (!c) return; const b = boxes(); b[c.id] = up ? Math.min(3, (b[c.id] || 0) + 1) : 0; store.set('flashcards', b); const at = store.get('fcAt', {}); at[c.id] = Date.now(); store.set('fcAt', at); markActivity(); if (st.i < st.deck.length - 1) st.i++; st.flipped = false; paint(); };
       const flip = () => { st.flipped = !st.flipped; const el = $('#fc-card', root); if (el) el.classList.toggle('flipped', st.flipped); };
-      if (useCommunity && App.social && !st.community) { App.social.communityCards(D.id).then(cards => { st.community = cards; buildDeck(); paint(); if (!cards.length) toast('No community cards for this class yet. Add one under Contribute.'); }); }
-      bind(root, { community: () => { setCourseSetting(D.id, 'communityCards', !useCommunity); st.community = null; this.render(root, null, {}); }, unit: el => { st.unit = +el.dataset.u; st.sec = null; App.go('flashcards', null, { unit: st.unit }); }, clearsec: () => { st.sec = null; App.go('flashcards'); }, mode: () => { st.mode = st.mode === 'due' ? 'shuffle' : 'due'; this.render(root, null, {}); }, reshuffle: () => { buildDeck(); paint(); }, reset: () => { if (confirm('Reset flashcard progress for this class?')) { store.set('flashcards', {}); paint(); toast('Flashcard progress reset'); } }, prev: () => { if (st.i > 0) { st.i--; st.flipped = false; paint(); } }, next: () => { if (st.i < st.deck.length - 1) { st.i++; st.flipped = false; paint(); } }, again: () => { grade(false); if (App.addXP) App.addXP(1); if (App.quest) App.quest('cards'); }, good: () => { grade(true); if (App.addXP) App.addXP(2); if (App.quest) App.quest('cards'); } });
+      bind(root, { unit: el => { st.unit = +el.dataset.u; st.sec = null; App.go('flashcards', null, { unit: st.unit }); }, clearsec: () => { st.sec = null; App.go('flashcards'); }, mode: () => { st.mode = st.mode === 'due' ? 'shuffle' : 'due'; this.render(root, null, {}); }, reshuffle: () => { buildDeck(); paint(); }, reset: () => { if (confirm('Reset flashcard progress for this class?')) { store.set('flashcards', {}); paint(); toast('Flashcard progress reset'); } }, prev: () => { if (st.i > 0) { st.i--; st.flipped = false; paint(); } }, next: () => { if (st.i < st.deck.length - 1) { st.i++; st.flipped = false; paint(); } }, again: () => { grade(false); if (App.addXP) App.addXP(1); if (App.quest) App.quest('cards'); }, good: () => { grade(true); if (App.addXP) App.addXP(2); if (App.quest) App.quest('cards'); } });
       on(root, 'click', '#fc-card', flip);
       this.keys = e => { if (e.target.matches('input, textarea, select') || $('#search-modal')) return; if (e.key === ' ') { e.preventDefault(); flip(); } else if (e.key === '1') grade(false); else if (e.key === '2') grade(true); else if (e.key === 'ArrowLeft') { if (st.i > 0) { st.i--; st.flipped = false; paint(); } } else if (e.key === 'ArrowRight') { if (st.i < st.deck.length - 1) { st.i++; st.flipped = false; paint(); } } };
       document.addEventListener('keydown', this.keys);
@@ -957,49 +979,21 @@
   };
 
   /* ======================================================
-     VIEW: Grades (supports "best n of a group", e.g. drop the lowest exam)
-     ====================================================== */
-  function gradeModel(vals, G = D.GRADING) {
-    if (G.options && G.options.length) { let best = null; for (const o of G.options) { const m = gradeModel(vals, Object.assign({}, G, { options: null, categories: G.categories.map(c => (c.id in o.weights) ? Object.assign({}, c, { weight: o.weights[c.id] }) : c) })); if (m.den && (!best || m.cur > best.cur + 1e-9)) { best = m; best.option = o; } } return best || gradeModel(vals, Object.assign({}, G, { options: null })); }
-    const cats = G.categories; const groups = G.groups || {};
-    let num = 0, den = 0; const used = {};
-    const groupCats = {}; cats.forEach(c => { if (c.group) (groupCats[c.group] = groupCats[c.group] || []).push(c); });
-    cats.filter(c => !c.group).forEach(c => { if (c.id in vals) { num += c.weight * vals[c.id]; den += c.weight; used[c.id] = c.weight; } });
-    Object.entries(groupCats).forEach(([gname, members]) => { const rule = groups[gname] || { keepBest: members.length, weight: members.reduce((s, c) => s + c.weight, 0) }; const entered = members.filter(c => c.id in vals).sort((a, b) => vals[b.id] - vals[a.id]).slice(0, rule.keepBest); const w = rule.weight / rule.keepBest; entered.forEach(c => { num += w * vals[c.id]; den += w; used[c.id] = w; }); });
-    return { cur: den ? num / den : NaN, banked: num / 100, den, used };
-  }
-  function overallWith(vals, fill) { const all = {}; D.GRADING.categories.forEach(c => { all[c.id] = (c.id in vals) ? vals[c.id] : fill; }); return gradeModel(all).cur; }
-  App.projectedGrade = id => { const C = Courses[id]; if (!C || !C.GRADING) return null; const data = (store.id === id ? store.data : store.peek(id)) || {}; const vals = data.grades || {}; if (!Object.keys(vals).length) return null; const m = gradeModel(vals, C.GRADING); if (!m.den) return null; return { letter: C.GRADING.scale.find(x => m.cur >= x.min)?.letter || 'F', pct: m.cur, den: m.den }; };
-  App.views.grades = {
-    title: 'Grade calculator',
-    render(root) {
-      const G = D.GRADING; const cats = G.categories; const saved = store.get('grades', {}); const letterFor = pct => G.scale.find(s => pct >= s.min)?.letter || 'F';
-      const compute = () => {
-        const vals = {}; cats.forEach(c => { const v = parseFloat($(`#g-${c.id}`, root).value); if (!isNaN(v)) vals[c.id] = Math.max(0, Math.min(100, v)); });
-        store.set('grades', vals); const out = $('#g-out', root); const m = gradeModel(vals);
-        if (!m.den) { out.innerHTML = '<div class="empty">Enter a percentage for at least one category.</div>'; return; }
-        const finalId = G.finalId; const finalEntered = finalId in vals;
-        const need = finalEntered ? [] : G.scale.filter(s => s.letter !== 'F').map(s => { const f = x => overallWith(Object.assign({}, vals, { [finalId]: x }), m.cur) - s.min; let lo = 0, hi = 100; if (f(0) >= 0) return { letter: s.letter, needed: 0 }; if (f(100) < 0) return { letter: s.letter, needed: 101 }; for (let k = 0; k < 40; k++) { const mid = (lo + hi) / 2; if (f(mid) >= 0) hi = mid; else lo = mid; } return { letter: s.letter, needed: hi }; });
-        out.innerHTML = `<div class="grid cols-3"><div class="stat"><div class="grade-letter">${letterFor(m.cur)}</div><div class="stat-label">current letter grade</div></div><div class="stat"><div class="stat-num">${m.cur.toFixed(1)}%</div><div class="stat-label">weighted average of what you entered (${Math.round(m.den)}% of the grade)</div></div><div class="stat"><div class="stat-num">${m.banked.toFixed(1)}</div><div class="stat-label">points already banked out of 100</div></div></div>${m.option ? `<p class="small mt-1">${icon('check', 12)} Using <b>${esc(m.option.label)}</b>, the exam weighting that gives you the best grade so far.</p>` : ''}
-          ${finalEntered ? '' : `<div class="divider"></div><div class="eyebrow mb-1">What you need on the ${esc(cats.find(c => c.id === finalId)?.name.split(' (')[0] || 'final')}</div><p class="small muted mb-1">Assumes categories you left blank end up at your current average${Object.keys(G.groups || {}).length ? ', and applies the drop-lowest rule' : ''}.</p><div class="table-wrap"><table class="table compact"><thead><tr><th>Target</th><th class="num">Score needed</th><th>Verdict</th></tr></thead><tbody>${need.map(n => `<tr><td><b>${n.letter}</b></td><td class="num">${n.needed <= 0 ? 'any score' : n.needed > 100 ? '> 100%' : n.needed.toFixed(1) + '%'}</td><td class="small">${n.needed <= 0 ? '<span class="chip good">locked in</span>' : n.needed > 100 ? '<span class="chip bad">out of reach</span>' : n.needed > 90 ? '<span class="chip warn">tough</span>' : '<span class="chip good">doable</span>'}</td></tr>`).join('')}</tbody></table></div>`}`;
-      };
-      root.innerHTML = pageHead('Grade calculator', `Weights come straight from the ${esc(D.code)} syllabus. Leave a category blank if it has not happened yet.${G.note ? ' ' + esc(G.note) : ''}`, `<a class="btn sm" href="${L('gpa')}">${icon('chart', 13)} Semester GPA</a>`) + `<div class="grid cols-3"><div class="panel span-2"><div class="panel-h"><div class="panel-title">${icon('calc')} Your scores</div><button class="btn sm ghost" data-action="clear">Clear</button></div>
-          <div class="table-wrap"><table class="table"><thead><tr><th>Category</th><th class="num">Weight</th><th>Your %</th></tr></thead><tbody>${cats.map(c => `<tr class="grade-row"><td>${esc(c.name)}</td><td class="num">${(+c.weight.toFixed(1))}%</td><td><input class="input mono" id="g-${c.id}" type="number" min="0" max="100" step="0.1" placeholder="—" value="${saved[c.id] ?? ''}"></td></tr>`).join('')}</tbody></table></div>
-          ${Object.values(G.groups || {}).map(gp => `<p class="small muted mt-1">${esc(gp.note || '')}</p>`).join('')}</div>
-        <div class="stack"><div class="panel" id="g-out"></div><div class="panel"><div class="eyebrow mb-1">Letter grade scale</div><div class="table-wrap"><table class="table compact"><thead><tr><th>Grade</th><th class="num">Percent</th>${G.scale[0].fourPt ? '<th class="num">4-point</th>' : ''}</tr></thead><tbody>${G.scale.map(s => `<tr><td><b>${s.letter}</b></td><td class="num">${s.min === 0 ? '< ' + G.scale[G.scale.length - 2].min : '≥ ' + s.min}</td>${s.fourPt ? `<td class="num">${s.fourPt}</td>` : ''}</tr>`).join('')}</tbody></table></div></div></div></div>
-        ${G.rubric ? `<div class="panel mt-2"><div class="panel-h"><div class="panel-title">${icon('list')} ${G.rubricTitle || (D.id === 'physics' ? 'How each lab is scored (20 points)' : 'How written work is scored (4-point rubric)')}</div></div><div class="table-wrap"><table class="table compact"><tbody>${G.rubric.map(r => `<tr><td style="width:140px"><b>${r.score} · ${esc(r.name)}</b></td><td>${esc(r.desc)}</td></tr>`).join('')}</tbody></table></div></div>` : ''}`;
-      compute(); $$('input', root).forEach(i => i.addEventListener('input', compute)); bind(root, { clear: () => { $$('input', root).forEach(i => i.value = ''); compute(); } });
-    }
-  };
-
-  /* ======================================================
      VIEW: Course info
      ====================================================== */
   App.views.course = {
     title: 'Syllabus & policies',
     render(root) {
-      const C = D.COURSE;
-      root.innerHTML = pageHead('Syllabus & policies', `${esc(C.code)} ${esc(C.name)} · ${esc(C.term)} · ${esc(C.school)}. The essentials from the syllabus, in one place.`) + `<div class="grid cols-2">${D.INFO.map(p => `<div class="panel${p.span2 ? ' span-2' : ''}"><div class="panel-h"><div class="panel-title">${icon(p.icon || 'info')} ${esc(p.title)}</div></div>${p.html}</div>`).join('')}</div>`;
+      const C = D.COURSE; const G = D.GRADING;
+      // how the grade is made, straight from the syllabus: the weights, the letter scale and any rubric (read only)
+      // how the grade is made, straight from the syllabus (read only): the weights, unless the class's own Grading
+      // panel already lists them, then the letter scale and any rubric
+      const shown = (D.INFO || []).some(p => /^grading\b/i.test(p.title || ''));
+      const cats = !shown && G && (G.categories || []).length ? `<div class="table-wrap"><table class="table compact"><thead><tr><th>Category</th><th class="num">Weight</th></tr></thead><tbody>${G.categories.map(c => `<tr class="grade-row"><td>${esc(c.name)}</td><td class="num">${(+(+c.weight).toFixed(1))}%</td></tr>`).join('')}</tbody></table></div>${Object.values(G.groups || {}).map(gp => gp.note ? `<p class="small muted mt-1">${esc(gp.note)}</p>` : '').join('')}` : '';
+      const scale = G && (G.scale || []).length > 1 ? `<div class="table-wrap"><table class="table compact grade-scale"><thead><tr><th>Grade</th><th class="num">Percent</th>${G.scale[0].fourPt ? '<th class="num">4-point</th>' : ''}</tr></thead><tbody>${G.scale.map(sc => `<tr><td><b>${esc(sc.letter)}</b></td><td class="num">${sc.min === 0 ? '< ' + G.scale[G.scale.length - 2].min : '≥ ' + sc.min}</td>${sc.fourPt ? `<td class="num">${esc(String(sc.fourPt))}</td>` : ''}</tr>`).join('')}</tbody></table></div>` : '';
+      const rubric = G && G.rubric ? `<div class="eyebrow mt-2 mb-1">${esc(G.rubricTitle || (D.id === 'physics' ? 'How each lab is scored (20 points)' : 'How written work is scored (4-point rubric)'))}</div><div class="table-wrap"><table class="table compact"><tbody>${G.rubric.map(r => `<tr><td style="width:140px"><b>${esc(String(r.score))} · ${esc(r.name)}</b></td><td>${esc(r.desc)}</td></tr>`).join('')}</tbody></table></div>` : '';
+      const grading = cats || scale || rubric ? `<div class="panel span-2 grading-panel"><div class="panel-h"><div class="panel-title">${icon('reportcard')} ${cats ? 'How the grade is made' : 'Letter grades'}</div></div>${cats && G.note ? `<p class="small muted mb-2">${esc(G.note)}</p>` : ''}<div class="grid cols-2">${cats ? `<div>${cats}</div>` : ''}${scale ? `<div>${scale}</div>` : ''}</div>${rubric}</div>` : '';
+      root.innerHTML = pageHead('Syllabus & policies', `${esc(C.code)} ${esc(C.name)} · ${esc(C.term)} · ${esc(C.school)}. The essentials from the syllabus, in one place.`) + `<div class="grid cols-2">${(D.INFO || []).map(p => `<div class="panel${p.span2 ? ' span-2' : ''}"><div class="panel-h"><div class="panel-title">${icon(p.icon || 'info')} ${esc(p.title)}</div></div>${p.html}</div>`).join('')}${grading}</div>`;
     }
   };
 
@@ -1053,7 +1047,7 @@
           ${App.boFloat ? `<label class="check" style="padding:0"><input type="checkbox" id="s-bofloat" ${s.boFloat === false ? '' : 'checked'}><span>Bo on every page <span class="muted small">(he floats in a corner; tap him to ask about what you're looking at)</span></span></label>
           <label class="check" style="padding:0"><input type="checkbox" id="s-botips" ${s.boTips === false || s.boFloat === false ? '' : 'checked'}${s.boFloat === false ? ' disabled' : ''}><span>Tips from Bo <span class="muted small">(now and then he offers to help with the questions on a page)</span></span></label>` : ''}
           <label class="check" style="padding:0"><input type="checkbox" id="s-geek" ${s.geek === true ? 'checked' : ''}><span>Geek mode <span class="muted small">(headings decode, a terminal status line, scanlines and CRT dialogs between pages)</span></span></label>
-          <div class="row gap-sm mt-2" style="flex-wrap:wrap"><button class="btn sm" data-action="tour-again">${icon('eye', 13)} Show the tour again</button><a class="btn sm" href="#/tools">${icon('sliders', 13)} Tools</a><a class="btn sm" href="#/resources">${icon('link', 13)} Resources</a></div>
+          <div class="row gap-sm mt-2" style="flex-wrap:wrap"><button class="btn sm" data-action="tour-again">${icon('eye', 13)} Show the tour again</button><a class="btn sm" href="#/customize">${icon('sliders', 13)} Customize Mathub</a><a class="btn sm" href="#/tools">${icon('grid', 13)} Tools</a><a class="btn sm" href="#/resources">${icon('link', 13)} Resources</a></div>
           <div class="field mb-2"><label for="s-goal">Daily XP goal</label><select class="select" id="s-goal">${(App.GOALS || [[30, 'Regular']]).map(([n, name]) => `<option value="${n}"${(App.dailyGoal ? App.dailyGoal() : 30) === n ? ' selected' : ''}>${n} XP · ${name}</option>`).join('')}</select><span class="help">A correct answer is 10 XP. The ring in the header fills up as you go; hit the goal every day to keep your streak strong.</span></div>
           <label class="check" style="padding:0"><input type="checkbox" id="s-sound" ${s.sound === false ? '' : 'checked'}><span>Sound effects <span class="muted small">(short cues for right, wrong and finished lessons)</span></span></label>
           <label class="check mb-2" style="padding:0"><input type="checkbox" id="s-livebg" ${s.liveBg === true ? 'checked' : ''}><span>Animated background <span class="muted small">(drifting symbols; off automatically when your system prefers reduced motion)</span></span></label>

@@ -1,8 +1,8 @@
 /* ============================================================
    Mathub — GPA calculator
    Semester GPA from a list of classes (prefilled with the student's
-   chosen classes, their credits and the letter each class's grade
-   calculator projects), cumulative GPA from what came before, and a
+   chosen classes and their credits; the letters are theirs to pick),
+   cumulative GPA from what came before, and a
    target planner (what this semester needs to reach a cumulative
    goal, or how many more credits at what average). Uses Montana
    State's 4.0 scale with plus/minus grades. Works inside any class
@@ -24,7 +24,7 @@
 
   const load = () => Object.assign({ rows: null, priorGpa: '', priorCredits: '', target: 3.5 }, settings().gpa || {});
   const save = patch => setSetting('gpa', Object.assign(load(), patch));
-  const defaultRows = () => App.myCourses().map(id => { const C = Courses[id]; const pr = App.projectedGrade ? App.projectedGrade(id) : null; return { id: uid(), course: id, name: `${C.code} · ${C.name}`, credits: (C.COURSE && C.COURSE.credits) || 3, grade: pr ? pr.letter : '' }; });
+  const defaultRows = () => App.myCourses().filter(id => Courses[id]).map(id => { const C = Courses[id]; return { id: uid(), course: id, name: `${C.code} · ${C.name}`, credits: (C.COURSE && C.COURSE.credits) || 3, grade: '' }; });
   const rows = () => { const s = load(); if (!Array.isArray(s.rows)) { const r = defaultRows(); save({ rows: r }); return r; } return s.rows; };
   const setRows = r => save({ rows: r });
 
@@ -63,14 +63,8 @@
     return `<div class="eyebrow mb-1">One grade step in each class${cum0 ? ' (cumulative)' : ''}</div><div class="table-wrap"><table class="table compact"><thead><tr><th>Class</th><th class="num">Now</th><th class="num">One step up</th><th class="num">One step down</th></tr></thead><tbody>${items.map(x => `<tr><td>${esc(x.r.name.split(' · ')[0])}</td><td class="num">${esc(x.r.grade)}</td><td class="num good">${x.up ? `${x.upL} · +${x.up.toFixed(2)}` : '—'}</td><td class="num bad">${x.down ? `${x.downL} · ${x.down.toFixed(2)}` : '—'}</td></tr>`).join('')}</tbody></table></div>`;
   }
 
-  function projLine(r) {
-    const C = r.course && Courses[r.course]; const pr = C && App.projectedGrade ? App.projectedGrade(r.course) : null;
-    if (pr) return `<div class="small muted mt-1 gpa-proj">${icon('calc', 11)} Grade calculator: <b>${esc(pr.letter)}</b> (${pr.pct.toFixed(1)}%)${r.grade !== pr.letter ? ` · <a href="#" data-action="gpa-use" data-id="${r.id}" data-letter="${esc(pr.letter)}">use it</a>` : ''}</div>`;
-    if (C) return `<div class="small muted mt-1 gpa-proj">${icon('calc', 11)} <a href="#/${C.id}/grades">Enter scores in the ${esc(C.code)} grade calculator</a> to project this grade.</div>`;
-    return '';
-  }
   function rowHtml(r) {
-    return `<tr class="gpa-row" data-id="${r.id}"><td><input class="input" data-f="name" value="${esc(r.name || '')}" placeholder="Class" aria-label="Class name">${projLine(r)}</td><td><input class="input mono" data-f="credits" type="number" min="0" max="12" step="0.5" value="${esc(String(r.credits ?? ''))}" aria-label="Credits"></td><td><select class="select" data-f="grade" aria-label="Grade"><option value="">—</option>${SCALE.map(([l]) => `<option value="${l}"${r.grade === l ? ' selected' : ''}>${l}</option>`).join('')}<option value="${NOT_GRADED}"${r.grade === NOT_GRADED ? ' selected' : ''}>P / W (not counted)</option></select></td><td class="num" data-pts="${r.id}"></td><td><button class="icon-btn" data-action="gpa-del" data-id="${r.id}" title="Remove">${icon('x', 13)}</button></td></tr>`;
+    return `<tr class="gpa-row" data-id="${r.id}"><td><input class="input" data-f="name" value="${esc(r.name || '')}" placeholder="Class" aria-label="Class name"></td><td><input class="input mono" data-f="credits" type="number" min="0" max="12" step="0.5" value="${esc(String(r.credits ?? ''))}" aria-label="Credits"></td><td><select class="select" data-f="grade" aria-label="Grade"><option value="">—</option>${SCALE.map(([l]) => `<option value="${l}"${r.grade === l ? ' selected' : ''}>${l}</option>`).join('')}<option value="${NOT_GRADED}"${r.grade === NOT_GRADED ? ' selected' : ''}>P / W (not counted)</option></select></td><td class="num" data-pts="${r.id}"></td><td><button class="icon-btn" data-action="gpa-del" data-id="${r.id}" title="Remove">${icon('x', 13)}</button></td></tr>`;
   }
   function paintRows(root) { $('#gpa-rows', root).innerHTML = rows().map(rowHtml).join('') || `<tr><td colspan="5"><div class="empty small">No classes yet. Add one below.</div></td></tr>`; stats(root); }
 
@@ -80,7 +74,7 @@
       const s = load(); const D = App.D; const back = standalone ? '#/' : App.link('dashboard');
       const head = standalone
         ? `<header class="landing-top"><div><div class="eyebrow">Mathub</div><h1 class="landing-title"><span class="logo-mark">${App.logoSvg(44)}</span>GPA calculator</h1><p class="muted">Semester GPA, cumulative GPA and what it takes to hit a goal, on Montana State's 4.0 scale.</p></div><div class="row gap-sm"><span id="landing-account"></span><a class="btn" href="#/">${icon('left', 14)} All classes</a></div></header>`
-        : App.pageHead('GPA calculator', 'Semester GPA, cumulative GPA and what it takes to hit a goal, on Montana State’s 4.0 scale. Your classes and credits are filled in; letters come from each grade calculator when you have entered scores there.', `<button class="btn sm ghost" data-action="gpa-reset">${icon('rotate', 13)} Reset to my classes</button>`);
+        : App.pageHead('GPA calculator', 'Semester GPA, cumulative GPA and what it takes to hit a goal, on Montana State’s 4.0 scale. Your classes and credits are filled in; pick the letter you have or expect in each.', `<button class="btn sm ghost" data-action="gpa-reset">${icon('rotate', 13)} Reset to my classes</button>`);
       root.innerHTML = `${standalone ? '<div class="landing-wrap contact-wrap">' : ''}${head}<div class="grid cols-3 gpa-grid">
         <div class="panel span-2"><div class="panel-h"><div class="panel-title">${icon('calc')} This semester</div>${standalone ? `<button class="btn sm ghost" data-action="gpa-reset">${icon('rotate', 13)} Reset to my classes</button>` : ''}</div>
           <div class="table-wrap"><table class="table gpa-table"><thead><tr><th>Class</th><th style="width:96px">Credits</th><th style="width:150px">Grade</th><th class="num" style="width:90px">Points</th><th style="width:34px"><span class="sr-only">Remove</span></th></tr></thead><tbody id="gpa-rows"></tbody></table></div>
@@ -96,12 +90,11 @@
       paintRows(root);
       const update = () => { const list = rows(); $$('.gpa-row', root).forEach(tr => { const r = list.find(x => x.id === tr.dataset.id); if (!r) return; r.name = $('[data-f="name"]', tr).value; r.credits = $('[data-f="credits"]', tr).value; r.grade = $('[data-f="grade"]', tr).value; }); setRows(list); save({ priorGpa: $('#gpa-prior', root).value, priorCredits: $('#gpa-prior-cr', root).value, target: $('#gpa-goal', root).value }); $$('.chip[data-action="gpa-goal"]', root).forEach(ch => ch.classList.toggle('on', +ch.dataset.g === +$('#gpa-goal', root).value)); stats(root); };
       root.addEventListener('input', e => { if (e.target.matches('input, select')) update(); });
-      root.addEventListener('change', e => { if (e.target.matches('select[data-f="grade"]')) { update(); const tr = e.target.closest('tr'); const r = rows().find(x => x.id === tr.dataset.id); const pl = $('.gpa-proj', tr); if (pl && r) pl.outerHTML = projLine(r); } });
+      root.addEventListener('change', e => { if (e.target.matches('select[data-f="grade"]')) update(); });
       bind(root, {
         'gpa-add': () => { const list = rows(); list.push({ id: uid(), name: '', credits: 3, grade: '' }); setRows(list); paintRows(root); const last = $$('.gpa-row [data-f="name"]', root).pop(); if (last) last.focus(); },
         'gpa-del': b => { setRows(rows().filter(r => r.id !== b.dataset.id)); paintRows(root); },
-        'gpa-use': (b, e) => { if (e) e.preventDefault(); const list = rows(); const r = list.find(x => x.id === b.dataset.id); if (r) { r.grade = b.dataset.letter; setRows(list); paintRows(root); } },
-        'gpa-reset': () => { setRows(defaultRows()); paintRows(root); toast('Reset to your classes and projected grades'); },
+        'gpa-reset': () => { setRows(defaultRows()); paintRows(root); toast('Reset to your classes'); },
         'gpa-goal': b => { $('#gpa-goal', root).value = b.dataset.g; update(); }
       });
       if (standalone) { const slot = $('#landing-account', root); if (slot && App.auth && App.auth.ready) App.auth.paintLandingAccount(slot); }

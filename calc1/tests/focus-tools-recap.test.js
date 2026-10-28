@@ -1,4 +1,4 @@
-/* Focus room, exam readiness, Blitz, Tools (calculator, units, citations, words, sig figs), Your week, account menu, mobile layouts. */
+/* Focus room, exam readiness, Tools (the map of study tools, Life and Future; calculator, units, citations, words, sig figs), Your week, the account menu (account things only), mobile layouts. */
 const T = require('./lib');
 (async () => {
   const { mk, login, go, log, check, txt } = await T.start({ dialogText: '40' });
@@ -21,15 +21,12 @@ const T = require('./lib');
   check('session finishes and logs minutes', !(await p.evaluate(() => App.focus.running)) && (await p.evaluate(() => App.focusStats().today)) >= 25 && !!(await p.$('.fz-summary')), await p.evaluate(() => App.focusStats()));
   check('session stored in class data', await p.evaluate(() => (App.store.peek('calc').sessions || []).some(s => s.m >= 25)));
   await p.click('[data-action="fz-break"]'); await p.waitForTimeout(300); check('break timer', (await txt(p, '#fz-sub')).includes('Break')); await p.click('[data-action="fz-skipbreak"]');
-  // blitz
-  await go(p, '#/calc/blitz', 900); check('blitz intro', !!(await p.$('[data-action="bz-start"]')) && !!(await p.$('.nav-item[data-view="blitz"]')));
-  await p.click('[data-action="bz-start"]'); await p.waitForTimeout(600); check('blitz question shown', (await p.$$('#bz-stage .q-opt')).length >= 2);
-  let correct = 0; for (let i = 0; i < 4; i++) { const ans = await p.evaluate(() => App.blitz.q && App.blitz.q.answer); if (ans === null) break; await p.click(`#bz-stage .q-opt[data-i="${ans}"]`); correct++; await p.waitForTimeout(600); }
-  const sc = await p.evaluate(() => App.blitz.score); check('correct answers score with multiplier', sc >= 40 && (await p.evaluate(() => App.blitz.combo)) === 4, { sc });
-  await p.keyboard.press('1'); await p.waitForTimeout(1100); check('keyboard answers', (await p.evaluate(() => App.blitz.n)) === 5);
-  await p.evaluate(() => { App.blitz.left = 1; }); await p.waitForTimeout(1600); check('blitz ends with summary and best score', !!(await p.$('.bz-end')) && (await p.evaluate(() => App.store.peek('calc').blitz.best)) >= 40, await txt(p, '.bz-final'));
   // tools
   await go(p, '#/tools', 700); check('tools tabs', (await p.$$('.dash-tabs .tab')).length === 5);
+  const map = await p.evaluate(() => [...document.querySelectorAll('.th-sec')].map(s => [s.querySelector('.th-h').textContent, [...s.querySelectorAll('.th-card')].map(a => a.getAttribute('href'))]));
+  check('the Tools page maps Study, Life and Future', map.map(m => m[0]).join() === 'Study,Life,Future' && ['#/gpa'].every(h => map[0][1].includes(h)) && ['#/habits', '#/goals', '#/wheel', '#/journal', '#/money'].every(h => map[1][1].includes(h)) && ['#/career', '#/portfolio'].every(h => map[2][1].includes(h)), map);
+  await p.click('.th-card[data-tool="sig"]'); await p.waitForTimeout(500); check('a study tool on the map opens its tab', await p.evaluate(() => document.querySelector('.dash-tabs .tab.active, .dash-tabs .tab[aria-selected="true"]').dataset.tab === 'sig'));
+  await p.click('.dash-tabs .tab[data-tab="calc"]'); await p.waitForTimeout(150);
   await p.fill('#tc-in', '2*sin(30)+sqrt(16)'); await p.keyboard.press('Enter'); await p.waitForTimeout(150); check('calculator degrees', (await txt(p, '#tc-out')) === '5', await txt(p, '#tc-out'));
   await p.click('[data-action="tc-mode"][data-m="rad"]'); await p.waitForTimeout(150); check('calculator radians', Math.abs(parseFloat(await txt(p, '#tc-out')) - (2 * Math.sin(30) + 4)) < 1e-6, await txt(p, '#tc-out'));
   await p.click('[data-action="tc-key"][data-k="!"]').catch(() => {}); await p.fill('#tc-in', '5'); await p.click('[data-action="tc-key"][data-k="!"]'); await p.waitForTimeout(100); check('factorial', (await txt(p, '#tc-out')) === '120');
@@ -47,7 +44,7 @@ const T = require('./lib');
   const png = await p.evaluate(() => App.recapCanvas(App.weekStats(0)).toDataURL('image/png').length); check('share card renders', png > 20000, png);
   check('recap marks seen', (await p.evaluate(() => App.settings().recapSeen)) === (await p.evaluate(() => App.weekStats(0).key)));
   // account menu
-  await go(p, '#/', 400); await login(p, 'alice.a@montana.edu'); await p.reload(); await p.waitForTimeout(1500); if (await p.$('.celebrate')) { await p.keyboard.press('Escape'); await p.waitForTimeout(200); } await p.click('#topbar-account [data-action="acct-toggle"]'); await p.waitForTimeout(200); const items = await p.$$eval('.pop-account .acct-dd-item', a => a.map(x => x.textContent.trim())); check('account menu has new entries', ['Focus room', 'Your week', 'Resources & guides', 'Tools'].every(x => items.includes(x)), items); await p.keyboard.press('Escape');
+  await go(p, '#/', 400); await login(p, 'alice.a@montana.edu'); await p.reload(); await p.waitForTimeout(1500); if (await p.$('.celebrate')) { await p.keyboard.press('Escape'); await p.waitForTimeout(200); } await p.click('#topbar-account [data-action="acct-toggle"]'); await p.waitForTimeout(200); const items = await p.$$eval('.pop-account .acct-dd-item', a => a.map(x => x.textContent.trim())); check('the account menu has only account things', ['Your plan', 'Usage & credits', 'Account settings', 'Customize'].every(x => items.some(i => i.startsWith(x))) && !items.some(i => /^(Today|Focus room|Character sheet|GPA calculator|Tools|People|Resources|Your badges)/.test(i)), items); await p.keyboard.press('Escape');
   const [cm, m] = await mk(390, 760, { serviceWorkers: 'block' }); await m.goto(T.base + '#/focus'); await m.waitForTimeout(900); check('mobile focus no hscroll', await m.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)); check('mobile tab bar has Focus', (await m.$$eval('#tabbar .tab-item', t => t.map(x => x.textContent.trim()))).includes('Focus'));
   await m.goto(T.base + '#/tools'); await m.waitForTimeout(700); check('mobile tools no hscroll', await m.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)); await m.goto(T.base + '#/recap?w=this'); await m.waitForTimeout(700); check('mobile recap no hscroll', await m.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)); await cm.close();
   await c.close(); await T.finish();

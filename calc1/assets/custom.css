@@ -1,0 +1,146 @@
+/* ============================================================
+   Mathub — the student's own look (assets/modules.js sets the
+   attributes on <html>) and the Customize page (#/customize).
+   Loaded last, so a choice here wins over the default look.
+   ============================================================ */
+
+/* ---------- accent colour: outside classes, or everywhere with data-accent-all ---------- */
+:root[data-accent="indigo"]:not([data-course]), html:root[data-accent="indigo"][data-accent-all] { --accent: #4F46E5; --accent-ink: #FFFFFF; --accent-soft: #E8E7FD; --accent-line: #B4B0F6; --accent-deep: #3F37C9; }
+:root[data-accent="violet"]:not([data-course]), html:root[data-accent="violet"][data-accent-all] { --accent: #7C3AED; --accent-ink: #FFFFFF; --accent-soft: #F0E8FD; --accent-line: #C9AEF6; --accent-deep: #6527C9; }
+:root[data-accent="pink"]:not([data-course]), html:root[data-accent="pink"][data-accent-all] { --accent: #DB2777; --accent-ink: #FFFFFF; --accent-soft: #FCE7F1; --accent-line: #F2A9CB; --accent-deep: #B51D61; }
+:root[data-accent="red"]:not([data-course]), html:root[data-accent="red"][data-accent-all] { --accent: #DC2626; --accent-ink: #FFFFFF; --accent-soft: #FDE8E8; --accent-line: #F3A9A9; --accent-deep: #B21C1C; }
+:root[data-accent="orange"]:not([data-course]), html:root[data-accent="orange"][data-accent-all] { --accent: #EA580C; --accent-ink: #FFFFFF; --accent-soft: #FDEDE3; --accent-line: #F6B88F; --accent-deep: #C2440A; }
+:root[data-accent="amber"]:not([data-course]), html:root[data-accent="amber"][data-accent-all] { --accent: #B45309; --accent-ink: #FFFFFF; --accent-soft: #FBF0DC; --accent-line: #E6C08A; --accent-deep: #8F4207; }
+:root[data-accent="green"]:not([data-course]), html:root[data-accent="green"][data-accent-all] { --accent: #15803D; --accent-ink: #FFFFFF; --accent-soft: #E3F4E8; --accent-line: #9BD3AE; --accent-deep: #0F6630; }
+:root[data-accent="teal"]:not([data-course]), html:root[data-accent="teal"][data-accent-all] { --accent: #0F766E; --accent-ink: #FFFFFF; --accent-soft: #DFF3F1; --accent-line: #93D0CA; --accent-deep: #0B5C56; }
+:root[data-accent="slate"]:not([data-course]), html:root[data-accent="slate"][data-accent-all] { --accent: #334155; --accent-ink: #FFFFFF; --accent-soft: #E7EBF0; --accent-line: #AEB8C6; --accent-deep: #222C3A; }
+/* in the dark: lighter tones on a deep ground */
+:root[data-theme="dark"][data-accent="indigo"]:not([data-course]), html:root[data-theme="dark"][data-accent="indigo"][data-accent-all] { --accent: #A5A8FF; --accent-ink: #11123A; --accent-soft: #23255A; --accent-line: #4A4DA8; --accent-deep: #8C90FF; }
+:root[data-theme="dark"][data-accent="violet"]:not([data-course]), html:root[data-theme="dark"][data-accent="violet"][data-accent-all] { --accent: #C4A2FF; --accent-ink: #1E1036; --accent-soft: #2E1F52; --accent-line: #6A4AA8; --accent-deep: #B088FF; }
+:root[data-theme="dark"][data-accent="pink"]:not([data-course]), html:root[data-theme="dark"][data-accent="pink"][data-accent-all] { --accent: #FF8CC0; --accent-ink: #3A0D22; --accent-soft: #4A1A31; --accent-line: #A8457A; --accent-deep: #FF6FAE; }
+:root[data-theme="dark"][data-accent="red"]:not([data-course]), html:root[data-theme="dark"][data-accent="red"][data-accent-all] { --accent: #FF8F8F; --accent-ink: #3A0B0B; --accent-soft: #4A1C1C; --accent-line: #A84848; --accent-deep: #FF7272; }
+:root[data-theme="dark"][data-accent="orange"]:not([data-course]), html:root[data-theme="dark"][data-accent="orange"][data-accent-all] { --accent: #FFA66B; --accent-ink: #3A1A06; --accent-soft: #4A2814; --accent-line: #A8643A; --accent-deep: #FF904A; }
+:root[data-theme="dark"][data-accent="amber"]:not([data-course]), html:root[data-theme="dark"][data-accent="amber"][data-accent-all] { --accent: #F5C26B; --accent-ink: #2E1F05; --accent-soft: #3E2E12; --accent-line: #9A7636; --accent-deep: #F2B44A; }
+:root[data-theme="dark"][data-accent="green"]:not([data-course]), html:root[data-theme="dark"][data-accent="green"][data-accent-all] { --accent: #6EDC95; --accent-ink: #072A14; --accent-soft: #143A22; --accent-line: #3A8A57; --accent-deep: #4FCF7E; }
+:root[data-theme="dark"][data-accent="teal"]:not([data-course]), html:root[data-theme="dark"][data-accent="teal"][data-accent-all] { --accent: #5ED6CB; --accent-ink: #062A27; --accent-soft: #123A37; --accent-line: #368A83; --accent-deep: #3FC8BC; }
+:root[data-theme="dark"][data-accent="slate"]:not([data-course]), html:root[data-theme="dark"][data-accent="slate"][data-accent-all] { --accent: #B4C0D2; --accent-ink: #141B26; --accent-soft: #262F3D; --accent-line: #5A6678; --accent-deep: #9AA8BE; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"])[data-accent="indigo"]:not([data-course]), html:root:not([data-theme="light"])[data-accent="indigo"][data-accent-all] { --accent: #A5A8FF; --accent-ink: #11123A; --accent-soft: #23255A; --accent-line: #4A4DA8; --accent-deep: #8C90FF; }
+  :root:not([data-theme="light"])[data-accent="violet"]:not([data-course]), html:root:not([data-theme="light"])[data-accent="violet"][data-accent-all] { --accent: #C4A2FF; --accent-ink: #1E1036; --accent-soft: #2E1F52; --accent-line: #6A4AA8; --accent-deep: #B088FF; }
+  :root:not([data-theme="light"])[data-accent="pink"]:not([data-course]), html:root:not([data-theme="light"])[data-accent="pink"][data-accent-all] { --accent: #FF8CC0; --accent-ink: #3A0D22; --accent-soft: #4A1A31; --accent-line: #A8457A; --accent-deep: #FF6FAE; }
+  :root:not([data-theme="light"])[data-accent="red"]:not([data-course]), html:root:not([data-theme="light"])[data-accent="red"][data-accent-all] { --accent: #FF8F8F; --accent-ink: #3A0B0B; --accent-soft: #4A1C1C; --accent-line: #A84848; --accent-deep: #FF7272; }
+  :root:not([data-theme="light"])[data-accent="orange"]:not([data-course]), html:root:not([data-theme="light"])[data-accent="orange"][data-accent-all] { --accent: #FFA66B; --accent-ink: #3A1A06; --accent-soft: #4A2814; --accent-line: #A8643A; --accent-deep: #FF904A; }
+  :root:not([data-theme="light"])[data-accent="amber"]:not([data-course]), html:root:not([data-theme="light"])[data-accent="amber"][data-accent-all] { --accent: #F5C26B; --accent-ink: #2E1F05; --accent-soft: #3E2E12; --accent-line: #9A7636; --accent-deep: #F2B44A; }
+  :root:not([data-theme="light"])[data-accent="green"]:not([data-course]), html:root:not([data-theme="light"])[data-accent="green"][data-accent-all] { --accent: #6EDC95; --accent-ink: #072A14; --accent-soft: #143A22; --accent-line: #3A8A57; --accent-deep: #4FCF7E; }
+  :root:not([data-theme="light"])[data-accent="teal"]:not([data-course]), html:root:not([data-theme="light"])[data-accent="teal"][data-accent-all] { --accent: #5ED6CB; --accent-ink: #062A27; --accent-soft: #123A37; --accent-line: #368A83; --accent-deep: #3FC8BC; }
+  :root:not([data-theme="light"])[data-accent="slate"]:not([data-course]), html:root:not([data-theme="light"])[data-accent="slate"][data-accent-all] { --accent: #B4C0D2; --accent-ink: #141B26; --accent-soft: #262F3D; --accent-line: #5A6678; --accent-deep: #9AA8BE; }
+}
+
+/* ---------- text size: the page itself scales, the frame stays put ---------- */
+:root[data-text="sm"] #view { zoom: 0.92; }
+:root[data-text="lg"] #view { zoom: 1.1; }
+:root[data-text="xl"] #view { zoom: 1.22; }
+:root[data-text="lg"] .sidebar, :root[data-text="lg"] .topbar { font-size: 105%; }
+:root[data-text="xl"] .sidebar, :root[data-text="xl"] .topbar { font-size: 110%; }
+
+/* ---------- spacing ---------- */
+:root[data-density="compact"]:not([data-app]) .panel:not(.panel .panel) { padding: 12px 14px; }   /* beats the default look's :root:not([data-skin]):not([data-app]) .panel */
+:root[data-density="compact"] .grid { gap: 10px; }
+:root[data-density="compact"] .stack { gap: 10px; }
+:root[data-density="compact"] .nav-item { padding-top: 5px; padding-bottom: 5px; min-height: 34px; }
+:root[data-density="compact"] .page-head { margin-bottom: 12px; }
+:root[data-density="roomy"]:not([data-app]) .panel:not(.panel .panel) { padding: 26px 28px; }
+:root[data-density="roomy"] .grid { gap: 22px; }
+:root[data-density="roomy"] .stack { gap: 22px; }
+:root[data-density="roomy"] .nav-item { padding-top: 10px; padding-bottom: 10px; }
+:root[data-density="roomy"] .page-head { margin-bottom: 26px; }
+
+/* ---------- corners ---------- */
+:root[data-radius="square"] { --radius: 4px; --radius-sm: 3px; }
+:root[data-radius="square"] :is(.panel, .btn, .input, .select, .chip, .nav-item, .card-link, .th-card, .ah-tool, .dw, .modal, .popover, .tab, .tab-pill, .dash-tabs, .cz-opt, .cz-preset, .cz-skin, .link-tile, .callout, .course-card, textarea) { border-radius: 4px !important; }
+:root[data-radius="round"] { --radius: 22px; --radius-sm: 14px; }
+:root[data-radius="round"] :is(.panel, .modal, .popover, .card-link, .course-card, .callout, .dw) { border-radius: 26px !important; }
+:root[data-radius="round"] :is(.btn, .input, .select, .chip, .nav-item, .tab, .tab-pill, .dash-tabs, .cz-opt) { border-radius: 999px !important; }
+:root[data-radius="round"] textarea.input { border-radius: 18px !important; }
+
+/* ---------- font ---------- */
+:root[data-font="system"] { --font-body: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; --font-display: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; --font-sans: var(--font-body); }
+:root[data-font="readable"] { --font-body: Verdana, Tahoma, "DejaVu Sans", sans-serif; --font-display: Verdana, Tahoma, "DejaVu Sans", sans-serif; --font-sans: var(--font-body); }
+:root[data-font="readable"] body { letter-spacing: 0.01em; line-height: 1.6; }
+:root[data-font="serif"] { --font-body: Charter, "Iowan Old Style", "Palatino Linotype", Georgia, serif; --font-display: Charter, "Iowan Old Style", "Palatino Linotype", Georgia, serif; --font-sans: var(--font-body); }
+:root[data-font] body { font-family: var(--font-body); }
+
+/* ---------- parts of the frame the student hid ---------- */
+:root[data-hide~="now"] #sb-now, :root[data-hide~="quick"] #sb-quick, :root[data-hide~="cal"] #sb-cal, :root[data-hide~="pomo"] .sidebar .pomo,
+:root[data-hide~="clock"] #tb-clock, :root[data-hide~="exam"] #exam-chip, :root[data-hide~="sounds"] .amb-top, :root[data-hide~="lang"] #lang-top { display: none !important; }
+
+/* ---------- the Customize page ---------- */
+.cz-wrap { max-width: 980px; }
+.cz-wrap .panes { margin-top: 14px; }
+.cz-sec { margin-bottom: 14px; }
+.cz-sec.is-hidden { opacity: 0.72; }
+.cz-note { display: flex; align-items: center; gap: 6px; margin: 0 0 12px 2px; }
+.cz-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.cz-row { display: flex; align-items: center; gap: 12px; min-width: 0; padding: 10px 2px; border-top: 1px solid var(--border); scroll-margin: 96px 0 24px; }
+.cz-row:first-child { border-top: 0; }
+.cz-row.is-off .cz-t b, .cz-row.is-hidden .cz-t b { color: var(--muted); }
+.cz-ic { flex: none; display: grid; place-items: center; width: 34px; height: 34px; border-radius: 10px; background: var(--accent-soft); color: var(--accent-deep, var(--accent)); }
+.cz-row.is-off .cz-ic { background: var(--surface-2); color: var(--muted); }
+.cz-t { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.cz-t b { font-size: 15px; line-height: 1.3; }
+.cz-t small { font-size: 13px; line-height: 1.35; color: var(--muted); }
+.cz-sub { margin: 12px 0 2px 2px; font: 800 13px/1.2 var(--font-display); color: var(--muted); }
+.cz-empty { padding: 8px 2px; }
+.cz-always { flex: none; }
+.cz-arrows { display: inline-flex; gap: 2px; flex: none; }
+.cz-arrows .icon-btn[disabled] { opacity: 0.35; cursor: default; }
+.cz-place, .cz-cplace { flex: none; width: auto; max-width: 150px; min-height: 34px; padding-top: 4px; padding-bottom: 4px; font-size: 13px; }
+.cz-pin { flex: none; }
+.cz-pin.on { color: var(--accent); background: var(--accent-soft); }
+/* the switch: a real checkbox under a track and thumb */
+.cz-switch { position: relative; flex: none; display: inline-flex; width: 46px; height: 28px; cursor: pointer; }
+.cz-switch input { position: absolute; inset: 0; z-index: 1; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
+.cz-track { pointer-events: none; width: 46px; height: 28px; border-radius: 999px; background: var(--surface-3, #cbd5e1); border: 2px solid var(--border-strong, #94a3b8); transition: background .15s, border-color .15s; position: relative; }
+.cz-track::after { content: ""; position: absolute; top: 2px; left: 2px; width: 20px; height: 20px; border-radius: 50%; background: #fff; box-shadow: 0 1px 2px rgba(0, 0, 0, .25); transition: transform .15s; }
+.cz-switch input:checked + .cz-track { background: var(--accent); border-color: var(--accent); }
+.cz-switch input:checked + .cz-track::after { transform: translateX(18px); }
+.cz-switch input:focus-visible + .cz-track { outline: 3px solid var(--accent); outline-offset: 2px; }
+/* presets */
+.cz-presets { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr)); gap: 10px; margin-bottom: 12px; }
+.cz-preset { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; padding: 12px 14px; border: 2px solid var(--border); border-radius: 16px; background: var(--surface); color: var(--ink); text-align: left; cursor: pointer; font: inherit; }
+.cz-preset:hover { border-color: var(--accent-line, var(--accent)); }
+.cz-preset:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.cz-preset small { color: var(--muted); font-size: 13px; line-height: 1.35; }
+/* the look */
+.cz-look { display: flex; flex-direction: column; gap: 18px; }
+.cz-field { min-width: 0; }
+.cz-h { margin: 0 0 8px; font: 800 15.5px/1.25 var(--font-display); color: var(--ink); }
+.cz-field > .small { margin: -4px 0 8px; }
+.cz-choice { display: flex; flex-wrap: wrap; gap: 6px; }
+.cz-opt { display: inline-flex; align-items: center; gap: 7px; min-height: 38px; padding: 6px 14px; border: 2px solid var(--border); border-radius: 12px; background: var(--surface); color: var(--ink); font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
+.cz-opt:hover { border-color: var(--accent-line, var(--accent)); }
+.cz-opt.on { border-color: var(--accent); background: var(--accent-soft); color: var(--accent-deep, var(--ink)); }
+.cz-opt:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.cz-dot { width: 16px; height: 16px; border-radius: 50%; flex: none; box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .15); }
+.cz-skins { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 200px), 1fr)); gap: 8px; }
+.cz-skin { display: grid; grid-template-columns: auto 1fr; grid-template-rows: auto auto; column-gap: 10px; align-items: center; padding: 10px 12px; border: 2px solid var(--border); border-radius: 14px; background: var(--surface); color: var(--ink); text-align: left; cursor: pointer; font: inherit; }
+.cz-skin.on { border-color: var(--accent); background: var(--accent-soft); }
+.cz-skin:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.cz-skin-sw { grid-row: 1 / 3; width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .12); }
+.cz-skin-sw i { width: 14px; height: 14px; border-radius: 50%; }
+.cz-skin b { font-size: 14px; } .cz-skin small { font-size: 12.5px; color: var(--muted); line-height: 1.3; }
+.cz-parts .cz-row { padding: 8px 2px; }
+.cz-scope { max-width: 320px; }
+.cz-import { position: relative; }
+/* a page whose feature is off */
+.cz-off-card { max-width: 560px; margin: 40px auto; display: flex; flex-direction: column; align-items: flex-start; gap: 10px; }
+.cz-off-ic { display: grid; place-items: center; width: 60px; height: 60px; border-radius: 18px; background: var(--surface-2); color: var(--muted); }
+.cz-off-card .page-title { margin: 0; }
+/* the sidebar's Customize link */
+.sb-custom { margin-top: 6px; padding-top: 6px; border-top: 1px dashed var(--border); }
+@media (max-width: 640px) {
+  .cz-row { flex-wrap: wrap; row-gap: 8px; }
+  .cz-row .cz-t { flex-basis: calc(100% - 100px); }
+  .cz-place, .cz-cplace { max-width: 130px; }
+}
+html[data-motion="off"] :is(.cz-track, .cz-track::after) { transition: none; }

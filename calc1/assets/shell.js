@@ -8,9 +8,12 @@
    - Now: the date, a live clock, and how far through the semester,
      the month and the week you are
    - New: one button for the quick-add dialog and six shortcuts
-   - the class you are in (its own pages, unchanged: app.js)
-   - Home, Today, Ask Bo; Your classes (pages outside a class);
-     School, Life, Future and Explore, each folding away
+   - the class you are in (its own menu: Learn, Practice, Plan, Explore,
+     Class; app.js)
+   - Home and Ask Bo; then, each folding away: Your classes (outside a
+     class), Planner (today, tasks, calendars, time), Tools (the study
+     tools, then Life and Future), Community and Resources. Every page
+     has one icon of its own (App.VIEW_ICON in app.js)
    - a month calendar with a dot on every day something is due
    - the account and the pomodoro (unchanged)
    Header: the page's place ("School › Timetable"), the next exam
@@ -28,16 +31,19 @@
   const native = () => !!(document.documentElement.dataset.app || (global.MATHUB_APP && global.MATHUB_APP.native));
 
   /* ---------- what lives where ---------- */
-  const TOP = [['home', '#/', 'Home', 'home'], ['today', '#/today', 'Today', 'flag'], ['tutor', '#/tutor', 'Ask Bo', 'bo']];
+  const TOP = [['home', '#/', 'Home'], ['tutor', '#/tutor', 'Ask Bo']];
+  // a group's items, then its sub-lists (Tools keeps Life and Future under it)
   const GROUPS = [
-    { id: 'school', label: 'School', items: [['tasks', 'Tasks', 'todo'], ['timetable', 'Timetable', 'table'], ['agenda', 'Calendar', 'calendar'], ['timelog', 'Time tracker', 'timer'], ['projects', 'Projects & thesis', 'folder'], ['focus', 'Focus room', 'clock'], ['gpa', 'GPA calculator', 'calc']] },
-    { id: 'office', label: 'Office', items: [['docs', 'Docs', 'docpage'], ['decks', 'Slides', 'present'], ['sheets', 'Sheets', 'grid3']] },
-    { id: 'life', label: 'Life', items: [['habits', 'Habits', 'repeat'], ['goals', 'Goals', 'target'], ['wheel', 'Wheel of life', 'wheel'], ['journal', 'Journal', 'note'], ['money', 'Money', 'wallet']] },
-    { id: 'future', label: 'Future', items: [['career', 'Internships & jobs', 'briefcase'], ['portfolio', 'Portfolio', 'star']] },
-    { id: 'explore', label: 'Explore', items: [['resources', 'Resources', 'link'], ['guides', 'Study guides', 'book'], ['tools', 'Tools', 'sliders'], ['forum', 'Discussions', 'chat'], ['leagues', 'Leagues', 'gem'], ['badges', 'Badges', 'award'], ['whatsnew', 'What’s new', 'zap']] }
+    { id: 'plan', label: 'Planner', items: [['today', 'Today'], ['tasks', 'Tasks'], ['agenda', 'Calendar'], ['timetable', 'Timetable'], ['timelog', 'Time tracker'], ['projects', 'Projects & thesis'], ['focus', 'Focus room']] },
+    { id: 'tools', label: 'Tools', items: [['tools', 'Calculators & converters'], ['gpa', 'GPA calculator']], subs: [
+      { id: 'life', label: 'Life', items: [['habits', 'Habits'], ['goals', 'Goals'], ['wheel', 'Wheel of life'], ['journal', 'Journal'], ['money', 'Money']] },
+      { id: 'future', label: 'Future', items: [['career', 'Internships & jobs'], ['portfolio', 'Portfolio']] }] },
+    { id: 'community', label: 'Community', items: [['forum', 'Discussions'], ['challenge', 'Daily challenge'], ['leagues', 'Leagues'], ['people', 'People'], ['sheet', 'Character sheet']] },
+    { id: 'help', label: 'Resources', items: [['resources', 'Resources'], ['guides', 'Study guides'], ['whatsnew', 'What’s new']] }
   ];
-  const PLACE = {}; GROUPS.forEach(g => g.items.forEach(([v, l]) => { PLACE[v] = [g.label, l]; }));
-  Object.assign(PLACE, { home: [null, 'Home'], today: [null, 'Today'], tutor: [null, 'Ask Bo'], settings: [null, 'Settings'], contact: [null, 'Contact'], policy: [null, 'Terms & privacy'], plan: [null, 'Your plan'], calls: [null, 'Usage'], usage: [null, 'Usage'], create: [null, 'Create a class'], request: [null, 'Request a class'], people: ['Explore', 'People'], recap: [null, 'Your week'], sheet: [null, 'Character sheet'], mistakes: ['School', 'Mistakes'], challenge: ['Explore', 'Daily challenge'], admin: [null, 'Admin'], class: [null, 'Join a class'], c: [null, 'A shared class'], join: [null, 'Join a classmate'], notfound: [null, 'Page not found'] });
+  const vi = v => (App.viewIcon ? App.viewIcon(v) : 'file');
+  const PLACE = {}; GROUPS.forEach(g => { g.items.forEach(([v, l]) => { PLACE[v] = [g.label, l]; }); (g.subs || []).forEach(sb => sb.items.forEach(([v, l]) => { PLACE[v] = [sb.label, l]; })); });
+  Object.assign(PLACE, { home: [null, 'Home'], tutor: [null, 'Ask Bo'], settings: [null, 'Settings'], contact: [null, 'Contact'], policy: [null, 'Terms & privacy'], plan: [null, 'Your plan'], calls: [null, 'Usage'], usage: [null, 'Usage'], create: [null, 'Create a class'], request: [null, 'Request a class'], recap: [null, 'Your week'], sheet: [null, 'Character sheet'], mistakes: [null, 'Mistakes'], admin: [null, 'Admin'], customize: [null, 'Customize'], off: [null, 'Turned off'], class: [null, 'Join a class'], c: [null, 'A shared class'], join: [null, 'Join a classmate'], notfound: [null, 'Page not found'] });
   App.shellGroups = GROUPS;
 
   const route = () => { const raw = location.hash.replace(/^#\/?/, '').split('?')[0]; const parts = raw.split('/').filter(Boolean); if (!parts.length) return { course: null, view: 'home' }; if (Courses[parts[0]]) return { course: parts[0], view: parts[1] || 'dashboard' }; return { course: null, view: parts[0] }; };
@@ -106,21 +112,32 @@
   }
   function paintNav() {
     const el = $('#sb-nav'); if (!el) return; const r = route(); const inClass = !!r.course; const c = counts();
-    const item = (v, href, label, ic, n) => `<a class="nav-item sb-item${!inClass && r.view === v ? ' active' : ''}" href="${href}" data-sv="${v}"${!inClass && r.view === v ? ' aria-current="page"' : ''}>${ic === 'bo' ? `<span class="sb-bo">${boIc()}</span>` : icon(ic)}<span>${esc(t(label))}</span>${n ? `<b class="sb-count">${n}</b>` : ''}</a>`;
-    let h = `<div class="sb-top-items">${TOP.map(([v, href, l, ic]) => item(v, href, l, ic, v === 'today' && c.tasks ? c.tasks : 0)).join('')}</div>`;
-    if (!inClass) {
+    const item = (v, href, label, n) => `<a class="nav-item sb-item${!inClass && r.view === v ? ' active' : ''}" href="${href}" data-sv="${v}"${!inClass && r.view === v ? ' aria-current="page"' : ''}>${v === 'tutor' ? `<span class="sb-bo">${boIc()}</span>` : icon(vi(v))}<span>${esc(t(label))}</span>${n ? `<b class="sb-count">${n}</b>` : ''}</a>`;
+    const n = v => v === 'today' || v === 'tasks' ? c.tasks : v === 'habits' ? c.habits : 0;
+    // the student's arrangement (assets/modules.js): group order, pages moved, hidden or pinned, features turned off
+    const A = App.arrangeSidebar ? App.arrangeSidebar(GROUPS) : { groups: GROUPS.map(g => Object.assign({}, g, { items: g.items.filter(([v]) => App.views[v]), subs: (g.subs || []).map(sb => Object.assign({}, sb, { items: sb.items.filter(([v]) => App.views[v]) })) })), pinned: [] };
+    const top = TOP.filter(([v]) => !App.moduleOn || App.moduleOn(v));
+    let h = `<div class="sb-top-items">${top.map(([v, href, l]) => item(v, href, l)).join('')}</div>`;
+    if (A.pinned.length) h += group('pinned', t('Pinned'), A.pinned.length, groupOpen('pinned', true), A.pinned.map(([v, l]) => item(v, '#/' + v, l, n(v))).join(''));
+    const parts = {};
+    if (!inClass && !(App.sideGroupHidden && App.sideGroupHidden('classes'))) {
       const ids = App.myCourses().filter(id => Courses[id]); const o = groupOpen('classes', true);
       const rows = ids.map(id => { const C = Courses[id]; let ex = null; try { ex = App.nextExamOf(C); } catch (e) {} const n = ex && ex.date ? App.daysBetween(App.todayISO(), ex.date) : null; return `<a class="nav-item sb-class" style="${Life().ccStyle(id)}" href="#/${esc(id)}/dashboard" title="${esc(C.name)}"><i class="sb-dot"></i><span>${esc(C.short)}</span>${n != null && n >= 0 && n <= 14 ? `<b class="sb-exam${n <= 3 ? ' soon' : ''}" title="${esc(ex.name)}">${n === 0 ? esc(t('today')) : esc(t('{1}d', n))}</b>` : ''}</a>`; }).join('');
       // administrators add classes; everyone else asks for one (assets/requests.js)
-      const add = App.canMakeClasses && App.canMakeClasses() ? `<a class="nav-item sb-add" href="#/create">${icon('plus')}<span>${esc(t('Add a class'))}</span></a>` : App.views.request ? `<a class="nav-item sb-add" href="#/request">${icon('path')}<span>${esc(t('Request a class'))}</span></a>` : '';
-      h += group('classes', t('Your classes'), ids.length, o, rows + add);
+      const add = App.canMakeClasses && App.canMakeClasses() ? `<a class="nav-item sb-add" href="#/create">${icon('plus')}<span>${esc(t('Add a class'))}</span></a>` : App.views.request ? `<a class="nav-item sb-add" href="#/request">${icon('plus')}<span>${esc(t('Request a class'))}</span></a>` : '';
+      parts.classes = group('classes', t('Your classes'), ids.length, o, rows + add);
     }
-    GROUPS.forEach(g => {
-      const items = g.items.filter(([v]) => App.views[v]); if (!items.length) return;
-      const has = !inClass && items.some(([v]) => v === r.view); const o = has || groupOpen(g.id, !inClass && g.id !== 'explore');
-      h += group(g.id, t(g.label), items.length, o, items.map(([v, l, ic]) => item(v, '#/' + v, l, ic, v === 'tasks' ? c.tasks : v === 'habits' ? c.habits : 0)).join(''));
+    A.groups.forEach(g => {
+      const items = g.items; const subs = (g.subs || []).filter(sb => sb.items.length);
+      const all = items.concat(...subs.map(sb => sb.items)); if (!all.length) return;
+      const has = !inClass && all.some(([v]) => v === r.view); const o = has || groupOpen(g.id, !inClass && g.id === 'plan');
+      const list = rows => rows.map(([v, l]) => item(v, '#/' + v, l, n(v))).join('');
+      parts[g.id] = group(g.id, t(g.label), all.length, o, list(items) + subs.map(sb => `<div class="sb-sub" role="group" aria-label="${esc(t(sb.label))}"><span class="sb-sub-h" aria-hidden="true">${esc(t(sb.label))}</span>${list(sb.items)}</div>`).join(''));
     });
-    if (!inClass && App.auth && App.auth.user && App.auth.user.mod) h += `<div class="sb-top-items">${item('admin', '#/admin', App.auth.user.admin ? 'Admin panel' : 'Moderation', 'shield')}</div>`;
+    const order = App.sideGroupOrder ? App.sideGroupOrder(['classes'].concat(GROUPS.map(g => g.id))) : ['classes'].concat(GROUPS.map(g => g.id));
+    order.forEach(id => { if (parts[id]) h += parts[id]; });
+    if (App.views.customize) h += `<div class="sb-top-items sb-custom">${item('customize', '#/customize', 'Customize')}</div>`;
+    if (!inClass && App.auth && App.auth.user && App.auth.user.mod) h += `<div class="sb-top-items">${item('admin', '#/admin', App.auth.user.admin ? 'Admin panel' : 'Moderation')}</div>`;
     el.innerHTML = h;
   }
   function group(id, label, n, open, inner) { return `<div class="sb-group" data-g="${id}"><button class="nav-label nav-toggle sb-toggle${open ? ' open' : ''}" type="button" data-sg="${id}" aria-expanded="${open}"><span>${esc(label)}</span><small>${n}</small>${icon('chevron', 12)}</button><div class="nav-group${open ? '' : ' closed'}"><div class="nav-group-in">${inner}</div></div></div>`; }

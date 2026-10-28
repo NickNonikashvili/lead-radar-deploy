@@ -1,12 +1,10 @@
 /* ============================================================
-   Mathub — learning tools with Bo (api/learn.php). Three pages in a class:
+   Mathub — learning tools with Bo (api/learn.php). Two pages in a class:
    - #/<class>/checkwork: a photo of handwritten work on one problem. Bo writes the lines down as they were written,
      the math check finds the first one that does not follow, and Bo says why with a hint, never the finished answer.
    - #/<class>/slides: lecture slides (.pptx or PDF, read in the browser) become study notes and flashcards, kept with
      the account; #/<class>/slides/<id> is one set: the notes, the cards to flip, Word, print and a CSV for Anki or
      Quizlet.
-   - #/<class>/officehours: three questions worth asking at office hours, from their recent mistakes in the class
-     (assets/mistakes.js), with when and where office hours are.
    ============================================================ */
 (function (global) {
   'use strict';
@@ -158,50 +156,7 @@
     });
   }
 
-  /* ---------- Office-hours prep ---------- */
-  const OH_HEAD = () => App.pageHead('Office-hours prep', 'Three questions worth asking at office hours, picked from what you got wrong lately in this class. Bring them, with your attempts.');
-  const OH_KEY = () => 'mathub-officehours-' + cid();
-  function recentMistakes() {
-    const list = (App.mistakesAll ? App.mistakesAll(cid()) : []).slice().sort((a, b) => (b.misses - a.misses) || (b.at - a.at)).slice(0, 20);
-    const secs = (App.D && App.D.SECTIONS) || []; const plainOf = s => { const d = document.createElement('div'); d.innerHTML = String(s || ''); return d.textContent.replace(/\s+/g, ' ').trim(); };
-    return list.map(m => { const qq = m.q || {}; const sec = secs.find(s => s.id === (m.t || qq.topic)); const right = qq.type === 'mc' && Array.isArray(qq.options) ? qq.options[qq.answer] : (qq.answerTex || qq.answer);
-      return { topic: sec ? sec.title : String(m.t || ''), q: plainOf(qq.prompt).slice(0, 400), right: plainOf(right == null ? '' : String(right)).slice(0, 120), misses: m.misses }; }).filter(m => m.q);
-  }
-  function officeView(root) {
-    if (gate(root, OH_HEAD(), () => officeView(root))) return;
-    const co = (App.D && App.D.COURSE) || {}; const when = co.office || co.officeHours || ''; const who = co.instructor || '';
-    const M = recentMistakes(); let saved = null; try { saved = JSON.parse(localStorage.getItem(OH_KEY()) || 'null'); } catch (e) {}
-    root.innerHTML = OH_HEAD() + `<div class="oh-wrap">
-      ${when ? `<div class="callout">${icon('clock', 15)} <span><b>${esc(t('Office hours'))}</b>${who ? ` · ${esc(who)}` : ''}: <span translate="no">${esc(when)}</span></span></div>` : ''}
-      <section class="panel mt-3"><div class="panel-h"><div class="panel-title">${icon('target')} ${esc(t('From your mistakes'))}</div><span class="small muted">${esc(M.length === 1 ? t('1 question you missed') : t('{1} questions you missed', num(M.length)))}</span></div>
-        ${M.length ? `<ul class="oh-m small">${M.slice(0, 5).map(m => `<li>${m.topic ? `<b>${esc(m.topic)}</b> · ` : ''}<span translate="no">${esc(m.q.length > 120 ? m.q.slice(0, 120) + '…' : m.q)}</span></li>`).join('')}</ul>` : `<p class="small muted">${esc(t('No mistakes saved in this class yet. Say what you are stuck on instead, or practice first.'))}</p>`}
-        <div class="field mt-2"><label for="oh-stuck">${esc(t('Anything else you are stuck on?'))} <span class="muted">${esc(t('(optional)'))}</span></label><input class="input" id="oh-stuck" maxlength="600" placeholder="${esc(t('For example: when to use the chain rule'))}"></div>
-        <button type="button" class="btn primary" data-action="oh-go">${icon('bulb', 15)} ${esc(t('Pick my three questions'))}</button></section>
-      <div id="oh-out" class="mt-3" aria-live="polite"></div></div>`;
-    const out = $('#oh-out', root);
-    if (saved && saved.questions) paintOH(out, saved);
-    bind(root, { 'oh-go': async el => {
-      const stuck = $('#oh-stuck', root).value.trim();
-      if (!M.length && !stuck) { toast('Say what you are stuck on first, or practice a little: Bo picks the questions from what went wrong.', 4500); $('#oh-stuck', root).focus(); return; }
-      el.disabled = true; out.innerHTML = `<div class="df-reading" role="status"><div><b>${esc(t('Bo is picking your questions'))}</b><div class="df-reading-bar"><span></span></div></div></div>`;
-      try { const r = await api('learn_officehours', Object.assign({ class: cid(), mistakes: M, stuck }, extra())); try { localStorage.setItem(OH_KEY(), JSON.stringify(r)); } catch (e) {} if (App.current === App.views.officehours) paintOH(out, r); }
-      catch (err) { out.innerHTML = creditsNote(err) || `<div class="callout small">${esc(err.message)}</div>`; }
-      el.disabled = false;
-    } });
-  }
-  function paintOH(out, r) {
-    out.innerHTML = `<section class="panel oh-res"><div class="panel-h"><div class="panel-title">${icon('list')} ${esc(t('Your questions'))}</div>${r.at ? `<span class="small muted">${esc(dateOf(r.at))}</span>` : ''}</div>
-      ${r.opener ? `<p class="oh-open" translate="no">${esc(r.opener)}</p>` : ''}
-      <ol class="oh-qs">${r.questions.map(x => `<li>${x.topic ? `<span class="eyebrow" translate="no">${esc(x.topic)}</span>` : ''}<p class="oh-q" translate="no">${esc(x.q)}</p>${x.why ? `<p class="small muted" translate="no">${esc(x.why)}</p>` : ''}${x.bring ? `<p class="small"><b>${esc(t('Bring'))}</b> <span translate="no">${esc(x.bring)}</span></p>` : ''}</li>`).join('')}</ol>
-      <div class="row gap-sm"><button type="button" class="btn" data-action="oh-copy">${icon('copy', 14)} ${esc(t('Copy'))}</button><button type="button" class="btn ghost" data-action="oh-print">${icon('print', 14)} ${esc(t('Print'))}</button></div></section>`;
-    bind(out, {
-      'oh-copy': async () => { const txt = [r.opener || ''].concat(r.questions.map((x, i) => `${i + 1}. ${x.q}${x.bring ? `\n   ${t('Bring')}: ${x.bring}` : ''}`)).filter(Boolean).join('\n\n'); try { await navigator.clipboard.writeText(txt); toast('Copied'); } catch (e) { toast('Copying is blocked here. Select the questions and copy them instead.', 4000); } },
-      'oh-print': () => global.print()
-    });
-  }
-
   const off = () => { if (App.views.slides._off) { App.views.slides._off(); App.views.slides._off = null; } };
   App.views.checkwork = { title: 'Check my work', render(root) { checkView(root); } };
   App.views.slides = { title: 'Notes from slides', render(root, param) { off(); if (param) setView(root, param); else slidesView(root); }, unmount: off };
-  App.views.officehours = { title: 'Office-hours prep', render(root) { officeView(root); } };
 })(window);

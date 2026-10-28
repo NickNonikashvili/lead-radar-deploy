@@ -72,7 +72,7 @@ const fs = require('fs'); const path = require('path'); const { spawnSync } = re
   check('an unsafe link in a card loses its href', await g.evaluate(() => [...document.querySelectorAll('a')].every(x => !/^\s*javascript:/i.test(x.getAttribute('href') || ''))));
   await go(g, '#/zzp101/settings', 700); await g.selectOption('#s-variant', '2'); await g.waitForTimeout(200);
   check('section variants move the exam date', await g.evaluate(() => window.Courses.zzp101.EXAMS[0].date === '2026-10-01' && window.Courses.zzp101.CALENDAR.every(e => !e[4] || e[4] === '2')));
-  await go(g, '#/zzp101/grades', 700); check('grade calculator rows', (await g.$$('.grade-row')).length === 4);
+  await go(g, '#/zzp101/course', 700); check('the syllabus page shows how the grade is made', (await g.evaluate(() => { const g = [...document.querySelectorAll('#view .panel')].find(x => /^\s*(Grading|How the grade is made)/.test((x.querySelector('.panel-title') || {}).textContent || '')); const tb = g && g.querySelector('tbody'); return tb ? tb.querySelectorAll('tr').length : 0; })) === 4);
   await go(g, '#/resources', 800); check('resources list the class links and drop the unsafe one', await g.evaluate(() => { const it = window.MATHUB_RESOURCES.ITEMS.filter(i => i.g === 'zzp101'); return it.length === 2 && it.every(i => !/javascript/i.test(i.u)); }));
   const [cm, m] = await mk(390, 760); for (const h of ['#/zzp101', '#/zzp101/calendar', '#/zzp101/notes/describe']) { await go(m, h, 1200); check(`no sideways scroll on ${h} at 390px`, await hscroll(m)); } await cm.close();
 

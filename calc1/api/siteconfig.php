@@ -76,7 +76,7 @@ function mh_siteconfig_fields(): array {
     'admin_report_day'   => ['mail', 'Weekly report day', 'select', 'It goes from 8:00 that morning (site time).', ['0', '1', '2', '3', '4', '5', '6']],
     'allowed_domains'    => ['access', 'Who may sign up (email domains)', 'domains', 'One per line. Subdomains are included (student.montana.edu counts as montana.edu).'],
     'extra_allowed_emails' => ['access', 'Also allowed to sign up', 'emails', 'One email per line, for people outside those domains.'],
-    'moderators'         => ['access', 'Moderators', 'emails', 'One email per line. They handle reports, contributions and mock exams.'],
+    'moderators'         => ['access', 'Moderators', 'emails', 'One email per line. They handle reports and flagged posts.'],
     'admins'             => ['access', 'Administrators', 'emails', 'One email per line. Everything, this page included. Your own address stays on the list.'],
     'site_name'          => ['site', 'Site name', 'text', ''],
     'site_url'           => ['site', 'Site address', 'url', 'Used in emails. Leave empty to use the address people open.'],

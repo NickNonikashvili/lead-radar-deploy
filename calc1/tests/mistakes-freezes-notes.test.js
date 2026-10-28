@@ -33,12 +33,6 @@ const T = require('./lib');
   await go(p, '#/', 900); await p.click('#topbar .streak-chip'); await p.waitForTimeout(400); if (!(await p.$('.pop-streak'))) { await p.click('#topbar .streak-chip'); await p.waitForTimeout(400); } const pop = await txt(p, '.pop-streak'); log('  popover:', pop.slice(0, 120), '| frozen cells:', (await p.$$('.pop-streak .sday.frozen')).length); check('popover shows freezes and a frozen day', pop.includes('freeze') && !!(await p.$('.pop-streak .sday.frozen'))); await p.keyboard.press('Escape');
   await p.evaluate(() => { App.setSetting('freezeWeeks', {}); App.setSetting('freezeBank', 0); const wk = App.isoWeek(new Date()); const w = { days: [App.toISO(App.addDays(new Date(), -2)), App.toISO(App.addDays(new Date(), -1))] }; App.setSetting('freezeWeeks', { [wk]: w }); App.noteGoalDay(); }); await p.waitForTimeout(100);
   check('third goal day earns a freeze', (await p.evaluate(() => App.freezeBank())) === 1);
-  // cheat sheet
-  await go(p, '#/calc/cheatsheet', 1200); check('cheat sheet nav + picker', !!(await p.$('.nav-item[data-view="cheatsheet"]')) && (await p.$$('.cs-pick')).length > 20);
-  await p.click('.cs-pick input'); await p.waitForTimeout(200); check('picked line appears on sheet', (await p.$$('#cs-sheet .cs-line')).length === 1 && (await p.evaluate(() => App.store.peek('calc').cheatsheet.items.length)) === 1);
-  await p.click('[data-action="cs-suggest"]'); await p.waitForTimeout(500); check('suggest adds exam formulas', (await p.$$('#cs-sheet .cs-line')).length > 5);
-  await p.click('[data-action="cs-cols"][data-n="3"]'); await p.waitForTimeout(100); check('columns setting', await p.$eval('#cs-sheet', e => e.classList.contains('cols-3')));
-  await p.fill('#cs-notes', 'My own rule $a^2+b^2=c^2$'); await p.waitForTimeout(600); check('own notes on sheet', (await txt(p, '#cs-sheet')).includes('My notes'));
   // my notes + highlights
   await go(p, '#/calc/notes/1.3', 1200); check('my notes box on topic', !!(await p.$('#mynotes #mn-text')) && !!(await p.$('.nav-item[data-view="mynotes"]')));
   await p.fill('#mn-text', 'Remember: the derivative at a point is a limit of secant slopes.'); await p.waitForTimeout(800); check('note saved', (await p.evaluate(() => App.store.peek('calc').mynotes['1.3'] || '')).includes('secant'));

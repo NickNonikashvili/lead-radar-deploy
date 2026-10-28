@@ -441,7 +441,6 @@
     { label: 'Today', items: [['dashboard', 'Dashboard', 'home'], ['calendar', 'Calendar', 'calendar']] },
     { label: 'Learn', items: [['notes', 'Topic notes', 'book'], ['playground', 'Code playground', 'flask'], ['formulas', 'Cheat sheet', 'sigma'], ['flashcards', 'Flashcards', 'cards'], ['textbook', 'Class site & links', 'link']] },
     { label: 'Practice', items: [['practice', 'Quizzer', 'list'], ['exam', 'Exam prep', 'flag'], ['planner', 'Study planner', 'calendar']] },
-    { label: 'Tools', items: [['grades', 'Grade calculator', 'calc'], ['scratchpad', 'Scratchpad', 'pen']] },
     { label: 'Community', items: [['forum', 'Discussions', 'chat']] },
     { label: 'Course', items: [['course', 'Syllabus & policies', 'info'], ['settings', 'Settings', 'sliders']] }
   ];

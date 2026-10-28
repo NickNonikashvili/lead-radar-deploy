@@ -376,7 +376,7 @@ THE SYLLABUS:
     // grading
     const G = P.GRADING = obj(P.GRADING) ? P.GRADING : {}; const catIds = new Set();
     G.categories = arr(G.categories).filter(obj).map((c, i) => { let cid = KEY.test(str(c.id)) ? str(c.id) : slug(c.name, `cat${i + 1}`); while (catIds.has(cid)) cid += '2'; catIds.add(cid); return { id: cid, name: str(c.name) || `Category ${i + 1}`, weight: Number(c.weight) || 0 }; }).filter(c => c.weight > 0);
-    if (!G.categories.length) { G.categories = [{ id: 'course', name: 'Course grade', weight: 100 }]; notes.push('The answer had no grading categories, so the grade calculator uses one overall grade.'); }
+    if (!G.categories.length) { G.categories = [{ id: 'course', name: 'Course grade', weight: 100 }]; notes.push('The answer had no grading categories, so the syllabus page shows one overall grade.'); }
     G.scale = arr(G.scale).filter(obj).map(x => ({ letter: str(x.letter), min: Number(x.min) })).filter(x => x.letter && Number.isFinite(x.min)).sort((a, b) => b.min - a.min);
     if (!G.scale.length) { G.scale = [['A', 90], ['B', 80], ['C', 70], ['D', 60], ['F', 0]].map(([letter, min]) => ({ letter, min })); notes.push('The answer had no letter-grade scale, so A 90, B 80, C 70, D 60 is used.'); }
     if (G.options && !Array.isArray(G.options)) delete G.options;

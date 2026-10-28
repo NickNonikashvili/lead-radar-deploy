@@ -34,20 +34,8 @@ const T = require('./lib');
     await go(p, `#/${id}/exam/exam1`); check(`${id} exam prep`, /Exam prep/.test(await txt(p, '.page-title')) && /Exam 1/.test(await txt(p, '#view')));
     await go(p, `#/${id}/calendar`); check(`${id} calendar shows exams`, /Exam/.test(await txt(p, '#view')));
     await go(p, `#/${id}/course`); check(`${id} syllabus panels`, (await p.$$('#view .panel')).length >= 5);
-    await go(p, `#/${id}/grades`); check(`${id} grade calculator rows`, (await p.$$('.grade-row')).length >= 4);
+    check(`${id} syllabus shows the grading and the letter scale`, (await p.evaluate(() => { const g = [...document.querySelectorAll('#view .panel')].find(x => /^\s*(Grading|How the grade is made)/.test((x.querySelector('.panel-title') || {}).textContent || '')); const tb = g && g.querySelector('tbody'); return tb ? tb.querySelectorAll('tr').length : 0; })) >= 4 && (await p.$$('.grade-scale tbody tr')).length >= 5);
   }
-
-  // ---- KIN 322: the best of six exam-weighting options ----
-  await go(p, '#/kin/grades');
-  const scores = { hw: 90, quizzes: 90, exam1: 50, exam2: 80, exam3: 85, final: 90, labs: 95, labexams: 90 };
-  for (const [k, v] of Object.entries(scores)) await p.fill(`#g-${k}`, String(v));
-  await p.waitForTimeout(200);
-  const gout = await txt(p, '#g-out');
-  check('KIN uses option 6 when the final is strongest', /Option 6/.test(gout) && /90\.8%/.test(gout), gout.slice(0, 160));
-  check('KIN projected grade is A-', await p.evaluate(() => { const g = App.projectedGrade('kin'); return g && g.letter === 'A-' && Math.abs(g.pct - 90.75) < 0.01; }));
-  await p.fill('#g-final', '60'); await p.waitForTimeout(150);
-  const g2 = await txt(p, '#g-out'); check('KIN picks option 2 when Exam 1 and the final are weak', /Option 2/.test(g2) && /83\.0%/.test(g2), g2.slice(0, 160));
-  await p.click('[data-action="clear"]'); await p.waitForTimeout(150);
 
   // ---- PSYX 340: section variants move lecture days and exam dates ----
   await go(p, '#/psyx/settings');
@@ -81,7 +69,7 @@ const T = require('./lib');
 
   // ---- phone width ----
   const [cm, m] = await mk(390, 760); await m.goto(base + '#/'); await m.waitForTimeout(400); await setSettings(m, { courses: ['biob', 'kin', 'psyx'], motion: 'off' });
-  for (const h of ['#/kin/notes/levers', '#/biob/formulas', '#/psyx/calendar', '#/kin/grades']) { await go(m, h, 700); check(`no sideways scroll on ${h} at 390px`, await hscroll(m)); }
+  for (const h of ['#/kin/notes/levers', '#/biob/formulas', '#/psyx/calendar', '#/kin/course']) { await go(m, h, 700); check(`no sideways scroll on ${h} at 390px`, await hscroll(m)); }
   await cm.close(); await c.close();
   await T.finish();
 })();

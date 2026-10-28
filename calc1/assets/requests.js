@@ -45,7 +45,7 @@
   const terms = () => { const d = App.parseISO ? App.parseISO(App.todayISO()) : new Date(); const y = d.getFullYear(), m = d.getMonth(); const seq = m >= 7 ? [['Fall', y], ['Spring', y + 1], ['Summer', y + 1]] : m >= 5 ? [['Summer', y], ['Fall', y], ['Spring', y + 1]] : [['Spring', y], ['Summer', y], ['Fall', y]]; return seq.map(([s, yy]) => `${s} ${yy}`); };
 
   App.views.request = {
-    title: 'Request a class', blurb: 'Don’t see your class? Send its code and syllabus and we will build it: notes, practice, the calendar and a grade calculator.',
+    title: 'Request a class', blurb: 'Don’t see your class? Send its code and syllabus and we will build it: notes, practice and the calendar.',
     render(root, param, query, standalone) {
       const guest = App.guest(); const pre = normCode(query.code || param || '') || '';
       const head = standalone ? `<div class="landing-wrap"><header class="landing-top"><div><div class="eyebrow">Mathub</div><h1 class="landing-title"><span class="logo-mark">${App.logoSvg(44)}</span>Request a class</h1><p class="muted">${this.blurb}</p></div><div class="row gap-sm"><span id="landing-account"></span><a class="btn" href="#/">${icon('left', 14)} All classes</a></div></header>` : App.pageHead('Request a class', this.blurb);

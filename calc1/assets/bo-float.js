@@ -158,7 +158,7 @@
   }
 
   /* ---------- the floating button ---------- */
-  function hidden() { const r = where(); return settings().boFloat === false || HIDE_ON.includes(r.view) || !!$('#bo-talk'); }   // during the tour he stays under its dim layer (one step points at him)
+  function hidden() { const r = where(); return settings().boFloat === false || (App.moduleOn && (!App.moduleOn('bofloat') || !App.moduleOn('tutor'))) || HIDE_ON.includes(r.view) || !!$('#bo-talk'); }   // during the tour he stays under its dim layer (one step points at him)
   function build() {
     if (F.fab) return;
     const fab = F.fab = document.createElement('button'); fab.type = 'button'; fab.id = 'bo-fab'; fab.className = 'bf-fab';

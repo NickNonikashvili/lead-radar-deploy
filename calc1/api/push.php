@@ -79,8 +79,7 @@ function mh_push_tick(int $max): int {
       $it = mh_reminder_items($u, $events, $tomorrow); $uid = (int)$u['id'];
       if ($it['due']) { $titles = array_map(fn($e) => $e['title'], $it['due']); mh_push_queue($uid, 'Due tomorrow: ' . implode(', ', array_slice($titles, 0, 2)) . (count($titles) > 2 ? ' +' . (count($titles) - 2) . ' more' : ''), implode(' · ', array_map(fn($e) => ($it['names'][$e['course']] ?? $e['course']) . ': ' . $e['title'] . ($e['time'] ? ' ' . $e['time'] : ''), array_slice($it['due'], 0, 4))), '#/today', 'due'); }
       if ($it['atRisk']) mh_push_queue($uid, "Your {$it['streak']}-day streak ends at midnight", 'One quiz question or one flashcard keeps it alive. Open Today and take two minutes.', '#/today', 'streak');
-      foreach ($it['meets'] as $m) mh_push_queue($uid, 'Study session: ' . $m['title'], $m['place'] . ' · ' . $m['when'], '#/meet', 'meet');
-      if ($it['due'] || $it['atRisk'] || $it['meets']) { if (mh_push_user($uid) > 0) $sent++; }
+      if ($it['due'] || $it['atRisk']) { if (mh_push_user($uid) > 0) $sent++; }
     } catch (Throwable $e) {}
   }
   return $sent;

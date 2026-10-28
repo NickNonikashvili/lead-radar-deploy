@@ -75,3 +75,7 @@ Download as Excel (.xlsx)
 Docs opens Word files (.docx) and text files. For an old .doc file, save it as .docx in Word first.
 Slides opens PowerPoint files (.pptx). For an old .ppt file, save it as .pptx in PowerPoint first.
 Sheets opens Excel files (.xlsx) and CSV files. For an old .xls file, save it as .xlsx in Excel first.
+# Customize (assets/modules.js): a feature's name in a sentence, and how many in a group are on
+{1} is turned off
+{1} is on again
+{1} of {2} on

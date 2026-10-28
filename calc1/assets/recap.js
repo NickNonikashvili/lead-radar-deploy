@@ -37,7 +37,7 @@
     if (s.daysActive >= 6) return ['Relentless.', `${s.daysActive} days out of 7. This is what a top grade looks like from the inside.`];
     if (s.xp >= s.goal) return ['Goal crushed.', `${s.xp} XP against a weekly goal of ${s.goal}. Raise the daily goal in Settings if that felt easy.`];
     if (s.daysActive >= 4) return ['Consistent.', `${s.daysActive} study days. Consistency beats intensity, and you had it.`];
-    if (s.acc !== null && s.acc >= 85 && s.answered >= 20) return ['Sharp.', `${s.acc}% on ${s.answered} questions. Time to try harder topics or a Blitz.`];
+    if (s.acc !== null && s.acc >= 85 && s.answered >= 20) return ['Sharp.', `${s.acc}% on ${s.answered} questions. Time to try harder topics or a practice exam.`];
     if (s.focus >= 120) return ['Deep work.', `${s.focus} focus minutes. That is real, logged time, not vibes.`];
     return ['A start.', `${s.daysActive} day${s.daysActive === 1 ? '' : 's'} this week. Two more next week would double it.`];
   }

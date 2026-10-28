@@ -128,7 +128,7 @@
   const NAV = [
     { label: 'Today', items: [['dashboard', 'Dashboard', 'home'], ['calendar', 'Calendar', 'calendar']] },
     { label: 'Learn', items: [['readings', 'Readings', 'book'], ['drafts', 'Draft feedback', 'pen'], ['phonetics', 'Phonetics lab', 'mic']] },
-    { label: 'Course', items: [['course', 'Syllabus & policies', 'info'], ['grades', 'Grade calculator', 'calc'], ['settings', 'Settings', 'sliders']] }
+    { label: 'Course', items: [['course', 'Syllabus & policies', 'info'], ['settings', 'Settings', 'sliders']] }
   ];
 
   /* ---------- readings, handed out for Project 1 ---------- */

@@ -166,8 +166,8 @@
   function openSheet(focus) {
     if ($('#class-sheet')) return; const id = curClass(); const C = id ? Courses[id] : null; const mine = myIds();
     const all = App.COURSE_ORDER.filter(x => Courses[x] && !Courses[x].preview && !local.has(x));
-    const tools = C && C.NAV && App.groupNav ? App.groupNav(C.NAV).flatMap(g => g.items) : [];
-    const more = [['#/today', 'Today', 'flag'], ['#/focus', 'Focus room', 'clock'], ['#/resources', 'Resources', 'book'], ['#/guides', 'Study guides', 'bulb'], ['#/tools', 'Tools', 'calc'], ['#/gpa', 'GPA', 'chart'], ['#/leagues', 'Leagues', 'trophy'], ['#/badges', 'Badges', 'award']];
+    const tools = C && C.NAV && App.groupNav ? App.groupNav(C.NAV, C.id).flatMap(g => g.items) : [];
+    const more = [['#/today', 'Today', 'flag'], ['#/focus', 'Focus room', 'clock'], ['#/resources', 'Resources', 'book'], ['#/guides', 'Study guides', 'bulb'], ['#/tools', 'Tools', 'calc'], ['#/gpa', 'GPA', 'chart'], ['#/leagues', 'Leagues', 'trophy']];
     const el = document.createElement('div'); el.className = 'modal-backdrop sheet-backdrop'; el.id = 'class-sheet';
     el.innerHTML = `<div class="sheet" role="dialog" aria-modal="true" aria-label="Your classes"><div class="sheet-grab" aria-hidden="true"></div>
       <div class="sheet-h"><h2>Your classes</h2><button class="icon-btn" data-action="close" aria-label="Close">${icon('x', 18)}</button></div>
@@ -235,7 +235,7 @@
   /* ---------- tab bar ---------- */
   function paintTabs(r) {
     const bar = $('#tabbar'); if (!bar) return; const id = (r.course && Courses[r.course]) ? r.course : curClass();
-    const tabs = [['#/', 'Learn', 'home', !r.course && r.view === 'home'], [id ? practiceHref(id) : '#/', 'Practice', 'list', !!r.course && ['practice', 'flashcards', 'lesson', 'blitz', 'exam'].includes(r.view)], ['#/tutor' + (id ? '/' + id : ''), 'Bo', 'bo', r.view === 'tutor'], ['#/today', 'Today', 'flag', r.view === 'today'], ['#/forum', 'Discuss', 'chat', r.view === 'forum'], ['#/settings', 'Me', 'user', r.view === 'settings']];
+    const tabs = [['#/', 'Learn', 'home', !r.course && r.view === 'home'], [id ? practiceHref(id) : '#/', 'Practice', 'list', !!r.course && ['practice', 'flashcards', 'lesson', 'exam'].includes(r.view)], ['#/tutor' + (id ? '/' + id : ''), 'Bo', 'bo', r.view === 'tutor'], ['#/today', 'Today', 'flag', r.view === 'today'], ['#/forum', 'Discuss', 'chat', r.view === 'forum'], ['#/settings', 'Me', 'user', r.view === 'settings']];
     bar.className = 'app-tabs'; bar.setAttribute('aria-label', 'Main');
     // Bo, the AI tutor, sits in the middle as himself
     bar.innerHTML = tabs.map(([h, l, ic, a]) => `<a class="tab-item${ic === 'bo' ? ' tab-bo' : ''}${a ? ' active' : ''}" href="${h}"${a ? ' aria-current="page"' : ''}${ic === 'bo' ? ' aria-label="Ask Bo, your AI tutor"' : ''}><span class="tab-ic">${ic === 'bo' ? (App.bobcatSvg ? App.bobcatSvg(30) : '') : icon(ic, 26)}</span><span>${l}</span></a>`).join('');

@@ -5,14 +5,10 @@ const T = require('./lib');
 
   const [c, p] = await mk(); await go(p, '#/'); await login(p, 'alice.a@montana.edu'); await p.reload(); await p.waitForTimeout(1500); if (await p.$('.celebrate')) await p.keyboard.press('Escape');
   await p.evaluate(() => { const s = App.settings(); delete s.gpa; s.courses = ['calc', 'physics', 'precalc', 'writ']; localStorage.setItem('studyhub-settings', JSON.stringify(s)); });
-  // grade calculator scores for calc so a projection exists
-  await go(p, '#/calc/grades'); await p.waitForTimeout(400); log('grades page GPA button:', await txt(p, '.page-actions a[href="#/calc/gpa"]'));
-  await p.fill('#g-webwork', '95'); await p.fill('#g-labs', '88'); await p.waitForTimeout(200); log('calc projected:', await txt(p, '#g-out .grade-letter'), JSON.stringify(await p.evaluate(() => App.projectedGrade('calc'))), '| physics projected:', await p.evaluate(() => App.projectedGrade('physics')));
   // in-course view
   await go(p, '#/calc/gpa'); await p.waitForTimeout(400);
   log('nav item:', await txt(p, '.nav-item[data-view="gpa"]'), '| title:', await txt(p, '.page-title'));
   log('rows:', await p.$$eval('.gpa-row', rs => rs.map(r => r.querySelector('[data-f=name]').value.split(' · ')[0] + ':' + r.querySelector('[data-f=credits]').value + ':' + (r.querySelector('[data-f=grade]').value || '-')).join(' | ')));
-  log('projection line:', await txt(p, '.gpa-row:nth-child(1) .gpa-proj'), '| physics line:', (await txt(p, '.gpa-row:nth-child(2) .gpa-proj')).slice(0, 60));
   log('semester (calc prefilled):', await txt(p, '#gpa-sem'), '| side:', await txt(p, '#gpa-sem-side'));
   await setGrade(p, 1, 'A'); await setGrade(p, 2, 'B+'); await setGrade(p, 3, 'P'); await setGrade(p, 4, 'A-');
   log('A,B+,P,A- ->', await txt(p, '#gpa-sem'), '|', await txt(p, '#gpa-sem-side'), '| points col:', await p.$$eval('[data-pts]', e => e.map(x => x.textContent).join(',')));
@@ -28,7 +24,6 @@ const T = require('./lib');
   await p.fill('.gpa-row:nth-child(5) [data-f="name"]', 'CHMY 141'); await p.fill('.gpa-row:nth-child(5) [data-f="credits"]', '4'); await setGrade(p, 5, 'B'); log('after add:', await txt(p, '#gpa-sem-side'));
   await p.click('.gpa-row:nth-child(2) [data-action="gpa-del"]'); await p.waitForTimeout(150); log('after delete:', (await p.$$('.gpa-row')).length, await p.$$eval('.gpa-row', rs => rs.map(r => r.querySelector('[data-f=name]').value.split(' · ')[0]).join(',')));
   await p.reload(); await p.waitForTimeout(1200); log('persisted after reload:', (await p.$$('.gpa-row')).length, '| gpa:', await txt(p, '.gpa-big'), '| prior:', await p.$eval('#gpa-prior', e => e.value), '| goal:', await p.$eval('#gpa-goal', e => e.value));
-  await p.click('.gpa-row:nth-child(1) [data-action="gpa-use"]').catch(() => {}); await p.waitForTimeout(150); log('use projected:', await p.$eval('.gpa-row:nth-child(1) select', e => e.value), '| proj line now:', await txt(p, '.gpa-row:nth-child(1) .gpa-proj'));
   await p.click('[data-action="gpa-reset"]'); await p.waitForTimeout(200); log('reset:', await p.$$eval('.gpa-row', rs => rs.map(r => r.querySelector('[data-f=name]').value.split(' · ')[0] + ':' + r.querySelector('[data-f=credits]').value + ':' + (r.querySelector('[data-f=grade]').value || '-')).join(' | ')));
   // standalone
   await go(p, '#/gpa'); await p.waitForTimeout(500); log('standalone title:', await txt(p, '.landing-title'), '| account painted:', !!(await p.$('#topbar-account .acct-btn')), '| landing class:', await p.$eval('.app', e => e.classList.contains('landing')), '| reset btn:', !!(await p.$('[data-action="gpa-reset"]')));

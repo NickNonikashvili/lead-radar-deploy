@@ -12,7 +12,8 @@
   const LOCAL_KEY = 'mathub-local-user';
   const LAST_KEY = 'mathub-last-user';
   const META_KEY = 'studyhub-meta';
-  const HARD = new Set(['grades', 'scratchpad', 'grapher', 'labs', 'motion', 'solvers', 'explorer', 'unitcircle']);
+  const HARD = new Set(['grapher', 'labs', 'motion', 'solvers', 'explorer', 'unitcircle']);
+  const vi = v => (App.viewIcon ? App.viewIcon(v) : 'file');   // each page's one icon (App.VIEW_ICON in app.js)
   const LIMITS = { questions: 3, cards: 5, sections: 3, formulaGroups: 2 };
 
   const Auth = { user: null, mode: 'checking', ready: false, health: null, limits: LIMITS, lastPull: {}, pushing: {}, timers: {}, listeners: [] };
@@ -130,14 +131,14 @@
       bind(cal, { 'ics-copy': async () => { try { await navigator.clipboard.writeText(url); toast('Calendar link copied. Paste it into your calendar app.', 3000); } catch (e) { $('#acct-ics', cal).select(); } }, 'ics-reset': async () => { if (!confirm('Make a new link? Calendars using the old one stop updating.')) return; await call('ics_token_reset', {}); Auth.growthInit(panel); toast('New calendar link made.'); } });
     } catch (e) { cal.innerHTML = `<div class="small muted">${esc(e.message)}</div>`; } }
     if (inv) { try { const r = await call('invite_mine'); const link = `${base}#/join?ref=${r.code}`; const text = `Study with me on Mathub: free notes, endless practice and a class board for our Montana State classes.${r.credits ? ` Sign up through my link and we both get ${r.credits} credits for Bo, the tutor who helps you on a whiteboard.` : ''} ${link}`;
-      const ip = $('#acct-invite-p', panel); if (ip && r.credits) ip.textContent = `Share your link. When a classmate signs up through it, you both get ${r.credits} credits for Bo, and a badge.`;
+      const ip = $('#acct-invite-p', panel); if (ip && r.credits) ip.textContent = `Share your link. When a classmate signs up through it, you both get ${r.credits} credits for Bo.`;
       inv.innerHTML = `<div class="invite-card"><div class="row gap-sm" style="flex-wrap:wrap"><input class="input mono small" id="acct-invlink" value="${esc(link)}" readonly aria-label="Invite link" style="flex:1 1 240px"><button class="btn sm primary" data-action="inv-share">${icon('external', 13)} ${navigator.share ? 'Share' : 'Copy'}</button></div><div class="small muted mt-1">${r.joined ? `${r.joined} classmate${r.joined === 1 ? '' : 's'} joined through your link.` : 'Nobody has used it yet. Send it to your study group.'}</div></div>`;
       bind(inv, { 'inv-share': async () => { try { if (navigator.share) await navigator.share({ title: 'Mathub', text, url: link }); else { await navigator.clipboard.writeText(text); toast('Invite copied. Paste it in your group chat.', 3000); } } catch (e) {} } });
     } catch (e) { inv.innerHTML = `<div class="small muted">${esc(e.message)}</div>`; } }
   };
   App.inviteBanner = function () {
     let ref = '', name = '', min = 0; try { ref = localStorage.getItem('mathub-ref') || ''; name = sessionStorage.getItem('mathub-ref-name') || ''; min = +sessionStorage.getItem('mathub-ref-min') || 0; } catch (e) {}
-    if (!ref || Auth.user) return ''; return `<div class="callout small row between" style="gap:10px;margin-bottom:12px"><span>${icon('users', 14)} ${name ? `<b>${esc(name)}</b> <span>invited you.</span>` : '<span>You were invited by a classmate.</span>'} <span>${min ? `Sign up with your montana.edu email and you both get ${min} credits for Bo.` : 'Sign up with your montana.edu email and you both earn a badge.'}</span></span><button class="btn sm primary" data-action="auth-signup">Sign up</button></div>`;
+    if (!ref || Auth.user) return ''; return `<div class="callout small row between" style="gap:10px;margin-bottom:12px"><span>${icon('users', 14)} ${name ? `<b>${esc(name)}</b> <span>invited you.</span>` : '<span>You were invited by a classmate.</span>'} <span>${min ? `Sign up with your montana.edu email and you both get ${min} credits for Bo.` : 'Sign up with your montana.edu email and study together on the class board.'}</span></span><button class="btn sm primary" data-action="auth-signup">Sign up</button></div>`;
   };
   Auth.pushInit = async function (panel) {
     const box = $('#acct-push', panel), note = $('#acct-push-note', panel), test = $('[data-action="push-test"]', panel); if (!box) return;
@@ -161,7 +162,7 @@
     try {
       const r = await call('data', { course, data, updated, force: !!force }, 'PUT');
       if (r.stale) { await Auth.pullCourse(course, true); } else setMeta(course, { synced: r.updated });
-      setSyncState('ok'); if (App.social) App.social.refreshBadges();
+      setSyncState('ok');
     } catch (e) { setSyncState(e.status === 401 ? 'out' : 'error'); if (e.status === 401) { Auth.user = null; changed(); } throw e; }
   };
   Auth.pullCourse = async function (course, quiet) {
@@ -172,7 +173,7 @@
     applyServer(course, r.data, r.updated);
   };
   /* ---------- preferences that follow the account (device-local settings such as the GPA calculator, sounds, goal, theme) ---------- */
-  const PREF_KEYS = ['gpa', 'ambient', 'dailyGoal', 'theme', 'liveBg', 'sound', 'phonRate', 'phonVoice_uk', 'phonVoice_us', 'readerVoice', 'readerScroll', 'navOpen', 'seenChangelog', 'todayPlan', 'lastVisit', 'challengeDone', 'lastLessonDay', 'pushOn', 'savedResources', 'guidesRead', 'skin', 'motion', 'geek', 'tourDone', 'recapSeen', 'focusLog', 'focusGoal', 'freezeBank', 'freezeUsed', 'freezeWeeks', 'focusPublic', 'planningEmail', 'lang', 'homeHide', 'tourLayout'];
+  const PREF_KEYS = ['gpa', 'ambient', 'dailyGoal', 'theme', 'liveBg', 'sound', 'phonRate', 'phonVoice_uk', 'phonVoice_us', 'readerVoice', 'readerScroll', 'navOpen', 'seenChangelog', 'todayPlan', 'lastVisit', 'challengeDone', 'lastLessonDay', 'pushOn', 'savedResources', 'guidesRead', 'skin', 'motion', 'geek', 'tourDone', 'recapSeen', 'focusLog', 'focusGoal', 'freezeBank', 'freezeUsed', 'freezeWeeks', 'focusPublic', 'planningEmail', 'lang', 'homeHide', 'tourLayout', 'forumPosted', 'modules', 'navLayout', 'classMenu', 'look', 'startPage', 'customizeTab'];
   function applyPrefs(prefs, updated) { if (!prefs || typeof prefs !== 'object') return; const s = App.settings(); PREF_KEYS.forEach(k => { if (prefs[k] !== undefined) s[k] = prefs[k]; }); s.prefsUpdated = updated; writeJSON('studyhub-settings', s); if (App.applyTheme) App.applyTheme(); if (prefs.lang && prefs.lang !== App.lang && global.MathubI18n && MathubI18n.codes.includes(prefs.lang)) location.reload(); }   // the language picked on another device
   Auth.prefsPush = function () { if (!Auth.user || Auth.mode !== 'server' || Auth.unreachable) return; clearTimeout(Auth.prefsTimer); Auth.prefsTimer = setTimeout(async () => { const s = App.settings(); const prefs = {}; PREF_KEYS.forEach(k => { if (s[k] !== undefined) prefs[k] = s[k]; }); const updated = Date.now(); s.prefsUpdated = updated; writeJSON('studyhub-settings', s); try { const r = await call('prefs', { prefs, updated }, 'PUT'); if (r.stale) applyPrefs(r.prefs, r.updated); } catch (e) {} }, 2500); };
   Auth.prefsPull = async function () { if (!Auth.user || Auth.mode !== 'server') return; try { const r = await call('prefs'); const local = App.settings().prefsUpdated || 0; if ((r.updated || 0) > local) applyPrefs(r.prefs, r.updated); else if (local > (r.updated || 0)) Auth.prefsPush(); } catch (e) {} };
@@ -227,7 +228,7 @@
     App.store.replace(course, merged); const now = Date.now(); setMeta(course, { updated: now, synced: updated });
     Auth.pushCourse(course, true).catch(() => {}); rerenderIfSafe(course);
   }
-  function rerenderIfSafe(course) { if (App.D && App.D.id === course && App.current && App.current !== App.views.scratchpad && !(App.views.practice.hasSession && App.views.practice.hasSession())) { try { App.rerender(); } catch {} } }
+  function rerenderIfSafe(course) { if (App.D && App.D.id === course && App.current && !(App.views.practice.hasSession && App.views.practice.hasSession())) { try { App.rerender(); } catch {} } }
   function setSyncState(state) { Auth.sync = state; const el = $('#acct-sync'); if (el) el.innerHTML = syncLabel(); }
   const syncLabel = () => Auth.mode !== 'server' ? '<span class="muted">local only</span>' : Auth.unreachable ? '<span style="color:var(--warn)">offline · will sync</span>' : Auth.sync === 'saving' ? 'saving…' : Auth.sync === 'error' ? '<span style="color:var(--bad)">not synced</span>' : 'synced';
 
@@ -257,25 +258,18 @@
     }
     const u = Auth.user; const name = u.name || u.email.split('@')[0]; const initial = name.trim()[0].toUpperCase();
     el.innerHTML = `<span class="acct-menu"><button class="acct-btn" data-action="acct-toggle" aria-haspopup="true" aria-expanded="false" title="Account menu"><span class="avatar sm">${esc(initial)}</span><span class="acct-btn-name">${esc(name)}</span>${icon('chevron', 12)}</button></span>`;
+    // your account and nothing else: the pages themselves live in the sidebar (assets/shell.js)
     bind(el, { 'acct-toggle': btn => {
       const unread = u.unread || 0;
       App.popover(btn, `<div class="acct-dd-head"><div class="acct-name">${esc(name)}</div><div class="acct-sub mono">${esc(u.email)}</div>${u.role || u.admin || u.mod ? `<div class="row gap-sm mt-1">${u.role ? `<span class="chip staff">${esc(u.role)}</span>` : ''}${u.admin ? '<span class="chip accent">administrator</span>' : u.mod ? '<span class="chip accent">moderator</span>' : ''}</div>` : ''}</div>
-        <a class="acct-dd-item" href="#/plan">${icon('gem', 15)}<span>Your plan</span>${App.subscription && App.subscription.plan() && App.plans ? `<b class="pill plan-pill">${esc(App.plans[App.subscription.plan()].short)}</b>` : ''}</a>
-        <a class="acct-dd-item" href="#/usage">${icon('gem', 15)}<span>Usage &amp; credits</span></a>
-        <a class="acct-dd-item" href="#/today">${icon('flag', 15)}<span>Today</span></a>
-        <a class="acct-dd-item" href="#/focus">${icon('clock', 15)}<span>Focus room</span></a>
-        <a class="acct-dd-item" href="#/recap">${icon('zap', 15)}<span>Your week</span></a>
-        <a class="acct-dd-item" href="#/sheet">${icon('shield', 15)}<span>Character sheet</span></a>
-        <a class="acct-dd-item" href="#/resources">${icon('link', 15)}<span>Resources & guides</span></a>
-        <a class="acct-dd-item" href="#/tools">${icon('sliders', 15)}<span>Tools</span></a>
-        <a class="acct-dd-item" href="${App.settingsLink ? App.settingsLink() : '#/settings'}">${icon('gear', 15)}<span>Account settings</span></a>
-        <a class="acct-dd-item" href="#/badges">${icon('award', 15)}<span>Your badges</span></a>
-        <a class="acct-dd-item" href="#/people">${icon('users', 15)}<span>People</span></a>
-        <a class="acct-dd-item" href="#/gpa">${icon('calc', 15)}<span>GPA calculator</span></a>
-        <a class="acct-dd-item" href="#/whatsnew">${icon('zap', 15)}<span>What's new</span>${App.changelogUnseen && App.changelogUnseen() ? '<i class="menu-dot"></i>' : ''}</a>
-        ${App.installAvailable && App.installAvailable() ? `<button class="acct-dd-item" data-action="install-app" data-close>${icon('download', 15)}<span>Install the app</span></button>` : ''}
-        ${Auth.mode === 'server' ? `<a class="acct-dd-item" href="${App.inboxLink ? App.inboxLink() : '#/forum/inbox'}">${icon('bell', 15)}<span>Inbox</span><b class="pill inbox-pill"${unread ? '' : ' hidden'}>${unread > 99 ? '99+' : unread}</b></a>` : ''}
-        ${u.mod ? `<a class="acct-dd-item" href="#/admin">${icon('shield', 15)}<span>${u.admin ? 'Admin panel' : 'Moderation'}</span></a>` : ''}
+        <a class="acct-dd-item" href="#/plan">${icon(vi('plan'), 15)}<span>Your plan</span>${App.subscription && App.subscription.plan() && App.plans ? `<b class="pill plan-pill">${esc(App.plans[App.subscription.plan()].short)}</b>` : ''}</a>
+        <a class="acct-dd-item" href="#/usage">${icon(vi('usage'), 15)}<span>Usage &amp; credits</span></a>
+        ${Auth.mode === 'server' ? `<a class="acct-dd-item" href="${App.inboxLink ? App.inboxLink() : '#/forum/inbox'}">${icon(vi('inbox'), 15)}<span>Inbox</span><b class="pill inbox-pill"${unread ? '' : ' hidden'}>${unread > 99 ? '99+' : unread}</b></a>` : ''}
+        <a class="acct-dd-item" href="${App.settingsLink ? App.settingsLink() : '#/settings'}">${icon(vi('settings'), 15)}<span>Account settings</span></a>
+        <a class="acct-dd-item" href="#/customize">${icon(vi('customize'), 15)}<span>Customize</span></a>
+        <a class="acct-dd-item" href="#/whatsnew">${icon(vi('whatsnew'), 15)}<span>What's new</span>${App.changelogUnseen && App.changelogUnseen() ? '<i class="menu-dot"></i>' : ''}</a>
+        ${App.installAvailable && App.installAvailable() ? `<button class="acct-dd-item" data-action="install-app" data-close>${icon(vi('install'), 15)}<span>Install the app</span></button>` : ''}
+        ${u.mod ? `<a class="acct-dd-item" href="#/admin">${icon(vi('admin'), 15)}<span>${u.admin ? 'Admin panel' : 'Moderation'}</span></a>` : ''}
         <div class="acct-dd-sep"></div>
         <button class="acct-dd-item" data-action="landing-logout" data-close>${icon('logout', 15)}<span>Log out</span></button>`,
         { 'landing-logout': () => { App.closePopover(); Auth.logout(); }, 'install-app': () => { App.closePopover(); if (App.installApp) App.installApp(); } }, { cls: 'pop-account' });
@@ -384,14 +378,11 @@
   Auth.settingsPanel = function (root) {
     const u = Auth.user; const server = Auth.mode === 'server'; let html;
     if (u) {
-      const name = u.name || u.email.split('@')[0]; const initial = name.trim()[0].toUpperCase(); const S = App.social;
-      const badgeLine = S && S.badges ? `${S.badges.badges.length} of ${S.badges.catalog.length} earned` : server ? 'See what you have earned' : 'Needs the account server';
+      const name = u.name || u.email.split('@')[0]; const initial = name.trim()[0].toUpperCase();
       html = `<div class="panel acct-panel">
         <div class="acct-hero"><div class="avatar big">${esc(initial)}</div><div class="acct-hero-body"><h2 class="acct-hero-name">${esc(name)}</h2><div class="mono small muted">${esc(u.email)}</div><div class="row gap-sm mt-1" style="flex-wrap:wrap">${u.role ? `<span class="chip staff">${esc(u.role)}</span>` : ''}${u.admin ? '<span class="chip accent">administrator</span>' : u.mod ? '<span class="chip accent">moderator</span>' : ''}<span class="chip ${server ? (Auth.unreachable ? 'warn' : 'good') : 'warn'}">${server ? (Auth.unreachable ? 'offline · will sync' : 'synced across devices') : 'local browser only'}</span>${u.created ? `<span class="chip">member since ${esc(App.fmtDate(App.toISO(new Date(u.created * 1000))))}</span>` : ''}</div></div></div>
         <div class="link-tiles">
-          <a class="link-tile gold" href="#/badges"><span class="tile-ic">${icon('award', 20)}</span><span class="tile-body"><b>Your badges</b><small id="acct-badge-count">${badgeLine}</small></span>${icon('right', 14)}</a>
-          <a class="link-tile" href="#/people"><span class="tile-ic">${icon('users', 20)}</span><span class="tile-body"><b>People</b><small>Classmates and their badges</small></span>${icon('right', 14)}</a>
-          <a class="link-tile" href="#/gpa"><span class="tile-ic">${icon('calc', 20)}</span><span class="tile-body"><b>GPA calculator</b><small>Semester, cumulative and goals</small></span>${icon('right', 14)}</a>
+          <a class="link-tile gold" href="#/customize"><span class="tile-ic">${icon(vi('customize'), 20)}</span><span class="tile-body"><b>Customize Mathub</b><small>Turn features on or off, arrange the menus, change the look</small></span>${icon('right', 14)}</a>
           ${server ? `<a class="link-tile" href="${App.inboxLink ? App.inboxLink() : '#/forum/inbox'}"><span class="tile-ic">${icon('bell', 20)}</span><span class="tile-body"><b>Inbox</b><small>${u.unread ? `${u.unread} unread ${u.unread === 1 ? 'reply' : 'replies'}` : 'Replies to your posts'}</small></span>${icon('right', 14)}</a>` : ''}
           ${u.mod ? `<a class="link-tile" href="#/admin"><span class="tile-ic">${icon('shield', 20)}</span><span class="tile-body"><b>${u.admin ? 'Admin panel' : 'Moderation'}</b><small>Members, reports and site settings</small></span>${icon('right', 14)}</a>` : ''}
         </div>
@@ -408,28 +399,27 @@
             <label class="check"><input type="checkbox" id="acct-planning" ${u.planning_email ? 'checked' : ''}><span>Sunday planning email <span class="muted small">(4 pm: everything due next week, your week in numbers, one suggested focus block)</span></span></label>
             <label class="check"><input type="checkbox" id="acct-focuspub" ${u.focus_public === false ? '' : 'checked'}><span>Show me in Focus together <span class="muted small">(others in the focus room see your name and task while your timer runs)</span></span></label></section>
           <section><div class="eyebrow mb-1">Calendar subscription</div><p class="small muted mb-1">Every exam and deadline of your classes in Google Calendar, Apple Calendar or Outlook, updated automatically. Keep the link private; anyone with it can see your class schedule.</p><div id="acct-cal"><div class="small muted">Loading…</div></div></section>
-          <section><div class="eyebrow mb-1">Invite a classmate</div><p class="small muted mb-1" id="acct-invite-p">Share your link. When a classmate signs up through it you both earn a badge.</p><div id="acct-invite"><div class="small muted">Loading…</div></div></section>` : ''}
+          <section><div class="eyebrow mb-1">Invite a classmate</div><p class="small muted mb-1" id="acct-invite-p">Share your link. When a classmate signs up through it you both get credits for Bo.</p><div id="acct-invite"><div class="small muted">Loading…</div></div></section>` : ''}
           <section><div class="eyebrow mb-1">Notifications on this device</div><label class="check"><input type="checkbox" id="acct-push" disabled><span>Push notifications <span class="muted small">(the evening before something is due, and when a streak is at risk; on iPhone this needs the app added to the home screen)</span></span></label><div class="row gap-sm mt-1"><button class="btn xs" data-action="push-test" disabled>Send a test</button><span class="small muted" id="acct-push-note">Checking…</span></div></section>
           <section><div class="eyebrow mb-1">Privacy</div>
             <label class="check"><input type="checkbox" id="acct-lb" ${u.show_on_leaderboard === false ? '' : 'checked'}><span>Show my name on leaderboards, helper lists and the People page <span class="muted small">(otherwise you appear as “Anonymous student”)</span></span></label>
             ${server ? `<div class="row gap-sm mt-1" style="flex-wrap:wrap"><button class="btn sm" data-action="data-export">${icon('download', 13)} Download my data</button><span class="small muted">Everything stored about your account, as one file.</span></div>` : ''}</section>
           ${server ? `<section><div class="eyebrow mb-1">Signed-in devices</div><div id="acct-devices"><div class="small muted">Loading…</div></div></section>
-          <section><div class="eyebrow mb-1">Blocked members</div><p class="small muted mb-1">You do not see posts, comments, study sessions or notifications from members you block. To block someone, use Block under one of their posts or comments.</p><div id="acct-blocks"><div class="small muted">Loading…</div></div></section>` : ''}` : ''}
+          <section><div class="eyebrow mb-1">Blocked members</div><p class="small muted mb-1">You do not see posts, comments or notifications from members you block. To block someone, use Block under one of their posts or comments.</p><div id="acct-blocks"><div class="small muted">Loading…</div></div></section>` : ''}` : ''}
         </div>
         <div class="divider"></div>
         <div class="row gap-sm" style="flex-wrap:wrap">${server ? `<button class="btn sm" data-action="sync-now">${icon('rotate', 13)} Sync now</button><button class="btn sm" data-action="change-pass">${icon('lock', 13)} Change password</button>` : ''}<button class="btn sm" data-action="logout">${icon('logout', 13)} Log out</button><span style="flex:1"></span><button class="btn sm danger ghost" data-action="delete-acct">${icon('trash', 13)} Delete account</button></div>
         <p class="small muted mt-2">${server ? 'Quiz history, flashcard boxes, checklists and grades are saved to your account a moment after each change and load on any device where you log in.' : 'The account server is unreachable, so nothing leaves this browser.'}</p></div>`;
     } else {
       const inApp = !!(window.MATHUB_APP && window.MATHUB_APP.native);
-      html = inApp ? `<div class="panel acct-panel"><div class="panel-h"><div class="panel-title">${icon('user')} Account</div><span class="chip">optional</span></div>${Auth.lockCard('An account is optional', 'Everything in the app works without one. Montana State students can sign in with their montana.edu email to sync progress across devices, join the class discussions and collect badges.', { compact: true })}</div>`
-        : `<div class="panel acct-panel"><div class="panel-h"><div class="panel-title">${icon('user')} Account</div><span class="chip warn">preview</span></div>${Auth.lockCard('You are previewing Mathub', 'Sign up with your montana.edu email to unlock every tool, collect badges, join the People page and sync your progress across devices.', { compact: true })}</div>`;
+      html = inApp ? `<div class="panel acct-panel"><div class="panel-h"><div class="panel-title">${icon('user')} Account</div><span class="chip">optional</span></div>${Auth.lockCard('An account is optional', 'Everything in the app works without one. Montana State students can sign in with their montana.edu email to sync progress across devices and join the class discussions.', { compact: true })}</div>`
+        : `<div class="panel acct-panel"><div class="panel-h"><div class="panel-title">${icon('user')} Account</div><span class="chip warn">preview</span></div>${Auth.lockCard('You are previewing Mathub', 'Sign up with your montana.edu email to unlock every tool, join the People page and sync your progress across devices.', { compact: true })}</div>`;
     }
     const wrap = document.createElement('div'); wrap.innerHTML = html; const panel = wrap.firstElementChild;
     const pref = (id, key, onMsg, offMsg) => { const el = $('#' + id, panel); if (el) el.addEventListener('change', async () => { try { const r = await call('profile', { [key]: el.checked }); Auth.user = Object.assign(Auth.user, r.user); toast(el.checked ? onMsg : offMsg); } catch (e) { toast(e.message); el.checked = !el.checked; } }); };
     Auth.pushInit(panel); if (server && u) { Auth.devicesInit(panel); Auth.blocksInit(panel); }
     pref('acct-planning', 'planning_email', 'Sunday planning email on', 'Sunday planning email off'); pref('acct-focuspub', 'focus_public', 'You show up in Focus together', 'Hidden from Focus together'); Auth.growthInit(panel);
     pref('acct-notify', 'notify_email', 'Reply emails on', 'Reply emails off'); pref('acct-reminder', 'reminder_email', 'Evening reminders on', 'Evening reminders off'); pref('acct-digest', 'digest_email', 'Weekly digest on', 'Weekly digest off'); pref('acct-news', 'news_email', 'News emails on', 'News emails off'); pref('acct-recap', 'recap_email', 'Call recaps by email on', 'Call recaps by email off'); pref('acct-exam', 'exam_nudge', 'Exam heads-ups on', 'Exam heads-ups off'); pref('acct-lb', 'show_on_leaderboard', 'Your name shows on leaderboards and the People page', 'You appear as “Anonymous student”');
-    if (u && server && App.social && App.social.refreshBadges) App.social.refreshBadges().then(r => { const el = $('#acct-badge-count', panel); if (el && r) el.textContent = `${r.badges.length} of ${r.catalog.length} earned`; }).catch(() => {});
     bind(panel, {
       'auth-signup': () => Auth.open('signup'), 'auth-login': () => Auth.open('login'), logout: () => Auth.logout(),
       'save-name': async () => { const name = $('#acct-name', panel).value.trim(); if (Auth.mode === 'server') { try { const r = await call('profile', { name }); Auth.user = r.user; } catch (e) { toast(e.message); return; } } else { Auth.user.name = name; writeJSON(LOCAL_KEY, Auth.user); } changed(); toast('Name saved'); const h = $('.acct-hero-name', panel); if (h) h.textContent = name || Auth.user.email.split('@')[0]; },

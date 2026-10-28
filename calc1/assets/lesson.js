@@ -81,7 +81,7 @@
         <div class="lesson-stats"><div class="lstat xp"><b>+${xp}</b><span>XP earned</span></div><div class="lstat ${pct >= 80 ? 'good' : pct >= 60 ? 'warn' : 'bad'}"><b>${pct}%</b><span>${ok} of ${n} correct</span></div><div class="lstat"><b>${secs >= 60 ? `${Math.floor(secs / 60)}m ${secs % 60}s` : `${secs}s`}</b><span>time</span></div><div class="lstat"><b>${L.best}</b><span>best combo</span></div></div>
         ${missed.length ? `<p class="small muted mt-2">Missed: ${missed.map(t => esc(App.Q.TOPICS[t].label)).join(', ')}</p>` : ''}
         <div class="row gap-sm mt-3" style="justify-content:center;flex-wrap:wrap"><button class="btn primary lg" data-action="again">${icon('rotate', 15)} Another lesson</button>${missed.length ? `<a class="btn lg" href="${App.link('lesson', null, { topics: missed.join(','), r: Date.now().toString(36) })}">${icon('target', 15)} Review missed</a>` : ''}<a class="btn lg" href="${App.link('path')}">${icon('path', 15)} Back to path</a></div>
-        ${App.guest() ? `<div class="mt-3">${App.lockCard('That was a preview lesson', 'Members get full 10-question lessons, XP that syncs everywhere, quests, leagues and badges.')}</div>` : ''}</div>`;
+        ${App.guest() ? `<div class="mt-3">${App.lockCard('That was a preview lesson', 'Members get full 10-question lessons, XP that syncs everywhere, quests and leagues.')}</div>` : ''}</div>`;
       bind(root, { again: () => this.render(root, null, L.query) });
       if (App.sfx) App.sfx.play('complete'); if (pct >= 80 && App.confetti) setTimeout(() => App.confetti({ count: 160 }), 200);
       if (App.auth) App.auth.bindLocks(root); window.scrollTo({ top: 0, behavior: 'smooth' });

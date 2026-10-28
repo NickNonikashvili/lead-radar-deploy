@@ -1,6 +1,9 @@
 /* ============================================================
    Mathub — tools (#/tools)
-   Small utilities students reach for every week, all offline:
+   Every tool in one place: a map of the study tools, the GPA
+   calculator, Life (habits, goals, wheel of life, journal, money)
+   and Future (internships and jobs, portfolio), then the small
+   utilities students reach for every week, all offline:
    a scientific calculator (degrees or radians, history, keyboard),
    a unit converter for physics, a citation builder (APA 7 and MLA 9
    for websites, books and journal articles), a word counter with
@@ -174,14 +177,24 @@
   function sigBind(root) { const inp = $('#ts-in', root), sel = $('#ts-n', root), out = $('#ts-out', root); const paint = () => { const r = sigfigs(inp.value); if (!r) { out.innerHTML = '<span class="muted">Enter a plain number such as 0.004500 or 6.02e23.</span>'; return; } const v = Number(inp.value.replace(/,/g, '')); const n = +sel.value; out.innerHTML = `<div class="ts-row"><small>Significant figures</small><b>${r.n}${r.ambiguous ? ' (or more)' : ''}</b></div><div class="ts-row"><small>Rounded to ${n}</small><b class="mono">${roundSig(v, n)}</b></div><div class="ts-row"><small>Scientific notation</small><b class="mono">${v === 0 ? '0' : v.toExponential(Math.max(0, r.n - 1))}</b></div>${r.note ? `<p class="small muted">${esc(r.note)}</p>` : ''}`; }; inp.addEventListener('input', paint); sel.addEventListener('change', paint); paint(); }
 
   /* ---------- view ---------- */
-  const TABS = [['calc', 'Calculator', 'calc', calcHtml, calcBind], ['units', 'Units', 'sliders', unitsHtml, unitsBind], ['cite', 'Citations', 'pen', citeHtml, citeBind], ['words', 'Word counter', 'file', wordsHtml, wordsBind], ['sig', 'Sig figs', 'sigma', sigHtml, sigBind]];
+  const TABS = [['calc', 'Calculator', 'calc', calcHtml, calcBind], ['units', 'Units', 'swap', unitsHtml, unitsBind], ['cite', 'Citations', 'quill', citeHtml, citeBind], ['words', 'Word counter', 'text', wordsHtml, wordsBind], ['sig', 'Sig figs', 'sigma', sigHtml, sigBind]];
+  // the map at the top: [where it goes, name, what it is for, icon]; '#tool:<tab>' opens one of the utilities below
+  const MAP = [
+    ['Study', [['#tool:calc', 'Calculator', 'Scientific, in degrees or radians', 'calc'], ['#tool:units', 'Unit converter', 'Length, mass, energy and more', 'swap'], ['#tool:cite', 'Citations', 'APA 7 and MLA 9', 'quill'], ['#tool:words', 'Word counter', 'Words, reading time, readability', 'text'], ['#tool:sig', 'Sig figs', 'Count and round significant figures', 'sigma'], ['#/gpa', 'GPA calculator', 'Semester and cumulative GPA, and goals', 'gpa']]],
+    ['Life', [['#/habits', 'Habits', 'Daily habits and streaks', 'habits'], ['#/goals', 'Goals', 'Goals for the quarter and their steps', 'goals'], ['#/wheel', 'Wheel of life', 'How each part of life is going', 'wheel'], ['#/journal', 'Journal', 'A page a day, a look back each week', 'journal'], ['#/money', 'Money', 'What came in and what went out', 'money']]],
+    ['Future', [['#/career', 'Internships & jobs', 'Applications, interviews and offers', 'career'], ['#/portfolio', 'Portfolio', 'Projects, skills and your résumé', 'portfolio']]]
+  ];
+  const mapIcon = k => (App.VIEW_ICON && App.VIEW_ICON[k]) || k;
+  const mapHtml = () => `<div class="th-map">${MAP.filter(([, rows]) => rows.some(([href]) => !App.moduleOn || App.moduleOn(href.startsWith('#tool:') ? 'tools' : href.slice(2)))).map(([h, rows]) => `<section class="th-sec" aria-labelledby="th-${h}"><h2 class="th-h" id="th-${h}">${esc(h)}</h2><div class="th-grid">${rows.filter(([href]) => (!/^#\//.test(href) || App.views[href.slice(2)]) && (!App.moduleOn || App.moduleOn(href.startsWith('#tool:') ? 'tools' : href.slice(2)))).map(([href, l, d, ic]) => `<a class="th-card" href="${href.startsWith('#tool:') ? '#tools-box' : href}"${href.startsWith('#tool:') ? ` data-tool="${href.slice(6)}"` : ''}><span class="th-ic" aria-hidden="true">${icon(mapIcon(ic), 20)}</span><span class="th-t"><b>${esc(l)}</b><small>${esc(d)}</small></span></a>`).join('')}</div></section>`).join('')}</div>`;
   App.views.tools = {
-    title: 'Tools', blurb: 'Calculator, unit converter, citation builder, word counter and sig figs. Everything runs in your browser and works offline.',
+    title: 'Tools', blurb: 'Everything for studying, for life and for what comes next, in one place.',
     render(root, param, query, standalone) {
       const head = standalone ? `<div class="landing-wrap"><header class="landing-top"><div><div class="eyebrow">Mathub</div><h1 class="landing-title"><span class="logo-mark">${App.logoSvg(44)}</span>Tools</h1><p class="muted">${this.blurb}</p></div><div class="row gap-sm"><span id="landing-account"></span><a class="btn" href="#/">${icon('left', 14)} All classes</a></div></header>` : App.pageHead('Tools', this.blurb);
-      root.innerHTML = `${head}<div class="dash-tabs" data-store="toolsTab" role="tablist">${TABS.map(([k, l, ic]) => `<button class="tab" data-tab="${k}" role="tab">${icon(ic, 14)}<span>${l}</span></button>`).join('')}</div><div class="panes">${TABS.map(([k, , , html]) => `<div class="pane" data-pane="${k}"><div class="panel">${html()}</div></div>`).join('')}</div>${standalone ? '</div>' : ''}`;
+      root.innerHTML = `${head}${mapHtml()}<section class="th-box" id="tools-box" aria-labelledby="th-box-h"><h2 class="th-h" id="th-box-h">Calculators &amp; converters</h2><p class="small muted th-note">They run in your browser and work offline.</p><div class="dash-tabs" data-store="toolsTab" role="tablist">${TABS.map(([k, l, ic]) => `<button class="tab" data-tab="${k}" role="tab">${icon(ic, 14)}<span>${l}</span></button>`).join('')}</div><div class="panes">${TABS.map(([k, , , html]) => `<div class="pane" data-pane="${k}"><div class="panel">${html()}</div></div>`).join('')}</div></section>${standalone ? '</div>' : ''}`;
       TABS.forEach(([k, , , , bindFn]) => bindFn($(`.pane[data-pane="${k}"]`, root)));
       if (param && TABS.some(t => t[0] === param)) { setSetting('toolsTab', param); }
+      // a study tool on the map opens its tab below and brings it into view
+      on(root, 'click', '[data-tool]', (a, e) => { e.preventDefault(); const tab = $(`.dash-tabs .tab[data-tab="${a.dataset.tool}"]`, root); if (tab) tab.click(); const box = $('#tools-box', root); if (box) box.scrollIntoView({ behavior: App.motionReduced && App.motionReduced() ? 'auto' : 'smooth', block: 'start' }); if (tab) tab.focus({ preventScroll: true }); });
       const slot = $('#landing-account', root); if (slot && App.auth && App.auth.ready) App.auth.paintLandingAccount(slot);
     }
   };

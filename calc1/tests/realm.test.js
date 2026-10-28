@@ -29,7 +29,7 @@ const T = require('./lib');
   log('outcomes:', JSON.stringify(out));
   check('natural 1 sends you to your nemesis lesson', out[0].kind === 'fumble' && /\/lesson\?topics=/.test(out[0].href), out[0]);
   check('middle rolls set a DC and a lesson', [out[1], out[2]].every(o => (o.kind === 'pass' || o.kind === 'fail') && o.dc >= 5 && o.dc <= 20 && /\/lesson\?topics=/.test(o.href) && o.topic) && (out[1].kind === 'pass') === (7 >= out[1].dc), out.slice(1, 3));
-  check('natural 20 grants a Blitz', out[3].kind === 'crit' && /\/blitz$/.test(out[3].href), out[3]);
+  check('natural 20 grants the daily challenge', out[3].kind === 'crit' && /\/challenge$/.test(out[3].href), out[3]);
   await p.evaluate(() => { location.hash = '#/calc/dashboard'; }); await p.waitForTimeout(1200); await p.click('.page-actions [data-roll]'); await p.waitForTimeout(80);   // the d20 sits on each class page
   check('rolling tumbles the die', await p.evaluate(() => !!document.querySelector('#roll-modal .d20-big.rolling')));
   await p.waitForTimeout(1500);
@@ -39,14 +39,14 @@ const T = require('./lib');
   await p.keyboard.press('Escape'); check('Escape closes the roll', !(await p.$('#roll-modal')));
   await p.evaluate(() => App.rollQuest('calc', { force: 20 })); await p.waitForTimeout(1500);
   const crit = await p.evaluate(() => ({ crit: !!document.querySelector('#roll-modal .d20-big.crit'), n: document.querySelector('#roll-modal .d20-big text').textContent, href: document.querySelector('#roll-modal [data-act="go"]').getAttribute('href') }));
-  check('a forced natural 20 glows and links to Blitz in that class', crit.crit && crit.n === '20' && crit.href === '#/calc/blitz', crit);
+  check('a forced natural 20 glows and links to that class’s daily challenge', crit.crit && crit.n === '20' && crit.href === '#/calc/challenge', crit);
   await p.click('#roll-modal [data-act="go"]'); await p.waitForTimeout(700);
-  check('accepting the quest navigates and closes the dialog', /#\/calc\/blitz/.test(p.url()) && !(await p.$('#roll-modal')));
+  check('accepting the quest navigates and closes the dialog', /#\/calc\/challenge/.test(p.url()) && !(await p.$('#roll-modal')));
   await go(p, '#/calc', 1200); check('class dashboard has a Roll a quest button', !!(await p.$('.page-actions [data-roll="calc"]')));
 
   // the character sheet computes from real data
   await p.evaluate(() => {
-    const t = App.todayISO(); const d = App.store.peek('calc'); d.history = Array.from({ length: 20 }, (_, i) => ({ t: 'velocity', ok: i < 15, d: t, k: 'x' + i })); d.progress = Object.assign({}, d.progress, { velocity: { a: 20, c: 15 }, aroc: { a: 10, c: 9 } }); d.blitz = { best: 200, plays: 3 };
+    const t = App.todayISO(); const d = App.store.peek('calc'); d.history = Array.from({ length: 20 }, (_, i) => ({ t: 'velocity', ok: i < 15, d: t, k: 'x' + i })); d.progress = Object.assign({}, d.progress, { velocity: { a: 20, c: 15 }, aroc: { a: 10, c: 9 } });
     localStorage.setItem('studyhub-calc', JSON.stringify(d)); const s = App.settings(); s.courses = ['calc', 'physics']; s.focusLog = { [t]: 100 }; localStorage.setItem('studyhub-settings', JSON.stringify(s));
   });
   await go(p, '#/sheet', 1000);
@@ -55,7 +55,7 @@ const T = require('./lib');
   const modOk = Object.values(sheet.ab).every(a => a.sc >= 3 && a.sc <= 20 && a.md.replace('−', '-') === (Math.floor((a.sc - 10) / 2) >= 0 ? '+' : '-') + Math.abs(Math.floor((a.sc - 10) / 2)));
   check('six ability scores from 3 to 20 with the tabletop modifier', Object.keys(sheet.ab).join() === 'STR,DEX,CON,INT,WIS,CHA' && modOk, sheet.ab);
   check('INT is 75% accuracy → 16 (4 + 0.75 × 16)', sheet.ab.INT.sc === 16 && /75% on 20/.test(sheet.ab.INT.why), sheet.ab.INT);
-  check('DEX from the Blitz best (200 → 13)', sheet.ab.DEX.sc === 13, sheet.ab.DEX);
+  check('DEX from the topics practised (1 topic → 9)', sheet.ab.DEX.sc === 9 && /1 topic practised/.test(sheet.ab.DEX.why), sheet.ab.DEX);
   check('CON from focus minutes (100 → 12)', sheet.ab.CON.sc === 12, sheet.ab.CON);
   check('classes listed with archetypes', sheet.classes.some(t => /Wizard · Calc I/.test(t)) && sheet.classes.some(t => /Artificer · Physics I/.test(t)), sheet.classes);
   check('proficiency lists the 90% topic, nemesis the weaker one', sheet.profs.some(t => /90%/.test(t)) && !!sheet.nemesis, { profs: sheet.profs, nemesis: sheet.nemesis });
@@ -93,10 +93,11 @@ const T = require('./lib');
   const [cm, m] = await mk(390, 820, { serviceWorkers: 'block' }); await realmOn(cm);
   for (const h of ['#/', '#/sheet', '#/calc']) { await go(m, h, 900); check(`no sideways scroll on ${h}`, await m.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)); }
   await cm.close();
-  // the account menu links the sheet (signed in, own context so synced preferences stay out of the other checks)
+  // the sidebar links the sheet, and the account menu no longer does (signed in, own context so synced preferences stay out of the other checks)
   const [ca, a] = await mk(1360, 900, { serviceWorkers: 'block' }); await go(a, '#/', 400); await login(a, 'alice.a@montana.edu'); await a.reload(); await a.waitForTimeout(1400); if (await a.$('.celebrate')) await a.keyboard.press('Escape');
   await a.evaluate(() => { const b = document.querySelector('#topbar-account [data-action="acct-toggle"]'); if (b) b.click(); }); await a.waitForTimeout(250);
-  check('account menu links the sheet', !!(await a.$('.popover a[href="#/sheet"]')));
+  check('the account menu no longer lists the sheet', !!(await a.$('.popover .acct-dd-item')) && !(await a.$('.popover a[href="#/sheet"]')));
+  await go(a, '#/', 1200); check('the sidebar lists the character sheet under Community', !!(await a.$('#sb-nav .sb-group[data-g="community"] a[href="#/sheet"]')));
   await a.evaluate(async () => { await fetch('api/index.php?r=logout', { method: 'POST', credentials: 'same-origin', headers: { 'X-Requested-With': 'MatHub' } }); }); await ca.close();
   await T.finish();
 })();

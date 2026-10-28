@@ -44,8 +44,8 @@ const T = require('./lib');
   await go(p, '#/m170/exam/exam2', 900);
   check('Exam 2 prep lists the triangle laws', /Laws of Sines and Cosines/.test(await txt(p, '#view')));
 
-  await go(p, '#/m170/grades', 900);
-  check('the grade calculator has the 6 syllabus categories', (await p.$$('.grade-row')).length === 6);
+  await go(p, '#/m170/course', 900);
+  check('the syllabus page has the 6 syllabus categories', (await p.evaluate(() => { const g = [...document.querySelectorAll('#view .panel')].find(x => /^\s*(Grading|How the grade is made)/.test((x.querySelector('.panel-title') || {}).textContent || '')); const tb = g && g.querySelector('tbody'); return tb ? tb.querySelectorAll('tr').length : 0; })) === 6);
   const g = await txt(p, '#view');
   check('it shows the 4-point scale and the written-work rubric', /3\.75 – 4\.0/.test(g) && /Substantial/.test(g) && /Developing/.test(g));
 

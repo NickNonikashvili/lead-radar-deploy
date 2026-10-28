@@ -36,11 +36,6 @@ const T = require('./lib');
   const xp = await p.evaluate(() => { const x = document.querySelector('.xp-float'); return x ? { coin: !!x.querySelector('.px-coin'), text: x.textContent.trim(), font: getComputedStyle(x).fontFamily } : null; });
   check('XP pop-up shows a pixel coin in the arcade font', xp && xp.coin && xp.text === '+10 XP' && /Press Start 2P/.test(xp.font), xp);
 
-  // Blitz end screen
-  await go(p, '#/calc/blitz', 900); await p.click('[data-action="bz-start"]'); await p.waitForTimeout(300); await p.evaluate(() => { App.blitz.left = 1; }); await p.waitForTimeout(1500);
-  const bz = await p.evaluate(() => ({ label: (document.querySelector('.bz-endlabel') || {}).textContent, art: !!document.querySelector('.bz-endart .px'), font: getComputedStyle(document.querySelector('.bz-final')).fontFamily }));
-  check('Blitz ends like an arcade cabinet', /Time up|New hi-score!/.test(bz.label) && bz.art && /Press Start 2P/.test(bz.font), bz);
-
   // character sheet inventory
   await go(p, '#/sheet', 900);
   const inv = await p.$$eval('.cs-inv .cs-item .px', els => els.map(e => e.getAttribute('class').split(' ')[1]));

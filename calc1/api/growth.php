@@ -81,20 +81,18 @@ function mh_invite_code(array $u): string {
   if ($c === '') { do { $c = ''; $alpha = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; for ($i = 0; $i < 6; $i++) $c .= $alpha[random_int(0, strlen($alpha) - 1)]; $st = $db->prepare('SELECT 1 FROM users WHERE invite_code = ?'); $st->execute([$c]); } while ($st->fetchColumn()); $db->prepare('UPDATE users SET invite_code = ? WHERE id = ?')->execute([$c, $u['id']]); }
   return $c;
 }
-/** After a verified sign-up that carried an invite code: badges for both, a note for the inviter. */
+/** After a verified sign-up that carried an invite code: a note for the inviter, and credits for both. */
 function mh_invite_reward(array $newUser): void {
   $inv = (int)($newUser['invited_by'] ?? 0); if (!$inv || $inv === (int)$newUser['id']) return; $db = mh_db(); $now = time();
   try {
-    $db->prepare('INSERT OR IGNORE INTO badges (user_id, code, earned) VALUES (?, "invited", ?)')->execute([(int)$newUser['id'], $now]);
-    $db->prepare('INSERT OR IGNORE INTO badges (user_id, code, earned) VALUES (?, "recruiter", ?)')->execute([$inv, $now]);
-    $db->prepare('INSERT INTO notifications (user_id, kind, post_id, comment_id, actor_id, actor, title, snippet, link, created) VALUES (?, "badge", 0, NULL, ?, ?, ?, ?, ?, ?)')->execute([$inv, (int)$newUser['id'], mh_display_name($newUser), 'joined through your invite link', 'You both earned a badge. Study together on the class board.', '#/people', $now]);
-    mh_activity('badge', '', 'A student joined through a classmate\'s invite', '#/people');
+    $db->prepare('INSERT INTO notifications (user_id, kind, post_id, comment_id, actor_id, actor, title, snippet, link, created) VALUES (?, "invite", 0, NULL, ?, ?, ?, ?, ?, ?)')->execute([$inv, (int)$newUser['id'], mh_display_name($newUser), 'joined through your invite link', 'Study together on the class board.', '#/people', $now]);
+    mh_activity('invite', '', 'A student joined through a classmate\'s invite', '#/people');
   } catch (Throwable $e) {}
   // and credits for Bo, for both (api/credits.php): ai_invite_credits each (100), up to 1,000 in all per account
   try {
     $n = max(0, (int)(mh_config()['ai_invite_credits'] ?? 100)); if ($n <= 0) return;
     require_once __DIR__ . '/credits.php'; mh_credits_gift((int)$newUser['id'], $n, 'invite:joined', 'Joined through an invite', 1000, 'invite:'); $theirs = mh_credits_gift($inv, $n, 'invite:' . (int)$newUser['id'], 'A classmate joined through your invite', 1000, 'invite:');
-    if ($theirs > 0) $db->prepare('INSERT INTO notifications (user_id, kind, post_id, comment_id, actor_id, actor, title, snippet, link, created) VALUES (?, "badge", 0, NULL, ?, ?, ?, ?, ?, ?)')->execute([$inv, (int)$newUser['id'], mh_display_name($newUser), $theirs . ' credits for Bo', 'They joined through your invite, so you both get ' . $theirs . ' credits to use with Bo.', '#/usage', $now]);
+    if ($theirs > 0) $db->prepare('INSERT INTO notifications (user_id, kind, post_id, comment_id, actor_id, actor, title, snippet, link, created) VALUES (?, "credits", 0, NULL, ?, ?, ?, ?, ?, ?)')->execute([$inv, (int)$newUser['id'], mh_display_name($newUser), $theirs . ' credits for Bo', 'They joined through your invite, so you both get ' . $theirs . ' credits to use with Bo.', '#/usage', $now]);
   } catch (Throwable $e) {}
 }
 /* ---------- Sunday planning email ---------- */
@@ -241,14 +239,6 @@ function mh_growth_route(string $route, array $in, array $cfg, string $ip): void
       mh_method('POST'); $u = mh_require_user(); $id = (int)($in['id'] ?? 0); $st = $db->prepare('SELECT user_id FROM announcements WHERE id = ?'); $st->execute([$id]); $owner = (int)$st->fetchColumn();
       if (!$owner) mh_fail('Not found.', 404); if ($owner !== (int)$u['id'] && !mh_is_mod($u)) mh_fail('Not yours.', 403); $db->prepare('DELETE FROM announcements WHERE id = ?')->execute([$id]); mh_json(['ok' => true]);
     }
-    case 'mock_official': {
-      mh_method('POST'); $u = mh_require_user(); if (!mh_is_staff($u)) mh_fail('Instructors, TAs and moderators only.', 403);
-      $st = $db->prepare('SELECT course FROM mocks WHERE id = ?'); $st->execute([(int)($in['id'] ?? 0)]); $mc = $st->fetchColumn(); if ($mc === false) mh_fail('Mock exam not found.', 404);
-      require_once __DIR__ . '/teach.php'; if (!mh_staff_can_course($u, (string)$mc)) mh_fail('You can mark mock exams official only in the classes you teach.', 403);
-      $db->prepare('UPDATE mocks SET official = ? WHERE id = ?')->execute([!empty($in['official']) ? 1 : 0, (int)($in['id'] ?? 0)]); mh_json(['ok' => true]);
-    }
-
-    /* --- invites --- */
     case 'invite_mine': { mh_method('GET'); $u = mh_require_user(); $st = $db->prepare('SELECT COUNT(*) FROM users WHERE invited_by = ? AND verified = 1'); $st->execute([$u['id']]); require_once __DIR__ . '/ai.php'; mh_json(['ok' => true, 'code' => mh_invite_code($u), 'joined' => (int)$st->fetchColumn(), 'credits' => max(0, (int)($cfg['ai_invite_credits'] ?? 100)), 'minutes' => 0]); }
     case 'invite_info': {
       mh_method('GET'); $code = strtoupper(preg_replace('/[^A-Za-z0-9]/', '', (string)($_GET['ref'] ?? ''))); if (strlen($code) !== 6) mh_fail('Not found.', 404);

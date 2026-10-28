@@ -9,7 +9,7 @@ const T = require('./lib');
   await go(p, '#/settings', 1500); check('calendar link shown', (await p.$eval('#acct-ics', e => e.value).catch(() => '')).includes('r=ics&t='));
   const icsUrl = await p.$eval('#acct-ics', e => e.value); const ics = await p.evaluate(async u => { const r = await fetch(u); return { status: r.status, type: r.headers.get('content-type'), n: ((await r.text()).match(/BEGIN:VEVENT/g) || []).length }; }, icsUrl); check('ics feed serves events', ics.status === 200 && /text\/calendar/.test(ics.type) && ics.n > 50, ics);
   check('invite link shown', (await p.$eval('#acct-invlink', e => e.value).catch(() => '')).includes('#/join?ref='));
-  check('and what it gives you both: credits for Bo', /you both get 100 credits for Bo, and a badge/.test(await txt(p, '#acct-invite-p')), await txt(p, '#acct-invite-p'));
+  check('and what it gives you both: credits for Bo', /you both get 100 credits for Bo\./.test(await txt(p, '#acct-invite-p')), await txt(p, '#acct-invite-p'));
   if (!(await p.$eval('#acct-planning', e => e.checked))) await p.click('#acct-planning'); await p.waitForTimeout(800); const me = await api(p, 'me'); check('planning email pref saved', me.json.user.planning_email === true, me.json.user.planning_email);
   // join page
   const code = (await p.$eval('#acct-invlink', e => e.value)).split('ref=')[1]; await p.evaluate(() => { localStorage.removeItem('mathub-ref'); }); await p.evaluate(async () => { await fetch('api/index.php?r=logout', { method: 'POST', credentials: 'same-origin', headers: { 'X-Requested-With': 'MatHub' } }); }); await p.reload(); await p.waitForTimeout(800);
@@ -34,6 +34,5 @@ const T = require('./lib');
   await go(p, '#/leagues', 1500); check('section board on leagues page', (await txt(p, '#lg-section')).includes('Section') || (await txt(p, '#lg-section')).includes('Set your'), (await txt(p, '#lg-section')).slice(0, 80));
   await p.evaluate(async () => { await fetch('api/index.php?r=logout', { method: 'POST', credentials: 'same-origin', headers: { 'X-Requested-With': 'MatHub' } }); }); await login(p, 'alice.a@montana.edu'); await p.reload(); await p.waitForTimeout(1000);
   await go(p, '#/calc', 1500); check('student sees the announcement', (await txt(p, '#dc-ann')).includes('Office hours moved') && !(await p.$('[data-action="ann-new"]')));
-  await go(p, '#/mock', 900); log('  mock page ok:', (await txt(p, '#view')).slice(0, 60));
   await c.close(); await T.finish();
 })();

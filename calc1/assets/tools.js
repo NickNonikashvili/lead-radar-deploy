@@ -1,12 +1,12 @@
 /* ============================================================
    Mathub — shared interactive tools (every course)
-   Quizzer, exam prep, scratchpad. Course data comes from App.D / App.Q.
+   Quizzer and exam prep. Course data comes from App.D / App.Q.
    ============================================================ */
 (function (global) {
   'use strict';
   const App = global.App;
   let D = null, QZ = null;
-  const { $, $$, esc, icon, bind, on, toast, store, typeset, parseNumber, fmtNum, cssVar, fitCanvas, pageHead } = App;
+  const { $, $$, esc, icon, bind, on, toast, store, typeset, parseNumber, fmtNum, pageHead } = App;
   const L = App.link;
   const LETTERS = 'ABCDEF';   // banks can have up to six options
   /* ---------- hint ladders: topic hints → problem hint → first step of the solution → full solution ---------- */
@@ -268,60 +268,5 @@
         print: () => { $$('.reveal', root).forEach(r => r.classList.add('open')); $$('.step.hidden', root).forEach(x => x.classList.remove('hidden')); window.print(); }
       });
     }
-  };
-
-  /* ======================================================
-     VIEW: Scratchpad
-     ====================================================== */
-  const PAD = { color: 'ink', size: 3, eraser: false, grid: true, strokes: null, cur: null, course: null };
-  const PAD_COLORS = [['ink', 'Ink'], ['accent', 'Blue'], ['good', 'Green'], ['bad', 'Red'], ['gold', 'Gold']];
-  App.views.scratchpad = {
-    title: 'Scratchpad',
-    render(root) {
-      if (!PAD.strokes || PAD.course !== D.id) { PAD.strokes = store.get('scratch', []); PAD.course = D.id; }
-      root.innerHTML = pageHead('Scratchpad', 'Work a problem by hand with a mouse, trackpad or stylus. Strokes are saved in this browser until you clear them.') + `
-        <div class="panel">
-          <div class="pad-tools">
-            ${PAD_COLORS.map(([k, l]) => `<button class="swatch${PAD.color === k && !PAD.eraser ? ' on' : ''}" data-action="color" data-c="${k}" title="${l}" style="background:var(--${k})"></button>`).join('')}
-            <span class="sizes">${[2, 4, 8].map(s => `<button class="size-btn${PAD.size === s ? ' on' : ''}" data-action="size" data-s="${s}" title="Pen ${s}px"><i style="width:${s + 4}px;height:${s + 4}px"></i></button>`).join('')}</span>
-            <button class="btn sm${PAD.eraser ? ' active' : ''}" data-action="eraser">Eraser</button>
-            <button class="btn sm" data-action="undo">${icon('undo', 13)} Undo</button>
-            <button class="btn sm${PAD.grid ? ' active' : ''}" data-action="grid">Grid</button>
-            <span style="flex:1"></span>
-            <button class="btn sm" data-action="save">${icon('download', 13)} Save PNG</button>
-            <button class="btn sm danger" data-action="clear">${icon('trash', 13)} Clear</button>
-          </div>
-          <canvas class="pad${PAD.grid ? ' grid' : ''}" id="pad"></canvas>
-        </div>`;
-      const canvas = $('#pad', root);
-      const colorOf = k => cssVar('--' + k);
-      const redraw = () => {
-        const { ctx, W, H } = fitCanvas(canvas); ctx.clearRect(0, 0, W, H);
-        for (const s of PAD.strokes) this.stroke(ctx, s, W, H);
-      };
-      this.stroke = (ctx, s, W, H, from = 0) => {
-        ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.globalCompositeOperation = s.erase ? 'destination-out' : 'source-over';
-        ctx.strokeStyle = s.erase ? '#000' : colorOf(s.color); ctx.lineWidth = s.erase ? s.size * 6 : s.size;
-        const p = s.pts; if (p.length < 2) { ctx.beginPath(); ctx.arc(p[0][0] * W, p[0][1] * H, ctx.lineWidth / 2, 0, Math.PI * 2); ctx.fillStyle = ctx.strokeStyle; ctx.fill(); ctx.globalCompositeOperation = 'source-over'; return; }
-        ctx.beginPath(); const st = Math.max(1, from); ctx.moveTo(p[st - 1][0] * W, p[st - 1][1] * H); for (let i = st; i < p.length; i++) ctx.lineTo(p[i][0] * W, p[i][1] * H); ctx.stroke(); ctx.globalCompositeOperation = 'source-over';
-      };
-      const norm = e => { const r = canvas.getBoundingClientRect(); return [(e.clientX - r.left) / r.width, (e.clientY - r.top) / r.height]; };
-      canvas.addEventListener('pointerdown', e => { e.preventDefault(); canvas.setPointerCapture(e.pointerId); PAD.cur = { color: PAD.color, size: PAD.size, erase: PAD.eraser, pts: [norm(e)] }; const { ctx, W, H } = fitCanvas(canvas); this.stroke(ctx, PAD.cur, W, H); });
-      canvas.addEventListener('pointermove', e => { if (!PAD.cur) return; PAD.cur.pts.push(norm(e)); const { ctx, W, H } = fitCanvas(canvas); this.stroke(ctx, PAD.cur, W, H, PAD.cur.pts.length - 1); });
-      const finish = () => { if (!PAD.cur) return; PAD.strokes.push(PAD.cur); PAD.cur = null; if (PAD.strokes.length > 600) PAD.strokes.splice(0, PAD.strokes.length - 600); store.set('scratch', PAD.strokes); };
-      canvas.addEventListener('pointerup', finish); canvas.addEventListener('pointercancel', finish); canvas.addEventListener('pointerleave', finish);
-      bind(root, {
-        color: el => { PAD.color = el.dataset.c; PAD.eraser = false; this.render(root); },
-        size: el => { PAD.size = +el.dataset.s; this.render(root); },
-        eraser: () => { PAD.eraser = !PAD.eraser; this.render(root); },
-        grid: () => { PAD.grid = !PAD.grid; this.render(root); },
-        undo: () => { PAD.strokes.pop(); store.set('scratch', PAD.strokes); redraw(); },
-        clear: () => { if (!PAD.strokes.length || confirm('Clear the scratchpad?')) { PAD.strokes = []; store.set('scratch', []); redraw(); } },
-        save: () => { const out = document.createElement('canvas'); out.width = canvas.width; out.height = canvas.height; const ctx = out.getContext('2d'); ctx.fillStyle = cssVar('--surface'); ctx.fillRect(0, 0, out.width, out.height); ctx.drawImage(canvas, 0, 0); try { const a = document.createElement('a'); a.href = out.toDataURL('image/png'); a.download = `scratchpad-${App.todayISO()}.png`; a.click(); toast('PNG saved'); } catch { toast('Could not save in this browser'); } }
-      });
-      this.resize = redraw; window.addEventListener('resize', this.resize);
-      redraw();
-    },
-    unmount() { window.removeEventListener('resize', this.resize); }
   };
 })(window);

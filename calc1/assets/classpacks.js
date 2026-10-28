@@ -29,7 +29,7 @@
   const HEX_RE = /^#[0-9a-f]{6}$/i;
   const CAL_TYPES = ['lecture', 'lab', 'exam', 'review', 'holiday', 'admin'];
   /* the class views a pack can use; anything else in its NAV is dropped */
-  const PACK_VIEWS = ['dashboard', 'calendar', 'notes', 'formulas', 'flashcards', 'textbook', 'practice', 'exam', 'planner', 'grades', 'scratchpad', 'forum', 'course', 'settings'];
+  const PACK_VIEWS = ['dashboard', 'calendar', 'notes', 'formulas', 'flashcards', 'textbook', 'practice', 'exam', 'planner', 'forum', 'course', 'settings'];
   const ICON_NAMES = ['d20', 'wand', 'compass', 'orb', 'sword', 'potion', 'scroll', 'quill', 'crown', 'home', 'calendar', 'book', 'sigma', 'cards', 'list', 'file', 'chart', 'flask', 'calc', 'pen', 'link', 'info', 'search', 'flag', 'clock', 'bulb', 'fire', 'eye', 'target', 'chat', 'pin', 'bell', 'lock', 'shield', 'grid', 'users', 'award', 'gear', 'user', 'zap', 'mic', 'gem', 'trophy', 'path', 'sliders'];
   const DATA_KEYS = ['code', 'name', 'short', 'term', 'tagline', 'kind', 'quizNote', 'formulasNote', 'filterExample', 'COURSE', 'GRADING', 'EXAMS', 'CALENDAR', 'CALENDAR_NOTE', 'RECURRING', 'SEMESTER', 'VARIANTS', 'UNITS', 'SECTIONS', 'FORMULAS', 'FLASHCARDS', 'PRACTICE', 'CHECKLISTS', 'INFO', 'NAV', 'DRAFTS', 'NOTEBOOK'];
   const META_KEYS = ['format', 'version', 'id', 'color', 'archetype', 'resources', 'resourcesBlurb', 'guides', 'canvasMatch', 'QUIZ', 'notes'];
@@ -327,7 +327,6 @@
       { label: 'Today', items: [['dashboard', 'Dashboard', 'home'], ['calendar', 'Calendar', 'calendar']] },
       { label: 'Learn', items: [['notes', 'Topic notes', 'book'], has('FORMULAS', 'formulaCount') && ['formulas', P.formulasTitle || 'Formulas & key terms', 'sigma'], has('FLASHCARDS', 'flashcardCount') && ['flashcards', 'Flashcards', 'cards'], ['textbook', 'Textbook & links', 'link']].filter(Boolean) },
       { label: 'Practice', items: [quiz && ['practice', 'Quizzer', 'list'], has('EXAMS') && ['exam', 'Exam prep', 'flag'], ['planner', 'Study planner', 'calendar']].filter(Boolean) },
-      { label: 'Tools', items: [(P.GRADING || P.hasGrading) && ['grades', 'Grade calculator', 'calc'], ['scratchpad', 'Scratchpad', 'pen']].filter(Boolean) },
       { label: 'Community', items: [['forum', 'Discussions', 'chat']] },
       { label: 'Course', items: [['course', 'Syllabus & policies', 'info'], ['settings', 'Settings', 'sliders']] }
     ];
@@ -387,7 +386,7 @@
     if (!P.CALENDAR.length) W('"CALENDAR" is empty: the calendar, Today and the current topic will be blank.');
     P.CALENDAR.forEach((e, i) => { if (!Array.isArray(e) || !isDate(e[0])) { E(`CALENDAR[${i}] must be ["YYYY-MM-DD", type, title, sectionId?, variantId?].`); return; } if (!CAL_TYPES.includes(e[1])) E(`CALENDAR[${i}] type "${e[1]}" must be one of ${CAL_TYPES.join(', ')}.`); if (!e[2]) E(`CALENDAR[${i}] needs a title.`); if (e[3] && !secIds.has(e[3])) W(`CALENDAR ${e[0]} points to section "${e[3]}", which does not exist.`); if (e[4] && (!variants || !variants.has(String(e[4])))) E(`CALENDAR ${e[0]} is tagged for variant "${e[4]}", which is not in VARIANTS.`); });
     P.EXAMS.forEach(e => { ['dates', 'dateLabels'].forEach(k => { if (e[k]) Object.keys(e[k]).forEach(v => { if (!variants || !variants.has(v)) E(`Exam "${e.id}" ${k} has variant "${v}", which is not in VARIANTS.`); else if (k === 'dates' && !isDate(e[k][v])) E(`Exam "${e.id}" date for "${v}" must be YYYY-MM-DD.`); }); }); });
-    if (!P.GRADING || !Array.isArray(P.GRADING.categories) || !P.GRADING.categories.length) E('"GRADING.categories" is required (the grade calculator and GPA use it).');
+    if (!P.GRADING || !Array.isArray(P.GRADING.categories) || !P.GRADING.categories.length) E('"GRADING.categories" is required (the syllabus page shows it).');
     else {
       const cat = new Set(); let sum = 0; P.GRADING.categories.forEach(c => { if (!KEY_RE.test(c.id || '')) E('Every grading category needs an id.'); cat.add(c.id); sum += Number(c.weight) || 0; });
       if (Math.abs(sum - 100) > 0.01 && !P.GRADING.options) W(`Grading weights add to ${sum}, not 100.`);
@@ -411,7 +410,7 @@
     (raw.NAV || []).forEach(g => (g.items || []).forEach(it => { if (Array.isArray(it) && !PACK_VIEWS.includes(it[0])) W(`NAV item "${it[0]}" is not available to uploaded classes and is left out.`); }));
     (raw.resources || []).forEach((r, i) => { if (!r.t || !r.u) E(`resources[${i}] needs a title (t) and a link (u).`); else if (!safeUrl(r.u)) W(`resources[${i}] link is not http, https or a Mathub path, so it is left out.`); });
     const stats = { sections: P.SECTIONS.length, units: P.UNITS.length, exams: P.EXAMS.length, calendar: P.CALENDAR.length, flashcards: P.FLASHCARDS.length, formulas: P.FORMULAS.reduce((n, g) => n + ((g.items || []).length), 0), practice: Object.values(P.PRACTICE).reduce((n, v) => n + ((v && v.problems) || []).length, 0), topics: 0, questions: 0, bankItems: 0 };
-    if (!raw.QUIZ) W('No "QUIZ": the class gets no quizzer, daily challenge or mock exams.');
+    if (!raw.QUIZ) W('No "QUIZ": the class gets no quizzer or daily challenge.');
     else {
       const Q = raw.QUIZ; const tk = Object.keys(Q.topics || {}); stats.topics = tk.length; stats.questions = (Q.questions || []).length;
       if (!tk.length) E('"QUIZ.topics" is empty.');

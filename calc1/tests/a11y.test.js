@@ -4,7 +4,7 @@ const T = require('./lib'); const fs = require('fs'); const path = require('path
 (async () => {
   const { mk, login, txt, go, log, check, api } = await T.start({});
   const axe = fs.readFileSync(path.join(__dirname, 'node_modules', 'axe-core', 'axe.min.js'), 'utf8');
-  const PAGES = [['#/', 'landing'], ['#/today', 'today'], ['#/calc', 'dashboard'], ['#/writ/drafts', 'drafts'], ['#/calc/notes/1.3', 'notes'], ['#/calc/practice', 'practice'], ['#/calc/flashcards', 'flashcards'], ['#/calc/calendar', 'calendar'], ['#/forum', 'forum'], ['#/settings', 'settings'], ['#/gpa', 'gpa'], ['#/whatsnew', 'whatsnew'], ['#/csci/playground', 'playground'], ['#/writ/phonetics', 'phonetics'], ['#/class', 'class-hub'], ['#/teach', 'teach-signed-out'], ['#/no-such-page', 'not-found'], ['#/create', 'create'], ['#/tutor', 'tutor'], ['#/plan', 'plan']];
+  const PAGES = [['#/', 'landing'], ['#/today', 'today'], ['#/calc', 'dashboard'], ['#/writ/drafts', 'drafts'], ['#/calc/notes/1.3', 'notes'], ['#/calc/practice', 'practice'], ['#/calc/flashcards', 'flashcards'], ['#/calc/calendar', 'calendar'], ['#/forum', 'forum'], ['#/settings', 'settings'], ['#/gpa', 'gpa'], ['#/whatsnew', 'whatsnew'], ['#/csci/playground', 'playground'], ['#/writ/phonetics', 'phonetics'], ['#/class', 'class-hub'], ['#/teach', 'teach-signed-out'], ['#/no-such-page', 'not-found'], ['#/create', 'create'], ['#/tutor', 'tutor'], ['#/plan', 'plan'], ['#/customize', 'customize'], ['#/customize/sidebar', 'customize-sidebar'], ['#/customize/classes', 'customize-classes'], ['#/customize/look', 'customize-look'], ['#/customize/start', 'customize-start'], ['#/tools', 'tools']];
   const [c, p] = await mk(1360, 900, { bypassCSP: true }); await go(p, '#/'); await login(p, 'alice.a@montana.edu'); await p.reload(); await p.waitForTimeout(1200); if (await p.$('.celebrate')) await p.keyboard.press('Escape');
   await p.evaluate(() => { const s = App.settings(); s.courses = ['calc', 'physics', 'writ', 'csci']; s.motion = 'off'; localStorage.setItem('studyhub-settings', JSON.stringify(s)); });   // no entrance animations: axe measures colours mid-fade otherwise
   // a draft review (assets/drafts.js), written by the AI stand-in, so the review page is checked too
@@ -17,7 +17,7 @@ const T = require('./lib'); const fs = require('fs'); const path = require('path
   PAGES.push(['#/writ/notebook/5', 'notebook']);
   // the learning tools (assets/learn.js), a set of notes from slides among them; the instructors' explainer; peer review
   { const sl = await api(p, 'learn_slides', { class: 'calc', source: 'Lecture 1.pptx', slides: [{ n: 1, text: 'Limits\nA limit is the value a function approaches.' }, { n: 2, text: 'One-sided limits\nFrom the left and from the right.' }] });
-    PAGES.push(['#/calc/checkwork', 'checkwork'], ['#/calc/slides', 'slides'], ['#/calc/officehours', 'officehours'], ['#/instructors', 'instructors'], ['#/writ/peer', 'peer']);
+    PAGES.push(['#/calc/checkwork', 'checkwork'], ['#/calc/slides', 'slides'], ['#/instructors', 'instructors'], ['#/writ/peer', 'peer']);
     if (sl.json && sl.json.set) PAGES.push(['#/calc/slides/' + sl.json.set.id, 'slide-notes']); else console.log('no slide notes:', sl.status, sl.json && sl.json.error); }
   const totals = {}; const serious = [];
   for (const [hash, name] of PAGES) {

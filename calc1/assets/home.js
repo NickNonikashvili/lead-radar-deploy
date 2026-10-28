@@ -23,8 +23,8 @@
 
   const safe = f => { try { return f(); } catch (e) { return null; } };
   const NODE_IC = { done: 'check', current: 'play', open: 'play', soon: 'book' };
-  const TOOL_ORDER = ['notes', 'readings', 'practice', 'flashcards', 'formulas', 'exam', 'calendar', 'grades', 'playground', 'mistakes', 'planner', 'course'];
-  const TOOL_NAME = { notes: 'Notes', readings: 'Readings', practice: 'Practice', flashcards: 'Flashcards', formulas: 'Formulas', exam: 'Exam prep', calendar: 'Calendar', grades: 'Grades', playground: 'Python', mistakes: 'Mistakes', planner: 'Planner', course: 'Syllabus' };
+  const TOOL_ORDER = ['notes', 'readings', 'practice', 'flashcards', 'formulas', 'exam', 'calendar', 'playground', 'mistakes', 'planner', 'course'];
+  const TOOL_NAME = { notes: 'Notes', readings: 'Readings', practice: 'Practice', flashcards: 'Flashcards', formulas: 'Formulas', exam: 'Exam prep', calendar: 'Calendar', playground: 'Python', mistakes: 'Mistakes', planner: 'Planner', course: 'Syllabus' };
   const SIDE_X = [-44, -14, 14, 44, 14, -14];   // the path's gentle zig-zag; each lesson's name sits on the roomier side of its button
   const nodesOf = C => (C && C.kind !== 'writing' && App.pathNodes ? safe(() => App.pathNodes(C)) : null) || [];
   const whenTxt = n => n === 0 ? 'Today' : n === 1 ? 'Tomorrow' : `In ${n} days`;
@@ -79,10 +79,10 @@
 
   const lockHero = C => { const L = App.createLock || {}; return `<section class="ah-hero ah-locked" aria-labelledby="ah-hero-h"><div class="ah-hero-h"><div><h2 id="ah-hero-h">${esc(C.name)}</h2><p>${icon('lock', 14)} Locked because your plan is off. The class and your progress in it are still saved ${esc(L.where || 'with your account')}.</p></div></div><div class="lock-acts"><button type="button" class="btn primary lg" data-lock="buy">Subscribe to open it</button><button type="button" class="btn" data-lock="restore">${esc(L.restoreLabel || 'Restore purchases')}</button></div></section>`; };
   function toolsHtml(C, o = {}) {
-    const id = C.id; const all = C.NAV && App.groupNav ? App.groupNav(C.NAV).flatMap(g => g.items) : [];
+    const id = C.id; const all = C.NAV && App.groupNav ? App.groupNav(C.NAV, C.id).flatMap(g => g.items) : [];
     const pick = TOOL_ORDER.map(v => all.find(x => x[0] === v)).filter(Boolean).slice(0, 7);
     if (!pick.length) return '';
-    return `<section class="ah-tools" aria-labelledby="ah-tools-h"><div class="ah-sec-h"><h2 id="ah-tools-h">Study tools</h2></div><div class="ah-tgrid">${pick.map(([v, l, ic]) => `<a class="ah-tool" href="#/${id}/${v}"><span class="ah-tool-ic" aria-hidden="true">${icon(ic || 'book', 22)}</span><span>${esc(TOOL_NAME[v] || l)}</span></a>`).join('')}${o.allHref ? `<a class="ah-tool" href="${o.allHref}">` : '<button class="ah-tool" data-ab-tools="1">'}<span class="ah-tool-ic" aria-hidden="true">${icon('grid', 22)}</span><span>All tools</span>${o.allHref ? '</a>' : '</button>'}</div></section>`;
+    return `<section class="ah-tools" aria-labelledby="ah-tools-h"><div class="ah-sec-h"><h2 id="ah-tools-h">Study tools</h2></div><div class="ah-tgrid">${pick.map(([v, l, ic]) => `<a class="ah-tool" href="#/${id}/${v}"><span class="ah-tool-ic" aria-hidden="true">${icon(App.viewIcon ? App.viewIcon(v, ic) : (ic || 'book'), 22)}</span><span>${esc(TOOL_NAME[v] || l)}</span></a>`).join('')}${o.allHref ? `<a class="ah-tool" href="${o.allHref}">` : '<button class="ah-tool" data-ab-tools="1">'}<span class="ah-tool-ic" aria-hidden="true">${icon('grid', 22)}</span><span>All tools</span>${o.allHref ? '</a>' : '</button>'}</div></section>`;
   }
 
   function pathHtml(C, o = {}) {

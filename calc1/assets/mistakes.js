@@ -1,6 +1,6 @@
 /* ============================================================
    Mathub — mistakes notebook
-   Every question you get wrong (practice, lessons, Blitz, the daily
+   Every question you get wrong (practice, lessons, the daily
    challenge) is saved with its explanation and comes back on a
    schedule: tomorrow after a miss, three days after a hit, and it is
    cleared after two hits in a row. Stored per class in the synced
@@ -75,7 +75,7 @@
     const due = rows.filter(r => r.m.due <= now).length; const cleared = ids.reduce((n, id) => n + App.mistakesCleared(id), 0);
     $('#mk-stats', root).innerHTML = `<div class="stat"><div class="stat-num count" data-count="${rows.length}">${rows.length}</div><div class="stat-label">open</div></div><div class="stat"><div class="stat-num count" data-count="${due}">${due}</div><div class="stat-label">due now</div></div><div class="stat"><div class="stat-num count" data-count="${cleared}">${cleared}</div><div class="stat-label">cleared for good</div></div>`;
     const b = $('[data-action="mk-retry"]', root); if (b) { b.disabled = !due; b.innerHTML = `${icon('play', 14)} Retry ${due} due`; }
-    if (!rows.length) { el.innerHTML = `<div class="empty">No mistakes saved yet. Miss a question in practice, a lesson, Blitz or the daily challenge and it lands here with its explanation.</div>`; return; }
+    if (!rows.length) { el.innerHTML = `<div class="empty">No mistakes saved yet. Miss a question in practice, a lesson or the daily challenge and it lands here with its explanation.</div>`; return; }
     const byTopic = {}; rows.forEach(r => { const C = Courses[r.cid]; const T = (C && ((C.quiz && C.quiz.TOPICS) || C.quizTopics)) || {}; const label = `${C ? C.short : r.cid} · ${(T[r.m.t] || {}).label || r.m.t}`; (byTopic[label] = byTopic[label] || []).push(r); });
     el.innerHTML = Object.entries(byTopic).sort((a, b) => b[1].length - a[1].length).map(([label, list]) => `<div class="mk-group"><div class="row between mb-1"><b>${esc(label)}</b><span class="small muted">${list.length}</span></div>${list.map(r => `<div class="mk-row${r.m.due <= now ? ' due' : ''}"><div class="mk-q">${r.m.q.prompt}</div><div class="mk-meta"><span class="chip xs ${r.m.due <= now ? 'warn' : ''}">${r.m.due <= now ? 'due now' : `back ${App.fmtDate(App.toISO(new Date(r.m.due)))}`}</span><span class="small muted">missed ${r.m.misses}×${r.m.wins ? ' · 1 hit' : ''}</span><button class="icon-btn" data-action="mk-drop" data-c="${r.cid}" data-k="${r.m.k}" title="Remove" aria-label="Remove">${icon('x', 12)}</button></div></div>`).join('')}</div>`).join('');
     typeset(el); if (App.countUp) App.countUp($('#mk-stats', root));

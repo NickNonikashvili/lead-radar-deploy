@@ -6,7 +6,7 @@
      and on the character sheet in every look
    - the d20 quest roller (buttons with data-roll="all" or a class id):
      a d20 tumbles and picks what to practise, leaning towards your weak
-     topics; a natural 20 sends you to a Blitz, a natural 1 to your
+     topics; a natural 20 sends you to the daily challenge, a natural 1 to your
      nemesis (weakest topic); the roll never changes XP
    - the character sheet at #/sheet: six ability scores computed from
      real study data, class levels from each class's XP, proficiencies,
@@ -56,7 +56,7 @@
   // the outcome of a roll (pure, so tests can check every branch with a forced number)
   App.rollOutcome = function (r, ids) {
     const pool = candidates(quizIds(ids)); if (!pool.length) return { r, kind: 'none', title: 'The dice are quiet', text: 'None of your classes has practice questions yet. Pick classes with practice in Settings.', href: '#/settings', cta: 'Choose classes' };
-    if (r === 20) { const q = pickWeighted(pool); return { r, kind: 'crit', title: 'Natural 20!', text: `Critical success. The dice grant a Blitz in ${Courses[q.id].short}: ninety seconds, combos multiply your score.`, href: `#/${q.id}/blitz`, cta: 'Start the Blitz', q }; }
+    if (r === 20) { const q = pickWeighted(pool); return { r, kind: 'crit', title: 'Natural 20!', text: `Critical success. The dice send you to today’s ${Courses[q.id].short} challenge: one problem, the same for everyone.`, href: `#/${q.id}/challenge`, cta: 'Take the challenge', q }; }
     if (r === 1) { const known = pool.filter(x => x.a >= 3); const q = (known.length ? known : pool).slice().sort((a, b) => b.w - a.w)[0]; return { r, kind: 'fumble', title: 'Natural 1…', text: `Critical fail. The dice send you to face your nemesis${q.acc !== null ? ` (${Math.round(q.acc * 100)}% so far)` : ''}.`, href: lessonHref(q), cta: 'Face the nemesis', q }; }
     const q = pickWeighted(pool); const dc = Math.max(5, Math.min(20, Math.round(8 + q.w * 10))); const ok = r >= dc;
     return { r, kind: ok ? 'pass' : 'fail', dc, title: ok ? `${r} beats DC ${dc}` : `${r} against DC ${dc}`, text: ok ? 'Success. The path ahead is clear: a quick lesson on this topic.' : 'The quest resists, so it is worth the practice: a short lesson on this topic.', href: lessonHref(q), cta: 'Accept the quest', q };
@@ -97,15 +97,14 @@
     const ids = App.myCourses().filter(id => Courses[id]); const data = ids.map(id => [id, store.peek(id) || {}]);
     const d7 = new Set(lastDays(7)), d14 = new Set(lastDays(14)), d30 = new Set(lastDays(30));
     const streak = App.streakAll ? App.streakAll().n : 0;
-    const blitz = data.reduce((b, [, d]) => Math.max(b, (d.blitz && d.blitz.best) || 0), 0);
     const log = settings().focusLog || {}; const focus = [...d7].reduce((s, k) => s + (log[k] || 0), 0);
-    let answered = 0, correct = 0; data.forEach(([, d]) => (d.history || []).forEach(h => { if (d30.has(h.d)) { answered++; if (h.ok) correct++; } }));
+    let answered = 0, correct = 0; const topics = new Set(); data.forEach(([id, d]) => (d.history || []).forEach(h => { if (d30.has(h.d)) { answered++; if (h.ok) correct++; if (h.t) topics.add(id + ':' + h.t); } }));
     let cards = 0; data.forEach(([, d]) => Object.values(d.fcAt || {}).forEach(ts => { if (d14.has(iso(new Date(ts)))) cards++; }));
     const days = new Set(); data.forEach(([, d]) => Object.keys(d.activity || {}).forEach(k => { if (d30.has(k)) days.add(k); }));
     const acc = answered ? correct / answered : null;
     return [
       { ab: 'STR', nm: 'Grit', sc: clamp(8 + Math.min(12, streak)), why: `${streak}-day streak`, how: 'Study every day to keep your streak.' },
-      { ab: 'DEX', nm: 'Speed', sc: clamp(8 + blitz / 40), why: blitz ? `Blitz best ${blitz}` : 'No Blitz yet', how: 'Play a Blitz round and beat your best.' },
+      { ab: 'DEX', nm: 'Range', sc: clamp(8 + topics.size / 2), why: topics.size === 1 ? '1 topic practised in 30 days' : `${topics.size} topics practised in 30 days`, how: 'Mix your practice across more topics.' },
       { ab: 'CON', nm: 'Stamina', sc: clamp(8 + focus / 25), why: `${focus} focus min this week`, how: 'Run focus blocks in the Focus room.' },
       { ab: 'INT', nm: 'Accuracy', sc: answered >= 10 ? clamp(4 + acc * 16) : 10, why: answered >= 10 ? `${Math.round(acc * 100)}% on ${answered} answers` : `${answered} answers in 30 days`, how: 'Answer questions carefully; ten unlock this score.' },
       { ab: 'WIS', nm: 'Memory', sc: clamp(8 + cards / 15), why: `${cards} cards in 2 weeks`, how: 'Review your due flashcards.' },
@@ -124,7 +123,7 @@
     ids.forEach(id => { const C = Courses[id]; const T = (C.quiz && C.quiz.TOPICS) || C.quizTopics || {}; const prog = (store.peek(id) || {}).progress || {};
       Object.entries(prog).forEach(([t, p]) => { if (!T[t] || !p || !p.a) return; const acc = p.c / p.a; const row = { id, t, label: T[t].label, a: p.a, acc }; all.push(row); if (p.a >= 5 && acc >= 0.8) profs.push(row); }); });
     const nemesis = all.filter(x => x.a >= 3).sort((a, b) => a.acc - b.acc)[0] || null;
-    const scrolls = ids.reduce((s, id) => s + ((((store.peek(id) || {}).cheatsheet) || {}).items || []).length, 0);
+    const scrolls = ids.reduce((s, id) => s + Object.values((store.peek(id) || {}).highlights || {}).reduce((n, a) => n + (Array.isArray(a) ? a.length : 0), 0), 0);
     const tomes = ids.reduce((s, id) => s + Object.keys((store.peek(id) || {}).mynotes || {}).length, 0);
     const monsters = App.mistakesSummary ? App.mistakesSummary().open : 0; const potions = App.freezeBank ? App.freezeBank() : 0;
     return { ids, abs, lv, classes, profs: profs.sort((a, b) => b.acc - a.acc).slice(0, 12), nemesis, scrolls, tomes, monsters, potions, align: alignment(abs) };
@@ -155,7 +154,7 @@
             <div class="cs-inv">
               <a class="cs-item" href="#/today">${App.pixel ? App.pixel('potion', 3) : icon('potion', 22)}<span><b>${S.potions}</b> Potion${S.potions === 1 ? '' : 's'} of Respite<small>Streak freezes; each covers a missed day</small></span></a>
               <a class="cs-item" href="#/mistakes">${App.pixel ? App.pixel('invader', 3, { cls: 'px-monster' }) : icon('sword', 22)}<span><b>${S.monsters}</b> Monster${S.monsters === 1 ? '' : 's'} to slay<small>Open items in your mistakes notebook</small></span></a>
-              <div class="cs-item">${App.pixel ? App.pixel('scroll', 3) : icon('scroll', 22)}<span><b>${S.scrolls}</b> Scroll${S.scrolls === 1 ? '' : 's'}<small>Lines on your cheat sheets</small></span></div>
+              <div class="cs-item">${App.pixel ? App.pixel('scroll', 3) : icon('scroll', 22)}<span><b>${S.scrolls}</b> Scroll${S.scrolls === 1 ? '' : 's'}<small>Lines you highlighted in the notes</small></span></div>
               <div class="cs-item">${App.pixel ? App.pixel('book', 3) : icon('book', 22)}<span><b>${S.tomes}</b> Tome${S.tomes === 1 ? '' : 's'}<small>Topics with your own notes</small></span></div>
             </div></div>
         </div></div>`;

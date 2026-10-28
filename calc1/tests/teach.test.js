@@ -90,7 +90,7 @@ const T = require('./lib');
   const sy = await txt(stu, '#view');
   check('the class opens for her with the syllabus panels', /Dr\. Ada Lovelace/.test(sy) && /Accommodations/.test(sy) && /AI tools/.test(sy), sy.slice(0, 200));
   await go(stu, `#/${pid}/calendar`, 1600); check('the class calendar has the midterm', /Midterm 1/.test(await txt(stu, '#view')));
-  await go(stu, `#/${pid}/grades`, 1400); check('the grade calculator uses the instructor’s categories', (await stu.$$('.grade-row')).length === 4);
+  await go(stu, `#/${pid}/course`, 1400); check('the syllabus page shows the instructor’s grading categories', (await stu.evaluate(() => { const g = [...document.querySelectorAll('#view .panel')].find(x => /^\s*(Grading|How the grade is made)/.test((x.querySelector('.panel-title') || {}).textContent || '')); const tb = g && g.querySelector('tbody'); return tb ? tb.querySelectorAll('tr').length : 0; })) === 4);
   await go(stu, `#/${pid}`, 1800); check('the class dashboard links to the class hub', !!(await stu.$('.tc-strip')));
 
   // announcement → inbox and hub

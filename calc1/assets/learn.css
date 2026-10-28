@@ -48,15 +48,9 @@
 .sl-text { font-size: 18px; line-height: 1.5; overflow-wrap: anywhere; }
 .sl-nav { justify-content: space-between; }
 
-/* office-hours prep */
-.oh-m { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 4px; }
-.oh-open { font-style: italic; color: var(--ink-2); }
-.oh-qs { margin: 6px 0 12px; padding-left: 22px; display: flex; flex-direction: column; gap: 14px; }
-.oh-q { font-size: 16px; margin: 2px 0; }
-
 @media (max-width: 820px) {
   .lw-wrap, .sl-cols { grid-template-columns: minmax(0, 1fr); }
   .sl-cards { position: static; }
   .sl-notes dl { grid-template-columns: minmax(0, 1fr); }
 }
-@media print { .sl-acts, .sl-cards, .oh-wrap .panel:not(.oh-res), .oh-res .row { display: none !important; } .sl-cols { display: block; } }
+@media print { .sl-acts, .sl-cards { display: none !important; } .sl-cols { display: block; } }
