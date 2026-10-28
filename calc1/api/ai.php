@@ -609,15 +609,16 @@ function mh_ai_recap_mail(array $u, array $parts, string $who, string $cid): arr
   $go = $url . '/#/mistakes?retry=1';
   $text[] = ''; $text[] = "Practice them on $site: $go";
   if ($parts['checks']) { $text[] = ''; $text[] = 'Answers: ' . implode('; ', array_map(fn($c, $i) => ($i + 1) . '. ' . mh_ai_mailmath($c['answer']), $parts['checks'], array_keys($parts['checks']))); }
-  $text[] = ''; $text[] = "You get this after each call with Bo. Turn it off in Settings → Account.";
+  [$unsub, $uh] = mh_unsub($u, 'recap');
+  $text[] = ''; $text[] = "You get this after each call with Bo. Stop these emails: $unsub (or in Settings → Account).";
   $html = '<!doctype html><html><body style="margin:0;background:#EEF4FF"><div style="background:#EEF4FF;padding:24px 12px;font-family:Helvetica Neue,Helvetica,Arial,sans-serif"><div style="max-width:520px;margin:0 auto;background:#fff;border:2px solid #D6E2F5;border-radius:20px;overflow:hidden">'
     . '<div style="background:#1A64D6;padding:16px 24px;color:#fff;font-size:20px;font-weight:800">' . htmlspecialchars($site, ENT_QUOTES) . '</div>'
     . '<div style="padding:24px;color:#0F172A;font-size:16px;line-height:1.55"><h1 style="margin:0 0 6px;font-size:22px">Your call with ' . htmlspecialchars($who, ENT_QUOTES) . '</h1><p style="margin:0 0 16px;color:#475569">' . $e($topic) . '</p>'
     . ($parts['intro'] !== '' ? '<p style="margin:0 0 16px;font-style:italic">' . $e($parts['intro']) . '</p>' : '') . implode('', $h)
     . '<p style="margin:20px 0 8px"><a href="' . htmlspecialchars($go, ENT_QUOTES) . '" style="display:inline-block;background:#1A64D6;color:#fff;text-decoration:none;font-weight:700;padding:12px 20px;border-radius:12px;border-bottom:4px solid #1450B0">Practice them on ' . htmlspecialchars($site, ENT_QUOTES) . ' &rarr;</a></p>'
     . ($parts['checks'] ? '<p style="margin:18px 0 0;font-size:13px;color:#64748B">Answers: ' . implode('; ', array_map(fn($c, $i) => ($i + 1) . '. ' . $e($c['answer']), $parts['checks'], array_keys($parts['checks']))) . '</p>' : '')
-    . '</div><div style="padding:14px 24px 18px;border-top:1px solid #E2E8F0;color:#64748B;font-size:13px">You get this after each call with Bo. Turn it off in Settings &rarr; Account.</div></div></div></body></html>';
-  return [$subject, implode("\n", $text), $html];
+    . '</div><div style="padding:14px 24px 18px;border-top:1px solid #E2E8F0;color:#64748B;font-size:13px">You get this after each call with Bo. <a href="' . htmlspecialchars($unsub, ENT_QUOTES) . '" style="color:#64748B">Stop these emails</a> or change them in Settings &rarr; Account.</div></div></div></body></html>';
+  return [$subject, implode("\n", $text), $html, $uh];
 }
 
 /* ---------- live calls (OpenAI's Realtime API) ---------- */
@@ -1256,7 +1257,7 @@ function mh_ai_route(string $route, array $in, array $cfg, string $ip): void {
       foreach ($parts['checks'] as $c) { $v = mh_mc_val(mh_mc_edge(mh_mc_norm($c['answer']), false)); if (is_finite($v)) $practice[] = ['prompt' => $c['q'], 'answer' => $v, 'tex' => mh_mc_fmt_tex($v), 'why' => $c['why']]; }
       $emailed = false;
       if (($cfg['recap_emails'] ?? 'on') !== 'off' && (int)($u['recap_email'] ?? 1) === 1 && (int)($u['verified'] ?? 0) === 1 && !str_ends_with((string)$u['email'], '@system.local')) {
-        require_once __DIR__ . '/mailer.php'; [$sub, $txt, $html] = mh_ai_recap_mail($u, $parts, $ch['name'], $cid); $emailed = mh_send_mail($cfg, $u['email'], $sub, $txt, $html)['ok'];
+        require_once __DIR__ . '/mailer.php'; [$sub, $txt, $html, $uh] = mh_ai_recap_mail($u, $parts, $ch['name'], $cid); $emailed = mh_send_mail($cfg, $u['email'], $sub, $txt, $html, $uh)['ok'];
       }
       mh_json(['ok' => true, 'recap' => $reply, 'topic' => $parts['topic'], 'practice' => $practice, 'emailed' => $emailed]);
     }

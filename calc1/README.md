@@ -76,7 +76,13 @@ unban, verify or delete any account. Both lists ship with nikoloz.nonikashvili@s
   flashcards, the practice set and a final review across those days as a synced checklist. Today's tasks also
   show on the dashboard.
 - **Offline.** `sw.js` caches the site so notes, formula sheets, flashcards and tools open without a connection,
-  and the site can be installed to a phone's home screen. A logged-in member stays logged in while offline;
+  and the site can be installed to a phone's home screen. On install it saves only what `index.html` loads (it reads
+  the page's own list of scripts and styles for that build) and the icons; a class's files are saved the first time
+  they are fetched, and `App.warmClasses` (assets/app.js) fetches the student's own classes in the background, once
+  per build, never on a data saver or 2G. A release used to re-download all 143 files (5.6 MB) for every visitor;
+  now it is the page's own files. The admin panel, What's new and the terms are not in `index.html` at all:
+  `App.lazyView(name, files, title)` holds their place and `App.need(files)` loads them the first time one opens.
+  The list of classes (`classpack_list`) carries a tag; a device that already has that list gets `same` back. A logged-in member stays logged in while offline;
   progress syncs when the connection returns. The account server itself is never cached.
 
 ## Community
@@ -483,7 +489,10 @@ are always theirs; with none picked it is empty. Until then the home page asks "
 ticked, Save needs at least one, and the class maker link for a class that is not there. The sidebar's Your classes
 shows Pick your classes, the home widgets point to the picker, the sign-in class list (`Auth.onboard`) starts
 unticked and its Later adds nothing, and the welcome for new accounts already asks for at least one. Saving offers
-to make each class yours (below). `tests/pick-classes.test.js`.
+to make each class yours (below). While nothing is picked the hero's first button is **Pick your classes** (it scrolls
+to the picker, under the top bar, and focuses the first class; Today would be empty), and neither the layout tour nor
+Bo's first tip opens: both wait until the classes are picked, and Bo's tip also waits for any dialog. `tests/pick-classes.test.js`,
+`tests/polish-round.test.js`.
 
 ## Your setup for a Montana State class
 
@@ -516,7 +525,10 @@ code's letters, CHMY → chemistry, HSTR → history…, then by `kind`). A clas
 own `TOOLS` (a class you make: the class maker's Tools tab, or what Bo suggested when he read the syllabus;
 `mh_ai_outline_prompt` asks for 3 to 5), its curated kit, or its subject's kit. Each student's own changes sit on
 top (settings `<class>.tools = { hide, add }`): tools hidden, tools added, formulas of their own; what they keep in a
-tool (checklist ticks, their own dates, decision scores) is in `<class>.toolData`.
+tool (checklist ticks, their own dates, decision scores) is in `<class>.toolData`. **Ask Bo about this** reads the
+open tool when tapped: the fields filled in (with their labels) and what its `.ct-out` areas show, as plain lines (a
+table's cells and rows apart, a drawing by its description), and opens Ask Bo with a question about that result and how
+to get it by hand; with nothing entered it asks how to use the tool.
 
 A tool is data, never code: `{ kind, title?, desc?, …settings }`, cleaned by `App.classTools.clean` (unknown kinds and
 anything that does not make sense are dropped). Kinds: `grapher` (up to three functions, sliders for free letters),
@@ -792,6 +804,19 @@ The prompts tell Bo he can draw anything and how (MH_AI_DRAW, the draw_on_board 
   check caught, rewrites, pages held back, calls and recaps (`metrics`, keys `bo_*`), and the answers students
   marked not right with the thumbs down in Ask Bo and the floating Bo (`ai_flag`, `ai_flags`), with Done.
 
+## A way out of every email
+
+Every email that is not a sign-in code follows one setting and says how to stop it in one click (`MH_UNSUB` and
+`mh_unsub()` in `api/lib.php`): news (`news_email`), exam reminders (`exam_nudge`), call recaps (`recap_email`), the
+weekly digest (`digest_email`), the Sunday plan (`planning_email`), evening reminders (`reminder_email`) and reply
+emails (`notify_email`). Each carries a footer link to `#/unsubscribe?k=<kind>&u=…&t=…` (a page that names the kind
+and has one button: opening it changes nothing, so mail scanners cannot unsubscribe anyone) and `List-Unsubscribe` /
+`List-Unsubscribe-Post` headers for a mail app's own button (a signed POST to `news_unsub`, no sign-in). The token
+is per kind, so a recap link cannot switch off exam reminders; news keeps the token its older emails carry. Real
+changes go into the usage report as `email_off_<kind>` and `email_on_<kind>`, unlike visits to the page
+(`view:unsubscribe`), which mail scanners also make. Mail without a way out tends to be marked spam, and then sign-in
+codes land there too.
+
 ## News emails (Email everyone)
 
 `api/news.php`, the admin panel's Email everyone tab, `#/unsubscribe`. The administrator writes one email (subject,
@@ -823,7 +848,7 @@ The October 2026 audit against what careful, large sites do (and where AI-built 
 
 ## Today: one plan across every class
 
-`#/today` (Today in the account menu, the sidebar and the hero button) builds one checklist for the day from all your classes: flashcards that are due on a spacing schedule (a card you get right comes back after 1, 3 and then 14 days; one you miss returns tomorrow; up to ten new cards per class), a lesson on your weakest topic (lowest accuracy over at least four questions, otherwise where the class is right now), the daily challenge, and anything due in the next 48 hours. The review player runs across classes inline (space flips, 1 = again, 2 = got it) and counts toward XP, quests and the streak. A summary card on the landing page shows what is left. Today's counts work from the light class index even before a class has been downloaded; pressing Start downloads what it needs.
+`#/today` (Today in the account menu, the sidebar and the hero button) builds one checklist for the day from all your classes: this week's topic in each class (the class calendar's latest lecture, `App.currentSectionOf`), ticked off once its lesson was read to the end (the notes page writes `lessonsRead` when its last row comes into view), with a Read button to the first one left; flashcards that are due on a spacing schedule (a card you get right comes back after 1, 3 and then 14 days; one you miss returns tomorrow; up to ten new cards per class), a lesson on your weakest topic (lowest accuracy over at least four questions, otherwise where the class is right now), the daily challenge, and anything due in the next 48 hours. The review player runs across classes inline (space flips, 1 = again, 2 = got it) and counts toward XP, quests and the streak. A summary card on the landing page shows what is left. Today's counts work from the light class index even before a class has been downloaded; pressing Start downloads what it needs.
 
 ## The planner: school, life and what's next
 
@@ -1048,6 +1073,24 @@ the share links and the policy now say studycat.org. To switch over:
 5. What does not move with the domain, because browsers keep it per address: the sign-in (everyone signs in once on
    studycat.org; their account, classes, progress and settings come back with it), push-notification permission
    (turned on again from Settings), and anything a visitor kept only in their browser without an account.
+
+**Making a release.** `node scripts/release.js 2026.10.28.5 --zip` (from `calc1/`) writes the build everywhere it
+lives: `index.html` (`data-build`, every `?v=`, and `data-news`, the newest release note, for the account menu's dot),
+`assets/app.js` (`MATHUB_ASSETS_BUILD`), `assets/styles.css` (`--assets-build`) and `build-check.js`; then it adds new
+text to the translation catalog, builds the language files and the study guides (with `learn/build.json`), says what
+is not translated yet, checks that every stamp agrees and makes `../calc1-deploy-<build>.zip`, with a check that no
+data, config, test or app file is inside and a line saying whether anything in `api/` changed since the last zip it
+made (`scripts/.last-release.json`). `node scripts/release.js --check` only checks the stamps. Write the release
+note in `assets/changelog.js` first.
+
+**After an upload.** `build-check.js` sits next to `index.html`, so it is replaced with the page. A moment after the
+page loads it compares the page's build with the scripts', the styles' and `learn/build.json`. When a folder was left
+behind (a zip extracted without replacing existing files), the page drops this device's saved copies and reloads
+once; if they still disagree, a red strip says the site is being updated, and an administrator also reads which
+folder is behind. Extract the zip over `public_html` and replace every file, `assets/` and `learn/` included. Files
+from retired tools that earlier uploads left on the server (the Office tools, Blitz, the cheat sheet, the old calls
+and requests scripts, the Barlow fonts, the old phonetics page) answer 410 Gone from `.htaccess`; deleting them is
+fine too.
 
 **Updating without losing users.** Accounts, posts and progress live only in `api/data/` (the SQLite
 database and `secret.key`). Those files are never in the zip. Upload a new zip over the old files and

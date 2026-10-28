@@ -128,7 +128,10 @@ function mh_packs_route(string $route, array $in, array $cfg, string $ip): void 
       // a class built in #/teach is listed for the students who joined it; its teaching team (and admins) get it as a preview, kept out of their own class lists
       $out = []; foreach ($rows as $r) { $teach = str_starts_with((string)$r['uploaded_by'], 'teach:'); $role = $roles[$r['id']] ?? '';
         if ($teach && $role === '' && !$isAdmin) continue; $o = json_decode((string)$r['stub']); if (!is_object($o)) continue; $o->id = $r['id']; $o->version = (int)$r['version']; $o->hidden = !(int)$r['enabled']; if ($teach && $role !== 'student') $o->preview = true; if (str_starts_with((string)$r['uploaded_by'], 'community:')) $o->community = true; $out[] = $o; }
-      mh_json(['ok' => true, 'packs' => $out]);
+      // the list carries a tag of what it holds: a device that already has this list sends the tag and gets "same" back, not the list again
+      $tag = substr(sha1(json_encode($out)), 0, 20);
+      if ((string)($in['tag'] ?? $_GET['tag'] ?? '') === $tag) mh_json(['ok' => true, 'same' => true, 'tag' => $tag]);
+      mh_json(['ok' => true, 'packs' => $out, 'tag' => $tag]);
     }
 
     case 'classpack_get': {

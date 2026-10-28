@@ -444,16 +444,35 @@
         `<div class="ct-cards" role="group" aria-label="Tools">${list.map(t => t.kind === 'link' ? `<a class="ct-card is-link" href="#/${esc(D.id)}/${esc(t.view)}"><span class="ct-ic" aria-hidden="true">${icon(iconOf(t), 18)}</span><span class="ct-t"><b>${esc(titleOf(t))}</b><small>${esc(descOf(t))}</small></span>${icon('right', 14)}</a>` : `<button class="ct-card${cur && t.id === cur.id ? ' on' : ''}" data-action="ct-open" data-id="${esc(t.id)}" aria-pressed="${cur && t.id === cur.id}" aria-controls="ct-pane"><span class="ct-ic" aria-hidden="true">${icon(iconOf(t), 18)}</span><span class="ct-t"><b>${esc(titleOf(t))}</b><small>${esc(descOf(t))}</small></span></button>`).join('')}</div>
         <section class="panel ct-pane" id="ct-pane" aria-labelledby="ct-pane-h"></section>`;
       const pane = $('#ct-pane', root);
+      let shown = null;   // the tool open in the pane
       const show = (t, user) => {
         if (!t) { pane.innerHTML = `<h2 class="sr-only" id="ct-pane-h">Tools</h2><div class="empty small">No tools here yet. <button class="btn sm" data-action="ct-edit">${icon('plus', 13)} Add one</button></div>`; return; }
-        const askBo = App.moduleOn && !App.moduleOn('tutor') ? '' : `<a class="btn sm ghost" href="#/tutor/${esc(D.id)}?q=${encodeURIComponent(`Help me use the ${titleOf(t)} on ${D.short}'s Tools page for my homework`)}">${icon('chat', 13)} Ask Bo how to use it</a>`;
+        const askBo = App.moduleOn && !App.moduleOn('tutor') ? '' : `<button type="button" class="btn sm ghost" data-action="ct-ask">${icon('chat', 13)} Ask Bo about this</button>`;
+        shown = t;
         pane.innerHTML = `<div class="panel-h"><h2 class="panel-title" id="ct-pane-h">${icon(iconOf(t))} ${esc(titleOf(t))}</h2>${askBo}</div><p class="small muted ct-desc">${esc(descOf(t))}</p><div class="ct-body ct-${t.kind}">${K[t.kind].html(t)}</div>`;
         try { K[t.kind].bind($('.ct-body', pane), t); } catch (e) { console.error(e); }
         if (!user && pane.contains(document.activeElement)) document.activeElement.blur();   // a tool that focuses its box would open a phone's keyboard as the page loads
         App.typeset(pane); setCourseSetting(D.id, 'toolOpen', t.id);
         $$('.ct-card[data-id]', root).forEach(b => { const on = b.dataset.id === t.id; b.classList.toggle('on', on); b.setAttribute('aria-pressed', String(on)); });
       };
+      /* Ask Bo about this: what the student typed and what the tool shows, read when they tap, so Bo explains their
+         result (and how to get it by hand); with nothing entered yet he explains how to use the tool */
+      const ask = () => {
+        const t = shown; if (!t) return; const body = $('.ct-body', pane);
+        const ins = body ? $$('input, select, textarea', body).filter(x => !['hidden', 'button', 'submit', 'checkbox', 'radio', 'file', 'range'].includes(x.type) && x.offsetParent !== null && String(x.value || '').trim()).slice(0, 8).map(x => {
+          const lab = x.id && $(`label[for="${x.id}"]`, body) || x.closest('label'); const name = String((lab && lab.textContent) || x.getAttribute('aria-label') || x.placeholder || '').replace(/\s+/g, ' ').trim().slice(0, 40);
+          const v = x.tagName === 'SELECT' ? ((x.selectedOptions[0] || {}).textContent || x.value) : x.value; return (name && !String(v).includes(name) ? name + ' ' : '') + String(v).replace(/\s+/g, ' ').trim().slice(0, 80);
+        }) : [];
+        // a result as plain lines: a table's cells and rows kept apart, a drawing by its description, not its tick labels
+        const plain = el => { const c = el.cloneNode(true); $$('svg, canvas, button', c).forEach(x => { const lab = x.getAttribute('aria-label') || (x.querySelector && x.querySelector('title') ? x.querySelector('title').textContent : ''); x.replaceWith(lab ? ` ${lab}. ` : ' '); }); $$('td, th', c).forEach(x => x.append(' · ')); $$('tr, li, p, br, h3, h4, .ct-row', c).forEach(x => x.append('; ')); return c.textContent.replace(/\s+/g, ' ').replace(/\s*·\s*;/g, ';').replace(/(\s*;)+/g, ';').replace(/^[\s;·]+|[\s;·]+$/g, '').trim(); };
+        const out = body ? $$('.ct-out', body).map(plain).filter(Boolean).join('; ').slice(0, 700) : '';
+        const q = ins.length || out
+          ? `On ${D.short}'s Tools page I used the ${titleOf(t)}.${ins.length ? ` I entered ${ins.join('; ')}.` : ''}${out ? ` It shows: ${out}` : ''} Can you explain what this means and how I would get it by hand?`
+          : `Help me use the ${titleOf(t)} on ${D.short}'s Tools page for my homework`;
+        location.hash = `#/tutor/${D.id}?q=${encodeURIComponent(q)}`;
+      };
       bind(root, {
+        'ct-ask': ask,
         'ct-open': b => { show(open.find(t => t.id === b.dataset.id), true); const top = pane.getBoundingClientRect().top; if (top > innerHeight * 0.7) pane.scrollIntoView({ behavior: App.motionReduced && App.motionReduced() ? 'auto' : 'smooth', block: 'start' }); },
         'ct-edit': () => editor(root, D)
       });

@@ -210,7 +210,7 @@
   function maybeTip() {
     clearTimeout(F.tipT); const tip = $('#bf-tip'); if (!tip) return; tip.hidden = true;
     if (!settings().boFloatSeen) {   // the first time: who he is and what he does, once
-      F.tipT = setTimeout(() => { if (F.open || hidden() || document.hidden) return; setSetting('boFloatSeen', Date.now()); tip.innerHTML = `<button type="button" class="bf-tip-b"><span><b>I'm here on every page now.</b> Tap me to ask about what you're looking at, or select any text and tap Explain.</span></button><button type="button" class="bf-tip-x" data-tip="x" aria-label="Hide this tip">${icon('x', 13)}</button>`; tip.hidden = false; F.tipT2 = setTimeout(() => { tip.hidden = true; }, 12000); }, 2500);
+      F.tipT = setTimeout(() => { if (F.open || hidden() || document.hidden || $('#pick-classes, .tour, .modal-backdrop')) return; setSetting('boFloatSeen', Date.now()); tip.innerHTML = `<button type="button" class="bf-tip-b"><span><b>I'm here on every page now.</b> Tap me to ask about what you're looking at, or select any text and tap Explain.</span></button><button type="button" class="bf-tip-x" data-tip="x" aria-label="Hide this tip">${icon('x', 13)}</button>`; tip.hidden = false; F.tipT2 = setTimeout(() => { tip.hidden = true; }, 12000); }, 2500);
       return;
     }
     if (settings().boTips === false || F.hint >= 3) return; const key = location.hash.split('?')[0]; if (F.hinted.has(key)) return;

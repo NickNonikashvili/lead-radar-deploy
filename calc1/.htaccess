@@ -52,6 +52,18 @@ Options -Indexes
   RewriteRule ^(.*)$ https://studycat.org/$1 [L,R=301]
 </IfModule>
 
+# Files that earlier releases put on the server and the site no longer uses. An upload never deletes a file, so
+# they would still be served; they answer 410 Gone instead (deleting them on the server is fine too). The Office
+# tools (Docs, Slides, Sheets), Blitz, the cheat sheet, the old calls and requests pages, the Barlow fonts and the
+# old phonetics page. assets/officekit.js is not one of them: it reads the files students open.
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteRule ^assets/office(-chart|-docs|-formula|-ooxml|-pptx|-sheets|-slides|-xlsx)?\.(js|css)$ - [G,L]
+  RewriteRule ^assets/(blitz|calls|cheatsheet|requests)\.js$ - [G,L]
+  RewriteRule ^assets/fonts/barlow-[a-z0-9-]+\.woff2$ - [G,L]
+  RewriteRule ^phonetics/ - [G,L]
+</IfModule>
+
 # HTTPS only: plain http:// visits are sent to https:// (Hostinger's recommended rule)
 <IfModule mod_rewrite.c>
   RewriteEngine On

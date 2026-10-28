@@ -26,7 +26,7 @@ const ask = q => { const r = require('child_process').spawnSync('php', ['-r', '$
   check('it goes to every verified member with news on', r.recipients === +who && r.recipients > 2, { api: r.recipients, db: who });
   r = (await api(a, 'admin_news_preview', d)).json;
   check('the preview fills in the credits, the minutes and the name', r.subject === `Bo is on every account now: ${(await api(a, 'admin_news')).json.credits} free credits a month` && /about \d+ minutes on a call/.test(r.text) && /Hi [A-Z][a-z]+,/.test(r.text) && !/\{name\}|\{minutes\}|\{credits\}/.test(r.html + r.text), r.subject);
-  check('its button opens the demo on the site, and the bottom has a way out', /href="https?:\/\/[^"]+\/#\/max"/.test(r.html) && /#\/unsubscribe\?u=\d+&amp;t=[0-9a-f]{32}/.test(r.html) && /Stop these emails: https?:\/\/\S+#\/unsubscribe\?u=\d+&t=[0-9a-f]{32}/.test(r.text), r.text.slice(-200));
+  check('its button opens the demo on the site, and the bottom has a way out', /href="https?:\/\/[^"]+\/#\/max"/.test(r.html) && /#\/unsubscribe\?k=news&amp;u=\d+&amp;t=[0-9a-f]{32}/.test(r.html) && /Stop these emails: https?:\/\/\S+#\/unsubscribe\?k=news&u=\d+&t=[0-9a-f]{32}/.test(r.text), r.text.slice(-200));
   check('a link that is not on StudyCat or https is refused', (await api(a, 'admin_news_preview', Object.assign({}, d, { link: 'javascript:alert(1)' }))).status === 400);
   const before = fs.existsSync(LOG) ? fs.readFileSync(LOG, 'utf8').length : 0;
   r = await api(a, 'admin_news_test', d);
@@ -61,7 +61,7 @@ const ask = q => { const r = require('child_process').spawnSync('php', ['-r', '$
 
   // the way out
   const bob = ask("SELECT id FROM users WHERE email = 'bob.bmu6j92pq@montana.edu'")[0].id;
-  const tok = (fs.readFileSync(LOG, 'utf8').match(new RegExp(`#/unsubscribe\\?u=${bob}&t=([0-9a-f]{32})`)) || [])[1];
+  const tok = (fs.readFileSync(LOG, 'utf8').match(new RegExp(`#/unsubscribe\\?k=news&u=${bob}&t=([0-9a-f]{32})`)) || [])[1];
   check('the email to Bob has his own link', !!tok, tok);
   r = await (await fetch(`${root}api/index.php?r=news_unsub&u=${bob}&t=${tok}`, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: 'List-Unsubscribe=One-Click' })).json();
   check('a mail app\'s one-click unsubscribe works without the site\'s header', r.ok && r.on === false && ask(`SELECT news_email FROM users WHERE id = ${bob}`)[0].news_email === 0, r);
@@ -72,7 +72,7 @@ const ask = q => { const r = require('child_process').spawnSync('php', ['-r', '$
   await go(u, `#/unsubscribe?u=${bob}&t=${tok}`, 1400);
   check('the link in the email opens a page with one question and one button (opening it changes nothing)', /Stop news emails\?/.test(await txt(u, '#uns-h')) && /bo…@montana\.edu/.test(await txt(u, '.uns')) && ask(`SELECT news_email FROM users WHERE id = ${bob}`)[0].news_email === 1);
   await u.click('[data-uns="0"]'); await u.waitForTimeout(700);
-  check('Stop news emails turns them off', /No more news emails/.test(await txt(u, '#uns-h')) && ask(`SELECT news_email FROM users WHERE id = ${bob}`)[0].news_email === 0);
+  check('Stop these emails turns them off', /You will not get these any more/.test(await txt(u, '#uns-h')) && ask(`SELECT news_email FROM users WHERE id = ${bob}`)[0].news_email === 0);
   await u.click('[data-uns="1"]'); await u.waitForTimeout(700);
   check('and Turn them back on undoes it', /Stop news emails\?/.test(await txt(u, '#uns-h')) && ask(`SELECT news_email FROM users WHERE id = ${bob}`)[0].news_email === 1);
   await go(u, `#/unsubscribe?u=${bob}&t=nope`, 1000); check('a broken link says so and points to Settings', /does not work/.test(await txt(u, '#uns-h')) && !!(await u.$('.uns a[href="#/settings"]')));

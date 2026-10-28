@@ -29,7 +29,7 @@ function mh_send_mail(array $cfg, string $to, string $subject, string $text, str
   ];
   foreach ($extra as $k => $v) if (preg_match('/^[A-Za-z-]+$/', (string)$k)) $headers[$k] = str_replace(["\r", "\n"], '', (string)$v);
   if ($mode === 'log') {
-    $line = '[' . gmdate('c') . "] to=$to subject=\"$subject\"\n$text\n---\n";
+    $line = '[' . gmdate('c') . "] to=$to subject=\"$subject\"\n$text\n" . (isset($headers['List-Unsubscribe']) ? 'List-Unsubscribe: ' . $headers['List-Unsubscribe'] . "\n" : '') . "---\n";
     @file_put_contents(__DIR__ . '/data/mail.log', $line, FILE_APPEND | LOCK_EX);
     return ['ok' => true, 'error' => null];
   }

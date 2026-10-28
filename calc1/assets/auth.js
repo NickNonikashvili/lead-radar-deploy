@@ -447,18 +447,30 @@
   };
 
   /* #/unsubscribe?u=…&t=… : the link at the bottom of a news email (api/news.php). One button, so a mail scanner that opens the link changes nothing. */
+  /* the page behind "Stop these emails" in every email (api/news.php news_unsub, MH_UNSUB in api/lib.php): one kind of
+     email, one button. Opening the link changes nothing (mail scanners open links); only the button does. */
+  const UNSUB = {
+    news: { col: 'news_email', title: 'Stop news emails?', what: 'These are the few emails a term about new things on StudyCat.' },
+    exam: { col: 'exam_nudge', title: 'Stop exam reminders?', what: 'These are the heads-up 3 days before each exam in your classes, with a review call with Bo.' },
+    recap: { col: 'recap_email', title: 'Stop call recaps?', what: 'These are Bo’s recaps after each call: what you covered, your slips and three practice problems.' },
+    digest: { col: 'digest_email', title: 'Stop the weekly digest?', what: 'This is your week on StudyCat: what you studied, what is due and the most upvoted posts.' },
+    planning: { col: 'planning_email', title: 'Stop the Sunday plan?', what: 'This is your week ahead, on Sunday afternoons, with a first focus block.' },
+    reminder: { col: 'reminder_email', title: 'Stop evening reminders?', what: 'These are the reminders the evening before something is due, or when your streak is about to end.' },
+    replies: { col: 'notify_email', title: 'Stop reply emails?', what: 'These are the emails when someone comments on your post or replies to your comment.' }
+  };
   App.views.unsubscribe = {
     title: 'Email settings',
     async render(root, param, query) {
-      const q = query || {}; const u = String(q.u || ''), t = String(q.t || ''); const qs = `&u=${encodeURIComponent(u)}&t=${encodeURIComponent(t)}`;
+      const q = query || {}; const u = String(q.u || ''), t = String(q.t || ''); const k = UNSUB[q.k] ? q.k : 'news'; const K = UNSUB[k];
+      const qs = `&k=${k}&u=${encodeURIComponent(u)}&t=${encodeURIComponent(t)}`;
       const shell = inner => `<div class="landing-wrap uns-wrap"><section class="panel uns" aria-labelledby="uns-h"><span class="uns-av" aria-hidden="true">${App.bobcatSvg ? App.bobcatSvg(64) : ''}</span>${inner}</section></div>`;
       root.innerHTML = shell('<p class="muted">Checking the link…</p>');
       let r; try { r = await call('news_unsub' + qs); } catch (e) { root.innerHTML = shell(`<h1 id="uns-h">This link does not work</h1><p>${esc(e.message)}</p><a class="btn" href="#/settings">${icon('gear', 14)} Open Settings</a>`); return; }
       const paint = on => {
         root.innerHTML = shell(on
-          ? `<h1 id="uns-h">Stop news emails?</h1><p>These are the few emails a term about new things on StudyCat, sent to <b>${esc(r.email)}</b>. Reminders and digests you turned on are not affected.</p><div class="row gap-sm"><button type="button" class="btn primary lg" data-uns="0">Stop news emails</button><a class="btn lg" href="#/">Keep them</a></div>`
-          : `<h1 id="uns-h">Done. No more news emails.</h1><p>${esc(r.email)} will not get them. Changed your mind?</p><div class="row gap-sm"><button type="button" class="btn lg" data-uns="1">Turn them back on</button><a class="btn primary lg" href="#/">Go to StudyCat</a></div>`);
-        root.querySelectorAll('[data-uns]').forEach(b => b.addEventListener('click', async () => { b.disabled = true; try { const x = await call('news_unsub' + qs, { on: b.dataset.uns === '1' ? 1 : 0 }); r.on = x.on; if (Auth.user && Auth.user.id === +u) Auth.user.news_email = x.on; paint(x.on); toast(x.on ? 'News emails are back on' : 'News emails are off'); } catch (e) { b.disabled = false; toast(e.message, 4000); } }));
+          ? `<h1 id="uns-h">${esc(K.title)}</h1><p>${esc(K.what)} <span>Sent to <b>${esc(r.email)}</b>.</span></p><p class="muted small">Other StudyCat emails are not affected. You can change any of them in Settings → Account.</p><div class="row gap-sm"><button type="button" class="btn primary lg" data-uns="0">Stop these emails</button><a class="btn lg" href="#/">Keep them</a></div>`
+          : `<h1 id="uns-h">Done. You will not get these any more.</h1><p>${esc(K.what)} <span>Sent to <b>${esc(r.email)}</b>.</span></p><p>Changed your mind?</p><div class="row gap-sm"><button type="button" class="btn lg" data-uns="1">Turn them back on</button><a class="btn primary lg" href="#/">Go to StudyCat</a></div>`);
+        root.querySelectorAll('[data-uns]').forEach(b => b.addEventListener('click', async () => { b.disabled = true; try { const x = await call('news_unsub' + qs, { on: b.dataset.uns === '1' ? 1 : 0 }); r.on = x.on; if (Auth.user && Auth.user.id === +u) Auth.user[K.col] = x.on; paint(x.on); toast(x.on ? 'Those emails are back on' : 'Those emails are off'); } catch (e) { b.disabled = false; toast(e.message, 4000); } }));
       };
       paint(r.on);
     }

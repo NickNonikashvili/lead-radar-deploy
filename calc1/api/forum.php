@@ -74,11 +74,11 @@ function mh_notify_reply(array $post, ?array $parent, array $actor, int $comment
       try {
         require_once __DIR__ . '/mailer.php'; $cfg = mh_config(); $site = $cfg['site_name'] ?? 'StudyCat';
         $link = rtrim((string)(($cfg['site_url'] ?? '') ?: ('https://' . ($_SERVER['HTTP_HOST'] ?? 'studycat.org'))), '/') . '/#/forum/' . (int)$post['id'];
-        $what = $kind === 'reply' ? 'replied to your comment on' : 'commented on your post';
+        $what = $kind === 'reply' ? 'replied to your comment on' : 'commented on your post'; [$unsub, $uh] = mh_unsub($to, 'replies');
         $subject = $actorName . ' ' . $what . ' "' . mb_substr($post['title'], 0, 60) . '"';
-        $text = $actorName . ' ' . $what . " \"{$post['title']}\":\n\n$snippet\n\nOpen it: $link\n\nYou can turn these emails off in Settings → Account on $site.";
-        $html = '<div style="font-family:Helvetica Neue,Helvetica,Arial,sans-serif;max-width:520px;margin:0 auto;padding:24px;color:#131C2E"><p style="margin:0 0 10px"><b>' . htmlspecialchars($actorName) . '</b> ' . $what . ' <b>' . htmlspecialchars($post['title']) . '</b></p><blockquote style="margin:0 0 14px;padding:10px 14px;border-left:3px solid #9DB4EA;background:#F6F8FB;border-radius:0 6px 6px 0">' . nl2br(htmlspecialchars($snippet)) . '</blockquote><p><a href="' . htmlspecialchars($link) . '" style="display:inline-block;background:#2B55B8;color:#fff;text-decoration:none;padding:9px 14px;border-radius:8px">Open the discussion</a></p><p style="font-size:12px;color:#64718A">You can turn these emails off in Settings → Account on ' . htmlspecialchars($site) . '.</p></div>';
-        mh_send_mail($cfg, $to['email'], $subject, $text, $html);
+        $text = $actorName . ' ' . $what . " \"{$post['title']}\":\n\n$snippet\n\nOpen it: $link\n\nStop these emails: $unsub (or in Settings → Account on $site).";
+        $html = '<div style="font-family:Helvetica Neue,Helvetica,Arial,sans-serif;max-width:520px;margin:0 auto;padding:24px;color:#131C2E"><p style="margin:0 0 10px"><b>' . htmlspecialchars($actorName) . '</b> ' . $what . ' <b>' . htmlspecialchars($post['title']) . '</b></p><blockquote style="margin:0 0 14px;padding:10px 14px;border-left:3px solid #9DB4EA;background:#F6F8FB;border-radius:0 6px 6px 0">' . nl2br(htmlspecialchars($snippet)) . '</blockquote><p><a href="' . htmlspecialchars($link) . '" style="display:inline-block;background:#2B55B8;color:#fff;text-decoration:none;padding:9px 14px;border-radius:8px">Open the discussion</a></p><p style="font-size:12px;color:#64718A"><a href="' . htmlspecialchars($unsub) . '" style="color:inherit">Stop these emails</a> or change them in Settings → Account on ' . htmlspecialchars($site) . '.</p></div>';
+        mh_send_mail($cfg, $to['email'], $subject, $text, $html, $uh);
       } catch (Throwable $e) { /* email is best-effort */ }
     }
   }
@@ -275,7 +275,7 @@ function mh_forum_route(string $route, array $in, array $cfg, string $ip): void 
 
     case 'admin_digest_test':
       mh_method('POST'); $u = mh_require_user(); if (!mh_is_admin($u)) mh_fail('Administrators only.', 403);
-      require_once __DIR__ . '/mailer.php'; [$subject, $text, $html] = mh_digest_content($u, mh_digest_context()); $r = mh_send_mail($cfg, $u['email'], $subject, $text, $html);
+      require_once __DIR__ . '/mailer.php'; [$subject, $text, $html, $uh] = mh_digest_content($u, mh_digest_context()); $r = mh_send_mail($cfg, $u['email'], $subject, $text, $html, $uh);
       if (!$r['ok']) mh_fail('Could not send: ' . ($r['error'] ?? 'unknown error'), 502);
       mh_json(['ok' => true, 'message' => 'Test digest sent to ' . $u['email']]);
 

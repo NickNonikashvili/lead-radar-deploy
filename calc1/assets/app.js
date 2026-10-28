@@ -10,6 +10,7 @@
 (function (global) {
   'use strict';
   const BUILD = global.MATHUB_BUILD || 'dev';
+  global.MATHUB_ASSETS_BUILD = '2026.10.28.5';   // the build these scripts belong to (scripts/release.js writes it; build-check.js compares it with the page's)
   const Courses = global.Courses || (global.Courses = {});
   const COURSE_ORDER = ['calc', 'physics', 'precalc', 'writ', 'csci', 'biob', 'kin', 'psyx'];
   const GLOBAL_VIEWS = ['instructors', 'contact', 'forum', 'policy', 'admin', 'challenge', 'people', 'settings', 'leagues', 'gpa', 'today', 'whatsnew', 'resources', 'guides', 'focus', 'recap', 'tools', 'mistakes', 'join', 'sheet', 'request', 'teach', 'class', 'syllabus', 'notfound', 'create', 'maker', 'c', 'tutor', 'plan', 'tasks', 'timetable', 'agenda', 'timelog', 'projects', 'habits', 'goals', 'wheel', 'journal', 'money', 'career', 'portfolio', 'max', 'unsubscribe', 'room', 'calls', 'usage', 'customize', 'off'];   // pages that work without a course, e.g. #/contact
@@ -439,6 +440,50 @@
         <div class="row gap-sm" style="flex-wrap:wrap"><a class="btn primary" href="#/">${icon('home', 14)} Start page</a>${classy ? `<a class="btn" href="#/class">${icon('users', 14)} Join a class with a code</a>${App.canRequest && App.canRequest() ? `<a class="btn" href="#/request?code=${encodeURIComponent(first.toUpperCase())}">${icon('path', 14)} Request this class</a>` : `<a class="btn" href="#/create">${icon('plus', 14)} Make it from its syllabus</a>`}` : `<a class="btn" href="#/contact">${icon('chat', 14)} Tell us about the broken link</a>`}</div></div>`;
     }
   };
+  /* ---------- code that loads the first time it is needed ----------
+     Pages most visits never open are not in index.html: the admin panel, What's new and the terms. App.need() loads
+     files in order, once; a page's stand-in holds its place in App.views (so links, menus and the router know it)
+     until its file arrives, and then the page is drawn again with the real one. Anything another file hung on the
+     stand-in meanwhile (teach.js adds a tab to the admin panel) moves over to it. */
+  const needing = {};
+  App.need = files => Promise.all([].concat(files).map(f => needing[f] || (needing[f] = new Promise((res, rej) => {
+    const s = document.createElement('script'); s.src = `assets/${f}?v=${encodeURIComponent(BUILD)}`; s.async = false;
+    s.onload = () => res(); s.onerror = () => { delete needing[f]; s.remove(); rej(new Error('This page could not load. Check your connection and try again.')); };
+    document.head.appendChild(s);
+  }))));
+  App.lazyView = (name, files, title) => {
+    if (App.views[name]) return;
+    const stub = App.views[name] = {
+      title, lazy: true,
+      render(root) {
+        root.innerHTML = '<div class="empty">Loading…</div>';
+        App.need(files).then(() => {
+          const real = App.views[name]; if (!real || real === stub) return;
+          Object.keys(stub).forEach(k => { if (!['title', 'lazy', 'render'].includes(k) && !(k in real)) real[k] = stub[k]; });
+          if (root.isConnected) render();
+        }).catch(e => { if (!root.isConnected) return; root.innerHTML = `<div class="empty">${esc(e.message)} <button class="btn sm" data-action="lazy-retry">Try again</button></div>`; bind(root, { 'lazy-retry': () => render() }); });
+      }
+    };
+  };
+  App.lazyView('admin', ['admin.js', 'admin-ops.js'], 'Admin');
+  App.lazyView('whatsnew', ['changelog.js'], 'What’s new');
+  App.lazyView('policy', ['policy.js'], 'Terms & Privacy');
+  // the account menu's dot: a release note this account has not opened (scripts/release.js writes the newest one's build on <html>)
+  App.changelogUnseen = () => { const news = document.documentElement.getAttribute('data-news') || ''; return !!news && (settings().seenChangelog || '') !== news; };
+  /* this student's classes, saved for offline use in the background: the service worker keeps what is fetched, and it no
+     longer downloads every class on install. Not on a data saver or a 2G connection, and once per build. */
+  App.warmClasses = async () => {
+    const cn = navigator.connection;
+    if (!navigator.serviceWorker || !navigator.serviceWorker.controller || navigator.onLine === false || (cn && (cn.saveData || /2g$/.test(cn.effectiveType || '')))) return;
+    let done; try { done = JSON.parse(localStorage.getItem('mathub-warm') || 'null'); } catch (e) { done = null; }
+    if (!done || done.build !== BUILD) done = { build: BUILD, ids: [] };
+    for (const id of App.myCourses()) {
+      const C = Courses[id]; if (!C || C.pack || done.ids.includes(id) || !(C.files || []).length) continue;   // an open class too: it may have loaded before the worker took over
+      const files = C.files.map(f => f + '.js').concat(LESSON_IDS.has(id) ? ['lessons/' + id + '.js'] : []);
+      try { for (const f of files) { const r = await fetch(`assets/${f}?v=${encodeURIComponent(BUILD)}`); if (!r.ok) throw new Error(r.status); } } catch (e) { return; }
+      done.ids.push(id); try { localStorage.setItem('mathub-warm', JSON.stringify(done)); } catch (e) {}
+    }
+  };
   /* ---------- invite landing: #/join?ref=CODE ---------- */
   App.views.join = {
     title: 'Join a classmate',
@@ -583,6 +628,7 @@
     applyTheme(); matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applyTheme);
     document.addEventListener('keydown', e => { if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); Search.open(); } if (e.key === 'Escape') { Search.close(); app.classList.remove('nav-open'); } });
     window.addEventListener('hashchange', render);
+    setTimeout(() => (global.requestIdleCallback || (f => f()))(() => { App.warmClasses().catch(() => {}); }), 12000);
   }
 
   /* ---------- Pomodoro ---------- */
@@ -694,13 +740,14 @@
       const hello = who && ss.phase !== 'before' && ss.phase !== 'after' ? `${esc(who)}, which class is giving you trouble ${greeting}?` : sub;
       const startHere = fresh ? `<div class="start-steps">${[['1', 'Pick a class', 'Your classes are below, in Your home. Tap one to open it.'], ['2', 'Take a 5-minute lesson', 'A few questions with worked answers. No setup.'], ['3', guest ? 'Sign up to keep it' : 'Come back tomorrow', guest ? 'A free montana.edu account saves your progress everywhere.' : 'Your streak and daily plan pick up where you left off.']].map(([n, h, p]) => `<div class="start-step"><span class="ss-n">${n}</span><div><b>${h}</b><small>${p}</small></div></div>`).join('')}</div>` : '';
       root.innerHTML = `<div class="landing-wrap">
-        <header class="landing-top hero dash-hero"><div><p class="hero-when">${esc(fmtDate(t, true))} · ${esc(first.term)}${ss.phase === 'during' ? ` · Week ${ss.week}` : ''}</p><h1 class="landing-title hero-sub">${hello}</h1>${guest ? '<p class="muted small hero-note">Every class you take, made simple: what is on the next exam, five-minute lessons and a tutor you can call. Free with a montana.edu email.</p>' : ''}${(() => { const soon = mineIds.map(id => ({ C: Courses[id], ex: nextExam(Courses[id]) })).filter(x => x.ex && x.ex.date >= t).sort((a, b) => a.ex.date.localeCompare(b.ex.date))[0]; if (!soon) return ''; const n = daysBetween(t, soon.ex.date); return `<a class="hero-count" href="#/${soon.C.id}/dashboard"><span class="hc-num count" data-count="${n}">${n}</span><span class="hc-body"><small>day${n === 1 ? '' : 's'} until ${esc(soon.ex.name)}</small><b>${esc(soon.C.short)} · ${esc(soon.ex.dateLabel || fmtDate(soon.ex.date, true))}${App.readiness ? (() => { const r = App.readiness(soon.C.id); return r && r.ok && r.score > 0 ? ` · ${r.score}% ready` : ''; })() : ''}</b></span>${icon('right', 14)}</a>`; })()}</div><div class="row gap-sm hero-actions"><a class="btn primary sm hero-today" href="#/today">${icon('flag', 14)} Today</a><a class="btn sm hero-faculty" href="#/teach" title="StudyCat Faculty: write your syllabus and run your class">${icon('file', 14)} For professors</a></div><div class="mascot-slot hero-mascot" data-size="96"></div><div class="px-skyline" aria-hidden="true"></div></header>
+        <header class="landing-top hero dash-hero"><div><p class="hero-when">${esc(fmtDate(t, true))} · ${esc(first.term)}${ss.phase === 'during' ? ` · Week ${ss.week}` : ''}</p><h1 class="landing-title hero-sub">${hello}</h1>${guest ? '<p class="muted small hero-note">Every class you take, made simple: what is on the next exam, five-minute lessons and a tutor you can call. Free with a montana.edu email.</p>' : ''}${(() => { const soon = mineIds.map(id => ({ C: Courses[id], ex: nextExam(Courses[id]) })).filter(x => x.ex && x.ex.date >= t).sort((a, b) => a.ex.date.localeCompare(b.ex.date))[0]; if (!soon) return ''; const n = daysBetween(t, soon.ex.date); return `<a class="hero-count" href="#/${soon.C.id}/dashboard"><span class="hc-num count" data-count="${n}">${n}</span><span class="hc-body"><small>day${n === 1 ? '' : 's'} until ${esc(soon.ex.name)}</small><b>${esc(soon.C.short)} · ${esc(soon.ex.dateLabel || fmtDate(soon.ex.date, true))}${App.readiness ? (() => { const r = App.readiness(soon.C.id); return r && r.ok && r.score > 0 ? ` · ${r.score}% ready` : ''; })() : ''}</b></span>${icon('right', 14)}</a>`; })()}</div><div class="row gap-sm hero-actions">${picking ? `<button type="button" class="btn primary sm hero-today hero-pick" data-action="go-pick">${icon('cap', 14)} Pick your classes</button>` : `<a class="btn primary sm hero-today" href="#/today">${icon('flag', 14)} Today</a>`}<a class="btn sm hero-faculty" href="#/teach" title="StudyCat Faculty: write your syllabus and run your class">${icon('file', 14)} For professors</a></div><div class="mascot-slot hero-mascot" data-size="96"></div><div class="px-skyline" aria-hidden="true"></div></header>
         <div id="announcement-slot"></div>
         ${App.inviteBanner ? App.inviteBanner() : ''}${App.recapBanner ? App.recapBanner() : ''}${picking ? pickClassesHtml() : fresh ? startHere : ''}
         ${App.dash ? App.dash.html() : ''}
         ${guest ? '<p class="small muted mt-2" style="text-align:center">Look around as much as you like. Sign up with a montana.edu email to keep your progress on every device.</p>' : ''}</div>`;
       if (App.dash) App.dash.paint(root);   // your home: the widgets you arranged (assets/dash.js)
-      bind(root, { theme: toggleTheme, search: () => Search.open() }); applyTheme(); if (picking) wirePickClasses(root);
+      // someone with no classes yet: the hero's button goes to the class picker (Today would be empty), below the hero on a phone
+      bind(root, { theme: toggleTheme, search: () => Search.open(), 'go-pick': () => { const box = $('#pick-classes', root); if (!box) return; box.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' }); const f = $('.pk-c input', box); if (f) setTimeout(() => f.focus({ preventScroll: true }), 350); } }); applyTheme(); if (picking) wirePickClasses(root);
       const slot = $('#landing-account', root); if (slot && App.auth) App.auth.paintLandingAccount(slot);
       paintAnnouncement(root);
       if (App.ambient && App.ambient.paint) try { App.ambient.paint(); } catch (e) {}   // the sound button in the hero shows what is playing
@@ -944,6 +991,9 @@
       bind(root, { open: el => App.go('notes', el.dataset.id), reveal: el => flip(el, $('#sol-' + el.dataset.i, root), 'Show the solution', 'Hide the solution'), answer: el => flip(el, $('#ans-' + el.dataset.i, root), 'Show the answer', 'Hide the answer'), jump: (el, e) => { e.preventDefault(); const t = $('#' + el.dataset.to, root); if (t) t.scrollIntoView({ behavior: 'smooth', block: 'start' }); } });
       if (App.paintMyNotes) App.paintMyNotes(root, sec);
       if (App.scrollProgress) App.scrollProgress($('.notes-layout > .stack > .panel', root));
+      // read to the end (its last row in view): Today ticks this week's topic off (assets/today.js)
+      const foot = $('.note-foot', root);
+      if (foot && 'IntersectionObserver' in global) { const io = new IntersectionObserver(es => { if (!es.some(e => e.isIntersecting) || !root.isConnected) return; io.disconnect(); const r = store.get('lessonsRead', {}); if (!r[sec.id]) { r[sec.id] = Date.now(); store.set('lessonsRead', r); } }, { threshold: 0.6 }); io.observe(foot); }
     }
   };
 

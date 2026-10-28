@@ -134,6 +134,20 @@ function mh_secret(): string {
   return $s;
 }
 
+/* ---------- a way out of every email that is not a sign-in code ----------
+   Each kind follows one setting (users.<column>, also in Settings → Account). Its footer links to #/unsubscribe?k=<kind>
+   (a page with one button, so mail scanners that open links change nothing), and List-Unsubscribe headers let a mail
+   app's own Unsubscribe button do it in one click (a signed POST to news_unsub, api/news.php; no sign-in). Mail that
+   has neither tends to be marked as spam, and then every StudyCat email lands there, sign-in codes too. */
+const MH_UNSUB = ['news' => 'news_email', 'exam' => 'exam_nudge', 'recap' => 'recap_email', 'digest' => 'digest_email', 'planning' => 'planning_email', 'reminder' => 'reminder_email', 'replies' => 'notify_email'];
+function mh_unsub_token(int $uid, string $kind): string { return substr(hash_hmac('sha256', ($kind === 'news' ? 'news-unsub:' : "unsub:$kind:") . $uid, mh_secret()), 0, 32); }   // news keeps the token its older emails carry
+function mh_unsub_site(): string { $cfg = mh_config(); return rtrim((string)(($cfg['site_url'] ?? '') ?: ('https://' . ($_SERVER['HTTP_HOST'] ?? 'studycat.org'))), '/'); }
+/** [the page link for the footer, the headers for mh_send_mail] */
+function mh_unsub(array $u, string $kind): array {
+  $q = 'k=' . $kind . '&u=' . (int)$u['id'] . '&t=' . mh_unsub_token((int)$u['id'], $kind); $site = mh_unsub_site();
+  return [$site . '/#/unsubscribe?' . $q, ['List-Unsubscribe' => '<' . $site . '/api/index.php?r=news_unsub&' . $q . '>', 'List-Unsubscribe-Post' => 'List-Unsubscribe=One-Click']];
+}
+
 function mh_client_ip(): string {
   $ip = $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
   return substr(preg_replace('/[^0-9a-fA-F:.]/', '', $ip), 0, 45);

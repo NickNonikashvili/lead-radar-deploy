@@ -28,8 +28,9 @@ const mailLen = () => (fs.existsSync(LOG) ? fs.readFileSync(LOG, 'utf8').length 
   const to = (mail.match(/^\[[^\]]+\] to=\S+ subject="Calc I Exam 1 is in 3 days"/gm) || []).map(x => x.split('to=')[1].split(' ')[0]);
   check('three days before: one email each, with the exam in the subject', n === 2 && to.length === 2 && to.includes(BOB) && to.includes(MOD), { n, to });
   const part = who => mail.split(/^\[[^\]]+\] to=/m).find(x => x.startsWith(who)) || '';
-  check('with the day, and a button that starts a review call with Bo (he has credits for one)', /Calc I Exam 1 is on Friday, Sep 18\./.test(part(BOB)) && /weakest topics/.test(part(BOB)) && /Start the review call with Bo: https?:\/\/\S+\/#\/tutor\/calc\?call=exam/.test(part(BOB)) && /Turn it off in Settings → Account/.test(part(BOB)), part(BOB).slice(0, 500));
+  check('with the day, and a button that starts a review call with Bo (he has credits for one)', /Calc I Exam 1 is on Friday, Sep 18\./.test(part(BOB)) && /weakest topics/.test(part(BOB)) && /Start the review call with Bo: https?:\/\/\S+\/#\/tutor\/calc\?call=exam/.test(part(BOB)) && /Stop these emails: https?:\/\/\S+\/#\/unsubscribe\?k=exam&u=\d+&t=[0-9a-f]{32}/.test(part(BOB)), part(BOB).slice(0, 500));
   check('and for a Max member too', /#\/tutor\/calc\?call=exam/.test(part(MOD)));
+  check('a mail app can unsubscribe in one click (List-Unsubscribe, for exam reminders only)', /List-Unsubscribe: <https?:\/\/\S+\/api\/index\.php\?r=news_unsub&k=exam&u=\d+&t=[0-9a-f]{32}>/.test(part(BOB)));
   check('each exam once: the calendar row and the exam itself are one heads-up', ask('SELECT COUNT(*) AS n FROM exam_nudges')[0].n === 2);
   sqlite(`UPDATE users SET exam_checked = 0 WHERE email IN ('${BOB}', '${MOD}')`);
   m0 = mailLen(); n = tick('2026-09-16');

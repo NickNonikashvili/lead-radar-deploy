@@ -102,14 +102,14 @@ function mh_planning_tick(int $max, bool $force = false): int {
   foreach ($st->fetchAll() as $u) {
     $db->prepare('UPDATE users SET planning_sent = ? WHERE id = ?')->execute([time(), $u['id']]);
     $from = mh_local_date(time() + 86400); $to = mh_local_date(time() + 7 * 86400); $ev = array_values(array_filter(mh_user_events($u), fn($e) => $e['date'] >= $from && $e['date'] <= $to));
-    $byDay = []; foreach ($ev as $e) $byDay[$e['date']][] = $e; $name = mh_display_name($u);
+    $byDay = []; foreach ($ev as $e) $byDay[$e['date']][] = $e; $name = mh_display_name($u); [$unsub, $uh] = mh_unsub($u, 'planning');
     $text = "Hi $name,\n\nHere is your week on StudyCat.\n\n"; $html = '<div style="font-family:Helvetica Neue,Helvetica,Arial,sans-serif;font-size:15px;line-height:1.55;color:#0F172A;max-width:560px"><p>Hi ' . htmlspecialchars($name) . ',</p><p>Here is your week on StudyCat.</p>';
     if ($byDay) { $html .= '<h3 style="margin:18px 0 6px">Due this week</h3>'; foreach ($byDay as $d => $list) { $label = (new DateTime($d, mh_tz()))->format('l, M j'); $text .= "$label\n"; $html .= '<p style="margin:8px 0 2px"><b>' . htmlspecialchars($label) . '</b></p><ul style="margin:0 0 6px 18px;padding:0">'; foreach ($list as $e) { $line = '[' . $e['short'] . '] ' . $e['title'] . ($e['time'] !== '' ? ' · ' . $e['time'] : ''); $text .= "  - $line\n"; $html .= '<li>' . htmlspecialchars($line) . '</li>'; } $html .= '</ul>'; $text .= "\n"; } }
     else { $text .= "Nothing is due in the next seven days in your classes. A good week to get ahead.\n\n"; $html .= '<p>Nothing is due in the next seven days in your classes. A good week to get ahead.</p>'; }
     $first = $ev[0] ?? null; $sugg = $first ? 'Monday, 25 minutes on ' . $first['title'] . ' (' . $first['short'] . ')' : 'Monday, 25 minutes of due flashcards in Today';
-    $text .= "Suggested first focus block: $sugg.\nStart it: https://studycat.org/#/focus\n\nYour week in numbers: https://studycat.org/#/recap?w=last\nToday's plan: https://studycat.org/#/today\n\nYou get this on Sundays because you turned on the planning email in Settings. Turn it off there any time.\n";
-    $html .= '<p style="margin:16px 0 4px"><b>Suggested first focus block:</b> ' . htmlspecialchars($sugg) . '. <a href="https://studycat.org/#/focus">Start it</a>.</p><p><a href="https://studycat.org/#/recap?w=last" style="display:inline-block;padding:10px 16px;background:#4F46E5;color:#fff;border-radius:10px;text-decoration:none;font-weight:700">See your week in numbers</a> &nbsp; <a href="https://studycat.org/#/today">Today\'s plan</a></p><p style="color:#5A6578;font-size:13px">You get this on Sundays because you turned on the planning email in Settings. Turn it off there any time.</p></div>';
-    try { mh_send_mail($cfg, $u['email'], 'Your week on StudyCat', $text, $html); $sent++; } catch (Throwable $e) {}
+    $text .= "Suggested first focus block: $sugg.\nStart it: https://studycat.org/#/focus\n\nYour week in numbers: https://studycat.org/#/recap?w=last\nToday's plan: https://studycat.org/#/today\n\nYou get this on Sundays because you turned on the planning email in Settings. Stop these emails: $unsub\n";
+    $html .= '<p style="margin:16px 0 4px"><b>Suggested first focus block:</b> ' . htmlspecialchars($sugg) . '. <a href="https://studycat.org/#/focus">Start it</a>.</p><p><a href="https://studycat.org/#/recap?w=last" style="display:inline-block;padding:10px 16px;background:#4F46E5;color:#fff;border-radius:10px;text-decoration:none;font-weight:700">See your week in numbers</a> &nbsp; <a href="https://studycat.org/#/today">Today\'s plan</a></p><p style="color:#5A6578;font-size:13px">You get this on Sundays because you turned on the planning email in Settings. <a href="' . htmlspecialchars($unsub) . '" style="color:#5A6578">Stop these emails</a> or turn it off in Settings.</p></div>';
+    try { mh_send_mail($cfg, $u['email'], 'Your week on StudyCat', $text, $html, $uh); $sent++; } catch (Throwable $e) {}
   }
   return $sent;
 }
@@ -145,20 +145,20 @@ function mh_exam_nudge_tick(int $max, bool $force = false, string $today = ''): 
       $e = $soon[0]; $cid = (string)$e['course']; $short = (string)$e['short']; $exam = $e['name']; $when = (new DateTime($e['date'], $tz))->format('l, M j') . ($e['time'] !== '' ? ', ' . $e['time'] : '');
       require_once __DIR__ . '/credits.php'; $plan = mh_plan($u, $cfg); $CC = mh_credits_cfg($cfg); $CL = mh_credits_left($u, $cfg, $plan);
       $call = $V['key'] !== '' && ($CL['admin'] || $CL['left'] >= 5000 * ($plan === 'max' ? $CC['call_strong'] : $CC['call_light']));   // credits for a call of about five minutes
-      $link = $call ? "#/tutor/$cid?call=exam" : "#/$cid/exam"; $go = $url . '/' . $link; $name = mh_display_name($u);
+      $link = $call ? "#/tutor/$cid?call=exam" : "#/$cid/exam"; $go = $url . '/' . $link; $name = mh_display_name($u); [$unsub, $uh] = mh_unsub($u, 'exam');
       $title = "$short $exam is in {$e['days']} days";
       $pitch = $call ? 'Bo has a review call ready. He starts with your weakest topics, asks you exam-style questions one at a time and checks your work on the board as you go. Fifteen minutes is plenty.' : 'Your exam prep page has the topics it covers, how ready you are and a practice exam. Start with your weakest topic.';
       $btn = $call ? 'Start the review call with Bo' : 'Open exam prep';
       $more = count($soon) > 1 ? 'Also soon: ' . implode(', ', array_map(fn($x) => $x['short'] . ' ' . $x['name'] . ' (' . (new DateTime($x['date'], $tz))->format('D, M j') . ')', array_slice($soon, 1, 3))) . '.' : '';
-      $text = "Hi $name,\n\n$short $exam is on $when.\n\n$pitch\n\n$btn: $go\n" . ($more !== '' ? "\n$more\n" : '') . "\nYou get this 3 days before each exam in your classes. Turn it off in Settings → Account.";
+      $text = "Hi $name,\n\n$short $exam is on $when.\n\n$pitch\n\n$btn: $go\n" . ($more !== '' ? "\n$more\n" : '') . "\nYou get this 3 days before each exam in your classes. Stop these emails: $unsub (or in Settings → Account).";
       $h = fn($s) => htmlspecialchars($s, ENT_QUOTES);
       $html = '<!doctype html><html><body style="margin:0;background:#EEF4FF"><div style="background:#EEF4FF;padding:24px 12px;font-family:Helvetica Neue,Helvetica,Arial,sans-serif"><div style="max-width:520px;margin:0 auto;background:#fff;border:2px solid #D6E2F5;border-radius:20px;overflow:hidden">'
         . '<div style="background:#1A64D6;padding:16px 24px;color:#fff;font-size:20px;font-weight:800">' . $h($site) . '</div>'
         . '<div style="padding:24px;color:#0F172A;font-size:16px;line-height:1.55"><p style="margin:0 0 6px;color:#475569">Hi ' . $h($name) . ',</p><h1 style="margin:0 0 6px;font-size:22px">' . $h($title) . '</h1><p style="margin:0 0 16px;color:#475569">' . $h($when) . '</p>'
         . '<p style="margin:0 0 16px">' . $h($pitch) . '</p><p style="margin:20px 0 8px"><a href="' . $h($go) . '" style="display:inline-block;background:#1A64D6;color:#fff;text-decoration:none;font-weight:700;padding:12px 20px;border-radius:12px;border-bottom:4px solid #1450B0">' . $h($btn) . ' &rarr;</a></p>'
         . ($more !== '' ? '<p style="margin:16px 0 0;font-size:14px;color:#475569">' . $h($more) . '</p>' : '')
-        . '</div><div style="padding:14px 24px 18px;border-top:1px solid #E2E8F0;color:#64748B;font-size:13px">You get this 3 days before each exam in your classes. Turn it off in Settings &rarr; Account.</div></div></div></body></html>';
-      $ok = mh_send_mail($cfg, $u['email'], $title, $text, $html)['ok'];
+        . '</div><div style="padding:14px 24px 18px;border-top:1px solid #E2E8F0;color:#64748B;font-size:13px">You get this 3 days before each exam in your classes. <a href="' . $h($unsub) . '" style="color:#64748B">Stop these emails</a> or change them in Settings &rarr; Account.</div></div></div></body></html>';
+      $ok = mh_send_mail($cfg, $u['email'], $title, $text, $html, $uh)['ok'];
       try { require_once __DIR__ . '/push.php'; $ps = $db->prepare('SELECT 1 FROM push_subs WHERE user_id = ? LIMIT 1'); $ps->execute([$uid]); if ($ps->fetchColumn()) { mh_push_queue($uid, $title, $call ? 'Bo has a review call ready on your weakest topics.' : 'Your exam prep page is ready: start with your weakest topic.', $link, 'exam'); mh_push_user($uid); } } catch (Throwable $x) {}
       if ($ok) { $sent++; mh_metric('exam_nudge'); }
     } catch (Throwable $x) {}

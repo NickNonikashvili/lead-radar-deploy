@@ -211,5 +211,6 @@ for (const c of ORDER) {
   });
 }
 out('sitemap.xml', `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.map(x => `  <url><loc>${SITE_URL}${x.u}</loc><lastmod>${TODAY}</lastmod><changefreq>${x.f}</changefreq><priority>${x.p}</priority></url>`).join('\n')}\n</urlset>\n`);
+out('learn/build.json', JSON.stringify({ build: BUILD }) + '\n');   // build-check.js reads it: are the study guides from the same upload as the page?
 out('robots.txt', `User-agent: *\nAllow: /\nDisallow: /api/\n\nSitemap: ${SITE_URL}/sitemap.xml\n`);
 console.log(`Wrote ${written.length} files: ${urls.length - 3} topic, class, guide and resource pages, learn/index.html, learn/whats-new.html, sitemap.xml, robots.txt (build ${BUILD}).`);

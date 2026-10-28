@@ -19,6 +19,13 @@ const ROOT = path.join(__dirname, '..');
   const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8'); const sw = fs.readFileSync(path.join(ROOT, 'sw.js'), 'utf8');
   check('and neither loaded by the page nor cached by the service worker', GONE.every(f => !html.includes('assets/' + f) && !sw.includes("'assets/" + f + "'")));
   check('the slide reader the learning tools need stays', html.includes('assets/officekit.js') && fs.existsSync(path.join(ROOT, 'assets', 'officekit.js')));
+  // the server still holds them from earlier uploads (an upload never deletes): .htaccess answers 410 Gone for them,
+  // and for no file the site uses
+  const gone410 = [...fs.readFileSync(path.join(ROOT, '.htaccess'), 'utf8').matchAll(/^\s*RewriteRule \^(\S+) - \[G,L\]$/gm)].map(m => new RegExp('^' + m[1]));
+  const retired = GONE.map(f => 'assets/' + f).concat(['assets/fonts/barlow-400.woff2', 'assets/fonts/barlow-condensed-700.woff2', 'phonetics/index.html', 'phonetics/app.js']);
+  const live = []; const walk = d => fs.readdirSync(path.join(ROOT, d), { withFileTypes: true }).forEach(e => { const r = d ? d + '/' + e.name : e.name; if (e.isDirectory()) { if (!/^(tests|app|node_modules|api|\.git)$/.test(r)) walk(r); } else live.push(r); }); walk('');
+  check('the server answers 410 Gone for every retired file', gone410.length >= 3 && retired.every(f => gone410.some(re => re.test(f))), retired.filter(f => !gone410.some(re => re.test(f))));
+  check('and for no file the site still uses (officekit.js included)', live.every(f => !gone410.some(re => re.test(f))) && live.includes('assets/officekit.js'), live.filter(f => gone410.some(re => re.test(f))));
 
   const [c, p] = await mk(1360, 900, { serviceWorkers: 'block' });
   await go(p, '#/', 1200);

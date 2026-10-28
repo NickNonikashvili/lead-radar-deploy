@@ -3,6 +3,7 @@
    Tokens first (light), then dark overrides, then components.
    ============================================================ */
 :root {
+  --assets-build: "2026.10.28.5";   /* the build these styles belong to (scripts/release.js; read by build-check.js) */
   --bg: #F6F8FB;
   --grid: rgba(43, 85, 184, 0.05);
   --surface: #FFFFFF;
@@ -374,6 +375,17 @@ input[type="checkbox"] { accent-color: var(--accent); width: 16px; height: 16px;
 .q-feedback b.res { display: block; margin-bottom: 4px; }
 .q-hint { margin-top: 10px; font-size: 13.5px; color: var(--ink-2); background: var(--gold-soft); padding: 8px 12px; border-radius: var(--radius-sm); }
 .score-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; }
+/* the Quizzer on a phone: the set's presets in one row that scrolls sideways and a slimmer score, so the first question
+   is near the top instead of two screens down */
+@media (max-width: 640px) {
+  #pq-setup .panel-h { flex-direction: column; align-items: stretch; gap: 10px; }
+  #pq-setup .panel-h > div:first-child { min-width: 0; max-width: 100%; } #pq-setup .panel-h p { white-space: normal; overflow-wrap: anywhere; margin-bottom: 0; }
+  #pq-setup .panel-h .row { flex-wrap: nowrap; overflow-x: auto; gap: 8px; margin: 0 -16px; padding: 2px 16px 6px; scrollbar-width: none; scroll-snap-type: x proximity; }
+  #pq-setup .panel-h .row::-webkit-scrollbar { display: none; }
+  #pq-setup .panel-h .row > * { flex: none; scroll-snap-align: start; }
+  #pq-session .score-bar .stat { padding: 8px 12px; }
+  #pq-session .score-bar .stat-num { font-size: 26px; }
+}
 .timer { font-family: var(--font-mono); font-size: 20px; font-weight: 500; font-variant-numeric: tabular-nums; }
 .timer.low { color: var(--bad); }
 

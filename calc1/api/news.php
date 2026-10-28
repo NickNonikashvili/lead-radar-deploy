@@ -20,7 +20,7 @@ function mh_news_db(): PDO {
   return $db;
 }
 function mh_news_url(): string { $cfg = mh_config(); return rtrim((string)(($cfg['site_url'] ?? '') ?: ('https://' . ($_SERVER['HTTP_HOST'] ?? 'studycat.org'))), '/'); }
-function mh_news_token(int $uid): string { return substr(hash_hmac('sha256', 'news-unsub:' . $uid, mh_secret()), 0, 32); }
+function mh_news_token(int $uid): string { return mh_unsub_token($uid, 'news'); }
 function mh_news_credits(): int { require_once __DIR__ . '/credits.php'; return (int)mh_credits_cfg(mh_config())['free']; }
 function mh_news_minutes(): int { require_once __DIR__ . '/credits.php'; $C = mh_credits_cfg(mh_config()); return $C['call_light'] > 0 ? (int)floor($C['free'] / $C['call_light']) : 0; }
 
@@ -51,7 +51,7 @@ function mh_news_render(array $n, array $u): array {
   $fill = fn(string $s) => strtr($s, ['{name}' => $first, '{credits}' => number_format(mh_news_credits()), '{minutes}' => (string)mh_news_minutes()]);
   $subject = $fill($n['subject']); $body = $fill($n['body']);
   $link = (string)($n['link'] ?? ''); if ($link !== '' && $link[0] === '#') $link = $url . '/' . $link; elseif ($link !== '' && $link[0] === '/') $link = $url . $link;
-  $unsub = $url . '/#/unsubscribe?u=' . (int)$u['id'] . '&t=' . mh_news_token((int)$u['id']);
+  [$unsub, $headers] = mh_unsub($u, 'news');
   $paras = array_values(array_filter(array_map('trim', preg_split('/\n\s*\n/', str_replace("\r", '', $body))), fn($p) => $p !== ''));
   $text = implode("\n\n", $paras) . ($n['button'] !== '' ? "\n\n" . $fill($n['button']) . ': ' . $link : '') . "\n\n— $site\n\nYou get this because you have a $site account. Stop these emails: $unsub (or in Settings → Account).";
   $p = fn(string $s) => '<p style="margin:0 0 14px">' . nl2br(htmlspecialchars($s, ENT_QUOTES)) . '</p>';
@@ -62,7 +62,6 @@ function mh_news_render(array $n, array $u): array {
     . '<div style="padding:26px 24px 20px;color:#0F172A;font-size:16px;line-height:1.55"><h1 style="margin:0 0 16px;font-size:24px;line-height:1.25">' . htmlspecialchars($subject, ENT_QUOTES) . '</h1>' . implode('', array_map($p, $paras)) . $btn . '</div>'
     . '<div style="padding:14px 24px 18px;border-top:1px solid #E2E8F0;color:#64748B;font-size:13px;line-height:1.5">You get this because you have a ' . htmlspecialchars($site, ENT_QUOTES) . ' account. <a href="' . htmlspecialchars($unsub, ENT_QUOTES) . '" style="color:#64748B">Stop these emails</a>, or turn them off in Settings &rarr; Account.</div>'
     . '</div></div></body></html>';
-  $headers = ['List-Unsubscribe' => '<' . $url . '/api/index.php?r=news_unsub&u=' . (int)$u['id'] . '&t=' . mh_news_token((int)$u['id']) . '>', 'List-Unsubscribe-Post' => 'List-Unsubscribe=One-Click'];
   return [$subject, $text, $html, $headers];
 }
 function mh_news_who(): string { return 'verified = 1 AND news_email = 1 AND email NOT LIKE "%@system.local"'; }
@@ -97,15 +96,19 @@ function mh_news_route(string $route, array $in, array $cfg, string $ip): void {
   if ($route === 'news_unsub') {
     // a signed link: no login. GET says whether it is good (the #/unsubscribe page); POST stops (or, with on: 1, starts) news.
     // Mail apps' one-click unsubscribe POSTs here without the site's header, so this route checks the signature instead.
+    // k names the kind of email (MH_UNSUB in api/lib.php); links in older news emails have none
+    $kind = (string)($in['k'] ?? $_GET['k'] ?? 'news'); if (!isset(MH_UNSUB[$kind])) $kind = 'news'; $col = MH_UNSUB[$kind];
     $uid = (int)($in['u'] ?? $_GET['u'] ?? 0); $tok = (string)($in['t'] ?? $_GET['t'] ?? '');
-    $st = $db->prepare('SELECT id, email, news_email FROM users WHERE id = ?'); $st->execute([$uid]); $u = $st->fetch();
-    if (!$u || !hash_equals(mh_news_token($uid), $tok)) mh_fail('This link does not work any more. Turn emails off in Settings → Account instead.', 404);
+    $st = $db->prepare("SELECT id, email, $col AS cur FROM users WHERE id = ?"); $st->execute([$uid]); $u = $st->fetch();
+    if (!$u || !hash_equals(mh_unsub_token($uid, $kind), $tok)) mh_fail('This link does not work any more. Turn emails off in Settings → Account instead.', 404);
     [$local, $dom] = array_pad(explode('@', (string)$u['email'], 2), 2, ''); $masked = mb_substr($local, 0, 2) . '…@' . $dom;
-    if ($method === 'GET') mh_json(['ok' => true, 'email' => $masked, 'on' => (int)$u['news_email'] === 1]);
+    if ($method === 'GET') mh_json(['ok' => true, 'email' => $masked, 'kind' => $kind, 'on' => (int)$u['cur'] === 1]);
     if ($method !== 'POST') mh_fail('Method not allowed.', 405);
     mh_rate_or_fail('news_unsub:' . $ip, 30, 3600);
-    $on = !empty($in['on']) ? 1 : 0; $db->prepare('UPDATE users SET news_email = ? WHERE id = ?')->execute([$on, $uid]);
-    mh_json(['ok' => true, 'email' => $masked, 'on' => $on === 1]);
+    $on = !empty($in['on']) ? 1 : 0; $db->prepare("UPDATE users SET $col = ? WHERE id = ?")->execute([$on, $uid]);
+    // the usage report counts real changes (email_off_exam, …), not visits to the page: mail scanners open links too
+    if ($on !== (int)$u['cur']) { try { require_once __DIR__ . '/social.php'; require_once __DIR__ . '/growth.php'; mh_metric(($on ? 'email_on_' : 'email_off_') . $kind); } catch (Throwable $e) {} }
+    mh_json(['ok' => true, 'email' => $masked, 'kind' => $kind, 'on' => $on === 1]);
   }
   if (!str_starts_with($route, 'admin_news')) return;
   $u = mh_require_user(); if (!mh_is_admin($u)) mh_fail('Administrators only.', 403);

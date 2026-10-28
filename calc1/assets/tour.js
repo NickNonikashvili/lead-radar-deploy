@@ -79,6 +79,7 @@
     let tried = false; try { tried = !!sessionStorage.getItem('mh-tour'); } catch (e) {}
     if (!force && (seen() || tried)) return false;
     if (!landing()) return false;   // the start page only
+    if (!force && $('#pick-classes')) return false;   // first the classes: the tour shows a home with them in it
     if ($('.modal-backdrop, .celebrate, #install-banner, #report-modal, #welcome, .pop, #paywall')) return false;
     const steps = STEPS.filter(s => (phone() ? !s.wide : !s.phone) && target(s));
     if (steps.length < 2) return false;

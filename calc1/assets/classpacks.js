@@ -543,9 +543,11 @@
   let lastSig = '';
   /* fetch the list of packs, register new and changed ones, drop removed ones; re-render when the page on screen depends on it */
   async function sync() {
-    let j; try { j = await api('classpack_list'); } catch (e) { j = null; }
+    const had = lsGet(LIST_KEY); const tag = had && Array.isArray(had.packs) && had.tag ? had.tag : '';
+    let j; try { j = await api('classpack_list' + (tag ? '&tag=' + encodeURIComponent(tag) : '')); } catch (e) { j = null; }
+    if (j && j.ok && j.same && tag) j = { ok: true, packs: had.packs, tag };   // nothing changed since this device's copy: the server did not send the list again
     if (!j || !j.ok || !Array.isArray(j.packs)) { const b = await bundled(); if (!b || !Array.isArray(b.packs)) return false; j = { ok: true, packs: b.packs }; }   // no account server: the bundled packs
-    lsSet(LIST_KEY, { packs: j.packs, at: Date.now() });
+    lsSet(LIST_KEY, { packs: j.packs, at: Date.now(), tag: j.tag || '' });
     const s = sig(j.packs); if (s === lastSig) return false; lastSig = s;
     const ids = new Set(j.packs.map(p => p.id)); const changed = [];
     [...registered].forEach(id => { if (!ids.has(id) && !local.has(id)) { if (App.D && App.D.id === id) App.forgetCourse(); unregister(id); changed.push(id); } });
