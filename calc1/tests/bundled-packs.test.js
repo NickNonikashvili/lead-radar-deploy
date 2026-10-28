@@ -21,8 +21,8 @@ const fs = require('fs'); const path = require('path');
     const [c, p] = await mk(1360, 900, { serviceWorkers: 'block' });
     if (mode === 'no server') await c.route('**/api/index.php**', r => r.abort());
     await go(p, '#/', 1800);
-    const tiles = await p.evaluate(() => [...document.querySelectorAll('.dw[data-w="classes"] .dwk')].map(c => c.dataset.c));
-    check(`${mode}: the start page lists the bundled classes`, ids.every(id => tiles.includes(id)), tiles);
+    const tiles = await p.evaluate(() => [...document.querySelectorAll('#pick-classes .pk-c input')].map(c => c.value));   // nobody has classes by default: they are offered to pick
+    check(`${mode}: the start page offers the bundled classes to pick`, ids.every(id => tiles.includes(id)), tiles);
     const id = ids.find(x => x === 'psci230d') || ids[0];
     await go(p, '#/' + id, 2200);
     const dash = await p.evaluate(() => ({ title: (document.querySelector('.page-title') || {}).textContent || '', hero: !!document.querySelector('.hero-exam'), err: !!document.querySelector('.page-load .err, .load-error') }));

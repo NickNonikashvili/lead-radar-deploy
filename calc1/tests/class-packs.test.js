@@ -53,7 +53,7 @@ const fs = require('fs'); const path = require('path'); const { spawnSync } = re
   check('the sidebar switcher includes the class with its colour', await g.evaluate(() => !!document.querySelector('.switch-btn[data-c="zzp101"]') && getComputedStyle(document.documentElement).getPropertyValue('--accent').trim().toUpperCase() === '#0F766E'));
   check('the class switcher offers Add a class (the class maker)', !!(await g.$('#course-switch a.req[href="#/maker"]')));
   await go(g, '#/', 900);
-  check('the start page lists the class', !!(await g.$('.dwk[data-c="zzp101"]')));
+  check('the start page offers the class to pick (nobody has classes by default)', !!(await g.$('#pick-classes input[value="zzp101"]')));
   await g.keyboard.press('Control+k'); await g.waitForTimeout(300); await g.fill('#search-input', 'z-score'); await g.waitForTimeout(400);
   check('search finds the class', /ZZP 101/.test(await txt(g, '#search-results'))); await g.keyboard.press('Escape');
   await s.reload(); await s.waitForTimeout(800);
@@ -112,6 +112,7 @@ const fs = require('fs'); const path = require('path'); const { spawnSync } = re
   check('its dashboard explains there are no exams', /Graded on assignments and quizzes/.test(await txt(g, '#view')) && !/Semester complete/.test(await txt(g, '#view')) && /No exams/.test(await txt(g, '#exam-chip')));
   check('the sidebar has no exam prep', !(await g.$('#sidebar-nav .nav-item[data-view="exam"]')));
   await go(g, '#/zzp101/exam', 900); check('the exam page says there are none instead of breaking', /has no exams/.test(await txt(g, '#view')));
+  await g.evaluate(() => App.setSetting('courses', ['zzp101']));   // picked
   await go(g, '#/', 900); check('its row on the start page says it has no exam coming up', /No exam/.test(await txt(g, '.dwk[data-c="zzp101"]')));
   await api(a, 'admin_classpack_delete', { id: 'zzp101', confirm: 'ZZP 101' });
 

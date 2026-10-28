@@ -136,7 +136,7 @@ const fs = require('fs'); const path = require('path');
   // sharing
   await go(a, `#/maker/${webId}?tab=basics`, 1500); await a.click('[data-mkr="share"]'); await a.waitForTimeout(1800);
   const sh = await a.evaluate(() => { const s = document.querySelector('#share-sheet'); return s && { url: (s.querySelector('#share-url') || {}).value || '', qr: !!s.querySelector('svg.qr path') }; });
-  check('Share gives a studycat.org/#/c/ link and a QR code', sh && /^https:\/\/mathub\.space\/#\/c\/[A-Z2-9]{8}$/.test(sh.url) && sh.qr, sh);
+  check('Share gives a studycat.org/#/c/ link and a QR code', sh && /^https:\/\/studycat\.org\/#\/c\/[A-Z2-9]{8}$/.test(sh.url) && sh.qr, sh);
   const code = sh ? sh.url.slice(-8) : '';
   await a.keyboard.press('Escape'); await a.waitForTimeout(400);
   await go(g, '#/c/' + code.toLowerCase(), 1800);

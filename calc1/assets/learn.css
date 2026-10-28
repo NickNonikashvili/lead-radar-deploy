@@ -73,8 +73,8 @@
 .lesson-check h2 { display: flex; align-items: center; gap: 6px; }
 .lesson-qs { margin: 8px 0 0; padding-left: 22px; display: flex; flex-direction: column; gap: 14px; }
 .lesson-qs > li { padding-left: 4px; }
-.lesson-q { margin-bottom: 6px; font-weight: 600; line-height: 1.5; }
-.lesson-a.open { margin-top: 8px; padding: 10px 12px; border-radius: 12px; background: var(--good-soft, var(--accent-soft)); line-height: 1.5; }
+.chk-q { margin-bottom: 6px; font-weight: 600; line-height: 1.5; }
+.chk-a.open { margin-top: 8px; padding: 10px 12px; border-radius: 12px; background: var(--good-soft, var(--accent-soft)); line-height: 1.5; }
 .lesson-ask { white-space: nowrap; }
-.lesson-foot { gap: 8px; flex-wrap: wrap; }
+.note-foot { gap: 8px; flex-wrap: wrap; }
 @media (max-width: 620px) { .lesson-plain { font-size: 16px; } .lesson-idea { padding: 12px 14px; } }

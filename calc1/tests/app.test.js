@@ -73,6 +73,10 @@ const { execFileSync } = require('child_process'); const path = require('path');
   check('the app has its own start page, not the website’s (no "For professors")', shell.home && shell.faculty === 'none', shell);
   check('no sideways scroll on the start page at 390px', await hscroll(p));
 
+  // nobody gets the Montana State classes by default: the app asks first; then the student picks three
+  const empty = await p.evaluate(() => ({ mine: App.myCourses().length, h: (document.querySelector('.ah-empty h2') || {}).textContent || '', add: !!document.querySelector('.ah-empty [data-ab-add]') }));
+  check('nobody gets classes by default: the app asks which ones you take, with Add a class', empty.mine === 0 && /Which classes are you taking/.test(empty.h) && empty.add, empty);
+  await p.evaluate(() => { App.setSetting('courses', ['calc', 'physics', 'precalc']); App.rerender(); }); await p.waitForTimeout(2200);
   // the app's own layout: a top bar with the class switcher, streak, XP and the account; a card per class; the class's path; a tab bar
   const look = await p.evaluate(() => { const q = s => document.querySelector(s); const b = q('#appbar'); const r = b ? b.getBoundingClientRect() : {}; const shown = s => { const e = q(s); return !!e && getComputedStyle(e).display !== 'none'; };
     return { bar: !!b && getComputedStyle(b).position === 'fixed' && r.top >= 0 && r.top < 80, parts: ['.ab-class', '.ab-streak', '.ab-xp', '.ab-signin'].filter(x => !!q('#appbar ' + x)), site: ['.topbar', '.sidebar', '.site-foot', '.hero-faculty'].filter(shown), cards: [...document.querySelectorAll('.ah-card[data-cid]')].map(c => c.dataset.cid), on: q('.ah-card.on') ? q('.ah-card.on').dataset.cid : '', add: !!q('.ah-add'), nodes: document.querySelectorAll('.ap-node').length, start: !!q('.ap-li.current .ap-start'), bo: !!q('.ap-li.current .ap-bo'), banner: q('.ap-banner h3') ? q('.ap-banner h3').textContent : '', labels: [...document.querySelectorAll('.ap-li:not(.exam) .ap-label b')].length, hero: q('.ah-hero h2') ? q('.ah-hero h2').textContent : '', exam: q('.ah-ex') ? q('.ah-ex').textContent.replace(/\s+/g, ' ').trim() : '', go: q('.ah-go') ? q('.ah-go').getAttribute('href') : '', today: q('.ah-today') ? q('.ah-today').textContent.replace(/\s+/g, ' ').trim() : '', tools: document.querySelectorAll('.ah-tool').length, xp: q('#appbar .ab-xp') ? q('#appbar .ab-xp').textContent.trim() : '', tabs: [...document.querySelectorAll('#tabbar.app-tabs .tab-item')].map(t => t.textContent.trim()), active: q('#tabbar .tab-item.active') ? q('#tabbar .tab-item.active').textContent.trim() : '' }; });
@@ -116,7 +120,7 @@ const { execFileSync } = require('child_process'); const path = require('path');
   check('no sideways scroll on the Learn page in exam week', await hscroll(p));
   await p.evaluate(() => App.setSetting('asof', null));
   const fetched = await p.evaluate(async () => { const r = await fetch('api/index.php?r=config', { headers: { 'X-Requested-With': 'MatHub' } }); return r.url; });
-  check('account calls go to https://studycat.org', /^https:\/\/mathub\.space\/api\/index\.php\?r=config/.test(fetched), fetched);
+  check('account calls go to https://studycat.org', /^https:\/\/studycat\.org\/api\/index\.php\?r=config/.test(fetched), fetched);
 
   // links to other sites open in the in-app browser and the app stays put
   await p.evaluate(() => { const a = document.createElement('a'); a.href = 'https://example.org/page'; a.id = 'ext'; a.textContent = 'x'; a.style.cssText = 'position:fixed;top:120px;left:10px;z-index:99999'; document.body.appendChild(a); const b = document.createElement('a'); b.href = 'learn/'; b.id = 'web'; b.textContent = 'y'; b.style.cssText = 'position:fixed;top:160px;left:10px;z-index:99999'; document.body.appendChild(b); });
