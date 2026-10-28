@@ -142,7 +142,7 @@ const PDF_TEXT = 'The river was loud that spring, louder than anyone in town cou
 
   /* ---------- the page ---------- */
   await go(a, '#/writ/dashboard', 1400);
-  check('WRIT 101’s sidebar has Draft feedback under Study', await a.evaluate(() => { const ids = [...document.querySelectorAll('#sidebar-nav a, #sidebar-nav button')].map(x => /Draft feedback/.test(x.textContent) ? (x.dataset.view || x.getAttribute('href') || '') : '').filter(Boolean); const study = [...document.querySelectorAll('#sidebar-nav button')].find(x => /^Study/.test(x.textContent.trim())); return ids.some(v => /drafts$/.test(v)) && !!study; }));
+  check('WRIT 101’s sidebar has Draft feedback under Learn', await a.evaluate(() => { const ids = [...document.querySelectorAll('#sidebar-nav a, #sidebar-nav button')].map(x => /Draft feedback/.test(x.textContent) ? (x.dataset.view || x.getAttribute('href') || '') : '').filter(Boolean); const study = [...document.querySelectorAll('#sidebar-nav button')].find(x => /^Learn/.test(x.textContent.trim())); return ids.some(v => /drafts$/.test(v)) && !!study; }));
   await go(a, '#/writ/drafts', 1600);
   const form = await a.evaluate(() => ({ opts: [...document.querySelectorAll('[name="df-p"]')].map(x => x.value + (x.checked ? '*' : '')).join(), stage: (document.querySelector('[name="df-stage"]:checked') || {}).value, brief: document.querySelector('#df-brief').textContent, next: document.querySelector('.df-form .panel-h').textContent }));
   check('the form: the four projects, starting on the one due next (Project 3, its first draft), with what Bo reads for', form.opts === 'p1,p2,p3*,pf' && form.stage === 'draft' && /What Bo reads for/.test(form.brief) && /public reader/.test(form.brief) && /Next: Project 3 draft/.test(form.next), form);

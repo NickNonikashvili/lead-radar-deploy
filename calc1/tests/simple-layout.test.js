@@ -36,11 +36,11 @@ const T = require('./lib');
   await p.click('#preview-banner [data-action="b-hide"]'); await p.waitForTimeout(150); await p.reload(); await p.waitForTimeout(1200);
   check('closing the preview note sticks', !(await p.$('#preview-banner')));
 
-  // sidebar: five groups, Study and Plan open, every tool listed once
+  // sidebar: five groups, Learn, Practice and Plan open, every tool listed once
   const nav = await p.evaluate(() => ({ groups: [...document.querySelectorAll('#sidebar-nav .nav-label')].map(l => [l.dataset.g, l.classList.contains('open')]), items: [...document.querySelectorAll('#sidebar-nav .nav-item')].map(b => b.dataset.view), all: App.D.NAV.flatMap(g => g.items.map(x => x[0])) }));
   log('sidebar:', JSON.stringify(nav.groups));
-  check('sidebar has five groups by intent', nav.groups.map(g => g[0]).join('|') === 'Study|Plan|More tools|Community|Class info', nav.groups);
-  check('only Study and Plan start open', nav.groups.filter(g => g[1]).map(g => g[0]).join('|') === 'Study|Plan', nav.groups);
+  check('sidebar has five groups by intent', nav.groups.map(g => g[0]).join('|') === 'Learn|Practice|Plan|Explore|Class', nav.groups);
+  check('only Learn, Practice and Plan start open', nav.groups.filter(g => g[1]).map(g => g[0]).join('|') === 'Learn|Practice|Plan', nav.groups);
   check('every tool appears exactly once', nav.items.length === new Set(nav.items).size && nav.all.every(id => nav.items.includes(id)), { items: nav.items.length, all: nav.all.length });
 
   // class dashboard: two panels up top, five tabs, readiness one click away

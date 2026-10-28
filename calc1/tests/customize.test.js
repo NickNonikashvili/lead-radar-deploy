@@ -13,7 +13,7 @@ const T = require('./lib');
   await go(p, '#/', 900); await login(p, 'alice.a@montana.edu');
   // start from Mathub as it came, here and on the account (an earlier run may have left a setup behind)
   await p.reload(); await p.waitForTimeout(1500);
-  await p.evaluate(() => { const D = { modules: { off: [] }, navLayout: {}, classMenu: {}, look: {}, startPage: 'home', customizeTab: 'features', theme: 'light' }; Object.entries(D).forEach(([k, v]) => App.setSetting(k, v)); App.setSetting('courses', ['calc', 'physics']); });
+  await p.evaluate(() => { const D = { modules: { off: [] }, navLayout: {}, classMenu: {}, look: {}, startPage: 'home', customizeTab: 'features', theme: 'system' }; Object.entries(D).forEach(([k, v]) => App.setSetting(k, v)); App.setSetting('courses', ['calc', 'physics']); });
   await p.waitForTimeout(2600); await p.reload(); await p.waitForTimeout(1500); if (await p.$('.celebrate')) await p.keyboard.press('Escape');
   const side = () => p.evaluate(() => ({ groups: [...document.querySelectorAll('#sb-nav .sb-group')].map(g => g.dataset.g), items: [...document.querySelectorAll('#sb-nav .sb-item')].map(a => a.dataset.sv), pinned: [...document.querySelectorAll('#sb-nav .sb-group[data-g="pinned"] .sb-item')].map(a => a.dataset.sv), byGroup: Object.fromEntries([...document.querySelectorAll('#sb-nav .sb-group')].map(g => [g.dataset.g, [...g.querySelectorAll('.sb-item')].map(a => a.dataset.sv)])) }));
   const tab = async k => { await p.click(`#view .dash-tabs .tab[data-tab="${k}"]`); await p.waitForTimeout(250); };
@@ -114,7 +114,7 @@ const T = require('./lib');
   check('parts of the frame can be hidden (the header clock, the month calendar)', await p.evaluate(() => { const ck = document.querySelector('#tb-clock'); const cal = document.querySelector('#sb-cal'); return (!ck || getComputedStyle(ck).display === 'none') && getComputedStyle(cal).display === 'none'; }));
   await p.click('#view [data-action="cz-reset"][data-what="look"]'); await p.waitForTimeout(200);
   const L2 = await css(); check('Reset the look puts it back', +L2.zoom === 1 && L2.radius !== '4px' && await p.evaluate(() => getComputedStyle(document.querySelector('#sb-cal')).display !== 'none'), L2);
-  await p.click('#view [data-action="cz-look"][data-k="theme"][data-v="light"]'); await p.waitForTimeout(100);
+  await p.click('#view [data-action="cz-look"][data-k="theme"][data-v="system"]'); await p.waitForTimeout(100);   // the account goes back to following the device (other suites sign in as alice)
 
   /* ---------- start page, backup, sync ---------- */
   await tab('start'); await p.selectOption('#cz-start', 'today'); await p.waitForTimeout(200);
@@ -140,6 +140,8 @@ const T = require('./lib');
   await p.setInputFiles('#cz-import', { name: 'x.json', mimeType: 'application/json', buffer: Buffer.from('{"hello":1}') }); await p.waitForTimeout(400);
   check('a file that is not a setup changes nothing', await p.evaluate(() => !App.moduleOn('money')));
   await p.click('#view [data-action="cz-reset"][data-what="all"]'); await p.waitForTimeout(300);
+
+  await p.waitForTimeout(2600);   // the reset reaches the account before the page closes
 
   /* ---------- phones ---------- */
   const [cm, m] = await mk(390, 800, { serviceWorkers: 'block' });

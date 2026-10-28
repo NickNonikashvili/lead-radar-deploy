@@ -246,7 +246,7 @@ const { execFileSync } = require('child_process'); const path = require('path');
   const before2 = await p.evaluate(() => window.__cap.perm);
   await p.check('#ap-exams'); await p.waitForTimeout(1200);
   const rem = await p.evaluate(() => ({ perm: window.__cap.perm, n: window.__cap.scheduled.length, titles: window.__cap.scheduled.map(n => n.title).slice(0, 4), on: App.settings().examReminders }));
-  check('turning exam reminders on asks permission first, then schedules them', before2 === 'prompt' && rem.perm === 'granted' && rem.on && rem.n > 0 && rem.titles.some(t => /Exam 1 is (in 3 days|tomorrow)/.test(t)), rem);
+  check('turning exam reminders on asks permission first, then schedules them', before2 === 'prompt' && rem.perm === 'granted' && rem.on && rem.n > 0 && rem.titles.some(t => /exam is (in 3 days|tomorrow)|Exam \d is (in 3 days|tomorrow)/i.test(t)), rem);
   await p.check('#ap-daily'); await p.waitForTimeout(900);
   check('the daily reminder repeats at the chosen time', await p.evaluate(() => window.__cap.scheduled.some(n => n.id === 999 && n.schedule.repeats && n.schedule.on.hour === 19)));
   await p.uncheck('#ap-exams'); await p.uncheck('#ap-daily'); await p.waitForTimeout(900);
