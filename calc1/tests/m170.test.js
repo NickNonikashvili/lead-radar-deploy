@@ -7,7 +7,7 @@ const T = require('./lib');
   const setSettings = (p, patch) => p.evaluate(patch => { const s = App.settings(); Object.assign(s, patch); localStorage.setItem('studyhub-settings', JSON.stringify(s)); }, patch);
   const [c, p] = await mk(1360, 900, { serviceWorkers: 'block' });
   await go(p, '#/', 1200);
-  await setSettings(p, { asof: '2026-10-08', motion: 'off' }); await p.reload(); await p.waitForTimeout(1500);
+  await setSettings(p, { asof: '2026-10-08', motion: 'off', courses: ['m170'] }); await p.reload(); await p.waitForTimeout(1500);
   const card = await p.evaluate(() => !!document.querySelector('.dwk[data-c="m170"]'));
   check('the start page lists M 170', card);
 

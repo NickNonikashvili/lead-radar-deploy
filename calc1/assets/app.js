@@ -294,7 +294,7 @@
     dashboard: 'cap', path: 'path', notes: 'book', readings: 'scroll', formulas: 'sigma', textbook: 'link', slides: 'layers', mynotes: 'marker',
     playground: 'keyboard', phonetics: 'mic', drafts: 'pen', notebook: 'quill', practice: 'list', flashcards: 'cards', exam: 'flag', checkwork: 'check',
     mistakes: 'undo', calendar: 'calendar', planner: 'planner', course: 'info', grapher: 'chart', labs: 'flask', motion: 'zap', solvers: 'wand',
-    explorer: 'eye', unitcircle: 'compass', maker: 'maker'
+    explorer: 'eye', unitcircle: 'compass', maker: 'maker', toolkit: 'calc'
   };
   App.VIEW_ICON = VIEW_ICON;
   App.viewIcon = (id, fallback) => VIEW_ICON[id] || fallback || 'file';
@@ -342,6 +342,7 @@
     add('notebook', 'Writer’s notebook', !!(C.NOTEBOOK && C.NOTEBOOK.count));
     add('slides', 'Notes from slides');
     add('checkwork', 'Check my work', !C.kind || C.kind === 'science');
+    add('toolkit', 'Tools');   // the class's own tools (assets/class-tools.js): calculators, solvers, simulators
     add('forum', 'Discussions');
     add('resources', 'Resources & guides');
   }
@@ -544,10 +545,10 @@
   }
   function toggleTheme() { if (App.themeFade) App.themeFade(); const isDark = document.documentElement.getAttribute('data-theme') === 'dark' || (!document.documentElement.getAttribute('data-theme') && matchMedia('(prefers-color-scheme: dark)').matches); setSetting('theme', isDark ? 'light' : 'dark'); applyTheme(); }
   /* A class's menu, the same in every class: Learn (the overview, the learning path, the lessons and the class's
-     reading), Practice, Plan (its calendar and the study planner), Explore (the class's own grapher, labs and
-     simulators, and anything new) and Class (the syllabus, Discussions, resources, settings). Learn, Practice and
+     reading), Practice, Plan (its calendar and the study planner), Explore (the class's Tools page, its own
+     grapher, labs and simulators, and anything new) and Class (the syllabus, Discussions, resources, settings). Learn, Practice and
      Plan are open; the other two fold away. C.NAV stays the source list; this is only the view. */
-  const NAV_PLAN = [['Learn', ['dashboard', 'path', 'notes', 'readings', 'formulas', 'textbook', 'slides', 'mynotes', 'playground', 'phonetics', 'drafts', 'notebook']], ['Practice', ['practice', 'flashcards', 'exam', 'checkwork', 'mistakes', 'challenge']], ['Plan', ['calendar', 'planner']], ['Explore', []], ['Class', ['course', 'forum', 'resources', 'settings']]];
+  const NAV_PLAN = [['Learn', ['dashboard', 'path', 'notes', 'readings', 'formulas', 'textbook', 'slides', 'mynotes', 'playground', 'phonetics', 'drafts', 'notebook']], ['Practice', ['practice', 'flashcards', 'exam', 'checkwork', 'mistakes', 'challenge']], ['Plan', ['calendar', 'planner']], ['Explore', ['toolkit']], ['Class', ['course', 'forum', 'resources', 'settings']]];
   function groupNavBase(NAV) {
     const all = NAV.flatMap(g => g.items); const used = new Set();
     const groups = NAV_PLAN.map(([label, ids]) => ({ label, items: ids.map(id => all.find(x => x[0] === id)).filter(x => x && !used.has(x[0]) && used.add(x[0])) }));

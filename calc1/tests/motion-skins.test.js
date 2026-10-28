@@ -3,6 +3,7 @@ const T = require('./lib');
 (async () => {
   const { mk, login, go, log, check, txt } = await T.start({});
   const [c, p] = await mk(1360, 900, { serviceWorkers: 'block' }); await go(p, '#/', 900);
+  await p.evaluate(() => { const s = App.settings(); s.courses = ['calc']; localStorage.setItem('studyhub-settings', JSON.stringify(s)); }); await p.reload(); await p.waitForTimeout(900);   // a visitor who picked a class: the widgets, not the class picker, open the page
   check('the home\'s widgets get a staggered entrance', (await p.$$('#dash-canvas .dw.mh-enter')).length >= 1, (await p.$$('#dash-canvas .dw')).length);
   check('hero panel has --i', await p.$eval('#view .panel.mh-enter', e => e.style.getPropertyValue('--i') !== '').catch(() => false));
   // the start page only draws a class's ring once there is progress in it, so check on a class dashboard (daily goal ring)

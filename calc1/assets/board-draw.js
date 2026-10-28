@@ -293,7 +293,7 @@
     let v = o.sliders ?? o.slider ?? o.params ?? o.parameters;
     if (v && typeof v === 'object' && !Array.isArray(v)) v = v.name ? [v] : Object.entries(v).map(([name, s]) => Array.isArray(s) ? { name, min: s[0], max: s[1], value: s[2] } : s && typeof s === 'object' ? Object.assign({ name }, s) : { name, value: s });
     const seen = new Set();
-    return list(v, 3).map(s => {
+    return list(v, 4).map(s => {   // four: a sinusoid's a, b, c and d
       if (typeof s === 'string') s = { name: s };
       if (!s || typeof s !== 'object') return null;
       const name = String(s.name ?? s.param ?? s.var ?? s.letter ?? s.symbol ?? '').trim().toLowerCase();
@@ -339,7 +339,7 @@
     if (!sp.sliders.length) {   // "a x^2 + c" with no sliders: a and c get one each, so the drawing still comes out
       const raw0 = [o.f, o.fn, o.function, o.expr, o.equation, typeof o.y === 'string' ? o.y : null].concat(list(o.fns ?? o.functions ?? o.curves, 6).map(g => typeof g === 'string' ? g : g && typeof g === 'object' ? g.f ?? g.fn ?? g.expr ?? (typeof g.y === 'string' ? g.y : null) : null)).filter(x => typeof x === 'string');
       const free = [...new Set([].concat(...raw0.map(freeOf)))];
-      if (free.length && free.length <= 3 && free.every(c => /^[a-df-su-wyz]$/.test(c))) sp.sliders = free.map(name => ({ name, min: -5, max: 5, step: 0.1, value: 1, label: '' }));
+      if (free.length && free.length <= 4 && free.every(c => /^[a-df-su-wyz]$/.test(c))) sp.sliders = free.map(name => ({ name, min: -5, max: 5, step: 0.1, value: 1, label: '' }));
     }
     const P = sp.sliders.length ? Object.fromEntries(sp.sliders.map(s => [s.name, s.value])) : null; sp.params = P;
     sp.fns = curves(o, P);

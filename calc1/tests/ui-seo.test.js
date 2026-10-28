@@ -7,9 +7,12 @@ const T = require('./lib');
   await go(p, '#/'); await p.waitForTimeout(400); log('landing: stat strip (guests only):', !!(await p.$('.stat-strip')), '| resume card (none yet):', !(await p.$('.resume-card')), '| tabbar hidden on desktop:', await p.$eval('#tabbar', e => getComputedStyle(e).display === 'none'));
   await go(p, '#/calc/notes/1.3'); await p.waitForTimeout(600); log('breadcrumb:', await txt(p, '#topbar-title'), '| crumb link:', await p.$eval('#topbar-title .crumb', e => e.getAttribute('href')), '| lastVisit:', JSON.stringify(await p.evaluate(() => { const l = App.settings().lastVisit; return { hash: l.hash, label: l.label, detail: l.detail }; })));
   log('switcher dots:', await p.$$eval('.switch-btn', b => b.map(x => x.dataset.c || 'home').join(',')));
-  await p.evaluate(() => { const s = App.settings(); s.lastVisit.t = Date.now() - 3600000; localStorage.setItem('studyhub-settings', JSON.stringify(s)); });
+  // "Pick up where you left off" is a widget a student adds to their home (it is not in the first layout)
+  const homeBefore = await p.evaluate(() => App.settings().homeLayout || null);
+  await p.evaluate(() => { const s = App.settings(); s.lastVisit.t = Date.now() - 3600000; const L = App.dash.layout(); if (!L.items.some(i => i.id === 'resume')) L.items.unshift({ id: 'resume', x: 0, y: 0, w: 6, h: 4, z: 99 }); s.homeLayout = { v: 1, items: L.items, note: L.note || '' }; localStorage.setItem('studyhub-settings', JSON.stringify(s)); });
   await go(p, '#/'); await p.waitForTimeout(500); log('resume card:', await txt(p, '.resume-card'), '| href:', await p.$eval('.resume-card', e => e.getAttribute('href')));
   await p.click('.resume-card'); await p.waitForTimeout(500); log('resume goes to notes:', await txt(p, '.note-title'));
+  await p.evaluate(h => App.setSetting('homeLayout', h), homeBefore);   // her home as it was, for the suites after this one
   await p.keyboard.press('?'); await p.waitForTimeout(200); log('shortcuts modal:', !!(await p.$('#shortcuts-modal')), '| rows:', (await p.$$('.shortcut')).length); await p.keyboard.press('Escape'); await p.waitForTimeout(150); log('closed:', !(await p.$('#shortcuts-modal')));
   await p.focus('#topbar-title'); await p.evaluate(() => window.scrollTo(0, 1200)); await p.waitForTimeout(400); log('back-to-top shown after scroll:', await p.$eval('#totop', e => e.classList.contains('show')));
   await go(p, '#/writ/readings'); await p.waitForTimeout(400); log('writ breadcrumb:', await txt(p, '#topbar-title'));

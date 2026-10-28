@@ -114,7 +114,7 @@ const T = require('./lib');
   // a first visit: the classes and the three steps
   const [c4, f] = await mk(1360, 900, { serviceWorkers: 'block' }); await go(f, '#/', 1500);
   const fw = await f.$$eval('#dash-canvas > .dw', w => w.map(x => x.dataset.w));
-  check('a first visit starts with the classes, Bo and the guides, and the three steps', fw[0] === 'classes' && fw.includes('bo') && !fw.includes('next') && (await f.$$('.start-steps .start-step')).length === 3, fw);
+  check('a first visit asks which classes they take first, then the classes, Bo and the guides', fw[0] === 'classes' && fw.includes('bo') && !fw.includes('next') && !!(await f.$('#pick-classes')) && !(await f.$('.start-steps')), fw);
   await c4.close();
   await T.finish();
 })();

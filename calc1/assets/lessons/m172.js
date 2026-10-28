@@ -199,7 +199,7 @@
     ]
   },
   eulerformula: {
-    plain: 'Put $i\\theta$ into the series for $e^x$ and the real and imaginary parts sort themselves into the series for cosine and sine: $e^{i\\theta} = \\cos\\theta + i\\sin\\theta$. So $e^{i\\theta}$ is the point at angle $\\theta$ on the unit circle, and multiplying by it rotates. Your instructor\'s notes set the details for this topic.',
+    plain: 'Put $i\\theta$ into the series for $e^x$ and the real and imaginary parts sort themselves into the series for cosine and sine: $e^{i\\theta} = \\cos\\theta + i\\sin\\theta$. So $e^{i\\theta}$ is the point at angle $\\theta$ on the unit circle, and multiplying by it rotates. This topic is beyond Active Calculus, so your instructor\'s notes set the details.',
     figure: { type: 'unitcircle', angles: [0, 60, 120, 180, 240, 300], highlight: 60, caption: 'e^(iπ/3) = ½ + (√3/2)i; cubing it turns three times as far, to e^(iπ) = −1.' },
     check: [
       ['Write $e^{i\\pi/3}$ as $a + bi$.', '$\\frac12 + \\frac{\\sqrt3}{2}i$.'],
@@ -208,7 +208,7 @@
     ]
   },
   fourier: {
-    plain: 'A Fourier series builds a repeating function from sines and cosines of increasing frequency, the way a chord is built from notes. Each coefficient measures how much of that frequency is in the function. Odd functions need only sines. Your instructor\'s conventions set the details for this topic.',
+    plain: 'A Fourier series builds a repeating function from sines and cosines of increasing frequency, the way a chord is built from notes. Each coefficient measures how much of that frequency is in the function. Odd functions need only sines. This topic is beyond Active Calculus, so your instructor\'s conventions set the details.',
     figure: { type: 'graph', x: [-3.2, 3.2], y: [-1.5, 1.5], fns: [{ f: 'x/abs(x)', label: 'square wave' }, { f: '(4/pi)(sin(x)+sin(3x)/3+sin(5x)/5)', label: 'three terms', dash: true }], caption: 'Three sine terms already look like the square wave.' },
     check: [
       ['The square wave is odd. Which coefficients are zero?', 'All the cosine coefficients ($a_n$).'],

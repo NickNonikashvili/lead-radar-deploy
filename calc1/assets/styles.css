@@ -1904,6 +1904,84 @@ body:has(.lesson-foot) #ambient { bottom: 96px; }
 .th-box { scroll-margin-top: 80px; }
 .th-note { margin: -4px 0 10px 2px; }
 html[data-motion="off"] .th-card { transition: none; }
+/* ---------- a class's Tools page (assets/class-tools.js): cards on top, the open tool below ---------- */
+.ct-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr)); gap: 10px; margin-bottom: 16px; }
+.ct-card { display: flex; align-items: center; gap: 12px; min-width: 0; padding: 12px 14px; border: 2px solid var(--border); border-radius: 16px; background: var(--surface); color: var(--ink); font: inherit; text-align: left; text-decoration: none; cursor: pointer; transition: border-color .15s, transform .15s, background .15s; }
+.ct-card:hover { border-color: var(--accent-line, var(--accent)); text-decoration: none; transform: translateY(-1px); }
+.ct-card:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.ct-card.on { border-color: var(--accent); background: var(--accent-soft); }
+.ct-card.is-link > svg:last-child { flex: none; margin-left: auto; color: var(--muted); }
+.ct-ic { flex: none; display: grid; place-items: center; width: 40px; height: 40px; border-radius: 12px; background: var(--accent-soft); color: var(--accent-deep, var(--accent)); }
+.ct-card.on .ct-ic { background: var(--surface); }
+.ct-t { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.ct-t b { font-size: 15px; line-height: 1.25; }
+.ct-t small { font-size: 13px; line-height: 1.35; color: var(--muted); }
+html[data-motion="off"] .ct-card { transition: none; }
+.ct-pane { min-width: 0; }
+.ct-pane .panel-h { flex-wrap: wrap; gap: 8px; }
+.ct-desc { margin: -4px 0 12px; }
+.ct-body { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.ct-body > .grid { gap: 10px; }
+.ct-out { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.ct-out:empty { display: none; }
+.ct-ans { margin: 0; font-size: 16px; line-height: 1.5; }
+.ct-ans b { font-weight: 700; }
+.ct-ans svg { vertical-align: -2px; color: var(--good); }
+.ct-sep { margin: 0 8px; color: var(--muted); }
+.ct-bad { margin: 0; color: var(--bad); font-size: 14px; }
+.ct-eq { padding: 10px 14px; border-radius: 12px; background: var(--surface-2); font-size: 17px; overflow-x: auto; }
+.ct-h { font-size: 14px; margin: 6px 0 4px; }
+.ct-table { width: 100%; }
+.ct-table td:first-child { color: var(--ink-2); }
+.ct-table .ct-best td { border-top: 2px solid var(--border); }
+.ct-fig { margin: 0; min-width: 0; }
+.ct-fig .bd { max-width: 100%; }
+.ct-scroll { overflow-x: auto; max-width: 100%; }
+.ct-range { width: 100%; accent-color: var(--accent); }
+.ct-consts, .ct-sets, .ct-add-kinds { display: flex; flex-wrap: wrap; gap: 6px; }
+.ct-warn { display: flex; gap: 8px; align-items: flex-start; font-size: 14px; }
+.ct-warn svg { flex: none; margin-top: 2px; }
+.ct-rows { display: flex; flex-direction: column; gap: 6px; }
+.ct-row { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr) 32px; gap: 6px; align-items: center; }
+.ct-row .icon-btn { width: 32px; height: 32px; }
+.ct-punnett { width: auto; border-collapse: collapse; }
+.ct-punnett th, .ct-punnett td { text-align: center; padding: 8px 12px; border: 1px solid var(--border); }
+.ct-punnett thead th, .ct-punnett tbody th { background: var(--surface-2); }
+.ct-mx { width: auto; }
+.ct-mx .input.sm { min-width: 110px; }
+.ct-mx .ct-best td, .ct-mx .ct-best th { border-top: 2px solid var(--border); }
+.ct-game { width: auto; }
+.ct-game td { white-space: nowrap; }
+.ct-game td .input.sm { width: 64px; display: inline-block; }
+.ct-game td.ct-nash { background: var(--good-soft); box-shadow: inset 0 0 0 2px var(--good); }
+.ct-ck { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.ct-ck label { display: flex; gap: 10px; align-items: flex-start; cursor: pointer; line-height: 1.45; }
+.ct-ck input { margin-top: 3px; flex: none; width: 18px; height: 18px; accent-color: var(--accent); }
+.ct-tl-bar { align-items: flex-end; flex-wrap: wrap; }
+.ct-tl-bar .field { flex: 1 1 220px; margin: 0; }
+.ct-tl { list-style: none; margin: 0; padding: 0 0 0 14px; border-left: 3px solid var(--accent-soft); display: flex; flex-direction: column; gap: 8px; max-height: 520px; overflow-y: auto; }
+.ct-tl li { position: relative; display: grid; grid-template-columns: minmax(96px, 150px) minmax(0, 1fr) auto; gap: 10px; align-items: baseline; }
+.ct-tl li::before { content: ''; position: absolute; left: -21px; top: 7px; width: 11px; height: 11px; border-radius: 50%; background: var(--accent); }
+.ct-tl li.mine::before { background: var(--surface); box-shadow: inset 0 0 0 2px var(--accent); }
+.ct-tl li.muted::before { display: none; }
+.ct-quiz { display: flex; flex-direction: column; gap: 8px; }
+.ct-order { margin: 0; padding-left: 22px; display: flex; flex-direction: column; gap: 6px; }
+.ct-order li > * { vertical-align: middle; }
+.ct-order li { display: list-item; }
+.ct-order li > span:first-child { display: inline; }
+.ct-order li > .row { display: inline-flex; margin-left: 8px; }
+.ct-add summary { cursor: pointer; font-weight: 600; font-size: 14px; display: inline-flex; gap: 6px; align-items: center; }
+.ct-add[open] summary { margin-bottom: 8px; }
+.ct-ed { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.ct-ed li { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.ct-ed label, .ct-ed-mine { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; }
+.ct-ed input { width: 18px; height: 18px; accent-color: var(--accent); }
+.ct-uc { align-items: start; }
+@media (max-width: 640px) {
+  .ct-tl li { grid-template-columns: minmax(0, 1fr) auto; }
+  .ct-tl li > b { grid-column: 1 / -1; }
+  .ct-row { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr) 32px; }
+}
 .tool-calc .tc-display { background: var(--surface-2); border-radius: 12px; padding: 10px 12px; margin-bottom: 10px; }
 .tc-input { font-size: 18px; width: 100%; }
 .tc-out { text-align: right; font-family: var(--font-mono); font-size: 28px; font-weight: 600; margin-top: 6px; min-height: 36px; word-break: break-all; }

@@ -7,7 +7,7 @@ const T = require('./lib');
   check('Classic is the default look', await p0.evaluate(() => document.documentElement.getAttribute('data-skin')) === null);
   await go(p0, '#/settings', 800); check('Classic is first in the look picker and selected', await p0.evaluate(() => { const o = document.querySelector('.skin-opt'); return o.dataset.skin === 'default' && o.classList.contains('on'); }));
   await p0.click('.skin-opt[data-skin="realm"]'); await p0.waitForTimeout(200); check('picking Realm applies it', await p0.evaluate(() => document.documentElement.getAttribute('data-skin')) === 'realm'); await c0.close();
-  const realmOn = ctx => ctx.addInitScript(() => { try { const s = JSON.parse(localStorage.getItem('studyhub-settings') || '{}'); if (!s.skin) { s.skin = 'realm'; localStorage.setItem('studyhub-settings', JSON.stringify(s)); } } catch (e) {} });
+  const realmOn = ctx => ctx.addInitScript(() => { try { const s = JSON.parse(localStorage.getItem('studyhub-settings') || '{}'); if (!s.skin) { s.skin = 'realm'; if (!s.courses) s.courses = ['calc', 'physics', 'csci']; localStorage.setItem('studyhub-settings', JSON.stringify(s)); } } catch (e) {} });
   const [c, p] = await mk(1360, 900, { serviceWorkers: 'block' }); await realmOn(c);
   await go(p, '#/', 1200);
   check('Realm applies before first paint', await p.evaluate(() => document.documentElement.getAttribute('data-skin')) === 'realm');

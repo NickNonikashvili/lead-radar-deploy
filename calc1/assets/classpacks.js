@@ -31,7 +31,7 @@
   /* the class views a pack can use; anything else in its NAV is dropped */
   const PACK_VIEWS = ['dashboard', 'calendar', 'notes', 'formulas', 'flashcards', 'textbook', 'practice', 'exam', 'planner', 'forum', 'course', 'settings'];
   const ICON_NAMES = ['d20', 'wand', 'compass', 'orb', 'sword', 'potion', 'scroll', 'quill', 'crown', 'home', 'calendar', 'book', 'sigma', 'cards', 'list', 'file', 'chart', 'flask', 'calc', 'pen', 'link', 'info', 'search', 'flag', 'clock', 'bulb', 'fire', 'eye', 'target', 'chat', 'pin', 'bell', 'lock', 'shield', 'grid', 'users', 'award', 'gear', 'user', 'zap', 'mic', 'gem', 'trophy', 'path', 'sliders'];
-  const DATA_KEYS = ['code', 'name', 'short', 'term', 'tagline', 'kind', 'quizNote', 'formulasNote', 'filterExample', 'COURSE', 'GRADING', 'EXAMS', 'CALENDAR', 'CALENDAR_NOTE', 'RECURRING', 'SEMESTER', 'VARIANTS', 'UNITS', 'SECTIONS', 'FORMULAS', 'FLASHCARDS', 'PRACTICE', 'CHECKLISTS', 'INFO', 'NAV', 'DRAFTS', 'NOTEBOOK'];
+  const DATA_KEYS = ['code', 'name', 'short', 'term', 'tagline', 'kind', 'quizNote', 'formulasNote', 'filterExample', 'COURSE', 'GRADING', 'EXAMS', 'CALENDAR', 'CALENDAR_NOTE', 'RECURRING', 'SEMESTER', 'VARIANTS', 'UNITS', 'SECTIONS', 'FORMULAS', 'FLASHCARDS', 'PRACTICE', 'CHECKLISTS', 'INFO', 'NAV', 'DRAFTS', 'NOTEBOOK', 'TOOLS'];
   const META_KEYS = ['format', 'version', 'id', 'color', 'archetype', 'resources', 'resourcesBlurb', 'guides', 'canvasMatch', 'QUIZ', 'notes'];
   const DEFAULT_HINT = 'Rule out the options that describe a different structure, process or idea first.';
 
@@ -354,6 +354,8 @@
     else delete P.DRAFTS;
     if (P.NOTEBOOK && typeof P.NOTEBOOK === 'object' && Number(P.NOTEBOOK.count) > 0) P.NOTEBOOK = { count: Math.min(40, Math.floor(Number(P.NOTEBOOK.count))), due: P.NOTEBOOK.due ? String(P.NOTEBOOK.due) : '', entries: (Array.isArray(P.NOTEBOOK.entries) ? P.NOTEBOOK.entries : []).filter(e => e && Number(e.n) >= 1).map(e => ({ n: Math.floor(Number(e.n)), week: e.week ? String(e.week) : '', title: e.title ? String(e.title) : '', prompt: e.prompt ? String(e.prompt) : '', reflect: e.reflect ? String(e.reflect) : '' })) };
     else delete P.NOTEBOOK;
+    // the class's Tools page (assets/class-tools.js reads each tool and drops what it cannot use)
+    if (Array.isArray(P.TOOLS)) P.TOOLS = P.TOOLS.filter(t => t && typeof t === 'object' && !Array.isArray(t) && JSON.stringify(t).length < 30000).slice(0, 16); else delete P.TOOLS;
     return P;
   }
   const contrast = (a, b) => { const L = h => { const c = [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16) / 255).map(v => v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4); return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]; }; const x = L(a), y = L(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); };

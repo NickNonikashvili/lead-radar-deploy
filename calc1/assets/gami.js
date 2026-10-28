@@ -116,7 +116,7 @@
   }
   function addXP(n, opts = {}) {
     if (!opts.raw && App.boostActive && App.boostActive()) n *= 2;
-    n = Math.round(n); const cid = opts.course || (App.D && App.D.id) || App.myCourses()[0]; if (!n || !cid) return;
+    n = Math.round(n); const cid = opts.course || (App.D && App.D.id) || App.myCourses()[0] || App.COURSE_ORDER[0]; if (!n || !cid) return;   // a visitor with no classes yet still earns it (totals count every class)
     const t = todayISO(); store.poke(cid, data => { const xs = data.xp = Array.isArray(data.xp) ? data.xp : []; const last = xs[xs.length - 1]; if (last && last.d === t) last.n += n; else xs.push({ d: t, n }); if (xs.length > 400) xs.splice(0, xs.length - 400); });
     const today = xpToday(), goal = dailyGoal(), s = settings();
     paintStats(); if (!opts.silent) floatXP(n);

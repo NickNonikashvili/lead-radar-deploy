@@ -38,7 +38,7 @@ const T = require('./lib');
   const during = await w.evaluate(() => ({ welcome: !!document.querySelector('#welcome'), tour: !!document.querySelector('.tour') }));
   if (during.welcome) {
     check('the tour waits while the welcome is open', !during.tour, during);
-    await w.evaluate(() => { const x = document.querySelector('#welcome'); if (App.welcome && App.welcome.close) App.welcome.close(); else if (x) x.remove(); }); await w.evaluate(() => { location.hash = '#/today'; }); await w.waitForTimeout(300); await w.evaluate(() => { location.hash = '#/'; }); await w.waitForTimeout(2600);
+    await w.evaluate(() => { const x = document.querySelector('#welcome'); if (App.welcome && App.welcome.close) App.welcome.close(); else if (x) x.remove(); document.querySelectorAll('.celebrate').forEach(c => c.remove()); }); await w.evaluate(() => { location.hash = '#/today'; });   // a league celebration (hidden in tests, but still open) would hold the tour back too await w.waitForTimeout(300); await w.evaluate(() => { location.hash = '#/'; }); await w.waitForTimeout(2600);
     check('and shows after it', !!(await w.$('.tour')), await w.evaluate(() => App.settings().tourLayout));
   } else log('(no welcome to open here; skipped the welcome check)');
   // leave her account as having seen it, so the tests after this one start without the tour

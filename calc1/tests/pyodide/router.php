@@ -111,7 +111,9 @@ if ($path === '/anthropic/v1/messages') {
       'EXAMS' => [['id' => 'exam1', 'name' => 'Exam 1', 'date' => '2026-10-20', 'covers' => 'Units 1 and 2', 'units' => [1, 2], 'weight' => 30]],
       'CALENDAR' => [['2026-09-01', 'lecture', 'Ratios', 'ratios'], ['2026-10-20', 'exam', 'Exam 1']],
       'UNITS' => [['n' => 1, 'title' => 'Numbers', 'sections' => ['ratios', 'percents'], 'exam' => 'exam1'], ['n' => 2, 'title' => 'Change', 'sections' => ['rates', 'growth'], 'exam' => 'exam1']],
-      'SECTIONS' => [['id' => 'ratios', 'label' => '1.1', 'title' => 'Ratios', 'unit' => 1, 'about' => 'Comparing quantities.'], ['id' => 'percents', 'label' => '1.2', 'title' => 'Percents', 'unit' => 1, 'about' => 'Parts of a hundred.'], ['id' => 'rates', 'label' => '2.1', 'title' => 'Rates', 'unit' => 2, 'about' => 'Change per unit.'], ['id' => 'growth', 'label' => '2.2', 'title' => 'Growth', 'unit' => 2, 'about' => 'Repeated change.']]];
+      'SECTIONS' => [['id' => 'ratios', 'label' => '1.1', 'title' => 'Ratios', 'unit' => 1, 'about' => 'Comparing quantities.'], ['id' => 'percents', 'label' => '1.2', 'title' => 'Percents', 'unit' => 1, 'about' => 'Parts of a hundred.'], ['id' => 'rates', 'label' => '2.1', 'title' => 'Rates', 'unit' => 2, 'about' => 'Change per unit.'], ['id' => 'growth', 'label' => '2.2', 'title' => 'Growth', 'unit' => 2, 'about' => 'Repeated change.']],
+      // the class's Tools page: Bo picks the subject's tools (and one he got wrong: a kind that does not exist is dropped)
+      'TOOLS' => [['kind' => 'solver', 'title' => 'Growth formulas', 'formulas' => [['n' => 'Percent change', 'eq' => 'pct = (b - a)/a*100', 'vars' => [['pct', 'percent change', '%'], ['b', 'new value', ''], ['a', 'old value', '']]]]], ['kind' => 'calculator'], ['kind' => 'stats'], ['kind' => 'hologram']]];
     $text = "```json\n" . json_encode($o) . "\n```";
   } elseif (str_contains($sys, 'course syllabus') && preg_match('/Write the study material for unit (\d+)/', $utext, $mm)) {
     preg_match_all('/^- ([a-z0-9-]+) \(/m', $utext, $ids); $secs = []; $cards = []; $qs = [];

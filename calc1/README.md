@@ -507,6 +507,31 @@ locked topic's idea above the sign-up card. On a phone the lesson comes first an
 Classes Bo writes use the same fields (`plain`, `figure`, `ideas`, `examples`, `pitfalls`, `check`, `tip`).
 `tests/lessons.test.js` checks every topic has a lesson and every picture draws.
 
+## Tools for every class (`#/<class>/toolkit`)
+
+Every class's menu has **Tools** (under Explore): the tools that class needs, one open at a time. `assets/class-tools.js`
+is the engine and the page; `assets/class-kits.js` is course material: the kit of each Montana State class
+(`MathubKits[id]`, in the order it shows) and the kits by subject for classes students make (`MathubSubjectKits`: by the
+code's letters, CHMY → chemistry, HSTR → history…, then by `kind`). A class's list comes from, first match wins: its
+own `TOOLS` (a class you make: the class maker's Tools tab, or what Bo suggested when he read the syllabus;
+`mh_ai_outline_prompt` asks for 3 to 5), its curated kit, or its subject's kit. Each student's own changes sit on
+top (settings `<class>.tools = { hide, add }`): tools hidden, tools added, formulas of their own; what they keep in a
+tool (checklist ticks, their own dates, decision scores) is in `<class>.toolData`.
+
+A tool is data, never code: `{ kind, title?, desc?, …settings }`, cleaned by `App.classTools.clean` (unknown kinds and
+anything that does not make sense are dropped). Kinds: `grapher` (up to three functions, sliders for free letters),
+`equation` (every root of an equation in x), `solver` (formulas `{ n, eq, vars: [[letter, meaning, unit, min, max]] }`:
+fill all but one letter and it finds that one, by a sign-change scan and halving, positive answers first), `integral`
+(left, right, midpoint, trapezoid and Simpson sums, drawn), `limit` (a table from both sides, or at infinity),
+`series` (20,000 partial sums with the nth-term and ratio tests as evidence), `unitcircle` (exact values for the
+special angles), `calculator` (with the class's constants), `units`, `sigfigs`, `cite` and `wordcount` (the site
+Tools page's own, `App.utilTools`), `stats`, `scatter`, `chisq` (the p-value from the incomplete gamma function),
+`punnett` (one to three genes), `base`, `timeline` (search, your own dates, an order quiz), `checklist` (sets with a
+count needed), `matrix` (a weighted decision matrix), `game` (2×2: best responses, dominant strategies, pure and
+mixed Nash equilibria) and `link` (one of the class's own pages: its grapher, labs, simulators). Every expression goes
+through `App.compileExpr`; every text is escaped. `tests/class-tools.test.js` checks each class's kit, the math of
+each kind, a student's own changes, a class with tools from Bo, the maker's Tools tab and phones.
+
 ## Bo, the AI tutor (Pro and Max), classes Bo writes, and the AI server
 
 `assets/tutor.js`, `assets/tutor.css`, `api/ai.php`; details and costs in `docs/app-subscriptions.md`.

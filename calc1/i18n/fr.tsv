@@ -7622,3 +7622,293 @@
 7821	Ton cours est prêt.
 7822	Tes {1} cours sont prêts.
 7823	Choisis tes cours
+7824	Les outils n’ont pas pu se charger. Rechargez la page.
+7825	Ajouter la formule
+7826	Loi des gaz parfaits
+7827	Formule
+7828	Écrivez * entre les lettres ; chaque lettre devient une case à remplir.
+7829	Ce que signifie chaque lettre
+7830	P = pression, atm
+7831	Facultatif. Une par ligne : lettre = sens, unité.
+7832	La page Outils du cours reçoit les outils de sa matière{1}. Changez-les et la liste devient la vôtre ; Bo propose aussi des outils quand il lit un plan de cours.
+7833	(d’après {1})
+7834	Choisir moi-même les outils
+7835	Sur la page Outils
+7836	Dans cet ordre. Renommez un outil, déplacez-le ou retirez-le.
+7837	Nom de l’outil {1}
+7838	Dates, une par ligne : quand | ce qui s’est passé
+7839	1603 | Le shogunat Tokugawa
+7840	Nom de la liste
+7841	Éléments, un par ligne
+7842	Pas encore d’outils : ajoutez-en un ci-dessous.
+7843	Ajouter un outil
+7844	Une formule à vous
+7845	Elle rejoint le solveur de formules du cours : remplissez ce que vous savez et il trouve le reste.
+7846	Reprendre les outils de la matière
+7847	Revenir aux outils de la matière du cours ? Votre liste sera remplacée.
+7848	Ma liste de contrôle
+7849	La première chose à vérifier
+7850	{1} ajouté, en fin de liste.
+7851	Une formule a besoin d’un signe =.
+7852	Cette formule n’a pas pu être lue : utilisez au moins deux lettres, des noms courts et * entre les lettres.
+7853	Formule ajoutée au solveur de formules.
+7854	Outils et simulateurs du cours
+7855	La page Outils de chaque cours, son traceur, ses labos et simulateurs.
+7856	sin cos tan sec csc cot asin acos atan arcsin arccos arctan sinh cosh tanh exp ln log log10 log2 sqrt abs cbrt floor ceil e pi
+7857	Tracez jusqu’à trois fonctions. Les lettres comme a, b et c ont des curseurs ; glissez pour déplacer, faites défiler pour zoomer, pointez pour lire.
+7858	{1} fonction : y =
+7859	Première
+7860	Deuxième
+7861	Troisième
+7862	Tapez une fonction de x, comme x^2 - 3 ou a*sin(b*x).
+7863	Impossible de la tracer. Vérifiez les parenthèses et écrivez * entre les lettres : a*x, pas ax.
+7864	Solveur d’équations
+7865	Tapez une équation en x et obtenez toutes les solutions, avec le graphique qui les montre.
+7866	Équation en x
+7867	Les solutions sont là où le membre de gauche moins celui de droite passe par zéro.
+7868	Aucune solution réelle trouvée.
+7869	gauche − droite
+7870	Solveur de formules
+7871	Choisissez une formule, remplissez ce que vous savez et laissez une case vide : c’est celle qu’il trouve.
+7872	Remplissez ce que vous savez et laissez vide celle que vous cherchez.
+7873	{1} n’est pas un nombre. Les fractions, les puissances et 2e-3 fonctionnent.
+7874	Membre de gauche {1}, de droite {2}. Videz une case pour la calculer.
+7875	Ces nombres vérifient la formule.
+7876	Ces nombres ne vérifient pas la formule.
+7879	Aucune valeur de {1} ne convient à ces nombres{2}. Vérifiez les unités et les signes.
+7880	entre {1} et {2}
+7881	{1}Vérification : remettez-le et les deux membres sont égaux.
+7882	La formule admet aussi
+7883	. Choisissez celle qui a du sens pour le problème.
+7884	Sommes à gauche, à droite, au point milieu, des trapèzes et de Simpson pour toute fonction, dessinées comme les rectangles qu’elles additionnent.
+7885	Extrémités gauches
+7886	Extrémités droites
+7887	Points milieux
+7888	De a =
+7889	À b =
+7890	Morceaux n =
+7891	Utilisez deux nombres différents pour a et b, et un nombre entier de morceaux de 1 à 400.
+7892	Simpson{1}
+7893	Règle
+7894	Écart
+7895	Intégrale (Simpson très fin)
+7896	Approchez un point des deux côtés et voyez vers quoi les valeurs se stabilisent.
+7897	Quand x tend vers (un nombre, ou inf)
+7898	Tapez le nombre vers lequel tend x, comme 0, 2 ou pi/2, ou inf.
+7899	Quand x grandit, les valeurs ne se stabilisent pas.
+7900	Quand x → ∞, f(x) →
+7901	; quand x → −∞, f(x) →
+7902	Les deux côtés tendent vers
+7903	, donc la limite {1}.
+7904	vaut {1} (elle croît sans borne)
+7905	Par la gauche, elle tend vers
+7906	, par la droite vers
+7907	. Les deux côtés ne s’accordent pas, donc la limite n’existe pas.
+7908	Les valeurs ne se fixent pas sur un nombre (elles oscillent peut-être), donc le tableau ne montre pas de limite.
+7909	{1}, et cela ne change pas la limite : seules les valeurs proches comptent.
+7910	f({1}) n’est pas définie
+7911	Distance h
+7912	Explorateur de séries
+7913	Tapez le terme général et regardez les sommes partielles : se fixent-elles sur un nombre ou continuent-elles ?
+7914	terme général a(n) =
+7915	Commencer à n =
+7916	Un terme n’est pas défini (une division par zéro ?). Essayez de commencer à n = 1.
+7917	Les termes ne tendent pas vers 0 (après 20 000 termes, ils atteignent encore {1}), donc la série
+7918	(critère du terme général).
+7919	Chaque terme vaut environ {1} fois le précédent, donc la série
+7920	(critère de d’Alembert), vers environ
+7921	Les sommes partielles se stabilisent, lentement, près de
+7922	: cela ressemble à une série qui
+7923	Après 20 000 termes, les sommes partielles croissent encore, comme pour la série harmonique. Un tableau ne distingue pas une série très lente d’une série divergente : tranchez avec un critère (comparaison, intégrale ou série de Riemann).
+7924	Les nombres sont des indices, pas une preuve : nommez le critère qui le démontre.
+7925	Dernier terme
+7926	Somme partielle
+7927	somme partielle
+7928	Tout angle : radians, son angle de référence et les sinus, cosinus et tangente exacts.
+7929	Angle en degrés
+7930	En
+7931	radians (pi/6, 2.1…)
+7932	Tapez un angle comme 225, -30 ou 3pi/4.
+7933	Degrés
+7934	Radians
+7935	(même position que {1}°)
+7936	Une valeur exacte : un angle remarquable.
+7937	Scientifique, en degrés ou en radians, avec les constantes de ce cours à portée de main.
+7938	Constantes
+7939	Convertissez entre unités ; le tableau les montre toutes à la fois.
+7940	Comptez les chiffres significatifs et arrondissez au nombre voulu.
+7941	MLA 9 et APA 7 pour un site, un livre ou un article.
+7942	Mots, phrases, temps de lecture et lisibilité. Rien ne quitte votre navigateur.
+7943	Statistiques
+7944	Collez des nombres : moyenne, médiane, dispersion, quartiles et valeurs aberrantes, avec une boîte à moustaches et un histogramme.
+7945	Nombres{1}, séparés par des espaces, des virgules ou des retours à la ligne
+7946	Collez au moins deux nombres.
+7947	Effectif n
+7948	Moyenne
+7949	Médiane
+7950	aucun (aucune valeur ne se répète)
+7951	Écart type s (échantillon)
+7952	σ (toute la population)
+7953	Minimum
+7954	Maximum
+7955	Valeurs aberrantes (règle 1,5 × EIQ)
+7956	Q1 et Q3 sont les médianes des moitiés inférieure et supérieure, comme les calcule une TI-84.
+7957	Droite d’ajustement
+7958	Collez des paires x, y : le nuage de points, la droite des moindres carrés, r et r², et une prédiction.
+7959	Une paire par ligne : x, y{1}
+7960	Prédire y pour x =
+7961	Collez au moins deux paires, une par ligne, comme 3, 4.5
+7962	Tous les x sont égaux, il n’y a donc pas de droite à ajuster.
+7963	peu ou pas de
+7964	Corrélation n’est pas causalité : une troisième chose peut faire varier les deux.
+7965	Une relation linéaire {1}, {2} : {3} % de la dispersion de y va avec x.
+7966	Pour x = {1}, la droite prédit y =
+7967	(hors de vos données : extrapolation, prudence)
+7968	Test du khi-deux
+7969	Effectifs observés contre une proportion attendue (9:3:3:1, 3:1…) : χ², degrés de liberté et la valeur p.
+7970	lisse, jaune
+7971	lisse, vert
+7972	ridé, jaune
+7973	ridé, vert
+7974	Chaque ligne : une catégorie, combien vous en avez compté et sa part de la proportion attendue.
+7975	Chaque ligne a besoin d’un effectif (0 ou plus) et d’une part attendue supérieure à 0.
+7976	Ajoutez vos effectifs.
+7977	Observé
+7978	Attendu
+7979	df = {1}
+7980	p est supérieur à 0,05{1} : les effectifs suivent la proportion attendue, et les écarts sont ceux du hasard. Vous ne rejetez pas l’hypothèse nulle.
+7981	(χ² est sous la valeur critique {1})
+7982	p est inférieur à 0,05{1} : les effectifs s’écartent de la proportion attendue plus que le hasard ne l’explique. Vous rejetez l’hypothèse nulle.
+7983	(χ² dépasse la valeur critique {1})
+7984	Un effectif attendu est inférieur à 5 : le test n’est pas fiable ici.
+7985	Échiquier de Punnett
+7986	Croisez deux parents (Aa × Aa, AaBb × aabb…) : l’échiquier, les génotypes et la proportion des phénotypes.
+7987	Une paire de lettres par gène ; la majuscule est dominante. Jusqu’à trois gènes, comme AaBbCc.
+7988	Parent 1
+7989	Parent 2
+7990	Écrivez les deux parents avec les mêmes gènes, une paire de lettres chacun : Aa × aa, ou AaBb × AaBb.
+7991	Gamètes
+7992	Génotypes
+7993	Proportion {1}
+7994	Phénotypes
+7995	Proportion {1}{2}
+7996	. A_ signifie au moins un A dominant.
+7997	Bases de numération
+7998	Binaire, octal, décimal et hexadécimal, avec les bits groupés et le caractère qu’un nombre représente.
+7999	Écrit en
+8000	décimal (base 10)
+8001	binaire (base 2)
+8002	octal (base 8)
+8003	hexadécimal (base 16)
+8004	Ce n’est pas un nombre entier en base {1}.
+8005	Décimal
+8006	Binaire
+8007	Octal
+8008	Hexadécimal
+8009	Bits nécessaires
+8010	En Python : bin({1}{2}), oct(…), hex(…), et int('{3}', {4}) revient en arrière.
+8011	Un octet{1}
+8012	(complément à deux)
+8013	Caractère (ASCII)
+8014	'{1}' · chr({2})
+8015	Frise chronologique
+8016	Les dates du cours dans l’ordre. Cherchez-les, ajoutez les vôtres ou testez-vous sur l’ordre.
+8017	Testez-moi sur l’ordre
+8018	Ajouter une date à vous
+8019	L’ajouter
+8020	Edo, 1868, Westphalie…
+8021	Quand (1603, 1603–1868, 300 av. J.-C.)
+8022	Retirer cette date
+8023	Pas encore de dates : ajoutez ci-dessous celles de vos lectures.
+8024	Donnez une année (1603, 300 av. J.-C.) et ce qui s’est passé.
+8025	Le quiz a besoin d’au moins quatre dates d’années différentes.
+8026	Mettez-les dans l’ordre, du plus ancien au plus récent.
+8027	Tout est dans l’ordre.
+8028	Pas tout à fait. Voici le bon ordre.
+8029	Cochez les critères au fur et à mesure.
+8030	Quelle liste
+8031	{1} sur {2} cochés{3}
+8032	Tout décocher
+8033	cela atteint le nombre de {1}
+8034	le nombre requis est {1}
+8035	Matrice de décision
+8036	Notez chaque option selon des critères pondérés ; le meilleur total gagne. Vos notes sont gardées pour ce cours.
+8037	Option A
+8038	Option B
+8039	Option C
+8040	Coût
+8041	Performance
+8042	Facilité
+8043	Option
+8044	Recommencer
+8045	Poids (1–5)
+8046	Nom de l’option {1}
+8047	Critère {1}
+8048	Poids de {1}
+8049	Notez chaque option de 1 (faible) à 5 (excellent) pour chaque critère ; le poids d’un critère dit combien il compte.
+8050	obtient le meilleur score, avec {1} sur {2}.
+8051	Égalité entre
+8052	: ajoutez un critère pour les départager.
+8053	Notez chaque option de 1 (faible) à 5 (excellent) pour chaque critère.
+8054	Option {1}
+8055	Nouveau critère
+8056	Dilemme du prisonnier
+8057	Coopérer
+8058	Trahir
+8059	Jeu de la poule mouillée
+8060	Dévier
+8061	Tenir
+8062	Chasse au cerf
+8063	Cerf
+8064	Lièvre
+8065	Guerre des sexes
+8066	Opéra
+8067	Football
+8068	Pièces assorties
+8069	Pile
+8070	Face
+8071	Course aux armements
+8072	Désarmer
+8073	S’armer
+8074	Jeu 2×2
+8075	Deux joueurs, deux choix chacun : meilleures réponses, stratégies dominantes et équilibres de Nash, purs et mixtes.
+8076	Ligne
+8077	Jeux classiques
+8081	Gain de {1}, {2} et {3}
+8084	Pas d’équilibre de Nash en stratégies pures : dans chaque case, quelqu’un préférerait changer.
+8085	{1} a une stratégie dominante :
+8086	est meilleure quoi que fasse {1}.
+8087	{1} n’a pas de stratégie dominante.
+8088	Équilibre mixte : {1} joue {2} {3} % du temps, {4} joue {5} {6} % du temps, si bien qu’aucun ne peut être exploité.
+8089	Les deux seraient mieux dans une autre case, mais aucun ne peut y aller seul : c’est le dilemme.
+8090	{1} (soit {2}{3}/{4})
+8091	{1} (soit {2}{3}{4})
+8092	Effectif observé
+8093	Effectif
+8094	Part attendue
+8095	Retirer cette ligne
+8176	Ouvre la page de ce cours qui s’en occupe.
+8177	Les outils dont ce cours a besoin : calculatrices, solveurs et simulateurs. Choisissez-en un ; il s’ouvre en dessous.
+8178	Conçu pour {1}. Choisissez-en un ; il s’ouvre en dessous.
+8179	Changer les outils
+8180	Pas encore d’outils ici.
+8181	En ajouter un
+8182	Demander à Bo comment s’en servir
+8183	Help me use the {1} on {2}'s Tools page for my homework
+8184	Changer les outils de {1}
+8185	Vous seul voyez ces changements, et ils sont gardés pour ce cours.
+8186	Sur cette page
+8187	Écrivez-la avec * entre les lettres (P*V = n*R*T). Chaque autre lettre devient une case à remplir.
+8188	Ce que signifie chaque lettre (facultatif, une par ligne : lettre = sens, unité)
+8189	ajouté par vous
+8190	Revenir aux outils du cours
+8191	Utilisez au moins deux lettres, comme F = m*a.
+8192	« {1} » est trop long pour une lettre.
+8193	Ma formule
+8194	Cette formule n’a pas pu être lue. Vérifiez les parenthèses et écrivez * entre les lettres.
+8195	Formule ajoutée. C’est le dernier outil de la page.
+8196	Ne laissez qu’une case vide, pas {1}.
+8197	Chaque case : le gain de {1}, puis celui de {2}. Changez n’importe quel nombre.
+8198	. Là, aucun joueur ne gagne à changer seul.
+8199	Deux équilibres de Nash
+8200	L’équilibre de Nash

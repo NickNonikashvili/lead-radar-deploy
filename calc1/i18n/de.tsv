@@ -7622,3 +7622,293 @@
 7821	Dein Kurs ist eingerichtet.
 7822	Deine {1} Kurse sind eingerichtet.
 7823	Wähle deine Kurse
+7824	Die Werkzeuge konnten nicht geladen werden. Lade die Seite neu.
+7825	Formel hinzufügen
+7826	Ideales Gasgesetz
+7827	Formel
+7828	Schreibe * zwischen die Buchstaben; jeder Buchstabe wird ein Feld zum Ausfüllen.
+7829	Was jeder Buchstabe bedeutet
+7830	P = Druck, atm
+7831	Optional. Eine pro Zeile: Buchstabe = Bedeutung, Einheit.
+7832	Die Werkzeugseite des Kurses bekommt die Werkzeuge seines Fachs{1}. Ändere sie, und die Liste gehört dir; Bo schlägt auch Werkzeuge vor, wenn er einen Lehrplan liest.
+7833	(nach {1})
+7834	Werkzeuge selbst wählen
+7835	Auf der Werkzeugseite
+7836	In dieser Reihenfolge. Benenne ein Werkzeug um, verschiebe es oder nimm es heraus.
+7837	Name von Werkzeug {1}
+7838	Daten, eines pro Zeile: wann | was geschah
+7839	1603 | Das Tokugawa-Shogunat
+7840	Name der Liste
+7841	Punkte, einer pro Zeile
+7842	Noch keine Werkzeuge: füge unten eins hinzu.
+7843	Werkzeug hinzufügen
+7844	Eine eigene Formel
+7845	Sie kommt in den Formellöser des Kurses: Trag ein, was du weißt, und er findet den Rest.
+7846	Wieder die Werkzeuge des Fachs nehmen
+7847	Zu den Werkzeugen des Fachs zurück? Deine Liste wird ersetzt.
+7848	Meine Checkliste
+7849	Das Erste, was zu prüfen ist
+7850	{1} hinzugefügt, am Ende der Liste.
+7851	Eine Formel braucht ein =-Zeichen.
+7852	Die Formel konnte nicht gelesen werden: Nimm mindestens zwei Buchstaben, kurze Namen und * zwischen den Buchstaben.
+7853	Formel zum Formellöser hinzugefügt.
+7854	Kurswerkzeuge und Simulatoren
+7855	Die Werkzeugseite jedes Kurses, sein Funktionsplotter, Labore und Simulatoren.
+7856	sin cos tan sec csc cot asin acos atan arcsin arccos arctan sinh cosh tanh exp ln log log10 log2 sqrt abs cbrt floor ceil e pi
+7857	Zeichne bis zu drei Funktionen. Buchstaben wie a, b und c bekommen Schieberegler; ziehen zum Verschieben, scrollen zum Zoomen, zeigen zum Ablesen.
+7858	{1} Funktion: y =
+7859	Erste
+7860	Zweite
+7861	Dritte
+7862	Gib eine Funktion von x ein, etwa x^2 - 3 oder a*sin(b*x).
+7863	Das ließ sich nicht zeichnen. Prüfe die Klammern und schreibe * zwischen die Buchstaben: a*x, nicht ax.
+7864	Gleichungslöser
+7865	Gib eine Gleichung in x ein und erhalte alle Lösungen, mit dem Graphen, der sie zeigt.
+7866	Gleichung in x
+7867	Die Lösungen liegen dort, wo linke Seite minus rechte Seite die Null kreuzt.
+7868	Keine reelle Lösung gefunden.
+7869	links − rechts
+7870	Formellöser
+7871	Wähle eine Formel, trag ein, was du weißt, und lass ein Feld leer: Das findet er.
+7872	Trag ein, was du weißt, und lass das Gesuchte leer.
+7873	{1} ist keine Zahl. Brüche, Potenzen und 2e-3 gehen.
+7874	Linke Seite {1}, rechte Seite {2}. Leere ein Feld, um danach aufzulösen.
+7875	Diese Zahlen erfüllen die Formel.
+7876	Diese Zahlen erfüllen die Formel nicht.
+7879	Kein Wert von {1} passt zu diesen Zahlen{2}. Prüfe die Einheiten und Vorzeichen.
+7880	zwischen {1} und {2}
+7881	{1}Probe: Setz es wieder ein, und beide Seiten stimmen überein.
+7882	Die Formel erlaubt auch
+7883	. Nimm das, was zur Aufgabe passt.
+7884	Links-, Rechts-, Mittelpunkt-, Trapez- und Simpson-Summen für jede Funktion, gezeichnet als die Rechtecke, die sie aufaddieren.
+7885	Linke Endpunkte
+7886	Rechte Endpunkte
+7887	Mittelpunkte
+7888	Von a =
+7889	Bis b =
+7890	Teile n =
+7891	Nimm zwei verschiedene Zahlen für a und b und eine ganze Zahl von Teilen von 1 bis 400.
+7892	Simpson{1}
+7893	Regel
+7894	Abweichung
+7895	Integral (sehr feiner Simpson)
+7896	Nähere dich einem Punkt von beiden Seiten und sieh, wo sich die Werte einpendeln.
+7897	Wenn x sich nähert (einer Zahl oder inf)
+7898	Gib die Zahl ein, der sich x nähert, etwa 0, 2 oder pi/2, oder inf.
+7899	Wenn x wächst, pendeln sich die Werte nicht ein.
+7900	Für x → ∞ gilt f(x) →
+7901	; für x → −∞ gilt f(x) →
+7902	Beide Seiten gehen gegen
+7903	, also ist der Grenzwert {1}.
+7904	{1} (wächst unbegrenzt)
+7905	Von links geht es gegen
+7906	, von rechts gegen
+7907	. Die Seiten stimmen nicht überein, also gibt es keinen Grenzwert.
+7908	Die Werte pendeln sich auf keine Zahl ein (vielleicht schwingen sie), also zeigt die Tabelle keinen Grenzwert.
+7909	{1}, und das ändert den Grenzwert nicht: Nur die Werte in der Nähe zählen.
+7910	f({1}) ist nicht definiert
+7911	Abstand h
+7912	Reihen-Explorer
+7913	Gib das n-te Glied ein und sieh dir die Partialsummen an: Pendeln sie sich ein oder wachsen sie weiter?
+7914	n-tes Glied a(n) =
+7915	Beginnen bei n =
+7916	Ein Glied ist nicht definiert (eine Division durch null?). Beginne lieber bei n = 1.
+7917	Die Glieder gehen nicht gegen 0 (nach 20.000 Gliedern sind sie noch bis {1} groß), also
+7918	(Nullfolgenkriterium).
+7919	Jedes Glied ist etwa {1}-mal das vorige, also
+7920	(Quotientenkriterium), gegen etwa
+7921	Die Partialsummen pendeln sich langsam ein, nahe
+7922	: Das sieht nach einer Reihe aus, die
+7923	Nach 20.000 Gliedern wachsen die Partialsummen noch, wie bei der harmonischen Reihe. Eine Tabelle unterscheidet eine sehr langsame Reihe nicht von einer divergenten: Entscheide es mit einem Kriterium (Vergleich, Integral oder p-Reihe).
+7924	Die Zahlen sind Hinweise, kein Beweis: Nenne das Kriterium, das es beweist.
+7925	Letztes Glied
+7926	Partialsumme
+7927	Partialsumme
+7928	Jeder Winkel: Bogenmaß, Bezugswinkel und exakter Sinus, Kosinus und Tangens.
+7929	Winkel in Grad
+7930	In
+7931	Bogenmaß (pi/6, 2.1…)
+7932	Gib einen Winkel ein, etwa 225, -30 oder 3pi/4.
+7933	Grad
+7934	Bogenmaß
+7935	(dieselbe Stelle wie {1}°)
+7936	Ein exakter Wert: ein besonderer Winkel.
+7937	Wissenschaftlich, in Grad oder Bogenmaß, mit den Konstanten dieses Kurses griffbereit.
+7938	Konstanten
+7939	Rechne Einheiten um; die Tabelle zeigt alle auf einmal.
+7940	Zähle signifikante Stellen und runde auf beliebig viele.
+7941	MLA 9 und APA 7 für eine Website, ein Buch oder einen Artikel.
+7942	Wörter, Sätze, Lesezeit und Lesbarkeit. Nichts verlässt deinen Browser.
+7943	Statistik
+7944	Füge Zahlen ein: Mittelwert, Median, Streuung, Quartile und Ausreißer, mit Boxplot und Histogramm.
+7945	Zahlen{1}, getrennt durch Leerzeichen, Kommas oder Zeilenumbrüche
+7946	Füge mindestens zwei Zahlen ein.
+7947	Anzahl n
+7948	Mittelwert
+7949	Median
+7950	keiner (kein Wert kommt doppelt vor)
+7951	Standardabweichung s (Stichprobe)
+7952	σ (ganze Grundgesamtheit)
+7953	Minimum
+7954	Maximum
+7955	Ausreißer (1,5 × IQR-Regel)
+7956	Q1 und Q3 sind die Mediane der unteren und oberen Hälfte, wie ein TI-84 sie berechnet.
+7957	Ausgleichsgerade
+7958	Füge x, y-Paare ein: Streudiagramm, Kleinste-Quadrate-Gerade, r und r² und eine Vorhersage.
+7959	Ein Paar pro Zeile: x, y{1}
+7960	y vorhersagen bei x =
+7961	Füge mindestens zwei Paare ein, eines pro Zeile, etwa 3, 4.5
+7962	Alle x sind gleich, also gibt es keine Gerade.
+7963	kaum eine
+7964	Korrelation ist keine Kausalität: Etwas Drittes kann beide bewegen.
+7965	Ein {1}, {2} linearer Zusammenhang: {3} % der Streuung von y gehen mit x einher.
+7966	Bei x = {1} sagt die Gerade y =
+7967	(außerhalb deiner Daten: Extrapolation, also Vorsicht)
+7968	Chi-Quadrat-Test
+7969	Beobachtete Anzahlen gegen ein erwartetes Verhältnis (9:3:3:1, 3:1…): χ², Freiheitsgrade und der p-Wert.
+7970	rund, gelb
+7971	rund, grün
+7972	runzlig, gelb
+7973	runzlig, grün
+7974	Jede Zeile: eine Kategorie, wie viele du gezählt hast und ihr Anteil am erwarteten Verhältnis.
+7975	Jede Zeile braucht eine Anzahl (0 oder mehr) und einen erwarteten Anteil über 0.
+7976	Trag deine Anzahlen ein.
+7977	Beobachtet
+7978	Erwartet
+7979	df = {1}
+7980	p liegt über 0,05{1}: Die Anzahlen passen zum erwarteten Verhältnis, und die Abweichungen sind die des Zufalls. Du verwirfst die Nullhypothese nicht.
+7981	(χ² liegt unter dem kritischen Wert {1})
+7982	p liegt unter 0,05{1}: Die Anzahlen weichen stärker vom erwarteten Verhältnis ab, als der Zufall erklärt. Du verwirfst die Nullhypothese.
+7983	(χ² liegt über dem kritischen Wert {1})
+7984	Eine erwartete Anzahl liegt unter 5, also ist der Test hier nicht verlässlich.
+7985	Punnett-Quadrat
+7986	Kreuze zwei Eltern (Aa × Aa, AaBb × aabb…): das Quadrat, die Genotypen und das Phänotypverhältnis.
+7987	Ein Buchstabenpaar pro Gen; der Großbuchstabe ist dominant. Bis zu drei Gene, etwa AaBbCc.
+7988	Elternteil 1
+7989	Elternteil 2
+7990	Schreibe beide Eltern mit denselben Genen, je ein Buchstabenpaar: Aa × aa oder AaBb × AaBb.
+7991	Gameten
+7992	Genotypen
+7993	Verhältnis {1}
+7994	Phänotypen
+7995	Verhältnis {1}{2}
+7996	. A_ heißt mindestens ein dominantes A.
+7997	Zahlensysteme
+7998	Binär, oktal, dezimal und hexadezimal, mit gruppierten Bits und dem Zeichen, für das eine Zahl steht.
+7999	Geschrieben im
+8000	Dezimalsystem (Basis 10)
+8001	Binärsystem (Basis 2)
+8002	Oktalsystem (Basis 8)
+8003	Hexadezimalsystem (Basis 16)
+8004	Das ist keine ganze Zahl zur Basis {1}.
+8005	Dezimal
+8006	Binär
+8007	Oktal
+8008	Hexadezimal
+8009	Benötigte Bits
+8010	In Python: bin({1}{2}), oct(…), hex(…), und int('{3}', {4}) rechnet zurück.
+8011	Ein Byte{1}
+8012	(Zweierkomplement)
+8013	Zeichen (ASCII)
+8014	'{1}' · chr({2})
+8015	Zeitleiste
+8016	Die Daten des Kurses in Reihenfolge. Durchsuche sie, füge eigene hinzu oder lass dich zur Reihenfolge abfragen.
+8017	Frag mich die Reihenfolge ab
+8018	Ein eigenes Datum hinzufügen
+8019	Hinzufügen
+8020	Edo, 1868, Westfalen…
+8021	Wann (1603, 1603–1868, 300 v. Chr.)
+8022	Dieses Datum entfernen
+8023	Noch keine Daten: Füge unten die aus deinen Texten hinzu.
+8024	Gib ein Jahr an (1603, 300 v. Chr.) und was geschah.
+8025	Das Quiz braucht mindestens vier Daten aus verschiedenen Jahren.
+8026	Bring sie in die richtige Reihenfolge, das Früheste zuerst.
+8027	Alles in der richtigen Reihenfolge.
+8028	Nicht ganz. Hier ist die richtige Reihenfolge.
+8029	Hake die Kriterien nach und nach ab.
+8030	Welche Liste
+8031	{1} von {2} abgehakt{3}
+8032	Alle Haken entfernen
+8033	das erreicht die Zahl von {1}
+8034	nötig sind {1}
+8035	Entscheidungsmatrix
+8036	Bewerte jede Option nach gewichteten Kriterien; die beste Summe gewinnt. Deine Punkte bleiben für diesen Kurs gespeichert.
+8037	Option A
+8038	Option B
+8039	Option C
+8040	Kosten
+8041	Leistung
+8042	Einfachheit
+8043	Option
+8044	Neu beginnen
+8045	Gewicht (1–5)
+8046	Name von Option {1}
+8047	Kriterium {1}
+8048	Gewicht von {1}
+8049	Bewerte jede Option je Kriterium von 1 (schwach) bis 5 (sehr gut); das Gewicht eines Kriteriums sagt, wie viel es zählt.
+8050	schneidet am besten ab, mit {1} von {2}.
+8051	Gleichstand zwischen
+8052	: Füge ein Kriterium hinzu, um sie zu trennen.
+8053	Bewerte jede Option je Kriterium von 1 (schwach) bis 5 (sehr gut).
+8054	Option {1}
+8055	Neues Kriterium
+8056	Gefangenendilemma
+8057	Kooperieren
+8058	Verraten
+8059	Feiglingsspiel
+8060	Ausweichen
+8061	Weiterfahren
+8062	Hirschjagd
+8063	Hirsch
+8064	Hase
+8065	Kampf der Geschlechter
+8066	Oper
+8067	Fußball
+8068	Matching Pennies
+8069	Kopf
+8070	Zahl
+8071	Wettrüsten
+8072	Abrüsten
+8073	Aufrüsten
+8074	2×2-Spiel
+8075	Zwei Spieler, je zwei Möglichkeiten: beste Antworten, dominante Strategien und Nash-Gleichgewichte, rein und gemischt.
+8076	Zeile
+8077	Klassische Spiele
+8081	Auszahlung für {1}, {2} und {3}
+8084	Kein Nash-Gleichgewicht in reinen Strategien: In jedem Feld würde jemand lieber wechseln.
+8085	{1} hat eine dominante Strategie:
+8086	ist besser, egal was {1} tut.
+8087	{1} hat keine dominante Strategie.
+8088	Gemischtes Gleichgewicht: {1} spielt {2} in {3} % der Fälle, {4} spielt {5} in {6} % der Fälle, so kann keiner ausgenutzt werden.
+8089	Beide stünden in einem anderen Feld besser da, aber keiner kommt allein dorthin: das Dilemma.
+8090	{1} (also {2}{3}/{4})
+8091	{1} (also {2}{3}{4})
+8092	Beobachtete Anzahl
+8093	Anzahl
+8094	Erwarteter Anteil
+8095	Diese Zeile entfernen
+8176	Öffnet die passende Seite dieses Kurses.
+8177	Die Werkzeuge, die dieser Kurs braucht: Rechner, Löser und Simulatoren. Wähle eins; es öffnet sich darunter.
+8178	Gemacht für {1}. Wähle eins; es öffnet sich darunter.
+8179	Werkzeuge ändern
+8180	Hier gibt es noch keine Werkzeuge.
+8181	Eins hinzufügen
+8182	Bo fragen, wie es geht
+8183	Help me use the {1} on {2}'s Tools page for my homework
+8184	Werkzeuge von {1} ändern
+8185	Nur du siehst diese Änderungen, und sie bleiben für diesen Kurs gespeichert.
+8186	Auf dieser Seite
+8187	Schreibe sie mit * zwischen den Buchstaben (P*V = n*R*T). Jeder andere Buchstabe wird ein Feld zum Ausfüllen.
+8188	Was jeder Buchstabe bedeutet (optional, eine pro Zeile: Buchstabe = Bedeutung, Einheit)
+8189	von dir hinzugefügt
+8190	Zurück zu den Werkzeugen des Kurses
+8191	Nimm mindestens zwei Buchstaben, etwa F = m*a.
+8192	„{1}“ ist zu lang für einen Buchstaben.
+8193	Meine Formel
+8194	Die Formel konnte nicht gelesen werden. Prüfe die Klammern und schreibe * zwischen die Buchstaben.
+8195	Formel hinzugefügt. Sie ist das letzte Werkzeug auf der Seite.
+8196	Lass nur ein Feld leer, nicht {1}.
+8197	Jedes Feld: die Auszahlung für {1}, dann für {2}. Ändere jede Zahl.
+8198	. Dort gewinnt kein Spieler, wenn er allein wechselt.
+8199	Zwei Nash-Gleichgewichte
+8200	Das Nash-Gleichgewicht

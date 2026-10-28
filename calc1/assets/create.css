@@ -724,3 +724,11 @@ body:has(#bo-fab:not([hidden])) .mkr-bar { margin-right: 78px; }
 @media (max-width: 620px) { body:has(#bo-fab:not([hidden])) .mkr-bar { margin-right: 66px; } }
 /* on a phone the bottom tab bar is there too: the save bar sits above it */
 @media (max-width: 900px) { .mkr-bar { bottom: calc(76px + env(safe-area-inset-bottom, 0px)); } .mkr-ed { padding-bottom: 150px; } }
+
+/* the class maker's Tools tab: one row per tool on the class's Tools page */
+.mkr-tool { display: flex; flex-direction: column; gap: 8px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 12px; margin-bottom: 8px; background: var(--surface); }
+.mkr-tool-h { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.mkr-tool-h > svg { flex: none; color: var(--accent-deep, var(--accent)); }
+.mkr-tool-h .input { flex: 1 1 auto; min-width: 0; }
+.mkr-tool-f { margin: 0; }
+.mkr-tool-f li { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }

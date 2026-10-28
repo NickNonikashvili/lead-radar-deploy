@@ -47,7 +47,7 @@
     { id: 'mynotes', g: 'class', label: 'My notes', desc: 'Your own notes and highlights on each topic.', views: ['mynotes'] },
     { id: 'planner', g: 'class', label: 'Study planner', desc: 'A day-by-day plan to the next exam.', views: ['planner'] },
     { id: 'calendar', g: 'class', label: 'Class calendar', desc: 'Lectures, labs, due dates and exams of a class.', views: ['calendar'] },
-    { id: 'explore', g: 'class', label: 'Grapher, labs and simulators', desc: 'A class’s own interactive tools.', views: ['grapher', 'labs', 'motion', 'solvers', 'explorer', 'unitcircle'] },
+    { id: 'explore', g: 'class', label: 'Class tools and simulators', desc: 'Each class’s own Tools page, grapher, labs and simulators.', views: ['toolkit', 'grapher', 'labs', 'motion', 'solvers', 'explorer', 'unitcircle'] },
     { id: 'playground', g: 'class', label: 'Code playground', desc: 'Python in the browser, for coding classes.', views: ['playground'] },
     { id: 'drafts', g: 'class', label: 'Draft feedback', desc: 'Bo’s coaching on a draft, for writing classes.', views: ['drafts', 'draft-history'] },
     { id: 'notebook', g: 'class', label: 'Writer’s notebook', desc: 'The notebook entries of a writing class.', views: ['notebook'] },

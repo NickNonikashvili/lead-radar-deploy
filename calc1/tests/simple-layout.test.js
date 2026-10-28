@@ -4,8 +4,12 @@ const T = require('./lib');
   const { mk, go, log, check, hscroll } = await T.start({});
   const [c, p] = await mk(1360, 900, { serviceWorkers: 'block' });
 
-  // start page, first visit as a guest
+  // start page, first visit as a guest: first the question of which classes they take, then (once picked) the hero, the steps and the widgets
   await go(p, '#/', 1500);
+  check('a brand-new visitor is asked which classes they take', await p.evaluate(() => !!document.querySelector('#pick-classes') && !document.querySelector('.start-steps')));
+  const first = await p.evaluate(() => [...document.querySelectorAll('#dash-canvas > .dw')].map(w => w.dataset.w));   // a first visit's widgets, before any class is picked
+  const pick = pg => pg.evaluate(() => { const s = App.settings(); s.courses = ['calc', 'physics', 'writ', 'csci']; localStorage.setItem('studyhub-settings', JSON.stringify(s)); });
+  await pick(p); await p.reload(); await p.waitForTimeout(1500);
   const land = await p.evaluate(() => {
     const secs = [...document.querySelectorAll('.landing-wrap > .land-sec > .sec-title, .landing-wrap > .land-sec > .sec-h > .sec-title')].map(h => h.textContent.trim());
     const hero = [...document.querySelectorAll('.landing-top .hero-actions > *')].map(e => e.id || e.className.split(' ').filter(c => c !== 'btn' && c !== 'sm').join('.'));
@@ -13,7 +17,7 @@ const T = require('./lib');
   });
   log('start page:', JSON.stringify(land));
   check('the start page is the hero, three steps and Your home: one section of widgets', land.secs.join('|') === 'Your home' && land.steps === 3, land.secs);
-  check('a first visit\'s home: the classes first, then Bo and the guides', land.widgets[0] === 'classes' && land.widgets.includes('bo') && land.widgets.includes('guides') && land.rows > 3, land.widgets);
+  check('a first visit\'s home: the classes first, then Bo and the guides; once picked, their rows', first[0] === 'classes' && first.includes('bo') && first.includes('guides') && land.rows > 3, { first, rows: land.rows });
   check('the hero keeps Today and For professors; search, focus sounds, the account and the theme are in the header on every page', land.hero.length === 2 && /hero-today/.test(land.hero[0]) && land.hero[1] === 'hero-faculty', land.hero);
   check('visitors get one line on Bo that opens the one-minute demo', land.bo === '#/max', land.bo);
   check('no learning path and no scrolling ticker on the start page', !land.path && !land.ticker);
@@ -56,7 +60,7 @@ const T = require('./lib');
 
   // phones
   const [cm, m] = await mk(390, 844, { serviceWorkers: 'block' });
-  await go(m, '#/', 1200); check('phone: start page does not scroll sideways', await hscroll(m));
+  await go(m, '#/', 600); await pick(m); await m.reload(); await m.waitForTimeout(1200); check('phone: start page does not scroll sideways', await hscroll(m));
   const cta = await m.evaluate(() => { const b = document.querySelector('.dwk[data-c="calc"]'); return !!b && b.scrollWidth <= b.clientWidth + 1; });
   check('phone: class buttons are not cut off', cta);
   await go(m, '#/calc', 1400); check('phone: dashboard does not scroll sideways', await hscroll(m));

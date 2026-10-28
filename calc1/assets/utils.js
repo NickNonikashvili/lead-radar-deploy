@@ -80,9 +80,9 @@
   }
   const sig = (v, n = 6) => { if (v === 0) return '0'; const s = Number(v.toPrecision(n)); return Math.abs(s) >= 1e9 || Math.abs(s) < 1e-4 ? s.toExponential(n - 1).replace(/\.?0+e/, 'e') : String(s); };
   App.convertUnits = convert;
-  function unitsHtml() {
-    const cat = settings().unitCat || 'speed';
-    return `<div class="tool-units"><div class="field"><label for="tu-cat">Quantity</label><select class="select" id="tu-cat">${Object.entries(UNITS).map(([k, c]) => `<option value="${k}"${k === cat ? ' selected' : ''}>${c.label}</option>`).join('')}</select></div>
+  function unitsHtml(cats) {   // cats: only these quantities (a class's Tools page)
+    const list = Object.keys(UNITS).filter(k => !Array.isArray(cats) || !cats.length || cats.includes(k)); const pick = settings().unitCat; const cat = list.includes(pick) ? pick : list.includes('speed') ? 'speed' : list[0];
+    return `<div class="tool-units"><div class="field"><label for="tu-cat">Quantity</label><select class="select" id="tu-cat">${Object.entries(UNITS).filter(([k]) => list.includes(k)).map(([k, c]) => `<option value="${k}"${k === cat ? ' selected' : ''}>${c.label}</option>`).join('')}</select></div>
       <div class="tu-row"><div class="field"><label for="tu-v">Value</label><input class="input mono" id="tu-v" value="1" inputmode="decimal"></div><div class="field"><label for="tu-from">From</label><select class="select" id="tu-from"></select></div><button class="icon-btn tu-swap" data-action="tu-swap" title="Swap" aria-label="Swap units">${icon('rotate', 15)}</button><div class="field"><label for="tu-to">To</label><select class="select" id="tu-to"></select></div></div>
       <div class="tu-out" id="tu-out" aria-live="polite"></div><div class="tu-table" id="tu-table"></div></div>`;
   }
@@ -178,6 +178,8 @@
 
   /* ---------- view ---------- */
   const TABS = [['calc', 'Calculator', 'calc', calcHtml, calcBind], ['units', 'Units', 'swap', unitsHtml, unitsBind], ['cite', 'Citations', 'quill', citeHtml, citeBind], ['words', 'Word counter', 'text', wordsHtml, wordsBind], ['sig', 'Sig figs', 'sigma', sigHtml, sigBind]];
+  // the same five on a class's Tools page (assets/class-tools.js), one open at a time: [markup, wiring]
+  App.utilTools = { calc: [calcHtml, calcBind], units: [unitsHtml, unitsBind], cite: [citeHtml, citeBind], words: [wordsHtml, wordsBind], sig: [sigHtml, sigBind], unitCats: Object.keys(UNITS) };
   // the map at the top: [where it goes, name, what it is for, icon]; '#tool:<tab>' opens one of the utilities below
   const MAP = [
     ['Study', [['#tool:calc', 'Calculator', 'Scientific, in degrees or radians', 'calc'], ['#tool:units', 'Unit converter', 'Length, mass, energy and more', 'swap'], ['#tool:cite', 'Citations', 'APA 7 and MLA 9', 'quill'], ['#tool:words', 'Word counter', 'Words, reading time, readability', 'text'], ['#tool:sig', 'Sig figs', 'Count and round significant figures', 'sigma'], ['#/gpa', 'GPA calculator', 'Semester and cumulative GPA, and goals', 'gpa']]],

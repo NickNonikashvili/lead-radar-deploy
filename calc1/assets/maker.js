@@ -4,8 +4,9 @@
      and fills in the maker), from scratch, or from Montana State's classes; the classes you have, each with Edit;
      and more ways in (a shared code, a class file, the AI you already use, the example class).
    - #/maker/new and #/maker/<id>: the editor. A class of your own (my####, assets/create.js) is edited whole:
-     Basics, Schedule, Exams, Grading, Topics and Lessons (Bo writes a unit's lessons, cards and questions on
-     request, step "unit"). Saving keeps it with the account (api/myclasses.php), so it can be changed any time.
+     Basics, Schedule, Exams, Grading, Topics, Lessons (Bo writes a unit's lessons, cards and questions on
+     request, step "unit") and Tools (the class's Tools page, assets/class-tools.js). Saving keeps it with the
+     account (api/myclasses.php), so it can be changed any time.
      A class from StudyCat's catalog keeps its notes, practice and cards; the student changes what is only true for
      their section (nickname, colour, instructor, office hours, where and when it meets, exam dates and times, dates
      of their own, grading weights). That is saved with the account as classCustom[id] and applied in assets/app.js
@@ -229,7 +230,7 @@
     editor(root, query, wrap, late);
   }
 
-  const TABS_MINE = [['basics', 'Basics', 'info'], ['schedule', 'Schedule', 'calendar'], ['exams', 'Exams', 'flag'], ['grading', 'Grading', 'reportcard'], ['topics', 'Topics', 'list'], ['lessons', 'Lessons', 'book']];
+  const TABS_MINE = [['basics', 'Basics', 'info'], ['schedule', 'Schedule', 'calendar'], ['exams', 'Exams', 'flag'], ['grading', 'Grading', 'reportcard'], ['topics', 'Topics', 'list'], ['lessons', 'Lessons', 'book'], ['tools', 'Tools', 'calc']];
   const TABS_CAT = [['basics', 'Your section', 'user'], ['dates', 'Your dates', 'calendar'], ['exams', 'Exams', 'flag'], ['grading', 'Grading', 'reportcard']];
 
   /* late: drawn after the page's own render finished (a class read or loaded first), so its tabs are wired here */
@@ -258,7 +259,7 @@
 
   function paintAll(root, only) {
     const cat = S.kind === 'catalog';
-    const panes = cat ? { basics: catBasics, dates: catDates, exams: catExams, grading: catGrading } : { basics: basicsHtml, schedule: scheduleHtml, exams: examsHtml, grading: gradingHtml, topics: topicsHtml, lessons: lessonsHtml };
+    const panes = cat ? { basics: catBasics, dates: catDates, exams: catExams, grading: catGrading } : { basics: basicsHtml, schedule: scheduleHtml, exams: examsHtml, grading: gradingHtml, topics: topicsHtml, lessons: lessonsHtml, tools: toolsHtml };
     Object.keys(panes).forEach(k => { if (only && !only.includes(k)) return; const el = $(`.pane[data-pane="${k}"]`, root); if (el) el.innerHTML = panes[k](); });
   }
   function paintTile(root) {
@@ -328,6 +329,26 @@
         <button type="button" class="btn sm ghost" data-addtopic="${ui}">${icon('plus', 13)} Add a topic</button></div>`; }).join('')}
       <div class="row gap-sm mt-1">${ADD('unit', 'Add a unit')}</div>`, 'list');
   }
+  /* the class's Tools page (assets/class-tools.js): until the student picks, the class gets the tools of its subject */
+  const tlLine = e => `${e[0]} | ${e[1]}`;
+  function toolsHtml() {
+    const P = S.obj; const T = App.classTools; if (!T) return sec('Tools', '', '<p class="small muted">The tools could not load. Reload the page.</p>', 'calc');
+    const own = Array.isArray(P.TOOLS) && P.TOOLS.length; const name = t => t.title || (t.kind === 'link' ? t.view : T.kinds[t.kind].label);
+    const add = `<div class="ct-add-kinds">${T.KIND_IDS.filter(k => k !== 'solver').map(k => `<button type="button" class="chip" data-tl-add="${k}">${icon(T.kinds[k].icon, 13)} ${esc(T.kinds[k].label)}</button>`).join('')}</div>`;
+    const formula = `<div class="mkr-grid">${F('Name', '<input class="input" id="mk-tf-n" maxlength="70" placeholder="Ideal gas law">')}${F('Formula', '<input class="input mono" id="mk-tf-eq" maxlength="200" placeholder="P*V = n*R*T">', 'Write * between letters; every letter becomes a box to fill in.')}${F('What each letter means', '<textarea class="input mono" id="mk-tf-vars" rows="3" placeholder="P = pressure, atm"></textarea>', 'Optional. One a line: letter = meaning, unit.', 'wide')}</div><div class="row gap-sm"><button type="button" class="btn" data-tl-formula>${icon('plus', 13)} Add the formula</button><span class="small" id="mk-tf-msg" role="status"></span></div>`;
+    if (!own) {
+      const g = T.clean(T.guess(P));
+      return sec('Tools', `The class’s Tools page gets the tools for its subject${P.code ? ` (from ${esc(String(P.code).split(/\s/)[0])})` : ''}. Change them and the list is yours; Bo also suggests tools when he reads a syllabus.`, `<ul class="ct-ed">${g.map(t => `<li><span class="ct-ed-mine">${icon(T.kinds[t.kind].icon, 14)} <span>${esc(name(t))}</span></span></li>`).join('')}</ul><div class="row gap-sm mt-2"><button type="button" class="btn primary" data-tl-own>${icon('sliders', 14)} Choose the tools myself</button></div>`, 'calc');
+    }
+    const rows = P.TOOLS.map((raw, i) => [T.clean([raw])[0], raw, i]).filter(r => r[0]);
+    return sec('On the Tools page', 'In this order. Rename a tool, move it, or take it off.', rows.map(([t, raw, i]) => `<div class="mkr-tool"><div class="mkr-tool-h">${icon(T.kinds[t.kind].icon, 15)}<input class="input sm" data-f="TOOLS.${i}.title" value="${esc(raw.title || '')}" placeholder="${esc(name(t))}" aria-label="Name of tool ${i + 1}" maxlength="50">${MOVE('TOOLS', i, P.TOOLS.length, name(t))}${DEL(`TOOLS.${i}`, name(t))}</div>
+        ${t.kind === 'solver' ? `<ul class="list small mkr-tool-f">${t.formulas.map((f, j) => `<li><span class="mono">${esc(f.eq)}</span> · ${esc(f.n)} ${DEL(`TOOLS.${i}.formulas.${j}`, f.n)}</li>`).join('')}</ul>` : ''}
+        ${t.kind === 'timeline' ? F('Dates, one a line: when | what happened', `<textarea class="input mono" rows="5" data-tlev="${i}" placeholder="1603 | The Tokugawa shogunate">${esc((raw.events || []).filter(Array.isArray).map(tlLine).join('\n'))}</textarea>`) : ''}
+        ${t.kind === 'checklist' ? `<div class="mkr-grid">${F('List name', I(`TOOLS.${i}.sets.0.name`, { max: 60 }))}${F('Items, one a line', TA(`TOOLS.${i}.sets.0.items`, { list: true, rows: 4 }), '', 'wide')}</div>` : ''}</div>`).join('') || '<p class="small muted">No tools yet: add one below.</p>', 'calc')
+      + sec('Add a tool', '', add, 'plus')
+      + sec('A formula of your own', 'It joins the class’s formula solver: fill in what you know and it finds the rest.', formula, 'wand')
+      + sec('Start over', '', `<button type="button" class="btn ghost" data-tl-reset>${icon('undo', 14)} Use the subject’s tools again</button>`, 'undo');
+  }
   function lessonsHtml() {
     const P = S.obj; const cards = (P.FLASHCARDS || []).length; const qs = ((P.QUIZ && P.QUIZ.questions) || []).reduce((n, q) => n + ((q.items || []).length || 1), 0);
     if (!P.SECTIONS.length) return sec('Lessons', '', '<p class="small muted">Add the topics first (the Topics tab). Then Bo can write a lesson for each one, or you can write them.</p>', 'book');
@@ -387,6 +408,7 @@
         return;
       }
       if (x.dataset.sec) { S.sec[x.dataset.sec] = x.value.trim(); touch(); return; }
+      if (x.dataset.tlev !== undefined) { const t = S.obj.TOOLS[+x.dataset.tlev]; if (t) { t.events = lines(x.value).map(l => { const m = /^(.+?)\s*(?:\||\s[–—-]\s)\s*(.+)$/.exec(l); return m ? [m[1].trim().slice(0, 40), m[2].trim().slice(0, 200)] : null; }).filter(Boolean).slice(0, 120); touch(); } return; }
       if (x.dataset.exk) { const o = S.obj.exams[x.dataset.exk] = Object.assign({}, S.obj.exams[x.dataset.exk]); const v = x.value.trim(); if (v) o[x.dataset.exf] = v; else delete o[x.dataset.exf]; if (!Object.keys(o).length) delete S.obj.exams[x.dataset.exk]; touch(); return; }
       if (x.dataset.w) { const v = x.value.trim(); if (v === '') delete S.obj.weights[x.dataset.w]; else S.obj.weights[x.dataset.w] = Number(v); touch(); paintSum(root); return; }
     });
@@ -412,6 +434,19 @@
       if (b.dataset.addex !== undefined) { const s = P.SECTIONS[+b.dataset.addex]; s.examples.push({ p: '', s: '' }); S.openLesson = s.id; touch(); repaint(root); return; }
       if (b.dataset.addcheck !== undefined) { const s = P.SECTIONS[+b.dataset.addcheck]; s.check.push({ q: '', a: '' }); S.openLesson = s.id; touch(); repaint(root); return; }
       if (b.dataset.scale) { if (P.GRADING.scale.length > 1 && !confirm('Replace the letter grades with these?')) return; P.GRADING.scale = SCALES[b.dataset.scale].map(([letter, min]) => ({ letter, min })); touch(); repaint(root); return; }
+      if (b.dataset.tlOwn !== undefined) { P.TOOLS = deep(App.classTools.guess(P)); touch(); repaint(root); return; }
+      if (b.dataset.tlReset !== undefined) { if (!confirm('Go back to the tools for the class’s subject? Your list is replaced.')) return; delete P.TOOLS; touch(); repaint(root); return; }
+      if (b.dataset.tlAdd) { const k = b.dataset.tlAdd; P.TOOLS = (P.TOOLS || []).concat([k === 'checklist' ? { kind: k, title: 'Checklist', sets: [{ name: 'My checklist', items: ['The first thing to check'] }] } : k === 'timeline' ? { kind: k, events: [] } : { kind: k }]).slice(0, 16); touch(); repaint(root); toast(`${App.classTools.kinds[k].label} added, at the end of the list.`); return; }
+      if (b.dataset.tlFormula !== undefined) {
+        const T = App.classTools; const msg = $('#mk-tf-msg', root); const n = $('#mk-tf-n', root).value.trim(), eq = $('#mk-tf-eq', root).value.trim();
+        if (!eq.includes('=')) { msg.textContent = 'A formula needs an = sign.'; return; }
+        const said = {}; $('#mk-tf-vars', root).value.split('\n').forEach(l => { const m = /^\s*([A-Za-z][A-Za-z0-9_]*)\s*[=:]\s*([^,]*)(?:,\s*(.*))?$/.exec(l); if (m) said[m[1]] = [m[2].trim(), (m[3] || '').trim()]; });
+        const letters = T.names(eq).filter(w => !/^(sin|cos|tan|sec|csc|cot|asin|acos|atan|arcsin|arccos|arctan|sinh|cosh|tanh|exp|ln|log|log10|log2|sqrt|abs|cbrt|floor|ceil|e|pi)$/.test(w));
+        const f = { n: n || eq, eq, vars: letters.map(w => [w, (said[w] || [])[0] || '', (said[w] || [])[1] || '']) };
+        const ok = T.clean([{ kind: 'solver', formulas: [f] }]); if (!ok.length) { msg.textContent = 'That formula could not be read: use at least two letters, short names, and * between letters.'; return; }
+        P.TOOLS = P.TOOLS || []; const sv = P.TOOLS.find(t => t && t.kind === 'solver' && Array.isArray(t.formulas)); if (sv) sv.formulas.push(f); else P.TOOLS.push({ kind: 'solver', title: 'Formulas', formulas: [f] });
+        touch(); repaint(root); toast('Formula added to the formula solver.'); return;
+      }
       if (b.dataset.write) { await writeUnits(root, [+b.dataset.write]); return; }
       if (b.dataset.mkr) { classActions(root, b); return; }
       const k = b.dataset.ed; if (!k) return;
