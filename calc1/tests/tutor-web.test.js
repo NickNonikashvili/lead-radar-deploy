@@ -165,7 +165,8 @@ const PNG = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwA
   check('phone: the message box sits on the screen, with no bar over it', pos.composer <= pos.tabbar + 1, pos);
   const pb = await ph.evaluate(() => { const b = document.querySelector('#bo-board'); const r = b.getBoundingClientRect(); const l = document.querySelector('#bo-log').getBoundingClientRect(); return { above: !!(b.compareDocumentPosition(document.querySelector('#bo-log')) & Node.DOCUMENT_POSITION_FOLLOWING), w: r.width, sticky: getComputedStyle(b).position, sheet: b.querySelector('.bb-sheet').getBoundingClientRect().height }; });
   check('phone: the board is above the chat, sticky, and not too tall', pb.above && pb.w > 300 && pb.sticky === 'sticky' && pb.sheet > 80 && pb.sheet <= 320, pb);
-  await ph.evaluate(() => scrollTo(0, document.body.scrollHeight)); await ph.waitForTimeout(300);
+  // to the end of the chat (the page's own end is the footer, where the board leaves with the chat column)
+  await ph.evaluate(() => { const l = document.querySelector('#bo-log'); scrollTo(0, scrollY + l.getBoundingClientRect().bottom - innerHeight + 140); }); await ph.waitForTimeout(300);
   const bs = await ph.$eval('#bo-board', b => { const r = b.getBoundingClientRect(); const t = document.querySelector('#topbar'); const tb = t && getComputedStyle(t).display !== 'none' ? Math.round(t.getBoundingClientRect().bottom) : 0; return { top: Math.round(r.top), topbar: tb }; });
   check('phone: scrolling the chat, the board stays on screen, under the top bar', bs.top >= bs.topbar - 1 && bs.top < bs.topbar + 40, bs);
   await ph.click('#bo-board [data-bb="fold"]'); await ph.waitForTimeout(250);

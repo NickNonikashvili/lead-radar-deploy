@@ -851,7 +851,7 @@ Settings → Account → "Notifications on this device" turns on web push (Chrom
 ## Install prompt, global search, synced preferences
 
 - **Add to home screen.** From the second visit a banner offers to install StudyCat: the native prompt on Chrome and Edge (Android and desktop), and step-by-step Share → Add to Home Screen instructions on iPhone and iPad. Dismissing hides it for a month; "Install the app" also lives in the account menu whenever installing is possible. The manifest has shortcuts (Today, Discussions, GPA) and a maskable icon.
-- **Search everywhere.** Ctrl/⌘ K searches (the header has no search button since 2026.10.28.3; the apps keep Search in their menu) notes, formulas, flashcards, calendars, practice topics and pages across every class, with class chips to narrow it; each result shows its class.
+- **Search everywhere.** Ctrl/⌘ K searches (the header has no search button since 2026.10.28.4; the apps keep Search in their menu) notes, formulas, flashcards, calendars, practice topics and pages across every class, with class chips to narrow it; each result shows its class.
 - **Preferences follow your account.** GPA calculator entries, focus-sound choices, daily goal, theme, phonetics and reader voices, seen-changelog, Today state and the start page's hidden cards sync through `prefs` (newest wins). The planner syncs through `life` (see The planner). Course progress already synced.
 
 ## Backups
