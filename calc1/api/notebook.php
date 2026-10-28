@@ -1,6 +1,6 @@
 <?php
 /* ============================================================
-   Mathub — the writer's notebook (assets/notebook.js): a writing class's numbered entries (NOTEBOOK in the class data;
+   StudyCat — the writer's notebook (assets/notebook.js): a writing class's numbered entries (NOTEBOOK in the class data;
    WRIT 101 has fifteen), written on the page and kept with the account so they are there on every device and at the
    end of the semester, when all of them are handed in together. Private: only the writer reads them, and no AI is
    involved. Each entry keeps the prompt the student copied in from class and the text, with its word count.

@@ -56,7 +56,7 @@ const tmp = n => path.join(require('os').tmpdir(), 'mathub-offsite-' + process.p
   const sent = r.json && r.json.sent; const key = sent ? 'nightly/' + sent.name : '';
   check('Send now sends the newest copy and checks it', r.json && r.json.ok && /^mathub-\d{8}-\d{4}(-manual)?\.sqlite\.mhbak$/.test(sent.name) && inBucket().includes(key), r.json);
   const raw = fs.existsSync(fileOf(key)) ? fs.readFileSync(fileOf(key)) : Buffer.alloc(0); const meta = fs.existsSync(fileOf(key) + '.meta.json') ? JSON.parse(fs.readFileSync(fileOf(key) + '.meta.json', 'utf8')) : {};
-  check('it is encrypted: Mathub’s header, no SQLite inside', raw.slice(0, 6).equals(Buffer.from('MHBAK\x01', 'latin1')) && !raw.includes(Buffer.from('SQLite format 3')) && !raw.includes(Buffer.from('alice.a@montana.edu')));
+  check('it is encrypted: StudyCat’s header, no SQLite inside', raw.slice(0, 6).equals(Buffer.from('MHBAK\x01', 'latin1')) && !raw.includes(Buffer.from('SQLite format 3')) && !raw.includes(Buffer.from('alice.a@montana.edu')));
   const users = +rows('SELECT COUNT(*) AS n FROM users')[0].n;
   check('the bucket holds the size and SHA-256 that were sent, and how many members', raw.length === sent.size && meta['x-amz-meta-sha256'] === require('crypto').createHash('sha256').update(raw).digest('hex') && meta['x-amz-meta-users'] === String(sent.users) && sent.users === users, { meta, size: raw.length, sent });
   r = await api(a, 'admin_offsite'); check('the panel shows it', r.json.last_sent && r.json.last_sent.name === sent.name && r.json.last_sent.ok && r.json.log[0].kind === 'send', r.json.last_sent);

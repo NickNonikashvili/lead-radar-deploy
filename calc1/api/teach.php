@@ -1,11 +1,11 @@
 <?php
 /* ============================================================
-   Mathub account server — the professors' section (#/teach)
+   StudyCat account server — the professors' section (#/teach)
    Instructors build a syllabus in a form, publish it, and the class
-   becomes a Mathub class for their students: calendar, exam
+   becomes a StudyCat class for their students: calendar, exam
    countdowns, grade calculator with their weights, syllabus page and
    a class board. Around it: a join code, a roster, announcements,
-   practice assignments drawn from Mathub's question banks,
+   practice assignments drawn from StudyCat's question banks,
    attendance check-in, and class insights.
 
    Who can do what
@@ -24,7 +24,7 @@
    - Students join with the class code. They see the class, its
      announcements and assignments. Their instructor sees their name,
      email, assignment results and check-ins for this class only, never
-     the rest of their Mathub activity.
+     the rest of their StudyCat activity.
    - Every string an instructor types is stored as plain text. The
      published class is built here, on the server, from that text, so
      no instructor can inject markup into a student's page.
@@ -395,7 +395,7 @@ function mh_teach_route(string $route, array $in, array $cfg, string $ip): void 
       if (mb_strlen($name) < 3) mh_fail('Add your name as students know it.'); if ($dept === '') mh_fail('Add your department.'); if ($courses === '') mh_fail('Add the course or courses you teach.');
       $st = $db->prepare('SELECT id FROM teach_requests WHERE user_id = ? AND status = \'new\''); $st->execute([$u['id']]); if ($st->fetchColumn()) mh_fail('Your request is already waiting for an administrator.');
       $db->prepare('INSERT INTO teach_requests (user_id, name, title, department, courses, message, created) VALUES (?, ?, ?, ?, ?, ?, ?)')->execute([$u['id'], $name, $title, $dept, $courses, $msg, $now]);
-      try { require_once __DIR__ . '/requests.php'; foreach (mh_req_admin_users() as $a) mh_req_notify((int)$a['id'], $u, 'teach_admin', $name . ' (' . $dept . ')', 'Asked for instructor access: ' . $courses, '#/admin/teach'); } catch (Throwable $e) { error_log('Mathub teach request notify: ' . $e->getMessage()); }
+      try { require_once __DIR__ . '/requests.php'; foreach (mh_req_admin_users() as $a) mh_req_notify((int)$a['id'], $u, 'teach_admin', $name . ' (' . $dept . ')', 'Asked for instructor access: ' . $courses, '#/admin/teach'); } catch (Throwable $e) { error_log('StudyCat teach request notify: ' . $e->getMessage()); }
       mh_json(['ok' => true]);
     }
 
@@ -420,7 +420,7 @@ function mh_teach_route(string $route, array $in, array $cfg, string $ip): void 
         $db->prepare('INSERT INTO roles (email, role, updated, scope) VALUES (?, \'Instructor\', ?, \'teach\') ON CONFLICT(email) DO UPDATE SET role = \'Instructor\', updated = excluded.updated, scope = CASE WHEN roles.scope = \'\' AND roles.role = \'Instructor\' THEN \'\' ELSE \'teach\' END')->execute([strtolower($r['email']), $now]);
         if (trim((string)$r['uname']) === '') $db->prepare('UPDATE users SET name = ? WHERE id = ?')->execute([$r['name'], $r['user_id']]);
       }
-      try { require_once __DIR__ . '/requests.php'; mh_req_notify((int)$r['user_id'], $u, 'teach', $decision === 'approve' ? 'Instructor access approved' : 'Instructor access', $decision === 'approve' ? 'You can now build syllabi and run your classes on Mathub.' : 'Your request was not approved. Reply to the site administrator if this is a mistake.', '#/teach'); } catch (Throwable $e) {}
+      try { require_once __DIR__ . '/requests.php'; mh_req_notify((int)$r['user_id'], $u, 'teach', $decision === 'approve' ? 'Instructor access approved' : 'Instructor access', $decision === 'approve' ? 'You can now build syllabi and run your classes on StudyCat.' : 'Your request was not approved. Reply to the site administrator if this is a mistake.', '#/teach'); } catch (Throwable $e) {}
       mh_json(['ok' => true]);
     }
 
@@ -463,7 +463,7 @@ function mh_teach_route(string $route, array $in, array $cfg, string $ip): void 
       $syl = mh_teach_clean_syllabus(json_decode((string)$c['syllabus'], true) ?: []);
       $errs = array_values(array_map(fn($x) => $x[1], array_filter(mh_teach_lint($syl), fn($x) => $x[0] === 'error'))); if ($errs) mh_fail('Fix these first: ' . implode(' ', $errs), 400, ['problems' => $errs]);
       require_once __DIR__ . '/packs.php';
-      $pid = mh_teach_pack_id($c); $pack = mh_teach_pack($c, $syl, $pid); $err = mh_pack_check($pack); if ($err !== '') { error_log("Mathub teach publish {$c['id']}: $err"); mh_fail('The class could not be built: ' . $err, 500); }
+      $pid = mh_teach_pack_id($c); $pack = mh_teach_pack($c, $syl, $pid); $err = mh_pack_check($pack); if ($err !== '') { error_log("StudyCat teach publish {$c['id']}: $err"); mh_fail('The class could not be built: ' . $err, 500); }
       $raw = json_encode($pack, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); if (strlen($raw) > MH_PACK_MAX_BYTES) mh_fail('This class is too large to publish.', 413);
       $first = $c['status'] !== 'published';
       mh_pack_store(mh_pack_db(), $pack, $raw, 'teach:' . $c['id'] . ' ' . mb_substr(mh_display_name($u), 0, 60), 1);
@@ -552,7 +552,7 @@ function mh_teach_route(string $route, array $in, array $cfg, string $ip): void 
     case 'teach_staff_add': {
       mh_method('POST'); $u = mh_require_user(); $c = mh_teach_class_or_fail($in); $acc = mh_teach_access($u, $c); if (!in_array($acc, ['owner', 'admin'], true)) mh_fail('Only the class owner can add co-instructors and TAs.', 403); mh_teach_tools_or_fail($u, $c);
       $email = mh_teach_email($in['email'] ?? ''); if ($email === '') mh_fail('Enter their email address.');
-      $t = mh_user_by_email($email); if (!$t || (int)$t['verified'] !== 1) mh_fail('That person needs a Mathub account first: ask them to sign up with their montana.edu address.');
+      $t = mh_user_by_email($email); if (!$t || (int)$t['verified'] !== 1) mh_fail('That person needs a StudyCat account first: ask them to sign up with their montana.edu address.');
       if ((int)$t['id'] === (int)$c['owner_id']) mh_fail('That is the class owner.');
       $db->prepare('INSERT INTO teach_members (class_id, user_id, role, joined) VALUES (?, ?, \'ta\', ?) ON CONFLICT(class_id, user_id) DO UPDATE SET role = \'ta\'')->execute([$c['id'], $t['id'], $now]);
       if (mh_role($email) === '') $db->prepare('INSERT OR IGNORE INTO roles (email, role, updated, scope) VALUES (?, \'TA\', ?, \'teach\')')->execute([$email, $now]);
@@ -575,11 +575,11 @@ function mh_teach_route(string $route, array $in, array $cfg, string $ip): void 
       $db->prepare('DELETE FROM teach_posts WHERE id = ?')->execute([$p['id']]); mh_json(['ok' => true]);
     }
 
-    /* --- practice assignments, drawn from a Mathub class's question bank --- */
+    /* --- practice assignments, drawn from a StudyCat class's question bank --- */
     case 'teach_assignment_save': {
       mh_method('POST'); $u = mh_require_user(); $c = mh_teach_class_or_fail($in); mh_teach_tools_or_fail($u, $c);
       $title = mh_teach_line($in['title'] ?? '', 120); if (mb_strlen($title) < 3) mh_fail('Give the assignment a title.');
-      $course = preg_replace('/[^a-z0-9]/', '', (string)($in['course'] ?? '')); if (!mh_is_course($course)) mh_fail('Pick the Mathub class whose questions to use.');
+      $course = preg_replace('/[^a-z0-9]/', '', (string)($in['course'] ?? '')); if (!mh_is_course($course)) mh_fail('Pick the StudyCat class whose questions to use.');
       $topics = array_values(array_unique(array_filter(array_map(fn($t) => preg_replace('/[^A-Za-z0-9_.-]/', '', (string)$t), is_array($in['topics'] ?? null) ? array_slice($in['topics'], 0, 40) : []), fn($t) => $t !== ''))); if (!$topics) mh_fail('Pick at least one topic.');
       $count = max(3, min(40, (int)($in['count'] ?? 10))); $minutes = max(0, min(240, (int)($in['minutes'] ?? 0)));
       $due = 0; if (!empty($in['due'])) { $d = mh_teach_date(substr((string)$in['due'], 0, 10)); if ($d === '') mh_fail('The due date must be a real date.'); $tm = mh_teach_time(substr((string)$in['due'], 11, 5)) ?: '23:59'; $tz = mh_config()['timezone'] ?? 'America/Denver'; $due = (new DateTime("$d $tm", new DateTimeZone($tz)))->getTimestamp(); }

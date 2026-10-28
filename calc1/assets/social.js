@@ -1,5 +1,5 @@
 /* ============================================================
-   Mathub — community features (front-end)
+   StudyCat — community features (front-end)
    Daily challenge + leaderboards, the people directory, live presence, activity
    feed, and the landing/dashboard widgets that surface them.
    Server: api/social.php.
@@ -33,9 +33,9 @@
   const PP = { q: '', sort: 'helpful', page: 0, rows: [], total: 0, online: 0, more: false };
   const hue = id => Math.round((id * 137.508) % 360);
   App.views.people = {
-    title: 'People', blurb: 'Everyone on Mathub, and how they have helped on the class boards. Names follow each person’s privacy setting.',
+    title: 'People', blurb: 'Everyone on StudyCat, and how they have helped on the class boards. Names follow each person’s privacy setting.',
     render(root, param, query, standalone) {
-      const wrap = standalone ? `<div class="landing-wrap"><header class="landing-top"><div><div class="eyebrow">Mathub</div><h1 class="landing-title"><span class="logo-mark">${App.logoSvg(44)}</span>People</h1><p class="muted">${this.blurb}</p></div><div class="row gap-sm"><span id="landing-account"></span><a class="btn" href="#/">${icon('left', 14)} All classes</a></div></header><div id="pp-root"></div></div>` : pageHead('People', this.blurb, ``) + '<div id="pp-root"></div>';
+      const wrap = standalone ? `<div class="landing-wrap"><header class="landing-top"><div><div class="eyebrow">StudyCat</div><h1 class="landing-title"><span class="logo-mark">${App.logoSvg(44)}</span>People</h1><p class="muted">${this.blurb}</p></div><div class="row gap-sm"><span id="landing-account"></span><a class="btn" href="#/">${icon('left', 14)} All classes</a></div></header><div id="pp-root"></div></div>` : pageHead('People', this.blurb, ``) + '<div id="pp-root"></div>';
       root.innerHTML = wrap; const el = $('#pp-root', root); const slot = $('#landing-account', root); if (slot && App.auth && App.auth.ready) App.auth.paintLandingAccount(slot);
       if (!user()) { el.innerHTML = lockCard('The People page is for members', 'Sign up free with your montana.edu email to see who is studying with you.'); return; }
       if (offline()) { el.innerHTML = '<div class="empty">The People page needs a connection to the server.</div>'; return; }
@@ -74,7 +74,7 @@
     api('presence', { course: D ? D.id : '', view, post_id: post }).then(r => { S.presence = r; paintPresence(); }).catch(() => {});
   }
   function paintPresence() {
-    const p = S.presence; const off = App.moduleOn && !App.moduleOn('presence'); const pill = $('#presence-pill'); if (pill) { if (!p || !user() || off) pill.hidden = true; else { pill.hidden = false; const D = App.D; const n = D ? (p.by_course[D.id] || 0) : p.online; pill.innerHTML = `<span class="dot"></span>${n} studying${D ? ' ' + esc(D.short) : ''} now`; pill.title = `${p.online} online across Mathub`; } }
+    const p = S.presence; const off = App.moduleOn && !App.moduleOn('presence'); const pill = $('#presence-pill'); if (pill) { if (!p || !user() || off) pill.hidden = true; else { pill.hidden = false; const D = App.D; const n = D ? (p.by_course[D.id] || 0) : p.online; pill.innerHTML = `<span class="dot"></span>${n} studying${D ? ' ' + esc(D.short) : ''} now`; pill.title = `${p.online} online across StudyCat`; } }
     const lp = $('#landing-presence'); if (lp && off) lp.innerHTML = ''; else if (lp && p) lp.innerHTML = `<span class="presence-inline"><span class="dot"></span>${p.online} studying right now${Object.keys(p.by_course).filter(k => k !== 'home' && p.by_course[k]).length ? ' · ' + Object.entries(p.by_course).filter(([k, v]) => k !== 'home' && v).map(([k, v]) => `${v} in ${esc(courseName(k))}`).join(', ') : ''}</span>`;
     const here = $('#fa-here'); if (here && p) here.textContent = p.here > 1 ? `${p.here} people are reading this` : '';
   }
@@ -104,7 +104,7 @@
     title: 'Daily challenge', blurb: 'One problem per class per day, the same for everyone. Solve it fast for bonus points and climb the weekly board.',
     render(root, param, query, standalone) {
       const courses = App.COURSE_ORDER.filter(id => global.Courses[id] && (global.Courses[id].quiz || global.Courses[id].hasQuiz)); const cid = standalone ? (query.course && courses.includes(query.course) ? query.course : courses[0]) : App.D.id;
-      const head = standalone ? `<div class="landing-wrap"><header class="landing-top"><div><div class="eyebrow">Mathub</div><h1 class="landing-title"><span class="logo-mark">${App.logoSvg(44)}</span>Daily challenge</h1><p class="muted">${this.blurb}</p></div><div class="row gap-sm"><span id="landing-account"></span><a class="btn" href="#/">${icon('left', 14)} All classes</a></div></header><div class="chips mb-2">${courses.map(c => `<a class="chip toggle${c === cid ? ' on' : ''}" href="#/challenge?course=${c}">${esc(courseName(c))}</a>`).join('')}</div><div id="ch-root"></div></div>` : pageHead('Daily challenge', this.blurb) + '<div id="ch-root"></div>';
+      const head = standalone ? `<div class="landing-wrap"><header class="landing-top"><div><div class="eyebrow">StudyCat</div><h1 class="landing-title"><span class="logo-mark">${App.logoSvg(44)}</span>Daily challenge</h1><p class="muted">${this.blurb}</p></div><div class="row gap-sm"><span id="landing-account"></span><a class="btn" href="#/">${icon('left', 14)} All classes</a></div></header><div class="chips mb-2">${courses.map(c => `<a class="chip toggle${c === cid ? ' on' : ''}" href="#/challenge?course=${c}">${esc(courseName(c))}</a>`).join('')}</div><div id="ch-root"></div></div>` : pageHead('Daily challenge', this.blurb) + '<div id="ch-root"></div>';
       root.innerHTML = head; const slot = $('#landing-account', root); if (slot && App.auth && App.auth.ready) App.auth.paintLandingAccount(slot);
       this.paint($('#ch-root', root), cid);
     },

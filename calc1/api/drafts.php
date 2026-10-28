@@ -1,6 +1,6 @@
 <?php
 /* ============================================================
-   Mathub — draft feedback (assets/drafts.js). A student shares a draft of a class project and Bo reads it the way a
+   StudyCat — draft feedback (assets/drafts.js). A student shares a draft of a class project and Bo reads it the way a
    writing-center tutor does: comments in the margin, each quoting the draft exactly so the page can highlight it,
    the two or three biggest revisions for that project's goals, and a question for each. He never writes it for
    them (WRIT 101 allows AI only where the instructor says so, and comments are what is allowed): a comment of his
@@ -20,7 +20,7 @@ const MH_DRAFT_MAX = 60000;      // characters, about 10,000 words
 const MH_DRAFT_MIN_WORDS = 60;
 const MH_DRAFT_KEEP = 12;        // versions kept for each project; the oldest go first
 const MH_DRAFT_SYS = <<<'TXT'
-THE DRAFT REVIEW. You are Bo, the writing tutor on Mathub, reading a student's draft for a college writing class the way a good writing-center tutor does. They want feedback so they can revise it themselves.
+THE DRAFT REVIEW. You are Bo, the writing tutor on StudyCat, reading a student's draft for a college writing class the way a good writing-center tutor does. They want feedback so they can revise it themselves.
 
 THE RULE THAT COMES FIRST: the words stay theirs.
 - Never write any of it for them: no rewritten sentences, no new sentences, openings, endings, thesis statements, titles, transitions or sample wording, not even "for example, you could say ...". The class allows AI only where the instructor says so, and this review is allowed because it only comments.
@@ -69,7 +69,7 @@ function mh_draft_projects(?array $C): array {
 }
 /** Who can switch draft feedback off for a class: an administrator, or the instructor whose email the syllabus gives. */
 function mh_draft_staff(array $u, ?array $C, string $cid = ''): bool {
-  if ($cid !== '') { require_once __DIR__ . '/instruct.php'; return mh_course_staff($u, $cid, $C); }   // also a Mathub Faculty class's teaching team
+  if ($cid !== '') { require_once __DIR__ . '/instruct.php'; return mh_course_staff($u, $cid, $C); }   // also a StudyCat Faculty class's teaching team
   if (mh_is_admin($u)) return true;
   $co = is_array($C['COURSE'] ?? null) ? $C['COURSE'] : []; $mail = strtolower(trim((string)($co['email'] ?? ($co['instructorEmail'] ?? ''))));
   return $mail !== '' && strtolower((string)$u['email']) === $mail;

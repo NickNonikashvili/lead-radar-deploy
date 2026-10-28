@@ -36,7 +36,7 @@ const FILE = path.join(__dirname, '..', 'api', 'data', 'site-config.json');
   check('the Keys & settings tab shows each setting with where it comes from', (await a.$$('.cfg-field')).length === all.length && /from the config file/.test(await txt(a, '.cfg-field[data-f="anthropic_key"]')) && /ends in …test/.test(await a.$eval('#cfg-anthropic_key', i => i.placeholder)));
   check('the key boxes are empty password fields', await a.$eval('#cfg-openai_key', i => i.type === 'password' && i.value === '' && i.autocomplete === 'new-password'));
   // change three things, with a wrong password first
-  await a.fill('#cfg-ai_tutor_monthly', '1234'); await a.fill('#cfg-smtp_pass', 'hunter2-mail-pass'); await a.fill('#cfg-mail_from_name', 'Mathub Team');
+  await a.fill('#cfg-ai_tutor_monthly', '1234'); await a.fill('#cfg-smtp_pass', 'hunter2-mail-pass'); await a.fill('#cfg-mail_from_name', 'StudyCat Team');
   check('the save bar counts the changes', !(await a.$('#cfg-bar[hidden]')) && /3 changes/.test(await txt(a, '#cfg-count')));
   await a.fill('#cfg-pass', 'not-my-password'); await a.click('#cfg-bar [type="submit"]'); await a.waitForTimeout(700);
   const saved = () => (fs.existsSync(FILE) ? fs.readFileSync(FILE, 'utf8') : '');

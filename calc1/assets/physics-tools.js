@@ -1,5 +1,5 @@
 /* ============================================================
-   Mathub — Physics I interactive tools
+   StudyCat — Physics I interactive tools
    Views: motion (projectile simulator, motion graphs), solvers
    (kinematics, vectors, incline & friction, unit converter).
    ============================================================ */

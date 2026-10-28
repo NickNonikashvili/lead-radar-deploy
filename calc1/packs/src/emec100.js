@@ -1,7 +1,7 @@
 /* EMEC 100 Introduction to Mechanical Engineering, Fall 2026 (Dr. Scott Monfort).
    Built from the Fall 2026 syllabus (v1.0). The syllabus asks that class materials, including the syllabus,
    not be posted without the instructor's written permission, so this pack carries the course facts only,
-   in Mathub's own words, and points to Canvas for the full policies. Upload it hidden until the instructor
+   in StudyCat's own words, and points to Canvas for the full policies. Upload it hidden until the instructor
    agrees. The syllabus has no weekly schedule and the class has no exams, so the topics follow the nine
    course objectives. Build:  node scripts/make-pack.js packs/src/emec100.js */
 const N = require('./emec100/notes.js');
@@ -16,7 +16,7 @@ module.exports = {
   format: 'mathub-class-pack', version: 1,
   id: 'emec100', code: 'EMEC 100', name: 'Introduction to Mechanical Engineering', short: 'EMEC 100', term: 'Fall 2026', kind: 'science',
   tagline: 'What mechanical engineers do: problem solving, units, design, manufacturing, communication and ethics',
-  quizNote: 'Mathub wrote these questions from the course objectives; they are not the instructor’s. EMEC 100 has no exams: grades come from assignments and quizzes in class and on Canvas, so use this to get comfortable with the ideas and the unit conversions.',
+  quizNote: 'StudyCat wrote these questions from the course objectives; they are not the instructor’s. EMEC 100 has no exams: grades come from assignments and quizzes in class and on Canvas, so use this to get comfortable with the ideas and the unit conversions.',
   formulasNote: 'The units, conversions and first formulas of mechanical engineering, plus the vocabulary of the profession, on one page.',
   filterExample: 'stress, FE exam',
   color: { light: '#475569', dark: '#94A3B8' },
@@ -113,7 +113,7 @@ module.exports = {
     { icon: 'users', title: 'Support', html: `<ul class="list-plain small">
       <li><b>Accommodations:</b> Disability Services, 137 Romney Hall, 406-994-2824, <a href="mailto:disabilityservices@montana.edu">disabilityservices@montana.edu</a>. Bring your Accommodation Notification to student hours.</li>
       <li><b>Writing:</b> the MSU Writing Center (<a href="https://www.montana.edu/writingcenter/" target="_blank" rel="noopener">montana.edu/writingcenter</a>).</li></ul>` },
-    { icon: 'bulb', title: 'How to use Mathub for this class', html: `<p class="small">There are no exams, so use Mathub to get ahead: learn the units and conversions until they are automatic (they come back in every ME course), read the topic notes before the matching discussion, and use the quizzer to check the vocabulary of design, manufacturing and ethics. The notes follow the course objectives; Canvas and lecture decide each week’s topic.</p>` }
+    { icon: 'bulb', title: 'How to use StudyCat for this class', html: `<p class="small">There are no exams, so use StudyCat to get ahead: learn the units and conversions until they are automatic (they come back in every ME course), read the topic notes before the matching discussion, and use the quizzer to check the vocabulary of design, manufacturing and ethics. The notes follow the course objectives; Canvas and lecture decide each week’s topic.</p>` }
   ],
 
   QUIZ

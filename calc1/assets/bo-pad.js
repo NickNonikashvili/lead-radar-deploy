@@ -1,5 +1,5 @@
 /* ============================================================
-   Mathub — the shared board (assets/bo-pad.js): a whiteboard as big as the screen, for you and Bo.
+   StudyCat — the shared board (assets/bo-pad.js): a whiteboard as big as the screen, for you and Bo.
    - You write on it: a pen (pressure from a stylus), a highlighter, an eraser that takes away whole strokes,
      typed text (x^2 shows as x²) and photos of a problem. Undo and redo; Clear can be undone too.
    - It is a board, not a page: drag with the hand (or two fingers, the middle button, the wheel) to move

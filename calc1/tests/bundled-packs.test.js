@@ -21,7 +21,7 @@ const fs = require('fs'); const path = require('path');
     const [c, p] = await mk(1360, 900, { serviceWorkers: 'block' });
     if (mode === 'no server') await c.route('**/api/index.php**', r => r.abort());
     await go(p, '#/', 1800);
-    const tiles = await p.evaluate(() => [...document.querySelectorAll('.course-card')].map(c => [...c.classList].find(k => k !== 'course-card')));
+    const tiles = await p.evaluate(() => [...document.querySelectorAll('.dw[data-w="classes"] .dwk')].map(c => c.dataset.c));
     check(`${mode}: the start page lists the bundled classes`, ids.every(id => tiles.includes(id)), tiles);
     const id = ids.find(x => x === 'psci230d') || ids[0];
     await go(p, '#/' + id, 2200);

@@ -1,6 +1,6 @@
 {
   "appId": "space.mathub.app",
-  "appName": "Mathub",
+  "appName": "StudyCat",
   "webDir": "www",
   "loggingBehavior": "debug",
   "ios": {

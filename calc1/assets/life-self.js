@@ -1,5 +1,5 @@
 /* ============================================================
-   Mathub — your planner, life and future pages (data: assets/life.js)
+   StudyCat — your planner, life and future pages (data: assets/life.js)
    #/habits     Habits: tick today, a week of squares, twelve weeks
                 of history, day and week streaks
    #/goals      Goals: a few per quarter, each with steps to tick
@@ -142,7 +142,7 @@
   const PROMPTS = ['What made today better than yesterday?', 'What did you learn today that surprised you?', 'What is one thing you are looking forward to?', 'Who helped you today, and how?', 'What would make tomorrow great?', 'What drained your energy today?', 'What are you proud of this week?'];
   const isoWeek = iso => (App.isoWeek ? App.isoWeek(App.parseISO(iso)) : iso);
   App.views.journal = {
-    title: 'Journal', blurb: 'A page a day: how it went and three good things. Saved to your account; nobody else on Mathub sees it.',
+    title: 'Journal', blurb: 'A page a day: how it went and three good things. Saved to your account; nobody else on StudyCat sees it.',
     render(root) {
       this.day = this.day || tIso(); if (this.day > tIso()) this.day = tIso();
       root.innerHTML = `<div class="lf-page jr-page">${head('Journal', this.blurb)}

@@ -1,4 +1,4 @@
-/* EMEC 100: topic notes, formulas and terms, flashcards. Written for Mathub from the course objectives
+/* EMEC 100: topic notes, formulas and terms, flashcards. Written for StudyCat from the course objectives
    and standard introductory engineering material; lectures and Canvas decide each week's content. */
 const CATALOG = 'https://catalog.montana.edu/undergraduate/engineering/mechanical-industrial-engineering/mechanical-engineering/';
 const MIE = 'https://www.montana.edu/mie/';

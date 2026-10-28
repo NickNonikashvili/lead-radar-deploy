@@ -1,5 +1,5 @@
 /* M 105 (with M 005): topic notes, formulas, flashcards, practice sets and checklists.
-   Written for Mathub from standard quantitative reasoning (units and percentages, large numbers, linear and
+   Written for StudyCat from standard quantitative reasoning (units and percentages, large numbers, linear and
    exponential relations, financial mathematics, probability and statistics), following the course description and
    learning outcomes in the Fall 2026 syllabus. The class notes packet, MyOpenMath and the worksheets decide what
    the tests ask. Money is written \$ so it is not read as math. */

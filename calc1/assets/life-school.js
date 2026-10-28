@@ -1,5 +1,5 @@
 /* ============================================================
-   Mathub — your planner, school pages (data: assets/life.js)
+   StudyCat — your planner, school pages (data: assets/life.js)
    #/tasks      Tasks: this week by day, everything open, a board
                 (to do, in progress, done) and what is done;
                 deadlines from your classes come in with one click
@@ -186,9 +186,9 @@
     const sem = L.mine().map(id => Courses[id] && Courses[id].SEMESTER).filter(Boolean)[0]; const until = (sem ? sem.end : L.addDaysISO(tIso(), 112)).replace(/-/g, '') + 'T235959';
     const first = d => { let x = tIso(); for (let i = 0; i < 7; i++) { if (L.dowOf(x) === d) return x; x = L.addDaysISO(x, 1); } return tIso(); };
     const esc2 = s => String(s || '').replace(/[\\;,]/g, m => '\\' + m).replace(/\n/g, '\\n');
-    const lines = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Mathub//Timetable//EN', 'CALSCALE:GREGORIAN'];
+    const lines = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//StudyCat//Timetable//EN', 'CALSCALE:GREGORIAN'];
     slots.forEach(s => { const d0 = Math.min(...s.days.map(d => App.daysBetween(tIso(), first(d)))); const day = L.addDaysISO(tIso(), d0).replace(/-/g, ''); const [sh, sm] = s.start.split(':'), [eh, em] = s.end.split(':');
-      lines.push('BEGIN:VEVENT', `UID:${s.id}@mathub.space`, `DTSTAMP:${new Date().toISOString().replace(/[-:]/g, '').slice(0, 15)}Z`, `DTSTART:${day}T${pad(sh)}${pad(sm)}00`, `DTEND:${day}T${pad(eh)}${pad(em)}00`, `RRULE:FREQ=WEEKLY;BYDAY=${s.days.map(d => BY[d]).join(',')};UNTIL=${until}`, `SUMMARY:${esc2(s.title)}`, s.place ? `LOCATION:${esc2(s.place)}` : '', 'END:VEVENT'); });
+      lines.push('BEGIN:VEVENT', `UID:${s.id}@studycat.org`, `DTSTAMP:${new Date().toISOString().replace(/[-:]/g, '').slice(0, 15)}Z`, `DTSTART:${day}T${pad(sh)}${pad(sm)}00`, `DTEND:${day}T${pad(eh)}${pad(em)}00`, `RRULE:FREQ=WEEKLY;BYDAY=${s.days.map(d => BY[d]).join(',')};UNTIL=${until}`, `SUMMARY:${esc2(s.title)}`, s.place ? `LOCATION:${esc2(s.place)}` : '', 'END:VEVENT'); });
     lines.push('END:VCALENDAR'); return lines.filter(Boolean).join('\r\n');
   }
   App.views.timetable = {
@@ -205,7 +205,7 @@
     paint(root) {
       const slots = L.all('slots'); const body = $('#tt-body', root); const iso = tIso();
       $$('.tt-has', root).forEach(b => { b.hidden = !slots.length; });
-      if (!slots.length) { body.innerHTML = `<div class="panel tt-start"><div class="tt-start-in">${icon('table', 34)}<div><h2>${esc(t('Build your week'))}</h2><p>${esc(t('Mathub can read when your classes meet from their syllabi. Then add labs, work shifts and study blocks, and see your whole week at a glance.'))}</p><div class="row gap-sm mt-2" style="flex-wrap:wrap"><button class="btn primary" type="button" data-action="import">${icon('download', 14)} ${esc(t('Bring in my classes'))}</button><button class="btn" type="button" data-action="new">${icon('plus', 14)} ${esc(t('Add something myself'))}</button></div></div></div></div>` + ttGrid(); return; }
+      if (!slots.length) { body.innerHTML = `<div class="panel tt-start"><div class="tt-start-in">${icon('table', 34)}<div><h2>${esc(t('Build your week'))}</h2><p>${esc(t('StudyCat can read when your classes meet from their syllabi. Then add labs, work shifts and study blocks, and see your whole week at a glance.'))}</p><div class="row gap-sm mt-2" style="flex-wrap:wrap"><button class="btn primary" type="button" data-action="import">${icon('download', 14)} ${esc(t('Bring in my classes'))}</button><button class="btn" type="button" data-action="new">${icon('plus', 14)} ${esc(t('Add something myself'))}</button></div></div></div></div>` + ttGrid(); return; }
       const todays = L.slotsOn(iso); const nowM = new Date().getHours() * 60 + new Date().getMinutes(); const next = todays.find(s => L.toMin(s.end) > nowM);
       const hours = slots.reduce((n, s) => n + (L.toMin(s.end) - L.toMin(s.start)) * (s.days || []).length, 0) / 60;
       const byKind = {}; slots.forEach(s => { const h = (L.toMin(s.end) - L.toMin(s.start)) * (s.days || []).length / 60; byKind[s.kind || 'other'] = (byKind[s.kind || 'other'] || 0) + h; });
@@ -346,7 +346,7 @@
     paint(root) {
       const list = L.all('projects').sort((a, b) => (a.due || '9999').localeCompare(b.due || '9999'));
       if (this.open === undefined && list.length === 1) this.open = list[0].id;   // one project: open it
-      if (!list.length) { $('#pj-body', root).innerHTML = empty('folder', 'No projects yet', 'A thesis, a research paper or a lab report: make it a project and Mathub spreads its steps out until the due date.', `<button class="btn primary" type="button" data-action="new">${icon('plus', 14)} ${esc(t('New project'))}</button>`); return; }
+      if (!list.length) { $('#pj-body', root).innerHTML = empty('folder', 'No projects yet', 'A thesis, a research paper or a lab report: make it a project and StudyCat spreads its steps out until the due date.', `<button class="btn primary" type="button" data-action="new">${icon('plus', 14)} ${esc(t('New project'))}</button>`); return; }
       $('#pj-body', root).innerHTML = `<div class="pj-list">${list.map(p => { const steps = p.steps || []; const done = steps.filter(s => s.done).length; const pc = steps.length ? Math.round(done / steps.length * 100) : 0; const next = steps.find(s => !s.done); const open = this.open === p.id; const left = p.due ? App.daysBetween(tIso(), p.due) : null; const wp = p.goal ? Math.min(100, Math.round((p.wrote || 0) / p.goal * 100)) : 0;
         return `<article class="panel pj${open ? ' open' : ''}" style="${p.course ? L.ccStyle(p.course) : ''}">
           <div class="pj-h"><button class="pj-title" type="button" data-action="open" data-id="${esc(p.id)}" aria-expanded="${open}"><span class="pj-ic">${icon(p.type === 'thesis' ? 'cap' : p.type === 'lab' ? 'flask' : p.type === 'talk' ? 'megaphone' : 'folder', 18)}</span><span><b>${esc(p.title)}</b><small>${esc(t(TYPE_NAME[p.type] || 'Project'))}${p.course && Courses[p.course] ? ' · ' + esc(Courses[p.course].short) : ''}${p.due ? ' · ' + esc(t('due {1}', App.shortDate(p.due))) : ''}</small></span></button>${left != null ? `<span class="pj-left${left <= 7 ? ' soon' : ''}">${left < 0 ? esc(t('{1} days late', -left)) : left === 0 ? esc(t('due today')) : esc(t('{1} days left', left))}</span>` : ''}<button class="icon-btn" type="button" data-action="edit" data-id="${esc(p.id)}" aria-label="${esc(t('Edit'))}">${icon('pen', 14)}</button></div>

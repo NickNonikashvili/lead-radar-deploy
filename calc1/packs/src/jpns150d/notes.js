@@ -1,5 +1,5 @@
 /* JPNS 150D: topic notes, key terms, flashcards, essay practice and checklists.
-   Written for Mathub from standard background on Japanese history and literature and the readings on the
+   Written for StudyCat from standard background on Japanese history and literature and the readings on the
    syllabus. The professor's lectures, the readings and the films decide what the exams ask. */
 const CANVAS = 'https://montana.instructure.com/';
 const R = (pages) => ({ link: CANVAS, linkLabel: pages });
@@ -452,7 +452,7 @@ card(5, 'murata', '“Eating the City”', 'A young woman gathers and eats Tokyo
 
 const P = (n, sec, q, s) => ({ n, sec, tags: ['essay practice'], q, s });
 const PRACTICE = {
-  exam1: { title: 'Exam 1 essay practice', subtitle: 'Mathub’s own practice prompts, not the professor’s question. Plan three points, each tied to a reading, in about 15 minutes.', problems: [
+  exam1: { title: 'Exam 1 essay practice', subtitle: 'StudyCat’s own practice prompts, not the professor’s question. Plan three points, each tied to a reading, in about 15 minutes.', problems: [
     P(1, 'intro', 'What do the Kojiki myths tell us about early Japanese values?', 'Divine descent of the emperors from Amaterasu (political legitimacy); purity and pollution (Izanagi’s purification after Yomi); kami in nature. Use the Izanagi–Izanami and Amaterasu cave episodes.'),
     P(2, 'genji', 'Explain mono no aware using “Yūgao”.', 'Define it as sensitivity to beauty in its passing. Yūgao, named for a flower that fades by morning; her sudden death; Genji’s grief and memory. Beauty heightened by loss.'),
     P(3, 'pillow', 'Compare The Tale of Genji and The Pillow Book.', 'Form: long tale vs miscellany (zuihitsu). Mood: aware vs okashi. Shared world: court refinement, seasons, poetry. The two authors’ rivalry, from Murasaki’s diary.'),

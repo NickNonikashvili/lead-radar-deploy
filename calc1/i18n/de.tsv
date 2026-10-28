@@ -1,4 +1,4 @@
-# Mathub — the interface in de. One line per catalog number (i18n/catalog.json): the number, a tab, the words. See scripts/build-i18n.js.
+# StudyCat — the interface in de. One line per catalog number (i18n/catalog.json): the number, a tab, the words. See scripts/build-i18n.js.
 2	Kein gültiger Export
 3	So
 4	Mo
@@ -91,26 +91,26 @@
 91	Startseite
 92	Dieser Kurs ist für dich nicht offen
 93	Es gibt keinen Kurs
-94	auf Mathub, den du öffnen kannst. Wenn deine Lehrkraft ihn eingerichtet hat, tritt mit dem Kurscode bei, den sie dir gegeben hat.
+94	auf StudyCat, den du öffnen kannst. Wenn deine Lehrkraft ihn eingerichtet hat, tritt mit dem Kurscode bei, den sie dir gegeben hat.
 95	Der Link ist vielleicht alt oder falsch geschrieben. Nichts ist verloren; such dir aus, wohin es weitergeht.
 96	Einem Kurs mit Code beitreten
 97	Diesen Kurs anfragen
 98	Aus dem Kursplan erstellen
-99	Mathub durchsuchen
+99	StudyCat durchsuchen
 100	Mit jemandem aus deinem Kurs lernen
 101	Du bist eingeladen
 102	Einladung wird geprüft…
 103	Diesem Link fehlt der Code.
-104	Mathub öffnen
-105	{1} nutzt Mathub für
+104	StudyCat öffnen
+105	{1} nutzt StudyCat für
 106	und möchte dich dabeihaben.
 107	die eigenen Kurse
-108	Jemand aus deinem Kurs möchte mit dir auf Mathub lernen.
+108	Jemand aus deinem Kurs möchte mit dir auf StudyCat lernen.
 109	Kostenlose Skripte zu jedem Thema, endlos Übungen, Lernkarten mit Wiederholungsplan, Terminkalender, ein Fokusraum und ein Kursforum für die Kurse der Montana State. Registriere dich mit deiner montana.edu-Adresse, dann bekommt ihr beide die Abzeichen Eingeladen und Werber.
 110	Erst mal umsehen
 111	Mit {1} lernen
 112	Zusammen lernen
-113	Du bist schon angemeldet · Mathub öffnen
+113	Du bist schon angemeldet · StudyCat öffnen
 114	Kostenlos registrieren
 115	Anmelden
 116	Die Einladung konnte nicht geprüft werden, aber du kannst dich trotzdem registrieren.
@@ -159,9 +159,9 @@
 161	Weitere Tools
 162	Kursinfos
 163	Alle Kurse
-164	Schick uns den Kursplan eines Kurses, den es auf Mathub noch nicht gibt
+164	Schick uns den Kursplan eines Kurses, den es auf StudyCat noch nicht gibt
 165	Kurs anfragen
-166	Erstelle aus dem Kursplan einen Kurs, den es auf Mathub noch nicht gibt
+166	Erstelle aus dem Kursplan einen Kurs, den es auf StudyCat noch nicht gibt
 167	Kurs erstellen
 168	Admin
 169	Moderation
@@ -191,9 +191,9 @@
 209	Suchen
 210	Skripte, Formeln, Lernkarten, Kalender, Seiten durchsuchen…
 211	{1} anfragen
-212	Noch nicht auf Mathub. Schick den Kursplan und wir bauen den Kurs.
+212	Noch nicht auf StudyCat. Schick den Kursplan und wir bauen den Kurs.
 213	{1} aus dem Kursplan erstellen
-214	Noch nicht auf Mathub. Lade den Kursplan hoch und Bo schreibt den Kurs.
+214	Noch nicht auf StudyCat. Lade den Kursplan hoch und Bo schreibt den Kurs.
 215	Keine Treffer. Probier ein anderes Wort oder einen anderen Kurs.
 216	Beginnt {1}
 217	Prüfungen geschafft
@@ -228,7 +228,7 @@
 246	Fokus-Timer
 247	Quest auswürfeln
 248	Kurse wählen
-249	Mathub Faculty: Schreib deinen Kursplan und leite deinen Kurs
+249	StudyCat Faculty: Schreib deinen Kursplan und leite deinen Kurs
 250	Suchen (Strg K)
 251	Fokusklänge und Musik
 252	Design wechseln
@@ -385,7 +385,7 @@
 403	{1}/{2} erledigt ·
 404	Öffnen
 405	Ruhetag. Nichts geplant.
-406	Noch kein Plan. Wähle eine Prüfung und deine Lerntage, und Mathub verteilt die Arbeit darauf.
+406	Noch kein Plan. Wähle eine Prüfung und deine Lerntage, und StudyCat verteilt die Arbeit darauf.
 407	Plan erstellen
 408	Keine Serien-Freezes mehr. Erreiche dein Tagesziel an drei Tagen einer Woche, um einen zu verdienen.
 409	Fokus diese Woche · Kursmedian {1} Std.
@@ -512,7 +512,7 @@
 532	Termine und Regeln stammen aus dem Kursplan Herbst 2026 jedes Kurses; die Wochenthemen in Physik und Precalculus sind Schätzungen. Canvas und deine Lehrkraft haben immer recht. {1} ist ein Studierendenprojekt und nicht mit der Montana State University verbunden.
 533	Fragen, ein falsches Datum, eine kaputte Aufgabe oder eine Idee für die Seite? Melde dich.
 534	Kopiert
-535	Dein Konto, Benachrichtigungen, Kurse und Einstellungen. Sie gelten überall auf Mathub.
+535	Dein Konto, Benachrichtigungen, Kurse und Einstellungen. Sie gelten überall auf StudyCat.
 536	Einstellungen gelten für alle Kurse. Der Fortschritt wird pro Kurs gespeichert und, wenn du angemeldet bist, mit deinem Konto synchronisiert.
 537	Kurse und Gruppen wählen
 538	Nur diese Kurse erscheinen auf der Startseite, im Kurswechsler, in Erinnerungen und in der Wochenübersicht.
@@ -672,7 +672,7 @@
 694	Kurs zeigen
 695	Dieser Kurs konnte nicht geöffnet werden.
 696	Probier seine Kursseite
-697	Alle Kurse, die in Mathub stecken
+697	Alle Kurse, die in StudyCat stecken
 698	Üben, Lernkarten, Heute und der Fokusraum
 699	Bo schreibt deine Kurse aus jedem Kursplan
 700	Eigene Kurse erstellen und teilen
@@ -681,14 +681,14 @@
 703	Ruf Bo an und sprich es durch
 704	Kostenlos
 705	Hi{1}!
-706	Willkommen bei Mathub{1}!
+706	Willkommen bei StudyCat{1}!
 707	Deine Kurse, deine Prüfungen und ein Tutor, der beides kennt, alles an einem Ort. So funktioniert es. Es dauert eine Minute.
 708	Zeig es mir
 709	1.4 Grenzwerte
 710	2.2 Kettenregel
 711	Prüfung 2 · in 9 Tagen
 712	Jeder Kurs ist ein Aufstieg
-713	Mathub kennt den Kursplan jedes Kurses: jedes Thema, jede Abgabe und jeden Prüfungstermin. Die Themen sind dein Weg und die nächste Prüfung ist der Gipfel, mit einem Bereitschaftswert, der dir sagt, wie nah du bist.
+713	StudyCat kennt den Kursplan jedes Kurses: jedes Thema, jede Abgabe und jeden Prüfungstermin. Die Themen sind dein Weg und die nächste Prüfung ist der Gipfel, mit einem Bereitschaftswert, der dir sagt, wie nah du bist.
 714	Die Ableitung von sin x ist…
 715	−cos x
 716	cos x
@@ -702,15 +702,15 @@
 724	Auf beiden Seiten 3 abziehen: 2x = 8
 725	Durch 2 teilen
 726	Das ist Bo, dein Tutor
-727	Frag ihn alles zu deinen Kursen, fotografiere eine Aufgabe oder ruf ihn an und rede einfach. Er rechnet die Mathe an seiner Tafel vor, Schritt für Schritt, und kennt deine Prüfungen. Bo gehört zu Mathub Max.
+727	Frag ihn alles zu deinen Kursen, fotografiere eine Aufgabe oder ruf ihn an und rede einfach. Er rechnet die Mathe an seiner Tafel vor, Schritt für Schritt, und kennt deine Prüfungen. Bo gehört zu StudyCat Max.
 728	Kursplan CHMY 121
 729	CHMY 121
 730	Allgemeine Chemie
 731	12 Themen · 140 Fragen · 3 Prüfungen
 732	Jeder Kurs, aus seinem Kursplan
-733	Belegst du etwas, das Mathub noch nicht hat? Lade den Kursplan hoch und Bo schreibt den ganzen Kurs: Skripte, Übungen, Lernkarten und Kalender. Das gibt es mit Mathub Pro oder Max.
+733	Belegst du etwas, das StudyCat noch nicht hat? Lade den Kursplan hoch und Bo schreibt den ganzen Kurs: Skripte, Übungen, Lernkarten und Kalender. Das gibt es mit StudyCat Pro oder Max.
 734	Welche Kurse belegst du?
-735	Wähle mindestens einen. Mathub zeigt nur deine, und du kannst sie jederzeit in den Einstellungen ändern.
+735	Wähle mindestens einen. StudyCat zeigt nur deine, und du kannst sie jederzeit in den Einstellungen ändern.
 736	Belegst du etwas anderes? Danach kannst du jeden Kurs aus seinem Kursplan erstellen.
 737	Weiter
 738	Wähle deine Mitgliedschaft
@@ -740,13 +740,13 @@
 762	Annehmen
 763	Das wurde nicht gespeichert. Prüfe deine Verbindung und versuch es noch einmal.
 764	Tab
-765	Du scheinst offline zu sein. Mathub läuft weiter; dein Fortschritt wird synchronisiert, sobald du wieder online bist.
+765	Du scheinst offline zu sein. StudyCat läuft weiter; dein Fortschritt wird synchronisiert, sobald du wieder online bist.
 766	Der Kontoserver hat eine unerwartete Antwort geschickt (
 767	Du bist offline. Dein Fortschritt wird synchronisiert, sobald du wieder online bist.
 768	Anfrage fehlgeschlagen.
 769	Posteingang, {1} ungelesen
 770	Posteingang
-771	Mathub blendet den Rest aus und nutzt die Zeiten deiner Gruppe.
+771	StudyCat blendet den Rest aus und nutzt die Zeiten deiner Gruppe.
 772	Eine richtige Antwort bringt 10 XP. Du kannst das jederzeit in den Einstellungen ändern.
 773	Speichern
 774	z. B. Mo Mi Fr 9:00
@@ -756,7 +756,7 @@
 778	Abbrechen
 779	Jetzt nicht
 780	Wähle mindestens einen Kurs.
-781	Gespeichert. Mathub zeigt jetzt
+781	Gespeichert. StudyCat zeigt jetzt
 782	Benachrichtigung
 783	Benachrichtigungen sind für diese Seite blockiert. Erlaube sie in den Browsereinstellungen und versuch es noch einmal.
 784	· angemeldet {1}
@@ -784,7 +784,7 @@
 807	Kalenderlink kopiert. Füge ihn in deine Kalender-App ein.
 808	Einen neuen Link erstellen? Kalender mit dem alten Link werden nicht mehr aktualisiert.
 809	Neuer Kalenderlink erstellt.
-810	Lern mit mir auf Mathub: kostenlose Skripte, endlos Übungen und ein Forum für unsere Kurse an der Montana State. {1}
+810	Lern mit mir auf StudyCat: kostenlose Skripte, endlos Übungen und ein Forum für unsere Kurse an der Montana State. {1}
 811	Einladungslink
 812	Teilen
 813	{1} {1|Person ist|Leute sind} über deinen Link beigetreten.{2|}
@@ -818,7 +818,7 @@
 842	Vorschau.
 843	mit deiner montana.edu-Adresse, um alle Tools freizuschalten und deinen Fortschritt zu behalten.
 844	Kostenlos für alle mit einer montana.edu-Adresse.
-845	Dieses Tool gehört zum vollen Mathub-Erlebnis.
+845	Dieses Tool gehört zum vollen StudyCat-Erlebnis.
 846	{1} ist für Mitglieder
 847	Erstelle ein kostenloses Konto, um {1} für {2} und alle anderen {3}-Tools zu nutzen und deinen Fortschritt auf allen Geräten zu behalten.
 848	Montana-State-E-Mail
@@ -850,14 +850,14 @@
 874	Neu hier?
 875	Konto
 876	Kostenloser Lernort für die Kurse der Montana State
-877	Mathub ist für Studierende der Montana State: Nutze deine @montana.edu-Adresse.
+877	StudyCat ist für Studierende der Montana State: Nutze deine @montana.edu-Adresse.
 878	Willkommen, {1}. Der Fortschritt wird in diesem Browser gespeichert.
 879	Ein neuer Code ist unterwegs.
 880	Ein neuer Code zum Zurücksetzen ist unterwegs.
 881	Code gesendet. Er läuft in 15 Minuten ab.
 882	Wenn es zu dieser Adresse ein Konto gibt, ist ein Code unterwegs.
 883	Bestätige deine E-Mail, um weiterzumachen.
-884	Willkommen bei Mathub, {1}!
+884	Willkommen bei StudyCat, {1}!
 885	Willkommen zurück, {1}.
 886	Abgemeldet
 887	{1} von {2} verdient
@@ -909,7 +909,7 @@
 933	Der Kontoserver ist nicht erreichbar, daher verlässt nichts diesen Browser.
 934	Ein Konto ist optional
 935	Alles in der App funktioniert auch ohne. Studierende der Montana State können sich mit ihrer montana.edu-Adresse anmelden, um den Fortschritt zu synchronisieren, an Kursdiskussionen teilzunehmen und Abzeichen zu sammeln.
-936	Du siehst eine Vorschau von Mathub
+936	Du siehst eine Vorschau von StudyCat
 937	Registriere dich mit deiner montana.edu-Adresse, um alle Tools freizuschalten, Abzeichen zu sammeln, auf der Leute-Seite zu erscheinen und deinen Fortschritt zu synchronisieren.
 938	Planungs-E-Mail am Sonntag an
 939	Planungs-E-Mail am Sonntag aus
@@ -927,10 +927,10 @@
 951	Wir haben dir einen Code geschickt. Gib ihn mit deinem neuen Passwort ein.
 952	Deine Daten konnten nicht exportiert werden.
 954	Deine Daten werden heruntergeladen.
-955	Auf allen anderen Geräten von Mathub abmelden? Dieses bleibt angemeldet.
+955	Auf allen anderen Geräten von StudyCat abmelden? Dieses bleibt angemeldet.
 956	Auf {1} anderen {1|Gerät|Geräten} abgemeldet.{2|}
 957	Auf keinem anderen Gerät war jemand angemeldet.
-958	Dein Mathub-Konto und alles darin löschen? Das lässt sich nicht rückgängig machen.
+958	Dein StudyCat-Konto und alles darin löschen? Das lässt sich nicht rückgängig machen.
 959	Mit deinem Passwort bestätigen:
 960	Konto gelöscht
 961	Bo ist gerade nicht erreichbar. Prüfe deine Verbindung und versuch es noch einmal.
@@ -996,7 +996,7 @@
 1021	Bo anrufen
 1022	Welcher Kurs
 1023	Melde dich an, um mit Bo zu reden
-1024	Bo gehört zu Mathub Max und arbeitet mit deinem Konto, damit er deine Kurse und deinen Fortschritt auf jedem Gerät verfolgen kann.
+1024	Bo gehört zu StudyCat Max und arbeitet mit deinem Konto, damit er deine Kurse und deinen Fortschritt auf jedem Gerät verfolgen kann.
 1025	Konto erstellen
 1026	Bo ist nicht erreichbar
 1027	Bo macht sich bereit
@@ -1013,17 +1013,17 @@
 1038	und er geht sie Schritt für Schritt mit dir durch.
 1039	Pläne und Quizze
 1040	auf Basis deiner echten Prüfungstermine.
-1041	Mathub Max enthält alles aus Pro: Bo schreibt auch deine Kurse aus ihren Kursplänen.
+1041	StudyCat Max enthält alles aus Pro: Bo schreibt auch deine Kurse aus ihren Kursplänen.
 1042	Abos vergleichen
 1043	Ruf ihn an
 1044	und rede einfach, wie mit einem Freund: Er antwortet sofort, du kannst ihn unterbrechen, und er schreibt die Mathe an seine Tafel.
 1045	Auf Max wechseln
-1046	Mathub Max holen
+1046	StudyCat Max holen
 1047	Bevor du anfängst
 1048	Um dir zu antworten, schickt Bo deine Frage (und jedes Foto oder PDF, das du anhängst, und, wenn du ihn von einer Seite aus fragst, was auf dieser Seite steht), eine Zusammenfassung des Kursplans und eine kurze Zusammenfassung deines Fortschritts (deine Ergebnisse pro Thema, verpasste Fragen, fällige Lernkarten und deine Prüfungstermine) an
 1049	Anthropic
 1050	, das Unternehmen hinter der KI Claude, mit der Bo läuft. Anthropic nutzt das nur, um Bos Antwort zu schreiben, und trainiert seine KI nicht damit.
-1051	Dein Chat mit Bo und die Notizen, die er sich darüber macht, wie du gern lernst, werden mit deinem Mathub-Konto gespeichert und sind so auf all deinen Geräten. Du kannst sie jederzeit unter „Was Bo weiß“ ansehen und löschen.
+1051	Dein Chat mit Bo und die Notizen, die er sich darüber macht, wie du gern lernst, werden mit deinem StudyCat-Konto gespeichert und sind so auf all deinen Geräten. Du kannst sie jederzeit unter „Was Bo weiß“ ansehen und löschen.
 1052	Datenschutzerklärung
 1053	Einverstanden, los geht’s
 1054	Nicht jetzt
@@ -1089,7 +1089,7 @@
 1116	Alles vergessen, was Bo über dich weiß: jeden Chat und jede Notiz? Deine Kurse und dein Fortschritt bleiben.
 1117	Chat geleert.
 1118	Bo hat alles vergessen.
-1119	Dein Chat und diese Notizen werden mit deinem Mathub-Konto gespeichert. Fragen gehen zur Beantwortung an die KI von Anthropic; siehe die
+1119	Dein Chat und diese Notizen werden mit deinem StudyCat-Konto gespeichert. Fragen gehen zur Beantwortung an die KI von Anthropic; siehe die
 1120	die Startseite
 1125	Diese Karte
 1126	Karte
@@ -1117,10 +1117,10 @@
 1167	Bo schaut nicht auf diese Seite
 1168	Dein Tutor für {1}
 1169	Melde dich an, um Bo zu fragen
-1170	Bo ist dein KI-Tutor in Mathub Max. Er erklärt jedes Thema und sieht die Seite, von der aus du fragst: die Fragen darauf, deine Antworten, das Skript, das du liest.
+1170	Bo ist dein KI-Tutor in StudyCat Max. Er erklärt jedes Thema und sieht die Seite, von der aus du fragst: die Fragen darauf, deine Antworten, das Skript, das du liest.
 1171	Bo ist nicht erreichbar
 1172	Bo ist noch nicht eingeschaltet. Er ist bald da.
-1173	Bo gehört zu Mathub Max
+1173	Bo gehört zu StudyCat Max
 1174	Er sieht deine Seite
 1175	: Tippe auf eine Frage und er geht sie mit dir durch oder prüft deine Antworten.
 1176	Erklärt alles
@@ -1217,13 +1217,13 @@
 1316	keine Verbindung
 1317	Nochmal anrufen
 1318	Einfache Sprachfunktion nutzen
-1319	Mathub kann dein Mikrofon nicht nutzen. Erlaube es über das Symbol in der Adressleiste und ruf dann nochmal an. Du kannst Bo auch schreiben.
+1319	StudyCat kann dein Mikrofon nicht nutzen. Erlaube es über das Symbol in der Adressleiste und ruf dann nochmal an. Du kannst Bo auch schreiben.
 1320	Kein Mikrofon gefunden. Schließ eins an oder schreib Bo.
 1321	Die Spracherkennung braucht Internet. Prüfe deine Verbindung und versuch es noch einmal.
 1322	Bo hat das nicht verstanden. Tippe ihn an, um es nochmal zu versuchen, oder schreib.
 1323	Deine Stimme geht direkt an OpenAI, mit dessen Echtzeit-Sprachmodell Bo spricht, zusammen mit dem, was Bo über deinen Kurs und deinen Stand weiß. Nichts wird aufgezeichnet.
 1324	Dein Browser macht aus dem Gesagten Text (Chrome nutzt die Spracherkennung von Google, Edge die von Microsoft, Safari die von Apple).
-1325	Was du sagst, wird nur aufgenommen, während Bo zuhört, von OpenAI über den Mathub-Server verschriftlicht und nicht gespeichert.
+1325	Was du sagst, wird nur aufgenommen, während Bo zuhört, von OpenAI über den StudyCat-Server verschriftlicht und nicht gespeichert.
 1326	Dieser Browser kann nicht zuhören, also schreibst du und Bo spricht.
 1327	Bos Stimme erzeugt OpenAI aus seiner geschriebenen Antwort.
 1328	Es ist ein echter Anruf
@@ -1269,7 +1269,7 @@
 1378	Kopieren ist in diesem Browser nicht möglich. Markiere den Text und kopiere ihn.
 1379	Klicke in das Feld und drücke Strg+V (⌘V auf dem Mac) zum Einfügen.
 1380	Link kopiert.
-1381	Mathub erreicht den Server gerade nicht. Prüfe deine Verbindung und versuch es noch einmal.
+1381	StudyCat erreicht den Server gerade nicht. Prüfe deine Verbindung und versuch es noch einmal.
 1384	Dieser Kurs ist auf diesem {1} nicht mehr gespeichert.
 1385	Dieser Kurs ist mit deinem Konto gespeichert. Geh online, um ihn hier zu öffnen.
 1386	Dieser Kurs konnte nicht geöffnet werden. Melde dich mit dem Konto an, mit dem du ihn erstellt hast.
@@ -1292,33 +1292,33 @@
 1416	Die Antwort hatte keine Notenskala, daher gilt A 90, B 80, C 70, D 60.
 1417	{1} {1|unvollständige Frage wurde|unvollständige Fragen wurden} weggelassen.{2|}
 1419	Die Antwort hatte keine brauchbaren Fragen, daher hat der Kurs kein Quiz.
-1420	Mathub Pro
+1420	StudyCat Pro
 1421	Pro
 1422	Lade einen beliebigen Kursplan hoch und Bo schreibt den ganzen Kurs: Skripte, Lernkarten, Übungsfragen, Kalender und Noten
 1423	Kurse, die deine Kommilitonen teilen, Kursdateien und Kurse, die mit der KI gemacht wurden, die du schon nutzt
-1424	Mathub Max
+1424	StudyCat Max
 1425	Max
 1426	Frag Bo, deinen KI-Tutor, alles, jederzeit. Er kennt deinen Kursplan, deine Prüfungen und weiß, wo du hängst
 1427	Schick ihm ein Foto einer Aufgabe und er geht sie mit dir durch
 1428	Sprich laut mit ihm oder schick ein Foto einer Aufgabe, und er geht sie mit dir durch
-1429	Mathub-Abos: Die Verbindung zum Store ist nicht gestartet
+1429	StudyCat-Abos: Die Verbindung zum Store ist nicht gestartet
 1430	Abonnieren ist in dieser Version der App nicht möglich.
-1431	Mathub Pro und Max gibt es im {1} noch nicht zu kaufen.
+1431	StudyCat Pro und Max gibt es im {1} noch nicht zu kaufen.
 1432	{1} gibt es im {2} noch nicht zu kaufen.
-1433	Für dieses {1}-Konto wurde kein Mathub-Pro- oder -Max-Abo gefunden.
+1433	Für dieses {1}-Konto wurde kein StudyCat-Pro- oder -Max-Abo gefunden.
 1434	Google
 1435	Apple
 1436	Melde dich an, um zu abonnieren. Dein Abo gehört zu deinem Konto.
 1437	Abonnieren auf der Website ist noch nicht möglich. Kommt bald.
 1438	Melde dich zuerst an.
-1439	Für dieses Konto wurde noch kein Mathub-Pro- oder -Max-Abo gefunden. Wenn du gerade bezahlt hast, warte eine Minute und prüfe es nochmal.
+1439	Für dieses Konto wurde noch kein StudyCat-Pro- oder -Max-Abo gefunden. Wenn du gerade bezahlt hast, warte eine Minute und prüfe es nochmal.
 1440	{1} ist gesperrt, weil dein Abo aus ist. Alles darin bleibt {2} gespeichert.
-1441	Um {1} zu deinen Kursen hinzuzufügen, brauchst du Mathub Pro oder Max.
-1442	Bo gehört zu Mathub Max. Wechsle von Pro, um mit ihm zu sprechen.
-1443	Mit Bo, deinem KI-Tutor, zu sprechen gehört zu Mathub Max.
-1444	Dass Bo deinen Kurs aus dem Kursplan schreibt, gehört zu Mathub Pro und Max.
-1445	Für {1} brauchst du Mathub Pro oder Max.
-1446	Mit Mathub Pro schreibt Bo deine Kurse. Max bringt „Bo fragen“ dazu, deinen KI-Tutor.
+1441	Um {1} zu deinen Kursen hinzuzufügen, brauchst du StudyCat Pro oder Max.
+1442	Bo gehört zu StudyCat Max. Wechsle von Pro, um mit ihm zu sprechen.
+1443	Mit Bo, deinem KI-Tutor, zu sprechen gehört zu StudyCat Max.
+1444	Dass Bo deinen Kurs aus dem Kursplan schreibt, gehört zu StudyCat Pro und Max.
+1445	Für {1} brauchst du StudyCat Pro oder Max.
+1446	Mit StudyCat Pro schreibt Bo deine Kurse. Max bringt „Bo fragen“ dazu, deinen KI-Tutor.
 1447	deinen {1}-Abos
 1448	Apple-ID
 1449	Dein Abo (im Kontomenü) oder über den Link in deiner Beleg-E-Mail
@@ -1332,7 +1332,7 @@
 1457	Preise werden von {1} geholt…
 1458	Dein Konto wird geprüft…
 1459	Ich habe schon abonniert
-1460	Wenn du in der Mathub-App mit diesem Konto abonnierst, gilt das auch hier.
+1460	Wenn du in der StudyCat-App mit diesem Konto abonnierst, gilt das auch hier.
 1461	Wechsel auf der Website: Kündige Pro unter Dein Abo, damit du nicht doppelt zahlst.
 1462	{1} ist aktiv. Danke!
 1463	{1} holen
@@ -1343,7 +1343,7 @@
 1468	Einloggen zum Abonnieren
 1469	Noch nicht verfügbar
 1470	Preise nicht verfügbar
-1471	Mathub konnte {1} nicht erreichen. Prüfe deine Verbindung und versuch es noch einmal.
+1471	StudyCat konnte {1} nicht erreichen. Prüfe deine Verbindung und versuch es noch einmal.
 1472	Schließ die Zahlung im neuen Tab ab. {1} wird hier aktiv, sobald die Zahlung durch ist.
 1473	Ich habe bezahlt: jetzt prüfen
 1474	Warte auf {1}…
@@ -1351,20 +1351,20 @@
 1476	Deine Zahlung bei {1} ist ausstehend. Dein Abo wird aktiv, sobald sie durch ist.
 1477	Der Kauf ist nicht durchgegangen. Es wurde nichts abgebucht.
 1478	{1} ist aktiv.
-1479	Du hast {1}. Bo braucht Mathub Max.
+1479	Du hast {1}. Bo braucht StudyCat Max.
 1481	{1} ist gesperrt
-1482	{1} ist ein Kurs, den du aus einem Kursplan erstellt hast. Selbst erstellte Kurse brauchen Mathub Pro oder Max, und dein Abo ist gerade aus. Alles darin, auch dein Fortschritt, bleibt {2} gespeichert und öffnet sich wieder, wenn du abonnierst.
+1482	{1} ist ein Kurs, den du aus einem Kursplan erstellt hast. Selbst erstellte Kurse brauchen StudyCat Pro oder Max, und dein Abo ist gerade aus. Alles darin, auch dein Fortschritt, bleibt {2} gespeichert und öffnet sich wieder, wenn du abonnierst.
 1483	Zurück zu deinen Kursen
-1484	{1} ist gesperrt · Mathub
-1485	Mathub Max ist aktiv: Bo schreibt deine Kurse, und du kannst
+1484	{1} ist gesperrt · StudyCat
+1485	StudyCat Max ist aktiv: Bo schreibt deine Kurse, und du kannst
 1486	ihn alles fragen
-1487	Mathub Pro ist aktiv: Bo schreibt deine Kurse.
+1487	StudyCat Pro ist aktiv: Bo schreibt deine Kurse.
 1488	bringt „Bo fragen“ dazu, deinen KI-Tutor.
 1489	Dass Bo deinen Kurs schreibt, gehört zu
 1490	bringt „Bo fragen“ dazu, deinen KI-Tutor. Der Beispielkurs ist kostenlos.
 1491	Wie lang soll die Antwort sein?
 1492	Füge hier die Antwort der KI ein
-1493	Jeder Kurs mit Kursplan wird ein Mathub-Kurs: Skripte, Lernkarten, Übungsfragen, Kalender und dein Notenrechner. {1}
+1493	Jeder Kurs mit Kursplan wird ein StudyCat-Kurs: Skripte, Lernkarten, Übungsfragen, Kalender und dein Notenrechner. {1}
 1494	Andere Wege, einen Kurs hinzuzufügen
 1495	Probier den Beispielkurs
 1496	Sieh dir an, wie ein fertiger Kurs aussieht. Kostenlos.
@@ -1375,9 +1375,9 @@
 1501	Kursdatei importieren
 1502	Datei wählen
 1503	Nutze die KI, die du schon verwendest
-1504	Kopiere die Anleitung von Mathub in einen beliebigen KI-Chat und füge dann die Antwort hier ein.
+1504	Kopiere die Anleitung von StudyCat in einen beliebigen KI-Chat und füge dann die Antwort hier ein.
 1505	Kopiere die Anleitung
-1506	Mathub schreibt eine Anleitung, die einer KI genau sagt, wie sie aus einem Kursplan einen Kurs macht.
+1506	StudyCat schreibt eine Anleitung, die einer KI genau sagt, wie sie aus einem Kursplan einen Kurs macht.
 1507	Ganzer Kurs
 1508	Kürzere Antwort
 1509	Wähle „Kürzere Antwort“, wenn deine KI bei langen Antworten mittendrin aufhört.
@@ -1385,18 +1385,18 @@
 1511	Lesen
 1512	Frag deine KI
 1513	Öffne den KI-Chat, den du nutzt{1}. Füge die Anleitung ein, häng deinen Kursplan an (ein PDF, ein Foto oder den Text) und schick es ab.
-1514	So sieht und versendet Mathub deinen Kursplan nie. Du entscheidest, welcher KI du ihn gibst, und für das, was du schickst, gelten deren Datenschutzregeln.
+1514	So sieht und versendet StudyCat deinen Kursplan nie. Du entscheidest, welcher KI du ihn gibst, und für das, was du schickst, gelten deren Datenschutzregeln.
 1515	Füge die Antwort ein
-1516	Kopiere die ganze Antwort der KI und füge sie hier ein. Mathub prüft sie, korrigiert kleine Fehler und zeigt dir den Kurs, bevor er hinzugefügt wird.
+1516	Kopiere die ganze Antwort der KI und füge sie hier ein. StudyCat prüft sie, korrigiert kleine Fehler und zeigt dir den Kurs, bevor er hinzugefügt wird.
 1517	Die Antwort der KI
 1518	Einfügen
 1519	Antwort prüfen
 1520	Von dir erstellte Kurse
 1521	Er ist auf diesem {1}{2} gespeichert und funktioniert offline.
 1522	und in deinem Konto
-1523	Er ist mit deinem Konto gespeichert und damit auch in den Mathub-Apps, wenn du dich dort anmeldest.
+1523	Er ist mit deinem Konto gespeichert und damit auch in den StudyCat-Apps, wenn du dich dort anmeldest.
 1524	Melde dich an, um einen Kurs hinzuzufügen.
-1525	Von dir erstellte Kurse werden mit deinem Mathub-Konto gespeichert und sind so auf jedem Gerät, auf dem du angemeldet bist, auch in den Apps.
+1525	Von dir erstellte Kurse werden mit deinem StudyCat-Konto gespeichert und sind so auf jedem Gerät, auf dem du angemeldet bist, auch in den Apps.
 1526	, in ihrer App oder im Web
 1527	in einem anderen Tab
 1528	Anleitung kopiert. Füge sie mit deinem Kursplan in deine KI ein.
@@ -1454,7 +1454,7 @@
 1581	{1} Schritte erledigt
 1582	Schritt {1} von {2}{3}
 1583	· das dauert ein, zwei Minuten
-1584	Melde dich zuerst an: Bo schreibt Kurse für dein Mathub-Konto.
+1584	Melde dich zuerst an: Bo schreibt Kurse für dein StudyCat-Konto.
 1585	Leg zuerst deinen Kursplan ab oder füge den Text ein.
 1586	Kursplan wird gelesen
 1587	Einheit {1} wird geschrieben: {2}
@@ -1472,7 +1472,7 @@
 1602	Datei senden
 1603	Herunterladen
 1604	Noch keine. Kurse, die du erstellst, erscheinen hier und bei deinen anderen Kursen.
-1605	{1} für Mathub
+1605	{1} für StudyCat
 1607	{1} löschen? Er wird aus deinem Konto und von allen Geräten gelöscht, auf denen du angemeldet bist, samt deinem Fortschritt.{2}
 1608	Sein Teillink funktioniert dann nicht mehr.
 1609	{1} von diesem {2} löschen? Dein Fortschritt darin wird ebenfalls gelöscht.
@@ -1483,19 +1483,19 @@
 1614	Link wird geholt…
 1615	Wer diesen Link oder Code hat, kann {1} sehen und eine Kopie zu den eigenen Kursen hinzufügen. Dein Name und dein Fortschritt bleiben unsichtbar.
 1616	Link
-1617	Für einen geteilten Kurs brauchst du Mathub Pro oder Max.
+1617	Für einen geteilten Kurs brauchst du StudyCat Pro oder Max.
 1618	Teilen beenden
 1619	Senden…
-1620	{1} auf Mathub
-1621	{1}: {2}. Lern es auf Mathub:
+1620	{1} auf StudyCat
+1621	{1}: {2}. Lern es auf StudyCat:
 1622	Teilen von {1} beenden? Link und Code funktionieren dann nicht mehr. Bereits hinzugefügte Kopien bleiben bei ihren Besitzern.
 1623	Der Link funktioniert nicht mehr.
-1624	Ein geteilter Kurs gehört zu deinem Mathub-Konto, deshalb musst du dich zum Teilen anmelden.
+1624	Ein geteilter Kurs gehört zu deinem StudyCat-Konto, deshalb musst du dich zum Teilen anmelden.
 1625	Melde dich an, um diesen Kurs zu teilen.
 1626	Dieser Kurs wurde auf diesem {1} mit einem anderen Konto erstellt und kann daher nicht von diesem aus geteilt werden.
 1627	Geteilter Kurs
 1628	Ein geteilter Kurs
-1629	Jemand aus deinem Kurs hat diesen Kurs auf Mathub aus einem Kursplan erstellt und mit dir geteilt.
+1629	Jemand aus deinem Kurs hat diesen Kurs auf StudyCat aus einem Kursplan erstellt und mit dir geteilt.
 1630	Dieser Teilcode stimmt nicht.
 1631	Ein Code hat 8 Buchstaben und Ziffern, etwa K7P2QX9M.
 1632	{1} wird geöffnet…
@@ -1503,8 +1503,8 @@
 1635	Der Kurs konnte nicht geöffnet werden.
 1636	Der Besitzer teilt ihn nicht mehr, oder der Code ist falsch geschrieben.
 1637	Dieser geteilte Kurs kann nicht genutzt werden.
-1638	Er hat Probleme, die Mathub nicht beheben kann: {1}
-1639	{1} · Geteilter Kurs · Mathub
+1638	Er hat Probleme, die StudyCat nicht beheben kann: {1}
+1639	{1} · Geteilter Kurs · StudyCat
 1640	Deine Kopie öffnen
 1641	{1} zu meinen Kursen hinzufügen
 1642	{1} Du bekommst deine eigene Kopie: Dein Fortschritt bleibt deiner.
@@ -1517,22 +1517,22 @@
 1650	(deinem Konto geschenkt)
 1651	Verlängert sich am {1}.
 1652	Aktiv bis {1}; verlängert sich nicht.
-1653	Kein Abo. Mit Mathub Pro ({1} pro Monat) schreibt Bo deine Kurse aus jedem Kursplan; Mathub Max ({2} pro Monat) bringt „Bo fragen“ dazu, deinen KI-Tutor. Der Beispielkurs ist kostenlos.
-1654	Mathub Pro und Max
+1653	Kein Abo. Mit StudyCat Pro ({1} pro Monat) schreibt Bo deine Kurse aus jedem Kursplan; StudyCat Max ({2} pro Monat) bringt „Bo fragen“ dazu, deinen KI-Tutor. Der Beispielkurs ist kostenlos.
+1654	StudyCat Pro und Max
 1655	Abo verwalten
 1656	Abos ansehen
 1657	Nochmal prüfen
 1658	{1} {1|von dir erstellter Kurs ist|von dir erstellte Kurse sind} mit deinem Konto gespeichert.{2|}{3|}
 1659	Kurse, die du aus einem Kursplan erstellst, werden mit deinem Konto gespeichert.
 1660	die Website (Karte, über Stripe)
-1661	ein Geschenk von Mathub
-1662	Alle Kurse, die in Mathub stecken: Lektionen, Übungen, Lernkarten und Prüfungsvorbereitung
+1661	ein Geschenk von StudyCat
+1662	Alle Kurse, die in StudyCat stecken: Lektionen, Übungen, Lernkarten und Prüfungsvorbereitung
 1663	Heute, dein Kalender, der Fokusraum und der GPA-Rechner
 1664	Der Beispielkurs, den du aus einem Kursplan erstellen kannst
 1665	Melde dich an, um dein Abo zu sehen
-1666	Dein Abo gehört zu deinem Mathub-Konto und funktioniert deshalb auf der Website und in den Apps.
+1666	Dein Abo gehört zu deinem StudyCat-Konto und funktioniert deshalb auf der Website und in den Apps.
 1667	Du hast das kostenlose Abo
-1668	Alles, was in Mathub steckt, ist kostenlos. Mit
+1668	Alles, was in StudyCat steckt, ist kostenlos. Mit
 1669	schreibt Bo deine Kurse aus jedem Kursplan, und
 1670	bringt Bo dazu, deinen KI-Tutor, im Chat und am Telefon.
 1671	Max holen
@@ -1551,7 +1551,7 @@
 1684	, und verlängert sich nicht
 1685	Jeden Monat
 1686	Von
-1687	Von Mathub geschenkt
+1687	Von StudyCat geschenkt
 1688	Bezahlt über
 1689	Alles aus {1} funktioniert bis dahin weiter. Anders überlegt? {2}
 1690	Schalte es unter Abrechnung verwalten wieder ein.
@@ -1564,11 +1564,11 @@
 1697	{1} von {2} genutzt{3}
 1698	Sie beginnen am {1} von vorn.
 1699	Fragen an Bo
-1700	Teil von Mathub Max
+1700	Teil von StudyCat Max
 1701	Kurse, die Bo schreibt
 1702	Anrufe mit Bo
 1703	, dein Abo
-1704	Monatliche Abos, die sich verlängern, bis du kündigst. {1} Ein Abo gehört zu deinem Mathub-Konto und funktioniert deshalb auf der Website und in den Apps.
+1704	Monatliche Abos, die sich verlängern, bis du kündigst. {1} Ein Abo gehört zu deinem StudyCat-Konto und funktioniert deshalb auf der Website und in den Apps.
 1705	Bedingungen
 1706	Gekauft im {1}, der die Abrechnung übernimmt.
 1707	Auf der Website wird die Zahlung von Stripe abgewickelt, über RevenueCat.
@@ -1578,9 +1578,9 @@
 1711	Wie kündige ich?
 1712	In deinen {1}-Abos (Abrechnung verwalten, oben), spätestens 24 Stunden vor der Verlängerung. Dein Abo bleibt bis zum Ende des bezahlten Monats aktiv.
 1713	Tippe oben auf
-1714	. Dein Abo bleibt bis zum Ende des bezahlten Monats aktiv, und es wird nichts mehr abgebucht. Wenn du es in der Mathub-App gekauft hast, kündigst du stattdessen im App Store oder bei Google Play; die Seite sagt dir, wo.
+1714	. Dein Abo bleibt bis zum Ende des bezahlten Monats aktiv, und es wird nichts mehr abgebucht. Wenn du es in der StudyCat-App gekauft hast, kündigst du stattdessen im App Store oder bei Google Play; die Seite sagt dir, wo.
 1715	Was passiert, wenn mein Abo endet?
-1716	Deine erstellten Kurse bleiben erhalten, gesperrt, und öffnen sich wieder, wenn du erneut abonnierst. Dein Fortschritt, deine Chats mit Bo und seine Notizen bleiben in deinem Konto. Alles, was in Mathub steckt, und der Beispielkurs bleiben kostenlos.
+1716	Deine erstellten Kurse bleiben erhalten, gesperrt, und öffnen sich wieder, wenn du erneut abonnierst. Dein Fortschritt, deine Chats mit Bo und seine Notizen bleiben in deinem Konto. Alles, was in StudyCat steckt, und der Beispielkurs bleiben kostenlos.
 1717	Wo sind meine Belege? Wie ändere ich meine Karte?
 1718	{1} verwaltet deine Belege und Zahlungsdaten.
 1719	öffnet die Abrechnungsseite deines Abos, wo du alle Belege siehst, die Karte änderst oder kündigst. Außerdem bekommst du jeden Monat einen Beleg per E-Mail.
@@ -1588,7 +1588,7 @@
 1721	Ja. Wechsle jederzeit auf Max; {1} kümmert sich um den Wechsel.
 1722	Wechsle jederzeit auf Max. Kündige auf der Website Pro, nachdem du Max hast, damit du nicht für beides zahlst. Um zu Pro zurückzugehen, kündige Max und hol dir Pro, wenn es endet.
 1723	Ich habe in der App abonniert. Gilt das hier auch?
-1724	Ja. Ein Abo gehört zu deinem Mathub-Konto und funktioniert deshalb überall, wo du dich damit anmeldest. Wenn es nicht angezeigt wird, tippe auf Nochmal prüfen.
+1724	Ja. Ein Abo gehört zu deinem StudyCat-Konto und funktioniert deshalb überall, wo du dich damit anmeldest. Wenn es nicht angezeigt wird, tippe auf Nochmal prüfen.
 1725	Gibt es Grenzen?
 1726	Fair-Use-Grenzen, die die meisten Studierenden nie erreichen: {1}. Sie beginnen am 1. von vorn.
 1727	Eine Frage zu einer Abbuchung?
@@ -1611,7 +1611,7 @@
 1744	Dein Abo bleibt aktiv bis
 1745	. Danach verlängert es sich nicht, und es wird nichts mehr abgebucht.
 1746	Deine erstellten Kurse bleiben erhalten, gesperrt, und öffnen sich wieder, wenn du zurückkommst.
-1747	Dein Fortschritt, deine Chats und alles, was in Mathub steckt, bleiben deins, kostenlos.
+1747	Dein Fortschritt, deine Chats und alles, was in StudyCat steckt, bleiben deins, kostenlos.
 1748	Warum kündigst du?
 1749	(optional, es hilft uns)
 1750	Was könnten wir besser machen?
@@ -1621,20 +1621,20 @@
 1754	Im {1} kündigen
 1755	Mein Abo kündigen
 1756	Wird gekündigt…
-1757	Mathub ist nicht erreichbar. Prüfe deine Verbindung und versuch es noch einmal.
+1757	StudyCat ist nicht erreichbar. Prüfe deine Verbindung und versuch es noch einmal.
 1758	{1} ist gekündigt. Es bleibt aktiv bis {2}.
 1759	Noch ein Schritt
-1760	Website-Abos werden auf ihrer Abrechnungsseite gekündigt, die RevenueCat für Mathub betreibt (Zahlungen über Stripe). Sie öffnet sich in einem neuen Tab: Wähle dort
+1760	Website-Abos werden auf ihrer Abrechnungsseite gekündigt, die RevenueCat für StudyCat betreibt (Zahlungen über Stripe). Sie öffnet sich in einem neuen Tab: Wähle dort
 1761	Abo kündigen
 1762	. {1} bleibt aktiv bis {2}.
 1763	Abrechnungsseite öffnen
-1764	Du hast {1} in der Mathub-App gekauft, deshalb kümmert sich {2} darum: Öffne deine Abos, wähle Mathub und kündige. Es bleibt aktiv bis {3}.
+1764	Du hast {1} in der StudyCat-App gekauft, deshalb kümmert sich {2} darum: Öffne deine Abos, wähle StudyCat und kündige. Es bleibt aktiv bis {3}.
 1765	{1}-Abos öffnen
 1766	App Store
 1767	Es ist schon gekündigt
 1768	{1} endet am {2} und verlängert sich nicht.
 1769	Nichts zu kündigen
-1770	{1} wurde deinem Konto von Mathub geschenkt und kostet dich daher nie etwas.
+1770	{1} wurde deinem Konto von StudyCat geschenkt und kostet dich daher nie etwas.
 1771	Schreib uns zum Kündigen
 1772	Die Abrechnungsseite für dein Abo wurde nicht gefunden. Schreib uns über die Kontaktseite, dann kündigen wir es für dich und sorgen dafür, dass nichts mehr abgebucht wird.
 1773	Kein Abo zum Kündigen
@@ -1642,7 +1642,7 @@
 1775	Dein Abo endet am {1}.
 1776	Noch {1} Fragen{2} in diesem Monat.
 1777	und {1} Anrufminuten
-1778	Mathub Max ist aktiv.
+1778	StudyCat Max ist aktiv.
 1779	Bo kann diesen Monat noch {1} Kurse schreiben.
 1780	Bo schreibt deine Kurse aus jedem Kursplan.
 1781	Max bringt „Bo fragen“ und Anrufe dazu.
@@ -1652,7 +1652,7 @@
 1785	Kurs schreiben
 1786	Aus jedem Kursplan
 1787	Bo im Chat und am Telefon · {1} pro Monat
-1788	Mathub Pro holen
+1788	StudyCat Pro holen
 1789	Bo schreibt deine Kurse · {1} pro Monat
 1790	Was jeweils dabei ist
 1791	Bo, dein Tutor
@@ -1684,7 +1684,7 @@
 1830	Akademische Ehrlichkeit.
 1831	Helft euch beim Lernen; teilt während einer Prüfung keine Prüfungsfragen oder -antworten und haltet euch an die Regeln jedes Kurses.
 1832	Deine Worte gehören dir.
-1833	Du bist für das verantwortlich, was du postest. Mathub kann Inhalte und Konten jederzeit entfernen.
+1833	Du bist für das verantwortlich, was du postest. StudyCat kann Inhalte und Konten jederzeit entfernen.
 1834	Sprachfilter.
 1835	Schimpfwörter werden automatisch zensiert.
 1836	Ich stimme zu:
@@ -1859,15 +1859,15 @@
 6114	Meine Lautsprecher hallen
 6115	Seine eigene Stimme kann Bo nicht unterbrechen, während er spricht. Tippe ihn an, um ihn zu stoppen
 6118	Jeder Kurs, auf Anfrage
-6119	Belegst du etwas, das Mathub noch nicht hat? Fordere es mit dem Kursplan an. Wir prüfen die Datei, bauen den ganzen Kurs (Notizen, Übungen, Karteikarten und Kalender) und sagen dir Bescheid, wenn er fertig ist – für alle, die ihn belegen.
-6120	Bo hilft dir bei einem Kurs, den du belegst. Wähle deine Kurse oder fordere einen an, den Mathub noch nicht hat.
+6119	Belegst du etwas, das StudyCat noch nicht hat? Fordere es mit dem Kursplan an. Wir prüfen die Datei, bauen den ganzen Kurs (Notizen, Übungen, Karteikarten und Kalender) und sagen dir Bescheid, wenn er fertig ist – für alle, die ihn belegen.
+6120	Bo hilft dir bei einem Kurs, den du belegst. Wähle deine Kurse oder fordere einen an, den StudyCat noch nicht hat.
 6121	Mehr Anrufzeit holen
 6122	Die Kurse, die du vorher erstellt hast, bleiben offen
 6123	Anrufe mit Bo: eine Stunde pro Monat inklusive, und weitere Stunden für je 10 $, wenn du sie willst
 6125	Kursanfragen
 6126	Kursplan wird geprüft
-6127	Kurse auf Mathub fügt das Mathub-Team hinzu. Fordere {1} mit dem Kursplan an, und du erfährst, wenn er fertig ist.
-6128	Kein Abo. Mit Mathub Pro ({1} im Monat) ist Bo auf jeder Seite; Mathub Max ({2} im Monat) bringt die Seite „Frag Bo“ und Anrufe mit ihm dazu.
+6127	Kurse auf StudyCat fügt das StudyCat-Team hinzu. Fordere {1} mit dem Kursplan an, und du erfährst, wenn er fertig ist.
+6128	Kein Abo. Mit StudyCat Pro ({1} im Monat) ist Bo auf jeder Seite; StudyCat Max ({2} im Monat) bringt die Seite „Frag Bo“ und Anrufe mit ihm dazu.
 6129	Fehlt ein Kurs?
 6130	Fordere ihn an
 6131	mit dem Kursplan, und wir bauen ihn.
@@ -1882,7 +1882,7 @@
 6140	Diese
 6141	{1} Fragen an Bo pro Monat
 6142	Wie funktioniert die Anrufzeit?
-6143	Mathub Max enthält jeden Monat eine Stunde Anrufe mit Bo. Wenn du mehr willst, kauf mehr Zeit auf der
+6143	StudyCat Max enthält jeden Monat eine Stunde Anrufe mit Bo. Wenn du mehr willst, kauf mehr Zeit auf der
 6144	Anrufe-Seite
 6145	: {1} für eine Stunde, im Voraus bezahlt, und sie verfällt nicht am Monatsende. Anrufe nutzen zuerst die Stunde des Monats.
 6146	Diesen Monat sind noch {1} Fragen übrig{2}.
@@ -1891,13 +1891,13 @@
 6149	Anrufzeit
 6150	Verwalten
 6151	Ein PDF, eine Word-Datei oder ein Foto, bis {1} MB. Du kannst sie auch hier ablegen.
-6152	Die Datei wird vor dem Speichern auf Schadsoftware geprüft, und nur das Mathub-Team sieht sie.
-6153	Das ist der Kursplan eines Kurses, den ich belege. Ich verstehe, dass nur das Mathub-Team die Datei sieht und sie nutzt, um den Kurs (mit Bo, der KI von Mathub) in eigenen Worten zu bauen.
+6152	Die Datei wird vor dem Speichern auf Schadsoftware geprüft, und nur das StudyCat-Team sieht sie.
+6153	Das ist der Kursplan eines Kurses, den ich belege. Ich verstehe, dass nur das StudyCat-Team die Datei sieht und sie nutzt, um den Kurs (mit Bo, der KI von StudyCat) in eigenen Worten zu bauen.
 6154	Kurse, die du vorher erstellt hast
-6155	Du hast sie aus einem Kursplan erstellt, bevor Kurse vom Mathub-Team hinzugefügt wurden. Sie bleiben deine.
+6155	Du hast sie aus einem Kursplan erstellt, bevor Kurse vom StudyCat-Team hinzugefügt wurden. Sie bleiben deine.
 6156	Der Kursplan enthält den Zeitplan, die Prüfungen und die Bewertung, die wir brauchen. Die Datei wird zuerst auf Schadsoftware geprüft.
 6157	Prüfe die Datei: ein PDF, eine Word-Datei oder ein Foto, bis 10 MB.
-6158	Anrufe mit Bo gibt es mit Mathub Max
+6158	Anrufe mit Bo gibt es mit StudyCat Max
 6159	{1} im Monat, mit
 6160	{1} Anrufen jeden Monat
 6161	. Mehr Zeit kostet {1} für {2}, und was du kaufst, verfällt nicht am Monatsende.
@@ -1938,15 +1938,15 @@
 6196	Schreib uns
 6197	Bos Stimme ist für deinen nächsten Anruf eingestellt.
 6198	Deine Anrufzeit, mehr kaufen, jeder Anruf und wie Bo klingt.
-6199	Anrufe mit Bo gibt es auf der Mathub-Website, mit demselben Konto.
+6199	Anrufe mit Bo gibt es auf der StudyCat-Website, mit demselben Konto.
 6200	Melde dich an, um deine Anrufe zu sehen
-6201	Deine Anrufzeit und deine Anrufe mit Bo werden mit deinem Mathub-Konto gespeichert.
+6201	Deine Anrufzeit und deine Anrufe mit Bo werden mit deinem StudyCat-Konto gespeichert.
 6203	{1} hinzugefügt. Danke!
 6204	Noch kein neuer Kauf. Wenn du gerade bezahlt hast, warte eine Minute und prüf noch einmal.
 6205	Du hast die Anrufzeit dieses Monats mit Bo aufgebraucht. Kauf eine Stunde (
-6206	Kurse fügt jetzt das Mathub-Team hinzu. Fordere deinen Kurs mit dem Kursplan an, und wir sagen dir, wenn er fertig ist.
-6212	Kurse fügt jetzt das Mathub-Team hinzu. Fordere deinen Kurs an, und wir sagen dir, wenn er fertig ist.
-1	Mathub
+6206	Kurse fügt jetzt das StudyCat-Team hinzu. Fordere deinen Kurs mit dem Kursplan an, und wir sagen dir, wenn er fertig ist.
+6212	Kurse fügt jetzt das StudyCat-Team hinzu. Fordere deinen Kurs an, und wir sagen dir, wenn er fertig ist.
+1	StudyCat
 133	Ctrl / ⌘ + K
 143	Ctrl / ⌘ + Enter
 175	plan for today due cards lesson challenge
@@ -2026,8 +2026,8 @@
 1344	There is no such tool.
 1358	input, select, button
 1383	myclass&id=
-1387	Mathub: a class could not be saved to the account
-1388	Mathub: syncing your classes stopped:
+1387	StudyCat: a class could not be saved to the account
+1388	StudyCat: syncing your classes stopped:
 1389	8 to 16
 1390	3 to 5
 1391	about 60
@@ -2035,12 +2035,12 @@
 1393	6 to 10
 1394	2 or 3
 1395	about 25
-1396	The JSON you wrote for Mathub has problems. Fix them and send the complete corrected JSON again, in one ```json code block and nothing else:
-1397	Your answer was cut off before the JSON ended, so Mathub cannot read it. Write the whole class again, shorter this time: 6 to 10 SECTIONS with 2 ideas each, about 25 FLASHCARDS and 4 questions per topic. Send only the JSON, in one ```json code block, and make sure it is complete.
+1396	The JSON you wrote for StudyCat has problems. Fix them and send the complete corrected JSON again, in one ```json code block and nothing else:
+1397	Your answer was cut off before the JSON ended, so StudyCat cannot read it. Write the whole class again, shorter this time: 6 to 10 SECTIONS with 2 ideas each, about 25 FLASHCARDS and 4 questions per topic. Send only the JSON, in one ```json code block, and make sure it is complete.
 1402	MY CLASS
 1409	s had
 1418	s were
-1544	Mathub could not read your JSON: {1}{2}. Send the complete corrected JSON again, in one ```json code block and nothing else.
+1544	StudyCat could not read your JSON: {1}{2}. Send the complete corrected JSON again, in one ```json code block and nothing else.
 1589	Bos Kurs hat die Prüfungen nicht bestanden:
 1590	Versuch es noch einmal oder nimm „Kürzerer Kurs“.
 1593	Der Kurs konnte nicht gespeichert werden:
@@ -2098,7 +2098,7 @@
 2346	quest:
 2365	league&xp=
 2397	600 16px Cinzel
-2398	16px "Mathub Runes"
+2398	16px "StudyCat Runes"
 2399	ᚠAa20
 2400	Magier
 2401	Beugt Grenzwerte und Änderungsraten nach seinem Willen.
@@ -2161,8 +2161,8 @@
 2459	Neutral
 2460	Chaotisch
 2461	Absolut neutral
-2462	Mathub · Charakterbogen
-2463	Deine Lerngewohnheiten als Pen-&-Paper-Held. Jede Zahl kommt aus dem, was du wirklich auf Mathub gemacht hast.
+2462	StudyCat · Charakterbogen
+2463	Deine Lerngewohnheiten als Pen-&-Paper-Held. Jede Zahl kommt aus dem, was du wirklich auf StudyCat gemacht hast.
 2464	Stufe {1}{2}
 2465	Hintergrund
 2466	Gesinnung
@@ -2440,8 +2440,8 @@
 2746	{1} {1|Titel|Titel} hinzugefügt{2|}
 2747	Füg zuerst eine MP3 hinzu.
 2748	Tipp noch mal auf Play, um die Musik zu starten.
-2749	Mathub-Musik
-2750	Meine Musik · Mathub
+2749	StudyCat-Musik
+2750	Meine Musik · StudyCat
 2751	Wähl zuerst einen Klang.
 2752	Alles stoppt in {1} Minuten
 2753	Timer aus
@@ -2466,7 +2466,7 @@
 2773	Bring deine eigene Playlist mit: bis zu
 2774	, jeder bis zu
 2775	8 Minuten
-2776	. Sie bleiben nur in diesem Browser und spielen weiter, während du dich durch Mathub bewegst.
+2776	. Sie bleiben nur in diesem Browser und spielen weiter, während du dich durch StudyCat bewegst.
 2777	· {1} insgesamt
 2778	Fokusklänge
 2779	Meine Musik
@@ -2506,8 +2506,8 @@
 2813	Pause · dehnen, Wasser trinken, kein Handy
 2814	Pausiert
 2815	Bereit
-2816	{1} · Fokus · Mathub
-2817	Fokus · Mathub
+2816	{1} · Fokus · StudyCat
+2817	Fokus · StudyCat
 2818	{1} fällige Lernkarten wiederholen
 2819	Lektion: {1} ({2})
 2820	Übungsset · {1}
@@ -2542,7 +2542,7 @@
 2850	Vollbild ist hier nicht verfügbar.
 2851	Tägliches Fokusziel in Minuten:
 2852	Eine Aufgabe, ein Timer, kein Handy.
-2853	Mathub · Fokusraum
+2853	StudyCat · Fokusraum
 2904	Skript lesen: {1} {2}
 2905	{1} üben ({2} {2|Thema|Themen}{3|})
 2906	Lernkarten: Einheit {1}
@@ -2667,7 +2667,7 @@
 3026	Wir schauen uns jede an.
 3027	Die Meldung konnte nicht gesendet werden. Bist du online?
 3028	(display-mode: standalone)
-3048	in Mathub
+3048	in StudyCat
 3049	Aus Gespeichertem entfernen
 3050	Für später speichern
 3051	{1} Min. Lesezeit
@@ -2686,7 +2686,7 @@
 3064	Aus Gespeichertem entfernt.
 3065	Füg den Link ein und schreib, wofür er gut ist.
 3066	Kurze, praktische Leitfäden für diese Kurse.
-3067	Mathub · Lernleitfäden
+3067	StudyCat · Lernleitfäden
 3068	Alle Leitfäden
 3070	Mehr Leitfäden
 3071	Noch mal lesen, zählt trotzdem
@@ -2698,7 +2698,7 @@
 3077	Schlauer lernen
 3078	Angefragt
 3079	Im Aufbau
-3080	Auf Mathub
+3080	Auf StudyCat
 3081	Vorerst nicht
 3082	Der Server ist nicht erreichbar.
 3083	Die Datei ist zu groß für den Server.
@@ -2734,7 +2734,7 @@
 3119	Skripte zu jedem Thema, Übungsfragen, Lernkarten, Kalender und ein Notenrechner, in unseren eigenen Worten.
 3120	Du hörst von uns.
 3121	Dein Posteingang sagt dir, wann wir anfangen und wann er fertig ist.
-3122	Kursplan-Dateien gehen nur an die Administratoren von Mathub und werden nie veröffentlicht. Kurse mit den meisten Anfragen und einem Kursplan werden zuerst gebaut.
+3122	Kursplan-Dateien gehen nur an die Administratoren von StudyCat und werden nie veröffentlicht. Kurse mit den meisten Anfragen und einem Kursplan werden zuerst gebaut.
 3123	Am häufigsten angefragt
 3124	{1} {1|Studierende:r|Studierende}{2|} · {3}
 3125	Kursplan da
@@ -2747,10 +2747,10 @@
 3132	Zurückziehen
 3133	Du hast noch keinen Kurs angefragt.
 3134	Das sieht nicht nach einem Kurscode aus. Versuch etwas wie CHMY 121.
-3135	{1} ist schon auf Mathub.
+3135	{1} ist schon auf StudyCat.
 3136	Wir legen ihn ab als
 3137	Dateien dürfen bis zu {1} MB groß sein.
-3138	Dieser Kurs ist schon auf Mathub.
+3138	Dieser Kurs ist schon auf StudyCat.
 3139	Gib zuerst den Kurscode ein.
 3141	Bitte setz das Häkchen zum Kursplan.
 3142	Anfrage für {1} gesendet{2}
@@ -2842,7 +2842,7 @@
 3228	CHECKLISTS "{1}" is not an exam id.
 3229	NAV item "{1}" is not available to uploaded classes and is left out.
 3230	resources[{1}] needs a title (t) and a link (u).
-3231	resources[{1}] link is not http, https or a Mathub path, so it is left out.
+3231	resources[{1}] link is not http, https or a StudyCat path, so it is left out.
 3232	No "QUIZ": the class gets no quizzer, daily challenge or mock exams.
 3233	"QUIZ.topics" is empty.
 3234	Quiz topic "{1}" must be letters, digits or dashes.
@@ -2870,7 +2870,7 @@
 3256	packs/index.json
 3257	packs/
 3258	Links für {1}: die Kursseite, kostenlose Texte und Übungen.
-3259	Mathub-Quiz für {1}
+3259	StudyCat-Quiz für {1}
 3260	Fragen zu jedem Thema, mit Erklärungen.
 3261	Diese Kursdatei passt nicht zum Kurs.
 3263	Du bist offline und dieser Kurs ist auf diesem Gerät noch nicht gespeichert.
@@ -2927,9 +2927,9 @@
 3370	Lerntage
 3371	Fokusminuten
 3372	Karten wiederholt
-3373	mathub.space · kostenloser Lernort für Kurse der Montana State
-3375	Meine Woche auf Mathub
-3376	{1} XP, {2} Lerntage, {3} Fragen auf Mathub diese Woche.
+3373	studycat.org · kostenloser Lernort für Kurse der Montana State
+3375	Meine Woche auf StudyCat
+3376	{1} XP, {2} Lerntage, {3} Fragen auf StudyCat diese Woche.
 3377	Als Bild gespeichert. Poste es oder schick es jemandem, der einen Schubs braucht.
 3378	Deine Woche · {1}
 3379	{1} {1|Tag|Tage}{2|} Lernen.
@@ -3688,7 +3688,7 @@
 4182	Frühling 2027
 4183	Sommer 2027
 4185	{1}{2}{3} · Montana State University
-4186	Made with Mathub · mathub.space
+4186	Made with StudyCat · studycat.org
 4187	· Section {1}
 4188	· {1} credits
 4189	Meetings
@@ -3711,7 +3711,7 @@
 4206	date to be announced
 4207	Exams and their dates.
 4208	Schedule
-4209	The schedule may change; changes are announced in class and on Mathub.
+4209	The schedule may change; changes are announced in class and on StudyCat.
 4210	The class meetings, day by day.
 4211	Policies
 4212	Attendance
@@ -3766,7 +3766,7 @@
 4264	Hell oder dunkel
 4265	{1}: Kontoeinstellungen
 4266	Anmelden
-4267	{1} · Mathub für Lehrende
+4267	{1} · StudyCat für Lehrende
 4268	Deine Kurspläne
 4269	Neuer Kursplan
 4270	Lehrenden-Status
@@ -3781,10 +3781,10 @@
 4279	Wird aktiv, sobald dein Lehrenden-Status bestätigt ist
 4280	Veröffentlichen
 4281	Änderungen veröffentlichen
-4282	Mathub für Lehrende
+4282	StudyCat für Lehrende
 4283	Schreib deinen Kursplan
 4284	Schreib den Kursplan einmal. Führ den Kurs daraus.
-4285	Ein Kursplan-Editor für Lehrende der Montana State. Die fertige Seite steht neben dem Formular und aktualisiert sich beim Tippen; druck sie, speicher sie als PDF oder veröffentliche sie für deine Studierenden auf Mathub.
+4285	Ein Kursplan-Editor für Lehrende der Montana State. Die fertige Seite steht neben dem Formular und aktualisiert sich beim Tippen; druck sie, speicher sie als PDF oder veröffentliche sie für deine Studierenden auf StudyCat.
 4286	Mit montana.edu anmelden
 4287	Kostenlos. Schreiben, Drucken und PDFs funktionieren direkt nach der Anmeldung. Zum Veröffentlichen für Studierende muss dein Lehrenden-Status bestätigt sein, meist innerhalb eines Tages.
 4288	Die Seite, während du schreibst
@@ -3802,7 +3802,7 @@
 4300	Du bist außerdem {1} {1|Kurs|Kursen}{2|} als Studierende:r beigetreten.
 4301	{1} auf der Studierenden-Seite öffnen
 4302	Dein Lehrenden-Status wird geprüft
-4303	(angefragt {1}). Schreib weiter; veröffentlichen kannst du, sobald ein Admin bestätigt. Du bekommst eine Nachricht in deinem Mathub-Posteingang.
+4303	(angefragt {1}). Schreib weiter; veröffentlichen kannst du, sobald ein Admin bestätigt. Du bekommst eine Nachricht in deinem StudyCat-Posteingang.
 4304	Kurspläne schreiben, ansehen, drucken und als PDF speichern geht schon jetzt.
 4305	Um für deine Studierenden zu veröffentlichen
 4306	, bestätige, dass du an der Montana State lehrst.
@@ -3817,10 +3817,10 @@
 4316	Kursplan erstellen
 4317	Eine Kopie von {1} {2}{3}
 4318	Wird erstellt …
-4319	Studierende vertrauen darauf, dass ein Kurs auf Mathub von ihren Lehrenden kommt, deshalb prüft ein Admin jede lehrende Person von Hand, bevor ein Kurs Studierende erreicht.
+4319	Studierende vertrauen darauf, dass ein Kurs auf StudyCat von ihren Lehrenden kommt, deshalb prüft ein Admin jede lehrende Person von Hand, bevor ein Kurs Studierende erreicht.
 4320	Bestätigt.
 4321	Du kannst Kurspläne veröffentlichen und Teilnehmerliste, Ankündigungen, Aufgaben, Anwesenheit und Auswertungen deiner Kurse nutzen.
-4322	, angefragt {1}. Du bekommst eine Nachricht in deinem Mathub-Posteingang. Bis dahin funktioniert alles außer dem Veröffentlichen.
+4322	, angefragt {1}. Du bekommst eine Nachricht in deinem StudyCat-Posteingang. Bis dahin funktioniert alles außer dem Veröffentlichen.
 4323	Weiterschreiben
 4324	Dr. Jane Smith
 4325	Assistant Professor, Lehrbeauftragte:r, Tutor:in …
@@ -3834,7 +3834,7 @@
 4333	Zur Bestätigung senden
 4334	Eine frühere Anfrage wurde nicht genehmigt. Falls das ein Fehler war, schick eine neue mit etwas mehr Details.
 4335	. Das sieht nach einer Studierenden-Adresse aus; Lehrende nutzen meist ihre dienstliche Adresse.
-4336	Gesendet. Die Antwort kommt in deinen Mathub-Posteingang.
+4336	Gesendet. Die Antwort kommt in deinen StudyCat-Posteingang.
 4337	teach_class_get&id=
 4338	Zurück zu deinen Kursplänen
 4339	Kursplan-Vorschau
@@ -3854,7 +3854,7 @@
 4353	Für deine Studierenden veröffentlichen
 4354	Die Änderungen veröffentlichen
 4355	Studierende, die mit dem Code beitreten,
-4356	bekommen diesen Kurs auf Mathub: den Kalender, Prüfungs-Countdowns, den Notenrechner mit deinen Gewichten, den Kursplan und ein Kursforum.
+4356	bekommen diesen Kurs auf StudyCat: den Kalender, Prüfungs-Countdowns, den Notenrechner mit deinen Gewichten, den Kursplan und ein Kursforum.
 4357	Alle im Kurs bekommen sofort den aktualisierten Kursplan und Kalender.
 4358	Zwischenprüfung 2 auf 12. Nov. verschoben
 4359	Sag den Studierenden, was sich geändert hat (optional)
@@ -3887,7 +3887,7 @@
 4387	Vor dem Veröffentlichen
 4388	Kurscode
 4389	Beitrittslink kopieren
-4390	Studierende öffnen mathub.space, wählen
+4390	Studierende öffnen studycat.org, wählen
 4392	und geben den Code ein oder öffnen den Link. {1}
 4393	Öffentliche Kursplan-Seite
 4394	Als Studierende:r ansehen
@@ -4013,11 +4013,11 @@
 4553	Neuer Code
 4554	{1} Ein neuer Code macht den alten ungültig; niemand wird entfernt.
 4555	Lehrteam
-4556	Du siehst Name, E-Mail, Aufgabenergebnisse und Anwesenheit jeder studierenden Person nur für diesen Kurs. Der Rest ihrer Aktivität auf Mathub bleibt privat. Offizielle Noten bleiben in Canvas.
+4556	Du siehst Name, E-Mail, Aufgabenergebnisse und Anwesenheit jeder studierenden Person nur für diesen Kurs. Der Rest ihrer Aktivität auf StudyCat bleibt privat. Offizielle Noten bleiben in Canvas.
 4557	Wer beitritt, hat den Kurs sofort auf der Startseite.
 4558	Studierende können jetzt beitreten; der Kurs erscheint für sie, sobald du veröffentlichst.
 4559	E-Mail einer mitlehrenden Person oder eines TA
-4560	Mitlehrende und TAs können den Kursplan bearbeiten, posten, Aufgaben stellen und Ergebnisse sehen. Sie brauchen ein Mathub-Konto.
+4560	Mitlehrende und TAs können den Kursplan bearbeiten, posten, Aufgaben stellen und Ergebnisse sehen. Sie brauchen ein StudyCat-Konto.
 4561	CSV herunterladen
 4562	Durchschnitt
 4563	Noch ist niemand beigetreten. Teil den Code im Kurs oder in Canvas.
@@ -4026,7 +4026,7 @@
 4566	Erledigte Aufgaben
 4567	Ø %
 4568	Zum Lehrteam hinzugefügt.
-4569	Beiträge im Kursbereich. Alle Studierenden bekommen sie in ihren Mathub-Posteingang und aufs Handy, wenn sie Benachrichtigungen aktiviert haben.
+4569	Beiträge im Kursbereich. Alle Studierenden bekommen sie in ihren StudyCat-Posteingang und aufs Handy, wenn sie Benachrichtigungen aktiviert haben.
 4570	teach_hub&id=
 4571	Sprechstunden diese Woche verschoben
 4572	Details, Links …
@@ -4064,7 +4064,7 @@
 4608	Frühere Termine
 4609	Die Anwesenheiten jeder Person stehen auf der Seite Studierende.
 4610	Anwesenheit erfassen
-4611	Zeig das auf dem Bildschirm. Studierende öffnen den Kurs auf Mathub und geben es ein.
+4611	Zeig das auf dem Bildschirm. Studierende öffnen den Kurs auf StudyCat und geben es ein.
 4612	übrig ·
 4613	von {1} eingecheckt
 4614	Auf dem Beamer zeigen
@@ -4106,7 +4106,7 @@
 4650	Die Kurswerkzeuge werden aktiv, sobald dein Lehrenden-Status bestätigt ist: Ein Admin prüft, ob du an der Montana State lehrst, meist innerhalb eines Tages.
 4651	Die Kurswerkzeuge werden aktiv, sobald der Lehrenden-Status der Kursverantwortlichen bestätigt ist.
 4652	Check-in-Code
-4653	Öffne den Kurs auf Mathub und gib diesen Code ein ·
+4653	Öffne den Kurs auf StudyCat und gib diesen Code ein ·
 4654	Kursbereich
 4655	Deine Kurse mit Lehrenden
 4656	Melde dich an, um deine Kurse zu sehen
@@ -4120,7 +4120,7 @@
 4664	teach_join_info&code=
 4665	Unterrichtet von
 4666	Was deine Lehrperson sieht:
-4667	deinen Namen und deine E-Mail, deine Ergebnisse bei den Übungsaufgaben dieses Kurses und deine Check-ins. Nichts anderes von dem, was du auf Mathub machst, wird geteilt, und du kannst den Kurs jederzeit verlassen.
+4667	deinen Namen und deine E-Mail, deine Ergebnisse bei den Übungsaufgaben dieses Kurses und deine Check-ins. Nichts anderes von dem, was du auf StudyCat machst, wird geteilt, und du kannst den Kurs jederzeit verlassen.
 4668	· {1} {1|Person|Personen}{2|} beigetreten
 4669	Du unterrichtest diesen Kurs
 4670	Dieser Kurs ist noch nicht für Studierende geöffnet. Frag deine Lehrperson.
@@ -4144,7 +4144,7 @@
 4688	überfällig
 4689	Gerade keine Aufgaben.
 4690	Noch nichts.
-4691	Diesen Kurs in Mathub für Lehrende verwalten
+4691	Diesen Kurs in StudyCat für Lehrende verwalten
 4692	Deine Lehrperson sieht deine Ergebnisse bei diesen Aufgaben und deine Check-ins, sonst nichts.
 4693	Diesen Kurs verlassen
 4694	Eingecheckt.
@@ -4157,14 +4157,14 @@
 4701	Dein Ergebnis wurde nicht gesendet:
 4702	Diesem Kurs beitreten
 4703	Die Lehrperson hat diesen Kursplan noch nicht veröffentlicht.
-4704	{1} {2} · Kursplan · Mathub
+4704	{1} {2} · Kursplan · StudyCat
 4705	Hast du einen Kurscode? Tritt deinem Kurs bei
-4706	· {1}, wie deine Studierenden es sehen. Zurück zu Mathub für Lehrende
+4706	· {1}, wie deine Studierenden es sehen. Zurück zu StudyCat für Lehrende
 4707	· Ankündigungen, Aufgaben und Check-in von deiner Lehrperson
 4708	{1} · unterrichtet {2}
 4709	Bestätigen
 4710	Ablehnen
-4711	Bestätige nur Personen, bei denen du prüfen kannst, dass sie an der Montana State lehren (eine Lehrendenseite, eine Institutsliste oder eine Antwort von ihrer montana.edu-Adresse). Alle Angemeldeten können in Mathub für Lehrende Kurspläne schreiben; bestätigte Lehrende können sie außerdem für beitretende Studierende veröffentlichen, in diesen Kursen posten, Übungen stellen und Anwesenheit erfassen. Nichts seitenweit.
+4711	Bestätige nur Personen, bei denen du prüfen kannst, dass sie an der Montana State lehren (eine Lehrendenseite, eine Institutsliste oder eine Antwort von ihrer montana.edu-Adresse). Alle Angemeldeten können in StudyCat für Lehrende Kurspläne schreiben; bestätigte Lehrende können sie außerdem für beitretende Studierende veröffentlichen, in diesen Kursen posten, Übungen stellen und Anwesenheit erfassen. Nichts seitenweit.
 4712	Warten auf Bestätigung
 4713	Bestätigte Lehrende
 4714	Keine offenen Anfragen.
@@ -4195,7 +4195,7 @@
 4750	That file is too large. Keep it under
 4751	Diese Einheit steht nicht in der Gliederung.
 4752	Nichts zu vergessen.
-4753	Mit Bo sprechen ist Teil von Mathub Max.
+4753	Mit Bo sprechen ist Teil von StudyCat Max.
 4754	You have used this month's
 4755	Frag Bo zuerst etwas.
 4756	Bos natürliche Stimme ist nicht eingeschaltet, deshalb wird die Stimme deines Geräts genutzt.
@@ -4241,7 +4241,7 @@
 4798	Sag kurz, was das Problem ist.
 4799	Danke. Ein Moderator schaut es sich an.
 4800	Das ist dein eigener Beitrag.
-4801	Beiträge von Mathub selbst können nicht blockiert werden. Melde sie stattdessen, wenn etwas nicht stimmt.
+4801	Beiträge von StudyCat selbst können nicht blockiert werden. Melde sie stattdessen, wenn etwas nicht stimmt.
 4802	Blockiert. Du siehst ihre Beiträge, Kommentare und Benachrichtigungen nicht mehr, und die Moderation wurde informiert.
 4803	Anpinnen und sperren kannst du Beiträge nur in den Foren der Kurse, die du unterrichtest.
 4804	Wer soll gesperrt werden?
@@ -4270,7 +4270,7 @@
 4827	Probeklausuren kannst du nur in Kursen, die du unterrichtest, als offiziell markieren.
 4847	Teilen-Link konnte nicht erstellt werden. Versuch es noch einmal.
 4848	Dieser Kurs ist nicht in deinem Konto.
-4849	Das ist kein Mathub-Kurs.
+4849	Das ist kein StudyCat-Kurs.
 4850	Der Kurs braucht einen Kurscode und einen Namen.
 4851	Dieser Kurs ist zu groß zum Speichern (Grenze 3 MB).
 4852	Your account already has
@@ -4283,7 +4283,7 @@
 4859	Wähl den letzten Tag als Datum.
 4860	Der letzte Tag muss heute oder später sein.
 4861	Wähl einen letzten Tag innerhalb von fünf Jahren oder kein Enddatum.
-4862	Dieser Kurs ist nicht auf Mathub.
+4862	Dieser Kurs ist nicht auf StudyCat.
 4863	Tritt diesem Kurs mit dem Code deiner Lehrperson bei, um ihn zu öffnen.
 4864	Wähl eine Kursdatei.
 4865	Class packs can be up to
@@ -4307,13 +4307,13 @@
 4884	An dieser Anfrage wird schon gearbeitet, daher kann sie nicht mehr zurückgezogen werden.
 4885	Unbekannter Kurscode.
 4886	Unbekannter Status.
-4887	Gib die Kurs-ID auf Mathub an (zum Beispiel chmy), damit Studierende ihn öffnen können.
+4887	Gib die Kurs-ID auf StudyCat an (zum Beispiel chmy), damit Studierende ihn öffnen können.
 4888	Keine Anfragen für diesen Kurs.
 4889	Kein eingefügter Text.
 4890	Keine Datei zu dieser Anfrage.
 4891	The settings could not be saved: the data folder is not writable.
 4892	The settings could not be saved.
-4893	That is not your password. Saving keys and settings needs your Mathub password.
+4893	That is not your password. Saving keys and settings needs your StudyCat password.
 4894	Unknown setting:
 4895	Keep your own address in Administrators, or you would lose this page.
 4896	Sending failed:
@@ -4363,11 +4363,11 @@
 4940	Tritt diesem Kurs zuerst mit seinem Code bei.
 4941	Nur die Kursverantwortlichen können Mitlehrende und TAs hinzufügen.
 4942	Gib ihre E-Mail-Adresse ein.
-4943	Diese Person braucht zuerst ein Mathub-Konto: Bitte sie, sich mit ihrer montana.edu-Adresse zu registrieren.
+4943	Diese Person braucht zuerst ein StudyCat-Konto: Bitte sie, sich mit ihrer montana.edu-Adresse zu registrieren.
 4944	Das ist die kursverantwortliche Person.
 4945	Gib der Ankündigung einen Titel.
 4946	Gib der Aufgabe einen Titel.
-4947	Wähl den Mathub-Kurs, dessen Fragen genutzt werden sollen.
+4947	Wähl den StudyCat-Kurs, dessen Fragen genutzt werden sollen.
 4948	Der Abgabetermin muss ein echtes Datum sein.
 4949	Aufgabe nicht gefunden.
 4950	Nur Studierende dieses Kurses können abgeben.
@@ -4465,7 +4465,7 @@
 5264	a.nav-item, a.sb-day
 5282	@none
 5307	VERSION:2.0
-5308	PRODID:-//Mathub//Timetable//EN
+5308	PRODID:-//StudyCat//Timetable//EN
 5340	@focus
 5466	Jedes WebWork pünktlich abgeben · Zweimal in die Sprechstunde gehen · 85 % in Prüfung 2 holen
 5546	Boeing
@@ -4506,7 +4506,7 @@
 6111	. That was a slip. Correct yourself out loud in one short sentence ("wait, my bad: …"), then carry on. Do not mention this note.
 6116	{1} Fix it quietly and call the tool once more. Do not mention this to the student.
 6117	{1} Carry on in words. Do not mention this to the student.
-6124	For Mathub’s team. A class Bo writes here goes on Mathub for everyone. Students ask for classes on Request a class, and you build them from
+6124	For StudyCat’s team. A class Bo writes here goes on StudyCat for everyone. Students ask for classes on Request a class, and you build them from
 6207	Diese Anfrage gibt es nicht mehr.
 6208	Bo konnte diese Word-Datei nicht lesen. Lad sie herunter, speicher sie als PDF und erstell den Kurs auf der Seite Erstellen.
 6210	Kein Mitglied mit dieser E-Mail.
@@ -4580,7 +4580,7 @@
 6280	Werden nach den monatlichen genutzt. Sie verfallen nie.
 6281	Admins zahlen nie
 6282	Credits übrig
-6283	Credits kaufst du auf der Mathub-Website, mit demselben Konto.
+6283	Credits kaufst du auf der StudyCat-Website, mit demselben Konto.
 6284	{1} Credits kaufen · {2}
 6285	Bezahlung per Karte, auf einer Seite, die sich in einem neuen Tab öffnet.
 6286	Der Kauf von Credits startet bald. Fragen?
@@ -4597,7 +4597,7 @@
 6297	Alles, was du genutzt hast
 6298	Deine Credits, wofür du sie genutzt hast, und mehr kaufen.
 6299	Melde dich an, um deine Credits zu sehen
-6300	Credits gehören zu deinem Mathub-Konto: einige jeden Monat, mehr, wenn du welche kaufst.
+6300	Credits gehören zu deinem StudyCat-Konto: einige jeden Monat, mehr, wenn du welche kaufst.
 6301	credits_status&refresh=1
 6302	{1} Credits hinzugefügt. Danke!
 6303	{1} im Monat · das stärkere Anrufmodell
@@ -4636,7 +4636,7 @@
 6336	reicht nicht für einen Anruf
 6337	eine Minute
 6338	Bei einem Anruf gehen das, was du sagst, deine Tafel und Bos Antworten an OpenAI, damit Bo dich hören und antworten kann. Nichts wird zum Trainieren ihrer Modelle verwendet.
-6339	Anrufe mit Bo gibt es auf der Mathub-Website. Öffne mathub.space in einem Browser.
+6339	Anrufe mit Bo gibt es auf der StudyCat-Website. Öffne studycat.org in einem Browser.
 6340	Sprecht es laut durch und schreibt zusammen an die Tafel.
 6341	a plane
 6342	Groß ansehen
@@ -4656,12 +4656,12 @@
 6356	Das Datum und wo du im Semester stehst
 6357	Das heutige Datum und eine Live-Uhr: Tipp auf die Zeit für Zifferblätter, die Zeit zu Hause und wie weit Semester, Monat und Woche sind.
 6358	Neu öffnet ein Feld für alles, was du hinzufügen willst: eine Aufgabe, eine Abgabe, eine Prüfung, einen Termin, ein To-do oder eine Kurszeit. Alt+N funktioniert überall.
-6359	Mathub Pro ist aktiv: 1.000 Credits im Monat für Bo.
+6359	StudyCat Pro ist aktiv: 1.000 Credits im Monat für Bo.
 6360	gibt 2.000 und sein stärkeres Sprachmodell bei Anrufen.
 6361	) gibt dir 1.000 Credits im Monat für Bo, und
 6362	2.000 mit seinem stärkeren Sprachmodell bei Anrufen.
-6363	Kostenlos: 100 Credits im Monat für Bo. Mathub Pro ({1} im Monat) gibt 1.000; Mathub Max ({2} im Monat) 2.000, mit seinem stärkeren Sprachmodell bei Anrufen.
-6364	Alles, was in Mathub steckt, ist kostenlos, und du bekommst 100 Credits im Monat für Bo: Frag ihn alles, ruf ihn an, lass ihn zeichnen.
+6363	Kostenlos: 100 Credits im Monat für Bo. StudyCat Pro ({1} im Monat) gibt 1.000; StudyCat Max ({2} im Monat) 2.000, mit seinem stärkeren Sprachmodell bei Anrufen.
+6364	Alles, was in StudyCat steckt, ist kostenlos, und du bekommst 100 Credits im Monat für Bo: Frag ihn alles, ruf ihn an, lass ihn zeichnen.
 6365	gibt dir 1.000 Credits im Monat, und
 6366	Hi {1}! Ich bin Bo. Ich kenne {2} aus dem Kursplan und weiß, wie dein Lernen läuft.
 6367	Hi! Ich bin Bo. Ich kenne {1} aus dem Kursplan und weiß, wie dein Lernen läuft.
@@ -4676,7 +4676,7 @@
 6376	Diesen Kommentar endgültig löschen? Das lässt sich nicht rückgängig machen.
 2247	{1} · {2} pts
 2286	+{1} XP
-2884	Mathub · {1}
+2884	StudyCat · {1}
 3037	Safari
 4739	Ctrl K
 4964	Bo · {1}
@@ -4882,13 +4882,13 @@
 2902	· noch {1}
 2903	· alles erledigt
 2917	Tag für Tag
-3029	Mathub installieren
-3030	Leg Mathub auf deinen Startbildschirm
+3029	StudyCat installieren
+3030	Leg StudyCat auf deinen Startbildschirm
 3031	Öffnet im Vollbild, lädt schneller, funktioniert offline.
 3032	Tipp auf Teilen und dann auf „Zum Home-Bildschirm“.
 3033	Installieren
 3034	Wie
-3035	Mathub zum Startbildschirm hinzufügen
+3035	StudyCat zum Startbildschirm hinzufügen
 3036	Öffne diese Seite in
 3038	(andere Browser auf dem iPhone können nicht installieren).
 3039	Tipp auf das
@@ -4897,9 +4897,9 @@
 3042	Zum Home-Bildschirm
 3043	, dann auf
 3044	Hinzufügen
-3045	Mathub öffnet sich dann im Vollbild wie eine App, bleibt angemeldet und kann dir Erinnerungen schicken, sobald du sie in den Einstellungen einschaltest.
+3045	StudyCat öffnet sich dann im Vollbild wie eine App, bleibt angemeldet und kann dir Erinnerungen schicken, sobald du sie in den Einstellungen einschaltest.
 3046	Öffne das Browsermenü und wähl „App installieren“ oder „Zum Startbildschirm hinzufügen“.
-3047	Mathub ist installiert. Du findest es bei deinen anderen Apps.
+3047	StudyCat ist installiert. Du findest es bei deinen anderen Apps.
 3069	Weiter: {1}
 3264	Keine anstehende Prüfung.
 3265	Keine Übungsthemen für diesen Kurs.
@@ -5011,16 +5011,16 @@
 4591	Ergebnisse
 4602	Minuten
 4603	Wann
-4723	Mathub wurde aktualisiert. Lade neu, um die neueste Version zu bekommen.
+4723	StudyCat wurde aktualisiert. Lade neu, um die neueste Version zu bekommen.
 4724	Navigation
 4725	Start / Pause
 4726	Fokus / Pause wechseln
 4727	Zum Inhalt springen
-4728	Mathub: kostenloser Lernort für Kurse der Montana State
+4728	StudyCat: kostenloser Lernort für Kurse der Montana State
 4730	Alle Lernleitfäden
 4740	Nutzungsbedingungen und Datenschutz
-4741	Mathub · Montana State · Herbst 2026
-4742	Mathub · Kostenloser Lernort für Kurse der Montana State
+4741	StudyCat · Montana State · Herbst 2026
+4742	StudyCat · Kostenloser Lernort für Kurse der Montana State
 4828	Diese Adresse hat schon ein Konto. Melde dich stattdessen an.
 4829	Für diese Adresse ist keine Registrierung offen. Registrier dich zuerst.
 4830	Diese Adresse ist schon bestätigt. Melde dich stattdessen an.
@@ -5047,7 +5047,7 @@
 4960	Import fehlgeschlagen: {1}
 4961	· Abschn. {1}
 4962	Der Kontoserver hat eine unerwartete Antwort geschickt ({1}).
-4963	Gespeichert. Mathub zeigt jetzt {1}.
+4963	Gespeichert. StudyCat zeigt jetzt {1}.
 4970	{1} Bos Stimme wird von OpenAI aus seiner geschriebenen Antwort erzeugt.
 4973	Bos Kurs hat die Prüfungen nicht bestanden: {1} Versuch es noch einmal oder nimm „Kürzerer Kurs“.
 4974	{1} Versuch es noch einmal oder nimm „Kürzerer Kurs“.
@@ -5121,7 +5121,7 @@
 5090	{1}, welcher Kurs macht dir {2} zu schaffen?
 5091	Dieser Browser hat keinen Platz mehr für deinen Planer. Melde dich an, um ihn in deinem Konto zu behalten.
 5092	Gelöscht
-5093	Mathub-Planer
+5093	StudyCat-Planer
 5094	Keine Planerdatei
 5095	Dein Konto ist nicht erreichbar.
 5096	Sonntag
@@ -5290,7 +5290,7 @@
 5312	Aufs Handy holen
 5313	Öffne die Datei, um deinen Stundenplan in deinen Kalender zu übernehmen
 5314	Bau deine Woche
-5315	Mathub kann aus den Kursplänen lesen, wann deine Kurse stattfinden. Dann füg Labore, Arbeitsschichten und Lernblöcke hinzu und sieh deine ganze Woche auf einen Blick.
+5315	StudyCat kann aus den Kursplänen lesen, wann deine Kurse stattfinden. Dann füg Labore, Arbeitsschichten und Lernblöcke hinzu und sieh deine ganze Woche auf einen Blick.
 5316	Meine Kurse übernehmen
 5317	Selbst etwas hinzufügen
 5318	in {1} Min.
@@ -5365,7 +5365,7 @@
 5389	Projekt gelöscht
 5390	{1} Wörter. Weiter so.
 5391	Noch keine Projekte
-5392	Eine Abschlussarbeit, Forschungsarbeit oder ein Laborbericht: Mach ein Projekt daraus und Mathub verteilt die Schritte bis zur Abgabe.
+5392	Eine Abschlussarbeit, Forschungsarbeit oder ein Laborbericht: Mach ein Projekt daraus und StudyCat verteilt die Schritte bis zur Abgabe.
 5393	heute fällig
 5394	noch {1} Tage
 5395	{1} von {2} Schritten
@@ -5463,7 +5463,7 @@
 5488	Was würde morgen großartig machen?
 5489	Was hat dir heute Energie geraubt?
 5490	Worauf bist du diese Woche stolz?
-5491	Eine Seite pro Tag: wie es lief und drei gute Dinge. In deinem Konto gespeichert; niemand sonst auf Mathub sieht es.
+5491	Eine Seite pro Tag: wie es lief und drei gute Dinge. In deinem Konto gespeichert; niemand sonst auf StudyCat sieht es.
 5492	Die Seite von heute
 5493	Wochenrückblick
 5494	Alle Seiten
@@ -5598,37 +5598,37 @@
 5626	Prüfungen übrig
 5627	{1} von {2} Aufgaben erledigt
 5628	Seitenleiste ausblenden
-5629	Alles auf Mathub
+5629	Alles auf StudyCat
 5630	Zu oft gespeichert. Versuch es in ein paar Minuten noch einmal.
 5631	Planerdaten fehlen.
 5632	Dein Planer ist zu groß zum Speichern. Lösch alte Tagebuchseiten oder Ausgaben, um Platz zu schaffen.
-5633	Alle Kurse auf Mathub und dein Planer
+5633	Alle Kurse auf StudyCat und dein Planer
 5634	Mach aus jedem Kursplan einen Kurs für alle
 5635	Bo auf jeder Seite: Frag ihn zu dem, was du gerade ansiehst
 5636	Eigene Kurse erstellen und teilen
 5637	Bos eigene Seite, jederzeit
 5643	Eigene Kurse: solche, die deine Kommiliton:innen teilen, Kursdateien und Kurse, die du mit der KI erstellt hast, die du schon nutzt
-5651	Mathub Max ist aktiv: Bo ist auf jeder Seite, und du kannst
+5651	StudyCat Max ist aktiv: Bo ist auf jeder Seite, und du kannst
 5654	Einen Kursplan in einen Kurs zu verwandeln ist kostenlos.
-5656	Kurse, die du zu Mathub hinzugefügt hast
-5657	Gib ihm den Kursplan. In ein, zwei Minuten ist der ganze Kurs auf Mathub, für dich und alle, die ihn belegen:
+5656	Kurse, die du zu StudyCat hinzugefügt hast
+5657	Gib ihm den Kursplan. In ein, zwei Minuten ist der ganze Kurs auf StudyCat, für dich und alle, die ihn belegen:
 5658	Die Datei wird auf Schadsoftware geprüft und nie aufbewahrt.
-5659	Bo prüft, ob es der Kursplan eines echten Kurses ist und ob der Kurs noch nicht auf Mathub ist.
-5660	Der Kurs kommt für alle auf Mathub. Dein Name steht nicht drauf.
+5659	Bo prüft, ob es der Kursplan eines echten Kurses ist und ob der Kurs noch nicht auf StudyCat ist.
+5660	Der Kurs kommt für alle auf StudyCat. Dein Name steht nicht drauf.
 5661	Bo schickt deinen Kursplan an die KI von Anthropic, um ihn zu prüfen und den Kurs zu schreiben; er wird nicht zum Trainieren der KI genutzt.
-5662	Melde dich zuerst an: Bo fügt den Kurs mit deinem Mathub-Konto hinzu.
+5662	Melde dich zuerst an: Bo fügt den Kurs mit deinem StudyCat-Konto hinzu.
 5663	Dein Kursplan wird geprüft
-5664	{1} zu Mathub hinzufügen
-5665	Er kommt für alle, die {1} belegen, auf Mathub und in deine Kurse. Dein Name steht nicht drauf.
+5664	{1} zu StudyCat hinzufügen
+5665	Er kommt für alle, die {1} belegen, auf StudyCat und in deine Kurse. Dein Name steht nicht drauf.
 5666	Es wurde nichts geschrieben oder hinzugefügt.
 5667	Alle teilen sich einen Kurs pro Fach, damit Skripte, Übungen und Forum an einem Ort bleiben.
 5668	Zu deinen Kursen hinzufügen
 5669	{1} ist in deinen Kursen.
-5670	{1} ist jetzt auf Mathub, für alle, die ihn belegen.
+5670	{1} ist jetzt auf StudyCat, für alle, die ihn belegen.
 5671	{1} hinzugefügt
-5672	Von Mathub ausgeblendet
-5673	Auf Mathub für alle
-5676	Alle Kurse auf Mathub: Lektionen, Übungen, Lernkarten und Prüfungsvorbereitung
+5672	Von StudyCat ausgeblendet
+5673	Auf StudyCat für alle
+5676	Alle Kurse auf StudyCat: Lektionen, Übungen, Lernkarten und Prüfungsvorbereitung
 5677	Heute, dein Planer, dein Kalender, der Fokusraum und der GPA-Rechner
 5685	Aus jedem Kursplan, für alle
 5695	Füg alles hinzu, von jeder Seite aus
@@ -5642,7 +5642,7 @@
 5704	Deine Kurse mit den Tagen bis zu jeder Prüfung, die Planerseiten, Schnell hinzufügen, der Monatskalender, die Uhr und deine Serie.
 5705	Jedes Thema, jede Formel, Lernkarte, Ressource oder Seite in allen deinen Kursen.
 5707	Bo, auf jeder Seite
-5708	Frag ihn zu dem, was du gerade ansiehst: Tipp auf eine Frage und er geht sie mit dir durch. Teil von Mathub Pro.
+5708	Frag ihn zu dem, was du gerade ansiehst: Tipp auf eine Frage und er geht sie mit dir durch. Teil von StudyCat Pro.
 5709	Hier unten
 5710	Start, Heute, der Fokusraum, das Forum und dein Konto, einen Tipp entfernt.
 5711	Mehr Platz nötig?
@@ -5651,7 +5651,7 @@
 5715	Bo konnte diesen Kursplan gerade nicht prüfen. Bitte versuch es noch einmal.
 5716	Das sieht nicht nach einem Kursplan aus
 5717	In diesem Kursplan steht etwas, das nicht für alle veröffentlicht werden kann:
-5718	Bo hat in diesem Kursplan keinen Kurscode (wie CHMY 121) gefunden. Jeder Kurs auf Mathub hat einen: Füg die Seite hinzu, auf der er steht.
+5718	Bo hat in diesem Kursplan keinen Kurscode (wie CHMY 121) gefunden. Jeder Kurs auf StudyCat hat einen: Füg die Seite hinzu, auf der er steht.
 5719	Dieser Kurs wartet nicht mehr darauf, hinzugefügt zu werden. Schreib ihn neu.
 5720	Dieser Kurs wurde nicht geprüft und kann daher nicht hinzugefügt werden. Schreib ihn neu.
 5721	Dieser Kurs ist zu groß zum Hinzufügen (Grenze 3 MB). Schreib ihn als kürzeren Kurs neu.
@@ -5773,7 +5773,7 @@
 5857	Funktionsplotter, Simulatoren, Löser, ein Einheitskreis und Notenrechner.
 5858	Diskussionen, Tageschallenges, Lernsessions und Probeklausuren.
 5859	Schau dich in Ruhe um. Registrier dich mit einer montana.edu-E-Mail, damit dein Fortschritt auf jedem Gerät bleibt.
-5860	Neuigkeiten von Mathub
+5860	Neuigkeiten von StudyCat
 5861	(ein paar Mal pro Semester: Neues, das du machen kannst, zum Beispiel Bo anrufen)
 5862	Neuigkeiten-E-Mails an
 5863	Neuigkeiten-E-Mails aus
@@ -5782,14 +5782,14 @@
 5866	Dieser Link funktioniert nicht
 5867	Einstellungen öffnen
 5868	Neuigkeiten-E-Mails abbestellen?
-5869	Das sind die wenigen E-Mails pro Semester über Neues auf Mathub, gesendet an
+5869	Das sind die wenigen E-Mails pro Semester über Neues auf StudyCat, gesendet an
 5870	. Erinnerungen und Zusammenfassungen, die du eingeschaltet hast, sind nicht betroffen.
 5871	Neuigkeiten-E-Mails abbestellen
 5872	Behalten
 5873	Erledigt. Keine Neuigkeiten-E-Mails mehr.
 5874	{1} bekommt sie nicht mehr. Doch anders überlegt?
 5875	Wieder einschalten
-5876	Zu Mathub
+5876	Zu StudyCat
 5877	Neuigkeiten-E-Mails sind wieder an
 5878	Neuigkeiten-E-Mails sind aus
 5882	Bo kostenlos anrufen
@@ -5811,7 +5811,7 @@
 5906	Noch mal ansehen
 5907	Bo · Seite 1
 5908	Bo · Seite 2
-5909	Anrufe mit Bo gibt es auf der Website. Öffne mathub.space im Browser auf dem Computer oder Handy.
+5909	Anrufe mit Bo gibt es auf der Website. Öffne studycat.org im Browser auf dem Computer oder Handy.
 5911	Hängst du fest?
 5912	Ruf Bo an.
 5913	Sprich mit ihm wie mit einem Freund. Schreib an die Tafel. Er zeigt dir, was schiefging.
@@ -5842,7 +5842,7 @@
 5953	Nothing is being sent.
 5970	Bos Charakter
 5971	Wer Bo ist, wenn er dich unterrichtet: im Chat, laut und bei Anrufen. Jeder hat seine eigene Stimme.
-5972	Lern mit mir auf Mathub: kostenlose Skripte, endlose Übungen und ein Kursforum für unsere Kurse an der Montana State.{1} {2}
+5972	Lern mit mir auf StudyCat: kostenlose Skripte, endlose Übungen und ein Kursforum für unsere Kurse an der Montana State.{1} {2}
 5978	Eine Zusammenfassung nach jedem Anruf mit Bo
 5979	(was ihr gemacht habt, der Fehler, auf den du achten solltest, und drei zum Probieren)
 5980	Ein Hinweis 3 Tage vor jeder Prüfung
@@ -5859,13 +5859,13 @@
 5993	Hat dir jemand aus deinem Kurs bei einem Anruf mit Bo einen Code gegeben?
 5994	Seinem Lernraum beitreten
 5995	Ein falscher Schritt, eine falsche Antwort, nicht das, was ich gefragt habe …
-5996	Danke. Das Mathub-Team schaut sich diese Antwort an. Was war falsch?
+5996	Danke. Das StudyCat-Team schaut sich diese Antwort an. Was war falsch?
 5997	Was falsch war
 5998	Etwas Unangemessenes? Melde es
 5999	Verstanden. Danke.
 6000	Wer Bo ist
 6001	Im Chat, laut und bei Anrufen. Jeder hat seine eigene Stimme; bei einem Anruf gilt sie ab dem nächsten.
-6003	Danke. Das Mathub-Team schaut sich diese Antwort an.
+6003	Danke. Das StudyCat-Team schaut sich diese Antwort an.
 6004	Das ist nicht durchgegangen.
 6005	Lernraum: Kommiliton:innen treten diesem Anruf bei
 6006	Lernraum
@@ -5914,7 +5914,7 @@
 6054	Ein Freund, der dir ein Jahr voraus ist. Entspannt, herzlich, ein bisschen witzig.
 6055	„Oh, knapp! Schau aber noch mal in Zeile zwei, da hat sich die Drei verdrückt.“
 6056	Dann {1}.
-6057	Mathub ist gerade nicht erreichbar. Prüf deine Verbindung.
+6057	StudyCat ist gerade nicht erreichbar. Prüf deine Verbindung.
 6058	Was im Anruf gesagt wird
 6059	Tipp eine Frage für Bo …
 6060	Lernraum mit {1}
@@ -5982,7 +5982,7 @@
 2046	Die Abzeichen konnten nicht geladen werden.
 2047	Dein Regal
 2048	Abzeichen von allen ansehen
-2049	Alle auf Mathub und die Abzeichen, die sie verdient haben. Die Namen folgen den Privatsphäre-Einstellungen jeder Person.
+2049	Alle auf StudyCat und die Abzeichen, die sie verdient haben. Die Namen folgen den Privatsphäre-Einstellungen jeder Person.
 2050	Die Seite „Leute“ gibt es für Mitglieder
 2051	Registrier dich kostenlos mit deiner montana.edu-E-Mail und sieh, wer mit dir lernt und welche Abzeichen sie verdient haben.
 2052	Die Seite „Leute“ braucht eine Verbindung zum Server.
@@ -6004,7 +6004,7 @@
 2069	Noch keine Abzeichen
 2070	Mehr anzeigen
 2071	{1} lernen{2} gerade
-2072	{1} online auf Mathub
+2072	{1} online auf StudyCat
 2073	{1} lernen gerade
 2074	{1} Leute lesen das gerade
 2075	Eine Aufgabe pro Kurs und Tag, für alle gleich. Lös sie schnell für Bonuspunkte und klettere in der Wochenrangliste nach oben.
@@ -6041,7 +6041,7 @@
 2107	Poste, wo und wann du lernst, und lass andere aus deinem Kurs dazukommen. Lernrunden verschwinden eine Stunde nach dem Ende.
 2108	z. B. WebWork 3.2 + Übung für Prüfung 2
 2109	z. B. Romney 220, Tisch am Fenster
-2110	Bring deine Formelsammlung mit. Achte auf den Mathub-Aufkleber.
+2110	Bring deine Formelsammlung mit. Achte auf den StudyCat-Aufkleber.
 2111	Lernrunde posten
 2112	Was
 2113	Wo
@@ -6322,7 +6322,7 @@
 6523	Du: anders gesehen
 6524	Wähle zwei verschiedene Versionen.
 6525	Von Version {1} zu Version {2}: {3} von {4} Absätzen neu oder geändert, {5} {5|Wort hinzugefügt|Wörter hinzugefügt} und {6} entfernt.
-6526	Überarbeitungsverlauf aus Mathub: jede mit Bo geteilte Version und was aus seinen Anmerkungen wurde.
+6526	Überarbeitungsverlauf aus StudyCat: jede mit Bo geteilte Version und was aus seinen Anmerkungen wurde.
 6527	· revision history
 6528	{1} revision history
 6529	Die Datei konnte hier nicht erstellt werden. Nutze stattdessen Drucken oder als PDF speichern.
@@ -6333,7 +6333,7 @@
 6534	Dieser Eintrag ist nicht in diesem Schreibheft.
 6535	Dieser Eintrag ist zu lang zum Speichern (etwa 7.000 Wörter). Teile ihn in zwei.
 6536	Dieser Eintrag wurde auf einem anderen Gerät geändert.
-6537	Mathub ist gerade nicht erreichbar.
+6537	StudyCat ist gerade nicht erreichbar.
 6538	Eintrag {1}: {2}
 6539	Eintrag {1}
 6540	notebook_list&class=
@@ -6403,7 +6403,7 @@
 6604	diese Arbeit
 6605	Noch keine Arbeiten.
 6606	Arbeit hinzufügen
-6607	0 für keins. Studierende schreiben jeden Eintrag auf Mathub, privat und ohne KI, und laden alle zur Abgabe herunter.
+6607	0 für keins. Studierende schreiben jeden Eintrag auf StudyCat, privat und ohne KI, und laden alle zur Abgabe herunter.
 6608	Abgabe
 6609	Diesen Entwurf ohne deinen Namen in die Muster einfließen lassen, die deine Lehrenden im Kurs sehen
 6610	(erst wenn fünf Studierende das getan haben; nie deine Worte)
@@ -6434,7 +6434,7 @@
 6635	Notes: {1}
 6636	Für die Lehrenden dieses Kurses: wie Bo hier arbeitet, die Entwürfe, die Studierende mit dir geteilt haben, Muster im Kurs und Credits für deine Studierenden.
 6637	Diese Seite ist für die Lehrenden des Kurses. Wenn du diesen Kurs unterrichtest, melde dich mit der E-Mail-Adresse aus dem Kursplan an oder füge den Kurs hinzu in
-6638	Was Lehrende auf Mathub tun können
+6638	Was Lehrende auf StudyCat tun können
 6639	Füge die Aufgabenstellung ein oder öffne die Datei, die du Studierenden gibst.
 6640	Aufgabenstellung
 6641	Bewertungsraster
@@ -6493,7 +6493,7 @@
 6694	Credits für jede Person
 6695	Credits geben
 6696	Wer?
-6697	Als Admin gibst du sie im Namen von Mathub.
+6697	Als Admin gibst du sie im Namen von StudyCat.
 6698	Sie werden von den Credits abgezogen, die du gekauft oder bekommen hast (nicht von den kostenlosen des Monats): Du hast {1}.
 6699	Die Studierenden behalten sie, und sie verfallen nie.
 6700	Bisher gegeben
@@ -6524,7 +6524,7 @@
 6725	Melde dich mit der E-Mail-Adresse aus dem Kursplan deines Kurses an.
 6726	instruct_get&class=
 6727	Für Lehrende
-6728	Mathub für Lehrende
+6728	StudyCat für Lehrende
 6729	Eine Lernseite für deinen Kurs, mit Bo, einem KI-Tutor, der unterrichtet, statt die Arbeit zu erledigen. Hier steht, was er tut, was du festlegst und was du siehst.
 6730	Was Bo tut
 6731	Er findet heraus, wo jemand steht, erklärt eine Idee nach der anderen, zeigt ein durchgerechnetes Beispiel und überlässt dann den nächsten Schritt den Studierenden.
@@ -6545,15 +6545,15 @@
 6746	Muster im Kurs: welche Ziele Bo unter den wichtigsten Überarbeitungen am häufigsten nennt. Nur von Studierenden, die ihre Entwürfe einfließen lassen, erst ab fünf, und nie ein Name, ein Zitat oder ein Entwurf.
 6747	Nie die Chats von Studierenden mit Bo, ihr Heft oder etwas, das sie nicht geteilt haben.
 6748	Credits für deine Studierenden
-6749	Bo läuft mit Credits, und jedes Konto bekommt jeden Monat einige kostenlos. Füge deinen Kurs in Mathub für Lehrende hinzu und gib den Studierenden seinen Code; dann kannst du jeder Person auf deiner Seite für Lehrende Credits geben, aus den Credits, die du gekauft hast. Sie verfallen nie.
+6749	Bo läuft mit Credits, und jedes Konto bekommt jeden Monat einige kostenlos. Füge deinen Kurs in StudyCat für Lehrende hinzu und gib den Studierenden seinen Code; dann kannst du jeder Person auf deiner Seite für Lehrende Credits geben, aus den Credits, die du gekauft hast. Sie verfallen nie.
 6750	Entwürfe, Chats und Hefte der Studierenden sind privat. Entwürfe werden an Anthropic gesendet, die Firma hinter der KI von Bo, um gelesen zu werden, und nicht zum Training verwendet. Alles wird gelöscht, wenn Studierende ihr Konto löschen. Die vollständige
 6751	Datenschutzerklärung
 6752	sagt genau, was gespeichert wird.
 6753	So fängst du an
 6754	Registriere dich mit deiner Hochschul-E-Mail.
-6755	Wenn dein Kurs auf Mathub ist und der Kursplan deine E-Mail nennt, findest du die Seite für Lehrende in seiner Seitenleiste.
-6756	Wenn nicht, füge ihn in Mathub für Lehrende hinzu: Schreib dort den Kursplan und veröffentliche ihn als Kurs.
-6757	Mathub für Lehrende öffnen
+6755	Wenn dein Kurs auf StudyCat ist und der Kursplan deine E-Mail nennt, findest du die Seite für Lehrende in seiner Seitenleiste.
+6756	Wenn nicht, füge ihn in StudyCat für Lehrende hinzu: Schreib dort den Kursplan und veröffentliche ihn als Kurs.
+6757	StudyCat für Lehrende öffnen
 6758	Schreib uns
 6759	chip bad
 6760	chip good
@@ -6679,10 +6679,10 @@
 6880	Das Teilen von Entwürfen mit Lehrenden ist für diesen Kurs nicht eingeschaltet.
 6881	Hier können nur Beiträge und Kommentare gelöscht werden.
 6882	Nur die Lehrenden dieses Kurses können das sehen.
-6883	Dieser Kurs ist nicht auf Mathub.
+6883	Dieser Kurs ist nicht auf StudyCat.
 6884	Dieser Entwurf ist nicht mit dir geteilt.
 6885	Gib jeder Person zwischen 1 und
-6886	Deinem Kurs in Mathub für Lehrende ist für dieses Fach noch niemand beigetreten.
+6886	Deinem Kurs in StudyCat für Lehrende ist für dieses Fach noch niemand beigetreten.
 6887	Die Kursliste hat sich geändert. Prüf die Zahl der Studierenden und versuch es noch einmal.
 6888	Das kostet
 6889	Mach zuerst ein Foto deiner Lösung.
@@ -6855,7 +6855,7 @@
 7055	Geöffnet. {1} Zellen nach Zeile 10.000 oder Spalte ZZ wurden weggelassen.
 7056	Diese Datei konnte nicht angezeigt werden. Vielleicht ist sie beschädigt.
 7057	Deine Änderungen von vor dem Verlassen sind wieder da
-7058	{1} · Mathub
+7058	{1} · StudyCat
 7059	Nicht gespeichert: Diese Datei ist größer als 8 MB, mehr geht nicht. Verkleinere die Bilder oder nimm einige heraus.
 7060	Auf diesem Gerät sind frühere Änderungen ({1}), die nie gespeichert wurden, und die Datei hat sich seitdem geändert.
 7061	Diese Datei wurde auf einem anderen Gerät geändert, seit du sie geöffnet hast.
@@ -7154,7 +7154,7 @@
 7354	classmates members
 7355	customize features modules sidebar menu order hide pin look theme colour color accent text size font spacing corners start page
 7356	So setzt sich die Note zusammen
-7357	Mathub anpassen
+7357	StudyCat anpassen
 7358	Teile deinen Link. Wenn sich jemand aus deinem Kurs darüber anmeldet, bekommt ihr beide {1} Credits für Bo.
 7359	Melde dich mit deiner montana.edu-E-Mail an und lernt zusammen im Kursforum.
 7360	Funktionen ein- oder ausschalten, Menüs ordnen, das Aussehen ändern
@@ -7165,7 +7165,7 @@
 7365	Die Antwort hatte keine Bewertungskategorien, deshalb zeigt die Seite zum Kursplan eine Gesamtnote.
 7366	Das Mitglied blockieren, das diesen Beitrag geschrieben hat? Du siehst dann seine Beiträge, Kommentare und Benachrichtigungen nicht mehr. Es wird nicht benachrichtigt. Der Beitrag geht außerdem zur Prüfung an die Moderatoren. Du kannst die Blockierung jederzeit in den Einstellungen aufheben.
 7367	Das Mitglied blockieren, das diesen Kommentar geschrieben hat? Du siehst dann seine Beiträge, Kommentare und Benachrichtigungen nicht mehr. Es wird nicht benachrichtigt. Der Kommentar geht außerdem zur Prüfung an die Moderatoren. Du kannst die Blockierung jederzeit in den Einstellungen aufheben.
-7368	Alle auf Mathub, und wie sie in den Kursforen geholfen haben. Die Namen folgen der Datenschutzeinstellung jeder Person.
+7368	Alle auf StudyCat, und wie sie in den Kursforen geholfen haben. Die Namen folgen der Datenschutzeinstellung jeder Person.
 7369	Melde dich kostenlos mit deiner montana.edu-E-Mail an, um zu sehen, wer mit dir lernt.
 7370	Am hilfreichsten
 7371	{1} {1|angenommene Antwort|angenommene Antworten}{2|}
@@ -7199,7 +7199,7 @@
 7399	Noch keine Fehler gespeichert. Beantworte eine Frage beim Üben, in einer Lektion oder in der täglichen Challenge falsch, und sie landet hier mit ihrer Erklärung.
 7400	{1} % bei {2} Fragen. Zeit für schwierigere Themen oder eine Probeklausur.
 7401	Mitglieder bekommen ganze Lektionen mit 10 Fragen, XP, die überall synchron sind, Quests und Ligen.
-7402	bekommen diesen Kurs auf Mathub: den Kalender, Countdowns bis zu den Prüfungen, deine Notengewichtung, den Kursplan und ein Kursforum.
+7402	bekommen diesen Kurs auf StudyCat: den Kalender, Countdowns bis zu den Prüfungen, deine Notengewichtung, den Kursplan und ein Kursforum.
 7403	Woraus sich die Kursnote zusammensetzt. Studierende sehen genau diese Gewichtung auf der Seite zum Kursplan.
 7404	Ausgeschaltet
 7405	In jedem Kurs
@@ -7246,13 +7246,13 @@
 7446	Das Forum jedes Kurses für Fragen und Antworten.
 7447	Eine Aufgabe am Tag, für alle gleich.
 7448	Wöchentliche XP-Ranglisten.
-7449	Alle auf Mathub, und wer in den Foren hilft.
+7449	Alle auf StudyCat, und wer in den Foren hilft.
 7450	Deine Lernstatistik als Rollenspielfigur.
 7451	Wer gerade lernt
-7452	Die Live-Zahl der Kommilitonen auf Mathub.
+7452	Die Live-Zahl der Kommilitonen auf StudyCat.
 7453	Nachhilfe, Hilfe und Links für jeden Kurs.
 7454	Kurze Ratgeber zu Lernen, Prüfungen und Konzentration.
-7455	Die Änderungen an Mathub.
+7455	Die Änderungen an StudyCat.
 7456	Feiern
 7457	Konfetti für ein erreichtes Ziel, ein Level-up oder einen perfekten Prüfungssatz.
 7458	Alles
@@ -7261,7 +7261,7 @@
 7461	Deine Kurse, Bo und der Planer; keine Seiten zu Leben, Zukunft oder Community.
 7462	Das Wichtigste
 7463	Lektionen, Übungen, Lernkarten, die Kalender, Aufgaben und Bo.
-7464	Mathub-Blau
+7464	StudyCat-Blau
 7465	Indigo
 7466	Violett
 7467	Pink
@@ -7322,7 +7322,7 @@
 7522	Reduziert schaltet Animationen und Übergänge aus.
 7523	Auf dem Bildschirm
 7524	Aussehen zurücksetzen
-7525	Wenn du Mathub öffnest
+7525	Wenn du StudyCat öffnest
 7526	Öffnen auf
 7527	Deine Einrichtung sichern oder mitnehmen
 7528	Deine Funktionen, Menüs und dein Aussehen in einer Datei, zum Aufbewahren oder für ein anderes Konto.
@@ -7330,9 +7330,9 @@
 7530	Eine Einrichtung laden
 7531	Alle Funktionen an, die Menüs und das Aussehen wie anfangs.
 7532	Alles zurücksetzen
-7533	Mach Mathub zu deinem: Schalte Funktionen ein oder aus, ordne die Seitenleiste und das Menü jedes Kurses, und ändere das Aussehen. Es wird mit deinem Konto gespeichert.
-7534	Mathub öffnet sich nächstes Mal dort
-7535	Diese Datei ist keine Mathub-Einrichtung.
+7533	Mach StudyCat zu deinem: Schalte Funktionen ein oder aus, ordne die Seitenleiste und das Menü jedes Kurses, und ändere das Aussehen. Es wird mit deinem Konto gespeichert.
+7534	StudyCat öffnet sich nächstes Mal dort
+7535	Diese Datei ist keine StudyCat-Einrichtung.
 7536	Einrichtung geladen
 7537	{1}: erledigt
 7538	Alle Funktionen wieder einschalten und Menüs und Aussehen wie anfangs zurücksetzen?
@@ -7340,3 +7340,285 @@
 7540	{1} ist ausgeschaltet
 7541	{1} ist wieder eingeschaltet
 7542	{1} von {2} an
+4767	Füge zuerst deinen Kursplan ein oder hänge ihn an.
+7543	lessons/
+7544	Füge einen Kurs aus deinem Kursplan oder von Grund auf hinzu
+7545	{1} erstellen
+7546	Noch nicht in deinen Kursen. Erstelle ihn aus deinem Kursplan.
+7547	Deine Kurse stehen unten, in Dein Start. Tippe auf einen, um ihn zu öffnen.
+7548	Die Idee
+7549	Die vollständige Lektion ergänzt ein Bild, die Kernpunkte, gelöste Beispiele, typische Fehler und einen Selbsttest.
+7550	Bo bitten, es anders zu erklären
+7551	Erkläre {1} auf andere Weise
+7552	In dieser Lektion
+7553	Kernpunkte
+7554	Gelöste Beispiele
+7555	Teste dich selbst
+7556	Lösung zeigen
+7557	Beispiel {1}
+7558	Antworte im Kopf oder auf Papier, dann schau nach.
+7559	Lösung ausblenden
+7560	Antwort ausblenden
+7561	Die Notengewichte unten sind die, die du festgelegt hast.
+7562	{1} {2} · {3}{4}. Das Wichtigste aus dem Kursplan, an einem Ort.
+7563	Diesen Kurs bearbeiten
+7564	Mach ihn zu deinem
+7565	Kurs-Baukasten
+7566	Nur diese Kurse erscheinen auf der Startseite, in der Kursauswahl, in Erinnerungen und in der Wochenübersicht. Mach jeden davon zu deinem, oder füge im Kurs-Baukasten einen aus deinem Kursplan hinzu.
+7567	Bo liest mehr Kurspläne und schreibt mehr Lektionen für deine eigenen Kurse
+7568	Du bekommst deine eigene Kopie, kostenlos: Ändere sie im Kurs-Baukasten, und dein Fortschritt bleibt deiner.
+7569	Nicht dabei? Erstelle ihn aus deinem Kursplan
+7570	Kurs-Baukasten öffnen
+7571	Eigene Kurse, aus deinem Kursplan oder von Grund auf erstellt und jederzeit änderbar
+7572	Aus deinem Kursplan oder von Grund auf
+7573	Dein eigener Kurs, gespeichert {1}.
+7574	Im Kurs-Baukasten bearbeiten
+7575	Einheit 1
+7576	Deine Kurse, so wie deine Sektion sie führt.
+7577	Dieser Kurs ist nicht hier.
+7578	Er wurde vielleicht gelöscht.
+7579	Zurück zum Kurs-Baukasten
+7580	Dein eigener Kurs
+7581	Zu deinem gemacht
+7582	Nicht in deiner Liste
+7583	Wie viele Themen?
+7584	Füge hier die Antwort der KI ein
+7585	Der schnellste Weg
+7586	Starte mit deinem Kursplan
+7587	Zieh das PDF, ein Foto oder den Text hierher. Bo liest Zeitplan, Prüfungen, Bewertung und Themen und füllt den Kurs-Baukasten aus. Du prüfst jedes Detail, bevor gespeichert wird.
+7588	Oder füge den Text ein
+7589	Alle Themen
+7590	Nur die Hauptthemen
+7591	Meinen Kursplan lesen
+7592	{1} Die Datei wird auf Schadsoftware geprüft und nie gespeichert.
+7593	Leer beginnen{1}
+7594	Gib Code, Termine, Prüfungen, Bewertung und Themen selbst ein.
+7595	Kurse der Montana State
+7596	Wähle aus Mathubs Kursen, mit fertigen Lektionen und Übungen, und mach dann jeden zu deinem.
+7597	Weitere Wege, einen Kurs hinzuzufügen
+7598	Der 8-stellige Code aus dem Link einer Mitschülerin oder eines Mitschülers.
+7599	Der Beispielkurs
+7600	Sieh dir einen fertigen Kurs an und ändere ihn dann nach Belieben.
+7601	Kopiere Mathubs Anleitung zusammen mit deinem Kursplan in einen beliebigen KI-Chat und füge hier die vollständige Antwort ein. So sieht StudyCat deinen Kursplan nie.
+7602	Im Baukasten öffnen
+7603	Deine Kurse, so wie deine Sektion sie führt. Starte mit deinem Kursplan, und Bo füllt Termine, Prüfungen, Bewertung und Themen aus, oder beginne leer. Ändere alles, jederzeit. Deine Kurse werden {1} gespeichert.
+7604	ist noch nicht gespeichert.
+7605	Verwerfen
+7606	Ein neuer Kurs
+7607	Einen Kursplan zu lesen kostet Credits, meist 20 bis 40.
+7608	Melde dich an, damit Bo ihn liest: Deine Kurse werden mit deinem Konto gespeichert.
+7609	Noch keine Kurse. Beginne oben einen.
+7610	Datei wird geprüft
+7611	Kurs-Baukasten wird ausgefüllt
+7612	Bo hat angehalten
+7613	Schritt {1} von {2} · etwa eine Minute
+7614	Melde dich zuerst an: Deine Kurse werden mit deinem Konto gespeichert.
+7615	Einen leeren Kurs beginnen
+7616	Füge zuerst die Antwort der KI ein.
+7617	In diesem Text ist kein Kurs. Füge die vollständige Antwort der KI ein, einschließlich des Teils, der mit { beginnt.
+7618	Die Antwort endet vor dem Schluss: Der KI ist der Platz ausgegangen. Schick ihr diese Nachricht oder bitte um „Nur die Hauptthemen“.
+7619	Die Antwort enthält einen Tippfehler und kann nicht gelesen werden{1}. Schick der KI diese Nachricht und füge ihre neue Antwort ein.
+7620	Das konnte nicht gelesen werden.
+7621	Den begonnenen Kurs verwerfen? Er wurde nicht gespeichert.
+7622	Deine Änderungen sind noch da. Speichere sie, wenn du fertig bist.
+7623	Dein Kurs wird geöffnet…
+7624	Grunddaten
+7625	Lektionen
+7626	Deine Termine
+7627	Mach {1} zu deinem
+7628	{1} bearbeiten
+7629	{1} der Montana State behält seine Lektionen, Übungen und Lernkarten. Was du hier änderst, gilt nur für dich: Es begleitet dich auf jeder Seite und jedem Gerät.
+7630	Bo hat das aus deinem Kursplan ausgefüllt. Prüfe Termine, Prüfungen und Bewertung und speichere dann.
+7631	Trag ein, was in deinem Kursplan steht. Zum Speichern brauchst du nur Code und Namen; den Rest kannst du jederzeit ergänzen.
+7632	Prüfe den Kurs, ändere, was du willst, und speichere dann.
+7633	Ändere, was du willst, und speichere dann. Es wird überall aktualisiert, wo du StudyCat nutzt.
+7634	StudyCat hat {1} {2}
+7635	, mit fertigen Lektionen und Übungen. Du kannst ihn stattdessen nutzen und zu deinem machen.
+7636	Mathubs {1} nutzen
+7637	{1} {2?Punkte:Punkt} zu prüfen
+7638	Ungespeicherte Änderungen
+7639	Alle meine Änderungen rückgängig machen
+7640	Verwerfen
+7641	Kurs speichern
+7642	Andere Farbe
+7643	Wie im Kursplan.
+7644	College Chemistry I
+7645	Kurzname
+7646	Chem I
+7647	In der Seitenleiste. Höchstens 12 Buchstaben.
+7648	Wer ihn unterrichtet
+7649	Aus dem Kursplan. Erscheint auf der Kursplan-Seite des Kurses.
+7650	Tue 2–3 pm, Gaines 110
+7651	Lehrbuch
+7652	Link zum Lehrbuch
+7653	Teilen, Kopie behalten oder löschen
+7654	Mit einem Teilen-Link kann jemand aus deinem Kurs eine eigene Kopie hinzufügen. Niemand sieht, wer ihn erstellt hat.
+7655	Teilen-Link
+7656	Kurs löschen
+7657	Datei senden
+7658	Datei herunterladen
+7659	Kein Thema
+7660	Wann er stattfindet
+7661	Hake die Tage und Zeiten an und setz dann die Vorlesungen in den Kalender. Feiertage und Prüfungstage werden übersprungen.
+7662	Vorlesungen in den Kalender setzen
+7663	Letzter Tag (mit Abschlussprüfungen)
+7664	Gaines 101
+7665	{1} {2?Vorlesungen:Vorlesung} jetzt im Kalender.
+7666	Noch keine Vorlesungen im Kalender.
+7667	Termine
+7668	Abgaben, Labore, Wiederholungen und Tage ohne Unterricht. Prüfungen haben einen eigenen Tab.
+7669	Auch die {1} Vorlesungen zeigen
+7670	Hausaufgabe 3 fällig
+7671	diesen Termin
+7672	Noch keine Termine.
+7673	Termin hinzufügen
+7674	Regeln, die sich wiederholen, wie „Hausaufgaben sind freitags um 23:59 Uhr fällig“.
+7675	Freitags um 23:59 Uhr fällig
+7676	diese Regel
+7677	Regel hinzufügen
+7678	Jede Prüfung bekommt einen Countdown, einen Lernplan und eine eigene Seite. Hake die Einheiten an, die sie abdeckt.
+7679	Prüfung 1
+7680	Anteil an der Note, in %.
+7681	Einheiten 1 und 2
+7682	Die Kategorien und ihre Gewichte, aus dem Kursplan.
+7683	Gewicht in %
+7684	Ergibt {1} %
+7685	Keine Kategorien: eine Gesamtnote
+7686	Der niedrigste Prozentwert für jeden Buchstaben.
+7687	Mit Plus und Minus
+7688	Ab %
+7689	Keine Prüfung
+7690	Einheiten und Themen
+7691	Themen sind das, was du lernst: Jedes bekommt eine Lektion, Lernkarten und Übungen. Gruppiere sie in Einheiten, meist eine Einheit pro Prüfung.
+7692	Thema hinzufügen
+7693	Titel der Einheit {1}
+7694	Prüfung am Ende dieser Einheit
+7695	Atome und Isotope
+7696	dieses Thema
+7697	Was dieses Thema abdeckt, in einem Satz (Bo schreibt daraus die Lektion)
+7698	Einheit hinzufügen
+7699	Füge zuerst die Themen hinzu (Tab Themen). Dann kann Bo für jedes eine Lektion schreiben, oder du schreibst sie selbst.
+7700	Bo schreibt eine Einheit nach der anderen: die Idee jedes Themas in einfachen Worten, gelöste Beispiele, typische Fehler und einen Selbsttest, dazu Lernkarten und Übungsfragen. Das kostet Credits, meist 20 bis 40 pro Einheit.
+7701	Jedes Thema hat eine Lektion.
+7702	{1} von {2} Themen haben eine Lektion.
+7703	Jetzt: {1} Lernkarten, {2} Übungsfragen.
+7704	Fehlende Lektionen schreiben
+7705	Alle Lektionen schreiben
+7706	Bo schreibt sie neu
+7707	Bo schreibt diese Einheit
+7708	Beispiel hinzufügen
+7709	Frage hinzufügen
+7710	Hat eine Lektion
+7711	Noch keine Lektion
+7712	Die Idee in einfachen Worten
+7713	Worum es in diesem Thema geht, so wie du es einer Freundin oder einem Freund sagen würdest
+7714	Bild entfernen
+7715	Ein Punkt pro Zeile
+7716	Einer pro Zeile. Mathe steht zwischen $-Zeichen, etwa $x^2$.
+7717	Eine Aufgabe
+7718	Ihre Lösung, Schritt für Schritt
+7719	dieses Beispiel
+7720	Ein Fehler pro Zeile
+7721	Eine kurze Frage
+7722	Ihre Antwort
+7723	diese Frage
+7724	Was für deine Sektion gilt. Lass ein Feld leer, um zu behalten, was StudyCat hat.
+7725	Mathubs Farbe
+7726	Sektionsnummer
+7727	Die Zeit deiner Vorlesung oder Prüfung
+7728	Spitzname
+7729	In der Seitenleiste und der Kursauswahl.
+7730	Tue 2–3 pm, Wilson 2-240
+7731	Mon · Wed · Fri 9:00–9:50 am
+7732	Deine eigenen Termine
+7733	Abgaben, Quizze, Labore oder freie Tage, die nur deine Sektion hat. Sie erscheinen im Kurskalender, in Heute und in deinen Erinnerungen. Die Termine des Kurses bleiben.
+7734	Quiz 2
+7735	Prüfungen in deiner Sektion
+7736	Datum, Uhrzeit und Raum deiner Sektion. Lass ein Feld leer, um Mathubs Angaben zu behalten.
+7737	StudyCat: {1}
+7738	Zeit und Raum
+7739	6:00 pm, Wilson 1-122
+7740	Dieser Kurs hat keine Prüfungen.
+7741	Dieser Kurs hat keine Bewertungskategorien.
+7742	Notengewichte in deiner Sektion
+7743	Wenn deine Lehrkraft anders gewichtet, lege deine Gewichte fest. Lass ein Feld leer, um Mathubs zu behalten.
+7744	Gewicht von {1} in %
+7745	button, a
+7746	Die Buchstabennoten durch diese ersetzen?
+7747	Diesen Kurs verwerfen? Er wurde nicht gespeichert.
+7748	Alle deine Änderungen an {1} rückgängig machen? Er kehrt zu Mathubs Terminen, Angaben und Gewichten zurück.
+7749	Thema.
+7750	„{1}“ und seine Lektion entfernen?
+7751	Ein Kurs braucht mindestens eine Einheit.
+7752	Einheit {1} mit {3?ihren:ihrem} {2} {3?Themen:Thema} entfernen?
+7753	Hake zuerst die Tage an, an denen der Kurs stattfindet.
+7754	Die {1} Vorlesungen im Kalender durch neue ersetzen?
+7755	{1} Vorlesungen stehen im Kalender.
+7756	Melde dich zuerst an: Bo schreibt Lektionen für dein Konto.
+7757	Füge der Einheit zuerst Themen hinzu.
+7758	Gib dem Kurs zuerst Code und Namen (Grunddaten).
+7759	Gib zuerst jedem Thema einen Titel (Themen).
+7760	Bo schreibt {1} neu, anstelle der jetzigen Lektionen{2}. Fortfahren?
+7761	Bo schreibt Einheit {1}…
+7762	Bo hat {1} geschrieben. Speichere den Kurs, um sie zu behalten.
+7763	die Einheit
+7764	Bo hat {1} geschrieben. Speichere, damit die Änderungen bleiben.{2?:}
+7765	{1} {2?Einheiten geschrieben:Einheit geschrieben}: Speichere, damit die Änderungen bleiben.{3?:}
+7766	Speichere zuerst deine Änderungen.
+7767	{1} löschen? Dein Fortschritt darin wird ebenfalls gelöscht.
+7768	Noch nicht gespeichert:
+7769	Dem Kurs fehlt sein Kurscode (Grunddaten).
+7770	Dem Kurs fehlt sein Name (Grunddaten).
+7771	Füge mindestens ein Thema hinzu (Themen).
+7772	Gib
+7773	ein Datum (Prüfungen), oder entferne diese Prüfung.{1?:}
+7774	jeder Prüfung
+7775	{1} ist gespeichert. Er ist jetzt bei deinen Kursen.
+7776	{1} ist gespeichert.
+7777	{1} ist wieder so, wie StudyCat ihn hat.
+7778	Gespeichert. {1} gehört jetzt dir, auf jeder Seite.
+7779	:root:root
+7780	Mach deine Kurse zu deinen
+7781	StudyCat hat die Lektionen und Übungen. Ergänze, was nur für deine Sektion gilt: deine Lehrkraft, Prüfungstermine und -zeiten, deine eigenen Abgaben und die Notengewichte.
+7782	Jederzeit: der Kurs-Baukasten, in der Seitenleiste unter Deine Kurse.
+7783	Dein Start
+7784	Widgets für deinen nächsten Schritt, was fällig ist und deine Woche. Anordnen setzt sie überallhin, sogar übereinander, und Widget hinzufügen bringt mehr: einen Timer, Aufgaben, Gewohnheiten, eine Notiz.
+7785	{1} verschieben
+7786	{1} nach vorne holen
+7787	Nach vorne holen
+7788	{1} nach hinten legen
+7789	Nach hinten legen
+7790	Wähle deine Kurse, dann erscheint hier der nächste Schritt für jeden.
+7791	{1} in {2} Tagen
+7792	Keine Prüfung in Sicht
+7793	Nichts für heute.
+7794	Mach weiter, wo du aufgehört hast
+7795	Öffne eine Lektion oder Seite, dann wartet sie hier auf dich.
+7796	Alles, woran du denken willst. Es wird beim Tippen gespeichert.
+7797	Widget hinzufügen
+7798	Anordnen
+7799	Zieh ein Widget an seinem Griff, ändere die Größe an seiner Ecke. Widgets dürfen sich überlappen: hol eins nach vorne oder leg es nach hinten.
+7800	Aufräumen
+7801	Wenn Anordnen an ist, verschieben die Pfeiltasten das Widget, und Umschalt mit den Pfeiltasten ändert seine Größe.
+7802	Dein Start ist leer
+7803	Füge die Widgets hinzu, die du willst, und setz sie, wohin du willst.
+7804	Dieses Widget konnte nicht angezeigt werden.
+7805	Widgets hinzufügen oder entfernen
+7806	Dein Start ist gespeichert
+7807	{1}: {2} Spalten breit, {3} Zeilen hoch
+7808	{1}: Spalte {2}, Zeile {3}
+7809	{1} entfernt. Füg es jederzeit wieder hinzu.
+7810	{1} ist vorne
+7811	{1} ist hinten
+7812	Widgets in einem Raster aufgeräumt
+7813	Deinen Start auf den Anfangszustand zurücksetzen?
+7814	Schick den Kurs, für den Lektionen geschrieben werden sollen.
+7815	Füge zuerst die Einheiten und Themen des Kurses hinzu.
+7816	Bo konnte diesen Kursplan gerade nicht lesen. Bitte versuch es noch einmal.
+7817	Wähle deine aus, um zu starten. StudyCat zeigt nur deine Kurse: ihre Notizen, Übungen, Termine und Bo. Ändere sie jederzeit in den Einstellungen.
+7818	Meinen Kurs speichern
+7819	Meine {1} Kurse speichern
+7820	Auf diesem Gerät gespeichert. Es kommt in dein Konto, sobald du wieder online bist.
+7821	Dein Kurs ist eingerichtet.
+7822	Deine {1} Kurse sind eingerichtet.
+7823	Wähle deine Kurse

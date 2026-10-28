@@ -5,7 +5,7 @@ primary_target: "assets/app-native.js"
 related_targets: ["assets/app.css","assets/app-boot.js"]
 ---
 
-# Mathub app shell (iOS and Android)
+# StudyCat app shell (iOS and Android)
 
 Scope: the native app's chrome and start screen (`assets/app.css`, `assets/app-native.js`, `assets/app-boot.js`, loaded only in the app). Mode: Operate. The website is untouched.
 Audience and job: an MSU student opening the app between classes to keep a streak and do the next bit of one class.

@@ -1,6 +1,6 @@
 <?php
 /* ============================================================
-   Mathub — news emails: one email the administrator writes and sends to every member (assets/admin.js, Email everyone).
+   StudyCat — news emails: one email the administrator writes and sends to every member (assets/admin.js, Email everyone).
    - Only verified members who have not turned news off get it (users.news_email, Settings → Account, or the link in the email).
    - Each email has a one-click way out: a link to #/unsubscribe (a page with one button, so mail scanners that open
      links do not unsubscribe anyone) and List-Unsubscribe headers for mail apps (a signed POST, no login needed).
@@ -19,7 +19,7 @@ function mh_news_db(): PDO {
   $db->exec('CREATE TABLE IF NOT EXISTS news_sent (news_id INTEGER NOT NULL, user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE, at INTEGER NOT NULL, ok INTEGER NOT NULL DEFAULT -1, PRIMARY KEY (news_id, user_id))');
   return $db;
 }
-function mh_news_url(): string { $cfg = mh_config(); return rtrim((string)(($cfg['site_url'] ?? '') ?: ('https://' . ($_SERVER['HTTP_HOST'] ?? 'mathub.space'))), '/'); }
+function mh_news_url(): string { $cfg = mh_config(); return rtrim((string)(($cfg['site_url'] ?? '') ?: ('https://' . ($_SERVER['HTTP_HOST'] ?? 'studycat.org'))), '/'); }
 function mh_news_token(int $uid): string { return substr(hash_hmac('sha256', 'news-unsub:' . $uid, mh_secret()), 0, 32); }
 function mh_news_credits(): int { require_once __DIR__ . '/credits.php'; return (int)mh_credits_cfg(mh_config())['free']; }
 function mh_news_minutes(): int { require_once __DIR__ . '/credits.php'; $C = mh_credits_cfg(mh_config()); return $C['call_light'] > 0 ? (int)floor($C['free'] / $C['call_light']) : 0; }
@@ -28,11 +28,11 @@ function mh_news_minutes(): int { require_once __DIR__ . '/credits.php'; $C = mh
 function mh_news_default(): array {
   return mh_news_credits() > 0 ? [
     'subject' => 'Bo is on every account now: {credits} free credits a month',
-    'body' => "Hi {name},\n\nStuck on a problem? Bo, the tutor on Mathub, is now on every account.\n\nAsk him anything, call him and talk it through, or have him draw it: graphs, 3D surfaces, diagrams, even pictures.\n\nEvery month you get {credits} credits for him, free. That is about {minutes} minutes on a call, or plenty of questions. No card needed.",
+    'body' => "Hi {name},\n\nStuck on a problem? Bo, the tutor on StudyCat, is now on every account.\n\nAsk him anything, call him and talk it through, or have him draw it: graphs, 3D surfaces, diagrams, even pictures.\n\nEvery month you get {credits} credits for him, free. That is about {minutes} minutes on a call, or plenty of questions. No card needed.",
     'button' => 'Call Bo', 'link' => '#/max',
   ] : [
-    'subject' => 'New on Mathub: call Bo',
-    'body' => "Hi {name},\n\nStuck on a problem? Now you can call Bo, the tutor on Mathub.\n\nYou talk. You write on a board you share. He shows you where it went wrong, like a tutor with a pen.\n\nSee a call in a minute:",
+    'subject' => 'New on StudyCat: call Bo',
+    'body' => "Hi {name},\n\nStuck on a problem? Now you can call Bo, the tutor on StudyCat.\n\nYou talk. You write on a board you share. He shows you where it went wrong, like a tutor with a pen.\n\nSee a call in a minute:",
     'button' => 'Watch a call with Bo', 'link' => '#/max',
   ];
 }
@@ -41,12 +41,12 @@ function mh_news_draft(array $in): array {
   $d = ['subject' => mh_str($in, 'subject', 140), 'body' => trim(mb_substr((string)($in['body'] ?? ''), 0, 4000)), 'button' => mh_str($in, 'button', 40), 'link' => mh_str($in, 'link', 300)];
   if ($d['subject'] === '') mh_fail('Write a subject.');
   if ($d['body'] === '') mh_fail('Write the message.');
-  if ($d['button'] !== '' && !preg_match('~^(#/|/|https://)~', $d['link'])) mh_fail('The button needs a link on Mathub (like #/max) or one that starts with https://.');
+  if ($d['button'] !== '' && !preg_match('~^(#/|/|https://)~', $d['link'])) mh_fail('The button needs a link on StudyCat (like #/max) or one that starts with https://.');
   return $d;
 }
 /** Subject, plain text and HTML of one news email for one member. */
 function mh_news_render(array $n, array $u): array {
-  $cfg = mh_config(); $site = $cfg['site_name'] ?? 'Mathub'; $url = mh_news_url();
+  $cfg = mh_config(); $site = $cfg['site_name'] ?? 'StudyCat'; $url = mh_news_url();
   $first = trim(explode(' ', trim((string)($u['name'] ?? '')))[0] ?? ''); if ($first === '' || str_contains($first, '@')) $first = 'there';
   $fill = fn(string $s) => strtr($s, ['{name}' => $first, '{credits}' => number_format(mh_news_credits()), '{minutes}' => (string)mh_news_minutes()]);
   $subject = $fill($n['subject']); $body = $fill($n['body']);

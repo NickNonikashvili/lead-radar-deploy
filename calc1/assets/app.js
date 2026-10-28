@@ -1,5 +1,5 @@
 /* ============================================================
-   Mathub — application shell
+   StudyCat — application shell
    Multi-course: each course is a data module registered on
    window.Courses (calc, physics, precalc). This file provides utilities,
    per-course storage, the math parser, routing (#/course/view/param),
@@ -12,8 +12,8 @@
   const BUILD = global.MATHUB_BUILD || 'dev';
   const Courses = global.Courses || (global.Courses = {});
   const COURSE_ORDER = ['calc', 'physics', 'precalc', 'writ', 'csci', 'biob', 'kin', 'psyx'];
-  const GLOBAL_VIEWS = ['instructors', 'contact', 'forum', 'policy', 'admin', 'challenge', 'people', 'settings', 'leagues', 'gpa', 'today', 'whatsnew', 'resources', 'guides', 'focus', 'recap', 'tools', 'mistakes', 'join', 'sheet', 'request', 'teach', 'class', 'syllabus', 'notfound', 'create', 'c', 'tutor', 'plan', 'tasks', 'timetable', 'agenda', 'timelog', 'projects', 'habits', 'goals', 'wheel', 'journal', 'money', 'career', 'portfolio', 'max', 'unsubscribe', 'room', 'calls', 'usage', 'customize', 'off'];   // pages that work without a course, e.g. #/contact
-  const SITE = 'Mathub';
+  const GLOBAL_VIEWS = ['instructors', 'contact', 'forum', 'policy', 'admin', 'challenge', 'people', 'settings', 'leagues', 'gpa', 'today', 'whatsnew', 'resources', 'guides', 'focus', 'recap', 'tools', 'mistakes', 'join', 'sheet', 'request', 'teach', 'class', 'syllabus', 'notfound', 'create', 'maker', 'c', 'tutor', 'plan', 'tasks', 'timetable', 'agenda', 'timelog', 'projects', 'habits', 'goals', 'wheel', 'journal', 'money', 'career', 'portfolio', 'max', 'unsubscribe', 'room', 'calls', 'usage', 'customize', 'off'];   // pages that work without a course, e.g. #/contact
+  const SITE = 'StudyCat';
   let D = null, QZ = null;        // current course data and quiz module
   const courseHooks = [];
 
@@ -61,6 +61,7 @@
     gear: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>',
     logout: '<path d="M10 4H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h5"/><path d="M15 16l4-4-4-4M19 12H9"/>', chevron: '<path d="M6 9l6 6 6-6"/>', user: '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',
     zap: '<path d="M13 2L4 14h7l-1 8 9-12h-7z"/>', mic: '<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3M8 21h8"/>', gem: '<path d="M6 3h12l4 6-10 12L2 9z"/><path d="M2 9h20M9 3l3 6 3-6M6 9l6 12M18 9l-6 12"/>', trophy: '<path d="M8 4h8v5a4 4 0 0 1-8 0z"/><path d="M8 5H5a3 3 0 0 0 3 4M16 5h3a3 3 0 0 1-3 4M12 13v4M8 21h8M9 17h6"/>', path: '<path d="M5 5c9 0 9 7 0 7s-9 7 0 7h14"/><circle cx="5" cy="5" r="1.8"/><circle cx="19" cy="19" r="1.8"/>',
+    maker: '<path d="M5 4.5A1.5 1.5 0 0 1 6.5 3H19v15H6.5A1.5 1.5 0 0 0 5 19.5z"/><path d="M5 19.5A1.5 1.5 0 0 0 6.5 21H19"/><path d="M12 6.5v7M8.5 10h7"/>',   // the class maker: a class (a book) with a plus
     planner: '<rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 2.5h6v3H9z"/><path d="M9 10.5h6M9 14h6M9 17.5h3.5"/>',   // the study planner: a clipboard of days, not the learning path's trail
     reportcard: '<rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 7.5h8M8 11h5"/><path d="M12.5 17.5l1.75-4.5 1.75 4.5M13.2 16h2.1"/>'   // the GPA calculator: a report card with its A
   };
@@ -93,7 +94,39 @@
   /* classes whose sections meet on different days (VARIANTS): calendar rows carry a section id in slot 4 and exams carry dates per section.
      The section comes from the Settings picker, or from the section number typed at sign-up ("01" → "1"). */
   const sectionVariant = C => { const V = C && C.VARIANTS; if (!V) return ''; const has = id => V.options.some(o => o.id === id); const pick = String(courseSetting(C.id, 'variant', '') || ''); if (has(pick)) return pick; const typed = String(parseInt(courseSetting(C.id, 'section', ''), 10) || ''); return has(typed) ? typed : V.default; };
-  const applyVariant = C => { if (!C || !C.VARIANTS) return; const v = sectionVariant(C); if (C.CALENDAR !== C._calView) C._calAll = C.CALENDAR; C._calView = (C._calAll || []).filter(e => !e[4] || e[4] === v); C.CALENDAR = C._calView; (C.EXAMS || []).forEach(ex => { if (ex.dates && ex.dates[v]) { ex.date = ex.dates[v]; if (ex.dateLabels && ex.dateLabels[v]) ex.dateLabel = ex.dateLabels[v]; } }); };
+  /* each student's own version of a class from the catalog, made in the class maker (assets/maker.js) and synced with
+     their account as classCustom[id]: a nickname, their instructor, office hours and where it meets, exam dates and
+     names, dates of their own and the grading weights. The class's own values stay in C._own, so a change can be undone. */
+  const ISO_D = /^\d{4}-\d{2}-\d{2}$/;
+  const classCustom = id => { const all = settings().classCustom; const k = all && typeof all === 'object' ? all[id] : null; return k && typeof k === 'object' ? k : null; };
+  const OWN_COURSE = ['instructor', 'instructorEmail', 'officeHours', 'classDays', 'room'];
+  const dayLabel = iso => { try { return new Date(iso + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }); } catch (e) { return iso; } };
+  const applyVariant = C => {
+    if (!C) return;
+    const K = classCustom(C.id); if (!C.VARIANTS && !K && !C._own) return;
+    const v = sectionVariant(C);
+    if (!C._own) C._own = { short: C.short };
+    if (C.CALENDAR && C.CALENDAR !== C._calView) C._calAll = C.CALENDAR;
+    if (C._calAll) {
+      let cal = C.VARIANTS ? C._calAll.filter(e => !e[4] || e[4] === v) : C._calAll.slice();
+      const mine = K && Array.isArray(K.events) ? K.events.filter(e => Array.isArray(e) && ISO_D.test(e[0] || '') && e[2]).map(e => Object.assign([e[0], e[1] || 'admin', String(e[2])], { mine: true })) : [];
+      if (mine.length) cal = cal.concat(mine).sort((a, b) => (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0));
+      C._calView = cal; C.CALENDAR = cal;
+    }
+    (C.EXAMS || []).forEach(ex => {
+      if (!ex._own) ex._own = { date: ex.date, dateLabel: ex.dateLabel, name: ex.name };
+      let date = ex._own.date, label = ex._own.dateLabel;
+      if (C.VARIANTS && ex.dates && ex.dates[v]) { date = ex.dates[v]; if (ex.dateLabels && ex.dateLabels[v]) label = ex.dateLabels[v]; }
+      const o = K && K.exams && K.exams[ex.id];
+      if (o && ISO_D.test(o.date || '') && o.date !== date) { date = o.date; label = o.time ? `${dayLabel(o.date)} · ${o.time}` : undefined; }
+      else if (o && o.time) label = `${dayLabel(date)} · ${o.time}`;
+      ex.date = date; if (label) ex.dateLabel = label; else delete ex.dateLabel; ex.name = (o && o.name) || ex._own.name;
+    });
+    if (C.COURSE) { if (!C._own.course) C._own.course = Object.fromEntries(OWN_COURSE.map(k => [k, C.COURSE[k]])); OWN_COURSE.forEach(k => { const x = K && typeof K[k] === 'string' && K[k].trim() ? K[k].trim() : C._own.course[k]; if (x === undefined) delete C.COURSE[k]; else C.COURSE[k] = x; }); }
+    if (C.GRADING && Array.isArray(C.GRADING.categories)) { C.GRADING.categories.forEach(c => { if (c._own === undefined) c._own = c.weight; const raw = K && K.weights ? K.weights[c.id] : null; const w = Number(raw); c.weight = raw != null && raw !== '' && w >= 0 && w <= 100 ? w : c._own; }); }
+    C.short = (K && typeof K.short === 'string' && K.short.trim()) ? K.short.trim().slice(0, 14) : C._own.short;
+    C.custom = !!K;
+  };
   Object.keys(global.Courses || {}).forEach(id => applyVariant(global.Courses[id]));
 
   /* ---------- dates ---------- */
@@ -239,7 +272,7 @@
   }
 
   /* ---------- App object ---------- */
-  const App = { views: {}, current: null, icon, esc, $, $$, bind, on, toast, store, settings, setSetting, courseSetting, setCourseSetting, applyVariant, sectionVariant, typeset, compileExpr, d1, d2, parseNumber, fmtNum, cssVar, fitCanvas, niceStep,
+  const App = { views: {}, current: null, icon, esc, $, $$, bind, on, toast, store, settings, setSetting, courseSetting, setCourseSetting, applyVariant, sectionVariant, classCustom, typeset, compileExpr, d1, d2, parseNumber, fmtNum, cssVar, fitCanvas, niceStep,
     recordAnswer, markActivity, progress, streak, unitMastery, cardsMastered, checklistState, todayISO, toISO, parseISO, fmtDate, shortDate, addDays, daysBetween, relDays, examStatus, secLabel, secById, topicsForSection,
     nextExam: () => nextExam(D), currentSection: () => currentSection(D), upcomingDeadlines: n => upcomingDeadlines(D, n), eventsOn: iso => eventsOn(D, iso),
     onCourse(fn) { courseHooks.push(fn); if (D) fn(D); }, BUILD, SITE, COURSE_ORDER, asOf, semesterState: () => semesterState(D),
@@ -261,27 +294,31 @@
     dashboard: 'cap', path: 'path', notes: 'book', readings: 'scroll', formulas: 'sigma', textbook: 'link', slides: 'layers', mynotes: 'marker',
     playground: 'keyboard', phonetics: 'mic', drafts: 'pen', notebook: 'quill', practice: 'list', flashcards: 'cards', exam: 'flag', checkwork: 'check',
     mistakes: 'undo', calendar: 'calendar', planner: 'planner', course: 'info', grapher: 'chart', labs: 'flask', motion: 'zap', solvers: 'wand',
-    explorer: 'eye', unitcircle: 'compass'
+    explorer: 'eye', unitcircle: 'compass', maker: 'maker'
   };
   App.VIEW_ICON = VIEW_ICON;
   App.viewIcon = (id, fallback) => VIEW_ICON[id] || fallback || 'file';
   App.pomo = () => Pomo;   // the sidebar's pomodoro, shared with the start page (assets/dash.js)
-  App.myCourses = () => { const c = settings().courses; const mine = Array.isArray(c) ? c.filter(id => Courses[id] && !Courses[id].preview) : []; return mine.length ? mine : COURSE_ORDER.filter(id => Courses[id]); };
+  // Your classes: the Montana State classes you picked (nobody gets them by default: the home page asks until you pick),
+  // then the classes you made yourself, which are always yours
+  App.myCourses = () => { const c = settings().courses; const mine = Array.isArray(c) ? c.filter(id => Courses[id] && !Courses[id].preview) : []; const own = App.myClasses ? App.myClasses.list().map(e => e.id).filter(id => Courses[id] && !mine.includes(id)) : []; return mine.concat(own); };
+  // the Montana State classes to pick from (not the ones you made, not ones being previewed)
+  App.catalogIds = () => COURSE_ORDER.filter(id => Courses[id] && !Courses[id].preview && !Courses[id].community && !(App.myClasses && App.myClasses.has(id)));
   App.isoWeek = d => { const x = new Date(d); x.setHours(0, 0, 0, 0); x.setDate(x.getDate() + 3 - ((x.getDay() + 6) % 7)); const w1 = new Date(x.getFullYear(), 0, 4); return x.getFullYear() + '-W' + String(1 + Math.round(((x - w1) / 86400000 - 3 + ((w1.getDay() + 6) % 7)) / 7)).padStart(2, '0'); };
   App.guest = () => !!(App.auth && App.auth.ready && !App.auth.user);
   App.limit = k => App.guest() && App.auth.limits && App.auth.limits[k] != null ? App.auth.limits[k] : Infinity;
   App.lockCard = (t, x, o) => App.auth ? App.auth.lockCard(t, x, o) : '';
-  // The Mathub mark: Bo the bobcat's head, the same drawing as the mascot. Fixed colours (he is tan in every theme);
+  // The StudyCat mark: Bo the bobcat's head, the same drawing as the mascot. Fixed colours (he is tan in every theme);
   // tile=true sets him on a navy rounded tile for places outside the page (icons, share cards).
   App.LOGO_PATHS = '<path d="M22 46L14 14l32 14z" fill="#C98B4B"/><path d="M98 46l8-32-32 14z" fill="#C98B4B"/><path d="M24 40l-6-19 20 10z" fill="#3B2A1C"/><path d="M96 40l6-19-20 10z" fill="#3B2A1C"/><ellipse cx="60" cy="58" rx="40" ry="34" fill="#D9A15B"/><ellipse cx="60" cy="69" rx="27" ry="21" fill="#F3DFB8"/><path d="M30 42c4 5 8 10 8 18M90 42c-4 5-8 10-8 18" stroke="#8B5A2B" stroke-width="3.2" stroke-linecap="round" fill="none"/><path d="M19 70l17 2M19 78l17-1M101 70l-17 2M101 78l-17-1" stroke="#8B5A2B" stroke-width="1.8" stroke-linecap="round"/><ellipse cx="46" cy="56" rx="7.5" ry="8.5" fill="#fff"/><ellipse cx="74" cy="56" rx="7.5" ry="8.5" fill="#fff"/><circle cx="47" cy="57.5" r="4.6" fill="#2A1B0E"/><circle cx="75" cy="57.5" r="4.6" fill="#2A1B0E"/><circle cx="48.6" cy="55.4" r="1.6" fill="#fff"/><circle cx="76.6" cy="55.4" r="1.6" fill="#fff"/><path d="M54 68h12l-6 6z" fill="#3B2A1C"/><path d="M60 74v3.5M60 77.5c-3 3-7 3-9 0M60 77.5c3 3 7 3 9 0" stroke="#3B2A1C" stroke-width="2.2" stroke-linecap="round" fill="none"/>';
   App.logoSvg = (size = 28, tile = false) => tile
     ? `<svg class="mh-logo tile" width="${size}" height="${size}" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="14" fill="#14213D"/><g transform="translate(-2.8 1.3) scale(0.58)">${App.LOGO_PATHS}</g></svg>`
     : `<svg class="mh-logo bo-mark" width="${Math.round(size * 1.16)}" height="${size}" viewBox="10 10 100 86" aria-hidden="true">${App.LOGO_PATHS}</svg>`;
-  App.wordmark = (cls = '') => `<span class="brand-word${cls ? ' ' + cls : ''}">Mathub</span>`;
+  App.wordmark = (cls = '') => `<span class="brand-word${cls ? ' ' + cls : ''}">StudyCat</span>`;
   App.tagline = (cls = '') => `<span class="brand-tag${cls ? ' ' + cls : ''}">Learn <i>/</i> Practice <i>/</i> Excel</span>`;
   Object.defineProperty(App, 'D', { get: () => D }); Object.defineProperty(App, 'Q', { get: () => QZ });
   App.Canvas = Canvas;
-  /* the site's address for links people share; inside the iOS app the page lives at capacitor://localhost, so links point at mathub.space */
+  /* the site's address for links people share; inside the iOS app the page lives at capacitor://localhost, so links point at studycat.org */
   App.siteBase = () => (window.MATHUB_APP && window.MATHUB_APP.native ? window.MATHUB_APP.api : location.origin + location.pathname.replace(/index\.html$/, ''));
   App.link = (view, param, query) => { let hs = '#/' + (D ? D.id : 'calc') + '/' + view + (param ? '/' + param : ''); if (query) hs += '?' + new URLSearchParams(query).toString(); return hs; };
   App.go = (view, param, query) => { const hs = App.link(view, param, query); if (location.hash === hs) { render(); return; } try { location.hash = hs; } catch { render(); } };
@@ -317,22 +354,31 @@
   }
   /* ---------- on-demand class loading: the shell ships light stubs (assets/courses-index.js); the full files come when a class is opened ---------- */
   const loading = {};
+  /* each class's lessons (assets/lessons/<id>.js): for every topic, the idea in plain words, a picture (a drawing spec,
+     App.boDraw), worked examples and a self-check, laid over its notes when the class loads */
+  const LESSON_IDS = new Set(['calc', 'precalc', 'physics', 'csci', 'biob', 'kin', 'psyx', 'writ', 'emec100', 'jpns150d', 'm170', 'm172', 'psci230d']);
+  function mergeLessons(F) {
+    const L = global.MathubLessons && global.MathubLessons[F.id]; if (!L || F._lessons) return F;
+    (F.SECTIONS || []).forEach(s => { const x = L[s.id]; if (!x) return; Object.keys(x).forEach(k => { if (k !== 'addExamples') s[k] = x[k]; }); if (x.addExamples) s.examples = (s.examples || (s.example && s.example.p ? [s.example] : [])).concat(x.addExamples); }); F._lessons = true; return F;
+  }
+  const lessonsFor = (F, one) => (LESSON_IDS.has(F.id) && !(global.MathubLessons && global.MathubLessons[F.id]) ? one('lessons/' + F.id).catch(() => {}) : Promise.resolve()).then(() => mergeLessons(F));
   App.loadCourse = function (id) {
     const C = Courses[id]; if (!C) return Promise.reject(new Error('Unknown class.'));
     const emit = (type, detail) => { try { document.dispatchEvent(new CustomEvent(type, { detail: Object.assign({ course: id }, detail) })); } catch (e) {} };
     if (C.pack && !C.loaded && App.packs) {   // a class uploaded in the admin panel (assets/classpacks.js): one JSON file from the server instead of scripts
       if (loading[id]) return loading[id];
       if (App.loadbar) App.loadbar.start();
-      loading[id] = App.packs.load(id).then(F => { F.loaded = true; delete F.stub; applyVariant(F); Search.index = null; emit('mh:loaded', {}); return F; }).finally(() => { delete loading[id]; if (App.loadbar) App.loadbar.done(); });
+      loading[id] = App.packs.load(id).then(F => lessonsFor(F, script)).then(F => { F.loaded = true; delete F.stub; applyVariant(F); Search.index = null; emit('mh:loaded', {}); return F; }).finally(() => { delete loading[id]; if (App.loadbar) App.loadbar.done(); });
       return loading[id];
     }
     if (C.loaded || !C.files || !C.files.length) { C.loaded = true; delete C.stub; return Promise.resolve(C); }
     if (loading[id]) return loading[id];
-    const one = src => new Promise((res, rej) => { if (document.querySelector(`script[data-src="${src}"]`)) return res(); const sc = document.createElement('script'); sc.src = `assets/${src}.js?v=${BUILD}`; sc.dataset.src = src; const t0 = performance.now(); sc.onload = () => { emit('mh:file', { src, url: sc.src, ms: Math.round(performance.now() - t0) }); res(); }; sc.onerror = () => { sc.remove(); rej(new Error(`Could not download ${src}.js. Check your connection and try again.`)); }; document.head.appendChild(sc); });
+    const one = script;
     if (App.loadbar) App.loadbar.start();
     emit('mh:load', { files: C.files.slice() });
-    loading[id] = (async () => { try { for (const f of C.files) await one(f); } finally { delete loading[id]; if (App.loadbar) App.loadbar.done(); } const F = Courses[id]; F.loaded = true; delete F.stub; applyVariant(F); Search.index = null; emit('mh:loaded', {}); return F; })();
+    loading[id] = (async () => { try { for (const f of C.files) await one(f); await lessonsFor(Courses[id], one); } finally { delete loading[id]; if (App.loadbar) App.loadbar.done(); } const F = Courses[id]; F.loaded = true; delete F.stub; applyVariant(F); Search.index = null; emit('mh:loaded', {}); return F; })();
     return loading[id];
+    function script(src) { return new Promise((res, rej) => { if (document.querySelector(`script[data-src="${src}"]`)) return res(); const sc = document.createElement('script'); sc.src = `assets/${src}.js?v=${BUILD}`; sc.dataset.src = src; const t0 = performance.now(); sc.onload = () => { emit('mh:file', { src, url: sc.src, ms: Math.round(performance.now() - t0) }); res(); }; sc.onerror = () => { sc.remove(); rej(new Error(`Could not download ${src}.js. Check your connection and try again.`)); }; document.head.appendChild(sc); }); }
   };
   App.loadCourses = ids => Promise.all(ids.map(id => App.loadCourse(id).catch(() => null)));
   App.courseLoaded = id => !!(Courses[id] && Courses[id].loaded);
@@ -388,8 +434,8 @@
     title: 'Page not found',
     render(root, param) {
       const first = String(param || '').split('/')[0]; const classy = /^[a-z]{1,6}\d{2,4}[a-z]?$/.test(first);
-      root.innerHTML = `<div class="landing-wrap"><header class="landing-top"><div><div class="eyebrow">${SITE}</div><h1 class="landing-title"><span class="logo-mark">${App.logoSvg(44)}</span>${classy ? 'This class is not open to you' : 'Page not found'}</h1><p class="muted">${classy ? `There is no class <b>${esc(first)}</b> on Mathub that you can open. If your instructor set it up, join it with the class code they gave you.` : 'The link may be old or mistyped. Nothing was lost; pick where to go from here.'}</p></div></header>
-        <div class="row gap-sm" style="flex-wrap:wrap"><a class="btn primary" href="#/">${icon('home', 14)} Start page</a>${classy ? `<a class="btn" href="#/class">${icon('users', 14)} Join a class with a code</a>${App.canRequest && App.canRequest() ? `<a class="btn" href="#/request?code=${encodeURIComponent(first.toUpperCase())}">${icon('path', 14)} Request this class</a>` : `<a class="btn" href="#/create">${icon('plus', 14)} Make it from its syllabus</a>`}` : `<button class="btn" data-action="search">${icon('search', 14)} Search Mathub</button>`}</div></div>`;
+      root.innerHTML = `<div class="landing-wrap"><header class="landing-top"><div><div class="eyebrow">${SITE}</div><h1 class="landing-title"><span class="logo-mark">${App.logoSvg(44)}</span>${classy ? 'This class is not open to you' : 'Page not found'}</h1><p class="muted">${classy ? `There is no class <b>${esc(first)}</b> on StudyCat that you can open. If your instructor set it up, join it with the class code they gave you.` : 'The link may be old or mistyped. Nothing was lost; pick where to go from here.'}</p></div></header>
+        <div class="row gap-sm" style="flex-wrap:wrap"><a class="btn primary" href="#/">${icon('home', 14)} Start page</a>${classy ? `<a class="btn" href="#/class">${icon('users', 14)} Join a class with a code</a>${App.canRequest && App.canRequest() ? `<a class="btn" href="#/request?code=${encodeURIComponent(first.toUpperCase())}">${icon('path', 14)} Request this class</a>` : `<a class="btn" href="#/create">${icon('plus', 14)} Make it from its syllabus</a>`}` : `<button class="btn" data-action="search">${icon('search', 14)} Search StudyCat</button>`}</div></div>`;
       bind(root, { search: () => { const b = $('.search-btn'); if (b) b.click(); } });
     }
   };
@@ -398,16 +444,16 @@
     title: 'Join a classmate',
     render(root, param, query) {
       const ref = String(query.ref || param || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6);
-      root.innerHTML = `<div class="landing-wrap"><header class="landing-top"><div><div class="eyebrow">Mathub</div><h1 class="landing-title"><span class="logo-mark">${App.logoSvg(44)}</span>You're invited</h1><p class="muted" id="join-sub">Checking the invite…</p></div><div class="row gap-sm"><span id="landing-account"></span></div></header><div class="panel lift" id="join-card"><div class="empty small">Loading…</div></div></div>`;
+      root.innerHTML = `<div class="landing-wrap"><header class="landing-top"><div><div class="eyebrow">StudyCat</div><h1 class="landing-title"><span class="logo-mark">${App.logoSvg(44)}</span>You're invited</h1><p class="muted" id="join-sub">Checking the invite…</p></div><div class="row gap-sm"><span id="landing-account"></span></div></header><div class="panel lift" id="join-card"><div class="empty small">Loading…</div></div></div>`;
       const card = $('#join-card', root); const sub = $('#join-sub', root);
-      if (!ref) { sub.textContent = 'That link is missing its code.'; card.innerHTML = `<div class="row gap-sm" style="flex-wrap:wrap"><a class="btn primary" href="#/">Open Mathub</a></div>`; return; }
+      if (!ref) { sub.textContent = 'That link is missing its code.'; card.innerHTML = `<div class="row gap-sm" style="flex-wrap:wrap"><a class="btn primary" href="#/">Open StudyCat</a></div>`; return; }
       try { localStorage.setItem('mathub-ref', ref); } catch (e) {}
       fetch(`api/index.php?r=invite_info&ref=${ref}`, { credentials: 'same-origin', headers: { 'X-Requested-With': 'MatHub' } }).then(r => r.json()).then(j => {
         const name = j && j.ok ? j.name : ''; try { sessionStorage.setItem('mathub-ref-name', name || ''); sessionStorage.setItem('mathub-ref-min', String(j && j.ok && (j.credits || 0) || '')); } catch (e) {}
-        sub.textContent = name ? `${name} uses Mathub for ${(j.courses || []).map(c => Courses[c] ? Courses[c].short : c).join(', ') || 'their classes'} and wants you in.` : 'A classmate wants you to study on Mathub.';
-        card.innerHTML = `<div class="grid cols-2" style="align-items:center"><div><h2 style="margin-top:0">${name ? `Study with ${esc(name)}` : 'Study together'}</h2><p>Free topic notes, endless practice, flashcards on a schedule, deadline calendars, a focus room and a class board for Montana State classes. ${j && j.ok && j.credits ? `Sign up with your montana.edu email and you both get ${j.credits} credits for Bo, the tutor you can call and work through problems with on a whiteboard.` : 'Sign up with your montana.edu email and you both get credits to use with Bo.'}</p><div class="row gap-sm" style="flex-wrap:wrap">${App.auth && App.auth.user ? `<a class="btn primary" href="#/">You are already signed in · open Mathub</a>` : `<button class="btn primary lg" data-action="auth-signup">${icon('fire', 14)} Sign up free</button><button class="btn" data-action="auth-login">Log in</button>`}<a class="btn" href="#/">Look around first</a></div></div><div class="mascot-slot" data-size="120"></div></div>`;
+        sub.textContent = name ? `${name} uses StudyCat for ${(j.courses || []).map(c => Courses[c] ? Courses[c].short : c).join(', ') || 'their classes'} and wants you in.` : 'A classmate wants you to study on StudyCat.';
+        card.innerHTML = `<div class="grid cols-2" style="align-items:center"><div><h2 style="margin-top:0">${name ? `Study with ${esc(name)}` : 'Study together'}</h2><p>Free topic notes, endless practice, flashcards on a schedule, deadline calendars, a focus room and a class board for Montana State classes. ${j && j.ok && j.credits ? `Sign up with your montana.edu email and you both get ${j.credits} credits for Bo, the tutor you can call and work through problems with on a whiteboard.` : 'Sign up with your montana.edu email and you both get credits to use with Bo.'}</p><div class="row gap-sm" style="flex-wrap:wrap">${App.auth && App.auth.user ? `<a class="btn primary" href="#/">You are already signed in · open StudyCat</a>` : `<button class="btn primary lg" data-action="auth-signup">${icon('fire', 14)} Sign up free</button><button class="btn" data-action="auth-login">Log in</button>`}<a class="btn" href="#/">Look around first</a></div></div><div class="mascot-slot" data-size="120"></div></div>`;
         if (App.auth) App.auth.bindLocks(card); if (App.paintMascots) App.paintMascots();
-      }).catch(() => { sub.textContent = 'Could not check the invite, but you can still sign up.'; card.innerHTML = `<div class="row gap-sm"><button class="btn primary" data-action="auth-signup">Sign up free</button><a class="btn" href="#/">Open Mathub</a></div>`; if (App.auth) App.auth.bindLocks(card); });
+      }).catch(() => { sub.textContent = 'Could not check the invite, but you can still sign up.'; card.innerHTML = `<div class="row gap-sm"><button class="btn primary" data-action="auth-signup">Sign up free</button><a class="btn" href="#/">Open StudyCat</a></div>`; if (App.auth) App.auth.bindLocks(card); });
       const slot = $('#landing-account', root); if (slot && App.auth && App.auth.ready) App.auth.paintLandingAccount(slot);
     }
   };
@@ -514,7 +560,7 @@
   function buildNav() {
     $('#brand-code').textContent = D.code; $('#brand-name').innerHTML = `${esc(D.name)}<small>${esc(D.term)}</small>`;
     const mine = App.myCourses(); if (D && !mine.includes(D.id)) mine.push(D.id);
-    $('#course-switch').innerHTML = COURSE_ORDER.filter(id => Courses[id] && mine.includes(id)).map(id => `<a class="switch-btn${id === D.id ? ' on' : ''}" data-c="${id}" href="#/${id}/dashboard" title="${esc(Courses[id].name)}">${esc(Courses[id].short)}</a>`).join('') + `<a class="switch-btn home" href="#/" title="All courses">${icon('grid', 14)}</a>` + (App.canMakeClasses && App.canMakeClasses() && App.views.create ? `<a class="switch-btn req" href="#/create" title="Make a class that is not on Mathub yet from its syllabus">${icon('plus', 13)} Make a class</a>` : App.views.request ? `<a class="switch-btn req" href="#/request" title="Send us the syllabus of a class that is not on Mathub yet">${icon('file', 13)} Request a class</a>` : '');
+    $('#course-switch').innerHTML = COURSE_ORDER.filter(id => Courses[id] && mine.includes(id)).map(id => `<a class="switch-btn${id === D.id ? ' on' : ''}" data-c="${id}" href="#/${id}/dashboard" title="${esc(Courses[id].name)}">${esc(Courses[id].short)}</a>`).join('') + `<a class="switch-btn home" href="#/" title="All courses">${icon('grid', 14)}</a>` + (App.views.maker ? `<a class="switch-btn req" href="#/maker" title="Add a class from your syllabus or from scratch">${icon('maker', 13)} Add a class</a>` : '');
     const staff = App.auth && App.auth.user && App.auth.user.mod ? [{ label: App.auth.user.admin ? 'Admin' : 'Moderation', items: [['admin', 'Admin panel', 'shield']] }] : [];
     // the class's instructors (assets/instruct.js asks the server which classes this account teaches)
     const tch = App.teaches; if (tch && App.views.instructor && (tch.admin || (tch.courses || []).includes(D.id))) staff.unshift({ label: 'Teaching', items: [['instructor', 'Instructor', 'gear']] });
@@ -523,7 +569,7 @@
     $('#sidebar-nav').innerHTML = groupNav(D.NAV, D.id).concat(staff).map(gp => { const o = !!openMap[gp.label] || gp.items.some(x => x[0] === cur); return `<button class="nav-label nav-toggle${o ? ' open' : ''}" data-action="navgroup" data-g="${esc(gp.label)}" aria-expanded="${o}"><span>${gp.label}</span><small>${gp.items.length}</small>${icon('chevron', 12)}</button><div class="nav-group${o ? '' : ' closed'}" data-g="${esc(gp.label)}"><div class="nav-group-in">` + gp.items.map(([id, label, ic]) => `<button class="nav-item" data-view="${id}" data-action="nav">${icon(VIEW_ICON[id] || ic)}<span>${label}</span></button>`).join('') + '</div></div>'; }).join('');
     $$('.nav-item').forEach(b => b.classList.toggle('active', b.dataset.view === cur));
   }
-  App.rebuildNav = () => { if (D) buildNav(); };
+  App.rebuildNav = () => { if (D) buildNav(); if (App.paintSidebar) App.paintSidebar(); };   // the class menu, and the sidebar's list of classes (a class added, renamed or made yours)
   App.searchReset = () => { Search.index = null; };
   App.forgetCourse = () => { D = null; QZ = null; };   // the next render sets the class up again (a class pack that changed under the open page)
   function buildLayout() {
@@ -583,7 +629,7 @@
       if ($('#search-modal')) { $('#search-input').focus(); return; }
       const m = document.createElement('div'); m.className = 'modal-backdrop'; m.id = 'search-modal';
       const chips = [['all', 'All classes']].concat(COURSE_ORDER.filter(id => Courses[id]).map(id => [id, Courses[id].short]));
-      m.innerHTML = `<div class="modal" role="dialog" aria-label="Search"><input id="search-input" class="search-input" placeholder="Search notes, formulas, flashcards, calendars, pages…" autocomplete="off" aria-label="Search Mathub"><div class="search-chips" id="search-chips">${chips.map(([id, l]) => `<button type="button" class="chip toggle${id === this.course ? ' on' : ''}" data-c="${id}">${esc(l)}</button>`).join('')}</div><div class="search-results" id="search-results"></div><div class="search-foot"><span><span class="kbd">↑↓</span> move</span><span><span class="kbd">Enter</span> open</span><span><span class="kbd">Esc</span> close</span></div></div>`;
+      m.innerHTML = `<div class="modal" role="dialog" aria-label="Search"><input id="search-input" class="search-input" placeholder="Search notes, formulas, flashcards, calendars, pages…" autocomplete="off" aria-label="Search StudyCat"><div class="search-chips" id="search-chips">${chips.map(([id, l]) => `<button type="button" class="chip toggle${id === this.course ? ' on' : ''}" data-c="${id}">${esc(l)}</button>`).join('')}</div><div class="search-results" id="search-results"></div><div class="search-foot"><span><span class="kbd">↑↓</span> move</span><span><span class="kbd">Enter</span> open</span><span><span class="kbd">Esc</span> close</span></div></div>`;
       document.body.appendChild(m); m.addEventListener('click', e => { if (e.target === m) this.close(); });
       const inp = $('#search-input'); inp.focus(); inp.addEventListener('input', () => this.query(inp.value));
       const missing = App.myCourses().filter(id => Courses[id] && !Courses[id].loaded); if (missing.length) App.loadCourses(missing).then(r => { if (r.some(Boolean) && $('#search-modal')) { this.index = null; this.query(inp.value); } });
@@ -597,8 +643,8 @@
       if (!this.index) this.build();
       q = q.trim().toLowerCase(); const words = q.split(/\s+/).filter(Boolean); const pool = this.index.filter(r => this.course === 'all' || !r.c || r.c === this.course);
       this.results = !q ? pool.filter(r => r.type === 'page').slice(0, 14) : pool.map(r => ({ r, score: words.reduce((sc, w) => sc + (r.t.toLowerCase().includes(w) ? 3 : r.key.includes(w) ? 1 : -100), 0) + (D && r.c === D.id ? 0.5 : 0) })).filter(x => x.score > 0).sort((a, b) => b.score - a.score).slice(0, 30).map(x => x.r);
-      { const m = q.toUpperCase().replace(/[\s\-_.]+/g, ' ').match(/^([A-Z]{1,5}) ?([0-9]{3}[A-Z]{0,3})$/); const bare = c => String(c).toUpperCase().replace(/[^A-Z0-9]/g, '').replace(/([0-9])[A-Z]+$/, '$1');   // a course code Mathub does not have: offer to request it
-        if (m && App.views.request && !COURSE_ORDER.some(id => Courses[id] && bare(Courses[id].code) === bare(m[1] + m[2]))) { const code = `${m[1]} ${m[2]}`; this.results.unshift({ type: 'request', t: `Request ${code}`, s: 'Not on Mathub yet. Send its syllabus and we will build it.', key: '', go: () => { location.hash = '#/request?code=' + encodeURIComponent(code); } }); } }
+      { const m = q.toUpperCase().replace(/[\s\-_.]+/g, ' ').match(/^([A-Z]{1,5}) ?([0-9]{3}[A-Z]{0,3})$/); const bare = c => String(c).toUpperCase().replace(/[^A-Z0-9]/g, '').replace(/([0-9])[A-Z]+$/, '$1');   // a course code StudyCat does not have: offer to request it
+        if (m && App.views.maker && !COURSE_ORDER.some(id => Courses[id] && bare(Courses[id].code) === bare(m[1] + m[2]))) { const code = `${m[1]} ${m[2]}`; this.results.unshift({ type: 'request', t: `Make ${code}`, s: 'Not in your classes yet. Make it from your syllabus.', key: '', go: () => { location.hash = '#/maker?code=' + encodeURIComponent(code); } }); } }
       this.sel = 0; this.paint();
     },
     paint() { const box = $('#search-results'); if (!box) return; box.innerHTML = this.results.length ? this.results.map((r, i) => `<div class="search-item${i === this.sel ? ' active' : ''}" data-i="${i}"><span class="type">${r.type}</span><span class="t">${esc(r.t)}</span><span class="s">${r.c && Courses[r.c] ? `<span class="chip course-${r.c}">${esc(Courses[r.c].short)}</span> ` : ''}${esc(r.s)}</span></div>`).join('') : '<div class="empty small">No matches. Try another word or another class.</div>'; const a = $('.search-item.active', box); if (a) a.scrollIntoView({ block: 'nearest' }); }
@@ -607,82 +653,54 @@
   /* ======================================================
      Landing page (course chooser)
      ====================================================== */
+  /* ---------- picking your classes: everyone picks the Montana State classes they take (none come by default) ---------- */
+  function pickClassesHtml() {
+    const ids = App.catalogIds(); const cc = id => (App.life && App.life.ccStyle ? App.life.ccStyle(id) : '');
+    return `<section class="panel pick-classes" id="pick-classes" aria-labelledby="pk-h">
+      <div class="pk-head"><span class="pk-ic" aria-hidden="true">${icon('cap', 24)}</span><div><h2 class="pk-title" id="pk-h">Which classes are you taking?</h2><p class="muted">Pick yours to start. StudyCat shows only your classes: their notes, practice, dates and Bo. Change them any time in Settings.</p></div></div>
+      <div class="pk-grid" role="group" aria-labelledby="pk-h">${ids.map(id => { const C = Courses[id]; return `<label class="pk-c" style="${cc(id)}"><input type="checkbox" value="${esc(id)}"><span class="pk-tile" aria-hidden="true">${esc(C.short || C.code)}</span><span class="pk-t"><b>${esc(C.name)}</b><small>${esc(C.code)}${C.term ? ` · ${esc(C.term)}` : ''}</small></span><span class="pk-tick" aria-hidden="true">${icon('check', 14)}</span></label>`; }).join('')}</div>
+      <div class="pk-go"><button class="btn primary" type="button" id="pk-save" disabled>Pick at least one class</button>${App.createLink ? App.createLink('small') : ''}</div>
+      <p class="small pk-msg" id="pk-msg" role="status"></p></section>`;
+  }
+  function wirePickClasses(root) {
+    const box = $('#pick-classes', root); if (!box) return; const btn = $('#pk-save', box);
+    const picked = () => $$('.pk-c input:checked', box).map(i => i.value);
+    box.addEventListener('change', e => { const l = e.target.closest('.pk-c'); if (l) l.classList.toggle('on', e.target.checked); const n = picked().length; btn.disabled = !n; btn.textContent = n ? (n === 1 ? 'Save my class' : `Save my ${n} classes`) : 'Pick at least one class'; });
+    btn.addEventListener('click', async () => {
+      const ids = picked(); if (!ids.length) return; const own = App.myClasses ? App.myClasses.list().map(e => e.id) : [];
+      const all = ids.concat((settings().courses || []).filter(id => own.includes(id) && !ids.includes(id)));
+      setSetting('courses', all); btn.disabled = true;
+      try { if (App.auth && App.auth.user && !App.auth.user.local && App.auth.savePrefs) await App.auth.savePrefs({ courses: all }); } catch (e) { $('#pk-msg', box).textContent = 'Saved on this device. It goes to your account when you are back online.'; }
+      toast(ids.length === 1 ? 'Your class is set.' : `Your ${ids.length} classes are set.`, 2600);
+      if (App.rebuildNav) App.rebuildNav(); App.rerender();
+      if (App.promptCustomize) setTimeout(() => App.promptCustomize(ids), 400);   // make each one yours (assets/maker.js)
+    });
+  }
+
   const Landing = {
     title: SITE,
     render(root) {
       const t = todayISO(); const d = today();
-      const guest = App.guest(); const mineIds = App.myCourses(); const showAll = Landing.showAll || mineIds.length === COURSE_ORDER.filter(id => Courses[id]).length;
-      const cards = COURSE_ORDER.filter(id => Courses[id] && (showAll || mineIds.includes(id))).map(id => {
-        const C = Courses[id]; const ex = nextExam(C); const st = ex ? examStatus(ex) : null; const ss = semesterState(C);
-        const chip = ss.phase === 'after' ? 'Semester complete' : ss.phase === 'before' ? `Starts ${esc(shortDate(C.SEMESTER.start))}` : ex ? `${esc(ex.name)} · ${esc(st.chip)}` : (C.EXAMS || []).length ? 'Exams done' : 'No exams';
-        const writing = C.kind === 'writing'; const rp = writing && App.readingProgress ? App.readingProgress(C) : null;
-        const nodes = !writing && App.pathNodes ? App.pathNodes(C) : []; const curNode = nodes.find(n => n.state === 'current'); const mastered = writing ? (rp ? rp.done : 0) : nodes.filter(n => n.state === 'done').length; const total = writing ? (rp ? rp.total : 0) : nodes.length; const mpct = total ? Math.round(100 * mastered / total) : 0; const RC = 2 * Math.PI * 15;
-        const ctaHref = writing ? (rp && rp.next ? `#/${id}/reading/${rp.next.id}` : `#/${id}/readings`) : `#/${id}/lesson${curNode ? '?topics=' + encodeURIComponent(curNode.t) : ''}`;
-        const ctaText = writing ? (rp && rp.next ? `${rp.started ? 'Resume' : 'Listen'}: ${esc(rp.next.title)}` : 'All readings finished') : (curNode ? 'Continue: ' + esc(curNode.label) : 'Start a lesson');
-        // one look: the class, its next exam and the one thing to do next (the details are on its dashboard)
-        return `<div class="course-card ${id}" data-action="open-course" data-c="${id}" role="link" tabindex="0">
-          <div class="course-card-head">${App.classSprite ? `<span class="cc-art" aria-hidden="true">${App.classSprite(id, 5)}</span>` : ''}<span class="course-idline"><span class="course-code">${esc(C.code)}</span>${App.archetype ? `<span class="arch-chip" title="${esc(App.archetype(id).line)}">${icon(App.archetype(id).icon, 13)} ${esc(App.archetype(id).name)}</span>` : ''}</span><span class="chip exam">${chip}</span></div>
-          <h2>${esc(C.name)}</h2>${guest && C.tagline ? `<p class="muted cc-tag">${esc(C.tagline)}</p>` : ''}
-          <div class="course-foot"><a class="btn course-open" href="${ctaHref}">${icon(writing ? 'book' : 'play', 14)} ${ctaText}</a>${mpct ? `<span class="course-ring" title="${mastered} of ${total} ${writing ? 'readings finished' : 'topics mastered'}"><svg viewBox="0 0 36 36" width="38" height="38"><circle class="ring-bg" cx="18" cy="18" r="15"/><circle class="ring-fg" cx="18" cy="18" r="15" stroke-dasharray="${RC.toFixed(2)}" stroke-dashoffset="${(RC * (1 - mpct / 100)).toFixed(2)}"/></svg><small>${mpct}%</small></span>` : ''}</div></div>`;
-      }).join('');
-      const merged = COURSE_ORDER.filter(id => Courses[id] && mineIds.includes(id)).flatMap(id => upcomingDeadlines(Courses[id], 8).map(x => Object.assign({ course: Courses[id] }, x))).filter(x => daysBetween(t, x.date) <= 7).sort((a, b) => a.date.localeCompare(b.date));
+      const guest = App.guest(); const mineIds = App.myCourses();
       const first = Courses[COURSE_ORDER[0]]; const ss = semesterState(first);
       const greeting = d.getHours() < 12 ? 'this morning' : d.getHours() < 18 ? 'this afternoon' : 'tonight';
       const who = App.auth && App.auth.user && !App.auth.user.local ? String(App.auth.user.name || '').trim().split(/\s+/)[0] : '';
       const sub = ss.phase === 'before' ? `Classes start ${esc(fmtDate(first.SEMESTER.start, true))}. Get a head start on the first topics.` : ss.phase === 'after' ? 'The semester is over. Everything stays here for review.' : `Which class is giving you trouble ${greeting}?`;
-      const fresh = !(App.xpTotal && App.xpTotal()) && !settings().lastVisit;   // someone who has not studied here yet
+      const U = App.auth && App.auth.user && !App.auth.user.local ? App.auth.user : null;
+      const fresh = !(App.xpTotal && App.xpTotal()) && !settings().lastVisit && !(U && Array.isArray(U.courses) && U.courses.length);   // someone who has not studied here yet
+      const picking = !mineIds.length;   // nobody gets the Montana State classes by default: pick yours first
       const hello = who && ss.phase !== 'before' && ss.phase !== 'after' ? `${esc(who)}, which class is giving you trouble ${greeting}?` : sub;
-      const startHere = fresh ? `<div class="start-steps">${[['1', 'Pick a class', 'Your classes are just above. Tap one to open it.'], ['2', 'Take a 5-minute lesson', 'A few questions with worked answers. No setup.'], ['3', guest ? 'Sign up to keep it' : 'Come back tomorrow', guest ? 'A free montana.edu account saves your progress everywhere.' : 'Your streak and daily plan pick up where you left off.']].map(([n, h, p]) => `<div class="start-step"><span class="ss-n">${n}</span><div><b>${h}</b><small>${p}</small></div></div>`).join('')}</div>` : '';
-      const tabs = [['week', 'This week', 'calendar'], ['community', 'Classmates', 'chat'], ['guides', 'Study guides', 'book']].concat(guest ? [['inside', 'What is inside', 'grid']] : []);
-      // students who have studied here get the apps' start page: the class they pick, its next exam, the next lesson and the unit they are in, beside today across all classes (assets/home.js)
-      const chosen = Array.isArray(settings().courses) && settings().courses.length; const lv = settings().lastVisit || {};
-      const homeIds = !fresh && App.home ? (chosen ? mineIds : [...new Set([lv.course].filter(id => id && Courses[id] && !Courses[id].preview).concat(mineIds))].slice(0, 6)) : [];
-      const resume = App.resumeCard ? App.resumeCard(mineIds, { noStrip: true }) : '';
-      const nextBody = homeIds.length ? App.home.webHome(homeIds, { side: resume }) : `${fresh ? startHere : (App.todaySummary ? App.todaySummary() : '')}${resume}`;
-      const allN = COURSE_ORDER.filter(id => Courses[id]).length;
-      // someone who is not signed in: one line on Bo, and the one-minute demo of a call (assets/max.js)
-      const boTeaser = guest && App.views.max ? `<a class="land-bo" href="#/max"><span class="lb-av" aria-hidden="true">${App.bobcatSvg ? App.bobcatSvg(46) : ''}</span><span class="lb-t"><b>Stuck on a problem? Call Bo.</b><small>A tutor who talks it through with you and writes on a board you share.</small></span><span class="lb-go">${icon('play', 13)} Watch a 1-minute demo</span></a>` : '';
-      const moreOpen = !!settings().landMore;
+      const startHere = fresh ? `<div class="start-steps">${[['1', 'Pick a class', 'Your classes are below, in Your home. Tap one to open it.'], ['2', 'Take a 5-minute lesson', 'A few questions with worked answers. No setup.'], ['3', guest ? 'Sign up to keep it' : 'Come back tomorrow', guest ? 'A free montana.edu account saves your progress everywhere.' : 'Your streak and daily plan pick up where you left off.']].map(([n, h, p]) => `<div class="start-step"><span class="ss-n">${n}</span><div><b>${h}</b><small>${p}</small></div></div>`).join('')}</div>` : '';
       root.innerHTML = `<div class="landing-wrap">
-        <header class="landing-top hero dash-hero"><div><p class="hero-when">${esc(fmtDate(t, true))} · ${esc(first.term)}${ss.phase === 'during' ? ` · Week ${ss.week}` : ''}</p><h1 class="landing-title hero-sub">${hello}</h1>${guest ? '<p class="muted small hero-note">Every class you take, made simple: what is on the next exam, five-minute lessons and a tutor you can call. Free with a montana.edu email.</p>' : ''}${(() => { const soon = mineIds.map(id => ({ C: Courses[id], ex: nextExam(Courses[id]) })).filter(x => x.ex && x.ex.date >= t).sort((a, b) => a.ex.date.localeCompare(b.ex.date))[0]; if (!soon) return ''; const n = daysBetween(t, soon.ex.date); return `<a class="hero-count" href="#/${soon.C.id}/dashboard"><span class="hc-num count" data-count="${n}">${n}</span><span class="hc-body"><small>day${n === 1 ? '' : 's'} until ${esc(soon.ex.name)}</small><b>${esc(soon.C.short)} · ${esc(soon.ex.dateLabel || fmtDate(soon.ex.date, true))}${App.readiness ? (() => { const r = App.readiness(soon.C.id); return r && r.ok && r.score > 0 ? ` · ${r.score}% ready` : ''; })() : ''}</b></span>${icon('right', 14)}</a>`; })()}</div><div class="row gap-sm hero-actions"><a class="btn primary sm hero-today" href="#/today">${icon('flag', 14)} Today</a><a class="btn sm hero-faculty" href="#/teach" title="Mathub Faculty: write your syllabus and run your class">${icon('file', 14)} For professors</a></div><div class="mascot-slot hero-mascot" data-size="96"></div><div class="px-skyline" aria-hidden="true"></div></header>
-        <div id="announcement-slot"></div>${boTeaser}
-        <section class="land-sec land-next" aria-labelledby="lsec-next"><h2 class="sec-title" id="lsec-next">${fresh ? 'Start here' : 'Your next step'}</h2>
-          ${App.inviteBanner ? App.inviteBanner() : ''}${App.recapBanner ? App.recapBanner() : ''}${nextBody}
-        </section>
-        <section class="land-sec" aria-labelledby="lsec-classes"><div class="sec-h"><h2 class="sec-title" id="lsec-classes">${showAll && mineIds.length < allN ? 'All classes' : 'Your classes'}</h2><span class="sec-acts">${guest ? '' : `<button class="linkbtn small" data-action="choose">${icon('sliders', 13)} Choose classes</button>`}${mineIds.length < allN ? `<button class="linkbtn small" data-action="show-all">${showAll ? 'Show only mine' : 'Show all classes'}</button>` : ''}</span></div>
-          <div class="course-grid">${cards}</div>
-          ${App.requestLink ? `<div class="rq-under">${App.requestLink()}${App.createLink ? App.createLink() : ''}${App.teachLinks ? App.teachLinks() : ''}</div>` : ''}
-        </section>
+        <header class="landing-top hero dash-hero"><div><p class="hero-when">${esc(fmtDate(t, true))} · ${esc(first.term)}${ss.phase === 'during' ? ` · Week ${ss.week}` : ''}</p><h1 class="landing-title hero-sub">${hello}</h1>${guest ? '<p class="muted small hero-note">Every class you take, made simple: what is on the next exam, five-minute lessons and a tutor you can call. Free with a montana.edu email.</p>' : ''}${(() => { const soon = mineIds.map(id => ({ C: Courses[id], ex: nextExam(Courses[id]) })).filter(x => x.ex && x.ex.date >= t).sort((a, b) => a.ex.date.localeCompare(b.ex.date))[0]; if (!soon) return ''; const n = daysBetween(t, soon.ex.date); return `<a class="hero-count" href="#/${soon.C.id}/dashboard"><span class="hc-num count" data-count="${n}">${n}</span><span class="hc-body"><small>day${n === 1 ? '' : 's'} until ${esc(soon.ex.name)}</small><b>${esc(soon.C.short)} · ${esc(soon.ex.dateLabel || fmtDate(soon.ex.date, true))}${App.readiness ? (() => { const r = App.readiness(soon.C.id); return r && r.ok && r.score > 0 ? ` · ${r.score}% ready` : ''; })() : ''}</b></span>${icon('right', 14)}</a>`; })()}</div><div class="row gap-sm hero-actions"><a class="btn primary sm hero-today" href="#/today">${icon('flag', 14)} Today</a><a class="btn sm hero-faculty" href="#/teach" title="StudyCat Faculty: write your syllabus and run your class">${icon('file', 14)} For professors</a></div><div class="mascot-slot hero-mascot" data-size="96"></div><div class="px-skyline" aria-hidden="true"></div></header>
+        <div id="announcement-slot"></div>
+        ${App.inviteBanner ? App.inviteBanner() : ''}${App.recapBanner ? App.recapBanner() : ''}${picking ? pickClassesHtml() : fresh ? startHere : ''}
         ${App.dash ? App.dash.html() : ''}
-        <details class="land-sec land-more" id="land-more"${moreOpen ? ' open' : ''}><summary><span class="lm-h"><span class="sec-title" id="lsec-more">More to explore</span><small>The week across your classes, your classmates, study guides</small></span><span class="lm-chev" aria-hidden="true">${icon('chevron', 16)}</span></summary>
-        <div class="dash-tabs landing-tabs" data-store="landTab" role="tablist">${tabs.map(([k, l, ic]) => `<button class="tab" data-tab="${k}" role="tab">${icon(ic, 14)}<span>${l}</span></button>`).join('')}</div>
-        <div class="panes">
-        <div class="pane" data-pane="week"><div class="grid cols-2">
-        <div class="panel"><div class="panel-h"><div class="panel-title">${icon('clock')} Next seven days, all classes</div><span class="small muted">syllabus rules, exams and drop dates</span></div>
-          ${merged.length ? `<div class="table-wrap"><table class="table compact"><tbody>${merged.slice(0, 6).map(x => `<tr><td style="width:120px" class="mono small">${daysBetween(t, x.date) === 0 ? 'Today' : daysBetween(t, x.date) === 1 ? 'Tomorrow' : esc(fmtDate(x.date))}</td><td style="width:90px"><span class="chip course-${x.course.id}">${esc(x.course.short)}</span></td><td>${esc(x.title)}${x.time ? ` <span class="muted small">· ${esc(x.time)}</span>` : ''}</td></tr>`).join('')}</tbody></table></div>${merged.length > 6 ? `<a class="small" href="#/today">${merged.length - 6} more this week · open Today ${icon('right', 11)}</a>` : ''}` : '<div class="empty">Nothing due in the next week.</div>'}
-        </div>
-        <div id="landing-canvas"></div></div></div>
-        <div class="pane" data-pane="community"><div class="row gap-sm mb-2" style="flex-wrap:wrap;align-items:center"><div id="landing-presence"></div><div class="league-slot" data-compact="1"></div></div><div id="landing-social"></div>
-        <div class="panel mt-2"><div class="panel-h"><div class="panel-title">${icon('chat')} Latest discussions</div><a class="btn sm" href="#/forum">${icon('chat', 13)} Open discussions</a></div><div id="landing-forum"><div class="empty small">Loading…</div></div></div></div>
-        <div class="pane" data-pane="guides">${App.guidesStrip ? App.guidesStrip() : ''}</div>
-        <div class="pane" data-pane="inside">${App.resumeCard ? App.resumeCard(mineIds, { stripOnly: true }) : ''}<div class="landing-features grid cols-4">${[['list', 'Endless quizzes', 'New problems every time, each with a worked answer.'], ['book', 'Notes on every topic', 'The big ideas, the formulas, a worked example and the usual mistakes.'], ['flask', 'Tools to play with', 'Graphers, simulators, solvers, a unit circle and grade calculators.'], ['chat', 'Classmates', 'Discussions, daily challenges, study sessions and mock exams.']].map(([ic, h, p]) => `<div class="card-link"><div class="eyebrow">${icon(ic, 14)}</div><h4>${h}</h4><p>${p}</p></div>`).join('')}</div></div>
-        </div></details>
         ${guest ? '<p class="small muted mt-2" style="text-align:center">Look around as much as you like. Sign up with a montana.edu email to keep your progress on every device.</p>' : ''}</div>`;
-      if (fresh) { const cs = $('[aria-labelledby="lsec-classes"]', root), nx = $('.land-next', root); if (cs && nx) nx.before(cs); }
-      if (App.dash) App.dash.paint(root);   // the planner's cards (assets/dash.js)
-      bind(root, { theme: toggleTheme, search: () => Search.open(), 'open-course': (el, e) => { if (e.target.closest('a')) return; location.hash = '#/' + el.dataset.c + '/dashboard'; }, 'show-all': (el, e) => { e.preventDefault(); Landing.showAll = !Landing.showAll; render(); }, choose: (el, e) => { e.preventDefault(); if (App.auth && App.auth.user) App.auth.onboard(true); else if (App.auth) App.auth.open('signup'); } }); applyTheme();
+      if (App.dash) App.dash.paint(root);   // your home: the widgets you arranged (assets/dash.js)
+      bind(root, { theme: toggleTheme, search: () => Search.open() }); applyTheme(); if (picking) wirePickClasses(root);
       const slot = $('#landing-account', root); if (slot && App.auth) App.auth.paintLandingAccount(slot);
-      // what is folded under "More to explore" loads when it is opened (the discussions, classmates and Canvas each ask the server)
-      const more = $('#land-more', root); let filled = false;
-      const fillMore = () => {
-        if (filled || !more || !more.open) return; filled = true;
-        const lf = $('#landing-forum', root); if (lf) { if (App.forumLatest) { const go = () => App.forumLatest(lf); if (App.auth && App.auth.ready) go(); else if (App.auth) App.auth.onChange(function once() { go(); }); } else lf.innerHTML = ''; }
-        Canvas.fill($('#landing-canvas', root), null, 8);
-        if (App.social) { const goS = () => App.social.fillLanding(root); if (App.auth && App.auth.ready) goS(); else if (App.auth) App.auth.onChange(function once() { goS(); }); }
-      };
-      if (more) more.addEventListener('toggle', () => { setSetting('landMore', more.open); fillMore(); });
-      fillMore(); paintAnnouncement(root);
-      if (homeIds.length) App.home.paintWebHome(root);
+      paintAnnouncement(root);
       if (App.ambient && App.ambient.paint) try { App.ambient.paint(); } catch (e) {}   // the sound button in the hero shows what is playing
       if (App.social && App.social.presencePing) { if (App.auth && App.auth.ready) App.social.presencePing(); else if (App.auth) App.auth.onChange(function once() { App.social.presencePing(); }); }
     }
@@ -846,7 +864,7 @@
               <div class="divider"></div>
               ${D.UNITS.map(u => { const m = unitMastery(u.n); return `<div class="bar-row"><span>Unit ${u.n} · ${esc(u.title)}</span><span class="mono">${m.a ? m.pct + '%' : '—'}</span><div class="bar"><div class="bar-fill ${m.pct >= 80 ? 'good' : m.pct >= 60 ? 'warn' : m.a ? 'bad' : ''}" style="width:${m.a ? m.pct : 0}%"></div></div></div>`; }).join('')}</div><div class="stack"><div class="panel"><div class="panel-h"><div class="panel-title">${icon('zap')} Daily quests</div></div><div class="quests-slot" data-compact="1"></div></div><div class="panel"><div class="panel-h"><div class="panel-title">${icon('gem')} Your league</div><a class="small" href="${L('leagues')}">All leagues</a></div><div class="league-slot"></div></div></div></div></div>
             <div class="pane" data-pane="plan"><div class="panel plan-panel"><div class="panel-h"><div class="panel-title">${icon('calendar')} ${plan ? (plan.isToday ? 'Today’s plan' : `Next study day · ${esc(fmtDate(plan.date))}`) : 'Study planner'}</div>${plan ? `<span class="small muted">${plan.done}/${plan.total} done · <a href="${L('planner')}">open plan</a></span>` : ''}</div>
-              ${plan ? (plan.items.length ? plan.items.map(i => `<label class="check plan-item${i.done ? ' done' : ''}" style="padding:4px 0"><input type="checkbox" data-plan="${i.id}" ${i.done ? 'checked' : ''}><span class="plan-label">${esc(i.label)}</span>${i.link ? `<a class="btn xs" href="${i.link}">Open</a>` : ''}</label>`).join('') : '<div class="empty">Rest day. Nothing planned.</div>') : `<div class="empty">No plan yet. Pick an exam and your study days and Mathub spreads the work across them. <a class="btn sm mt-2" href="${L('planner')}">Build a plan</a></div>`}</div></div>
+              ${plan ? (plan.items.length ? plan.items.map(i => `<label class="check plan-item${i.done ? ' done' : ''}" style="padding:4px 0"><input type="checkbox" data-plan="${i.id}" ${i.done ? 'checked' : ''}><span class="plan-label">${esc(i.label)}</span>${i.link ? `<a class="btn xs" href="${i.link}">Open</a>` : ''}</label>`).join('') : '<div class="empty">Rest day. Nothing planned.</div>') : `<div class="empty">No plan yet. Pick an exam and your study days and StudyCat spreads the work across them. <a class="btn sm mt-2" href="${L('planner')}">Build a plan</a></div>`}</div></div>
             <div class="pane" data-pane="community"><div class="grid cols-3"><div id="dash-social" class="span-2 stack"></div><div id="dash-social-side"></div></div></div>
           </div>
         </div>`;
@@ -892,24 +910,36 @@
         root.innerHTML = `<div class="notes-layout"><div class="panel sec-nav">${navHtml}</div><div class="stack"><div class="panel">
           <div class="note-head"><span class="note-num">${esc(sec.label)}</span><span class="chip">Unit ${sec.unit}</span>${ex ? `<span class="chip exam">${esc(ex.name)}</span>` : ''}</div>
           <h1 class="note-title">${esc(sec.title)}</h1>
-          <div class="note-block"><h2>Big ideas</h2><ul class="list">${sec.ideas.slice(0, 2).map(i => `<li>${i}</li>`).join('')}<li class="muted">… and ${Math.max(0, sec.ideas.length - 2)} more, plus formulas, a worked example, common mistakes and an exam tip.</li></ul></div>
+          ${sec.plain ? `<div class="note-block lesson-idea"><h2>${icon('bulb', 16)} The idea</h2><div class="lesson-plain">${sec.plain}</div></div><p class="muted small">The full lesson adds a picture, the key points, worked examples, common mistakes and a self-check.</p>` : `<div class="note-block"><h2>Big ideas</h2><ul class="list">${sec.ideas.slice(0, 2).map(i => `<li>${i}</li>`).join('')}<li class="muted">… and ${Math.max(0, sec.ideas.length - 2)} more, plus formulas, a worked example, common mistakes and an exam tip.</li></ul></div>`}
           ${App.lockCard(`Notes beyond the first ${freeN} topics are for members`, `Sign up free to read every ${D.short} topic (${D.SECTIONS.length} in total) with worked examples and exam tips.`)}
           <div class="row between mt-3"><div>${prev ? `<button class="btn" data-action="open" data-id="${prev.id}">${icon('left', 14)} ${esc(prev.label)}</button>` : ''}</div><div>${next ? `<button class="btn" data-action="open" data-id="${next.id}">${esc(next.label)} ${icon('right', 14)}</button>` : ''}</div></div>
           </div></div></div>`;
         bind(root, { open: el => App.go('notes', el.dataset.id) }); return;
       }
-      root.innerHTML = `<div class="notes-layout"><div class="panel sec-nav">${navHtml}</div><div class="stack"><div class="panel">
+      // the lesson: the idea in plain words, a picture, the key points and formulas, worked examples, the usual
+      // mistakes and a self-check (assets/lessons/<id>.js lays them over the notes; a class of your own carries them)
+      const examples = (Array.isArray(sec.examples) && sec.examples.length ? sec.examples : sec.example && sec.example.p ? [sec.example] : []).filter(x => x && x.p);
+      const checks = (sec.check || []).map(c => (Array.isArray(c) ? { q: c[0], a: c[1] } : c)).filter(c => c && c.q);
+      let fig = ''; if (sec.figure && App.boDraw) { try { const sp = App.boDraw.parse(sec.figure); if (sp) fig = `<figure class="lesson-fig">${App.boDraw.html(sp, false)}</figure>`; } catch (e) {} }
+      const askBo = App.moduleOn && !App.moduleOn('tutor') ? '' : `<a class="btn sm ghost lesson-ask" href="#/tutor/${esc(D.id)}?q=${encodeURIComponent(`Explain ${sec.title} another way`)}">${icon('chat', 13)} Ask Bo to explain it another way</a>`;
+      const lesson = !!(sec.plain || fig || checks.length);
+      root.innerHTML = `<div class="notes-layout"><div class="panel sec-nav">${navHtml}</div><div class="stack"><article class="panel note-lesson${lesson ? ' is-lesson' : ''}">
         <div class="note-head"><span class="note-num">${esc(sec.label)}</span><span class="chip">Unit ${sec.unit}</span>${ex ? `<span class="chip exam">${esc(ex.name)}</span>` : ''}${sec.link ? `<a class="small" style="margin-left:auto" href="${sec.link}" target="_blank" rel="noopener">${esc(sec.linkLabel || (D.kind === 'code' ? 'Class site' : 'Read in the textbook'))} ${icon('external', 12)}</a>` : '<span style="margin-left:auto"></span>'}${App.flagButton ? App.flagButton({ course: D.id, view: 'Notes', ref: `${sec.label} ${sec.title}` }) : ''}</div>
         <h1 class="note-title">${esc(sec.title)}</h1>
-        <div class="note-block"><h2>Big ideas</h2><ul class="list">${(sec.ideas || []).map(i => `<li>${i}</li>`).join('')}</ul></div>
+        ${lesson ? `<nav class="lesson-toc" aria-label="In this lesson">${[sec.plain && ['idea', 'The idea'], fig && ['picture', 'Picture'], (sec.ideas || []).length && ['points', 'Key points'], examples.length && ['examples', examples.length > 1 ? 'Worked examples' : 'Worked example'], (sec.pitfalls || []).length && ['mistakes', 'Common mistakes'], checks.length && ['check', 'Check yourself']].filter(Boolean).map(([k, l]) => `<a href="#" data-action="jump" data-to="ls-${k}">${l}</a>`).join('')}</nav>` : ''}
+        ${sec.plain ? `<section class="note-block lesson-idea" id="ls-idea"><h2>${icon('bulb', 16)} The idea</h2><div class="lesson-plain">${sec.plain}</div></section>` : ''}
+        ${fig ? `<section class="note-block" id="ls-picture"><h2 class="sr-only">Picture</h2>${fig}</section>` : ''}
+        ${(sec.ideas || []).length ? `<section class="note-block" id="ls-points"><h2>${lesson ? 'Key points' : 'Big ideas'}</h2><ul class="list">${(sec.ideas || []).map(i => `<li>${i}</li>`).join('')}</ul></section>` : ''}
         ${sec.formulas && sec.formulas.length ? `<div class="note-block"><h2>Key formulas</h2>${sec.formulas.map(f => `<div class="formula-row"><div class="name">${esc(f.n)}</div><div class="tex">$$${f.t}$$</div></div>`).join('')}</div>` : ''}
         ${sec.code && sec.code.length ? `<div class="note-block"><h2>Code you should know</h2>${sec.code.map((c, i) => `<div class="code-card"><div class="code-card-h"><span>${esc(c.t)}</span><a class="btn xs primary" href="${L('playground', null, { ex: `sec:${sec.id}:${i}`, run: 1 })}">${icon('play', 11)} Try it</a></div><pre class="code-ex">${esc(c.c)}</pre>${c.out ? `<div class="code-out"><span class="eyebrow">Output</span><pre>${esc(c.out)}</pre></div>` : ''}</div>`).join('')}</div>` : ''}
-        ${sec.example && sec.example.p ? `<div class="note-block"><h2>Worked example</h2><div class="callout"><div>${sec.example.p}</div><button class="btn sm mt-2" data-action="reveal">${icon('eye', 14)} Show solution</button><div class="reveal mt-2" id="sol">${sec.example.s || ''}</div></div></div>` : ''}
-        ${sec.pitfalls && sec.pitfalls.length ? `<div class="note-block"><h2>Common mistakes</h2><ul class="list">${sec.pitfalls.map(i => `<li>${i}</li>`).join('')}</ul></div>` : ''}
+        ${examples.length ? `<section class="note-block" id="ls-examples"><h2>${examples.length > 1 ? 'Worked examples' : 'Worked example'}</h2>${examples.map((x, i) => `<div class="callout lesson-ex">${examples.length > 1 ? `<div class="eyebrow">Example ${i + 1}</div>` : ''}<div>${x.p}</div><button class="btn sm mt-2" data-action="reveal" data-i="${i}" aria-expanded="false" aria-controls="sol-${i}">${icon('eye', 14)} Show the solution</button><div class="reveal mt-2" id="sol-${i}">${x.s || ''}</div></div>`).join('')}</section>` : ''}
+        ${sec.pitfalls && sec.pitfalls.length ? `<section class="note-block" id="ls-mistakes"><h2>Common mistakes</h2><ul class="list lesson-mistakes">${sec.pitfalls.map(i => `<li>${i}</li>`).join('')}</ul></section>` : ''}
+        ${checks.length ? `<section class="note-block lesson-check" id="ls-check"><h2>${icon('check', 16)} Check yourself</h2><p class="small muted">Answer in your head or on paper, then look.</p><ol class="lesson-qs">${checks.map((c, i) => `<li><div class="lesson-q">${c.q}</div><button class="btn sm" data-action="answer" data-i="${i}" aria-expanded="false" aria-controls="ans-${i}">${icon('eye', 13)} Show the answer</button><div class="reveal lesson-a" id="ans-${i}">${c.a || ''}</div></li>`).join('')}</ol></section>` : ''}
         ${sec.tip ? `<div class="note-block"><div class="callout tip"><div class="eyebrow">Exam tip</div>${sec.tip}</div></div>` : ''}
-        <div class="row between mt-3"><div>${prev ? `<button class="btn" data-action="open" data-id="${prev.id}">${icon('left', 14)} ${esc(prev.label)}</button>` : ''}</div><div class="row">${topics.length ? `<a class="btn primary" href="${L('practice', null, { topics: topics.join(',') })}">${icon('list', 14)} Practice ${esc(sec.label)}</a>` : ''}<a class="btn" href="${L('flashcards', null, { sec: sec.id })}">${icon('cards', 14)} Cards</a></div><div>${next ? `<button class="btn" data-action="open" data-id="${next.id}">${esc(next.label)} ${icon('right', 14)}</button>` : ''}</div></div>
-      </div></div></div>`;
-      bind(root, { open: el => App.go('notes', el.dataset.id), reveal: el => { const s = $('#sol', root); s.classList.toggle('open'); el.innerHTML = s.classList.contains('open') ? `${icon('eye', 14)} Hide solution` : `${icon('eye', 14)} Show solution`; } });
+        <div class="row between mt-3 lesson-foot"><div>${prev ? `<button class="btn" data-action="open" data-id="${prev.id}">${icon('left', 14)} ${esc(prev.label)}</button>` : ''}</div><div class="row" style="flex-wrap:wrap;justify-content:center">${topics.length ? `<a class="btn primary" href="${L('practice', null, { topics: topics.join(',') })}">${icon('list', 14)} Practice ${esc(sec.label)}</a>` : ''}<a class="btn" href="${L('flashcards', null, { sec: sec.id })}">${icon('cards', 14)} Cards</a>${askBo}</div><div>${next ? `<button class="btn" data-action="open" data-id="${next.id}">${esc(next.label)} ${icon('right', 14)}</button>` : ''}</div></div>
+      </article></div></div>`;
+      const flip = (el, box, show, hide) => { const on = box.classList.toggle('open'); el.setAttribute('aria-expanded', String(on)); el.innerHTML = on ? `${icon('eye', 14)} ${hide}` : `${icon('eye', 14)} ${show}`; if (on && App.typeset) App.typeset(box); };
+      bind(root, { open: el => App.go('notes', el.dataset.id), reveal: el => flip(el, $('#sol-' + el.dataset.i, root), 'Show the solution', 'Hide the solution'), answer: el => flip(el, $('#ans-' + el.dataset.i, root), 'Show the answer', 'Hide the answer'), jump: (el, e) => { e.preventDefault(); const t = $('#' + el.dataset.to, root); if (t) t.scrollIntoView({ behavior: 'smooth', block: 'start' }); } });
       if (App.paintMyNotes) App.paintMyNotes(root, sec);
       if (App.scrollProgress) App.scrollProgress($('.notes-layout > .stack > .panel', root));
     }
@@ -993,7 +1023,11 @@
       const scale = G && (G.scale || []).length > 1 ? `<div class="table-wrap"><table class="table compact grade-scale"><thead><tr><th>Grade</th><th class="num">Percent</th>${G.scale[0].fourPt ? '<th class="num">4-point</th>' : ''}</tr></thead><tbody>${G.scale.map(sc => `<tr><td><b>${esc(sc.letter)}</b></td><td class="num">${sc.min === 0 ? '< ' + G.scale[G.scale.length - 2].min : '≥ ' + sc.min}</td>${sc.fourPt ? `<td class="num">${esc(String(sc.fourPt))}</td>` : ''}</tr>`).join('')}</tbody></table></div>` : '';
       const rubric = G && G.rubric ? `<div class="eyebrow mt-2 mb-1">${esc(G.rubricTitle || (D.id === 'physics' ? 'How each lab is scored (20 points)' : 'How written work is scored (4-point rubric)'))}</div><div class="table-wrap"><table class="table compact"><tbody>${G.rubric.map(r => `<tr><td style="width:140px"><b>${esc(String(r.score))} · ${esc(r.name)}</b></td><td>${esc(r.desc)}</td></tr>`).join('')}</tbody></table></div>` : '';
       const grading = cats || scale || rubric ? `<div class="panel span-2 grading-panel"><div class="panel-h"><div class="panel-title">${icon('reportcard')} ${cats ? 'How the grade is made' : 'Letter grades'}</div></div>${cats && G.note ? `<p class="small muted mb-2">${esc(G.note)}</p>` : ''}<div class="grid cols-2">${cats ? `<div>${cats}</div>` : ''}${scale ? `<div>${scale}</div>` : ''}</div>${rubric}</div>` : '';
-      root.innerHTML = pageHead('Syllabus & policies', `${esc(C.code)} ${esc(C.name)} · ${esc(C.term)} · ${esc(C.school)}. The essentials from the syllabus, in one place.`) + `<div class="grid cols-2">${(D.INFO || []).map(p => `<div class="panel${p.span2 ? ' span-2' : ''}"><div class="panel-h"><div class="panel-title">${icon(p.icon || 'info')} ${esc(p.title)}</div></div>${p.html}</div>`).join('')}${grading}</div>`;
+      // the student's own details (the class maker): their instructor, office hours and where it meets
+      const K = classCustom(D.id); const own = (App.packs && App.packs.local && App.packs.local.has(D.id)) || !!K;
+      const det = own ? [['user', 'Instructor', C.instructor], ['send', 'Email', C.instructorEmail ? `<a href="mailto:${esc(C.instructorEmail)}">${esc(C.instructorEmail)}</a>` : ''], ['clock', 'Office hours', C.officeHours], ['calendar', 'When and where', [C.classDays, C.room].filter(Boolean).join(' · ')]].filter(r => r[2]) : [];
+      const mine = det.length ? `<div class="panel span-2 own-panel"><div class="panel-h"><div class="panel-title">${icon('user')} ${K ? 'Your section' : 'Your class'}</div><a class="btn sm" href="#/maker/${esc(D.id)}">${icon('maker', 13)} Edit</a></div><dl class="own-list">${det.map(([ic, k, v]) => `<div><dt>${icon(ic, 13)} ${k}</dt><dd>${ic === 'send' ? v : esc(v)}</dd></div>`).join('')}</dl>${K && K.weights && Object.keys(K.weights).length ? '<p class="small muted mt-1">The grading weights below are the ones you set.</p>' : ''}</div>` : '';
+      root.innerHTML = pageHead('Syllabus & policies', `${esc(C.code)} ${esc(C.name)} · ${esc(C.term)}${C.school ? ` · ${esc(C.school)}` : ''}. The essentials from the syllabus, in one place.`, `<a class="btn" href="#/maker/${esc(D.id)}">${icon('maker', 14)} ${own ? 'Edit this class' : 'Make it yours'}</a>`) + `<div class="grid cols-2">${mine}${(D.INFO || []).map(p => `<div class="panel${p.span2 ? ' span-2' : ''}"><div class="panel-h"><div class="panel-title">${icon(p.icon || 'info')} ${esc(p.title)}</div></div>${p.html}</div>`).join('')}${grading}</div>`;
     }
   };
 
@@ -1035,9 +1069,9 @@
       const s = settings(); const C = standalone ? null : D; const hasLab = !!(C && (C.RECURRING || []).some(r => r.afterLabDay)); const V = C && C.VARIANTS;
       const mine = App.myCourses(); const sem = (C || Courses[mine[0]] || Courses[COURSE_ORDER[0]]).SEMESTER;
       const head = standalone
-        ? `<header class="landing-top"><div><div class="eyebrow">Mathub</div><h1 class="landing-title"><span class="logo-mark">${App.logoSvg(44)}</span>Settings</h1><p class="muted">Your account, notifications, classes and preferences. They apply everywhere on Mathub.</p></div><div class="row gap-sm"><span id="landing-account"></span><a class="btn" href="#/">${icon('left', 14)} All classes</a></div></header>`
+        ? `<header class="landing-top"><div><div class="eyebrow">StudyCat</div><h1 class="landing-title"><span class="logo-mark">${App.logoSvg(44)}</span>Settings</h1><p class="muted">Your account, notifications, classes and preferences. They apply everywhere on StudyCat.</p></div><div class="row gap-sm"><span id="landing-account"></span><a class="btn" href="#/">${icon('left', 14)} All classes</a></div></header>`
         : pageHead('Settings', 'Preferences apply to every class. Progress is stored per class and, when you are logged in, synced to your account.');
-      const classesPanel = `<div class="panel span-2"><div class="panel-h"><div class="panel-title">${icon('grid')} Your classes</div><button class="btn sm" data-action="choose">Choose classes and sections</button></div><div class="row gap-sm" style="flex-wrap:wrap">${mine.map(id => `<span class="chip course-${id}">${esc(Courses[id].short)}${courseSetting(id, 'section', '') ? ' · sec ' + esc(courseSetting(id, 'section', '')) : ''}${courseSetting(id, 'examTime', '') ? ' · ' + esc(courseSetting(id, 'examTime', '')) : ''}</span>`).join('')}</div><p class="small muted mt-1">Only these classes show on the landing page, in the course switcher, in reminders and in the weekly digest.</p>${App.requestLink ? App.requestLink('small') : ''}</div>`;
+      const classesPanel = `<div class="panel span-2"><div class="panel-h"><div class="panel-title">${icon('grid')} Your classes</div><div class="row gap-sm"><a class="btn sm" href="#/maker">${icon('maker', 13)} Class maker</a><button class="btn sm" data-action="choose">Choose classes and sections</button></div></div><div class="row gap-sm" style="flex-wrap:wrap">${mine.map(id => `<span class="chip course-${id}">${esc(Courses[id].short)}${courseSetting(id, 'section', '') ? ' · sec ' + esc(courseSetting(id, 'section', '')) : ''}${courseSetting(id, 'examTime', '') ? ' · ' + esc(courseSetting(id, 'examTime', '')) : ''}</span>`).join('')}</div><p class="small muted mt-1">Only these classes show on the landing page, in the course switcher, in reminders and in the weekly digest. Make any of them yours, or add one from your syllabus, in the class maker.</p></div>`;
       const prefsPanel = `<div class="panel"><div class="panel-h"><div class="panel-title">${icon('sliders')} Preferences</div></div>
           ${I18N ? `<div class="field mb-2"><label for="s-lang">Language</label><select class="select" id="s-lang" translate="no">${I18N.langs.map(([c, n]) => `<option value="${c}"${c === App.lang ? ' selected' : ''}>${n}</option>`).join('')}</select><p class="muted small mt-1">The interface and Bo. Class notes and questions stay in the class’s own language.</p></div>` : ''}
           <div class="field mb-2"><label for="s-theme">Theme</label><select class="select" id="s-theme"><option value="system"${s.theme === 'system' ? ' selected' : ''}>Match system</option><option value="light"${s.theme === 'light' ? ' selected' : ''}>Light</option><option value="dark"${s.theme === 'dark' ? ' selected' : ''}>Dark</option></select></div>
@@ -1047,7 +1081,7 @@
           ${App.boFloat ? `<label class="check" style="padding:0"><input type="checkbox" id="s-bofloat" ${s.boFloat === false ? '' : 'checked'}><span>Bo on every page <span class="muted small">(he floats in a corner; tap him to ask about what you're looking at)</span></span></label>
           <label class="check" style="padding:0"><input type="checkbox" id="s-botips" ${s.boTips === false || s.boFloat === false ? '' : 'checked'}${s.boFloat === false ? ' disabled' : ''}><span>Tips from Bo <span class="muted small">(now and then he offers to help with the questions on a page)</span></span></label>` : ''}
           <label class="check" style="padding:0"><input type="checkbox" id="s-geek" ${s.geek === true ? 'checked' : ''}><span>Geek mode <span class="muted small">(headings decode, a terminal status line, scanlines and CRT dialogs between pages)</span></span></label>
-          <div class="row gap-sm mt-2" style="flex-wrap:wrap"><button class="btn sm" data-action="tour-again">${icon('eye', 13)} Show the tour again</button><a class="btn sm" href="#/customize">${icon('sliders', 13)} Customize Mathub</a><a class="btn sm" href="#/tools">${icon('grid', 13)} Tools</a><a class="btn sm" href="#/resources">${icon('link', 13)} Resources</a></div>
+          <div class="row gap-sm mt-2" style="flex-wrap:wrap"><button class="btn sm" data-action="tour-again">${icon('eye', 13)} Show the tour again</button><a class="btn sm" href="#/customize">${icon('sliders', 13)} Customize StudyCat</a><a class="btn sm" href="#/tools">${icon('grid', 13)} Tools</a><a class="btn sm" href="#/resources">${icon('link', 13)} Resources</a></div>
           <div class="field mb-2"><label for="s-goal">Daily XP goal</label><select class="select" id="s-goal">${(App.GOALS || [[30, 'Regular']]).map(([n, name]) => `<option value="${n}"${(App.dailyGoal ? App.dailyGoal() : 30) === n ? ' selected' : ''}>${n} XP · ${name}</option>`).join('')}</select><span class="help">A correct answer is 10 XP. The ring in the header fills up as you go; hit the goal every day to keep your streak strong.</span></div>
           <label class="check" style="padding:0"><input type="checkbox" id="s-sound" ${s.sound === false ? '' : 'checked'}><span>Sound effects <span class="muted small">(short cues for right, wrong and finished lessons)</span></span></label>
           <label class="check mb-2" style="padding:0"><input type="checkbox" id="s-livebg" ${s.liveBg === true ? 'checked' : ''}><span>Animated background <span class="muted small">(drifting symbols; off automatically when your system prefers reduced motion)</span></span></label>

@@ -1,5 +1,5 @@
 /* ============================================================
-   Mathub — your credits and what you used them on (#/usage; #/calls goes here too)
+   StudyCat — your credits and what you used them on (#/usage; #/calls goes here too)
    Like Claude's usage page: what is left (the month's credits first, then the ones you bought, which never expire),
    when the month's come back, this month by what you used them on, the last 30 days, what things cost, buying more
    (RevenueCat's web checkout, then "I paid" asks again), every use and every purchase, and how Bo sounds on calls.
@@ -28,7 +28,7 @@
   const dayISO = iso => { const [y, m, d] = String(iso).split('-').map(Number); return new Date(y, m - 1, d).toLocaleDateString([], { month: 'long', day: 'numeric' }); };
   const FICON = { chat: 'chat', call: 'phone', image: 'image', voice: 'mic', recap: 'list', memory: 'bulb', class: 'book', other: 'zap' };
   const settings = () => App.settings(); const setSetting = (k, v) => App.setSetting(k, v);
-  const planName = p => p === 'max' ? 'Mathub Max' : p === 'pro' ? 'Mathub Pro' : 'Free';
+  const planName = p => p === 'max' ? 'StudyCat Max' : p === 'pro' ? 'StudyCat Pro' : 'Free';
 
   /* ---------- the parts of the page ---------- */
   function leftHtml(S) {
@@ -41,7 +41,7 @@
           <p class="us-m-f">Back to ${cr(S.allowance)} on ${esc(dayISO(S.resets))}.</p></div>
         <div class="us-m"><div class="us-m-h"><b>Credits you bought</b><span><b>${cr(S.paid)}</b> left</span></div><p class="us-m-f">Used after the monthly ones. They never expire.</p></div>
       </div>
-      <div class="us-buy" id="us-buy">${NATIVE ? `<p class="small muted">Credits are bought on the Mathub website, with the same account.</p>` : S.buy ? `<a class="btn primary lg" href="${esc(S.buy)}" target="_blank" rel="noopener" data-action="us-buy">${icon('plus', 17)} Buy ${cr(S.pack)} credits · ${esc(S.price)}</a><span class="small muted">Paid by card, on a page that opens in a new tab.</span>` : `<span class="small muted">Buying credits opens soon. Questions? <a href="#/contact">Write to us</a>.</span>`}
+      <div class="us-buy" id="us-buy">${NATIVE ? `<p class="small muted">Credits are bought on the StudyCat website, with the same account.</p>` : S.buy ? `<a class="btn primary lg" href="${esc(S.buy)}" target="_blank" rel="noopener" data-action="us-buy">${icon('plus', 17)} Buy ${cr(S.pack)} credits · ${esc(S.price)}</a><span class="small muted">Paid by card, on a page that opens in a new tab.</span>` : `<span class="small muted">Buying credits opens soon. Questions? <a href="#/contact">Write to us</a>.</span>`}
         <a class="btn ghost" href="#/plan">${icon('gem', 15)} ${S.plan === 'max' ? 'Your plan' : 'More credits every month'}</a></div>
       <div class="us-wait" id="us-wait" hidden><p>${icon('clock', 15)} Finish paying in the new tab, then come back here.</p><button type="button" class="btn" data-action="us-sync">${icon('rotate', 15)} I paid: check now</button></div>
     </section>`;
@@ -129,7 +129,7 @@
     async render(root) {
       const u = App.auth && App.auth.user;
       const head = App.pageHead('Usage', 'Your credits, what you used them on, and buying more.');
-      if (!u || u.local) { root.innerHTML = head + App.lockCard('Sign in to see your credits', 'Credits come with your Mathub account: some every month, and more when you buy them.'); return; }
+      if (!u || u.local) { root.innerHTML = head + App.lockCard('Sign in to see your credits', 'Credits come with your StudyCat account: some every month, and more when you buy them.'); return; }
       root.innerHTML = `${head}<div class="us-page" id="us"><div class="panel"><div class="empty">Loading…</div></div></div>`;
       let S; try { S = await api(/[?&]paid=1\b/.test(location.hash) ? 'credits_status&refresh=1' : 'credits_status'); } catch (e) { const b = $('#us', root); if (b) b.innerHTML = `<div class="callout warn">${esc(e.message)}</div>`; return; }
       paint(root, S);

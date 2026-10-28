@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /* ============================================================
-   Mathub — social preview cards (1200×630 PNG)
+   StudyCat — social preview cards (1200×630 PNG)
    Renders assets/og.png (site) and assets/og-<class>.png (one per
    class, in the class colour) with headless Chromium, so links to
    the app and to /learn pages show a proper card on iMessage,
@@ -41,15 +41,15 @@ const HEAD = `<!DOCTYPE html><html><head><meta charset="utf-8">${FONT_LINK}<styl
   .chips.many{right:72px;flex-wrap:wrap;gap:10px} .chips.many .chip{font-size:19px;padding:8px 15px}
 </style></head><body>`;
 const card = (color, inner, cls = '') => `${HEAD}<div class="card${cls ? ' ' + cls : ''}" style="background:${color}">${RANGE}${inner}</div></body></html>`;
-const site = card(COLORS.site, `<div class="brand">${LOGO}<b>Mathub</b></div>
+const site = card(COLORS.site, `<div class="brand">${LOGO}<b>StudyCat</b></div>
 <div class="tag">Free study hub for Montana State classes</div>
 <div class="sub">Topic notes, endless practice, flashcards, deadline calendars, simulators, a Python playground and a class board. Built by a Bobcat, for Bobcats.</div>
-<div class="chips${ORDER.length > 6 ? ' many' : ''}">${ORDER.map(c => `<span class="chip">${esc(Courses[c].code)}</span>`).join('')}</div><div class="url">mathub.space</div>`, ORDER.length > 6 ? 'cls' : '');
+<div class="chips${ORDER.length > 6 ? ' many' : ''}">${ORDER.map(c => `<span class="chip">${esc(Courses[c].code)}</span>`).join('')}</div><div class="url">studycat.org</div>`, ORDER.length > 6 ? 'cls' : '');
 const classCard = c => { const C = Courses[c]; const bits = [`${C.sectionCount} topic guides`, C.flashcardCount ? `${C.flashcardCount} flashcards` : null, C.hasQuiz ? 'endless practice' : (C.READINGS ? 'read-along readings' : null), 'deadline calendar'].filter(Boolean);
-  return card(COLORS[c] || COLORS.site, `<div class="brand">${LOGO}<b>Mathub</b><small>Montana State · ${esc(C.term)}</small></div>
+  return card(COLORS[c] || COLORS.site, `<div class="brand">${LOGO}<b>StudyCat</b><small>Montana State · ${esc(C.term)}</small></div>
 <div class="tag big">${esc(C.code)} · ${esc(C.name)}</div>
 <div class="sub">${esc(C.tagline || '')}</div>
-<div class="chips">${bits.map(b => `<span class="chip">${esc(b)}</span>`).join('')}</div><div class="url">mathub.space/learn/${c}</div>`, 'cls'); };
+<div class="chips">${bits.map(b => `<span class="chip">${esc(b)}</span>`).join('')}</div><div class="url">studycat.org/learn/${c}</div>`, 'cls'); };
 (async () => {
   const exe = process.env.MATHUB_CHROMIUM || (fs.existsSync('/opt/pw-browsers/chromium_headless_shell-1194/chrome-linux/headless_shell') ? '/opt/pw-browsers/chromium_headless_shell-1194/chrome-linux/headless_shell' : undefined);
   const browser = await chromium.launch({ executablePath: exe, args: ['--no-sandbox'] });

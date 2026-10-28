@@ -1,6 +1,6 @@
 <?php
 /* ============================================================
-   Mathub — the encrypted backup file (api/offsite.php sends it; api/backup-tool.php opens it on any computer).
+   StudyCat — the encrypted backup file (api/offsite.php sends it; api/backup-tool.php opens it on any computer).
    Format: "MHBAK\x01", a 16-byte salt, the PBKDF2 rounds (uint32, big-endian) and a 4-byte nonce prefix; then
    chunks of [length (uint32)][GCM tag (16)][ciphertext]. The plaintext is the file gzipped, cut in 1 MB pieces;
    the key is PBKDF2-SHA256(passphrase, salt, rounds); chunk i's nonce is the prefix + i (uint64) and its
@@ -46,7 +46,7 @@ function mh_bak_decrypt(string $src, string $dst, string $pass): int {
   $out = null; $n = 0;
   try {
     $head = mh_bak_read($in, MH_BAK_HEAD);
-    if (strlen($head) !== MH_BAK_HEAD || substr($head, 0, 6) !== MH_BAK_MAGIC) throw new RuntimeException('This is not an encrypted Mathub backup.');
+    if (strlen($head) !== MH_BAK_HEAD || substr($head, 0, 6) !== MH_BAK_MAGIC) throw new RuntimeException('This is not an encrypted StudyCat backup.');
     $salt = substr($head, 6, 16); $rounds = (int)unpack('N', substr($head, 22, 4))[1]; $np = substr($head, 26, 4);
     if ($rounds < 10000 || $rounds > 5000000) throw new RuntimeException('This copy is damaged.');
     $key = mh_bak_key($pass, $salt, $rounds); $out = @fopen($dst, 'wb'); if (!$out) throw new RuntimeException('Could not write the restored file.');

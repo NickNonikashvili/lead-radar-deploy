@@ -1,11 +1,12 @@
 /* ============================================================
-   Mathub Pro and Max, Ask Bo and "Let Bo write it", in the browser (assets/tutor.js, assets/create.js):
+   StudyCat Pro and Max, Ask Bo and "Let Bo write it", in the browser (assets/tutor.js, assets/create.js):
    - guests are asked to sign in; without Max the tutor shows what Bo does and offers Max only;
      Pro members are offered the move up to Max
    - a Max member agrees to what is sent to the AI first, then chats: Bo greets with the next exam and
      the weakest topic (from this device, free), answers with the progress snapshot sent along, keeps
      notes she can see and delete, takes a photo, and every answer can be reported
-   - Bo writes a class from a pasted syllabus, step by step, and it is added like any other class
+   - Bo reads a pasted syllabus for the class maker (any member, paid in credits), writes its lessons, and the class
+     is the student's own: nothing is published for everyone
    The AI and RevenueCat are stand-ins (tests/pyodide/router.php); mod.user has Max through plan_grants.
    ============================================================ */
 const T = require('./lib');
@@ -32,16 +33,16 @@ const PNG = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwA
   const [ca, a] = await open(1360, 900, 'alice.a@montana.edu');
   await api(a, 'create_status&refresh=1');
   await go(a, '#/tutor', 1800);
-  check('without a plan, Ask Bo works on her monthly credits: no plan wall', !/Get Mathub Max|part of Mathub Max/.test(await txt(a, '#bo-main')) && /Before you start|Pick a class first|Ask Bo about|I'm Bo/.test(await txt(a, '#bo-main')), (await txt(a, '#bo-main')).slice(0, 200));
+  check('without a plan, Ask Bo works on her monthly credits: no plan wall', !/Get StudyCat Max|part of StudyCat Max/.test(await txt(a, '#bo-main')) && /Before you start|Pick a class first|Ask Bo about|I'm Bo/.test(await txt(a, '#bo-main')), (await txt(a, '#bo-main')).slice(0, 200));
   await a.evaluate(() => { App.paywall({ need: 'max', reason: 'bo' }); }); await a.waitForTimeout(1500);
   const pw = await a.evaluate(() => { const s = document.querySelector('#paywall'); return s && { h: s.querySelector('h2').textContent, plans: [...s.querySelectorAll('[data-plan]')].map(b => b.dataset.plan), buy: (s.querySelector('[data-action="pw-buy"]') || {}).textContent, href: (s.querySelector('[data-action="pw-buy"]') || {}).getAttribute && s.querySelector('[data-action="pw-buy"]').getAttribute('href'), why: s.querySelector('.pw-why').textContent }; });
-  check('Bo\'s paywall offers Max only, at $20, with her Max checkout', pw && pw.h === 'Mathub Max' && pw.plans.join() === 'max' && /Get Max for \$20 a month/.test(pw.buy) && /^https:\/\/pay\.rev\.cat\/sbx_max_link\/mh_\d+$/.test(pw.href) && /2,000 credits a month/.test(pw.why), pw);
+  check('Bo\'s paywall offers Max only, at $20, with her Max checkout', pw && pw.h === 'StudyCat Max' && pw.plans.join() === 'max' && /Get Max for \$20 a month/.test(pw.buy) && /^https:\/\/pay\.rev\.cat\/sbx_max_link\/mh_\d+$/.test(pw.href) && /2,000 credits a month/.test(pw.why), pw);
   await a.keyboard.press('Escape'); await a.waitForTimeout(300);
   const aliceId = (await api(a, 'create_status')).json.customer;
   fs.writeFileSync(STATE, JSON.stringify({ [aliceId]: { expires: new Date(Date.now() + 30 * 864e5).toISOString(), plan: 'pro' } }));
   await api(a, 'create_status&refresh=1'); await a.evaluate(() => App.subscription.refresh(true)); await a.waitForTimeout(500);
   await go(a, '#/create', 1500);
-  check('with Pro, a student who opens Create a class lands on Request a class (classes are added by Mathub\'s team)', /#\/request$/.test(a.url()) && !(await a.$('#mk-bo-text')), a.url());
+  check('with Pro, Create a class is the class maker, with Bo reading a syllabus', /#\/maker$/.test(a.url()) && !!(await a.$('#mkr-bo #mk-bo-text')), a.url());
   await go(a, '#/settings', 1400); await a.click('#create-panel [data-cp="max"]'); await a.waitForTimeout(1200);
   check('the move-up card: Max only, and a note to cancel Pro on the website so she is not billed twice', /Move up to Max/.test(await txt(a, '#paywall h2')) && /cancel Pro/.test(await txt(a, '#paywall .pw-fine')) && /Move up to Max for \$20 a month/.test(await txt(a, '#paywall [data-action="pw-buy"]')), await txt(a, '#paywall'));
   await a.keyboard.press('Escape');
@@ -55,7 +56,7 @@ const PNG = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwA
   await m.evaluate(() => App.setSetting('aiConsent', 0));
   await go(m, '#/tutor/calc', 1800);
   const cons = await txt(m, '#bo-main');
-  check('before the first question: what is sent to Anthropic, that it is not used for training, and where the chat is kept', /Before you start/.test(cons) && /Anthropic/.test(cons) && /does not train/.test(cons) && /saved with your Mathub account/.test(cons) && !!(await m.$('[data-go="agree"]')), cons.slice(0, 200));
+  check('before the first question: what is sent to Anthropic, that it is not used for training, and where the chat is kept', /Before you start/.test(cons) && /Anthropic/.test(cons) && /does not train/.test(cons) && /saved with your StudyCat account/.test(cons) && !!(await m.$('[data-go="agree"]')), cons.slice(0, 200));
   await m.click('[data-go="agree"]'); await m.waitForTimeout(1800);
   const greet = await txt(m, '#bo-log .bo-msg.bo');
   check('Bo greets from what the device knows (no AI call): the next exam and the weakest topic', /I['’]m Bo/.test(greet) && /Exam 2 is in 3 days/.test(greet) && /weakest topic/.test(greet), greet);
@@ -136,27 +137,23 @@ const PNG = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwA
   check('exam week has "Ask Bo to quiz you"', quiz === '#/tutor/calc?q=quiz', quiz);
   await go(m, quiz, 2200);
   check('which opens Bo with the quiz request ready to send', /Quiz me for Exam 2/.test(await m.$eval('#bo-q', x => x.value)));
-  // Bo writes a class (Mathub's team adds classes: an administrator)
+  // Bo reads a syllabus for the class maker: any member, and the class is hers alone (never published)
   await cm.close();
-  const [cx, mx] = await open(1360, 900, 'admin.user@montana.edu');
-  await go(mx, '#/create', 1500);
-  check('the administrator\'s Create page says it is for Mathub\'s team, with the way to Class requests, and the syllabus form', /For Mathub’s team/.test(await txt(mx, '#mk-sub')) && !!(await mx.$('#mk-sub a[href="#/admin/classes"]')) && !!(await mx.$('#mk-bo-text')));
-  const tcode = 'TB ' + (1000 + Math.floor(Math.random() * 8999)); const tid = tcode.toLowerCase().replace(' ', '');
+  const [cx, mx] = await open(1360, 900, 'bob.bmu6j92pq@montana.edu');
+  await mx.evaluate(() => localStorage.removeItem('mh-maker-draft'));
+  const tcode = 'TB ' + (1000 + Math.floor(Math.random() * 8999));
+  await go(mx, '#/maker', 1500); await mx.click('.mkr-paste summary');
   await mx.fill('#mk-bo-text', `${tcode} Testing Bo, Fall 2026. Exam 1 Oct 20. Topics: ratios, percents, rates, growth.`);
-  await mx.click('[data-bo-write]'); await mx.waitForTimeout(5000);
-  const steps = await mx.$$eval('#mk-bo-steps li', ls => ls.map(l => [l.textContent.trim(), l.className]));
-  check('Bo shows his steps: checking the syllabus, each unit, checking the class', steps.length === 4 && steps.every(s => s[1] === 'done') && /Checking the syllabus/.test(steps[0][0]) && /Writing unit 1: Numbers/.test(steps[1][0]), steps);
-  check('then the class preview with Add to Mathub, for everyone who takes it', new RegExp(tcode).test(await txt(mx, '#mk-bo-result')) && /4 topics/.test(await txt(mx, '#mk-bo-result')) && !!(await mx.$('#mk-bo-result [data-publish]')) && /for everyone who takes/.test(await txt(mx, '#mk-bo-result')));
-  await mx.click('#mk-bo-result [data-publish]'); await mx.waitForTimeout(2600);
-  check('adding it puts it on Mathub and opens the class', !(await mx.$('#paywall')) && mx.url().endsWith(`#/${tid}/dashboard`), mx.url());
+  await mx.click('[data-mk="read"]'); await mx.waitForTimeout(5000);
+  check('a student with no plan has Bo read a syllabus, and the class maker opens filled in', /#\/maker\/new$/.test(mx.url()) && (await mx.inputValue('[data-f="code"]')) === tcode, mx.url());
+  await mx.click('[data-ed="save"]'); await mx.waitForTimeout(2000);
+  const mid = (/#\/maker\/(my\d{4})/.exec(mx.url()) || [])[1];
+  await mx.click('[data-ed="write-all"]'); await mx.waitForTimeout(5000); await mx.click('[data-ed="save"]'); await mx.waitForTimeout(1600);
   const pub = (await api(mx, 'classpack_list')).json.packs || [];
-  check('it is in everyone\'s list of classes, and in hers', pub.some(p => p.id === tid) && (await mx.evaluate(id => (App.settings().courses || []).includes(id), tid)), pub.map(p => p.id));
-  await go(mx, `#/${tid}/practice`, 1500);
-  check('the class Bo wrote has a working quizzer', /Quizzer/.test(await txt(mx, '#view')));
-  await go(mx, '#/create', 1500); await mx.fill('#mk-bo-text', `${tcode} Testing Bo, Fall 2026. Topics: ratios.`); await mx.click('[data-bo-write]'); await mx.waitForTimeout(2500);
-  check('a second upload of that syllabus says it is on Mathub already, with Open', /already on Mathub/.test(await txt(mx, '#mk-bo-result')) && (await mx.$eval('#mk-bo-result .mk-exists a', a => a.getAttribute('href'))) === `#/${tid}/dashboard`, await txt(mx, '#mk-bo-result'));
-  check('and the Create page lists the classes she added to Mathub', /Classes you added to Mathub/.test(await txt(mx, '#mk-pub-sec')) && new RegExp(tcode).test(await txt(mx, '#mk-pub')), await txt(mx, '#mk-pub-sec'));
-  require('child_process').spawnSync('php', ['-r', '$d = new PDO("sqlite:" . $argv[1]); $d->prepare("DELETE FROM class_packs WHERE id = ?")->execute([$argv[2]]);', path.join(__dirname, '..', 'api', 'data', 'mathub.sqlite'), tid]);
+  check('it is hers, and nothing is published for everyone', !!mid && !pub.some(p => p.code === tcode) && ((await api(mx, 'myclasses')).json.classes || []).some(c => c.id === mid), mid);
+  await go(mx, `#/${mid}/practice`, 1800);
+  check('the class with the lessons Bo wrote has a working quizzer', /Quizzer/.test(await txt(mx, '#view')), (await txt(mx, '#view')).slice(0, 120));
+  await api(mx, 'myclass_delete', { id: mid });
   await cx.close();
 
   // phones

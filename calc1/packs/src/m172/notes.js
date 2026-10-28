@@ -1,5 +1,5 @@
 /* M 172: topic notes, formulas, flashcards, practice sets and checklists.
-   Written for Mathub from standard Calculus II material, following the section numbers of Active Calculus
+   Written for StudyCat from standard Calculus II material, following the section numbers of Active Calculus
    used on the syllabus. The instructor's classes, labs and WeBWorK decide what the exams ask. */
 const R = String.raw;
 const AC = 'https://activecalculus.org/single1e/';   // the first edition: its section numbers match the syllabus

@@ -251,9 +251,9 @@
       const b = e.target.closest('[data-bf]'); if (b) { const k = b.dataset.bf;
         if (k === 'close') closePanel(); else if (k === 'point') startPoint(); else if (k === 'see') { setSetting('boSee', !see()); paintCtx(); if (!logOf().length) paintWelcome(); }
         else if (k === 'unfocus') { F.focus = null; paintChips(); } else if (k === 'unfile') { F.file = null; paintChips(); } else if (k === 'retry') { const m = b.closest('.bf-msg'); const t = m.dataset.q || ''; m.remove(); send(t); }
-        else if (k === 'bad') {   // not right: to Mathub's Bo quality review (api/ai.php ai_flag)
+        else if (k === 'bad') {   // not right: to StudyCat's Bo quality review (api/ai.php ai_flag)
           const m = b.closest('.bf-msg'); if (b.getAttribute('aria-pressed') === 'true' || !m.dataset.at) return; b.setAttribute('aria-pressed', 'true');
-          fetch('api/index.php?r=ai_flag', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'MatHub' }, body: JSON.stringify({ class: m.dataset.cid, at: +m.dataset.at, text: String(m.dataset.src || '').slice(0, 60) }) }).then(x => x.json()).then(j => toast(j && j.ok ? 'Thanks. Mathub’s team will look at this answer.' : (j && j.error) || 'That did not go through.', 3000), () => { b.setAttribute('aria-pressed', 'false'); toast('That did not go through.'); });
+          fetch('api/index.php?r=ai_flag', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'MatHub' }, body: JSON.stringify({ class: m.dataset.cid, at: +m.dataset.at, text: String(m.dataset.src || '').slice(0, 60) }) }).then(x => x.json()).then(j => toast(j && j.ok ? 'Thanks. StudyCat’s team will look at this answer.' : (j && j.error) || 'That did not go through.', 3000), () => { b.setAttribute('aria-pressed', 'false'); toast('That did not go through.'); });
         }
         else if (k === 'copy') { const m = b.closest('.bf-msg'); const t = App.boBoard ? App.boBoard.plainOf(m.dataset.src || '') : m.textContent; (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(() => toast('Copied.'), () => toast('Copying is not available here.')); }
         return; }
@@ -294,7 +294,7 @@
   }
   const logOf = () => (F.logs[F.cid || '_'] = F.logs[F.cid || '_'] || []);
 
-  /* who can ask: signed in, Mathub Pro or Max, agreed to what is sent, and a class */
+  /* who can ask: signed in, StudyCat Pro or Max, agreed to what is sent, and a class */
   async function status(force) {
     if (!force && F.status && Date.now() - F.statusAt < 60000) return F.status;
     F.status = await api('ai_status'); F.statusAt = Date.now(); if (App.boTalk && App.boTalk.setStatus) App.boTalk.setStatus(F.status); return F.status;
@@ -305,7 +305,7 @@
     if (!s.enabled) return `<div class="bf-gate"><p class="bf-gate-h">Bo is getting ready</p><p>Bo isn't switched on yet. He'll be here soon.</p></div>`;
     if (s.credits && s.credits.out && !s.admin) return `<div class="bf-gate"><p class="bf-gate-h">You’re out of credits</p><p>Questions, calls and Bo’s pictures all use credits. Yours come back on ${esc(App.fmtDate ? App.fmtDate(s.credits.resets) : s.credits.resets)}, or get more now.</p><div class="bf-gate-acts"><a class="btn primary" href="#/usage">${icon('plus', 15)} Get credits</a><button type="button" class="btn" data-go="pro">${s.plan === 'max' ? 'Your plan' : 'More every month'}</button></div></div>`;
     if (!settings().aiConsent) return `<div class="bf-gate bf-consent">${App.boGateHtml ? App.boGateHtml.consent() : ''}</div>`;
-    if (!F.cid) return `<div class="bf-gate"><p class="bf-gate-h">Pick a class first</p><p>Bo helps with a class you take. Choose your classes, or request one Mathub does not have yet.</p><div class="bf-gate-acts"><a class="btn primary" href="#/">Your classes</a><a class="btn" href="#/request">Request a class</a></div></div>`;
+    if (!F.cid) return `<div class="bf-gate"><p class="bf-gate-h">Pick a class first</p><p>Bo helps with a class you take. Choose your classes, or request one StudyCat does not have yet.</p><div class="bf-gate-acts"><a class="btn primary" href="#/">Your classes</a><a class="btn" href="#/request">Request a class</a></div></div>`;
     return '';
   }
   async function gateGo(g) {

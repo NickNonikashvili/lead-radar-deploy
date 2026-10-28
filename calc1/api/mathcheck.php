@@ -1,6 +1,6 @@
 <?php
 /* ============================================================
-   Mathub — the math check on the server: the same rules as assets/mathcheck.js, for what students type to Bo or say
+   StudyCat — the math check on the server: the same rules as assets/mathcheck.js, for what students type to Bo or say
    in basic voice (api/ai.php, ai_tutor). What is wrong in their message (arithmetic, a letter given two values, an
    answer that does not solve the problem being worked, a bare number answering Bo's last question, a derivative or
    antiderivative said in words) becomes a MATH CHECK note for Bo, so he never agrees with something wrong.

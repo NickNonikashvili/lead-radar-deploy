@@ -1,6 +1,6 @@
 <?php
 /* ============================================================
-   Mathub account server — peer review swaps (#/<class>/peer; assets/peer.js)
+   StudyCat account server — peer review swaps (#/<class>/peer; assets/peer.js)
    In a class whose instructor turned swaps on (class_ai.peer, api/instruct.php), a student offers a version of a
    project draft (one they shared with Bo) for a swap. When a classmate offers one for the same project, they are
    paired: each reads the other's draft (the draft only, not Bo's feedback) and writes back, with comments on exact
@@ -46,7 +46,7 @@ function mh_peer_for_review(int $uid, int $reviewId): array {
   return $out;
 }
 function mh_peer_notify(int $to, string $kind, string $title, string $snippet, string $link, array $actor): void {
-  try { mh_db()->prepare('INSERT INTO notifications (user_id, kind, post_id, comment_id, actor_id, actor, title, snippet, link, created) VALUES (?, ?, 0, NULL, ?, ?, ?, ?, ?, ?)')->execute([$to, $kind, (int)$actor['id'], mh_display_name($actor), mb_substr($title, 0, 140), mb_substr($snippet, 0, 200), $link, time()]); } catch (Throwable $e) { error_log('Mathub notify: ' . $e->getMessage()); }
+  try { mh_db()->prepare('INSERT INTO notifications (user_id, kind, post_id, comment_id, actor_id, actor, title, snippet, link, created) VALUES (?, ?, 0, NULL, ?, ?, ?, ?, ?, ?)')->execute([$to, $kind, (int)$actor['id'], mh_display_name($actor), mb_substr($title, 0, 140), mb_substr($snippet, 0, 200), $link, time()]); } catch (Throwable $e) { error_log('StudyCat notify: ' . $e->getMessage()); }
 }
 
 function mh_peer_route(string $route, array $in, array $cfg): void {

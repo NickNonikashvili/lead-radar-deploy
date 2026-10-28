@@ -1,6 +1,6 @@
 <?php
 /* ============================================================
-   Mathub account server — answer tests for Bo (admin panel → Answer tests)
+   StudyCat account server — answer tests for Bo (admin panel → Answer tests)
    Real questions with what a good answer must and must not do, put to Bo exactly as a new student in that class
    would get him (mh_ai_tutor_system in api/ai.php: the same instructions, class, character and instructor
    settings), one question at a time from the admin panel, with every run kept so that a change of model, prompt or
@@ -70,7 +70,7 @@ function mh_eval_db(): PDO {
 /* ---------- a test's checks ---------- */
 /** Tidies what the admin panel sends; throws a message for the person. */
 function mh_eval_clean(array $in): array {
-  $cid = is_string($in['course'] ?? null) ? strtolower(trim($in['course'])) : ''; if ($cid !== '' && !isset(mh_course_names()[$cid])) throw new RuntimeException('That class is not on Mathub.');
+  $cid = is_string($in['course'] ?? null) ? strtolower(trim($in['course'])) : ''; if ($cid !== '' && !isset(mh_course_names()[$cid])) throw new RuntimeException('That class is not on StudyCat.');
   $q = mh_ai_clip($in['q'] ?? '', 2000); if (mb_strlen($q) < 3) throw new RuntimeException('Write the question.');
   $lang = preg_match('/^(en|es|ru|fr|it|pt|de)$/', (string)($in['lang'] ?? 'en')) ? (string)$in['lang'] : 'en';
   $c = is_array($in['checks'] ?? null) ? $in['checks'] : [];

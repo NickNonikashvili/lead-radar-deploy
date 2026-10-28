@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /* ============================================================
-   Mathub — list the bundled class packs
+   StudyCat — list the bundled class packs
    Every packs/<id>.mathub.json ships with the site and installs itself
    on the server the first time anyone opens it (api/lib.php,
    mh_packs_seed_bundled). This script writes packs/index.json, the

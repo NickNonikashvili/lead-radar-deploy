@@ -22,7 +22,7 @@ const sysText = j => (j.system || []).map(b => b.text || '').join('\n');
   // what a test needs
   r = await api(a, 'admin_eval_save', { case: { course: 'calc', q: 'What is 2 + 2?', checks: {} } }); check('a test needs at least one check', r.status === 400 && /at least one check/.test(r.json.error), r.json);
   r = await api(a, 'admin_eval_save', { case: { q: 'Hi', checks: { has: ['x'] } } }); check('and a question', r.status === 400 && /Write the question/.test(r.json.error));
-  r = await api(a, 'admin_eval_save', { case: { course: 'nope', q: 'What is 2 + 2?', checks: { has: ['4'] } } }); check('and a class that is on Mathub', r.status === 400 && /not on Mathub/.test(r.json.error));
+  r = await api(a, 'admin_eval_save', { case: { course: 'nope', q: 'What is 2 + 2?', checks: { has: ['4'] } } }); check('and a class that is on StudyCat', r.status === 400 && /not on StudyCat/.test(r.json.error));
   r = await api(a, 'admin_eval_save', { case: { q: 'What is 2 + 2?', checks: { number: { value: 'four' } } } }); check('a number must be a number', r.status === 400 && /must be a number/.test(r.json.error));
 
   // the starter tests
@@ -55,7 +55,7 @@ const sysText = j => (j.system || []).map(b => b.text || '').join('\n');
   check('the judge failing: fails, with the judge’s reason', res[t2.id].pass === false && /does not: FAILME/.test(res[t2.id].why), res[t2.id]);
   check('a phrase it must not say: fails, saying which', res[t3.id].pass === false && /Says “Bo here”, which it must not/.test(res[t3.id].why), res[t3.id]);
   check('hints only reaches Bo’s instructions, and the number he must not state is not there', res[t4.id].pass === true && /HINTS ONLY/.test(res[t4.id].sys), res[t4.id]);
-  check('the student’s language reaches them too', res[t5.id].pass === true && /LANGUAGE: the student uses Mathub in (Spanish|Español)/.test(res[t5.id].sys), res[t5.id].sys.slice(-400));
+  check('the student’s language reaches them too', res[t5.id].pass === true && /LANGUAGE: the student uses StudyCat in (Spanish|Español)/.test(res[t5.id].sys), res[t5.id].sys.slice(-400));
   r = await api(a, 'admin_eval_run&id=' + s1.run);
   check('the run: 3 of 5 passed, every answer kept', r.json && r.json.ok && r.json.run.status === 'done' && r.json.run.passed === 3 && r.json.run.done === 5 && r.json.run.results.every(x => x.answer.startsWith('Bo here.')) && r.json.run.regressions === 0, r.json.run);
   const use = rows("SELECT mc, month_mc, paid_mc FROM credit_use WHERE feature = 'eval' AND ref = ?", 'eval:' + s1.run)[0] || {};

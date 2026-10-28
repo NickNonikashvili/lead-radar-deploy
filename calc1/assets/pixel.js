@@ -1,5 +1,5 @@
 /* ============================================================
-   Mathub — pixel art
+   StudyCat — pixel art
    Hand-drawn sprites stored as character grids and drawn as crisp SVG
    (one rectangle run per row and colour), so they stay sharp at any
    size, weigh a few hundred bytes and need no image files.

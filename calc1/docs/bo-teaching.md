@@ -1,6 +1,6 @@
 # How Bo teaches
 
-Bo is Mathub's tutor: in the Ask Bo chat, when you talk with him out loud, and on live calls. This page is the
+Bo is StudyCat's tutor: in the Ask Bo chat, when you talk with him out loud, and on live calls. This page is the
 set of teaching rules he follows, why each one is there, and where it comes from. The rules themselves live in
 `api/ai.php` (`MH_AI_TEACH`), and every one of Bo's instructions includes them: the chat (`MH_AI_BO_FULL`), voice
 mode (`MH_AI_VOICE`) and calls (`MH_AI_LIVE`, `MH_AI_LIVE_REST`). Change them there; this page explains them.
@@ -21,7 +21,7 @@ mode (`MH_AI_VOICE`) and calls (`MH_AI_LIVE`, `MH_AI_LIVE_REST`). Change them th
 | 10 | **Mistakes are information** | Name exactly what went wrong and why it is tempting, show it fails, let them fix it; praise specific thinking, not "great job". | Feedback at the task and process level, not the person (Hattie & Timperley 2007); Tutor CoPilot (Wang et al. 2025): more probing questions and less generic praise went with more mastery. |
 | 11 | **Change the angle** | If it didn't land: a simpler example, a picture, another comparison. Never the same words again. | Adapting to the learner (LearnLM); multiple representations. |
 | 12 | **Close the loop** | The key idea in one sentence, and what to do next. | Pólya's "look back"; "feed forward" (Hattie & Timperley). |
-| 13 | **Be exactly right** | Work carefully, check answers (substitute back, estimate), use the class's notation, say when unsure. | Pólya's "look back"; Mathub's rule that Bo uses the class facts exactly. |
+| 13 | **Be exactly right** | Work carefully, check answers (substitute back, estimate), use the class's notation, say when unsure. | Pólya's "look back"; StudyCat's rule that Bo uses the class facts exactly. |
 
 ## Never agreeing with something wrong
 
@@ -167,7 +167,7 @@ problems go into the mistakes notebook, due now, with the slips the app caught o
 
 ## Before an exam: the review call
 
-Three days before an exam in a student's classes (`mh_exam_nudge_tick`), Mathub emails them once (and sends a
+Three days before an exam in a student's classes (`mh_exam_nudge_tick`), StudyCat emails them once (and sends a
 push if they turned those on) with a link to `#/tutor/<class>?call=exam`. That opens a call whose instructions
 add MH_AI_EXAM_CALL: name the exam and its day, start with the weakest topic, one exam-style question at a time,
 check it with `check_math`, short explanations of what went wrong, and end by naming the one topic to practise.
@@ -193,7 +193,7 @@ math-check work.
 ## The board: what Bo can draw
 
 `assets/board-draw.js` draws a picture from a small description Bo writes (JSON after `draw:` in a board page; on a
-call, the `draw_on_board` tool). Nothing in it runs as code: functions are read by Mathub's own expression reader,
+call, the `draw_on_board` tool). Nothing in it runs as code: functions are read by StudyCat's own expression reader,
 sizes are capped, and every label is escaped. Models don't always write tidy JSON, so it reads what he meant: code
 fences, single or smart quotes, unquoted keys, trailing commas, LaTeX with one backslash (`\frac`, which strict JSON
 would turn into a form feed), a reply cut off, synonyms ("plot", "bar chart"), points as `[x, y]` or `{x, y}`,

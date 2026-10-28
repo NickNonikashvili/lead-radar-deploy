@@ -3,7 +3,7 @@
    - an administrator adds anyone, also outside montana.edu: the account is verified at once, with a role and
      a plan if wanted (given like Members gives one); an outside address is allowed to sign in (Keys & settings)
    - invited: an email with a link (#/?setpw=…) that opens "choose your password" with the address filled in,
-     and a code good for 7 days; then Mathub welcomes them. Or the administrator sets the password
+     and a code good for 7 days; then StudyCat welcomes them. Or the administrator sets the password
    - duplicates and weak passwords are refused, naming the field; students and moderators cannot add anyone
    Everything made here is removed at the end.
    ============================================================ */
@@ -30,11 +30,11 @@ const LOG = path.join(__dirname, '..', 'api', 'data', 'mail.log');
   check('Members has an Add a member form: email, name, role, plan and how they sign in', !!(await a.$('#adm-add #add-email')) && (await a.$$eval('#add-role option', o => o.map(x => x.textContent).join())) === 'Student,TA,Instructor' && (await a.$$('#adm-add input[name="add-how"]')).length === 2 && !!(await a.$('.adm-add-pass[hidden]')));
   await a.fill('#add-email', OUT); await a.fill('#add-name', 'Dr. Hall'); await a.selectOption('#add-role', 'Instructor'); await a.selectOption('#add-plan', 'max');
   await a.click('#adm-add button[type="submit"]'); await a.waitForTimeout(1500);
-  check('it adds them and says how they sign in', /Added dr\.hall/.test(await txt(a, '#adm-add-msg')) && /Instructor/.test(await txt(a, '#adm-add-msg')) && /Mathub Max/.test(await txt(a, '#adm-add-msg')) && /outside montana\.edu/.test(await txt(a, '#adm-add-msg')), await txt(a, '#adm-add-msg'));
+  check('it adds them and says how they sign in', /Added dr\.hall/.test(await txt(a, '#adm-add-msg')) && /Instructor/.test(await txt(a, '#adm-add-msg')) && /StudyCat Max/.test(await txt(a, '#adm-add-msg')) && /outside montana\.edu/.test(await txt(a, '#adm-add-msg')), await txt(a, '#adm-add-msg'));
   check('they are in the list', (await txt(a, '#adm-body .table-wrap')).includes(OUT));
   const mail = fs.readFileSync(LOG, 'utf8'); const part = mail.slice(mail.lastIndexOf('to=' + OUT));
   const code = (/Your code: (\d{6})/.exec(part) || [])[1]; const link = (/(https?:\/\/\S+#\/\?setpw=\S+)/.exec(part) || [])[1];
-  check('they get an email with a link to choose their password and a code', !!code && !!link && link.includes(encodeURIComponent(OUT)) && /Ada added you to Mathub/.test(part), part.slice(0, 300));
+  check('they get an email with a link to choose their password and a code', !!code && !!link && link.includes(encodeURIComponent(OUT)) && /Ada added you to StudyCat/.test(part), part.slice(0, 300));
   const cfg = (await api(a, 'admin_config')).json.groups.flatMap(g => g.fields); const F = k => cfg.find(f => f.key === k).value;
   const given = (await api(a, `admin_users&q=${encodeURIComponent(OUT)}`)).json.users[0].plan;
   check('an outside address is allowed to sign in (Keys & settings), and Max is given to them (Members shows it)', F('extra_allowed_emails').includes(OUT) && given.plan === 'max' && given.gift.plan === 'max' && given.gift.until === 0 && (await rowPlan(a, OUT)) === 'Max', given);
@@ -55,7 +55,7 @@ const LOG = path.join(__dirname, '..', 'api', 'data', 'mail.log');
   await i.fill('#au-code', code); await i.fill('#au-pass', 'office-hours-tuesday-3'); await i.click('#auth-modal button[type="submit"]'); await i.waitForTimeout(2000);
   const me = await i.evaluate(() => App.auth.user && { email: App.auth.user.email, role: App.auth.user.role, req: App.auth.user.can_request, welcomed: App.auth.user.welcomed });
   check('they are signed in, as an instructor who can request classes', me && me.email === OUT && me.role === 'Instructor' && me.req === true, me);
-  check('and Mathub welcomes them (classes and membership)', !!(await i.$('#welcome')) && me.welcomed === false);
+  check('and StudyCat welcomes them (classes and membership)', !!(await i.$('#welcome')) && me.welcomed === false);
   check('their plan is Max', (await api(i, 'ai_status')).json.max === true);
   await api(i, 'account_delete', { password: 'office-hours-tuesday-3' }); await ci.close();
   // the TA signs in with the password they were given

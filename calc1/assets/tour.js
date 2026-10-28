@@ -1,9 +1,9 @@
 /* ============================================================
-   Mathub — the tour of the layout
+   StudyCat — the tour of the layout
    Coach marks on the start page for the frame every page shares: the
    clock and time bars, quick add, the sidebar's groups, the month
-   calendar, the header, Your day and Bo. On a phone the sidebar is the
-   menu, so the phone gets its own steps (the menu, search, Your day,
+   calendar, the header, Your home and Bo. On a phone the sidebar is the
+   menu, so the phone gets its own steps (the menu, search, Your home,
    the tab bar). Steps whose part is not on the screen are left out.
    A spotlight cuts a hole in a dim overlay around each part; Next, Back,
    Skip, arrow keys and Escape all work.
@@ -27,8 +27,8 @@
     { sel: '#topbar .topbar-actions', wide: true, title: 'The header, on every page', text: 'Your next exam, search (Ctrl K, or ⌘ K on a Mac), focus sounds, your streak and daily goal, and your account.' },
     { sel: '#topbar [data-action="menu"]', phone: true, title: 'Everything is in the menu', text: 'Your classes with the days until each exam, the planner pages, quick add, the month calendar, the clock and your streak.' },
     { sel: '#topbar .search-btn', phone: true, title: 'Search everything', text: 'Any topic, formula, flashcard, resource or page across all your classes.' },
-    { sel: '#dash .dash-grid, #dash', title: 'Your day', text: 'Today’s classes, what is due and your week. Customize adds more: a timer, to-dos, habits and goals.' },
-    { sel: '#bo-fab', title: 'Bo, on every page', text: 'Ask him about whatever you are looking at: tap a question and he walks you through it. Part of Mathub Pro.' },
+    { sel: '#dash', title: 'Your home', text: 'Widgets for your next step, what is due and your week. Arrange puts them anywhere, even on top of each other, and Add a widget brings more: a timer, to-dos, habits, a note.' },
+    { sel: '#bo-fab', title: 'Bo, on every page', text: 'Ask him about whatever you are looking at: tap a question and he walks you through it. Part of StudyCat Pro.' },
     { sel: '#tabbar', phone: true, title: 'Down here', text: 'Home, Today, the Focus room, the board and your account, one tap away.' },
     { sel: '#sb-hide', wide: true, title: 'Need more room?', text: 'Tuck the sidebar away here and the clock moves into the header. The menu button brings it back.' }
   ];

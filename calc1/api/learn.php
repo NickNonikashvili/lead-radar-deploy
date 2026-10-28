@@ -1,6 +1,6 @@
 <?php
 /* ============================================================
-   Mathub account server — learning tools with Bo (assets/learn.js)
+   StudyCat account server — learning tools with Bo (assets/learn.js)
    - Check my work (learn_check): a photo of handwritten work on one problem. Bo writes each line down as it was
      written (never fixing it); the math check (api/mathcheck.php) finds the first line that does not follow, exactly,
      and Bo says why and gives a hint for that line. Never the finished solution. Nothing is kept.
@@ -71,7 +71,7 @@ function mh_learn_set_row(array $r, bool $full): array {
 function mh_learn_route(string $route, array $in, array $cfg): void {
   $u = mh_require_user(); $uid = (int)$u['id'];
   $cid = mh_ai_cid($in['class'] ?? ($_GET['class'] ?? '')); $C = mh_ai_class($u, $cid);
-  if (!$C) mh_fail('That class is not on Mathub.', 404);
+  if (!$C) mh_fail('That class is not on StudyCat.', 404);
   $A = mh_ai_settings($cfg); require_once __DIR__ . '/credits.php';
   switch ($route) {
     case 'learn_check': {   // a photo of their work → the lines, the first wrong one (exact where the math check can tell), why, a hint

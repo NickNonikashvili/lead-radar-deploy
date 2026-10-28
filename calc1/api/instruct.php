@@ -1,8 +1,8 @@
 <?php
 /* ============================================================
-   Mathub account server — instructors in a class (#/<class>/instructor; assets/instruct.js)
-   Who teaches a class on Mathub (mh_course_staff): an administrator, the instructor whose email the class's syllabus
-   gives (COURSE.email), or the teaching team (owner, co-instructors, TAs) of a confirmed Mathub Faculty class that is
+   StudyCat account server — instructors in a class (#/<class>/instructor; assets/instruct.js)
+   Who teaches a class on StudyCat (mh_course_staff): an administrator, the instructor whose email the class's syllabus
+   gives (COURSE.email), or the teaching team (owner, co-instructors, TAs) of a confirmed StudyCat Faculty class that is
    this class or is linked to it (api/teach.php). For their class they can:
    - set how Bo works in it (class_ai): hints only, notes for Bo, and for each project an assignment sheet and a rubric
      Bo reads drafts against; turn peer review swaps on (api/peer.php) and draft sharing off. Draft feedback itself is
@@ -10,7 +10,7 @@
    - read the draft versions students choose to share with them (draft_shares), and reply;
    - see patterns in Bo's draft feedback across the class: only from students who let their drafts count, only once
      five have, and never a name, a quote or a draft;
-   - give credits to the students in their Mathub Faculty class, out of credits they bought.
+   - give credits to the students in their StudyCat Faculty class, out of credits they bought.
    Routes: instruct_me, instruct_get, instruct_save, instruct_shares, instruct_share_get, instruct_reply,
            instruct_patterns, instruct_roster, instruct_sponsor.
    ============================================================ */
@@ -37,7 +37,7 @@ function mh_instruct_db(): PDO {
 /* ---------- who teaches a class ---------- */
 /** The class's own instructor email from its syllabus data, lower case ('' when it has none). */
 function mh_course_email(?array $C): string { $co = is_array($C['COURSE'] ?? null) ? $C['COURSE'] : []; return strtolower(trim((string)($co['email'] ?? ($co['instructorEmail'] ?? '')))); }
-/** Classes this person teaches through Mathub Faculty: each confirmed class's own id and the class it is linked to. */
+/** Classes this person teaches through StudyCat Faculty: each confirmed class's own id and the class it is linked to. */
 function mh_course_staff_teach(array $u): array {
   static $memo = []; $uid = (int)$u['id']; if (isset($memo[$uid])) return $memo[$uid];
   require_once __DIR__ . '/teach.php';
@@ -53,7 +53,7 @@ function mh_course_staff(?array $u, string $cid, ?array $C = null): bool {
   if ($mail !== '' && strtolower((string)$u['email']) === $mail) return true;
   return in_array($cid, mh_course_staff_teach($u), true);
 }
-/** Does anyone teach this class on Mathub (so a shared draft reaches someone)? */
+/** Does anyone teach this class on StudyCat (so a shared draft reaches someone)? */
 function mh_course_has_staff(string $cid, ?array $C): bool {
   if (mh_course_email($C) !== '') return true;
   require_once __DIR__ . '/teach.php';
@@ -156,7 +156,7 @@ function mh_instruct_roster(array $u, string $cid): array {
 }
 
 function mh_instruct_notify(int $to, string $kind, array $actor, string $title, string $snippet, string $link): void {
-  try { mh_db()->prepare('INSERT INTO notifications (user_id, kind, post_id, comment_id, actor_id, actor, title, snippet, link, created) VALUES (?, ?, 0, NULL, ?, ?, ?, ?, ?, ?)')->execute([$to, $kind, (int)$actor['id'], mh_display_name($actor), mb_substr($title, 0, 140), mb_substr($snippet, 0, 200), $link, time()]); } catch (Throwable $e) { error_log('Mathub notify: ' . $e->getMessage()); }
+  try { mh_db()->prepare('INSERT INTO notifications (user_id, kind, post_id, comment_id, actor_id, actor, title, snippet, link, created) VALUES (?, ?, 0, NULL, ?, ?, ?, ?, ?, ?)')->execute([$to, $kind, (int)$actor['id'], mh_display_name($actor), mb_substr($title, 0, 140), mb_substr($snippet, 0, 200), $link, time()]); } catch (Throwable $e) { error_log('StudyCat notify: ' . $e->getMessage()); }
 }
 
 function mh_instruct_route(string $route, array $in, array $cfg): void {
@@ -170,7 +170,7 @@ function mh_instruct_route(string $route, array $in, array $cfg): void {
     mh_json(['ok' => true, 'admin' => mh_is_admin($u), 'courses' => array_values(array_unique($mine))]);
   }
   $cid = mh_ai_cid($in['class'] ?? ($_GET['class'] ?? '')); $C = mh_ai_class($u, $cid);
-  if (!$C) mh_fail('That class is not on Mathub.', 404);
+  if (!$C) mh_fail('That class is not on StudyCat.', 404);
   mh_course_staff_or_fail($u, $cid, $C);
   require_once __DIR__ . '/drafts.php'; $P = mh_draft_projects($C); $db = mh_draft_db();
   switch ($route) {
@@ -227,7 +227,7 @@ function mh_instruct_route(string $route, array $in, array $cfg): void {
       mh_method('POST'); require_once __DIR__ . '/credits.php';
       $each = (int)($in['credits'] ?? 0); if ($each < 1 || $each > MH_SPONSOR_MAX) mh_fail('Give each student between 1 and ' . number_format(MH_SPONSOR_MAX) . ' credits.', 400);
       $R = mh_instruct_roster($u, $cid); $n = count($R['students']);
-      if (!$n) mh_fail('No students have joined your Mathub Faculty class for this course yet.', 400);
+      if (!$n) mh_fail('No students have joined your StudyCat Faculty class for this course yet.', 400);
       if ((int)($in['expect'] ?? -1) !== $n) mh_fail('The class list changed. Check the number of students and try again.', 409, ['students' => $n]);
       $total = $each * $n; $admin = mh_is_admin($u);
       mh_rate_or_fail('instruct_sponsor:' . $u['id'], 20, 3600, 'Slow down a little.');
@@ -238,7 +238,7 @@ function mh_instruct_route(string $route, array $in, array $cfg): void {
         if (!$admin) $cdb->prepare("INSERT INTO credit_add (user_id, kind, mc, ref, note, created) VALUES (?, 'sponsor', ?, ?, ?, ?)")->execute([(int)$u['id'], -1000 * $total, $batch, "$each each for $n students in $cname", time()]);
         $add = $cdb->prepare("INSERT INTO credit_add (user_id, kind, mc, ref, note, created) VALUES (?, 'gift', ?, ?, ?, ?)");
         foreach ($R['students'] as $s) $add->execute([$s['id'], 1000 * $each, $batch . ':' . $s['id'], "From $name for $cname", time()]);
-        if ($admin) $cdb->prepare("INSERT INTO credit_add (user_id, kind, mc, ref, note, created) VALUES (?, 'sponsor', 0, ?, ?, ?)")->execute([(int)$u['id'], $batch, "$each each for $n students in $cname (given by Mathub)", time()]);
+        if ($admin) $cdb->prepare("INSERT INTO credit_add (user_id, kind, mc, ref, note, created) VALUES (?, 'sponsor', 0, ?, ?, ?)")->execute([(int)$u['id'], $batch, "$each each for $n students in $cname (given by StudyCat)", time()]);
         $cdb->commit();
       } catch (Throwable $e) { if ($cdb->inTransaction()) $cdb->rollBack(); throw $e; }
       foreach ($R['students'] as $s) mh_instruct_notify($s['id'], 'credits', $u, $cname, number_format($each) . ' credits for Bo. They never expire.', '#/usage');

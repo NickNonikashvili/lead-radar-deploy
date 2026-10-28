@@ -1,5 +1,5 @@
 /* M 172 question bank. Calculated questions draw fresh numbers every time; bank items are
-   [prompt, correct, [wrong answers], explanation]. Written for Mathub from standard Calculus II
+   [prompt, correct, [wrong answers], explanation]. Written for StudyCat from standard Calculus II
    material and the syllabus topics; not from the instructor. Typed answers accept exact forms
    such as 2pi/15 or e^2-1, and decimals within 0.5%. */
 const R = String.raw;

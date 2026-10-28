@@ -1,5 +1,5 @@
 /* ============================================================
-   Mathub — English phonetics data for WRIT 101
+   StudyCat — English phonetics data for WRIT 101
    Word bank with British (RP) and American IPA, syllables and stress;
    IPA keyboard layout; sound cues for speech; symbol library; phoneme
    features; minimal pairs; sentences; extra dictionary words; guides;

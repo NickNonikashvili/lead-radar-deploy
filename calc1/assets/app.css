@@ -1,5 +1,5 @@
 /* ============================================================
-   Mathub app (iOS and Android): fitting the phone, and the pages only the app has.
+   StudyCat app (iOS and Android): fitting the phone, and the pages only the app has.
    Loaded only in the app (see app/scripts/build-www.js); the student
    site's look (world.css) still does the rest.
    ============================================================ */
@@ -117,7 +117,7 @@ html[data-app] .sheet-backdrop.open { opacity: 1; }
 .sg-item svg { color: var(--cc, var(--accent)); }
 .sg-item:active { transform: translateY(4px); box-shadow: none; }
 
-/* ---------- Mathub Create in the start page (the paywall, lock and Settings row are in create.css) ---------- */
+/* ---------- StudyCat Create in the start page (the paywall, lock and Settings row are in create.css) ---------- */
 .ah-locked .ah-hero-h p { display: flex; gap: 6px; align-items: flex-start; }
 .ah-locked .ah-hero-h p svg { flex: none; margin-top: 2px; }
 .ah-locked .lock-acts { margin-top: 14px; }

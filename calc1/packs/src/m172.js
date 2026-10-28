@@ -23,7 +23,7 @@ module.exports = {
   format: 'mathub-class-pack', version: 1,
   id: 'm172', code: 'M 172', name: 'Calculus II', short: 'Calc II', term: 'Fall 2026', kind: 'math',
   tagline: 'Integration techniques, volumes and work, differential equations, and sequences, series and Taylor series',
-  quizNote: 'Mathub wrote these questions from the syllabus topics; they are not the instructor’s. Exams allow no calculator, so work each one by hand first. Type answers as exact values or decimals: 2pi/15, 14/3, e^2-1 and 0.419 all work, and answers within 0.5% count.',
+  quizNote: 'StudyCat wrote these questions from the syllabus topics; they are not the instructor’s. Exams allow no calculator, so work each one by hand first. Type answers as exact values or decimals: 2pi/15, 14/3, e^2-1 and 0.419 all work, and answers within 0.5% count.',
   formulasNote: 'Every integration technique, application formula, convergence test and Maclaurin series from the course on one page. Exams are closed-book with no calculator, so cover the right side and test yourself.',
   filterExample: 'ratio test, washers',
   color: { light: '#4338CA', dark: '#A5B4FC' },
@@ -219,14 +219,14 @@ module.exports = {
     { icon: 'shield', title: 'AI and academic integrity', html: `<ul class="list-plain small">
       <li><b>AI is allowed as a support tool for learning</b>, but it must not replace your own thinking, problem solving or written work. Everything you submit must show your own understanding.</li>
       <li>Answers from solution manuals or Q&amp;A sites count as cheating unless the instructor allows them; acknowledge collaborators and cite sources. Copying another student’s finished work makes both of you responsible.</li>
-      <li>Mathub fits the policy when you use it to practise and to check your understanding: attempt each problem yourself first.</li></ul>` },
+      <li>StudyCat fits the policy when you use it to practise and to check your understanding: attempt each problem yourself first.</li></ul>` },
     { icon: 'users', title: 'Where to get help', html: `<ul class="list-plain small">
       <li><b>Office hours</b> with Dr. Malo or Ziyal Jandrasi, which the syllabus strongly encourages.</li>
       <li><b>Math & Stat Center</b>, Romney Hall 220 (<a href="https://www.montana.edu/mathstatcenter/" target="_blank" rel="noopener">montana.edu/mathstatcenter</a>), and <b>Smarty Cats</b> study sessions.</li>
       <li><b>Study groups:</b> work with classmates on concepts and homework as much as you can.</li>
       <li><b>Accommodations:</b> Disability Services, Romney Hall 137 (<a href="https://www.montana.edu/disabilityservices/" target="_blank" rel="noopener">montana.edu/disabilityservices</a>). Ask as early as possible.</li>
       <li><b>If you are ill,</b> stay home, email your instructor as soon as you can, and use the course materials online.</li></ul>` },
-    { icon: 'bulb', title: 'How to use Mathub for this class', html: `<p class="small">After each class, read that topic’s notes and do the flashcards the same day. Before WeBWorK, run a few quizzer questions on the section. Exams are by hand with no calculator and graded on your work, so do the practice sets on paper, writing every step and the sentence that explains it, before you open the solutions.</p>` }
+    { icon: 'bulb', title: 'How to use StudyCat for this class', html: `<p class="small">After each class, read that topic’s notes and do the flashcards the same day. Before WeBWorK, run a few quizzer questions on the section. Exams are by hand with no calculator and graded on your work, so do the practice sets on paper, writing every step and the sentence that explains it, before you open the solutions.</p>` }
   ],
 
   QUIZ

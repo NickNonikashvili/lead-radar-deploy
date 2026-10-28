@@ -1,5 +1,5 @@
 /* Instructors in a class (api/instruct.php, assets/instruct.js) and what students see of it (api/drafts.php,
-   assets/drafts.js). Covered: who teaches a class (an administrator, the syllabus email, a Mathub Faculty class's
+   assets/drafts.js). Covered: who teaches a class (an administrator, the syllabus email, a StudyCat Faculty class's
    teaching team); the class settings (hints only and notes for Bo in his chat, each project's assignment sheet and
    rubric in a draft review, unknown projects dropped); sharing a version with the instructor (the shared list, one
    shared version, a reply the student sees and is told about, stopping, sharing switched off); patterns (nothing
@@ -103,7 +103,7 @@ const DRAFT = "My grandmother's farmhouse sat at the end of a gravel road outsid
 
   /* ---------- the roster and credits ---------- */
   r = await api(d, 'instruct_roster&class=writ');
-  check('without a Mathub Faculty class there is no roster', r.ok && r.classes.length === 0 && r.students.length === 0, r);
+  check('without a StudyCat Faculty class there is no roster', r.ok && r.classes.length === 0 && r.students.length === 0, r);
   const made = await api(d, 'teach_class_create', { code: 'WRIT 101', title: 'College Writing I', term: 'Fall 2026', section: '030', link_course: 'writ' }); const tid = made.id;
   const syl = (await api(d, 'teach_class_get&id=' + tid)).syllabus; syl.people[0].name = syl.people[0].name || 'Admin User'; syl.people[0].hours = 'MWF 10'; syl.exams = [{ name: 'Portfolio', date: '2026-12-11', time: '', place: '', covers: '' }];
   syl.schedule = { start: '2026-08-24', end: '2026-12-11', rows: [{ date: '2026-08-24', type: 'lecture', title: 'Welcome', notes: '' }] };

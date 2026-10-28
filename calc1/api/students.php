@@ -1,6 +1,6 @@
 <?php
 /* ============================================================
-   Mathub account server — the student file: one JSON file per student, everything Bo needs to know about them
+   StudyCat account server — the student file: one JSON file per student, everything Bo needs to know about them
    - api/data/students/<user id>.json (never served as a file; read through ai_student). What is in it:
        student   first name, school, language, Bo's character, the plan
        classes   each class they asked Bo about: its name, the next exam, readiness, weakest and strongest topics,
@@ -70,7 +70,7 @@ function mh_student_update(array $u, array $cfg, array $in, string $cid, ?array 
 
 /** The block in Bo's instructions: who they are, their other classes, what he remembers, the summaries, recent calls. */
 function mh_student_context(array $S, string $cid): string {
-  $L = ['THE STUDENT FILE (what Mathub keeps about them; use it, never recite it):'];
+  $L = ['THE STUDENT FILE (what StudyCat keeps about them; use it, never recite it):'];
   $st = $S['student'] ?? [];
   if ($st) $L[] = '- ' . implode(', ', array_filter([isset($st['name']) ? 'Name: ' . $st['name'] : '', isset($st['school']) ? $st['school'] : '', isset($st['plan']) ? 'plan: ' . $st['plan'] : '']));
   $others = array_filter($S['classes'] ?? [], fn($k, $id) => $id !== $cid, ARRAY_FILTER_USE_BOTH);

@@ -18,7 +18,7 @@ module.exports = {
   format: 'mathub-class-pack', version: 1,
   id: 'jpns150d', code: 'JPNS 150D', name: 'Introduction to Japanese Culture and Civilization', short: 'JPNS 150D', term: 'Fall 2026', kind: 'reading',
   tagline: 'Japan from its myths to the present, through history, religion, Noh, haiku, novels, film and anime',
-  quizNote: 'Mathub wrote these questions from the syllabus readings and standard background on Japanese history and literature; they are not the professor’s. The exams’ multiple choice also draws on lectures and films, so check anything surprising against your notes.',
+  quizNote: 'StudyCat wrote these questions from the syllabus readings and standard background on Japanese history and literature; they are not the professor’s. The exams’ multiple choice also draws on lectures and films, so check anything surprising against your notes.',
   formulasTitle: 'Key terms, people & works',
   formulasNote: 'Every period, term, author and work from the syllabus on one page. Cover the right side and test yourself, then practise using the terms in an essay sentence.',
   filterExample: 'mono no aware, Bashō',
@@ -179,7 +179,7 @@ module.exports = {
       <li>Phones off, no texting and no eating in class; disruptive students will be asked to leave.</li>
       <li>If you miss class, get the material from classmates.</li>
       <li><b>Accommodations:</b> contact the professor and Disability Services (<a href="https://www.montana.edu/disabilityservices/" target="_blank" rel="noopener">montana.edu/disabilityservices</a>) as soon as possible.</li></ul>` },
-    { icon: 'bulb', title: 'How to use Mathub for this class', html: `<p class="small">Before each class, do the reading listed for it, then read that topic’s notes and run its flashcards the same day. When an essay question comes out, use the essay practice for that exam to plan an answer with three points, each tied to a specific reading or film. For the multiple choice, run the quizzer on the exam’s units and keep the key terms sheet’s timeline straight.</p>` }
+    { icon: 'bulb', title: 'How to use StudyCat for this class', html: `<p class="small">Before each class, do the reading listed for it, then read that topic’s notes and run its flashcards the same day. When an essay question comes out, use the essay practice for that exam to plan an answer with three points, each tied to a specific reading or film. For the multiple choice, run the quizzer on the exam’s units and keep the key terms sheet’s timeline straight.</p>` }
   ],
 
   QUIZ

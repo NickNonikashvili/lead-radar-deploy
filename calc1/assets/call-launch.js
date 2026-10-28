@@ -1,5 +1,5 @@
 /* ============================================================
-   Mathub — Call Bo: one clear way to start a call (App.callBo)
+   StudyCat — Call Bo: one clear way to start a call (App.callBo)
    The phone button in the top bar (every page), the start page's Bo card and each class's page open this sheet:
    pick the class to talk about (or "Anything else"), see the credits you have and about how many minutes they
    make, who Bo is today, and start. The call itself is assets/talk.js. The first time, the sheet says what a
@@ -46,7 +46,7 @@
       <div class="cb-acts">${out ? `<a class="btn primary lg" href="#/usage" data-cb-close>${icon('plus', 17)} ${esc(t('Get credits'))}</a>` : `<button type="button" class="btn primary lg cb-go" data-cb-go>${icon('phone', 18)} ${esc(t('Start the call'))}</button>`}<button type="button" class="btn ghost" data-cb-close>${esc(t('Not now'))}</button></div>`;
   }
   async function open(o = {}) {
-    if (!can()) { if (App.toast) App.toast(t('Calls with Bo are on the Mathub website. Open mathub.space in a browser.'), 4000); return; }
+    if (!can()) { if (App.toast) App.toast(t('Calls with Bo are on the StudyCat website. Open studycat.org in a browser.'), 4000); return; }
     if (!user()) { if (App.auth) App.auth.open('signup'); return; }
     if (L.el) return;
     L.cid = o.cid || ''; L.S = null; L.back = document.activeElement;

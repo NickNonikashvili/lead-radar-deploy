@@ -1,5 +1,5 @@
 /* ============================================================
-   Mathub — modules and customization (#/customize)
+   StudyCat — modules and customization (#/customize)
    Every feature is a module the student can turn off; a module that
    is off leaves the sidebar, every class's menu, the Tools page,
    search and home, and its address shows a page that turns it back on.
@@ -17,7 +17,7 @@
    - look:      { accent, accentAll, text, density, radius, font, hide: [parts] }
                 (html data-accent, data-text, data-density, data-radius,
                 data-font, data-hide; assets/custom.css)
-   - startPage: what opening Mathub shows ('home', 'today', 'tutor',
+   - startPage: what opening StudyCat shows ('home', 'today', 'tutor',
                 'agenda', 'tasks' or 'class:<id>')
    Some things are always on: home, a class's overview, its lessons and
    syllabus, Settings and this page.
@@ -71,12 +71,12 @@
     { id: 'forum', g: 'community', label: 'Discussions', desc: 'Each class’s board for questions and answers.', views: ['forum'] },
     { id: 'challenge', g: 'community', label: 'Daily challenge', desc: 'One problem a day, the same for everyone.', views: ['challenge'] },
     { id: 'leagues', g: 'community', label: 'Leagues', desc: 'Weekly XP boards.', views: ['leagues'] },
-    { id: 'people', g: 'community', label: 'People', desc: 'Everyone on Mathub, and who helps on the boards.', views: ['people'] },
+    { id: 'people', g: 'community', label: 'People', desc: 'Everyone on StudyCat, and who helps on the boards.', views: ['people'] },
     { id: 'sheet', g: 'community', label: 'Character sheet', desc: 'Your study stats as a tabletop character.', views: ['sheet'] },
-    { id: 'presence', g: 'community', label: 'Who is studying now', desc: 'The live count of classmates on Mathub.', views: [] },
+    { id: 'presence', g: 'community', label: 'Who is studying now', desc: 'The live count of classmates on StudyCat.', views: [] },
     { id: 'resources', g: 'help', label: 'Resources', desc: 'Tutoring, help and links for every class.', views: ['resources'] },
     { id: 'guides', g: 'help', label: 'Study guides', desc: 'Short guides on studying, exams and focus.', views: ['guides'] },
-    { id: 'whatsnew', g: 'help', label: 'What’s new', desc: 'The changes to Mathub.', views: ['whatsnew'] },
+    { id: 'whatsnew', g: 'help', label: 'What’s new', desc: 'The changes to StudyCat.', views: ['whatsnew'] },
     { id: 'celebrate', g: 'extras', label: 'Celebrations', desc: 'Confetti for a goal reached, a level up or an exam set aced.', views: [] }
   ];
   const ALWAYS = ['home', 'dashboard', 'notes', 'course', 'settings', 'customize', 'off', 'notfound'];
@@ -129,11 +129,11 @@
   const setCm = patch => { setSetting('classMenu', Object.assign(cm(), patch)); refresh(); };
 
   /* ---------- the look ---------- */
-  const ACCENTS = [['default', 'Mathub blue', '#1A64D6'], ['indigo', 'Indigo', '#4F46E5'], ['violet', 'Violet', '#7C3AED'], ['pink', 'Pink', '#DB2777'], ['red', 'Red', '#DC2626'], ['orange', 'Orange', '#EA580C'], ['amber', 'Amber', '#B45309'], ['green', 'Green', '#15803D'], ['teal', 'Teal', '#0F766E'], ['slate', 'Slate', '#334155']];
+  const ACCENTS = [['default', 'StudyCat blue', '#1A64D6'], ['indigo', 'Indigo', '#4F46E5'], ['violet', 'Violet', '#7C3AED'], ['pink', 'Pink', '#DB2777'], ['red', 'Red', '#DC2626'], ['orange', 'Orange', '#EA580C'], ['amber', 'Amber', '#B45309'], ['green', 'Green', '#15803D'], ['teal', 'Teal', '#0F766E'], ['slate', 'Slate', '#334155']];
   const TEXT = [['sm', 'Smaller'], ['md', 'Normal'], ['lg', 'Larger'], ['xl', 'Largest']];
   const DENSITY = [['compact', 'Compact'], ['cozy', 'Comfortable'], ['roomy', 'Roomy']];
   const RADIUS = [['square', 'Square'], ['soft', 'Soft'], ['round', 'Round']];
-  const FONTS = [['default', 'Mathub'], ['system', 'Your device’s'], ['readable', 'Easy to read'], ['serif', 'Book']];
+  const FONTS = [['default', 'StudyCat'], ['system', 'Your device’s'], ['readable', 'Easy to read'], ['serif', 'Book']];
   const PARTS = [['now', 'Date, clock and how far through the term (sidebar)'], ['quick', 'The New button and shortcuts (sidebar)'], ['cal', 'Month calendar (sidebar)'], ['pomo', 'Focus timer (sidebar)'], ['clock', 'Clock (header)'], ['exam', 'Next exam (header)'], ['sounds', 'Sounds button (header)'], ['lang', 'Language button (header)']];
   const look = () => Object.assign({ accent: 'default', accentAll: false, text: 'md', density: 'cozy', radius: 'soft', font: 'default', hide: [] }, settings().look || {});
   function applyLook() {
@@ -148,10 +148,10 @@
   const setLook = patch => { setSetting('look', Object.assign(look(), patch)); applyLook(); };
   applyLook(); document.addEventListener('DOMContentLoaded', applyLook);
 
-  /* ---------- where opening Mathub lands ---------- */
+  /* ---------- where opening StudyCat lands ---------- */
   const entry = location.hash.replace(/^#\/?/, '');
   let started = false; try { started = sessionStorage.getItem('mh-started') === '1'; sessionStorage.setItem('mh-started', '1'); } catch (e) {}
-  /** Called by the router before the start page draws: a start page other than home, once, when Mathub was opened at its root. */
+  /** Called by the router before the start page draws: a start page other than home, once, when StudyCat was opened at its root. */
   App.startRedirect = function () {
     if (started || entry) return false; started = true; const sp = settings().startPage || 'home'; if (sp === 'home') return false;
     const hash = sp.startsWith('class:') ? (global.Courses[sp.slice(6)] ? `#/${sp.slice(6)}/dashboard` : '') : (App.views[sp] && App.moduleOn(sp) ? '#/' + sp : '');
@@ -241,7 +241,7 @@
   function startHtml() {
     const sp = settings().startPage || 'home'; const mine = App.myCourses().filter(id => global.Courses[id]);
     const opts = [['home', 'Home'], ['today', 'Today'], ['tutor', 'Ask Bo'], ['agenda', 'Calendar'], ['tasks', 'Tasks']].filter(([v]) => v === 'home' || App.moduleOn(v)).concat(mine.map(id => ['class:' + id, global.Courses[id].short || id]));
-    return `<section class="panel cz-sec"><div class="panel-h"><h2 class="panel-title">${icon('home')} ${esc(t('When you open Mathub'))}</h2></div><div class="field"><label for="cz-start">${esc(t('Open on'))}</label><select class="select" id="cz-start">${opts.map(([v, l]) => `<option value="${esc(v)}"${v === sp ? ' selected' : ''}>${esc(t(l))}</option>`).join('')}</select></div></section>
+    return `<section class="panel cz-sec"><div class="panel-h"><h2 class="panel-title">${icon('home')} ${esc(t('When you open StudyCat'))}</h2></div><div class="field"><label for="cz-start">${esc(t('Open on'))}</label><select class="select" id="cz-start">${opts.map(([v, l]) => `<option value="${esc(v)}"${v === sp ? ' selected' : ''}>${esc(t(l))}</option>`).join('')}</select></div></section>
       <section class="panel cz-sec"><div class="panel-h"><h2 class="panel-title">${icon('download')} ${esc(t('Back up or move your setup'))}</h2></div><p class="small muted">${esc(t('Your features, menus and look in one file, to keep or to load on another account.'))}</p>
         <div class="row gap-sm" style="flex-wrap:wrap"><button type="button" class="btn" data-action="cz-export">${icon('download', 14)} ${esc(t('Download my setup'))}</button><label class="btn cz-import">${icon('upload', 14)} ${esc(t('Load a setup'))}<input type="file" id="cz-import" accept="application/json,.json" class="sr-only"></label></div></section>
       <section class="panel cz-sec"><div class="panel-h"><h2 class="panel-title">${icon('rotate')} ${esc(t('Start over'))}</h2></div><p class="small muted">${esc(t('Every feature on, the menus and the look as they came.'))}</p><button type="button" class="btn danger" data-action="cz-reset" data-what="all">${icon('rotate', 14)} ${esc(t('Reset everything'))}</button></section>`;
@@ -249,9 +249,9 @@
   const KEYS = ['modules', 'navLayout', 'classMenu', 'look', 'startPage'];
   const AS_CAME = { modules: { off: [] }, navLayout: {}, classMenu: {}, look: {}, startPage: 'home' };   // written out (not deleted) so other devices take the reset too
   App.views.customize = {
-    title: 'Customize', blurb: 'Make Mathub yours: turn features on or off, arrange the sidebar and every class’s menu, and change the look. It is saved with your account.',
+    title: 'Customize', blurb: 'Make StudyCat yours: turn features on or off, arrange the sidebar and every class’s menu, and change the look. It is saved with your account.',
     render(root, param, query, standalone) {
-      const head = App.pageHead(t('Customize Mathub'), t(this.blurb));
+      const head = App.pageHead(t('Customize StudyCat'), t(this.blurb));
       root.innerHTML = `<div class="${standalone ? 'landing-wrap ' : ''}cz-wrap">${head}<div class="dash-tabs" data-store="customizeTab" role="tablist">${TABS.map(([k, l, ic]) => `<button class="tab" data-tab="${k}" role="tab">${icon(ic, 14)}<span>${esc(t(l))}</span></button>`).join('')}</div><div class="panes">${TABS.map(([k]) => `<div class="pane" data-pane="${k}" role="tabpanel"></div>`).join('')}</div></div>`;
       if (param && TABS.some(x => x[0] === param)) setSetting('customizeTab', param);
       this.paint(root); this.wire(root);
@@ -274,8 +274,8 @@
         if (x.dataset.part) { const L = look(); setLook({ hide: x.checked ? L.hide.filter(p => p !== x.dataset.part) : L.hide.concat(x.dataset.part) }); return; }
         if (x.id === 'cz-scope') { scope = x.value; again('classes'); return; }
         if (x.id === 'cz-accent-all') { setLook({ accentAll: x.checked }); return; }
-        if (x.id === 'cz-start') { setSetting('startPage', x.value); toast(t('Mathub will open there next time')); return; }
-        if (x.id === 'cz-import' && x.files && x.files[0]) { const f = x.files[0]; f.text().then(txt => { let j; try { j = JSON.parse(txt); } catch (err) { toast(t('That file is not a Mathub setup.')); return; } if (!j || j.mathubSetup !== 1) { toast(t('That file is not a Mathub setup.')); return; } KEYS.forEach(k => { if (j[k] !== undefined && j[k] !== null && (typeof j[k] === 'object' || typeof j[k] === 'string')) setSetting(k, j[k]); }); refresh(); again(); toast(t('Setup loaded')); }); x.value = ''; }
+        if (x.id === 'cz-start') { setSetting('startPage', x.value); toast(t('StudyCat will open there next time')); return; }
+        if (x.id === 'cz-import' && x.files && x.files[0]) { const f = x.files[0]; f.text().then(txt => { let j; try { j = JSON.parse(txt); } catch (err) { toast(t('That file is not a StudyCat setup.')); return; } if (!j || j.mathubSetup !== 1) { toast(t('That file is not a StudyCat setup.')); return; } KEYS.forEach(k => { if (j[k] !== undefined && j[k] !== null && (typeof j[k] === 'object' || typeof j[k] === 'string')) setSetting(k, j[k]); }); refresh(); again(); toast(t('Setup loaded')); }); x.value = ''; }
       });
       bind(root, {
         'cz-preset': b => { const p = PRESETS.find(x => x[0] === b.dataset.p); if (p) { setModules(p[3]); again(); toast(t('{1}: done', t(p[1]))); } },

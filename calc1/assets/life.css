@@ -1,5 +1,5 @@
 /* ============================================================
-   Mathub — the planner pages, their dialogs and the start page dashboard
+   StudyCat — the planner pages, their dialogs and the start page dashboard
    (assets/life.js, life-school.js, life-self.js, dash.js). Big Sky:
    white cards with 2px borders on the sky ground, lips under anything
    you can press, Gabarito numbers, each class in its own colour
@@ -615,3 +615,85 @@
 .dw-hweek i.fut { background: transparent; box-shadow: inset 0 0 0 1px var(--border); }
 :root .dash-hero .hero-note { max-width: 46ch; }
 @media (min-width: 761px) { :root .dash-hero > div:first-child { max-width: min(560px, 52%); } }
+
+/* ============================================================
+   Your home: widgets placed anywhere (assets/dash.js). 12 columns; rows of 30px; z decides which is on top.
+   ============================================================ */
+.home-dash .dash-top { margin-bottom: 6px; }
+.dash-acts { flex-wrap: wrap; }
+.dash-edit-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px; margin: 8px 0 4px; padding: 8px 12px; border-radius: 14px; background: var(--accent-soft); color: var(--accent-deep, var(--ink)); }
+.dash-edit-bar[hidden] { display: none; }
+.dash-canvas { position: relative; margin: 6px -6px 0; min-height: 120px; }
+.dash-canvas > .dw { position: absolute; margin: 0; overflow: hidden; transition: left .18s ease, top .18s ease, width .18s ease, height .18s ease, box-shadow .15s; }
+.dash-canvas > .dw .dw-b { overflow: auto; overscroll-behavior: contain; scrollbar-width: thin; padding-right: 2px; }
+.dash-canvas .ah-today > .ah-sec-h { display: none; }   /* the widget has its own title */
+.dash-canvas .dw-next .ah-hero { margin: 0; box-shadow: none; }
+/* Bo inside his widget: the widget names him, so his panel keeps the credits line, the plan and the three things to do */
+.dash-canvas .dw-bo-slot .bh { display: flex; flex-direction: column; align-items: stretch; gap: 12px; margin: 0; box-shadow: none; border: 0; padding: 0; background: none; }
+.dash-canvas .dw-bo-slot .bh-av { width: 46px; height: 46px; border-radius: 15px; box-shadow: none; }
+.dash-canvas .dw-bo-slot .bh-av svg { width: 38px; height: 38px; }
+.dash-canvas .dw-bo-slot .bh-t h2 { display: none; }
+.dash-canvas .dw-bo-slot .bh-sub { margin: 0; }
+.dash-canvas .dw-bo-slot .bh-plan { margin-top: 6px; }
+.dash-canvas .dw-bo-slot .bh-acts { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; }
+.dash-canvas .dw-bo-slot .bh-act { min-height: 58px; padding: 8px 10px; border-radius: 16px; gap: 10px; }
+.dash-canvas .dw-bo-slot .bh-ic { width: 36px; height: 36px; border-radius: 12px; }
+.dash-canvas .dw-bo-slot .bh-l b { font-size: 15px; }
+.dash-canvas .dw-bo-guest { flex-direction: column; align-items: flex-start; gap: 10px; margin: 0; }
+.dw-pick { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+.dw-pick-sel { display: block; margin-bottom: 10px; }
+.dw-pick-sel .select { width: auto; min-width: 140px; }
+.dw-foot { display: flex; flex-wrap: wrap; gap: 12px; margin-top: auto; padding-top: 6px; }
+.dw-note { flex: 1; min-height: 80px; resize: none; background: color-mix(in srgb, var(--gold, #f5c518) 12%, var(--surface)); border-style: dashed; font-size: 15px; line-height: 1.5; }
+.dash-empty { min-height: 220px; }
+/* your classes, in rows */
+.dwk-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr)); gap: 8px; }
+.dwk { display: flex; align-items: center; gap: 10px; min-width: 0; padding: 8px 10px; border: 2px solid var(--border); border-radius: 14px; background: var(--surface); color: var(--ink); text-decoration: none !important; box-shadow: 0 3px 0 var(--lip, var(--border)); }
+.dwk:hover { border-color: var(--cc-line, var(--accent-line, var(--accent))); }
+.dwk:active { transform: translateY(2px); box-shadow: none; }
+.dwk-tile { flex: none; display: grid; place-items: center; min-width: 52px; height: 38px; padding: 0 6px; border-radius: 11px; background: var(--cc, var(--accent)); color: var(--cc-ink, #fff); font: 800 12px/1.1 var(--font-display); text-align: center; }
+.dwk-t { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.dwk-t b { font-size: 13.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dwk-t small { font-size: 12.5px; color: var(--muted); }
+.dwk > svg { flex: none; color: var(--muted); }
+/* arranging: a grid to drop on, a handle to drag, a corner to resize, and front, back and remove */
+.dw-grip, .dw-ed, .dw-rs { display: none; }
+.dash-canvas.editing { background-image: linear-gradient(to right, color-mix(in srgb, var(--accent) 14%, transparent) 1px, transparent 1px), linear-gradient(to bottom, color-mix(in srgb, var(--accent) 10%, transparent) 1px, transparent 1px); background-size: calc(100% / 12) 30px; border-radius: 16px; }
+.dash-canvas.editing > .dw { outline: 2px dashed var(--accent-line, var(--accent)); outline-offset: -2px; }
+.dash-canvas.editing .dw-grip { display: inline-grid; place-items: center; flex: none; width: 30px; height: 30px; padding: 0; border: 2px solid var(--border); border-radius: 9px; background: var(--surface-2); color: var(--ink-2); cursor: grab; touch-action: none; }
+.dash-canvas.editing .dw-grip:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.dash-canvas.editing .dw-ed { display: inline-flex; gap: 2px; flex: none; }
+.dash-canvas.editing .dw-ed .icon-btn { width: 30px; height: 30px; }
+.dash-canvas.editing:not(.stacked) .dw-st, .dash-canvas.stacked .dw-fr { display: none; }
+.dash-canvas.editing:not(.stacked) .dw-rs { display: block; position: absolute; right: 2px; bottom: 2px; width: 22px; height: 22px; cursor: nwse-resize; touch-action: none; border-radius: 0 0 14px 0; background: linear-gradient(135deg, transparent 50%, color-mix(in srgb, var(--accent) 55%, transparent) 50% 58%, transparent 58% 70%, color-mix(in srgb, var(--accent) 55%, transparent) 70% 78%, transparent 78%); }
+.dash-canvas.editing .dw-more { display: none; }
+.dw.dragging, .dw.resizing { transition: none !important; box-shadow: 0 18px 40px rgba(15, 23, 42, .22) !important; }
+.dw.dragging { cursor: grabbing; opacity: .94; }
+.dw-ghost { position: absolute; border: 2px dashed var(--accent); border-radius: 18px; background: color-mix(in srgb, var(--accent-soft) 60%, transparent); pointer-events: none; transition: left .08s, top .08s, width .08s, height .08s; }
+/* a narrow screen: the widgets stack in reading order */
+.dash-canvas.stacked { display: flex; flex-direction: column; gap: 12px; height: auto !important; margin: 6px 0 0; }
+.dash-canvas.stacked > .dw { position: relative; left: auto !important; top: auto !important; width: auto !important; height: auto !important; max-height: 640px; z-index: auto !important; }
+.dash-canvas.stacked.editing { background: none; }
+@media (prefers-reduced-motion: reduce) { .dash-canvas > .dw, .dw-ghost { transition: none; } }
+/* picking your classes on the home page: nobody gets the Montana State classes by default (assets/app.js, pickClassesHtml) */
+.panel.pick-classes { margin: 18px 0 6px; padding: 22px 24px; border: 2px solid var(--accent-line, var(--accent)); background: color-mix(in srgb, var(--accent-soft) 55%, var(--surface)); }
+.pk-head { display: flex; align-items: flex-start; gap: 14px; margin-bottom: 16px; }
+.pk-ic { flex: none; display: grid; place-items: center; width: 48px; height: 48px; border-radius: 15px; background: var(--surface); color: var(--accent-deep, var(--accent)); border: 2px solid var(--accent-line, var(--border)); }
+.pk-title { margin: 2px 0 4px; font: 800 24px/1.15 var(--font-display); letter-spacing: -.01em; color: var(--ink); }
+.pk-head p { margin: 0; max-width: 60ch; line-height: 1.5; }
+.pk-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 250px), 1fr)); gap: 8px; }
+.pk-c { position: relative; display: flex; align-items: center; gap: 10px; min-width: 0; padding: 10px 12px; border: 2px solid var(--border); border-radius: 14px; background: var(--surface); cursor: pointer; transition: border-color .12s ease-out, background-color .12s ease-out; }
+.pk-c:hover { border-color: var(--cc-line, var(--accent-line, var(--accent))); }
+.pk-c input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.pk-c:focus-within { outline: 3px solid var(--accent); outline-offset: 2px; }
+.pk-c.on { border-color: var(--cc, var(--accent)); background: color-mix(in srgb, var(--cc, var(--accent)) 9%, var(--surface)); }
+.pk-tile { flex: none; display: grid; place-items: center; min-width: 58px; height: 40px; padding: 0 6px; border-radius: 11px; background: var(--cc, var(--accent)); color: var(--cc-ink, #fff); font: 800 12.5px/1.1 var(--font-display); text-align: center; }
+.pk-t { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.pk-t b { font-size: 14px; line-height: 1.25; }
+.pk-t small { font-size: 12.5px; color: var(--muted); }
+.pk-tick { flex: none; display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; border: 2px solid var(--border-strong, var(--border)); color: transparent; }
+.pk-c.on .pk-tick { background: var(--cc, var(--accent)); border-color: var(--cc, var(--accent)); color: var(--cc-ink, #fff); }
+.pk-go { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 18px; margin-top: 16px; }
+.pk-go .btn { min-width: 200px; justify-content: center; }
+.pk-msg:empty { display: none; }
+@media (max-width: 600px) { .pick-classes { padding: 18px 16px; } .pk-title { font-size: 21px; } .pk-go .btn { width: 100%; } }

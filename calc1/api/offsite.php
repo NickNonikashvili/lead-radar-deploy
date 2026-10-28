@@ -1,18 +1,18 @@
 <?php
 /* ============================================================
-   Mathub account server — off-site backups
+   StudyCat account server — off-site backups
    Each day's copy of the database (api/extras.php mh_backup_make) also goes, encrypted, to a storage bucket that
    speaks the S3 API (Amazon S3, Cloudflare R2, Backblaze B2, Wasabi, MinIO…), so a lost server is not a lost site.
    - Encrypted before it leaves the server: gzip, then AES-256-GCM in 1 MB chunks, with a key made from the
      passphrase (PBKDF2-SHA256, 200,000 rounds, a new salt for every copy). Each chunk's nonce counts up, and its
      authenticated data names the chunk and says whether it is the last, so a copy that was cut short, reordered or
      changed does not open. Without the passphrase nobody can read the copies, the storage company included.
-   - Checked after it is sent: the bucket must report the size and the SHA-256 Mathub sent.
+   - Checked after it is sent: the bucket must report the size and the SHA-256 StudyCat sent.
    - Restored as a test once a week, and from the admin panel: the newest copy is downloaded, decrypted into a
      temporary file and opened with SQLite. PRAGMA integrity_check must say ok and it must hold as many members as
      the copy that was sent. The temporary files are deleted either way.
    - The bucket keeps the newest offsite_keep (30) copies, and none older than 90 days (the privacy policy's promise);
-     older ones Mathub sent are deleted, and nothing else in the bucket is touched.
+     older ones StudyCat sent are deleted, and nothing else in the bucket is touched.
    - Requests are signed with AWS Signature Version 4 (mh_s3_sign; tests/offsite.test.js checks it against botocore).
    - The work runs after the page that started it has its answer (housekeeping), or in the cron route, never
      while someone waits.
@@ -128,7 +128,7 @@ function mh_s3_why(array $r): string {
   if (preg_match('#<Code>([^<]+)</Code>#', $r['body'], $c)) { preg_match('#<Message>([^<]*)</Message>#', $r['body'], $m); return 'The storage said ' . $c[1] . ($m && $m[1] !== '' ? ': ' . html_entity_decode($m[1]) : '') . " (HTTP {$r['code']})."; }
   return "The storage answered HTTP {$r['code']}.";
 }
-/** The copies Mathub sent that are in the bucket: [key, name, size, modified], newest first. */
+/** The copies StudyCat sent that are in the bucket: [key, name, size, modified], newest first. */
 function mh_s3_list(array $O): array {
   $out = []; $token = '';
   for ($page = 0; $page < 20; $page++) {
@@ -165,7 +165,7 @@ function mh_offsite_send(?array $cfg = null): array {
     $hd = mh_s3($O, 'HEAD', $key, [], ['timeout' => 60]);
     if ($hd['code'] !== 200) throw new RuntimeException('Sent, but the storage cannot find it: ' . mh_s3_why($hd));
     if ((int)($hd['headers']['content-length'] ?? -1) !== $enc['size']) throw new RuntimeException('Sent, but the storage holds a different size (' . ($hd['headers']['content-length'] ?? '?') . ' bytes, not ' . $enc['size'] . ').');
-    if (($hd['headers']['x-amz-meta-sha256'] ?? '') !== $enc['sha256']) throw new RuntimeException('Sent, but the storage does not report the fingerprint Mathub sent.');
+    if (($hd['headers']['x-amz-meta-sha256'] ?? '') !== $enc['sha256']) throw new RuntimeException('Sent, but the storage does not report the fingerprint StudyCat sent.');
     $kept = mh_offsite_trim($O);
     $res = ['name' => $name, 'size' => $enc['size'], 'sha256' => $enc['sha256'], 'users' => $users, 'ms' => (int)round(1000 * (microtime(true) - $t0)), 'note' => $kept === null ? 'Old copies could not be listed.' : "$kept in the bucket"];
     mh_offsite_log('send', $name, true, $res); return $res;
@@ -173,7 +173,7 @@ function mh_offsite_send(?array $cfg = null): array {
     mh_offsite_log('send', $name, false, ['note' => $e->getMessage(), 'ms' => (int)round(1000 * (microtime(true) - $t0))]); throw $e;
   } finally { @unlink($tmp); }
 }
-/** Deletes the copies Mathub sent beyond the newest offsite_keep, and any older than 90 days. Returns how many are left (null: could not list). */
+/** Deletes the copies StudyCat sent beyond the newest offsite_keep, and any older than 90 days. Returns how many are left (null: could not list). */
 function mh_offsite_trim(array $O): ?int {
   try { $all = mh_s3_list($O); } catch (Throwable $e) { return null; }
   $left = 0;

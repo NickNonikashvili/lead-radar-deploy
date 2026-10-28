@@ -1,5 +1,5 @@
 /* ============================================================
-   Mathub — hint ladders
+   StudyCat — hint ladders
    Three progressive hints per quiz topic: a way to think about it,
    the procedure, and the nearly-there nudge. The quizzer adds the
    problem's own hint, the first step of the worked solution, and

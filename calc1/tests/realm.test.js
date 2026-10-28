@@ -11,16 +11,16 @@ const T = require('./lib');
   const [c, p] = await mk(1360, 900, { serviceWorkers: 'block' }); await realmOn(c);
   await go(p, '#/', 1200);
   check('Realm applies before first paint', await p.evaluate(() => document.documentElement.getAttribute('data-skin')) === 'realm');
-  const fonts = await p.evaluate(async () => { await document.fonts.ready; const h = document.querySelector('.course-card h2'); return { cinzel: document.fonts.check('600 20px Cinzel'), h2: getComputedStyle(h).fontFamily, body: getComputedStyle(document.body).fontFamily, feat: getComputedStyle(document.body).fontFeatureSettings }; });
+  const fonts = await p.evaluate(async () => { await document.fonts.ready; const h = document.querySelector('#dash-canvas .dw-h h3'); return { cinzel: document.fonts.check('600 20px Cinzel'), h2: getComputedStyle(h).fontFamily, body: getComputedStyle(document.body).fontFamily, feat: getComputedStyle(document.body).fontFeatureSettings }; });
   log('fonts:', JSON.stringify(fonts));
   check('Cinzel loads from the site and sets the headings', fonts.cinzel && /Cinzel/.test(fonts.h2), fonts);
   check('body text stays Helvetica Neue', /Helvetica Neue/.test(fonts.body), fonts.body);
   check('no stylistic set that hooks Cinzel\'s I', fonts.feat === 'normal', fonts.feat);
-  const arch = await p.$$eval('.course-card .arch-chip', els => els.map(e => ({ t: e.textContent.trim(), vis: getComputedStyle(e).display !== 'none' })));
-  log('archetypes:', arch.map(a => a.t).join(', '));
-  check('every class card shows its archetype', arch.length >= 3 && arch.every(a => a.vis) && arch.some(a => a.t === 'Wizard') && arch.some(a => a.t === 'Artificer'), arch);
+  const arch = await p.evaluate(() => ['calc', 'physics', 'csci'].map(id => App.archetype(id).name));
+  log('archetypes:', arch.join(', '));
+  check('every class has its archetype', arch.length === 3 && arch.includes('Wizard') && arch.includes('Artificer'), arch);
   check('Bo wears the wizard hat', await p.evaluate(() => { const h = document.querySelector('.mascot-slot .bo-hat'); return !!h && getComputedStyle(h).display !== 'none'; }));
-  const bg = await p.evaluate(() => ({ body: getComputedStyle(document.body).backgroundImage.slice(0, 30), bgc: getComputedStyle(document.body).backgroundColor, panel: getComputedStyle(document.querySelector('.course-card')).backgroundImage.split('url(').length - 1 }));
+  const bg = await p.evaluate(() => ({ body: getComputedStyle(document.body).backgroundImage.slice(0, 30), bgc: getComputedStyle(document.body).backgroundColor, panel: getComputedStyle(document.querySelector('#dash-canvas .dw')).backgroundImage.split('url(').length - 1 }));
   check('parchment texture and panel corner ornaments', /url\(/.test(bg.body) && bg.bgc === 'rgb(237, 225, 198)' && bg.panel === 4, bg);
   check('pages outside a class use the crimson accent', await p.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--accent').trim()) === '#9E1B2E');
 
@@ -66,7 +66,7 @@ const T = require('./lib');
   const gk = await p.evaluate(() => new Promise(res => { addEventListener('hashchange', () => setTimeout(() => { const i = document.querySelector('#view .gk-dec i'); const s = document.querySelector('#gk-status'); res({ glyphs: i ? i.textContent : '', font: i ? getComputedStyle(i).fontFamily : '' , status: s ? s.textContent : '' }); }, 30), { once: true }); location.hash = '#/calc/notes/1.2'; }));
   await p.waitForTimeout(700); const st = await p.evaluate(() => document.querySelector('#gk-status').textContent);
   log('realm geek:', JSON.stringify(gk), st);
-  check('decode uses runes in the rune font', /[ᚠ-ᛸ]/.test(gk.glyphs) && /Mathub Runes/.test(gk.font), gk);
+  check('decode uses runes in the rune font', /[ᚠ-ᛸ]/.test(gk.glyphs) && /StudyCat Runes/.test(gk.font), gk);
   check('status line teleports', /~\/realm \$ teleport calc\/notes\/1\.2/.test(st), st);
 
   // Classic takes it all away

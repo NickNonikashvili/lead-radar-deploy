@@ -1,8 +1,8 @@
 <?php
 /* ============================================================
-   Mathub — Canvas calendar feed sync
+   StudyCat — Canvas calendar feed sync
    Fetches the owner's Canvas iCal feed (Calendar → Calendar Feed),
-   maps each event to a Mathub course by the course name in the
+   maps each event to a StudyCat course by the course name in the
    event title, caches the result for an hour in api/data/canvas.json
    and serves it to the site. Only events for the mapped courses are
    exposed; anything else in the feed is dropped.
@@ -22,7 +22,7 @@ function mh_canvas_feed_url(): string {
   $cfg = mh_config(); $u = trim((string)($cfg['canvas_feed'] ?? '')); if ($u !== '') return $u;
   return trim((string)mh_setting('canvas_feed', ''));
 }
-/** Which Mathub course an event belongs to, from the course name Canvas appends in [brackets]. */
+/** Which StudyCat course an event belongs to, from the course name Canvas appends in [brackets]. */
 function mh_canvas_course(string $summary, array $cfg): ?string {
   $rules = $cfg['canvas_course_match'] ?? ['calc' => ['M 171', 'M171', 'CALCULUS I'], 'physics' => ['PHSX 220', 'PHSX220', 'PHYSICS I'], 'precalc' => ['M 151', 'M151', 'PRECALC'], 'writ' => ['WRIT 101', 'WRIT101', 'COLLEGE WRITING'], 'csci' => ['CSCI 127', 'CSCI127', 'Joy and Beauty of Data'], 'biob' => ['BIOB 160', 'BIOB160', 'PRINCIPLES OF LIVING SYSTEMS'], 'kin' => ['KIN 322', 'KIN322'], 'psyx' => ['PSYX 340', 'PSYX340', 'PSYCHOLOGICAL DISORDERS']];
   foreach (mh_pack_rows() as $p) if (!isset($rules[$p['id']])) { $c = json_decode((string)$p['canvas'], true); $rules[$p['id']] = is_array($c) && $c ? $c : [$p['code'], str_replace(' ', '', $p['code'])]; }
@@ -79,13 +79,13 @@ function mh_http_get(string $url, bool $ownerSet = false): ?string {
     foreach ($ips as $addr) if (!filter_var($addr, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE)) { $GLOBALS['mh_http_error'] = 'that address points to this server or a private network'; return null; }
   }
   if (function_exists('curl_init')) {
-    $ch = curl_init($url); curl_setopt_array($ch, [CURLOPT_RETURNTRANSFER => true, CURLOPT_FOLLOWLOCATION => true, CURLOPT_MAXREDIRS => 4, CURLOPT_TIMEOUT => 20, CURLOPT_CONNECTTIMEOUT => 10, CURLOPT_USERAGENT => 'Mathub/1.0 (+calendar sync)', CURLOPT_PROTOCOLS => CURLPROTO_HTTPS | CURLPROTO_HTTP, CURLOPT_REDIR_PROTOCOLS => CURLPROTO_HTTPS | CURLPROTO_HTTP, CURLOPT_MAXFILESIZE => 8 * 1024 * 1024]);
+    $ch = curl_init($url); curl_setopt_array($ch, [CURLOPT_RETURNTRANSFER => true, CURLOPT_FOLLOWLOCATION => true, CURLOPT_MAXREDIRS => 4, CURLOPT_TIMEOUT => 20, CURLOPT_CONNECTTIMEOUT => 10, CURLOPT_USERAGENT => 'StudyCat/1.0 (+calendar sync)', CURLOPT_PROTOCOLS => CURLPROTO_HTTPS | CURLPROTO_HTTP, CURLOPT_REDIR_PROTOCOLS => CURLPROTO_HTTPS | CURLPROTO_HTTP, CURLOPT_MAXFILESIZE => 8 * 1024 * 1024]);
     $body = curl_exec($ch); $code = (int)curl_getinfo($ch, CURLINFO_RESPONSE_CODE); $err = curl_error($ch); curl_close($ch);
     if ($body !== false && $code >= 200 && $code < 300) return (string)$body;
     $GLOBALS['mh_http_error'] = $err !== '' ? $err : ('HTTP ' . $code);
     return null;
   }
-  $ctx = stream_context_create(['http' => ['timeout' => 20, 'follow_location' => 1, 'user_agent' => 'Mathub/1.0 (+calendar sync)']]);
+  $ctx = stream_context_create(['http' => ['timeout' => 20, 'follow_location' => 1, 'user_agent' => 'StudyCat/1.0 (+calendar sync)']]);
   $body = @file_get_contents($url, false, $ctx); if ($body === false) { $GLOBALS['mh_http_error'] = error_get_last()['message'] ?? 'request failed'; return null; } return $body;
 }
 /** Returns ['events' => [...], 'fetched' => ts, 'error' => ?string, 'configured' => bool]. */

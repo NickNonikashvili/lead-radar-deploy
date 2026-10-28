@@ -1,4 +1,4 @@
-# Where AI-built ("vibe-coded") sites fall short of big-company sites, and where Mathub stands
+# Where AI-built ("vibe-coded") sites fall short of big-company sites, and where StudyCat stands
 
 October 11, 2026 · build 2026.10.11.1
 
@@ -15,7 +15,7 @@ Research from 2025–2026 finds AI-built sites fall short of professionally buil
 
 Big companies close these gaps with process, not with smarter code: threat modelling, server-side permission checks, security headers, controlled dependencies, accessibility conformance, error monitoring, backups, a way to download your data, a security contact, and tests that run before every release.
 
-Mathub was audited against that list, and every gap that could be closed in code was closed in this build. The fixes are listed below. Four were real bugs found along the way:
+StudyCat was audited against that list, and every gap that could be closed in code was closed in this build. The fixes are listed below. Four were real bugs found along the way:
 
 - A whole class of SQL mistake (in the new code).
 - A crash on classes without a question bank.
@@ -57,9 +57,9 @@ Mathub was audited against that list, and every gap that could be closed in code
 - **Speed.** Only **48%** of mobile origins pass all three Core Web Vitals (desktop: 56%). ([Web Almanac 2025, Performance](https://almanac.httparchive.org/en/2025/performance))
 - **Security headers.** Among the top 10,000 sites, 51.7% send HSTS and only **27.3%** send a Content-Security-Policy. ([AppSecSanta, Feb 2026](https://appsecsanta.com/research/security-headers-study-2026))
 
-## The checklist, and Mathub against it
+## The checklist, and StudyCat against it
 
-| Area | What careful, large sites do | Mathub before this build | What changed |
+| Area | What careful, large sites do | StudyCat before this build | What changed |
 |---|---|---|---|
 | Who may do what | Every permission is checked on the server, per object | Already server-side for every admin and moderator route. One gap: any instructor or TA could post announcements to **every** class and site-wide, mark any mock exam official, and pin or lock any post | Staff powers are scoped to the classes they teach; only moderators post site-wide (`mh_staff_can_course`). Every new professor route checks the role on the server. 45 API checks cover the boundaries (`tests/teach-api.test.js`) |
 | Secrets | Never in the page; kept out of version control | Already right: secrets live only in `api/config.local.php` and `api/data` | No change needed |
@@ -67,7 +67,7 @@ Mathub was audited against that list, and every gap that could be closed in code
 | Request forgery (SSRF) | Outbound fetchers allow only safe schemes and public hosts | The Canvas calendar fetcher followed any URL and redirect | Web addresses only, no `file://`, and an address typed in the admin panel cannot point at the server or a private network. Redirects are limited the same way |
 | Files on the server | Deny by default | `api/.htaccess` listed files to block; five helper files were reachable | Allow-list: only `api/index.php` answers; everything else in `api/` is denied |
 | Error messages | Generic to visitors, details in the log | Unexpected errors sent their internal message (SQL, file paths) to the browser; mail and push errors did too | Visitors get a short reference code; details go to the server log under it |
-| Security headers | CSP, HSTS, frame protection, permissions policy | Only `nosniff` and a referrer policy | Content-Security-Policy with **no inline scripts**, scripts only from Mathub and MathJax pinned to 3.2.2. Also HSTS, `X-Frame-Options`/`frame-ancestors`, `Permissions-Policy`, `Cross-Origin-Opener-Policy`, and an HTTPS redirect. The inline boot code moved to `assets/boot.js` |
+| Security headers | CSP, HSTS, frame protection, permissions policy | Only `nosniff` and a referrer policy | Content-Security-Policy with **no inline scripts**, scripts only from StudyCat and MathJax pinned to 3.2.2. Also HSTS, `X-Frame-Options`/`frame-ancestors`, `Permissions-Policy`, `Cross-Origin-Opener-Policy`, and an HTTPS redirect. The inline boot code moved to `assets/boot.js` |
 | Third-party code | Few third parties, versions pinned | Google Fonts on every page; MathJax pinned by URL | Fonts are self-hosted (`assets/fonts.css`), so no visitor's IP goes to Google just to draw text. The policy restricts jsDelivr to the exact MathJax version path. The unused Realm-only font preload is gone |
 | Accounts | Rate limits, breached-password checks, timing-safe login, session control | Rate limits and hashed one-time codes and tokens were already in | The common-password blocklist and "no email name in the password" check follow NIST SP 800-63B. Logins take the same time whether or not the account exists. **Settings → Signed-in devices** lists sessions with "Sign out everywhere else" |
 | Privacy | Download your data, clear disclosure | Could delete the account and back up progress, but not download everything | **Settings → Download my data** gives one JSON file of everything stored about the account, minus secrets. The privacy policy now covers instructor visibility, error reports and the new controls |
@@ -87,22 +87,22 @@ Mathub was audited against that list, and every gap that could be closed in code
   ```
 - **Tests in CI.** The suites run with `node tests/run.js` before each release. They need the seeded test accounts in `api/data`, which is never committed, so a GitHub Actions run needs a fixture database first.
 - **An outside penetration test.** Everything above was checked by the author and by automated tests. A one-off review by someone else is the usual next step for a site that holds student data.
-- **Email for class announcements.** Students get them in the Mathub inbox and as push notifications. Email would need a sending queue to stay within Hostinger's limits.
+- **Email for class announcements.** Students get them in the StudyCat inbox and as push notifications. Email would need a sending queue to stay within Hostinger's limits.
 
 ## The professors' section (built in the same release)
 
-Since build 2026.10.12.1 this is **Mathub Faculty**, a separate workspace with its own look, opened from a "For professors" button on the start page. Anyone signed in can write and print syllabi there; an administrator confirms faculty status in **Admin → Instructors** before a class can be published or use the class tools. Instructors get:
+Since build 2026.10.12.1 this is **StudyCat Faculty**, a separate workspace with its own look, opened from a "For professors" button on the start page. Anyone signed in can write and print syllabi there; an administrator confirms faculty status in **Admin → Instructors** before a class can be published or use the class tools. Instructors get:
 
 - **A syllabus builder.** It covers course facts, meeting times, people and office hours, outcomes, materials, policies, exams, a day-by-day schedule and grading.
   - MSU's accommodations, integrity and wellbeing statements come pre-filled, with three AI-policy presets.
   - A checklist shows what is missing, and grading weights must add to 100%.
   - "Fill in class meetings" generates the term from the meeting days and skips holidays. "Paste topics" fills them in.
   - Print / PDF and a public syllabus page.
-- **Publishing.** The syllabus becomes a Mathub class, built on the server from the plain text. Students who join with the 6-character code get the calendar, exam countdowns, the grade calculator with the instructor's weights, the syllabus page, exam prep and a class board. Nobody else sees the class.
+- **Publishing.** The syllabus becomes a StudyCat class, built on the server from the plain text. Students who join with the 6-character code get the calendar, exam countdowns, the grade calculator with the instructor's weights, the syllabus page, exam prep and a class board. Nobody else sees the class.
 - **Running the class.**
   - A roster with CSV export, and co-instructors or TAs.
   - Announcements to students' inbox and phone.
-  - Practice assignments from Mathub's question banks: each student gets their own version, retakes are allowed, and the best score counts.
+  - Practice assignments from StudyCat's question banks: each student gets their own version, retakes are allowed, and the best score counts.
   - Attendance check-in with a 4-digit code.
   - Insights: completion, average scores, the weakest topics and attendance.
 

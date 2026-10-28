@@ -1,7 +1,7 @@
 /* ============================================================
-   Mathub — the interface in English, Español, Русский, Français, Italiano, Português and Deutsch.
+   StudyCat — the interface in English, Español, Русский, Français, Italiano, Português and Deutsch.
    Loaded in <head> right after boot.js. The language is the one picked (the globe in the top bar, Settings, the page
-   footer), else the browser's first language that Mathub has, else English. For any language but English, its
+   footer), else the browser's first language that StudyCat has, else English. For any language but English, its
    dictionary (assets/i18n/<lang>.js, built from i18n/<lang>.tsv by scripts/build-i18n.js) loads before the page,
    and the interface is shown in it as it is drawn: the text, the words in title, aria-label, placeholder and alt,
    confirm() / prompt() / alert(), the tab's title, dates and numbers. The code itself stays in English, so nothing
@@ -12,7 +12,7 @@
      entry is translated too ("Exam {1} is {2}" with "tomorrow").
    - {1|вопрос|вопроса|вопросов} picks the plural for the number in {1} (Intl.PluralRules: one, few, many, other);
      {1?días:día} is the first when the English had something in {1} (a plural "s"), else the second; {1|} leaves it out.
-   - Text that fits no entry is tried in parts, at " · " (a title like "Quizzer · Mathub").
+   - Text that fits no entry is tried in parts, at " · " (a title like "Quizzer · StudyCat").
    - MathubI18n.t('…', a, b) (App.t) for words that never reach the page; MathubI18n.set('de') switches (and reloads).
    ============================================================ */
 (function (global) {

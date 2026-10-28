@@ -1,6 +1,6 @@
 <?php
 /* ============================================================
-   Mathub account server — shared helpers
+   StudyCat account server — shared helpers
    SQLite storage, JSON I/O, rate limits, email codes, login tokens.
    ============================================================ */
 declare(strict_types=1);
@@ -160,7 +160,7 @@ function mh_email_check(string $email): array {
   $domain = substr($email, strrpos($email, '@') + 1);
   $ok = in_array($email, array_map('strtolower', mh_config()['extra_allowed_emails'] ?? []), true);
   foreach (mh_config()['allowed_domains'] as $d) { $d = strtolower($d); if ($domain === $d || str_ends_with($domain, '.' . $d)) { $ok = true; break; } }
-  if (!$ok) return [null, 'Mathub is for Montana State students: sign up with your @montana.edu address.'];
+  if (!$ok) return [null, 'StudyCat is for Montana State students: sign up with your @montana.edu address.'];
   return [$email, null];
 }
 
@@ -177,8 +177,8 @@ function mh_user_public(array $u): array {
     'show_on_leaderboard' => (int)($u['show_on_leaderboard'] ?? 1) === 1, 'digest_email' => (int)($u['digest_email'] ?? 1) === 1, 'planning_email' => (int)($u['planning_email'] ?? 0) === 1, 'news_email' => (int)($u['news_email'] ?? 1) === 1, 'recap_email' => (int)($u['recap_email'] ?? 1) === 1, 'exam_nudge' => (int)($u['exam_nudge'] ?? 1) === 1, 'recap_emails_on' => (mh_config()['recap_emails'] ?? 'on') !== 'off', 'exam_emails_on' => (mh_config()['exam_emails'] ?? 'on') !== 'off', 'focus_public' => (int)($u['focus_public'] ?? 1) === 1, 'staff' => mh_role($u['email']) !== '', 'role' => mh_role($u['email']),
     'courses' => isset($u['courses']) && $u['courses'] !== null && $u['courses'] !== '' ? (json_decode((string)$u['courses'], true) ?: []) : null, 'sections' => isset($u['sections']) && $u['sections'] ? (json_decode((string)$u['sections'], true) ?: (object)[]) : (object)[], 'reminder_email' => (int)($u['reminder_email'] ?? 0) === 1, 'league' => (int)($u['league'] ?? 0), 'can_request' => mh_can_request($u), 'welcomed' => (int)($u['welcomed'] ?? 1) > 0];
 }
-/** Professors and TAs (an Instructor or TA role, or a TA in a Mathub Faculty class) and administrators: they request new classes. */
-/** Who can ask for a class (api/requests.php): every member; classes are added by Mathub's team from the requests. */
+/** Professors and TAs (an Instructor or TA role, or a TA in a StudyCat Faculty class) and administrators: they request new classes. */
+/** Who could ask for a class (api/requests.php, retired 2026.10.28.2: students make their own in the class maker). */
 function mh_can_request(array $u): bool { return (int)($u['id'] ?? 0) > 0; }
 /** Display name: the chosen name, else the part of the email before the @. */
 function mh_display_name(array $row, string $prefix = ''): string {
@@ -269,7 +269,7 @@ function mh_ua_label(string $ua): string {
 }
 /** Everything stored about one account, for "Download my data". Secrets (password hash, login tokens, calendar and push keys, IP addresses) are left out. */
 function mh_export_user(array $u): array {
-  $db = mh_db(); $out = ['exported' => gmdate('c'), 'site' => mh_config()['site_name'] ?? 'Mathub'];
+  $db = mh_db(); $out = ['exported' => gmdate('c'), 'site' => mh_config()['site_name'] ?? 'StudyCat'];
   $hide = ['pass_hash', 'ics_token', 'ip', 'hash', 'code_hash', 'p256dh', 'auth', 'endpoint', 'invite_code'];
   $acct = $u; foreach ($hide as $k) unset($acct[$k]); $out['account'] = $acct; $out['role'] = mh_role($u['email']);
   $skip = ['users', 'tokens', 'codes', 'rate', 'sqlite_sequence'];
@@ -280,7 +280,7 @@ function mh_export_user(array $u): array {
     foreach ($rows as &$r) { foreach ($hide as $k) unset($r[$k]); if ($t === 'progress' && isset($r['json'])) { $r['data'] = json_decode((string)$r['json'], true); unset($r['json']); } if ($t === 'office_files' && isset($r['body'])) { $r['body'] = json_decode((string)$r['body'], true); unset($r['dev']); } } unset($r);
     $out['tables'][$t] = $rows;
   }
-  // classes this member had Bo write from a syllabus and published for everyone (api/community.php)
+  // classes this member had Bo write from a syllabus and published for everyone, before that was retired (api/community.php)
   try { $st = mh_pack_db()->prepare('SELECT id, code, name, enabled, created FROM class_packs WHERE uploaded_by = ?'); $st->execute(['community:' . $u['id']]); $added = $st->fetchAll(); if ($added) $out['classes_added_to_mathub'] = array_map(fn($r) => ['id' => $r['id'], 'code' => $r['code'], 'name' => $r['name'], 'published' => (bool)$r['enabled'], 'added' => gmdate('c', (int)$r['created'])], $added); } catch (Throwable $e) {}
   // peer review swaps they were in and what they wrote (api/peer.php; the tables name both people, so they are not in the loop above)
   try { $st = $db->prepare('SELECT id, course, project, created, due, closed FROM peer_swaps WHERE a_user = ? OR b_user = ?'); $st->execute([$u['id'], $u['id']]); if ($sw = $st->fetchAll()) $out['peer_review_swaps'] = $sw;
@@ -295,7 +295,7 @@ function mh_export_user(array $u): array {
 /* ---------- request guards ---------- */
 function mh_guard_mutation(): void {
   if (($_SERVER['HTTP_X_REQUESTED_WITH'] ?? '') !== 'MatHub') mh_fail('Bad request.', 400);
-  if (($_SERVER['HTTP_ORIGIN'] ?? '') === 'capacitor://localhost') return;   // the Mathub iOS app (its pages are served from capacitor://localhost); no website can send this origin
+  if (($_SERVER['HTTP_ORIGIN'] ?? '') === 'capacitor://localhost') return;   // the StudyCat iOS app (its pages are served from capacitor://localhost); no website can send this origin
   $site = $_SERVER['HTTP_SEC_FETCH_SITE'] ?? '';
   if ($site !== '' && !in_array($site, ['same-origin', 'same-site', 'none'], true)) mh_fail('Cross-site request blocked.', 403);
   $origin = $_SERVER['HTTP_ORIGIN'] ?? '';
@@ -309,7 +309,7 @@ function mh_method(string ...$allowed): void {
 /* ---------- emails ---------- */
 function mh_send_code(string $email, string $kind, string $code): void {
   require_once __DIR__ . '/mailer.php';
-  $cfg = mh_config(); $site = $cfg['site_name'] ?? 'Mathub'; $ttl = (int)($cfg['code_ttl_minutes'] ?? 15);
+  $cfg = mh_config(); $site = $cfg['site_name'] ?? 'StudyCat'; $ttl = (int)($cfg['code_ttl_minutes'] ?? 15);
   $what = $kind === 'reset' ? 'password reset' : 'sign-up';
   $subject = "$site $what code: $code";
   $text = "Your $site $what code is $code\n\nIt expires in $ttl minutes. If you did not request this, you can ignore this email.\n\n— $site";
@@ -318,7 +318,7 @@ function mh_send_code(string $email, string $kind, string $code): void {
         . "<p style=\"font-size:34px;letter-spacing:8px;font-weight:700;margin:0 0 16px;font-family:Consolas,Menlo,monospace\">$code</p>"
         . "<p style=\"font-size:14px;color:#64718A;margin:0\">It expires in $ttl minutes. If you did not request this, you can ignore this email.</p></div>";
   $r = mh_send_mail($cfg, $email, $subject, $text, $html);
-  if (!$r['ok']) { error_log('Mathub mail to ' . $email . ': ' . ($r['error'] ?? 'unknown error')); mh_fail('The code could not be emailed right now. Please try again in a few minutes.', 502); }
+  if (!$r['ok']) { error_log('StudyCat mail to ' . $email . ': ' . ($r['error'] ?? 'unknown error')); mh_fail('The code could not be emailed right now. Please try again in a few minutes.', 502); }
 }
 
 /* ---------- the class list: built-in classes plus class packs uploaded in the admin panel (packs.php) ---------- */
@@ -338,7 +338,7 @@ function mh_packs_seed_bundled(PDO $db): void {
     $st = $db->prepare('SELECT sha FROM class_pack_seeds WHERE id = ?'); $st->execute(['*']); if ($st->fetchColumn() === $sig) return;
     require_once __DIR__ . '/packs.php'; mh_packs_apply_bundled($db, $files);
     $db->prepare('INSERT OR REPLACE INTO class_pack_seeds (id, sha, seeded) VALUES (?, ?, ?)')->execute(['*', $sig, time()]);
-  } catch (Throwable $e) { error_log('Mathub bundled packs: ' . $e->getMessage()); }
+  } catch (Throwable $e) { error_log('StudyCat bundled packs: ' . $e->getMessage()); }
 }
 /** Every installed pack (hidden ones too), without the pack data: id, code, name, short, version, enabled, canvas. */
 function mh_pack_rows(bool $fresh = false): array {

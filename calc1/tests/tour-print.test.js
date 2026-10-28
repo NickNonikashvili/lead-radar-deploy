@@ -12,18 +12,18 @@ const T = require('./lib');
   const spot = await p.$eval('.tour-spot', e => ({ shown: e.style.display !== 'none', w: parseFloat(e.style.width) })); const now = await p.$eval('#sb-now', e => e.getBoundingClientRect().width);
   check('the spotlight sits on the clock in the sidebar, and the card beside it', spot.shown && Math.abs(spot.w - now - 16) < 3 && !!(await p.$('.tour-card.side')), { spot, now });
   const n = await p.$$eval('.tour-dots i', d => d.length); const steps = await p.evaluate(() => App.tour.steps.length);
-  check('a computer gets the sidebar, header, Your day and Bo steps, not the phone ones', n >= 7 && n < steps, { n, steps });
+  check('a computer gets the sidebar, header, Your home and Bo steps, not the phone ones', n >= 7 && n < steps, { n, steps });
   await p.keyboard.press('ArrowRight'); await p.waitForTimeout(400); check('next step: quick add', (await txt(p, '.tour-card h3')) === 'Add anything, from any page');
   await p.click('[data-action="tour-back"]'); await p.waitForTimeout(300); check('back step', (await txt(p, '.tour-card h3')) === 'The date, and where you are in the term');
   const titles = []; for (let i = 0; i < n; i++) { titles.push(await txt(p, '.tour-card h3')); await p.click('[data-action="tour-next"]').catch(() => {}); await p.waitForTimeout(380); }
   log('steps:', titles.join(' | '));
-  check('it covers the sidebar, the header and Your day', ['Everything is in the sidebar', 'Your month at a glance', 'The header, on every page', 'Your day'].every(x => titles.includes(x)), titles);
+  check('it covers the sidebar, the header and Your home', ['Everything is in the sidebar', 'Your month at a glance', 'The header, on every page', 'Your home'].every(x => titles.includes(x)), titles);
   check('the tour finishes and is remembered with the layout it showed', !(await p.$('.tour')) && (await p.evaluate(() => App.settings().tourLayout === App.tour.version && App.settings().tourDone === true)));
   await p.reload(); await p.waitForTimeout(3000); check('the tour does not repeat', !(await p.$('.tour')));
   await go(p, '#/settings', 700); await p.click('[data-action="tour-again"]'); await p.waitForTimeout(2200);
   check('settings shows the tour again, on the start page', !!(await p.$('.tour')) && /^#\/?$/.test(await p.evaluate(() => location.hash)), await p.evaluate(() => location.hash));
   await p.keyboard.press('Escape'); await p.waitForTimeout(200); check('escape closes it, and it counts as seen', !(await p.$('.tour')) && (await p.evaluate(() => App.settings().tourLayout)) === (await p.evaluate(() => App.tour.version)));
-  // a phone: the sidebar is the menu, so the steps are the menu, search, Your day and the tab bar
+  // a phone: the sidebar is the menu, so the steps are the menu, search, Your home and the tab bar
   const [cp, ph] = await mk(390, 844, { serviceWorkers: 'block', isMobile: true, hasTouch: true });
   await cp.addInitScript(() => { try { const s = JSON.parse(localStorage.getItem('studyhub-settings') || '{}'); if (!s.courses) { s.courses = ['calc']; s.boFloatSeen = 1; localStorage.setItem('studyhub-settings', JSON.stringify(s)); } } catch (e) {} });
   await go(ph, '#/', 3400);

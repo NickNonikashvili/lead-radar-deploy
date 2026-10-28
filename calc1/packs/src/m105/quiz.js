@@ -1,5 +1,5 @@
 /* M 105 question bank. Calculated questions draw fresh values every time; bank items are
-   [prompt, correct, [wrong answers], explanation]. Written for Mathub from the course description and standard
+   [prompt, correct, [wrong answers], explanation]. Written for StudyCat from the course description and standard
    quantitative reasoning; not from the instructor. Typed answers are plain numbers (no commas, $ or % signs);
    fractions like 13/52 and expressions like 4*10^7 work too. Money is written \$ so it is not read as math. */
 const R = String.raw;

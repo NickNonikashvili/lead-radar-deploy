@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /* ============================================================
-   Mathub — the interface's words, for translating:  node scripts/i18n-extract.js
+   StudyCat — the interface's words, for translating:  node scripts/i18n-extract.js
    Reads the interface scripts, index.html and the API's messages, and keeps every piece of text a student can see
    in i18n/catalog.json, each with a number that never changes (new words get new numbers; words no longer in the
    code are marked gone, not removed, so translations are never lost). Text is cut the way the browser sees it:
@@ -14,7 +14,7 @@ const ROOT = path.resolve(__dirname, '..'); const OUT = path.join(ROOT, 'i18n', 
 // the interface; not the course material (*-data.js, *-quiz.js, ladders.js, courses-index.js), the admin panel, the apps' own files,
 // class-pack checks (classpacks.js, for authors), What's new (changelog.js) or the legal text (policy.js: a note says it is in English)
 const FILES = ['app.js', 'home.js', 'welcome.js', 'auth.js', 'tutor.js', 'bo-float.js', 'talk.js', 'create.js', 'forum.js', 'social.js', 'gami.js', 'quests.js', 'realm.js',
-  'tools.js', 'utils.js', 'ambient.js', 'focus.js', 'today.js', 'planner.js', 'gpa.js', 'report.js', 'pwa.js', 'resources.js', 'requests.js', 'usage.js', 'board-draw-more.js', 'call-launch.js', 'classpacks.js', 'readiness.js',
+  'tools.js', 'utils.js', 'ambient.js', 'focus.js', 'today.js', 'planner.js', 'gpa.js', 'report.js', 'pwa.js', 'resources.js', 'maker.js', 'usage.js', 'board-draw-more.js', 'call-launch.js', 'classpacks.js', 'readiness.js',
   'mistakes.js', 'mynotes.js', 'recap.js', 'tour.js', 'motion.js', 'pixel.js', 'geek.js', 'lesson.js', 'reader.js', 'board-draw.js', 'bo-pad.js', 'max.js',
   'calc-tools.js', 'precalc-tools.js', 'physics-tools.js', 'phonetics.js', 'pylab.js', 'teach.js', 'boot.js',
   'life.js', 'shell.js', 'life-school.js', 'life-self.js', 'dash.js', 'bo-characters.js', 'room.js', 'drafts.js', 'notebook.js', 'officekit.js', 'instruct.js', 'peer.js', 'learn.js', 'modules.js'];
@@ -145,7 +145,7 @@ for (const f of fs.readdirSync(path.join(ROOT, 'assets')).filter(x => x.endsWith
   for (const m of fs.readFileSync(path.join(ROOT, 'assets', f), 'utf8').matchAll(/\{\s*label:\s*'([^']+)',\s*items:\s*\[(.*?)\]\s*\}/g)) [m[1], ...[...m[2].matchAll(/\[\s*'[^']*',\s*'([^']+)'/g)].map(x => x[1])].forEach(k => add(norm(k), f));
 }
 fromHtml(fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8').split('<body>')[1] || '', 'index.html');
-add('Mathub · Free study hub for Montana State classes', 'index.html');
+add('StudyCat · Free study hub for Montana State classes', 'index.html');
 // the API's messages (shown in toasts and forms): mh_fail('…') and 'error' => '…'
 for (const f of fs.readdirSync(path.join(ROOT, 'api')).filter(x => x.endsWith('.php'))) {
   const src = fs.readFileSync(path.join(ROOT, 'api', f), 'utf8'); let m;

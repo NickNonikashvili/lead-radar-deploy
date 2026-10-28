@@ -1,10 +1,10 @@
-/* No tracking, kept that way: nothing Mathub ships can watch its visitors for someone else.
+/* No tracking, kept that way: nothing StudyCat ships can watch its visitors for someone else.
    - No tracking pixels, analytics, tag managers, session recorders or chat widgets in any page, script or server file
      (Meta Pixel, Google Analytics and Tag Manager, TikTok, LinkedIn, Snap, Pinterest, Hotjar, Clarity, Segment,
      Mixpanel, PostHog, FullStory, LogRocket, Intercom and the like).
-   - The pages' Content-Security-Policy (index.html and every static page in learn/) lets scripts load only from Mathub and
-     the pinned math renderer, and pictures only from Mathub (and data:/blob:), so a pasted pixel or tag cannot run or call
-     out; connections go only to Mathub and the services the privacy policy names.
+   - The pages' Content-Security-Policy (index.html and every static page in learn/) lets scripts load only from StudyCat and
+     the pinned math renderer, and pictures only from StudyCat (and data:/blob:), so a pasted pixel or tag cannot run or call
+     out; connections go only to StudyCat and the services the privacy policy names.
    - One cookie (the sign-in session), HttpOnly, Secure over HTTPS, SameSite; emails carry no pictures (no open tracking).
    - The privacy policy says so, and names every outside service the pages contact. */
 const fs = require('fs'); const path = require('path');
@@ -34,7 +34,7 @@ const strict = (o, where) => {
   return why.map(w => where + ': ' + w);
 };
 const app = strict(csp(read('index.html')), 'index.html');
-check('the app page lets scripts load only from Mathub and the math renderer, pictures only from Mathub, and connects only to named services', app.length === 0, app);
+check('the app page lets scripts load only from StudyCat and the math renderer, pictures only from StudyCat, and connects only to named services', app.length === 0, app);
 const learn = walk('learn', /\.html$/); const loose = learn.flatMap(f => strict(csp(read(f)), f));
 check(`all ${learn.length} static study pages have the same strict policy`, learn.length > 100 && loose.length === 0, loose.slice(0, 5));
 const seo = read('scripts/build-seo.js'); check('and the script that builds them writes it (img-src without https:)', /img-src 'self' data:;/.test(seo) && !/img-src[^;"]*https:/.test(seo));

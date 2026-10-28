@@ -1,5 +1,5 @@
 /* M 170 question bank. Calculated questions draw fresh values every time; bank items are
-   [prompt, correct, [wrong answers], explanation]. Written for Mathub from standard trigonometry and the
+   [prompt, correct, [wrong answers], explanation]. Written for StudyCat from standard trigonometry and the
    course outcomes; not from the instructor. Typed answers accept exact forms such as sqrt(3)/2 or 5pi/6. */
 const R = String.raw;
 const calc = (topic, o) => Object.assign({ type: 'calc', topic }, o);

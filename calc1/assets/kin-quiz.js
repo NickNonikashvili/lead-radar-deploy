@@ -1,12 +1,12 @@
 /* ============================================================
-   Mathub — KIN 322 question bank
+   StudyCat — KIN 322 question bank
    Multiple-choice banks for every topic, plus generators for the parts
    that are worked out or looked up by rule: planes and axes, lever
    classes, torque and muscle force, mechanical advantage, stress and
    strain, contraction type, the convex–concave rule, spinal cord levels,
    scapulohumeral rhythm, carpals, normal ROM, knee ligament tests, leg
    compartments, hip angles, Trendelenburg, and gait timing. Written for
-   Mathub from standard kinesiology content; lecture and lab decide what
+   StudyCat from standard kinesiology content; lecture and lab decide what
    the exams actually ask.
    ============================================================ */
 (function (global) {

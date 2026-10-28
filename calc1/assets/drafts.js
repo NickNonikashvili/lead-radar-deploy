@@ -1,5 +1,5 @@
 /* ============================================================
-   Mathub — draft feedback for a writing class (D.DRAFTS; api/drafts.php)
+   StudyCat — draft feedback for a writing class (D.DRAFTS; api/drafts.php)
    A student pastes a project draft (or opens a .docx, .pdf, .odt or .txt file, read in the browser by
    assets/officekit.js), picks the project and its stage, and Bo reads it like a writing tutor: margin comments on exact
    passages, highlighted in the draft; the two or three biggest revisions with a question each; what works; the next
@@ -456,7 +456,7 @@
     bind(root, {
       'dh-print': () => global.print(),
       'dh-word': async () => {
-        const blocks = [{ style: 'title', text: p ? p.name : pid }, { style: 'note', text: t('Revision history from Mathub: every version shared with Bo, and what became of his notes.') }];
+        const blocks = [{ style: 'title', text: p ? p.name : pid }, { style: 'note', text: t('Revision history from StudyCat: every version shared with Bo, and what became of his notes.') }];
         if (V.length > 1) { const D = diffTexts(V[0].text, V[V.length - 1].text); blocks.push({ style: 'p', text: t('From version {1} to version {2}: {3} of {4} paragraphs new or changed, {5} words added and {6} taken out.', V[0].version, V[V.length - 1].version, D.changed, D.paras, num(D.added), num(D.removed)) }); }
         fate.forEach(f => { if (!f.items.length) return; blocks.push({ style: 'h2', text: `${t('Version {1}', f.v.version)} → ${t('Version {1}', f.v.version + 1)}` }); f.items.forEach(x => blocks.push({ style: 'p', runs: [{ t: `${x.letter}. ${x.title}`, b: true }, { t: (x.bo ? ` · ${t('Bo: {1}', t(STATUS[x.bo] || x.bo))}` : '') + (x.you ? ` · ${x.you === 'done' ? t('You: done') : t('You: disagreed')}` : '') + (x.note ? `\n${x.note}` : '') }] })); });
         V.forEach(v => { blocks.push({ style: 'pagebreak' }); blocks.push({ style: 'h1', text: `${verLabel(v)} · ${dateOf(v.created)}` }); v.text.split(/\n\s*\n/).filter(x => x.trim()).forEach(x => blocks.push({ style: 'p', text: x.trim() })); });

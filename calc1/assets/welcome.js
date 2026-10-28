@@ -1,5 +1,5 @@
 /* ============================================================
-   Mathub — the welcome (website): right after sign-up, a short walk through Mathub under the Big Sky, the
+   StudyCat — the welcome (website): right after sign-up, a short walk through StudyCat under the Big Sky, the
    range gliding past as you go, then the two choices every new account makes: the classes they take (at least
    one) and a membership (Free, Pro or Max; Pro and Max open the checkout). Saved with api welcome_done; until
    it is done it comes back at the next visit. Accounts from before it, and the apps, never see it.
@@ -23,7 +23,7 @@
   const W = { el: null, i: 0, picked: new Set(), plan: '', declined: '', busy: false, back: null, saved: false };
   const ids = () => (App.COURSE_ORDER || []).filter(id => Courses[id] && !Courses[id].preview);
   const PLAN_LINES = {
-    free: ['Every class on Mathub, and your planner', 'Turn any syllabus into a class for everyone'],
+    free: ['Every class on StudyCat, and your planner', 'Turn any syllabus into a class for everyone'],
     pro: ['Bo on every page: ask about what you are looking at', 'Make and share classes of your own'],
     max: ['Everything in Pro', 'Ask Bo’s own page, any time', 'Call Bo and talk it through']
   };
@@ -36,7 +36,7 @@
   const SCENE = {
     hello: () => ({
       art: `<div class="wa wa-hello"><span class="wa-disc"></span><span class="wa-bo">${bo(156)}</span><span class="wa-say">Hi${firstName() ? ` ${esc(firstName())}` : ''}!</span><i class="wa-spark s1"></i><i class="wa-spark s2"></i><i class="wa-spark s3"></i><i class="wa-spark s4"></i></div>`,
-      h: `Welcome to Mathub${firstName() ? `, ${esc(firstName())}` : ''}!`,
+      h: `Welcome to StudyCat${firstName() ? `, ${esc(firstName())}` : ''}!`,
       p: 'Your classes, your exams and a tutor who knows both, all in one place. Here is how it works. It takes a minute.',
       next: 'Show me'
     }),
@@ -50,7 +50,7 @@
           <g class="m-flag"><path class="m-pole" d="M226 54 V14"/><path class="m-flag-f" d="M226 14 L254 22 L226 31Z"/></g></svg>
         <span class="wa-chip wa-c1">${icon('check', 13)} 1.4 Limits</span><span class="wa-chip wa-c2">2.2 Chain rule</span><span class="wa-chip wa-exam">${icon('flag', 13)} Exam 2 · in 9 days</span></div>`,
       h: 'Every class is a climb',
-      p: 'Mathub knows each class’s syllabus: every topic, deadline and exam date. The topics are your trail and the next exam is the summit, with a readiness score that tells you how close you are.',
+      p: 'StudyCat knows each class’s syllabus: every topic, deadline and exam date. The topics are your trail and the next exam is the summit, with a readiness score that tells you how close you are.',
       next: 'Next'
     }),
     practice: () => ({
@@ -66,19 +66,19 @@
           <div class="wa-board"><b>Solving 2x + 3 = 11</b><span class="l l1"><em>1</em>Take 3 from both sides: 2x = 8</span><span class="l l2"><em>2</em>Divide by 2</span><span class="l l3 ans">${icon('check', 14)} x = 4</span></div>
           <span class="wa-call">${icon('phone', 22)}<i></i><i></i></span></div>`,
       h: 'Meet Bo, your tutor',
-      p: 'Ask him anything about your classes, snap a photo of a problem, or call him and just talk. He works the math out on his board, step by step, and he knows your exams. Bo comes with Mathub Max.',
+      p: 'Ask him anything about your classes, snap a photo of a problem, or call him and just talk. He works the math out on his board, step by step, and he knows your exams. Bo comes with StudyCat Max.',
       next: 'Next'
     }),
     create: () => ({
       art: `<div class="wa wa-create"><div class="wa-doc"><b>CHMY 121 syllabus</b><i></i><i></i><i></i><i></i><i></i></div><span class="wa-arrow">${icon('right', 22)}</span>
           <span class="wa-bot">${bo(66)}</span><div class="wa-class"><b>CHMY 121</b><span>General Chemistry</span><small>12 topics · 140 questions · 3 exams</small></div></div>`,
       h: 'Any class, on request',
-      p: 'Taking something Mathub does not have yet? Request it with its syllabus. We check the file, build the whole class (notes, practice, flashcards and its calendar) and tell you when it is ready, for everyone who takes it.',
+      p: 'Taking something StudyCat does not have yet? Request it with its syllabus. We check the file, build the whole class (notes, practice, flashcards and its calendar) and tell you when it is ready, for everyone who takes it.',
       next: 'Next'
     }),
     classes: () => ({
       h: 'Which classes are you taking?',
-      p: 'Pick at least one. Mathub shows only yours, and you can change them any time in Settings.',
+      p: 'Pick at least one. StudyCat shows only yours, and you can change them any time in Settings.',
       body: `<div class="wl-classes" role="group" aria-label="Your classes">${ids().map(id => { const C = Courses[id]; const on = W.picked.has(id); return `<button type="button" class="wl-class${on ? ' on' : ''}" aria-pressed="${on}" data-c="${esc(id)}" style="${cls(id)}"><span class="wl-class-art" aria-hidden="true">${App.classSprite ? App.classSprite(id, 4) : ''}</span><span class="wl-class-t"><b>${esc(C.short || C.code)}</b><span>${esc(C.code)} · ${esc(C.name)}</span></span><span class="wl-tick" aria-hidden="true">${icon('check', 16)}</span></button>`; }).join('')}</div>
         <p class="wl-note">${icon('plus', 14)} Taking something else? You can make any class from its syllabus after this.</p>`,
       next: 'Continue'
@@ -106,7 +106,7 @@
         <svg class="wl-ridge r1" viewBox="0 0 1600 300" preserveAspectRatio="none"><path d="M0 300 L0 170 L120 110 L240 160 L380 70 L520 150 L640 100 L800 170 L930 80 L1080 150 L1220 90 L1360 160 L1480 100 L1600 140 L1600 300Z"/></svg>
         <svg class="wl-ridge r2" viewBox="0 0 1600 300" preserveAspectRatio="none"><path d="M0 300 L0 200 L160 140 L300 200 L460 120 L600 190 L760 130 L900 210 L1050 140 L1200 200 L1340 130 L1480 190 L1600 150 L1600 300Z"/></svg>
         <svg class="wl-ridge r3" viewBox="0 0 1600 300" preserveAspectRatio="none"><path d="M0 300 L0 240 L140 200 L260 236 L420 190 L560 240 L700 206 L860 250 L1000 210 L1160 246 L1300 214 L1460 244 L1600 220 L1600 300Z"/></svg></div>
-      <header class="wl-top"><span class="wl-brand">${App.logoSvg ? App.logoSvg(30) : ''}<b>Mathub</b></span>
+      <header class="wl-top"><span class="wl-brand">${App.logoSvg ? App.logoSvg(30) : ''}<b>StudyCat</b></span>
         <div class="wl-trail" aria-hidden="true"><span class="wl-line"><i></i></span>${STEPS.map((s, i) => `<span class="wl-dot" style="left:${(i / (n - 1) * 100).toFixed(2)}%"></span>`).join('')}<span class="wl-walker">${bo(30)}</span></div>
         <button type="button" class="wl-skip" data-w="skip">Skip the tour</button></header>
       <p class="sr-only" id="wl-pos" aria-live="polite"></p>
@@ -119,7 +119,7 @@
     if (k === 'classes') next = `<button type="button" class="btn primary lg wl-next" data-w="next"${W.picked.size ? '' : ' aria-disabled="true"'}>${W.picked.size ? `Continue with ${W.picked.size} class${W.picked.size === 1 ? '' : 'es'}` : 'Pick at least one class'}${icon('right', 16)}</button>`;
     else if (k === 'plan') {
       const p = W.plan; const owned = p && RANK[have()] >= RANK[p] && p !== 'free';
-      const label = !p ? 'Pick a membership' : W.declined || p === 'free' ? 'Start with Free' : owned ? `Continue with ${planName(p)}` : `Get ${planName(p).replace('Mathub ', '')} · ${price(p)} a month`;
+      const label = !p ? 'Pick a membership' : W.declined || p === 'free' ? 'Start with Free' : owned ? `Continue with ${planName(p)}` : `Get ${planName(p).replace('StudyCat ', '')} · ${price(p)} a month`;
       next = `<button type="button" class="btn primary lg wl-next" data-w="next"${p ? '' : ' aria-disabled="true"'}>${W.busy ? 'One moment…' : label}${icon('right', 16)}</button>`;
     } else next = `<button type="button" class="btn primary lg wl-next" data-w="next">${S.next}${icon('right', 16)}</button>`;
     return `${back}${next}`;

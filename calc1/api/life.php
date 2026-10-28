@@ -1,6 +1,6 @@
 <?php
 /* ============================================================
-   Mathub account server — the student's own planner ("life")
+   StudyCat account server — the student's own planner ("life")
    Route: life (GET: the stored document; PUT: merge and store)
    Tasks, to-dos, events, the timetable, habits, goals, the wheel
    of life, the journal, money, career and projects (assets/life.js).

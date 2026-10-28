@@ -1,5 +1,5 @@
 /* ============================================================
-   Mathub — first script on the page (loaded in <head>, before the styles paint).
+   StudyCat — first script on the page (loaded in <head>, before the styles paint).
    Kept in a file instead of inline so the Content-Security-Policy can forbid inline scripts.
    1. build id, theme and motion attributes before first paint (no flash of the wrong theme)
    2. MathJax configuration (MathJax itself loads from jsDelivr, pinned to 3.2.2)
@@ -46,7 +46,7 @@
   if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
     window.addEventListener('load', function () {
       navigator.serviceWorker.register('sw.js?v=' + window.MATHUB_BUILD).then(function (reg) {
-        reg.addEventListener('updatefound', function () { var nw = reg.installing; if (!nw) return; nw.addEventListener('statechange', function () { if (nw.state === 'installed' && navigator.serviceWorker.controller && window.App && window.App.toast) window.App.toast('Mathub was updated. Reload to get the newest version.', 6000); }); });
+        reg.addEventListener('updatefound', function () { var nw = reg.installing; if (!nw) return; nw.addEventListener('statechange', function () { if (nw.state === 'installed' && navigator.serviceWorker.controller && window.App && window.App.toast) window.App.toast('StudyCat was updated. Reload to get the newest version.', 6000); }); });
       }).catch(function () {});
     });
   }

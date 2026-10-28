@@ -1,11 +1,11 @@
 <?php
 /* ============================================================
-   Mathub account server — credits: what everything with AI costs, metered like Claude's usage
+   StudyCat account server — credits: what everything with AI costs, metered like Claude's usage
    - 1 credit is about 1¢. Every plan gets credits each month, back to full on the 1st (UTC): credits_free (100),
      credits_pro (1,000), credits_max (2,000). More are bought ahead, credits_pack (1,000) for credits_pack_price ($10):
      a one-time purchase through RevenueCat (credits_product, sold on the website through credits_link). Bought and
      given credits never expire. Everything uses the month's credits first, then the ones bought.
-   - What things cost comes from what they really cost Mathub, times credits_markup (1 credit = 1¢):
+   - What things cost comes from what they really cost StudyCat, times credits_markup (1 credit = 1¢):
        chat, voice answers, recaps, summaries: by their tokens, at the model's price (credits_prices; cache reads
          at a tenth, cache writes at 1.25×), through mh_credits_ai(), which every call to Anthropic goes through
        calls: per minute, by the call's model (credits_call_strong 17 for Max's model, credits_call_light 6)
@@ -107,7 +107,7 @@ function mh_credits_spend(array $u, string $feature, int $mc, string $ref, strin
   $db->prepare('INSERT INTO credit_use (user_id, at, feature, mc, month_mc, paid_mc, ref, detail) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')->execute([$uid, time(), $feature, $mc, $fromMonth, $fromPaid, $ref, $detail]);
   return $mc;
 }
-/** Credits Mathub gives (an invite, a thank-you): once per ref; up to $cap credits in all for refs starting with $capRef. */
+/** Credits StudyCat gives (an invite, a thank-you): once per ref; up to $cap credits in all for refs starting with $capRef. */
 function mh_credits_gift(int $uid, int $credits, string $ref, string $note, int $cap = 0, string $capRef = ''): int {
   if ($credits <= 0) return 0; $db = mh_credits_db();
   if ($cap > 0) { $st = $db->prepare("SELECT COALESCE(SUM(mc), 0) FROM credit_add WHERE user_id = ? AND kind = 'gift' AND ref LIKE ?"); $st->execute([$uid, $capRef . '%']); $credits = min($credits, max(0, $cap - intdiv((int)$st->fetchColumn(), 1000))); if ($credits <= 0) return 0; }
@@ -191,7 +191,7 @@ function mh_credits_status(array $u, array $cfg): array {
   $st = $db->prepare('SELECT at, feature, mc, detail FROM credit_use WHERE user_id = ? ORDER BY at DESC, id DESC LIMIT 60'); $st->execute([$uid]);
   $recent = array_map(fn($r) => ['at' => (int)$r['at'], 'k' => (string)$r['feature'], 't' => MH_CREDIT_FEATURES[(string)$r['feature']] ?? 'Other', 'detail' => (string)$r['detail'], 'credits' => $k((int)$r['mc'])], $st->fetchAll());
   $st = $db->prepare("SELECT kind, mc, ref, note, created FROM credit_add WHERE user_id = ? AND kind <> 'used' AND NOT (kind = 'sponsor' AND mc = 0) ORDER BY created DESC LIMIT 40"); $st->execute([$uid]);
-  $label = fn($r) => (string)$r['kind'] === 'buy' ? 'Bought' : ((string)$r['kind'] === 'refund' ? 'Refunded' : ((string)$r['kind'] === 'sponsor' ? 'Given to your students: ' . (string)$r['note'] : (str_starts_with((string)$r['ref'], 'sponsor:') || (string)$r['note'] === 'Call time bought before, as credits' ? (string)$r['note'] : 'From Mathub')));
+  $label = fn($r) => (string)$r['kind'] === 'buy' ? 'Bought' : ((string)$r['kind'] === 'refund' ? 'Refunded' : ((string)$r['kind'] === 'sponsor' ? 'Given to your students: ' . (string)$r['note'] : (str_starts_with((string)$r['ref'], 'sponsor:') || (string)$r['note'] === 'Call time bought before, as credits' ? (string)$r['note'] : 'From StudyCat')));
   $adds = array_map(fn($r) => ['kind' => (string)$r['kind'], 'credits' => $k((int)$r['mc']), 'note' => $label($r), 'at' => (int)$r['created']], $st->fetchAll());
   $customer = 'mh_' . $uid;
   return ['ok' => true, 'plan' => $L['plan'], 'admin' => $L['admin'],
@@ -240,7 +240,7 @@ function mh_credits_route(string $route, array $in, array $cfg, string $ip): voi
       $net = (int)$s['sold'] - (int)$s['refunds'];
       mh_json(['ok' => true, 'month' => gmdate('Y-m'), 'by' => $by,
         'totals' => ['credits' => $k($t['mc']), 'month' => $k($t['m']), 'paid' => $k($t['p']), 'people' => (int)$t['people'], 'packs_sold' => (int)$s['sold'], 'refunds' => (int)$s['refunds'], 'given' => $k($s['given']), 'revenue' => round($net * $C['price_num'], 2), 'all_packs' => (int)$all['sold'] - (int)$all['refunds'],
-          'cost' => round(((int)$t['mc'] / 1000) / 100 / max(0.01, $C['markup']), 2)],   // about what it cost Mathub, in dollars
+          'cost' => round(((int)$t['mc'] / 1000) / 100 / max(0.01, $C['markup']), 2)],   // about what it cost StudyCat, in dollars
         'settings' => ['free' => $C['free'], 'pro' => $C['pro'], 'max' => $C['max'], 'pack' => $C['pack'], 'price' => $C['price'], 'markup' => $C['markup'], 'call_strong' => $C['call_strong'], 'call_light' => $C['call_light'], 'image' => $C['image'], 'image_big' => $C['image_big'], 'products' => $C['products'], 'link' => $C['link'] !== '', 'revenuecat' => trim((string)($cfg['revenuecat_secret'] ?? '')) !== ''],
         'people' => array_slice($people, 0, 300), 'log' => $log]);
     }
@@ -252,7 +252,7 @@ function mh_credits_route(string $route, array $in, array $cfg, string $ip): voi
       if ($n < 0 && mh_credits_paid((int)$m['id']) + 1000 * $n < 0) mh_fail('They do not have that many bought or given credits to take back.');
       $db->prepare("INSERT INTO credit_add (user_id, kind, mc, ref, note, by_id, created) VALUES (?, 'gift', ?, ?, ?, ?, ?)")->execute([(int)$m['id'], 1000 * $n, bin2hex(random_bytes(8)), $note, (int)$u['id'], time()]);
       if ($n > 0 && !empty($in['tell'])) {
-        try { require_once __DIR__ . '/forum.php'; require_once __DIR__ . '/requests.php'; mh_req_notify((int)$m['id'], ['id' => (int)mh_system_user()['id'], 'name' => 'Mathub'], 'credits', 'Credits for Bo', 'Mathub gave you ' . number_format($n) . ' credits to use with Bo.', '#/usage'); } catch (Throwable $e) {}
+        try { require_once __DIR__ . '/forum.php'; require_once __DIR__ . '/requests.php'; mh_req_notify((int)$m['id'], ['id' => (int)mh_system_user()['id'], 'name' => 'StudyCat'], 'credits', 'Credits for Bo', 'StudyCat gave you ' . number_format($n) . ' credits to use with Bo.', '#/usage'); } catch (Throwable $e) {}
       }
       mh_json(['ok' => true, 'paid' => round(mh_credits_paid((int)$m['id']) / 1000, 1)]);
     }

@@ -1,5 +1,5 @@
 /* ============================================================
-   Mathub — the frame on every page (assets/shell.js)
+   StudyCat — the frame on every page (assets/shell.js)
    The sidebar and the header now stay on every page of the website,
    not just inside a class. Big Sky: a white sidebar with a 2px edge,
    soft sky-tinted blocks inside it, chunky pressable pieces with a
@@ -76,7 +76,7 @@ html[data-app] :is(#sb-now, #sb-quick, #sb-nav, #sb-cal, #tb-clock) { display: n
 /* inside a class: the class's own block keeps its look, with a line under it */
 .app:not(.landing) #sidebar-nav { padding-bottom: 8px; border-bottom: 2px solid var(--border); }
 
-/* everything on Mathub */
+/* everything on StudyCat */
 .sb-nav { display: flex; flex-direction: column; gap: 2px; }
 .sb-top-items { display: flex; flex-direction: column; gap: 2px; }
 .sb-group .nav-toggle { padding-top: 12px; }

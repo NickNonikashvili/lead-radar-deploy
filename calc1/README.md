@@ -1,4 +1,4 @@
-# Mathub
+# StudyCat
 
 A free study hub for eight Fall 2026 courses at Montana State University:
 
@@ -64,7 +64,7 @@ unban, verify or delete any account. Both lists ship with nikoloz.nonikashvili@s
 
 - **Canvas calendar feed.** In Canvas open Calendar → *Calendar Feed* and copy the link. Paste it in the admin
   panel (`#/forum/admin` → Site settings). The server (`api/canvas.php`) downloads the feed at most once an hour,
-  keeps only events whose course name matches a Mathub class (`canvas_course_match` in `config.php`), and the
+  keeps only events whose course name matches a StudyCat class (`canvas_course_match` in `config.php`), and the
   site shows them as "From Canvas" on the landing page, each dashboard and the calendar. Real Canvas due dates
   replace the estimated standing rules in the due-soon lists. The admin panel also has an announcement banner.
 - **Reply notifications.** Members get an inbox (bell in the top bar, `#/forum/inbox`) whenever someone comments on
@@ -117,7 +117,7 @@ unban, verify or delete any account. Both lists ship with nikoloz.nonikashvili@s
 
 - **Account menu in the header.** Once signed in, your avatar sits in the top bar of every page. It holds your account and nothing else: Your plan, Usage & credits, Inbox, Account settings, Customize, What's new, Install the app, the admin panel for staff, and Log out. The pages themselves live in the sidebar.
 - **Settings from the start page.** `#/settings` works without picking a class: account, notifications, privacy, your classes and sections, theme and a preview-as-of date. Per-class backups (export, import, reset) stay on each class's own settings page, linked from there.
-- **Clearer account panel.** A header with your name, email, role and sync state, then large icon tiles for Customize Mathub, Inbox and the admin panel, then Profile, Email me and Privacy sections.
+- **Clearer account panel.** A header with your name, email, role and sync state, then large icon tiles for Customize StudyCat, Inbox and the admin panel, then Profile, Email me and Privacy sections.
 - **People page** (`#/people`, members only, under Community in the sidebar). Every verified member with their role, classes, join date, an online dot when they are on the site right now, and post, reply and accepted-answer counts; sorted by the most helpful, who is online, the newest or by name. Names follow each person's privacy setting.
 
 ## Streaks, XP, daily goals, the learning path and Bo
@@ -137,7 +137,7 @@ A headphones bubble floats in the bottom-right corner of every page and opens in
 
 **Focus sounds** are soundscapes synthesised on the device with the Web Audio API, so nothing streams and nothing is hosted: rain (layered body, hiss, drops with random panning, gusts), thunderstorm (rain plus rolling rumbles and the occasional close crack), ocean waves (each wave scheduled with its own swell, crash and foam), wind (gusts with a whistle), fireplace (roar, crackle clusters, pops), forest (breeze, rustling leaves and four kinds of birdsong), summer night (three crickets, a katydid, a distant owl), coffee shop (murmuring voices, cup clinks, someone typing, the espresso machine), lo-fi beats (a Rhodes-style chord loop with wow and flutter, bass, swung drums, sparse melody and vinyl crackle), soft piano (slow generative piano in a random key), an ambient drone and white, pink and brown noise. Everything runs through a synthetic reverb and a limiter. Sounds layer, each has its own volume, there is a master volume, a 15, 30 or 60 minute sleep timer that fades everything (music included) out, and the mix is remembered; browsers require a click before audio starts, so a saved mix waits for Resume.
 
-**My music** is a personal playlist of up to 10 MP3 files, each up to 8 minutes, that the student adds from their own device. Files are kept in the browser's IndexedDB and are never uploaded, so the site hosts no music and every student's playlist is private to that browser. Play/pause, previous/next, shuffle, repeat (all, one, off), seek, volume, reorder and remove; playback continues while moving around Mathub, and the phone's lock-screen media keys work through the Media Session API. Clearing site data removes the files.
+**My music** is a personal playlist of up to 10 MP3 files, each up to 8 minutes, that the student adds from their own device. Files are kept in the browser's IndexedDB and are never uploaded, so the site hosts no music and every student's playlist is private to that browser. Play/pause, previous/next, shuffle, repeat (all, one, off), seek, volume, reorder and remove; playback continues while moving around StudyCat, and the phone's lock-screen media keys work through the Media Session API. Clearing site data removes the files.
 
 ## English Phonetics Lab
 
@@ -167,15 +167,15 @@ Speech uses the browser's speech synthesis with a voice picker per accent and a 
 
 ## For instructors (`#/<class>/instructor`, `#/instructors`)
 
-`api/instruct.php`, `assets/instruct.js`, `assets/instruct.css`. A class's instructors are the email on its syllabus (`COURSE.instructorEmail`, or the owner and TAs of a Mathub Faculty class linked to it, `mh_course_staff`); admins count everywhere. The sidebar gets a **Teaching** group with the Instructor page of each class they teach (`instruct_me`, `App.teaches`).
+`api/instruct.php`, `assets/instruct.js`, `assets/instruct.css`. A class's instructors are the email on its syllabus (`COURSE.instructorEmail`, or the owner and TAs of a StudyCat Faculty class linked to it, `mh_course_staff`); admins count everywhere. The sidebar gets a **Teaching** group with the Instructor page of each class they teach (`instruct_me`, `App.teaches`).
 
 - **Bo in this class** (`class_ai`, `instruct_save`). **Hints only**: Bo gives one hint at a time and never the final answer to a problem from the class (`MH_CLASS_HINTS`). **Notes for Bo** (up to 1,500 characters), read in every chat and call in the class; his own rules come first. Both reach the chat (`ai_tutor`), the live call's instructions and the draft review (`mh_class_ai_prompt`). Unsaved edits stay in the browser (`mathub-instr-<class>`) until saved.
 - **Draft feedback per project**: on or off for the class (`ai_draft_switch`), and for each project an **assignment sheet** (pasted, or opened from a .docx/.pdf/.odt/.txt) and a **rubric** of up to 12 criteria. The review reads the draft against them as well as the project's goals (`mh_class_ai_project`); Bo never grades.
 - **Shared with you.** A student can share one version of a draft with the class's instructors, with a note (`ai_draft_share`, `draft_shares`; off with the class's Sharing switch). The instructor sees that version, Bo's review of it, the student's answers to his notes and their name and email, and can reply (`instruct_reply`); the reply shows on the student's review and in their inbox. Unsharing removes the instructor's access and the reply.
 - **Patterns** (`instruct_patterns`). Per project, from drafts whose writers ticked **Let this draft count** (`counted`): how often Bo named each goal among the biggest revisions, how many drafts were first or revised, their median length, what became of his revisions at the next version and how his notes were answered. Nothing shows until five students have let a draft count for that project (`MH_PATTERN_MIN`), and never a name, a quote or a draft.
-- **Credits for your students** (`instruct_sponsor`). The students who joined the class's Mathub Faculty class (`instruct_roster`) each get the same number of credits (1 to 2,000), taken from credits the instructor bought or was given (never the month's free ones), in one transaction: a `sponsor` row for the giver and a gift with the instructor's name for each student, who gets a notification. An admin gives them from Mathub.
+- **Credits for your students** (`instruct_sponsor`). The students who joined the class's StudyCat Faculty class (`instruct_roster`) each get the same number of credits (1 to 2,000), taken from credits the instructor bought or was given (never the month's free ones), in one transaction: a `sponsor` row for the giver and a gift with the instructor's name for each student, who gets a notification. An admin gives them from StudyCat.
 - **Peer review swaps** (`api/peer.php`, `assets/peer.js`, `#/<class>/peer`; on per class, with the days to write back). A student offers a version they shared with Bo and is paired with a classmate offering one for the same project, never someone they blocked or reported and preferring someone new. Each reads the other's draft (not Bo's review) with their display name, comments on selected words (up to 30; a quote must be in the draft) and writes a note on the whole draft; sending is final. What a partner sent shows on the writer's review under **From peer review**, and goes to Bo with the next revision. A draft can be reported (the moderators see it in the report queue as a peer review draft) or a swap ended so the two are never paired again.
-- **Papers in Mathub Faculty** (`#/teach/<id>/papers`). A syllabus can list papers (name, brief, goals one per line, first and revised draft dates) and a writer's notebook (entries and the date they are handed in); the published class then gets draft feedback, the revision history and the notebook, with the due dates in its calendar.
+- **Papers in StudyCat Faculty** (`#/teach/<id>/papers`). A syllabus can list papers (name, brief, goals one per line, first and revised draft dates) and a writer's notebook (entries and the date they are handed in); the published class then gets draft feedback, the revision history and the notebook, with the due dates in its calendar.
 - **For instructors** (`#/instructors`): one page for anyone saying what Bo does, what an instructor controls, what they see (and never see), credits and how to start.
 
 ## Learning tools: Check my work, Notes from slides
@@ -193,20 +193,20 @@ Speech uses the browser's speech synthesis with a voice picker per accent and a 
 - **The Tools page** (`#/tools`) maps every tool: Study (the five utilities on the page, the GPA calculator), Life and Future, then the calculator, unit converter, citations, word counter and sig figs.
 - **Retired on October 27–28, 2026:** Docs, Slides and Sheets, the class grade calculator, office-hours prep, Blitz, the cheat sheet, the scratchpad, study sessions, mock exams, contributions and badges. Their pages and server routes are gone (an old link inside a class opens the class); their database tables are left as they were, so nothing anyone made is lost: Office files are still in Download my data and deleted with the account. Each class's grading weights, letter scale and rubric moved to its syllabus page.
 
-## Customize: a modular Mathub (`#/customize`)
+## Customize: a modular StudyCat (`#/customize`)
 
 `assets/modules.js` and `assets/custom.css`. Everything is saved in the synced preferences (`modules`, `navLayout`, `classMenu`, `look`, `startPage` in `PREF_KEYS`, `assets/auth.js`), so it follows the student to every device.
 
 - **Features.** Every feature is a module (`App.MODULES`: 47, in groups Bo, In every class, Planner, Tools, Life, Future, Community, Resources and Extras) with a switch. A module that is off leaves the sidebar, every class's menu, the Tools page, search and home (`App.moduleOn(view)`), and its address shows a page saying so with a Turn it on button. Some are not pages: Bo on every page (the floating button), Who is studying now (the presence count) and Celebrations (confetti). Always on: home, a class's overview, lessons and syllabus, Settings and Customize. Presets: Everything, Study only, The essentials.
 - **Sidebar.** Groups move up and down and hide; pages move up and down, move to another group, hide (still reachable from the Tools page and search) or get pinned to a Pinned group at the top (`App.arrangeSidebar`).
 - **Class menus.** The same for every class's menu (`App.arrangeClassMenu`): groups and pages reorder, pages move between groups, and pages hide in every class or in one class only.
-- **Look.** Theme, style (the looks), an accent colour (ten, for the site; optionally inside classes too instead of each class's colour), text size (the page scales), spacing, corners, font (Mathub, your device's, easy to read, book), motion, the animated background, and parts of the frame shown or hidden (the date block, New and shortcuts, the month calendar, the focus timer, the header clock, the next exam, the sound and language buttons). Set as attributes on `<html>` (`data-accent`, `data-text`, `data-density`, `data-radius`, `data-font`, `data-hide`).
-- **Start & backup.** The page Mathub opens on (Home, Today, Ask Bo, Calendar, Tasks or one of your classes; once per visit, only when Mathub is opened at its root), Download my setup (`mathub-setup.json`), Load a setup, Reset everything.
+- **Look.** Theme, style (the looks), an accent colour (ten, for the site; optionally inside classes too instead of each class's colour), text size (the page scales), spacing, corners, font (StudyCat, your device's, easy to read, book), motion, the animated background, and parts of the frame shown or hidden (the date block, New and shortcuts, the month calendar, the focus timer, the header clock, the next exam, the sound and language buttons). Set as attributes on `<html>` (`data-accent`, `data-text`, `data-density`, `data-radius`, `data-font`, `data-hide`).
+- **Start & backup.** The page StudyCat opens on (Home, Today, Ask Bo, Calendar, Tasks or one of your classes; once per visit, only when StudyCat is opened at its root), Download my setup (`mathub-setup.json`), Load a setup, Reset everything.
 - **Tests:** `tests/customize.test.js` (47 checks).
 
 ## SEO: static study guides, sitemap and metadata
 
-The app is a hash-routed single page, which search engines index as one URL. `node scripts/build-seo.js` (run from `calc1/`) renders every topic of every class into a plain HTML page under `learn/` (`learn/<course>/<topic>.html`, about 110 pages), a class page per course with facts, exam dates and the topic list, a hub page at `learn/index.html`, plus `sitemap.xml` and `robots.txt`. The pages use `assets/seo.css`, MathJax for formulas, breadcrumbs, previous/next links, JSON-LD (`LearningResource`, `CollectionPage`, `BreadcrumbList`) and Open Graph tags, and every page links into the app (notes, practice on that topic, flashcards, playground). Rerun the script whenever course data changes and ship the `learn/` folder, `sitemap.xml` and `robots.txt` with the site. The app's `index.html` carries a canonical link, Open Graph and Twitter cards (`assets/og.png`), JSON-LD for the site and its study guides, and a `<noscript>` block with links to the guides; the service worker leaves `/learn/` pages alone. After deploying, submit `https://mathub.space/sitemap.xml` in Google Search Console.
+The app is a hash-routed single page, which search engines index as one URL. `node scripts/build-seo.js` (run from `calc1/`) renders every topic of every class into a plain HTML page under `learn/` (`learn/<course>/<topic>.html`, about 110 pages), a class page per course with facts, exam dates and the topic list, a hub page at `learn/index.html`, plus `sitemap.xml` and `robots.txt`. The pages use `assets/seo.css`, MathJax for formulas, breadcrumbs, previous/next links, JSON-LD (`LearningResource`, `CollectionPage`, `BreadcrumbList`) and Open Graph tags, and every page links into the app (notes, practice on that topic, flashcards, playground). Rerun the script whenever course data changes and ship the `learn/` folder, `sitemap.xml` and `robots.txt` with the site. The app's `index.html` carries a canonical link, Open Graph and Twitter cards (`assets/og.png`), JSON-LD for the site and its study guides, and a `<noscript>` block with links to the guides; the service worker leaves `/learn/` pages alone. After deploying, submit `https://studycat.org/sitemap.xml` in Google Search Console.
 
 ## UI polish
 
@@ -275,7 +275,7 @@ Admin panel → Members → **Add a member** (`api admin_user_add`): any email a
 (it is added to "Also allowed to sign up" in Keys & settings so it can sign in), with a name, a role (student, TA,
 instructor) and a plan given without paying (Pro or Max, given like below). The account is verified at once.
 Either the administrator sets the password, or the person gets an email with a link (`#/?setpw=<email>`, which
-opens "choose your password" with the address filled in) and a code good for 7 days. Mathub's welcome greets them
+opens "choose your password" with the address filled in) and a code good for 7 days. StudyCat's welcome greets them
 at their first sign-in. Duplicates and weak passwords are refused.
 
 ## Giving members a membership
@@ -308,44 +308,14 @@ last four characters), saving needs the administrator's password, every change i
 setting, who, when; never the value), and an administrator cannot remove themselves. Check buttons try the AI
 keys, RevenueCat and email (a test email to you).
 
-## Request a class
+## Request a class (retired in 2026.10.28.2)
 
-Classes are added by Mathub's team, so this is how a class gets onto Mathub. `#/request` (`assets/requests.js`,
-`api/requests.php`) is for **every signed-in member** (`mh_can_request`, `user.can_request`; guests are asked to sign
-in). A member sends the course code (normalised to MSU style, e.g. `chmy121` → `CHMY 121`), an optional name, term
-and instructor, and the syllabus as a PDF, a Word file (.docx) or a photo (JPEG, PNG, WebP), up to 10 MB, or pasted
-text, with a consent box. Links lead there from the start page (under Your classes, and the Bo card's Request a
-class), the sidebar (Request a class where administrators see Add a class), the class picker, Settings, Bo's "Pick a
-class first", a shared class link, and search (typing an unknown course code offers "Request CHMY 999"). Codes
-already on Mathub are caught as you type. Classes a student made before (their own classes) are listed there too,
-with Open, Download and Delete (`App.paintMyClasses`).
-
-- **The malware check** (`mh_cc_scan` in `api/community.php`, before anything is kept): the file must be what its
-  first bytes say (programs, archives, scripts and old Office files are refused); a PDF with active content
-  (JavaScript, launch actions, embedded files, rich media, XFA, submit or import actions, also inside compressed
-  streams and behind `#xx` escapes) or a password is refused; a Word file is opened as the zip it is
-  (`mh_cc_docx_check`): macros (`vbaProject.bin`), ActiveX, embedded files and objects, programs inside, a
-  template, frame or object loaded from outside (`TargetMode="External"`), `altChunk` and DDE fields are refused,
-  and so is a zip that unpacks to far more than it is; a photo must decode as the picture it says, with nothing
-  hidden after it. ClamAV scans it too when the server has it; with `virustotal_key` its SHA-256 is looked up. What
-  was checked is kept with the request (`class_requests.scan`) for the admin panel. A refused file is not kept.
-- **Storage.** Requests live in the `class_requests` table. Files go to `api/data/syllabi/` under random names, with
-  `Require all denied`, and are only served to administrators (`admin_classreq_file`). `api/.user.ini` raises PHP's
-  upload limit to 12 MB for the API.
-- **Demand.** Requests for the same code are grouped. The page shows a public **Most requested** list (codes and
-  counts only, never names or files) with a one-click **Me too**, and each student's own requests with their status.
-- **Admin panel → Class requests.** Groups sorted by demand, with each requester, their note and the syllabus.
-  **Preview and build** shows the syllabus on the page: a PDF in a frame and a photo as a picture (both from a copy
-  fetched by the page, a `blob:` URL, so the file is never a page of its own; the page's CSP allows `frame-src
-  blob:`), a Word file as its text (`admin_classreq_preview`), the pasted text, and what the malware check looked at.
-  **Build the class with Bo** (Full or Shorter) runs `ai_class` with the request's id (the stored file is read on
-  the server; a Word file goes as its text, a big photo is made smaller) and shows his steps and the class; **Add to
-  Mathub** publishes it (`community_publish`), and everyone who asked is told (by the pack's code, and by the
-  request's code when they differ, `ai_builds.req_code`). Already on Mathub: one button marks the request added as
-  that class. The status buttons still work by hand: **Working on it**, **Mark added** (asks for the class id),
-  **Can't add** (with a reason) or **Back to new**; each change sends an inbox message (and a push when added).
-- **Limits.** 8 requests per student per day, 10 open at once, one open request per class per student; banned
-  accounts cannot request. Students can withdraw a request while it is new, which deletes the file.
+Every student now makes their own classes in the class maker (below), so Request a class is gone: `#/request`
+opens `#/maker`, `assets/requests.js` is deleted, and the routes `classreq_*` and `admin_classreq*` are no longer
+served (`api/requests.php` keeps only the shared inbox helpers, `mh_req_notify` and `mh_req_admin_users`).
+Requests already made stay in `class_requests`, their files in `api/data/syllabi/` (`Require all denied`), until an
+administrator deletes them; the admin panel's Add a class tab still shows how many asked for a code. The malware
+check (`mh_cc_scan` in `api/community.php`) now guards the syllabus a student gives Bo in the class maker.
 
 ## Add a class from the admin panel (class packs)
 
@@ -363,24 +333,24 @@ How it works:
 - **Server class lists.** Lists that used to be hard-coded (discussions, goals, profile classes, emails, the ICS feed, Canvas matching) now come from `mh_course_ids()` and `mh_course_names()` in `api/lib.php`, which add the installed packs to the built-in classes.
 - **Not available to uploaded classes:** custom tools (graphers, solvers, the Python playground) and the static `/learn/<id>/` pages and share images. Those still need a built-in class.
 
-## Mathub Faculty (#/teach) and the class pages for students (#/class)
+## StudyCat Faculty (#/teach) and the class pages for students (#/class)
 
 `assets/teach.js`, `assets/teach.css`, `api/teach.php`. A workspace for instructors, separate from the student site: a **For professors** button on the start page (and a footer link) opens it. It sets `<html data-surface="faculty">`, which hides the student chrome (sidebar, tab bar, sounds button, footer) and switches to its own look: a navy rail, a white top bar, 1px lines and 6px corners, Source Serif 4 for titles and the syllabus, Source Sans 3 for the interface (both self-hosted). Light and dark follow the site's theme.
 
 - **Who can do what.** Anyone signed in can write syllabi: drafts, the live page and Print / PDF are private to their author (up to 15 drafts before confirmation). Publishing to students, joining, the roster, announcements, assignments, attendance and insights need **confirmed faculty status**: the instructor asks at `#/teach/verify` (name, title, department, courses) and an administrator confirms in **Admin panel → Instructors**, which gives the role `Instructor` with scope `teach` (their own classes only). Administrators count as confirmed. The server enforces all of it (`mh_teach_tools_or_fail`).
 - **The syllabus editor** (`#/teach/<id>/<page>`). One page each for course details, people and office hours, description and outcomes, materials, schedule, exams, grading and policies, with the finished syllabus beside the form (`docHtml`), updating as you type; a gold change bar in its margin marks the part being edited. The rail marks pages with something to fix. It saves itself as you type (Ctrl/⌘ S saves now). MSU's accommodations, integrity and wellbeing statements are pre-filled; three AI-policy presets. **Fill in class meetings** builds the term from the meeting days and marks Labor Day, Veterans Day, Thanksgiving week and the Monday holidays; **Paste topics** fills them. Under 1240px wide the page moves behind a **Preview** button.
 - **Overview** (`#/teach/<id>`): draft or published, the checklist grouped by page, the join code, links to the public syllabus page (`#/syllabus/<CODE>`) and to the class as students see it. **Class settings**: the default question bank, unpublish, delete (type the course code).
-- **Publishing.** The server turns the plain-text syllabus into a class pack (weeks become topics, exams split the units, the grading and the policies become the syllabus page) with an id from the course code (`m171`, else `m171b`, else `tc0042`). It is added to its students' class lists and never to the teaching team's: `classpack_list` sends it to them with `preview: true`, so it opens as a preview (with a strip back to Mathub Faculty) but stays out of their own classes. Nobody else gets it. Re-publishing updates the class and can tell students what changed.
-- **Running the class.** Join code and link, roster with CSV export, co-instructors and TAs; announcements (inbox + push); practice assignments from any Mathub question bank (each student gets their own seeded version, retakes count their best score, results by student and by topic); attendance check-in with a 4-digit code that stays open a few minutes, with a full-screen view for the projector; insights (completion, averages, weakest topics, attendance).
+- **Publishing.** The server turns the plain-text syllabus into a class pack (weeks become topics, exams split the units, the grading and the policies become the syllabus page) with an id from the course code (`m171`, else `m171b`, else `tc0042`). It is added to its students' class lists and never to the teaching team's: `classpack_list` sends it to them with `preview: true`, so it opens as a preview (with a strip back to StudyCat Faculty) but stays out of their own classes. Nobody else gets it. Re-publishing updates the class and can tell students what changed.
+- **Running the class.** Join code and link, roster with CSV export, co-instructors and TAs; announcements (inbox + push); practice assignments from any StudyCat question bank (each student gets their own seeded version, retakes count their best score, results by student and by topic); attendance check-in with a 4-digit code that stays open a few minutes, with a full-screen view for the projector; insights (completion, averages, weakest topics, attendance).
 - **Students.** `#/class/join/<CODE>` shows the class and exactly what the instructor will see before they join. `#/class/<id>` is the class hub: links to the class pages, assignments, announcements and check-in. The class dashboard links back to the hub.
 - **Privacy.** Instructors see a student's name, email, results on that class's assignments and check-ins, nothing else. Deleting a class (owner types the course code) removes its pack and its rows; student accounts are never touched.
 - **Tests.** `tests/teach.test.js` (the whole flow in a browser) and `tests/teach-api.test.js` (permissions and boundaries over HTTP).
 
-## Mathub for iPhone, iPad and Android (`app/`)
+## StudyCat for iPhone, iPad and Android (`app/`)
 
 Native iOS and Android apps built with Capacitor from this same site. It carries the whole site inside it and
 works offline: MathJax and the Python runtime are bundled, nothing is downloaded at runtime. Account
-calls go to `https://mathub.space/api/` (the server accepts the app's origin, `capacitor://localhost`).
+calls go to `https://studycat.org/api/` (the server accepts the app's origin, `capacitor://localhost`).
 
 - **Create a class** (`#/create`, `assets/create.js`, on the website and in the apps): see "Classes students
   make" below. In the apps classes are saved as files on the device (`classes/my####.mathub.json`) and, when
@@ -394,7 +364,7 @@ calls go to `https://mathub.space/api/` (the server accepts the app's origin, `c
   flashcards, missed questions, what is due), the class's tools, and its path with every lesson named, unit by
   unit, with exam checkpoints; the class button opens a sheet with your classes, Create a class and every tool;
   the tab bar is Learn, Practice, Today, Discuss, Me.
-- **Mathub Pro and Max** (`assets/create.js`, setup in `docs/app-subscriptions.md`): two monthly plans, sold
+- **StudyCat Pro and Max** (`assets/create.js`, setup in `docs/app-subscriptions.md`): two monthly plans, sold
   through the App Store and Google Play via RevenueCat (`@revenuecat/purchases-capacitor`) and on the website
   through RevenueCat Web Purchase Links; a plan works everywhere the student signs in. Bo, the AI tutor, is a tab.
 - **On the phone:** exam and daily reminders as local notifications, haptics, the share sheet (classes, data
@@ -412,59 +382,50 @@ calls go to `https://mathub.space/api/` (the server accepts the app's origin, `c
   `cd android && ./gradlew bundleRelease`. `.github/workflows/android-build.yml` builds a debug APK (kept as a
   download on the workflow run, to install on a phone) and the release bundle, and checks the target SDK and permissions.
 - **Art:** `node app/scripts/make-art.js` redraws every icon, launch image and the Play listing art from Bo.
-- **App Review:** what gets apps rejected, what Mathub does about each guideline, the App Store Connect
+- **App Review:** what gets apps rejected, what StudyCat does about each guideline, the App Store Connect
   answers, the review account and the reviewer notes are in [`docs/ios-app-review.md`](docs/ios-app-review.md);
   the same for Google Play (Data safety, content rating, the closed test, signing) in
   [`docs/android-play-review.md`](docs/android-play-review.md). Store art is in `app/store/`.
-- **Account deletion link** (Google Play asks for one): `https://mathub.space/#/policy/delete`.
+- **Account deletion link** (Google Play asks for one): `https://studycat.org/#/policy/delete`.
 
 The Hostinger zip never includes `app/`.
 
-## Classes students make, Mathub Pro and Max, and sharing
+## Classes students make, StudyCat Pro and Max, and sharing
 
 `assets/create.js`, `assets/create.css`, `api/myclasses.php`; setup and store details in
 `docs/app-subscriptions.md`.
 
-- **Create a class** (`#/create`): on the website for **administrators only** (`App.canMakeClasses`; everyone else
-  who opens it lands on Request a class, and the server refuses students `ai_class` and `community_publish`); the
-  apps (on hold) still make a class of your own on the device, without Bo. Copy the instructions, give them to any
-  AI with your syllabus, paste the answer back. Mathub finds the JSON in the answer, repairs what it safely can, validates
-  it with the class-pack checker and shows a preview before adding it. Mathub never sends the syllabus anywhere.
-  On the website adding a class needs an account; the page itself is open to guests.
+- **Making a class** is for every member, free, in the class maker (`#/maker`, below); `#/create` opens it (with
+  `?paid=1`, Your plan). The apps (on hold) still make a class on the device from the copy-and-paste AI steps.
+  `App.classMake` (exported from `create.js`) holds what both share: the prompt, `extract`, `repair`, `assemble`,
+  `preview`, `codeOf`, `termGuess`, the colours and the platform helpers.
 - **Where classes live.** With the account (`my_classes`: the class pack, up to 40 classes of 3 MB each), so
   they are on the website and in the apps wherever the student signs in. The website caches them in IndexedDB
   and clears them on sign-out; the apps keep a file per class and work offline. A class made in the app while
   signed out goes up at the next sign-in. `App.classSync` keeps both sides the same (new ones up, the account's
   down, deleted ones gone everywhere; an id clash gets a new id). Rows go with the account through
   `ON DELETE CASCADE`, and Download my data includes them.
-- **Mathub Pro ($15) and Mathub Max ($20)** (`App.subscription`, `App.paywall({ need })`): with Pro, Bo is on every
+- **StudyCat Pro ($15) and StudyCat Max ($20)** (`App.subscription`, `App.paywall({ need })`): with Pro, Bo is on every
   page (the floating Bo, `assets/bo-float.js`); Max adds Ask Bo's own page, talking out loud and calls, with an hour
   of calls each month and more time bought ahead (Calls with Bo, below). The apps buy them through the App Store or
   Google Play; the website opens the plan's RevenueCat Web Purchase Link (Stripe) in a new tab and waits for it
   (`create_status`, which asks RevenueCat's REST API and keeps the answer for 10 minutes unless asked to refresh).
   All use the RevenueCat customer `mh_<account id>` and the entitlements `pro` and `max` (a Max product unlocks
-  both). `plan_grants` in `config.local.php` gives testers a plan without paying. The example class and classes
-  made before the plans existed are free; when a plan ends, classes are kept, locked (`App.courseGate`), until it
-  is back. Settings has a Your plan panel (website) or row (apps) leading to **Your plan** (`#/plan`, also in the
+  both). `plan_grants` in `config.local.php` gives testers a plan without paying. Every class of your own is free
+  on every plan (`App.classLocked` is always false); Bo's work on it (reading a syllabus, writing lessons) uses credits. Settings has a Your plan panel (website) or row (apps) leading to **Your plan** (`#/plan`, also in the
   account menu): the plan and how it is paid, when it renews or ends, their credits (this month's, as a meter, and the bought
   ones, linking to Usage), the three plans side by side, Manage billing (RevenueCat's customer portal or the store)
   and **Cancel plan**: one dialog (what changes and when, an optional reason kept in `plan_feedback`, Keep my plan),
   then `plan_cancel` cancels a website plan through RevenueCat's API v2 when `revenuecat_v2_key` and
   `revenuecat_project` are set, or opens its billing page; App Store and Google Play plans go to the store.
-- **Bo on the start page** (website, signed in): one card under the hero with Call Bo (the Call Bo sheet), Ask Bo
-  and Request a class on every plan (administrators see Add a class); out of credits, Get credits comes first. It
-  says how many credits are left and about how many minutes on a call they make, the plan a click from Your plan
-  and the credits a click from Usage.
-- **Sharing** (administrators on the website; students no longer share). Share gives `https://mathub.space/#/c/CODE`,
-  the 8-character code and a QR code (`assets/vendor/qrcode.js`, qrcode-generator, MIT, loaded on demand). `#/c/CODE`
-  shows the class to anyone, without the owner's name, with Report, and Request it for students (Add a copy for
-  administrators). Links students shared before keep working until their owner stops sharing. Moderators can stop a reported
-  share from Admin → Problems. The owner can stop sharing at any time.
-- **Create a class** (`#/create`, administrators): "Bo writes it from your syllabus" first (drop in a PDF, photo or text file, or
-  paste the text; Full or Shorter class; Write my class, then his steps and the class preview with Add to Mathub;
-  see Classes anyone adds from a syllabus), then Classes you added to Mathub, then
-  "Other ways to add a class": the free example class, a share code, a class file, and "Use the AI you already
-  use" (the three copy-and-paste steps, folded away).
+- **Bo on the home page** (website, signed in): the Bo widget of the home dashboard (`#dw-bo-slot`, filled by
+  `create.js`) with Call Bo, Ask Bo and Make a class; out of credits, Get credits comes first. It says how many
+  credits are left and about how many minutes on a call they make.
+- **Sharing** (every member, from the class maker's Share, file or delete section). Share gives
+  `https://studycat.org/#/c/CODE`, the 8-character code and a QR code (`assets/vendor/qrcode.js`, qrcode-generator,
+  MIT, loaded on demand). `#/c/CODE` shows the class to anyone, without the owner's name, with Report and Add my own
+  copy; the copy is the classmate's to change. The maker's More ways opens a code too. Moderators can stop a
+  reported share from Admin → Problems. The owner can stop sharing at any time.
 - **Server keys** (in `api/config.local.php` only): `revenuecat_secret`, `pro_web_link`, `max_web_link`,
   `anthropic_key`, `openai_key` (optional: Bo's natural voice), and `plan_grants` for testers.
 
@@ -473,7 +434,7 @@ The Hostinger zip never includes `app/`.
 `assets/i18n.js`, `assets/i18n/<lang>.js`, `i18n/`, `scripts/i18n-extract.js`, `scripts/build-i18n.js`. The interface
 is shown in the language picked from the globe in the top bar (EN, ES… with a menu of all seven, each in its own
 words; arrow keys, Home/End and Escape work), at the foot of every page or in Settings (kept with the account, `lang`
-in the preferences), else the browser's language if Mathub has it, else English. The code stays in English: `assets/i18n.js`
+in the preferences), else the browser's language if StudyCat has it, else English. The code stays in English: `assets/i18n.js`
 loads the language's dictionary before the page and swaps the words as the page is drawn (text, title, aria-label,
 placeholder, alt, confirm/prompt/alert, the tab's title), so nothing a page does changes. An entry with `{1}` is a
 pattern ("{1} questions left"); `{1|вопрос|вопроса|вопросов}` picks a plural; text that fits no entry stays English.
@@ -488,40 +449,63 @@ To add words: `node scripts/i18n-extract.js` (new words get new numbers in `i18n
 follow goes in `i18n/extra.txt`), translate the numbers in `i18n/<lang>.tsv`, then `node scripts/build-i18n.js`.
 Every language has every entry; `node scripts/build-i18n.js` says how many each has and checks each `{1}`.
 
-## Classes Bo writes from a syllabus, for everyone
+## The class maker (`#/maker`), the flagship
 
-`api/community.php`, `api/ai.php` (`ai_class`), `assets/create.js` (`App.boClass`, shared with the admin panel).
-Mathub's administrators have Bo turn a syllabus into a class that is published for every student (one class per
-course, so its notes, practice and board stay in one place): from a class request in the admin panel (`ai_class` with
-`request`, the stored syllabus) or from a file or text on the Create page. Students request classes instead (Request a
-class, above); the server refuses them `ai_class` and `community_publish` (403, `request: true`).
+`assets/maker.js`, `assets/create.css` (the `mkr-` styles), `api/myclasses.php`, `api/ai.php` (`ai_class`),
+`api/community.php` (the checks). Every class is the student's own: made here, stored with their account, edited
+any time. It is in the sidebar (Class maker), in Settings → Your classes, in the class switcher (Add a class) and in
+search (an unknown course code offers "Make CODE").
 
-- **The file is checked for malware first** (`mh_cc_scan`): it must be what it says it is by its first bytes (a PDF,
-  a JPEG/PNG/WebP/GIF photo, or UTF-8 text) and is never a program, archive or script under another name; a photo
-  with a script or an archive hidden after the picture is refused; a PDF with active content (JavaScript, launch
-  actions, embedded files, rich media, XFA, submit or import actions) is refused, names written with `#xx` escapes
-  and compressed (FlateDecode) streams included, and a password-protected PDF cannot be read. ClamAV scans it too
-  when the server has `clamdscan`/`clamscan`; with `virustotal_key` (Keys & settings) VirusTotal is asked about
-  its SHA-256 only. A file given on the Create page is never stored; a request's file is kept with the request.
-- **Then Bo checks the document** (`MH_CC_SCREEN`, one small request): the syllabus of one real course (a course
-  code and title, real content), nothing that must not be published (hateful or sexual content, students' private
-  details, text aimed at the AI), its code, title, school and term. Not a syllabus, or something unpublishable:
-  refused with the reason (422). No course code: refused. The check and the outline share the syllabus through
-  prompt caching (the same system prompt and the syllabus block marked `ephemeral`).
-- **Not on Mathub already** (`mh_cc_find`): the same code (subject letters and number: `M 171`, `M171` and `M 171Q`
-  are one course) at the same school as a built-in class or a published pack is refused (409) with a link to it
-  and Add it to your classes. A different school's course with the same code is a different class.
-- **Publishing** (`community_publish`): Bo writes the outline and each unit as before; each unit is kept
-  (`ai_build_units`) next to the outline and what the check found (`ai_builds.screen`). The browser puts the class
-  together and sends it with its build; the server publishes it only if it is the course that was checked and
-  every piece of its text is text Bo wrote for that build (labels the browser makes up, like "Unit 3" and ids,
-  aside), checks for duplicates again inside a transaction, gives it the pack id of its code (`chmy121`, or with a
-  letter when taken), the tagline "Made with Bo from the syllabus" and `uploaded_by` `community:<account id>`, and
-  stores it as a class pack, published. The students who requested that class are told, it appears in the
-  activity feed, and the browser adds it to the maker's classes and opens it. `community_mine` lists a member's
-  classes on the Create page. Admin → Classes lists them as "Made with Bo · email" (looked up when listed),
-  where they can be hidden, rolled back or deleted like any pack. Limits: 30 checks a day and 20 publishes an hour
-  per account.
+- **Home** (`#/maker`): the syllabus first (drop a PDF, photo or text file, or paste it, with its size shown, then
+  **Read my syllabus**), Start blank, the Montana State classes to add, Your classes, and More ways (a share code,
+  a class file, the example class, and the copy-and-paste steps for the AI you already use). An unsaved draft
+  (`mh-maker-draft`) is offered again until it is saved.
+- **Bo reads the syllabus** (`ai_class`, step `outline`; any signed-in member, paid in credits): the file is checked
+  for malware first (`mh_cc_scan`, and it is never kept), then Bo checks it is a course syllabus (`MH_CC_SCREEN`)
+  and writes the class's facts and topics, which open in the editor filled in. When StudyCat's catalog has the
+  same course (`mh_cc_find`), the maker offers it next to the student's own.
+- **The editor** (`#/maker/new`, `#/maker/<id>`): tabs Basics (code, name, term, instructor, email, office hours,
+  colour), Schedule (meeting days, times and room, lectures on the calendar, your own dates), Exams, Grading (the
+  weights add up to 100%), Topics (units and numbered topics) and Lessons. Save repairs and validates the class
+  (the class-pack checker), puts each exam on the calendar and adds it (`App.myClasses.add`); the save bar sits
+  above the tab bar on phones. **Lessons**: Bo writes a unit's lessons, or all of them (`ai_class` step `unit`, sent
+  the class's outline, `mh_ai_own_outline`, not the file), in the lesson format below, with flashcards and
+  questions; each topic's lesson can be edited or its picture removed.
+- **Picking classes**: after a student adds classes from the list, `App.promptCustomize(ids)` asks them to make
+  them theirs (below). `#/request` and `#/create` open the maker.
+
+## Everyone picks their classes
+
+Nobody gets the Montana State classes by default (2026.10.28.2). `App.myCourses()` is the classes the student picked
+(`settings.courses`, synced as the account's `courses`) plus the classes they made themselves (`App.myClasses`), which
+are always theirs; with none picked it is empty. Until then the home page asks "Which classes are you taking?"
+(`pickClassesHtml` in `assets/app.js`, styles in `assets/life.css`): every class from `App.catalogIds()`, nothing
+ticked, Save needs at least one, and the class maker link for a class that is not there. The sidebar's Your classes
+shows Pick your classes, the home widgets point to the picker, the sign-in class list (`Auth.onboard`) starts
+unticked and its Later adds nothing, and the welcome for new accounts already asks for at least one. Saving offers
+to make each class yours (below). `tests/pick-classes.test.js`.
+
+## Your setup for a Montana State class
+
+The maker opens a catalog class (`#/maker/calc`) with Your section, Dates, Exams and Grading. It saves an overlay,
+`settings.classCustom[id]` = `{short, instructor, instructorEmail, officeHours, classDays, room, color, events:
+[[date, type, title]], exams: {id: {date, time, name}}, weights: {catId: n}}`, synced with the account's
+preferences, and the section through `Auth.savePrefs({sections})`. `applyVariant` in `assets/app.js` lays it over
+the class when it loads (the originals stay in `_own`; the student's own dates are marked `mine`), and
+`App.applyClassColors` injects the colours (`#mh-class-colors`).
+
+## Lessons: every topic taught, not just listed
+
+`assets/lessons/<id>.js`, one per Montana State class (calc, physics, precalc, writ, csci, biob, kin, psyx,
+emec100, jpns150d, m170, m172, psci230d: 251 topics), each `(window.MathubLessons ||= {})[id] = { sectionId:
+{...} }`. `loadCourse` loads it after the class (`LESSON_IDS`, `lessonsFor`) and `mergeLessons` lays it over the
+notes: `plain` (the idea in plain words, HTML with TeX), `figure` (a drawing spec for `App.boDraw`, with
+`caption`), `check` (`[question, answer]` pairs) and `addExamples` (worked examples added after the notes' own).
+The notes page (`App.views.notes`) reads: The idea, the picture, Key points, Key formulas, Worked examples, Common
+mistakes, Check yourself (answers revealed one at a time) and the exam tip, with a contents row. A visitor sees a
+locked topic's idea above the sign-up card. On a phone the lesson comes first and the list of topics after it.
+Classes Bo writes use the same fields (`plain`, `figure`, `ideas`, `examples`, `pitfalls`, `check`, `tip`).
+`tests/lessons.test.js` checks every topic has a lesson and every picture draws.
 
 ## Bo, the AI tutor (Pro and Max), classes Bo writes, and the AI server
 
@@ -640,7 +624,7 @@ class, above); the server refuses them `ai_class` and `community_publish` (403, 
   (`float: 1`); Ask Bo's own page, talking and calls stay Max, so the panel's link to the full chat shows for Max only.
 - **Let Bo write it** (Create a class, no plan needed): paste or attach a syllabus (PDF, photo or text); after the
   checks above Bo reads it into an outline, then writes each unit, with the steps shown as they happen; the class is
-  checked like any other and published with Add to Mathub.
+  checked like any other and published with Add to StudyCat.
 - **The AI server** (`api/ai.php`, routes `ai_status`, `ai_thread`, `ai_tutor`, `ai_forget`, `ai_class`): the only
   thing that talks to the AI (Anthropic's Messages API; `anthropic_key` in `config.local.php`). It checks the plan,
   enforces limits (1,500 questions and 15 classes a month per account), and keeps requests small: compact class
@@ -658,15 +642,18 @@ studied here get them under "Your next step": a tab per class, the class card an
 Today, the tools and where they left off (two columns on wide screens). A first visit keeps the intro and the
 three steps.
 
-**Kept simple (2026.10.19.4).** The start page reads top to bottom in a few groups: the hero (the day, the next
-exam, Today), Bo (the Bo card for members, one line and the one-minute demo for visitors), the next step, Your
-classes, Your day, and More to explore. Class cards show the class, its next exam and one button (the details are
-on the class page). Your day starts with three cards (today's schedule, what is due, the week); Customize brings
-back the rest (`settings.homeHide`; an account that never customized gets `START_HIDE` in `assets/dash.js`). The
-week across classes, classmates and study guides are a closed `<details>` (`#land-more`), remembered open or shut
-(`settings.landMore`) and filled only when opened, so the start page makes no discussion, Canvas or community
-requests until then. Phones get the class cards two to a row. A class page shows no From Canvas box when Canvas
-has nothing coming up.
+**Your home, arranged by you (2026.10.28.2).** Below the hero (the day, the next exam, the announcement and invite
+banners, and Start here for a first visit), the start page is a dashboard of widgets (`assets/dash.js`, styles in
+`assets/life.css`): Up next, Today, Bo, your classes, today's schedule, what is due, this week, a clock, a pomodoro,
+to-dos, reminders, habits, goals, the wheel of life, discussions, study guides, where you left off and a note.
+**Arrange** lets the student drag a widget by its grip anywhere, resize it from its corner, overlap widgets and
+bring one to the front or send it back, add and remove widgets, tidy them into a grid or start over; the grip works
+from the keyboard too (arrows move, Shift with the arrows resizes). The layout is a 12-column grid of 30-pixel rows,
+`settings.homeLayout` = `{v: 1, items: [{id, x, y, w, h, z}], note}`, synced with the account. The defaults differ
+for a returning student (signed in, classes chosen or visited before: Up next, Today, Bo, what is due, the schedule,
+the week, the classes) and a newcomer (classes, Bo, guides, week, clock). Under 720 pixels the widgets stack in
+reading order. With more than four classes, Up next has a class picker. The learning path is in each class, not
+on the home page.
 
 **Exam week.** From 7 days before an exam (`App.home.examWeek`), the start page (website and apps) and the class
 page show a plan for today (the weakest topic as a 5-minute lesson, flashcards due, a timed practice exam in the
@@ -785,7 +772,7 @@ The prompts tell Bo he can draw anything and how (MH_AI_DRAW, the draw_on_board 
 `api/news.php`, the admin panel's Email everyone tab, `#/unsubscribe`. The administrator writes one email (subject,
 paragraphs, a button and its link; `{name}`, `{credits}` and `{minutes}` are filled in), sees it as members will, sends a test to
 themselves, then sends it to every verified member who has news on (`users.news_email`, on by default; Settings →
-Account → News from Mathub). It is ready with the email about Bo on every account and the free monthly credits. Sending goes in batches of
+Account → News from StudyCat). It is ready with the email about Bo on every account and the free monthly credits. Sending goes in batches of
 ten every few seconds while the admin page is open, and a few on every visit to the site otherwise
 (`mh_news_tick` in housekeeping); `news_sent` makes sure nobody gets it twice. Three failures in a row with nothing
 sent pause it with the mail server's error. Each email ends with a link to `#/unsubscribe?u=…&t=…` (a signed link:
@@ -799,7 +786,7 @@ The October 2026 audit against what careful, large sites do (and where AI-built 
 
 - **Headers.** `index.html` and the static pages carry a Content-Security-Policy with no inline scripts (startup code is `assets/boot.js`, MathJax settings for static pages `assets/mathjax-static.js`); scripts come only from this site and `cdn.jsdelivr.net/npm/mathjax@3.2.2/`. `.htaccess` adds HSTS, frame protection, Permissions-Policy, Cross-Origin-Opener-Policy and an HTTPS redirect. `api/.htaccess` allows only `api/index.php`.
 - **Fonts** are self-hosted (`assets/fonts.css`, licences in `assets/fonts/`); no Google Fonts request.
-- **No tracking.** No ads, analytics, tracking pixels (Meta, Google, TikTok…), session recorders or third-party cookies; the only cookie is the sign-in session, and emails carry no pictures or tracked links. The pages' policy allows scripts only from Mathub and the pinned MathJax, pictures only from Mathub (`data:`/`blob:` too), and connections only to Mathub and the services the privacy policy names (jsDelivr for MathJax and Pyodide, the Free Dictionary API). `tests/privacy.test.js` fails if any of that changes: a tracker's script, pixel or global in any shipped file, a looser policy on the app or any static page, a second cookie, a picture in an email, or a fetch to a host the policy does not name.
+- **No tracking.** No ads, analytics, tracking pixels (Meta, Google, TikTok…), session recorders or third-party cookies; the only cookie is the sign-in session, and emails carry no pictures or tracked links. The pages' policy allows scripts only from StudyCat and the pinned MathJax, pictures only from StudyCat (`data:`/`blob:` too), and connections only to StudyCat and the services the privacy policy names (jsDelivr for MathJax and Pyodide, the Free Dictionary API). `tests/privacy.test.js` fails if any of that changes: a tracker's script, pixel or global in any shipped file, a looser policy on the app or any static page, a second cookie, a picture in an email, or a fetch to a host the policy does not name.
 - **Accounts.** Common passwords are refused, logins take the same time whether or not the account exists, **Settings → Signed-in devices** can sign out every other device, and **Settings → Download my data** exports everything stored about the account (secrets left out).
 - **Errors.** Unexpected server errors show a reference code and log the details. Browser errors are reported without personal data (`client_error`) and grouped in **Admin panel → Site errors** for 45 days.
 - **Staff scope.** Instructors and TAs act only on the classes they teach; only moderators post to every class.
@@ -815,14 +802,14 @@ The October 2026 audit against what careful, large sites do (and where AI-built 
 
 ## The planner: school, life and what's next
 
-Mathub plans the whole semester, not only the classes. The pages live in `assets/life.js` (the store, sync, the add dialog and quick add), `assets/life-school.js`, `assets/life-self.js` and `assets/dash.js`, styled by `assets/life.css`; the frame is `assets/shell.js` and `assets/shell.css`.
+StudyCat plans the whole semester, not only the classes. The pages live in `assets/life.js` (the store, sync, the add dialog and quick add), `assets/life-school.js`, `assets/life-self.js` and `assets/dash.js`, styled by `assets/life.css`; the frame is `assets/shell.js` and `assets/shell.css`.
 
-- **The frame on every page.** The sidebar and the top bar now show on the start page and every global page too (the apps and Mathub Faculty keep their own frames). The sidebar has the date, a clock (tap it for clock faces and your home time zone), progress bars for the semester ("Week 8 of 16") or the year, month and week, New and six quick-add buttons, the navigation in groups (Home, Today and Ask Bo; Your classes with the days left until each exam; School; Life; Future; Explore) and a month calendar with dots on busy days and exams marked. The button at its top hides it (remembered). Alt+N opens quick add anywhere.
+- **The frame on every page.** The sidebar and the top bar now show on the start page and every global page too (the apps and StudyCat Faculty keep their own frames). The sidebar has the date, a clock (tap it for clock faces and your home time zone), progress bars for the semester ("Week 8 of 16") or the year, month and week, New and six quick-add buttons, the navigation in groups (Home, Today and Ask Bo; Your classes with the days left until each exam; School; Life; Future; Explore) and a month calendar with dots on busy days and exams marked. The button at its top hides it (remembered). Alt+N opens quick add anywhere.
 - **School.** Tasks and assignments (`#/tasks`: this week, open, a drag-and-drop board and done; filter by class; priority, estimate and notes; "Add class deadlines" copies each class's deadlines in), Timetable (`#/timetable`: built from the classes' lecture, lab and recitation times in one dialog, overlapping blocks side by side, a now line, "Add to your phone" as an .ics file repeating weekly until the semester ends, and Print), Calendar (`#/agenda`: month, week and list, everything dated from your tasks, events, to-dos and projects plus every class's exams, deadlines and holidays and Canvas), Time tracker (`#/timelog`: a running timer per class, manual entries, hours this week by class, focus-timer minutes counted in) and Projects (`#/projects`: thesis, paper, lab report and talk templates whose steps are spread until the due date; a word count, sources and notes).
 - **Life.** Habits (`#/habits`: every day or a number of days a week, streaks, the last weeks as dots), Goals (`#/goals`: by quarter, with steps and progress), Wheel of life (`#/wheel`: eight areas scored monthly, drawn as a radar against last month), Journal (`#/journal`: a page and a mood per day, a mood strip for the month) and Money (`#/money`: income and spending by category, budgets per category, what is left this month).
 - **Future.** Career (`#/career`: internships and jobs on a five-stage board, from interested to offer) and Portfolio (`#/portfolio`: projects, skills and links on a sheet that prints cleanly; only http(s) links are kept).
 - **Your day on the start page.** Cards for today's classes, what is due, a clock, the pomodoro (it shares its timer with the sidebar), to-dos, events, habits, goals, the wheel and the week. Customize hides cards; the choice follows your account (`homeHide` in `prefs`). Each class card shows its open tasks and next exam.
-- **Saved with your account, offline first.** Everything is one document in the browser (`mathub-life`), so it works offline, and syncs through `api/index.php?r=life` (GET; PUT merges). The server and the page merge the same way: records with an `id` merge one by one and the newer change (`u`) wins, so two devices editing different things both keep their edits; deleted records leave a marker for 90 days so a deletion syncs too. A planner over 600 KB is refused with a clear message. A guest's planner is adopted by the account on sign-in; signing out clears it from a shared browser. Download my data includes it. Events can have a reminder (a toast and, if allowed, a notification while Mathub is open).
+- **Saved with your account, offline first.** Everything is one document in the browser (`mathub-life`), so it works offline, and syncs through `api/index.php?r=life` (GET; PUT merges). The server and the page merge the same way: records with an `id` merge one by one and the newer change (`u`) wins, so two devices editing different things both keep their edits; deleted records leave a marker for 90 days so a deletion syncs too. A planner over 600 KB is refused with a clear message. A guest's planner is adopted by the account on sign-in; signing out clears it from a shared browser. Download my data includes it. Events can have a reminder (a toast and, if allowed, a notification while StudyCat is open).
 
 ## Report a problem
 
@@ -838,7 +825,7 @@ Settings → Account → "Notifications on this device" turns on web push (Chrom
 
 ## Install prompt, global search, synced preferences
 
-- **Add to home screen.** From the second visit a banner offers to install Mathub: the native prompt on Chrome and Edge (Android and desktop), and step-by-step Share → Add to Home Screen instructions on iPhone and iPad. Dismissing hides it for a month; "Install the app" also lives in the account menu whenever installing is possible. The manifest has shortcuts (Today, Discussions, GPA) and a maskable icon.
+- **Add to home screen.** From the second visit a banner offers to install StudyCat: the native prompt on Chrome and Edge (Android and desktop), and step-by-step Share → Add to Home Screen instructions on iPhone and iPad. Dismissing hides it for a month; "Install the app" also lives in the account menu whenever installing is possible. The manifest has shortcuts (Today, Discussions, GPA) and a maskable icon.
 - **Search everywhere.** Ctrl/⌘ K (or the search icon on the landing page) searches notes, formulas, flashcards, calendars, practice topics and pages across every class, with class chips to narrow it; each result shows its class.
 - **Preferences follow your account.** GPA calculator entries, focus-sound choices, daily goal, theme, phonetics and reader voices, seen-changelog, Today state and the start page's hidden cards sync through `prefs` (newest wins). The planner syncs through `life` (see The planner). Course progress already synced.
 
@@ -850,8 +837,8 @@ The server copies the SQLite database once a day (SQLite's own `VACUUM INTO`, co
 
 - **Set up:** admin panel → Keys & settings → Off-site backups: the storage address, region, bucket, an optional folder, an access key that may only read, write, list and delete in that bucket, and an encryption passphrase of at least 12 characters. **Check** writes, reads, lists and deletes a small test file and says which step failed. Write the passphrase down somewhere other than the server: without it nobody can open the copies, you included.
 - **Encrypted before it leaves:** gzip, then AES-256-GCM in 1 MB chunks, with a key made from the passphrase (PBKDF2-SHA256, 200,000 rounds, a new salt for every copy). A copy that was cut short, reordered or changed does not open.
-- **Checked:** after each send the bucket must report the size and SHA-256 Mathub sent. Once a week (and from the Backups tab, **Restore test**) the newest copy is downloaded, decrypted and opened with SQLite: the integrity check must say ok and it must hold as many members as the copy that was sent. The Backups tab shows the newest copy off-site, the last restore test and the history; a failure shows there and in the weekly report.
-- **Kept:** the newest 30 (`offsite_keep`, 1–90), and none older than 90 days, as the privacy policy says. Only Mathub's own copies are deleted; nothing else in the bucket is touched.
+- **Checked:** after each send the bucket must report the size and SHA-256 StudyCat sent. Once a week (and from the Backups tab, **Restore test**) the newest copy is downloaded, decrypted and opened with SQLite: the integrity check must say ok and it must hold as many members as the copy that was sent. The Backups tab shows the newest copy off-site, the last restore test and the history; a failure shows there and in the weekly report.
+- **Kept:** the newest 30 (`offsite_keep`, 1–90), and none older than 90 days, as the privacy policy says. Only StudyCat's own copies are deleted; nothing else in the bucket is touched.
 - **Opening a copy anywhere** (a computer with PHP 8): put `api/backup-tool.php` and `api/backupcrypto.php` in one folder and run `php backup-tool.php decrypt mathub-20261026-0300.sqlite.mhbak mathub.sqlite`. It asks for the passphrase (or reads `MATHUB_BACKUP_PASSPHRASE`) and never overwrites a file; `php backup-tool.php check mathub.sqlite` runs SQLite's integrity check and counts the members. To put it back: stop the site, replace `api/data/mathub.sqlite` with it (deleting `mathub.sqlite-wal` and `-shm` beside it), start. The tool does nothing on the web.
 - The work runs from housekeeping after the page that started it has its answer, or in the cron route; never while someone waits.
 
@@ -905,7 +892,7 @@ The server copies the SQLite database once a day (SQLite's own `VACUUM INTO`, co
 
 ## The look
 
-The logo is Bo the bobcat's head: the same drawing as the mascot (ears, face, eyes, nose and whiskers), in his own tan and brown in every theme, beside the wordmark "Mathub" in Gabarito. `assets/mark.svg` is the bare mark, `assets/icon.svg` Bo on a navy rounded tile (favicon, home-screen icon), `assets/logo.svg` the lockup and `assets/logo.png` a 1200px raster of it for places that cannot take SVG. In the app the mark is drawn by `App.logoSvg(size, tile)` from `App.LOGO_PATHS` (`assets/app.js`); `index.html` carries a static copy in the sidebar. `node scripts/build-icons.js` renders the PNG sizes plus a maskable 512 with Bo inside the safe zone, `node scripts/build-og.js` the social cards (flat class colour, a white mountain range, Bo on a white tile, fonts embedded from `assets/fonts`), `node scripts/build-seo.js` the static pages, which share the mark.
+The logo is Bo the bobcat's head: the same drawing as the mascot (ears, face, eyes, nose and whiskers), in his own tan and brown in every theme, beside the wordmark "StudyCat" in Gabarito. `assets/mark.svg` is the bare mark, `assets/icon.svg` Bo on a navy rounded tile (favicon, home-screen icon), `assets/logo.svg` the lockup and `assets/logo.png` a 1200px raster of it for places that cannot take SVG. In the app the mark is drawn by `App.logoSvg(size, tile)` from `App.LOGO_PATHS` (`assets/app.js`); `index.html` carries a static copy in the sidebar. `node scripts/build-icons.js` renders the PNG sizes plus a maskable 512 with Bo inside the safe zone, `node scripts/build-og.js` the social cards (flat class colour, a white mountain range, Bo on a white tile, fonts embedded from `assets/fonts`), `node scripts/build-seo.js` the static pages, which share the mark.
 
 Pages that belong to no class (start page, Today, Focus, Settings, board, resources) use the brand blue as their accent; every class keeps its own hue. The colour system in `styles.css` ("Look v3") gives every other hue a meaning: indigo for learning, green for progress and readiness, amber for XP and rewards, coral for deadlines and mistakes, teal for focus, violet for community and creative tools. Sidebar groups, panel icons, the mobile tab bar and calls to action follow it, a four-hue wash sits behind the page, and the floating background carries glyphs from every subject in that subject's hue.
 
@@ -929,13 +916,13 @@ The whole site is set in Helvetica Neue (`--font-sans` in `styles.css`, also use
 
 ## Layout: what lives where
 
-The layout is built for someone opening Mathub for the first time: a few groups per screen, the rest one tap away.
+The layout is built for someone opening StudyCat for the first time: a few groups per screen, the rest one tap away.
 
 - **Header.** Class title, next-exam chip, search, theme and the account menu. The streak flame and the daily goal ring (level inside; tap it for XP, level, goal and today's quests) appear after your first bit of studying; the inbox bell only for signed-in members. Double XP shows as a chip only while it is on. Visitors get a one-line preview note with a sign-up link; closing it is remembered on that device.
 - **On every page.** Outside a class the same sidebar and header frame the start page and the planner pages: the clock and time bars, quick add, the planner's groups and the month calendar (see The planner).
 - **Sidebar.** Inside a class, five groups: Learn, Practice, Plan, Explore and Class (see The layout), each page with its own icon; the student can rearrange it in Customize.
 - **Dashboard.** The page head with the d20, a Getting started checklist for new users, a streak warning when one is at risk, then the exam card with a one-line readiness summary ("How to raise it" opens the Readiness tab). Below it two panels: Today (classes, due soon, current topic) and Keep going (continue on your path, smart review). Five tabs hold the rest: This week (with Canvas), Readiness, Progress (goal, streak, hours, accuracy, cards, unit mastery, daily quests and your league), Planner and Community. The tab you pick is remembered.
-- **Start page.** Four groups: the header (date, logo, one sentence, the next-exam countdown, Today, search, account, theme), *Your next step* (today's plan or, for first-time visitors, three numbered steps, the resume card, and a row of quick actions: Focus timer, Roll a quest, GPA calculator, Choose classes), *Your classes* (cards with what is being covered, the next exam, one Continue button, Open class and a progress ring) and *Explore* with tabs: This week (next seven days across classes and Canvas), Community (who is studying, your league, challenges, sessions, latest discussions), Guides, and for visitors What is inside.
+- **Start page.** The hero, then the home dashboard of widgets the student arranges (see The start page). Before 2026.10.28.2: four groups: the header (date, logo, one sentence, the next-exam countdown, Today, search, account, theme), *Your next step* (today's plan or, for first-time visitors, three numbered steps, the resume card, and a row of quick actions: Focus timer, Roll a quest, GPA calculator, Choose classes), *Your classes* (cards with what is being covered, the next exam, one Continue button, Open class and a progress ring) and *Explore* with tabs: This week (next seven days across classes and Canvas), Community (who is studying, your league, challenges, sessions, latest discussions), Guides, and for visitors What is inside.
 
 ## Lessons, quests, leagues and sound
 
@@ -1008,8 +995,9 @@ public_html/
 Then in **hPanel**:
 
 1. **PHP version** 8.1 or newer (Websites → Manage → PHP configuration). SQLite is enabled by default.
-2. **Email.** Codes are sent from `info@mathub.space`. For reliable delivery open `api/config.php` and
-   put that mailbox's password in `smtp_pass` (SMTP host `smtp.hostinger.com`, port 465). Leave it
+2. **Email.** Codes are sent from the mailbox in `mail_from` and `smtp_user` (still `info@mathub.space`, the one that
+   exists, until a mailbox on studycat.org is set up; then change both in `config.local.php` or Admin → Keys &
+   settings → Email). For reliable delivery put that mailbox's password in `smtp_pass` (SMTP host `smtp.hostinger.com`, port 465). Leave it
    blank and the server falls back to PHP `mail()`, which also works on Hostinger but is more likely
    to land in spam.
 3. **Permissions.** `api/data` must be writable (755 is normally enough on Hostinger).
@@ -1020,6 +1008,21 @@ Then in **hPanel**:
    stale copy repairs itself automatically.
 
 **HTTPS.** `.htaccess` sends every `http://` visit to `https://` and tells browsers to stay on HTTPS for a year, so the site needs its SSL certificate active (hPanel → Security → SSL) before this build goes up. Hidden files and folders (`.htaccess`, `.well-known`) must be uploaded too; File Manager shows them when "Show hidden files" is on.
+
+**Moving to studycat.org (2026.10.28.2: Mathub is now StudyCat).** Every link, email, page title, the sitemap,
+the share links and the policy now say studycat.org. To switch over:
+
+1. In hPanel, add studycat.org to this website (or point its DNS at it) and turn on its SSL certificate before
+   uploading this build; `.htaccess` sends visitors to HTTPS.
+2. Keep mathub.space pointing at the same website. `.htaccess` then sends every request for it to the same page on
+   studycat.org (301 for pages, 308 for `api/` so a POST stays a POST), so old links, emails and share codes work.
+3. Create `info@studycat.org` (or a forwarder to your inbox) for the contact address, then switch `mail_from` and
+   `smtp_user` to it (Admin → Keys & settings → Email) and set its SPF and DKIM records, so mail is not marked spam.
+4. Set the site address (Admin → Keys & settings → Site address) to `https://studycat.org`, and update the return
+   links in RevenueCat's Web Purchase Links and any Search Console property to the new domain.
+5. What does not move with the domain, because browsers keep it per address: the sign-in (everyone signs in once on
+   studycat.org; their account, classes, progress and settings come back with it), push-notification permission
+   (turned on again from Settings), and anything a visitor kept only in their browser without an account.
 
 **Updating without losing users.** Accounts, posts and progress live only in `api/data/` (the SQLite
 database and `secret.key`). Those files are never in the zip. Upload a new zip over the old files and

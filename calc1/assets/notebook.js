@@ -1,5 +1,5 @@
 /* ============================================================
-   Mathub — the writer's notebook (D.NOTEBOOK; api/notebook.php). A writing class's numbered entries (WRIT 101: fifteen,
+   StudyCat — the writer's notebook (D.NOTEBOOK; api/notebook.php). A writing class's numbered entries (WRIT 101: fifteen,
    reviewed weekly and handed in together at the end), written here and kept with the account. Private, and no AI:
    Bo is not part of it. Each entry has the prompt the student copies in from class and their writing, saved as they
    type (a copy stays on this device until the server has it, so nothing is lost offline). The whole notebook downloads
@@ -23,7 +23,7 @@
   async function api(route, body, keepalive) {
     const opts = { method: body ? 'POST' : 'GET', credentials: 'same-origin', headers: { 'X-Requested-With': 'MatHub', 'Accept': 'application/json' }, cache: 'no-store', keepalive: !!keepalive };
     if (body) { opts.headers['Content-Type'] = 'application/json'; opts.body = JSON.stringify(body); }
-    let res, json; try { res = await fetch(API + route, opts); json = await res.json(); } catch (e) { throw Object.assign(new Error('Mathub cannot be reached right now.'), { network: true }); }
+    let res, json; try { res = await fetch(API + route, opts); json = await res.json(); } catch (e) { throw Object.assign(new Error('StudyCat cannot be reached right now.'), { network: true }); }
     if (!json || json.ok === false) throw Object.assign(new Error((json && json.error) || 'Something went wrong. Please try again.'), { status: res.status, data: json });
     return json;
   }

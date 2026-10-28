@@ -1,6 +1,6 @@
 <?php
 /* ============================================================
-   Mathub — community features
+   StudyCat — community features
    Daily challenge + leaderboards, live presence, polls, helper
    rankings, the people directory, activity feed, weekly digest, cron.
    (Badges were retired on October 27, 2026: none are awarded or shown;
@@ -21,7 +21,7 @@ function mh_lb_name(array $row, string $prefix = ''): string { return (int)($row
 function mh_system_user(): array {
   $db = mh_db(); $st = $db->prepare('SELECT * FROM users WHERE email = ?'); $st->execute(['mathub@system.local']); $u = $st->fetch();
   if ($u) return $u;
-  $db->prepare('INSERT INTO users (email, name, pass_hash, verified, created, terms_accepted) VALUES (?, ?, ?, 1, ?, ?)')->execute(['mathub@system.local', 'Mathub', password_hash(bin2hex(random_bytes(16)), PASSWORD_DEFAULT), time(), time()]);
+  $db->prepare('INSERT INTO users (email, name, pass_hash, verified, created, terms_accepted) VALUES (?, ?, ?, 1, ?, ?)')->execute(['mathub@system.local', 'StudyCat', password_hash(bin2hex(random_bytes(16)), PASSWORD_DEFAULT), time(), time()]);
   $st->execute(['mathub@system.local']); return $st->fetch();
 }
 function mh_user_progress(int $uid): array { $st = mh_db()->prepare('SELECT course, json FROM progress WHERE user_id = ?'); $st->execute([$uid]); $out = []; foreach ($st->fetchAll() as $r) { $j = json_decode($r['json'], true); if (is_array($j)) $out[$r['course']] = $j; } return $out; }
@@ -122,8 +122,8 @@ function mh_reminder_tick(int $max): int {
   $ws = mh_reminder_window_start(); if ($ws === null || $max <= 0) return 0;
   $db = mh_db(); $st = $db->prepare('SELECT * FROM users WHERE verified = 1 AND reminder_email = 1 AND reminder_sent < ? AND email NOT LIKE "%@system.local" ORDER BY id LIMIT ?'); $st->execute([$ws, $max]); $users = $st->fetchAll();
   if (!$users) return 0;
-  require_once __DIR__ . '/mailer.php'; $cfg = mh_config(); $sent = 0; $site = $cfg['site_name'] ?? 'Mathub';
-  $url = rtrim((string)(($cfg['site_url'] ?? '') ?: ('https://' . ($_SERVER['HTTP_HOST'] ?? 'mathub.space'))), '/');
+  require_once __DIR__ . '/mailer.php'; $cfg = mh_config(); $sent = 0; $site = $cfg['site_name'] ?? 'StudyCat';
+  $url = rtrim((string)(($cfg['site_url'] ?? '') ?: ('https://' . ($_SERVER['HTTP_HOST'] ?? 'studycat.org'))), '/');
   $tomorrow = mh_local_date(time() + 86400); $names = mh_course_names() + ['general' => 'General'];
   $events = []; try { require_once __DIR__ . '/canvas.php'; $events = mh_canvas_events(false)['events']; } catch (Throwable $e) {}
   foreach ($users as $u) {
@@ -174,7 +174,7 @@ function mh_digest_context(): array {
   return $ctx;
 }
 function mh_digest_content(array $u, array $ctx): array {
-  $cfg = mh_config(); $site = $cfg['site_name'] ?? 'Mathub'; $url = rtrim((string)(($cfg['site_url'] ?? '') ?: ('https://' . ($_SERVER['HTTP_HOST'] ?? 'mathub.space'))), '/');
+  $cfg = mh_config(); $site = $cfg['site_name'] ?? 'StudyCat'; $url = rtrim((string)(($cfg['site_url'] ?? '') ?: ('https://' . ($_SERVER['HTTP_HOST'] ?? 'studycat.org'))), '/');
   $names = mh_course_names() + ['general' => 'General'];
   $from = mh_local_date(time() - 7 * 86400); $answered = 0; $correct = 0; $days = [];
   foreach (mh_user_progress((int)$u['id']) as $blob) { foreach ($blob['history'] ?? [] as $h) if (($h['d'] ?? '') >= $from) { $answered++; if (!empty($h['ok'])) $correct++; } foreach (array_keys($blob['activity'] ?? []) as $d) if ($d >= $from) $days[$d] = true; }

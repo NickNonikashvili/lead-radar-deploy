@@ -1,4 +1,4 @@
-# Mathub account server: only index.php is reachable from the web.
+# StudyCat account server: only index.php is reachable from the web.
 # Every other file here (helpers, config, data) is denied by default, so a new helper file is never exposed by accident.
 Options -Indexes
 <FilesMatch ".">

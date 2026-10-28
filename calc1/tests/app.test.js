@@ -1,9 +1,10 @@
 /* The iOS app's web side, in Chromium with a stand-in for Capacitor (the phone's native layer): app/www is built by
    app/scripts/build-www.js and opened from the test server. Checks that the app marks itself, keeps the website-only
-   pieces out, opens other sites in the in-app browser, and that Create a class works end to end: copy the instructions,
-   paste a messy AI answer, the repairs and the checks, the preview, adding the class, its file on the device, reopening
-   it after a restart, deleting it; a cut-off answer and a broken one; the example class; reminders after permission;
-   haptics on answers; nothing of this on the website. Account calls to https://mathub.space go to the test server. */
+   pieces out, opens other sites in the in-app browser, and that the class maker works end to end in the app: copy the
+   instructions, paste a messy AI answer, the repairs, the class opened in the maker, saving it (free, no account), its
+   file on the device, reopening it after a restart, sending and deleting it; a cut-off answer and a broken one; the
+   example class; the plans; reminders after permission; haptics on answers; none of the app's code on the website.
+   Account calls to https://studycat.org go to the test server. */
 const T = require('./lib');
 const { execFileSync } = require('child_process'); const path = require('path');
 (async () => {
@@ -19,7 +20,7 @@ const { execFileSync } = require('child_process'); const path = require('path');
     const plan = () => { const v = sessionStorage.getItem('fake-sub') || ''; return v === 'max' || v === 'pro' ? v : ''; };
     const ent = (id, prod) => ({ identifier: id, isActive: true, willRenew: true, productIdentifier: prod, expirationDate: new Date(Date.now() + 30 * 864e5).toISOString() });
     const info = () => ({ entitlements: { active: plan() === 'max' ? { pro: ent('pro', 'mathub_max_monthly'), max: ent('max', 'mathub_max_monthly') } : plan() === 'pro' ? { pro: ent('pro', 'mathub_pro_monthly') } : {}, all: {} }, managementURL: 'https://apps.apple.com/account/subscriptions' });
-    const pkgs = [{ identifier: 'pro', packageType: 'CUSTOM', offeringIdentifier: 'default', product: { identifier: 'mathub_pro_monthly', title: 'Mathub Pro', priceString: '$14.99', price: 14.99 } }, { identifier: 'max', packageType: 'CUSTOM', offeringIdentifier: 'default', product: { identifier: 'mathub_max_monthly', title: 'Mathub Max', priceString: '$49.99', price: 49.99 } }];
+    const pkgs = [{ identifier: 'pro', packageType: 'CUSTOM', offeringIdentifier: 'default', product: { identifier: 'mathub_pro_monthly', title: 'StudyCat Pro', priceString: '$14.99', price: 14.99 } }, { identifier: 'max', packageType: 'CUSTOM', offeringIdentifier: 'default', product: { identifier: 'mathub_max_monthly', title: 'StudyCat Max', priceString: '$49.99', price: 49.99 } }];
     window.MATHUB_BILLING_KEYS = { ios: 'appl_test', android: 'goog_test' };
     const fsKey = p => 'fakefs:' + p;
     const ok = v => Promise.resolve(v);
@@ -59,8 +60,8 @@ const { execFileSync } = require('child_process'); const path = require('path');
     const [c, p] = await mk(w, h, { serviceWorkers: 'block' });
     await c.addInitScript(fakeCapacitor, platform);
     await c.addInitScript(() => { document.addEventListener('DOMContentLoaded', () => { const st = document.createElement('style'); st.textContent = '.celebrate{display:none!important}'; document.head.appendChild(st); }); });
-    // the app's account calls go to https://mathub.space; here they go to the test server
-    await c.route('https://mathub.space/**', async route => { const u = route.request().url().replace('https://mathub.space/', base.replace(/index\.html$/, '')); try { const r = await route.fetch({ url: u }); await route.fulfill({ response: r }); } catch (e) { await route.abort(); } });
+    // the app's account calls go to https://studycat.org; here they go to the test server
+    await c.route('https://studycat.org/**', async route => { const u = route.request().url().replace('https://studycat.org/', base.replace(/index\.html$/, '')); try { const r = await route.fetch({ url: u }); await route.fulfill({ response: r }); } catch (e) { await route.abort(); } });
     return [c, p];
   };
 
@@ -115,29 +116,29 @@ const { execFileSync } = require('child_process'); const path = require('path');
   check('no sideways scroll on the Learn page in exam week', await hscroll(p));
   await p.evaluate(() => App.setSetting('asof', null));
   const fetched = await p.evaluate(async () => { const r = await fetch('api/index.php?r=config', { headers: { 'X-Requested-With': 'MatHub' } }); return r.url; });
-  check('account calls go to https://mathub.space', /^https:\/\/mathub\.space\/api\/index\.php\?r=config/.test(fetched), fetched);
+  check('account calls go to https://studycat.org', /^https:\/\/mathub\.space\/api\/index\.php\?r=config/.test(fetched), fetched);
 
   // links to other sites open in the in-app browser and the app stays put
   await p.evaluate(() => { const a = document.createElement('a'); a.href = 'https://example.org/page'; a.id = 'ext'; a.textContent = 'x'; a.style.cssText = 'position:fixed;top:120px;left:10px;z-index:99999'; document.body.appendChild(a); const b = document.createElement('a'); b.href = 'learn/'; b.id = 'web'; b.textContent = 'y'; b.style.cssText = 'position:fixed;top:160px;left:10px;z-index:99999'; document.body.appendChild(b); });
   const before = p.url(); await p.click('#ext'); await p.click('#web'); await p.waitForTimeout(300);
   const br = await p.evaluate(() => window.__cap.browser);
   check('an outside link opens in the in-app browser', br[0] === 'https://example.org/page' && p.url() === before, br);
-  check('a website-only page opens on mathub.space', br[1] === 'https://mathub.space/learn/', br);
+  check('a website-only page opens on studycat.org', br[1] === 'https://studycat.org/learn/', br);
 
-  // Create a class: the instructions
+  // the class maker in the app (#/create leads there): the AI you already use, with the class kept on the phone
   await go(p, '#/create', 1200);
-  check('#/create opens with the three do-it-yourself steps (Bo writes classes only for Mathub\'s administrators)', /Create a class/.test(await txt(p, '#view')) && !(await p.$('#mk-bo-text')) && (await p.$$('#mk-diy .mk-step')).length === 3);
-  check('no sideways scroll on #/create at 390px', await hscroll(p));
-  await p.click('#mk-diy summary'); await p.waitForTimeout(200);
-  await p.click('[data-action="copy-prompt"]'); await p.waitForTimeout(300);
+  check('#/create opens the class maker, which says classes stay on this phone', /#\/maker$/.test(p.url()) && /Class maker/.test(await txt(p, '#view')) && /saved on this (phone|iPhone)/.test(await txt(p, '#view .page-head')), [p.url(), await txt(p, '#view .page-head')]);
+  check('no sideways scroll on the class maker at 390px', await hscroll(p));
+  await p.click('.mkr-more > summary'); await p.waitForTimeout(200);
+  await p.click('[data-mk="copy-prompt"]'); await p.waitForTimeout(300);
   const clip = await p.evaluate(() => window.__cap.clipboard);
   check('Copy instructions puts the full instructions on the clipboard', /mathub-class-pack/.test(clip) && /THE SYLLABUS:\s*$/.test(clip) && /about 60/.test(clip), clip.slice(0, 120));
-  await p.click('[data-action="size"][data-size="short"]'); await p.click('[data-action="copy-prompt"]'); await p.waitForTimeout(200);
-  check('"Shorter answer" asks for less', /about 25/.test(await p.evaluate(() => window.__cap.clipboard)));
+  await p.click('[data-size="short"]'); await p.click('[data-mk="copy-prompt"]'); await p.waitForTimeout(200);
+  check('"Main topics only" asks for less', /about 25/.test(await p.evaluate(() => window.__cap.clipboard)));
   check('copying gives a haptic tap', (await p.evaluate(() => window.__cap.haptics)).includes('n:SUCCESS'));
 
   // a messy answer, as a chat AI writes it: text around it, a trailing comma, a missing unit, a "quiz" calendar row, flashcards with front/back, an exam without a date, a question as an object
-  const messy = `Sure! Here is your Mathub class:\n\n\`\`\`json\n${JSON.stringify({
+  const messy = `Sure! Here is your StudyCat class:\n\n\`\`\`json\n${JSON.stringify({
     format: 'mathub-class-pack', version: 1, id: 'chmy121', code: 'CHMY 121', name: 'Introduction to General Chemistry', term: 'Fall 2026',
     COURSE: { instructor: 'Dr. Jane Smith', instructorEmail: 'jane.smith@montana.edu', officeHours: 'Tue 2-3 pm', lectures: 'MWF 9:00-9:50' },
     GRADING: { categories: [{ name: 'Homework', weight: 20 }, { name: 'Exams', weight: 50 }, { name: 'Final', weight: 30 }] },
@@ -150,19 +151,15 @@ const { execFileSync } = require('child_process'); const path = require('path');
       questions: [{ type: 'bank', topic: 'atoms', items: [['Isotopes differ in their number of', 'neutrons', ['protons', 'electrons', 'charges'], 'Same protons, different neutrons.'], { q: 'The nucleus contains', a: 'protons and neutrons', wrong: ['electrons only', 'photons', 'electrons and protons'], why: 'Electrons are outside the nucleus.' }] },
         { type: 'bank', topic: 'moles', items: [['One mole is about how many particles?', '6.022 × 10^23', ['6.022 × 10^22', '3.14 × 10^23', '1000'], 'Avogadro’s number.']] }] }
   }, null, 2).replace('"Final exam",\n      "date": "TBA"', '"Final exam",\n      "date": "TBA",')}\n\`\`\`\n\nLet me know if you want more questions!`;
-  await p.fill('#mk-text', messy); await p.click('[data-action="check"]'); await p.waitForTimeout(500);
-  const pv = await txt(p, '#mk-result');
-  check('a messy answer is repaired and previewed', /Introduction to General Chemistry/.test(pv) && /Add CHMY 121/.test(pv), pv.slice(0, 300));
-  check('the preview counts what is in it and says what was left out', /2 topics/.test(pv) && /flashcards/.test(pv) && /notes? about this class/.test(pv), pv.slice(0, 300));
-  check('the Create page says a class from a syllabus is free, and what Pro (with the store price) and Max give in credits', /is free/.test(await txt(p, '#mk-sub')) && /Mathub Pro/.test(await txt(p, '#mk-sub')) && /\$14\.99 a month/.test(await txt(p, '#mk-sub')) && /1,000 credits a month/.test(await txt(p, '#mk-sub')) && /Max 2,000/.test(await txt(p, '#mk-sub')), await txt(p, '#mk-sub'));
-  await p.click('[data-add]'); await p.waitForTimeout(700);
-  const pw = await p.evaluate(() => { const s = document.querySelector('#paywall'); return s && { plans: [...s.querySelectorAll('[data-plan]')].map(b => [b.dataset.plan, b.querySelector('.pw-plan-price').textContent, b.getAttribute('aria-checked')]), price: s.querySelector('#pw-price').textContent, buy: s.querySelector('[data-action="pw-buy"]').textContent, restore: !!s.querySelector('[data-action="pw-restore"]'), fine: s.querySelector('.pw-fine').textContent, terms: !!s.querySelector('.pw-fine a[href="#/policy/create"]') && !!s.querySelector('.pw-fine a[href="#/policy/privacy"]'), why: s.querySelector('.pw-why').textContent, saved: JSON.parse(localStorage.getItem('mh-my-classes') || '[]').length }; });
-  check('adding a class from a syllabus asks for a plan first: Pro and Max with the store prices, Pro picked, renewal terms, Terms and Privacy, Restore; nothing is saved yet', pw && pw.plans.map(x => x.join(':')).join() === 'pro:$14.99 a month:true,max:$49.99 a month:false' && /Pro \$14\.99 · Max \$49\.99/.test(pw.price) && /Get Pro for \$14\.99 a month/.test(pw.buy) && pw.restore && /Renews every month at \$14\.99/.test(pw.fine) && /at least 24 hours/.test(pw.fine) && pw.terms && /CHMY 121/.test(pw.why) && pw.saved === 0, pw);
-  check('the app connects to the store with its own key', (await p.evaluate(() => window.__cap.billingKey)) === 'appl_test');
-  await p.click('#paywall [data-action="pw-buy"]'); await p.waitForTimeout(1800);
-  check('subscribing buys the Pro package, then the class is added', (await p.evaluate(() => window.__cap.purchases)).join() === 'pro' && /#\/my\d{4}\/dashboard/.test(p.url()), p.url());
-  const cid = (/#\/(my\d{4})\/dashboard/.exec(p.url()) || [])[1];
-  check('adding the class opens its dashboard', !!cid, p.url());
+  await p.fill('#mk-text', messy); await p.click('[data-mk="check"]'); await p.waitForTimeout(900);
+  check('a messy answer is repaired and opened in the maker, with what was left out to check', /#\/maker\/new$/.test(p.url()) && (await p.inputValue('[data-f="name"]')) === 'Introduction to General Chemistry' && /things? to check/.test(await txt(p, '.mkr-notes')), p.url());
+  await p.click('.mkr-tabs .tab[data-tab="topics"]'); await p.waitForTimeout(200);
+  check('its two topics are in the maker', (await p.$$('.mkr-topic')).length === 2);
+  await p.click('[data-ed="save"]'); await p.waitForTimeout(1500);
+  check('saving needs no plan and no account in the app: no paywall', !(await p.$('#paywall')) && /#\/maker\/my\d{4}/.test(p.url()), p.url());
+  const cid = (/#\/maker\/(my\d{4})/.exec(p.url()) || [])[1];
+  check('saving gives the class its own id', !!cid, p.url());
+  await go(p, `#/${cid}/dashboard`, 1800);
   const saved = await p.evaluate(id => ({ file: !!localStorage.getItem('fakefs:DATA/classes/' + id + '.mathub.json'), idx: JSON.parse(localStorage.getItem('mh-my-classes') || '[]').map(e => e.id), local: App.packs.local.has(id), order: App.COURSE_ORDER.includes(id), strip: !!document.querySelector('.mk-strip') }), cid);
   check('the class is saved as a file in the app’s own folder and listed with the other classes', saved.file && saved.idx.includes(cid) && saved.local && saved.order && saved.strip, saved);
   check('an exam the syllabus gave no weight shows no made-up percent', !/undefined|NaN/.test(await txt(p, '#view')) && /Exam 1/.test(await txt(p, '#view')), (await txt(p, '#view')).slice(0, 200));
@@ -182,59 +179,54 @@ const { execFileSync } = require('child_process'); const path = require('path');
   check('right and wrong answers give the matching haptic', (await p.evaluate(() => window.__cap.haptics)).join() === 'n:SUCCESS,n:ERROR', await p.evaluate(() => window.__cap.haptics));
 
   // a cut-off answer and a broken one
-  await go(p, '#/create', 1000); await p.click('#mk-diy summary'); await p.waitForTimeout(200);
-  await p.fill('#mk-text', messy.slice(0, 900)); await p.click('[data-action="check"]'); await p.waitForTimeout(300);
-  check('a cut-off answer is caught, with a message to send the AI', /stops before the end/.test(await txt(p, '#mk-result')) && !!(await p.$('#mk-result [data-copy]')));
-  await p.click('#mk-result [data-copy]'); await p.waitForTimeout(200);
+  await go(p, '#/maker', 1000); await p.click('.mkr-more > summary'); await p.waitForTimeout(200);
+  await p.fill('#mk-text', messy.slice(0, 900)); await p.click('[data-mk="check"]'); await p.waitForTimeout(300);
+  check('a cut-off answer is caught, with a message to send the AI', /stops before the end/.test(await txt(p, '#mk-result')) && !!(await p.$('#mk-result [data-mk="copy-ask"]')));
+  await p.click('#mk-result [data-mk="copy-ask"]'); await p.waitForTimeout(200);
   check('that message asks for a shorter, complete answer', /cut off/.test(await p.evaluate(() => window.__cap.clipboard)));
-  await p.fill('#mk-text', '```json\n{ "code": "X 101", "name": "Nothing in it" }\n```'); await p.click('[data-action="check"]'); await p.waitForTimeout(300);
-  const broken = await txt(p, '#mk-result');
-  check('an answer missing what a class needs lists what to fix', /Almost there/.test(broken) && /SECTIONS/.test(broken), broken.slice(0, 200));
-  await p.fill('#mk-text', '```json\n{ "code": "X 101", "name": "Typo" "term": "Fall 2026" }\n```'); await p.click('[data-action="check"]'); await p.waitForTimeout(300);
+  await p.fill('#mk-text', '```json\n{ "code": "X 101", "name": "Typo" "term": "Fall 2026" }\n```'); await p.click('[data-mk="check"]'); await p.waitForTimeout(300);
   check('a JSON typo is caught', /typo/.test(await txt(p, '#mk-result')));
-  await p.fill('#mk-text', '<script>alert(1)</script> { "code": "<img src=x onerror=alert(1)>" '); await p.click('[data-action="check"]'); await p.waitForTimeout(300);
+  await p.fill('#mk-text', '<script>alert(1)</script> { "code": "<img src=x onerror=alert(1)>" '); await p.click('[data-mk="check"]'); await p.waitForTimeout(300);
   check('markup in a pasted answer is never put on the page', !(await p.$('#mk-result img, #mk-result script')));
+  await p.fill('#mk-text', '```json\n{ "code": "X 101", "name": "Nothing in it" }\n```'); await p.click('[data-mk="check"]'); await p.waitForTimeout(900);
+  await p.click('[data-ed="save"]'); await p.waitForTimeout(500);
+  check('an answer missing what a class needs opens in the maker, and saving says what to add', /Add at least one topic/.test(await txt(p, '#mkr-err')), await txt(p, '#mkr-err'));
+  await p.click('[data-ed="discard"]'); await p.waitForTimeout(800);
 
   // the example class
-  await p.click('[data-action="example"]'); await p.waitForTimeout(800);
-  check('the example class checks clean', /Add SKIL 101/.test(await txt(p, '#mk-alt-result')) && !/to fix/.test(await txt(p, '#mk-alt-result')));
-  await p.click('#mk-alt-result [data-add]'); await p.waitForTimeout(1500);
-  const exId = (/#\/(my\d{4})\/dashboard/.exec(p.url()) || [])[1];
+  await go(p, '#/maker', 1000); await p.click('.mkr-more > summary'); await p.waitForTimeout(200);
+  await p.click('[data-mk="example"]'); await p.waitForTimeout(1000);
+  check('the example class opens in the maker', (await p.inputValue('[data-f="code"]')) === 'SKIL 101', p.url());
+  await p.click('[data-ed="save"]'); await p.waitForTimeout(1500);
+  const exId = (/#\/maker\/(my\d{4})/.exec(p.url()) || [])[1];
   await go(p, `#/${exId}/practice`, 2500);
   check('the example class has a working quizzer', !!(await p.$('#view .q-opt, #view [data-action="answer"], #view .quiz')) || /Retrieval|Spacing|Notes|Planning/.test(await txt(p, '#view')), (await txt(p, '#view')).slice(0, 160));
 
-  // managing them: send, delete
-  await go(p, '#/create', 1000);
-  check('both classes are listed under "Classes you created"', (await p.$$('.mk-item')).length === 2);
-  await p.click(`[data-file="${cid}"]`); await p.waitForTimeout(400);
+  // managing them: both listed, send, delete
+  await go(p, '#/maker', 1000);
+  check('both classes are listed in the class maker, with Edit', (await p.$$('.mkr-row a[href^="#/maker/my"]')).length === 2);
+  await go(p, `#/maker/${cid}?tab=basics`, 1200); await p.click('[data-mkr="file"]'); await p.waitForTimeout(400);
   const sh = await p.evaluate(() => window.__cap.shared.slice(-1)[0]);
-  check('Send shares the class as a file', sh && Array.isArray(sh.files) && /CHMY121\.mathub\.json$/.test(sh.files[0]), sh);
-  await p.click(`[data-del="${exId}"]`); await p.waitForTimeout(800);
-  const gone = await p.evaluate(id => ({ file: !!localStorage.getItem('fakefs:DATA/classes/' + id + '.mathub.json'), reg: !!window.Courses[id], rows: document.querySelectorAll('.mk-item').length }), exId);
-  check('Delete removes the class and its file', !gone.file && !gone.reg && gone.rows === 1, gone);
+  check('Send the file shares the class as a file', sh && Array.isArray(sh.files) && /CHMY121\.mathub\.json$/.test(sh.files[0]), sh);
+  await go(p, `#/maker/${exId}?tab=basics`, 1200); await p.click('[data-mkr="delete"]'); await p.waitForTimeout(900);
+  const gone = await p.evaluate(id => ({ file: !!localStorage.getItem('fakefs:DATA/classes/' + id + '.mathub.json'), reg: !!window.Courses[id], hash: location.hash }), exId);
+  check('Delete removes the class and its file', !gone.file && !gone.reg && gone.hash === '#/maker', gone);
 
-  // when the plan ends: the class stays, locked; the example class is still free; classes made before subscriptions stay free
-  await p.evaluate(() => { sessionStorage.setItem('fake-sub', '0'); return App.subscription.refresh(); }); await p.waitForTimeout(300);
-  await go(p, `#/${cid}/dashboard`, 1600);
-  const lk = await p.evaluate(() => { const c = document.querySelector('.sublock'); return { text: c ? c.textContent.replace(/\s+/g, ' ') : '', buy: !!document.querySelector('[data-lock="buy"]'), restore: !!document.querySelector('[data-lock="restore"]') }; });
-  check('with no plan, a class made from a syllabus is kept but locked, with Subscribe and Restore', /is locked/.test(lk.text) && /still saved/.test(lk.text) && lk.buy && lk.restore, lk.text.slice(0, 160));
-  check('the locked class is still on the device', await p.evaluate(id => !!localStorage.getItem('fakefs:DATA/classes/' + id + '.mathub.json'), cid));
-  await go(p, '#/', 1800);
-  check('its card on the start page says Locked', /Locked/.test(await txt(p, `.ah-card[data-cid="${cid}"]`)), await txt(p, `.ah-card[data-cid="${cid}"]`));
-  await go(p, '#/create', 1000);
-  await p.click('[data-action="example"]'); await p.waitForTimeout(800); await p.click('#mk-alt-result [data-add]'); await p.waitForTimeout(1600);
-  const ex2 = (/#\/(my\d{4})\/dashboard/.exec(p.url()) || [])[1];
-  check('the example class is free: added without the paywall, and it opens', !!ex2 && !(await p.$('#paywall')) && !(await p.$('.sublock')), p.url());
-  await go(p, `#/${cid}/dashboard`, 1600); await p.click('[data-lock="buy"]'); await p.waitForTimeout(700); await p.click('#paywall [data-action="pw-buy"]'); await p.waitForTimeout(1600);
-  check('subscribing from the locked class opens it again', !(await p.$('.sublock')) && /Exam 1/.test(await txt(p, '#view')));
+  // a class of your own is free: Pro and Max are about credits for Bo
+  await p.evaluate(() => { App.paywall({}); }); await p.waitForTimeout(700);
+  const pw = await p.evaluate(() => { const s = document.querySelector('#paywall'); return s && { plans: [...s.querySelectorAll('[data-plan]')].map(b => [b.dataset.plan, b.querySelector('.pw-plan-price').textContent, b.getAttribute('aria-checked')]), price: s.querySelector('#pw-price').textContent }; });
+  check('the plans show the store prices, Pro picked', pw && pw.plans.map(x => x.join(':')).join() === 'pro:$14.99 a month:true,max:$49.99 a month:false' && /Pro \$14\.99 · Max \$49\.99/.test(pw.price), pw);
+  check('the app connects to the store with its own key', (await p.evaluate(() => window.__cap.billingKey)) === 'appl_test');
+  await p.click('#paywall [data-action="pw-buy"]'); await p.waitForTimeout(1600);
+  check('subscribing buys the Pro package', (await p.evaluate(() => window.__cap.purchases)).join() === 'pro');
   await go(p, '#/settings', 1400);
-  check('Settings shows Mathub Pro as on, with Manage subscription, Move up to Max and Restore', /Mathub Pro/.test(await txt(p, '.ap-sub')) && !!(await p.$('.ap-sub [data-sub="max"]')) && /On\. Renews/.test(await txt(p, '.ap-sub')) && !!(await p.$('.ap-sub [data-sub="manage"]')) && !!(await p.$('.ap-sub [data-sub="restore"]')), await txt(p, '.ap-sub'));
+  check('Settings shows StudyCat Pro as on, with Manage subscription, Move up to Max and Restore', /StudyCat Pro/.test(await txt(p, '.ap-sub')) && !!(await p.$('.ap-sub [data-sub="max"]')) && /On\. Renews/.test(await txt(p, '.ap-sub')) && !!(await p.$('.ap-sub [data-sub="manage"]')) && !!(await p.$('.ap-sub [data-sub="restore"]')), await txt(p, '.ap-sub'));
   await p.evaluate(() => { sessionStorage.setItem('fake-sub', '0'); return App.subscription.refresh(); });
-  await go(p, `#/${cid}/dashboard`, 1400);
-  check('with the plan off again, the class locks again', !!(await p.$('.sublock')));
-  await p.evaluate(() => App.setSetting('subMigrated', 0)); await p.reload(); await p.waitForTimeout(2000);   // as if this version had just been installed over an older one
   await go(p, `#/${cid}/dashboard`, 1600);
-  check('classes made before subscriptions existed stay free', !(await p.$('.sublock')) && /Exam 1/.test(await txt(p, '#view')));
+  check('with no plan, a class you made stays open', !(await p.$('.sublock')) && /Exam 1/.test(await txt(p, '#view')));
+  await go(p, '#/maker', 1000); await p.click('.mkr-more > summary'); await p.waitForTimeout(200); await p.click('[data-mk="example"]'); await p.waitForTimeout(1000); await p.click('[data-ed="save"]'); await p.waitForTimeout(1500);
+  const ex2 = (/#\/maker\/(my\d{4})/.exec(p.url()) || [])[1];
+  check('and the example class can be added again, with no plan', !!ex2 && !(await p.$('#paywall')), p.url());
 
   // reminders: asked only when turned on, then scheduled for the exams
   await go(p, '#/settings', 1600);
@@ -257,14 +249,14 @@ const { execFileSync } = require('child_process'); const path = require('path');
   await p.waitForTimeout(700);
   const dl = await p.evaluate(() => ({ s: window.__cap.shared.slice(-1)[0], body: atob(localStorage.getItem('fakefs:CACHE/share/mathub-data.json') || '') }));
   check('a file the page makes (Download my data) opens the share sheet with that file', dl.s && /share\/mathub-data\.json$/.test(dl.s.files[0]) && dl.body === '{"x":1}', dl);
-  await p.evaluate(() => { const a = document.createElement('a'); a.href = 'https://mathub.space/api/index.php?r=ics&t=x'; a.download = 'mathub.ics'; a.id = 'dl-ics'; a.textContent = 'ics'; a.style.cssText = 'position:fixed;top:120px;left:10px;z-index:9999;padding:8px;background:#fff'; document.body.appendChild(a); });
+  await p.evaluate(() => { const a = document.createElement('a'); a.href = 'https://studycat.org/api/index.php?r=ics&t=x'; a.download = 'mathub.ics'; a.id = 'dl-ics'; a.textContent = 'ics'; a.style.cssText = 'position:fixed;top:120px;left:10px;z-index:9999;padding:8px;background:#fff'; document.body.appendChild(a); });
   await p.click('#dl-ics'); await p.waitForTimeout(300);
-  check('a file on the server (the .ics feed) opens in the in-app browser', (await p.evaluate(() => window.__cap.browser.slice(-1)[0])) === 'https://mathub.space/api/index.php?r=ics&t=x' && p.url().startsWith(APP));
-  check('links people share point at mathub.space, not the app', await p.evaluate(() => App.siteBase()) === 'https://mathub.space/');
+  check('a file on the server (the .ics feed) opens in the in-app browser', (await p.evaluate(() => window.__cap.browser.slice(-1)[0])) === 'https://studycat.org/api/index.php?r=ics&t=x' && p.url().startsWith(APP));
+  check('links people share point at studycat.org, not the app', await p.evaluate(() => App.siteBase()) === 'https://studycat.org/');
 
   // #/teach in the app points to the web
   await go(p, '#/teach', 1000); await p.click('[data-action="open-web"]'); await p.waitForTimeout(200);
-  check('Mathub Faculty opens on the web from the app', (await p.evaluate(() => window.__cap.browser.slice(-1)[0])) === 'https://mathub.space/#/teach');
+  check('StudyCat Faculty opens on the web from the app', (await p.evaluate(() => window.__cap.browser.slice(-1)[0])) === 'https://studycat.org/#/teach');
 
   // ---------- Android: the same app, with Android's conventions ----------
   const [cn, a] = await mkApp(412, 915, 'android');
@@ -273,14 +265,14 @@ const { execFileSync } = require('child_process'); const path = require('path');
   check('Android: the app marks itself and colours the system bars through SystemBars', and.app === 'android' && and.platform === 'android' && and.bars.length > 0, and);
   check('Android: the back button and back gesture are handled', and.back === 1, and);
   await a.evaluate(() => { location.hash = '#/create'; }); await a.waitForTimeout(1000);
-  check('Android: Create a class says the class stays on this phone', /saved on this phone/.test(await txt(a, '#view')));
+  check('Android: the class maker says classes stay on this phone', /saved on this phone/.test(await txt(a, '#view')));
   const back = () => a.evaluate(() => window.__cap.listeners.backButton.forEach(fn => fn({ canGoBack: true })));
   await a.evaluate(() => App.showShortcuts()); await a.waitForTimeout(300);
   await back(); await a.waitForTimeout(700);
-  check('Android back: closes an open dialog first', !(await a.$('#shortcuts-modal')) && /#\/create$/.test(a.url()), a.url());
+  check('Android back: closes an open dialog first', !(await a.$('#shortcuts-modal')) && /#\/maker$/.test(a.url()), a.url());
   await a.evaluate(() => document.querySelector('.app') && document.querySelector('.app').classList.add('nav-open'));
   await back(); await a.waitForTimeout(300);
-  check('Android back: then closes the menu', await a.evaluate(() => !document.querySelector('.app.nav-open')) && /#\/create$/.test(a.url()));
+  check('Android back: then closes the menu', await a.evaluate(() => !document.querySelector('.app.nav-open')) && /#\/maker$/.test(a.url()));
   await back(); await a.waitForTimeout(1000);
   check('Android back: then goes back a page', /#\/$/.test(a.url()), a.url());
   await back(); await a.waitForTimeout(300);
@@ -292,15 +284,15 @@ const { execFileSync } = require('child_process'); const path = require('path');
   check('Android: reminders go in their own channel and are inexact (no exact-alarm permission needed)', arem.ch.some(c => c.id === 'reminders' && c.importance === 3) && arem.n.length === 1 && arem.n[0].channelId === 'reminders' && arem.n[0].isExactNotification === false, arem);
   check('no sideways scroll on Android at 412px', await hscroll(a));
 
-  // the website has Create a class too (assets/create.js, for Mathub's administrators: a guest lands on Request a class), but none of the app's own code
+  // the website has the class maker too (assets/maker.js; #/create leads there), but none of the app's own code
   const [cw, w] = await mk(1360, 900, { serviceWorkers: 'block' });
   await goSite(w, '#/create', 1400);
-  const web = await w.evaluate(() => ({ app: document.documentElement.dataset.app || '', create: !!(window.App && App.views.create), scripts: [...document.scripts].map(s => s.src).filter(s => /app-(boot|native)/.test(s)).length, request: /#\/request$/.test(location.hash) }));
-  check('the website has the Create a class page (a guest is sent to Request a class) and loads no app code', web.app === '' && web.create && web.scripts === 0 && web.request, web);
+  const web = await w.evaluate(() => ({ app: document.documentElement.dataset.app || '', maker: !!(window.App && App.views.maker), scripts: [...document.scripts].map(s => s.src).filter(s => /app-(boot|native)/.test(s)).length, at: /#\/maker$/.test(location.hash) }));
+  check('the website has the class maker (#/create leads there) and loads no app code', web.app === '' && web.maker && web.scripts === 0 && web.at, web);
 
   await goSite(w, '#/policy/delete', 1400);
   const del = await txt(w, '#pol-delete') + ' ' + await w.evaluate(() => { const h = document.querySelector('#pol-delete'); let t = ''; for (let n = h && h.nextElementSibling; n && n.tagName !== 'H2'; n = n.nextElementSibling) t += n.textContent + ' '; return t; });
-  check('the website has a public "Deleting your Mathub account" page (Google Play asks for its link)', /Deleting your Mathub account/.test(del) && /Settings/.test(del) && /Delete account/.test(del) && /within 7 days/.test(del) && /Kept, but no longer linked/.test(del), del.slice(0, 160));
+  check('the website has a public "Deleting your StudyCat account" page (Google Play asks for its link)', /Deleting your StudyCat account/.test(del) && /Settings/.test(del) && /Delete account/.test(del) && /within 7 days/.test(del) && /Kept, but no longer linked/.test(del), del.slice(0, 160));
   await Promise.all([ca.close(), cn.close(), cw.close()]);
   await T.finish();
 })();

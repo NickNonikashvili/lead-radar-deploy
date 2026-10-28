@@ -1,5 +1,5 @@
 /* PSCI 230D question bank. Bank items are [prompt, correct, [wrong answers], explanation, hint?].
-   Written for Mathub from standard IR material and the syllabus readings; not from the instructor. */
+   Written for StudyCat from standard IR material and the syllabus readings; not from the instructor. */
 const bank = (topic, items, extra = {}) => Object.assign({ type: 'bank', topic, items, options: 4 }, extra);   // four choices, like the midterms' bubble sheets
 
 const topics = {

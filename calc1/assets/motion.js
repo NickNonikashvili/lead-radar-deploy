@@ -1,5 +1,5 @@
 /* ============================================================
-   Mathub — motion helpers
+   StudyCat — motion helpers
    The top loading bar (class downloads), staggered card entrances,
    ring and progress-bar fills, scroll reveal for long pages, the
    theme-change fade, and the "Reduce motion" setting. Pure polish:

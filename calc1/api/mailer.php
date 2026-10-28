@@ -1,6 +1,6 @@
 <?php
 /* ============================================================
-   Mathub — outgoing mail. No dependencies.
+   StudyCat — outgoing mail. No dependencies.
    Modes: smtp (built-in client, SSL or STARTTLS), mail (PHP mail()), log (write to data/mail.log).
    ============================================================ */
 
@@ -14,7 +14,7 @@ function mh_mail_mode(array $cfg): string {
 /** $extra: more headers, like List-Unsubscribe on news emails (api/news.php). */
 function mh_send_mail(array $cfg, string $to, string $subject, string $text, string $html, array $extra = []): array {
   $mode = mh_mail_mode($cfg);
-  $from = $cfg['mail_from']; $fromName = $cfg['mail_from_name'] ?? 'Mathub';
+  $from = $cfg['mail_from']; $fromName = $cfg['mail_from_name'] ?? 'StudyCat';
   $boundary = 'mh' . bin2hex(random_bytes(8));
   $body = "--$boundary\r\nContent-Type: text/plain; charset=UTF-8\r\nContent-Transfer-Encoding: 8bit\r\n\r\n" . mh_crlf($text) . "\r\n\r\n"
         . "--$boundary\r\nContent-Type: text/html; charset=UTF-8\r\nContent-Transfer-Encoding: 8bit\r\n\r\n" . mh_crlf($html) . "\r\n\r\n--$boundary--\r\n";
@@ -25,7 +25,7 @@ function mh_send_mail(array $cfg, string $to, string $subject, string $text, str
     'Reply-To' => $from,
     'MIME-Version' => '1.0',
     'Content-Type' => "multipart/alternative; boundary=\"$boundary\"",
-    'X-Mailer' => 'Mathub',
+    'X-Mailer' => 'StudyCat',
   ];
   foreach ($extra as $k => $v) if (preg_match('/^[A-Za-z-]+$/', (string)$k)) $headers[$k] = str_replace(["\r", "\n"], '', (string)$v);
   if ($mode === 'log') {
@@ -80,7 +80,7 @@ function mh_smtp_send(array $cfg, string $from, string $to, string $subject, arr
     $cmd("MAIL FROM:<$from>", [250]);
     $cmd("RCPT TO:<$to>", [250, 251]);
     $cmd('DATA', [354]);
-    $msg = "Date: " . date('r') . "\r\nTo: <$to>\r\nSubject: $subject\r\nMessage-ID: <" . bin2hex(random_bytes(10)) . "@" . (explode('@', $from)[1] ?? 'mathub.space') . ">\r\n";
+    $msg = "Date: " . date('r') . "\r\nTo: <$to>\r\nSubject: $subject\r\nMessage-ID: <" . bin2hex(random_bytes(10)) . "@" . (explode('@', $from)[1] ?? 'studycat.org') . ">\r\n";
     foreach ($headers as $k => $v) $msg .= "$k: $v\r\n";
     $msg .= "\r\n" . preg_replace('/^\./m', '..', $body);
     fwrite($sock, $msg . "\r\n.\r\n");

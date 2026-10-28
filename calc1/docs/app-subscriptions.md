@@ -1,13 +1,13 @@
-# Mathub Pro and Mathub Max: the plans, Bo, and the AI server
+# StudyCat Pro and StudyCat Max: the plans, Bo, and the AI server
 
 Two monthly plans, on the website and in the iPhone, iPad and Android apps:
 
 | Plan | Price | What it unlocks |
 |---|---|---|
-| **Mathub Pro** | $15 a month | **Bo on every page** of the website (the floating Bo, `assets/bo-float.js`: questions about the page, photos and PDFs of problems), and classes of your own: made with the AI you already use (copy the instructions, paste the answer), from a class file, or from a class someone shares. |
-| **Mathub Max** | $20 a month | Everything in Pro, plus **Ask Bo's own page** (`#/tutor`, the Bo tab in the apps) and, on the website, **voice calls with Bo** (`assets/talk.js`): an hour of calls each month included, and more time bought ahead, $10 an hour (below). |
+| **StudyCat Pro** | $15 a month | **Bo on every page** of the website (the floating Bo, `assets/bo-float.js`: questions about the page, photos and PDFs of problems), and classes of your own: made with the AI you already use (copy the instructions, paste the answer), from a class file, or from a class someone shares. |
+| **StudyCat Max** | $20 a month | Everything in Pro, plus **Ask Bo's own page** (`#/tutor`, the Bo tab in the apps) and, on the website, **voice calls with Bo** (`assets/talk.js`): an hour of calls each month included, and more time bought ahead, $10 an hour (below). |
 
-Since 2026.10.21 classes are added by Mathub's team: students request a class with its syllabus (checked for
+Since 2026.10.21 classes are added by StudyCat's team: students request a class with its syllabus (checked for
 malware), and an administrator has Bo build it from the request in the admin panel (README → Request a class). Max
 is $20 a month with an hour of calls; more call time is a one-time purchase on the website (section 2, step 7). The
 app store listings and review notes below still describe the earlier split and need updating before the apps are
@@ -20,9 +20,9 @@ Everything else stays free:
 - **When a plan ends**, the classes made with it are kept, locked, and open again the moment it is back.
 - **Offline**, the apps remember until when the plan is paid for, so classes stay open on a plane.
 
-One plan works everywhere the student signs in with the same Mathub account:
+One plan works everywhere the student signs in with the same StudyCat account:
 
-| Where | How it is sold | How Mathub knows the plan |
+| Where | How it is sold | How StudyCat knows the plan |
 |---|---|---|
 | iPhone, iPad | App Store In-App Purchase | RevenueCat SDK in the app (`@revenuecat/purchases-capacitor`) |
 | Android | Google Play Billing | the same SDK |
@@ -35,7 +35,7 @@ works in the app after signing in.
 
 | | Pro | Max |
 |---|---|---|
-| App Store product (one subscription group "Mathub", Max ranked above Pro) | `mathub_pro_monthly` | `mathub_max_monthly` |
+| App Store product (one subscription group "StudyCat", Max ranked above Pro) | `mathub_pro_monthly` | `mathub_max_monthly` |
 | Google Play subscription, base plan | `mathub_pro` / `monthly` | `mathub_max` / `monthly` |
 | RevenueCat entitlements | `pro` | `pro` and `max` |
 | RevenueCat offering `default`: package identifiers | `pro` | `max` |
@@ -52,26 +52,26 @@ Code: `assets/create.js` (plans: `App.subscription`, the paywall `App.paywall({ 
 **Google Play Console**
 1. Settings → Payments profile: create the merchant profile and add your bank account.
 2. Upload a build with the billing permission to a testing track first (Play only then lets you create subscriptions).
-3. Monetize with Play → Products → Subscriptions: create `mathub_pro` ("Mathub Pro") with a base plan `monthly`,
-   auto-renewing, 1 month, US$14.99 (or 15.00), and `mathub_max` ("Mathub Max") with a base plan `monthly`,
+3. Monetize with Play → Products → Subscriptions: create `mathub_pro` ("StudyCat Pro") with a base plan `monthly`,
+   auto-renewing, 1 month, US$14.99 (or 15.00), and `mathub_max` ("StudyCat Max") with a base plan `monthly`,
    US$19.99 (or 20.00). Activate both.
 
 **App Store Connect**
 1. Business: sign the **Paid Apps Agreement**, add bank and tax information; enroll in the **Small Business Program** (15%).
-2. Your app → Monetization → Subscriptions: create the group "Mathub", then `mathub_max_monthly` (level 1, "Mathub Max",
-   $19.99) and `mathub_pro_monthly` (level 2, "Mathub Pro", $14.99), 1 month each. Putting Max above Pro in the
+2. Your app → Monetization → Subscriptions: create the group "StudyCat", then `mathub_max_monthly` (level 1, "StudyCat Max",
+   $19.99) and `mathub_pro_monthly` (level 2, "StudyCat Pro", $14.99), 1 month each. Putting Max above Pro in the
    group makes a Pro member's purchase of Max an upgrade. Add display names, descriptions and a screenshot of the paywall.
 3. Submit the subscriptions **together with an app version** (on the version page, under In-App Purchases and Subscriptions).
-4. Add the Terms of Use link to the App Store description: `Terms of Use: https://mathub.space/#/policy/create`.
+4. Add the Terms of Use link to the App Store description: `Terms of Use: https://studycat.org/#/policy/create`.
 
 **Stripe (for the website)**: create a Stripe account, finish its activation, and connect it in RevenueCat
 (Project settings → Web → Stripe).
 
 ## 2. RevenueCat (revenuecat.com)
 
-1. Project "Mathub"; add the **App Store** app (bundle `space.mathub.app`, In-App Purchase Key), the **Play Store**
+1. Project "StudyCat"; add the **App Store** app (bundle `space.mathub.app`, In-App Purchase Key), the **Play Store**
    app (package `space.mathub.app`, service-account JSON) and a **Web Billing** app (Stripe connected) with two
-   products: "Mathub Pro" $15 a month and "Mathub Max" $20 a month. (Already selling Max at $50? Change the web
+   products: "StudyCat Pro" $15 a month and "StudyCat Max" $20 a month. (Already selling Max at $50? Change the web
    product's price in RevenueCat; existing subscribers keep their price until you migrate them, following RevenueCat's
    and Stripe's price-change rules.)
 2. Products: the App Store, Play Store and web products for both plans.
@@ -79,12 +79,12 @@ Code: `assets/create.js` (plans: `App.subscription`, the paywall `App.paywall({ 
 4. Offerings: `default` (current) with two custom packages, identifiers **`pro`** and **`max`**, each with its App
    Store and Play product. For the website, two more offerings, `web_pro` and `web_max`, each with its web product.
 5. Web → **Web Purchase Links**: one for `web_pro`, one for `web_max`. Set the success redirect of both to
-   `https://mathub.space/#/plan?paid=1` (links made earlier to `#/create?paid=1` still land on Your plan). Copy both links (`https://pay.rev.cat/<token>/`).
+   `https://studycat.org/#/plan?paid=1` (links made earlier to `#/create?paid=1` still land on Your plan). Copy both links (`https://pay.rev.cat/<token>/`).
 6. API keys: copy the public `appl_…` and `goog_…` keys and create a **secret** key (`sk_…`) for the server.
 7. **Credits** (website only, `api/credits.php`): in the Web Billing app create a **one-time, consumable** product,
    identifier `mathub_credits` ("1,000 credits for Bo", $10). Attach it to **no entitlement** (a consumable in an
    entitlement would unlock it forever). Make an offering `web_credits` with that product, then a Web Purchase Link
-   for it with the success redirect `https://mathub.space/#/usage?paid=1`. Put the link in Site settings → Payments →
+   for it with the success redirect `https://studycat.org/#/usage?paid=1`. Put the link in Site settings → Payments →
    "Credits web purchase link" (`credits_link`), without a user id. Each purchase shows on the customer as a
    `non_subscriptions` transaction; the server adds a pack (`credits_pack`, 1,000) per transaction, once, and takes
    it back when a refunded transaction disappears. Change the pack, its price or the product id there too, and the
@@ -95,7 +95,7 @@ Code: `assets/create.js` (plans: `App.subscription`, the paywall `App.paywall({ 
 
 ## 3. Bo and the AI server (Anthropic)
 
-Ask Bo and the classes Bo writes run through Mathub's own server, `api/ai.php`. The apps and the website never talk
+Ask Bo and the classes Bo writes run through StudyCat's own server, `api/ai.php`. The apps and the website never talk
 to the AI directly. The server holds the key, checks the plan (Pro or Max to write a class, Max to talk with Bo),
 enforces the limits, and keeps every request small:
 
@@ -169,7 +169,7 @@ call settings): the browser hears, the answer streams from Claude, and Bo reads 
   at the time of writing). Limits per account: `ai_voice_monthly` (300,000 characters, about 5 hours of Bo talking)
   and `ai_listen_monthly` (10 hours), counted in `ai_usage.voice` and `ai_usage.listen`. Each spoken question also
   counts as one of the 1,500 questions a month. No audio is stored anywhere.
-- The site's `.htaccess` allows the microphone for Mathub's own pages (`Permissions-Policy: microphone=(self)`).
+- The site's `.htaccess` allows the microphone for StudyCat's own pages (`Permissions-Policy: microphone=(self)`).
 
 To switch Bo on: create an API key at console.anthropic.com (Settings → API keys; add a payment method and set a
 monthly spend limit there), then put it in `api/config.local.php`.
@@ -177,9 +177,9 @@ monthly spend limit there), then put it in `api/config.local.php`.
 ### Credits pay for Bo
 
 Bo works on every plan; credits pay for him (`api/credits.php`, README → Credits). Each answer costs what its tokens
-cost Mathub at Anthropic's prices, times `credits_markup` (2); a live call is paid by the minute (`credits_call_strong`
+cost StudyCat at Anthropic's prices, times `credits_markup` (2); a live call is paid by the minute (`credits_call_strong`
 on Max's stronger model, `credits_call_light` otherwise); a picture from OpenAI's image model (`ai_image_model`,
-gpt-image-2) costs `credits_image`. 1 credit is about 1¢, so a free account's 100 credits a month cost Mathub at most
+gpt-image-2) costs `credits_image`. 1 credit is about 1¢, so a free account's 100 credits a month cost StudyCat at most
 about 50¢ at the default markup. The free minutes (`ai_trial_minutes`) are retired.
 
 ## 4. Put the keys in
@@ -203,7 +203,7 @@ never shows them again), or in `api/config.local.php` (never in the repository o
 'anthropic_key'     => 'sk-ant-xxxxxxxx',
 'openai_key'        => 'sk-proj-xxxxxxxx',   // live calls with Bo, his natural voice, and listening in Firefox
 'plan_grants'       => ['you@montana.edu' => 'max'],   // testers who get a plan without paying
-'revenuecat_v2_key' => 'sk_xxxxxxxx',   // optional: Cancel plan cancels website plans right on Mathub
+'revenuecat_v2_key' => 'sk_xxxxxxxx',   // optional: Cancel plan cancels website plans right on StudyCat
 'revenuecat_project' => 'projxxxxxxxx',
 ```
 
@@ -250,14 +250,14 @@ use basic voice (Chrome, Edge and Safari, with the device's own voice).
   user-generated content (classes, chats with Bo); Photos (only those sent to Bo). Anthropic and RevenueCat are
   service providers, so this is not "shared". **AI-Generated Content policy:** every answer from Bo has Report,
   which files it for the moderators.
-- **Review notes:** "Making a class (Bo writes it from a syllabus) needs Mathub Pro; Bo, the AI tutor, needs Mathub Max. To try without buying:
+- **Review notes:** "Making a class (Bo writes it from a syllabus) needs StudyCat Pro; Bo, the AI tutor, needs StudyCat Max. To try without buying:
   Create a class → Try an example class (free). Sandbox purchases unlock both. Bo's answers come from Anthropic's
   Claude through our server; the student agrees before the first question, and every answer can be reported."
 
 ## Sharing a class
 
 A class saved with the account can be shared (`myclass_share`): an 8-character code and the link
-`https://mathub.space/#/c/CODE` with its QR code (`assets/vendor/qrcode.js`, MIT, loaded on demand). Anyone can
+`https://studycat.org/#/c/CODE` with its QR code (`assets/vendor/qrcode.js`, MIT, loaded on demand). Anyone can
 open it and see the class without the owner's name; adding a copy needs Pro or Max. Shared classes have Report;
 moderators can stop a share from Admin → Problems (`admin_unshare`).
 

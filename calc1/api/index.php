@@ -1,6 +1,6 @@
 <?php
 /* ============================================================
-   Mathub account server — endpoints
+   StudyCat account server — endpoints
    Called as api/index.php?r=<route>. Responses are JSON.
    Routes: health, me, signup, verify, resend, login, logout, forgot,
            reset, profile, data, data_all, account_delete, stats,
@@ -10,7 +10,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/lib.php';
 error_reporting(E_ALL); ini_set('display_errors', '0');
 // Details of an unexpected error go to the server log under a short reference; the visitor only sees the reference.
-set_exception_handler(function (Throwable $e) { $ref = bin2hex(random_bytes(4)); error_log("Mathub error $ref: " . $e->getMessage() . ' @ ' . basename($e->getFile()) . ':' . $e->getLine()); mh_fail("Something went wrong on our side (reference $ref). Please try again.", 500, ['ref' => $ref]); });
+set_exception_handler(function (Throwable $e) { $ref = bin2hex(random_bytes(4)); error_log("StudyCat error $ref: " . $e->getMessage() . ' @ ' . basename($e->getFile()) . ':' . $e->getLine()); mh_fail("Something went wrong on our side (reference $ref). Please try again.", 500, ['ref' => $ref]); });
 
 $route = preg_replace('/[^a-z_]/', '', (string)($_GET['r'] ?? ''));
 $ip = mh_client_ip(); $in = mh_input(); $cfg = mh_config();
@@ -22,7 +22,7 @@ switch ($route) {
     require_once __DIR__ . '/mailer.php';
     $db = mh_db(); mh_secret();
     try { require_once __DIR__ . '/social.php'; mh_housekeeping(); } catch (Throwable $e) { /* never block the site */ }
-    mh_json(['ok' => true, 'site' => $cfg['site_name'] ?? 'Mathub', 'domains' => $cfg['allowed_domains'], 'mail' => mh_mail_mode($cfg), 'user' => ($u = mh_current_user()) ? mh_user_public($u) : null]);
+    mh_json(['ok' => true, 'site' => $cfg['site_name'] ?? 'StudyCat', 'domains' => $cfg['allowed_domains'], 'mail' => mh_mail_mode($cfg), 'user' => ($u = mh_current_user()) ? mh_user_public($u) : null]);
 
   case 'me':
     mh_method('GET');
@@ -130,7 +130,7 @@ switch ($route) {
     $rm = array_key_exists('reminder_email', $in) ? (!empty($in['reminder_email']) ? 1 : 0) : (int)($u['reminder_email'] ?? 0);
     if (array_key_exists('recap_email', $in)) { $re = !empty($in['recap_email']) ? 1 : 0; mh_db()->prepare('UPDATE users SET recap_email = ? WHERE id = ?')->execute([$re, $u['id']]); $u['recap_email'] = $re; }   // the recap after a call with Bo (api/ai.php)
     if (array_key_exists('exam_nudge', $in)) { $en = !empty($in['exam_nudge']) ? 1 : 0; mh_db()->prepare('UPDATE users SET exam_nudge = ? WHERE id = ?')->execute([$en, $u['id']]); $u['exam_nudge'] = $en; }   // the heads-up before an exam (api/growth.php)
-    if (array_key_exists('news_email', $in)) { $ne = !empty($in['news_email']) ? 1 : 0; mh_db()->prepare('UPDATE users SET news_email = ? WHERE id = ?')->execute([$ne, $u['id']]); $u['news_email'] = $ne; }   // news from Mathub (api/news.php)
+    if (array_key_exists('news_email', $in)) { $ne = !empty($in['news_email']) ? 1 : 0; mh_db()->prepare('UPDATE users SET news_email = ? WHERE id = ?')->execute([$ne, $u['id']]); $u['news_email'] = $ne; }   // news from StudyCat (api/news.php)
     if (array_key_exists('planning_email', $in) || array_key_exists('focus_public', $in)) { $pe = array_key_exists('planning_email', $in) ? (!empty($in['planning_email']) ? 1 : 0) : (int)($u['planning_email'] ?? 0); $fp = array_key_exists('focus_public', $in) ? (!empty($in['focus_public']) ? 1 : 0) : (int)($u['focus_public'] ?? 1); mh_db()->prepare('UPDATE users SET planning_email = ?, focus_public = ? WHERE id = ?')->execute([$pe, $fp, $u['id']]); $u['planning_email'] = $pe; $u['focus_public'] = $fp; }
     $courses = $u['courses'] ?? null; if (array_key_exists('courses', $in)) { $c = is_array($in['courses']) ? array_values(array_unique(array_filter($in['courses'], fn($x) => is_string($x) && mh_is_course($x)))) : []; $courses = json_encode($c); }
     $sections = $u['sections'] ?? null; if (array_key_exists('sections', $in) && is_array($in['sections'])) { $sec = []; foreach ($in['sections'] as $cid => $v) { if (!mh_is_course((string)$cid) || !is_array($v)) continue; $sec[$cid] = ['section' => mb_substr(trim((string)($v['section'] ?? '')), 0, 20), 'examTime' => mb_substr(trim((string)($v['examTime'] ?? '')), 0, 60), 'labDay' => in_array($v['labDay'] ?? '', ['tue', 'thu'], true) ? $v['labDay'] : '']; } $sections = json_encode($sec); }
@@ -234,11 +234,9 @@ switch ($route) {
     if (in_array($route, ['ics', 'ics_token', 'ics_token_reset', 'focus_ping', 'focus_stop', 'focus_done', 'focus_room', 'track', 'admin_growth', 'class_goal', 'league_section', 'ann_list', 'ann_post', 'ann_delete', 'invite_mine', 'invite_info'], true)) { require_once __DIR__ . '/social.php'; require_once __DIR__ . '/growth.php'; mh_growth_route($route, $in, $cfg, $ip); }
     if (str_starts_with($route, 'ai_')) { require_once __DIR__ . '/ai.php'; mh_ai_route($route, $in, $cfg, $ip); }
     if (str_starts_with($route, 'credits_') || str_starts_with($route, 'admin_credits')) { require_once __DIR__ . '/credits.php'; mh_credits_route($route, $in, $cfg, $ip); }   // credits: what everything with Bo costs, monthly and bought
-    if (str_starts_with($route, 'room_')) { require_once __DIR__ . '/room.php'; mh_room_route($route, $in, $cfg, $ip); }   // study rooms: classmates join a call with Bo   // Bo, the AI tutor, and classes Bo writes (Mathub Max)
-    if (str_starts_with($route, 'myclass') || in_array($route, ['shared_class', 'create_status', 'plan_cancel', 'admin_unshare', 'admin_plan'], true)) { require_once __DIR__ . '/myclasses.php'; mh_myclass_route($route, $in, $cfg, $ip); }   // classes students make, sharing them, Mathub Create
-    if (str_starts_with($route, 'community_')) { require_once __DIR__ . '/community.php'; mh_community_route($route, $in, $cfg, $ip); }   // classes anyone makes from a syllabus, for everyone
+    if (str_starts_with($route, 'room_')) { require_once __DIR__ . '/room.php'; mh_room_route($route, $in, $cfg, $ip); }   // study rooms: classmates join a call with Bo   // Bo, the AI tutor, and classes Bo writes (StudyCat Max)
+    if (str_starts_with($route, 'myclass') || in_array($route, ['shared_class', 'create_status', 'plan_cancel', 'admin_unshare', 'admin_plan'], true)) { require_once __DIR__ . '/myclasses.php'; mh_myclass_route($route, $in, $cfg, $ip); }   // classes students make, sharing them, StudyCat Create
     if (str_starts_with($route, 'classpack_') || str_starts_with($route, 'admin_classpack')) { require_once __DIR__ . '/packs.php'; mh_packs_route($route, $in, $cfg, $ip); }
-    if (str_starts_with($route, 'classreq_') || str_starts_with($route, 'admin_classreq')) { require_once __DIR__ . '/forum.php'; require_once __DIR__ . '/requests.php'; mh_requests_route($route, $in, $cfg, $ip); }
     if (str_starts_with($route, 'push_')) { require_once __DIR__ . '/social.php'; require_once __DIR__ . '/push.php'; mh_push_route($route, $in, $cfg, $ip); }
     if (str_starts_with($route, 'issue_') || str_starts_with($route, 'admin_issue') || str_starts_with($route, 'admin_backup') || $route === 'prefs') { require_once __DIR__ . '/social.php'; require_once __DIR__ . '/extras.php'; mh_extras_route($route, $in, $cfg, $ip); }
     if ($route === 'life') { require_once __DIR__ . '/life.php'; mh_life_route($route, $in, $cfg, $ip); }   // tasks, timetable, habits, journal… (assets/life.js)

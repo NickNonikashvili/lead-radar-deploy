@@ -8,7 +8,7 @@ const T = require('./lib');
   const [c, p] = await mk(1360, 900, { serviceWorkers: 'block' });
   await go(p, '#/', 1200);
   await setSettings(p, { asof: '2026-10-05', motion: 'off' }); await p.reload(); await p.waitForTimeout(1500);
-  check('the start page lists JPNS 150D', await p.evaluate(() => [...document.querySelectorAll('.course-card')].some(c => c.classList.contains('jpns150d'))));
+  check('the start page lists JPNS 150D', await p.evaluate(() => !!document.querySelector('.dwk[data-c="jpns150d"]')));
 
   await go(p, '#/jpns150d', 2200);
   const dash = await p.evaluate(() => { const C = window.Courses.jpns150d; return { loaded: !!(C && C.loaded), title: (document.querySelector('.page-title') || {}).textContent || '', chip: (document.querySelector('#exam-chip') || {}).textContent || '', current: App.currentSectionOf(C).id }; });

@@ -1,5 +1,5 @@
 /* Classes students make, on the account server: saving, listing, opening and deleting them, the limits, share codes
-   and the public shared page, and Mathub Create's status from RevenueCat (a stand-in on the Pyodide mirror server,
+   and the public shared page, and StudyCat Create's status from RevenueCat (a stand-in on the Pyodide mirror server,
    see tests/pyodide/router.php; config.local.php needs revenuecat_secret 'sk_test', revenuecat_api and create_web_link).
    Plain HTTP, no browser pages. */
 const T = require('./lib'); const fs = require('fs'); const path = require('path');
@@ -33,7 +33,7 @@ const pack = (id, code, extra = {}) => Object.assign({ format: 'mathub-class-pac
   r = await call('alice', 'myclass_save', { id: 'my2222', pack: pack('my2222', 'SKIL 101') }); r = await call('alice', 'myclasses'); ok('a free class stays free when saved again', r.classes.find(c => c.id === 'my2222').free === true, r.classes);
   r = await call('alice', 'myclass_save', { id: 'my9999', pack: pack('my1234', 'X 1') }); ok('a pack whose id does not match is refused', r.status === 400, r);
   r = await call('alice', 'myclass_save', { id: 'calc', pack: pack('calc', 'M 171') }); ok('only ids of classes students make (my####)', r.status === 400, r);
-  r = await call('alice', 'myclass_save', { id: 'my3333', pack: { format: 'something-else', id: 'my3333', code: 'A', name: 'B' } }); ok('only Mathub class packs', r.status === 400, r);
+  r = await call('alice', 'myclass_save', { id: 'my3333', pack: { format: 'something-else', id: 'my3333', code: 'A', name: 'B' } }); ok('only StudyCat class packs', r.status === 400, r);
   r = await call('alice', 'myclass_save', { id: 'my4444', pack: pack('my4444', 'BIG 1', { blob: 'x'.repeat(3100000) }) }); ok('a class over 3 MB is refused', r.status === 413, r);
 
   // sharing

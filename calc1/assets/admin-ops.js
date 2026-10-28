@@ -1,5 +1,5 @@
 /* ============================================================
-   Mathub — running the site, in the admin panel (assets/admin.js calls these):
+   StudyCat — running the site, in the admin panel (assets/admin.js calls these):
    - Backups: the off-site copies (api/offsite.php): where they go, the newest, the last restore test, send or test now
    - Answer tests (its own tab; api/evals.php): the tests, running them one at a time, every run and what changed
    - Overview: the cost alerts standing and this week's report (api/ops.php), emailed on demand

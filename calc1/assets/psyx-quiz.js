@@ -1,9 +1,9 @@
 /* ============================================================
-   Mathub — PSYX 340 question bank
+   StudyCat — PSYX 340 question bank
    Multiple-choice banks for every topic, plus generators for the rules
    that are counted or timed (episode durations, the psychosis ladder,
    trauma timing, substance use disorder severity, anorexia BMI
-   severity, ADHD thresholds, personality clusters). Written for Mathub
+   severity, ADHD thresholds, personality clusters). Written for StudyCat
    from the DSM-5-TR and standard abnormal-psychology content; the
    instructor's lectures decide what the exams actually ask.
    ============================================================ */

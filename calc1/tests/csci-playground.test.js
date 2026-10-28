@@ -3,12 +3,12 @@ const T = require('./lib');
   const { browser, base, errors, mk, txt, login, api, hscroll, go, log, check } = await T.start({ pyodide: true });
   const setCourses = (p, ids) => p.evaluate(ids => { const s = App.settings(); s.courses = ids; localStorage.setItem('studyhub-settings', JSON.stringify(s)); }, ids);
   const waitStatus = async (p, re, ms = 90000) => { const t0 = Date.now(); while (Date.now() - t0 < ms) { const s = await txt(p, '#py-status'); if (re.test(s)) return s; await p.waitForTimeout(300); } return 'TIMEOUT: ' + await txt(p, '#py-status'); };
-  const cardSpans = p => p.$$eval('.course-grid .course-card', cs => { const gw = cs[0].parentElement.getBoundingClientRect().width; return cs.map(c => Math.round(100 * c.getBoundingClientRect().width / gw)); });
+  const cardSpans = p => p.$$eval('.dw[data-w="classes"] .dwk', cs => cs.map(c => c.dataset.c));   // Your home's classes widget
 
   // ---- landing grid + switcher as a guest with different class counts ----
   const [c, p] = await mk(); await go(p, '#/'); await p.waitForTimeout(800);
-  log('guest cards:', (await p.$$('.course-grid .course-card')).length, '| widths %:', JSON.stringify(await cardSpans(p)));
-  for (const ids of [['csci'], ['calc', 'csci'], ['calc', 'physics', 'csci'], ['calc', 'physics', 'precalc', 'writ'], ['calc', 'physics', 'precalc', 'writ', 'csci']]) { await setCourses(p, ids); await p.reload(); await p.waitForTimeout(700); log(`${ids.length} classes -> cards:`, (await p.$$('.course-grid .course-card')).length, 'widths %:', JSON.stringify(await cardSpans(p))); }
+  log('guest classes:', (await p.$$('.dw[data-w="classes"] .dwk')).length, '| widths %:', JSON.stringify(await cardSpans(p)));
+  for (const ids of [['csci'], ['calc', 'csci'], ['calc', 'physics', 'csci'], ['calc', 'physics', 'precalc', 'writ'], ['calc', 'physics', 'precalc', 'writ', 'csci']]) { await setCourses(p, ids); await p.reload(); await p.waitForTimeout(700); log(`${ids.length} classes -> rows:`, (await p.$$('.dw[data-w="classes"] .dwk')).length, 'widths %:', JSON.stringify(await cardSpans(p))); }
   await go(p, '#/calc'); await p.waitForTimeout(500);
   const sw = await p.evaluate(() => { const side = document.getElementById('sidebar').getBoundingClientRect(); return Array.from(document.querySelectorAll('.switch-btn')).map(b => { const r = b.getBoundingClientRect(); return { t: b.textContent.trim(), inside: r.right <= side.right + 1 && r.left >= side.left - 1 && r.width > 20, w: Math.round(r.width) }; }); });
   log('switcher (5 classes):', JSON.stringify(sw), '| all inside:', sw.every(x => x.inside));

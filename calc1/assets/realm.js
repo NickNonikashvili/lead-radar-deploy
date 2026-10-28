@@ -1,5 +1,5 @@
 /* ============================================================
-   Mathub — Realm: the tabletop layer
+   StudyCat — Realm: the tabletop layer
    - class archetypes: every class is a character class (Calculus I is
      the Wizard, Physics I the Artificer, Precalculus the Ranger, Writing
      the Bard, CSCI 127 the Warlock); shown on the class cards in Realm
@@ -19,7 +19,7 @@
   const { $, $$, esc, icon, store, settings, toast } = App; const Courses = global.Courses;
   App.isRealm = () => document.documentElement.getAttribute('data-skin') === 'realm';
   // warm the fonts the canvases and the decode use, only when this look is on
-  const warmFonts = () => { if (App.isRealm() && document.fonts && document.fonts.load) ['600 16px Cinzel', '16px "Mathub Runes"'].forEach(f => document.fonts.load(f, 'ᚠAa20').catch(() => {})); };
+  const warmFonts = () => { if (App.isRealm() && document.fonts && document.fonts.load) ['600 16px Cinzel', '16px "StudyCat Runes"'].forEach(f => document.fonts.load(f, 'ᚠAa20').catch(() => {})); };
   warmFonts(); new MutationObserver(warmFonts).observe(document.documentElement, { attributes: true, attributeFilter: ['data-skin'] });
 
   /* ---------- archetypes ---------- */
@@ -132,7 +132,7 @@
     title: 'Character sheet',
     render(root, param, query, standalone) {
       const S = sheetData(); const u = App.auth && App.auth.user; const name = (u && u.name) || 'Adventurer'; const top = S.classes[0];
-      const head = `<header class="landing-top"><div><div class="eyebrow">Mathub · character sheet</div><h1 class="landing-title"><span class="logo-mark">${App.logoSvg(44)}</span>Character sheet</h1><p class="muted">Your study habits as a tabletop hero. Every number comes from what you actually did on Mathub.</p></div><div class="row gap-sm"><span id="landing-account"></span><a class="btn" href="#/">${icon('left', 14)} All classes</a></div></header>`;
+      const head = `<header class="landing-top"><div><div class="eyebrow">StudyCat · character sheet</div><h1 class="landing-title"><span class="logo-mark">${App.logoSvg(44)}</span>Character sheet</h1><p class="muted">Your study habits as a tabletop hero. Every number comes from what you actually did on StudyCat.</p></div><div class="row gap-sm"><span id="landing-account"></span><a class="btn" href="#/">${icon('left', 14)} All classes</a></div></header>`;
       root.innerHTML = `<div class="landing-wrap cs-wrap">${head}
         <div class="cs-top mb-2">
           <div class="panel"><div class="eyebrow">Level ${S.lv.n}${S.lv.name ? ` · ${esc(S.lv.name)}` : ''}</div><div class="cs-name">${esc(name)}</div>

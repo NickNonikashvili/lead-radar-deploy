@@ -1,6 +1,6 @@
 <?php
 /* ============================================================
-   Mathub — open an off-site backup (api/offsite.php) on any computer with PHP 8 (OpenSSL, zlib, PDO SQLite), with
+   StudyCat — open an off-site backup (api/offsite.php) on any computer with PHP 8 (OpenSSL, zlib, PDO SQLite), with
    this file and backupcrypto.php beside it:
      php backup-tool.php decrypt <copy.sqlite.mhbak> <restored.sqlite>
      php backup-tool.php check <restored.sqlite>

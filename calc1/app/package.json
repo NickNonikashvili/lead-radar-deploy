@@ -2,7 +2,7 @@
   "name": "mathub-app",
   "version": "1.0.0",
   "private": true,
-  "description": "Mathub for iOS and Android: the study hub, offline, with classes you create from your own syllabus.",
+  "description": "StudyCat for iOS and Android: the study hub, offline, with classes you create from your own syllabus.",
   "scripts": {
     "build": "node scripts/build-www.js",
     "sync": "node scripts/build-www.js && cap sync",

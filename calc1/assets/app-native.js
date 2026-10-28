@@ -1,5 +1,5 @@
 /* ============================================================
-   Mathub app — what only the app does (loaded only in the iOS and Android apps, after every other script)
+   StudyCat app — what only the app does (loaded only in the iOS and Android apps, after every other script)
    - reminders: exam reminders and a daily study reminder as local notifications, only after
      the student turns them on and allows them
    - haptics on right and wrong answers, finished lessons and level-ups
@@ -28,10 +28,10 @@
      discussions and classes with an instructor, and sign-up is limited to Montana State addresses */
   if (App.auth) App.auth.gate = () => 'open';
   App.views.teach = {
-    title: 'Mathub Faculty',
+    title: 'StudyCat Faculty',
     render(root) {
-      root.innerHTML = `<div class="landing-wrap"><header class="landing-top"><div><h1 class="landing-title"><span class="logo-mark">${App.logoSvg(44)}</span>Mathub Faculty</h1><p class="muted">The syllabus editor for instructors is on the web, where there is room for the form and the page side by side.</p></div></header>
-        <div class="row gap-sm" style="flex-wrap:wrap"><button class="btn primary" data-action="open-web">${icon('external', 14)} Open Mathub Faculty</button><a class="btn" href="#/">${icon('left', 14)} Back to your classes</a></div></div>`;
+      root.innerHTML = `<div class="landing-wrap"><header class="landing-top"><div><h1 class="landing-title"><span class="logo-mark">${App.logoSvg(44)}</span>StudyCat Faculty</h1><p class="muted">The syllabus editor for instructors is on the web, where there is room for the form and the page side by side.</p></div></header>
+        <div class="row gap-sm" style="flex-wrap:wrap"><button class="btn primary" data-action="open-web">${icon('external', 14)} Open StudyCat Faculty</button><a class="btn" href="#/">${icon('left', 14)} Back to your classes</a></div></div>`;
       bind(root, { 'open-web': () => N.open(MA.api + '#/teach') });
     }
   };
@@ -58,7 +58,7 @@
       if ((await N.notify.permission()) !== 'granted') return;
       const list = []; const now = Date.now();
       if (s.examReminders) {
-        // the classes the student chose, plus the ones they made; until they choose, only the ones they made (not every class on Mathub)
+        // the classes the student chose, plus the ones they made; until they choose, only the ones they made (not every class on StudyCat)
         const mine = [...new Set((Array.isArray(s.courses) && s.courses.length ? s.courses : []).concat([...local]))].filter(id => Courses[id] && !Courses[id].preview);
         const items = [];
         mine.forEach(id => { const C = Courses[id]; if (!C) return; (C.EXAMS || []).forEach(e => { if (!e.date || !ISO.test(e.date)) return; const [y, m, d] = e.date.split('-').map(Number);
@@ -72,7 +72,7 @@
     async enable() {
       if (!N.notify.available()) return false;
       let p = await N.notify.permission(); if (p === 'prompt' || p === 'prompt-with-rationale') p = await N.notify.request();
-      if (p !== 'granted') { toast(ANDROID ? 'Notifications are off for Mathub. Turn them on in Settings › Apps › Mathub › Notifications.' : 'Notifications are off for Mathub. Turn them on in the Settings app: Mathub › Notifications.', 6000); return false; }
+      if (p !== 'granted') { toast(ANDROID ? 'Notifications are off for StudyCat. Turn them on in Settings › Apps › StudyCat › Notifications.' : 'Notifications are off for StudyCat. Turn them on in the Settings app: StudyCat › Notifications.', 6000); return false; }
       return true;
     }
   };
@@ -84,14 +84,14 @@
     const s = settings(); const mine = Mine.list().length;
     return `<div class="panel span-2 app-panel" id="app-panel"><div class="panel-h"><div class="panel-title">${icon('bell')} On this ${DEVICE}</div></div>
       <div class="grid cols-2"><div>
-        <label class="check" style="padding:0"><input type="checkbox" id="ap-exams" ${s.examReminders ? 'checked' : ''}><span>Exam reminders <span class="muted small">(3 days before and the evening before each exam in your classes${Array.isArray(s.courses) && s.courses.length ? '' : '; choose your classes above so Mathub knows which ones'})</span></span></label>
+        <label class="check" style="padding:0"><input type="checkbox" id="ap-exams" ${s.examReminders ? 'checked' : ''}><span>Exam reminders <span class="muted small">(3 days before and the evening before each exam in your classes${Array.isArray(s.courses) && s.courses.length ? '' : '; choose your classes above so StudyCat knows which ones'})</span></span></label>
         <label class="check" style="padding:0"><input type="checkbox" id="ap-daily" ${s.dailyReminder ? 'checked' : ''}><span>Daily study reminder</span></label>
         <div class="field mt-1" style="max-width:220px"><label for="ap-time">Remind me at</label><input class="input" type="time" id="ap-time" value="${esc(s.reminderTime || '19:00')}" ${s.dailyReminder ? '' : 'disabled'}></div>
       </div><div>
         <label class="check" style="padding:0"><input type="checkbox" id="ap-haptics" ${s.haptics === false ? '' : 'checked'}><span>Haptics <span class="muted small">(a tap when an answer is right or wrong)</span></span></label>
         <div class="ap-sub"><div class="ap-sub-t"><b>${Sub.active() ? esc(Sub.planName()) : 'Your plan'}</b><span class="small muted">${subLine()}</span></div><div class="row gap-sm">${Sub.active() ? `<button type="button" class="btn sm" data-sub="manage">Manage subscription</button>` : `<button type="button" class="btn sm primary" data-sub="buy">See the plans</button>`}${Sub.plan() === 'pro' ? `<button type="button" class="btn sm primary" data-sub="max">Move up to Max</button>` : ''}<button type="button" class="btn sm ghost" data-sub="restore">Restore purchases</button></div></div>
         <p class="small mt-1">${mine ? `${mine} class${mine === 1 ? '' : 'es'} you created ${mine === 1 ? 'is' : 'are'} saved on this ${DEVICE}${App.auth && App.auth.user ? ' and with your account' : ''}.` : `Classes you create from a syllabus are saved on this ${DEVICE}, and with your account when you are signed in.`} <a href="#/create">Create a class</a></p>
-        <p class="small muted">Mathub ${esc(MA.version)} · <a href="#/policy">Terms and privacy</a> · <a href="#/contact">Contact</a></p>
+        <p class="small muted">StudyCat ${esc(MA.version)} · <a href="#/policy">Terms and privacy</a> · <a href="#/contact">Contact</a></p>
       </div></div></div>`;
   }
   function subLine() {

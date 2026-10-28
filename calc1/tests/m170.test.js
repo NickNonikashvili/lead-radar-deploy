@@ -8,7 +8,7 @@ const T = require('./lib');
   const [c, p] = await mk(1360, 900, { serviceWorkers: 'block' });
   await go(p, '#/', 1200);
   await setSettings(p, { asof: '2026-10-08', motion: 'off' }); await p.reload(); await p.waitForTimeout(1500);
-  const card = await p.evaluate(() => [...document.querySelectorAll('.course-card')].some(c => c.classList.contains('m170')));
+  const card = await p.evaluate(() => !!document.querySelector('.dwk[data-c="m170"]'));
   check('the start page lists M 170', card);
 
   await go(p, '#/m170', 2200);

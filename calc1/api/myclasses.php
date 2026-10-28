@@ -1,14 +1,14 @@
 <?php
 /* ============================================================
-   Mathub account server — classes students make, sharing them, and the Pro and Max plans
+   StudyCat account server — classes students make, sharing them, and the Pro and Max plans
    Routes: myclasses, myclass, myclass_save, myclass_delete, myclass_share, myclass_unshare,
            shared_class (public, by share code), create_status, plan_cancel, admin_plan (administrators)
    - A student's own classes (made from a syllabus or a class file) are kept with their account, so they
      open on the website and on every phone they sign in on. The app keeps its own copy in files on the
      device and syncs; the website keeps a copy in the browser.
-   - Share codes: the owner can turn on a link (mathub.space/#/c/CODE) that lets anyone open the class
+   - Share codes: the owner can turn on a link (studycat.org/#/c/CODE) that lets anyone open the class
      and add a copy; turning it off makes the link stop working at once.
-   - The plans: Mathub Pro (classes Bo writes from a syllabus, api/ai.php, and making classes) and Mathub Max
+   - The plans: StudyCat Pro (classes Bo writes from a syllabus, api/ai.php, and making classes) and StudyCat Max
      (Pro, plus Bo the AI tutor). App purchases (App Store, Google Play) and web purchases (RevenueCat web
      checkout) belong to the RevenueCat customer "mh_<user id>", with the entitlements "pro" and "max" (a Max
      product unlocks both). The server asks RevenueCat with the secret key in config.local.php and keeps the
@@ -223,7 +223,7 @@ function mh_myclass_route(string $route, array $in, array $cfg, string $ip): voi
     case 'myclass_save': {
       mh_method('POST'); $u = mh_require_user(); mh_rate_or_fail("myclass_save:{$u['id']}", 120, 3600);
       $cid = mh_myclass_id($in['id'] ?? ''); $pack = $in['pack'] ?? null;
-      if (!is_array($pack) || ($pack['format'] ?? '') !== 'mathub-class-pack' || ($pack['id'] ?? '') !== $cid) mh_fail('That is not a Mathub class.', 400);
+      if (!is_array($pack) || ($pack['format'] ?? '') !== 'mathub-class-pack' || ($pack['id'] ?? '') !== $cid) mh_fail('That is not a StudyCat class.', 400);
       $code = trim((string)($pack['code'] ?? '')); $name = trim((string)($pack['name'] ?? ''));
       if ($code === '' || $name === '' || mb_strlen($code) > 40 || mb_strlen($name) > 200) mh_fail('The class needs a course code and a name.', 400);
       $json = json_encode($pack, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); $bytes = strlen((string)$json);
@@ -332,10 +332,10 @@ function mh_myclass_route(string $route, array $in, array $cfg, string $ip): voi
       }
       $told = false;
       if ($plan !== '' && !empty($in['tell']) && (int)$t['id'] !== (int)$u['id'] && (!$had || $had['plan'] !== $plan || (int)$had['until'] !== $until)) {
-        $name = $plan === 'max' ? 'Mathub Max' : 'Mathub Pro';
+        $name = $plan === 'max' ? 'StudyCat Max' : 'StudyCat Pro';
         $when = $until ? 'It is yours until ' . (new DateTime('@' . $until))->setTimezone(new DateTimeZone(in_array($cfg['timezone'] ?? '', timezone_identifiers_list(), true) ? (string)$cfg['timezone'] : 'America/Denver'))->format('F j, Y') . '.' : 'It has no end date.';
         $db->prepare('INSERT INTO notifications (user_id, kind, post_id, comment_id, actor_id, actor, title, snippet, link, created) VALUES (?, "plan", 0, NULL, ?, ?, ?, ?, "#/plan", ?)')
-          ->execute([$t['id'], $u['id'], mb_substr(mh_display_name($u) ?: 'Mathub', 0, 60), $name, "$when It never charges you. Open Your plan to see what it includes.", $now]);
+          ->execute([$t['id'], $u['id'], mb_substr(mh_display_name($u) ?: 'StudyCat', 0, 60), $name, "$when It never charges you. Open Your plan to see what it includes.", $now]);
         $told = true;
       }
       $row = mh_plan_admin_rows([$t], $cfg)[(int)$t['id']];

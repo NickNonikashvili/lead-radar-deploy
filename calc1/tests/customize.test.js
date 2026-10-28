@@ -5,13 +5,13 @@
    - Class menus: the same for every class's menu, and pages hidden in one class only.
    - Look: accent colour (outside classes, or everywhere), text size, spacing, corners, font, theme, motion and parts
      of the frame hidden.
-   - Start: the page Mathub opens on; a setup downloaded, loaded and reset; all of it synced with the account. */
+   - Start: the page StudyCat opens on; a setup downloaded, loaded and reset; all of it synced with the account. */
 const T = require('./lib');
 (async () => {
   const { mk, go, login, api, check, hscroll, txt, base } = await T.start();
   const [c, p] = await mk(1360, 900, { serviceWorkers: 'block', acceptDownloads: true });
   await go(p, '#/', 900); await login(p, 'alice.a@montana.edu');
-  // start from Mathub as it came, here and on the account (an earlier run may have left a setup behind)
+  // start from StudyCat as it came, here and on the account (an earlier run may have left a setup behind)
   await p.reload(); await p.waitForTimeout(1500);
   await p.evaluate(() => { const D = { modules: { off: [] }, navLayout: {}, classMenu: {}, look: {}, startPage: 'home', customizeTab: 'features', theme: 'system' }; Object.entries(D).forEach(([k, v]) => App.setSetting(k, v)); App.setSetting('courses', ['calc', 'physics']); });
   await p.waitForTimeout(2600); await p.reload(); await p.waitForTimeout(1500); if (await p.$('.celebrate')) await p.keyboard.press('Escape');
@@ -120,7 +120,7 @@ const T = require('./lib');
   await tab('start'); await p.selectOption('#cz-start', 'today'); await p.waitForTimeout(200);
   const [c2, p2] = await mk(1360, 900, { serviceWorkers: 'block', storageState: await c.storageState() });
   await p2.goto(base); await p2.waitForTimeout(1500);
-  check('Mathub opens on the page picked', /#\/today$/.test(p2.url()) && /Today/.test(await txt(p2, '.page-title, h1')), p2.url());
+  check('StudyCat opens on the page picked', /#\/today$/.test(p2.url()) && /Today/.test(await txt(p2, '.page-title, h1')), p2.url());
   await p2.goto(p2.url().replace(/#.*$/, '') + '#/'); await p2.waitForTimeout(900);
   check('and Home is still Home after that', !/#\/today$/.test(p2.url()));
   await c2.close();

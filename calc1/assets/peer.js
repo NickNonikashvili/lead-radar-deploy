@@ -1,5 +1,5 @@
 /* ============================================================
-   Mathub — peer review swaps (api/peer.php). #/<class>/peer lists a student's swaps and lets them offer a draft
+   StudyCat — peer review swaps (api/peer.php). #/<class>/peer lists a student's swaps and lets them offer a draft
    version (#/<class>/peer?review=<id> picks it); #/<class>/peer/<id> is one swap: the classmate's draft on paper,
    comments on passages they select, a note on the whole, and Send (final). What the classmate wrote back shows on the
    student's own review of that version (assets/drafts.js). Report and "never pair us again" end a swap.
@@ -20,7 +20,7 @@
   async function api(route, body) {
     const opts = { method: body ? 'POST' : 'GET', credentials: 'same-origin', headers: { 'X-Requested-With': 'MatHub', 'Accept': 'application/json' }, cache: 'no-store' };
     if (body) { opts.headers['Content-Type'] = 'application/json'; opts.body = JSON.stringify(body); }
-    let res, json; try { res = await fetch(API + route, opts); json = await res.json(); } catch (e) { throw new Error('Mathub cannot be reached right now.'); }
+    let res, json; try { res = await fetch(API + route, opts); json = await res.json(); } catch (e) { throw new Error('StudyCat cannot be reached right now.'); }
     if (!json || json.ok === false) throw Object.assign(new Error((json && json.error) || 'Something went wrong. Please try again.'), { status: res.status, data: json });
     return json;
   }

@@ -3,7 +3,7 @@ const T = require('./lib');
 (async () => {
   const { mk, login, go, log, check, txt } = await T.start({});
   const [c, p] = await mk(1360, 900, { serviceWorkers: 'block' }); await go(p, '#/', 900);
-  check('cards get staggered entrance', (await p.$$('.course-card.mh-enter')).length >= 1, (await p.$$('.course-card.enter')).length);
+  check('the home\'s widgets get a staggered entrance', (await p.$$('#dash-canvas .dw.mh-enter')).length >= 1, (await p.$$('#dash-canvas .dw')).length);
   check('hero panel has --i', await p.$eval('#view .panel.mh-enter', e => e.style.getPropertyValue('--i') !== '').catch(() => false));
   // the start page only draws a class's ring once there is progress in it, so check on a class dashboard (daily goal ring)
   await go(p, '#/calc', 900); check('rings animate', (await p.$$('.ring-fg.ring-anim')).length >= 1); await go(p, '#/', 600);

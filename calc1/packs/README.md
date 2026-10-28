@@ -37,7 +37,7 @@ posts stay in the database, so uploading the class again brings them back.
 
 Every `packs/<id>.mathub.json` file ships in the deploy zip and installs itself: the first
 request after a deploy that the server sees a new file, it checks the pack, installs it,
-publishes it and posts "New class on Mathub" (`mh_packs_seed_bundled` in `api/lib.php`,
+publishes it and posts "New class on StudyCat" (`mh_packs_seed_bundled` in `api/lib.php`,
 `mh_packs_apply_bundled` in `api/packs.php`). In **Admin panel → Classes** it shows as
 uploaded by "bundled with the site". The rules, so the admin panel always wins:
 

@@ -1,5 +1,5 @@
 /* ============================================================
-   Mathub — Talk with Bo (assets/talk.js): a voice call with Bo, the AI tutor, on the website.
+   StudyCat — Talk with Bo (assets/talk.js): a voice call with Bo, the AI tutor, on the website.
    The student talks; Bo listens, thinks, answers out loud and writes the math on a whiteboard.
    - Hearing: the browser's own speech recognition (Chrome, Edge, Safari), with live captions. Where there is
      none (Firefox) and the server has speech switched on, a short recording is turned into text by the
@@ -35,7 +35,7 @@
   const RATES = [0.9, 1, 1.15, 1.3];
 
   /* ---------- what Bo says out loud: his words without the board, notes, markdown or LaTeX ---------- */
-  const say = w => ' ' + (App.t ? App.t(w) : w) + ' ';   // math read out in the language Mathub is in (i18n/<lang>.tsv)
+  const say = w => ' ' + (App.t ? App.t(w) : w) + ' ';   // math read out in the language StudyCat is in (i18n/<lang>.tsv)
   const FN = { sin: 'sine', cos: 'cosine', tan: 'tangent', sec: 'secant', csc: 'cosecant', cot: 'cotangent', ln: 'natural log of', log: 'log of', arcsin: 'arc sine', arccos: 'arc cosine', arctan: 'arc tangent' };
   let MATHS = null; const MATH = () => MATHS || (MATHS = [
     [/\\left|\\right|\\,|\\;|\\!|\\quad/g, ' '], [/\\lim_\{([^{}]+)\}/g, say('the limit as $1 of')], [/\\d?frac\{([^{}]+)\}\{([^{}]+)\}/g, say('$1 over $2')], [/\\sqrt\{([^{}]+)\}/g, say('the square root of $1')],
@@ -122,7 +122,7 @@
   }
 
   /* ---------- the voices this device has: the most natural-sounding English one first ---------- */
-  const deviceVoices = () => (synth ? synth.getVoices().filter(v => String(v.lang || '').toLowerCase().replace('_', '-').split('-')[0] === (SPEECH[App.lang] ? App.lang : 'en')) : []);   // voices in the language Mathub is in
+  const deviceVoices = () => (synth ? synth.getVoices().filter(v => String(v.lang || '').toLowerCase().replace('_', '-').split('-')[0] === (SPEECH[App.lang] ? App.lang : 'en')) : []);   // voices in the language StudyCat is in
   const NOVELTY = /(albert|bad news|bahh|bells|boing|bubbles|cellos|deranged|good news|hysterical|jester|organ|superstar|trinoids|whisper|wobble|zarvox|junior|ralph|kathy|princess|fred)/i;
   function bestVoice() {
     const vs = deviceVoices(); if (!vs.length) return null;
@@ -565,7 +565,7 @@
   const noPlan = x => { if (x.status !== 402) return false; ended(x.message, true); return true; };
   function showType(on) { if (!T.el) return; const f = $('#bt-type', T.el); f.hidden = !on; T.el.classList.toggle('typing', !!on); const b = $('[data-t="type"]', T.el); if (b) b.setAttribute('aria-expanded', String(on)); if (on) setTimeout(() => { const q = $('#bt-q', T.el); if (q) q.focus(); }, 30); }
   function micTrouble(code) {
-    const msg = code === 'not-allowed' || code === 'service-not-allowed' ? 'Mathub can’t use your microphone. Allow it from the icon in the address bar, then call again. You can also type to Bo.'
+    const msg = code === 'not-allowed' || code === 'service-not-allowed' ? 'StudyCat can’t use your microphone. Allow it from the icon in the address bar, then call again. You can also type to Bo.'
       : code === 'audio-capture' ? 'No microphone was found. Plug one in, or type to Bo.' : code === 'network' ? 'Speech recognition needs the internet. Check your connection and try again.' : /^Bo |^Slow|month|long one/.test(code) ? code : 'Bo couldn’t hear that. Tap him to try again, or type.';
     if (T.mode === 'live') { failed(msg, false); showType(true); return; }
     who('muted'); paintStatus(msg); if (code === 'not-allowed' || code === 'service-not-allowed' || code === 'audio-capture') showType(true);
@@ -582,7 +582,7 @@
     if (!T.el) return; const ex = $('#bt-extra', T.el);
     const live = T.mode === 'live';
     const where = live ? 'Your voice goes straight to OpenAI, whose real-time voice model Bo talks with, together with what Bo knows about your class and how you’re doing, and pictures of the board. Nothing is recorded.'
-      : (SR ? 'Your browser turns what you say into text (Chrome uses Google’s speech service, Edge Microsoft’s, Safari Apple’s).' : canHear() ? 'What you say is recorded only while Bo listens, written down by OpenAI through Mathub’s server, and not kept.' : 'This browser can’t listen, so you type and Bo talks.') + (naturalOn() ? ' Bo’s voice is made by OpenAI from his written answer.' : '');
+      : (SR ? 'Your browser turns what you say into text (Chrome uses Google’s speech service, Edge Microsoft’s, Safari Apple’s).' : canHear() ? 'What you say is recorded only while Bo listens, written down by OpenAI through StudyCat’s server, and not kept.' : 'This browser can’t listen, so you type and Bo talks.') + (naturalOn() ? ' Bo’s voice is made by OpenAI from his written answer.' : '');
     ex.innerHTML = `<section class="bt-hello" aria-labelledby="bt-hello-h"><h3 id="bt-hello-h">${live ? 'It’s a real call' : 'Talk with Bo out loud'}</h3>
       ${T.focus === 'exam' ? examCard(false) : ''}${ch() ? `<p class="bt-char-line">You’re talking with <b>${esc(ch().name)}</b> · <button type="button" class="linkbtn" data-t="settings">Change</button></p>` : ''}
       <p>${live ? 'Just talk. Bo answers right away, waits until you’re done, and you can cut in whenever you want, like with a friend. Mute pauses your mic.' : 'Ask anything and Bo answers out loud, writing the math on the board. Tap Bo to send what you said, or to cut in.'}</p>

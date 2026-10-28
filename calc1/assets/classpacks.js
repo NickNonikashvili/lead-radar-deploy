@@ -1,5 +1,5 @@
 /* ============================================================
-   Mathub — class packs
+   StudyCat — class packs
    A class pack is one JSON file that holds a whole class: the syllabus
    facts, calendar, exams, grading, topic notes, formulas, flashcards,
    practice sets and a question bank. The admin uploads it in the admin
@@ -108,6 +108,7 @@
       for (const k of Object.keys(v)) {
         if (BAD_KEYS.has(k)) continue;
         if (calcQ && EXPR_KEYS.has(k)) { o[k] = rawCopy(v[k]); continue; }   // expressions are compiled, never shown; their results are cleaned when filled in
+        if (k === 'figure') { o[k] = rawCopy(v[k]); continue; }   // a lesson's picture is a drawing spec: App.boDraw reads it as data and escapes every label
         o[k] = clean(v[k], k, { res: ctx.res || k === 'resources', quiz: ctx.quiz || k === 'QUIZ' });
       }
       return o;
@@ -408,7 +409,7 @@
     if (raw.NOTEBOOK !== undefined && !P.NOTEBOOK) E('"NOTEBOOK" needs a "count" of entries.');
     if (P.NOTEBOOK) P.NOTEBOOK.entries.forEach(e => { if (e.n > P.NOTEBOOK.count) W(`Notebook entry ${e.n} is past its count (${P.NOTEBOOK.count}).`); if (e.reflect && !draftIds.has(e.reflect)) W(`Notebook entry ${e.n} reflects on "${e.reflect}", which is not a project.`); });
     (raw.NAV || []).forEach(g => (g.items || []).forEach(it => { if (Array.isArray(it) && !PACK_VIEWS.includes(it[0])) W(`NAV item "${it[0]}" is not available to uploaded classes and is left out.`); }));
-    (raw.resources || []).forEach((r, i) => { if (!r.t || !r.u) E(`resources[${i}] needs a title (t) and a link (u).`); else if (!safeUrl(r.u)) W(`resources[${i}] link is not http, https or a Mathub path, so it is left out.`); });
+    (raw.resources || []).forEach((r, i) => { if (!r.t || !r.u) E(`resources[${i}] needs a title (t) and a link (u).`); else if (!safeUrl(r.u)) W(`resources[${i}] link is not http, https or a StudyCat path, so it is left out.`); });
     const stats = { sections: P.SECTIONS.length, units: P.UNITS.length, exams: P.EXAMS.length, calendar: P.CALENDAR.length, flashcards: P.FLASHCARDS.length, formulas: P.FORMULAS.reduce((n, g) => n + ((g.items || []).length), 0), practice: Object.values(P.PRACTICE).reduce((n, v) => n + ((v && v.problems) || []).length, 0), topics: 0, questions: 0, bankItems: 0 };
     if (!raw.QUIZ) W('No "QUIZ": the class gets no quizzer or daily challenge.');
     else {
@@ -491,7 +492,7 @@
     R.GROUPS = R.GROUPS.filter(g => g.id !== id); R.ITEMS = R.ITEMS.filter(x => x.g !== id);
     const at = R.GROUPS.findIndex(g => g.id === 'wellbeing');
     R.GROUPS.splice(at < 0 ? R.GROUPS.length : at, 0, { id, title: `${S.name} · ${S.code}`, blurb: S.resourcesBlurb || `Links for ${S.code}: the class site, free readings and practice.` });
-    if (S.hasQuiz) R.ITEMS.push({ g: id, t: `Mathub ${S.code} quizzer`, u: `#/${id}/practice`, d: 'Questions on every topic, with explanations.', k: 'tool', tags: ['mathub', 'practice'], top: true });
+    if (S.hasQuiz) R.ITEMS.push({ g: id, t: `StudyCat ${S.code} quizzer`, u: `#/${id}/practice`, d: 'Questions on every topic, with explanations.', k: 'tool', tags: ['mathub', 'practice'], top: true });
     (S.resources || []).forEach(r => { if (r && r.t && r.u) R.ITEMS.push({ g: id, t: String(r.t), u: r.u, d: String(r.d || ''), k: R.KINDS && R.KINDS[r.k] ? r.k : 'reference', tags: Array.isArray(r.tags) ? r.tags.map(String).slice(0, 6) : [], top: !!r.top }); });
   }
   function addGuides(id, ids) { (global.MATHUB_GUIDES || []).forEach(g => { if (Array.isArray(g.for)) { const i = g.for.indexOf(id); if (i >= 0) g.for.splice(i, 1); if ((ids || []).includes(g.id)) g.for.push(id); } }); }
@@ -503,7 +504,7 @@
     if (App.D === C && C.loaded) { if (!replaceOpen) return false; App.forgetCourse(); }   // the open class keeps its copy, unless the page has only just loaded
     Object.keys(C).forEach(k => delete C[k]);
     const N = normalize(S); STUB_KEYS.forEach(k => { if (N[k] !== undefined) C[k] = N[k]; });
-    Object.assign(C, { id, pack: true, packVersion: Number(raw.version) || 1, hidden: !!raw.hidden, preview: !!raw.preview, stub: true, loaded: false, files: [], archetype: archOf(S.archetype), packFile: typeof raw.file === 'string' && FILE_RE.test(raw.file) ? raw.file : '' });
+    Object.assign(C, { id, pack: true, packVersion: Number(raw.version) || 1, hidden: !!raw.hidden, preview: !!raw.preview, community: !!raw.community, stub: true, loaded: false, files: [], archetype: archOf(S.archetype), packFile: typeof raw.file === 'string' && FILE_RE.test(raw.file) ? raw.file : '' });
     /* a class its teaching team built in #/teach opens for them as a preview, but stays out of every class list */
     const at = App.COURSE_ORDER.indexOf(id); if (C.preview) { if (at >= 0) App.COURSE_ORDER.splice(at, 1); } else if (at < 0) App.COURSE_ORDER.push(id);
     styleFor(id, raw.color); addResources(id, S); addGuides(id, raw.guides); if (App.addArchetype) App.addArchetype(id, C.archetype);
@@ -536,7 +537,7 @@
     }
     return install(id, data);
   }
-  const sig = list => (list || []).map(p => `${p.id}:${p.version}:${p.hidden ? 1 : 0}${p.preview ? 1 : 0}`).sort().join('|');
+  const sig = list => (list || []).map(p => `${p.id}:${p.version}:${p.hidden ? 1 : 0}${p.preview ? 1 : 0}${p.community ? 1 : 0}`).sort().join('|');
   let lastSig = '';
   /* fetch the list of packs, register new and changed ones, drop removed ones; re-render when the page on screen depends on it */
   async function sync() {

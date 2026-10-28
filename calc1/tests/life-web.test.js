@@ -10,7 +10,7 @@
    - Timetable: meeting times read from each syllabus, a week grid, overlaps side by side, a calendar file
    - Calendar: a month with exams, the day from the sidebar's calendar, a week and a list
    - Time tracker, Projects & thesis, Habits, Goals, Wheel of life, Journal, Money, Internships & jobs, Portfolio
-   - the start page: Your day (schedule, due this week, clock, pomodoro, to-dos, events, habits, goals,
+   - the start page: Your home's planner widgets (schedule, due this week, clock, pomodoro, to-dos, events, habits, goals,
      wheel, this week), Customize, class cards with their numbers
    - the account: the planner follows it to another browser, merges record by record, leaves on log out
    - phones: the drawer, nothing wider than the screen
@@ -194,13 +194,13 @@ const T = require('./lib');
 
   /* ---------- the start page ---------- */
   await hop(p, '#/', 1200);
-  const first = await p.$$eval('#dash-grid > .dw', cs => cs.map(c => c.dataset.w));
-  check('Your day starts with three cards: today, what is due and the week', first.join(',') === 'schedule,due,week', first);
-  await p.evaluate(() => App.setSetting('homeHide', [])); await hop(p, '#/today', 300); await hop(p, '#/', 1200);
-  const dash = await p.evaluate(() => ({ cards: [...document.querySelectorAll('#dash-grid > .dw')].map(c => c.dataset.w), due: document.querySelector('.dwc-due').textContent.replace(/\s+/g, ' '), sched: document.querySelectorAll('.dw-sched li').length, todo: /Buy a blue book/.test(document.querySelector('.dwc-todos').textContent), ev: /Study group/.test(document.querySelector('.dwc-events').textContent), habit: document.querySelectorAll('.dw-habit').length, goal: /50%/.test(document.querySelector('.dwc-goals').textContent), wheel: !!document.querySelector('.dwc-wheel svg.radar'), week: document.querySelectorAll('.dw-day').length, cardLines: [...document.querySelectorAll('.course-card')].map(c => c.querySelectorAll('.course-meta, .cc-stats').length) }));
-  check('Customize can show all ten cards', dash.cards.join(',') === 'schedule,due,clock,pomo,todos,events,habits,goals,wheel,week', dash.cards);
+  const first = await p.$$eval('#dash-canvas > .dw', cs => cs.map(c => c.dataset.w));
+  check('Your home starts with the planner\'s schedule, what is due and the week among its widgets', ['schedule', 'due', 'week'].every(w => first.includes(w)), first);
+  await p.evaluate(() => App.setSetting('homeLayout', { v: 1, note: '', items: ['schedule', 'due', 'clock', 'pomo', 'todos', 'events', 'habits', 'goals', 'wheel', 'week'].map((id, i) => ({ id, x: (i % 2) * 6, y: Math.floor(i / 2) * 11, w: 6, h: 11, z: i + 1 })) })); await hop(p, '#/today', 300); await hop(p, '#/', 1200);
+  const dash = await p.evaluate(() => ({ cards: [...document.querySelectorAll('#dash-canvas > .dw')].map(c => c.dataset.w), due: document.querySelector('.dwc-due').textContent.replace(/\s+/g, ' '), sched: document.querySelectorAll('.dw-sched li').length, todo: /Buy a blue book/.test(document.querySelector('.dwc-todos').textContent), ev: /Study group/.test(document.querySelector('.dwc-events').textContent), habit: document.querySelectorAll('.dw-habit').length, goal: /50%/.test(document.querySelector('.dwc-goals').textContent), wheel: !!document.querySelector('.dwc-wheel svg.radar'), week: document.querySelectorAll('.dw-day').length, cardLines: [...document.querySelectorAll('.course-card')].map(c => c.querySelectorAll('.course-meta, .cc-stats').length) }));
+  check('all ten planner widgets can be on the home', dash.cards.join(',') === 'schedule,due,clock,pomo,todos,events,habits,goals,wheel,week', dash.cards);
   check('due this week, today\'s schedule, to-dos, events, habits, goals, the wheel and the week are filled from the planner', /Problem set 7/.test(dash.due) && dash.sched >= 1 && dash.todo && dash.ev && dash.habit === 1 && dash.goal && dash.wheel && dash.week === 7, dash);
-  check('class cards are short: no numbers or meta blocks (they are on the class page)', dash.cardLines.length >= 1 && dash.cardLines.every(n => n === 0), dash.cardLines);
+  check('the home has no learning path', !(await p.$('#view .ap-li, #view .ah-pathsec')));
   await p.click('.dwc-pomo [data-dw="mode"][data-m="long"]'); await p.waitForTimeout(200);
   check('the pomodoro has a long break, and the sidebar\'s timer follows', (await txt(p, '#dw-pomo-time')) === '15:00' && (await txt(p, '#pomo-time')) === '15:00' && /Long break/.test(await txt(p, '#pomo-mode')));
   await p.click('.dwc-pomo [data-dw="pomo"]'); await p.waitForTimeout(2200);
@@ -208,8 +208,9 @@ const T = require('./lib');
   await p.click('.dwc-pomo [data-dw="reset"]');
   await p.fill('.dwc-todos input[name="title"]', 'Print the lab'); await p.keyboard.press('Enter'); await p.waitForTimeout(400);
   check('a to-do added on the start page', /Print the lab/.test(await txt(p, '.dwc-todos')) && await p.evaluate(() => document.activeElement && document.activeElement.closest('.dwc-todos') !== null));
-  await p.click('[data-dw="custom"]'); await p.waitForTimeout(300); await p.uncheck('.lf-modal input[name="wheel"]'); await p.click('.lf-modal button[type="submit"]'); await p.waitForTimeout(300);
-  check('Customize hides a card and remembers it', !(await p.$('.dwc-wheel')) && await p.evaluate(() => (App.settings().homeHide || []).includes('wheel')));
+  await p.click('[data-dw="arrange"]'); await p.waitForTimeout(200); await p.click('.dwc-wheel [data-dwe="remove"]'); await p.waitForTimeout(300); await p.click('[data-dw="arrange"]'); await p.waitForTimeout(200);
+  check('Arrange removes a widget and remembers it', !(await p.$('.dwc-wheel')) && await p.evaluate(() => !App.dash.layout().items.some(i => i.id === 'wheel')));
+  await p.evaluate(() => App.setSetting('homeLayout', null));
   const heroCtl = await p.evaluate(() => [...document.querySelectorAll('.landing-top .hero-actions > *')].map(e => e.className));
   check('the hero keeps Today and For professors; search, sounds, theme and the account are in the header', heroCtl.length === 2 && /hero-today/.test(heroCtl[0]) && /hero-faculty/.test(heroCtl[1]) && !!(await p.$('#topbar .amb-top')) && !!(await p.$('#topbar .theme-btn')), heroCtl);
   await c1.close();

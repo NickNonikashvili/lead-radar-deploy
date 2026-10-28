@@ -1,5 +1,5 @@
 /* ============================================================
-   Mathub — Office files in the browser (App.Office). Zip and unzip (a .docx, .pptx, .xlsx or .odt is a zip of XML),
+   StudyCat — Office files in the browser (App.Office). Zip and unzip (a .docx, .pptx, .xlsx or .odt is a zip of XML),
    the text of a .docx, .odt or PDF, the text of each slide of a .pptx or page of a PDF, and a simple .docx written
    from paragraphs. Used by draft feedback (assets/drafts.js), the writer's notebook (assets/notebook.js), the
    instructor's assignment sheets (assets/instruct.js) and notes from slides (assets/learn.js). PDFs are read with pdf.js
@@ -169,7 +169,7 @@
   async function slideText(f) {
     const ext = (f.name.split('.').pop() || '').toLowerCase();
     if (f.size > 60 * 1024 * 1024) throw new Error('That file is too big. Save the slides as a PDF without the pictures, or split the lecture.');
-    if (!['pptx', 'pdf'].includes(ext) && f.type !== 'application/pdf') throw new Error('Mathub reads slides as .pptx or .pdf. From Google Slides or Keynote, download them as PowerPoint or PDF.');
+    if (!['pptx', 'pdf'].includes(ext) && f.type !== 'application/pdf') throw new Error('StudyCat reads slides as .pptx or .pdf. From Google Slides or Keynote, download them as PowerPoint or PDF.');
     const buf = await f.arrayBuffer();
     try { return ext === 'pptx' ? await pptxSlides(buf) : await pdfPages(buf); }
     catch (e) {
@@ -199,7 +199,7 @@
       if (m === 'scanned') throw new Error('That PDF has no text to read (it may be a scan). Copy the text from the original document and paste it here.');
       throw new Error('That file could not be read. Copy the text from it and paste it here.');
     }
-    throw new Error('Mathub reads .docx, .pdf, .odt and .txt files. For a Google Doc, use File › Download › Microsoft Word, or copy the text and paste it here.');
+    throw new Error('StudyCat reads .docx, .pdf, .odt and .txt files. For a Google Doc, use File › Download › Microsoft Word, or copy the text and paste it here.');
   }
 
   /* ---------- writing a .docx from blocks: [{ style: 'title' | 'h1' | 'h2' | 'p' | 'note' | 'pagebreak', text, runs: [{ t, b, i }] }] ---------- */
@@ -222,7 +222,7 @@
       { name: 'word/styles.xml', data: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:styles ${W}><w:docDefaults><w:rPrDefault><w:rPr><w:rFonts w:ascii="${font}" w:hAnsi="${font}" w:eastAsia="${font}" w:cs="${font}"/><w:sz w:val="${half}"/><w:szCs w:val="${half}"/><w:lang w:val="en-US"/></w:rPr></w:rPrDefault><w:pPrDefault><w:pPr><w:spacing w:after="160" w:line="${line}" w:lineRule="auto"/></w:pPr></w:pPrDefault></w:docDefaults><w:style w:type="paragraph" w:default="1" w:styleId="Normal"><w:name w:val="Normal"/><w:qFormat/></w:style>${[['Title', 'Title', 0, half + 12], ['Heading1', 'heading 1', 360, half + 6], ['Heading2', 'heading 2', 240, half + 2]].map(head).join('')}<w:style w:type="paragraph" w:styleId="Note"><w:name w:val="Note"/><w:basedOn w:val="Normal"/><w:rPr><w:i/><w:color w:val="595959"/></w:rPr></w:style></w:styles>` },
       { name: 'word/document.xml', data: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document ${W}><w:body>${body}<w:sectPr><w:pgSz w:w="12240" w:h="15840"/><w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440" w:header="720" w:footer="720" w:gutter="0"/></w:sectPr></w:body></w:document>` },
       { name: 'docProps/core.xml', data: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:dcterms="http://purl.org/dc/terms/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"><dc:title>${X(opts.title || '')}</dc:title><dc:creator>${X(opts.author || '')}</dc:creator><dcterms:created xsi:type="dcterms:W3CDTF">${new Date().toISOString().replace(/\.\d+Z$/, 'Z')}</dcterms:created></cp:coreProperties>` },
-      { name: 'docProps/app.xml', data: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Properties xmlns="http://schemas.openxmlformats.org/officeDocument/2006/extended-properties"><Application>Mathub</Application></Properties>' }
+      { name: 'docProps/app.xml', data: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Properties xmlns="http://schemas.openxmlformats.org/officeDocument/2006/extended-properties"><Application>StudyCat</Application></Properties>' }
     ];
     return zip(files);
   }
@@ -232,7 +232,7 @@
     const a = document.createElement('a'); a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
     setTimeout(() => URL.revokeObjectURL(url), 4000);
   }
-  const safeName = s => String(s || 'Mathub').replace(/[\\/:*?"<>|\u0000-\u001F]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 80) || 'Mathub';
+  const safeName = s => String(s || 'StudyCat').replace(/[\\/:*?"<>|\u0000-\u001F]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 80) || 'StudyCat';
 
   App.Office = { crc32, zip, entries, read, readText, docxText, odtText, pdfText, pdfPages, pptxSlides, slideText, fileText, docx, download, safeName, DOCX: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' };
 })(window);

@@ -1,4 +1,4 @@
-/* EMEC 100 question bank: [prompt, correct, [wrong answers], explanation, hint?]. Written for Mathub from the
+/* EMEC 100 question bank: [prompt, correct, [wrong answers], explanation, hint?]. Written for StudyCat from the
    course objectives and standard intro-engineering material; not from the instructor. */
 const bank = (topic, items, extra = {}) => Object.assign({ type: 'bank', topic, items, options: 4 }, extra);
 

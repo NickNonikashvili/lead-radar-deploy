@@ -1,6 +1,6 @@
 <?php
 /* ============================================================
-   Mathub account server — pictures Bo makes for his board (assets/board-draw-more.js, the "image" drawing)
+   StudyCat account server — pictures Bo makes for his board (assets/board-draw-more.js, the "image" drawing)
    - ai_image {prompt, style, shape, cid}: OpenAI's image model (ai_image_model, gpt-image-2; gpt-image-1 if the
      account cannot use it) draws it, with what Bo knows about the student and the class (api/students.php) so it
      fits them. It is kept in api/data/ai-img/ under a name made from what was asked, so the same picture is never
@@ -57,7 +57,7 @@ function mh_img_route(string $route, array $in, array $cfg): void {
       // what Bo knows about them and the class, so the picture fits (api/students.php)
       $cid = is_string($in['cid'] ?? null) && preg_match('/^[a-z0-9][a-z0-9_-]{0,40}$/', $in['cid']) ? $in['cid'] : '';
       $who = ''; try { require_once __DIR__ . '/students.php'; $who = mh_student_image_context($u, $cid, $cfg); } catch (Throwable $e) {}
-      $full = 'For a university student\'s study board on Mathub (Montana State University)' . ($who !== '' ? ": $who" : '') . ".\n" . MH_IMG_STYLE[$style] . ($ln !== '' ? "\nAny words or labels in the picture are in $ln; math notation stays as it is." : '') . "\n\nThe picture: " . $prompt;
+      $full = 'For a university student\'s study board on StudyCat (Montana State University)' . ($who !== '' ? ": $who" : '') . ".\n" . MH_IMG_STYLE[$style] . ($ln !== '' ? "\nAny words or labels in the picture are in $ln; math notation stays as it is." : '') . "\n\nThe picture: " . $prompt;
       @set_time_limit(190); @ignore_user_abort(true);   // kept even if they leave: next time it is there
       [$code, $bin, $why] = mh_img_make($I, $I['model'], $full, $size);
       if ($code >= 400 && $code < 500 && $code !== 429 && $I['model'] !== 'gpt-image-1' && !preg_match('/safety|moderation|policy/i', $why)) { error_log('mathub image: ' . $I['model'] . ' refused (' . $code . ' ' . substr($why, 0, 120) . '), using gpt-image-1'); [$code, $bin, $why] = mh_img_make($I, 'gpt-image-1', $full, $size); }

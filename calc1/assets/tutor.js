@@ -1,7 +1,7 @@
 /* ============================================================
-   Mathub — Ask Bo (#/tutor, #/tutor/<class>): talk with Bo, an AI tutor who knows the class from its
-   syllabus and how the student's studying is going. Part of Mathub Max. Website and apps.
-   - Bo answers through Mathub's server (api/ai.php), which holds the AI key, keeps each request small
+   StudyCat — Ask Bo (#/tutor, #/tutor/<class>): talk with Bo, an AI tutor who knows the class from its
+   syllabus and how the student's studying is going. Part of StudyCat Max. Website and apps.
+   - Bo answers through StudyCat's server (api/ai.php), which holds the AI key, keeps each request small
      (a compact class summary, a short progress snapshot, the last few turns, Bo's notes) and uses the
      smallest model that does the job. The chat and Bo's notes are kept with the account.
    - The progress snapshot is made here, from what this device knows: readiness for the next exam,
@@ -403,7 +403,7 @@
       st.exam = false; return;
     }
     if (!settings().aiConsent) { main.innerHTML = consent(); wireGate(main, () => start(main, query)); return; }
-    if (!st.cid) { main.innerHTML = gate('Pick a class first', 'Bo helps with a class you take. Choose your classes, or request one Mathub does not have yet.', `<a class="btn primary" href="#/">Your classes</a><a class="btn" href="#/request">Request a class</a>`); return; }
+    if (!st.cid) { main.innerHTML = gate('Pick a class first', 'Bo helps with a class you take. Choose your classes, or request one StudyCat does not have yet.', `<a class="btn primary" href="#/">Your classes</a><a class="btn" href="#/request">Request a class</a>`); return; }
     main.onclick = null; chat(main, query);
   }
   const gate = (h, p, acts) => `<section class="bo-gate"><span class="bo-gate-av" aria-hidden="true">${bo(96)}</span><h2>${h}</h2><p>${p}</p>${acts ? `<div class="bo-gate-acts">${acts}</div>` : ''}</section>`;
@@ -431,7 +431,7 @@
   function consent() {
     return `<section class="bo-gate bo-consent" aria-labelledby="bo-consent-h"><span class="bo-gate-av" aria-hidden="true">${bo(80)}</span><h2 id="bo-consent-h">Before you start</h2>
       <p>To answer you, Bo sends what you ask (and any photo or PDF you add, and, when you ask him from a page, what is on that page), a summary of your class's syllabus and a short summary of your progress (your scores by topic, questions you missed, flashcards due and your exam dates) to <b>Anthropic</b>, the company that makes the Claude AI Bo runs on. Anthropic uses it only to write Bo's answer and does not train its AI on it.</p>
-      <p>Your chat with Bo and the notes he keeps about how you like to learn are saved with your Mathub account, so they are on all your devices. You can see and delete them any time under “What Bo knows”. <a href="#/policy/privacy">Privacy Policy</a></p>
+      <p>Your chat with Bo and the notes he keeps about how you like to learn are saved with your StudyCat account, so they are on all your devices. You can see and delete them any time under “What Bo knows”. <a href="#/policy/privacy">Privacy Policy</a></p>
       <div class="bo-gate-acts"><button type="button" class="btn primary lg" data-go="agree">I agree, let's start</button><button type="button" class="btn ghost" data-go="later">Not now</button></div></section>`;
   }
 
@@ -527,14 +527,14 @@
       const pg = e.target.closest('[data-bo-page]'); if (pg && board) { boardPaint(board, pages, +pg.dataset.boPage, false); fold(false); board.classList.remove('bb-flash'); void board.offsetWidth; board.classList.add('bb-flash'); if (board.getBoundingClientRect().bottom < 60) board.scrollIntoView({ block: 'nearest' }); return; }
       const rd = e.target.closest('[data-bo-read]'); if (rd) { App.boTalk.read(msg.dataset.src || text, rd, st.status); return; }
       if (e.target.closest('[data-bo-copy]')) { try { await (NATIVE ? N.copy(text) : navigator.clipboard.writeText(text)); toast('Copied.'); } catch (x) { toast('Copying is not available here.'); } return; }
-      // not right: the answer goes to Mathub's Bo quality review at once; what was wrong can follow
+      // not right: the answer goes to StudyCat's Bo quality review at once; what was wrong can follow
       const bad = e.target.closest('[data-bo-bad]');
       if (bad && msg.dataset.at) {
         if (bad.getAttribute('aria-pressed') === 'true') return;
         bad.setAttribute('aria-pressed', 'true'); const src = msg.dataset.src || '';
         try { await api('ai_flag', { class: id, at: +msg.dataset.at, text: src.slice(0, 60) }); } catch (x) { bad.setAttribute('aria-pressed', 'false'); toast(x.message); return; }
         const box = document.createElement('form'); box.className = 'bo-bad';
-        box.innerHTML = `<p>${icon('check', 14)} Thanks. Mathub’s team will look at this answer. What was wrong? <span class="muted">(optional)</span></p><div class="bo-bad-row"><label class="sr-only" for="bo-bad-${msg.dataset.at}">What was wrong</label><input class="input sm" id="bo-bad-${msg.dataset.at}" maxlength="500" placeholder="A wrong step, a wrong answer, not what I asked…"><button type="submit" class="btn sm">Send</button></div><button type="button" class="linkbtn small" data-bo-report>Something inappropriate? Report it</button>`;
+        box.innerHTML = `<p>${icon('check', 14)} Thanks. StudyCat’s team will look at this answer. What was wrong? <span class="muted">(optional)</span></p><div class="bo-bad-row"><label class="sr-only" for="bo-bad-${msg.dataset.at}">What was wrong</label><input class="input sm" id="bo-bad-${msg.dataset.at}" maxlength="500" placeholder="A wrong step, a wrong answer, not what I asked…"><button type="submit" class="btn sm">Send</button></div><button type="button" class="linkbtn small" data-bo-report>Something inappropriate? Report it</button>`;
         $('.bo-bubble', msg).appendChild(box); $('input', box).focus();
         box.addEventListener('submit', async ev => { ev.preventDefault(); const why = $('input', box).value.trim(); if (!why) { box.remove(); return; } try { await api('ai_flag', { class: id, at: +msg.dataset.at, text: src.slice(0, 60), why }); box.innerHTML = `<p>${icon('check', 14)} Got it. Thank you.</p>`; setTimeout(() => box.remove(), 2400); } catch (x) { toast(x.message); } });
         return;
@@ -640,7 +640,7 @@
     el.innerHTML = `<div class="${NATIVE ? 'sheet' : 'modal'} pw bo-knows" role="dialog" aria-modal="true" aria-labelledby="bo-knows-h">${NATIVE ? '<div class="sheet-grab" aria-hidden="true"></div>' : ''}
       <div class="sheet-h"><h2 id="bo-knows-h">What Bo knows</h2><button class="icon-btn" data-action="close" aria-label="Close">${icon('x', 18)}</button></div>
       <div class="bo-k-body">${knowsHtml(id)}</div>
-      <p class="small muted">Your chat and these notes are saved with your Mathub account. Questions go to Anthropic's AI to be answered; see the <a href="#/policy/privacy">Privacy Policy</a>.</p></div>`;
+      <p class="small muted">Your chat and these notes are saved with your StudyCat account. Questions go to Anthropic's AI to be answered; see the <a href="#/policy/privacy">Privacy Policy</a>.</p></div>`;
     document.body.appendChild(el); requestAnimationFrame(() => el.classList.add('open'));
     const close = () => { document.removeEventListener('keydown', onKey); el.classList.remove('open'); setTimeout(() => el.remove(), 200); };
     const onKey = e => { if (e.key === 'Escape') close(); }; document.addEventListener('keydown', onKey);

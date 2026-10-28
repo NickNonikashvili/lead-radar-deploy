@@ -1,5 +1,5 @@
 /* PSCI 230D: topic notes, key terms, flashcards, practice sets and checklists.
-   Written for Mathub from standard introductory IR material and the readings on the syllabus.
+   Written for StudyCat from standard introductory IR material and the readings on the syllabus.
    The instructor's lectures and Mingst decide what the exams ask. */
 const EIR = 'https://www.e-ir.info/publication/beginners-textbook-international-relations/';
 const EIRT = 'https://www.e-ir.info/publication/international-relations-theory/';

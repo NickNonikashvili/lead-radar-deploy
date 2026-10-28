@@ -13,8 +13,8 @@ const T = require('./lib');
   const [c, p] = await mk(); await go(p, '#/'); await p.waitForTimeout(600);
   check('class order lists the new classes', await p.evaluate(() => ['biob', 'kin', 'psyx'].every(id => window.Courses[id] && window.Courses[id].stub)));
   await setSettings(p, { courses: ['calc', 'biob', 'kin', 'psyx'], motion: 'off' }); await p.reload(); await p.waitForTimeout(700);
-  const cards = await p.$$eval('.course-grid .course-card', cs => cs.map(x => x.textContent.replace(/\s+/g, ' ').trim().slice(0, 40)));
-  check('start page shows the new class cards', ['BIOB 160', 'KIN 322', 'PSYX 340'].every(code => cards.some(t => t.includes(code))), cards);
+  const cards = await p.$$eval('.dw[data-w="classes"] .dwk', cs => cs.map(x => x.textContent.replace(/\s+/g, ' ').trim().slice(0, 40)));
+  check('Your home lists the new classes', ['BIOB 160', 'KIN 322', 'PSYX 340'].every(code => cards.some(t => t.includes(code))), cards);
   await login(p, 'alice.a@montana.edu'); await p.reload(); await p.waitForTimeout(1000); await p.evaluate(() => document.querySelectorAll('.celebrate').forEach(e => e.remove()));   // grade calculators and full sheets are for members
 
   for (const id of IDS) {

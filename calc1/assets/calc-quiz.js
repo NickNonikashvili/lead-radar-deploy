@@ -1,5 +1,5 @@
 /* ============================================================
-   Mathub — Calculus I procedural question generators
+   StudyCat — Calculus I procedural question generators
    Every generator returns:
    { topic, type:'mc'|'num', prompt, options?, answer, answerTex?, explanation, hint? }
    For 'mc', answer is the index of the correct option.

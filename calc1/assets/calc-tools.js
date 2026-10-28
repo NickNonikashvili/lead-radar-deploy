@@ -1,5 +1,5 @@
 /* ============================================================
-   Mathub — Calculus I tools: grapher and labs
+   StudyCat — Calculus I tools: grapher and labs
    ============================================================ */
 (function (global) {
   'use strict';

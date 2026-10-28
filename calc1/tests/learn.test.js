@@ -72,7 +72,7 @@ const PDF = pdf([[[72, 700, 'Photosynthesis'], [72, 680, 'Light makes sugar.']],
   check('a .pptx is read in the presentation’s order, each slide’s text with its speaker notes (the slide number left out)', JSON.stringify(slides) === JSON.stringify([{ n: 1, text: 'Cell respiration\nMakes ATP from glucose.' }, { n: 2, text: 'Glycolysis\nGlucose is split into two pyruvate.\nNotes: Remember: net 2 ATP.' }]), slides);
   const pages = await a.evaluate(async b => App.Office.slideText(new File([new Uint8Array(b)], 'Lecture 8.pdf', { type: 'application/pdf' })), [...PDF]);
   check('a PDF of slides, page by page', JSON.stringify(pages) === JSON.stringify([{ n: 1, text: 'Photosynthesis\nLight makes sugar.' }, { n: 2, text: 'Chlorophyll\nAbsorbs red and blue.' }]), pages);
-  check('other files are refused with what to do', /Mathub reads slides as \.pptx or \.pdf/.test(await a.evaluate(async () => { try { await App.Office.slideText(new File(['x'], 'notes.key')); return ''; } catch (e) { return e.message; } })));
+  check('other files are refused with what to do', /StudyCat reads slides as \.pptx or \.pdf/.test(await a.evaluate(async () => { try { await App.Office.slideText(new File(['x'], 'notes.key')); return ''; } catch (e) { return e.message; } })));
   check('slides with no text: refused', (await api(a, 'learn_slides', { class: 'calc', slides: [{ n: 1, text: '   ' }] })).status === 400);
   check('too much text for one set: refused (413)', (await api(a, 'learn_slides', { class: 'calc', slides: [{ n: 1, text: 'word '.repeat(1200) }, ...Array.from({ length: 15 }, (_, i) => ({ n: i + 2, text: 'word '.repeat(1199) }))] })).status === 413);
   r = await api(a, 'learn_slides', { class: 'calc', source: 'Lecture 7.pptx', slides });

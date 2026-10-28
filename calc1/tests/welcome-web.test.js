@@ -1,6 +1,6 @@
 /* ============================================================
    The welcome after sign-up (assets/welcome.js, api welcome_done):
-   - a new account gets it right after verifying its email: a walk through Mathub (with Back, Skip the tour,
+   - a new account gets it right after verifying its email: a walk through StudyCat (with Back, Skip the tour,
      the keyboard), then the classes it takes (at least one) and a membership (Free, Pro or Max; Pro and Max
      open the checkout, and closing it leaves you on Free), then You're all set
    - until those choices are made it comes back at every visit; once made, never again, and the old tour
@@ -31,7 +31,7 @@ const row = email => JSON.parse(spawnSync('php', ['-r', '$d = new PDO("sqlite:" 
   check('a new account is not welcomed yet', v.ok && v.user.welcomed === false, v.user);
   await p.reload(); await p.waitForTimeout(1500);
   const dlg = await p.evaluate(() => { const w = document.querySelector('#welcome'); return w && { role: w.getAttribute('role'), modal: w.getAttribute('aria-modal'), step: w.dataset.step, h: w.querySelector('h1').textContent, focus: document.activeElement && document.activeElement.id, skip: !w.querySelector('.wl-skip').hidden, tour: !!document.querySelector('.tour') }; });
-  check('the welcome opens: a dialog that greets them by name, with the heading focused', dlg && dlg.role === 'dialog' && dlg.modal === 'true' && dlg.step === 'hello' && /Welcome to Mathub, Riley!/.test(dlg.h) && dlg.focus === 'wl-h' && dlg.skip && !dlg.tour, dlg);
+  check('the welcome opens: a dialog that greets them by name, with the heading focused', dlg && dlg.role === 'dialog' && dlg.modal === 'true' && dlg.step === 'hello' && /Welcome to StudyCat, Riley!/.test(dlg.h) && dlg.focus === 'wl-h' && dlg.skip && !dlg.tour, dlg);
   await next(p);
   check('Next walks on: every class is a climb', (await step(p)) === 'climb' && /Every class is a climb/.test(await txt(p, '#wl-h')));
   check('the trail at the top follows', (await p.$eval('#welcome', e => getComputedStyle(e).getPropertyValue('--s').trim())) === '1');
@@ -64,7 +64,7 @@ const row = email => JSON.parse(spawnSync('php', ['-r', '$d = new PDO("sqlite:" 
   await p.click('.wl-plan[data-p="max"]');
   check('picking Max offers its checkout', (await p.$eval('.wl-plan[data-p="max"]', b => b.getAttribute('aria-checked'))) === 'true' && /Get Max · \$20 a month/.test(await txt(p, '#welcome .wl-next')));
   await next(p); await p.waitForTimeout(900);
-  check('which opens the Max checkout card on top', /Mathub Max/.test(await txt(p, '#paywall h2')) && (await step(p)) === 'plan');
+  check('which opens the Max checkout card on top', /StudyCat Max/.test(await txt(p, '#paywall h2')) && (await step(p)) === 'plan');
   await p.keyboard.press('Escape'); await p.waitForTimeout(700);
   check('closing it leaves them on Free, and says so', !(await p.$('#paywall')) && /on Free for now/.test(await txt(p, '#wl-plan-note')) && /Start with Free/.test(await txt(p, '#welcome .wl-next')));
   await next(p); await p.waitForTimeout(900);

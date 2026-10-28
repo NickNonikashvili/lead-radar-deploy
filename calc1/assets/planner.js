@@ -1,5 +1,5 @@
 /* ============================================================
-   Mathub — Study planner
+   StudyCat — Study planner
    Pick an exam and the days you can study; the planner spreads the
    exam's topics, flashcard decks, practice sets and a final review
    across those days as a checklist. Saved per class and synced.

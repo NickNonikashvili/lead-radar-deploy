@@ -1,5 +1,5 @@
 /* ============================================================
-   Mathub — the math check (App.mathCheck): exact arithmetic so Bo never agrees with something wrong.
+   StudyCat — the math check (App.mathCheck): exact arithmetic so Bo never agrees with something wrong.
    - claims(text, ctx): what is wrong in something said or written, in plain math, LaTeX or spoken words
      ("eleven minus three is six", "x = 11 - 3 so x = 6", "2x + 3 = 11 so x = 6"); with ctx (equations from
      the problem being worked, a question just asked) it also checks a bare answer ("x = 6", "6").

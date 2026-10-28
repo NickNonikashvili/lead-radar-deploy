@@ -1,5 +1,5 @@
 /* ============================================================
-   Mathub — learning tools with Bo (api/learn.php). Two pages in a class:
+   StudyCat — learning tools with Bo (api/learn.php). Two pages in a class:
    - #/<class>/checkwork: a photo of handwritten work on one problem. Bo writes the lines down as they were written,
      the math check finds the first one that does not follow, and Bo says why with a hint, never the finished answer.
    - #/<class>/slides: lecture slides (.pptx or PDF, read in the browser) become study notes and flashcards, kept with
@@ -21,7 +21,7 @@
   async function api(route, body) {
     const opts = { method: body ? 'POST' : 'GET', credentials: 'same-origin', headers: { 'X-Requested-With': 'MatHub', 'Accept': 'application/json' }, cache: 'no-store' };
     if (body) { opts.headers['Content-Type'] = 'application/json'; opts.body = JSON.stringify(body); }
-    let res, json; try { res = await fetch(API + route, opts); json = await res.json(); } catch (e) { throw new Error('Mathub cannot be reached right now.'); }
+    let res, json; try { res = await fetch(API + route, opts); json = await res.json(); } catch (e) { throw new Error('StudyCat cannot be reached right now.'); }
     if (!json || json.ok === false) throw Object.assign(new Error((json && json.error) || 'Something went wrong. Please try again.'), { status: res.status, data: json });
     return json;
   }

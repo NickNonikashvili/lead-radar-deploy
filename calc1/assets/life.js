@@ -1,5 +1,5 @@
 /* ============================================================
-   Mathub — your own planner: the store, sync and quick add
+   StudyCat — your own planner: the store, sync and quick add
    Everything a student keeps for themselves outside a class's own
    pages: tasks and assignments, to-dos, events and reminders, the
    timetable, habits, goals, the wheel of life, the journal, money,
@@ -94,7 +94,7 @@
     setCfg(k, v) { Life.setRec('cfg', { [k]: v }); },
     onChange(fn) { listeners.push(fn); },
     uid, merge,
-    exportJSON() { return JSON.stringify({ app: 'Mathub planner', exported: new Date().toISOString(), life: S.doc }, null, 2); },
+    exportJSON() { return JSON.stringify({ app: 'StudyCat planner', exported: new Date().toISOString(), life: S.doc }, null, 2); },
     importJSON(txt) { const o = JSON.parse(txt); const doc = o && o.life && typeof o.life === 'object' ? o.life : o; if (!isObj(doc)) throw new Error('Not a planner file'); S.doc = merge(S.doc, doc); save('*'); },
     size() { try { return JSON.stringify(S.doc).length; } catch (e) { return 0; } },
     state: () => ({ owner: S.owner, dirty: S.dirty, synced: S.synced })
@@ -317,7 +317,7 @@
   };
   document.addEventListener('keydown', e => { if (e.key && e.key.toLowerCase() === 'n' && e.altKey && !e.ctrlKey && !e.metaKey) { e.preventDefault(); App.quickAdd('task'); } });   // Alt+N: quick add
 
-  /* ---------- reminders: a nudge when an event's reminder time comes while Mathub is open ---------- */
+  /* ---------- reminders: a nudge when an event's reminder time comes while StudyCat is open ---------- */
   function notified() { try { return JSON.parse(localStorage.getItem(NOTIFIED) || '{}'); } catch (e) { return {}; } }
   function tickReminders() {
     const n = Date.now(); const seen = notified(); let dirty = false;
@@ -326,7 +326,7 @@
       if (n >= at && n - at < 3 * 3600000 && !seen[k]) {
         seen[k] = n; dirty = true; const when = ev.time ? fmtTime(ev.time) : relDay(ev.date); const msg = `${ev.title} · ${when}`;
         toast(`<b>${icon('alarm', 14)}</b> ${esc(msg)}`, 6000);
-        try { if (global.Notification && Notification.permission === 'granted') new Notification('Mathub', { body: msg, icon: 'assets/icon-192.png', tag: k }); } catch (e) {}
+        try { if (global.Notification && Notification.permission === 'granted') new Notification('StudyCat', { body: msg, icon: 'assets/icon-192.png', tag: k }); } catch (e) {}
       }
     });
     if (dirty) { const keep = {}; Object.keys(seen).forEach(k => { if (n - seen[k] < 7 * 86400000) keep[k] = seen[k]; }); try { localStorage.setItem(NOTIFIED, JSON.stringify(keep)); } catch (e) {} }

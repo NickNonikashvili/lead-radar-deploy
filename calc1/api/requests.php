@@ -1,22 +1,15 @@
 <?php
 /* ============================================================
-   Mathub account server — class requests
-   Classes are added by Mathub's team: any signed-in member asks for a class
-   Mathub does not have yet, with its syllabus (a PDF, a Word file or a photo,
-   up to 10 MB) or its text. Each file is checked for malware before it is
-   kept (mh_cc_scan in api/community.php: what it really is, active content in
-   a PDF, macros and embedded objects in a Word file, ClamAV when the server has
-   it, VirusTotal by fingerprint when it is set up); what was checked is kept
-   with the request for the admin panel. Files go to data/syllabi, which the web
-   cannot read; only administrators can see them: a preview in the admin panel
-   (admin_classreq_preview, and admin_classreq_file for the file itself), and
-   from there Bo builds the class from it (api/ai.php ai_class with request)
-   and it is published for everyone. Requests for the same course code are
-   grouped, so the admin panel shows demand, and a status change (working on
-   it, added, can't add) reaches everyone who asked, in their inbox.
-   Routes: classreq_create, classreq_mine, classreq_top, classreq_withdraw,
-           admin_classreqs, admin_classreq_update, admin_classreq_file,
-           admin_classreq_preview, admin_classreq_delete
+   StudyCat account server — class requests (retired) and inbox notes
+   Request a class is retired (2026.10.28.2): every student makes their own classes in the class maker
+   (assets/maker.js), from their syllabus with Bo or from scratch, so its routes (classreq_*, admin_classreq*)
+   are no longer served. What stays here is shared:
+     * mh_req_notify, the inbox note other parts of the server send (instructor access, credits, teaching teams);
+     * mh_req_admin_users, the administrators to tell;
+     * the requests already made and their syllabus files (data/syllabi, which the web cannot read), kept as they
+       were, and the demand helpers the admin panel's Add a class tab still reads (how many asked for a code).
+   Earlier: any signed-in member asked for a class with its syllabus (a PDF, a Word file or a photo, up to 10 MB),
+   checked for malware before it was kept (mh_cc_scan in api/community.php), and administrators built it with Bo.
    ============================================================ */
 declare(strict_types=1);
 
@@ -91,7 +84,7 @@ function mh_req_public(array $r): array {
 }
 function mh_req_notify(int $uid, array $actor, string $kind, string $title, string $snippet, string $link): void {
   mh_db()->prepare('INSERT INTO notifications (user_id, kind, post_id, comment_id, actor_id, actor, title, snippet, link, created) VALUES (?, ?, 0, NULL, ?, ?, ?, ?, ?, ?)')
-    ->execute([$uid, $kind, (int)($actor['id'] ?? 0), mb_substr(mh_display_name($actor) ?: 'Mathub', 0, 60), mb_substr($title, 0, 120), mb_substr($snippet, 0, 300), mb_substr($link, 0, 200), time()]);
+    ->execute([$uid, $kind, (int)($actor['id'] ?? 0), mb_substr(mh_display_name($actor) ?: 'StudyCat', 0, 60), mb_substr($title, 0, 120), mb_substr($snippet, 0, 300), mb_substr($link, 0, 200), time()]);
 }
 /** The administrators' user rows (from the admins list in config). */
 function mh_req_admin_users(): array {
@@ -106,9 +99,9 @@ function mh_req_set_status(string $code, string $status, string $note = '', stri
   $changed = 0;
   foreach ($rows as $r) {
     if ($r['status'] === $status && $r['admin_note'] === $note) continue; $changed++;
-    $msg = ['new' => "$code is back in the queue.", 'working' => "We are building $code now.", 'added' => "$code is on Mathub. Open it and add it to your classes.", 'declined' => "We can't add $code right now."][$status] . ($note !== '' ? " $note" : '');
-    mh_req_notify((int)$r['user_id'], ['id' => (int)mh_system_user()['id'], 'name' => 'Mathub'], 'classreq', $code, $msg, $status === 'added' ? "#/$courseId" : '#/request');
-    if ($status === 'added') { try { require_once __DIR__ . '/push.php'; mh_push_queue((int)$r['user_id'], "$code is on Mathub", 'The class you asked for is ready: notes, practice and the calendar.', "#/$courseId", 'classreq'); } catch (Throwable $e) {} }
+    $msg = ['new' => "$code is back in the queue.", 'working' => "We are building $code now.", 'added' => "$code is on StudyCat. Open it and add it to your classes.", 'declined' => "We can't add $code right now."][$status] . ($note !== '' ? " $note" : '');
+    mh_req_notify((int)$r['user_id'], ['id' => (int)mh_system_user()['id'], 'name' => 'StudyCat'], 'classreq', $code, $msg, $status === 'added' ? "#/$courseId" : '#/request');
+    if ($status === 'added') { try { require_once __DIR__ . '/push.php'; mh_push_queue((int)$r['user_id'], "$code is on StudyCat", 'The class you asked for is ready: notes, practice and the calendar.', "#/$courseId", 'classreq'); } catch (Throwable $e) {} }
   }
   return $changed;
 }
@@ -200,7 +193,7 @@ function mh_requests_route(string $route, array $in, array $cfg, string $ip): vo
       $code = mh_req_code(mh_str($in, 'code', 20)); if (!$code) mh_fail('Unknown course code.');
       $status = (string)($in['status'] ?? ''); if (!in_array($status, MH_REQ_STATUSES, true)) mh_fail('Unknown status.');
       $note = mh_str($in, 'note', 400); $courseId = preg_replace('/[^a-z0-9]/', '', strtolower((string)($in['course_id'] ?? '')));
-      if ($status === 'added' && $courseId === '') mh_fail('Give the class id on Mathub (for example chmy) so students can open it.');
+      if ($status === 'added' && $courseId === '') mh_fail('Give the class id on StudyCat (for example chmy) so students can open it.');
       $changed = mh_req_set_status($code, $status, $note, $courseId); if ($changed < 0) mh_fail('No requests for that class.', 404);
       mh_json(['ok' => true, 'notified' => $changed]);
     }

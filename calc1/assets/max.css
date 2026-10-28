@@ -1,7 +1,7 @@
 /* ============================================================
-   Mathub — Max, shown (#/max, assets/max.js)
+   StudyCat — Max, shown (#/max, assets/max.js)
    One page, read in seconds: a big line, the demo playing beside it, three steps, four things you get,
-   the same button again. Bright paper, Mathub's blue and sun, Bo; no gradients, no cards in cards.
+   the same button again. Bright paper, StudyCat's blue and sun, Bo; no gradients, no cards in cards.
    ============================================================ */
 .mx { max-width: 1240px; margin: 0 auto; padding: 28px 24px 64px; color: var(--ink); }
 .mx h1, .mx-h2 { font-family: var(--font-display); letter-spacing: -.02em; }

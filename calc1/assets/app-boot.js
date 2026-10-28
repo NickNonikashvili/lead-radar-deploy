@@ -1,21 +1,21 @@
 /* ============================================================
-   Mathub app — the bridge to the phone (loaded only in the iOS and Android apps, right after boot.js)
+   StudyCat app — the bridge to the phone (loaded only in the iOS and Android apps, right after boot.js)
    The app ships the whole site inside it and runs offline. This file:
    - marks the page as the app (<html data-app="ios" or "android">, window.MATHUB_APP)
-   - sends the site's account calls (api/index.php) to https://mathub.space; Capacitor's
+   - sends the site's account calls (api/index.php) to https://studycat.org; Capacitor's
      native HTTP carries them, so the session cookie lives in the app, not in a browser
    - points the Python playground at the copy of Pyodide inside the app (no code is downloaded)
    - opens links to other sites in an in-app Safari sheet instead of replacing the app
    - window.Native: haptics, clipboard, share sheet, files in the app's own folder,
      local notifications, the status bar; each falls back to the web version off the phone
-   Nothing here runs on mathub.space: the website's index.html never loads it.
+   Nothing here runs on studycat.org: the website's index.html never loads it.
    ============================================================ */
 (function () {
   'use strict';
   var C = window.Capacitor;
   var native = !!(C && typeof C.isNativePlatform === 'function' && C.isNativePlatform());
   var platform = native && C.getPlatform ? C.getPlatform() : 'web';
-  var API_BASE = 'https://mathub.space/';
+  var API_BASE = 'https://studycat.org/';
   var html = document.documentElement;
   window.MATHUB_APP = { native: native, platform: platform, api: API_BASE, version: html.getAttribute('data-app-version') || '1.0' };
   html.setAttribute('data-app', platform);

@@ -1,5 +1,5 @@
 /* ============================================================
-   Mathub — Bo's characters (App.boChars): who Bo is when he tutors you, picked by each student.
+   StudyCat — Bo's characters (App.boChars): who Bo is when he tutors you, picked by each student.
    Professor Bo (the default) is an 80-year-old Harvard professor: exacting, dry and hard to impress.
    Each character has his own manner (the words he is told are in api/ai.php, mh_ai_character), his own voice and
    pace on calls (unless the student picked a voice or a speed), and his own look: Bo the bobcat with glasses and a

@@ -1,5 +1,5 @@
 /* ============================================================
-   Mathub Faculty (#/teach), and the class pages for students (#/class, #/syllabus)
+   StudyCat Faculty (#/teach), and the class pages for students (#/class, #/syllabus)
    The faculty workspace is a surface of its own: a navy rail, a white top
    bar, Source Serif 4 for titles and the syllabus itself, Source Sans 3 for
    the interface, and none of the student site's chrome (no mascot, XP,
@@ -7,7 +7,7 @@
    one page per part of the syllabus with the finished document beside it,
    updating as you type; a checklist of what students look for; print / PDF;
    and publishing to the students who join with the class code. Around it:
-   roster, announcements (inbox + push), practice assignments from Mathub's
+   roster, announcements (inbox + push), practice assignments from StudyCat's
    question banks, attendance check-in and insights.
      #/teach                    your syllabi (signed out: what the workspace is)
      #/teach/new                start a syllabus
@@ -80,9 +80,9 @@
       ${sec('materials', 'Materials', (s.materials || []).filter(m => m.title || m.url).length ? `<ul>${s.materials.filter(m => m.title || m.url).map(m => `<li>${m.url ? `<a href="${esc(m.url)}" target="_blank" rel="noopener">${esc(m.title || m.url)}</a>` : `<b>${esc(m.title)}</b>`} <span class="sy-muted">(${m.required ? 'required' : 'optional'})</span>${m.note ? ` · ${esc(m.note)}` : ''}</li>`).join('')}</ul>` : '', 'The textbook, software and anything else students need.')}
       ${sec('grading', 'Grading', cats.length ? `<table class="sy-table"><thead><tr><th>Category</th><th class="num">Share</th></tr></thead><tbody>${cats.map(x => `<tr><td>${esc(x.name)}${x.note ? ` <span class="sy-muted">${esc(x.note)}</span>` : ''}</td><td class="num">${esc(pct(x.weight))}%</td></tr>`).join('')}</tbody></table>${scale.length ? `<p><b>Letter grades:</b> ${scale.map(x => `${esc(x.letter)} ≥ ${esc(pct(x.min))}%`).join(', ')}</p>` : ''}${paras((s.grading || {}).notes)}` : '', 'How the course grade is made up.')}
       ${sec('exams', 'Exams', exams.length ? `<ul>${exams.map(e => `<li><b>${esc(e.name)}:</b> ${e.date ? esc(fmt(e.date)) + (e.time ? ', ' + esc(fmtTime(e.time)) : '') + (e.place ? ', ' + esc(e.place) : '') : 'date to be announced'}${e.covers ? `<br><span class="sy-muted">${esc(e.covers)}</span>` : ''}</li>`).join('')}</ul>` : '', 'Exams and their dates.')}
-      ${sec('schedule', 'Schedule', rows.length ? `<table class="sy-table sy-sched"><thead><tr><th>Date</th><th>What</th></tr></thead><tbody>${rows.map(r => `<tr class="sy-${esc(r.type)}"><td class="sy-date">${esc(fmt(r.date))}</td><td><b>${esc(TYPE[r.type] || 'Class')}${r.title ? ':' : ''}</b> ${esc(r.title)}${r.notes ? `<br><span class="sy-muted">${esc(r.notes).replace(/\n/g, '<br>')}</span>` : ''}</td></tr>`).join('')}</tbody></table><p class="sy-muted">The schedule may change; changes are announced in class and on Mathub.</p>` : '', 'The class meetings, day by day.')}
+      ${sec('schedule', 'Schedule', rows.length ? `<table class="sy-table sy-sched"><thead><tr><th>Date</th><th>What</th></tr></thead><tbody>${rows.map(r => `<tr class="sy-${esc(r.type)}"><td class="sy-date">${esc(fmt(r.date))}</td><td><b>${esc(TYPE[r.type] || 'Class')}${r.title ? ':' : ''}</b> ${esc(r.title)}${r.notes ? `<br><span class="sy-muted">${esc(r.notes).replace(/\n/g, '<br>')}</span>` : ''}</td></tr>`).join('')}</tbody></table><p class="sy-muted">The schedule may change; changes are announced in class and on StudyCat.</p>` : '', 'The class meetings, day by day.')}
       ${sec('policies', 'Policies', [['Attendance', p.attendance], ['Late work', p.late], ['AI tools', p.aiText], ['Academic integrity', p.integrity], ['Accommodations', p.accommodations], ['Wellbeing and support', p.wellbeing], ['Communication', p.communication]].concat((p.other || []).map(x => [x.title || 'Policy', x.text])).filter(x => x[1]).map(([t, x]) => `<h3>${esc(t)}</h3>${paras(x)}`).join(''), 'Attendance, late work, AI tools and the statements students need.')}
-      <footer class="sy-foot">Made with Mathub · mathub.space</footer>
+      <footer class="sy-foot">Made with StudyCat · studycat.org</footer>
     </article>`;
   }
   function printDoc(html, title) {
@@ -129,20 +129,20 @@
     const u = user(); const de = document.documentElement; const dark = de.getAttribute('data-theme') === 'dark' || (!de.getAttribute('data-theme') && matchMedia('(prefers-color-scheme: dark)').matches);
     root.innerHTML = `<div class="fx tex2jax_ignore mathjax_ignore${o.norail ? ' norail' : ''}" id="fx">
       <nav class="fx-rail" id="fx-rail" aria-label="Faculty workspace">
-        <a class="fx-brand" href="#/teach"><span class="fx-brand-name">Mathub</span><span class="fx-brand-sub">Faculty</span></a>
+        <a class="fx-brand" href="#/teach"><span class="fx-brand-name">StudyCat</span><span class="fx-brand-sub">Faculty</span></a>
         <div class="fx-rail-body">${o.rail || ''}</div>
         <div class="fx-rail-foot"><a class="fx-nav" href="#/">${icon('left', 16)}<span>Student site</span></a><button type="button" class="fx-nav" data-action="fx-theme"><span class="theme-btn fx-theme-ic" aria-hidden="true">${icon(dark ? 'sun' : 'moon', 16)}</span><span>Light or dark</span></button></div>
       </nav>
       <div class="fx-col">
         <header class="fx-top"><button type="button" class="fx-iconbtn fx-menu" data-action="fx-menu" aria-label="Menu" aria-controls="fx-rail" aria-expanded="false">${icon('menu', 18)}</button>
-          <a class="fx-top-brand" href="#/teach"><span class="fx-brand-name">Mathub</span><span class="fx-brand-sub">Faculty</span></a>
+          <a class="fx-top-brand" href="#/teach"><span class="fx-brand-name">StudyCat</span><span class="fx-brand-sub">Faculty</span></a>
           <div class="fx-crumbs">${o.crumbs || ''}</div>
           <div class="fx-top-actions">${o.actions || ''}${u ? `<a class="fx-who" href="#/settings" title="${esc(u.email)}: account settings"><span class="fx-avatar" aria-hidden="true">${esc(initials(u.name || u.email))}</span><span class="fx-who-name">${esc(u.name || u.email)}</span></a>` : `<button type="button" class="fx-btn sm" data-action="auth-login">Sign in</button>`}</div></header>
         <div class="fx-page" id="tc-body">${o.body || ''}</div>
       </div>
       <div class="fx-scrim" data-action="fx-menu" hidden></div>
     </div>`;
-    if (o.title) document.title = `${o.title} · Mathub Faculty`;
+    if (o.title) document.title = `${o.title} · StudyCat Faculty`;
     const fx = $('#fx', root);
     bind(fx, Object.assign({ 'fx-theme': () => App.toggleTheme(), 'fx-menu': () => { const open = !fx.classList.contains('rail-open'); fx.classList.toggle('rail-open', open); $('.fx-scrim', fx).hidden = !open; $('.fx-menu', fx).setAttribute('aria-expanded', String(open)); if (open) { const a = $('.fx-rail .fx-nav', fx); if (a) a.focus(); } } }, o.on || {}));
     if (App.auth) App.auth.bindLocks(fx);
@@ -172,7 +172,7 @@
      #/teach
      ============================================================ */
   App.views.teach = {
-    title: 'Mathub Faculty',
+    title: 'StudyCat Faculty',
     render(root, param) {
       document.documentElement.dataset.surface = 'faculty';
       const parts = String(param || '').split('/').filter(Boolean); const id = parseInt(parts[0], 10);
@@ -193,7 +193,7 @@
     frame(root, { norail: true, crumbs: `<a class="fx-crumb-exit" href="#/">${icon('left', 14)} Student site</a>`, title: 'Write your syllabus', body: `<div class="fx-intro">
       <div class="fx-intro-copy">
         <h1 class="fx-display">Write the syllabus once. Run the class from it.</h1>
-        <p class="fx-lede lg">A syllabus editor for Montana State instructors. The finished page sits beside the form and updates as you type; print it, save it as a PDF, or publish it to your students on Mathub.</p>
+        <p class="fx-lede lg">A syllabus editor for Montana State instructors. The finished page sits beside the form and updates as you type; print it, save it as a PDF, or publish it to your students on StudyCat.</p>
         <div class="fx-actions"><button type="button" class="fx-btn primary lg" data-action="auth-login">Sign in with montana.edu</button><button type="button" class="fx-btn lg" data-action="auth-signup">Create an account</button></div>
         <p class="fx-help">Free. Writing, printing and PDFs work as soon as you sign in. Publishing to students needs your faculty status confirmed, usually within a day.</p>
         <p class="fx-help"><a href="#/instructors">What Bo does in your class, and what you control</a></p>
@@ -219,7 +219,7 @@
   }
   function statusNote(me) {
     if (me.instructor) return '';
-    if (me.request && me.request.status === 'new') return `<div class="fx-note">${icon('clock', 15)}<div><p><b>Your faculty status is being checked</b> (asked ${esc(ago(me.request.created))}). Keep writing; you can publish once an administrator confirms it. You will get a message in your Mathub inbox.</p></div></div>`;
+    if (me.request && me.request.status === 'new') return `<div class="fx-note">${icon('clock', 15)}<div><p><b>Your faculty status is being checked</b> (asked ${esc(ago(me.request.created))}). Keep writing; you can publish once an administrator confirms it. You will get a message in your StudyCat inbox.</p></div></div>`;
     return `<div class="fx-note">${icon('shield', 15)}<div><p>Write, preview, print and save syllabi as PDFs now. <b>To publish to your students</b>, confirm that you teach at Montana State.</p><a class="fx-btn sm" href="#/teach/verify">Confirm faculty status</a></div></div>`;
   }
 
@@ -236,7 +236,7 @@
         <div class="fx-field"><label class="fx-label" for="tn-section">Section</label><input class="fx-input" id="tn-section" maxlength="20" placeholder="003"></div>
         <div class="fx-field"><label class="fx-label" for="tn-term">Term</label><select class="fx-input fx-select" id="tn-term">${Object.keys(TERMS).map((t, i) => `<option${i === 0 ? ' selected' : ''}>${t}</option>`).join('')}</select></div>
         <div class="fx-field span2"><label class="fx-label" for="tn-from">Start from</label><select class="fx-input fx-select" id="tn-from"><option value="blank">The Montana State template</option>${mine.map(c => `<option value="copy:${c.id}">A copy of ${esc(c.code)} ${esc(c.title)}${c.term ? ' (' + esc(c.term) + ')' : ''}</option>`).join('')}</select><span class="fx-help">A copy keeps your policies, grading and materials; dates start empty.</span></div>
-        <div class="fx-field"><label class="fx-label" for="tn-link">Practice questions</label><select class="fx-input fx-select" id="tn-link"><option value="">None</option>${qc.map(id => `<option value="${id}">${esc(global.Courses[id].code || global.Courses[id].short)} on Mathub</option>`).join('')}</select><span class="fx-help">For practice assignments.</span></div>
+        <div class="fx-field"><label class="fx-label" for="tn-link">Practice questions</label><select class="fx-input fx-select" id="tn-link"><option value="">None</option>${qc.map(id => `<option value="${id}">${esc(global.Courses[id].code || global.Courses[id].short)} on StudyCat</option>`).join('')}</select><span class="fx-help">For practice assignments.</span></div>
       </div><div class="fx-actions"><button class="fx-btn primary" type="submit">Create syllabus</button><a class="fx-btn quiet" href="#/teach">Cancel</a><span class="fx-msg" id="tn-status" role="status"></span></div></form></div>`;
     const f = $('#tc-new', root); const code = $('#tn-code', f), link = $('#tn-link', f);
     code.addEventListener('input', () => { const b = code.value.toUpperCase().replace(/[^A-Z0-9]/g, ''); const hit = qc.find(id => String(global.Courses[id].code || '').toUpperCase().replace(/[^A-Z0-9]/g, '').replace(/[A-Z]+$/, '') === b.replace(/[A-Z]+$/, '')); if (hit && !link.dataset.touched) link.value = hit; });
@@ -250,10 +250,10 @@
     frame(root, { rail: homeRail('verify'), crumbs: '<a href="#/teach">Your syllabi</a><span class="fx-sep" aria-hidden="true">/</span><span aria-current="page">Faculty status</span>', body: '<div class="fx-wait">Loading…</div>', title: 'Faculty status' });
     let me; try { me = ME = await api('teach_me'); } catch (e) { if (root.isConnected) $('#tc-body', root).innerHTML = `<div class="fx-narrow"><p class="fx-error">${esc(e.message)}</p></div>`; return; }
     if (!root.isConnected) return; const rail = $('.fx-rail-body', root); if (rail) rail.innerHTML = homeRail('verify');
-    const head = `<header class="fx-head"><h1 class="fx-h1">Faculty status</h1><p class="fx-lede">Students trust that a class on Mathub comes from their instructor, so an administrator checks each instructor by hand before a class can reach students.</p></header>`;
+    const head = `<header class="fx-head"><h1 class="fx-h1">Faculty status</h1><p class="fx-lede">Students trust that a class on StudyCat comes from their instructor, so an administrator checks each instructor by hand before a class can reach students.</p></header>`;
     const body = $('#tc-body', root);
     if (me.instructor) { body.innerHTML = `<div class="fx-narrow">${head}<div class="fx-note good">${icon('check', 15)}<div><p><b>Confirmed.</b> You can publish syllabi, and use the roster, announcements, assignments, attendance and insights for your classes.</p><a class="fx-btn sm" href="#/teach">Your syllabi</a></div></div></div>`; return; }
-    if (me.request && me.request.status === 'new') { body.innerHTML = `<div class="fx-narrow">${head}<div class="fx-note">${icon('clock', 15)}<div><p><b>Being checked</b>, asked ${esc(ago(me.request.created))}. You will get a message in your Mathub inbox. Meanwhile, everything except publishing works.</p><a class="fx-btn sm" href="#/teach">Keep writing</a></div></div></div>`; return; }
+    if (me.request && me.request.status === 'new') { body.innerHTML = `<div class="fx-narrow">${head}<div class="fx-note">${icon('clock', 15)}<div><p><b>Being checked</b>, asked ${esc(ago(me.request.created))}. You will get a message in your StudyCat inbox. Meanwhile, everything except publishing works.</p><a class="fx-btn sm" href="#/teach">Keep writing</a></div></div></div>`; return; }
     body.innerHTML = `<div class="fx-narrow">${head}<form class="fx-panel" id="tc-req" novalidate>${me.request && me.request.status === 'declined' ? '<p class="fx-help">An earlier request was not approved. If that was a mistake, send a new one with a little more detail.</p>' : ''}
       <div class="fx-grid g2"><div class="fx-field"><label class="fx-label" for="tr-name">Your name, as students know it <span class="fx-req">required</span></label><input class="fx-input" id="tr-name" maxlength="80" value="${esc(user().name || '')}" placeholder="Dr. Jane Smith" required></div>
       <div class="fx-field"><label class="fx-label" for="tr-title">Title</label><input class="fx-input" id="tr-title" maxlength="80" placeholder="Assistant Professor, Lecturer, GTA…"></div>
@@ -263,7 +263,7 @@
       <p class="fx-help">You are signed in as <b>${esc(user().email)}</b>${/student\./i.test(user().email) ? '. That looks like a student address; instructors usually use their faculty address.' : '.'}</p>
       <div class="fx-actions"><button class="fx-btn primary" type="submit">Send for confirmation</button><span class="fx-msg" id="tr-status" role="status"></span></div></form></div>`;
     const f = $('#tc-req', body); f.addEventListener('submit', async e => { e.preventDefault(); const st = $('#tr-status', f); st.textContent = 'Sending…'; st.className = 'fx-msg';
-      try { await api('teach_request', { name: $('#tr-name', f).value, title: $('#tr-title', f).value, department: $('#tr-dept', f).value, courses: $('#tr-courses', f).value, message: $('#tr-msg', f).value }); toast('Sent. You will hear back in your Mathub inbox.'); verifyPage(root); } catch (err) { st.textContent = err.message; st.className = 'fx-msg bad'; } });
+      try { await api('teach_request', { name: $('#tr-name', f).value, title: $('#tr-title', f).value, department: $('#tr-dept', f).value, courses: $('#tr-courses', f).value, message: $('#tr-msg', f).value }); toast('Sent. You will hear back in your StudyCat inbox.'); verifyPage(root); } catch (err) { st.textContent = err.message; st.className = 'fx-msg bad'; } });
   }
 
   /* ---------- one class ---------- */
@@ -321,7 +321,7 @@
     if (errs.length) { modal(`<h2 class="fx-dlg-h">${errs.length} thing${errs.length === 1 ? '' : 's'} to fix first</h2><ul class="fx-lint">${errs.map(x => `<li class="fx-l-error">${icon('x', 13)}<span>${esc(x[1])} <a href="#/teach/${S.id}/${esc(x[2] || 'overview')}" data-close>Fix it</a></span></li>`).join('')}</ul><div class="fx-dlg-actions"><button class="fx-btn primary" data-close>OK</button></div>`, { cls: 'fx-dlg', label: 'Fix before publishing' }); return; }
     const first = S.cls.status !== 'published';
     const m = modal(`<h2 class="fx-dlg-h">${first ? 'Publish to your students' : 'Publish the changes'}</h2>
-      <p>${first ? `Students who join with the code <b class="mono">${esc(S.cls.join_code)}</b> get this class on Mathub: the calendar, exam countdowns, your grading weights, the syllabus and a class board.` : 'Everyone in the class gets the updated syllabus and calendar right away.'}</p>
+      <p>${first ? `Students who join with the code <b class="mono">${esc(S.cls.join_code)}</b> get this class on StudyCat: the calendar, exam countdowns, your grading weights, the syllabus and a class board.` : 'Everyone in the class gets the updated syllabus and calendar right away.'}</p>
       ${first ? '' : `<div class="fx-field"><label class="fx-label" for="tp-note">Tell students what changed (optional)</label><input class="fx-input" id="tp-note" maxlength="200" placeholder="Midterm 2 moved to Nov 12"><span class="fx-help">Sent to their inbox and phone.</span></div>`}
       <div class="fx-dlg-actions"><button class="fx-btn primary" data-go>Publish</button><button class="fx-btn" data-close>Cancel</button><span class="fx-msg" data-st role="status"></span></div>`, { cls: 'fx-dlg', label: 'Publish' });
     $('[data-go]', m.el).addEventListener('click', async () => { const st = $('[data-st]', m.el); st.textContent = 'Publishing…';
@@ -387,7 +387,7 @@
         <header class="fx-head"><h1 class="fx-h1">${esc(c.title)}</h1><p class="fx-lede">${esc(c.code)}${c.section ? ` · Section ${esc(c.section)}` : ''} · ${esc(c.term || 'No term yet')}${c.access === 'staff' ? ` · owned by ${esc(S.owner)}` : ''}</p></header>
         <div class="fx-state ${pub ? (S.dirty ? 'changes' : 'live') : 'draft'}">${pub ? (S.dirty ? `<b>Published, with changes since.</b> Students see the version from ${fmtWhen(c.published_at)} until you publish again.` : `<b>Published</b> ${fmtWhen(c.published_at)}. Students who join see this syllabus.`) : `<b>Draft.</b> Only you${c.access === 'staff' ? ' and the teaching team' : ''} can see it.`}</div>
         <section class="fx-sec"><h2 class="fx-h2">${pub ? 'Checklist' : 'Before you publish'}</h2><div id="fx-checklist"></div></section>
-        <section class="fx-sec"><h2 class="fx-h2">Share with students</h2>${c.verified ? `<div class="fx-share"><div><span class="fx-label">Class code</span><div class="fx-code mono">${esc(c.join_code)}</div></div><div class="fx-share-actions"><button type="button" class="fx-btn sm" data-action="copy-link">${icon('copy', 14)} Copy join link</button>${pub ? `<a class="fx-btn sm quiet" href="#/syllabus/${esc(c.join_code)}" target="_blank" rel="noopener">${icon('external', 14)} Public syllabus page</a>` : ''}${pub && c.pack_id ? `<a class="fx-btn sm quiet" href="#/${esc(c.pack_id)}/dashboard" target="_blank" rel="noopener">${icon('eye', 14)} See it as a student</a>` : ''}</div></div><p class="fx-help">Students open mathub.space, choose <b>Join a class</b> and type the code, or open the link. ${pub ? 'The class appears on their start page right away.' : 'They can join now; the class appears for them once you publish.'}</p>` : verifyNote('Students can join once your faculty status is confirmed. Until then you can write, preview, print and save the syllabus as a PDF.')}</section>
+        <section class="fx-sec"><h2 class="fx-h2">Share with students</h2>${c.verified ? `<div class="fx-share"><div><span class="fx-label">Class code</span><div class="fx-code mono">${esc(c.join_code)}</div></div><div class="fx-share-actions"><button type="button" class="fx-btn sm" data-action="copy-link">${icon('copy', 14)} Copy join link</button>${pub ? `<a class="fx-btn sm quiet" href="#/syllabus/${esc(c.join_code)}" target="_blank" rel="noopener">${icon('external', 14)} Public syllabus page</a>` : ''}${pub && c.pack_id ? `<a class="fx-btn sm quiet" href="#/${esc(c.pack_id)}/dashboard" target="_blank" rel="noopener">${icon('eye', 14)} See it as a student</a>` : ''}</div></div><p class="fx-help">Students open studycat.org, choose <b>Join a class</b> and type the code, or open the link. ${pub ? 'The class appears on their start page right away.' : 'They can join now; the class appears for them once you publish.'}</p>` : verifyNote('Students can join once your faculty status is confirmed. Until then you can write, preview, print and save the syllabus as a PDF.')}</section>
         <section class="fx-sec"><h2 class="fx-h2">Write it page by page</h2><ol class="fx-steps">${SYL.map(([k, l]) => `<li><a href="#/teach/${S.id}/${k}">${l}</a><span class="fx-mark-slot" data-mark="${k}">${markHtml(k)}</span></li>`).join('')}</ol></section>
       </div>${paperCol()}</div>`;
       paintLint(); paintPaper(false);
@@ -454,7 +454,7 @@
       const P = S.syl.papers || (S.syl.papers = []); if (!S.syl.notebook) S.syl.notebook = { count: 0, due: '' };
       sylPage(pane, 'papers', 'Papers your students write and revise. Each gets Bo’s draft feedback, where he comments like a writing tutor and never writes any of it for them, and a revision history. Leave it empty if your class has none.', `
         <section class="fx-sec"><div class="fx-list" data-list="papers">${P.map((x, i) => `<div class="fx-item" data-item><div class="fx-grid g3">${F('Name', I(`papers.${i}.name`, 'Paper 1: A place that matters'), '', 'span2')}${F('First draft due', I(`papers.${i}.draft`, '', '', 'date'))}${F('What it asks for', TA(`papers.${i}.brief`, 3, 'The assignment in a few sentences.'), '', 'span2')}${F('Revised draft due', I(`papers.${i}.revised`, '', '', 'date'))}${F('Its goals, one per line', TA(`papers.${i}.goals`, 4, 'A clear claim\nEvidence from at least two sources'), 'Bo reads each draft against these.', 'span2')}</div>${DEL('papers', i, (x.name || 'this paper'))}</div>`).join('') || EMPTY('No papers yet.')}${ADD('papers', 'Add a paper')}</div></section>
-        <section class="fx-sec"><h2 class="fx-h2">Writer’s notebook</h2><div class="fx-grid g3">${F('Entries', `<input class="fx-input num" type="number" min="0" max="40" step="1" ${val('notebook.count', 'data-num')} value="${esc(String(S.syl.notebook.count || 0))}">`, '0 for none. Students write each entry on Mathub, privately and with no AI, and download them all for handing in.')}${F('Handed in', I('notebook.due', '', '', 'date'))}</div></section>`);
+        <section class="fx-sec"><h2 class="fx-h2">Writer’s notebook</h2><div class="fx-grid g3">${F('Entries', `<input class="fx-input num" type="number" min="0" max="40" step="1" ${val('notebook.count', 'data-num')} value="${esc(String(S.syl.notebook.count || 0))}">`, '0 for none. Students write each entry on StudyCat, privately and with no AI, and download them all for handing in.')}${F('Handed in', I('notebook.due', '', '', 'date'))}</div></section>`);
     },
     grading(pane) {
       const g = S.syl.grading; const sum = () => g.categories.filter(x => x.name).reduce((a, x) => a + (Number(x.weight) || 0), 0);
@@ -488,14 +488,14 @@
       const studs = r.members.filter(m => m.role === 'student'); const tas = r.members.filter(m => m.role === 'ta');
       body(pane, `<div class="fx-grid g2 fx-gap">
         <section class="fx-panel"><h2 class="fx-h2">How students join</h2><div class="fx-code big mono" aria-label="Class code">${esc(c.join_code)}</div>
-          <p>Students open <b>mathub.space</b>, choose <b>Join a class</b> and type this code, or use the link.</p>
+          <p>Students open <b>studycat.org</b>, choose <b>Join a class</b> and type this code, or use the link.</p>
           <div class="fx-actions"><button type="button" class="fx-btn sm primary" data-action="copy-link">${icon('copy', 14)} Copy join link</button><button type="button" class="fx-btn sm quiet" data-action="new-code">${icon('rotate', 14)} New code</button></div>
           <p class="fx-help">${c.status === 'published' ? 'Students who join get the class on their start page right away.' : 'Students can join now; the class appears for them once you publish.'} A new code stops the old one from working; nobody is removed.</p></section>
         <section class="fx-panel"><h2 class="fx-h2">Teaching team</h2><ul class="fx-team"><li><b>${esc(S.owner)}</b> <span class="fx-tag">owner</span></li>${tas.map(t => `<li><span><b>${esc(t.name)}</b> · ${esc(t.email)}</span><button type="button" class="fx-btn sm quiet" data-action="rm" data-u="${t.id}" data-n="${esc(t.name)}">Remove</button></li>`).join('')}</ul>
-          ${c.access === 'owner' || c.access === 'admin' ? `<form class="fx-inline-form" id="tc-ta"><label class="sr-only" for="tc-ta-email">Email of a co-instructor or TA</label><input class="fx-input" type="email" id="tc-ta-email" placeholder="ta.name@montana.edu" required><button class="fx-btn sm" type="submit">${icon('plus', 14)} Add</button></form><p class="fx-help">Co-instructors and TAs can edit the syllabus, post, assign and see results. They need a Mathub account.</p>` : ''}</section></div>
+          ${c.access === 'owner' || c.access === 'admin' ? `<form class="fx-inline-form" id="tc-ta"><label class="sr-only" for="tc-ta-email">Email of a co-instructor or TA</label><input class="fx-input" type="email" id="tc-ta-email" placeholder="ta.name@montana.edu" required><button class="fx-btn sm" type="submit">${icon('plus', 14)} Add</button></form><p class="fx-help">Co-instructors and TAs can edit the syllabus, post, assign and see results. They need a StudyCat account.</p>` : ''}</section></div>
         <section class="fx-sec"><h2 class="fx-h2">Students <span class="fx-count">${studs.length}</span>${studs.length ? `<button type="button" class="fx-btn sm fx-h-act" data-action="csv">${icon('download', 14)} Download CSV</button>` : ''}</h2>
           ${studs.length ? `<div class="fx-table-wrap"><table class="fx-table"><thead><tr><th scope="col">Name</th><th scope="col">Email</th><th scope="col">Joined</th><th scope="col" class="num">Assignments</th><th scope="col" class="num">Average</th><th scope="col" class="num">Check-ins</th><th scope="col"><span class="sr-only">Remove</span></th></tr></thead><tbody>${studs.map(m => `<tr><td>${esc(m.name)}</td><td class="fx-email">${esc(m.email)}</td><td>${esc(new Date(m.joined * 1000).toLocaleDateString())}</td><td class="num">${m.done}/${r.assignments}</td><td class="num">${m.avg == null ? '–' : m.avg + '%'}</td><td class="num">${m.checkins}/${r.sessions}</td><td class="act"><button type="button" class="fx-btn sm quiet" data-action="rm" data-u="${m.id}" data-n="${esc(m.name)}">Remove</button></td></tr>`).join('')}</tbody></table></div>` : `<p class="fx-list-empty">Nobody has joined yet. Share the code in class or on Canvas.</p>`}
-          <p class="fx-help">You see each student’s name, email, assignment results and check-ins for this class only. The rest of their Mathub activity stays private. Official grades stay in Canvas.</p></section>`);
+          <p class="fx-help">You see each student’s name, email, assignment results and check-ins for this class only. The rest of their StudyCat activity stays private. Official grades stay in Canvas.</p></section>`);
       bind(pane, {
         'copy-link': () => copy(joinLink(c.join_code), 'Join link copied.'),
         'new-code': async () => { if (!confirm('Make a new class code? The old code stops working.')) return; try { const x = await api('teach_class_code', { id: S.id }); S.cls.join_code = x.join_code; PAGE.students(pane); } catch (e) { toast(e.message); } },
@@ -505,7 +505,7 @@
       const f = $('#tc-ta', pane); if (f) f.addEventListener('submit', async e => { e.preventDefault(); try { await api('teach_staff_add', { id: S.id, email: $('#tc-ta-email', f).value }); toast('Added to the teaching team.'); PAGE.students(pane); } catch (err) { toast(err.message, 5000); } });
     },
     async announce(pane) {
-      if (!tool(pane, 'announce', 'Posts on the class hub. Every student gets them in their Mathub inbox, and on their phone if they turned notifications on.')) return;
+      if (!tool(pane, 'announce', 'Posts on the class hub. Every student gets them in their StudyCat inbox, and on their phone if they turned notifications on.')) return;
       let h; try { h = await api('teach_hub&id=' + S.id); } catch (e) { return fail(pane, e); }
       body(pane, `<div class="fx-grid g2 fx-gap"><form class="fx-panel" id="tc-post" novalidate><h2 class="fx-h2">New announcement</h2>
           <div class="fx-field"><label class="fx-label" for="ta-title">Title <span class="fx-req">required</span></label><input class="fx-input" id="ta-title" maxlength="120" placeholder="Office hours moved this week" required></div>
@@ -552,7 +552,7 @@
       let r; try { r = await api('teach_insights&id=' + S.id); } catch (e) { return fail(pane, e); }
       const open = r.open && r.open.closes * 1000 > Date.now() ? r.open : null;
       body(pane, `<div class="fx-grid g2 fx-gap"><section class="fx-panel fx-att"><h2 class="fx-h2">${open ? esc(open.label) : 'Take attendance'}</h2>
-          ${open ? `<p>Show this on the screen. Students open the class on Mathub and type it.</p><div class="fx-code huge mono" aria-live="polite">${esc(open.code)}</div><p class="fx-att-meta"><b id="tc-att-left"></b> left · <span id="tc-att-n">${(r.attendance.find(x => x.id === open.id) || { n: 0 }).n}</span> of ${r.students} checked in</p><div class="fx-actions"><button type="button" class="fx-btn primary" data-action="project">${icon('zoomin', 14)} Show on the projector</button><button type="button" class="fx-btn" data-action="close" data-id="${open.id}">${icon('lock', 14)} Close check-in</button></div>`
+          ${open ? `<p>Show this on the screen. Students open the class on StudyCat and type it.</p><div class="fx-code huge mono" aria-live="polite">${esc(open.code)}</div><p class="fx-att-meta"><b id="tc-att-left"></b> left · <span id="tc-att-n">${(r.attendance.find(x => x.id === open.id) || { n: 0 }).n}</span> of ${r.students} checked in</p><div class="fx-actions"><button type="button" class="fx-btn primary" data-action="project">${icon('zoomin', 14)} Show on the projector</button><button type="button" class="fx-btn" data-action="close" data-id="${open.id}">${icon('lock', 14)} Close check-in</button></div>`
           : `<div class="fx-grid g2"><div class="fx-field"><label class="fx-label" for="at-label">Label</label><input class="fx-input" id="at-label" maxlength="60" placeholder="Optional, e.g. Week 6 Monday"></div><div class="fx-field"><label class="fx-label" for="at-min">Open for</label><select class="fx-input fx-select" id="at-min"><option value="3">3 minutes</option><option value="5" selected>5 minutes</option><option value="10">10 minutes</option><option value="15">15 minutes</option></select></div></div><div class="fx-actions"><button type="button" class="fx-btn primary" data-action="open">${icon('play', 14)} Open check-in</button></div>`}</section>
         <section class="fx-panel"><h2 class="fx-h2">Past sessions</h2>${r.attendance.length ? `<div class="fx-table-wrap"><table class="fx-table"><thead><tr><th scope="col">Session</th><th scope="col">When</th><th scope="col" class="num">Checked in</th></tr></thead><tbody>${r.attendance.map(a => `<tr><td>${esc(a.label)}</td><td>${esc(new Date(a.opens * 1000).toLocaleString())}</td><td class="num">${a.n}/${r.students}</td></tr>`).join('')}</tbody></table></div>` : '<p class="fx-list-empty">No sessions yet.</p>'}<p class="fx-help">Each student’s check-ins are on the Students page.</p></section></div>`);
       bind(pane, {
@@ -599,7 +599,7 @@
   /** The check-in code, full screen, for the room's projector. */
   function projector(open) {
     if (!open) return; const el = document.createElement('div'); el.className = 'fx-projector'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-modal', 'true'); el.setAttribute('aria-label', 'Check-in code');
-    el.innerHTML = `<p class="fx-proj-label">${esc(S.cls.code)} · ${esc(open.label)}</p><p class="fx-proj-code mono">${esc(open.code)}</p><p class="fx-proj-sub">Open the class on Mathub and type this code · <b data-left></b> left</p><button type="button" class="fx-btn" data-x>Close</button>`;
+    el.innerHTML = `<p class="fx-proj-label">${esc(S.cls.code)} · ${esc(open.label)}</p><p class="fx-proj-code mono">${esc(open.code)}</p><p class="fx-proj-sub">Open the class on StudyCat and type this code · <b data-left></b> left</p><button type="button" class="fx-btn" data-x>Close</button>`;
     document.body.appendChild(el); let t = null;
     const close = () => { clearInterval(t); document.removeEventListener('keydown', key); if (document.fullscreenElement) document.exitFullscreen().catch(() => {}); el.remove(); };
     const key = e => { if (e.key === 'Escape') close(); }; document.addEventListener('keydown', key);
@@ -615,7 +615,7 @@
     title: 'Your class',
     render(root, param) {
       const parts = String(param || '').split('/').filter(Boolean);
-      root.innerHTML = `<div class="landing-wrap tc-wrap"><header class="landing-top"><div><h1 class="landing-title"><span class="logo-mark">${App.logoSvg(44)}</span>${parts[0] === 'join' ? 'Join a class' : parts[0] ? 'Class hub' : 'Your classes with an instructor'}</h1></div><div class="row gap-sm"><span id="landing-account"></span><a class="btn" href="${parts[0] && parts[0] !== 'join' ? '#/class' : '#/'}">${icon('left', 14)} ${parts[0] && parts[0] !== 'join' ? 'Your classes' : 'Mathub'}</a></div></header><div id="tc-body"><div class="empty">Loading…</div></div></div>`;
+      root.innerHTML = `<div class="landing-wrap tc-wrap"><header class="landing-top"><div><h1 class="landing-title"><span class="logo-mark">${App.logoSvg(44)}</span>${parts[0] === 'join' ? 'Join a class' : parts[0] ? 'Class hub' : 'Your classes with an instructor'}</h1></div><div class="row gap-sm"><span id="landing-account"></span><a class="btn" href="${parts[0] && parts[0] !== 'join' ? '#/class' : '#/'}">${icon('left', 14)} ${parts[0] && parts[0] !== 'join' ? 'Your classes' : 'StudyCat'}</a></div></header><div id="tc-body"><div class="empty">Loading…</div></div></div>`;
       const slot = $('#landing-account', root); if (slot && App.auth && App.auth.ready) App.auth.paintLandingAccount(slot);
       const body = $('#tc-body', root);
       if (parts[0] === 'join') return joinPage(body, (parts[1] || '').toUpperCase());
@@ -629,7 +629,7 @@
   async function myClasses(body) {
     let me; try { me = await api('teach_me'); } catch (e) { body.innerHTML = `<div class="empty">${esc(e.message)}</div>`; return; }
     const card = c => `<a class="tc-card" href="#/class/${c.id}"><div class="row between"><span class="tc-card-code">${esc(c.code)}${c.section ? ` · ${esc(c.section)}` : ''}</span>${c.status === 'published' ? '' : '<span class="chip xs warn">syllabus coming</span>'}</div><b class="tc-card-title">${esc(c.title)}</b><span class="small muted">${esc(c.instructor)} · ${esc(c.term)}</span></a>`;
-    body.innerHTML = `${me.enrolled.length ? `<div class="tc-grid">${me.enrolled.map(card).join('')}</div>` : '<div class="empty">You have not joined a class yet.</div>'}<div class="mt-2">${joinBox()}</div>${me.teaching.length ? `<p class="small muted mt-2">Teaching? Your classes are in <a href="#/teach">Mathub Faculty</a>.</p>` : ''}`;
+    body.innerHTML = `${me.enrolled.length ? `<div class="tc-grid">${me.enrolled.map(card).join('')}</div>` : '<div class="empty">You have not joined a class yet.</div>'}<div class="mt-2">${joinBox()}</div>${me.teaching.length ? `<p class="small muted mt-2">Teaching? Your classes are in <a href="#/teach">StudyCat Faculty</a>.</p>` : ''}`;
     wireJoinBox(body);
   }
   async function joinPage(body, code) {
@@ -638,7 +638,7 @@
     const c = r.class; const already = c.access === 'student'; const teaching = ['owner', 'staff', 'admin'].includes(c.access);
     body.innerHTML = `<div class="grid cols-2 tc-joincard"><section class="panel"><p class="small muted">${esc(c.code)}${c.section ? ` · Section ${esc(c.section)}` : ''} · ${esc(c.term)}</p><h2 class="tc-h2">${esc(c.title)}</h2><p class="small">Taught by <b>${esc(c.instructor)}</b>${c.students ? ` · ${c.students} student${c.students === 1 ? '' : 's'} joined` : ''}</p>
         ${teaching ? `<a class="btn primary" href="#/teach/${c.id}">${icon('right', 14)} You teach this class</a>` : already ? `<a class="btn primary" href="#/class/${c.id}">${icon('right', 14)} Open the class</a>` : c.open === false ? '<div class="callout small">This class is not open to students yet. Check with your instructor.</div>' : signedOut() ? App.lockCard('Sign in to join', 'Use your montana.edu email. It takes a minute.', { compact: true }) : `<button class="btn primary" data-action="join">${icon('check', 14)} Join ${esc(c.code)}</button>`}
-        <div class="callout small mt-2">${icon('eye', 13)} <b>What your instructor sees:</b> your name and email, your results on this class’s practice assignments, and your attendance check-ins. Nothing else you do on Mathub is shared, and you can leave the class at any time.</div></section>
+        <div class="callout small mt-2">${icon('eye', 13)} <b>What your instructor sees:</b> your name and email, your results on this class’s practice assignments, and your attendance check-ins. Nothing else you do on StudyCat is shared, and you can leave the class at any time.</div></section>
       <section class="panel"><div class="panel-title mb-1">${icon('file')} Syllabus</div>${c.syllabus ? `<p class="small">${esc((c.syllabus.course || {}).description || '').slice(0, 280)}${((c.syllabus.course || {}).description || '').length > 280 ? '…' : ''}</p><a class="btn sm" href="#/syllabus/${esc(code)}">${icon('eye', 13)} Read the full syllabus</a>` : '<p class="small muted">Your instructor has not published the syllabus yet. Join now and it appears when it is ready.</p>'}</section></div>`;
     if (App.auth) App.auth.bindLocks(body);
     bind(body, { join: async () => { try { const x = await api('teach_join', { code }); if (App.packs && App.packs.sync) await App.packs.sync(); if (App.auth && App.auth.refresh) App.auth.refresh(); App.teachForget(); toast(`You joined ${c.code}.`); location.hash = '#/class/' + x.id; } catch (e) { toast(e.message, 5000); } } });
@@ -656,7 +656,7 @@
       <div class="grid cols-2">
         <section class="panel"><div class="panel-h"><div class="panel-title">${icon('target')} Assignments</div></div>${h.assignments.length ? h.assignments.map(a => { const m = a.mine; const late = a.due && now > a.due; return `<div class="tc-asg"><div class="row between"><div><b>${esc(a.title)}</b><div class="small muted">${a.count} questions · ${esc(dueText(a.due))}${a.minutes ? ` · ${a.minutes} min` : ''}</div>${a.note ? `<div class="small">${esc(a.note)}</div>` : ''}</div>${h.staff ? `<span class="chip xs">${a.submitted} done</span>` : `<div class="row gap-sm">${m ? `<span class="chip xs ${m.best === m.total ? 'good' : ''}">best ${m.best}/${m.total}</span>` : late ? '<span class="chip xs warn">past due</span>' : ''}<button class="btn sm${m ? '' : ' primary'}" data-action="start" data-id="${a.id}">${m ? 'Try again' : 'Start'}</button></div>`}</div></div>`; }).join('') : '<div class="empty">No assignments right now.</div>'}</section>
         <section class="panel"><div class="panel-h"><div class="panel-title">${icon('megaphone')} Announcements</div></div>${h.posts.length ? h.posts.map(p => `<div class="tc-post"><b>${p.pinned ? icon('pin', 12) + ' ' : ''}${esc(p.title)}</b><div class="small muted">${esc(p.author)} · ${esc(ago(p.created))}</div>${p.body ? `<div class="small tc-post-body">${paras(p.body)}</div>` : ''}</div>`).join('') : '<div class="empty">Nothing yet.</div>'}</section></div>
-      ${h.staff ? `<p class="small mt-2"><a href="#/teach/${c.id}">${icon('gear', 13)} Manage this class in Mathub Faculty</a></p>` : `<p class="small muted mt-2">Your instructor sees your results on these assignments and your check-ins, nothing else. <button class="linkbtn small" data-action="leave">Leave this class</button></p>`}`;
+      ${h.staff ? `<p class="small mt-2"><a href="#/teach/${c.id}">${icon('gear', 13)} Manage this class in StudyCat Faculty</a></p>` : `<p class="small muted mt-2">Your instructor sees your results on these assignments and your check-ins, nothing else. <button class="linkbtn small" data-action="leave">Leave this class</button></p>`}`;
     const f = $('#tc-checkin', body); if (f && $('#ci-code', f)) f.addEventListener('submit', async e => { e.preventDefault(); try { await api('teach_checkin', { id, code: $('#ci-code', f).value }); toast('Checked in.'); hub(body, id); } catch (err) { toast(err.message, 4000); } });
     bind(body, {
       start: b => startAssignment(h.assignments.find(a => a.id === Number(b.dataset.id)), c, () => hub(body, id)),
@@ -689,7 +689,7 @@
       const b = $('#sy-body', root); let r;
       try { r = await api('teach_join_info&code=' + code); } catch (e) { b.innerHTML = `<div class="empty">${esc(e.message)}</div>`; return; }
       if (!r.class.syllabus) { b.innerHTML = '<div class="empty">The instructor has not published this syllabus yet.</div>'; return; }
-      b.innerHTML = `<div class="sy-sheet">${docHtml(r.class.syllabus, r.class)}</div>`; document.title = `${r.class.code} ${r.class.title} · Syllabus · Mathub`;
+      b.innerHTML = `<div class="sy-sheet">${docHtml(r.class.syllabus, r.class)}</div>`; document.title = `${r.class.code} ${r.class.title} · Syllabus · StudyCat`;
       bind(root, { print: () => printDoc(docHtml(r.class.syllabus, r.class), `${r.class.code} ${r.class.title} syllabus`) });
     }
   };
@@ -697,7 +697,7 @@
   /* ---------- links from the rest of the site ---------- */
   App.teachLinks = () => `<a class="rq-link" href="#/class">${icon('users', 13)} Have a class code? Join your class</a>`;
   /* A class built in #/teach: on its dashboard, students get a strip to the class hub (announcements, assignments, check-in),
-     and its teaching team, who open it as a preview, get a strip back to Mathub Faculty.
+     and its teaching team, who open it as a preview, get a strip back to StudyCat Faculty.
      Which classes those are comes from teach_me (the classes this person joined or teaches), cached for a few minutes. */
   const hubs = { map: null, at: 0, loading: null };
   const hubMap = () => { if (hubs.map && Date.now() - hubs.at < 300000) return Promise.resolve(hubs.map); if (!hubs.loading) hubs.loading = api('teach_me').then(me => { const m = {}; me.teaching.concat(me.enrolled).forEach(c => { if (c.pack_id) m[c.pack_id] = c.id; }); hubs.map = m; hubs.at = Date.now(); return m; }).catch(() => ({})).finally(() => { hubs.loading = null; }); return hubs.loading; };
@@ -707,7 +707,7 @@
     if (!r.course || r.view !== 'dashboard' || signedOut()) return; const C = global.Courses[r.course]; if (!C || !C.pack) return;
     hubMap().then(m => { const cid = m[r.course]; if (!cid || !root.isConnected || $('.tc-strip', root)) return;
       const strip = document.createElement('a'); strip.className = 'tc-strip' + (C.preview ? ' preview' : ''); strip.href = C.preview ? '#/teach/' + cid : '#/class/' + cid;
-      strip.innerHTML = C.preview ? `${icon('eye', 15)}<span><b>Preview</b> · ${esc(C.short || C.code || '')} as your students see it. Back to Mathub Faculty</span>${icon('right', 14)}` : `${icon('megaphone', 15)}<span><b>Class hub</b> · announcements, assignments and check-in from your instructor</span>${icon('right', 14)}`;
+      strip.innerHTML = C.preview ? `${icon('eye', 15)}<span><b>Preview</b> · ${esc(C.short || C.code || '')} as your students see it. Back to StudyCat Faculty</span>${icon('right', 14)}` : `${icon('megaphone', 15)}<span><b>Class hub</b> · announcements, assignments and check-in from your instructor</span>${icon('right', 14)}`;
       root.insertAdjacentElement('afterbegin', strip); });
   });
 
@@ -717,7 +717,7 @@
     let r; try { r = await api('admin_teach_requests'); } catch (e) { el.innerHTML = `<div class="empty">${esc(e.message)}</div>`; return; }
     const open = r.requests.filter(x => x.status === 'new'); const rest = r.requests.filter(x => x.status !== 'new');
     const reqRow = x => `<div class="tc-adm-req"><div><b>${esc(x.name)}</b>${x.title ? ` · ${esc(x.title)}` : ''} · ${esc(x.department)}<div class="small">${esc(x.email)} · teaches ${esc(x.courses)}</div>${x.message ? `<div class="small muted">${esc(x.message)}</div>` : ''}<div class="small muted">${esc(ago(x.created))}</div></div>${x.status === 'new' ? `<div class="row gap-sm"><button class="btn sm primary" data-action="ok" data-id="${x.id}">Confirm</button><button class="btn sm ghost" data-action="no" data-id="${x.id}">Decline</button></div>` : `<span class="chip xs ${x.status === 'approved' ? 'good' : 'muted'}">${esc(x.status)}</span>`}</div>`;
-    el.innerHTML = `<div class="callout small mb-2">Confirm only people you can verify teach at Montana State (a faculty page, a department listing, or a reply from their montana.edu address). Anyone signed in can write syllabi in Mathub Faculty; confirmed instructors can also publish them to the students who join, post to those classes, assign practice and take attendance. Nothing site-wide.</div>
+    el.innerHTML = `<div class="callout small mb-2">Confirm only people you can verify teach at Montana State (a faculty page, a department listing, or a reply from their montana.edu address). Anyone signed in can write syllabi in StudyCat Faculty; confirmed instructors can also publish them to the students who join, post to those classes, assign practice and take attendance. Nothing site-wide.</div>
       <div class="panel"><div class="panel-h"><div class="panel-title">${icon('shield')} Waiting for confirmation <span class="chip xs">${open.length}</span></div></div>${open.length ? open.map(reqRow).join('') : '<div class="empty">No requests waiting.</div>'}</div>
       <div class="grid cols-2 mt-2"><div class="panel"><div class="panel-h"><div class="panel-title">${icon('users')} Confirmed instructors</div></div>${r.instructors.length ? r.instructors.map(i => `<div class="row between tc-team"><span class="small"><b>${esc(i.name || i.email)}</b> · ${esc(i.email)}${i.scope === 'teach' ? '' : ' <span class="chip xs">all classes</span>'}</span><button class="btn xs ghost" data-action="revoke" data-email="${esc(i.email)}">Revoke</button></div>`).join('') : '<div class="empty">None yet.</div>'}</div>
       <div class="panel"><div class="panel-h"><div class="panel-title">${icon('book')} Classes</div></div>${r.classes.length ? `<div class="table-wrap"><table class="table compact"><thead><tr><th>Class</th><th>Instructor</th><th class="num">Students</th><th>Status</th></tr></thead><tbody>${r.classes.map(c => `<tr><td><a href="#/teach/${c.id}">${esc(c.code)} ${esc(c.title)}</a><div class="small muted">${esc(c.term)}</div></td><td class="small">${esc(c.instructor)}</td><td class="num">${c.students}</td><td>${c.status === 'published' ? '<span class="chip xs good">published</span>' : '<span class="chip xs warn">draft</span>'}</td></tr>`).join('')}</tbody></table></div>` : '<div class="empty">No classes yet.</div>'}</div></div>

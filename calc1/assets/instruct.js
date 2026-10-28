@@ -1,11 +1,11 @@
 /* ============================================================
-   Mathub — instructors (api/instruct.php). Two pages:
-   - #/<class>/instructor: for a class's instructors only (its syllabus email, its Mathub Faculty teaching team, or an
+   StudyCat — instructors (api/instruct.php). Two pages:
+   - #/<class>/instructor: for a class's instructors only (its syllabus email, its StudyCat Faculty teaching team, or an
      administrator). Bo in this class (hints only, notes for Bo), draft feedback (on or off, sharing, peer review
      swaps, each project's assignment sheet and rubric), the versions students shared, patterns across the class
      (anonymous, from students who let their drafts count, once there are five) and credits for their students.
      #/<class>/instructor/share/<id> opens one shared version.
-   - #/instructors: what Mathub does in a class and what an instructor controls, for anyone.
+   - #/instructors: what StudyCat does in a class and what an instructor controls, for anyone.
    ============================================================ */
 (function (global) {
   'use strict';
@@ -21,7 +21,7 @@
   async function api(route, body) {
     const opts = { method: body ? 'POST' : 'GET', credentials: 'same-origin', headers: { 'X-Requested-With': 'MatHub', 'Accept': 'application/json' }, cache: 'no-store' };
     if (body) { opts.headers['Content-Type'] = 'application/json'; opts.body = JSON.stringify(body); }
-    let res, json; try { res = await fetch(API + route, opts); json = await res.json(); } catch (e) { throw new Error('Mathub cannot be reached right now.'); }
+    let res, json; try { res = await fetch(API + route, opts); json = await res.json(); } catch (e) { throw new Error('StudyCat cannot be reached right now.'); }
     if (!json || json.ok === false) throw Object.assign(new Error((json && json.error) || 'Something went wrong. Please try again.'), { status: res.status, data: json });
     return json;
   }
@@ -34,7 +34,7 @@
 
   /* ---------- the class's instructor page ---------- */
   const HEAD = () => App.pageHead('Instructor', 'For this class’s instructors: how Bo works in it, the drafts students shared with you, patterns across the class, and credits for your students.');
-  const notStaff = root => { root.innerHTML = HEAD() + `<div class="callout mt-3">${icon('lock', 14)} <span>This page is for the class’s instructors. If you teach this class, sign in with the email address on its syllabus, or add the class in <a href="#/teach">Mathub Faculty</a>.</span></div><p class="mt-2"><a class="btn" href="#/instructors">${icon('info', 14)} What instructors can do on Mathub</a></p>`; };
+  const notStaff = root => { root.innerHTML = HEAD() + `<div class="callout mt-3">${icon('lock', 14)} <span>This page is for the class’s instructors. If you teach this class, sign in with the email address on its syllabus, or add the class in <a href="#/teach">StudyCat Faculty</a>.</span></div><p class="mt-2"><a class="btn" href="#/instructors">${icon('info', 14)} What instructors can do on StudyCat</a></p>`; };
 
   function settingsHtml(I) {
     const S = I.settings; const P = I.projects;
@@ -139,14 +139,14 @@
   }
 
   function creditsHtml(j) {
-    if (!j.classes.length) return `<div class="callout">${icon('info', 14)} <span>To give your students credits, add this class in <a href="#/teach">Mathub Faculty</a> and give them its join code. Students who join show here.</span></div>`;
+    if (!j.classes.length) return `<div class="callout">${icon('info', 14)} <span>To give your students credits, add this class in <a href="#/teach">StudyCat Faculty</a> and give them its join code. Students who join show here.</span></div>`;
     const n = j.students.length;
     return `<p class="small">${esc(n === 1 ? t('1 student has joined {1}.', j.classes.map(c => c.code + (c.section ? ' ' + c.section : '')).join(', ')) : t('{1} students have joined {2}.', n, j.classes.map(c => c.code + (c.section ? ' ' + c.section : '')).join(', ')))}</p>
       ${n ? `<details class="in-roster"><summary>${esc(t('See who'))}</summary><ul class="small">${j.students.map(s => `<li>${esc(s.name)} <span class="muted mono">${esc(s.email)}</span></li>`).join('')}</ul></details>
       <form class="in-give panel mt-2" id="in-give" novalidate>
         <div class="field"><label for="in-each">Credits for each student</label><input class="input" id="in-each" type="number" min="1" max="${j.max}" step="1" value="100" inputmode="numeric"></div>
         <p class="small" id="in-total" aria-live="polite"></p>
-        <p class="small muted">${j.admin ? esc(t('As an administrator, you give these from Mathub.')) : esc(t('They come out of the credits you bought or were given (not the month’s free ones): you have {1}.', num(j.paid)))} ${esc(t('Students keep them, and they never expire.'))}</p>
+        <p class="small muted">${j.admin ? esc(t('As an administrator, you give these from StudyCat.')) : esc(t('They come out of the credits you bought or were given (not the month’s free ones): you have {1}.', num(j.paid)))} ${esc(t('Students keep them, and they never expire.'))}</p>
         <button type="submit" class="btn primary">${icon('gem', 14)} Give credits</button></form>` : ''}
       ${j.given.length ? `<h2 class="in-h mt-3">Given so far</h2><ul class="small in-given">${j.given.map(g => `<li>${esc(dateOf(g.created))} · ${esc(g.note)}${g.credits ? ` · ${esc(t('{1} credits', num(g.credits)))}` : ''}</li>`).join('')}</ul>` : ''}`;
   }
@@ -250,13 +250,13 @@
     title: 'For instructors',
     render(root) {
       const card = (ic, h, body) => `<section class="panel ins-card"><h2 class="ins-h">${icon(ic, 18)} ${h}</h2>${body}</section>`;
-      root.innerHTML = App.pageHead('Mathub for instructors', 'A study site for your class, with Bo, an AI tutor that teaches instead of doing the work. Here is what he does, what you control, and what you see.') + `<div class="ins-grid">
+      root.innerHTML = App.pageHead('StudyCat for instructors', 'A study site for your class, with Bo, an AI tutor that teaches instead of doing the work. Here is what he does, what you control, and what you see.') + `<div class="ins-grid">
         ${card('chat', 'What Bo does', `<ul><li>He finds out where a student is, explains one idea at a time, shows a worked example and then hands the next step to them.</li><li>He checks the math before he agrees with an answer, and says so kindly when it is wrong.</li><li>In a writing class he only comments on drafts: he marks passages, names the biggest revisions and asks questions. He never writes a sentence of a student’s paper, and the server drops a comment that would.</li></ul>`)}
         ${card('gear', 'What you control', `<p>Each class has an Instructor page for its instructors:</p><ul><li><b>Hints only:</b> Bo gives hints and checks steps, never final answers.</li><li><b>Notes for Bo:</b> what he should know about your class, like your citation style.</li><li><b>Draft feedback</b> on or off for the class, with each project’s assignment sheet and rubric for Bo to read against. He never grades.</li><li><b>Sharing</b> and <b>peer review swaps</b> on or off.</li></ul>`)}
         ${card('eye', 'What you see', `<ul><li>A draft only when a student chooses to share it with you, with Bo’s feedback on it, their answers to his notes and their note to you. You can reply.</li><li>Patterns across the class: which goals Bo names most often among the biggest revisions. Only from students who let their drafts count, only once five have, and never a name, a quote or a draft.</li><li>Never a student’s chats with Bo, their notebook, or anything they did not share.</li></ul>`)}
-        ${card('gem', 'Credits for your students', `<p>Bo runs on credits, and every account gets some free each month. Add your class in Mathub Faculty and give students its code; then you can give each of them credits from your Instructor page, out of credits you bought. They never expire.</p>`)}
+        ${card('gem', 'Credits for your students', `<p>Bo runs on credits, and every account gets some free each month. Add your class in StudyCat Faculty and give students its code; then you can give each of them credits from your Instructor page, out of credits you bought. They never expire.</p>`)}
         ${card('shield', 'Privacy', `<p>Students’ drafts, chats and notebooks are private to them. Drafts are sent to Anthropic, which makes the AI behind Bo, to be read, and are not used to train it. Everything goes when a student deletes their account. The full <a href="#/policy">privacy policy</a> says exactly what is kept.</p>`)}
-        ${card('flag', 'Getting started', `<ol><li>Sign up with your school email.</li><li>If your class is on Mathub and its syllabus lists your email, the Instructor page is in its sidebar.</li><li>If not, add it in Mathub Faculty: write the syllabus there and publish it as a class.</li></ol><div class="row gap-sm mt-2"><a class="btn primary" href="#/teach">${icon('book', 14)} Open Mathub Faculty</a><a class="btn" href="#/contact">${icon('chat', 14)} Ask us</a></div>`)}
+        ${card('flag', 'Getting started', `<ol><li>Sign up with your school email.</li><li>If your class is on StudyCat and its syllabus lists your email, the Instructor page is in its sidebar.</li><li>If not, add it in StudyCat Faculty: write the syllabus there and publish it as a class.</li></ol><div class="row gap-sm mt-2"><a class="btn primary" href="#/teach">${icon('book', 14)} Open StudyCat Faculty</a><a class="btn" href="#/contact">${icon('chat', 14)} Ask us</a></div>`)}
       </div>`;
     }
   };

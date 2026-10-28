@@ -38,7 +38,7 @@ const inDays = n => { const d = new Date(); d.setDate(d.getDate() + n); return i
   check('Members has a Plan column, and a way to list only Pro and Max', (await a.$$eval('#adm-body thead th', t => t.map(x => x.textContent))).includes('Plan') && (await a.$$eval('#adm-show option', o => o.map(x => x.textContent).join())) === 'Everyone,With Pro or Max');
   check('the whole table fits on a laptop: nothing to scroll sideways to reach Delete', await a.$eval('.adm-members', w => w.scrollWidth <= w.clientWidth + 1));
   const mo = await rowOf(a, MOD);
-  check('a member with a tester plan shows Max, from "tester"', mo && mo.plan === 'Max' && mo.src === 'tester' && /Mathub Max, tester/.test(mo.label), mo);
+  check('a member with a tester plan shows Max, from "tester"', mo && mo.plan === 'Max' && mo.src === 'tester' && /StudyCat Max, tester/.test(mo.label), mo);
   await search(a, 'alice.a');
   const al = await rowOf(a, ALICE);
   check('a member with nothing shows Free', al && al.plan === 'Free' && al.src === '', al);
@@ -47,11 +47,11 @@ const inDays = n => { const d = new Date(); d.setDate(d.getDate() + n); return i
   const ed = await a.evaluate(id => { const f = document.querySelector('.adm-plan-row .adm-plan'); return f && { open: document.querySelector(`[data-action="plan"][data-u="${id}"]`).getAttribute('aria-expanded'), h: f.querySelector('h3').textContent, now: f.querySelector('.adm-plan-now').textContent, picked: f.querySelector('input[type="radio"]:checked').value, focus: document.activeElement && document.activeElement.type, grid: f.querySelector('.adm-plan-grid').hidden, sum: f.querySelector('.adm-plan-sum').textContent }; }, ID);
   check('pressing it opens Give a membership under their row: what they have now, and Free picked', ed && ed.open === 'true' && ed.h === 'Membership for Alice' && /Free: nothing paid for or given/.test(ed.now) && ed.picked === '' && ed.focus === 'radio' && ed.grid && /Nothing is given/.test(ed.sum), ed);
   await a.click('.adm-plan-opt.is-max');
-  check('picking Max asks for how long, with a note, and offers to tell them', await a.evaluate(() => { const f = document.querySelector('.adm-plan'); return !f.querySelector('.adm-plan-grid').hidden && f.querySelector('.adm-plan-tell input').checked && /Alice gets Mathub Max free, with no end date\. It never charges them\./.test(f.querySelector('.adm-plan-sum').textContent); }));
+  check('picking Max asks for how long, with a note, and offers to tell them', await a.evaluate(() => { const f = document.querySelector('.adm-plan'); return !f.querySelector('.adm-plan-grid').hidden && f.querySelector('.adm-plan-tell input').checked && /Alice gets StudyCat Max free, with no end date\. It never charges them\./.test(f.querySelector('.adm-plan-sum').textContent); }));
   await a.selectOption(`#pl-for-${ID}`, '91'); await a.fill(`#pl-note-${ID}`, 'Testing Bo with Dr. Hall');
   check('3 months says the last day', /until the end of \w+ \d+, 20\d\d/.test(await txt(a, '.adm-plan-sum')));
   await a.click('.adm-plan button[type="submit"]'); await a.waitForTimeout(1500);
-  check('saving gives it, and says they were told', /Alice has Mathub Max until/.test(await txt(a, '.toast')) && /told in their inbox/.test(await txt(a, '.toast')), await txt(a, '.toast'));
+  check('saving gives it, and says they were told', /Alice has StudyCat Max until/.test(await txt(a, '.toast')) && /told in their inbox/.test(await txt(a, '.toast')), await txt(a, '.toast'));
   const al2 = await rowOf(a, ALICE);
   check('the row now shows Max, given, until the last day; focus is back on it', al2.plan === 'Max' && /^given, until \w+ \d+, 20\d\d$/.test(al2.src) && await a.evaluate(id => document.activeElement === document.querySelector(`[data-action="plan"][data-u="${id}"]`), ID), al2);
   const gift = (await api(a, `admin_users&q=alice.a`)).json.users[0].plan.gift;
@@ -62,12 +62,12 @@ const inDays = n => { const d = new Date(); d.setDate(d.getDate() + n); return i
   check('Alice has Max at once, given, until that day, never renewing', st.plan === 'max' && st.active && st.granted && st.until && st.renews === false, st);
   check('so Bo is hers', (await api(s, 'ai_status')).json.max === true);
   const nl = (await api(s, 'notif_list')).json.notifications[0];
-  check('she is told in her inbox, with a link to Your plan', nl.kind === 'plan' && nl.title === 'Mathub Max' && /It is yours until \w+ \d+, 20\d\d\. It never charges you/.test(nl.snippet) && nl.link === '#/plan', nl);
+  check('she is told in her inbox, with a link to Your plan', nl.kind === 'plan' && nl.title === 'StudyCat Max' && /It is yours until \w+ \d+, 20\d\d\. It never charges you/.test(nl.snippet) && nl.link === '#/plan', nl);
   await go(s, '#/forum/inbox', 1500);
-  check('the inbox reads "Ada gave you Mathub Max"', /Ada gave you Mathub Max/.test(await txt(s, '#fa-inbox')) && (await s.$eval('#fa-inbox .inbox-row', r => r.getAttribute('href'))) === '#/plan');
+  check('the inbox reads "Ada gave you StudyCat Max"', /Ada gave you StudyCat Max/.test(await txt(s, '#fa-inbox')) && (await s.$eval('#fa-inbox .inbox-row', r => r.getAttribute('href'))) === '#/plan');
   await go(s, '#/plan', 1800);
   const pn = await txt(s, '#pl-now');
-  check('Your plan: Mathub Max, given to her account until that day, free, nothing to cancel', /Given to your account until/.test(pn) && /Mathub Max/.test(pn) && /Ends/.test(pn) && /never charges you/.test(pn) && /Given by Mathub/.test(pn) && !(await s.$('#pl-now [data-pl="cancel"]')) && !/Manage billing/.test(pn), pn);
+  check('Your plan: StudyCat Max, given to her account until that day, free, nothing to cancel', /Given to your account until/.test(pn) && /StudyCat Max/.test(pn) && /Ends/.test(pn) && /never charges you/.test(pn) && /Given by StudyCat/.test(pn) && !(await s.$('#pl-now [data-pl="cancel"]')) && !/Manage billing/.test(pn), pn);
   await cs.close();
 
   // only Pro and Max
@@ -76,7 +76,7 @@ const inDays = n => { const d = new Date(); d.setDate(d.getDate() + n); return i
   check('"With Pro or Max" lists Alice and the tester, not Bob', listed.includes(ALICE) && listed.includes(MOD) && !listed.includes(BOB) && await a.evaluate(() => document.activeElement && document.activeElement.id === 'adm-show'), listed);
   await a.selectOption('#adm-show', ''); await a.waitForTimeout(1200);
   const mod = await rowOf(a, MOD); await a.click(`[data-action="plan"][data-u="${mod.id}"]`); await a.waitForTimeout(300);
-  check('the tester\'s editor says where the plan comes from', /Tester plan: Mathub Max/.test(await txt(a, '.adm-plan-now')));
+  check('the tester\'s editor says where the plan comes from', /Tester plan: StudyCat Max/.test(await txt(a, '.adm-plan-now')));
   await a.keyboard.press('Escape'); await a.waitForTimeout(200);
   check('Esc closes it, back on the button', !(await a.$('.adm-plan-row')) && await a.evaluate(id => document.activeElement === document.querySelector(`[data-action="plan"][data-u="${id}"]`), mod.id));
 
@@ -105,7 +105,7 @@ const inDays = n => { const d = new Date(); d.setDate(d.getDate() + n); return i
   check('with a day it is given until then', al3.plan === 'Pro' && /given, until/.test(al3.src) && !/told/.test(await txt(a, '.toast')), al3);
   check('not telling her leaves her inbox alone', before >= 1 && (await told()) === before);
   await a.click(`[data-action="plan"][data-u="${ID}"]`); await a.waitForTimeout(300);
-  check('opening it again shows what was given, with its day', await a.evaluate(id => { const f = document.querySelector('.adm-plan'); return f.querySelector('input[type="radio"]:checked').value === 'pro' && document.querySelector(`#pl-for-${id}`).value === 'day' && !!document.querySelector(`#pl-day-${id}`).value && /Given Mathub Pro by Ada/.test(f.querySelector('.adm-plan-now').textContent); }, ID));
+  check('opening it again shows what was given, with its day', await a.evaluate(id => { const f = document.querySelector('.adm-plan'); return f.querySelector('input[type="radio"]:checked').value === 'pro' && document.querySelector(`#pl-for-${id}`).value === 'day' && !!document.querySelector(`#pl-day-${id}`).value && /Given StudyCat Pro by Ada/.test(f.querySelector('.adm-plan-now').textContent); }, ID));
   await a.click('.adm-plan-opt:not(.is-pro):not(.is-max)');
   check('picking Free says it is taken back', /What was given to Alice is taken back now/.test(await txt(a, '.adm-plan-sum')) && await a.$eval('.adm-plan-grid', g => g.hidden));
   await a.click('.adm-plan button[type="submit"]'); await a.waitForTimeout(1500);
@@ -123,12 +123,12 @@ const inDays = n => { const d = new Date(); d.setDate(d.getDate() + n); return i
   check('Bob has Max, given, and still pays for Pro', sb.plan === 'max' && sb.granted && sb.paid === 'pro' && sb.paid_renews === true, sb);
   await b.evaluate(() => App.subscription.refresh(true)); await go(b, '#/plan', 1800);
   const bp = await txt(b, '#pl-now');
-  check('his Your plan says so, with Manage billing and Cancel Pro for what he pays for', /Mathub Max/.test(bp) && /No end date/.test(bp) && /You also pay for Mathub Pro/.test(bp) && /Manage billing/.test(bp) && /Cancel Pro/.test(await txt(b, '#pl-now [data-pl="cancel"]')), bp);
+  check('his Your plan says so, with Manage billing and Cancel Pro for what he pays for', /StudyCat Max/.test(bp) && /No end date/.test(bp) && /You also pay for StudyCat Pro/.test(bp) && /Manage billing/.test(bp) && /Cancel Pro/.test(await txt(b, '#pl-now [data-pl="cancel"]')), bp);
   await go(a, '#/admin/members', 1300); await search(a, 'bob.');
   const br = await rowOf(a, BOB); await a.click(`[data-action="plan"][data-u="${br.id}"]`); await a.waitForTimeout(300);
-  check('Members: Max, given; the editor also says he pays for Pro', br.plan === 'Max' && br.src === 'given' && /Pays for Mathub Pro through the website/.test(await txt(a, '.adm-plan-now')), br);
+  check('Members: Max, given; the editor also says he pays for Pro', br.plan === 'Max' && br.src === 'given' && /Pays for StudyCat Pro through the website/.test(await txt(a, '.adm-plan-now')), br);
   await a.click('.adm-plan-opt:not(.is-pro):not(.is-max)'); await a.click('.adm-plan button[type="submit"]'); await a.waitForTimeout(1500);
-  check('taking Max back leaves the Pro he pays for', /They still have Mathub Pro \(they pay for it\)/.test(await txt(a, '.toast')) && (await api(b, 'create_status')).json.plan === 'pro' && !(await api(b, 'create_status')).json.granted);
+  check('taking Max back leaves the Pro he pays for', /They still have StudyCat Pro \(they pay for it\)/.test(await txt(a, '.toast')) && (await api(b, 'create_status')).json.plan === 'pro' && !(await api(b, 'create_status')).json.granted);
   fs.writeFileSync(STATE, '{}'); await api(b, 'create_status&refresh=1');
   await cb.close();
 

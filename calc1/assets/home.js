@@ -1,6 +1,6 @@
 /* ============================================================
-   Mathub — the start page's pieces, shared by the iOS and Android apps (their Learn page, app-native.js)
-   and the website (the start page for students who have studied here, app.js):
+   StudyCat — the start page's pieces, shared by the iOS and Android apps (their Learn page, app-native.js)
+   and the website (the Up next and Today widgets of Your home, assets/dash.js):
    - your classes as cards, each with its next exam and how much of it you have mastered
    - the class you picked: where it is, its next exam and how ready you are, and the next lesson
    - today across all your classes: daily goal, flashcards due, missed questions, what is due
@@ -175,38 +175,7 @@
     </section>`;
   }
 
-  /* ============================================================
-     The website's start page for students who have studied here: the class you pick, its next exam
-     and how ready you are, the next lesson and the unit you are in; beside it today across all your
-     classes and the class's tools. (First visits keep the intro and the steps.)
-     ============================================================ */
-  function webHome(mineIds, extra = {}) {
-    const mine = mineIds.filter(x => Courses[x] && !Courses[x].preview); if (!mine.length) return '';
-    const id = curClass() && mine.includes(curClass()) ? curClass() : mine[0];
-    return `<div class="ah wh" id="web-home">
-      ${mine.length > 1 ? `<div class="wh-pick" role="tablist" aria-label="Show a class">${mine.map(x => `<button type="button" role="tab" class="wh-tab${x === id ? ' on' : ''}" aria-selected="${x === id}" data-wh="${x}" style="${ccStyle(x)}">${esc(Courses[x].short || Courses[x].code)}</button>`).join('')}</div>` : ''}
-      <div class="wh-grid"><div class="wh-main" id="wh-main" aria-busy="true" style="${ccStyle(id)}"><div class="ah-loading" aria-hidden="true"><i></i><i></i><i></i></div></div>
-      <aside class="wh-side">${todayHtml()}<div id="wh-tools"></div>${extra.side || ''}</aside></div></div>`;
-  }
-  function paintWebHome(root) {
-    const box = $('#web-home', root); if (!box) return;
-    const main = $('#wh-main', box); const tabs = $$('.wh-tab', box); const on = $('.wh-tab.on', box); const id = on ? on.dataset.wh : (myIds()[0] || null); if (!id) return;
-    wirePath(main);
-    box.addEventListener('click', e => { const b = e.target.closest('[data-wh]'); if (!b) return; setClass(b.dataset.wh); tabs.forEach(x => { const sel = x === b; x.classList.toggle('on', sel); x.setAttribute('aria-selected', String(sel)); }); fill(b.dataset.wh); });
-    const fill = cid => {
-      main.setAttribute('aria-busy', 'true'); main.setAttribute('style', ccStyle(cid));
-      App.loadCourse(cid).then(C => {
-        if (!main.isConnected) return; main.setAttribute('aria-busy', 'false');
-        if (locked(cid)) { main.innerHTML = lockHero(C); if (App.createLock) App.createLock.wire(main, C); $('#wh-tools', box).innerHTML = ''; return; }
-        const xw = examWeekHtml(C); main.innerHTML = heroHtml(C, { noExam: !!xw }) + xw + pathHtml(C, { unitOnly: true });
-        $('#wh-tools', box).innerHTML = toolsHtml(C, { allHref: `#/${cid}/dashboard` }); $('#wh-tools', box).setAttribute('style', ccStyle(cid));
-        if (App.typeset) safe(() => App.typeset(main));
-      }).catch(() => { main.setAttribute('aria-busy', 'false'); main.innerHTML = `<div class="ah-empty"><p>This class could not be opened.</p><a class="btn" href="#/${cid}/dashboard">Try its class page</a></div>`; });
-    };
-    fill(id);
-  }
-
-  App.home = { myIds, curClass, setClass, examOf, daysTo, inDays, nodesOf, todayHtml, classRow, heroHtml, lockHero, toolsHtml, pathHtml, wirePath, examWeek, examWeekHtml, webHome, paintWebHome };
+  App.home = { myIds, curClass, setClass, examOf, daysTo, inDays, nodesOf, todayHtml, classRow, heroHtml, lockHero, toolsHtml, pathHtml, wirePath, examWeek, examWeekHtml };
 
   /* the class page shows exam week too, above everything else */
   App.onRender = App.onRender || [];

@@ -1,5 +1,5 @@
 /* ============================================================
-   Mathub — shared interactive tools (every course)
+   StudyCat — shared interactive tools (every course)
    Quizzer and exam prep. Course data comes from App.D / App.Q.
    ============================================================ */
 (function (global) {

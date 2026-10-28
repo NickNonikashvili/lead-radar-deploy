@@ -1,5 +1,5 @@
 /* M 170: topic notes, formulas, flashcards, practice sets and checklists.
-   Written for Mathub from standard trigonometry, following OpenStax Algebra and Trigonometry 2e,
+   Written for StudyCat from standard trigonometry, following OpenStax Algebra and Trigonometry 2e,
    chapters 7–10, and the course's learning outcomes. Class, WeBWorK and the written homework decide
    what the exams ask. */
 const R = String.raw;

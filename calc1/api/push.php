@@ -1,6 +1,6 @@
 <?php
 /* ============================================================
-   Mathub account server — web push
+   StudyCat account server — web push
    Sends "empty" pushes signed with VAPID (no payload encryption
    needed); the service worker then fetches the pending notifications
    for the logged-in user with push_pending and shows them. Keys are
@@ -36,7 +36,7 @@ function mh_der_to_raw(string $der): string {
 }
 function mh_vapid_jwt(string $aud): string {
   $v = mh_vapid(); $cfg = mh_config();
-  $h = mh_b64u(json_encode(['typ' => 'JWT', 'alg' => 'ES256'])); $c = mh_b64u(json_encode(['aud' => $aud, 'exp' => time() + 12 * 3600, 'sub' => 'mailto:' . ($cfg['mail_from'] ?? 'info@mathub.space')]));
+  $h = mh_b64u(json_encode(['typ' => 'JWT', 'alg' => 'ES256'])); $c = mh_b64u(json_encode(['aud' => $aud, 'exp' => time() + 12 * 3600, 'sub' => 'mailto:' . ($cfg['mail_from'] ?? 'info@studycat.org')]));
   $key = openssl_pkey_get_private($v['pem']); $sig = ''; if (!openssl_sign("$h.$c", $sig, $key, OPENSSL_ALGO_SHA256)) throw new RuntimeException('Could not sign.');
   return "$h.$c." . mh_b64u(mh_der_to_raw($sig));
 }
@@ -88,7 +88,7 @@ function mh_push_tick(int $max): int {
 function mh_push_route(string $route, array $in, array $cfg, string $ip): void {
   $db = mh_db();
   switch ($route) {
-    case 'push_key': { mh_method('GET'); try { mh_json(['ok' => true, 'key' => mh_vapid()['pub']]); } catch (Throwable $e) { error_log('Mathub push key: ' . $e->getMessage()); mh_fail('Push notifications are not available on this server right now.', 500); } }
+    case 'push_key': { mh_method('GET'); try { mh_json(['ok' => true, 'key' => mh_vapid()['pub']]); } catch (Throwable $e) { error_log('StudyCat push key: ' . $e->getMessage()); mh_fail('Push notifications are not available on this server right now.', 500); } }
     case 'push_subscribe': {
       mh_method('POST'); $u = mh_require_user(); mh_rate_or_fail("push:sub:$ip", 30, 3600);
       $endpoint = (string)($in['endpoint'] ?? ''); $keys = is_array($in['keys'] ?? null) ? $in['keys'] : []; $p256 = (string)($keys['p256dh'] ?? ''); $auth = (string)($keys['auth'] ?? '');
@@ -111,7 +111,7 @@ function mh_push_route(string $route, array $in, array $cfg, string $ip): void {
     }
     case 'push_test': {
       mh_method('POST'); $u = mh_require_user(); mh_rate_or_fail('push:test:' . $u['id'], 5, 86400, 'Five test notifications a day is plenty.');
-      mh_push_queue((int)$u['id'], 'Mathub notifications work', 'This is your test. Reminders arrive the evening before something is due, and when a streak is at risk.', '#/today', 'test');
+      mh_push_queue((int)$u['id'], 'StudyCat notifications work', 'This is your test. Reminders arrive the evening before something is due, and when a streak is at risk.', '#/today', 'test');
       $n = mh_push_user((int)$u['id']);
       mh_json(['ok' => true, 'sent' => $n, 'note' => $n ? 'Sent to ' . $n . ' device' . ($n === 1 ? '' : 's') . '.' : 'No device accepted the push. Turn notifications on in this browser first.']);
     }

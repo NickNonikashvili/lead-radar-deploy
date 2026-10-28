@@ -1,4 +1,4 @@
-/* An email to every member (api/news.php, admin Email everyone, #/unsubscribe, Settings → Account → News from Mathub).
+/* An email to every member (api/news.php, admin Email everyone, #/unsubscribe, Settings → Account → News from StudyCat).
    Covered: only admins, the draft about Bo on every account (free monthly credits), the preview ({name}, {credits}, {minutes}, the button's link,
    the way out), a test to yourself, the send itself (confirmed, once per member, in batches, nobody twice, not to
    members who turned news off or are not verified), a mail server that refuses (it pauses and says why), stop,
@@ -27,7 +27,7 @@ const ask = q => { const r = require('child_process').spawnSync('php', ['-r', '$
   r = (await api(a, 'admin_news_preview', d)).json;
   check('the preview fills in the credits, the minutes and the name', r.subject === `Bo is on every account now: ${(await api(a, 'admin_news')).json.credits} free credits a month` && /about \d+ minutes on a call/.test(r.text) && /Hi [A-Z][a-z]+,/.test(r.text) && !/\{name\}|\{minutes\}|\{credits\}/.test(r.html + r.text), r.subject);
   check('its button opens the demo on the site, and the bottom has a way out', /href="https?:\/\/[^"]+\/#\/max"/.test(r.html) && /#\/unsubscribe\?u=\d+&amp;t=[0-9a-f]{32}/.test(r.html) && /Stop these emails: https?:\/\/\S+#\/unsubscribe\?u=\d+&t=[0-9a-f]{32}/.test(r.text), r.text.slice(-200));
-  check('a link that is not on Mathub or https is refused', (await api(a, 'admin_news_preview', Object.assign({}, d, { link: 'javascript:alert(1)' }))).status === 400);
+  check('a link that is not on StudyCat or https is refused', (await api(a, 'admin_news_preview', Object.assign({}, d, { link: 'javascript:alert(1)' }))).status === 400);
   const before = fs.existsSync(LOG) ? fs.readFileSync(LOG, 'utf8').length : 0;
   r = await api(a, 'admin_news_test', d);
   const tail = () => fs.readFileSync(LOG, 'utf8').slice(before);
@@ -79,7 +79,7 @@ const ask = q => { const r = require('child_process').spawnSync('php', ['-r', '$
   await cu.close();
   // the setting
   await go(a, '#/settings', 1200);
-  const box = await a.$('#acct-news'); check('Settings has News from Mathub, on', !!box && await box.isChecked());
+  const box = await a.$('#acct-news'); check('Settings has News from StudyCat, on', !!box && await box.isChecked());
   await box.uncheck(); await a.waitForTimeout(700); check('turning it off is saved', ask("SELECT news_email FROM users WHERE email = 'admin.user@montana.edu'")[0].news_email === 0);
   await box.check(); await a.waitForTimeout(700);
 

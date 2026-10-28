@@ -60,7 +60,7 @@ const sqlite = q => require('child_process').spawnSync('php', ['-r', '$d = new P
   await go(a, '#/calc/practice', 1600);
   await a.click('#bo-fab'); await a.waitForTimeout(900);
   const ag = await txt(a, '#bo-pop .bf-body');
-  check('without a plan, Bo on every page works on her credits: she is asked to agree first, no plan wall', /Before you start/.test(ag) && !/Get Mathub Pro|part of Mathub Pro/.test(ag), ag.slice(0, 160));
+  check('without a plan, Bo on every page works on her credits: she is asked to agree first, no plan wall', /Before you start/.test(ag) && !/Get StudyCat Pro|part of StudyCat Pro/.test(ag), ag.slice(0, 160));
   // out of credits: the panel says so, with Get credits
   const ALICE = "(SELECT id FROM users WHERE email = 'alice.a@montana.edu')";
   sqlite(`INSERT INTO credit_use (user_id, at, feature, mc, month_mc, paid_mc, ref, detail) VALUES (${ALICE}, strftime('%s','now'), 'other', 100000, 100000, 0, 'test-out', 'test')`);
@@ -73,7 +73,7 @@ const sqlite = q => require('child_process').spawnSync('php', ['-r', '$d = new P
   fs.writeFileSync(STATE, JSON.stringify({ [aliceId]: { expires: new Date(Date.now() + 30 * 864e5).toISOString(), plan: 'pro' } }));
   await api(a, 'create_status&refresh=1'); await a.evaluate(() => { App.setSetting('aiConsent', Date.now()); if (App.subscription) App.subscription.refresh(true); }); await api(a, 'ai_forget', { what: 'all' });
   await a.reload(); await a.waitForTimeout(1600); await a.click('#bo-fab'); await a.waitForTimeout(1200);
-  check('with Mathub Pro the panel is open for questions, with the link to Ask Bo’s page', !(await a.$('#bo-pop .bf-gate')) && !!(await a.$('#bo-pop #bf-q')) && !!(await shownEl(a, '#bf-full')), await txt(a, '#bo-pop .bf-body'));
+  check('with StudyCat Pro the panel is open for questions, with the link to Ask Bo’s page', !(await a.$('#bo-pop .bf-gate')) && !!(await a.$('#bo-pop #bf-q')) && !!(await shownEl(a, '#bf-full')), await txt(a, '#bo-pop .bf-body'));
   await a.fill('#bf-q', 'What is a limit?'); await a.keyboard.press('Enter'); await a.waitForTimeout(2600);
   check('and Bo answers a Pro member here', /Bo here\./.test(await lastBo(a)) && last().messages && /What is a limit\?/.test(JSON.stringify(last().messages)), await lastBo(a));
   fs.writeFileSync(STATE, '{}'); await api(a, 'create_status&refresh=1'); await api(a, 'ai_forget', { what: 'all' });

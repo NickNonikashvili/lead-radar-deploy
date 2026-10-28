@@ -1,5 +1,5 @@
 /* ============================================================
-   Mathub — running the site in the admin panel (assets/admin-ops.js): off-site backups, answer tests, cost alerts,
+   StudyCat — running the site in the admin panel (assets/admin-ops.js): off-site backups, answer tests, cost alerts,
    the weekly report and usage.
    ============================================================ */
 .ops-off-grid, .ops-cost { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr)); gap: 12px; margin-top: 10px; }

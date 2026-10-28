@@ -112,7 +112,7 @@ const NOW = () => Math.floor(Date.now() / 1000);
   const kept = path.join(__dirname, '..', 'api', 'data', 'ai-img', require('crypto').createHash('sha256').update(JSON.stringify(['gpt-image-2', 'medium', '1024x1024', 'diagram', pic.prompt])).digest('hex') + '.webp');
   try { fs.unlinkSync(kept); } catch (e) {}   // made by an earlier run
   r = await api(a, 'ai_image', pic);
-  check('Bo makes a picture: a link to it on Mathub', r.ok && /^api\/index\.php\?r=ai_image_file&id=[a-f0-9]{64}$/.test(r.url || ''), r);
+  check('Bo makes a picture: a link to it on StudyCat', r.ok && /^api\/index\.php\?r=ai_image_file&id=[a-f0-9]{64}$/.test(r.url || ''), r);
   const sent = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures', 'image-last.json'), 'utf8'));
   check('the image model is asked for it, with the style and what Bo knows about the class', /right triangle/.test(sent.prompt) && /textbook figure/.test(sent.prompt) && sent.size === '1024x1024' && sent.model === 'gpt-image-2', { model: sent.model, size: sent.size });
   const img = rows("SELECT mc, detail FROM credit_use WHERE user_id = ? AND feature = 'image'", aliceId);
@@ -185,7 +185,7 @@ const NOW = () => Math.floor(Date.now() / 1000);
   const buy = await b.$eval('[data-action="us-buy"]', x => ({ href: x.getAttribute('href'), target: x.getAttribute('target'), text: x.textContent })).catch(() => null);
   check('Buy 1,000 credits · $10 opens his checkout in a new tab', buy && buy.href === `https://pay.rev.cat/sbx_credits_link/${bobCust}` && buy.target === '_blank' && /1,000 credits · \$10/.test(buy.text), buy);
   check('what he used them on this month, the last 30 days, and what things cost', (await b.$$('.us-by li')).length >= 2 && !!(await b.$('svg.us-days')) && /A minute|call/i.test(await txt(b, '.us-prices')), await txt(b, '.us-by'));
-  check('everything he used, and what was bought, refunded and given', /Calc|Calculus|call/i.test(await txt(b, '#us-rec-h + *, .us-list')) && /Refunded/.test(await txt(b, '#us')) && /From Mathub/.test(await txt(b, '#us')));
+  check('everything he used, and what was bought, refunded and given', /Calc|Calculus|call/i.test(await txt(b, '#us-rec-h + *, .us-list')) && /Refunded/.test(await txt(b, '#us')) && /From StudyCat/.test(await txt(b, '#us')));
   const pages = cb.pages().length;
   await b.click('[data-action="us-buy"]'); await b.waitForTimeout(500); for (const pg of cb.pages().slice(pages)) await pg.close();
   check('after Buy, the page waits for the payment, with I paid', await b.isVisible('#us-wait') && /I paid/.test(await txt(b, '#us-wait')));

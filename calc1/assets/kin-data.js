@@ -1,5 +1,5 @@
 /* ============================================================
-   Mathub — KIN 322 Kinesiology (Fall 2026)
+   StudyCat — KIN 322 Kinesiology (Fall 2026)
    Instructor: Jim Becker, PhD. Built from the course syllabus and its
    tentative schedule. Everyone shares the Tue/Thu lectures, but labs
    run in six sections, so lab rows carry a lab-section id in the fifth
@@ -439,7 +439,7 @@
     { icon: 'list', title: 'Homework and quizzes', html: `<ul class="list-plain small"><li>Homework prepares you for each week’s lecture. Hand-write or type it, and turn it in on Canvas by the end of class on the due day.</li><li>Keep it all in a 3-ring binder. It is checked in week 14 or 15, and you need that sign-off to use it on the final.</li><li>Review quizzes open Friday 8:00 am and close Monday 5:00 pm: 10 minutes, closed book and closed note.</li></ul>` },
     { icon: 'shield', title: 'Integrity', html: `<p class="small">Collaboration is <b>not allowed</b> on any assignment or quiz in this course, and all work must be your own with proper citations. A first small offense loses credit for the assignment; serious or repeated offenses cost a letter grade or the course and are reported to the Board of Conduct.</p>` },
     { icon: 'calendar', title: 'Dates and policies', html: `<ul class="list-plain small"><li>Last day to add with MyInfo: Tue Sept 1. Add/drop online: Wed Sept 9. Drop without a W: Wed Sept 16. Withdraw with a W: Wed Nov 18.</li><li>No extensions, late work or revisions without prior approval or a documented illness, injury or hardship.</li><li>Accommodations: contact the Office of Disability, Re-Entry and Veterans Services and the instructor.</li></ul>` },
-    { icon: 'bulb', title: 'How to use Mathub for this class', span2: true, html: `<p class="small">Use Mathub to <b>study</b>, not to complete graded work: the syllabus bans collaboration on homework and quizzes, so do those on your own. After each lecture, read the topic note, then practice movements on yourself for the plane-and-axis and muscle-action questions. Before each exam, drill the quizzer’s torque, lever, ROM and gait questions and review the Formulas & key terms sheet; before each lab practical, pair it with palpation in open lab.</p>` }
+    { icon: 'bulb', title: 'How to use StudyCat for this class', span2: true, html: `<p class="small">Use StudyCat to <b>study</b>, not to complete graded work: the syllabus bans collaboration on homework and quizzes, so do those on your own. After each lecture, read the topic note, then practice movements on yourself for the plane-and-axis and muscle-action questions. Before each exam, drill the quizzer’s torque, lever, ROM and gait questions and review the Formulas & key terms sheet; before each lab practical, pair it with palpation in open lab.</p>` }
   ];
   const NAV = [
     { label: 'Today', items: [['dashboard', 'Dashboard', 'home'], ['calendar', 'Calendar', 'calendar']] },
@@ -453,7 +453,7 @@
   global.Courses.kin = Object.assign(global.Courses.kin || {}, {
     id: 'kin', code: 'KIN 322', name: 'Kinesiology', short: 'KIN 322', term: 'Fall 2026', kind: 'science', tagline: 'How joints and muscles move the spine and limbs, and the biomechanics behind it',
     formulasNote: 'Everything on one page. The closed-note part of each exam is from memory; the open-note part allows your homework, not this sheet.', filterExample: 'torque, ACL',
-    quizNote: 'Torque, lever, range-of-motion and gait questions are generated with computed answers; anatomy questions come from a bank written for Mathub. Check anything surprising against lecture, lab and your Trail Guide.',
+    quizNote: 'Torque, lever, range-of-motion and gait questions are generated with computed answers; anatomy questions come from a bank written for StudyCat. Check anything surprising against lecture, lab and your Trail Guide.',
     COURSE, GRADING, EXAMS, CALENDAR, CALENDAR_NOTE, RECURRING, SEMESTER, VARIANTS, UNITS, SECTIONS, FORMULAS, FLASHCARDS, PRACTICE, CHECKLISTS, INFO, NAV
   });
 })(window);

@@ -1,9 +1,10 @@
 <?php
 /* ============================================================
-   Mathub account server — Bo, the AI tutor, talking with Bo out loud, and classes Bo writes from a syllabus
+   StudyCat account server — Bo, the AI tutor, talking with Bo out loud, and classes Bo writes from a syllabus
    Routes: ai_status, ai_thread, ai_tutor, ai_forget, ai_class, ai_speak, ai_listen, ai_live_start, ai_call_start, ai_live_tick, ai_live_log
-   - Who can do what: any signed-in member can have Bo turn a syllabus into a class, which is checked first and then
-     published for everyone (api/community.php). Everything else with Bo (asking him on any page or on his own page,
+   - Who can do what: any signed-in member can have Bo read a syllabus for the class maker (ai_class: the file is
+     checked first, api/community.php) and write a class's lessons; the class is the student's own and never published.
+     That and everything else with Bo (asking him on any page or on his own page,
      talking out loud, calls, his pictures) works on any plan and is paid in credits (api/credits.php): each month's
      credits by plan, then credits bought. Max calls use the stronger model. (The free minutes, ai_trial, are retired;
      a call already on them when this changed finishes on them.)
@@ -16,7 +17,7 @@
        * Bo's chat is kept here: only the last few turns go to the AI, plus up to 12 short notes Bo saved;
        * the parts that do not change (Bo's instructions, the class summary) are marked for prompt caching;
        * a class from a syllabus is written in steps: the syllabus is checked (is it a real course, and new
-         to Mathub?) and read into an outline in two requests that share the cached syllabus, the outline is kept
+         to StudyCat?) and read into an outline in two requests that share the cached syllabus, the outline is kept
          here, then each unit is written from that outline instead of the whole syllabus again (each unit is kept
          too, so the published class can be checked against what Bo wrote).
    - The smallest model that does the job well: claude-haiku-5-5 by default (ai_model_tutor, ai_model_class).
@@ -76,7 +77,7 @@ function mh_ai_db(): PDO {
     $db->exec('CREATE TABLE IF NOT EXISTS ai_builds (id TEXT PRIMARY KEY, user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE, created INTEGER NOT NULL, outline TEXT NOT NULL, units INTEGER NOT NULL, steps INTEGER NOT NULL DEFAULT 0)');
     $bc = array_column($db->query('PRAGMA table_info(ai_builds)')->fetchAll(), 'name');
     if (!in_array('screen', $bc, true)) $db->exec("ALTER TABLE ai_builds ADD COLUMN screen TEXT NOT NULL DEFAULT ''");          // what the check found: the course code, title, school and term
-    if (!in_array('published', $bc, true)) $db->exec("ALTER TABLE ai_builds ADD COLUMN published TEXT NOT NULL DEFAULT ''");    // the pack id once it is on Mathub
+    if (!in_array('published', $bc, true)) $db->exec("ALTER TABLE ai_builds ADD COLUMN published TEXT NOT NULL DEFAULT ''");    // the pack id once it is on StudyCat
     if (!in_array('req_code', $bc, true)) $db->exec("ALTER TABLE ai_builds ADD COLUMN req_code TEXT NOT NULL DEFAULT ''");      // built from a class request: its course code, so those who asked hear it is added
     $db->exec('CREATE TABLE IF NOT EXISTS ai_build_units (build TEXT NOT NULL, n INTEGER NOT NULL, data TEXT NOT NULL, PRIMARY KEY (build, n))');   // each unit as Bo wrote it
     $cols = array_column($db->query('PRAGMA table_info(ai_usage)')->fetchAll(), 'name');
@@ -297,7 +298,7 @@ function mh_ai_clip($v, int $max): string {
   return mb_strlen($s) > $max ? rtrim(mb_substr($s, 0, $max - 1)) . '…' : $s;
 }
 
-/** The class as Mathub knows it: built-in (api/classdata), a class pack, or one the student made. */
+/** The class as StudyCat knows it: built-in (api/classdata), a class pack, or one the student made. */
 function mh_ai_class(array $u, string $cid): ?array {
   if (preg_match('/^my\d{4,6}$/', $cid)) {
     $st = mh_myclass_db()->prepare('SELECT pack FROM my_classes WHERE user_id = ? AND cid = ?'); $st->execute([$u['id'], $cid]); $p = $st->fetchColumn();
@@ -443,13 +444,13 @@ CODE: a block in ``` with its language (```python … ```) on the page, for prog
 TXT;
 
 const MH_AI_BO = <<<'TXT'
-You are Bo, the bobcat who tutors students on Mathub, a study app for Montana State University students. You talk with one student. Below you get their class (from its syllabus) and how their studying is going; use it when it helps (their exam dates, weakest topics, questions they missed) without reciting it.
+You are Bo, the bobcat who tutors students on StudyCat, a study app for Montana State University students. You talk with one student. Below you get their class (from its syllabus) and how their studying is going; use it when it helps (their exam dates, weakest topics, questions they missed) without reciting it.
 How you help:
 - Direct and clear, like the best tutor they've had, in your character (YOUR CHARACTER below). Keep the chat itself short: usually under about 80 words, never padding (no "Great question", no recap of what they just said, no summary of the board). Your board carries the worked math and the pictures, so the chat is the talking around them. Go longer only when they ask for more.
 - Teach the way the HOW YOU TEACH rules below say.
 - Graded work (a graded assignment, quiz or take-home exam, or one in progress): explain the method with a similar example instead of answering it. Never help during an exam.
 - Use the class facts exactly. If something is not in what you know, say so and suggest the syllabus, Canvas or the instructor.
-- Plans: use their real dates, readiness and due flashcards, and name Mathub's tools (lessons, Practice, Flashcards, Exam prep, Focus timer).
+- Plans: use their real dates, readiness and due flashcards, and name StudyCat's tools (lessons, Practice, Flashcards, Exam prep, Focus timer).
 - Math in LaTeX between $...$ or $$...$$. Otherwise plain text; **bold** and "- " lists are fine.
 - Your whiteboard: when you work something out (solving a problem, a derivation, a worked example, a formula and what its parts mean), write it on your board instead of in the chat, as a block on lines of its own:
 [board: A short title, like "Solving 2x + 3 = 11"]
@@ -494,18 +495,18 @@ function mh_ai_character(string $id): array {
 }
 function mh_ai_character_id(array $in): string { $p = is_string($in['persona'] ?? null) ? $in['persona'] : ''; return in_array($p, ['professor', 'coach', 'detective', 'zen', 'buddy'], true) ? $p : MH_AI_CHAR_DEFAULT; }
 
-/* the language the student reads Mathub in (assets/i18n.js): Bo answers in it; the class material stays in English */
+/* the language the student reads StudyCat in (assets/i18n.js): Bo answers in it; the class material stays in English */
 const MH_AI_LIVE_SPEAK_EN = '- Speak English unless they speak to you in another language. Do not switch because of an accent or a short "mm-hmm".';   // MH_AI_LIVE's language line, for English; mh_ai_live_instructions swaps it for theirs
 const MH_AI_LANGS = ['es' => 'Spanish', 'ru' => 'Russian', 'fr' => 'French', 'it' => 'Italian', 'pt' => 'Portuguese (Brazilian)', 'de' => 'German'];
 function mh_ai_lang(array $in): string {
   $l = is_string($in['lang'] ?? null) ? $in['lang'] : ''; if (!isset(MH_AI_LANGS[$l])) return '';
   $n = MH_AI_LANGS[$l];
-  return "LANGUAGE: the student uses Mathub in $n. Always answer in $n (what you say, and the words on your board), even when their message, a suggested question or the page is in English, unless they ask for another language. Their class, notes and exams are in English, so the first time you use a key term, give the English term in brackets, e.g. a $n word (derivative). Math notation stays as it is.";
+  return "LANGUAGE: the student uses StudyCat in $n. Always answer in $n (what you say, and the words on your board), even when their message, a suggested question or the page is in English, unless they ask for another language. Their class, notes and exams are in English, so the first time you use a key term, give the English term in brackets, e.g. a $n word (derivative). Math notation stays as it is.";
 }
 
-/* asked from a page of Mathub (Bo floats on every page, assets/bo-float.js): what is on it, and what they pointed at */
+/* asked from a page of StudyCat (Bo floats on every page, assets/bo-float.js): what is on it, and what they pointed at */
 const MH_AI_SCREEN = <<<'TXT'
-THEIR SCREEN: they asked you from a page of Mathub, and THE PAGE below is what is on it: the page, its questions or problems numbered as they see them (Q3, Problem 2), the choices, what they answered and whether it was right, and the text in view. "This", "this one", "Q3", "number 2", "the last one" mean what is on it.
+THEIR SCREEN: they asked you from a page of StudyCat, and THE PAGE below is what is on it: the page, its questions or problems numbered as they see them (Q3, Problem 2), the choices, what they answered and whether it was right, and the text in view. "This", "this one", "Q3", "number 2", "the last one" mean what is on it.
 - Answer about what they are looking at, by the numbers they see. If what they ask isn't on the page, just answer it.
 - A question they haven't answered yet: don't hand over the answer; go up the hint ladder (the idea, a hint, the first step) unless they ask for the full solution. One they got wrong: say exactly what went wrong and why it's tempting, then how to do it, and let them try a similar one.
 - "Check my answers": go through each one they answered, briefly; spend your words on the wrong ones.
@@ -596,7 +597,7 @@ function mh_ai_mailmath(string $s): string {
   return trim(str_replace(['{', '}', '\\'], ['', '', ''], $s));
 }
 function mh_ai_recap_mail(array $u, array $parts, string $who, string $cid): array {
-  $cfg = mh_config(); $site = $cfg['site_name'] ?? 'Mathub'; $url = rtrim((string)(($cfg['site_url'] ?? '') ?: ('https://' . ($_SERVER['HTTP_HOST'] ?? 'mathub.space'))), '/');
+  $cfg = mh_config(); $site = $cfg['site_name'] ?? 'StudyCat'; $url = rtrim((string)(($cfg['site_url'] ?? '') ?: ('https://' . ($_SERVER['HTTP_HOST'] ?? 'studycat.org'))), '/');
   $e = fn($x) => htmlspecialchars(mh_ai_mailmath((string)$x), ENT_QUOTES);
   $topic = $parts['topic'] !== '' ? $parts['topic'] : 'your call';
   $subject = "Your call with $who: " . mh_ai_mailmath($topic);
@@ -674,8 +675,8 @@ function mh_ai_trial_call(int $uid, $lid, array $V): bool {
 }
 /** Without Max: a call goes on only while free minutes are left; otherwise the answer names Max. */
 function mh_ai_trial_or_fail(int $uid, array $V): void {
-  if ($V['trial'] <= 0) mh_fail('Talking with Bo is part of Mathub Max.', 402, ['plan' => 'max']);
-  if (mh_ai_trial_left($uid, $V) <= 0) mh_fail('You have used your ' . intdiv(mh_ai_trial_total($uid, $V), 60) . ' free minutes with Bo. Calls with Bo are part of Mathub Max.', 402, ['plan' => 'max', 'trial_over' => true]);
+  if ($V['trial'] <= 0) mh_fail('Talking with Bo is part of StudyCat Max.', 402, ['plan' => 'max']);
+  if (mh_ai_trial_left($uid, $V) <= 0) mh_fail('You have used your ' . intdiv(mh_ai_trial_total($uid, $V), 60) . ' free minutes with Bo. Calls with Bo are part of StudyCat Max.', 402, ['plan' => 'max', 'trial_over' => true]);
 }
 /** Free minutes as the page shows them, for an account without Max. */
 function mh_ai_trial_public(int $uid, array $V): array { $used = mh_ai_trial_used($uid); $all = mh_ai_trial_total($uid, $V); return ['minutes' => intdiv($all, 60), 'left' => max(0, $all - $used), 'used' => $used, 'bonus' => intdiv($all - $V['trial'], 60), 'invite' => intdiv(mh_ai_invite_secs($V), 60)]; }
@@ -695,7 +696,7 @@ function mh_ai_invite_secs(array $V): int { return $V['trial'] > 0 ? 60 * max(0,
    knows about them (mh_ai_live_instructions). */
 const MH_AI_LIVE = <<<'TXT'
 # Role and objective
-You are Bo, the bobcat tutor on Mathub, on a live voice call with a Montana State University student. Help them understand the math in their class and do it themselves. Success is them doing the next one on their own.
+You are Bo, the bobcat tutor on StudyCat, on a live voice call with a Montana State University student. Help them understand the math in their class and do it themselves. Success is them doing the next one on their own.
 
 # Personality and tone
 - Your character (YOUR CHARACTER below) sets your manner. It never changes the facts or these rules.
@@ -877,7 +878,7 @@ function mh_ai_file($f, array $types, int $max): ?array {
 
 /* ---------- writing a class from a syllabus ---------- */
 const MH_AI_CLASS_SYS = <<<'TXT'
-You turn a college course syllabus into a study class for Mathub, a study app for Montana State University students. Reply with ONE JSON object in a ```json code block and nothing else. Strings are plain text (no HTML, no Markdown); write math as LaTeX between $ signs and double every backslash. Copy names, dates and numbers from the syllabus exactly; never invent a date.
+You turn a college course syllabus into a study class for StudyCat, a study app for Montana State University students. Reply with ONE JSON object in a ```json code block and nothing else. Strings are plain text (no HTML, no Markdown); write math as LaTeX between $ signs and double every backslash. Copy names, dates and numbers from the syllabus exactly; never invent a date.
 TXT;
 
 function mh_ai_sizes(string $size): array {
@@ -897,6 +898,15 @@ Read the syllabus and write the class's facts and structure as this JSON (ids us
 Rules: {$Z['sections']} SECTIONS in total, one per main topic, grouped in UNITS (one unit per exam period when the course has exams). An exam with no date in the syllabus goes in COURSE.deadlines, not EXAMS. CALENDAR types: lecture, lab, exam, review, holiday, admin (deadlines); include every exam, holiday and deadline, and one lecture row per topic when there is a schedule. GRADING weights add up to 100; use the syllabus's own letter scale when it has one. Leave out an exam's weight when the syllabus does not give it. color.light is a deep colour that white text can sit on.
 TXT;
 }
+/** A class outline the maker sends (the student's own class as it is now): only what the unit prompt reads, cut to size. */
+function mh_ai_own_outline($o): array {
+  if (!is_array($o)) mh_fail('Send the class to write lessons for.', 400);
+  $O = ['code' => mh_ai_plain($o['code'] ?? '', 30), 'name' => mh_ai_plain($o['name'] ?? '', 120), 'UNITS' => [], 'SECTIONS' => []];
+  foreach (array_slice(is_array($o['UNITS'] ?? null) ? $o['UNITS'] : [], 0, 16) as $u) { if (!is_array($u)) continue; $O['UNITS'][] = ['n' => (int)($u['n'] ?? 0), 'title' => mh_ai_plain($u['title'] ?? '', 80), 'sections' => array_values(array_map(fn($x) => mb_substr((string)$x, 0, 40), array_slice(array_filter(is_array($u['sections'] ?? null) ? $u['sections'] : [], 'is_string'), 0, 12)))]; }
+  foreach (array_slice(is_array($o['SECTIONS'] ?? null) ? $o['SECTIONS'] : [], 0, 40) as $x) { if (!is_array($x) || !is_string($x['id'] ?? null)) continue; $O['SECTIONS'][] = ['id' => mb_substr($x['id'], 0, 40), 'label' => mh_ai_plain($x['label'] ?? '', 10), 'title' => mh_ai_plain($x['title'] ?? '', 80), 'unit' => (int)($x['unit'] ?? 0), 'about' => mh_ai_plain($x['about'] ?? '', 300)]; }
+  if ($O['code'] === '' && $O['name'] === '' || !$O['UNITS'] || !$O['SECTIONS']) mh_fail('Add the class\'s units and topics first.', 400);
+  return $O;
+}
 function mh_ai_unit_prompt(array $O, int $n, array $Z): string {
   $lines = ['CLASS: ' . mh_ai_plain($O['code'] ?? '', 30) . ' ' . mh_ai_plain($O['name'] ?? '', 80)];
   $secs = []; foreach ((array)($O['SECTIONS'] ?? []) as $s) if (is_array($s) && isset($s['id'])) $secs[(string)$s['id']] = $s;
@@ -912,11 +922,13 @@ $outline
 Write the study material for unit $n "$title", these sections:
 $list
 
-Reply with this JSON:
-{"SECTIONS":[{"id":"section id","ideas":["a short paragraph that teaches part of the topic"],"pitfalls":["a common mistake"],"example":{"p":"a problem","s":"its worked solution"}}],
+Each section is a short lesson a student can learn from alone: first the idea in plain words, then a picture, the key points, worked examples, the usual mistakes and a self-check. Reply with this JSON:
+{"SECTIONS":[{"id":"section id","plain":"the idea in plain words: two to four sentences a first-year student understands on first reading, with no undefined jargon","figure":{"type":"graph","x":[-3,3],"fns":[{"f":"x^2","label":"y = x^2"}],"caption":"what to notice in the picture"},"ideas":["a key point, one or two sentences"],"examples":[{"p":"a problem","s":"its worked solution, step by step, each step on its own line"}],"pitfalls":["a common mistake, and how to avoid it"],"check":[{"q":"a quick question to check understanding","a":"its answer, with one line of why"}]}],
 "FLASHCARDS":[{"id":"c1","sec":"section id","f":"front","b":"back"}],
 "QUIZ":{"questions":[{"topic":"section id","items":[["question","correct answer",["wrong","wrong","wrong"],"one-sentence explanation"]]}]}}
-Per section: {$Z['ideas']} ideas, one or two pitfalls, an example when the subject has problems to solve, {$Z['cards']} flashcards and {$Z['questions']} questions. Accurate and at the level of the course. Wrong answers are plausible but clearly wrong, and a question never gives its answer away.
+Per section: {$Z['ideas']} key points, one or two worked examples when the subject has problems to solve (otherwise an example that applies the idea), one or two pitfalls, two or three self-check questions, {$Z['cards']} flashcards and {$Z['questions']} quiz questions.
+The figure is a drawing spec for the picture that helps most, or left out when no picture helps. Kinds: graph (fns of x, points, "x" and "y" ranges), numberline (intervals like "-1 < x <= 3", points), figure (shapes in coordinates: polygon, segment, arrow, circle, angle, text), table (head, rows), bars (bars of label and value), pie (slices), venn (sets, values), tree (branches with p), flow (steps in order; a step ending in ? is a decision), each with a short "caption".
+Accurate and at the level of the course. Wrong answers are plausible but clearly wrong, and a question never gives its answer away.
 TXT;
 }
 
@@ -1104,7 +1116,7 @@ function mh_ai_route(string $route, array $in, array $cfg, string $ip): void {
       $headset = ($in['mic'] ?? '') === 'headset';   // the page guesses from the microphone's name, or they said so in the call's settings
       // what is said is also written down (captions, the app's math check): in their language, with the class's words
       $lc = is_string($in['lang'] ?? null) && isset(MH_AI_LANGS[$in['lang']]) ? $in['lang'] : 'en';
-      $kw = ['derivative', 'integral', 'limit', 'squared', 'cubed', 'square root', 'fraction', 'denominator', 'numerator', 'exponent', 'logarithm', 'sine', 'cosine', 'tangent', 'slope', 'asymptote', 'chain rule', 'Mathub', 'Bo'];
+      $kw = ['derivative', 'integral', 'limit', 'squared', 'cubed', 'square root', 'fraction', 'denominator', 'numerator', 'exponent', 'logarithm', 'sine', 'cosine', 'tangent', 'slope', 'asymptote', 'chain rule', 'StudyCat', 'Bo'];
       if ($C) { $w = mh_ai_plain($C['code'] ?? '', 20); if ($w !== '') $kw[] = $w; foreach (array_slice((array)($C['SECTIONS'] ?? []), 0, 40) as $sec) if (is_array($sec)) { $w = mh_ai_plain($sec['title'] ?? '', 40); if ($w !== '' && mb_strlen($w) <= 32) $kw[] = $w; } }
       $kw = array_slice(array_values(array_unique($kw)), 0, 40);
       $tm = $V['live_transcribe'];
@@ -1170,7 +1182,7 @@ function mh_ai_route(string $route, array $in, array $cfg, string $ip): void {
       if ($trial && (string)$r['call'] === '' && !empty($in['end'])) { $db->prepare('UPDATE ai_live SET ended = 1 WHERE id = ?')->execute([$lid]); mh_json(['ok' => true, 'left' => mh_ai_trial_left($uid, $V), 'end' => true]); }   // a basic voice call hung up
       if ($trial && mh_ai_trial_left($uid, $V) <= 0) {   // the free minutes are up
         mh_ai_hangup($V, (string)$r['call']); $db->prepare('UPDATE ai_live SET ended = 1 WHERE id = ?')->execute([$lid]);
-        mh_json(['ok' => true, 'left' => 0, 'end' => true, 'trial_over' => true, 'why' => 'That was your ' . intdiv(mh_ai_trial_total($uid, $V), 60) . ' free minutes with Bo. Get Mathub Max to keep calling him.']);
+        mh_json(['ok' => true, 'left' => 0, 'end' => true, 'trial_over' => true, 'why' => 'That was your ' . intdiv(mh_ai_trial_total($uid, $V), 60) . ' free minutes with Bo. Get StudyCat Max to keep calling him.']);
       }
       if ($left <= 0) {
         mh_ai_hangup($V, (string)$r['call']); $db->prepare('UPDATE ai_live SET ended = 1 WHERE id = ?')->execute([$lid]);
@@ -1271,30 +1283,21 @@ function mh_ai_route(string $route, array $in, array $cfg, string $ip): void {
       mh_json(['ok' => true, 'saved' => count($new), 'notes' => mh_ai_notes($uid)]);
     }
     case 'ai_class': {
-      // classes are added by Mathub's team: students request them (api/requests.php), and an administrator has Bo build
-      // one from a request's syllabus in the admin panel (request: its id), or from a syllabus given here
+      // Bo reads a syllabus for the class maker (assets/maker.js), for any member, paid in credits: step "outline" checks
+      // the file and that it is a syllabus, and writes the class's facts and topics, which fill in the maker; step
+      // "unit" writes the lessons, cards and questions of one unit (the outline from that build, or the student's own
+      // class as it is now in the maker). The class is the student's own: it is never published.
       mh_method('POST'); $u = mh_require_user(); $uid = (int)$u['id'];
-      if (!mh_is_admin($u)) mh_fail('Classes are added by the Mathub team now. Request your class with its syllabus, and we will tell you when it is ready.', 403, ['request' => true]);
-      require_once __DIR__ . '/credits.php'; mh_credits_for($u, $cfg, 'class', 'Building a class');   // written down at 0 for administrators
+      require_once __DIR__ . '/credits.php';
       mh_rate_or_fail("ai_class:$uid", 40, 3600, 'Bo is writing a lot of classes for you. Try again in a while.');
       $step = (string)($in['step'] ?? ''); $Z = mh_ai_sizes((string)($in['size'] ?? 'full'));
+      mh_credits_need($u, 2000, $cfg, $step === 'unit' ? 'Bo to write these lessons' : 'Bo to read a syllabus');
+      mh_credits_for($u, $cfg, 'class', $step === 'unit' ? 'Lessons for a class' : 'Reading a syllabus');   // written down at 0 for administrators
       @set_time_limit(200);
       if ($step === 'outline') {
         $S = is_array($in['syllabus'] ?? null) ? $in['syllabus'] : []; $text = trim((string)($S['text'] ?? ''));
         $file = isset($S['file']) ? mh_ai_file($S['file'], ['application/pdf', 'image/jpeg', 'image/png', 'image/webp', 'image/gif', 'text/plain'], MH_AI_FILE_BYTES) : null;
-        $reqCode = '';
-        if (!empty($in['request'])) {   // the syllabus a student sent with a request (checked for malware when it came in, and again below)
-          require_once __DIR__ . '/requests.php'; $q = mh_req_db()->prepare('SELECT * FROM class_requests WHERE id = ?'); $q->execute([(int)$in['request']]); $R = $q->fetch();
-          if (!$R) mh_fail('That request is not there any more.', 404);
-          $reqCode = (string)$R['code']; $text = trim((string)$R['text']); $path = $R['file'] !== '' ? mh_req_file_path((string)$R['file']) : null;
-          if ($path) {
-            $bin = (string)file_get_contents($path);
-            if ($R['file_type'] === 'docx') { require_once __DIR__ . '/community.php'; $t = mh_cc_docx_text($bin); if ($t === '') mh_fail('Bo could not read that Word file. Download it, save it as a PDF and build the class from the Create page.', 422); $text = trim($text . "\n" . $t); }
-            elseif ($R['file_type'] === 'pdf') $file = ['type' => 'application/pdf', 'data' => base64_encode($bin)];
-            else $file = mh_ai_photo($bin, MH_REQ_KINDS[$R['file_type']] ?? 'image/jpeg');
-          }
-        }
-        if ($text === '' && !$file) mh_fail($reqCode !== '' ? 'That request has no syllabus. Ask the student for it, or find it and build the class from the Create page.' : 'Paste your syllabus or attach it first.', 400);
+        if ($text === '' && !$file) mh_fail('Paste your syllabus or attach it first.', 400);
         if (mb_strlen($text) > 120000) mh_fail('That syllabus is very long. Paste the parts with the schedule, topics, exams and grading.', 413);
         require_once __DIR__ . '/community.php';
         // 1. the file: what it says it is, and nothing harmful in it (it is never kept)
@@ -1306,44 +1309,44 @@ function mh_ai_route(string $route, array $in, array $cfg, string $ip): void {
         if ($text !== '') $doc[] = ['type' => 'text', 'text' => "THE SYLLABUS:\n" . $text];
         $doc[count($doc) - 1]['cache_control'] = ['type' => 'ephemeral'];   // the two requests below share the syllabus, so the second reads it from the cache
         $sys = [['type' => 'text', 'text' => MH_AI_CLASS_SYS]];
-        // 2. a real course, with nothing in it that cannot be published, and not on Mathub already
+        // 2. a course syllabus (not homework or something else), and its code, title and school
         mh_rate_or_fail("ai_class_check:$uid", 30, 86400, 'That is a lot of syllabi for one day. Try again tomorrow.');
         $r0 = mh_ai_call($A, $A['class_model'], $sys, [['role' => 'user', 'content' => array_merge($doc, [['type' => 'text', 'text' => MH_CC_SCREEN]])]], 600, 90);
         mh_ai_count($uid, '', $r0['in'], $r0['out']);
-        $K = mh_ai_json($r0['text']); if (!$K || !array_key_exists('syllabus', $K)) mh_fail('Bo could not check this syllabus just now. Please try again.', 502);
+        $K = mh_ai_json($r0['text']); if (!$K || !array_key_exists('syllabus', $K)) mh_fail('Bo could not read this syllabus just now. Please try again.', 502);
         $why = mh_ai_plain($K['reason'] ?? '', 200);
-        if (!($K['syllabus'] === true || $K['syllabus'] === 'true')) mh_fail('This does not look like a course syllabus' . ($why !== '' ? ': ' . rtrim($why, '.') . '.' : '.') . ' Bo makes classes only from the syllabus of a real course.', 422, ['check' => 'syllabus']);
-        $worry = mh_ai_plain($K['concerns'] ?? '', 200); if ($worry !== '') mh_fail('This syllabus has something in it that cannot be published for everyone: ' . rtrim($worry, '.') . '.', 422, ['check' => 'content']);
+        if (!($K['syllabus'] === true || $K['syllabus'] === 'true')) mh_fail('This does not look like a course syllabus' . ($why !== '' ? ': ' . rtrim($why, '.') . '.' : '.') . ' Try the syllabus itself, or start a blank class and fill it in.', 422, ['check' => 'syllabus']);
         $code = mh_ai_plain($K['code'] ?? '', 40); $school = mh_ai_plain($K['school'] ?? '', 120);
-        if (mh_cc_code($code) === '') mh_fail('Bo could not find the course code (like CHMY 121) in this syllabus. Every class on Mathub has one: add the page that shows it.', 422, ['check' => 'code']);
-        if ($dup = mh_cc_find($code, $school)) mh_fail("{$dup['code']} {$dup['name']} is already on Mathub, so it was not added again.", 409, ['exists' => $dup]);
+        // the same course in StudyCat's catalog: the maker offers it (with its notes and practice) next to the student's own
+        $same = mh_cc_code($code) !== '' ? mh_cc_find($code, $school) : null;
         // 3. the outline
         $r = mh_ai_call($A, $A['class_model'], $sys, [['role' => 'user', 'content' => array_merge($doc, [['type' => 'text', 'text' => 'Today is ' . gmdate('Y-m-d') . ".\n" . mh_ai_outline_prompt($Z)]])]], 8000, 170);
         $O = mh_ai_json($r['text']);
         if (!$O || empty($O['UNITS']) || empty($O['SECTIONS']) || !is_array($O['UNITS']) || !is_array($O['SECTIONS'])) { mh_ai_count($uid, '', $r['in'], $r['out']); mh_fail($r['stop'] === 'max_tokens' ? 'That syllabus made a very long outline. Choose "Shorter class" and try again.' : 'Bo could not find the topics and dates in that. Try the syllabus PDF itself, or paste its text.', 422); }
         $units = array_values(array_filter(array_map(fn($x) => is_array($x) ? (int)($x['n'] ?? 0) : 0, $O['UNITS'])));
         if (!$units || count($units) > 16 || count($O['SECTIONS']) > 40) mh_fail('That syllabus did not split into units Bo could use. Try pasting its schedule and topics.', 422);
-        // the course that was checked: the outline keeps its code, and a different code in it is checked again
-        if (mh_cc_code((string)($O['code'] ?? '')) !== mh_cc_code($code)) { if (mh_cc_code((string)($O['code'] ?? '')) !== '' && ($dup = mh_cc_find((string)$O['code'], $school))) mh_fail("{$dup['code']} {$dup['name']} is already on Mathub, so it was not added again.", 409, ['exists' => $dup]); $O['code'] = $code; if (is_array($O['COURSE'] ?? null)) $O['COURSE']['code'] = $code; }
+        if (trim((string)($O['code'] ?? '')) === '' && $code !== '') { $O['code'] = $code; if (is_array($O['COURSE'] ?? null)) $O['COURSE']['code'] = $code; }
         if (trim((string)($O['name'] ?? '')) === '') $O['name'] = mh_ai_plain($K['name'] ?? '', 120);
         $screen = ['code' => $code, 'name' => mh_ai_plain($K['name'] ?? '', 120), 'school' => $school, 'term' => mh_ai_plain($K['term'] ?? '', 40)];
         $id = bin2hex(random_bytes(12));
-        $db->prepare('INSERT INTO ai_builds (id, user_id, created, outline, units, screen, req_code) VALUES (?, ?, ?, ?, ?, ?, ?)')->execute([$id, $uid, time(), json_encode($O, JSON_UNESCAPED_UNICODE), count($units), json_encode($screen, JSON_UNESCAPED_UNICODE), $reqCode]);
+        $db->prepare('INSERT INTO ai_builds (id, user_id, created, outline, units, screen, req_code) VALUES (?, ?, ?, ?, ?, ?, ?)')->execute([$id, $uid, time(), json_encode($O, JSON_UNESCAPED_UNICODE), count($units), json_encode($screen, JSON_UNESCAPED_UNICODE), '']);
         mh_ai_count($uid, 'classes', $r['in'], $r['out']);
-        mh_json(['ok' => true, 'build' => $id, 'outline' => $O, 'units' => $units, 'checked' => $screen]);
+        mh_json(['ok' => true, 'build' => $id, 'outline' => $O, 'units' => $units, 'checked' => $screen, 'catalog' => $same]);
       }
       if ($step === 'unit') {
         $bid = preg_replace('/[^a-f0-9]/', '', (string)($in['build'] ?? '')); $n = (int)($in['unit'] ?? 0);
-        $st = $db->prepare('SELECT * FROM ai_builds WHERE id = ? AND user_id = ?'); $st->execute([$bid, $uid]); $b = $st->fetch();
-        if (!$b || (int)$b['created'] < time() - 3 * 3600) mh_fail('This class is no longer being written. Start again.', 404);
-        if ((int)$b['steps'] >= 2 * (int)$b['units'] + 2) mh_fail('Bo has already written this class. Start a new one.', 429);
-        $db->prepare('UPDATE ai_builds SET steps = steps + 1 WHERE id = ?')->execute([$bid]);
-        $O = json_decode((string)$b['outline'], true);
+        if ($bid !== '') {
+          $st = $db->prepare('SELECT * FROM ai_builds WHERE id = ? AND user_id = ?'); $st->execute([$bid, $uid]); $b = $st->fetch();
+          if (!$b || (int)$b['created'] < time() - 3 * 3600) mh_fail('This class is no longer being written. Start again.', 404);
+          if ((int)$b['steps'] >= 2 * (int)$b['units'] + 2) mh_fail('Bo has already written this class. Start a new one.', 429);
+          $db->prepare('UPDATE ai_builds SET steps = steps + 1 WHERE id = ?')->execute([$bid]);
+          $O = json_decode((string)$b['outline'], true);
+        } else $O = mh_ai_own_outline($in['outline'] ?? null);   // the student's class as it is now in the maker
         $r = mh_ai_call($A, $A['class_model'], [['type' => 'text', 'text' => MH_AI_CLASS_SYS]], [['role' => 'user', 'content' => mh_ai_unit_prompt($O, $n, $Z)]], 10000, 170);
         mh_ai_count($uid, '', $r['in'], $r['out']);
         $J = mh_ai_json($r['text']);
         if (!$J) mh_fail($r['stop'] === 'max_tokens' ? 'Unit ' . $n . ' came out too long. Choose "Shorter class" and try again.' : 'Bo stumbled writing unit ' . $n . '. Try again.', 422);
-        $db->prepare('INSERT OR REPLACE INTO ai_build_units (build, n, data) VALUES (?, ?, ?)')->execute([$bid, $n, json_encode($J, JSON_UNESCAPED_UNICODE)]);   // the published class is checked against it
+        if ($bid !== '') $db->prepare('INSERT OR REPLACE INTO ai_build_units (build, n, data) VALUES (?, ?, ?)')->execute([$bid, $n, json_encode($J, JSON_UNESCAPED_UNICODE)]);
         mh_json(['ok' => true, 'unit' => $n, 'data' => $J]);
       }
       mh_fail('Unknown step.', 400);

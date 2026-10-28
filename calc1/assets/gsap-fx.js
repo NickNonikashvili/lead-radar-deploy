@@ -1,5 +1,5 @@
 /* ============================================================
-   Mathub — GSAP, on demand
+   StudyCat — GSAP, on demand
    GSAP and ScrollTrigger live in assets/vendor/ (precached for
    offline) and are fetched only by the two things that use them:
    the weekly recap story (a timeline: progress segments, counting

@@ -1,19 +1,15 @@
 /* ============================================================
-   Mathub — "Your day" on the website's start page
-   The planner at a glance, in Big Sky cards under the hero:
-   - Today's schedule: the timetable, events and exams of the day,
-     with what is on now and next
-   - Due this week: your tasks and every class's deadlines, tick
-     them off right there, add one in a line
-   - The clock: a face that ticks, the time back home, the semester
-   - Pomodoro: the sidebar's timer, bigger, with focus, short and
-     long breaks
-   - To-dos, reminders and events, habits to tick, this quarter's
-     goals, the wheel of life
-   - This week: seven days with everything dated on them
-   It starts with today's schedule, what is due and the week; Customize
-   picks the cards (settings.homeHide).
-   Data: assets/life.js. Used by the Landing view in assets/app.js.
+   StudyCat — your home: a dashboard of widgets you arrange yourself (the website's start page)
+   - Widgets: Up next (the class you picked: its next exam, how ready you are, the next lesson), Today across your
+     classes, Bo, your classes, today's schedule, what is due, this week, the clock, the pomodoro, to-dos, reminders,
+     habits, goals, the wheel of life, the latest discussions, study guides, where you left off, and a note.
+   - Arrange: drag a widget by its handle anywhere, resize it from its corner, let widgets overlap and bring one to
+     the front or send it to the back, add and remove widgets, tidy them into a grid, or go back to the start. The
+     grip works with the keyboard too (arrows move, Shift with the arrows resizes). The layout is saved with the
+     account (settings.homeLayout, synced): 12 columns wide, rows of ROW pixels.
+   - On a narrow screen the widgets stack in reading order (top to bottom, left to right); Arrange moves them up
+     and down there.
+   Data: assets/life.js, assets/home.js and the classes. Used by the start page in assets/app.js.
    ============================================================ */
 (function (global) {
   'use strict';
@@ -22,11 +18,7 @@
   const Courses = global.Courses;
   const t = (s, ...v) => (App.t ? App.t(s, ...v) : s);
   const tIso = () => L.today();
-  const WIDGETS = [['schedule', 'Today’s schedule'], ['due', 'Due this week'], ['clock', 'Clock'], ['pomo', 'Pomodoro'], ['todos', 'To-dos'], ['events', 'Reminders & events'], ['habits', 'Habits'], ['goals', 'Goals this quarter'], ['wheel', 'Wheel of life'], ['week', 'This week']];
-  // a first look shows three cards: today, what is due and the week; Customize brings back the rest
-  const START_HIDE = ['clock', 'pomo', 'todos', 'events', 'habits', 'goals', 'wheel'];
-  const hidden = () => new Set(Array.isArray(settings().homeHide) ? settings().homeHide : START_HIDE);
-  const card = (id, title, ic, href, body, extra = '') => `<section class="panel dw dwc-${id}" data-w="${id}" aria-labelledby="dw-${id}-t"><div class="dw-h"><span class="dw-ic">${icon(ic, 16)}</span><h3 id="dw-${id}-t">${esc(t(title))}</h3>${extra}${href ? `<a class="dw-more" href="${href}" aria-label="${esc(t('Open {1}', t(title)))}">${icon('right', 14)}</a>` : ''}</div><div class="dw-b">${body}</div></section>`;
+  const card = (id, title, ic, href, body, extra = '') => `<section class="panel dw dwc-${id}" data-w="${id}" aria-labelledby="dw-${id}-t"><div class="dw-h"><button type="button" class="dw-grip" data-dwg="${id}" aria-label="${esc(t('Move {1}', t(title)))}" aria-describedby="dw-keys">${icon('grid', 15)}</button><span class="dw-ic">${icon(ic, 16)}</span><h3 id="dw-${id}-t">${esc(t(title))}</h3>${extra}${href ? `<a class="dw-more" href="${href}" aria-label="${esc(t('Open {1}', t(title)))}">${icon('right', 14)}</a>` : ''}<span class="dw-ed"><button type="button" class="icon-btn dw-st" data-dwe="up" aria-label="${esc(t('Move {1} up', t(title)))}">${icon('up', 14)}</button><button type="button" class="icon-btn dw-st" data-dwe="down" aria-label="${esc(t('Move {1} down', t(title)))}">${icon('down', 14)}</button><button type="button" class="icon-btn dw-fr" data-dwe="front" aria-label="${esc(t('Bring {1} to the front', t(title)))}" title="${esc(t('Bring to the front'))}">${icon('layers', 14)}</button><button type="button" class="icon-btn dw-fr" data-dwe="back" aria-label="${esc(t('Send {1} to the back', t(title)))}" title="${esc(t('Send to the back'))}">${icon('swap', 14)}</button><button type="button" class="icon-btn" data-dwe="remove" aria-label="${esc(t('Remove {1}', t(title)))}" title="${esc(t('Remove'))}">${icon('x', 14)}</button></span></div><div class="dw-b">${body}</div><span class="dw-rs" data-dwr="${id}" aria-hidden="true"></span></section>`;
   const none = (txt, action = '') => `<div class="dw-none"><p>${esc(t(txt))}</p>${action}</div>`;
 
   /* ---------- the cards ---------- */
@@ -90,57 +82,208 @@
     const ws = L.weekStart(tIso()); const we = L.addDaysISO(ws, 6); const items = L.items(ws, we).filter(x => x.kind !== 'note' && x.kind !== 'holiday'); const by = {}; items.forEach(x => (by[x.date] = by[x.date] || []).push(x));
     return `<div class="dw-week">${Array.from({ length: 7 }, (_, i) => { const d = L.addDaysISO(ws, i); const list = by[d] || []; const slots = L.slotsOn(d).length; return `<a class="dw-day${d === tIso() ? ' today' : ''}${d < tIso() ? ' past' : ''}" href="#/agenda?d=${d}"><span class="dw-day-h"><small>${esc(t(L.DOW[L.dowOf(d)]))}</small><b>${App.parseISO(d).getDate()}</b></span>${list.slice(0, 4).map(x => `<span class="dw-it k-${x.kind}${x.done ? ' done' : ''}" style="${x.course ? L.ccStyle(x.course) : ''}">${esc(x.title)}</span>`).join('')}${list.length > 4 ? `<span class="dw-it more">${esc(t('+{1} more', list.length - 4))}</span>` : ''}${slots ? `<span class="dw-slots">${icon('table', 11)} ${esc(t('{1} on your timetable', slots))}</span>` : ''}</a>`; }).join('')}</div>`;
   }
-  const BUILD = {
-    schedule: () => card('schedule', 'Today’s schedule', 'clock', '#/timetable', schedule()),
-    due: () => card('due', 'Due this week', 'todo', '#/tasks', due()),
-    clock: () => card('clock', 'Clock', 'globe', '', clock()),
-    pomo: () => card('pomo', 'Pomodoro', 'timer', '#/focus', pomo()),
-    todos: () => card('todos', 'To-dos', 'check', '', todos()),
-    events: () => card('events', 'Reminders & events', 'alarm', '#/agenda', events()),
-    habits: () => card('habits', 'Habits', 'repeat', '#/habits', habits()),
-    goals: () => card('goals', 'Goals this quarter', 'target', '#/goals', goals()),
-    wheel: () => card('wheel', 'Wheel of life', 'wheel', '#/wheel', wheel()),
-    week: () => card('week', 'This week', 'calendar', '#/agenda', week())
-  };
 
-  /* ---------- the section ---------- */
-  App.dash = {
-    WIDGETS,
-    html() { return `<section class="land-sec dash" id="dash" aria-labelledby="lsec-day"><div class="sec-h"><h2 class="sec-title" id="lsec-day">${esc(t('Your day'))}</h2><span class="dash-acts"><button class="btn sm" type="button" data-dw="quick">${icon('plus', 13)} ${esc(t('New'))}</button><button class="btn sm ghost" type="button" data-dw="custom">${icon('sliders', 13)} ${esc(t('Customize'))}</button></span></div><div class="dash-grid" id="dash-grid"></div></section>`; },
-    paint(root) {
-      const grid = $('#dash-grid', root); if (!grid) return; const hid = hidden();
-      grid.innerHTML = WIDGETS.filter(([id]) => !hid.has(id)).map(([id]) => { try { return BUILD[id](); } catch (e) { console.error(e); return ''; } }).join('') || `<div class="lf-empty">${icon('sliders', 26)}<b>${esc(t('Every card is hidden'))}</b><p>${esc(t('Use Customize to bring some back.'))}</p></div>`;
-      if (App.tickClocks) App.tickClocks();
-      this.wire(root);
-    },
-    wire(root) {
-      const sec = $('#dash', root); if (!sec || sec.__wired) return; sec.__wired = true;
-      const repaint = () => { const y = window.scrollY; this.paint(root); window.scrollTo(0, y); };
-      sec.addEventListener('click', e => {
-        const b = e.target.closest('[data-dw]'); if (!b) return; const k = b.dataset.dw; const id = b.dataset.id;
-        if (k === 'done') { L.put('tasks', id, { status: 'done', doneAt: Date.now() }); toast(t('Done')); repaint(); }
-        else if (k === 'todo') { const x = L.get('todos', id); if (x) L.put('todos', id, { done: !x.done }); repaint(); }
-        else if (k === 'todo-del') { L.drop('todos', id, t('To-do deleted')); repaint(); }
-        else if (k === 'habit') { if (L.toggleHabit) L.toggleHabit(id); repaint(); }
-        else if (k === 'event') L.editEvent(id);
-        else if (k === 'new-event') App.quickAdd('event');
-        else if (k === 'new-goal') { if (App.quickAddGoal) App.quickAddGoal(); }
-        else if (k === 'quick') App.quickAdd('task');
-        else if (k === 'pomo') { const P = App.pomo(); P.toggle(); }
-        else if (k === 'reset') { const P = App.pomo(); P.reset(); }
-        else if (k === 'mode') { const P = App.pomo(); if (P.running && !confirm(t('Stop the timer and switch?'))) return; P.setMode(b.dataset.m); }
-        else if (k === 'custom') {
-          const hid = hidden(); L.form({ title: 'Customize your day', icon: 'sliders', fields: WIDGETS.map(([w, l]) => ({ k: w, label: l, type: 'check' })), values: Object.fromEntries(WIDGETS.map(([w]) => [w, !hid.has(w)])), submit: 'Save',
-            onSave: v => { setSetting('homeHide', WIDGETS.map(([w]) => w).filter(w => !v[w])); repaint(); } });
-        }
-      });
-      sec.addEventListener('submit', e => { const f = e.target.closest('[data-dw-form]'); if (!f) return; e.preventDefault(); const title = f.title.value.trim(); if (!title) return; if (f.dataset.dwForm === 'todo') L.add('todos', { title, date: '', done: false }); else L.saveTask({ title, due: tIso(), priority: 'medium', status: 'todo', kind: 'task' }); repaint(); const again = $(`[data-dw-form="${f.dataset.dwForm}"] input`, root); if (again) again.focus(); });
-      sec.addEventListener('change', e => { const z = e.target.closest('[data-dw-zone]'); if (z && z.value) { L.setCfg('homeZone', z.value); repaint(); if (App.paintSidebar) App.paintSidebar(); } });
-      // the big timer follows the sidebar's
-      const P = App.pomo ? App.pomo() : null;
-      if (P && !P.__dash) { P.__dash = true; P.watchers.push(p => { const el = $('#dw-pomo-time'); if (!el) return; const w = el.closest('.dw-pomo'); const mode = w && $$('.dw-modes button', w).find(x => x.classList.contains('on')); if (!w || p.running !== w.classList.contains('on') || (mode && mode.dataset.m !== p.mode)) { const host = el.closest('.dw-b'); if (host) host.innerHTML = pomo(); return; } el.textContent = `${String(Math.floor(p.left / 60)).padStart(2, '0')}:${String(p.left % 60).padStart(2, '0')}`; const fg = $('.dw-ring-fg', w); if (fg) { const C = 2 * Math.PI * 52; fg.setAttribute('stroke-dashoffset', (C * (p.left / p.len())).toFixed(1)); } }); }
-    }
+  App.dash = {};
+  /* ---------- widgets from the rest of StudyCat: your classes, Bo, discussions, guides ---------- */
+  const H = () => App.home || {};
+  const myIds = () => (App.myCourses ? App.myCourses() : []).filter(id => Courses[id] && !Courses[id].preview);
+  const signedIn = () => !!(App.auth && App.auth.user && !App.auth.user.local);
+  function nextBody() {
+    const ids = myIds(); if (!ids.length) return none('Pick your classes and the next step for each shows here.', `<button class="btn sm" type="button" data-dw="choose">${esc(t('Choose classes'))}</button>`);
+    const cur = H().curClass ? H().curClass() : ids[0]; const id = ids.includes(cur) ? cur : ids[0];
+    // a few classes are buttons; more are a menu, so the widget stays short
+    const pick = ids.length > 4 ? `<label class="dw-pick-sel"><span class="sr-only">${esc(t('Show a class'))}</span><select class="select sm" data-dw-pick>${ids.map(x => `<option value="${esc(x)}"${x === id ? ' selected' : ''}>${esc(Courses[x].short || Courses[x].code)}</option>`).join('')}</select></label>`
+      : ids.length > 1 ? `<div class="wh-pick dw-pick" role="tablist" aria-label="${esc(t('Show a class'))}">${ids.map(x => `<button type="button" role="tab" class="wh-tab${x === id ? ' on' : ''}" aria-selected="${x === id}" data-dw="pick" data-id="${esc(x)}" style="${L.ccStyle(x)}">${esc(Courses[x].short || Courses[x].code)}</button>`).join('')}</div>` : '';
+    return `${pick}<div class="dw-next" data-cid="${esc(id)}" style="${L.ccStyle(id)}"><div class="ah-loading" aria-hidden="true"><i></i><i></i><i></i></div></div>`;
+  }
+  function fillNext(el) {
+    const box = $('.dw-next', el); if (!box) return; const id = box.dataset.cid;
+    App.loadCourse(id).then(C => { if (!box.isConnected) return; const xw = H().examWeekHtml ? H().examWeekHtml(C) : ''; box.innerHTML = (H().heroHtml ? H().heroHtml(C, { noExam: !!xw }) : '') + xw; if (App.typeset) try { App.typeset(box); } catch (e) {} })
+      .catch(() => { if (box.isConnected) box.innerHTML = `<p class="small muted">${esc(t('This class could not be opened.'))} <a href="#/${esc(id)}/dashboard">${esc(t('Try its class page'))}</a></p>`; });
+  }
+  function classesBody() {
+    const ids = myIds(); const iso = tIso();
+    const rows = ids.map(id => { const C = Courses[id]; let ex = null; try { ex = App.nextExamOf(C); } catch (e) {} const n = ex && ex.date ? App.daysBetween(iso, ex.date) : null;
+      return `<a class="dwk" data-c="${esc(id)}" href="#/${esc(id)}/dashboard" style="${L.ccStyle(id)}"><span class="dwk-tile" aria-hidden="true">${esc(C.short || C.code)}</span><span class="dwk-t"><b>${esc(C.code)} · ${esc(C.name)}</b><small>${ex && n != null && n >= 0 ? esc(t('{1} in {2} days', ex.name, n)).replace(/ in 0 days$/, ' ' + t('today')).replace(/ in 1 days$/, ' ' + t('tomorrow')) : esc(t('No exam coming up'))}</small></span>${icon('right', 15)}</a>`; }).join('');
+    return `${rows ? `<div class="dwk-list">${rows}</div>` : none('No classes yet.')}<div class="dw-foot">${signedIn() ? `<button class="linkbtn small" type="button" data-dw="choose">${icon('sliders', 13)} ${esc(t('Choose classes'))}</button>` : ''}<a class="linkbtn small" href="#/maker">${icon('maker', 13)} ${esc(t('Class maker'))}</a></div>`;
+  }
+  const W = {
+    next: { t: 'Up next', ic: 'play', href: '', w: 7, h: 11, body: nextBody, after: fillNext },
+    today: { t: 'Today, all classes', ic: 'flag', href: '#/today', w: 5, h: 11, live: true, body: () => (H().todayHtml ? H().todayHtml() : none('Nothing for today.')) },
+    bo: { t: 'Bo, your tutor', ic: 'chat', href: '', w: 7, h: 9, body: () => signedIn() ? '<div id="dw-bo-slot" class="dw-bo-slot"></div>' : `<a class="land-bo dw-bo-guest" href="#/max"><span class="lb-av" aria-hidden="true">${App.bobcatSvg ? App.bobcatSvg(46) : ''}</span><span class="lb-t"><b>${esc(t('Stuck on a problem? Call Bo.'))}</b><small>${esc(t('A tutor who talks it through with you and writes on a board you share.'))}</small></span><span class="lb-go">${icon('play', 13)} ${esc(t('Watch a 1-minute demo'))}</span></a>` },
+    classes: { t: 'Your classes', ic: 'cap', href: '', w: 12, h: 7, live: true, body: classesBody },
+    schedule: { t: 'Today’s schedule', ic: 'clock', href: '#/timetable', w: 4, h: 9, live: true, body: schedule },
+    due: { t: 'Due this week', ic: 'todo', href: '#/tasks', w: 5, h: 7, live: true, body: due },
+    week: { t: 'This week', ic: 'calendar', href: '#/agenda', w: 8, h: 9, live: true, body: week },
+    clock: { t: 'Clock', ic: 'globe', href: '', w: 4, h: 9, body: clock },
+    pomo: { t: 'Pomodoro', ic: 'timer', href: '#/focus', w: 4, h: 10, body: pomo },
+    todos: { t: 'To-dos', ic: 'check', href: '', w: 4, h: 9, live: true, body: todos },
+    events: { t: 'Reminders & events', ic: 'alarm', href: '#/agenda', w: 4, h: 8, live: true, body: events },
+    habits: { t: 'Habits', ic: 'repeat', href: '#/habits', w: 4, h: 8, live: true, body: habits },
+    goals: { t: 'Goals this quarter', ic: 'target', href: '#/goals', w: 4, h: 8, live: true, body: goals },
+    wheel: { t: 'Wheel of life', ic: 'wheel', href: '#/wheel', w: 4, h: 10, live: true, body: wheel },
+    forum: { t: 'Latest discussions', ic: 'chat', href: '#/forum', w: 6, h: 9, body: () => '<div class="dw-forum"><p class="small muted">…</p></div>', after: el => { const f = $('.dw-forum', el); if (f && App.forumLatest) App.forumLatest(f); else if (f) f.innerHTML = ''; } },
+    guides: { t: 'Study guides', ic: 'bulb', href: '#/guides', w: 6, h: 8, body: () => (App.guidesStrip ? App.guidesStrip() : '') },
+    resume: { t: 'Pick up where you left off', ic: 'rotate', href: '', w: 6, h: 4, body: () => { const r = App.resumeCard ? App.resumeCard(myIds(), { noStrip: true }) : ''; return r || none('Open a lesson or a page and it waits here for you.'); } },
+    note: { t: 'Note', ic: 'pen', href: '', w: 4, h: 7, body: () => `<label class="sr-only" for="dw-note">${esc(t('Note'))}</label><textarea class="input dw-note" id="dw-note" placeholder="${esc(t('Anything to remember. It is saved as you type.'))}">${esc(layout().note || '')}</textarea>` }
   };
+  const IDS = Object.keys(W);
+  App.dash.WIDGETS = IDS.map(id => [id, W[id].t]);
+
+  /* ---------- the layout: 12 columns, rows of ROW px; widgets may overlap, z decides which is on top ---------- */
+  const COLS = 12, ROW = 30, MINW = 3, MINH = 3;
+  const START = { in: [['next', 0, 0, 7, 11], ['today', 7, 0, 5, 11], ['bo', 0, 11, 7, 9], ['due', 7, 11, 5, 9], ['schedule', 0, 20, 4, 9], ['week', 4, 20, 8, 9], ['classes', 0, 29, 12, 7]],
+    out: [['classes', 0, 0, 7, 11], ['bo', 7, 0, 5, 11], ['guides', 0, 11, 12, 8], ['week', 0, 19, 8, 9], ['clock', 8, 19, 4, 9]] };
+  // someone who has studied here (signed in, or with classes picked) starts with their next step; a first visit with the classes
+  const returning = () => signedIn() || (Array.isArray(settings().courses) && settings().courses.length > 0) || !!settings().lastVisit;
+  const fresh = () => ({ v: 1, items: START[returning() ? 'in' : 'out'].map(([id, x, y, w, h], i) => ({ id, x, y, w, h, z: i + 1 })), note: '' });
+  function clampIt(it) { const w = Math.max(MINW, Math.min(COLS, Math.round(+it.w) || W[it.id].w)); return { id: it.id, w, h: Math.max(MINH, Math.min(60, Math.round(+it.h) || W[it.id].h)), x: Math.max(0, Math.min(COLS - w, Math.round(+it.x) || 0)), y: Math.max(0, Math.min(400, Math.round(+it.y) || 0)), z: Math.round(+it.z) || 1 }; }
+  function layout() {
+    const s = settings().homeLayout; if (!s || typeof s !== 'object' || !Array.isArray(s.items)) return fresh();
+    const seen = new Set(); return { v: 1, items: s.items.filter(it => it && W[it.id] && !seen.has(it.id) && seen.add(it.id)).map(clampIt), note: typeof s.note === 'string' ? s.note.slice(0, 4000) : '' };
+  }
+  const save = Lx => setSetting('homeLayout', { v: 1, items: Lx.items.map(clampIt), note: Lx.note || '' });
+  const narrow = canvas => canvas.clientWidth < 720;
+  const order = items => items.slice().sort((a, b) => a.y - b.y || a.x - b.x);
+  // pack widgets into the grid without overlaps, keeping their reading order (Tidy up)
+  function tidy(items) {
+    const taken = []; const free = (x, y, w, h) => taken.every(o => x + w <= o.x || o.x + o.w <= x || y + h <= o.y || o.y + o.h <= y);
+    return order(items).map((it, i) => { let y = 0, x = 0; for (; ; y++) { for (x = 0; x <= COLS - it.w; x++) if (free(x, y, it.w, it.h)) break; if (x <= COLS - it.w) break; } const o = Object.assign({}, it, { x, y, z: i + 1 }); taken.push(o); return o; });
+  }
+
+  const D = { editing: false };
+  App.dash.html = () => `<section class="land-sec dash home-dash" id="dash" aria-labelledby="lsec-day"><div class="sec-h dash-top"><h2 class="sec-title" id="lsec-day">${esc(t('Your home'))}</h2><span class="dash-acts"><button class="btn sm" type="button" data-dw="quick">${icon('plus', 13)} ${esc(t('New'))}</button><button class="btn sm" type="button" data-dw="add">${icon('grid', 13)} ${esc(t('Add a widget'))}</button><button class="btn sm${D.editing ? ' primary' : ''}" type="button" data-dw="arrange" aria-pressed="${D.editing}">${icon(D.editing ? 'check' : 'sliders', 13)} ${esc(t(D.editing ? 'Done' : 'Arrange'))}</button></span></div>
+    <div class="dash-edit-bar" id="dash-edit-bar"${D.editing ? '' : ' hidden'}><span class="small">${icon('grid', 13)} ${esc(t('Drag a widget by its handle, resize it from its corner. Widgets can overlap: bring one to the front or send it to the back.'))}</span><span class="row gap-sm"><button class="btn sm ghost" type="button" data-dw="tidy">${esc(t('Tidy up'))}</button><button class="btn sm ghost" type="button" data-dw="home-reset">${esc(t('Start over'))}</button></span></div>
+    <p class="sr-only" id="dw-keys">${esc(t('With Arrange on, the arrow keys move the widget and Shift with the arrow keys resizes it.'))}</p><p class="sr-only" aria-live="polite" id="dw-say"></p>
+    <div class="dash-canvas${D.editing ? ' editing' : ''}" id="dash-canvas"></div></section>`;
+
+  function place(canvas, el, it) {
+    el.style.zIndex = String(it.z);
+    if (narrow(canvas)) { ['left', 'top', 'width', 'height'].forEach(k => { el.style[k] = ''; }); return; }
+    el.style.left = `calc(${(it.x / COLS) * 100}% + 6px)`; el.style.width = `calc(${(it.w / COLS) * 100}% - 12px)`;
+    el.style.top = `${it.y * ROW + 6}px`; el.style.height = `${it.h * ROW - 12}px`;
+  }
+  function sizeCanvas(canvas, Lx) {
+    const stack = narrow(canvas); canvas.classList.toggle('stacked', stack);
+    if (stack) { canvas.style.height = ''; order(Lx.items).forEach((it, i) => { const el = $(`.dw[data-w="${it.id}"]`, canvas); if (el) el.style.order = String(i); }); return; }
+    const rows = Lx.items.reduce((m, it) => Math.max(m, it.y + it.h), 0) + (D.editing ? 8 : 0);
+    canvas.style.height = `${Math.max(rows, D.editing ? 14 : 4) * ROW}px`;
+  }
+  const say = msg => { const el = $('#dw-say'); if (el) el.textContent = msg; };
+
+  App.dash.paint = function (root, only) {
+    const canvas = $('#dash-canvas', root); if (!canvas) return; const Lx = layout();
+    const items = Lx.items.filter(it => !only || only.includes(it.id));
+    if (!only) canvas.innerHTML = Lx.items.length ? '' : `<div class="lf-empty dash-empty">${icon('grid', 26)}<b>${esc(t('Your home is empty'))}</b><p>${esc(t('Add the widgets you want, and put them anywhere.'))}</p><button class="btn primary" type="button" data-dw="add">${icon('plus', 14)} ${esc(t('Add a widget'))}</button></div>`;
+    items.forEach(it => {
+      const w = W[it.id]; let html; try { html = card(it.id, w.t, w.ic, w.href, w.body()); } catch (e) { console.error(e); html = card(it.id, w.t, w.ic, w.href, none('This widget could not be drawn.')); }
+      const tmp = document.createElement('div'); tmp.innerHTML = html; const el = tmp.firstElementChild;
+      const old = $(`.dw[data-w="${it.id}"]`, canvas); if (old) old.replaceWith(el); else canvas.appendChild(el);
+      place(canvas, el, it); if (w.after) try { w.after(el); } catch (e) { console.error(e); }
+    });
+    sizeCanvas(canvas, Lx);
+    if (App.tickClocks) App.tickClocks();
+    this.wire(root);
+    if (!only) { const ev = new CustomEvent('mathub:dash', { detail: { root } }); document.dispatchEvent(ev); }
+  };
+  // the widgets that show planner data are drawn again when it changes (not Bo, the class or the discussions)
+  App.dash.repaintLive = root => App.dash.paint(root, IDS.filter(id => W[id].live));
+
+  /* the widget picker: every widget, on or off */
+  function picker(root) {
+    const Lx = layout(); const on = new Set(Lx.items.map(it => it.id));
+    L.form({ title: 'Add or remove widgets', icon: 'grid', fields: IDS.map(id => ({ k: id, label: W[id].t, type: 'check' })), values: Object.fromEntries(IDS.map(id => [id, on.has(id)])), submit: 'Save',
+      onSave: v => {
+        let items = Lx.items.filter(it => v[it.id]); const bottom = items.reduce((m, it) => Math.max(m, it.y + it.h), 0); let x = 0, y = bottom, rowH = 0;
+        IDS.filter(id => v[id] && !on.has(id)).forEach(id => { const w = W[id]; if (x + w.w > COLS) { x = 0; y += rowH; rowH = 0; } items.push({ id, x, y, w: w.w, h: w.h, z: items.reduce((m, it) => Math.max(m, it.z), 0) + 1 }); x += w.w; rowH = Math.max(rowH, w.h); });
+        save({ items, note: Lx.note }); App.dash.paint(root); toast(t('Your home is saved'));
+      } });
+  }
+  function setEditing(root, on) {
+    D.editing = on; const sec = $('#dash', root); if (!sec) return;
+    const b = $('[data-dw="arrange"]', sec); if (b) { b.classList.toggle('primary', on); b.setAttribute('aria-pressed', String(on)); b.innerHTML = `${icon(on ? 'check' : 'sliders', 13)} ${esc(t(on ? 'Done' : 'Arrange'))}`; }
+    const bar = $('#dash-edit-bar', sec); if (bar) bar.hidden = !on;
+    const canvas = $('#dash-canvas', sec); canvas.classList.toggle('editing', on); sizeCanvas(canvas, layout());
+    if (!on) toast(t('Your home is saved'));
+  }
+
+  /* dragging and resizing with the pointer: the widget follows, and lands on the grid */
+  function drag(root, e, el, mode) {
+    const canvas = $('#dash-canvas', root); if (narrow(canvas)) return;
+    e.preventDefault(); const Lx = layout(); const it = Lx.items.find(x => x.id === el.dataset.w); if (!it) return;
+    const colW = canvas.clientWidth / COLS; const st = { px: e.clientX, py: e.clientY, x: it.x, y: it.y, w: it.w, h: it.h };
+    it.z = Lx.items.reduce((m, o) => Math.max(m, o.z), 0) + 1; place(canvas, el, it); el.classList.add(mode === 'move' ? 'dragging' : 'resizing');
+    const ghost = document.createElement('div'); ghost.className = 'dw-ghost'; canvas.appendChild(ghost);
+    const calc = ev => { const dx = ev.clientX - st.px, dy = ev.clientY - st.py; if (mode === 'move') { it.x = Math.max(0, Math.min(COLS - it.w, Math.round(st.x + dx / colW))); it.y = Math.max(0, Math.round(st.y + dy / ROW)); } else { it.w = Math.max(MINW, Math.min(COLS - it.x, Math.round(st.w + dx / colW))); it.h = Math.max(MINH, Math.round(st.h + dy / ROW)); } return { dx, dy }; };
+    const move = ev => { const { dx, dy } = calc(ev); if (mode === 'move') el.style.transform = `translate(${dx}px, ${dy}px)`; else { el.style.width = `${st.w * colW - 12 + dx}px`; el.style.height = `${st.h * ROW - 12 + dy}px`; } place(canvas, ghost, Object.assign({}, it, { z: it.z - 1 })); if (ev.clientY > innerHeight - 40) scrollBy(0, 14); else if (ev.clientY < 60) scrollBy(0, -14); };
+    const up = ev => { calc(ev); document.removeEventListener('pointermove', move); document.removeEventListener('pointerup', up); document.removeEventListener('pointercancel', up); ghost.remove(); el.style.transform = ''; el.classList.remove('dragging', 'resizing'); place(canvas, el, it); save(Lx); sizeCanvas(canvas, Lx); if (mode !== 'move') App.dash.paint(root, [it.id]); };
+    document.addEventListener('pointermove', move); document.addEventListener('pointerup', up); document.addEventListener('pointercancel', up);
+  }
+  /* the same with the keyboard, on a widget's grip */
+  function key(root, e, el) {
+    const k = e.key; const canvas = $('#dash-canvas', root); const Lx = layout(); const it = Lx.items.find(x => x.id === el.dataset.w); if (!it) return;
+    const name = t(W[it.id].t); const d = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }[k];
+    if (d) {
+      e.preventDefault();
+      if (narrow(canvas)) { if (!d[1]) return; const list = order(Lx.items); const i = list.indexOf(it), j = i + d[1]; if (j < 0 || j >= list.length) return; const o = list[j]; [it.y, o.y] = [o.y, it.y]; if (it.y === o.y) [it.x, o.x] = [o.x, it.x]; save(Lx); sizeCanvas(canvas, Lx); el.querySelector('.dw-grip').focus(); say(t('{1} moved', name)); return; }
+      if (e.shiftKey) { it.w = Math.max(MINW, Math.min(COLS - it.x, it.w + d[0])); it.h = Math.max(MINH, it.h + d[1]); save(Lx); App.dash.paint(root, [it.id]); const g = $(`.dw[data-w="${it.id}"] .dw-grip`, canvas); if (g) g.focus(); say(t('{1}: {2} columns wide, {3} rows tall', name, it.w, it.h)); return; }
+      it.x = Math.max(0, Math.min(COLS - it.w, it.x + d[0])); it.y = Math.max(0, it.y + d[1]); place(canvas, el, it); save(Lx); sizeCanvas(canvas, Lx); say(t('{1}: column {2}, row {3}', name, it.x + 1, it.y + 1));
+    } else if (k === 'Delete' || k === 'Backspace') { e.preventDefault(); act(root, el, 'remove'); }
+  }
+  function act(root, el, what) {
+    const Lx = layout(); const it = Lx.items.find(x => x.id === el.dataset.w); if (!it) return; const canvas = $('#dash-canvas', root);
+    if (what === 'remove') { Lx.items = Lx.items.filter(x => x !== it); save(Lx); el.remove(); sizeCanvas(canvas, Lx); toast(t('{1} removed. Add it back any time.', t(W[it.id].t))); return; }
+    if (what === 'up' || what === 'down') {   // a phone: the order they stack in
+      const list = order(Lx.items); const i = list.indexOf(it), j = i + (what === 'up' ? -1 : 1); if (j < 0 || j >= list.length) return; const o = list[j];
+      [it.x, o.x] = [o.x, it.x]; [it.y, o.y] = [o.y, it.y]; if (it.y === o.y && it.x === o.x) it.y += what === 'up' ? -1 : 1;
+      save(Lx); sizeCanvas(canvas, Lx); const b = $(`[data-dwe="${what}"]`, el); if (b) b.focus(); say(t('{1} moved', t(W[it.id].t))); return;
+    }
+    const zs = Lx.items.map(o => o.z); it.z = what === 'front' ? Math.max(...zs) + 1 : Math.min(...zs) - 1;
+    if (it.z < 1) { Lx.items.forEach(o => { o.z += 2 - it.z; }); }
+    save(Lx); Lx.items.forEach(o => { const e2 = $(`.dw[data-w="${o.id}"]`, canvas); if (e2) e2.style.zIndex = String(o.z); });
+    say(t(what === 'front' ? '{1} is in front' : '{1} is at the back', t(W[it.id].t)));
+  }
+
+  App.dash.wire = function (root) {
+    const sec = $('#dash', root); if (!sec || sec.__wired) return; sec.__wired = true;
+    const repaint = () => { const y = window.scrollY; App.dash.paint(root); window.scrollTo(0, y); };
+    sec.addEventListener('pointerdown', e => {
+      if (!D.editing || e.button > 0) return;
+      const g = e.target.closest('.dw-grip'), r = e.target.closest('.dw-rs'); if (!g && !r) return;
+      drag(root, e, (g || r).closest('.dw'), g ? 'move' : 'size');
+    });
+    sec.addEventListener('keydown', e => { const g = e.target.closest('.dw-grip'); if (g && D.editing) key(root, e, g.closest('.dw')); });
+    sec.addEventListener('click', e => {
+      const ed = e.target.closest('[data-dwe]'); if (ed) { act(root, ed.closest('.dw'), ed.dataset.dwe); return; }
+      const b = e.target.closest('[data-dw]'); if (!b) return; const k = b.dataset.dw; const id = b.dataset.id;
+      if (k === 'arrange') setEditing(root, !D.editing);
+      else if (k === 'add') picker(root);
+      else if (k === 'tidy') { const Lx = layout(); Lx.items = tidy(Lx.items); save(Lx); repaint(); say(t('Widgets tidied into a grid')); }
+      else if (k === 'home-reset') { if (confirm(t('Put your home back as it came?'))) { save(fresh()); repaint(); } }
+      else if (k === 'pick') { if (H().setClass) H().setClass(id); App.dash.paint(root, ['next']); }
+      else if (k === 'choose') { const pk = document.getElementById('pick-classes'); if (pk) { pk.scrollIntoView({ behavior: 'smooth', block: 'start' }); const f = pk.querySelector('input'); if (f) f.focus({ preventScroll: true }); } else if (App.auth && App.auth.user) App.auth.onboard(true); else location.hash = '#/'; }   // the home page's class picker, or the class list
+      else if (k === 'done') { L.put('tasks', id, { status: 'done', doneAt: Date.now() }); toast(t('Done')); App.dash.repaintLive(root); }
+      else if (k === 'todo') { const x = L.get('todos', id); if (x) L.put('todos', id, { done: !x.done }); App.dash.repaintLive(root); }
+      else if (k === 'todo-del') { L.drop('todos', id, t('To-do deleted')); App.dash.repaintLive(root); }
+      else if (k === 'habit') { if (L.toggleHabit) L.toggleHabit(id); App.dash.repaintLive(root); }
+      else if (k === 'event') L.editEvent(id);
+      else if (k === 'new-event') App.quickAdd('event');
+      else if (k === 'new-goal') { if (App.quickAddGoal) App.quickAddGoal(); }
+      else if (k === 'quick') App.quickAdd('task');
+      else if (k === 'pomo') { const P = App.pomo(); P.toggle(); }
+      else if (k === 'reset') { const P = App.pomo(); P.reset(); }
+      else if (k === 'mode') { const P = App.pomo(); if (P.running && !confirm(t('Stop the timer and switch?'))) return; P.setMode(b.dataset.m); }
+    });
+    sec.addEventListener('submit', e => { const f = e.target.closest('[data-dw-form]'); if (!f) return; e.preventDefault(); const title = f.title.value.trim(); if (!title) return; if (f.dataset.dwForm === 'todo') L.add('todos', { title, date: '', done: false }); else L.saveTask({ title, due: tIso(), priority: 'medium', status: 'todo', kind: 'task' }); App.dash.repaintLive(root); const again = $(`[data-dw-form="${f.dataset.dwForm}"] input`, root); if (again) again.focus(); });
+    sec.addEventListener('change', e => { if (e.target.matches('[data-dw-pick]')) { if (H().setClass) H().setClass(e.target.value); App.dash.paint(root, ['next']); const s2 = $('[data-dw-pick]', root); if (s2) s2.focus(); return; } const z = e.target.closest('[data-dw-zone]'); if (z && z.value) { L.setCfg('homeZone', z.value); App.dash.paint(root, ['clock']); if (App.paintSidebar) App.paintSidebar(); } });
+    let noteT = 0; sec.addEventListener('input', e => { if (e.target.id !== 'dw-note') return; clearTimeout(noteT); const v = e.target.value; noteT = setTimeout(() => { const Lx = layout(); Lx.note = v.slice(0, 4000); save(Lx); }, 500); });
+    // the canvas follows the width of the page: stacked on a phone, placed on a larger screen
+    if (global.ResizeObserver) { const canvas = $('#dash-canvas', sec); let wasNarrow = narrow(canvas); const ro = new ResizeObserver(() => { if (!canvas.isConnected) { ro.disconnect(); return; } const n = narrow(canvas); if (n !== wasNarrow) { wasNarrow = n; const Lx = layout(); Lx.items.forEach(it => { const el = $(`.dw[data-w="${it.id}"]`, canvas); if (el) place(canvas, el, it); }); sizeCanvas(canvas, Lx); } }); ro.observe(canvas); }
+    // the big timer follows the sidebar's
+    const P = App.pomo ? App.pomo() : null;
+    if (P && !P.__dash) { P.__dash = true; P.watchers.push(p => { const el = $('#dw-pomo-time'); if (!el) return; const w = el.closest('.dw-pomo'); const mode = w && $$('.dw-modes button', w).find(x => x.classList.contains('on')); if (!w || p.running !== w.classList.contains('on') || (mode && mode.dataset.m !== p.mode)) { const host = el.closest('.dw-b'); if (host) host.innerHTML = pomo(); return; } el.textContent = `${String(Math.floor(p.left / 60)).padStart(2, '0')}:${String(p.left % 60).padStart(2, '0')}`; const fg = $('.dw-ring-fg', w); if (fg) { const C = 2 * Math.PI * 52; fg.setAttribute('stroke-dashoffset', (C * (p.left / p.len())).toFixed(1)); } }); }
+  };
+  App.dash.layout = layout; App.dash.tidy = tidy; App.dash.COLS = COLS; App.dash.ROW = ROW;
   // on each class card: your tasks for it and its exams
   App.dash.classStats = id => {
     const C = Courses[id]; if (!C) return ''; const iso = tIso();
@@ -149,6 +292,6 @@
     const week = L.items(iso, L.addDaysISO(iso, 6)).filter(x => x.course === id && ['deadline', 'assignment', 'task', 'exam'].includes(x.kind) && !x.done).length;
     return `<div class="cc-stats" aria-label="${esc(t('This class in numbers'))}"><span><b>${week}</b>${esc(t('due this week'))}</span><span><b>${open}</b>${esc(t('tasks open'))}</span><span><b>${done}</b>${esc(t('done'))}</span><span><b>${left}</b>${esc(t(left === 1 ? 'exam left' : 'exams left'))}</span>${tasks.length ? `<div class="cc-bar" title="${esc(t('{1} of {2} tasks done', done, tasks.length))}"><i style="width:${Math.round(done / tasks.length * 100)}%"></i></div>` : ''}</div>`;
   };
-  // planner changes repaint the start page's cards while it is open
-  L.onChange(() => { const root = $('#view'); if (!root || !$('#dash-grid', root)) return; const a = document.activeElement; if (a && a.closest && a.closest('#dash') && a.matches('input, select, textarea')) return; clearTimeout(App.dash.t); App.dash.t = setTimeout(() => App.dash.paint(root), 150); });
+  // planner changes draw the widgets that show it again, while the start page is open
+  L.onChange(() => { const root = $('#view'); if (!root || !$('#dash-canvas', root)) return; const a = document.activeElement; if (a && a.closest && a.closest('#dash') && a.matches('input, select, textarea')) return; clearTimeout(App.dash.t); App.dash.t = setTimeout(() => App.dash.repaintLive(root), 150); });
 })(window);

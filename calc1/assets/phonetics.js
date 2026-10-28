@@ -1,5 +1,5 @@
 /* ============================================================
-   Mathub — English phonetics lab (WRIT 101)
+   StudyCat — English phonetics lab (WRIT 101)
    A native port of the English Phonetics Lab: practice trainer with
    seven modes (word→IPA, IPA→word, sentence→IPA, IPA→sentence,
    syllabification, stress, phoneme features), British and American

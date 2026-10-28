@@ -1,5 +1,5 @@
 /* ============================================================
-   Mathub — tools (#/tools)
+   StudyCat — tools (#/tools)
    Every tool in one place: a map of the study tools, the GPA
    calculator, Life (habits, goals, wheel of life, journal, money)
    and Future (internships and jobs, portfolio), then the small
@@ -189,7 +189,7 @@
   App.views.tools = {
     title: 'Tools', blurb: 'Everything for studying, for life and for what comes next, in one place.',
     render(root, param, query, standalone) {
-      const head = standalone ? `<div class="landing-wrap"><header class="landing-top"><div><div class="eyebrow">Mathub</div><h1 class="landing-title"><span class="logo-mark">${App.logoSvg(44)}</span>Tools</h1><p class="muted">${this.blurb}</p></div><div class="row gap-sm"><span id="landing-account"></span><a class="btn" href="#/">${icon('left', 14)} All classes</a></div></header>` : App.pageHead('Tools', this.blurb);
+      const head = standalone ? `<div class="landing-wrap"><header class="landing-top"><div><div class="eyebrow">StudyCat</div><h1 class="landing-title"><span class="logo-mark">${App.logoSvg(44)}</span>Tools</h1><p class="muted">${this.blurb}</p></div><div class="row gap-sm"><span id="landing-account"></span><a class="btn" href="#/">${icon('left', 14)} All classes</a></div></header>` : App.pageHead('Tools', this.blurb);
       root.innerHTML = `${head}${mapHtml()}<section class="th-box" id="tools-box" aria-labelledby="th-box-h"><h2 class="th-h" id="th-box-h">Calculators &amp; converters</h2><p class="small muted th-note">They run in your browser and work offline.</p><div class="dash-tabs" data-store="toolsTab" role="tablist">${TABS.map(([k, l, ic]) => `<button class="tab" data-tab="${k}" role="tab">${icon(ic, 14)}<span>${l}</span></button>`).join('')}</div><div class="panes">${TABS.map(([k, , , html]) => `<div class="pane" data-pane="${k}"><div class="panel">${html()}</div></div>`).join('')}</div></section>${standalone ? '</div>' : ''}`;
       TABS.forEach(([k, , , , bindFn]) => bindFn($(`.pane[data-pane="${k}"]`, root)));
       if (param && TABS.some(t => t[0] === param)) { setSetting('toolsTab', param); }

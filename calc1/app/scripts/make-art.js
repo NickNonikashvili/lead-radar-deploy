@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /* ============================================================
-   Mathub app art: every icon and launch image for iOS, Android and the store listings, drawn from Bo
+   StudyCat app art: every icon and launch image for iOS, Android and the store listings, drawn from Bo
    (assets/icon.svg) so they always match. Run after changing the logo:
 
      node app/scripts/make-art.js            (from calc1/)
@@ -46,7 +46,7 @@ const sq = (S, inner, bg) => page(S, S, `<svg xmlns="http://www.w3.org/2000/svg"
   /* ---------- iOS ---------- */
   const iosIcon = path.join(APP, 'ios', 'App', 'App', 'Assets.xcassets', 'AppIcon.appiconset', 'AppIcon-512@2x.png');
   await shoot(iosIcon, 1024, 1024, sq(1024, `<rect width="1024" height="1024" fill="${NAVY}"/>` + place(1024, 1024 * 0.58 * 1.12 / 64, FACE, -1), NAVY), false);
-  const splash = (w, h, faceW) => page(w, h, `<div style="width:${w}px;height:${h}px;background:${NAVY};display:flex;flex-direction:column;align-items:center;justify-content:center;gap:${Math.round(faceW * 0.12)}px"><svg xmlns="http://www.w3.org/2000/svg" width="${faceW}" height="${faceW}" viewBox="0 0 ${faceW} ${faceW}">${place(faceW, faceW * 0.952 / BOX.w, FACE)}</svg><div style="font-family:G;font-weight:800;font-size:${Math.round(faceW * 0.33)}px;letter-spacing:-0.01em;color:${INK}">Mathub</div></div>`, NAVY);
+  const splash = (w, h, faceW) => page(w, h, `<div style="width:${w}px;height:${h}px;background:${NAVY};display:flex;flex-direction:column;align-items:center;justify-content:center;gap:${Math.round(faceW * 0.12)}px"><svg xmlns="http://www.w3.org/2000/svg" width="${faceW}" height="${faceW}" viewBox="0 0 ${faceW} ${faceW}">${place(faceW, faceW * 0.952 / BOX.w, FACE)}</svg><div style="font-family:G;font-weight:800;font-size:${Math.round(faceW * 0.33)}px;letter-spacing:-0.01em;color:${INK}">StudyCat</div></div>`, NAVY);
   const iosSplash = path.join(APP, 'ios', 'App', 'App', 'Assets.xcassets', 'Splash.imageset');
   for (const n of ['splash-2732x2732.png', 'splash-2732x2732-1.png', 'splash-2732x2732-2.png']) await shoot(path.join(iosSplash, n), 2732, 2732, splash(2732, 2732, 460), false);
 
@@ -69,7 +69,7 @@ const sq = (S, inner, bg) => page(S, S, `<svg xmlns="http://www.w3.org/2000/svg"
   /* ---------- Google Play listing ---------- */
   const store = path.join(APP, 'store');
   await shoot(path.join(store, 'play-icon-512.png'), 512, 512, sq(512, `<rect width="512" height="512" fill="${NAVY}"/>` + place(512, 512 * 0.58 * 1.12 / 64, FACE), NAVY), false);
-  await shoot(path.join(store, 'play-feature-1024x500.png'), 1024, 500, page(1024, 500, `<div style="width:1024px;height:500px;background:radial-gradient(120% 140% at 85% 10%, #22356A 0%, ${NAVY} 60%);display:flex;align-items:center;gap:56px;padding:0 84px;box-sizing:border-box"><svg xmlns="http://www.w3.org/2000/svg" width="230" height="230" viewBox="0 0 230 230">${place(230, 230 / BOX.w, FACE)}</svg><div style="font-family:G;color:${INK}"><div style="font-weight:800;font-size:92px;letter-spacing:-0.02em;line-height:1">Mathub</div><div style="font-weight:600;font-size:34px;line-height:1.25;margin-top:18px;color:#C9D6F2">Your classes, offline.<br>Any class, from its syllabus.</div></div></div>`, NAVY), false);
+  await shoot(path.join(store, 'play-feature-1024x500.png'), 1024, 500, page(1024, 500, `<div style="width:1024px;height:500px;background:radial-gradient(120% 140% at 85% 10%, #22356A 0%, ${NAVY} 60%);display:flex;align-items:center;gap:56px;padding:0 84px;box-sizing:border-box"><svg xmlns="http://www.w3.org/2000/svg" width="230" height="230" viewBox="0 0 230 230">${place(230, 230 / BOX.w, FACE)}</svg><div style="font-family:G;color:${INK}"><div style="font-weight:800;font-size:92px;letter-spacing:-0.02em;line-height:1">StudyCat</div><div style="font-weight:600;font-size:34px;line-height:1.25;margin-top:18px;color:#C9D6F2">Your classes, offline.<br>Any class, from its syllabus.</div></div></div>`, NAVY), false);
 
   await browser.close();
   // flatten the iOS icon (no alpha channel) and the Play art (opaque by design)

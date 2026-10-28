@@ -1,8 +1,8 @@
 <?php
 /* ============================================================
-   Mathub account server — running the site: what Bo costs, alerts when it costs too much, the weekly report to the
+   StudyCat account server — running the site: what Bo costs, alerts when it costs too much, the weekly report to the
    administrators, and the usage numbers behind the admin panel's Growth tab.
-   - What Bo costs Mathub is estimated from credit_use: every use is written down with its credits (administrators'
+   - What Bo costs StudyCat is estimated from credit_use: every use is written down with its credits (administrators'
      too, at no charge), and credits ÷ credits_markup are cents. Calls count by the minute at their rate.
    - Cost alerts (Keys & settings → Plans and payments): cost_alert_daily and cost_alert_monthly, in dollars (0: off),
      and, while either is set, a spike: a day costing over three times the average of the 14 days before it (and
@@ -89,7 +89,7 @@ function mh_ops_alert_tick(bool $force = false): array {
   return $did;
 }
 function mh_ops_admin_emails(): array { return array_values(array_unique(array_filter(array_map(fn($e) => strtolower(trim((string)$e)), mh_config()['admins'] ?? []), fn($e) => filter_var($e, FILTER_VALIDATE_EMAIL)))); }
-function mh_ops_site(): array { $cfg = mh_config(); return [(string)($cfg['site_name'] ?? 'Mathub'), rtrim((string)(($cfg['site_url'] ?? '') ?: ('https://' . ($_SERVER['HTTP_HOST'] ?? 'mathub.space'))), '/')]; }
+function mh_ops_site(): array { $cfg = mh_config(); return [(string)($cfg['site_name'] ?? 'StudyCat'), rtrim((string)(($cfg['site_url'] ?? '') ?: ('https://' . ($_SERVER['HTTP_HOST'] ?? 'studycat.org'))), '/')]; }
 function mh_ops_alert_email(string $kind, float $usd, float $limit, string $note, array $top): void {
   require_once __DIR__ . '/mailer.php'; [$site, $url] = mh_ops_site(); $cfg = mh_config();
   $what = ['day' => 'today', 'month' => 'this month', 'spike' => 'today, more than three times a usual day'][$kind] ?? '';
@@ -120,8 +120,10 @@ function mh_ops_report(int $end = 0): array {
   $bo['per_active'] = $people['active'] ? round($bo['usd'] / $people['active'], 3) : 0;
   $s = $c1("SELECT COALESCE(SUM(kind = 'buy'), 0) AS sold, COALESCE(SUM(kind = 'refund'), 0) AS refunds FROM credit_add WHERE created >= ? AND created < ?", [$from, $end]);
   $money = ['packs' => (int)$s['sold'], 'refunds' => (int)$s['refunds'], 'revenue' => round(((int)$s['sold'] - (int)$s['refunds']) * $C['price_num'], 2), 'price' => $C['price']];
-  $req = ['new' => 0, 'top' => []];
-  try { require_once __DIR__ . '/requests.php'; mh_req_db(); $req['new'] = $one('SELECT COUNT(*) FROM class_requests WHERE created >= ? AND created < ? AND status <> "withdrawn"', [$from, $end]); $req['top'] = array_slice(mh_req_demand(), 0, 5); } catch (Throwable $e) {}
+  // students' own classes (the class maker, api/myclasses.php) and syllabi Bo read for it, this week
+  $made = ['made' => 0, 'people' => 0, 'syllabi' => 0];
+  try { require_once __DIR__ . '/myclasses.php'; $st = mh_myclass_db()->prepare('SELECT COUNT(*) AS n, COUNT(DISTINCT user_id) AS p FROM my_classes WHERE created >= ? AND created < ?'); $st->execute([$from, $end]); $m = $st->fetch(); $made['made'] = (int)$m['n']; $made['people'] = (int)$m['p']; } catch (Throwable $e) {}
+  try { $made['syllabi'] = (int)$c1("SELECT COUNT(*) AS n FROM credit_use WHERE feature = 'class' AND detail = 'Reading a syllabus' AND at >= ? AND at < ?", [$from, $end])['n']; } catch (Throwable $e) {}
   $safe = ['reports' => 0, 'issues' => 0, 'errors' => 0, 'flags' => 0];
   foreach (['reports' => 'SELECT COUNT(*) FROM reports WHERE status = "open"', 'issues' => 'SELECT COUNT(*) FROM issues WHERE status = "open"', 'flags' => 'SELECT COUNT(*) FROM ai_flags WHERE status = "open"'] as $k => $sql) { try { $safe[$k] = (int)$db->query($sql)->fetchColumn(); } catch (Throwable $e) {} }
   try { $safe['errors'] = $one('SELECT COALESCE(SUM(count), 0) FROM client_errors WHERE last >= ?', [$from]); } catch (Throwable $e) {}
@@ -131,7 +133,7 @@ function mh_ops_report(int $end = 0): array {
   $eval = null; try { require_once __DIR__ . '/evals.php'; $eval = mh_eval_last(); } catch (Throwable $e) {}
   $st = $cdb->prepare('SELECT kind, period, usd, limit_usd, note FROM ops_alerts WHERE at >= ? AND at < ? ORDER BY at'); $st->execute([$from, $end]);
   $alerts = array_map(fn($r) => ['kind' => (string)$r['kind'], 'period' => (string)$r['period'], 'usd' => (float)$r['usd'], 'limit' => (float)$r['limit_usd'], 'note' => (string)$r['note']], $st->fetchAll());
-  return ['from' => $from, 'end' => $end, 'label' => mh_ops_fmt($from, 'M j') . ' – ' . mh_ops_fmt($end - 1, 'M j'), 'people' => $people, 'bo' => $bo, 'money' => $money, 'requests' => $req, 'safety' => $safe, 'backups' => $backups, 'eval' => $eval, 'alerts' => $alerts];
+  return ['from' => $from, 'end' => $end, 'label' => mh_ops_fmt($from, 'M j') . ' – ' . mh_ops_fmt($end - 1, 'M j'), 'people' => $people, 'bo' => $bo, 'money' => $money, 'classes' => $made, 'safety' => $safe, 'backups' => $backups, 'eval' => $eval, 'alerts' => $alerts];
 }
 /** The report as an email: [subject, text, html]. */
 function mh_ops_report_mail(array $R): array {
@@ -143,7 +145,7 @@ function mh_ops_report_mail(array $R): array {
   $S['Bo'] = [mh_ops_n($B['uses'], 'use', 'uses') . ' by ' . mh_ops_n($B['people'], 'person', 'people') . ', costing about ' . mh_ops_money($B['usd']) . " ({$ch($B['usd'], $B['usd_prev'])}); " . mh_ops_money($B['per_active']) . ' per active member.'];
   foreach ($B['by'] as $f) $S['Bo'][] = "{$f['title']}: " . mh_ops_money($f['usd']) . ', ' . mh_ops_n($f['uses'], 'use', 'uses') . ' by ' . mh_ops_n($f['people'], 'person', 'people');
   $M = $R['money']; $S['Credits sold'] = [$M['packs'] ? "{$M['packs']} packs" . ($M['refunds'] ? ", {$M['refunds']} refunded" : '') . ', about ' . mh_ops_money($M['revenue']) . '.' : 'No packs sold this week.'];
-  $Q = $R['requests']; $S['Class requests'] = [$Q['new'] . ' new this week.']; foreach ($Q['top'] as $t) $S['Class requests'][] = "{$t['code']}" . ($t['title'] !== '' ? " {$t['title']}" : '') . ": {$t['people']} " . ($t['people'] === 1 ? 'person' : 'people') . ($t['recent'] ? ", {$t['recent']} in the last 30 days" : '') . ($t['syllabus'] ? '' : ', no syllabus yet');
+  $Q = $R['classes'] ?? ['made' => 0, 'people' => 0, 'syllabi' => 0]; $S['Classes made'] = [$Q['made'] ? mh_ops_n($Q['made'], 'class', 'classes') . ' made in the class maker by ' . mh_ops_n($Q['people'], 'person', 'people') . '.' : 'No classes made in the class maker this week.', mh_ops_n($Q['syllabi'], 'syllabus', 'syllabi') . ' read by Bo.'];
   $F = $R['safety']; $S['To look at'] = [mh_ops_n($F['reports'], 'open report', 'open reports') . ', ' . mh_ops_n($F['issues'], 'problem report', 'problem reports') . ', ' . mh_ops_n($F['flags'], 'answer', 'answers') . ' marked not right, ' . mh_ops_n($F['errors'], 'site error', 'site errors') . ' this week.'];
   $K = $R['backups']; $bk = [$K['local'] ? 'Newest copy on the server: ' . $ago($K['local']['at']) . '.' : 'No copy on the server yet.'];
   $o = $K['offsite']; if (!$o || !$o['ready']) $bk[] = 'Off-site copies are not set up' . ($o && $o['missing'] !== '' ? ': ' . $o['missing'] : '.');

@@ -1,5 +1,5 @@
 /* ============================================================
-   Mathub — the frame on every page of the website
+   StudyCat — the frame on every page of the website
    The sidebar and the header used to belong to class pages only;
    now every page has them (the iOS and Android apps keep their own
    frame, assets/app-native.js, and the faculty workspace its own).
@@ -43,7 +43,7 @@
   ];
   const vi = v => (App.viewIcon ? App.viewIcon(v) : 'file');
   const PLACE = {}; GROUPS.forEach(g => { g.items.forEach(([v, l]) => { PLACE[v] = [g.label, l]; }); (g.subs || []).forEach(sb => sb.items.forEach(([v, l]) => { PLACE[v] = [sb.label, l]; })); });
-  Object.assign(PLACE, { home: [null, 'Home'], tutor: [null, 'Ask Bo'], settings: [null, 'Settings'], contact: [null, 'Contact'], policy: [null, 'Terms & privacy'], plan: [null, 'Your plan'], calls: [null, 'Usage'], usage: [null, 'Usage'], create: [null, 'Create a class'], request: [null, 'Request a class'], recap: [null, 'Your week'], sheet: [null, 'Character sheet'], mistakes: [null, 'Mistakes'], admin: [null, 'Admin'], customize: [null, 'Customize'], off: [null, 'Turned off'], class: [null, 'Join a class'], c: [null, 'A shared class'], join: [null, 'Join a classmate'], notfound: [null, 'Page not found'] });
+  Object.assign(PLACE, { home: [null, 'Home'], tutor: [null, 'Ask Bo'], settings: [null, 'Settings'], contact: [null, 'Contact'], policy: [null, 'Terms & privacy'], plan: [null, 'Your plan'], calls: [null, 'Usage'], usage: [null, 'Usage'], maker: ['Your classes', 'Class maker'], create: ['Your classes', 'Class maker'], request: ['Your classes', 'Class maker'], recap: [null, 'Your week'], sheet: [null, 'Character sheet'], mistakes: [null, 'Mistakes'], admin: [null, 'Admin'], customize: [null, 'Customize'], off: [null, 'Turned off'], class: [null, 'Join a class'], c: [null, 'A shared class'], join: [null, 'Join a classmate'], notfound: [null, 'Page not found'] });
   App.shellGroups = GROUPS;
 
   const route = () => { const raw = location.hash.replace(/^#\/?/, '').split('?')[0]; const parts = raw.split('/').filter(Boolean); if (!parts.length) return { course: null, view: 'home' }; if (Courses[parts[0]]) return { course: parts[0], view: parts[1] || 'dashboard' }; return { course: null, view: parts[0] }; };
@@ -123,9 +123,11 @@
     if (!inClass && !(App.sideGroupHidden && App.sideGroupHidden('classes'))) {
       const ids = App.myCourses().filter(id => Courses[id]); const o = groupOpen('classes', true);
       const rows = ids.map(id => { const C = Courses[id]; let ex = null; try { ex = App.nextExamOf(C); } catch (e) {} const n = ex && ex.date ? App.daysBetween(App.todayISO(), ex.date) : null; return `<a class="nav-item sb-class" style="${Life().ccStyle(id)}" href="#/${esc(id)}/dashboard" title="${esc(C.name)}"><i class="sb-dot"></i><span>${esc(C.short)}</span>${n != null && n >= 0 && n <= 14 ? `<b class="sb-exam${n <= 3 ? ' soon' : ''}" title="${esc(ex.name)}">${n === 0 ? esc(t('today')) : esc(t('{1}d', n))}</b>` : ''}</a>`; }).join('');
-      // administrators add classes; everyone else asks for one (assets/requests.js)
-      const add = App.canMakeClasses && App.canMakeClasses() ? `<a class="nav-item sb-add" href="#/create">${icon('plus')}<span>${esc(t('Add a class'))}</span></a>` : App.views.request ? `<a class="nav-item sb-add" href="#/request">${icon('plus')}<span>${esc(t('Request a class'))}</span></a>` : '';
-      parts.classes = group('classes', t('Your classes'), ids.length, o, rows + add);
+      // the class maker (assets/maker.js): add a class from a syllabus or from scratch, and make each one yours
+      const add = App.views.maker ? `<a class="nav-item sb-add${!inClass && r.view === 'maker' ? ' active' : ''}" href="#/maker" data-sv="maker"${!inClass && r.view === 'maker' ? ' aria-current="page"' : ''}>${icon('maker')}<span>${esc(t('Class maker'))}</span></a>` : '';
+      // nobody gets the Montana State classes by default: until you pick, the list asks you to
+      const pick = ids.length ? '' : `<a class="nav-item sb-pick" href="#/" data-sv="pick">${icon('cap')}<span>${esc(t('Pick your classes'))}</span></a>`;
+      parts.classes = group('classes', t('Your classes'), ids.length, o, pick + rows + add);
     }
     A.groups.forEach(g => {
       const items = g.items; const subs = (g.subs || []).filter(sb => sb.items.length);
@@ -167,7 +169,7 @@
     // the clock in the header
     const acts = $('#topbar .topbar-actions'); if (acts && !$('#tb-clock')) { const b = document.createElement('button'); b.id = 'tb-clock'; b.className = 'tb-clock'; b.type = 'button'; b.dataset.action = 'clock'; b.setAttribute('aria-haspopup', 'dialog'); b.title = t('Open the clock'); b.innerHTML = `${icon('clock', 14)}<span data-clock="">${esc(clockTxt())}</span><span class="sr-only">, ${esc(t('Open the clock'))}</span>`; const s = $('.search-btn', acts); acts.insertBefore(b, s || null); }
     if (r.course) return;   // a class page writes its own title and exam (app.js)
-    const p = PLACE[r.view] || [null, (App.views[r.view] && App.views[r.view].title) || 'Mathub'];
+    const p = PLACE[r.view] || [null, (App.views[r.view] && App.views[r.view].title) || 'StudyCat'];
     $('#topbar-title').innerHTML = `${p[0] ? `<span class="crumb">${esc(t(p[0]))}</span><span class="crumb-sep">›</span>` : ''}<span class="crumb-cur">${esc(t(p[1]))}</span>`;
     // the soonest exam across your classes
     const chip = $('#exam-chip'); if (chip) {

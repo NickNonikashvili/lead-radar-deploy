@@ -2,7 +2,7 @@
    Build:  node scripts/make-pack.js packs/src/m170.js
    Notes, formulas, flashcards, practice and checklists live in m170/notes.js; the question bank in m170/quiz.js.
    The syllabus has no schedule: no exam dates and no topic-by-topic calendar. The two exam dates below are
-   Mathub's estimates (agreed with the site admin) and are labeled as estimates everywhere; the weekly topics
+   StudyCat's estimates (agreed with the site admin) and are labeled as estimates everywhere; the weekly topics
    follow the textbook's order and are labeled as estimated pacing. Replace both when the real dates are known. */
 const N = require('./m170/notes.js');
 const QUIZ = require('./m170/quiz.js');
@@ -13,14 +13,14 @@ const WEBWORK = 'https://webwork3.math.montana.edu/webwork2/F26M170';
 const GRADESCOPE = 'https://www.gradescope.com/';
 const CLASS = (date, sec, topic) => [date, 'lecture', `Wednesday class: lecture and group activities (estimated topic: ${topic})`, sec];
 const NO = (date, why) => [date, 'holiday', why];
-const EST = 'The syllabus gives no date: this is Mathub’s estimate. Check Canvas or ask in class for the real date.';
+const EST = 'The syllabus gives no date: this is StudyCat’s estimate. Check Canvas or ask in class for the real date.';
 const EXAM_FORMAT = 'In class, on paper. No calculators, electronics or phones. Show your work and explain it: answers alone get little or no credit.';
 
 module.exports = {
   format: 'mathub-class-pack', version: 1,
   id: 'm170', code: 'M 170', name: 'Trigonometry for Calculus', short: 'Trig', term: 'Fall 2026', kind: 'math',
   tagline: 'Angles and radians, the unit circle, graphs, identities, inverse trig and the laws of sines and cosines',
-  quizNote: 'Mathub wrote these questions from the course outcomes and the textbook; they are not the instructor’s. Exams allow no calculator, so work each one by hand. Type exact answers like sqrt(3)/2, 5pi/6 or -1/2, or a decimal; answers within 0.5% count.',
+  quizNote: 'StudyCat wrote these questions from the course outcomes and the textbook; they are not the instructor’s. Exams allow no calculator, so work each one by hand. Type exact answers like sqrt(3)/2, 5pi/6 or -1/2, or a decimal; answers within 0.5% count.',
   formulasNote: 'The unit circle values, identities, graph features and triangle laws for M 170 on one page. Exams are closed-book with no calculator, so cover the right side and test yourself.',
   filterExample: 'unit circle, Law of Cosines',
   color: { light: '#A21CAF', dark: '#F0ABFC' },
@@ -147,7 +147,7 @@ module.exports = {
       <p class="small mt-1">Graded on a 4-point scale: A 3.75 (93.75%) · A- 3.65 · B+ 3.55 · B 3.3 · B- 3.0 · C+ 2.9 · C 2.8 · C- 2.7 · D 2.5 · F below 2.5.</p>` },
     { icon: 'flag', title: 'Exams and the final presentation', html: `<ul class="list-plain small">
       <li><b>Two exams, in class.</b> No calculators, no electronics, no phones.</li>
-      <li><b>The syllabus gives no exam dates.</b> Mathub estimates Exam 1 on Wed Oct 14 and Exam 2 on Wed Dec 9; check Canvas or ask in class.</li>
+      <li><b>The syllabus gives no exam dates.</b> StudyCat estimates Exam 1 on Wed Oct 14 and Exam 2 on Wed Dec 9; check Canvas or ask in class.</li>
       <li>The <b>final presentation</b> is 10% of your grade; its date and format will come from your instructor.</li>
       <li><b>Conflicts:</b> extreme circumstances only. Contact your instructor before the exam, ideally a week ahead, with your name, section, the reason and the exam. Work, travel and leaving early for holidays do not count; documentation may be requested.</li></ul>` },
     { icon: 'clock', title: 'Homework and quizzes', html: `<ul class="list-plain small">
@@ -159,14 +159,14 @@ module.exports = {
       <li><b>AI is allowed as a support tool for learning</b>, such as clarifying concepts, practice questions, checking your work or study plans, but not to replace your own thinking, problem solving or written work.</li>
       <li>The syllabus’s best practices: attempt the problem first, ask specific questions, and verify every result yourself.</li>
       <li>Answers from solution manuals or Q&amp;A sites count as cheating unless allowed; acknowledge collaborators and cite sources.</li>
-      <li>Mathub fits the policy when you use it to practise and to check your understanding.</li></ul>` },
+      <li>StudyCat fits the policy when you use it to practise and to check your understanding.</li></ul>` },
     { icon: 'users', title: 'Where to get help', html: `<ul class="list-plain small">
       <li><b>Textbook videos:</b> each section of the book ends with links to short videos.</li>
       <li><b>Office hours</b> with your instructor, which the syllabus strongly encourages.</li>
       <li><b>Math &amp; Stat Center</b>, Romney 220: Mon–Thu 9–6, Fri 9–5. <b>Smarty Cats</b> also supports M 170.</li>
       <li><b>Study groups:</b> work together on concepts and homework problems, but do your homework on your own.</li>
       <li><b>Accommodations:</b> Disability Services, 137 Romney Hall (<a href="https://www.montana.edu/drv/disability/student.htm" target="_blank" rel="noopener">details</a>). <b>Wellbeing:</b> <a href="https://www.montana.edu/counseling/" target="_blank" rel="noopener">Counseling &amp; Psychological Services</a>, <a href="https://www.montana.edu/oha/" target="_blank" rel="noopener">Health Advancement</a>, <a href="https://www.montana.edu/health/" target="_blank" rel="noopener">Medical Services</a>, <a href="https://montana.welltrack.com/" target="_blank" rel="noopener">WellTrack</a>.</li></ul>` },
-    { icon: 'bulb', title: 'How to use Mathub for this class', html: `<p class="small">Learn the unit circle first: run its flashcards until you can write the first quadrant from memory and get the others by symmetry. After each Wednesday class, read that topic’s notes and do a few quizzer questions before the Monday WeBWorK. Exams are by hand with no calculator, so do the practice sets on paper and explain every step.</p>` }
+    { icon: 'bulb', title: 'How to use StudyCat for this class', html: `<p class="small">Learn the unit circle first: run its flashcards until you can write the first quadrant from memory and get the others by symmetry. After each Wednesday class, read that topic’s notes and do a few quizzer questions before the Monday WeBWorK. Exams are by hand with no calculator, so do the practice sets on paper and explain every step.</p>` }
   ],
 
   QUIZ

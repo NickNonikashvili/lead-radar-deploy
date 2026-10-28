@@ -44,7 +44,7 @@ review
 # a word between two bold labels; the files a draft opens from (assets/drafts.js, instruct.js)
 and
 .docx, .pdf, .odt or .txt
-# Mathub Faculty (assets/teach.js): how many suggestions a part of the syllabus has
+# StudyCat Faculty (assets/teach.js): how many suggestions a part of the syllabus has
 1 suggestion
 {1} suggestions
 # Docs, Slides and Sheets (assets/office-*.js): the slide themes (assets/office-pptx.js), shown with t(name)

@@ -1,5 +1,5 @@
 /* ============================================================
-   Mathub — admin panel (#/admin, or inside a class)
+   StudyCat — admin panel (#/admin, or inside a class)
    Overview, members, reports,
    keys and settings (API keys, the email password, plans, limits, who may sign up and who is staff;
    api/siteconfig.php), site settings (Canvas feed, announcement, staff roles), digest.
@@ -16,7 +16,7 @@
   const planCell = x => {
     const P = x.plan || {}; const k = P.plan || '';
     const src = !k ? '' : P.gift && P.gift.plan === k ? (P.gift.until ? `given, until ${day(P.gift.until)}` : 'given') : P.paid && P.paid.plan === k ? 'paid' : 'tester';
-    return `<button class="btn xs adm-plan-btn${k ? ' is-' + k : ''}" data-action="plan" data-u="${x.id}" aria-expanded="false" aria-label="${k ? `Mathub ${PLAN_NAME[k]}${src ? `, ${src}` : ''}` : 'Free'}: give or change the membership of ${esc(x.name || x.email)}">${icon(k === 'pro' ? 'zap' : 'gem', 12)} ${k ? PLAN_NAME[k] : 'Free'}</button>${src ? `<div class="adm-plan-src">${esc(src)}</div>` : ''}`;
+    return `<button class="btn xs adm-plan-btn${k ? ' is-' + k : ''}" data-action="plan" data-u="${x.id}" aria-expanded="false" aria-label="${k ? `StudyCat ${PLAN_NAME[k]}${src ? `, ${src}` : ''}` : 'Free'}: give or change the membership of ${esc(x.name || x.email)}">${icon(k === 'pro' ? 'zap' : 'gem', 12)} ${k ? PLAN_NAME[k] : 'Free'}</button>${src ? `<div class="adm-plan-src">${esc(src)}</div>` : ''}`;
   };
   const API = 'api/index.php?r=';
   const user = () => (App.auth && App.auth.user) || null; const isAdmin = () => !!(user() && user().admin); const isMod = () => !!(user() && user().mod);
@@ -31,17 +31,13 @@
     if (!json || json.ok === false) { const err = new Error((json && json.error) || 'Request failed.'); err.data = json; throw err; }
     return json;
   }
-  // class requests: the files previewed (blob URLs, let go when the tab is drawn again), Bo's builds in progress by request,
-  // and what the malware check looked at, in a line
-  const BLOBS = [], JOBS = {};
-  const scanLine = sc => [sc.kind, ...(sc.checks || []), `ClamAV: ${sc.clamav}`, `VirusTotal: ${sc.virustotal}`, sc.sha256 ? `SHA-256 ${String(sc.sha256).slice(0, 16)}…` : ''].filter(Boolean).join(' · ');
-  const TABS = [['overview', 'Overview', 'grid', 'admin'], ['members', 'Members', 'info', 'admin'], ['issues', 'Problems', 'bulb', 'mod'], ['packs', 'Add a class', 'book', 'admin'], ['classes', 'Class requests', 'path', 'admin'], ['teach', 'Instructors', 'users', 'admin'], ['errors', 'Site errors', 'zap', 'admin'], ['backups', 'Backups', 'download', 'admin'], ['reports', 'Reports', 'flag', 'mod'], ['growth', 'Growth', 'chart', 'admin'], ['config', 'Keys & settings', 'lock', 'admin'], ['settings', 'Site settings', 'sliders', 'admin'], ['digest', 'Digest & cron', 'clock', 'admin'], ['email', 'Email everyone', 'send', 'admin'], ['bo', 'Bo quality', 'chat', 'admin'], ['tests', 'Answer tests', 'check', 'admin'], ['credits', 'Credits', 'zap', 'admin']];
+  const TABS = [['overview', 'Overview', 'grid', 'admin'], ['members', 'Members', 'info', 'admin'], ['issues', 'Problems', 'bulb', 'mod'], ['packs', 'Add a class', 'book', 'admin'], ['teach', 'Instructors', 'users', 'admin'], ['errors', 'Site errors', 'zap', 'admin'], ['backups', 'Backups', 'download', 'admin'], ['reports', 'Reports', 'flag', 'mod'], ['growth', 'Growth', 'chart', 'admin'], ['config', 'Keys & settings', 'lock', 'admin'], ['settings', 'Site settings', 'sliders', 'admin'], ['digest', 'Digest & cron', 'clock', 'admin'], ['email', 'Email everyone', 'send', 'admin'], ['bo', 'Bo quality', 'chat', 'admin'], ['tests', 'Answer tests', 'check', 'admin'], ['credits', 'Credits', 'zap', 'admin']];
 
   App.views.admin = {
     title: 'Admin panel',
     render(root, param, query, standalone) {
       const tabs = TABS.filter(t => t[3] === 'mod' ? isMod() : isAdmin()); const want = param === 'calls' ? 'credits' : param; const tab = tabs.find(t => t[0] === want) ? want : (tabs[0] ? tabs[0][0] : 'overview');
-      const head = standalone ? `<header class="landing-top"><div><div class="eyebrow">Mathub</div><h1 class="landing-title"><span class="logo-mark">${App.logoSvg(44)}</span>Admin panel</h1><p class="muted">${isAdmin() ? 'Everything about the site, in one place.' : 'Moderation tools.'}</p></div><div class="row gap-sm"><span id="landing-account"></span><a class="btn" href="#/">${icon('left', 14)} All classes</a><button class="icon-btn theme-btn" data-action="theme" aria-label="Toggle theme"></button></div></header>` : pageHead('Admin panel', isAdmin() ? 'Everything about the site, in one place.' : 'Moderation tools.');
+      const head = standalone ? `<header class="landing-top"><div><div class="eyebrow">StudyCat</div><h1 class="landing-title"><span class="logo-mark">${App.logoSvg(44)}</span>Admin panel</h1><p class="muted">${isAdmin() ? 'Everything about the site, in one place.' : 'Moderation tools.'}</p></div><div class="row gap-sm"><span id="landing-account"></span><a class="btn" href="#/">${icon('left', 14)} All classes</a><button class="icon-btn theme-btn" data-action="theme" aria-label="Toggle theme"></button></div></header>` : pageHead('Admin panel', isAdmin() ? 'Everything about the site, in one place.' : 'Moderation tools.');
       root.innerHTML = `${standalone ? '<div class="landing-wrap admin-wrap">' : ''}${head}${!isMod() ? App.lockCard('Staff only', 'Log in with a moderator or administrator account to open the admin panel.') : `<div class="admin-layout"><nav class="admin-tabs">${tabs.map(t => `<a class="admin-tab${t[0] === tab ? ' active' : ''}" href="${standalone ? '#/admin/' + t[0] : App.link('admin', t[0])}">${icon(t[2], 15)}<span>${t[1]}</span></a>`).join('')}</nav><div class="admin-body" id="adm-body"><div class="empty">Loading…</div></div></div>`}${standalone ? '</div>' : ''}`;
       const slot = $('#landing-account', root); if (slot && App.auth && App.auth.ready) App.auth.paintLandingAccount(slot);
       bind(root, { theme: () => App.toggleTheme(), 'auth-signup': () => App.auth.open('signup'), 'auth-login': () => App.auth.open('login') });
@@ -61,7 +57,7 @@
       const tile = (v, label, sub) => `<div class="bq-tile"><b>${v}</b><span>${esc(label)}</span>${sub ? `<small>${esc(sub)}</small>` : ''}</div>`;
       const kind = { buy: 'Bought', gift: 'Given', refund: 'Refunded' };
       el.innerHTML = `<div id="ops-cost"></div><div class="callout small mb-2">Credits in ${esc(r.month)}. Everything with Bo uses them, on any plan: each answer by what it took (tokens), calls by the minute, pictures each. Each month free accounts get ${n(C.free)}, Pro ${n(C.pro)} and Max ${n(C.max)}; more is ${n(C.pack)} for ${esc(C.price)}, bought ahead. The month’s credits are used first, then bought ones (which never expire). Administrators are never charged.</div>
-        <div class="bq-tiles">${tile(n(T.credits), 'Used this month', `${T.people} ${T.people === 1 ? 'person' : 'people'}`)}${tile(n(T.month), 'From monthly credits', '')}${tile(n(T.paid), 'From bought or given', '')}${tile(`${cur}${(T.cost || 0).toFixed(2)}`, 'About what it cost', 'OpenAI and Anthropic, roughly')}${tile(`${T.packs_sold}`, 'Packs sold this month', `${T.refunds} refunded · ${T.all_packs} in all`)}${tile(`${cur}${(T.revenue || 0).toFixed(2)}`, 'From packs this month', 'before Stripe and store fees')}${tile(n(T.given), 'Given by Mathub', 'this month')}</div>
+        <div class="bq-tiles">${tile(n(T.credits), 'Used this month', `${T.people} ${T.people === 1 ? 'person' : 'people'}`)}${tile(n(T.month), 'From monthly credits', '')}${tile(n(T.paid), 'From bought or given', '')}${tile(`${cur}${(T.cost || 0).toFixed(2)}`, 'About what it cost', 'OpenAI and Anthropic, roughly')}${tile(`${T.packs_sold}`, 'Packs sold this month', `${T.refunds} refunded · ${T.all_packs} in all`)}${tile(`${cur}${(T.revenue || 0).toFixed(2)}`, 'From packs this month', 'before Stripe and store fees')}${tile(n(T.given), 'Given by StudyCat', 'this month')}</div>
         <div class="grid cols-2 mb-2">
           <div class="panel"><div class="panel-h"><div class="panel-title">${icon('sliders')} What things cost</div><a class="btn xs" href="#/admin/settings">Change</a></div>
             <ul class="small cl-adm-set"><li>A minute on a call: <b>${n(C.call_strong)}</b> with Max’s stronger model, <b>${n(C.call_light)}</b> otherwise</li><li>A picture: <b>${n(C.image)}</b>, wide or tall <b>${n(C.image_big)}</b></li><li>Answers and everything else: what it cost in tokens × <b>${C.markup}</b>, 1 credit = 1¢</li><li>Packs: <b>${n(C.pack)} for ${esc(C.price)}</b> (product ${(C.products || []).map(esc).join(', ') || 'not set'})</li><li>Purchase link: ${C.link ? '<span class="chip xs good">set</span>' : '<span class="chip xs warn">not set: members cannot buy credits yet</span>'} · RevenueCat: ${C.revenuecat ? '<span class="chip xs good">connected</span>' : '<span class="chip xs warn">no secret key</span>'}</li></ul></div>
@@ -144,81 +140,6 @@
         el.innerHTML = `<div class="row between mb-2"><div class="row gap-sm">${['open', 'resolved', 'all'].map(x => `<button class="chip toggle${x === status ? ' on' : ''}" data-action="is-filter" data-s="${x}">${x}</button>`).join('')}</div><span class="chip${r.open ? ' warn' : ' good'}">${r.open} open</span></div>
           ${r.items.length ? `<div class="stack-sm">${r.items.map(i => `<div class="panel issue${i.status === 'resolved' ? ' resolved' : ''}"><div class="row between"><div class="row gap-sm"><span class="chip course-${esc(i.course || 'general')}">${esc(NAMES[i.course] || i.course || 'site')}</span><span class="chip">${esc(i.reason)}</span><b>${esc(i.view || 'Page')}${i.ref ? ' · ' + esc(i.ref) : ''}</b></div><span class="small muted">${App.ago(i.created * 1000)} · ${i.email ? esc(i.email) : 'anonymous'}</span></div>${i.prompt ? `<div class="issue-quote small mt-1">${esc(i.prompt)}</div>` : ''}${i.answer ? `<div class="small muted mt-1">Their answer: ${esc(i.answer)}</div>` : ''}${i.comment ? `<p class="mt-1">${esc(i.comment)}</p>` : ''}<div class="row gap-sm mt-1"><a class="btn xs" href="${esc(i.url || '#/')}">Open page</a>${/^#\/c\/[A-Za-z0-9]{8}$/.test(i.url || '') ? `<button class="btn xs danger" data-action="is-unshare" data-code="${esc(i.url.slice(4))}">Stop sharing this class</button>` : ''}${i.status === 'open' ? `<button class="btn xs primary" data-action="is-resolve" data-id="${i.id}">Resolve</button>` : `<button class="btn xs" data-action="is-reopen" data-id="${i.id}">Reopen</button>`}${isAdmin() ? `<button class="btn xs danger" data-action="is-delete" data-id="${i.id}">Delete</button>` : ''}<span class="small muted">${esc(i.build || '')}</span></div></div>`).join('')}</div>` : '<div class="empty">No problem reports here. Students can flag any question, lesson, flashcard or note.</div>'}`;
         bind(el, { 'is-filter': b => this.issues(el, root, b.dataset.s), 'is-resolve': async b => { const note = prompt('Optional note for the reporter (goes to their inbox):'); if (note === null) return; try { await api('admin_issue', { id: +b.dataset.id, action: 'resolve', note }); } catch (e) { App.toast(e.message); } this.issues(el, root, status); }, 'is-reopen': async b => { try { await api('admin_issue', { id: +b.dataset.id, action: 'reopen' }); } catch (e) { App.toast(e.message); } this.issues(el, root, status); }, 'is-unshare': async b => { if (!confirm('Stop sharing this class? Its link stops working for everyone; the owner keeps the class.')) return; try { const x = await api('admin_unshare', { code: b.dataset.code }); App.toast(x.stopped ? 'The link no longer works.' : 'It was not shared any more.'); } catch (e) { App.toast(e.message); } }, 'is-delete': async b => { if (!confirm('Delete this report?')) return; try { await api('admin_issue', { id: +b.dataset.id, action: 'delete' }); } catch (e) { App.toast(e.message); } this.issues(el, root, status); } });
-      } catch (e) { el.innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
-    },
-    async classes(el, root, status = 'open') {
-      BLOBS.splice(0).forEach(u => URL.revokeObjectURL(u));   // previews from the last time this tab was drawn
-      try {
-        const r = await api('admin_classreqs&status=' + status); const kb = n => n > 1048576 ? (n / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(n / 1024)) + ' KB';
-        const ST = { new: ['New', ''], working: ['Being built', 'warn'], added: ['Added', 'good'], declined: ['Declined', 'muted'] };
-        const guessId = code => code.replace(/\s+/g, '').toLowerCase();
-        el.innerHTML = `<div class="row between mb-2" style="flex-wrap:wrap;gap:8px"><div class="row gap-sm">${[['open', 'Open'], ['added', 'Added'], ['declined', 'Declined'], ['all', 'All']].map(([k, l]) => `<button class="chip toggle${k === status ? ' on' : ''}" data-action="cr-filter" data-s="${k}">${l} <b>${r.counts[k] || 0}</b></button>`).join('')}</div><span class="small muted">Most wanted first: by how many people asked, then how many asked in the last 30 days. Syllabus files are only visible here.</span></div>
-          ${r.groups.length ? `<div class="stack-sm">${r.groups.map(g => `<div class="panel cr-group" data-code="${esc(g.code)}"><div class="row between" style="flex-wrap:wrap;gap:8px"><div class="row gap-sm"><b class="mono" style="font-size:16px">${esc(g.code)}</b>${g.title ? `<span>${esc(g.title)}</span>` : ''}<span class="chip ${ST[g.status] ? ST[g.status][1] : ''}">${esc(ST[g.status] ? ST[g.status][0] : g.status)}</span><span class="chip">${g.people} ${g.people === 1 ? 'person' : 'people'}</span>${g.recent ? `<span class="chip accent">${g.recent} in the last 30 days</span>` : ''}<span class="chip${g.syllabi ? ' good' : ' warn'}">${g.syllabi ? `${g.syllabi} syllab${g.syllabi === 1 ? 'us' : 'i'}` : 'no syllabus yet'}</span>${g.status === 'added' && g.course_id ? `<a class="chip accent" href="#/${esc(g.course_id)}">#/${esc(g.course_id)}</a>` : ''}</div>
-              <div class="row gap-sm">${g.status !== 'working' && g.status !== 'added' ? `<button class="btn xs" data-action="cr-set" data-st="working">Working on it</button>` : ''}${g.status !== 'added' ? `<button class="btn xs primary" data-action="cr-set" data-st="added">Mark added</button>` : ''}${g.status !== 'declined' ? `<button class="btn xs" data-action="cr-set" data-st="declined">Can't add</button>` : ''}${g.status !== 'new' ? `<button class="btn xs ghost" data-action="cr-set" data-st="new">Back to new</button>` : ''}</div></div>
-              ${g.admin_note ? `<div class="small muted mt-1">${icon('chat', 11)} Note sent: ${esc(g.admin_note)}</div>` : ''}
-              <div class="cr-list mt-1">${g.requests.map(q => `<div class="cr-row"><div><b>${q.deleted ? '<span class="muted">account deleted</span>' : esc(q.name || q.email)}</b>${q.email ? ` <a class="small muted" href="mailto:${esc(q.email)}">${esc(q.email)}</a>` : ''} <span class="small muted">· ${App.ago(q.created * 1000)}${q.term ? ' · ' + esc(q.term) : ''}${q.instructor ? ' · ' + esc(q.instructor) : ''}</span>${q.note ? `<div class="small mt-1">${esc(q.note)}</div>` : ''}</div>
-                <div class="row gap-sm">${q.file_name ? `${q.scan ? `<span class="chip xs good" title="${esc(scanLine(q.scan))}">${icon('shield', 11)} Checked</span>` : `<span class="chip xs warn" title="Sent before uploads were checked for malware">${icon('shield', 11)} Not checked</span>`}` : ''}${q.file_name || q.has_text ? `<button class="btn xs primary" data-action="cr-preview" data-id="${q.id}" aria-expanded="false">${icon('eye', 12)} Preview and build</button>` : ''}${q.file_name ? `<a class="btn xs" href="${API}admin_classreq_file&id=${q.id}" download>${icon('download', 12)} ${esc(q.file_name)} · ${kb(q.file_size)}</a>` : ''}${q.has_text ? `<a class="btn xs" href="${API}admin_classreq_file&id=${q.id}&part=text" download>${icon('file', 12)} Pasted text</a>` : ''}${!q.file_name && !q.has_text ? '<span class="small muted">no syllabus</span>' : ''}<button class="btn xs danger" data-action="cr-delete" data-id="${q.id}" title="Delete this request and its file">${icon('trash', 12)}</button></div>
-                <div class="cr-pv" id="cr-pv-${q.id}" hidden></div></div>`).join('')}</div></div>`).join('')}</div>`
-            : `<div class="empty">${status === 'open' ? 'No open class requests. Students ask from the start page, the class picker and Settings.' : 'Nothing here.'}</div>`}
-          <p class="small muted mt-2">${icon('book', 12)} Preview a request's syllabus, then have Bo build the class from it and add it to Mathub: everyone who asked is told. Or build a class pack yourself and upload it under <a href="#/admin/packs">Add a class</a>.</p>`;
-        const groupOf = b => r.groups.find(g => g.code === b.closest('.cr-group').dataset.code);
-        bind(el, {
-          'cr-filter': b => this.classes(el, root, b.dataset.s),
-          // the syllabus as the student sent it (a PDF or a photo from a copy fetched here, a Word file's text, pasted text),
-          // what the malware check looked at, and Bo building the class from it
-          'cr-preview': async b => {
-            const id = +b.dataset.id; const box = $('#cr-pv-' + id, el); if (!box) return;
-            const open = box.hidden; box.hidden = !open; b.setAttribute('aria-expanded', String(open)); if (!open || box.dataset.ready) return;
-            box.innerHTML = '<div class="small muted">Opening the syllabus…</div>';
-            try {
-              const p = await api('admin_classreq_preview&id=' + id); let view = '';
-              if (p.missing) view = '<div class="callout warn small">The file is missing on the server.</div>';
-              else if (p.kind === 'pdf' || ['jpg', 'png', 'webp'].includes(p.kind)) {
-                const res = await fetch(API + 'admin_classreq_file&inline=1&id=' + id, { credentials: 'same-origin', headers: { 'X-Requested-With': 'MatHub' }, cache: 'no-store' });
-                if (!res.ok) throw new Error('The file could not be opened.');
-                const url = URL.createObjectURL(await res.blob()); BLOBS.push(url);
-                view = p.kind === 'pdf' ? `<iframe class="cr-frame" src="${url}" title="${esc(p.code)} syllabus"></iframe>` : `<img class="cr-img" src="${url}" alt="The ${esc(p.code)} syllabus, as the student sent it">`;
-                view += `<div class="row gap-sm mt-1"><a class="btn xs" href="${url}" target="_blank" rel="noopener">${icon('external', 12)} Open it bigger</a></div>`;
-              } else if (p.kind === 'docx') view = p.file_text ? `<div class="eyebrow">The Word file's text</div><pre class="cr-text">${esc(p.file_text)}</pre>` : '<div class="callout warn small">The Word file\'s text could not be read. Download it to look at it.</div>';
-              if (p.text) view += `<div class="eyebrow mt-1">Pasted with the request</div><pre class="cr-text">${esc(p.text)}</pre>`;
-              const scan = p.scan ? `<div class="cr-scan small"><span class="chip xs good">${icon('shield', 11)} Malware check passed</span> ${esc(scanLine(p.scan))}</div>` : p.kind && p.kind !== 'text' ? `<div class="cr-scan small"><span class="chip xs warn">${icon('shield', 11)} Sent before uploads were checked</span> Download it with care. ${p.kind === 'pdf' || p.kind !== 'docx' ? 'Bo checks it before he reads it.' : ''}</div>` : '';
-              box.innerHTML = `${scan}<div class="cr-view">${view}</div>
-                <div class="cr-build"><div class="row gap-sm" style="flex-wrap:wrap"><button class="btn sm primary" data-action="cr-build" data-id="${id}" data-size="full">${icon('wand', 13)} Build the class with Bo</button><button class="btn sm" data-action="cr-build" data-id="${id}" data-size="short">Shorter class</button><span class="small muted">He checks it is a real course and not on Mathub yet, then writes it unit by unit (a minute or two).</span></div>
-                <div class="cr-prog" hidden><ol class="mk-bo-steps"></ol></div><div class="cr-out" aria-live="polite"></div></div>`;
-              box.dataset.ready = '1';
-            } catch (e) { box.innerHTML = `<div class="callout warn small">${esc(e.message)}</div>`; }
-          },
-          'cr-build': async b => {
-            if (!App.boClass) { App.toast('Reload the page and try again.'); return; }
-            const id = +b.dataset.id; const g = groupOf(b); const box = b.closest('.cr-build'); const prog = $('.cr-prog', box), out = $('.cr-out', box);
-            const job = JOBS[id] || (JOBS[id] = { build: null }); const btns = $$('[data-action="cr-build"]', box);
-            const paint = (list, i, fail) => { $('ol', prog).innerHTML = list.map((t, k) => `<li class="${k < i ? 'done' : k === i ? (fail ? 'fail' : 'now') : ''}"><span class="mk-bo-dot" aria-hidden="true">${k < i ? icon('check', 13) : ''}</span>${esc(t)}</li>`).join(''); };
-            btns.forEach(x => { x.disabled = true; }); out.innerHTML = ''; prog.hidden = false; let at = { list: ['Checking the syllabus'], i: 0 }; paint(at.list, 0);
-            try {
-              const made = await App.boClass.build(job, { request: id, size: b.dataset.size }, (list, i) => { at = { list, i }; paint(list, i); });
-              paint(made.list, made.list.length);
-              out.innerHTML = App.boClass.preview(made.pack, made.v, made.notes, `<div class="row gap-sm mt-1"><button type="button" class="btn primary" data-pub>${icon('plus', 15)} Add ${esc(made.pack.code)} to Mathub</button></div><p class="small muted mt-1">It goes on Mathub for everyone, and the ${g.n} student${g.n === 1 ? '' : 's'} who asked for ${esc(g.code)} ${g.n === 1 ? 'is' : 'are'} told.</p>`);
-              $('[data-pub]', out).addEventListener('click', async e => {
-                const pb = e.currentTarget; pb.disabled = true;
-                try { const res = await App.boClass.publish({ build: made.build, pack: made.pack }); if (App.packs && App.packs.sync) await App.packs.sync(); App.toast(`${res.code} is on Mathub (#/${res.id}) · ${res.notified || 0} told`, 5000); delete JOBS[id]; this.classes(el, root, status); }
-                catch (x) { pb.disabled = false; App.toast(x.message, 5000); }
-              });
-            } catch (x) {
-              paint(at.list, at.i, true); const ex = x.data && x.data.exists;
-              out.innerHTML = `<div class="callout warn small"><b>${esc(x.message)}</b>${ex ? `<div class="mt-1"><button type="button" class="btn xs primary" data-mark="${esc(ex.id)}">Mark ${esc(g.code)} added as #/${esc(ex.id)}</button></div>` : job.build ? ' Build again picks up where Bo stopped.' : ''}</div>`;
-              const mk = $('[data-mark]', out); if (mk) mk.addEventListener('click', async () => { try { const res = await api('admin_classreq_update', { code: g.code, status: 'added', note: '', course_id: ex.id }); App.toast(`${g.code} marked added · ${res.notified} told`); this.classes(el, root, status); } catch (e) { App.toast(e.message); } });
-            }
-            btns.forEach(x => { x.disabled = false; });
-          },
-          'cr-set': async b => {
-            const g = groupOf(b); const st = b.dataset.st; let courseId = '';
-            if (st === 'added') { courseId = prompt(`Class id on Mathub for ${g.code} (the part after #/, for example ${guessId(g.code)}):`, g.course_id || guessId(g.code)); if (courseId === null) return; courseId = courseId.trim().toLowerCase(); if (!global.Courses[courseId] && !confirm(`There is no class "${courseId}" in this build yet, so the link students get will not open until you deploy it. Send anyway?`)) return; }
-            const note = prompt(st === 'declined' ? `Why can't ${g.code} be added? (goes to the ${g.n} student${g.n === 1 ? '' : 's'} who asked)` : `Optional note for the ${g.n} student${g.n === 1 ? '' : 's'} who asked:`, ''); if (note === null) return;
-            try { const res = await api('admin_classreq_update', { code: g.code, status: st, note, course_id: courseId }); App.toast(`${g.code}: ${ST[st][0].toLowerCase()} · ${res.notified} notified`); } catch (e) { App.toast(e.message); }
-            this.classes(el, root, status);
-          },
-          'cr-delete': async b => { if (!confirm('Delete this request and its syllabus file? The student is not notified.')) return; try { await api('admin_classreq_delete', { id: +b.dataset.id }); } catch (e) { App.toast(e.message); } this.classes(el, root, status); }
-        });
       } catch (e) { el.innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
     },
     /* class packs: one .mathub.json file per class, checked here before it goes live (assets/classpacks.js, api/packs.php) */
@@ -305,16 +226,16 @@
       const plus = n => { const d = new Date(); d.setDate(d.getDate() + n); return iso(d); };
       const nice = v => new Date(v + 'T12:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
       const lines = [];
-      if (P.paid) lines.push(`Pays for Mathub ${PLAN_NAME[P.paid.plan]} through ${PAID_IN[P.paid.store] || 'the website'}${P.paid.until ? `; ${P.paid.renews ? 'renews' : 'ends'} ${day(P.paid.until)}` : ''}.`);
-      if (g) lines.push(`Given Mathub ${PLAN_NAME[g.plan]}${g.by ? ` by ${g.by}` : ''} on ${day(g.at)}, ${g.until ? `until ${day(g.until)}` : 'with no end date'}${g.note ? `. Note: ${g.note}` : ''}.`);
-      if (P.tester) lines.push(`Tester plan: Mathub ${PLAN_NAME[P.tester]} (Keys & settings or config.local.php).`);
+      if (P.paid) lines.push(`Pays for StudyCat ${PLAN_NAME[P.paid.plan]} through ${PAID_IN[P.paid.store] || 'the website'}${P.paid.until ? `; ${P.paid.renews ? 'renews' : 'ends'} ${day(P.paid.until)}` : ''}.`);
+      if (g) lines.push(`Given StudyCat ${PLAN_NAME[g.plan]}${g.by ? ` by ${g.by}` : ''} on ${day(g.at)}, ${g.until ? `until ${day(g.until)}` : 'with no end date'}${g.note ? `. Note: ${g.note}` : ''}.`);
+      if (P.tester) lines.push(`Tester plan: StudyCat ${PLAN_NAME[P.tester]} (Keys & settings or config.local.php).`);
       if (!lines.length) lines.push('Free: nothing paid for or given.');
       const untilDay = g && g.until ? iso(new Date(g.until * 1000)) : '';
       cell.innerHTML = `<form class="adm-plan" novalidate aria-labelledby="pl-h-${id}">
         <div class="adm-plan-h"><h3 id="pl-h-${id}">Membership for ${esc(name)}</h3><span class="mono small muted">${esc(x.email)}</span></div>
         <ul class="adm-plan-now">${lines.map(l => `<li>${esc(l)}</li>`).join('')}</ul>
         <fieldset class="adm-plan-opts"><legend>Give them</legend>
-          ${[['', 'Free', g ? 'Take back what was given' : 'Nothing given'], ['pro', 'Mathub Pro', 'More credits for Bo, and classes of their own'], ['max', 'Mathub Max', 'The most credits, and the stronger call model']].map(([v, h, d]) => `<label class="adm-plan-opt${v ? ' is-' + v : ''}"><input type="radio" name="pl-${id}" value="${v}"${(g ? g.plan : '') === v ? ' checked' : ''}><span><b>${h}</b><small>${d}</small></span></label>`).join('')}
+          ${[['', 'Free', g ? 'Take back what was given' : 'Nothing given'], ['pro', 'StudyCat Pro', 'More credits for Bo, and classes of their own'], ['max', 'StudyCat Max', 'The most credits, and the stronger call model']].map(([v, h, d]) => `<label class="adm-plan-opt${v ? ' is-' + v : ''}"><input type="radio" name="pl-${id}" value="${v}"${(g ? g.plan : '') === v ? ' checked' : ''}><span><b>${h}</b><small>${d}</small></span></label>`).join('')}
         </fieldset>
         <div class="adm-plan-grid">
           <div class="field"><label for="pl-for-${id}">For how long</label><select class="select" id="pl-for-${id}"><option value="">No end date</option><option value="30">1 month</option><option value="91">3 months</option><option value="183">6 months</option><option value="365">1 year</option><option value="day"${untilDay ? ' selected' : ''}>Until a day you pick</option></select></div>
@@ -332,8 +253,8 @@
         const p = pick(); const u = until(); form.classList.toggle('is-free', !p);
         $('.adm-plan-grid', form).hidden = !p; $('.adm-plan-tell', form).hidden = !p; dayBox.hidden = forSel.value !== 'day';
         $(`#pl-sum-${id}`, form).textContent = p
-          ? `${name} gets Mathub ${PLAN_NAME[p]} free, ${u ? `until the end of ${nice(u)}` : 'with no end date'}. It never charges them.${P.paid ? ' What they pay for is not changed.' : ''}`
-          : g ? `What was given to ${name} is taken back now.${P.paid ? ` They keep Mathub ${PLAN_NAME[P.paid.plan]}, which they pay for.` : ''}` : `Nothing is given to ${name}.`;
+          ? `${name} gets StudyCat ${PLAN_NAME[p]} free, ${u ? `until the end of ${nice(u)}` : 'with no end date'}. It never charges them.${P.paid ? ' What they pay for is not changed.' : ''}`
+          : g ? `What was given to ${name} is taken back now.${P.paid ? ` They keep StudyCat ${PLAN_NAME[P.paid.plan]}, which they pay for.` : ''}` : `Nothing is given to ${name}.`;
         if (P.tester) $(`#pl-sum-${id}`, form).textContent += ' Saving also removes their tester plan from Keys & settings (one in config.local.php stays).';
       };
       form.addEventListener('change', sum); dayIn.addEventListener('input', sum); sum();
@@ -347,7 +268,7 @@
         try {
           const r = await api('admin_plan', { user_id: id, plan: p, until: u, note: $(`#pl-note-${id}`, form).value.trim(), tell: $(`#pl-tell-${id}`, form).checked });
           const still = r.plan && r.plan.plan;
-          toast(p ? `${name} has Mathub ${PLAN_NAME[p]}${u ? ` until ${nice(u)}` : ''}.${r.told ? ' They were told in their inbox.' : ''}` : `Took back what was given to ${name}.${still ? ` They still have Mathub ${PLAN_NAME[still]} (${r.plan.paid && r.plan.paid.plan === still ? 'they pay for it' : 'a tester plan in config.local.php'}).` : ''}`, 5000);
+          toast(p ? `${name} has StudyCat ${PLAN_NAME[p]}${u ? ` until ${nice(u)}` : ''}.${r.told ? ' They were told in their inbox.' : ''}` : `Took back what was given to ${name}.${still ? ` They still have StudyCat ${PLAN_NAME[still]} (${r.plan.paid && r.plan.paid.plan === still ? 'they pay for it' : 'a tester plan in config.local.php'}).` : ''}`, 5000);
           done(r);
         } catch (x2) {
           btn.disabled = false; msg.className = 'small adm-add-msg bad'; msg.textContent = x2.message;
@@ -364,18 +285,18 @@
         const byId = new Map(us.users.map(x => [x.id, x]));
         // add a member: any email address, ready to use, with a role and a plan if wanted
         const add = `<form class="panel mb-2 adm-add" id="adm-add" novalidate><div class="panel-h"><h2 class="panel-title">${icon('plus')} Add a member</h2></div>
-          <p class="small muted mb-2">Any email address, also outside montana.edu. The account is ready at once; the first time they sign in, Mathub welcomes them and they pick their classes.</p>
+          <p class="small muted mb-2">Any email address, also outside montana.edu. The account is ready at once; the first time they sign in, StudyCat welcomes them and they pick their classes.</p>
           <div class="adm-add-grid"><div class="field"><label for="add-email">Email <span class="req">*</span></label><input class="input" id="add-email" type="email" autocomplete="off" required placeholder="name@example.edu"></div>
             <div class="field"><label for="add-name">Name</label><input class="input" id="add-name" maxlength="60" autocomplete="off" placeholder="Optional"></div>
             <div class="field"><label for="add-role">Role</label><select class="select" id="add-role"><option value="">Student</option><option value="TA">TA</option><option value="Instructor">Instructor</option></select></div>
-            <div class="field"><label for="add-plan">Plan</label><select class="select" id="add-plan"><option value="">No plan</option><option value="pro">Mathub Pro, free for them</option><option value="max">Mathub Max, free for them</option></select></div></div>
+            <div class="field"><label for="add-plan">Plan</label><select class="select" id="add-plan"><option value="">No plan</option><option value="pro">StudyCat Pro, free for them</option><option value="max">StudyCat Max, free for them</option></select></div></div>
           <fieldset class="adm-add-how"><legend>How they sign in</legend>
             <label class="check"><input type="radio" name="add-how" value="invite" checked> <span>Email them a link and a code to choose their own password <span class="muted small">(good for 7 days)</span></span></label>
             <label class="check"><input type="radio" name="add-how" value="password"> <span>Set a password now and tell them yourself</span></label>
             <div class="field adm-add-pass" hidden><label for="add-pass">Password</label><input class="input" id="add-pass" type="text" autocomplete="off" spellcheck="false" placeholder="At least 8 characters"></div></fieldset>
           <div class="row gap-sm mt-2" style="flex-wrap:wrap;align-items:center"><button class="btn primary" type="submit">${icon('plus', 14)} Add member</button><p class="small adm-add-msg" id="adm-add-msg" role="status"></p></div></form>`;
         el.innerHTML = add + `<div class="panel"><div class="panel-h"><div class="panel-title">${icon('info')} Members</div><div class="adm-find"><select class="select" id="adm-show" aria-label="Show"><option value="">Everyone</option><option value="plan"${show ? ' selected' : ''}>With Pro or Max</option></select><input class="input" id="adm-q" type="search" aria-label="Search members" placeholder="Search email or name…" value="${esc(q || '')}"></div></div>
-          <p class="small muted mb-2">Press a member’s plan to give them Mathub Pro or Max, free for them, for as long as you like, or to take it back.</p>
+          <p class="small muted mb-2">Press a member’s plan to give them StudyCat Pro or Max, free for them, for as long as you like, or to take it back.</p>
           <div class="table-wrap adm-members"><table class="table compact"><thead><tr><th>Member</th><th>Plan</th><th>Status</th><th></th></tr></thead><tbody>${us.users.map(x => `<tr><td><div><b>${esc(x.name || x.email.split('@')[0])}</b>${x.admin ? ' <span class="chip accent">admin</span>' : x.mod ? ' <span class="chip">mod</span>' : ''}</div><div class="mono small muted">${esc(x.email)}</div><div class="small muted adm-mem-meta">Joined ${day(x.created)} · last login ${x.last_login ? timeAgo(x.last_login) : 'never'} · ${x.posts} ${x.posts === 1 ? 'post' : 'posts'}, ${x.comments} ${x.comments === 1 ? 'comment' : 'comments'}</div></td><td class="adm-plan-cell">${planCell(x)}</td><td class="small">${!x.verified ? '<span class="chip warn">unverified</span>' : x.banned_until ? `<span class="chip bad">banned until ${new Date(x.banned_until * 1000).toLocaleDateString()}</span>` : '<span class="chip good">active</span>'}${x.terms ? '' : ' <span class="chip">no rules yet</span>'}</td><td><div class="row gap-sm" style="flex-wrap:nowrap;justify-content:flex-end">${x.admin ? '' : `${x.banned_until ? `<button class="btn xs" data-action="user" data-a="unban" data-u="${x.id}">Unban</button>` : `<button class="btn xs" data-action="user" data-a="ban" data-u="${x.id}">Ban</button>`}${!x.verified ? `<button class="btn xs" data-action="user" data-a="verify" data-u="${x.id}">Verify</button>` : ''}<button class="btn xs danger ghost" data-action="user" data-a="delete" data-u="${x.id}" data-e="${esc(x.email)}">Delete</button>`}</div></td></tr>`).join('') || `<tr><td colspan="5"><div class="empty">${show && !q ? 'Nobody has Pro or Max yet. Press a member’s plan to give them one.' : 'No members match.'}</div></td></tr>`}</tbody></table></div>
           ${us.more ? `<div class="row mt-2" style="justify-content:center"><button class="btn" data-action="page" data-p="${(page || 0) + 1}">Next page</button></div>` : ''}</div>`;
         const inp = $('#adm-q', el); let t; inp.addEventListener('input', () => { clearTimeout(t); t = setTimeout(() => again(0, () => { const i = $('#adm-q', el); if (i) { i.focus(); i.setSelectionRange(i.value.length, i.value.length); } }), 350); });
@@ -388,7 +309,7 @@
           $$('.field.bad', form).forEach(f => f.classList.remove('bad')); btn.disabled = true; out.className = 'small adm-add-msg'; out.textContent = 'Adding…';
           try {
             const r = await api('admin_user_add', body);
-            const extra = [r.user.role ? `${r.user.role}` : '', r.user.plan ? `Mathub ${r.user.plan === 'max' ? 'Max' : 'Pro'}` : '', r.allowed ? 'allowed to sign in from outside montana.edu' : ''].filter(Boolean).join(' · ');
+            const extra = [r.user.role ? `${r.user.role}` : '', r.user.plan ? `StudyCat ${r.user.plan === 'max' ? 'Max' : 'Pro'}` : '', r.allowed ? 'allowed to sign in from outside montana.edu' : ''].filter(Boolean).join(' · ');
             toast(r.how === 'invite' ? (r.invited ? `Added ${r.user.email}. They have an email to choose their password.` : `Added ${r.user.email}, but the email could not be sent. Check Email in Keys & settings.`) : `Added ${r.user.email}. Tell them their password.`, 5000);
             await this.members(el, root, '', 0);
             const m2 = $('#adm-add-msg', el); if (m2) { m2.className = 'small adm-add-msg good'; m2.textContent = `Added ${r.user.email}${extra ? ` (${extra})` : ''}.`; }
@@ -549,7 +470,7 @@
         el.innerHTML = `<div class="panel mb-2"><div class="panel-h"><div class="panel-title">${icon('clock')} Weekly digest</div><span class="chip ${st.digest_window ? 'good' : ''}">${st.digest_window ? 'sending window open' : 'next window: Sunday 5 pm'}</span></div>
             <p class="small">Every member who has not turned it off gets one email a week: what is due (from Canvas), the most upvoted posts, and their own stats against the class average. Sent this week: <b>${st.digest_sent_week}</b>.</p>
             <p class="small muted">Emails go out a few at a time whenever someone uses the site during the window. For a reliable Sunday send, add a cron job in hPanel (Advanced → Cron Jobs) that runs every 10 minutes on Sunday evening:</p>
-            <pre class="mono small" style="white-space:pre-wrap;background:var(--surface-2);padding:10px;border-radius:8px">curl -s "https://mathub.space/api/index.php?r=cron&amp;key=YOUR_CRON_KEY"</pre>
+            <pre class="mono small" style="white-space:pre-wrap;background:var(--surface-2);padding:10px;border-radius:8px">curl -s "https://studycat.org/api/index.php?r=cron&amp;key=YOUR_CRON_KEY"</pre>
             <p class="small muted">Set <code>cron_key</code> in <code>api/config.local.php</code> to any long random string and use the same value in the URL. ${st.cron_configured ? '<span class="chip good">cron key set</span>' : '<span class="chip warn">cron key not set</span>'} The cron call also refreshes the Canvas cache and prunes old presence rows.</p>
             <div class="row gap-sm mt-2"><button class="btn sm primary" data-action="test">${icon('reply', 13)} Send me a test digest now</button></div></div>`;
         bind(el, { test: async b => { b.disabled = true; try { const r = await api('admin_digest_test', {}); toast(r.message, 4000); } catch (e) { toast(e.message, 5000); } b.disabled = false; } });

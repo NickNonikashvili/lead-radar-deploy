@@ -1,5 +1,5 @@
 /* ============================================================
-   Mathub — BIOB 160 question bank
+   StudyCat — BIOB 160 question bank
    Multiple-choice banks for every topic, plus generators for the parts
    of the course that are worked step by step: isotopes and half-lives,
    pH, molarity, polymers, complementary strands, Chargaff's rules,
@@ -7,7 +7,7 @@
    table, mutations, chromosome counts in mitosis and meiosis, Punnett
    squares, the product rule, sex linkage, recombination and map order,
    Hardy–Weinberg, respiration bookkeeping, tonicity, surface-to-volume,
-   coupled ΔG, PCR and restriction fragments. Written for Mathub from
+   coupled ΔG, PCR and restriction fragments. Written for StudyCat from
    standard introductory biology content (Campbell Biology, OpenStax
    Biology 2e); the instructors' lectures decide what the exams ask.
    ============================================================ */

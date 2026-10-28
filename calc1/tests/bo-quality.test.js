@@ -47,7 +47,7 @@ const OFFER = 'v=0\r\no=- 1 2 IN IP4 127.0.0.1\r\ns=test\r\nt=0 0\r\n';
   check('Bo’s answers have a thumbs down (Not right?)', bads.length >= 2, bads.length);
   await bads[bads.length - 1].click(); await m.waitForTimeout(700);
   check('one tap marks it and asks what was wrong, optionally', (await m.$eval('.bo-msg.bo:last-of-type [data-bo-bad]', b => b.getAttribute('aria-pressed')).catch(() => null)) === 'true' || (await m.$$('.bo-bad')).length === 1);
-  check('the box says the team will look at it and offers to report something worse', /Mathub’s team will look at this answer/.test(await txt(m, '.bo-bad')) && !!(await m.$('.bo-bad [data-bo-report]')));
+  check('the box says the team will look at it and offers to report something worse', /StudyCat’s team will look at this answer/.test(await txt(m, '.bo-bad')) && !!(await m.$('.bo-bad [data-bo-report]')));
   await m.fill('.bo-bad input', 'Wrong answer for 11 - 3'); await m.click('.bo-bad button[type="submit"]'); await m.waitForTimeout(600);
   rows = ask('SELECT * FROM ai_flags ORDER BY id');
   check('Send adds what was wrong to that answer', rows.length === 2 && rows[1].why === 'Wrong answer for 11 - 3' && /11 - 3/.test(rows[1].q), rows.map(x => [x.q.slice(0, 30), x.why]));

@@ -64,7 +64,7 @@ const IMGDIR = path.join(__dirname, '..', 'api', 'data', 'ai-img');
   check('a picture shows Bo drawing it while it is made', /Bo is drawing this picture/.test(await txt(p, '#dm .bd-imgbox')) || !!(await p.$('#dm .bd-imgbox.ok img')));
   await p.waitForSelector('#dm .bd-imgbox.ok img', { timeout: 15000 }).catch(() => {});
   const img = await p.$eval('#dm .bd-imgbox img', e => ({ src: e.getAttribute('src'), w: e.naturalWidth, alt: e.alt })).catch(() => null);
-  check('then the picture itself, from Mathub (not a link to elsewhere), with its alt text', img && /^blob:/.test(img.src) && img.w > 0 && /unit circle/.test(img.alt), img);
+  check('then the picture itself, from StudyCat (not a link to elsewhere), with its alt text', img && /^blob:/.test(img.src) && img.w > 0 && /unit circle/.test(img.alt), img);
   await draw({ type: 'image', prompt: 'REFUSE-SAFETY a picture', style: 'photo' }, 'dm2');
   await p.waitForSelector('#dm2 .bd-img-wait.bad', { timeout: 15000 }).catch(() => {});
   check('a picture the safety check turns down says so, and offers to try again', /safety check/.test(await txt(p, '#dm2 .bd-imgbox')) && !!(await p.$('#dm2 [data-img-retry]')), await txt(p, '#dm2 .bd-imgbox'));

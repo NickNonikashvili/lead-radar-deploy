@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /* ============================================================
-   Mathub — build a class pack
+   StudyCat — build a class pack
    A class is written as a small JavaScript file that exports one
    object (loops and helpers are handy for calendars and question
    banks). This script turns it into the JSON file the admin uploads

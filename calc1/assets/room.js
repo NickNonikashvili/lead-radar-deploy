@@ -1,5 +1,5 @@
 /* ============================================================
-   Mathub — a study room, for the classmates who join a call with Bo (#/room/CODE; api/room.php).
+   StudyCat — a study room, for the classmates who join a call with Bo (#/room/CODE; api/room.php).
    The student on the call shares a code (assets/talk.js, the people button). Here, on the whole screen: the
    board as they write on it (and yours: what you write shows on theirs), Bo's pages, the captions of what Bo
    and they say, and a box to type a question that Bo hears and answers out loud on their call. You don't
@@ -12,7 +12,7 @@
   const API = 'api/index.php?r=';
   const HDR = { 'Content-Type': 'application/json', 'X-Requested-With': 'MatHub' };
   async function post(route, body) {
-    let res, j; try { res = await fetch(API + route, { method: 'POST', credentials: 'same-origin', headers: HDR, body: JSON.stringify(body) }); j = await res.json(); } catch (e) { throw new Error('Mathub cannot be reached right now. Check your connection.'); }
+    let res, j; try { res = await fetch(API + route, { method: 'POST', credentials: 'same-origin', headers: HDR, body: JSON.stringify(body) }); j = await res.json(); } catch (e) { throw new Error('StudyCat cannot be reached right now. Check your connection.'); }
     if (!j || j.ok === false) throw Object.assign(new Error((j && j.error) || 'Something went wrong.'), { status: res.status });
     return j;
   }

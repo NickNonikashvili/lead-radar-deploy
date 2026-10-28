@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /* ============================================================
-   Mathub — the dictionaries the site loads:  node scripts/build-i18n.js [--pseudo]
+   StudyCat — the dictionaries the site loads:  node scripts/build-i18n.js [--pseudo]
    i18n/catalog.json (the interface's words, numbered; scripts/i18n-extract.js) and i18n/<lang>.tsv (one line per
    number: the number, a tab, the words in that language) → assets/i18n/<lang>.js, keyed by the English.
    In a translation: {1}, {2} are the values the English has; {1|one|few|many} picks a plural by the number in {1}
@@ -19,7 +19,7 @@ const LANGS = ['es', 'ru', 'fr', 'it', 'pt', 'de'];
 const cat = JSON.parse(fs.readFileSync(path.join(DIR, 'catalog.json'), 'utf8')).filter(e => !e.gone);
 const byId = new Map(cat.map(e => [e.id, e]));
 fs.mkdirSync(OUT, { recursive: true });
-const head = l => `/* Mathub — the interface in ${l}. Built by scripts/build-i18n.js from i18n/${l}.tsv: edit that file, not this one. */\n`;
+const head = l => `/* StudyCat — the interface in ${l}. Built by scripts/build-i18n.js from i18n/${l}.tsv: edit that file, not this one. */\n`;
 if (process.argv.includes('--pseudo')) {
   const d = {}; cat.forEach(e => { d[e.en] = '«' + e.en + '»'; });
   fs.writeFileSync(path.join(OUT, 'qps.js'), head('qps') + `MathubI18n.add('qps', ${JSON.stringify(d)});\n`);

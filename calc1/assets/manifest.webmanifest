@@ -1,7 +1,7 @@
 {
   "id": "/",
-  "name": "Mathub",
-  "short_name": "Mathub",
+  "name": "StudyCat",
+  "short_name": "StudyCat",
   "description": "Free study hub for Montana State classes: notes, endless practice, flashcards, deadline calendars, a Python playground and a class board.",
   "start_url": "./?source=pwa",
   "scope": "./",

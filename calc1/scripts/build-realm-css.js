@@ -51,7 +51,7 @@ const dark = `
   --shadow: 0 18px 40px -18px rgba(0, 0, 0, 0.7), 0 4px 14px -6px rgba(0, 0, 0, 0.4);
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35), 0 5px 14px -8px rgba(0, 0, 0, 0.45);`;
 const css = `/* ============================================================
-   Mathub — the Realm look (the default skin)
+   StudyCat — the Realm look (the default skin)
    A fantasy tabletop look on top of the normal layout: parchment and
    ink by day, a starlit dungeon by night, Cinzel for headings (body text
    stays Helvetica Neue), gold ornaments on panels, gem buttons, a map on
@@ -63,10 +63,10 @@ const css = `/* ============================================================
    Fonts: Cinzel and Noto Sans Runic (SIL OFL), see assets/fonts/README.txt.
    ============================================================ */
 @font-face { font-family: "Cinzel"; src: url("fonts/cinzel.woff2") format("woff2"); font-weight: 400 900; font-style: normal; font-display: swap; }
-@font-face { font-family: "Mathub Runes"; src: url("fonts/runes.woff2") format("woff2"); unicode-range: U+16A0-16F8; font-display: swap; }
+@font-face { font-family: "StudyCat Runes"; src: url("fonts/runes.woff2") format("woff2"); unicode-range: U+16A0-16F8; font-display: swap; }
 
 /* ---------- tokens: parchment by day, dungeon by night ---------- */
-${R} { --font-display: "Cinzel", "Trajan Pro", Georgia, serif; --font-rune: "Mathub Runes", "Segoe UI Historic", "Noto Sans Runic", serif;
+${R} { --font-display: "Cinzel", "Trajan Pro", Georgia, serif; --font-rune: "StudyCat Runes", "Segoe UI Historic", "Noto Sans Runic", serif;
   --img-fiber: ${fiber}; --img-stains: ${stains}; --img-stars: ${starField}; --img-compass: ${compass}; --img-map: ${map};
   --img-orn-l-tl: ${L.tl}; --img-orn-l-tr: ${L.tr}; --img-orn-l-bl: ${L.bl}; --img-orn-l-br: ${L.br};
   --img-orn-d-tl: ${D.tl}; --img-orn-d-tr: ${D.tr}; --img-orn-d-bl: ${D.bl}; --img-orn-d-br: ${D.br};

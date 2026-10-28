@@ -1,6 +1,6 @@
 <?php
 /* ============================================================
-   Mathub account server — class packs
+   StudyCat account server — class packs
    A class pack is one JSON file with a whole class in it (syllabus
    facts, calendar, exams, notes, flashcards, question bank). The admin
    uploads it in the admin panel and the class appears for everyone:
@@ -21,7 +21,7 @@ const MH_PACK_ID_RE = '/^[a-z]{1,6}\d{2,4}[a-z]?$/';
 /** The structural checks the server insists on; the admin panel runs the full check (questions included) before upload. Returns an error or ''. */
 function mh_pack_check($p): string {
   if (!is_array($p)) return 'That is not a class pack (expected a JSON object).';
-  if (($p['format'] ?? '') !== 'mathub-class-pack') return 'This file is not a Mathub class pack ("format" is missing).';
+  if (($p['format'] ?? '') !== 'mathub-class-pack') return 'This file is not a StudyCat class pack ("format" is missing).';
   if (($p['version'] ?? 0) !== 1) return 'This class pack format version is not supported.';
   $id = (string)($p['id'] ?? '');
   if (!preg_match(MH_PACK_ID_RE, $id)) return 'The class id must be letters then a course number, like chmy121.';
@@ -95,12 +95,12 @@ function mh_packs_apply_bundled(PDO $db, array $files): void {
   $seen = $db->prepare('SELECT sha FROM class_pack_seeds WHERE id = ?'); $mark = $db->prepare('INSERT OR REPLACE INTO class_pack_seeds (id, sha, seeded) VALUES (?, ?, ?)');
   foreach ($files as $f) {
     $raw = (string)@file_get_contents($f); if ($raw === '' || strlen($raw) > MH_PACK_MAX_BYTES) continue;
-    $p = json_decode($raw, true); $err = mh_pack_check($p); if ($err !== '') { error_log('Mathub bundled pack ' . basename($f) . ': ' . $err); continue; }
+    $p = json_decode($raw, true); $err = mh_pack_check($p); if ($err !== '') { error_log('StudyCat bundled pack ' . basename($f) . ': ' . $err); continue; }
     $id = $p['id']; $sha = sha1($raw); $seen->execute([$id]); $prev = $seen->fetchColumn(); if ($prev === $sha) continue;
     $row = mh_pack_get($id);
     if ($prev === false ? !$row : ($row && $row['uploaded_by'] === MH_PACK_BUNDLED)) {
       [$old, $enabled] = mh_pack_store($db, $p, $raw, MH_PACK_BUNDLED, null);
-      if (!$old && $enabled) { try { require_once __DIR__ . '/social.php'; mh_activity('class', $id, 'New class on Mathub: ' . $p['code'] . ' ' . $p['name'], '#/' . $id); } catch (Throwable $e) {} }
+      if (!$old && $enabled) { try { require_once __DIR__ . '/social.php'; mh_activity('class', $id, 'New class on StudyCat: ' . $p['code'] . ' ' . $p['name'], '#/' . $id); } catch (Throwable $e) {} }
     }
     $mark->execute([$id, $sha, time()]);
   }
@@ -112,7 +112,7 @@ function mh_pack_teach_roles(): array {
   $u = mh_current_user(); if (!$u) return [];
   try { require_once __DIR__ . '/teach.php'; $db = mh_teach_db(); $st = $db->prepare('SELECT c.pack_id, CASE WHEN c.owner_id = ? THEN \'team\' WHEN m.role = \'ta\' THEN \'team\' ELSE \'student\' END AS r FROM teach_classes c LEFT JOIN teach_members m ON m.class_id = c.id AND m.user_id = ? WHERE c.pack_id != \'\' AND (c.owner_id = ? OR m.user_id IS NOT NULL)'); $st->execute([$u['id'], $u['id'], $u['id']]);
     $out = []; foreach ($st->fetchAll() as $r) $out[(string)$r['pack_id']] = $r['r'] === 'student' ? 'student' : 'team'; return $out; }
-  catch (Throwable $e) { error_log('Mathub teach visibility: ' . $e->getMessage()); return []; }
+  catch (Throwable $e) { error_log('StudyCat teach visibility: ' . $e->getMessage()); return []; }
 }
 function mh_pack_teach_visible(): array { return array_keys(mh_pack_teach_roles()); }
 function mh_packs_route(string $route, array $in, array $cfg, string $ip): void {
@@ -120,19 +120,20 @@ function mh_packs_route(string $route, array $in, array $cfg, string $ip): void 
   $admin = function (): array { $u = mh_require_user(); if (!mh_is_admin($u)) mh_fail('Admins only.', 403); return $u; };
   switch ($route) {
 
-    /* the light stubs of every published pack (admins also get hidden ones, marked hidden) */
+    /* the light stubs of every published pack (admins also get hidden ones, marked hidden). A class a student made public
+       before that was retired (api/community.php) is marked community: the class picker offers it only to students who have it. */
     case 'classpack_list': {
       mh_method('GET'); $isAdmin = mh_is_admin(mh_current_user()); $roles = mh_pack_teach_roles();
       $rows = $db->query('SELECT id, version, enabled, stub, uploaded_by FROM class_packs' . ($isAdmin ? '' : ' WHERE enabled = 1') . ' ORDER BY created, id')->fetchAll();
       // a class built in #/teach is listed for the students who joined it; its teaching team (and admins) get it as a preview, kept out of their own class lists
       $out = []; foreach ($rows as $r) { $teach = str_starts_with((string)$r['uploaded_by'], 'teach:'); $role = $roles[$r['id']] ?? '';
-        if ($teach && $role === '' && !$isAdmin) continue; $o = json_decode((string)$r['stub']); if (!is_object($o)) continue; $o->id = $r['id']; $o->version = (int)$r['version']; $o->hidden = !(int)$r['enabled']; if ($teach && $role !== 'student') $o->preview = true; $out[] = $o; }
+        if ($teach && $role === '' && !$isAdmin) continue; $o = json_decode((string)$r['stub']); if (!is_object($o)) continue; $o->id = $r['id']; $o->version = (int)$r['version']; $o->hidden = !(int)$r['enabled']; if ($teach && $role !== 'student') $o->preview = true; if (str_starts_with((string)$r['uploaded_by'], 'community:')) $o->community = true; $out[] = $o; }
       mh_json(['ok' => true, 'packs' => $out]);
     }
 
     case 'classpack_get': {
       mh_method('GET'); $id = mh_pack_id_in($in); $r = $id ? mh_pack_get($id) : null;
-      if (!$r || (!(int)$r['enabled'] && !mh_is_admin(mh_current_user()))) mh_fail('This class is not on Mathub.', 404);
+      if (!$r || (!(int)$r['enabled'] && !mh_is_admin(mh_current_user()))) mh_fail('This class is not on StudyCat.', 404);
       if (str_starts_with((string)$r['uploaded_by'], 'teach:') && !mh_is_admin(mh_current_user()) && !in_array($id, mh_pack_teach_visible(), true)) mh_fail('Join this class with the code from your instructor to open it.', 403);
       mh_json(['ok' => true, 'version' => (int)$r['version'], 'pack' => json_decode((string)$r['json'])]);
     }
@@ -154,7 +155,7 @@ function mh_packs_route(string $route, array $in, array $cfg, string $ip): void 
       if (mh_pack_get($id) && !empty($in['expect_new'])) mh_fail("A class with the id $id is already installed. Upload it as an update instead.", 409, ['exists' => true]);
       [$old, $enabled] = mh_pack_store($db, $p, $raw, (string)$u['email'], array_key_exists('publish', $in) ? (!empty($in['publish']) ? 1 : 0) : null);
       $notified = !empty($in['notify']) && $enabled ? mh_pack_notify($p, $id) : 0;
-      if (!$old && $enabled) { try { require_once __DIR__ . '/social.php'; mh_activity('class', $id, 'New class on Mathub: ' . $p['code'] . ' ' . $p['name'], '#/' . $id); } catch (Throwable $e) {} }
+      if (!$old && $enabled) { try { require_once __DIR__ . '/social.php'; mh_activity('class', $id, 'New class on StudyCat: ' . $p['code'] . ' ' . $p['name'], '#/' . $id); } catch (Throwable $e) {} }
       $r = mh_pack_get($id);
       mh_json(['ok' => true, 'created' => !$old, 'notified' => $notified, 'pack' => mh_pack_meta($r, mh_pack_request_counts())]);
     }

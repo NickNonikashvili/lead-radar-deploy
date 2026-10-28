@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /* ============================================================
-   Mathub — class data for Bo, the AI tutor (api/ai.php)
+   StudyCat — class data for Bo, the AI tutor (api/ai.php)
    The built-in classes live in assets/*-data.js, which the server cannot read. This writes the parts
    Bo needs (course facts, grading, exams, calendar, units, and each topic's ideas) as one small JSON
    file per class in api/classdata/, where the server turns it into a compact text summary. Class packs

@@ -1,5 +1,5 @@
 /* ============================================================
-   Mathub — learning tools with Bo (assets/learn.js): Check my work, Notes from slides, Office-hours prep.
+   StudyCat — learning tools with Bo (assets/learn.js): Check my work, Notes from slides, Office-hours prep.
    The "Bo is reading" bar is the draft page's (assets/drafts.css).
    ============================================================ */
 
@@ -54,3 +54,27 @@
   .sl-notes dl { grid-template-columns: minmax(0, 1fr); }
 }
 @media print { .sl-acts, .sl-cards { display: none !important; } .sl-cols { display: block; } }
+
+/* ============================================================
+   A topic's notes as a lesson (app.js, the Notes view): the idea in plain words, a picture, the key points,
+   worked examples, the usual mistakes and a self-check
+   ============================================================ */
+.lesson-toc { display: flex; flex-wrap: wrap; gap: 6px; margin: 2px 0 16px; }
+.lesson-toc a { display: inline-flex; align-items: center; min-height: 32px; padding: 0 12px; border: 2px solid var(--border); border-radius: 999px; background: var(--surface); color: var(--ink-2); font-size: 13px; font-weight: 700; text-decoration: none; }
+.lesson-toc a:hover { border-color: var(--accent); color: var(--accent-deep, var(--accent)); }
+.lesson-idea { padding: 14px 18px 16px; border-radius: 18px; background: var(--accent-soft); }
+.lesson-idea h2 { display: flex; align-items: center; gap: 6px; color: var(--accent-deep, var(--accent)); }
+.lesson-plain { font-size: 17px; line-height: 1.65; color: var(--ink); max-width: 68ch; }
+.lesson-plain p { margin: 0 0 8px; } .lesson-plain p:last-child { margin: 0; }
+.notes-layout > *, .notes-layout .stack > * { min-width: 0; }   /* a wide table or code block scrolls inside its card, never widens the page */
+.lesson-fig { margin: 0; padding: 12px; border: 2px solid var(--border); border-radius: 18px; background: var(--surface); overflow-x: auto; }
+.lesson-ex + .lesson-ex { margin-top: 10px; }
+.lesson-mistakes li::marker { color: var(--bad); }
+.lesson-check h2 { display: flex; align-items: center; gap: 6px; }
+.lesson-qs { margin: 8px 0 0; padding-left: 22px; display: flex; flex-direction: column; gap: 14px; }
+.lesson-qs > li { padding-left: 4px; }
+.lesson-q { margin-bottom: 6px; font-weight: 600; line-height: 1.5; }
+.lesson-a.open { margin-top: 8px; padding: 10px 12px; border-radius: 12px; background: var(--good-soft, var(--accent-soft)); line-height: 1.5; }
+.lesson-ask { white-space: nowrap; }
+.lesson-foot { gap: 8px; flex-wrap: wrap; }
+@media (max-width: 620px) { .lesson-plain { font-size: 16px; } .lesson-idea { padding: 12px 14px; } }

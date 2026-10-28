@@ -1,5 +1,5 @@
 /* JPNS 150D question bank. Bank items are [prompt, correct, [wrong answers], explanation].
-   Written for Mathub from standard background on Japanese history and literature and the syllabus
+   Written for StudyCat from standard background on Japanese history and literature and the syllabus
    readings; not from the professor. Four choices, like a typical multiple-choice exam. */
 const bank = (topic, items, extra = {}) => Object.assign({ type: 'bank', topic, items, options: 4 }, extra);
 

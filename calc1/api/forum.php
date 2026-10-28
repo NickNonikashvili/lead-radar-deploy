@@ -1,6 +1,6 @@
 <?php
 /* ============================================================
-   Mathub — discussion board endpoints (posts, comments, votes,
+   StudyCat — discussion board endpoints (posts, comments, votes,
    reports, moderation). Included by index.php for forum_* routes.
    ============================================================ */
 declare(strict_types=1);
@@ -72,8 +72,8 @@ function mh_notify_reply(array $post, ?array $parent, array $actor, int $comment
     $st = $db->prepare('SELECT * FROM users WHERE id = ?'); $st->execute([$uid]); $to = $st->fetch();
     if ($to && (int)($to['notify_email'] ?? 1) === 1 && (int)$to['verified'] === 1 && mh_rate("notifmail:{$uid}:{$post['id']}", 1, 6 * 3600)) {
       try {
-        require_once __DIR__ . '/mailer.php'; $cfg = mh_config(); $site = $cfg['site_name'] ?? 'Mathub';
-        $link = rtrim((string)(($cfg['site_url'] ?? '') ?: ('https://' . ($_SERVER['HTTP_HOST'] ?? 'mathub.space'))), '/') . '/#/forum/' . (int)$post['id'];
+        require_once __DIR__ . '/mailer.php'; $cfg = mh_config(); $site = $cfg['site_name'] ?? 'StudyCat';
+        $link = rtrim((string)(($cfg['site_url'] ?? '') ?: ('https://' . ($_SERVER['HTTP_HOST'] ?? 'studycat.org'))), '/') . '/#/forum/' . (int)$post['id'];
         $what = $kind === 'reply' ? 'replied to your comment on' : 'commented on your post';
         $subject = $actorName . ' ' . $what . ' "' . mb_substr($post['title'], 0, 60) . '"';
         $text = $actorName . ' ' . $what . " \"{$post['title']}\":\n\n$snippet\n\nOpen it: $link\n\nYou can turn these emails off in Settings → Account on $site.";
@@ -130,7 +130,7 @@ function mh_forum_route(string $route, array $in, array $cfg, string $ip): void 
       $db->prepare('INSERT INTO posts (user_id, course, flair, title, body, anon, created, ip) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')->execute([$u['id'], $course, $flair, $title, $body, $anon, $now, $ip]);
       $id = (int)$db->lastInsertId();
       $db->prepare('INSERT OR REPLACE INTO votes (user_id, kind, item_id, value) VALUES (?, "p", ?, 1)')->execute([$u['id'], $id]); mh_recount('p', $id);
-      if (!empty($in['poll']) && is_array($in['poll']) && !empty($in['poll']['options'])) { try { mh_poll_create($id, (array)$in['poll']['options'], (string)($in['poll']['question'] ?? ''), !empty($in['poll']['multi']) ? 1 : 0); } catch (Throwable $e) { $db->prepare('DELETE FROM posts WHERE id = ?')->execute([$id]); if (!($e instanceof RuntimeException) || $e instanceof PDOException) { error_log('Mathub poll: ' . $e->getMessage()); mh_fail('The poll could not be saved. Please try again.', 500); } mh_fail($e->getMessage()); } }
+      if (!empty($in['poll']) && is_array($in['poll']) && !empty($in['poll']['options'])) { try { mh_poll_create($id, (array)$in['poll']['options'], (string)($in['poll']['question'] ?? ''), !empty($in['poll']['multi']) ? 1 : 0); } catch (Throwable $e) { $db->prepare('DELETE FROM posts WHERE id = ?')->execute([$id]); if (!($e instanceof RuntimeException) || $e instanceof PDOException) { error_log('StudyCat poll: ' . $e->getMessage()); mh_fail('The poll could not be saved. Please try again.', 500); } mh_fail($e->getMessage()); } }
       mh_activity('post', $course, ($flair === 'question' ? 'New question: ' : 'New post: ') . $title, '#/forum/' . $id);
       mh_json(['ok' => true, 'post' => mh_post_row(mh_get_post($id), $u, $mod, ['p' . $id => 1])]);
 
@@ -211,7 +211,7 @@ function mh_forum_route(string $route, array $in, array $cfg, string $ip): void 
       $item = $kind === 'p' ? mh_get_post($id) : mh_get_comment($id); if (!$item) mh_fail('Not available.', 404);
       $target = (int)$item['user_id'];
       if ($target === (int)$u['id']) mh_fail('That is your own post.');
-      if ($item['u_email'] === 'mathub@system.local') mh_fail('Posts from Mathub itself cannot be blocked. Report it instead if something is wrong.');
+      if ($item['u_email'] === 'mathub@system.local') mh_fail('Posts from StudyCat itself cannot be blocked. Report it instead if something is wrong.');
       $anon = (int)$item['anon'] === 1; $label = $anon ? 'An anonymous member' : mh_display_name($item, 'u_');
       $db->prepare('INSERT OR IGNORE INTO member_blocks (user_id, blocked_id, anon, label, created) VALUES (?, ?, ?, ?, ?)')->execute([$u['id'], $target, $anon ? 1 : 0, mb_substr($label, 0, 80), $now]);
       $db->prepare('UPDATE notifications SET read = 1 WHERE user_id = ? AND actor_id = ?' . ($anon ? ' AND actor = \'Someone\'' : ''))->execute([$u['id'], $target]);
@@ -317,8 +317,8 @@ function mh_forum_route(string $route, array $in, array $cfg, string $ip): void 
       $invited = false;
       if ($how === 'invite') {
         require_once __DIR__ . '/mailer.php';
-        $site = (string)($cfg['site_name'] ?? 'Mathub'); $code = mh_code_issue($email, 'reset', 7 * 86400);
-        $base = rtrim((string)(($cfg['site_url'] ?? '') ?: ('https://' . preg_replace('/[^A-Za-z0-9.:-]/', '', (string)($_SERVER['HTTP_HOST'] ?? 'mathub.space')))), '/');
+        $site = (string)($cfg['site_name'] ?? 'StudyCat'); $code = mh_code_issue($email, 'reset', 7 * 86400);
+        $base = rtrim((string)(($cfg['site_url'] ?? '') ?: ('https://' . preg_replace('/[^A-Za-z0-9.:-]/', '', (string)($_SERVER['HTTP_HOST'] ?? 'studycat.org')))), '/');
         $link = $base . '/#/?setpw=' . rawurlencode($email); $who = mh_display_name($u);
         $text = "$who added you to $site.
 

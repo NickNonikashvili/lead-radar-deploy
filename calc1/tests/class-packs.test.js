@@ -2,7 +2,7 @@
    works like a built-in class. Covers the builder's checks, the upload preview, the
    class on the start page, in the sidebar and in search, every class view, the
    quizzer, section variants, the cleaner (no script from a pack ever runs), the
-   server accepting the new class id, telling the students who asked, hide and
+   server accepting the new class id, telling the students who asked before requests were retired, hide and
    publish, updates reaching students, rollback, and delete. Uses ZZP 101, which is
    not a real course, and removes it at the end. */
 const T = require('./lib');
@@ -26,11 +26,11 @@ const fs = require('fs'); const path = require('path'); const { spawnSync } = re
   // ---- the admin uploads it ----
   const [ca, a] = await mk(1360, 1000); await go(a, '#/'); await login(a, 'admin.user@montana.edu'); await a.reload(); await a.waitForTimeout(900);
   const leftover = await api(a, 'admin_classpacks'); for (const p of (leftover.packs || []).filter(p => p.id === 'zzp101')) await api(a, 'admin_classpack_delete', { id: p.id, confirm: p.code });
-  // a TA asks for the class first, so the upload can tell them (requests come from professors and TAs)
-  await api(a, 'admin_role', { email: 'alice.a@montana.edu', role: 'TA' });
+  // a student asked for the class before Request a class was retired, so the upload can tell them (api/requests.php keeps the requests)
+  const db = path.join(__dirname, '..', 'api', 'data', 'mathub.sqlite');
+  const sql = q => spawnSync('php', ['-r', '$d = new PDO("sqlite:" . $argv[1]); $d->exec($argv[2]);', db, q]);
+  sql("DELETE FROM class_requests WHERE code = 'ZZP 101'"); sql(`INSERT INTO class_requests (user_id, code, title, text, created, updated) SELECT id, 'ZZP 101', 'Sample Statistics', '', ${Math.floor(Date.now() / 1000)}, ${Math.floor(Date.now() / 1000)} FROM users WHERE email = 'alice.a@montana.edu'`);
   const [cs, s] = await mk(1360, 1000); await go(s, '#/'); await login(s, 'alice.a@montana.edu'); await s.reload(); await s.waitForTimeout(900);
-  const asked = await api(s, 'classreq_create', { code: 'ZZP 101', title: 'Sample Statistics' });
-  check('a TA asks for ZZP 101', asked.ok === true || /already asked/.test(asked.error || ''), asked);
   check('students cannot use the admin pack routes', (await api(s, 'admin_classpacks')).ok === false && (await api(s, 'admin_classpack_install', { json: JSON.stringify(pack) })).ok === false);
 
   await go(a, '#/admin/packs', 1200);
@@ -51,16 +51,16 @@ const fs = require('fs'); const path = require('path'); const { spawnSync } = re
   check('a direct link works on a first visit', /Data and sampling/.test(await txt(g, '#view')) && await g.evaluate(() => window.Courses.zzp101 && window.Courses.zzp101.loaded));
   check('hostile markup in the pack never runs', await g.evaluate(() => window.__pwned === undefined && !document.querySelector('#view img, #view script')) && /this sentence stays/.test(await txt(g, '#view')));
   check('the sidebar switcher includes the class with its colour', await g.evaluate(() => !!document.querySelector('.switch-btn[data-c="zzp101"]') && getComputedStyle(document.documentElement).getPropertyValue('--accent').trim().toUpperCase() === '#0F766E'));
-  check('the sidebar offers a guest Request a class (classes are added by Mathub\'s team)', !!(await g.$('#course-switch a.req[href="#/request"]')) && !(await g.$('#course-switch a.req[href="#/create"]')));
+  check('the class switcher offers Add a class (the class maker)', !!(await g.$('#course-switch a.req[href="#/maker"]')));
   await go(g, '#/', 900);
-  check('the start page shows the class card', !!(await g.$('.course-card.zzp101')) || /ZZP 101/.test(await txt(g, '.course-grid')));
+  check('the start page lists the class', !!(await g.$('.dwk[data-c="zzp101"]')));
   await g.keyboard.press('Control+k'); await g.waitForTimeout(300); await g.fill('#search-input', 'z-score'); await g.waitForTimeout(400);
   check('search finds the class', /ZZP 101/.test(await txt(g, '#search-results'))); await g.keyboard.press('Escape');
   await s.reload(); await s.waitForTimeout(800);
   for (const h of ['#/today', '#/gpa', '#/sheet', '#/focus', '#/leagues', '#/guides', '#/tools', '#/mistakes', '#/challenge', '#/settings']) { await go(s, h, 900); check(`${h} renders with the uploaded class`, (await txt(s, '#view')).length > 40); }
   await s.evaluate(() => document.documentElement.setAttribute('data-skin', 'realm')); await go(s, '#/sheet', 900); check('the character sheet knows its archetype', await s.evaluate(() => App.archetype('zzp101').name === 'Oracle'));
-  await go(s, '#/request', 900); await s.fill('#rq-code', 'zzp101'); await s.waitForTimeout(150);
-  check('the request page knows the class is on Mathub', /already on Mathub/.test(await txt(s, '#rq-code-help')));
+  await go(s, '#/maker/zzp101', 1500);
+  check('the uploaded class can be made hers in the class maker', /Make ZZP 101 yours|Make .* yours/.test(await txt(s, '.mkr-ed-head')), await txt(s, '#view').then(t => t.slice(0, 120)));
   await login(g, 'mod.user@montana.edu'); await g.reload(); await g.waitForTimeout(800);   // signed in from here: full quizzer and grade calculator
   await go(g, '#/zzp101/practice', 900); if (await g.isVisible('#view [data-action="start"]')) { await g.click('#view [data-action="start"]'); await g.waitForTimeout(500); }   // a set is generated on arrival
   const cards = (await g.$$('.q-card')).length; const opt = await g.$('.q-card .q-opt'); if (opt) { await opt.click(); await g.waitForTimeout(250); }
@@ -89,7 +89,7 @@ const fs = require('fs'); const path = require('path'); const { spawnSync } = re
   check('hiding it marks it hidden', /Hidden/.test(await txt(a, '.pk-row[data-id="zzp101"]')));
   check('students no longer get it', !(await api(g, 'classpack_list')).packs.some(p => p.id === 'zzp101') && (await api(g, 'classpack_get&id=zzp101')).ok === false);
   check('admins still do, marked hidden', (await api(a, 'classpack_list')).packs.some(p => p.id === 'zzp101' && p.hidden));
-  await g.reload(); await go(g, '#/', 1200); check('the hidden class leaves a student\'s start page', await g.evaluate(() => !window.Courses.zzp101) && !(await g.$('.course-card.zzp101')));
+  await g.reload(); await go(g, '#/', 1200); check('the hidden class leaves a student\'s start page', await g.evaluate(() => !window.Courses.zzp101) && !(await g.$('.dwk[data-c="zzp101"]')));
   await api(a, 'admin_classpack_set', { id: 'zzp101', enabled: true });
   const v2 = JSON.parse(JSON.stringify(pack)); v2.SECTIONS[0].title = 'Data, samples and bias'; v2.QUIZ.questions[0].items.push(['Who answers a voluntary survey?', 'people who choose to respond', ['a random sample', 'everyone', 'nobody'], 'They pick themselves.']);
   const up = await api(a, 'admin_classpack_install', { json: JSON.stringify(v2) });
@@ -112,7 +112,7 @@ const fs = require('fs'); const path = require('path'); const { spawnSync } = re
   check('its dashboard explains there are no exams', /Graded on assignments and quizzes/.test(await txt(g, '#view')) && !/Semester complete/.test(await txt(g, '#view')) && /No exams/.test(await txt(g, '#exam-chip')));
   check('the sidebar has no exam prep', !(await g.$('#sidebar-nav .nav-item[data-view="exam"]')));
   await go(g, '#/zzp101/exam', 900); check('the exam page says there are none instead of breaking', /has no exams/.test(await txt(g, '#view')));
-  await go(g, '#/', 900); check('its start page card says No exams', /No exams/.test(await txt(g, '.course-card.zzp101')));
+  await go(g, '#/', 900); check('its row on the start page says it has no exam coming up', /No exam/.test(await txt(g, '.dwk[data-c="zzp101"]')));
   await api(a, 'admin_classpack_delete', { id: 'zzp101', confirm: 'ZZP 101' });
 
   // ---- a class with papers: projects for Bo's draft feedback and a writer's notebook come from the pack ----
@@ -132,8 +132,7 @@ const fs = require('fs'); const path = require('path'); const { spawnSync } = re
   await api(a, 'admin_classpack_delete', { id: 'zzp101', confirm: 'ZZP 101' });
 
   // ---- clean up ----
-  const all = await api(a, 'admin_classreqs&status=all'); for (const gr of (all.groups || []).filter(x => x.code === 'ZZP 101')) for (const q of gr.requests) await api(a, 'admin_classreq_delete', { id: q.id });
-  await api(a, 'admin_role', { email: 'alice.a@montana.edu', role: '' });
+  sql("DELETE FROM class_requests WHERE code = 'ZZP 101'");
   fs.rmSync(bad, { force: true });
   await cg.close(); await cs.close(); await ca.close();
   await T.finish();

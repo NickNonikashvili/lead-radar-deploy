@@ -14,7 +14,7 @@ module.exports = {
   format: 'mathub-class-pack', version: 1,
   id: 'psci230d', code: 'PSCI 230D', name: 'Introduction to International Relations', short: 'PSCI 230D', term: 'Fall 2026', kind: 'reading',
   tagline: 'Why states fight and cooperate: theories, war, international organizations, law and the global economy',
-  quizNote: 'Mathub wrote these questions to help you study; they are not from the instructor. Midterms are closed-book multiple choice on the material since the last exam, so check anything surprising against your lecture notes and the readings.',
+  quizNote: 'StudyCat wrote these questions to help you study; they are not from the instructor. Midterms are closed-book multiple choice on the material since the last exam, so check anything surprising against your lecture notes and the readings.',
   formulasTitle: 'Key terms & thinkers',
   formulasNote: 'Every concept, thinker and treaty on one page. The midterms are closed-book multiple choice, so cover the definitions and test whether you can name each one.',
   filterExample: 'anarchy, Fearon',
@@ -185,13 +185,13 @@ module.exports = {
     { icon: 'shield', title: 'Academic integrity and AI', html: `<ul class="list-plain small">
       <li>Academic misconduct (plagiarism, cheating, multiple submissions, helping others cheat) gets the maximum sanction: a <b>zero on the assignment</b>, which generally means failing the course. Ask the instructor if you are unsure how to cite.</li>
       <li><b>AI:</b> using generative AI text tools for your writing counts as academic dishonesty in this course. Do not use AI tools during in-class activities or assignments.</li>
-      <li>Use Mathub to study and test yourself, not to produce graded work.</li></ul>` },
+      <li>Use StudyCat to study and test yourself, not to produce graded work.</li></ul>` },
     { icon: 'users', title: 'Support', html: `<ul class="list-plain small">
       <li><b>Accommodations:</b> Office of Disability Services, 137 Romney Hall (<a href="https://www.montana.edu/disabilityservices/" target="_blank" rel="noopener">montana.edu/disabilityservices</a>). Talk with the instructor early about your plan.</li>
       <li><b>Well-being:</b> Counseling and Psychological Services (<a href="https://www.montana.edu/counseling/index.html" target="_blank" rel="noopener">montana.edu/counseling</a>), confidential.</li>
       <li><b>Writing:</b> the MSU Writing Center (<a href="https://www.montana.edu/writingcenter/" target="_blank" rel="noopener">montana.edu/writingcenter</a>).</li>
       <li><b>Content note:</b> the course covers war, torture and death. Let the instructor know if you have concerns.</li></ul>` },
-    { icon: 'bulb', title: 'How to use Mathub for this class', html: `<p class="small">Do the reading, then open that day's topic notes and test yourself with the flashcards the same day. The key terms sheet lists every concept, thinker and treaty; cover the definitions and name them. Before each midterm, run the quizzer on that unit and work the short-answer practice set; the final adds short answers, so practise explaining a theory or a reading in three or four sentences.</p>` }
+    { icon: 'bulb', title: 'How to use StudyCat for this class', html: `<p class="small">Do the reading, then open that day's topic notes and test yourself with the flashcards the same day. The key terms sheet lists every concept, thinker and treaty; cover the definitions and name them. Before each midterm, run the quizzer on that unit and work the short-answer practice set; the final adds short answers, so practise explaining a theory or a reading in three or four sentences.</p>` }
   ],
 
   QUIZ

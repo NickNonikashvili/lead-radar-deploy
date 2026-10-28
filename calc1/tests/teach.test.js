@@ -1,4 +1,4 @@
-/* Mathub Faculty end to end: the "For professors" button opens the workspace (its own frame), an instructor writes a syllabus page by page with the live page beside it (schedule generator, grading, checklist),
+/* StudyCat Faculty end to end: the "For professors" button opens the workspace (its own frame), an instructor writes a syllabus page by page with the live page beside it (schedule generator, grading, checklist),
    publishes it, and runs the class (announcement, assignment, attendance, insights); a student joins with the code, gets the
    class, sees the hub, does the assignment and checks in; a student who did not join cannot open the class. Also the
    "page not found" view, the public syllabus page, account devices and data export, and no sideways scroll on a phone. */
@@ -75,7 +75,7 @@ const T = require('./lib');
   await go(prof, '#/', 1800);
   const sep = await prof.evaluate(pid => ({ order: App.COURSE_ORDER.includes(pid), mine: App.myCourses().includes(pid), open: !!window.Courses[pid], preview: !!(window.Courses[pid] || {}).preview, surface: document.documentElement.dataset.surface || '' }), pid);
   check('the published class stays out of the instructor’s own classes, and the student site is back to normal', !sep.order && !sep.mine && sep.open && sep.preview && sep.surface === '', sep);
-  await go(prof, `#/${pid}`, 2200); check('opening it as a student shows a preview strip back to Mathub Faculty', /Preview/.test(await txt(prof, '.tc-strip')) && (await prof.getAttribute('.tc-strip', 'href')) === `#/teach/${id}`);
+  await go(prof, `#/${pid}`, 2200); check('opening it as a student shows a preview strip back to StudyCat Faculty', /Preview/.test(await txt(prof, '.tc-strip')) && (await prof.getAttribute('.tc-strip', 'href')) === `#/teach/${id}`);
 
   // a student joins
   const [cb, stu] = await mk2(1360, 900);

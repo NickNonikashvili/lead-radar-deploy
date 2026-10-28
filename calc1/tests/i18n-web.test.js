@@ -58,7 +58,7 @@ const SETTINGS = { es: 'Ajustes', ru: 'Настройки', fr: 'Paramètres', i
   check('Bo greets in Russian', hello.want !== 'Ask me anything, or snap a photo of a problem.' && hello.text.includes(hello.want) && !/Ask me anything/.test(hello.text), hello.text.slice(0, 300));
   await m.evaluate(() => App.boAsk({ class: 'calc', q: 'What is a limit?', snapshot: {}, today: App.todayISO() }, () => {}));
   const sys = JSON.parse(fs.readFileSync(LAST, 'utf8')).system.map(b => b.text).join('\n');
-  check('Bo is told to answer in Russian, with the English terms the class uses', /LANGUAGE: the student uses Mathub in Russian\. Always answer in Russian/.test(sys) && /English term in brackets/.test(sys), sys.slice(-400));
+  check('Bo is told to answer in Russian, with the English terms the class uses', /LANGUAGE: the student uses StudyCat in Russian\. Always answer in Russian/.test(sys) && /English term in brackets/.test(sys), sys.slice(-400));
   await api(m, 'ai_forget', { what: 'all' });
   await m.evaluate(() => MathubI18n.set('en')).catch(() => {}); await m.waitForLoadState('load'); await m.waitForTimeout(3500);   // leave the account in English for the tests after this one
   await T.finish();

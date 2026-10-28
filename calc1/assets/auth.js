@@ -1,5 +1,5 @@
 /* ============================================================
-   Mathub — accounts, preview gating and progress sync
+   StudyCat — accounts, preview gating and progress sync
    Talks to api/index.php (PHP + SQLite). When the account server is
    unreachable (site opened as a file, api/ not uploaded) it falls back
    to a local sign-in that keeps progress in this browser only.
@@ -24,7 +24,7 @@
     const opts = { method: method || (body ? 'POST' : 'GET'), credentials: 'same-origin', headers: { 'X-Requested-With': 'MatHub', 'Accept': 'application/json' }, cache: 'no-store' };
     if (body) { opts.headers['Content-Type'] = 'application/json'; opts.body = JSON.stringify(body); }
     let res, json;
-    try { res = await fetch(API + route, opts); } catch (e) { Auth.unreachable = true; paintAccount(); throw Object.assign(new Error('You seem to be offline. Mathub keeps working; your progress syncs when you are back.'), { network: true }); }
+    try { res = await fetch(API + route, opts); } catch (e) { Auth.unreachable = true; paintAccount(); throw Object.assign(new Error('You seem to be offline. StudyCat keeps working; your progress syncs when you are back.'), { network: true }); }
     try { json = await res.json(); } catch (e) { throw Object.assign(new Error('The account server sent an unexpected reply (' + res.status + ').'), { network: true }); }
     if (json && json.offline) { Auth.unreachable = true; paintAccount(); throw Object.assign(new Error('You are offline. Your progress syncs when you are back.'), { network: true }); }
     if (Auth.unreachable) { Auth.unreachable = false; paintAccount(); }
@@ -60,19 +60,22 @@
     const u = Auth.user; if (!u) return; if (!force && Array.isArray(u.courses)) return;
     let dismissed = false; try { dismissed = localStorage.getItem('mathub-onboarded') === '1'; } catch {}
     if (!force && dismissed) return;
-    const courses = App.COURSE_ORDER.filter(id => global.Courses[id]); const chosen = Array.isArray(u.courses) && u.courses.length ? u.courses : (App.settings().courses || courses);
+    const had = Array.isArray(u.courses) ? u.courses.slice() : (Array.isArray(App.settings().courses) ? App.settings().courses.slice() : []);
+    const courses = App.COURSE_ORDER.filter(id => global.Courses[id] && (!global.Courses[id].community || had.includes(id))); const chosen = Array.isArray(u.courses) && u.courses.length ? u.courses : (App.settings().courses || []);   // nothing is ticked for you: pick your own
     const m = document.createElement('div'); m.className = 'modal-backdrop'; m.id = 'onboard-modal';
-    m.innerHTML = `<div class="modal auth-modal onboard-modal" role="dialog" aria-label="Your classes"><div class="auth-head"><span class="logo-mark">${App.logoSvg(26)}</span><div><b>Which classes are you taking?</b><div class="small muted">Mathub hides the rest and uses your section's times.</div></div><button class="icon-btn" data-action="close" aria-label="Close">${icon('x', 16)}</button></div>
+    m.innerHTML = `<div class="modal auth-modal onboard-modal" role="dialog" aria-label="Your classes"><div class="auth-head"><span class="logo-mark">${App.logoSvg(26)}</span><div><b>Which classes are you taking?</b><div class="small muted">StudyCat hides the rest and uses your section's times.</div></div><button class="icon-btn" data-action="close" aria-label="Close">${icon('x', 16)}</button></div>
       <div class="onboard-list">${courses.map(id => { const C = global.Courses[id]; const on = chosen.includes(id); const hasLab = (C.RECURRING || []).some(r => r.afterLabDay); return `<div class="onboard-course${on ? ' on' : ''}" data-c="${id}"><label class="check" style="padding:0"><input type="checkbox" data-course="${id}" ${on ? 'checked' : ''}><span><b>${esc(C.code)}</b> ${esc(C.name)}</span></label>
         <div class="onboard-fields grid cols-3" style="gap:8px"><div class="field"><label>Section</label><input class="input" data-sec="${id}" maxlength="20" placeholder="e.g. 002" value="${esc(App.courseSetting(id, 'section', ''))}"></div><div class="field"><label>Your lecture / exam time</label><input class="input" data-time="${id}" maxlength="60" placeholder="e.g. MWF 9:00 am" value="${esc(App.courseSetting(id, 'examTime', ''))}"></div>${hasLab ? `<div class="field"><label>Lab day</label><select class="select" data-lab="${id}"><option value="tue"${App.courseSetting(id, 'labDay', 'tue') !== 'thu' ? ' selected' : ''}>Tuesday</option><option value="thu"${App.courseSetting(id, 'labDay', 'tue') === 'thu' ? ' selected' : ''}>Thursday</option></select></div>` : '<div></div>'}</div></div>`; }).join('')}</div>
-      ${App.requestLink ? `<div class="mt-1">${App.requestLink('small')}</div>` : ''}
+      ${App.createLink ? `<div class="mt-1">${App.createLink('small')}</div>` : ''}
       <div class="eyebrow mt-2 mb-1">Daily XP goal</div><div class="goal-picks">${(App.GOALS || []).map(([n, nm]) => `<button type="button" class="goal-pick${(App.dailyGoal ? App.dailyGoal() : 30) === n ? ' on' : ''}" data-action="goal" data-n="${n}"><b>${n} XP</b><span>${nm}</span></button>`).join('')}</div><p class="small muted mt-1">A correct answer is 10 XP. You can change this any time in Settings.</p>
-      <div class="row gap-sm mt-2"><button class="btn primary" data-action="save">Save</button><button class="btn" data-action="close">${force ? 'Cancel' : 'Skip for now'}</button></div><div class="auth-msg" id="onboard-msg"></div></div>`;
+      <div class="row gap-sm mt-2"><button class="btn primary" data-action="save">Save</button><button class="btn" data-action="close">${force ? 'Cancel' : 'Later'}</button></div><div class="auth-msg" id="onboard-msg"></div></div>`;
     document.body.appendChild(m);
     const done = () => { App.dismiss(m); try { localStorage.setItem('mathub-onboarded', '1'); } catch {} };
     on(m, 'change', 'input[data-course]', el => { el.closest('.onboard-course').classList.toggle('on', el.checked); });
-    bind(m, { goal: b => { $$('.goal-pick', m).forEach(x => x.classList.toggle('on', x === b)); }, close: () => { done(); if (!Array.isArray(u.courses)) Auth.savePrefs({ courses: courses }).catch(() => {}); },
-      save: async () => { const picked = $$('input[data-course]', m).filter(i => i.checked).map(i => i.dataset.course); if (!picked.length) { $('#onboard-msg', m).textContent = 'Pick at least one class.'; return; } const sections = {}; courses.forEach(id => { const lab = $(`select[data-lab="${id}"]`, m); sections[id] = { section: $(`input[data-sec="${id}"]`, m).value.trim(), examTime: $(`input[data-time="${id}"]`, m).value.trim(), labDay: lab ? lab.value : '' }; }); const gp = $('.goal-pick.on', m); if (gp) App.setSetting('dailyGoal', +gp.dataset.n); try { await Auth.savePrefs({ courses: picked, sections }); done(); if (App.paintStats) App.paintStats(); toast('Saved. Mathub now shows ' + picked.map(id => global.Courses[id].short).join(', ') + '.', 3500); App.rerender(); } catch (e) { $('#onboard-msg', m).textContent = e.message; } } });
+    bind(m, { goal: b => { $$('.goal-pick', m).forEach(x => x.classList.toggle('on', x === b)); }, close: () => { done(); },   // no classes are added for you: the home page keeps asking until you pick
+      save: async () => { const picked = $$('input[data-course]', m).filter(i => i.checked).map(i => i.dataset.course); if (!picked.length) { $('#onboard-msg', m).textContent = 'Pick at least one class.'; return; } const sections = {}; courses.forEach(id => { const lab = $(`select[data-lab="${id}"]`, m); sections[id] = { section: $(`input[data-sec="${id}"]`, m).value.trim(), examTime: $(`input[data-time="${id}"]`, m).value.trim(), labDay: lab ? lab.value : '' }; }); const gp = $('.goal-pick.on', m); if (gp) App.setSetting('dailyGoal', +gp.dataset.n); try { await Auth.savePrefs({ courses: picked, sections }); done(); if (App.paintStats) App.paintStats(); toast('Saved. StudyCat now shows ' + picked.map(id => global.Courses[id].short).join(', ') + '.', 3500); App.rerender();
+        // the classes just added: offer to make each one theirs in the class maker (assets/maker.js)
+        const fresh = picked.filter(id => !had.includes(id) && !(App.packs && App.packs.local && App.packs.local.has(id))); if (fresh.length && App.promptCustomize) setTimeout(() => App.promptCustomize(fresh), 400); } catch (e) { $('#onboard-msg', m).textContent = e.message; } } });
     m.addEventListener('click', e => { if (e.target === m) bind; if (e.target.closest('.rq-link')) done(); });
   };
   function changed() { applyServerPrefs(); paintAccount(); paintBanner(); try { dispatchEvent(new Event('mathub-auth')); } catch (e) {}   // signed in or out: the top bar's Call Bo (assets/call-launch.js) listens
@@ -130,10 +133,10 @@
       cal.innerHTML = `<div class="cal-sub"><input class="input mono small" id="acct-ics" value="${esc(url)}" readonly aria-label="Calendar subscription link"><div class="row gap-sm mt-1" style="flex-wrap:wrap"><button class="btn sm primary" data-action="ics-copy">${icon('file', 13)} Copy link</button><a class="btn sm" href="${esc(webcal)}">${icon('calendar', 13)} Open in calendar app</a><a class="btn sm" href="${esc(url)}" download="mathub.ics">${icon('download', 13)} Download .ics</a><button class="btn sm ghost" data-action="ics-reset">${icon('rotate', 13)} New link</button></div><details class="mt-1"><summary class="small">How to subscribe (${r.events} events)</summary><ul class="list small mt-1"><li><b>Google Calendar</b> (on a computer): Other calendars → + → From URL → paste the link → Add calendar. Updates every few hours.</li><li><b>Apple Calendar</b>: File → New Calendar Subscription → paste the link. On iPhone: Settings → Calendar → Accounts → Add Subscribed Calendar.</li><li><b>Outlook</b>: Add calendar → Subscribe from web → paste the link.</li></ul></details></div>`;
       bind(cal, { 'ics-copy': async () => { try { await navigator.clipboard.writeText(url); toast('Calendar link copied. Paste it into your calendar app.', 3000); } catch (e) { $('#acct-ics', cal).select(); } }, 'ics-reset': async () => { if (!confirm('Make a new link? Calendars using the old one stop updating.')) return; await call('ics_token_reset', {}); Auth.growthInit(panel); toast('New calendar link made.'); } });
     } catch (e) { cal.innerHTML = `<div class="small muted">${esc(e.message)}</div>`; } }
-    if (inv) { try { const r = await call('invite_mine'); const link = `${base}#/join?ref=${r.code}`; const text = `Study with me on Mathub: free notes, endless practice and a class board for our Montana State classes.${r.credits ? ` Sign up through my link and we both get ${r.credits} credits for Bo, the tutor who helps you on a whiteboard.` : ''} ${link}`;
+    if (inv) { try { const r = await call('invite_mine'); const link = `${base}#/join?ref=${r.code}`; const text = `Study with me on StudyCat: free notes, endless practice and a class board for our Montana State classes.${r.credits ? ` Sign up through my link and we both get ${r.credits} credits for Bo, the tutor who helps you on a whiteboard.` : ''} ${link}`;
       const ip = $('#acct-invite-p', panel); if (ip && r.credits) ip.textContent = `Share your link. When a classmate signs up through it, you both get ${r.credits} credits for Bo.`;
       inv.innerHTML = `<div class="invite-card"><div class="row gap-sm" style="flex-wrap:wrap"><input class="input mono small" id="acct-invlink" value="${esc(link)}" readonly aria-label="Invite link" style="flex:1 1 240px"><button class="btn sm primary" data-action="inv-share">${icon('external', 13)} ${navigator.share ? 'Share' : 'Copy'}</button></div><div class="small muted mt-1">${r.joined ? `${r.joined} classmate${r.joined === 1 ? '' : 's'} joined through your link.` : 'Nobody has used it yet. Send it to your study group.'}</div></div>`;
-      bind(inv, { 'inv-share': async () => { try { if (navigator.share) await navigator.share({ title: 'Mathub', text, url: link }); else { await navigator.clipboard.writeText(text); toast('Invite copied. Paste it in your group chat.', 3000); } } catch (e) {} } });
+      bind(inv, { 'inv-share': async () => { try { if (navigator.share) await navigator.share({ title: 'StudyCat', text, url: link }); else { await navigator.clipboard.writeText(text); toast('Invite copied. Paste it in your group chat.', 3000); } } catch (e) {} } });
     } catch (e) { inv.innerHTML = `<div class="small muted">${esc(e.message)}</div>`; } }
   };
   App.inviteBanner = function () {
@@ -173,8 +176,10 @@
     applyServer(course, r.data, r.updated);
   };
   /* ---------- preferences that follow the account (device-local settings such as the GPA calculator, sounds, goal, theme) ---------- */
-  const PREF_KEYS = ['gpa', 'ambient', 'dailyGoal', 'theme', 'liveBg', 'sound', 'phonRate', 'phonVoice_uk', 'phonVoice_us', 'readerVoice', 'readerScroll', 'navOpen', 'seenChangelog', 'todayPlan', 'lastVisit', 'challengeDone', 'lastLessonDay', 'pushOn', 'savedResources', 'guidesRead', 'skin', 'motion', 'geek', 'tourDone', 'recapSeen', 'focusLog', 'focusGoal', 'freezeBank', 'freezeUsed', 'freezeWeeks', 'focusPublic', 'planningEmail', 'lang', 'homeHide', 'tourLayout', 'forumPosted', 'modules', 'navLayout', 'classMenu', 'look', 'startPage', 'customizeTab'];
-  function applyPrefs(prefs, updated) { if (!prefs || typeof prefs !== 'object') return; const s = App.settings(); PREF_KEYS.forEach(k => { if (prefs[k] !== undefined) s[k] = prefs[k]; }); s.prefsUpdated = updated; writeJSON('studyhub-settings', s); if (App.applyTheme) App.applyTheme(); if (prefs.lang && prefs.lang !== App.lang && global.MathubI18n && MathubI18n.codes.includes(prefs.lang)) location.reload(); }   // the language picked on another device
+  const PREF_KEYS = ['gpa', 'ambient', 'dailyGoal', 'theme', 'liveBg', 'sound', 'phonRate', 'phonVoice_uk', 'phonVoice_us', 'readerVoice', 'readerScroll', 'navOpen', 'seenChangelog', 'todayPlan', 'lastVisit', 'challengeDone', 'lastLessonDay', 'pushOn', 'savedResources', 'guidesRead', 'skin', 'motion', 'geek', 'tourDone', 'recapSeen', 'focusLog', 'focusGoal', 'freezeBank', 'freezeUsed', 'freezeWeeks', 'focusPublic', 'planningEmail', 'lang', 'homeHide', 'tourLayout', 'forumPosted', 'modules', 'navLayout', 'classMenu', 'look', 'startPage', 'customizeTab', 'classCustom', 'makerTab', 'makerTabC', 'homeLayout'];
+  function applyPrefs(prefs, updated) { if (!prefs || typeof prefs !== 'object') return; const s = App.settings(); PREF_KEYS.forEach(k => { if (prefs[k] !== undefined) s[k] = prefs[k]; }); s.prefsUpdated = updated; writeJSON('studyhub-settings', s); if (App.applyTheme) App.applyTheme(); if (prefs.homeLayout !== undefined && App.dash && App.dash.paint && document.querySelector('#view #dash-canvas')) App.dash.paint(document.querySelector('#view'));   // the home arranged on another device
+    if (prefs.classCustom !== undefined) { Object.keys(global.Courses || {}).forEach(id => App.applyVariant(global.Courses[id])); if (App.applyClassColors) App.applyClassColors(); }   // the classes made theirs on another device (assets/maker.js)
+    if (prefs.lang && prefs.lang !== App.lang && global.MathubI18n && MathubI18n.codes.includes(prefs.lang)) location.reload(); }   // the language picked on another device
   Auth.prefsPush = function () { if (!Auth.user || Auth.mode !== 'server' || Auth.unreachable) return; clearTimeout(Auth.prefsTimer); Auth.prefsTimer = setTimeout(async () => { const s = App.settings(); const prefs = {}; PREF_KEYS.forEach(k => { if (s[k] !== undefined) prefs[k] = s[k]; }); const updated = Date.now(); s.prefsUpdated = updated; writeJSON('studyhub-settings', s); try { const r = await call('prefs', { prefs, updated }, 'PUT'); if (r.stale) applyPrefs(r.prefs, r.updated); } catch (e) {} }, 2500); };
   Auth.prefsPull = async function () { if (!Auth.user || Auth.mode !== 'server') return; try { const r = await call('prefs'); const local = App.settings().prefsUpdated || 0; if ((r.updated || 0) > local) applyPrefs(r.prefs, r.updated); else if (local > (r.updated || 0)) Auth.prefsPush(); } catch (e) {} };
   App.onSetting = k => { if (PREF_KEYS.includes(k)) Auth.prefsPush(); };
@@ -295,7 +300,7 @@
   Auth.bindLocks = function (root) { on(root, 'click', '[data-action="auth-signup"]', () => Auth.open('signup')); on(root, 'click', '[data-action="auth-login"]', () => Auth.open('login')); };
   Auth.renderLocked = function (root, V, view) {
     const D = App.D; const label = (() => { for (const gp of D.NAV) for (const it of gp.items) if (it[0] === view) return it[1]; return V.title; })();
-    root.innerHTML = App.pageHead(label, V.blurb || 'This tool is part of the full Mathub experience.') + Auth.lockCard(`${label} is for members`, `Create a free account to use the ${label.toLowerCase()} for ${D.name} and every other ${D.short} tool, and to keep your progress across devices.`) + `<div class="grid cols-3 mt-3">${(V.preview || []).map(p => `<div class="card-link"><h4>${esc(p[0])}</h4><p>${esc(p[1])}</p></div>`).join('')}</div>`;
+    root.innerHTML = App.pageHead(label, V.blurb || 'This tool is part of the full StudyCat experience.') + Auth.lockCard(`${label} is for members`, `Create a free account to use the ${label.toLowerCase()} for ${D.name} and every other ${D.short} tool, and to keep your progress across devices.`) + `<div class="grid cols-3 mt-3">${(V.preview || []).map(p => `<div class="card-link"><h4>${esc(p[0])}</h4><p>${esc(p[1])}</p></div>`).join('')}</div>`;
     Auth.bindLocks(root);
   };
 
@@ -328,7 +333,7 @@
     } else {
       body = `${email}<div class="field"><label for="au-pass">Password</label><input class="input" id="au-pass" type="password" autocomplete="current-password" required></div><button class="btn primary mt-2" type="submit" style="width:100%">Log in</button><div class="row between mt-2"><button class="btn xs ghost" type="button" data-action="tab" data-t="forgot">Forgot password?</button><span class="small muted">New here? <a href="#" data-action="tab" data-t="signup">Sign up</a></span></div>`;
     }
-    m.innerHTML = `<div class="modal auth-modal" role="dialog" aria-label="Account"><div class="auth-head"><span class="logo-mark" aria-hidden="true">${App.logoSvg ? App.logoSvg(26) : ''}</span><div><b>Mathub</b><div class="small muted">Free study hub for Montana State classes</div></div><button class="icon-btn" data-action="close" aria-label="Close">${icon('x', 16)}</button></div>${offline ? '' : `<div class="tabs auth-tabs">${tabs}</div>`}<form id="auth-form" novalidate>${body}<div class="auth-msg${M.msgKind ? ' ' + M.msgKind : ''}" id="auth-msg">${M.msg ? esc(M.msg) : ''}</div></form></div>`;
+    m.innerHTML = `<div class="modal auth-modal" role="dialog" aria-label="Account"><div class="auth-head"><span class="logo-mark" aria-hidden="true">${App.logoSvg ? App.logoSvg(26) : ''}</span><div><b>StudyCat</b><div class="small muted">Free study hub for Montana State classes</div></div><button class="icon-btn" data-action="close" aria-label="Close">${icon('x', 16)}</button></div>${offline ? '' : `<div class="tabs auth-tabs">${tabs}</div>`}<form id="auth-form" novalidate>${body}<div class="auth-msg${M.msgKind ? ' ' + M.msgKind : ''}" id="auth-msg">${M.msg ? esc(M.msg) : ''}</div></form></div>`;
     bind(m, { close: Auth.close, tab: (el, e) => { e.preventDefault(); M.state = el.dataset.t; M.msg = ''; paintModal(); }, resend: () => submit('resend'), 'resend-reset': () => submit('forgot-again') });
     const form = $('#auth-form', m); form.addEventListener('submit', e => { e.preventDefault(); submit(); });
     const first = $('#au-email', m) && !M.email ? $('#au-email', m) : ($('#au-code', m) || $('#au-pass', m) || $('#au-email', m)); if (first) setTimeout(() => first.focus(), 30);
@@ -341,7 +346,7 @@
     const v = id => { const el = $('#' + id, m); return el ? el.value.trim() : ''; };
     const email = v('au-email') || M.email; if (v('au-email')) M.email = v('au-email').toLowerCase();
     if (Auth.mode === 'offline') {
-      if (!Auth.emailOk(email)) return msg('Mathub is for Montana State students: use your @montana.edu address.', 'bad');
+      if (!Auth.emailOk(email)) return msg('StudyCat is for Montana State students: use your @montana.edu address.', 'bad');
       const u = { email: email.toLowerCase(), name: v('au-name'), local: true, created: Date.now() }; writeJSON(LOCAL_KEY, u); Auth.user = u; Auth.close(); changed(); toast(`Welcome, ${u.name || u.email.split('@')[0]}. Progress is saved in this browser.`, 3000); App.rerender(); return;
     }
     try {
@@ -362,10 +367,10 @@
   }
   function finishLogin(user, isNew) {
     Auth.user = user; Auth.close(); changed();
-    toast(isNew ? `Welcome to Mathub, ${user.name || user.email.split('@')[0]}!` : `Welcome back, ${user.name || user.email.split('@')[0]}.`, 2600);
+    toast(isNew ? `Welcome to StudyCat, ${user.name || user.email.split('@')[0]}!` : `Welcome back, ${user.name || user.email.split('@')[0]}.`, 2600);
     Auth.pullAll().then(() => App.rerender()).catch(() => App.rerender());
     if (App.rebuildNav) App.rebuildNav();
-    // a new account gets the welcome (what Mathub is, then its classes and a membership); otherwise the class picker if it has none
+    // a new account gets the welcome (what StudyCat is, then its classes and a membership); otherwise the class picker if it has none
     setTimeout(() => { if (App.welcome && App.welcome.needed()) App.welcome.open(); else Auth.onboard(isNew || !Array.isArray(user.courses)); }, 900);
   }
   Auth.logout = async function () {
@@ -382,7 +387,7 @@
       html = `<div class="panel acct-panel">
         <div class="acct-hero"><div class="avatar big">${esc(initial)}</div><div class="acct-hero-body"><h2 class="acct-hero-name">${esc(name)}</h2><div class="mono small muted">${esc(u.email)}</div><div class="row gap-sm mt-1" style="flex-wrap:wrap">${u.role ? `<span class="chip staff">${esc(u.role)}</span>` : ''}${u.admin ? '<span class="chip accent">administrator</span>' : u.mod ? '<span class="chip accent">moderator</span>' : ''}<span class="chip ${server ? (Auth.unreachable ? 'warn' : 'good') : 'warn'}">${server ? (Auth.unreachable ? 'offline · will sync' : 'synced across devices') : 'local browser only'}</span>${u.created ? `<span class="chip">member since ${esc(App.fmtDate(App.toISO(new Date(u.created * 1000))))}</span>` : ''}</div></div></div>
         <div class="link-tiles">
-          <a class="link-tile gold" href="#/customize"><span class="tile-ic">${icon(vi('customize'), 20)}</span><span class="tile-body"><b>Customize Mathub</b><small>Turn features on or off, arrange the menus, change the look</small></span>${icon('right', 14)}</a>
+          <a class="link-tile gold" href="#/customize"><span class="tile-ic">${icon(vi('customize'), 20)}</span><span class="tile-body"><b>Customize StudyCat</b><small>Turn features on or off, arrange the menus, change the look</small></span>${icon('right', 14)}</a>
           ${server ? `<a class="link-tile" href="${App.inboxLink ? App.inboxLink() : '#/forum/inbox'}"><span class="tile-ic">${icon('bell', 20)}</span><span class="tile-body"><b>Inbox</b><small>${u.unread ? `${u.unread} unread ${u.unread === 1 ? 'reply' : 'replies'}` : 'Replies to your posts'}</small></span>${icon('right', 14)}</a>` : ''}
           ${u.mod ? `<a class="link-tile" href="#/admin"><span class="tile-ic">${icon('shield', 20)}</span><span class="tile-body"><b>${u.admin ? 'Admin panel' : 'Moderation'}</b><small>Members, reports and site settings</small></span>${icon('right', 14)}</a>` : ''}
         </div>
@@ -394,7 +399,7 @@
             <label class="check"><input type="checkbox" id="acct-digest" ${u.digest_email === false ? '' : 'checked'}><span>The weekly digest <span class="muted small">(Sunday evening: what is due, top posts, your stats vs. the class)</span></span></label>
             ${u.recap_emails_on === false ? '' : `<label class="check"><input type="checkbox" id="acct-recap" ${u.recap_email === false ? '' : 'checked'}><span>A recap after each call with Bo <span class="muted small">(what you covered, the slip to watch and three to try)</span></span></label>`}
             ${u.exam_emails_on === false ? '' : `<label class="check"><input type="checkbox" id="acct-exam" ${u.exam_nudge === false ? '' : 'checked'}><span>A heads-up 3 days before each exam <span class="muted small">(by email, and on this device if notifications are on, with a review call with Bo)</span></span></label>`}
-            <label class="check"><input type="checkbox" id="acct-news" ${u.news_email === false ? '' : 'checked'}><span>News from Mathub <span class="muted small">(a few times a term: new things you can do, like calling Bo)</span></span></label></section>
+            <label class="check"><input type="checkbox" id="acct-news" ${u.news_email === false ? '' : 'checked'}><span>News from StudyCat <span class="muted small">(a few times a term: new things you can do, like calling Bo)</span></span></label></section>
           ${server ? `<section><div class="eyebrow mb-1">Plan the week</div>
             <label class="check"><input type="checkbox" id="acct-planning" ${u.planning_email ? 'checked' : ''}><span>Sunday planning email <span class="muted small">(4 pm: everything due next week, your week in numbers, one suggested focus block)</span></span></label>
             <label class="check"><input type="checkbox" id="acct-focuspub" ${u.focus_public === false ? '' : 'checked'}><span>Show me in Focus together <span class="muted small">(others in the focus room see your name and task while your timer runs)</span></span></label></section>
@@ -413,7 +418,7 @@
     } else {
       const inApp = !!(window.MATHUB_APP && window.MATHUB_APP.native);
       html = inApp ? `<div class="panel acct-panel"><div class="panel-h"><div class="panel-title">${icon('user')} Account</div><span class="chip">optional</span></div>${Auth.lockCard('An account is optional', 'Everything in the app works without one. Montana State students can sign in with their montana.edu email to sync progress across devices and join the class discussions.', { compact: true })}</div>`
-        : `<div class="panel acct-panel"><div class="panel-h"><div class="panel-title">${icon('user')} Account</div><span class="chip warn">preview</span></div>${Auth.lockCard('You are previewing Mathub', 'Sign up with your montana.edu email to unlock every tool, join the People page and sync your progress across devices.', { compact: true })}</div>`;
+        : `<div class="panel acct-panel"><div class="panel-h"><div class="panel-title">${icon('user')} Account</div><span class="chip warn">preview</span></div>${Auth.lockCard('You are previewing StudyCat', 'Sign up with your montana.edu email to unlock every tool, join the People page and sync your progress across devices.', { compact: true })}</div>`;
     }
     const wrap = document.createElement('div'); wrap.innerHTML = html; const panel = wrap.firstElementChild;
     const pref = (id, key, onMsg, offMsg) => { const el = $('#' + id, panel); if (el) el.addEventListener('change', async () => { try { const r = await call('profile', { [key]: el.checked }); Auth.user = Object.assign(Auth.user, r.user); toast(el.checked ? onMsg : offMsg); } catch (e) { toast(e.message); el.checked = !el.checked; } }); };
@@ -430,9 +435,9 @@
           const blob = await res.blob(); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `mathub-data-${new Date().toISOString().slice(0, 10)}.json`; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500); toast('Your data is downloading.'); }
         catch (e) { toast(e.message); }
       },
-      'devices-out': async () => { if (!confirm('Sign out of Mathub on every other device? This one stays signed in.')) return; try { const r = await call('logout_others', {}); toast(r.signed_out ? `Signed out of ${r.signed_out} other device${r.signed_out === 1 ? '' : 's'}.` : 'No other devices were signed in.'); Auth.devicesInit(panel); } catch (e) { toast(e.message); } },
+      'devices-out': async () => { if (!confirm('Sign out of StudyCat on every other device? This one stays signed in.')) return; try { const r = await call('logout_others', {}); toast(r.signed_out ? `Signed out of ${r.signed_out} other device${r.signed_out === 1 ? '' : 's'}.` : 'No other devices were signed in.'); Auth.devicesInit(panel); } catch (e) { toast(e.message); } },
       'delete-acct': async () => {
-        if (!confirm('Delete your Mathub account and everything saved to it? This cannot be undone.')) return;
+        if (!confirm('Delete your StudyCat account and everything saved to it? This cannot be undone.')) return;
         if (Auth.mode === 'server') { const pass = prompt('Confirm with your password:'); if (pass === null) return; try { await call('account_delete', { password: pass }); } catch (e) { toast(e.message); return; } }
         else writeJSON(LOCAL_KEY, null);
         Auth.user = null; changed(); toast('Account deleted'); App.go('dashboard');
@@ -451,8 +456,8 @@
       let r; try { r = await call('news_unsub' + qs); } catch (e) { root.innerHTML = shell(`<h1 id="uns-h">This link does not work</h1><p>${esc(e.message)}</p><a class="btn" href="#/settings">${icon('gear', 14)} Open Settings</a>`); return; }
       const paint = on => {
         root.innerHTML = shell(on
-          ? `<h1 id="uns-h">Stop news emails?</h1><p>These are the few emails a term about new things on Mathub, sent to <b>${esc(r.email)}</b>. Reminders and digests you turned on are not affected.</p><div class="row gap-sm"><button type="button" class="btn primary lg" data-uns="0">Stop news emails</button><a class="btn lg" href="#/">Keep them</a></div>`
-          : `<h1 id="uns-h">Done. No more news emails.</h1><p>${esc(r.email)} will not get them. Changed your mind?</p><div class="row gap-sm"><button type="button" class="btn lg" data-uns="1">Turn them back on</button><a class="btn primary lg" href="#/">Go to Mathub</a></div>`);
+          ? `<h1 id="uns-h">Stop news emails?</h1><p>These are the few emails a term about new things on StudyCat, sent to <b>${esc(r.email)}</b>. Reminders and digests you turned on are not affected.</p><div class="row gap-sm"><button type="button" class="btn primary lg" data-uns="0">Stop news emails</button><a class="btn lg" href="#/">Keep them</a></div>`
+          : `<h1 id="uns-h">Done. No more news emails.</h1><p>${esc(r.email)} will not get them. Changed your mind?</p><div class="row gap-sm"><button type="button" class="btn lg" data-uns="1">Turn them back on</button><a class="btn primary lg" href="#/">Go to StudyCat</a></div>`);
         root.querySelectorAll('[data-uns]').forEach(b => b.addEventListener('click', async () => { b.disabled = true; try { const x = await call('news_unsub' + qs, { on: b.dataset.uns === '1' ? 1 : 0 }); r.on = x.on; if (Auth.user && Auth.user.id === +u) Auth.user.news_email = x.on; paint(x.on); toast(x.on ? 'News emails are back on' : 'News emails are off'); } catch (e) { b.disabled = false; toast(e.message, 4000); } }));
       };
       paint(r.on);

@@ -1,8 +1,8 @@
 <?php
-// Serves the local Pyodide package with CORS for Mathub tests.
+// Serves the local Pyodide package with CORS for StudyCat tests.
 header('Access-Control-Allow-Origin: *');
 $path = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
-// a stand-in for RevenueCat's GET /v1/subscribers/{id}, for the Mathub Pro and Max tests (config.local.php: revenuecat_api,
+// a stand-in for RevenueCat's GET /v1/subscribers/{id}, for the StudyCat Pro and Max tests (config.local.php: revenuecat_api,
 // revenuecat_secret 'sk_test'); who is subscribed, and to which plan, comes from tests/fixtures/rc-state.json, written by the test
 if (preg_match('#^/revenuecat/v1/subscribers/(.+)$#', $path, $m)) {
   header('Content-Type: application/json');
@@ -116,7 +116,7 @@ if ($path === '/anthropic/v1/messages') {
   } elseif (str_contains($sys, 'course syllabus') && preg_match('/Write the study material for unit (\d+)/', $utext, $mm)) {
     preg_match_all('/^- ([a-z0-9-]+) \(/m', $utext, $ids); $secs = []; $cards = []; $qs = [];
     foreach ($ids[1] as $k => $sid) {
-      $secs[] = ['id' => $sid, 'ideas' => ["$sid explained simply.", "More about $sid."], 'pitfalls' => ["Mixing up $sid."], 'example' => ['p' => "A $sid problem", 's' => 'Its solution']];
+      $secs[] = ['id' => $sid, 'plain' => "The idea of $sid, in plain words.", 'figure' => ['type' => 'numberline', 'intervals' => ['0 < x <= 1'], 'caption' => "A picture of $sid"], 'ideas' => ["$sid explained simply.", "More about $sid."], 'examples' => [['p' => "A $sid problem", 's' => 'Its solution']], 'pitfalls' => ["Mixing up $sid."], 'check' => [['q' => "What is $sid?", 'a' => "It is $sid."], ['q' => "Why does $sid matter?", 'a' => 'Because it does.']]];
       $cards[] = ['id' => "c$k", 'sec' => $sid, 'f' => "What is $sid?", 'b' => "The idea of $sid."];
       $qs[] = ['topic' => $sid, 'items' => [["Which one is $sid?", 'This one', ['That one', 'Neither', 'Both'], "Because it is $sid."], ["Is $sid useful?", 'Yes', ['No', 'Never', 'Only on Sundays'], 'It is.']]];
     }

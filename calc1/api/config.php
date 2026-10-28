@@ -1,6 +1,6 @@
 <?php
 /* ============================================================
-   Mathub account server — configuration
+   StudyCat account server — configuration
    Edit this file after uploading to Hostinger. Nothing else needs
    changing. Keep it out of version control if you add a password.
    ============================================================ */
@@ -19,15 +19,17 @@ return [
 
   // Sender for verification / reset emails. Must be a mailbox that exists on your domain.
   'mail_from'       => 'info@mathub.space',
-  'mail_from_name'  => 'Mathub',
-  'site_name'       => 'Mathub',
+  'mail_from_name'  => 'StudyCat',
+  'site_name'       => 'StudyCat',
 
   // How to send mail:
   //   'auto' = use SMTP when smtp_pass is filled in, otherwise PHP mail()
   //   'smtp' = always SMTP, 'mail' = always PHP mail(), 'log' = do not send, write codes to data/mail.log (testing only)
   'mail_mode'       => 'auto',
 
-  // Hostinger mailbox SMTP (hPanel → Emails → Manage → Configuration). Fill smtp_pass with the password of info@mathub.space.
+  // Hostinger mailbox SMTP (hPanel → Emails → Manage → Configuration). Fill smtp_pass with the password of the mailbox in
+  // smtp_user. It stays info@mathub.space (the mailbox that exists) until one on studycat.org is set up: then change
+  // mail_from and smtp_user here, in config.local.php, or in Admin → Keys & settings → Email.
   'smtp_host'       => 'smtp.hostinger.com',
   'smtp_port'       => 465,          // 465 = SSL (recommended on Hostinger), 587 = STARTTLS
   'smtp_user'       => 'info@mathub.space',
@@ -58,15 +60,15 @@ return [
   // Optional. If set, GET api/index.php?r=stats with header X-Admin-Key: <this value> returns sign-up counts.
   'admin_key'       => '',
 
-  // The plans (see docs/app-subscriptions.md): Mathub Pro (classes Bo writes from a syllabus, and making classes)
-  // and Mathub Max (Pro, plus Bo the AI tutor). Secrets go in config.local.php, never in this file:
+  // The plans (see docs/app-subscriptions.md): StudyCat Pro (classes Bo writes from a syllabus, and making classes)
+  // and StudyCat Max (Pro, plus Bo the AI tutor). Secrets go in config.local.php, never in this file:
   //   revenuecat_secret  RevenueCat secret API key (sk_...)
   //   pro_web_link, max_web_link  the production Web Purchase Links from RevenueCat (https://pay.rev.cat/...), without a user id
   //   pro_web_price, max_web_price  the prices to show on the website
   //   plan_grants        accounts that get a plan without paying, for testing: ['someone@montana.edu' => 'max']
   //   revenuecat_v2_key, revenuecat_project  optional: a RevenueCat API v2 secret key (sk_...) allowed to write
   //                      subscriptions, and the project id (proj...), so "Cancel plan" cancels a website plan right
-  //                      on Mathub; without them the Your plan page sends the student to RevenueCat's customer portal
+  //                      on StudyCat; without them the Your plan page sends the student to RevenueCat's customer portal
   'revenuecat_secret' => '',
   'revenuecat_v2_key' => '',
   'revenuecat_project' => '',

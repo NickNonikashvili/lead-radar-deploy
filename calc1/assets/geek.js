@@ -1,5 +1,5 @@
 /* ============================================================
-   Mathub — geek mode
+   StudyCat — geek mode
    Terminal and CRT flavoured transitions on top of the motion layer:
    - page headings, the breadcrumb and panel titles decode from random
      glyphs into their text, left to right, with a blinking cursor
@@ -160,7 +160,7 @@
     const dpr = Math.min(2, global.devicePixelRatio || 1); const W = c.width = Math.round(innerWidth * dpr), H = c.height = Math.round(innerHeight * dpr); const x = c.getContext('2d');
     const fs = Math.round(16 * dpr), cols = Math.ceil(W / fs), drops = Array.from({ length: cols }, () => Math.random() * -H / fs); const t0 = performance.now(); let raf = 0;
     const draw = now => {
-      const rl = realm(); x.fillStyle = rl ? 'rgba(14, 9, 20, 0.16)' : 'rgba(3, 7, 18, 0.16)'; x.fillRect(0, 0, W, H); x.font = rl ? `${fs}px "Mathub Runes", "Segoe UI Historic", serif` : `${fs}px "JetBrains Mono", ui-monospace, monospace`;
+      const rl = realm(); x.fillStyle = rl ? 'rgba(14, 9, 20, 0.16)' : 'rgba(3, 7, 18, 0.16)'; x.fillRect(0, 0, W, H); x.font = rl ? `${fs}px "StudyCat Runes", "Segoe UI Historic", serif` : `${fs}px "JetBrains Mono", ui-monospace, monospace`;
       for (let i = 0; i < cols; i++) { const y = drops[i] * fs; x.fillStyle = Math.random() < 0.08 ? (rl ? '#FFF3D6' : '#E6F0FF') : rl ? (i % 3 ? '#E8B84E' : (i % 2 ? '#B69BE8' : '#F07A86')) : (i % 3 ? '#4ADE80' : '#5B8CFF'); x.fillText(glyph(), i * fs, y); drops[i] = y > H && Math.random() > 0.975 ? 0 : drops[i] + 1; }
       if (now - t0 < ms) raf = requestAnimationFrame(draw); else { c.classList.add('out'); setTimeout(() => c.remove(), 600); }
     };

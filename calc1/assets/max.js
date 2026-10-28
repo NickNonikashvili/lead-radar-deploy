@@ -1,5 +1,5 @@
 /* ============================================================
-   Mathub — Max, shown (#/max): what a call with Bo is like, for everyone, in under a minute.
+   StudyCat — Max, shown (#/max): what a call with Bo is like, for everyone, in under a minute.
    A short demo that plays by itself (no AI, no sound): a student writes a problem on the board, Bo
    circles the slip, says why in captions, puts the steps up and a graph you can move. Then one
    button: call Bo (the Call Bo sheet, assets/call-launch.js; every account gets credits each month), or sign up first.
@@ -119,13 +119,13 @@
   /* ---------- the button: call Bo (or sign up first); the Call Bo sheet picks the class and shows the credits ---------- */
   function callFree() {
     if (!user()) { if (App.auth) App.auth.open('signup'); return; }
-    if (!(App.boTalk && App.boTalk.supported()) || !App.callBo) { toast('Calls with Bo are on the website. Open mathub.space on a computer or phone browser.', 4500); return; }
+    if (!(App.boTalk && App.boTalk.supported()) || !App.callBo) { toast('Calls with Bo are on the website. Open studycat.org on a computer or phone browser.', 4500); return; }
     let cid = settings().boClass; try { const ids = App.home.myIds() || []; if (!ids.includes(cid)) cid = App.home.curClass() || ids[0]; } catch (e) {}
     App.callBo({ cid: cid || '', onClose: () => App.rerender && App.rerender() });
   }
 
   App.views.max = {
-    title: 'Mathub Max',
+    title: 'StudyCat Max',
     render(root) {
       root.innerHTML = `<div class="mx">
         <section class="mx-hero" aria-labelledby="mx-h">

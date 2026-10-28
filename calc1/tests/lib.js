@@ -1,5 +1,5 @@
 /* ============================================================
-   Mathub browser tests — shared helpers
+   StudyCat browser tests — shared helpers
    Every *.test.js starts with  const T = require('./lib')  and
    const H = await T.start(opts)  which launches headless Chromium
    and returns: browser, base, errors, mk(w, h, ctxOpts), login(page,

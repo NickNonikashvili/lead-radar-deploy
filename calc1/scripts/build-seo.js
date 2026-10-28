@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /* ============================================================
-   Mathub — static study-guide pages for search engines
+   StudyCat — static study-guide pages for search engines
    The app itself is a hash-routed single page, which search engines
    index as one URL. This script renders every topic of every class
    into a plain HTML page under learn/, plus a class page per course,
@@ -11,8 +11,8 @@
 'use strict';
 const fs = require('fs'); const path = require('path');
 const ROOT = path.resolve(__dirname, '..');
-const SITE_URL = 'https://mathub.space';
-const SITE = 'Mathub';
+const SITE_URL = 'https://studycat.org';
+const SITE = 'StudyCat';
 const BUILD = (fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8').match(/data-build="([^"]+)"/) || [])[1] || 'dev';
 const TODAY = new Date().toISOString().slice(0, 10);
 
@@ -83,7 +83,7 @@ ${hasTex ? `<script src="/assets/mathjax-static.js?v=${BUILD}"></script>
 <script type="application/ld+json">${JSON.stringify(ld)}</script>
 </head>
 <body class="${o.course ? 'course-' + o.course : ''}">
-<header class="s-head"><a class="s-brand" href="/">${LOGO}<span><b>Mathub</b><small>Learn <i>/</i> Practice <i>/</i> Excel</small></span></a><nav class="s-nav"><a href="/learn/">Study guides</a>${o.course ? `<a href="${courseUrl(o.course)}">${esc(Courses[o.course].short)}</a>` : ''}<a class="s-btn" href="${o.appLink || '/'}">Open Mathub</a></nav></header>
+<header class="s-head"><a class="s-brand" href="/">${LOGO}<span><b>StudyCat</b><small>Learn <i>/</i> Practice <i>/</i> Excel</small></span></a><nav class="s-nav"><a href="/learn/">Study guides</a>${o.course ? `<a href="${courseUrl(o.course)}">${esc(Courses[o.course].short)}</a>` : ''}<a class="s-btn" href="${o.appLink || '/'}">Open StudyCat</a></nav></header>
 <main class="s-wrap">
 <nav class="s-crumbs" aria-label="Breadcrumb">${crumbs.map((c, i) => i < crumbs.length - 1 ? `<a href="${c.u}">${esc(c.n)}</a><span>›</span>` : `<span aria-current="page">${esc(c.n)}</span>`).join('')}</nav>
 ${o.body}
@@ -101,19 +101,19 @@ function topicBody(c, C, s, i) {
   const parts = [];
   parts.push(`<div class="s-eyebrow">${esc(C.code)} ${esc(C.name)}${unit ? ` · Unit ${unit.n}: ${esc(unit.title)}` : ''}${exam ? ` · on ${esc(exam.name)}` : ''}</div>`);
   parts.push(`<h1>${esc(s.label && s.label !== s.id ? s.label + ' ' : (s.label || ''))}${esc(s.title)}</h1>`);
-  parts.push(`<p class="s-lead">${C.kind === 'writing' ? `What happens in ${esc(s.label)} of ${esc(C.code)} ${esc(C.name)} at Montana State University, with the notebook prompts and project deadlines for the week.` : `Study notes for <b>${esc(s.title)}</b> in ${esc(C.code)} ${esc(C.name)} at Montana State University: the big ideas, ${s.formulas && s.formulas.length ? 'key formulas, ' : ''}${s.code && s.code.length ? 'code you should know, ' : ''}a worked example, common mistakes and an exam tip. The same topic has endless practice questions and flashcards in Mathub.`}</p>`);
+  parts.push(`<p class="s-lead">${C.kind === 'writing' ? `What happens in ${esc(s.label)} of ${esc(C.code)} ${esc(C.name)} at Montana State University, with the notebook prompts and project deadlines for the week.` : `Study notes for <b>${esc(s.title)}</b> in ${esc(C.code)} ${esc(C.name)} at Montana State University: the big ideas, ${s.formulas && s.formulas.length ? 'key formulas, ' : ''}${s.code && s.code.length ? 'code you should know, ' : ''}a worked example, common mistakes and an exam tip. The same topic has endless practice questions and flashcards in StudyCat.`}</p>`);
   if (ideas.length) parts.push(`<section><h2>${C.kind === 'writing' ? 'This week' : 'Big ideas'}</h2><ul class="s-list">${ideas.map(x => `<li>${x}</li>`).join('')}</ul></section>`);
   if (s.formulas && s.formulas.length) parts.push(`<section><h2>Key formulas</h2>${s.formulas.map(f => `<div class="s-formula"><div class="s-fname">${esc(f.n)}</div><div class="s-tex">$$${f.t}$$</div></div>`).join('')}</section>`);
   if (s.code && s.code.length) parts.push(`<section><h2>Code you should know</h2>${s.code.map(x => `<div class="s-code"><div class="s-code-h">${esc(x.t)}</div><pre><code>${esc(x.c)}</code></pre>${x.out ? `<div class="s-out"><span>Output</span><pre>${esc(x.out)}</pre></div>` : ''}</div>`).join('')}</section>`);
   if (s.example && s.example.p) parts.push(`<section><h2>Worked example</h2><div class="s-callout"><div>${s.example.p}</div>${s.example.s ? `<details><summary>Show the solution</summary><div class="s-solution">${s.example.s}</div></details>` : ''}</div></section>`);
   if (s.pitfalls && s.pitfalls.length) parts.push(`<section><h2>Common mistakes</h2><ul class="s-list">${s.pitfalls.map(x => `<li>${x}</li>`).join('')}</ul></section>`);
   if (s.tip) parts.push(`<section><div class="s-tip"><span class="s-eyebrow">Exam tip</span>${s.tip}</div></section>`);
-  const cta = [`<a class="s-btn primary" href="/#/${c}/notes/${encodeURIComponent(s.id)}">Open these notes in Mathub</a>`];
+  const cta = [`<a class="s-btn primary" href="/#/${c}/notes/${encodeURIComponent(s.id)}">Open these notes in StudyCat</a>`];
   if (topics.length) cta.push(`<a class="s-btn" href="/#/${c}/practice?topics=${encodeURIComponent(topics.join(','))}">Practice questions on this topic</a>`);
   if (C.FLASHCARDS && C.FLASHCARDS.some(f => f.sec === s.id)) cta.push(`<a class="s-btn" href="/#/${c}/flashcards?sec=${encodeURIComponent(s.id)}">Flashcards</a>`);
   if (C.kind === 'code') cta.push(`<a class="s-btn" href="/#/${c}/playground">Python playground</a>`);
   if (C.kind === 'writing') cta.push(`<a class="s-btn" href="/#/${c}/readings">Readings as audiobooks</a>`);
-  parts.push(`<section class="s-cta"><h2>Keep going in Mathub</h2><p>Mathub is free for Montana State students: ${C.quiz ? 'an endless quizzer with worked explanations, one-question lessons, ' : ''}flashcards, exam prep checklists, the class calendar with every deadline, a grade calculator and a study board for ${esc(C.code)}.</p><div class="s-btns">${cta.join('')}</div></section>`);
+  parts.push(`<section class="s-cta"><h2>Keep going in StudyCat</h2><p>StudyCat is free for Montana State students: ${C.quiz ? 'an endless quizzer with worked explanations, one-question lessons, ' : ''}flashcards, exam prep checklists, the class calendar with every deadline, a grade calculator and a study board for ${esc(C.code)}.</p><div class="s-btns">${cta.join('')}</div></section>`);
   parts.push(`<nav class="s-prevnext" aria-label="Previous and next topic">${prev ? `<a href="${topicUrl(c, prev)}">← ${esc(prev.label || '')} ${esc(prev.title)}</a>` : '<span></span>'}${next ? `<a href="${topicUrl(c, next)}">${esc(next.label || '')} ${esc(next.title)} →</a>` : '<span></span>'}</nav>`);
   return parts.join('\n');
 }
@@ -124,35 +124,35 @@ function coursePage(c, C) {
   const offers = { calc: ['Section notes with formulas, worked examples and exam tips', 'Endless quizzer with 30+ procedural question types and worked explanations', 'Flashcards, learning path and one-question lessons', 'Exam prep checklists and practice sets', 'Grapher, labs and a grade calculator', 'Calendar with every WebWork, homework, lab and exam date'], physics: ['Section notes with formulas and worked problems', 'Endless quizzer and one-question lessons', 'Projectile, motion and force simulators', 'Exam prep checklists and practice sets', 'Grade calculator and study planner', 'Calendar with labs, homework and exams'], precalc: ['Section notes with formulas and worked examples', 'Endless quizzer with worked explanations', 'Unit circle and grapher tools', 'Exam prep, flashcards and learning path', 'Grade calculator', 'Calendar with every quiz and exam'], writ: ['Week-by-week guide to all three projects and the portfolio', 'The class readings as read-along audiobooks', 'English Phonetics Lab: IPA practice, minimal pairs, symbols and a transcription tool', 'Deadline calendar and grade calculator', 'Writer’s notebook reminders'], csci: ['Topic notes with runnable code examples', 'Code playground: Python in the browser with turtle drawings and matplotlib charts', 'Endless "what does this print" questions and lessons', 'Cheat sheet, flashcards and practice sets for all three exams', 'Calendar with every lab, program and exam', 'Grade calculator with the syllabus weights'], biob: ['Topic notes with worked examples and Campbell reading pages', 'Genetics, pH, respiration and PCR questions generated fresh with worked answers', 'Formulas and key-terms sheet, flashcards and practice sets for all four exams', 'Calendar with every lecture topic and exam window', 'Grade calculator with the 400-point breakdown'], kin: ['Topic notes for every joint and region, with worked examples', 'Torque, lever, range-of-motion and gait questions with computed answers', 'Key-terms sheet with ROM norms, nerves and lever rules', 'Calendar that follows your lab section, with every practical and quiz window', 'Grade calculator that applies the best of the six exam-weighting options'], psyx: ['Topic notes on every disorder: criteria, causes and treatments', 'Criteria and timing questions (durations, counts, severity) generated fresh', 'Criteria and key-terms sheet, flashcards and practice sets for all three exams', 'Calendar that follows your section (Tue/Thu or Mon/Wed)', 'Grade calculator with the syllabus points'] }[c] || [];
   const body = `<div class="s-eyebrow">Montana State University · ${esc(C.term)} · ${KIND[c] || ''}</div>
 <h1>${esc(C.code)} ${esc(C.name)}: study guide</h1>
-<p class="s-lead">${esc(BLURB[c] || C.tagline || '')} Every topic below is a free study page; the same material lives in the Mathub app with practice, flashcards, the calendar and a grade calculator for this class.</p>
+<p class="s-lead">${esc(BLURB[c] || C.tagline || '')} Every topic below is a free study page; the same material lives in the StudyCat app with practice, flashcards, the calendar and a grade calculator for this class.</p>
 <div class="s-facts">${instructor(C) ? `<div><span>Instructor</span><b>${esc(instructor(C))}</b></div>` : ''}${meets(C) ? `<div><span>Meets</span><b>${esc(meets(C))}</b></div>` : ''}${C.COURSE.credits ? `<div><span>Credits</span><b>${esc(C.COURSE.credits)}</b></div>` : ''}<div><span>Topics</span><b>${C.SECTIONS.length}</b></div></div>
 ${exams ? `<section><h2>Exams and major deadlines</h2><div class="s-table"><table><thead><tr><th>Exam</th><th>When</th><th>Covers</th></tr></thead><tbody>${exams}</tbody></table></div></section>` : ''}
-<section class="s-cta"><h2>What Mathub gives you for ${esc(C.code)}</h2><ul class="s-list">${offers.map(x => `<li>${esc(x)}</li>`).join('')}</ul><div class="s-btns"><a class="s-btn primary" href="/#/${c}">Open ${esc(C.short)} in Mathub</a><a class="s-btn" href="/#/${c}/calendar">Class calendar</a></div></section>
+<section class="s-cta"><h2>What StudyCat gives you for ${esc(C.code)}</h2><ul class="s-list">${offers.map(x => `<li>${esc(x)}</li>`).join('')}</ul><div class="s-btns"><a class="s-btn primary" href="/#/${c}">Open ${esc(C.short)} in StudyCat</a><a class="s-btn" href="/#/${c}/calendar">Class calendar</a></div></section>
 ${units}`;
   const ld = [{ '@context': 'https://schema.org', '@type': 'CollectionPage', name: `${C.code} ${C.name} study guide`, url: SITE_URL + courseUrl(c), description: BLURB[c] || C.tagline, isPartOf: { '@type': 'WebSite', name: SITE, url: SITE_URL + '/' }, about: { '@type': 'Thing', name: `${C.code} ${C.name}, Montana State University` }, hasPart: C.SECTIONS.map(s => ({ '@type': 'LearningResource', name: `${s.label && s.label !== s.id ? s.label + ' ' : ''}${s.title}`, url: SITE_URL + topicUrl(c, s) })) }];
-  return page({ title: `${C.code} ${C.name} study guide · Montana State · ${SITE}`, desc: clip(`${C.code} ${C.name} at Montana State University: ${BLURB[c] || ''} ${C.SECTIONS.length} topic pages, exam dates and free practice in Mathub.`, 158), url: courseUrl(c), type: 'website', course: c, appLink: `/#/${c}`, crumbs: [{ n: C.short, u: courseUrl(c) }], body, ld });
+  return page({ title: `${C.code} ${C.name} study guide · Montana State · ${SITE}`, desc: clip(`${C.code} ${C.name} at Montana State University: ${BLURB[c] || ''} ${C.SECTIONS.length} topic pages, exam dates and free practice in StudyCat.`, 158), url: courseUrl(c), type: 'website', course: c, appLink: `/#/${c}`, crumbs: [{ n: C.short, u: courseUrl(c) }], body, ld });
 }
 
 function hubPage() {
   const cards = ORDER.map(c => { const C = Courses[c]; return `<a class="s-card" href="${courseUrl(c)}"><div class="s-eyebrow">${esc(C.code)} · ${esc(KIND[c] || '')}</div><h2>${esc(C.name)}</h2><p>${esc(BLURB[c] || C.tagline || '')}</p><small>${C.SECTIONS.length} topics${C.FLASHCARDS && C.FLASHCARDS.length ? ` · ${C.FLASHCARDS.length} flashcards` : ''}${C.quiz ? ' · endless practice' : ''}</small></a>`; }).join('');
   const body = `<div class="s-eyebrow">Montana State University · Bozeman · Fall 2026</div>
 <h1>Free study guides for Montana State classes</h1>
-<p class="s-lead">Mathub turns each class syllabus into topic-by-topic notes, practice questions, flashcards and a deadline calendar. Pick a class below to read the study pages, or open the app to practice.</p>
+<p class="s-lead">StudyCat turns each class syllabus into topic-by-topic notes, practice questions, flashcards and a deadline calendar. Pick a class below to read the study pages, or open the app to practice.</p>
 <div class="s-cards">${cards}</div>
-<section class="s-cta"><h2>How Mathub works</h2><ul class="s-list"><li><b>Notes</b> for every section with big ideas, formulas, a worked example, common mistakes and an exam tip.</li><li><b>Endless practice</b>: procedurally generated questions with worked explanations, one-question lessons, daily challenges and mock exams.</li><li><b>The calendar</b> with every homework, lab, quiz, exam and drop date from the syllabus, plus a study planner.</li><li><b>Tools</b>: grade calculators, a GPA calculator, graphers, physics simulators, a Python playground and read-along audiobooks.</li><li><b>A class board</b> to ask questions and study with classmates, with streaks, XP, badges and leagues to keep you going.</li></ul><div class="s-btns"><a class="s-btn primary" href="/">Open Mathub</a></div></section>`;
+<section class="s-cta"><h2>How StudyCat works</h2><ul class="s-list"><li><b>Notes</b> for every section with big ideas, formulas, a worked example, common mistakes and an exam tip.</li><li><b>Endless practice</b>: procedurally generated questions with worked explanations, one-question lessons, daily challenges and mock exams.</li><li><b>The calendar</b> with every homework, lab, quiz, exam and drop date from the syllabus, plus a study planner.</li><li><b>Tools</b>: grade calculators, a GPA calculator, graphers, physics simulators, a Python playground and read-along audiobooks.</li><li><b>A class board</b> to ask questions and study with classmates, with streaks, XP, badges and leagues to keep you going.</li></ul><div class="s-btns"><a class="s-btn primary" href="/">Open StudyCat</a></div></section>`;
   const ld = [{ '@context': 'https://schema.org', '@type': 'CollectionPage', name: 'Study guides for Montana State classes', url: SITE_URL + '/learn/', isPartOf: { '@type': 'WebSite', name: SITE, url: SITE_URL + '/' }, hasPart: ORDER.map(c => ({ '@type': 'CollectionPage', name: `${Courses[c].code} ${Courses[c].name} study guide`, url: SITE_URL + courseUrl(c) })) }];
   return page({ title: `Study guides for Montana State classes: M171, PHSX 220, M151Q, WRIT 101, CSCI 127 · ${SITE}`, desc: 'Free topic-by-topic study notes, practice questions, flashcards and deadline calendars for Montana State University classes: Calculus I, Physics I, Precalculus, College Writing I and Joy and Beauty of Data.', url: '/learn/', type: 'website', appLink: '/', body, ld });
 }
 
 function whatsNewPage() {
   require(path.join(ROOT, 'assets', 'changelog.js')); const LOG = (global.MATHUB_CHANGELOG || window.MATHUB_CHANGELOG || []);
-  const body = `<div class="s-eyebrow">Mathub · release notes</div>
-<h1>What's new in Mathub</h1>
-<p class="s-lead">Every release, newest first. Mathub ships most weeks; the current build is ${esc(LOG[0] ? LOG[0].v : BUILD)}. Ideas and bug reports are welcome on the class board or with the flag on any page.</p>
+  const body = `<div class="s-eyebrow">StudyCat · release notes</div>
+<h1>What's new in StudyCat</h1>
+<p class="s-lead">Every release, newest first. StudyCat ships most weeks; the current build is ${esc(LOG[0] ? LOG[0].v : BUILD)}. Ideas and bug reports are welcome on the class board or with the flag on any page.</p>
 ${LOG.map((r, i) => `<section class="s-release${i === 0 ? ' latest' : ''}"><h2>${esc(r.t)}</h2><div class="s-eyebrow">${esc(fmtDate(r.d))} · build ${esc(r.v)}</div><ul class="s-list">${r.items.map(x => `<li>${esc(x)}</li>`).join('')}</ul></section>`).join('')}
 <section class="s-cta"><div class="s-btns"><a class="s-btn primary" href="/#/whatsnew">Open in the app</a><a class="s-btn" href="/learn/">All study guides</a></div></section>`;
-  const ld = [{ '@context': 'https://schema.org', '@type': 'WebPage', name: "What's new in Mathub", url: SITE_URL + '/learn/whats-new.html', dateModified: LOG[0] ? LOG[0].d : TODAY, isPartOf: { '@type': 'WebSite', name: SITE, url: SITE_URL + '/' } }];
-  return page({ title: `What's new · release notes · ${SITE}`, desc: clip(`Mathub release notes: ${LOG.slice(0, 3).map(r => r.t).join('; ')}.`, 158), url: '/learn/whats-new.html', type: 'website', crumbs: [{ n: "What's new", u: '/learn/whats-new.html' }], body, ld });
+  const ld = [{ '@context': 'https://schema.org', '@type': 'WebPage', name: "What's new in StudyCat", url: SITE_URL + '/learn/whats-new.html', dateModified: LOG[0] ? LOG[0].d : TODAY, isPartOf: { '@type': 'WebSite', name: SITE, url: SITE_URL + '/' } }];
+  return page({ title: `What's new · release notes · ${SITE}`, desc: clip(`StudyCat release notes: ${LOG.slice(0, 3).map(r => r.t).join('; ')}.`, 158), url: '/learn/whats-new.html', type: 'website', crumbs: [{ n: "What's new", u: '/learn/whats-new.html' }], body, ld });
 }
 
 /* ---------- study guides and resources ---------- */
@@ -163,27 +163,27 @@ const guideUrl = g => `/learn/guides/${g.id}.html`;
 function guideBodyHtml(g) { return g.body.map(b => b.h ? `<h2>${inlineMd(b.h)}</h2>` : b.p ? `<p>${inlineMd(b.p)}</p>` : b.ul ? `<ul class="s-list">${b.ul.map(x => `<li>${inlineMd(x)}</li>`).join('')}</ul>` : b.ol ? `<ol class="s-list ol">${b.ol.map(x => `<li>${inlineMd(x)}</li>`).join('')}</ol>` : b.tip ? `<div class="s-tip"><span class="s-eyebrow">Tip</span><div>${inlineMd(b.tip)}</div></div>` : b.q ? `<blockquote class="s-quote">${inlineMd(b.q)}</blockquote>` : '').join(''); }
 function guidePage(g) {
   const others = GUIDES.filter(x => x !== g).slice(0, 4);
-  const body = `<div class="s-eyebrow">Mathub study guide · ${g.minutes} min read · ${g.tags.map(esc).join(' · ')}</div>
+  const body = `<div class="s-eyebrow">StudyCat study guide · ${g.minutes} min read · ${g.tags.map(esc).join(' · ')}</div>
 <h1>${esc(g.title)}</h1>
 <p class="s-lead">${esc(g.blurb)}</p>
 ${guideBodyHtml(g)}
-<section class="s-cta"><h2>Put it to work</h2><p>Mathub turns these ideas into a daily plan: due flashcards on a spacing schedule, one-question lessons, endless practice and a focus timer, for ${ORDER.map(c => Courses[c].code).join(', ')}.</p><div class="s-btns"><a class="s-btn primary" href="/#/today">Open Today in Mathub</a><a class="s-btn" href="/learn/guides/">All study guides</a></div></section>
+<section class="s-cta"><h2>Put it to work</h2><p>StudyCat turns these ideas into a daily plan: due flashcards on a spacing schedule, one-question lessons, endless practice and a focus timer, for ${ORDER.map(c => Courses[c].code).join(', ')}.</p><div class="s-btns"><a class="s-btn primary" href="/#/today">Open Today in StudyCat</a><a class="s-btn" href="/learn/guides/">All study guides</a></div></section>
 <section><h2>More guides</h2><div class="s-cards">${others.map(o => `<a class="s-card" href="${guideUrl(o)}"><div class="s-eyebrow">${o.minutes} min</div><h2>${esc(o.title)}</h2><p>${esc(o.blurb)}</p></a>`).join('')}</div></section>`;
   const ld = [{ '@context': 'https://schema.org', '@type': 'Article', headline: g.title, description: g.blurb, url: SITE_URL + guideUrl(g), datePublished: TODAY, dateModified: TODAY, author: { '@type': 'Organization', name: SITE }, publisher: { '@type': 'Organization', name: SITE }, keywords: g.tags.join(', '), timeRequired: `PT${g.minutes}M` }];
   return page({ title: `${g.title} · study guide · ${SITE}`, desc: clip(g.blurb, 158), url: guideUrl(g), crumbs: [{ n: 'Guides', u: '/learn/guides/' }, { n: g.title, u: guideUrl(g) }], body, ld });
 }
 function guidesIndexPage() {
-  const body = `<div class="s-eyebrow">Mathub · study skills</div><h1>Study guides for college classes</h1><p class="s-lead">${GUIDES.length} short, practical guides written for Montana State students in calculus, physics, precalculus, writing and Python: how to study for a math exam, active recall, focus, office hours, test anxiety, note-taking and more. Each takes under six minutes.</p>
+  const body = `<div class="s-eyebrow">StudyCat · study skills</div><h1>Study guides for college classes</h1><p class="s-lead">${GUIDES.length} short, practical guides written for Montana State students in calculus, physics, precalculus, writing and Python: how to study for a math exam, active recall, focus, office hours, test anxiety, note-taking and more. Each takes under six minutes.</p>
 <div class="s-cards">${GUIDES.map(g => `<a class="s-card" href="${guideUrl(g)}"><div class="s-eyebrow">${g.minutes} min · ${g.tags.slice(0, 2).map(esc).join(' · ')}</div><h2>${esc(g.title)}</h2><p>${esc(g.blurb)}</p></a>`).join('')}</div>
-<section class="s-cta"><h2>Study with Mathub</h2><p>Free notes, endless practice, flashcards and calendars for every class, plus a focus room and a resources hub.</p><div class="s-btns"><a class="s-btn primary" href="/">Open Mathub</a><a class="s-btn" href="/learn/resources.html">Resources</a></div></section>`;
+<section class="s-cta"><h2>Study with StudyCat</h2><p>Free notes, endless practice, flashcards and calendars for every class, plus a focus room and a resources hub.</p><div class="s-btns"><a class="s-btn primary" href="/">Open StudyCat</a><a class="s-btn" href="/learn/resources.html">Resources</a></div></section>`;
   const ld = [{ '@context': 'https://schema.org', '@type': 'CollectionPage', name: 'Study guides', url: SITE_URL + '/learn/guides/', hasPart: GUIDES.map(g => ({ '@type': 'Article', headline: g.title, url: SITE_URL + guideUrl(g) })) }];
   return page({ title: `Study guides: how to study for math and physics exams, focus, notes · ${SITE}`, desc: clip(`${GUIDES.length} practical study-skills guides for college students: exam plans, active recall, focus blocks, office hours, test anxiety, note-taking, coding and essay drafting.`, 158), url: '/learn/guides/', type: 'website', crumbs: [{ n: 'Guides', u: '/learn/guides/' }], body, ld });
 }
 function resourcesPage() {
   const grp = g => RES.ITEMS.filter(it => it.g === g.id && /^https?:/.test(it.u));
-  const body = `<div class="s-eyebrow">Mathub · resources</div><h1>Free study resources for Montana State classes</h1><p class="s-lead">Curated links for every class and for studying in general: free textbooks, video channels, practice sites, tools, and the campus services most students never use. Save any of them to your account inside Mathub.</p>
+  const body = `<div class="s-eyebrow">StudyCat · resources</div><h1>Free study resources for Montana State classes</h1><p class="s-lead">Curated links for every class and for studying in general: free textbooks, video channels, practice sites, tools, and the campus services most students never use. Save any of them to your account inside StudyCat.</p>
 ${RES.GROUPS.map(g => { const items = grp(g); return items.length ? `<section><h2>${esc(g.title)}</h2><p>${esc(g.blurb)}</p><ul class="s-res">${items.map(it => `<li><a href="${esc(it.u)}" target="_blank" rel="noopener">${esc(it.t)}</a> <span class="s-kind">${esc(RES.KINDS[it.k] || it.k)}</span><br><span class="s-desc">${esc(it.d)}</span></li>`).join('')}</ul></section>` : ''; }).join('')}
-<section class="s-cta"><h2>Everything else lives in the app</h2><p>Practice questions, flashcards, calendars, a focus room, a code playground and a class board.</p><div class="s-btns"><a class="s-btn primary" href="/#/resources">Open resources in Mathub</a><a class="s-btn" href="/learn/guides/">Study guides</a></div></section>`;
+<section class="s-cta"><h2>Everything else lives in the app</h2><p>Practice questions, flashcards, calendars, a focus room, a code playground and a class board.</p><div class="s-btns"><a class="s-btn primary" href="/#/resources">Open resources in StudyCat</a><a class="s-btn" href="/learn/guides/">Study guides</a></div></section>`;
   const ld = [{ '@context': 'https://schema.org', '@type': 'CollectionPage', name: 'Study resources for Montana State classes', url: SITE_URL + '/learn/resources.html', isPartOf: { '@type': 'WebSite', name: SITE, url: SITE_URL + '/' } }];
   return page({ title: `Free study resources for M171, PHSX 220, M151Q, WRIT 101 and CSCI 127 · ${SITE}`, desc: clip('Curated free resources for Montana State classes: textbooks, video channels, practice sites, tools, tutoring, the Writing Center, counseling and more, organized by class.', 158), url: '/learn/resources.html', type: 'website', crumbs: [{ n: 'Resources', u: '/learn/resources.html' }], body, ld });
 }

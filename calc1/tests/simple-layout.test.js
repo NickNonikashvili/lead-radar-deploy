@@ -1,31 +1,22 @@
-/* Simpler screens: the sidebar in five groups, a short start page (hero, Bo, classes and the next step, Your day, the rest folded under More to explore; a first visit sees its classes before the steps), short class cards, the class dashboard with five tabs, a quiet top bar for newcomers, and the one-line preview note. */
+/* Simpler screens: the sidebar in five groups, a short start page (the hero, the steps on a first visit, and Your home: widgets the student arranges), the class dashboard with five tabs, a quiet top bar for newcomers, and the one-line preview note. */
 const T = require('./lib');
 (async () => {
   const { mk, go, log, check, hscroll } = await T.start({});
   const [c, p] = await mk(1360, 900, { serviceWorkers: 'block' });
 
   // start page, first visit as a guest
-  await go(p, '#/', 1200);
+  await go(p, '#/', 1500);
   const land = await p.evaluate(() => {
-    const secs = [...document.querySelectorAll('.landing-wrap > .land-sec > .sec-title, .landing-wrap > .land-sec > .sec-h > .sec-title, .landing-wrap > .land-more .sec-title')].map(h => h.textContent.trim());
+    const secs = [...document.querySelectorAll('.landing-wrap > .land-sec > .sec-title, .landing-wrap > .land-sec > .sec-h > .sec-title')].map(h => h.textContent.trim());
     const hero = [...document.querySelectorAll('.landing-top .hero-actions > *')].map(e => e.id || e.className.split(' ').filter(c => c !== 'btn' && c !== 'sm').join('.'));
-    const card = document.querySelector('.course-card.calc'); const more = document.querySelector('#land-more');
-    return { secs, hero, quick: !!document.querySelector('.quick-row, .land-next .hero-focus, .land-next [data-roll="all"]'), bo: (document.querySelector('.landing-wrap > .land-bo') || {}).getAttribute ? document.querySelector('.landing-wrap > .land-bo').getAttribute('href') : '', steps: document.querySelectorAll('.start-steps .start-step').length, ticker: !!document.querySelector('#landing-ticker'), meta: card.querySelectorAll('.course-meta, .cc-stats').length, buttons: card.querySelectorAll('.course-foot .btn').length, h: card.getBoundingClientRect().height, folded: !!more && more.tagName === 'DETAILS' && !more.open, tabs: [...document.querySelectorAll('#land-more .landing-tabs .tab')].map(t => t.dataset.tab), guides: document.querySelectorAll('#land-more .pane[data-pane="guides"] .guides-strip .guide-card').length, strip: !!document.querySelector('#land-more .pane[data-pane="inside"] .stat-strip'), presence: !!document.querySelector('#land-more .pane[data-pane="community"] #landing-presence'), league: !!document.querySelector('#land-more .pane[data-pane="community"] .league-slot') };
+    return { secs, hero, widgets: [...document.querySelectorAll('#dash-canvas > .dw')].map(w => w.dataset.w), bo: (document.querySelector('.dw[data-w="bo"] .land-bo') || {}).getAttribute ? document.querySelector('.dw[data-w="bo"] .land-bo').getAttribute('href') : '', steps: document.querySelectorAll('.start-steps .start-step').length, ticker: !!document.querySelector('#landing-ticker'), path: !!document.querySelector('#view .ap-li, #view .ah-pathsec'), rows: document.querySelectorAll('.dw[data-w="classes"] .dwk').length };
   });
   log('start page:', JSON.stringify(land));
-  check('start page reads in a few groups: a first visit sees its classes, then the steps, Your day, and the rest folded away', land.secs.join('|') === 'Your classes|Start here|Your day|More to explore', land.secs);
+  check('the start page is the hero, three steps and Your home: one section of widgets', land.secs.join('|') === 'Your home' && land.steps === 3, land.secs);
+  check('a first visit\'s home: the classes first, then Bo and the guides', land.widgets[0] === 'classes' && land.widgets.includes('bo') && land.widgets.includes('guides') && land.rows > 3, land.widgets);
   check('the hero keeps Today and For professors; search, focus sounds, the account and the theme are in the header on every page', land.hero.length === 2 && /hero-today/.test(land.hero[0]) && land.hero[1] === 'hero-faculty', land.hero);
   check('visitors get one line on Bo that opens the one-minute demo', land.bo === '#/max', land.bo);
-  check('no row of extra buttons under the next step (the timer and the d20 are in the sidebar and on each class)', !land.quick);
-  check('first-time visitors get three numbered steps', land.steps === 3);
-  check('no scrolling ticker', !land.ticker);
-  check('class cards are short: the class, its next exam and one button', land.meta === 0 && land.buttons === 1 && land.h < 360, { meta: land.meta, buttons: land.buttons, h: land.h });
-  check('the extras are folded under More to explore: this week, classmates, guides, what is inside', land.folded && land.tabs.join(',') === 'week,community,guides,inside', land);
-  check('guides, the stat strip, presence and the league are in its tabs', land.guides === 3 && land.strip && land.presence && land.league, land);
-  await p.click('#land-more > summary'); await p.waitForTimeout(500);
-  check('opening it shows the tabs and is remembered', await p.evaluate(() => document.querySelector('#land-more').open && App.settings().landMore === true && !!document.querySelector('#land-more .landing-tabs .tab.on')));
-  await p.reload(); await p.waitForTimeout(1200); check('it stays open after a reload', await p.evaluate(() => document.querySelector('#land-more').open));
-  await p.click('#land-more > summary'); await p.waitForTimeout(300);
+  check('no learning path and no scrolling ticker on the start page', !land.path && !land.ticker);
 
   // top bar and preview note on a class page
   await go(p, '#/calc', 1500);
@@ -58,15 +49,15 @@ const T = require('./lib');
   // after some studying the start page switches to "Your next step" and the widgets appear
   await p.evaluate(() => { App.addXP(10, { course: 'calc', silent: true }); const s = App.settings(); s.lastVisit = { hash: '#/calc/notes/1.3', label: 'Calc I · Notes', course: 'calc', t: Date.now() - 3600000 }; localStorage.setItem('studyhub-settings', JSON.stringify(s)); });
   await go(p, '#/', 1200);
-  const back = await p.evaluate(() => ({ title: document.querySelector('.land-next .sec-title').textContent.trim(), steps: !!document.querySelector('.start-steps'), resume: !!document.querySelector('.land-next .resume-card'), hub: (() => { const h = document.querySelector('#topbar .hub-slot'); return !!h && getComputedStyle(h).display !== 'none'; })() }));
-  check('returning students see "Your next step" with a resume card', back.title === 'Your next step' && !back.steps && back.resume, back);
+  const back = await p.evaluate(() => ({ widgets: [...document.querySelectorAll('#dash-canvas > .dw')].map(w => w.dataset.w), steps: !!document.querySelector('.start-steps'), hub: (() => { const h = document.querySelector('#topbar .hub-slot'); return !!h && getComputedStyle(h).display !== 'none'; })() }));
+  check('returning students get their home: Up next, Today and Bo first, no first-visit steps', back.widgets.slice(0, 3).join() === 'next,today,bo' && !back.steps, back);
   check('streak and XP widgets appear once there is something to show', back.hub, back);
   await c.close();
 
   // phones
   const [cm, m] = await mk(390, 844, { serviceWorkers: 'block' });
   await go(m, '#/', 1200); check('phone: start page does not scroll sideways', await hscroll(m));
-  const cta = await m.evaluate(() => { const b = document.querySelector('.course-card.calc .course-open'); return b.scrollWidth <= b.clientWidth + 1; });
+  const cta = await m.evaluate(() => { const b = document.querySelector('.dwk[data-c="calc"]'); return !!b && b.scrollWidth <= b.clientWidth + 1; });
   check('phone: class buttons are not cut off', cta);
   await go(m, '#/calc', 1400); check('phone: dashboard does not scroll sideways', await hscroll(m));
   await cm.close();

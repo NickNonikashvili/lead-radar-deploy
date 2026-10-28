@@ -1,6 +1,6 @@
 <?php
 /* ============================================================
-   Mathub account server — keys and settings from the admin panel
+   StudyCat account server — keys and settings from the admin panel
    Routes: admin_config (what is set), admin_config_save, admin_config_test
    - Administrators change the site's keys (Anthropic, OpenAI, RevenueCat), the email password and the other
      settings in the admin panel (Keys & settings) instead of editing config.local.php on the server.
@@ -42,20 +42,20 @@ function mh_siteconfig_fields(): array {
     'ai_voice_monthly'   => ['ai', 'Characters Bo speaks, per student per month', 'int', '', [0, 10000000]],
     'ai_listen_monthly'  => ['ai', 'Seconds Bo listens (Firefox), per student per month', 'int', '', [0, 1000000]],
     'revenuecat_secret'  => ['pay', 'RevenueCat secret API key (v1)', 'secret', 'RevenueCat → Project settings → API keys → Secret API keys. Lets the server see each account’s plan.'],
-    'revenuecat_v2_key'  => ['pay', 'RevenueCat secret API key (v2)', 'secret', 'Optional, with write access to subscriptions: Cancel plan then cancels website plans right on Mathub.'],
+    'revenuecat_v2_key'  => ['pay', 'RevenueCat secret API key (v2)', 'secret', 'Optional, with write access to subscriptions: Cancel plan then cancels website plans right on StudyCat.'],
     'revenuecat_project' => ['pay', 'RevenueCat project id', 'text', 'The proj… id in the RevenueCat dashboard’s address. Needed with the v2 key.'],
-    'pro_web_link'       => ['pay', 'Mathub Pro web purchase link', 'url', 'RevenueCat → Web → Web Purchase Links (https://pay.rev.cat/…), without a user id.'],
-    'max_web_link'       => ['pay', 'Mathub Max web purchase link', 'url', ''],
-    'pro_web_price'      => ['pay', 'Mathub Pro price shown on the website', 'price', ''],
-    'max_web_price'      => ['pay', 'Mathub Max price shown on the website', 'price', '$20 by default.'],
+    'pro_web_link'       => ['pay', 'StudyCat Pro web purchase link', 'url', 'RevenueCat → Web → Web Purchase Links (https://pay.rev.cat/…), without a user id.'],
+    'max_web_link'       => ['pay', 'StudyCat Max web purchase link', 'url', ''],
+    'pro_web_price'      => ['pay', 'StudyCat Pro price shown on the website', 'price', ''],
+    'max_web_price'      => ['pay', 'StudyCat Max price shown on the website', 'price', '$20 by default.'],
     'credits_free'       => ['pay', 'Credits a month without a plan', 'int', '100 by default. 1 credit is about 1¢. They come back on the 1st.', [0, 100000]],
-    'credits_pro'        => ['pay', 'Credits a month with Mathub Pro', 'int', '1,000 by default.', [0, 1000000]],
-    'credits_max'        => ['pay', 'Credits a month with Mathub Max', 'int', '2,000 by default. Max also gets the stronger call model.', [0, 1000000]],
+    'credits_pro'        => ['pay', 'Credits a month with StudyCat Pro', 'int', '1,000 by default.', [0, 1000000]],
+    'credits_max'        => ['pay', 'Credits a month with StudyCat Max', 'int', '2,000 by default. Max also gets the stronger call model.', [0, 1000000]],
     'credits_pack'       => ['pay', 'Credits in a pack to buy', 'int', '1,000 by default. Bought credits never expire; a member uses the month’s credits first.', [1, 1000000]],
     'credits_pack_price' => ['pay', 'Price of a pack, shown on the website', 'price', '$10 by default. Set the real price on the product in RevenueCat.'],
-    'credits_link'       => ['pay', 'Credits web purchase link', 'url', 'RevenueCat → Web → Web Purchase Links, for an offering with the one-time (consumable) credits product, without a user id. Its success page: https://mathub.space/#/usage?paid=1.'],
+    'credits_link'       => ['pay', 'Credits web purchase link', 'url', 'RevenueCat → Web → Web Purchase Links, for an offering with the one-time (consumable) credits product, without a user id. Its success page: https://studycat.org/#/usage?paid=1.'],
     'credits_product'    => ['pay', 'Credits product id in RevenueCat', 'text', 'mathub_credits by default. Each purchase adds a pack; a refunded one is taken back. (Call hours bought before, mathub_call_hour, count as 1,000 credits each.)'],
-    'credits_markup'     => ['pay', 'Credits markup on what the AI costs', 'num', '2 by default: a chat answer that costs Mathub 1¢ in tokens costs 2 credits.', [1, 10]],
+    'credits_markup'     => ['pay', 'Credits markup on what the AI costs', 'num', '2 by default: a chat answer that costs StudyCat 1¢ in tokens costs 2 credits.', [1, 10]],
     'credits_call_strong' => ['pay', 'Credits a minute, calls on Max’s model', 'num', '17 by default (about what gpt-realtime-2.1 costs, with the markup).', [0, 1000]],
     'credits_call_light' => ['pay', 'Credits a minute, calls on the light model', 'num', '6 by default (everyone without Max).', [0, 1000]],
     'credits_image'      => ['pay', 'Credits per picture', 'num', '15 by default; credits_image_big for wide or tall ones.', [0, 1000]],
@@ -90,7 +90,7 @@ function mh_siteconfig_fields(): array {
     'session_days'       => ['site', 'Stay signed in for (days)', 'int', '', [1, 730]],
     'offsite_endpoint'   => ['backup', 'Storage address (S3 endpoint)', 'endpoint', 'Amazon S3: https://s3.us-west-2.amazonaws.com. Cloudflare R2: https://<account id>.r2.cloudflarestorage.com. Backblaze B2: https://s3.us-west-004.backblazeb2.com.'],
     'offsite_region'     => ['backup', 'Region', 'text', 'us-west-2 on Amazon; auto on Cloudflare R2; on Backblaze the part after s3. in the address (us-west-004).'],
-    'offsite_bucket'     => ['backup', 'Bucket', 'text', 'A private bucket for Mathub’s copies.'],
+    'offsite_bucket'     => ['backup', 'Bucket', 'text', 'A private bucket for StudyCat’s copies.'],
     'offsite_prefix'     => ['backup', 'Folder in the bucket', 'text', 'Optional, like mathub.'],
     'offsite_key_id'     => ['backup', 'Access key ID', 'text', 'Best a key that may only read, write, list and delete in that bucket.'],
     'offsite_secret'     => ['backup', 'Secret access key', 'secret', ''],
@@ -196,7 +196,7 @@ function mh_siteconfig_route(string $route, array $in, array $cfg, string $ip): 
       mh_method('POST');
       mh_rate_or_fail("config_save:{$u['id']}", 40, 900, 'Too many saves at once. Wait a few minutes.');
       $full = $db->prepare('SELECT * FROM users WHERE id = ?'); $full->execute([$u['id']]); $me = $full->fetch();
-      if (!mh_password_check($me ?: null, (string)($in['password'] ?? ''))) { mh_rate_or_fail("config_badpass:{$u['id']}", 6, 900, 'Too many wrong passwords. Wait a few minutes.'); mh_fail('That is not your password. Saving keys and settings needs your Mathub password.', 401, ['field' => 'password']); }
+      if (!mh_password_check($me ?: null, (string)($in['password'] ?? ''))) { mh_rate_or_fail("config_badpass:{$u['id']}", 6, 900, 'Too many wrong passwords. Wait a few minutes.'); mh_fail('That is not your password. Saving keys and settings needs your StudyCat password.', 401, ['field' => 'password']); }
       $values = is_array($in['values'] ?? null) ? $in['values'] : []; $clear = is_array($in['clear'] ?? null) ? array_values(array_filter($in['clear'], 'is_string')) : [];
       $next = $saved; $changed = [];
       foreach ($values as $k => $v) {
@@ -221,7 +221,7 @@ function mh_siteconfig_route(string $route, array $in, array $cfg, string $ip): 
       $what = (string)($in['what'] ?? ''); $c = array_merge($files, $saved);
       if ($what === 'mail') {
         require_once __DIR__ . '/mailer.php';
-        $site = (string)($c['site_name'] ?? 'Mathub');
+        $site = (string)($c['site_name'] ?? 'StudyCat');
         $r = mh_send_mail($c, $u['email'], "$site test email", "This is a test email from the $site admin panel. If you got it, email works.", '<p>This is a test email from the ' . htmlspecialchars($site) . ' admin panel.</p><p>If you got it, email works.</p>');
         if (!$r['ok']) mh_json(['ok' => true, 'pass' => false, 'message' => 'Sending failed: ' . ($r['error'] ?? 'unknown error')]);
         mh_json(['ok' => true, 'pass' => true, 'message' => (mh_mail_mode($c) === 'log' ? 'Written to the mail log (mail_mode is log), not sent.' : 'Sent to ' . $u['email'] . '. Check the inbox (and spam).')]);
@@ -244,7 +244,7 @@ function mh_siteconfig_route(string $route, array $in, array $cfg, string $ip): 
       if ($what === 'backup') {   // a small file written, read, listed and deleted in the bucket, with the settings as they would be saved
         require_once __DIR__ . '/offsite.php'; $O = mh_offsite_cfg($c); $out = [];
         if ($O['endpoint'] === '' || $O['bucket'] === '' || $O['key'] === '' || $O['secret'] === '') mh_json(['ok' => true, 'pass' => false, 'results' => [['name' => 'Storage', 'pass' => false, 'message' => 'Set the address, bucket, access key ID and secret first.']]]);
-        $key = mh_offsite_key($O, 'mathub-check.txt'); $body = 'Mathub checked it can write here, ' . gmdate('Y-m-d H:i') . ' UTC. It deletes this file right after.';
+        $key = mh_offsite_key($O, 'mathub-check.txt'); $body = 'StudyCat checked it can write here, ' . gmdate('Y-m-d H:i') . ' UTC. It deletes this file right after.';
         $tmp = mh_offsite_tmp() . '/check-' . bin2hex(random_bytes(4)) . '.txt'; file_put_contents($tmp, $body);
         $r = mh_s3($O, 'PUT', $key, [], ['upload' => $tmp, 'sha256' => hash('sha256', $body), 'headers' => ['content-type' => 'text/plain'], 'timeout' => 30]); @unlink($tmp);
         $out[] = ['name' => 'Write', 'pass' => $r['code'] === 200, 'message' => $r['code'] === 200 ? 'A test file went in.' : mh_s3_why($r)];

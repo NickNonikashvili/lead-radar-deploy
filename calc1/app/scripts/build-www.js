@@ -50,7 +50,7 @@ const BUILD = (/data-build="([^"]+)"/.exec(html) || [])[1] || 'dev';
 const must = (re, what) => { if (!re.test(html)) throw new Error('build-www: could not find ' + what + ' in index.html'); };
 must(/<meta http-equiv="Content-Security-Policy"[^>]*>/, 'the CSP meta tag');
 html = html.replace(/<meta http-equiv="Content-Security-Policy"[^>]*>/,
-  `<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https:; media-src 'self' blob: data:; connect-src 'self' blob: data: https://mathub.space https://api.dictionaryapi.dev; object-src 'none'; base-uri 'none'; form-action 'none'; frame-src 'none'">`);
+  `<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https:; media-src 'self' blob: data:; connect-src 'self' blob: data: https://studycat.org https://api.dictionaryapi.dev; object-src 'none'; base-uri 'none'; form-action 'none'; frame-src 'none'">`);
 must(/<meta name="viewport"[^>]*>/, 'the viewport meta tag');
 html = html.replace(/<meta name="viewport"[^>]*>/, '<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">');
 html = html.replace(/<html lang="en" data-build="([^"]+)">/, `<html lang="en" data-build="$1" data-app-version="${VERSION}">`);
@@ -72,4 +72,4 @@ const remote = [...html.matchAll(/<script[^>]+src="(https?:[^"]+)"/g)].map(m => 
 if (remote.length) throw new Error('build-www: scripts from other sites in index.html: ' + remote.join(', '));
 const missing = [...html.matchAll(/(?:src|href)="(assets\/[^"?]+)/g)].map(m => m[1]).filter(f => !fs.existsSync(path.join(WWW, f)));
 if (missing.length) throw new Error('build-www: missing files: ' + missing.join(', '));
-console.log(`app/www built: Mathub ${VERSION} (site ${BUILD}), ${(size(WWW) / 1e6).toFixed(1)} MB`);
+console.log(`app/www built: StudyCat ${VERSION} (site ${BUILD}), ${(size(WWW) / 1e6).toFixed(1)} MB`);

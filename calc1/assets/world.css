@@ -1,5 +1,5 @@
 /* ============================================================
-   Mathub — Big Sky (default look since 2026.10.02.3)
+   StudyCat — Big Sky (default look since 2026.10.02.3)
    Every class is a mountain and its next exam is the summit, drawn
    as a bright, illustrated climb. Montana daylight: white surfaces
    on a faint sky ground, Bobcat navy ink, each class in its own
@@ -550,7 +550,7 @@ html[data-motion="off"] .trail-board.tb-anim .tb-path, html[data-motion="off"] .
 :root:not([data-skin]) .fa-post.full { padding: 22px 24px; }
 :root:not([data-skin]) .fa-post h3, :root:not([data-skin]) .fa-title { font-family: var(--font-display); font-weight: 800; }
 
-/* standalone pages: the logo already sits beside the title, so the "Mathub" line above it goes */
+/* standalone pages: the logo already sits beside the title, so the "StudyCat" line above it goes */
 :root:not([data-skin]) .landing-top:not(.hero) > div > .eyebrow:first-child, :root:not([data-skin]) .fz-top > div > .eyebrow:first-child { display: none; }
 :root:not([data-skin]) .landing-top:not(.hero) .landing-title { font-size: 34px; }
 

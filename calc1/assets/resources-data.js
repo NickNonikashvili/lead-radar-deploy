@@ -1,10 +1,10 @@
 /* ============================================================
-   Mathub — resources
+   StudyCat — resources
    Curated links for every class, for Montana State and for studying
    in general. Each item: g (group), t (title), u (url), d (one line),
    k (kind: video, practice, tool, reading, reference, msu, community,
    app, wellbeing), tags, and top (shown first). "in" links point into
-   Mathub itself. Add an item and it appears in the app and on the
+   StudyCat itself. Add an item and it appears in the app and on the
    static resources page (node scripts/build-seo.js).
    ============================================================ */
 (function (global) {
@@ -27,26 +27,26 @@
   const add = (g, t, u, d, k, tags = [], top = false) => I.push({ g, t, u, d, k, tags, top });
 
   /* ---------- every class ---------- */
-  add('general', 'Today in Mathub', '#/today', 'Your daily plan: due flashcards, one lesson, the challenge and deadlines, across every class.', 'tool', ['mathub'], true);
+  add('general', 'Today in StudyCat', '#/today', 'Your daily plan: due flashcards, one lesson, the challenge and deadlines, across every class.', 'tool', ['mathub'], true);
   add('general', 'Focus room', '#/focus', 'A 25, 50 or 90-minute timer with a task, sounds and a session log that feeds your streak and XP.', 'tool', ['mathub', 'focus'], true);
   add('general', 'Study skills guides', '#/guides', 'Short, practical guides written for these classes: how to study for a math exam, active recall, office hours, test anxiety.', 'reading', ['mathub', 'guides'], true);
   add('general', 'Khan Academy', 'https://www.khanacademy.org/', 'Free video lessons and practice for every math and science topic in these classes, with mastery tracking.', 'video', ['math', 'physics', 'free'], true);
   add('general', 'Wolfram|Alpha', 'https://www.wolframalpha.com/', 'Type any math or physics question and get the answer with steps (steps need the paid tier; answers are free). Use it to check, not to skip the work.', 'tool', ['math', 'physics', 'checker'], true);
   add('general', 'Desmos graphing calculator', 'https://www.desmos.com/calculator', 'The fastest way to see a function, a derivative, a limit or a data set. Sliders make parameters come alive.', 'tool', ['math', 'graphs'], true);
-  add('general', 'Desmos scientific calculator', 'https://www.desmos.com/scientific', 'A clean scientific calculator in the browser (also in Mathub Tools).', 'tool', ['calculator']);
+  add('general', 'Desmos scientific calculator', 'https://www.desmos.com/scientific', 'A clean scientific calculator in the browser (also in StudyCat Tools).', 'tool', ['calculator']);
   add('general', 'GeoGebra', 'https://www.geogebra.org/', 'Interactive geometry, graphing, 3D and calculus applets; thousands of ready-made demos for unit circle, derivatives and vectors.', 'tool', ['math', 'graphs']);
   add('general', 'Symbolab', 'https://www.symbolab.com/', 'Step-by-step solutions for algebra, calculus and trig. Good for checking a derivative or integral after you have tried it.', 'tool', ['math', 'checker']);
   add('general', 'OpenStax', 'https://openstax.org/', 'Peer-reviewed, completely free college textbooks: University Physics, Precalculus, Calculus, Statistics and more.', 'reading', ['free', 'textbook'], true);
   add('general', 'LibreTexts', 'https://libretexts.org/', 'A huge open library of textbooks and worked examples in math, physics, chemistry and computer science.', 'reading', ['free', 'textbook']);
   add('general', 'MIT OpenCourseWare', 'https://ocw.mit.edu/', 'Full MIT courses with lecture videos, problem sets and exams with solutions. Single-variable calculus and classical mechanics map closely to M171 and PHSX 220.', 'video', ['lectures', 'free']);
-  add('general', 'Anki', 'https://apps.ankiweb.net/', 'The classic spaced-repetition flashcard app (free on desktop and Android). Mathub flashcards use the same idea; Anki is for building your own decks in any class.', 'app', ['flashcards', 'spaced repetition']);
+  add('general', 'Anki', 'https://apps.ankiweb.net/', 'The classic spaced-repetition flashcard app (free on desktop and Android). StudyCat flashcards use the same idea; Anki is for building your own decks in any class.', 'app', ['flashcards', 'spaced repetition']);
   add('general', 'Quizlet', 'https://quizlet.com/', 'Shared flashcard sets for almost any textbook chapter; search your class name plus the chapter.', 'app', ['flashcards']);
   add('general', 'Retrieval Practice', 'https://www.retrievalpractice.org/', 'The research behind why testing yourself beats rereading, with free guides for students.', 'reading', ['study skills']);
   add('general', 'Learning How to Learn (free course)', 'https://www.coursera.org/learn/learning-how-to-learn', 'The most-taken online course ever: focused vs. diffuse thinking, chunking, procrastination and memory, in short videos.', 'video', ['study skills']);
   add('general', 'Cornell note-taking system', 'https://lsc.cornell.edu/how-to-study/taking-notes/cornell-note-taking-system/', 'The two-column notes method that turns lecture notes into a self-quiz. Cornell explains it in one page.', 'reading', ['notes', 'study skills']);
-  add('general', 'Pomofocus', 'https://pomofocus.io/', 'A minimal Pomodoro timer with tasks, if you want one outside Mathub.', 'app', ['focus']);
+  add('general', 'Pomofocus', 'https://pomofocus.io/', 'A minimal Pomodoro timer with tasks, if you want one outside StudyCat.', 'app', ['focus']);
   add('general', 'Forest', 'https://www.forestapp.cc/', 'Plant a tree that dies if you leave the app: the phone-blocking focus timer that actually works for a lot of people.', 'app', ['focus', 'phone']);
-  add('general', 'Lofi Girl', 'https://www.youtube.com/@LofiGirl', 'Endless study music streams. Mathub focus sounds and your own MP3s live in the sound bubble.', 'video', ['music', 'focus']);
+  add('general', 'Lofi Girl', 'https://www.youtube.com/@LofiGirl', 'Endless study music streams. StudyCat focus sounds and your own MP3s live in the sound bubble.', 'video', ['music', 'focus']);
   add('general', 'Google Scholar', 'https://scholar.google.com/', 'Search academic papers and books; the "cite" button gives you MLA and APA formats instantly.', 'tool', ['research', 'citations']);
   add('general', 'Zotero', 'https://www.zotero.org/', 'Free reference manager: save sources with one click and generate a bibliography in any style.', 'app', ['research', 'citations']);
   add('general', 'ZoteroBib', 'https://zbib.org/', 'Paste a URL, ISBN or DOI and get a formatted citation, no account needed.', 'tool', ['citations'], true);
@@ -54,8 +54,8 @@
   add('general', 'Crash Course', 'https://www.youtube.com/@crashcourse', 'Fast, funny overviews of physics, computer science, statistics and study skills.', 'video', ['overview']);
   add('general', 'Stack Exchange: Mathematics', 'https://math.stackexchange.com/', 'Ask a precise math question and get a careful answer; search first, most questions have been asked.', 'community', ['math', 'q&a']);
   add('general', 'Physics Stack Exchange', 'https://physics.stackexchange.com/', 'Conceptual physics questions answered by people who teach it.', 'community', ['physics', 'q&a']);
-  add('general', 'Mathub discussions', '#/forum', 'Your classmates, this semester, these exact assignments. Ask, answer, form a study group.', 'community', ['mathub'], true);
-  add('general', 'Mathub tools', '#/tools', 'Scientific calculator, unit converter, citation builder, word counter and significant figures, all offline.', 'tool', ['mathub'], true);
+  add('general', 'StudyCat discussions', '#/forum', 'Your classmates, this semester, these exact assignments. Ask, answer, form a study group.', 'community', ['mathub'], true);
+  add('general', 'StudyCat tools', '#/tools', 'Scientific calculator, unit converter, citation builder, word counter and significant figures, all offline.', 'tool', ['mathub'], true);
 
   /* ---------- Montana State ---------- */
   add('msu', 'Office of Student Success', 'https://www.montana.edu/success/', 'Free tutoring, academic coaching, study-skills workshops and the people to talk to when a semester goes sideways.', 'msu', ['tutoring', 'coaching'], true);
@@ -65,7 +65,7 @@
   add('msu', 'MSU Library', 'https://www.lib.montana.edu/', 'Study rooms you can reserve, research help chat, textbooks on reserve, and quiet floors.', 'msu', ['library', 'study space'], true);
   add('msu', 'Counseling & Psychological Services', 'https://www.montana.edu/counseling/', 'Free, confidential counseling for students, plus workshops on stress and test anxiety. Same-day options exist.', 'msu', ['mental health'], true);
   add('msu', 'Office of Disability Services', 'https://www.montana.edu/disabilityservices/', 'Accommodations such as extended exam time, note-taking support and quiet testing rooms. Register early in the semester.', 'msu', ['accommodations']);
-  add('msu', 'Registrar and academic calendar', 'https://www.montana.edu/registrar/', 'Add/drop and withdrawal deadlines, finals schedule, registration dates. Mathub calendars mirror the class ones, but this is the source.', 'msu', ['deadlines']);
+  add('msu', 'Registrar and academic calendar', 'https://www.montana.edu/registrar/', 'Add/drop and withdrawal deadlines, finals schedule, registration dates. StudyCat calendars mirror the class ones, but this is the source.', 'msu', ['deadlines']);
   add('msu', 'MyInfo', 'https://myinfo.montana.edu/', 'Grades, registration, transcripts, financial aid and your class schedule.', 'msu', ['grades', 'registration']);
   add('msu', 'Student Health Partners', 'https://www.montana.edu/health/', 'Medical care, dental and wellness on campus; sick notes and flu shots live here too.', 'msu', ['health']);
   add('msu', 'Financial Aid', 'https://www.montana.edu/finaid/', 'Scholarships, emergency funds and questions about aid.', 'msu', ['money']);
@@ -87,8 +87,8 @@
   add('calc', 'Derivative Calculator', 'https://www.derivative-calculator.net/', 'Shows the steps of a derivative, including which rule was used where. Check your homework, then close it.', 'tool', ['checker']);
   add('calc', 'Integral Calculator', 'https://www.integral-calculator.com/', 'Same idea for integrals, with the substitution or parts steps spelled out.', 'tool', ['checker']);
   add('calc', 'Desmos: derivative explorer', 'https://www.desmos.com/calculator', 'Type f(x) and then d/dx f(x) to watch the derivative graph track the slope. Great for the units 1 and 2 concept questions.', 'tool', ['graphs']);
-  add('calc', 'Mathub grapher and labs', '#/calc/grapher', 'Secant-to-tangent, Riemann sums, area functions and more, built for this class.', 'tool', ['mathub']);
-  add('calc', 'Mathub endless practice', '#/calc/practice', 'Procedural questions per topic with worked solutions and hint ladders.', 'practice', ['mathub'], true);
+  add('calc', 'StudyCat grapher and labs', '#/calc/grapher', 'Secant-to-tangent, Riemann sums, area functions and more, built for this class.', 'tool', ['mathub']);
+  add('calc', 'StudyCat endless practice', '#/calc/practice', 'Procedural questions per topic with worked solutions and hint ladders.', 'practice', ['mathub'], true);
 
   /* ---------- Physics I ---------- */
   add('physics', 'OpenStax University Physics Volume 1', 'https://openstax.org/details/books/university-physics-volume-1', 'The free textbook for the mechanics half of the course: read the summary and try the end-of-chapter problems (answers to odds are included).', 'reading', ['textbook', 'free'], true);
@@ -101,9 +101,9 @@
   add('physics', 'The Physics Classroom', 'https://www.physicsclassroom.com/', 'Tutorials and interactive exercises written for first-year physics, strong on free-body diagrams.', 'reading', ['tutorials']);
   add('physics', 'Isaac Physics', 'https://isaacphysics.org/', 'Free problem sets with hints that scale up in difficulty; excellent for exam-style numerical questions.', 'practice', ['problems']);
   add('physics', 'Crash Course Physics', 'https://www.youtube.com/playlist?list=PL8dPuuaLjXtN0ge7yDk_UA0ldZJdhwkoV', 'Ten-minute overviews for each unit before you dive into problems.', 'video', ['overview']);
-  add('physics', 'Wolfram|Alpha unit conversions', 'https://www.wolframalpha.com/', 'Type "72 km/h in m/s" or "0.5 hp in watts". Mathub Tools has a converter that works offline.', 'tool', ['units']);
-  add('physics', 'Mathub motion lab and solvers', '#/physics/motion', 'Projectiles, motion graphs and the equation solvers built for PHSX 220.', 'tool', ['mathub'], true);
-  add('physics', 'Mathub endless practice', '#/physics/practice', 'Numerical and conceptual questions per topic with full solutions.', 'practice', ['mathub'], true);
+  add('physics', 'Wolfram|Alpha unit conversions', 'https://www.wolframalpha.com/', 'Type "72 km/h in m/s" or "0.5 hp in watts". StudyCat Tools has a converter that works offline.', 'tool', ['units']);
+  add('physics', 'StudyCat motion lab and solvers', '#/physics/motion', 'Projectiles, motion graphs and the equation solvers built for PHSX 220.', 'tool', ['mathub'], true);
+  add('physics', 'StudyCat endless practice', '#/physics/practice', 'Numerical and conceptual questions per topic with full solutions.', 'practice', ['mathub'], true);
 
   /* ---------- Precalculus ---------- */
   add('precalc', 'Khan Academy: Precalculus', 'https://www.khanacademy.org/math/precalculus', 'Functions, exponentials, logs, trig and vectors with instant-feedback practice.', 'video', ['lessons', 'practice'], true);
@@ -116,14 +116,14 @@
   add('precalc', 'Math is Fun', 'https://www.mathsisfun.com/', 'Friendly explanations with interactive diagrams for functions, logs and trig.', 'reading', ['lessons']);
   add('precalc', 'Desmos', 'https://www.desmos.com/calculator', 'Graph transformations, inverse functions and trig graphs with sliders.', 'tool', ['graphs'], true);
   add('precalc', 'GeoGebra unit circle', 'https://www.geogebra.org/search/unit%20circle', 'Interactive unit circles to drill angles, radians and the six trig values.', 'tool', ['unit circle']);
-  add('precalc', 'Mathub unit circle and explorer', '#/precalc/unitcircle', 'Drill the unit circle and explore function families built for M151Q.', 'tool', ['mathub'], true);
-  add('precalc', 'Mathub endless practice', '#/precalc/practice', 'Questions per topic with worked solutions.', 'practice', ['mathub'], true);
+  add('precalc', 'StudyCat unit circle and explorer', '#/precalc/unitcircle', 'Drill the unit circle and explore function families built for M151Q.', 'tool', ['mathub'], true);
+  add('precalc', 'StudyCat endless practice', '#/precalc/practice', 'Questions per topic with worked solutions.', 'practice', ['mathub'], true);
 
   /* ---------- College Writing ---------- */
   add('writ', 'MSU Writing Center', 'https://www.montana.edu/writingcenter/', 'Free tutors for every stage of a WRIT 101 project, from brainstorming to a final polish. Book before deadline weeks fill up.', 'msu', ['tutoring'], true);
   add('writ', 'Purdue OWL: MLA formatting', 'https://owl.purdue.edu/owl/research_and_citation/mla_style/mla_formatting_and_style_guide/mla_formatting_and_style_guide.html', 'Headers, in-text citations and the Works Cited page, with examples for every source type.', 'reference', ['mla', 'citations'], true);
   add('writ', 'Purdue OWL: APA style', 'https://owl.purdue.edu/owl/research_and_citation/apa_style/apa_formatting_and_style_guide/general_format.html', 'The same for APA 7, used by many other MSU classes.', 'reference', ['apa', 'citations']);
-  add('writ', 'ZoteroBib', 'https://zbib.org/', 'Paste a link or ISBN and get the MLA or APA citation. Mathub Tools has a citation builder too.', 'tool', ['citations'], true);
+  add('writ', 'ZoteroBib', 'https://zbib.org/', 'Paste a link or ISBN and get the MLA or APA citation. StudyCat Tools has a citation builder too.', 'tool', ['citations'], true);
   add('writ', 'Hemingway Editor', 'https://hemingwayapp.com/', 'Highlights long sentences, passive voice and adverbs. Run a draft through it once, then decide what to keep.', 'tool', ['editing'], true);
   add('writ', 'Grammarly', 'https://www.grammarly.com/', 'Grammar and clarity checks in the browser and in Docs; the free tier catches most slips.', 'tool', ['editing']);
   add('writ', 'LanguageTool', 'https://languagetool.org/', 'An open-source grammar checker, good for writers whose first language is not English.', 'tool', ['editing']);
@@ -134,14 +134,14 @@
   add('writ', 'YouGlish', 'https://youglish.com/', 'Hear any English word pronounced in real YouTube clips, in American or British accents. Pairs with the Phonetics Lab.', 'tool', ['pronunciation'], true);
   add('writ', 'Forvo', 'https://forvo.com/', 'Native speakers pronouncing words in hundreds of languages.', 'tool', ['pronunciation']);
   add('writ', 'Project Gutenberg', 'https://www.gutenberg.org/', 'Seventy thousand free classic books to read for pleasure or to pull examples from.', 'reading', ['books']);
-  add('writ', 'Mathub Phonetics Lab', '#/writ/phonetics', 'Practice sounds, minimal pairs, IPA symbols and transcription with instant feedback.', 'tool', ['mathub', 'pronunciation'], true);
-  add('writ', 'Mathub read-along readings', '#/writ/readings', 'The class readings read aloud with highlighting, at your speed.', 'tool', ['mathub'], true);
+  add('writ', 'StudyCat Phonetics Lab', '#/writ/phonetics', 'Practice sounds, minimal pairs, IPA symbols and transcription with instant feedback.', 'tool', ['mathub', 'pronunciation'], true);
+  add('writ', 'StudyCat read-along readings', '#/writ/readings', 'The class readings read aloud with highlighting, at your speed.', 'tool', ['mathub'], true);
 
   /* ---------- CSCI 127 ---------- */
   add('csci', 'Python documentation', 'https://docs.python.org/3/', 'The official reference. The Tutorial section is genuinely readable; the Library Reference is where you look things up.', 'reference', ['docs'], true);
   add('csci', 'The Python Tutorial', 'https://docs.python.org/3/tutorial/', 'Chapters 3 to 9 cover everything CSCI 127 does, in the same order.', 'reading', ['docs', 'tutorial'], true);
   add('csci', 'Python Tutor', 'https://pythontutor.com/', 'Paste code and step through it line by line, watching variables and the call stack. The single best tool for understanding loops, functions and lists.', 'tool', ['visualizer', 'debugging'], true);
-  add('csci', 'Mathub code playground', '#/csci/playground', 'Run Python in the browser with input(), turtle drawings and matplotlib charts, right next to the notes.', 'tool', ['mathub'], true);
+  add('csci', 'StudyCat code playground', '#/csci/playground', 'Run Python in the browser with input(), turtle drawings and matplotlib charts, right next to the notes.', 'tool', ['mathub'], true);
   add('csci', 'W3Schools Python', 'https://www.w3schools.com/python/', 'Short pages with a "Try it yourself" editor for every language feature.', 'reading', ['tutorial', 'reference'], true);
   add('csci', 'Automate the Boring Stuff with Python', 'https://automatetheboringstuff.com/', 'A free book that teaches Python by doing useful things: files, spreadsheets, web pages.', 'reading', ['book', 'free'], true);
   add('csci', 'Think Python (2nd edition)', 'https://greenteapress.com/wp/think-python-2e/', 'A free, careful introduction to programming with Python, with exercises.', 'reading', ['book', 'free']);
@@ -162,7 +162,7 @@
   add('csci', 'regex101', 'https://regex101.com/', 'Test regular expressions with a live explanation of each part.', 'tool', ['regex']);
 
   /* ---------- BIOB 160 ---------- */
-  add('biob', 'Mathub BIOB 160 quizzer', '#/biob/practice', 'Punnett squares, pH, respiration counts, codons and PCR questions generated fresh, with worked answers.', 'tool', ['mathub', 'practice'], true);
+  add('biob', 'StudyCat BIOB 160 quizzer', '#/biob/practice', 'Punnett squares, pH, respiration counts, codons and PCR questions generated fresh, with worked answers.', 'tool', ['mathub', 'practice'], true);
   add('biob', 'OpenStax Biology 2e', 'https://openstax.org/details/books/biology-2e', 'A free, full introductory biology textbook that covers the same chapters as Campbell.', 'reading', ['book', 'free'], true);
   add('biob', 'Khan Academy: Biology', 'https://www.khanacademy.org/science/biology', 'Videos and practice on chemistry of life, cells, energy and genetics.', 'video', ['videos', 'practice'], true);
   add('biob', 'Amoeba Sisters', 'https://www.youtube.com/@AmoebaSisters', 'Short, clear cartoon videos on mitosis, meiosis, Punnett squares, protein synthesis and more.', 'video', ['videos'], true);
@@ -172,7 +172,7 @@
   add('biob', 'PhET: Gene Expression Essentials', 'https://phet.colorado.edu/en/simulations/gene-expression-essentials', 'Build a protein from a gene: transcription and translation you can control.', 'tool', ['simulation']);
 
   /* ---------- KIN 322 ---------- */
-  add('kin', 'Mathub KIN 322 quizzer', '#/kin/practice', 'Planes and axes, levers and torque, ROM norms, knee tests and gait timing, with worked answers.', 'tool', ['mathub', 'practice'], true);
+  add('kin', 'StudyCat KIN 322 quizzer', '#/kin/practice', 'Planes and axes, levers and torque, ROM norms, knee tests and gait timing, with worked answers.', 'tool', ['mathub', 'practice'], true);
   add('kin', 'OpenStax Anatomy & Physiology 2e', 'https://openstax.org/details/books/anatomy-and-physiology-2e', 'A free textbook; chapters 7–11 cover the skeleton, joints and muscles.', 'reading', ['book', 'free'], true);
   add('kin', 'TeachMeAnatomy', 'https://teachmeanatomy.info/', 'Clear pages for every joint, muscle and nerve, with clinical notes; organized by region like this class.', 'reference', ['anatomy'], true);
   add('kin', 'Kenhub', 'https://www.kenhub.com/', 'Anatomy articles, videos and quizzes; many are free, some need an account.', 'practice', ['anatomy', 'quizzes']);
@@ -181,7 +181,7 @@
   add('kin', 'American Spinal Injury Association', 'https://asia-spinalinjury.org/', 'Home of the International Standards (ISNCSCI) exam used to classify spinal cord injuries.', 'reference', ['spinal cord injury']);
 
   /* ---------- PSYX 340 ---------- */
-  add('psyx', 'Mathub PSYX 340 quizzer', '#/psyx/practice', 'Criteria, durations, severity counts and case questions for every disorder, with explanations.', 'tool', ['mathub', 'practice'], true);
+  add('psyx', 'StudyCat PSYX 340 quizzer', '#/psyx/practice', 'Criteria, durations, severity counts and case questions for every disorder, with explanations.', 'tool', ['mathub', 'practice'], true);
   add('psyx', 'OpenStax Psychology 2e: psychological disorders', 'https://openstax.org/books/psychology-2e/pages/15-introduction', 'A free, shorter second explanation of the major disorders (chapter 15) and therapy (chapter 16).', 'reading', ['book', 'free'], true);
   add('psyx', 'NIMH health topics', 'https://www.nimh.nih.gov/health/topics', 'The National Institute of Mental Health’s overviews of each disorder, with current research and statistics.', 'reference', ['disorders', 'statistics'], true);
   add('psyx', 'APA Dictionary of Psychology', 'https://dictionary.apa.org/', 'Precise definitions for the terms that show up on exams.', 'reference', ['terms']);
@@ -197,8 +197,8 @@
   add('wellbeing', 'Sleep Foundation: students', 'https://www.sleepfoundation.org/', 'Why the all-nighter is the worst possible exam strategy, and what to do instead.', 'reading', ['sleep']);
   add('wellbeing', 'Headspace', 'https://www.headspace.com/', 'Guided meditation and focus music; the basics are free.', 'app', ['meditation']);
   add('wellbeing', 'Insight Timer', 'https://insighttimer.com/', 'Thousands of free guided meditations, including short ones for before an exam.', 'app', ['meditation']);
-  add('wellbeing', 'Mathub focus sounds', '#/focus', 'Rain, cafe, brown noise and piano in the sound bubble, with a timer.', 'tool', ['mathub', 'focus']);
-  add('wellbeing', 'Beating test anxiety (guide)', '#/guides/test-anxiety', 'A short Mathub guide with the three things that actually lower exam-day panic.', 'reading', ['mathub', 'guides'], true);
+  add('wellbeing', 'StudyCat focus sounds', '#/focus', 'Rain, cafe, brown noise and piano in the sound bubble, with a timer.', 'tool', ['mathub', 'focus']);
+  add('wellbeing', 'Beating test anxiety (guide)', '#/guides/test-anxiety', 'A short StudyCat guide with the three things that actually lower exam-day panic.', 'reading', ['mathub', 'guides'], true);
 
   global.MATHUB_RESOURCES = { KINDS, GROUPS, ITEMS: I };
 })(typeof window !== 'undefined' ? window : globalThis);

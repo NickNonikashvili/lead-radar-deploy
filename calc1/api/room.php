@@ -1,6 +1,6 @@
 <?php
 /* ============================================================
-   Mathub — study rooms: classmates join a call with Bo (assets/room.js, assets/talk.js).
+   StudyCat — study rooms: classmates join a call with Bo (assets/room.js, assets/talk.js).
    The student on the call (the host) opens a room and shares its code; up to MH_ROOM_GUESTS classmates join with
    it. They see the board and the captions as they happen, write on the board, and type questions that the host's
    Bo hears and answers. Nothing goes peer to peer (no TURN server on shared hosting, and campus Wi-Fi blocks it):

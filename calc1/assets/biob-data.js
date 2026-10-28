@@ -1,5 +1,5 @@
 /* ============================================================
-   Mathub — BIOB 160 Principles of Living Systems (Fall 2026)
+   StudyCat — BIOB 160 Principles of Living Systems (Fall 2026)
    Instructors: Mensur Dlakic (first half) and Alan Dyer (second half).
    Built from the course syllabus and its week-by-week schedule; reading
    pages refer to Campbell Biology (12th ed.). Each topic also links a
@@ -23,7 +23,7 @@
     links: [
       { eyebrow: 'Course site', title: 'Canvas', url: CANVAS, desc: 'Lecture slides, practice quizzes, the lab manual and announcements.' },
       { eyebrow: 'Textbook', title: 'Campbell Biology (RedShelf in Canvas)', url: CANVAS, desc: 'Opens from the RedShelf link in Canvas. Opt out by about Sept 15 if you have your own copy of editions 8–11.' },
-      { eyebrow: 'Free reading', title: 'OpenStax Biology 2e', url: 'https://openstax.org/details/books/biology-2e', desc: 'A free textbook that covers the same topics; each Mathub topic links the matching chapter.' },
+      { eyebrow: 'Free reading', title: 'OpenStax Biology 2e', url: 'https://openstax.org/details/books/biology-2e', desc: 'A free textbook that covers the same topics; each StudyCat topic links the matching chapter.' },
       { eyebrow: 'Practice', title: 'Canvas practice quizzes', url: CANVAS, desc: 'Timed practice quizzes that do not count and can be retaken; the best rehearsal for exam pacing.' },
       { eyebrow: 'Genetics', title: 'Genetic code table (NCBI)', url: 'https://www.ncbi.nlm.nih.gov/Taxonomy/Utils/wprintgc.cgi?chapter=tgencodes#SG1', desc: 'The standard codon table used in the translation problems.' }
     ],
@@ -474,7 +474,7 @@
     { icon: 'flag', title: 'Exams', html: `<ul class="list-plain small"><li>Each exam runs in a scheduled <b>5-hour window</b> on its day; you must be available. There are no early exams.</li><li>Make-ups are at 11 am two days after the exam and earn <b>80%</b> of the score, unless you missed for a valid reason and emailed or called ahead (or as soon as reasonably possible).</li><li>No notecards during exams.</li><li>The final (Wed Dec 16, noon–1:50 pm) is half cumulative and half on material since Oct 14.</li></ul>` },
     { icon: 'shield', title: 'Honor code', html: `<p class="small">All graded work must be your own. Cheating on any exam or on the lab results in an <b>F in the course</b>. Collaboration on graded material is not allowed unless an assignment says so, and paraphrasing or quoting without citing is plagiarism.</p>` },
     { icon: 'calendar', title: 'Attendance and email', html: `<ul class="list-plain small"><li>You are responsible on exams for anything covered in a class you miss.</li><li>Check your email and Canvas at least once a day; announcements, lecture slides, quizzes and lab materials are posted there.</li></ul>` },
-    { icon: 'bulb', title: 'How to use Mathub for this class', span2: true, html: `<p class="small">After each lecture, read the topic note and do its flashcards the same day. The quizzer’s genetics, pH, respiration and PCR questions are generated fresh each time with worked answers, so drill them until they are automatic. Before each exam, pair Mathub’s exam-prep set with the Canvas practice quizzes, which are timed like the real thing.</p>` }
+    { icon: 'bulb', title: 'How to use StudyCat for this class', span2: true, html: `<p class="small">After each lecture, read the topic note and do its flashcards the same day. The quizzer’s genetics, pH, respiration and PCR questions are generated fresh each time with worked answers, so drill them until they are automatic. Before each exam, pair StudyCat’s exam-prep set with the Canvas practice quizzes, which are timed like the real thing.</p>` }
   ];
   const NAV = [
     { label: 'Today', items: [['dashboard', 'Dashboard', 'home'], ['calendar', 'Calendar', 'calendar']] },
@@ -488,7 +488,7 @@
   global.Courses.biob = Object.assign(global.Courses.biob || {}, {
     id: 'biob', code: 'BIOB 160', name: 'Principles of Living Systems', short: 'BIOB 160', term: 'Fall 2026', kind: 'science', tagline: 'Chemistry of life, cells and energy, then genetics from Mendel to CRISPR',
     formulasNote: 'Everything on one page. Exams allow no notecards, so use it to test what you can rewrite from memory.', filterExample: 'pH, meiosis',
-    quizNote: 'Genetics, pH, respiration and PCR questions are generated with computed answers; concept questions come from a bank written for Mathub. Check anything surprising against the lecture slides and Campbell.',
+    quizNote: 'Genetics, pH, respiration and PCR questions are generated with computed answers; concept questions come from a bank written for StudyCat. Check anything surprising against the lecture slides and Campbell.',
     COURSE, GRADING, EXAMS, CALENDAR, CALENDAR_NOTE, RECURRING, SEMESTER, UNITS, SECTIONS, FORMULAS, FLASHCARDS, PRACTICE, CHECKLISTS, INFO, NAV
   });
 })(window);
