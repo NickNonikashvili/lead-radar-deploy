@@ -9,6 +9,7 @@
 (function () {
   'use strict';
   var html = document.documentElement;
+  html.classList.add('mh-booting');   // until the first page is drawn (assets/app.js afterRender): the footer waits, so it does not jump
   window.MATHUB_BUILD = html.getAttribute('data-build') || 'dev';
   window.Courses = window.Courses || {};
   try {

@@ -904,6 +904,7 @@ The server copies the SQLite database once a day (SQLite's own `VACUUM INTO`, co
 
 - Empty panels get Bo and a short line; loading placeholders become skeleton bars automatically.
 - Accessibility: a skip link is the first tab stop, every control has a name, dialogs are announced, small text and chips meet WCAG AA contrast in both themes, and `tests/a11y.test.js` runs axe-core over the main pages so it stays that way.
+- Steady on a phone: pages do not jump while they open (layout shift under 0.1), text-style buttons answer taps over at least 24 × 24 px (WCAG 2.5.8), and focus or a jump in the page lands below the sticky top bar (WCAG 2.4.11). `tests/steady-phone.test.js` checks all three, and that no page is wider than the phone (DESIGN.md, Layout).
 - `#/whatsnew` lists every release (a dot in the account menu until you have seen the latest); `learn/whats-new.html` is the public copy for search engines and links.
 - Every class has its own social card (`assets/og-<class>.png`, made by `node scripts/build-og.js`) used by its study-guide pages.
 

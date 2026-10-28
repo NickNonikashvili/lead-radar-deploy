@@ -180,7 +180,8 @@ html[data-app] :is(#sb-now, #sb-quick, #sb-nav, #sb-cal, #tb-clock) { display: n
 @media (max-width: 640px) {
   :root:not([data-app]) .topbar { gap: 6px; }
   :root:not([data-app]) .topbar #topbar-hub, :root:not([data-app]) .topbar .bo-top, :root:not([data-app]) .topbar .tb-clock { display: none !important; }
-  :root:not([data-app]) .topbar-title { display: flex; flex-direction: column; justify-content: center; gap: 1px; line-height: 1.15; font-size: 17px; }
+  :root:not([data-app]) .topbar-title { display: flex; flex-direction: column; justify-content: center; gap: 1px; line-height: 1.15; font-size: 17px; min-height: 36px; }   /* room for the two lines before they arrive */
+  :root:not([data-app]) .topbar-actions { min-height: 40px; align-items: center; }
   :root:not([data-app]) .topbar-title .crumb { display: block; font-size: 11.5px; letter-spacing: 0.01em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   :root:not([data-app]) .topbar-title .crumb-sep { display: none; }
   :root:not([data-app]) .topbar-title .crumb-cur { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

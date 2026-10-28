@@ -89,6 +89,8 @@
 /* ---------- base ---------- */
 *, *::before, *::after { box-sizing: border-box; }
 html { -webkit-text-size-adjust: 100%; }
+:where(#view *) { scroll-margin-top: 72px; }   /* the sticky top bar is 61px: focus and jumps in the page land below it (WCAG 2.4.11).
+   Not scroll-padding on html: that scrolls the page when a top-bar button takes focus, and scrolling closes its menu */
 body {
   margin: 0; font-family: var(--font-body); font-size: 15px; line-height: 1.55; color: var(--ink);
   background-color: var(--bg);
@@ -378,7 +380,7 @@ input[type="checkbox"] { accent-color: var(--accent); width: 16px; height: 16px;
 /* the Quizzer on a phone: the set's presets in one row that scrolls sideways and a slimmer score, so the first question
    is near the top instead of two screens down */
 @media (max-width: 640px) {
-  #pq-setup .panel-h { flex-direction: column; align-items: stretch; gap: 10px; }
+  #pq-setup .panel-h { flex-direction: column; flex-wrap: nowrap; align-items: stretch; gap: 10px; }   /* one line: a wrapping column grows to its widest item */
   #pq-setup .panel-h > div:first-child { min-width: 0; max-width: 100%; } #pq-setup .panel-h p { white-space: normal; overflow-wrap: anywhere; margin-bottom: 0; }
   #pq-setup .panel-h .row { flex-wrap: nowrap; overflow-x: auto; gap: 8px; margin: 0 -16px; padding: 2px 16px 6px; scrollbar-width: none; scroll-snap-type: x proximity; }
   #pq-setup .panel-h .row::-webkit-scrollbar { display: none; }
@@ -575,6 +577,8 @@ canvas.riemann { display: block; width: 100%; height: 300px; }
    up with the page (the same 1200px column and side padding). */
 .site-foot { margin-top: auto; padding: 0 28px calc(20px + env(safe-area-inset-bottom)); border-top: 1px solid var(--border); background: var(--surface); color: var(--muted); font-size: 14px; }
 .sf-top, .sf-base { max-width: 1144px; margin: 0 auto; }
+/* until the first page is drawn the footer would sit mid-screen and then jump down (the worst layout shift on phones) */
+html.mh-booting .site-foot { display: none; }
 .sf-top { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); gap: 28px 56px; padding: 34px 0 28px; }
 .sf-brand { display: grid; align-content: start; justify-items: start; gap: 12px; }
 .sf-logo { display: inline-flex; align-items: center; gap: 10px; color: var(--ink); font: 800 21px/1 var(--font-display); letter-spacing: -0.02em; text-decoration: none; }
@@ -1947,7 +1951,6 @@ body:has(.lesson-foot) #ambient { bottom: 96px; }
 .th-t { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .th-t b { font-size: 15px; line-height: 1.25; }
 .th-t small { font-size: 13px; line-height: 1.35; color: var(--muted); }
-.th-box { scroll-margin-top: 80px; }
 .th-note { margin: -4px 0 10px 2px; }
 html[data-motion="off"] .th-card { transition: none; }
 /* ---------- a class's Tools page (assets/class-tools.js): cards on top, the open tool below ---------- */
@@ -2414,6 +2417,10 @@ html[data-motion="off"] .px-go-q { animation: none; }
 .icon-btn[hidden], .hub-slot[hidden] { display: none; }
 .linkbtn { background: none; border: 0; padding: 0; font: inherit; color: var(--accent); font-weight: 600; text-decoration: none; cursor: pointer; display: inline-flex; align-items: center; gap: 3px; }
 .linkbtn:hover { text-decoration: underline; }
+/* WCAG 2.2 target size (2.5.8): text-style buttons answer taps over at least 24 × 24 px, an invisible area centred on
+   them, so the layout around them does not change */
+:is(.linkbtn, .linkish, .sb-time, .eyebrow a) { position: relative; }
+:is(.linkbtn, .linkish, .sb-time, .eyebrow a)::after { content: ''; position: absolute; left: 50%; top: 50%; width: max(100%, 24px); height: max(100%, 24px); transform: translate(-50%, -50%); }
 .linkbtn svg { width: 12px; height: 12px; }
 .ready-line { margin-top: 8px; font-size: 13.5px; opacity: 0.92; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; }
 .hero-exam .ready-line .linkbtn { color: inherit; text-decoration: underline; text-underline-offset: 3px; }

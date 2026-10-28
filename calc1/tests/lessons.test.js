@@ -20,8 +20,8 @@ const IDS = ['calc', 'physics', 'precalc', 'writ', 'csci', 'biob', 'kin', 'psyx'
   const L = box.window.MathubLessons || {};
   const thin = []; IDS.forEach(id => Object.entries(L[id] || {}).forEach(([s, x]) => { if (!x.plain || x.plain.length < 120 || !Array.isArray(x.check) || x.check.length < 2) thin.push(id + ' ' + s); }));
   check('and every lesson has the idea in a few sentences and at least two self-check questions', thin.length === 0, thin);
-  const sw = fs.readFileSync(path.join(ROOT, 'sw.js'), 'utf8');
-  check('the lessons of the classes kept offline are cached with them', ['calc', 'physics', 'precalc', 'writ', 'csci', 'biob', 'kin', 'psyx'].every(id => sw.includes(`'assets/lessons/${id}.js' + V`)));
+  const app = fs.readFileSync(path.join(ROOT, 'assets', 'app.js'), 'utf8');
+  check('a class kept offline keeps its lessons with it (App.warmClasses saves them with the class)', /App\.warmClasses = [\s\S]{0,900}LESSON_IDS\.has\(id\) \? \['lessons\/' \+ id \+ '\.js'\]/.test(app));
 
   /* ---------- every topic of every class, in the page ---------- */
   const [c, p] = await mk(1360, 900, { serviceWorkers: 'block' });

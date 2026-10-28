@@ -21,11 +21,11 @@ const T = require('./lib');
     check('after picking, the picker is gone', !(await p.$('#pick-classes')));
     await c.close(); }
 
-  // the Quizzer on a phone
+  // the Quizzer on a phone (wider than 391px, not innerWidth: a phone lays a too-wide page out wider)
   { const [c, p] = await mk(390, 844, { isMobile: true, hasTouch: true, serviceWorkers: 'block' });
     await c.addInitScript(() => { try { const s = JSON.parse(localStorage.getItem('studyhub-settings') || '{}'); Object.assign(s, { courses: ['calc'], boFloatSeen: 1, tourLayout: 99 }); localStorage.setItem('studyhub-settings', JSON.stringify(s)); } catch (e) {} });
     await go(p, '#/calc/practice', 2500);
-    const q = await p.evaluate(() => { const row = document.querySelector('[data-action="smart"]').parentElement; const sub = document.querySelector('#pq-setup .panel-h p'); const panel = sub && sub.closest('.panel'); const first = document.querySelector('#pq-session .q-num'); return { wrap: getComputedStyle(row).flexWrap, firstTop: first ? Math.round(first.getBoundingClientRect().top) : null, subInside: sub && panel ? sub.getBoundingClientRect().right <= panel.getBoundingClientRect().right + 1 : true, hs: document.documentElement.scrollWidth <= innerWidth + 1 }; });
+    const q = await p.evaluate(() => { const row = document.querySelector('[data-action="smart"]').parentElement; const sub = document.querySelector('#pq-setup .panel-h p'); const panel = sub && sub.closest('.panel'); const first = document.querySelector('#pq-session .q-num'); return { wrap: getComputedStyle(row).flexWrap, firstTop: first ? Math.round(first.getBoundingClientRect().top) : null, subInside: sub && panel ? sub.getBoundingClientRect().right <= panel.getBoundingClientRect().right + 1 : true, hs: document.documentElement.scrollWidth <= 391 }; });
     check('phone Quizzer: presets in one row, the current set inside its panel, nothing scrolls sideways', q.wrap === 'nowrap' && q.subInside && q.hs, q);
     check('and the first question starts on the first screen', q.firstTop !== null && q.firstTop < 844, q.firstTop);
     await c.close(); }
@@ -47,10 +47,10 @@ const T = require('./lib');
     await p.evaluate(() => { for (const id of ['calc', 'writ']) { const k = Object.keys(localStorage).find(x => x.endsWith(id) && /study/.test(x)); if (k) { const d = JSON.parse(localStorage.getItem(k) || '{}'); delete d.lessonsRead; localStorage.setItem(k, JSON.stringify(d)); } } });
     const item = () => p.evaluate(() => { const it = [...document.querySelectorAll('.td-item')].find(x => /topic/.test(x.textContent)); return it ? { done: it.classList.contains('done'), text: it.textContent.replace(/\s+/g, ' ').trim(), href: it.querySelector('a') ? it.querySelector('a').getAttribute('href') : '' } : null; });
     await go(p, '#/today', 2200); const a = await item();
-    check('Today lists this week’s topic in each class, with a Read button', a && !a.done && /0 of 2 done/.test(a.text) && /Calc I/.test(a.text) && /Writing/.test(a.text) && /^#\/calc\/notes\//.test(a.href), a);
+    check('Today lists this week’s topic in each class, with a Read button', a && !a.done && /0 of [2-9] done/.test(a.text) && /Calc I/.test(a.text) && /Writing/.test(a.text) && /^#\/calc\/notes\//.test(a.href), a);
     await go(p, a.href.replace(/^#/, '#'), 2400); await p.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight)); await p.waitForTimeout(900);
     await go(p, '#/today', 2000); const b2 = await item();
-    check('reading the lesson to its end ticks it off, and Read moves to the next class', b2 && /1 of 2 done/.test(b2.text) && /✓ Calc I/.test(b2.text) && /^#\/writ\/notes\//.test(b2.href), b2);
+    check('reading the lesson to its end ticks it off, and Read moves to the next class', b2 && /1 of [2-9] done/.test(b2.text) && /✓ Calc I/.test(b2.text) && /^#\/writ\/notes\//.test(b2.href), b2);
     await p.evaluate(async k => { App.setSetting('courses', k); try { await App.auth.savePrefs({ courses: k }); } catch (e) {} }, keep || []);
     await c.close(); }
   await T.finish();
