@@ -64,7 +64,7 @@
 .ah-ex { display: flex; align-items: center; gap: 12px; margin-top: 14px; padding: 12px; border-radius: 18px; background: var(--surface-2); color: var(--ink); text-decoration: none; }
 .ah-ex:active { opacity: .8; }
 .ah-ex > svg { flex: none; color: var(--muted); }
-.ah-days { flex: none; display: flex; flex-direction: column; align-items: center; justify-content: center; width: 62px; height: 62px; border-radius: 16px; background: var(--coral); color: #fff; box-shadow: 0 4px 0 var(--coral-deep); }
+.ah-days { flex: none; display: flex; flex-direction: column; align-items: center; justify-content: center; width: 62px; height: 62px; border-radius: 16px; background: var(--coral-deep, #C9372D); color: #fff; box-shadow: 0 4px 0 #8E241D; }   /* the deep coral: white 11.5px text needs 4.5:1 */
 .ah-days b { font: 800 27px/1 var(--font-display); font-variant-numeric: tabular-nums; }
 .ah-days b.sm { padding: 0 4px; font-size: 13.5px; line-height: 1.1; text-align: center; }
 .ah-days small { font: 700 11.5px/1.2 var(--font-body); }

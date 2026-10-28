@@ -67,7 +67,9 @@
     if (!s || !/[A-Za-z]/.test(s)) return null;
     var v = exact[s]; if (v != null) return v;
     var c = s.slice(-1); if (c === ':' && exact[s.slice(0, -1)] != null) return exact[s.slice(0, -1)] + (lang === 'fr' ? ' :' : ':');
-    var seen = [], words = s.match(/[A-Za-z][A-Za-z'’]{2,}/g) || [];
+    // longest words first: each pattern is filed under its longest word, so the most specific patterns are tried before
+    // a short, general one ("{1}, and {2}") can swallow a whole sentence
+    var seen = [], words = (s.match(/[A-Za-z][A-Za-z'’]{2,}/g) || []).sort(function (a, b) { return b.length - a.length; });
     for (var i = 0; i < words.length; i++) { var l = byWord[words[i].toLowerCase()]; if (l && seen.indexOf(l) < 0) { seen.push(l); var r = tryAll(l, s, depth); if (r != null) return r; } }
     var r2 = tryAll(loose, s, depth); if (r2 != null) return r2;
     if (depth < 1 && s.indexOf(' · ') > 0) {   // a title or a line of facts: in parts

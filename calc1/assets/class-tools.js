@@ -255,8 +255,9 @@
       const g1 = gam(A), g2 = gam(B); const G = {}, P = {};
       const pheno = gt => gt.match(/../g).map(pr => { const L = pr[0].toUpperCase(); const dom = pr !== pr.toLowerCase(); const tr = t.traits[L] || t.traits[L.toLowerCase()]; return tr && tr[0] ? (dom ? tr[0] : tr[1] || 'recessive') : dom ? `${L}_` : pr.toLowerCase(); }).join(', ');
       const cells = g2.map(y => g1.map(x => { const gt = geno(x, y); G[gt] = (G[gt] || 0) + 1; const ph = pheno(gt); P[ph] = (P[ph] || 0) + 1; return gt; }));
-      const tot = g1.length * g2.length; const gcd = (p, q) => q ? gcd(q, p % q) : p; const ratio = o => { const v = Object.values(o); const gg = v.reduce(gcd); return v.map(x => x / gg).join(' : '); };
-      const sortK = o => Object.entries(o).sort((p, q) => q[1] - p[1]);
+      const tot = g1.length * g2.length; const gcd = (p, q) => q ? gcd(q, p % q) : p;
+      const caps = k => (k.match(/[A-Z]/g) || []).length; const sortK = o => Object.entries(o).sort((p, q) => caps(q[0]) - caps(p[0]) || (p[0] < q[0] ? -1 : p[0] > q[0] ? 1 : 0));   // dominant first: AA, Aa, aa; A_ B_, A_ bb, aa B_, aa bb
+      const ratio = o => { const v = sortK(o).map(e => e[1]); const gg = v.reduce(gcd); return v.map(x => x / gg).join(' : '); };
       out.innerHTML = `<div class="ct-scroll"><table class="table compact ct-punnett"><thead><tr><th scope="col"><span class="sr-only">Gametes</span></th>${g1.map(x => `<th scope="col" class="mono">${esc(x)}</th>`).join('')}</tr></thead><tbody>${cells.map((row, j) => `<tr><th scope="row" class="mono">${esc(g2[j])}</th>${row.map(c => `<td class="mono">${esc(c)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>
         <div class="grid cols-2"><div><h3 class="ct-h">Genotypes</h3><ul class="list">${sortK(G).map(([k, v]) => `<li><b class="mono">${esc(k)}</b>: ${v}/${tot} (${sig(v / tot * 100, 3)}%)</li>`).join('')}</ul><p class="small muted">Ratio ${ratio(G)}</p></div><div><h3 class="ct-h">Phenotypes</h3><ul class="list">${sortK(P).map(([k, v]) => `<li><b>${esc(k)}</b>: ${v}/${tot} (${sig(v / tot * 100, 3)}%)</li>`).join('')}</ul><p class="small muted">Ratio ${ratio(P)}${Object.keys(t.traits).length ? '' : '. A_ means at least one dominant A.'}</p></div></div>`;
     })
@@ -334,7 +335,8 @@
     clean: (t, o) => { t.presets = arr(o.presets, 6).filter(k => GAMES[k]); if (!t.presets.length) t.presets = ['pd', 'chicken', 'stag', 'bos', 'pennies']; t.players = arr(o.players, 2).map(p => str(p, 20)); if (t.players.length < 2) t.players = ['Row', 'Column']; },
     html: t => `<div class="row gap-sm ct-sets" role="group" aria-label="Classic games">${t.presets.map((k, i) => `<button class="chip toggle${i ? '' : ' on'}" data-action="gm-pick" data-k="${k}">${esc(GAMES[k][0])}</button>`).join('')}</div><div id="gm-box"></div><div class="ct-out" id="gm-out" aria-live="polite"></div>`,
     bind: (el, t) => {
-      const [P1, P2] = t.players; let names = GAMES[t.presets[0]][1].slice(), pay = GAMES[t.presets[0]][2].map(p => p.slice());
+      const tn = x => (App.t ? App.t(x) : x);   // a classic game's moves in the page's language (Cooperate, Defect…)
+      const [P1, P2] = t.players; let names = GAMES[t.presets[0]][1].map(tn), pay = GAMES[t.presets[0]][2].map(p => p.slice());
       const paint = () => {
         $('#gm-box', el).innerHTML = `<p class="small">Each cell: the payoff to ${esc(P1)}, then to ${esc(P2)}. Change any number.</p><div class="ct-scroll"><table class="table compact ct-game"><thead><tr><th></th><th scope="col">${esc(P2)}: ${esc(names[0])}</th><th scope="col">${esc(P2)}: ${esc(names[1])}</th></tr></thead><tbody>${[0, 1].map(r => `<tr><th scope="row">${esc(P1)}: ${esc(names[r])}</th>${[0, 1].map(c => { const k = r * 2 + c; return `<td data-cell="${k}"><input class="input sm mono" data-g="${k}:0" value="${pay[k][0]}" aria-label="${esc(P1)} payoff, ${esc(names[r])} and ${esc(names[c])}" inputmode="decimal"> , <input class="input sm mono" data-g="${k}:1" value="${pay[k][1]}" aria-label="${esc(P2)} payoff, ${esc(names[r])} and ${esc(names[c])}" inputmode="decimal"></td>`; }).join('')}</tr>`).join('')}</tbody></table></div>`;
         solve();
@@ -352,7 +354,7 @@
           <ul class="list small">${domR ? `<li>${esc(P1)} has a dominant strategy: <b>${esc(domR)}</b> is better whatever ${esc(P2)} does.</li>` : `<li>${esc(P1)} has no dominant strategy.</li>`}${domC ? `<li>${esc(P2)} has a dominant strategy: <b>${esc(domC)}</b>.</li>` : `<li>${esc(P2)} has no dominant strategy.</li>`}${mixed ? `<li>Mixed equilibrium: ${esc(P1)} plays ${esc(names[0])} ${sig(p * 100, 3)}% of the time, ${esc(P2)} plays ${esc(names[0])} ${sig(q * 100, 3)}% of the time, so neither can be exploited.</li>` : ''}${nash.length === 1 && [0, 1, 2, 3].some(k => k !== nash[0] && R(k) > R(nash[0]) && Cc(k) > Cc(nash[0])) ? '<li>Both would be better off in another cell, but neither can get there alone: the dilemma.</li>' : ''}</ul>`;
       };
       el.addEventListener('input', e => { const x = e.target.closest('[data-g]'); if (!x) return; const [k, w] = x.dataset.g.split(':').map(Number); const v = App.parseNumber(x.value); if (Number.isFinite(v)) { pay[k][w] = v; solve(); } });
-      bind(el, { 'gm-pick': b => { const g = GAMES[b.dataset.k]; names = g[1].slice(); pay = g[2].map(p => p.slice()); $$('[data-action="gm-pick"]', el).forEach(x => x.classList.toggle('on', x === b)); paint(); } });
+      bind(el, { 'gm-pick': b => { const g = GAMES[b.dataset.k]; names = g[1].map(tn); pay = g[2].map(p => p.slice()); $$('[data-action="gm-pick"]', el).forEach(x => x.classList.toggle('on', x === b)); paint(); } });
       paint();
     }
   });

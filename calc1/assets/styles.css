@@ -1978,6 +1978,11 @@ html[data-motion="off"] .ct-card { transition: none; }
 .ct-ed input { width: 18px; height: 18px; accent-color: var(--accent); }
 .ct-uc { align-items: start; }
 @media (max-width: 640px) {
+  .ct-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }   /* on a phone the open tool stays near the top: names only */
+  .ct-card { padding: 10px; gap: 8px; border-radius: 14px; }
+  .ct-ic { width: 32px; height: 32px; border-radius: 10px; }
+  .ct-t b { font-size: 14px; }
+  .ct-t small, .ct-card.is-link > svg:last-child { display: none; }
   .ct-tl li { grid-template-columns: minmax(0, 1fr) auto; }
   .ct-tl li > b { grid-column: 1 / -1; }
   .ct-row { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr) 32px; }
