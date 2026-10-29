@@ -3,7 +3,7 @@
    Tokens first (light), then dark overrides, then components.
    ============================================================ */
 :root {
-  --assets-build: "2026.10.29.3";   /* the build these styles belong to (scripts/release.js; read by build-check.js) */
+  --assets-build: "2026.10.29.4";   /* the build these styles belong to (scripts/release.js; read by build-check.js) */
   --bg: #F6F8FB;
   --grid: rgba(43, 85, 184, 0.05);
   --surface: #FFFFFF;
