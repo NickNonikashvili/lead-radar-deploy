@@ -770,6 +770,7 @@
 
   const Landing = {
     title: SITE,
+    unmount() { if (document.documentElement.dataset.surface === 'guest') { delete document.documentElement.dataset.surface; if (App.startPitch) App.startPitch.top(false); } },
     render(root) {
       const t = todayISO(); const d = today();
       const guest = App.guest(); const mineIds = App.myCourses();
@@ -785,12 +786,15 @@
       const goPick = () => { const box = $('#pick-classes', root); if (!box) return; box.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' }); const f = $('.pk-c input', box); if (f) setTimeout(() => f.focus({ preventScroll: true }), 350); };
       if (App.startPitch) App.startPitch.clear();
       // a newcomer (not signed in, no class yet) gets the whole story of StudyCat on one page (assets/start.js)
+      const de = document.documentElement;
       if (App.startPitch && App.startPitch.needed()) {
+        de.dataset.surface = 'guest'; App.startPitch.top(true);   // the landing's own header, no sidebar (assets/design.css)
         root.innerHTML = App.startPitch.html({ when: `${fmtDate(t, true)} · ${first.term}${ss.phase === 'during' ? ` · Week ${ss.week}` : ''}`, picker: pickClassesHtml(), banners: (App.inviteBanner ? App.inviteBanner() : '') + (App.recapBanner ? App.recapBanner() : '') });
         bind(root, { 'go-pick': goPick }); wirePickClasses(root); paintAnnouncement(root); App.startPitch.wire(root);
         if (App.social && App.social.presencePing) { if (App.auth && App.auth.ready) App.social.presencePing(); else if (App.auth) App.auth.onChange(function once() { App.social.presencePing(); }); }
         return;
       }
+      if (de.dataset.surface === 'guest') { delete de.dataset.surface; if (App.startPitch) App.startPitch.top(false); }
       // your home as the October 2026 redesign draws it: one hero, a tidy grid of cards (assets/home-grid.js);
       // Arrange freely keeps the free-form dashboard below (assets/dash.js)
       if (App.homeGrid && App.homeGrid.on()) {

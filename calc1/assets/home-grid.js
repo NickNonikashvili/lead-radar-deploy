@@ -59,11 +59,11 @@
   const chip = id => { const C = Courses[id]; return `<a class="hg-chip" href="#/${esc(id)}/dashboard" style="${cc(id)}"><span class="hg-code">${esc(C.short || C.code)}</span><span>${esc(C.name)}</span></a>`; };
 
   /* ---------- the hero ---------- */
+  // the art: two ranges of mountains, the pixel skyline and Bo (the sky and the moon are the hero's background)
+  const art = HG.art = '<svg class="hg-peaks" viewBox="0 0 1200 200" preserveAspectRatio="none" aria-hidden="true"><path class="far" d="M0 70L130 40 330 125 560 20 800 118 1010 32 1200 96V200H0z"/><path class="near" d="M0 120L210 82 420 140 640 74 880 136 1060 88 1200 118V200H0z"/><path class="hill" d="M0 168Q300 140 600 166T1200 160V200H0z"/></svg><div class="mascot-slot hg-bo" data-size="96" aria-hidden="true"></div><div class="px-skyline" aria-hidden="true"></div>';
   function heroHtml(state) {
     const d0 = iso(); const first = mine()[0]; const ss = first && App.semesterStateOf ? safe(() => App.semesterStateOf(Courses[first])) : null;
     const when = `${esc(fmt(d0, { weekday: 'short', month: 'short', day: 'numeric' }))}${ss && ss.week ? ` · ${esc(t('Week {1}', ss.week))}` : ''}`;
-    // the art: two ranges of mountains, the pixel skyline and Bo (the sky and the moon are the hero's background)
-    const art = '<svg class="hg-peaks" viewBox="0 0 1200 200" preserveAspectRatio="none" aria-hidden="true"><path class="far" d="M0 70L130 40 330 125 560 20 800 118 1010 32 1200 96V200H0z"/><path class="near" d="M0 120L210 82 420 140 640 74 880 136 1060 88 1200 118V200H0z"/><path class="hill" d="M0 168Q300 140 600 166T1200 160V200H0z"/></svg><div class="mascot-slot hg-bo" data-size="96" aria-hidden="true"></div><div class="px-skyline" aria-hidden="true"></div>';
     const ids = mine();
     if (state.kind === 'exam') {
       const { id, C, ex, n } = state; const r = safe(() => App.readiness(id)); const pct = r && r.ok ? r.score : 0;
@@ -71,10 +71,10 @@
       const others = ids.filter(x => x !== id).slice(0, 4);
       return `<header class="hg-hero" data-state="exam"><div class="hg-hero-in">
         <p class="hg-when">${when}<span class="hg-gold">${icon('calendar', 13)} ${esc(t('Next exam'))} · ${esc(fmt(ex.date, { weekday: 'short', month: 'short', day: 'numeric' }))}</span></p>
-        <h1 class="hg-title">${esc(C.short)} ${esc(ex.name)} <em>${esc(tail)}</em></h1>
+        <h1 class="hg-title">${esc(C.short || C.code || C.name)} ${esc(ex.name)} <em>${esc(tail)}</em></h1>
         ${examTopics(C, ex) ? `<p class="hg-sub">${esc(examTopics(C, ex))}</p>` : ''}
         <div class="hg-ready"><span class="hg-track" role="progressbar" aria-label="${esc(t('Ready for {1}', ex.name))}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${pct}"><i style="width:${pct}%"></i></span><span>${pct}%</span></div>
-        <div class="hg-cta"><a class="btn primary lg" href="#/${esc(id)}/practice?exam=${esc(ex.id)}">${esc(t('Start {1} quiz', C.short))} ${icon('right', 16)}</a><a class="hg-link" href="#/${esc(id)}/exam/${esc(ex.id)}">${esc(t('See exam topics'))}</a></div>
+        <div class="hg-cta"><a class="btn primary lg" href="#/${esc(id)}/practice?exam=${esc(ex.id)}">${esc(t('Start {1} quiz', C.short || C.code || C.name))} ${icon('right', 16)}</a><a class="hg-link" href="#/${esc(id)}/exam/${esc(ex.id)}">${esc(t('See exam topics'))}</a></div>
         ${others.length ? `<div class="hg-chips">${others.map(chip).join('')}</div>` : ''}</div>${art}</header>`;
     }
     if (state.kind === 'back') {
@@ -85,7 +85,7 @@
         <p class="hg-when">${when} · ${esc(t('Pick up where you left off'))}</p>
         <h1 class="hg-title">${esc(t('Back to'))} <em class="hg-cls" style="${cc(id)}">${esc(C.name)}?</em></h1>
         <p class="hg-sub">${esc(line)}</p>
-        <div class="hg-cta"><a class="btn primary lg" href="#/${esc(id)}/practice">${esc(t('Continue {1} quiz', C.short))} ${icon('right', 16)}</a>${missed ? `<a class="hg-link" href="#/${esc(id)}/mistakes">${esc(missed === 1 ? t('Retry the one I missed') : t('Retry the {1} I missed', missed))}</a>` : ''}</div>
+        <div class="hg-cta"><a class="btn primary lg" href="#/${esc(id)}/practice">${esc(t('Continue {1} quiz', C.short || C.code || C.name))} ${icon('right', 16)}</a>${missed ? `<a class="hg-link" href="#/${esc(id)}/mistakes">${esc(missed === 1 ? t('Retry the one I missed') : t('Retry the {1} I missed', missed))}</a>` : ''}</div>
         ${others.length ? `<div class="hg-chips">${others.map(chip).join('')}</div>` : ''}</div>${art}</header>`;
     }
     // nothing studied yet: your classes to start one; no classes yet: the class picker is right below the hero
@@ -108,9 +108,9 @@
     const ids = mine(); const d0 = iso(); const p = App.todayPlan ? App.todayPlan() : { reviewed: 0 }; const items = [];
     const due = ids.map(id => ({ id, n: safe(() => { const x = App.dueCards(id); return x.count + (x.estimated || 0); }) || 0 })).filter(x => x.n).sort((a, b) => b.n - a.n);
     const dueN = due.reduce((s, x) => s + x.n, 0);
-    if (dueN || p.reviewed) items.push({ done: !dueN && p.reviewed > 0, title: due.length ? `${t('Flashcards')} · ${due.map(x => Courses[x.id].short).slice(0, 2).join(', ')}` : t('Flashcards'), sub: dueN ? t('{1} min · {2} cards', Math.max(5, Math.round(dueN * 0.4)), dueN) : t('{1} reviewed today', p.reviewed), href: '#/today', min: dueN ? Math.max(5, Math.round(dueN * 0.4)) : 0 });
+    if (dueN || p.reviewed) items.push({ done: !dueN && p.reviewed > 0, title: due.length ? `${t('Flashcards')} · ${due.map(x => Courses[x.id].short || Courses[x.id].code).slice(0, 2).join(', ')}` : t('Flashcards'), sub: dueN ? t('{1} min · {2} cards', Math.max(5, Math.round(dueN * 0.4)), dueN) : t('{1} reviewed today', p.reviewed), href: '#/today', min: dueN ? Math.max(5, Math.round(dueN * 0.4)) : 0 });
     const weak = ids.map(id => ({ id, w: safe(() => App.weakestTopic(id)) })).filter(x => x.w)[0];
-    if (weak) { const done = settings().lastLessonDay === d0; items.push({ done, title: `${weak.w.label} · ${Courses[weak.id].short}`, sub: done ? t('Done today') : t('{1} min · a short lesson', 10), href: `#/${weak.id}/lesson?topics=${encodeURIComponent(weak.w.t)}`, min: done ? 0 : 10 }); }
+    if (weak) { const done = settings().lastLessonDay === d0; items.push({ done, title: `${weak.w.label} · ${Courses[weak.id].short || Courses[weak.id].code}`, sub: done ? t('Done today') : t('{1} min · a short lesson', 10), href: `#/${weak.id}/lesson?topics=${encodeURIComponent(weak.w.t)}`, min: done ? 0 : 10 }); }
     const m = App.mistakesSummary ? safe(() => App.mistakesSummary()) : null;
     if (m && (m.due || m.open)) items.push({ done: !m.due, title: m.due ? t('Retry {1} missed questions', m.due) : t('No mistakes due today'), sub: m.due ? t('{1} min · back with their explanations', Math.max(3, m.due * 2)) : t('{1} still open', m.open), href: '#/mistakes', min: m.due ? Math.max(3, m.due * 2) : 0 });
     const list = items.slice(0, 3); const done = list.filter(x => x.done).length; const mins = list.reduce((s, x) => s + x.min, 0);
@@ -133,7 +133,7 @@
     const items = (ex.C.CHECKLISTS && ex.C.CHECKLISTS[ex.ex.id]) || []; if (!items.length) return '';
     const st = (dataOf(ex.id).checklists || {})[ex.ex.id] || {};
     const body = `<div class="hg-check">${items.map((it, i) => `<label class="hg-ck"><input type="checkbox" data-hgc="${esc(ex.id)}|${esc(ex.ex.id)}|${i}"${st[i] ? ' checked' : ''}><span>${esc(typeof it === 'string' ? it : it.t || it.text || '')}</span></label>`).join('')}</div><p class="hg-foot">${esc(t('Shows up in the week before an exam.'))}</p>`;
-    return shell('checklist', 'half', t('{1} checklist', ex.ex.name), body, `<span class="hg-badge">${esc(ex.C.short)} · ${esc(fmt(ex.ex.date, { weekday: 'short' }))}</span>`);
+    return shell('checklist', 'half', t('{1} checklist', ex.ex.name), body, `<span class="hg-badge">${esc(ex.C.short || ex.C.code)} · ${esc(fmt(ex.ex.date, { weekday: 'short' }))}</span>`);
   }
   function pctOf(id) {
     const r = safe(() => App.readiness(id)); if (r && r.ok) return r.score;
@@ -172,75 +172,87 @@
     notes: { t: 'Notes', ic: 'book', tone: 'violet', lab: 'Short lessons for every topic', go: 'Open', href: () => { const id = classFor(); return id ? `#/${id}/notes` : ''; } }
   };
   const ORDER = ['puzzle', 'plan', 'week', 'checklist', 'classes', 'cards', 'mistakes', 'forum'];
-  const TOOL_ORDER = Object.keys(TOOLS);
   const MINI = ['cards', 'mistakes', 'forum'];
   const NAMES = { puzzle: 'Daily challenge', plan: 'Today’s plan', week: 'This week', checklist: 'Exam checklist', classes: 'Your classes', cards: 'Flashcards', mistakes: 'Mistakes', forum: 'Discussions' };
-  const prefs = () => { const g = settings().homeGrid || {}; return { hidden: Array.isArray(g.hidden) ? g.hidden : [], shown: Array.isArray(g.shown) ? g.shown : [] }; };
-  const save = g => setSetting('homeGrid', g);   // synced with the account (assets/auth.js PREF_KEYS)
-  const isShown = id => { const g = prefs(); return TOOLS[id] ? g.shown.includes(id) : !g.hidden.includes(id); };
   function cardHtml(id) {
     if (TOOLS[id]) return toolCard(id);
     return ({ puzzle: () => (App.wordPuzzle ? App.wordPuzzle.card(more('puzzle', t('Daily challenge'))) : ''), plan: planCard, week: weekCard, checklist: checklistCard, classes: classesCard, cards: cardsCard, mistakes: mistakesCard, forum: forumCard })[id]();
   }
 
+  /* ---------- a board of cards you can hide and add back (this home; StudyCat Faculty's home too, assets/teach.js) ----------
+     o: key (the synced setting: { hidden, shown }), order (shown until hidden), optional (hidden until added), small (in the
+     row of small cards), card(id) → html, name(id) → label, available(id) (an optional card that can be added here) */
+  HG.board = function (o) {
+    const prefs = () => { const g = settings()[o.key] || {}; return { hidden: Array.isArray(g.hidden) ? g.hidden : [], shown: Array.isArray(g.shown) ? g.shown : [] }; };
+    const opt = id => o.optional.includes(id);
+    const isShown = id => { const g = prefs(); return opt(id) ? g.shown.includes(id) : !g.hidden.includes(id); };
+    const ids = () => o.order.concat(o.optional);
+    // the big cards first, then the small ones in a row of their own
+    const gridHtml = () => {
+      const on = ids().filter(isShown); const html = id => safe(() => o.card(id)) || '';
+      const minis = on.filter(id => o.small.includes(id)).map(html).join('');
+      return on.filter(id => !o.small.includes(id)).map(html).join('') + (minis ? `<div class="hg-minis">${minis}</div>` : '');
+    };
+    const addHtml = () => ids().filter(id => !isShown(id) && (!opt(id) || !o.available || o.available(id))).map(id => `<button type="button" class="hg-add-b" data-hga="${id}"><span class="hg-plus" aria-hidden="true">${icon('plus', 13)}</span>${esc(o.name(id))}</button>`).join('') || `<span class="small muted">${esc(t('Everything is on your dashboard.'))}</span>`;
+    const html = (foot = '') => `<div class="hg-grid" id="hg-grid">${gridHtml()}</div>
+      <section class="hg-add" aria-labelledby="hg-add-t"><h2 class="hg-add-h" id="hg-add-t">${esc(t('Add to dashboard'))}</h2>
+        <div class="hg-add-list" id="hg-add-list">${addHtml()}</div>${foot}</section>`;
+    function closeMenu() { const m = $('.hg-menu'); if (m) { const b = $(`[data-hgm="${m.dataset.for}"]`); if (b) b.setAttribute('aria-expanded', 'false'); m.remove(); } }
+    // W: the board's own wrapper (drawn fresh with each visit); after: called once the grid is drawn again in place
+    function wire(W, after) {
+      const repaint = () => { const g = $('#hg-grid', W), a = $('#hg-add-list', W); if (g) g.innerHTML = gridHtml(); if (a) a.innerHTML = addHtml(); if (after) after(); };   // in place: no jump to the top
+      W.addEventListener('click', e => {
+        const mb = e.target.closest('[data-hgm]');
+        if (mb) {
+          e.preventDefault(); const id = mb.dataset.hgm; const open = $('.hg-menu'); const was = open && open.dataset.for === id; closeMenu(); if (was) return;
+          const card = mb.closest('.hg-card'); const m = document.createElement('div'); m.className = 'hg-menu'; m.setAttribute('role', 'menu'); m.dataset.for = id;
+          m.innerHTML = `<button type="button" role="menuitem" data-hgh="${id}">${icon('eyeoff', 16)} ${esc(t('Hide from dashboard'))}</button>`;
+          card.appendChild(m); mb.setAttribute('aria-expanded', 'true'); m.querySelector('button').focus();
+          // a click anywhere else, or Tab out of it, closes it
+          m.addEventListener('focusout', ev => { const to = ev.relatedTarget; if (to && to.closest && to.closest('[data-hgm]')) return; if (!to || !m.contains(to)) setTimeout(() => { if (m.isConnected && !m.contains(document.activeElement)) closeMenu(); }, 0); });
+          setTimeout(() => document.addEventListener('click', function off(ev) { document.removeEventListener('click', off, true); if (m.isConnected && !ev.target.closest('.hg-menu, [data-hgm]')) closeMenu(); }, true), 0);
+          return;
+        }
+        const hb = e.target.closest('[data-hgh]');
+        if (hb) {
+          const id = hb.dataset.hgh; const g = prefs(); if (opt(id)) g.shown = g.shown.filter(x => x !== id); else if (!g.hidden.includes(id)) g.hidden.push(id); setSetting(o.key, g); closeMenu(); repaint();
+          const b = $(`[data-hga="${id}"]`, W); if (b) b.focus(); App.toast(t('Hidden. Add it back any time from Add to dashboard.')); return;
+        }
+        const ab = e.target.closest('[data-hga]');
+        if (ab) {
+          const id = ab.dataset.hga; const g = prefs(); if (opt(id)) { if (!g.shown.includes(id)) g.shown.push(id); } else g.hidden = g.hidden.filter(x => x !== id); setSetting(o.key, g); repaint();
+          const c = $(`[data-hg="${id}"]`, W); if (c) { c.scrollIntoView({ block: 'nearest', behavior: App.motionReduced && App.motionReduced() ? 'auto' : 'smooth' }); const h = $('h2', c); if (h) { h.setAttribute('tabindex', '-1'); h.focus({ preventScroll: true }); } }
+          return;
+        }
+        if (!e.target.closest('.hg-menu')) closeMenu();
+      });
+      W.addEventListener('keydown', e => { if (e.key === 'Escape' && $('.hg-menu')) { const id = $('.hg-menu').dataset.for; closeMenu(); const b = $(`[data-hgm="${id}"]`, W); if (b) b.focus(); } });
+    }
+    return { html, wire, gridHtml, addHtml, isShown };
+  };
+  HG.more = more; HG.shell = shell; HG.mini = mini; HG.chip = chip;
+  const board = HG.board({ key: 'homeGrid', order: ORDER, optional: Object.keys(TOOLS), small: MINI.concat(Object.keys(TOOLS)), card: cardHtml, name: id => t(TOOLS[id] ? TOOLS[id].t : NAMES[id]), available: id => !!(typeof TOOLS[id].href === 'function' ? TOOLS[id].href() : TOOLS[id].href) });   // synced with the account (assets/auth.js PREF_KEYS)
+
   /* ---------- the page ---------- */
   // the website's own look only: the apps keep their frame, the other looks (Realm and the rest) keep the free-form home
   HG.on = () => settings().homeMode !== 'free' && !document.documentElement.dataset.app && !document.documentElement.dataset.skin;
-  // the big cards first, then the small ones (and the tools you added) in a row of their own
-  function gridHtml() {
-    const ids = ORDER.concat(TOOL_ORDER).filter(isShown); const small = id => MINI.includes(id) || !!TOOLS[id];
-    const html = id => safe(() => cardHtml(id)) || '';
-    const minis = ids.filter(small).map(html).join('');
-    return ids.filter(id => !small(id)).map(html).join('') + (minis ? `<div class="hg-minis">${minis}</div>` : '');
-  }
-  function addHtml() {
-    const hidden = ORDER.concat(TOOL_ORDER).filter(id => !isShown(id) && (TOOLS[id] ? !!(typeof TOOLS[id].href === 'function' ? TOOLS[id].href() : TOOLS[id].href) : true));
-    return hidden.map(id => `<button type="button" class="hg-add-b" data-hga="${id}"><span class="hg-plus" aria-hidden="true">${icon('plus', 13)}</span>${esc(t(TOOLS[id] ? TOOLS[id].t : NAMES[id]))}</button>`).join('') || `<span class="small muted">${esc(t('Everything is on your dashboard.'))}</span>`;
-  }
   HG.html = (o = {}) => {
     if (o.picking) return heroHtml({ kind: 'start' }) + (o.after || '');
     return `${heroHtml(HG.state())}${o.after || ''}
-      <div class="hg-grid" id="hg-grid">${gridHtml()}</div>
-      <section class="hg-add" aria-labelledby="hg-add-t"><h2 class="hg-add-h" id="hg-add-t">${esc(t('Add to dashboard'))}</h2>
-        <div class="hg-add-list" id="hg-add-list">${addHtml()}</div>
-        <button type="button" class="hg-free linkbtn small" data-hg-free="1">${icon('sliders', 13)} ${esc(t('Arrange freely: drag, resize and add more widgets'))}</button></section>`;
+      ${board.html(`<button type="button" class="hg-free linkbtn small" data-hg-free="1">${icon('sliders', 13)} ${esc(t('Arrange freely: drag, resize and add more widgets'))}</button>`)}`;
   };
-  function closeMenu() { const m = $('.hg-menu'); if (m) { const b = $(`[data-hgm="${m.dataset.for}"]`); if (b) b.setAttribute('aria-expanded', 'false'); m.remove(); } }
   HG.wire = function (root, rerender) {
     // listeners go on the home's own wrapper, drawn fresh with each visit (#view stays, so they would pile up there)
     const W = $('.hg-wrap', root); if (!W) return;
-    const repaint = () => { const g = $('#hg-grid', W), a = $('#hg-add-list', W); if (g) g.innerHTML = gridHtml(); if (a) a.innerHTML = addHtml(); loadLater(); };   // in place: no jump to the top
     function loadLater() {
       const later = $('[data-hg-later]', W);
       if (later && App.loadCourse) App.loadCourse(later.dataset.hgLater).then(() => { if (!later.isConnected) return; const tmp = document.createElement('div'); tmp.innerHTML = checklistCard(); if (tmp.firstElementChild && !tmp.firstElementChild.matches('[data-hg-later]')) later.replaceWith(tmp.firstElementChild); else later.remove(); }).catch(() => later.remove());
     }
+    board.wire(W, loadLater);
     W.addEventListener('click', e => {
-      const mb = e.target.closest('[data-hgm]');
-      if (mb) {
-        e.preventDefault(); const id = mb.dataset.hgm; const open = $('.hg-menu'); const was = open && open.dataset.for === id; closeMenu(); if (was) return;
-        const card = mb.closest('.hg-card'); const m = document.createElement('div'); m.className = 'hg-menu'; m.setAttribute('role', 'menu'); m.dataset.for = id;
-        m.innerHTML = `<button type="button" role="menuitem" data-hgh="${id}">${icon('eyeoff', 16)} ${esc(t('Hide from dashboard'))}</button>`;
-        card.appendChild(m); mb.setAttribute('aria-expanded', 'true'); m.querySelector('button').focus();
-        // a click anywhere else, or Tab out of it, closes it
-        m.addEventListener('focusout', ev => { const to = ev.relatedTarget; if (to && to.closest && to.closest('[data-hgm]')) return; if (!to || !m.contains(to)) setTimeout(() => { if (m.isConnected && !m.contains(document.activeElement)) closeMenu(); }, 0); });
-        setTimeout(() => document.addEventListener('click', function off(ev) { document.removeEventListener('click', off, true); if (m.isConnected && !ev.target.closest('.hg-menu, [data-hgm]')) closeMenu(); }, true), 0);
-        return;
-      }
-      const hb = e.target.closest('[data-hgh]');
-      if (hb) {
-        const id = hb.dataset.hgh; const g = prefs(); if (TOOLS[id]) g.shown = g.shown.filter(x => x !== id); else if (!g.hidden.includes(id)) g.hidden.push(id); save(g); closeMenu(); repaint();
-        const b = $(`[data-hga="${id}"]`, W); if (b) b.focus(); App.toast(t('Hidden. Add it back any time from Add to dashboard.')); return;
-      }
-      const ab = e.target.closest('[data-hga]');
-      if (ab) {
-        const id = ab.dataset.hga; const g = prefs(); if (TOOLS[id]) { if (!g.shown.includes(id)) g.shown.push(id); } else g.hidden = g.hidden.filter(x => x !== id); save(g); repaint();
-        const c = $(`[data-hg="${id}"]`, W); if (c) { c.scrollIntoView({ block: 'nearest', behavior: App.motionReduced && App.motionReduced() ? 'auto' : 'smooth' }); const h = $('h2', c); if (h) { h.setAttribute('tabindex', '-1'); h.focus({ preventScroll: true }); } } return;
-      }
       if (e.target.closest('[data-hg-pick]')) { App.auth.onboard(true); return; }
-      if (e.target.closest('[data-hg-free]')) { setSetting('homeMode', 'free'); rerender(); return; }
-      if (!e.target.closest('.hg-menu')) closeMenu();
+      if (e.target.closest('[data-hg-free]')) { setSetting('homeMode', 'free'); rerender(); }
     });
-    W.addEventListener('keydown', e => { if (e.key === 'Escape' && $('.hg-menu')) { const id = $('.hg-menu').dataset.for; closeMenu(); const b = $(`[data-hgm="${id}"]`, W); if (b) b.focus(); } });
     // checklists are keyed by exam; an empty set comes back from the server as [] (a list), so it is copied into an object first
     W.addEventListener('change', e => {
       const c = e.target.closest('[data-hgc]'); if (!c) return; const [cid, exid, i] = c.dataset.hgc.split('|');

@@ -863,6 +863,29 @@ The October 2026 audit against what careful, large sites do (and where AI-built 
 
 `assets/gpa.js` adds a GPA calculator at `#/gpa` (under Tools in the sidebar and on the Tools page). It uses Montana State's 4.0 scale with plus and minus grades (A 4.00, A- 3.67, B+ 3.33 … D- 0.67, F 0). The semester table starts with the student's chosen classes and their credits; the student picks the letter they have or expect in each. Add or remove classes, mark one P/W so it is not counted, and see semester GPA, graded credits and quality points, with a Dean's List (3.50 on 12+ credits) or below-good-standing flag. Enter the GPA and graded credits from before this semester for the cumulative GPA and its change; set a goal to see the semester GPA it needs (and roughly which letter in every class), or how many more credits at 4.0 it would take when it is out of reach this semester. A what-if table shows how one grade step up or down in each class moves the result. Everything is saved in the browser.
 
+## The October 2026 redesign (2026.10.29.8)
+
+The designer's files ("StudyCat Redesign", Figma "StudyCat") adapted to the site, in `assets/design.css` (loaded last,
+website default look only; the apps keep their frame). Night is the design as drawn and follows the device; day is its
+twin; the light-or-dark switch stays.
+- **Your home** (`assets/home-grid.js`): one hero (the soonest exam in three weeks, else the class you practised last
+  and how it went, else pick a class), then cards: the daily word, today's plan, this week, the exam checklist in the
+  week before an exam, your classes, flashcards, mistakes, discussions. ⋮ → Hide from dashboard; Add to dashboard
+  brings a card back and lists the tools. Saved with the account (`homeGrid`). Arrange freely keeps the free-form
+  dashboard on that device (`homeMode`).
+- **The daily word** (`assets/word-puzzle.js`): five letters from your classes' vocabulary (each word with what it
+  means in that class), six tries, +20 XP and a streak (`wordPuzzle`, synced).
+- **Learning or teaching**: a switch at the top of the sidebar; Teaching opens StudyCat Faculty in the same frame, with
+  a home of its own (the next class meeting, class activity, coming up, attendance, your syllabi, practice
+  assignments; office hours, the printed syllabus and faculty status to add, `teachGrid`). Your syllabi moved to
+  `#/teach/syllabi`. The side you used last is where StudyCat opens (`side`).
+- **The landing for a first visit** (`assets/start.js`): its own header instead of the sidebar, the three steps as
+  tabs with the class picker, an example question and sign-up, practice, Bo, professors, questions, a last call.
+- **Fixed on the way**: a map saved empty came back from the server as a list (PHP arrays cannot tell `{}` from
+  `[]`), so the next named entry written into it (a checklist tick, a flashcard box) was lost. `api/lib.php`
+  `mh_input_json()` keeps `{}` for progress and preferences, the server sends objects back, and the browser turns an
+  empty list back into a map (`App.store.get`, `settings()`, `Auth.asMaps`).
+
 ## Quick to tap (Interaction to Next Paint)
 
 Measured on a phone-sized page with the CPU slowed four times (a mid-range phone), the main study taps stay under 200 ms: flipping a card, Got it and Again, generating a practice set, answering a question, opening the menu and the add dialog. What it took: a practice answer repaints its own question and the score bar (`paintBar` in assets/tools.js), not the whole set and its MathJax (336 to 176 ms); the floating Bo's tip decides from `glance()` (assets/bo-float.js), the page's classes only, instead of `screen()`, which measures every block and held the main thread for about 350 ms six seconds after each answer; confetti sets one transform per piece; the "+XP" float measures at the start of a frame; `todayISO()` parses the settings again only when they changed. tests/snappy.test.js checks the behaviour (not the timings, which depend on the machine).

@@ -130,8 +130,10 @@
     root.innerHTML = `<div class="fx tex2jax_ignore mathjax_ignore${o.norail ? ' norail' : ''}" id="fx">
       <nav class="fx-rail" id="fx-rail" aria-label="Faculty workspace">
         <a class="fx-brand" href="#/teach"><span class="fx-brand-name">StudyCat</span><span class="fx-brand-sub">Faculty</span></a>
+        ${App.modeSwitch ? App.modeSwitch('teach') : ''}
+        ${u ? `<div class="fx-add"><button type="button" class="fx-addbtn" data-action="fx-add" aria-haspopup="menu" aria-expanded="false">${icon('plus', 16)} Add to syllabus</button></div>` : ''}
         <div class="fx-rail-body">${o.rail || ''}</div>
-        <div class="fx-rail-foot"><a class="fx-nav" href="#/">${icon('left', 16)}<span>Student site</span></a><button type="button" class="fx-nav" data-action="fx-theme"><span class="theme-btn fx-theme-ic" aria-hidden="true">${icon(dark ? 'sun' : 'moon', 16)}</span><span>Light or dark</span></button></div>
+        <div class="fx-rail-foot">${App.modeSwitch ? '' : `<a class="fx-nav" href="#/">${icon('left', 16)}<span>Student site</span></a>`}<button type="button" class="fx-nav" data-action="fx-theme"><span class="theme-btn fx-theme-ic" aria-hidden="true">${icon(dark ? 'sun' : 'moon', 16)}</span><span>Light or dark</span></button></div>
       </nav>
       <div class="fx-col">
         <header class="fx-top"><button type="button" class="fx-iconbtn fx-menu" data-action="fx-menu" aria-label="Menu" aria-controls="fx-rail" aria-expanded="false">${icon('menu', 18)}</button>
@@ -144,14 +146,14 @@
     </div>`;
     if (o.title) document.title = `${o.title} · StudyCat Faculty`;
     const fx = $('#fx', root);
-    bind(fx, Object.assign({ 'fx-theme': () => App.toggleTheme(), 'fx-menu': () => { const open = !fx.classList.contains('rail-open'); fx.classList.toggle('rail-open', open); $('.fx-scrim', fx).hidden = !open; $('.fx-menu', fx).setAttribute('aria-expanded', String(open)); if (open) { const a = $('.fx-rail .fx-nav', fx); if (a) a.focus(); } } }, o.on || {}));
+    bind(fx, Object.assign({ 'fx-theme': () => App.toggleTheme(), 'fx-add': b => addMenu(b), 'fx-menu': () => { const open = !fx.classList.contains('rail-open'); fx.classList.toggle('rail-open', open); $('.fx-scrim', fx).hidden = !open; $('.fx-menu', fx).setAttribute('aria-expanded', String(open)); if (open) { const a = $('.fx-rail .fx-nav', fx); if (a) a.focus(); } } }, o.on || {}));
     if (App.auth) App.auth.bindLocks(fx);
     return fx;
   }
   const navItem = (href, label, ic, on, extra = '') => `<a class="fx-nav${on ? ' on' : ''}" href="${href}"${on ? ' aria-current="page"' : ''}>${icon(ic, 16)}<span>${label}</span>${extra}</a>`;
   function homeRail(active) {
     const ok = ME && ME.instructor; const waiting = ME && ME.request && ME.request.status === 'new';
-    return `<div class="fx-nav-group">${navItem('#/teach', 'Your syllabi', 'file', active === 'home')}${navItem('#/teach/new', 'New syllabus', 'plus', active === 'new')}${navItem('#/teach/verify', 'Faculty status', 'shield', active === 'verify', ME && !ok ? `<span class="fx-mark ${waiting ? 'wait' : 'warn'}" title="${waiting ? 'Being checked' : 'Not confirmed yet'}"></span>` : '')}</div>`;
+    return `<div class="fx-nav-group">${navItem('#/teach', 'Home', 'home', active === 'home')}${navItem('#/teach/syllabi', 'Your syllabi', 'file', active === 'syllabi')}${navItem('#/teach/new', 'New syllabus', 'plus', active === 'new')}${navItem('#/teach/verify', 'Faculty status', 'shield', active === 'verify', ME && !ok ? `<span class="fx-mark ${waiting ? 'wait' : 'warn'}" title="${waiting ? 'Being checked' : 'Not confirmed yet'}"></span>` : '')}</div>`;
   }
   const lintCount = (k, lv) => (S.lint || []).filter(x => x[2] === k && x[0] === lv).length;
   const markHtml = k => { const e = lintCount(k, 'error'), w = lintCount(k, 'warn'); return e ? `<span class="fx-mark err" title="${e} to fix">${e}<span class="sr-only"> to fix</span></span>` : w ? `<span class="fx-mark warn" title="${w} suggestion${w === 1 ? '' : 's'}"><span class="sr-only">${w} suggestion${w === 1 ? '' : 's'}</span></span>` : ''; };
@@ -181,8 +183,9 @@
       if (signedOut()) return intro(root);
       if (id) return openClass(root, id, PAGES.includes(parts[1]) ? parts[1] : LEGACY[parts[1]] || 'overview');
       if (parts[0] === 'new') return newPage(root);
+      if (parts[0] === 'syllabi') return home(root);
       if (parts[0] === 'verify') return verifyPage(root);
-      home(root);
+      teachHome(root);
     },
     unmount() { flush(); clearInterval(attTimer); delete document.documentElement.dataset.surface; }
   };
@@ -203,9 +206,127 @@
     </div>` });
   }
 
+  /* ---------- Add to syllabus: straight to the part of the open (or latest) syllabus you want to add to ---------- */
+  function addMenu(b) {
+    const open = $('.fx-addmenu'); if (open) { open.remove(); b.setAttribute('aria-expanded', 'false'); return; }
+    const go = async k => {
+      let id = S && S.id; if (!id) { try { if (!ME) ME = await api('teach_me'); } catch (e) {} const c = ME && ME.teaching.find(x => x.access !== 'student'); id = c && c.id; }
+      location.hash = id ? `#/teach/${id}/${k}` : '#/teach/new';
+    };
+    const m = document.createElement('div'); m.className = 'fx-addmenu hg-menu'; m.setAttribute('role', 'menu');
+    m.innerHTML = [['exams', 'An exam', 'flag'], ['schedule', 'A class day', 'calendar'], ['people', 'Office hours', 'users'], ['materials', 'A reading or material', 'scroll'], ['policies', 'A policy', 'shield']].map(([k, l, ic]) => `<button type="button" role="menuitem" data-k="${k}">${icon(ic, 16)} ${l}</button>`).join('');
+    b.parentNode.appendChild(m); b.setAttribute('aria-expanded', 'true'); m.querySelector('button').focus();
+    const close = () => { m.remove(); b.setAttribute('aria-expanded', 'false'); };
+    m.addEventListener('click', e => { const x = e.target.closest('[data-k]'); if (x) { close(); go(x.dataset.k); } });
+    m.addEventListener('keydown', e => { if (e.key === 'Escape') { close(); b.focus(); } });
+    m.addEventListener('focusout', e => { if (!e.relatedTarget || !m.contains(e.relatedTarget)) setTimeout(() => { if (m.isConnected && !m.contains(document.activeElement) && document.activeElement !== b) close(); }, 0); });
+  }
+
+  /* ---------- Home: the next class, how it is going, what is coming, attendance, your syllabi ----------
+     The teaching side of the October 2026 redesign, in the same cards as the student home (assets/home-grid.js, .hg-*).
+     The class it is about: the one that meets next (else the one edited last). Everything comes from your syllabus and
+     from what your students handed in; nothing here is a guess. Cards hide and come back (settings.teachGrid, synced). */
+  const nowHM = () => { const d = new Date(); return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); };
+  const todayIso = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
+  // the next meeting in the syllabus: today (still to come), then the next seven days
+  function nextMeeting(syl) {
+    const meets = (((syl || {}).course || {}).meets || []).filter(m => m.days && m.start); const t0 = todayIso();
+    for (let n = 0; n < 8; n++) {
+      const d = plus(t0, n); if (NO_CLASS[d]) continue; const dow = D0(d).getUTCDay();
+      const hits = meets.filter(m => parseDays(m.days).includes(dow) && (n > 0 || (m.end || m.start) > nowHM())).sort((a, b) => a.start.localeCompare(b.start));
+      if (hits.length) return { date: d, n, m: hits[0] };
+    }
+    return null;
+  }
+  const clsName = c => (c.title && c.title.length <= 16 ? c.title : c.code) || 'Your class';
+  async function teachHome(root) {
+    const fx = frame(root, { rail: homeRail('home'), crumbs: '<span aria-current="page">Home</span>', body: '<div class="fx-wait">Loading…</div>', title: 'Home' });
+    let me; try { me = ME = await api('teach_me'); } catch (e) { if (root.isConnected) $('#tc-body', root).innerHTML = `<div class="fx-wide"><p class="fx-error">${esc(e.message)}</p></div>`; return; }
+    if (!root.isConnected) return;
+    const mine = me.teaching.filter(c => c.access !== 'student');
+    // the class: the one that meets next, else the one edited last
+    const full = {}; await Promise.all(mine.slice(0, 6).map(async c => { try { full[c.id] = (await api('teach_class_get&id=' + c.id)).syllabus; } catch (e) {} }));
+    if (!root.isConnected) return;
+    const next = mine.map(c => ({ c, nx: nextMeeting(full[c.id]) })).filter(x => x.nx).sort((a, b) => a.nx.date.localeCompare(b.nx.date) || a.nx.m.start.localeCompare(b.nx.m.start))[0];
+    const pick = next ? next.c : mine.slice().sort((a, b) => b.updated - a.updated)[0];
+    const syl = pick ? full[pick.id] || {} : {}; let ins = null;
+    if (pick && pick.verified) { try { ins = await api('teach_insights&id=' + pick.id); } catch (e) {} }
+    if (!root.isConnected) return;
+    const H = App.homeGrid; const body = $('#tc-body', root);
+    body.innerHTML = `<div class="hg-wrap fx-home">${heroHtml(me, pick, syl, next && next.nx, ins)}${H ? homeBoard(me, mine, pick, syl, ins).html() : ''}</div>`;
+    if (H) homeBoard(me, mine, pick, syl, ins).wire($('.fx-home', body));
+    if (App.paintMascots) App.paintMascots();
+  }
+  function heroHtml(me, c, syl, nx, ins) {
+    const H = App.homeGrid; const art = H ? H.art : ''; const t0 = todayIso();
+    const when = `${esc(fmt(t0))}${me.instructor ? '' : ' · <span class="hg-gold">' + icon('shield', 13) + ' Faculty status not confirmed yet</span>'}`;
+    if (!c) return `<header class="hg-hero" data-state="start"><div class="hg-hero-in"><p class="hg-when">${when}</p>
+      <h1 class="hg-title">Write the syllabus once. <em>Run the class from it.</em></h1>
+      <p class="hg-sub">Course facts, office hours, schedule, exams, grading and policies, with the finished page beside the form. Print it, save it as a PDF, or publish it to your students.</p>
+      <div class="hg-cta"><a class="btn primary lg" href="#/teach/new">Start a syllabus ${icon('right', 16)}</a><a class="hg-link" href="#/instructors">What Bo does in your class</a></div></div>${art}</header>`;
+    const exam = ((syl.exams || []).filter(e => e.date && e.date >= t0).sort((a, b) => a.date.localeCompare(b.date)))[0];
+    const row = ((syl.schedule || {}).rows || []).find(r => r.date === (nx ? nx.date : t0) && r.title);
+    const examLine = exam ? (plus(t0, 7) >= exam.date ? ` ${exam.name} is on ${fmt(exam.date, { weekday: 'long', month: undefined, day: undefined })}.` : ` ${exam.name}: ${fmt(exam.date)}.`) : '';
+    const kind = nx ? String(nx.m.kind || 'Class').toLowerCase() : '';
+    const title = nx ? `${esc(clsName(c))} ${esc(kind)} <em>${nx.n === 0 ? 'at ' + esc(fmtTime(nx.m.start)) : nx.n === 1 ? 'tomorrow, ' + esc(fmtTime(nx.m.start)) : esc(fmt(nx.date, { month: undefined, day: undefined })) + ', ' + esc(fmtTime(nx.m.start))}.</em>` : `${esc(clsName(c))}: <em>no class meetings yet.</em>`;
+    const chip = nx ? `<span class="hg-chip fx-room">${esc([nx.m.room, c.students ? `${c.students} student${c.students === 1 ? '' : 's'}` : ''].filter(Boolean).join(' · ') || c.code)}</span>` : '';
+    const sub = nx ? `${row ? `${nx.n === 0 ? 'Today' : 'Next'}: ${esc(row.title)}.` : ''}${esc(examLine)}`.trim() : 'Add the days and times you meet, and this shows the next class, its room and what is on the schedule.';
+    const tools = c.verified ? `<a class="btn primary lg" href="#/teach/${c.id}/attendance">Show the attendance code ${icon('right', 16)}</a><a class="hg-link" href="#/teach/${c.id}/insights">Open class activity</a>`
+      : `<a class="btn primary lg" href="#/teach/${c.id}/${nx ? 'overview' : 'course'}">${nx ? 'Open the syllabus' : 'Add class meetings'} ${icon('right', 16)}</a><a class="hg-link" href="#/teach/verify">Attendance and class activity turn on with faculty status</a>`;
+    return `<header class="hg-hero" data-state="${nx ? 'class' : 'start'}"><div class="hg-hero-in"><p class="hg-when">${when}</p>
+      <h1 class="hg-title">${title}</h1>${chip ? `<div class="hg-chips">${chip}</div>` : ''}${sub ? `<p class="hg-sub">${sub}</p>` : ''}
+      <div class="hg-cta">${tools}</div></div>${art}</header>`;
+  }
+  function homeBoard(me, mine, c, syl, ins) {
+    const H = App.homeGrid; const t0 = todayIso(); const sec = c && c.section ? ` · Sec ${esc(c.section)}` : '';
+    const card = id => {
+      if (!c && id !== 'syllabi' && id !== 'status') return '';
+      if (id === 'activity') {
+        if (!c.verified) return H.shell('activity', 'half', 'Class activity', `<p class="hg-none">Once your faculty status is confirmed and students join with the class code, what they practise shows here: who practised, the scores and where they get stuck.</p><a class="hg-go" href="#/teach/verify">Faculty status</a>`);
+        const a = ins && ins.assignments && ins.assignments[ins.assignments.length - 1]; const n = ins ? ins.students : c.students;
+        const stats = `<div class="fx-stats"><div><b class="hg-num">${a ? a.done : 0}<small>/${n || 0}</small></b><span>${a ? 'handed in ' + esc(a.title) : 'students'}</span></div><div><b class="hg-num">${a && a.avg != null ? a.avg + '%' : '–'}</b><span>average score</span></div><div><b class="hg-num">${ins ? ins.joined_week : 0}</b><span>joined this week</span></div></div>`;
+        const stuck = ins && ins.topics && ins.topics.length ? `<p class="fx-cap">Where they get stuck</p><div class="hg-classes fx-stuck">${ins.topics.slice(0, 3).map(x => `<div class="hg-cl"><span class="hg-cl-row"><b>${esc(x.topic)}</b><span class="hg-pct">${x.pct}% right</span></span><span class="hg-track" role="progressbar" aria-label="${esc(x.topic)}: ${x.pct}% right" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${x.pct}"><i style="width:${x.pct}%"></i></span></div>`).join('')}</div>` : '';
+        return H.shell('activity', 'half', 'Class activity', `${stats}${stuck}<p class="hg-foot">From the practice your students handed in.</p>`, `<span class="hg-meta">This week in ${esc(clsName(c))}${sec}</span>`);
+      }
+      if (id === 'coming') {
+        const items = (syl.exams || []).filter(e => e.date && e.date >= t0).map(e => ({ d: e.date, t: e.name, s: e.covers || e.place || '', exam: true }))
+          .concat(((syl.schedule || {}).rows || []).filter(r => r.date && r.date >= t0 && r.title && r.type !== 'holiday').map(r => ({ d: r.date, t: r.title, s: r.type === 'lecture' ? 'Lecture' : r.type || '' })))
+          .sort((a, b) => a.d.localeCompare(b.d)).slice(0, 4);
+        const body = items.length ? `<div class="hg-week">${items.map(x => `<div class="hg-wk${x.exam ? ' exam' : ''}"><span class="hg-day"><small>${esc(fmt(x.d, { month: undefined, day: undefined }).toUpperCase())}</small><b>${D0(x.d).getUTCDate()}</b></span><span class="hg-bar" aria-hidden="true"></span><span class="hg-wk-t"><b>${esc(x.t)}</b><small>${esc(x.s)}</small></span>${x.exam ? '<span class="hg-badge">Exam</span>' : ''}</div>`).join('')}</div>` : '<p class="hg-none">Nothing ahead in the schedule. Add class days and exams to the syllabus and they show here.</p>';
+        return H.shell('coming', 'half', 'Coming up', body, `<a class="hg-head-link" href="#/teach/${c.id}/schedule">Edit syllabus</a>`);
+      }
+      if (id === 'attendance') {
+        if (!c.verified) return '';
+        const ss = (ins && ins.attendance || []).slice(-4).reverse(); const n = Math.max(1, (ins && ins.students) || c.students || 1);
+        const body = ss.length ? `<div class="hg-classes">${ss.map(x => { const p = Math.min(100, Math.round(100 * x.n / n)); return `<div class="hg-cl"><span class="hg-cl-row"><b>${esc(x.label || fmtWhen(x.opens))}</b><span class="hg-pct">${x.n} · ${p}%</span></span><span class="hg-track" role="progressbar" aria-label="${esc(x.label || fmtWhen(x.opens))}: ${p}% checked in" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${p}"><i style="width:${p}%"></i></span></div>`; }).join('')}</div>` : '<p class="hg-none">No check-ins yet. In class, open attendance: students type the 4-digit code on StudyCat.</p>';
+        return H.shell('attendance', 'half', 'Attendance', body, `<a class="hg-head-link" href="#/teach/${c.id}/attendance">Show code</a>`);
+      }
+      if (id === 'syllabi') {
+        const body = mine.length ? `<div class="hg-plan">${mine.slice(0, 5).map(x => `<a class="hg-row fx-syl" href="#/teach/${x.id}"><span class="hg-row-t"><b>${esc(x.title || x.code)}</b><small>${esc([x.code, x.section ? 'Sec ' + x.section : '', x.term].filter(Boolean).join(' · '))}</small></span><span class="fx-tag${x.status === 'published' ? ' live' : ''}">${x.status === 'published' ? 'Published' : 'Draft'}</span></a>`).join('')}</div>` : '<p class="hg-none">No syllabi yet. The Montana State template has the accommodations, integrity and wellbeing statements in already.</p>';
+        return H.shell('syllabi', 'half', 'Your syllabi', body, `<a class="hg-head-link" href="#/teach/new">+ New syllabus</a>`);
+      }
+      if (id === 'assign') {
+        if (!c.verified) return '';
+        const a = ins && ins.assignments && ins.assignments[ins.assignments.length - 1]; const n = Math.max(1, (ins && ins.students) || 1);
+        return H.mini('assign', 'target', 'green', 'Practice assignments', a ? Math.round(100 * a.done / n) + '%' : '0', a ? `finished ${a.title} · ${dueText(a.due).replace(/^Due /, 'due ')}` : 'No practice assigned yet', `#/teach/${c.id}/assign`, a ? 'See results' : 'Assign practice');
+      }
+      if (id === 'hours') {
+        const p = (syl.people || []).find(x => x.hours) || (syl.people || [])[0] || {};
+        return H.mini('hours', 'users', 'blue', 'Office hours', p.hours ? p.hours.split(/[,;]/)[0] : '–', p.hours ? [p.office].filter(Boolean).join('') || 'From your syllabus' : 'Not in the syllabus yet', `#/teach/${c.id}/people`, 'Edit hours');
+      }
+      if (id === 'pdf') return c.status === 'published' && c.join_code ? H.mini('pdf', 'file', 'violet', 'Syllabus PDF', c.code, 'The published syllabus, ready to print or save as a PDF', `#/syllabus/${esc(c.join_code)}`, 'Open it') : '';
+      if (id === 'status') return H.mini('status', 'shield', me.instructor ? 'green' : 'gold', 'Faculty status', me.instructor ? 'Confirmed' : me.request && me.request.status === 'new' ? 'Being checked' : 'Not yet', me.instructor ? 'You can publish and use the class tools' : 'Needed to publish and for the class tools', '#/teach/verify', me.instructor ? 'See it' : 'Confirm faculty status');
+      return '';
+    };
+    const NAMES = { activity: 'Class activity', coming: 'Coming up', attendance: 'Attendance', syllabi: 'Your syllabi', assign: 'Practice assignments', hours: 'Office hours', pdf: 'Syllabus PDF', status: 'Faculty status' };
+    // faculty status stays on the home until it is confirmed (publishing and the class tools wait for it)
+    const st = me.instructor ? [] : ['status'];
+    return H.board({ key: 'teachGrid', order: ['activity', 'coming', 'attendance', 'syllabi', 'assign'].concat(st), optional: ['hours', 'pdf'].concat(me.instructor ? ['status'] : []), small: ['assign', 'hours', 'pdf', 'status'], card, name: id => NAMES[id], available: id => id === 'status' || (!!c && (id !== 'pdf' || c.status === 'published')) });
+  }
+
   /* ---------- your syllabi ---------- */
   async function home(root) {
-    frame(root, { rail: homeRail('home'), crumbs: '<span aria-current="page">Your syllabi</span>', body: '<div class="fx-wait">Loading your syllabi…</div>', title: 'Your syllabi' });
+    frame(root, { rail: homeRail('syllabi'), crumbs: '<span aria-current="page">Your syllabi</span>', body: '<div class="fx-wait">Loading your syllabi…</div>', title: 'Your syllabi' });
     let me; try { me = ME = await api('teach_me'); } catch (e) { if (root.isConnected) $('#tc-body', root).innerHTML = `<div class="fx-wide"><p class="fx-error">${esc(e.message)}</p></div>`; return; }
     if (!root.isConnected) return;
     const rows = me.teaching.filter(c => c.access !== 'student');
@@ -226,7 +347,7 @@
   /* ---------- a new syllabus ---------- */
   const quizCourses = () => App.COURSE_ORDER.filter(id => { const C = global.Courses[id]; return C && !C.hidden && !C.preview && (C.quiz || C.hasQuiz || ['calc', 'physics', 'precalc', 'csci', 'biob', 'kin', 'psyx'].includes(id)); });
   async function newPage(root) {
-    frame(root, { rail: homeRail('new'), crumbs: '<a href="#/teach">Your syllabi</a><span class="fx-sep" aria-hidden="true">/</span><span aria-current="page">New syllabus</span>', body: '<div class="fx-wait">Loading…</div>', title: 'New syllabus' });
+    frame(root, { rail: homeRail('new'), crumbs: '<a href="#/teach/syllabi">Your syllabi</a><span class="fx-sep" aria-hidden="true">/</span><span aria-current="page">New syllabus</span>', body: '<div class="fx-wait">Loading…</div>', title: 'New syllabus' });
     if (!ME) { try { ME = await api('teach_me'); } catch (e) {} } if (!root.isConnected) return;
     const mine = ((ME && ME.teaching) || []).filter(c => c.access !== 'student'); const qc = quizCourses();
     $('#tc-body', root).innerHTML = `<div class="fx-narrow"><header class="fx-head"><h1 class="fx-h1">New syllabus</h1><p class="fx-lede">The basics first. The rest is filled in page by page, with the finished syllabus beside the form.</p></header>
@@ -247,7 +368,7 @@
 
   /* ---------- faculty status ---------- */
   async function verifyPage(root) {
-    frame(root, { rail: homeRail('verify'), crumbs: '<a href="#/teach">Your syllabi</a><span class="fx-sep" aria-hidden="true">/</span><span aria-current="page">Faculty status</span>', body: '<div class="fx-wait">Loading…</div>', title: 'Faculty status' });
+    frame(root, { rail: homeRail('verify'), crumbs: '<a href="#/teach/syllabi">Your syllabi</a><span class="fx-sep" aria-hidden="true">/</span><span aria-current="page">Faculty status</span>', body: '<div class="fx-wait">Loading…</div>', title: 'Faculty status' });
     let me; try { me = ME = await api('teach_me'); } catch (e) { if (root.isConnected) $('#tc-body', root).innerHTML = `<div class="fx-narrow"><p class="fx-error">${esc(e.message)}</p></div>`; return; }
     if (!root.isConnected) return; const rail = $('.fx-rail-body', root); if (rail) rail.innerHTML = homeRail('verify');
     const head = `<header class="fx-head"><h1 class="fx-h1">Faculty status</h1><p class="fx-lede">Students trust that a class on StudyCat comes from their instructor, so an administrator checks each instructor by hand before a class can reach students.</p></header>`;
@@ -268,10 +389,10 @@
 
   /* ---------- one class ---------- */
   async function openClass(root, id, tab) {
-    const crumbs = c => `<a href="#/teach">Your syllabi</a><span class="fx-sep" aria-hidden="true">/</span><span aria-current="page">${c ? `${esc(c.code)} · ${esc(c.title)}` : 'Class'}</span>`;
+    const crumbs = c => `<a href="#/teach/syllabi">Your syllabi</a><span class="fx-sep" aria-hidden="true">/</span><span aria-current="page">${c ? `${esc(c.code)} · ${esc(c.title)}` : 'Class'}</span>`;
     if (!S || S.id !== id) {
       frame(root, { crumbs: crumbs(), body: '<div class="fx-wait">Opening the class…</div>', title: 'Class' });
-      let r; try { r = await api('teach_class_get&id=' + id); } catch (e) { if (root.isConnected) $('#tc-body', root).innerHTML = `<div class="fx-narrow"><p class="fx-error">${esc(e.message)}</p><a class="fx-btn" href="#/teach">Back to your syllabi</a></div>`; return; }
+      let r; try { r = await api('teach_class_get&id=' + id); } catch (e) { if (root.isConnected) $('#tc-body', root).innerHTML = `<div class="fx-narrow"><p class="fx-error">${esc(e.message)}</p><a class="fx-btn" href="#/teach/syllabi">Back to your syllabi</a></div>`; return; }
       if (!root.isConnected) return;
       S = { id, cls: r.class, syl: r.syllabus, lint: r.lint, starter: r.starter, ai: r.ai_presets, owner: r.owner, dirty: r.dirty, meInstructor: r.me_instructor, timer: null, unsaved: false };
     }

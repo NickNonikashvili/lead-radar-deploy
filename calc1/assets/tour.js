@@ -17,7 +17,7 @@
   'use strict';
   const App = global.App; if (!App) return;
   const { $, $$, esc, icon, settings, setSetting } = App;
-  const LAYOUT = 1;   // the layout of 2026.10.18 (the sidebar and header on every page)
+  const LAYOUT = 2;   // 1: the layout of 2026.10.18 (the sidebar and header on every page); 2: the redesign of 2026.10.29 (a new home, Learning or teaching)
   const t = (s, ...v) => (App.t ? App.t(s, ...v) : s);
   const STEPS = [
     { sel: '#sb-now', wide: true, title: 'The date, and where you are in the term', text: 'Today’s date and a live clock: tap the time for clock faces, the time back home and how far you are through the semester, the month and the week.' },
@@ -26,6 +26,8 @@
     { sel: '#sb-cal', wide: true, title: 'Your month at a glance', text: 'Dots mark busy days and exams. Tap a day to see everything on it.' },
     { sel: '#topbar .topbar-actions', wide: true, title: 'The header, on every page', text: 'Your next exam, focus sounds, the language, your streak and daily goal, and your account.' },
     { sel: '#topbar [data-action="menu"]', phone: true, title: 'Everything is in the menu', text: 'Your classes with the days until each exam, the planner pages, quick add, the month calendar, the clock and your streak.' },
+    { sel: '#sb-mode .sb-mode', wide: true, title: 'Learning or teaching', text: 'Teach a class? Teaching switches this same frame to StudyCat Faculty: your syllabi, attendance and how the class is doing. Learning brings you back.' },
+    { sel: '#hg-grid', title: 'Your home', text: 'Your next exam up top, then cards for today: the daily word, today’s plan, your week and your classes. Hide a card from its ⋮ menu; Add to dashboard brings it back, and the tools wait there too.' },
     { sel: '#dash', title: 'Your home', text: 'Widgets for your next step, what is due and your week. Arrange puts them anywhere, even on top of each other, and Add a widget brings more: a timer, to-dos, habits, a note.' },
     { sel: '#bo-fab', title: 'Bo, on every page', text: 'Ask him about whatever you are looking at: tap a question and he walks you through it. Part of StudyCat Pro.' },
     { sel: '#sb-hide', wide: true, title: 'Need more room?', text: 'Tuck the sidebar away here and the clock moves into the header. The menu button brings it back.' }

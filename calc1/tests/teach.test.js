@@ -14,13 +14,14 @@ const T = require('./lib');
   // tidy up classes left by an earlier run of this test
   const mine = await api(prof, 'teach_me'); for (const c of (mine.teaching || []).filter(c => c.code === 'M 171' && c.section === '009')) await api(prof, 'teach_class_delete', { id: c.id, confirm: 'M 171' });
 
-  // the way in: one button on the start page, and the workspace is its own surface
+  // the way in: the Learning or teaching switch at the top of the sidebar; the workspace draws the same frame, switched to Teaching
   await go(prof, '#/', 1200);
-  check('the start page has a "For professors" button to the faculty workspace', (await prof.getAttribute('.hero-actions .hero-faculty', 'href')) === '#/teach');
-  await prof.click('.hero-actions .hero-faculty'); await prof.waitForTimeout(1600);
+  check('the sidebar switches between learning and teaching, Teaching opens the faculty workspace', (await prof.getAttribute('.sidebar .sb-mode a[data-side="teach"]', 'href')) === '#/teach' && !!(await prof.$('.sidebar .sb-mode a[data-side="learn"][aria-current="true"]')));
+  await prof.click('.sidebar .sb-mode a[data-side="teach"]'); await prof.waitForTimeout(1600);
+  check('there the same switch says Teaching, and Learning goes back', !!(await prof.$('.fx-rail .sb-mode a[data-side="teach"][aria-current="true"]')) && (await prof.getAttribute('.fx-rail .sb-mode a[data-side="learn"]', 'href')) === '#/');
   const surf = await prof.evaluate(() => ({ s: document.documentElement.dataset.surface, tab: !!document.querySelector('#tabbar') && getComputedStyle(document.querySelector('#tabbar')).display, rail: !!document.querySelector('.fx-rail'), side: getComputedStyle(document.querySelector('.sidebar')).display }));
   check('the workspace has its own frame and none of the student site’s chrome', surf.s === 'faculty' && surf.rail && surf.side === 'none' && (surf.tab === false || surf.tab === 'none'), surf);
-  check('it lists your syllabi with a "New syllabus" button', /Your syllabi/.test(await txt(prof, '#tc-body')) && !!(await prof.$('a[href="#/teach/new"]')));
+  check('its home lists your syllabi with a "New syllabus" button', /Your syllabi/.test(await txt(prof, '#tc-body')) && !!(await prof.$('#tc-body a[href="#/teach/new"]')));
   await go(prof, '#/teach/new', 1200);
   await prof.fill('#tn-code', 'M 171'); await prof.fill('#tn-title', 'Calculus I'); await prof.fill('#tn-section', '009'); await prof.selectOption('#tn-link', 'calc');
   await prof.click('#tc-new button[type=submit]'); await prof.waitForTimeout(1600);

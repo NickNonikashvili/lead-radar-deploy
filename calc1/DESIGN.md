@@ -155,6 +155,15 @@ components:
 
 # Design System: StudyCat
 
+> **2026.10.29.8, the October 2026 redesign** (`assets/design.css`, loaded last, website default look only; the
+> designer's files "StudyCat Redesign" and the Figma "StudyCat"): a quieter, flatter frame. Night is the design as
+> drawn (a deep navy page, flat cards with one hairline border, a light-blue primary with dark text, gold for exams
+> and the teaching side); day is its twin. Outfit for headings, Figtree for text. Signed-in students get a new home
+> (one hero, then cards that hide and come back), the sidebar gets a Learning or teaching switch, StudyCat Faculty
+> moves into the same frame with its own home, and a first visit gets the designer's landing with its own header.
+> Where this file's older sections and design.css disagree, design.css and the section "The October 2026 redesign"
+> at the end win.
+
 > **2026.10.22.3, Big Sky, calmer** (`assets/clean.css`, loaded last, website default look only): the owner asked
 > for a clean, modern, uncluttered site that is still Big Sky. The sky, mountains, Bo and class colours stay; the
 > chrome changes: 1px borders everywhere (a generated rule thins every 2px border), a faint 1px edge under buttons
@@ -444,4 +453,53 @@ The pieces above live in `assets/create.css` (the maker, `mk-` and `mkr-`), `ass
 - **The home dashboard**: widgets are panels on a 12-column canvas of 30px rows, positioned absolutely so they can overlap. Arrange shows the grid as faint accent lines, outlines each widget in a dashed accent, and gives it a 30px grip (2px border, 9px radius), up, down, front, back and remove buttons, and a corner resize handle; while dragging, a dashed accent ghost shows where it lands and the widget lifts with a deep shadow. Under 720px the widgets stack (no handles; up and down move them). Class rows are 2px bordered with a class-coloured code tile. The note widget is a dashed, faintly gold paper.
 - **A lesson** (a topic's notes): a row of pill links (2px border, 999px radius) to each part, then The idea on an accent-soft block (18px radius, 17px text, 1.65 line height, at most 68ch), the picture in a 2px bordered 18px card with its caption, then the notes (key points, formulas), worked examples as callouts with Show the solution, Common mistakes with coral markers, and Check yourself as numbered cards with Show the answer. On a phone the lesson comes before the list of topics.
 - **Exam week on the class page**: right under the page heading, the same card made wide (from 900px): Today on the left, the day-by-day plan open on the right.
+
+## The October 2026 redesign
+
+**Source.** The designer's files (1-landing, 2-landing steps, 3-dashboard learning, 4-learning hero states, 6-dashboard
+teaching, the two interactive dashboards, practice-cards hover) and the Figma "StudyCat". The HTML files hold every
+measurement; `assets/design.css` restates them as tokens.
+
+**Colour.** Night: page #0B1222, sidebar #0F182C (right border #1D2948), cards #141F38 with a 1px #25335A border, inner
+boxes #0F182C, the hero a soft gradient #0B1322 → #111D33 with a #1D2948 border. Primary #7CB1FF with #0B1A33 text;
+secondary buttons #16213B on #2D3B63; links #8DBCFF; gold #F6C234 for exams, the daily challenge and teaching (chips
+#2E2610 / #F6C234 / #5A4815). Day: page #F3F6FB, white cards on #DFE6F0 lines, primary #1A64D6 with white text, gold
+chips #FFF1C9 / #6B4D00. A class's own pages keep the class colour as their accent (`:not([data-course])`).
+
+**Type.** Outfit (variable, self-hosted, SIL OFL) for headings: the hero 52px/800 (the landing 68px), card titles
+22px/700, small card titles in Figtree 16/700, big numbers in Outfit 36px/700. Figtree for everything else. Cyrillic
+headings fall back to Figtree (Outfit has none). Uppercase tracked labels are allowed for the designer's few
+eyebrows: Daily challenge · #n, Add to dashboard, For professors, Where they get stuck.
+
+**Shape and depth.** Cards 20px, the hero 24px, buttons 10-12px, chips 999px. One hairline border, no lip, no press-down,
+no shadow on cards (the ⋮ menu and dialogs float). The hero's art: two ranges of mountains (an inline SVG drawn in
+tokens, so day and night both work), the 8-bit skyline and Bo.
+
+**Components.**
+- *The home* (`assets/home-grid.js`): one hero in one of three states (an exam in the next three weeks: "Calc I
+  Exam 2 in 4 days." with its topics, readiness and a quiz; else "Back to Physics I?" with the last day's score and
+  Retry the ones I missed; else pick a class), then a wrapping row of cards (full 100%, half 420px basis, small 220px
+  basis, the small ones in a row of their own), then Add to dashboard. Every card has a ⋮ menu with Hide from
+  dashboard; Add to dashboard lists what is hidden and the tools (GPA, focus timer, class tools, grapher, calculators,
+  formula sheets, notes). Arrange freely keeps the free-form dashboard (`assets/dash.js`), per device.
+- *The daily word* (`assets/word-puzzle.js`): the full-width gold card (the last try's tiles, +20 XP, New puzzle in…),
+  and the game as a dialog: six rows of five, an on-screen keyboard, green with a bar for the right place, gold with
+  a dot for elsewhere, grey for not in the word, and every try read out in words.
+- *The sidebar*: the Learning or teaching switch (Learning on #1A2F5A / #8DBCFF, Teaching on #3A2F12 / #FFE08A), the
+  date and time, Add to planner (a secondary button), Home and Ask Bo, Your classes (Pick your classes, the classes,
+  Class maker), Planner, then Tools, Community and Resources folded.
+- *StudyCat Faculty in the same frame* (`assets/teach.js`): the faculty rail is the sidebar (StudyCat Faculty, the
+  switch on Teaching, Add to syllabus, Home, Your syllabi, New syllabus, Faculty status, Light or dark at the foot); its
+  home is the student home's cards: the next class meeting ("Calculus I lecture at 1:10 pm.", its room and students,
+  today's topic, the next exam), class activity, coming up, attendance, your syllabi, practice assignments, and office
+  hours, the printed syllabus and faculty status to add. The syllabus page itself stays a printed page in Source Serif 4.
+- *The landing* (`assets/start.js`): the sidebar steps aside and the header is the site's own (How it works, Features,
+  For professors, Study guides, the language, Log in, Sign up free); the hero, four numbers, Start in three steps as
+  tabs (the class picker, an example question, sign up), Practice first with three cards on a diagonal that rise on
+  hover, Learn / Plan / Tools, Stuck? Call Bo., the gold For professors band, questions in three columns, a last call.
+
+**Named rules.** *The One Hero Rule*: a home says one thing at the top, the soonest thing that matters.
+*The Real Data Rule*: every number on a card comes from the student's or the class's own data; a card with nothing
+real to say says so plainly, or stays hidden. *The Same Frame Rule*: learning and teaching share one frame; only the
+switch and the sidebar's contents change.
 

@@ -45,7 +45,7 @@ const T = require('./lib');
   } else log('(no welcome to open here; skipped the welcome check)');
   // leave her account as having seen it, so the tests after this one start without the tour
   if (await w.$('.tour')) await w.keyboard.press('Escape'); await w.evaluate(() => App.setSetting('tourLayout', App.tour.version)); await w.waitForTimeout(3200);
-  check('closing it is saved with her account', ((await api(w, 'prefs')).json.prefs || {}).tourLayout === 1);
+  check('closing it is saved with her account', ((await api(w, 'prefs')).json.prefs || {}).tourLayout === await w.evaluate(() => App.tour.version));
   await cw.close(); await cp.close();
   await go(p, '#/calc/formulas', 1200); check('print button on formulas', !!(await p.$('.page-actions .print-btn')));
   await go(p, '#/calc/notes/1.3', 900); check('print button on notes', !!(await p.$('.note-head .print-btn')));

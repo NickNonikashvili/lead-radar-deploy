@@ -92,6 +92,15 @@
   App.zoneOffset = offsetTxt;
 
   /* ---------- sidebar ---------- */
+  // Learning or teaching: the same frame, two layouts (no roles at sign-up). Teaching is StudyCat Faculty (assets/teach.js),
+  // which draws the same switch at the top of its own sidebar. The side last used is where opening StudyCat lands (modules.js).
+  App.modeSwitch = active => `<div class="sb-mode" role="group" aria-label="${esc(t('Learning or teaching'))}">${[['learn', '#/', 'cap', 'Learning'], ['teach', '#/teach', 'bulb', 'Teaching']].map(([k, href, ic, l]) => `<a class="sb-mode-b ${k}${k === active ? ' on' : ''}" href="${href}" data-side="${k}"${k === active ? ' aria-current="true"' : ''}>${icon(ic, 16)}<span>${esc(t(l))}</span></a>`).join('')}</div>`;
+  document.addEventListener('click', e => {
+    const b = e.target.closest && e.target.closest('[data-side]'); if (b && settings().side !== b.dataset.side) setSetting('side', b.dataset.side);
+    // Pick your classes when you have some: the same picker as Settings (signed out: make an account to keep them)
+    const r = e.target.closest && e.target.closest('[data-repick]'); if (r && App.auth) { e.preventDefault(); if (App.auth.user) App.auth.onboard(true); else App.auth.open('signup'); }
+  });
+  function paintMode() { const el = $('#sb-mode'); if (el && !el.firstChild) el.innerHTML = App.modeSwitch('learn'); }
   function barsHtml() { return progress().map(b => `<div class="sb-bar" data-k="${b.k}"><div class="sb-bar-row"><span>${esc(b.label)}</span><b>${b.p}%</b></div><div class="sb-track" role="progressbar" aria-label="${esc(b.sub)}: ${esc(b.label)}" aria-valuenow="${b.p}" aria-valuemin="0" aria-valuemax="100"><i style="width:${b.p}%"></i></div></div>`).join(''); }
   function paintNow() {
     const el = $('#sb-now'); if (!el) return; const d = App.parseISO(App.todayISO());
@@ -101,7 +110,7 @@
   function paintQuick() {
     const el = $('#sb-quick'); if (!el || el.dataset.done) return; el.dataset.done = '1';
     const keys = ['task', 'assignment', 'exam', 'event', 'todo', 'slot'];
-    el.innerHTML = `<button class="btn primary sb-new" type="button" data-qa="task" aria-keyshortcuts="Alt+N" title="${esc(t('Add anything: a task, an exam, an event… (Alt+N)'))}">${icon('plus', 15)} ${esc(t('New'))}</button><div class="sb-qa" role="group" aria-label="${esc(t('Quick add'))}">${keys.map(k => { const q = Life().QA.find(x => x[0] === k); return `<button type="button" class="sb-qa-btn" data-qa="${k}" title="${esc(t('New {1}', t(q[1]).toLowerCase()))}">${icon(q[2], 15)}<span>${esc(t(q[1]))}</span></button>`; }).join('')}</div>`;
+    el.innerHTML = `<button class="btn sb-new" type="button" data-qa="task" aria-keyshortcuts="Alt+N" title="${esc(t('Add anything: a task, an exam, an event… (Alt+N)'))}">${icon('plus', 15)} ${esc(t('Add to planner'))}</button><div class="sb-qa" role="group" aria-label="${esc(t('Quick add'))}">${keys.map(k => { const q = Life().QA.find(x => x[0] === k); return `<button type="button" class="sb-qa-btn" data-qa="${k}" title="${esc(t('New {1}', t(q[1]).toLowerCase()))}">${icon(q[2], 15)}<span>${esc(t(q[1]))}</span></button>`; }).join('')}</div>`;
   }
   const boIc = () => (App.logoSvg ? App.logoSvg(16) : icon('chat'));
   function counts() {
@@ -126,7 +135,8 @@
       // the class maker (assets/maker.js): add a class from a syllabus or from scratch, and make each one yours
       const add = App.views.maker ? `<a class="nav-item sb-add${!inClass && r.view === 'maker' ? ' active' : ''}" href="#/maker" data-sv="maker"${!inClass && r.view === 'maker' ? ' aria-current="page"' : ''}>${icon('maker')}<span>${esc(t('Class maker'))}</span></a>` : '';
       // nobody gets the Montana State classes by default: until you pick, the list asks you to
-      const pick = ids.length ? '' : `<a class="nav-item sb-pick" href="#/" data-sv="pick">${icon('cap')}<span>${esc(t('Pick your classes'))}</span></a>`;
+      // until you pick, it asks you to; after, it changes them (the class picker of your account)
+      const pick = `<a class="nav-item sb-pick" href="#/" data-sv="pick"${ids.length ? ' data-repick="1"' : ''}>${icon('cap')}<span>${esc(t('Pick your classes'))}</span></a>`;
       parts.classes = group('classes', t('Your classes'), ids.length, o, pick + rows + add);
     }
     A.groups.forEach(g => {
@@ -160,7 +170,7 @@
     el.innerHTML = `<div class="sb-cal-h"><button class="sb-toggle-cal nav-toggle${open ? ' open' : ''}" type="button" data-sg="cal" aria-expanded="${open}">${icon('chevron', 12)}<span>${esc(L.monthName(mo))} ${y}</span></button><span class="sb-cal-nav"><button class="icon-btn xs" type="button" data-cal="-1" aria-label="${esc(t('Previous month'))}">${icon('left', 12)}</button><button class="icon-btn xs" type="button" data-cal="0" aria-label="${esc(t('This month'))}" ${calOff ? '' : 'hidden'}>${icon('target', 12)}</button><button class="icon-btn xs" type="button" data-cal="1" aria-label="${esc(t('Next month'))}">${icon('right', 12)}</button></span></div><div class="nav-group${open ? '' : ' closed'}"><div class="nav-group-in"><div class="sb-grid" role="group" aria-label="${esc(L.monthName(mo))} ${y}"><div class="sb-heads" aria-hidden="true">${heads}</div><div class="sb-days">${cells}</div></div></div></div>`;
   }
 
-  function paintSidebar() { if (native() || !$('#sb-nav')) return; paintNow(); paintQuick(); paintNav(); paintCal(); }
+  function paintSidebar() { if (native() || !$('#sb-nav')) return; paintMode(); paintNow(); paintQuick(); paintNav(); paintCal(); }
   App.paintSidebar = paintSidebar;
 
   /* ---------- header ---------- */

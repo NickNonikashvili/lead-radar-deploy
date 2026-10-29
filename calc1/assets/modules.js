@@ -153,7 +153,8 @@
   let started = false; try { started = sessionStorage.getItem('mh-started') === '1'; sessionStorage.setItem('mh-started', '1'); } catch (e) {}
   /** Called by the router before the start page draws: a start page other than home, once, when StudyCat was opened at its root. */
   App.startRedirect = function () {
-    if (started || entry) return false; started = true; const sp = settings().startPage || 'home'; if (sp === 'home') return false;
+    // no start page picked: the side you used last (Teaching opens StudyCat Faculty)
+    if (started || entry) return false; started = true; const sp = settings().startPage || (settings().side === 'teach' ? 'teach' : 'home'); if (sp === 'home') return false;
     const hash = sp.startsWith('class:') ? (global.Courses[sp.slice(6)] ? `#/${sp.slice(6)}/dashboard` : '') : (App.views[sp] && App.moduleOn(sp) ? '#/' + sp : '');
     if (!hash) return false; try { history.replaceState(null, '', hash); } catch (e) { location.hash = hash; return true; } return true;
   };

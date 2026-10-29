@@ -39,61 +39,67 @@
     return { classes: ids.length, topics, cards, langs };
   };
 
-  // the three ridges of the Bridger Range (the welcome's shapes) and the sky above them
-  const RIDGES = ['M0 300 L0 170 L120 110 L240 160 L380 70 L520 150 L640 100 L800 170 L930 80 L1080 150 L1220 90 L1360 160 L1480 100 L1600 140 L1600 300Z',
-    'M0 300 L0 200 L160 140 L300 200 L460 120 L600 190 L760 130 L900 210 L1050 140 L1200 200 L1340 130 L1480 190 L1600 150 L1600 300Z',
-    'M0 300 L0 240 L140 200 L260 236 L420 190 L560 240 L700 206 L860 250 L1000 210 L1160 246 L1300 214 L1460 244 L1600 220 L1600 300Z'];
-  const scene = (clouds = true) => `<div class="mo-scene" aria-hidden="true"><span class="mo-sun"></span>${clouds ? '<span class="mo-cloud c1"></span><span class="mo-cloud c2"></span><span class="mo-cloud c3"></span>' : ''}${RIDGES.map((d, i) => `<svg class="mo-ridge r${i + 1}" viewBox="0 0 1600 300" preserveAspectRatio="none" focusable="false"><path d="${d}"/></svg>`).join('')}</div>`;
-  const TRAIL = 'M40 40 C 200 4, 300 60, 500 34 S 800 6, 960 40';
   const fmt = n => { try { return Number(n).toLocaleString(document.documentElement.lang || 'en'); } catch (e) { return String(n); } };
 
-  /* ---------- the page ---------- */
+  /* ---------- the page (the October 2026 redesign: the designer's landing, 1-landing.html) ---------- */
   // ctx: { when (the date line), picker (the class picker's HTML) }
+  // While it is on screen the frame steps aside (<html data-surface="guest">): no sidebar, and the header is the
+  // site's own: the sections of this page, the language, Log in and Sign up free (assets/design.css, .gl-*).
   S.html = function (ctx) {
-    const n = S.numbers(); const anim = !reduced();
+    const n = S.numbers(); const anim = !reduced(); const H = App.homeGrid;
     const num = v => `<b class="mo-num" data-count="${v}">${fmt(v)}</b>`;
-    const card = (ic, h, p, extra = '') => `<article class="mo-card" data-mo><span class="mo-ic" aria-hidden="true">${icon(ic, 22)}</span><h3>${h}</h3><p>${p}</p>${extra}</article>`;
-    const q = (h, a) => `<details><summary>${h}</summary><div class="mo-a"><p>${a}</p></div></details>`;
-    return `<div class="landing-wrap mo-page${anim ? ' mo-anim' : ''}" data-mo-page>
-      <header class="landing-top hero mo-hero" data-section="hero">
-        <div class="mo-hero-copy">
-          <p class="hero-when">${esc(ctx.when)}</p>
-          <h1 class="landing-title mo-h1"><span class="mo-line" style="--i:0"><span>Every class you take,</span></span><span class="mo-line mo-accent" style="--i:1"><span>made simple.</span></span></h1>
-          <p class="mo-sub">What is on the next exam, five-minute lessons and a tutor you can call. Free with a montana.edu email.</p>
-          <div class="row gap-sm hero-actions"><button type="button" class="btn primary hero-today hero-pick" data-action="go-pick">${icon('cap', 16)} Pick your classes</button><a class="btn hero-faculty" href="#/teach" title="StudyCat Faculty: write your syllabus and run your class">${icon('file', 16)} For professors</a></div>
+    const stat = (ic, v, l) => `<div class="mo-stat gl-stat" data-mo><span class="gl-stat-ic" aria-hidden="true">${icon(ic, 20)}</span>${num(v)}<span>${l}</span></div>`;
+    const q = (h, a) => `<details><summary>${h}<span class="gl-plus" aria-hidden="true">${icon('plus', 16)}</span></summary><div class="mo-a"><p>${a}</p></div></details>`;
+    const tab = (k, i, h, sub, on) => `<button type="button" role="tab" class="gl-tab" id="gl-t${k}" aria-controls="gl-p${k}" aria-selected="${on}" tabindex="${on ? 0 : -1}" data-gltab="${k}"><span class="gl-tab-n" aria-hidden="true">${i}</span><span class="gl-tab-t"><b>${h}</b><small>${sub}</small></span></button>`;
+    const col = (h, items) => `<div class="gl-col" data-mo><h3>${h}</h3><ul>${items.map(x => `<li>${icon('check', 14)}${x}</li>`).join('')}</ul></div>`;
+    const feat = (ic, h, p) => `<div class="gl-feat" data-mo><span class="gl-feat-ic" aria-hidden="true">${icon(ic, 18)}</span><span><b>${h}</b><small>${p}</small></span></div>`;
+    const stack = (cls, ic, tone, h, p, tag = '') => `<article class="gl-card ${cls}"><div class="gl-card-h"><span class="hg-ic tone-${tone}" aria-hidden="true">${icon(ic, 20)}</span><h3>${h}</h3>${tag}</div><p>${p}</p></article>`;
+    const art = H ? H.art.replace('mascot-slot hg-bo', 'mascot-slot hg-bo mo-bo') : '';
+    return `<div class="landing-wrap mo-page gl-page${anim ? ' mo-anim' : ''}" data-mo-page>
+      <header class="hg-hero mo-hero gl-hero" data-section="hero">
+        <div class="hg-hero-in mo-hero-copy">
+          <p class="hg-when">${esc(ctx.when)}</p>
+          <h1 class="hg-title mo-h1"><span class="mo-line" style="--i:0"><span>Every class you take,</span></span> <em class="mo-line" style="--i:1"><span>made simple.</span></em></h1>
+          <p class="hg-sub mo-sub">What is on the next exam, five-minute lessons and a tutor you can call. Free with a montana.edu email.</p>
+          <div class="hg-cta hero-actions"><button type="button" class="btn primary lg hero-pick" data-action="go-pick">${icon('cap', 16)} Pick your classes</button><a class="btn lg hero-faculty" href="#/teach" title="StudyCat Faculty: write your syllabus, run the class from it">${icon('bulb', 16)} For professors</a></div>
           <p class="small mo-note">No account needed to look around.</p>
-        </div>
-        ${scene()}
-        <div class="mascot-slot hero-mascot mo-bo" data-size="104"></div><div class="px-skyline" aria-hidden="true"></div>
+        </div>${art}
       </header>
       <div id="announcement-slot"></div>${ctx.banners || ''}
-      <section class="mo-stats" data-section="stats" aria-label="StudyCat in numbers"><div class="mo-stat" data-mo>${num(n.classes)}<span>Montana State classes</span></div><div class="mo-stat" data-mo>${num(n.topics)}<span>topics with notes</span></div><div class="mo-stat" data-mo>${num(n.cards)}<span>flashcards to review</span></div><div class="mo-stat" data-mo>${num(n.langs)}<span>languages to choose from</span></div></section>
-      <section class="mo-sec mo-how" data-section="how" aria-labelledby="mo-how-h">
-        <h2 class="mo-h2" id="mo-how-h" data-mo>Three steps. The first takes a minute.</h2>
-        <div class="mo-trail"><svg class="mo-trail-path" viewBox="0 0 1000 64" preserveAspectRatio="none" aria-hidden="true" focusable="false"><defs><mask id="mo-trail-mask" maskUnits="userSpaceOnUse" x="0" y="-20" width="1000" height="110"><path class="mo-draw" d="${TRAIL}" pathLength="1"/></mask></defs><path class="mo-dots" d="${TRAIL}" mask="url(#mo-trail-mask)"/></svg>
-          <ol class="mo-steps">
-            <li class="mo-step" data-mo><span class="mo-step-n" aria-hidden="true">1</span><b>Pick your classes</b><small>StudyCat shows only your classes: their notes, practice, dates and Bo.</small></li>
-            <li class="mo-step" data-mo><span class="mo-step-n" aria-hidden="true">2</span><b>Take a five-minute lesson</b><small>A few questions with worked answers. No setup.</small></li>
-            <li class="mo-step" data-mo><span class="mo-step-n" aria-hidden="true">3</span><b>Sign up to keep it</b><small>A free montana.edu account saves your progress everywhere.</small></li>
-          </ol></div>
-      </section>
-      ${ctx.picker}
-      <section class="mo-sec mo-inside" data-section="inside" aria-labelledby="mo-in-h">
-        <h2 class="mo-h2" id="mo-in-h" data-mo>Everything a class needs, in one place</h2>
-        <div class="mo-cards">
-          ${card('book', 'A lesson for every topic', 'The idea in plain words, a picture, a worked example and two quick checks.')}
-          ${card('target', 'Practice that keeps going', 'The Quizzer builds new questions for your class and shows how each one is solved.')}
-          ${card('chat', 'Bo, your tutor', 'Ask him anything, or call him and work it out together on a shared board.', '<a href="#/max">Try the one-minute demo</a>')}
-          ${card('calendar', 'Every deadline', 'Exams, homework and labs from each syllabus, in one calendar.')}
-          ${card('calc', 'Tools for each class', 'Grade calculators, graphers, simulators and more, picked for the class.')}
-          ${card('sun', 'Your day, planned', 'Today puts the next thing to do first, so you always know where to start.')}
-        </div>
-        <p class="mo-more" data-mo>Want to read first? <a href="/learn/">Browse the free study guides</a>.</p>
-      </section>
-      <section class="mo-sec mo-faq" data-section="faq" aria-labelledby="mo-faq-h">
-        <h2 class="mo-h2" id="mo-faq-h" data-mo>Questions</h2>
+      <section class="mo-stats gl-stats" data-section="stats" aria-label="StudyCat in numbers">${stat('cap', n.classes, 'Montana State classes')}${stat('book', n.topics, 'topics with notes')}${stat('cards', n.cards, 'flashcards to review')}${stat('globe', n.langs, 'languages to choose from')}</section>
+      <section class="mo-sec gl-steps" id="gl-how" data-section="how" aria-labelledby="gl-how-h">
+        <h2 class="mo-h2" id="gl-how-h" data-mo>Start in three steps</h2>
         <div data-mo>
-          ${q('Is StudyCat free?', 'Yes. Everything built into StudyCat is free, and you get 100 credits a month for Bo: ask him anything, call him, have him draw it. StudyCat Pro gives you 1,000 credits a month, and StudyCat Max 2,000 with his stronger voice model on calls.')}
+          <div class="gl-tabs" role="tablist" aria-label="How it works">${tab(1, 1, 'Pick a class', `Choose from ${n.classes} classes`, true)}${tab(2, 2, 'Take a five-minute quiz', 'Each answer solved step by step', false)}${tab(3, 3, 'Sign up to keep it', 'Free with montana.edu', false)}</div>
+          <div class="gl-panel" role="tabpanel" id="gl-p1" aria-labelledby="gl-t1" tabindex="0">${ctx.picker}<div class="gl-p-foot"><button type="button" class="linkbtn" data-gltab="2">See what a quiz looks like</button></div></div>
+          <div class="gl-panel" role="tabpanel" id="gl-p2" aria-labelledby="gl-t2" tabindex="0" hidden><div class="gl-split">
+            <div class="gl-split-t"><h3>Five questions, about five minutes</h3><p>Questions come from your class’s topics. After each answer you see why it is right, and Bo can walk you through anything you missed.</p><button type="button" class="btn primary" data-gltab="1">Pick a class to start</button></div>
+            <div class="gl-q" role="group" aria-labelledby="gl-q-h"><div class="gl-q-top"><span class="hg-code">Calc I</span><span>Limits</span><small>An example</small></div>
+              <p class="gl-q-h" id="gl-q-h">What is the limit of sin(x) / x as x approaches 0?</p>
+              <div class="gl-q-opts">${['0', '1', '∞', 'It does not exist'].map((o, i) => `<button type="button" class="gl-opt" data-glq="${i}"><span class="gl-opt-k" aria-hidden="true">${'ABCD'[i]}</span>${o}</button>`).join('')}</div>
+              <p class="gl-q-say" id="gl-q-say" role="status"></p></div></div></div>
+          <div class="gl-panel" role="tabpanel" id="gl-p3" aria-labelledby="gl-t3" tabindex="0" hidden><div class="gl-split">
+            <div class="gl-split-t"><h3>Keep your progress everywhere</h3><p>A free account with your montana.edu email keeps your classes, streak and answers on every device. We email a 6-digit code to confirm the address.</p></div>
+            <form class="gl-join" id="gl-join"><label for="gl-email">Your montana.edu email</label><div class="gl-join-row"><input class="input" id="gl-email" type="email" autocomplete="email" placeholder="you@montana.edu" required><button type="submit" class="btn primary">Sign up free</button></div><p class="small muted">Already have an account? <button type="button" class="linkbtn" data-action="auth-login">Log in</button></p></form></div></div>
+        </div>
+      </section>
+      <section class="mo-sec gl-practice" id="gl-features" data-section="practice" aria-labelledby="gl-pr-h">
+        <div class="gl-practice-t" data-mo><h2 class="mo-h2" id="gl-pr-h">Practice first. The rest is one tap away.</h2><p>Every class you pick comes with three ways to practice: a quick quiz, five-minute lessons and flashcards. Notes, a plan and tools for that class are right beside them.</p><button type="button" class="linkbtn gl-go" data-action="go-pick">Try a free quiz</button></div>
+        <div class="gl-stack" data-mo aria-label="Three ways to practice">${stack('back', 'cards', 'violet', 'Flashcards', 'Key terms and formulas, brought back right before you would forget them.')}${stack('mid', 'book', 'orange', 'Five-minute lessons', 'The idea in plain words, a picture, a worked example and two quick checks.')}${stack('front', 'list', 'blue', 'Quizzer', 'New questions for your class every time, each one solved step by step.', '<span class="gl-tag">Most used</span>')}</div>
+        <div class="gl-cols">${col('Learn', ['Notes for every topic', 'Formula sheets', 'Exam checklists'])}${col('Plan', ['Calendar', 'Study planner', 'Daily challenge'])}${col('Tools', ['Grade and GPA calculators', 'Grapher', 'Discussions'])}</div>
+        <p class="mo-more gl-more" data-mo>Want to read first? <a href="/learn/">Browse the free study guides</a>.</p>
+      </section>
+      <section class="mo-sec gl-bo" data-section="bo" aria-labelledby="gl-bo-h"><div class="gl-bo-card" data-mo>
+        <div class="mascot-slot gl-bo-face" data-size="88" aria-hidden="true"></div>
+        <div class="gl-bo-t"><h2 class="mo-h2" id="gl-bo-h">Stuck? Call Bo.</h2><p>Talk it through out loud, like with a tutor next to you. Bo listens, asks questions and works it out with you on a shared board. Prefer typing? Ask him anything.</p>
+          <div class="hg-cta"><a class="btn primary" href="#/tutor">${icon('chat', 16)} Ask Bo</a><a class="hg-link" href="#/max">Try the one-minute demo</a></div></div></div></section>
+      <section class="mo-sec gl-prof" id="gl-prof" data-section="prof" aria-labelledby="gl-prof-h"><div class="gl-prof-card">
+        <div class="gl-prof-t" data-mo><span class="gl-eyebrow">For professors</span><h2 class="mo-h2" id="gl-prof-h">See how your class is doing, without extra grading.</h2><p>Write the syllabus once; StudyCat turns it into practice, dates and a class board, and you see what your students work on.</p><a class="btn gl-gold" href="#/teach">Start a syllabus</a></div>
+        <div class="gl-feats">${feat('chart', 'Follow class progress', 'See which topics students practice and where they get stuck.')}${feat('file', 'Build the syllabus once', 'From the Montana State template: publish it and the class has its calendar, exam countdowns and grading.')}${feat('check', 'Attendance by code', 'Show a 4-digit code in the lecture; students type it on StudyCat to check in.')}</div></div></section>
+      <section class="mo-sec mo-faq gl-faq" data-section="faq" aria-labelledby="mo-faq-h">
+        <h2 class="mo-h2" id="mo-faq-h" data-mo>Questions</h2>
+        <div class="gl-faq-grid" data-mo>
+          ${q('Is StudyCat free?', 'Yes. Everything built into StudyCat is free, and you get 100 credits a month for Bo: ask him anything, call him, have him draw it. StudyCat Pro gives you 1,000 credits a month, and StudyCat Max 2,000 with his stronger voice model.')}
           ${q('Do I need an account?', 'No. Look around as much as you like. Sign up with a montana.edu email to keep your progress on every device.')}
           ${q('Who can join?', 'Only montana.edu addresses can join. We email a 6-digit code to confirm the address.')}
           ${q('Is StudyCat made by Montana State?', 'No. StudyCat is a free, independent study site made by a Montana State student. It is not affiliated with Montana State University; syllabus details come from each class and can change, so confirm dates on Canvas.')}
@@ -101,20 +107,38 @@
           ${q('Which languages does it speak?', 'StudyCat is in English, Español, Русский, Français, Italiano, Português and Deutsch, and Bo speaks the language you pick.')}
         </div>
       </section>
-      <section class="mo-final" data-section="final" aria-labelledby="mo-end-h">
-        ${scene(false)}
-        <div class="mo-final-card" data-mo><h2 class="mo-h2" id="mo-end-h">Start with one class today.</h2><p>Pick it, read one lesson, try one question. That is the whole first step.</p>
-          <div class="row gap-sm"><button type="button" class="btn primary" data-action="go-pick">${icon('cap', 16)} Pick your classes</button><button type="button" class="btn" data-action="mo-signup">Sign up free</button></div></div>
+      <section class="hg-hero mo-final gl-final" data-section="final" aria-labelledby="mo-end-h">
+        <div class="hg-hero-in mo-final-card" data-mo><h2 class="hg-title" id="mo-end-h">Start with one class <em>today.</em></h2><p class="hg-sub">Pick it, take one quiz. That is the whole first step.</p>
+          <div class="hg-cta"><button type="button" class="btn primary lg" data-action="go-pick">${icon('cap', 16)} Try a free quiz</button><button type="button" class="btn lg" data-action="mo-signup">Sign up free</button></div></div>${art.replace(' data-size="96"', ' data-size="80"')}
       </section>
     </div>`;
   };
+  // the header while the landing is on screen: the page's sections, then the language, Log in and Sign up free
+  S.top = on => { const tb = document.getElementById('topbar'); if (!tb) return; let h = tb.querySelector('.gl-head'); if (on && !h) { h = document.createElement('div'); h.className = 'gl-head'; h.innerHTML = S.topHtml(); tb.insertBefore(h, tb.querySelector('.topbar-title')); } else if (!on && h) h.remove(); };
+  S.topHtml = () => `<a class="gl-brand" href="#/" aria-label="StudyCat, home">${App.logoSvg ? App.logoSvg(26) : ''}<b>StudyCat</b></a><nav class="gl-nav" aria-label="On this page"><button type="button" data-glgo="gl-how">How it works</button><button type="button" data-glgo="gl-features">Features</button><button type="button" data-glgo="gl-prof">For professors</button><a href="/learn/">Study guides</a></nav>`;
 
   // what the page's own buttons do (the hero's Pick your classes is bound by the start page with the rest)
   S.wire = function (root) {
     const page = $('.mo-page', root); if (!page) return;
-    page.addEventListener('click', e => { if (e.target.closest('[data-action="mo-signup"]') && App.auth && App.auth.open) App.auth.open('signup'); });
+    const tabs = $$('.gl-tab', page);
+    const pick = (k, focus) => { tabs.forEach(t => { const on = t.dataset.gltab === String(k); t.setAttribute('aria-selected', String(on)); t.tabIndex = on ? 0 : -1; const p = $('#' + t.getAttribute('aria-controls'), page); if (p) p.hidden = !on; if (on && focus) t.focus(); }); };
+    page.addEventListener('click', e => {
+      if (e.target.closest('[data-action="mo-signup"]') && App.auth && App.auth.open) App.auth.open('signup');
+      // Pick your classes, anywhere on the page: the first step, its tab open (the start page then scrolls to the picker)
+      if (e.target.closest('[data-action="go-pick"]')) pick(1);
+      const tb = e.target.closest('[data-gltab]'); if (tb) { pick(tb.dataset.gltab, !tb.classList.contains('gl-tab')); if (!tb.classList.contains('gl-tab')) { const t = $(`#gl-t${tb.dataset.gltab}`, page); if (t) t.focus(); } }
+      // the example question: right or wrong, and why
+      const o = e.target.closest('[data-glq]');
+      if (o) { const ok = o.dataset.glq === '1'; $$('.gl-opt', page).forEach(b => { b.classList.toggle('ok', b.dataset.glq === '1'); b.classList.toggle('no', b === o && !ok); b.setAttribute('aria-pressed', String(b === o)); });
+        $('#gl-q-say', page).textContent = (ok ? 'Right. ' : 'Not quite: it is 1. ') + 'As x gets close to 0, sin x and x get close together, so their ratio goes to 1. The derivative of sin x is built on this limit.'; }
+    });
+    // the tabs by keyboard: arrows move between them, Home and End jump to the ends
+    page.addEventListener('keydown', e => { const t = e.target.closest('.gl-tab'); if (!t) return; const i = tabs.indexOf(t); const k = { ArrowRight: i + 1, ArrowLeft: i - 1, Home: 0, End: tabs.length - 1 }[e.key]; if (k === undefined) return; e.preventDefault(); const n = (k + tabs.length) % tabs.length; pick(tabs[n].dataset.gltab, true); });
+    const f = $('#gl-join', page); if (f) f.addEventListener('submit', e => { e.preventDefault(); if (App.auth && App.auth.open) App.auth.open('signup', $('#gl-email', f).value.trim()); });
     S.motion(page);
   };
+  // the landing's header: its links scroll to the parts of the page (the page's address stays #/)
+  document.addEventListener('click', e => { const b = e.target.closest && e.target.closest('[data-glgo]'); if (!b) return; const el = document.getElementById(b.dataset.glgo); if (!el) return; const tb = document.getElementById('topbar'); const y = el.getBoundingClientRect().top + global.scrollY - ((tb && tb.offsetHeight) || 0) - 12; global.scrollTo({ top: y, behavior: reduced() ? 'auto' : 'smooth' }); const h = el.querySelector('h2'); if (h) { h.setAttribute('tabindex', '-1'); h.focus({ preventScroll: true }); } });
 
   /* ---------- motion ---------- */
   let ctx = null;   // the GSAP context of the page now on screen, reverted when it goes
@@ -168,10 +192,9 @@
       // the signature: three ridges at their own depths, the sun sinking and the clouds drifting as you leave the hero
       if (hero) {
         const sc = { trigger: hero, start: 'top top', end: 'bottom top', scrub: 1.5 };
-        [['.mo-hero .mo-ridge.r1', -18], ['.mo-hero .mo-ridge.r2', -40], ['.mo-hero .mo-ridge.r3', -70]].forEach(([s, y]) => gsap.to(s, { y, ease: 'none', scrollTrigger: sc }));
-        gsap.to('.mo-hero .mo-sun', { y: 70, ease: 'none', scrollTrigger: sc });
-        gsap.to('.mo-hero .mo-cloud', { xPercent: -30, ease: 'none', scrollTrigger: sc });
-        gsap.to('.mo-hero .mo-bo', { y: -70, ease: 'none', scrollTrigger: sc });
+        // the ranges at their own depths and Bo rising as you leave the hero (the redesign's peaks: .hg-peaks)
+        [['.mo-hero .hg-peaks .far', -12], ['.mo-hero .hg-peaks .near', -26], ['.mo-hero .hg-peaks .hill', -40]].forEach(([s, y]) => { if ($(s, page)) gsap.to(s, { y, ease: 'none', scrollTrigger: sc }); });
+        if ($('.mo-hero .mo-bo', page)) gsap.to('.mo-hero .mo-bo', { y: -40, ease: 'none', scrollTrigger: sc });
       }
       // LIFT, per section: the heading first, then its parts one after another; the cards come in from alternate sides
       $$('[data-section]', page).forEach(sec => {
@@ -199,9 +222,8 @@
       // the end: the sun goes down behind the range while the card comes up; the buttons spring in (PULSE)
       const fin = $('.mo-final', page);
       if (fin) {
-        gsap.fromTo('.mo-final .mo-sun', { y: -40 }, { y: 70, ease: 'none', scrollTrigger: { trigger: fin, start: 'top 90%', end: 'bottom 70%', scrub: 1.2 } });
-        [['.mo-final .mo-ridge.r1', 20], ['.mo-final .mo-ridge.r2', 40], ['.mo-final .mo-ridge.r3', 60]].forEach(([s, y]) => gsap.from(s, { y, ease: 'none', scrollTrigger: { trigger: fin, start: 'top bottom', end: 'bottom bottom', scrub: 1.5 } }));
-        gsap.from('.mo-final-card .btn', { scale: 0.88, duration: 0.5, ease: 'back.out(1.7)', stagger: 0.08, clearProps: 'transform', scrollTrigger: { trigger: '.mo-final-card', start: 'top 80%', once: true } });
+        [['.mo-final .hg-peaks .far', 16], ['.mo-final .hg-peaks .near', 30], ['.mo-final .hg-peaks .hill', 44]].forEach(([s, y]) => { if ($(s, page)) gsap.from(s, { y, ease: 'none', scrollTrigger: { trigger: fin, start: 'top bottom', end: 'bottom bottom', scrub: 1.5 } }); });
+        if ($('.mo-final-card .btn', page)) gsap.from('.mo-final-card .btn', { scale: 0.88, duration: 0.5, ease: 'back.out(1.7)', stagger: 0.08, clearProps: 'transform', scrollTrigger: { trigger: '.mo-final-card', start: 'top 80%', once: true } });
       }
       // questions ease open and shut (a native <details>: without this it simply opens)
       $$('.mo-faq details', page).forEach(d => {
