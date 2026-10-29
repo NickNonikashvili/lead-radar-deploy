@@ -3,7 +3,7 @@
    Tokens first (light), then dark overrides, then components.
    ============================================================ */
 :root {
-  --assets-build: "2026.10.28.5";   /* the build these styles belong to (scripts/release.js; read by build-check.js) */
+  --assets-build: "2026.10.29.1";   /* the build these styles belong to (scripts/release.js; read by build-check.js) */
   --bg: #F6F8FB;
   --grid: rgba(43, 85, 184, 0.05);
   --surface: #FFFFFF;
@@ -89,8 +89,6 @@
 /* ---------- base ---------- */
 *, *::before, *::after { box-sizing: border-box; }
 html { -webkit-text-size-adjust: 100%; }
-:where(#view *) { scroll-margin-top: 72px; }   /* the sticky top bar is 61px: focus and jumps in the page land below it (WCAG 2.4.11).
-   Not scroll-padding on html: that scrolls the page when a top-bar button takes focus, and scrolling closes its menu */
 body {
   margin: 0; font-family: var(--font-body); font-size: 15px; line-height: 1.55; color: var(--ink);
   background-color: var(--bg);
@@ -1951,6 +1949,7 @@ body:has(.lesson-foot) #ambient { bottom: 96px; }
 .th-t { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .th-t b { font-size: 15px; line-height: 1.25; }
 .th-t small { font-size: 13px; line-height: 1.35; color: var(--muted); }
+.th-box { scroll-margin-top: 80px; }
 .th-note { margin: -4px 0 10px 2px; }
 html[data-motion="off"] .th-card { transition: none; }
 /* ---------- a class's Tools page (assets/class-tools.js): cards on top, the open tool below ---------- */

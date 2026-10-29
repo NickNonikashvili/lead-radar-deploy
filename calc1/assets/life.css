@@ -677,6 +677,7 @@
 @media (prefers-reduced-motion: reduce) { .dash-canvas > .dw, .dw-ghost { transition: none; } }
 /* picking your classes on the home page: nobody gets the Montana State classes by default (assets/app.js, pickClassesHtml) */
 .panel.pick-classes { margin: 18px 0 6px; padding: 22px 24px; border: 2px solid var(--accent-line, var(--accent)); background: color-mix(in srgb, var(--accent-soft) 55%, var(--surface)); }
+.panel.pick-classes { scroll-margin-top: 76px; }   /* the hero's Pick your classes button scrolls here: below the top bar */
 .pk-head { display: flex; align-items: flex-start; gap: 14px; margin-bottom: 16px; }
 .pk-ic { flex: none; display: grid; place-items: center; width: 48px; height: 48px; border-radius: 15px; background: var(--surface); color: var(--accent-deep, var(--accent)); border: 2px solid var(--accent-line, var(--border)); }
 .pk-title { margin: 2px 0 4px; font: 800 24px/1.15 var(--font-display); letter-spacing: -.01em; color: var(--ink); }

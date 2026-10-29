@@ -74,7 +74,8 @@ function zip(out) {
   const leaks = names.filter(n => /config\.local|api\/data|^tests\/|^docs\/|DESIGN|PRODUCT|(^|\/)app\/|keystore|\.sqlite$/.test(n));
   if (leaks.length) { fs.unlinkSync(out); fail('these must never be in the zip: ' + leaks.join(', ')); }
   const body = execFileSync('unzip', ['-p', out], { maxBuffer: 1 << 30 });
-  if (/sk_test|sk-ant-test|sk-openai-test|sk_v2_test|proj_test/.test(body.toString('latin1'))) { fs.unlinkSync(out); fail('a test key is inside the zip'); }
+  const testKey = new RegExp(['sk_', 'sk-ant-', 'sk-openai-', 'sk_v2_', 'proj_'].map(p => p + 'test').join('|'));   // built from pieces, so this script (it ships in scripts/) does not match itself
+  if (testKey.test(body.toString('latin1'))) { fs.unlinkSync(out); fail('a test key is inside the zip'); }
   const last = (() => { try { return JSON.parse(read('scripts/.last-release.json')); } catch (e) { return null; } })();
   const hash = apiHash(); const apiChanged = !last || last.api !== hash;
   write('scripts/.last-release.json', JSON.stringify({ build, api: hash, at: new Date().toISOString() }, null, 1) + '\n');

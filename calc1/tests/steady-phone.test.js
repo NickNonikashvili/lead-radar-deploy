@@ -1,8 +1,9 @@
-/* Steadier pages on a phone, and easier to tap (2026.10.28.6):
+/* Steadier pages on a phone, and easier to tap (2026.10.29.1):
    - nothing jumps while a page opens (CLS under 0.1): the footer waits for the page (html.mh-booting, assets/boot.js
      and afterRender in assets/app.js), and the phone top bar keeps its height while the class name loads
    - text-style buttons answer taps over at least 24 × 24 px (WCAG 2.5.8) through an invisible ::after
-   - keyboard focus and jumps land below the sticky top bar (scroll-padding-top)
+   - keyboard focus lands below the sticky top bar (a focusin listener in assets/app.js), and clicking a top-bar button
+     never scrolls the page (scroll-padding on html did: the scroll closed the menu the button opens)
    - the Quizzer's row of presets scrolls inside its panel: the page is never wider than the phone */
 const T = require('./lib');
 (async () => {
@@ -33,8 +34,6 @@ const T = require('./lib');
   // focus below the sticky top bar
   const [c2, d] = await mk(1280, 860, { serviceWorkers: 'block' }); await seed(c2);
   await go(d, '#/calc/notes/1.1', 2400);
-  const sp = await d.evaluate(() => ({ pad: parseFloat(getComputedStyle(document.querySelector('#view h1, #view h2')).scrollMarginTop), html: getComputedStyle(document.documentElement).scrollPaddingTop, bar: document.querySelector('.topbar').getBoundingClientRect().height }));
-  check('the page keeps room under the sticky top bar for focus and jumps (on the page, not on html)', sp.pad >= sp.bar + 4 && sp.html === 'auto', sp);
   const f = await d.evaluate(async () => { window.scrollTo(0, 0); const els = [...document.querySelectorAll('#view a[href], #view button')].filter(e => e.getClientRects().length); const el = els.find(e => e.getBoundingClientRect().top > innerHeight * 1.5); if (!el) return null; el.focus(); await new Promise(r => setTimeout(r, 300)); el.blur(); window.scrollBy(0, -el.getBoundingClientRect().top + 20); await new Promise(r => setTimeout(r, 100)); el.focus(); await new Promise(r => setTimeout(r, 300)); return { top: Math.round(el.getBoundingClientRect().top), bar: Math.round(document.querySelector('.topbar').getBoundingClientRect().bottom) }; });
   check('focus that scrolls up into the page lands below the top bar, not under it', !f || f.top >= f.bar, f);
   await d.evaluate(() => window.scrollTo(0, 600)); await d.waitForTimeout(200);

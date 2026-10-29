@@ -10,7 +10,7 @@
 (function (global) {
   'use strict';
   const BUILD = global.MATHUB_BUILD || 'dev';
-  global.MATHUB_ASSETS_BUILD = '2026.10.28.5';   // the build these scripts belong to (scripts/release.js writes it; build-check.js compares it with the page's)
+  global.MATHUB_ASSETS_BUILD = '2026.10.29.1';   // the build these scripts belong to (scripts/release.js writes it; build-check.js compares it with the page's)
   const Courses = global.Courses || (global.Courses = {});
   const COURSE_ORDER = ['calc', 'physics', 'precalc', 'writ', 'csci', 'biob', 'kin', 'psyx'];
   const GLOBAL_VIEWS = ['instructors', 'contact', 'forum', 'policy', 'admin', 'challenge', 'people', 'settings', 'leagues', 'gpa', 'today', 'whatsnew', 'resources', 'guides', 'focus', 'recap', 'tools', 'mistakes', 'join', 'sheet', 'request', 'teach', 'class', 'syllabus', 'notfound', 'create', 'maker', 'c', 'tutor', 'plan', 'tasks', 'timetable', 'agenda', 'timelog', 'projects', 'habits', 'goals', 'wheel', 'journal', 'money', 'career', 'portfolio', 'max', 'unsubscribe', 'room', 'calls', 'usage', 'customize', 'off'];   // pages that work without a course, e.g. #/contact
@@ -531,6 +531,15 @@
     document.body.appendChild(el); const close = () => App.dismiss(el); el.addEventListener('click', e => { if (e.target === el || e.target.closest('[data-action="close"]')) close(); }); const key = e => { if (e.key === 'Escape') { close(); document.removeEventListener('keydown', key); } }; document.addEventListener('keydown', key);
   };
   document.addEventListener('keydown', e => { if (e.key === '?' && !e.ctrlKey && !e.metaKey && !e.altKey && !e.target.matches('input, textarea, select, [contenteditable]')) { e.preventDefault(); App.showShortcuts(); } });
+  /* focus not hidden under the sticky top bar (WCAG 2.4.11): once the browser has scrolled a keyboard-focused part of the
+     page into view, move it below the bar. Not scroll-padding on html: a top-bar button taking focus then scrolls the
+     page (and a scroll closes its menu); not scroll-margin: that also shifts what is inside small scrolling boxes */
+  let lastPointer = 0;
+  document.addEventListener('pointerdown', () => { lastPointer = Date.now(); }, true);
+  document.addEventListener('focusin', e => {
+    const el = e.target; if (!el.closest || !el.closest('#view') || Date.now() - lastPointer < 600) return;
+    requestAnimationFrame(() => { const bar = $('.topbar'); if (!bar || document.activeElement !== el) return; const b = bar.getBoundingClientRect().bottom, r = el.getBoundingClientRect(); if (b > 0 && r.bottom > 0 && r.top < b + 4) window.scrollBy(0, r.top - b - 12); });
+  });
   function initToTop() { if ($('#totop')) return; const b = document.createElement('button'); b.id = 'totop'; b.className = 'totop'; b.title = 'Back to top'; b.setAttribute('aria-label', 'Back to top'); b.innerHTML = icon('up', 16); b.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' })); document.body.appendChild(b); let t = 0; window.addEventListener('scroll', () => { if (t) return; t = setTimeout(() => { t = 0; b.classList.toggle('show', window.scrollY > 400); }, 120); }, { passive: true }); }
   const trailSeen = new Set();
   // the winding trail between the run nodes: measured after layout so it follows the nodes at any width
