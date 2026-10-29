@@ -8137,3 +8137,196 @@
 8335	La próxima tarjeta vuelve en {1} días.
 8336	La próxima tarjeta vuelve el {1}.
 8337	Espaciarlas es lo que hace que se queden.
+8338	Aprender o enseñar
+8339	¿Das una clase? Enseñar cambia este mismo marco a StudyCat Faculty: tus programas, la asistencia y cómo va la clase. Aprender te devuelve aquí.
+8340	Tu próximo examen arriba y, debajo, tarjetas para hoy: la palabra del día, el plan de hoy, tu semana y tus clases. Oculta una tarjeta desde su menú ⋮; Añadir al panel la recupera, y ahí esperan también las herramientas.
+8341	Añadir al programa
+8342	Un examen
+8343	Un día de clase
+8344	Una lectura o material
+8345	Una política
+8346	Estado como profesor aún sin confirmar
+8347	Escribe el programa una vez.
+8348	Lleva la clase desde él.
+8349	Datos del curso, horas de consulta, calendario, exámenes, calificación y políticas, con la página terminada junto al formulario. Imprímela, guárdala como PDF o publícala para tus estudiantes.
+8350	Empezar un programa
+8351	Qué hace Bo en tu clase
+8352	{1} es el {2}.
+8353	mañana,
+8354	aún sin clases en el programa.
+8355	Añade los días y horas de clase, y aquí verás la próxima clase, su aula y lo que toca en el calendario.
+8356	Mostrar el código de asistencia
+8357	Abrir la actividad de la clase
+8358	La asistencia y la actividad de la clase se activan con el estado como profesor
+8359	Abrir el programa
+8360	Añadir horarios de clase
+8361	· Sec. {1}
+8362	Actividad de la clase
+8363	Cuando se confirme tu estado como profesor y los estudiantes se unan con el código de la clase, aquí verás lo que practican: quién practicó, las notas y dónde se atascan.
+8364	nota media
+8365	se unieron esta semana
+8366	entregaron
+8367	Dónde se atascan
+8368	{1}: {2}% de aciertos
+8369	De la práctica que entregaron tus estudiantes.
+8370	Esta semana en {1}{2}
+8371	No hay nada próximo en el calendario. Añade días de clase y exámenes al programa y aparecerán aquí.
+8372	Editar el programa
+8373	{1}: {2}% registrados
+8374	Aún no hay registros. En clase, abre la asistencia: los estudiantes escriben el código de 4 cifras en StudyCat.
+8375	Mostrar código
+8376	Sec.
+8377	Aún no hay programas. La plantilla de Montana State ya incluye las declaraciones de adaptaciones, integridad y bienestar.
+8378	+ Nuevo programa
+8379	Tareas de práctica
+8380	terminaron {1} · {2}
+8381	Aún no hay práctica asignada
+8382	Ver resultados
+8383	Asignar práctica
+8384	De tu programa
+8385	Aún no está en el programa
+8386	Editar horario
+8387	Programa en PDF
+8388	El programa publicado, listo para imprimir o guardar como PDF
+8389	Confirmado
+8390	Puedes publicar y usar las herramientas de la clase
+8391	Necesario para publicar y para las herramientas de la clase
+8392	{1} Estado como profesor aún sin confirmar
+8393	mañana, {1}
+8394	entregaron {1}
+8395	Sec. {1}
+8396	Aprender
+8397	Añadir al planificador
+8398	Usar la disposición ordenada
+8399	Semana {1}
+8400	es hoy.
+8401	es mañana.
+8402	en {1} días.
+8403	Empezar el cuestionario de {1}
+8404	Ver los temas del examen
+8405	{1}: {2}, {3} de {4} correctas.
+8406	{1}: {2} de {3} correctas.
+8407	Seguir con el cuestionario de {1}
+8408	Repetir la que fallé
+8409	Repetir las {1} que fallé
+8410	Elige una clase y haz un
+8411	cuestionario de cinco minutos.
+8412	Cada pregunta se resuelve paso a paso.
+8413	¿No está tu clase? Créala desde tu programa
+8414	Más opciones para {1}
+8415	{1} min · {2} tarjetas
+8416	{1} repasadas hoy
+8417	Hecho hoy
+8418	{1} min · una lección corta
+8419	Repetir {1} preguntas falladas
+8420	No hay errores pendientes hoy
+8421	{1} min · vuelven con sus explicaciones
+8422	Aún sin hacer
+8423	Abrir el plan de hoy
+8424	Aún no hay nada planificado. Elige una clase y StudyCat te planifica el día.
+8425	{1} min · {2} de {3} hechas
+8426	Abrir el calendario
+8427	Aparece la semana antes de un examen.
+8428	Cambiar tus clases
+8429	tarjeta para repasar hoy
+8430	tarjetas para repasar hoy
+8431	Repasar ahora
+8432	Abrir las tarjetas
+8433	pregunta para repetir hoy
+8434	preguntas para repetir hoy
+8435	Repetirlas
+8436	Abrir el cuaderno
+8437	respuesta o mención nueva
+8438	respuestas y menciones nuevas
+8439	Este semestre, según tus notas
+8440	Abrir la calculadora
+8441	Una sesión de concentración
+8442	Herramientas de la clase
+8443	Calculadoras de notas y herramientas elegidas para cada clase
+8444	Representa cualquier ecuación
+8445	Haz una cuenta rápida
+8446	Todas las fórmulas de cada clase
+8447	Lecciones cortas para cada tema
+8448	Lista para el examen
+8449	Todo está en tu panel.
+8450	Añadir al panel
+8451	Ocultar del panel
+8452	Oculta. Vuelve a añadirla cuando quieras desde Añadir al panel.
+8453	Organizar libremente: arrastra, cambia el tamaño y añade más widgets
+8569	Lo que estás haciendo ahora mismo.
+8577	en su sitio
+8578	en la palabra, en otro sitio
+8579	no está en la palabra
+8580	Resuelta en {1} de 6.
+8581	Esta vez no. La palabra era {1}.
+8582	{1} de 6 intentos usados. Sigue.
+8583	Adivina la palabra de hoy en seis intentos
+8584	Día {1} de tu racha. Sigue así.
+8585	Una palabra de {1}.
+8586	Una palabra sobre estudiar.
+8587	Reto diario · #{1}
+8588	Nuevo reto en {1}
+8589	Seguir jugando
+8590	Jugar el reto de hoy
+8591	Intento {1}: {2}
+8592	Intento {1}, escribiendo: {2}
+8593	Intento {1}, sin usar
+8594	Borrar una letra
+8595	Resuelta en {1} de 6. +{2} XP
+8596	La palabra era {1}.
+8597	Racha: {1} · Resueltas {2} de {3}
+8598	Palabra del día · #{1}
+8599	Cinco letras, seis intentos. Una letra se pone verde con una barra si está en su sitio, dorada con un punto si está en la palabra en otro sitio, y gris si no está en la palabra.
+8600	Cinco letras, por favor.
+8601	Resuelta. La palabra es {1}: {2}
+8602	No quedan intentos. La palabra era {1}: {2}
+8603	Quedan {1} intentos.
+8604	StudyCat Faculty: escribe tu programa y lleva la clase desde él
+8605	Tres formas de practicar
+8606	Empieza en tres pasos
+8607	Ver cómo es un cuestionario
+8608	Cinco preguntas, unos cinco minutos
+8609	Las preguntas salen de los temas de tu clase. Tras cada respuesta ves por qué es correcta, y Bo puede explicarte lo que hayas fallado.
+8610	Elige una clase para empezar
+8611	Límites
+8612	Un ejemplo
+8613	¿Cuál es el límite de sin(x) / x cuando x tiende a 0?
+8614	Guarda tu progreso en todas partes
+8615	Una cuenta gratuita con tu correo de montana.edu guarda tus clases, tu racha y tus respuestas en todos tus dispositivos. Te enviamos un código de 6 cifras para confirmar la dirección.
+8616	Tu correo de montana.edu
+8617	¿Ya tienes una cuenta?
+8618	Practica primero. Lo demás está a un toque.
+8619	Cada clase que elijas trae tres formas de practicar: un cuestionario rápido, lecciones de cinco minutos y tarjetas. Los apuntes, un plan y las herramientas de esa clase están justo al lado.
+8620	Prueba un cuestionario gratis
+8621	¿Atascado? Llama a Bo.
+8622	Explícalo en voz alta, como con un tutor a tu lado. Bo escucha, hace preguntas y lo resuelve contigo en una pizarra compartida. ¿Prefieres escribir? Pregúntale lo que quieras.
+8623	Mira cómo va tu clase, sin corregir de más.
+8624	Escribe el programa una vez; StudyCat lo convierte en práctica, fechas y un tablón de la clase, y ves en qué trabajan tus estudiantes.
+8625	Empieza con una clase
+8626	hoy.
+8627	Elígela y haz un cuestionario. Ese es todo el primer paso.
+8628	Elige entre {1} clases
+8629	Haz un cuestionario de cinco minutos
+8630	Cada respuesta resuelta paso a paso
+8631	Gratis con montana.edu
+8632	No existe
+8633	Términos clave y fórmulas, justo antes de que los olvides.
+8634	Lecciones de cinco minutos
+8635	Preguntas nuevas para tu clase cada vez, cada una resuelta paso a paso.
+8636	La más usada
+8637	Apuntes de cada tema
+8638	Listas para los exámenes
+8639	Calculadoras de notas y de GPA
+8640	Sigue el progreso de la clase
+8641	Mira qué temas practican los estudiantes y dónde se atascan.
+8642	Crea el programa una vez
+8643	Con la plantilla de Montana State: publícalo y la clase tiene su calendario, cuentas atrás de exámenes y calificación.
+8644	Asistencia con código
+8645	Muestra un código de 4 cifras en clase; los estudiantes lo escriben en StudyCat para registrarse.
+8646	Sí. Todo lo que trae StudyCat es gratis, y tienes 100 créditos al mes para Bo: pregúntale lo que quieras, llámalo, pídele que lo dibuje. StudyCat Pro te da 1.000 créditos al mes, y StudyCat Max 2.000 con su modelo de voz más potente.
+8647	StudyCat, inicio
+8648	Correcto.
+8649	No exactamente: es 1.
+8650	Cuando x se acerca a 0, sin x y x se acercan entre sí, así que su cociente tiende a 1. La derivada de sin x se basa en este límite.
+8651	Correcto. Cuando x se acerca a 0, sin x y x se acercan entre sí, así que su cociente tiende a 1. La derivada de sin x se basa en este límite.
+8652	No exactamente: es 1. Cuando x se acerca a 0, sin x y x se acercan entre sí, así que su cociente tiende a 1. La derivada de sin x se basa en este límite.
