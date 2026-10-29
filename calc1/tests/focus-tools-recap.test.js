@@ -1,7 +1,7 @@
 /* Focus room, exam readiness, Tools (the map of study tools, Life and Future; calculator, units, citations, words, sig figs), Your week, the account menu (account things only), mobile layouts. */
 const T = require('./lib');
 (async () => {
-  const { mk, login, go, log, check, txt } = await T.start({ dialogText: '40' });
+  const { mk, login, go, log, check, txt } = await T.start({ dialogText: '40', freeHome: true });
   const [c, p] = await mk(1360, 900, { serviceWorkers: 'block' }); await go(p, '#/', 700);
   await p.evaluate(() => { const s = App.settings(); s.courses = ['calc', 'physics', 'csci']; localStorage.setItem('studyhub-settings', JSON.stringify(s)); App.store.poke('calc', d => { const r = App.readiness('calc'); const t0 = r && r.ok ? r.topics[0].t : 'velocity'; d.progress = { [t0]: { a: 12, c: 10 }, aroc: { a: 6, c: 2 } }; d.history = [{ t: 'velocity', ok: true, d: App.todayISO() }]; d.activity = { [App.todayISO()]: true }; d.xp = [{ d: App.todayISO(), n: 40 }]; }); });
   await p.reload(); await p.waitForTimeout(1200);   // the classes were picked after the first paint

@@ -3,7 +3,7 @@ const T = require('./lib');
 (async () => {
   const { mk, login, go, log, check, txt, api } = await T.start({});
   const [c, p] = await mk(1360, 900, { serviceWorkers: 'block' }); await go(p, '#/', 700);
-  check('landing guides strip', (await p.$$('.guides-strip .guide-card')).length === 3);
+  check('the start page points to the free study guides', !!(await p.$('.gl-more a[href="/learn/"]')));
   await go(p, '#/resources', 700); const n0 = (await p.$$('.rs-item')).length; check('resources general list', n0 >= 20, n0); check('guides shown on general', (await p.$$('#rs-guides .guide-card')).length === 6);
   await p.click('.rs-groups .chip[data-g="calc"]'); await p.waitForTimeout(200); check('calc group', (await p.$$('.rs-item')).length >= 10 && (await txt(p, '#rs-blurb')).includes('Active Calculus'));
   await p.click('#rs-kinds .chip[data-k="video"]'); await p.waitForTimeout(200); check('kind filter', (await p.$$('.rs-item')).length >= 3 && (await p.$$eval('.rs-item .rs-ic', e => e.every(x => x.classList.contains('kind-video')))));

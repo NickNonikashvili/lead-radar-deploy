@@ -17,7 +17,7 @@ const rows = (q, ...a) => { try { return JSON.parse(sql(q, ...a) || '[]'); } cat
 const OFFER = 'v=0\r\no=- 1 2 IN IP4 127.0.0.1\r\ns=test\r\nt=0 0\r\n';
 const NOW = () => Math.floor(Date.now() / 1000);
 (async () => {
-  const { mk, go, txt, login, api: raw, hscroll, log, check } = await T.start();
+  const { mk, go, txt, login, api: raw, hscroll, log, check } = await T.start({ freeHome: true });
   const api = async (...a) => { const r = await raw(...a); return Object.assign(r.json || {}, { status: r.status }); };
   const ALICE = 'alice.a@montana.edu', BOB = 'bob.bmu6j92pq@montana.edu';
   const quiet = () => document.addEventListener('DOMContentLoaded', () => { const st = document.createElement('style'); st.textContent = '.celebrate{display:none!important}'; document.head.appendChild(st); });

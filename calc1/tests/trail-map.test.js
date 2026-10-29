@@ -10,7 +10,7 @@ const T = require('./lib');
     return { body: cs(document.body).fontFamily, h1: cs(document.querySelector('.page-title')).fontFamily, bodyBg: cs(document.body).backgroundImage, btnBg: b ? cs(b).backgroundImage : '', live: !!document.querySelector('#live-bg:not([hidden])'), geek: document.documentElement.getAttribute('data-geek'), skin: document.documentElement.getAttribute('data-skin') };
   });
   log('look:', JSON.stringify(look));
-  check('default look sets text in Figtree and headings in Gabarito', /Figtree/.test(look.body) && /Gabarito/.test(look.h1), look);
+  check('default look sets text in Figtree and headings in Outfit', /Figtree/.test(look.body) && /Outfit/.test(look.h1), look);
   check('no gradients on the page ground or the primary button', look.bodyBg === 'none' && look.btnBg === 'none', look);
   check('the drifting background and geek mode are off unless switched on', !look.live && look.geek !== 'on' && look.skin === null, look);
 

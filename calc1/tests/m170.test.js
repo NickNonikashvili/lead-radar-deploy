@@ -3,7 +3,7 @@
    opens on its dashboard, and its notes, quizzer, exam prep, grade calculator and syllabus page work. */
 const T = require('./lib');
 (async () => {
-  const { mk, go, txt, login, log, check, hscroll } = await T.start();
+  const { mk, go, txt, login, log, check, hscroll } = await T.start({ freeHome: true });
   const setSettings = (p, patch) => p.evaluate(patch => { const s = App.settings(); Object.assign(s, patch); localStorage.setItem('studyhub-settings', JSON.stringify(s)); }, patch);
   const [c, p] = await mk(1360, 900, { serviceWorkers: 'block' });
   await go(p, '#/', 1200);

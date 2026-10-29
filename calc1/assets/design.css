@@ -71,12 +71,14 @@
 }
 
 /* the accent: the redesign's blue, except on a class's own pages, which keep the class's colour (styles.css, world.css) */
-:root:not([data-skin]):not([data-app]):not([data-course]) { --accent: #1A64D6; --accent-ink: #FFFFFF; --accent-soft: #E4EEFD; --accent-line: #A9C8F5; --accent-deep: #1450B0; }
-:root:not([data-skin]):not([data-app]):not([data-course])[data-theme="dark"] { --accent: #7CB1FF; --accent-ink: #0B1A33; --accent-soft: #1A2F5A; --accent-line: #3C5A92; --accent-deep: #8DBCFF; }
-@media (prefers-color-scheme: dark) { :root:not([data-skin]):not([data-app]):not([data-course]):not([data-theme="light"]) { --accent: #7CB1FF; --accent-ink: #0B1A33; --accent-soft: #1A2F5A; --accent-line: #3C5A92; --accent-deep: #8DBCFF; } }
+:root:not([data-skin]):not([data-app]):not([data-course]):not([data-accent]) { --accent: #1A64D6; --accent-ink: #FFFFFF; --accent-soft: #E4EEFD; --accent-line: #A9C8F5; --accent-deep: #1450B0; }
+:root:not([data-skin]):not([data-app]):not([data-course]):not([data-accent])[data-theme="dark"] { --accent: #7CB1FF; --accent-ink: #0B1A33; --accent-soft: #1A2F5A; --accent-line: #3C5A92; --accent-deep: #8DBCFF; }
+@media (prefers-color-scheme: dark) { :root:not([data-skin]):not([data-app]):not([data-course]):not([data-accent]):not([data-theme="light"]) { --accent: #7CB1FF; --accent-ink: #0B1A33; --accent-soft: #1A2F5A; --accent-line: #3C5A92; --accent-deep: #8DBCFF; } }
 
 /* ---------- type: Outfit for headings, Figtree for everything else ---------- */
-:root:not([data-skin]):not([data-app]) :is(h1, h2, h3, .page-title, .sec-title, .panel-title, .dw-title) { font-family: var(--font-display); color: var(--ink-strong); }
+:root:not([data-skin]):not([data-app]) :is(h1, h2, h3, .page-title, .sec-title, .panel-title, .dw-title) { font-family: var(--font-display); }
+/* the heading colour stays low so a card that sets its own (the call page's night sky) keeps it */
+:where(:root:not([data-skin]):not([data-app])) :is(h1, h2, h3, .page-title, .sec-title, .panel-title, .dw-title) { color: var(--ink-strong); }
 :root:not([data-skin]):not([data-app]) h1, :root:not([data-skin]):not([data-app]) .page-title { font-weight: 800; letter-spacing: -0.02em; }
 :root:not([data-skin]):not([data-app]) :is(h2, .sec-title) { font-weight: 700; letter-spacing: -0.005em; }
 :root:not([data-skin]):not([data-app]) a:not(.btn):not(.nav-item):not(.card-link):not(.sf-logo):not(.brand-logo) { text-underline-offset: 3px; }
