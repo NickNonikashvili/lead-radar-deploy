@@ -3,7 +3,10 @@
    Covered: Bo's cost today and this month from the credits used; the daily, monthly and spike alerts, emailed to the
    administrators once each with who used most, and shown in the panel; the weekly report: what it says, emailed by
    housekeeping once from its day and hour, not when it is off, and to me on demand; the classes made in the class maker
-   and the syllabi Bo read; how far the last 30 days' sign-ups got and Bo's cost by week; administrators only. */
+   and the syllabi Bo read; how far the last 30 days' sign-ups got and Bo's cost by week; administrators only.
+   The spending cap: a day (or month) over it pauses everything with Bo for members, never for administrators, with
+   one email to the administrators and a line in the panel; a raised or cleared cap counts at once. (Every check sends
+   an empty question, so no AI is ever asked.) */
 const T = require('./lib'); const fs = require('fs'); const path = require('path'); const cp = require('child_process');
 const API = path.join(__dirname, '..', 'api'); const DB = path.join(API, 'data', 'mathub.sqlite'); const LOG = path.join(API, 'data', 'mail.log');
 const sql = (q, ...a) => cp.spawnSync('php', ['-r', '$d = new PDO("sqlite:" . $argv[1]); $s = $d->prepare($argv[2]); $s->execute(array_slice($argv, 3)); echo json_encode($s->fetchAll(PDO::FETCH_ASSOC));', DB, q, ...a.map(String)]).stdout.toString();
@@ -16,7 +19,7 @@ const idOf = email => +rows('SELECT id FROM users WHERE email = ?', email)[0].id
   const [c, a] = await mk(1360, 900); await go(a, '#/'); await login(a, 'admin.user@montana.edu');
   const KEY = 'ops-test-cron-key'; const cron = () => a.evaluate(async k => (await fetch('api/index.php?r=cron&key=' + k)).json(), KEY);
   const settings = v => api(a, 'admin_config_save', { password: 'password123', values: v });
-  const unset = () => api(a, 'admin_config_save', { password: 'password123', clear: ['cost_alert_daily', 'cost_alert_monthly', 'admin_report', 'admin_report_day', 'cron_key'] });
+  const unset = () => api(a, 'admin_config_save', { password: 'password123', clear: ['cost_alert_daily', 'cost_alert_monthly', 'cost_cap_daily', 'cost_cap_monthly', 'admin_report', 'admin_report_day', 'cron_key'] });
   await api(a, 'admin_ops');   // the tables
   const clean = () => { sql('DELETE FROM ops_alerts'); sql('DELETE FROM credit_use'); };
   clean(); await unset(); await settings({ cron_key: KEY });
@@ -70,6 +73,24 @@ const idOf = email => +rows('SELECT id FROM users WHERE email = ?', email)[0].id
   // administrators only
   const [c2, b] = await mk(1000, 800); await go(b, '#/'); await login(b, 'alice.a@montana.edu');
   check('members cannot see the costs or the report', (await api(b, 'admin_ops')).status === 403 && (await api(b, 'admin_ops_send', {})).status === 403);
+
+  // the spending cap ($12 so far today)
+  const ask = async p => ((await api(p, 'ai_tutor', { q: '' })).json || {});
+  check('with no cap, Bo is not paused', !(await ask(b)).resting);
+  m0 = mailLen(); await settings({ cost_cap_daily: '11' });
+  let rb = await api(b, 'ai_tutor', { q: '' });
+  check('a day over its spending cap: Bo rests for members until tomorrow, and says their credits were not used', rb.status === 503 && rb.json.resting === 'day' && /^Bo is resting until tomorrow/.test(rb.json.error) && /None of your credits were used/.test(rb.json.error), rb);
+  const capMail = mailSince(m0);
+  check('the administrators get one email: Bo has paused, and who used most', /to=admin\.user@montana\.edu subject="StudyCat: Bo has paused for today: today cost \$12\.00 \(your cap: \$11\.00\)"/.test(capMail) && /Most of it: alice\.a@montana\.edu \$9\.00/.test(capMail) && /raise or clear the cap/.test(capMail), capMail.slice(0, 500));
+  m0 = mailLen(); sql("DELETE FROM ops_state WHERE k = 'cap_now'"); await ask(b);
+  check('and only once that day', !/Bo has paused/.test(mailSince(m0)));
+  check('every use of Bo pauses, not only the chat', ((await api(b, 'ai_speak', { text: 'hello' })).json || {}).resting === 'day');
+  const adm = await ask(a); check('administrators are never paused', !adm.resting && /Ask Bo something first/.test(adm.error || ''), adm);
+  r = await api(a, 'admin_ops'); check('the panel shows Bo paused, with the cap', r.json.alerts.some(x => x.kind === 'cap_day' && x.limit === 11 && Math.abs(x.usd - 12) < 0.01), r.json.alerts);
+  await settings({ cost_cap_daily: '50' }); check('a raised cap counts at once', !(await ask(b)).resting);
+  await settings({ cost_cap_daily: '0', cost_cap_monthly: '5' }); rb = await api(b, 'ai_tutor', { q: '' });
+  check('a month over its cap: Bo rests until the 1st', rb.status === 503 && rb.json.resting === 'month' && /until the 1st/.test(rb.json.error), rb.json);
+  await api(a, 'admin_config_save', { password: 'password123', clear: ['cost_cap_daily', 'cost_cap_monthly'] }); check('a cleared cap: Bo is back', !(await ask(b)).resting);
   await c2.close();
 
   // the tabs

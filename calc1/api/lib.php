@@ -122,6 +122,10 @@ function mh_db(): PDO {
   // anon = 1 when the block was made from an anonymous post: it then hides only that member's anonymous posts, so blocking
   // never reveals who wrote one (their named posts staying visible says nothing about which named member it was)
   $db->exec('CREATE TABLE IF NOT EXISTS member_blocks (user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE, blocked_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE, anon INTEGER NOT NULL DEFAULT 0, label TEXT NOT NULL DEFAULT "", created INTEGER NOT NULL, PRIMARY KEY (user_id, blocked_id, anon))');
+  // lookups that grow with the site: a member's sign-ins (and the ones that ran out), the calendar feed and invite links
+  // by their code, a member's posts, comments and phones. Without these each is a scan of the whole table, and so is
+  // every ON DELETE CASCADE from users.
+  foreach (['tokens_user ON tokens(user_id)', 'tokens_expires ON tokens(expires)', 'users_ics ON users(ics_token)', 'users_invite ON users(invite_code)', 'posts_user ON posts(user_id)', 'comments_user ON comments(user_id)', 'push_subs_user ON push_subs(user_id)'] as $ix) $db->exec("CREATE INDEX IF NOT EXISTS $ix");
   return $db;
 }
 

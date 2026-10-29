@@ -89,6 +89,23 @@ StudyCat was audited against that list, and every gap that could be closed in co
 - **An outside penetration test.** Everything above was checked by the author and by automated tests. A one-off review by someone else is the usual next step for a site that holds student data.
 - **Email for class announcements.** Students get them in the StudyCat inbox and as push notifications. Email would need a sending queue to stay within Hostinger's limits.
 
+## Follow-up, October 29 2026: two reels on vibe-coded apps
+
+Two short videos made the rounds: one on the ways a vibe-coded app can cost $100,000 with no users (security holes, data breaches, runaway AI bills, accessibility and other lawsuits), one on five ways to make such an app faster (the database, dependencies, the front end, the back end, finding the bottleneck). StudyCat against both:
+
+| Point | StudyCat before | What changed |
+|---|---|---|
+| Runaway AI bills | Per-member rate limits on every AI route, every use paid in credits, cost alerts by email | A **spending cap** (`cost_cap_daily`, `cost_cap_monthly`): once the day's or month's estimated cost reaches it, everything with Bo pauses for everyone but administrators until the day or month is over, a call in progress ends, no credits are used, and the administrators get one email. The alerts warn; the cap stops |
+| Security holes | Permissions checked on the server, parameterized queries, CSP without inline scripts, `api/` denied by default | No change needed. The translation tool (`scripts/i18n-extract.js`) no longer opens `api/config.local.php` |
+| Data breaches | Passwords hashed (`password_hash`), sign-in tokens stored only as SHA-256 hashes, an HttpOnly, Secure, SameSite cookie, login rate limits, encrypted off-site backups | No change needed |
+| Accessibility lawsuits | WCAG 2.2 AA statement, axe on 25 pages | Decorative animation now stops by itself (WCAG 2.2.2): see the animation budget in DESIGN.md |
+| Other legal risk | Terms, privacy policy, no tracking, under-13 rule | Terms **1.16 Copyright complaints**: what a notice needs, takedown, counter-notice, repeat infringers. For the US safe harbor (17 U.S.C. § 512) the site owner also has to register a designated agent with the U.S. Copyright Office (online, a small fee); that is a step only the owner can take |
+| The database | WAL, a busy timeout, prepared statements | Eight indexes for lookups that grew with the site: a member's sign-ins and the expired ones, the calendar feed and invite links by code, a member's posts, comments and phones, today's call minutes (checked at every call tick). Each was a scan of the whole table, and so was every `ON DELETE CASCADE` from `users`. The schema setup at the top of each request was measured at 0.4 ms and left as it is; the API answers in 5 to 7 ms on the test server |
+| Dependencies | No framework, no build step; GSAP vendored and pinned, loaded only on the two motion pages | No change needed |
+| The front end | Page files loaded when opened for the admin panel, What's new and the terms | 19 more pages load when first opened; Bo's endless SVG animations, which restyled and repainted the page every frame, now play a few times and rest (idle style recalculations on a page with Bo: about 180 every 3 seconds to 0); `.htaccess` also compresses `text/javascript`, the name current servers give `.js` files |
+| The back end | Bulk email queued and sent in batches, housekeeping on a timer | No change needed |
+| Finding the bottleneck | Lighthouse-style load tests | Measured with Chrome traces: script running was about 230 ms at 4× CPU slowdown; style recalculation from animations was the real cost |
+
 ## The professors' section (built in the same release)
 
 Since build 2026.10.12.1 this is **StudyCat Faculty**, a separate workspace with its own look, opened from a "For professors" button on the start page. Anyone signed in can write and print syllabi there; an administrator confirms faculty status in **Admin → Instructors** before a class can be published or use the class tools. Instructors get:

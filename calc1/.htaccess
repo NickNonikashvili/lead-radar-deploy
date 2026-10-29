@@ -73,5 +73,6 @@ Options -Indexes
   RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
 </IfModule>
 <IfModule mod_deflate.c>
-  AddOutputFilterByType DEFLATE text/html text/css text/plain application/xml application/javascript application/json image/svg+xml
+  # text/javascript is how current servers name .js files: without it the scripts would be sent uncompressed
+  AddOutputFilterByType DEFLATE text/html text/css text/plain application/xml application/javascript text/javascript application/json application/manifest+json image/svg+xml application/wasm
 </IfModule>

@@ -130,7 +130,8 @@
     },
 
     /* ---------- Overview: alerts and this week's report ---------- */
-    alertLine(a) { const what = { day: 'today', month: 'this month', spike: 'today, over three times a usual day' }[a.kind] || ''; return `Bo has cost ${money(a.usd)} ${what}${a.kind === 'spike' ? '' : ` (your alert: ${money(a.limit)})`}.${a.note ? ' ' + a.note : ''}`; },
+    alertLine(a) { if (/^cap_/.test(a.kind)) return `Bo is paused ${a.kind === 'cap_month' ? 'until the 1st' : 'for today'}: ${a.kind === 'cap_month' ? 'this month' : 'today'} cost ${money(a.usd)}, your spending cap is ${money(a.limit)}. Raise or clear it under Keys & settings → Plans and payments.`;
+      const what = { day: 'today', month: 'this month', spike: 'today, over three times a usual day' }[a.kind] || ''; return `Bo has cost ${money(a.usd)} ${what}${a.kind === 'spike' ? '' : ` (your alert: ${money(a.limit)})`}.${a.note ? ' ' + a.note : ''}`; },
     async report(box) {
       let r; try { r = await api('admin_ops'); } catch (e) { box.innerHTML = ''; return; }
       const R = r.report;

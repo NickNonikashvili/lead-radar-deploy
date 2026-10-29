@@ -62,6 +62,8 @@ function mh_siteconfig_fields(): array {
     'credits_image_big'  => ['pay', 'Credits per wide or tall picture', 'num', '22 by default.', [0, 1000]],
     'cost_alert_daily'   => ['pay', 'Cost alert: a day over (dollars)', 'num', 'Administrators get one email when Bo’s estimated AI cost for a day passes this. 0: off. While either alert is set, a day costing over three times the usual (and over $1) sends one too.', [0, 1000000]],
     'cost_alert_monthly' => ['pay', 'Cost alert: a month over (dollars)', 'num', 'The same for the month so far. 0: off.', [0, 10000000]],
+    'cost_cap_daily'     => ['pay', 'Spending cap: a day (dollars)', 'num', 'A hard stop, above the alert. When Bo’s estimated AI cost for the day reaches this, everything with Bo pauses for everyone except administrators until midnight (site time); a call in progress ends, no credits are used, and the administrators get one email. The rest of StudyCat works as usual. 0: off.', [0, 1000000]],
+    'cost_cap_monthly'   => ['pay', 'Spending cap: a month (dollars)', 'num', 'The same for the month so far: Bo pauses until the 1st. 0: off.', [0, 10000000]],
     'plan_grants'        => ['pay', 'Tester plans', 'grants', 'One per line: someone@montana.edu = pro (or max), for testing. To give a member a membership, use Membership in Members.'],
     'mail_mode'          => ['mail', 'How email is sent', 'select', 'auto: SMTP when the password is set, otherwise PHP mail(). log: nothing is sent (testing).', ['auto', 'smtp', 'mail', 'log']],
     'mail_from'          => ['mail', 'Sender address', 'email', 'A mailbox that exists on your domain.'],

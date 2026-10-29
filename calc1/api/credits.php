@@ -117,9 +117,29 @@ function mh_credits_gift(int $uid, int $credits, string $ref, string $note, int 
 /** Stop here when they cannot pay for $mc (thousandths): 402, credits. Administrators always can. */
 function mh_credits_need(array $u, int $mc, array $cfg, string $what = 'that'): void {
   if (mh_is_admin($u)) return;
+  mh_credits_cap_or_fail($cfg);   // the site's spending cap comes before anyone's credits
   $L = mh_credits_left($u, $cfg); if ($L['left'] >= $mc) return;
   if (mh_credits_sync($u, $cfg) > 0) { $L = mh_credits_left($u, $cfg); if ($L['left'] >= $mc) return; }   // bought a moment ago
   mh_fail($L['left'] <= 0 ? 'You’re out of credits. Get more on the Usage page, or wait for the 1st, when your monthly credits come back.' : "You don’t have enough credits for $what. Get more on the Usage page.", 402, ['credits' => true, 'left' => intdiv($L['left'], 1000)]);
+}
+
+/* ---------- the spending cap (Keys & settings → Plans and payments: cost_cap_daily, cost_cap_monthly, in dollars; 0: off)
+   A hard stop under the cost alerts: once Bo's estimated cost for the day (or the month) reaches it, everything with Bo
+   pauses for everyone but administrators until the day (or month) is over, and the administrators get one email
+   (api/ops.php, mh_ops_cap). Every use of Bo asks mh_credits_need first; a call in progress ends at its next tick. ---------- */
+/** The cap reached now: 'day', 'month' or ''. */
+function mh_credits_cap(array $cfg): string {
+  $day = max(0.0, (float)($cfg['cost_cap_daily'] ?? 0)); $month = max(0.0, (float)($cfg['cost_cap_monthly'] ?? 0));
+  if ($day <= 0 && $month <= 0) return '';
+  require_once __DIR__ . '/ops.php'; return mh_ops_cap($day, $month);
+}
+function mh_credits_cap_why(string $kind): string {
+  return $kind === 'month' ? 'Bo is resting until the 1st: StudyCat has reached its limit for Bo this month. None of your credits were used, and everything else works as usual.' : 'Bo is resting until tomorrow: StudyCat has reached its limit for Bo today. None of your credits were used, and everything else works as usual.';
+}
+function mh_credits_cap_or_fail(array $cfg): void {
+  $kind = mh_credits_cap($cfg); if ($kind === '') return;
+  if ($kind === 'month') mh_fail('Bo is resting until the 1st: StudyCat has reached its limit for Bo this month. None of your credits were used, and everything else works as usual.', 503, ['resting' => 'month']);
+  mh_fail('Bo is resting until tomorrow: StudyCat has reached its limit for Bo today. None of your credits were used, and everything else works as usual.', 503, ['resting' => 'day']);
 }
 
 /* ---------- what Anthropic's answers cost: every call to the AI says who it was for (mh_credits_for) ---------- */

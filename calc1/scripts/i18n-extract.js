@@ -147,7 +147,7 @@ for (const f of fs.readdirSync(path.join(ROOT, 'assets')).filter(x => x.endsWith
 fromHtml(fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8').split('<body>')[1] || '', 'index.html');
 add('StudyCat · Free study hub for Montana State classes', 'index.html');
 // the API's messages (shown in toasts and forms): mh_fail('…') and 'error' => '…'
-for (const f of fs.readdirSync(path.join(ROOT, 'api')).filter(x => x.endsWith('.php'))) {
+for (const f of fs.readdirSync(path.join(ROOT, 'api')).filter(x => x.endsWith('.php') && x !== 'config.local.php')) {   // never the secrets file
   const src = fs.readFileSync(path.join(ROOT, 'api', f), 'utf8'); let m;
   const re = /(?:mh_fail|mh_json_error|'error'\s*=>|'message'\s*=>|'hint'\s*=>)\s*\(?\s*'((?:[^'\\]|\\.)*)'/g;
   while ((m = re.exec(src))) add(norm(m[1].replace(/\\'/g, "'")), 'api/' + f);

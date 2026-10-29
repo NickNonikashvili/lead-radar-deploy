@@ -86,6 +86,7 @@ function mh_ai_db(): PDO {
     if (!in_array('live', $cols, true)) $db->exec('ALTER TABLE ai_usage ADD COLUMN live INTEGER NOT NULL DEFAULT 0');       // seconds of live calls
     $db->exec('CREATE TABLE IF NOT EXISTS ai_trial (user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE, used INTEGER NOT NULL DEFAULT 0, first INTEGER NOT NULL DEFAULT 0)');   // the free minutes used
     $db->exec('CREATE TABLE IF NOT EXISTS ai_live (id TEXT PRIMARY KEY, user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE, cid TEXT NOT NULL DEFAULT "", call TEXT NOT NULL DEFAULT "", started INTEGER NOT NULL, last INTEGER NOT NULL, secs INTEGER NOT NULL DEFAULT 0, ended INTEGER NOT NULL DEFAULT 0)');
+    $db->exec('CREATE INDEX IF NOT EXISTS ai_live_user ON ai_live(user_id, started)');   // today's call minutes, at every tick
     $lc = array_column($db->query('PRAGMA table_info(ai_live)')->fetchAll(), 'name');
     if (!in_array('trial', $lc, true)) $db->exec('ALTER TABLE ai_live ADD COLUMN trial INTEGER NOT NULL DEFAULT 0');   // a call on the free minutes
     if (!in_array('rate', $lc, true)) $db->exec('ALTER TABLE ai_live ADD COLUMN rate REAL NOT NULL DEFAULT 0');   // credits a minute (api/credits.php)
@@ -1175,6 +1176,10 @@ function mh_ai_route(string $route, array $in, array $cfg, string $ip): void {
       $trial = (int)($r['trial'] ?? 0) === 1;
       if ($trial) { mh_ai_trial_add($uid, $d); if ((string)$r['call'] !== '') mh_ai_add($uid, 'live', $d); }
       else { mh_ai_add($uid, 'live', $d); mh_ai_call_charge($u, $r, $d, $secs, $cfg); }   // credits, per second at the call's rate
+      if (!mh_is_admin($u) && ($cap = mh_credits_cap($cfg)) !== '') {   // the site's spending cap was reached: Bo says goodbye
+        mh_ai_hangup($V, (string)$r['call']); $db->prepare('UPDATE ai_live SET ended = 1 WHERE id = ?')->execute([$lid]);
+        mh_json(['ok' => true, 'left' => 0, 'end' => true, 'resting' => $cap, 'why' => mh_credits_cap_why($cap)]);
+      }
       $left = min(mh_ai_live_left($uid, $V), $V['live_call'] - $secs); if ($trial) $left = (string)$r['call'] === '' ? mh_ai_trial_left($uid, $V) : min($left, mh_ai_trial_left($uid, $V));
       $outOfTime = false;
       if (!$trial && !mh_is_admin($u)) {   // out of credits: the call ends (a pack bought a moment ago counts)

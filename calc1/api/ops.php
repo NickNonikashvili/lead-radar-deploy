@@ -9,6 +9,10 @@
      over $1). Each alert is
      emailed to the administrators once for its day or month, and shows at the top of the admin panel until the day
      or month is over. Checked from housekeeping, at most every 15 minutes.
+   - The spending cap (Keys & settings → Plans and payments): cost_cap_daily and cost_cap_monthly, in dollars (0: off), a
+     hard stop above the alerts. Once the day's (or month's) estimated cost reaches it, everything with Bo pauses for
+     everyone but administrators until the day (or month) is over (api/credits.php, mh_credits_cap_or_fail), and the
+     administrators get one email. Looked up at most once a minute; a changed cap counts at once.
    - The weekly report (Keys & settings → Email: admin_report, on by default; admin_report_day, Monday by default):
      from 8:00 site time, one email to each administrator with the seven days before: members, sign-ups and who was
      active; Bo's use and cost by feature; credits sold; class requests by demand; open reports, problem reports and
@@ -90,8 +94,37 @@ function mh_ops_alert_tick(bool $force = false): array {
 }
 function mh_ops_admin_emails(): array { return array_values(array_unique(array_filter(array_map(fn($e) => strtolower(trim((string)$e)), mh_config()['admins'] ?? []), fn($e) => filter_var($e, FILTER_VALIDATE_EMAIL)))); }
 function mh_ops_site(): array { $cfg = mh_config(); return [(string)($cfg['site_name'] ?? 'StudyCat'), rtrim((string)(($cfg['site_url'] ?? '') ?: ('https://' . ($_SERVER['HTTP_HOST'] ?? 'studycat.org'))), '/')]; }
+/** The spending cap reached now: 'month', 'day' or ''. The answer is kept for a minute (with the caps and the day it was
+    for, so a changed cap or a new day counts at once); the first time in a day or month the administrators get an email. */
+function mh_ops_cap(float $day, float $month): string {
+  static $memo = null; if ($memo !== null) return $memo;
+  $now = time(); $d0 = mh_ops_day_start($now); $key = [$day, $month, $d0];
+  $c = json_decode(mh_ops_get('cap_now') ?: '[]', true) ?: [];
+  if (($c['key'] ?? null) === $key && (int)($c['at'] ?? 0) > $now - 60) return $memo = (string)($c['kind'] ?? '');
+  $kind = ''; $usd = 0.0; $limit = 0.0;
+  if ($month > 0) { $m = mh_ops_usd(mh_ops_month_start($now)); if ($m >= $month) [$kind, $usd, $limit] = ['month', $m, $month]; }
+  if ($kind === '' && $day > 0) { $t = mh_ops_usd($d0); if ($t >= $day) [$kind, $usd, $limit] = ['day', $t, $day]; }
+  mh_ops_set('cap_now', json_encode(['key' => $key, 'at' => $now, 'kind' => $kind]));
+  if ($kind !== '') {
+    $st = mh_ops_db()->prepare('INSERT OR IGNORE INTO ops_alerts (kind, period, at, usd, limit_usd, note) VALUES (?, ?, ?, ?, ?, ?)');
+    $st->execute(['cap_' . $kind, mh_ops_fmt($now, $kind === 'month' ? 'Y-m' : 'Y-m-d'), $now, $usd, $limit, '']);
+    if ($st->rowCount()) { try { mh_ops_alert_email('cap_' . $kind, $usd, $limit, '', mh_ops_top_people($kind === 'month' ? mh_ops_month_start($now) : $d0, $now + 1)); } catch (Throwable $e) {} }
+  }
+  return $memo = $kind;
+}
+
 function mh_ops_alert_email(string $kind, float $usd, float $limit, string $note, array $top): void {
   require_once __DIR__ . '/mailer.php'; [$site, $url] = mh_ops_site(); $cfg = mh_config();
+  if ($kind === 'cap_day' || $kind === 'cap_month') {   // the spending cap: Bo has paused
+    $m = $kind === 'cap_month'; $subject = "$site: Bo has paused " . ($m ? 'until the 1st' : 'for today') . ': ' . ($m ? 'this month' : 'today') . ' cost ' . mh_ops_money($usd) . ' (your cap: ' . mh_ops_money($limit) . ')';
+    $lines = ['Bo’s estimated AI cost ' . ($m ? 'this month' : 'today') . ' reached ' . mh_ops_money($usd) . ', the spending cap of ' . mh_ops_money($limit) . ' you set, so everything with Bo is paused for everyone except administrators until ' . ($m ? 'the 1st' : 'midnight') . '. Members are told Bo is resting, and none of their credits are used.'];
+    if ($top) $lines[] = 'Most of it: ' . implode('; ', array_map(fn($t) => "{$t['email']} " . mh_ops_money($t['usd']) . " ({$t['share']}%)", $top)) . '.';
+    $lines[] = 'Credits and who used them: ' . $url . '/#/admin/credits';
+    $lines[] = 'To let Bo carry on, raise or clear the cap under Keys & settings → Plans and payments. You get one email like this a ' . ($m ? 'month' : 'day') . '.';
+    $html = '<div style="font-family:system-ui,sans-serif;line-height:1.5;color:#1d2433">' . implode('', array_map(fn($l) => '<p>' . htmlspecialchars($l) . '</p>', $lines)) . '</div>';
+    foreach (mh_ops_admin_emails() as $to) mh_send_mail($cfg, $to, $subject, implode("\n\n", $lines), $html);
+    return;
+  }
   $what = ['day' => 'today', 'month' => 'this month', 'spike' => 'today, more than three times a usual day'][$kind] ?? '';
   $subject = "$site: Bo has cost " . mh_ops_money($usd) . " $what" . ($kind === 'spike' ? '' : ' (your alert: ' . mh_ops_money($limit) . ')');
   $lines = ["Bo’s estimated AI cost $what is " . mh_ops_money($usd) . ($kind === 'spike' ? '.' : ', over the ' . mh_ops_money($limit) . ' you set.')];
@@ -153,7 +186,7 @@ function mh_ops_report_mail(array $R): array {
     $bk[] = $o['last_test'] ? ($o['last_test']['ok'] ? 'Restore test passed ' . $ago($o['last_test']['at']) . " ({$o['last_test']['note']})." : 'The last restore test FAILED: ' . $o['last_test']['note']) : 'No restore test yet.'; }
   $S['Backups'] = $bk;
   $E = $R['eval']; $S['Answer tests'] = [$E ? "Last run " . mh_ops_fmt($E['started'], 'M j') . ": {$E['passed']} of {$E['done']} passed" . ($E['regressions'] ? ", {$E['regressions']} newly failing" : '') . " ({$E['model']})." : 'No run yet. Run them from the admin panel’s Answer tests tab.'];
-  $S['Cost alerts'] = !$R['alerts'] ? ['None this week.'] : array_map(fn($a) => ['day' => 'Day', 'month' => 'Month', 'spike' => 'Spike'][$a['kind']] . " {$a['period']}: " . mh_ops_money($a['usd']) . ($a['kind'] === 'spike' ? '' : ' (alert at ' . mh_ops_money($a['limit']) . ')'), $R['alerts']);
+  $S['Cost alerts'] = !$R['alerts'] ? ['None this week.'] : array_map(fn($a) => (['day' => 'Day', 'month' => 'Month', 'spike' => 'Spike', 'cap_day' => 'Bo paused for the day', 'cap_month' => 'Bo paused for the month'][$a['kind']] ?? $a['kind']) . " {$a['period']}: " . mh_ops_money($a['usd']) . ($a['kind'] === 'spike' ? '' : (str_starts_with($a['kind'], 'cap_') ? ' (cap at ' : ' (alert at ') . mh_ops_money($a['limit']) . ')'), $R['alerts']);
   $subject = "$site this week ({$R['label']}): {$P['signups']} sign-ups, {$P['active']} active, Bo " . mh_ops_money($B['usd']);
   $text = "$site, {$R['label']}\n\n"; $html = '<div style="font-family:system-ui,sans-serif;line-height:1.5;color:#1d2433;max-width:620px"><h1 style="font-size:20px;margin:0 0 4px">' . htmlspecialchars($site) . ' this week</h1><p style="color:#5b6478;margin:0 0 16px">' . htmlspecialchars($R['label']) . '</p>';
   foreach ($S as $h => $lines) { $text .= strtoupper($h) . "\n" . implode("\n", array_map(fn($l) => '- ' . $l, $lines)) . "\n\n"; $html .= '<h2 style="font-size:15px;margin:18px 0 4px">' . htmlspecialchars($h) . '</h2><ul style="margin:0;padding-left:18px">' . implode('', array_map(fn($l) => '<li>' . htmlspecialchars($l) . '</li>', $lines)) . '</ul>'; }
