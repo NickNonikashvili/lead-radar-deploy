@@ -172,7 +172,8 @@
 :root:not([data-skin]) .btn:not(:disabled):active { transform: translateY(3px); box-shadow: 0 0 0 var(--lip); }
 :root:not([data-skin]) .btn:disabled { opacity: 0.55; box-shadow: none; }
 :root:not([data-skin]) .btn.primary { background: var(--accent); background-image: none; color: var(--accent-ink); border-color: var(--accent); box-shadow: 0 4px 0 color-mix(in srgb, var(--accent) 66%, #0A1428); filter: none; }
-:root:not([data-skin]) .btn.primary:not(:disabled):hover { background: color-mix(in srgb, var(--accent) 88%, #FFFFFF); border-color: color-mix(in srgb, var(--accent) 88%, #FFFFFF); box-shadow: 0 4px 0 color-mix(in srgb, var(--accent) 66%, #0A1428); filter: none; }
+:root:not([data-skin]) .btn.primary:not(:disabled):hover { background: color-mix(in srgb, var(--accent) 90%, #0A1428); border-color: color-mix(in srgb, var(--accent) 90%, #0A1428); box-shadow: 0 4px 0 color-mix(in srgb, var(--accent) 66%, #0A1428); filter: none; }   /* a shade darker: white text keeps 4.5:1 */
+:root[data-theme="dark"]:not([data-skin]) .btn.primary:not(:disabled):hover { background: color-mix(in srgb, var(--accent) 88%, #FFFFFF); border-color: color-mix(in srgb, var(--accent) 88%, #FFFFFF); }   /* dark mode's text is dark: a shade lighter */
 :root:not([data-skin]) .btn.primary:not(:disabled):active { transform: translateY(4px); box-shadow: 0 0 0 transparent; }
 :root:not([data-skin]) .btn.ghost { background: transparent; border-color: transparent; box-shadow: none; }
 :root:not([data-skin]) .btn.ghost:not(:disabled):hover { background: var(--surface-2); box-shadow: none; }

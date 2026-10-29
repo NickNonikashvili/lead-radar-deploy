@@ -10,7 +10,7 @@
 (function (global) {
   'use strict';
   const BUILD = global.MATHUB_BUILD || 'dev';
-  global.MATHUB_ASSETS_BUILD = '2026.10.29.1';   // the build these scripts belong to (scripts/release.js writes it; build-check.js compares it with the page's)
+  global.MATHUB_ASSETS_BUILD = '2026.10.29.2';   // the build these scripts belong to (scripts/release.js writes it; build-check.js compares it with the page's)
   const Courses = global.Courses || (global.Courses = {});
   const COURSE_ORDER = ['calc', 'physics', 'precalc', 'writ', 'csci', 'biob', 'kin', 'psyx'];
   const GLOBAL_VIEWS = ['instructors', 'contact', 'forum', 'policy', 'admin', 'challenge', 'people', 'settings', 'leagues', 'gpa', 'today', 'whatsnew', 'resources', 'guides', 'focus', 'recap', 'tools', 'mistakes', 'join', 'sheet', 'request', 'teach', 'class', 'syllabus', 'notfound', 'create', 'maker', 'c', 'tutor', 'plan', 'tasks', 'timetable', 'agenda', 'timelog', 'projects', 'habits', 'goals', 'wheel', 'journal', 'money', 'career', 'portfolio', 'max', 'unsubscribe', 'room', 'calls', 'usage', 'customize', 'off'];   // pages that work without a course, e.g. #/contact

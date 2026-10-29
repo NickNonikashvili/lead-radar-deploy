@@ -318,35 +318,85 @@
     const m = $('#auth-modal'); if (!m) return;
     const offline = Auth.mode === 'offline';
     const tabs = ['login', 'signup'].map(t => `<button class="tab${M.state === t || (t === 'signup' && M.state === 'verify') || (t === 'login' && (M.state === 'forgot' || M.state === 'reset')) ? ' active' : ''}" data-action="tab" data-t="${t}">${t === 'login' ? 'Log in' : 'Sign up'}</button>`).join('');
-    const email = `<div class="field"><label for="au-email">Montana State email</label><input class="input" id="au-email" type="email" name="email" autocomplete="username" placeholder="you@montana.edu" value="${esc(M.email)}" required></div>`;
+    const email = `<div class="field"><label for="au-email">Montana State email</label><input class="input" id="au-email" type="email" name="email" autocomplete="username" inputmode="email" autocapitalize="none" spellcheck="false" placeholder="you@montana.edu" value="${esc(M.email)}" required><p class="au-hint small" id="au-email-hint" hidden></p></div>`;
+    // a password field with Show (people mistype what they cannot see) and a Caps Lock hint
+    const pass = (label, auto, extra = '') => `<div class="field"><label for="au-pass">${label}</label><div class="pw-wrap"><input class="input" id="au-pass" type="password" autocomplete="${auto}" ${extra} required><button class="pw-eye" type="button" data-action="pw-eye" aria-controls="au-pass" aria-pressed="false" aria-label="Show password">Show</button></div><p class="au-caps small" id="au-caps" hidden>Caps Lock is on.</p></div>`;
+    const code = `<div class="field"><label for="au-code">Code</label><input class="input mono" id="au-code" inputmode="numeric" autocomplete="one-time-code" maxlength="9" placeholder="123456" required></div>`;
     let body = '';
     if (offline) {
       body = `<div class="callout small mb-2"><b>Account server unreachable.</b> This happens when the site is opened as a file or the <code>api</code> folder is not on the server. You can still sign in locally: your progress stays in this browser only.</div>${email}<div class="field"><label for="au-name">Name (optional)</label><input class="input" id="au-name" type="text" autocomplete="name" placeholder="Your name"></div><button class="btn primary mt-2" type="submit" style="width:100%">Continue locally</button>`;
     } else if (M.state === 'signup') {
-      body = `${email}<div class="field"><label for="au-name">Name (optional)</label><input class="input" id="au-name" type="text" autocomplete="name" placeholder="What should we call you?"></div><div class="field"><label for="au-pass">Password</label><input class="input" id="au-pass" type="password" autocomplete="new-password" minlength="8" placeholder="At least 8 characters" required></div><button class="btn primary mt-2" type="submit" style="width:100%">${icon('fire', 14)} Create account</button><p class="small muted mt-2">We email a 6-digit code to confirm the address. Only montana.edu addresses can join. By creating an account you agree to the <a href="#/policy" target="_blank">Terms of Use and Privacy Policy</a>.</p>`;
+      body = `${email}<div class="field"><label for="au-name">Name (optional)</label><input class="input" id="au-name" type="text" autocomplete="name" placeholder="What should we call you?"></div>${pass('Password', 'new-password', 'minlength="8" placeholder="At least 8 characters"')}<button class="btn primary mt-2" type="submit" style="width:100%">${icon('fire', 14)} Create account</button><p class="small muted mt-2">We email a 6-digit code to confirm the address. Only montana.edu addresses can join. By creating an account you agree to the <a href="#/policy" target="_blank">Terms of Use and Privacy Policy</a>.</p>`;
     } else if (M.state === 'verify') {
-      body = `<p class="small mb-2">We sent a 6-digit code to <b>${esc(M.email)}</b>. Check spam if it does not arrive in a minute.</p><div class="field"><label for="au-code">Code</label><input class="input mono" id="au-code" inputmode="numeric" pattern="[0-9]*" autocomplete="one-time-code" maxlength="6" placeholder="123456" required></div><button class="btn primary mt-2" type="submit" style="width:100%">${icon('check', 14)} Verify and log in</button><div class="row between mt-2"><button class="btn xs ghost" type="button" data-action="resend">Resend code</button><button class="btn xs ghost" type="button" data-action="tab" data-t="signup">Use a different email</button></div>`;
+      body = `<p class="small mb-2">We sent a 6-digit code to <b>${esc(M.email)}</b>. Check spam if it does not arrive in a minute.</p>${code}<button class="btn primary mt-2" type="submit" style="width:100%">${icon('check', 14)} Verify and log in</button><div class="row between mt-2"><button class="btn xs ghost" type="button" data-action="resend">Resend code</button><button class="btn xs ghost" type="button" data-action="tab" data-t="signup">Use a different email</button></div>`;
     } else if (M.state === 'forgot') {
       body = `<p class="small mb-2">Enter your email and we will send a reset code.</p>${email}<button class="btn primary mt-2" type="submit" style="width:100%">Email me a code</button><div class="row mt-2"><button class="btn xs ghost" type="button" data-action="tab" data-t="login">Back to log in</button></div>`;
     } else if (M.state === 'reset') {
-      body = `<p class="small mb-2">Enter the code we sent to <b>${esc(M.email)}</b> and choose a new password.</p><div class="field"><label for="au-code">Code</label><input class="input mono" id="au-code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="123456" required></div><div class="field"><label for="au-pass">New password</label><input class="input" id="au-pass" type="password" autocomplete="new-password" minlength="8" required></div><button class="btn primary mt-2" type="submit" style="width:100%">Set password and log in</button><div class="row mt-2"><button class="btn xs ghost" type="button" data-action="resend-reset">Resend code</button></div>`;
+      body = `<p class="small mb-2">Enter the code we sent to <b>${esc(M.email)}</b> and choose a new password.</p>${code}${pass('New password', 'new-password', 'minlength="8" placeholder="At least 8 characters"')}<button class="btn primary mt-2" type="submit" style="width:100%">Set password and log in</button><div class="row mt-2"><button class="btn xs ghost" type="button" data-action="resend-reset">Resend code</button></div>`;
     } else {
-      body = `${email}<div class="field"><label for="au-pass">Password</label><input class="input" id="au-pass" type="password" autocomplete="current-password" required></div><button class="btn primary mt-2" type="submit" style="width:100%">Log in</button><div class="row between mt-2"><button class="btn xs ghost" type="button" data-action="tab" data-t="forgot">Forgot password?</button><span class="small muted">New here? <a href="#" data-action="tab" data-t="signup">Sign up</a></span></div>`;
+      body = `${email}${pass('Password', 'current-password')}<button class="btn primary mt-2" type="submit" style="width:100%">Log in</button><div class="row between mt-2"><button class="btn xs ghost" type="button" data-action="tab" data-t="forgot">Forgot password?</button><span class="small muted">New here? <a href="#" data-action="tab" data-t="signup">Sign up</a></span></div>`;
     }
-    m.innerHTML = `<div class="modal auth-modal" role="dialog" aria-label="Account"><div class="auth-head"><span class="logo-mark" aria-hidden="true">${App.logoSvg ? App.logoSvg(26) : ''}</span><div><b>StudyCat</b><div class="small muted">Free study hub for Montana State classes</div></div><button class="icon-btn" data-action="close" aria-label="Close">${icon('x', 16)}</button></div>${offline ? '' : `<div class="tabs auth-tabs">${tabs}</div>`}<form id="auth-form" novalidate>${body}<div class="auth-msg${M.msgKind ? ' ' + M.msgKind : ''}" id="auth-msg">${M.msg ? esc(M.msg) : ''}</div></form></div>`;
-    bind(m, { close: Auth.close, tab: (el, e) => { e.preventDefault(); M.state = el.dataset.t; M.msg = ''; paintModal(); }, resend: () => submit('resend'), 'resend-reset': () => submit('forgot-again') });
+    // the message goes right under the button that caused it, above the small print
+    const note = html => { const box = `<div class="auth-msg${M.msgKind ? ' ' + M.msgKind : ''}" id="auth-msg" role="status" aria-live="polite">${M.msg ? esc(M.msg) : ''}</div>`; const at = html.indexOf('</button>', html.indexOf('type="submit"')); return at < 0 ? html + box : html.slice(0, at + 9) + box + html.slice(at + 9); };
+    m.innerHTML = `<div class="modal auth-modal" role="dialog" aria-label="Account"><div class="auth-head"><span class="logo-mark" aria-hidden="true">${App.logoSvg ? App.logoSvg(26) : ''}</span><div><b>StudyCat</b><div class="small muted">Free study hub for Montana State classes</div></div><button class="icon-btn" data-action="close" aria-label="Close">${icon('x', 16)}</button></div>${offline ? '' : `<div class="tabs auth-tabs">${tabs}</div>`}<form id="auth-form" novalidate>${note(body)}</form></div>`;
+    bind(m, { close: Auth.close, tab: (el, e) => { e.preventDefault(); M.state = el.dataset.t; M.msg = ''; paintModal(); }, resend: () => submit('resend'), 'resend-reset': () => submit('forgot-again'),
+      'pw-eye': btn => { const p = $('#au-pass', m); if (!p) return; const show = p.type === 'password'; p.type = show ? 'text' : 'password'; btn.setAttribute('aria-pressed', String(show)); btn.textContent = show ? 'Hide' : 'Show'; btn.setAttribute('aria-label', show ? 'Hide password' : 'Show password'); },
+      'au-fix': btn => { const e = $('#au-email', m); if (!e) return; e.value = btn.dataset.fix; M.email = btn.dataset.fix; hint(''); e.removeAttribute('aria-invalid'); e.focus(); } });
     const form = $('#auth-form', m); form.addEventListener('submit', e => { e.preventDefault(); submit(); });
+    form.addEventListener('input', e => { if (e.target.getAttribute('aria-invalid')) { e.target.removeAttribute('aria-invalid'); if (M.msgKind === 'bad') msg('', ''); } });
+    const em = $('#au-email', m); if (em) em.addEventListener('blur', () => { const s = Auth.emailTypo(em.value); hint(s ? s : ''); });
+    const pw = $('#au-pass', m); if (pw) ['keydown', 'keyup'].forEach(t => pw.addEventListener(t, e => { const c = $('#au-caps', m); if (c && e.getModifierState) c.hidden = !e.getModifierState('CapsLock'); }));
     const first = $('#au-email', m) && !M.email ? $('#au-email', m) : ($('#au-code', m) || $('#au-pass', m) || $('#au-email', m)); if (first) setTimeout(() => first.focus(), 30);
   }
-  function msg(text, kind) { M.msg = text; M.msgKind = kind || ''; const el = $('#auth-msg'); if (el) { el.textContent = text; el.className = 'auth-msg ' + (kind || ''); } }
-  function busy(b) { M.busy = b; $$('#auth-form button, #auth-form input').forEach(x => x.disabled = b); }
+  // the message under the form; a field it is about is marked (aria-invalid, described by the message) and gets focus
+  function msg(text, kind, field) {
+    M.msg = text; M.msgKind = kind || ''; const el = $('#auth-msg'); if (el) { el.textContent = text; el.className = 'auth-msg ' + (kind || ''); }
+    $$('#auth-form [aria-invalid]').forEach(x => x.removeAttribute('aria-invalid'));
+    const f = field && $('#' + field); if (f) { f.setAttribute('aria-invalid', 'true'); f.setAttribute('aria-describedby', 'auth-msg'); f.focus(); }
+  }
+  function hint(fix) {
+    const h = $('#au-email-hint'); if (!h) return;
+    if (!fix) { h.hidden = true; h.textContent = ''; return; }
+    h.hidden = false; h.innerHTML = `Did you mean <button class="linkbtn" type="button" data-action="au-fix" data-fix="${esc(fix)}">${esc(fix)}</button>?`;
+  }
+  // a near miss of montana.edu (montana.ed, montanna.edu, montana.edu.com): suggested, never blocked (the server decides)
+  Auth.emailTypo = function (value) {
+    const v = String(value || '').trim().toLowerCase(); const at = v.lastIndexOf('@'); if (at < 1) return '';
+    const dom = v.slice(at + 1); if (!dom || dom === 'montana.edu' || /\.montana\.edu$/.test(dom)) return '';
+    const dist = (a, b) => { const d = Array.from({ length: a.length + 1 }, (_, i) => [i]); for (let j = 1; j <= b.length; j++) d[0][j] = j; for (let i = 1; i <= a.length; i++) for (let j = 1; j <= b.length; j++) d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1)); return d[a.length][b.length]; };
+    const near = dist(dom, 'montana.edu') <= 2 || /^montana(\.edu)?(\.[a-z]+)?$/.test(dom) || dom === 'msu.edu' || dom === 'montanastate.edu';
+    return near ? v.slice(0, at) + '@montana.edu' : '';
+  };
+  const BUSY = { signup: 'Creating your account…', verify: 'Checking the code…', forgot: 'Sending a code…', reset: 'Setting your password…', login: 'Logging in…' };
+  function busy(b) {
+    M.busy = b; const form = $('#auth-form'); if (form) form.setAttribute('aria-busy', String(b));
+    $$('#auth-form button, #auth-form input').forEach(x => x.disabled = b);
+    const go = $('#auth-form button[type="submit"]'); if (!go) return;
+    if (b && BUSY[M.state]) { go.dataset.label = go.innerHTML; go.textContent = BUSY[M.state]; } else if (!b && go.dataset.label) { go.innerHTML = go.dataset.label; delete go.dataset.label; }
+  }
+  // what can be checked before asking the server: a missing or malformed field is named, and its field gets focus
+  function precheck(v, email) {
+    const shape = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (['signup', 'login', 'forgot'].includes(M.state) || Auth.mode === 'offline') {
+      if (!email) return ['Enter your email address.', 'au-email'];
+      if (!shape.test(email)) return ['That does not look like an email address. It needs an @ and a domain, like you@montana.edu.', 'au-email'];
+    }
+    if (Auth.mode === 'offline') return null;
+    if ((M.state === 'verify' || M.state === 'reset') && !/^\d{6}$/.test(v('au-code'))) return ['Enter the 6-digit code from the email.', 'au-code'];
+    if ((M.state === 'signup' || M.state === 'reset') && $('#au-pass') && $('#au-pass').value.length < 8) return ['Use at least 8 characters for your password.', 'au-pass'];
+    if (M.state === 'login' && !$('#au-pass').value) return ['Enter your password.', 'au-pass'];
+    return null;
+  }
+  // which field a message from the server is about
+  const fieldFor = text => { const t = String(text || '').toLowerCase(); return /code/.test(t) && $('#au-code') ? 'au-code' : /password/.test(t) && $('#au-pass') ? 'au-pass' : /email|address|montana/.test(t) && $('#au-email') ? 'au-email' : ''; };
   async function submit(action) {
     if (M.busy) return;
     const m = $('#auth-modal'); if (!m) return;
-    const v = id => { const el = $('#' + id, m); return el ? el.value.trim() : ''; };
+    const v = id => { const el = $('#' + id, m); return !el ? '' : id === 'au-code' ? el.value.replace(/\D/g, '') : el.value.trim(); };
     const email = v('au-email') || M.email; if (v('au-email')) M.email = v('au-email').toLowerCase();
+    if (!action) { const bad = precheck(v, email); if (bad) return msg(bad[0], 'bad', bad[1]); }
     if (Auth.mode === 'offline') {
-      if (!Auth.emailOk(email)) return msg('StudyCat is for Montana State students: use your @montana.edu address.', 'bad');
+      if (!Auth.emailOk(email)) return msg('StudyCat is for Montana State students: use your @montana.edu address.', 'bad', 'au-email');
       const u = { email: email.toLowerCase(), name: v('au-name'), local: true, created: Date.now() }; writeJSON(LOCAL_KEY, u); Auth.user = u; Auth.close(); changed(); toast(`Welcome, ${u.name || u.email.split('@')[0]}. Progress is saved in this browser.`, 3000); App.rerender(); return;
     }
     try {
@@ -362,7 +412,7 @@
       else { const r = await call('login', { email, password: v('au-pass') }); if (r.pending) { M.email = r.email || email; M.state = 'verify'; M.msg = ''; paintModal(); msg(r.message || 'Verify your email to continue.', 'warn'); } else finishLogin(r.user, false); }
     } catch (e) {
       if (e.data && e.data.exists) { M.state = 'login'; paintModal(); }
-      msg(e.message, 'bad');
+      busy(false); msg(e.message, 'bad', fieldFor(e.message));
     } finally { busy(false); }
   }
   function finishLogin(user, isNew) {

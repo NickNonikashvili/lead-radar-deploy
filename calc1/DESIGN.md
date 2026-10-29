@@ -261,7 +261,7 @@ Soft and friendly: 10-14px corners on controls, 16px on tiles, 20px on cards, 24
 ### Buttons
 - **Shape:** soft corners (14px; 12px small, 16px large).
 - **Primary:** the page's accent with white text (dark text in dark mode), Figtree 700, on a darker lip of its own colour.
-- **Hover / Focus:** hover lightens the fill slightly; focus shows a 3px accent ring; pressing drops it onto its lip.
+- **Hover / Focus:** hover darkens the fill slightly (lightens it in dark mode, where the text is dark), so the text keeps 4.5:1; focus shows a 3px accent ring; pressing drops it onto its lip.
 - **Secondary:** white with a 2px border and a neutral lip. **Ghost:** no border, no lip.
 
 ### Chips

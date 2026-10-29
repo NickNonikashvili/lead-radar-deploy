@@ -3,7 +3,7 @@
    Tokens first (light), then dark overrides, then components.
    ============================================================ */
 :root {
-  --assets-build: "2026.10.29.1";   /* the build these styles belong to (scripts/release.js; read by build-check.js) */
+  --assets-build: "2026.10.29.2";   /* the build these styles belong to (scripts/release.js; read by build-check.js) */
   --bg: #F6F8FB;
   --grid: rgba(43, 85, 184, 0.05);
   --surface: #FFFFFF;
@@ -192,7 +192,7 @@ mjx-container[display="true"] { margin: 10px 0 !important; }
 .btn:hover { background: var(--surface-2); text-decoration: none; }
 .btn svg { width: 15px; height: 15px; }
 .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
-.btn.primary:hover { filter: brightness(1.08); }
+.btn.primary:hover { filter: brightness(0.92); }   /* darker on hover: white text keeps 4.5:1 (lighter in dark mode, where the text is dark) */
 .btn.ghost { border-color: transparent; background: transparent; color: var(--accent); }
 .btn.ghost:hover { background: var(--accent-soft); }
 .btn.danger { color: var(--bad); border-color: color-mix(in srgb, var(--bad) 40%, transparent); }
@@ -566,6 +566,17 @@ canvas.riemann { display: block; width: 100%; height: 300px; }
 .auth-msg.bad { color: var(--bad); }
 .auth-msg.good { color: var(--good); }
 .auth-msg.warn { color: var(--warn); }
+/* the password's Show button sits beside the field (it fits any language's word); a field the message is about turns red */
+.pw-wrap { display: flex; gap: 6px; align-items: stretch; }
+.pw-wrap .input { flex: 1; min-width: 0; }
+.pw-eye { flex: none; min-width: 64px; min-height: 36px; padding: 4px 12px; border: 1px solid var(--border-strong); border-radius: var(--radius-sm); background: var(--surface); color: var(--accent); font: 600 13px/1 var(--font-body); cursor: pointer; }
+.pw-eye:hover { background: var(--surface-2); }
+.pw-eye:focus-visible { outline: 2px solid var(--accent); outline-offset: 0; }
+.pw-eye[aria-pressed="true"] { color: var(--ink); background: var(--surface-2); }
+.au-hint, .au-caps { margin: 6px 0 0; color: var(--muted); }
+.au-caps { color: var(--warn); }
+#auth-modal .input[aria-invalid="true"] { border-color: var(--bad); box-shadow: 0 0 0 1px var(--bad); }
+#auth-modal .input[aria-invalid="true"]:focus { outline-color: var(--bad); box-shadow: 0 0 0 3px color-mix(in srgb, var(--bad) 22%, transparent); }
 .exam-chip.asof { background: var(--warn-soft); color: var(--warn); border-color: color-mix(in srgb, var(--warn) 35%, transparent); }
 @media (max-width: 640px) { .preview-banner { padding: 8px 14px; font-size: 12.5px; } .lock-card { flex-direction: column; gap: 10px; } .landing-title .logo-mark svg { width: 34px; height: 34px; } }
 
@@ -832,7 +843,8 @@ h1, h2, h3, h4 { letter-spacing: -0.01em; }
 .btn { border-radius: 10px; font-weight: 600; transition: transform 0.12s, box-shadow 0.12s, background 0.12s, border-color 0.12s; }
 .btn:hover { transform: translateY(-1px); }
 .btn.primary { background: linear-gradient(135deg, var(--accent), var(--accent-deep)); border-color: transparent; box-shadow: 0 6px 16px -8px var(--accent); }
-.btn.primary:hover { filter: brightness(1.05); box-shadow: 0 10px 22px -10px var(--accent); }
+.btn.primary:hover { filter: brightness(0.94); box-shadow: 0 10px 22px -10px var(--accent); }
+:root[data-theme="dark"] .btn.primary:hover { filter: brightness(1.06); }
 .btn.xs, .btn.sm { border-radius: 8px; }
 .chip { border-radius: 999px; padding: 3px 10px; font-weight: 600; letter-spacing: 0.01em; }
 .chip.canvas { background: color-mix(in srgb, var(--lab-soft) 70%, var(--surface)); color: var(--lab); }
