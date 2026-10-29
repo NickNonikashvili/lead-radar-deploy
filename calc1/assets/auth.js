@@ -235,7 +235,17 @@
   function applyPrefs(prefs, updated) { if (!prefs || typeof prefs !== 'object') return; asMaps(prefs, PREF_MAPS); const s = App.settings(); PREF_KEYS.forEach(k => { if (prefs[k] !== undefined) s[k] = prefs[k]; }); s.prefsUpdated = updated; writeJSON('studyhub-settings', s); if (App.applyTheme) App.applyTheme(); if (prefs.homeLayout !== undefined && App.dash && App.dash.paint && document.querySelector('#view #dash-canvas')) App.dash.paint(document.querySelector('#view'));   // the home arranged on another device
     if (prefs.classCustom !== undefined) { Object.keys(global.Courses || {}).forEach(id => App.applyVariant(global.Courses[id])); if (App.applyClassColors) App.applyClassColors(); }   // the classes made theirs on another device (assets/maker.js)
     if (prefs.lang && prefs.lang !== App.lang && global.MathubI18n && MathubI18n.codes.includes(prefs.lang)) location.reload(); }   // the language picked on another device
-  Auth.prefsPush = function () { if (!Auth.user || Auth.mode !== 'server' || Auth.unreachable) return; clearTimeout(Auth.prefsTimer); Auth.prefsTimer = setTimeout(async () => { const s = App.settings(); const prefs = {}; PREF_KEYS.forEach(k => { if (s[k] !== undefined) prefs[k] = s[k]; }); const updated = Date.now(); s.prefsUpdated = updated; writeJSON('studyhub-settings', s); try { const r = await call('prefs', { prefs, updated }, 'PUT'); if (r.stale) applyPrefs(r.prefs, r.updated); } catch (e) {} }, 2500); };
+  Auth.prefsPush = function () { if (!Auth.user || Auth.mode !== 'server' || Auth.unreachable) return; clearTimeout(Auth.prefsTimer); Auth.prefsTimer = setTimeout(() => sendPrefs(false), 2500); };
+  async function sendPrefs(leaving) {
+    Auth.prefsTimer = null; const s = App.settings(); const prefs = {}; PREF_KEYS.forEach(k => { if (s[k] !== undefined) prefs[k] = s[k]; }); const updated = Date.now(); s.prefsUpdated = updated; writeJSON('studyhub-settings', s);
+    const body = JSON.stringify({ prefs, updated });
+    // on the way out (a reload, a closed tab) the request has to outlive the page: keepalive, which takes up to 64 KB
+    if (leaving) { try { fetch(API + 'prefs', { method: 'PUT', keepalive: body.length < 60000, credentials: 'same-origin', headers: { 'X-Requested-With': 'MatHub', 'Content-Type': 'application/json' }, body }).catch(() => {}); } catch (e) {} return; }
+    try { const r = await call('prefs', { prefs, updated }, 'PUT'); if (r.stale) applyPrefs(r.prefs, r.updated); } catch (e) {}
+  }
+  // a change made in the last seconds before the page goes away (hiding a card, then reloading) is sent now, not lost
+  const leave = () => { if (Auth.prefsTimer) { clearTimeout(Auth.prefsTimer); sendPrefs(true); } };
+  global.addEventListener('pagehide', leave); document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') leave(); });
   Auth.prefsPull = async function () { if (!Auth.user || Auth.mode !== 'server') return; try { const r = await call('prefs'); const local = App.settings().prefsUpdated || 0; if ((r.updated || 0) > local) applyPrefs(r.prefs, r.updated); else if (local > (r.updated || 0)) Auth.prefsPush(); } catch (e) {} };
   App.onSetting = k => { if (PREF_KEYS.includes(k)) Auth.prefsPush(); };
   Auth.pullAll = async function () {

@@ -17,7 +17,7 @@ const STATE = path.join(__dirname, 'fixtures', 'rc-state.json'); const CANCELS =
 const DB = path.join(__dirname, '..', 'api', 'data', 'mathub.sqlite');
 const sql = (q, arg) => (spawnSync('php', ['-r', '$d = new PDO("sqlite:" . $argv[1]); $s = $d->prepare($argv[2]); $s->execute($argv[3] === "" ? [] : [$argv[3]]); echo json_encode($s->fetchAll(PDO::FETCH_ASSOC));', DB, q, arg === undefined ? '' : String(arg)], { encoding: 'utf8' }).stdout || '[]');
 (async () => {
-  const { mk, txt, login, api, go, hscroll, check } = await T.start();
+  const { mk, txt, login, api, go, hscroll, check } = await T.start({ freeHome: true });
   fs.writeFileSync(STATE, '{}'); try { fs.unlinkSync(CANCELS); } catch (e) {}
   const quiet = () => document.addEventListener('DOMContentLoaded', () => { const st = document.createElement('style'); st.textContent = '.celebrate{display:none!important}'; document.head.appendChild(st); });
   const setup = () => { try { const s = JSON.parse(localStorage.getItem('studyhub-settings') || '{}'); s.tourDone = true; s.courses = ['calc', 'physics']; s.asof = '2026-10-13'; s.lastVisit = { course: 'calc', label: 'Calc I' }; localStorage.setItem('studyhub-settings', JSON.stringify(s)); } catch (e) {} };

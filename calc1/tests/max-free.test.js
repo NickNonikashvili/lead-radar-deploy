@@ -9,7 +9,7 @@ const { live, quiet } = require('./talk-fakes');
 const sqlite = q => require('child_process').spawnSync('php', ['-r', '$d = new PDO("sqlite:" . $argv[1]); $d->exec($argv[2]);', path.join(__dirname, '..', 'api', 'data', 'mathub.sqlite'), q]);
 const ALICE = "(SELECT id FROM users WHERE email = 'alice.a@montana.edu')";
 (async () => {
-  const { mk, txt, login, api, go, hscroll, log, check } = await T.start({ audio: true });
+  const { mk, txt, login, api, go, hscroll, log, check } = await T.start({ audio: true, freeHome: true });
   const fresh = () => sqlite(`DELETE FROM ai_trial WHERE user_id = ${ALICE}; DELETE FROM ai_live WHERE user_id = ${ALICE}; DELETE FROM credit_use WHERE user_id = ${ALICE}; DELETE FROM credit_add WHERE user_id = ${ALICE}; DELETE FROM rate WHERE key LIKE 'ai_live:%'`);
   fresh();
 
@@ -36,7 +36,7 @@ const ALICE = "(SELECT id FROM users WHERE email = 'alice.a@montana.edu')";
   check('a visitor who taps Call Bo is asked to sign up first', !!(await p.$('#auth-modal')));
   await p.keyboard.press('Escape'); await p.waitForTimeout(200);
   // the plans say where to see it, and so does the start page
-  await go(p, '#/', 900); check('the start page has one line on Bo that opens the demo', (await p.getAttribute('.land-bo', 'href')) === '#/max');
+  await go(p, '#/', 900); check('the start page\'s Bo section opens the demo', !!(await p.$('.gl-bo a[href="#/max"]')));
   await c.close();
 
   // a phone, and someone who asked for less motion

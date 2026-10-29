@@ -11,11 +11,13 @@
 const T = require('./lib'); const fs = require('fs'); const path = require('path');
 const AXE = fs.readFileSync(path.join(__dirname, 'node_modules', 'axe-core', 'axe.min.js'), 'utf8');
 (async () => {
-  const { mk, go, login, check } = await T.start({});
+  const { mk, go, login, api, check } = await T.start({});
   const [c, p] = await mk(1360, 900, { serviceWorkers: 'block', bypassCSP: true, reducedMotion: 'reduce' });
   await c.addInitScript(() => { try { const s = JSON.parse(localStorage.getItem('studyhub-settings') || '{}'); s.boFloatSeen = 1; localStorage.setItem('studyhub-settings', JSON.stringify(s)); } catch (e) {} });
   await go(p, '#/', 600); await login(p, 'alice.a@montana.edu');
-  await p.evaluate(() => { App.setSetting('homeGrid', { hidden: [], shown: [] }); App.setSetting('homeMode', 'grid'); App.setSetting('wordPuzzle', null); });
+  // a clean start on the account too: an earlier run's puzzle and hidden cards are saved with it
+  const fresh = async q => { const pr = (await api(q, 'prefs')).json.prefs || {}; pr.wordPuzzle = null; pr.homeGrid = { hidden: [], shown: [] }; await api(q, 'prefs', { prefs: pr, updated: Date.now() }, 'PUT'); await q.evaluate(() => { App.setSetting('homeMode', 'grid'); }); };
+  await fresh(p);
   await p.reload(); await p.waitForTimeout(2200);
 
   // the hero
@@ -47,6 +49,7 @@ const AXE = fs.readFileSync(path.join(__dirname, 'node_modules', 'axe-core', 'ax
   check('Hide from dashboard: the card goes, it is listed under Add to dashboard, focus lands there', !m.card && m.chip && m.focus === 'cards' && m.saved.includes('cards'), m);
   await p.reload(); await p.waitForTimeout(2000);
   check('still hidden after a reload', await p.evaluate(() => !document.querySelector('[data-hg="cards"]') && !!document.querySelector('[data-hga="cards"]')));
+  check('and the account has it: the change was sent as the page reloaded (assets/auth.js sendPrefs)', ((((await api(p, 'prefs')).json.prefs || {}).homeGrid || {}).hidden || []).includes('cards'));
   await p.click('[data-hga="cards"]'); await p.waitForTimeout(200);
   m = await p.evaluate(() => ({ card: !!document.querySelector('[data-hg="cards"]'), focus: document.activeElement && document.activeElement.id }));
   check('Add to dashboard brings it back and focuses its heading', m.card && m.focus === 'hg-cards-t', m);
@@ -125,7 +128,7 @@ const AXE = fs.readFileSync(path.join(__dirname, 'node_modules', 'axe-core', 'ax
   for (const [w, hh, scheme] of [[1360, 900, 'light'], [1360, 900, 'dark'], [390, 844, 'dark']]) {
     const [c2, q] = await mk(w, hh, { serviceWorkers: 'block', bypassCSP: true, colorScheme: scheme, reducedMotion: 'reduce', hasTouch: w < 500 });
     await c2.addInitScript(() => { try { const s = JSON.parse(localStorage.getItem('studyhub-settings') || '{}'); s.boFloatSeen = 1; localStorage.setItem('studyhub-settings', JSON.stringify(s)); } catch (e) {} });
-    await go(q, '#/', 600); await login(q, 'alice.a@montana.edu'); await q.evaluate(() => { App.setSetting('homeMode', 'grid'); App.setSetting('wordPuzzle', null); }); await q.reload(); await q.waitForTimeout(2200);
+    await go(q, '#/', 600); await login(q, 'alice.a@montana.edu'); await fresh(q); await q.reload(); await q.waitForTimeout(2200);
     await q.addScriptTag({ content: AXE });
     const v = await q.evaluate(async () => (await axe.run('#view', { runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa'] }, resultTypes: ['violations'] })).violations.filter(x => x.impact === 'serious' || x.impact === 'critical').map(x => x.id + ': ' + x.nodes.slice(0, 2).map(n => n.target.join(' ')).join(', ')));
     check(`axe finds nothing serious on the home (${w}px, ${scheme})`, v.length === 0, v);

@@ -81,7 +81,7 @@ const T = require('./lib');
   await cm.close();
 
   // ---- ambient sounds ----
-  const [cg, G] = await mk(); await go(G, '#/'); await G.waitForTimeout(800);
+  const [cg, G] = await mk(); await go(G, '#/calc'); await G.waitForTimeout(800);
   await G.click('#topbar .amb-top'); await G.waitForTimeout(250); log('panel tiles:', (await G.$$('.amb-tile')).length, '| tabs:', await G.$$eval('.amb-tab', e => e.map(x => x.textContent.trim()).join(',')), '| spotify gone:', !(await G.$('.amb-spotify')));
   for (const id of ['rain', 'storm', 'ocean', 'wind', 'fire', 'forest', 'night', 'cafe', 'lofi', 'piano', 'drone', 'brown', 'pink', 'white']) { await G.click(`.amb-tbtn[data-id="${id}"]`); await G.waitForTimeout(350); }
   log('all 14 playing:', await G.evaluate(() => App.ambient.playing().length), '| ctx state:', await G.evaluate(() => 'running'), '| bubble on:', await G.$eval('.amb-bubble', e => e.classList.contains('on')), '| sliders:', (await G.$$('.amb-vol')).length);

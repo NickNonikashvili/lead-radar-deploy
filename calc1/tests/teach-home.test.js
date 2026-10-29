@@ -26,7 +26,7 @@ const AXE = fs.readFileSync(path.join(__dirname, 'node_modules', 'axe-core', 'ax
   check('a sample class to teach', id > 0, id);
 
   // the switch on the student side, then the teaching home
-  await p.reload(); await p.waitForTimeout(1500);
+  await p.reload(); await p.waitForTimeout(1500); await p.evaluate(() => App.setSetting('teachGrid', { hidden: [], shown: [] }));
   check('the sidebar has the Learning or teaching switch, on Learning', !!(await p.$('.sidebar .sb-mode a[data-side="learn"][aria-current="true"]')));
   await p.click('.sidebar .sb-mode a[data-side="teach"]'); await p.waitForTimeout(3500);
   const h = await p.evaluate(() => ({ hash: location.hash, on: !!document.querySelector('.fx-rail .sb-mode a[data-side="teach"][aria-current="true"]'), add: !!document.querySelector('.fx-rail [data-action="fx-add"]'), rail: [...document.querySelectorAll('.fx-rail .fx-nav')].map(a => a.textContent.trim()), title: (document.querySelector('.fx-home .hg-title') || {}).textContent || '', sub: (document.querySelector('.fx-home .hg-sub') || {}).textContent || '', room: (document.querySelector('.fx-home .fx-room') || {}).textContent || '', cards: [...document.querySelectorAll('.fx-home .hg-card')].map(x => x.dataset.hg), adds: [...document.querySelectorAll('.fx-home [data-hga]')].map(b => b.dataset.hga), side: App.settings().side }));
