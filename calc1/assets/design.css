@@ -1,0 +1,87 @@
+/* ============================================================
+   StudyCat — the October 2026 redesign (the designer's files, "StudyCat Redesign", Figma "StudyCat")
+   Loaded last on the website (not in the iOS and Android apps: [data-app] keeps its own frame).
+   The night look is the design as drawn: a deep navy page, flat cards with one hairline border, a light-blue primary
+   with dark text, gold for exams and the teaching side, Outfit for headings and Figtree for text. The day look is its
+   twin: the same structure and spacing on white cards and a soft blue-grey page.
+   Tokens first (both themes), then the pieces every page shares: type, cards, buttons, chips, the frame.
+   ============================================================ */
+
+/* Outfit (The Outfit Project Authors), the heading face. Variable weight 100-900, Latin and Latin Extended.
+   SIL Open Font License 1.1 (fonts/OFL-Outfit.txt). Files from @fontsource-variable/outfit. */
+@font-face { font-family: "Outfit"; font-style: normal; font-weight: 100 900; font-display: swap; src: url(fonts/outfit-var.woff2) format("woff2"); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: "Outfit"; font-style: normal; font-weight: 100 900; font-display: swap; src: url(fonts/outfit-var-ext.woff2) format("woff2"); unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF; }
+
+/* ---------- tokens: day ---------- */
+:root:not([data-skin]):not([data-app]) {
+  --font-display: "Outfit", "Figtree", "Helvetica Neue", Arial, sans-serif;
+  --font-brand: "Outfit", "Figtree", "Helvetica Neue", Arial, sans-serif;
+  --bg: #F3F6FB; --surface: #FFFFFF; --surface-2: #F5F8FC; --surface-3: #E9EFF8;
+  --border: #DFE6F0; --border-strong: #C6D2E4; --lip: transparent;
+  --ink: #12213F; --ink-2: #3B4A66; --muted: #56657D; --ink-strong: #0B1A33;
+  --accent: #1A64D6; --accent-ink: #FFFFFF; --accent-soft: #E4EEFD; --accent-line: #A9C8F5; --accent-deep: #1450B0;
+  --link: #1A5BC7;
+  --gold-hi: #F6C234; --gold-chip-bg: #FFF1C9; --gold-chip-fg: #6B4D00; --gold-chip-line: #F0D27A;
+  --d-side: #FBFCFE; --d-side-line: #E3E9F2; --d-nav-on: #E6EEFB; --d-nav-on-fg: #0B1A33;
+  --d-card: var(--surface); --d-card-line: #E1E8F1; --d-inner: #F5F8FC; --d-inner-line: #E3EAF3;
+  --d-hero-line: #DDE5F0; --d-foot: #FFFFFF; --d-foot-line: #E1E8F1;
+  --d-switch-bg: #F1F5FB; --d-switch-line: #DDE5F0; --d-learn-on: #DCE8FB; --d-learn-on-fg: #1450B0; --d-teach-on: #FFF1C9; --d-teach-on-fg: #6B4D00;
+  --d-track: #E1E8F2;
+  --shadow: 0 18px 40px -18px rgba(18, 33, 63, 0.28), 0 3px 8px -3px rgba(18, 33, 63, 0.1);
+  --radius: 20px; --radius-sm: 12px;
+}
+/* ---------- tokens: night (the design as drawn) ---------- */
+:root:not([data-skin]):not([data-app])[data-theme="dark"] {
+  --bg: #0B1222; --surface: #141F38; --surface-2: #0F182C; --surface-3: #1B2A4C;
+  --border: #25335A; --border-strong: #3C5A92; --lip: transparent;
+  --ink: #E8EEFB; --ink-2: #C5CFE4; --muted: #A3B0CC; --ink-strong: #FFFFFF;
+  --accent: #7CB1FF; --accent-ink: #0B1A33; --accent-soft: #1A2F5A; --accent-line: #3C5A92; --accent-deep: #8DBCFF;
+  --link: #8DBCFF;
+  --gold-hi: #F6C234; --gold-chip-bg: #2E2610; --gold-chip-fg: #F6C234; --gold-chip-line: #5A4815;
+  --d-side: #0F182C; --d-side-line: #1D2948; --d-nav-on: #1B2A4C; --d-nav-on-fg: #FFFFFF;
+  --d-card: #141F38; --d-card-line: #25335A; --d-inner: #0F182C; --d-inner-line: #22305A;
+  --d-hero-line: #1D2948; --d-foot: #152036; --d-foot-line: #22305A;
+  --d-switch-bg: #0F182C; --d-switch-line: #1D2948; --d-learn-on: #1A2F5A; --d-learn-on-fg: #8DBCFF; --d-teach-on: #3A2F12; --d-teach-on-fg: #FFE08A;
+  --d-track: #22305A;
+  --shadow: 0 18px 40px rgba(0, 0, 0, 0.35); --shadow-sm: none;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-skin]):not([data-app]):not([data-theme="light"]) {
+    --bg: #0B1222; --surface: #141F38; --surface-2: #0F182C; --surface-3: #1B2A4C;
+    --border: #25335A; --border-strong: #3C5A92; --lip: transparent;
+    --ink: #E8EEFB; --ink-2: #C5CFE4; --muted: #A3B0CC; --ink-strong: #FFFFFF;
+    --accent: #7CB1FF; --accent-ink: #0B1A33; --accent-soft: #1A2F5A; --accent-line: #3C5A92; --accent-deep: #8DBCFF;
+    --link: #8DBCFF;
+    --gold-hi: #F6C234; --gold-chip-bg: #2E2610; --gold-chip-fg: #F6C234; --gold-chip-line: #5A4815;
+    --d-side: #0F182C; --d-side-line: #1D2948; --d-nav-on: #1B2A4C; --d-nav-on-fg: #FFFFFF;
+    --d-card: #141F38; --d-card-line: #25335A; --d-inner: #0F182C; --d-inner-line: #22305A;
+    --d-hero-line: #1D2948; --d-foot: #152036; --d-foot-line: #22305A;
+    --d-switch-bg: #0F182C; --d-switch-line: #1D2948; --d-learn-on: #1A2F5A; --d-learn-on-fg: #8DBCFF; --d-teach-on: #3A2F12; --d-teach-on-fg: #FFE08A;
+    --d-track: #22305A;
+    --shadow: 0 18px 40px rgba(0, 0, 0, 0.35); --shadow-sm: none;
+  }
+}
+
+/* ---------- type: Outfit for headings, Figtree for everything else ---------- */
+:root:not([data-skin]):not([data-app]) :is(h1, h2, h3, .page-title, .sec-title, .panel-title, .dw-title) { font-family: var(--font-display); color: var(--ink-strong); }
+:root:not([data-skin]):not([data-app]) h1, :root:not([data-skin]):not([data-app]) .page-title { font-weight: 800; letter-spacing: -0.02em; }
+:root:not([data-skin]):not([data-app]) :is(h2, .sec-title) { font-weight: 700; letter-spacing: -0.005em; }
+:root:not([data-skin]):not([data-app]) a:not(.btn):not(.nav-item):not(.card-link):not(.sf-logo):not(.brand-logo) { text-underline-offset: 3px; }
+
+/* ---------- the frame ---------- */
+:root:not([data-skin]):not([data-app]) body { background: var(--bg); }
+:root:not([data-skin]):not([data-app]) .sidebar { background: var(--d-side); border-right: 1px solid var(--d-side-line); box-shadow: none; }
+:root:not([data-skin]):not([data-app]) .sidebar .nav-item { border-radius: 8px; font-weight: 500; }
+:root:not([data-skin]):not([data-app]) .sidebar .nav-item.active { background: var(--d-nav-on); color: var(--d-nav-on-fg); font-weight: 600; box-shadow: none; }
+:root:not([data-skin]):not([data-app]) .topbar { background: var(--bg); border-bottom: 1px solid var(--d-side-line); box-shadow: none; }
+:root:not([data-skin]):not([data-app]) .site-foot { background: var(--d-foot); border-top: 1px solid var(--d-foot-line); }
+
+/* ---------- cards: flat, one hairline border, 20px corners ---------- */
+:root:not([data-skin]):not([data-app]) :is(.panel, .dw, .card) { background: var(--d-card); border: 1px solid var(--d-card-line); border-radius: 20px; box-shadow: none; }
+
+/* ---------- buttons: no lip, no press-down; the primary is the accent with dark (night) or white (day) text ---------- */
+:root:not([data-skin]):not([data-app]) .btn { border-radius: 10px; box-shadow: none; border: 1px solid var(--border-strong); background: var(--surface); color: var(--ink); font-weight: 600; }
+:root:not([data-skin]):not([data-app]) .btn:active { transform: none; }
+:root:not([data-skin]):not([data-app]) .btn.primary { background: var(--accent); color: var(--accent-ink); border-color: transparent; font-weight: 700; }
+:root:not([data-skin]):not([data-app]) .btn.primary:hover { filter: none; background: color-mix(in srgb, var(--accent) 90%, var(--ink-strong)); }
+:root:not([data-skin]):not([data-app]) .btn.lg { border-radius: 12px; }

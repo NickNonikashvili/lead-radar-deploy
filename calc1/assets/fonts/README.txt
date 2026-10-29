@@ -15,3 +15,5 @@ These three used to load from Google Fonts. They are served from this folder so 
 
 source-serif-4-var*.woff2  Source Serif 4 (Adobe), the title and document face of StudyCat Faculty and the syllabus page. Variable weight 200-900, roman and italic, Latin. SIL Open Font License 1.1 (OFL-SourceSerif4.txt). Source: https://github.com/adobe-fonts/source-serif (files from @fontsource-variable/source-serif-4)
 source-sans-3-var.woff2    Source Sans 3 (Adobe), the interface face of StudyCat Faculty. Variable weight 200-900, Latin. SIL Open Font License 1.1 (OFL-SourceSans3.txt). Source: https://github.com/adobe-fonts/source-sans (files from @fontsource-variable/source-sans-3)
+
+outfit-var*.woff2  Outfit (The Outfit Project Authors), the heading face of the October 2026 redesign (assets/design.css). Variable weight 100-900, Latin and Latin Extended. SIL Open Font License 1.1 (OFL-Outfit.txt). Source: https://github.com/Outfitio/Outfit-Fonts (files from @fontsource-variable/outfit)
