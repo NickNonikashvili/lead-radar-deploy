@@ -451,10 +451,10 @@
     s.onload = () => res(); s.onerror = () => { delete needing[f]; s.remove(); rej(new Error('This page could not load. Check your connection and try again.')); };
     document.head.appendChild(s);
   }))));
-  App.lazyView = (name, files, title) => {
+  App.lazyView = (name, files, title, blurb) => {
     if (App.views[name]) return;
     const stub = App.views[name] = {
-      title, lazy: true,
+      title, lazy: true, ...(blurb ? { blurb } : {}),
       render(root) {
         root.innerHTML = '<div class="empty">Loading…</div>';
         App.need(files).then(() => {
@@ -468,6 +468,31 @@
   App.lazyView('admin', ['admin.js', 'admin-ops.js'], 'Admin');
   App.lazyView('whatsnew', ['changelog.js'], 'What’s new');
   App.lazyView('policy', ['policy.js'], 'Terms & Privacy');
+  // pages that load when first opened, so a visit does not parse them up front: the planner and life pages, the writer's
+  // notebook, peer review, study rooms, the GPA calculator, a class's Tools and draft feedback. Title and blurb as the files
+  // have them (menus, the members card and the class Tools links read them before the page loads)
+  App.LAZY_PAGES = [
+    ['tasks', 'life-school.js', 'Tasks', 'Everything you have to hand in or get done, from every class.'],
+    ['timetable', 'life-school.js', 'Timetable', 'Your week: classes, labs, work shifts and study blocks. Click an empty hour to add something there.'],
+    ['agenda', 'life-school.js', 'Calendar', 'Every exam, deadline, task and event, from all your classes and your own planner.'],
+    ['timelog', 'life-school.js', 'Time tracker', 'Where your study hours go, class by class. The Focus room’s minutes count too.'],
+    ['projects', 'life-school.js', 'Projects & thesis', 'Big pieces of work, broken into steps you can finish, with word counts and sources.'],
+    ['habits', 'life-self.js', 'Habits', 'Small things, most days. Tick them off and watch the streak grow.'],
+    ['wheel', 'life-self.js', 'Wheel of life', 'Score each part of your life from 1 to 10, once a month. The lowest one is where a goal helps most.'],
+    ['goals', 'life-self.js', 'Goals', 'A few goals for each quarter, each broken into steps you can tick.'],
+    ['journal', 'life-self.js', 'Journal', 'A page a day: how it went and three good things. Saved to your account; nobody else on StudyCat sees it.'],
+    ['money', 'life-self.js', 'Money', 'What came in, what went out, and how much is left this month.'],
+    ['career', 'life-self.js', 'Internships & jobs', 'Every application in one place, from the wishlist to the offer.'],
+    ['portfolio', 'life-self.js', 'Portfolio', 'Your best work on one page you can print, save as a PDF or send with an application.'],
+    ['notebook', 'notebook.js', 'Writer’s notebook'],
+    ['peer', 'peer.js', 'Peer review'],
+    ['room', 'room.js', 'Study room'],
+    ['gpa', 'gpa.js', 'GPA calculator'],
+    ['toolkit', 'class-tools.js', 'Tools', 'The tools this class needs: calculators, solvers and simulators. Pick one; it opens below.'],
+    ['drafts', 'drafts.js', 'Draft feedback'],
+    ['draft-history', 'drafts.js', 'Revision history'],
+  ];
+  App.LAZY_PAGES.forEach(([name, file, title, blurb]) => App.lazyView(name, [file], title, blurb));
   // the account menu's dot: a release note this account has not opened (scripts/release.js writes the newest one's build on <html>)
   App.changelogUnseen = () => { const news = document.documentElement.getAttribute('data-news') || ''; return !!news && (settings().seenChangelog || '') !== news; };
   /* this student's classes, saved for offline use in the background: the service worker keeps what is fetched, and it no
@@ -483,6 +508,8 @@
       try { for (const f of files) { const r = await fetch(`assets/${f}?v=${encodeURIComponent(BUILD)}`); if (!r.ok) throw new Error(r.status); } } catch (e) { return; }
       done.ids.push(id); try { localStorage.setItem('mathub-warm', JSON.stringify(done)); } catch (e) {}
     }
+    // and the pages that load when opened, so they work offline too
+    if (!done.pages) { try { for (const f of [...new Set(App.LAZY_PAGES.map(x => x[1]))]) { const r = await fetch(`assets/${f}?v=${encodeURIComponent(BUILD)}`); if (!r.ok) throw new Error(r.status); } } catch (e) { return; } done.pages = 1; try { localStorage.setItem('mathub-warm', JSON.stringify(done)); } catch (e) {} }
   };
   /* ---------- invite landing: #/join?ref=CODE ---------- */
   App.views.join = {

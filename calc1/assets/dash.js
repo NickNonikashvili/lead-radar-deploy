@@ -268,7 +268,7 @@
       else if (k === 'habit') { if (L.toggleHabit) L.toggleHabit(id); App.dash.repaintLive(root); }
       else if (k === 'event') L.editEvent(id);
       else if (k === 'new-event') App.quickAdd('event');
-      else if (k === 'new-goal') { if (App.quickAddGoal) App.quickAddGoal(); }
+      else if (k === 'new-goal') { App.need(['life-self.js']).then(() => { if (App.quickAddGoal) App.quickAddGoal(); }).catch(e => App.toast(e.message)); }   // the goals page loads when first needed
       else if (k === 'quick') App.quickAdd('task');
       else if (k === 'pomo') { const P = App.pomo(); P.toggle(); }
       else if (k === 'reset') { const P = App.pomo(); P.reset(); }

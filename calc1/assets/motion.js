@@ -38,12 +38,27 @@
     if (!root || reduced()) return;
     // the first-visit start page moves itself (assets/start.js)
     const els = $$(SEL, root).filter(el => !el.closest('.mo-page') && (!el.closest('.mh-enter, .mh-reveal') || el.matches('.panel, .course-card'))); const vh = global.innerHeight || 800;
-    let k = 0; els.forEach(el => { if (el.classList.contains('mh-enter') || el.classList.contains('mh-reveal')) return; const r = el.getBoundingClientRect(); if (r.top < vh + 40 && k < 18) { el.style.setProperty('--i', k++); el.classList.add('mh-enter'); } else { el.classList.add('mh-reveal'); const o = observer(); if (o) o.observe(el); else el.classList.add('mh-enter'); } });
+    // every position is read before any class is written: a write between reads makes the browser restyle the page each time
+    const todo = els.filter(el => !el.classList.contains('mh-enter') && !el.classList.contains('mh-reveal')); const tops = todo.map(el => el.getBoundingClientRect().top);
+    let k = 0; todo.forEach((el, i) => { if (tops[i] < vh + 40 && k < 18) { el.style.setProperty('--i', k++); el.classList.add('mh-enter'); } else { el.classList.add('mh-reveal'); const o = observer(); if (o) o.observe(el); else el.classList.add('mh-enter'); } });
     // rings: draw from empty to their value
     $$('.ring-fg', root).forEach(c => { const dash = parseFloat(c.getAttribute('stroke-dasharray')); if (!dash || c.classList.contains('ring-anim')) return; c.style.setProperty('--ring-c', dash); c.classList.add('ring-anim'); });
     // progress bars: grow from zero
-    $$('.bar-fill', root).forEach(b => { if (b.dataset.grown) return; b.dataset.grown = '1'; const w = b.style.width; if (!w) return; b.style.transition = 'none'; b.style.width = '0'; void b.offsetWidth; b.style.transition = ''; requestAnimationFrame(() => { b.style.width = w; }); });
+    // (all set to empty first, one layout read, then they grow: one layout for every bar, not one each)
+    const bars = $$('.bar-fill', root).filter(b => !b.dataset.grown && b.style.width).map(b => { b.dataset.grown = '1'; const w = b.style.width; b.style.transition = 'none'; b.style.width = '0'; return [b, w]; });
+    if (bars.length) { void root.offsetWidth; bars.forEach(([b]) => { b.style.transition = ''; }); requestAnimationFrame(() => bars.forEach(([b, w]) => { b.style.width = w; })); }
   };
+
+  /* ---------- Bo blinks now and then: one shared timer instead of an endless animation per eye, so nothing moves
+     between blinks (an endless CSS animation on an SVG costs a restyle and a repaint every frame) ---------- */
+  (function blinker() {
+    const next = () => setTimeout(tick, 4200 + Math.random() * 3600);
+    const tick = () => {
+      if (!document.hidden && !reduced()) { const eyes = $$('.bob-lids, .px-bo.px-anim'); eyes.forEach(g => g.classList.add('blink')); if (eyes.length) setTimeout(() => eyes.forEach(g => g.classList.remove('blink')), 340); }
+      next();
+    };
+    next();
+  })();
 
   /* ---------- theme fade + button spin ---------- */
   App.themeFade = function () {

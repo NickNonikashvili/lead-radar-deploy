@@ -188,6 +188,7 @@
     if (App.current !== App.views.instructor) return;
     const r = j.review, fb = r.feedback || {}, R = r.responses || {}; const p = ((App.D && App.D.DRAFTS) || []).find(x => x.id === r.project);
     const LET = 'ABCD'; const ans = k => { const x = R[k]; return x ? `<span class="df-st${x.s === 'done' ? ' st-done' : ''}">${esc(x.s === 'done' ? t('They marked it done') : t('They disagree'))}</span>${x.why ? `<span class="small" translate="no"> “${esc(x.why)}”</span>` : ''}` : ''; };
+    if (!App.draftPaper) { try { await App.need(['drafts.js']); } catch (e) {} }   // Bo's marks on the draft come from the draft feedback page, which loads when first needed
     const paper = App.draftPaper ? App.draftPaper(r.text, fb) : r.text.split(/\n\s*\n/).map(x => `<p>${esc(x.trim())}</p>`).join('');
     const others = j.shared.filter(x => x.id !== r.id);
     root.innerHTML = `<div class="in-sv">

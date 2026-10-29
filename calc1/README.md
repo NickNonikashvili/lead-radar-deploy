@@ -81,7 +81,13 @@ unban, verify or delete any account. Both lists ship with nikoloz.nonikashvili@s
   they are fetched, and `App.warmClasses` (assets/app.js) fetches the student's own classes in the background, once
   per build, never on a data saver or 2G. A release used to re-download all 143 files (5.6 MB) for every visitor;
   now it is the page's own files. The admin panel, What's new and the terms are not in `index.html` at all:
-  `App.lazyView(name, files, title)` holds their place and `App.need(files)` loads them the first time one opens.
+  `App.lazyView(name, files, title, blurb)` holds their place and `App.need(files)` loads them the first time one
+  opens. The same goes for the planner and personal pages (`life-school.js`, `life-self.js`), the notebook, peer
+  review, the study room, GPA, the class tools and drafts: `App.LAZY_PAGES` (assets/app.js) lists each page with its
+  file and the exact title and one-line description its file gives it, so the sidebar, search and Customize show it
+  before it loads (tests/lighter.test.js compares them). Code elsewhere that needs one of them first calls
+  `App.need([...])` (the dashboard's new goal, Make's tools, sharing a draft with an instructor). `App.warmClasses`
+  fetches these files in the background once per build, so they open offline.
   The list of classes (`classpack_list`) carries a tag; a device that already has that list gets `same` back. A logged-in member stays logged in while offline;
   progress syncs when the connection returns. The account server itself is never cached.
 

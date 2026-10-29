@@ -1221,13 +1221,17 @@ html.no-live-bg body::before { animation: none; opacity: 0.55; }
 .mascot .bubble::after { content: ''; position: absolute; right: -7px; bottom: 10px; width: 12px; height: 12px; background: var(--surface); border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); transform: rotate(-45deg); }
 .mascot.worried .bubble { border-color: color-mix(in srgb, var(--warn) 50%, var(--border)); }
 .bobcat { flex: none; filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.15)); }
-.bob-head { animation: bob 4.5s ease-in-out infinite; transform-origin: 60px 70px; }
+/* Bo's idle moves play a few times and rest: an endless animation on an SVG restyles and repaints the page every frame
+   (about 15% of a laptop's CPU, far more on a phone), and moving content should stop by itself (WCAG 2.2.2) */
+.bob-head { animation: bob 4.5s ease-in-out 2; transform-origin: 60px 70px; }
 .mascot.worried .bob-head { animation: bobWorried 2.4s ease-in-out infinite; }
-.mascot.happy .bob-head { animation: bobHappy 3.2s ease-in-out infinite; }
+.mascot.happy .bob-head { animation: bobHappy 3.2s ease-in-out 3; }
 @keyframes bob { 0%, 100% { transform: translateY(0) rotate(0); } 50% { transform: translateY(-2.5px) rotate(-1.5deg); } }
 @keyframes bobHappy { 0%, 100% { transform: translateY(0) rotate(-2deg); } 50% { transform: translateY(-4px) rotate(2deg); } }
 @keyframes bobWorried { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-2px) rotate(-2deg); } 75% { transform: translateX(2px) rotate(2deg); } }
-.bob-lids ellipse { transform-box: fill-box; transform-origin: center; transform: scaleY(0); animation: blink 5.5s infinite; }
+.bob-lids ellipse { transform-box: fill-box; transform-origin: center; transform: scaleY(0); }
+.bob-lids.blink ellipse { animation: blinkOnce 0.3s ease-in-out; }   /* one blink, now and then (a shared timer in assets/motion.js) */
+@keyframes blinkOnce { 0%, 100% { transform: scaleY(0); } 35%, 65% { transform: scaleY(1); } }
 .bob-lids ellipse:nth-child(2) { animation-delay: 0.02s; }
 @keyframes blink { 0%, 92%, 100% { transform: scaleY(0); } 95%, 97% { transform: scaleY(1); } }
 .hero-mascot { position: absolute; right: 26px; bottom: -4px; z-index: 1; }
@@ -2373,8 +2377,10 @@ h1, .page-title, .landing-title { letter-spacing: -0.03em; }
 :root { --font-pixel: "Press Start 2P", ui-monospace, "JetBrains Mono", monospace; }
 .px { display: inline-block; vertical-align: middle; flex: none; overflow: visible; }
 .px-anim .pxf2 { visibility: hidden; }
-.px-anim.px-n2 .pxf1 { animation: pxA 0.9s steps(1) infinite; } .px-anim.px-n2 .pxf2 { animation: pxB 0.9s steps(1) infinite; }
-.px-bo.px-anim .pxf1 { animation: pxBlinkA 3.6s steps(1) infinite; } .px-bo.px-anim .pxf2 { animation: pxBlinkB 3.6s steps(1) infinite; }
+.px-anim.px-n2 .pxf1 { animation: pxA 0.9s steps(1) 6; } .px-anim.px-n2 .pxf2 { animation: pxB 0.9s steps(1) 6; }   /* a few flips, then the sprite rests */
+.px-bo.px-anim .pxf1 { animation: pxBlinkA 3.6s steps(1) 2; } .px-bo.px-anim .pxf2 { animation: pxBlinkB 3.6s steps(1) 2; }
+.px-bo.px-anim.blink .pxf1 { animation: pxShut 0.3s steps(1); } .px-bo.px-anim.blink .pxf2 { animation: pxOpen 0.3s steps(1); }   /* later blinks: the shared timer */
+@keyframes pxShut { 0%, 100% { visibility: hidden; } } @keyframes pxOpen { 0%, 100% { visibility: visible; } }
 @keyframes pxA { 0%, 49.9% { visibility: visible; } 50%, 100% { visibility: hidden; } }
 @keyframes pxB { 0%, 49.9% { visibility: hidden; } 50%, 100% { visibility: visible; } }
 @keyframes pxBlinkA { 0%, 92.9% { visibility: visible; } 93%, 100% { visibility: hidden; } }
@@ -2667,7 +2673,7 @@ p, li, .muted { text-wrap: pretty; }
    the sounds start from the top bar's button on class pages, the start page's button next to search, or the Focus room.
    "Back to top" keeps clear of the sidebar on wide screens. */
 #ambient .amb-bubble:not(.on):not(.open) { display: none; }
-body:has(.app:not(.landing)) .amb-top { display: inline-flex; }
+body .app:not(.landing) .amb-top { display: inline-flex; }   /* .amb-top lives in .app's top bar: no :has() (it is checked on every change) */
 body:has(.app:not(.landing)) #ambient .amb-bubble { display: none; }
 body:has(.app:not(.landing)) #ambient { top: 64px; bottom: auto; right: 12px; }
 body:has(.app:not(.landing)) .amb-panel { top: 0; bottom: auto; max-height: calc(100vh - 160px); transform-origin: top right; }

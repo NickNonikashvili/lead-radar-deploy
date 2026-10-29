@@ -332,7 +332,9 @@
   /* the class's Tools page (assets/class-tools.js): until the student picks, the class gets the tools of its subject */
   const tlLine = e => `${e[0]} | ${e[1]}`;
   function toolsHtml() {
-    const P = S.obj; const T = App.classTools; if (!T) return sec('Tools', '', '<p class="small muted">The tools could not load. Reload the page.</p>', 'calc');
+    const P = S.obj; const T = App.classTools;
+    // the Tools page loads when first needed (assets/class-tools.js): fetch it, then paint this section again
+    if (!T) { App.need(['class-tools.js']).then(() => { const v = $('#view'); if (v && App.current === App.views.maker) repaint(v); }).catch(() => { const m = $('#mk-tools-wait'); if (m) m.textContent = 'The tools could not load. Check your connection and reload the page.'; }); return sec('Tools', '', '<p class="small muted" id="mk-tools-wait">Loading the tools…</p>', 'calc'); }
     const own = Array.isArray(P.TOOLS) && P.TOOLS.length; const name = t => t.title || (t.kind === 'link' ? t.view : T.kinds[t.kind].label);
     const add = `<div class="ct-add-kinds">${T.KIND_IDS.filter(k => k !== 'solver').map(k => `<button type="button" class="chip" data-tl-add="${k}">${icon(T.kinds[k].icon, 13)} ${esc(T.kinds[k].label)}</button>`).join('')}</div>`;
     const formula = `<div class="mkr-grid">${F('Name', '<input class="input" id="mk-tf-n" maxlength="70" placeholder="Ideal gas law">')}${F('Formula', '<input class="input mono" id="mk-tf-eq" maxlength="200" placeholder="P*V = n*R*T">', 'Write * between letters; every letter becomes a box to fill in.')}${F('What each letter means', '<textarea class="input mono" id="mk-tf-vars" rows="3" placeholder="P = pressure, atm"></textarea>', 'Optional. One a line: letter = meaning, unit.', 'wide')}</div><div class="row gap-sm"><button type="button" class="btn" data-tl-formula>${icon('plus', 13)} Add the formula</button><span class="small" id="mk-tf-msg" role="status"></span></div>`;
