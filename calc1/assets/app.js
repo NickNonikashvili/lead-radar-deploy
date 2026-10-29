@@ -1060,6 +1060,32 @@
   /* ======================================================
      VIEW: Flashcards
      ====================================================== */
+  /* ---------- spaced review, shared by the Flashcards page and Today (assets/today.js) ----------
+     A card's box says when it comes back: box 0 at once, then after a day, 3 days, a week, 16 days and 35 days (box 5).
+     Box 3 and up counts as mastered. "Got it" moves a card up one box only when it was due (or new): going through a
+     deck twice in one sitting does not fake mastery, and its date stays. "Again" sends it to box 0, and the page brings
+     it back a few cards later in the same sitting. Leitner's boxes with widening gaps, after the spacing effect and
+     successive relearning (Cepeda et al. 2006; Rawson & Dunlosky 2011). */
+  const SRS_DAYS = [0, 1, 3, 7, 16, 35], SRS_SAY = ['later today', 'in 1 day', 'in 3 days', 'in 1 week', 'in 16 days', 'in 5 weeks'];
+  App.srs = {
+    MAX: SRS_DAYS.length - 1,
+    dueAt: (box, at) => (box === undefined || !at ? 0 : at + SRS_DAYS[Math.min(SRS_DAYS.length - 1, box)] * 86400000),
+    isDue: (box, at, now = Date.now()) => box === undefined || !at || now >= App.srs.dueAt(box, at),
+    /** [box, time] after a grade */
+    grade(box, at, up, now = Date.now()) {
+      if (!up) return [0, now];
+      if (!App.srs.isDue(box, at, now)) return [box, at];
+      return [Math.min(App.srs.MAX, (box || 0) + 1), now];
+    },
+    /** what "Got it" would do, in a few words: "in 3 days", or "not due yet" */
+    gap(box, at, now = Date.now()) { return App.srs.isDue(box, at, now) ? SRS_SAY[Math.min(App.srs.MAX, (box || 0) + 1)] : 'not due yet'; },
+    /** when a time comes: "later today", "tomorrow", "in 3 days", "on Nov 12" */
+    days(ts, now = Date.now()) { return Math.round((new Date(ts).setHours(0, 0, 0, 0) - new Date(now).setHours(0, 0, 0, 0)) / 86400000); },
+    when(ts, now = Date.now()) { const d = App.srs.days(ts, now); return d <= 0 ? 'later today' : d === 1 ? 'tomorrow' : d < 7 ? `in ${d} days` : `on ${new Date(ts).toLocaleDateString(document.documentElement.lang || 'en', { month: 'short', day: 'numeric' })}`; },
+    /** the caught-up line, one whole sentence each so it translates */
+    next(ts, now = Date.now()) { const d = App.srs.days(ts, now); return d <= 0 ? 'The next card comes back later today.' : d === 1 ? 'The next card comes back tomorrow.' : d < 7 ? `The next card comes back in ${d} days.` : `The next card comes back on ${new Date(ts).toLocaleDateString(document.documentElement.lang || 'en', { month: 'short', day: 'numeric' })}.`; }
+  };
+
   App.views.flashcards = {
     title: 'Flashcards', state: {},
     render(root, param, query) {
@@ -1067,23 +1093,45 @@
       if (query.unit) st.unit = +query.unit; if (query.sec) st.sec = query.sec; else if (!param) st.sec = null;
       const boxes = () => store.get('flashcards', {});
       const freeC = App.limit('cards');
-      const buildDeck = () => { const b = boxes(); let cards = D.FLASHCARDS.filter(c => (!st.unit || c.unit === st.unit) && (!st.sec || c.sec === st.sec)); st.total = cards.length; cards = QZ.helpers.shuffle(cards); if (st.mode === 'due') cards.sort((x, y) => (b[x.id] || 0) - (b[y.id] || 0)); if (cards.length > freeC) cards = cards.slice(0, freeC); st.deck = cards; st.i = 0; st.flipped = false; if (param) { const k = cards.findIndex(c => c.id === param); if (k >= 0) st.i = k; } };
+      const times = () => store.get('fcAt', {});
+      const buildDeck = () => {
+        const b = boxes(), at = times(), now = Date.now(); let cards = D.FLASHCARDS.filter(c => (!st.unit || c.unit === st.unit) && (!st.sec || c.sec === st.sec));
+        st.pool = cards; st.total = cards.length; st.later = []; st.reviewed = 0; cards = QZ.helpers.shuffle(cards);
+        if (st.mode === 'due') {   // due now: cards you have seen first (lowest box first), then new ones
+          st.later = cards.filter(c => !App.srs.isDue(b[c.id], at[c.id], now)); cards = cards.filter(c => App.srs.isDue(b[c.id], at[c.id], now));
+          cards.sort((x, y) => (b[x.id] === undefined) - (b[y.id] === undefined) || (b[x.id] || 0) - (b[y.id] || 0));
+        }
+        if (param) { const card = D.FLASHCARDS.find(c => c.id === param); if (card && !cards.includes(card)) cards.unshift(card); }   // a card opened from search is always there
+        st.capped = Math.max(0, cards.length - freeC); if (st.capped) cards = cards.slice(0, freeC);
+        st.deck = cards; st.i = 0; st.flipped = false; if (param) { const k = cards.findIndex(c => c.id === param); if (k >= 0) st.i = k; }
+      };
       buildDeck();
       const paint = () => {
-        const b = boxes(); const c = st.deck[st.i]; const mastered = st.deck.filter(x => (b[x.id] || 0) >= 3).length;
-        $('#fc-stats', root).innerHTML = `<span class="chip good">${mastered} mastered</span><span class="chip">${st.deck.length}${st.total > st.deck.length ? ` of ${st.total}` : ''} cards</span>`;
-        const lk = $('#fc-lock', root); if (lk) lk.innerHTML = st.total > st.deck.length ? App.lockCard(`${st.total - st.deck.length} more cards for members`, `Preview shows ${st.deck.length} cards per deck. Sign up free for all ${D.FLASHCARDS.length} ${D.short} flashcards and saved mastery boxes.`, { compact: true }) : '';
-        const stage = $('#fc-stage', root); if (!c) { stage.innerHTML = '<div class="empty">No cards match this filter.</div>'; $('#fc-controls', root).innerHTML = ''; return; }
+        const b = boxes(), at = times(); const c = st.deck[st.i]; const mastered = st.pool.filter(x => (b[x.id] || 0) >= 3).length; const left = Math.max(0, st.deck.length - st.i);
+        $('#fc-stats', root).innerHTML = `<span class="chip good">${mastered} mastered</span>${st.mode === 'due' ? `<span class="chip">${left} due now</span>` : ''}<span class="chip">${st.total} cards</span>`;
+        const lk = $('#fc-lock', root); if (lk) lk.innerHTML = st.capped ? App.lockCard(`${st.capped} more cards for members`, `Preview shows ${st.deck.length} cards per deck. Sign up free for all ${D.FLASHCARDS.length} ${D.short} flashcards and saved mastery boxes.`, { compact: true }) : '';
+        const stage = $('#fc-stage', root);
+        if (!c) {   // the end of the deck, or nothing due
+          const next = st.later.concat(st.deck).map(x => App.srs.dueAt(b[x.id], at[x.id])).filter(t => t > Date.now()).sort((x, y) => x - y)[0];
+          const head = !st.pool.length ? 'No cards match this filter.' : st.reviewed ? `That’s the deck: ${st.reviewed} card${st.reviewed === 1 ? '' : 's'} reviewed.` : 'All caught up: nothing is due right now.';
+          stage.innerHTML = `<div class="empty fc-done" role="status"><b>${esc(head)}</b>${st.pool.length ? `${next ? `<p class="small muted">${esc(App.srs.next(next))}</p>` : ''}<p class="small muted">Spacing them out is what makes them stick.</p><div class="row gap-sm" style="justify-content:center">${st.mode === 'due' ? `<button class="btn" data-action="mode">${icon('cards', 14)} Go through all ${st.total} anyway</button>` : `<button class="btn" data-action="reshuffle">${icon('rotate', 14)} Shuffle and go again</button>`}</div>` : ''}</div>`;
+          $('#fc-controls', root).innerHTML = ''; return;
+        }
         const box = b[c.id] || 0;
         stage.innerHTML = `<div class="fc-card${st.flipped ? ' flipped' : ''}" id="fc-card" tabindex="0" role="button"><span class="sr-only">Flip card: </span><div class="fc-face fc-front"><span class="eyebrow">Card ${st.i + 1} / ${st.deck.length} · box ${box}</span><span class="sec chip">${esc(c.sec ? secLabel(c.sec) : 'Unit ' + c.unit)}</span><div>${c.f}</div><div class="fc-hint">Tap or press space to flip</div></div><div class="fc-face fc-back"><span class="eyebrow">Answer</span><span class="sec chip">${esc(c.sec ? secLabel(c.sec) : 'Unit ' + c.unit)}</span><div>${c.b}</div></div></div>`;
-        $('#fc-controls', root).innerHTML = `${App.flagButton ? App.flagButton({ course: D.id, view: 'Flashcards', ref: c.id, prompt: c.f }) : ''}<button class="btn" data-action="prev" ${st.i === 0 ? 'disabled' : ''}>${icon('left', 14)} Prev</button><button class="btn danger" data-action="again">Again <span class="kbd">1</span></button><button class="btn primary" data-action="good">Got it <span class="kbd">2</span></button><button class="btn" data-action="next" ${st.i >= st.deck.length - 1 ? 'disabled' : ''}>Next ${icon('right', 14)}</button>`;
+        $('#fc-controls', root).innerHTML = `${App.flagButton ? App.flagButton({ course: D.id, view: 'Flashcards', ref: c.id, prompt: c.f }) : ''}<button class="btn" data-action="prev" ${st.i === 0 ? 'disabled' : ''}>${icon('left', 14)} Prev</button><button class="btn danger" data-action="again">Again <span class="fc-gap">later today</span> <span class="kbd">1</span></button><button class="btn primary" data-action="good">Got it <span class="fc-gap">${esc(App.srs.gap(b[c.id], at[c.id]))}</span> <span class="kbd">2</span></button><button class="btn" data-action="next" ${st.i >= st.deck.length - 1 ? 'disabled' : ''}>Next ${icon('right', 14)}</button>`;
         typeset(stage);
       };
-      root.innerHTML = pageHead('Flashcards', 'Definitions, laws and formulas. "Got it" moves a card up a box; three boxes means mastered. "Again" sends it back to the start.') + `<div class="panel"><div class="row between mb-2"><div class="chips">${[0, 1, 2, 3, 4].map(u => `<span class="chip toggle${st.unit === u ? ' on' : ''}" data-action="unit" data-u="${u}">${u ? 'Unit ' + u : 'All units'}</span>`).join('')}${st.sec ? `<span class="chip accent">${esc(secLabel(st.sec))} <span data-action="clearsec" style="cursor:pointer">✕</span></span>` : ''}</div><div class="row"><span id="fc-stats" class="row gap-sm"></span><button class="btn sm" data-action="mode">${st.mode === 'due' ? 'Order: weakest first' : 'Order: shuffled'}</button><button class="btn sm" data-action="reshuffle">${icon('rotate', 13)} Reshuffle</button><button class="btn sm ghost" data-action="reset">Reset progress</button></div></div><div class="fc-stage" id="fc-stage"></div><div class="fc-controls" id="fc-controls"></div><div id="fc-lock" class="mt-2"></div></div>`;
+      root.innerHTML = pageHead('Flashcards', 'Definitions, laws and formulas. Each card comes back just before you would forget it: "Got it" spaces it further out (a day, 3 days, a week, then longer), "Again" brings it back today. Box 3 and up means mastered.') + `<div class="panel"><div class="row between mb-2"><div class="chips">${[0, 1, 2, 3, 4].map(u => `<span class="chip toggle${st.unit === u ? ' on' : ''}" data-action="unit" data-u="${u}">${u ? 'Unit ' + u : 'All units'}</span>`).join('')}${st.sec ? `<span class="chip accent">${esc(secLabel(st.sec))} <span data-action="clearsec" style="cursor:pointer">✕</span></span>` : ''}</div><div class="row"><span id="fc-stats" class="row gap-sm"></span><button class="btn sm" data-action="mode" aria-pressed="${st.mode === 'due'}">${st.mode === 'due' ? 'Showing: due now' : 'Showing: all cards'}</button><button class="btn sm" data-action="reshuffle">${icon('rotate', 13)} Reshuffle</button><button class="btn sm ghost" data-action="reset">Reset progress</button></div></div><div class="fc-stage" id="fc-stage"></div><div class="fc-controls" id="fc-controls"></div><div id="fc-lock" class="mt-2"></div></div>`;
       paint();
-      const grade = up => { const c = st.deck[st.i]; if (!c) return; const b = boxes(); b[c.id] = up ? Math.min(3, (b[c.id] || 0) + 1) : 0; store.set('flashcards', b); const at = store.get('fcAt', {}); at[c.id] = Date.now(); store.set('fcAt', at); markActivity(); if (st.i < st.deck.length - 1) st.i++; st.flipped = false; paint(); };
+      const grade = up => {
+        const c = st.deck[st.i]; if (!c) return; const b = boxes(), at = times(); [b[c.id], at[c.id]] = App.srs.grade(b[c.id], at[c.id], up);
+        store.set('flashcards', b); store.set('fcAt', at); markActivity(); st.reviewed++;
+        if (!up) st.deck.splice(Math.min(st.deck.length, st.i + 4), 0, c);   // missed: it comes back a few cards later
+        st.i++; st.flipped = false; paint();
+      };
       const flip = () => { st.flipped = !st.flipped; const el = $('#fc-card', root); if (el) el.classList.toggle('flipped', st.flipped); };
-      bind(root, { unit: el => { st.unit = +el.dataset.u; st.sec = null; App.go('flashcards', null, { unit: st.unit }); }, clearsec: () => { st.sec = null; App.go('flashcards'); }, mode: () => { st.mode = st.mode === 'due' ? 'shuffle' : 'due'; this.render(root, null, {}); }, reshuffle: () => { buildDeck(); paint(); }, reset: () => { if (confirm('Reset flashcard progress for this class?')) { store.set('flashcards', {}); paint(); toast('Flashcard progress reset'); } }, prev: () => { if (st.i > 0) { st.i--; st.flipped = false; paint(); } }, next: () => { if (st.i < st.deck.length - 1) { st.i++; st.flipped = false; paint(); } }, again: () => { grade(false); if (App.addXP) App.addXP(1); if (App.quest) App.quest('cards'); }, good: () => { grade(true); if (App.addXP) App.addXP(2); if (App.quest) App.quest('cards'); } });
+      bind(root, { unit: el => { st.unit = +el.dataset.u; st.sec = null; App.go('flashcards', null, { unit: st.unit }); }, clearsec: () => { st.sec = null; App.go('flashcards'); }, mode: () => { st.mode = st.mode === 'due' ? 'shuffle' : 'due'; this.render(root, null, {}); }, reshuffle: () => { buildDeck(); paint(); }, reset: () => { if (confirm('Reset flashcard progress for this class?')) { store.set('flashcards', {}); buildDeck(); paint(); toast('Flashcard progress reset'); } }, prev: () => { if (st.i > 0) { st.i--; st.flipped = false; paint(); } }, next: () => { if (st.i < st.deck.length - 1) { st.i++; st.flipped = false; paint(); } }, again: () => { grade(false); if (App.addXP) App.addXP(1); if (App.quest) App.quest('cards'); }, good: () => { grade(true); if (App.addXP) App.addXP(2); if (App.quest) App.quest('cards'); } });
       on(root, 'click', '#fc-card', flip);
       this.keys = e => { if (e.target.matches('input, textarea, select') || $('#search-modal')) return; if (e.key === ' ') { e.preventDefault(); flip(); } else if (e.key === '1') grade(false); else if (e.key === '2') grade(true); else if (e.key === 'ArrowLeft') { if (st.i > 0) { st.i--; st.flipped = false; paint(); } } else if (e.key === 'ArrowRight') { if (st.i < st.deck.length - 1) { st.i++; st.flipped = false; paint(); } } };
       document.addEventListener('keydown', this.keys);

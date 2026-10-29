@@ -8021,3 +8021,23 @@
 8307	De nouveau en ligne.
 8308	De nouveau en ligne · synchronisation…
 8309	De nouveau en ligne · tout est synchronisé.
+8315	pas encore à revoir
+8316	plus tard aujourd’hui
+8317	{1} à revoir maintenant
+8318	Paquet terminé : {1} {2?cartes revues:carte revue}.
+8319	Tout est à jour : rien à revoir pour l’instant.
+8322	Revoir les {1} quand même
+8323	Mélanger et recommencer
+8325	Définitions, lois et formules. Chaque carte revient juste avant que tu l’oublies : « Je sais » l’espace davantage (un jour, 3 jours, une semaine, puis plus), « Encore » la fait revenir aujourd’hui. À partir de la boîte 3, elle compte comme maîtrisée.
+8326	Affichage : à revoir maintenant
+8327	Affichage : toutes les cartes
+8328	dans 1 jour
+8329	dans 3 jours
+8330	dans 1 semaine
+8331	dans 16 jours
+8332	dans 5 semaines
+8333	La prochaine carte revient plus tard aujourd’hui.
+8334	La prochaine carte revient demain.
+8335	La prochaine carte revient dans {1} jours.
+8336	La prochaine carte revient le {1}.
+8337	C’est l’espacement qui les fait tenir.

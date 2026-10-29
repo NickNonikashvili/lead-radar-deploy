@@ -1,8 +1,8 @@
 /* ============================================================
    StudyCat — Today: one daily plan across every class
-   Due flashcards from all classes with a light spaced-repetition
-   rule (box 0 now, box 1 after a day, box 2 after three days,
-   mastered cards get a refresh after two weeks), a lesson on the
+   Due flashcards from all classes on the Flashcards page's own
+   schedule (App.srs in assets/app.js: a day, 3 days, a week, 16
+   and 35 days; a missed card comes back in the same sitting), a lesson on the
    weakest topic, the daily challenge, deadlines in the next 48 hours,
    quests and a per-class table. The review player here grades cards
    straight into each class's own store, so it stays in step with the
@@ -13,7 +13,7 @@
   const App = global.App; if (!App) return;
   const { $, $$, esc, icon, bind, store, toast, settings, setSetting } = App;
   const Courses = global.Courses;
-  const INTERVAL = { 0: 0, 1: 1, 2: 3, 3: 14 }; const DAY = 86400000; const NEW_PER_CLASS = 10;
+  const NEW_PER_CLASS = 10; const isDue = (box, at, now) => App.srs.isDue(box, at, now);
   const dataOf = id => (store.id === id ? store.data : store.peek(id)) || {};
   const mine = () => App.myCourses().filter(id => Courses[id]);
   const tISO = () => App.todayISO();
@@ -22,11 +22,11 @@
   function dueCards(id, now = Date.now()) {
     const C = Courses[id]; const cards = C.FLASHCARDS || []; const d = dataOf(id); const b = d.flashcards || {}; const at = d.fcAt || {}; const reviews = [], fresh = [];
     if (!C.FLASHCARDS && C.flashcardCount) {   // class not downloaded yet: count from what this device remembers about its cards
-      const cap0 = App.limit('cards'); let rv = 0; Object.keys(b).forEach(k => { const t = at[k]; const wait = INTERVAL[Math.min(3, b[k])] * DAY; if (!t || now - t >= wait) rv++; });
+      const cap0 = App.limit('cards'); let rv = 0; Object.keys(b).forEach(k => { if (isDue(b[k], at[k], now)) rv++; });
       const fr = Math.max(0, C.flashcardCount - Object.keys(b).length); const count = Math.min(rv + Math.min(fr, NEW_PER_CLASS), isFinite(cap0) ? cap0 : Infinity);
       return { list: [], reviews: rv, fresh: fr, total: C.flashcardCount, unseen: fr, count, estimated: 0 };
     }
-    cards.forEach(c => { const box = b[c.id]; if (box === undefined) { fresh.push(c); return; } const t = at[c.id]; const wait = INTERVAL[Math.min(3, box)] * DAY; if (!t || now - t >= wait) reviews.push(c); });
+    cards.forEach(c => { const box = b[c.id]; if (box === undefined) { fresh.push(c); return; } if (isDue(box, at[c.id], now)) reviews.push(c); });
     const cap = App.limit('cards'); const list = reviews.concat(fresh.slice(0, NEW_PER_CLASS)).slice(0, isFinite(cap) ? cap : undefined);
     return { list, reviews: reviews.length, fresh: fresh.length, total: cards.length, unseen: fresh.length, count: list.length, estimated: !C.FLASHCARDS && C.flashcardCount ? Math.max(0, C.flashcardCount - Object.keys(b).length) : 0 };
   }
@@ -70,8 +70,9 @@
   }
   function gradeCard(root, up) {
     const it = R.queue[R.i]; if (!it || !R.flipped) return; const now = Date.now(); const today = tISO();
-    store.poke(it.course, data => { const b = data.flashcards = data.flashcards || {}; b[it.c.id] = up ? Math.min(3, (b[it.c.id] || 0) + 1) : 0; const at = data.fcAt = data.fcAt || {}; at[it.c.id] = now; const act = data.activity = data.activity || {}; if (!act[today]) act[today] = true; });
+    store.poke(it.course, data => { const b = data.flashcards = data.flashcards || {}; const at = data.fcAt = data.fcAt || {}; [b[it.c.id], at[it.c.id]] = App.srs.grade(b[it.c.id], at[it.c.id], up, now); const act = data.activity = data.activity || {}; if (!act[today]) act[today] = true; });
     if (App.addXP) App.addXP(up ? 2 : 1, { course: it.course, silent: !up }); if (App.quest) App.quest('cards'); if (App.sfx) App.sfx.play(up ? 'correct' : 'wrong');
+    if (!up) R.queue.splice(Math.min(R.queue.length, R.i + 4), 0, it);   // missed: it comes back a few cards later
     R.done++; if (up) R.good++; savePlan({ reviewed: plan().reviewed + 1 }); R.i++; R.flipped = false; paintReview(root);
   }
 

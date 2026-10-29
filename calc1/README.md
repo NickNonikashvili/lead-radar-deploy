@@ -24,7 +24,7 @@ keep their progress in sync across devices.
 | Calendar | Full semester, week by week, today highlighted |
 | Notes | Every topic: big ideas, key formulas, worked example, common mistakes, exam tip, textbook link |
 | Formula sheet | Filterable and printable |
-| Flashcards | 3-box mastery system with keyboard shortcuts |
+| Flashcards | Spaced review (`App.srs`): each card comes back after a day, 3 days, a week, 16 and 35 days; keyboard shortcuts |
 | Quizzer | Endless procedurally generated problems (multiple choice and typed answers), practice or timed-exam mode, per-topic accuracy |
 | Exam prep | Practice sets with worked solutions plus a checklist per exam |
 | Syllabus & policies | Deadlines, help, exam rules, and how the grade is made: the weights, the letter scale and any rubric |
@@ -862,6 +862,10 @@ The October 2026 audit against what careful, large sites do (and where AI-built 
 ## GPA calculator
 
 `assets/gpa.js` adds a GPA calculator at `#/gpa` (under Tools in the sidebar and on the Tools page). It uses Montana State's 4.0 scale with plus and minus grades (A 4.00, A- 3.67, B+ 3.33 … D- 0.67, F 0). The semester table starts with the student's chosen classes and their credits; the student picks the letter they have or expect in each. Add or remove classes, mark one P/W so it is not counted, and see semester GPA, graded credits and quality points, with a Dean's List (3.50 on 12+ credits) or below-good-standing flag. Enter the GPA and graded credits from before this semester for the cumulative GPA and its change; set a goal to see the semester GPA it needs (and roughly which letter in every class), or how many more credits at 4.0 it would take when it is out of reach this semester. A what-if table shows how one grade step up or down in each class moves the result. Everything is saved in the browser.
+
+## Spaced review (the Flashcards page and Today)
+
+`App.srs` (assets/app.js) is the one schedule both use. A card's box (`flashcards[id]`, 0–5, synced with the class data) and the time it was last graded (`fcAt[id]`) say when it is due: at once in box 0, then 1, 3, 7, 16 and 35 days. Box 3 and up counts as mastered (readiness, the class cards). "Got it" moves a card up one box only when it was due or new; graded early (going through the deck again, "all cards" mode), it keeps its box and its date, so a sitting of cramming does not count as mastery. "Again" sends it to box 0, and both players bring it back a few cards later in the same sitting. The Flashcards page shows the cards due now (seen ones first, lowest box first, then new ones), says on the button how far "Got it" sends the card ("in 3 days", or "not due yet"), and when nothing is due says "All caught up" and when the next card comes back, with "Go through all anyway". Boxes from before (0–3, with a 14-day refresh at 3) keep working: box 3 now comes back after a week. Why: the spacing effect and successive relearning (Cepeda et al. 2006; Rawson & Dunlosky 2011); Leitner's boxes with widening gaps. tests/spaced-review.test.js.
 
 ## Today: one plan across every class
 

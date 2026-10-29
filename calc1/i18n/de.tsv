@@ -8021,3 +8021,23 @@
 8307	Wieder online.
 8308	Wieder online · wird synchronisiert…
 8309	Wieder online · alles ist synchronisiert.
+8315	noch nicht fällig
+8316	später heute
+8317	{1} jetzt fällig
+8318	Stapel geschafft: {1} {2?Karten:Karte} wiederholt.
+8319	Alles erledigt: gerade ist nichts fällig.
+8322	Trotzdem alle {1} durchgehen
+8323	Mischen und noch einmal
+8325	Definitionen, Gesetze und Formeln. Jede Karte kommt kurz bevor du sie vergessen würdest zurück: „Kann ich“ schiebt sie weiter hinaus (ein Tag, 3 Tage, eine Woche, dann länger), „Nochmal“ holt sie heute zurück. Ab Kasten 3 gilt sie als gelernt.
+8326	Anzeige: jetzt fällig
+8327	Anzeige: alle Karten
+8328	in 1 Tag
+8329	in 3 Tagen
+8330	in 1 Woche
+8331	in 16 Tagen
+8332	in 5 Wochen
+8333	Die nächste Karte kommt später heute zurück.
+8334	Die nächste Karte kommt morgen zurück.
+8335	Die nächste Karte kommt in {1} Tagen zurück.
+8336	Die nächste Karte kommt am {1} zurück.
+8337	Gerade der Abstand lässt sie hängen bleiben.
