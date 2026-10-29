@@ -25,6 +25,15 @@ function mh_fail(string $message, int $status = 400, array $extra = []): void {
   mh_json(array_merge(['ok' => false, 'error' => $message], $extra), $status);
 }
 
+/* One field of the request body as JSON with every {} kept as {}. mh_input() decodes into PHP arrays, which cannot tell
+   an empty object from an empty list, so a map saved empty ({}) would come back as a list ([]) and the browser's next
+   write to it would be lost. Null when the body has no such field. */
+function mh_input_json(string $key): ?string {
+  $raw = file_get_contents('php://input') ?: ''; if ($raw === '') return null;
+  $j = json_decode($raw); if (!is_object($j) || !property_exists($j, $key)) return null;
+  $out = json_encode($j->$key, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); return $out === false ? null : $out;
+}
+
 function mh_input(): array {
   static $in = null;
   if ($in !== null) return $in;

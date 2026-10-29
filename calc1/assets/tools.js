@@ -264,7 +264,7 @@
               <div class="mt-2"><div class="eyebrow mb-1">Topics on this exam</div><div class="link-grid">${ex.sections.map(id => { const s = App.secById(id); return s ? `<a class="card-link" href="${L('notes', s.id)}" style="padding:10px 12px"><h4 style="font-size:14px">${esc(s.label)} ${esc(s.title)}</h4></a>` : ''; }).join('')}</div></div>`}
           </div>
         </div>`;
-      on(root, 'change', 'input[data-i]', el => { const c = store.get('checklists', {}); const s = c[exId] || {}; s[el.dataset.i] = el.checked; c[exId] = s; store.set('checklists', c); el.closest('.check').classList.toggle('done', el.checked); App.markActivity(); });
+      on(root, 'change', 'input[data-i]', el => { const c = Object.assign({}, store.get('checklists', {})); const s = c[exId] || {}; s[el.dataset.i] = el.checked; c[exId] = s; store.set('checklists', c); el.closest('.check').classList.toggle('done', el.checked); App.markActivity(); });
       on(root, 'change', 'input[data-done]', el => { const all = store.get('practiceDone', {}); const d = all[exId] || {}; d[el.dataset.done] = el.checked; all[exId] = d; store.set('practiceDone', all); App.markActivity(); });
       bind(root, {
         sol: el => { const s = $(`#pes-${el.dataset.n}`, root); s.classList.toggle('open'); el.innerHTML = s.classList.contains('open') ? `${icon('eye', 12)} Hide` : `${icon('eye', 12)} Solution`; },

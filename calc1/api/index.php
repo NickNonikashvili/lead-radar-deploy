@@ -151,12 +151,12 @@ switch ($route) {
     if ($_SERVER['REQUEST_METHOD'] === 'GET') {
       $course = preg_replace('/[^a-z0-9_-]/', '', (string)($_GET['course'] ?? ''));
       $st = $db->prepare('SELECT json, updated FROM progress WHERE user_id = ? AND course = ?'); $st->execute([$u['id'], $course]); $row = $st->fetch();
-      mh_json(['ok' => true, 'course' => $course, 'data' => $row ? json_decode($row['json'], true) : null, 'updated' => $row ? (int)$row['updated'] : 0]);
+      mh_json(['ok' => true, 'course' => $course, 'data' => $row ? json_decode($row['json']) : null, 'updated' => $row ? (int)$row['updated'] : 0]);
     }
     mh_rate_or_fail("data:user:{$u['id']}", 1200, 3600);
     $course = preg_replace('/[^a-z0-9_-]/', '', (string)($in['course'] ?? '')); if ($course === '') mh_fail('Missing course.');
     $data = $in['data'] ?? null; if (!is_array($data)) mh_fail('Missing data.');
-    $json = json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    $json = mh_input_json('data') ?? json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);   // {} stays {}
     if (strlen($json) > (int)($cfg['max_data_bytes'] ?? 600000)) mh_fail('Progress data is too large to save.', 413);
     $updated = isset($in['updated']) && is_numeric($in['updated']) ? (int)$in['updated'] : (int)round(microtime(true) * 1000);
     $st = $db->prepare('SELECT updated FROM progress WHERE user_id = ? AND course = ?'); $st->execute([$u['id'], $course]); $cur = $st->fetchColumn();
@@ -169,7 +169,7 @@ switch ($route) {
     mh_method('GET');
     $u = mh_require_user();
     $st = mh_db()->prepare('SELECT course, json, updated FROM progress WHERE user_id = ?'); $st->execute([$u['id']]);
-    $out = []; foreach ($st->fetchAll() as $r) $out[$r['course']] = ['data' => json_decode($r['json'], true), 'updated' => (int)$r['updated']];
+    $out = []; foreach ($st->fetchAll() as $r) $out[$r['course']] = ['data' => json_decode($r['json']), 'updated' => (int)$r['updated']];
     mh_json(['ok' => true, 'courses' => $out]);
 
   case 'account_delete':

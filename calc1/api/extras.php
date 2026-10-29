@@ -74,11 +74,12 @@ function mh_extras_route(string $route, array $in, array $cfg, string $ip): void
     /* --- preferences that follow the account --- */
     case 'prefs': {
       mh_method('GET', 'PUT', 'POST'); $u = mh_require_user();
-      if ($_SERVER['REQUEST_METHOD'] === 'GET') mh_json(['ok' => true, 'prefs' => $u['prefs'] ? (json_decode((string)$u['prefs'], true) ?: (object)[]) : (object)[], 'updated' => (int)($u['prefs_updated'] ?? 0)]);
+      if ($_SERVER['REQUEST_METHOD'] === 'GET') mh_json(['ok' => true, 'prefs' => $u['prefs'] ? (json_decode((string)$u['prefs']) ?: (object)[]) : (object)[], 'updated' => (int)($u['prefs_updated'] ?? 0)]);
       $prefs = is_array($in['prefs'] ?? null) ? $in['prefs'] : []; $updated = (int)($in['updated'] ?? time()); $stored = (int)($u['prefs_updated'] ?? 0);
-      $json = json_encode($prefs); if (strlen($json) > 60000) mh_fail('Preferences are too large.');
-      if ($updated >= $stored) { $db->prepare('UPDATE users SET prefs = ?, prefs_updated = ? WHERE id = ?')->execute([$json, $updated, $u['id']]); mh_json(['ok' => true, 'prefs' => $prefs, 'updated' => $updated]); }
-      mh_json(['ok' => true, 'stale' => true, 'prefs' => json_decode((string)$u['prefs'], true) ?: (object)[], 'updated' => $stored]);
+      $json = mh_input_json('prefs'); if ($json === null || $json === 'null' || $json[0] !== '{') $json = json_encode((object)$prefs);   // {} stays {}
+      if (strlen($json) > 60000) mh_fail('Preferences are too large.');
+      if ($updated >= $stored) { $db->prepare('UPDATE users SET prefs = ?, prefs_updated = ? WHERE id = ?')->execute([$json, $updated, $u['id']]); mh_json(['ok' => true, 'prefs' => json_decode($json), 'updated' => $updated]); }
+      mh_json(['ok' => true, 'stale' => true, 'prefs' => json_decode((string)$u['prefs']) ?: (object)[], 'updated' => $stored]);
     }
   }
   mh_fail('Not found.', 404);

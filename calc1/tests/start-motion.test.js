@@ -10,7 +10,7 @@
 const T = require('./lib'); const fs = require('fs'); const path = require('path');
 const AXE = fs.readFileSync(path.join(__dirname, 'node_modules', 'axe-core', 'axe.min.js'), 'utf8');
 (async () => {
-  const { mk, go, base, login, check, log } = await T.start({});
+  const { mk, go, base, login, check, log } = await T.start({ freeHome: true });
   const root = base.replace(/index\.html$/, '');
   const clsWatch = c => c.addInitScript(() => { window.__cls = 0; try { new PerformanceObserver(l => { for (const e of l.getEntries()) if (!e.hadRecentInput) window.__cls += e.value; }).observe({ type: 'layout-shift', buffered: true }); } catch (e) {} });
   const scrollAll = async (p, w) => { await p.mouse.move(Math.round(w * 0.6), 400); const H = await p.evaluate(() => document.documentElement.scrollHeight); for (let y = 0; y < H; y += 450) { await p.mouse.wheel(0, 450); await p.waitForTimeout(180); } await p.waitForTimeout(1500); };

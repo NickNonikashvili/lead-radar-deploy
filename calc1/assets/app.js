@@ -79,16 +79,19 @@
       if (id === 'calc' && !localStorage.getItem(storeKey('calc')) && localStorage.getItem('m171-study-v1')) { writeJSON(storeKey('calc'), readJSON('m171-study-v1')); }
       this.data = readJSON(storeKey(id));
     },
-    get(k, def) { return (k in this.data) ? this.data[k] : def; },
+    // a map saved empty used to come back from the server as [] (assets/auth.js DATA_MAPS): asked for with a {} default, it is a {} again
+    get(k, def) { const v = (k in this.data) ? this.data[k] : def; if (Array.isArray(v) && !v.length && def && typeof def === 'object' && !Array.isArray(def)) return (this.data[k] = {}); return v; },
     set(k, v) { this.data[k] = v; writeJSON(storeKey(this.id), this.data); if (global.App && global.App.auth) global.App.auth.noteWrite(this.id); },
     replace(id, data) { data = data && typeof data === 'object' ? data : {}; writeJSON(storeKey(id), data); if (this.id === id) this.data = data; },
     exportJSON() { return JSON.stringify({ course: this.id, data: this.data, settings: readJSON('studyhub-settings') }, null, 2); },
     importJSON(txt) { const obj = JSON.parse(txt); if (!obj || typeof obj !== 'object') throw new Error('Not a valid export'); const data = obj.data && typeof obj.data === 'object' ? obj.data : obj; this.data = data; writeJSON(storeKey(this.id), data); if (obj.settings) writeJSON('studyhub-settings', obj.settings); if (global.App && global.App.auth) global.App.auth.noteWrite(this.id); },
     reset() { this.data = {}; try { localStorage.removeItem(storeKey(this.id)); } catch {} if (global.App && global.App.auth) global.App.auth.noteWrite(this.id); },
     peek(id) { return readJSON(storeKey(id)); },
-    poke(id, fn) { if (id === this.id) { fn(this.data); writeJSON(storeKey(id), this.data); } else { const d = readJSON(storeKey(id)); fn(d); writeJSON(storeKey(id), d); } if (global.App && global.App.auth) global.App.auth.noteWrite(id); }
+    // poke: change another class's saved data in place (a class with nothing saved yet starts empty)
+    poke(id, fn) { if (id === this.id) { fn(this.data); writeJSON(storeKey(id), this.data); } else { const d = readJSON(storeKey(id)) || {}; fn(d); writeJSON(storeKey(id), d); } if (global.App && global.App.auth) global.App.auth.noteWrite(id); }
   };
-  const settings = () => Object.assign({ theme: 'system' }, readJSON('studyhub-settings'));
+  // the same for the synced settings that are maps (assets/auth.js PREF_MAPS)
+  const settings = () => { const s = Object.assign({ theme: 'system' }, readJSON('studyhub-settings')); (global.App && global.App.PREF_MAPS || []).forEach(k => { if (Array.isArray(s[k]) && !s[k].length) s[k] = {}; }); return s; };
   const setSetting = (k, v) => { const s = settings(); s[k] = v; writeJSON('studyhub-settings', s); if (global.App && global.App.onSetting) { try { global.App.onSetting(k); } catch (e) {} } };
   const courseSetting = (courseId, k, def) => { const s = settings(); return (s[courseId] && k in s[courseId]) ? s[courseId][k] : def; };
   const setCourseSetting = (courseId, k, v) => { const s = settings(); s[courseId] = Object.assign({}, s[courseId], { [k]: v }); writeJSON('studyhub-settings', s); };
@@ -788,6 +791,16 @@
         if (App.social && App.social.presencePing) { if (App.auth && App.auth.ready) App.social.presencePing(); else if (App.auth) App.auth.onChange(function once() { App.social.presencePing(); }); }
         return;
       }
+      // your home as the October 2026 redesign draws it: one hero, a tidy grid of cards (assets/home-grid.js);
+      // Arrange freely keeps the free-form dashboard below (assets/dash.js)
+      if (App.homeGrid && App.homeGrid.on()) {
+        root.innerHTML = `<div class="landing-wrap hg-wrap">${App.homeGrid.html({ picking, after: `<div id="announcement-slot"></div>${App.inviteBanner ? App.inviteBanner() : ''}${App.recapBanner ? App.recapBanner() : ''}${picking ? pickClassesHtml() : ''}` })}</div>`;
+        App.homeGrid.wire(root, () => render());
+        bind(root, { 'go-pick': goPick }); if (picking) wirePickClasses(root);
+        paintAnnouncement(root);
+        if (App.social && App.social.presencePing) { if (App.auth && App.auth.ready) App.social.presencePing(); else if (App.auth) App.auth.onChange(function once() { App.social.presencePing(); }); }
+        return;
+      }
       const startHere = fresh ? `<div class="start-steps">${[['1', 'Pick a class', 'Your classes are below, in Your home. Tap one to open it.'], ['2', 'Take a 5-minute lesson', 'A few questions with worked answers. No setup.'], ['3', guest ? 'Sign up to keep it' : 'Come back tomorrow', guest ? 'A free montana.edu account saves your progress everywhere.' : 'Your streak and daily plan pick up where you left off.']].map(([n, h, p]) => `<div class="start-step"><span class="ss-n">${n}</span><div><b>${h}</b><small>${p}</small></div></div>`).join('')}</div>` : '';
       root.innerHTML = `<div class="landing-wrap">
         <header class="landing-top hero dash-hero"><div><p class="hero-when">${esc(fmtDate(t, true))} · ${esc(first.term)}${ss.phase === 'during' ? ` · Week ${ss.week}` : ''}</p><h1 class="landing-title hero-sub">${hello}</h1>${guest ? '<p class="muted small hero-note">Every class you take, made simple: what is on the next exam, five-minute lessons and a tutor you can call. Free with a montana.edu email.</p>' : ''}${(() => { const soon = mineIds.map(id => ({ C: Courses[id], ex: nextExam(Courses[id]) })).filter(x => x.ex && x.ex.date >= t).sort((a, b) => a.ex.date.localeCompare(b.ex.date))[0]; if (!soon) return ''; const n = daysBetween(t, soon.ex.date); return `<a class="hero-count" href="#/${soon.C.id}/dashboard"><span class="hc-num count" data-count="${n}">${n}</span><span class="hc-body"><small>day${n === 1 ? '' : 's'} until ${esc(soon.ex.name)}</small><b>${esc(soon.C.short)} · ${esc(soon.ex.dateLabel || fmtDate(soon.ex.date, true))}${App.readiness ? (() => { const r = App.readiness(soon.C.id); return r && r.ok && r.score > 0 ? ` · ${r.score}% ready` : ''; })() : ''}</b></span>${icon('right', 14)}</a>`; })()}</div><div class="row gap-sm hero-actions">${picking ? `<button type="button" class="btn primary sm hero-today hero-pick" data-action="go-pick">${icon('cap', 14)} Pick your classes</button>` : `<a class="btn primary sm hero-today" href="#/today">${icon('flag', 14)} Today</a>`}<a class="btn sm hero-faculty" href="#/teach" title="StudyCat Faculty: write your syllabus and run your class">${icon('file', 14)} For professors</a></div><div class="mascot-slot hero-mascot" data-size="96"></div><div class="px-skyline" aria-hidden="true"></div></header>
@@ -855,7 +868,7 @@
         </div>
       </div>`;
     bind(root, { 'remind-on': async () => { try { await App.auth.savePrefs({ reminder_email: true }); toast('Evening reminders on', 3000); render(); } catch (e) { toast(e.message); } }, 'remind-no': () => { setSetting('remindNudgeDismissed', true); render(); }, 'gs-dismiss': () => { setSetting('gsDismissed', true); render(); }, 'gs-signup': (el, e) => { e.preventDefault(); if (App.auth) App.auth.open('signup'); } });
-    on(root, 'change', 'input[data-cl]', el => { if (!ex) return; const all = store.get('checklists', {}); all[ex.id] = all[ex.id] || {}; all[ex.id][el.dataset.cl] = el.checked; store.set('checklists', all); markActivity(); });
+    on(root, 'change', 'input[data-cl]', el => { if (!ex) return; const all = Object.assign({}, store.get('checklists', {})); all[ex.id] = all[ex.id] || {}; all[ex.id][el.dataset.cl] = el.checked; store.set('checklists', all); markActivity(); });
     Canvas.fill($('#dash-canvas', root), D.id, 6); paintAnnouncement(root);
     if (App.social) { const goS = () => App.social.fillDashboard($('#dash-social', root), D.id); if (App.auth && App.auth.ready) goS(); else if (App.auth) App.auth.onChange(function once() { goS(); }); }
   }

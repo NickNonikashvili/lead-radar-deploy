@@ -3,7 +3,7 @@
    KIN's best-of exam weighting works, and the static pages and API accept them. */
 const T = require('./lib');
 (async () => {
-  const { base, mk, txt, login, hscroll, go: open, log, check } = await T.start();
+  const { base, mk, txt, login, hscroll, go: open, log, check } = await T.start({ freeHome: true });
   /* celebrations (league promotions, level-ups) sit over the page; clear them so clicks land */
   const go = async (p, hash, wait) => { await open(p, hash, wait); await p.evaluate(() => document.querySelectorAll('.celebrate').forEach(e => e.remove())); };
   const setSettings = (p, patch) => p.evaluate(patch => { const s = App.settings(); Object.assign(s, patch); localStorage.setItem('studyhub-settings', JSON.stringify(s)); }, patch);

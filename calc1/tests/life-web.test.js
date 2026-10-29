@@ -17,7 +17,7 @@
    ============================================================ */
 const T = require('./lib');
 (async () => {
-  const { mk, txt, login, api, go, hscroll, check } = await T.start();
+  const { mk, txt, login, api, go, hscroll, check } = await T.start({ freeHome: true });
   const quiet = () => document.addEventListener('DOMContentLoaded', () => { const st = document.createElement('style'); st.textContent = '.celebrate{display:none!important}'; document.head.appendChild(st); });
   const setup = () => { try { const s = JSON.parse(localStorage.getItem('studyhub-settings') || '{}'); s.tourDone = true; s.boFloatSeen = true; s.courses = s.courses || ['calc', 'physics', 'writ']; s.asof = '2026-10-13'; localStorage.setItem('studyhub-settings', JSON.stringify(s)); } catch (e) {} };
   const open = async (w = 1440, h = 900, more = {}) => { const [c, p] = await mk(w, h, Object.assign({ serviceWorkers: 'block', reducedMotion: 'reduce' }, more)); await c.addInitScript(quiet); await c.addInitScript(setup); await go(p, '#/', 900); return [c, p]; };

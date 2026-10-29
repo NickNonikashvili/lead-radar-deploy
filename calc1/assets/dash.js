@@ -153,7 +153,7 @@
 
   const D = { editing: false };
   App.dash.html = () => `<section class="land-sec dash home-dash" id="dash" aria-labelledby="lsec-day"><div class="sec-h dash-top"><h2 class="sec-title" id="lsec-day">${esc(t('Your home'))}</h2><span class="dash-acts"><button class="btn sm" type="button" data-dw="quick">${icon('plus', 13)} ${esc(t('New'))}</button><button class="btn sm" type="button" data-dw="add">${icon('grid', 13)} ${esc(t('Add a widget'))}</button><button class="btn sm${D.editing ? ' primary' : ''}" type="button" data-dw="arrange" aria-pressed="${D.editing}">${icon(D.editing ? 'check' : 'sliders', 13)} ${esc(t(D.editing ? 'Done' : 'Arrange'))}</button></span></div>
-    <div class="dash-edit-bar" id="dash-edit-bar"${D.editing ? '' : ' hidden'}><span class="small">${icon('grid', 13)} ${esc(t('Drag a widget by its handle, resize it from its corner. Widgets can overlap: bring one to the front or send it to the back.'))}</span><span class="row gap-sm"><button class="btn sm ghost" type="button" data-dw="tidy">${esc(t('Tidy up'))}</button><button class="btn sm ghost" type="button" data-dw="home-reset">${esc(t('Start over'))}</button></span></div>
+    <div class="dash-edit-bar" id="dash-edit-bar"${D.editing ? '' : ' hidden'}><span class="small">${icon('grid', 13)} ${esc(t('Drag a widget by its handle, resize it from its corner. Widgets can overlap: bring one to the front or send it to the back.'))}</span><span class="row gap-sm"><button class="btn sm ghost" type="button" data-dw="tidy">${esc(t('Tidy up'))}</button><button class="btn sm ghost" type="button" data-dw="home-reset">${esc(t('Start over'))}</button>${App.homeGrid ? `<button class="btn sm ghost" type="button" data-dw="grid">${esc(t('Use the tidy layout'))}</button>` : ''}</span></div>
     <p class="sr-only" id="dw-keys">${esc(t('With Arrange on, the arrow keys move the widget and Shift with the arrow keys resizes it.'))}</p><p class="sr-only" aria-live="polite" id="dw-say"></p>
     <div class="dash-canvas${D.editing ? ' editing' : ''}" id="dash-canvas"></div></section>`;
 
@@ -259,6 +259,7 @@
       if (k === 'arrange') setEditing(root, !D.editing);
       else if (k === 'add') picker(root);
       else if (k === 'tidy') { const Lx = layout(); Lx.items = tidy(Lx.items); save(Lx); repaint(); say(t('Widgets tidied into a grid')); }
+      else if (k === 'grid') { App.homeGrid.backToGrid(); App.rerender(); }   // back to the designed home (assets/home-grid.js)
       else if (k === 'home-reset') { if (confirm(t('Put your home back as it came?'))) { save(fresh()); repaint(); } }
       else if (k === 'pick') { if (H().setClass) H().setClass(id); App.dash.paint(root, ['next']); }
       else if (k === 'choose') { const pk = document.getElementById('pick-classes'); if (pk) { pk.scrollIntoView({ behavior: 'smooth', block: 'start' }); const f = pk.querySelector('input'); if (f) f.focus({ preventScroll: true }); } else if (App.auth && App.auth.user) App.auth.onboard(true); else location.hash = '#/'; }   // the home page's class picker, or the class list

@@ -1,6 +1,6 @@
 const T = require('./lib');
 (async () => {
-  const { browser, base, errors, mk, txt, login, api, hscroll, go, log, check } = await T.start({ pyodide: true });
+  const { browser, base, errors, mk, txt, login, api, hscroll, go, log, check } = await T.start({ pyodide: true, freeHome: true });
   const setCourses = (p, ids) => p.evaluate(ids => { const s = App.settings(); s.courses = ids; localStorage.setItem('studyhub-settings', JSON.stringify(s)); }, ids);
   const waitStatus = async (p, re, ms = 90000) => { const t0 = Date.now(); while (Date.now() - t0 < ms) { const s = await txt(p, '#py-status'); if (re.test(s)) return s; await p.waitForTimeout(300); } return 'TIMEOUT: ' + await txt(p, '#py-status'); };
   const cardSpans = p => p.$$eval('.dw[data-w="classes"] .dwk', cs => cs.map(c => c.dataset.c));   // Your home's classes widget

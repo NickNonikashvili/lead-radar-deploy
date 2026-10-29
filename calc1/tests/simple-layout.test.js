@@ -1,7 +1,7 @@
 /* Simpler screens: the sidebar in five groups, a short start page (the hero, the steps on a first visit, and Your home: widgets the student arranges), the class dashboard with five tabs, a quiet top bar for newcomers, and the one-line preview note. */
 const T = require('./lib');
 (async () => {
-  const { mk, go, log, check, hscroll } = await T.start({});
+  const { mk, go, log, check, hscroll } = await T.start({ freeHome: true });
   const [c, p] = await mk(1360, 900, { serviceWorkers: 'block' });
 
   // start page, first visit as a guest: first the question of which classes they take, then (once picked) the hero, the steps and the widgets

@@ -225,8 +225,14 @@
     applyServer(course, r.data, r.updated);
   };
   /* ---------- preferences that follow the account (device-local settings such as the GPA calculator, sounds, goal, theme) ---------- */
-  const PREF_KEYS = ['gpa', 'ambient', 'dailyGoal', 'theme', 'liveBg', 'sound', 'phonRate', 'phonVoice_uk', 'phonVoice_us', 'readerVoice', 'readerScroll', 'navOpen', 'seenChangelog', 'todayPlan', 'lastVisit', 'challengeDone', 'lastLessonDay', 'pushOn', 'savedResources', 'guidesRead', 'skin', 'motion', 'geek', 'tourDone', 'recapSeen', 'focusLog', 'focusGoal', 'freezeBank', 'freezeUsed', 'freezeWeeks', 'focusPublic', 'planningEmail', 'lang', 'homeHide', 'tourLayout', 'forumPosted', 'modules', 'navLayout', 'classMenu', 'look', 'startPage', 'customizeTab', 'classCustom', 'makerTab', 'makerTabC', 'homeLayout'];
-  function applyPrefs(prefs, updated) { if (!prefs || typeof prefs !== 'object') return; const s = App.settings(); PREF_KEYS.forEach(k => { if (prefs[k] !== undefined) s[k] = prefs[k]; }); s.prefsUpdated = updated; writeJSON('studyhub-settings', s); if (App.applyTheme) App.applyTheme(); if (prefs.homeLayout !== undefined && App.dash && App.dash.paint && document.querySelector('#view #dash-canvas')) App.dash.paint(document.querySelector('#view'));   // the home arranged on another device
+  const PREF_KEYS = ['gpa', 'ambient', 'dailyGoal', 'theme', 'liveBg', 'sound', 'phonRate', 'phonVoice_uk', 'phonVoice_us', 'readerVoice', 'readerScroll', 'navOpen', 'seenChangelog', 'todayPlan', 'lastVisit', 'challengeDone', 'lastLessonDay', 'pushOn', 'savedResources', 'guidesRead', 'skin', 'motion', 'geek', 'tourDone', 'recapSeen', 'focusLog', 'focusGoal', 'freezeBank', 'freezeUsed', 'freezeWeeks', 'focusPublic', 'planningEmail', 'lang', 'homeHide', 'tourLayout', 'forumPosted', 'modules', 'navLayout', 'classMenu', 'look', 'startPage', 'customizeTab', 'classCustom', 'makerTab', 'makerTabC', 'homeLayout', 'homeGrid', 'wordPuzzle'];
+  // Maps that the server used to send back as [] when they were empty (PHP cannot tell {} from []; api/lib.php
+  // mh_input_json now keeps {}). A name written into a list is lost when it is saved, so an empty list becomes {} again.
+  const DATA_MAPS = ['activity', 'checklists', 'fcAt', 'flashcards', 'freezes', 'highlights', 'lessonsRead', 'mynotes', 'mynotesAt', 'phon', 'practiceDone', 'progress', 'readings'];
+  const PREF_MAPS = ['ambient', 'challengeDone', 'classCustom', 'classMenu', 'focusLog', 'freezeUsed', 'freezeWeeks', 'gpa', 'homeGrid', 'look', 'navLayout', 'navOpen', 'todayPlan', 'wordPuzzle'];
+  const asMaps = (o, keys) => { if (o && typeof o === 'object') keys.forEach(k => { if (Array.isArray(o[k]) && !o[k].length) o[k] = {}; }); return o; };
+  Auth.asMaps = asMaps; App.PREF_MAPS = PREF_MAPS;
+  function applyPrefs(prefs, updated) { if (!prefs || typeof prefs !== 'object') return; asMaps(prefs, PREF_MAPS); const s = App.settings(); PREF_KEYS.forEach(k => { if (prefs[k] !== undefined) s[k] = prefs[k]; }); s.prefsUpdated = updated; writeJSON('studyhub-settings', s); if (App.applyTheme) App.applyTheme(); if (prefs.homeLayout !== undefined && App.dash && App.dash.paint && document.querySelector('#view #dash-canvas')) App.dash.paint(document.querySelector('#view'));   // the home arranged on another device
     if (prefs.classCustom !== undefined) { Object.keys(global.Courses || {}).forEach(id => App.applyVariant(global.Courses[id])); if (App.applyClassColors) App.applyClassColors(); }   // the classes made theirs on another device (assets/maker.js)
     if (prefs.lang && prefs.lang !== App.lang && global.MathubI18n && MathubI18n.codes.includes(prefs.lang)) location.reload(); }   // the language picked on another device
   Auth.prefsPush = function () { if (!Auth.user || Auth.mode !== 'server' || Auth.unreachable) return; clearTimeout(Auth.prefsTimer); Auth.prefsTimer = setTimeout(async () => { const s = App.settings(); const prefs = {}; PREF_KEYS.forEach(k => { if (s[k] !== undefined) prefs[k] = s[k]; }); const updated = Date.now(); s.prefsUpdated = updated; writeJSON('studyhub-settings', s); try { const r = await call('prefs', { prefs, updated }, 'PUT'); if (r.stale) applyPrefs(r.prefs, r.updated); } catch (e) {} }, 2500); };
@@ -272,6 +278,7 @@
   }
   Auth.mergeData = mergeData;
   function applyServer(course, data, updated) {
+    asMaps(data, DATA_MAPS); asMaps(App.store.peek(course), DATA_MAPS);
     const m = meta()[course] || {}; const local = App.store.peek(course); const hasLocal = Object.keys(local).length > 0;
     if (!data) { if (hasLocal) Auth.pushCourse(course).catch(() => {}); return; }
     if (!hasLocal) { App.store.replace(course, data); setMeta(course, { updated, synced: updated }); rerenderIfSafe(course); return; }

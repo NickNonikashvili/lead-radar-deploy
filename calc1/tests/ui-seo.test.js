@@ -1,6 +1,6 @@
 const T = require('./lib');
 (async () => {
-  const { browser, base, errors, mk, txt, login, api, hscroll, go, log, check } = await T.start({});
+  const { browser, base, errors, mk, txt, login, api, hscroll, go, log, check } = await T.start({ freeHome: true });
 
   const [c, p] = await mk(); await go(p, '#/'); await login(p, 'alice.a@montana.edu'); await p.reload(); await p.waitForTimeout(1500); if (await p.$('.celebrate')) await p.keyboard.press('Escape');
   await p.evaluate(() => { const s = App.settings(); delete s.lastVisit; s.courses = ['calc', 'physics', 'precalc', 'writ', 'csci']; localStorage.setItem('studyhub-settings', JSON.stringify(s)); });

@@ -1,7 +1,7 @@
 /* Motion layer: staggered entrances, ring fills, the loading bar, skins and reduce-motion. */
 const T = require('./lib');
 (async () => {
-  const { mk, login, go, log, check, txt } = await T.start({});
+  const { mk, login, go, log, check, txt } = await T.start({ freeHome: true });
   const [c, p] = await mk(1360, 900, { serviceWorkers: 'block' }); await go(p, '#/', 900);
   await p.evaluate(() => { const s = App.settings(); s.courses = ['calc']; localStorage.setItem('studyhub-settings', JSON.stringify(s)); }); await p.reload(); await p.waitForTimeout(900);   // a visitor who picked a class: the widgets, not the class picker, open the page
   check('the home\'s widgets get a staggered entrance', (await p.$$('#dash-canvas .dw.mh-enter')).length >= 1, (await p.$$('#dash-canvas .dw')).length);

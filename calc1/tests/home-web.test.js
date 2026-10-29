@@ -12,7 +12,7 @@
    ============================================================ */
 const T = require('./lib');
 (async () => {
-  const { mk, txt, go, hscroll, check } = await T.start();
+  const { mk, txt, go, hscroll, check } = await T.start({ freeHome: true });
   const setup = asof => { try { const s = JSON.parse(localStorage.getItem('studyhub-settings') || '{}'); s.tourDone = true; s.courses = ['calc', 'physics', 'precalc']; s.lastVisit = { hash: '#/calc/notes/1.3', label: 'Calc I · Notes', course: 'calc', t: Date.now() - 3600000 }; s.appClass = 'calc'; if (asof) s.asof = asof; else delete s.asof; if (!sessionStorage.getItem('kept')) { delete s.homeLayout; sessionStorage.setItem('kept', '1'); } localStorage.setItem('studyhub-settings', JSON.stringify(s)); } catch (e) {} };
   const open = async (w, h, asof) => { const [c, p] = await mk(w, h, { serviceWorkers: 'block' }); await c.addInitScript(setup, asof); await go(p, '#/', 900); await p.evaluate(() => App.addXP(10, { course: 'calc', silent: true })); await p.reload(); await p.waitForTimeout(2200); return [c, p]; };
   const lay = p => p.evaluate(() => App.dash.layout().items);
