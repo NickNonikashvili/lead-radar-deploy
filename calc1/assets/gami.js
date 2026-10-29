@@ -41,12 +41,13 @@
     const c = document.createElement('canvas'); c.className = 'confetti'; c.setAttribute('aria-hidden', 'true'); document.body.appendChild(c); const ctx = c.getContext('2d');
     const dpr = Math.min(2, devicePixelRatio || 1); c.width = innerWidth * dpr; c.height = innerHeight * dpr; ctx.scale(dpr, dpr);
     const colors = opts.colors || ['#2B55B8', '#0E7C86', '#F2C14E', '#E4572E', '#7B61FF', '#2FB36B', '#FF7AB6'];
-    const n = opts.count || 150; const ox = opts.x ?? innerWidth / 2, oy = opts.y ?? innerHeight * 0.32;
+    const n = Math.round((opts.count || 150) * Math.min(1, (innerWidth * innerHeight) / (1280 * 800) + 0.35)); const ox = opts.x ?? innerWidth / 2, oy = opts.y ?? innerHeight * 0.32;
     const P = Array.from({ length: n }, () => { const a = Math.random() * Math.PI * 2, v = 5 + Math.random() * 9; return { x: ox, y: oy, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 7, g: 0.22 + Math.random() * 0.14, w: 6 + Math.random() * 6, h: 4 + Math.random() * 4, r: Math.random() * Math.PI, vr: (Math.random() - 0.5) * 0.3, col: colors[Math.floor(Math.random() * colors.length)], life: 90 + Math.random() * 60 }; });
     let t = 0;
     (function frame() {
-      ctx.clearRect(0, 0, innerWidth, innerHeight); let alive = 0;
-      for (const p of P) { if (t > p.life) continue; alive++; p.vy += p.g; p.vx *= 0.99; p.x += p.vx; p.y += p.vy; p.r += p.vr; ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.r); ctx.globalAlpha = Math.max(0, Math.min(1, (p.life - t) / 30)); ctx.fillStyle = p.col; ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h); ctx.restore(); }
+      ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, c.width, c.height); let alive = 0;
+      // each piece sets the whole transform at once: a save() and restore() per piece cost a phone most of a frame
+      for (const p of P) { if (t > p.life) continue; alive++; p.vy += p.g; p.vx *= 0.99; p.x += p.vx; p.y += p.vy; p.r += p.vr; const cs = Math.cos(p.r) * dpr, sn = Math.sin(p.r) * dpr; ctx.setTransform(cs, sn, -sn, cs, p.x * dpr, p.y * dpr); ctx.globalAlpha = Math.max(0, Math.min(1, (p.life - t) / 30)); ctx.fillStyle = p.col; ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h); }
       t++; if (alive && t < 220) requestAnimationFrame(frame); else c.remove();
     })();
   }
@@ -107,12 +108,14 @@
   let floatPending = 0, floatTimer = 0;
   function floatXP(n) {
     floatPending += n; clearTimeout(floatTimer);
-    floatTimer = setTimeout(() => {
+    floatTimer = setTimeout(() => requestAnimationFrame(() => {   // measured at the start of a frame, before anything is added: no extra layout
       const amt = floatPending; floatPending = 0; if (reduced()) return;
-      const ring = $$('.goal-ring').find(el => el.offsetParent !== null); const el = document.createElement('div'); el.className = 'xp-float'; el.innerHTML = `${App.pixel ? App.pixel('coin', 2) : ''}<span>+${amt} XP</span>`; document.body.appendChild(el);
-      if (ring) { const r = ring.getBoundingClientRect(); el.style.left = (r.left + r.width / 2) + 'px'; el.style.top = (r.bottom + 4) + 'px'; } else { el.style.left = '50%'; el.style.top = '60px'; }
+      const ring = $$('.goal-ring').find(el => el.offsetParent !== null); const r = ring ? ring.getBoundingClientRect() : null;
+      const el = document.createElement('div'); el.className = 'xp-float'; el.innerHTML = `${App.pixel ? App.pixel('coin', 2) : ''}<span>+${amt} XP</span>`;
+      if (r) { el.style.left = (r.left + r.width / 2) + 'px'; el.style.top = (r.bottom + 4) + 'px'; } else { el.style.left = '50%'; el.style.top = '60px'; }
+      document.body.appendChild(el);
       setTimeout(() => el.remove(), 1300);
-    }, 60);
+    }), 60);
   }
   function addXP(n, opts = {}) {
     if (!opts.raw && App.boostActive && App.boostActive()) n *= 2;

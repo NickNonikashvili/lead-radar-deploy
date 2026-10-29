@@ -115,6 +115,15 @@
     if (solT) L.push(solShown ? '  Worked solution (open on the page): ' + clip(solT, 1200) : '  Worked solution (hidden from them; use it to be right, do not give it away unless they ask): ' + clip(solT, 1200));
     return { el, label, short: sh, kind: /^Problem/i.test(lab) ? 'problem' : 'question', state, text: L.join('\n'), prompt };
   }
+  /* the tip only needs what kind of page this is and how many answers are wrong: a glance at the page's classes, with no
+     measuring and no reading. (screen() measures every block on the page; on a long practice set that held a phone's
+     main thread for a third of a second, about six seconds after each answer: right when the next tap came.) */
+  function glance() {
+    const root = $('#view'); if (!root) return null;
+    const its = $$(ITEM, root).filter(el => !el.parentElement.closest(ITEM) && !el.closest('[hidden], .hidden'));
+    const kind = its.some(el => el.classList.contains('fc-card')) ? 'card' : its.some(el => /^Problem/i.test(((($('.q-num', el) || {}).textContent) || '').trim())) ? 'problems' : its.length ? 'questions' : $('#py-code', root) ? 'code' : 'page';
+    return { kind, wrong: its.filter(el => el.classList.contains('wrong')).length };
+  }
   function screen() {
     const root = $('#view'); if (!root) return null;
     const T = texMap(); const r = where();
@@ -215,8 +224,8 @@
     }
     if (settings().boTips === false || F.hint >= 3) return; const key = location.hash.split('?')[0]; if (F.hinted.has(key)) return;
     F.tipT = setTimeout(() => {
-      if (F.open || hidden() || document.hidden) return; const c = safe(screen); if (!c || !['questions', 'problems', 'card', 'code'].includes(c.kind)) return;
-      const wrong = c.items.filter(i => i.state === 'wrong').length;
+      if (F.open || hidden() || document.hidden) return; const c = safe(glance); if (!c || !['questions', 'problems', 'card', 'code'].includes(c.kind)) return;
+      const wrong = c.wrong;
       const t = c.kind === 'card' ? 'Stuck on this card? I can explain it.' : c.kind === 'code' ? 'Code not working? I can look at it.' : wrong ? (wrong === 1 ? 'Missed one? Tap me and we’ll go through it.' : 'Missed a few? Tap me and we’ll go through them.') : c.kind === 'problems' ? 'Stuck on one of these problems? Tap me.' : 'Stuck on one of these questions? Tap me.';
       F.hint++; F.hinted.add(key); tip.innerHTML = `<button type="button" class="bf-tip-b"><span>${esc(t)}</span></button><button type="button" class="bf-tip-x" data-tip="x" aria-label="Hide this tip">${icon('x', 13)}</button>`; tip.hidden = false;
       F.tipT2 = setTimeout(() => { tip.hidden = true; }, 9000);

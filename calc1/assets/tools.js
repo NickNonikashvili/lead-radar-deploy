@@ -153,14 +153,20 @@
       const topics = [...new Set(missed.map(q => q.topic))];
       this.start(root, QZ.generateSet(topics, Math.max(5, missed.length * 2)));
     },
-    paintSession(root) {
-      const s = PQ.session; const box = $('#pq-session', root);
+    barHtml() {
+      const s = PQ.session;
       const answered = Object.keys(s.answers).length, correct = Object.values(s.answers).filter(a => a.ok && !a.assisted).length;
       const done = s.mode === 'practice' ? answered : (s.submitted ? s.questions.length : answered);
       const bar = s.mode === 'practice'
         ? `<div class="score-bar"><span class="stat"><span class="stat-num">${correct}<span class="muted" style="font-size:15px">/${answered}</span></span><span class="stat-label">correct so far · ${s.questions.length} questions</span></span>${(s.combo || 0) >= 2 ? `<span class="combo-chip" key="${s.combo}">${App.icon('fire', 13)} ${s.combo} in a row</span>` : ''}<div class="bar" style="flex:1;min-width:120px"><div class="bar-fill ${answered && correct / answered < 0.6 ? 'bad' : answered && correct / answered < 0.8 ? 'warn' : 'good'}" style="width:${s.questions.length ? 100 * answered / s.questions.length : 0}%"></div></div><button class="btn" data-action="retry-missed">${icon('target', 14)} Retry missed topics</button><button class="btn primary" data-action="new-set">${icon('rotate', 14)} New set</button></div>`
         : s.submitted ? this.summaryHtml(s)
         : `<div class="score-bar"><span class="timer" id="pq-timer">${fmtClock(s.left)}</span><span class="muted small">${answered} / ${s.questions.length} answered · no feedback until you submit</span><button class="btn primary" style="margin-left:auto" data-action="submit">${icon('check', 14)} Submit exam</button></div>`;
+      return bar;
+    },
+    /** practice mode: an answer repaints its own question and the score bar, not the whole set (and its maths) */
+    paintBar(root) { const p = $('#pq-session > .panel', root); if (p) p.innerHTML = this.barHtml(); },
+    paintSession(root) {
+      const s = PQ.session; const box = $('#pq-session', root); const bar = this.barHtml();
       box.innerHTML = `<div class="panel mb-2">${bar}</div><div class="stack">${s.questions.map((q, i) => this.qHtml(q, i)).join('')}</div>${s.mode === 'exam' && !s.submitted ? `<div class="row mt-2" style="justify-content:flex-end"><button class="btn primary" data-action="submit">${icon('check', 14)} Submit exam</button></div>` : ''}${s.capped ? `<div class="mt-2">${App.lockCard('That is the preview: ' + s.questions.length + ' questions per set', `Members get sets of up to 30 questions, timed exam mode, retry-missed drills and per-topic accuracy that follows you across devices.`)}</div>` : ''}`;
       typeset(box); if (App.auth) App.auth.bindLocks(root);
     },
@@ -184,7 +190,7 @@
       const s = PQ.session; if (s.submitted) return; const q = s.questions[qi]; if (s.mode === 'practice' && s.answers[qi]) return;
       const assistedMC = s.mode === 'practice' && s.ladder && (s.ladder[qi] || 0) >= App.ladder(q).length;
       s.answers[qi] = { sel: k, ok: k === q.answer, assisted: assistedMC };
-      if (s.mode === 'practice') { const ok = s.answers[qi].ok; if (!assistedMC) App.recordAnswer(q.topic, ok); else App.markActivity(); if (!ok && App.recordMistake) App.recordMistake(q, D.id, 'practice'); this.combo(s, ok && !assistedMC); this.paintSession(root); this.flash(root, q, ok); this.scrollTo(root, q); }
+      if (s.mode === 'practice') { const ok = s.answers[qi].ok; if (!assistedMC) App.recordAnswer(q.topic, ok); else App.markActivity(); if (!ok && App.recordMistake) App.recordMistake(q, D.id, 'practice'); this.combo(s, ok && !assistedMC); this.repaintQ(root, qi); this.paintBar(root); this.flash(root, q, ok); this.scrollTo(root, q); }
       else this.repaintQ(root, qi);
     },
     answerNum(root, qi) {
@@ -194,7 +200,7 @@
       const tol = q.tol ? Math.max(q.tol * Math.abs(q.answer), 1e-9) : Math.max(0.011, 0.005 * Math.abs(q.answer));
       const assistedNum = s.mode === 'practice' && s.ladder && (s.ladder[qi] || 0) >= App.ladder(q).length;
       s.answers[qi] = { raw, val: v, ok: Math.abs(v - q.answer) <= tol, assisted: assistedNum };
-      if (s.mode === 'practice') { const ok = s.answers[qi].ok; if (!assistedNum) App.recordAnswer(q.topic, ok); else App.markActivity(); if (!ok && App.recordMistake) App.recordMistake(q, D.id, 'practice'); this.combo(s, ok && !assistedNum); this.paintSession(root); this.flash(root, q, ok); this.scrollTo(root, q); }
+      if (s.mode === 'practice') { const ok = s.answers[qi].ok; if (!assistedNum) App.recordAnswer(q.topic, ok); else App.markActivity(); if (!ok && App.recordMistake) App.recordMistake(q, D.id, 'practice'); this.combo(s, ok && !assistedNum); this.repaintQ(root, qi); this.paintBar(root); this.flash(root, q, ok); this.scrollTo(root, q); }
       else this.repaintQ(root, qi);
     },
     repaintQ(root, qi, ok) { const q = PQ.session.questions[qi]; const old = $(`#qc-${q.id}`, root); if (!old) return; const tmp = document.createElement('div'); tmp.innerHTML = this.qHtml(q, qi); old.replaceWith(tmp.firstElementChild); const nq = $(`#qc-${q.id}`, root); if (nq && ok !== undefined) nq.classList.add(ok ? 'pop' : 'shake'); typeset(nq); },

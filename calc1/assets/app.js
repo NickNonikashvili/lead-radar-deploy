@@ -137,7 +137,10 @@
   const parseISO = iso => { const [y, m, d] = iso.split('-').map(Number); return new Date(y, m - 1, d); };
   const toISO = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   const addDays = (d, n) => { const x = new Date(d); x.setDate(x.getDate() + n); return x; };
-  const asOf = () => { const v = settings().asof; return v && /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : null; };
+  // the date StudyCat is pretending it is (settings.asof, for testing): read on every todayISO(), so the settings are
+  // parsed again only when they changed
+  let asofRaw, asofVal = null;
+  const asOf = () => { let raw = null; try { raw = localStorage.getItem('studyhub-settings'); } catch (e) {} if (raw !== asofRaw) { asofRaw = raw; const v = readJSON('studyhub-settings').asof; asofVal = v && /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : null; } return asofVal; };
   const today = () => { const ov = asOf(); const d = ov ? parseISO(ov) : new Date(); d.setHours(0, 0, 0, 0); return d; };
   const todayISO = () => toISO(today());
   const daysBetween = (a, b) => Math.round((parseISO(b) - parseISO(a)) / 86400000);
