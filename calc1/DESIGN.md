@@ -357,6 +357,17 @@ The same cards as the Tools page (2px border, 16px radius, a 40px Accent Soft ic
 - **Don't** copy Khan Academy's, Duolingo's or Brilliant's faces, colours or mascots; match their craft.
 - **Don't** spend gold, coral or pine on decoration.
 
+## Motion pages: the first-visit start page and the study guides
+
+The two public front doors move more than the rest of StudyCat, because a visitor is deciding whether to stay; the study pages keep the one-meaningful-motion-per-screen rule. Built with the motion-web-design skill (ORGANIC ODYSSEY timings: LIFT 0.7 s power2.out, cards 120 ms apart, headline lines 140 ms apart) on StudyCat's own tokens, not the skill's dark presets.
+
+- **The story** (`assets/start.js`, `assets/start.css`), for someone not signed in with no class picked: the Big Sky hero (painted sky, sun or moon, three Bridger ridges, the 8-bit skyline, Bo), four real numbers in Gabarito, three gold steps on a dotted trail, the class picker, six white cards of what is inside, six questions and a last call where the sun sets behind the range. Headlines are sentence case with no kickers; the hero keeps Pick your classes and For professors.
+- **The motion vocabulary.** REVEAL: the hero's two lines rise out of their own box, in CSS so the headline (the largest content) paints at once. LIFT: each section's heading and parts rise 40px and fade in, one after another; the cards come in from alternate sides. COUNT: the numbers climb to their value once. PULSE: the main buttons spring in on entrance (back.out); hover and press stay the site's own (no hover lift or glow). The signature: the ridges move at three depths as you leave the hero, the sun sinks, and at the end it sets behind the range; the trail draws itself (a mask over the dotted path, so it stays dotted).
+- **Tiers.** Wide screens: GSAP + ScrollTrigger. Phones, or GSAP slower than 2.5 s: a scroll check adds `.mo-in`, CSS fades. Reduce motion: nothing hidden, nothing moved.
+- **Rules that keep it honest.** Only parts that start below the fold are hidden. A part reached by Tab shows at once (`.mo-now`). The page never scrolls sideways while cards slide in (`overflow-x: clip`). Layout shift stays under 0.1.
+- **Where this differs from the skill, on purpose.** No Lenis smooth scroll: StudyCat's native scroll carries anchor jumps, the focus nudge under the top bar, popovers that close on scroll, and screen readers. No Vite build: the site has none, so GSAP is the vendored file loaded on demand. No Unsplash photos or video slots: the page shows StudyCat's own illustration (and the security policy allows images from the site only). Hover does not scale or lift (DESIGN.md's press-down rule). Eyebrow kickers are dropped (the Sentence Case Rule).
+- **The study guides** (`assets/learn-motion.js`, the end of `assets/seo.css`): the header gets a soft shadow once you scroll, a 3px reading line in the page's accent fills as you read a topic, parts below the fold lift in in batches, the class cards' counts climb, and the worked solution eases open. Their parchment look stays.
+
 ## The planner pages and Your day
 
 The planner (tasks, timetable, calendar, time tracker, projects, habits, goals, wheel of life, journal, money, career, portfolio) is Operate surface: scanability first, Big Sky in the details. Styles live in `assets/life.css`.

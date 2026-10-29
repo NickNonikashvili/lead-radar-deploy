@@ -7,7 +7,7 @@ const T = require('./lib');
   // start page, first visit as a guest: first the question of which classes they take, then (once picked) the hero, the steps and the widgets
   await go(p, '#/', 1500);
   check('a brand-new visitor is asked which classes they take', await p.evaluate(() => !!document.querySelector('#pick-classes') && !document.querySelector('.start-steps')));
-  const first = await p.evaluate(() => [...document.querySelectorAll('#dash-canvas > .dw')].map(w => w.dataset.w));   // a first visit's widgets, before any class is picked
+  const first = await p.evaluate(() => ({ widgets: document.querySelectorAll('#dash-canvas > .dw').length, story: !!document.querySelector('.mo-page'), bo: !!document.querySelector('.mo-page a[href="#/max"]'), guides: !!document.querySelector('.mo-page a[href="/learn/"]') }));   // a first visit, before any class is picked: the story of StudyCat (assets/start.js)
   const pick = pg => pg.evaluate(() => { const s = App.settings(); s.courses = ['calc', 'physics', 'writ', 'csci']; localStorage.setItem('studyhub-settings', JSON.stringify(s)); });
   await pick(p); await p.reload(); await p.waitForTimeout(1500);
   const land = await p.evaluate(() => {
@@ -17,7 +17,7 @@ const T = require('./lib');
   });
   log('start page:', JSON.stringify(land));
   check('the start page is the hero, three steps and Your home: one section of widgets', land.secs.join('|') === 'Your home' && land.steps === 3, land.secs);
-  check('a first visit\'s home: the classes first, then Bo and the guides; once picked, their rows', first[0] === 'classes' && first.includes('bo') && first.includes('guides') && land.rows > 3, { first, rows: land.rows });
+  check('a first visit gets the story of StudyCat instead of empty widgets, with Bo\'s demo and the guides; once picked, their rows', first.story && first.widgets === 0 && first.bo && first.guides && land.rows > 3, { first, rows: land.rows });
   check('the hero keeps Today and For professors; search, focus sounds, the account and the theme are in the header on every page', land.hero.length === 2 && /hero-today/.test(land.hero[0]) && land.hero[1] === 'hero-faculty', land.hero);
   check('visitors get one line on Bo that opens the one-minute demo', land.bo === '#/max', land.bo);
   check('no learning path and no scrolling ticker on the start page', !land.path && !land.ticker);

@@ -69,6 +69,8 @@ const AXE = fs.readFileSync(path.join(__dirname, 'node_modules', 'axe-core', 'ax
   let sent = null; await p.route(/r=verify\b/, async r => { sent = JSON.parse(r.request().postData() || '{}'); await r.continue(); });
   await p.fill('#au-code', '123 456'); await p.click('#auth-form button[type="submit"]'); await p.waitForTimeout(900);
   check('a pasted "123 456" is sent as 123456', sent && sent.code === '123456', sent);
+  await p.keyboard.press('Escape'); await p.waitForTimeout(500);
+  check('Escape closes the dialog', !(await p.$('#auth-modal')));
   await c.close();
   await T.finish();
 })();

@@ -36,7 +36,8 @@
   }
   App.motionRender = function (root) {
     if (!root || reduced()) return;
-    const els = $$(SEL, root).filter(el => !el.closest('.mh-enter, .mh-reveal') || el.matches('.panel, .course-card')); const vh = global.innerHeight || 800;
+    // the first-visit start page moves itself (assets/start.js)
+    const els = $$(SEL, root).filter(el => !el.closest('.mo-page') && (!el.closest('.mh-enter, .mh-reveal') || el.matches('.panel, .course-card'))); const vh = global.innerHeight || 800;
     let k = 0; els.forEach(el => { if (el.classList.contains('mh-enter') || el.classList.contains('mh-reveal')) return; const r = el.getBoundingClientRect(); if (r.top < vh + 40 && k < 18) { el.style.setProperty('--i', k++); el.classList.add('mh-enter'); } else { el.classList.add('mh-reveal'); const o = observer(); if (o) o.observe(el); else el.classList.add('mh-enter'); } });
     // rings: draw from empty to their value
     $$('.ring-fg', root).forEach(c => { const dash = parseFloat(c.getAttribute('stroke-dasharray')); if (!dash || c.classList.contains('ring-anim')) return; c.style.setProperty('--ring-c', dash); c.classList.add('ring-anim'); });

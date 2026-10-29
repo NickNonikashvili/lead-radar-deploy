@@ -113,8 +113,8 @@ const T = require('./lib');
 
   // a first visit: the classes and the three steps
   const [c4, f] = await mk(1360, 900, { serviceWorkers: 'block' }); await go(f, '#/', 1500);
-  const fw = await f.$$eval('#dash-canvas > .dw', w => w.map(x => x.dataset.w));
-  check('a first visit asks which classes they take first, then the classes, Bo and the guides', fw[0] === 'classes' && fw.includes('bo') && !fw.includes('next') && !!(await f.$('#pick-classes')) && !(await f.$('.start-steps')), fw);
+  const fw = await f.evaluate(() => ({ widgets: document.querySelectorAll('#dash-canvas > .dw').length, story: !!document.querySelector('.mo-page'), bo: !!document.querySelector('.mo-page a[href="#/max"]'), guides: !!document.querySelector('.mo-page a[href="/learn/"]') }));
+  check('a first visit gets the story of StudyCat (assets/start.js): the class picker, Bo\'s demo and the guides, no empty widgets', fw.story && fw.widgets === 0 && fw.bo && fw.guides && !!(await f.$('#pick-classes')) && !(await f.$('.start-steps')), fw);
   await c4.close();
   await T.finish();
 })();

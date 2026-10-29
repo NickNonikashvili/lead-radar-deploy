@@ -314,6 +314,7 @@
     paintModal();
   };
   Auth.close = () => { const m = $('#auth-modal'); if (m) App.dismiss(m); };
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && $('#auth-modal')) Auth.close(); });   // Escape closes it, like every dialog, wherever the focus is
   function paintModal() {
     const m = $('#auth-modal'); if (!m) return;
     const offline = Auth.mode === 'offline';
@@ -373,6 +374,8 @@
     $$('#auth-form button, #auth-form input').forEach(x => x.disabled = b);
     const go = $('#auth-form button[type="submit"]'); if (!go) return;
     if (b && BUSY[M.state]) { go.dataset.label = go.innerHTML; go.textContent = BUSY[M.state]; } else if (!b && go.dataset.label) { go.innerHTML = go.dataset.label; delete go.dataset.label; }
+    // disabling the focused button drops focus to the page: give it back to the form
+    if (!b && (!document.activeElement || document.activeElement === document.body)) go.focus();
   }
   // what can be checked before asking the server: a missing or malformed field is named, and its field gets focus
   function precheck(v, email) {

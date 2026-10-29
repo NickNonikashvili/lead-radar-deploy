@@ -1,0 +1,156 @@
+/* ============================================================
+   StudyCat — the start page for a first visit (assets/start.js)
+   A visitor who has not signed in or picked a class gets the whole
+   story of StudyCat on one page: the Big Sky hero, the numbers, the
+   three steps, the class picker, what is inside, questions and a last
+   call to start. Motion vocabulary (motion-web-design, ORGANIC
+   ODYSSEY timings on StudyCat's own tokens): LIFT for sections, REVEAL
+   lines for the headline, COUNT for the numbers, PULSE for the buttons'
+   entrance, and the ridges of the Bridger Range in parallax as you
+   scroll. Everything here is decorative: with Reduce motion the page
+   is simply there (no .mo-anim, no .mo-on).
+   ============================================================ */
+
+/* ---------- the hero: a painted sky, the sun, clouds and three ridges ---------- */
+.mo-page { --mo-sky-top: #BFDDFF; --mo-sky-mid: #DDEEFF; --mo-sky-low: #F3F9FF; --mo-r1: color-mix(in srgb, var(--accent) 22%, #CFE2FA); --mo-r2: color-mix(in srgb, var(--accent) 40%, #B9D3F4); --mo-r3: color-mix(in srgb, #22A447 46%, #E8F2EA); --mo-sun: #FFC629; }
+:root[data-theme="dark"] .mo-page { --mo-sky-top: #0B1322; --mo-sky-mid: #10203A; --mo-sky-low: #142036; --mo-r1: #1B2B48; --mo-r2: #213760; --mo-r3: #1D3A33; --mo-sun: #EEF3FA; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .mo-page { --mo-sky-top: #0B1322; --mo-sky-mid: #10203A; --mo-sky-low: #142036; --mo-r1: #1B2B48; --mo-r2: #213760; --mo-r3: #1D3A33; --mo-sun: #EEF3FA; } }
+
+:root:not([data-skin]):not([data-app]) .landing-top.hero.mo-hero { position: relative; display: block; min-height: clamp(540px, 76vh, 700px); margin-bottom: 0; padding: clamp(28px, 6vh, 64px) clamp(22px, 4vw, 56px) 200px; overflow: hidden; border-radius: 24px; border: 1px solid var(--border); background: linear-gradient(180deg, var(--mo-sky-top) 0%, var(--mo-sky-mid) 52%, var(--mo-sky-low) 100%); }
+:root:not([data-skin]):not([data-app]) .landing-top.hero.mo-hero::before, :root:not([data-skin]):not([data-app]) .landing-top.hero.mo-hero::after { display: none; }
+:root .landing-top.hero.mo-hero > .mo-hero-copy { position: relative; z-index: 3; max-width: min(600px, 100%); padding-right: 0; }
+:root .landing-top.hero.mo-hero .hero-when { font-size: 14.5px; color: var(--ink-2); margin: 0 0 14px; }
+:root .landing-top.hero.mo-hero .landing-title.mo-h1 { margin: 0; font-family: var(--font-display); font-weight: 800; font-size: clamp(38px, 5.4vw, 64px); line-height: 1.02; letter-spacing: -0.03em; color: var(--ink); background: none; -webkit-text-fill-color: currentColor; animation: none; max-width: none; }
+.mo-line { display: block; overflow: hidden; padding-bottom: 0.06em; }
+.mo-line > span { display: block; }
+.mo-line.mo-accent > span { color: var(--accent); }
+:root .landing-top.hero.mo-hero .mo-sub { margin: 18px 0 0; max-width: 46ch; font-size: clamp(16px, 1.4vw, 18.5px); line-height: 1.55; color: var(--ink-2); }
+.landing-top.hero.mo-hero .hero-actions { position: static; margin-top: 26px; flex-wrap: wrap; animation: none; }
+:root .landing-top.hero.mo-hero .hero-actions .btn { min-height: 46px; padding: 11px 20px; font-size: 15.5px; border-radius: 14px; }
+:root .landing-top.hero.mo-hero .mo-note { margin: 14px 0 0; color: var(--muted); }
+
+.mo-scene { position: absolute; inset: 0; z-index: 1; pointer-events: none; }
+.mo-sun { position: absolute; right: 16%; top: 16%; width: 92px; height: 92px; border-radius: 50%; background: var(--mo-sun); box-shadow: 0 0 0 18px color-mix(in srgb, var(--mo-sun) 20%, transparent), 0 0 90px 30px color-mix(in srgb, var(--mo-sun) 30%, transparent); }
+.mo-cloud { position: absolute; height: 26px; border-radius: 999px; background: rgba(255, 255, 255, 0.88); }
+.mo-cloud::before, .mo-cloud::after { content: ""; position: absolute; bottom: 8px; border-radius: 50%; background: inherit; }
+.mo-cloud::before { left: 18%; width: 46%; height: 34px; }
+.mo-cloud::after { left: 46%; width: 34%; height: 26px; }
+.mo-cloud.c1 { top: 12%; left: 54%; width: 120px; }
+.mo-cloud.c2 { top: 30%; left: 80%; width: 84px; opacity: 0.8; }
+.mo-cloud.c3 { top: 8%; left: 36%; width: 64px; opacity: 0.6; }
+:root[data-theme="dark"] .mo-cloud { background: rgba(255, 255, 255, 0.07); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .mo-cloud { background: rgba(255, 255, 255, 0.07); } }
+.mo-ridge { position: absolute; left: -10%; bottom: 0; width: 120%; display: block; }
+.mo-ridge.r1 { height: 58%; } .mo-ridge.r2 { height: 42%; } .mo-ridge.r3 { height: 26%; }
+.mo-ridge.r1 path { fill: var(--mo-r1); } .mo-ridge.r2 path { fill: var(--mo-r2); } .mo-ridge.r3 path { fill: var(--mo-r3); }
+:root .landing-top.hero.mo-hero .px-skyline { z-index: 2; }
+:root .landing-top.hero.mo-hero .hero-mascot.mo-bo { right: clamp(18px, 7vw, 120px); bottom: 26px; z-index: 3; }
+
+/* the entrance (CSS, so the headline paints at once: it is the page's largest content) */
+@keyframes moRise { from { transform: translateY(105%); } to { transform: none; } }
+@keyframes moLift { from { opacity: 0; transform: translateY(var(--mo-from, 24px)); } to { opacity: 1; transform: none; } }
+@keyframes moPulse { 0% { opacity: 0; transform: scale(0.88); } 100% { opacity: 1; transform: none; } }
+@keyframes moSunUp { from { transform: translateY(60px); opacity: 0.4; } to { transform: none; opacity: 1; } }
+@keyframes moRidgeUp { from { transform: translateY(70px); } to { transform: none; } }
+@keyframes moHop { 0% { opacity: 0; transform: translateY(40px); } 60% { opacity: 1; transform: translateY(-10px); } 80% { transform: translateY(2px); } 100% { transform: none; } }
+@keyframes moDrift { from { transform: translateX(0); } to { transform: translateX(-60px); } }
+:root .mo-anim .landing-top.hero.mo-hero .hero-when { animation: moLift 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) both; --mo-from: 16px; }
+.mo-anim .mo-line > span { animation: moRise 0.7s cubic-bezier(0.215, 0.61, 0.355, 1) both; animation-delay: calc(0.12s + var(--i, 0) * 0.14s); }
+:root .mo-anim .landing-top.hero.mo-hero .mo-sub { animation: moLift 0.5s 0.42s cubic-bezier(0.25, 0.46, 0.45, 0.94) both; }
+:root .mo-anim .landing-top.hero.mo-hero .hero-actions > :first-child { animation: moPulse 0.5s 0.58s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+:root .mo-anim .landing-top.hero.mo-hero .hero-actions > :not(:first-child), :root .mo-anim .landing-top.hero.mo-hero .mo-note { animation: moLift 0.35s 0.72s ease-out both; --mo-from: 12px; }
+.mo-anim .mo-sun { animation: moSunUp 1.2s 0.1s cubic-bezier(0.215, 0.61, 0.355, 1) both; }
+.mo-anim .mo-ridge { animation: moRidgeUp 0.9s cubic-bezier(0.215, 0.61, 0.355, 1) both; }
+.mo-anim .mo-ridge.r1 { animation-delay: 0.2s; } .mo-anim .mo-ridge.r2 { animation-delay: 0.3s; } .mo-anim .mo-ridge.r3 { animation-delay: 0.4s; }
+.mo-anim .mo-bo { animation: moHop 0.8s 0.95s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+.mo-anim .mo-cloud { animation: moDrift 40s linear infinite alternate; }
+.mo-anim .mo-cloud.c2 { animation-duration: 56s; } .mo-anim .mo-cloud.c3 { animation-duration: 70s; }
+
+/* ---------- sections ---------- */
+.mo-sec { margin: clamp(56px, 9vw, 112px) 0 0; }
+.mo-h2 { margin: 0 0 14px; font-family: var(--font-display); font-weight: 800; font-size: clamp(28px, 3.6vw, 44px); line-height: 1.08; letter-spacing: -0.025em; color: var(--ink); max-width: 24ch; }
+.mo-lead { margin: 0 0 30px; max-width: 58ch; font-size: 17px; line-height: 1.6; color: var(--ink-2); }
+
+/* the numbers (COUNT) */
+.mo-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-top: 22px; }
+.mo-stat { padding: 20px 20px 18px; border: 2px solid var(--border); border-radius: 18px; background: var(--surface); }
+.mo-num { display: block; font-family: var(--font-display); font-weight: 800; font-size: clamp(32px, 4vw, 48px); line-height: 1; letter-spacing: -0.02em; color: var(--accent); font-variant-numeric: tabular-nums; }
+.mo-stat > span { display: block; margin-top: 8px; font-size: 14.5px; font-weight: 600; color: var(--ink-2); }
+
+/* three steps on a trail that draws itself */
+.mo-trail { position: relative; }
+.mo-trail-path { position: absolute; left: 0; right: 0; top: 4px; width: 100%; height: 64px; overflow: visible; }
+.mo-trail-path .mo-dots { fill: none; stroke: #A86B3C; stroke-width: 4; stroke-linecap: round; stroke-dasharray: 1 13; vector-effect: non-scaling-stroke; }
+.mo-trail-path .mo-draw { fill: none; stroke: #fff; stroke-width: 24; stroke-dasharray: 1; stroke-dashoffset: 0; }   /* the mask that reveals the dotted trail (pathLength 1) */
+.mo-steps { position: relative; list-style: none; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; margin: 0; padding: 0; }
+.mo-step { padding: 0 6px 0 0; }
+.mo-step-n { display: grid; place-items: center; width: 56px; height: 56px; margin: 8px 0 18px; border-radius: 50%; background: #FFC629; color: #3D2C00; font-family: var(--font-display); font-weight: 800; font-size: 24px; box-shadow: 0 4px 0 #E0A800; }
+.mo-step b { display: block; font-family: var(--font-display); font-size: 21px; font-weight: 800; color: var(--ink); }
+.mo-step small { display: block; margin-top: 6px; font-size: 15.5px; line-height: 1.55; color: var(--ink-2); max-width: 32ch; }
+
+/* what is inside */
+.mo-inside { overflow-x: clip; }   /* the cards slide in from the sides: never wider than the page meanwhile */
+.mo-cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+.mo-card { padding: 22px 22px 20px; border: 2px solid var(--border); border-radius: 20px; background: var(--surface); }
+.mo-card .mo-ic { display: grid; place-items: center; width: 44px; height: 44px; margin-bottom: 14px; border-radius: 12px; background: var(--accent-soft, color-mix(in srgb, var(--accent) 12%, var(--surface))); color: var(--accent); }
+.mo-card h3 { margin: 0 0 6px; font-family: var(--font-display); font-size: 20px; font-weight: 800; color: var(--ink); }
+.mo-card p { margin: 0; font-size: 15.5px; line-height: 1.55; color: var(--ink-2); }
+.mo-card a { display: inline-block; margin-top: 10px; font-weight: 700; }
+.mo-more { margin: 22px 0 0; color: var(--ink-2); }
+.mo-page .pick-classes { margin-top: clamp(40px, 6vw, 72px); }
+
+/* questions (native details, eased open by start.js when GSAP is here) */
+.mo-faq { max-width: 820px; }
+.mo-faq details { border-bottom: 2px solid var(--border); }
+.mo-faq summary { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 56px; padding: 14px 2px; cursor: pointer; list-style: none; font-family: var(--font-display); font-size: 19px; font-weight: 800; color: var(--ink); }
+.mo-faq summary::-webkit-details-marker { display: none; }
+.mo-faq summary::after { content: ""; flex: none; width: 12px; height: 12px; border-right: 3px solid var(--accent); border-bottom: 3px solid var(--accent); transform: rotate(45deg) translate(-3px, -3px); transition: transform 0.25s ease; }
+.mo-faq details[open] summary::after { transform: rotate(-135deg) translate(-3px, -3px); }
+.mo-faq summary:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; border-radius: 8px; }
+.mo-faq .mo-a { overflow: hidden; }
+.mo-faq .mo-a p { margin: 0; padding: 0 2px 18px; max-width: 64ch; font-size: 16px; line-height: 1.6; color: var(--ink-2); }
+
+/* the last call: the sun sets behind the range */
+.mo-final { position: relative; margin: clamp(64px, 9vw, 120px) 0 40px; padding: 120px clamp(18px, 4vw, 48px) 40px; overflow: hidden; border-radius: 24px; border: 1px solid var(--border); background: linear-gradient(180deg, var(--mo-sky-top), var(--mo-sky-low)); }
+.mo-final .mo-scene { z-index: 0; }
+.mo-final .mo-sun { right: auto; left: 18%; top: 28%; }
+.mo-final .mo-ridge.r1 { height: 70%; } .mo-final .mo-ridge.r2 { height: 52%; } .mo-final .mo-ridge.r3 { height: 34%; }
+.mo-final-card { position: relative; z-index: 1; max-width: 560px; margin: 0 auto; padding: 28px 28px 26px; border: 2px solid var(--border); border-radius: 22px; background: var(--surface); text-align: center; }
+.mo-final-card .mo-h2 { margin: 0 auto 10px; }
+.mo-final-card p { margin: 0 auto 20px; max-width: 42ch; color: var(--ink-2); font-size: 16.5px; line-height: 1.55; }
+.mo-final-card .row { justify-content: center; flex-wrap: wrap; }
+.mo-final-card .btn { min-height: 46px; padding: 11px 20px; font-size: 15.5px; border-radius: 14px; }
+
+/* ---------- scroll reveal: hidden only once start.js has taken over (.mo-on), shown when in view (.mo-in) ---------- */
+.mo-page.mo-on [data-mo]:not(.mo-in) { opacity: 0; transform: translateY(var(--mo-from, 32px)); }
+.mo-page.mo-on [data-mo].mo-now { transition: none; }   /* focus got there first: shown at once */
+.mo-page.mo-on.mo-io [data-mo]:not(.mo-now) { transition: opacity 0.55s ease-out, transform 0.6s cubic-bezier(0.215, 0.61, 0.355, 1); transition-delay: calc(var(--k, 0) * 90ms); }
+.mo-page.mo-on .mo-trail:not(.mo-in) .mo-draw { stroke-dashoffset: 1; }
+.mo-page.mo-on.mo-io .mo-trail .mo-draw { transition: stroke-dashoffset 1.4s cubic-bezier(0.65, 0, 0.35, 1) 0.2s; }
+
+/* ---------- phones ---------- */
+@media (max-width: 767px) {
+  :root:not([data-skin]):not([data-app]) .landing-top.hero.mo-hero { min-height: 0; padding: 26px 18px 200px; border-radius: 20px; }
+  :root .landing-top.hero.mo-hero .landing-title.mo-h1 { font-size: clamp(34px, 10vw, 44px); }
+  :root .landing-top.hero.mo-hero .hero-actions .btn { flex: 1 1 auto; justify-content: center; }
+  .mo-sun { width: 50px; height: 50px; right: 12%; top: auto; bottom: 112px; box-shadow: 0 0 0 12px color-mix(in srgb, var(--mo-sun) 20%, transparent), 0 0 50px 16px color-mix(in srgb, var(--mo-sun) 26%, transparent); }
+  .mo-cloud.c1 { top: auto; bottom: 132px; left: 8%; width: 84px; } .mo-cloud.c2, .mo-cloud.c3 { display: none; }
+  .mo-ridge.r1 { height: 150px; } .mo-ridge.r2 { height: 112px; } .mo-ridge.r3 { height: 72px; }
+  :root .landing-top.hero.mo-hero .hero-mascot.mo-bo { right: 14px; bottom: 18px; }
+  .mo-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .mo-stat { padding: 16px 14px 14px; }
+  .mo-steps, .mo-cards { grid-template-columns: 1fr; }
+  .mo-trail-path { display: none; }
+  .mo-step { display: grid; grid-template-columns: 56px 1fr; column-gap: 14px; align-items: start; }
+  .mo-step-n { grid-row: span 2; margin: 0; }
+  .mo-final { padding: 96px 14px 18px; }
+  .mo-final-card { padding: 22px 18px; }
+  .mo-final .mo-ridge.r1 { height: 150px; } .mo-final .mo-ridge.r2 { height: 110px; } .mo-final .mo-ridge.r3 { height: 70px; }
+}
+@media (min-width: 768px) and (max-width: 1100px) { .mo-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); } .mo-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+/* ---------- Reduce motion: the page is simply there ---------- */
+@media (prefers-reduced-motion: reduce) { .mo-anim *, .mo-page.mo-on [data-mo] { animation: none !important; transition: none !important; } .mo-page.mo-on [data-mo]:not(.mo-in) { opacity: 1; transform: none; } .mo-page.mo-on .mo-trail .mo-draw { stroke-dashoffset: 0; } }
+:root[data-motion="off"] .mo-anim *, :root[data-motion="off"] .mo-page.mo-on [data-mo] { animation: none !important; transition: none !important; }
+:root[data-motion="off"] .mo-page.mo-on [data-mo]:not(.mo-in) { opacity: 1; transform: none; }
+:root[data-motion="off"] .mo-page.mo-on .mo-trail .mo-draw { stroke-dashoffset: 0; }

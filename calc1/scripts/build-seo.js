@@ -78,6 +78,7 @@ function page(o) {
 <link rel="apple-touch-icon" sizes="180x180" href="/assets/icon-180.png">
 <link rel="stylesheet" href="/assets/fonts.css?v=${BUILD}">
 <link rel="stylesheet" href="/assets/seo.css?v=${BUILD}">
+<script src="/assets/learn-motion.js?v=${BUILD}" defer></script>
 ${hasTex ? `<script src="/assets/mathjax-static.js?v=${BUILD}"></script>
 <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3.2.2/es5/tex-svg.js"></script>` : ''}
 <script type="application/ld+json">${JSON.stringify(ld)}</script>
@@ -134,7 +135,7 @@ ${units}`;
 }
 
 function hubPage() {
-  const cards = ORDER.map(c => { const C = Courses[c]; return `<a class="s-card" href="${courseUrl(c)}"><div class="s-eyebrow">${esc(C.code)} · ${esc(KIND[c] || '')}</div><h2>${esc(C.name)}</h2><p>${esc(BLURB[c] || C.tagline || '')}</p><small>${C.SECTIONS.length} topics${C.FLASHCARDS && C.FLASHCARDS.length ? ` · ${C.FLASHCARDS.length} flashcards` : ''}${C.quiz ? ' · endless practice' : ''}</small></a>`; }).join('');
+  const cards = ORDER.map(c => { const C = Courses[c]; return `<a class="s-card" href="${courseUrl(c)}"><div class="s-eyebrow">${esc(C.code)} · ${esc(KIND[c] || '')}</div><h2>${esc(C.name)}</h2><p>${esc(BLURB[c] || C.tagline || '')}</p><small><span data-count="${C.SECTIONS.length}">${C.SECTIONS.length}</span> topics${C.FLASHCARDS && C.FLASHCARDS.length ? ` · <span data-count="${C.FLASHCARDS.length}">${C.FLASHCARDS.length}</span> flashcards` : ''}${C.quiz ? ' · endless practice' : ''}</small></a>`; }).join('');
   const body = `<div class="s-eyebrow">Montana State University · Bozeman · Fall 2026</div>
 <h1>Free study guides for Montana State classes</h1>
 <p class="s-lead">StudyCat turns each class syllabus into topic-by-topic notes, practice questions, flashcards and a deadline calendar. Pick a class below to read the study pages, or open the app to practice.</p>
