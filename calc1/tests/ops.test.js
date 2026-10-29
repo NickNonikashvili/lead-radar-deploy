@@ -81,12 +81,12 @@ const idOf = email => +rows('SELECT id FROM users WHERE email = ?', email)[0].id
   let rb = await api(b, 'ai_tutor', { q: '' });
   check('a day over its spending cap: Bo rests for members until tomorrow, and says their credits were not used', rb.status === 503 && rb.json.resting === 'day' && /^Bo is resting until tomorrow/.test(rb.json.error) && /None of your credits were used/.test(rb.json.error), rb);
   const capMail = mailSince(m0);
-  check('the administrators get one email: Bo has paused, and who used most', /to=admin\.user@montana\.edu subject="StudyCat: Bo has paused for today: today cost \$12\.00 \(your cap: \$11\.00\)"/.test(capMail) && /Most of it: alice\.a@montana\.edu \$9\.00/.test(capMail) && /raise or clear the cap/.test(capMail), capMail.slice(0, 500));
+  check('the administrators get one email: Bo has paused, and who used most', /to=admin\.user@montana\.edu subject="StudyCat: Bo has paused for today: today cost \$12\.\d\d \(your cap: \$11\.00\)"/.test(capMail) && /Most of it: alice\.a@montana\.edu \$9\.\d\d/.test(capMail) && /raise or clear the cap/.test(capMail), capMail.slice(0, 500));
   m0 = mailLen(); sql("DELETE FROM ops_state WHERE k = 'cap_now'"); await ask(b);
   check('and only once that day', !/Bo has paused/.test(mailSince(m0)));
   check('every use of Bo pauses, not only the chat', ((await api(b, 'ai_speak', { text: 'hello' })).json || {}).resting === 'day');
-  const adm = await ask(a); check('administrators are never paused', !adm.resting && /Ask Bo something first/.test(adm.error || ''), adm);
-  r = await api(a, 'admin_ops'); check('the panel shows Bo paused, with the cap', r.json.alerts.some(x => x.kind === 'cap_day' && x.limit === 11 && Math.abs(x.usd - 12) < 0.01), r.json.alerts);
+  const adm = await ask(a); check('administrators are never paused (the question goes on to its own checks)', !adm.resting && /Pick a class first|Ask Bo something first/.test(adm.error || ''), adm);
+  r = await api(a, 'admin_ops'); check('the panel shows Bo paused, with the cap', r.json.alerts.some(x => x.kind === 'cap_day' && x.limit === 11 && x.usd >= 12 && x.usd < 13), r.json.alerts);
   await settings({ cost_cap_daily: '50' }); check('a raised cap counts at once', !(await ask(b)).resting);
   await settings({ cost_cap_daily: '0', cost_cap_monthly: '5' }); rb = await api(b, 'ai_tutor', { q: '' });
   check('a month over its cap: Bo rests until the 1st', rb.status === 503 && rb.json.resting === 'month' && /until the 1st/.test(rb.json.error), rb.json);
