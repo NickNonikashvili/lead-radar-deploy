@@ -3,7 +3,7 @@
    Tokens first (light), then dark overrides, then components.
    ============================================================ */
 :root {
-  --assets-build: "2026.10.29.5";   /* the build these styles belong to (scripts/release.js; read by build-check.js) */
+  --assets-build: "2026.10.29.6";   /* the build these styles belong to (scripts/release.js; read by build-check.js) */
   --bg: #F6F8FB;
   --grid: rgba(43, 85, 184, 0.05);
   --surface: #FFFFFF;
@@ -351,7 +351,7 @@ input[type="checkbox"] { accent-color: var(--accent); width: 16px; height: 16px;
 .fc-back { transform: rotateY(180deg); background: var(--accent-soft); border-color: var(--accent-line); font-size: 17px; line-height: 1.5; }
 .fc-hint { position: absolute; bottom: 12px; left: 0; right: 0; font-size: 12px; color: var(--muted); }
 .fc-controls { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 14px; }
-.fc-controls .fc-gap { margin-left: -2px; font-weight: 500; opacity: 0.85; }   /* how far the grade sends the card */
+.fc-controls .fc-gap { margin-left: -2px; font-weight: 500; }   /* lighter by weight only: a fade fails contrast on the red button */   /* how far the grade sends the card */
 .fc-controls .fc-gap::before { content: '· '; }
 .fc-done { display: grid; gap: 8px; justify-items: center; padding: 28px 16px; }
 .fc-done p { margin: 0; }
