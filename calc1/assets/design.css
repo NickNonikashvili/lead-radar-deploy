@@ -388,9 +388,9 @@
    (<html data-surface="guest">), then the hero, the numbers, three steps in tabs, practice, Bo, professors,
    questions and a last call
    ============================================================ */
-:root[data-surface="guest"] :is(.sidebar, #nav-backdrop, .menu-btn, .topbar-title, .exam-chip, .call-top, .amb-top, #topbar-hub, .bell-btn) { display: none !important; }
-:root[data-surface="guest"] .app { display: block; }
-:root[data-surface="guest"] .topbar { position: sticky; top: 0; z-index: 30; gap: 16px; padding: 12px max(24px, calc((100vw - 1176px) / 2)); background: color-mix(in srgb, var(--bg) 92%, transparent); backdrop-filter: blur(10px); }
+:root[data-surface="guest"]:not([data-app]) :is(.sidebar, #nav-backdrop, .menu-btn, .topbar-title, .exam-chip, .call-top, .amb-top, #topbar-hub, .bell-btn) { display: none !important; }
+:root[data-surface="guest"]:not([data-app]) .app { display: block; }
+:root[data-surface="guest"]:not([data-app]) .topbar { position: sticky; top: 0; z-index: 30; gap: 16px; padding: 12px max(24px, calc((100vw - 1176px) / 2)); background: color-mix(in srgb, var(--bg) 92%, transparent); backdrop-filter: blur(10px); }
 :root[data-surface="guest"] .topbar-actions { margin-left: auto; }
 .gl-head { display: flex; align-items: center; gap: 28px; min-width: 0; }
 .gl-brand { display: inline-flex; align-items: center; gap: 8px; color: var(--ink-strong); text-decoration: none; }
@@ -539,3 +539,4 @@
 .gl-final .mo-final-card p { margin: 0; max-width: none; }
 @media (max-width: 760px) { .gl-bo-face { display: none; } }
 .gl-more { flex: 1 1 100%; margin: 0; color: var(--muted); }
+:root:not([data-skin]):not([data-app]) .fx-brand-sub { color: var(--gold-chip-fg); }

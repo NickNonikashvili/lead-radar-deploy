@@ -17,6 +17,10 @@
     if (s.theme && s.theme !== 'system') html.setAttribute('data-theme', s.theme);
     var skin = s.skin || 'default'; if (skin !== 'default') html.setAttribute('data-skin', skin);
     html.setAttribute('data-motion', s.motion === 'off' ? 'off' : 'on');
+    // a first visit (no classes, never signed in on this device, at the start page) gets the landing's own frame from the
+    // first paint, so the page does not jump when the sidebar steps aside (assets/start.js; not in the apps, assets/design.css)
+    var last = null; try { last = JSON.parse(localStorage.getItem('mathub-last-user') || 'null'); } catch (e) {}
+    if (!location.hash.replace(/^#\/?/, '') && !(Array.isArray(s.courses) && s.courses.length) && !(last && last.user)) html.setAttribute('data-surface', 'guest');
     html.setAttribute('data-geek', s.geek !== true || s.motion === 'off' || (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) ? 'off' : 'on');
   } catch (e) {}
   window.MathJax = {

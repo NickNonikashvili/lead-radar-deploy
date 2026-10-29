@@ -125,7 +125,8 @@
     page.addEventListener('click', e => {
       if (e.target.closest('[data-action="mo-signup"]') && App.auth && App.auth.open) App.auth.open('signup');
       // Pick your classes, anywhere on the page: the first step, its tab open (the start page then scrolls to the picker)
-      if (e.target.closest('[data-action="go-pick"]')) pick(1);
+      // shown at once (not on its way in), so the scroll to the picker lands where it should
+      if (e.target.closest('[data-action="go-pick"]')) { pick(1); $$('#gl-how [data-mo]', page).forEach(el => { el.classList.add('mo-now'); show(el); }); }
       const tb = e.target.closest('[data-gltab]'); if (tb) { pick(tb.dataset.gltab, !tb.classList.contains('gl-tab')); if (!tb.classList.contains('gl-tab')) { const t = $(`#gl-t${tb.dataset.gltab}`, page); if (t) t.focus(); } }
       // the example question: right or wrong, and why
       const o = e.target.closest('[data-glq]');

@@ -8,7 +8,7 @@
 const T = require('./lib');
 const fs = require('fs'); const path = require('path'); const { spawnSync } = require('child_process');
 (async () => {
-  const { base, mk, txt, login, api: raw, hscroll, go: open, log, check } = await T.start();
+  const { base, mk, txt, login, api: raw, hscroll, go: open, log, check } = await T.start({ freeHome: true });
   const api = async (...a) => ((await raw(...a)).json || {});
   const go = async (p, hash, wait) => { await open(p, hash, wait); await p.evaluate(() => document.querySelectorAll('.celebrate').forEach(e => e.remove())); };
   const ROOT = path.resolve(__dirname, '..'); const FIX = path.join(__dirname, 'fixtures');
