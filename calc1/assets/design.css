@@ -268,6 +268,9 @@
 .wp-pts { font-family: var(--font-display); font-weight: 700; font-size: 32px; color: var(--hg-gold-text); line-height: 1; }
 .wp-btn { min-height: 44px; padding: 0 18px; border-radius: 10px; border: 2px solid var(--hg-gold-text); background: transparent; color: var(--hg-gold-text); font: inherit; font-weight: 700; font-size: 15px; display: inline-flex; align-items: center; text-decoration: none; cursor: pointer; }
 .wp-btn:hover { background: color-mix(in srgb, var(--hg-gold-text) 12%, transparent); }
+.wp-btn svg { margin-right: 8px; flex: none; }
+.wp-end-act { display: flex; justify-content: center; margin-top: 8px; }
+.wp-share-box { width: 100%; margin-top: 8px; font-size: 14px; line-height: 1.4; resize: none; }
 
 /* ---------- the daily word: the game ---------- */
 .wp-back .modal.wp-modal { max-width: 440px; width: calc(100% - 32px); padding: 20px 20px 18px; border-radius: 20px; background: var(--d-card); border: 1px solid var(--d-card-line); }

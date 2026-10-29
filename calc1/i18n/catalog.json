@@ -760,7 +760,7 @@
 {"id":759,"en":"Step {1} of {2}","files":["welcome.js"]},
 {"id":760,"en":"Pick at least one class to go on.","files":["welcome.js"]},
 {"id":761,"en":"Pick Free, Pro or Max to go on.","files":["welcome.js"]},
-{"id":762,"en":"Accept","files":["welcome.js","auth.js","tutor.js","bo-float.js","talk.js","create.js","forum.js","social.js","quests.js","usage.js","call-launch.js","teach.js","drafts.js","notebook.js","instruct.js","peer.js","learn.js"]},
+{"id":762,"en":"Accept","files":["welcome.js","auth.js","tutor.js","bo-float.js","talk.js","create.js","forum.js","social.js","quests.js","usage.js","call-launch.js","teach.js","word-puzzle.js","drafts.js","notebook.js","instruct.js","peer.js","learn.js"]},
 {"id":763,"en":"That did not save. Check your connection and try again.","files":["welcome.js"]},
 {"id":764,"en":"Tab","files":["welcome.js","talk.js","board-draw.js","pylab.js","word-puzzle.js"]},
 {"id":765,"en":"You seem to be offline. StudyCat keeps working; your progress syncs when you are back.","files":["auth.js"]},
@@ -1087,7 +1087,7 @@
 {"id":1086,"en":"ai_thread&class=","files":["tutor.js"],"gone":true},
 {"id":1087,"en":"Quiz me for {1}: one question at a time, starting with my weakest topic.","files":["tutor.js"]},
 {"id":1088,"en":"Quiz me: one question at a time, starting with my weakest topic.","files":["tutor.js"]},
-{"id":1089,"en":"(pointer: coarse)","files":["tutor.js","bo-float.js"]},
+{"id":1089,"en":"(pointer: coarse)","files":["tutor.js","bo-float.js","word-puzzle.js"]},
 {"id":1090,"en":"Your photo","files":["tutor.js","talk.js"]},
 {"id":1091,"en":"Remove the photo","files":["talk.js"]},
 {"id":1092,"en":"Copied.","files":["tutor.js","bo-float.js","teach.js"]},
@@ -8650,5 +8650,9 @@
 {"id":8649,"en":"Not quite: it is 1.","files":["start.js"]},
 {"id":8650,"en":"As x gets close to 0, sin x and x get close together, so their ratio goes to 1. The derivative of sin x is built on this limit.","files":["start.js"]},
 {"id":8651,"en":"Right. As x gets close to 0, sin x and x get close together, so their ratio goes to 1. The derivative of sin x is built on this limit.","files":["start.js"]},
-{"id":8652,"en":"Not quite: it is 1. As x gets close to 0, sin x and x get close together, so their ratio goes to 1. The derivative of sin x is built on this limit.","files":["start.js"]}
+{"id":8652,"en":"Not quite: it is 1. As x gets close to 0, sin x and x get close together, so their ratio goes to 1. The derivative of sin x is built on this limit.","files":["start.js"]},
+{"id":8653,"en":"StudyCat daily word #{1} · {2}/6","files":["word-puzzle.js"]},
+{"id":8654,"en":"Copied. Paste it in your group chat.","files":["word-puzzle.js"]},
+{"id":8655,"en":"Your result, to copy","files":["word-puzzle.js"]},
+{"id":8656,"en":"Share your result","files":["word-puzzle.js"]}
 ]

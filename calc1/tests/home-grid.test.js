@@ -12,7 +12,7 @@ const T = require('./lib'); const fs = require('fs'); const path = require('path
 const AXE = fs.readFileSync(path.join(__dirname, 'node_modules', 'axe-core', 'axe.min.js'), 'utf8');
 (async () => {
   const { mk, go, login, api, check } = await T.start({});
-  const [c, p] = await mk(1360, 900, { serviceWorkers: 'block', bypassCSP: true, reducedMotion: 'reduce' });
+  const [c, p] = await mk(1360, 900, { serviceWorkers: 'block', bypassCSP: true, reducedMotion: 'reduce', permissions: ['clipboard-read', 'clipboard-write'] });
   await c.addInitScript(() => { try { const s = JSON.parse(localStorage.getItem('studyhub-settings') || '{}'); s.boFloatSeen = 1; localStorage.setItem('studyhub-settings', JSON.stringify(s)); } catch (e) {} });
   await go(p, '#/', 600); await login(p, 'alice.a@montana.edu');
   // a clean start on the account too: an earlier run's puzzle and hidden cards are saved with it
@@ -103,6 +103,17 @@ const AXE = fs.readFileSync(path.join(__dirname, 'node_modules', 'axe-core', 'ax
   check('closing shows the result on the card, focus on the card', !g.modal && /Solved in 2 of 6/.test(g.card) && /wp-btn|H2/.test(g.focus), g);
   await p.reload(); await p.waitForTimeout(1800);
   check('the same word and result after a reload', await p.evaluate(w => { const s = App.wordPuzzle.state(); return s.w === w && s.done && /Solved in 2 of 6/.test(document.querySelector('.hg-puzzle h2').textContent); }, word));
+  // share: the try count and the squares, nothing that gives the word away, and your invite link
+  const sh = await p.evaluate(() => ({ btn: !!document.querySelector('.hg-puzzle [data-wp="share"]'), text: App.wordPuzzle.shareText(App.wordPuzzle.state()) }));
+  const rows = sh.text.trim().split('\n').slice(-2);
+  check('Share your result: “StudyCat daily word #N · 2/6”, then a row of squares per try, the last all green, no letters', sh.btn && /^StudyCat daily word #\d+ · 2\/6/.test(sh.text) && rows.every(r => /^(\u{1F7E9}|\u{1F7E8}|\u2B1C){5}$/u.test(r)) && /^(\u{1F7E9}){5}$/u.test(rows[1]) && !sh.text.includes(word), sh);
+  await p.click('.hg-puzzle [data-wp="share"]'); await p.waitForTimeout(400);
+  const clip = await p.evaluate(() => navigator.clipboard.readText());
+  check('on a computer it is copied with your invite link, and a toast says so', clip.startsWith(sh.text) && /#\/join\?ref=\w+/.test(clip) && /Copied/.test(await p.evaluate(() => (document.querySelector('.toast') || {}).textContent || '')), clip);
+  await p.evaluate(() => { navigator.clipboard.writeText = () => Promise.reject(new Error('blocked')); });
+  await p.click('.hg-puzzle [data-wp="share"]'); await p.waitForTimeout(200);
+  const box = await p.evaluate(() => { const b = document.querySelector('.hg-puzzle .wp-share-box'); return b && { text: b.value, focused: document.activeElement === b, sel: b.selectionEnd - b.selectionStart === b.value.length, label: b.getAttribute('aria-label') }; });
+  check('where copying is blocked, the result waits in a box, selected, to copy by hand', box && box.text.startsWith(sh.text) && box.focused && box.sel && /Your result/.test(box.label), box);
 
   // streaks: solved yesterday → today adds a day; a missed day starts again; six misses end it
   const st = await p.evaluate(() => {

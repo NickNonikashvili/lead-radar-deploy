@@ -9,11 +9,14 @@
      its class, with a link to the class. Miss it: the word and its meaning, and the streak starts again.
    - Saved with the account (settings.wordPuzzle, assets/auth.js PREF_KEYS). Typed on a keyboard or with the
      on-screen keys.
+   - Share your result: the coloured squares only (no letters, so nothing is given away), the try count and your
+     invite link (a classmate who signs up through it gets Bo credits, and so do you). The share sheet on a phone
+     and in the apps, the clipboard on a computer, and a box to copy by hand where neither works.
    ============================================================ */
 (function (global) {
   'use strict';
   const App = global.App; const Courses = global.Courses; if (!App) return;
-  const { $, $$, esc, icon, settings, setSetting } = App;
+  const { $, $$, esc, icon, settings, setSetting, toast } = App;
   const t = (s, ...v) => (App.t ? App.t(s, ...v) : s);
   const LEN = 5, TRIES = 6, XP = 20;
   const FIRST = '2026-10-29';   // puzzle #1
@@ -47,9 +50,37 @@
   const sayTry = (g, r) => g.split('').map((L, i) => `${L} ${t(SAY[r[i]])}`).join(', ');
   const untilTomorrow = () => { const n = new Date(); const m = new Date(n.getFullYear(), n.getMonth(), n.getDate() + 1); const min = Math.max(1, Math.round((m - n) / 60000)); const h = Math.floor(min / 60); return h ? t('{1}h {2}m', h, min % 60) : t('{1}m', min); };
 
+  /* ---------- share the result ---------- */
+  const SQ = { ok: '\u{1F7E9}', in: '\u{1F7E8}', no: '\u2B1C' };   // green, yellow and white squares, as the daily word games post them
+  let invite = '';   // your invite link, fetched once before you share (a share sheet must open straight from the tap)
+  function getInvite() {
+    const A = App.auth; if (invite || getInvite.busy || !A || !A.user || A.user.local || A.mode !== 'server' || A.unreachable) return; getInvite.busy = true;
+    fetch('api/index.php?r=invite_mine', { credentials: 'same-origin', headers: { 'X-Requested-With': 'MatHub', 'Accept': 'application/json' }, cache: 'no-store' })
+      .then(r => r.json()).then(j => { if (j && j.ok && j.code) invite = `${App.siteBase()}#/join?ref=${encodeURIComponent(j.code)}`; }).catch(() => {}).then(() => { getInvite.busy = false; });
+  }
+  function shareText(s) {
+    const head = t('StudyCat daily word #{1} · {2}/6', dayNo(s.d), s.won ? s.g.length : 'X') + (s.won && s.streak > 1 ? ' · \u{1F525} ' + t('{1}-day streak', s.streak) : '');
+    return head + '\n\n' + s.g.map(g => mark(g, s.w).map(r => SQ[r]).join('')).join('\n');
+  }
+  async function share(btn) {
+    const s = state(); if (!s.done) return; const text = shareText(s); const url = invite || App.siteBase();
+    try {
+      if (global.Native && Native.share) { await Native.share({ title: 'StudyCat', text, url }); return; }   // the apps (assets/app-boot.js)
+      if (navigator.share && global.matchMedia && matchMedia('(pointer: coarse)').matches) { await navigator.share({ title: 'StudyCat', text, url }); return; }
+      await navigator.clipboard.writeText(text + '\n' + url); toast(t('Copied. Paste it in your group chat.'), 3000);
+    } catch (e) {
+      if (e && e.name === 'AbortError') return;   // the share sheet was closed
+      // no clipboard here: the text in a box, selected, to copy by hand
+      const host = btn.closest('.wp-end, .wp-side') || btn.parentNode; const box = host.querySelector('.wp-share-box') || document.createElement('textarea');
+      box.className = 'input wp-share-box'; box.readOnly = true; box.rows = s.g.length + 4; box.value = text + '\n' + url; box.setAttribute('aria-label', t('Your result, to copy'));
+      if (!box.isConnected) host.appendChild(box); box.focus(); box.select();
+    }
+  }
+  const shareBtn = () => `<button type="button" class="wp-btn wp-share" data-wp="share">${icon('send', 16)} ${esc(t('Share your result'))}</button>`;
+
   /* ---------- the home card ---------- */
   function card(moreBtn) {
-    const s = state(); const n = dayNo(s.d); const C = Courses[s.c];
+    const s = state(); const n = dayNo(s.d); const C = Courses[s.c]; if (s.done) getInvite();
     // the tiles: your last try and the next empty row (two empty rows before you start)
     const tiles = (g, res) => `<span class="wp-trow">${Array.from({ length: LEN }, (_, i) => `<span class="wp-tile ${g ? res[i] : 'blank'}">${g ? esc(g[i]) : ''}</span>`).join('')}</span>`;
     const last = s.g[s.g.length - 1];
@@ -61,7 +92,7 @@
       <div class="wp-text"><span class="wp-eyebrow">${esc(t('Daily challenge · #{1}', n))}</span><h2 id="hg-puzzle-t">${esc(lead)}</h2><p class="wp-sub">${sub}</p>${s.done && s.streak > 1 ? `<p class="wp-streak">${icon('fire', 14)} ${esc(t('{1}-day streak', s.streak))}</p>` : ''}</div>
       <div class="wp-preview" aria-hidden="true">${preview}</div>
       <div class="wp-side">${s.done ? (s.won ? `<span class="wp-pts">+${XP} XP</span>` : '') : `<span class="wp-pts">+${XP} XP</span>`}<span class="small muted">${esc(t('New puzzle in {1}', untilTomorrow()))}</span>
-        ${s.done ? (C ? `<a class="wp-btn" href="#/${esc(s.c)}/dashboard">${esc(t('Open {1}', C.short || C.name))}</a>` : '') : `<button type="button" class="wp-btn" data-wp="open">${esc(s.g.length ? t('Keep playing') : t('Play today’s puzzle'))}</button>`}</div></section>`;
+        ${s.done ? shareBtn() + (C ? `<a class="hg-link" href="#/${esc(s.c)}/dashboard">${esc(t('Open {1}', C.short || C.name))}</a>` : '') : `<button type="button" class="wp-btn" data-wp="open">${esc(s.g.length ? t('Keep playing') : t('Play today’s puzzle'))}</button>`}</div></section>`;
   }
 
   /* ---------- the game ---------- */
@@ -80,7 +111,8 @@
       }).join('');
       const kb = KEYS.map((row, i) => `<div class="wp-krow">${i === 2 ? `<button type="button" class="wp-key wide" data-k="Enter">${esc(t('Enter'))}</button>` : ''}${row.split('').map(L => `<button type="button" class="wp-key ${k[L] || ''}" data-k="${L}" aria-label="${L}${k[L] ? ', ' + esc(t(SAY[k[L]])) : ''}">${L}</button>`).join('')}${i === 2 ? `<button type="button" class="wp-key wide" data-k="Backspace" aria-label="${esc(t('Delete a letter'))}">${icon('undo', 16)}</button>` : ''}</div>`).join('');
       const C = Courses[s.c];
-      const end = s.done ? `<div class="wp-end"><p class="wp-lead">${esc(s.won ? t('Solved in {1} of 6. +{2} XP', s.g.length, XP) : t('The word was {1}.', s.w))}</p><p class="wp-word" translate="no"><b>${esc(s.w)}</b>${C ? ` · ${esc(C.short || C.name)}` : ''}: ${esc(s.m)}</p><p class="small muted">${esc(t('Streak: {1} · Solved {2} of {3}', s.streak, s.wins, s.played))} · ${esc(t('New puzzle in {1}', untilTomorrow()))}</p></div>` : '';
+      const end = s.done ? `<div class="wp-end"><p class="wp-lead">${esc(s.won ? t('Solved in {1} of 6. +{2} XP', s.g.length, XP) : t('The word was {1}.', s.w))}</p><p class="wp-word" translate="no"><b>${esc(s.w)}</b>${C ? ` · ${esc(C.short || C.name)}` : ''}: ${esc(s.m)}</p><p class="small muted">${esc(t('Streak: {1} · Solved {2} of {3}', s.streak, s.wins, s.played))} · ${esc(t('New puzzle in {1}', untilTomorrow()))}</p><div class="wp-end-act">${shareBtn()}</div></div>` : '';
+      if (s.done) getInvite();
       $('.wp-body', m).innerHTML = `<div class="wp-board">${rows}</div>${end}${s.done ? '' : `<div class="wp-kb">${kb}</div>`}`;
     }
     m.innerHTML = `<div class="modal wp-modal" role="dialog" aria-modal="true" aria-labelledby="wp-h" aria-describedby="wp-how" tabindex="-1"><div class="row between wp-top"><h2 id="wp-h">${esc(t('Daily word · #{1}', dayNo(s.d)))}</h2><button type="button" class="icon-btn" data-k="close" aria-label="${esc(t('Close'))}">${icon('plus', 18)}</button></div>
@@ -117,13 +149,13 @@
     }
     document.addEventListener('keydown', onKey, true);
     // a tapped or clicked key gives focus back to the game, so the keyboard's Enter sends the word (not that key again)
-    m.addEventListener('click', e => { const b = e.target.closest('[data-k]'); if (b) { press(b.dataset.k); if (e.detail > 0 && b.dataset.k !== 'close' && m.isConnected) dlg().focus(); return; } if (e.target === m) close(); });
+    m.addEventListener('click', e => { const sh = e.target.closest('[data-wp="share"]'); if (sh) { share(sh); return; } const b = e.target.closest('[data-k]'); if (b) { press(b.dataset.k); if (e.detail > 0 && b.dataset.k !== 'close' && m.isConnected) dlg().focus(); return; } if (e.target === m) close(); });
     const dlg = () => m.querySelector('.wp-modal'); dlg().focus();
   }
 
   App.wordPuzzle = {
-    card, open, mark, pick, pool, state, WORDS,
+    card, open, mark, pick, pool, state, shareText, WORDS,
     // after the game the card is drawn again with the result, and focus goes to it
-    wire(root) { root.addEventListener('click', e => { if (!e.target.closest('[data-wp="open"]')) return; open(() => { const c = $('.hg-puzzle', root); if (!c) return; const tmp = document.createElement('div'); const m = c.querySelector('.hg-more'); tmp.innerHTML = card(m ? m.outerHTML.replace(' aria-expanded="true"', ' aria-expanded="false"') : ''); const n = tmp.firstElementChild; c.replaceWith(n); const f = n.querySelector('.wp-btn') || n.querySelector('h2'); if (f) { if (f.tagName === 'H2') f.setAttribute('tabindex', '-1'); f.focus(); } }); }); }
+    wire(root) { root.addEventListener('click', e => { const sh = e.target.closest('[data-wp="share"]'); if (sh) { share(sh); return; } if (!e.target.closest('[data-wp="open"]')) return; open(() => { const c = $('.hg-puzzle', root); if (!c) return; const tmp = document.createElement('div'); const m = c.querySelector('.hg-more'); tmp.innerHTML = card(m ? m.outerHTML.replace(' aria-expanded="true"', ' aria-expanded="false"') : ''); const n = tmp.firstElementChild; c.replaceWith(n); const f = n.querySelector('[data-wp="open"]') || n.querySelector('h2'); if (f) { if (f.tagName === 'H2') f.setAttribute('tabindex', '-1'); f.focus(); } }); }); }
   };
 })(window);

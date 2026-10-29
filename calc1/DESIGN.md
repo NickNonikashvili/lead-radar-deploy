@@ -484,7 +484,8 @@ tokens, so day and night both work), the 8-bit skyline and Bo.
   formula sheets, notes). Arrange freely keeps the free-form dashboard (`assets/dash.js`), per device.
 - *The daily word* (`assets/word-puzzle.js`): the full-width gold card (the last try's tiles, +20 XP, New puzzle in…),
   and the game as a dialog: six rows of five, an on-screen keyboard, green with a bar for the right place, gold with
-  a dot for elsewhere, grey for not in the word, and every try read out in words.
+  a dot for elsewhere, grey for not in the word, and every try read out in words. Once it is done, Share your result
+  (an outlined gold button with the send icon) sits where Play was, with Open the class as a plain link under it.
 - *The sidebar*: the Learning or teaching switch (Learning on #1A2F5A / #8DBCFF, Teaching on #3A2F12 / #FFE08A), the
   date and time, Add to planner (a secondary button), Home and Ask Bo, Your classes (Pick your classes, the classes,
   Class maker), Planner, then Tools, Community and Resources folded.

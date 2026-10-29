@@ -874,7 +874,9 @@ twin; the light-or-dark switch stays.
   brings a card back and lists the tools. Saved with the account (`homeGrid`). Arrange freely keeps the free-form
   dashboard on that device (`homeMode`).
 - **The daily word** (`assets/word-puzzle.js`): five letters from your classes' vocabulary (each word with what it
-  means in that class), six tries, +20 XP and a streak (`wordPuzzle`, synced).
+  means in that class), six tries, +20 XP and a streak (`wordPuzzle`, synced). Share your result posts the try count
+  and a row of coloured squares per try (no letters) with your invite link: the share sheet on phones and in the apps,
+  the clipboard on a computer, a box to copy by hand where neither works.
 - **Learning or teaching**: a switch at the top of the sidebar; Teaching opens StudyCat Faculty in the same frame, with
   a home of its own (the next class meeting, class activity, coming up, attendance, your syllabi, practice
   assignments; office hours, the printed syllabus and faculty status to add, `teachGrid`). Your syllabi moved to
