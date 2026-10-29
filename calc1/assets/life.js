@@ -108,7 +108,8 @@
   async function req(method, body) {
     const opts = { method, credentials: 'same-origin', cache: 'no-store', headers: { 'X-Requested-With': 'MatHub', Accept: 'application/json' } };
     if (body) { opts.headers['Content-Type'] = 'application/json'; opts.body = JSON.stringify(body); }
-    const r = await fetch('api/index.php?r=life', opts); let j = null; try { j = await r.json(); } catch (e) {}
+    let r; try { r = await fetch('api/index.php?r=life', opts); } catch (e) { if (App.auth && App.auth.lost) App.auth.lost(); throw Object.assign(new Error(t('Could not reach your account.')), { network: true }); }
+    let j = null; try { j = await r.json(); } catch (e) {}
     if (!j || j.ok === false) throw Object.assign(new Error((j && j.error) || t('Could not reach your account.')), { status: r.status });
     return j;
   }
@@ -138,6 +139,7 @@
   document.addEventListener('DOMContentLoaded', () => setTimeout(hookAuth, 0));
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && online() && now() - lastPull > 60000) pull(); if (document.visibilityState === 'hidden' && S.dirty && online()) { clearTimeout(pushTimer); push(); } });
   window.addEventListener('storage', e => { if (e.key === KEY) { S = readState(); changed('*'); } });   // another tab changed it
+  window.addEventListener('online', () => { if (S.dirty) setTimeout(() => { if (S.dirty && online()) schedulePush(200); }, 1500); });   // back online: what waited goes up (the account check runs first)
 
   /* ---------- dates and small pieces the pages share ---------- */
   const ISO_RE = /^\d{4}-\d{2}-\d{2}$/;

@@ -81,8 +81,54 @@
   function changed() { applyServerPrefs(); paintAccount(); paintBanner(); try { dispatchEvent(new Event('mathub-auth')); } catch (e) {}   // signed in or out: the top bar's Call Bo (assets/call-launch.js) listens
     Auth.setUnread(Auth.user ? (Auth.user.unread || 0) : 0); if (Auth.user && !Auth.user.local && Auth.mode === 'server') writeJSON(LAST_KEY, { user: Auth.user, health: Auth.health ? { domains: Auth.health.domains } : null, at: Date.now() }); if (!Auth.user) writeJSON(LAST_KEY, null); Auth.listeners.forEach(fn => { try { fn(Auth.user); } catch (e) { console.error(e); } }); }
 
+  /* ---------- the connection, in plain sight (the first usability heuristic: show the system's status) ----------
+     While StudyCat cannot reach the account server, a small line near the bottom says so and that what you do is kept
+     on this device; once it can again, "Back online · syncing…" and then "Everything is synced" for a moment. While the
+     server is out of reach it is asked again every 30 s, then 60 and 120 (only while the page is visible), so a flaky
+     network that never fires the browser's online event still recovers. The line is a live region (role=status) that
+     stays in the page, so screen readers hear each change. The account box keeps its own label (synced, saving…). */
+  const Net = Auth.net = { shown: '', wait: 30000, timer: 0, hide: 0 };
+  Net.off = () => navigator.onLine === false || (Auth.mode === 'server' && !!Auth.unreachable);
+  Net.pending = () => {   // changes on this device the account has not got yet: a class's progress, the planner
+    if (!Auth.user || Auth.user.local || Auth.mode !== 'server') return false;
+    const M = meta(); return Object.keys(M).some(id => (M[id].updated || 0) > (M[id].synced || 0)) || !!(App.life && App.life.state && App.life.state().dirty);
+  };
+  Net.el = () => { let el = $('#net-status'); if (!el && document.body) { el = document.createElement('div'); el.id = 'net-status'; el.className = 'net-status'; el.setAttribute('role', 'status'); document.body.appendChild(el); } return el; };
+  Net.say = (kind, text) => {
+    const el = Net.el(); if (!el) return; clearTimeout(Net.hide); Net.shown = kind; el.dataset.kind = kind;
+    el.innerHTML = `<p class="net-pill">${icon(kind === 'off' ? 'wifioff' : kind === 'done' ? 'check' : 'rotate', 16)}<span>${esc(text)}</span></p>`;
+    if (kind === 'done') Net.hide = setTimeout(Net.clear, 3200);
+  };
+  Net.clear = () => { clearTimeout(Net.hide); Net.shown = ''; const el = $('#net-status'); if (el) { el.innerHTML = ''; delete el.dataset.kind; } };
+  Net.paint = () => {
+    if (Net.off()) {
+      if (Net.shown !== 'off') Net.say('off', Auth.user && !Auth.user.local && Auth.mode === 'server' ? 'You’re offline. What you do is kept on this device and syncs when you’re back.' : 'You’re offline. StudyCat keeps working with what is saved on this device.');
+      Net.retry(); return;
+    }
+    Net.retry();   // (clears the timer)
+    if (Net.shown !== 'off') return;
+    if (!Net.pending()) { Net.say('done', 'Back online.'); return; }
+    Net.say('sync', 'Back online · syncing…'); let n = 0;
+    const check = () => { if (Net.shown !== 'sync') return; if (!Net.pending()) Net.say('done', 'Back online · everything is synced.'); else if (++n < 30) setTimeout(check, 700); else Net.clear(); };   // still not synced after 20 s: the account box says so
+    setTimeout(check, 700);
+  };
+  Net.retry = () => {   // one timer at a time: a failed save while offline does not push the next try back
+    if (!(Auth.mode === 'server' && Auth.unreachable)) { clearTimeout(Net.timer); Net.timer = 0; Net.wait = 30000; return; }
+    if (Net.timer) return;
+    Net.timer = setTimeout(async () => {
+      Net.timer = 0; if (!Auth.unreachable) { Net.wait = 30000; return; }
+      if (document.visibilityState === 'visible' && navigator.onLine !== false) { try { await call('health'); } catch (e) {} if (!Auth.unreachable) { Net.wait = 30000; Auth.init(); return; } }
+      Net.wait = Math.min(Net.wait * 2, 120000); Net.retry();
+    }, Net.wait);
+  };
+  /** Another part of StudyCat (the planner) could not reach the server: the same as a failed call here. */
+  Auth.lost = () => { if (Auth.mode === 'server' && !Auth.unreachable) { Auth.unreachable = true; paintAccount(); } };
+
   /* ---------- boot ---------- */
+  // Auth.init runs once at start and again when the server is back: the listeners and the account check are set up
+  // once, and a second run redraws the page only when the account changed or nobody is typing in it
   Auth.init = async function () {
+    const again = Auth.ready, before = Auth.user && !Auth.user.local ? Auth.user.id : null;
     try {
       const h = await call('health'); Auth.health = h; Auth.mode = 'server'; Auth.user = h.user || null; Auth.unreachable = false; writeJSON(LAST_KEY, Auth.user ? { user: Auth.user, health: { domains: h.domains }, at: Date.now() } : null);
     } catch (e) {
@@ -90,15 +136,18 @@
       if (e.network && last && last.user) { Auth.mode = 'server'; Auth.unreachable = true; Auth.user = last.user; Auth.health = last.health || null; }
       else { Auth.mode = 'offline'; const lu = readJSON(LOCAL_KEY); Auth.user = lu && lu.email ? Object.assign({ local: true }, lu) : null; }
     }
-    window.addEventListener('online', () => { if (Auth.unreachable) Auth.init(); });
-    if (Auth.mode === 'server' && !Auth.unreachable) setInterval(() => { if (document.visibilityState === 'visible' && Auth.user) call('me').then(r => { if (r.user) { Auth.user = Object.assign(Auth.user, r.user); Auth.setUnread(r.user.unread || 0); } else if (Auth.user && !Auth.user.local) { Auth.user = null; changed(); App.rerender(); } }).catch(() => {}); }, 90000);
+    if (!again) { addEventListener('online', () => { Net.paint(); if (Auth.unreachable) Auth.init(); }); addEventListener('offline', Net.paint); }
+    if (Auth.mode === 'server' && !Auth.unreachable && !Auth.polling && (Auth.polling = true)) setInterval(() => { if (document.visibilityState === 'visible' && Auth.user) call('me').then(r => { if (r.user) { Auth.user = Object.assign(Auth.user, r.user); Auth.setUnread(r.user.unread || 0); } else if (Auth.user && !Auth.user.local) { Auth.user = null; changed(); App.rerender(); } }).catch(() => {}); }, 90000);
     Auth.ready = true; changed(); if (App.rebuildNav) App.rebuildNav();
-    if (App.welcome && App.welcome.needed()) setTimeout(() => { if (App.welcome.needed()) App.welcome.open(); }, 500);   // the welcome was left before the choices were made
+    if (!again && App.welcome && App.welcome.needed()) setTimeout(() => { if (App.welcome.needed()) App.welcome.open(); }, 500);   // the welcome was left before the choices were made
     // an invitation from an administrator: #/?setpw=<email> opens "choose your password" with the address filled in
-    { const sp = /[?&]setpw=([^&#]+)/.exec(location.hash); if (sp && !Auth.user && Auth.mode === 'server') setTimeout(() => Auth.open('reset', decodeURIComponent(sp[1])), 300); }
-    if (App.current && !(App.current === App.views.practice && App.views.practice.hasSession && App.views.practice.hasSession())) { try { App.rerender(); } catch (e) { console.error(e); } }
+    if (!again) { const sp = /[?&]setpw=([^&#]+)/.exec(location.hash); if (sp && !Auth.user && Auth.mode === 'server') setTimeout(() => Auth.open('reset', decodeURIComponent(sp[1])), 300); }
+    const typing = () => { const a = document.activeElement; return !!(a && a.closest && a.closest('#view') && a.matches('input, textarea, select, [contenteditable="true"]')); };
+    const who = Auth.user && !Auth.user.local ? Auth.user.id : null;
+    if (App.current && (!again || who !== before || !typing()) && !(App.current === App.views.practice && App.views.practice.hasSession && App.views.practice.hasSession())) { try { App.rerender(); } catch (e) { console.error(e); } }
     if (Auth.user && Auth.mode === 'server') Auth.pullAll().catch(() => {});
-    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && Auth.user && Auth.mode === 'server' && App.D) Auth.pullCourse(App.D.id, true).catch(() => {}); });
+    Net.paint();
+    if (!again) document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && Auth.user && Auth.mode === 'server' && App.D) Auth.pullCourse(App.D.id, true).catch(() => {}); });
   };
 
   /* ---------- push notifications ---------- */
@@ -239,6 +288,7 @@
 
   /* ---------- account box (sidebar) & preview banner ---------- */
   function paintAccount() {
+    if (Auth.ready) Net.paint();
     const box = $('#account-box'); if (!box) return;
     if (!Auth.ready) { box.innerHTML = '<div class="acct small muted">Checking account…</div>'; return; }
     if (Auth.user) {

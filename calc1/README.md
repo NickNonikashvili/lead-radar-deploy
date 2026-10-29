@@ -89,7 +89,14 @@ unban, verify or delete any account. Both lists ship with nikoloz.nonikashvili@s
   `App.need([...])` (the dashboard's new goal, Make's tools, sharing a draft with an instructor). `App.warmClasses`
   fetches these files in the background once per build, so they open offline.
   The list of classes (`classpack_list`) carries a tag; a device that already has that list gets `same` back. A logged-in member stays logged in while offline;
-  progress syncs when the connection returns. The account server itself is never cached.
+  progress syncs when the connection returns. A status line says so (`Auth.net` in assets/auth.js, a `role="status"`
+  region that stays in the page): "You're offline. What you do is kept on this device and syncs when you're back",
+  then "Back online · syncing…" and "Back online · everything is synced." It shows when the browser goes offline and
+  whenever a call to the account server (or the planner's, through `Auth.lost`) cannot get through; while the server
+  is out of reach it is asked again every 30 s, then 60 and 120, while the page is visible, so a network that never
+  fires the browser's online event still recovers. `Auth.init` runs again on the way back: its listeners and the
+  account check are set up once, and the second run redraws the page only when the account changed or nobody is
+  typing in it. The planner pushes what waited when the browser is back online. tests/offline-status.test.js. The account server itself is never cached.
 
 ## Community
 

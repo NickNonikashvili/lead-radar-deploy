@@ -420,6 +420,20 @@ canvas.riemann { display: block; width: 100%; height: 300px; }
 .search-item .s { color: var(--muted); font-size: 12.5px; margin-left: auto; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 40%; }
 .search-foot { padding: 8px 14px; border-top: 1px solid var(--border); font-size: 12px; color: var(--muted); display: flex; gap: 12px; }
 .toast { position: fixed; bottom: 22px; left: 50%; transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: 10px 16px; border-radius: 8px; font-size: 14px; z-index: 70; box-shadow: var(--shadow); }
+/* the connection's status line (assets/auth.js, Auth.net): above the toasts, clear of the floating Bo button. The
+   region itself is always in the page (a live region that stays put is announced reliably); only the pill shows. */
+.net-status { position: fixed; left: 50%; bottom: calc(76px + env(safe-area-inset-bottom)); transform: translateX(-50%); z-index: 69; width: max-content; max-width: min(460px, calc(100vw - 32px)); pointer-events: none; }
+.net-pill { display: flex; align-items: flex-start; gap: 9px; margin: 0; padding: 10px 16px; border-radius: 14px; background: var(--ink); color: var(--surface, var(--bg)); font-size: 14px; font-weight: 600; line-height: 1.4; box-shadow: var(--shadow); pointer-events: auto; }
+.net-pill svg { flex: none; margin-top: 1px; }
+.net-status[data-kind="sync"] .net-pill svg { animation: netTurn 1.1s linear 8; }
+@keyframes netTurn { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: no-preference) { html:not([data-motion="off"]) .net-pill { animation: netIn 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) both; } }
+@keyframes netIn { from { opacity: 0; transform: translateY(10px); } }
+@media (prefers-reduced-motion: reduce) { .net-status .net-pill svg { animation: none; } }
+html[data-motion="off"] .net-status .net-pill svg { animation: none; }
+/* phones: on the left, beside the floating Bo button (which sits bottom right) */
+@media (max-width: 900px) { .net-status { left: 14px; transform: none; bottom: calc(84px + env(safe-area-inset-bottom)); max-width: calc(100vw - 104px); } }
+@media print { .net-status { display: none; } }
 
 /* ---------- textbook ---------- */
 .pdf-frame { width: 100%; height: 720px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface-2); }

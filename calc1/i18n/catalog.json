@@ -8302,5 +8302,10 @@
 {"id":8301,"en":"The tools could not load. Check your connection and reload the page.","files":["maker.js"]},
 {"id":8302,"en":"Loading the tools…","files":["maker.js"]},
 {"id":8303,"en":"Bo is resting until the 1st: StudyCat has reached its limit for Bo this month. None of your credits were used, and everything else works as usual.","files":["api/credits.php"]},
-{"id":8304,"en":"Bo is resting until tomorrow: StudyCat has reached its limit for Bo today. None of your credits were used, and everything else works as usual.","files":["api/credits.php"]}
+{"id":8304,"en":"Bo is resting until tomorrow: StudyCat has reached its limit for Bo today. None of your credits were used, and everything else works as usual.","files":["api/credits.php"]},
+{"id":8305,"en":"You’re offline. What you do is kept on this device and syncs when you’re back.","files":["auth.js"]},
+{"id":8306,"en":"You’re offline. StudyCat keeps working with what is saved on this device.","files":["auth.js"]},
+{"id":8307,"en":"Back online.","files":["auth.js"]},
+{"id":8308,"en":"Back online · syncing…","files":["auth.js"]},
+{"id":8309,"en":"Back online · everything is synced.","files":["auth.js"]}
 ]
