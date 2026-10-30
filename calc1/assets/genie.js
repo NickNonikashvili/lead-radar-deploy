@@ -1,21 +1,24 @@
 /* ============================================================
-   StudyCat — the genie: a page you leave closes into the sidebar, like a window into the Dock on a Mac
+   StudyCat — the genie: a class page closes into the sidebar like a window into the Dock on a Mac, and opens out of it
    How the Mac does it (and the GNOME and KWin ports): the window is cut into thin strips across the way it goes, and
    each strip is bent onto a four-cornered piece of a funnel whose sides are curves, from the window down to the Dock
    icon; the funnel forms first, then the window slides through it into the icon, its far edge following its near one.
    Here each strip is a box holding the page, with a CSS matrix3d that lays it onto its piece (a projective map, the
    same per-strip homography the GNOME extension uses): straight lines stay straight, strips meet their neighbours
    exactly, and the text stays sharp, because nothing is redrawn.
-   - The page you leave goes into a ghost over the new page: fixed, inert, hidden from screen readers, on an opaque
-     sheet, without the ids, names and frames inside it, its animations at their end; the new page is there
-     underneath at once. The ghost goes under the sidebar (on a phone, under the top bar), so the page disappears
-     into it. The parts of the page outside the screen are emptied first (they keep their size), so the copies for
-     the strips are small and quick to lay out; the last, widest strip (where the page is not bent) keeps the page
-     itself.
-   - On a computer the neck is at the sidebar's edge, level with the link of the page you leave (assets/app.js picks
-     it): the funnel lies across the screen and the page flows left into it, and the sidebar's edge bulges out there
-     and snaps back (.vt-bulge). On a phone the neck is at the menu button: the funnel stands up and the page flows up
-     into it, and the button squashes and snaps back (.vt-snap).
+   - When you leave a class page for one outside the classes, it closes into the sidebar; when you go into a class
+     from outside, the class page opens out of the sidebar the same way, backwards (assets/app.js decides).
+   - Closing: the page you leave goes into a ghost over the new page: fixed, inert, hidden from screen readers, on an
+     opaque sheet, without the ids, names and frames inside it, nothing animating; the new page is there underneath at
+     once. Opening: the page you leave stays still on the screen (.genie-under) while the new one is drawn (a class
+     may load first), then a copy of the new page comes out of the neck over it, and both go. The ghost goes under the
+     sidebar (on a phone, under the top bar), so the page disappears into it and comes out of it. The parts of the
+     page outside the screen are emptied first (they keep their size), so the copies for the strips are small and
+     quick to lay out; the last, widest strip (where the page is not bent) keeps the page itself.
+   - On a computer the neck is at the sidebar's edge, level with the link of the class page you leave or open
+     (assets/app.js picks it): the funnel lies across the screen and the page flows left into it, and the sidebar's
+     edge bulges out there and snaps back (.vt-bulge). On a phone the neck is at the menu button: the funnel stands up
+     and the page flows up into it, and the button squashes and snaps back (.vt-snap).
    - Strips are thinner near the neck, where the sides bend most; the funnel's sides are smoothstep curves.
    About 0.48 s from the first frame drawn; nothing at all with Reduce motion (assets/app.js does not call it).
    ============================================================ */
@@ -72,28 +75,48 @@
     return c;
   }
 
-  /* page: the element of the page you leave (detached by the router); rect: where it was on the screen
-     aim: { x, y } the neck on the screen (fractions), rail (the sidebar, on a computer) or el (the menu button)
-     offs: App.genieMeasure(page), taken while it was on the screen (else it is measured here) */
-  App.genie = function (page, rect, aim, offs, done) {
+  // the content area: right of the sidebar (on a computer), under the top bar
+  function frameOf(aim) {
+    const tb = document.querySelector('.topbar'); const top = tb ? Math.max(0, Math.round(tb.getBoundingClientRect().bottom)) : 0;
+    const left = aim && aim.rail ? Math.round(aim.rail.getBoundingClientRect().right) : 0;
+    return { left, top, W: Math.max(40, innerWidth - left), H: Math.max(40, innerHeight - top) };
+  }
+  // a page shown a second time: its own id stays (the styles for #view; the live page comes first in the document, so
+  // #view still finds that one); the ids inside go (outside drawings, whose shapes point at them), and the names (radio
+  // buttons would share a group with the live page's)
+  function tame(page) {
+    page.querySelectorAll('[id]').forEach(n => { if (!n.closest('svg')) n.removeAttribute('id'); });
+    page.querySelectorAll('[name], [autofocus]').forEach(n => { n.removeAttribute('name'); n.removeAttribute('autofocus'); });
+  }
+  // a fixed layer over the content area, inert and hidden from screen readers
+  function layer(cls, f) {
+    const el = document.createElement('div'); el.className = cls; el.setAttribute('aria-hidden', 'true'); el.inert = true;
+    Object.assign(el.style, { left: `${f.left}px`, top: `${f.top}px`, width: `${f.W}px`, height: `${f.H}px` }); return el;
+  }
+  // the page on its opaque sheet, where it was on the screen
+  function onSheet(page, rect, f) {
+    Object.assign(page.style, { position: 'absolute', left: `${rect.left - f.left}px`, top: `${rect.top - f.top}px`, width: `${rect.width}px`, margin: '0' });
+    const sheet = document.createElement('div'); sheet.className = 'genie-sheet'; sheet.style.width = `${f.W}px`; sheet.style.height = `${f.H}px`;
+    sheet.appendChild(page); return sheet;
+  }
+  const settle = () => { const de = document.documentElement; if (!document.querySelector('.genie-under')) de.classList.remove('genie-hold'); if (!document.querySelector('.genie-ghost, .genie-under')) de.classList.remove('genie-on'); };
+  const live = new Set();   // what is running, so the next page change can end it at once
+  App.genieStop = () => Array.from(live).forEach(f => f());
+
+  /* page: the page to bend, on the screen at rect; aim: { x, y } the neck on the screen (fractions), rail (the
+     sidebar, on a computer) or el (the menu button); offs: App.genieMeasure(page), taken while it was on the screen
+     (else it is measured here). Closing (reverse false): the page goes into the neck. Opening: it comes out of it,
+     over `under` (the page you left, standing still), which goes with it at the end. */
+  function run(page, rect, aim, offs, reverse, under, done) {
     const de = document.documentElement; const app = document.querySelector('.app') || document.body;
-    const tb = document.querySelector('.topbar'); const top = tb ? Math.max(0, Math.round(tb.getBoundingClientRect().bottom)) : 0;   // under the top bar
-    const left = aim.rail ? Math.round(aim.rail.getBoundingClientRect().right) : 0;
-    const W = Math.max(40, innerWidth - left), H = Math.max(40, innerHeight - top); const orient = aim.rail ? 'h' : 'v';
+    const f = frameOf(aim); const { left, top, W, H } = f; const orient = aim.rail ? 'h' : 'v';
     const len = orient === 'h' ? W : H, size = orient === 'h' ? H : W;
     const neck = Math.max(NK + 4, Math.min(size - NK - 4, orient === 'h' ? aim.y * innerHeight - top : aim.x * innerWidth - left));
     const dur = App.genieMs || 480;   // App.genieMs: slowed down to look at it
-    const ghost = document.createElement('div'); ghost.className = 'genie-ghost'; ghost.setAttribute('aria-hidden', 'true'); ghost.inert = true;
-    Object.assign(ghost.style, { left: `${left}px`, top: `${top}px`, width: `${W}px`, height: `${H}px` });
-    // its own id stays (the styles for #view; the new page comes first in the document, so #view still finds that one);
-    // the ids inside go (outside drawings, whose shapes point at them), and the names (radio buttons would share a group with the new page's)
-    page.querySelectorAll('[id]').forEach(n => { if (!n.closest('svg')) n.removeAttribute('id'); });
-    page.querySelectorAll('[name], [autofocus]').forEach(n => { n.removeAttribute('name'); n.removeAttribute('autofocus'); });
-    Object.assign(page.style, { position: 'absolute', left: `${rect.left - left}px`, top: `${rect.top - top}px`, width: `${rect.width}px`, margin: '0' });
-    const sheet = document.createElement('div'); sheet.className = 'genie-sheet'; sheet.style.width = `${W}px`; sheet.style.height = `${H}px`;
+    const ghost = layer('genie-ghost', f);
+    tame(page); const sheet = onSheet(page, rect, f);
     if (offs) empty(offs);
-    sheet.appendChild(page); ghost.appendChild(sheet);
-    de.classList.add('genie-on'); app.appendChild(ghost);
+    ghost.appendChild(sheet); de.classList.add('genie-on'); app.appendChild(ghost);
     if (!offs) empty(offscreen(page, { left, top, right: left + W, bottom: top + H }));
     const nodes = page.getElementsByTagName('*').length;
     // strips: thin near the neck, fewer when the page is big (each is a copy to lay out), one wide one where the funnel ends
@@ -110,9 +133,7 @@
     }
     ghost.replaceChildren(...strips.map(p => p.box));
     let t0 = 0, raf = 0;
-    const draw = t => {
-      // the funnel forms in the first 36%; from 26% the page slides through it, picking up speed, its far edge last
-      const A = easeOut(Math.min(1, t / 0.36)), go = len * 1.02 * easeIn(Math.max(0, (t - 0.26) / 0.74));
+    const draw = (A, go) => {
       for (const p of strips) {
         const gone = p.a0 + go >= len; p.box.style.visibility = gone ? 'hidden' : ''; if (gone) continue;
         const [l0, h0] = sides(p.a0, len, size, neck, A), [l1, h1] = sides(p.a1, len, size, neck, A);
@@ -120,15 +141,40 @@
         p.s.style.transform = orient === 'h' ? `translate3d(${-(p.a0 + go)}px,0,0)` : `translate3d(0,${-(p.a0 + go)}px,0)`;
       }
     };
-    draw(0);
+    /* closing: the funnel forms in the first 36%; from 26% the page slides through it, picking up speed, its far edge
+       last. Opening: the page pours out of the neck, slowing as it comes (done at 74%), and from 64% the funnel lets go */
+    const at = t => reverse ? [1 - smooth((t - 0.64) / 0.36), len * 1.02 * (1 - easeOut(Math.min(1, t / 0.74)))] : [easeOut(Math.min(1, t / 0.36)), len * 1.02 * easeIn(Math.max(0, (t - 0.26) / 0.74))];
+    draw(...at(0));
     /* the clock starts a frame late, once the strips have been drawn the first time (the costly frame), so the motion
-       starts at its start; then the sidebar's edge stretches out where the page goes in, or the menu button squashes */
+       starts at its start; then the sidebar's edge stretches out where the page goes in (or comes out), or the menu
+       button squashes */
     const frame = now => {
-      if (!t0) { t0 = now; if (aim.rail && App.genieBulge) App.genieBulge(aim, dur); else if (aim.el && App.burst) setTimeout(() => App.burst(aim.el, 'vt-snap'), dur * 0.78); }
-      const t = Math.min(1, (now - t0) / dur); draw(t); if (t < 1) raf = requestAnimationFrame(frame); else finish();
+      if (!t0) { t0 = now; if (aim.rail && App.genieBulge) App.genieBulge(aim, dur, reverse); else if (aim.el && App.burst) setTimeout(() => App.burst(aim.el, 'vt-snap'), dur * (reverse ? 0.02 : 0.78)); }
+      const t = Math.min(1, (now - t0) / dur); draw(...at(t)); if (t < 1) raf = requestAnimationFrame(frame); else finish();
     };
-    const finish = () => { cancelAnimationFrame(raf); ghost.remove(); if (!document.querySelector('.genie-ghost')) de.classList.remove('genie-on'); if (done) done(); };
+    const finish = () => { live.delete(finish); cancelAnimationFrame(raf); ghost.remove(); if (under) under.remove(); settle(); if (done) done(); };
+    live.add(finish);
     raf = requestAnimationFrame(() => { raf = requestAnimationFrame(frame); });
     return { ghost, finish, strips: strips.length };
+  }
+
+  // closing: page, the page you leave (detached by the router), was at rect on the screen
+  App.genie = (page, rect, aim, offs, done) => run(page, rect, aim, offs, false, null, done);
+
+  /* opening: the page you leave stays on the screen at once, over the new one (which may still be loading), until
+     open(view, aim) sends a copy of the new page out of aim over it; drop() lets go of it with no animation */
+  App.genieHold = function (page, rect, aim) {
+    const f = frameOf(aim); tame(page); const under = layer('genie-under', f); under.appendChild(onSheet(page, rect, f));
+    document.documentElement.classList.add('genie-on', 'genie-hold'); (document.querySelector('.app') || document.body).appendChild(under);   // genie-hold: the live page is out of sight till it has come out
+    let alive = true;
+    const drop = () => { alive = false; live.delete(drop); under.remove(); settle(); };
+    live.add(drop);
+    return {
+      alive: () => alive, drop,
+      open(view, aim2, done) {
+        if (!alive) return null; live.delete(drop); alive = false;
+        return run(copy(view, Array.from(view.querySelectorAll('canvas'))), view.getBoundingClientRect(), aim2, null, true, under, done);
+      }
+    };
   };
 })(window);

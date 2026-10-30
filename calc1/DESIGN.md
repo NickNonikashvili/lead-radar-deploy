@@ -532,9 +532,14 @@ a 13 px ring after its label if it takes over 350 ms (`button.is-busy`), and is 
 (20 s at most). `data-nobusy` opts a button out.
 
 ### Page changes (the genie, like a Mac window going into the Dock)
-Only when you close a study page: from a class's own page (not its dashboard, calendar, planner, discussions,
-syllabus or settings) or Focus, Mistakes or Ask Bo, to a page that is not one (`App.isStudyPage`). Every other change
-is plain: the new page is drawn at once.
+Only across the edge of a class (`App.isClassPage`: any page of a class but its discussions). Leaving a class page
+for a page outside the classes (home, discussions, settings...), it closes into the sidebar; going into a class from
+outside, the class page opens out of the sidebar the same way, backwards: the page you leave is held still on the
+screen (`App.genieHold`, `.genie-under`; the live page waits out of sight under `html.genie-hold`) while the class
+page is drawn (up to 1.5 s, a class may load first), then a copy of it pours out of the neck (slowing as it comes,
+done at 74%; from 64% the funnel lets go) and both go; the sidebar's edge meets it already stretching. Changes within
+a class, between classes, or between pages outside them are plain. A change during one ends it at once
+(`App.genieStop`).
 How the Mac does it, and the GNOME (macos-genie) and KWin ports: the window is cut into thin strips across the way it
 goes, each strip is bent onto a four-cornered piece of a funnel whose sides are curves, from the window to the Dock
 icon; the funnel forms first, then the window slides through it, its far edge following its near one. `navigate()`
@@ -549,9 +554,9 @@ out), draws the new page, and hands the old one to `App.genie` (`assets/genie.js
   (Heckbert's square-to-quad map: straight lines stay straight, neighbours meet exactly, 1 px overlap); its sheet
   slides so it shows its own slice. A layer per strip (a screenful in all), not per sheet.
 - The funnel: smoothstep sides from the full page to a 36 px neck, reaching 72% of the way. On a computer the neck is
-  at the sidebar's edge, level with the page's own link (`genieTarget`: the longest link or `button[data-view]` its
-  address starts with, else the logo) and the page flows left; on a phone it is at the menu button and the page flows
-  up.
+  at the sidebar's edge, level with the class page's own link (`genieTarget`: the longest link or `button[data-view]`
+  its address starts with, else the class's link, else the logo) and the page flows left; on a phone it is at the
+  menu button and the page flows up; with neither on the screen (a visitor's start page), the top left corner.
 - Timing: 0.48 s from the first frame drawn (the clock starts a frame late, after the costly first frame). The funnel
   forms in the first 36% (eased out); from 26% the page slides through it (eased in), its far edge last. On a computer
   the sidebar's edge bulges out there (`.vt-bulge`, the sidebar's own colours, 1.45× as long: out by 58%, snaps back

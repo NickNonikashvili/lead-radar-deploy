@@ -13,7 +13,7 @@
    ============================================================ */
 (function () {
   'use strict';
-  var BUILD = '2026.10.30.6';   // written by scripts/release.js
+  var BUILD = '2026.10.30.7';   // written by scripts/release.js
   var html = document.documentElement;
   if (html.hasAttribute('data-app') || /^(localhost|127\.0\.0\.1)$/.test(location.hostname) && !/[?&]buildcheck\b/.test(location.search) && !window.MATHUB_BUILDCHECK) return;
   var KEY = 'mathub-buildcheck-' + BUILD;

@@ -10,7 +10,7 @@
 (function (global) {
   'use strict';
   const BUILD = global.MATHUB_BUILD || 'dev';
-  global.MATHUB_ASSETS_BUILD = '2026.10.30.6';   // the build these scripts belong to (scripts/release.js writes it; build-check.js compares it with the page's)
+  global.MATHUB_ASSETS_BUILD = '2026.10.30.7';   // the build these scripts belong to (scripts/release.js writes it; build-check.js compares it with the page's)
   const Courses = global.Courses || (global.Courses = {});
   const COURSE_ORDER = ['calc', 'physics', 'precalc', 'writ', 'csci', 'biob', 'kin', 'psyx'];
   const GLOBAL_VIEWS = ['instructors', 'contact', 'forum', 'policy', 'admin', 'challenge', 'people', 'settings', 'leagues', 'gpa', 'today', 'whatsnew', 'resources', 'guides', 'focus', 'recap', 'tools', 'mistakes', 'join', 'sheet', 'request', 'teach', 'class', 'syllabus', 'notfound', 'create', 'maker', 'c', 'tutor', 'plan', 'tasks', 'timetable', 'agenda', 'timelog', 'projects', 'habits', 'goals', 'wheel', 'journal', 'money', 'career', 'portfolio', 'max', 'unsubscribe', 'room', 'calls', 'usage', 'customize', 'off'];   // pages that work without a course, e.g. #/contact
@@ -477,51 +477,69 @@
   }
   window.addEventListener('scroll', () => { clearTimeout(Scroll.t); Scroll.t = setTimeout(scrollKeep, 150); }, { passive: true });
   window.addEventListener('pagehide', scrollKeep);
-  /* ---------- closing a study page: it goes into the sidebar (the genie, assets/genie.js) ----------
-     Only when you leave a study page (a lesson, flashcards, a quiz, a tool...) for one that is not (the dashboard, the
-     calendar, home, settings...); every other page change is plain. It goes into the sidebar level with its own link
-     (the StudyCat logo when it has none), and the sidebar's edge stretches out there and snaps back; on a phone it goes
-     into the menu button. The new page is drawn at once, underneath. Nothing moves with Reduce motion, in a background
-     tab or in the apps. */
+  /* ---------- in and out of a class: the genie (assets/genie.js) ----------
+     Leaving a class page (any page of a class) for one outside the classes (home, discussions, settings...), the page
+     closes into the sidebar like a window into the Dock; going into a class from outside, the class page opens out of
+     the sidebar the same way, backwards. Changes within a class, between classes or between pages outside them are
+     plain. It goes into (or comes out of) the sidebar level with the class page's link (else the class's link, else
+     the StudyCat logo), where the sidebar's edge stretches out and snaps back; on a phone, the menu button. Nothing
+     moves with Reduce motion (the switch in Customize or the device's), in a background tab or in the apps. */
   const Nav = { shown: location.hash };
-  // a study page: a class's own page, but not its dashboard, calendar, planner, discussions, syllabus or settings; or one of the few that work across classes
-  const NOT_STUDY = ['dashboard', 'calendar', 'planner', 'forum', 'course', 'settings'], STUDY_ANYWHERE = ['focus', 'mistakes', 'tutor'];
-  const isStudy = h => { const p = String(h || '').replace(/^#\/?/, '').split('?')[0].split('/').filter(Boolean); if (!p.length) return false; return Courses[p[0]] ? !!p[1] && !NOT_STUDY.includes(p[1]) : STUDY_ANYWHERE.includes(p[0]); };
-  App.isStudyPage = isStudy;
+  // a class page: any page inside a class (#/<class>/...), but not its discussions (they are the whole community's)
+  const isClassPage = h => { const p = String(h || '').replace(/^#\/?/, '').split('?')[0].split('/').filter(Boolean); return !!p.length && !!Courses[p[0]] && p[1] !== 'forum'; };
+  App.isClassPage = isClassPage;
   const pagePath = h => { const p = String(h || '#/').split('?')[0].replace(/\/+$/, '') || '#'; const seg = p.slice(2).split('/'); return seg.length === 1 && Courses[seg[0]] ? `${p}/dashboard` : p; };
   const shownRail = () => [$('.sidebar'), $('.fx-rail')].find(el => { if (!el) return false; const r = el.getBoundingClientRect(); const cs = getComputedStyle(el); return r.right > 40 && r.width > 0 && r.left < 20 && cs.visibility !== 'hidden' && cs.display !== 'none'; });
   // where a page goes: level with its own link in the sidebar (the longest link its address starts with; a page's
-  // menu item before a class chip), else the logo; on a phone, where the sidebar is tucked away, into the menu button
+  // menu item before a class chip), else its class's link, else the logo; on a phone, where the sidebar is tucked
+  // away, into the menu button; with neither on the screen, the top left corner
   function genieTarget(hash) {
     const rail = shownRail(); const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
     if (rail) {
-      const want = pagePath(hash); let best = -1, el = null;
+      const want = pagePath(hash); const cls = want.split('/')[1]; let best = -1, el = null;
       const cid = document.documentElement.dataset.course;   // a class's own menu items are buttons with data-view, for #/<class>/<view>
-      $$('a[href^="#/"], button[data-view]', rail).forEach(a => { const r = a.getBoundingClientRect(); if (!r.height || r.bottom < 0 || r.top > innerHeight) return; const href = a.getAttribute('href'); if (!href && !cid) return; const h = href ? pagePath(href) : `#/${cid}/${a.dataset.view}`; const sc = (h === want ? 1e4 : want.startsWith(h + '/') ? h.length : -1) + (a.dataset.view || a.dataset.sv ? 0.5 : 0) - (a.classList.contains('sb-class') ? 0.25 : 0); if (sc > best) { best = sc; el = a; } });
+      $$('a[href^="#/"], button[data-view]', rail).forEach(a => { const r = a.getBoundingClientRect(); if (!r.height || r.bottom < 0 || r.top > innerHeight) return; const href = a.getAttribute('href'); if (!href && !cid) return; const h = href ? pagePath(href) : `#/${cid}/${a.dataset.view}`; const sc = (h === want ? 1e4 : want.startsWith(h + '/') ? h.length : cls && h.split('/')[1] === cls ? 50 : -1) + (a.dataset.view || a.dataset.sv ? 0.5 : 0) - (a.classList.contains('sb-class') ? 0.25 : 0); if (sc > best) { best = sc; el = a; } });
       el = el || $('.brand-logo', rail) || rail; const rr = rail.getBoundingClientRect(), r = el.getBoundingClientRect();
       const y = clamp(r.top + r.height / 2, 90, innerHeight - 60);
       return { rail, el, px: rr.right, py: y, x: clamp(rr.right / innerWidth, 0.02, 0.98), y: y / innerHeight };
     }
-    const el = $('#topbar .menu-btn'); if (!el) return null; const r = el.getBoundingClientRect(); if (!r.width) return null;
+    const el = $('#topbar .menu-btn'); const r = el && el.getBoundingClientRect();
+    if (!r || !r.width) return { x: 0.03, y: 0.03 };
     return { el, x: clamp((r.left + r.width / 2) / innerWidth, 0.02, 0.98), y: clamp((r.top + r.height / 2) / innerHeight, 0.02, 0.98) };
   }
-  // the sidebar's edge stretching out where the page goes in: a bulge in the sidebar's own colours, gone once it settles
-  App.genieBulge = function (aim, dur) {
+  // the sidebar's edge stretching out where the page goes in: a bulge in the sidebar's own colours, gone once it settles;
+  // a page coming out (open) meets it already stretching, at the start
+  App.genieBulge = function (aim, dur, open) {
     const cs = getComputedStyle(aim.rail); const bg = cs.backgroundColor; const b = document.createElement('div'); b.className = 'vt-bulge'; b.setAttribute('aria-hidden', 'true');
-    b.style.left = `${aim.px - 1}px`; b.style.top = `${aim.py}px`; b.style.animationDuration = `${Math.round(dur * 1.45)}ms`;
+    b.style.left = `${aim.px - 1}px`; b.style.top = `${aim.py}px`; b.style.animationDuration = `${Math.round(dur * 1.45)}ms`; if (open) b.style.animationDelay = `${-Math.round(dur * 0.74)}ms`;
     b.style.setProperty('--vt-bulge-bg', bg && !/rgba\(.*,\s*0\)$|transparent/.test(bg) ? bg : getComputedStyle(document.body).backgroundColor);
     b.style.setProperty('--vt-bulge-line', cs.borderRightColor || 'transparent');
     b.addEventListener('animationend', () => b.remove());   // gone once it has settled (it ends flat, so a missed end leaves nothing to see)
     (document.querySelector('.app') || document.body).appendChild(b); return b;
   };
+  // the page you arrive on, once it is drawn (a class may load first, a page's code the first time): up to 1.5 s
+  function whenDrawn(go, giveUp) {
+    const t0 = performance.now();
+    const tick = () => {
+      const v = $('#view'), r = route(); const ok = v && v.childElementCount && !$('.page-load', v) && (!r.course || (Courses[r.course] && Courses[r.course].loaded));
+      if (ok) requestAnimationFrame(() => go($('#view'))); else if (performance.now() - t0 > 1500) giveUp(); else requestAnimationFrame(tick);
+    };
+    tick();
+  }
   function navigate() {
     const de = document.documentElement; const from = Nav.shown; Nav.shown = location.hash;
-    const can = App.genie && isStudy(from) && !isStudy(location.hash) && !document.hidden && !de.dataset.app && !(App.motionReduced && App.motionReduced());
-    const old = can ? $('#view') : null; const rect = old && old.getBoundingClientRect();
-    let offs = null; try { offs = old && App.genieMeasure ? App.genieMeasure(old) : null; } catch (e) {}   // what is off the screen, while it is laid out
+    if (App.genieStop) App.genieStop();   // one still running ends at once
+    const into = isClassPage(location.hash), outOf = isClassPage(from);
+    const mode = into === outOf || !App.genie || document.hidden || de.dataset.app || (App.motionReduced && App.motionReduced()) ? null : outOf ? 'close' : 'open';
+    const old = mode ? $('#view') : null; const rect = old && old.getBoundingClientRect();
+    let offs = null; if (mode === 'close') { try { offs = App.genieMeasure ? App.genieMeasure(old) : null; } catch (e) {} }   // what is off the screen, while it is laid out
     render();
     if (!old || old.isConnected || !old.childElementCount || rect.height < 40) return;   // drawn in place, or nothing to close
-    try { const aim = genieTarget(from); if (aim) App.genie(old, rect, aim, offs); } catch (e) { setTimeout(() => { throw e; }); }
+    try {
+      if (mode === 'close') { App.genie(old, rect, genieTarget(from), offs); return; }
+      const hold = App.genieHold(old, rect, genieTarget(location.hash));
+      whenDrawn(view => { if (hold.alive()) hold.open(view, genieTarget(location.hash)); }, () => hold.drop());
+    } catch (e) { setTimeout(() => { throw e; }); }
   }
   function render() {
     scrollKeep(); Nav.shown = location.hash;   // where you were on the page you are leaving: before it is cleared (an empty page is scrolled to the top)

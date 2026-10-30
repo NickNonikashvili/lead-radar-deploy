@@ -145,10 +145,12 @@
    them), cut into strips (.genie-strip) that are each bent onto a piece of the funnel, each holding the page on its
    opaque sheet (.genie-sheet) slid along so the strip shows its own slice: a layer per strip, not per sheet (a
    screenful in all), redrawn as the page slides. Nothing inside animates (each copy would start its own over). */
-.genie-ghost { position: fixed; z-index: 25; overflow: hidden; pointer-events: none; }
+.genie-ghost, .genie-under { position: fixed; z-index: 25; overflow: hidden; pointer-events: none; }
+.genie-under { z-index: 24; }   /* opening: the page you leave, still, under the one coming out */
+html.genie-hold .main > main#view { opacity: 0; }   /* opening: the live page waits out of sight (nothing of it shows over the page you left) */
 .genie-strip { position: absolute; left: 0; top: 0; overflow: hidden; transform-origin: 0 0; will-change: transform; }
 .genie-sheet { position: absolute; left: 0; top: 0; overflow: hidden; background: var(--bg); }
-.genie-ghost * { animation: none !important; transition: none !important; }
+.genie-ghost *, .genie-under * { animation: none !important; transition: none !important; }
 @media (min-width: 901px) { html.genie-on .sidebar { z-index: 28; } }
 /* the sidebar's edge where the page goes in: a bulge in the sidebar's own colours (assets/app.js puts it there for
    the change), stretching out as the page arrives, then snapping back past flat and settling */
