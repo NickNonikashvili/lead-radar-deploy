@@ -10,7 +10,7 @@
 (function (global) {
   'use strict';
   const BUILD = global.MATHUB_BUILD || 'dev';
-  global.MATHUB_ASSETS_BUILD = '2026.10.30.2';   // the build these scripts belong to (scripts/release.js writes it; build-check.js compares it with the page's)
+  global.MATHUB_ASSETS_BUILD = '2026.10.30.3';   // the build these scripts belong to (scripts/release.js writes it; build-check.js compares it with the page's)
   const Courses = global.Courses || (global.Courses = {});
   const COURSE_ORDER = ['calc', 'physics', 'precalc', 'writ', 'csci', 'biob', 'kin', 'psyx'];
   const GLOBAL_VIEWS = ['instructors', 'contact', 'forum', 'policy', 'admin', 'challenge', 'people', 'settings', 'leagues', 'gpa', 'today', 'whatsnew', 'resources', 'guides', 'focus', 'recap', 'tools', 'mistakes', 'join', 'sheet', 'request', 'teach', 'class', 'syllabus', 'notfound', 'create', 'maker', 'c', 'tutor', 'plan', 'tasks', 'timetable', 'agenda', 'timelog', 'projects', 'habits', 'goals', 'wheel', 'journal', 'money', 'career', 'portfolio', 'max', 'unsubscribe', 'room', 'calls', 'usage', 'customize', 'off'];   // pages that work without a course, e.g. #/contact
@@ -446,7 +446,8 @@
   }
   function scrollArrive() {
     let st = history.state; let seen = !!(st && st.k);
-    if (!seen) { st = Object.assign({}, st, { k: Date.now().toString(36) + (Scroll.seq++).toString(36) }); try { history.replaceState(st, ''); } catch (e) { seen = false; } }
+    if (!seen) { st = Object.assign({}, st, { k: Date.now().toString(36) + (Scroll.seq++).toString(36), i: (Scroll.i != null ? Scroll.i : 0) + 1 }); try { history.replaceState(st, ''); } catch (e) { seen = false; } }
+    if (st.i != null) Scroll.i = st.i;   // how deep in the tab's history: Back is a lower number (navigate below)
     const k = st.k, again = k === Scroll.cur; let y = seen && !again ? Scroll.at[k] || 0 : 0; Scroll.cur = k;
     // the page drawn again just after you arrived (the account signing in, a class finishing loading) keeps that place;
     // drawn again later (you changed something), it starts at the top as before
@@ -457,6 +458,22 @@
   }
   window.addEventListener('scroll', () => { clearTimeout(Scroll.t); Scroll.t = setTimeout(scrollKeep, 150); }, { passive: true });
   window.addEventListener('pagehide', scrollKeep);
+  /* ---------- page changes: the old page becomes a bubble and sinks away ----------
+     Opening a page: the one you leave pulls in into a rounded bubble and drops below the screen while the new one
+     settles in under it; Back: the page you go back to rises from below as a bubble and opens out (assets/motion.css).
+     The sidebar, the top bar and the floating buttons keep still (each has its own view-transition-name), so only the
+     page moves. This is the browser's View Transitions (Chrome, Edge, Safari 18, Firefox 144); without it, with
+     Reduce motion, in a background tab and in the apps, the page simply changes. The page is drawn the same way
+     either way; only the frame or so before the new one is shown waits. */
+  function navigate() {
+    const de = document.documentElement; const st = history.state;
+    const back = !!(st && st.i != null && Scroll.i != null && st.i < Scroll.i);
+    if (!document.startViewTransition || document.hidden || de.dataset.app || (App.motionReduced && App.motionReduced())) { render(); return; }
+    de.dataset.nav = back ? 'back' : 'push';
+    let vt; try { vt = document.startViewTransition(() => { try { render(); } catch (e) { setTimeout(() => { throw e; }); } }); } catch (e) { delete de.dataset.nav; render(); return; }
+    Scroll.vt = vt; const end = () => { if (Scroll.vt === vt) { Scroll.vt = null; delete de.dataset.nav; } };
+    vt.ready.catch(() => {}); vt.updateCallbackDone.catch(() => {}); vt.finished.then(end, end);
+  }
   function render() {
     scrollKeep();   // where you were on the page you are leaving: before it is cleared (an empty page is scrolled to the top)
     const { course, view, param, query } = route();
@@ -718,7 +735,7 @@
     $('#nav-backdrop').addEventListener('click', () => app.classList.remove('nav-open'));
     applyTheme(); matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applyTheme);
     document.addEventListener('keydown', e => { if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); Search.open(); } if (e.key === 'Escape') { Search.close(); app.classList.remove('nav-open'); } });
-    window.addEventListener('hashchange', render);
+    window.addEventListener('hashchange', navigate);
     setTimeout(() => (global.requestIdleCallback || (f => f()))(() => { App.warmClasses().catch(() => {}); }), 12000);
   }
 

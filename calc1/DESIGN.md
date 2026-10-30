@@ -522,3 +522,13 @@ enough, about a second at most); a new page starts at the top; `App.replaceHash`
 a 13 px ring after its label if it takes over 350 ms (`button.is-busy`), and is free again when the promise settles
 (20 s at most). `data-nobusy` opts a button out.
 
+### Page changes (the old page bubbles away)
+A hash change goes through `navigate()` (`assets/app.js`): `document.startViewTransition(render)` with
+`html[data-nav="push"|"back"]` (Back is a lower `history.state.i` than the page you are on). Push (`vtSink`): the
+page you leave pulls in to `scale(0.9)` with 36 px corners (a clip-path) in the first third (eased out), then
+drops to `translateY(112%) scale(0.8)` picking up speed (eased in), on top of the new page, which settles from
+`scale(0.96)` and `brightness(0.82)` (`vtSettle`). Back (`vtRise`, `vtRecede`) is the reverse: the page you return to rises
+from below as a bubble and opens out over the one you leave. 0.45 s. The frame has its own snapshots so it keeps
+still (`view-transition-name`: side, top, fx-rail, fx-top, bo-fab, ambient, totop): the menus swap at once (a phone's
+drawer still slides shut), the titles cross-fade in 0.22 s. No transition without the API, with Reduce motion, in a
+hidden tab or in the apps; render() is the same either way (an error in it is thrown again, not swallowed).

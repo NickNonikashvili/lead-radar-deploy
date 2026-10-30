@@ -41,5 +41,31 @@ const T = require('./lib');
   check('busy at once, the spinner only after a moment, both gone when the answer comes', b.at0.busy === 'true' && !b.at0.spin && b.at500.spin && b.after.busy === null && !b.after.spin && b.label === 'Save', b);
   check('a button whose action is instant is never marked busy', b.quickBusy === null, b);
   await c.close();
+
+  // page changes: the old page becomes a bubble and sinks away; Back brings it up again; the frame keeps still; Reduce motion: none
+  const [c2, q] = await mk(1360, 900, { serviceWorkers: 'block', reducedMotion: 'no-preference' });
+  await q.addInitScript(() => { try { const s = JSON.parse(localStorage.getItem('studyhub-settings') || '{}'); s.motion = 'on'; localStorage.setItem('studyhub-settings', JSON.stringify(s)); } catch (e) {} });
+  await go(q, '#/resources', 1200);
+  const vtOn = await q.evaluate(() => typeof document.startViewTransition === 'function');
+  const anims = () => q.evaluate(() => ({ nav: document.documentElement.dataset.nav || null, a: document.getAnimations().filter(a => a.effect && /view-transition/.test(a.effect.pseudoElement || '')).map(a => `${a.effect.pseudoElement}:${a.animationName}`) }));
+  // the slide starts once the new page is drawn (a frame or a few later): wait for it
+  const sliding = () => q.waitForFunction(() => document.getAnimations().some(a => a.effect && /view-transition-new\(root\)/.test(a.effect.pseudoElement || '')), null, { timeout: 1500 }).catch(() => {});
+  await q.evaluate(() => { location.hash = '#/calc'; }); await sliding();
+  const push = await anims();
+  check('opening a page: the old one becomes a bubble and sinks away, the new one settles in under it', vtOn && push.nav === 'push' && push.a.includes('::view-transition-old(root):vtSink') && push.a.includes('::view-transition-new(root):vtSettle'), push);
+  const frame = await q.evaluate(() => ({ side: getComputedStyle(document.querySelector('.sidebar')).viewTransitionName, top: getComputedStyle(document.querySelector('.topbar')).viewTransitionName, bo: document.querySelector('#bo-fab') ? getComputedStyle(document.querySelector('#bo-fab')).viewTransitionName : 'bo-fab' }));
+  check('the sidebar, the top bar and Ask Bo keep still (their own snapshots)', frame.side === 'side' && frame.top === 'top' && frame.bo === 'bo-fab', frame);
+  await q.waitForTimeout(700);
+  const after = await anims();
+  check('and when it has settled, the page is just the page again', after.nav === null && after.a.length === 0 && /#\/calc/.test(await q.evaluate(() => location.hash)), after);
+  await q.goBack(); await sliding();
+  const pop = await anims();
+  check('Back: the page you go back to rises from below as a bubble and opens out', pop.nav === 'back' && pop.a.includes('::view-transition-new(root):vtRise') && pop.a.includes('::view-transition-old(root):vtRecede'), pop);
+  await q.waitForTimeout(700);
+  await q.emulateMedia({ reducedMotion: 'reduce' });
+  await q.evaluate(() => { location.hash = '#/calc'; }); await q.waitForTimeout(60);
+  const still = await anims();
+  check('with Reduce motion the page simply changes', still.nav === null && still.a.length === 0 && await q.evaluate(() => !!document.querySelector('#view').children.length), still);
+  await c2.close();
   await T.finish();
 })();

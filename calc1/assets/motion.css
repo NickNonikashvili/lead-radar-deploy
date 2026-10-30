@@ -140,6 +140,44 @@
 #totop { transition: opacity 0.25s, transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1); }
 #totop:hover { transform: translateY(-3px); }
 
+/* ---------- page changes: the old page becomes a bubble and sinks away (assets/app.js navigate) ----------
+   Opening a page: the page you leave pulls in from its edges into a rounded bubble, then
+   drops below the bottom of the screen, picking up speed as it goes, while the new page settles in underneath.
+   Back is the same in reverse: the page you go back to rises from below as a bubble and opens out to fill the screen
+   over the one you leave. About 0.45 s, quick to shape and quicker to go. The frame keeps still: the sidebar, the top
+   bar, the faculty rail and top bar, and the floating buttons have their own snapshots (the menus swap at once, a
+   phone's drawer still slides shut, the titles cross-fade quickly). */
+.sidebar { view-transition-name: side; }
+.topbar { view-transition-name: top; }
+.fx-rail { view-transition-name: fx-rail; }
+.fx-top { view-transition-name: fx-top; }
+#bo-fab { view-transition-name: bo-fab; }
+#ambient { view-transition-name: ambient; }
+#totop { view-transition-name: totop; }
+::view-transition-group(*) { animation-duration: 0.45s; animation-timing-function: cubic-bezier(0.32, 0.72, 0, 1); }
+::view-transition-old(root), ::view-transition-new(root) { mix-blend-mode: normal; animation-duration: 0.45s; animation-timing-function: linear; animation-fill-mode: both; transform-origin: 50% 40%; }
+/* the rounding is a clip-path (a snapshot's border-radius does not clip it), so the depth comes from the page under
+   the bubble: a little dimmer at first, coming up to full as the bubble leaves */
+@keyframes vtSink {
+  0% { transform: none; clip-path: inset(0 round 0); animation-timing-function: cubic-bezier(0.2, 0.9, 0.3, 1); }
+  34% { transform: scale(0.9); clip-path: inset(0 round 36px); animation-timing-function: cubic-bezier(0.55, 0, 0.85, 0.4); }
+  100% { transform: translateY(112%) scale(0.8); clip-path: inset(0 round 52px); }
+}
+@keyframes vtSettle { from { transform: scale(0.96); filter: brightness(0.82); } to { transform: none; filter: none; } }
+@keyframes vtRise {
+  0% { transform: translateY(112%) scale(0.8); clip-path: inset(0 round 52px); animation-timing-function: cubic-bezier(0.15, 0.6, 0.45, 1); }
+  66% { transform: scale(0.9); clip-path: inset(0 round 36px); animation-timing-function: cubic-bezier(0.2, 0.9, 0.3, 1); }
+  100% { transform: none; clip-path: inset(0 round 0); }
+}
+@keyframes vtRecede { from { transform: none; filter: none; } to { transform: scale(0.96); filter: brightness(0.82); } }
+html[data-nav="push"]::view-transition-old(root) { animation-name: vtSink; z-index: 2; }
+html[data-nav="push"]::view-transition-new(root) { animation-name: vtSettle; animation-timing-function: cubic-bezier(0.2, 0.9, 0.3, 1); }
+html[data-nav="back"]::view-transition-new(root) { animation-name: vtRise; z-index: 2; }
+html[data-nav="back"]::view-transition-old(root) { animation-name: vtRecede; animation-timing-function: cubic-bezier(0.2, 0.9, 0.3, 1); }
+::view-transition-old(side), ::view-transition-old(fx-rail) { animation: none; opacity: 0; }
+::view-transition-new(side), ::view-transition-new(fx-rail) { animation: none; }
+::view-transition-old(top), ::view-transition-new(top), ::view-transition-old(fx-top), ::view-transition-new(fx-top) { animation-duration: 0.22s; }
+
 /* ---------- mascot ---------- */
 .mascot-slot svg, .celebrate-bo svg, .empty.bo svg { transform-origin: 50% 100%; }
 .mascot-slot:hover svg { animation: mhWiggle 0.7s ease-in-out; }
