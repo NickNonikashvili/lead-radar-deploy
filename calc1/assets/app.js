@@ -392,22 +392,24 @@
     (F.SECTIONS || []).forEach(s => { const x = L[s.id]; if (!x) return; Object.keys(x).forEach(k => { if (k !== 'addExamples') s[k] = x[k]; }); if (x.addExamples) s.examples = (s.examples || (s.example && s.example.p ? [s.example] : [])).concat(x.addExamples); }); F._lessons = true; return F;
   }
   const lessonsFor = (F, one) => (LESSON_IDS.has(F.id) && !(global.MathubLessons && global.MathubLessons[F.id]) ? one('lessons/' + F.id).catch(() => {}) : Promise.resolve()).then(() => mergeLessons(F));
-  App.loadCourse = function (id) {
+  // quiet: loaded ahead of a click (the intent below), so no loading bar; if the click comes while it is still on its
+  // way, the bar shows for the rest of it
+  App.loadCourse = function (id, quiet) {
     const C = Courses[id]; if (!C) return Promise.reject(new Error('Unknown class.'));
+    if (loading[id]) { if (!quiet && loading[id].quiet && App.loadbar) { loading[id].quiet = false; App.loadbar.wrap(loading[id]).catch(() => {}); } return loading[id]; }
+    const bar = !quiet && App.loadbar;
     const emit = (type, detail) => { try { document.dispatchEvent(new CustomEvent(type, { detail: Object.assign({ course: id }, detail) })); } catch (e) {} };
     if (C.pack && !C.loaded && App.packs) {   // a class uploaded in the admin panel (assets/classpacks.js): one JSON file from the server instead of scripts
-      if (loading[id]) return loading[id];
-      if (App.loadbar) App.loadbar.start();
-      loading[id] = App.packs.load(id).then(F => lessonsFor(F, script)).then(F => { F.loaded = true; delete F.stub; applyVariant(F); Search.index = null; emit('mh:loaded', {}); return F; }).finally(() => { delete loading[id]; if (App.loadbar) App.loadbar.done(); });
-      return loading[id];
+      if (bar) bar.start();
+      loading[id] = App.packs.load(id).then(F => lessonsFor(F, script)).then(F => { F.loaded = true; delete F.stub; applyVariant(F); Search.index = null; emit('mh:loaded', {}); return F; }).finally(() => { delete loading[id]; if (bar) bar.done(); });
+      loading[id].quiet = !!quiet; return loading[id];
     }
     if (C.loaded || !C.files || !C.files.length) { C.loaded = true; delete C.stub; return Promise.resolve(C); }
-    if (loading[id]) return loading[id];
     const one = script;
-    if (App.loadbar) App.loadbar.start();
+    if (bar) bar.start();
     emit('mh:load', { files: C.files.slice() });
-    loading[id] = (async () => { try { for (const f of C.files) await one(f); await lessonsFor(Courses[id], one); } finally { delete loading[id]; if (App.loadbar) App.loadbar.done(); } const F = Courses[id]; F.loaded = true; delete F.stub; applyVariant(F); Search.index = null; emit('mh:loaded', {}); return F; })();
-    return loading[id];
+    loading[id] = (async () => { try { for (const f of C.files) await one(f); await lessonsFor(Courses[id], one); } finally { delete loading[id]; if (bar) bar.done(); } const F = Courses[id]; F.loaded = true; delete F.stub; applyVariant(F); Search.index = null; emit('mh:loaded', {}); return F; })();
+    loading[id].quiet = !!quiet; return loading[id];
     function script(src) { return new Promise((res, rej) => { if (document.querySelector(`script[data-src="${src}"]`)) return res(); const sc = document.createElement('script'); sc.src = `assets/${src}.js?v=${BUILD}`; sc.dataset.src = src; const t0 = performance.now(); sc.onload = () => { emit('mh:file', { src, url: sc.src, ms: Math.round(performance.now() - t0) }); res(); }; sc.onerror = () => { sc.remove(); rej(new Error(`Could not download ${src}.js. Check your connection and try again.`)); }; document.head.appendChild(sc); }); }
   };
   App.loadCourses = ids => Promise.all(ids.map(id => App.loadCourse(id).catch(() => null)));
@@ -421,6 +423,23 @@
     root.innerHTML = `<div class="page-load"><div class="empty px-gameover">${App.pixel ? `<div class="px-go-art">${App.pixel('boSad', 5)}</div><div class="px-label px-go-title" aria-hidden="true">Game over</div>` : ''}<p>${esc(err && err.message || 'Could not load this class.')}</p>${App.pixel ? '<div class="px-label px-go-q" aria-hidden="true">Continue?</div>' : ''}<div class="row gap-sm mt-2" style="justify-content:center"><button class="btn sm primary" data-action="retry">${icon('rotate', 13)} Try again</button><a class="btn sm" href="#/">All classes</a></div></div></div>`;
     bind(root, { retry: () => render() });
   }
+  /* ---------- a page starts loading before you click it ----------
+     A pointer resting on a link for 65 ms (about an even chance of a click, which leaves 300 ms or more), a finger
+     landing on one (about 90 ms before the tap) or the keyboard stopping on one starts loading what that page needs,
+     quietly: a class not opened yet, or a page whose code loads the first time (What's new, the terms, the planner
+     pages). So the page is usually ready when the click comes (the instant.page measurements). Not offline, not
+     when the connection asked to save data. */
+  const Intent = { t: null };
+  const intended = e => {
+    const a = e.target && e.target.closest && e.target.closest('a[href^="#/"]'); if (!a) return null; const seg = (a.getAttribute('href') || '').slice(2).split(/[/?#]/)[0];
+    const C = Courses[seg]; if (C) return !C.loaded && !loading[seg] ? () => App.loadCourse(seg, true) : null;
+    const V = App.views[seg]; return V && V.lazy && V.load ? () => V.load() : null;
+  };
+  const warm = go => { if (navigator.onLine === false || (navigator.connection && navigator.connection.saveData)) return; try { Promise.resolve(go()).catch(() => {}); } catch (e) {} };
+  document.addEventListener('pointerover', e => { if (e.pointerType !== 'mouse') return; const go = intended(e); clearTimeout(Intent.t); if (go) Intent.t = setTimeout(() => warm(go), 65); }, { passive: true });
+  document.addEventListener('pointerout', () => clearTimeout(Intent.t), { passive: true });
+  document.addEventListener('touchstart', e => { const go = intended(e); if (go) warm(go); }, { passive: true });
+  document.addEventListener('focusin', e => { const go = intended(e); clearTimeout(Intent.t); if (go) Intent.t = setTimeout(() => warm(go), 200); });
   function prefetchLast() {
     const lv = settings().lastVisit; const id = lv && lv.course; if (!id || !Courses[id] || Courses[id].loaded || !App.myCourses().includes(id)) return;
     const idle = global.requestIdleCallback || (fn => setTimeout(fn, 1500)); idle(() => { if (navigator.onLine === false) return; App.loadCourse(id).catch(() => {}); });
@@ -525,14 +544,15 @@
   App.lazyView = (name, files, title, blurb) => {
     if (App.views[name]) return;
     const stub = App.views[name] = {
-      title, lazy: true, ...(blurb ? { blurb } : {}),
+      title, lazy: true, files, ...(blurb ? { blurb } : {}),
+      // the code arrives (opened, or loaded ahead of a click): what other files hung on the stand-in moves to the real page
+      load() {
+        return App.need(files).then(() => { const real = App.views[name]; if (!real || real === stub) return; Object.keys(stub).forEach(k => { if (!['title', 'lazy', 'files', 'load', 'render'].includes(k) && !(k in real)) real[k] = stub[k]; }); });
+      },
       render(root) {
         root.innerHTML = '<div class="empty">Loading…</div>';
-        App.need(files).then(() => {
-          const real = App.views[name]; if (!real || real === stub) return;
-          Object.keys(stub).forEach(k => { if (!['title', 'lazy', 'render'].includes(k) && !(k in real)) real[k] = stub[k]; });
-          if (root.isConnected) render();
-        }).catch(e => { if (!root.isConnected) return; root.innerHTML = `<div class="empty">${esc(e.message)} <button class="btn sm" data-action="lazy-retry">Try again</button></div>`; bind(root, { 'lazy-retry': () => render() }); });
+        stub.load().then(() => { const real = App.views[name]; if (real && real !== stub && root.isConnected) render(); })
+          .catch(e => { if (!root.isConnected) return; root.innerHTML = `<div class="empty">${esc(e.message)} <button class="btn sm" data-action="lazy-retry">Try again</button></div>`; bind(root, { 'lazy-retry': () => render() }); });
       }
     };
   };

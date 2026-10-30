@@ -67,5 +67,23 @@ const T = require('./lib');
   const still = await anims();
   check('with Reduce motion the page simply changes', still.nav === null && still.a.length === 0 && await q.evaluate(() => !!document.querySelector('#view').children.length), still);
   await c2.close();
+
+  // a page starts loading before you click it: a class link you rest the pointer on, a page whose code loads the first time
+  const [c3, w] = await mk(1360, 900, { serviceWorkers: 'block', reducedMotion: 'reduce' });
+  await w.addInitScript(() => { try { const s = JSON.parse(localStorage.getItem('studyhub-settings') || '{}'); s.courses = ['calc', 'physics']; s.boFloatSeen = 1; s.tourLayout = 9; localStorage.setItem('studyhub-settings', JSON.stringify(s)); } catch (e) {} });
+  await go(w, '#/resources', 1500);
+  const pre = await w.evaluate(() => ({ loaded: App.courseLoaded('physics'), link: !!document.querySelector('a[href^="#/physics"]'), lazy: !!(App.views.whatsnew && App.views.whatsnew.lazy) }));
+  await w.hover('a[href^="#/physics"]'); await w.waitForTimeout(30);
+  const early = await w.evaluate(() => App.courseLoaded('physics'));
+  let bar = false; for (let i = 0; i < 20; i++) { bar = bar || await w.evaluate(() => { const b = document.querySelector('#loadbar'); return !!(b && b.classList.contains('on')); }); await w.waitForTimeout(40); }
+  const post = await w.evaluate(() => ({ loaded: App.courseLoaded('physics'), hash: location.hash }));
+  check('resting the pointer on a class link loads that class quietly (no loading bar), without opening it', pre.link && !pre.loaded && !early && post.loaded && !bar && /resources/.test(post.hash), { pre, early, bar, post });
+  await w.evaluate(() => { const a = document.createElement('a'); a.href = '#/whatsnew'; a.id = 'zz-wn'; a.textContent = 'What is new'; a.style.cssText = 'position:fixed;top:120px;left:420px;z-index:999;padding:8px;background:#fff'; document.body.appendChild(a); });
+  await w.hover('#zz-wn'); await w.waitForTimeout(800);
+  const lz = await w.evaluate(() => ({ lazy: !!(App.views.whatsnew && App.views.whatsnew.lazy), hash: location.hash }));
+  check('and a page whose code loads the first time (What’s new) is fetched ahead of the click', pre.lazy && !lz.lazy && /resources/.test(lz.hash), { pre, lz });
+  await w.click('#zz-wn'); await w.waitForTimeout(500);
+  check('so it opens at once', await w.evaluate(() => /whatsnew/.test(location.hash) && !/Loading…/.test(document.querySelector('#view').textContent) && document.querySelector('#view').textContent.length > 200));
+  await c3.close();
   await T.finish();
 })();

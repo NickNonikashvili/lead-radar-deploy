@@ -532,3 +532,11 @@ from below as a bubble and opens out over the one you leave. 0.45 s. The frame h
 still (`view-transition-name`: side, top, fx-rail, fx-top, bo-fab, ambient, totop): the menus swap at once (a phone's
 drawer still slides shut), the titles cross-fade in 0.22 s. No transition without the API, with Reduce motion, in a
 hidden tab or in the apps; render() is the same either way (an error in it is thrown again, not swallowed).
+
+### Ready before you click; type details
+Intent preloading (`assets/app.js`, after the instant.page measurements): a mouse resting 65 ms on an `a[href^="#/"]`,
+a touchstart, or keyboard focus resting 200 ms starts `App.loadCourse(id, true)` (quiet: no loading bar; if the click
+comes while it is still loading, the bar shows for the rest) for a class not loaded yet, or the lazy page's `load()`
+(the stand-in's code, with what other files hung on it carried over). Not offline, not with Save-Data. Type: `p, li`
+use `text-wrap: pretty`, headings `balance`; ticking numbers use `tabular-nums`.
+

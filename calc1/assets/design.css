@@ -595,4 +595,9 @@ html[data-motion="off"] button.is-busy::after { animation-duration: 1.4s !import
 .wp-end.later { animation-delay: 0.95s; }
 @media (prefers-reduced-motion: reduce) { .wp-end.later { animation-delay: 0s; } }
 html[data-motion="off"] .wp-end.later { animation-delay: 0s; }
+/* type details: a paragraph does not end on one lonely word, a heading's lines are balanced, and numbers that tick
+   (the clock, countdowns, scores, the daily word's points) keep their width so nothing beside them jitters */
+:root:not([data-skin]):not([data-app]) :is(p, li, .hg-sub, .wp-sub, .small) { text-wrap: pretty; }
+:root:not([data-skin]):not([data-app]) :is(h1, h2, h3, .page-title) { text-wrap: balance; }
+:is(.hg-num, .wp-pts, .hg-day b, .sb-time, .gl-stat b, .wp-side .small, .hg-bar-n, .fx-stat b) { font-variant-numeric: tabular-nums; }
 
