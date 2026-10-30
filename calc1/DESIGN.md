@@ -223,6 +223,14 @@ A daylight palette: navy on white over a sky tint, a full set of class colours, 
 
 **The No Glow Rule.** No gradient on any button, card, title or number, no coloured glow, no glass. The only soft gradients are the painted skies of illustrations.
 
+**The One Loud Thing Rule.** A screen has one filled button, the page's own; the frame speaks in words, dots and
+outlines. The next exam in the top bar is words with a coral dot, unread notifications are a dot (the number is still
+read out), Call Bo is an outlined button, the streak is a plain number. A class shows its colour as a dot beside its
+code, not as a filled label in a different bright colour each. A number that matters is set large in the type (an
+exam week's days), not put in a coloured tile; rows are split by hairlines, with plain icons, not tinted icon tiles.
+From "AI slop vs. senior designer" (Griffin Wooldridge, October 2026): gradient cards, a bright colour per thing and
+a gradient button are the slop; one accent, type hierarchy and hairlines are the senior version (`assets/quiet.css`).
+
 ## Typography
 
 **Display Font:** Gabarito (with Figtree, Helvetica Neue, Arial)
@@ -357,6 +365,7 @@ The same cards as the Tools page (2px border, 16px radius, a 40px Accent Soft ic
 - **Do** give each class its own 8-bit sprite, drawn in the pixel style of Bo's world.
 - **Do** keep Bo and the pixel Bridger Range in the scenery, and Bo as the logo.
 - **Do** honour Reduce motion: every entrance and the node pulse have a still version.
+- **Do** keep one filled button per screen, the page's own; the top bar and sidebar use words, dots and outlines.
 
 ### Don't:
 - **Don't** use gradients, glow or glass on buttons, cards, titles or numbers; the only gradients are painted skies.

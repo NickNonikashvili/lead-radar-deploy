@@ -868,6 +868,11 @@ The October 2026 audit against what careful, large sites do (and where AI-built 
 The designer's files ("StudyCat Redesign", Figma "StudyCat") adapted to the site, in `assets/design.css` (loaded last,
 website default look only; the apps keep their frame). Night is the design as drawn and follows the device; day is its
 twin; the light-or-dark switch stays.
+- **Quieter** (2026.10.30.6, `assets/quiet.css`, loaded after it): after "AI slop vs. senior designer" (Griffin
+  Wooldridge), one filled button per screen and the frame in words, dots and outlines: the next exam is words with a
+  coral dot, unread notifications a dot, Call Bo outlined, the streak a plain number; class codes are a colour dot
+  and the code, not a filled label; an exam week's days are a big number, its rows split by hairlines with plain
+  icons; the gradients left from older looks are flat (DESIGN.md, The One Loud Thing Rule).
 - **Your home** (`assets/home-grid.js`): one hero (the soonest exam in three weeks, else the class you practised last
   and how it went, else pick a class), then cards: the daily word, today's plan, this week, the exam checklist in the
   week before an exam, your classes, flashcards, mistakes, discussions. ⋮ → Hide from dashboard; Add to dashboard

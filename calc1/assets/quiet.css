@@ -1,0 +1,75 @@
+/* ============================================================
+   StudyCat — quieter: one accent, the type and hairlines doing the work instead of tinted tiles, pills and badges
+   After "AI slop vs. senior designer" (Griffin Wooldridge, Instagram, October 2026): the slop screen is a gradient
+   page with a gradient card for every number, a different bright colour for each thing, emoji and a gradient button;
+   the senior one is a plain page with one accent, numbers set large in the type, quiet labels, hairline cards and a
+   single strong button. Applied here to the busiest places: the top bar, the home hero and cards, a class's exam
+   week, and the gradients left from older looks. Colour still means something (DESIGN.md, Colors): the class
+   colours, coral for exams, gold for rewards and the painted skies stay; only the decoration goes.
+   The website's own look only (other looks and the apps keep theirs). Loaded last.
+   ============================================================ */
+
+/* ---------- the top bar: text and icons; the one filled button on a screen is the page's own ---------- */
+/* the next exam: words with a small dot, not a tinted pill */
+:root:not([data-skin]):not([data-app]) #topbar .exam-chip { gap: 7px; padding: 5px 8px; border: 0; border-radius: 8px; background: transparent; box-shadow: none; color: var(--muted); }
+:root:not([data-skin]):not([data-app]) #topbar .exam-chip > svg { display: none; }
+:root:not([data-skin]):not([data-app]) #topbar .exam-chip::before { content: ""; flex: none; width: 7px; height: 7px; border-radius: 50%; background: var(--coral, #E5533D); }
+:root:not([data-skin]):not([data-app]) #topbar .exam-chip b { color: var(--ink); font-family: inherit; font-weight: 700; }
+:root:not([data-skin]):not([data-app]) #topbar .exam-chip:hover { background: var(--surface-2); }
+:root:not([data-skin]):not([data-app]) #topbar .exam-chip.asof::before { background: var(--warn, #B7791F); }
+/* Call Bo: an outlined button (the page's own call button is the filled one) */
+:root:not([data-skin]):not([data-app]) #topbar .call-top { border: 1px solid var(--d-btn2-line); background: var(--d-btn2); color: var(--link); box-shadow: none; }
+:root:not([data-skin]):not([data-app]) #topbar .call-top:hover { border-color: var(--link); background: var(--surface-2); }
+/* unread notifications: a dot (the number is still read out with the button) */
+:root:not([data-skin]):not([data-app]) .bell-btn .badge { top: 5px; right: 5px; width: 9px; min-width: 0; height: 9px; padding: 0; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 2px var(--surface); color: transparent; font-size: 0; overflow: hidden; }
+/* the streak and the day's goal: no gold gradient, no glow, no flicker */
+:root:not([data-skin]):not([data-app]) .streak-chip, :root:not([data-skin]):not([data-app]) .streak-chip.lit { border-color: transparent; background: transparent; color: var(--ink); font-variant-numeric: tabular-nums; }
+:root:not([data-skin]):not([data-app]) .streak-chip:not(.lit) { color: var(--muted); }
+:root:not([data-skin]):not([data-app]) .streak-chip:hover { background: var(--surface-2); transform: none; }
+:root:not([data-skin]):not([data-app]) .streak-chip.lit svg { animation: none; }
+:root:not([data-skin]):not([data-app]) .goal-ring.done .ring-fg { filter: none; }
+
+/* ---------- the home hero: one colour of emphasis, plain words for the date ---------- */
+:root:not([data-skin]):not([data-app]) .hg-hero::before { content: none; }
+:root:not([data-skin]):not([data-app]) .hg-hero .hg-title em, :root:not([data-skin]):not([data-app]) .hg-hero .hg-title em.hg-cls { color: var(--muted); }
+:root:not([data-skin]):not([data-app]) .hg-gold { padding: 0; border: 0; background: none; color: var(--ink-2); font-weight: 600; }
+:root:not([data-skin]):not([data-app]) .hg-gold svg { color: var(--muted); }
+/* a class: its colour as a dot beside its code, not a filled label in a different bright colour each */
+:root:not([data-skin]):not([data-app]) .hg-chip { gap: 10px; padding: 0 14px; color: var(--muted); }
+:root:not([data-skin]):not([data-app]) .hg-code { display: inline-flex; align-items: center; gap: 7px; padding: 0; border-radius: 0; background: none; color: var(--ink); font-size: 13px; letter-spacing: 0; }
+:root:not([data-skin]):not([data-app]) .hg-code::before { content: ""; flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--cc, var(--accent)); }
+
+/* ---------- a class's exam week: a hairline card, the days as a big number, plain rows ---------- */
+:root:not([data-skin]):not([data-app]) .xw { padding: 20px 20px 12px; border: 1px solid var(--d-card-line); border-radius: var(--radius); box-shadow: none; }
+:root:not([data-skin]):not([data-app]) .xw-head { align-items: flex-start; }
+:root:not([data-skin]):not([data-app]) .xw-days { width: auto; min-width: 56px; height: auto; align-items: flex-start; padding: 0 6px 0 0; border-radius: 0; background: none; color: var(--ink); }
+:root:not([data-skin]):not([data-app]) .xw-days b { font: 700 46px/0.9 var(--font-display); letter-spacing: -0.03em; }
+:root:not([data-skin]):not([data-app]) .xw-days small { margin-top: 5px; color: var(--muted); font-size: 12.5px; font-weight: 600; }
+:root:not([data-skin]):not([data-app]) .xw-bar { height: 6px; margin: 16px 0 6px; }
+:root:not([data-skin]):not([data-app]) .xw-bar i { background: var(--accent); }
+:root:not([data-skin]):not([data-app]) .xw-item { border-top: 1px solid var(--d-card-line); }
+:root:not([data-skin]):not([data-app]) .xw-ic { width: 24px; height: 24px; border-radius: 0; background: none; color: var(--muted); }
+:root:not([data-skin]):not([data-app]) .xw-item:hover .xw-ic { color: var(--link); }
+:root:not([data-skin]):not([data-app]) .xw-plan { border-top: 1px solid var(--d-card-line); }
+:root:not([data-skin]):not([data-app]) .xw-plan li, :root:not([data-skin]):not([data-app]) .xw-wide .xw-plan li:first-child { border-top: 1px solid var(--d-card-line); }
+/* links in a list stay underlined (not told apart by colour alone, WCAG 1.4.1), with a fine, faint line */
+:root:not([data-skin]):not([data-app]) .xw-plan li a:not(.btn):not(.chip):not(.nav-item):not(.tb-run):not(.sec-link) { color: var(--ink-2); font-weight: 500; text-decoration-thickness: 1px; text-decoration-color: color-mix(in srgb, currentColor 38%, transparent); text-underline-offset: 4px; }
+:root:not([data-skin]):not([data-app]) .xw-plan li a:not(.btn):not(.chip):not(.nav-item):not(.tb-run):not(.sec-link):hover { color: var(--link); text-decoration-color: currentColor; }
+
+/* ---------- the sidebar: exam countdowns as plain numbers; the near one in the exam colour, no pill ---------- */
+:root:not([data-skin]):not([data-app]) .sb-exam { padding: 1px 2px; background: none; color: var(--muted); font-variant-numeric: tabular-nums; }
+:root:not([data-skin]):not([data-app]) .sb-exam.soon { background: none; color: var(--coral-ink, var(--bad)); }
+
+/* ---------- home cards: plain cards; the daily word keeps its gold words and button, not a gold page ---------- */
+:root:not([data-skin]):not([data-app]) .hg-card.hg-puzzle { background: var(--d-card); border-color: var(--d-card-line); }
+:root:not([data-skin]):not([data-app]) .hg-badge { padding: 0; border-radius: 0; background: none; color: var(--muted); font-weight: 600; }
+:root:not([data-skin]):not([data-app]) .hg-wk.exam .hg-badge { color: var(--hg-gold-text); font-weight: 700; }
+
+/* ---------- gradients left from older looks: flat, in the page's own colours (the reel's first tell of slop) ---------- */
+:root:not([data-skin]):not([data-app]) :is(.recap-card, .resume-card, .today-card, .gs-card, .recap-slide, .league-title) { background: var(--d-card); border-color: var(--d-card-line); }
+:root:not([data-skin]):not([data-app]) :is(.today-goal, .level-card-in, .lstat.xp, .amb-now, .link-tile.gold, .lock-card) { background: var(--d-inner); }
+:root:not([data-skin]):not([data-app]) .recap-card .rc-ic { padding: 0; background: none; color: var(--link); }
+:root:not([data-skin]):not([data-app]) .hero-count .hc-num { padding: 0; background: none; color: inherit; }
+:root:not([data-skin]):not([data-app]) :is(.lvl-badge, .avatar.big, .acct-btn .avatar.sm, .amb-bubble, .celebrate-ic) { background: var(--accent); color: var(--accent-ink, #fff); }
+:root:not([data-skin]):not([data-app]) :is(.boost-chip, .combo-chip) { border: 1px solid var(--border); background: var(--surface-2); color: var(--ink); }
+:root:not([data-skin]):not([data-app]) .tb-readybar i { background-image: none; }
