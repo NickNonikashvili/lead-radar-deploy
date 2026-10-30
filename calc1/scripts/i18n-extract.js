@@ -65,7 +65,7 @@ function lex(src) {
 
 /* ---------- what counts as words a person reads ---------- */
 const CODEY = [/^[#.[]?[\w$-]+(\.[\w$-]+)*$/, /^(\/[\w-]|\?|&)/, /[{};]\s*$/, /^[\w-]+\s*:\s*[^ ]+;/, /\b(px|rem|em|vh|vw|deg|ms)\b.*[;:]/, /^[\w-]+=/, /=>|===|!==|&&|\|\||\(\)|\$\{/,
-  /serif|sans-serif|monospace|system-ui/, /^[\w.+-]+@[\w-]+\.\w+$/, /^(image|application|text|audio|video)\//, /^[A-Z_]{3,}$/, /^\W+$/, /^[\w-]+\.(js|css|json|php|png|svg|jpg|woff2|pdf|html|md|txt)$/i];
+  /serif|sans-serif|monospace|system-ui/, /^(cubic-bezier|steps|linear|ease(-in|-out|-in-out)?)\(/, /^[\w.+-]+@[\w-]+\.\w+$/, /^(image|application|text|audio|video)\//, /^[A-Z_]{3,}$/, /^\W+$/, /^[\w-]+\.(js|css|json|php|png|svg|jpg|woff2|pdf|html|md|txt)$/i];
 function readable(s) {
   if (/^(https?:|mailto:|tel:|data:|blob:|\.\/|api\/|assets\/|#\/)/.test(s)) return false;
   const t = s.replace(/\{\d+\}/g, ' ').replace(/\s+/g, ' ').trim();

@@ -182,6 +182,23 @@
   /* ---------- a board of cards you can hide and add back (this home; StudyCat Faculty's home too, assets/teach.js) ----------
      o: key (the synced setting: { hidden, shown }), order (shown until hidden), optional (hidden until added), small (in the
      row of small cards), card(id) → html, name(id) → label, available(id) (an optional card that can be added here) */
+  /* small motion for the boards (none when motion is reduced; assets/motion.js App.motionReduced): a menu leaves
+     faster than it came, a hidden card fades where it was before the others glide into its place (FLIP), a card
+     added back grows in. Quick and eased out, as interface motion should be: under 300 ms. */
+  const still = () => !!(App.motionReduced && App.motionReduced());
+  const EASE = 'cubic-bezier(0.23, 1, 0.32, 1)';
+  // a closing menu stops being the menu at once (tests and handlers look for .hg-menu), then fades out
+  HG.menuOut = m => { if (!m || !m.isConnected) return; if (still()) { m.remove(); return; } m.className = 'hg-menu-out'; m.removeAttribute('role'); m.setAttribute('aria-hidden', 'true'); m.inert = true; setTimeout(() => m.remove(), 130); };
+  const places = W => { const m = new Map(); $$('[data-hg]', W).forEach(c => m.set(c.dataset.hg, c.getBoundingClientRect())); return m; };
+  function glide(W, before, fresh) {
+    if (still() || !Element.prototype.animate) return;
+    $$('[data-hg]', W).forEach(c => {
+      const a = before.get(c.dataset.hg);
+      if (!a) { if (c.dataset.hg === fresh) c.animate([{ opacity: 0, transform: 'scale(0.96)' }, { opacity: 1, transform: 'none' }], { duration: 240, easing: EASE }); return; }
+      const b = c.getBoundingClientRect(); const dx = a.left - b.left, dy = a.top - b.top;
+      if (Math.abs(dx) > 1 || Math.abs(dy) > 1) c.animate([{ transform: `translate(${dx}px, ${dy}px)` }, { transform: 'none' }], { duration: 280, easing: EASE });
+    });
+  }
   HG.board = function (o) {
     const prefs = () => { const g = settings()[o.key] || {}; return { hidden: Array.isArray(g.hidden) ? g.hidden : [], shown: Array.isArray(g.shown) ? g.shown : [] }; };
     const opt = id => o.optional.includes(id);
@@ -197,10 +214,16 @@
     const html = (foot = '') => `<div class="hg-grid" id="hg-grid">${gridHtml()}</div>
       <section class="hg-add" aria-labelledby="hg-add-t"><h2 class="hg-add-h" id="hg-add-t">${esc(t('Add to dashboard'))}</h2>
         <div class="hg-add-list" id="hg-add-list">${addHtml()}</div>${foot}</section>`;
-    function closeMenu() { const m = $('.hg-menu'); if (m) { const b = $(`[data-hgm="${m.dataset.for}"]`); if (b) b.setAttribute('aria-expanded', 'false'); m.remove(); } }
+    function closeMenu() { const m = $('.hg-menu'); if (m) { const b = $(`[data-hgm="${m.dataset.for}"]`); if (b) b.setAttribute('aria-expanded', 'false'); HG.menuOut(m); } }
     // W: the board's own wrapper (drawn fresh with each visit); after: called once the grid is drawn again in place
     function wire(W, after) {
       const repaint = () => { const g = $('#hg-grid', W), a = $('#hg-add-list', W); if (g) g.innerHTML = gridHtml(); if (a) a.innerHTML = addHtml(); if (after) after(); };   // in place: no jump to the top
+      // a card onto the board (Add to dashboard, or Undo after hiding): it grows in, the others make room, focus on its heading
+      const show = id => {
+        const g = prefs(); if (opt(id)) { if (!g.shown.includes(id)) g.shown.push(id); } else g.hidden = g.hidden.filter(x => x !== id); setSetting(o.key, g);
+        const before = places(W); repaint(); glide(W, before, id);
+        const c = $(`[data-hg="${id}"]`, W); if (c) { c.scrollIntoView({ block: 'nearest', behavior: still() ? 'auto' : 'smooth' }); const h = $('h2', c); if (h) { h.setAttribute('tabindex', '-1'); h.focus({ preventScroll: true }); } }
+      };
       W.addEventListener('click', e => {
         const mb = e.target.closest('[data-hgm]');
         if (mb) {
@@ -215,14 +238,15 @@
         }
         const hb = e.target.closest('[data-hgh]');
         if (hb) {
-          const id = hb.dataset.hgh; const g = prefs(); if (opt(id)) g.shown = g.shown.filter(x => x !== id); else if (!g.hidden.includes(id)) g.hidden.push(id); setSetting(o.key, g); closeMenu(); repaint();
-          const b = $(`[data-hga="${id}"]`, W); if (b) b.focus(); App.toast(t('Hidden. Add it back any time from Add to dashboard.')); return;
+          const id = hb.dataset.hgh; const g = prefs(); if (opt(id)) g.shown = g.shown.filter(x => x !== id); else if (!g.hidden.includes(id)) g.hidden.push(id); setSetting(o.key, g); closeMenu();
+          const gone = () => { const before = places(W); repaint(); glide(W, before); const b = $(`[data-hga="${id}"]`, W); if (b) b.focus(); App.toast(t('Hidden. Add it back any time from Add to dashboard.'), 6000, { label: t('Undo'), run: () => show(id) }); };
+          const card = $(`[data-hg="${id}"]`, W);
+          if (still() || !card || !card.animate) gone(); else { card.style.pointerEvents = 'none'; card.animate([{ opacity: 1, transform: 'none' }, { opacity: 0, transform: 'scale(0.96)' }], { duration: 160, easing: 'ease-in', fill: 'forwards' }).onfinish = gone; }
+          return;
         }
         const ab = e.target.closest('[data-hga]');
         if (ab) {
-          const id = ab.dataset.hga; const g = prefs(); if (opt(id)) { if (!g.shown.includes(id)) g.shown.push(id); } else g.hidden = g.hidden.filter(x => x !== id); setSetting(o.key, g); repaint();
-          const c = $(`[data-hg="${id}"]`, W); if (c) { c.scrollIntoView({ block: 'nearest', behavior: App.motionReduced && App.motionReduced() ? 'auto' : 'smooth' }); const h = $('h2', c); if (h) { h.setAttribute('tabindex', '-1'); h.focus({ preventScroll: true }); } }
-          return;
+          show(ab.dataset.hga); return;
         }
         if (!e.target.closest('.hg-menu')) closeMenu();
       });
@@ -257,6 +281,7 @@
     W.addEventListener('change', e => {
       const c = e.target.closest('[data-hgc]'); if (!c) return; const [cid, exid, i] = c.dataset.hgc.split('|');
       App.store.poke(cid, d => { const all = d.checklists = Object.assign({}, d.checklists); const st = all[exid] = all[exid] || {}; st[i] = c.checked; });
+      if (c.checked && App.burst) App.burst(c, 'ck-pop');   // a small give when it is ticked (assets/motion.js)
     });
     if (App.wordPuzzle) App.wordPuzzle.wire(W);
     loadLater();

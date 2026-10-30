@@ -10,7 +10,7 @@
 (function (global) {
   'use strict';
   const BUILD = global.MATHUB_BUILD || 'dev';
-  global.MATHUB_ASSETS_BUILD = '2026.10.29.9';   // the build these scripts belong to (scripts/release.js writes it; build-check.js compares it with the page's)
+  global.MATHUB_ASSETS_BUILD = '2026.10.30.1';   // the build these scripts belong to (scripts/release.js writes it; build-check.js compares it with the page's)
   const Courses = global.Courses || (global.Courses = {});
   const COURSE_ORDER = ['calc', 'physics', 'precalc', 'writ', 'csci', 'biob', 'kin', 'psyx'];
   const GLOBAL_VIEWS = ['instructors', 'contact', 'forum', 'policy', 'admin', 'challenge', 'people', 'settings', 'leagues', 'gpa', 'today', 'whatsnew', 'resources', 'guides', 'focus', 'recap', 'tools', 'mistakes', 'join', 'sheet', 'request', 'teach', 'class', 'syllabus', 'notfound', 'create', 'maker', 'c', 'tutor', 'plan', 'tasks', 'timetable', 'agenda', 'timelog', 'projects', 'habits', 'goals', 'wheel', 'journal', 'money', 'career', 'portfolio', 'max', 'unsubscribe', 'room', 'calls', 'usage', 'customize', 'off'];   // pages that work without a course, e.g. #/contact
@@ -34,7 +34,18 @@
     root.__on = root.__on || {}; const key = evt + '|' + sel; root.__on[key] = fn; root.__onBound = root.__onBound || {};
     if (!root.__onBound[key]) { root.__onBound[key] = true; root.addEventListener(evt, e => { const el = e.target.closest(sel); if (el && root.contains(el)) root.__on[key](el, e); }); }
   }
-  function toast(msg, ms = 1800) { $$('.toast').forEach(t => t.remove()); const t = document.createElement('div'); t.className = 'toast'; if (/^\s*<(svg|b|i)\b/.test(msg)) t.innerHTML = msg; else t.textContent = msg; document.body.appendChild(t); setTimeout(() => (App.dismiss ? App.dismiss(t, 220) : t.remove()), ms); }
+  // a toast is also read out by screen readers (one status region that stays on the page: a new element is often not
+  // announced); it waits while the pointer or focus is on it; an action (Undo) makes it stay longer
+  function sayStatus(text) { let r = document.getElementById('sr-status'); if (!r) { r = document.createElement('div'); r.id = 'sr-status'; r.className = 'sr-only'; r.setAttribute('role', 'status'); document.body.appendChild(r); } r.textContent = ''; setTimeout(() => { r.textContent = text; }, 80); }
+  function toast(msg, ms = 1800, action) {
+    $$('.toast').forEach(t => t.remove()); const t = document.createElement('div'); t.className = 'toast'; if (/^\s*<(svg|b|i)\b/.test(msg)) t.innerHTML = msg; else t.textContent = msg;
+    let kill; const go = () => (App.dismiss ? App.dismiss(t, 220) : t.remove()); const arm = n => { clearTimeout(kill); kill = setTimeout(go, n); };
+    if (action) { t.classList.add('has-act'); const b = document.createElement('button'); b.type = 'button'; b.className = 'toast-act'; b.textContent = action.label; b.addEventListener('click', () => { clearTimeout(kill); t.remove(); action.run(); }); t.appendChild(b); ms = Math.max(ms, 6000); }
+    t.addEventListener('pointerenter', () => clearTimeout(kill)); t.addEventListener('pointerleave', () => arm(1500));
+    t.addEventListener('focusin', () => clearTimeout(kill)); t.addEventListener('focusout', () => arm(1500));
+    document.body.appendChild(t); arm(ms); setTimeout(() => { if (t.isConnected) sayStatus([...t.childNodes].filter(n => !(n.classList && n.classList.contains('toast-act'))).map(n => n.textContent).join('').trim()); }, 0);
+    return t;
+  }
 
   /* ---------- icons ---------- */
   const ICONS = {

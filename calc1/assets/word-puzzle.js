@@ -101,13 +101,15 @@
     if ($('#wp-modal')) return; const back = document.activeElement; let s = state(); let cur = '';
     const m = document.createElement('div'); m.className = 'modal-backdrop wp-back'; m.id = 'wp-modal';
     const known = () => { const k = {}; s.g.forEach(g => mark(g, s.w).forEach((r, i) => { const L = g[i]; const rank = { ok: 3, in: 2, no: 1 }; if (!k[L] || rank[r] > rank[k[L]]) k[L] = r; })); return k; };
-    function paint() {
+    // fx: the letter just typed pops (fx.typed), the try just sent turns its tiles over one by one (fx.flip)
+    function paint(fx = {}) {
       const k = known();
       const rows = Array.from({ length: TRIES }, (_, r) => {
         const g = s.g[r]; const res = g ? mark(g, s.w) : null; const typing = !g && r === s.g.length && !s.done;
         const letters = g || (typing ? cur.padEnd(LEN) : ' '.repeat(LEN));
         const label = g ? t('Try {1}: {2}', r + 1, sayTry(g, res)) : typing ? t('Try {1}, typing: {2}', r + 1, cur ? cur.split('').join(' ') : t('empty')) : t('Try {1}, not used yet', r + 1);
-        return `<div class="wp-row${typing ? ' now' : ''}" role="img" aria-label="${esc(label)}">${letters.split('').map((L, i) => `<span class="wp-cell ${res ? res[i] : L.trim() ? 'typed' : ''}">${esc(L.trim())}</span>`).join('')}</div>`;
+        const fxc = i => (fx.flip === r ? ' flip' : typing && fx.typed === i ? ' pop' : '');
+        return `<div class="wp-row${typing ? ' now' : ''}${fx.flip === r && s.won && s.done ? ' won' : ''}" role="img" aria-label="${esc(label)}">${letters.split('').map((L, i) => `<span class="wp-cell ${res ? res[i] : L.trim() ? 'typed' : ''}${fxc(i)}" style="--i:${i}">${esc(L.trim())}</span>`).join('')}</div>`;
       }).join('');
       const kb = KEYS.map((row, i) => `<div class="wp-krow">${i === 2 ? `<button type="button" class="wp-key wide" data-k="Enter">${esc(t('Enter'))}</button>` : ''}${row.split('').map(L => `<button type="button" class="wp-key ${k[L] || ''}" data-k="${L}" aria-label="${L}${k[L] ? ', ' + esc(t(SAY[k[L]])) : ''}">${L}</button>`).join('')}${i === 2 ? `<button type="button" class="wp-key wide" data-k="Backspace" aria-label="${esc(t('Delete a letter'))}">${icon('undo', 16)}</button>` : ''}</div>`).join('');
       const C = Courses[s.c];
@@ -131,13 +133,13 @@
           s.done = true; s.won = won; s.played++;
           if (won) { s.wins++; s.streak = s.lastWon && App.daysBetween(s.lastWon, s.d) === 1 ? s.streak + 1 : 1; s.best = Math.max(s.best, s.streak); s.lastWon = s.d; } else s.streak = 0;
         }
-        save(s); paint();
+        save(s); paint({ flip: s.g.length - 1 });
         say(sayTry(s.g[s.g.length - 1], res) + '. ' + (s.done ? (s.won ? t('Solved. The word is {1}: {2}', s.w, s.m) : t('No tries left. The word was {1}: {2}', s.w, s.m)) : t('{1} tries left.', TRIES - s.g.length)));
         if (s.done && s.won) { if (App.addXP) App.addXP(XP); if (App.confetti && !(App.motionReduced && App.motionReduced())) App.confetti({ count: 90 }); }
         if (s.done) dlg().focus();   // the keyboard is gone; the result is read out
         return;
       } else if (/^[A-Z]$/.test(k) && cur.length < LEN) cur += k;
-      paint(); say(cur ? cur.split('').join(' ') : t('empty'));
+      paint(/^[A-Z]$/.test(k) ? { typed: cur.length - 1 } : {}); say(cur ? cur.split('').join(' ') : t('empty'));
     }
     function onKey(e) {
       if (e.key === 'Escape') { e.preventDefault(); return close(); }

@@ -66,6 +66,29 @@ const AXE = fs.readFileSync(path.join(__dirname, 'node_modules', 'axe-core', 'ax
   check('after coming home a few times, ⋮ still opens one menu (no stacked handlers)', await p.evaluate(() => document.querySelectorAll('.hg-menu').length === 1));
   await p.mouse.click(5, 880); await p.waitForTimeout(150);
   check('a click elsewhere closes it', await p.evaluate(() => !document.querySelector('.hg-menu')));
+  // Undo: the hide toast brings the card back, and what a toast says is read out (one status region, #sr-status)
+  await p.click('[data-hgm="week"]'); await p.click('.hg-menu [data-hgh="week"]'); await p.waitForTimeout(250);
+  const un = await p.evaluate(() => ({ gone: !document.querySelector('[data-hg="week"]'), act: (document.querySelector('.toast .toast-act') || {}).textContent, said: (document.querySelector('#sr-status[role="status"]') || {}).textContent || '' }));
+  check('hiding a card offers Undo, and the toast is read out to screen readers', un.gone && un.act === 'Undo' && /^Hidden\./.test(un.said) && !/Undo/.test(un.said), un);
+  await p.click('.toast .toast-act'); await p.waitForTimeout(250);
+  const ub = await p.evaluate(() => ({ back: !!document.querySelector('[data-hg="week"]'), focus: document.activeElement && document.activeElement.id, saved: App.settings().homeGrid.hidden.includes('week'), toast: !!document.querySelector('.toast') }));
+  check('Undo puts it back where it was, focus on its heading, and the toast goes', ub.back && ub.focus === 'hg-week-t' && !ub.saved && !ub.toast, ub);
+  // with motion on: the menu grows in and fades out, a hidden card fades before it goes, the others glide over
+  await p.emulateMedia({ reducedMotion: 'no-preference' }); const motion0 = await p.evaluate(() => { const m = App.settings().motion; App.setSetting('motion', 'on'); App.applyMotion(); return m || null; });
+  await p.click('[data-hgm="week"]'); await p.waitForTimeout(20);
+  const mi = await p.evaluate(() => getComputedStyle(document.querySelector('.hg-menu')).animationName);
+  await p.keyboard.press('Escape'); await p.waitForTimeout(20);
+  const mo = await p.evaluate(() => ({ menu: !!document.querySelector('.hg-menu'), out: !!document.querySelector('.hg-menu-out[aria-hidden="true"]') }));
+  await p.waitForTimeout(250);
+  check('motion on: the menu grows in, and on close it stops being the menu at once and fades out', mi === 'hgMenuIn' && !mo.menu && mo.out && !(await p.$('.hg-menu-out')), { mi, mo });
+  await p.click('[data-hgm="week"]'); await p.click('.hg-menu [data-hgh="week"]'); await p.waitForTimeout(60);
+  const fading = await p.evaluate(() => { const c = document.querySelector('[data-hg="week"]'); return c && +getComputedStyle(c).opacity < 1; });
+  await p.waitForTimeout(160);
+  const gliding = await p.evaluate(() => document.getAnimations().some(a => a.effect && a.effect.target && a.effect.target.closest && a.effect.target.closest('#hg-grid')));
+  await p.waitForTimeout(400);
+  check('motion on: the hidden card fades where it was, then the others glide into its place', fading && gliding && !(await p.$('[data-hg="week"]')), { fading, gliding });
+  await p.click('.toast .toast-act'); await p.waitForTimeout(400);
+  await p.emulateMedia({ reducedMotion: 'reduce' }); await p.evaluate(m => { App.setSetting('motion', m || undefined); App.applyMotion(); }, motion0);
 
   // Arrange freely, and back
   await p.click('[data-hg-free]'); await p.waitForTimeout(700);
@@ -83,11 +106,16 @@ const AXE = fs.readFileSync(path.join(__dirname, 'node_modules', 'axe-core', 'ax
   // play: one miss, then the word
   const word = await p.evaluate(() => App.wordPuzzle.state().w);
   const xp0 = await p.evaluate(() => App.xpToday());
+  await p.emulateMedia({ reducedMotion: 'no-preference' }); const motion1 = await p.evaluate(() => { const m = App.settings().motion; App.setSetting('motion', 'on'); App.applyMotion(); return m || null; });
   await p.click('[data-wp="open"]'); await p.waitForTimeout(200);
   let g = await p.evaluate(() => ({ dlg: !!document.querySelector('#wp-modal [role="dialog"][aria-modal="true"]'), focus: document.activeElement && document.activeElement.classList.contains('wp-modal') }));
   check('Play opens the game as a dialog, focus on it (so typing and Enter go to the game)', g.dlg && g.focus, g);
   const miss = word === 'QWXYZ' ? 'ZYXWQ' : 'QWXYZ';
-  await p.keyboard.type(miss.toLowerCase()); await p.keyboard.press('Enter'); await p.waitForTimeout(150);
+  await p.keyboard.type(miss[0].toLowerCase());
+  const popped = await p.evaluate(() => { const c = document.querySelector('.wp-row.now .wp-cell.pop'); return c && c.textContent; });
+  await p.keyboard.type(miss.slice(1).toLowerCase()); await p.keyboard.press('Enter'); await p.waitForTimeout(150);
+  const flips = await p.evaluate(() => [...document.querySelectorAll('.wp-row')[0].querySelectorAll('.wp-cell.flip')].map(c => getComputedStyle(c).animationName));
+  check('motion on: a typed letter pops, and a sent try turns its tiles over one by one', popped === miss[0] && flips.length === 5 && flips.every(n => /wpFlip/.test(n)), { popped, flips });
   g = await p.evaluate(() => ({ row: document.querySelector('.wp-row').getAttribute('aria-label'), say: document.querySelector('#wp-say').textContent, marked: document.querySelectorAll('.wp-row')[0].querySelectorAll('.wp-cell.ok, .wp-cell.in, .wp-cell.no').length }));
   check('a try is marked letter by letter and read out in words', g.marked === 5 && /Try 1: Q (right place|in the word, wrong place|not in the word)/.test(g.row) && /tries left/.test(g.say), g);
   await p.keyboard.type('ab'); await p.keyboard.press('Enter'); await p.waitForTimeout(150);
@@ -96,11 +124,13 @@ const AXE = fs.readFileSync(path.join(__dirname, 'node_modules', 'axe-core', 'ax
   // the on-screen keys work too
   for (const L of word) await p.click(`.wp-key[data-k="${L}"]`);
   await p.click('.wp-key[data-k="Enter"]'); await p.waitForTimeout(300);
-  g = await p.evaluate(() => ({ s: App.wordPuzzle.state(), end: (document.querySelector('.wp-end') || {}).textContent || '', xp: App.xpToday() }));
+  g = await p.evaluate(() => ({ s: App.wordPuzzle.state(), end: (document.querySelector('.wp-end') || {}).textContent || '', xp: App.xpToday(), hop: document.querySelectorAll('.wp-row.won .wp-cell.flip').length }));
   check('the word: solved in 2, the meaning, +20 XP, a 1-day streak', g.s.done && g.s.won && g.s.g.length === 2 && g.s.streak === 1 && g.end.includes(g.s.m) && g.xp - xp0 >= 20, { s: g.s, xp: g.xp - xp0 });
+  check('motion on: the solved row hops once its tiles have turned', g.hop === 5, g.hop);
   await p.keyboard.press('Escape'); await p.waitForTimeout(200);
   g = await p.evaluate(() => ({ modal: !!document.querySelector('#wp-modal'), card: (document.querySelector('.hg-puzzle h2') || {}).textContent, focus: document.activeElement && (document.activeElement.className || document.activeElement.tagName) }));
   check('closing shows the result on the card, focus on the card', !g.modal && /Solved in 2 of 6/.test(g.card) && /wp-btn|H2/.test(g.focus), g);
+  await p.emulateMedia({ reducedMotion: 'reduce' }); await p.evaluate(m => { App.setSetting('motion', m || undefined); App.applyMotion(); }, motion1);
   await p.reload(); await p.waitForTimeout(1800);
   check('the same word and result after a reload', await p.evaluate(w => { const s = App.wordPuzzle.state(); return s.w === w && s.done && /Solved in 2 of 6/.test(document.querySelector('.hg-puzzle h2').textContent); }, word));
   // share: the try count and the squares, nothing that gives the word away, and your invite link

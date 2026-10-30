@@ -2571,7 +2571,7 @@
 {"id":2570,"en":"Scratchpad","files":["tools.js","classpacks.js","biob-data.js","calc-data.js","csci-data.js","kin-data.js","physics-data.js","precalc-data.js","psyx-data.js"],"gone":true},
 {"id":2571,"en":"Work a problem by hand with a mouse, trackpad or stylus. Strokes are saved in this browser until you clear them.","files":["tools.js"],"gone":true},
 {"id":2572,"en":"Eraser","files":["tools.js"],"gone":true},
-{"id":2573,"en":"Undo","files":["bo-pad.js","life.js"]},
+{"id":2573,"en":"Undo","files":["bo-pad.js","life.js","home-grid.js"]},
 {"id":2574,"en":"Grid","files":["tools.js"],"gone":true},
 {"id":2575,"en":"Save PNG","files":["tools.js"],"gone":true},
 {"id":2576,"en":"Pen {1}px","files":["tools.js"],"gone":true},
@@ -8654,5 +8654,6 @@
 {"id":8653,"en":"StudyCat daily word #{1} · {2}/6","files":["word-puzzle.js"]},
 {"id":8654,"en":"Copied. Paste it in your group chat.","files":["word-puzzle.js"]},
 {"id":8655,"en":"Your result, to copy","files":["word-puzzle.js"]},
-{"id":8656,"en":"Share your result","files":["word-puzzle.js"]}
+{"id":8656,"en":"Share your result","files":["word-puzzle.js"]},
+{"id":8657,"en":"cubic-bezier(0.23, 1, 0.32, 1)","files":["home-grid.js"],"gone":true}
 ]

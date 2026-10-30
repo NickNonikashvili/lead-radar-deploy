@@ -3,7 +3,7 @@
    Tokens first (light), then dark overrides, then components.
    ============================================================ */
 :root {
-  --assets-build: "2026.10.29.9";   /* the build these styles belong to (scripts/release.js; read by build-check.js) */
+  --assets-build: "2026.10.30.1";   /* the build these styles belong to (scripts/release.js; read by build-check.js) */
   --bg: #F6F8FB;
   --grid: rgba(43, 85, 184, 0.05);
   --surface: #FFFFFF;
@@ -2425,6 +2425,10 @@ html[data-motion="off"] .px-anim .pxf1 { animation: none !important; visibility:
 .streak-chip .px-flame { margin: -2px 1px -2px -1px; }
 .streak-chip:not(.lit) .px-flame { filter: grayscale(1); opacity: 0.55; }
 .toast .px { margin-right: 6px; vertical-align: -3px; }
+.toast.has-act { display: flex; align-items: center; gap: 12px; padding: 6px 6px 6px 16px; width: max-content; max-width: min(560px, calc(100vw - 32px)); box-sizing: border-box; }   /* centred from left: 50%, it would only get half the screen to wrap in */
+.toast-act { background: none; border: 0; color: inherit; font: inherit; font-weight: 700; text-decoration: underline; text-underline-offset: 3px; padding: 6px 10px; min-height: 32px; border-radius: 6px; cursor: pointer; white-space: nowrap; transition: background 0.12s, transform 0.12s; }
+.toast-act:hover { background: color-mix(in srgb, currentColor 16%, transparent); }
+.toast-act:active { transform: scale(0.96); }
 .celebrate-ic .px, .celebrate-ic.big .px { display: block; margin: 0 auto; animation: pxBob 0.8s steps(2) 3; }
 /* class loading and the game-over screen */
 .px-loader { display: flex; align-items: center; gap: 12px; margin: 12px 0 14px; color: var(--muted); }

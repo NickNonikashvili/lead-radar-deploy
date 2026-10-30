@@ -208,7 +208,8 @@
 
   /* ---------- Add to syllabus: straight to the part of the open (or latest) syllabus you want to add to ---------- */
   function addMenu(b) {
-    const open = $('.fx-addmenu'); if (open) { open.remove(); b.setAttribute('aria-expanded', 'false'); return; }
+    const out = el => (App.homeGrid && App.homeGrid.menuOut ? App.homeGrid.menuOut(el) : el.remove());   // fades out (assets/home-grid.js)
+    const open = $('.fx-addmenu'); if (open) { out(open); b.setAttribute('aria-expanded', 'false'); return; }
     const go = async k => {
       let id = S && S.id; if (!id) { try { if (!ME) ME = await api('teach_me'); } catch (e) {} const c = ME && ME.teaching.find(x => x.access !== 'student'); id = c && c.id; }
       location.hash = id ? `#/teach/${id}/${k}` : '#/teach/new';
@@ -216,7 +217,7 @@
     const m = document.createElement('div'); m.className = 'fx-addmenu hg-menu'; m.setAttribute('role', 'menu');
     m.innerHTML = [['exams', 'An exam', 'flag'], ['schedule', 'A class day', 'calendar'], ['people', 'Office hours', 'users'], ['materials', 'A reading or material', 'scroll'], ['policies', 'A policy', 'shield']].map(([k, l, ic]) => `<button type="button" role="menuitem" data-k="${k}">${icon(ic, 16)} ${l}</button>`).join('');
     b.parentNode.appendChild(m); b.setAttribute('aria-expanded', 'true'); m.querySelector('button').focus();
-    const close = () => { m.remove(); b.setAttribute('aria-expanded', 'false'); };
+    const close = () => { out(m); b.setAttribute('aria-expanded', 'false'); };
     m.addEventListener('click', e => { const x = e.target.closest('[data-k]'); if (x) { close(); go(x.dataset.k); } });
     m.addEventListener('keydown', e => { if (e.key === 'Escape') { close(); b.focus(); } });
     m.addEventListener('focusout', e => { if (!e.relatedTarget || !m.contains(e.relatedTarget)) setTimeout(() => { if (m.isConnected && !m.contains(document.activeElement) && document.activeElement !== b) close(); }, 0); });

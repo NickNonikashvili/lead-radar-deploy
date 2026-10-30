@@ -504,3 +504,12 @@ tokens, so day and night both work), the 8-bit skyline and Bo.
 real to say says so plainly, or stays hidden. *The Same Frame Rule*: learning and teaching share one frame; only the
 switch and the sidebar's contents change.
 
+### Small motion (October 30 polish)
+Quick and eased out (`cubic-bezier(0.23, 1, 0.32, 1)`): enter about 140 to 280 ms, leave faster, a press is a
+small give (`scale(0.97)` in 80 ms, no press-down lip). Menus (`.hg-menu`) grow from their ⋮ and, on close, stop
+being the menu at once (`.hg-menu-out`) while they fade. A hidden card fades where it was, then the others glide
+into its place (FLIP with the Web Animations API, `assets/home-grid.js`); Undo in the toast and Add to dashboard
+grow it back in. The daily word: a typed letter pops, a sent try turns its tiles over one by one (the colour from
+the halfway point), a solved row hops. Toasts are read out (`#sr-status`, one status region that stays on the page),
+wait while hovered or focused, and can carry one action (`App.toast(msg, ms, { label, run })`). All of it is
+still with Reduce motion (the setting or the device preference).
