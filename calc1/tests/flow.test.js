@@ -1,7 +1,9 @@
 /* Moving around (assets/app.js):
    - Back and Forward put you where you were on a page you saw (and a reload keeps your place); a new page starts at the top
    - a button whose action waits on the server is busy at once (a double tap sends it once), shows a spinner only if it
-     takes a while, and is free again when the answer comes */
+     takes a while, and is free again when the answer comes
+   - the page you leave closes into its sidebar link like a Mac window into the Dock (assets/genie.js); on a phone,
+     into the menu button; nothing moves with Reduce motion */
 const T = require('./lib');
 (async () => {
   const { mk, go, check } = await T.start({});
@@ -42,31 +44,55 @@ const T = require('./lib');
   check('a button whose action is instant is never marked busy', b.quickBusy === null, b);
   await c.close();
 
-  // page changes: the old page closes like a Mac window (the genie); Back opens it again; the frame keeps still; Reduce motion: none
+  // page changes: the page you leave closes into its sidebar link like a Mac window into the Dock (the genie, assets/genie.js)
   const [c2, q] = await mk(1360, 900, { serviceWorkers: 'block', reducedMotion: 'no-preference' });
   await q.addInitScript(() => { try { const s = JSON.parse(localStorage.getItem('studyhub-settings') || '{}'); s.motion = 'on'; localStorage.setItem('studyhub-settings', JSON.stringify(s)); } catch (e) {} });
-  await go(q, '#/resources', 1200);
-  const vtOn = await q.evaluate(() => typeof document.startViewTransition === 'function');
-  const anims = () => q.evaluate(() => ({ nav: document.documentElement.dataset.nav || null, a: document.getAnimations().filter(a => a.effect && /view-transition/.test(a.effect.pseudoElement || '')).map(a => `${a.effect.pseudoElement}:${a.animationName}`) }));
-  // the slide starts once the new page is drawn (a frame or a few later): wait for it
-  const sliding = () => q.waitForFunction(() => document.getAnimations().some(a => a.effect && /view-transition-new\(root\)/.test(a.effect.pseudoElement || '')), null, { timeout: 1500 }).catch(() => {});
-  await q.evaluate(() => { location.hash = '#/calc'; }); await sliding();
-  const push = await anims();
-  check('opening a page: the old one closes like a Mac window (the genie), the new one settles in under it', vtOn && push.nav === 'push' && push.a.includes('::view-transition-old(root):vtGenie') && push.a.includes('::view-transition-new(root):vtSettle'), push);
-  const frame = await q.evaluate(() => ({ side: getComputedStyle(document.querySelector('.sidebar')).viewTransitionName, top: getComputedStyle(document.querySelector('.topbar')).viewTransitionName, bo: document.querySelector('#bo-fab') ? getComputedStyle(document.querySelector('#bo-fab')).viewTransitionName : 'bo-fab' }));
-  check('the sidebar, the top bar and Ask Bo keep still (their own snapshots)', frame.side === 'side' && frame.top === 'top' && frame.bo === 'bo-fab', frame);
-  await q.waitForTimeout(700);
-  const after = await anims();
-  check('and when it has settled, the page is just the page again', after.nav === null && after.a.length === 0 && /#\/calc/.test(await q.evaluate(() => location.hash)), after);
-  await q.goBack(); await sliding();
-  const pop = await anims();
-  check('Back: the page you go back to comes up out of the genie and opens out', pop.nav === 'back' && pop.a.includes('::view-transition-new(root):vtGenie') && pop.a.includes('::view-transition-old(root):vtRecede'), pop);
-  await q.waitForTimeout(700);
+  await go(q, '#/calc/path', 1500);
+  const ghostNow = () => q.evaluate(() => {
+    const g = document.querySelector('.genie-ghost'); const views = document.querySelectorAll('#view');
+    const b = document.querySelector('.vt-bulge'); const link = document.querySelector('.sidebar button[data-view="path"]');
+    const strips = g ? Array.from(g.querySelectorAll(':scope > .genie-strip')) : [];
+    return { ghost: !!g, hidden: g && g.getAttribute('aria-hidden'), inert: g && g.inert, strips: strips.length, m3: strips.every(s => /^matrix3d\(/.test(s.style.transform)),
+      ids: g ? Array.from(g.querySelectorAll('[id]')).filter(n => n.id !== 'view' && !n.closest('svg')).length : -1, oldText: g ? /Learning path/i.test(g.textContent) : false,
+      first: views[0] && !views[0].closest('.genie-ghost'), bulge: b ? Math.round(b.getBoundingClientRect().left) : null, rail: Math.round(document.querySelector('.sidebar').getBoundingClientRect().right),
+      level: b && link ? Math.abs(parseFloat(b.style.top) - (link.getBoundingClientRect().top + link.getBoundingClientRect().height / 2)) : null, on: document.documentElement.classList.contains('genie-on') };
+  });
+  await q.evaluate(() => { App.genieMs = 2400; location.hash = '#/calc/notes'; });
+  await q.waitForSelector('.vt-bulge', { timeout: 2000 }).catch(() => {});
+  const g1 = await ghostNow();
+  check('opening a page: the old one goes into a ghost over the new one, cut into strips bent onto the funnel (hidden from screen readers, without its ids)', g1.ghost && g1.hidden === 'true' && g1.inert && g1.strips >= 6 && g1.m3 && g1.ids === 0 && g1.oldText && g1.first && g1.on, g1);
+  check('it goes into the sidebar level with its own link, where the sidebar\'s edge stretches out', g1.bulge !== null && Math.abs(g1.bulge - g1.rail) <= 2 && g1.level !== null && g1.level < 8, g1);
+  await q.waitForTimeout(600);
+  // once the funnel has formed (a quarter of the way): the strips near the neck are squeezed to a sliver, the far ones are the whole page; the sides are curves, not straight lines
+  const shape = await q.evaluate(() => Array.from(document.querySelectorAll('.genie-ghost > .genie-strip')).filter(s => s.style.visibility !== 'hidden').map(s => { const r = s.getBoundingClientRect(); return [Math.round(r.left), Math.round(r.top), Math.round(r.height)]; }));
+  const hs = shape.map(s => s[2]), n = hs.length, mid = Math.floor(n / 2);
+  const bend = n > 4 ? Math.abs((hs[mid] - hs[0]) / mid - (hs[n - 2] - hs[mid]) / (n - 2 - mid)) : 0;
+  check('the page is squeezed into the neck between curved sides', n > 4 && hs[0] < 140 && hs[n - 1] > 600 && hs.every((h, i) => !i || h >= hs[i - 1] - 2) && bend > 3, { hs, bend });
+  await q.waitForTimeout(2100);
+  const g2 = await ghostNow();
+  check('and when it is done, nothing is left of it: just the new page', !g2.ghost && g2.bulge === null && !g2.on && /#\/calc\/notes/.test(await q.evaluate(() => location.hash)), g2);
+  await q.evaluate(() => { App.genieMs = 0; });
+  await q.goBack(); await q.waitForTimeout(40);
+  const gBack = await ghostNow();
+  check('Back closes the page you leave the same way', gBack.ghost && gBack.strips >= 6, gBack);
+  await q.waitForTimeout(900);
   await q.emulateMedia({ reducedMotion: 'reduce' });
-  await q.evaluate(() => { location.hash = '#/calc'; }); await q.waitForTimeout(60);
-  const still = await anims();
-  check('with Reduce motion the page simply changes', still.nav === null && still.a.length === 0 && await q.evaluate(() => !!document.querySelector('#view').children.length), still);
+  await q.evaluate(() => { location.hash = '#/calc/notes'; }); await q.waitForTimeout(60);
+  const still = await ghostNow();
+  check('with Reduce motion the page simply changes', !still.ghost && still.bulge === null && await q.evaluate(() => !!document.querySelector('#view').children.length), still);
   await c2.close();
+  // on a phone the sidebar is tucked away: the page goes up into the menu button, which squashes and snaps back
+  const [c4, ph] = await mk(390, 800, { serviceWorkers: 'block', reducedMotion: 'no-preference' });
+  await ph.addInitScript(() => { try { const s = JSON.parse(localStorage.getItem('studyhub-settings') || '{}'); s.motion = 'on'; localStorage.setItem('studyhub-settings', JSON.stringify(s)); } catch (e) {} });
+  await go(ph, '#/calc/path', 1500);
+  await ph.evaluate(() => { App.genieMs = 1200; location.hash = '#/calc/notes'; });
+  await ph.waitForSelector('.genie-ghost', { timeout: 2000 }).catch(() => {});
+  await ph.waitForTimeout(500);
+  const up = await ph.evaluate(() => { const s = Array.from(document.querySelectorAll('.genie-ghost > .genie-strip')).filter(x => x.style.visibility !== 'hidden').map(x => { const r = x.getBoundingClientRect(); return [Math.round(r.left), Math.round(r.width)]; }); const m = document.querySelector('#topbar .menu-btn').getBoundingClientRect(); return { s, menu: Math.round(m.left + m.width / 2) }; });
+  let snapped = false; for (let i = 0; i < 30 && !snapped; i++) { snapped = await ph.evaluate(() => document.querySelector('#topbar .menu-btn').classList.contains('vt-snap')); if (!snapped) await ph.waitForTimeout(40); }
+  const top0 = up.s[0];
+  check('phone: the strips stand on top of each other, the top ones narrowed to the menu button, which squashes as the page goes in', up.s.length >= 6 && top0 && top0[1] < 200 && top0[0] < up.menu && top0[0] + top0[1] > up.menu - 30 && up.s[up.s.length - 1][1] > 340 && snapped, { up, snapped });
+  await c4.close();
 
   // a page starts loading before you click it: a class link you rest the pointer on, a page whose code loads the first time
   const [c3, w] = await mk(1360, 900, { serviceWorkers: 'block', reducedMotion: 'reduce' });

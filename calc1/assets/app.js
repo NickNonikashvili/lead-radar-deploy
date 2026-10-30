@@ -10,7 +10,7 @@
 (function (global) {
   'use strict';
   const BUILD = global.MATHUB_BUILD || 'dev';
-  global.MATHUB_ASSETS_BUILD = '2026.10.30.4';   // the build these scripts belong to (scripts/release.js writes it; build-check.js compares it with the page's)
+  global.MATHUB_ASSETS_BUILD = '2026.10.30.5';   // the build these scripts belong to (scripts/release.js writes it; build-check.js compares it with the page's)
   const Courses = global.Courses || (global.Courses = {});
   const COURSE_ORDER = ['calc', 'physics', 'precalc', 'writ', 'csci', 'biob', 'kin', 'psyx'];
   const GLOBAL_VIEWS = ['instructors', 'contact', 'forum', 'policy', 'admin', 'challenge', 'people', 'settings', 'leagues', 'gpa', 'today', 'whatsnew', 'resources', 'guides', 'focus', 'recap', 'tools', 'mistakes', 'join', 'sheet', 'request', 'teach', 'class', 'syllabus', 'notfound', 'create', 'maker', 'c', 'tutor', 'plan', 'tasks', 'timetable', 'agenda', 'timelog', 'projects', 'habits', 'goals', 'wheel', 'journal', 'money', 'career', 'portfolio', 'max', 'unsubscribe', 'room', 'calls', 'usage', 'customize', 'off'];   // pages that work without a course, e.g. #/contact
@@ -477,24 +477,48 @@
   }
   window.addEventListener('scroll', () => { clearTimeout(Scroll.t); Scroll.t = setTimeout(scrollKeep, 150); }, { passive: true });
   window.addEventListener('pagehide', scrollKeep);
-  /* ---------- page changes: the old page becomes a bubble and sinks away ----------
-     Opening a page: the one you leave pulls in into a rounded bubble and drops below the screen while the new one
-     settles in under it; Back: the page you go back to rises from below as a bubble and opens out (assets/motion.css).
-     The sidebar, the top bar and the floating buttons keep still (each has its own view-transition-name), so only the
-     page moves. This is the browser's View Transitions (Chrome, Edge, Safari 18, Firefox 144); without it, with
-     Reduce motion, in a background tab and in the apps, the page simply changes. The page is drawn the same way
-     either way; only the frame or so before the new one is shown waits. */
+  /* ---------- page changes: the page you leave closes into the sidebar (the genie, assets/genie.js) ----------
+     It goes into the sidebar level with its own link (the StudyCat logo when it has none), and the sidebar's edge
+     stretches out there and snaps back; on a phone it goes into the menu button. The new page is drawn at once,
+     underneath. Nothing moves with Reduce motion, in a background tab or in the apps. */
+  const Nav = { shown: location.hash };
+  const pagePath = h => { const p = String(h || '#/').split('?')[0].replace(/\/+$/, '') || '#'; const seg = p.slice(2).split('/'); return seg.length === 1 && Courses[seg[0]] ? `${p}/dashboard` : p; };
+  const shownRail = () => [$('.sidebar'), $('.fx-rail')].find(el => { if (!el) return false; const r = el.getBoundingClientRect(); const cs = getComputedStyle(el); return r.right > 40 && r.width > 0 && r.left < 20 && cs.visibility !== 'hidden' && cs.display !== 'none'; });
+  // where a page goes: level with its own link in the sidebar (the longest link its address starts with; a page's
+  // menu item before a class chip), else the logo; on a phone, where the sidebar is tucked away, into the menu button
+  function genieTarget(hash) {
+    const rail = shownRail(); const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+    if (rail) {
+      const want = pagePath(hash); let best = -1, el = null;
+      const cid = document.documentElement.dataset.course;   // a class's own menu items are buttons with data-view, for #/<class>/<view>
+      $$('a[href^="#/"], button[data-view]', rail).forEach(a => { const r = a.getBoundingClientRect(); if (!r.height || r.bottom < 0 || r.top > innerHeight) return; const href = a.getAttribute('href'); if (!href && !cid) return; const h = href ? pagePath(href) : `#/${cid}/${a.dataset.view}`; const sc = (h === want ? 1e4 : want.startsWith(h + '/') ? h.length : -1) + (a.dataset.view || a.dataset.sv ? 0.5 : 0) - (a.classList.contains('sb-class') ? 0.25 : 0); if (sc > best) { best = sc; el = a; } });
+      el = el || $('.brand-logo', rail) || rail; const rr = rail.getBoundingClientRect(), r = el.getBoundingClientRect();
+      const y = clamp(r.top + r.height / 2, 90, innerHeight - 60);
+      return { rail, el, px: rr.right, py: y, x: clamp(rr.right / innerWidth, 0.02, 0.98), y: y / innerHeight };
+    }
+    const el = $('#topbar .menu-btn'); if (!el) return null; const r = el.getBoundingClientRect(); if (!r.width) return null;
+    return { el, x: clamp((r.left + r.width / 2) / innerWidth, 0.02, 0.98), y: clamp((r.top + r.height / 2) / innerHeight, 0.02, 0.98) };
+  }
+  // the sidebar's edge stretching out where the page goes in: a bulge in the sidebar's own colours, gone once it settles
+  App.genieBulge = function (aim, dur) {
+    const cs = getComputedStyle(aim.rail); const bg = cs.backgroundColor; const b = document.createElement('div'); b.className = 'vt-bulge'; b.setAttribute('aria-hidden', 'true');
+    b.style.left = `${aim.px - 1}px`; b.style.top = `${aim.py}px`; b.style.animationDuration = `${Math.round(dur * 1.45)}ms`;
+    b.style.setProperty('--vt-bulge-bg', bg && !/rgba\(.*,\s*0\)$|transparent/.test(bg) ? bg : getComputedStyle(document.body).backgroundColor);
+    b.style.setProperty('--vt-bulge-line', cs.borderRightColor || 'transparent');
+    b.addEventListener('animationend', () => b.remove());   // gone once it has settled (it ends flat, so a missed end leaves nothing to see)
+    (document.querySelector('.app') || document.body).appendChild(b); return b;
+  };
   function navigate() {
-    const de = document.documentElement; const st = history.state;
-    const back = !!(st && st.i != null && Scroll.i != null && st.i < Scroll.i);
-    if (!document.startViewTransition || document.hidden || de.dataset.app || (App.motionReduced && App.motionReduced())) { render(); return; }
-    de.dataset.nav = back ? 'back' : 'push';
-    let vt; try { vt = document.startViewTransition(() => { try { render(); } catch (e) { setTimeout(() => { throw e; }); } }); } catch (e) { delete de.dataset.nav; render(); return; }
-    Scroll.vt = vt; const end = () => { if (Scroll.vt === vt) { Scroll.vt = null; delete de.dataset.nav; } };
-    vt.ready.catch(() => {}); vt.updateCallbackDone.catch(() => {}); vt.finished.then(end, end);
+    const de = document.documentElement; const from = Nav.shown; Nav.shown = location.hash;
+    const can = App.genie && !document.hidden && !de.dataset.app && !(App.motionReduced && App.motionReduced());
+    const old = can ? $('#view') : null; const rect = old && old.getBoundingClientRect();
+    let offs = null; try { offs = old && App.genieMeasure ? App.genieMeasure(old) : null; } catch (e) {}   // what is off the screen, while it is laid out
+    render();
+    if (!old || old.isConnected || !old.childElementCount || rect.height < 40) return;   // drawn in place, or nothing to close
+    try { const aim = genieTarget(from); if (aim) App.genie(old, rect, aim, offs); } catch (e) { setTimeout(() => { throw e; }); }
   }
   function render() {
-    scrollKeep();   // where you were on the page you are leaving: before it is cleared (an empty page is scrolled to the top)
+    scrollKeep(); Nav.shown = location.hash;   // where you were on the page you are leaving: before it is cleared (an empty page is scrolled to the top)
     const { course, view, param, query } = route();
     if (App.current && App.current.unmount) { try { App.current.unmount(); } catch {} }
     const app = $('.app'); const stale = $('#view'); const root = stale.cloneNode(false); stale.replaceWith(root); scrollArrive();

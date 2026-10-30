@@ -522,17 +522,29 @@ enough, about a second at most); a new page starts at the top; `App.replaceHash`
 a 13 px ring after its label if it takes over 350 ms (`button.is-busy`), and is free again when the promise settles
 (20 s at most). `data-nobusy` opts a button out.
 
-### Page changes (the genie, like a Mac window closing)
-A hash change goes through `navigate()` (`assets/app.js`): `document.startViewTransition(render)` with
-`html[data-nav="push"|"back"]` (Back is a lower `history.state.i` than the page you are on). Push (`vtGenie`): the
-page you leave bends into a funnel, its top wide and its sides curving in to a neck 10% wide at the bottom centre of
-the screen, in the first third (eased out), then slides down through the neck, picking up speed; the funnel is a
-`clip-path: polygon()` with 12 points down each side, fixed to the screen while the page moves (the keyframes come from
-`scripts/genie.py`). The new page settles underneath from `scale(0.97)` and `brightness(0.82)` (`vtSettle`). Back runs
-`vtGenie` in reverse on the page you return to, over the one you leave (`vtRecede`). 0.34 s. The frame has its own
-snapshots so it keeps still (`view-transition-name`: side, top, fx-rail, fx-top, bo-fab, ambient, totop): the menus
-swap at once (a phone's drawer still slides shut), the titles cross-fade in 0.2 s. No transition without the API,
-with Reduce motion, in a hidden tab or in the apps; render() is the same either way (an error in it is thrown again).
+### Page changes (the genie, like a Mac window going into the Dock)
+How the Mac does it, and the GNOME (macos-genie) and KWin ports: the window is cut into thin strips across the way it
+goes, each strip is bent onto a four-cornered piece of a funnel whose sides are curves, from the window to the Dock
+icon; the funnel forms first, then the window slides through it, its far edge following its near one. `navigate()`
+(`assets/app.js`) measures what lies off the screen in the page you leave (`App.genieMeasure`, while it is still laid
+out), draws the new page, and hands the old one to `App.genie` (`assets/genie.js`):
+- The old page goes into `.genie-ghost` over the new one (fixed, inert, `aria-hidden`, under the sidebar and the top
+  bar, so it disappears into them), on an opaque sheet (`.genie-sheet`, `--bg`). Off-screen parts are emptied but keep
+  their size; ids (outside SVG), `name` and `autofocus` go; nothing inside animates.
+- The ghost is cut into strips (`.genie-strip`): up to 16 on a computer, 10 on a phone, fewer for a big page (each
+  strip holds a copy; the widest, unbent one keeps the page itself; frames and players stay blank, canvases are drawn
+  over), thinner near the neck (`(j/n)^1.35`). Each strip's `matrix3d` lays it onto its piece of the funnel
+  (Heckbert's square-to-quad map: straight lines stay straight, neighbours meet exactly, 1 px overlap); its sheet
+  slides so it shows its own slice. A layer per strip (a screenful in all), not per sheet.
+- The funnel: smoothstep sides from the full page to a 36 px neck, reaching 72% of the way. On a computer the neck is
+  at the sidebar's edge, level with the page's own link (`genieTarget`: the longest link or `button[data-view]` its
+  address starts with, else the logo) and the page flows left; on a phone it is at the menu button and the page flows
+  up.
+- Timing: 0.48 s from the first frame drawn (the clock starts a frame late, after the costly first frame). The funnel
+  forms in the first 36% (eased out); from 26% the page slides through it (eased in), its far edge last. On a computer
+  the sidebar's edge bulges out there (`.vt-bulge`, the sidebar's own colours, 1.45× as long: out by 58%, snaps back
+  past flat to -0.24, settles); on a phone the menu button squashes and snaps back (`.vt-snap`) at 78%.
+- None with Reduce motion, in a hidden tab or in the apps; the new page is drawn the same either way.
 
 ### Ready before you click; type details
 Intent preloading (`assets/app.js`, after the instant.page measurements): a mouse resting 65 ms on an `a[href^="#/"]`,
