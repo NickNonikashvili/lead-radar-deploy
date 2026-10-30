@@ -513,3 +513,12 @@ grow it back in. The daily word: a typed letter pops, a sent try turns its tiles
 the halfway point), a solved row hops. Toasts are read out (`#sr-status`, one status region that stays on the page),
 wait while hovered or focused, and can carry one action (`App.toast(msg, ms, { label, run })`). All of it is
 still with Reduce motion (the setting or the device preference).
+
+### Moving around (October 30 polish, round 2)
+Back and Forward restore where you were (`history.scrollRestoration = 'manual'`; each entry's key in
+`history.state.k`, positions in sessionStorage, taken before the old page is cleared, restored once the page is tall
+enough, about a second at most); a new page starts at the top; `App.replaceHash` keeps the entry's state. A
+`data-action` button whose handler returns a promise is busy at once (`aria-busy`, a second press is ignored), shows
+a 13 px ring after its label if it takes over 350 ms (`button.is-busy`), and is free again when the promise settles
+(20 s at most). `data-nobusy` opts a button out.
+

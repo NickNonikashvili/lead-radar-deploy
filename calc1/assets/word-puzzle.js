@@ -113,7 +113,7 @@
       }).join('');
       const kb = KEYS.map((row, i) => `<div class="wp-krow">${i === 2 ? `<button type="button" class="wp-key wide" data-k="Enter">${esc(t('Enter'))}</button>` : ''}${row.split('').map(L => `<button type="button" class="wp-key ${k[L] || ''}" data-k="${L}" aria-label="${L}${k[L] ? ', ' + esc(t(SAY[k[L]])) : ''}">${L}</button>`).join('')}${i === 2 ? `<button type="button" class="wp-key wide" data-k="Backspace" aria-label="${esc(t('Delete a letter'))}">${icon('undo', 16)}</button>` : ''}</div>`).join('');
       const C = Courses[s.c];
-      const end = s.done ? `<div class="wp-end"><p class="wp-lead">${esc(s.won ? t('Solved in {1} of 6. +{2} XP', s.g.length, XP) : t('The word was {1}.', s.w))}</p><p class="wp-word" translate="no"><b>${esc(s.w)}</b>${C ? ` · ${esc(C.short || C.name)}` : ''}: ${esc(s.m)}</p><p class="small muted">${esc(t('Streak: {1} · Solved {2} of {3}', s.streak, s.wins, s.played))} · ${esc(t('New puzzle in {1}', untilTomorrow()))}</p><div class="wp-end-act">${shareBtn()}</div></div>` : '';
+      const end = s.done ? `<div class="wp-end${fx.flip !== undefined ? ' later' : ''}"><p class="wp-lead">${esc(s.won ? t('Solved in {1} of 6. +{2} XP', s.g.length, XP) : t('The word was {1}.', s.w))}</p><p class="wp-word" translate="no"><b>${esc(s.w)}</b>${C ? ` · ${esc(C.short || C.name)}` : ''}: ${esc(s.m)}</p><p class="small muted">${esc(t('Streak: {1} · Solved {2} of {3}', s.streak, s.wins, s.played))} · ${esc(t('New puzzle in {1}', untilTomorrow()))}</p><div class="wp-end-act">${shareBtn()}</div></div>` : '';
       if (s.done) getInvite();
       $('.wp-body', m).innerHTML = `<div class="wp-board">${rows}</div>${end}${s.done ? '' : `<div class="wp-kb">${kb}</div>`}`;
     }

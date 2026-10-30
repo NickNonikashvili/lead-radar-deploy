@@ -10,7 +10,7 @@
 (function (global) {
   'use strict';
   const BUILD = global.MATHUB_BUILD || 'dev';
-  global.MATHUB_ASSETS_BUILD = '2026.10.30.1';   // the build these scripts belong to (scripts/release.js writes it; build-check.js compares it with the page's)
+  global.MATHUB_ASSETS_BUILD = '2026.10.30.2';   // the build these scripts belong to (scripts/release.js writes it; build-check.js compares it with the page's)
   const Courses = global.Courses || (global.Courses = {});
   const COURSE_ORDER = ['calc', 'physics', 'precalc', 'writ', 'csci', 'biob', 'kin', 'psyx'];
   const GLOBAL_VIEWS = ['instructors', 'contact', 'forum', 'policy', 'admin', 'challenge', 'people', 'settings', 'leagues', 'gpa', 'today', 'whatsnew', 'resources', 'guides', 'focus', 'recap', 'tools', 'mistakes', 'join', 'sheet', 'request', 'teach', 'class', 'syllabus', 'notfound', 'create', 'maker', 'c', 'tutor', 'plan', 'tasks', 'timetable', 'agenda', 'timelog', 'projects', 'habits', 'goals', 'wheel', 'journal', 'money', 'career', 'portfolio', 'max', 'unsubscribe', 'room', 'calls', 'usage', 'customize', 'off'];   // pages that work without a course, e.g. #/contact
@@ -27,8 +27,19 @@
     root.__actions = map;
     if (!root.__boundClick) {
       root.__boundClick = true;
-      root.addEventListener('click', e => { const el = e.target.closest('[data-action]'); if (!el || !root.contains(el)) return; const fn = root.__actions && root.__actions[el.dataset.action]; if (fn) fn(el, e); });
+      root.addEventListener('click', e => {
+        const el = e.target.closest('[data-action]'); if (!el || !root.contains(el)) return; const fn = root.__actions && root.__actions[el.dataset.action]; if (!fn) return;
+        if (el.getAttribute('aria-busy') === 'true') { e.preventDefault(); return; }   // still working on the last press: a double tap sends it once
+        const r = fn(el, e); if (r && typeof r.then === 'function' && el.tagName === 'BUTTON' && !el.hasAttribute('data-nobusy')) busyWhile(el, r);
+      });
     }
+  }
+  // a button whose action waits on the server says so: busy at once (a second press is ignored), a small spinner if it
+  // takes longer than a third of a second (no flash for quick ones), and never stuck for more than 20 seconds
+  function busyWhile(el, p) {
+    el.setAttribute('aria-busy', 'true'); const show = setTimeout(() => el.classList.add('is-busy'), 350);
+    const done = () => { clearTimeout(show); clearTimeout(cap); el.removeAttribute('aria-busy'); el.classList.remove('is-busy'); }; const cap = setTimeout(done, 20000);
+    Promise.resolve(p).then(done, done);
   }
   function on(root, evt, sel, fn) {
     root.__on = root.__on || {}; const key = evt + '|' + sel; root.__on[key] = fn; root.__onBound = root.__onBound || {};
@@ -340,7 +351,7 @@
   App.siteBase = () => (window.MATHUB_APP && window.MATHUB_APP.native ? window.MATHUB_APP.api : location.origin + location.pathname.replace(/index\.html$/, ''));
   App.link = (view, param, query) => { let hs = '#/' + (D ? D.id : 'calc') + '/' + view + (param ? '/' + param : ''); if (query) hs += '?' + new URLSearchParams(query).toString(); return hs; };
   App.go = (view, param, query) => { const hs = App.link(view, param, query); if (location.hash === hs) { render(); return; } try { location.hash = hs; } catch { render(); } };
-  App.replaceHash = hs => { try { history.replaceState(null, '', hs); } catch {} };
+  App.replaceHash = hs => { try { history.replaceState(history.state, '', hs); } catch {} };   // the same page, a new address: keeps the entry's state (its scroll key)
   const pageHead = (title, sub, actions = '') => `<div class="page-head"><div><h1 class="page-title">${title}</h1>${sub ? `<p class="page-sub">${sub}</p>` : ''}</div><div class="page-actions">${actions}</div></div>`;
   App.pageHead = pageHead;
   const L = App.link;
@@ -421,10 +432,36 @@
     const view = parts[1] || 'dashboard';
     return { course: parts[0], view: App.views[view] || !Courses[parts[0]].loaded ? view : 'dashboard', param: parts.slice(2).join('/') || null, query };
   }
+  /* ---------- Back and Forward put you where you were ----------
+     Each history entry gets a key (history.state.k) and its scroll position is kept for the tab (sessionStorage), taken
+     as you leave it. A new page starts at the top; going Back or Forward to a page you saw (or reloading it) puts you
+     back where you left it, once the page is tall enough: pages draw in steps, so it waits up to about a second. */
+  const Scroll = { at: {}, cur: null, seq: 0 };
+  try { Scroll.at = JSON.parse(sessionStorage.getItem('studyhub-scroll') || '{}') || {}; } catch (e) {}
+  try { if ('scrollRestoration' in history) history.scrollRestoration = 'manual'; } catch (e) {}
+  function scrollKeep() {
+    if (!Scroll.cur) return; Scroll.at[Scroll.cur] = Math.round(window.scrollY);
+    const keys = Object.keys(Scroll.at); if (keys.length > 60) keys.slice(0, keys.length - 60).forEach(k => delete Scroll.at[k]);
+    try { sessionStorage.setItem('studyhub-scroll', JSON.stringify(Scroll.at)); } catch (e) {}
+  }
+  function scrollArrive() {
+    let st = history.state; let seen = !!(st && st.k);
+    if (!seen) { st = Object.assign({}, st, { k: Date.now().toString(36) + (Scroll.seq++).toString(36) }); try { history.replaceState(st, ''); } catch (e) { seen = false; } }
+    const k = st.k, again = k === Scroll.cur; let y = seen && !again ? Scroll.at[k] || 0 : 0; Scroll.cur = k;
+    // the page drawn again just after you arrived (the account signing in, a class finishing loading) keeps that place;
+    // drawn again later (you changed something), it starts at the top as before
+    if (again && Scroll.back && Scroll.back.k === k && Date.now() < Scroll.back.until) y = Scroll.back.y;
+    else if (y > 0) Scroll.back = { k, y, until: Date.now() + 2500 }; else if (!again) Scroll.back = null;
+    window.scrollTo(0, 0);
+    if (y > 0) { let n = 0; const go = () => { if (Scroll.cur !== k) return; const max = document.documentElement.scrollHeight - innerHeight; if (max >= y - 4 || n++ > 60) { window.scrollTo(0, Math.min(y, Math.max(0, max))); return; } requestAnimationFrame(go); }; requestAnimationFrame(go); }
+  }
+  window.addEventListener('scroll', () => { clearTimeout(Scroll.t); Scroll.t = setTimeout(scrollKeep, 150); }, { passive: true });
+  window.addEventListener('pagehide', scrollKeep);
   function render() {
+    scrollKeep();   // where you were on the page you are leaving: before it is cleared (an empty page is scrolled to the top)
     const { course, view, param, query } = route();
     if (App.current && App.current.unmount) { try { App.current.unmount(); } catch {} }
-    const app = $('.app'); const stale = $('#view'); const root = stale.cloneNode(false); stale.replaceWith(root); window.scrollTo(0, 0);
+    const app = $('.app'); const stale = $('#view'); const root = stale.cloneNode(false); stale.replaceWith(root); scrollArrive();
     if (query.asof !== undefined) { setSetting('asof', /^\d{4}-\d{2}-\d{2}$/.test(query.asof) ? query.asof : ''); }
     if (!course) {
       app.classList.add('landing'); app.classList.remove('nav-open'); document.documentElement.removeAttribute('data-course');

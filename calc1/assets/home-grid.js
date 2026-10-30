@@ -239,7 +239,8 @@
         const hb = e.target.closest('[data-hgh]');
         if (hb) {
           const id = hb.dataset.hgh; const g = prefs(); if (opt(id)) g.shown = g.shown.filter(x => x !== id); else if (!g.hidden.includes(id)) g.hidden.push(id); setSetting(o.key, g); closeMenu();
-          const gone = () => { const before = places(W); repaint(); glide(W, before); const b = $(`[data-hga="${id}"]`, W); if (b) b.focus(); App.toast(t('Hidden. Add it back any time from Add to dashboard.'), 6000, { label: t('Undo'), run: () => show(id) }); };
+          // it goes, the others close the gap, its chip pops into Add to dashboard, and the toast offers Undo
+          const gone = () => { const before = places(W); repaint(); glide(W, before); const b = $(`[data-hga="${id}"]`, W); if (b) { b.focus(); if (!still() && b.animate) b.animate([{ opacity: 0, transform: 'scale(0.9)' }, { opacity: 1, transform: 'none' }], { duration: 220, easing: EASE }); } App.toast(t('Hidden. Add it back any time from Add to dashboard.'), 6000, { label: t('Undo'), run: () => show(id) }); };
           const card = $(`[data-hg="${id}"]`, W);
           if (still() || !card || !card.animate) gone(); else { card.style.pointerEvents = 'none'; card.animate([{ opacity: 1, transform: 'none' }, { opacity: 0, transform: 'scale(0.96)' }], { duration: 160, easing: 'ease-in', fill: 'forwards' }).onfinish = gone; }
           return;
