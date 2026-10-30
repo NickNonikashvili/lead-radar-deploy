@@ -42,7 +42,7 @@ const T = require('./lib');
   check('a button whose action is instant is never marked busy', b.quickBusy === null, b);
   await c.close();
 
-  // page changes: the old page becomes a bubble and sinks away; Back brings it up again; the frame keeps still; Reduce motion: none
+  // page changes: the old page closes like a Mac window (the genie); Back opens it again; the frame keeps still; Reduce motion: none
   const [c2, q] = await mk(1360, 900, { serviceWorkers: 'block', reducedMotion: 'no-preference' });
   await q.addInitScript(() => { try { const s = JSON.parse(localStorage.getItem('studyhub-settings') || '{}'); s.motion = 'on'; localStorage.setItem('studyhub-settings', JSON.stringify(s)); } catch (e) {} });
   await go(q, '#/resources', 1200);
@@ -52,7 +52,7 @@ const T = require('./lib');
   const sliding = () => q.waitForFunction(() => document.getAnimations().some(a => a.effect && /view-transition-new\(root\)/.test(a.effect.pseudoElement || '')), null, { timeout: 1500 }).catch(() => {});
   await q.evaluate(() => { location.hash = '#/calc'; }); await sliding();
   const push = await anims();
-  check('opening a page: the old one becomes a bubble and sinks away, the new one settles in under it', vtOn && push.nav === 'push' && push.a.includes('::view-transition-old(root):vtSink') && push.a.includes('::view-transition-new(root):vtSettle'), push);
+  check('opening a page: the old one closes like a Mac window (the genie), the new one settles in under it', vtOn && push.nav === 'push' && push.a.includes('::view-transition-old(root):vtGenie') && push.a.includes('::view-transition-new(root):vtSettle'), push);
   const frame = await q.evaluate(() => ({ side: getComputedStyle(document.querySelector('.sidebar')).viewTransitionName, top: getComputedStyle(document.querySelector('.topbar')).viewTransitionName, bo: document.querySelector('#bo-fab') ? getComputedStyle(document.querySelector('#bo-fab')).viewTransitionName : 'bo-fab' }));
   check('the sidebar, the top bar and Ask Bo keep still (their own snapshots)', frame.side === 'side' && frame.top === 'top' && frame.bo === 'bo-fab', frame);
   await q.waitForTimeout(700);
@@ -60,7 +60,7 @@ const T = require('./lib');
   check('and when it has settled, the page is just the page again', after.nav === null && after.a.length === 0 && /#\/calc/.test(await q.evaluate(() => location.hash)), after);
   await q.goBack(); await sliding();
   const pop = await anims();
-  check('Back: the page you go back to rises from below as a bubble and opens out', pop.nav === 'back' && pop.a.includes('::view-transition-new(root):vtRise') && pop.a.includes('::view-transition-old(root):vtRecede'), pop);
+  check('Back: the page you go back to comes up out of the genie and opens out', pop.nav === 'back' && pop.a.includes('::view-transition-new(root):vtGenie') && pop.a.includes('::view-transition-old(root):vtRecede'), pop);
   await q.waitForTimeout(700);
   await q.emulateMedia({ reducedMotion: 'reduce' });
   await q.evaluate(() => { location.hash = '#/calc'; }); await q.waitForTimeout(60);
