@@ -14,7 +14,8 @@ const T = require('./lib');
   const start = await p.$('[data-action="start"]:visible') || await p.$('[data-action="new-set"]'); await start.click(); await p.waitForTimeout(800);
   const before = await p.evaluate(() => { const cards = [...document.querySelectorAll('#pq-session .q-card')]; window.__second = cards[1]; window.__bar = document.querySelector('#pq-session > .panel'); return { n: cards.length, mc: !!cards[0].querySelector('[data-action="mc"]') }; });
   // answer the first multiple-choice question (or the first number one with a wrong value)
-  const first = await p.evaluate(() => { const card = [...document.querySelectorAll('#pq-session .q-card')].find(c => c.querySelector('[data-action="mc"]')); return card ? card.id : null; });
+  // the question watched for not being rebuilt is one other than the answered one (the questions are drawn at random, so the first multiple-choice one may be the second)
+  const first = await p.evaluate(() => { const cards = [...document.querySelectorAll('#pq-session .q-card')]; const card = cards.find(c => c.querySelector('[data-action="mc"]')); if (card) window.__second = cards.find(c => c !== card); return card ? card.id : null; });
   check('a practice set has questions to answer', before.n >= 5 && !!first, before);
   await p.click(`#${first} [data-action="mc"] >> nth=0`); await p.waitForTimeout(400);
   const after = await p.evaluate(id => { const card = document.getElementById(id); const cards = [...document.querySelectorAll('#pq-session .q-card')]; return { graded: /correct|wrong/.test(card.className), feedback: !!card.querySelector('.q-feedback'), sameOther: cards.includes(window.__second) && window.__second.isConnected, sameBar: window.__bar.isConnected, bar: document.querySelector('#pq-session .score-bar').textContent.replace(/\s+/g, ' '), fill: document.querySelector('#pq-session .score-bar .bar-fill').style.width, n: cards.length }; }, first);
