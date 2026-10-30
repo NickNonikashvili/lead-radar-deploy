@@ -477,11 +477,17 @@
   }
   window.addEventListener('scroll', () => { clearTimeout(Scroll.t); Scroll.t = setTimeout(scrollKeep, 150); }, { passive: true });
   window.addEventListener('pagehide', scrollKeep);
-  /* ---------- page changes: the page you leave closes into the sidebar (the genie, assets/genie.js) ----------
-     It goes into the sidebar level with its own link (the StudyCat logo when it has none), and the sidebar's edge
-     stretches out there and snaps back; on a phone it goes into the menu button. The new page is drawn at once,
-     underneath. Nothing moves with Reduce motion, in a background tab or in the apps. */
+  /* ---------- closing a study page: it goes into the sidebar (the genie, assets/genie.js) ----------
+     Only when you leave a study page (a lesson, flashcards, a quiz, a tool...) for one that is not (the dashboard, the
+     calendar, home, settings...); every other page change is plain. It goes into the sidebar level with its own link
+     (the StudyCat logo when it has none), and the sidebar's edge stretches out there and snaps back; on a phone it goes
+     into the menu button. The new page is drawn at once, underneath. Nothing moves with Reduce motion, in a background
+     tab or in the apps. */
   const Nav = { shown: location.hash };
+  // a study page: a class's own page, but not its dashboard, calendar, planner, discussions, syllabus or settings; or one of the few that work across classes
+  const NOT_STUDY = ['dashboard', 'calendar', 'planner', 'forum', 'course', 'settings'], STUDY_ANYWHERE = ['focus', 'mistakes', 'tutor'];
+  const isStudy = h => { const p = String(h || '').replace(/^#\/?/, '').split('?')[0].split('/').filter(Boolean); if (!p.length) return false; return Courses[p[0]] ? !!p[1] && !NOT_STUDY.includes(p[1]) : STUDY_ANYWHERE.includes(p[0]); };
+  App.isStudyPage = isStudy;
   const pagePath = h => { const p = String(h || '#/').split('?')[0].replace(/\/+$/, '') || '#'; const seg = p.slice(2).split('/'); return seg.length === 1 && Courses[seg[0]] ? `${p}/dashboard` : p; };
   const shownRail = () => [$('.sidebar'), $('.fx-rail')].find(el => { if (!el) return false; const r = el.getBoundingClientRect(); const cs = getComputedStyle(el); return r.right > 40 && r.width > 0 && r.left < 20 && cs.visibility !== 'hidden' && cs.display !== 'none'; });
   // where a page goes: level with its own link in the sidebar (the longest link its address starts with; a page's
@@ -510,7 +516,7 @@
   };
   function navigate() {
     const de = document.documentElement; const from = Nav.shown; Nav.shown = location.hash;
-    const can = App.genie && !document.hidden && !de.dataset.app && !(App.motionReduced && App.motionReduced());
+    const can = App.genie && isStudy(from) && !isStudy(location.hash) && !document.hidden && !de.dataset.app && !(App.motionReduced && App.motionReduced());
     const old = can ? $('#view') : null; const rect = old && old.getBoundingClientRect();
     let offs = null; try { offs = old && App.genieMeasure ? App.genieMeasure(old) : null; } catch (e) {}   // what is off the screen, while it is laid out
     render();

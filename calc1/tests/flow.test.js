@@ -2,8 +2,9 @@
    - Back and Forward put you where you were on a page you saw (and a reload keeps your place); a new page starts at the top
    - a button whose action waits on the server is busy at once (a double tap sends it once), shows a spinner only if it
      takes a while, and is free again when the answer comes
-   - the page you leave closes into its sidebar link like a Mac window into the Dock (assets/genie.js); on a phone,
-     into the menu button; nothing moves with Reduce motion */
+   - closing a study page for one that is not (the dashboard, a page outside the class) sends it into its sidebar link
+     like a Mac window into the Dock (assets/genie.js); on a phone, into the menu button; any other change is plain;
+     nothing moves with Reduce motion */
 const T = require('./lib');
 (async () => {
   const { mk, go, check } = await T.start({});
@@ -44,23 +45,28 @@ const T = require('./lib');
   check('a button whose action is instant is never marked busy', b.quickBusy === null, b);
   await c.close();
 
-  // page changes: the page you leave closes into its sidebar link like a Mac window into the Dock (the genie, assets/genie.js)
+  // closing a study page for one that is not: it goes into its sidebar link like a Mac window into the Dock (the genie, assets/genie.js)
   const [c2, q] = await mk(1360, 900, { serviceWorkers: 'block', reducedMotion: 'no-preference' });
   await q.addInitScript(() => { try { const s = JSON.parse(localStorage.getItem('studyhub-settings') || '{}'); s.motion = 'on'; localStorage.setItem('studyhub-settings', JSON.stringify(s)); } catch (e) {} });
   await go(q, '#/calc/path', 1500);
   const ghostNow = () => q.evaluate(() => {
     const g = document.querySelector('.genie-ghost'); const views = document.querySelectorAll('#view');
-    const b = document.querySelector('.vt-bulge'); const link = document.querySelector('.sidebar button[data-view="path"]');
+    const b = document.querySelector('.vt-bulge'); const link = document.querySelector('.sidebar button[data-view="notes"]');
     const strips = g ? Array.from(g.querySelectorAll(':scope > .genie-strip')) : [];
     return { ghost: !!g, hidden: g && g.getAttribute('aria-hidden'), inert: g && g.inert, strips: strips.length, m3: strips.every(s => /^matrix3d\(/.test(s.style.transform)),
-      ids: g ? Array.from(g.querySelectorAll('[id]')).filter(n => n.id !== 'view' && !n.closest('svg')).length : -1, oldText: g ? /Learning path/i.test(g.textContent) : false,
+      ids: g ? Array.from(g.querySelectorAll('[id]')).filter(n => n.id !== 'view' && !n.closest('svg')).length : -1, oldText: g ? /Section notes|notes/i.test(g.textContent) : false,
       first: views[0] && !views[0].closest('.genie-ghost'), bulge: b ? Math.round(b.getBoundingClientRect().left) : null, rail: Math.round(document.querySelector('.sidebar').getBoundingClientRect().right),
       level: b && link ? Math.abs(parseFloat(b.style.top) - (link.getBoundingClientRect().top + link.getBoundingClientRect().height / 2)) : null, on: document.documentElement.classList.contains('genie-on') };
   });
-  await q.evaluate(() => { App.genieMs = 2400; location.hash = '#/calc/notes'; });
+  // from one study page to another: a plain change
+  await q.evaluate(() => { location.hash = '#/calc/notes'; }); await q.waitForTimeout(60);
+  const plain = await ghostNow();
+  check('from a study page to another study page the page simply changes', !plain.ghost && plain.bulge === null, plain);
+  await q.waitForTimeout(900);
+  await q.evaluate(() => { App.genieMs = 2400; location.hash = '#/calc/dashboard'; });
   await q.waitForSelector('.vt-bulge', { timeout: 2000 }).catch(() => {});
   const g1 = await ghostNow();
-  check('opening a page: the old one goes into a ghost over the new one, cut into strips bent onto the funnel (hidden from screen readers, without its ids)', g1.ghost && g1.hidden === 'true' && g1.inert && g1.strips >= 6 && g1.m3 && g1.ids === 0 && g1.oldText && g1.first && g1.on, g1);
+  check('closing a study page for the dashboard: it goes into a ghost over the dashboard, cut into strips bent onto the funnel (hidden from screen readers, without its ids)', g1.ghost && g1.hidden === 'true' && g1.inert && g1.strips >= 6 && g1.m3 && g1.ids === 0 && g1.oldText && g1.first && g1.on, g1);
   check('it goes into the sidebar level with its own link, where the sidebar\'s edge stretches out', g1.bulge !== null && Math.abs(g1.bulge - g1.rail) <= 2 && g1.level !== null && g1.level < 8, g1);
   await q.waitForTimeout(600);
   // once the funnel has formed (a quarter of the way): the strips near the neck are squeezed to a sliver, the far ones are the whole page; the sides are curves, not straight lines
@@ -70,14 +76,19 @@ const T = require('./lib');
   check('the page is squeezed into the neck between curved sides', n > 4 && hs[0] < 140 && hs[n - 1] > 600 && hs.every((h, i) => !i || h >= hs[i - 1] - 2) && bend > 3, { hs, bend });
   await q.waitForTimeout(2100);
   const g2 = await ghostNow();
-  check('and when it is done, nothing is left of it: just the new page', !g2.ghost && g2.bulge === null && !g2.on && /#\/calc\/notes/.test(await q.evaluate(() => location.hash)), g2);
+  check('and when it is done, nothing is left of it: just the new page', !g2.ghost && g2.bulge === null && !g2.on && /#\/calc\/dashboard/.test(await q.evaluate(() => location.hash)), g2);
   await q.evaluate(() => { App.genieMs = 0; });
   await q.goBack(); await q.waitForTimeout(40);
   const gBack = await ghostNow();
-  check('Back closes the page you leave the same way', gBack.ghost && gBack.strips >= 6, gBack);
+  check('going back into a study page is a plain change', !gBack.ghost, gBack);
+  await q.waitForTimeout(600);
+  await q.evaluate(() => { location.hash = '#/resources'; }); await q.waitForTimeout(40);
+  const gOut = await ghostNow();
+  check('closing a study page for a page outside the class closes it the same way', gOut.ghost && gOut.strips >= 6, gOut);
   await q.waitForTimeout(900);
+  await q.evaluate(() => { location.hash = '#/calc/notes'; }); await q.waitForTimeout(900);
   await q.emulateMedia({ reducedMotion: 'reduce' });
-  await q.evaluate(() => { location.hash = '#/calc/notes'; }); await q.waitForTimeout(60);
+  await q.evaluate(() => { location.hash = '#/calc/dashboard'; }); await q.waitForTimeout(60);
   const still = await ghostNow();
   check('with Reduce motion the page simply changes', !still.ghost && still.bulge === null && await q.evaluate(() => !!document.querySelector('#view').children.length), still);
   await c2.close();
@@ -85,7 +96,7 @@ const T = require('./lib');
   const [c4, ph] = await mk(390, 800, { serviceWorkers: 'block', reducedMotion: 'no-preference' });
   await ph.addInitScript(() => { try { const s = JSON.parse(localStorage.getItem('studyhub-settings') || '{}'); s.motion = 'on'; localStorage.setItem('studyhub-settings', JSON.stringify(s)); } catch (e) {} });
   await go(ph, '#/calc/path', 1500);
-  await ph.evaluate(() => { App.genieMs = 1200; location.hash = '#/calc/notes'; });
+  await ph.evaluate(() => { App.genieMs = 1200; location.hash = '#/calc/dashboard'; });
   await ph.waitForSelector('.genie-ghost', { timeout: 2000 }).catch(() => {});
   await ph.waitForTimeout(500);
   const up = await ph.evaluate(() => { const s = Array.from(document.querySelectorAll('.genie-ghost > .genie-strip')).filter(x => x.style.visibility !== 'hidden').map(x => { const r = x.getBoundingClientRect(); return [Math.round(r.left), Math.round(r.width)]; }); const m = document.querySelector('#topbar .menu-btn').getBoundingClientRect(); return { s, menu: Math.round(m.left + m.width / 2) }; });

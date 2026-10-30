@@ -523,6 +523,9 @@ a 13 px ring after its label if it takes over 350 ms (`button.is-busy`), and is 
 (20 s at most). `data-nobusy` opts a button out.
 
 ### Page changes (the genie, like a Mac window going into the Dock)
+Only when you close a study page: from a class's own page (not its dashboard, calendar, planner, discussions,
+syllabus or settings) or Focus, Mistakes or Ask Bo, to a page that is not one (`App.isStudyPage`). Every other change
+is plain: the new page is drawn at once.
 How the Mac does it, and the GNOME (macos-genie) and KWin ports: the window is cut into thin strips across the way it
 goes, each strip is bent onto a four-cornered piece of a funnel whose sides are curves, from the window to the Dock
 icon; the funnel forms first, then the window slides through it, its far edge following its near one. `navigate()`
