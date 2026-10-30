@@ -49,7 +49,8 @@ const T = require('./lib');
   // the Dock when you leave the class, and opens out of it when you go in; everything else is a plain change
   const [c2, q] = await mk(1360, 900, { serviceWorkers: 'block', reducedMotion: 'no-preference' });
   await q.addInitScript(() => { try { const s = JSON.parse(localStorage.getItem('studyhub-settings') || '{}'); s.motion = 'on'; localStorage.setItem('studyhub-settings', JSON.stringify(s)); } catch (e) {} });
-  // signed in (a visitor's home is the start page, with no sidebar); this account keeps Reduce motion on, so it is switched off here
+  // signed in (a visitor's home is the start page, with no sidebar); this account keeps Reduce motion on, so it is
+  // switched off here and back on at the end (the setting follows the account, and other suites expect it on)
   const signIn = async pg => { await go(pg, '#/', 600); await login(pg, 'alice.a@montana.edu'); await pg.reload(); await pg.waitForTimeout(1200); if (await pg.$('.celebrate')) await pg.keyboard.press('Escape'); await pg.evaluate(() => { App.setSetting('motion', 'on'); if (App.applyMotion) App.applyMotion(); }); };
   await signIn(q); await go(q, '#/calc/path', 1500); await q.evaluate(() => { App.setSetting('motion', 'on'); if (App.applyMotion) App.applyMotion(); });
   const ghostNow = linkSel => q.evaluate(linkSel => {
@@ -105,6 +106,8 @@ const T = require('./lib');
   await q.evaluate(() => { location.hash = '#/calc/dashboard'; }); await q.waitForTimeout(60);
   const still = await ghostNow();
   check('with Reduce motion the page simply changes', !still.ghost && !still.under && still.bulge === null && await q.evaluate(() => !!document.querySelector('#view').children.length), still);
+  const reduceAgain = async pg => { await pg.evaluate(() => { App.setSetting('motion', 'off'); }); await pg.waitForTimeout(3200); };   // sent to the account after 2.5 s
+  await reduceAgain(q);
   await c2.close();
   // on a phone the sidebar is tucked away: the page goes up into the menu button (and comes out of it), which squashes and snaps back
   const [c4, ph] = await mk(390, 800, { serviceWorkers: 'block', reducedMotion: 'no-preference' });
@@ -122,6 +125,7 @@ const T = require('./lib');
   await ph.waitForSelector('.genie-under', { timeout: 2500 }).catch(() => {});
   const pin = await ph.evaluate(() => ({ under: !!document.querySelector('.genie-under'), strips: document.querySelectorAll('.genie-ghost > .genie-strip').length }));
   check('phone: going into a class, the class page comes out of the menu button over the page you left', pin.under && pin.strips >= 6, pin);
+  await ph.waitForTimeout(1500); await reduceAgain(ph);
   await c4.close();
 
   // a page starts loading before you click it: a class link you rest the pointer on, a page whose code loads the first time

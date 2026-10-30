@@ -17,7 +17,8 @@ const T = require('./lib');
   const bootlog = await p.evaluate(() => { const b = document.querySelector('#view .page-load .gk-boot'); return b ? b.textContent : null; });
   log('boot log while loading:', JSON.stringify(bootlog));
   check('boot log names the class and the first file', !!bootlog && /mathub open calc/.test(bootlog) && /✓ calc-data\.js/.test(bootlog) && /ms/.test(bootlog), bootlog);
-  await p.waitForTimeout(1200); await p.unroute('**/calc-quiz.js*');
+  // going into a class from outside, the class page then opens out of the sidebar (assets/genie.js) before the line is typed out
+  await p.waitForTimeout(1900); await p.unroute('**/calc-quiz.js*');
   const st = await p.evaluate(() => { const s = document.querySelector('#gk-status'); const side = document.querySelector('.sidebar').getBoundingClientRect(); return { text: s && s.textContent, left: s ? parseFloat(s.style.left) : 0, sideRight: side.right }; });
   log('status after load:', st.text);
   check('status line types the route with a real time', /cd calc\/dashboard/.test(st.text || '') && /✓ \d+ ms/.test(st.text || ''), st.text);
