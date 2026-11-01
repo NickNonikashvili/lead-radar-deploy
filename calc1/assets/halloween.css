@@ -1,5 +1,5 @@
 /* ============================================================
-   StudyCat — Halloween (2026.11.01.2). The website's own look dresses up from October 1 to November 8 every year
+   StudyCat — Halloween (2026.11.01.3). The website's own look dresses up from October 1 to November 8 every year
    (assets/season.js sets html[data-season="halloween"]; Settings switches it off for the year). The other looks and the
    iOS and Android apps keep theirs. Loaded last.
    What it changes, all from tokens and decorations, never the layout:
@@ -109,7 +109,7 @@
 /* ---------- the hero (home and start page): stars, a harvest moon with bats in front, the range at night ---------- */
 :root[data-season="halloween"]:not([data-skin]):not([data-app]) .hg-hero { background: var(--hw-stars), var(--hg-sky); }
 :root[data-season="halloween"]:not([data-skin]):not([data-app]) .hg-hero::before { content: ""; position: absolute; top: 30px; right: 8%; width: 128px; height: 128px; border-radius: 50%; background: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><defs><radialGradient id='m' cx='40%' cy='36%' r='70%'><stop offset='0' stop-color='%23FFEBC2'/><stop offset='.55' stop-color='%23FFBE6B'/><stop offset='1' stop-color='%23EF842C'/></radialGradient></defs><circle cx='50' cy='50' r='48' fill='url(%23m)'/><circle cx='35' cy='40' r='7' fill='%23DE8A3C' opacity='.35'/><circle cx='63' cy='61' r='10' fill='%23DE8A3C' opacity='.28'/><circle cx='59' cy='30' r='4.5' fill='%23DE8A3C' opacity='.35'/><circle cx='31' cy='66' r='4' fill='%23DE8A3C' opacity='.3'/></svg>") center / contain no-repeat; box-shadow: var(--hw-glow); z-index: -2; pointer-events: none; }
-:root[data-season="halloween"]:not([data-skin]):not([data-app]) .hg-hero::after { content: ""; position: absolute; top: 34px; right: calc(8% - 46px); width: 200px; height: 110px; background: var(--hw-bats) center / contain no-repeat; z-index: -1; pointer-events: none; animation: hw-hover 5.5s ease-in-out infinite alternate; }
+:root[data-season="halloween"]:not([data-skin]):not([data-app]) .hg-hero::after { content: ""; position: absolute; top: 34px; right: calc(8% - 46px); width: 200px; height: 110px; background: var(--hw-bats) center / contain no-repeat; z-index: -1; pointer-events: none; animation: hw-hover 5.5s ease-in-out 4 alternate; }
 :root[data-season="halloween"]:not([data-skin]):not([data-app]) .px-skyline { background-image: var(--px-skyline-hw, var(--px-skyline)); filter: none; opacity: 1; }
 @keyframes hw-hover { from { transform: translate(0, 0) rotate(0deg); } to { transform: translate(-6px, -9px) rotate(-1.5deg); } }
 @media (max-width: 640px) {
@@ -119,8 +119,14 @@
 
 /* ---------- the frame: a spider on a thread in the sidebar, a faint orange edge under the top bar ---------- */
 :root[data-season="halloween"]:not([data-skin]):not([data-app]) .sb-head { position: relative; }
-:root[data-season="halloween"]:not([data-skin]):not([data-app]) .sb-head::after { content: ""; position: absolute; top: -30px; right: 52px; width: 20px; height: 66px; background: var(--hw-spider) bottom center / 20px 18px no-repeat, linear-gradient(var(--hw-thread), var(--hw-thread)) top center / 1px calc(100% - 14px) no-repeat; pointer-events: none; transform-origin: 50% 0; animation: hw-dangle 4.6s ease-in-out infinite alternate; }
-@keyframes hw-dangle { from { transform: translateY(-7px) rotate(-3deg); } to { transform: translateY(7px) rotate(3deg); } }
+:root[data-season="halloween"]:not([data-skin]):not([data-app]) .sb-head::after { content: ""; position: absolute; top: -30px; right: 52px; width: 20px; height: 66px; background: var(--hw-spider) bottom center / 20px 18px no-repeat, linear-gradient(var(--hw-thread), var(--hw-thread)) top center / 1px calc(100% - 14px) no-repeat; pointer-events: none; transform-origin: 50% 0; animation: hw-dangle 7.2s ease-in-out 0.6s both; }
+/* it lowers itself on its thread and swings to a stop: a few swings, then the page rests (DESIGN.md, Lighter). Brushing past
+   the logo sets it swinging again (assets/pixel.js flips data-swing between a and b: a new animation name restarts it) */
+@keyframes hw-dangle { 0% { transform: translateY(-16px) rotate(0deg); } 16% { transform: translateY(6px) rotate(3deg); } 34% { transform: translateY(-4px) rotate(-2.2deg); } 52% { transform: translateY(3px) rotate(1.4deg); } 70% { transform: translateY(-1.5px) rotate(-0.8deg); } 86% { transform: translateY(0.5px) rotate(0.3deg); } 100% { transform: none; } }
+:root[data-season="halloween"]:not([data-skin]):not([data-app]) .sb-head[data-swing="a"]::after { animation: hw-swing-a 4.4s ease-in-out both; }
+:root[data-season="halloween"]:not([data-skin]):not([data-app]) .sb-head[data-swing="b"]::after { animation: hw-swing-b 4.4s ease-in-out both; }
+@keyframes hw-swing-a { 0%, 100% { transform: none; } 18% { transform: translateY(4px) rotate(4deg); } 40% { transform: translateY(-3px) rotate(-2.6deg); } 62% { transform: translateY(2px) rotate(1.4deg); } 82% { transform: translateY(-0.5px) rotate(-0.5deg); } }
+@keyframes hw-swing-b { 0%, 100% { transform: none; } 18% { transform: translateY(4px) rotate(4deg); } 40% { transform: translateY(-3px) rotate(-2.6deg); } 62% { transform: translateY(2px) rotate(1.4deg); } 82% { transform: translateY(-0.5px) rotate(-0.5deg); } }
 :root[data-season="halloween"]:not([data-skin]):not([data-app]) .topbar { box-shadow: inset 0 -1px 0 color-mix(in srgb, var(--accent) 28%, transparent); }
 
 /* ---------- cobwebs in a corner: the home cards, a class's exam week, the flashcard ---------- */
@@ -132,19 +138,26 @@
 :root[data-season="halloween"]:not([data-skin]):not([data-app]) ::selection { background: color-mix(in srgb, var(--accent) 30%, transparent); }
 :root[data-season="halloween"]:not([data-skin]):not([data-app]) { scrollbar-color: color-mix(in srgb, var(--accent) 45%, var(--surface-3)) transparent; }
 
-/* ---------- three pixel bats cross the top of the screen every 40 seconds or so (assets/pixel.js adds them) ---------- */
+/* ---------- three pixel bats cross the top of the screen now and then. assets/pixel.js adds them and starts each flight
+   with .fly on one shared timer, like Bo's blinks: between flights nothing moves, and the wings flap on every flight ---------- */
 .hw-bats { display: none; }
 :root[data-season="halloween"]:not([data-skin]):not([data-app]) .hw-bats { display: block; position: fixed; top: 0; left: 0; right: 0; height: 0; z-index: 45; pointer-events: none; }
-:root[data-season="halloween"]:not([data-skin]):not([data-app]) .hw-bats .px-bat { position: absolute; top: 16px; right: -60px; width: 34px; height: auto; opacity: 0; animation: hw-fly 41s linear 5s infinite; }
-:root[data-season="halloween"]:not([data-skin]):not([data-app]) .hw-bats .px-bat:nth-child(2) { top: 38px; width: 26px; animation-delay: 6.3s; }
-:root[data-season="halloween"]:not([data-skin]):not([data-app]) .hw-bats .px-bat:nth-child(3) { top: 24px; width: 22px; animation-delay: 7.1s; }
+:root[data-season="halloween"]:not([data-skin]):not([data-app]) .hw-bats .px-bat { position: absolute; top: 16px; right: -60px; width: 34px; height: auto; opacity: 0; }
+:root[data-season="halloween"]:not([data-skin]):not([data-app]) .hw-bats .px-bat:nth-child(2) { top: 38px; width: 26px; }
+:root[data-season="halloween"]:not([data-skin]):not([data-app]) .hw-bats .px-bat:nth-child(3) { top: 24px; width: 22px; }
+:root[data-season="halloween"]:not([data-skin]):not([data-app]) .hw-bats .px-bat :is(.pxf1, .pxf2) { animation: none; }
+:root[data-season="halloween"]:not([data-skin]):not([data-app]) .hw-bats.fly .px-bat { animation: hw-fly 5.2s linear both; }
+:root[data-season="halloween"]:not([data-skin]):not([data-app]) .hw-bats.fly .px-bat .pxf1 { animation: pxA 0.32s steps(1) 17; }
+:root[data-season="halloween"]:not([data-skin]):not([data-app]) .hw-bats.fly .px-bat .pxf2 { animation: pxB 0.32s steps(1) 17; }
+:root[data-season="halloween"]:not([data-skin]):not([data-app]) .hw-bats.fly .px-bat:nth-child(2), :root[data-season="halloween"]:not([data-skin]):not([data-app]) .hw-bats.fly .px-bat:nth-child(2) :is(.pxf1, .pxf2) { animation-delay: 1.3s; }
+:root[data-season="halloween"]:not([data-skin]):not([data-app]) .hw-bats.fly .px-bat:nth-child(3), :root[data-season="halloween"]:not([data-skin]):not([data-app]) .hw-bats.fly .px-bat:nth-child(3) :is(.pxf1, .pxf2) { animation-delay: 2.1s; }
 @keyframes hw-fly {
   0% { opacity: 0; transform: translate3d(0, 0, 0); }
-  0.6% { opacity: 1; }
-  4% { transform: translate3d(-34vw, -10px, 0); }
-  8% { transform: translate3d(-68vw, 9px, 0); }
-  11.9% { opacity: 1; }
-  12%, 100% { opacity: 0; transform: translate3d(calc(-100vw - 90px), -4px, 0); }
+  5% { opacity: 1; }
+  33% { transform: translate3d(-34vw, -10px, 0); }
+  66% { transform: translate3d(-68vw, 9px, 0); }
+  97% { opacity: 1; }
+  100% { opacity: 0; transform: translate3d(calc(-100vw - 90px), -4px, 0); }
 }
 
 /* ---------- motion: nothing moves when motion is reduced ---------- */

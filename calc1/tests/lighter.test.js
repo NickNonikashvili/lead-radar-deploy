@@ -49,7 +49,8 @@ const T = require('./lib'); const fs = require('fs'); const path = require('path
   // after Bo's first moves the page rests: no endless animation, so no restyle or repaint while the student reads
   for (const [w, h] of [[390, '#/calc'], [1360, '#/']]) {
     const [c3, r] = await mk(w, 850, { serviceWorkers: 'block' });
-    await c3.addInitScript(() => { try { localStorage.setItem('studyhub-settings', JSON.stringify({ courses: ['calc'], boFloatSeen: 1, tourLayout: 99, tourDone: true, geek: false })); } catch (e) {} });
+    // in the Halloween costume, the stricter case: its bats and spider must rest too, whatever the date the suite runs on
+    await c3.addInitScript(() => { try { localStorage.setItem('studyhub-settings', JSON.stringify({ courses: ['calc'], boFloatSeen: 1, tourLayout: 99, tourDone: true, geek: false, season: 'halloween' })); } catch (e) {} });
     await go(r, h, 10500);
     const rest = await r.evaluate(async () => { const endless = document.getAnimations().filter(a => a.playState === 'running' && a.effect.getTiming().iterations === Infinity && !(a.effect.pseudoElement)).map(a => a.animationName); let blinked = false; const mo = new MutationObserver(() => { if (document.querySelector('.bob-lids.blink, .px-bo.blink')) blinked = true; }); mo.observe(document.body, { subtree: true, attributes: true, attributeFilter: ['class'] }); await new Promise(ok => setTimeout(ok, 8200)); mo.disconnect(); return { endless, bo: document.querySelectorAll('.bob-lids, .px-bo.px-anim').length, blinked }; });
     check(`${h} (${w}px): nothing animates without end once Bo has settled, and Bo still blinks now and then`, rest.endless.length === 0 && rest.bo > 0 && rest.blinked, rest);

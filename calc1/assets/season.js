@@ -1,5 +1,5 @@
 /* ============================================================
-   StudyCat — the seasons (2026.11.01.2). Every year from October 1 to November 8 the website dresses up for
+   StudyCat — the seasons (2026.11.01.3). Every year from October 1 to November 8 the website dresses up for
    Halloween: html[data-season="halloween"] turns on assets/halloween.css (the website's own look only: not the other
    looks, not the iOS and Android apps) and the Halloween block at the end of assets/seo.css on the study guides.
    Loaded in <head> on every page (index.html right after boot.js, and each study guide), so the costume is on from
@@ -9,8 +9,9 @@
      next October it comes back by itself. settings.season = 'halloween' or 'none' forces it either way (the tests
      and a preview; never set by the page).
    - The tab's icon (Bo in a witch's hat) and the phone's browser bar follow it.
-   Moving pieces (bats, the spider, a flicker) are CSS animations that stop with Reduce motion or the device's own
-   reduced-motion setting, and switching the look off removes them (WCAG 2.2.2 Pause, Stop, Hide).
+   The moving pieces (the bats by the moon, the spider, the bats that cross the screen now and then) move a few times
+   and rest, like everything else (DESIGN.md, Lighter); Reduce motion or the device's own reduced-motion setting stops
+   them, and switching the look off removes them (WCAG 2.2.2 Pause, Stop, Hide).
    ============================================================ */
 (function () {
   'use strict';

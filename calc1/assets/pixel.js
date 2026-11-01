@@ -110,12 +110,30 @@
     ($('.sf-base', f) || f).insertAdjacentHTML('afterbegin', `<span class="px-sig" data-hw="${hw}">${App.pixel(hw ? 'bat' : 'invader', 2, { cls: 'px-foot-inv' })}<span>Handmade with</span>${App.pixel(hw ? 'pumpkin' : 'heart', 2)}<span class="sr-only"> love </span><span>in Bozeman</span></span>`);
   }
   App.signFooter = signFooter;
-  // three pixel bats that cross the top of the screen now and then in the Halloween season (assets/halloween.css flies them)
+  // three pixel bats that cross the top of the screen now and then in the Halloween season. One flight at a time on one
+  // timer, like Bo's blinks (assets/motion.js): between flights nothing moves, so the page rests (DESIGN.md, Lighter)
+  let flights = 0;
+  const still = () => document.documentElement.getAttribute('data-motion') === 'off' || !!(App.motionReduced && App.motionReduced());
+  function fly() {   // one flight now (.hw-bats.fly in assets/halloween.css); false when the bats are away or motion is reduced
+    const el = document.querySelector('.hw-bats');
+    if (!el || !halloween() || document.hidden || still()) return false;
+    if (el.classList.contains('fly')) return true;   // a flight is under way: never cut one short
+    el.classList.add('fly'); setTimeout(() => el.classList.remove('fly'), 7800);   // the last bat lands after 2.1 s + 5.2 s
+    return true;
+  }
+  App.flyBats = fly;
+  function soon(ms) { clearTimeout(flights); flights = setTimeout(() => { fly(); soon(30000 + Math.random() * 45000); }, ms); }
   function bats() {
     const on = halloween(); const el = document.querySelector('.hw-bats');
-    if (on && !el && document.body) document.body.insertAdjacentHTML('beforeend', `<div class="hw-bats" aria-hidden="true">${App.pixel('bat', 2)}${App.pixel('bat', 2)}${App.pixel('bat', 2)}</div>`);
-    else if (!on && el) el.remove();
+    if (on && !el && document.body) { document.body.insertAdjacentHTML('beforeend', `<div class="hw-bats" aria-hidden="true">${App.pixel('bat', 2)}${App.pixel('bat', 2)}${App.pixel('bat', 2)}</div>`); soon(5000 + Math.random() * 2500); }
+    else if (!on && el) { el.remove(); clearTimeout(flights); }
   }
+  // brushing past the logo sets the sidebar's spider swinging again: a new animation name restarts it, leaving does nothing
+  document.addEventListener('pointerover', e => {
+    const h = e.target.closest && e.target.closest('.sb-head');
+    if (!h || h.contains(e.relatedTarget) || !halloween() || still()) return;
+    h.dataset.swing = h.dataset.swing === 'a' ? 'b' : 'a';
+  }, { passive: true });
   App.onSeason = () => { bats(); signFooter(); };   // the season switched in Settings or on another device (applyTheme in assets/app.js)
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', App.onSeason); else App.onSeason();
 })(window);

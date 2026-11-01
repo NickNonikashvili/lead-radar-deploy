@@ -598,7 +598,7 @@ spinner that never ends. MathJax 3.2.2 ships in `assets/vendor/mathjax/` (tex-sv
 capturing `error` listener in `assets/boot.js` (and `assets/mathjax-static.js` on the study guides) adds the jsDelivr
 copy only when ours fails.
 
-### Halloween (2026.11.01.2)
+### Halloween (2026.11.01.3)
 The website's own look dresses up every year from October 1 to November 8 (`assets/season.js`, loaded in `<head>` on
 the page and every study guide, sets `html[data-season="halloween"]` before the first paint; `assets/halloween.css`
 holds the costume; the other looks and the apps keep theirs). Settings has a Halloween look switch: off stores
@@ -614,12 +614,18 @@ holds the costume; the other looks and the apps keep theirs). Settings has a Hal
   behind the words) and the pixel range at night (`--px-skyline-hw`, `assets/pixel.js`). Pixel friends in empty boxes
   become a pumpkin, a ghost or a bat; a bat and a jack-o'-lantern sign the footer. A spider hangs in the sidebar,
   cobwebs sit in an empty corner of the home cards, a class's exam week and the flashcard (bottom-left, clear of its
-  labels), and three pixel bats cross the top of the screen every 41 s (`pointer-events: none`).
-- Motion: every moving piece stops with Reduce motion (rules as specific as the ones that start them) and with the
+  labels), and three pixel bats cross the top of the screen now and then (`pointer-events: none`).
+- Motion rests, as everywhere (Lighter): no Halloween animation runs without end (`tests/lighter.test.js` checks in
+  costume). The bats fly one 5 s flight at a time, started by one timer in `assets/pixel.js` like Bo's blinks (every
+  30 to 75 s, never while the tab is hidden or motion is reduced; `App.flyBats()`), with their wings flapping on every
+  flight, and between flights nothing moves. The hero's bats bob four times; the spider lowers itself on its thread and
+  swings to a stop, and brushing past the logo swings it again (`data-swing` flips between two animation names, since
+  only a new name restarts a CSS animation).
+- Motion stops: every moving piece stops with Reduce motion (rules as specific as the ones that start them) and with the
   device's reduced-motion setting; switching the look off removes them (WCAG 2.2.2 Pause, Stop, Hide). Another
   season is the same pattern: a date window in `season.js`, a token block, a few decorations.
 
-### Nothing wider than the phone (2026.11.01.2)
+### Nothing wider than the phone (2026.11.01.3)
 Every page fits a 320 px screen (`tests/steady-phone.test.js`). A grid of cards asks for at most the screen:
 `repeat(auto-fill, minmax(min(300px, 100%), 1fr))`, never a bare `minmax(300px, 1fr)`; a one-column phone grid is
 `minmax(0, 1fr)` so a long name wraps instead of widening it. A formula inside a sentence is drawn smaller to fit its

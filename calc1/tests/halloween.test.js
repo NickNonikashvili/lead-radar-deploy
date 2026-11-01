@@ -1,4 +1,4 @@
-/* Halloween (2026.11.01.2): from October 1 to November 8 every year the website dresses up (assets/season.js,
+/* Halloween (2026.11.01.3): from October 1 to November 8 every year the website dresses up (assets/season.js,
    assets/halloween.css, the Halloween pieces of assets/pixel.js and the block at the end of assets/seo.css).
    - the dates: on from October 1 to November 8, off the rest of the year; switched off for a year in Settings it comes
      back the next October; settings.season forces it either way
@@ -7,7 +7,8 @@
    - night and day: the pumpkin accent on the one filled button, the page colours, every text colour readable (WCAG AA)
    - Bo wears a witch's hat (the logo and the mascot); the hero has a moon, bats and the range at night; a spider hangs in
      the sidebar; empty boxes get a pumpkin, a ghost or a bat; a bat and a jack-o'-lantern sign the footer
-   - the bats fly only with motion on, and nothing moves with Reduce motion
+   - the bats fly only with motion on, one flight at a time with their wings flapping; every Halloween animation stops by
+     itself, so the page rests between flights (DESIGN.md, Lighter); nothing moves with Reduce motion
    - Settings: a switch turns it off for the year (synced) and back on; it is restored at the end
    - not in the other looks; nothing wider than a phone; the study guides dress up too
    - the other suites see the everyday look (tests/lib.js sets settings.season = 'none' unless a suite asks) */
@@ -32,17 +33,28 @@ const T = require('./lib');
   const head = await p.evaluate(() => ({ parse: window.__seasonAtParse, icon: document.querySelector('link[rel="icon"][type="image/svg+xml"]').getAttribute('href'), bar: document.querySelector('meta[name="theme-color"]').content, motion: document.documentElement.getAttribute('data-motion') }));
   check('it is on before the page draws: on <html> when the document is parsed, the tab icon is Bo in a witch’s hat, the browser bar is the night colour', head.parse === 'halloween' && /icon-halloween\.svg/.test(head.icon) && head.bar === '#1A1026' && head.motion === 'on', head);
   const hero = await p.evaluate(() => { const h = document.querySelector('.hg-hero'); const b = getComputedStyle(h, '::before'), a = getComputedStyle(h, '::after'); const sky = getComputedStyle(h.querySelector('.px-skyline')).backgroundImage; const hat = h.querySelector('.bobcat .bo-hat');
-    return { moon: b.content !== 'none' && /svg/.test(b.backgroundImage) && parseFloat(b.width) > 50, bats: a.content !== 'none' && /svg/.test(a.backgroundImage), hover: a.animationName, stars: /radial-gradient/.test(getComputedStyle(h).backgroundImage), range: /3B2C5A/i.test(sky), hat: !!hat && getComputedStyle(hat).display !== 'none' }; });
-  check('the start page hero: stars, a harvest moon with bats in front of it (hovering), the pixel range at night, Bo in a witch’s hat', hero.moon && hero.bats && hero.hover === 'hw-hover' && hero.stars && hero.range && hero.hat, hero);
+    const bob = document.getAnimations().find(x => x.animationName === 'hw-hover');
+    return { moon: b.content !== 'none' && /svg/.test(b.backgroundImage) && parseFloat(b.width) > 50, bats: a.content !== 'none' && /svg/.test(a.backgroundImage), hover: a.animationName, bobs: bob ? bob.effect.getTiming().iterations : null, stars: /radial-gradient/.test(getComputedStyle(h).backgroundImage), range: /3B2C5A/i.test(sky), hat: !!hat && getComputedStyle(hat).display !== 'none' }; });
+  check('the start page hero: stars, a harvest moon with bats in front of it (a few bobs, then they rest), the pixel range at night, Bo in a witch’s hat', hero.moon && hero.bats && hero.hover === 'hw-hover' && hero.bobs === 4 && hero.stars && hero.range && hero.hat, hero);
   await go(p, '#/calc/dashboard', 2600);
   const look = await p.evaluate(() => { const btn = document.querySelector('#view .btn.primary');
     return { bg: getComputedStyle(document.body).backgroundColor, btn: btn ? getComputedStyle(btn).backgroundColor : '', btnInk: btn ? getComputedStyle(btn).color : '', side: getComputedStyle(document.querySelector('.sidebar')).backgroundColor }; });
   check('night: the aubergine page and sidebar, the one filled button pumpkin with dark text (on a class page too)', look.bg === rgb('#120C1C') && look.side === rgb('#150E20') && look.btn === rgb('#FF7A1A') && look.btnInk === rgb('#1A0B00'), look);
   const bo = await p.evaluate(() => { const shown = s => { const e = document.querySelector(s); return !!e && getComputedStyle(e).display !== 'none' && e.getBoundingClientRect().width > 4; }; return { logo: shown('.sidebar .brand-logo .hw-hat'), foot: shown('.site-foot .hw-hat') }; });
   check('Bo wears a witch’s hat in the logo too: the sidebar and the footer', bo.logo && bo.foot, bo);
-  const frame = await p.evaluate(() => { const sp = getComputedStyle(document.querySelector('.sb-head'), '::after'); const bats = [...document.querySelectorAll('.hw-bats .px-bat')];
-    return { spider: sp.content !== 'none' && /svg/.test(sp.backgroundImage), dangle: sp.animationName, bats: bats.length, fly: bats.length ? getComputedStyle(bats[0]).animationName : '', clicks: bats.length ? getComputedStyle(document.querySelector('.hw-bats')).pointerEvents : '' }; });
-  check('a spider dangles in the sidebar, and three pixel bats fly across the top now and then without catching a click', frame.spider && frame.dangle === 'hw-dangle' && frame.bats === 3 && frame.fly === 'hw-fly' && frame.clicks === 'none', frame);
+  const frame = await p.evaluate(async () => { const sp = getComputedStyle(document.querySelector('.sb-head'), '::after'); const bats = [...document.querySelectorAll('.hw-bats .px-bat')];
+    const flew = window.App.flyBats(); await new Promise(r => setTimeout(r, 300));
+    // every Halloween animation stops by itself: the page rests between flights and between Bo's blinks (DESIGN.md, Lighter)
+    const endless = document.getAnimations().filter(a => /^hw-/.test(a.animationName) && a.effect.getTiming().iterations === Infinity).map(a => a.animationName);
+    return { spider: sp.content !== 'none' && /svg/.test(sp.backgroundImage), dangle: sp.animationName, bats: bats.length, flew, fly: bats.length ? getComputedStyle(bats[0]).animationName : '', flap: bats.length ? getComputedStyle(bats[0].querySelector('.pxf1')).animationName : '', endless, clicks: bats.length ? getComputedStyle(document.querySelector('.hw-bats')).pointerEvents : '' }; });
+  check('a spider dangles in the sidebar, and three pixel bats fly across the top now and then, flapping, without catching a click', frame.spider && frame.dangle === 'hw-dangle' && frame.bats === 3 && frame.flew === true && frame.fly === 'hw-fly' && frame.flap === 'pxA' && frame.clicks === 'none', frame);
+  check('every Halloween animation stops by itself (no endless loop)', frame.endless.length === 0, frame.endless);
+  await p.waitForTimeout(8300);
+  const landed = await p.evaluate(() => ({ flying: !!document.querySelector('.hw-bats.fly'), moving: document.getAnimations().filter(a => a.playState === 'running' && a.effect.target && a.effect.target.closest && a.effect.target.closest('.hw-bats')).length }));
+  check('after a flight the bats land out of sight and nothing of theirs moves until the next one', !landed.flying && landed.moving === 0, landed);
+  await p.hover('.sb-head .brand-logo'); await p.waitForTimeout(150);
+  const swing = await p.evaluate(() => getComputedStyle(document.querySelector('.sb-head'), '::after').animationName);
+  check('brushing past the logo sets the spider swinging again', /^hw-swing-[ab]$/.test(swing), swing);
   const friends = await p.evaluate(async () => { const v = document.querySelector('#view'); const names = []; for (const t of ['Nothing here yet.', 'No mistakes to retry.', 'No posts yet.', 'Nothing due today.']) { const d = document.createElement('div'); d.className = 'empty'; d.textContent = t; v.appendChild(d); await new Promise(r => setTimeout(r, 60)); const s = d.querySelector('.bo-mini svg'); names.push(s ? s.getAttribute('class').split(' ')[1] : '-'); d.remove(); } return names; });
   check('empty boxes get a Halloween friend: a pumpkin, a ghost, a bat (or Bo)', friends.length === 4 && friends.every(n => ['px-pumpkin', 'px-ghost', 'px-bat', 'px-bo'].includes(n)) && friends.some(n => n !== 'px-bo'), friends);
   const sig = await p.evaluate(() => { const s = document.querySelector('.px-sig'); return s ? [...s.querySelectorAll('svg')].map(x => x.getAttribute('class').split(' ')[1]).join(',') : ''; });
@@ -57,10 +69,10 @@ const T = require('./lib');
   check('night: every text colour reads at 4.5:1 or more on its backgrounds', contrast.length === 0, contrast);
   // Reduce motion: nothing moves
   await p.evaluate(() => { document.documentElement.setAttribute('data-motion', 'off'); }); await p.waitForTimeout(200);
-  const still = await p.evaluate(() => ({ bats: getComputedStyle(document.querySelector('.hw-bats')).display, spider: getComputedStyle(document.querySelector('.sb-head'), '::after').animationName }));
+  const still = await p.evaluate(() => ({ bats: getComputedStyle(document.querySelector('.hw-bats')).display, spider: getComputedStyle(document.querySelector('.sb-head'), '::after').animationName, flies: window.App.flyBats() }));
   await go(p, '#/', 2000); await p.evaluate(() => { document.documentElement.setAttribute('data-motion', 'off'); }); await p.waitForTimeout(200);
   still.hover = await p.evaluate(() => getComputedStyle(document.querySelector('.hg-hero'), '::after').animationName);
-  check('with Reduce motion nothing moves: no bats, the spider and the hovering bats hold still', still.bats === 'none' && still.spider === 'none' && still.hover === 'none', still);
+  check('with Reduce motion nothing moves: no bats (no flight starts), the spider and the hovering bats hold still', still.bats === 'none' && still.flies === false && still.spider === 'none' && still.hover === 'none', still);
   await c.close();
 
   /* ---------- day, and the switch in Settings (the clock fixed on Halloween, so the dates decide) ---------- */
