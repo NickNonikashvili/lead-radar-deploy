@@ -109,6 +109,12 @@ button { font: inherit; color: inherit; }
 .tabular { font-variant-numeric: tabular-nums; }
 .hidden { display: none !important; }
 mjx-container { overflow-x: auto; overflow-y: hidden; max-width: 100%; }
+/* a formula inside a sentence that is wider than the line (a phone) is drawn a little smaller to fit instead of pushing the
+   page sideways (the widest in the lessons is 1.3 times a phone's line); a display formula scrolls inside itself */
+mjx-container:not([display="true"]) > svg { max-width: 100%; height: auto; }
+/* and the formula's hidden copy for screen readers (clipped to nothing on screen) no wider than the drawn one, or a small
+   phone still scrolls sideways by its full width */
+mjx-assistive-mml { max-width: 100%; }
 mjx-container[display="true"] { margin: 10px 0 !important; }
 .qmath mjx-container[display="true"] { margin: 8px 0 2px !important; }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; animation: none !important; } }
@@ -161,6 +167,7 @@ mjx-container[display="true"] { margin: 10px 0 !important; }
 .page-title { font-size: 28px; }
 .page-sub { color: var(--muted); margin-top: 4px; max-width: 70ch; }
 .page-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+@media (max-width: 480px) { .page-actions { max-width: 100%; } .page-actions > .btn { max-width: 100%; white-space: normal; text-align: left; } }   /* a long button (Continue: Units & dimensional analysis) wraps on a small phone */
 
 /* ---------- layout helpers ---------- */
 .grid { display: grid; gap: 16px; }
@@ -1132,7 +1139,7 @@ h1, h2, h3, h4 { letter-spacing: -0.01em; }
 .link-tile b { font-size: 14px; }
 .link-tile small { font-size: 12px; color: var(--muted); }
 .link-tile > svg:last-child { color: var(--muted); flex: none; }
-.acct-sections { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 18px 28px; margin-top: 18px; }
+.acct-sections { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr)); gap: 18px 28px; margin-top: 18px; }
 .acct-sections section .check { padding: 5px 0; }
 .stack-sm { display: flex; flex-direction: column; gap: 8px; }
 .settings-wrap .landing-top { margin-bottom: 22px; }
@@ -1145,7 +1152,7 @@ h1, h2, h3, h4 { letter-spacing: -0.01em; }
 .people-search .input { flex: 1; }
 .people-count { margin-left: auto; font-size: 13px; color: var(--muted); display: inline-flex; align-items: center; gap: 6px; }
 .online-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--good); box-shadow: 0 0 0 3px color-mix(in srgb, var(--good) 25%, transparent); vertical-align: middle; }
-.people-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
+.people-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(280px, 100%), 1fr)); gap: 12px; }
 .person { padding: 14px; border: 1px solid var(--border); border-radius: 14px; background: var(--surface); display: flex; flex-direction: column; gap: 10px; }
 .person.me { border-color: var(--accent-line); background: linear-gradient(160deg, var(--accent-soft), var(--surface) 60%); }
 .person.anon { opacity: 0.85; }
@@ -1873,7 +1880,7 @@ body:has(.lesson-foot) #ambient { bottom: 96px; }
 .rs-tools .input { flex: 1 1 260px; }
 .rs-kinds { display: flex; flex-wrap: wrap; gap: 5px; }
 .rs-blurb { margin: 0; max-width: 760px; }
-.rs-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 10px; }
+.rs-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(320px, 100%), 1fr)); gap: 10px; }
 .rs-item { display: flex; gap: 12px; padding: 14px 14px 12px; border: 1px solid var(--border); border-radius: 14px; background: var(--surface); transition: transform 0.18s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.18s, border-color 0.18s; }
 .rs-item:hover { transform: translateY(-2px); box-shadow: var(--shadow-sm); border-color: var(--accent-line); }
 .rs-item.top { border-color: var(--accent-line); background: linear-gradient(180deg, var(--accent-soft) 0%, var(--surface) 60%); }
@@ -1889,7 +1896,7 @@ body:has(.lesson-foot) #ambient { bottom: 96px; }
 .rs-actions { display: flex; flex-direction: column; gap: 4px; align-items: flex-end; }
 .rs-save.on { color: var(--accent); background: var(--accent-soft); }
 .chip.xs { font-size: 11px; padding: 2px 7px; }
-.guide-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 10px; }
+.guide-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(240px, 100%), 1fr)); gap: 10px; }
 .guide-card { display: flex; flex-direction: column; gap: 6px; padding: 14px 16px; border: 1px solid var(--border); border-radius: 14px; background: var(--surface); color: inherit; text-decoration: none; transition: transform 0.18s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.18s, border-color 0.18s; }
 .guide-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-sm); border-color: var(--accent-line); text-decoration: none; }
 .guide-card.read { opacity: 0.85; }
@@ -1907,7 +1914,7 @@ body:has(.lesson-foot) #ambient { bottom: 96px; }
 .guide-tip svg { flex: 0 0 auto; color: var(--gold); margin-top: 3px; }
 .guide-quote { margin: 14px 0; padding: 12px 16px; border-left: 4px solid var(--accent); background: var(--surface-2); border-radius: 0 12px 12px 0; font-family: var(--font-display); font-size: 16.5px; line-height: 1.55; white-space: pre-line; }
 .guide-foot { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 22px; padding-top: 16px; border-top: 1px solid var(--border); }
-@media (max-width: 640px) { .rs-list { grid-template-columns: 1fr; } .rs-actions { flex-direction: row; } }
+@media (max-width: 640px) { .rs-list { grid-template-columns: minmax(0, 1fr); } .rs-actions { flex-direction: row; } }   /* minmax(0, …): a long link name wraps instead of widening the page */
 
 /* ---------- focus room ---------- */
 .fz-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; margin-bottom: 18px; flex-wrap: wrap; }

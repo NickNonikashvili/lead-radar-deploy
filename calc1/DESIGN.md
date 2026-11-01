@@ -598,6 +598,16 @@ spinner that never ends. MathJax 3.2.2 ships in `assets/vendor/mathjax/` (tex-sv
 capturing `error` listener in `assets/boot.js` (and `assets/mathjax-static.js` on the study guides) adds the jsDelivr
 copy only when ours fails.
 
+### Nothing wider than the phone (2026.11.01.2)
+Every page fits a 320 px screen (`tests/steady-phone.test.js`). A grid of cards asks for at most the screen:
+`repeat(auto-fill, minmax(min(300px, 100%), 1fr))`, never a bare `minmax(300px, 1fr)`; a one-column phone grid is
+`minmax(0, 1fr)` so a long name wraps instead of widening it. A formula inside a sentence is drawn smaller to fit its
+line (`mjx-container:not([display="true"]) > svg { max-width: 100%; height: auto }`, at most about 1.3 times in the
+lessons, so it stays readable) and its hidden MathML copy for screen readers is capped the same way, or a small phone
+scrolls by its full width; a display formula scrolls inside itself. Page buttons wrap below 480 px. A class page that
+needs something the class does not have (`NEEDS` in `assets/app.js`: the quizzer, flashcards, a formula sheet, a
+textbook; WRIT 101 has none of them) opens the class's own page instead of a blank one.
+
 ### Chaos tests
 `tests/chaos.test.js` (seeded: `CHAOS_SEED=n node tests/run.js chaos` replays a run) holds a steady state (the page for
 the address is drawn, no loading bar or genie copy left, no uncaught error) while it breaks things: random API

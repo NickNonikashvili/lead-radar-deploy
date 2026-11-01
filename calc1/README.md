@@ -880,6 +880,10 @@ twin; the light-or-dark switch stays.
   Discussions. Every page or list that loads from the server fails into `App.failed` (plain words and Try again; by
   itself once back online), and MathJax ships in `assets/vendor/mathjax/` with the CDN only as a fallback (DESIGN.md,
   Refine).
+- **Nothing wider than the phone** (2026.11.01.2): every page fits a 320 px screen. Card grids ask for
+  `min(Npx, 100%)`, a formula in a sentence is drawn smaller to fit its line (its screen-reader copy too), page buttons
+  wrap on small phones, and a class page the class does not have (WRIT 101's quizzer, flashcards, formula sheet,
+  textbook) opens the class's own page (`NEEDS` in `assets/app.js`; DESIGN.md, Nothing wider than the phone).
 - **Your home** (`assets/home-grid.js`): one hero (the soonest exam in three weeks, else the class you practised last
   and how it went, else pick a class), then cards: the daily word, today's plan, this week, the exam checklist in the
   week before an exam, your classes, flashcards, mistakes, discussions. ⋮ → Hide from dashboard; Add to dashboard

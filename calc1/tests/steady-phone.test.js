@@ -7,7 +7,7 @@
    - the Quizzer's row of presets scrolls inside its panel: the page is never wider than the phone */
 const T = require('./lib');
 (async () => {
-  const { mk, go, base, check, log } = await T.start({});
+  const { mk, go, base, check, log, login, hscroll } = await T.start({});
   const seed = c => c.addInitScript(() => {
     try { const s = JSON.parse(localStorage.getItem('studyhub-settings') || '{}'); Object.assign(s, { courses: ['calc'], boFloatSeen: 1, tourLayout: 99 }); localStorage.setItem('studyhub-settings', JSON.stringify(s)); } catch (e) {}
     window.__cls = 0; try { new PerformanceObserver(l => { for (const e of l.getEntries()) if (!e.hadRecentInput) window.__cls += e.value; }).observe({ type: 'layout-shift', buffered: true }); } catch (e) {}
@@ -41,5 +41,17 @@ const T = require('./lib');
   const tb = await d.evaluate(() => ({ y: Math.round(scrollY), pop: !!document.querySelector('.popover') })); tb.which = which;
   check('clicking a top-bar button further down the page does not scroll it (a scroll would close its menu)', tb.y === 600, tb);
   await c2.close();
+
+  // the smallest phones (320 px wide): nothing wider than the screen. A formula inside a sentence is drawn a little smaller to fit
+  // its line (and its hidden copy for screen readers is no wider), grids never ask for more than the screen, a long button wraps
+  const [c3, s] = await mk(320, 640, { hasTouch: true, serviceWorkers: 'block' });
+  await go(s, '#/', 900); await login(s, 'alice.a@montana.edu'); await s.reload(); await s.waitForTimeout(1200);
+  const wide = [];
+  for (const h of ['#/physics/notes/vectors', '#/m170/notes/sumdiff', '#/m172/notes/work', '#/m170/resources', '#/physics/path', '#/']) { await go(s, h, 2400); if (!(await hscroll(s))) wide.push(h + ' ' + await s.evaluate(() => document.documentElement.scrollWidth)); }
+  check('at 320 px nothing scrolls sideways: lessons with a long formula in a sentence, Resources, the learning path, home', wide.length === 0, wide);
+  await go(s, '#/m170/notes/sumdiff', 2400);
+  const fit = await s.evaluate(() => { const svgs = [...document.querySelectorAll('mjx-container:not([display="true"]) > svg')]; const out = svgs.filter(svg => { let b = svg.parentElement.parentElement; while (b && getComputedStyle(b).display.startsWith('inline')) b = b.parentElement; return svg.getBoundingClientRect().right > b.getBoundingClientRect().right + 1; }).length; return { n: svgs.length, out }; });
+  check('and every formula in a sentence fits its line', fit.n > 5 && fit.out === 0, fit);
+  await c3.close();
   await T.finish();
 })();

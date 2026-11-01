@@ -34,6 +34,15 @@ const T = require('./lib');
   await p2.route('**/assets/precalc-quiz.js*', r => r.abort()); await go(p2, '#/precalc'); await p2.waitForTimeout(800); check('failed download shows an error with retry', /Could not download/.test(await txt(p2, '#view .empty')) && !!(await p2.$('[data-action="retry"]')), await txt(p2, '#view .empty'));
   await p2.unroute('**/assets/precalc-quiz.js*'); await p2.click('[data-action="retry"]'); await p2.waitForTimeout(1200); check('retry loads the class', /Precalc/.test(await txt(p2, '#topbar-title')) && /precalc/.test(await loaded(p2)));
   await c2.close();
+  // a page the class does not have (WRIT 101: no quizzer, flashcards, formula sheet or textbook), from an old link or typed in,
+  // opens the class's own page instead of a blank one (the quizzer and the flashcards threw before)
+  const [c4, w] = await mk(); await go(w, '#/', 900); await login(w, 'alice.a@montana.edu'); await w.reload(); await w.waitForTimeout(1200);
+  await go(w, '#/writ/readings', 1800); const went = [];
+  for (const v of ['flashcards', 'practice', 'textbook', 'formulas', 'path']) { await w.evaluate(h => { location.hash = h; }, '#/writ/' + v); await w.waitForTimeout(1000); went.push(v + ' > ' + await w.evaluate(() => location.hash.replace('#/writ/', '') + ((document.querySelector('#view') || {}).innerText || '').trim().length)); }
+  check("a WRIT 101 page it does not have (flashcards, quizzer, textbook, formulas, path), typed in, opens the class's own page", went.every(g => / > dashboard\d{3,}$/.test(g)), went);
+  await w.evaluate(() => { location.hash = '#/calc/flashcards'; }); await w.waitForTimeout(1600);
+  check('and a class that has them still opens them', (await w.evaluate(() => location.hash)) === '#/calc/flashcards' && /Flashcards/.test(await txt(w, '#view .page-title')), await w.evaluate(() => location.hash));
+  await c4.close();
   const [c3, m] = await mk(390, 760); await m.goto(base + '#/calc'); await m.waitForTimeout(1200); log('mobile calc no hscroll:', await m.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), '| tabbar:', await m.$$eval('#tabbar .tab-item', t => t.map(x => x.textContent.trim()).join(','))); await c3.close();
   await T.finish();
 })();

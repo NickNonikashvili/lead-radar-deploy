@@ -376,6 +376,10 @@
     add('forum', 'Discussions');
     add('resources', 'Resources & guides');
   }
+  /* what a class page needs from its class: WRIT 101 has no quizzer, flashcards, formula sheet or textbook (and a class made
+     from a syllabus may lack some); such a page from an old link or typed in opens the class's own page, not a blank one */
+  const NEEDS = { practice: C => !!C.quiz, lesson: C => !!C.quiz, path: C => !!C.quiz, challenge: C => !!C.quiz, flashcards: C => !!(C.FLASHCARDS || []).length, formulas: C => !!(C.FORMULAS || []).length, textbook: C => !!(C.COURSE && C.COURSE.textbook) };
+  const classHas = view => !NEEDS[view] || NEEDS[view](D);
   function setCourse(id) {
     if (D && D.id === id) { document.documentElement.setAttribute('data-course', id); return; }   // back into the same class from a page outside it: its colour again
     D = Courses[id]; QZ = D.quiz; store.load(id); augmentNav(D);
@@ -560,6 +564,7 @@
     if (!Courses[course].loaded) { App.current = null; renderLoading(root, course); App.loadCourse(course).then(() => { if (route().course === course && $('#view') === root) render(); }).catch(err => { if ($('#view') === root) renderLoadError(root, course, err); }); afterRender(root); return; }
     setCourse(course);
     if (App.courseGate && App.courseGate(course, root, view)) { App.current = null; afterRender(root); return; }   // a class made from a syllabus is locked while the student has no plan (assets/create.js)
+    if (!classHas(view)) { App.replaceHash(`#/${D.id}/dashboard`); render(); return; }   // a page this class does not have (NEEDS above)
     if (App.moduleOn && !App.moduleOn(view)) { App.current = App.views.off; document.title = `${App.views.off.title} · ${D.code} · ${SITE}`; App.views.off.render(root, view); updateExamChip(); afterRender(root); return; }   // a feature turned off in Customize
     const V = App.views[view]; App.current = V;
     $$('.nav-item').forEach(b => b.classList.toggle('active', b.dataset.view === view));

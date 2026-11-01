@@ -521,7 +521,7 @@ input[type="date"].fx-input, input[type="time"].fx-input, input[type="datetime-l
 .chip.bad { background: var(--bad-soft); color: var(--bad); }
 .tc-modal { padding: 20px 22px; max-height: 86vh; overflow: auto; }
 .tc-modal.wide { max-width: 880px; }
-.tc-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; }
+.tc-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(240px, 100%), 1fr)); gap: 12px; }
 .tc-card { display: flex; flex-direction: column; gap: 6px; padding: 14px 16px; border-radius: var(--radius); background: var(--surface); border: 1px solid var(--border); color: var(--ink); text-decoration: none; box-shadow: var(--shadow-sm); transition: border-color 0.15s; min-width: 0; }
 .tc-card:hover { border-color: var(--accent-line, var(--accent)); }
 .tc-card:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }

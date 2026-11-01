@@ -891,7 +891,7 @@ html[data-motion="off"] :is(.bf-pop, .bf-fab-l, .bf-hl) { transition: none; }
 .bo-free p { margin: 0; color: var(--ink); font-size: 16px; line-height: 1.45; text-align: center; }
 
 /* ---------- Bo's characters (assets/bo-characters.js): radio cards in Settings, Ask Bo's sheet and a call's settings ---------- */
-.bc-pick { display: grid; gap: 10px; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
+.bc-pick { display: grid; gap: 10px; grid-template-columns: repeat(auto-fill, minmax(min(260px, 100%), 1fr)); }
 .bc-pick.compact { grid-template-columns: minmax(0, 1fr); gap: 6px; }
 .bc-card { position: relative; display: flex; align-items: flex-start; gap: 12px; padding: 12px 14px; border: 2px solid var(--border); border-radius: 18px; background: var(--surface); cursor: pointer; box-shadow: 0 3px 0 var(--lip, var(--border)); }
 .bc-card:hover { border-color: var(--accent-line, var(--border)); }
