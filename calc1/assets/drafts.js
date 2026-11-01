@@ -214,7 +214,7 @@
   /* the reviews they have, by project, newest version first; and the instructor's switch */
   async function past(root) {
     const box = $('#df-past', root); if (!box) return;
-    let L; try { L = ST.list = await api('ai_draft_list&class=' + encodeURIComponent(cid())); } catch (e) { box.innerHTML = `<div class="empty small">${esc(e.message)}</div>`; return; }
+    let L; try { L = ST.list = await api('ai_draft_list&class=' + encodeURIComponent(cid())); } catch (e) { box.innerHTML = App.failed(e, { small: true }); return; }
     const staff = $('#df-staff', root);
     if (staff) staff.innerHTML = L.staff ? `<div class="callout df-switch row between">${L.off ? `<span>${icon('lock', 14)} Bo’s draft feedback is off for this class. Students see a note instead of the form.</span><button type="button" class="btn sm" data-action="df-switch" data-off="0">Turn it on</button>` : `<span>${icon('shield', 14)} You teach this class: Bo’s draft feedback is on for your students.</span><button type="button" class="btn sm" data-action="df-switch" data-off="1">Turn it off for the class</button>`}</div>`
       : L.off ? `<div class="callout df-switch">${icon('lock', 14)} Your instructor has turned off Bo’s draft feedback for this class. Your past reviews are still here.</div>` : '';
@@ -279,7 +279,7 @@
   async function reviewView(root, id) {
     if (!user()) { formView(root, {}); return; }
     root.innerHTML = `<div class="df-review"><a class="btn sm" href="${App.link('drafts')}">${icon('left', 13)} All drafts</a><div class="empty mt-3">Opening Bo’s feedback…</div></div>`;
-    let r; try { r = await getReview(id, true); } catch (e) { root.innerHTML = `<div class="df-review"><a class="btn sm" href="${App.link('drafts')}">${icon('left', 13)} All drafts</a><div class="empty mt-3">${esc(e.message)}</div></div>`; return; }
+    let r; try { r = await getReview(id, true); } catch (e) { root.innerHTML = `<div class="df-review"><a class="btn sm" href="${App.link('drafts')}">${icon('left', 13)} All drafts</a>${App.failed(e)}</div>`; return; }
     if (App.current !== App.views.drafts) return;
     const p = projectOf(r.project); const fb = r.feedback || {}; const P = paperHtml(r.text, fb); const R = r.responses || (r.responses = {});
     let before = null; if (r.before) { try { before = await getReview(r.before); } catch (e) {} }

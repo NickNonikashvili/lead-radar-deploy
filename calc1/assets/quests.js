@@ -143,7 +143,7 @@
       if (offline()) { el.innerHTML = '<div class="empty">Leagues need a connection to the server.</div>'; return; }
       el.innerHTML = '<div class="empty">Loading…</div>';
       leagueData(true).then(r => {
-        if (!r) { el.innerHTML = '<div class="empty">Could not load the league right now.</div>'; return; }
+        if (!r) { el.innerHTML = App.failed({ message: 'Could not load the league right now.' }); return; }
         checkLastWeek(r);
         el.innerHTML = `<div class="league-head"><div class="tier-strip">${TIERS.map((t, i) => `<div class="tier${i === r.league ? ' on' : i < r.league ? ' passed' : ''}" title="${t} League">${gem(i, i === r.league ? 44 : 28)}<small>${t}</small></div>`).join('')}</div>
           <div class="league-title"><div>${gem(r.league, 40)}</div><div><h2>${TIERS[r.league]} League</h2><div class="small muted">${r.members} member${r.members === 1 ? '' : 's'} · ends in <b>${endsIn(r.week_end)}</b>${r.zones.promote ? ` · top ${r.zones.promote} move up to ${TIERS[r.league + 1]}` : ' · the top league'}${r.zones.demote ? ` · bottom ${r.zones.demote} move down` : ''}</div></div><div class="league-me"><b>${r.me.rank ? '#' + r.me.rank : '—'}</b><small>your rank</small></div><div class="league-me"><b>${r.me.xp}</b><small>XP this week</small></div></div></div>

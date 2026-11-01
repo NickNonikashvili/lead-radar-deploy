@@ -49,7 +49,7 @@
     async load(el, append) {
       const list = $('#pp-list', el); if (!list) return; if (!append) list.innerHTML = '<div class="empty">Loading…</div>';
       try { const r = await api(`people&q=${encodeURIComponent(PP.q)}&sort=${encodeURIComponent(PP.sort)}&page=${PP.page}`); PP.rows = append ? PP.rows.concat(r.people) : r.people; PP.total = r.total; PP.online = r.online; PP.more = r.more; }
-      catch (e) { list.innerHTML = `<div class="empty">${esc(e.message)}</div>`; return; }
+      catch (e) { list.innerHTML = App.failed(e); return; }
       this.paintList(el);
     },
     paintList(el) {
@@ -110,7 +110,7 @@
     },
     async paint(el, cid) {
       el.innerHTML = `<div class="grid cols-3"><div class="panel span-2" id="ch-q"><div class="empty">Loading…</div></div><div class="stack" id="ch-side"></div></div>`;
-      if (App.loadCourse) { try { await App.loadCourse(cid); } catch (e) { el.innerHTML = `<div class="empty">${esc(e.message)}</div>`; return; } }
+      if (App.loadCourse) { try { await App.loadCourse(cid); } catch (e) { el.innerHTML = App.failed(e); return; } }
       let stats = null; if (!offline()) { try { stats = await api('challenge_stats&course=' + cid); } catch (e) { stats = null; } }
       const date = stats && stats.date ? stats.date : App.todayISO(); const q = Challenge.question(cid, date);
       if (!q) { el.innerHTML = '<div class="empty">No challenge available for this class yet.</div>'; return; }

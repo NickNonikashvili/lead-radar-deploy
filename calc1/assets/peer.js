@@ -30,7 +30,7 @@
   /* ---------- the list: offer a draft, waiting, swaps ---------- */
   async function listView(root, query) {
     root.innerHTML = HEAD() + `<div class="empty mt-3">${esc(t('Opening…'))}</div>`;
-    let S, L; try { [S, L] = await Promise.all([api('peer_status&class=' + encodeURIComponent(cid())), api('ai_draft_list&class=' + encodeURIComponent(cid()))]); } catch (e) { root.innerHTML = HEAD() + `<div class="empty mt-3">${esc(e.message)}</div>`; return; }
+    let S, L; try { [S, L] = await Promise.all([api('peer_status&class=' + encodeURIComponent(cid())), api('ai_draft_list&class=' + encodeURIComponent(cid()))]); } catch (e) { root.innerHTML = HEAD() + App.failed(e); return; }
     if (App.current !== App.views.peer) return;
     // the newest version of each project, the ones a swap can offer
     const latest = {}; L.reviews.forEach(r => { if (!latest[r.project] || latest[r.project].version < r.version) latest[r.project] = r; });

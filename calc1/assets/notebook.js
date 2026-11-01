@@ -172,7 +172,7 @@
       if (!user()) { root.innerHTML = head + `<div class="mt-3">${App.lockCard('The notebook is for members', 'Sign up with your montana.edu email to keep your notebook with your account, on every device.')}</div>`; if (App.auth) App.auth.bindLocks(root); return; }
       const had = S.loaded && S.cid === cid(); const tok = S.tok = (S.tok || 0) + 1;
       if (!had) root.innerHTML = head + `<div class="empty mt-3">${esc(t('Opening your notebook…'))}</div>`;
-      try { await load(); } catch (e) { if (!had) { root.innerHTML = head + `<div class="empty mt-3">${esc(e.message)}</div>`; return; } }   // offline later on: what is here already
+      try { await load(); } catch (e) { if (!had) { root.innerHTML = head + App.failed(e); return; } }   // offline later on: what is here already
       if (App.current !== App.views.notebook || tok !== S.tok) return;
       let n = Math.max(0, Math.min(NB().count, parseInt(param, 10) || 0));
       const wide = global.matchMedia('(min-width: 821px)').matches;

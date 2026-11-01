@@ -107,6 +107,7 @@
     }
     Net.retry();   // (clears the timer)
     if (Net.shown !== 'off') return;
+    try { dispatchEvent(new Event('mathub-online')); } catch (e) {}   // back: a page that could not load asks again (App.failed, assets/app.js)
     if (!Net.pending()) { Net.say('done', 'Back online.'); return; }
     Net.say('sync', 'Back online · syncing…'); let n = 0;
     const check = () => { if (Net.shown !== 'sync') return; if (!Net.pending()) Net.say('done', 'Back online · everything is synced.'); else if (++n < 30) setTimeout(check, 700); else Net.clear(); };   // still not synced after 20 s: the account box says so
@@ -165,7 +166,7 @@
     const el = $('#acct-devices', panel); if (!el) return;
     try { const r = await call('sessions', null, 'GET'); const others = r.devices.filter(d => !d.current).length;
       el.innerHTML = `<ul class="list-plain small dev-list">${r.devices.map(d => `<li>${icon(d.current ? 'check' : 'user', 12)} <b>${esc(d.device)}</b>${d.current ? ' <span class="chip xs good">this device</span>' : ''} <span class="muted">· signed in ${esc(new Date(d.created * 1000).toLocaleDateString())}</span></li>`).join('')}</ul>${others ? `<button class="btn sm mt-1" data-action="devices-out">${icon('logout', 13)} Sign out everywhere else</button>` : '<p class="small muted mt-1">Only this device is signed in.</p>'}`; }
-    catch (e) { el.innerHTML = `<div class="small muted">${esc(e.message)}</div>`; }
+    catch (e) { el.innerHTML = App.failed(e, { small: true }); }
   };
   /* members this account blocked in discussions, with Unblock (api: forum_blocks, forum_unblock) */
   Auth.blocksInit = async function (panel) {
@@ -173,7 +174,7 @@
     try { const r = await call('forum_blocks', null, 'GET');
       el.innerHTML = r.blocks.length ? `<ul class="list-plain small dev-list">${r.blocks.map(b => `<li class="row between gap-sm"><span>${icon('user', 12)} <b>${esc(b.label || 'A member')}</b>${b.anon ? ' <span class="muted">(their anonymous posts)</span>' : ''} <span class="muted">· blocked ${esc(new Date(b.created * 1000).toLocaleDateString())}</span></span><button class="btn xs" data-action="unblock" data-id="${b.id}">Unblock</button></li>`).join('')}</ul>` : '<p class="small muted">You have not blocked anyone.</p>';
       bind(el, { unblock: async b => { try { await call('forum_unblock', { id: +b.dataset.id }); toast('Unblocked. Their posts show again.'); Auth.blocksInit(panel); } catch (e) { toast(e.message, 3000); } } }); }
-    catch (e) { el.innerHTML = `<div class="small muted">${esc(e.message)}</div>`; }
+    catch (e) { el.innerHTML = App.failed(e, { small: true }); }
   };
   Auth.growthInit = async function (panel) {
     const cal = $('#acct-cal', panel), inv = $('#acct-invite', panel); if (!cal && !inv) return; if (!Auth.user || Auth.mode !== 'server') { if (cal) cal.innerHTML = '<div class="small muted">Needs the account server.</div>'; if (inv) inv.innerHTML = ''; return; }
@@ -181,12 +182,12 @@
     if (cal) { try { const r = await call('ics_token'); const url = `${base}api/index.php?r=ics&t=${r.token}`; const webcal = url.replace(/^https?:\/\//, 'webcal://');
       cal.innerHTML = `<div class="cal-sub"><input class="input mono small" id="acct-ics" value="${esc(url)}" readonly aria-label="Calendar subscription link"><div class="row gap-sm mt-1" style="flex-wrap:wrap"><button class="btn sm primary" data-action="ics-copy">${icon('file', 13)} Copy link</button><a class="btn sm" href="${esc(webcal)}">${icon('calendar', 13)} Open in calendar app</a><a class="btn sm" href="${esc(url)}" download="mathub.ics">${icon('download', 13)} Download .ics</a><button class="btn sm ghost" data-action="ics-reset">${icon('rotate', 13)} New link</button></div><details class="mt-1"><summary class="small">How to subscribe (${r.events} events)</summary><ul class="list small mt-1"><li><b>Google Calendar</b> (on a computer): Other calendars → + → From URL → paste the link → Add calendar. Updates every few hours.</li><li><b>Apple Calendar</b>: File → New Calendar Subscription → paste the link. On iPhone: Settings → Calendar → Accounts → Add Subscribed Calendar.</li><li><b>Outlook</b>: Add calendar → Subscribe from web → paste the link.</li></ul></details></div>`;
       bind(cal, { 'ics-copy': async () => { try { await navigator.clipboard.writeText(url); toast('Calendar link copied. Paste it into your calendar app.', 3000); } catch (e) { $('#acct-ics', cal).select(); } }, 'ics-reset': async () => { if (!confirm('Make a new link? Calendars using the old one stop updating.')) return; await call('ics_token_reset', {}); Auth.growthInit(panel); toast('New calendar link made.'); } });
-    } catch (e) { cal.innerHTML = `<div class="small muted">${esc(e.message)}</div>`; } }
+    } catch (e) { cal.innerHTML = App.failed(e, { small: true }); } }
     if (inv) { try { const r = await call('invite_mine'); const link = `${base}#/join?ref=${r.code}`; const text = `Study with me on StudyCat: free notes, endless practice and a class board for our Montana State classes.${r.credits ? ` Sign up through my link and we both get ${r.credits} credits for Bo, the tutor who helps you on a whiteboard.` : ''} ${link}`;
       const ip = $('#acct-invite-p', panel); if (ip && r.credits) ip.textContent = `Share your link. When a classmate signs up through it, you both get ${r.credits} credits for Bo.`;
       inv.innerHTML = `<div class="invite-card"><div class="row gap-sm" style="flex-wrap:wrap"><input class="input mono small" id="acct-invlink" value="${esc(link)}" readonly aria-label="Invite link" style="flex:1 1 240px"><button class="btn sm primary" data-action="inv-share">${icon('external', 13)} ${navigator.share ? 'Share' : 'Copy'}</button></div><div class="small muted mt-1">${r.joined ? `${r.joined} classmate${r.joined === 1 ? '' : 's'} joined through your link.` : 'Nobody has used it yet. Send it to your study group.'}</div></div>`;
       bind(inv, { 'inv-share': async () => { try { if (navigator.share) await navigator.share({ title: 'StudyCat', text, url: link }); else { await navigator.clipboard.writeText(text); toast('Invite copied. Paste it in your group chat.', 3000); } } catch (e) {} } });
-    } catch (e) { inv.innerHTML = `<div class="small muted">${esc(e.message)}</div>`; } }
+    } catch (e) { inv.innerHTML = App.failed(e, { small: true }); } }
   };
   App.inviteBanner = function () {
     let ref = '', name = '', min = 0; try { ref = localStorage.getItem('mathub-ref') || ''; name = sessionStorage.getItem('mathub-ref-name') || ''; min = +sessionStorage.getItem('mathub-ref-min') || 0; } catch (e) {}

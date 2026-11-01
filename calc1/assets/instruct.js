@@ -175,10 +175,10 @@
         <div class="pane" data-pane="credits" id="in-credits"><div class="empty">${esc(t('Opening…'))}</div></div>
       </div></div>`;
     App.initTabs(root); bindSettings(root, I);
-    const fill = async (sel, make) => { const box = $(sel, root); if (!box) return; try { box.innerHTML = await make(); } catch (e) { box.innerHTML = `<div class="empty">${esc(e.message)}</div>`; } };
+    const fill = async (sel, make) => { const box = $(sel, root); if (!box) return; try { box.innerHTML = await make(); } catch (e) { box.innerHTML = App.failed(e, { small: true }); } };
     if (I.projects.length) { fill('#in-shared', sharedHtml); fill('#in-patterns', async () => patternsHtml(await api('instruct_patterns&class=' + q(cid())))); }
     try { const j = await api('instruct_roster&class=' + q(cid())); const box = $('#in-credits', root); if (box) { box.innerHTML = creditsHtml(j); bindCredits(root, j); } }
-    catch (e) { const box = $('#in-credits', root); if (box) box.innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
+    catch (e) { const box = $('#in-credits', root); if (box) box.innerHTML = App.failed(e, { small: true }); }
   }
 
   /* one shared version: the draft with Bo's marks, his notes with the student's answers, their note, and a reply */

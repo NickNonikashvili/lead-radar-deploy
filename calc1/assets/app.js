@@ -86,6 +86,7 @@
     zap: '<path d="M13 2L4 14h7l-1 8 9-12h-7z"/>', mic: '<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3M8 21h8"/>', gem: '<path d="M6 3h12l4 6-10 12L2 9z"/><path d="M2 9h20M9 3l3 6 3-6M6 9l6 12M18 9l-6 12"/>', trophy: '<path d="M8 4h8v5a4 4 0 0 1-8 0z"/><path d="M8 5H5a3 3 0 0 0 3 4M16 5h3a3 3 0 0 1-3 4M12 13v4M8 21h8M9 17h6"/>', path: '<path d="M5 5c9 0 9 7 0 7s-9 7 0 7h14"/><circle cx="5" cy="5" r="1.8"/><circle cx="19" cy="19" r="1.8"/>',
     maker: '<path d="M5 4.5A1.5 1.5 0 0 1 6.5 3H19v15H6.5A1.5 1.5 0 0 0 5 19.5z"/><path d="M5 19.5A1.5 1.5 0 0 0 6.5 21H19"/><path d="M12 6.5v7M8.5 10h7"/>',   // the class maker: a class (a book) with a plus
     planner: '<rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 2.5h6v3H9z"/><path d="M9 10.5h6M9 14h6M9 17.5h3.5"/>',   // the study planner: a clipboard of days, not the learning path's trail
+    alert: '<path d="M10.3 4.2L2.6 18a2 2 0 0 0 1.7 3h15.4a2 2 0 0 0 1.7-3L13.7 4.2a2 2 0 0 0-3.4 0z"/><path d="M12 9.5v4.5M12 17.5v.01"/>',   // something did not work
     reportcard: '<rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 7.5h8M8 11h5"/><path d="M12.5 17.5l1.75-4.5 1.75 4.5M13.2 16h2.1"/>'   // the GPA calculator: a report card with its A
   };
   const icon = (name, size = 18) => `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[name] || ''}</svg>`;
@@ -741,6 +742,20 @@
     (App.onRender || []).forEach(fn => { try { fn(root, route()); } catch (e) { console.error(e); } });
     if (App.motionRender) App.motionRender(root); { const r = route(); App.track('view:' + (r.course ? r.view : (r.view === 'home' ? 'landing' : r.view))); } if (App.paintStats) { App.paintStats(); App.paintMascots(); App.countUp(root); } if (App.paintQuests) App.paintQuests(); if (App.paintLeagueWidgets) App.paintLeagueWidgets(root); }
   App.rerender = () => render();
+  /* ---------- a part of a page that could not load (found by the chaos tests: a failed request was a dead end) ----------
+     Says what happened in plain words, with Try again (the page is drawn again, so it asks again); when it is the
+     connection, it also tries again by itself once StudyCat is back online. small: inside a panel, not a whole page. */
+  const offlineErr = e => !!(e && (e.network || /offline|reach|connection|network/i.test(e.message || ''))) || navigator.onLine === false;
+  App.failed = (e, opts = {}) => {
+    const net = offlineErr(e); const msg = e && e.message && !/^(Request failed|Something went wrong)\.?$/i.test(e.message) ? e.message : '';
+    const title = net ? 'You’re offline' : 'This didn’t load';
+    const detail = net ? 'It loads by itself when you’re back online.' : (msg || 'Something went wrong on our side. It’s not you.');
+    return `<div class="fail-state${opts.small ? ' small' : ''}" role="status" data-fail="${net ? 'net' : 'err'}"><span class="fail-ic" aria-hidden="true">${icon(net ? 'wifioff' : 'alert', opts.small ? 18 : 22)}</span><div class="fail-body"><p class="fail-t">${esc(title)}</p><p class="fail-d">${esc(detail)}</p></div><button type="button" class="btn sm" data-fail-retry>${icon('rotate', 14)}<span>Try again</span></button></div>`;
+  };
+  document.addEventListener('click', ev => { const b = ev.target.closest && ev.target.closest('[data-fail-retry]'); if (!b) return; ev.preventDefault(); b.disabled = true; render(); });
+  // back online (the browser says so, or the account server answers again): a page that failed for the connection asks again
+  const refetch = () => { if ($('#view [data-fail="net"]')) render(); };
+  addEventListener('online', () => setTimeout(refetch, 400)); addEventListener('mathub-online', refetch);
   App.searchReset = () => { Search.index = null; };   // the planner changed, so search reads it again
   App.currentSectionOf = C => currentSection(C);
   App.paintAnnouncement = root => paintAnnouncement(root);   // the apps' own start page shows the admin announcement too
@@ -780,10 +795,31 @@
   // then the student's own arrangement: order, groups, pages hidden, features turned off (assets/modules.js)
   const groupNav = (NAV, cid) => { const base = groupNavBase(NAV); return App.arrangeClassMenu ? App.arrangeClassMenu(base, cid || '') : base; };
   App.groupNav = groupNav; App.groupNavBase = groupNavBase;
+  // open or close the class menu (the class header in the sidebar); Escape, a click elsewhere or a page change closes it
+  function classMenu(open) {
+    const b = $('.sb-classbox .cs-btn'), m = $('#cs-menu'); if (!b || !m) return;
+    const on = open === undefined ? m.hidden : !!open; if (on === !m.hidden) return;
+    m.hidden = !on; b.setAttribute('aria-expanded', String(on));
+    if (on) { const cur = $('.switch-btn.on', m) || $('.switch-btn', m); if (cur) cur.focus({ preventScroll: true }); }
+  }
+  document.addEventListener('click', e => { if (!(e.target.closest && e.target.closest('#course-switch, .sb-classbox .cs-btn'))) classMenu(false); });
+  document.addEventListener('keydown', e => {
+    const m = $('#cs-menu'); if (!m || m.hidden) return;
+    if (e.key === 'Escape') { classMenu(false); const b = $('.sb-classbox .cs-btn'); if (b) b.focus(); return; }
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { const items = $$('a', m); const i = items.indexOf(document.activeElement); const n = items[(i + (e.key === 'ArrowDown' ? 1 : items.length - 1)) % items.length]; if (n) { e.preventDefault(); n.focus(); } }
+  });
+  document.addEventListener('focusin', e => { if (!(e.target.closest && e.target.closest('#course-switch, .sb-classbox .cs-btn'))) classMenu(false); });
   function buildNav() {
     $('#brand-code').textContent = D.code; $('#brand-name').innerHTML = `${esc(D.name)}<small>${esc(D.term)}</small>`;
     const mine = App.myCourses(); if (D && !mine.includes(D.id)) mine.push(D.id);
-    $('#course-switch').innerHTML = COURSE_ORDER.filter(id => Courses[id] && mine.includes(id)).map(id => `<a class="switch-btn${id === D.id ? ' on' : ''}" data-c="${id}" href="#/${id}/dashboard" title="${esc(Courses[id].name)}">${esc(Courses[id].short)}</a>`).join('') + `<a class="switch-btn home" href="#/" title="All courses">${icon('grid', 14)}</a>` + (App.views.maker ? `<a class="switch-btn req" href="#/maker" title="Add a class from your syllabus or from scratch">${icon('maker', 13)} Add a class</a>` : '');
+    // the class header opens the class menu (it used to be a grid of every class, ~300 px before the class's own pages):
+    // your other classes with their colour and next exam, All your classes, Add a class
+    const cc = id => (App.life && App.life.ccStyle ? App.life.ccStyle(id) : '');
+    const examIn = C => { try { const ex = App.nextExamOf(C); const n = ex && ex.date ? App.daysBetween(App.todayISO(), ex.date) : null; return n !== null && n >= 0 && n <= 21 ? `<span class="sb-exam${n <= 3 ? ' soon' : ''}">${n ? n + 'd' : 'today'}</span>` : ''; } catch (e) { return ''; } };
+    const brand = $('.sb-classbox .brand'); let sw = brand && $('.cs-btn', brand);
+    if (brand && !sw) { sw = document.createElement('button'); sw.type = 'button'; sw.className = 'cs-btn'; sw.dataset.action = 'class-menu'; sw.setAttribute('aria-haspopup', 'menu'); sw.setAttribute('aria-controls', 'cs-menu'); brand.appendChild(sw); }
+    if (sw) { sw.setAttribute('aria-expanded', 'false'); sw.setAttribute('aria-label', `Switch class (${D.short})`); sw.innerHTML = icon('chevron', 16); }
+    $('#course-switch').innerHTML = `<div class="cs-menu" id="cs-menu" role="menu" aria-label="Your classes" hidden>` + COURSE_ORDER.filter(id => Courses[id] && mine.includes(id)).map(id => `<a class="switch-btn${id === D.id ? ' on' : ''}" data-c="${id}" href="#/${id}/dashboard" role="menuitem" title="${esc(Courses[id].name)}"${id === D.id ? ' aria-current="page"' : ''}><span class="sw-dot" style="${cc(id)}" aria-hidden="true"></span><span class="sw-t"><b>${esc(Courses[id].short)}</b><small>${esc(Courses[id].name)}</small></span>${examIn(Courses[id])}${id === D.id ? icon('check', 15) : ''}</a>`).join('') + `<div class="cs-sep" role="separator"></div><a class="switch-btn home" href="#/" role="menuitem" title="All courses">${icon('grid', 15)}<span>All your classes</span></a>` + (App.views.maker ? `<a class="switch-btn req" href="#/maker" role="menuitem" title="Add a class from your syllabus or from scratch">${icon('maker', 15)}<span>Add a class</span></a>` : '') + `</div>`;
     const staff = App.auth && App.auth.user && App.auth.user.mod ? [{ label: App.auth.user.admin ? 'Admin' : 'Moderation', items: [['admin', 'Admin panel', 'shield']] }] : [];
     // the class's instructors (assets/instruct.js asks the server which classes this account teaches)
     const tch = App.teaches; if (tch && App.views.instructor && (tch.admin || (tch.courses || []).includes(D.id))) staff.unshift({ label: 'Teaching', items: [['instructor', 'Instructor', 'gear']] });
@@ -797,7 +833,7 @@
   App.forgetCourse = () => { D = null; QZ = null; };   // the next render sets the class up again (a class pack that changed under the open page)
   function buildLayout() {
     const app = $('.app');
-    bind($('#sidebar'), { nav: el => App.go(el.dataset.view), navgroup: el => { const m = Object.assign({}, settings().navOpen || {}); const now = el.classList.contains('open'); m[el.dataset.g] = !now; setSetting('navOpen', m); el.classList.toggle('open', !now); el.setAttribute('aria-expanded', String(!now)); const g = el.nextElementSibling; if (g) g.classList.toggle('closed', now); }, 'pomo-toggle': () => Pomo.toggle(), 'pomo-reset': () => Pomo.reset(), 'pomo-mode': () => Pomo.switchMode() });
+    bind($('#sidebar'), { 'class-menu': () => classMenu(), nav: el => App.go(el.dataset.view), navgroup: el => { const m = Object.assign({}, settings().navOpen || {}); const now = el.classList.contains('open'); m[el.dataset.g] = !now; setSetting('navOpen', m); el.classList.toggle('open', !now); el.setAttribute('aria-expanded', String(!now)); const g = el.nextElementSibling; if (g) g.classList.toggle('closed', now); }, 'pomo-toggle': () => Pomo.toggle(), 'pomo-reset': () => Pomo.reset(), 'pomo-mode': () => Pomo.switchMode() });
     document.addEventListener('click', e => { if (e.target.closest('[data-action="print-page"]')) global.print(); });
     bind($('#topbar'), { menu: () => (App.toggleSidebar ? App.toggleSidebar() : app.classList.toggle('nav-open')), search: () => Search.open(), theme: toggleTheme, 'exam-chip': el => { if (el.dataset.href && !App.inCourse()) location.hash = el.dataset.href; else App.go('dashboard'); }, 'asof-clear': () => { setSetting('asof', ''); render(); toast('Back to today'); }, inbox: () => { if (App.auth && !App.auth.user) App.auth.open('login'); else App.go('forum', 'inbox'); } });
     $('#nav-backdrop').addEventListener('click', () => app.classList.remove('nav-open'));

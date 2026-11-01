@@ -2432,7 +2432,7 @@
 {"id":2431,"en":"The quest resists, so it is worth the practice: a short lesson on this topic.","files":["realm.js"]},
 {"id":2432,"en":"Accept the quest","files":["realm.js"]},
 {"id":2433,"en":"Roll for a quest","files":["realm.js"]},
-{"id":2434,"en":"All your classes","files":["realm.js"]},
+{"id":2434,"en":"All your classes","files":["app.js","realm.js"]},
 {"id":2435,"en":"Rolling…","files":["realm.js"]},
 {"id":2436,"en":"Roll again","files":["realm.js"]},
 {"id":2437,"en":"{1} · {2} quest","files":["realm.js"]},
@@ -8655,5 +8655,10 @@
 {"id":8654,"en":"Copied. Paste it in your group chat.","files":["word-puzzle.js"]},
 {"id":8655,"en":"Your result, to copy","files":["word-puzzle.js"]},
 {"id":8656,"en":"Share your result","files":["word-puzzle.js"]},
-{"id":8657,"en":"cubic-bezier(0.23, 1, 0.32, 1)","files":["home-grid.js"],"gone":true}
+{"id":8657,"en":"cubic-bezier(0.23, 1, 0.32, 1)","files":["home-grid.js"],"gone":true},
+{"id":8658,"en":"You’re offline","files":["app.js"]},
+{"id":8659,"en":"This didn’t load","files":["app.js"]},
+{"id":8660,"en":"It loads by itself when you’re back online.","files":["app.js"]},
+{"id":8661,"en":"Something went wrong on our side. It’s not you.","files":["app.js"]},
+{"id":8662,"en":"Switch class ({1})","files":["app.js"]}
 ]

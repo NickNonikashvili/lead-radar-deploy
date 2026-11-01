@@ -131,7 +131,7 @@
       const head = App.pageHead('Usage', 'Your credits, what you used them on, and buying more.');
       if (!u || u.local) { root.innerHTML = head + App.lockCard('Sign in to see your credits', 'Credits come with your StudyCat account: some every month, and more when you buy them.'); return; }
       root.innerHTML = `${head}<div class="us-page" id="us"><div class="panel"><div class="empty">Loading…</div></div></div>`;
-      let S; try { S = await api(/[?&]paid=1\b/.test(location.hash) ? 'credits_status&refresh=1' : 'credits_status'); } catch (e) { const b = $('#us', root); if (b) b.innerHTML = `<div class="callout warn">${esc(e.message)}</div>`; return; }
+      let S; try { S = await api(/[?&]paid=1\b/.test(location.hash) ? 'credits_status&refresh=1' : 'credits_status'); } catch (e) { const b = $('#us', root); if (b) b.innerHTML = App.failed(e); return; }
       paint(root, S);
       bind(root, {
         'us-buy': () => { const w = $('#us-wait', root); if (w) w.hidden = false; },

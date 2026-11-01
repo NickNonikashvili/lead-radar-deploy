@@ -80,7 +80,7 @@ function page(o) {
 <link rel="stylesheet" href="/assets/seo.css?v=${BUILD}">
 <script src="/assets/learn-motion.js?v=${BUILD}" defer></script>
 ${hasTex ? `<script src="/assets/mathjax-static.js?v=${BUILD}"></script>
-<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3.2.2/es5/tex-svg.js"></script>` : ''}
+<script id="MathJax-script" async src="/assets/vendor/mathjax/tex-svg.js"></script>` : ''}
 <script type="application/ld+json">${JSON.stringify(ld)}</script>
 </head>
 <body class="${o.course ? 'course-' + o.course : ''}">

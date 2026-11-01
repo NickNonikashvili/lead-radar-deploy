@@ -1,0 +1,69 @@
+/* ============================================================
+   StudyCat — refine (November 2026): the frame, the type and the pages people use most, made calmer and more exact
+   Loaded last, after quiet.css; the website's own look only (the other looks and the apps keep theirs).
+   What it follows (DESIGN.md, Refine): one type scale (titles 700-750, not 800; the brand's hero keeps its weight),
+   hierarchy from weight, size and colour rather than boxes (Refactoring UI: emphasise by de-emphasising), fewer
+   choices in view at once (Hick's law: the class menu, quiet secondary buttons), and depth from one soft shadow
+   instead of heavy borders (Linear's 2024 and 2026 refreshes: quieter sidebar, fewer borders).
+   ============================================================ */
+
+/* ---------- type: one scale ---------- */
+:root:not([data-skin]):not([data-app]) .page-title { font-size: clamp(26px, 1.6vw + 12px, 34px); font-weight: 750; letter-spacing: -0.022em; line-height: 1.12; }
+:root:not([data-skin]):not([data-app]) .note-title { font-size: clamp(28px, 1.9vw + 12px, 38px); font-weight: 750; letter-spacing: -0.024em; line-height: 1.1; }
+:root:not([data-skin]):not([data-app]) .page-sub, :root:not([data-skin]):not([data-app]) .page-head p { max-width: 64ch; color: var(--muted); font-size: 15.5px; line-height: 1.55; }
+:root:not([data-skin]):not([data-app]) #view h2 { letter-spacing: -0.012em; }
+:root:not([data-skin]):not([data-app]) #view :is(.panel-title, .sec-title) { font-weight: 700; }
+
+/* ---------- the sidebar: no counts beside the group names (they say nothing a glance does not) ---------- */
+:root:not([data-skin]):not([data-app]) .nav-label small { display: none; }
+
+/* ---------- cards: a hairline and one soft shadow, the same everywhere ---------- */
+:root:not([data-skin]):not([data-app]) { --refine-lift: 0 1px 2px rgba(18, 33, 63, 0.05), 0 8px 24px -16px rgba(18, 33, 63, 0.18); }
+:root:not([data-skin]):not([data-app])[data-theme="dark"] { --refine-lift: 0 1px 2px rgba(0, 0, 0, 0.3), 0 10px 28px -18px rgba(0, 0, 0, 0.55); }
+@media (prefers-color-scheme: dark) { :root:not([data-skin]):not([data-app]):not([data-theme="light"]) { --refine-lift: 0 1px 2px rgba(0, 0, 0, 0.3), 0 10px 28px -18px rgba(0, 0, 0, 0.55); } }
+:root:not([data-skin]):not([data-app]) #view :is(.panel, .hg-card, .xw) { box-shadow: var(--refine-lift); }
+
+/* ---------- flashcards: a card on a deck, the prompt set like a card, the grade buttons as the one choice ---------- */
+:root:not([data-skin]):not([data-app]) .fc-stage { position: relative; isolation: isolate; max-width: 680px; margin: 6px auto 0; }
+:root:not([data-skin]):not([data-app]) .fc-stage::before, :root:not([data-skin]):not([data-app]) .fc-stage::after { content: ""; position: absolute; z-index: -1; height: 60px; border: 1px solid var(--d-card-line); border-radius: 20px; background: var(--d-card); }
+:root:not([data-skin]):not([data-app]) .fc-stage::before { left: 16px; right: 16px; bottom: -8px; }
+:root:not([data-skin]):not([data-app]) .fc-stage::after { left: 34px; right: 34px; bottom: -16px; opacity: 0.6; }
+:root:not([data-skin]):not([data-app]) .fc-stage:has(.fc-done)::before, :root:not([data-skin]):not([data-app]) .fc-stage:has(.fc-done)::after { display: none; }
+:root:not([data-skin]):not([data-app]) .fc-card { min-height: 300px; }
+:root:not([data-skin]):not([data-app]) .fc-face { padding: 44px 40px 40px; border: 1px solid var(--d-card-line); border-radius: 20px; background: var(--d-card); box-shadow: var(--refine-lift); }
+:root:not([data-skin]):not([data-app]) .fc-front { font-size: clamp(20px, 1.2vw + 12px, 26px); font-weight: 600; line-height: 1.35; letter-spacing: -0.01em; color: var(--ink-strong); }
+:root:not([data-skin]):not([data-app]) .fc-back { background: var(--d-inner); border-color: var(--d-card-line); color: var(--ink); font-size: 17px; }
+:root:not([data-skin]):not([data-app]) .fc-face .eyebrow { top: 16px; left: 20px; color: var(--muted); font-size: 12.5px; font-variant-numeric: tabular-nums; }
+:root:not([data-skin]):not([data-app]) .fc-face .sec { top: 13px; right: 16px; }
+:root:not([data-skin]):not([data-app]) .fc-hint { bottom: 14px; color: var(--muted); font-size: 12px; }
+:root:not([data-skin]):not([data-app]) .fc-controls { margin-top: 30px; gap: 10px; }
+:root:not([data-skin]):not([data-app]) .fc-controls [data-action="again"], :root:not([data-skin]):not([data-app]) .fc-controls [data-action="good"] { min-height: 46px; padding: 0 20px; font-size: 15px; }
+:root:not([data-skin]):not([data-app]) .fc-controls :is([data-action="prev"], [data-action="next"]) { border-color: transparent; background: none; color: var(--ink-2); }
+:root:not([data-skin]):not([data-app]) .fc-controls :is([data-action="prev"], [data-action="next"]):hover:not(:disabled) { background: var(--surface-2); }
+
+/* ---------- the quizzer's set-up: one strong choice (Review for me), the rest as quiet chips ---------- */
+:root:not([data-skin]):not([data-app]) #pq-setup .panel-h .row { gap: 6px; }
+:root:not([data-skin]):not([data-app]) #pq-setup .panel-h .btn:not(.primary):not(.ghost) { min-height: 32px; padding: 0 12px; border-color: var(--d-card-line); border-radius: 999px; background: var(--d-card); color: var(--ink-2); font-size: 13px; font-weight: 600; }
+:root:not([data-skin]):not([data-app]) #pq-setup .panel-h .btn:not(.primary):not(.ghost):hover { border-color: var(--border-strong); color: var(--ink); }
+:root:not([data-skin]):not([data-app]) #pq-setup .panel-h .btn.primary { min-height: 32px; border-radius: 999px; padding: 0 14px; }
+
+/* ---------- the top bar in three groups, a hairline between them: where you stand (the next exam, the streak, the
+   day's goal), then Call Bo, then the tools (inbox, sounds, language, theme), then you ---------- */
+:root:not([data-skin]):not([data-app]) .topbar-actions { gap: 4px; }
+:root:not([data-skin]):not([data-app]) .topbar-actions > .hub-slot:not(:empty) { padding-right: 10px; margin-right: 6px; border-right: 1px solid var(--border); }
+:root:not([data-skin]):not([data-app]) .topbar-actions > .call-top:not([hidden]) { margin-right: 8px; }
+:root:not([data-skin]):not([data-app]) .topbar-actions > .icon-btn, :root:not([data-skin]):not([data-app]) .topbar-actions .lang-top-btn { color: var(--muted); }
+:root:not([data-skin]):not([data-app]) .topbar-actions > .icon-btn:hover, :root:not([data-skin]):not([data-app]) .topbar-actions .lang-top-btn:hover { color: var(--ink); }
+:root:not([data-skin]):not([data-app]) .topbar-actions > .acct-slot { margin-left: 6px; }
+
+/* ---------- Settings: each on/off choice a row with a switch on the right (still a checkbox to the browser) ---------- */
+:root:not([data-skin]):not([data-app]) .acct-sections section .check { flex-direction: row-reverse; justify-content: space-between; align-items: center; gap: 14px; padding: 11px 0; border-bottom: 1px solid var(--d-card-line); }
+:root:not([data-skin]):not([data-app]) .acct-sections section .check:last-child { border-bottom: 0; }
+:root:not([data-skin]):not([data-app]) .acct-sections .check input[type="checkbox"] { -webkit-appearance: none; appearance: none; flex: none; width: 40px; height: 24px; margin: 0; border: 1px solid var(--border-strong); border-radius: 999px; background-color: var(--d-track); background-image: radial-gradient(circle, #fff 0 8px, transparent 8.5px); background-repeat: no-repeat; background-size: 20px 20px; background-position: 1px 50%; cursor: pointer; transition: background-color 0.15s, background-position 0.18s cubic-bezier(0.2, 0.8, 0.2, 1), border-color 0.15s; }
+:root:not([data-skin]):not([data-app]) .acct-sections .check input[type="checkbox"]:checked { border-color: var(--accent); background-color: var(--accent); background-position: calc(100% - 1px) 50%; }
+:root:not([data-skin]):not([data-app]) .acct-sections .check input[type="checkbox"]:disabled { opacity: 0.5; cursor: not-allowed; }
+:root:not([data-skin]):not([data-app]) .acct-sections .check input[type="checkbox"]:focus-visible { outline: 3px solid color-mix(in srgb, var(--accent) 55%, transparent); outline-offset: 2px; }
+html[data-motion="off"] .acct-sections .check input[type="checkbox"] { transition: none; }
+
+/* ---------- Discussions: the class as one picker beside the sort tabs ---------- */
+.fa-class .select { min-width: 150px; height: 38px; }

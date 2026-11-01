@@ -242,7 +242,7 @@
   const clsName = c => (c.title && c.title.length <= 16 ? c.title : c.code) || 'Your class';
   async function teachHome(root) {
     const fx = frame(root, { rail: homeRail('home'), crumbs: '<span aria-current="page">Home</span>', body: '<div class="fx-wait">Loading…</div>', title: 'Home' });
-    let me; try { me = ME = await api('teach_me'); } catch (e) { if (root.isConnected) $('#tc-body', root).innerHTML = `<div class="fx-wide"><p class="fx-error">${esc(e.message)}</p></div>`; return; }
+    let me; try { me = ME = await api('teach_me'); } catch (e) { if (root.isConnected) $('#tc-body', root).innerHTML = `<div class="fx-wide">${App.failed(e)}</div>`; return; }
     if (!root.isConnected) return;
     const mine = me.teaching.filter(c => c.access !== 'student');
     // the class: the one that meets next, else the one edited last
@@ -328,7 +328,7 @@
   /* ---------- your syllabi ---------- */
   async function home(root) {
     frame(root, { rail: homeRail('syllabi'), crumbs: '<span aria-current="page">Your syllabi</span>', body: '<div class="fx-wait">Loading your syllabi…</div>', title: 'Your syllabi' });
-    let me; try { me = ME = await api('teach_me'); } catch (e) { if (root.isConnected) $('#tc-body', root).innerHTML = `<div class="fx-wide"><p class="fx-error">${esc(e.message)}</p></div>`; return; }
+    let me; try { me = ME = await api('teach_me'); } catch (e) { if (root.isConnected) $('#tc-body', root).innerHTML = `<div class="fx-wide">${App.failed(e)}</div>`; return; }
     if (!root.isConnected) return;
     const rows = me.teaching.filter(c => c.access !== 'student');
     const tag = c => c.status === 'published' ? '<span class="fx-tag live">Published</span>' : '<span class="fx-tag">Draft</span>';
@@ -370,7 +370,7 @@
   /* ---------- faculty status ---------- */
   async function verifyPage(root) {
     frame(root, { rail: homeRail('verify'), crumbs: '<a href="#/teach/syllabi">Your syllabi</a><span class="fx-sep" aria-hidden="true">/</span><span aria-current="page">Faculty status</span>', body: '<div class="fx-wait">Loading…</div>', title: 'Faculty status' });
-    let me; try { me = ME = await api('teach_me'); } catch (e) { if (root.isConnected) $('#tc-body', root).innerHTML = `<div class="fx-narrow"><p class="fx-error">${esc(e.message)}</p></div>`; return; }
+    let me; try { me = ME = await api('teach_me'); } catch (e) { if (root.isConnected) $('#tc-body', root).innerHTML = `<div class="fx-narrow">${App.failed(e)}</div>`; return; }
     if (!root.isConnected) return; const rail = $('.fx-rail-body', root); if (rail) rail.innerHTML = homeRail('verify');
     const head = `<header class="fx-head"><h1 class="fx-h1">Faculty status</h1><p class="fx-lede">Students trust that a class on StudyCat comes from their instructor, so an administrator checks each instructor by hand before a class can reach students.</p></header>`;
     const body = $('#tc-body', root);
@@ -749,7 +749,7 @@
   const joinBox = () => `<form class="panel tc-joinbox" id="tc-joinbox" novalidate><div class="panel-title mb-1">${icon('users')} Join with a class code</div><div class="row gap-sm"><input class="input mono tc-codein" id="tj-code" maxlength="8" placeholder="ABC234" autocomplete="off" autocapitalize="characters" aria-label="Class code"><button class="btn primary" type="submit">Continue</button></div><p class="help mt-1">Six letters and numbers, from your instructor.</p></form>`;
   const wireJoinBox = body => { const f = $('#tc-joinbox', body); if (f) f.addEventListener('submit', e => { e.preventDefault(); const v = $('#tj-code', f).value.toUpperCase().replace(/[^A-Z0-9]/g, ''); if (v.length === 6) location.hash = '#/class/join/' + v; else toast('Class codes have 6 letters and numbers.'); }); };
   async function myClasses(body) {
-    let me; try { me = await api('teach_me'); } catch (e) { body.innerHTML = `<div class="empty">${esc(e.message)}</div>`; return; }
+    let me; try { me = await api('teach_me'); } catch (e) { body.innerHTML = App.failed(e); return; }
     const card = c => `<a class="tc-card" href="#/class/${c.id}"><div class="row between"><span class="tc-card-code">${esc(c.code)}${c.section ? ` · ${esc(c.section)}` : ''}</span>${c.status === 'published' ? '' : '<span class="chip xs warn">syllabus coming</span>'}</div><b class="tc-card-title">${esc(c.title)}</b><span class="small muted">${esc(c.instructor)} · ${esc(c.term)}</span></a>`;
     body.innerHTML = `${me.enrolled.length ? `<div class="tc-grid">${me.enrolled.map(card).join('')}</div>` : '<div class="empty">You have not joined a class yet.</div>'}<div class="mt-2">${joinBox()}</div>${me.teaching.length ? `<p class="small muted mt-2">Teaching? Your classes are in <a href="#/teach">StudyCat Faculty</a>.</p>` : ''}`;
     wireJoinBox(body);
@@ -766,7 +766,7 @@
     bind(body, { join: async () => { try { const x = await api('teach_join', { code }); if (App.packs && App.packs.sync) await App.packs.sync(); if (App.auth && App.auth.refresh) App.auth.refresh(); App.teachForget(); toast(`You joined ${c.code}.`); location.hash = '#/class/' + x.id; } catch (e) { toast(e.message, 5000); } } });
   }
   async function hub(body, id) {
-    let h; try { h = await api('teach_hub&id=' + id); } catch (e) { body.innerHTML = `<div class="empty">${esc(e.message)} <a href="#/class">Your classes</a></div>`; return; }
+    let h; try { h = await api('teach_hub&id=' + id); } catch (e) { body.innerHTML = App.failed(e) + '<p class="small mt-2"><a href="#/class">Your classes</a></p>'; return; }
     const c = h.class; const pid = c.pack_id;
     const live = c.status === 'published' && !!pid;   // the class list picks the class up on its own (and again when a link to it is opened)
     if (live && !global.Courses[pid] && App.packs && App.packs.sync) App.packs.sync().catch(() => {});

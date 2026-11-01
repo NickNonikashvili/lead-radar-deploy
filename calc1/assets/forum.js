@@ -123,7 +123,7 @@
       box.innerHTML = `${F.standalone ? '' : pageHead('Discussions', this.blurb, `<a class="btn primary" href="${base()}/new" data-action="new-post">${icon('pen', 14)} New post</a>`)}
         ${F.standalone ? `<div class="row between mb-2"><div></div><a class="btn primary" href="${base()}/new" data-action="new-post">${icon('pen', 14)} New post</a></div>` : ''}
         <div class="panel fa-toolbar"><div class="tabs" style="margin:0;border:0">${[['hot', 'Hot'], ['new', 'New'], ['top', 'Top']].map(([k, l]) => `<button class="tab${F.sort === k ? ' active' : ''}" data-action="sort" data-s="${k}">${l}</button>`).join('')}</div>
-          <div class="chips">${['all', ...App.COURSE_ORDER.filter(id => global.Courses[id]), 'general'].map(id => `<span class="chip toggle${F.course === id ? ' on' : ''}" data-action="course" data-c="${id}">${esc(cm[id].short)}</span>`).join('')}</div>
+          <label class="fa-class"><span class="sr-only">Class</span><select class="select" id="fa-course">${['all', ...App.COURSE_ORDER.filter(id => global.Courses[id]), 'general'].map(id => `<option value="${id}"${F.course === id ? ' selected' : ''}>${esc(cm[id].short)}</option>`).join('')}</select></label>
           <input class="input" id="fa-q" placeholder="Search posts…" value="${esc(F.q)}" style="max-width:220px">
           <div class="chips fa-filters">${[['', 'All'], ['unanswered', 'Unanswered'], ['solved', 'Solved'], ['polls', 'Polls']].map(([k, l]) => `<span class="chip toggle${F.filter === k ? ' on' : ''}" data-action="filter" data-f="${k}">${l}</span>`).join('')}</div></div>
         <div id="fa-helpers"></div>
@@ -132,6 +132,8 @@
         <div class="stack" id="fa-list"><div class="empty">Loading…</div></div><div class="row mt-2" id="fa-more" style="justify-content:center"></div>
         ${isMod() ? `<p class="small muted mt-2">${isAdmin() ? 'Administrator' : 'Moderator'}: <a href="${base()}/reports">report queue</a>${isAdmin() ? ` · <a href="${base()}/admin">admin panel</a>` : ''}.</p>` : ''}`;
       const q = $('#fa-q', box); let t; q.addEventListener('input', () => { clearTimeout(t); t = setTimeout(() => { F.q = q.value.trim(); F.page = 0; this.loadList(box); }, 350); });
+      // the class: one picker, not a chip for every class (fourteen choices in view at once)
+      const cs = $('#fa-course', box); if (cs) cs.addEventListener('change', () => { F.course = cs.value; F.page = 0; this.loadList(box); });
       this.loadList(box);
       if (u && !offline()) api('helpers').then(r => { const h = $('#fa-helpers', box); if (!h) return; const rows = r.week.length ? r.week : r.all; if (!rows.length) return; h.innerHTML = `<div class="panel helpers mb-2"><div class="panel-h"><div class="panel-title">${icon('shield')} Helpers ${r.week.length ? 'this week' : 'of all time'}</div><span class="small muted">accepted answers and upvotes</span></div><div class="helper-row">${rows.slice(0, 6).map((x, i) => `<span class="helper"><span class="rank">${i + 1}</span><b>${esc(x.name)}</b>${x.role ? `<span class="chip staff">${esc(x.role)}</span>` : ''}<span class="muted small">${x.points} pts${x.accepted ? ` · ${x.accepted} accepted` : ''}</span></span>`).join('')}</div></div>`; }).catch(() => {});
     },
@@ -141,7 +143,7 @@
       try {
         const r = await api(`forum_posts&course=${encodeURIComponent(F.course)}&sort=${F.sort}&q=${encodeURIComponent(F.q)}&page=${F.page}&filter=${F.filter}`);
         F.posts = append ? F.posts.concat(r.posts) : r.posts; F.more = r.more; this.paintList(box, false, r.guest);
-      } catch (e) { listEl.innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
+      } catch (e) { listEl.innerHTML = App.failed(e); }
     },
     paintList(box, _, guest) {
       const listEl = $('#fa-list', box); const moreEl = $('#fa-more', box); if (!listEl) return;
@@ -165,7 +167,7 @@
       if (!user()) { el.innerHTML = App.lockCard('Sign in to read this discussion', 'Posts and comments are visible to members only. Sign up free with your montana.edu email.'); return; }
       let data;
       if (offline()) { const p = DEMO.posts.find(x => x.id === id); if (!p) { el.innerHTML = '<div class="empty">Sample post not found.</div>'; return; } data = { post: p, comments: DEMO.comments[id] || [], mod: false, banned: 0, terms: true }; }
-      else { try { data = await api('forum_post&id=' + id); } catch (e) { el.innerHTML = `<div class="empty">${esc(e.message)}</div>`; return; } }
+      else { try { data = await api('forum_post&id=' + id); } catch (e) { el.innerHTML = App.failed(e); return; } }
       F.thread = data; this.paintThread(el);
       if (!offline() && user() && user().unread) api('notif_read', { post_id: id }).then(r => { if (auth().setUnread) auth().setUnread(r.unread); }).catch(() => {});
     },
@@ -240,7 +242,7 @@
         el.innerHTML = `<div class="panel"><div class="panel-h"><div class="panel-title">${icon('flag')} Open reports</div><span class="chip">${r.reports.length}</span></div>
           ${r.reports.length ? `<div class="table-wrap"><table class="table compact"><thead><tr><th>Item</th><th>Reason</th><th>Author</th><th></th></tr></thead><tbody>${r.reports.map(x => x.kind === 'peer' ? `<tr><td><span class="chip">peer review draft</span> <span class="small">${esc(x.snippet.slice(0, 160))}${x.snippet.length > 160 ? '…' : ''}</span></td><td class="small">${esc(x.reason)}<div class="muted">by ${esc(x.reporter)} · ${timeAgo(x.created)}</div></td><td class="small mono">${esc(x.author)}</td><td><div class="row gap-sm" style="flex-wrap:nowrap"><button class="btn xs" data-action="ban" data-kind="peer" data-id="0" data-user="${x.author_id}" data-refresh="reports">Ban</button><button class="btn xs ghost" data-action="mod" data-a="resolve" data-report="${x.id}" data-refresh="reports">Dismiss</button></div></td></tr>` : `<tr><td><span class="chip">${x.kind === 'p' ? 'post' : 'comment'}</span> <a href="${threadLink(x.post_id)}">${esc(x.snippet.slice(0, 110))}${x.snippet.length > 110 ? '…' : ''}</a>${x.removed ? ' <span class="chip bad">removed</span>' : ''}</td><td class="small">${esc(x.reason)}<div class="muted">by ${esc(x.reporter)} · ${timeAgo(x.created)}</div></td><td class="small mono">${esc(x.author)}</td><td><div class="row gap-sm" style="flex-wrap:nowrap">${x.removed ? '' : `<button class="btn xs danger" data-action="mod" data-a="remove" data-kind="${x.kind}" data-id="${x.item_id}" data-refresh="reports">Remove</button>`}<button class="btn xs" data-action="ban" data-kind="${x.kind}" data-id="${x.item_id}" data-refresh="reports">Ban</button>${isAdmin() ? `<button class="btn xs danger ghost" data-action="purge" data-kind="${x.kind}" data-id="${x.item_id}" data-refresh="reports">Delete</button>` : ''}<button class="btn xs ghost" data-action="mod" data-a="resolve" data-report="${x.id}" data-refresh="reports">Dismiss</button></div></td></tr>`).join('')}</tbody></table></div>` : '<div class="empty">Nothing reported. Nice community.</div>'}</div>
           <div class="panel mt-2"><div class="panel-h"><div class="panel-title">${icon('lock')} Active bans</div></div>${r.bans.length ? `<div class="table-wrap"><table class="table compact"><tbody>${r.bans.map(b => `<tr><td class="mono small">${esc(b.email)}</td><td class="small">until ${new Date(b.until * 1000).toLocaleDateString()}${b.reason ? ' · ' + esc(b.reason) : ''}</td><td><button class="btn xs" data-action="mod" data-a="unban" data-user="${b.user_id}" data-refresh="reports">Unban</button></td></tr>`).join('')}</tbody></table></div>` : '<div class="empty">No active bans.</div>'}</div>`;
-      } catch (e) { el.innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
+      } catch (e) { el.innerHTML = App.failed(e); }
     },
 
     /* --- inbox --- */
@@ -252,7 +254,7 @@
       try {
         const r = await api('notif_list'); if (auth().setUnread) auth().setUnread(r.unread);
         el.innerHTML = r.notifications.length ? `<div class="panel" style="padding:6px 8px">${r.notifications.map(n => `<a class="inbox-row${n.read ? '' : ' unread'}" href="${['badge', 'invite', 'issue', 'classreq', 'classreq_admin', 'class', 'class_assign', 'teach', 'teach_admin', 'plan', 'draft_share', 'draft_reply', 'peer_pair', 'peer_sent', 'credits'].includes(n.kind) ? esc(/^#\//.test(n.link || '') ? n.link : '#/') : threadLink(n.post_id)}" data-action="open-notif" data-id="${n.id}"><span class="inbox-dot"></span><div class="inbox-body"><div><b>${esc(n.actor)}</b> ${n.kind === 'issue' ? 'resolved your report' : n.kind === 'class' ? 'posted in your class:' : n.kind === 'class_assign' ? 'assigned practice:' : n.kind === 'teach' ? 'updated your teaching access:' : n.kind === 'teach_admin' ? 'asked for instructor access:' : n.kind === 'classreq' ? 'updated your class request for' : n.kind === 'classreq_admin' ? 'requested a class:' : n.kind === 'badge' ? 'awarded you' : n.kind === 'plan' ? 'gave you' : n.kind === 'draft_share' ? 'shared a draft with you:' : n.kind === 'draft_reply' ? 'replied about your draft' : n.kind === 'peer_pair' ? 'is your peer review partner for' : n.kind === 'peer_sent' ? 'sent you peer review on' : n.kind === 'credits' ? 'gave you credits for' : n.kind === 'reply' ? 'replied to your comment on' : n.kind === 'accepted' ? 'accepted your answer on' : 'commented on your post'} <b>${esc(n.title)}</b></div><div class="small muted">${esc(n.snippet)}</div></div><span class="small muted">${timeAgo(n.created)}</span></a>`).join('')}</div>` : '<div class="empty">Nothing yet. When someone answers one of your posts, it shows up here.</div>';
-      } catch (e) { el.innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
+      } catch (e) { el.innerHTML = App.failed(e); }
     },
 
     /* --- administrator panel --- */
@@ -273,7 +275,7 @@
             <div class="table-wrap"><table class="table compact"><thead><tr><th>Member</th><th>Joined</th><th class="num">Posts</th><th class="num">Comments</th><th>Status</th><th></th></tr></thead><tbody>${us.users.map(x => `<tr><td><div><b>${esc(x.name || x.email.split('@')[0])}</b>${x.admin ? ' <span class="chip accent">admin</span>' : x.mod ? ' <span class="chip">mod</span>' : ''}</div><div class="mono small muted">${esc(x.email)}</div></td><td class="small">${new Date(x.created * 1000).toLocaleDateString()}<div class="muted">last login ${x.last_login ? timeAgo(x.last_login) : 'never'}</div></td><td class="num">${x.posts}</td><td class="num">${x.comments}</td><td class="small">${!x.verified ? '<span class="chip warn">unverified</span>' : x.banned_until ? `<span class="chip bad">banned until ${new Date(x.banned_until * 1000).toLocaleDateString()}</span>` : '<span class="chip good">active</span>'}${x.terms ? '' : ' <span class="chip">no rules yet</span>'}</td><td><div class="row gap-sm" style="flex-wrap:nowrap;justify-content:flex-end">${x.admin ? '' : `${x.banned_until ? `<button class="btn xs" data-action="admin-user" data-a="unban" data-u="${x.id}">Unban</button>` : `<button class="btn xs" data-action="admin-user" data-a="ban" data-u="${x.id}">Ban</button>`}${!x.verified ? `<button class="btn xs" data-action="admin-user" data-a="verify" data-u="${x.id}">Verify</button>` : ''}<button class="btn xs danger ghost" data-action="admin-user" data-a="delete" data-u="${x.id}" data-e="${esc(x.email)}">Delete</button>`}</div></td></tr>`).join('') || '<tr><td colspan="6"><div class="empty">No members match.</div></td></tr>'}</tbody></table></div>
             ${us.more ? `<div class="row mt-2" style="justify-content:center"><button class="btn" data-action="admin-page" data-p="${(page || 0) + 1}" data-q="${esc(q || '')}">Next page</button></div>` : ''}</div>`;
         const inp = $('#fa-admin-q', el); let t; inp.addEventListener('input', () => { clearTimeout(t); t = setTimeout(() => this.admin(box, inp.value.trim(), 0), 350); });
-      } catch (e) { el.innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
+      } catch (e) { el.innerHTML = App.failed(e); }
     },
 
     /* --- actions --- */
@@ -374,6 +376,6 @@
   /* ---------- landing panel: latest discussions ---------- */
   App.forumLatest = async function (el) {
     const paint = (posts, guest) => { el.innerHTML = posts.length ? `<div class="fa-latest">${posts.slice(0, 5).map(p => `<a class="fa-latest-row" href="${guest ? '#/forum' : '#/forum/' + p.id}">${courseChip(p.course)}<span class="t">${esc(p.title)}</span><span class="muted small">${icon('chat', 12)} ${p.ncomments}</span></a>`).join('')}</div>` : '<div class="empty">No discussions yet. Start one.</div>'; };
-    try { if (offline()) paint(DEMO.posts, !user()); else { const r = await api('forum_posts&course=all&sort=new'); paint(r.posts, r.guest); } } catch (e) { el.innerHTML = `<div class="empty small">${esc(e.message)}</div>`; }
+    try { if (offline()) paint(DEMO.posts, !user()); else { const r = await api('forum_posts&course=all&sort=new'); paint(r.posts, r.guest); } } catch (e) { el.innerHTML = App.failed(e, { small: true }); }
   };
 })(window);

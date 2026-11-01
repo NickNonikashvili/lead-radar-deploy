@@ -2756,3 +2756,39 @@ body:has(.app:not(.landing)) .amb-panel { top: 0; bottom: auto; max-height: calc
 .uns { display: grid; gap: 12px; justify-items: start; padding: 28px; margin-top: 30px; }
 .uns h1 { font-size: 26px; margin: 0; }
 .uns p { margin: 0; font-size: 16px; }
+
+/* ---------- a part of a page that could not load (App.failed, assets/app.js): what happened, and Try again ---------- */
+.fail-state { display: flex; align-items: center; gap: 14px; padding: 16px 18px; border: 1px solid var(--border); border-radius: var(--radius-sm, 12px); background: var(--surface); color: var(--ink); text-align: left; }
+.fail-state .fail-ic { flex: none; display: grid; place-items: center; width: 42px; height: 42px; border-radius: 50%; background: var(--surface-2); color: var(--muted); }
+.fail-state[data-fail="err"] .fail-ic { color: var(--coral-ink, var(--bad, #B42318)); }
+.fail-state .fail-body { flex: 1; min-width: 0; }
+.fail-state .fail-t { margin: 0; font-weight: 700; line-height: 1.3; }
+.fail-state .fail-d { margin: 2px 0 0; color: var(--muted); font-size: 14px; line-height: 1.45; }
+.fail-state .btn { flex: none; }
+.fail-state.small { gap: 10px; padding: 10px 12px; } .fail-state.small .fail-ic { width: 32px; height: 32px; }
+@media (max-width: 520px) { .fail-state { flex-wrap: wrap; } .fail-state .btn { margin-left: 56px; } }
+
+/* ---------- the class menu: the class header in the sidebar opens it (it was a grid of every class) ---------- */
+.sb-classbox .brand { position: relative; }
+.brand .cs-btn { position: absolute; inset: 0 0 6px; display: flex; align-items: center; justify-content: flex-end; padding: 0 8px; border: 0; border-radius: 10px; background: none; color: var(--muted); cursor: pointer; }
+.brand .cs-btn:hover { background: color-mix(in srgb, var(--ink) 5%, transparent); color: var(--ink); }
+.brand .cs-btn:focus-visible { outline-offset: -2px; }
+.brand .cs-btn > svg { transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1); }
+.brand .cs-btn[aria-expanded="true"] > svg { transform: rotate(180deg); }
+.course-switch { position: relative; display: block; padding: 0; }
+.cs-menu { position: absolute; z-index: 40; top: -4px; left: 4px; right: 4px; max-height: min(64vh, 460px); overflow: auto; padding: 6px; border: 1px solid var(--border); border-radius: 14px; background: var(--surface); box-shadow: var(--shadow); }
+.cs-menu[hidden] { display: none; }
+.cs-menu .switch-btn { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 44px; padding: 7px 10px; flex: none; border: 0; border-radius: 9px; background: none; color: var(--ink); font-size: 14px; font-weight: 500; text-align: left; white-space: normal; overflow: visible; }
+.cs-menu .switch-btn::before { display: none; }
+.cs-menu .switch-btn:hover, .cs-menu .switch-btn:focus-visible { background: var(--surface-2); text-decoration: none; }
+.cs-menu .switch-btn.on { background: var(--accent-soft); color: var(--ink); }
+.cs-menu .switch-btn > svg { flex: none; color: var(--muted); }
+.cs-menu .switch-btn.on > svg:last-child { color: var(--accent); }
+.cs-menu .sw-dot { flex: none; width: 10px; height: 10px; border-radius: 50%; background: var(--cc, var(--accent)); }
+.cs-menu .sw-t { flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.25; }
+.cs-menu .sw-t b { font-weight: 650; }
+.cs-menu .sw-t small { overflow: hidden; color: var(--muted); font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+.cs-menu .sb-exam { margin-left: 0; }
+.cs-menu .home, .cs-menu .req { color: var(--ink-2); }
+.cs-sep { height: 1px; margin: 6px 6px; background: var(--border); }
+@media (prefers-reduced-motion: reduce) { .brand .cs-btn > svg { transition: none; } }

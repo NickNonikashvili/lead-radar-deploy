@@ -112,7 +112,7 @@
       const j = await api('learn_slides_list&class=' + q(cid())); if (App.current !== App.views.slides) return;
       box.innerHTML = `<section class="panel"><div class="panel-h"><div class="panel-title">${icon('book')} ${esc(t('Your notes'))}</div></div>${j.sets.length ? `<ul class="sl-sets">${j.sets.map(s => `<li><a href="${App.link('slides', s.id)}"><b translate="no">${esc(s.title)}</b><small>${esc(t('{1} slides · {2} flashcards · {3}', num(s.slides), num(s.count), dateOf(s.created)))}</small></a><button type="button" class="icon-btn" data-action="sl-del" data-id="${s.id}" aria-label="${esc(t('Delete {1}', s.title))}" title="${esc(t('Delete'))}">${icon('trash', 15)}</button></li>`).join('')}</ul>` : `<div class="empty small">${esc(t('No notes yet. Open the slides from a lecture to start.'))}</div>`}</section>`;
       bind(box, { 'sl-del': async el => { if (!confirm(t('Delete these notes and their flashcards?'))) return; try { await api('learn_slides_delete', { class: cid(), id: +el.dataset.id }); el.closest('li').remove(); toast('Deleted'); } catch (e) { toast(e.message, 4000); } } });
-    } catch (e) { box.innerHTML = `<div class="empty small">${esc(e.message)}</div>`; }
+    } catch (e) { box.innerHTML = App.failed(e, { small: true }); }
   }
   async function setView(root, id) {
     root.innerHTML = `<div class="sl-set"><a class="btn sm" href="${App.link('slides')}">${icon('left', 13)} ${esc(t('All notes'))}</a><div class="empty mt-3">${esc(t('Opening…'))}</div></div>`;
