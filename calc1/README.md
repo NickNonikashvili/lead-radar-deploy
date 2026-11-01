@@ -880,6 +880,10 @@ twin; the light-or-dark switch stays.
   Discussions. Every page or list that loads from the server fails into `App.failed` (plain words and Try again; by
   itself once back online), and MathJax ships in `assets/vendor/mathjax/` with the CDN only as a fallback (DESIGN.md,
   Refine).
+- **Halloween** (2026.11.01.2, `assets/season.js`, `assets/halloween.css`): every October 1 to November 8 the website's
+  own look dresses up (night aubergine or day harvest dusk, a pumpkin accent, a moon and bats on the hero, a spider in the
+  sidebar, Bo in a witch's hat, pixel pumpkins, ghosts and bats). Settings switches it off until next October; nothing
+  moves with Reduce motion; `tests/halloween.test.js` (DESIGN.md, Halloween).
 - **Nothing wider than the phone** (2026.11.01.2): every page fits a 320 px screen. Card grids ask for
   `min(Npx, 100%)`, a formula in a sentence is drawn smaller to fit its line (its screen-reader copy too), page buttons
   wrap on small phones, and a class page the class does not have (WRIT 101's quizzer, flashcards, formula sheet,

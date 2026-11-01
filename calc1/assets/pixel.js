@@ -48,6 +48,16 @@
     apple: { rows: ["........oooo..", "......oooGGo..", "......oBGGGo..", "...ooooBGooo..", "..ooRRoBRRoo..", ".ooRRRDDRRRoo.", "ooRwwRRRRRRRoo", "oRRwRRRRRRRRRo", "oRRRRRRRRRRRRo", "oRRRRRRRRRRRRo", "ooRRRRRRRRRRoo", ".oRRRRRRRRRRo.", ".ooRRRRRRRRoo.", "..oooooooooo.."], pal: {"o": "#14213D", "R": "#E5383B", "D": "#B42328", "B": "#7A4A20", "G": "#4ADE80", "w": "#FFC2C2"} }
   };
   S.computer.frames[1] = withRows(S.computer.rows, { 4: '.oSGSSSSSSSSo.' });
+  // Halloween (assets/season.js): a jack-o'-lantern whose candle flickers, a ghost whose hem sways, a bat that flaps
+  S.pumpkin = { rows: ['....gg.....', '.....g.....', '..ooooooo..', '.oOOOdOOOo.', 'oOyyOdOyyOo', 'oOOyOdOyOOo', 'oOOOOdOOOOo', 'oOyOyyyOyOo', '.oOyyyyyOo.', '..ooooooo..'], pal: { o: '#7A2E00', O: '#FF7A1A', d: '#E2600A', y: '#FFC93D', Y: '#FFF1A8', g: '#3F7A2A' } };
+  S.pumpkin.frames = [S.pumpkin.rows, S.pumpkin.rows.map(r => r.replace(/y/g, 'Y'))];
+  S.ghost = { rows: ['..ooooo..', '.owwwwwo.', 'owwwwwwwo', 'owewwwewo', 'owewwwewo', 'owwwwwwwo', 'owwwmwwwo', 'owwwwwwwo', 'owwowowwo', 'oo.o.o.oo'], pal: { o: '#4A3D63', w: '#F4F1FA', e: '#2A1B3D', m: '#2A1B3D' } };
+  S.ghost.frames = [S.ghost.rows, withRows(S.ghost.rows, { 8: 'owowwwowo', 9: 'o.oo.oo.o' })];
+  S.bat = { rows: ['o.....o.o.....o', 'oo....ooo....oo', 'ooo..oeoeo..ooo', 'ooooooooooooooo', '.ooo.ooooo.ooo.', '..o...ooo...o..', '.......o.......'], pal: { o: '#2A1B3D', e: '#FF9F1C' } };
+  S.bat.frames = [S.bat.rows, ['...............', 'o.....o.o.....o', 'oo...oeoeo...oo', 'ooo.ooooooo.ooo', '.ooooooooooooo.', '......ooo......', '.......o.......']];
+  // the website in its Halloween costume (not the other looks or the apps)
+  const halloween = () => { const h = document.documentElement; return h.getAttribute('data-season') === 'halloween' && !h.hasAttribute('data-skin') && !h.hasAttribute('data-app'); };
+  App.isHalloween = halloween;
   // the start page skyline: the Bridger Range, pines and a sun, generated so it tiles seamlessly
   (function skyline() {
     const W = 64, H = 20, peaks = [[10, 13], [26, 16], [41, 12], [55, 9]]; const g = Array.from({ length: H }, () => Array(W).fill('.'));
@@ -84,14 +94,28 @@
   App.classSprite = (id, scale = 4) => App.pixel(CLASS_SPRITE[id] || 'book', scale, { cls: 'px-class', still: true });
   // a stable sprite per empty-state message, so the same box always shows the same friend
   const FRIENDS = ['bo', 'invader', 'floppy', 'potion', 'computer', 'book', 'star', 'heart'];
-  App.pixelFor = txt => { let h = 0; for (const ch of String(txt || '')) h = (h * 31 + ch.charCodeAt(0)) | 0; const name = FRIENDS[Math.abs(h) % FRIENDS.length]; return App.pixel(name, name === 'heart' || name === 'star' ? 4 : 3, { cls: 'px-friend' }); };
+  const HW_FRIENDS = ['pumpkin', 'ghost', 'bat', 'pumpkin', 'ghost', 'bo'];   // in the Halloween season
+  App.pixelFor = txt => { let h = 0; for (const ch of String(txt || '')) h = (h * 31 + ch.charCodeAt(0)) | 0; const list = halloween() ? HW_FRIENDS : FRIENDS; const name = list[Math.abs(h) % list.length]; return App.pixel(name, name === 'heart' || name === 'star' ? 4 : 3, { cls: 'px-friend' }); };
   // the skyline as a CSS background (tiles horizontally along the bottom of the start page hero)
   const sky = S.skyline; const skySvg = `<svg xmlns="http://www.w3.org/2000/svg" width="${sky.rows[0].length}" height="${sky.rows.length}" viewBox="0 0 ${sky.rows[0].length} ${sky.rows.length}" shape-rendering="crispEdges">${paths(sky.rows, sky.pal)}</svg>`;
   document.documentElement.style.setProperty('--px-skyline', `url("data:image/svg+xml,${encodeURIComponent(skySvg)}")`);
+  // the same range on Halloween night: purple peaks under moonlit snow, black pines, an orange moon (assets/halloween.css)
+  const HW_SKY = { m: '#3B2C5A', n: '#2E2148', M: '#C9B8E8', t: '#1E3A2B', T: '#15291F', b: '#3B2418', g: '#2B3A22', G: '#21301B', s: '#FF8A1F', S: '#FFC15E', w: '#5E4E7E', W: '#4B3D68' };
+  const hwSvg = skySvg.replace(/<path[\s\S]*<\/svg>$/, paths(sky.rows, Object.assign({}, sky.pal, HW_SKY)) + '</svg>');
+  document.documentElement.style.setProperty('--px-skyline-hw', `url("data:image/svg+xml,${encodeURIComponent(hwSvg)}")`);
   // footer signature
-  function signFooter() {
-    const f = $('.site-foot'); if (!f || $('.px-sig', f)) return;
-    ($('.sf-base', f) || f).insertAdjacentHTML('afterbegin', `<span class="px-sig">${App.pixel('invader', 2, { cls: 'px-foot-inv' })}<span>Handmade with</span>${App.pixel('heart', 2)}<span class="sr-only"> love </span><span>in Bozeman</span></span>`);
+  function signFooter() {   // in the Halloween season a bat and a jack-o'-lantern sign it instead of the invader and the heart
+    const f = $('.site-foot'); if (!f) return; const hw = halloween(); const had = $('.px-sig', f);
+    if (had && had.dataset.hw === String(hw)) return; if (had) had.remove();
+    ($('.sf-base', f) || f).insertAdjacentHTML('afterbegin', `<span class="px-sig" data-hw="${hw}">${App.pixel(hw ? 'bat' : 'invader', 2, { cls: 'px-foot-inv' })}<span>Handmade with</span>${App.pixel(hw ? 'pumpkin' : 'heart', 2)}<span class="sr-only"> love </span><span>in Bozeman</span></span>`);
   }
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', signFooter); else signFooter();
+  App.signFooter = signFooter;
+  // three pixel bats that cross the top of the screen now and then in the Halloween season (assets/halloween.css flies them)
+  function bats() {
+    const on = halloween(); const el = document.querySelector('.hw-bats');
+    if (on && !el && document.body) document.body.insertAdjacentHTML('beforeend', `<div class="hw-bats" aria-hidden="true">${App.pixel('bat', 2)}${App.pixel('bat', 2)}${App.pixel('bat', 2)}</div>`);
+    else if (!on && el) el.remove();
+  }
+  App.onSeason = () => { bats(); signFooter(); };   // the season switched in Settings or on another device (applyTheme in assets/app.js)
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', App.onSeason); else App.onSeason();
 })(window);

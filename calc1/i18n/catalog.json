@@ -8660,5 +8660,14 @@
 {"id":8659,"en":"This didn’t load","files":["app.js"]},
 {"id":8660,"en":"It loads by itself when you’re back online.","files":["app.js"]},
 {"id":8661,"en":"Something went wrong on our side. It’s not you.","files":["app.js"]},
-{"id":8662,"en":"Switch class ({1})","files":["app.js"]}
+{"id":8662,"en":"Switch class ({1})","files":["app.js"]},
+{"id":8663,"en":"Halloween look","files":["app.js"]},
+{"id":8664,"en":"(bats, pumpkins and Bo in a witch’s hat, until November 8)","files":["app.js"]},
+{"id":8665,"en":"....gg.....","files":["pixel.js"]},
+{"id":8666,"en":"..ooooooo..","files":["pixel.js"]},
+{"id":8667,"en":"oo....ooo....oo","files":["pixel.js"]},
+{"id":8668,"en":"ooo..oeoeo..ooo","files":["pixel.js"]},
+{"id":8669,"en":"..o...ooo...o..","files":["pixel.js"]},
+{"id":8670,"en":"oo...oeoeo...oo","files":["pixel.js"]},
+{"id":8671,"en":"......ooo......","files":["pixel.js"]}
 ]

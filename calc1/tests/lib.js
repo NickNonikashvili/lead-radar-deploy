@@ -32,6 +32,9 @@ async function start(opts = {}) {
     const geek = opts.geek === true || process.env.MATHUB_GEEK === '1';
     if (geek) await c.addInitScript(() => { try { const s = JSON.parse(localStorage.getItem('studyhub-settings') || '{}'); if (s.geek === undefined) { s.geek = true; localStorage.setItem('studyhub-settings', JSON.stringify(s)); } } catch (e) {} });
     if (!geek) await c.addInitScript(() => { try { const s = JSON.parse(localStorage.getItem('studyhub-settings') || '{}'); if (s.geek === undefined) { s.geek = false; localStorage.setItem('studyhub-settings', JSON.stringify(s)); } } catch (e) {} });
+    // the Halloween season (assets/season.js, October 1 to November 8): the suites see the everyday look unless they ask for it
+    // ({ season: true }, tests/halloween.test.js); otherwise every check of a colour or a corner would depend on the date
+    if (opts.season !== true) await c.addInitScript(() => { try { const s = JSON.parse(localStorage.getItem('studyhub-settings') || '{}'); if (s.season === undefined) { s.season = 'none'; localStorage.setItem('studyhub-settings', JSON.stringify(s)); } } catch (e) {} });
     if (opts.tour !== true) await c.addInitScript(() => { try { const s = JSON.parse(localStorage.getItem('studyhub-settings') || '{}'); if (s.tourDone === undefined) s.tourDone = true; if (s.tourLayout === undefined) s.tourLayout = 99; localStorage.setItem('studyhub-settings', JSON.stringify(s)); } catch (e) {} });
     // the weekly league result (Monday's "Promoted to … League!") would cover the page in any test that signs in on a Monday
     // the suites about the free-form dashboard (assets/dash.js) see it as Arrange freely leaves it; the rest see the tidy home (assets/home-grid.js)

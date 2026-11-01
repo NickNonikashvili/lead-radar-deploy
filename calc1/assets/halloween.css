@@ -1,0 +1,154 @@
+/* ============================================================
+   StudyCat — Halloween (2026.11.01.2). The website's own look dresses up from October 1 to November 8 every year
+   (assets/season.js sets html[data-season="halloween"]; Settings switches it off for the year). The other looks and the
+   iOS and Android apps keep theirs. Loaded last.
+   What it changes, all from tokens and decorations, never the layout:
+   - colours: night is a deep aubergine with bone-white text and a pumpkin accent (dark text on orange buttons); day is
+     a harvest dusk, warm parchment with plum text and a burnt-orange accent (white text). Every text colour keeps
+     WCAG AA contrast (DESIGN.md, Halloween). Class pages wear the pumpkin accent too; a colour picked in Customize wins.
+   - Bo wears a witch's hat (the logo and the mascot); the tab icon is Bo in it under an orange moon.
+   - the home and start-page hero: a night sky with stars, a harvest moon and bats, purple peaks, the pixel range at
+     night (assets/pixel.js: --px-skyline-hw); empty boxes get a pumpkin, a ghost or a bat; the footer is signed by a
+     bat and a jack-o'-lantern.
+   - small things: a spider on a thread in the sidebar, cobwebs in the corners of the home cards and a flashcard, three
+     pixel bats that cross the top of the screen now and then, orange selection and scrollbars, a glow on the one filled
+     button.
+   Motion: the spider, the bats and the hovering bats stop with Reduce motion or the device's reduced-motion setting;
+   switching the look off removes them all (WCAG 2.2.2 Pause, Stop, Hide).
+   ============================================================ */
+
+/* ---------- day: a harvest dusk ---------- */
+:root[data-season="halloween"]:not([data-skin]):not([data-app]) {
+  --bg: #FBF3E8; --surface: #FFFCF7; --surface-2: #F9F0E2; --surface-3: #F1E3CF;
+  --border: #EBDCC6; --border-strong: #D8C0A0;
+  --ink: #2B1A38; --ink-2: #4B3A5A; --muted: #6A5876; --ink-strong: #1D0F29;
+  --link: #A63D0A;
+  --gold-hi: #F2B02E;
+  --d-side: #FFF9F1; --d-side-line: #EEDFCB; --d-nav-on: #FCE3CC; --d-nav-on-fg: #5C2405;
+  --d-card: #FFFCF7; --d-card-line: #EEDFCB; --d-inner: #FAF1E3; --d-inner-line: #EFE1CC;
+  --d-hero-line: #EAD7BF; --d-foot: #FFFAF2; --d-foot-line: #EEDFCB;
+  --d-switch-bg: #FAF1E3; --d-switch-line: #EAD7BF; --d-learn-on: #FCE1C8; --d-learn-on-fg: #8A3407;
+  --d-track: #F1E2CC; --d-btn2: #FFFCF7; --d-btn2-line: #D8C0A0;
+  --hg-sky: linear-gradient(180deg, #F8DCC6 0%, #F2D3DB 48%, #E4D3EE 100%);
+  --hg-peak-far: #B9A0CF; --hg-peak-near: #9076B0; --hg-hill: #5E4778;
+  --hg-ok: #4FA235; --hg-in: #F07A16;
+  --hw-stars: none;
+  --hw-bats: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 110' fill='%232B1A38'><g transform='translate(18 46) scale(1.15) rotate(-8 24 8)'><path d='M21 8Q15 2 2 6Q5 7 6 10Q8 8 10 9Q11 12 13 13Q15 10 17 11Q18 14 21 12ZM27 8Q33 2 46 6Q43 7 42 10Q40 8 38 9Q37 12 35 13Q33 10 31 11Q30 14 27 12ZM24 4Q27 6 26.5 11Q25.5 15 24 15Q22.5 15 21.5 11Q21 6 24 4ZM22.2 5.2L21 1.6L23.6 4.2ZM25.8 5.2L27 1.6L24.4 4.2Z'/></g><g transform='translate(112 12) scale(.82) rotate(7 24 8)'><path d='M21 8Q15 2 2 6Q5 7 6 10Q8 8 10 9Q11 12 13 13Q15 10 17 11Q18 14 21 12ZM27 8Q33 2 46 6Q43 7 42 10Q40 8 38 9Q37 12 35 13Q33 10 31 11Q30 14 27 12ZM24 4Q27 6 26.5 11Q25.5 15 24 15Q22.5 15 21.5 11Q21 6 24 4ZM22.2 5.2L21 1.6L23.6 4.2ZM25.8 5.2L27 1.6L24.4 4.2Z'/></g><g transform='translate(148 66) scale(.58) rotate(-5 24 8)'><path d='M21 8Q15 2 2 6Q5 7 6 10Q8 8 10 9Q11 12 13 13Q15 10 17 11Q18 14 21 12ZM27 8Q33 2 46 6Q43 7 42 10Q40 8 38 9Q37 12 35 13Q33 10 31 11Q30 14 27 12ZM24 4Q27 6 26.5 11Q25.5 15 24 15Q22.5 15 21.5 11Q21 6 24 4ZM22.2 5.2L21 1.6L23.6 4.2ZM25.8 5.2L27 1.6L24.4 4.2Z'/></g></svg>");
+  --hw-spider: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 18'><path d='M7.4 8L2 3.6M7.2 9.2L1 9M7.4 10.4L2 14.6M8.4 11.6L5.4 16.6M12.6 8L18 3.6M12.8 9.2L19 9M12.6 10.4L18 14.6M11.6 11.6L14.6 16.6' stroke='%232B1A38' stroke-width='1.3' stroke-linecap='round' fill='none'/><ellipse cx='10' cy='10' rx='3.5' ry='4.3' fill='%232B1A38'/><circle cx='10' cy='4.8' r='2.5' fill='%232B1A38'/><circle cx='9.1' cy='4.5' r='.62' fill='%23FF9F1C'/><circle cx='10.9' cy='4.5' r='.62' fill='%23FF9F1C'/></svg>"); --hw-thread: rgba(43, 26, 56, 0.4);
+  --hw-web: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64' fill='none' stroke='%236A5876' stroke-width='.7' opacity='.32'><g><path d='M64 0L0 4M64 0L8 30M64 0L30 52M64 0L56 64'/><path d='M46 1.1Q49.6 4.4 48.1 8.5Q51.6 11.2 54.2 15.1Q58.4 15.4 61.8 17.9M30.1 2.1Q35 8.6 34 16Q41.2 21 45.4 28.5Q53.5 30 59.8 33.7M14.1 3.1Q19.5 13.5 20 23.6Q29.5 32 36.7 41.9Q47.5 45 57.8 49.6'/></g></svg>"); --hw-web-bl: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64' fill='none' stroke='%236A5876' stroke-width='.7' opacity='.32'><g transform='rotate(180 32 32)'><path d='M64 0L0 4M64 0L8 30M64 0L30 52M64 0L56 64'/><path d='M46 1.1Q49.6 4.4 48.1 8.5Q51.6 11.2 54.2 15.1Q58.4 15.4 61.8 17.9M30.1 2.1Q35 8.6 34 16Q41.2 21 45.4 28.5Q53.5 30 59.8 33.7M14.1 3.1Q19.5 13.5 20 23.6Q29.5 32 36.7 41.9Q47.5 45 57.8 49.6'/></g></svg>");
+  --hw-glow: 0 0 60px 14px rgba(255, 170, 90, 0.35);
+  --hw-rim: transparent;
+}
+:root[data-season="halloween"]:not([data-skin]):not([data-app]):not([data-accent]) { --accent: #C2410C; --accent-ink: #FFFFFF; --accent-soft: #FDE8D6; --accent-line: #F2B486; --accent-deep: #9A3409; }
+
+/* ---------- night: Halloween night (the dark button, or the device in dark mode) ---------- */
+:root[data-season="halloween"]:not([data-skin]):not([data-app])[data-theme="dark"] {
+  --bg: #120C1C; --surface: #1B1328; --surface-2: #160F21; --surface-3: #281C3A;
+  --border: #2F2242; --border-strong: #4C3768;
+  --ink: #F3EADB; --ink-2: #D6CABA; --muted: #A99AB9; --ink-strong: #FFF8EC;
+  --link: #FFA45C;
+  --gold-hi: #FFC542; --gold-chip-bg: #33240D; --gold-chip-fg: #FFC542; --gold-chip-line: #5E4314;
+  --d-side: #150E20; --d-side-line: #251A34; --d-nav-on: #2B1D3E; --d-nav-on-fg: #FFF8EC;
+  --d-card: #1B1328; --d-card-line: #2F2242; --d-inner: #160F21; --d-inner-line: #2C2040;
+  --d-hero-line: #2A1D3B; --d-foot: #171022; --d-foot-line: #2C2040;
+  --d-switch-bg: #160F21; --d-switch-line: #251A34; --d-learn-on: #3B2412; --d-learn-on-fg: #FFB067;
+  --d-track: #2F2242; --d-btn2: #1E1530; --d-btn2-line: #3B2B52;
+  --shadow: 0 18px 40px rgba(0, 0, 0, 0.45);
+  --hg-sky: linear-gradient(180deg, #150C24 0%, #22113A 55%, #3A1A4A 100%);
+  --hg-peak-far: #2C1F47; --hg-peak-near: #22173B; --hg-hill: #1A1329;
+  --hg-ok: #6CC24A; --hg-in: #FF8C2A;
+  --hw-stars: radial-gradient(1.6px 1.6px at 7% 14%, rgba(255, 244, 220, 0.9) 50%, transparent 51%), radial-gradient(1.2px 1.2px at 18% 34%, rgba(255, 244, 220, 0.7) 50%, transparent 51%), radial-gradient(1.8px 1.8px at 29% 9%, rgba(255, 244, 220, 0.85) 50%, transparent 51%), radial-gradient(1.1px 1.1px at 41% 26%, rgba(255, 244, 220, 0.6) 50%, transparent 51%), radial-gradient(1.4px 1.4px at 52% 12%, rgba(255, 244, 220, 0.8) 50%, transparent 51%), radial-gradient(1.2px 1.2px at 63% 31%, rgba(255, 244, 220, 0.65) 50%, transparent 51%), radial-gradient(1.7px 1.7px at 71% 8%, rgba(255, 244, 220, 0.9) 50%, transparent 51%), radial-gradient(1.1px 1.1px at 84% 22%, rgba(255, 244, 220, 0.6) 50%, transparent 51%), radial-gradient(1.5px 1.5px at 93% 11%, rgba(255, 244, 220, 0.8) 50%, transparent 51%), radial-gradient(1.0px 1.0px at 12% 48%, rgba(255, 244, 220, 0.5) 50%, transparent 51%), radial-gradient(1.3px 1.3px at 47% 44%, rgba(255, 244, 220, 0.55) 50%, transparent 51%), radial-gradient(1.0px 1.0px at 79% 40%, rgba(255, 244, 220, 0.5) 50%, transparent 51%), radial-gradient(1.2px 1.2px at 97% 36%, rgba(255, 244, 220, 0.6) 50%, transparent 51%);
+  --hw-bats: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 110' fill='%230C0714'><g transform='translate(18 46) scale(1.15) rotate(-8 24 8)'><path d='M21 8Q15 2 2 6Q5 7 6 10Q8 8 10 9Q11 12 13 13Q15 10 17 11Q18 14 21 12ZM27 8Q33 2 46 6Q43 7 42 10Q40 8 38 9Q37 12 35 13Q33 10 31 11Q30 14 27 12ZM24 4Q27 6 26.5 11Q25.5 15 24 15Q22.5 15 21.5 11Q21 6 24 4ZM22.2 5.2L21 1.6L23.6 4.2ZM25.8 5.2L27 1.6L24.4 4.2Z'/></g><g transform='translate(112 12) scale(.82) rotate(7 24 8)'><path d='M21 8Q15 2 2 6Q5 7 6 10Q8 8 10 9Q11 12 13 13Q15 10 17 11Q18 14 21 12ZM27 8Q33 2 46 6Q43 7 42 10Q40 8 38 9Q37 12 35 13Q33 10 31 11Q30 14 27 12ZM24 4Q27 6 26.5 11Q25.5 15 24 15Q22.5 15 21.5 11Q21 6 24 4ZM22.2 5.2L21 1.6L23.6 4.2ZM25.8 5.2L27 1.6L24.4 4.2Z'/></g><g transform='translate(148 66) scale(.58) rotate(-5 24 8)'><path d='M21 8Q15 2 2 6Q5 7 6 10Q8 8 10 9Q11 12 13 13Q15 10 17 11Q18 14 21 12ZM27 8Q33 2 46 6Q43 7 42 10Q40 8 38 9Q37 12 35 13Q33 10 31 11Q30 14 27 12ZM24 4Q27 6 26.5 11Q25.5 15 24 15Q22.5 15 21.5 11Q21 6 24 4ZM22.2 5.2L21 1.6L23.6 4.2ZM25.8 5.2L27 1.6L24.4 4.2Z'/></g></svg>");
+  --hw-spider: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 18'><path d='M7.4 8L2 3.6M7.2 9.2L1 9M7.4 10.4L2 14.6M8.4 11.6L5.4 16.6M12.6 8L18 3.6M12.8 9.2L19 9M12.6 10.4L18 14.6M11.6 11.6L14.6 16.6' stroke='%238C78AE' stroke-width='1.3' stroke-linecap='round' fill='none'/><ellipse cx='10' cy='10' rx='3.5' ry='4.3' fill='%238C78AE'/><circle cx='10' cy='4.8' r='2.5' fill='%238C78AE'/><circle cx='9.1' cy='4.5' r='.62' fill='%23FF9F1C'/><circle cx='10.9' cy='4.5' r='.62' fill='%23FF9F1C'/></svg>"); --hw-thread: rgba(214, 202, 230, 0.55);
+  --hw-web: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64' fill='none' stroke='%23CDBBE8' stroke-width='.7' opacity='.4'><g><path d='M64 0L0 4M64 0L8 30M64 0L30 52M64 0L56 64'/><path d='M46 1.1Q49.6 4.4 48.1 8.5Q51.6 11.2 54.2 15.1Q58.4 15.4 61.8 17.9M30.1 2.1Q35 8.6 34 16Q41.2 21 45.4 28.5Q53.5 30 59.8 33.7M14.1 3.1Q19.5 13.5 20 23.6Q29.5 32 36.7 41.9Q47.5 45 57.8 49.6'/></g></svg>"); --hw-web-bl: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64' fill='none' stroke='%23CDBBE8' stroke-width='.7' opacity='.4'><g transform='rotate(180 32 32)'><path d='M64 0L0 4M64 0L8 30M64 0L30 52M64 0L56 64'/><path d='M46 1.1Q49.6 4.4 48.1 8.5Q51.6 11.2 54.2 15.1Q58.4 15.4 61.8 17.9M30.1 2.1Q35 8.6 34 16Q41.2 21 45.4 28.5Q53.5 30 59.8 33.7M14.1 3.1Q19.5 13.5 20 23.6Q29.5 32 36.7 41.9Q47.5 45 57.8 49.6'/></g></svg>");
+  --hw-glow: 0 0 70px 18px rgba(255, 140, 50, 0.22);
+  --hw-rim: #9A7BCB;
+}
+:root[data-season="halloween"]:not([data-skin]):not([data-app])[data-theme="dark"]:not([data-accent]) {
+  --accent: #FF7A1A; --accent-ink: #1A0B00; --accent-soft: #3A2212; --accent-line: #7A3D14; --accent-deep: #FFA45C;
+}
+@media (prefers-color-scheme: dark) {
+  :root[data-season="halloween"]:not([data-skin]):not([data-app]):not([data-theme="light"]) {
+  --bg: #120C1C; --surface: #1B1328; --surface-2: #160F21; --surface-3: #281C3A;
+  --border: #2F2242; --border-strong: #4C3768;
+  --ink: #F3EADB; --ink-2: #D6CABA; --muted: #A99AB9; --ink-strong: #FFF8EC;
+  --link: #FFA45C;
+  --gold-hi: #FFC542; --gold-chip-bg: #33240D; --gold-chip-fg: #FFC542; --gold-chip-line: #5E4314;
+  --d-side: #150E20; --d-side-line: #251A34; --d-nav-on: #2B1D3E; --d-nav-on-fg: #FFF8EC;
+  --d-card: #1B1328; --d-card-line: #2F2242; --d-inner: #160F21; --d-inner-line: #2C2040;
+  --d-hero-line: #2A1D3B; --d-foot: #171022; --d-foot-line: #2C2040;
+  --d-switch-bg: #160F21; --d-switch-line: #251A34; --d-learn-on: #3B2412; --d-learn-on-fg: #FFB067;
+  --d-track: #2F2242; --d-btn2: #1E1530; --d-btn2-line: #3B2B52;
+  --shadow: 0 18px 40px rgba(0, 0, 0, 0.45);
+  --hg-sky: linear-gradient(180deg, #150C24 0%, #22113A 55%, #3A1A4A 100%);
+  --hg-peak-far: #2C1F47; --hg-peak-near: #22173B; --hg-hill: #1A1329;
+  --hg-ok: #6CC24A; --hg-in: #FF8C2A;
+  --hw-stars: radial-gradient(1.6px 1.6px at 7% 14%, rgba(255, 244, 220, 0.9) 50%, transparent 51%), radial-gradient(1.2px 1.2px at 18% 34%, rgba(255, 244, 220, 0.7) 50%, transparent 51%), radial-gradient(1.8px 1.8px at 29% 9%, rgba(255, 244, 220, 0.85) 50%, transparent 51%), radial-gradient(1.1px 1.1px at 41% 26%, rgba(255, 244, 220, 0.6) 50%, transparent 51%), radial-gradient(1.4px 1.4px at 52% 12%, rgba(255, 244, 220, 0.8) 50%, transparent 51%), radial-gradient(1.2px 1.2px at 63% 31%, rgba(255, 244, 220, 0.65) 50%, transparent 51%), radial-gradient(1.7px 1.7px at 71% 8%, rgba(255, 244, 220, 0.9) 50%, transparent 51%), radial-gradient(1.1px 1.1px at 84% 22%, rgba(255, 244, 220, 0.6) 50%, transparent 51%), radial-gradient(1.5px 1.5px at 93% 11%, rgba(255, 244, 220, 0.8) 50%, transparent 51%), radial-gradient(1.0px 1.0px at 12% 48%, rgba(255, 244, 220, 0.5) 50%, transparent 51%), radial-gradient(1.3px 1.3px at 47% 44%, rgba(255, 244, 220, 0.55) 50%, transparent 51%), radial-gradient(1.0px 1.0px at 79% 40%, rgba(255, 244, 220, 0.5) 50%, transparent 51%), radial-gradient(1.2px 1.2px at 97% 36%, rgba(255, 244, 220, 0.6) 50%, transparent 51%);
+  --hw-bats: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 110' fill='%230C0714'><g transform='translate(18 46) scale(1.15) rotate(-8 24 8)'><path d='M21 8Q15 2 2 6Q5 7 6 10Q8 8 10 9Q11 12 13 13Q15 10 17 11Q18 14 21 12ZM27 8Q33 2 46 6Q43 7 42 10Q40 8 38 9Q37 12 35 13Q33 10 31 11Q30 14 27 12ZM24 4Q27 6 26.5 11Q25.5 15 24 15Q22.5 15 21.5 11Q21 6 24 4ZM22.2 5.2L21 1.6L23.6 4.2ZM25.8 5.2L27 1.6L24.4 4.2Z'/></g><g transform='translate(112 12) scale(.82) rotate(7 24 8)'><path d='M21 8Q15 2 2 6Q5 7 6 10Q8 8 10 9Q11 12 13 13Q15 10 17 11Q18 14 21 12ZM27 8Q33 2 46 6Q43 7 42 10Q40 8 38 9Q37 12 35 13Q33 10 31 11Q30 14 27 12ZM24 4Q27 6 26.5 11Q25.5 15 24 15Q22.5 15 21.5 11Q21 6 24 4ZM22.2 5.2L21 1.6L23.6 4.2ZM25.8 5.2L27 1.6L24.4 4.2Z'/></g><g transform='translate(148 66) scale(.58) rotate(-5 24 8)'><path d='M21 8Q15 2 2 6Q5 7 6 10Q8 8 10 9Q11 12 13 13Q15 10 17 11Q18 14 21 12ZM27 8Q33 2 46 6Q43 7 42 10Q40 8 38 9Q37 12 35 13Q33 10 31 11Q30 14 27 12ZM24 4Q27 6 26.5 11Q25.5 15 24 15Q22.5 15 21.5 11Q21 6 24 4ZM22.2 5.2L21 1.6L23.6 4.2ZM25.8 5.2L27 1.6L24.4 4.2Z'/></g></svg>");
+  --hw-spider: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 18'><path d='M7.4 8L2 3.6M7.2 9.2L1 9M7.4 10.4L2 14.6M8.4 11.6L5.4 16.6M12.6 8L18 3.6M12.8 9.2L19 9M12.6 10.4L18 14.6M11.6 11.6L14.6 16.6' stroke='%238C78AE' stroke-width='1.3' stroke-linecap='round' fill='none'/><ellipse cx='10' cy='10' rx='3.5' ry='4.3' fill='%238C78AE'/><circle cx='10' cy='4.8' r='2.5' fill='%238C78AE'/><circle cx='9.1' cy='4.5' r='.62' fill='%23FF9F1C'/><circle cx='10.9' cy='4.5' r='.62' fill='%23FF9F1C'/></svg>"); --hw-thread: rgba(214, 202, 230, 0.55);
+  --hw-web: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64' fill='none' stroke='%23CDBBE8' stroke-width='.7' opacity='.4'><g><path d='M64 0L0 4M64 0L8 30M64 0L30 52M64 0L56 64'/><path d='M46 1.1Q49.6 4.4 48.1 8.5Q51.6 11.2 54.2 15.1Q58.4 15.4 61.8 17.9M30.1 2.1Q35 8.6 34 16Q41.2 21 45.4 28.5Q53.5 30 59.8 33.7M14.1 3.1Q19.5 13.5 20 23.6Q29.5 32 36.7 41.9Q47.5 45 57.8 49.6'/></g></svg>"); --hw-web-bl: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64' fill='none' stroke='%23CDBBE8' stroke-width='.7' opacity='.4'><g transform='rotate(180 32 32)'><path d='M64 0L0 4M64 0L8 30M64 0L30 52M64 0L56 64'/><path d='M46 1.1Q49.6 4.4 48.1 8.5Q51.6 11.2 54.2 15.1Q58.4 15.4 61.8 17.9M30.1 2.1Q35 8.6 34 16Q41.2 21 45.4 28.5Q53.5 30 59.8 33.7M14.1 3.1Q19.5 13.5 20 23.6Q29.5 32 36.7 41.9Q47.5 45 57.8 49.6'/></g></svg>");
+  --hw-glow: 0 0 70px 18px rgba(255, 140, 50, 0.22);
+  --hw-rim: #9A7BCB;
+  }
+  :root[data-season="halloween"]:not([data-skin]):not([data-app]):not([data-theme="light"]):not([data-accent]) {
+  --accent: #FF7A1A; --accent-ink: #1A0B00; --accent-soft: #3A2212; --accent-line: #7A3D14; --accent-deep: #FFA45C;
+  }
+}
+
+/* ---------- Bo in a witch's hat: the logo (App.WITCH_HAT) and the mascot (his hat, in witch's colours) ---------- */
+:root[data-season="halloween"]:not([data-skin]):not([data-app]) .mh-logo:not(.tile) { overflow: visible; }
+:root[data-season="halloween"]:not([data-skin]):not([data-app]) .mh-logo:not(.tile) .hw-hat { display: inline; }
+:root[data-season="halloween"]:not([data-skin]):not([data-app]) .bobcat { overflow: visible; }
+:root[data-season="halloween"]:not([data-skin]):not([data-app]) .bobcat .bo-hat { display: inline; }
+:root[data-season="halloween"]:not([data-skin]):not([data-app]) .bobcat .bo-hat > path:nth-of-type(1) { fill: #2B1B40; }
+:root[data-season="halloween"]:not([data-skin]):not([data-app]) .bobcat .bo-hat > path:nth-of-type(2), :root[data-season="halloween"]:not([data-skin]):not([data-app]) .bobcat .bo-hat > ellipse { fill: #1C1029; }
+:root[data-season="halloween"]:not([data-skin]):not([data-app]) .bobcat .bo-hat > path:nth-of-type(3) { fill: #FF7A1A; }
+:root[data-season="halloween"]:not([data-skin]):not([data-app]) .bobcat .bo-hat > path:nth-of-type(4) { fill: #FFC542; }
+:root[data-season="halloween"]:not([data-skin]):not([data-app]) :is(.bobcat .bo-hat, .mh-logo .hw-hat) > :is(path:first-of-type, ellipse) { stroke: var(--hw-rim); stroke-width: 1.4px; paint-order: stroke; }
+
+/* ---------- the hero (home and start page): stars, a harvest moon with bats in front, the range at night ---------- */
+:root[data-season="halloween"]:not([data-skin]):not([data-app]) .hg-hero { background: var(--hw-stars), var(--hg-sky); }
+:root[data-season="halloween"]:not([data-skin]):not([data-app]) .hg-hero::before { content: ""; position: absolute; top: 30px; right: 8%; width: 128px; height: 128px; border-radius: 50%; background: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><defs><radialGradient id='m' cx='40%' cy='36%' r='70%'><stop offset='0' stop-color='%23FFEBC2'/><stop offset='.55' stop-color='%23FFBE6B'/><stop offset='1' stop-color='%23EF842C'/></radialGradient></defs><circle cx='50' cy='50' r='48' fill='url(%23m)'/><circle cx='35' cy='40' r='7' fill='%23DE8A3C' opacity='.35'/><circle cx='63' cy='61' r='10' fill='%23DE8A3C' opacity='.28'/><circle cx='59' cy='30' r='4.5' fill='%23DE8A3C' opacity='.35'/><circle cx='31' cy='66' r='4' fill='%23DE8A3C' opacity='.3'/></svg>") center / contain no-repeat; box-shadow: var(--hw-glow); z-index: -2; pointer-events: none; }
+:root[data-season="halloween"]:not([data-skin]):not([data-app]) .hg-hero::after { content: ""; position: absolute; top: 34px; right: calc(8% - 46px); width: 200px; height: 110px; background: var(--hw-bats) center / contain no-repeat; z-index: -1; pointer-events: none; animation: hw-hover 5.5s ease-in-out infinite alternate; }
+:root[data-season="halloween"]:not([data-skin]):not([data-app]) .px-skyline { background-image: var(--px-skyline-hw, var(--px-skyline)); filter: none; opacity: 1; }
+@keyframes hw-hover { from { transform: translate(0, 0) rotate(0deg); } to { transform: translate(-6px, -9px) rotate(-1.5deg); } }
+@media (max-width: 640px) {
+  :root[data-season="halloween"]:not([data-skin]):not([data-app]) .hg-hero::before { top: auto; bottom: 92px; right: auto; left: 18px; width: 62px; height: 62px; }
+  :root[data-season="halloween"]:not([data-skin]):not([data-app]) .hg-hero::after { top: auto; bottom: 96px; right: auto; left: 40px; width: 110px; height: 60px; }
+}
+
+/* ---------- the frame: a spider on a thread in the sidebar, a faint orange edge under the top bar ---------- */
+:root[data-season="halloween"]:not([data-skin]):not([data-app]) .sb-head { position: relative; }
+:root[data-season="halloween"]:not([data-skin]):not([data-app]) .sb-head::after { content: ""; position: absolute; top: -30px; right: 52px; width: 20px; height: 66px; background: var(--hw-spider) bottom center / 20px 18px no-repeat, linear-gradient(var(--hw-thread), var(--hw-thread)) top center / 1px calc(100% - 14px) no-repeat; pointer-events: none; transform-origin: 50% 0; animation: hw-dangle 4.6s ease-in-out infinite alternate; }
+@keyframes hw-dangle { from { transform: translateY(-7px) rotate(-3deg); } to { transform: translateY(7px) rotate(3deg); } }
+:root[data-season="halloween"]:not([data-skin]):not([data-app]) .topbar { box-shadow: inset 0 -1px 0 color-mix(in srgb, var(--accent) 28%, transparent); }
+
+/* ---------- cobwebs in a corner: the home cards, a class's exam week, the flashcard ---------- */
+:root[data-season="halloween"]:not([data-skin]):not([data-app]) :is(.hg-card, .xw) { background-image: var(--hw-web); background-repeat: no-repeat; background-position: right -1px top -1px; background-size: 72px 72px; }
+:root[data-season="halloween"]:not([data-skin]):not([data-app]) .fc-front { background-image: var(--hw-web-bl); background-repeat: no-repeat; background-position: left -1px bottom -1px; background-size: 84px 84px; }
+
+/* ---------- the one filled button glows like a lantern; selection and scrollbars in pumpkin ---------- */
+:root[data-season="halloween"]:not([data-skin]):not([data-app]) .btn.primary:not(:disabled):hover { box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent), 0 10px 26px -10px color-mix(in srgb, var(--accent) 75%, transparent); }
+:root[data-season="halloween"]:not([data-skin]):not([data-app]) ::selection { background: color-mix(in srgb, var(--accent) 30%, transparent); }
+:root[data-season="halloween"]:not([data-skin]):not([data-app]) { scrollbar-color: color-mix(in srgb, var(--accent) 45%, var(--surface-3)) transparent; }
+
+/* ---------- three pixel bats cross the top of the screen every 40 seconds or so (assets/pixel.js adds them) ---------- */
+.hw-bats { display: none; }
+:root[data-season="halloween"]:not([data-skin]):not([data-app]) .hw-bats { display: block; position: fixed; top: 0; left: 0; right: 0; height: 0; z-index: 45; pointer-events: none; }
+:root[data-season="halloween"]:not([data-skin]):not([data-app]) .hw-bats .px-bat { position: absolute; top: 16px; right: -60px; width: 34px; height: auto; opacity: 0; animation: hw-fly 41s linear 5s infinite; }
+:root[data-season="halloween"]:not([data-skin]):not([data-app]) .hw-bats .px-bat:nth-child(2) { top: 38px; width: 26px; animation-delay: 6.3s; }
+:root[data-season="halloween"]:not([data-skin]):not([data-app]) .hw-bats .px-bat:nth-child(3) { top: 24px; width: 22px; animation-delay: 7.1s; }
+@keyframes hw-fly {
+  0% { opacity: 0; transform: translate3d(0, 0, 0); }
+  0.6% { opacity: 1; }
+  4% { transform: translate3d(-34vw, -10px, 0); }
+  8% { transform: translate3d(-68vw, 9px, 0); }
+  11.9% { opacity: 1; }
+  12%, 100% { opacity: 0; transform: translate3d(calc(-100vw - 90px), -4px, 0); }
+}
+
+/* ---------- motion: nothing moves when motion is reduced ---------- */
+/* (as specific as the rules that start them, or they would win) */
+:root[data-season="halloween"]:not([data-skin]):not([data-app])[data-motion="off"] .hw-bats { display: none; }
+:root[data-season="halloween"]:not([data-skin]):not([data-app])[data-motion="off"] .hg-hero::after, :root[data-season="halloween"]:not([data-skin]):not([data-app])[data-motion="off"] .sb-head::after { animation: none; }
+@media (prefers-reduced-motion: reduce) { .hw-bats { display: none !important; } }

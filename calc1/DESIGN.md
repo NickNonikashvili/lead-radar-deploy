@@ -598,6 +598,27 @@ spinner that never ends. MathJax 3.2.2 ships in `assets/vendor/mathjax/` (tex-sv
 capturing `error` listener in `assets/boot.js` (and `assets/mathjax-static.js` on the study guides) adds the jsDelivr
 copy only when ours fails.
 
+### Halloween (2026.11.01.2)
+The website's own look dresses up every year from October 1 to November 8 (`assets/season.js`, loaded in `<head>` on
+the page and every study guide, sets `html[data-season="halloween"]` before the first paint; `assets/halloween.css`
+holds the costume; the other looks and the apps keep theirs). Settings has a Halloween look switch: off stores
+`seasonOff` = the year (synced with the account), so it comes back next October; `settings.season` = `halloween` or
+`none` forces it either way, and `tests/lib.js` gives every suite `none` unless it asks (`tests/halloween.test.js`).
+- Colours are tokens only, never the layout. Night: page `#120C1C`, cards `#1B1328`, bone text `#F3EADB`, muted
+  `#A99AB9`, pumpkin accent `#FF7A1A` with dark text `#1A0B00`. Day: parchment `#FBF3E8`, plum text `#2B1A38`, muted
+  `#6A5876`, burnt-orange accent `#C2410C` with white text. Every text colour is 4.5:1 or more on its backgrounds (the
+  lowest is a link on the day hero's lavender edge, 4.51). Class pages wear the pumpkin accent; a Customize accent wins.
+- Bo wears a witch's hat: the logo draws one (`App.WITCH_HAT`, hidden outside the season), the mascot's hat is
+  recoloured, and the tab icon is `assets/icon-halloween.svg`; the browser bar turns `#1A1026`.
+- The hero gets stars, a harvest moon with bats in front (`::before`/`::after`; low beside the hills on a phone, never
+  behind the words) and the pixel range at night (`--px-skyline-hw`, `assets/pixel.js`). Pixel friends in empty boxes
+  become a pumpkin, a ghost or a bat; a bat and a jack-o'-lantern sign the footer. A spider hangs in the sidebar,
+  cobwebs sit in an empty corner of the home cards, a class's exam week and the flashcard (bottom-left, clear of its
+  labels), and three pixel bats cross the top of the screen every 41 s (`pointer-events: none`).
+- Motion: every moving piece stops with Reduce motion (rules as specific as the ones that start them) and with the
+  device's reduced-motion setting; switching the look off removes them (WCAG 2.2.2 Pause, Stop, Hide). Another
+  season is the same pattern: a date window in `season.js`, a token block, a few decorations.
+
 ### Nothing wider than the phone (2026.11.01.2)
 Every page fits a 320 px screen (`tests/steady-phone.test.js`). A grid of cards asks for at most the screen:
 `repeat(auto-fill, minmax(min(300px, 100%), 1fr))`, never a bare `minmax(300px, 1fr)`; a one-column phone grid is

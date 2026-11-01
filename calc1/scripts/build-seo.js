@@ -78,6 +78,7 @@ function page(o) {
 <link rel="apple-touch-icon" sizes="180x180" href="/assets/icon-180.png">
 <link rel="stylesheet" href="/assets/fonts.css?v=${BUILD}">
 <link rel="stylesheet" href="/assets/seo.css?v=${BUILD}">
+<script src="/assets/season.js?v=${BUILD}"></script>
 <script src="/assets/learn-motion.js?v=${BUILD}" defer></script>
 ${hasTex ? `<script src="/assets/mathjax-static.js?v=${BUILD}"></script>
 <script id="MathJax-script" async src="/assets/vendor/mathjax/tex-svg.js"></script>` : ''}
