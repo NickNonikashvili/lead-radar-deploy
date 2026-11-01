@@ -570,3 +570,40 @@ comes while it is still loading, the bar shows for the rest) for a class not loa
 (the stand-in's code, with what other files hung on it carried over). Not offline, not with Save-Data. Type: `p, li`
 use `text-wrap: pretty`, headings `balance`; ticking numbers use `tabular-nums`.
 
+### Refine (2026.11.01.1)
+`assets/refine.css`, loaded after `quiet.css`, website default look only. After Refactoring UI (emphasise by
+de-emphasising: hierarchy from weight, size and colour before boxes), Hick's law (fewer choices in view at once) and
+Linear's 2024 and 2026 refreshes (a quieter frame, fewer borders, one soft shadow):
+- Type: one scale for page titles (26 to 34 px, 750, -0.022em) and lesson titles (28 to 38 px); the subtitle muted, 64ch.
+- Cards: a hairline and one soft shadow (`--refine-lift`, with its own night value).
+- The class menu (`#cs-menu`, `classMenu()` in `assets/app.js`): the sidebar shows the class you are in; the chevron
+  button on it opens your classes as a menu (role menu, arrow keys, Escape back to the button, closes on a click or
+  focus outside) with each exam countdown (coral within 3 days), then All your classes and Add a class. It replaces the
+  grid of every class. Discussions picks its class from one select beside the sort tabs.
+- One filled button per screen, applied to the pages: Today fills only the first unfinished item's button; the
+  quizzer's set-up keeps Review for me filled and the rest as chips; Flashcards keeps the units and the counts (as
+  words) above the card and the deck's settings (Showing, Reshuffle, Reset progress) below it as quiet buttons; on a
+  phone the units scroll in one line.
+- Counts are numbers set large in the type, not tinted tiles (Mistakes, the quizzer's score).
+- Settings: each on/off choice is a row with a switch on the right (still a checkbox to the browser and screen readers).
+- The top bar in groups split by a hairline: where you stand (exam, streak, goal), Call Bo, the tools, you.
+- Today's long lists (cards due per class, the week's topics) read as two lines; the button opens the rest.
+
+### When something fails
+`App.failed(e, {small})` (`assets/app.js`) is the one failure state: an icon, a plain title ("This didn’t load" or
+"You’re offline"), one line on what happens next, and Try again (`[data-fail-retry]` re-renders the page). A network
+failure is marked `data-fail="net"` and re-renders by itself on `online` and on `mathub-online` (fired by `Net.paint`
+when the API answers again). Every list or page that loads from the server uses it: never a bare "Could not load" or a
+spinner that never ends. MathJax 3.2.2 ships in `assets/vendor/mathjax/` (tex-svg and the extensions the pages use); a
+capturing `error` listener in `assets/boot.js` (and `assets/mathjax-static.js` on the study guides) adds the jsDelivr
+copy only when ours fails.
+
+### Chaos tests
+`tests/chaos.test.js` (seeded: `CHAOS_SEED=n node tests/run.js chaos` replays a run) holds a steady state (the page for
+the address is drawn, no loading bar or genie copy left, no uncaught error) while it breaks things: random API
+failures, drops, garbled and slow answers (writes faked or failed, never sent); a class file, a lazy page and MathJax
+that will not load; garbled and full storage; 70 quick page changes with motion on; and a monkey (random clicks,
+typing, scrolls and Escapes in the style of gremlins.js, writes blocked) as a guest and signed in on a phone, which
+also checks that the page never scrolls sideways. After principlesofchaos.org: a steady state first, real-world
+faults, a small blast radius.
+

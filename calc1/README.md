@@ -873,6 +873,13 @@ twin; the light-or-dark switch stays.
   coral dot, unread notifications a dot, Call Bo outlined, the streak a plain number; class codes are a colour dot
   and the code, not a filled label; an exam week's days are a big number, its rows split by hairlines with plain
   icons; the gradients left from older looks are flat (DESIGN.md, The One Loud Thing Rule).
+- **Refine** (2026.11.01.1, `assets/refine.css`, loaded last): one type scale, cards with a hairline and one soft
+  shadow, your classes behind one menu at the top of the sidebar (`#cs-menu`), one filled button on Today (the next
+  thing to do), Flashcards with one line above the card and the deck's settings below it, counts set large instead of
+  tinted tiles (Mistakes, the quizzer), switches in Settings, the top bar in groups, and one class picker in
+  Discussions. Every page or list that loads from the server fails into `App.failed` (plain words and Try again; by
+  itself once back online), and MathJax ships in `assets/vendor/mathjax/` with the CDN only as a fallback (DESIGN.md,
+  Refine).
 - **Your home** (`assets/home-grid.js`): one hero (the soonest exam in three weeks, else the class you practised last
   and how it went, else pick a class), then cards: the daily word, today's plan, this week, the exam checklist in the
   week before an exam, your classes, flashcards, mistakes, discussions. ⋮ → Hide from dashboard; Add to dashboard
@@ -968,6 +975,12 @@ The server copies the SQLite database once a day (SQLite's own `VACUUM INTO`, co
 ## Tests
 
 `tests/` holds headless Chromium checks (Playwright) that cover the classes, the Python playground, phonetics, GPA, the SEO pages, Today, problem reports, the admin tabs, push and preference routes, on-demand loading, the accessibility audit, the motion layer and skins, resources and guides, the focus room, tools, every class's Tools page (`class-tools.test.js`), the weekly recap, the tour and printing, the geek mode, the Realm look, pixel art, the simpler layout (`simple-layout.test.js`: the start page groups, the sidebar groups, the dashboard tabs and what newcomers see) and the interface polish (`polish.test.js`: the type floor, class-colour contrast, the tab pill, the sidebar accordion, dialog and toast exits, the phone focus-sounds button, the GSAP recap and reading line, and Reduce motion). One-time setup: `cd tests && npm install` (Playwright downloads its Chromium). Then `node tests/run.js` starts PHP's built-in server on 127.0.0.1:8766 if nothing is listening, runs every `*.test.js` and prints a summary; `node tests/run.js today` runs the suites whose names contain "today". The playground test uses the Pyodide CDN unless a local mirror is unpacked into `tests/pyodide/package/` (a PHP router for it is included). The suites log in with the seeded test accounts (`alice.a@montana.edu`, `mod.user@montana.edu`, `admin.user@montana.edu`, password `password123`), which exist only in a development database.
+
+`tests/chaos.test.js` breaks things on purpose and checks that StudyCat keeps working: the API failing, dropping, garbling or
+slowing answers at random, a class file, a lazy page or MathJax that will not load, garbled or full storage, 70 quick page
+changes, and a monkey of random clicks as a guest and on a phone. It is seeded, so `CHAOS_SEED=3 node tests/run.js chaos`
+replays a run exactly (DESIGN.md, Chaos tests). It takes about ten minutes; run it alone, since a run stops the shared test
+server when it ends.
 
 ## Focus room, resources, guides, readiness, your week, tools
 

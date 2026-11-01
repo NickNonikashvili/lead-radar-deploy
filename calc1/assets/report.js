@@ -13,7 +13,7 @@
   const API = 'api/index.php?r=';
   const REASONS = [['wrong', 'The answer or solution is wrong'], ['typo', 'Typo or formatting problem'], ['unclear', 'The question or note is unclear'], ['bug', 'Something did not work'], ['link', 'A link is broken or has moved'], ['resource', 'Suggest a resource'], ['other', 'Something else']];
   const strip = s => String(s || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 400);
-  App.flagButton = ctx => `<button type="button" class="icon-btn q-flag" data-ctx="${esc(JSON.stringify(ctx))}" title="Report a problem with this" aria-label="Report a problem">${icon('flag', 12)}</button>`;
+  App.flagButton = ctx => `<button type="button" class="icon-btn q-flag" data-ctx="${esc(JSON.stringify(ctx))}" title="Report a problem with this" aria-label="Report a problem">${icon('flag', 14)}</button>`;
   App.reportIssue = function (ctx) {
     ctx = ctx || {}; if ($('#report-modal')) return;
     const course = ctx.course || (App.D && App.D.id) || ''; const C = global.Courses[course]; const el = document.createElement('div'); el.className = 'modal-backdrop'; el.id = 'report-modal';
