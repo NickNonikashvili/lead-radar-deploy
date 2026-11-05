@@ -9,7 +9,7 @@
   --mat: #E2E8EB; --raised: #F5F8F9; --ink: #111E27; --ink-soft: #4A5D6A;
   --kapton: #9A5005; --tape-a: rgba(232, 146, 44, .8); --grid: rgba(42, 104, 147, .11);
   --light: #E3EAEE; --light-soft: #97AAB6; --amber: #F2A04A; --dark-grid: rgba(207, 222, 231, .07);
-  --tick: rgba(17, 30, 39, .38);
+  --tick: rgba(17, 30, 39, .38); --tape-ink: #1E1306;
   --display: "Archivo", "Arial Narrow", Arial, sans-serif;
   --body: "Atkinson Hyperlegible", Arial, sans-serif;
   --mono: "Martian Mono", Menlo, Consolas, monospace;
@@ -46,6 +46,14 @@ html, body { background: #FFFFFF; -webkit-print-color-adjust: exact; print-color
 .name span { display: block; }
 .name .outline { color: transparent; -webkit-text-stroke: .7pt var(--ink); }
 .role { margin-top: 6pt; font-family: var(--body); font-weight: 700; font-size: 6.6pt; line-height: 1.3; color: var(--ink-soft); }
+.tagline {
+  align-self: flex-start; margin-top: 9pt;
+  padding: 3.2pt 7pt 3.4pt;
+  background: var(--tape-a); color: var(--tape-ink);
+  font-family: var(--display); font-weight: 750; font-stretch: 105%;
+  font-size: 8pt; line-height: 1; letter-spacing: .005em;
+  transform: rotate(-2deg); transform-origin: left center;
+}
 .contact { margin-top: auto; display: grid; gap: 3pt; }
 .contact div { display: flex; align-items: baseline; gap: 5pt; }
 .contact dt { width: .36in; font-family: var(--mono); font-stretch: 87.5%; font-size: 4.6pt; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-soft); }
@@ -110,6 +118,7 @@ html, body { background: #FFFFFF; -webkit-print-color-adjust: exact; print-color
     <p class="label">Repair technician · Cybersecurity student</p>
     <h1 class="name"><span>Megan</span><span class="outline">Pimley</span></h1>
     <p class="role">Apple-certified technician · Bozeman, Montana</p>
+    <p class="tagline">your friendly neighborhood techy</p>
     <dl class="contact">
       <div><dt>Email</dt><dd>mlpimley@gmail.com</dd></div>
       <div><dt>Phone</dt><dd>(406) 839-0462</dd></div>
@@ -125,6 +134,7 @@ html, body { background: #FFFFFF; -webkit-print-color-adjust: exact; print-color
     <p class="label">Repair technician · Cybersecurity student</p>
     <h1 class="name"><span>Megan</span><span class="outline">Pimley</span></h1>
     <p class="role">Apple-certified technician · Bozeman, Montana</p>
+    <p class="tagline">your friendly neighborhood techy</p>
     <dl class="contact">
       <div><dt>Email</dt><dd>mlpimley@gmail.com</dd></div>
       <div><dt>Phone</dt><dd>(406) 839-0462</dd></div>
@@ -140,6 +150,7 @@ html, body { background: #FFFFFF; -webkit-print-color-adjust: exact; print-color
     <p class="label">Repair technician · Cybersecurity student</p>
     <h1 class="name"><span>Megan</span><span class="outline">Pimley</span></h1>
     <p class="role">Apple-certified technician · Bozeman, Montana</p>
+    <p class="tagline">your friendly neighborhood techy</p>
     <dl class="contact">
       <div><dt>Email</dt><dd>mlpimley@gmail.com</dd></div>
       <div><dt>Phone</dt><dd>(406) 839-0462</dd></div>
@@ -155,6 +166,7 @@ html, body { background: #FFFFFF; -webkit-print-color-adjust: exact; print-color
     <p class="label">Repair technician · Cybersecurity student</p>
     <h1 class="name"><span>Megan</span><span class="outline">Pimley</span></h1>
     <p class="role">Apple-certified technician · Bozeman, Montana</p>
+    <p class="tagline">your friendly neighborhood techy</p>
     <dl class="contact">
       <div><dt>Email</dt><dd>mlpimley@gmail.com</dd></div>
       <div><dt>Phone</dt><dd>(406) 839-0462</dd></div>
@@ -170,6 +182,7 @@ html, body { background: #FFFFFF; -webkit-print-color-adjust: exact; print-color
     <p class="label">Repair technician · Cybersecurity student</p>
     <h1 class="name"><span>Megan</span><span class="outline">Pimley</span></h1>
     <p class="role">Apple-certified technician · Bozeman, Montana</p>
+    <p class="tagline">your friendly neighborhood techy</p>
     <dl class="contact">
       <div><dt>Email</dt><dd>mlpimley@gmail.com</dd></div>
       <div><dt>Phone</dt><dd>(406) 839-0462</dd></div>
@@ -185,6 +198,7 @@ html, body { background: #FFFFFF; -webkit-print-color-adjust: exact; print-color
     <p class="label">Repair technician · Cybersecurity student</p>
     <h1 class="name"><span>Megan</span><span class="outline">Pimley</span></h1>
     <p class="role">Apple-certified technician · Bozeman, Montana</p>
+    <p class="tagline">your friendly neighborhood techy</p>
     <dl class="contact">
       <div><dt>Email</dt><dd>mlpimley@gmail.com</dd></div>
       <div><dt>Phone</dt><dd>(406) 839-0462</dd></div>
@@ -200,6 +214,7 @@ html, body { background: #FFFFFF; -webkit-print-color-adjust: exact; print-color
     <p class="label">Repair technician · Cybersecurity student</p>
     <h1 class="name"><span>Megan</span><span class="outline">Pimley</span></h1>
     <p class="role">Apple-certified technician · Bozeman, Montana</p>
+    <p class="tagline">your friendly neighborhood techy</p>
     <dl class="contact">
       <div><dt>Email</dt><dd>mlpimley@gmail.com</dd></div>
       <div><dt>Phone</dt><dd>(406) 839-0462</dd></div>
@@ -215,6 +230,7 @@ html, body { background: #FFFFFF; -webkit-print-color-adjust: exact; print-color
     <p class="label">Repair technician · Cybersecurity student</p>
     <h1 class="name"><span>Megan</span><span class="outline">Pimley</span></h1>
     <p class="role">Apple-certified technician · Bozeman, Montana</p>
+    <p class="tagline">your friendly neighborhood techy</p>
     <dl class="contact">
       <div><dt>Email</dt><dd>mlpimley@gmail.com</dd></div>
       <div><dt>Phone</dt><dd>(406) 839-0462</dd></div>
@@ -230,6 +246,7 @@ html, body { background: #FFFFFF; -webkit-print-color-adjust: exact; print-color
     <p class="label">Repair technician · Cybersecurity student</p>
     <h1 class="name"><span>Megan</span><span class="outline">Pimley</span></h1>
     <p class="role">Apple-certified technician · Bozeman, Montana</p>
+    <p class="tagline">your friendly neighborhood techy</p>
     <dl class="contact">
       <div><dt>Email</dt><dd>mlpimley@gmail.com</dd></div>
       <div><dt>Phone</dt><dd>(406) 839-0462</dd></div>
@@ -245,6 +262,7 @@ html, body { background: #FFFFFF; -webkit-print-color-adjust: exact; print-color
     <p class="label">Repair technician · Cybersecurity student</p>
     <h1 class="name"><span>Megan</span><span class="outline">Pimley</span></h1>
     <p class="role">Apple-certified technician · Bozeman, Montana</p>
+    <p class="tagline">your friendly neighborhood techy</p>
     <dl class="contact">
       <div><dt>Email</dt><dd>mlpimley@gmail.com</dd></div>
       <div><dt>Phone</dt><dd>(406) 839-0462</dd></div>
