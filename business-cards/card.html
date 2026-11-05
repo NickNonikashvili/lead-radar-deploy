@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Megan Pimley business card</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&family=Atkinson+Hyperlegible:wght@400;700&family=Martian+Mono:wdth,wght@75..112.5,300..700&display=block">
+<style>
+:root {
+  --mat: #E2E8EB; --raised: #F5F8F9; --ink: #111E27; --ink-soft: #4A5D6A;
+  --kapton: #9A5005; --tape-a: rgba(232, 146, 44, .8); --grid: rgba(42, 104, 147, .11);
+  --light: #E3EAEE; --light-soft: #97AAB6; --amber: #F2A04A; --dark-grid: rgba(207, 222, 231, .07);
+  --tick: rgba(17, 30, 39, .38);
+  --display: "Archivo", "Arial Narrow", Arial, sans-serif;
+  --body: "Atkinson Hyperlegible", Arial, sans-serif;
+  --mono: "Martian Mono", Menlo, Consolas, monospace;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { background: #FFFFFF; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+.card { position: relative; width: 3.75in; height: 2.25in; overflow: hidden; break-after: page; }
+.card:last-of-type { break-after: auto; }
+.safe { position: absolute; inset: .25in; }
+.tape { position: absolute; background: var(--tape-a); }
+.screw { position: absolute; width: .12in; height: .12in; }
+.screw .lobes { fill: var(--ink); }
+.label {
+  display: flex; align-items: center; gap: 4pt;
+  font-family: var(--mono); font-stretch: 87.5%; font-weight: 500; font-size: 5.3pt; line-height: 1;
+  letter-spacing: .12em; text-transform: uppercase; color: var(--kapton);
+}
+.label::before { content: ""; width: 9pt; height: 3.4pt; background: var(--tape-a); transform: rotate(-4deg); flex: none; }
+
+/* front */
+.front {
+  background-color: var(--mat); color: var(--ink);
+  background-image: linear-gradient(var(--grid) .5pt, transparent .5pt), linear-gradient(90deg, var(--grid) .5pt, transparent .5pt);
+  background-size: .125in .125in; background-position: .125in .125in;
+}
+.front .screw .head { fill: var(--raised); stroke: var(--ink-soft); stroke-width: 1.6; }
+.tape-f { top: .05in; right: -.2in; width: 1.05in; height: .25in; transform: rotate(32deg); }
+.f-safe { display: flex; flex-direction: column; }
+.name {
+  margin-top: 7pt;
+  font-family: var(--display); font-weight: 850; font-stretch: 125%;
+  font-size: 29pt; line-height: .9; letter-spacing: -.02em; text-transform: uppercase;
+}
+.name span { display: block; }
+.name .outline { color: transparent; -webkit-text-stroke: .7pt var(--ink); }
+.role { margin-top: 6pt; font-family: var(--body); font-weight: 700; font-size: 6.6pt; line-height: 1.3; color: var(--ink-soft); }
+.contact { margin-top: auto; display: grid; gap: 3pt; }
+.contact div { display: flex; align-items: baseline; gap: 5pt; }
+.contact dt { width: .36in; font-family: var(--mono); font-stretch: 87.5%; font-size: 4.6pt; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-soft); }
+.contact dd { font-family: var(--mono); font-stretch: 87.5%; font-weight: 500; font-size: 6.3pt; color: var(--ink); }
+.f-screw { right: 0; bottom: 0; }
+.ruler {
+  position: absolute; left: 0; right: 0; bottom: .125in; height: .1in;
+  background-image: linear-gradient(90deg, var(--tick) .5pt, transparent .5pt), linear-gradient(90deg, var(--tick) .5pt, transparent .5pt);
+  background-size: .0625in 3pt, .25in 6.5pt;
+  background-position: .125in 100%, .125in 100%;
+  background-repeat: repeat-x;
+}
+
+/* back */
+.back {
+  background-color: var(--ink); color: var(--light);
+  background-image: linear-gradient(var(--dark-grid) .5pt, transparent .5pt), linear-gradient(90deg, var(--dark-grid) .5pt, transparent .5pt);
+  background-size: .125in .125in; background-position: .125in .125in;
+}
+.back .screw .head { fill: #1B2933; stroke: var(--light-soft); stroke-width: 1.6; }
+.back .screw .lobes { fill: var(--light); }
+.sc-tl { left: .225in; top: .225in; } .sc-tr { right: .225in; top: .225in; }
+.sc-bl { left: .225in; bottom: .225in; } .sc-br { right: .225in; bottom: .225in; }
+.tape-b { top: -.05in; right: .6in; width: .92in; height: .25in; transform: rotate(-8deg); }
+.b-safe { display: grid; grid-template-columns: 1.28in minmax(0, 1fr); gap: .22in; align-items: center; }
+.qr-wrap { position: relative; width: 1.28in; height: 1.28in; }
+.qr-wrap svg { display: block; width: 100%; height: 100%; border-radius: .04in; }
+.cm { position: absolute; width: .1in; height: .1in; border: 0 solid var(--amber); }
+.cm.tl { left: -.06in; top: -.06in; border-left-width: .9pt; border-top-width: .9pt; }
+.cm.tr { right: -.06in; top: -.06in; border-right-width: .9pt; border-top-width: .9pt; }
+.cm.bl { left: -.06in; bottom: -.06in; border-left-width: .9pt; border-bottom-width: .9pt; }
+.cm.br { right: -.06in; bottom: -.06in; border-right-width: .9pt; border-bottom-width: .9pt; }
+.b-label { color: var(--amber); }
+.scan {
+  margin-top: 6pt;
+  font-family: var(--display); font-weight: 800; font-stretch: 112%;
+  font-size: 15pt; line-height: 1; letter-spacing: -.01em; color: var(--light);
+}
+.url { margin-top: 6pt; font-family: var(--mono); font-stretch: 87.5%; font-size: 5pt; line-height: 1.55; color: var(--light-soft); }
+.sign { margin-top: 10pt; display: flex; align-items: center; gap: 5pt; font-family: var(--body); font-weight: 700; font-size: 6.4pt; color: var(--light); }
+.mark {
+  width: 14pt; height: 14pt; display: grid; place-items: center; flex: none;
+  border: .7pt solid var(--light); border-radius: 3pt;
+  font-family: var(--display); font-weight: 850; font-stretch: 125%; font-size: 5.4pt; letter-spacing: .02em;
+}
+@page { size: 3.75in 2.25in; margin: 0; }</style>
+</head>
+<body>
+
+<section class="card front" aria-label="Card front">
+  <span class="tape tape-f"></span>
+  <div class="safe f-safe">
+    <p class="label">Repair technician · Cybersecurity student</p>
+    <h1 class="name"><span>Megan</span><span class="outline">Pimley</span></h1>
+    <p class="role">Apple-certified technician · Bozeman, Montana</p>
+    <dl class="contact">
+      <div><dt>Email</dt><dd>mlpimley@gmail.com</dd></div>
+      <div><dt>Phone</dt><dd>(406) 839-0462</dd></div>
+    </dl>
+    <svg class="screw f-screw" viewBox="0 0 32 32" aria-hidden="true"><circle class="head" cx="16" cy="16" r="14.5"/><g class="lobes"><circle cx="16" cy="11.2" r="2.4"/><circle cx="20.57" cy="14.52" r="2.4"/><circle cx="18.82" cy="19.88" r="2.4"/><circle cx="13.18" cy="19.88" r="2.4"/><circle cx="11.43" cy="14.52" r="2.4"/><circle cx="16" cy="16" r="3.6"/></g></svg>
+  </div>
+  <div class="ruler"></div>
+</section>
+
+<section class="card back" aria-label="Card back">
+  <span class="tape tape-b"></span>
+  <svg class="screw sc-tl" viewBox="0 0 32 32" aria-hidden="true"><circle class="head" cx="16" cy="16" r="14.5"/><g class="lobes"><circle cx="16" cy="11.2" r="2.4"/><circle cx="20.57" cy="14.52" r="2.4"/><circle cx="18.82" cy="19.88" r="2.4"/><circle cx="13.18" cy="19.88" r="2.4"/><circle cx="11.43" cy="14.52" r="2.4"/><circle cx="16" cy="16" r="3.6"/></g></svg><svg class="screw sc-tr" viewBox="0 0 32 32" aria-hidden="true"><circle class="head" cx="16" cy="16" r="14.5"/><g class="lobes"><circle cx="16" cy="11.2" r="2.4"/><circle cx="20.57" cy="14.52" r="2.4"/><circle cx="18.82" cy="19.88" r="2.4"/><circle cx="13.18" cy="19.88" r="2.4"/><circle cx="11.43" cy="14.52" r="2.4"/><circle cx="16" cy="16" r="3.6"/></g></svg><svg class="screw sc-bl" viewBox="0 0 32 32" aria-hidden="true"><circle class="head" cx="16" cy="16" r="14.5"/><g class="lobes"><circle cx="16" cy="11.2" r="2.4"/><circle cx="20.57" cy="14.52" r="2.4"/><circle cx="18.82" cy="19.88" r="2.4"/><circle cx="13.18" cy="19.88" r="2.4"/><circle cx="11.43" cy="14.52" r="2.4"/><circle cx="16" cy="16" r="3.6"/></g></svg><svg class="screw sc-br" viewBox="0 0 32 32" aria-hidden="true"><circle class="head" cx="16" cy="16" r="14.5"/><g class="lobes"><circle cx="16" cy="11.2" r="2.4"/><circle cx="20.57" cy="14.52" r="2.4"/><circle cx="18.82" cy="19.88" r="2.4"/><circle cx="13.18" cy="19.88" r="2.4"/><circle cx="11.43" cy="14.52" r="2.4"/><circle cx="16" cy="16" r="3.6"/></g></svg>
+  <div class="safe b-safe">
+    <div class="qr-wrap"><svg  xmlns="http://www.w3.org/2000/svg" viewBox="0 0 45 45" shape-rendering="crispEdges" role="img" aria-label="QR code for https://magenta-caribou-858830.hostingersite.com"><rect width="45" height="45" fill="#F5F8F9"/><path fill="#111E27" d="M4 4h7v1h-7zM12 4h2v1h-2zM16 4h1v1h-1zM22 4h1v1h-1zM24 4h3v1h-3zM28 4h3v1h-3zM32 4h1v1h-1zM34 4h7v1h-7zM4 5h1v1h-1zM10 5h1v1h-1zM19 5h1v1h-1zM22 5h5v1h-5zM29 5h4v1h-4zM34 5h1v1h-1zM40 5h1v1h-1zM4 6h1v1h-1zM6 6h3v1h-3zM10 6h1v1h-1zM13 6h1v1h-1zM22 6h1v1h-1zM24 6h3v1h-3zM28 6h1v1h-1zM32 6h1v1h-1zM34 6h1v1h-1zM36 6h3v1h-3zM40 6h1v1h-1zM4 7h1v1h-1zM6 7h3v1h-3zM10 7h1v1h-1zM17 7h1v1h-1zM19 7h2v1h-2zM24 7h1v1h-1zM26 7h1v1h-1zM28 7h3v1h-3zM34 7h1v1h-1zM36 7h3v1h-3zM40 7h1v1h-1zM4 8h1v1h-1zM6 8h3v1h-3zM10 8h1v1h-1zM12 8h2v1h-2zM16 8h2v1h-2zM21 8h1v1h-1zM23 8h1v1h-1zM27 8h1v1h-1zM34 8h1v1h-1zM36 8h3v1h-3zM40 8h1v1h-1zM4 9h1v1h-1zM10 9h1v1h-1zM12 9h3v1h-3zM18 9h1v1h-1zM20 9h6v1h-6zM31 9h2v1h-2zM34 9h1v1h-1zM40 9h1v1h-1zM4 10h7v1h-7zM12 10h1v1h-1zM14 10h1v1h-1zM16 10h1v1h-1zM18 10h1v1h-1zM20 10h1v1h-1zM22 10h1v1h-1zM24 10h1v1h-1zM26 10h1v1h-1zM28 10h1v1h-1zM30 10h1v1h-1zM32 10h1v1h-1zM34 10h7v1h-7zM14 11h1v1h-1zM16 11h2v1h-2zM19 11h4v1h-4zM24 11h2v1h-2zM27 11h2v1h-2zM30 11h1v1h-1zM32 11h1v1h-1zM5 12h7v1h-7zM15 12h4v1h-4zM21 12h1v1h-1zM24 12h1v1h-1zM35 12h2v1h-2zM40 12h1v1h-1zM5 13h2v1h-2zM11 13h4v1h-4zM16 13h1v1h-1zM18 13h1v1h-1zM23 13h2v1h-2zM26 13h7v1h-7zM34 13h1v1h-1zM37 13h1v1h-1zM6 14h5v1h-5zM12 14h2v1h-2zM16 14h2v1h-2zM20 14h3v1h-3zM24 14h2v1h-2zM29 14h2v1h-2zM34 14h1v1h-1zM38 14h1v1h-1zM40 14h1v1h-1zM4 15h1v1h-1zM7 15h2v1h-2zM11 15h2v1h-2zM14 15h1v1h-1zM17 15h1v1h-1zM20 15h2v1h-2zM23 15h1v1h-1zM25 15h2v1h-2zM30 15h1v1h-1zM32 15h1v1h-1zM34 15h1v1h-1zM40 15h1v1h-1zM4 16h2v1h-2zM10 16h3v1h-3zM16 16h1v1h-1zM21 16h1v1h-1zM23 16h2v1h-2zM26 16h1v1h-1zM28 16h3v1h-3zM33 16h6v1h-6zM40 16h1v1h-1zM5 17h2v1h-2zM9 17h1v1h-1zM15 17h1v1h-1zM17 17h2v1h-2zM20 17h3v1h-3zM24 17h1v1h-1zM26 17h2v1h-2zM32 17h2v1h-2zM35 17h1v1h-1zM37 17h2v1h-2zM4 18h1v1h-1zM6 18h1v1h-1zM9 18h3v1h-3zM13 18h1v1h-1zM17 18h2v1h-2zM20 18h4v1h-4zM26 18h1v1h-1zM30 18h3v1h-3zM34 18h4v1h-4zM40 18h1v1h-1zM4 19h2v1h-2zM9 19h1v1h-1zM14 19h1v1h-1zM17 19h1v1h-1zM20 19h1v1h-1zM22 19h1v1h-1zM24 19h1v1h-1zM27 19h1v1h-1zM30 19h2v1h-2zM35 19h2v1h-2zM39 19h2v1h-2zM4 20h1v1h-1zM6 20h3v1h-3zM10 20h1v1h-1zM15 20h4v1h-4zM20 20h1v1h-1zM22 20h1v1h-1zM25 20h2v1h-2zM28 20h2v1h-2zM33 20h4v1h-4zM38 20h1v1h-1zM40 20h1v1h-1zM4 21h1v1h-1zM11 21h2v1h-2zM15 21h3v1h-3zM21 21h4v1h-4zM32 21h1v1h-1zM35 21h1v1h-1zM38 21h1v1h-1zM5 22h2v1h-2zM8 22h1v1h-1zM10 22h1v1h-1zM13 22h1v1h-1zM18 22h3v1h-3zM22 22h2v1h-2zM26 22h6v1h-6zM34 22h2v1h-2zM39 22h2v1h-2zM5 23h1v1h-1zM7 23h1v1h-1zM12 23h1v1h-1zM14 23h1v1h-1zM16 23h2v1h-2zM19 23h1v1h-1zM22 23h4v1h-4zM27 23h1v1h-1zM30 23h1v1h-1zM33 23h1v1h-1zM40 23h1v1h-1zM4 24h2v1h-2zM10 24h2v1h-2zM14 24h2v1h-2zM17 24h1v1h-1zM20 24h1v1h-1zM22 24h1v1h-1zM26 24h2v1h-2zM29 24h3v1h-3zM33 24h6v1h-6zM40 24h1v1h-1zM4 25h1v1h-1zM6 25h3v1h-3zM11 25h4v1h-4zM16 25h2v1h-2zM19 25h1v1h-1zM21 25h1v1h-1zM23 25h1v1h-1zM26 25h2v1h-2zM29 25h1v1h-1zM33 25h1v1h-1zM35 25h1v1h-1zM38 25h1v1h-1zM6 26h1v1h-1zM10 26h1v1h-1zM14 26h1v1h-1zM16 26h3v1h-3zM21 26h1v1h-1zM23 26h3v1h-3zM28 26h4v1h-4zM33 26h1v1h-1zM37 26h4v1h-4zM5 27h2v1h-2zM8 27h2v1h-2zM12 27h2v1h-2zM15 27h2v1h-2zM18 27h1v1h-1zM22 27h4v1h-4zM27 27h3v1h-3zM35 27h1v1h-1zM4 28h2v1h-2zM7 28h2v1h-2zM10 28h3v1h-3zM14 28h3v1h-3zM18 28h7v1h-7zM30 28h1v1h-1zM32 28h2v1h-2zM37 28h3v1h-3zM4 29h4v1h-4zM9 29h1v1h-1zM11 29h2v1h-2zM14 29h2v1h-2zM18 29h1v1h-1zM20 29h4v1h-4zM25 29h5v1h-5zM31 29h1v1h-1zM34 29h1v1h-1zM38 29h2v1h-2zM4 30h1v1h-1zM8 30h6v1h-6zM16 30h1v1h-1zM18 30h1v1h-1zM20 30h1v1h-1zM22 30h1v1h-1zM24 30h3v1h-3zM28 30h1v1h-1zM30 30h3v1h-3zM34 30h2v1h-2zM38 30h1v1h-1zM40 30h1v1h-1zM4 31h1v1h-1zM8 31h1v1h-1zM14 31h1v1h-1zM17 31h3v1h-3zM24 31h2v1h-2zM28 31h1v1h-1zM30 31h2v1h-2zM33 31h1v1h-1zM35 31h2v1h-2zM39 31h1v1h-1zM4 32h1v1h-1zM6 32h3v1h-3zM10 32h5v1h-5zM16 32h2v1h-2zM22 32h1v1h-1zM24 32h1v1h-1zM26 32h13v1h-13zM40 32h1v1h-1zM12 33h1v1h-1zM14 33h8v1h-8zM23 33h1v1h-1zM25 33h1v1h-1zM27 33h1v1h-1zM29 33h1v1h-1zM31 33h2v1h-2zM36 33h1v1h-1zM4 34h7v1h-7zM12 34h1v1h-1zM16 34h4v1h-4zM21 34h2v1h-2zM25 34h1v1h-1zM30 34h1v1h-1zM32 34h1v1h-1zM34 34h1v1h-1zM36 34h2v1h-2zM39 34h2v1h-2zM4 35h1v1h-1zM10 35h1v1h-1zM12 35h2v1h-2zM15 35h3v1h-3zM24 35h3v1h-3zM28 35h1v1h-1zM30 35h1v1h-1zM32 35h1v1h-1zM36 35h1v1h-1zM40 35h1v1h-1zM4 36h1v1h-1zM6 36h3v1h-3zM10 36h1v1h-1zM12 36h1v1h-1zM15 36h3v1h-3zM21 36h1v1h-1zM23 36h1v1h-1zM25 36h1v1h-1zM29 36h1v1h-1zM31 36h6v1h-6zM38 36h3v1h-3zM4 37h1v1h-1zM6 37h3v1h-3zM10 37h1v1h-1zM12 37h1v1h-1zM14 37h3v1h-3zM18 37h1v1h-1zM24 37h3v1h-3zM28 37h1v1h-1zM30 37h2v1h-2zM34 37h1v1h-1zM36 37h2v1h-2zM39 37h1v1h-1zM4 38h1v1h-1zM6 38h3v1h-3zM10 38h1v1h-1zM12 38h1v1h-1zM18 38h1v1h-1zM23 38h1v1h-1zM25 38h2v1h-2zM30 38h1v1h-1zM33 38h1v1h-1zM35 38h1v1h-1zM38 38h1v1h-1zM40 38h1v1h-1zM4 39h1v1h-1zM10 39h1v1h-1zM12 39h2v1h-2zM16 39h5v1h-5zM22 39h5v1h-5zM28 39h1v1h-1zM30 39h3v1h-3zM40 39h1v1h-1zM4 40h7v1h-7zM13 40h2v1h-2zM21 40h1v1h-1zM23 40h1v1h-1zM29 40h2v1h-2zM33 40h2v1h-2zM36 40h5v1h-5z"/></svg><span class="cm tl"></span><span class="cm tr"></span><span class="cm bl"></span><span class="cm br"></span></div>
+    <div>
+      <p class="label b-label">Portfolio</p>
+      <p class="scan">Scan to see<br>my work</p>
+      <p class="url">magenta-caribou-858830<br>.hostingersite.com</p>
+      <div class="sign"><span class="mark">MP</span><span>Megan Pimley</span></div>
+    </div>
+  </div>
+</section>
+
+</body>
+</html>
