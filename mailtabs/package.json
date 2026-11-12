@@ -1,0 +1,24 @@
+{
+  "name": "mailtabs",
+  "version": "1.0.0",
+  "description": "One inbox for all your email accounts (Gmail, Outlook, Yahoo, iCloud, any IMAP), organised into tabs you design.",
+  "main": "server.js",
+  "type": "commonjs",
+  "private": true,
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --test --test-concurrency=1 test/"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "better-sqlite3": "^13.1.1",
+    "dotenv": "^18.0.10",
+    "express": "^4.22.3",
+    "htm": "^3.1.1",
+    "imapflow": "^2.11.0",
+    "mailparser": "^3.14.3",
+    "sanitize-html": "^2.18.2"
+  }
+}
