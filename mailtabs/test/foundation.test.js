@@ -83,7 +83,7 @@ test('config: overrides and parsing', (t) => {
   assert.equal(c.disableScheduler, true);
 
   assert.equal(loadConfig({ DATA_DIR: dir, SECRET_KEY: 'k'.repeat(64), ALLOW_SIGNUPS: '0' }).allowSignups, false);
-  assert.equal(loadConfig({ DATA_DIR: dir, SECRET_KEY: 'k'.repeat(64), TRUST_PROXY: 'true' }).trustProxy, true);
+  assert.equal(loadConfig({ DATA_DIR: dir, SECRET_KEY: 'k'.repeat(64), TRUST_PROXY: 'true' }).trustProxy, 1, '"true" means one proxy hop, never trust-everything');
   assert.equal(loadConfig({ DATA_DIR: dir, SECRET_KEY: 'k'.repeat(64), PORT: '4000' }).appUrl, 'http://localhost:4000');
 });
 

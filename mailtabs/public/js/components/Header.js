@@ -53,7 +53,7 @@ function SearchBox() {
       placeholder=${`Search ${tabName}`}
       aria-label=${`Search mail in ${tabName}`}
       autocomplete="off"
-      spellcheck="false"
+      spellcheck=${false}
       value=${value}
       onInput=${onInput}
       onKeyDown=${onKeyDown}

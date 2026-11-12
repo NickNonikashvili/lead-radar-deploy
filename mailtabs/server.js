@@ -1,6 +1,7 @@
 'use strict';
 
 const fs = require('fs');
+const net = require('net');
 const path = require('path');
 
 // Load .env from the app folder (not the current directory), so `node mailtabs/server.js` works too.
@@ -11,6 +12,7 @@ const { openDb } = require('./src/db');
 const { createCrypto } = require('./src/crypto');
 const { createApp } = require('./src/app');
 const { SyncManager } = require('./src/sync');
+const { redirectUriFor } = require('./src/oauth');
 
 const SHUTDOWN_TIMEOUT_MS = 10_000;
 
@@ -23,22 +25,86 @@ function isLocalUrl(url) {
   }
 }
 
-/** Print configuration hints that a self-hoster would otherwise only discover by accident. */
-function startupWarnings(config, db) {
+// Top-level domains that are not on the public suffix list: home/office networks and tests.
+const PRIVATE_TLDS = new Set(['lan', 'local', 'localdomain', 'home', 'internal', 'intranet', 'corp', 'private', 'test', 'example', 'invalid']);
+
+/**
+ * Why Google or Microsoft would refuse <APP_URL>/api/oauth/<provider>/callback as a redirect
+ * URI, as short reasons (empty when it looks acceptable). Google: https unless localhost or a
+ * loopback IP, no raw IPs, and the domain must end in a public suffix. Microsoft: https unless
+ * localhost; http://127.0.0.1 only via the app manifest; [::1] not at all.
+ */
+function redirectUriProblems(providerKey, appUrl) {
+  let url;
+  try {
+    url = new URL(appUrl);
+  } catch (_) {
+    return ['APP_URL is not a valid URL'];
+  }
+  const host = url.hostname.toLowerCase();
+  const bare = host.replace(/^\[|\]$/g, '');
+  const isIp = net.isIP(bare) !== 0;
+  const isLocalhost = host === 'localhost' || host.endsWith('.localhost');
+  const isLoopbackIp = (net.isIPv4(bare) && bare.startsWith('127.')) || bare === '::1';
+  const https = url.protocol === 'https:';
+  const problems = [];
+
+  if (providerKey === 'google') {
+    if (!https && !isLocalhost && !isLoopbackIp) problems.push('it is not https:// (only localhost may use http://)');
+    if (isIp && !isLoopbackIp) problems.push('it uses a raw IP address instead of a domain name');
+    const tld = host.split('.').pop();
+    if (!isIp && !isLocalhost && (!host.includes('.') || PRIVATE_TLDS.has(tld) || host.endsWith('.home.arpa'))) {
+      problems.push(`${host} is not under a public domain ending (names like *.lan, *.local or *.home are refused)`);
+    }
+  } else if (bare === '::1') {
+    problems.push('the IPv6 loopback [::1] is not supported (use http://localhost)');
+  } else if (!https && !isLocalhost) {
+    problems.push(
+      isLoopbackIp
+        ? 'http://127.0.0.1 can only be registered through the app manifest (use http://localhost instead)'
+        : 'it is not https:// (only localhost may use http://)'
+    );
+  }
+  return problems;
+}
+
+/**
+ * Print configuration hints that a self-hoster would otherwise only discover by accident.
+ * Returns the warnings (also logged with logger.warn); informational lines go to logger.log.
+ */
+function startupWarnings(config, db, logger = console) {
   const warnings = [];
 
   if (!config.google.enabled && !config.microsoft.enabled) {
     warnings.push(
       'Neither Google nor Microsoft sign-in is configured (GOOGLE_CLIENT_ID/SECRET, MICROSOFT_CLIENT_ID/SECRET).\n' +
         '  Password accounts still work: Gmail with an App Password, Yahoo, iCloud, AOL, Fastmail and any IMAP server.\n' +
-        '  Outlook.com / Hotmail accounts need Microsoft sign-in, because Microsoft turned off IMAP passwords.'
+        '  Outlook.com, Hotmail and Microsoft 365 accounts need Microsoft sign-in, because Microsoft turned off IMAP passwords.'
     );
   } else if (!config.google.enabled) {
     warnings.push('Google sign-in is not configured; Gmail accounts can still be added with an App Password.');
   } else if (!config.microsoft.enabled) {
     warnings.push(
-      'Microsoft sign-in is not configured (MICROSOFT_CLIENT_ID/SECRET), so Outlook.com / Hotmail accounts cannot be added.'
+      'Microsoft sign-in is not configured (MICROSOFT_CLIENT_ID/SECRET), so Outlook.com, Hotmail and Microsoft 365 accounts cannot be added.'
     );
+  }
+
+  const oauthSetups = [
+    { key: 'google', name: 'Google', where: 'your Google OAuth client (Google Auth platform > Clients > Authorized redirect URIs)' },
+    { key: 'microsoft', name: 'Microsoft', where: 'your Entra app registration (Authentication > Redirect URI, platform "Web", not SPA)' },
+  ];
+  for (const { key, name, where } of oauthSetups) {
+    if (!config[key].enabled) continue;
+    const uri = redirectUriFor(config, key);
+    logger.log(`${name} sign-in: register this exact redirect URI in ${where}:\n  ${uri}`);
+    const problems = redirectUriProblems(key, config.appUrl);
+    if (problems.length) {
+      warnings.push(
+        `${name} sign-in is enabled, but ${name} will reject the redirect URI ${uri}: ${problems.join('; ')}.\n` +
+          '  Serve Mailtabs on a real domain over https (for example behind a TLS reverse proxy) and set APP_URL to it,\n' +
+          '  or open it through http://localhost (for example over an SSH tunnel) with APP_URL=http://localhost:<port>.'
+      );
+    }
   }
 
   if (!config.cookieSecure && !isLocalUrl(config.appUrl)) {
@@ -67,7 +133,8 @@ function startupWarnings(config, db) {
     /* informational only */
   }
 
-  for (const w of warnings) console.warn(`WARNING: ${w}`);
+  for (const w of warnings) logger.warn(`WARNING: ${w}`);
+  return warnings;
 }
 
 function main() {
@@ -151,4 +218,4 @@ if (require.main === module) {
   }
 }
 
-module.exports = { main, startupWarnings };
+module.exports = { main, startupWarnings, redirectUriProblems };

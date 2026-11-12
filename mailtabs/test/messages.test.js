@@ -502,7 +502,8 @@ test('end to end against Dovecot: list, body, attachments, flags, bulk, mark-all
   assert.equal(png.headers.get('content-type'), 'image/png');
   assert.equal(png.headers.get('content-disposition'), `inline; filename="logo.png"; filename*=UTF-8''logo.png`);
   assert.deepEqual(png.buffer, PNG);
-  assert.equal(pdfRes.headers.get('content-type'), 'application/pdf');
+  // Only safe inline image types keep the sender's type; everything else downloads as bytes.
+  assert.equal(pdfRes.headers.get('content-type'), 'application/octet-stream');
   assert.equal(pdfRes.headers.get('content-disposition'), `attachment; filename="report.pdf"; filename*=UTF-8''report.pdf`);
   assert.deepEqual(pdfRes.buffer, pdf);
   assert.equal(txt.headers.get('content-disposition'), `attachment; filename="Gr__e (final).txt"; filename*=UTF-8''Gr%C3%BC%C3%9Fe%20%28final%29.txt`);

@@ -124,7 +124,9 @@ export const api = {
   message: (messageId, opts) => get(`/api/messages/${id(messageId)}`, opts),
   updateMessage: (messageId, body) => patch(`/api/messages/${id(messageId)}`, body),
   bulk: (ids, action) => post('/api/messages/bulk', { ids, action }),
-  markAllRead: (tab) => post('/api/messages/mark-all-read', { tab }),
+  // `filters` narrows it to what the list shows: { q, starred }.
+  markAllRead: (tab, filters = {}) => post('/api/messages/mark-all-read', { tab, ...filters }),
+  oauthResult: () => get('/api/oauth/result'),
 };
 
 /** URL for the sandboxed iframe that renders a message body. */

@@ -1,7 +1,7 @@
 // Signed-in layout: header, tab bar, warnings, list + reading pane, dialogs.
-import { html, useEffect } from '/vendor/preact-htm.js';
+import { html, useEffect, useState } from '/vendor/preact-htm.js';
 import { useStore } from '../store.js';
-import { accountLabel, reconnectAccount } from '../actions.js';
+import { accountLabel, openDialog, reconnectAccount } from '../actions.js';
 import { Icon } from '../icons.js';
 import { useGlobalShortcuts } from '../keyboard.js';
 import { Header } from './Header.js';
@@ -15,14 +15,34 @@ import { SettingsDialog } from './SettingsDialog.js';
 
 function AccountAlerts() {
   const { accounts, presets } = useStore((s) => ({ accounts: s.accounts, presets: s.config.presets }));
-  const broken = accounts.filter((a) => a.status === 'auth_error');
-  if (!broken.length) return null;
+  const [dismissed, setDismissed] = useState(() => new Set());
+  const needReconnect = accounts.filter((a) => a.status === 'auth_error');
+  // Other failures (server unreachable, timeouts...) keep retrying on their own, but the user
+  // should still know that this inbox isn't being updated.
+  const failing = accounts.filter((a) => a.status === 'error' && !dismissed.has(`${a.id}:${a.lastError}`));
+  if (!needReconnect.length && !failing.length) return null;
   return html`<div class="alerts">
-    ${broken.map(
+    ${needReconnect.map(
       (a) => html`<div key=${a.id} class="alert-bar" role="status">
         <${Icon} name="alert" size=${16} />
         <span class="alert-text"><strong>${accountLabel(a, presets)} (${a.email})</strong> needs to be reconnected.</span>
         <button type="button" class="btn btn-sm" onClick=${() => reconnectAccount(a)}>Reconnect</button>
+      </div>`
+    )}
+    ${failing.map(
+      (a) => html`<div key=${`e${a.id}`} class="alert-bar" role="status">
+        <${Icon} name="alert" size=${16} />
+        <span class="alert-text"><strong>${accountLabel(a, presets)} (${a.email})</strong> isn't updating: ${a.lastError || 'the last check failed.'}</span>
+        <button type="button" class="btn btn-sm" onClick=${() => openDialog('settings', { section: 'accounts' })}>Settings</button>
+        <button
+          type="button"
+          class="icon-btn"
+          aria-label="Dismiss"
+          title="Dismiss"
+          onClick=${() => setDismissed((d) => new Set([...d, `${a.id}:${a.lastError}`]))}
+        >
+          <${Icon} name="x" size=${16} />
+        </button>
       </div>`
     )}
   </div>`;

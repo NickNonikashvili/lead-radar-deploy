@@ -307,9 +307,107 @@ test('private and unencrypted hosts are refused when the operator has not allowe
   assert.equal((await alice.get('/api/accounts')).body.accounts.length, 0);
 });
 
+test('Microsoft accounts cannot be added or changed with a password (OAUTH_REQUIRED)', async (t) => {
+  const { srv, alice, aliceUser } = await setup(t);
+  const expectOAuthRequired = (res, label) => {
+    assert.equal(res.status, 400, `${label}: ${JSON.stringify(res.body)}`);
+    assert.equal(res.body.code, 'OAUTH_REQUIRED', label);
+    assert.match(res.body.error, /Sign in with Microsoft/, label);
+    return res.body.error;
+  };
+
+  // Refused before any login check: these hosts would otherwise need DNS and a real server.
+  const outlook = { provider: 'outlook', email: 'me@outlook.com', password: 'an-app-password' };
+  for (const path of ['/api/accounts', '/api/accounts/test']) {
+    const message = expectOAuthRequired(await alice.post(path, outlook), path);
+    // Microsoft sign-in is not configured in this test server: say what the site owner must set.
+    assert.match(message, /MICROSOFT_CLIENT_ID and MICROSOFT_CLIENT_SECRET/);
+    assert.match(message, /README/);
+  }
+  expectOAuthRequired(await alice.post('/api/accounts', { email: 'me@hotmail.com', password: 'x' }), 'provider guessed from the domain');
+  expectOAuthRequired(await alice.post('/api/accounts', { provider: 'outlook', email: 'me@outlook.com' }), 'not asked for a password first');
+  for (const host of ['outlook.office365.com', 'OUTLOOK.OFFICE.COM', 'imap-mail.outlook.com']) {
+    const body = { provider: 'imap', email: 'me@contoso.com', password: 'x', imapHost: host, imapPort: 993, imapSecurity: 'tls' };
+    expectOAuthRequired(await alice.post('/api/accounts', body), host);
+  }
+  assert.equal(srv.db.prepare('SELECT COUNT(*) AS n FROM accounts').get().n, 0);
+
+  // Existing password accounts cannot be pointed at Microsoft or given a new password there.
+  const plain = seedAccount(srv.db, srv.crypto, aliceUser.id, { email: 'me@contoso.com' });
+  expectOAuthRequired(
+    await alice.patch(`/api/accounts/${plain.id}`, { imapHost: 'outlook.office365.com', imapPort: 993, imapSecurity: 'tls' }),
+    'PATCH host'
+  );
+  const legacy = seedAccount(srv.db, srv.crypto, aliceUser.id, { provider: 'outlook', email: 'old@outlook.com', imap_host: 'outlook.office365.com' });
+  expectOAuthRequired(await alice.patch(`/api/accounts/${legacy.id}`, { password: 'new' }), 'PATCH password');
+  const renamed = await alice.patch(`/api/accounts/${legacy.id}`, { displayName: 'Old mail' });
+  assert.equal(renamed.status, 200, 'cosmetic edits still work');
+  assert.equal(srv.db.prepare('SELECT imap_host FROM accounts WHERE id = ?').get(plain.id).imap_host, IMAP_TEST.host);
+});
+
+test('OAUTH_REQUIRED does not mention server settings once Microsoft sign-in is configured', async (t) => {
+  const { alice } = await setup(t, { MICROSOFT_CLIENT_ID: 'ms-id', MICROSOFT_CLIENT_SECRET: 'ms-secret' });
+  const res = await alice.post('/api/accounts', { provider: 'outlook', email: 'me@outlook.com', password: 'x' });
+  assert.equal(res.body.code, 'OAUTH_REQUIRED');
+  assert.doesNotMatch(res.body.error, /MICROSOFT_CLIENT_ID/);
+});
+
 // ---------------------------------------------------------------------------------------------
 // Real IMAP login checks (bob@test.local only)
 // ---------------------------------------------------------------------------------------------
+
+test('POST without a color gives the account the first palette colour not in use', async (t) => {
+  if (!(await imapAvailable())) return t.skip('IMAP test server not reachable');
+  const { srv, alice, aliceUser } = await setup(t);
+  seedAccount(srv.db, srv.crypto, aliceUser.id, { color: '#4f46e5' }); // indigo, palette slot 1
+  seedAccount(srv.db, srv.crypto, aliceUser.id, { color: '#0891b2' }); // teal, slot 3
+  const res = await alice.post('/api/accounts', bobAccountBody());
+  assert.equal(res.status, 201, JSON.stringify(res.body));
+  assert.equal(res.body.account.color, '#2563eb', 'blue, the first free slot');
+});
+
+test('iCloud/Yandex: a failed login is retried once with the other username form, which is saved', async (t) => {
+  if (!(await imapAvailable())) return t.skip('IMAP test server not reachable');
+  const { srv, alice, aliceUser } = await setup(t);
+  // Dovecot knows bob only as bob@test.local, so the bare name fails and the full address works.
+  const icloud = seedAccount(srv.db, srv.crypto, aliceUser.id, {
+    provider: 'icloud',
+    email: BOB.user,
+    imap_user: 'bob',
+    secret: { password: 'old-wrong-password' },
+    status: 'auth_error',
+    sync_state: '{"uidValidity":1,"lastUid":5}',
+  });
+  seedMessage(srv.db, icloud.id);
+
+  // A username the user typed is used as it is: no retry.
+  const typed = await alice.patch(`/api/accounts/${icloud.id}`, { password: BOB.pass, imapUser: 'bob' });
+  assert.equal(typed.status, 400);
+  assert.equal(typed.body.code, 'IMAP_AUTH_FAILED');
+
+  const fixed = await alice.patch(`/api/accounts/${icloud.id}`, { password: BOB.pass });
+  assert.equal(fixed.status, 200, JSON.stringify(fixed.body));
+  assert.equal(fixed.body.account.imapUser, BOB.user, 'the username that worked is saved');
+  assert.equal(fixed.body.account.status, 'pending');
+  const row = srv.db.prepare('SELECT * FROM accounts WHERE id = ?').get(icloud.id);
+  assert.equal(row.sync_state, '{"uidValidity":1,"lastUid":5}', 'same mailbox: sync state kept');
+  assert.equal(srv.db.prepare('SELECT COUNT(*) AS n FROM messages WHERE account_id = ?').get(icloud.id).n, 1, 'and its mail');
+
+  // Providers without that quirk get no second attempt.
+  const other = seedAccount(srv.db, srv.crypto, aliceUser.id, { provider: 'imap', email: 'bob@other.example', imap_user: 'bob' });
+  const noRetry = await alice.patch(`/api/accounts/${other.id}`, { password: BOB.pass });
+  assert.equal(noRetry.body.code, 'IMAP_AUTH_FAILED');
+
+  // New accounts: the default username (the full address) is tried first; a typed one is kept
+  // (a retry would have found bob@test.local and succeeded).
+  srv.db.prepare('DELETE FROM accounts WHERE id = ?').run(icloud.id);
+  const yandexTyped = await alice.post('/api/accounts', bobAccountBody({ provider: 'yandex', imapUser: 'bob' }));
+  assert.equal(yandexTyped.body.code, 'IMAP_AUTH_FAILED');
+  const created = await alice.post('/api/accounts', bobAccountBody({ provider: 'yandex' }));
+  assert.equal(created.status, 201, JSON.stringify(created.body));
+  assert.equal(created.body.account.imapUser, BOB.user);
+});
+
 
 test('POST /api/accounts verifies the login with the real IMAP server before saving', async (t) => {
   if (!(await imapAvailable())) return t.skip('IMAP test server not reachable');
@@ -373,7 +471,12 @@ test('PATCH with a new password or server re-verifies the login first', async (t
   assert.equal(unchanged.secret_enc, before.secret_enc, 'a wrong password is never stored');
   assert.equal(unchanged.display_name, null, 'nothing else changes either');
 
-  const badPort = await alice.patch(`/api/accounts/${account.id}`, { imapPort: 1 });
+  // Changing the server needs the password typed again: the saved one is only ever sent to
+  // the server it was saved for.
+  const noPassword = await alice.patch(`/api/accounts/${account.id}`, { imapPort: 1 });
+  assert.equal(noPassword.status, 400);
+  assert.equal(noPassword.body.code, 'PASSWORD_REQUIRED');
+  const badPort = await alice.patch(`/api/accounts/${account.id}`, { imapPort: 1, password: BOB.pass });
   assert.equal(badPort.body.code, 'IMAP_CONNECT_FAILED');
   assert.equal(srv.db.prepare('SELECT imap_port FROM accounts WHERE id = ?').get(account.id).imap_port, IMAP_TEST.port);
 
@@ -406,7 +509,7 @@ test('PATCH with a new password or server re-verifies the login first', async (t
 
   // A different server is a different mailbox: after a successful check, local mail and the
   // sync state are reset so the next sync starts fresh.
-  const moved = await alice.patch(`/api/accounts/${account.id}`, { imapHost: 'LOCALHOST' });
+  const moved = await alice.patch(`/api/accounts/${account.id}`, { imapHost: 'LOCALHOST', password: BOB.pass });
   assert.equal(moved.status, 200, JSON.stringify(moved.body));
   assert.equal(moved.body.account.imapHost, 'localhost', 'host names are normalised');
   assert.equal(srv.db.prepare('SELECT COUNT(*) AS n FROM messages WHERE account_id = ?').get(account.id).n, 0);

@@ -3,11 +3,19 @@
 const Database = require('better-sqlite3');
 
 // Each entry is one schema version. Never edit a released migration — append a new one.
+//
+// Ids use AUTOINCREMENT on purpose: plain INTEGER PRIMARY KEY reuses the id of the newest
+// deleted row, and a background sync or body download still holding that id would then write
+// into somebody else's account or message.
+// accounts.config_version is bumped whenever an account's server/login changes, so a sync
+// that started with the old settings can tell its writes are stale.
+// messages.flags_changed_at records when the user last changed read/star in Mailtabs, so a
+// sync that read the server's flags before that change doesn't undo it.
 const MIGRATIONS = [
   // v1 — initial schema
   `
   CREATE TABLE users (
-    id INTEGER PRIMARY KEY,
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
     email TEXT NOT NULL UNIQUE COLLATE NOCASE,
     name TEXT,
     password_hash TEXT NOT NULL,
@@ -24,7 +32,7 @@ const MIGRATIONS = [
   CREATE INDEX sessions_user ON sessions(user_id);
 
   CREATE TABLE accounts (
-    id INTEGER PRIMARY KEY,
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     provider TEXT NOT NULL,
     auth_type TEXT NOT NULL,
@@ -39,6 +47,7 @@ const MIGRATIONS = [
     mailbox TEXT NOT NULL DEFAULT 'INBOX',
     sync_state TEXT,
     status TEXT NOT NULL DEFAULT 'pending',
+    config_version INTEGER NOT NULL DEFAULT 0,
     last_error TEXT,
     last_synced_at INTEGER,
     created_at INTEGER NOT NULL,
@@ -46,7 +55,7 @@ const MIGRATIONS = [
   );
 
   CREATE TABLE tabs (
-    id INTEGER PRIMARY KEY,
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     name TEXT NOT NULL,
     color TEXT NOT NULL DEFAULT '#4f46e5',
@@ -65,7 +74,7 @@ const MIGRATIONS = [
   CREATE INDEX tab_accounts_account ON tab_accounts(account_id);
 
   CREATE TABLE messages (
-    id INTEGER PRIMARY KEY,
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
     account_id INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
     mailbox TEXT NOT NULL,
     uid INTEGER NOT NULL,
@@ -88,6 +97,7 @@ const MIGRATIONS = [
     html_body TEXT,
     attachments_json TEXT,
     remote_image_count INTEGER NOT NULL DEFAULT 0,
+    flags_changed_at INTEGER,
     created_at INTEGER NOT NULL,
     UNIQUE(account_id, mailbox, uid_validity, uid)
   );
@@ -136,12 +146,31 @@ function migrate(db) {
   }
 }
 
+/** The database holds cached mail and sessions: keep it private to the server's user. */
+function restrictPermissions(filePath) {
+  const fs = require('fs');
+  const path = require('path');
+  try {
+    fs.chmodSync(path.dirname(filePath), 0o700);
+  } catch (_) {
+    /* not ours to change (e.g. a mounted volume root) */
+  }
+  for (const f of [filePath, `${filePath}-wal`, `${filePath}-shm`]) {
+    try {
+      fs.chmodSync(f, 0o600);
+    } catch (_) {
+      /* WAL files appear later; SQLite creates them with the db file's mode */
+    }
+  }
+}
+
 /**
  * Open (or create) the SQLite database and bring the schema up to date.
  * @param {string} filePath path to the .db file, or ':memory:'
  */
 function openDb(filePath) {
   const db = new Database(filePath);
+  if (filePath !== ':memory:') restrictPermissions(filePath);
   if (filePath !== ':memory:') db.pragma('journal_mode = WAL');
   db.pragma('foreign_keys = ON');
   db.pragma('busy_timeout = 5000');

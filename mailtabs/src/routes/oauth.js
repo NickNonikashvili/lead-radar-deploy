@@ -4,7 +4,9 @@
  * /api/oauth/:provider/start and /callback — "Sign in with Google / Microsoft" for mail access.
  *
  * Both are full-page browser navigations, so problems are reported by redirecting to
- * `/?oauth_error=<message>` (the frontend shows it as a toast) rather than as JSON.
+ * `/?oauth=failed` and keeping the message server-side for that user; the frontend fetches it
+ * once from GET /api/oauth/result. Messages are never put in the URL, so a crafted link can't
+ * make Mailtabs display text of an attacker's choosing.
  *
  * The `state` parameter is a random, single-use token stored server-side together with the
  * PKCE verifier, the signed-in user, the provider and what to do afterwards. The callback only
@@ -40,9 +42,15 @@ const NO_REFRESH_TOKEN =
   "Mail access wasn't granted, so Mailtabs can't keep this inbox up to date. Please try again and allow access to your mail.";
 const BAD_STATE = 'This sign-in link has expired or was already used. Please try again.';
 
-function errorRedirect(res, message) {
-  const text = String(message || 'Sign-in failed.').slice(0, MAX_ERROR_LENGTH);
-  res.redirect(302, `/?oauth_error=${encodeURIComponent(text)}`);
+const RESULT_TTL_MS = 5 * 60 * 1000;
+const lastErrors = new Map(); // userId -> { message, expires }
+
+function errorRedirect(req, res, message) {
+  if (!req.user) return res.redirect(302, '/?oauth=signin');
+  const now = Date.now();
+  for (const [userId, entry] of lastErrors) if (entry.expires <= now) lastErrors.delete(userId);
+  lastErrors.set(req.user.id, { message: String(message || 'Sign-in failed.').slice(0, MAX_ERROR_LENGTH), expires: now + RESULT_TTL_MS });
+  res.redirect(302, '/?oauth=failed');
 }
 
 function scalar(value) {
@@ -62,7 +70,7 @@ function parseIdCsv(value) {
 module.exports = function oauthRoutes({ db, config, crypto, syncManager }) {
   const router = express.Router();
 
-  const redirectUri = (provider) => `${config.appUrl}/api/oauth/${provider.key}/callback`;
+  const redirectUri = (provider) => oauth.redirectUriFor(config, provider.key);
 
   /** The provider for :provider, or null when unknown or not configured on this server. */
   function enabledProvider(key) {
@@ -78,12 +86,21 @@ module.exports = function oauthRoutes({ db, config, crypto, syncManager }) {
   const deleteExpired = db.prepare('DELETE FROM oauth_states WHERE expires_at <= ?');
   const takeState = db.prepare('DELETE FROM oauth_states WHERE state = ? RETURNING *');
 
+  // --- result of the last failed sign-in (read once) -----------------------------------------
+
+  router.get('/result', (req, res) => {
+    if (!req.user) return res.status(401).json({ error: 'Not signed in', code: 'UNAUTHENTICATED' });
+    const entry = lastErrors.get(req.user.id);
+    lastErrors.delete(req.user.id);
+    res.json({ error: entry && entry.expires > Date.now() ? entry.message : null });
+  });
+
   // --- start --------------------------------------------------------------------------------
 
   router.get('/:provider/start', (req, res) => {
     const provider = enabledProvider(req.params.provider);
     if (!provider) return notConfigured(res);
-    if (!req.user) return res.redirect(302, '/?oauth_error=Please+sign+in+first');
+    if (!req.user) return res.redirect(302, '/?oauth=signin');
     const userId = req.user.id;
 
     // Reconnecting an existing account?
@@ -92,19 +109,19 @@ module.exports = function oauthRoutes({ db, config, crypto, syncManager }) {
     if (rawAccountId !== undefined && rawAccountId !== '') {
       const id = /^\d{1,15}$/.test(String(rawAccountId)) ? Number(rawAccountId) : 0;
       account = id ? queries.getAccountRowForUser(db, userId, id) : null;
-      if (!account) return errorRedirect(res, 'That account was not found.');
+      if (!account) return errorRedirect(req, res, 'That account was not found.');
       if (account.provider !== provider.presetKey) {
-        return errorRedirect(res, `That account can't be connected with ${provider.label} sign-in.`);
+        return errorRedirect(req, res, `That account can't be connected with ${provider.label} sign-in.`);
       }
     }
 
     const tabIds = parseIdCsv(scalar(req.query.tabIds));
-    if (tabIds === null) return errorRedirect(res, 'The selected tabs are not valid.');
+    if (tabIds === null) return errorRedirect(req, res, 'The selected tabs are not valid.');
     if (tabIds.length) {
       const owned = db
         .prepare(`SELECT id FROM tabs WHERE user_id = ? AND id IN (${tabIds.map(() => '?').join(', ')})`)
         .all(userId, ...tabIds);
-      if (owned.length !== tabIds.length) return errorRedirect(res, 'One of the selected tabs no longer exists.');
+      if (owned.length !== tabIds.length) return errorRedirect(req, res, 'One of the selected tabs no longer exists.');
     }
 
     const state = randomToken(32);
@@ -179,7 +196,7 @@ module.exports = function oauthRoutes({ db, config, crypto, syncManager }) {
                                    imap_security, imap_user, secret_enc, mailbox, status, created_at)
              VALUES (?, ?, 'oauth', ?, NULL, ?, ?, ?, ?, ?, ?, 'INBOX', 'pending', ?)`
           )
-          .run(userId, provider.presetKey, tokens.email, queries.DEFAULT_COLOR, provider.imapHost, provider.imapPort, provider.imapSecurity, tokens.email, secretEnc, Date.now());
+          .run(userId, provider.presetKey, tokens.email, queries.nextAccountColor(db, userId), provider.imapHost, provider.imapPort, provider.imapSecurity, tokens.email, secretEnc, Date.now());
         accountId = Number(info.lastInsertRowid);
       }
 
@@ -210,19 +227,19 @@ module.exports = function oauthRoutes({ db, config, crypto, syncManager }) {
 
       const providerError = scalar(req.query.error);
       if (providerError) {
-        return errorRedirect(res, PROVIDER_ERRORS[providerError] || 'Sign-in failed. Please try again.');
+        return errorRedirect(req, res, PROVIDER_ERRORS[providerError] || 'Sign-in failed. Please try again.');
       }
-      if (!req.user) return res.redirect(302, '/?oauth_error=Please+sign+in+first');
+      if (!req.user) return res.redirect(302, '/?oauth=signin');
 
       const now = Date.now();
       if (!stateRow || stateRow.expires_at <= now || stateRow.provider !== key || stateRow.user_id !== req.user.id) {
-        return errorRedirect(res, BAD_STATE);
+        return errorRedirect(req, res, BAD_STATE);
       }
       const provider = enabledProvider(key);
-      if (!provider) return errorRedirect(res, 'That sign-in provider is not configured on this server.');
+      if (!provider) return errorRedirect(req, res, 'That sign-in provider is not configured on this server.');
 
       const code = scalar(req.query.code);
-      if (typeof code !== 'string' || !code || code.length > 4096) return errorRedirect(res, 'The sign-in did not return an authorization code. Please try again.');
+      if (typeof code !== 'string' || !code || code.length > 4096) return errorRedirect(req, res, 'The sign-in did not return an authorization code. Please try again.');
 
       let tokens;
       try {
@@ -231,8 +248,8 @@ module.exports = function oauthRoutes({ db, config, crypto, syncManager }) {
         if (err instanceof oauth.OAuthError) {
           // invalid_grant here means the one-time code itself was rejected (expired or reused),
           // not that a stored connection was revoked.
-          if (err.code === 'invalid_grant') return errorRedirect(res, 'The sign-in took too long or was already used. Please try again.');
-          return errorRedirect(res, err.message);
+          if (err.code === 'invalid_grant') return errorRedirect(req, res, 'The sign-in took too long or was already used. Please try again.');
+          return errorRedirect(req, res, err.message);
         }
         throw err;
       }
@@ -242,7 +259,7 @@ module.exports = function oauthRoutes({ db, config, crypto, syncManager }) {
       if (stateRow.account_id) {
         const target = queries.getAccountRowForUser(db, userId, stateRow.account_id);
         if (target && target.email.toLowerCase() !== tokens.email.toLowerCase()) {
-          return errorRedirect(res, `You signed in as ${tokens.email}, but this account is ${target.email}. Sign in with ${target.email} to reconnect it.`);
+          return errorRedirect(req, res, `You signed in as ${tokens.email}, but this account is ${target.email}. Sign in with ${target.email} to reconnect it.`);
         }
       }
 
@@ -250,7 +267,7 @@ module.exports = function oauthRoutes({ db, config, crypto, syncManager }) {
       try {
         accountId = upsertAccount(userId, provider, tokens, stateRow);
       } catch (err) {
-        if (err.redirectMessage) return errorRedirect(res, err.redirectMessage);
+        if (err.redirectMessage) return errorRedirect(req, res, err.redirectMessage);
         throw err;
       }
 
@@ -264,7 +281,7 @@ module.exports = function oauthRoutes({ db, config, crypto, syncManager }) {
       // This is a browser navigation: a JSON 500 would strand the user on a raw error page.
       console.error('[oauth] callback failed:', (err && err.stack) || err);
       if (res.headersSent) return next(err);
-      errorRedirect(res, 'Something went wrong while connecting the account. Please try again.');
+      errorRedirect(req, res, 'Something went wrong while connecting the account. Please try again.');
     }
   });
 

@@ -61,18 +61,20 @@ function RuleRow({ cond, index, onChange, onRemove }) {
   </div>`;
 }
 
-export function TabEditorDialog({ tabId = null }) {
+export function TabEditorDialog({ tabId = null, draft = null }) {
   const { tabs, accounts, presets } = useStore((s) => ({ tabs: s.tabs, accounts: s.accounts, presets: s.config.presets }));
   const tab = tabId != null ? tabs.find((t) => t.id === tabId) || null : null;
   const editing = !!tab;
+  // `draft`: unsaved edits kept while the user connected another account from this dialog.
+  const d = draft || {};
 
-  const [name, setName] = useState(tab ? tab.name : '');
-  const [color, setColor] = useState(tab ? tab.color : nextFreeColor(tabs.map((t) => t.color)));
-  const [mode, setMode] = useState(tab && tab.allAccounts ? 'all' : 'some');
-  const [accountIds, setAccountIds] = useState(tab ? tab.accountIds || [] : []);
-  const initialConds = tab && tab.rules && Array.isArray(tab.rules.conditions) ? tab.rules.conditions : [];
-  const [rulesOn, setRulesOn] = useState(initialConds.length > 0);
-  const [match, setMatch] = useState((tab && tab.rules && tab.rules.match) || 'all');
+  const [name, setName] = useState(d.name !== undefined ? d.name : tab ? tab.name : '');
+  const [color, setColor] = useState(d.color || (tab ? tab.color : nextFreeColor(tabs.map((t) => t.color))));
+  const [mode, setMode] = useState(d.mode || (tab && tab.allAccounts ? 'all' : 'some'));
+  const [accountIds, setAccountIds] = useState(d.accountIds || (tab ? tab.accountIds || [] : []));
+  const initialConds = d.conditions || (tab && tab.rules && Array.isArray(tab.rules.conditions) ? tab.rules.conditions : []);
+  const [rulesOn, setRulesOn] = useState(d.rulesOn !== undefined ? d.rulesOn : initialConds.length > 0);
+  const [match, setMatch] = useState(d.match || (tab && tab.rules && tab.rules.match) || 'all');
   const [conditions, setConditions] = useState(() => (initialConds.length ? initialConds.map(newCondition) : [newCondition()]));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -91,7 +93,18 @@ export function TabEditorDialog({ tabId = null }) {
       return next.length ? next : [newCondition()];
     });
 
-  const connectAccount = () => openDialog('addAccount', editing ? { tabIds: [tab.id] } : {});
+  // Keep everything typed so far: the account dialog brings the user back here afterwards,
+  // with the new account ticked (it is attached when this tab is saved).
+  const connectAccount = () =>
+    openDialog('addAccount', {
+      returnTo: {
+        type: 'tabEditor',
+        props: {
+          tabId: editing ? tab.id : null,
+          draft: { name, color, mode, accountIds, rulesOn, match, conditions: conditions.map(({ field, op, value }) => ({ field, op, value })) },
+        },
+      },
+    });
 
   const onSubmit = async (e) => {
     e.preventDefault();

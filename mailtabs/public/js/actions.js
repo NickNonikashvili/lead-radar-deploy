@@ -110,20 +110,36 @@ setUnauthorizedHandler(() => {
 function takeUrlFlags() {
   const url = new URL(window.location.href);
   const connected = url.searchParams.get('connected');
-  const oauthError = url.searchParams.get('oauth_error');
-  if (connected !== null || oauthError !== null) {
+  // 'failed' | 'signin'. The message itself is fetched from the server: text in the URL is
+  // never displayed, so nobody can craft a link that makes Mailtabs show their words.
+  const oauth = url.searchParams.get('oauth');
+  if (connected !== null || oauth !== null || url.searchParams.has('oauth_error')) {
     url.searchParams.delete('connected');
+    url.searchParams.delete('oauth');
     url.searchParams.delete('oauth_error');
     window.history.replaceState(window.history.state, '', url.pathname + url.search + url.hash);
   }
-  return { connected, oauthError };
+  return { connected, oauth };
+}
+
+async function showOAuthOutcome(oauth, user) {
+  if (oauth === 'signin') {
+    toast('Please sign in to Mailtabs first, then connect the account again.', { type: 'error' });
+  } else if (oauth === 'failed' && user) {
+    try {
+      const { error } = await api.oauthResult();
+      if (error) toast(error, { type: 'error' });
+    } catch (_) {
+      /* nothing to show */
+    }
+  }
 }
 
 export async function boot() {
   const theme = loadTheme();
   applyTheme(theme);
   setState({ theme, bootError: null });
-  const { connected, oauthError } = takeUrlFlags();
+  const { connected, oauth } = takeUrlFlags();
 
   let config = getState().config;
   try {
@@ -143,7 +159,7 @@ export async function boot() {
   }
 
   setState({ config, user: user || null, booted: true });
-  if (oauthError) toast(oauthError, { type: 'error' });
+  showOAuthOutcome(oauth, user);
   if (user) await enterApp({ connectedId: connected });
 }
 
@@ -494,7 +510,11 @@ export async function loadList({ keepMessages = false } = {}) {
     }));
   } catch (err) {
     if ((err && err.name === 'AbortError') || seq !== listSeq) return;
-    setState((st) => ({ list: { ...st.list, status: 'error', error: err.message || "Couldn't load messages." } }));
+    // Never leave the previous results on screen as if they answered this query: clear them
+    // so the list shows the error with its "Try again" button.
+    setState((st) => ({
+      list: { ...st.list, messages: [], nextCursor: null, loadingMore: false, status: 'error', error: err.message || "Couldn't load messages." },
+    }));
   }
 }
 
@@ -615,26 +635,22 @@ async function backgroundTick() {
   if (!getState().user) return;
   if (!document.hidden) {
     lastBgRefresh = Date.now();
-    const wasBusy = anyAccountBusy();
     await Promise.allSettled([refreshAccounts({ quiet: true }), refreshTabs({ quiet: true })]);
-    await refreshListIfChanged({ force: wasBusy && !anyAccountBusy() });
+    await refreshListIfChanged();
   }
   if (getState().user && bgTimer === null) scheduleBackground();
 }
 
-/** Cheap check (limit=1) whether the newest message in view changed. */
-async function refreshListIfChanged({ force = false } = {}) {
+/**
+ * Bring the visible list up to date: new mail, and read/star/removal changes the server picked
+ * up from other mail apps. Re-fetching the first page is one small request per tick.
+ * A list that failed to load is retried.
+ */
+async function refreshListIfChanged() {
   const s = getState();
+  if (s.list.status === 'error') return loadList();
   if (s.list.status !== 'ready') return;
-  if (force) return softRefreshList();
-  try {
-    const { messages = [] } = await api.messages({ ...listParams(s), limit: 1 });
-    const top = messages[0] ? messages[0].id : null;
-    const currentTop = getState().list.messages[0] ? getState().list.messages[0].id : null;
-    if (top !== currentTop) await softRefreshList();
-  } catch (_) {
-    /* quiet */
-  }
+  return softRefreshList();
 }
 
 // ---------------------------------------------------------------------------
@@ -687,7 +703,13 @@ async function loadDetail(id) {
     setDetail(id, { status: 'ready', message: merged });
   } catch (err) {
     if (isSessionGone(err)) return;
-    setDetail(id, { status: 'error', error: err.message || "Couldn't open this message.", notFound: err.status === 404 });
+    const notFound = err.status === 404;
+    setDetail(id, { status: 'error', error: err.message || "Couldn't open this message.", notFound });
+    if (notFound) {
+      // Moved or deleted in another app (and already gone here): drop the stale row.
+      setState((st) => ({ list: { ...st.list, messages: st.list.messages.filter((m) => m.id !== id) } }));
+      scheduleCountsRefresh();
+    }
   }
 }
 
@@ -709,8 +731,13 @@ window.addEventListener('popstate', (event) => {
     ignoreNextPop = false;
     return;
   }
-  const inReader = event.state && event.state.mtReader;
-  if (!inReader && getState().openId != null) setState({ openId: null });
+  const state = event.state || {};
+  // Back while a full-screen dialog (mobile) is open closes the dialog, nothing else.
+  if (!state.mtDialog && getState().dialog) {
+    setState({ dialog: null });
+    return;
+  }
+  if (!state.mtReader && getState().openId != null) setState({ openId: null });
 });
 
 export function openMessage(id) {
@@ -801,7 +828,9 @@ export async function moveMessages(ids, action) {
   setState((st) => ({ list: { ...st.list, messages: remaining }, cursorId: next ? next.id : null }));
   for (const m of removed) adjustCounts(m.accountId, { total: -1, unread: m.isRead ? 0 : -1 });
   if (wasOpen) {
-    if (next && !isMobile()) openMessage(next.id);
+    // Advance to the next message only when that doesn't change anything on the server:
+    // opening an unread one would silently mark it read. Otherwise the cursor waits on it.
+    if (next && !isMobile() && next.isRead) openMessage(next.id);
     else closeReader();
   }
 
@@ -836,8 +865,16 @@ export async function markAllRead() {
   mutationSeq += 1;
   setState((st) => ({ list: { ...st.list, messages: st.list.messages.map((m) => (m.isRead ? m : { ...m, isRead: true })) } }));
   try {
-    const { count = 0 } = await api.markAllRead(s.activeTabId);
-    toast(count ? `Marked ${plural(count, 'message')} as read` : 'Everything here is already read', { type: 'success' });
+    const params = listParams(s);
+    const { count = 0, failed = [] } = await api.markAllRead(s.activeTabId, { q: params.q, starred: params.starred });
+    if (failed.length) {
+      // Some accounts refused: reload so the rows that are still unread show as unread.
+      const names = failed.map((f) => accountLabel(getState().accounts.find((a) => a.id === f.accountId)) || 'one account');
+      toast(`Couldn't mark everything as read in ${names.join(', ')}: ${failed[0].error}`, { type: 'error' });
+      loadList();
+    } else {
+      toast(count ? `Marked ${plural(count, 'message')} as read` : 'Everything here is already read', { type: 'success' });
+    }
   } catch (err) {
     setState((st) => ({ list: { ...st.list, messages: st.list.messages.map((m) => (unreadIds.has(m.id) ? { ...m, isRead: false } : m)) } }));
     toastError(err, "Couldn't mark messages as read.");
@@ -879,12 +916,22 @@ export function targetMessageId() {
 // Dialogs
 
 export function openDialog(type, props = {}) {
+  // On phones dialogs are full-screen sheets that look like pages, so give them a history
+  // entry: the Back gesture then closes the sheet instead of leaving Mailtabs.
+  const current = window.history.state || {};
+  if (isMobile() && !getState().dialog && !current.mtDialog) {
+    window.history.pushState({ ...current, mtDialog: true }, '');
+  }
   // Success/info toasts refer to what happened before; don't let them sit over the dialog.
   setState((s) => ({ dialog: { type, props }, toasts: s.toasts.filter((t) => t.type === 'error') }));
 }
 
 export function closeDialog() {
   setState({ dialog: null });
+  if (window.history.state && window.history.state.mtDialog) {
+    ignoreNextPop = true;
+    window.history.back();
+  }
 }
 
 /** Which OAuth provider (google|microsoft) an account signs in with, if any. */

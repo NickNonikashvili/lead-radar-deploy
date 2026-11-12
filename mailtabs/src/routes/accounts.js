@@ -11,7 +11,7 @@
 const express = require('express');
 const { HttpError } = require('../errors');
 const { requireAuth, asyncHandler } = require('../middleware');
-const { PRESETS, guessPresetForEmail, presetHostForEmail } = require('../providers');
+const { PRESETS, guessPresetForEmail, presetHostForEmail, isMicrosoftImapHost, alternateUsername } = require('../providers');
 const imap = require('../imap');
 const netguard = require('../netguard');
 const queries = require('../queries');
@@ -80,19 +80,41 @@ const given = (v) => v !== undefined && v !== null && !(typeof v === 'string' &&
 
 /**
  * Connection settings for a new password account: the body's values, else the provider preset.
- * @returns {{ provider, email, password, host, port, security, user }}
+ * `alternateUser` is a second username to try if the login fails (iCloud/Yandex may want only the
+ * part before the @); never set when the user typed a username themselves.
+ * Microsoft accounts are refused (OAUTH_REQUIRED) before a password is even asked for.
+ * @returns {{ provider, email, password, host, port, security, user, alternateUser }}
  */
-function readNewConnection(body) {
+function readNewConnection(body, config) {
   const email = requireEmail(body.email);
   const provider = given(body.provider) ? requireProvider(body.provider) : guessPresetForEmail(email);
-  const password = requirePassword(body.password);
   const preset = PRESETS[provider];
   const host = given(body.imapHost) ? requireHost(body.imapHost) : presetHostForEmail(provider, email);
+  assertPasswordLoginPossible(config, { provider, host });
+  const password = requirePassword(body.password);
   if (!host) throw validate.badRequest('Enter the IMAP server name (for example imap.example.com).', 'HOST_REQUIRED');
   const port = given(body.imapPort) ? requirePort(body.imapPort) : preset.imapPort;
   const security = given(body.imapSecurity) ? requireSecurity(body.imapSecurity) : preset.imapSecurity;
-  const user = validate.optionalText(body.imapUser, { field: 'Username', max: MAX_IMAP_USER }) || email;
-  return { provider, email, password, host, port, security, user };
+  const typedUser = validate.optionalText(body.imapUser, { field: 'Username', max: MAX_IMAP_USER });
+  const user = typedUser || email;
+  const alternateUser = typedUser ? null : alternateUsername(provider, user, email);
+  return { provider, email, password, host, port, security, user, alternateUser };
+}
+
+/**
+ * Microsoft turned off password sign-in for IMAP everywhere (Outlook.com since September 2024,
+ * every Microsoft 365 tenant for good), so a password login can only fail: refuse it up front.
+ */
+function assertPasswordLoginPossible(config, { provider, host }) {
+  if (provider !== 'outlook' && !isMicrosoftImapHost(host)) return;
+  let message =
+    'Microsoft accounts (Outlook.com, Hotmail, Live and Microsoft 365) no longer accept passwords or app passwords for IMAP. ' +
+    'Connect this account with "Sign in with Microsoft" instead.';
+  if (!(config && config.microsoft && config.microsoft.enabled)) {
+    message +=
+      " Microsoft sign-in isn't set up on this server yet: the site owner needs to set MICROSOFT_CLIENT_ID and MICROSOFT_CLIENT_SECRET (see the README).";
+  }
+  throw validate.badRequest(message, 'OAUTH_REQUIRED');
 }
 
 function isUniqueViolation(err) {
@@ -144,17 +166,20 @@ module.exports = function accountsRoutes({ db, config, crypto, syncManager }) {
     }
   }
 
+  /** Check the login; resolves with the username that worked (conn.user or conn.alternateUser). */
   async function verify(userId, conn) {
     spendVerifyBudget(userId);
     // Throws HttpError 400 with a friendly message (IMAP_AUTH_FAILED, IMAP_CONNECT_FAILED,
     // HOST_NOT_ALLOWED, HOST_NOT_FOUND, INSECURE_NOT_ALLOWED, ...); passed through as-is.
-    await imap.verifyLogin(imapDeps, {
+    const result = await imap.verifyLogin(imapDeps, {
       host: conn.host,
       port: conn.port,
       security: conn.security,
       user: conn.user,
       password: conn.password,
+      alternateUser: conn.alternateUser || undefined,
     });
+    return (result && result.user) || conn.user;
   }
 
   /** Start a background sync. Must be called after the account's status is set to 'pending'. */
@@ -198,9 +223,9 @@ module.exports = function accountsRoutes({ db, config, crypto, syncManager }) {
   router.post(
     '/test',
     asyncHandler(async (req, res) => {
-      const conn = readNewConnection(validate.requireBody(req));
-      await verify(req.user.id, conn);
-      res.json({ ok: true });
+      const conn = readNewConnection(validate.requireBody(req), config);
+      const user = await verify(req.user.id, conn);
+      res.json(user === conn.user ? { ok: true } : { ok: true, imapUser: user });
     })
   );
 
@@ -209,14 +234,15 @@ module.exports = function accountsRoutes({ db, config, crypto, syncManager }) {
     asyncHandler(async (req, res) => {
       const userId = req.user.id;
       const body = validate.requireBody(req);
-      const conn = readNewConnection(body);
+      const conn = readNewConnection(body, config);
       const displayName = validate.optionalText(body.displayName, { field: 'Display name', max: MAX_DISPLAY_NAME });
-      const color = given(body.color) ? validate.requireColor(body.color) : queries.DEFAULT_COLOR;
+      // Without a chosen colour, the account gets the first palette colour its siblings don't use.
+      const color = given(body.color) ? validate.requireColor(body.color) : null;
       const tabIds = readTabIds(userId, body.tabIds);
 
       // Cheap checks first; then the (slow) login check; only then store anything.
       if (findByEmail.get(userId, conn.email)) throw duplicate();
-      await verify(userId, conn);
+      conn.user = await verify(userId, conn);
 
       let accountId;
       try {
@@ -233,7 +259,7 @@ module.exports = function accountsRoutes({ db, config, crypto, syncManager }) {
               conn.provider,
               conn.email,
               displayName,
-              color,
+              color || queries.nextAccountColor(db, userId),
               conn.host,
               conn.port,
               conn.security,
@@ -289,6 +315,15 @@ module.exports = function accountsRoutes({ db, config, crypto, syncManager }) {
           'OAUTH_ACCOUNT'
         );
       }
+      if (connectionChanged || newPassword) assertPasswordLoginPossible(config, { provider: account.provider, host: conn.host });
+
+      // The stored password may only ever be sent to the server it was saved for. Pointing the
+      // account at another server (or downgrading its encryption) needs the password typed again,
+      // otherwise a hijacked Mailtabs session could redirect the saved app password to itself.
+      const endpointChanged = conn.host !== account.imap_host || conn.port !== account.imap_port || conn.security !== account.imap_security;
+      if (endpointChanged && newPassword === null) {
+        throw validate.badRequest('Enter the password for this account again to change its server settings.', 'PASSWORD_REQUIRED');
+      }
 
       if (connectionChanged || newPassword) {
         let password = newPassword;
@@ -300,7 +335,10 @@ module.exports = function accountsRoutes({ db, config, crypto, syncManager }) {
           }
           if (!password) throw validate.badRequest('Enter the password for this account again.', 'PASSWORD_REQUIRED');
         }
-        await verify(userId, { ...conn, password });
+        // Unless a username was given, iCloud/Yandex logins may retry with the other username form.
+        const alternateUser = given(body.imapUser) ? null : alternateUsername(account.provider, conn.user, account.email);
+        // The same mailbox under another login name: mailboxChanged stays as computed above.
+        conn.user = await verify(userId, { ...conn, password, alternateUser });
         Object.assign(sets, {
           imap_host: conn.host,
           imap_port: conn.port,
@@ -318,7 +356,9 @@ module.exports = function accountsRoutes({ db, config, crypto, syncManager }) {
         if (!queries.getAccountRowForUser(db, userId, account.id)) return false; // removed during the login check
         const columns = Object.keys(sets);
         if (columns.length) {
-          db.prepare(`UPDATE accounts SET ${columns.map((c) => `${c} = ?`).join(', ')} WHERE id = ? AND user_id = ?`).run(
+          // config_version tells a sync still running with the old settings that its writes are stale.
+          const bump = sets.status === 'pending' ? ', config_version = config_version + 1' : '';
+          db.prepare(`UPDATE accounts SET ${columns.map((c) => `${c} = ?`).join(', ')}${bump} WHERE id = ? AND user_id = ?`).run(
             ...columns.map((c) => sets[c]),
             account.id,
             userId

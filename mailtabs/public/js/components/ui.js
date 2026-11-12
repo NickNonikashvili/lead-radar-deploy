@@ -30,11 +30,19 @@ export function ColorSwatches({ value, onChange, label = 'Color', name }) {
   </fieldset>`;
 }
 
-/** First swatch not used yet by `used` colors (falls back to cycling). */
+/**
+ * The first swatch none of `used` has; when all are taken, the least-used one (swatch order breaks
+ * ties). The server picks account colours the same way (src/palette.js).
+ */
 export function nextFreeColor(used) {
-  const taken = new Set((used || []).map((c) => String(c || '').toLowerCase()));
-  const free = SWATCHES.find((s) => !taken.has(s.value));
-  return (free || SWATCHES[taken.size % SWATCHES.length]).value;
+  const counts = new Map(SWATCHES.map((s) => [s.value, 0]));
+  for (const c of used || []) {
+    const key = String(c || '').toLowerCase();
+    if (counts.has(key)) counts.set(key, counts.get(key) + 1);
+  }
+  let best = SWATCHES[0].value;
+  for (const s of SWATCHES) if (counts.get(s.value) < counts.get(best)) best = s.value;
+  return best;
 }
 
 export function ColorDot({ color, size = 8, className = '' }) {

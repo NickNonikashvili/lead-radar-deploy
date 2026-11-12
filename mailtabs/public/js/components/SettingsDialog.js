@@ -53,7 +53,9 @@ function AccountEditor({ account, tabs, presets, providers, onDone }) {
     const body = {
       displayName: displayName.trim(),
       color,
-      tabIds: tabIds.filter((id) => tabs.some((t) => t.id === id && !t.allAccounts)),
+      // tabIds replaces the account's memberships, so keep the ones the checklist doesn't show
+      // ("All accounts" tabs): they remember the choice if that tab is switched back to "Only these".
+      tabIds: tabIds.filter((id) => tabs.some((t) => t.id === id)),
     };
     if (!isOAuth && password) body.password = password;
     setBusy(true);

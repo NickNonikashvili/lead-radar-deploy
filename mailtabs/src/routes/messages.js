@@ -277,8 +277,10 @@ module.exports = function messagesRoutes({ db, config, crypto, syncManager }) {
               const [column, value] = 'isRead' in flags ? ['is_read', flags.isRead ? 1 : 0] : ['is_starred', flags.isStarred ? 1 : 0];
               for (const batch of chunk(ids, LOCAL_UPDATE_BATCH)) {
                 count += db
-                  .prepare(`UPDATE messages SET ${column} = ? WHERE ${column} != ? AND id IN (${batch.map(() => '?').join(', ')})`)
-                  .run(value, value, ...batch).changes;
+                  .prepare(
+                    `UPDATE messages SET ${column} = ?, flags_changed_at = ? WHERE ${column} != ? AND id IN (${batch.map(() => '?').join(', ')})`
+                  )
+                  .run(value, Date.now(), value, ...batch).changes;
               }
             }
           } catch (err) {
@@ -312,7 +314,16 @@ module.exports = function messagesRoutes({ db, config, crypto, syncManager }) {
       const userId = req.user.id;
       const body = validate.requireBody(req);
       const tab = queries.resolveTab(db, userId, readTabParam(userId, body.tab));
-      const refs = queries.selectTabMessageRefs(db, userId, tab, { unread: true });
+      // Same narrowing as the list the user is looking at: a search or the Starred filter
+      // must only mark what is shown, not the whole tab.
+      let accountId;
+      if (body.account !== undefined && body.account !== null && body.account !== '') {
+        accountId = validate.requireId(body.account, 'account');
+        if (!queries.getAccountRowForUser(db, userId, accountId)) throw new HttpError(404, 'Account not found', 'NOT_FOUND');
+      }
+      const search = typeof body.q === 'string' ? body.q.slice(0, MAX_QUERY) : undefined;
+      const starred = body.starred === true || body.starred === 1 || body.starred === '1' || body.starred === 'true';
+      const refs = queries.selectTabMessageRefs(db, userId, tab, { unread: true, q: search, starred: starred || undefined, accountId });
       const { count, failed } = await applyToGroups(userId, refs, 'read');
       if (failed.length && count === 0) {
         // Nothing could be changed: report it as an error so the UI rolls back.
@@ -434,8 +445,11 @@ module.exports = function messagesRoutes({ db, config, crypto, syncManager }) {
       if (!att) throw new HttpError(404, 'Attachment not found', 'NOT_FOUND');
 
       const declared = String(att.contentType || '').toLowerCase().split(';')[0].trim();
-      const contentType = CONTENT_TYPE_RE.test(declared) ? declared : 'application/octet-stream';
-      const inline = INLINE_IMAGE_TYPES.has(contentType);
+      const inline = INLINE_IMAGE_TYPES.has(declared);
+      // Only the safe inline image types keep the sender's type. Everything else is a plain
+      // download: a same-origin response typed text/html or application/javascript is a gadget
+      // for script injection, whatever Content-Disposition says.
+      const contentType = inline && CONTENT_TYPE_RE.test(declared) ? declared : 'application/octet-stream';
       const filename = cleanFilename(att.filename, index);
 
       res.setHeader('Content-Type', contentType);
@@ -466,8 +480,10 @@ module.exports = function messagesRoutes({ db, config, crypto, syncManager }) {
       if ('isStarred' in changes) columns.push({ column: 'is_starred', next: changes.isStarred ? 1 : 0, prev: row.is_starred });
 
       // Local first, so the UI and the counts are right immediately ...
-      db.prepare(`UPDATE messages SET ${columns.map((c) => `${c.column} = ?`).join(', ')} WHERE id = ?`).run(
+      // (flags_changed_at keeps a sync that read the server's flags a moment ago from undoing it.)
+      db.prepare(`UPDATE messages SET ${columns.map((c) => `${c.column} = ?`).join(', ')}, flags_changed_at = ? WHERE id = ?`).run(
         ...columns.map((c) => c.next),
+        Date.now(),
         row.id
       );
       // ... then on the mail server; undo locally if that fails.

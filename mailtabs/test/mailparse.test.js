@@ -8,9 +8,11 @@ const {
   sanitizeEmailHtml,
   rewriteCidLinks,
   makeSnippet,
+  stripLeadingSubject,
   renderBodyDocument,
   countRemoteImages,
   linkifyText,
+  htmlToPlainText,
 } = require('../src/mailparse');
 const { buildMessage, TINY_PNG } = require('./engine-helpers');
 
@@ -205,6 +207,7 @@ test('makeSnippet collapses whitespace, drops invisible padding and caps at 200 
   assert.equal(makeSnippet('  Hello\n\n\tworld  '), 'Hello world');
   assert.equal(makeSnippet('Preview‌ ‌ ͏ text'), 'Preview text');
   assert.equal(makeSnippet('Click [https://example.com/x] now'), 'Click now');
+  assert.equal(makeSnippet('See the deck [https://example.com/x].'), 'See the deck.', 'no space left before punctuation');
   const long = makeSnippet('word '.repeat(100));
   assert.ok(long.length <= 200, String(long.length));
   assert.ok(long.endsWith('…'));
@@ -284,9 +287,56 @@ test('parseRawMessage: HTML-only message gets text and a clean snippet', async (
   );
   assert.ok(p.text.includes('World'));
   assert.doesNotMatch(p.snippet, /<|color:red|https:\/\/t\.example/);
-  assert.match(p.snippet, /^Your weekly digest HELLO World link$/i);
+  assert.equal(p.snippet, 'Your weekly digest Hello World link');
   assert.equal(p.remoteImageCount, 1);
   assert.equal(p.hasAttachments, false);
+});
+
+test('parseRawMessage: headings and table headers keep their case in text and snippet', async () => {
+  const p = await parseRawMessage(
+    buildMessage({
+      subject: 'Planning',
+      html:
+        '<h1>Q4 Roadmap Review</h1><h3>Agenda for Thursday</h3><p>Hello <b>team</b>.</p>' +
+        '<table><tr><th>Item</th><th>Owner</th></tr><tr><td>Budget</td><td>Ann</td></tr></table>' +
+        '<img src="data:image/png;base64,iVBORw0KGgo=" alt="Company logo">',
+    })
+  );
+  assert.match(p.text, /^Q4 Roadmap Review\n/);
+  assert.match(p.text, /Agenda for Thursday/);
+  assert.doesNotMatch(p.text, /ROADMAP|AGENDA|ITEM|OWNER/);
+  assert.equal(p.snippet, 'Q4 Roadmap Review Agenda for Thursday Hello team. Item Owner Budget Ann');
+  assert.doesNotMatch(p.snippet, /data:|logo/, 'images are not part of the text');
+});
+
+test('parseRawMessage: a first heading that repeats the subject is left out of the snippet', async () => {
+  const dup = await parseRawMessage(
+    buildMessage({ subject: 'Q4 Roadmap Review', html: '<h1>Q4 roadmap  review</h1><p>Agenda for Thursday.</p>' })
+  );
+  assert.equal(dup.snippet, 'Agenda for Thursday.');
+  assert.match(dup.text, /^Q4 roadmap review\n/, 'the stored text keeps it');
+
+  // Only an exact repeat on its own line: a heading that says more stays.
+  const more = await parseRawMessage(buildMessage({ subject: 'Q4 Roadmap Review', html: '<h1>Q4 Roadmap Review: agenda</h1><p>Hi.</p>' }));
+  assert.equal(more.snippet, 'Q4 Roadmap Review: agenda Hi.');
+  const sentence = await parseRawMessage(buildMessage({ subject: 'Hello', text: 'Hello Bob, how are you?' }));
+  assert.equal(sentence.snippet, 'Hello Bob, how are you?');
+  // Plain-text mail that starts with the subject line too.
+  const plain = await parseRawMessage(buildMessage({ subject: 'Weekly update', text: '\nWeekly update\n\nAll systems normal.' }));
+  assert.equal(plain.snippet, 'All systems normal.');
+});
+
+test('stripLeadingSubject and htmlToPlainText edge cases', () => {
+  assert.equal(stripLeadingSubject('', 'x'), '');
+  assert.equal(stripLeadingSubject(null, 'x'), '');
+  assert.equal(stripLeadingSubject('Body', ''), 'Body');
+  assert.equal(stripLeadingSubject('Body', null), 'Body');
+  assert.equal(stripLeadingSubject('Sale [https://shop.example/] \nNow on', 'SALE'), 'Now on', 'link targets are ignored');
+  assert.equal(stripLeadingSubject('Only the subject', 'Only the subject'), '');
+  assert.equal(htmlToPlainText(''), '');
+  // Absurdly deep nesting skips html-to-text (stack depth) but still yields the text, case kept.
+  const deep = `${'<div>'.repeat(1500)}Deep Inside${'</div>'.repeat(1500)}`;
+  assert.equal(htmlToPlainText(deep), 'Deep Inside');
 });
 
 test('parseRawMessage: ISO-8859-1 body, Q/B-encoded headers, groups, missing date', async () => {

@@ -3,7 +3,18 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 
-const { PRESETS, publicPresets, guessPresetForEmail, presetHostForEmail, oauthProviders, oauthProviderForPreset } = require('../src/providers');
+const {
+  PRESETS,
+  publicPresets,
+  guessPresetForEmail,
+  presetHostForEmail,
+  presetKeyForHost,
+  isMicrosoftImapHost,
+  alternateUsername,
+  authFailureHintForHost,
+  oauthProviders,
+  oauthProviderForPreset,
+} = require('../src/providers');
 const { loadConfig } = require('../src/config');
 
 function config(env = {}) {
@@ -51,6 +62,87 @@ test('key presets match the spec', () => {
   assert.equal(PRESETS.imap.label, 'Other (IMAP)');
 });
 
+test('help texts and links follow the providers\' current documentation', () => {
+  assert.match(PRESETS.gmail.passwordHelp, /2-Step Verification/);
+  assert.match(PRESETS.gmail.passwordHelp, /Advanced Protection/);
+  assert.match(PRESETS.gmail.passwordHelp, /security-key-only/);
+  assert.match(PRESETS.gmail.passwordHelp, /work and school/);
+
+  // No password escape hatch for Microsoft accounts any more.
+  assert.doesNotMatch(PRESETS.outlook.passwordHelp, /work accounts still allow/i);
+  assert.match(PRESETS.outlook.passwordHelp, /Sign in with Microsoft/);
+  assert.match(PRESETS.outlook.passwordHelp, /Forwarding and IMAP/);
+  assert.equal(PRESETS.outlook.passwordHelpUrl, null);
+
+  assert.equal(PRESETS.icloud.passwordHelpUrl, 'https://account.apple.com');
+  assert.match(PRESETS.icloud.passwordHelp, /App-Specific Passwords/);
+  assert.equal(PRESETS.icloud.usernameFallback, 'localPart');
+
+  assert.equal(PRESETS.yandex.passwordHelpUrl, 'https://id.yandex.com/security');
+  assert.match(PRESETS.yandex.passwordHelp, /IMAP/);
+  assert.match(PRESETS.yandex.passwordHelp, /App passwords and OAuth tokens/);
+  assert.match(PRESETS.yandex.passwordHelp, /2–3 hours/);
+  assert.equal(PRESETS.yandex.usernameFallback, 'localPart');
+
+  assert.ok(PRESETS.zoho.domains.includes('zohomail.com') && PRESETS.zoho.domains.includes('zoho.com'));
+  assert.match(PRESETS.zoho.passwordHelp, /imappro\.zoho\.com/);
+  assert.match(PRESETS.zoho.passwordHelp, /Server Configuration Details/);
+
+  assert.equal(PRESETS.aol.passwordHelpUrl, 'https://login.aol.com/myaccount/security');
+  assert.ok(PRESETS.aol.domains.includes('aol.com'));
+  assert.equal(PRESETS.fastmail.passwordHelpUrl, 'https://app.fastmail.com/settings/security');
+  assert.match(PRESETS.fastmail.passwordHelp, /Basic plan has no IMAP/);
+  assert.match(PRESETS.gmx.passwordHelp, /POP3 & IMAP/);
+  assert.equal(presetHostForEmail('gmx', 'a@gmx.com'), 'imap.gmx.com');
+
+  // The browser gets the help texts but not the server-only fields.
+  const icloud = publicPresets().find((p) => p.key === 'icloud');
+  assert.equal(icloud.passwordHelpUrl, 'https://account.apple.com');
+  assert.equal(icloud.authFailureHint, undefined);
+});
+
+test('presetKeyForHost / isMicrosoftImapHost recognise providers by IMAP server name', () => {
+  assert.equal(presetKeyForHost('imap.gmail.com'), 'gmail');
+  assert.equal(presetKeyForHost('IMAP.GMX.NET.'), 'gmx');
+  assert.equal(presetKeyForHost('imappro.zoho.com'), 'zoho');
+  assert.equal(presetKeyForHost('imap.zoho.eu'), 'zoho');
+  assert.equal(presetKeyForHost('imap.ya.ru'), 'yandex');
+  assert.equal(presetKeyForHost('imap.example.com'), null);
+  assert.equal(presetKeyForHost(''), null);
+  assert.equal(presetKeyForHost(undefined), null);
+  for (const host of ['outlook.office365.com', 'outlook.office.com', 'imap-mail.outlook.com', 'Outlook.Office365.com']) {
+    assert.equal(isMicrosoftImapHost(host), true, host);
+  }
+  assert.equal(isMicrosoftImapHost('imap.gmail.com'), false);
+  assert.equal(isMicrosoftImapHost('outlook.office365.com.evil.example'), false);
+});
+
+test('alternateUsername: iCloud and Yandex retry with the other username form', () => {
+  assert.equal(alternateUsername('icloud', 'johnappleseed@icloud.com', 'johnappleseed@icloud.com'), 'johnappleseed');
+  assert.equal(alternateUsername('icloud', 'johnappleseed', 'johnappleseed@icloud.com'), 'johnappleseed@icloud.com');
+  assert.equal(alternateUsername('yandex', 'user@yandex.com', 'user@yandex.com'), 'user');
+  assert.equal(alternateUsername('icloud', 'same@me.com', 'SAME@me.com'), 'same');
+  assert.equal(alternateUsername('icloud', 'Same', 'same'), null, 'nothing else to try');
+  assert.equal(alternateUsername('icloud', '', 'a@me.com'), null);
+  for (const key of ['gmail', 'outlook', 'yahoo', 'fastmail', 'imap', 'nope']) {
+    assert.equal(alternateUsername(key, 'a@b.com', 'a@b.com'), null, key);
+  }
+});
+
+test('authFailureHintForHost gives provider advice by server name', () => {
+  assert.match(authFailureHintForHost('imap.gmx.net'), /POP3 & IMAP/);
+  assert.match(authFailureHintForHost('imap.gmx.com'), /switches it off/);
+  assert.match(authFailureHintForHost('imap.zoho.com'), /IMAP Access/);
+  assert.match(authFailureHintForHost('imap.yandex.com'), /2–3 hours/);
+  assert.match(authFailureHintForHost('outlook.office365.com'), /Forwarding and IMAP/);
+  assert.match(authFailureHintForHost('imap.mail.yahoo.com'), /app password/);
+  assert.match(authFailureHintForHost('imap.aol.com'), /app password/);
+  assert.match(authFailureHintForHost('imap.fastmail.com'), /Basic plan/);
+  assert.match(authFailureHintForHost('imap.mail.me.com'), /app-specific password/);
+  assert.match(authFailureHintForHost('imap.gmail.com'), /App Password/);
+  assert.equal(authFailureHintForHost('127.0.0.1'), '');
+});
+
 test('guessPresetForEmail maps domains and falls back to imap', () => {
   assert.equal(guessPresetForEmail('me@gmail.com'), 'gmail');
   assert.equal(guessPresetForEmail('Me@GoogleMail.com'), 'gmail');
@@ -95,7 +187,15 @@ test('oauthProviders reflects config and spec endpoints', () => {
   assert.equal(p.microsoft.tokenUrl, 'https://login.microsoftonline.com/consumers/oauth2/v2.0/token');
   assert.ok(p.microsoft.scopes.includes('https://outlook.office.com/IMAP.AccessAsUser.All'));
   assert.ok(p.microsoft.scopes.includes('offline_access'));
+  assert.equal(p.microsoft.scopes[0], 'https://outlook.office.com/IMAP.AccessAsUser.All', 'the IMAP scope comes first');
+  assert.ok(!p.microsoft.scopes.some((s) => /graph\.microsoft\.com|User\.Read/i.test(s)), 'no Graph scopes');
   assert.deepEqual(p.microsoft.extraAuthParams, { prompt: 'select_account' });
+  assert.equal(p.microsoft.mailScope, 'https://outlook.office.com/IMAP.AccessAsUser.All');
+  assert.deepEqual(p.microsoft.refreshScopes, ['https://outlook.office.com/IMAP.AccessAsUser.All', 'offline_access']);
+  assert.equal(p.google.mailScope, 'https://mail.google.com/');
+  assert.equal(p.google.refreshScopes, null, 'Google refreshes without a scope');
+  assert.deepEqual(p.google.envNames, ['GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET']);
+  assert.deepEqual(p.microsoft.envNames, ['MICROSOFT_CLIENT_ID', 'MICROSOFT_CLIENT_SECRET']);
 
   // Fresh objects every call.
   p.google.scopes.push('x');

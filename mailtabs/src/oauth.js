@@ -14,11 +14,16 @@ const TOKEN_REQUEST_TIMEOUT_MS = 15000;
 const REFRESH_MARGIN_MS = 2 * 60 * 1000;
 const REVOKED_MESSAGE = 'Access was revoked or expired — reconnect this account.';
 const UNREADABLE_MESSAGE = "The saved sign-in for this account can't be read (the server's secret key changed) — reconnect this account.";
+// Token endpoint errors that mean the server's own client ID/secret are wrong, expired or deleted.
+const CLIENT_ERRORS = new Set(['invalid_client', 'unauthorized_client', 'deleted_client']);
+const EMAIL_RE = /^[^\s@]+@[^\s@.]+(?:\.[^\s@.]+)+$/;
 
 class OAuthError extends Error {
   /**
    * @param {string} message human readable
-   * @param {'invalid_grant'|'oauth_error'} code
+   * @param {'invalid_grant'|'invalid_client'|'insufficient_scope'|'oauth_error'} code
+   *   invalid_grant: the user's grant is gone (reconnect); invalid_client: this server's client
+   *   ID/secret were rejected (site owner must fix the configuration)
    * @param {number} [status] HTTP status returned by the token endpoint, if any
    */
   constructor(message, code = 'oauth_error', status) {
@@ -27,6 +32,76 @@ class OAuthError extends Error {
     this.code = code;
     this.status = status;
   }
+}
+
+/** The redirect URI to register with the provider: <APP_URL>/api/oauth/<provider>/callback. */
+function redirectUriFor(config, providerKey) {
+  return `${config.appUrl}/api/oauth/${providerKey}/callback`;
+}
+
+/** Why a stored refresh token stopped working, in words the user (and site owner) can act on. */
+function revokedMessage(provider) {
+  if (provider && provider.key === 'google') {
+    return (
+      "Google stopped accepting this account's saved sign-in — reconnect it. Common causes: this server's Google app is still " +
+      'in "Testing" mode (sign-ins then expire after 7 days), your Google password changed, access was removed in your ' +
+      'Google Account, it went unused for 6 months, or it was connected more than 100 times.'
+    );
+  }
+  if (provider && provider.key === 'microsoft') {
+    return (
+      "Microsoft stopped accepting this account's saved sign-in — reconnect it. Common causes: your password changed or " +
+      'your sessions were signed out, access was removed from your Microsoft account, or it went unused for 90 days.'
+    );
+  }
+  return REVOKED_MESSAGE;
+}
+
+/** The provider refused this server's client credentials: a configuration problem, not the user's. */
+function clientErrorMessage(provider, errorCode, description) {
+  const who = provider.label || provider.key;
+  const names = (provider.envNames || []).join(' and ') || 'the OAuth client ID and secret';
+  let cause = 'the client secret may be wrong, expired or replaced';
+  if (provider.key === 'microsoft' && errorCode === 'unauthorized_client') {
+    cause = 'the app registration may not allow this kind of account (its supported account types must match MICROSOFT_TENANT)';
+  } else if (provider.key === 'microsoft') {
+    cause = 'client secrets expire (after 24 months at most), so a new one may be needed';
+  } else if (errorCode === 'deleted_client') {
+    cause = 'Google deletes OAuth clients that go unused for 6 months, so a new one is needed';
+  } else if (provider.key === 'google') {
+    cause = 'the client secret may be wrong or replaced, or the OAuth client deleted';
+  }
+  const detail = description ? `${errorCode}: ${description.slice(0, 100)}` : errorCode;
+  return `${who} rejected this server's ${who} sign-in settings (${detail}). Nothing is wrong with your account: the site owner should check ${names} — ${cause}.`;
+}
+
+/**
+ * Did the token response grant the mail scope? RFC 6749 §5.1: a response without `scope`
+ * granted exactly what was asked for. Accepts the full scope URL or its last part
+ * ('IMAP.AccessAsUser.All'), case-insensitively.
+ */
+function grantsMailScope(provider, scope) {
+  if (!provider.mailScope || typeof scope !== 'string' || !scope.trim()) return true;
+  const norm = (v) => String(v).toLowerCase().replace(/\/+$/, '');
+  const wanted = norm(provider.mailScope);
+  const bare = wanted.slice(wanted.lastIndexOf('/') + 1);
+  return scope.split(/\s+/).some((s) => {
+    const got = norm(s);
+    return got === wanted || got === bare;
+  });
+}
+
+function missingScopeMessage(provider) {
+  if (provider.key === 'google') {
+    return (
+      "Mail access wasn't granted, so the account was not connected. Sign in again and tick the Gmail permission " +
+      '("Read, compose, send, and permanently delete all your email from Gmail") — Mailtabs needs it to read your inbox.'
+    );
+  }
+  return (
+    "Mail access wasn't granted, so the account was not connected. Sign in again and accept the permission to read your " +
+    'mail (IMAP). Work accounts may need an administrator to approve it.'
+  );
 }
 
 /** URL to send the browser to so the user can grant mail access. */
@@ -65,7 +140,8 @@ function emailFromClaims(provider, claims) {
   if (!claims) return null;
   const candidates = provider.key === 'microsoft' ? [claims.email, claims.preferred_username, claims.upn] : [claims.email];
   for (const value of candidates) {
-    if (typeof value === 'string' && /^[^\s@]+@[^\s@]+$/.test(value.trim())) return value.trim();
+    // Microsoft's preferred_username can also be a phone number or a plain user name.
+    if (typeof value === 'string' && value.trim().length <= 254 && EMAIL_RE.test(value.trim())) return value.trim();
   }
   return null;
 }
@@ -106,8 +182,14 @@ async function tokenRequest(provider, fields) {
     const errorCode = data && typeof data.error === 'string' ? data.error : '';
     const description = data && typeof data.error_description === 'string' ? data.error_description : '';
     if (errorCode === 'invalid_grant') {
-      const err = new OAuthError(REVOKED_MESSAGE, 'invalid_grant', res.status);
+      const err = new OAuthError(revokedMessage(provider), 'invalid_grant', res.status);
       err.description = description;
+      throw err;
+    }
+    if (CLIENT_ERRORS.has(errorCode)) {
+      const err = new OAuthError(clientErrorMessage(provider, errorCode, description), 'invalid_client', res.status);
+      err.description = description;
+      err.providerError = errorCode;
       throw err;
     }
     const detail = description || errorCode || `HTTP ${res.status}`;
@@ -135,10 +217,17 @@ async function exchangeCode(provider, { code, codeVerifier, redirectUri }) {
     redirect_uri: redirectUri,
     code_verifier: codeVerifier,
   });
+  // With granular consent (Google) the user may have granted sign-in but not mail access.
+  if (!grantsMailScope(provider, data.scope)) throw new OAuthError(missingScopeMessage(provider), 'insufficient_scope');
   const claims = decodeJwtPayload(data.id_token);
   const email = emailFromClaims(provider, claims);
   if (!email) {
-    throw new OAuthError(`Could not determine the email address of the ${provider.label || provider.key} account.`, 'oauth_error');
+    throw new OAuthError(
+      provider.key === 'microsoft'
+        ? 'Could not determine the mailbox address of the Microsoft account. If you signed in with a phone number or user name, sign in with your email address instead.'
+        : `Could not determine the email address of the ${provider.label || provider.key} account.`,
+      'oauth_error'
+    );
   }
   const name = claims && typeof claims.name === 'string' && claims.name.trim() ? claims.name.trim() : null;
   return {
@@ -163,7 +252,11 @@ async function refreshAccessToken(provider, refreshToken) {
     grant_type: 'refresh_token',
     refresh_token: refreshToken,
   };
-  if (provider.key === 'microsoft') fields.scope = provider.scopes.join(' ');
+  if (Array.isArray(provider.refreshScopes) && provider.refreshScopes.length) {
+    // Microsoft returns a token for the resource of the FIRST scope, so the mail scope leads.
+    const rest = provider.refreshScopes.filter((s) => s !== provider.mailScope);
+    fields.scope = (provider.mailScope ? [provider.mailScope, ...rest] : rest).join(' ');
+  }
   const data = await tokenRequest(provider, fields);
   return {
     accessToken: data.access_token,
@@ -172,12 +265,17 @@ async function refreshAccessToken(provider, refreshToken) {
   };
 }
 
-function markRevoked(db, accountId, message = REVOKED_MESSAGE) {
+function markAccount(db, accountId, status, message) {
   try {
-    db.prepare("UPDATE accounts SET status = 'auth_error', last_error = ? WHERE id = ?").run(message, accountId);
+    db.prepare('UPDATE accounts SET status = ?, last_error = ? WHERE id = ?').run(status, message, accountId);
   } catch (_) {
     /* account deleted or DB closed — nothing to mark */
   }
+}
+
+/** The user must reconnect: the scheduler skips 'auth_error' accounts until then. */
+function markRevoked(db, accountId, message = REVOKED_MESSAGE) {
+  markAccount(db, accountId, 'auth_error', message);
 }
 
 // One refresh per account at a time, so a sync and a user action do not race each other
@@ -230,7 +328,10 @@ async function getFreshAccessToken({ db, crypto, config }, accountRow) {
     try {
       fresh = await refreshAccessToken(provider, secret.refreshToken);
     } catch (err) {
-      if (err instanceof OAuthError && err.code === 'invalid_grant') markRevoked(db, accountRow.id);
+      if (err instanceof OAuthError && err.code === 'invalid_grant') markRevoked(db, accountRow.id, err.message);
+      // A server misconfiguration (wrong/expired client secret, deleted client) is not the
+      // user's fault: plain 'error', so the account is retried once the site owner fixes it.
+      else if (err instanceof OAuthError && err.code === 'invalid_client') markAccount(db, accountRow.id, 'error', err.message);
       throw err;
     }
     const newSecret = crypto.encryptJson({
@@ -255,11 +356,13 @@ async function getFreshAccessToken({ db, crypto, config }, accountRow) {
 }
 
 module.exports = {
+  redirectUriFor,
   buildAuthUrl,
   exchangeCode,
   refreshAccessToken,
   getFreshAccessToken,
   OAuthError,
   decodeJwtPayload,
+  grantsMailScope,
   REVOKED_MESSAGE,
 };

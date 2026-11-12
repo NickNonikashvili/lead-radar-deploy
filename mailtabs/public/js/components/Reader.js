@@ -22,22 +22,46 @@ function contentHeight(iframe) {
     return null; // not same-origin (should not happen)
   }
   if (!doc || !doc.documentElement) return null;
-  const root = doc.documentElement;
   const body = doc.body;
-  const h = Math.max(root.getBoundingClientRect().height, body ? body.scrollHeight : 0, body ? body.getBoundingClientRect().height : 0);
+  if (!body) return null;
+  // Measure the content wrapper, not html/body: their height can depend on the iframe's own
+  // height (height:100%, 100vh), which would make every resize grow the iframe again.
+  const wrapper = doc.getElementById('mt-root');
+  const view = doc.defaultView;
+  const style = view ? view.getComputedStyle(body) : null;
+  const padding = style ? parseFloat(style.paddingTop) + parseFloat(style.paddingBottom) + parseFloat(style.marginTop) + parseFloat(style.marginBottom) : 32;
+  const h = wrapper ? wrapper.getBoundingClientRect().height + (Number.isFinite(padding) ? padding : 32) : body.scrollHeight;
   return Math.ceil(h);
 }
+
+// If an email still manages to grow with its frame, stop following it after a few rounds
+// and let the frame scroll instead.
+const MAX_GROWTHS_PER_SECOND = 6;
 
 function BodyFrame({ messageId, showImages, title }) {
   const ref = useRef(null);
   const [height, setHeight] = useState(160);
   const observer = useRef(null);
 
+  const growth = useRef({ count: 0, since: 0, last: 0 });
   const resize = () => {
     const iframe = ref.current;
     if (!iframe) return;
     const h = contentHeight(iframe);
-    if (h && h > 0) setHeight(h);
+    if (!h || h <= 0) return;
+    const g = growth.current;
+    const now = performance.now();
+    if (now - g.since > 1000) {
+      g.since = now;
+      g.count = 0;
+    }
+    if (h > g.last) g.count += 1;
+    g.last = h;
+    if (g.count > MAX_GROWTHS_PER_SECOND) {
+      if (observer.current) observer.current.disconnect();
+      return;
+    }
+    setHeight(h);
   };
 
   useEffect(() => {
@@ -188,7 +212,7 @@ export function Reader() {
   if (s.openId == null) return html`<${ReaderPlaceholder} />`;
 
   const detail = s.detail;
-  if (detail && detail.status === 'error' && !s.item) {
+  if (detail && detail.status === 'error') {
     return html`<div class="reader-placeholder">
       <div class="empty-icon is-danger"><${Icon} name="alert" size=${22} /></div>
       <p class="empty-title">${detail.notFound ? 'This message is no longer available' : "Couldn't open this message"}</p>

@@ -4,7 +4,16 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const http = require('http');
 
-const { buildAuthUrl, exchangeCode, refreshAccessToken, getFreshAccessToken, OAuthError, decodeJwtPayload } = require('../src/oauth');
+const {
+  buildAuthUrl,
+  exchangeCode,
+  refreshAccessToken,
+  getFreshAccessToken,
+  OAuthError,
+  decodeJwtPayload,
+  grantsMailScope,
+  redirectUriFor,
+} = require('../src/oauth');
 const { oauthProviders } = require('../src/providers');
 const imap = require('../src/imap');
 const { makeEngineEnv, createUser, createAccount, getAccount } = require('./engine-helpers');
@@ -102,6 +111,7 @@ test('buildAuthUrl includes PKCE, state, scopes and provider extras', () => {
     const ms = new URL(buildAuthUrl(microsoft, { state: 's', codeChallenge: 'c', redirectUri: 'http://x/cb' }));
     assert.equal(ms.searchParams.get('prompt'), 'select_account');
     assert.ok(ms.searchParams.get('scope').includes('offline_access'));
+    assert.ok(ms.searchParams.get('scope').startsWith('https://outlook.office.com/IMAP.AccessAsUser.All '), 'IMAP scope first');
     assert.equal(ms.searchParams.get('login_hint'), null);
     assert.throws(() => buildAuthUrl(google, { state: 's' }), OAuthError);
   } finally {
@@ -183,9 +193,74 @@ test('exchangeCode: no id_token / non-email claim -> OAuthError', async () => {
     mock.respond = () => ({ body: { access_token: 'a' } });
     await assert.rejects(exchangeCode(microsoft, { code: 'c', codeVerifier: 'v', redirectUri: 'r' }), OAuthError);
     mock.respond = () => ({ body: { access_token: 'a', id_token: jwt({ preferred_username: '+15551234567' }) } });
-    await assert.rejects(exchangeCode(microsoft, { code: 'c', codeVerifier: 'v', redirectUri: 'r' }), OAuthError);
+    await assert.rejects(exchangeCode(microsoft, { code: 'c', codeVerifier: 'v', redirectUri: 'r' }), (err) => {
+      assert.ok(err instanceof OAuthError);
+      assert.match(err.message, /mailbox address/);
+      assert.match(err.message, /phone number/);
+      return true;
+    });
     mock.respond = () => ({ body: { access_token: 'a', id_token: 'garbage' } });
     await assert.rejects(exchangeCode(microsoft, { code: 'c', codeVerifier: 'v', redirectUri: 'r' }), OAuthError);
+    // Usernames that only look a bit like addresses are not used as the mailbox.
+    for (const name of ['jdoe', 'jdoe@contoso', 'j doe@contoso.com', `${'a'.repeat(250)}@contoso.com`]) {
+      mock.respond = () => ({ body: { access_token: 'a', id_token: jwt({ preferred_username: name }) } });
+      await assert.rejects(exchangeCode(microsoft, { code: 'c', codeVerifier: 'v', redirectUri: 'r' }), OAuthError, name);
+    }
+    // A bad email claim falls back to a good preferred_username.
+    mock.respond = () => ({ body: { access_token: 'a', id_token: jwt({ email: 'not-an-email', preferred_username: 'jdoe@contoso.com' }) } });
+    assert.equal((await exchangeCode(microsoft, { code: 'c', codeVerifier: 'v', redirectUri: 'r' })).email, 'jdoe@contoso.com');
+  } finally {
+    env.close();
+  }
+});
+
+test('exchangeCode refuses a grant without mail access (granular consent)', async () => {
+  const env = envWithOAuth();
+  try {
+    const { google, microsoft } = providersFor(env);
+    const idToken = jwt({ email: 'me@gmail.com' });
+    // Google: the user unticked the Gmail permission but allowed sign-in.
+    mock.respond = () => ({
+      body: { access_token: 'a', refresh_token: 'r', scope: 'openid https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile', id_token: idToken },
+    });
+    await assert.rejects(exchangeCode(google, { code: 'c', codeVerifier: 'v', redirectUri: 'r' }), (err) => {
+      assert.ok(err instanceof OAuthError);
+      assert.equal(err.code, 'insufficient_scope');
+      assert.match(err.message, /Mail access wasn't granted/);
+      assert.match(err.message, /Gmail/);
+      return true;
+    });
+    mock.respond = () => ({ body: { access_token: 'a', scope: 'https://mail.google.com/ openid https://www.googleapis.com/auth/userinfo.email', id_token: idToken } });
+    assert.equal((await exchangeCode(google, { code: 'c', codeVerifier: 'v', redirectUri: 'r' })).email, 'me@gmail.com');
+    // No scope field at all means "what was asked for" (RFC 6749 §5.1).
+    mock.respond = () => ({ body: { access_token: 'a', id_token: idToken } });
+    assert.equal((await exchangeCode(google, { code: 'c', codeVerifier: 'v', redirectUri: 'r' })).email, 'me@gmail.com');
+
+    // Microsoft: the token must carry IMAP.AccessAsUser.All.
+    const msToken = jwt({ email: 'me@outlook.com' });
+    mock.respond = () => ({ body: { access_token: 'a', scope: 'openid profile email offline_access', id_token: msToken } });
+    await assert.rejects(exchangeCode(microsoft, { code: 'c', codeVerifier: 'v', redirectUri: 'r' }), (err) => err.code === 'insufficient_scope');
+    mock.respond = () => ({ body: { access_token: 'a', scope: 'https://outlook.office.com/IMAP.AccessAsUser.All https://outlook.office.com/User.Read', id_token: msToken } });
+    assert.equal((await exchangeCode(microsoft, { code: 'c', codeVerifier: 'v', redirectUri: 'r' })).email, 'me@outlook.com');
+  } finally {
+    env.close();
+  }
+});
+
+test('grantsMailScope accepts the full or the bare scope name, in any case', () => {
+  const env = envWithOAuth();
+  try {
+    const { google, microsoft } = providersFor(env);
+    assert.equal(grantsMailScope(google, 'https://mail.google.com/'), true);
+    assert.equal(grantsMailScope(google, 'openid https://mail.google.com'), true);
+    assert.equal(grantsMailScope(google, 'openid email'), false);
+    assert.equal(grantsMailScope(google, 'https://mail.google.com.evil.example/'), false);
+    assert.equal(grantsMailScope(google, undefined), true);
+    assert.equal(grantsMailScope(google, ''), true);
+    assert.equal(grantsMailScope(microsoft, 'IMAP.AccessAsUser.All offline_access'), true);
+    assert.equal(grantsMailScope(microsoft, 'https://outlook.office.com/imap.accessasuser.all'), true);
+    assert.equal(grantsMailScope(microsoft, 'https://outlook.office.com/SMTP.Send'), false);
+    assert.equal(redirectUriFor(env.config, 'google'), `${env.config.appUrl}/api/oauth/google/callback`);
   } finally {
     env.close();
   }
@@ -201,13 +276,24 @@ test('exchangeCode: provider errors become OAuthError with code and status', asy
       assert.equal(err.status, 400);
       return true;
     });
+    // The server's own client ID/secret were refused: a configuration problem for the site owner.
     mock.respond = () => ({ status: 401, body: { error: 'invalid_client', error_description: 'The OAuth client was not found.' } });
     await assert.rejects(exchangeCode(google, { code: 'c', codeVerifier: 'v', redirectUri: 'r' }), (err) => {
-      assert.equal(err.code, 'oauth_error');
+      assert.equal(err.code, 'invalid_client');
       assert.equal(err.status, 401);
       assert.match(err.message, /OAuth client was not found/);
+      assert.match(err.message, /site owner should check GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET/);
+      assert.ok(err.message.length <= 300, 'fits the callback error redirect');
       return true;
     });
+    mock.respond = () => ({ status: 401, body: { error: 'deleted_client', error_description: 'The OAuth client was deleted.' } });
+    await assert.rejects(exchangeCode(google, { code: 'c', codeVerifier: 'v', redirectUri: 'r' }), (err) => {
+      assert.equal(err.code, 'invalid_client');
+      assert.match(err.message, /unused for 6 months/);
+      return true;
+    });
+    mock.respond = () => ({ status: 400, body: { error: 'unauthorized_client' } });
+    await assert.rejects(exchangeCode(google, { code: 'c', codeVerifier: 'v', redirectUri: 'r' }), (err) => err.code === 'invalid_client');
     mock.respond = () => ({ status: 502, body: '<html>bad gateway</html>' });
     await assert.rejects(exchangeCode(google, { code: 'c', codeVerifier: 'v', redirectUri: 'r' }), (err) => err.code === 'oauth_error' && err.status === 502);
     await assert.rejects(exchangeCode(google, { code: '', codeVerifier: 'v', redirectUri: 'r' }), OAuthError);
@@ -252,8 +338,10 @@ test('refreshAccessToken keeps the original refresh token unless the provider ro
     mock.respond = () => ({ body: { access_token: 'new-at-2', refresh_token: 'rotated-rt', expires_in: 3600 } });
     const rotated = await refreshAccessToken(microsoft, 'orig-rt');
     assert.equal(rotated.refreshToken, 'rotated-rt');
-    assert.equal(mock.requests[1].form.scope, microsoft.scopes.join(' '), 'Microsoft refresh sends scope');
+    // Microsoft issues the token for the first scope's resource, so the IMAP scope leads.
+    assert.equal(mock.requests[1].form.scope, 'https://outlook.office.com/IMAP.AccessAsUser.All offline_access', 'Microsoft refresh sends scope');
     assert.equal(mock.requests[1].form.client_id, 'ms-client');
+    assert.equal(mock.requests[1].form.client_secret, 'ms-secret');
 
     mock.respond = () => ({ status: 400, body: { error: 'invalid_grant' } });
     await assert.rejects(refreshAccessToken(google, 'revoked'), (err) => err.code === 'invalid_grant');
@@ -342,9 +430,77 @@ test('getFreshAccessToken: invalid_grant marks the account auth_error', async ()
     });
     const row = getAccount(env.db, account.id);
     assert.equal(row.status, 'auth_error');
-    assert.equal(row.last_error, 'Access was revoked or expired — reconnect this account.');
+    // The message names the likely causes, including the Testing-mode 7-day expiry.
+    assert.match(row.last_error, /^Google stopped accepting this account's saved sign-in — reconnect it\./);
+    assert.match(row.last_error, /"Testing" mode/);
+    assert.match(row.last_error, /7 days/);
+    assert.match(row.last_error, /password changed/);
+    assert.match(row.last_error, /6 months/);
+    assert.match(row.last_error, /100 times/);
     assert.equal(imap.isAuthFailure(new OAuthError('x', 'invalid_grant')), true);
     assert.equal(imap.friendlyImapError(new OAuthError(row.last_error, 'invalid_grant')), row.last_error);
+
+    const ms = oauthAccount(env, { refreshToken: 'gone', accessToken: 'old', accessTokenExpiresAt: 0 }, { provider: 'outlook', email: 'me@outlook.com' });
+    await assert.rejects(getFreshAccessToken(env, ms), (err) => err.code === 'invalid_grant');
+    assert.equal(getAccount(env.db, ms.id).status, 'auth_error');
+    assert.match(getAccount(env.db, ms.id).last_error, /^Microsoft stopped accepting .*reconnect it/);
+  } finally {
+    env.close();
+  }
+});
+
+test('getFreshAccessToken: a rejected client ID/secret is a server problem (status error, not auth_error)', async () => {
+  const env = envWithOAuth();
+  try {
+    for (const error of ['invalid_client', 'unauthorized_client', 'deleted_client']) {
+      const account = oauthAccount(env, { refreshToken: 'rt', accessToken: 'old', accessTokenExpiresAt: 0 }, { email: `${error}@gmail.com` });
+      mock.respond = () => ({ status: 401, body: { error, error_description: 'Unauthorized' } });
+      await assert.rejects(getFreshAccessToken(env, account), (err) => {
+        assert.ok(err instanceof OAuthError);
+        assert.equal(err.code, 'invalid_client');
+        assert.equal(imap.isAuthFailure(err), false, 'the user cannot fix this by reconnecting');
+        return true;
+      });
+      const row = getAccount(env.db, account.id);
+      assert.equal(row.status, 'error', error);
+      assert.match(row.last_error, /site owner should check GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET/);
+      assert.match(row.last_error, /Nothing is wrong with your account/);
+      assert.equal(env.crypto.decryptJson(row.secret_enc).refreshToken, 'rt', 'the refresh token is kept for when the config is fixed');
+    }
+
+    const ms = oauthAccount(env, { refreshToken: 'rt', accessToken: 'old', accessTokenExpiresAt: 0 }, { provider: 'outlook', email: 'me@outlook.com' });
+    mock.respond = () => ({ status: 401, body: { error: 'invalid_client', error_description: 'AADSTS7000222: The provided client secret keys are expired.' } });
+    await assert.rejects(getFreshAccessToken(env, ms), (err) => err.code === 'invalid_client');
+    const msRow = getAccount(env.db, ms.id);
+    assert.equal(msRow.status, 'error');
+    assert.match(msRow.last_error, /MICROSOFT_CLIENT_ID and MICROSOFT_CLIENT_SECRET/);
+    assert.match(msRow.last_error, /expire/);
+    mock.respond = () => ({ status: 400, body: { error: 'unauthorized_client', error_description: 'AADSTS70002: not enabled for consumers.' } });
+    await assert.rejects(refreshAccessToken(providersFor(env).microsoft, 'rt'), (err) => err.code === 'invalid_client' && /MICROSOFT_TENANT/.test(err.message));
+  } finally {
+    env.close();
+  }
+});
+
+test('getFreshAccessToken (Microsoft): IMAP scope first and the rotated refresh token is stored', async () => {
+  const env = envWithOAuth();
+  try {
+    const account = oauthAccount(env, { refreshToken: 'ms-rt-1', accessToken: 'old', accessTokenExpiresAt: 0 }, { provider: 'outlook', email: 'me@outlook.com' });
+    mock.respond = () => ({ body: { access_token: 'ms-fresh', refresh_token: 'ms-rt-2', expires_in: 3600 } });
+    assert.equal(await getFreshAccessToken(env, account), 'ms-fresh');
+    assert.equal(mock.requests[0].form.scope.split(' ')[0], 'https://outlook.office.com/IMAP.AccessAsUser.All');
+    assert.equal(mock.requests[0].form.refresh_token, 'ms-rt-1');
+    assert.equal(env.crypto.decryptJson(getAccount(env.db, account.id).secret_enc).refreshToken, 'ms-rt-2');
+
+    // The next refresh uses the rotated token.
+    env.db.prepare('UPDATE accounts SET secret_enc = ? WHERE id = ?').run(
+      env.crypto.encryptJson({ ...env.crypto.decryptJson(getAccount(env.db, account.id).secret_enc), accessTokenExpiresAt: 0 }),
+      account.id
+    );
+    mock.respond = () => ({ body: { access_token: 'ms-fresh-2', refresh_token: 'ms-rt-3', expires_in: 3600 } });
+    assert.equal(await getFreshAccessToken(env, account), 'ms-fresh-2');
+    assert.equal(mock.requests[1].form.refresh_token, 'ms-rt-2');
+    assert.equal(env.crypto.decryptJson(getAccount(env.db, account.id).secret_enc).refreshToken, 'ms-rt-3');
   } finally {
     env.close();
   }

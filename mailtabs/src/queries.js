@@ -9,6 +9,7 @@
  */
 
 const { HttpError } = require('./errors');
+const { nextPaletteColor } = require('./palette');
 
 const DEFAULT_COLOR = '#4f46e5';
 const DEFAULT_LIMIT = 50;
@@ -281,8 +282,9 @@ function listMessages(db, userId, { tabId = 'all', accountId, q, unread, starred
   if (before !== undefined && before !== null && before !== '') {
     const [date, id] = decodeCursor(before);
     // Equal dates are common (bulk mail); the id tiebreak keeps pages stable and gap-free.
-    where.push('(m.date < ? OR (m.date = ? AND m.id < ?))');
-    params.push(date, date, id);
+    // Row-value comparison lets SQLite walk the (date, id) index instead of re-sorting.
+    where.push('(m.date, m.id) < (?, ?)');
+    params.push(date, id);
   }
 
   let rows;
@@ -317,11 +319,17 @@ function countForTab(db, userId, tab) {
  * Minimal rows ({id, account_id, mailbox, uid, uid_validity}) of every message in a tab that
  * matches extra conditions — used by mark-all-read.
  */
-function selectTabMessageRefs(db, userId, tab, { unread } = {}) {
-  const filter = listFilterSql(db, userId, tab, { unread });
-  return db
-    .prepare(`SELECT m.id, m.account_id, m.mailbox, m.uid, m.uid_validity FROM messages m WHERE ${filter.where} ORDER BY m.id`)
-    .all(...filter.params);
+function selectTabMessageRefs(db, userId, tab, { unread, q, starred, accountId } = {}) {
+  const filter = listFilterSql(db, userId, tab, { unread, q, starred, accountId });
+  if (filter.empty) return [];
+  try {
+    return db
+      .prepare(`SELECT m.id, m.account_id, m.mailbox, m.uid, m.uid_validity FROM messages m WHERE ${filter.where} ORDER BY m.id`)
+      .all(...filter.params);
+  } catch (err) {
+    if (q && isFtsSyntaxError(err)) return [];
+    throw err;
+  }
 }
 
 /** The full message row if it belongs to one of the user's accounts, else null. */
@@ -588,6 +596,12 @@ function requireBody(req) {
   return body;
 }
 
+/** Colour for a user's next account: the first palette colour none of their accounts has yet. */
+function nextAccountColor(db, userId) {
+  const used = db.prepare('SELECT color FROM accounts WHERE user_id = ?').all(userId).map((r) => r.color);
+  return nextPaletteColor(used);
+}
+
 const validate = { requireId, requireIdList, optionalText, requireColor, requireBoolean, requireBody, badRequest, COLOR_RE };
 
 module.exports = {
@@ -614,6 +628,7 @@ module.exports = {
   getAccountRowForUser,
   listAccountsJson,
   getAccountJson,
+  nextAccountColor,
   listTabsJson,
   getTabJson,
   RULE_FIELDS,

@@ -10,8 +10,21 @@
  *   3. the iframe sandbox (no allow-scripts).
  */
 
+const path = require('path');
 const { simpleParser } = require('mailparser');
 const sanitizeHtml = require('sanitize-html');
+
+// html-to-text is mailparser's own dependency (not ours): load the copy mailparser itself uses.
+// mailparser's built-in conversion cannot be configured and upper-cases headings, so we skip it
+// and convert here. If the module is ever missing, the simple converter below takes over.
+const convertHtml = (() => {
+  try {
+    const mailparserDir = path.dirname(require.resolve('mailparser'));
+    return require(require.resolve('html-to-text', { paths: [mailparserDir] })).htmlToText;
+  } catch (_) {
+    return null;
+  }
+})();
 
 // ---------------------------------------------------------------------------------------------
 // Sanitizing
@@ -197,7 +210,7 @@ function decodeEntities(s) {
   });
 }
 
-/** Crude HTML -> text (used only when mailparser could not produce text). */
+/** Crude HTML -> text (fallback when html-to-text can't be used for a message). */
 function htmlToText(html) {
   if (!html) return '';
   return decodeEntities(
@@ -212,18 +225,84 @@ function htmlToText(html) {
     .trim();
 }
 
+// Deepest element nesting handed to html-to-text: its recursive walk overflows the stack at
+// about 2000 levels (mailparser uses the same limit). Real markup stays far below this.
+const MAX_HTML_DEPTH = 1000;
+const VOID_TAGS = new Set(['area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input', 'link', 'meta', 'param', 'source', 'track', 'wbr']);
+
+/** Whether well-formed (sanitized) HTML nests elements deeper than `max`. Linear scan. */
+function nestsDeeperThan(html, max) {
+  let depth = 0;
+  for (const m of String(html).matchAll(/<(\/?)([a-zA-Z][a-zA-Z0-9-]*)\b[^>]*?(\/?)>/g)) {
+    if (m[3] || VOID_TAGS.has(m[2].toLowerCase())) continue;
+    if (m[1]) depth = Math.max(0, depth - 1);
+    else if (++depth > max) return true;
+  }
+  return false;
+}
+
+const HTML_TO_TEXT_OPTIONS = {
+  wordwrap: false,
+  limits: { maxDepth: MAX_HTML_DEPTH },
+  selectors: [
+    // html-to-text upper-cases headings and table header cells by default, which turns list
+    // previews into "Q4 ROADMAP REVIEW — ...". Keep the sender's capitalisation.
+    ...['h1', 'h2', 'h3', 'h4', 'h5', 'h6'].map((selector) => ({ selector, options: { uppercase: false } })),
+    { selector: 'table', options: { uppercaseHeaderCells: false } },
+    // Layout-table cells on their own lines ("Name Owner", not "NameOwner").
+    { selector: 'td', format: 'block' },
+    { selector: 'th', format: 'block' },
+    // Logos, spacers and tracking pixels (often data: URLs) are noise in a text version.
+    { selector: 'img', format: 'skip' },
+  ],
+};
+
+/** Plain text for an HTML body, keeping the original capitalisation. */
+function htmlToPlainText(html) {
+  if (!html) return '';
+  const s = String(html);
+  if (convertHtml && s.length <= MAX_HTML_TO_TEXT && !nestsDeeperThan(s, MAX_HTML_DEPTH)) {
+    try {
+      return convertHtml(s, HTML_TO_TEXT_OPTIONS).trim();
+    } catch (_) {
+      /* fall through to the simple converter */
+    }
+  }
+  return htmlToText(s);
+}
+
 // Characters used by marketing mail to pad preheaders; invisible, so drop them from previews.
 const INVISIBLE_CHARS = /[­͏؜ᅟᅠ឴឵᠎​-‏‪-‮⁠-⁤⁪-⁯﻿ㅤﾠ]/g;
+
+/** Text as a preview shows it: link targets and invisible padding dropped, whitespace collapsed. */
+function previewText(text) {
+  return String(text)
+    // html-to-text renders links as "text [https://…]" — noise in a preview.
+    .replace(/\s*\[(?:https?|mailto|cid):[^\]\s]*\]/gi, '')
+    .replace(INVISIBLE_CHARS, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/**
+ * The text without its first line when that line just repeats the subject (many emails start
+ * with the subject as a heading, so the preview would show it twice). Compared ignoring case,
+ * whitespace and link targets; anything else on the line keeps it.
+ */
+function stripLeadingSubject(text, subject) {
+  if (!text) return '';
+  const wanted = subject ? previewText(subject).toLowerCase() : '';
+  if (!wanted) return String(text);
+  const lines = String(text).split('\n');
+  const first = lines.findIndex((line) => previewText(line) !== '');
+  if (first >= 0 && previewText(lines[first]).toLowerCase() === wanted) return lines.slice(first + 1).join('\n');
+  return String(text);
+}
 
 /** One-line plain-text preview: whitespace collapsed, at most 200 characters. */
 function makeSnippet(text, max = 200) {
   if (!text) return '';
-  let s = String(text)
-    // html-to-text renders links/images as "[https://…]" — noise in a preview.
-    .replace(/\[(?:https?|mailto|cid):[^\]\s]*\]/gi, ' ')
-    .replace(INVISIBLE_CHARS, '')
-    .replace(/\s+/g, ' ')
-    .trim();
+  let s = previewText(text);
   if (s.length > max) {
     let cut = s.slice(0, max - 1);
     if (/[\ud800-\udbff]$/.test(cut)) cut = cut.slice(0, -1); // don't split a surrogate pair
@@ -292,10 +371,16 @@ function renderBodyDocument({ html, text, subject } = {}, { showImages = false }
   return (
     '<!DOCTYPE html><html><head><meta charset="utf-8">' +
     '<meta name="viewport" content="width=device-width, initial-scale=1">' +
+    // Remote images/CSS backgrounds (once shown) must not tell senders where they were opened.
+    '<meta name="referrer" content="no-referrer">' +
     '<base target="_blank">' +
     `<title>${escapeHtml(subject || '')}</title>` +
     `<style>${RESET_CSS}</style>` +
-    `</head><body>${content}</body></html>`
+    // The app sizes the iframe to #mt-root. The trailing style stops emails whose html/body are
+    // `height:100%` / `100vh` from growing with the iframe (each resize would grow them again).
+    `</head><body><div id="mt-root">${content}</div>` +
+    '<style>html,body{height:auto!important;min-height:0!important;max-height:none!important}</style>' +
+    '</body></html>'
   );
 }
 
@@ -303,6 +388,7 @@ function renderBodyDocument({ html, text, subject } = {}, { showImages = false }
 // MIME parsing
 // ---------------------------------------------------------------------------------------------
 
+// Converting multi-megabyte HTML to text is slow; past this the simple converter is used.
 const MAX_HTML_TO_TEXT = 1500000;
 
 function flattenAddresses(field) {
@@ -330,6 +416,21 @@ function defaultFilename(contentType, index) {
 }
 
 /**
+ * The Date header in epoch ms, or null when there is none or it can't be read.
+ * mailparser silently substitutes "now" for an unreadable Date header, which would make old
+ * mail look brand new; the caller then falls back to the server's arrival time instead.
+ */
+function headerDate(parsed) {
+  if (!(parsed.date instanceof Date) || Number.isNaN(parsed.date.getTime())) return null;
+  const line = (parsed.headerLines || []).find((h) => h && h.key === 'date');
+  if (!line) return null;
+  const raw = String(line.line || '').replace(/^date:\s*/i, '').trim();
+  const looksLikeNow = Math.abs(parsed.date.getTime() - Date.now()) < 5000;
+  if (looksLikeNow && Number.isNaN(Date.parse(raw.replace(/\s*\([^)]*\)\s*$/, '')))) return null;
+  return parsed.date.getTime();
+}
+
+/**
  * Parse a raw RFC 822 message.
  * @param {Buffer|string} source
  */
@@ -338,13 +439,13 @@ async function parseRawMessage(source) {
     keepCidLinks: true, // we rewrite cid: links ourselves once the row id is known
     skipTextToHtml: true,
     skipImageLinks: true,
-    // Converting multi-megabyte HTML to text is slow; past this we fall back to htmlToText().
-    maxHtmlLengthToParse: MAX_HTML_TO_TEXT,
+    // mailparser's HTML -> text conversion upper-cases headings; htmlToPlainText() does it instead.
+    skipHtmlToText: true,
   });
 
   const html = parsed.html ? sanitizeEmailHtml(parsed.html) : null;
   let text = typeof parsed.text === 'string' ? parsed.text.replace(/\s+$/, '') : '';
-  if (!text && html) text = htmlToText(html);
+  if (!text.trim() && html) text = htmlToPlainText(html);
 
   const attachments = (parsed.attachments || []).map((att, index) => {
     const cid = att.cid ? String(att.cid) : null;
@@ -363,7 +464,7 @@ async function parseRawMessage(source) {
   });
 
   const from = flattenAddresses(parsed.from)[0] || null;
-  const date = parsed.date instanceof Date && !Number.isNaN(parsed.date.getTime()) ? parsed.date.getTime() : null;
+  const date = headerDate(parsed);
 
   return {
     messageId: parsed.messageId || null,
@@ -375,7 +476,7 @@ async function parseRawMessage(source) {
     date,
     text,
     html,
-    snippet: makeSnippet(text || htmlToText(html)),
+    snippet: makeSnippet(stripLeadingSubject(text, parsed.subject)),
     attachments,
     hasAttachments: attachments.some((a) => !a.inline),
     remoteImageCount: countRemoteImages(html),
@@ -387,9 +488,11 @@ module.exports = {
   sanitizeEmailHtml,
   rewriteCidLinks,
   makeSnippet,
+  stripLeadingSubject,
   renderBodyDocument,
   countRemoteImages,
   htmlToText,
+  htmlToPlainText,
   linkifyText,
   escapeHtml,
 };

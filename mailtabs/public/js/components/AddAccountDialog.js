@@ -2,7 +2,7 @@
 // (OAuth redirect) or connect with an (app) password over IMAP.
 import { html, useEffect, useMemo, useRef, useState } from '/vendor/preact-htm.js';
 import { useStore } from '../store.js';
-import { addPasswordAccount, closeDialog, startOAuth } from '../actions.js';
+import { addPasswordAccount, closeDialog, openDialog, startOAuth } from '../actions.js';
 import { Icon, Spinner } from '../icons.js';
 import { PROVIDER_ORDER, providerLabel } from '../constants.js';
 import { emailDomain, guessPresetKey } from '../format.js';
@@ -32,6 +32,7 @@ function friendlyAccountError(err) {
   if (!err) return '';
   if (err.code === 'ACCOUNT_EXISTS') return 'This account is already connected to Mailtabs.';
   if (err.code === 'INSECURE_NOT_ALLOWED') return 'Unencrypted connections are turned off on this server. Choose SSL/TLS or STARTTLS.';
+  // OAUTH_REQUIRED (a Microsoft server): the server's message says what to do instead.
   return err.message || "Couldn't connect this account.";
 }
 
@@ -106,7 +107,7 @@ function ProviderChooser({ presets, providers, onPick }) {
   </div>`;
 }
 
-export function AddAccountDialog({ provider: initialProvider = null, tabIds: initialTabIds = [], email: initialEmail = '' }) {
+export function AddAccountDialog({ provider: initialProvider = null, tabIds: initialTabIds = [], email: initialEmail = '', returnTo = null }) {
   const { config, tabs, accounts } = useStore((s) => ({ config: s.config, tabs: s.tabs, accounts: s.accounts }));
   const presets = config.presets && config.presets.length ? config.presets : FALLBACK_PRESETS;
   const providers = config.providers || {};
@@ -132,6 +133,21 @@ export function AddAccountDialog({ provider: initialProvider = null, tabIds: ini
   const [error, setError] = useState('');
   const formId = useUid('add-account-form');
   const pwHelpId = useUid('pw-help');
+
+  // Opened from the tab editor: go back to it (with its unsaved draft) instead of closing.
+  const leave = (newAccount = null) => {
+    if (!returnTo) return closeDialog();
+    const props = { ...(returnTo.props || {}) };
+    if (newAccount && props.draft) {
+      props.draft = { ...props.draft, mode: 'some', accountIds: [...new Set([...(props.draft.accountIds || []), newAccount.id])] };
+    }
+    openDialog(returnTo.type, props);
+  };
+  // While the login is being checked the dialog can't be dismissed: the account would be
+  // added anyway, behind the user's back.
+  const close = () => {
+    if (!busy) leave();
+  };
 
   const pick = (key, typedEmail) => {
     const next = presets.find((p) => p.key === key);
@@ -182,7 +198,9 @@ export function AddAccountDialog({ provider: initialProvider = null, tabIds: ini
   };
 
   const shortName = preset ? providerLabel(preset.key, presets, { short: true }) : '';
-  const impliedTabName = (displayName.trim() || shortName).slice(0, 40);
+  // "Other (IMAP)" would otherwise name the tab "IMAP": the mail domain says more.
+  const emailDomain = (email.split('@')[1] || '').trim().toLowerCase();
+  const impliedTabName = (displayName.trim() || (preset && preset.key === 'imap' && emailDomain ? emailDomain : shortName)).slice(0, 40);
   const tabIdsToAttach = selectedTabs.filter((id) => tabs.some((t) => t.id === id && !t.allAccounts));
 
   // ------------------------------------------------------------------ OAuth
@@ -229,8 +247,8 @@ export function AddAccountDialog({ provider: initialProvider = null, tabIds: ini
 
     setBusy(true);
     try {
-      await addPasswordAccount(body, { newTab: createTab && impliedTabName ? { name: impliedTabName, color } : null });
-      closeDialog();
+      const account = await addPasswordAccount(body, { newTab: createTab && impliedTabName ? { name: impliedTabName, color } : null });
+      leave(account);
     } catch (err) {
       setError(friendlyAccountError(err));
       setBusy(false);
@@ -250,8 +268,8 @@ export function AddAccountDialog({ provider: initialProvider = null, tabIds: ini
     subtitle = null;
     const oauthOk = oauthAvailable(preset, providers);
     const passwordAllowed = (preset.auth || ['password']).includes('password');
-    const outlookBlocked = preset.key === 'outlook' && !oauthOk;
-    const mode = oauthOk && !usePassword ? 'oauth' : outlookBlocked && !usePassword ? 'blocked' : 'password';
+    // Microsoft accepts no IMAP passwords at all, so without Microsoft sign-in there is nothing to offer.
+    const mode = oauthOk && (!usePassword || !passwordAllowed) ? 'oauth' : !passwordAllowed ? 'blocked' : 'password';
 
     const back = html`<button type="button" class="link-btn back-link" onClick=${backToProviders}>
       <${Icon} name="chevronLeft" size=${14} /> All providers
@@ -288,7 +306,7 @@ export function AddAccountDialog({ provider: initialProvider = null, tabIds: ini
             </p>`
           : null}
       </div>`;
-      footer = html`<button type="button" class="btn btn-ghost" onClick=${closeDialog}>Cancel</button>
+      footer = html`<button type="button" class="btn btn-ghost" onClick=${close} disabled=${busy}>Cancel</button>
         <button type="button" class="btn btn-primary" onClick=${onOAuth} disabled=${busy} data-autofocus>
           ${busy ? html`<${Spinner} size=${14} />` : null} Sign in with ${name}
         </button>`;
@@ -300,21 +318,20 @@ export function AddAccountDialog({ provider: initialProvider = null, tabIds: ini
           <div>
             <h3 class="notice-title">Microsoft sign-in isn't set up on this server</h3>
             <p>
-              Outlook.com, Hotmail and Live accounts no longer let mail apps sign in with a password — they need
-              “Sign in with Microsoft”. The person who runs this Mailtabs server can turn it on by registering an app with
-              Microsoft and setting <code>MICROSOFT_CLIENT_ID</code> and <code>MICROSOFT_CLIENT_SECRET</code>.
+              Outlook.com, Hotmail, Live and Microsoft 365 work or school accounts no longer let mail apps sign in with a
+              password or app password — they need “Sign in with Microsoft”.
+            </p>
+            <p>
+              The person who runs this Mailtabs server can turn it on by registering an app with Microsoft and setting
+              <code>MICROSOFT_CLIENT_ID</code> and <code>MICROSOFT_CLIENT_SECRET</code> (the README explains how).
             </p>
           </div>
         </div>
-        <p class="small muted">
-          Work account that allows IMAP passwords?${' '}
-          <button type="button" class="link-btn" onClick=${() => setUsePassword(true)}>Use password</button>
-        </p>
       </div>`;
-      footer = html`<button type="button" class="btn" onClick=${closeDialog}>Close</button>`;
+      footer = html`<button type="button" class="btn" onClick=${close}>Close</button>`;
     } else {
       const guess = guessPresetKey(email, presets);
-      const showGuess = guess && guess !== preset.key && !(preset.key === 'outlook' && usePassword);
+      const showGuess = guess && guess !== preset.key;
       const googleNote = preset.key === 'gmail' && !oauthOk;
       body = html`<form id=${formId} class="form" onSubmit=${onSubmit} aria-busy=${busy ? 'true' : 'false'}>
         ${back}
@@ -342,7 +359,7 @@ export function AddAccountDialog({ provider: initialProvider = null, tabIds: ini
               type=${showPassword ? 'text' : 'password'}
               required
               autocomplete="off"
-              spellcheck="false"
+              spellcheck=${false}
               value=${password}
               onInput=${(e) => setPassword(e.currentTarget.value)}
               aria-describedby=${preset.passwordHelp ? pwHelpId : undefined}
@@ -380,7 +397,7 @@ export function AddAccountDialog({ provider: initialProvider = null, tabIds: ini
                     class="input"
                     type="text"
                     inputmode="url"
-                    spellcheck="false"
+                    spellcheck=${false}
                     autocomplete="off"
                     required=${preset.key === 'imap'}
                     placeholder=${email.includes('@') ? `imap.${email.split('@').pop()}` : 'imap.example.com'}
@@ -394,7 +411,7 @@ export function AddAccountDialog({ provider: initialProvider = null, tabIds: ini
                 </label>
                 <label class="field">
                   <span class="field-label">Security</span>
-                  <select class="input" value=${advanced.security} onChange=${(e) => setAdv('security', e.currentTarget.value)}>
+                  <select class="input" aria-label="Security" value=${advanced.security} onChange=${(e) => setAdv('security', e.currentTarget.value)}>
                     <option value="tls">SSL/TLS (recommended)</option>
                     <option value="starttls">STARTTLS</option>
                     <option value="none">None — unencrypted</option>
@@ -402,7 +419,7 @@ export function AddAccountDialog({ provider: initialProvider = null, tabIds: ini
                 </label>
                 <label class="field">
                   <span class="field-label">Username</span>
-                  <input class="input" type="text" spellcheck="false" autocomplete="off" placeholder="Same as email address" value=${advanced.user} onInput=${(e) => setAdv('user', e.currentTarget.value)} />
+                  <input class="input" type="text" spellcheck=${false} autocomplete="off" placeholder="Same as email address" value=${advanced.user} onInput=${(e) => setAdv('user', e.currentTarget.value)} />
                 </label>
               </div>`
             : null}
@@ -410,14 +427,14 @@ export function AddAccountDialog({ provider: initialProvider = null, tabIds: ini
 
         <${InlineError} message=${error} />
       </form>`;
-      footer = html`<button type="button" class="btn btn-ghost" onClick=${closeDialog}>Cancel</button>
+      footer = html`<button type="button" class="btn btn-ghost" onClick=${close} disabled=${busy}>Cancel</button>
         <button type="submit" form=${formId} class="btn btn-primary" disabled=${busy}>
           ${busy ? html`<${Spinner} size=${14} /> Checking your login…` : 'Add account'}
         </button>`;
     }
   }
 
-  return html`<${Dialog} title=${title} subtitle=${subtitle} onClose=${closeDialog} footer=${footer} size="md" className="add-account-dialog">
+  return html`<${Dialog} title=${title} subtitle=${subtitle} onClose=${close} footer=${footer} size="md" className="add-account-dialog">
     ${body}
   </${Dialog}>`;
 }

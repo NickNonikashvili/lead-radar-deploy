@@ -23,7 +23,10 @@ const { parseRawMessage, rewriteCidLinks } = require('./mailparse');
 const { HttpError } = require('./errors');
 
 const FETCH_CHUNK = 50; // messages per metadata FETCH / insert transaction
-const SOURCE_BATCH_BYTES = 20 * 1024 * 1024; // cap on raw bytes held in memory at once
+const SOURCE_BATCH_BYTES = 20 * 1024 * 1024; // cap on (reported) raw bytes held in memory at once
+const SOURCE_BATCH_COUNT = 10; // ...and on the number of sources, in case the server under-reports sizes
+const MAX_NEW_PER_RUN = 1000; // a huge batch of new mail is spread over several runs
+const SYNC_DEADLINE_MS = 10 * 60 * 1000; // a run that takes longer is cut off (progress is kept)
 const DELETE_BATCH = 500;
 const MAX_STAGGER_MS = 500;
 const STOP_WAIT_MS = 10000;
@@ -35,6 +38,19 @@ class AccountGoneError extends Error {
     super('Account was removed');
     this.name = 'AccountGoneError';
   }
+}
+
+/** Thrown inside a sync when the account's server/login was changed mid-sync (its writes are stale). */
+class SettingsChangedError extends Error {
+  constructor() {
+    super('Account settings changed during the sync');
+    this.name = 'SettingsChangedError';
+  }
+}
+
+/** A refusal the server gave for this command only (NO/BAD); the connection is still fine. */
+function isCommandRefusal(err, client) {
+  return !!(err && client && client.usable && (err.responseStatus === 'NO' || err.responseStatus === 'BAD'));
 }
 
 /** Minimal promise concurrency limiter. */
@@ -175,7 +191,6 @@ class SyncManager {
     this.interval = null;
     this.started = false;
     this.stopped = false;
-    this.passRunning = false;
   }
 
   // ------------------------------------------------------------------------------------------
@@ -186,7 +201,6 @@ class SyncManager {
     if (this.started) return;
     this.started = true;
     this.stopped = false;
-    this.passRunning = false;
     // A previous process may have died mid-sync; those accounts are not syncing any more.
     this._safe(() => this.db.prepare("UPDATE accounts SET status = 'pending' WHERE status = 'syncing'").run());
     if (this.config.disableScheduler) return;
@@ -224,34 +238,26 @@ class SyncManager {
     this.timers.add(t);
   }
 
-  /** Sync every account that is not waiting for the user to reconnect it, staggered. */
+  /**
+   * Sync every account that is not waiting for the user to reconnect it, staggered.
+   * Accounts are scheduled independently: one slow account (still in flight from an earlier
+   * tick) is simply skipped, it never holds up everybody else's sync.
+   */
   _scheduledPass() {
-    if (this.stopped || this.passRunning) return;
+    if (this.stopped) return;
     const rows = this._safe(
       () => this.db.prepare("SELECT id FROM accounts WHERE status != 'auth_error' ORDER BY COALESCE(last_synced_at, 0), id").all(),
       []
-    );
+    ).filter((row) => !this.inFlight.has(row.id));
     if (!rows.length) return;
-    this.passRunning = true;
     const intervalMs = Math.max(1, Number(this.config.syncIntervalMinutes) || 3) * 60 * 1000;
     const stagger = Math.min(MAX_STAGGER_MS, Math.floor(intervalMs / (rows.length + 1)));
-    const runs = [];
     rows.forEach((row, i) => {
-      runs.push(
-        new Promise((resolve) => {
-          const run = () => {
-            if (this.stopped) return resolve();
-            this.syncAccount(row.id).then(resolve, resolve);
-          };
-          if (i === 0) run();
-          else this._later(i * stagger, run);
-        })
-      );
-    });
-    // If stop() clears a staggered timer its promise never settles; that only keeps
-    // passRunning set, which no longer matters once stopped.
-    Promise.all(runs).then(() => {
-      this.passRunning = false;
+      const run = () => {
+        if (!this.stopped) this.syncAccount(row.id);
+      };
+      if (i === 0) run();
+      else this._later(i * stagger, run);
     });
   }
 
@@ -343,33 +349,65 @@ class SyncManager {
     this._safe(() => this.db.prepare("UPDATE accounts SET status = 'syncing' WHERE id = ?").run(accountId));
     let state = null;
     let error = null;
+    let activeClient = null;
+    let timedOut = false;
+    // Wall-clock deadline: a server that trickles bytes can't keep this run (and its
+    // concurrency slot) forever. Progress saved per chunk survives the cut-off.
+    const deadline = setTimeout(() => {
+      timedOut = true;
+      if (activeClient) activeClient.close();
+    }, SYNC_DEADLINE_MS);
+    if (typeof deadline.unref === 'function') deadline.unref();
     try {
-      state = await imap.withImap(this.deps, account, (client) => this._syncMailbox(client, account, stats));
+      state = await imap.withImap(
+        this.deps,
+        account,
+        (client) => {
+          activeClient = client;
+          if (timedOut) client.close();
+          return this._syncMailbox(client, account, stats);
+        },
+        { maxLiteralSize: this._sourceCap() + 64 * 1024 }
+      );
     } catch (err) {
       error = err;
+    } finally {
+      clearTimeout(deadline);
+    }
+    if (error && timedOut && !(error instanceof AccountGoneError) && !(error instanceof SettingsChangedError)) {
+      error = new Error('Checking this inbox took too long and was stopped. It will continue on the next check.');
+      error.friendly = error.message;
     }
 
     const current = this._getAccount(accountId);
     if (!current || error instanceof AccountGoneError) return { ...stats, ok: false, error: 'Account was removed' };
     const message = error ? imap.friendlyImapError(error) : null;
 
-    if (current.status === 'pending') {
+    if (error instanceof SettingsChangedError || current.config_version !== account.config_version || current.status === 'pending') {
       // The account was edited or reconnected while this sync ran with its old settings
       // (we set 'syncing' above). This outcome is stale: leave the status alone and sync again.
       this.rerun.add(accountId);
-      return error ? { ...stats, ok: false, error: message } : { ...stats, ok: true };
+      return error && !(error instanceof SettingsChangedError) ? { ...stats, ok: false, error: message } : { ...stats, ok: true };
     }
 
     if (!error) {
       this._safe(() =>
         this.db
-          .prepare("UPDATE accounts SET sync_state = ?, status = 'ok', last_error = NULL, last_synced_at = ? WHERE id = ?")
-          .run(JSON.stringify(state), Date.now(), accountId)
+          .prepare(
+            "UPDATE accounts SET sync_state = ?, status = 'ok', last_error = NULL, last_synced_at = ? WHERE id = ? AND config_version = ?"
+          )
+          .run(JSON.stringify(state), Date.now(), accountId, account.config_version)
       );
+      // More new mail than one run handles: carry on right away.
+      if (stats.more) this.rerun.add(accountId);
       return { ...stats, ok: true };
     }
     const status = imap.isAuthFailure(error) ? 'auth_error' : 'error';
-    this._safe(() => this.db.prepare('UPDATE accounts SET status = ?, last_error = ? WHERE id = ?').run(status, message, accountId));
+    this._safe(() =>
+      this.db
+        .prepare('UPDATE accounts SET status = ?, last_error = ? WHERE id = ? AND config_version = ?')
+        .run(status, message, accountId, account.config_version)
+    );
     this.logger.warn(`[sync] ${account.email}: ${message}`);
     return { ...stats, ok: false, error: message };
   }
@@ -391,7 +429,7 @@ class SyncManager {
       let state = parseState(account.sync_state);
       if (state.uidValidity !== uidValidity) {
         // UIDs from the old UIDVALIDITY mean nothing any more: start over.
-        const info = this._accountTx(account.id, () =>
+        const info = this._accountTx(account, () =>
           db.prepare('DELETE FROM messages WHERE account_id = ? AND mailbox = ? AND uid_validity != ?').run(account.id, mailbox, uidValidity)
         );
         stats.removed += info.changes;
@@ -411,9 +449,14 @@ class SyncManager {
 
       // `lastUid+1:*` always matches the newest message even when it is older (IMAP quirk),
       // so new mail is decided by comparing UIDs, never by the range alone.
-      const newUids = prevLastUid
+      let newUids = prevLastUid
         ? serverUids.filter((uid) => uid > prevLastUid)
         : serverUids.slice(-Math.max(1, Number(this.config.initialSyncLimit) || 200));
+      if (newUids.length > MAX_NEW_PER_RUN) {
+        // Oldest first, so lastUid only ever moves past messages that were stored.
+        newUids = newUids.slice(0, MAX_NEW_PER_RUN);
+        stats.more = true;
+      }
 
       let lastUid = prevLastUid;
       for (const uids of chunk(newUids, FETCH_CHUNK)) {
@@ -422,7 +465,7 @@ class SyncManager {
         // Save progress so an interrupted first sync resumes instead of starting over.
         // highestModseq stays at the old value until flags have been refreshed.
         const progress = JSON.stringify({ uidValidity, lastUid, highestModseq: state.highestModseq || null });
-        this._safe(() => db.prepare('UPDATE accounts SET sync_state = ? WHERE id = ?').run(progress, account.id));
+        this._accountTx(account, () => db.prepare('UPDATE accounts SET sync_state = ? WHERE id = ?').run(progress, account.id));
       }
 
       if (prevLastUid > 0) {
@@ -436,12 +479,14 @@ class SyncManager {
         .all(account.id, mailbox, uidValidity);
       const goneIds = localRows.filter((r) => !serverSet.has(r.uid)).map((r) => r.id);
       for (const ids of chunk(goneIds, DELETE_BATCH)) {
-        const info = this._accountTx(account.id, () =>
+        const info = this._accountTx(account, () =>
           db.prepare(`DELETE FROM messages WHERE id IN (${ids.map(() => '?').join(',')})`).run(...ids)
         );
         stats.removed += info.changes;
       }
 
+      // When this run stopped early (stats.more), keep the old modseq: the flags of messages
+      // not yet stored will be fetched fresh anyway, and nothing is skipped.
       return { uidValidity, lastUid, highestModseq: startModseq !== null ? startModseq.toString() : null };
     } finally {
       lock.release();
@@ -456,6 +501,9 @@ class SyncManager {
 
     const since = toBigIntOrNull(state.highestModseq);
     const changes = [];
+    // Flags read from the server reflect its state at about this moment. A read/star change
+    // the user makes in Mailtabs after this point must not be overwritten by them.
+    const fetchStartedAt = Date.now();
     if (startModseq !== null && since !== null) {
       stats.flagRefresh = 'condstore';
       if (startModseq <= since) return; // nothing at all changed in the mailbox
@@ -471,35 +519,69 @@ class SyncManager {
     if (!changes.length) return;
 
     const stmt = this.db.prepare(
-      'UPDATE messages SET is_read = ?, is_starred = ? WHERE account_id = ? AND mailbox = ? AND uid_validity = ? AND uid = ? AND (is_read != ? OR is_starred != ?)'
+      'UPDATE messages SET is_read = ?, is_starred = ? WHERE account_id = ? AND mailbox = ? AND uid_validity = ? AND uid = ? AND (is_read != ? OR is_starred != ?)' +
+        ' AND (flags_changed_at IS NULL OR flags_changed_at < ?)'
     );
-    stats.updated += this._accountTx(account.id, () => {
+    stats.updated += this._accountTx(account, () => {
       let n = 0;
       for (const { uid, flags } of changes) {
         if (!flags || uid > prevLastUid) continue; // newer messages were just stored with fresh flags
         const read = flags.has('\\Seen') ? 1 : 0;
         const starred = flags.has('\\Flagged') ? 1 : 0;
-        n += stmt.run(read, starred, account.id, mailbox, uidValidity, uid, read, starred).changes;
+        n += stmt.run(read, starred, account.id, mailbox, uidValidity, uid, read, starred, fetchStartedAt).changes;
       }
       return n;
     });
   }
 
+  /** Largest message source the sync downloads; anything bigger is fetched when opened. */
+  _sourceCap() {
+    return 2 * (Number(this.config.maxBodyBytes) || 5000000);
+  }
+
+  /**
+   * Run one FETCH over `uids`, collecting results with collect(msg). If the server refuses the
+   * whole command (one broken message can do that, e.g. Exchange "conversion failed"), retry
+   * message by message so one bad message can't block the rest. Returns the UIDs that still failed.
+   */
+  async _fetchEach(client, uids, query, collect) {
+    try {
+      for await (const msg of client.fetch(imap.toUidSet(uids), query, { uid: true })) collect(msg);
+      return [];
+    } catch (err) {
+      if (!isCommandRefusal(err, client) || uids.length === 1) {
+        if (uids.length === 1 && isCommandRefusal(err, client)) return uids;
+        throw err;
+      }
+    }
+    const failed = [];
+    for (const uid of uids) {
+      try {
+        for await (const msg of client.fetch(String(uid), query, { uid: true })) collect(msg);
+      } catch (err) {
+        if (!isCommandRefusal(err, client)) throw err;
+        failed.push(uid);
+      }
+    }
+    return failed;
+  }
+
   /** Fetch and store one chunk of new UIDs. Returns how many rows were inserted. */
   async _fetchAndStore(client, account, mailbox, uidValidity, uids) {
     const wanted = new Set(uids);
-    const metas = [];
+    const byUid = new Map(); // a retried FETCH may deliver a message twice
     // Collect first: no other IMAP command may run while a fetch() is being iterated.
-    for await (const msg of client.fetch(
-      imap.toUidSet(uids),
-      { uid: true, flags: true, envelope: true, internalDate: true, size: true },
-      { uid: true }
-    )) {
-      if (wanted.has(msg.uid)) metas.push(msg);
+    const metaFailed = await this._fetchEach(client, uids, { uid: true, flags: true, envelope: true, internalDate: true, size: true }, (msg) => {
+      if (wanted.has(msg.uid)) byUid.set(msg.uid, msg);
+    });
+    const metas = [...byUid.values()].sort((a, b) => a.uid - b.uid);
+    if (metaFailed.length) {
+      this.logger.warn(`[sync] ${account.email}: the server refused to describe UID(s) ${metaFailed.join(',')}; skipping them`);
     }
     if (!metas.length) return 0;
 
     const maxBody = Number(this.config.maxBodyBytes) || 5000000;
+    const sourceCap = this._sourceCap();
     const large = metas.filter((m) => Number(m.size) > maxBody);
     const small = metas.filter((m) => !(Number(m.size) > maxBody));
     let inserted = 0;
@@ -507,36 +589,48 @@ class SyncManager {
     if (large.length) {
       // Bodies are deferred; the structure alone tells us whether to show a paperclip.
       const structures = new Map();
-      for await (const msg of client.fetch(imap.toUidSet(large.map((m) => m.uid)), { uid: true, bodyStructure: true }, { uid: true })) {
+      await this._fetchEach(client, large.map((m) => m.uid), { uid: true, bodyStructure: true }, (msg) => {
         structures.set(msg.uid, msg.bodyStructure);
-      }
+      });
       inserted += this._storeRows(
-        account.id,
+        account,
         large.map((meta) => ({ row: this._buildRow(account.id, mailbox, uidValidity, meta, null, structures.get(meta.uid)), parsed: null }))
       );
     }
 
-    for (const batch of sizeBatches(small, SOURCE_BATCH_BYTES)) {
-      const sources = new Map();
-      for await (const msg of client.fetch(imap.toUidSet(batch.map((m) => m.uid)), { uid: true, source: true }, { uid: true })) {
-        if (msg.source) sources.set(msg.uid, msg.source);
-      }
-      const entries = [];
-      for (const meta of batch) {
-        let parsed = null;
-        const source = sources.get(meta.uid);
-        if (source) {
-          try {
-            parsed = await parseRawMessage(source);
-          } catch (err) {
-            // Unparseable MIME: keep the envelope, the body can be retried on open.
-            this.logger.warn(`[sync] ${account.email}: could not parse message UID ${meta.uid}: ${err && err.message}`);
+    for (const sized of sizeBatches(small, SOURCE_BATCH_BYTES)) {
+      for (const batch of chunk(sized, SOURCE_BATCH_COUNT)) {
+        const sources = new Map();
+        // Ask for at most sourceCap bytes: a server that under-reports sizes still can't make us
+        // buffer more (the connection's literal limit backs this up).
+        const failed = await this._fetchEach(
+          client,
+          batch.map((m) => m.uid),
+          { uid: true, source: { start: 0, maxLength: sourceCap } },
+          (msg) => {
+            if (msg.source && msg.source.length < sourceCap) sources.set(msg.uid, msg.source);
           }
+        );
+        if (failed.length) {
+          this.logger.warn(`[sync] ${account.email}: could not download UID(s) ${failed.join(',')}; they will be fetched when opened`);
         }
-        entries.push({ row: this._buildRow(account.id, mailbox, uidValidity, meta, parsed, null), parsed });
+        const entries = [];
+        for (const meta of batch) {
+          let parsed = null;
+          const source = sources.get(meta.uid);
+          if (source) {
+            try {
+              parsed = await parseRawMessage(source);
+            } catch (err) {
+              // Unparseable MIME: keep the envelope, the body can be retried on open.
+              this.logger.warn(`[sync] ${account.email}: could not parse message UID ${meta.uid}: ${err && err.message}`);
+            }
+          }
+          entries.push({ row: this._buildRow(account.id, mailbox, uidValidity, meta, parsed, null), parsed });
+        }
+        sources.clear();
+        inserted += this._storeRows(account, entries);
       }
-      sources.clear();
-      inserted += this._storeRows(account.id, entries);
     }
     return inserted;
   }
@@ -574,10 +668,15 @@ class SyncManager {
     };
   }
 
-  /** Run fn in a transaction that first checks the account still exists. */
-  _accountTx(accountId, fn) {
+  /**
+   * Run fn in a transaction that first checks the account still exists with the settings this
+   * sync started with (otherwise the writes would belong to a different mailbox).
+   */
+  _accountTx(account, fn) {
     const tx = this.db.transaction(() => {
-      if (!this.db.prepare('SELECT 1 FROM accounts WHERE id = ?').get(accountId)) throw new AccountGoneError();
+      const row = this.db.prepare('SELECT config_version FROM accounts WHERE id = ?').get(account.id);
+      if (!row) throw new AccountGoneError();
+      if (row.config_version !== account.config_version) throw new SettingsChangedError();
       return fn();
     });
     try {
@@ -588,7 +687,7 @@ class SyncManager {
     }
   }
 
-  _storeRows(accountId, entries) {
+  _storeRows(account, entries) {
     if (!entries.length) return 0;
     if (!this._insertStmt) {
       this._insertStmt = this.db.prepare(
@@ -596,7 +695,7 @@ class SyncManager {
       );
       this._updateHtmlStmt = this.db.prepare('UPDATE messages SET html_body = ? WHERE id = ?');
     }
-    return this._accountTx(accountId, () => {
+    return this._accountTx(account, () => {
       let n = 0;
       for (const { row, parsed } of entries) {
         const info = this._insertStmt.run(row);
@@ -634,6 +733,7 @@ class SyncManager {
           lock.release();
         }
       });
+      // (withImap's default literal limit, 64 MB, bounds how much one message may be.)
     } catch (err) {
       if (err instanceof HttpError) throw err;
       const wrapped = new HttpError(502, imap.friendlyImapError(err), 'IMAP_ERROR');
@@ -650,16 +750,21 @@ class SyncManager {
       throw wrapped;
     }
     const html = parsed.html ? rewriteCidLinks(parsed.html, row.id, parsed.attachments) : null;
+    // Only fill in the very row we downloaded for (it may have been archived meanwhile).
+    const identity = [row.id, row.account_id, row.mailbox, row.uid_validity, row.uid];
     this.db
       .prepare(
         `UPDATE messages SET body_state = 'ready', text_body = ?, html_body = ?, attachments_json = ?, snippet = ?,
-           has_attachments = ?, remote_image_count = ? WHERE id = ?`
+           has_attachments = ?, remote_image_count = ?
+         WHERE id = ? AND account_id = ? AND mailbox = ? AND uid_validity = ? AND uid = ?`
       )
-      .run(parsed.text, html, attachmentsMeta(parsed.attachments), parsed.snippet, parsed.hasAttachments ? 1 : 0, parsed.remoteImageCount, row.id);
-    const updated = this.db.prepare('SELECT * FROM messages WHERE id = ?').get(row.id);
+      .run(parsed.text, html, attachmentsMeta(parsed.attachments), parsed.snippet, parsed.hasAttachments ? 1 : 0, parsed.remoteImageCount, ...identity);
+    const updated = this.db
+      .prepare('SELECT * FROM messages WHERE id = ? AND account_id = ? AND mailbox = ? AND uid_validity = ? AND uid = ?')
+      .get(...identity);
     if (!updated) throw new HttpError(404, 'Message not found', 'NOT_FOUND');
     return updated;
   }
 }
 
-module.exports = { SyncManager, createLimiter, pickDate, structureHasAttachments };
+module.exports = { SyncManager, createLimiter, pickDate, structureHasAttachments, SettingsChangedError };

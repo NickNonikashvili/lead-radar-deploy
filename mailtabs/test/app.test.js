@@ -341,8 +341,9 @@ test('requireAuth and csrfGuard in isolation', async (t) => {
   assert.equal((await client.raw('/api/thing', { method: 'POST' })).status, 403);
   assert.equal((await client.raw('/api/thing', { method: 'POST', headers: { 'X-Mailtabs': '1' } })).status, 200);
   assert.equal((await client.raw('/api/thing', { method: 'OPTIONS' })).status, 200);
-  assert.equal((await client.raw('/not-api', { method: 'POST' })).status, 200, 'only /api is guarded');
-  assert.equal((await client.raw('/apiary', { method: 'POST' })).status, 404, '/apiary is not /api');
+  assert.equal((await client.raw('/not-api', { method: 'POST' })).status, 403, 'every unsafe method is guarded, whatever the path');
+  assert.equal((await client.raw('/API/thing', { method: 'POST' })).status, 403, 'path case cannot bypass the guard');
+  assert.equal((await client.raw('/apiary', { method: 'POST', headers: { 'X-Mailtabs': '1' } })).status, 404, 'with the header, unknown paths fall through');
 });
 
 // ---------------------------------------------------------------------------------------------

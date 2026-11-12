@@ -204,3 +204,12 @@ test('api: network failures become a friendly ApiError', async () => {
     globalThis.fetch = realFetch;
   }
 });
+
+test('Add account: Microsoft accounts have no password escape hatch; the owner is told what to set', () => {
+  const src = read(path.join(PUBLIC, 'js/components/AddAccountDialog.js'));
+  assert.doesNotMatch(src, /allows IMAP passwords/);
+  assert.doesNotMatch(src, /preset\.key === 'outlook' && usePassword/);
+  assert.match(src, /<code>MICROSOFT_CLIENT_ID<\/code> and <code>MICROSOFT_CLIENT_SECRET<\/code>/);
+  assert.match(src, /README/);
+  assert.match(src, /Microsoft 365/);
+});

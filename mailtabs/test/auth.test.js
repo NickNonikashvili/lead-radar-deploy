@@ -9,7 +9,7 @@ const { sha256Hex } = require('../src/crypto');
 const PASSWORD = DEFAULT_TEST_PASSWORD;
 
 function sessionCookieLine(res) {
-  return res.headers.getSetCookie().find((l) => l.startsWith('mt_session='));
+  return res.headers.getSetCookie().find((l) => l.startsWith('mt_session=') || l.startsWith('__Host-mt_session='));
 }
 
 test('auth', async (t) => {
@@ -314,6 +314,9 @@ test('https APP_URL marks the session cookie Secure', async (t) => {
   const res = await makeClient(srv.baseUrl).post('/api/auth/signup', { email: 'secure@example.com', password: PASSWORD });
   assert.equal(res.status, 201);
   const line = sessionCookieLine(res);
+  assert.match(line, /^__Host-mt_session=/, 'HTTPS sessions use the __Host- prefix');
+  assert.match(line, /; Path=\//);
+  assert.doesNotMatch(line, /; Domain=/i);
   assert.match(line, /; Secure/);
   assert.match(line, /; HttpOnly/);
   assert.match(res.headers.get('strict-transport-security') || '', /max-age=\d+/);

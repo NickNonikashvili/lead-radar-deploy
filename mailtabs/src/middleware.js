@@ -9,6 +9,10 @@ const { randomToken, sha256Hex } = require('./crypto');
 // ---------------------------------------------------------------------------------------------
 
 const SESSION_COOKIE = 'mt_session';
+// Over HTTPS the cookie is named with the __Host- prefix: browsers then only accept it from
+// this exact origin (Secure, Path=/, no Domain), so a sibling subdomain can't plant a session.
+const SECURE_SESSION_COOKIE = '__Host-mt_session';
+const sessionCookieName = (config) => (config && config.cookieSecure ? SECURE_SESSION_COOKIE : SESSION_COOKIE);
 const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 const SESSION_REFRESH_MS = 60 * 60 * 1000; // sliding expiry is bumped at most once per hour
 
@@ -96,11 +100,11 @@ function cookieOptions(config) {
 }
 
 function setSessionCookie(res, config, token) {
-  res.cookie(SESSION_COOKIE, token, { ...cookieOptions(config), maxAge: SESSION_TTL_MS });
+  res.cookie(sessionCookieName(config), token, { ...cookieOptions(config), maxAge: SESSION_TTL_MS });
 }
 
 function clearSessionCookie(res, config) {
-  res.clearCookie(SESSION_COOKIE, cookieOptions(config));
+  res.clearCookie(sessionCookieName(config), cookieOptions(config));
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -149,7 +153,7 @@ function sessionLoader({ db, config }) {
   return function loadSession(req, res, next) {
     req.user = null;
     req.sessionId = null;
-    const token = parseCookies(req.headers.cookie)[SESSION_COOKIE];
+    const token = parseCookies(req.headers.cookie)[sessionCookieName(config)];
     if (!token) return next();
 
     let row;
@@ -191,12 +195,11 @@ function requireAuth(req, res, next) {
 // custom header to a cross-site request without a CORS preflight, which we never approve.
 // ---------------------------------------------------------------------------------------------
 
-function isApiPath(p) {
-  return p === '/api' || p.startsWith('/api/');
-}
-
+// Every state-changing request is checked, whatever its path: Express routes '/API/...' to
+// the same handlers as '/api/...', so a path test here would be a bypass. Nothing outside the
+// API accepts POST/PUT/PATCH/DELETE anyway.
 function csrfGuard(req, res, next) {
-  if (SAFE_METHODS.has(req.method) || !isApiPath(req.path)) return next();
+  if (SAFE_METHODS.has(req.method)) return next();
   if (req.get(CSRF_HEADER) !== '1') {
     return res.status(403).json({ error: 'Missing CSRF header', code: 'CSRF' });
   }

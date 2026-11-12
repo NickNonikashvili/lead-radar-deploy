@@ -32,11 +32,32 @@ function remoteFailed(what) {
   return new HttpError(502, `The mail server refused to ${what}. Try again in a moment.`, 'REMOTE_FAILED');
 }
 
+// One write-back connection per account at a time. Fast triage (j/k with the reader open,
+// several archives in a row) would otherwise open a burst of parallel logins, and providers
+// cap those (Gmail allows ~15 connections per account across all of the user's apps).
+const accountQueues = new Map(); // accountId -> tail promise
+
+function serializePerAccount(accountId, task) {
+  const key = Number(accountId);
+  const prev = accountQueues.get(key) || Promise.resolve();
+  const run = prev.then(task, task);
+  const tail = run.catch(() => {});
+  accountQueues.set(key, tail);
+  tail.then(() => {
+    if (accountQueues.get(key) === tail) accountQueues.delete(key);
+  });
+  return run;
+}
+
 /**
  * Open the account's mailbox read-write and run fn(client). When `uidValidity` is given and
  * no longer matches, nothing is changed (the UIDs could now point at different messages).
  */
-async function withWritableMailbox(deps, accountRow, uidValidity, fn) {
+function withWritableMailbox(deps, accountRow, uidValidity, fn) {
+  return serializePerAccount(accountRow.id, () => openWritable(deps, accountRow, uidValidity, fn));
+}
+
+async function openWritable(deps, accountRow, uidValidity, fn) {
   try {
     return await imap.withImap(deps, accountRow, async (client) => {
       const lock = await client.getMailboxLock(accountRow.mailbox || 'INBOX');

@@ -13,9 +13,15 @@ const { ImapFlow } = require('imapflow');
 const { HttpError } = require('./errors');
 const netguard = require('./netguard');
 const { getFreshAccessToken, OAuthError } = require('./oauth');
+const { presetKeyForHost, authFailureHintForHost } = require('./providers');
 
 const SECURITY_VALUES = ['tls', 'starttls', 'none'];
 const LOGOUT_TIMEOUT_MS = 5000;
+
+// Upper bound on any single literal (one message source) a server may send us. Without it
+// imapflow accepts up to 1 GB, so a hostile "Other IMAP" server could exhaust memory.
+// Callers that only expect small literals (the sync) pass a tighter limit.
+const DEFAULT_MAX_LITERAL_BYTES = 64 * 1024 * 1024;
 
 const silentLogger = { debug() {}, info() {}, warn() {}, error() {} };
 
@@ -24,7 +30,7 @@ const silentLogger = { debug() {}, info() {}, warn() {}, error() {} };
  * @param {object} config app config
  * @param {{host, port, security, user, password?, accessToken?}} params
  */
-async function buildConnectionOptions(config, { host, port, security, user, password, accessToken }) {
+async function buildConnectionOptions(config, { host, port, security, user, password, accessToken }, limits = {}) {
   const sec = String(security || 'tls').toLowerCase();
   if (!SECURITY_VALUES.includes(sec)) {
     throw new HttpError(400, 'Security must be one of: tls, starttls, none.', 'INVALID_SECURITY');
@@ -64,12 +70,20 @@ async function buildConnectionOptions(config, { host, port, security, user, pass
     socketTimeout: 60000,
     disableAutoIdle: true, // connections are short-lived; never sit in IDLE
     tls: isIpHost ? {} : { servername: hostname },
+    maxLiteralSize: limitOr(limits.maxLiteralSize, DEFAULT_MAX_LITERAL_BYTES),
   };
+  // One response = its literals plus framing; keep headroom above the literal cap.
+  options.maxResponseSize = options.maxLiteralSize + 1024 * 1024;
   // SNI must not be an IP address (RFC 6066); only set it for real host names.
   if (!isIpHost) options.servername = hostname;
   // Remember the name the user typed so error messages don't show the pinned IP.
   Object.defineProperty(options, 'displayHost', { value: hostname, enumerable: false });
   return options;
+}
+
+function limitOr(value, fallback) {
+  const n = Number(value);
+  return Number.isInteger(n) && n > 0 ? n : fallback;
 }
 
 /** Decrypt an account's stored secret, mapping failure to a reconnect-style auth error. */
@@ -85,15 +99,15 @@ function decryptSecret(crypto, accountRow) {
 }
 
 /** ImapFlow constructor options for an account row (auth resolved, OAuth token fresh). */
-async function buildImapOptions(deps, accountRow) {
+async function buildImapOptions(deps, accountRow, limits = {}) {
   const { config, crypto } = deps;
   const base = { host: accountRow.imap_host, port: accountRow.imap_port, security: accountRow.imap_security, user: accountRow.imap_user };
   if (accountRow.auth_type === 'oauth') {
     const accessToken = await getFreshAccessToken(deps, accountRow);
-    return buildConnectionOptions(config, { ...base, accessToken });
+    return buildConnectionOptions(config, { ...base, accessToken }, limits);
   }
   const secret = decryptSecret(crypto, accountRow);
-  return buildConnectionOptions(config, { ...base, password: secret.password });
+  return buildConnectionOptions(config, { ...base, password: secret.password }, limits);
 }
 
 function annotate(err, options) {
@@ -121,8 +135,8 @@ async function connectWithOptions(options, logger = silentLogger) {
 }
 
 /** Connected ImapFlow client for an account. The caller must logout() it. */
-async function connect(deps, accountRow) {
-  const options = await buildImapOptions(deps, accountRow);
+async function connect(deps, accountRow, limits = {}) {
+  const options = await buildImapOptions(deps, accountRow, limits);
   return connectWithOptions(options, deps.logger);
 }
 
@@ -148,9 +162,12 @@ async function safeLogout(client) {
   }
 }
 
-/** Run fn(client) with a connected client; always logs out / closes afterwards. */
-async function withImap(deps, accountRow, fn) {
-  const client = await connect(deps, accountRow);
+/**
+ * Run fn(client) with a connected client; always logs out / closes afterwards.
+ * `limits.maxLiteralSize` caps the size of any one message the server may send.
+ */
+async function withImap(deps, accountRow, fn, limits = {}) {
+  const client = await connect(deps, accountRow, limits);
   try {
     return await fn(client);
   } catch (err) {
@@ -160,26 +177,61 @@ async function withImap(deps, accountRow, fn) {
   }
 }
 
+// RFC 5530 response codes that mean "not now", not "wrong credentials".
+const TRANSIENT_LOGIN_CODES = new Set(['UNAVAILABLE', 'INUSE', 'LIMIT', 'SERVERBUG', 'OVERQUOTA']);
+
+/**
+ * A login the server refused for a temporary reason (too many connections, maintenance...).
+ * imapflow flags every refused LOGIN/AUTHENTICATE as authenticationFailed, so look closer
+ * before telling the user their password is wrong.
+ */
+function isTransientLoginRefusal(err) {
+  if (!err || !err.authenticationFailed) return false;
+  const code = String(err.serverResponseCode || '').toUpperCase();
+  if (TRANSIENT_LOGIN_CODES.has(code)) return true;
+  if (code) return false; // AUTHENTICATIONFAILED, AUTHORIZATIONFAILED, EXPIRED, ...
+  const text = `${err.responseText || ''} ${typeof err.response === 'string' ? err.response : ''}`;
+  return /too many (simultaneous |concurrent )?(connections|logins|sessions)|try again later|temporar(il)?y|maintenance|unavailable/i.test(text) &&
+    !/password|credential|invalid|incorrect/i.test(text);
+}
+
+/** True when the user has to fix credentials / reconnect (never for temporary refusals). */
 function isAuthFailure(err) {
-  return !!(err && (err.authenticationFailed || (err instanceof OAuthError && err.code === 'invalid_grant')));
+  if (!err) return false;
+  if (err instanceof OAuthError) return err.code === 'invalid_grant';
+  return !!err.authenticationFailed && !isTransientLoginRefusal(err);
 }
 
 /**
  * Check that a login works without saving anything.
- * @returns {{ok: true}} or throws HttpError(400, friendly, 'IMAP_AUTH_FAILED' | 'IMAP_CONNECT_FAILED')
+ * `alternateUser` (optional, password logins only): a second username to try once when the
+ * server rejects `user` — iCloud and Yandex may want only the part before the @.
+ * @returns {{ok: true, user: string}} with the username that worked, or throws
+ *   HttpError(400, friendly, 'IMAP_AUTH_FAILED' | 'IMAP_CONNECT_FAILED') for the first attempt
  *   (policy errors such as HOST_NOT_ALLOWED / INSECURE_NOT_ALLOWED are thrown as they are).
  */
-async function verifyLogin(deps, { host, port, security, user, password, accessToken }) {
+async function verifyLogin(deps, { host, port, security, user, password, accessToken, alternateUser }) {
   const options = await buildConnectionOptions(deps.config, { host, port, security, user, password, accessToken });
   let client;
   try {
     client = await connectWithOptions(options, deps.logger);
   } catch (err) {
     const message = friendlyImapError(err, { host: options.displayHost, port: options.port, oauth: !!accessToken });
-    throw new HttpError(400, message, isAuthFailure(err) ? 'IMAP_AUTH_FAILED' : 'IMAP_CONNECT_FAILED');
+    const failure = new HttpError(400, message, isAuthFailure(err) ? 'IMAP_AUTH_FAILED' : 'IMAP_CONNECT_FAILED');
+    if (failure.code === 'IMAP_AUTH_FAILED' && !accessToken && alternateUser && alternateUser !== user) {
+      try {
+        const retry = await buildConnectionOptions(deps.config, { host, port, security, user: alternateUser, password });
+        client = await connectWithOptions(retry, deps.logger);
+      } catch (_) {
+        throw failure; // report the first attempt: it used the username the user expects
+      }
+      await safeLogout(client);
+      return { ok: true, user: alternateUser };
+    }
+    throw failure;
   }
   await safeLogout(client);
-  return { ok: true };
+  return { ok: true, user };
 }
 
 /** Pick the mailbox path with a special-use flag from a LIST result. */
@@ -256,10 +308,21 @@ function friendlyImapError(err, ctx = {}) {
   const message = String(err.message || '');
   const serverText = String(err.responseText || (typeof err.response === 'string' ? err.response : '') || '');
 
+  if (err.authenticationFailed && isTransientLoginRefusal(err)) {
+    return `The mail server is temporarily refusing connections (${truncate(serverText || message)}). Mailtabs will try again automatically.`;
+  }
   if (err.authenticationFailed) {
     const text = `${serverText} ${message}`;
+    // Provider-specific advice (app passwords, "turn IMAP on first", ...), chosen by server name.
+    const hint = authFailureHintForHost(host);
     if (ctx.oauth || err.oauthError || /XOAUTH2|OAUTHBEARER/i.test(String(err.executedCommand || ''))) {
-      return 'The mail server rejected the sign-in — reconnect this account.';
+      // Outlook.com refuses even a valid token until the user turns IMAP on.
+      const imapOff = presetKeyForHost(host) === 'outlook' ? ` ${hint}` : '';
+      return `The mail server rejected the sign-in — reconnect this account.${imapOff}`;
+    }
+    if (presetKeyForHost(host) === 'outlook') {
+      // An account saved with a password before Microsoft switched password sign-in off.
+      return 'Microsoft no longer accepts passwords for IMAP. Add this account again with "Sign in with Microsoft" to switch it over.';
     }
     if (/application-specific password|app password|\bASP\b/i.test(text)) {
       return 'This account needs an app password instead of your normal password. Create one in your account security settings.';
@@ -268,12 +331,12 @@ function friendlyImapError(err, ctx = {}) {
       return 'Your provider wants you to sign in through its website first (a security check). Sign in there, then try again.';
     }
     if (/imap (access )?(is )?disabled|enable imap|not enabled for imap/i.test(text)) {
-      return 'IMAP access is turned off for this account. Turn it on in your email provider\'s settings, then try again.';
+      return `IMAP access is turned off for this account. Turn it on in your email provider's settings, then try again.${hint ? ` ${hint}` : ''}`;
     }
     if (/too many|rate|try again later/i.test(text) && !/password/i.test(text)) {
       return `The mail server temporarily refused the login: ${truncate(serverText || message)}`;
     }
-    return 'Wrong email or password. Many providers (Gmail, Yahoo, iCloud) require an app password instead of your normal password.';
+    return `Wrong email or password. ${hint || 'Many providers (Gmail, Yahoo, iCloud) require an app password instead of your normal password.'}`;
   }
 
   if (code === 'ENOTFOUND' || code === 'EAI_AGAIN' || code === 'EAI_NONAME') {
@@ -328,6 +391,7 @@ module.exports = {
   pickSpecialMailbox,
   friendlyImapError,
   isAuthFailure,
+  isTransientLoginRefusal,
   toUidSet,
   safeLogout,
 };

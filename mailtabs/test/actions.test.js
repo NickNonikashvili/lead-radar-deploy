@@ -88,6 +88,25 @@ test('friendlyImapError maps common failures to plain English', () => {
   assert.match(f(authErr, { oauth: true }), /reconnect/);
   assert.match(f(Object.assign(new Error('Command failed'), { authenticationFailed: true, responseText: '[ALERT] Please log in via your web browser' })), /website/);
 
+  // Provider-specific advice, picked by server name.
+  assert.match(f(authErr, { host: 'imap.gmx.net' }), /^Wrong email or password\. GMX: turn on "POP3 & IMAP"/);
+  assert.match(f(authErr, { host: 'imap.zoho.com' }), /IMAP Access.*imappro\.zoho\.com/);
+  assert.match(f(authErr, { host: 'imap.yandex.com' }), /App passwords and OAuth tokens.*2–3 hours/);
+  assert.match(f(authErr, { host: 'imap.fastmail.com' }), /Basic plan has no IMAP/);
+  assert.match(f(authErr, { host: 'imap.mail.yahoo.com' }), /Generate app password/);
+  assert.match(f(authErr, { host: 'imap.mail.me.com' }), /app-specific password/);
+  assert.match(f(Object.assign(authErr, { imapHost: 'imap.aol.com' })), /AOL needs an app password/, 'host from the annotated error');
+  delete authErr.imapHost;
+  assert.match(
+    f(Object.assign(new Error('Command failed'), { authenticationFailed: true, responseText: 'IMAP access is disabled for this account' }), { host: 'imap.gmx.com' }),
+    /IMAP access is turned off.*GMX: turn on/
+  );
+  // OAuth: Outlook.com rejects even a valid token until IMAP is switched on; Gmail gets no app-password advice.
+  assert.match(f(authErr, { oauth: true, host: 'outlook.office365.com' }), /reconnect this account\. For Outlook\.com, check that IMAP is turned on/);
+  assert.equal(f(authErr, { oauth: true, host: 'imap.gmail.com' }), 'The mail server rejected the sign-in — reconnect this account.');
+  // A password account left over from before Microsoft switched passwords off.
+  assert.match(f(authErr, { host: 'outlook.office365.com' }), /no longer accepts passwords.*Sign in with Microsoft/);
+
   assert.equal(
     f(Object.assign(new Error('getaddrinfo ENOTFOUND imap.nope.example'), { code: 'ENOTFOUND', hostname: 'imap.nope.example' })),
     'Could not find the mail server imap.nope.example. Check the server name for typos.'
@@ -243,7 +262,7 @@ test('resolveTarget: Archive, then All Mail (Gmail), then a folder named Archive
 imapTest('verifyLogin: success, wrong password, unreachable, insecure', async (t, ctx) => {
   const deps = { config: ctx.config };
   const base = { host: '127.0.0.1', port: 1143, security: 'none', user: 'alice@test.local' };
-  assert.deepEqual(await imap.verifyLogin(deps, { ...base, password: 'alicepw' }), { ok: true });
+  assert.deepEqual(await imap.verifyLogin(deps, { ...base, password: 'alicepw' }), { ok: true, user: 'alice@test.local' });
 
   await assert.rejects(imap.verifyLogin(deps, { ...base, password: 'nope' }), (err) => {
     assert.ok(err instanceof HttpError);
@@ -276,6 +295,29 @@ imapTest('verifyLogin: success, wrong password, unreachable, insecure', async (t
   } finally {
     strict.close();
   }
+});
+
+imapTest('verifyLogin retries once with alternateUser and reports the username that worked', async (t, ctx) => {
+  const deps = { config: ctx.config };
+  const base = { host: '127.0.0.1', port: 1143, security: 'none', password: 'alicepw' };
+  // Dovecot knows only "alice@test.local": the bare name fails, the retry succeeds.
+  assert.deepEqual(await imap.verifyLogin(deps, { ...base, user: 'alice', alternateUser: 'alice@test.local' }), {
+    ok: true,
+    user: 'alice@test.local',
+  });
+  // The retry is not needed when the first name works.
+  assert.deepEqual(await imap.verifyLogin(deps, { ...base, user: 'alice@test.local', alternateUser: 'alice' }), {
+    ok: true,
+    user: 'alice@test.local',
+  });
+  // Both fail: the first attempt's error is reported.
+  await assert.rejects(imap.verifyLogin(deps, { ...base, password: 'nope', user: 'alice@test.local', alternateUser: 'alice' }), (err) => {
+    assert.equal(err.code, 'IMAP_AUTH_FAILED');
+    assert.match(err.message, /Wrong email or password/);
+    return true;
+  });
+  // Connection problems are not retried with another username.
+  await assert.rejects(imap.verifyLogin(deps, { ...base, port: 1, user: 'alice', alternateUser: 'alice@test.local' }), (err) => err.code === 'IMAP_CONNECT_FAILED');
 });
 
 imapTest('withImap logs out even when the callback throws, and returns its result', async (t, ctx) => {

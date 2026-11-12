@@ -168,7 +168,7 @@ All settings are environment variables (or lines in `.env`). See `.env.example` 
 | `MAX_BODY_BYTES` | `5000000` | Bigger messages are downloaded only when you open them. |
 | `SYNC_CONCURRENCY` | `4` | How many accounts sync at the same time. |
 | `ALLOW_PRIVATE_IMAP_HOSTS` | `false` | Allow IMAP servers on localhost/private networks and unencrypted IMAP. Keep `false` on shared servers. |
-| `TRUST_PROXY` | `false` | `true` or a number of proxy hops when behind a reverse proxy. |
+| `TRUST_PROXY` | `false` | Number of reverse proxies in front of Mailtabs (`true` = 1). |
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | – | Enables *Sign in with Google*. |
 | `MICROSOFT_CLIENT_ID` / `MICROSOFT_CLIENT_SECRET` | – | Enables *Sign in with Microsoft*. |
 | `MICROSOFT_TENANT` | `common` | `common` (personal + work), `consumers` (personal only), or your tenant ID. |
@@ -193,8 +193,10 @@ All settings are environment variables (or lines in `.env`). See `.env.example` 
 
 ## 8. Limitations
 
-- **Reading only.** There is no compose or reply yet. Replies open in your normal mail app via the sender's address.
+- **Reading only.** There is no compose or reply yet: reply from your normal mail app for now.
 - **Inbox only.** Other folders and labels aren't synced.
+- **No undo for Archive and Delete.** Nothing is lost: archived mail is in your provider's Archive
+  (Gmail: *All Mail*), and deleted mail is in its Trash.
 - **Single process.** Run one instance, not a cluster.
 - Rules that ignore upper/lower case do so for plain A–Z letters. Search ignores case and accents for all languages.
 

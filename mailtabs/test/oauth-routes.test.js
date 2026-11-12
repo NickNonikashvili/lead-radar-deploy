@@ -79,11 +79,15 @@ async function start(client, provider = 'google', query = '') {
   return { location, url, state: url.searchParams.get('state') };
 }
 
-function oauthError(res) {
+/** Assert a failed-sign-in redirect and return the message the frontend would show. */
+async function oauthError(client, res) {
   assert.equal(res.status, 302);
   const location = res.headers.get('location');
-  assert.ok(location.startsWith('/?oauth_error='), `expected an oauth_error redirect, got ${location}`);
-  return new URL(location, 'http://x').searchParams.get('oauth_error');
+  assert.equal(location, '/?oauth=failed', `expected an oauth failure redirect, got ${location}`);
+  const result = await client.get('/api/oauth/result');
+  assert.equal(result.status, 200);
+  assert.equal((await client.get('/api/oauth/result')).body.error, null, 'the message is shown once');
+  return result.body.error;
 }
 
 const accountsOf = (srv, userId) => srv.db.prepare('SELECT * FROM accounts WHERE user_id = ? ORDER BY id').all(userId);
@@ -93,7 +97,7 @@ test('start: needs a configured provider and a signed-in user', async (t) => {
   const anon = makeClient(srv.baseUrl);
   const signedOut = await anon.get('/api/oauth/google/start');
   assert.equal(signedOut.status, 302);
-  assert.equal(signedOut.headers.get('location'), '/?oauth_error=Please+sign+in+first');
+  assert.equal(signedOut.headers.get('location'), '/?oauth=signin');
 
   assert.equal((await alice.get('/api/oauth/yahoo/start')).status, 404);
   assert.equal((await alice.get('/api/oauth/microsoft/start')).status, 404, 'not configured');
@@ -142,12 +146,12 @@ test('start: validates accountId and tabIds against the signed-in user', async (
   const theirs = seedAccount(srv.db, srv.crypto, malloryUser.id, { provider: 'gmail', email: 'm@gmail.com' });
   const theirTab = (await mallory.post('/api/tabs', { name: 'M' })).body.tab;
 
-  assert.match(oauthError(await alice.get(`/api/oauth/google/start?accountId=${theirs.id}`)), /not found/);
-  assert.match(oauthError(await alice.get('/api/oauth/google/start?accountId=abc')), /not found/);
-  assert.match(oauthError(await alice.get(`/api/oauth/google/start?accountId=${myYahoo.id}`)), /can't be connected/);
-  assert.match(oauthError(await alice.get(`/api/oauth/google/start?tabIds=${theirTab.id}`)), /tab/);
-  assert.match(oauthError(await alice.get('/api/oauth/google/start?tabIds=1,x')), /tab/);
-  assert.match(oauthError(await alice.get('/api/oauth/google/start?tabIds=-1')), /tab/);
+  assert.match(await oauthError(alice, await alice.get(`/api/oauth/google/start?accountId=${theirs.id}`)), /not found/);
+  assert.match(await oauthError(alice, await alice.get('/api/oauth/google/start?accountId=abc')), /not found/);
+  assert.match(await oauthError(alice, await alice.get(`/api/oauth/google/start?accountId=${myYahoo.id}`)), /can't be connected/);
+  assert.match(await oauthError(alice, await alice.get(`/api/oauth/google/start?tabIds=${theirTab.id}`)), /tab/);
+  assert.match(await oauthError(alice, await alice.get('/api/oauth/google/start?tabIds=1,x')), /tab/);
+  assert.match(await oauthError(alice, await alice.get('/api/oauth/google/start?tabIds=-1')), /tab/);
   assert.equal(srv.db.prepare('SELECT COUNT(*) AS n FROM oauth_states').get().n, 0, 'no state stored for rejected starts');
 
   // Reconnect: the state remembers the account, and the provider gets a login hint.
@@ -207,37 +211,37 @@ test('callback: state is single-use, expires, is bound to the user and the provi
   const first = await start(alice);
   assert.equal((await alice.get(`/api/oauth/google/callback?code=c1&state=${first.state}`)).status, 302);
   assert.equal(accountsOf(srv, aliceUser.id).length, 1);
-  assert.match(oauthError(await alice.get(`/api/oauth/google/callback?code=c1&state=${first.state}`)), /expired or was already used/);
+  assert.match(await oauthError(alice, await alice.get(`/api/oauth/google/callback?code=c1&state=${first.state}`)), /expired or was already used/);
   assert.equal(mock.requests.length, 1, 'a replayed state never reaches the token endpoint');
 
   // Expired.
   const expired = await start(alice);
   srv.db.prepare('UPDATE oauth_states SET expires_at = ? WHERE state = ?').run(Date.now() - 1, expired.state);
-  assert.match(oauthError(await alice.get(`/api/oauth/google/callback?code=c2&state=${expired.state}`)), /expired/);
+  assert.match(await oauthError(alice, await alice.get(`/api/oauth/google/callback?code=c2&state=${expired.state}`)), /expired/);
   assert.equal(srv.db.prepare('SELECT COUNT(*) AS n FROM oauth_states WHERE state = ?').get(expired.state).n, 0, 'expired state removed');
 
   // Another user's session.
   const stolen = await start(alice);
-  assert.match(oauthError(await mallory.get(`/api/oauth/google/callback?code=c3&state=${stolen.state}`)), /expired or was already used/);
+  assert.match(await oauthError(mallory, await mallory.get(`/api/oauth/google/callback?code=c3&state=${stolen.state}`)), /expired or was already used/);
   assert.equal(accountsOf(srv, malloryUser.id).length, 0);
   // ... and the state is gone for Alice too (it was single-use).
-  assert.match(oauthError(await alice.get(`/api/oauth/google/callback?code=c3&state=${stolen.state}`)), /expired/);
+  assert.match(await oauthError(alice, await alice.get(`/api/oauth/google/callback?code=c3&state=${stolen.state}`)), /expired/);
 
   // Wrong provider.
   const google = await start(alice, 'google');
-  assert.match(oauthError(await alice.get(`/api/oauth/microsoft/callback?code=c4&state=${google.state}`)), /expired or was already used/);
+  assert.match(await oauthError(alice, await alice.get(`/api/oauth/microsoft/callback?code=c4&state=${google.state}`)), /expired or was already used/);
 
   // Missing / unknown / absurd state.
-  assert.match(oauthError(await alice.get('/api/oauth/google/callback?code=c5')), /expired/);
-  assert.match(oauthError(await alice.get('/api/oauth/google/callback?code=c5&state=nope')), /expired/);
-  assert.match(oauthError(await alice.get(`/api/oauth/google/callback?code=c5&state=${'x'.repeat(5000)}`)), /expired/);
+  assert.match(await oauthError(alice, await alice.get('/api/oauth/google/callback?code=c5')), /expired/);
+  assert.match(await oauthError(alice, await alice.get('/api/oauth/google/callback?code=c5&state=nope')), /expired/);
+  assert.match(await oauthError(alice, await alice.get(`/api/oauth/google/callback?code=c5&state=${'x'.repeat(5000)}`)), /expired/);
   assert.equal((await alice.get('/api/oauth/yahoo/callback?code=c&state=s')).status, 404);
 
   // Not signed in when coming back: asked to sign in, and the state is used up anyway.
   const anon = makeClient(srv.baseUrl);
   const pending = await start(alice);
   const signedOut = await anon.get(`/api/oauth/google/callback?code=c6&state=${pending.state}`);
-  assert.equal(signedOut.headers.get('location'), '/?oauth_error=Please+sign+in+first');
+  assert.equal(signedOut.headers.get('location'), '/?oauth=signin');
   assert.equal(srv.db.prepare('SELECT COUNT(*) AS n FROM oauth_states WHERE state = ?').get(pending.state).n, 0);
 
   assert.equal(mock.requests.length, 1);
@@ -247,12 +251,13 @@ test('callback: provider error parameter and token endpoint failures', async (t)
   const { srv, alice, aliceUser, mock } = await setup(t);
 
   const cancelled = await start(alice);
-  const msg = oauthError(await alice.get(`/api/oauth/google/callback?error=access_denied&state=${cancelled.state}`));
+  const msg = await oauthError(alice, await alice.get(`/api/oauth/google/callback?error=access_denied&state=${cancelled.state}`));
   assert.match(msg, /cancelled/);
   assert.equal(srv.db.prepare('SELECT COUNT(*) AS n FROM oauth_states WHERE state = ?').get(cancelled.state).n, 0, 'state consumed');
 
   // Free text from the URL is never shown (anyone can craft a callback link).
-  const crafted = oauthError(
+  const crafted = await oauthError(
+    alice,
     await alice.get('/api/oauth/google/callback?error=weird_thing&error_description=Call%20555-0100%20to%20restore%20your%20account')
   );
   assert.ok(!/555-0100|weird_thing/.test(crafted));
@@ -260,25 +265,25 @@ test('callback: provider error parameter and token endpoint failures', async (t)
 
   // No code.
   const noCode = await start(alice);
-  assert.match(oauthError(await alice.get(`/api/oauth/google/callback?state=${noCode.state}`)), /authorization code/);
+  assert.match(await oauthError(alice, await alice.get(`/api/oauth/google/callback?state=${noCode.state}`)), /authorization code/);
 
   // The token endpoint refuses the code.
   mock.reply = () => ({ status: 400, body: { error: 'invalid_grant', error_description: 'Bad code' } });
   const refused = await start(alice);
-  assert.match(oauthError(await alice.get(`/api/oauth/google/callback?code=bad&state=${refused.state}`)), /took too long or was already used/);
+  assert.match(await oauthError(alice, await alice.get(`/api/oauth/google/callback?code=bad&state=${refused.state}`)), /took too long or was already used/);
   mock.reply = () => ({ status: 500, body: { error: 'server_error' } });
   const broken = await start(alice);
-  assert.match(oauthError(await alice.get(`/api/oauth/google/callback?code=bad&state=${broken.state}`)), /sign-in failed/i);
+  assert.match(await oauthError(alice, await alice.get(`/api/oauth/google/callback?code=bad&state=${broken.state}`)), /sign-in failed/i);
 
   // No email in the id_token.
   mock.reply = () => ({ status: 200, body: { access_token: 'a', refresh_token: 'r', expires_in: 60, id_token: jwt({ sub: '123' }) } });
   const noEmail = await start(alice);
-  assert.match(oauthError(await alice.get(`/api/oauth/google/callback?code=c&state=${noEmail.state}`)), /email address/);
+  assert.match(await oauthError(alice, await alice.get(`/api/oauth/google/callback?code=c&state=${noEmail.state}`)), /email address/);
 
   // No refresh token for a new account: mail access was not granted.
   mock.reply = () => ({ status: 200, body: { access_token: 'a', expires_in: 3600, id_token: jwt({ email: 'new@gmail.com' }) } });
   const noRefresh = await start(alice);
-  assert.match(oauthError(await alice.get(`/api/oauth/google/callback?code=c&state=${noRefresh.state}`)), NO_REFRESH);
+  assert.match(await oauthError(alice, await alice.get(`/api/oauth/google/callback?code=c&state=${noRefresh.state}`)), NO_REFRESH);
 
   assert.equal(accountsOf(srv, aliceUser.id).length, 0, 'no account was created by any failure');
   assert.equal(srv.syncManager.calls.syncAccount.length, 0);
@@ -309,7 +314,7 @@ test('callback: reconnecting keeps the old refresh token when none is sent, and 
   // Signing in as a different Google account while reconnecting this one is refused.
   mock.reply = () => ({ status: 200, body: { access_token: 'x', refresh_token: 'y', expires_in: 3600, id_token: jwt({ email: 'someone-else@gmail.com' }) } });
   const wrong = await start(alice, 'google', `?accountId=${account.id}`);
-  assert.match(oauthError(await alice.get(`/api/oauth/google/callback?code=c3&state=${wrong.state}`)), /someone-else@gmail\.com/);
+  assert.match(await oauthError(alice, await alice.get(`/api/oauth/google/callback?code=c3&state=${wrong.state}`)), /someone-else@gmail\.com/);
   assert.equal(accountsOf(srv, aliceUser.id).length, 1);
   assert.equal(srv.crypto.decryptJson(accountsOf(srv, aliceUser.id)[0].secret_enc).accessToken, 'access-2');
 });
@@ -378,4 +383,56 @@ test('callback: Microsoft accounts (email from preferred_username)', async (t) =
   assert.equal(account.email, 'me@outlook.com');
   assert.equal(mock.requests[0].path, '/microsoft/token');
   assert.equal(mock.requests[0].fields.client_secret, 'ms-client-secret');
+});
+
+test('callback: a grant without mail access connects nothing and says what to tick', async (t) => {
+  const { srv, alice, aliceUser, mock } = await setup(t);
+  mock.reply = () => ({
+    status: 200,
+    body: {
+      access_token: 'a',
+      refresh_token: 'r',
+      expires_in: 3600,
+      scope: 'openid https://www.googleapis.com/auth/userinfo.email',
+      id_token: jwt({ email: 'person@gmail.com' }),
+    },
+  });
+  const { state } = await start(alice);
+  const msg = await oauthError(alice, await alice.get(`/api/oauth/google/callback?code=c&state=${state}`));
+  assert.match(msg, /Mail access wasn't granted/);
+  assert.match(msg, /Gmail permission/);
+  assert.equal(accountsOf(srv, aliceUser.id).length, 0);
+  assert.equal(srv.syncManager.calls.syncAccount.length, 0);
+});
+
+test('callback: a rejected client secret is reported as a server setting', async (t) => {
+  const { alice, mock } = await setup(t);
+  mock.reply = () => ({ status: 401, body: { error: 'invalid_client', error_description: 'Unauthorized' } });
+  const { state } = await start(alice);
+  const msg = await oauthError(alice, await alice.get(`/api/oauth/google/callback?code=c&state=${state}`));
+  assert.match(msg, /site owner should check GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET/);
+});
+
+test('callback: new accounts get distinct palette colours; existing ones keep theirs', async (t) => {
+  const { srv, alice, aliceUser, mock } = await setup(t);
+  // One existing account already uses the first palette colour (indigo).
+  seedAccount(srv.db, srv.crypto, aliceUser.id, { email: 'old@example.com', color: '#4f46e5' });
+  let email = 'first@gmail.com';
+  mock.reply = () => ({ status: 200, body: { access_token: 'a', refresh_token: 'r', expires_in: 3600, id_token: jwt({ email }) } });
+
+  const one = await start(alice);
+  await alice.get(`/api/oauth/google/callback?code=c&state=${one.state}`);
+  email = 'second@gmail.com';
+  const two = await start(alice);
+  await alice.get(`/api/oauth/google/callback?code=c&state=${two.state}`);
+  const colors = Object.fromEntries(accountsOf(srv, aliceUser.id).map((a) => [a.email, a.color]));
+  assert.equal(colors['first@gmail.com'], '#2563eb');
+  assert.equal(colors['second@gmail.com'], '#0891b2');
+
+  // Reconnecting keeps the colour the user has.
+  srv.db.prepare("UPDATE accounts SET color = '#123456' WHERE email = 'first@gmail.com'").run();
+  email = 'first@gmail.com';
+  const again = await start(alice);
+  await alice.get(`/api/oauth/google/callback?code=c&state=${again.state}`);
+  assert.equal(srv.db.prepare("SELECT color FROM accounts WHERE email = 'first@gmail.com'").get().color, '#123456');
 });

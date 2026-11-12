@@ -26,7 +26,9 @@ function parseTrustProxy(value) {
   const v = String(value).trim();
   if (/^\d+$/.test(v)) return Number(v);
   const b = bool(v, undefined);
-  if (b !== undefined) return b;
+  // "true" means one proxy hop. Express's own `true` would trust every X-Forwarded-For entry,
+  // which clients can forge to dodge the per-IP login rate limit.
+  if (b !== undefined) return b ? 1 : false;
   return v; // express also accepts strings like 'loopback' or a CIDR list
 }
 
