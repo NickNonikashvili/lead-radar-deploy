@@ -134,7 +134,7 @@ test('db: creates the schema with expected pragmas', () => {
       .all()
       .map((r) => r.name)
       .sort();
-    assert.deepEqual(tables, ['accounts', 'messages', 'messages_fts', 'oauth_states', 'sessions', 'tab_accounts', 'tabs', 'users']);
+    assert.deepEqual(tables, ['accounts', 'folders', 'messages', 'messages_fts', 'oauth_states', 'outbox', 'sessions', 'tab_accounts', 'tabs', 'uploads', 'user_settings', 'users']);
   } finally {
     db.close();
   }

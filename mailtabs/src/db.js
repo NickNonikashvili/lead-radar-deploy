@@ -134,6 +134,92 @@ const MIGRATIONS = [
     expires_at INTEGER NOT NULL
   );
   `,
+
+  // v2 — every folder, sending, drafts, outbox, conversations
+  `
+  CREATE TABLE folders (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    account_id INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+    path TEXT NOT NULL,
+    name TEXT NOT NULL,
+    delimiter TEXT,
+    parent_path TEXT,
+    special_use TEXT,
+    selectable INTEGER NOT NULL DEFAULT 1,
+    sync_mode TEXT NOT NULL DEFAULT 'auto',
+    sync_state TEXT,
+    total_count INTEGER NOT NULL DEFAULT 0,
+    unread_count INTEGER NOT NULL DEFAULT 0,
+    has_older INTEGER NOT NULL DEFAULT 0,
+    last_synced_at INTEGER,
+    last_opened_at INTEGER,
+    created_at INTEGER NOT NULL,
+    UNIQUE(account_id, path)
+  );
+  CREATE INDEX folders_account ON folders(account_id);
+  CREATE INDEX folders_special ON folders(special_use);
+
+  -- Every existing account has its INBOX; carry its sync position over.
+  INSERT INTO folders (account_id, path, name, special_use, sync_mode, sync_state, last_synced_at, created_at)
+    SELECT id, 'INBOX', 'Inbox', '\\Inbox', 'auto', sync_state, last_synced_at, created_at FROM accounts;
+
+  ALTER TABLE messages ADD COLUMN folder_id INTEGER REFERENCES folders(id) ON DELETE CASCADE;
+  ALTER TABLE messages ADD COLUMN in_reply_to TEXT;
+  ALTER TABLE messages ADD COLUMN references_json TEXT;
+  ALTER TABLE messages ADD COLUMN thread_key TEXT;
+  ALTER TABLE messages ADD COLUMN is_draft INTEGER NOT NULL DEFAULT 0;
+  ALTER TABLE messages ADD COLUMN is_answered INTEGER NOT NULL DEFAULT 0;
+  UPDATE messages SET folder_id = (
+    SELECT f.id FROM folders f WHERE f.account_id = messages.account_id AND f.path = messages.mailbox
+  );
+  UPDATE messages SET thread_key = 'mid:' || message_id WHERE message_id IS NOT NULL;
+  CREATE INDEX messages_folder_date ON messages(folder_id, date DESC, id DESC);
+  CREATE INDEX messages_thread ON messages(account_id, thread_key);
+  CREATE INDEX messages_account_msgid ON messages(account_id, message_id);
+
+  ALTER TABLE accounts ADD COLUMN smtp_host TEXT;
+  ALTER TABLE accounts ADD COLUMN smtp_port INTEGER;
+  ALTER TABLE accounts ADD COLUMN smtp_security TEXT;
+  ALTER TABLE accounts ADD COLUMN smtp_user TEXT;
+  ALTER TABLE accounts ADD COLUMN smtp_secret_enc TEXT;
+  ALTER TABLE accounts ADD COLUMN sender_name TEXT;
+  ALTER TABLE accounts ADD COLUMN signature_html TEXT;
+  ALTER TABLE accounts ADD COLUMN folders_synced_at INTEGER;
+
+  CREATE TABLE user_settings (
+    user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+    settings TEXT NOT NULL DEFAULT '{}'
+  );
+
+  CREATE TABLE uploads (
+    id TEXT PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    filename TEXT NOT NULL,
+    content_type TEXT NOT NULL,
+    size INTEGER NOT NULL,
+    path TEXT NOT NULL,
+    created_at INTEGER NOT NULL
+  );
+  CREATE INDEX uploads_user ON uploads(user_id);
+
+  CREATE TABLE outbox (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    account_id INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+    payload TEXT NOT NULL,
+    send_at INTEGER NOT NULL,
+    status TEXT NOT NULL DEFAULT 'queued',
+    error TEXT,
+    attempts INTEGER NOT NULL DEFAULT 0,
+    draft_folder_id INTEGER,
+    draft_uid INTEGER,
+    sent_message_id TEXT,
+    created_at INTEGER NOT NULL,
+    sent_at INTEGER
+  );
+  CREATE INDEX outbox_due ON outbox(status, send_at);
+  CREATE INDEX outbox_user ON outbox(user_id, status);
+    `,
 ];
 
 function migrate(db) {
