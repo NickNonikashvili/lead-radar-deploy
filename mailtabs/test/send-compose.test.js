@@ -341,6 +341,44 @@ test('prepareCompose replyAll: everyone except all of my addresses, deduped', ()
   assert.deepEqual(prepareCompose({ mode: 'replyAll', original: junk, account: ACCOUNT, accounts: ACCOUNTS }).cc, []);
 });
 
+test('prepareCompose: mail from another of my accounts is answered like any sender (BUG-REPLY-OWN)', () => {
+  // i2 replies to a message i1 (another account of the same user) sent to i2 and Carol, Cc i3.
+  const i1 = { id: 1, email: 'i1@test.local', imap_user: 'i1@test.local' };
+  const i2 = { id: 2, email: 'i2@test.local', imap_user: 'i2@test.local' };
+  const i3 = { id: 3, email: 'i3@test.local', smtp_user: 'i3@test.local' };
+  const accounts = [i1, i2, i3];
+  const fromI1 = original({
+    account_id: 2,
+    from_name: 'Ivy One',
+    from_address: 'i1@test.local',
+    to_json: JSON.stringify([{ address: 'I2@test.local' }, { name: 'Carol', address: 'carol@example.org' }]),
+    cc_json: JSON.stringify([{ address: 'i3@test.local' }, { address: 'i1@test.local' }]),
+  });
+  const addrs = (p) => [p.to.map((r) => r.address), p.cc.map((r) => r.address)];
+
+  const reply = prepareCompose({ mode: 'reply', original: fromI1, account: i2, accounts });
+  assert.deepEqual(reply.to, [{ name: 'Ivy One', address: 'i1@test.local' }], 'back to i1, not to the replying account');
+  assert.deepEqual(reply.cc, []);
+  // Reply all keeps the sender being answered and leaves out the user's other addresses.
+  assert.deepEqual(addrs(prepareCompose({ mode: 'replyAll', original: fromI1, account: i2, accounts })), [['i1@test.local', 'carol@example.org'], []]);
+  // A Reply-To on another of my accounts is answered too.
+  const viaReplyTo = original({ reply_to_json: JSON.stringify([{ address: 'i3@test.local' }]) });
+  assert.deepEqual(addrs(prepareCompose({ mode: 'reply', original: viaReplyTo, account: ACCOUNT, accounts: [...ACCOUNTS, i3] })), [['i3@test.local'], []]);
+
+  // The replying account's own message (from it, or filed in its Sent folder) goes back to its recipients.
+  const fromI2 = original({ account_id: 2, from_address: 'i2@test.local', to_json: JSON.stringify([{ address: 'i1@test.local' }, { address: 'zed@example.org' }]), cc_json: '[]' });
+  assert.deepEqual(addrs(prepareCompose({ mode: 'reply', original: fromI2, account: i2, accounts })), [['i1@test.local', 'zed@example.org'], []]);
+  assert.deepEqual(addrs(prepareCompose({ mode: 'replyAll', original: fromI2, account: i2, accounts })), [['zed@example.org'], []], 'reply all leaves out my addresses');
+  // Sent from an alias the account does not list: the Sent folder says it is mine.
+  const fromAlias = original({ account_id: 2, from_address: 'ivy@alias.example', to_json: JSON.stringify([{ address: 'zed@example.org' }]), cc_json: '[]' });
+  assert.deepEqual(addrs(prepareCompose({ mode: 'reply', original: fromAlias, account: i2, accounts, inSentFolder: true })), [['zed@example.org'], []]);
+  assert.deepEqual(addrs(prepareCompose({ mode: 'reply', original: fromAlias, account: i2, accounts })), [['ivy@alias.example'], []]);
+
+  // A note to self from another of my accounts: reply all still has a recipient.
+  const note = original({ account_id: 2, from_address: 'i1@test.local', to_json: JSON.stringify([{ address: 'i2@test.local' }]), cc_json: '[]' });
+  assert.deepEqual(addrs(prepareCompose({ mode: 'replyAll', original: note, account: i2, accounts })), [['i1@test.local'], []]);
+});
+
 test('prepareCompose forward: header block, original body, non-inline attachments', () => {
   const p = prepareCompose({ mode: 'forward', original: original({ subject: 'Plans' }), account: ACCOUNT, accounts: ACCOUNTS });
   assert.equal(p.subject, 'Fwd: Plans');

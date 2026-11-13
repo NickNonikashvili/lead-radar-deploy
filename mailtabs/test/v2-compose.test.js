@@ -116,6 +116,41 @@ test('compose prepare: new / reply / replyAll / forward, From = the receiving ac
   assert.equal((await makeClient(srv.baseUrl).get('/api/compose/prepare?mode=new')).status, 401);
 });
 
+test('compose prepare: replying between two of my accounts goes to the sender; my Sent mail to its recipients', async (t) => {
+  const { srv, alice, aliceUser } = await setup(t);
+  const i1 = sendingAccount(srv, aliceUser.id, { email: 'i1@test.local' });
+  const i2 = sendingAccount(srv, aliceUser.id, { email: 'i2@test.local' });
+  const prepare = async (mode, id) => {
+    const res = await alice.get(`/api/compose/prepare?mode=${mode}&messageId=${id}`);
+    assert.equal(res.status, 200, JSON.stringify(res.body));
+    return res.body.payload;
+  };
+  const addrs = (p) => [p.accountId, p.to.map((r) => r.address), p.cc.map((r) => r.address)];
+
+  // i1 wrote to i2 and Carol; the copy in i2's inbox is answered from i2, back to i1.
+  const received = seedMessage(srv.db, i2.id, {
+    from_name: 'Ivy One',
+    from_address: 'i1@test.local',
+    to: [{ name: '', address: 'i2@test.local' }, { name: 'Carol', address: 'carol@example.com' }],
+  });
+  assert.deepEqual(addrs(await prepare('reply', received.id)), [i2.id, ['i1@test.local'], []]);
+  assert.deepEqual(addrs(await prepare('replyAll', received.id)), [i2.id, ['i1@test.local', 'carol@example.com'], []]);
+
+  // The same message in i1's Sent folder (sent from an alias i1 does not list) goes to its recipients.
+  const sentFolder = seedFolder(srv.db, i1.id, 'Sent', { specialUse: '\\Sent' });
+  const sent = seedMessage(srv.db, i1.id, {
+    mailbox: 'Sent',
+    folder_id: sentFolder.id,
+    from_address: 'ivy@alias.example',
+    to: [{ name: '', address: 'i2@test.local' }, { name: 'Carol', address: 'carol@example.com' }],
+  });
+  assert.deepEqual(addrs(await prepare('reply', sent.id)), [i1.id, ['i2@test.local', 'carol@example.com'], []]);
+  assert.deepEqual(addrs(await prepare('replyAll', sent.id)), [i1.id, ['carol@example.com'], []], 'reply all leaves out my addresses');
+  // Outside a Sent folder an unknown alias is just another sender.
+  const archived = seedMessage(srv.db, i1.id, { mailbox: 'Archive', from_address: 'ivy@alias.example', to: [{ name: '', address: 'carol@example.com' }] });
+  assert.deepEqual(addrs(await prepare('reply', archived.id)), [i1.id, ['ivy@alias.example'], []]);
+});
+
 // ---------------------------------------------------------------------------------------------
 // Uploads
 // ---------------------------------------------------------------------------------------------
@@ -274,7 +309,7 @@ test('send: validation, ownership, canSend, undo delay and scheduling; outbox en
   // Outbox list: newest first, only the user's.
   const list = await alice.get('/api/outbox');
   assert.deepEqual(list.body.items.map((i) => i.subject), ['Later', 'Hello']);
-  assert.deepEqual(Object.keys(list.body.items[0]).sort(), ['accountId', 'attempts', 'createdAt', 'error', 'id', 'sendAt', 'sentAt', 'status', 'subject', 'to']);
+  assert.deepEqual(Object.keys(list.body.items[0]).sort(), ['accountId', 'attempts', 'createdAt', 'error', 'id', 'notDeliveredTo', 'partial', 'sendAt', 'sentAt', 'status', 'subject', 'to']);
   assert.deepEqual(list.body.items[1].to, [{ name: 'Bob', address: 'bob@b.example' }]);
   assert.deepEqual((await mallory.get('/api/outbox')).body.items, []);
 

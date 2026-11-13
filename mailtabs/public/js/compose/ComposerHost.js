@@ -23,9 +23,10 @@ import {
 let hosts = 0;
 
 function Snackbar({ snack }) {
-  const now = useNow(500);
+  useNow(500); // re-render twice a second for the countdown
   if (!snack) return null;
-  const left = snack.sendAt ? Math.max(0, Math.ceil((snack.sendAt - now) / 1000)) : 0;
+  // The current time, not the last tick: a tick up to 500 ms old would turn "5 s" into "6 s".
+  const left = snack.sendAt ? Math.max(0, Math.ceil((snack.sendAt - Date.now()) / 1000)) : 0;
   const canUndo = (snack.kind === 'sending' && left > 0) || snack.kind === 'scheduled';
   const alert = snack.kind === 'failed' || snack.kind === 'retrying';
   let text = snack.text;

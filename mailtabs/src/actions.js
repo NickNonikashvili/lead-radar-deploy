@@ -497,6 +497,21 @@ function localTx(deps, accountRow, fn) {
   })();
 }
 
+/**
+ * Run a folder change (create / rename / delete) of the account, marked so that a sync listing
+ * taken meanwhile is not applied over it (see folders.beginFolderChange).
+ */
+function folderChange(deps, accountRow, fn) {
+  return withAccount(deps, accountRow, async (client) => {
+    const end = deps && deps.db ? folders.beginFolderChange(deps.db, accountRow.id) : () => {};
+    try {
+      return await fn(client);
+    } finally {
+      end();
+    }
+  });
+}
+
 /** Re-read the server's folder list into the folders table. */
 async function relist(deps, accountRow, client) {
   if (!deps || !deps.db) return;
@@ -518,7 +533,7 @@ function folderRow(deps, accountRow, path) {
 async function createFolder(deps, accountRow, path) {
   const target = requirePath(path);
   if (isInboxPath(target)) return { path: 'INBOX', created: false, folder: folderRow(deps, accountRow, 'INBOX') };
-  return withAccount(deps, accountRow, async (client) => {
+  return folderChange(deps, accountRow, async (client) => {
     const result = await folderCommand(() => client.mailboxCreate(target));
     if (!result) throw remoteFailed('create the folder');
     const created = result.path || target;
@@ -537,7 +552,7 @@ async function renameFolder(deps, accountRow, oldPath, newPath) {
   const to = requirePath(newPath);
   if (isInboxPath(from) || isInboxPath(to)) throw new HttpError(400, 'The inbox cannot be renamed.', 'PROTECTED_FOLDER');
   if (from === to) return { path: to, folder: folderRow(deps, accountRow, to) };
-  return withAccount(deps, accountRow, async (client) => {
+  return folderChange(deps, accountRow, async (client) => {
     // Some servers (Dovecot) happily RENAME onto an existing name and merge the subfolders, so
     // the name must be free, including as the parent of other folders.
     const boxes = await client.list();
@@ -566,7 +581,7 @@ async function renameFolder(deps, accountRow, oldPath, newPath) {
 async function deleteFolder(deps, accountRow, path) {
   const target = requirePath(path);
   if (isInboxPath(target)) throw new HttpError(400, 'The inbox cannot be deleted.', 'PROTECTED_FOLDER');
-  return withAccount(deps, accountRow, async (client) => {
+  return folderChange(deps, accountRow, async (client) => {
     const boxes = await client.list();
     const entry = boxes.find((box) => box.path === target);
     if (!entry) {

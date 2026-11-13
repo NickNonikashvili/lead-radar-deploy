@@ -88,11 +88,13 @@ test('classifyFolder: INBOX, server flags, names, containers, display names', ()
   assert.equal(c(entry('Flat', { delimiter: null })).parentPath, null);
 });
 
-test('classifyFolder: on-demand folders (\\All, \\Flagged, \\Important, Gmail views)', () => {
+test('classifyFolder: on-demand folders (\\All, \\Flagged, \\Important, Gmail views; Gmail Starred is synced)', () => {
   const c = (e, opts) => folders.classifyFolder(e, opts);
   const gmail = { isGmail: true };
   assert.equal(c(entry('[Gmail]/All Mail', { flags: ['\\All'], specialUse: '\\All', specialUseSource: 'extension' }), gmail).syncMode, 'on_demand');
-  assert.equal(c(entry('[Gmail]/Starred', { flags: ['\\Flagged'], specialUse: '\\Flagged', specialUseSource: 'extension' }), gmail).syncMode, 'on_demand');
+  // Gmail's Starred backs the Starred view (starred mail that was archived lives nowhere else).
+  assert.equal(c(entry('[Gmail]/Starred', { flags: ['\\Flagged'], specialUse: '\\Flagged', specialUseSource: 'extension' }), gmail).syncMode, 'auto');
+  assert.equal(c(entry('Flagged', { flags: ['\\Flagged'], specialUse: '\\Flagged', specialUseSource: 'extension' })).syncMode, 'on_demand', 'other servers\' virtual Flagged');
   assert.equal(c(entry('[Gmail]/Important', { flags: ['\\Important'] }), gmail).syncMode, 'on_demand');
   assert.equal(c(entry('[Gmail]/Scheduled'), gmail).syncMode, 'on_demand', 'other [Gmail] views');
   assert.equal(c(entry('[Google Mail]/Bin', { flags: ['\\Trash'], specialUse: '\\Trash', specialUseSource: 'extension' }), gmail).syncMode, 'auto');

@@ -9,7 +9,7 @@ const { openDb } = require('../src/db');
 const { createCrypto } = require('../src/crypto');
 const { HttpError } = require('../src/errors');
 const queries = require('../src/queries');
-const { seedAccount, seedMessage, TEST_SECRET_KEY } = require('./helpers');
+const { seedAccount, seedMessage, seedFolder, TEST_SECRET_KEY } = require('./helpers');
 
 const crypto = createCrypto(TEST_SECRET_KEY);
 
@@ -414,4 +414,26 @@ test('validate helpers', () => {
   assert.equal(validate.optionalText('   ', { field: 'x', max: 5 }), null);
   assert.throws(() => validate.optionalText('toolong', { field: 'x', max: 5 }), (err) => err.status === 400);
   assert.throws(() => validate.optionalText(5, { field: 'x', max: 5 }), (err) => err.status === 400);
+});
+
+test("hidden folders (Exchange's Calendar, Contacts, ...) are neither listed nor resolvable", () => {
+  const { db, addUser } = setup();
+  const alice = addUser('alice@example.com');
+  const mallory = addUser('mallory@example.com');
+  const work = seedAccount(db, crypto, alice, { email: 'work@corp.com' });
+  const inbox = seedFolder(db, work.id, 'INBOX');
+  const archive = seedFolder(db, work.id, 'Archive', { specialUse: '\\Archive' });
+  const calendar = seedFolder(db, work.id, 'Calendar', { sync_mode: 'hidden' });
+  seedMessage(db, work.id, { subject: 'meeting', mailbox: 'Calendar', folder_id: calendar.id });
+
+  const tree = queries.listFoldersJson(db, alice);
+  assert.equal(tree.accounts.length, 1);
+  assert.deepEqual(tree.accounts[0].folders.map((f) => f.id).sort(), [inbox.id, archive.id].sort());
+
+  assert.equal(queries.resolveFolder(db, alice, archive.id).id, archive.id);
+  const notFound = (err) => err instanceof HttpError && err.status === 404 && err.code === 'NOT_FOUND';
+  assert.throws(() => queries.resolveFolder(db, alice, calendar.id), notFound);
+  assert.throws(() => queries.resolveFolder(db, mallory, archive.id), notFound, "another user's folder");
+  assert.throws(() => queries.listMessages(db, alice, { folderId: calendar.id }), notFound);
+  assert.deepEqual(queries.listFoldersJson(db, mallory), { accounts: [] });
 });

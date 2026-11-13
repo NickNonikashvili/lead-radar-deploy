@@ -115,8 +115,7 @@ export function formatAddress(entry) {
   return name || address;
 }
 
-/** Short label for an address list: names when present, else addresses. */
-/** "Ana, Ben +3". `total` is the full count when `list` holds only the first few. */
+/** Short label for an address list, names when present: "Ana, Ben +3". `total` is the full count when `list` holds only the first few. */
 export function shortAddressList(list, max = 3, total = null) {
   if (!Array.isArray(list) || list.length === 0) return '';
   const labels = list.map((e) => (e && (e.name || e.address)) || '').filter(Boolean);

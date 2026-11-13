@@ -31,9 +31,11 @@ const LIST_RECIPIENTS_MAX = 10;
 // Unified views across all of a user's accounts (GET /api/messages?view=...).
 const VIEWS = ['starred', 'sent', 'drafts', 'junk', 'trash'];
 const VIEW_SPECIAL_USE = Object.freeze({ sent: '\\Sent', drafts: '\\Drafts', junk: '\\Junk', trash: '\\Trash' });
-// Starred leaves out mail on its way out (Trash, Spam) and Gmail's views, whose messages are
-// copies of mail that lives in another folder.
-const STARRED_EXCLUDED_SPECIAL_USES = ['\\Trash', '\\Junk', '\\All', '\\Flagged', '\\Important'];
+// Starred leaves out mail on its way out (Trash, Spam) and Gmail's Important view. All Mail and
+// Gmail's Starred count only for mail stored nowhere else (starred, then archived): other copies
+// of a message win (see viewFilterSql).
+const STARRED_EXCLUDED_SPECIAL_USES = ['\\Trash', '\\Junk', '\\Important'];
+const STARRED_FALLBACK_SPECIAL_USES = ['\\All', '\\Flagged']; // in this order of preference
 
 // ---------------------------------------------------------------------------------------------
 // Small helpers
@@ -217,7 +219,8 @@ function resolveFolder(db, userId, folderId) {
     Number.isSafeInteger(id) && id > 0
       ? db.prepare('SELECT f.*, a.user_id AS user_id FROM folders f JOIN accounts a ON a.id = f.account_id WHERE f.id = ? AND a.user_id = ?').get(id, userId)
       : null;
-  if (!row) throw new HttpError(404, 'Folder not found', 'NOT_FOUND');
+  // Exchange's non-mail folders (Calendar, Contacts, ...) are never shown, so they don't exist here.
+  if (!row || folders.isHiddenFolder(row)) throw new HttpError(404, 'Folder not found', 'NOT_FOUND');
   return row;
 }
 
@@ -242,19 +245,24 @@ function specialFoldersSql(userId, specialUses) {
 
 /**
  * WHERE fragment for a unified view. 'starred' = starred messages in any folder except Trash,
- * Spam and Gmail's views, one row per (account, Message-ID) — the lowest id — because Gmail
- * shows a starred message in every label it carries. The others = every folder with that
- * special use, across the user's accounts.
+ * Spam and Gmail's Important, one row per (account, Message-ID) because Gmail shows a starred
+ * message in every label it carries: a copy in an ordinary folder first, else the All Mail copy,
+ * else the one in Gmail's Starred (each time the lowest id). The others = every folder with
+ * that special use, across the user's accounts.
  */
 function viewFilterSql(userId, view) {
   if (view === 'starred') {
     const excluded = specialFoldersSql(userId, STARRED_EXCLUDED_SPECIAL_USES);
+    const [all, flagged] = STARRED_FALLBACK_SPECIAL_USES;
+    // 0 = an ordinary folder, 1 = All Mail, 2 = Gmail's Starred.
+    const rank = (alias) => `COALESCE((SELECT CASE f.special_use WHEN ? THEN 1 WHEN ? THEN 2 ELSE 0 END FROM folders f WHERE f.id = ${alias}.folder_id), 0)`;
     return {
       where:
         `${USER_ACCOUNTS_SQL} AND m.is_starred = 1 AND (m.folder_id IS NULL OR m.folder_id NOT IN ${excluded.sql})` +
         ' AND (m.message_id IS NULL OR NOT EXISTS (SELECT 1 FROM messages d WHERE d.account_id = m.account_id' +
-        ` AND d.message_id = m.message_id AND d.id < m.id AND d.is_starred = 1 AND (d.folder_id IS NULL OR d.folder_id NOT IN ${excluded.sql})))`,
-      params: [userId, ...excluded.params, ...excluded.params],
+        ` AND d.message_id = m.message_id AND d.id != m.id AND d.is_starred = 1 AND (d.folder_id IS NULL OR d.folder_id NOT IN ${excluded.sql})` +
+        ` AND (${rank('d')} < ${rank('m')} OR (${rank('d')} = ${rank('m')} AND d.id < m.id))))`,
+      params: [userId, ...excluded.params, ...excluded.params, all, flagged, all, flagged, all, flagged, all, flagged],
     };
   }
   const specialUse = VIEW_SPECIAL_USE[view];
@@ -722,7 +730,9 @@ function listFoldersJson(db, userId) {
       .map((r) => [r.id, Number(r.unread) || 0])
   );
   const byAccount = new Map(accounts.map((a) => [a.id, []]));
-  for (const row of rows) if (byAccount.has(row.account_id)) byAccount.get(row.account_id).push(row);
+  for (const row of rows) {
+    if (byAccount.has(row.account_id) && !folders.isHiddenFolder(row)) byAccount.get(row.account_id).push(row);
+  }
   return {
     accounts: accounts.map((a) => ({
       accountId: a.id,

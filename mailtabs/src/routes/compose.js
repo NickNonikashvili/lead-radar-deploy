@@ -11,7 +11,7 @@
  *   POST   /api/drafts             { payload, draft? }     (at most one save per second per user)
  *   DELETE /api/drafts             { draft }
  *   POST   /api/send               { payload, sendAt?, draft? }
- *   GET    /api/outbox
+ *   GET    /api/outbox,  GET /api/outbox/:id
  *   POST   /api/outbox/:id/cancel | /retry,   DELETE /api/outbox/:id
  *   GET    /api/contacts?q=&limit=
  *
@@ -173,7 +173,7 @@ function uploadsRouter({ db, config }) {
     const row = uploads.getUpload(db, userId, req.params.id);
     if (!row) throw new HttpError(404, 'Attachment not found', 'NOT_FOUND');
     // A message waiting in the outbox still needs it (cancel or delete that message first).
-    if (uploads.uploadsInUse(db).has(row.id)) {
+    if (uploads.uploadInUse(db, row.id)) {
       throw new HttpError(409, 'This attachment belongs to a message waiting to be sent.', 'UPLOAD_IN_USE');
     }
     uploads.deleteUpload(deps, userId, row.id);
@@ -278,8 +278,19 @@ module.exports = function composeRoutes({ db, config, crypto, syncManager, outbo
       // Replies and forwards come from the account that received the original.
       const account = accounts.find((a) => a.id === row.account_id);
       if (!account) throw new HttpError(404, 'Message not found', 'NOT_FOUND');
+      const folder = row.folder_id ? folders.getFolder(db, row.folder_id) : null;
+      const inSentFolder = !!folder && folder.account_id === account.id && folder.special_use === '\\Sent';
       const original = await withBody(row);
-      const payload = compose.prepareCompose({ mode, original, account, accounts, signatureHtml: account.signature_html, timeZone, locale });
+      const payload = compose.prepareCompose({
+        mode,
+        original,
+        account,
+        accounts,
+        inSentFolder,
+        signatureHtml: account.signature_html,
+        timeZone,
+        locale,
+      });
       res.json({ payload, draft: null });
     })
   );
@@ -341,6 +352,15 @@ module.exports = function composeRoutes({ db, config, crypto, syncManager, outbo
 
   router.get('/outbox', requireAuth, (req, res) => {
     res.json({ items: outboxManager.list(req.user.id).map(outboxItemJson) });
+  });
+
+  // One message, whatever its status (sent and cancelled ones are kept for a week): the composer
+  // follows a send with it, so a message gone from the list is never taken for "sent".
+  router.get('/outbox/:id', requireAuth, (req, res) => {
+    const id = validate.requireId(req.params.id, 'outbox id');
+    const row = outboxManager.get(req.user.id, id);
+    if (!row) throw new HttpError(404, 'This message is no longer in the outbox.', 'NOT_FOUND');
+    res.json({ outbox: outboxItemJson(row) });
   });
 
   router.post('/outbox/:id/cancel', requireAuth, (req, res) => {

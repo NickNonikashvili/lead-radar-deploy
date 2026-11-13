@@ -118,18 +118,38 @@ function deleteUpload(deps, userId, id) {
   return true;
 }
 
-/** Upload ids still needed by messages waiting in the outbox (queued, sending or failed). */
+// Outbox rows that still need their uploads.
+const WAITING = "('queued', 'sending', 'failed')";
+
+/**
+ * Upload ids still needed by messages waiting in the outbox (queued, sending or failed), from
+ * the indexed outbox_uploads table (never by parsing payloads: they can be megabytes each).
+ */
 function uploadsInUse(db) {
-  const ids = new Set();
-  for (const { payload } of db.prepare("SELECT payload FROM outbox WHERE status IN ('queued', 'sending', 'failed')").all()) {
-    try {
-      const parsed = JSON.parse(payload);
-      for (const a of (parsed && parsed.attachments) || []) if (a && typeof a.uploadId === 'string') ids.add(a.uploadId);
-    } catch (_) {
-      /* unreadable payload: nothing to keep */
-    }
-  }
-  return ids;
+  return new Set(
+    db
+      .prepare(`SELECT DISTINCT ou.upload_id FROM outbox_uploads ou JOIN outbox o ON o.id = ou.outbox_id WHERE o.status IN ${WAITING}`)
+      .pluck()
+      .all()
+  );
+}
+
+/** Does a message waiting in the outbox still need this upload? */
+function uploadInUse(db, id) {
+  return !!db
+    .prepare(`SELECT 1 FROM outbox_uploads ou JOIN outbox o ON o.id = ou.outbox_id WHERE ou.upload_id = ? AND o.status IN ${WAITING} LIMIT 1`)
+    .get(id);
+}
+
+/** Record that an outbox row needs these uploads (its payload's own are recorded by a trigger). */
+function recordOutboxUploads(db, outboxId, uploadIds) {
+  const insert = db.prepare('INSERT OR IGNORE INTO outbox_uploads (outbox_id, upload_id) VALUES (?, ?)');
+  for (const id of uploadIds || []) if (typeof id === 'string' && ID_RE.test(id)) insert.run(outboxId, id);
+}
+
+/** The uploads an outbox row needs (its payload's and the carried parts it refers to). */
+function outboxUploadIds(db, outboxId) {
+  return db.prepare('SELECT upload_id FROM outbox_uploads WHERE outbox_id = ?').pluck().all(outboxId);
 }
 
 /**
@@ -182,5 +202,8 @@ module.exports = {
   deleteUpload,
   cleanupUploads,
   uploadsInUse,
+  uploadInUse,
+  recordOutboxUploads,
+  outboxUploadIds,
   uploadJson: toJson,
 };

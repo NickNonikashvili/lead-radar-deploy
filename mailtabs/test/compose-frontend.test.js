@@ -71,12 +71,18 @@ test('every way into the editor goes through the sanitiser', () => {
   const editor = read(path.join(COMPOSE, 'editor.js'));
   // setHtml / swapSignature / appendQuote / paste fallback all build nodes via htmlToFragment.
   assert.match(editor, /setHtml\(untrusted\)\s*\{[\s\S]*?htmlToFragment\(untrusted/);
-  assert.match(editor, /swapSignature\(signatureHtml\)\s*\{[\s\S]*?htmlToFragment\(signatureHtml/);
+  // The signature swap (in the editor, or on body HTML the editor hasn't loaded yet) shares one helper.
+  assert.match(editor, /swapSignature\(signatureHtml\)\s*\{[\s\S]*?swapSignatureIn\(this\.el, signatureHtml\)/);
+  assert.match(editor, /function swapSignatureIn\(root, signatureHtml\)\s*\{[\s\S]*?htmlToFragment\(signatureHtml/);
+  assert.match(editor, /export function swapSignatureInHtml\(bodyHtml, signatureHtml\)\s*\{[\s\S]*?htmlToFragment\(bodyHtml/);
   assert.match(editor, /appendQuote\(quoteHtml\)\s*\{[\s\S]*?htmlToFragment\(quoteHtml/);
   assert.match(editor, /onPaste\(e\)[\s\S]*?e\.preventDefault\(\)/, 'paste is always intercepted');
   assert.match(editor, /new MutationObserver/, 'a mutation observer scrubs anything else');
   const compose = read(path.join(COMPOSE, 'compose.js'));
   assert.match(compose, /sanitizeTree\(parseUntrusted\(p\.html/, 'server HTML is sanitised before use');
+  // Switching From before the editor has shown the body still swaps the signature (in the HTML it loads).
+  assert.match(compose, /rt\.editor\.swapSignature\(signature\)\) return \{\};\s*const c = getComposer\(id\);\s*return \{ bodyHtml: swapSignatureInHtml\(c\.bodyHtml, signature\), bodyVersion: c\.bodyVersion \+ 1 \};/);
+  assert.match(compose, /export function setFrom\(id, accountId\) \{[\s\S]*?signaturePatch\(id, accountById\(accountId\)\)/);
 });
 
 test('composer stylesheet and modules load nothing external; no inline handlers in templates', () => {

@@ -5,7 +5,7 @@ import { getState, setState, resetState, EMPTY_LIST } from './store.js';
 import { MOBILE_QUERY, UNIFIED_VIEWS, providerLabel } from './constants.js';
 import { plural, senderLabel } from './format.js';
 import { SPECIAL, folderLabel, isInboxFolder, nextSelection } from './components/navModel.js';
-import { ensureComposerOwner, openComposer, resetComposers } from './compose/compose.js';
+import { ensureComposerOwner, forgetOutboxItem, openComposer, resetComposers } from './compose/compose.js';
 
 const PAGE_SIZE = 50;
 const DETAIL_CACHE_MAX = 40;
@@ -70,6 +70,11 @@ export function accountLabel(account, presets) {
 
 let toastSeq = 0;
 
+/** Errors stay long enough to read, longer for the ones that explain what to do (e.g. Gmail's "Show in IMAP"). */
+function errorToastMs(message) {
+  return Math.min(15000, Math.max(7000, String(message).length * 60));
+}
+
 /**
  * toast('Saved', { type: 'success' }); an `action` ({ label, run }) adds a button (e.g. Undo).
  * Toasts with an action are never merged with an identical one: each undoes something different.
@@ -82,7 +87,7 @@ export function toast(message, { type = 'info', timeout, action = null } = {}) {
   }
   const id = ++toastSeq;
   setState((s) => ({ toasts: [...s.toasts, { id, message, type, action }].slice(-4) }));
-  const ms = timeout !== undefined ? timeout : action ? UNDO_MS : type === 'error' ? 7000 : 4000;
+  const ms = timeout !== undefined ? timeout : action ? UNDO_MS : type === 'error' ? errorToastMs(message) : 4000;
   if (ms > 0) setTimeout(() => dismissToast(id), ms);
   return id;
 }
@@ -724,10 +729,15 @@ export async function renameFolder(folderId, name) {
   return folder;
 }
 
-/** Throws ApiError FOLDER_NOT_EMPTY (409) unless `force`; the dialog asks first. */
-export async function deleteFolder(folderId, { force = false } = {}) {
+/**
+ * Throws ApiError FOLDER_NOT_EMPTY (409) unless `force`; the dialog asks first. onDeleted runs as
+ * soon as the server deleted it, before the folder leaves the store: the dialog closes there, so
+ * it never re-renders for a folder that no longer exists.
+ */
+export async function deleteFolder(folderId, { force = false, onDeleted = null } = {}) {
   const before = folderById(folderId);
   await api.deleteFolder(folderId, { force });
+  if (onDeleted) onDeleted();
   const s = getState();
   // Children go with their parent on the server.
   const prefix = before ? `${before.path}${before.delimiter || '/'}` : null;
@@ -736,9 +746,26 @@ export async function deleteFolder(folderId, { force = false } = {}) {
   );
   setState((st) => ({ folders: st.folders.filter((f) => !doomed.has(f.id)) }));
   if (s.view === 'folder' && doomed.has(s.folderId)) selectView('inbox');
+  // Focus was on the deleted folder's menu: put it somewhere that stays.
+  focusStableElement();
   await refreshFolders({ quiet: true });
   refreshTabs({ quiet: true });
   toast(`Folder “${before ? folderLabel(before) : 'folder'}” deleted`, { type: 'success' });
+}
+
+/**
+ * After the element that had the focus went away: focus the current sidebar entry (or Compose),
+ * never leave it on <body>, where single keys are list shortcuts.
+ */
+function focusStableElement() {
+  setTimeout(() => {
+    const active = document.activeElement;
+    if (active && active !== document.body && active.isConnected) return;
+    const visible = (el) => !!el && el.offsetParent !== null;
+    const target =
+      [...document.querySelectorAll('nav.sidebar [aria-current=page]')].find(visible) || [...document.querySelectorAll('.compose-btn')].find(visible);
+    if (target) target.focus({ preventScroll: true });
+  }, 50);
 }
 
 /** Permanently delete everything in Trash/Spam folders (one or many, e.g. "Empty Trash" across accounts). */
@@ -1277,7 +1304,8 @@ function applyLocalFlags(id, flags) {
   });
 }
 
-async function loadDetail(id) {
+/** markRead: the message was opened without being in the loaded list (a notification): mark it read once known. */
+async function loadDetail(id, { markRead = false } = {}) {
   setDetail(id, { status: 'loading' });
   try {
     const { message } = await api.message(id);
@@ -1285,6 +1313,7 @@ async function loadDetail(id) {
     const local = getState().list.messages.find((m) => m.id === id);
     const merged = local ? { ...message, isRead: local.isRead, isStarred: local.isStarred } : message;
     setDetail(id, { status: 'ready', message: merged });
+    if (markRead && !merged.isRead && getState().openId === id) updateFlags(id, { isRead: true }, { quiet: true });
   } catch (err) {
     if (isSessionGone(err)) return;
     const notFound = err.status === 404;
@@ -1414,7 +1443,8 @@ export function openMessage(id) {
   setState({ openId: id, cursorId: id });
   if (item && !item.isRead) updateFlags(id, { isRead: true }, { quiet: true });
   const cached = s.details[id];
-  if (!cached || cached.status === 'error') loadDetail(id);
+  // Not known here yet (opened from a notification before the list caught up): marked read once loaded.
+  if (!cached || cached.status === 'error') loadDetail(id, { markRead: !item });
   if (getState().conversationView) {
     const t = s.threads[id];
     if (!t || t.status === 'error' || t.status === 'ready') loadThread(id); // refresh: replies may have arrived
@@ -1629,6 +1659,15 @@ export async function moveMessages(ids, action, { folderId = null } = {}) {
     else closeReader();
   }
 
+  // The open message stayed where it was after all: show it again (desktop) unless the user
+  // moved on meanwhile (the next message we opened ourselves doesn't count).
+  const reopenIfBack = (backIds) => {
+    if (!wasOpen || !backIds.has(s.openId) || isMobile()) return;
+    const now = getState();
+    if (now.list.key !== s.list.key) return;
+    if (now.openId == null || (next && now.openId === next.id)) openMessage(s.openId);
+  };
+
   const [done, verb] = VERBS[action] || ['moved', 'move'];
   try {
     const results = await Promise.all(requests.map((r) => api.bulk(r.ids, r.action, r.extra)));
@@ -1642,6 +1681,7 @@ export async function moveMessages(ids, action, { folderId = null } = {}) {
       restoreMessages(restoredOnFail.filter((m) => leavingIds.has(m.id)), s.list.key);
       for (const m of restoredOnFail) adjustCountsFor(m, { total: 1, unread: m.isRead ? 0 : 1 });
       toast(`Couldn't ${verb} ${plural(restoredOnFail.length, 'message')}: ${failed[0].error || 'the mail server refused'}`, { type: 'error' });
+      reopenIfBack(new Set(restoredOnFail.map((m) => m.id)));
     }
     const moved = targets.filter((m) => !restoredOnFail.includes(m));
     if (moved.length) {
@@ -1661,6 +1701,7 @@ export async function moveMessages(ids, action, { folderId = null } = {}) {
     restoreMessages(targets.filter((m) => leavingIds.has(m.id)), s.list.key);
     for (const m of targets) adjustCountsFor(m, { total: 1, unread: m.isRead ? 0 : 1 });
     toastError(err, `Couldn't ${verb} the message.`);
+    reopenIfBack(targetIds);
   } finally {
     mutationSeq += 1;
     scheduleCountsRefresh();
@@ -1804,6 +1845,7 @@ export async function cancelOutboxItem(id) {
   try {
     const { payload, draft } = await api.cancelOutbox(id);
     dropOutboxItem(id);
+    forgetOutboxItem(id); // its "Sending… Undo" snackbar is over
     openComposer({ mode: 'outbox', payload, draft: draft || null });
   } catch (err) {
     toastError(err, "Couldn't stop this message.");
@@ -1827,6 +1869,7 @@ export async function deleteOutboxItem(id) {
   try {
     await api.deleteOutbox(id);
     dropOutboxItem(id);
+    forgetOutboxItem(id);
     toast('Removed from the outbox', { type: 'success' });
   } catch (err) {
     toastError(err, "Couldn't remove this message.");

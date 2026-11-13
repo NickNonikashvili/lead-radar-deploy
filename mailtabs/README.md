@@ -121,10 +121,11 @@ How sending works in Mailtabs:
 
 - **Undo send.** After you click Send, the message waits 10 seconds (change it in **Settings →
   Sending**, 0–30 s) and you can click *Undo* to get back to editing.
-- **Scheduled send.** Use the arrow next to *Send*. Scheduled messages wait in the **Outbox**, where
-  you can edit, retry or delete them. They are sent by the Mailtabs server, so it must be running at
-  that time (the browser doesn't need to be open). A message that fails stays in the Outbox with the
-  reason and a *Retry* button.
+- **Scheduled send.** Use the arrow next to *Send*. Scheduled messages wait in the **Outbox** (they
+  leave the Drafts folder), where you can edit, retry or delete them. They are sent by the Mailtabs
+  server, so it must be running at that time (the browser doesn't need to be open). A message that
+  fails stays in the Outbox with the reason and a *Retry* button. So does a message the server
+  delivered to some recipients but refused for others: *Retry* sends it to those only.
 - **Drafts** save a few seconds after you stop typing, into the account's real Drafts folder.
 - **Attachments** up to 25 MB per message in total (most providers' own limit).
 - **Signature and sender name** are set per account in **Settings → Sending**.
@@ -267,12 +268,15 @@ All settings are environment variables (or lines in `.env`). See `.env.example` 
   changed, and downloads new messages, read/star changes and deletions only for those (so a quiet
   account costs one short connection). The Inbox is always checked. A first sync fetches the newest
   `INITIAL_SYNC_LIMIT` inbox messages and the newest 50 of every other folder; *Load older messages*
-  fetches more. Gmail's huge *All Mail* and *Important* views are only synced while you look at them.
+  fetches more. Gmail's huge *All Mail* and *Important* views are only synced while you look at them; its
+  *Starred* is synced like a folder, so starred mail you archived still shows in Starred.
   Opening a folder or clicking refresh checks right away.
-- **Sending** goes through each provider's own SMTP server (or Microsoft Graph, see above), signed in
-  with the account's own credentials. Messages wait in a server-side outbox that survives restarts.
-  (If the server is killed in the very second a message is being handed to the provider, that one
-  message is sent again after the restart, rather than lost.)
+- **Sending** goes through each provider's own SMTP server (or Microsoft Graph, see above), always
+  signed in with the account's own credentials (a server that offers no login is refused). Messages
+  wait in a server-side outbox that survives restarts. Mailtabs never resends a message on its own
+  once it has been handed to the provider: if the connection breaks (or the server is restarted)
+  after that point, the message may have arrived, so it stays in the Outbox as *Not sent* with that
+  explanation instead of being retried. Check your Sent folder before using *Retry*.
 - **Outgoing HTML** (what you type, signatures, quoted replies) is cleaned to a safe subset before it is
   sent. Attachments you upload are kept only until the message is sent or discarded (at most a day).
 - **Credentials** are encrypted at rest with AES-256-GCM using `SECRET_KEY`. They are never sent to the

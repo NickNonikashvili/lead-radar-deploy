@@ -381,7 +381,7 @@ test('Graph consent refused at refresh (AADSTS65001): forgotten, account keeps s
   }
 });
 
-test('Graph answers: 429/5xx retryable, 401 drops the cached token, 403 asks to reconnect', async () => {
+test('Graph answers: 429/503 retryable, other 5xx "may have been sent", 401 drops the cached token, 403 asks to reconnect', async () => {
   const env = envWithMicrosoft();
   try {
     const account = msAccount(env, { smtp_disabled_at: Date.now() });
@@ -391,6 +391,9 @@ test('Graph answers: 429/5xx retryable, 401 drops the cached token, 403 asks to 
     await assert.rejects(send(), (err) => err.retryable === true && /limiting how fast/.test(err.message) && /7 s/.test(err.message));
     ms.graph = () => ({ status: 503, body: { error: { code: 'ServiceUnavailable', message: 'busy' } } });
     await assert.rejects(send(), (err) => err.retryable === true && /temporarily/.test(err.message));
+    // Any other 5xx may come after Microsoft accepted the message: never resent automatically.
+    ms.graph = () => ({ status: 500, body: { error: { code: 'InternalServerError', message: 'oops' } } });
+    await assert.rejects(send(), (err) => err.retryable === false && err.maybeSent === true && /may have been sent anyway/.test(err.message));
     assert.equal(ms.tokenRequests.length, 1, 'the Graph token is reused');
 
     ms.graph = () => ({ status: 401, body: { error: { code: 'InvalidAuthenticationToken', message: 'Access token has expired' } } });

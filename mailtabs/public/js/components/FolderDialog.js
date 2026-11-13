@@ -108,25 +108,32 @@ function NameForm({ mode, folder, accountId, parentId: initialParent, initialNam
 function DeleteForm({ folder }) {
   const folders = useStore((s) => s.folders);
   const tree = subtree(folders, folder);
-  const known = tree.reduce((n, f) => n + (f.totalCount || 0), 0);
-  const [count, setCount] = useState(known); // what we know (or the server told us) is inside
+  // What we know is inside; the server has the last word (FOLDER_NOT_EMPTY carries its counts).
+  const [count, setCount] = useState(() => tree.reduce((n, f) => n + (f.totalCount || 0), 0)); // -1: some, number unknown
+  const [children, setChildren] = useState(tree.length - 1);
+  const [serverSaid, setServerSaid] = useState(false); // the server has told us what is inside
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
-  const children = tree.length - 1;
 
   const confirm = async () => {
     if (busy) return;
     setBusy(true);
     setError('');
     try {
-      // Only force when the user has seen how many messages go with it.
-      await deleteFolder(folder.id, { force: count !== 0 });
-      closeDialog();
+      // Only force once the user has seen how many messages go with it. Local counts can be
+      // stale (or unknown for subfolders), so otherwise the server checks and tells us first.
+      // The dialog closes as soon as the server deleted the folder, before the folder leaves
+      // the store (else this dialog would re-render as "Folder not found").
+      await deleteFolder(folder.id, { force: count !== 0 || serverSaid, onDeleted: closeDialog });
     } catch (err) {
       if (err.code === 'FOLDER_NOT_EMPTY') {
-        // -1: the server didn't say how many.
-        setCount(Number(err.data && err.data.count) || -1);
-        setError('');
+        const data = err.data || {};
+        const n = Number(data.count);
+        const subs = Number(data.subfolders);
+        if (Number.isInteger(subs) && subs >= 0) setChildren(subs);
+        // -1: "messages", the server didn't say how many.
+        setCount(Number.isInteger(n) && n >= 0 ? n : -1);
+        setServerSaid(true);
       } else setError(err.message || "Couldn't delete the folder.");
       setBusy(false);
     }
@@ -134,8 +141,20 @@ function DeleteForm({ folder }) {
 
   const footer = html`<button type="button" class="btn btn-ghost" onClick=${closeDialog} disabled=${busy} data-autofocus>Cancel</button>
     <button type="button" class="btn btn-danger" onClick=${confirm} disabled=${busy}>
-      ${busy ? html`<${Spinner} size=${14} />` : null} ${count !== 0 ? 'Delete folder and messages' : 'Delete folder'}
+      ${busy ? html`<${Spinner} size=${14} />` : null} ${count !== 0 ? 'Delete folder and messages' : children ? 'Delete folders' : 'Delete folder'}
     </button>`;
+
+  const name = html`<strong>${folderPathLabel(folder)}</strong>`;
+  const subs = children ? `its ${plural(children, 'subfolder')}` : '';
+  let text;
+  if (count !== 0) {
+    const what = count > 0 ? plural(count, 'message') : 'messages';
+    text = html`${name} ${children ? `and ${subs} contain` : 'contains'} ${what}. They'll be deleted from the mail server with the folder. This can't be undone.`;
+  } else if (children) {
+    text = html`${name} and ${subs} will be deleted from the mail server. This can't be undone.`;
+  } else {
+    text = html`${name} will be deleted from the mail server.`;
+  }
 
   return html`<${Dialog}
     title=${`Delete “${folderLabel(folder)}”?`}
@@ -146,11 +165,7 @@ function DeleteForm({ folder }) {
     titleIcon=${html`<span class="dialog-title-icon is-danger"><${Icon} name="alert" size=${18} /></span>`}
   >
     <div class="stack">
-      <p class="confirm-text">
-        ${count !== 0
-          ? html`<strong>${folderPathLabel(folder)}</strong> ${children ? `and its ${plural(children, 'subfolder')} contain` : 'contains'} ${count > 0 ? plural(count, 'message') : 'messages'}. They'll be deleted from the mail server with the folder. This can't be undone.`
-          : html`<strong>${folderPathLabel(folder)}</strong>${children ? ` and its ${plural(children, 'subfolder')}` : ''} will be deleted from the mail server.`}
-      </p>
+      <p class="confirm-text">${text}</p>
       <${InlineError} message=${error} />
     </div>
   </${Dialog}>`;

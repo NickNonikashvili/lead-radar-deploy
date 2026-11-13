@@ -113,6 +113,8 @@ export const composeApi = {
     return request('POST', '/api/send', body);
   },
   outbox: (opts) => request('GET', '/api/outbox', undefined, opts),
+  /** -> { outbox: { id, status, error, partial, notDeliveredTo, ... } } (any status; 404 once purged) */
+  outboxItem: (outboxId) => request('GET', `/api/outbox/${id(outboxId)}`),
   /** -> { payload, draft } */
   cancelOutbox: (outboxId) => request('POST', `/api/outbox/${id(outboxId)}/cancel`, {}),
   retryOutbox: (outboxId) => request('POST', `/api/outbox/${id(outboxId)}/retry`, {}),

@@ -18,6 +18,9 @@ const actions = require('../actions');
 const folders = require('../folders');
 const { parseRawMessage, renderBodyDocument, escapeHtml } = require('../mailparse');
 const queries = require('../queries');
+const drafts = require('../drafts');
+const uploads = require('../uploads');
+const { createLimiter, createKeyedLimiter } = require('../concurrency');
 
 const { validate } = queries;
 
@@ -35,7 +38,9 @@ const FLAG_ACTIONS = Object.freeze({
 const SPECIAL_MOVES = Object.freeze({ archive: 'archive', trash: 'trash', spam: 'junk', notspam: 'inbox' });
 const BULK_ACTIONS = [...Object.keys(FLAG_ACTIONS), ...Object.keys(SPECIAL_MOVES), 'delete_forever', 'move'];
 // A move that is already where it is going is simply left alone.
-const ALREADY_THERE = Object.freeze({ archive: ['\\Archive', '\\All'], spam: ['\\Junk'], notspam: ['\\Inbox'] });
+// Archiving a message shown from Gmail's All Mail or Starred (mail stored nowhere else, see the
+// Starred view) leaves it where it is: moving it out of Starred would only unstar it.
+const ALREADY_THERE = Object.freeze({ archive: ['\\Archive', '\\All', '\\Flagged'], spam: ['\\Junk'], notspam: ['\\Inbox'] });
 const FOREVER_FOLDERS = new Set(['\\Trash', '\\Junk']);
 
 // Undo of moves: tokens live in memory for 10 minutes, are single use and belong to one user.
@@ -46,6 +51,11 @@ const UNDO_SYNC_WAIT_MS = 10000;
 
 // Largest message source offered as a download (the IMAP literal cap is a little above this).
 const MAX_RAW_BYTES = 60 * 1024 * 1024;
+// Whole message sources (an .eml download, a message's attachments) are held in memory while
+// they are sent or parsed: each user's downloads take turns, two at a time, and the whole server
+// runs at most six at once.
+const SOURCE_DOWNLOADS_PER_USER = 2;
+const SOURCE_DOWNLOADS_AT_ONCE = 6;
 
 // Only these image types are shown inline (they are what cid: images in emails use). Everything
 // else, including SVG (which can carry script), is always a download.
@@ -270,10 +280,13 @@ class LruCache {
 // Router
 // ---------------------------------------------------------------------------------------------
 
-module.exports = function messagesRoutes({ db, config, crypto, syncManager }) {
+module.exports = function messagesRoutes({ db, config, crypto, syncManager, logger = console }) {
   const router = express.Router();
   router.use(requireAuth);
   const imapDeps = { db, crypto, config };
+  const perUserDownloads = createKeyedLimiter(SOURCE_DOWNLOADS_PER_USER);
+  const allDownloads = createLimiter(SOURCE_DOWNLOADS_AT_ONCE);
+  const sourceDownloads = (userId, fn) => perUserDownloads(userId, () => allDownloads(fn));
 
   const attachmentCache = new LruCache({ maxEntries: 20, maxBytes: 50 * 1024 * 1024 });
   const attachmentFetches = new Map(); // cache key -> Promise (concurrent requests share one download)
@@ -436,10 +449,22 @@ module.exports = function messagesRoutes({ db, config, crypto, syncManager }) {
       action === 'move'
         ? await actions.moveMessages(imapDeps, account, group.mailbox, uids, destination.path, { uidValidity: group.uidValidity })
         : await actions.moveToSpecial(imapDeps, account, group.mailbox, uids, SPECIAL_MOVES[action], { uidValidity: group.uidValidity });
+    const dest =
+      result.destination && !result.deleted
+        ? action === 'move'
+          ? destination
+          : db.prepare('SELECT * FROM folders WHERE account_id = ? AND path = ?').get(account.id, result.destination)
+        : null;
+    // An open composer may still refer to these rows (a forward's attachments): remember where
+    // the messages went before their rows go.
+    try {
+      drafts.recordMoves(db, account.id, group.rows, { folderId: dest ? dest.id : null, uidMap: result.uidMap, uidValidity: result.uidValidity ?? null });
+    } catch (err) {
+      logger.warn(`[messages] could not record where moved messages went: ${err && err.message}`);
+    }
     const count = deleteLocalRows(ids);
     if (result.deleted || !result.destination) return { count, undo: null };
 
-    const dest = action === 'move' ? destination : db.prepare('SELECT * FROM folders WHERE account_id = ? AND path = ?').get(account.id, result.destination);
     // Views that are only synced while open (Gmail's All Mail) pick the messages up when opened.
     if (dest && dest.sync_mode !== 'on_demand') syncFolderSoon(dest.id);
     const uidMap = {};
@@ -528,7 +553,8 @@ module.exports = function messagesRoutes({ db, config, crypto, syncManager }) {
       let destination;
       if (body.action === 'move') {
         destination = folders.folderForUser(db, userId, validate.requireId(body.folderId, 'folder'));
-        if (!destination) throw new HttpError(404, 'Folder not found', 'NOT_FOUND');
+        // Exchange's hidden non-mail folders don't exist as far as the app is concerned.
+        if (!destination || folders.isHiddenFolder(destination)) throw new HttpError(404, 'Folder not found', 'NOT_FOUND');
         if (!destination.selectable) throw validate.badRequest('Messages cannot be moved into this folder.', 'NOT_SELECTABLE');
       }
       // Ids that are not the user's simply match nothing.
@@ -648,7 +674,7 @@ module.exports = function messagesRoutes({ db, config, crypto, syncManager }) {
       if (Number(row.size) > MAX_RAW_BYTES) {
         throw new HttpError(413, 'This message is too large to download here. Open it in your provider\'s web mail instead.', 'TOO_LARGE');
       }
-      const source = await fetchSource(row, account, { maxLiteralSize: MAX_RAW_BYTES });
+      const source = await sourceDownloads(userId, () => fetchSource(row, account, { maxLiteralSize: MAX_RAW_BYTES }));
       res.setHeader('Content-Type', 'message/rfc822');
       res.setHeader('Content-Disposition', contentDisposition('attachment', emlFilename(row.subject)));
       res.setHeader('X-Content-Type-Options', 'nosniff');
@@ -748,7 +774,7 @@ module.exports = function messagesRoutes({ db, config, crypto, syncManager }) {
     if (attachmentFetches.has(key)) return attachmentFetches.get(key);
 
     const work = (async () => {
-      const source = await fetchSource(row, account);
+      const source = await sourceDownloads(account.user_id, () => fetchSource(row, account));
       let parsed;
       try {
         parsed = await parseRawMessage(source);
@@ -776,7 +802,25 @@ module.exports = function messagesRoutes({ db, config, crypto, syncManager }) {
     '/:id/attachments/:index',
     asyncHandler(async (req, res) => {
       const userId = req.user.id;
-      const row = loadMessage(userId, req.params.id);
+      let row;
+      try {
+        row = loadMessage(userId, req.params.id);
+      } catch (err) {
+        // A reopened draft that a later save replaced: the composer still shows its pictures
+        // (and sends its files) from the parts kept back then.
+        const carried =
+          err instanceof HttpError && err.status === 404 && /^\d{1,15}$/.test(req.params.id) && /^\d{1,4}$/.test(req.params.index)
+            ? drafts.carriedUpload(db, userId, Number(req.params.id), Number(req.params.index))
+            : null;
+        if (!carried) throw err;
+        let content;
+        try {
+          content = uploads.readUpload(carried);
+        } catch (_) {
+          throw new HttpError(404, 'Attachment not found', 'NOT_FOUND');
+        }
+        return sendAttachment(res, { filename: carried.filename, contentType: carried.content_type, content }, Number(req.params.index));
+      }
       if (!/^\d{1,4}$/.test(req.params.index)) throw validate.badRequest('Invalid attachment number.', 'INVALID_ID');
       const index = Number(req.params.index);
       // When the body is stored we know the attachment list: skip the download for bad indexes.
@@ -795,25 +839,28 @@ module.exports = function messagesRoutes({ db, config, crypto, syncManager }) {
       const list = await getAttachments(row, account);
       const att = list[index];
       if (!att) throw new HttpError(404, 'Attachment not found', 'NOT_FOUND');
-
-      const declared = String(att.contentType || '').toLowerCase().split(';')[0].trim();
-      const inline = INLINE_IMAGE_TYPES.has(declared);
-      // Only the safe inline image types keep the sender's type. Everything else is a plain
-      // download: a same-origin response typed text/html or application/javascript is a gadget
-      // for script injection, whatever Content-Disposition says.
-      const contentType = inline && CONTENT_TYPE_RE.test(declared) ? declared : 'application/octet-stream';
-      const filename = cleanFilename(att.filename, index);
-
-      res.setHeader('Content-Type', contentType);
-      res.setHeader('Content-Disposition', contentDisposition(inline ? 'inline' : 'attachment', filename));
-      res.setHeader('X-Content-Type-Options', 'nosniff');
-      res.setHeader('Cache-Control', 'private, max-age=86400');
-      // If a browser ever renders an attachment, it gets no scripts, no plugins, no origin.
-      res.setHeader('Content-Security-Policy', "default-src 'none'; img-src 'self' data:; style-src 'unsafe-inline'; sandbox");
-      res.setHeader('Content-Length', String(att.content.length));
-      res.end(att.content);
+      sendAttachment(res, att, index);
     })
   );
+
+  function sendAttachment(res, att, index) {
+    const declared = String(att.contentType || '').toLowerCase().split(';')[0].trim();
+    const inline = INLINE_IMAGE_TYPES.has(declared);
+    // Only the safe inline image types keep the sender's type. Everything else is a plain
+    // download: a same-origin response typed text/html or application/javascript is a gadget
+    // for script injection, whatever Content-Disposition says.
+    const contentType = inline && CONTENT_TYPE_RE.test(declared) ? declared : 'application/octet-stream';
+    const filename = cleanFilename(att.filename, index);
+
+    res.setHeader('Content-Type', contentType);
+    res.setHeader('Content-Disposition', contentDisposition(inline ? 'inline' : 'attachment', filename));
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('Cache-Control', 'private, max-age=86400');
+    // If a browser ever renders an attachment, it gets no scripts, no plugins, no origin.
+    res.setHeader('Content-Security-Policy', "default-src 'none'; img-src 'self' data:; style-src 'unsafe-inline'; sandbox");
+    res.setHeader('Content-Length', String(att.content.length));
+    res.end(att.content);
+  }
 
   router.patch(
     '/:id',

@@ -12,9 +12,24 @@
  * The row is marked 'sent' as soon as the SMTP server accepted the message, so a problem in
  * the follow-up steps can never cause a second delivery.
  *
- * Failures: status 'failed' with a friendly error. Connection problems (and other temporary
- * answers) get one automatic retry after a minute; login, recipient and size errors do not.
- * A process that died mid-send leaves rows in 'sending'; start() queues them again.
+ * Accounts send in parallel, one message at a time each (a user's accounts at most two at a
+ * time): an account with mail due gets its lane at once, whatever other lanes are doing, and
+ * every send has a wall-clock deadline, so one slow or hostile server holds up nobody else.
+ *
+ * Failures: status 'failed' with a friendly error. Problems before the server received the
+ * message (connection refused, 4xx answers) get one automatic retry after a minute; login,
+ * recipient and size errors do not. Once the whole message was handed over, a lost connection
+ * or a timeout means it may have been delivered: the row fails saying so and is never resent
+ * automatically. A process that died mid-send leaves rows in 'sending': start() queues them
+ * again when they never reached the hand-over, else fails them the same way.
+ *
+ * Recipients refused while the server accepted the others stay in pending_recipients and the
+ * row stays in the outbox: queued for one more try when every refusal was temporary (4xx),
+ * else failed. Retrying it sends the same message (same Message-ID) to them only.
+ *
+ * A scheduled message lives in the outbox, not in Drafts: its server draft is removed when it
+ * is queued (parts the message takes from that draft are kept first), so nobody edits a copy
+ * the outbox would never send.
  */
 
 const { HttpError } = require('./errors');
@@ -29,9 +44,14 @@ const DEFAULT_SETTINGS = Object.freeze({ undoSendSeconds: 10, notifications: fal
 const MAX_SCHEDULE_MS = 366 * 24 * 60 * 60 * 1000;
 const MAX_TIMER_MS = 60 * 60 * 1000; // re-check at least hourly (clock changes, long schedules)
 const KEEP_FINISHED_MS = 7 * 24 * 60 * 60 * 1000;
-const ACCOUNT_CONCURRENCY = 4;
+const MAX_LANES = 8; // accounts sending at the same time
+const LANES_PER_USER = 2;
+// One send, start to finish (25 MB of attachments on a slow link fits; a server that trickles
+// replies to keep the connection alive does not).
+const SEND_DEADLINE_MS = 10 * 60 * 1000;
 const STOP_WAIT_MS = 10000;
 const ACTIVE = ['queued', 'sending', 'failed'];
+const INTERRUPTED_MAYBE_SENT = `Mailtabs was restarted while it was handing this message to the mail server. ${smtp.MAY_HAVE_BEEN_SENT}`;
 
 /** The user's settings with defaults applied (undoSendSeconds clamped to 0..30). */
 function getUserSettings(db, userId) {
@@ -57,9 +77,21 @@ function parsePayload(row) {
   }
 }
 
+/** Recipients a partly delivered row still has to reach, or null (= all of them). */
+function pendingRecipients(row) {
+  if (!row || !row.pending_recipients) return null;
+  try {
+    const list = JSON.parse(row.pending_recipients);
+    return Array.isArray(list) ? list.filter((a) => typeof a === 'string' && a) : null;
+  } catch (_) {
+    return null;
+  }
+}
+
 /** Outbox row -> the JSON the outbox list shows. */
 function outboxItemJson(row) {
   const payload = parsePayload(row);
+  const pending = pendingRecipients(row);
   return {
     id: row.id,
     accountId: row.account_id,
@@ -71,6 +103,9 @@ function outboxItemJson(row) {
     attempts: row.attempts,
     createdAt: row.created_at,
     sentAt: row.sent_at || null,
+    // Delivered to some recipients already; notDeliveredTo still have to get it.
+    partial: !!(pending && pending.length && row.sent_at),
+    notDeliveredTo: pending || [],
   };
 }
 
@@ -89,23 +124,34 @@ function resolveSendAt(sendAt, now, undoSeconds) {
   return Math.floor(ms);
 }
 
+/** The provider of the account's mailbox: its IMAP server when that is a known one, else its preset. */
+function mailboxProviderKey(account) {
+  return providers.presetKeyForHost(account.imap_host) || account.provider;
+}
+
+/** The provider whose SMTP server sends for the account (unknown host: the mailbox's provider). */
+function smtpProviderKey(account) {
+  return providers.presetKeyForSmtpHost(smtp.smtpSettingsFor(account).host) || mailboxProviderKey(account);
+}
+
 /**
  * Does Mailtabs have to APPEND a copy to Sent for this account? 'append' | 'server' | 'if-folder'
  * ('if-folder': Other-IMAP accounts — only when the server has a Sent folder; never create one).
- * The outgoing server decides when it is a known one (e.g. an IMAP account sending via Gmail).
+ * 'server' only when the outgoing server belongs to the mailbox's own provider: Gmail or
+ * Microsoft file their copy in the mailbox of the SMTP login, so an IMAP account on
+ * mail.example.org that sends through smtp.gmail.com still needs its own copy.
  */
 function sentCopyPolicy(account) {
-  const settings = smtp.smtpSettingsFor(account);
-  const bySmtp = providers.presetKeyForSmtpHost(settings.host);
-  const key = bySmtp || account.provider;
-  const preset = providers.PRESETS[key];
-  if (!preset || key === 'imap') return 'if-folder';
+  const mailboxKey = mailboxProviderKey(account);
+  const preset = providers.PRESETS[mailboxKey];
+  if (!preset || mailboxKey === 'imap') return 'if-folder';
+  if (smtpProviderKey(account) !== mailboxKey) return 'append';
   return preset.sentCopy === 'server' ? 'server' : 'append';
 }
 
 function sentCopyUnverified(account) {
-  const key = providers.presetKeyForSmtpHost(smtp.smtpSettingsFor(account).host) || account.provider;
-  return !!(providers.PRESETS[key] && providers.PRESETS[key].sentCopyUnverified);
+  const key = smtpProviderKey(account);
+  return key === mailboxProviderKey(account) && !!(providers.PRESETS[key] && providers.PRESETS[key].sentCopyUnverified);
 }
 
 function errorText(err) {
@@ -116,19 +162,28 @@ function errorText(err) {
 
 class OutboxManager {
   /**
-   * @param {{ db, crypto, config, syncManager?, logger?, retryDelayMs?, sentCopyCheckDelayMs? }} deps
-   *   retryDelayMs / sentCopyCheckDelayMs are only changed by tests.
+   * @param {{ db, crypto, config, syncManager?, logger?, retryDelayMs?, sentCopyCheckDelayMs?, sendDeadlineMs? }} deps
+   *   retryDelayMs / sentCopyCheckDelayMs / sendDeadlineMs are only changed by tests.
    */
-  constructor({ db, crypto, config, syncManager = null, logger = console, retryDelayMs = 60000, sentCopyCheckDelayMs = 3000 }) {
+  constructor({
+    db,
+    crypto,
+    config,
+    syncManager = null,
+    logger = console,
+    retryDelayMs = 60000,
+    sentCopyCheckDelayMs = 3000,
+    sendDeadlineMs = SEND_DEADLINE_MS,
+  }) {
     if (!db || !crypto || !config) throw new Error('OutboxManager needs { db, crypto, config }');
     this.db = db;
     this.logger = logger || console;
     this.deps = { db, crypto, config, syncManager, logger: this.logger };
     this.retryDelayMs = retryDelayMs;
     this.sentCopyCheckDelayMs = sentCopyCheckDelayMs;
+    this.sendDeadlineMs = sendDeadlineMs;
     this.timer = null;
-    this.running = null;
-    this.again = false;
+    this.lanes = new Map(); // accountId -> { userId, promise } (one account sending, a message at a time)
     this.started = false;
     this.stopped = false;
     this.followUps = new Set(); // after-send work still in progress
@@ -142,8 +197,12 @@ class OutboxManager {
     if (this.started) return;
     this.started = true;
     this.stopped = false;
-    // A previous process died mid-send: those rows go out again (at-least-once).
-    this._safe(() => this.db.prepare("UPDATE outbox SET status = 'queued' WHERE status = 'sending'").run());
+    // A previous process died mid-send. Rows that never reached the hand-over go out again; the
+    // others may have been delivered, so they wait for the user instead.
+    this._safe(() => {
+      this.db.prepare("UPDATE outbox SET status = 'failed', error = ? WHERE status = 'sending' AND handed_over_at IS NOT NULL").run(INTERRUPTED_MAYBE_SENT);
+      this.db.prepare("UPDATE outbox SET status = 'queued' WHERE status = 'sending'").run();
+    });
     this._arm();
   }
 
@@ -152,7 +211,7 @@ class OutboxManager {
     this.started = false;
     if (this.timer) clearTimeout(this.timer);
     this.timer = null;
-    const pending = [this.running, ...this.followUps].filter(Boolean);
+    const pending = [...[...this.lanes.values()].map((l) => l.promise), ...this.followUps];
     if (!pending.length) return;
     let t;
     await Promise.race([Promise.allSettled(pending), new Promise((resolve) => (t = setTimeout(resolve, STOP_WAIT_MS)))]);
@@ -161,8 +220,8 @@ class OutboxManager {
 
   /** Wait until no send or follow-up step is running (tests). */
   async idle() {
-    while (this.running || this.followUps.size) {
-      await Promise.allSettled([this.running, ...this.followUps].filter(Boolean));
+    while (this.lanes.size || this.followUps.size) {
+      await Promise.allSettled([...[...this.lanes.values()].map((l) => l.promise), ...this.followUps]);
     }
   }
 
@@ -175,17 +234,30 @@ class OutboxManager {
     }
   }
 
-  /** Schedule the next sendDue() for the earliest queued row. */
+  /**
+   * Wake up for the earliest queued row of an account that has no lane (a lane picks up its own
+   * account's rows as they come due).
+   */
   _arm() {
     if (this.timer) clearTimeout(this.timer);
     this.timer = null;
     if (!this.started || this.stopped) return;
-    const next = this._safe(() => this.db.prepare("SELECT MIN(send_at) AS at FROM outbox WHERE status = 'queued'").get(), null);
+    const busy = [...this.lanes.keys()];
+    const next = this._safe(
+      () =>
+        this.db
+          .prepare(
+            `SELECT MIN(send_at) AS at FROM outbox WHERE status = 'queued'${busy.length ? ` AND account_id NOT IN (${busy.map(() => '?').join(', ')})` : ''}`
+          )
+          .get(...busy),
+      null
+    );
     if (!next || next.at === null || next.at === undefined) return;
     const delay = Math.min(Math.max(0, next.at - Date.now()), MAX_TIMER_MS);
     this.timer = setTimeout(() => {
       this.timer = null;
-      this.sendDue().catch((err) => this.logger.error('[outbox] send pass failed:', err));
+      this._pump();
+      this._arm();
     }, delay);
     if (typeof this.timer.unref === 'function') this.timer.unref();
   }
@@ -230,12 +302,15 @@ class OutboxManager {
       if (ref.uploadId && !uploads.getUpload(db, userId, ref.uploadId)) {
         throw new HttpError(410, 'An attachment is no longer available — attach it again.', 'ATTACHMENT_GONE');
       }
-      if (ref.messageId && !drafts.messageForUser(db, userId, ref.messageId)) {
+      if (ref.messageId && !drafts.refAvailable(db, userId, ref)) {
         throw new HttpError(410, 'A message you attached files from is no longer available.', 'ATTACHMENT_GONE');
       }
     }
     for (const key of ['replyToMessageId', 'forwardOfMessageId']) {
-      if (normalized[key] && !drafts.messageForUser(db, userId, normalized[key])) normalized[key] = null;
+      if (!normalized[key]) continue;
+      // A message moved since the composer opened is found again in its new folder.
+      const current = drafts.currentMessageRow(db, userId, normalized[key]);
+      normalized[key] = current ? current.id : null;
     }
     let draftRef = null;
     if (draft) {
@@ -248,15 +323,51 @@ class OutboxManager {
     }
 
     const now = Date.now();
-    const at = resolveSendAt(sendAt, now, getUserSettings(db, userId).undoSendSeconds);
-    const info = db
-      .prepare(
-        `INSERT INTO outbox (user_id, account_id, payload, send_at, status, attempts, draft_folder_id, draft_uid, created_at)
-         VALUES (?, ?, ?, ?, 'queued', 0, ?, ?, ?)`
-      )
-      .run(userId, account.id, JSON.stringify(normalized), at, draftRef ? draftRef.folderId : null, draftRef ? draftRef.uid : null, now);
+    const undoSeconds = getUserSettings(db, userId).undoSendSeconds;
+    const at = resolveSendAt(sendAt, now, undoSeconds);
+    const id = db.transaction(() => {
+      const info = db
+        .prepare(
+          `INSERT INTO outbox (user_id, account_id, payload, send_at, status, attempts, draft_folder_id, draft_uid, created_at)
+           VALUES (?, ?, ?, ?, 'queued', 0, ?, ?, ?)`
+        )
+        .run(userId, account.id, JSON.stringify(normalized), at, draftRef ? draftRef.folderId : null, draftRef ? draftRef.uid : null, now);
+      const rowId = Number(info.lastInsertRowid);
+      // The payload's own uploads are recorded by a trigger; these are reached through a replaced draft.
+      uploads.recordOutboxUploads(db, rowId, drafts.carriedUploadIds(db, userId, normalized));
+      return rowId;
+    })();
+    if (draftRef && at > now + undoSeconds * 1000) this._releaseScheduledDraft(userId, id, normalized, draftRef);
     this._arm();
-    return db.prepare('SELECT * FROM outbox WHERE id = ?').get(Number(info.lastInsertRowid));
+    return db.prepare('SELECT * FROM outbox WHERE id = ?').get(id);
+  }
+
+  /**
+   * A message scheduled for later: remove its server draft now (the outbox row holds the
+   * message). The draft chain is taken now, so a draft saved after this is the user's new one.
+   * Parts the message takes from those drafts are kept first; if that fails, the draft stays
+   * and goes after sending, as for "send now".
+   */
+  _releaseScheduledDraft(userId, outboxId, payload, draftRef) {
+    const { db, deps } = this;
+    const chain = drafts.draftChain(db, draftRef);
+    const task = (async () => {
+      if (drafts.refersToDrafts(db, userId, payload, chain)) {
+        const { sources } = await drafts.materialize(deps, userId, payload);
+        if (!drafts.carryReplacedParts(deps, userId, sources, chain)) return;
+        uploads.recordOutboxUploads(db, outboxId, drafts.carriedUploadIds(db, userId, payload));
+      }
+      await drafts.deleteRefsAcrossAccounts(deps, userId, chain);
+      this._safe(() =>
+        db
+          .prepare('UPDATE outbox SET draft_folder_id = NULL, draft_uid = NULL WHERE id = ? AND draft_folder_id = ? AND draft_uid = ?')
+          .run(outboxId, draftRef.folderId, draftRef.uid)
+      );
+      drafts.syncFolderSoon(deps, drafts.folderById(db, draftRef.folderId));
+    })()
+      .catch((err) => this.logger.warn(`[outbox] message ${outboxId}: could not remove its draft: ${imap.friendlyImapError(err)}`))
+      .finally(() => this.followUps.delete(task));
+    this.followUps.add(task);
   }
 
   /** Undo / unschedule: only while still queued. Returns the payload (for the composer). */
@@ -270,9 +381,18 @@ class OutboxManager {
    */
   cancelWithDraft(userId, outboxId) {
     const row = this._requireRow(userId, outboxId);
-    const res = this.db.prepare("UPDATE outbox SET status = 'cancelled' WHERE id = ? AND user_id = ? AND status = 'queued'").run(row.id, userId);
+    // A message that already reached some of its recipients can't be taken back.
+    const res = this.db
+      .prepare("UPDATE outbox SET status = 'cancelled' WHERE id = ? AND user_id = ? AND status = 'queued' AND sent_at IS NULL")
+      .run(row.id, userId);
     if (res.changes !== 1) {
-      throw new HttpError(409, row.status === 'sent' ? 'Too late: the message was already sent.' : 'Too late: the message is being sent.', 'TOO_LATE');
+      const text =
+        row.status === 'sent'
+          ? 'Too late: the message was already sent.'
+          : row.sent_at
+            ? 'Too late: the message was already sent to some of its recipients.'
+            : 'Too late: the message is being sent.';
+      throw new HttpError(409, text, 'TOO_LATE');
     }
     this._arm();
     const payload = parsePayload(row);
@@ -280,11 +400,13 @@ class OutboxManager {
     return { payload, draft: draftOf(row) };
   }
 
-  /** Try a failed message again now. */
+  /** Try a failed message again now (only to the recipients it did not reach yet). */
   retry(userId, outboxId) {
     const row = this._requireRow(userId, outboxId);
     const res = this.db
-      .prepare("UPDATE outbox SET status = 'queued', send_at = ?, error = NULL, attempts = 0 WHERE id = ? AND user_id = ? AND status = 'failed'")
+      .prepare(
+        "UPDATE outbox SET status = 'queued', send_at = ?, error = NULL, attempts = 0, handed_over_at = NULL WHERE id = ? AND user_id = ? AND status = 'failed'"
+      )
       .run(Date.now(), row.id, userId);
     if (res.changes !== 1) throw new HttpError(409, 'Only messages that failed to send can be retried.', 'NOT_FAILED');
     this._arm();
@@ -294,9 +416,10 @@ class OutboxManager {
   /** Delete a queued, failed (or finished) message and the uploads only it used. */
   remove(userId, outboxId) {
     const row = this._requireRow(userId, outboxId);
+    const used = uploads.outboxUploadIds(this.db, row.id);
     const res = this.db.prepare("DELETE FROM outbox WHERE id = ? AND user_id = ? AND status != 'sending'").run(row.id, userId);
     if (res.changes !== 1) throw new HttpError(409, 'Too late: the message is being sent.', 'TOO_LATE');
-    this._deleteUploads(userId, parsePayload(row));
+    this._deleteUploads(userId, used);
     this._arm();
     return { ok: true };
   }
@@ -312,41 +435,65 @@ class OutboxManager {
   // Sending
   // ------------------------------------------------------------------------------------------
 
-  /** Send every due row: accounts in parallel (bounded), one message at a time per account. */
-  sendDue() {
-    if (this.running) {
-      this.again = true;
-      return this.running;
-    }
-    this.running = (async () => {
-      do {
-        this.again = false;
-        this._purgeFinished();
-        const due = this._safe(
-          () => this.db.prepare("SELECT id, account_id FROM outbox WHERE status = 'queued' AND send_at <= ? ORDER BY send_at, id").all(Date.now()),
-          []
-        );
-        const byAccount = new Map();
-        for (const r of due) {
-          if (!byAccount.has(r.account_id)) byAccount.set(r.account_id, []);
-          byAccount.get(r.account_id).push(r.id);
-        }
-        const lanes = [...byAccount.values()];
-        const workers = Array.from({ length: Math.min(ACCOUNT_CONCURRENCY, lanes.length) }, async () => {
-          for (let lane = lanes.shift(); lane; lane = lanes.shift()) {
-            for (const id of lane) {
-              if (this.stopped) return;
-              await this._sendOne(id).catch((err) => this.logger.error(`[outbox] unexpected failure sending ${id}:`, err));
-            }
-          }
+  /**
+   * Send what is due now: a lane per account (within the limits), one attempt per row. Resolves
+   * once the lanes have finished.
+   */
+  async sendDue() {
+    this._pump();
+    while (this.lanes.size) await Promise.allSettled([...this.lanes.values()].map((l) => l.promise));
+  }
+
+  /** Start a lane for every account with mail due that has none (MAX_LANES, LANES_PER_USER). */
+  _pump() {
+    if (this.stopped) return;
+    this._purgeFinished();
+    const due = this._safe(
+      () =>
+        this.db
+          .prepare(
+            "SELECT account_id, user_id, MIN(send_at) AS at FROM outbox WHERE status = 'queued' AND send_at <= ? GROUP BY account_id, user_id ORDER BY at, account_id"
+          )
+          .all(Date.now()),
+      []
+    );
+    for (const { account_id: accountId, user_id: userId } of due) {
+      if (this.lanes.size >= MAX_LANES) break;
+      if (this.lanes.has(accountId)) continue;
+      if ([...this.lanes.values()].filter((l) => l.userId === userId).length >= LANES_PER_USER) continue;
+      const lane = { userId, promise: null };
+      this.lanes.set(accountId, lane);
+      lane.promise = this._runLane(accountId)
+        .catch((err) => this.logger.error(`[outbox] sending for account ${accountId} failed:`, err))
+        .finally(() => {
+          this.lanes.delete(accountId);
+          // A lane slot is free: whoever waits for one goes now.
+          if (this.started && !this.stopped) this._pump();
+          this._arm();
         });
-        await Promise.all(workers);
-      } while (this.again && !this.stopped);
-    })().finally(() => {
-      this.running = null;
-      this._arm();
-    });
-    return this.running;
+    }
+  }
+
+  /** One account's due rows, one at a time, each at most once per lane. */
+  async _runLane(accountId) {
+    const attempted = [];
+    for (;;) {
+      if (this.stopped) return;
+      const next = this._safe(
+        () =>
+          this.db
+            .prepare(
+              `SELECT id FROM outbox WHERE account_id = ? AND status = 'queued' AND send_at <= ?${
+                attempted.length ? ` AND id NOT IN (${attempted.map(() => '?').join(', ')})` : ''
+              } ORDER BY send_at, id LIMIT 1`
+            )
+            .get(accountId, Date.now(), ...attempted),
+        null
+      );
+      if (!next) return;
+      attempted.push(next.id);
+      await this._sendOne(next.id).catch((err) => this.logger.error(`[outbox] unexpected failure sending ${next.id}:`, err));
+    }
   }
 
   _purgeFinished() {
@@ -359,7 +506,7 @@ class OutboxManager {
     const { db } = this;
     // Claim it: a cancel that got there first wins.
     const claimed = db
-      .prepare("UPDATE outbox SET status = 'sending', attempts = attempts + 1 WHERE id = ? AND status = 'queued' AND send_at <= ?")
+      .prepare("UPDATE outbox SET status = 'sending', attempts = attempts + 1, handed_over_at = NULL WHERE id = ? AND status = 'queued' AND send_at <= ?")
       .run(id, Date.now());
     if (claimed.changes !== 1) return;
     const row = db.prepare('SELECT * FROM outbox WHERE id = ?').get(id);
@@ -367,40 +514,108 @@ class OutboxManager {
     const account = db.prepare('SELECT * FROM accounts WHERE id = ? AND user_id = ?').get(row.account_id, row.user_id);
     if (!account) return this._fail(row, new HttpError(404, 'The account this message was to be sent from was removed.', 'NOT_FOUND'));
 
+    // Delivered to some recipients already: the same message (Message-ID, Date) to the others.
+    const pending = pendingRecipients(row);
+    const resend = !!(pending && row.sent_at);
     let payload;
     let built;
+    let rawWithBcc;
     let result;
     try {
       payload = compose.validatePayload(parsePayload(row));
       const { payload: ready, attachments } = await drafts.materialize(this.deps, row.user_id, payload);
       const fromName = drafts.senderNameFor(db, account);
-      built = await compose.buildMime({ account, payload: ready, attachments, fromName });
-      result = await smtp.sendMessage(this.deps, account, {
-        from: built.envelope.from,
-        recipients: built.envelope.to,
-        raw: built.raw,
-        // Graph reads the recipients from the headers: the same message, Bcc header kept.
-        graphRaw: async () =>
-          (await compose.buildMime({ account, payload: ready, attachments, fromName, messageId: built.messageId, date: built.date, keepBcc: true })).raw,
-      });
+      const same = resend && row.sent_message_id ? { messageId: row.sent_message_id, date: new Date(row.sent_at) } : {};
+      built = await compose.buildMime({ account, payload: ready, attachments, fromName, ...same });
+      // The same message with its Bcc header, for Microsoft Graph (which reads the recipients from
+      // the headers) and for the sender's own Sent copy. Only the delivered copy leaves Bcc out.
+      const { raw, messageId, date } = built;
+      rawWithBcc = async () => {
+        if (!ready.bcc.length) return raw;
+        return (await compose.buildMime({ account, payload: ready, attachments, fromName, messageId, date, keepBcc: true })).raw;
+      };
+      const wanted = pending ? new Set(pending.map((a) => a.toLowerCase())) : null;
+      const recipients = wanted ? built.envelope.to.filter((a) => wanted.has(String(a).toLowerCase())) : built.envelope.to;
+      if (!recipients.length) {
+        result = { accepted: [], rejected: [], rejectedErrors: [], via: 'smtp' }; // nobody left to send to
+      } else {
+        result = await smtp.sendMessage(this.deps, account, {
+          from: built.envelope.from,
+          recipients,
+          raw,
+          graphRaw: rawWithBcc,
+          smtpOnly: !!wanted,
+          onHandover: () => this._handedOver(row.id),
+          signal: AbortSignal.timeout(this.sendDeadlineMs),
+        });
+      }
     } catch (err) {
       return this._fail(row, err);
     }
 
-    const note = result.rejected.length ? `Not delivered to: ${result.rejected.join(', ').slice(0, 400)}` : null;
-    this._safe(() =>
-      db
-        .prepare("UPDATE outbox SET status = 'sent', sent_at = ?, sent_message_id = ?, error = ? WHERE id = ?")
-        .run(Date.now(), built.messageId, note, row.id)
-    );
+    const complete = !result.rejected.length;
+    if (complete) {
+      this._safe(() =>
+        db
+          .prepare(
+            "UPDATE outbox SET status = 'sent', sent_at = COALESCE(sent_at, ?), sent_message_id = COALESCE(sent_message_id, ?), error = NULL, pending_recipients = NULL WHERE id = ?"
+          )
+          .run(Date.now(), built.messageId, row.id)
+      );
+    } else {
+      this._partlySent(row, built, result);
+    }
     // Follow-up steps never delay the next message of the queue... but are awaited by stop().
-    const followUp = this._afterSend(row, account, payload, built, result.via).finally(() => this.followUps.delete(followUp));
+    const followUp = this._afterSend(row, account, payload, built, result.via, rawWithBcc, { first: !resend, complete }).finally(() =>
+      this.followUps.delete(followUp)
+    );
     this.followUps.add(followUp);
+  }
+
+  _handedOver(id) {
+    this._safe(() => this.db.prepare("UPDATE outbox SET handed_over_at = ? WHERE id = ? AND status = 'sending'").run(Date.now(), id));
+  }
+
+  /**
+   * The server accepted the message for some recipients and refused others: keep the row (and
+   * the refused recipients) in the outbox, to try them once more when every refusal was
+   * temporary, else for the user to see.
+   */
+  _partlySent(row, built, result) {
+    const now = Date.now();
+    const why = new Map(result.rejectedErrors.map((e) => [String(e.address).toLowerCase(), e]));
+    const temporary = (address) => {
+      const e = why.get(String(address).toLowerCase());
+      return !!e && e.code >= 400 && e.code < 500;
+    };
+    const left = result.rejected;
+    const reached = result.accepted.length === 1 ? result.accepted[0] : `${result.accepted.length} recipients`;
+    const refusals = left
+      .map((address) => {
+        const e = why.get(String(address).toLowerCase());
+        return e && e.response ? `${address} (${e.response})` : address;
+      })
+      .join(', ')
+      .slice(0, 600);
+    const allTemporary = left.every(temporary);
+    const again = allTemporary && row.attempts < 2 && !this.stopped;
+    let error = result.accepted.length ? `Sent to ${reached}, but not delivered to ${refusals}.` : `Not delivered to ${refusals}.`;
+    if (again) error += ' Trying them again in a minute.';
+    else if (allTemporary) error += ' The server only refused them for now: retry later.';
+    this._safe(() =>
+      this.db
+        .prepare(
+          `UPDATE outbox SET status = ?, send_at = ?, error = ?, pending_recipients = ?,
+             sent_at = COALESCE(sent_at, ?), sent_message_id = COALESCE(sent_message_id, ?) WHERE id = ?`
+        )
+        .run(again ? 'queued' : 'failed', again ? now + this.retryDelayMs : row.send_at, error, JSON.stringify(left), now, built.messageId, row.id)
+    );
+    this.logger.warn(`[outbox] message ${row.id} (account ${row.account_id}): ${error}`);
   }
 
   _fail(row, err) {
     const message = errorText(err);
-    const retryable = !!(err && err.retryable === true);
+    const retryable = !!(err && err.retryable === true && !err.maybeSent);
     if (retryable && row.attempts < 2 && !this.stopped) {
       this._safe(() =>
         this.db
@@ -413,13 +628,23 @@ class OutboxManager {
     this.logger.warn(`[outbox] message ${row.id} (account ${row.account_id}) not sent: ${message}`);
   }
 
-  async _afterSend(row, account, payload, built, via) {
-    const steps = [
-      ['sent copy', () => this._sentCopy(account, built, via)],
-      ['answered flag', () => (payload.replyToMessageId ? this._markAnswered(row.user_id, payload.replyToMessageId) : null)],
-      ['draft cleanup', () => (draftOf(row) ? drafts.deleteRefsAcrossAccounts(this.deps, row.user_id, drafts.draftChain(this.db, draftOf(row))) : null)],
-      ['upload cleanup', () => this._deleteUploads(row.user_id, payload)],
-    ];
+  /**
+   * first: the message reached its first recipients now (not a resend to the remaining ones);
+   * complete: nobody is left to send it to.
+   */
+  async _afterSend(row, account, payload, built, via, rawWithBcc, { first = true, complete = true } = {}) {
+    const draft = draftOf(row);
+    const steps = [];
+    if (first) {
+      steps.push(['sent copy', () => this._sentCopy(account, built, via, rawWithBcc)]);
+      steps.push(['answered flag', () => (payload.replyToMessageId ? this._markAnswered(row.user_id, payload.replyToMessageId) : null)]);
+      // Only the drafts saved up to queueing: a draft saved later is the user's newer one.
+      steps.push([
+        'draft cleanup',
+        () => (draft ? drafts.deleteRefsAcrossAccounts(this.deps, row.user_id, drafts.draftChain(this.db, draft, { until: row.created_at })) : null),
+      ]);
+    }
+    if (complete) steps.push(['upload cleanup', () => this._deleteUploads(row.user_id, uploads.outboxUploadIds(this.db, row.id))]);
     for (const [name, step] of steps) {
       try {
         await step();
@@ -429,8 +654,11 @@ class OutboxManager {
     }
   }
 
-  /** File the sent message in \Sent unless the provider's server (or Microsoft Graph) does that itself. */
-  async _sentCopy(account, built, via = 'smtp') {
+  /**
+   * File the sent message in \Sent unless the provider's server (or Microsoft Graph) does that itself.
+   * rawWithBcc: the message as sent plus its Bcc header (the sender's copy records whom they Bcc'd).
+   */
+  async _sentCopy(account, built, via = 'smtp', rawWithBcc = async () => built.raw) {
     const policy = via === 'graph' ? 'server' : sentCopyPolicy(account);
     const deps = this.deps;
     if (policy === 'server') {
@@ -441,13 +669,14 @@ class OutboxManager {
     if (sentCopyUnverified(account) && this.sentCopyCheckDelayMs > 0) {
       await new Promise((resolve) => setTimeout(resolve, this.sentCopyCheckDelayMs));
     }
+    const raw = await rawWithBcc();
     const folder = await drafts.serializePerAccount(account.id, () =>
       imap.withImap(deps, account, async (client) => {
         const sent = await drafts.resolveSpecialFolder(deps, account, client, '\\Sent', { create: policy === 'append' });
         if (!sent) return null;
         const existing = await drafts.findByMessageId(client, sent.path, built.messageId);
         if (existing.length) return sent; // the server filed it already
-        const res = await drafts.appendRaw(client, sent.path, built.raw, ['\\Seen'], built.messageId);
+        const res = await drafts.appendRaw(client, sent.path, raw, ['\\Seen'], built.messageId);
         drafts.rememberAppend(deps.db, sent.id, res.uid, res.uidValidity);
         return sent;
       })
@@ -458,7 +687,7 @@ class OutboxManager {
   /** Set \Answered on the message replied to, on the server and here. */
   async _markAnswered(userId, messageId) {
     const deps = this.deps;
-    const original = drafts.messageForUser(deps.db, userId, messageId);
+    const original = drafts.currentMessageRow(deps.db, userId, messageId);
     if (!original) return;
     const account = deps.db.prepare('SELECT * FROM accounts WHERE id = ? AND user_id = ?').get(original.account_id, userId);
     if (!account) return;
@@ -476,12 +705,11 @@ class OutboxManager {
     );
   }
 
-  /** Delete the uploads a payload used, unless another waiting message still needs them. */
-  _deleteUploads(userId, payload) {
-    const ids = ((payload && payload.attachments) || []).map((a) => a && a.uploadId).filter(Boolean);
-    if (!ids.length) return;
-    const inUse = uploads.uploadsInUse(this.db);
-    for (const id of ids) if (!inUse.has(id)) uploads.deleteUpload(this.deps, userId, id);
+  /** Delete these uploads of the user, unless a message waiting in the outbox still needs them. */
+  _deleteUploads(userId, uploadIds) {
+    for (const id of uploadIds || []) {
+      if (!uploads.uploadInUse(this.db, id)) uploads.deleteUpload(this.deps, userId, id);
+    }
   }
 }
 

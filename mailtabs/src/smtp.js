@@ -17,6 +17,7 @@
  */
 
 const net = require('net');
+const { Readable } = require('stream');
 const nodemailer = require('nodemailer');
 const { HttpError } = require('./errors');
 const netguard = require('./netguard');
@@ -196,6 +197,10 @@ async function connectionOptions(config, { host, port, security, auth }) {
     ignoreTLS: sec === 'none',
     name: ehloName(config),
     auth,
+    // Always log in. Without this nodemailer skips AUTH when the server does not advertise it
+    // (a plain MX on port 25), so any password "works" and mail goes out unauthenticated with
+    // whatever From the account claims.
+    forceAuth: true,
     tls: isIpHost ? { minVersion: 'TLSv1.2' } : { servername: hostname, minVersion: 'TLSv1.2' },
     ...TIMEOUTS,
     logger: false,
@@ -240,13 +245,77 @@ function annotate(err, options) {
 }
 
 /**
- * Send a prebuilt message.
- * @param {{ from: string, recipients: string[], raw: Buffer }} message
- * @returns {Promise<{ accepted: string[], rejected: string[], response: string }>}
- * @throws HttpError 400 (setup/policy problems) or 502 with a friendly message; the original
- *   error is `cause`, and `retryable` says whether trying again later may help.
+ * Watch the message being handed to the server. nodemailer pipes the message stream into the
+ * connection only once the server accepted DATA, so this relay (added like nodemailer's own
+ * DKIM signer, as a process function) reads nothing before that: state.started then, and
+ * state.ended once the last byte went to the connection (the end-of-data dot follows at once).
+ * Should nodemailer ever read the message earlier, both only come sooner, which errs on the
+ * side of "may have been sent".
  */
-async function sendRaw(deps, account, { from, recipients, raw }) {
+function watchHandover(transport, state, onStart) {
+  transport.use('stream', (mail, done) => {
+    mail.message.processFunc((input) => {
+      let reading = false;
+      const pull = () => {
+        let chunk;
+        while ((chunk = input.read()) !== null) if (!out.push(chunk)) return;
+      };
+      const out = new Readable({
+        read() {
+          if (!reading) {
+            reading = true;
+            state.started = true;
+            try {
+              if (onStart) onStart();
+            } catch (_) {
+              /* bookkeeping only */
+            }
+            input.on('readable', pull);
+            input.once('end', () => out.push(null));
+          }
+          pull();
+        },
+        destroy(err, callback) {
+          input.destroy();
+          callback(err);
+        },
+      });
+      input.once('error', (err) => out.destroy(err));
+      out.once('end', () => {
+        state.ended = true;
+      });
+      return out;
+    });
+    done();
+  });
+}
+
+const MAY_HAVE_BEEN_SENT = 'It may have been delivered anyway: check your Sent folder (or ask a recipient) before sending it again.';
+
+/**
+ * An error after the whole message was handed over that is not the server's answer to it (a
+ * lost connection, a timeout): the server may have accepted the message. Never retried
+ * automatically, or the recipients would get it twice.
+ */
+function maybeSentError(err, where) {
+  const wrapped = new HttpError(502, `The connection to ${where} ended before it confirmed the message. ${MAY_HAVE_BEEN_SENT}`, 'SMTP_MAYBE_SENT');
+  wrapped.cause = err;
+  wrapped.retryable = false;
+  wrapped.maybeSent = true;
+  return wrapped;
+}
+
+/**
+ * Send a prebuilt message.
+ * @param {{ from: string, recipients: string[], raw: Buffer, onHandover?: () => void, signal?: AbortSignal }} message
+ *   onHandover: called when the server starts receiving the message itself (after DATA);
+ *   signal: aborts the whole send (the outbox's wall-clock deadline)
+ * @returns {Promise<{ accepted: string[], rejected: string[], rejectedErrors: Array<{ address, code, response }>, response: string }>}
+ * @throws HttpError 400 (setup/policy problems) or 502 with a friendly message; the original
+ *   error is `cause`, `retryable` says whether trying again later may help, and `maybeSent`
+ *   that the server may have accepted the message although the send failed.
+ */
+async function sendRaw(deps, account, { from, recipients, raw, onHandover, signal }) {
   if (!Buffer.isBuffer(raw) || !raw.length) throw new TypeError('sendRaw: raw must be a non-empty Buffer');
   const to = [...new Set((recipients || []).map((r) => String(r || '').trim()).filter(Boolean))];
   if (!to.length) throw new HttpError(400, 'Add at least one recipient.', 'INVALID_COMPOSE');
@@ -258,17 +327,33 @@ async function sendRaw(deps, account, { from, recipients, raw }) {
     throw wrapSendError(err, { oauth: account.auth_type === 'oauth', email: account.email });
   }
   const transport = nodemailer.createTransport(options);
+  const handover = { started: false, ended: false };
+  watchHandover(transport, handover, onHandover);
   try {
     // With the size in the envelope, nodemailer refuses a message over the server's advertised
     // SIZE limit before transmitting it (and announces SIZE= in MAIL FROM).
-    const info = await transport.sendMail({ envelope: { from: from || account.email, to, size: raw.length }, raw });
+    const info = await transport.sendMail({
+      envelope: { from: from || account.email, to, size: raw.length },
+      raw,
+      ...(signal ? { signal } : {}),
+    });
     return {
       accepted: (info.accepted || []).map(String),
       rejected: (info.rejected || []).map(String),
+      rejectedErrors: (info.rejectedErrors || []).map((e) => ({
+        address: String((e && e.recipient) || ''),
+        code: Number(e && e.responseCode) || 0,
+        response: truncate((e && (e.response || e.message)) || '', 200),
+      })),
       response: String(info.response || ''),
     };
   } catch (err) {
-    throw wrapSendError(annotate(err, options), { oauth: account.auth_type === 'oauth', email: account.email });
+    annotate(err, options);
+    // EMESSAGE is the server's own answer to the message (it refused it): nothing was delivered.
+    if (handover.ended && err && err.code !== 'EMESSAGE') {
+      throw maybeSentError(err, `${options.displayHost || options.host}:${options.port}`);
+    }
+    throw wrapSendError(err, { oauth: account.auth_type === 'oauth', email: account.email });
   } finally {
     transport.close();
   }
@@ -305,11 +390,13 @@ function isSmtpAuthDisabled(err) {
  * Send a built message the way the account can: SMTP, or Microsoft Graph for Microsoft
  * accounts whose SMTP AUTH is turned off. A 5.7.139 answer switches the account to Graph for
  * good (when it consented to Graph; else the error says to reconnect).
- * @param {{ from: string, recipients: string[], raw: Buffer, graphRaw?: Buffer|(() => Promise<Buffer>) }} message
+ * @param {{ from: string, recipients: string[], raw: Buffer, graphRaw?: Buffer|(() => Promise<Buffer>),
+ *   onHandover?: () => void, signal?: AbortSignal, smtpOnly?: boolean }} message
  *   graphRaw: the same message with its Bcc header (Graph reads the recipients from the headers);
- *   defaults to raw
- * @returns {Promise<{ accepted: string[], rejected: string[], response: string, via: 'smtp'|'graph' }>}
- * @throws HttpError like sendRaw (`retryable` set)
+ *   defaults to raw. smtpOnly: the recipients are a subset of the message's (Graph would send to
+ *   all of them), so Graph is not an option.
+ * @returns {Promise<{ accepted: string[], rejected: string[], rejectedErrors: object[], response: string, via: 'smtp'|'graph' }>}
+ * @throws HttpError like sendRaw (`retryable`, `maybeSent` set)
  */
 async function sendMessage(deps, account, message) {
   const { route, code, message: reason } = sendRoute(deps, account);
@@ -318,6 +405,12 @@ async function sendMessage(deps, account, message) {
     err.retryable = false;
     throw err;
   }
+  const notViaGraph = () => {
+    const err = new HttpError(400, "This message can't be sent again to only some of its recipients from this account. Send it to them as a new message.", 'SMTP_FAILED');
+    err.retryable = false;
+    return err;
+  };
+  if (route === 'graph' && message.smtpOnly) throw notViaGraph();
   if (route === 'smtp') {
     try {
       return { ...(await sendRaw(deps, account, message)), via: 'smtp' };
@@ -331,10 +424,12 @@ async function sendMessage(deps, account, message) {
         throw wrapped;
       }
       if (deps.logger) deps.logger.warn(`[smtp] ${account.email}: SMTP AUTH is turned off by Microsoft; sending through Microsoft Graph from now on.`);
+      if (message.smtpOnly) throw notViaGraph();
     }
   }
   const raw = typeof message.graphRaw === 'function' ? await message.graphRaw() : message.graphRaw || message.raw;
-  return { ...(await graph.sendMimeViaGraph(deps, account, raw, message.recipients)), via: 'graph' };
+  const sent = await graph.sendMimeViaGraph(deps, account, raw, message.recipients, { signal: message.signal, onHandover: message.onHandover });
+  return { rejectedErrors: [], ...sent, via: 'graph' };
 }
 
 /**
@@ -377,7 +472,7 @@ const CERT_CODES = new Set([
   'CERT_SIGNATURE_FAILURE',
   'HOSTNAME_MISMATCH',
 ]);
-const CONNECTION_CODES = new Set(['ECONNECTION', 'ETIMEDOUT', 'ESOCKET', 'EDNS', 'ETLS', 'EPROTOCOL', 'ECONNREFUSED', 'ECONNRESET', 'EPIPE', 'ENOTFOUND', 'EAI_AGAIN', 'EHOSTUNREACH', 'ENETUNREACH']);
+const CONNECTION_CODES = new Set(['ECONNECTION', 'ETIMEDOUT', 'ESOCKET', 'EDNS', 'ETLS', 'EPROTOCOL', 'ECONNREFUSED', 'ECONNRESET', 'EPIPE', 'ENOTFOUND', 'EAI_AGAIN', 'EHOSTUNREACH', 'ENETUNREACH', 'EABORT']);
 
 function serverText(err) {
   return String((err && (err.response || err.message)) || '');
@@ -475,6 +570,12 @@ function friendlySmtpError(err, ctx = {}) {
   }
   if (kind === 'auth') {
     if (code === 'ENOAUTH') return 'No login is saved for the outgoing mail server. Enter the SMTP username and password in the account settings.';
+    // 500/502/503/504 to AUTH: the server takes no logins at all (a server for mail between
+    // servers, usually on port 25). Mailtabs only sends through a server it logged in to.
+    const rc = Number(err.responseCode) || 0;
+    if (code === 'EAUTH' && rc >= 500 && rc <= 504 && !/5\.7\.\d/.test(text)) {
+      return `${where} does not accept a login, so Mailtabs can't send through it. Use your provider's server for sending (usually port 587 with STARTTLS, or 465 with TLS).`;
+    }
     if (ctx.oauth || code === 'EOAUTH2' || /XOAUTH2/i.test(String(err.command || ''))) {
       return `The mail server did not accept this account's sign-in for sending. ${RECONNECT_TO_SEND}`;
     }
@@ -524,6 +625,7 @@ function friendlySmtpError(err, ctx = {}) {
     return `Timed out talking to ${where}. Check the outgoing server name, port and security setting.`;
   }
   if (original === 'EHOSTUNREACH' || original === 'ENETUNREACH') return `Could not reach ${where} — the network is unreachable.`;
+  if (code === 'EABORT') return `${where} took too long to accept the message, so sending was stopped.`;
   if (kind === 'connection') return `The connection to ${where} was lost. Try again in a moment.`;
   if (kind === 'temporary') return `The mail server is temporarily unable to accept the message (${truncate(text, 150)}).`;
   if (err.response) return `The mail server said: ${truncate(err.response)}`;
@@ -541,6 +643,7 @@ module.exports = {
   friendlySmtpError,
   classifySmtpError,
   isRetryableSmtpError,
+  MAY_HAVE_BEEN_SENT,
   smtpSettingsFor,
   sendingStatus,
   RECONNECT_TO_SEND,

@@ -19,7 +19,7 @@ function isRetrying(item) {
 }
 
 function StatusPill({ item, now }) {
-  if (item.status === 'failed') return html`<span class="pill pill-danger">Not sent</span>`;
+  if (item.status === 'failed') return html`<span class="pill pill-danger">${item.partial ? 'Partly sent' : 'Not sent'}</span>`;
   if (item.status === 'sending') return html`<span class="pill pill-accent"><${Spinner} size=${10} /> Sending…</span>`;
   if (isRetrying(item)) {
     return html`<span class="pill pill-warning" title=${formatFullDate(item.sendAt)}>
@@ -36,7 +36,9 @@ function confirmDelete(item) {
   if (item.status === 'failed') return deleteOutboxItem(item.id);
   openDialog('confirm', {
     title: 'Delete this message?',
-    message: `“${item.subject || '(no subject)'}” won't be sent. To change it instead, use Edit.`,
+    message: item.partial
+      ? `“${item.subject || '(no subject)'}” was already sent to some recipients. The others won't get it.`
+      : `“${item.subject || '(no subject)'}” won't be sent. To change it instead, use Edit.`,
     confirmLabel: 'Delete',
     danger: true,
     onConfirm: async () => {
@@ -87,7 +89,7 @@ export function OutboxView() {
               : null}
           </div>
           <div class="outbox-actions">
-            ${item.status === 'queued'
+            ${item.status === 'queued' && !item.partial
               ? html`<button type="button" class="btn btn-sm" onClick=${() => cancelOutboxItem(item.id)} title="Stop sending and open it in the composer">
                   <${Icon} name="edit" size=${14} /> Edit
                 </button>`

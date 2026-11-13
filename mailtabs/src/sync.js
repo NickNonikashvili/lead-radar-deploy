@@ -48,6 +48,7 @@ const OTHER_FOLDER_INITIAL_LIMIT = 50; // first sync of a folder other than INBO
 const ON_DEMAND_WINDOW_MS = 30 * 60 * 1000; // 'on_demand' folders are synced while opened this recently
 const FLAG_RECHECK_MS = 15 * 60 * 1000; // servers without CONDSTORE: look at unchanged folders this often
 const MAX_BACKFILL = 500;
+const THREAD_BACKFILL_BATCH = 500; // pre-v2 rows given their conversation headers per folder run
 const DELETE_BATCH = 500;
 const MAX_STAGGER_MS = 500;
 const STOP_WAIT_MS = 10000;
@@ -126,6 +127,18 @@ function createLimiter(max) {
     });
   Object.defineProperty(limit, 'active', { get: () => active });
   return limit;
+}
+
+/** References / In-Reply-To of a FETCH BODY[HEADER.FIELDS (...)] result, each on its own. */
+function threadingHeaders(raw) {
+  const text = Buffer.isBuffer(raw) ? raw.toString('utf8') : String(raw || '');
+  const lines = text.replace(/\r\n[ \t]+/g, ' ').split(/\r?\n/);
+  const value = (name) =>
+    lines
+      .filter((l) => l.toLowerCase().startsWith(`${name}:`))
+      .map((l) => l.slice(name.length + 1))
+      .join(' ');
+  return { references: parseMessageIdList(value('references')), inReplyTo: normalizeMessageId(value('in-reply-to')) || null };
 }
 
 function chunk(list, size) {
@@ -622,6 +635,7 @@ class SyncManager {
     // lists many folders that hold no mail (calendars, contacts, …): ask only about mail folders.
     const statusPerMailFolder = exchange && !hasCapability(client, 'LIST-STATUS');
     let entries = null;
+    const changeMark = folders.folderChangeMark(db, account.id);
     try {
       entries = await client.list(statusPerMailFolder ? {} : { statusQuery: STATUS_QUERY });
       if (entries && statusPerMailFolder) await this._statusOfMailFolders(client, entries, { isGmail: gmail, isExchange: exchange });
@@ -637,7 +651,11 @@ class SyncManager {
       }
     }
     this._accountTx(account, () => {
-      if (entries) {
+      // A folder was created, renamed or deleted here meanwhile: this listing is older than the
+      // table (the change re-listed itself), so it is not applied.
+      if (entries && folders.folderListingStale(db, account.id, changeMark)) {
+        this.logger.info(`[sync] ${account.email}: folders changed while listing them; keeping the current folder list`);
+      } else if (entries) {
         const changes = folders.upsertFolders(db, account.id, entries, { isGmail: gmail, isExchange: exchange });
         db.prepare('UPDATE accounts SET folders_synced_at = ? WHERE id = ?').run(Date.now(), account.id);
         stats.foldersAdded = changes.added;
@@ -799,6 +817,7 @@ class SyncManager {
       if (prevLastUid > 0) {
         await this._refreshFlags(client, account, folder, uidValidity, prevLastUid, state, startModseq, fstats);
       }
+      await this._backfillThreading(client, account, folder, uidValidity, { isGmail });
 
       // Local messages that are no longer in the folder were moved or deleted elsewhere.
       const serverSet = new Set(serverUids);
@@ -837,6 +856,33 @@ class SyncManager {
     if (folder.special_use === '\\Inbox' || stats.folderId === folder.id) stats.flagRefresh = fstats.flagRefresh;
     stats.folders.push(fstats);
     return fstats;
+  }
+
+  /**
+   * Mail stored before conversations existed (schema v2) has no In-Reply-To / References and a
+   * thread key of its own Message-ID, so it never joins a conversation. Read those two headers
+   * for a batch of such rows per run (newest first) and file them under their thread.
+   */
+  async _backfillThreading(client, account, folder, uidValidity, { isGmail = false } = {}) {
+    const db = this.db;
+    const rows = db
+      .prepare('SELECT id, uid, message_id FROM messages WHERE folder_id = ? AND uid_validity = ? AND references_json IS NULL ORDER BY uid DESC LIMIT ?')
+      .all(folder.id, uidValidity, THREAD_BACKFILL_BATCH);
+    if (!rows.length) return;
+    const query = { uid: true, headers: ['references', 'in-reply-to'] };
+    if (isGmail) query.threadId = true;
+    const found = new Map();
+    await this._fetchEach(client, rows.map((r) => r.uid), query, (msg) => found.set(msg.uid, msg));
+    const update = db.prepare('UPDATE messages SET in_reply_to = ?, references_json = ?, thread_key = ? WHERE id = ? AND references_json IS NULL');
+    this._folderTx(account, folder, () => {
+      for (const row of rows) {
+        const msg = found.get(row.uid);
+        // Not readable (or gone): marked done all the same, keeping its own thread key.
+        const { references, inReplyTo } = msg ? threadingHeaders(msg.headers) : { references: [], inReplyTo: null };
+        const key = threadKeyFor({ gmailThreadId: isGmail && msg ? msg.threadId : null, references, inReplyTo, messageId: row.message_id });
+        update.run(inReplyTo, JSON.stringify(references), key, row.id);
+      }
+    });
   }
 
   _oldestLocalUid(folder, uidValidity) {

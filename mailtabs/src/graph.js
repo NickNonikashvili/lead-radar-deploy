@@ -104,19 +104,53 @@ function graphFailure(status, { code, message }, retryAfter) {
     return failure(400, `Microsoft refused the recipient address${said}. Check the addresses and try again.`, 'SMTP_FAILED');
   }
   if (/MimeContent/i.test(code)) return failure(400, `Microsoft could not read the message${said}.`, 'SMTP_FAILED');
-  if (status >= 500 || status === 408) {
+  // 503 (and 408) mean the request was not processed. Any other 5xx may come after Microsoft
+  // accepted the message.
+  if (status === 503 || status === 408) {
     return failure(502, `Microsoft is temporarily unable to accept the message${said}.`, 'SMTP_FAILED', { retryable: true });
   }
+  if (status >= 500) return maybeSent(`Microsoft reported an error (HTTP ${status})${said}.`);
   return failure(502, `Microsoft did not accept the message (HTTP ${status})${said}.`, 'SMTP_FAILED');
+}
+
+// fetch failures that happen before the request reaches Microsoft: nothing was sent.
+const NOT_SENT_NETWORK_CODES = new Set([
+  'ECONNREFUSED',
+  'ENOTFOUND',
+  'EAI_AGAIN',
+  'EHOSTUNREACH',
+  'ENETUNREACH',
+  'UND_ERR_CONNECT_TIMEOUT',
+  'CERT_HAS_EXPIRED',
+  'DEPTH_ZERO_SELF_SIGNED_CERT',
+  'SELF_SIGNED_CERT_IN_CHAIN',
+  'UNABLE_TO_VERIFY_LEAF_SIGNATURE',
+  'ERR_TLS_CERT_ALTNAME_INVALID',
+]);
+const MAY_HAVE_BEEN_SENT = 'It may have been sent anyway: check your Sent folder before sending it again.';
+
+function networkCode(err) {
+  const cause = err && err.cause;
+  return String((cause && (cause.code || (cause.cause && cause.cause.code))) || (err && err.code) || '');
+}
+
+/** A failure after the request may have reached Microsoft: never resent automatically. */
+function maybeSent(message, cause) {
+  const err = failure(502, `${message} ${MAY_HAVE_BEEN_SENT}`, 'SMTP_MAYBE_SENT', { cause });
+  err.maybeSent = true;
+  return err;
 }
 
 /**
  * Send a raw MIME message (with its Bcc header) through Microsoft Graph.
  * @param {string[]} recipients the envelope recipients (Graph reports none of its own)
+ * @param {{ signal?: AbortSignal, onHandover?: () => void }} [opts] signal aborts the request (the
+ *   outbox's deadline); onHandover runs right before the request is sent
  * @returns {Promise<{ accepted: string[], rejected: string[], response: string }>}
- * @throws HttpError (status 400 for problems the user must fix, 502 otherwise; `retryable` set)
+ * @throws HttpError (status 400 for problems the user must fix, 502 otherwise; `retryable` set,
+ *   `maybeSent` when Microsoft may have accepted the message although the request failed)
  */
-async function sendMimeViaGraph(deps, account, raw, recipients = []) {
+async function sendMimeViaGraph(deps, account, raw, recipients = [], { signal, onHandover } = {}) {
   if (!Buffer.isBuffer(raw) || !raw.length) throw new TypeError('sendMimeViaGraph: raw must be a non-empty Buffer');
   if (raw.length > MAX_GRAPH_MIME_BYTES) throw tooLarge(raw.length);
   const provider = oauthProviderForPreset(deps.config, account.provider);
@@ -140,16 +174,22 @@ async function sendMimeViaGraph(deps, account, raw, recipients = []) {
   }
 
   let res;
+  const timeout = AbortSignal.timeout(REQUEST_TIMEOUT_MS);
   try {
+    if (onHandover) onHandover();
     res = await fetch(url, {
       method: 'POST',
       headers: { authorization: `Bearer ${token}`, 'content-type': 'text/plain', accept: 'application/json' },
       body: raw.toString('base64'),
       redirect: 'error',
-      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+      signal: signal ? AbortSignal.any([timeout, signal]) : timeout,
     });
   } catch (err) {
-    throw failure(502, 'Could not reach Microsoft to send the message. Try again in a moment.', 'SMTP_CONNECT_FAILED', { retryable: true, cause: err });
+    if (NOT_SENT_NETWORK_CODES.has(networkCode(err))) {
+      throw failure(502, 'Could not reach Microsoft to send the message. Try again in a moment.', 'SMTP_CONNECT_FAILED', { retryable: true, cause: err });
+    }
+    // Timed out or cut off once the request was on its way: Microsoft may have taken it.
+    throw maybeSent('The connection to Microsoft ended before it confirmed the message.', err);
   }
 
   if (res.status === 202 || (res.status >= 200 && res.status < 300)) {

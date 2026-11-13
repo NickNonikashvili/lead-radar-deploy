@@ -615,11 +615,12 @@ function forwardableAttachments(row) {
  * @param {{ db?, mode: 'new'|'reply'|'replyAll'|'forward', original?: object (messages row; its body
  *   should be downloaded first — see SyncManager.fetchBodyNow), account: object (the From account; for
  *   replies/forwards the account that received the original), accounts: object[] (all of the user's),
+ *   inSentFolder?: boolean (the original sits in that account's Sent folder),
  *   signatureHtml?: string, timeZone?: string, locale?: string }} args
  * @returns payload { accountId, mode, to, cc, bcc, subject, html, attachments, inReplyTo, references,
  *   replyToMessageId, forwardOfMessageId } — attachments carry filename/contentType/size for display.
  */
-function prepareCompose({ mode = 'new', original, account, accounts = [], signatureHtml, timeZone, locale } = {}) {
+function prepareCompose({ mode = 'new', original, account, accounts = [], inSentFolder = false, signatureHtml, timeZone, locale } = {}) {
   if (!account) throw new TypeError('prepareCompose: account is required');
   const signature = signatureBlock(signatureHtml !== undefined ? signatureHtml : account.signature_html);
   const base = {
@@ -640,7 +641,6 @@ function prepareCompose({ mode = 'new', original, account, accounts = [], signat
   if (!MODES.includes(mode)) throw invalid('Invalid compose mode.');
 
   const own = ownAddresses(accounts.length ? accounts : [account]);
-  const isOwn = (r) => own.has(r.address.toLowerCase());
   const from = normalizeAddress(original.from_address || '') ? { name: headerText(original.from_name || ''), address: normalizeAddress(original.from_address) } : null;
   const origTo = storedAddresses(original.to_json);
   const origCc = storedAddresses(original.cc_json);
@@ -669,20 +669,29 @@ function prepareCompose({ mode = 'new', original, account, accounts = [], signat
     };
   }
 
-  // Reply / reply all. Replying to a message this user sent goes back to its recipients.
+  // Reply / reply all. A message the replying account sent (or filed in its Sent folder) is
+  // answered to its recipients. Mail from another of the user's accounts is answered like anyone
+  // else's: back to that address.
+  const mine = ownAddresses([account]);
+  const sentByMe = !!inSentFolder || !!(from && mine.has(from.address.toLowerCase()));
+  let answered = [];
   let to;
   let cc = [];
-  if (from && isOwn(from)) {
+  if (sentByMe) {
     to = origTo;
     if (mode === 'replyAll') cc = origCc;
   } else {
-    to = replyTo.length ? replyTo : from ? [from] : [];
+    answered = replyTo.length ? replyTo : from ? [from] : [];
+    to = answered;
     if (mode === 'replyAll') {
       to = [...to, ...origTo];
       cc = origCc;
     }
   }
   if (mode === 'replyAll') {
+    // Leave out the user's own addresses, except the one being answered.
+    const keep = new Set(answered.map((r) => r.address.toLowerCase()).filter((a) => !mine.has(a)));
+    const isOwn = (r) => own.has(r.address.toLowerCase()) && !keep.has(r.address.toLowerCase());
     const othersTo = to.filter((r) => !isOwn(r));
     // A note to self stays addressed to self rather than to nobody.
     to = othersTo.length || cc.some((r) => !isOwn(r)) ? othersTo : to.slice(0, 1);

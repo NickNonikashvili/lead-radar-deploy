@@ -22,6 +22,7 @@ import {
   validateSendAt,
 } from './compose-utils.js';
 import { parseUntrusted, sanitizeTree, serializeTree } from './sanitize.js';
+import { swapSignatureInHtml } from './editor.js';
 
 const MAX_OPEN = 3;
 const AUTOSAVE_MS = 4000;
@@ -276,12 +277,33 @@ export function openComposer(opts = {}) {
   return id;
 }
 
+const sameDraft = (a, b) => !!a && !!b && Number(a.folderId) === Number(b.folderId) && Number(a.uid) === Number(b.uid);
+
+/** The open composer (other than `exceptId`) whose server draft is `draft`, or null. */
+function composerWithDraft(draft, exceptId) {
+  return (
+    state.composers.find((c) => {
+      if (c.id === exceptId) return false;
+      const rt = runtimes.get(c.id);
+      return sameDraft(c.draft, draft) || sameDraft(rt && rt.lastDraft, draft);
+    }) || null
+  );
+}
+
 function loadPrepared(id, mode, messageId) {
   updateComposer(id, { status: 'loading', error: null });
   composeApi
     .prepare(mode, messageId)
     .then(({ payload, draft }) => {
       if (!payload) throw new Error("Couldn't prepare that message.");
+      // The draft is already open (a new message that saved it, or a window opened from an
+      // older row of it): two windows would each replace the other's saves. Bring that one up.
+      const twin = mode === 'draft' && draft ? composerWithDraft(draft, id) : null;
+      if (twin) {
+        removeComposer(id);
+        focusComposer(twin.id);
+        return;
+      }
       applyPayload(id, payload, draft || null);
     })
     .catch((err) => {
@@ -411,7 +433,10 @@ function applyPayload(id, payload, draft, { stash = null, restored = false } = {
   const to = toRecipientList(p.to);
   const cc = toRecipientList(p.cc);
   const bcc = toRecipientList(p.bcc);
-  const unsaved = (c.mode === 'outbox' || restored || !!stash) && !draft;
+  // A restored message (undo send, Outbox "Edit") holds what was about to be sent, which can be
+  // newer than its server draft (typed after the last autosave): unsaved until its first save,
+  // which replaces that draft.
+  const unsaved = c.mode === 'outbox' || restored || !!stash;
   updateComposer(id, (cur) => ({
     status: 'ready',
     error: null,
@@ -433,10 +458,9 @@ function applyPayload(id, payload, draft, { stash = null, restored = false } = {
     replyToMessageId: p.replyToMessageId ?? null,
     forwardOfMessageId: p.forwardOfMessageId ?? null,
     draft: draft || null,
-    // A restored message that exists nowhere else counts as unsaved, so it gets saved as a draft.
     revision: unsaved ? 1 : 0,
     savedRevision: 0,
-    saveState: draft ? 'saved' : unsaved ? 'dirty' : 'idle',
+    saveState: unsaved ? 'dirty' : draft ? 'saved' : 'idle',
     focusTarget: to.length || cc.length || bcc.length ? 'body' : 'to',
     focusSeq: cur.focusSeq + 1,
   }));
@@ -487,13 +511,23 @@ export function registerCommit(id, fn) {
   return () => rt.commits.delete(fn);
 }
 
+/**
+ * Put `account`'s signature into the body: in the editor, or, while the editor isn't showing the
+ * body (it mounts a moment after the composer is ready, or the window is minimised), into the
+ * HTML it will load. Returns the composer patch.
+ */
+function signaturePatch(id, account) {
+  const signature = (account && account.signatureHtml) || '';
+  const rt = runtime(id);
+  if (rt.editor && rt.editor.swapSignature && rt.editor.swapSignature(signature)) return {};
+  const c = getComposer(id);
+  return { bodyHtml: swapSignatureInHtml(c.bodyHtml, signature), bodyVersion: c.bodyVersion + 1 };
+}
+
 export function setFrom(id, accountId) {
   const c = getComposer(id);
   if (!c || c.accountId === accountId) return;
-  const account = accountById(accountId);
-  const rt = runtime(id);
-  if (rt.editor && rt.editor.swapSignature) rt.editor.swapSignature((account && account.signatureHtml) || '');
-  editComposer(id, { accountId, notice: null });
+  editComposer(id, { accountId, notice: null, ...signaturePatch(id, accountById(accountId)) });
 }
 
 /**
@@ -505,10 +539,7 @@ export function ensureAccount(id) {
   if (!c || c.status !== 'ready' || (c.accountId != null && accountById(c.accountId))) return;
   const accountId = defaultAccountId();
   if (accountId == null) return;
-  const account = accountById(accountId);
-  const rt = runtime(id);
-  if (rt.editor && rt.editor.swapSignature) rt.editor.swapSignature((account && account.signatureHtml) || '');
-  updateComposer(id, { accountId });
+  updateComposer(id, { accountId, ...signaturePatch(id, accountById(accountId)) });
 }
 
 export function expandQuote(id) {
@@ -518,6 +549,15 @@ export function expandQuote(id) {
   if (rt.editor && rt.editor.appendQuote) rt.editor.appendQuote(c.quoteHtml);
   // The quote now lives in the editor (inside a data-mt-quote wrapper).
   updateComposer(id, { quoteCollapsed: false, quoteHtml: '' });
+}
+
+/**
+ * Put the keyboard focus back into a composer (after a confirm strip, panel or notice that had
+ * it went away), so the next keystrokes are typed here and never reach the list shortcuts.
+ * target: 'to' | 'subject' | 'body' (its first line) | 'editor' (the text, where the caret was).
+ */
+export function refocusComposer(id, target = 'body') {
+  updateComposer(id, (cur) => ({ focusTarget: target, focusSeq: cur.focusSeq + 1 }));
 }
 
 export function focusComposer(id) {
@@ -712,7 +752,8 @@ async function flushSave(id) {
 
 export function addFiles(id, fileList) {
   const c = getComposer(id);
-  if (!c || c.status !== 'ready') return;
+  // While sending or closing, what goes out (or into the draft) is already decided.
+  if (!c || c.status !== 'ready' || c.sending || c.closing) return;
   const files = Array.from(fileList || []).filter(Boolean);
   if (!files.length) return;
   const { accepted, rejected } = checkAttachmentFiles(c.attachments, files);
@@ -768,7 +809,7 @@ function startUpload(id, file, existingKey = null) {
 export function retryAttachment(id, key) {
   const c = getComposer(id);
   const a = c && c.attachments.find((x) => x.key === key);
-  if (!a || a.status !== 'error' || !a.file) return;
+  if (!a || a.status !== 'error' || !a.file || c.sending || c.closing) return;
   startUpload(id, a.file, key);
 }
 
@@ -885,6 +926,9 @@ export function resolveConfirm(id, actionId) {
   updateComposer(id, { confirm: null });
   switch (actionId) {
     case 'keep':
+      // Back to where the question came from: the subject when it was missing, else the text
+      // where the caret was.
+      refocusComposer(id, confirm.kind === 'subject' ? 'subject' : 'editor');
       break;
     case 'discard':
       discardComposer(id, { confirmed: true });
@@ -970,6 +1014,14 @@ export async function sendComposer(id, { sendAt = null, confirmed = [] } = {}) {
   if (rt.savePromise) await rt.savePromise.catch(() => {});
   const cur = getComposer(id);
   if (!cur) return;
+  // Files added while waiting (the window refuses new ones now, but one may have started just before).
+  if (cur.attachments.some((a) => a.status !== 'done')) {
+    updateComposer(id, { sending: false });
+    return fail(
+      id,
+      cur.attachments.some((a) => a.status === 'uploading') ? 'Wait for the attachments to finish uploading.' : "Some attachments didn't upload. Try them again or remove them."
+    );
+  }
   let payload;
   try {
     payload = buildPayload(cur, { forDraft: false });
@@ -1053,6 +1105,15 @@ export function dismissSnack(id) {
 }
 
 const WATCH_MS = 3 * 60 * 1000; // follow a send this long after it was due (covers the server's retry a minute later)
+const watchTimers = new Set(); // pending looks at sends being followed (dropped on sign-out)
+
+function later(fn, ms) {
+  const t = setTimeout(() => {
+    watchTimers.delete(t);
+    fn();
+  }, ms);
+  watchTimers.add(t);
+}
 
 /**
  * Follow a message after Send until it is sent or has failed. When the server could not send it
@@ -1064,10 +1125,20 @@ function watchOutbox(outboxId, sendAt) {
   const check = async (failures) => {
     if (!watching()) return;
     try {
-      const { items } = await composeApi.outbox();
+      let item = null;
+      try {
+        ({ outbox: item } = await composeApi.outboxItem(outboxId));
+      } catch (err) {
+        if (err.status !== 404) throw err;
+      }
       if (!watching()) return;
-      const item = (items || []).find((i) => i.id === outboxId);
-      if (!item || item.status === 'sent') {
+      // Deleted from the Outbox meanwhile (or long gone): nothing to report.
+      if (!item || item.status === 'cancelled') {
+        sentStash.delete(outboxId);
+        dismissSnack(state.snack && state.snack.id);
+        return;
+      }
+      if (item.status === 'sent') {
         sentStash.delete(outboxId);
         announceOutbox();
         announceDrafts({ refresh: true });
@@ -1076,25 +1147,34 @@ function watchOutbox(outboxId, sendAt) {
       }
       if (item.status === 'failed') {
         announceOutbox();
-        showSnack({ kind: 'failed', outboxId, text: `Message not sent: ${item.error || 'the mail server refused it.'}`, timeout: 15000 });
+        const text = item.partial ? `Partly sent: ${item.error || 'some recipients were refused.'}` : `Message not sent: ${item.error || 'the mail server refused it.'}`;
+        showSnack({ kind: 'failed', outboxId, text, timeout: 15000 });
         return;
       }
-      if (item.status === 'cancelled') return;
       if (item.status === 'queued' && item.error && item.sendAt <= Date.now() + 120_000) {
         // The first attempt failed; the server tries again shortly (the error says when).
-        const text = `Not sent yet: ${item.error}`;
+        const text = item.partial ? `Partly sent: ${item.error}` : `Not sent yet: ${item.error}`;
         if (state.snack.kind !== 'retrying' || state.snack.text !== text) {
           announceOutbox();
           showSnack({ kind: 'retrying', outboxId, sendAt: item.sendAt, text });
         }
       }
-      if (Date.now() < until) setTimeout(() => check(0), 2000);
+      if (Date.now() < until) later(() => check(0), 2000);
       else showSnack({ kind: 'info', text: 'Still sending… check the Outbox for its status.', timeout: 6000 });
     } catch (_) {
-      if (failures < 5) setTimeout(() => check(failures + 1), 3000);
+      if (failures < 5) later(() => check(failures + 1), 3000);
     }
   };
-  setTimeout(() => check(0), Math.max(0, sendAt - Date.now()) + 1200);
+  later(() => check(0), Math.max(0, sendAt - Date.now()) + 1200);
+}
+
+/**
+ * The Outbox view stopped or deleted a message: the send snackbar for it (if any) must not go on
+ * to say "Message sent", nor offer an Undo that can only fail.
+ */
+export function forgetOutboxItem(outboxId) {
+  sentStash.delete(outboxId);
+  if (state.snack && state.snack.outboxId === outboxId) dismissSnack(state.snack.id);
 }
 
 /** Undo send / unschedule: cancel the queued message and put it back in a composer. */
@@ -1108,7 +1188,8 @@ export async function undoSend(outboxId) {
     openComposer({ mode: 'outbox', payload: payload || {}, draft: draft || null, _stash: stash });
     showSnack({ kind: 'info', text: 'Sending undone', timeout: 3000 });
   } catch (err) {
-    if (err.status === 409) showSnack({ kind: 'info', text: 'Too late to undo: the message has already been sent.', timeout: 6000 });
+    // The server says why: already sent, being sent, or sent to some recipients.
+    if (err.status === 409) showSnack({ kind: 'info', text: err.message || 'Too late to undo: the message has already been sent.', timeout: 6000 });
     else showSnack({ kind: 'failed', outboxId, text: err.message || "Couldn't undo sending.", timeout: 8000 });
   }
 }
@@ -1179,6 +1260,8 @@ export function resetComposers() {
     for (const u of rt.uploads.values()) u.abort();
   }
   runtimes.clear();
+  for (const t of watchTimers) clearTimeout(t);
+  watchTimers.clear();
   sentStash.clear();
   uploadInfo.clear();
   messageAttachmentCache.clear();

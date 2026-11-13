@@ -20,6 +20,7 @@ import {
   markChanged,
   maximizeComposer,
   minimizeComposer,
+  refocusComposer,
   registerEditor,
   removeAttachment,
   resolveConfirm,
@@ -93,7 +94,15 @@ function Notice({ model }) {
   return html`<div class=${`cmp-banner ${model.notice.type === 'error' ? 'is-error' : 'is-info'}`} role=${model.notice.type === 'error' ? 'alert' : 'status'}>
     <${CIcon} name=${model.notice.type === 'error' ? 'alert' : 'info'} size=${16} />
     <span>${model.notice.text}</span>
-    <button type="button" class="icon-btn cmp-banner-x" aria-label="Dismiss" onClick=${() => editComposer(model.id, { notice: null }, { changed: false })}>
+    <button
+      type="button"
+      class="icon-btn cmp-banner-x"
+      aria-label="Dismiss"
+      onClick=${() => {
+        editComposer(model.id, { notice: null }, { changed: false });
+        refocusComposer(model.id, 'editor');
+      }}
+    >
       <${CIcon} name="x" size=${14} />
     </button>
   </div>`;
@@ -378,8 +387,12 @@ export function ComposerWindow({ model, mobile }) {
       if (model.focusTarget === 'to') {
         const input = root.querySelector('[data-field="to"] .chip-input');
         if (input) input.focus();
+      } else if (model.focusTarget === 'subject') {
+        const input = root.querySelector('.cmp-subject');
+        if (input) input.focus();
       } else {
-        controller.focus('start');
+        // 'editor': back where the caret was (after a strip or notice); else the first line.
+        controller.focus(model.focusTarget === 'editor' ? 'keep' : 'start');
       }
     }, 40);
     return () => clearTimeout(t);
@@ -411,7 +424,7 @@ export function ComposerWindow({ model, mobile }) {
     } else if (e.key === 'Escape' && !e.defaultPrevented) {
       e.preventDefault();
       if (model.confirm) resolveConfirm(id, 'keep');
-      else if (customOpen) setCustomOpen(false);
+      else if (customOpen) closeCustom();
       else if (model.maximized) maximizeComposer(id, false);
       else if (mobile) sheetBack();
       else minimizeComposer(id, true);
@@ -446,6 +459,16 @@ export function ComposerWindow({ model, mobile }) {
     if (fileRef.current) fileRef.current.click();
   };
   const send = () => sendComposer(id);
+  // The custom time panel closes without scheduling: focus goes back to the button that opened
+  // it (or the text), never to the page, where single keys are list shortcuts.
+  const closeCustom = () => {
+    setCustomOpen(false);
+    setTimeout(() => {
+      const btn = menuBtnRef.current;
+      if (btn && btn.isConnected && btn.offsetParent !== null && !btn.disabled) btn.focus();
+      else refocusComposer(id, 'editor');
+    }, 0);
+  };
   const schedule = (at) => {
     setMenuOpen(false);
     setCustomOpen(false);
@@ -591,7 +614,7 @@ export function ComposerWindow({ model, mobile }) {
         }}></div>
       </div>
       ${showFormatting ? html`<${FormatToolbar} controller=${controller} className="cmp-toolbar" compact=${mobile} />` : null}
-      ${customOpen ? html`<${CustomSchedule} onSchedule=${schedule} onCancel=${() => setCustomOpen(false)} />` : null}
+      ${customOpen ? html`<${CustomSchedule} onSchedule=${schedule} onCancel=${closeCustom} />` : null}
       <${ConfirmStrip} model=${model} />
       <footer class="cmp-foot">
         ${sheet

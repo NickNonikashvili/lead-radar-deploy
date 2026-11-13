@@ -244,7 +244,7 @@ test('v2: the composer is wired in through its three contract modules only', () 
   const settings = read(path.join(PUBLIC, 'js/components/SettingsDialog.js'));
   assert.match(settings, /import \{ SignatureSettings \} from '\.\.\/compose\/SignatureSettings\.js'/);
   assert.match(settings, /<\$\{SignatureSettings\}/);
-  assert.match(read(path.join(PUBLIC, 'js/actions.js')), /import \{ ensureComposerOwner, openComposer, resetComposers \} from '\.\/compose\/compose\.js'/);
+  assert.match(read(path.join(PUBLIC, 'js/actions.js')), /import \{ ensureComposerOwner, forgetOutboxItem, openComposer, resetComposers \} from '\.\/compose\/compose\.js'/);
   // Outside compose/, nothing reaches into the composer's internals.
   const contract = new Set(['compose.js', 'ComposerHost.js', 'SignatureSettings.js']);
   for (const f of jsFiles.filter((x) => !rel(x).startsWith(`js${path.sep}compose${path.sep}`))) {
@@ -424,4 +424,56 @@ test('v2 api: folder, bulk, undo, thread, settings, outbox and compose endpoints
   } finally {
     globalThis.fetch = realFetch;
   }
+});
+
+test("v2: deleting a folder follows the server's FOLDER_NOT_EMPTY count and subfolders", () => {
+  const src = read(path.join(PUBLIC, 'js/components/FolderDialog.js'));
+  const form = src.slice(src.indexOf('function DeleteForm('), src.indexOf('function EmptyForm('));
+  assert.match(form, /err\.code === 'FOLDER_NOT_EMPTY'/);
+  assert.match(form, /data\.count/, 'uses the message count the server sends');
+  assert.match(form, /data\.subfolders/, 'uses the subfolder count the server sends');
+  // Forced only once the user has seen a message count or the server's own answer: a folder
+  // whose local count is 0 (stale, or subfolders never opened) is checked by the server first.
+  assert.match(form, /force: count !== 0 \|\| serverSaid/);
+  assert.match(form, /setServerSaid\(true\)/);
+});
+
+test('v2: error toasts stay up long enough to read a hint such as Gmail\'s "Show in IMAP"', () => {
+  const src = read(path.join(PUBLIC, 'js/actions.js'));
+  const fn = src.match(/function errorToastMs\(message\) \{([\s\S]*?)\n\}/);
+  assert.ok(fn, 'errorToastMs exists');
+  const errorToastMs = new Function('message', fn[1]); // eslint-disable-line no-new-func
+  assert.equal(errorToastMs('Short failure.'), 7000);
+  const gmail = `Couldn't delete 1 message: Gmail's Trash folder is hidden from mail apps, so this can't be done here. In Gmail's settings (Labels), turn on "Show in IMAP" for Trash.`;
+  assert.ok(errorToastMs(gmail) >= 9000, `long hint: ${errorToastMs(gmail)} ms`);
+  assert.equal(errorToastMs('x'.repeat(5000)), 15000, 'capped');
+  assert.match(src, /type === 'error' \? errorToastMs\(message\)/);
+  // Bulk failures show the server's own sentence (NO_TRASH / NO_ARCHIVE carry what to do).
+  assert.match(src, /failed\[0\]\.error \|\| 'the mail server refused'/);
+});
+
+test('reader: "to me, …" names the user once when several of their accounts got the message', () => {
+  const src = read(path.join(PUBLIC, 'js/components/MessageParts.js'));
+  const m = src.match(/export function recipientsSummary\(message, account, accounts = \[\]\) \{([\s\S]*?)\n\}/);
+  assert.ok(m, 'recipientsSummary exists');
+  const recipientsSummary = new Function('message', 'account', 'accounts = []', m[1]); // eslint-disable-line no-new-func
+  const accounts = [{ email: 'I1@test.local' }, { email: 'i2@test.local' }];
+  const msg = {
+    to: [{ name: '', address: 'i1@test.local' }],
+    cc: [{ name: 'Ivan', address: 'i2@test.local' }, { name: 'Carol Example', address: 'carol@example.com' }, { name: '', address: 'other@corp.example' }],
+  };
+  assert.equal(recipientsSummary(msg, accounts[0], accounts), 'to me, Carol Example, other@corp.example');
+  assert.equal(recipientsSummary({ to: [], cc: [] }, accounts[0], accounts), 'to undisclosed recipients');
+  const many = { to: ['a', 'b', 'c', 'd', 'e'].map((x) => ({ name: x.toUpperCase(), address: `${x}@x.com` })), cc: [] };
+  assert.equal(recipientsSummary(many, accounts[0], accounts), 'to A, B, C +2');
+});
+
+test('a move the server refused shows the open message again (desktop, same list, nothing else opened)', () => {
+  const src = read(path.join(PUBLIC, 'js/actions.js'));
+  const fn = src.slice(src.indexOf('export async function moveMessages('), src.indexOf('/** Permanently delete, after asking. */'));
+  assert.match(fn, /const reopenIfBack = \(backIds\) => \{/);
+  assert.match(fn, /isMobile\(\)\) return;/);
+  assert.match(fn, /now\.list\.key !== s\.list\.key\) return;/);
+  assert.match(fn, /reopenIfBack\(new Set\(restoredOnFail\.map\(\(m\) => m\.id\)\)\);/, 'after a per-account failure');
+  assert.match(fn, /toastError\(err, `Couldn't \$\{verb\} the message\.`\);\s*reopenIfBack\(targetIds\);/, 'after a failed request');
 });

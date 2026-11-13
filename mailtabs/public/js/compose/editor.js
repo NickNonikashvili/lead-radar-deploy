@@ -48,6 +48,48 @@ export function normaliseLinkInput(input) {
   return null;
 }
 
+function blankLineEl() {
+  const div = document.createElement('div');
+  div.appendChild(document.createElement('br'));
+  return div;
+}
+
+/** Replace, add or remove the data-mt-signature block inside `root` (editor content). */
+function swapSignatureIn(root, signatureHtml) {
+  const existing = root.querySelector('[data-mt-signature]');
+  const frag = signatureHtml ? htmlToFragment(signatureHtml, document, { mode: 'editor' }) : null;
+  const hasContent = frag && frag.childNodes.length > 0;
+  if (existing) {
+    if (hasContent) existing.replaceChildren(frag);
+    else {
+      // Also drop the blank line that separated it from the text.
+      const prev = existing.previousElementSibling;
+      existing.remove();
+      if (prev && prev.textContent === '' && !prev.querySelector('img') && prev !== root.firstElementChild) prev.remove();
+    }
+  } else if (hasContent) {
+    const wrap = document.createElement('div');
+    wrap.setAttribute('data-mt-signature', '1');
+    wrap.appendChild(frag);
+    const quote = root.querySelector('[data-mt-quote]');
+    if (quote) {
+      root.insertBefore(blankLineEl(), quote);
+      root.insertBefore(wrap, quote);
+    } else {
+      root.appendChild(blankLineEl());
+      root.appendChild(wrap);
+    }
+  }
+}
+
+/** swapSignatureIn for body HTML that isn't in an editor (yet): same input and output format as the editor's. */
+export function swapSignatureInHtml(bodyHtml, signatureHtml) {
+  const root = document.createElement('div');
+  root.appendChild(htmlToFragment(bodyHtml || '', document, { mode: 'editor' }));
+  swapSignatureIn(root, signatureHtml);
+  return serializeElement(root, { mode: 'send' });
+}
+
 /**
  * Owns one contenteditable element. Components call attach()/detach(); the composer reads the
  * content with getHtml() (sanitised for sending) and listens through `onChange`.
@@ -150,40 +192,18 @@ export class EditorController {
   }
 
   blankLine() {
-    const div = document.createElement('div');
-    div.appendChild(document.createElement('br'));
-    return div;
+    return blankLineEl();
   }
 
-  /** Replace (or add/remove) the data-mt-signature block. */
+  /**
+   * Replace (or add/remove) the data-mt-signature block. Returns false when the editor isn't
+   * showing anything yet (the caller then changes the HTML it is about to load instead).
+   */
   swapSignature(signatureHtml) {
-    if (!this.el) return;
-    const existing = this.el.querySelector('[data-mt-signature]');
-    const frag = signatureHtml ? htmlToFragment(signatureHtml, document, { mode: 'editor' }) : null;
-    const hasContent = frag && frag.childNodes.length > 0;
-    if (existing) {
-      if (hasContent) existing.replaceChildren(frag);
-      else {
-        // Also drop the blank line that separated it from the text.
-        const prev = existing.previousElementSibling;
-        existing.remove();
-        if (prev && prev.textContent === '' && !prev.querySelector('img') && prev !== this.el.firstElementChild) prev.remove();
-      }
-    } else if (hasContent) {
-      const wrap = document.createElement('div');
-      wrap.setAttribute('data-mt-signature', '1');
-      wrap.appendChild(frag);
-      const quote = this.el.querySelector('[data-mt-quote]');
-      const blank = this.blankLine();
-      if (quote) {
-        this.el.insertBefore(blank, quote);
-        this.el.insertBefore(wrap, quote);
-      } else {
-        this.el.appendChild(blank);
-        this.el.appendChild(wrap);
-      }
-    }
+    if (!this.el) return false;
+    swapSignatureIn(this.el, signatureHtml);
     this.notify();
+    return true;
   }
 
   /** Move a collapsed quote into the editor. */
@@ -197,10 +217,22 @@ export class EditorController {
     if (typeof wrap.scrollIntoView === 'function') wrap.scrollIntoView({ block: 'nearest' });
   }
 
+  /** where: 'start' (first line), 'end', or 'keep' (where the caret was, else the end). */
   focus(where = 'start') {
     if (!this.el) return;
-    this.el.focus({ preventScroll: where !== 'end' });
     const sel = window.getSelection();
+    if (where === 'keep') {
+      const inside = !!sel && sel.rangeCount > 0 && this.el.contains(sel.getRangeAt(0).startContainer);
+      this.el.focus({ preventScroll: true });
+      if (inside) return;
+      if (sel && this.savedRange && this.el.contains(this.savedRange.startContainer)) {
+        sel.removeAllRanges();
+        sel.addRange(this.savedRange);
+        return;
+      }
+      where = 'end';
+    }
+    this.el.focus({ preventScroll: where !== 'end' });
     if (!sel) return;
     const range = document.createRange();
     if (where === 'end') {

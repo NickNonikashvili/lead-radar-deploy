@@ -161,12 +161,22 @@ test('queue -> undo window -> cancel -> send: exact MIME, Sent copy, \\Answered,
     assert.equal(s2Inbox.length, 1);
     assert.equal(s2Inbox[0].envelope.subject, 'Re: Question');
 
-    // Copy in s1's Sent (Other-IMAP account with a \Sent folder), once, flagged \Seen.
+    // Copy in s1's Sent (Other-IMAP account with a \Sent folder), once, flagged \Seen: the message
+    // that was sent plus its Bcc header, so the sender sees whom they Bcc'd (BUG-SENT-BCC).
     const sentFolder = await messagesIn('s1', 'Sent');
     assert.equal(sentFolder.length, 1);
     assert.ok(sentFolder[0].flags.has('\\Seen'));
-    const trimEnd = (b) => b.toString().replace(/(\r\n)+$/, '');
-    assert.equal(trimEnd(sentFolder[0].source), trimEnd(sent.raw), 'the Sent copy is the very message that was sent');
+    const copy = sentFolder[0];
+    assert.deepEqual(headerLines(copy.source, 'Bcc'), ['Bcc: Hidden <hidden@example.org>']);
+    assert.deepEqual(copy.envelope.bcc.map((a) => a.address), ['hidden@example.org']);
+    const withoutBcc = (raw) => headerBlock(raw).split('\r\n').filter((l) => !/^bcc:/i.test(l) && !/boundary=/i.test(l));
+    assert.deepEqual(withoutBcc(copy.source), withoutBcc(sent.raw), 'otherwise the same headers: Message-ID, Date, From, To, Subject…');
+    const parsedCopy = await parse(copy.source);
+    assert.equal(parsedCopy.messageId, parsed.messageId);
+    assert.equal(parsedCopy.date.getTime(), parsed.date.getTime());
+    assert.equal(parsedCopy.html, parsed.html);
+    assert.equal(parsedCopy.text, parsed.text);
+    assert.deepEqual(parsedCopy.attachments.map((a) => [a.filename, a.content.toString()]), [['notes.txt', 'the notes']]);
     const sentRow = env.db.prepare("SELECT * FROM folders WHERE account_id = ? AND special_use = '\\Sent'").get(account.id);
     assert.ok(synced.includes(sentRow.id), 'Sent synced in the background');
 
@@ -199,7 +209,10 @@ test('Sent copy: skipped for providers whose server files it, never duplicated o
     assert.equal(sentCopyPolicy({ ...ctx.account, smtp_host: 'smtp.gmail.com' }), 'server');
     assert.equal(sentCopyPolicy({ ...ctx.account, provider: 'zoho', smtp_host: null }), 'server');
     assert.equal(sentCopyPolicy({ ...ctx.account, provider: 'icloud', smtp_host: null }), 'append');
-    assert.equal(sentCopyPolicy({ ...ctx.account, provider: 'imap', smtp_host: 'smtp.gmail.com' }), 'server', 'judged by the outgoing server');
+    // Gmail files its copy in the Gmail mailbox of the SMTP login, not on this IMAP server.
+    assert.equal(sentCopyPolicy({ ...ctx.account, provider: 'imap', smtp_host: 'smtp.gmail.com' }), 'if-folder', 'another provider sends: own copy');
+    assert.equal(sentCopyPolicy({ ...ctx.account, provider: 'yahoo', imap_host: 'imap.mail.yahoo.com', smtp_host: 'smtp.office365.com' }), 'append');
+    assert.equal(sentCopyPolicy({ ...ctx.account, provider: 'imap', imap_host: 'imap.gmail.com', smtp_host: 'smtp.gmail.com' }), 'server', 'same provider on both sides');
     assert.equal(sentCopyPolicy({ ...ctx.account, provider: 'imap', smtp_host: 'mail.example.org' }), 'if-folder');
   } finally {
     await ctx.outbox.stop();
@@ -222,6 +235,10 @@ test('Sent copy: skipped for providers whose server files it, never duplicated o
     await ctx.outbox.idle();
     const sent = await messagesIn('s1', 'Sent');
     assert.deepEqual(sent.map((m) => m.envelope.subject).sort(), ['Hello from the outbox', 'Second']);
+    // Without Bcc recipients the copy is the very message that was sent.
+    const trimEnd = (b) => b.toString().replace(/(\r\n)+$/, '');
+    const second = sent.find((m) => m.envelope.subject === 'Second');
+    assert.equal(trimEnd(second.source), trimEnd(smtpServer.messages[smtpServer.messages.length - 1].raw));
   } finally {
     await ctx.outbox.stop();
     ctx.env.close();
@@ -291,6 +308,8 @@ test('failures: friendly errors, one automatic retry for connection problems onl
       attempts: 1,
       createdAt: row.created_at,
       sentAt: null,
+      partial: false,
+      notDeliveredTo: [],
     });
 
     // Fixed password + retry -> sent.
@@ -323,13 +342,16 @@ test('failures: friendly errors, one automatic retry for connection problems onl
     assert.equal(row.status, 'failed');
     assert.match(row.error, /refused the recipient address: nobody@example.org/);
 
-    // Some recipients refused: sent, the refused ones noted.
+    // Some recipients refused for good (5xx): delivered to the others, the row stays in the
+    // outbox (failed) with the refused ones, and is not retried by itself.
     const partRow = outbox.queue(userId, payload({ accountId: account.id, to: ['s2@test.local', 'nobody@example.org'], bcc: [] }));
     await outbox.sendDue();
     await outbox.idle();
     row = outbox.get(userId, partRow.id);
-    assert.equal(row.status, 'sent');
-    assert.equal(row.error, 'Not delivered to: nobody@example.org');
+    assert.equal(row.status, 'failed');
+    assert.match(row.error, /^Sent to s2@test\.local, but not delivered to nobody@example\.org \(.*User unknown.*\)\.$/);
+    assert.deepEqual([outboxItemJson(row).partial, outboxItemJson(row).notDeliveredTo], [true, ['nobody@example.org']]);
+    assert.throws(() => outbox.cancel(userId, partRow.id), (err) => err.code === 'TOO_LATE', 'a partly sent message cannot be taken back');
 
     // An attachment that disappeared before sending.
     const up = uploads.saveUpload(deps, userId, { filename: 'x.txt', contentType: 'text/plain', buffer: Buffer.from('x') });

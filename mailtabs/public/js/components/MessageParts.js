@@ -4,11 +4,11 @@ import { attachmentUrl } from '../api.js';
 import { Icon } from '../icons.js';
 import { formatAddress, formatBytes } from '../format.js';
 
-/** "to me, Priya, Marcus +2" — any of the user's own addresses reads as "me". */
+/** "to me, Priya, Marcus +2" — any of the user's own addresses reads as "me" (once, however many of them got it). */
 export function recipientsSummary(message, account, accounts = []) {
   const mine = new Set([account && account.email, ...accounts.map((a) => a.email)].filter(Boolean).map((e) => e.toLowerCase()));
   const label = (e) => (e && e.address && mine.has(e.address.toLowerCase()) ? 'me' : (e && (e.name || e.address)) || '');
-  const people = [...(message.to || []), ...(message.cc || [])].map(label).filter(Boolean);
+  const people = [...(message.to || []), ...(message.cc || [])].map(label).filter((name, i, all) => name && (name !== 'me' || all.indexOf('me') === i));
   if (!people.length) return 'to undisclosed recipients';
   return `to ${people.length > 3 ? `${people.slice(0, 3).join(', ')} +${people.length - 3}` : people.join(', ')}`;
 }

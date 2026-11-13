@@ -227,6 +227,64 @@ const MIGRATIONS = [
   `
   ALTER TABLE accounts ADD COLUMN smtp_disabled_at INTEGER;
   `,
+
+  // v4 —
+  //  * outbox_uploads: the uploads each outbox row needs (an indexed lookup instead of parsing
+  //    every waiting payload). The trigger records a payload's own uploads; the outbox adds the
+  //    ones it reaches through carried_parts.
+  //  * outbox.handed_over_at: when the current attempt started handing the message to the
+  //    server (after that, a lost connection means "may have been sent", never an automatic
+  //    resend). outbox.pending_recipients: JSON list of recipients a partly delivered message
+  //    still has to reach (NULL = all of them).
+  //  * carried_parts: attachments and inline images of a draft that a later save replaced, kept
+  //    as uploads, so a composer that still refers to them by the old draft's row keeps working.
+  //  * moved_messages: where a moved message went, so references to its old row (a forward's
+  //    attachments) still find it.
+  //  * messages_pre_v2: the rows stored before conversations existed (no References read yet),
+  //    which the sync gives their threading headers a batch at a time.
+  `
+  CREATE TABLE outbox_uploads (
+    outbox_id INTEGER NOT NULL REFERENCES outbox(id) ON DELETE CASCADE,
+    upload_id TEXT NOT NULL,
+    PRIMARY KEY (outbox_id, upload_id)
+  );
+  CREATE INDEX outbox_uploads_upload ON outbox_uploads(upload_id);
+  CREATE TRIGGER outbox_uploads_ai AFTER INSERT ON outbox BEGIN
+    INSERT OR IGNORE INTO outbox_uploads (outbox_id, upload_id)
+      SELECT new.id, json_extract(a.value, '$.uploadId')
+        FROM json_each(CASE WHEN json_valid(new.payload) THEN new.payload ELSE '{}' END, '$.attachments') a
+       WHERE a.type = 'object' AND json_type(a.value, '$.uploadId') = 'text';
+  END;
+  INSERT OR IGNORE INTO outbox_uploads (outbox_id, upload_id)
+    SELECT o.id, json_extract(a.value, '$.uploadId')
+      FROM outbox o, json_each(CASE WHEN json_valid(o.payload) THEN o.payload ELSE '{}' END, '$.attachments') a
+     WHERE a.type = 'object' AND json_type(a.value, '$.uploadId') = 'text';
+
+  ALTER TABLE outbox ADD COLUMN handed_over_at INTEGER;
+  ALTER TABLE outbox ADD COLUMN pending_recipients TEXT;
+
+  CREATE TABLE carried_parts (
+    message_id INTEGER NOT NULL,
+    part_index INTEGER NOT NULL,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    upload_id TEXT NOT NULL REFERENCES uploads(id) ON DELETE CASCADE,
+    PRIMARY KEY (message_id, part_index)
+  );
+  CREATE INDEX carried_parts_upload ON carried_parts(upload_id);
+
+  CREATE TABLE moved_messages (
+    old_id INTEGER PRIMARY KEY,
+    account_id INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+    message_id TEXT,
+    folder_id INTEGER,
+    uid INTEGER,
+    uid_validity INTEGER,
+    moved_at INTEGER NOT NULL
+  );
+  CREATE INDEX moved_messages_at ON moved_messages(moved_at);
+
+  CREATE INDEX messages_pre_v2 ON messages(folder_id, uid) WHERE references_json IS NULL;
+  `,
 ];
 
 function migrate(db) {

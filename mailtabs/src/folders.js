@@ -174,7 +174,10 @@ function classifyFolder(entry, { isGmail = false, isExchange = false } = {}) {
   if (!parentPath) parentPath = null;
 
   let syncMode = 'auto';
-  if (ON_DEMAND_SPECIAL_USES.has(specialUse)) syncMode = 'on_demand';
+  // Gmail's Starred holds starred mail that lives nowhere else but All Mail (starred, then
+  // archived): it backs the unified Starred view, so it is synced like a real folder.
+  if (isGmail && specialUse === '\\Flagged') syncMode = 'auto';
+  else if (ON_DEMAND_SPECIAL_USES.has(specialUse)) syncMode = 'on_demand';
   else if (isGmail && GMAIL_SYSTEM_PREFIX.test(path) && !GMAIL_SYNCED_SPECIAL_USES.has(specialUse)) syncMode = 'on_demand';
   else if (isExchange && !isInbox && specialUseSource !== 'server' && isExchangeNonMail(segments)) {
     syncMode = HIDDEN;
@@ -438,6 +441,50 @@ function removeFolderLocal(db, accountId, path) {
   })();
 }
 
+// ---------------------------------------------------------------------------------------------
+// Folder changes made here (create / rename / delete) vs. the sync's folder listing
+// ---------------------------------------------------------------------------------------------
+//
+// The sync lists an account's folders and applies the listing a moment (seconds, on servers
+// without LIST-STATUS) later. A listing taken before or while the user renamed, created or
+// deleted a folder here is stale: applied, it would delete the renamed folder with its mail or
+// bring a deleted one back. Each change bumps a counter per account; the sync compares.
+
+const folderChanges = new WeakMap(); // db -> Map(accountId -> { version, active })
+
+function changeEntry(db, accountId) {
+  if (!folderChanges.has(db)) folderChanges.set(db, new Map());
+  const byAccount = folderChanges.get(db);
+  const key = Number(accountId);
+  if (!byAccount.has(key)) byAccount.set(key, { version: 0, active: 0 });
+  return byAccount.get(key);
+}
+
+/** A folder change of the account starts; call the returned function when it is over. */
+function beginFolderChange(db, accountId) {
+  const entry = changeEntry(db, accountId);
+  entry.active += 1;
+  entry.version += 1;
+  let ended = false;
+  return () => {
+    if (ended) return;
+    ended = true;
+    entry.active -= 1;
+    entry.version += 1;
+  };
+}
+
+/** Taken before listing the folders; pass it to folderListingStale() before applying the listing. */
+function folderChangeMark(db, accountId) {
+  return changeEntry(db, accountId).version;
+}
+
+/** Did a folder change start, run or finish since `mark` was taken? */
+function folderListingStale(db, accountId, mark) {
+  const entry = changeEntry(db, accountId);
+  return entry.active > 0 || entry.version !== mark;
+}
+
 /** Is this folder row one of Exchange's non-mail folders (never synced, shown or moved into)? */
 function isHiddenFolder(row) {
   return !!row && row.sync_mode === HIDDEN;
@@ -456,6 +503,9 @@ module.exports = {
   renameFolderLocal,
   removeFolderLocal,
   isHiddenFolder,
+  beginFolderChange,
+  folderChangeMark,
+  folderListingStale,
   SPECIAL_USES,
   MAX_FOLDERS_PER_ACCOUNT,
   HIDDEN_SYNC_MODE: HIDDEN,

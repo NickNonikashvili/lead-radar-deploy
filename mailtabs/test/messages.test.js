@@ -16,6 +16,7 @@ const {
   signupUser,
   seedAccount,
   seedMessage,
+  seedFolder,
   IMAP_TEST,
   imapAvailable,
   resetMailbox,
@@ -99,7 +100,14 @@ test('message list: tabs, account filter, search, flags, paging, validation', as
   const evil = seedAccount(srv.db, srv.crypto, malloryUser.id, { email: 'evil@x.com' });
   const base = 1_700_000_000_000;
   const w1 = seedMessage(srv.db, work.id, { subject: 'Budget review', date: base + 3000, is_read: 0 });
-  const w2 = seedMessage(srv.db, work.id, { subject: 'Lunch?', date: base + 2000, is_read: 1, is_starred: 1 });
+  const w2 = seedMessage(srv.db, work.id, {
+    subject: 'Lunch?',
+    date: base + 2000,
+    is_read: 1,
+    is_starred: 1,
+    to: [{ name: 'Me', address: 'me@work.com' }, { name: '', address: 'pat@example.com' }],
+    cc: [{ name: 'Cc Person', address: 'cc@example.com' }],
+  });
   const h1 = seedMessage(srv.db, home.id, { subject: 'Holiday budget', date: base + 1000, is_read: 0, has_attachments: 1 });
   seedMessage(srv.db, evil.id, { subject: 'Budget secrets of mallory', date: base + 5000 });
   const workTab = (await alice.post('/api/tabs', { name: 'Work', accountIds: [work.id] })).body.tab;
@@ -131,6 +139,12 @@ test('message list: tabs, account filter, search, flags, paging, validation', as
     isAnswered: false,
     isDraft: false,
     threadKey: null,
+    // The To recipients only (Cc stays in the message detail), for the Sent / Drafts rows.
+    to: [
+      { name: 'Me', address: 'me@work.com' },
+      { name: '', address: 'pat@example.com' },
+    ],
+    toCount: 2,
   });
   assert.deepEqual(await listIds(''), [w1.id, w2.id, h1.id], 'tab defaults to all');
   assert.deepEqual(await listIds(`?tab=${workTab.id}`), [w1.id, w2.id]);
@@ -163,6 +177,23 @@ test('message list: tabs, account filter, search, flags, paging, validation', as
   // Mallory sees only Mallory's mail.
   assert.deepEqual((await mallory.get('/api/messages')).body.messages.map((m) => m.subject), ['Budget secrets of mallory']);
   assert.deepEqual((await mallory.get('/api/messages?q=budget')).body.messages.length, 1);
+
+  // Folders: a folder lists its mail; another user's folder and Exchange's hidden non-mail
+  // folders (Calendar, Contacts, ...) don't exist, for listing and for mark-all-read alike.
+  assert.deepEqual(await listIds(`?folder=${w1.folder_id}`), [w1.id, w2.id]);
+  const evilFolder = seedFolder(srv.db, evil.id, 'Secret');
+  const hidden = seedFolder(srv.db, work.id, 'Calendar', { sync_mode: 'hidden' });
+  seedMessage(srv.db, work.id, { subject: 'Calendar item', mailbox: 'Calendar', folder_id: hidden.id });
+  for (const id of [evilFolder.id, hidden.id]) {
+    const res = await alice.get(`/api/messages?folder=${id}`);
+    assert.equal(res.status, 404, `folder ${id}: ${JSON.stringify(res.body)}`);
+    assert.equal(res.body.code, 'NOT_FOUND');
+    assert.equal((await alice.post('/api/messages/mark-all-read', { folder: id })).status, 404);
+    assert.equal((await alice.post('/api/messages/bulk', { ids: [w1.id], action: 'move', folderId: id })).status, 404, 'no moves into it');
+  }
+  const tree = (await alice.get('/api/folders')).body;
+  const workFolders = tree.accounts.find((a) => a.accountId === work.id).folders.map((f) => f.path);
+  assert.ok(workFolders.includes('INBOX') && !workFolders.includes('Calendar'), `folders: ${workFolders}`);
 });
 
 test('message detail: shape, deferred bodies, cross-user 404', async (t) => {

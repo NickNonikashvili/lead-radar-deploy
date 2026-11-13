@@ -124,6 +124,7 @@ function annotate(err, options) {
 /** Create a client, attach the mandatory error listener and connect it. */
 async function connectWithOptions(options, logger = silentLogger) {
   const client = new ImapFlow(options);
+  rememberMissingPaths(client);
   // ImapFlow emits 'error' for socket-level failures; without a listener Node would crash.
   client.on('error', (err) => {
     logger.warn(`[imap] ${options.displayHost || options.host}: ${err && err.message}`);
@@ -135,6 +136,24 @@ async function connectWithOptions(options, logger = silentLogger) {
     throw annotate(err, options);
   }
   return client;
+}
+
+/**
+ * imapflow marks an error for a folder that does not exist (err.mailboxMissing) without saying
+ * which folder; every SELECT (getMailboxLock included) goes through mailboxOpen, so note it there.
+ */
+function rememberMissingPaths(client) {
+  const open = client.mailboxOpen.bind(client);
+  client.mailboxOpen = async (path, ...rest) => {
+    try {
+      return await open(path, ...rest);
+    } catch (err) {
+      if (err && typeof err === 'object' && err.mailboxMissing && !err.path) {
+        err.path = Array.isArray(path) ? path.join('/') : String(path);
+      }
+      throw err;
+    }
+  };
 }
 
 /** Connected ImapFlow client for an account. The caller must logout() it. */
@@ -409,7 +428,11 @@ function friendlyImapError(err, ctx = {}) {
   }
   if (code === 'ETHROTTLE') return 'The mail server is limiting how often we can connect. It will be retried automatically.';
   if (code === 'LockTimeout') return 'The mailbox was busy. Try again in a moment.';
-  if (err.mailboxMissing) return `The folder "${err.path || 'INBOX'}" was not found on the mail server.`;
+  if (err.mailboxMissing) {
+    return err.path
+      ? `The folder "${truncate(err.path, 100)}" was not found on the mail server. It may have been deleted or renamed in another mail app.`
+      : 'This folder was not found on the mail server. It may have been deleted or renamed in another mail app.';
+  }
   if (serverText) return `The mail server said: ${truncate(serverText)}`;
   if (message && message !== 'Command failed') return `Mail server error: ${truncate(message)}`;
   return 'Unknown error talking to the mail server.';
