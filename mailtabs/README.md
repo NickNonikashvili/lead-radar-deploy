@@ -212,7 +212,8 @@ This is the **only** way to connect Microsoft mail accounts.
 
 Each Outlook.com user must also turn on **Settings → Mail → Forwarding and IMAP → "Let devices and apps
 use IMAP"** (it's off by default). Work/school tenants may need an admin to grant consent or enable IMAP
-for the mailbox.
+for the mailbox. Organisations that only allow admin-approved apps must approve all the permissions
+above, including *Mail.Send*; otherwise sign-in shows "Need admin approval".
 
 If you set this up before Mailtabs could send mail, add the two new permissions above and have each
 Outlook user click *Reconnect* on their account once.
