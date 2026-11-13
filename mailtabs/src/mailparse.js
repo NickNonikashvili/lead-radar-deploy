@@ -430,6 +430,72 @@ function headerDate(parsed) {
   return parsed.date.getTime();
 }
 
+// ---------------------------------------------------------------------------------------------
+// Message-IDs and conversations
+// ---------------------------------------------------------------------------------------------
+
+// RFC 5322 caps a header line at 998 characters; nothing longer is a real Message-ID.
+const MAX_MESSAGE_ID_LENGTH = 998;
+// Long mailing-list threads carry hundreds of References. The first one (the thread root) and
+// the most recent ones are what threading needs; the rest would only bloat every row.
+const MAX_REFERENCES = 100;
+// eslint-disable-next-line no-control-regex
+const MESSAGE_ID_TOKEN = /<([^<>\s\u0000-\u001f\u007f]{1,996})>/g;
+
+/** Flatten a header value that may be a string, an array, or nested arrays of strings. */
+function headerStrings(value) {
+  if (value === null || value === undefined) return [];
+  if (Array.isArray(value)) return value.flatMap(headerStrings);
+  if (Buffer.isBuffer(value)) return [value.toString('utf8')];
+  return typeof value === 'string' ? [value] : [];
+}
+
+/**
+ * Every Message-ID in a References / In-Reply-To style value, in order, as "<id>" strings.
+ * Accepts the raw header text, mailparser's parsed form (string or array), or a raw
+ * "References: …" header block. Duplicates are dropped; very long lists keep the first entry
+ * (the thread root) and the newest ones.
+ */
+function parseMessageIdList(value) {
+  const out = [];
+  const seen = new Set();
+  for (const text of headerStrings(value)) {
+    const s = text.replace(/^\s*(?:references|in-reply-to)\s*:/i, '');
+    for (const m of s.matchAll(MESSAGE_ID_TOKEN)) {
+      const id = `<${m[1]}>`;
+      if (!seen.has(id)) {
+        seen.add(id);
+        out.push(id);
+      }
+    }
+  }
+  if (out.length > MAX_REFERENCES) return [out[0], ...out.slice(out.length - (MAX_REFERENCES - 1))];
+  return out;
+}
+
+/** The first Message-ID of a header value as "<id>", or null. Bare ids get their brackets back. */
+function normalizeMessageId(value) {
+  const ids = parseMessageIdList(value);
+  if (ids.length) return ids[0];
+  const bare = headerStrings(value).join(' ').trim();
+  // eslint-disable-next-line no-control-regex
+  if (bare && bare.length <= MAX_MESSAGE_ID_LENGTH - 2 && !/[\s<>\u0000-\u001f\u007f]/.test(bare)) return `<${bare}>`;
+  return null;
+}
+
+/**
+ * The key that groups a message with the rest of its conversation:
+ *   'gm:' + Gmail's X-GM-THRID when the server provided one,
+ *   else 'mid:' + the first References entry (the thread root),
+ *   else 'mid:' + In-Reply-To, else 'mid:' + the message's own Message-ID, else null.
+ */
+function threadKeyFor({ gmailThreadId, references, inReplyTo, messageId } = {}) {
+  const gm = gmailThreadId === null || gmailThreadId === undefined ? '' : String(gmailThreadId).trim();
+  if (/^[0-9A-Za-z_-]{1,64}$/.test(gm)) return `gm:${gm}`;
+  const root = parseMessageIdList(references)[0] || normalizeMessageId(inReplyTo) || normalizeMessageId(messageId);
+  return root ? `mid:${root}` : null;
+}
+
 /**
  * Parse a raw RFC 822 message.
  * @param {Buffer|string} source
@@ -468,6 +534,8 @@ async function parseRawMessage(source) {
 
   return {
     messageId: parsed.messageId || null,
+    inReplyTo: normalizeMessageId(parsed.inReplyTo),
+    references: parseMessageIdList(parsed.references),
     subject: typeof parsed.subject === 'string' ? parsed.subject : null,
     from,
     to: flattenAddresses(parsed.to),
@@ -485,6 +553,9 @@ async function parseRawMessage(source) {
 
 module.exports = {
   parseRawMessage,
+  parseMessageIdList,
+  normalizeMessageId,
+  threadKeyFor,
   sanitizeEmailHtml,
   rewriteCidLinks,
   makeSnippet,

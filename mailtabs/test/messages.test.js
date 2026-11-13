@@ -126,6 +126,11 @@ test('message list: tabs, account filter, search, flags, paging, validation', as
     isRead: true,
     isStarred: true,
     hasAttachments: false,
+    // v2
+    folderId: w2.folder_id,
+    isAnswered: false,
+    isDraft: false,
+    threadKey: null,
   });
   assert.deepEqual(await listIds(''), [w1.id, w2.id, h1.id], 'tab defaults to all');
   assert.deepEqual(await listIds(`?tab=${workTab.id}`), [w1.id, w2.id]);
@@ -354,7 +359,7 @@ test('bulk and mark-all-read: validation, grouping per account, failures, cross-
   assert.equal(row(srv, m1.id).is_read, 0, 'not marked read when the server refused');
 
   const empty = await mallory.post('/api/messages/bulk', { ids: [m1.id, m2.id], action: 'archive' });
-  assert.deepEqual(empty.body, { ok: true, count: 0, failed: [] });
+  assert.deepEqual(empty.body, { ok: true, count: 0, failed: [], undo: null }, 'moves answer with an undo token (none here)');
 
   // mark-all-read: nothing could be changed -> 502 so the UI rolls back.
   const mar = await alice.post('/api/messages/mark-all-read', { tab: 'all' });
@@ -566,9 +571,9 @@ test('end to end against Dovecot: list, body, attachments, flags, bulk, mark-all
 
   // --- archive and trash move on the server, then disappear locally
   const archived = await alice.post('/api/messages/bulk', { ids: [plainId], action: 'archive' });
-  assert.deepEqual(archived.body, { ok: true, count: 1, failed: [] });
+  assert.deepEqual({ ...archived.body, undo: typeof archived.body.undo }, { ok: true, count: 1, failed: [], undo: 'string' }, 'Dovecot reports COPYUID: undoable');
   const trashed = await alice.post('/api/messages/bulk', { ids: [richId, hugeId], action: 'trash' });
-  assert.deepEqual(trashed.body, { ok: true, count: 2, failed: [] });
+  assert.deepEqual({ ...trashed.body, undo: typeof trashed.body.undo }, { ok: true, count: 2, failed: [], undo: 'string' });
   assert.equal(row(srv, plainId), undefined);
   const subjectsIn = (box) =>
     withTestImap('bob', async (client) => {

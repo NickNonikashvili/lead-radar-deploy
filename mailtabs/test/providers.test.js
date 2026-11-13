@@ -191,7 +191,18 @@ test('oauthProviders reflects config and spec endpoints', () => {
   assert.ok(!p.microsoft.scopes.some((s) => /graph\.microsoft\.com|User\.Read/i.test(s)), 'no Graph scopes');
   assert.deepEqual(p.microsoft.extraAuthParams, { prompt: 'select_account' });
   assert.equal(p.microsoft.mailScope, 'https://outlook.office.com/IMAP.AccessAsUser.All');
-  assert.deepEqual(p.microsoft.refreshScopes, ['https://outlook.office.com/IMAP.AccessAsUser.All', 'offline_access']);
+  assert.deepEqual(p.microsoft.refreshScopes, [
+    'https://outlook.office.com/IMAP.AccessAsUser.All',
+    'https://outlook.office.com/SMTP.Send',
+    'offline_access',
+  ]);
+  // Sending: SMTP.Send (same resource as IMAP) is asked for at sign-in, right after the IMAP scope.
+  assert.equal(p.microsoft.scopes[1], 'https://outlook.office.com/SMTP.Send');
+  assert.equal(p.microsoft.sendScope, 'https://outlook.office.com/SMTP.Send');
+  assert.deepEqual(p.microsoft.optionalScopes, ['https://outlook.office.com/SMTP.Send']);
+  assert.equal(p.google.sendScope, 'https://mail.google.com/', 'the Gmail scope covers SMTP');
+  assert.deepEqual([p.google.smtpHost, p.google.smtpPort, p.google.smtpSecurity], ['smtp.gmail.com', 465, 'tls']);
+  assert.deepEqual([p.microsoft.smtpHost, p.microsoft.smtpPort, p.microsoft.smtpSecurity], ['smtp.office365.com', 587, 'starttls']);
   assert.equal(p.google.mailScope, 'https://mail.google.com/');
   assert.equal(p.google.refreshScopes, null, 'Google refreshes without a scope');
   assert.deepEqual(p.google.envNames, ['GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET']);
@@ -221,4 +232,72 @@ test('oauthProviderForPreset maps account provider keys to OAuth providers', () 
   assert.equal(oauthProviderForPreset(c, 'gmail').key, 'google');
   assert.equal(oauthProviderForPreset(c, 'outlook').key, 'microsoft');
   assert.equal(oauthProviderForPreset(c, 'yahoo'), null);
+});
+
+// ---------------------------------------------------------------------------------------------
+// Sending (SMTP) presets
+// ---------------------------------------------------------------------------------------------
+
+const { presetSmtpSettings, presetKeyForSmtpHost, isMicrosoftConsumerEmail } = require('../src/providers');
+
+test('every preset has SMTP defaults and a sent-copy policy', () => {
+  const expected = {
+    gmail: ['smtp.gmail.com', 465, 'tls', 'server'],
+    outlook: ['smtp.office365.com', 587, 'starttls', 'server'],
+    yahoo: ['smtp.mail.yahoo.com', 465, 'tls', 'append'],
+    icloud: ['smtp.mail.me.com', 587, 'starttls', 'append'],
+    aol: ['smtp.aol.com', 465, 'tls', 'append'],
+    fastmail: ['smtp.fastmail.com', 465, 'tls', 'append'],
+    // Zoho documents that its SMTP server files sent mail in Sent itself.
+    zoho: ['smtp.zoho.com', 465, 'tls', 'server'],
+    gmx: ['mail.gmx.com', 587, 'starttls', 'append'],
+    yandex: ['smtp.yandex.com', 465, 'tls', 'append'],
+    imap: ['', 465, 'tls', 'append'],
+  };
+  for (const p of publicPresets()) {
+    assert.deepEqual([p.smtpHost, p.smtpPort, p.smtpSecurity, p.sentCopy], expected[p.key], p.key);
+    assert.equal(typeof p.smtpHostByDomain, 'object');
+  }
+  // Public copies: changing them must not change the presets.
+  const outlook = publicPresets().find((p) => p.key === 'outlook');
+  outlook.smtpHostByDomain['evil.example'] = 'x';
+  assert.equal(PRESETS.outlook.smtpHostByDomain['evil.example'], undefined);
+  assert.equal(PRESETS.icloud.smtpUser, 'email', 'iCloud SMTP wants the full address');
+});
+
+test('presetSmtpSettings picks the outgoing host by IMAP host, then email domain', () => {
+  // Personal Microsoft accounts vs work/school mailboxes.
+  assert.equal(presetSmtpSettings('outlook', { email: 'me@hotmail.com' }).host, 'smtp-mail.outlook.com');
+  assert.equal(presetSmtpSettings('outlook', { email: 'me@OUTLOOK.com' }).host, 'smtp-mail.outlook.com');
+  assert.equal(presetSmtpSettings('outlook', { email: 'me@contoso.com' }).host, 'smtp.office365.com');
+  assert.equal(presetSmtpSettings('outlook', { email: 'me@contoso.com' }).port, 587);
+  // GMX.net / .de accounts use mail.gmx.net.
+  assert.equal(presetSmtpSettings('gmx', { email: 'me@gmx.de' }).host, 'mail.gmx.net');
+  assert.equal(presetSmtpSettings('gmx', { email: 'me@gmx.com' }).host, 'mail.gmx.com');
+  assert.equal(presetSmtpSettings('gmx', { email: 'me@example.org', imapHost: 'imap.gmx.net' }).host, 'mail.gmx.net');
+  // Zoho: own-domain paid plans (imappro.*) and EU accounts.
+  assert.equal(presetSmtpSettings('zoho', { email: 'me@company.com', imapHost: 'imappro.zoho.com' }).host, 'smtppro.zoho.com');
+  assert.equal(presetSmtpSettings('zoho', { email: 'me@zoho.eu' }).host, 'smtp.zoho.eu');
+  assert.equal(presetSmtpSettings('zoho', { email: 'me@zoho.com' }).host, 'smtp.zoho.com');
+  // Other IMAP and unknown presets have no default host.
+  assert.deepEqual(presetSmtpSettings('imap', { email: 'me@example.org' }), { host: '', port: 465, security: 'tls', sentCopy: 'append' });
+  assert.equal(presetSmtpSettings('nope', {}).host, '');
+});
+
+test('presetKeyForSmtpHost and isMicrosoftConsumerEmail', () => {
+  assert.equal(presetKeyForSmtpHost('smtp.gmail.com'), 'gmail');
+  assert.equal(presetKeyForSmtpHost('SMTP-MAIL.OUTLOOK.COM.'), 'outlook');
+  assert.equal(presetKeyForSmtpHost('smtp.office365.com'), 'outlook');
+  assert.equal(presetKeyForSmtpHost('smtppro.zoho.eu'), 'zoho');
+  assert.equal(presetKeyForSmtpHost('mail.gmx.net'), 'gmx');
+  assert.equal(presetKeyForSmtpHost('smtp.example.org'), null);
+  assert.equal(presetKeyForSmtpHost(''), null);
+  assert.equal(isMicrosoftConsumerEmail('a@live.com'), true);
+  assert.equal(isMicrosoftConsumerEmail('a@contoso.com'), false);
+});
+
+test('oauthOverrides may point SMTP at a test server too', () => {
+  const overrides = { google: { smtpHost: '127.0.0.1', smtpPort: '2525', smtpSecurity: 'none' } };
+  const p = oauthProviders(config({ OAUTH_TEST_ENDPOINTS: JSON.stringify(overrides) }));
+  assert.deepEqual([p.google.smtpHost, p.google.smtpPort, p.google.smtpSecurity], ['127.0.0.1', 2525, 'none']);
 });

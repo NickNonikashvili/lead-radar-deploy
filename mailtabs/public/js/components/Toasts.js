@@ -2,13 +2,14 @@
 // top layer and stay visible above an open modal dialog.
 import { html, useEffect, useRef } from '/vendor/preact-htm.js';
 import { useStore } from '../store.js';
-import { dismissToast } from '../actions.js';
+import { dismissToast, runToastAction } from '../actions.js';
 import { Icon } from '../icons.js';
 
 const ICONS = { success: 'check', error: 'alert', info: 'info' };
 
 export function Toasts() {
-  const { toasts, inDialog } = useStore((s) => ({ toasts: s.toasts, inDialog: !!s.dialog }));
+  // On phones the list has a floating Compose button in the corner; toasts sit above it.
+  const { toasts, inDialog, aboveFab } = useStore((s) => ({ toasts: s.toasts, inDialog: !!s.dialog, aboveFab: !!s.user && s.openId == null }));
   const ref = useRef(null);
   const count = toasts.length;
   const lastId = count ? toasts[count - 1].id : 0;
@@ -26,11 +27,20 @@ export function Toasts() {
   }, [count, lastId]);
 
   // While a dialog is open, toasts move away from where dialog footers sit (see CSS).
-  return html`<div ref=${ref} class=${`toasts ${inDialog ? 'in-dialog' : ''}`} popover="manual" aria-live="polite" aria-relevant="additions">
+  return html`<div
+    ref=${ref}
+    class=${`toasts ${inDialog ? 'in-dialog' : ''} ${aboveFab && !inDialog ? 'above-fab' : ''}`}
+    popover="manual"
+    aria-live="polite"
+    aria-relevant="additions"
+  >
     ${toasts.map(
       (t) => html`<div key=${t.id} class=${`toast toast-${t.type}`} role=${t.type === 'error' ? 'alert' : 'status'}>
         <span class="toast-icon"><${Icon} name=${ICONS[t.type] || 'info'} size=${16} /></span>
         <span class="toast-text">${t.message}</span>
+        ${t.action
+          ? html`<button type="button" class="toast-action" onClick=${() => runToastAction(t.id)}>${t.action.label}</button>`
+          : null}
         <button type="button" class="icon-btn toast-close" aria-label="Dismiss" onClick=${() => dismissToast(t.id)}>
           <${Icon} name="x" size=${14} />
         </button>

@@ -10,6 +10,8 @@
 
 const { HttpError } = require('./errors');
 const { nextPaletteColor } = require('./palette');
+const smtp = require('./smtp');
+const folders = require('./folders');
 
 const DEFAULT_COLOR = '#4f46e5';
 const DEFAULT_LIMIT = 50;
@@ -20,9 +22,16 @@ const MAX_CURSOR_LENGTH = 200;
 
 // Columns a message list needs. Bodies are deliberately left out (they can be megabytes).
 const LIST_COLUMNS = [
-  'm.id', 'm.account_id', 'm.from_name', 'm.from_address', 'm.subject', 'm.snippet', 'm.date',
-  'm.is_read', 'm.is_starred', 'm.has_attachments',
+  'm.id', 'm.account_id', 'm.folder_id', 'm.from_name', 'm.from_address', 'm.subject', 'm.snippet', 'm.date',
+  'm.is_read', 'm.is_starred', 'm.is_answered', 'm.is_draft', 'm.has_attachments', 'm.thread_key',
 ].join(', ');
+
+// Unified views across all of a user's accounts (GET /api/messages?view=...).
+const VIEWS = ['starred', 'sent', 'drafts', 'junk', 'trash'];
+const VIEW_SPECIAL_USE = Object.freeze({ sent: '\\Sent', drafts: '\\Drafts', junk: '\\Junk', trash: '\\Trash' });
+// Starred leaves out mail on its way out (Trash, Spam) and Gmail's views, whose messages are
+// copies of mail that lives in another folder.
+const STARRED_EXCLUDED_SPECIAL_USES = ['\\Trash', '\\Junk', '\\All', '\\Flagged', '\\Important'];
 
 // ---------------------------------------------------------------------------------------------
 // Small helpers
@@ -139,14 +148,31 @@ function rulesSql(rules) {
 // Tab membership
 // ---------------------------------------------------------------------------------------------
 
+const INBOX_SPECIAL_USE = '\\Inbox';
+
+/**
+ * WHERE fragment (on alias `alias`) for "this message is in the INBOX of one of the user's
+ * accounts" — tabs and their counts only ever mean the inbox. A row without a folder (written
+ * before folders existed) counts by its mailbox name.
+ */
+function inboxOnlySql(alias, userId) {
+  return {
+    sql:
+      `(${alias}.folder_id IN (SELECT f.id FROM folders f JOIN accounts fa ON fa.id = f.account_id WHERE fa.user_id = ? AND f.special_use = ?)` +
+      ` OR (${alias}.folder_id IS NULL AND ${alias}.mailbox = 'INBOX'))`,
+    params: [userId, INBOX_SPECIAL_USE],
+  };
+}
+
 /**
  * WHERE fragment (on alias `m`) selecting the messages of a tab, or of "All inboxes" when
- * `tab` is null. A message belongs to tab T iff its account is the user's AND
- * (T.all_accounts OR the account is attached to T) AND T's rules match.
+ * `tab` is null. A message belongs to tab T iff its account is the user's AND it is in that
+ * account's INBOX AND (T.all_accounts OR the account is attached to T) AND T's rules match.
  */
 function tabFilterSql(db, userId, tab) {
-  const where = ['m.account_id IN (SELECT a.id FROM accounts a WHERE a.user_id = ?)'];
-  const params = [userId];
+  const inbox = inboxOnlySql('m', userId);
+  const where = ['m.account_id IN (SELECT a.id FROM accounts a WHERE a.user_id = ?)', inbox.sql];
+  const params = [userId, ...inbox.params];
   if (tab) {
     if (Number(tab.user_id) !== Number(userId)) {
       // Never reached through the routes (they look tabs up by user), but be safe.
@@ -174,6 +200,99 @@ function resolveTab(db, userId, tabId) {
   const row = Number.isSafeInteger(id) && id > 0 ? db.prepare('SELECT * FROM tabs WHERE id = ? AND user_id = ?').get(id, userId) : null;
   if (!row) throw new HttpError(404, 'Tab not found', 'NOT_FOUND');
   return row;
+}
+
+// ---------------------------------------------------------------------------------------------
+// Folders and unified views
+// ---------------------------------------------------------------------------------------------
+
+const USER_ACCOUNTS_SQL = 'm.account_id IN (SELECT a.id FROM accounts a WHERE a.user_id = ?)';
+
+/** The user's folder row (with user_id), or HttpError 404. */
+function resolveFolder(db, userId, folderId) {
+  const id = Number(folderId);
+  const row =
+    Number.isSafeInteger(id) && id > 0
+      ? db.prepare('SELECT f.*, a.user_id AS user_id FROM folders f JOIN accounts a ON a.id = f.account_id WHERE f.id = ? AND a.user_id = ?').get(id, userId)
+      : null;
+  if (!row) throw new HttpError(404, 'Folder not found', 'NOT_FOUND');
+  return row;
+}
+
+/**
+ * WHERE fragment for one folder. Rows stored before folders existed have no folder_id; they
+ * belong to the folder by account + mailbox path.
+ */
+function folderFilterSql(userId, folder) {
+  return {
+    where: `${USER_ACCOUNTS_SQL} AND (m.folder_id = ? OR (m.folder_id IS NULL AND m.account_id = ? AND m.mailbox = ?))`,
+    params: [userId, folder.id, folder.account_id, folder.path],
+  };
+}
+
+/** Ids of the user's folders with one of these special uses (SQL subquery + params). */
+function specialFoldersSql(userId, specialUses) {
+  return {
+    sql: `(SELECT f.id FROM folders f JOIN accounts fa ON fa.id = f.account_id WHERE fa.user_id = ? AND f.special_use IN (${placeholders(specialUses.length)}))`,
+    params: [userId, ...specialUses],
+  };
+}
+
+/**
+ * WHERE fragment for a unified view. 'starred' = starred messages in any folder except Trash,
+ * Spam and Gmail's views, one row per (account, Message-ID) — the lowest id — because Gmail
+ * shows a starred message in every label it carries. The others = every folder with that
+ * special use, across the user's accounts.
+ */
+function viewFilterSql(userId, view) {
+  if (view === 'starred') {
+    const excluded = specialFoldersSql(userId, STARRED_EXCLUDED_SPECIAL_USES);
+    return {
+      where:
+        `${USER_ACCOUNTS_SQL} AND m.is_starred = 1 AND (m.folder_id IS NULL OR m.folder_id NOT IN ${excluded.sql})` +
+        ' AND (m.message_id IS NULL OR NOT EXISTS (SELECT 1 FROM messages d WHERE d.account_id = m.account_id' +
+        ` AND d.message_id = m.message_id AND d.id < m.id AND d.is_starred = 1 AND (d.folder_id IS NULL OR d.folder_id NOT IN ${excluded.sql})))`,
+      params: [userId, ...excluded.params, ...excluded.params],
+    };
+  }
+  const specialUse = VIEW_SPECIAL_USE[view];
+  if (!specialUse) throw new HttpError(400, `view must be one of: ${VIEWS.join(', ')}.`, 'INVALID_VIEW');
+  const special = specialFoldersSql(userId, [specialUse]);
+  return { where: `${USER_ACCOUNTS_SQL} AND m.folder_id IN ${special.sql}`, params: [userId, ...special.params] };
+}
+
+/**
+ * Which messages a list request is about: exactly one of a tab (or All inboxes), a folder or a
+ * unified view. Resolved for the user (404 for someone else's tab/folder).
+ * @returns {{ kind: 'tab', tab: object|null } | { kind: 'folder', folder: object } | { kind: 'view', view: string }}
+ */
+function resolveSource(db, userId, { tabId, folderId, view } = {}) {
+  const has = (v) => v !== undefined && v !== null && v !== '';
+  const hasTab = has(tabId) && tabId !== 'all';
+  if ([hasTab, has(folderId), has(view)].filter(Boolean).length > 1) {
+    throw new HttpError(400, 'Use only one of tab, folder or view.', 'INVALID_SOURCE');
+  }
+  if (has(folderId)) return { kind: 'folder', folder: resolveFolder(db, userId, folderId) };
+  if (has(view)) {
+    if (!VIEWS.includes(view)) throw new HttpError(400, `view must be one of: ${VIEWS.join(', ')}.`, 'INVALID_VIEW');
+    return { kind: 'view', view };
+  }
+  return { kind: 'tab', tab: resolveTab(db, userId, tabId) };
+}
+
+/** WHERE fragment for a resolved source. */
+function sourceFilterSql(db, userId, source) {
+  if (source.kind === 'folder') {
+    if (Number(source.folder.user_id) !== Number(userId)) return { where: '0', params: [] };
+    return folderFilterSql(userId, source.folder);
+  }
+  if (source.kind === 'view') return viewFilterSql(userId, source.view);
+  return tabFilterSql(db, userId, source.tab);
+}
+
+/** A tab row / null (All inboxes) or an already resolved source -> resolved source. */
+function asSource(tabOrSource) {
+  return tabOrSource && typeof tabOrSource === 'object' && typeof tabOrSource.kind === 'string' ? tabOrSource : { kind: 'tab', tab: tabOrSource || null };
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -238,12 +357,13 @@ function clampLimit(limit) {
 // ---------------------------------------------------------------------------------------------
 
 /**
- * WHERE fragment for a list request: tab membership + optional account/search/unread/starred.
- * `tab` is a tab row (already resolved for this user) or null for All inboxes.
+ * WHERE fragment for a list request: the source (tab, folder or view) + optional
+ * account/search/unread/starred. `source` is a resolved source (resolveSource), or — as before
+ * folders existed — a tab row (already resolved for this user) or null for All inboxes.
  * Returns { where, params, empty } — `empty` means the request can match nothing.
  */
-function listFilterSql(db, userId, tab, { accountId, q, unread, starred } = {}) {
-  const filter = tabFilterSql(db, userId, tab);
+function listFilterSql(db, userId, source, { accountId, q, unread, starred } = {}) {
+  const filter = sourceFilterSql(db, userId, asSource(source));
   const where = [filter.where];
   const params = [...filter.params];
   if (accountId !== undefined && accountId !== null && accountId !== '') {
@@ -266,15 +386,16 @@ function isFtsSyntaxError(err) {
 }
 
 /**
- * One page of messages, newest first.
- * @param {{ tabId?: number|'all', accountId?: number, q?: string, unread?: boolean, starred?: boolean,
- *           before?: string, limit?: number }} options
+ * One page of messages, newest first. The source is one of tabId (default All inboxes),
+ * folderId or view ('starred' | 'sent' | 'drafts' | 'junk' | 'trash').
+ * @param {{ tabId?: number|'all', folderId?: number, view?: string, accountId?: number, q?: string,
+ *           unread?: boolean, starred?: boolean, before?: string, limit?: number }} options
  * @returns {{ messages: object[], nextCursor: string|null }}
  */
-function listMessages(db, userId, { tabId = 'all', accountId, q, unread, starred, before, limit = DEFAULT_LIMIT } = {}) {
-  const tab = resolveTab(db, userId, tabId);
+function listMessages(db, userId, { tabId = 'all', folderId, view, accountId, q, unread, starred, before, limit = DEFAULT_LIMIT } = {}) {
+  const source = resolveSource(db, userId, { tabId, folderId, view });
   const pageSize = clampLimit(limit);
-  const filter = listFilterSql(db, userId, tab, { accountId, q, unread, starred });
+  const filter = listFilterSql(db, userId, source, { accountId, q, unread, starred });
   if (filter.empty) return { messages: [], nextCursor: null };
 
   const where = [filter.where];
@@ -316,15 +437,15 @@ function countForTab(db, userId, tab) {
 }
 
 /**
- * Minimal rows ({id, account_id, mailbox, uid, uid_validity}) of every message in a tab that
- * matches extra conditions — used by mark-all-read.
+ * Minimal rows ({id, account_id, folder_id, mailbox, uid, uid_validity}) of every message in a
+ * tab (or a resolved source: folder, view) that matches extra conditions — used by mark-all-read.
  */
 function selectTabMessageRefs(db, userId, tab, { unread, q, starred, accountId } = {}) {
   const filter = listFilterSql(db, userId, tab, { unread, q, starred, accountId });
   if (filter.empty) return [];
   try {
     return db
-      .prepare(`SELECT m.id, m.account_id, m.mailbox, m.uid, m.uid_validity FROM messages m WHERE ${filter.where} ORDER BY m.id`)
+      .prepare(`SELECT m.id, m.account_id, m.folder_id, m.mailbox, m.uid, m.uid_validity FROM messages m WHERE ${filter.where} ORDER BY m.id`)
       .all(...filter.params);
   } catch (err) {
     if (q && isFtsSyntaxError(err)) return [];
@@ -375,6 +496,7 @@ function toMessageListItem(row) {
   return {
     id: row.id,
     accountId: row.account_id,
+    folderId: row.folder_id ?? null,
     fromName: row.from_name || null,
     fromAddress: row.from_address || null,
     subject: row.subject ?? null,
@@ -382,7 +504,10 @@ function toMessageListItem(row) {
     date: row.date,
     isRead: !!row.is_read,
     isStarred: !!row.is_starred,
+    isAnswered: !!row.is_answered,
+    isDraft: !!row.is_draft,
     hasAttachments: !!row.has_attachments,
+    threadKey: row.thread_key ?? null,
   };
 }
 
@@ -417,8 +542,34 @@ function toMessageDetail(row) {
   };
 }
 
-/** Account JSON. Built field by field so secret_enc (password/tokens) can never slip through. */
-function toAccountJson(row, { messageCount = 0, unreadCount = 0, tabIds = [] } = {}) {
+// Without the app's crypto/config (unit tests), sending status is judged from the row alone:
+// an unreadable OAuth secret means "scopes unknown" (Google: can send; Microsoft: reconnect).
+const NO_SECRETS_DEPS = Object.freeze({
+  config: {},
+  crypto: Object.freeze({
+    decryptJson() {
+      throw new Error('no crypto');
+    },
+  }),
+});
+
+/** { canSend, code, message } for an account row (see smtp.sendingStatus). */
+function sendingStatusFor(row, deps) {
+  try {
+    return smtp.sendingStatus(deps && deps.config && deps.crypto ? deps : NO_SECRETS_DEPS, row);
+  } catch (_) {
+    return { canSend: false, code: 'SMTP_NOT_CONFIGURED', message: 'Sending is not set up for this account yet.' };
+  }
+}
+
+/**
+ * Account JSON. Built field by field so secret_enc / smtp_secret_enc (passwords, tokens) can
+ * never slip through. smtp* are the effective outgoing settings (the provider's defaults unless
+ * the account has its own).
+ */
+function toAccountJson(row, { messageCount = 0, unreadCount = 0, tabIds = [], deps } = {}) {
+  const outgoing = smtp.smtpSettingsFor(row);
+  const sending = sendingStatusFor(row, deps);
   return {
     id: row.id,
     provider: row.provider,
@@ -437,6 +588,15 @@ function toAccountJson(row, { messageCount = 0, unreadCount = 0, tabIds = [] } =
     messageCount,
     unreadCount,
     tabIds,
+    smtpHost: outgoing.host || null,
+    smtpPort: outgoing.host ? outgoing.port : null,
+    smtpSecurity: outgoing.host ? outgoing.security : null,
+    smtpUser: outgoing.host ? outgoing.user || null : null,
+    hasSmtpPassword: !!row.smtp_secret_enc,
+    senderName: row.sender_name || null,
+    signatureHtml: row.signature_html || '',
+    canSend: !!sending.canSend,
+    sendBlockedReason: sending.canSend ? null : sending.message || null,
   };
 }
 
@@ -458,21 +618,26 @@ function toTabJson(row, { accountIds = [], unreadCount = 0, totalCount = 0 } = {
 // Whole-resource loaders used by the routes
 // ---------------------------------------------------------------------------------------------
 
-/** Account JSON for all of a user's accounts (oldest first), or for one id. */
-function listAccountsJson(db, userId, { accountId } = {}) {
+/**
+ * Account JSON for all of a user's accounts (oldest first), or for one id.
+ * `deps` ({ config, crypto }) lets canSend look at OAuth grants; optional.
+ */
+function listAccountsJson(db, userId, { accountId, deps } = {}) {
   const rows = accountId
     ? db.prepare('SELECT * FROM accounts WHERE user_id = ? AND id = ?').all(userId, accountId)
     : db.prepare('SELECT * FROM accounts WHERE user_id = ? ORDER BY created_at, id').all(userId);
   if (!rows.length) return [];
 
+  // Counts are of the inbox, like the tabs (folders carry their own counts).
+  const inbox = inboxOnlySql('m', userId);
   const counts = new Map();
   for (const c of db
     .prepare(
       `SELECT m.account_id AS id, COUNT(*) AS total, COALESCE(SUM(m.is_read = 0), 0) AS unread
          FROM messages m JOIN accounts a ON a.id = m.account_id
-        WHERE a.user_id = ? GROUP BY m.account_id`
+        WHERE a.user_id = ? AND ${inbox.sql} GROUP BY m.account_id`
     )
-    .all(userId)) {
+    .all(userId, ...inbox.params)) {
     counts.set(c.id, c);
   }
 
@@ -493,12 +658,13 @@ function listAccountsJson(db, userId, { accountId } = {}) {
       messageCount: c ? Number(c.total) : 0,
       unreadCount: c ? Number(c.unread) : 0,
       tabIds: tabIds.get(row.id) || [],
+      deps,
     });
   });
 }
 
-function getAccountJson(db, userId, accountId) {
-  return listAccountsJson(db, userId, { accountId: Number(accountId) })[0] || null;
+function getAccountJson(db, userId, accountId, { deps } = {}) {
+  return listAccountsJson(db, userId, { accountId: Number(accountId), deps })[0] || null;
 }
 
 function tabAccountIds(db, userId, tabId) {
@@ -524,6 +690,182 @@ function listTabsJson(db, userId) {
 function getTabJson(db, userId, tabId) {
   const row = db.prepare('SELECT * FROM tabs WHERE id = ? AND user_id = ?').get(Number(tabId), userId);
   return row ? tabJsonFromRow(db, userId, row) : null;
+}
+
+// ---------------------------------------------------------------------------------------------
+// Folders
+// ---------------------------------------------------------------------------------------------
+
+/**
+ * { accounts: [{ accountId, folders: [Folder] }] } for GET /api/folders, accounts in the usual
+ * order and folders in sidebar order (Inbox, Drafts, Sent, Archive, Junk, Trash, then by path).
+ * Unread counts: for a folder whose every message is stored here, the local count (it follows
+ * the user's reads at once); otherwise the server's STATUS count.
+ */
+function listFoldersJson(db, userId) {
+  const accounts = db.prepare('SELECT id FROM accounts WHERE user_id = ? ORDER BY created_at, id').all(userId);
+  const rows = db
+    .prepare('SELECT f.* FROM folders f JOIN accounts a ON a.id = f.account_id WHERE a.user_id = ? ORDER BY f.account_id, f.id')
+    .all(userId);
+  const local = new Map(
+    db
+      .prepare(
+        `SELECT m.folder_id AS id, COALESCE(SUM(m.is_read = 0), 0) AS unread FROM messages m JOIN accounts a ON a.id = m.account_id
+          WHERE a.user_id = ? AND m.folder_id IS NOT NULL GROUP BY m.folder_id`
+      )
+      .all(userId)
+      .map((r) => [r.id, Number(r.unread) || 0])
+  );
+  const byAccount = new Map(accounts.map((a) => [a.id, []]));
+  for (const row of rows) if (byAccount.has(row.account_id)) byAccount.get(row.account_id).push(row);
+  return {
+    accounts: accounts.map((a) => ({
+      accountId: a.id,
+      folders: folders.sortFolders(byAccount.get(a.id)).map((row) => {
+        const complete = row.last_synced_at !== null && row.last_synced_at !== undefined && !row.has_older;
+        return folders.folderJson(row, complete ? { unreadLocal: local.get(row.id) || 0 } : {});
+      }),
+    })),
+  };
+}
+
+// ---------------------------------------------------------------------------------------------
+// Conversations
+// ---------------------------------------------------------------------------------------------
+
+const MAX_THREAD_MESSAGES = 100;
+// Gmail's views repeat messages stored in other folders; never show those copies.
+const THREAD_HIDDEN_SPECIAL_USES = new Set(['\\All', '\\Flagged', '\\Important']);
+// Deleted and spam mail only joins a conversation when the opened message is there itself.
+const THREAD_OUT_SPECIAL_USES = new Set(['\\Trash', '\\Junk']);
+// The copy to show when a message is in several folders (lower wins).
+const COPY_RANK = { '\\Inbox': 0, '\\Sent': 1, '\\Archive': 2, '\\Drafts': 4, '\\Trash': 5, '\\Junk': 6 };
+const copyRank = (row) => COPY_RANK[row.folder_special_use] ?? 3;
+
+/**
+ * The conversation of a message the user may see: same account, same thread_key, plus direct
+ * links (the messages it references / that reply to it, for mail without a full References
+ * chain). One row per Message-ID, oldest first, at most 100 (the newest ones, always including
+ * the opened message). Rows carry folder_special_use / folder_name.
+ */
+function threadMessages(db, userId, row) {
+  if (!row || !db.prepare('SELECT 1 FROM accounts WHERE id = ? AND user_id = ?').get(row.account_id, userId)) return [];
+  const refs = parseJson(row.references_json, []);
+  const linked = [...new Set([...(Array.isArray(refs) ? refs.slice(-50) : []), row.in_reply_to].filter((v) => typeof v === 'string' && v))];
+  const conditions = ['m.id = ?'];
+  const params = [row.id];
+  if (row.thread_key) {
+    conditions.push('m.thread_key = ?');
+    params.push(row.thread_key);
+  }
+  if (linked.length) {
+    conditions.push(`m.message_id IN (${placeholders(linked.length)})`);
+    params.push(...linked);
+  }
+  if (row.message_id) {
+    conditions.push('m.in_reply_to = ?');
+    params.push(row.message_id);
+  }
+  const rows = db
+    .prepare(
+      `SELECT m.*, f.special_use AS folder_special_use, f.name AS folder_name
+         FROM messages m LEFT JOIN folders f ON f.id = m.folder_id
+        WHERE m.account_id = ? AND (${conditions.join(' OR ')})
+        ORDER BY m.date DESC, m.id DESC LIMIT 1000`
+    )
+    .all(row.account_id, ...params);
+
+  const opened = rows.find((r) => r.id === row.id);
+  if (!opened) return [];
+  const openedIsOut = THREAD_OUT_SPECIAL_USES.has(opened.folder_special_use);
+  const best = new Map(); // dedupe key -> row
+  for (const r of rows) {
+    if (r.id !== opened.id) {
+      if (THREAD_HIDDEN_SPECIAL_USES.has(r.folder_special_use)) continue;
+      if (!openedIsOut && THREAD_OUT_SPECIAL_USES.has(r.folder_special_use)) continue;
+    }
+    const key = r.message_id ? `mid:${r.message_id}` : `id:${r.id}`;
+    const current = best.get(key);
+    if (
+      !current ||
+      (current.id !== opened.id && (r.id === opened.id || copyRank(r) < copyRank(current) || (copyRank(r) === copyRank(current) && r.id < current.id)))
+    ) {
+      best.set(key, r);
+    }
+  }
+  const newestFirst = [...best.values()].sort((a, b) => b.date - a.date || b.id - a.id);
+  let kept = newestFirst.slice(0, MAX_THREAD_MESSAGES);
+  if (!kept.some((r) => r.id === opened.id)) kept = [...kept.slice(0, MAX_THREAD_MESSAGES - 1), best.get(opened.message_id ? `mid:${opened.message_id}` : `id:${opened.id}`)];
+  return kept.sort((a, b) => a.date - b.date || a.id - b.id);
+}
+
+/** MessageDetail plus where the message is (for the conversation view). */
+function toThreadMessageJson(row) {
+  return { ...toMessageDetail(row), specialUse: row.folder_special_use || null, folderName: row.folder_name || null };
+}
+
+// ---------------------------------------------------------------------------------------------
+// Contacts (recipient autocomplete)
+// ---------------------------------------------------------------------------------------------
+
+const MAX_CONTACT_ROWS = 20000;
+const MAX_CONTACT_QUERY = 100;
+const CONTACT_ADDRESS = /^[^\s@<>",;]{1,64}@[^\s@<>",;]{1,253}$/;
+// eslint-disable-next-line no-control-regex
+const HAS_CONTROL_CHAR = /[\u0000-\u001f\u007f]/;
+
+/**
+ * People the user corresponds with: senders of their mail (not Spam) and recipients of what
+ * they sent (Sent folders). Prefix match on the address or on any word of the name; ranked by
+ * how often they appear, then by how recently. The user's own accounts are left out.
+ * @returns {Array<{ name: string, address: string }>}
+ */
+function listContacts(db, userId, { q = '', limit = 8 } = {}) {
+  const term = String(q || '').replace(CONTROL_CHARS, ' ').trim().toLowerCase().slice(0, MAX_CONTACT_QUERY);
+  const max = Math.min(20, Math.max(1, Math.floor(Number(limit)) || 8));
+  const own = new Set(db.prepare('SELECT lower(email) AS e FROM accounts WHERE user_id = ?').all(userId).map((r) => r.e));
+  const junk = specialFoldersSql(userId, ['\\Junk']);
+  const sent = specialFoldersSql(userId, ['\\Sent']);
+  const recipients = (column) =>
+    `SELECT json_extract(r.value, '$.name') AS name, json_extract(r.value, '$.address') AS address, m.date AS date
+       FROM messages m, ${addressList(column)} r
+      WHERE ${USER_ACCOUNTS_SQL} AND m.folder_id IN ${sent.sql}`;
+  const match = term
+    ? `WHERE lower(c.address) LIKE ? ESCAPE '\\' OR lower(COALESCE(c.name, '')) LIKE ? ESCAPE '\\' OR lower(COALESCE(c.name, '')) LIKE ? ESCAPE '\\'`
+    : '';
+  const matchParams = term ? [`${escapeLike(term)}%`, `${escapeLike(term)}%`, `% ${escapeLike(term)}%`] : [];
+  const rows = db
+    .prepare(
+      `SELECT c.name, c.address, c.date FROM (
+         SELECT m.from_name AS name, m.from_address AS address, m.date AS date FROM messages m
+          WHERE ${USER_ACCOUNTS_SQL} AND m.from_address IS NOT NULL AND m.from_address != ''
+            AND (m.folder_id IS NULL OR m.folder_id NOT IN ${junk.sql})
+         UNION ALL ${recipients('m.to_json')}
+         UNION ALL ${recipients('m.cc_json')}
+       ) c ${match}
+       ORDER BY c.date DESC LIMIT ${MAX_CONTACT_ROWS}`
+    )
+    .all(userId, ...junk.params, userId, ...sent.params, userId, ...sent.params, ...matchParams);
+
+  const byAddress = new Map();
+  for (const r of rows) {
+    const address = typeof r.address === 'string' ? r.address.trim() : '';
+    if (!CONTACT_ADDRESS.test(address) || HAS_CONTROL_CHAR.test(address)) continue;
+    const key = address.toLowerCase();
+    if (own.has(key)) continue;
+    let entry = byAddress.get(key);
+    if (!entry) {
+      entry = { address, name: '', count: 0, last: r.date };
+      byAddress.set(key, entry);
+    }
+    entry.count += 1;
+    // Rows come newest first: the first non-empty name is the most recent one.
+    if (!entry.name && typeof r.name === 'string' && r.name.trim()) entry.name = r.name.replace(CONTROL_CHARS, ' ').trim().slice(0, 200);
+  }
+  return [...byAddress.values()]
+    .sort((a, b) => b.count - a.count || b.last - a.last)
+    .slice(0, max)
+    .map(({ name, address }) => ({ name, address }));
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -589,6 +931,13 @@ function requireBoolean(value, field) {
   return value;
 }
 
+/** An integer (number or digit string) between min and max, else 400. */
+function requireInt(value, { field, min, max }) {
+  const n = typeof value === 'string' && /^-?\d{1,15}$/.test(value.trim()) ? Number(value.trim()) : value;
+  if (!Number.isSafeInteger(n) || n < min || n > max) throw badRequest(`${field} must be a whole number from ${min} to ${max}.`);
+  return n;
+}
+
 /** Plain JSON object body (express.json leaves `{}` when there is none). */
 function requireBody(req) {
   const body = req.body;
@@ -602,11 +951,12 @@ function nextAccountColor(db, userId) {
   return nextPaletteColor(used);
 }
 
-const validate = { requireId, requireIdList, optionalText, requireColor, requireBoolean, requireBody, badRequest, COLOR_RE };
+const validate = { requireId, requireIdList, optionalText, requireColor, requireBoolean, requireInt, requireBody, badRequest, COLOR_RE };
 
 module.exports = {
   validate,
   tabFilterSql,
+  inboxOnlySql,
   listMessages,
   countForTab,
   getMessageForUser,
@@ -631,6 +981,17 @@ module.exports = {
   nextAccountColor,
   listTabsJson,
   getTabJson,
+  // v2: folders, unified views, conversations, contacts
+  resolveSource,
+  resolveFolder,
+  folderFilterSql,
+  viewFilterSql,
+  listFoldersJson,
+  threadMessages,
+  toThreadMessageJson,
+  listContacts,
+  sendingStatusFor,
+  VIEWS,
   RULE_FIELDS,
   RULE_OPS,
   DEFAULT_COLOR,

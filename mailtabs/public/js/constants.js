@@ -56,17 +56,43 @@ export const MAX_RULES = 20;
 export const MAX_TAB_NAME = 40;
 
 export const SHORTCUTS = [
+  { keys: ['c'], label: 'Compose' },
   { keys: ['j'], label: 'Next message' },
   { keys: ['k'], label: 'Previous message' },
   { keys: ['Enter', 'o'], label: 'Open message' },
+  { keys: ['r'], label: 'Reply' },
+  { keys: ['a'], label: 'Reply all' },
+  { keys: ['f'], label: 'Forward' },
   { keys: ['e'], label: 'Archive' },
   { keys: ['#'], label: 'Delete' },
+  { keys: ['v'], label: 'Move to…' },
+  { keys: ['!'], label: 'Report spam / not spam' },
   { keys: ['s'], label: 'Star / unstar' },
   { keys: ['u'], label: 'Mark read / unread' },
+  { keys: ['x'], label: 'Select / deselect' },
+  { keys: ['z'], label: 'Undo the last move' },
   { keys: ['/'], label: 'Search' },
-  { keys: ['Esc'], label: 'Close message' },
+  { keys: ['Esc'], label: 'Close message / clear selection' },
 ];
 
+/**
+ * Views that combine one kind of folder across every account (plus the outbox).
+ * `specialUse` is the folder type the view is made of.
+ */
+export const UNIFIED_VIEWS = [
+  { id: 'starred', label: 'Starred', icon: 'star' },
+  { id: 'sent', label: 'Sent', icon: 'send', specialUse: '\\Sent' },
+  { id: 'drafts', label: 'Drafts', icon: 'draft', specialUse: '\\Drafts' },
+  { id: 'outbox', label: 'Outbox', icon: 'outbox' },
+  { id: 'junk', label: 'Spam', icon: 'spam', specialUse: '\\Junk' },
+  { id: 'trash', label: 'Trash', icon: 'trash', specialUse: '\\Trash' },
+];
+
+/** Undo-send delay choices (seconds) offered in Settings. */
+export const UNDO_SEND_CHOICES = [0, 5, 10, 20, 30];
+
 export const MOBILE_QUERY = '(max-width: 767px)';
+/** At and above this width the sidebar is always on screen (else it's a drawer). */
+export const DESKTOP_QUERY = '(min-width: 1024px)';
 
 export const SEARCH_INPUT_ID = 'mailtabs-search';

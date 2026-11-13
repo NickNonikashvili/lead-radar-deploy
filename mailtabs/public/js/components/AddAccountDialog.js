@@ -16,6 +16,7 @@ const FALLBACK_PRESETS = [
 
 const OAUTH_NAMES = { google: 'Google', microsoft: 'Microsoft' };
 const DEFAULT_PORTS = { tls: 993, starttls: 143, none: 143 };
+const SMTP_PORTS = { tls: 465, starttls: 587, none: 25 };
 
 function oauthAvailable(preset, providers) {
   return !!(preset && preset.oauthProvider && (preset.auth || []).includes('oauth') && providers && providers[preset.oauthProvider]);
@@ -129,6 +130,8 @@ export function AddAccountDialog({ provider: initialProvider = null, tabIds: ini
   const [advancedOpen, setAdvancedOpen] = useState(() => !!initialPreset && initialPreset.key === 'imap');
   const [advanced, setAdvanced] = useState(() => presetDefaults(initialPreset, initialEmail));
   const [advancedTouched, setAdvancedTouched] = useState(false);
+  // Outgoing mail for "Other (IMAP)" (presets bring their own SMTP settings).
+  const [smtp, setSmtp] = useState({ host: '', port: '465', security: 'tls', user: '', password: '' });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const formId = useUid('add-account-form');
@@ -187,6 +190,13 @@ export function AddAccountDialog({ provider: initialProvider = null, tabIds: ini
     setError('');
   };
 
+  const setSmtpField = (field, value) =>
+    setSmtp((v) => {
+      const next = { ...v, [field]: value };
+      if (field === 'security' && Object.values(SMTP_PORTS).map(String).includes(v.port)) next.port = String(SMTP_PORTS[value]);
+      return next;
+    });
+
   const setAdv = (field, value) => {
     setAdvancedTouched(true);
     setAdvanced((a) => {
@@ -199,8 +209,9 @@ export function AddAccountDialog({ provider: initialProvider = null, tabIds: ini
 
   const shortName = preset ? providerLabel(preset.key, presets, { short: true }) : '';
   // "Other (IMAP)" would otherwise name the tab "IMAP": the mail domain says more.
-  const emailDomain = (email.split('@')[1] || '').trim().toLowerCase();
-  const impliedTabName = (displayName.trim() || (preset && preset.key === 'imap' && emailDomain ? emailDomain : shortName)).slice(0, 40);
+  // (Named typedDomain: an `emailDomain` here would shadow the helper onEmailInput calls.)
+  const typedDomain = emailDomain(email);
+  const impliedTabName = (displayName.trim() || (preset && preset.key === 'imap' && typedDomain ? typedDomain : shortName)).slice(0, 40);
   const tabIdsToAttach = selectedTabs.filter((id) => tabs.some((t) => t.id === id && !t.allAccounts));
 
   // ------------------------------------------------------------------ OAuth
@@ -243,6 +254,18 @@ export function AddAccountDialog({ provider: initialProvider = null, tabIds: ini
       body.imapPort = port;
       body.imapSecurity = advanced.security;
       if (advanced.user.trim()) body.imapUser = advanced.user.trim();
+    }
+    if (isImap && smtp.host.trim()) {
+      const smtpPort = Number(smtp.port);
+      if (!Number.isInteger(smtpPort) || smtpPort < 1 || smtpPort > 65535) {
+        setAdvancedOpen(true);
+        return setError('The SMTP port must be a number between 1 and 65535.');
+      }
+      body.smtpHost = smtp.host.trim();
+      body.smtpPort = smtpPort;
+      body.smtpSecurity = smtp.security;
+      if (smtp.user.trim()) body.smtpUser = smtp.user.trim();
+      if (smtp.password) body.smtpPassword = smtp.password;
     }
 
     setBusy(true);
@@ -294,7 +317,7 @@ export function AddAccountDialog({ provider: initialProvider = null, tabIds: ini
         <div class="oauth-panel">
           <${ProviderMark} provider=${preset.key} size=${44} />
           <p class="oauth-text">
-            You'll go to ${name} to sign in and allow Mailtabs to read your inbox. Your ${name} password is never shared with Mailtabs.
+            You'll go to ${name} to sign in and allow Mailtabs to read and send your mail. Your ${name} password is never shared with Mailtabs.
           </p>
         </div>
         ${tabsSection}
@@ -421,7 +444,46 @@ export function AddAccountDialog({ provider: initialProvider = null, tabIds: ini
                   <span class="field-label">Username</span>
                   <input class="input" type="text" spellcheck=${false} autocomplete="off" placeholder="Same as email address" value=${advanced.user} onInput=${(e) => setAdv('user', e.currentTarget.value)} />
                 </label>
-              </div>`
+              </div>
+              ${preset.key === 'imap'
+                ? html`<p class="field-label smtp-heading">Sending (SMTP)</p>
+                    <p class="field-hint">Leave the server empty to add the account for reading only; you can set up sending later in Settings.</p>
+                    <div class="advanced-grid">
+                      <label class="field">
+                        <span class="field-label">SMTP server</span>
+                        <input
+                          class="input"
+                          type="text"
+                          inputmode="url"
+                          spellcheck=${false}
+                          autocomplete="off"
+                          placeholder=${email.includes('@') ? `smtp.${email.split('@').pop()}` : 'smtp.example.com'}
+                          value=${smtp.host}
+                          onInput=${(e) => setSmtpField('host', e.currentTarget.value)}
+                        />
+                      </label>
+                      <label class="field">
+                        <span class="field-label">Port</span>
+                        <input class="input" type="number" min="1" max="65535" inputmode="numeric" value=${smtp.port} onInput=${(e) => setSmtpField('port', e.currentTarget.value)} />
+                      </label>
+                      <label class="field">
+                        <span class="field-label">Security</span>
+                        <select class="input" aria-label="SMTP security" value=${smtp.security} onChange=${(e) => setSmtpField('security', e.currentTarget.value)}>
+                          <option value="tls">SSL/TLS (recommended)</option>
+                          <option value="starttls">STARTTLS</option>
+                          <option value="none">None — unencrypted</option>
+                        </select>
+                      </label>
+                      <label class="field">
+                        <span class="field-label">SMTP username</span>
+                        <input class="input" type="text" spellcheck=${false} autocomplete="off" placeholder="Same as IMAP" value=${smtp.user} onInput=${(e) => setSmtpField('user', e.currentTarget.value)} />
+                      </label>
+                      <label class="field field-span">
+                        <span class="field-label">SMTP password</span>
+                        <input class="input" type="password" autocomplete="off" placeholder="Same as the password above" value=${smtp.password} onInput=${(e) => setSmtpField('password', e.currentTarget.value)} />
+                      </label>
+                    </div>`
+                : null}`
             : null}
         </div>
 

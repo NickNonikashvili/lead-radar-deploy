@@ -6,6 +6,7 @@ const express = require('express');
 
 const { APP_ROOT } = require('./config');
 const providers = require('./providers');
+const { OutboxManager } = require('./outbox');
 const {
   securityHeaders,
   noStore,
@@ -25,10 +26,14 @@ const PREACT_HTM_BUNDLE = path.join(path.dirname(require.resolve('htm')), '..', 
 // route, so a missing one should 404 rather than receive index.html.
 const LOOKS_LIKE_FILE = /\/[^/]*\.[A-Za-z0-9]+$/;
 
+// Compose payloads carry the message HTML (up to 2 MB, more once JSON-escaped).
+const COMPOSE_JSON_LIMIT = '6mb';
+
 /**
  * Build the express app (does not listen).
- * @param {{ db, config, crypto, syncManager, publicDir?: string, logger?: Console }} deps
- *   publicDir/logger are optional and only overridden by tests.
+ * @param {{ db, config, crypto, syncManager, outboxManager?, publicDir?: string, logger?: Console }} deps
+ *   outboxManager: the server passes the one it starts; without it the app makes one that is
+ *   not started (messages are queued, nothing is sent). publicDir/logger are for tests.
  */
 function createApp(deps) {
   const { db, config, crypto, syncManager } = deps;
@@ -37,19 +42,27 @@ function createApp(deps) {
   }
   const publicDir = deps.publicDir || DEFAULT_PUBLIC_DIR;
   const logger = deps.logger || console;
-  const routeDeps = { db, config, crypto, syncManager };
+  const outboxManager = deps.outboxManager || new OutboxManager({ db, crypto, config, syncManager, logger });
+  const routeDeps = { db, config, crypto, syncManager, outboxManager, logger };
 
   const app = express();
   app.disable('x-powered-by');
   app.set('trust proxy', config.trustProxy);
+  app.locals.outboxManager = outboxManager;
 
   app.use(securityHeaders(config));
   app.use('/api', noStore);
   // Reject cross-site writes before spending time parsing their bodies.
   app.use(csrfGuard);
   // Only the API takes request bodies or needs to know who is signed in; static files skip both.
-  app.use('/api', express.json({ limit: '1mb' }));
+  // The session comes first so an upload is refused before its body is read.
   app.use('/api', sessionLoader(routeDeps));
+  // Attachments are raw bodies of any type (a .json file too), so they bypass the JSON parser.
+  app.use('/api/uploads', require('./routes/compose').uploadsRouter(routeDeps));
+  // Drafts and sends carry whole messages; everything else stays small. (A parsed body is
+  // skipped by the next parser.)
+  app.use(['/api/drafts', '/api/send'], express.json({ limit: COMPOSE_JSON_LIMIT }));
+  app.use('/api', express.json({ limit: '1mb' }));
 
   // --- API -----------------------------------------------------------------------------------
   const countUsers = db.prepare('SELECT COUNT(*) AS n FROM users');
@@ -68,7 +81,11 @@ function createApp(deps) {
   app.use('/api/sync', accountsRoutes.syncRouter(routeDeps));
   app.use('/api/tabs', require('./routes/tabs')(routeDeps));
   app.use('/api/messages', require('./routes/messages')(routeDeps));
+  app.use('/api/folders', require('./routes/folders')(routeDeps));
+  app.use('/api/settings', require('./routes/settings')(routeDeps));
   app.use('/api/oauth', require('./routes/oauth')(routeDeps));
+  // /api/compose/prepare, /api/drafts, /api/send, /api/outbox, /api/contacts
+  app.use('/api', require('./routes/compose')(routeDeps));
   app.use('/api', apiNotFound);
 
   // --- Vendored browser library ------------------------------------------------------------

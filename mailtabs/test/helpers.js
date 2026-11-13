@@ -33,7 +33,19 @@ const DEFAULT_TEST_PASSWORD = 'correct horse battery staple';
 class StubSyncManager {
   constructor({ db } = {}) {
     this.db = db;
-    this.calls = { syncAccount: [], syncUser: [], fetchBodyNow: [] };
+    this.calls = { syncAccount: [], syncUser: [], fetchBodyNow: [], syncFolder: [], backfillFolder: [] };
+  }
+
+  async syncFolder(folderId, { markOpened = true } = {}) {
+    this.calls.syncFolder.push({ folderId, markOpened });
+    const folder = this.db ? this.db.prepare('SELECT account_id FROM folders WHERE id = ?').get(folderId) : null;
+    if (!folder) return { accountId: null, folderId, ok: false, newMessages: 0, removed: 0, updated: 0, error: 'Folder not found' };
+    return { accountId: folder.account_id, folderId, ok: true, newMessages: 0, removed: 0, updated: 0 };
+  }
+
+  async backfillFolder(folderId, { count = 100 } = {}) {
+    this.calls.backfillFolder.push({ folderId, count });
+    return { added: 0, hasOlder: false };
   }
 
   start() {}
@@ -87,15 +99,21 @@ function listen(server) {
 /**
  * Start the real app on a random port with a throwaway data directory.
  * @param {Record<string,string>} envOverrides  env vars passed to loadConfig (merged over test defaults)
- * @param {{ stubSync?: boolean, publicDir?: string, logger?: object }} options
- * @returns {Promise<{ baseUrl, config, db, crypto, syncManager, app, server, dataDir, close }>}
+ * @param {{ stubSync?: boolean, publicDir?: string, logger?: object,
+ *           outbox?: 'manual'|'auto'|object, outboxOptions?: object }} options
+ *   outbox: 'manual' (default) = the real OutboxManager, not started: messages are queued and
+ *   only sent when the test calls `srv.outboxManager.sendDue()`; 'auto' = started (sends when due,
+ *   like the server); an object = use it as the outbox manager (a stub). outboxOptions are passed
+ *   to the OutboxManager constructor (e.g. { retryDelayMs, sentCopyCheckDelayMs }).
+ * @returns {Promise<{ baseUrl, config, db, crypto, syncManager, outboxManager, app, server, dataDir, close }>}
  */
-async function startTestServer(envOverrides = {}, { stubSync = false, publicDir, logger } = {}) {
+async function startTestServer(envOverrides = {}, { stubSync = false, publicDir, logger, outbox = 'manual', outboxOptions = {} } = {}) {
   const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'mailtabs-test-'));
   // Listen first so APP_URL can contain the real port (OAuth redirect URIs depend on it).
   const server = http.createServer();
   let db;
   let syncManager;
+  let outboxManager;
   try {
     const port = await listen(server);
     const baseUrl = `http://127.0.0.1:${port}`;
@@ -122,14 +140,27 @@ async function startTestServer(envOverrides = {}, { stubSync = false, publicDir,
       syncManager = new SyncManager({ db, crypto, config, logger: process.env.MAILTABS_TEST_LOG ? console : quietLogger });
     }
 
-    const app = createApp({ db, config, crypto, syncManager, publicDir, logger });
+    if (outbox && typeof outbox === 'object') {
+      outboxManager = outbox;
+    } else {
+      const { OutboxManager } = require('../src/outbox');
+      outboxManager = new OutboxManager({ db, crypto, config, syncManager, logger: quietLogger, sentCopyCheckDelayMs: 0, ...outboxOptions });
+    }
+
+    const app = createApp({ db, config, crypto, syncManager, outboxManager, publicDir, logger });
     server.on('request', app);
     syncManager.start();
+    if (outbox === 'auto') outboxManager.start();
 
     let closed = false;
     async function close() {
       if (closed) return;
       closed = true;
+      try {
+        if (typeof outboxManager.stop === 'function') await outboxManager.stop();
+      } catch (err) {
+        console.error('test server: outboxManager.stop failed:', err);
+      }
       try {
         await syncManager.stop();
       } catch (err) {
@@ -147,9 +178,10 @@ async function startTestServer(envOverrides = {}, { stubSync = false, publicDir,
       fs.rmSync(dataDir, { recursive: true, force: true });
     }
 
-    return { baseUrl, config, db, crypto, syncManager, app, server, dataDir, close };
+    return { baseUrl, config, db, crypto, syncManager, outboxManager, app, server, dataDir, close };
   } catch (err) {
     // Do not leak a listening socket or temp dir when setup fails.
+    if (outboxManager && typeof outboxManager.stop === 'function') await Promise.resolve(outboxManager.stop()).catch(() => {});
     if (syncManager && typeof syncManager.stop === 'function') await Promise.resolve(syncManager.stop()).catch(() => {});
     server.close();
     if (db) db.close();
@@ -280,6 +312,9 @@ const IMAP_TEST = Object.freeze({
   users: Object.freeze({
     alice: Object.freeze({ user: 'alice@test.local', pass: 'alicepw' }),
     bob: Object.freeze({ user: 'bob@test.local', pass: 'bobpw' }),
+    // ROUTES v2 tests (test/v2-*.test.js) only.
+    r1: Object.freeze({ user: 'r1@test.local', pass: 'r1pw' }),
+    r2: Object.freeze({ user: 'r2@test.local', pass: 'r2pw' }),
   }),
 });
 
@@ -510,10 +545,41 @@ function seedAccount(db, crypto, userId, overrides = {}) {
   return db.prepare('SELECT * FROM accounts WHERE id = ?').get(Number(info.lastInsertRowid));
 }
 
-/** Insert a message row directly. `to`/`cc` may be [{name, address}] arrays. Returns the row. */
+/**
+ * The folder row of an account for a mailbox path, created when missing (INBOX gets
+ * special_use '\\Inbox'; others get `specialUse` when given). Returns the row.
+ */
+function seedFolder(db, accountId, path = 'INBOX', { specialUse = null, delimiter = '/', ...rest } = {}) {
+  const folders = require('../src/folders');
+  if (path.toUpperCase() === 'INBOX') return folders.inboxFolder(db, accountId);
+  const existing = db.prepare('SELECT * FROM folders WHERE account_id = ? AND path = ?').get(accountId, path);
+  if (existing) return existing;
+  const segments = delimiter ? path.split(delimiter) : [path];
+  const row = {
+    account_id: accountId,
+    path,
+    name: segments[segments.length - 1],
+    delimiter,
+    parent_path: segments.length > 1 ? segments.slice(0, -1).join(delimiter) : null,
+    special_use: specialUse,
+    selectable: 1,
+    sync_mode: 'auto',
+    created_at: Date.now(),
+    ...rest,
+  };
+  const cols = Object.keys(row);
+  const info = db.prepare(`INSERT INTO folders (${cols.join(', ')}) VALUES (${cols.map((c) => `@${c}`).join(', ')})`).run(row);
+  return db.prepare('SELECT * FROM folders WHERE id = ?').get(Number(info.lastInsertRowid));
+}
+
+/**
+ * Insert a message row directly. `to`/`cc` may be [{name, address}] arrays. Returns the row.
+ * The row gets the folder of its mailbox (created when missing) unless folder_id is given.
+ */
 function seedMessage(db, accountId, overrides = {}) {
   seedSeq += 1;
   const { to = [], cc = [], replyTo = [], attachments = null, ...rest } = overrides;
+  if (!('folder_id' in rest)) rest.folder_id = seedFolder(db, accountId, rest.mailbox || 'INBOX').id;
   const row = {
     account_id: accountId,
     mailbox: 'INBOX',
@@ -622,5 +688,138 @@ async function mailboxFlags(userKey, mailbox = 'INBOX') {
 
 module.exports.seedAccount = seedAccount;
 module.exports.seedMessage = seedMessage;
+module.exports.seedFolder = seedFolder;
 module.exports.lockTestImapUser = lockTestImapUser;
 module.exports.mailboxFlags = mailboxFlags;
+
+// ---------------------------------------------------------------------------------------------
+// ROUTES v2 additions: whole-mailbox reset, an in-process SMTP server, small waiting helpers
+// ---------------------------------------------------------------------------------------------
+
+const DOVECOT_SPECIAL_FOLDERS = ['INBOX', 'Sent', 'Drafts', 'Archive', 'Junk', 'Trash'];
+
+/** Empty every special folder of a test user and delete every other folder it has. */
+async function resetAllFolders(userKey) {
+  await withTestImap(userKey, async (client) => {
+    const boxes = await client.list();
+    // Deepest first, so a parent is never deleted before its children.
+    const custom = boxes
+      .filter((box) => !DOVECOT_SPECIAL_FOLDERS.includes(box.path))
+      .sort((a, b) => b.path.split(boxDelimiter(b)).length - a.path.split(boxDelimiter(a)).length);
+    for (const box of custom) await client.mailboxDelete(box.path).catch(() => {});
+    for (const box of DOVECOT_SPECIAL_FOLDERS) {
+      let lock;
+      try {
+        lock = await client.getMailboxLock(box);
+      } catch (_) {
+        continue;
+      }
+      try {
+        if (client.mailbox.exists > 0) await client.messageDelete('1:*');
+      } finally {
+        lock.release();
+      }
+    }
+  });
+}
+
+function boxDelimiter(box) {
+  return box.delimiter || '/';
+}
+
+/** [{ uid, flags, envelope, source }] of a test user's mailbox. */
+async function mailboxMessages(userKey, mailbox = 'INBOX') {
+  return withTestImap(userKey, async (client) => {
+    const lock = await client.getMailboxLock(mailbox);
+    try {
+      const out = [];
+      if (!client.mailbox.exists) return out;
+      for await (const msg of client.fetch('1:*', { uid: true, flags: true, envelope: true, source: true })) {
+        out.push({ uid: msg.uid, flags: msg.flags, envelope: msg.envelope, source: msg.source });
+      }
+      return out;
+    } finally {
+      lock.release();
+    }
+  });
+}
+
+/**
+ * An SMTP server on 127.0.0.1 (random port, no TLS, AUTH PLAIN/LOGIN required) that records
+ * every message. With `deliverToDovecot`, a message for a known test user (IMAP_TEST.users) is
+ * APPENDed to that user's INBOX before the server answers, like a real delivery.
+ * @param {{ users?: {[username]: password}, deliverToDovecot?: boolean, rejectRecipients?: string[] }} opts
+ * @returns {Promise<{ port, messages: Array<{ from, to, raw, user }>, close() }>}
+ */
+async function startSmtpCapture({ users = {}, deliverToDovecot = false, rejectRecipients = [] } = {}) {
+  const { SMTPServer } = require('smtp-server');
+  const messages = [];
+  const byAddress = new Map(Object.entries(IMAP_TEST.users).map(([key, c]) => [c.user.toLowerCase(), key]));
+  const server = new SMTPServer({
+    authOptional: false,
+    allowInsecureAuth: true,
+    disabledCommands: ['STARTTLS'],
+    authMethods: ['PLAIN', 'LOGIN'],
+    logger: false,
+    onAuth(auth, session, cb) {
+      if (Object.prototype.hasOwnProperty.call(users, auth.username) && users[auth.username] === auth.password) {
+        return cb(null, { user: auth.username });
+      }
+      const err = new Error('5.7.8 Authentication credentials invalid');
+      err.responseCode = 535;
+      return cb(err);
+    },
+    onRcptTo(address, session, cb) {
+      if (rejectRecipients.includes(address.address)) {
+        const err = new Error(`5.1.1 <${address.address}>: Recipient address rejected: User unknown`);
+        err.responseCode = 550;
+        return cb(err);
+      }
+      cb();
+    },
+    onData(stream, session, cb) {
+      const chunks = [];
+      stream.on('data', (c) => chunks.push(c));
+      stream.on('end', async () => {
+        const raw = Buffer.concat(chunks);
+        const to = session.envelope.rcptTo.map((r) => r.address);
+        messages.push({ from: session.envelope.mailFrom.address, to, raw, user: session.user });
+        if (deliverToDovecot) {
+          for (const address of to) {
+            const key = byAddress.get(String(address).toLowerCase());
+            if (!key) continue;
+            try {
+              await withTestImap(key, (client) => client.append('INBOX', raw, []));
+            } catch (err) {
+              console.error(`test SMTP: delivery to ${address} failed:`, err && err.message);
+            }
+          }
+        }
+        cb(null, 'Queued as test');
+      });
+    },
+  });
+  server.on('error', () => {});
+  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+  return {
+    port: server.server.address().port,
+    messages,
+    close: () => new Promise((resolve) => server.close(resolve)),
+  };
+}
+
+/** Poll fn() until it returns something truthy (or throw after timeoutMs). */
+async function waitUntil(fn, { timeoutMs = 15000, intervalMs = 100, what = 'condition' } = {}) {
+  const deadline = Date.now() + timeoutMs;
+  for (;;) {
+    const value = await fn();
+    if (value) return value;
+    if (Date.now() > deadline) throw new Error(`Timed out waiting for ${what}`);
+    await new Promise((resolve) => setTimeout(resolve, intervalMs));
+  }
+}
+
+module.exports.resetAllFolders = resetAllFolders;
+module.exports.mailboxMessages = mailboxMessages;
+module.exports.startSmtpCapture = startSmtpCapture;
+module.exports.waitUntil = waitUntil;

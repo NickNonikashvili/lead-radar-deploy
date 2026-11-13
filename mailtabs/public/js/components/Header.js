@@ -1,16 +1,46 @@
-// Top bar: brand, search (debounced, scoped to the current tab), refresh, user menu.
+// Top bar: navigation toggle, brand, search (debounced, scoped to the current view),
+// refresh, user menu.
 import { html, useEffect, useRef, useState } from '/vendor/preact-htm.js';
 import { useStore } from '../store.js';
-import { openDialog, setQuery, signOut, syncAll } from '../actions.js';
+import { openDialog, openDrawer, closeDrawer, setQuery, setSidebarCollapsed, signOut, syncAll, viewTitle } from '../actions.js';
 import { Icon, Logo } from '../icons.js';
 import { initials, timeAgo } from '../format.js';
-import { SEARCH_INPUT_ID } from '../constants.js';
-import { useDebouncedCallback, useNow, useOutsideClick, useUid } from '../hooks.js';
+import { DESKTOP_QUERY, SEARCH_INPUT_ID } from '../constants.js';
+import { useDebouncedCallback, useMediaQuery, useNow, useOutsideClick, useUid } from '../hooks.js';
+
+/** Desktop: collapse the sidebar to icons. Smaller screens: open the navigation drawer. */
+function NavToggle() {
+  const desktop = useMediaQuery(DESKTOP_QUERY);
+  const { rail, drawerOpen, noAccounts } = useStore((s) => ({ rail: s.sidebarCollapsed, drawerOpen: s.drawerOpen, noAccounts: s.accountsLoaded && s.accounts.length === 0 }));
+  if (noAccounts) return null;
+  if (desktop) {
+    return html`<button
+      type="button"
+      class="icon-btn topbar-btn nav-toggle"
+      aria-label=${rail ? 'Expand the sidebar' : 'Collapse the sidebar'}
+      title=${rail ? 'Expand sidebar' : 'Collapse sidebar'}
+      onClick=${() => setSidebarCollapsed(!rail)}
+    >
+      <${Icon} name="menu" size=${19} />
+    </button>`;
+  }
+  return html`<button
+    type="button"
+    class="icon-btn topbar-btn nav-toggle"
+    aria-label="Show folders and accounts"
+    aria-expanded=${drawerOpen ? 'true' : 'false'}
+    title="Folders and accounts"
+    onClick=${() => (drawerOpen ? closeDrawer() : openDrawer())}
+  >
+    <${Icon} name="menu" size=${19} />
+  </button>`;
+}
 
 function SearchBox() {
   const { query, tabName } = useStore((s) => ({
     query: s.query,
-    tabName: s.activeTabId === 'all' ? 'All inboxes' : (s.tabs.find((t) => t.id === s.activeTabId) || {}).name || 'this tab',
+    // The outbox has nothing to search: searching from there searches the inboxes.
+    tabName: s.view === 'outbox' ? 'All inboxes' : viewTitle(s),
   }));
   const [value, setValue] = useState(query);
   const debouncedSet = useDebouncedCallback((v) => setQuery(v), 300);
@@ -171,6 +201,7 @@ function UserMenu() {
 
 export function Header() {
   return html`<header class="topbar">
+    <${NavToggle} />
     <div class="brand">
       <${Logo} size=${28} />
       <span class="brand-name">Mailtabs</span>

@@ -14,6 +14,7 @@ const imap = require('../src/imap');
 const { SyncManager, SettingsChangedError } = require('../src/sync');
 const { makeEngineEnv, createUser, createAccount, recordingLogger } = require('./engine-helpers');
 const { buildRawMessage } = require('./helpers');
+const { resetUser } = require('./folders-helpers');
 
 // A Dovecot user no other test file touches.
 const V2 = { user: 'v2@test.local', pass: 'v2pw', host: '127.0.0.1', port: 1143 };
@@ -42,18 +43,9 @@ async function withV2(fn) {
   }
 }
 
+// Every folder of v2 is synced, so every folder is emptied (and extra ones removed).
 async function resetV2() {
-  await withV2(async (client) => {
-    for (const box of ['INBOX', 'Archive', 'Trash']) {
-      const lock = await client.getMailboxLock(box).catch(() => null);
-      if (!lock) continue;
-      try {
-        if (client.mailbox.exists) await client.messageDelete('1:*');
-      } finally {
-        lock.release();
-      }
-    }
-  });
+  await resetUser('v2');
 }
 
 async function appendV2(subject, flags = []) {

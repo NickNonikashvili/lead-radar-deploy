@@ -590,3 +590,91 @@ test('buildImapOptions for an OAuth account uses { user, accessToken } (XOAUTH2)
     env.close();
   }
 });
+
+// ---------------------------------------------------------------------------------------------
+// Sending: granted scopes (SMTP.Send)
+// ---------------------------------------------------------------------------------------------
+
+const { grantsSendScope, refreshScopesFor, scopeIncludes } = require('../src/oauth');
+
+test('exchangeCode reports the granted scopes (or the requested ones when the response has none)', async () => {
+  const env = envWithOAuth();
+  try {
+    const { google, microsoft } = providersFor(env);
+    const msToken = jwt({ email: 'me@outlook.com' });
+    mock.respond = () => ({
+      body: { access_token: 'a', refresh_token: 'r', scope: 'https://outlook.office.com/IMAP.AccessAsUser.All https://outlook.office.com/SMTP.Send', id_token: msToken },
+    });
+    const ms = await exchangeCode(microsoft, { code: 'c', codeVerifier: 'v', redirectUri: 'r' });
+    assert.equal(ms.grantedScopes, 'https://outlook.office.com/IMAP.AccessAsUser.All https://outlook.office.com/SMTP.Send');
+    // The authorize request asks for SMTP.Send right after IMAP.
+    const url = new URL(buildAuthUrl(microsoft, { state: 's', codeChallenge: 'c', redirectUri: 'r' }));
+    assert.deepEqual(url.searchParams.get('scope').split(' ').slice(0, 2), [
+      'https://outlook.office.com/IMAP.AccessAsUser.All',
+      'https://outlook.office.com/SMTP.Send',
+    ]);
+
+    mock.respond = () => ({ body: { access_token: 'a', id_token: jwt({ email: 'me@gmail.com' }) } });
+    const g = await exchangeCode(google, { code: 'c', codeVerifier: 'v', redirectUri: 'r' });
+    assert.equal(g.grantedScopes, 'https://mail.google.com/ openid email profile');
+  } finally {
+    env.close();
+  }
+});
+
+test('grantsSendScope / scopeIncludes: full or bare names, unknown -> null', () => {
+  const env = envWithOAuth();
+  try {
+    const { google, microsoft } = providersFor(env);
+    assert.equal(grantsSendScope(microsoft, 'https://outlook.office.com/IMAP.AccessAsUser.All https://outlook.office.com/SMTP.Send'), true);
+    assert.equal(grantsSendScope(microsoft, 'IMAP.AccessAsUser.All smtp.send'), true);
+    assert.equal(grantsSendScope(microsoft, 'https://outlook.office.com/IMAP.AccessAsUser.All offline_access'), false);
+    assert.equal(grantsSendScope(microsoft, null), null, 'accounts from before grantedScopes was recorded');
+    assert.equal(grantsSendScope(google, 'https://mail.google.com/ openid'), true);
+    assert.equal(scopeIncludes('a b', ''), false);
+    assert.equal(scopeIncludes(undefined, 'a'), false);
+  } finally {
+    env.close();
+  }
+});
+
+test('Microsoft refresh asks for SMTP.Send only when the account was granted it', async () => {
+  const env = envWithOAuth();
+  try {
+    const { microsoft, google } = providersFor(env);
+    assert.deepEqual(refreshScopesFor(microsoft, null), ['https://outlook.office.com/IMAP.AccessAsUser.All', 'offline_access']);
+    assert.deepEqual(refreshScopesFor(microsoft, 'https://outlook.office.com/IMAP.AccessAsUser.All https://outlook.office.com/SMTP.Send'), [
+      'https://outlook.office.com/IMAP.AccessAsUser.All',
+      'https://outlook.office.com/SMTP.Send',
+      'offline_access',
+    ]);
+    assert.equal(refreshScopesFor(google, 'x'), null);
+
+    // A legacy account (IMAP consent only) keeps refreshing with IMAP alone, and learns its scopes.
+    const legacy = oauthAccount(env, { refreshToken: 'rt-legacy', accessToken: 'old', accessTokenExpiresAt: 0 }, { provider: 'outlook', email: 'old@outlook.com' });
+    mock.respond = () => ({ body: { access_token: 'fresh-1', expires_in: 3600, scope: 'https://outlook.office.com/IMAP.AccessAsUser.All' } });
+    assert.equal(await getFreshAccessToken(env, legacy), 'fresh-1');
+    assert.equal(mock.requests[0].form.scope, 'https://outlook.office.com/IMAP.AccessAsUser.All offline_access');
+    let stored = env.crypto.decryptJson(getAccount(env.db, legacy.id).secret_enc);
+    assert.equal(stored.grantedScopes, 'https://outlook.office.com/IMAP.AccessAsUser.All');
+
+    // An account that granted sending refreshes with it, and keeps the recorded scopes when the
+    // response does not repeat them.
+    const sender = oauthAccount(
+      env,
+      { refreshToken: 'rt-send', accessToken: 'old', accessTokenExpiresAt: 0, grantedScopes: 'https://outlook.office.com/IMAP.AccessAsUser.All https://outlook.office.com/SMTP.Send' },
+      { provider: 'outlook', email: 'new@outlook.com' }
+    );
+    mock.respond = () => ({ body: { access_token: 'fresh-2', expires_in: 3600 } });
+    assert.equal(await getFreshAccessToken(env, sender), 'fresh-2');
+    assert.equal(
+      mock.requests[1].form.scope,
+      'https://outlook.office.com/IMAP.AccessAsUser.All https://outlook.office.com/SMTP.Send offline_access'
+    );
+    stored = env.crypto.decryptJson(getAccount(env.db, sender.id).secret_enc);
+    assert.equal(stored.grantedScopes, 'https://outlook.office.com/IMAP.AccessAsUser.All https://outlook.office.com/SMTP.Send');
+    assert.equal(stored.accessToken, 'fresh-2');
+  } finally {
+    env.close();
+  }
+});

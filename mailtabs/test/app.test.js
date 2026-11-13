@@ -151,12 +151,19 @@ test('app with a built frontend', async (t) => {
   await t.test('feature routes are mounted behind the CSRF guard and the session', async () => {
     const user = makeClient(srv.baseUrl);
     await signupUser(user);
-    for (const p of ['/api/accounts', '/api/tabs', '/api/messages?tab=all']) {
+    for (const p of ['/api/accounts', '/api/tabs', '/api/messages?tab=all', '/api/folders', '/api/settings', '/api/outbox', '/api/contacts?q=a']) {
       const res = await user.get(p);
       assert.notEqual(res.status, 404, `${p} should be mounted`);
       assert.match(res.headers.get('content-type'), /json/, p);
     }
     assert.notEqual((await user.post('/api/sync')).status, 404, '/api/sync should be mounted');
+    // v2 write endpoints exist and are behind the session (an anonymous request is 401, not 404).
+    const anonymous = makeClient(srv.baseUrl);
+    for (const [method, p] of [['post', '/api/uploads'], ['post', '/api/drafts'], ['del', '/api/drafts'], ['post', '/api/send'], ['get', '/api/compose/prepare']]) {
+      const res = await anonymous[method](p, method === 'get' ? undefined : {});
+      assert.equal(res.status, 401, `${method} ${p}`);
+    }
+    assert.equal((await anonymous.raw('/api/uploads', { method: 'POST', body: 'x' })).status, 403, 'CSRF first');
   });
 });
 

@@ -363,8 +363,9 @@ test('JSON mappers: shapes, and secrets never appear', () => {
 
   const json = queries.getAccountJson(db, u, acc.id);
   assert.deepEqual(Object.keys(json).sort(), [
-    'authType', 'color', 'createdAt', 'displayName', 'email', 'id', 'imapHost', 'imapPort', 'imapSecurity', 'imapUser',
-    'lastError', 'lastSyncedAt', 'messageCount', 'provider', 'status', 'tabIds', 'unreadCount',
+    'authType', 'canSend', 'color', 'createdAt', 'displayName', 'email', 'hasSmtpPassword', 'id', 'imapHost', 'imapPort',
+    'imapSecurity', 'imapUser', 'lastError', 'lastSyncedAt', 'messageCount', 'provider', 'sendBlockedReason', 'senderName',
+    'signatureHtml', 'smtpHost', 'smtpPort', 'smtpSecurity', 'smtpUser', 'status', 'tabIds', 'unreadCount',
   ]);
   assert.equal(json.messageCount, 1);
   assert.equal(json.unreadCount, 0);
@@ -383,7 +384,8 @@ test('JSON mappers: shapes, and secrets never appear', () => {
   assert.deepEqual(detail.attachments[1], { index: 1, filename: 'report.pdf', contentType: 'application/pdf', size: 99, inline: false });
   assert.equal('html_body' in detail || 'htmlBody' in detail || 'textBody' in detail, false, 'no body content in detail JSON');
   assert.deepEqual(Object.keys(queries.toMessageListItem(msg)).sort(), [
-    'accountId', 'date', 'fromAddress', 'fromName', 'hasAttachments', 'id', 'isRead', 'isStarred', 'snippet', 'subject',
+    'accountId', 'date', 'folderId', 'fromAddress', 'fromName', 'hasAttachments', 'id', 'isAnswered', 'isDraft', 'isRead',
+    'isStarred', 'snippet', 'subject', 'threadKey',
   ]);
 });
 

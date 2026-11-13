@@ -23,20 +23,41 @@ export const initialState = {
   tabsLoaded: false,
   allCounts: { unreadCount: 0, totalCount: 0 },
 
-  activeTabId: 'all', // 'all' | number
+  // What the main list shows: 'inbox' (the tabs), a unified view across accounts
+  // ('starred' | 'sent' | 'drafts' | 'junk' | 'trash'), 'outbox', or 'folder' (folderId).
+  view: 'inbox',
+  folderId: null,
+  activeTabId: 'all', // 'all' | number (only meaningful in the inbox view)
   filter: 'all', // all | unread | starred
   query: '',
 
+  folders: [], // every folder of every account (GET /api/folders), flattened
+  foldersLoaded: false,
+  folderSync: {}, // folderId -> 'syncing' | 'error' while a folder view is being refreshed
+  backfill: { folderId: null, status: 'idle', error: null }, // "Load older messages"
+  collapsed: {}, // sidebar tree: 'a:<accountId>' / 'f:<folderId>' -> true when collapsed
+
+  outbox: { items: [], loaded: false, error: null },
+  settings: { undoSendSeconds: 10, notifications: false },
+  settingsLoaded: false,
+
   list: EMPTY_LIST,
   cursorId: null, // keyboard / selection cursor in the list
+  selectedIds: [], // multi-select (checkboxes), in list order
+  selectAnchor: null, // last row toggled without Shift (start of a Shift-click range)
   openId: null, // message shown in the reading pane
   details: {}, // id -> { status: 'loading'|'ready'|'error', message?, error? }
+  threads: {}, // id of the opened message -> { status, messages?, error? }
+  conversationView: true, // show the whole conversation in the reader
   showImages: {}, // id -> true once the user allowed remote images
+
+  sidebarCollapsed: false, // desktop: icon rail instead of the full sidebar
+  drawerOpen: false, // tablet/phone: navigation drawer
 
   syncing: false,
   lastCheckedAt: null,
 
-  dialog: null, // { type: 'addAccount' | 'tabEditor' | 'settings', props }
+  dialog: null, // { type: 'addAccount' | 'tabEditor' | 'settings' | 'move' | 'folder' | 'confirm', props }
   toasts: [],
 };
 
@@ -55,9 +76,10 @@ export function setState(update) {
   for (const listener of [...listeners]) listener();
 }
 
-/** Restore everything except config (used on sign-out / session expiry). */
+/** Restore everything except config and per-browser UI preferences (sign-out / session expiry). */
 export function resetState(overrides = {}) {
-  state = { ...initialState, config: state.config, booted: true, ...overrides };
+  const keep = { sidebarCollapsed: state.sidebarCollapsed, conversationView: state.conversationView, collapsed: state.collapsed };
+  state = { ...initialState, config: state.config, booted: true, ...keep, ...overrides };
   for (const listener of [...listeners]) listener();
 }
 

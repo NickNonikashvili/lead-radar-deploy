@@ -4,7 +4,9 @@
  * OAuth 2.0 (authorization code + PKCE) for Google and Microsoft mail access.
  *
  * Provider objects come from providers.oauthProviders(config). Tokens are stored encrypted in
- * accounts.secret_enc as { refreshToken, accessToken, accessTokenExpiresAt }.
+ * accounts.secret_enc as { refreshToken, accessToken, accessTokenExpiresAt, grantedScopes? }.
+ * grantedScopes is the space-separated scope string the token endpoint last reported (absent
+ * for accounts connected before it was recorded).
  */
 
 const { oauthProviderForPreset } = require('./providers');
@@ -76,19 +78,43 @@ function clientErrorMessage(provider, errorCode, description) {
 }
 
 /**
+ * Does the space-separated scope string `scope` contain `wanted`? Accepts the full scope URL or
+ * its last part ('IMAP.AccessAsUser.All' — Microsoft reports either), case-insensitively.
+ */
+function scopeIncludes(scope, wanted) {
+  if (typeof scope !== 'string' || !wanted) return false;
+  const norm = (v) => String(v).toLowerCase().replace(/\/+$/, '');
+  const full = norm(wanted);
+  const bare = full.slice(full.lastIndexOf('/') + 1);
+  return scope.split(/\s+/).some((s) => {
+    const got = norm(s);
+    return got && (got === full || got === bare);
+  });
+}
+
+/**
  * Did the token response grant the mail scope? RFC 6749 §5.1: a response without `scope`
- * granted exactly what was asked for. Accepts the full scope URL or its last part
- * ('IMAP.AccessAsUser.All'), case-insensitively.
+ * granted exactly what was asked for.
  */
 function grantsMailScope(provider, scope) {
   if (!provider.mailScope || typeof scope !== 'string' || !scope.trim()) return true;
-  const norm = (v) => String(v).toLowerCase().replace(/\/+$/, '');
-  const wanted = norm(provider.mailScope);
-  const bare = wanted.slice(wanted.lastIndexOf('/') + 1);
-  return scope.split(/\s+/).some((s) => {
-    const got = norm(s);
-    return got === wanted || got === bare;
-  });
+  return scopeIncludes(scope, provider.mailScope);
+}
+
+/**
+ * May an account with these granted scopes send mail over SMTP?
+ * true / false, or null when it is not known (no scope string was recorded for the account).
+ */
+function grantsSendScope(provider, grantedScopes) {
+  if (!provider || !provider.sendScope) return null;
+  if (typeof grantedScopes !== 'string' || !grantedScopes.trim()) return null;
+  return scopeIncludes(grantedScopes, provider.sendScope);
+}
+
+/** The scope string to record for a token response (what was granted, or what was asked for). */
+function grantedScopesFrom(data, requested) {
+  if (data && typeof data.scope === 'string' && data.scope.trim()) return data.scope.trim().slice(0, 2000);
+  return Array.isArray(requested) && requested.length ? requested.join(' ') : null;
 }
 
 function missingScopeMessage(provider) {
@@ -205,7 +231,9 @@ async function tokenRequest(provider, fields) {
 
 /**
  * Exchange an authorization code for tokens.
- * @returns {Promise<{accessToken, refreshToken: string|null, expiresAt: number, email: string, name: string|null}>}
+ * @returns {Promise<{accessToken, refreshToken: string|null, expiresAt: number, email: string, name: string|null,
+ *   grantedScopes: string|null}>} grantedScopes must be saved in the account secret: it decides
+ *   which scopes later refreshes ask for and whether the account may send.
  */
 async function exchangeCode(provider, { code, codeVerifier, redirectUri }) {
   if (!code) throw new OAuthError('No authorization code was returned.');
@@ -236,15 +264,31 @@ async function exchangeCode(provider, { code, codeVerifier, redirectUri }) {
     expiresAt: expiresAtFrom(data),
     email,
     name,
+    grantedScopes: grantedScopesFrom(data, provider.scopes),
   };
 }
 
 /**
- * Use a refresh token to get a new access token.
- * @returns {Promise<{accessToken, refreshToken, expiresAt}>} refreshToken is the rotated one if the
- *   provider sent one, else the original.
+ * The scopes to send with a refresh: the provider's refresh scopes, minus optional ones the
+ * account was never granted (`grantedScopes` unknown counts as not granted), mail scope first.
  */
-async function refreshAccessToken(provider, refreshToken) {
+function refreshScopesFor(provider, grantedScopes) {
+  if (!Array.isArray(provider.refreshScopes) || !provider.refreshScopes.length) return null;
+  const optional = new Set(provider.optionalScopes || []);
+  const wanted = provider.refreshScopes.filter((s) => !optional.has(s) || scopeIncludes(grantedScopes, s));
+  // Microsoft returns a token for the resource of the FIRST scope, so the mail scope leads.
+  const rest = wanted.filter((s) => s !== provider.mailScope);
+  return provider.mailScope ? [provider.mailScope, ...rest] : rest;
+}
+
+/**
+ * Use a refresh token to get a new access token.
+ * @param {{ grantedScopes?: string|null }} [opts] the scopes the account was granted so far
+ * @returns {Promise<{accessToken, refreshToken, expiresAt, grantedScopes: string|null}>} refreshToken is
+ *   the rotated one if the provider sent one, else the original; grantedScopes is the scope string of
+ *   the response (null when it had none).
+ */
+async function refreshAccessToken(provider, refreshToken, { grantedScopes = null } = {}) {
   if (!refreshToken) throw new OAuthError(REVOKED_MESSAGE, 'invalid_grant');
   const fields = {
     client_id: provider.clientId,
@@ -252,16 +296,14 @@ async function refreshAccessToken(provider, refreshToken) {
     grant_type: 'refresh_token',
     refresh_token: refreshToken,
   };
-  if (Array.isArray(provider.refreshScopes) && provider.refreshScopes.length) {
-    // Microsoft returns a token for the resource of the FIRST scope, so the mail scope leads.
-    const rest = provider.refreshScopes.filter((s) => s !== provider.mailScope);
-    fields.scope = (provider.mailScope ? [provider.mailScope, ...rest] : rest).join(' ');
-  }
+  const scopes = refreshScopesFor(provider, grantedScopes);
+  if (scopes && scopes.length) fields.scope = scopes.join(' ');
   const data = await tokenRequest(provider, fields);
   return {
     accessToken: data.access_token,
     refreshToken: typeof data.refresh_token === 'string' && data.refresh_token ? data.refresh_token : refreshToken,
     expiresAt: expiresAtFrom(data),
+    grantedScopes: typeof data.scope === 'string' && data.scope.trim() ? data.scope.trim().slice(0, 2000) : null,
   };
 }
 
@@ -326,7 +368,7 @@ async function getFreshAccessToken({ db, crypto, config }, accountRow) {
     }
     let fresh;
     try {
-      fresh = await refreshAccessToken(provider, secret.refreshToken);
+      fresh = await refreshAccessToken(provider, secret.refreshToken, { grantedScopes: secret.grantedScopes || null });
     } catch (err) {
       if (err instanceof OAuthError && err.code === 'invalid_grant') markRevoked(db, accountRow.id, err.message);
       // A server misconfiguration (wrong/expired client secret, deleted client) is not the
@@ -334,10 +376,12 @@ async function getFreshAccessToken({ db, crypto, config }, accountRow) {
       else if (err instanceof OAuthError && err.code === 'invalid_client') markAccount(db, accountRow.id, 'error', err.message);
       throw err;
     }
+    const grantedScopes = fresh.grantedScopes || secret.grantedScopes || null;
     const newSecret = crypto.encryptJson({
       refreshToken: fresh.refreshToken,
       accessToken: fresh.accessToken,
       accessTokenExpiresAt: fresh.expiresAt,
+      ...(grantedScopes ? { grantedScopes } : {}),
     });
     try {
       db.prepare('UPDATE accounts SET secret_enc = ? WHERE id = ?').run(newSecret, accountRow.id);
@@ -364,5 +408,8 @@ module.exports = {
   OAuthError,
   decodeJwtPayload,
   grantsMailScope,
+  grantsSendScope,
+  scopeIncludes,
+  refreshScopesFor,
   REVOKED_MESSAGE,
 };

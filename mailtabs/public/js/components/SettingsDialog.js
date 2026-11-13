@@ -1,32 +1,104 @@
-// Settings: accounts (status, edit, sync, remove), password, appearance, shortcuts.
+// Settings: accounts (status, edit, sending, sync, remove), sending (undo delay, From name and
+// signatures), notifications, password, appearance, shortcuts.
 import { html, useEffect, useRef, useState } from '/vendor/preact-htm.js';
 import { useStore } from '../store.js';
 import {
-  accountLabel,
   changePassword,
   closeDialog,
+  notificationPermission,
   oauthProviderFor,
   openDialog,
   removeAccount,
+  setNotifications,
   setTheme,
   signOut,
   startOAuth,
   syncAccount,
   toast,
   updateAccount,
+  updateSettings,
 } from '../actions.js';
 import { Icon, Spinner } from '../icons.js';
-import { SHORTCUTS, providerLabel } from '../constants.js';
+import { SHORTCUTS, UNDO_SEND_CHOICES, providerLabel } from '../constants.js';
 import { useNow, useUid } from '../hooks.js';
+import { SignatureSettings } from '../compose/SignatureSettings.js';
 import { Dialog } from './Dialog.js';
 import { ColorDot, ColorSwatches, InlineError, Kbd, StatusPill, TabChecklist } from './ui.js';
 
 const SECTIONS = [
   { id: 'accounts', label: 'Accounts', icon: 'mail' },
+  { id: 'sending', label: 'Sending', icon: 'send' },
+  { id: 'notifications', label: 'Notifications', icon: 'bell' },
   { id: 'security', label: 'Password', icon: 'lock' },
   { id: 'appearance', label: 'Appearance', icon: 'moon' },
   { id: 'shortcuts', label: 'Shortcuts', icon: 'keyboard' },
 ];
+
+const SMTP_DEFAULT_PORTS = { tls: 465, starttls: 587, none: 25 };
+
+function smtpFromAccount(account) {
+  return {
+    host: account.smtpHost || '',
+    port: account.smtpPort ? String(account.smtpPort) : '465',
+    security: account.smtpSecurity || 'tls',
+    user: account.smtpUser || '',
+    password: '',
+  };
+}
+
+/** Outgoing mail (SMTP) for password accounts; OAuth accounts send with their sign-in. */
+function SendingFields({ account, smtp, setSmtp, open, setOpen }) {
+  const set = (field, value) =>
+    setSmtp((v) => {
+      const next = { ...v, [field]: value };
+      // Follow the conventional port when switching security, unless a custom port was typed.
+      if (field === 'security' && Object.values(SMTP_DEFAULT_PORTS).map(String).includes(v.port)) next.port = String(SMTP_DEFAULT_PORTS[value]);
+      return next;
+    });
+  return html`<fieldset class="fieldset smtp-fieldset">
+    <legend class="field-label">Sending</legend>
+    <p class=${`send-status ${account.canSend ? 'is-ok' : 'is-off'}`}>
+      <${Icon} name=${account.canSend ? 'check' : 'alert'} size=${14} />
+      ${account.canSend
+        ? html`Sends through <strong>${account.smtpHost || 'your provider'}</strong>.`
+        : account.smtpHost
+          ? 'Sending isn’t working yet. Check the outgoing server settings below.'
+          : 'Sending isn’t set up yet. Enter the outgoing (SMTP) server below.'}
+    </p>
+    <button type="button" class="advanced-toggle" aria-expanded=${open ? 'true' : 'false'} onClick=${() => setOpen((v) => !v)}>
+      <${Icon} name="chevronRight" size=${14} className=${open ? 'rot-90' : ''} /> Outgoing server (SMTP)
+    </button>
+    ${open
+      ? html`<div class="advanced-grid">
+          <label class="field">
+            <span class="field-label">SMTP server</span>
+            <input class="input" type="text" inputmode="url" spellcheck=${false} autocomplete="off" placeholder="smtp.example.com" value=${smtp.host} onInput=${(e) => set('host', e.currentTarget.value)} />
+          </label>
+          <label class="field">
+            <span class="field-label">Port</span>
+            <input class="input" type="number" min="1" max="65535" inputmode="numeric" value=${smtp.port} onInput=${(e) => set('port', e.currentTarget.value)} />
+          </label>
+          <label class="field">
+            <span class="field-label">Security</span>
+            <select class="input" value=${smtp.security} onChange=${(e) => set('security', e.currentTarget.value)}>
+              <option value="tls">SSL/TLS (recommended)</option>
+              <option value="starttls">STARTTLS</option>
+              <option value="none">None — unencrypted</option>
+            </select>
+          </label>
+          <label class="field">
+            <span class="field-label">Username</span>
+            <input class="input" type="text" spellcheck=${false} autocomplete="off" placeholder="Same as incoming" value=${smtp.user} onInput=${(e) => set('user', e.currentTarget.value)} />
+          </label>
+          <label class="field field-span">
+            <span class="field-label">SMTP password</span>
+            <input class="input" type="password" autocomplete="off" placeholder="Leave blank to use the incoming password" value=${smtp.password} onInput=${(e) => set('password', e.currentTarget.value)} />
+            <span class="field-hint">Changing the server needs the password again, so it is never sent somewhere new without you typing it.</span>
+          </label>
+        </div>`
+      : null}
+  </fieldset>`;
+}
 
 const OAUTH_NAMES = { google: 'Google', microsoft: 'Microsoft' };
 
@@ -38,6 +110,8 @@ function AccountEditor({ account, tabs, presets, providers, onDone }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [confirmRemove, setConfirmRemove] = useState(false);
+  const [smtp, setSmtp] = useState(() => smtpFromAccount(account));
+  const [smtpOpen, setSmtpOpen] = useState(() => account.authType !== 'oauth' && !account.canSend);
   const formId = useUid('acct-form');
   const isOAuth = account.authType === 'oauth';
   const oauthProvider = isOAuth ? oauthProviderFor(account, presets) : null;
@@ -58,11 +132,30 @@ function AccountEditor({ account, tabs, presets, providers, onDone }) {
       tabIds: tabIds.filter((id) => tabs.some((t) => t.id === id)),
     };
     if (!isOAuth && password) body.password = password;
+    let smtpChanged = false;
+    if (!isOAuth) {
+      const before = smtpFromAccount(account);
+      const port = Number(smtp.port);
+      if (smtp.host.trim() !== before.host) body.smtpHost = smtp.host.trim();
+      if (smtp.port !== before.port) {
+        if (!Number.isInteger(port) || port < 1 || port > 65535) return setError('The SMTP port must be a number between 1 and 65535.');
+        body.smtpPort = port;
+      }
+      if (smtp.security !== before.security) body.smtpSecurity = smtp.security;
+      if (smtp.user.trim() !== before.user) body.smtpUser = smtp.user.trim();
+      if (smtp.password) body.smtpPassword = smtp.password;
+      smtpChanged = ['smtpHost', 'smtpPort', 'smtpSecurity', 'smtpUser', 'smtpPassword'].some((k) => k in body);
+      if ('smtpHost' in body && before.host && !smtp.password) {
+        setSmtpOpen(true);
+        return setError('Enter the SMTP password again to send through a different server.');
+      }
+    }
     setBusy(true);
     try {
       await updateAccount(account.id, body);
-      toast(password ? 'Password updated — checking for new mail…' : 'Account saved', { type: 'success' });
+      toast(password ? 'Password updated — checking for new mail…' : smtpChanged ? 'Sending settings checked and saved' : 'Account saved', { type: 'success' });
       setPassword('');
+      setSmtp((v) => ({ ...v, password: '' }));
       setBusy(false);
       onDone();
     } catch (err) {
@@ -102,7 +195,10 @@ function AccountEditor({ account, tabs, presets, providers, onDone }) {
       ? html`<div class="field">
           <span class="field-label">Sign-in</span>
           <div class="reconnect-row">
-            <span class="muted small">Connected with ${OAUTH_NAMES[oauthProvider] || 'OAuth'} sign-in.</span>
+            <span class="muted small">
+              Connected with ${OAUTH_NAMES[oauthProvider] || 'OAuth'} sign-in.${' '}
+              ${account.canSend === false ? html`<strong class="send-off">Reconnect to enable sending.</strong>` : account.canSend ? 'Sending is set up.' : ''}
+            </span>
             ${canReconnect
               ? html`<button type="button" class="btn btn-sm" onClick=${() => startOAuth(oauthProvider, { accountId: account.id })}>
                   <${Icon} name="refresh" size=${14} /> Reconnect
@@ -122,6 +218,7 @@ function AccountEditor({ account, tabs, presets, providers, onDone }) {
           />
           ${preset && preset.passwordHelp ? html`<span class="field-hint">${preset.passwordHelp}</span>` : null}
         </label>`}
+    ${isOAuth ? null : html`<${SendingFields} account=${account} smtp=${smtp} setSmtp=${setSmtp} open=${smtpOpen} setOpen=${setSmtpOpen} />`}
 
     <${InlineError} message=${error} />
 
@@ -142,7 +239,7 @@ function AccountEditor({ account, tabs, presets, providers, onDone }) {
           <span class="spacer"></span>
           <button type="button" class="btn btn-ghost" onClick=${onDone}>Cancel</button>
           <button type="submit" class="btn btn-primary" disabled=${busy}>
-            ${busy ? html`<${Spinner} size=${14} />` : null} ${!isOAuth && password ? 'Check & save' : 'Save changes'}
+            ${busy ? html`<${Spinner} size=${14} />` : null} ${!isOAuth && (password || smtp.password || smtp.host.trim() !== (account.smtpHost || '')) ? 'Check & save' : 'Save changes'}
           </button>
         </div>`}
   </form>`;
@@ -176,7 +273,8 @@ function AccountsSection({ focusAccountId }) {
     <div class="section-head">
       <div>
         <h3 class="section-title">Email accounts</h3>
-        <p class="section-sub">Mailtabs checks each inbox every few minutes. Removing an account never deletes mail on the server.</p>
+        <p class="section-sub">Mailtabs checks each account's folders every few minutes. Removing an account never deletes mail on the server.
+          Calendar, contact sync, server-side filters, vacation replies and snooze stay on your provider's own site.</p>
       </div>
       <button type="button" class="btn btn-sm" onClick=${() => openDialog('addAccount')}><${Icon} name="plus" size=${14} /> Add account</button>
     </div>
@@ -198,6 +296,7 @@ function AccountsSection({ focusAccountId }) {
                     ${a.displayName ? html`<span>${a.email}</span><span aria-hidden="true"> · </span>` : null}
                     <span>${providerLabel(a.provider, presets, { short: true })}</span>
                     ${typeof a.messageCount === 'number' ? html`<span aria-hidden="true"> · </span><span>${a.messageCount.toLocaleString()} messages</span>` : null}
+                    ${a.canSend === false ? html`<span aria-hidden="true"> · </span><span class="send-off">Can't send yet</span>` : null}
                   </div>
                 </div>
                 <div class="account-status"><${StatusPill} account=${a} now=${now} /></div>
@@ -317,12 +416,142 @@ function AppearanceSection() {
   </div>`;
 }
 
+/** "Saved" next to a setting for a few seconds (toasts would sit on top of the dialog). */
+function useSavedFlag() {
+  const [saved, setSaved] = useState(false);
+  const timer = useRef(null);
+  useEffect(() => () => clearTimeout(timer.current), []);
+  const flash = () => {
+    setSaved(true);
+    clearTimeout(timer.current);
+    timer.current = setTimeout(() => setSaved(false), 2500);
+  };
+  return [saved, flash, () => setSaved(false)];
+}
+
+function SavedNote({ show }) {
+  return show ? html`<span class="saved-note" role="status"><${Icon} name="check" size=${14} /> Saved</span>` : null;
+}
+
+function SendingSection() {
+  const { settings, loaded } = useStore((s) => ({ settings: s.settings, loaded: s.settingsLoaded }));
+  const [error, setError] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [saved, flashSaved, hideSaved] = useSavedFlag();
+  const selectId = useUid('undo-send');
+
+  const onChange = async (e) => {
+    const value = Number(e.currentTarget.value);
+    setBusy(true);
+    setError('');
+    hideSaved();
+    try {
+      await updateSettings({ undoSendSeconds: value });
+      flashSaved();
+    } catch (err) {
+      setError(err.message || "Couldn't save the setting.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return html`<div class="settings-section">
+    <div class="section-head">
+      <div>
+        <h3 class="section-title">Undo send</h3>
+        <p class="section-sub">After you press Send, Mailtabs waits this long before handing the message to your mail server, so you can still take it back.</p>
+      </div>
+    </div>
+    <div class="field inline-field">
+      <label class="field-label" for=${selectId}>Delay</label>
+      <select id=${selectId} class="input input-inline" value=${String(settings.undoSendSeconds)} onChange=${onChange} disabled=${busy || !loaded}>
+        ${UNDO_SEND_CHOICES.map((n) => html`<option key=${n} value=${String(n)}>${n ? `${n} seconds` : 'Off — send right away'}</option>`)}
+      </select>
+      ${busy ? html`<${Spinner} size=${14} />` : html`<${SavedNote} show=${saved} />`}
+    </div>
+    <${InlineError} message=${error} />
+    <div class="section-divider" role="presentation"></div>
+    <div class="section-head">
+      <div>
+        <h3 class="section-title">From name and signatures</h3>
+        <p class="section-sub">Each account has its own name and signature. Mailtabs sends from one address per account (aliases aren't supported) and doesn't request read receipts.</p>
+      </div>
+    </div>
+    <${SignatureSettings} />
+  </div>`;
+}
+
+const PERMISSION_TEXT = {
+  unsupported: "This browser can't show desktop notifications.",
+  denied: 'Notifications are blocked for Mailtabs in this browser. Allow them in the site settings (the icon left of the address), then turn this on again.',
+  default: 'Your browser will ask for permission when you turn this on.',
+  granted: '',
+};
+
+function NotificationsSection() {
+  const enabled = useStore((s) => !!s.settings.notifications);
+  const [permission, setPermission] = useState(() => notificationPermission());
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const [saved, flashSaved, hideSaved] = useSavedFlag();
+  const switchId = useUid('notify');
+
+  const toggle = async (on) => {
+    setBusy(true);
+    setError('');
+    hideSaved();
+    try {
+      await setNotifications(on);
+      flashSaved();
+    } catch (err) {
+      setError(err.message || "Couldn't change notifications.");
+    } finally {
+      setPermission(notificationPermission());
+      setBusy(false);
+    }
+  };
+
+  const active = enabled && permission === 'granted';
+  return html`<div class="settings-section">
+    <div class="section-head">
+      <div>
+        <h3 class="section-title">Desktop notifications</h3>
+        <p class="section-sub">
+          Get a notification for new Inbox mail while Mailtabs is open in a browser tab you aren't looking at. At most three at a time; more arrive as one summary.
+        </p>
+      </div>
+    </div>
+    <label class="switch-row" for=${switchId}>
+      <input
+        id=${switchId}
+        type="checkbox"
+        role="switch"
+        class="switch"
+        checked=${active}
+        disabled=${busy || permission === 'unsupported'}
+        onChange=${(e) => toggle(e.currentTarget.checked)}
+      />
+      <span class="switch-label">Notify me about new mail</span>
+      ${busy ? html`<${Spinner} size=${14} />` : html`<${SavedNote} show=${saved} />`}
+    </label>
+    ${enabled && permission !== 'granted' && permission !== 'unsupported'
+      ? html`<div class="banner banner-warning">
+          <${Icon} name="alert" size=${16} />
+          <span>Notifications are on for your account, but this browser hasn't allowed them yet.</span>
+          <button type="button" class="btn btn-sm" onClick=${() => toggle(true)} disabled=${busy || permission === 'denied'}>Allow</button>
+        </div>`
+      : null}
+    ${PERMISSION_TEXT[permission] && !(enabled && permission === 'default') ? html`<p class="field-hint">${PERMISSION_TEXT[permission]}</p>` : null}
+    <${InlineError} message=${error} />
+  </div>`;
+}
+
 function ShortcutsSection() {
   return html`<div class="settings-section">
     <div class="section-head">
       <div>
         <h3 class="section-title">Keyboard shortcuts</h3>
-        <p class="section-sub">Shortcuts are off while you're typing in a field.</p>
+        <p class="section-sub">Shortcuts are off while you're typing in a field. Actions apply to the selected messages when you have selected some.</p>
       </div>
     </div>
     <dl class="shortcut-list">
@@ -387,6 +616,8 @@ export function SettingsDialog({ accountId = null, section: initialSection = 'ac
       </div>
       <div class="settings-panel" role="tabpanel" id=${`${baseId}-panel`} aria-labelledby=${`${baseId}-tab-${section}`}>
         ${section === 'accounts' ? html`<${AccountsSection} focusAccountId=${accountId} />` : null}
+        ${section === 'sending' ? html`<${SendingSection} />` : null}
+        ${section === 'notifications' ? html`<${NotificationsSection} />` : null}
         ${section === 'security' ? html`<${PasswordSection} />` : null}
         ${section === 'appearance' ? html`<${AppearanceSection} />` : null}
         ${section === 'shortcuts' ? html`<${ShortcutsSection} />` : null}

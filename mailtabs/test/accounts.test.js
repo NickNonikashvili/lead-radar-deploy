@@ -114,6 +114,16 @@ test('GET /api/accounts: shape, counts, tab ids, ordering, never any secret', as
     messageCount: 2,
     unreadCount: 1,
     tabIds: [tab.body.tab.id],
+    // v2: sending. An Other-IMAP account without an outgoing server cannot send yet.
+    smtpHost: null,
+    smtpPort: null,
+    smtpSecurity: null,
+    smtpUser: null,
+    hasSmtpPassword: false,
+    senderName: null,
+    signatureHtml: '',
+    canSend: false,
+    sendBlockedReason: 'Sending is not set up for this account yet: add its outgoing (SMTP) server in the account settings.',
   });
   assert.equal(second.authType, 'oauth');
   assert.equal(second.unreadCount, 1);

@@ -1,6 +1,6 @@
 // Empty / zero states for the workspace.
 import { html } from '/vendor/preact-htm.js';
-import { openDialog, setFilter, setQuery } from '../actions.js';
+import { compose, openDialog, setFilter, setQuery } from '../actions.js';
 import { Icon, Spinner } from '../icons.js';
 import { Kbd, ProviderMark } from './ui.js';
 import { PROVIDER_UI } from '../constants.js';
@@ -40,7 +40,17 @@ export function EmptyTab({ tab }) {
   </div>`;
 }
 
-export function NoMessages({ query, filter, tabName, syncing }) {
+// Empty unified views and special folders: [icon, title, text].
+const VIEW_EMPTY = {
+  starred: ['star', 'No starred messages', 'Star a message to find it here quickly, whichever account it is in.'],
+  sent: ['send', 'Nothing sent yet', 'Mail you send from any of your accounts shows up here.'],
+  drafts: ['draft', 'No drafts', 'Messages you start writing are saved here automatically.'],
+  junk: ['spam', 'No spam', 'Mail your providers flag as spam lands here.'],
+  trash: ['trash', 'Trash is empty', 'Deleted mail stays here until your provider removes it.'],
+};
+const SPECIAL_VIEW = { '\\Sent': 'sent', '\\Drafts': 'drafts', '\\Junk': 'junk', '\\Trash': 'trash', '\\Flagged': 'starred' };
+
+export function NoMessages({ query, filter, tabName, syncing, view = 'inbox', folder = null }) {
   if (query) {
     return html`<div class="empty-state">
       <div class="empty-icon"><${Icon} name="search" size=${22} /></div>
@@ -50,10 +60,11 @@ export function NoMessages({ query, filter, tabName, syncing }) {
     </div>`;
   }
   if (syncing) {
+    const inbox = view === 'inbox';
     return html`<div class="empty-state">
       <div class="empty-icon"><${Spinner} size=${22} /></div>
-      <h3 class="empty-title">Syncing your inbox…</h3>
-      <p class="empty-text">The first sync can take a minute. New mail will appear here automatically.</p>
+      <h3 class="empty-title">${inbox ? 'Syncing your inbox…' : `Checking ${tabName} for mail…`}</h3>
+      <p class="empty-text">${inbox ? 'The first sync can take a minute. New mail will appear here automatically.' : 'This takes a moment the first time a folder is opened.'}</p>
     </div>`;
   }
   if (filter === 'unread' || filter === 'starred') {
@@ -62,6 +73,26 @@ export function NoMessages({ query, filter, tabName, syncing }) {
       <h3 class="empty-title">${filter === 'unread' ? 'No unread mail' : 'No starred messages'}</h3>
       <p class="empty-text">${filter === 'unread' ? `You've read everything in ${tabName}.` : 'Star a message to find it here quickly.'}</p>
       <button type="button" class="btn" onClick=${() => setFilter('all')}>Show all mail</button>
+    </div>`;
+  }
+  const viewKey = folder ? SPECIAL_VIEW[folder.specialUse] : view;
+  const preset = VIEW_EMPTY[viewKey];
+  if (preset) {
+    const [icon, title, text] = preset;
+    return html`<div class="empty-state">
+      <div class="empty-icon"><${Icon} name=${icon} size=${22} /></div>
+      <h3 class="empty-title">${title}</h3>
+      <p class="empty-text">${text}</p>
+      ${viewKey === 'sent' || viewKey === 'drafts'
+        ? html`<button type="button" class="btn" onClick=${() => compose('new')}><${Icon} name="pen" size=${15} /> Compose</button>`
+        : null}
+    </div>`;
+  }
+  if (folder) {
+    return html`<div class="empty-state">
+      <div class="empty-icon"><${Icon} name="folder" size=${22} /></div>
+      <h3 class="empty-title">${folder.hasOlder ? 'No recent messages here' : 'This folder is empty'}</h3>
+      <p class="empty-text">${folder.hasOlder ? 'The server has older mail in this folder.' : 'Move messages here with “Move to…” or the v key.'}</p>
     </div>`;
   }
   return html`<div class="empty-state">

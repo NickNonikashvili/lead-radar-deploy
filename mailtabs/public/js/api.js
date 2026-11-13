@@ -90,7 +90,7 @@ const get = (path, opts) => request('GET', path, undefined, opts);
 const post = (path, body, opts) => request('POST', path, body, opts);
 const patch = (path, body, opts) => request('PATCH', path, body, opts);
 const put = (path, body, opts) => request('PUT', path, body, opts);
-const del = (path, opts) => request('DELETE', path, undefined, opts);
+const del = (path, body, opts) => request('DELETE', path, body, opts);
 
 const id = (value) => encodeURIComponent(String(value));
 
@@ -119,14 +119,44 @@ export const api = {
   deleteTab: (tabId) => del(`/api/tabs/${id(tabId)}`),
   reorderTabs: (ids) => put('/api/tabs/order', { ids }),
 
-  // messages
+  // messages. `params` has exactly one source: { tab } | { folder } | { view }.
   messages: (params, opts) => get(`/api/messages${query(params)}`, opts),
   message: (messageId, opts) => get(`/api/messages/${id(messageId)}`, opts),
   updateMessage: (messageId, body) => patch(`/api/messages/${id(messageId)}`, body),
-  bulk: (ids, action) => post('/api/messages/bulk', { ids, action }),
+  // `extra` carries action arguments, e.g. { folderId } for 'move'.
+  bulk: (ids, action, extra = {}) => post('/api/messages/bulk', { ids, action, ...extra }),
+  undo: (token) => post('/api/messages/undo', { token }),
+  thread: (messageId, opts) => get(`/api/messages/${id(messageId)}/thread`, opts),
   // `filters` narrows it to what the list shows: { q, starred }.
   markAllRead: (tab, filters = {}) => post('/api/messages/mark-all-read', { tab, ...filters }),
   oauthResult: () => get('/api/oauth/result'),
+
+  // folders
+  folders: () => get('/api/folders'),
+  createFolder: (body) => post('/api/folders', body),
+  renameFolder: (folderId, name) => patch(`/api/folders/${id(folderId)}`, { name }),
+  deleteFolder: (folderId, { force = false } = {}) => del(`/api/folders/${id(folderId)}${force ? '?force=1' : ''}`),
+  syncFolder: (folderId) => post(`/api/folders/${id(folderId)}/sync`, {}),
+  backfillFolder: (folderId, count = 100) => post(`/api/folders/${id(folderId)}/backfill`, { count }),
+  emptyFolder: (folderId) => post(`/api/folders/${id(folderId)}/empty`, {}),
+
+  // settings
+  settings: () => get('/api/settings'),
+  updateSettings: (body) => put('/api/settings', body),
+
+  // outbox
+  outbox: () => get('/api/outbox'),
+  cancelOutbox: (outboxId) => post(`/api/outbox/${id(outboxId)}/cancel`, {}),
+  retryOutbox: (outboxId) => post(`/api/outbox/${id(outboxId)}/retry`, {}),
+  deleteOutbox: (outboxId) => del(`/api/outbox/${id(outboxId)}`),
+
+  // compose (the composer may use these or its own helpers)
+  prepareCompose: (params) => get(`/api/compose/prepare${query(params)}`),
+  saveDraft: (body) => post('/api/drafts', body),
+  deleteDraft: (draft) => del('/api/drafts', { draft }),
+  send: (body) => post('/api/send', body),
+  contacts: (q, limit = 8, opts) => get(`/api/contacts${query({ q, limit })}`, opts),
+  deleteUpload: (uploadId) => del(`/api/uploads/${id(uploadId)}`),
 };
 
 /** URL for the sandboxed iframe that renders a message body. */
@@ -136,6 +166,16 @@ export function bodyUrl(messageId, showImages) {
 
 export function attachmentUrl(messageId, index) {
   return `/api/messages/${id(messageId)}/attachments/${id(index)}`;
+}
+
+/** Download of the original message (.eml). */
+export function rawUrl(messageId) {
+  return `/api/messages/${id(messageId)}/raw`;
+}
+
+/** Printable page for a message (remote images only when the user allowed them). */
+export function printUrl(messageId, showImages) {
+  return `/api/messages/${id(messageId)}/print${showImages ? '?images=1' : ''}`;
 }
 
 /** Full-page navigation target that starts Google/Microsoft sign-in. */

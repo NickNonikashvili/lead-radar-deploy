@@ -70,6 +70,15 @@ function parseIdCsv(value) {
 module.exports = function oauthRoutes({ db, config, crypto, syncManager }) {
   const router = express.Router();
 
+  /** Outgoing-server columns for an OAuth account: null (the provider default) unless a test overrides it. */
+  function outgoingServerFor(provider) {
+    const override = config.oauthOverrides && config.oauthOverrides[provider.key];
+    if (override && override.smtpHost && provider.smtpHost) {
+      return { host: provider.smtpHost, port: provider.smtpPort || null, security: provider.smtpSecurity || null };
+    }
+    return { host: null, port: null, security: null };
+  }
+
   const redirectUri = (provider) => oauth.redirectUriFor(config, provider.key);
 
   /** The provider for :provider, or null when unknown or not configured on this server. */
@@ -170,11 +179,18 @@ module.exports = function oauthRoutes({ db, config, crypto, syncManager }) {
         err.redirectMessage = NO_REFRESH_TOKEN;
         throw err;
       }
+      // grantedScopes decides which scopes later refreshes ask for and whether the account may
+      // send (Microsoft's SMTP.Send).
       const secretEnc = crypto.encryptJson({
         refreshToken,
         accessToken: tokens.accessToken,
         accessTokenExpiresAt: tokens.expiresAt,
+        ...(tokens.grantedScopes ? { grantedScopes: tokens.grantedScopes } : {}),
       });
+      // OAuth accounts send through the provider's own server (smtp.js picks it). Only test
+      // setups that point the provider elsewhere (OAUTH_TEST_ENDPOINTS) store one; a password
+      // account converted to OAuth loses its own outgoing settings and SMTP password.
+      const smtpCols = outgoingServerFor(provider);
 
       let accountId;
       if (existing) {
@@ -184,19 +200,53 @@ module.exports = function oauthRoutes({ db, config, crypto, syncManager }) {
           String(existing.imap_user).toLowerCase() !== String(tokens.email).toLowerCase();
         db.prepare(
           `UPDATE accounts SET provider = ?, auth_type = 'oauth', email = ?, imap_host = ?, imap_port = ?, imap_security = ?,
-                  imap_user = ?, secret_enc = ?, status = 'pending', last_error = NULL${mailboxChanged ? ', sync_state = NULL' : ''}
+                  imap_user = ?, secret_enc = ?, status = 'pending', last_error = NULL,
+                  smtp_host = ?, smtp_port = ?, smtp_security = ?, smtp_user = NULL, smtp_secret_enc = NULL${
+                    mailboxChanged ? ', sync_state = NULL, folders_synced_at = NULL, config_version = config_version + 1' : ''
+                  }
             WHERE id = ? AND user_id = ?`
-        ).run(provider.presetKey, tokens.email, provider.imapHost, provider.imapPort, provider.imapSecurity, tokens.email, secretEnc, existing.id, userId);
-        if (mailboxChanged) db.prepare('DELETE FROM messages WHERE account_id = ?').run(existing.id);
+        ).run(
+          provider.presetKey,
+          tokens.email,
+          provider.imapHost,
+          provider.imapPort,
+          provider.imapSecurity,
+          tokens.email,
+          secretEnc,
+          smtpCols.host,
+          smtpCols.port,
+          smtpCols.security,
+          existing.id,
+          userId
+        );
+        if (mailboxChanged) {
+          // A different mailbox: its folders (and their messages, by cascade) mean nothing here.
+          db.prepare('DELETE FROM folders WHERE account_id = ?').run(existing.id);
+          db.prepare('DELETE FROM messages WHERE account_id = ?').run(existing.id);
+        }
         accountId = existing.id;
       } else {
         const info = db
           .prepare(
             `INSERT INTO accounts (user_id, provider, auth_type, email, display_name, color, imap_host, imap_port,
-                                   imap_security, imap_user, secret_enc, mailbox, status, created_at)
-             VALUES (?, ?, 'oauth', ?, NULL, ?, ?, ?, ?, ?, ?, 'INBOX', 'pending', ?)`
+                                   imap_security, imap_user, secret_enc, mailbox, status, created_at, smtp_host, smtp_port, smtp_security)
+             VALUES (?, ?, 'oauth', ?, NULL, ?, ?, ?, ?, ?, ?, 'INBOX', 'pending', ?, ?, ?, ?)`
           )
-          .run(userId, provider.presetKey, tokens.email, queries.nextAccountColor(db, userId), provider.imapHost, provider.imapPort, provider.imapSecurity, tokens.email, secretEnc, Date.now());
+          .run(
+            userId,
+            provider.presetKey,
+            tokens.email,
+            queries.nextAccountColor(db, userId),
+            provider.imapHost,
+            provider.imapPort,
+            provider.imapSecurity,
+            tokens.email,
+            secretEnc,
+            Date.now(),
+            smtpCols.host,
+            smtpCols.port,
+            smtpCols.security
+          );
         accountId = Number(info.lastInsertRowid);
       }
 

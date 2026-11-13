@@ -2,7 +2,8 @@
 
 /**
  * SyncManager tests against the real Dovecot test server (alice@test.local only).
- * Skipped when the server is not reachable.
+ * Skipped when the server is not reachable. Every folder of alice is synced; these tests look
+ * at the INBOX (test/folders-sync.test.js covers the other folders).
  */
 
 const test = require('node:test');
@@ -12,6 +13,15 @@ const imap = require('../src/imap');
 const { SyncManager, createLimiter, pickDate, structureHasAttachments } = require('../src/sync');
 const { HttpError } = require('../src/errors');
 const h = require('./engine-helpers');
+const fh = require('./folders-helpers');
+
+// The INBOX rows of an account, by UID (other folders are synced too).
+const inboxOf = (db, accountId) => fh.rowsIn(db, accountId, 'INBOX');
+const inboxState = (db, accountId) => fh.folderState(db, accountId, 'INBOX');
+const setInboxState = (db, accountId, state) =>
+  db.prepare("UPDATE folders SET sync_state = ? WHERE account_id = ? AND path = 'INBOX'").run(JSON.stringify(state), accountId);
+// Empty every folder of alice (resetAlice only empties INBOX, Archive and Trash).
+const resetAlice = () => fh.resetUser('alice');
 
 let available = false;
 let releaseLock = () => {};
@@ -20,12 +30,12 @@ test.before(async () => {
   available = await h.aliceAvailable();
   if (!available) return;
   releaseLock = await h.lockAlice();
-  await h.resetAlice();
+  await resetAlice();
 });
 
 test.after(async () => {
   try {
-    if (available) await h.resetAlice();
+    if (available) await resetAlice();
   } finally {
     releaseLock();
   }
@@ -39,7 +49,7 @@ function imapTest(name, envOverrides, fn) {
   }
   test(name, async (t) => {
     if (!available) return t.skip('IMAP test server (127.0.0.1:1143) not reachable');
-    await h.resetAlice();
+    await resetAlice();
     const env = h.makeEngineEnv(envOverrides);
     const logger = h.recordingLogger();
     const manager = new SyncManager({ db: env.db, crypto: env.crypto, config: env.config, logger });
@@ -134,7 +144,7 @@ imapTest('initial sync takes the newest INITIAL_SYNC_LIMIT messages with correct
   assert.equal(result.newMessages, 3);
   assert.equal(result.removed, 0);
 
-  const rows = h.messagesOf(ctx.db, account.id);
+  const rows = inboxOf(ctx.db, account.id);
   assert.deepEqual(rows.map((r) => r.uid), uids.slice(2));
   assert.deepEqual(rows.map((r) => r.subject), ['Message 3', 'Message 4', 'Message 5']);
   const [m3, m4, m5] = rows;
@@ -153,14 +163,17 @@ imapTest('initial sync takes the newest INITIAL_SYNC_LIMIT messages with correct
   assert.ok(Math.abs(m3.date - ago(7 * 60000).getTime()) < 5000, 'Date header used');
   assert.ok(m5.date > m4.date && m4.date > m3.date);
 
+  assert.ok(rows.every((r) => r.folder_id === fh.folderRow(ctx.db, account.id, 'INBOX').id));
   const acc = h.getAccount(ctx.db, account.id);
   assert.equal(acc.status, 'ok');
   assert.equal(acc.last_error, null);
   assert.ok(acc.last_synced_at > Date.now() - 60000);
-  const state = JSON.parse(acc.sync_state);
+  const state = inboxState(ctx.db, account.id);
   assert.equal(typeof state.uidValidity, 'number');
   assert.equal(state.lastUid, uids[4]);
+  assert.equal(state.oldestUid, uids[2]);
   assert.match(String(state.highestModseq), /^\d+$/, 'Dovecot has CONDSTORE');
+  assert.equal(fh.folderRow(ctx.db, account.id, 'INBOX').has_older, 1, 'two older messages left on the server');
 });
 
 imapTest('incremental sync fetches only new UIDs (and the `*` quirk does not refetch the last one)', async (t, ctx) => {
@@ -172,13 +185,13 @@ imapTest('incremental sync fetches only new UIDs (and the `*` quirk does not ref
   const again = await ctx.manager.syncAccount(account.id);
   assert.equal(again.ok, true);
   assert.equal(again.newMessages, 0);
-  assert.equal(h.messagesOf(ctx.db, account.id).length, 1);
+  assert.equal(inboxOf(ctx.db, account.id).length, 1);
 
   await h.appendAlice(h.buildMessage({ subject: 'second' }));
   await h.appendAlice(h.buildMessage({ subject: 'third' }));
   const third = await ctx.manager.syncAccount(account.id);
   assert.equal(third.newMessages, 2);
-  assert.deepEqual(h.messagesOf(ctx.db, account.id).map((r) => r.subject), ['first', 'second', 'third']);
+  assert.deepEqual(inboxOf(ctx.db, account.id).map((r) => r.subject), ['first', 'second', 'third']);
 });
 
 imapTest('a Date header far in the future falls back to the server arrival time', async (t, ctx) => {
@@ -186,7 +199,7 @@ imapTest('a Date header far in the future falls back to the server arrival time'
   await h.appendAlice(h.buildMessage({ subject: 'from the future', date: new Date('2099-01-01T00:00:00Z') }), { date: arrival });
   const account = h.createAccount(ctx.db, ctx.crypto, ctx.userId);
   await ctx.manager.syncAccount(account.id);
-  const [row] = h.messagesOf(ctx.db, account.id);
+  const [row] = inboxOf(ctx.db, account.id);
   assert.ok(Math.abs(row.date - arrival.getTime()) < 2000, `${new Date(row.date).toISOString()} vs ${arrival.toISOString()}`);
 });
 
@@ -228,7 +241,7 @@ imapTest('flag changes made elsewhere are picked up via CONDSTORE', async (t, ct
   assert.equal(result.ok, true);
   assert.equal(result.flagRefresh, 'condstore');
   assert.equal(result.updated, 2);
-  const byUid = Object.fromEntries(h.messagesOf(ctx.db, account.id).map((r) => [r.uid, r]));
+  const byUid = Object.fromEntries(inboxOf(ctx.db, account.id).map((r) => [r.uid, r]));
   assert.equal(byUid[a].is_read, 0);
   assert.equal(byUid[b].is_read, 1);
   assert.equal(byUid[b].is_starred, 1);
@@ -242,11 +255,7 @@ imapTest('flag refresh falls back to a FLAGS fetch over the known UID range with
   await ctx.manager.syncAccount(account.id);
 
   // Force the non-CONDSTORE path by forgetting the stored HIGHESTMODSEQ.
-  const forget = () => {
-    const state = JSON.parse(h.getAccount(ctx.db, account.id).sync_state);
-    state.highestModseq = null;
-    ctx.db.prepare('UPDATE accounts SET sync_state = ? WHERE id = ?').run(JSON.stringify(state), account.id);
-  };
+  const forget = () => setInboxState(ctx.db, account.id, { ...inboxState(ctx.db, account.id), highestModseq: null });
   forget();
   await setServerFlags([
     { uid: a, add: ['\\Seen'] },
@@ -255,11 +264,11 @@ imapTest('flag refresh falls back to a FLAGS fetch over the known UID range with
   const result = await ctx.manager.syncAccount(account.id);
   assert.equal(result.flagRefresh, 'fallback');
   assert.equal(result.updated, 2);
-  const byUid = Object.fromEntries(h.messagesOf(ctx.db, account.id).map((r) => [r.uid, r]));
+  const byUid = Object.fromEntries(inboxOf(ctx.db, account.id).map((r) => [r.uid, r]));
   assert.equal(byUid[a].is_read, 1);
   assert.equal(byUid[b].is_starred, 0);
   // The modseq is stored again, so the next sync is back on CONDSTORE.
-  assert.match(String(JSON.parse(h.getAccount(ctx.db, account.id).sync_state).highestModseq), /^\d+$/);
+  assert.match(String(inboxState(ctx.db, account.id).highestModseq), /^\d+$/);
 
   forget();
   const unchanged = await ctx.manager.syncAccount(account.id);
@@ -279,7 +288,7 @@ imapTest('messages deleted, flagged \\Deleted or moved elsewhere are removed loc
   const flagged = await h.appendAlice(h.buildMessage({ subject: 'flag deleted' }));
   const account = h.createAccount(ctx.db, ctx.crypto, ctx.userId);
   await ctx.manager.syncAccount(account.id);
-  assert.equal(h.messagesOf(ctx.db, account.id).length, 4);
+  assert.equal(inboxOf(ctx.db, account.id).length, 4);
 
   await h.withAlice(async (client) => {
     const lock = await client.getMailboxLock('INBOX');
@@ -294,20 +303,23 @@ imapTest('messages deleted, flagged \\Deleted or moved elsewhere are removed loc
   const result = await ctx.manager.syncAccount(account.id);
   assert.equal(result.ok, true);
   assert.equal(result.removed, 3);
-  assert.deepEqual(h.messagesOf(ctx.db, account.id).map((r) => r.uid), [keep]);
-  // FTS stays consistent with the table (delete trigger ran).
+  assert.deepEqual(inboxOf(ctx.db, account.id).map((r) => r.uid), [keep]);
+  // The moved message now lives in Archive (that folder changed, so it was synced too).
+  const archived = fh.rowsIn(ctx.db, account.id, 'Archive');
+  assert.deepEqual(archived.map((r) => r.subject), ['archive me']);
+  // FTS stays consistent with the table (delete trigger ran for the INBOX row).
   const fts = ctx.db.prepare("SELECT rowid FROM messages_fts WHERE messages_fts MATCH 'archive'").all();
-  assert.equal(fts.length, 0);
+  assert.deepEqual(fts.map((r) => r.rowid), archived.map((r) => r.id));
 });
 
 imapTest('an emptied mailbox removes everything locally', async (t, ctx) => {
   await h.appendAlice(h.buildMessage({ subject: 'x' }));
   const account = h.createAccount(ctx.db, ctx.crypto, ctx.userId);
   await ctx.manager.syncAccount(account.id);
-  await h.resetAlice();
+  await resetAlice();
   const result = await ctx.manager.syncAccount(account.id);
   assert.equal(result.removed, 1);
-  assert.equal(h.messagesOf(ctx.db, account.id).length, 0);
+  assert.equal(inboxOf(ctx.db, account.id).length, 0);
 });
 
 imapTest('a UIDVALIDITY change wipes local mail and resyncs from scratch', async (t, ctx) => {
@@ -315,20 +327,20 @@ imapTest('a UIDVALIDITY change wipes local mail and resyncs from scratch', async
   await h.appendAlice(h.buildMessage({ subject: 'two' }));
   const account = h.createAccount(ctx.db, ctx.crypto, ctx.userId);
   await ctx.manager.syncAccount(account.id);
-  const real = JSON.parse(h.getAccount(ctx.db, account.id).sync_state);
+  const real = inboxState(ctx.db, account.id);
 
   // Pretend everything we have came from an older UIDVALIDITY generation.
   ctx.db.prepare('UPDATE messages SET uid_validity = 1, uid = uid + 1000 WHERE account_id = ?').run(account.id);
-  ctx.db.prepare('UPDATE accounts SET sync_state = ? WHERE id = ?').run(JSON.stringify({ uidValidity: 1, lastUid: 99999, highestModseq: '1' }), account.id);
+  setInboxState(ctx.db, account.id, { uidValidity: 1, lastUid: 99999, highestModseq: '1' });
 
   const result = await ctx.manager.syncAccount(account.id);
   assert.equal(result.ok, true);
   assert.equal(result.removed, 2);
   assert.equal(result.newMessages, 2);
-  const rows = h.messagesOf(ctx.db, account.id);
+  const rows = inboxOf(ctx.db, account.id);
   assert.deepEqual(rows.map((r) => r.subject), ['one', 'two']);
   assert.ok(rows.every((r) => r.uid_validity === real.uidValidity));
-  assert.deepEqual(JSON.parse(h.getAccount(ctx.db, account.id).sync_state).uidValidity, real.uidValidity);
+  assert.deepEqual(inboxState(ctx.db, account.id).uidValidity, real.uidValidity);
 });
 
 // ---------------------------------------------------------------------------------------------
@@ -349,7 +361,7 @@ imapTest('inline cid: images are rewritten to the new row id during sync', async
   );
   const account = h.createAccount(ctx.db, ctx.crypto, ctx.userId);
   await ctx.manager.syncAccount(account.id);
-  const [row] = h.messagesOf(ctx.db, account.id);
+  const [row] = inboxOf(ctx.db, account.id);
   assert.ok(row.html_body.includes(`src="/api/messages/${row.id}/attachments/0"`), row.html_body);
   assert.doesNotMatch(row.html_body, /cid:/);
   const atts = JSON.parse(row.attachments_json);
@@ -381,7 +393,7 @@ imapTest('large messages are deferred and fetchBodyNow downloads them on demand'
   const account = h.createAccount(ctx.db, ctx.crypto, ctx.userId);
   const result = await ctx.manager.syncAccount(account.id);
   assert.equal(result.newMessages, 2);
-  const rows = Object.fromEntries(h.messagesOf(ctx.db, account.id).map((r) => [r.subject, r]));
+  const rows = Object.fromEntries(inboxOf(ctx.db, account.id).map((r) => [r.subject, r]));
   assert.equal(rows['small one'].body_state, 'ready');
   const deferred = rows['big one'];
   assert.equal(deferred.uid, bigUid);
@@ -415,7 +427,7 @@ imapTest('fetchBodyNow reports a message that is gone from the server', { MAX_BO
   const uid = await h.appendAlice(h.buildMessage({ subject: 'big', text: 'x'.repeat(20000) }));
   const account = h.createAccount(ctx.db, ctx.crypto, ctx.userId);
   await ctx.manager.syncAccount(account.id);
-  const [row] = h.messagesOf(ctx.db, account.id);
+  const [row] = inboxOf(ctx.db, account.id);
   assert.equal(row.body_state, 'deferred');
   await h.withAlice(async (client) => {
     const lock = await client.getMailboxLock('INBOX');
@@ -439,7 +451,7 @@ imapTest('fetchBodyNow wraps connection failures in a friendly 502', { MAX_BODY_
   await h.appendAlice(h.buildMessage({ subject: 'big', text: 'y'.repeat(20000) }));
   const account = h.createAccount(ctx.db, ctx.crypto, ctx.userId);
   await ctx.manager.syncAccount(account.id);
-  const [row] = h.messagesOf(ctx.db, account.id);
+  const [row] = inboxOf(ctx.db, account.id);
   ctx.db.prepare('UPDATE accounts SET imap_port = 1 WHERE id = ?').run(account.id);
   await assert.rejects(ctx.manager.fetchBodyNow(row), (err) => {
     assert.equal(err.status, 502);
@@ -527,7 +539,7 @@ imapTest('fixing the password while a sync with the old one runs: stale result i
   while (h.getAccount(ctx.db, account.id).status !== 'ok' && Date.now() < deadline) await new Promise((r) => setTimeout(r, 50));
   assert.equal(h.getAccount(ctx.db, account.id).status, 'ok');
   assert.equal(runs, 2);
-  assert.deepEqual(h.messagesOf(ctx.db, account.id).map((m) => m.subject), ['after the fix']);
+  assert.deepEqual(inboxOf(ctx.db, account.id).map((m) => m.subject), ['after the fix']);
 });
 
 imapTest('unknown account resolves (never rejects) with ok:false', async (t, ctx) => {
@@ -659,7 +671,7 @@ imapTest('the scheduler syncs accounts shortly after start, skipping ones that n
   while (h.getAccount(ctx.db, good.id).status !== 'ok' && Date.now() < deadline) await new Promise((r) => setTimeout(r, 100));
   await ctx.manager.stop();
   assert.equal(h.getAccount(ctx.db, good.id).status, 'ok');
-  assert.equal(h.messagesOf(ctx.db, good.id).length, 1);
+  assert.equal(inboxOf(ctx.db, good.id).length, 1);
   assert.ok(!synced.includes(broken.id), 'auth_error accounts are not retried automatically');
   assert.equal(h.getAccount(ctx.db, broken.id).status, 'auth_error');
 });

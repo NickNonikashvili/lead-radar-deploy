@@ -11,10 +11,42 @@
  *                     username, so a failed login is retried once with the other form
  *   authFailureHint   added to the "wrong password" message for this provider's servers
  *
- * Help texts follow the providers' own documentation as checked on 2026-11-12.
+ * Sending (SMTP) fields:
+ *   smtpHost/smtpPort/smtpSecurity  the default outgoing server
+ *   smtpHostByDomain     outgoing host for particular email domains (sent to the browser)
+ *   smtpHostForImapHost  outgoing host that belongs to a particular IMAP host (Zoho paid plans, GMX.net)
+ *   otherSmtpHosts       further SMTP hosts of the provider (to recognise it by host name)
+ *   smtpUser             'email': the SMTP username is the full address even when the IMAP one is not
+ *   sentCopy             'server' when the provider's SMTP server files a copy in Sent itself,
+ *                        'append' when the client has to APPEND one
+ *   sentCopyUnverified   the provider does not document it either way: look for a server copy
+ *                        (by Message-ID) a little later before appending
+ *
+ * Help texts follow the providers' own documentation as checked on 2026-11-12; SMTP settings
+ * as checked on 2026-11-13.
  */
 
 const PRESET_ORDER = ['gmail', 'outlook', 'yahoo', 'icloud', 'aol', 'fastmail', 'zoho', 'gmx', 'yandex', 'imap'];
+
+// Personal Microsoft account domains (Outlook.com, Hotmail, Live, MSN). Any other domain on the
+// Outlook preset is a work or school mailbox on Exchange Online.
+const OUTLOOK_CONSUMER_DOMAINS = Object.freeze([
+  'outlook.com',
+  'hotmail.com',
+  'live.com',
+  'msn.com',
+  'hotmail.co.uk',
+  'outlook.co.uk',
+  'passport.com',
+  'hotmail.fr',
+  'hotmail.de',
+  'hotmail.it',
+  'hotmail.es',
+  'live.co.uk',
+  'live.fr',
+  'outlook.fr',
+  'outlook.de',
+]);
 
 const PRESETS = Object.freeze({
   gmail: Object.freeze({
@@ -23,6 +55,11 @@ const PRESETS = Object.freeze({
     imapHost: 'imap.gmail.com',
     imapPort: 993,
     imapSecurity: 'tls',
+    smtpHost: 'smtp.gmail.com',
+    smtpPort: 465,
+    smtpSecurity: 'tls',
+    // "Sent messages are automatically copied to the Gmail/Sent folder if your email client uses SMTP."
+    sentCopy: 'server',
     domains: Object.freeze(['gmail.com', 'googlemail.com']),
     auth: Object.freeze(['oauth', 'password']),
     oauthProvider: 'google',
@@ -38,24 +75,17 @@ const PRESETS = Object.freeze({
     imapHost: 'outlook.office365.com',
     imapPort: 993,
     imapSecurity: 'tls',
-    domains: Object.freeze([
-      'outlook.com',
-      'hotmail.com',
-      'live.com',
-      'msn.com',
-      'hotmail.co.uk',
-      'outlook.co.uk',
-      'passport.com',
-      'hotmail.fr',
-      'hotmail.de',
-      'hotmail.it',
-      'hotmail.es',
-      'live.co.uk',
-      'live.fr',
-      'outlook.fr',
-      'outlook.de',
-    ]),
+    // Work/school (Exchange Online) mailboxes submit through smtp.office365.com; personal
+    // Outlook.com/Hotmail addresses through smtp-mail.outlook.com (see smtpHostByDomain).
+    // Port 465 is not supported by either. Exchange files a copy in Sent Items itself.
+    smtpHost: 'smtp.office365.com',
+    smtpPort: 587,
+    smtpSecurity: 'starttls',
+    sentCopy: 'server',
+    domains: OUTLOOK_CONSUMER_DOMAINS,
     otherHosts: Object.freeze(['outlook.office.com', 'imap-mail.outlook.com']),
+    smtpHostByDomain: Object.freeze(Object.fromEntries(OUTLOOK_CONSUMER_DOMAINS.map((d) => [d, 'smtp-mail.outlook.com']))),
+    otherSmtpHosts: Object.freeze(['smtp-mail.outlook.com']),
     // Microsoft turned off password (basic auth) sign-in for IMAP everywhere: Outlook.com since
     // 2024-09-16, and every Exchange Online / Microsoft 365 tenant for good (app passwords too).
     auth: Object.freeze(['oauth']),
@@ -72,6 +102,11 @@ const PRESETS = Object.freeze({
     imapHost: 'imap.mail.yahoo.com',
     imapPort: 993,
     imapSecurity: 'tls',
+    smtpHost: 'smtp.mail.yahoo.com',
+    smtpPort: 465,
+    smtpSecurity: 'tls',
+    sentCopy: 'append',
+    sentCopyUnverified: true,
     domains: Object.freeze([
       'yahoo.com',
       'ymail.com',
@@ -98,6 +133,12 @@ const PRESETS = Object.freeze({
     imapHost: 'imap.mail.me.com',
     imapPort: 993,
     imapSecurity: 'tls',
+    smtpHost: 'smtp.mail.me.com',
+    smtpPort: 587,
+    smtpSecurity: 'starttls',
+    sentCopy: 'append',
+    // iCloud's SMTP server wants the full address even when IMAP accepts the bare name.
+    smtpUser: 'email',
     domains: Object.freeze(['icloud.com', 'me.com', 'mac.com']),
     auth: Object.freeze(['password']),
     oauthProvider: null,
@@ -114,6 +155,11 @@ const PRESETS = Object.freeze({
     imapHost: 'imap.aol.com',
     imapPort: 993,
     imapSecurity: 'tls',
+    smtpHost: 'smtp.aol.com',
+    smtpPort: 465,
+    smtpSecurity: 'tls',
+    sentCopy: 'append',
+    sentCopyUnverified: true,
     domains: Object.freeze(['aol.com', 'aim.com']),
     auth: Object.freeze(['password']),
     oauthProvider: null,
@@ -127,6 +173,10 @@ const PRESETS = Object.freeze({
     imapHost: 'imap.fastmail.com',
     imapPort: 993,
     imapSecurity: 'tls',
+    smtpHost: 'smtp.fastmail.com',
+    smtpPort: 465,
+    smtpSecurity: 'tls',
+    sentCopy: 'append',
     domains: Object.freeze(['fastmail.com', 'fastmail.fm']),
     auth: Object.freeze(['password']),
     oauthProvider: null,
@@ -142,8 +192,25 @@ const PRESETS = Object.freeze({
     imapHost: 'imap.zoho.com',
     imapPort: 993,
     imapSecurity: 'tls',
+    smtpHost: 'smtp.zoho.com',
+    smtpPort: 465,
+    smtpSecurity: 'tls',
+    // Zoho documents that mail sent through its SMTP servers "is automatically saved in your
+    // Sent folder", so appending a copy would duplicate it.
+    sentCopy: 'server',
     domains: Object.freeze(['zoho.com', 'zohomail.com', 'zoho.eu', 'zohomail.eu']),
     hostByDomain: Object.freeze({ 'zoho.eu': 'imap.zoho.eu', 'zohomail.eu': 'imap.zoho.eu' }),
+    smtpHostByDomain: Object.freeze({ 'zoho.eu': 'smtp.zoho.eu', 'zohomail.eu': 'smtp.zoho.eu' }),
+    // Paid organisations (imappro.*) and other data centres send through the matching SMTP host.
+    smtpHostForImapHost: Object.freeze({
+      'imap.zoho.eu': 'smtp.zoho.eu',
+      'imappro.zoho.com': 'smtppro.zoho.com',
+      'imappro.zoho.eu': 'smtppro.zoho.eu',
+      'imap.zoho.in': 'smtp.zoho.in',
+      'imappro.zoho.in': 'smtppro.zoho.in',
+      'imap.zoho.com.au': 'smtp.zoho.com.au',
+      'imappro.zoho.com.au': 'smtppro.zoho.com.au',
+    }),
     // imappro.* serve paid organisations on their own domain; the regional hosts are not on
     // Zoho's own help page, so they are only used to recognise a Zoho server.
     otherHosts: Object.freeze([
@@ -168,6 +235,10 @@ const PRESETS = Object.freeze({
     imapHost: 'imap.gmx.com',
     imapPort: 993,
     imapSecurity: 'tls',
+    smtpHost: 'mail.gmx.com',
+    smtpPort: 587,
+    smtpSecurity: 'starttls',
+    sentCopy: 'append',
     domains: Object.freeze(['gmx.com', 'gmx.us', 'gmx.net', 'gmx.de', 'gmx.at', 'gmx.ch']),
     // German-language GMX accounts live on a different IMAP host.
     hostByDomain: Object.freeze({
@@ -176,6 +247,13 @@ const PRESETS = Object.freeze({
       'gmx.at': 'imap.gmx.net',
       'gmx.ch': 'imap.gmx.net',
     }),
+    smtpHostByDomain: Object.freeze({
+      'gmx.net': 'mail.gmx.net',
+      'gmx.de': 'mail.gmx.net',
+      'gmx.at': 'mail.gmx.net',
+      'gmx.ch': 'mail.gmx.net',
+    }),
+    smtpHostForImapHost: Object.freeze({ 'imap.gmx.net': 'mail.gmx.net', 'imap.gmx.com': 'mail.gmx.com' }),
     auth: Object.freeze(['password']),
     oauthProvider: null,
     passwordHelp: 'Turn on "POP3 & IMAP access" in your GMX mail settings first (GMX switches it off again after a long time without use)',
@@ -189,6 +267,11 @@ const PRESETS = Object.freeze({
     imapHost: 'imap.yandex.com',
     imapPort: 993,
     imapSecurity: 'tls',
+    smtpHost: 'smtp.yandex.com',
+    smtpPort: 465,
+    smtpSecurity: 'tls',
+    sentCopy: 'append',
+    sentCopyUnverified: true,
     domains: Object.freeze(['yandex.com', 'yandex.ru', 'ya.ru', 'yandex.by', 'yandex.kz', 'yandex.ua']),
     auth: Object.freeze(['password']),
     oauthProvider: null,
@@ -207,6 +290,11 @@ const PRESETS = Object.freeze({
     imapHost: '',
     imapPort: 993,
     imapSecurity: 'tls',
+    // The user supplies the outgoing server; these are only the form's defaults.
+    smtpHost: '',
+    smtpPort: 465,
+    smtpSecurity: 'tls',
+    sentCopy: 'append',
     domains: Object.freeze([]),
     auth: Object.freeze(['password']),
     oauthProvider: null,
@@ -237,6 +325,11 @@ function publicPresets() {
       passwordHelp: p.passwordHelp,
       passwordHelpUrl: p.passwordHelpUrl,
       hostByDomain: p.hostByDomain ? { ...p.hostByDomain } : {},
+      smtpHost: p.smtpHost,
+      smtpPort: p.smtpPort,
+      smtpSecurity: p.smtpSecurity,
+      smtpHostByDomain: p.smtpHostByDomain ? { ...p.smtpHostByDomain } : {},
+      sentCopy: p.sentCopy,
     };
   });
 }
@@ -295,6 +388,48 @@ function alternateUsername(presetKey, user, email) {
   return u && full.includes('@') && full.toLowerCase() !== u.toLowerCase() ? full : null;
 }
 
+/**
+ * Default outgoing (SMTP) server for an account on preset `presetKey`.
+ * The account's IMAP host decides first (a Zoho paid-plan IMAP host means the matching SMTP
+ * host), then the email domain (Outlook.com vs Microsoft 365, GMX.net), then the preset default.
+ * @returns {{ host: string, port: number, security: string, sentCopy: 'server'|'append' }}
+ *   host is '' when the preset has no default (Other IMAP) or the preset is unknown.
+ */
+function presetSmtpSettings(presetKey, { email, imapHost } = {}) {
+  const preset = PRESETS[presetKey] || PRESETS.imap;
+  const imap = String(imapHost || '').trim().toLowerCase().replace(/\.$/, '');
+  const domain = emailDomain(email);
+  const host =
+    (preset.smtpHostForImapHost && preset.smtpHostForImapHost[imap]) ||
+    (preset.smtpHostByDomain && preset.smtpHostByDomain[domain]) ||
+    preset.smtpHost ||
+    '';
+  return { host, port: preset.smtpPort, security: preset.smtpSecurity, sentCopy: preset.sentCopy };
+}
+
+/** Preset key whose outgoing server `host` is (by host name), or null. */
+function presetKeyForSmtpHost(host) {
+  const h = String(host || '').trim().toLowerCase().replace(/\.$/, '');
+  if (!h) return null;
+  for (const key of PRESET_ORDER) {
+    const p = PRESETS[key];
+    if (!p.smtpHost) continue;
+    const hosts = [
+      p.smtpHost,
+      ...Object.values(p.smtpHostByDomain || {}),
+      ...Object.values(p.smtpHostForImapHost || {}),
+      ...(p.otherSmtpHosts || []),
+    ];
+    if (hosts.includes(h)) return key;
+  }
+  return null;
+}
+
+/** True for a personal Microsoft account address (Outlook.com, Hotmail, Live, MSN). */
+function isMicrosoftConsumerEmail(email) {
+  return OUTLOOK_CONSUMER_DOMAINS.includes(emailDomain(email));
+}
+
 /** Provider-specific advice to add to a failed password login for `host`, or ''. */
 function authFailureHintForHost(host) {
   const key = presetKeyForHost(host);
@@ -302,13 +437,13 @@ function authFailureHintForHost(host) {
 }
 
 // Only these keys of config.oauthOverrides (tests only) may replace a provider's values.
-const OVERRIDABLE_KEYS = ['authUrl', 'tokenUrl', 'imapHost', 'imapPort', 'imapSecurity'];
+const OVERRIDABLE_KEYS = ['authUrl', 'tokenUrl', 'imapHost', 'imapPort', 'imapSecurity', 'smtpHost', 'smtpPort', 'smtpSecurity'];
 
 function applyOverrides(provider, overrides) {
   if (!overrides || typeof overrides !== 'object') return provider;
   for (const key of OVERRIDABLE_KEYS) {
     if (overrides[key] !== undefined && overrides[key] !== null && overrides[key] !== '') {
-      provider[key] = key === 'imapPort' ? Number(overrides[key]) : overrides[key];
+      provider[key] = key === 'imapPort' || key === 'smtpPort' ? Number(overrides[key]) : overrides[key];
     }
   }
   return provider;
@@ -340,11 +475,17 @@ function oauthProviders(config) {
         mailScope: 'https://mail.google.com/',
         // Google refreshes without a scope parameter.
         refreshScopes: null,
+        // https://mail.google.com/ covers IMAP, POP and SMTP.
+        sendScope: 'https://mail.google.com/',
+        optionalScopes: [],
         envNames: ['GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET'],
         extraAuthParams: { access_type: 'offline', prompt: 'consent', include_granted_scopes: 'true' },
         imapHost: 'imap.gmail.com',
         imapPort: 993,
         imapSecurity: 'tls',
+        smtpHost: 'smtp.gmail.com',
+        smtpPort: 465,
+        smtpSecurity: 'tls',
       },
       overrides.google
     ),
@@ -359,15 +500,32 @@ function oauthProviders(config) {
         authUrl: `https://login.microsoftonline.com/${tenant}/oauth2/v2.0/authorize`,
         tokenUrl: `https://login.microsoftonline.com/${tenant}/oauth2/v2.0/token`,
         // The IMAP scope must come first: with scopes for several resources, Microsoft issues the
-        // access token for the first one. No Graph scopes (such as User.Read) for the same reason.
-        scopes: ['https://outlook.office.com/IMAP.AccessAsUser.All', 'offline_access', 'openid', 'email', 'profile'],
+        // access token for the first one. SMTP.Send belongs to the same resource
+        // (outlook.office.com), so one token covers both. No Graph scopes (such as User.Read).
+        scopes: [
+          'https://outlook.office.com/IMAP.AccessAsUser.All',
+          'https://outlook.office.com/SMTP.Send',
+          'offline_access',
+          'openid',
+          'email',
+          'profile',
+        ],
         mailScope: 'https://outlook.office.com/IMAP.AccessAsUser.All',
-        refreshScopes: ['https://outlook.office.com/IMAP.AccessAsUser.All', 'offline_access'],
+        refreshScopes: ['https://outlook.office.com/IMAP.AccessAsUser.All', 'https://outlook.office.com/SMTP.Send', 'offline_access'],
+        sendScope: 'https://outlook.office.com/SMTP.Send',
+        // Asked for on refresh only when the account was granted them: Microsoft refuses a refresh
+        // for scopes the user never consented to, which would cut off accounts connected before
+        // sending existed (they consented to IMAP only) — they must reconnect to add sending.
+        optionalScopes: ['https://outlook.office.com/SMTP.Send'],
         envNames: ['MICROSOFT_CLIENT_ID', 'MICROSOFT_CLIENT_SECRET'],
         extraAuthParams: { prompt: 'select_account' },
         imapHost: 'outlook.office365.com',
         imapPort: 993,
         imapSecurity: 'tls',
+        // Work/school default; personal addresses use smtp-mail.outlook.com (presetSmtpSettings).
+        smtpHost: 'smtp.office365.com',
+        smtpPort: 587,
+        smtpSecurity: 'starttls',
       },
       overrides.microsoft
     ),
@@ -389,6 +547,9 @@ module.exports = {
   isMicrosoftImapHost,
   alternateUsername,
   authFailureHintForHost,
+  presetSmtpSettings,
+  presetKeyForSmtpHost,
+  isMicrosoftConsumerEmail,
   oauthProviders,
   oauthProviderForPreset,
 };

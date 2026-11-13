@@ -1,17 +1,26 @@
-// Signed-in layout: header, tab bar, warnings, list + reading pane, dialogs.
+// Signed-in layout: header; sidebar (or drawer); the tab bar (Inbox) or a view header;
+// warnings; list + reading pane (or the outbox); dialogs; the composer windows.
 import { html, useEffect, useState } from '/vendor/preact-htm.js';
 import { useStore } from '../store.js';
 import { accountLabel, openDialog, reconnectAccount } from '../actions.js';
 import { Icon } from '../icons.js';
 import { useGlobalShortcuts } from '../keyboard.js';
+import { ComposerHost } from '../compose/ComposerHost.js';
 import { Header } from './Header.js';
+import { Sidebar } from './Sidebar.js';
 import { TabBar } from './TabBar.js';
-import { FilterBar, MessageList } from './MessageList.js';
+import { ViewHeader } from './FolderView.js';
+import { BulkBar } from './BulkBar.js';
+import { ComposeFab, FilterBar, MessageList } from './MessageList.js';
 import { Reader } from './Reader.js';
+import { OutboxView } from './OutboxView.js';
 import { NoAccounts } from './EmptyStates.js';
 import { AddAccountDialog } from './AddAccountDialog.js';
 import { TabEditorDialog } from './TabEditorDialog.js';
 import { SettingsDialog } from './SettingsDialog.js';
+import { MoveDialog } from './MoveDialog.js';
+import { FolderDialog } from './FolderDialog.js';
+import { ConfirmDialog } from './ConfirmDialog.js';
 
 function AccountAlerts() {
   const { accounts, presets } = useStore((s) => ({ accounts: s.accounts, presets: s.config.presets }));
@@ -56,14 +65,19 @@ function Dialogs() {
   if (dialog.type === 'addAccount') return html`<${AddAccountDialog} key=${`add-${props.provider || ''}`} ...${props} />`;
   if (dialog.type === 'tabEditor') return html`<${TabEditorDialog} key=${`tab-${props.tabId || 'new'}`} ...${props} />`;
   if (dialog.type === 'settings') return html`<${SettingsDialog} key="settings" ...${props} />`;
+  if (dialog.type === 'move') return html`<${MoveDialog} key=${`move-${(props.ids || []).join(',')}`} ...${props} />`;
+  if (dialog.type === 'folder') return html`<${FolderDialog} key=${`folder-${props.mode}-${props.folderId || props.accountId}`} ...${props} />`;
+  if (dialog.type === 'confirm') return html`<${ConfirmDialog} key=${`confirm-${props.title}`} ...${props} />`;
   return null;
 }
 
 export function MainLayout() {
-  const { noAccounts, readerOpen, unread } = useStore((s) => ({
+  const { noAccounts, readerOpen, unread, view, selecting } = useStore((s) => ({
     noAccounts: s.accountsLoaded && s.accounts.length === 0,
     readerOpen: s.openId != null,
     unread: s.allCounts.unreadCount,
+    view: s.view,
+    selecting: s.selectedIds.length > 0,
   }));
   useGlobalShortcuts();
 
@@ -75,21 +89,38 @@ export function MainLayout() {
     };
   }, [unread]);
 
-  return html`<div class="app">
+  let main;
+  if (noAccounts) {
+    main = html`<main class="workspace workspace-empty"><${NoAccounts} /></main>`;
+  } else if (view === 'outbox') {
+    main = html`<main class="workspace workspace-single">
+      <${OutboxView} />
+      <${ComposeFab} />
+    </main>`;
+  } else {
+    main = html`<main class=${`workspace ${readerOpen ? 'reader-open' : ''}`}>
+      <section class="list-pane" aria-label="Message list">
+        ${selecting ? html`<${BulkBar} />` : html`<${FilterBar} />`}
+        <${MessageList} />
+        <${ComposeFab} />
+      </section>
+      <section class="reader-pane" aria-label="Reading pane">
+        <${Reader} />
+      </section>
+    </main>`;
+  }
+
+  return html`<div class=${`app ${noAccounts ? 'no-accounts' : ''}`}>
     <${Header} />
-    <${TabBar} />
-    <${AccountAlerts} />
-    ${noAccounts
-      ? html`<main class="workspace workspace-empty"><${NoAccounts} /></main>`
-      : html`<main class=${`workspace ${readerOpen ? 'reader-open' : ''}`}>
-          <section class="list-pane" aria-label="Message list">
-            <${FilterBar} />
-            <${MessageList} />
-          </section>
-          <section class="reader-pane" aria-label="Reading pane">
-            <${Reader} />
-          </section>
-        </main>`}
+    <div class="app-body">
+      ${noAccounts ? null : html`<${Sidebar} />`}
+      <div class="app-main">
+        ${noAccounts ? null : view === 'inbox' ? html`<${TabBar} />` : html`<${ViewHeader} />`}
+        <${AccountAlerts} />
+        ${main}
+      </div>
+    </div>
     <${Dialogs} />
+    <${ComposerHost} />
   </div>`;
 }

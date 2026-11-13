@@ -13,6 +13,8 @@ const { HttpError } = require('../errors');
 const { requireAuth, asyncHandler } = require('../middleware');
 const { PRESETS, guessPresetForEmail, presetHostForEmail, isMicrosoftImapHost, alternateUsername } = require('../providers');
 const imap = require('../imap');
+const smtp = require('../smtp');
+const compose = require('../compose');
 const netguard = require('../netguard');
 const queries = require('../queries');
 
@@ -22,7 +24,12 @@ const MAX_EMAIL = 254;
 const MAX_PASSWORD = 1024;
 const MAX_DISPLAY_NAME = 60;
 const MAX_IMAP_USER = 254;
+const MAX_SENDER_NAME = 100;
+const MAX_SIGNATURE_BYTES = 20 * 1024;
 const SECURITY_VALUES = ['tls', 'starttls', 'none'];
+const SMTP_FIELDS = ['smtpHost', 'smtpPort', 'smtpSecurity', 'smtpUser', 'smtpPassword'];
+// eslint-disable-next-line no-control-regex
+const HAS_CONTROL = /[\u0000-\u001f\u007f-\u009f\u2028\u2029]/;
 const SYNC_WAIT_MS = 45000;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+$/;
 
@@ -77,6 +84,63 @@ function requireSecurity(value) {
 }
 
 const given = (v) => v !== undefined && v !== null && !(typeof v === 'string' && v.trim() === '');
+
+function requireSmtpHost(value) {
+  if (typeof value !== 'string' || !value.trim()) {
+    throw validate.badRequest('Enter the outgoing (SMTP) server name, for example smtp.example.com.', 'HOST_REQUIRED');
+  }
+  const host = netguard.normalizeHost(value);
+  if (!host) throw validate.badRequest('Enter a valid outgoing server name, like smtp.example.com.', 'HOST_NOT_ALLOWED');
+  return host;
+}
+
+function requireSmtpPassword(value) {
+  if (typeof value !== 'string' || value === '') throw validate.badRequest('Enter the password for the outgoing server.', 'PASSWORD_REQUIRED');
+  if (value.length > MAX_PASSWORD) throw validate.badRequest('That password is too long.', 'VALIDATION');
+  return value;
+}
+
+/** The From display name: one line of text, or null to use the Mailtabs user's name. */
+function readSenderName(value) {
+  const name = validate.optionalText(value, { field: 'Sender name', max: MAX_SENDER_NAME });
+  if (name && HAS_CONTROL.test(name)) throw validate.badRequest('The sender name cannot contain line breaks or control characters.');
+  return name;
+}
+
+/** A signature, sanitised with the same allow-list as outgoing mail; null when empty. */
+function readSignature(value) {
+  if (value === undefined || value === null || value === '') return null;
+  if (typeof value !== 'string') throw validate.badRequest('The signature must be text.');
+  const tooLarge = () =>
+    validate.badRequest(`The signature is too long (at most ${MAX_SIGNATURE_BYTES / 1024} KB). Remove images or formatting.`, 'SIGNATURE_TOO_LARGE');
+  if (Buffer.byteLength(value, 'utf8') > MAX_SIGNATURE_BYTES * 2) throw tooLarge();
+  const clean = compose.sanitizeOutgoingHtml(value);
+  if (Buffer.byteLength(clean, 'utf8') > MAX_SIGNATURE_BYTES) throw tooLarge();
+  // A signature with no visible content (e.g. "<p><br></p>") is no signature.
+  const visible = clean.replace(/<(?!img\b)[^>]*>/gi, '').replace(/&nbsp;|\s/g, '');
+  return visible ? clean : null;
+}
+
+/**
+ * Outgoing-server fields of a request body ({ smtpHost, smtpPort, smtpSecurity, smtpUser,
+ * smtpPassword }) as account columns; only the fields that were given. `smtpHost: ''` / null
+ * clears the account's own outgoing settings (back to the provider's default, if any).
+ */
+function readSmtpColumns(body) {
+  const cols = {};
+  if (body.smtpHost !== undefined) {
+    if (body.smtpHost === null || (typeof body.smtpHost === 'string' && !body.smtpHost.trim())) {
+      return { clear: true, cols: { smtp_host: null, smtp_port: null, smtp_security: null, smtp_user: null, smtp_secret_enc: null } };
+    }
+    cols.smtp_host = requireSmtpHost(body.smtpHost);
+  }
+  if (given(body.smtpPort)) cols.smtp_port = requirePort(body.smtpPort);
+  if (given(body.smtpSecurity)) cols.smtp_security = requireSecurity(body.smtpSecurity);
+  // An empty username means "the default" (the mailbox's own username).
+  if (body.smtpUser !== undefined) cols.smtp_user = validate.optionalText(body.smtpUser, { field: 'SMTP username', max: MAX_IMAP_USER });
+  const password = given(body.smtpPassword) ? requireSmtpPassword(body.smtpPassword) : null;
+  return { clear: false, cols, password };
+}
 
 /**
  * Connection settings for a new password account: the body's values, else the provider preset.
@@ -149,6 +213,8 @@ module.exports = function accountsRoutes({ db, config, crypto, syncManager }) {
   const router = express.Router();
   router.use(requireAuth);
   const imapDeps = { db, crypto, config };
+  // For canSend (OAuth grants) and SMTP checks.
+  const jsonDeps = { deps: imapDeps };
 
   // --- per-user budget for IMAP login checks ---------------------------------------------
   const verifyBudget = new Map(); // userId -> { count, resetAt }
@@ -182,6 +248,12 @@ module.exports = function accountsRoutes({ db, config, crypto, syncManager }) {
     return (result && result.user) || conn.user;
   }
 
+  /** Check an outgoing-server login (same per-user budget as IMAP checks); throws HttpError. */
+  async function verifyOutgoing(userId, settings, password) {
+    spendVerifyBudget(userId);
+    return smtp.verifySmtp(imapDeps, { host: settings.host, port: settings.port, security: settings.security, user: settings.user, password });
+  }
+
   /** Start a background sync. Must be called after the account's status is set to 'pending'. */
   function kickSync(accountId) {
     Promise.resolve()
@@ -194,6 +266,17 @@ module.exports = function accountsRoutes({ db, config, crypto, syncManager }) {
     const row = queries.getAccountRowForUser(db, userId, id);
     if (!row) throw new HttpError(404, 'Account not found', 'NOT_FOUND');
     return row;
+  }
+
+  /** The password inside an encrypted secret, or null when it can't be read. */
+  function readSavedPassword(secretEnc) {
+    if (!secretEnc) return null;
+    try {
+      const secret = crypto.decryptJson(secretEnc) || {};
+      return typeof secret.password === 'string' && secret.password ? secret.password : null;
+    } catch (_) {
+      return null;
+    }
   }
 
   /** tabIds from a body, validated as the user's own tabs. */
@@ -217,7 +300,7 @@ module.exports = function accountsRoutes({ db, config, crypto, syncManager }) {
   const duplicate = () => new HttpError(409, 'This email account is already connected.', 'ACCOUNT_EXISTS');
 
   router.get('/', (req, res) => {
-    res.json({ accounts: queries.listAccountsJson(db, req.user.id) });
+    res.json({ accounts: queries.listAccountsJson(db, req.user.id, jsonDeps) });
   });
 
   router.post(
@@ -239,10 +322,35 @@ module.exports = function accountsRoutes({ db, config, crypto, syncManager }) {
       // Without a chosen colour, the account gets the first palette colour its siblings don't use.
       const color = given(body.color) ? validate.requireColor(body.color) : null;
       const tabIds = readTabIds(userId, body.tabIds);
+      const senderName = body.senderName === undefined ? null : readSenderName(body.senderName);
+      const signatureHtml = body.signatureHtml === undefined ? null : readSignature(body.signatureHtml);
+      const outgoing = readSmtpColumns(body);
+      const smtpCols = outgoing.clear ? {} : outgoing.cols;
 
       // Cheap checks first; then the (slow) login check; only then store anything.
       if (findByEmail.get(userId, conn.email)) throw duplicate();
       conn.user = await verify(userId, conn);
+
+      // Sending is checked after the mailbox works. A problem there never blocks adding the
+      // account (reading mail is the main thing); the user is told what to fix instead.
+      const warnings = [];
+      const smtpSettings = smtp.smtpSettingsFor({
+        provider: conn.provider,
+        auth_type: 'password',
+        email: conn.email,
+        imap_host: conn.host,
+        imap_user: conn.user,
+        ...smtpCols,
+      });
+      if (!smtpSettings.host) {
+        warnings.push('Sending is not set up yet: add the outgoing (SMTP) server in the account settings.');
+      } else {
+        try {
+          await verifyOutgoing(userId, smtpSettings, outgoing.password !== null && outgoing.password !== undefined ? outgoing.password : conn.password);
+        } catch (err) {
+          warnings.push(`Sending is not set up yet: ${err && err.expose === true ? err.message : smtp.friendlySmtpError(err)}`);
+        }
+      }
 
       let accountId;
       try {
@@ -251,8 +359,9 @@ module.exports = function accountsRoutes({ db, config, crypto, syncManager }) {
           const info = db
             .prepare(
               `INSERT INTO accounts (user_id, provider, auth_type, email, display_name, color, imap_host, imap_port,
-                                     imap_security, imap_user, secret_enc, mailbox, status, created_at)
-               VALUES (?, ?, 'password', ?, ?, ?, ?, ?, ?, ?, ?, 'INBOX', 'pending', ?)`
+                                     imap_security, imap_user, secret_enc, mailbox, status, created_at,
+                                     smtp_host, smtp_port, smtp_security, smtp_user, smtp_secret_enc, sender_name, signature_html)
+               VALUES (?, ?, 'password', ?, ?, ?, ?, ?, ?, ?, ?, 'INBOX', 'pending', ?, ?, ?, ?, ?, ?, ?, ?)`
             )
             .run(
               userId,
@@ -265,7 +374,14 @@ module.exports = function accountsRoutes({ db, config, crypto, syncManager }) {
               conn.security,
               conn.user,
               crypto.encryptJson({ password: conn.password }),
-              Date.now()
+              Date.now(),
+              smtpCols.smtp_host ?? null,
+              smtpCols.smtp_port ?? null,
+              smtpCols.smtp_security ?? null,
+              smtpCols.smtp_user ?? null,
+              outgoing.password ? crypto.encryptJson({ password: outgoing.password }) : null,
+              senderName,
+              signatureHtml
             );
           const id = Number(info.lastInsertRowid);
           // A tab could have been deleted during the login check; attach only those still there.
@@ -280,7 +396,7 @@ module.exports = function accountsRoutes({ db, config, crypto, syncManager }) {
       }
 
       kickSync(accountId);
-      res.status(201).json({ account: queries.getAccountJson(db, userId, accountId) });
+      res.status(201).json({ account: queries.getAccountJson(db, userId, accountId, jsonDeps), warnings });
     })
   );
 
@@ -296,7 +412,10 @@ module.exports = function accountsRoutes({ db, config, crypto, syncManager }) {
         sets.display_name = validate.optionalText(body.displayName, { field: 'Display name', max: MAX_DISPLAY_NAME });
       }
       if (body.color !== undefined) sets.color = validate.requireColor(body.color);
+      if (body.senderName !== undefined) sets.sender_name = readSenderName(body.senderName);
+      if (body.signatureHtml !== undefined) sets.signature_html = readSignature(body.signatureHtml);
       const tabIds = body.tabIds === undefined ? undefined : readTabIds(userId, body.tabIds);
+      const outgoing = readSmtpColumns(body);
 
       // Connection settings: start from the stored ones and apply what the body changes.
       const conn = { host: account.imap_host, port: account.imap_port, security: account.imap_security, user: account.imap_user };
@@ -309,7 +428,23 @@ module.exports = function accountsRoutes({ db, config, crypto, syncManager }) {
       const mailboxChanged = conn.host !== account.imap_host || conn.user !== account.imap_user;
       const connectionChanged = mailboxChanged || conn.port !== account.imap_port || conn.security !== account.imap_security;
 
-      if (account.auth_type === 'oauth' && (connectionChanged || newPassword)) {
+      // Outgoing server: what it is now, and what it would be after this change.
+      const smtpBefore = smtp.smtpSettingsFor(account);
+      const smtpAfter = smtp.smtpSettingsFor({
+        ...account,
+        imap_host: conn.host,
+        imap_user: conn.user,
+        ...outgoing.cols,
+      });
+      const smtpEndpointChanged =
+        smtpAfter.host !== smtpBefore.host || smtpAfter.port !== smtpBefore.port || smtpAfter.security !== smtpBefore.security;
+      // Only fields the user sent count: when just the IMAP server changes, the provider's
+      // default outgoing server simply follows it (that IMAP login was checked with a typed password).
+      const smtpFieldsGiven = SMTP_FIELDS.some((key) => body[key] !== undefined);
+      const smtpChanged =
+        smtpFieldsGiven && !outgoing.clear && (smtpEndpointChanged || smtpAfter.user !== smtpBefore.user || !!outgoing.password);
+
+      if (account.auth_type === 'oauth' && (connectionChanged || newPassword || smtpChanged || outgoing.clear)) {
         throw validate.badRequest(
           'This account signs in with Google or Microsoft — reconnect it instead of changing its password or server.',
           'OAUTH_ACCOUNT'
@@ -348,8 +483,35 @@ module.exports = function accountsRoutes({ db, config, crypto, syncManager }) {
           last_error: null,
         });
         if (newPassword !== null) sets.secret_enc = crypto.encryptJson({ password: newPassword });
-        // A different server or login is a different mailbox: its UIDs mean nothing here.
-        if (mailboxChanged) sets.sync_state = null;
+        // A different server or login is a different mailbox: its folders and UIDs mean nothing
+        // here (sync_state is the pre-folders column, kept empty for older code paths).
+        if (mailboxChanged) Object.assign(sets, { sync_state: null, folders_synced_at: null });
+      }
+
+      if (smtpChanged) {
+        if (!smtpAfter.host) throw validate.badRequest('Enter the outgoing (SMTP) server name first.', 'HOST_REQUIRED');
+        // Which password the outgoing server would get: typed now, or one that is saved.
+        let smtpPassword = outgoing.password;
+        let typed = !!smtpPassword;
+        if (!smtpPassword && account.smtp_secret_enc) {
+          smtpPassword = readSavedPassword(account.smtp_secret_enc);
+        } else if (!smtpPassword) {
+          // No separate SMTP password: sending reuses the mailbox password.
+          typed = newPassword !== null;
+          smtpPassword = newPassword !== null ? newPassword : readSavedPassword(account.secret_enc);
+        }
+        // Same rule as for the IMAP server: a saved password only ever goes to the server it
+        // was saved (and checked) for.
+        if (smtpEndpointChanged && !typed) {
+          throw validate.badRequest('Enter the password for the outgoing server again to change its settings.', 'PASSWORD_REQUIRED');
+        }
+        if (!smtpPassword) throw validate.badRequest('Enter the password for the outgoing server.', 'PASSWORD_REQUIRED');
+        // Throws 400 SMTP_AUTH_FAILED / SMTP_CONNECT_FAILED (or a policy error): nothing is saved.
+        await verifyOutgoing(userId, smtpAfter, smtpPassword);
+        Object.assign(sets, outgoing.cols);
+        if (outgoing.password) sets.smtp_secret_enc = crypto.encryptJson({ password: outgoing.password });
+      } else if (outgoing.clear) {
+        Object.assign(sets, outgoing.cols);
       }
 
       const stillThere = db.transaction(() => {
@@ -364,7 +526,11 @@ module.exports = function accountsRoutes({ db, config, crypto, syncManager }) {
             userId
           );
         }
-        if (mailboxChanged) db.prepare('DELETE FROM messages WHERE account_id = ?').run(account.id);
+        if (mailboxChanged) {
+          // Folders go with their messages (cascade); the next sync lists the new mailbox.
+          db.prepare('DELETE FROM folders WHERE account_id = ?').run(account.id);
+          db.prepare('DELETE FROM messages WHERE account_id = ?').run(account.id);
+        }
         if (tabIds !== undefined) {
           db.prepare('DELETE FROM tab_accounts WHERE account_id = ?').run(account.id);
           for (const tabId of tabIds) {
@@ -376,7 +542,7 @@ module.exports = function accountsRoutes({ db, config, crypto, syncManager }) {
       if (!stillThere) throw new HttpError(404, 'Account not found', 'NOT_FOUND');
 
       if (sets.status === 'pending') kickSync(account.id);
-      res.json({ account: queries.getAccountJson(db, userId, account.id) });
+      res.json({ account: queries.getAccountJson(db, userId, account.id, jsonDeps) });
     })
   );
 

@@ -10,7 +10,7 @@ const assert = require('node:assert/strict');
 const dns = require('dns');
 
 const imap = require('../src/imap');
-const { applyFlags, moveMessages, resolveTarget } = require('../src/actions');
+const { applyFlags, moveToSpecial, resolveTarget } = require('../src/actions');
 const { HttpError } = require('../src/errors');
 const { OAuthError } = require('../src/oauth');
 const h = require('./engine-helpers');
@@ -364,15 +364,15 @@ imapTest('applyFlags adds and removes \\Seen and \\Flagged on the server', async
   const a = await h.appendAlice(h.buildMessage({ subject: 'a' }));
   const b = await h.appendAlice(h.buildMessage({ subject: 'b' }), { flags: ['\\Seen', '\\Flagged'] });
 
-  await applyFlags(ctx, ctx.account, [a], { isRead: true, isStarred: true });
-  await applyFlags(ctx, ctx.account, [b], { isRead: false });
+  await applyFlags(ctx, ctx.account, 'INBOX', [a], { isRead: true, isStarred: true });
+  await applyFlags(ctx, ctx.account, 'INBOX', [b], { isRead: false });
   let flags = await h.aliceFlags();
   assert.ok(flags.get(a).has('\\Seen'));
   assert.ok(flags.get(a).has('\\Flagged'));
   assert.ok(!flags.get(b).has('\\Seen'));
   assert.ok(flags.get(b).has('\\Flagged'), 'untouched flag kept');
 
-  await applyFlags(ctx, ctx.account, [a, b], { isStarred: false, uidValidity: await uidValidityOfInbox() });
+  await applyFlags(ctx, ctx.account, 'INBOX', [a, b], { isStarred: false, uidValidity: await uidValidityOfInbox() });
   flags = await h.aliceFlags();
   assert.ok(!flags.get(a).has('\\Flagged'));
   assert.ok(!flags.get(b).has('\\Flagged'));
@@ -381,7 +381,7 @@ imapTest('applyFlags adds and removes \\Seen and \\Flagged on the server', async
 
 imapTest('applyFlags refuses to touch anything when UIDVALIDITY changed', async (t, ctx) => {
   const a = await h.appendAlice(h.buildMessage({ subject: 'a' }));
-  await assert.rejects(applyFlags(ctx, ctx.account, [a], { isRead: true, uidValidity: 1 }), (err) => {
+  await assert.rejects(applyFlags(ctx, ctx.account, 'INBOX', [a], { isRead: true, uidValidity: 1 }), (err) => {
     assert.equal(err.status, 409);
     assert.equal(err.code, 'UIDVALIDITY_CHANGED');
     return true;
@@ -391,20 +391,23 @@ imapTest('applyFlags refuses to touch anything when UIDVALIDITY changed', async 
 
 imapTest('applyFlags with nothing to do does not connect', async (t, ctx) => {
   const broken = { ...ctx.account, imap_port: 1 };
-  await applyFlags(ctx, broken, [], { isRead: true });
-  await applyFlags(ctx, broken, [1, 2], {});
+  await applyFlags(ctx, broken, 'INBOX', [], { isRead: true });
+  await applyFlags(ctx, broken, 'INBOX', [1, 2], {});
 });
 
-imapTest('moveMessages archives into \\Archive and trashes into \\Trash', async (t, ctx) => {
+imapTest('moveToSpecial archives into \\Archive and trashes into \\Trash', async (t, ctx) => {
   const keep = await h.appendAlice(h.buildMessage({ subject: 'keep' }));
   const arch1 = await h.appendAlice(h.buildMessage({ subject: 'archive-1' }));
   const arch2 = await h.appendAlice(h.buildMessage({ subject: 'archive-2' }));
   const del = await h.appendAlice(h.buildMessage({ subject: 'trash-me' }));
 
-  const archived = await moveMessages(ctx, ctx.account, [arch1, arch2], 'archive');
-  assert.deepEqual(archived, { destination: 'Archive', deleted: false });
-  const trashed = await moveMessages(ctx, ctx.account, [del], 'trash', { uidValidity: await uidValidityOfInbox() });
-  assert.deepEqual(trashed, { destination: 'Trash', deleted: false });
+  const archived = await moveToSpecial(ctx, ctx.account, 'INBOX', [arch1, arch2], 'archive');
+  assert.equal(archived.destination, 'Archive');
+  assert.equal(archived.deleted, false);
+  assert.deepEqual(Object.keys(archived.uidMap).map(Number), [arch1, arch2], 'COPYUID map');
+  const trashed = await moveToSpecial(ctx, ctx.account, 'INBOX', [del], 'trash', { uidValidity: await uidValidityOfInbox() });
+  assert.equal(trashed.destination, 'Trash');
+  assert.equal(trashed.deleted, false);
 
   assert.deepEqual(await h.aliceSubjects('INBOX'), ['keep']);
   assert.deepEqual((await h.aliceSubjects('Archive')).sort(), ['archive-1', 'archive-2']);
@@ -412,14 +415,14 @@ imapTest('moveMessages archives into \\Archive and trashes into \\Trash', async 
   assert.ok((await h.aliceFlags()).has(keep));
 });
 
-imapTest('moveMessages validates its target and tolerates empty input', async (t, ctx) => {
-  await assert.rejects(moveMessages(ctx, ctx.account, [1], 'spam'), (err) => err.status === 400 && err.code === 'INVALID_TARGET');
-  assert.deepEqual(await moveMessages(ctx, { ...ctx.account, imap_port: 1 }, [], 'trash'), { destination: null, deleted: false });
+imapTest('moveToSpecial validates its target and tolerates empty input', async (t, ctx) => {
+  await assert.rejects(moveToSpecial(ctx, ctx.account, 'INBOX', [1], 'spam'), (err) => err.status === 400 && err.code === 'INVALID_TARGET');
+  assert.deepEqual(await moveToSpecial(ctx, { ...ctx.account, imap_port: 1 }, 'INBOX', [], 'trash'), { destination: null, uidMap: {}, uidValidity: null, deleted: false });
 });
 
 imapTest('remote failures become HttpError 502 REMOTE_FAILED with a friendly message', async (t, ctx) => {
   const unreachable = { ...ctx.account, imap_port: 1 };
-  await assert.rejects(applyFlags(ctx, unreachable, [1], { isRead: true }), (err) => {
+  await assert.rejects(applyFlags(ctx, unreachable, 'INBOX', [1], { isRead: true }), (err) => {
     assert.ok(err instanceof HttpError);
     assert.equal(err.status, 502);
     assert.equal(err.code, 'REMOTE_FAILED');
@@ -427,7 +430,7 @@ imapTest('remote failures become HttpError 502 REMOTE_FAILED with a friendly mes
     return true;
   });
   const wrongPw = h.createAccount(ctx.db, ctx.crypto, ctx.userId, { email: 'wrong@test.local', password: 'nope' });
-  await assert.rejects(moveMessages(ctx, wrongPw, [1], 'archive'), (err) => err.status === 502 && /Wrong email or password/.test(err.message));
+  await assert.rejects(moveToSpecial(ctx, wrongPw, 'INBOX', [1], 'archive'), (err) => err.status === 502 && /Wrong email or password/.test(err.message));
 });
 
 // ---------------------------------------------------------------------------------------------
@@ -474,21 +477,21 @@ function useFakeClient(t, client) {
 }
 
 const fakeDeps = { db: null, crypto: null, config: {} };
-const fakeAccount = { id: 1, mailbox: 'INBOX' };
+const fakeAccount = { id: 1 };
 const box = (path, specialUse) => ({ path, name: path.split('/').pop(), flags: new Set(specialUse ? [specialUse] : []), specialUse, specialUseSource: specialUse ? 'extension' : undefined });
 
-test('moveMessages: Gmail-style archive goes to All Mail; ranges are compressed; lock released', async (t) => {
+test('moveToSpecial: Gmail-style archive goes to All Mail; ranges are compressed; lock released', async (t) => {
   const client = fakeClient({ list: [box('INBOX', '\\Inbox'), box('[Gmail]/All Mail', '\\All'), box('[Gmail]/Trash', '\\Trash')] });
   useFakeClient(t, client);
-  const res = await moveMessages(fakeDeps, fakeAccount, [5, 3, 4, 9], 'archive', { uidValidity: 77 });
-  assert.deepEqual(res, { destination: '[Gmail]/All Mail', deleted: false });
+  const res = await moveToSpecial(fakeDeps, fakeAccount, 'INBOX', [5, 3, 4, 9], 'archive', { uidValidity: 77 });
+  assert.deepEqual(res, { destination: '[Gmail]/All Mail', uidMap: {}, uidValidity: null, deleted: false });
   assert.deepEqual(client.calls, [['lock', 'INBOX'], ['move', '3:5,9', '[Gmail]/All Mail', { uid: true }], ['release']]);
 });
 
-test('moveMessages: no archive folder -> NO_ARCHIVE; no trash folder -> delete in place', async (t) => {
+test('moveToSpecial: no archive folder -> NO_ARCHIVE; no trash folder -> delete in place', async (t) => {
   const client = fakeClient({ list: [box('INBOX', '\\Inbox')] });
   useFakeClient(t, client);
-  await assert.rejects(moveMessages(fakeDeps, fakeAccount, [1], 'archive'), (err) => {
+  await assert.rejects(moveToSpecial(fakeDeps, fakeAccount, 'INBOX', [1], 'archive'), (err) => {
     assert.equal(err.status, 400);
     assert.equal(err.code, 'NO_ARCHIVE');
     assert.equal(err.message, 'This account has no Archive folder');
@@ -496,23 +499,23 @@ test('moveMessages: no archive folder -> NO_ARCHIVE; no trash folder -> delete i
   });
   assert.deepEqual(client.calls.at(-1), ['release'], 'lock released after failure');
   client.calls.length = 0;
-  const res = await moveMessages(fakeDeps, fakeAccount, [1, 2], 'trash');
-  assert.deepEqual(res, { destination: null, deleted: true });
+  const res = await moveToSpecial(fakeDeps, fakeAccount, 'INBOX', [1, 2], 'trash');
+  assert.deepEqual(res, { destination: null, uidMap: {}, uidValidity: null, deleted: true });
   assert.deepEqual(client.calls, [['lock', 'INBOX'], ['delete', '1:2', { uid: true }], ['release']]);
 });
 
-test('moveMessages / applyFlags: a refused command is a 502 REMOTE_FAILED', async (t) => {
+test('moveToSpecial / applyFlags: a refused command is a 502 REMOTE_FAILED', async (t) => {
   const client = fakeClient({ list: [box('INBOX'), box('Trash', '\\Trash')], moveResult: false, flagsResult: false });
   useFakeClient(t, client);
-  await assert.rejects(moveMessages(fakeDeps, fakeAccount, [1], 'trash'), (err) => err.status === 502 && err.code === 'REMOTE_FAILED');
-  await assert.rejects(applyFlags(fakeDeps, fakeAccount, [1], { isRead: false }), (err) => err.status === 502 && err.code === 'REMOTE_FAILED');
+  await assert.rejects(moveToSpecial(fakeDeps, fakeAccount, 'INBOX', [1], 'trash'), (err) => err.status === 502 && err.code === 'REMOTE_FAILED');
+  await assert.rejects(applyFlags(fakeDeps, fakeAccount, 'INBOX', [1], { isRead: false }), (err) => err.status === 502 && err.code === 'REMOTE_FAILED');
 });
 
 test('applyFlags: large selections are sent in batches; read-only mailboxes are refused', async (t) => {
   const client = fakeClient({ list: [] });
   useFakeClient(t, client);
   const uids = Array.from({ length: 1200 }, (_, i) => i * 2 + 1); // no ranges possible
-  await applyFlags(fakeDeps, fakeAccount, uids, { isRead: true, isStarred: false });
+  await applyFlags(fakeDeps, fakeAccount, 'INBOX', uids, { isRead: true, isStarred: false });
   const adds = client.calls.filter((c) => c[0] === 'add');
   const removes = client.calls.filter((c) => c[0] === 'remove');
   assert.equal(adds.length, 3);
@@ -521,5 +524,5 @@ test('applyFlags: large selections are sent in batches; read-only mailboxes are 
   assert.deepEqual(removes[0][2], ['\\Flagged']);
 
   client.mailbox.readOnly = true;
-  await assert.rejects(applyFlags(fakeDeps, fakeAccount, [1], { isRead: true }), (err) => err.status === 502);
+  await assert.rejects(applyFlags(fakeDeps, fakeAccount, 'INBOX', [1], { isRead: true }), (err) => err.status === 502);
 });

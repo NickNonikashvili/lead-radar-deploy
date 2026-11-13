@@ -348,7 +348,9 @@ test('callback: converts an existing password account for the same address', asy
   assert.equal(converted.auth_type, 'oauth');
   assert.equal(converted.display_name, 'Mine', 'user labels are kept');
   assert.equal(converted.color, '#123456');
-  assert.deepEqual(Object.keys(srv.crypto.decryptJson(converted.secret_enc)).sort(), ['accessToken', 'accessTokenExpiresAt', 'refreshToken']);
+  // v2: the granted scopes are kept (they decide what a refresh asks for, and whether the account may send).
+  assert.deepEqual(Object.keys(srv.crypto.decryptJson(converted.secret_enc)).sort(), ['accessToken', 'accessTokenExpiresAt', 'grantedScopes', 'refreshToken']);
+  assert.equal(converted.smtp_secret_enc, null, 'a converted password account loses its SMTP password');
   assert.equal(srv.db.prepare('SELECT COUNT(*) AS n FROM messages WHERE account_id = ?').get(sameBox.id).n, 1);
   const tabs = (await alice.get('/api/tabs')).body.tabs;
   assert.deepEqual(tabs.find((x) => x.id === tabA.id).accountIds, [sameBox.id], 'existing memberships kept');
@@ -365,6 +367,7 @@ test('callback: converts an existing password account for the same address', asy
   assert.equal(moved.imap_host, '127.0.0.1');
   assert.equal(moved.sync_state, null);
   assert.equal(srv.db.prepare('SELECT COUNT(*) AS n FROM messages WHERE account_id = ?').get(elsewhere.id).n, 0);
+  assert.equal(srv.db.prepare('SELECT COUNT(*) AS n FROM folders WHERE account_id = ?').get(elsewhere.id).n, 0, 'the old mailbox\'s folders go too');
 });
 
 test('callback: Microsoft accounts (email from preferred_username)', async (t) => {

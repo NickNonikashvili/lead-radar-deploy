@@ -1,9 +1,29 @@
-// Global keyboard shortcuts (SPEC §8): j/k move, Enter/o open, e archive,
-// # delete, s star, u toggle unread, / search, Esc close reader.
+// Global keyboard shortcuts: j/k move, Enter/o open, c compose, r/a/f reply/reply all/forward,
+// e archive, # delete, v move, ! spam, s star, u read/unread, x select, z undo, / search,
+// Esc close reader / clear selection. List actions apply to the selection when there is one.
 // Ignored while typing, while a dialog/menu is open, or with modifier keys.
 import { useEffect } from '/vendor/preact-htm.js';
 import { getState } from './store.js';
-import { closeReader, moveCursor, moveMessages, openMessage, targetMessageId, toggleRead, toggleStar } from './actions.js';
+import {
+  clearSelection,
+  closeReader,
+  compose,
+  deleteMessages,
+  findMessage,
+  isDraftMessage,
+  moveCursor,
+  moveMessages,
+  openMessage,
+  openMoveDialog,
+  setFlagsBulk,
+  targetIds,
+  targetMessageId,
+  toggleRead,
+  toggleSelect,
+  toggleSpam,
+  toggleStar,
+  undoLast,
+} from './actions.js';
 import { SEARCH_INPUT_ID } from './constants.js';
 
 export function focusSearch() {
@@ -31,15 +51,25 @@ function isActivatable(el) {
   return !!(el && el.closest && el.closest('button, a[href], summary, [role=menuitem], [role=button]'));
 }
 
+/** Reply/forward target: the open or cursor message, never a draft. */
+function replyTarget() {
+  const id = targetMessageId();
+  if (id == null) return null;
+  const m = findMessage(id);
+  return m && !isDraftMessage(m) ? id : null;
+}
+
 export function handleShortcut(e) {
   if (e.defaultPrevented || e.ctrlKey || e.metaKey || e.altKey) return false;
   if (isTypingTarget(e.target)) return false;
   const s = getState();
   if (s.dialog || document.querySelector('dialog[open]')) return false;
-  if (e.target && e.target.closest && e.target.closest('[role=menu]')) return false;
+  // Menus, and non-modal windows such as the docked composer, keep their keys to themselves.
+  if (e.target && e.target.closest && e.target.closest('[role=menu], [role=dialog], [data-shortcuts="off"]')) return false;
 
   const key = e.key;
   const target = targetMessageId();
+  const ids = targetIds();
   switch (key) {
     case 'j':
       moveCursor(1);
@@ -58,28 +88,57 @@ export function handleShortcut(e) {
       openMessage(s.cursorId);
       break;
     }
+    case 'c':
+      compose('new');
+      break;
+    case 'r':
+    case 'a':
+    case 'f': {
+      const id = replyTarget();
+      if (id == null) return false;
+      compose(key === 'r' ? 'reply' : key === 'a' ? 'replyAll' : 'forward', id);
+      break;
+    }
     case 'e':
-      if (target == null) return false;
-      moveMessages([target], 'archive');
+      if (!ids.length) return false;
+      moveMessages(ids, 'archive');
       break;
     case '#':
-      if (target == null) return false;
-      moveMessages([target], 'trash');
+      if (!ids.length) return false;
+      deleteMessages(ids);
+      break;
+    case '!':
+      if (!ids.length) return false;
+      toggleSpam(ids);
+      break;
+    case 'v':
+      if (!ids.length) return false;
+      openMoveDialog(ids);
       break;
     case 's':
-      if (target == null) return false;
-      toggleStar(target);
+      if (!ids.length) return false;
+      if (ids.length === 1) toggleStar(ids[0]);
+      else setFlagsBulk(ids, ids.every((id) => (findMessage(id) || {}).isStarred) ? 'unstar' : 'star');
       break;
     case 'u':
+      if (!ids.length) return false;
+      if (ids.length === 1) toggleRead(ids[0]);
+      else setFlagsBulk(ids, ids.some((id) => !(findMessage(id) || {}).isRead) ? 'read' : 'unread');
+      break;
+    case 'x':
       if (target == null) return false;
-      toggleRead(target);
+      toggleSelect(target);
+      break;
+    case 'z':
+      if (!undoLast()) return false;
       break;
     case '/':
       focusSearch();
       break;
     case 'Escape':
-      if (s.openId == null) return false;
-      closeReader();
+      if (s.openId != null) closeReader();
+      else if (s.selectedIds.length) clearSelection();
+      else return false;
       break;
     default:
       return false;

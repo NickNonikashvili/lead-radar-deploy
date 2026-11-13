@@ -66,16 +66,34 @@ test('browser JS never writes raw HTML or evaluates strings', () => {
 });
 
 test('the message iframe sandbox never allows scripts', () => {
-  const reader = read(path.join(PUBLIC, 'js/components/Reader.js'));
-  const m = reader.match(/const FRAME_SANDBOX = '([^']*)'/);
-  assert.ok(m, 'Reader.js defines FRAME_SANDBOX');
+  const frame = read(path.join(PUBLIC, 'js/components/BodyFrame.js'));
+  const m = frame.match(/export const FRAME_SANDBOX = '([^']*)'/);
+  assert.ok(m, 'BodyFrame.js defines FRAME_SANDBOX');
   assert.equal(m[1], 'allow-same-origin allow-popups allow-popups-to-escape-sandbox');
-  assert.match(reader, /sandbox=\$\{FRAME_SANDBOX\}/);
+  assert.match(frame, /sandbox=\$\{FRAME_SANDBOX\}/);
+  // The reader and conversation items render bodies only through BodyFrame.
+  for (const f of ['js/components/Reader.js', 'js/components/Conversation.js']) {
+    const src = read(path.join(PUBLIC, f));
+    assert.doesNotMatch(src, /<iframe/, `${f} must use BodyFrame for message bodies`);
+    assert.match(src, /import \{[^}]*\bBodyFrame\b[^}]*\} from '\.\/BodyFrame\.js'/);
+  }
   for (const f of jsFiles) {
-    for (const s of read(f).matchAll(/sandbox=["'`]([^"'`]*)["'`]/g)) {
+    const src = read(f);
+    for (const s of src.matchAll(/sandbox=["'`]([^"'`]*)["'`]/g)) {
       assert.ok(!s[1].includes('allow-scripts'), `${rel(f)} sandbox must not include allow-scripts`);
     }
+    // Sandbox values kept in constants or set with setAttribute.
+    for (const s of src.matchAll(/_SANDBOX\s*=\s*['"`]([^'"`]*)['"`]/g)) {
+      assert.ok(!s[1].includes('allow-scripts'), `${rel(f)} sandbox constant must not include allow-scripts`);
+    }
+    for (const s of src.matchAll(/setAttribute\(\s*['"]sandbox['"]\s*,\s*['"`]([^'"`]*)['"`]/g)) {
+      assert.ok(!s[1].includes('allow-scripts'), `${rel(f)} must not set allow-scripts`);
+    }
   }
+  // The print frame may open the print dialog (allow-modals) but never run script.
+  const print = frame.match(/const PRINT_SANDBOX = '([^']*)'/);
+  assert.ok(print, 'BodyFrame.js defines PRINT_SANDBOX');
+  assert.equal(print[1], 'allow-same-origin allow-modals');
 });
 
 test('every module parses as an ES module and every relative import resolves to a real export', () => {
@@ -212,4 +230,196 @@ test('Add account: Microsoft accounts have no password escape hatch; the owner i
   assert.match(src, /<code>MICROSOFT_CLIENT_ID<\/code> and <code>MICROSOFT_CLIENT_SECRET<\/code>/);
   assert.match(src, /README/);
   assert.match(src, /Microsoft 365/);
+});
+
+// ---------------------------------------------------------------------------------------------
+// v2 navigation
+
+test('v2: the composer is wired in through its three contract modules only', () => {
+  const htmlSrc = read(path.join(PUBLIC, 'index.html'));
+  assert.match(htmlSrc, /<link rel="stylesheet" href="\/js\/compose\/compose\.css"/);
+  const layout = read(path.join(PUBLIC, 'js/components/MainLayout.js'));
+  assert.match(layout, /import \{ ComposerHost \} from '\.\.\/compose\/ComposerHost\.js'/);
+  assert.equal((layout.match(/<\$\{ComposerHost\}/g) || []).length, 1, 'ComposerHost is mounted exactly once');
+  const settings = read(path.join(PUBLIC, 'js/components/SettingsDialog.js'));
+  assert.match(settings, /import \{ SignatureSettings \} from '\.\.\/compose\/SignatureSettings\.js'/);
+  assert.match(settings, /<\$\{SignatureSettings\}/);
+  assert.match(read(path.join(PUBLIC, 'js/actions.js')), /import \{ openComposer, resetComposers \} from '\.\/compose\/compose\.js'/);
+  // Outside compose/, nothing reaches into the composer's internals.
+  const contract = new Set(['compose.js', 'ComposerHost.js', 'SignatureSettings.js']);
+  for (const f of jsFiles.filter((x) => !rel(x).startsWith(`js${path.sep}compose${path.sep}`))) {
+    for (const m of read(f).matchAll(/from\s*['"]([^'"]*compose\/[^'"]+)['"]/g)) {
+      assert.ok(contract.has(path.basename(m[1])), `${rel(f)} imports composer internals (${m[1]})`);
+    }
+  }
+});
+
+test('v2: keyboard shortcuts cover reply, reply all, forward, compose, move, spam and select', () => {
+  const src = read(path.join(PUBLIC, 'js/keyboard.js'));
+  for (const key of ['r', 'a', 'f', 'c', 'v', '!', 'x', 'e', '#', 's', 'u', 'j', 'k', 'z']) {
+    assert.match(src, new RegExp(`case '${key.replace(/[#!]/g, (c) => `\\${c}`)}'`), `keyboard.js handles ${key}`);
+  }
+  // Non-modal windows (the docked composer) keep their keys.
+  assert.match(src, /\[role=dialog\]/);
+  const constants = read(path.join(PUBLIC, 'js/constants.js'));
+  for (const label of ['Reply', 'Reply all', 'Forward', 'Compose', 'Move to…', 'Select / deselect']) {
+    assert.ok(constants.includes(`label: '${label}'`), `SHORTCUTS lists ${label}`);
+  }
+});
+
+test('v2: Add account no longer shadows the emailDomain() helper', () => {
+  const src = read(path.join(PUBLIC, 'js/components/AddAccountDialog.js'));
+  assert.doesNotMatch(src, /const emailDomain\s*=/);
+  assert.match(src, /hostByDomain\[emailDomain\(value\)\]/);
+});
+
+test('v2 navModel: folder trees lift special folders, nest the rest and drop empty containers', async () => {
+  const nav = await importModule('js/components/navModel.js');
+  const f = (id, path, specialUse = null, extra = {}) => {
+    const parts = path.split('/');
+    return { id, accountId: 1, path, name: path === 'INBOX' ? 'INBOX' : parts[parts.length - 1], parentPath: parts.length > 1 ? parts.slice(0, -1).join('/') : null, delimiter: '/', specialUse, selectable: true, ...extra };
+  };
+  const folders = [
+    f(1, 'INBOX', '\\Inbox'),
+    f(2, '[Gmail]', null, { selectable: false }),
+    f(3, '[Gmail]/Sent Mail', '\\Sent'),
+    f(4, '[Gmail]/Trash', '\\Trash'),
+    f(5, '[Gmail]/Drafts', '\\Drafts'),
+    f(6, 'Travel'),
+    f(7, 'Travel/Lisbon 2027'),
+    f(8, 'Receipts'),
+    f(9, 'Empty container', null, { selectable: false }),
+    f(10, '[Gmail]/Starred', '\\Flagged'),
+  ];
+  const tree = nav.buildFolderTree(folders);
+  assert.deepEqual(tree.map((n) => n.folder.id), [1, 5, 3, 4, 10, 8, 6], 'specials first in fixed order, then custom A–Z; empty containers dropped');
+  assert.deepEqual(tree.find((n) => n.folder.id === 6).children.map((n) => n.folder.id), [7]);
+  const rows = nav.flattenTree(tree, (id) => id === 6);
+  assert.ok(!rows.some((r) => r.folder.id === 7), 'collapsed folders hide their children');
+  assert.deepEqual(rows.find((r) => r.folder.id === 6), { folder: folders[5], depth: 0, hasChildren: true, expanded: false });
+  assert.equal(nav.flattenTree(tree).find((r) => r.folder.id === 7).depth, 1);
+
+  assert.equal(nav.folderLabel(folders[0]), 'Inbox');
+  assert.equal(nav.folderPathLabel(folders[6]), 'Travel › Lisbon 2027');
+  assert.equal(nav.folderIcon(folders[2]), 'send');
+  assert.ok(nav.isProtectedFolder(folders[0]) && nav.isProtectedFolder(folders[2]) && !nav.isProtectedFolder(folders[5]));
+  assert.ok(nav.canEmptyFolder(folders[3]) && !nav.canEmptyFolder(folders[5]));
+  assert.equal(nav.folderBadge({ ...folders[4], totalCount: 3, unreadCount: 0 }), 3, 'drafts show their total');
+  assert.equal(nav.folderBadge({ ...folders[2], totalCount: 9, unreadCount: 2 }), 0, 'Sent shows no count');
+  assert.equal(nav.folderBadge({ ...folders[7], totalCount: 9, unreadCount: 2 }), 2);
+
+  const targets = nav.moveTargets(folders, 1, { excludeFolderId: 1 });
+  assert.ok(!targets.some((t) => t.id === 1), 'the current folder is not a move target');
+  assert.ok(!targets.some((t) => t.id === 2 || t.id === 9), 'containers are not move targets');
+  assert.ok(!targets.some((t) => t.id === 10), 'virtual Starred is not a move target');
+  assert.ok(!targets.some((t) => t.id === 5), 'Drafts is not a move target');
+  assert.deepEqual(targets.slice(0, 2).map((t) => t.id), [3, 4], 'special folders first');
+  assert.equal(nav.moveTargets(folders, 2).length, 0, 'other accounts have their own folders');
+  assert.ok(nav.folderMatches(folders[6], 'lisb') && nav.folderMatches(folders[6], 'travel/') && !nav.folderMatches(folders[6], 'zzz'));
+  assert.deepEqual(nav.parentOptions(folders, 1).map((x) => x.id), [9, 8, 6, 7], 'no Inbox, special or [Gmail] parents');
+});
+
+test('v2 navModel: folder names and selection ranges', async () => {
+  const nav = await importModule('js/components/navModel.js');
+  assert.match(nav.validateFolderName('  '), /Enter a folder name/);
+  assert.match(nav.validateFolderName('a/b', { delimiter: '/' }), /can't contain “\/”/);
+  assert.match(nav.validateFolderName('inbox'), /reserved/);
+  assert.match(nav.validateFolderName('Work', { siblings: ['work'] }), /already exists/);
+  assert.equal(nav.validateFolderName('Work', { siblings: ['Work'], current: 'Work' }), '', 'renaming to its own name is fine');
+  assert.match(nav.validateFolderName('x'.repeat(101)), /at most 100/);
+  assert.match(nav.validateFolderName('a\u0007b'), /control characters/);
+  assert.equal(nav.validateFolderName('Clients 2027'), '');
+
+  const order = [10, 11, 12, 13, 14];
+  let sel = nav.nextSelection({ order, selected: [], anchor: null }, 11);
+  assert.deepEqual(sel, { selected: [11], anchor: 11 });
+  sel = nav.nextSelection({ order, ...sel }, 14, { range: true });
+  assert.deepEqual(sel.selected, [11, 12, 13, 14], 'Shift-click selects the range from the anchor');
+  sel = nav.nextSelection({ order, selected: sel.selected, anchor: 12 }, 12);
+  assert.deepEqual(sel.selected, [11, 13, 14], 'plain click toggles one row and moves the anchor');
+  sel = nav.nextSelection({ order, ...sel }, 14, { range: true });
+  assert.deepEqual(sel.selected, [11], 'a range from an unselected anchor clears the range');
+  assert.deepEqual(nav.nextSelection({ order, selected: [10], anchor: 99 }, 12, { range: true }).selected, [10, 12], 'a stale anchor falls back to a toggle');
+});
+
+test('v2 format: outbox send times', async () => {
+  const { formatSendTime } = await importModule('js/format.js');
+  const now = new Date(2026, 10, 12, 15, 0).getTime();
+  assert.equal(formatSendTime(now - 1000, now), 'now');
+  assert.equal(formatSendTime(now + 8000, now), 'in 8 s');
+  assert.equal(formatSendTime(now + 5 * 60_000, now), 'in 5 min');
+  assert.match(formatSendTime(new Date(2026, 10, 12, 20, 30).getTime(), now, 'en-US'), /^today at 8:30\sPM$/);
+  assert.match(formatSendTime(new Date(2026, 10, 13, 8, 0).getTime(), now, 'en-US'), /^tomorrow at 8:00\sAM$/);
+  assert.match(formatSendTime(new Date(2026, 10, 16, 8, 0).getTime(), now, 'en-US'), /^Mon, Nov 16 at 8:00\sAM$/);
+  assert.match(formatSendTime(new Date(2027, 0, 4, 8, 0).getTime(), now, 'en-US'), /2027/);
+  assert.equal(formatSendTime(NaN, now), '');
+});
+
+test('v2 api: folder, bulk, undo, thread, settings, outbox and compose endpoints', async () => {
+  const mod = await importModule('js/api.js');
+  const calls = [];
+  const realFetch = globalThis.fetch;
+  globalThis.fetch = async (url, init) => {
+    calls.push({ url, method: init.method, body: init.body ? JSON.parse(init.body) : undefined, csrf: init.headers['X-Mailtabs'] });
+    return new Response(JSON.stringify({ ok: true }), { status: 200, headers: { 'content-type': 'application/json' } });
+  };
+  try {
+    const { api } = mod;
+    await api.folders();
+    await api.createFolder({ accountId: 1, name: 'Clients', parentId: 4 });
+    await api.renameFolder(7, 'Partners');
+    await api.deleteFolder(7);
+    await api.deleteFolder(7, { force: true });
+    await api.syncFolder(7);
+    await api.backfillFolder(7, 100);
+    await api.emptyFolder(9);
+    await api.bulk([1, 2], 'move', { folderId: 7 });
+    await api.undo('tok123');
+    await api.thread(5);
+    await api.settings();
+    await api.updateSettings({ undoSendSeconds: 20 });
+    await api.outbox();
+    await api.cancelOutbox(3);
+    await api.retryOutbox(3);
+    await api.deleteOutbox(3);
+    await api.deleteDraft({ folderId: 2, uid: 9 });
+    await api.messages({ folder: 7, limit: 50 });
+    await api.messages({ view: 'starred', unread: true });
+    const sig = calls.map((c) => `${c.method} ${c.url}`);
+    assert.deepEqual(sig, [
+      'GET /api/folders',
+      'POST /api/folders',
+      'PATCH /api/folders/7',
+      'DELETE /api/folders/7',
+      'DELETE /api/folders/7?force=1',
+      'POST /api/folders/7/sync',
+      'POST /api/folders/7/backfill',
+      'POST /api/folders/9/empty',
+      'POST /api/messages/bulk',
+      'POST /api/messages/undo',
+      'GET /api/messages/5/thread',
+      'GET /api/settings',
+      'PUT /api/settings',
+      'GET /api/outbox',
+      'POST /api/outbox/3/cancel',
+      'POST /api/outbox/3/retry',
+      'DELETE /api/outbox/3',
+      'DELETE /api/drafts',
+      'GET /api/messages?folder=7&limit=50',
+      'GET /api/messages?view=starred&unread=1',
+    ]);
+    for (const c of calls) if (c.method !== 'GET') assert.equal(c.csrf, '1', `${c.method} ${c.url} sends X-Mailtabs`);
+    assert.deepEqual(calls[1].body, { accountId: 1, name: 'Clients', parentId: 4 });
+    assert.deepEqual(calls[2].body, { name: 'Partners' });
+    assert.deepEqual(calls[6].body, { count: 100 });
+    assert.deepEqual(calls[8].body, { ids: [1, 2], action: 'move', folderId: 7 });
+    assert.deepEqual(calls[9].body, { token: 'tok123' });
+    assert.deepEqual(calls[12].body, { undoSendSeconds: 20 });
+    assert.deepEqual(calls[17].body, { draft: { folderId: 2, uid: 9 } });
+    assert.equal(mod.rawUrl(5), '/api/messages/5/raw');
+    assert.equal(mod.printUrl(5, false), '/api/messages/5/print');
+    assert.equal(mod.printUrl(5, true), '/api/messages/5/print?images=1');
+  } finally {
+    globalThis.fetch = realFetch;
+  }
 });

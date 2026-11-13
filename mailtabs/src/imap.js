@@ -256,6 +256,19 @@ async function findSpecialMailbox(client, specialUse) {
   return pickSpecialMailbox(list, specialUse);
 }
 
+const GMAIL_HOSTS = new Set(['imap.gmail.com', 'imap.googlemail.com']);
+
+/**
+ * Is this account on Gmail (labels as folders, [Gmail]/… system folders, X-GM-THRID)?
+ * Decided by the server name, or by the X-GM-EXT-1 capability of a connected client
+ * (Google Workspace accounts on a custom IMAP name, test doubles).
+ */
+function isGmail(accountRow, client) {
+  const host = String((accountRow && accountRow.imap_host) || '').trim().toLowerCase();
+  if (GMAIL_HOSTS.has(host)) return true;
+  return !!(client && client.capabilities && typeof client.capabilities.has === 'function' && client.capabilities.has('X-GM-EXT-1'));
+}
+
 /** Compress UIDs into an IMAP sequence set: [1,2,3,7,9,10] -> "1:3,7,9:10". */
 function toUidSet(uids) {
   const sorted = [...new Set(uids.map(Number).filter((n) => Number.isInteger(n) && n > 0))].sort((a, b) => a - b);
@@ -389,6 +402,7 @@ module.exports = {
   verifyLogin,
   findSpecialMailbox,
   pickSpecialMailbox,
+  isGmail,
   friendlyImapError,
   isAuthFailure,
   isTransientLoginRefusal,

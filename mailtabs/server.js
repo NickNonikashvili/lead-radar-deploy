@@ -12,9 +12,37 @@ const { openDb } = require('./src/db');
 const { createCrypto } = require('./src/crypto');
 const { createApp } = require('./src/app');
 const { SyncManager } = require('./src/sync');
+const { OutboxManager } = require('./src/outbox');
+const { cleanupUploads } = require('./src/uploads');
 const { redirectUriFor } = require('./src/oauth');
 
-const SHUTDOWN_TIMEOUT_MS = 10_000;
+const SHUTDOWN_TIMEOUT_MS = 15_000;
+// Abandoned attachment uploads (older than a day and not needed by the outbox) are removed hourly.
+const UPLOAD_CLEANUP_INTERVAL_MS = 60 * 60 * 1000;
+const UPLOAD_CLEANUP_FIRST_MS = 60 * 1000;
+
+/**
+ * Run cleanupUploads now-ish and then every hour. Returns stop(). Timers are unref()'d so they
+ * never keep the process alive on their own.
+ */
+function startUploadCleanup({ db, config }, logger = console) {
+  const run = () => {
+    try {
+      const { removed, strayFiles } = cleanupUploads({ db, config });
+      if (removed || strayFiles) logger.log(`Removed ${removed + strayFiles} abandoned attachment upload(s).`);
+    } catch (err) {
+      logger.error('Cleaning up attachment uploads failed:', err);
+    }
+  };
+  const first = setTimeout(run, UPLOAD_CLEANUP_FIRST_MS);
+  const interval = setInterval(run, UPLOAD_CLEANUP_INTERVAL_MS);
+  first.unref();
+  interval.unref();
+  return () => {
+    clearTimeout(first);
+    clearInterval(interval);
+  };
+}
 
 function isLocalUrl(url) {
   try {
@@ -144,7 +172,8 @@ function main() {
   const db = openDb(path.join(config.dataDir, 'mailtabs.db'));
   const crypto = createCrypto(config.secretKey);
   const syncManager = new SyncManager({ db, crypto, config });
-  const app = createApp({ db, config, crypto, syncManager });
+  const outboxManager = new OutboxManager({ db, crypto, config, syncManager });
+  const app = createApp({ db, config, crypto, syncManager, outboxManager });
 
   startupWarnings(config, db);
 
@@ -161,6 +190,8 @@ function main() {
   });
 
   syncManager.start();
+  outboxManager.start();
+  const stopUploadCleanup = startUploadCleanup({ db, config });
 
   let shuttingDown = false;
   async function shutdown(signal, exitCode = 0) {
@@ -180,7 +211,15 @@ function main() {
 
     const serverClosed = new Promise((resolve) => server.close(() => resolve()));
     server.closeIdleConnections(); // keep-alive sockets would otherwise hold close() open
+    stopUploadCleanup();
 
+    // The outbox first: a message being handed to the SMTP server is finished (or left
+    // 'sending' to go out again on the next start); its follow-up steps use the sync engine.
+    try {
+      await outboxManager.stop();
+    } catch (err) {
+      console.error('Error while stopping the outbox:', err);
+    }
     try {
       await syncManager.stop();
     } catch (err) {
@@ -218,4 +257,4 @@ if (require.main === module) {
   }
 }
 
-module.exports = { main, startupWarnings, redirectUriProblems };
+module.exports = { main, startupWarnings, redirectUriProblems, startUploadCleanup };

@@ -57,6 +57,25 @@ export function timeAgo(ms, now = Date.now(), locale = undefined) {
   return new Date(ms).toLocaleDateString(locale, { month: 'short', day: 'numeric' });
 }
 
+/**
+ * When a queued message goes out: "in 8 s", "in 5 min", "today at 3:40 PM",
+ * "tomorrow at 8:00 AM", "Mon, Nov 16 at 8:00 AM" (past times: "now").
+ */
+export function formatSendTime(ms, now = Date.now(), locale = undefined) {
+  if (!Number.isFinite(ms)) return '';
+  const diff = ms - now;
+  if (diff <= 0) return 'now';
+  if (diff < 60_000) return `in ${Math.ceil(diff / 1000)} s`;
+  if (diff < 60 * 60_000) return `in ${Math.round(diff / 60_000)} min`;
+  const time = new Date(ms).toLocaleTimeString(locale, { hour: 'numeric', minute: '2-digit' });
+  const today = startOfDay(now);
+  if (ms < today + DAY) return `today at ${time}`;
+  if (ms < today + 2 * DAY) return `tomorrow at ${time}`;
+  const sameYear = new Date(ms).getFullYear() === new Date(now).getFullYear();
+  const day = new Date(ms).toLocaleDateString(locale, { weekday: 'short', month: 'short', day: 'numeric', year: sameYear ? undefined : 'numeric' });
+  return `${day} at ${time}`;
+}
+
 /** One or two letters for an avatar. */
 export function initials(name, email) {
   const source = String(name || '').replace(/["'()<>]/g, ' ').trim();
