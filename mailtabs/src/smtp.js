@@ -10,6 +10,10 @@
  * Passwords: accounts.smtp_secret_enc ({ password }) when the outgoing server has its own
  * login, else the IMAP secret. OAuth accounts send with XOAUTH2 using the account's (fresh)
  * access token; Microsoft accounts need the SMTP.Send scope (granted since v2).
+ *
+ * Microsoft accounts whose SMTP AUTH is turned off (5.7.139 — many personal Outlook.com
+ * accounts) send through Microsoft Graph instead (graph.js) when they consented to Graph's
+ * Mail.Send; accounts.smtp_disabled_at remembers the refusal so later sends go straight there.
  */
 
 const net = require('net');
@@ -17,11 +21,16 @@ const nodemailer = require('nodemailer');
 const { HttpError } = require('./errors');
 const netguard = require('./netguard');
 const providers = require('./providers');
-const { getFreshAccessToken, OAuthError, grantsSendScope } = require('./oauth');
+const graph = require('./graph');
+const { getFreshAccessToken, OAuthError, grantsSendScope, grantsGraphSendScope } = require('./oauth');
 
 const SECURITY_VALUES = ['tls', 'starttls', 'none'];
 const TIMEOUTS = Object.freeze({ connectionTimeout: 20000, greetingTimeout: 15000, socketTimeout: 60000, dnsTimeout: 10000 });
 const RECONNECT_TO_SEND = 'Reconnect this account to allow sending (sign in again and accept the permission to send email).';
+const SMTP_OFF_RECONNECT =
+  'Microsoft has turned off sending from mail apps (SMTP) for this account. Reconnect it (sign in with Microsoft again and accept the permission to send email) so Mailtabs can send through Microsoft Graph instead.';
+// Microsoft's "SMTP AUTH is turned off for this mailbox / organisation".
+const SMTP_AUTH_DISABLED_RE = /5\.7\.139\b|SmtpClientAuthentication is disabled/i;
 
 // ---------------------------------------------------------------------------------------------
 // Settings
@@ -64,15 +73,21 @@ function storedOAuthSecret(crypto, account) {
   }
 }
 
+function isMicrosoftOAuth(config, account) {
+  if (!account || account.auth_type !== 'oauth') return false;
+  const provider = oauthProviderFor(config, account);
+  return !!(provider && provider.key === 'microsoft');
+}
+
 /**
- * Can this account send, and if not, why? For the account JSON (canSend) and the composer.
- * @returns {{ canSend: boolean, code: string|null, message: string|null }}
+ * Can this account log in to its outgoing (SMTP) server at all?
+ * @returns {{ ok: boolean, code: string|null, message: string|null }}
  */
-function sendingStatus(deps, account) {
+function smtpLoginStatus(deps, account) {
   const { host } = smtpSettingsFor(account);
   if (!host) {
     return {
-      canSend: false,
+      ok: false,
       code: 'SMTP_NOT_CONFIGURED',
       message: 'Sending is not set up for this account yet: add its outgoing (SMTP) server in the account settings.',
     };
@@ -83,9 +98,38 @@ function sendingStatus(deps, account) {
     // Google's mail scope always includes SMTP. Microsoft accounts connected before sending
     // existed only consented to IMAP (and recorded no scopes), so they must reconnect once.
     const ok = provider && provider.key === 'google' ? granted !== false : granted === true;
-    if (!ok) return { canSend: false, code: 'SMTP_SCOPE_MISSING', message: RECONNECT_TO_SEND };
+    if (!ok) return { ok: false, code: 'SMTP_SCOPE_MISSING', message: RECONNECT_TO_SEND };
   }
-  return { canSend: true, code: null, message: null };
+  return { ok: true, code: null, message: null };
+}
+
+/** May this Microsoft account send through Microsoft Graph (it consented to Mail.Send)? */
+function graphSendAvailable(deps, account) {
+  if (!isMicrosoftOAuth(deps.config, account)) return false;
+  return grantsGraphSendScope(oauthProviderFor(deps.config, account), storedOAuthSecret(deps.crypto, account));
+}
+
+/**
+ * How this account sends: 'smtp', 'graph' (Microsoft accounts whose SMTP AUTH is off, or that
+ * consented to Graph but not to SMTP.Send), or null with the reason it can't.
+ * @returns {{ route: 'smtp'|'graph'|null, code: string|null, message: string|null }}
+ */
+function sendRoute(deps, account) {
+  const login = smtpLoginStatus(deps, account);
+  const smtpOff = !!account.smtp_disabled_at && isMicrosoftOAuth(deps.config, account);
+  if (login.ok && !smtpOff) return { route: 'smtp', code: null, message: null };
+  if (graphSendAvailable(deps, account)) return { route: 'graph', code: null, message: null };
+  if (smtpOff) return { route: null, code: 'SMTP_SCOPE_MISSING', message: SMTP_OFF_RECONNECT };
+  return { route: null, code: login.code, message: login.message };
+}
+
+/**
+ * Can this account send, and if not, why? For the account JSON (canSend) and the composer.
+ * @returns {{ canSend: boolean, code: string|null, message: string|null }}
+ */
+function sendingStatus(deps, account) {
+  const { route, code, message } = sendRoute(deps, account);
+  return route ? { canSend: true, code: null, message: null } : { canSend: false, code, message };
 }
 
 /** The password for the outgoing server: its own when saved, else the IMAP password. */
@@ -170,8 +214,8 @@ async function connectionOptions(config, { host, port, security, auth }) {
  * Throws HttpError 400 SMTP_NOT_CONFIGURED / SMTP_SCOPE_MISSING / policy errors.
  */
 async function buildTransportOptions(deps, account) {
-  const status = sendingStatus(deps, account);
-  if (!status.canSend) throw new HttpError(400, status.message, status.code);
+  const status = smtpLoginStatus(deps, account);
+  if (!status.ok) throw new HttpError(400, status.message, status.code);
   const settings = smtpSettingsFor(account);
   let auth;
   if (account.auth_type === 'oauth') {
@@ -215,7 +259,9 @@ async function sendRaw(deps, account, { from, recipients, raw }) {
   }
   const transport = nodemailer.createTransport(options);
   try {
-    const info = await transport.sendMail({ envelope: { from: from || account.email, to }, raw });
+    // With the size in the envelope, nodemailer refuses a message over the server's advertised
+    // SIZE limit before transmitting it (and announces SIZE= in MAIL FROM).
+    const info = await transport.sendMail({ envelope: { from: from || account.email, to, size: raw.length }, raw });
     return {
       accepted: (info.accepted || []).map(String),
       rejected: (info.rejected || []).map(String),
@@ -240,6 +286,55 @@ function wrapSendError(err, ctx) {
   wrapped.cause = err;
   wrapped.retryable = isRetryableSmtpError(err);
   return wrapped;
+}
+
+/** Remember that Microsoft refused SMTP AUTH for this account (later sends go straight to Graph). */
+function markSmtpDisabled(db, account) {
+  try {
+    db.prepare('UPDATE accounts SET smtp_disabled_at = ? WHERE id = ? AND smtp_disabled_at IS NULL').run(Date.now(), account.id);
+  } catch (_) {
+    /* account removed meanwhile */
+  }
+}
+
+function isSmtpAuthDisabled(err) {
+  return SMTP_AUTH_DISABLED_RE.test(serverText((err && err.cause) || err)) || SMTP_AUTH_DISABLED_RE.test(serverText(err));
+}
+
+/**
+ * Send a built message the way the account can: SMTP, or Microsoft Graph for Microsoft
+ * accounts whose SMTP AUTH is turned off. A 5.7.139 answer switches the account to Graph for
+ * good (when it consented to Graph; else the error says to reconnect).
+ * @param {{ from: string, recipients: string[], raw: Buffer, graphRaw?: Buffer|(() => Promise<Buffer>) }} message
+ *   graphRaw: the same message with its Bcc header (Graph reads the recipients from the headers);
+ *   defaults to raw
+ * @returns {Promise<{ accepted: string[], rejected: string[], response: string, via: 'smtp'|'graph' }>}
+ * @throws HttpError like sendRaw (`retryable` set)
+ */
+async function sendMessage(deps, account, message) {
+  const { route, code, message: reason } = sendRoute(deps, account);
+  if (!route) {
+    const err = new HttpError(400, reason, code);
+    err.retryable = false;
+    throw err;
+  }
+  if (route === 'smtp') {
+    try {
+      return { ...(await sendRaw(deps, account, message)), via: 'smtp' };
+    } catch (err) {
+      if (!isMicrosoftOAuth(deps.config, account) || !isSmtpAuthDisabled(err)) throw err;
+      markSmtpDisabled(deps.db, account);
+      if (!graphSendAvailable(deps, account)) {
+        const wrapped = new HttpError(400, SMTP_OFF_RECONNECT, 'SMTP_SCOPE_MISSING');
+        wrapped.cause = err.cause || err;
+        wrapped.retryable = false;
+        throw wrapped;
+      }
+      if (deps.logger) deps.logger.warn(`[smtp] ${account.email}: SMTP AUTH is turned off by Microsoft; sending through Microsoft Graph from now on.`);
+    }
+  }
+  const raw = typeof message.graphRaw === 'function' ? await message.graphRaw() : message.graphRaw || message.raw;
+  return { ...(await graph.sendMimeViaGraph(deps, account, raw, message.recipients)), via: 'graph' };
 }
 
 /**
@@ -312,7 +407,7 @@ function classifySmtpError(err) {
   if (/5\.7\.30\b|basic authentication is not supported/i.test(text)) return 'auth';
   if (/limit for sending|sending limit|5\.4\.5\b|daily (user )?sending quota|too many (messages|recipients)/i.test(text)) return 'limit';
   const mailboxFull = /5\.2\.2\b|mailbox (is )?full|over ?quota|quota exceeded/i.test(text);
-  if (!mailboxFull && (rc === 552 || /5\.3\.4\b|message (size|too (big|large))|too large|exceeds .*size|size limit/i.test(text))) return 'size';
+  if (!mailboxFull && (rc === 552 || /5\.3\.4\b|message (size|too (big|large))|too large|exceeds .*size|size limit|larger than allowed/i.test(text))) return 'size';
   // A 4xx answer to the envelope (greylisting, "try again later") is worth another attempt.
   if (code === 'EENVELOPE' && rc >= 400 && rc < 500) return 'temporary';
   if (/5\.7\.60\b|send ?as|not (allowed|authori[sz]ed) to send|sender address rejected|5\.1\.8\b|bad outbound sender/i.test(text)) return 'sender';
@@ -328,6 +423,21 @@ function isRetryableSmtpError(err) {
   const kind = classifySmtpError(err);
   if (kind === 'connection') return !CERT_CODES.has(String(err.originalCode || '')) && String(err.originalCode || '') !== 'ENOTFOUND';
   return kind === 'temporary';
+}
+
+function sizeText(bytes) {
+  const mb = bytes / (1024 * 1024);
+  if (mb < 1) return `${Math.max(1, Math.round(bytes / 1024))} KB`;
+  return `${mb >= 10 ? Math.round(mb) : mb.toFixed(1)} MB`;
+}
+
+/** "Too large for Gmail (it accepts at most 35 MB …)" — the limit when the server announced one. */
+function tooLargeMessage(err, presetKey, host) {
+  const label = presetKey && presetKey !== 'imap' && providers.PRESETS[presetKey] ? providers.PRESETS[presetKey].label : null;
+  const who = label || (host && host !== 'the outgoing mail server' ? host : 'the mail server');
+  const limit = Number((serverText(err).match(/larger than allowed (\d+)/i) || [])[1]) || 0;
+  const detail = limit ? ` (it accepts at most ${sizeText(limit)} per message, and attachments grow by about a third when sent)` : '';
+  return `This message is too large for ${who}${detail}. Remove some attachments (or share them as links) and try again.`;
 }
 
 /** Microsoft's "SMTP AUTH is turned off" answers (5.7.139), with the right advice. */
@@ -377,7 +487,7 @@ function friendlySmtpError(err, ctx = {}) {
   if (kind === 'limit') {
     return "You have reached your provider's sending limit. Try again later — the limit resets within 24 hours.";
   }
-  if (kind === 'size') return 'The message is too large for the mail server. Remove some attachments (or share them as links) and try again.';
+  if (kind === 'size') return tooLargeMessage(err, presetKey, host);
   if (kind === 'sender') {
     if (/5\.1\.8\b|bad outbound sender/i.test(text)) {
       return 'Your provider has blocked sending from this account, often after suspected spam. Sign in on its website to unblock it.';
@@ -426,6 +536,8 @@ module.exports = {
   connectionOptions,
   verifySmtp,
   sendRaw,
+  sendMessage,
+  sendRoute,
   friendlySmtpError,
   classifySmtpError,
   isRetryableSmtpError,

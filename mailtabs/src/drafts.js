@@ -297,6 +297,49 @@ function messageForUser(db, userId, messageId) {
   );
 }
 
+/**
+ * Attachment references with what the composer shows for them (filename, contentType, size),
+ * from the user's uploads and stored messages. A reference that can no longer be found keeps a
+ * generic name (sending it reports it as gone).
+ */
+function describeAttachments(db, userId, attachments) {
+  const metaByMessage = new Map();
+  const metaOf = (messageId) => {
+    if (!metaByMessage.has(messageId)) {
+      const row = messageForUser(db, userId, messageId);
+      let list = [];
+      try {
+        list = row ? JSON.parse(row.attachments_json || '[]') : [];
+      } catch (_) {
+        list = [];
+      }
+      metaByMessage.set(messageId, Array.isArray(list) ? list : []);
+    }
+    return metaByMessage.get(messageId);
+  };
+  return (Array.isArray(attachments) ? attachments : [])
+    .filter((ref) => ref && typeof ref === 'object')
+    .map((ref) => {
+      if (ref.uploadId) {
+        const row = uploads.getUpload(db, userId, ref.uploadId);
+        return {
+          uploadId: ref.uploadId,
+          filename: row ? row.filename : 'attachment',
+          contentType: row ? row.content_type : 'application/octet-stream',
+          size: row ? Number(row.size) : null,
+        };
+      }
+      const meta = metaOf(ref.messageId).find((a) => a && a.index === ref.index);
+      return {
+        messageId: ref.messageId,
+        index: ref.index,
+        filename: compose.cleanFilename(meta && meta.filename, `attachment-${Number(ref.index) + 1}`),
+        contentType: compose.cleanContentType(meta && meta.contentType),
+        size: meta && Number.isFinite(meta.size) ? meta.size : null,
+      };
+    });
+}
+
 /** Download and parse a stored message's source (for its attachments). */
 async function fetchParsedMessage(deps, userId, messageId) {
   const gone = () => new HttpError(410, 'A message you attached files from is no longer on the mail server.', 'ATTACHMENT_GONE');
@@ -579,6 +622,7 @@ module.exports = {
   resolveInlineImages,
   materialize,
   senderNameFor,
+  describeAttachments,
   // shared with the outbox
   serializePerAccount,
   resolveSpecialFolder,

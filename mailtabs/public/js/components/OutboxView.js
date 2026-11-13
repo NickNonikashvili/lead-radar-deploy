@@ -13,9 +13,19 @@ function recipients(to) {
   return typeof to === 'string' && to ? to : '(no recipients)';
 }
 
+/** Queued again after a failed attempt (the server retries connection problems once). */
+function isRetrying(item) {
+  return item.status === 'queued' && !!item.error;
+}
+
 function StatusPill({ item, now }) {
   if (item.status === 'failed') return html`<span class="pill pill-danger">Not sent</span>`;
   if (item.status === 'sending') return html`<span class="pill pill-accent"><${Spinner} size=${10} /> Sending…</span>`;
+  if (isRetrying(item)) {
+    return html`<span class="pill pill-warning" title=${formatFullDate(item.sendAt)}>
+      <${Icon} name="clock" size=${12} /> ${item.sendAt - now > 1000 ? `Trying again ${formatSendTime(item.sendAt, now)}` : 'Trying again…'}
+    </span>`;
+  }
   const soon = item.sendAt - now < 60_000;
   return html`<span class=${`pill ${soon ? 'pill-accent' : 'pill-neutral'}`} title=${formatFullDate(item.sendAt)}>
     <${Icon} name="clock" size=${12} /> ${soon ? `Sending ${formatSendTime(item.sendAt, now)}` : `Scheduled ${formatSendTime(item.sendAt, now)}`}
@@ -72,7 +82,9 @@ export function OutboxView() {
             <div class="outbox-meta">
               ${account ? html`<span class="outbox-from"><${ColorDot} color=${account.color} /> From ${accountLabel(account, presets)} · ${account.email}</span>` : null}
             </div>
-            ${item.status === 'failed' && item.error ? html`<p class="outbox-error" role="note"><${Icon} name="alert" size=${14} /> ${item.error}</p>` : null}
+            ${(item.status === 'failed' || isRetrying(item)) && item.error
+              ? html`<p class="outbox-error" role="note"><${Icon} name="alert" size=${14} /> ${item.error}</p>`
+              : null}
           </div>
           <div class="outbox-actions">
             ${item.status === 'queued'

@@ -220,6 +220,13 @@ const MIGRATIONS = [
   CREATE INDEX outbox_due ON outbox(status, send_at);
   CREATE INDEX outbox_user ON outbox(user_id, status);
     `,
+
+  // v3 — Microsoft accounts whose SMTP AUTH is turned off (535 5.7.139) send through Microsoft
+  // Graph: smtp_disabled_at records when Microsoft refused SMTP, so later sends go straight to
+  // Graph. (folders.sync_mode may now also be 'hidden': Exchange's calendar, contacts, … folders.)
+  `
+  ALTER TABLE accounts ADD COLUMN smtp_disabled_at INTEGER;
+  `,
 ];
 
 function migrate(db) {

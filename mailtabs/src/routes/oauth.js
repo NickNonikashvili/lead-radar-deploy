@@ -180,12 +180,13 @@ module.exports = function oauthRoutes({ db, config, crypto, syncManager }) {
         throw err;
       }
       // grantedScopes decides which scopes later refreshes ask for and whether the account may
-      // send (Microsoft's SMTP.Send).
+      // send (Microsoft's SMTP.Send); graphScopes whether it may send through Microsoft Graph.
       const secretEnc = crypto.encryptJson({
         refreshToken,
         accessToken: tokens.accessToken,
         accessTokenExpiresAt: tokens.expiresAt,
         ...(tokens.grantedScopes ? { grantedScopes: tokens.grantedScopes } : {}),
+        ...(tokens.graphScopes ? { graphScopes: tokens.graphScopes } : {}),
       });
       // OAuth accounts send through the provider's own server (smtp.js picks it). Only test
       // setups that point the provider elsewhere (OAUTH_TEST_ENDPOINTS) store one; a password
@@ -194,13 +195,15 @@ module.exports = function oauthRoutes({ db, config, crypto, syncManager }) {
 
       let accountId;
       if (existing) {
-        // Reconnect, or convert a password account for the same address to OAuth.
+        // Reconnect, or convert a password account for the same address to OAuth. A reconnect
+        // also forgets that SMTP AUTH was refused: the next send tries SMTP again (and falls back
+        // to Graph at once if it is still off).
         const mailboxChanged =
           String(existing.imap_host).toLowerCase() !== String(provider.imapHost).toLowerCase() ||
           String(existing.imap_user).toLowerCase() !== String(tokens.email).toLowerCase();
         db.prepare(
           `UPDATE accounts SET provider = ?, auth_type = 'oauth', email = ?, imap_host = ?, imap_port = ?, imap_security = ?,
-                  imap_user = ?, secret_enc = ?, status = 'pending', last_error = NULL,
+                  imap_user = ?, secret_enc = ?, status = 'pending', last_error = NULL, smtp_disabled_at = NULL,
                   smtp_host = ?, smtp_port = ?, smtp_security = ?, smtp_user = NULL, smtp_secret_enc = NULL${
                     mailboxChanged ? ', sync_state = NULL, folders_synced_at = NULL, config_version = config_version + 1' : ''
                   }

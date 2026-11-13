@@ -980,6 +980,9 @@ button.cmp-status.is-error:hover {
 .cmp-snack.is-failed .cmp-snack-icon {
   color: #fca5a5;
 }
+.cmp-snack.is-retrying .cmp-snack-icon {
+  color: #fcd34d;
+}
 .cmp-snack-text {
   flex: 1;
   min-width: 0;

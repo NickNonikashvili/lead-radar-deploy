@@ -6,7 +6,7 @@
  * Every send goes through the outbox, even "send now": the row waits for the user's undo
  * window (undoSendSeconds) or the scheduled time, and can be cancelled until it is picked up.
  * Sending one row:
- *   resolve attachments -> build MIME -> SMTP -> status 'sent'
+ *   resolve attachments -> build MIME -> SMTP (or Microsoft Graph, see smtp.sendMessage) -> status 'sent'
  *   then, best effort: copy to \Sent (providers whose SMTP server does not do it), mark the
  *   original \Answered, delete the server draft, delete the uploads, sync Sent.
  * The row is marked 'sent' as soon as the SMTP server accepted the message, so a problem in
@@ -264,7 +264,10 @@ class OutboxManager {
     return this.cancelWithDraft(userId, outboxId).payload;
   }
 
-  /** cancel() plus the server draft the message was sent from ({folderId, uid} | null). */
+  /**
+   * cancel() plus the server draft the message was sent from ({folderId, uid} | null). The
+   * payload's attachments carry filename, contentType and size again (for the composer).
+   */
   cancelWithDraft(userId, outboxId) {
     const row = this._requireRow(userId, outboxId);
     const res = this.db.prepare("UPDATE outbox SET status = 'cancelled' WHERE id = ? AND user_id = ? AND status = 'queued'").run(row.id, userId);
@@ -272,7 +275,9 @@ class OutboxManager {
       throw new HttpError(409, row.status === 'sent' ? 'Too late: the message was already sent.' : 'Too late: the message is being sent.', 'TOO_LATE');
     }
     this._arm();
-    return { payload: parsePayload(row), draft: draftOf(row) };
+    const payload = parsePayload(row);
+    payload.attachments = drafts.describeAttachments(this.db, userId, payload.attachments);
+    return { payload, draft: draftOf(row) };
   }
 
   /** Try a failed message again now. */
@@ -368,8 +373,16 @@ class OutboxManager {
     try {
       payload = compose.validatePayload(parsePayload(row));
       const { payload: ready, attachments } = await drafts.materialize(this.deps, row.user_id, payload);
-      built = await compose.buildMime({ account, payload: ready, attachments, fromName: drafts.senderNameFor(db, account) });
-      result = await smtp.sendRaw(this.deps, account, { from: built.envelope.from, recipients: built.envelope.to, raw: built.raw });
+      const fromName = drafts.senderNameFor(db, account);
+      built = await compose.buildMime({ account, payload: ready, attachments, fromName });
+      result = await smtp.sendMessage(this.deps, account, {
+        from: built.envelope.from,
+        recipients: built.envelope.to,
+        raw: built.raw,
+        // Graph reads the recipients from the headers: the same message, Bcc header kept.
+        graphRaw: async () =>
+          (await compose.buildMime({ account, payload: ready, attachments, fromName, messageId: built.messageId, date: built.date, keepBcc: true })).raw,
+      });
     } catch (err) {
       return this._fail(row, err);
     }
@@ -381,7 +394,7 @@ class OutboxManager {
         .run(Date.now(), built.messageId, note, row.id)
     );
     // Follow-up steps never delay the next message of the queue... but are awaited by stop().
-    const followUp = this._afterSend(row, account, payload, built).finally(() => this.followUps.delete(followUp));
+    const followUp = this._afterSend(row, account, payload, built, result.via).finally(() => this.followUps.delete(followUp));
     this.followUps.add(followUp);
   }
 
@@ -400,9 +413,9 @@ class OutboxManager {
     this.logger.warn(`[outbox] message ${row.id} (account ${row.account_id}) not sent: ${message}`);
   }
 
-  async _afterSend(row, account, payload, built) {
+  async _afterSend(row, account, payload, built, via) {
     const steps = [
-      ['sent copy', () => this._sentCopy(account, built)],
+      ['sent copy', () => this._sentCopy(account, built, via)],
       ['answered flag', () => (payload.replyToMessageId ? this._markAnswered(row.user_id, payload.replyToMessageId) : null)],
       ['draft cleanup', () => (draftOf(row) ? drafts.deleteRefsAcrossAccounts(this.deps, row.user_id, drafts.draftChain(this.db, draftOf(row))) : null)],
       ['upload cleanup', () => this._deleteUploads(row.user_id, payload)],
@@ -416,9 +429,9 @@ class OutboxManager {
     }
   }
 
-  /** File the sent message in \Sent unless the provider's SMTP server does that itself. */
-  async _sentCopy(account, built) {
-    const policy = sentCopyPolicy(account);
+  /** File the sent message in \Sent unless the provider's server (or Microsoft Graph) does that itself. */
+  async _sentCopy(account, built, via = 'smtp') {
+    const policy = via === 'graph' ? 'server' : sentCopyPolicy(account);
     const deps = this.deps;
     if (policy === 'server') {
       drafts.syncFolderSoon(deps, drafts.specialFolderRow(deps.db, account.id, '\\Sent'));

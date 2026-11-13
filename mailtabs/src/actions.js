@@ -14,6 +14,11 @@
  * 404 'FOLDER_NOT_FOUND', and 502 'REMOTE_FAILED' (with a friendly message) for anything the
  * server or the network refused.
  *
+ * Gmail (labels as folders): archive = MOVE to All Mail (or, when All Mail is hidden from IMAP,
+ * remove the \Inbox label); trash = MOVE to [Gmail]/Trash; deleting for good outside Trash/Spam
+ * = MOVE to Trash, then delete there (an EXPUNGE in INBOX or a label only removes that label).
+ * Folder names are never trusted there: a label called "Archive" is just a label.
+ *
  * Message operations only change the server; the routes update the local rows. Folder
  * operations (create/rename/delete) also update the `folders` table when deps.db is given,
  * because the local folder tree has to follow the server exactly (a rename keeps the folder's
@@ -31,6 +36,8 @@ const SPECIAL_TARGETS = ['archive', 'trash', 'junk', 'inbox'];
 const ARCHIVE_NAMES = ['archive'];
 const TRASH_NAMES = ['trash', 'deleted items', 'deleted messages', 'deleted', 'bin'];
 const JUNK_NAMES = ['junk', 'spam', 'junk e-mail', 'junk email', 'bulk mail'];
+const GMAIL_HIDDEN = (folder) =>
+  `Gmail's ${folder} folder is hidden from mail apps, so this can't be done here. In Gmail's settings (Labels), turn on "Show in IMAP" for ${folder}.`;
 
 // System flags plus RFC 3501 keyword atoms; anything else could break the APPEND command line.
 const FLAG_RE = /^(?:\\(?:Seen|Answered|Flagged|Deleted|Draft)|\$?[A-Za-z0-9_.-]{1,64})$/;
@@ -96,25 +103,28 @@ function withAccount(deps, accountRow, fn) {
 }
 
 /**
- * Open one of the account's folders read-write and run fn(client). When `uidValidity` is given
- * and no longer matches, nothing is changed.
+ * On an open connection: select `path` read-write and run fn(client). When `uidValidity` is
+ * given and no longer matches, nothing is changed.
  */
+async function inWritableMailbox(client, path, uidValidity, fn) {
+  const lock = await client.getMailboxLock(path);
+  try {
+    if (uidValidity !== undefined && uidValidity !== null && Number(client.mailbox.uidValidity) !== Number(uidValidity)) {
+      throw new HttpError(409, 'This folder changed on the mail server. Refresh and try again.', 'UIDVALIDITY_CHANGED');
+    }
+    if (client.mailbox.readOnly) {
+      throw new HttpError(502, 'The mail server only allows reading this folder, so changes cannot be saved.', 'REMOTE_FAILED');
+    }
+    return await fn(client);
+  } finally {
+    lock.release();
+  }
+}
+
+/** Open one of the account's folders read-write and run fn(client) (see inWritableMailbox). */
 function withWritableMailbox(deps, accountRow, folderPath, uidValidity, fn) {
   const path = requirePath(folderPath);
-  return withAccount(deps, accountRow, async (client) => {
-    const lock = await client.getMailboxLock(path);
-    try {
-      if (uidValidity !== undefined && uidValidity !== null && Number(client.mailbox.uidValidity) !== Number(uidValidity)) {
-        throw new HttpError(409, 'This folder changed on the mail server. Refresh and try again.', 'UIDVALIDITY_CHANGED');
-      }
-      if (client.mailbox.readOnly) {
-        throw new HttpError(502, 'The mail server only allows reading this folder, so changes cannot be saved.', 'REMOTE_FAILED');
-      }
-      return await fn(client);
-    } finally {
-      lock.release();
-    }
-  });
+  return withAccount(deps, accountRow, (client) => inWritableMailbox(client, path, uidValidity, fn));
 }
 
 /** imapflow's Map of source UID -> destination UID as a plain { [oldUid]: newUid } object. */
@@ -181,8 +191,11 @@ function byName(list, names) {
   return [...exact, ...named].map((box) => box.path);
 }
 
-/** Where `target` messages go on this server, best first (may include the source folder). */
-function specialCandidates(list, target) {
+/**
+ * Where `target` messages go on this server, best first (may include the source folder).
+ * Gmail: only the folders Gmail itself flags (never a label that is merely named "Archive").
+ */
+function specialCandidates(list, target, { gmail = false } = {}) {
   const boxes = (list || []).filter(
     (box) => box && box.path && box.selectable !== false && !(box.flags && [...box.flags].some((f) => /^\\(noselect|nonexistent)$/i.test(String(f))))
   );
@@ -195,15 +208,15 @@ function specialCandidates(list, target) {
       add(imap.pickSpecialMailbox(boxes, '\\Archive'));
       // Gmail: moving out of INBOX into All Mail is exactly what "Archive" does there.
       add(imap.pickSpecialMailbox(boxes, '\\All'));
-      byName(boxes, ARCHIVE_NAMES).forEach(add);
+      if (!gmail) byName(boxes, ARCHIVE_NAMES).forEach(add);
       break;
     case 'trash':
       add(imap.pickSpecialMailbox(boxes, '\\Trash'));
-      byName(boxes, TRASH_NAMES).forEach(add);
+      if (!gmail) byName(boxes, TRASH_NAMES).forEach(add);
       break;
     case 'junk':
       add(imap.pickSpecialMailbox(boxes, '\\Junk'));
-      byName(boxes, JUNK_NAMES).forEach(add);
+      if (!gmail) byName(boxes, JUNK_NAMES).forEach(add);
       break;
     case 'inbox':
       add('INBOX');
@@ -218,20 +231,21 @@ function specialCandidates(list, target) {
  * Where 'archive' / 'trash' / 'junk' / 'inbox' go on this server, or null. Never the folder the
  * messages are already in (archive: none; trash: delete in place; junk: none).
  */
-function resolveTarget(list, target, sourcePath) {
+function resolveTarget(list, target, sourcePath, options) {
   const source = String(sourcePath).toLowerCase();
-  return specialCandidates(list, target).find((path) => path.toLowerCase() !== source) || null;
+  return specialCandidates(list, target, options).find((path) => path.toLowerCase() !== source) || null;
 }
 
 /** The account's folders from the local table, shaped like LIST entries (null when none). */
 function listFromTable(db, accountId) {
   if (!db) return null;
-  const rows = db.prepare('SELECT path, name, special_use, selectable FROM folders WHERE account_id = ?').all(accountId);
+  const rows = db.prepare('SELECT path, name, special_use, selectable, sync_mode FROM folders WHERE account_id = ?').all(accountId);
   if (!rows.length) return null;
   return rows.map((r) => ({
     path: r.path,
     name: r.name,
-    selectable: !!r.selectable,
+    // Exchange's calendar/contacts/… folders are never where messages go.
+    selectable: !!r.selectable && !folders.isHiddenFolder(r),
     specialUse: r.special_use || undefined,
     specialUseSource: r.special_use ? 'extension' : undefined,
     flags: new Set(r.special_use ? [r.special_use] : []),
@@ -242,7 +256,9 @@ function listFromTable(db, accountId) {
  * Move messages of one folder to the account's Archive / Trash / Junk folder or back to INBOX.
  * The destination comes from the folders table first, a LIST only when the table has none.
  * Trash falls back to deleting (\Deleted + EXPUNGE) when the server has no trash folder, and
- * trashing inside the Trash deletes for good (like every mail app).
+ * trashing inside the Trash deletes for good (like every mail app). On Gmail, archiving without
+ * a visible All Mail removes the \Inbox label instead, and a hidden Trash is an error (an
+ * EXPUNGE elsewhere would only remove a label).
  * @returns {Promise<{destination: string|null, uidMap: object, uidValidity: number|null, deleted: boolean}>}
  */
 async function moveToSpecial(deps, accountRow, folderPath, uids, target, { uidValidity } = {}) {
@@ -254,24 +270,41 @@ async function moveToSpecial(deps, accountRow, folderPath, uids, target, { uidVa
   if (!list.length) return { destination: null, uidMap: {}, uidValidity: null, deleted: false };
 
   return withWritableMailbox(deps, accountRow, source, uidValidity, async (client) => {
+    const gmail = imap.isGmail(accountRow, client);
     const table = listFromTable(deps && deps.db, accountRow.id);
-    let destination = table ? resolveTarget(table, target, source) : null;
-    let candidates = table ? specialCandidates(table, target) : [];
+    let destination = table ? resolveTarget(table, target, source, { gmail }) : null;
+    let candidates = table ? specialCandidates(table, target, { gmail }) : [];
     if (!destination) {
       const boxes = await client.list();
-      destination = resolveTarget(boxes, target, source);
-      candidates = candidates.concat(specialCandidates(boxes, target));
+      destination = resolveTarget(boxes, target, source, { gmail });
+      candidates = candidates.concat(specialCandidates(boxes, target, { gmail }));
     }
     if (!destination) {
       const alreadyThere = candidates.some((path) => path.toLowerCase() === source.toLowerCase());
-      if (target === 'trash') return deleteRanges(client, list).then(() => ({ destination: null, uidMap: {}, uidValidity: null, deleted: true }));
+      if (target === 'trash') {
+        if (gmail && !alreadyThere) throw new HttpError(400, GMAIL_HIDDEN('Trash'), 'NO_TRASH');
+        await deleteRanges(client, list);
+        return { destination: null, uidMap: {}, uidValidity: null, deleted: true };
+      }
       if (alreadyThere) throw new HttpError(400, 'These messages are already in that folder.', 'INVALID_TARGET');
-      if (target === 'archive') throw new HttpError(400, 'This account has no Archive folder', 'NO_ARCHIVE');
-      throw new HttpError(400, 'This account has no Spam folder', 'NO_JUNK');
+      if (target === 'archive' && gmail && isInboxPath(source)) {
+        await removeInboxLabel(client, list);
+        return { destination: null, uidMap: {}, uidValidity: null, deleted: false };
+      }
+      if (target === 'archive') throw new HttpError(400, gmail ? GMAIL_HIDDEN('All Mail') : 'This account has no Archive folder', 'NO_ARCHIVE');
+      throw new HttpError(400, gmail ? GMAIL_HIDDEN('Spam') : 'This account has no Spam folder', 'NO_JUNK');
     }
     const moved = await moveRanges(client, list, destination, target);
     return { ...moved, deleted: false };
   });
+}
+
+/** Gmail archive without All Mail: UID STORE -X-GM-LABELS (\Inbox) — the message leaves INBOX only. */
+async function removeInboxLabel(client, uids) {
+  for (const batch of batches(uids, UID_BATCH)) {
+    const ok = await client.messageFlagsRemove(imap.toUidSet(batch), ['\\Inbox'], { uid: true, useLabels: true });
+    if (!ok) throw remoteFailed('archive the message');
+  }
 }
 
 async function moveRanges(client, uids, destination, what) {
@@ -309,17 +342,72 @@ async function moveMessages(deps, accountRow, folderPath, uids, destPath, { uidV
   const source = requirePath(folderPath);
   const destination = requirePath(destPath);
   if (destination === source) throw new HttpError(400, 'These messages are already in that folder.', 'INVALID_TARGET');
+  if (folders.isHiddenFolder(folderRow(deps, accountRow, destination))) {
+    throw new HttpError(400, 'Messages cannot be moved into that folder.', 'INVALID_TARGET');
+  }
   const list = normalizeUids(uids);
   if (!list.length) return { destination, uidMap: {}, uidValidity: null };
   return withWritableMailbox(deps, accountRow, source, uidValidity, (client) => moveRanges(client, list, destination, 'move'));
 }
 
-/** Delete messages for good: \Deleted + UID EXPUNGE (only these UIDs, given UIDPLUS). */
+/** The special use of one of the account's folders: the folders table first, else LIST. */
+async function specialUseOf(deps, accountRow, client, path) {
+  const row = deps && deps.db ? deps.db.prepare('SELECT special_use FROM folders WHERE account_id = ? AND path = ?').get(accountRow.id, path) : null;
+  if (row) return row.special_use || null;
+  const boxes = await client.list();
+  for (const use of ['\\Trash', '\\Junk', '\\All']) if (imap.pickSpecialMailbox(boxes, use) === path) return use;
+  return null;
+}
+
+/**
+ * Delete messages for good: \Deleted + UID EXPUNGE (only these UIDs, given UIDPLUS).
+ * Gmail: only Trash and Spam really delete; from anywhere else the messages are moved to the
+ * Trash first and deleted there.
+ */
 async function deleteForever(deps, accountRow, folderPath, uids, { uidValidity } = {}) {
+  const path = requirePath(folderPath);
   const list = normalizeUids(uids);
   if (!list.length) return { deleted: 0 };
-  await withWritableMailbox(deps, accountRow, folderPath, uidValidity, (client) => deleteRanges(client, list));
+  await withAccount(deps, accountRow, async (client) => {
+    if (imap.isGmail(accountRow, client)) {
+      const use = await specialUseOf(deps, accountRow, client, path);
+      if (use !== '\\Trash' && use !== '\\Junk') return gmailDeleteViaTrash(deps, accountRow, client, path, list, uidValidity);
+    }
+    return inWritableMailbox(client, path, uidValidity, () => deleteRanges(client, list));
+  });
   return { deleted: list.length };
+}
+
+/** Gmail delete-forever outside Trash/Spam: MOVE to [Gmail]/Trash, then delete them there. */
+async function gmailDeleteViaTrash(deps, accountRow, client, source, uids, uidValidity) {
+  const table = listFromTable(deps && deps.db, accountRow.id);
+  const trash = (table && resolveTarget(table, 'trash', source, { gmail: true })) || resolveTarget(await client.list(), 'trash', source, { gmail: true });
+  if (!trash) throw new HttpError(400, GMAIL_HIDDEN('Trash'), 'NO_TRASH');
+
+  // Gmail's message ids (X-GM-MSGID: 64-bit decimals, kept as strings) find the messages in the
+  // Trash should the server not report their new UIDs.
+  const emailIds = [];
+  const moved = await inWritableMailbox(client, source, uidValidity, async () => {
+    for (const batch of batches(uids, UID_BATCH)) {
+      for await (const msg of client.fetch(imap.toUidSet(batch), { uid: true }, { uid: true })) {
+        if (msg && msg.emailId !== undefined && msg.emailId !== null && msg.emailId !== false) emailIds.push(String(msg.emailId));
+      }
+    }
+    return moveRanges(client, uids, trash, 'trash');
+  });
+
+  await inWritableMailbox(client, trash, undefined, async () => {
+    const sameFolder = !moved.uidValidity || Number(client.mailbox.uidValidity) === Number(moved.uidValidity);
+    const found = new Set(sameFolder ? Object.values(moved.uidMap).map(Number) : []);
+    if (found.size < uids.length) {
+      for (const id of emailIds) {
+        const hits = await client.search({ emailId: id }, { uid: true });
+        for (const uid of Array.isArray(hits) ? hits : []) found.add(Number(uid));
+      }
+    }
+    const targets = normalizeUids([...found]);
+    if (targets.length) await deleteRanges(client, targets);
+  });
 }
 
 /** Delete one message by UID (replacing a saved draft). Nothing happens when it is already gone. */
@@ -413,7 +501,8 @@ function localTx(deps, accountRow, fn) {
 async function relist(deps, accountRow, client) {
   if (!deps || !deps.db) return;
   const entries = await client.list();
-  localTx(deps, accountRow, (db) => folders.upsertFolders(db, accountRow.id, entries, { isGmail: imap.isGmail(accountRow, client) }));
+  const options = { isGmail: imap.isGmail(accountRow, client), isExchange: imap.isExchange(accountRow, client) };
+  localTx(deps, accountRow, (db) => folders.upsertFolders(db, accountRow.id, entries, options));
 }
 
 function folderRow(deps, accountRow, path) {

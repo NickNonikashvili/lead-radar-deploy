@@ -244,7 +244,7 @@ test('v2: the composer is wired in through its three contract modules only', () 
   const settings = read(path.join(PUBLIC, 'js/components/SettingsDialog.js'));
   assert.match(settings, /import \{ SignatureSettings \} from '\.\.\/compose\/SignatureSettings\.js'/);
   assert.match(settings, /<\$\{SignatureSettings\}/);
-  assert.match(read(path.join(PUBLIC, 'js/actions.js')), /import \{ openComposer, resetComposers \} from '\.\/compose\/compose\.js'/);
+  assert.match(read(path.join(PUBLIC, 'js/actions.js')), /import \{ ensureComposerOwner, openComposer, resetComposers \} from '\.\/compose\/compose\.js'/);
   // Outside compose/, nothing reaches into the composer's internals.
   const contract = new Set(['compose.js', 'ComposerHost.js', 'SignatureSettings.js']);
   for (const f of jsFiles.filter((x) => !rel(x).startsWith(`js${path.sep}compose${path.sep}`))) {
@@ -417,8 +417,10 @@ test('v2 api: folder, bulk, undo, thread, settings, outbox and compose endpoints
     assert.deepEqual(calls[12].body, { undoSendSeconds: 20 });
     assert.deepEqual(calls[17].body, { draft: { folderId: 2, uid: 9 } });
     assert.equal(mod.rawUrl(5), '/api/messages/5/raw');
-    assert.equal(mod.printUrl(5, false), '/api/messages/5/print');
-    assert.equal(mod.printUrl(5, true), '/api/messages/5/print?images=1');
+    // The printed header is dated in the browser's time zone.
+    const tz = new URLSearchParams({ tz: Intl.DateTimeFormat().resolvedOptions().timeZone }).toString();
+    assert.equal(mod.printUrl(5, false), `/api/messages/5/print?${tz}`);
+    assert.equal(mod.printUrl(5, true), `/api/messages/5/print?images=1&${tz}`);
   } finally {
     globalThis.fetch = realFetch;
   }

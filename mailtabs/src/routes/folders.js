@@ -7,6 +7,8 @@
  * Folder changes are made on the real mail server first (actions.js), which also keeps the
  * local folders table in step. Special folders (Inbox, Sent, Drafts, Trash, Spam, Archive, Gmail's
  * system folders) can't be renamed or deleted: other mail apps and the provider depend on them.
+ * Exchange's non-mail folders (calendars, contacts, tasks, …; sync_mode 'hidden') are not part of
+ * the tree and read as "not found".
  */
 
 const express = require('express');
@@ -96,7 +98,7 @@ module.exports = function foldersRoutes({ db, config, crypto, syncManager }) {
   function loadFolder(userId, rawId) {
     const id = validate.requireId(rawId, 'folder id');
     const folder = folders.folderForUser(db, userId, id);
-    if (!folder) throw new HttpError(404, 'Folder not found', 'NOT_FOUND');
+    if (!folder || folders.isHiddenFolder(folder)) throw new HttpError(404, 'Folder not found', 'NOT_FOUND');
     return folder;
   }
 
@@ -142,7 +144,11 @@ module.exports = function foldersRoutes({ db, config, crypto, syncManager }) {
   // --- the tree -------------------------------------------------------------------------
 
   router.get('/', (req, res) => {
-    res.json(queries.listFoldersJson(db, req.user.id));
+    const tree = queries.listFoldersJson(db, req.user.id);
+    for (const account of tree.accounts || []) {
+      account.folders = (account.folders || []).filter((f) => f.syncMode !== folders.HIDDEN_SYNC_MODE);
+    }
+    res.json(tree);
   });
 
   // --- create ---------------------------------------------------------------------------
@@ -238,15 +244,19 @@ module.exports = function foldersRoutes({ db, config, crypto, syncManager }) {
       if (!flagQuery(req.query.force)) {
         // Deleting a folder deletes its mail and every subfolder on the server: only an empty
         // one goes without asking. Local rows and the last STATUS can be stale, so ask the server.
-        const children = subtree(folder).length - 1;
-        const { n: local } = db.prepare('SELECT COUNT(*) AS n FROM messages WHERE folder_id = ?').get(folder.id);
-        let count = Math.max(Number(folder.total_count) || 0, Number(local) || 0);
+        const rows = subtree(folder);
+        const children = rows.length - 1;
+        // Messages in the folder and its subfolders, as far as known (stored here or last STATUS).
+        const localCount = db.prepare('SELECT COUNT(*) AS n FROM messages WHERE folder_id = ?');
+        let count = rows.reduce((sum, row) => sum + Math.max(Number(row.total_count) || 0, Number(localCount.get(row.id).n) || 0), 0);
         if (!children && !count && folder.selectable) count = (await liveMessageCount(account, folder)) || 0;
         if (children || count) {
           const what = [count ? `${count} message${count === 1 ? '' : 's'}` : null, children ? `${children} subfolder${children === 1 ? '' : 's'}` : null]
             .filter(Boolean)
             .join(' and ');
-          throw new HttpError(409, `This folder isn't empty (${what}). Deleting it deletes everything in it for good.`, 'FOLDER_NOT_EMPTY');
+          const err = new HttpError(409, `This folder isn't empty (${what}). Deleting it deletes everything in it for good.`, 'FOLDER_NOT_EMPTY');
+          err.details = { count, subfolders: children };
+          throw err;
         }
       }
 

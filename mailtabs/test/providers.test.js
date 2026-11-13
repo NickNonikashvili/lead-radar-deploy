@@ -188,7 +188,12 @@ test('oauthProviders reflects config and spec endpoints', () => {
   assert.ok(p.microsoft.scopes.includes('https://outlook.office.com/IMAP.AccessAsUser.All'));
   assert.ok(p.microsoft.scopes.includes('offline_access'));
   assert.equal(p.microsoft.scopes[0], 'https://outlook.office.com/IMAP.AccessAsUser.All', 'the IMAP scope comes first');
-  assert.ok(!p.microsoft.scopes.some((s) => /graph\.microsoft\.com|User\.Read/i.test(s)), 'no Graph scopes');
+  // Graph's Mail.Send is consented to at sign-in (for the Graph send fallback), never first and
+  // never more than that: the sign-in token must stay an outlook.office.com one.
+  assert.deepEqual(p.microsoft.scopes.filter((s) => /graph\.microsoft\.com|User\.Read/i.test(s)), ['https://graph.microsoft.com/Mail.Send']);
+  assert.deepEqual(p.microsoft.graphScopes, ['https://graph.microsoft.com/Mail.Send', 'offline_access']);
+  assert.equal(p.microsoft.graphSendUrl, 'https://graph.microsoft.com/v1.0/me/sendMail');
+  assert.equal(p.google.graphSendUrl, null);
   assert.deepEqual(p.microsoft.extraAuthParams, { prompt: 'select_account' });
   assert.equal(p.microsoft.mailScope, 'https://outlook.office.com/IMAP.AccessAsUser.All');
   assert.deepEqual(p.microsoft.refreshScopes, [

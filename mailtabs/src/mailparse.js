@@ -490,7 +490,10 @@ function normalizeMessageId(value) {
  *   else 'mid:' + In-Reply-To, else 'mid:' + the message's own Message-ID, else null.
  */
 function threadKeyFor({ gmailThreadId, references, inReplyTo, messageId } = {}) {
-  const gm = gmailThreadId === null || gmailThreadId === undefined ? '' : String(gmailThreadId).trim();
+  // X-GM-THRID is a 64-bit decimal: only a string (or BigInt) carries it exactly. A Number above
+  // 2^53 has already lost digits and would merge unrelated conversations.
+  const lossy = typeof gmailThreadId === 'number' && !Number.isSafeInteger(gmailThreadId);
+  const gm = gmailThreadId === null || gmailThreadId === undefined || lossy ? '' : String(gmailThreadId).trim();
   if (/^[0-9A-Za-z_-]{1,64}$/.test(gm)) return `gm:${gm}`;
   const root = parseMessageIdList(references)[0] || normalizeMessageId(inReplyTo) || normalizeMessageId(messageId);
   return root ? `mid:${root}` : null;

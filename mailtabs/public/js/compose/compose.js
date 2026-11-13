@@ -4,7 +4,7 @@
 import { useEffect, useReducer, useRef } from '/vendor/preact-htm.js';
 import { getState } from '../store.js';
 import { toast } from '../actions.js';
-import { composeApi, uploadFile } from './compose-api.js';
+import { clearContactCache, composeApi, uploadFile } from './compose-api.js';
 import { addRecipients, makeRecipient, parseAddressList, MAX_RECIPIENTS } from './recipients.js';
 import {
   LIMITS,
@@ -31,6 +31,7 @@ const DOCK = { expanded: 510, minimized: 250, gap: 12, margin: 32 }; // keep in 
 // ------------------------------------------------------------------------------- store
 
 let state = { composers: [], snack: null };
+let owner = null; // id of the Mailtabs user the open composers belong to
 const listeners = new Set();
 const runtimes = new Map(); // composer id -> non-serialisable bits (timers, editor handle, uploads)
 let seq = 0;
@@ -98,7 +99,7 @@ function updateComposer(id, patch) {
 function runtime(id) {
   let rt = runtimes.get(id);
   if (!rt) {
-    rt = { saveTimer: null, savePromise: null, saveAgain: false, editor: null, uploads: new Map(), commits: new Set(), lastDraft: null };
+    rt = { saveTimer: null, savePromise: null, saveAgain: false, editor: null, uploads: new Map(), commits: new Set(), lastDraft: null, sourceReplaced: false };
     runtimes.set(id, rt);
   }
   return rt;
@@ -114,10 +115,26 @@ export function canSendFrom(account) {
   return !!account && account.canSend !== false;
 }
 
-/** Why an account can't send, for the From list and the composer banner. */
+/** What to do so an account can send (a button label), or null when it can send. */
 export function sendBlockReason(account) {
   if (!account || canSendFrom(account)) return null;
-  return account.smtpHost ? 'Reconnect to enable sending' : 'Set up sending';
+  return account.authType === 'oauth' ? 'Reconnect to enable sending' : 'Set up sending';
+}
+
+/** Why an account can't send, in the server's words (account JSON `sendBlockedReason`). */
+export function sendBlockedText(account) {
+  if (!account || canSendFrom(account)) return null;
+  const reason = typeof account.sendBlockedReason === 'string' ? account.sendBlockedReason.trim() : '';
+  if (reason) return reason;
+  return account.authType === 'oauth' ? 'Reconnect this account to allow sending.' : 'Sending is not set up for this account yet.';
+}
+
+/** The first clause of sendBlockedText, short enough for an entry of the From list. */
+export function sendBlockedHint(account) {
+  const text = sendBlockedText(account);
+  if (!text) return null;
+  const short = text.split(/:\s|\s\(|\.\s/)[0].replace(/\.$/, '').trim();
+  return short.length > 70 ? `${short.slice(0, 67).trimEnd()}…` : short;
 }
 
 function defaultAccountId(preferred) {
@@ -199,6 +216,8 @@ function toRecipientList(list) {
  * Returns the composer id, or null when it couldn't be opened.
  */
 export function openComposer(opts = {}) {
+  const user = getState().user;
+  ensureComposerOwner(user ? user.id : null);
   const mode = MODES.includes(opts.mode) ? opts.mode : 'new';
   const messageId = opts.messageId ?? null;
 
@@ -645,6 +664,12 @@ export function saveDraft(id) {
       }
       const draft = (result && result.draft) || previous;
       rt.lastDraft = draft;
+      const now = getComposer(id);
+      if (now && now.mode === 'draft' && now.sourceMessageId != null && !rt.sourceReplaced && previous) {
+        // The server replaced the draft this composer was opened from: its list row is gone.
+        rt.sourceReplaced = true;
+        announceDrafts({ removedMessageIds: [now.sourceMessageId] });
+      }
       updateComposer(id, (cur) => ({
         draft,
         savedRevision: revision,
@@ -801,6 +826,7 @@ export async function closeComposer(id) {
   if (c.revision === c.savedRevision && c.draft) {
     removeComposer(id);
     toast('Saved to Drafts', { type: 'success' });
+    announceDrafts({ refresh: true });
     return;
   }
   updateComposer(id, { closing: true, confirm: null });
@@ -810,6 +836,7 @@ export async function closeComposer(id) {
   if (cur.revision === cur.savedRevision && cur.saveState === 'saved') {
     removeComposer(id);
     toast('Saved to Drafts', { type: 'success' });
+    announceDrafts({ refresh: true });
   } else {
     updateComposer(id, {
       closing: false,
@@ -844,6 +871,7 @@ export async function discardComposer(id, { confirmed = false } = {}) {
   try {
     await composeApi.deleteDraft(draft);
     toast('Draft discarded');
+    announceDrafts({ removedMessageIds: c.mode === 'draft' ? [c.sourceMessageId] : [], refresh: true });
   } catch (err) {
     toast(err.message || "Couldn't delete the draft from the server.", { type: 'error' });
   }
@@ -911,7 +939,7 @@ export async function sendComposer(id, { sendAt = null, confirmed = [] } = {}) {
   if (!c || c.status !== 'ready' || c.sending) return;
   const account = accountById(c.accountId);
   if (!account) return fail(id, 'Choose an account to send from.');
-  if (!canSendFrom(account)) return fail(id, `Sending isn't set up for ${account.email} yet. Choose another account or ${sendBlockReason(account).toLowerCase()}.`);
+  if (!canSendFrom(account)) return fail(id, `${account.email} can't send yet: ${sendBlockedText(account)} Choose another account, or save this as a draft.`);
   const all = [...c.to, ...c.cc, ...c.bcc];
   if (!all.length) return fail(id, 'Add at least one recipient.', 'to');
   const invalid = all.find((r) => !r.valid);
@@ -967,6 +995,8 @@ export async function sendComposer(id, { sendAt = null, confirmed = [] } = {}) {
     });
     removeComposer(id);
     announceOutbox();
+    // The server deletes the draft once the message is out; its row goes now.
+    if (cur.mode === 'draft' && cur.sourceMessageId != null) announceDrafts({ removedMessageIds: [cur.sourceMessageId] });
     // sendAt is epoch milliseconds; tolerate an ISO string too.
     const parsed = typeof outbox.sendAt === 'string' && !/^\d+$/.test(outbox.sendAt) ? Date.parse(outbox.sendAt) : Number(outbox.sendAt);
     const sendAtMs = Number.isFinite(parsed) && parsed > 0 ? parsed : Date.now();
@@ -994,6 +1024,19 @@ function announceOutbox() {
     /* very old browsers: the outbox view refreshes on its own */
   }
 }
+
+/**
+ * Tell the message list that server drafts changed: `removedMessageIds` are list rows that no
+ * longer exist (a reopened draft is replaced by its first save, discarded or sent); `refresh`
+ * asks for the Drafts list and counts to be brought up to date.
+ */
+function announceDrafts({ removedMessageIds = [], refresh = false } = {}) {
+  try {
+    window.dispatchEvent(new CustomEvent('mailtabs:drafts-changed', { detail: { removedMessageIds: removedMessageIds.filter((x) => x != null), refresh } }));
+  } catch (_) {
+    /* the list catches up on its next refresh */
+  }
+}
 let snackSeq = 0;
 let snackTimer = null;
 
@@ -1009,16 +1052,25 @@ export function dismissSnack(id) {
   if (state.snack && (id == null || state.snack.id === id)) setComposerState({ snack: null });
 }
 
+const WATCH_MS = 3 * 60 * 1000; // follow a send this long after it was due (covers the server's retry a minute later)
+
+/**
+ * Follow a message after Send until it is sent or has failed. When the server could not send it
+ * and will try again (connection problems), say so instead of a silent "Sending…".
+ */
 function watchOutbox(outboxId, sendAt) {
-  const check = async (attempt) => {
-    if (!state.snack || state.snack.outboxId !== outboxId || state.snack.kind !== 'sending') return;
+  const until = Math.max(sendAt, Date.now()) + WATCH_MS;
+  const watching = () => !!state.snack && state.snack.outboxId === outboxId && (state.snack.kind === 'sending' || state.snack.kind === 'retrying');
+  const check = async (failures) => {
+    if (!watching()) return;
     try {
       const { items } = await composeApi.outbox();
-      if (!state.snack || state.snack.outboxId !== outboxId) return;
+      if (!watching()) return;
       const item = (items || []).find((i) => i.id === outboxId);
       if (!item || item.status === 'sent') {
         sentStash.delete(outboxId);
         announceOutbox();
+        announceDrafts({ refresh: true });
         showSnack({ kind: 'sent', text: 'Message sent', timeout: 5000 });
         return;
       }
@@ -1028,10 +1080,18 @@ function watchOutbox(outboxId, sendAt) {
         return;
       }
       if (item.status === 'cancelled') return;
-      if (attempt < 30) setTimeout(() => check(attempt + 1), 2000);
+      if (item.status === 'queued' && item.error && item.sendAt <= Date.now() + 120_000) {
+        // The first attempt failed; the server tries again shortly (the error says when).
+        const text = `Not sent yet: ${item.error}`;
+        if (state.snack.kind !== 'retrying' || state.snack.text !== text) {
+          announceOutbox();
+          showSnack({ kind: 'retrying', outboxId, sendAt: item.sendAt, text });
+        }
+      }
+      if (Date.now() < until) setTimeout(() => check(0), 2000);
       else showSnack({ kind: 'info', text: 'Still sending… check the Outbox for its status.', timeout: 6000 });
     } catch (_) {
-      if (attempt < 5) setTimeout(() => check(attempt + 1), 3000);
+      if (failures < 5) setTimeout(() => check(failures + 1), 3000);
     }
   };
   setTimeout(() => check(0), Math.max(0, sendAt - Date.now()) + 1200);
@@ -1112,7 +1172,7 @@ if (typeof window !== 'undefined') {
   });
 }
 
-/** Drop every composer without saving (sign-out / a different user signed in). */
+/** Drop every composer without saving, and everything cached for its user (sign-out / a different user signed in). */
 export function resetComposers() {
   for (const rt of runtimes.values()) {
     clearTimeout(rt.saveTimer);
@@ -1120,6 +1180,27 @@ export function resetComposers() {
   }
   runtimes.clear();
   sentStash.clear();
+  uploadInfo.clear();
+  messageAttachmentCache.clear();
+  clearContactCache();
   clearTimeout(snackTimer);
+  owner = null;
   setComposerState({ composers: [], snack: null });
+}
+
+/** The user the open composers (and the send snackbar) belong to. */
+export function composerOwner() {
+  return owner;
+}
+
+/**
+ * Composers belong to the user who opened them. When somebody else is signed in now (for
+ * example after the session expired and another person signed in), drop them unseen; the
+ * same user signing back in finds them again.
+ */
+export function ensureComposerOwner(userId) {
+  const id = userId ?? null;
+  if (owner === id) return;
+  if (owner !== null || state.composers.length || state.snack) resetComposers();
+  owner = id;
 }

@@ -425,7 +425,9 @@ test('compose-api: every non-GET sends X-Mailtabs + JSON; GETs do not need it', 
     await composeApi.contacts('ad a', { limit: 8 });
     await composeApi.outbox();
     await composeApi.settings();
-    assert.equal(calls[0].url, '/api/compose/prepare?mode=replyAll&messageId=42');
+    // The browser's time zone dates the reply quote.
+    const tz = new URLSearchParams({ tz: Intl.DateTimeFormat().resolvedOptions().timeZone }).toString();
+    assert.equal(calls[0].url, `/api/compose/prepare?mode=replyAll&messageId=42&${tz}`);
     assert.equal(calls[1].url, '/api/contacts?q=ad+a&limit=8');
     for (const c of calls) {
       assert.equal(c.init.method, 'GET');

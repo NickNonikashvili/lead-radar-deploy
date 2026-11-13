@@ -116,11 +116,13 @@ export function formatAddress(entry) {
 }
 
 /** Short label for an address list: names when present, else addresses. */
-export function shortAddressList(list, max = 3) {
+/** "Ana, Ben +3". `total` is the full count when `list` holds only the first few. */
+export function shortAddressList(list, max = 3, total = null) {
   if (!Array.isArray(list) || list.length === 0) return '';
   const labels = list.map((e) => (e && (e.name || e.address)) || '').filter(Boolean);
-  if (labels.length <= max) return labels.join(', ');
-  return `${labels.slice(0, max).join(', ')} +${labels.length - max}`;
+  const count = Number.isInteger(total) && total > labels.length ? total : labels.length;
+  if (count <= max) return labels.join(', ');
+  return `${labels.slice(0, max).join(', ')} +${count - max}`;
 }
 
 export function plural(n, one, many = `${one}s`) {

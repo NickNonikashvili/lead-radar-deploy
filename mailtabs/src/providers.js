@@ -437,7 +437,7 @@ function authFailureHintForHost(host) {
 }
 
 // Only these keys of config.oauthOverrides (tests only) may replace a provider's values.
-const OVERRIDABLE_KEYS = ['authUrl', 'tokenUrl', 'imapHost', 'imapPort', 'imapSecurity', 'smtpHost', 'smtpPort', 'smtpSecurity'];
+const OVERRIDABLE_KEYS = ['authUrl', 'tokenUrl', 'graphSendUrl', 'imapHost', 'imapPort', 'imapSecurity', 'smtpHost', 'smtpPort', 'smtpSecurity'];
 
 function applyOverrides(provider, overrides) {
   if (!overrides || typeof overrides !== 'object') return provider;
@@ -478,6 +478,10 @@ function oauthProviders(config) {
         // https://mail.google.com/ covers IMAP, POP and SMTP.
         sendScope: 'https://mail.google.com/',
         optionalScopes: [],
+        // Gmail always accepts SMTP from OAuth clients: no Graph-style fallback.
+        graphSendScope: null,
+        graphScopes: null,
+        graphSendUrl: null,
         envNames: ['GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET'],
         extraAuthParams: { access_type: 'offline', prompt: 'consent', include_granted_scopes: 'true' },
         imapHost: 'imap.gmail.com',
@@ -501,10 +505,12 @@ function oauthProviders(config) {
         tokenUrl: `https://login.microsoftonline.com/${tenant}/oauth2/v2.0/token`,
         // The IMAP scope must come first: with scopes for several resources, Microsoft issues the
         // access token for the first one. SMTP.Send belongs to the same resource
-        // (outlook.office.com), so one token covers both. No Graph scopes (such as User.Read).
+        // (outlook.office.com), so one token covers both. Graph's Mail.Send is only consented to
+        // here; its own token comes from a refresh (graphScopes) when SMTP sending is turned off.
         scopes: [
           'https://outlook.office.com/IMAP.AccessAsUser.All',
           'https://outlook.office.com/SMTP.Send',
+          'https://graph.microsoft.com/Mail.Send',
           'offline_access',
           'openid',
           'email',
@@ -517,6 +523,11 @@ function oauthProviders(config) {
         // for scopes the user never consented to, which would cut off accounts connected before
         // sending existed (they consented to IMAP only) — they must reconnect to add sending.
         optionalScopes: ['https://outlook.office.com/SMTP.Send'],
+        // Sending through Microsoft Graph (POST /me/sendMail with the raw MIME) for mailboxes whose
+        // SMTP AUTH is turned off (5.7.139) — the case for many personal Outlook.com accounts.
+        graphSendScope: 'https://graph.microsoft.com/Mail.Send',
+        graphScopes: ['https://graph.microsoft.com/Mail.Send', 'offline_access'],
+        graphSendUrl: 'https://graph.microsoft.com/v1.0/me/sendMail',
         envNames: ['MICROSOFT_CLIENT_ID', 'MICROSOFT_CLIENT_SECRET'],
         extraAuthParams: { prompt: 'select_account' },
         imapHost: 'outlook.office365.com',

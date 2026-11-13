@@ -385,8 +385,15 @@ test('JSON mappers: shapes, and secrets never appear', () => {
   assert.equal('html_body' in detail || 'htmlBody' in detail || 'textBody' in detail, false, 'no body content in detail JSON');
   assert.deepEqual(Object.keys(queries.toMessageListItem(msg)).sort(), [
     'accountId', 'date', 'folderId', 'fromAddress', 'fromName', 'hasAttachments', 'id', 'isAnswered', 'isDraft', 'isRead',
-    'isStarred', 'snippet', 'subject', 'threadKey',
+    'isStarred', 'snippet', 'subject', 'threadKey', 'to', 'toCount',
   ]);
+  // Sent / Drafts rows name their recipients: the first few, plus how many there are.
+  const many = Array.from({ length: 14 }, (_, i) => ({ name: `P${i}`, address: `p${i}@x.com` }));
+  const item = queries.toMessageListItem({ ...msg, to_json: JSON.stringify(many) });
+  assert.equal(item.to.length, 10);
+  assert.deepEqual(item.to[0], { name: 'P0', address: 'p0@x.com' });
+  assert.equal(item.toCount, 14);
+  assert.deepEqual(queries.toMessageListItem({ ...msg, to_json: 'not json' }).to, []);
 });
 
 test('validate helpers', () => {

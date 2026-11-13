@@ -4,9 +4,11 @@
  * OAuth 2.0 (authorization code + PKCE) for Google and Microsoft mail access.
  *
  * Provider objects come from providers.oauthProviders(config). Tokens are stored encrypted in
- * accounts.secret_enc as { refreshToken, accessToken, accessTokenExpiresAt, grantedScopes? }.
+ * accounts.secret_enc as { refreshToken, accessToken, accessTokenExpiresAt, grantedScopes?, graphScopes? }.
  * grantedScopes is the space-separated scope string the token endpoint last reported (absent
- * for accounts connected before it was recorded).
+ * for accounts connected before it was recorded). graphScopes (Microsoft only) are the Microsoft
+ * Graph scopes the account consented to — Graph is a second resource, so its token is obtained
+ * separately (getGraphAccessToken) and only kept in memory; '' means Microsoft refused them.
  */
 
 const { oauthProviderForPreset } = require('./providers');
@@ -19,6 +21,13 @@ const UNREADABLE_MESSAGE = "The saved sign-in for this account can't be read (th
 // Token endpoint errors that mean the server's own client ID/secret are wrong, expired or deleted.
 const CLIENT_ERRORS = new Set(['invalid_client', 'unauthorized_client', 'deleted_client']);
 const EMAIL_RE = /^[^\s@]+@[^\s@.]+(?:\.[^\s@.]+)+$/;
+const GRAPH_RECONNECT_MESSAGE =
+  'Reconnect this account to allow sending through Microsoft (sign in with Microsoft again and accept the permission to send email).';
+// Refresh answers that mean "this scope was never (or is no longer) consented to", not "the
+// sign-in is gone": AADSTS65001 no consent, 65004 consent declined, 70000 scope unauthorized,
+// 70011 invalid scope.
+const CONSENT_ERROR_RE = /\bAADSTS(?:65001|65004|70000|70011)\b/;
+const CONSENT_ERROR_CODES = new Set(['invalid_scope', 'consent_required']);
 
 class OAuthError extends Error {
   /**
@@ -109,6 +118,27 @@ function grantsSendScope(provider, grantedScopes) {
   if (!provider || !provider.sendScope) return null;
   if (typeof grantedScopes !== 'string' || !grantedScopes.trim()) return null;
   return scopeIncludes(grantedScopes, provider.sendScope);
+}
+
+/**
+ * May an account send through Microsoft Graph (Mail.Send)? Judged from the secret's graphScopes:
+ * recorded at sign-in when the authorize request asked for them, and replaced by what each Graph
+ * token response reports.
+ */
+function grantsGraphSendScope(provider, secret) {
+  if (!provider || !provider.graphSendScope || !secret || typeof secret !== 'object') return false;
+  return scopeIncludes(secret.graphScopes, provider.graphSendScope);
+}
+
+/**
+ * Graph scopes a successful sign-in consented to. Microsoft's consent covers every scope of the
+ * authorize request, but the code-redeem response only lists those of the first resource
+ * (outlook.office.com), so they are taken from the request.
+ */
+function consentedGraphScopes(provider, data) {
+  if (!provider.graphSendScope || !Array.isArray(provider.graphScopes)) return null;
+  if (data && typeof data.scope === 'string' && scopeIncludes(data.scope, provider.graphSendScope)) return data.scope.trim().slice(0, 2000);
+  return Array.isArray(provider.scopes) && provider.scopes.includes(provider.graphSendScope) ? provider.graphScopes.join(' ') : null;
 }
 
 /** The scope string to record for a token response (what was granted, or what was asked for). */
@@ -210,6 +240,7 @@ async function tokenRequest(provider, fields) {
     if (errorCode === 'invalid_grant') {
       const err = new OAuthError(revokedMessage(provider), 'invalid_grant', res.status);
       err.description = description;
+      err.providerError = errorCode;
       throw err;
     }
     if (CLIENT_ERRORS.has(errorCode)) {
@@ -221,6 +252,7 @@ async function tokenRequest(provider, fields) {
     const detail = description || errorCode || `HTTP ${res.status}`;
     const err = new OAuthError(`${provider.label || provider.key} sign-in failed: ${detail.slice(0, 300)}`, 'oauth_error', res.status);
     err.description = description;
+    err.providerError = errorCode || null;
     throw err;
   }
   if (typeof data.access_token !== 'string' || !data.access_token) {
@@ -232,8 +264,9 @@ async function tokenRequest(provider, fields) {
 /**
  * Exchange an authorization code for tokens.
  * @returns {Promise<{accessToken, refreshToken: string|null, expiresAt: number, email: string, name: string|null,
- *   grantedScopes: string|null}>} grantedScopes must be saved in the account secret: it decides
- *   which scopes later refreshes ask for and whether the account may send.
+ *   grantedScopes: string|null, graphScopes: string|null}>} grantedScopes (and graphScopes, Microsoft)
+ *   must be saved in the account secret: they decide which scopes later refreshes ask for and
+ *   whether (and how) the account may send.
  */
 async function exchangeCode(provider, { code, codeVerifier, redirectUri }) {
   if (!code) throw new OAuthError('No authorization code was returned.');
@@ -265,6 +298,7 @@ async function exchangeCode(provider, { code, codeVerifier, redirectUri }) {
     email,
     name,
     grantedScopes: grantedScopesFrom(data, provider.scopes),
+    graphScopes: consentedGraphScopes(provider, data),
   };
 }
 
@@ -320,19 +354,47 @@ function markRevoked(db, accountId, message = REVOKED_MESSAGE) {
   markAccount(db, accountId, 'auth_error', message);
 }
 
-// One refresh per account at a time, so a sync and a user action do not race each other
-// (Microsoft rotates refresh tokens; two parallel refreshes would waste one of them).
 // Keyed by db handle first so separate databases (e.g. in tests) never share entries.
-const refreshesInFlight = new WeakMap();
+const refreshesInFlight = new WeakMap(); // db -> Map(accountId -> Promise<access token>)
+const graphRefreshesInFlight = new WeakMap(); // db -> Map(accountId -> Promise<Graph access token>)
+const refreshQueues = new WeakMap(); // db -> Map(accountId -> tail of the account's refresh queue)
+const graphTokens = new WeakMap(); // db -> Map(accountId -> { token, expiresAt, email, configVersion })
+
+function mapFor(weak, db) {
+  if (!weak.has(db)) weak.set(db, new Map());
+  return weak.get(db);
+}
+
+/** One caller per account does `work`; the others share its promise. */
+async function shared(weak, db, accountId, work) {
+  const inFlight = mapFor(weak, db);
+  if (inFlight.has(accountId)) return inFlight.get(accountId);
+  const promise = work();
+  inFlight.set(accountId, promise);
+  try {
+    return await promise;
+  } finally {
+    inFlight.delete(accountId);
+  }
+}
 
 /**
- * Return a usable access token for an OAuth account, refreshing it (and persisting the new
- * secret) when it has less than two minutes left.
+ * Refreshes of one account (for IMAP/SMTP or for Graph) run one at a time: Microsoft rotates
+ * refresh tokens, so each refresh must start from the token the previous one stored.
  */
-async function getFreshAccessToken({ db, crypto, config }, accountRow) {
-  if (!accountRow || accountRow.auth_type !== 'oauth') throw new OAuthError('Not an OAuth account');
+function inRefreshQueue(db, accountId, task) {
+  const queues = mapFor(refreshQueues, db);
+  const run = (queues.get(accountId) || Promise.resolve()).then(task, task);
+  const tail = run.catch(() => {});
+  queues.set(accountId, tail);
+  tail.then(() => {
+    if (queues.get(accountId) === tail) queues.delete(accountId);
+  });
+  return run;
+}
 
-  // Prefer the stored secret over the caller's copy of the row: it may have been refreshed since.
+/** The account's secret as stored now (the caller's row may be older); unreadable -> reconnect. */
+function readSecret({ db, crypto }, accountRow) {
   let secretEnc = accountRow.secret_enc;
   try {
     const current = db.prepare('SELECT secret_enc FROM accounts WHERE id = ?').get(accountRow.id);
@@ -340,63 +402,175 @@ async function getFreshAccessToken({ db, crypto, config }, accountRow) {
   } catch (_) {
     /* fall back to the row we were given */
   }
-
-  let secret;
   try {
-    secret = crypto.decryptJson(secretEnc) || {};
+    return crypto.decryptJson(secretEnc) || {};
   } catch (_) {
     markRevoked(db, accountRow.id, UNREADABLE_MESSAGE);
     throw new OAuthError(UNREADABLE_MESSAGE, 'invalid_grant');
   }
+}
 
-  const expiresAt = Number(secret.accessTokenExpiresAt) || 0;
-  if (secret.accessToken && expiresAt - Date.now() > REFRESH_MARGIN_MS) return secret.accessToken;
-
-  if (!refreshesInFlight.has(db)) refreshesInFlight.set(db, new Map());
-  const inFlight = refreshesInFlight.get(db);
-  if (inFlight.has(accountRow.id)) return inFlight.get(accountRow.id);
-
-  const work = (async () => {
-    const provider = oauthProviderForPreset(config, accountRow.provider);
-    if (!provider) throw new OAuthError(`Unknown sign-in provider for this account (${accountRow.provider}).`);
-    if (!provider.enabled) {
-      throw new OAuthError(`${provider.label} sign-in is not configured on this server, so this account cannot be refreshed.`);
-    }
-    if (!secret.refreshToken) {
-      markRevoked(db, accountRow.id);
-      throw new OAuthError(REVOKED_MESSAGE, 'invalid_grant');
-    }
-    let fresh;
-    try {
-      fresh = await refreshAccessToken(provider, secret.refreshToken, { grantedScopes: secret.grantedScopes || null });
-    } catch (err) {
-      if (err instanceof OAuthError && err.code === 'invalid_grant') markRevoked(db, accountRow.id, err.message);
-      // A server misconfiguration (wrong/expired client secret, deleted client) is not the
-      // user's fault: plain 'error', so the account is retried once the site owner fixes it.
-      else if (err instanceof OAuthError && err.code === 'invalid_client') markAccount(db, accountRow.id, 'error', err.message);
-      throw err;
-    }
-    const grantedScopes = fresh.grantedScopes || secret.grantedScopes || null;
-    const newSecret = crypto.encryptJson({
-      refreshToken: fresh.refreshToken,
-      accessToken: fresh.accessToken,
-      accessTokenExpiresAt: fresh.expiresAt,
-      ...(grantedScopes ? { grantedScopes } : {}),
-    });
-    try {
-      db.prepare('UPDATE accounts SET secret_enc = ? WHERE id = ?').run(newSecret, accountRow.id);
-    } catch (_) {
-      /* account deleted meanwhile — the token is still good for this one use */
-    }
-    return fresh.accessToken;
-  })();
-
-  inFlight.set(accountRow.id, work);
+/**
+ * Merge `changes` into the stored secret (read and written in one synchronous step, so fields
+ * another refresh stored meanwhile — Graph scopes, a rotated refresh token — are kept).
+ */
+function updateSecret({ db, crypto }, accountId, fallback, changes) {
   try {
-    return await work;
-  } finally {
-    inFlight.delete(accountRow.id);
+    db.transaction(() => {
+      const row = db.prepare('SELECT secret_enc FROM accounts WHERE id = ?').get(accountId);
+      if (!row) return; // account deleted meanwhile — the token is still good for this one use
+      let current;
+      try {
+        current = crypto.decryptJson(row.secret_enc) || {};
+      } catch (_) {
+        current = fallback || {};
+      }
+      db.prepare('UPDATE accounts SET secret_enc = ? WHERE id = ?').run(crypto.encryptJson({ ...current, ...changes }), accountId);
+    })();
+  } catch (_) {
+    /* DB closed — the token is still good for this one use */
   }
+}
+
+function tokenUsable(token, expiresAt, margin = REFRESH_MARGIN_MS) {
+  return !!token && (Number(expiresAt) || 0) - Date.now() > margin;
+}
+
+function providerForRefresh(config, accountRow) {
+  const provider = oauthProviderForPreset(config, accountRow.provider);
+  if (!provider) throw new OAuthError(`Unknown sign-in provider for this account (${accountRow.provider}).`);
+  if (!provider.enabled) {
+    throw new OAuthError(`${provider.label} sign-in is not configured on this server, so this account cannot be refreshed.`);
+  }
+  return provider;
+}
+
+/** Record what a failed refresh means for the account (revoked / server misconfiguration). */
+function noteRefreshFailure(db, accountId, err) {
+  if (err instanceof OAuthError && err.code === 'invalid_grant') markRevoked(db, accountId, err.message);
+  // A server misconfiguration (wrong/expired client secret, deleted client) is not the
+  // user's fault: plain 'error', so the account is retried once the site owner fixes it.
+  else if (err instanceof OAuthError && err.code === 'invalid_client') markAccount(db, accountId, 'error', err.message);
+}
+
+/**
+ * Return a usable access token for an OAuth account, refreshing it (and persisting the new
+ * secret) when it has less than `minValidityMs` (default two minutes) left. IMAP connections ask
+ * for more: Gmail closes an OAuth IMAP session when its token expires, so a long sync must not
+ * start on a token about to run out.
+ */
+async function getFreshAccessToken(deps, accountRow, { minValidityMs = REFRESH_MARGIN_MS } = {}) {
+  const { db, config } = deps;
+  if (!accountRow || accountRow.auth_type !== 'oauth') throw new OAuthError('Not an OAuth account');
+
+  const first = readSecret(deps, accountRow);
+  if (tokenUsable(first.accessToken, first.accessTokenExpiresAt, minValidityMs)) return first.accessToken;
+
+  // One refresh per account at a time, so a sync and a user action do not race each other.
+  return shared(refreshesInFlight, db, accountRow.id, () =>
+    inRefreshQueue(db, accountRow.id, async () => {
+      // A refresh that ran while this one waited (Graph's included) may have stored newer tokens.
+      const secret = readSecret(deps, accountRow);
+      if (tokenUsable(secret.accessToken, secret.accessTokenExpiresAt, minValidityMs)) return secret.accessToken;
+      const provider = providerForRefresh(config, accountRow);
+      if (!secret.refreshToken) {
+        markRevoked(db, accountRow.id);
+        throw new OAuthError(REVOKED_MESSAGE, 'invalid_grant');
+      }
+      let fresh;
+      try {
+        fresh = await refreshAccessToken(provider, secret.refreshToken, { grantedScopes: secret.grantedScopes || null });
+      } catch (err) {
+        noteRefreshFailure(db, accountRow.id, err);
+        throw err;
+      }
+      const grantedScopes = fresh.grantedScopes || secret.grantedScopes || null;
+      updateSecret(deps, accountRow.id, secret, {
+        refreshToken: fresh.refreshToken,
+        accessToken: fresh.accessToken,
+        accessTokenExpiresAt: fresh.expiresAt,
+        ...(grantedScopes ? { grantedScopes } : {}),
+      });
+      return fresh.accessToken;
+    })
+  );
+}
+
+/** A Graph refresh refused because the account never consented to (or lost) the Graph scopes. */
+function isConsentError(err) {
+  if (!(err instanceof OAuthError)) return false;
+  return CONSENT_ERROR_CODES.has(err.providerError) || CONSENT_ERROR_RE.test(String(err.description || ''));
+}
+
+function graphCacheKey(accountRow) {
+  return { email: String(accountRow.email || '').toLowerCase(), configVersion: accountRow.config_version ?? null };
+}
+
+/** Forget the cached Graph token of an account (e.g. Graph answered 401). */
+function forgetGraphAccessToken(db, accountId) {
+  if (graphTokens.has(db)) graphTokens.get(db).delete(accountId);
+}
+
+/**
+ * A Microsoft Graph access token (scope Mail.Send) for a Microsoft account that consented to it,
+ * obtained with a refresh_token grant and cached in memory until it is about to expire. A
+ * rotated refresh token is stored like getFreshAccessToken stores it.
+ * @throws OAuthError 'insufficient_scope' (with "reconnect" advice) when the account has no
+ *   Graph consent — Microsoft's refusal is remembered (graphScopes ''), so the account shows
+ *   "can't send" until it is reconnected; other OAuthErrors as getFreshAccessToken.
+ */
+async function getGraphAccessToken(deps, accountRow) {
+  const { db, config } = deps;
+  if (!accountRow || accountRow.auth_type !== 'oauth') throw new OAuthError('Not an OAuth account');
+  const provider = oauthProviderForPreset(config, accountRow.provider);
+  if (!provider || !provider.graphSendScope) throw new OAuthError('Sending through Microsoft Graph needs a Microsoft account.', 'insufficient_scope');
+
+  const key = graphCacheKey(accountRow);
+  const cached = mapFor(graphTokens, db).get(accountRow.id);
+  if (cached && cached.email === key.email && cached.configVersion === key.configVersion && tokenUsable(cached.token, cached.expiresAt)) {
+    return cached.token;
+  }
+
+  return shared(graphRefreshesInFlight, db, accountRow.id, () =>
+    inRefreshQueue(db, accountRow.id, async () => {
+      const secret = readSecret(deps, accountRow);
+      if (!grantsGraphSendScope(provider, secret)) throw new OAuthError(GRAPH_RECONNECT_MESSAGE, 'insufficient_scope');
+      providerForRefresh(config, accountRow);
+      if (!secret.refreshToken) {
+        markRevoked(db, accountRow.id);
+        throw new OAuthError(REVOKED_MESSAGE, 'invalid_grant');
+      }
+      let data;
+      try {
+        data = await tokenRequest(provider, {
+          client_id: provider.clientId,
+          client_secret: provider.clientSecret,
+          grant_type: 'refresh_token',
+          refresh_token: secret.refreshToken,
+          scope: provider.graphScopes.join(' '),
+        });
+      } catch (err) {
+        if (isConsentError(err)) {
+          updateSecret(deps, accountRow.id, secret, { graphScopes: '' });
+          throw new OAuthError(GRAPH_RECONNECT_MESSAGE, 'insufficient_scope', err.status);
+        }
+        // Conditional Access (e.g. MFA required for Graph) can't be satisfied without the user.
+        if (err instanceof OAuthError && err.providerError === 'interaction_required') {
+          throw new OAuthError(GRAPH_RECONNECT_MESSAGE, 'insufficient_scope', err.status);
+        }
+        noteRefreshFailure(db, accountRow.id, err); // the same refresh token serves IMAP: revoked is revoked
+        throw err;
+      }
+      const reported = typeof data.scope === 'string' && data.scope.trim() ? data.scope.trim().slice(0, 2000) : null;
+      updateSecret(deps, accountRow.id, secret, {
+        refreshToken: typeof data.refresh_token === 'string' && data.refresh_token ? data.refresh_token : secret.refreshToken,
+        ...(reported ? { graphScopes: reported } : {}),
+      });
+      const entry = { token: data.access_token, expiresAt: expiresAtFrom(data), ...key };
+      mapFor(graphTokens, db).set(accountRow.id, entry);
+      return entry.token;
+    })
+  );
 }
 
 module.exports = {
@@ -405,11 +579,15 @@ module.exports = {
   exchangeCode,
   refreshAccessToken,
   getFreshAccessToken,
+  getGraphAccessToken,
+  forgetGraphAccessToken,
   OAuthError,
   decodeJwtPayload,
   grantsMailScope,
   grantsSendScope,
+  grantsGraphSendScope,
   scopeIncludes,
   refreshScopesFor,
   REVOKED_MESSAGE,
+  GRAPH_RECONNECT_MESSAGE,
 };

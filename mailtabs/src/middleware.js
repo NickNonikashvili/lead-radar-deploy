@@ -269,9 +269,25 @@ function apiNotFound(req, res) {
   res.status(404).json({ error: 'Not found', code: 'NOT_FOUND' });
 }
 
+// Extra fields an HttpError may add to its JSON body (err.details), e.g. FOLDER_NOT_EMPTY's count.
+const DETAIL_KEY = /^[a-z][A-Za-z0-9]{0,31}$/;
+const RESERVED_DETAIL_KEYS = new Set(['error', 'code']);
+
+/** Copy err.details (plain numbers, strings and booleans only) into the error body. */
+function addDetails(body, details) {
+  if (!details || typeof details !== 'object' || Array.isArray(details)) return;
+  for (const [key, value] of Object.entries(details)) {
+    if (!DETAIL_KEY.test(key) || RESERVED_DETAIL_KEYS.has(key)) continue;
+    if ((typeof value === 'number' && Number.isFinite(value)) || typeof value === 'boolean' || (typeof value === 'string' && value.length <= 500)) {
+      body[key] = value;
+    }
+  }
+}
+
 /**
  * createErrorHandler(logger) -> express error middleware. HttpError (or anything with a numeric
- * `.status` and `.expose === true`) is sent as-is; everything else becomes a logged 500.
+ * `.status` and `.expose === true`) is sent as-is (plus its `details`, see addDetails);
+ * everything else becomes a logged 500.
  */
 function createErrorHandler(logger = console) {
   // eslint-disable-next-line no-unused-vars
@@ -294,6 +310,7 @@ function createErrorHandler(logger = console) {
       status = err.status;
       body = { error: String(err.message || http.STATUS_CODES[status] || 'Error') };
       if (typeof err.code === 'string' && err.code) body.code = err.code;
+      addDetails(body, err.details);
     } else if (err && Number.isInteger(err.status) && err.status >= 400 && err.status < 500) {
       // Client errors raised by express/body-parser internals (e.g. malformed URL encoding).
       // Their messages are not meant for users, so send only the standard reason phrase.

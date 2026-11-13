@@ -14,23 +14,73 @@
 const SPECIAL_USES = ['\\Inbox', '\\Sent', '\\Drafts', '\\Trash', '\\Junk', '\\Archive', '\\All', '\\Flagged', '\\Important'];
 const CANONICAL_SPECIAL_USE = new Map(SPECIAL_USES.map((s) => [s.toLowerCase(), s]));
 
-// Well-known folder names for servers that do not flag their special folders (SPEC §2).
-const SPECIAL_USE_BY_NAME = new Map([
-  ['sent', '\\Sent'],
-  ['sent items', '\\Sent'],
-  ['sent messages', '\\Sent'],
-  ['drafts', '\\Drafts'],
-  ['junk', '\\Junk'],
-  ['junk e-mail', '\\Junk'],
-  ['junk email', '\\Junk'],
-  ['spam', '\\Junk'],
-  ['bulk mail', '\\Junk'],
-  ['trash', '\\Trash'],
-  ['deleted items', '\\Trash'],
-  ['deleted messages', '\\Trash'],
-  ['bin', '\\Trash'],
-  ['archive', '\\Archive'],
-]);
+// Well-known folder names for servers that do not flag their special folders: English (incl.
+// Yahoo's 'Draft' and 'Bulk', Exchange's 'Sent Items' / 'Deleted Items' / 'Junk Email'), German,
+// French, Spanish, Italian, Portuguese and Dutch (webmail and Exchange spellings). Compared in
+// lower case, NFC. imapflow's own (larger) name tables are used as well — see classifyFolder.
+const NAMES_BY_SPECIAL_USE = {
+  '\\Sent': [
+    'sent', 'sent items', 'sent messages', 'sent mail',
+    'gesendet', 'gesendete elemente', 'gesendete objekte', 'gesendete nachrichten',
+    'envoyés', 'envoyes', 'éléments envoyés', 'elements envoyes', 'messages envoyés',
+    'enviados', 'elementos enviados', 'mensajes enviados',
+    'posta inviata', 'inviata', 'inviati', 'elementi inviati', 'messaggi inviati',
+    'itens enviados', 'mensagens enviadas',
+    'verzonden', 'verzonden items', 'verzonden berichten',
+  ],
+  '\\Drafts': [
+    'drafts', 'draft',
+    'entwürfe', 'entwurf',
+    'brouillons',
+    'borradores',
+    'bozze',
+    'rascunhos',
+    'concepten',
+  ],
+  '\\Junk': [
+    'junk', 'junk e-mail', 'junk email', 'junk mail', 'spam', 'bulk', 'bulk mail',
+    'spamverdacht', 'junk-e-mail', 'unerwünscht',
+    'courrier indésirable', 'courrier indesirable', 'indésirables', 'pourriel',
+    'correo no deseado', 'correo electrónico no deseado',
+    'posta indesiderata',
+    'lixo eletrônico', 'lixo eletrónico', 'e-mail de lixo',
+    'ongewenste e-mail', 'ongewenste mail',
+  ],
+  '\\Trash': [
+    'trash', 'deleted', 'deleted items', 'deleted messages', 'bin',
+    'gelöscht', 'gelöschte elemente', 'gelöschte objekte', 'papierkorb',
+    'corbeille', 'éléments supprimés', 'elements supprimes', 'supprimés',
+    'papelera', 'elementos eliminados', 'eliminados',
+    'cestino', 'posta eliminata', 'elementi eliminati',
+    'lixeira', 'lixo', 'itens excluídos', 'itens eliminados', 'reciclagem',
+    'prullenbak', 'verwijderde items', 'verwijderd',
+  ],
+  '\\Archive': ['archive', 'archives', 'archiv', 'archivio', 'archivo', 'arquivo', 'archief'],
+};
+const SPECIAL_USE_BY_NAME = new Map(
+  Object.entries(NAMES_BY_SPECIAL_USE).flatMap(([use, names]) => names.map((n) => [n.normalize('NFC'), use]))
+);
+
+// Exchange (Outlook.com, Microsoft 365, on-premises Exchange) lists its calendars, contacts,
+// tasks, … as selectable mailboxes. They hold no mail: never synced, not shown, no move targets.
+// Top-level names (their subfolders, e.g. Calendar/Birthdays, go with them), English plus the
+// localised mailbox languages above.
+const EXCHANGE_NON_MAIL_NAMES = new Set(
+  [
+    'calendar', 'contacts', 'tasks', 'notes', 'journal', 'outbox', 'sync issues', 'conversation history',
+    'rss subscriptions', 'rss feeds', 'conversation action settings', 'quick step settings', 'yammer root', 'social activity notifications',
+    'kalender', 'kontakte', 'aufgaben', 'notizen', 'postausgang', 'synchronisierungsprobleme', 'unterhaltungsverlauf', 'rss-feeds', 'rss-abonnements',
+    'calendrier', 'tâches', 'boîte d\'envoi', 'problèmes de synchronisation', 'historique des conversations', 'flux rss',
+    'calendario', 'contactos', 'tareas', 'notas', 'diario', 'bandeja de salida', 'problemas de sincronización', 'historial de conversaciones', 'fuentes rss',
+    'contatti', 'attività', 'note', 'posta in uscita', 'problemi di sincronizzazione', 'cronologia conversazioni', 'feed rss',
+    'calendário', 'contatos', 'tarefas', 'anotações', 'diário', 'caixa de saída', 'problemas de sincronização', 'histórico de conversa', 'histórico de conversas',
+    'agenda', 'contactpersonen', 'taken', 'notities', 'logboek', 'postvak uit', 'synchronisatieproblemen', 'gespreksgeschiedenis',
+  ].map((n) => n.normalize('NFC'))
+);
+
+// sync_mode values: 'auto' (synced when it changed), 'on_demand' (only while opened), 'hidden'
+// (not mail: never synced or shown).
+const HIDDEN = 'hidden';
 
 // Virtual "every message again" folders: only synced while the user is looking at them.
 const ON_DEMAND_SPECIAL_USES = new Set(['\\All', '\\Flagged', '\\Important']);
@@ -62,14 +112,27 @@ function isShallow(segments) {
   return segments.length === 1 || (segments.length === 2 && segments[0].toUpperCase() === 'INBOX');
 }
 
+function nameKey(name) {
+  return String(name || '').trim().toLowerCase().normalize('NFC');
+}
+
+/** An Exchange calendar/contacts/tasks/… folder (or one below it)? */
+function isExchangeNonMail(segments) {
+  return EXCHANGE_NON_MAIL_NAMES.has(nameKey(segments[0]));
+}
+
 /**
  * Describe one imapflow LIST entry as a folder row.
+ * Special use: the server's SPECIAL-USE attributes first (imapflow's pick when it came from the
+ * extension, else the entry's own flags — Exchange sends them without announcing SPECIAL-USE),
+ * then well-known names (imapflow's localised tables, then ours) — names only near the top of
+ * the tree and never on Gmail, where a label merely named "Archive" or "Spam" is just a label.
  * @param {object} entry imapflow list() entry ({ path, name, delimiter, parentPath, flags, specialUse, specialUseSource })
- * @param {{ isGmail?: boolean }} options
+ * @param {{ isGmail?: boolean, isExchange?: boolean }} options isExchange: hide calendar/contacts/… folders
  * @returns {{ path, name, delimiter, parentPath, specialUse, selectable, syncMode, specialUseSource }}
  *   specialUseSource is 'server' (flagged by the server) or 'name' (guessed from the name) or null.
  */
-function classifyFolder(entry, { isGmail = false } = {}) {
+function classifyFolder(entry, { isGmail = false, isExchange = false } = {}) {
   const path = String((entry && entry.path) || '');
   const delimiter = entry && entry.delimiter ? String(entry.delimiter) : null;
   const flags = lowerFlags(entry && entry.flags);
@@ -82,28 +145,23 @@ function classifyFolder(entry, { isGmail = false } = {}) {
     specialUse = '\\Inbox';
     specialUseSource = 'server';
   } else {
-    // 1. imapflow's pick: server SPECIAL-USE/XLIST flags first, then localised names. It
-    //    already resolved conflicts (one folder per special use).
-    // Gmail flags every system folder itself; a label merely named "Archive" or "Spam" is a
-    // label, so names are never trusted there.
     const namesTrusted = !isGmail && isShallow(segments);
     const picked = entry && entry.specialUse ? CANONICAL_SPECIAL_USE.get(String(entry.specialUse).toLowerCase()) : null;
-    const pickedFromServer = entry && (entry.specialUseSource === 'extension' || entry.specialUseSource === 'user');
-    if (picked && picked !== '\\Inbox' && (pickedFromServer || namesTrusted)) {
+    const pickedFromServer = !!entry && (entry.specialUseSource === 'extension' || entry.specialUseSource === 'user');
+    // 1. Declared by the server (or configured by the user): imapflow's pick, then the flags.
+    if (picked && picked !== '\\Inbox' && pickedFromServer) {
       specialUse = picked;
-      specialUseSource = pickedFromServer ? 'server' : 'name';
-    }
-    // 2. Flags imapflow does not know (\Important) or gave to another folder.
-    if (!specialUse) {
+      specialUseSource = 'server';
+    } else {
       const flag = SPECIAL_USES.find((s) => s !== '\\Inbox' && flags.has(s.toLowerCase()));
       if (flag) {
         specialUse = flag;
         specialUseSource = 'server';
       }
     }
-    // 3. Well-known names.
+    // 2. Guessed from the name.
     if (!specialUse && namesTrusted) {
-      const byName = SPECIAL_USE_BY_NAME.get(String(segments[segments.length - 1]).trim().toLowerCase());
+      const byName = (picked && picked !== '\\Inbox' ? picked : null) || SPECIAL_USE_BY_NAME.get(nameKey(segments[segments.length - 1]));
       if (byName) {
         specialUse = byName;
         specialUseSource = 'name';
@@ -118,6 +176,11 @@ function classifyFolder(entry, { isGmail = false } = {}) {
   let syncMode = 'auto';
   if (ON_DEMAND_SPECIAL_USES.has(specialUse)) syncMode = 'on_demand';
   else if (isGmail && GMAIL_SYSTEM_PREFIX.test(path) && !GMAIL_SYNCED_SPECIAL_USES.has(specialUse)) syncMode = 'on_demand';
+  else if (isExchange && !isInbox && specialUseSource !== 'server' && isExchangeNonMail(segments)) {
+    syncMode = HIDDEN;
+    specialUse = null;
+    specialUseSource = null;
+  }
 
   return {
     path,
@@ -163,15 +226,16 @@ function countOrNull(value) {
  * and folders the server no longer lists are deleted — their messages go with them (cascade).
  * STATUS counts (entry.status.messages / unseen) are stored when present.
  * A listing without INBOX is treated as incomplete: nothing is removed then.
+ * @param {{ isGmail?: boolean, isExchange?: boolean }} options see classifyFolder
  * @returns {{ added: number, removed: number, changed: number }}
  */
-function upsertFolders(db, accountId, listEntries, { isGmail = false } = {}) {
+function upsertFolders(db, accountId, listEntries, { isGmail = false, isExchange = false } = {}) {
   const classified = [];
   const statusByPath = new Map();
   const seen = new Set();
   for (const entry of listEntries || []) {
     if (!entry || typeof entry.path !== 'string' || !entry.path || entry.path.length > MAX_PATH_LENGTH) continue;
-    const c = classifyFolder(entry, { isGmail });
+    const c = classifyFolder(entry, { isGmail, isExchange });
     if (seen.has(c.path)) continue;
     if (classified.length >= MAX_FOLDERS_PER_ACCOUNT && c.specialUse !== '\\Inbox') continue;
     seen.add(c.path);
@@ -192,6 +256,9 @@ function upsertFolders(db, accountId, listEntries, { isGmail = false } = {}) {
   );
   const counts = db.prepare('UPDATE folders SET total_count = ?, unread_count = ? WHERE account_id = ? AND path = ?');
   const remove = db.prepare('DELETE FROM folders WHERE id = ?');
+  // A folder recognised as not holding mail (synced before it was hidden): drop what was stored.
+  const forgetMessages = db.prepare('DELETE FROM messages WHERE folder_id = ?');
+  const forgetState = db.prepare('UPDATE folders SET sync_state = NULL, last_synced_at = NULL, has_older = 0 WHERE id = ?');
 
   return db.transaction(() => {
     const result = { added: 0, removed: 0, changed: 0 };
@@ -210,6 +277,10 @@ function upsertFolders(db, accountId, listEntries, { isGmail = false } = {}) {
         row.sync_mode !== c.syncMode
       ) {
         update.run(c.name, c.delimiter, c.parentPath, c.specialUse, selectable, c.syncMode, row.id);
+        if (c.syncMode === HIDDEN && row.sync_mode !== HIDDEN) {
+          forgetMessages.run(row.id);
+          forgetState.run(row.id);
+        }
         result.changed += 1;
       }
       const status = statusByPath.get(c.path);
@@ -367,6 +438,11 @@ function removeFolderLocal(db, accountId, path) {
   })();
 }
 
+/** Is this folder row one of Exchange's non-mail folders (never synced, shown or moved into)? */
+function isHiddenFolder(row) {
+  return !!row && row.sync_mode === HIDDEN;
+}
+
 module.exports = {
   classifyFolder,
   upsertFolders,
@@ -379,6 +455,8 @@ module.exports = {
   sortFolders,
   renameFolderLocal,
   removeFolderLocal,
+  isHiddenFolder,
   SPECIAL_USES,
   MAX_FOLDERS_PER_ACCOUNT,
+  HIDDEN_SYNC_MODE: HIDDEN,
 };

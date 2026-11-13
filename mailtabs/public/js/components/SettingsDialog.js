@@ -541,7 +541,9 @@ function NotificationsSection() {
           <button type="button" class="btn btn-sm" onClick=${() => toggle(true)} disabled=${busy || permission === 'denied'}>Allow</button>
         </div>`
       : null}
-    ${PERMISSION_TEXT[permission] && !(enabled && permission === 'default') ? html`<p class="field-hint">${PERMISSION_TEXT[permission]}</p>` : null}
+    ${PERMISSION_TEXT[permission] && !(enabled && permission === 'default') && !(error && permission === 'denied')
+      ? html`<p class="field-hint">${PERMISSION_TEXT[permission]}</p>`
+      : null}
     <${InlineError} message=${error} />
   </div>`;
 }

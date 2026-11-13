@@ -1,7 +1,7 @@
 // API calls used by the composer (SPEC2 §4), following /js/api.js conventions:
 // JSON bodies, `X-Mailtabs: 1` on every non-GET (CSRF guard), same-origin credentials,
 // errors as ApiError, and a lost session handed to the app's shared 401 handler.
-import { ApiError, api } from '../api.js';
+import { ApiError, api, browserTimeZone } from '../api.js';
 
 const CSRF_HEADER = 'X-Mailtabs';
 
@@ -80,9 +80,28 @@ function query(params) {
 
 const id = (value) => encodeURIComponent(String(value));
 
+// Recent contact lookups (query -> contacts), a small LRU shared by every recipient field.
+// They are the signed-in user's correspondents: cleared whenever the composers are reset.
+const contactCache = new Map();
+const CONTACT_CACHE_MAX = 60;
+
+export function cachedContacts(q) {
+  return contactCache.has(q) ? contactCache.get(q) : null;
+}
+
+export function rememberContacts(q, contacts) {
+  contactCache.delete(q);
+  contactCache.set(q, contacts);
+  if (contactCache.size > CONTACT_CACHE_MAX) contactCache.delete(contactCache.keys().next().value);
+}
+
+export function clearContactCache() {
+  contactCache.clear();
+}
+
 export const composeApi = {
-  /** -> { payload, draft } */
-  prepare: (mode, messageId, opts) => request('GET', `/api/compose/prepare${query({ mode, messageId })}`, undefined, opts),
+  /** -> { payload, draft }. The time zone dates the reply quote ("On <date>, … wrote:") like the reader sees it. */
+  prepare: (mode, messageId, opts) => request('GET', `/api/compose/prepare${query({ mode, messageId, tz: browserTimeZone() })}`, undefined, opts),
   /** -> { draft: { folderId, uid } } */
   saveDraft: (payload, draft) => request('POST', '/api/drafts', draft ? { payload, draft } : { payload }),
   deleteDraft: (draft) => request('DELETE', '/api/drafts', { draft }),

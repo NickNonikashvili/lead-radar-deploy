@@ -22,9 +22,11 @@ const MAX_CURSOR_LENGTH = 200;
 
 // Columns a message list needs. Bodies are deliberately left out (they can be megabytes).
 const LIST_COLUMNS = [
-  'm.id', 'm.account_id', 'm.folder_id', 'm.from_name', 'm.from_address', 'm.subject', 'm.snippet', 'm.date',
+  'm.id', 'm.account_id', 'm.folder_id', 'm.from_name', 'm.from_address', 'm.to_json', 'm.subject', 'm.snippet', 'm.date',
   'm.is_read', 'm.is_starred', 'm.is_answered', 'm.is_draft', 'm.has_attachments', 'm.thread_key',
 ].join(', ');
+// List rows of Sent / Drafts name their recipients; a few are enough for one line.
+const LIST_RECIPIENTS_MAX = 10;
 
 // Unified views across all of a user's accounts (GET /api/messages?view=...).
 const VIEWS = ['starred', 'sent', 'drafts', 'junk', 'trash'];
@@ -493,12 +495,15 @@ function getAccountRowForUser(db, userId, accountId) {
 // ---------------------------------------------------------------------------------------------
 
 function toMessageListItem(row) {
+  const to = addressesFrom(row.to_json);
   return {
     id: row.id,
     accountId: row.account_id,
     folderId: row.folder_id ?? null,
     fromName: row.from_name || null,
     fromAddress: row.from_address || null,
+    to: to.slice(0, LIST_RECIPIENTS_MAX),
+    toCount: to.length,
     subject: row.subject ?? null,
     snippet: row.snippet ?? null,
     date: row.date,

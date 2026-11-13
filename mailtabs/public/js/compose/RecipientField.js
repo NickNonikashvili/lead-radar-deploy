@@ -3,18 +3,11 @@ import { html, useEffect, useRef, useState } from '/vendor/preact-htm.js';
 import { initials } from '../format.js';
 import { useUid } from '../hooks.js';
 import { CIcon } from './compose-icons.js';
-import { composeApi } from './compose-api.js';
+import { cachedContacts, composeApi, rememberContacts } from './compose-api.js';
 import { registerCommit } from './compose.js';
 import { addRecipients, formatRecipient, makeRecipient, parseAddressList, recipientLabel, sameAddress, splitTyped } from './recipients.js';
 
 const SUGGEST_DELAY = 160;
-const contactCache = new Map(); // query -> contacts (small LRU)
-
-function remember(q, contacts) {
-  contactCache.delete(q);
-  contactCache.set(q, contacts);
-  if (contactCache.size > 60) contactCache.delete(contactCache.keys().next().value);
-}
 
 /** Bold the part of `text` that matches the typed prefix (no markup strings involved). */
 function Highlight({ text, query }) {
@@ -90,8 +83,9 @@ export function RecipientField({ composerId, field, label, recipients, onChange,
       setOpen(fresh.length > 0);
       setActive(fresh.length ? 0 : -1);
     };
-    if (contactCache.has(query.toLowerCase())) {
-      show(contactCache.get(query.toLowerCase()));
+    const cached = cachedContacts(query.toLowerCase());
+    if (cached) {
+      show(cached);
       return;
     }
     timer.current = setTimeout(async () => {
@@ -99,7 +93,7 @@ export function RecipientField({ composerId, field, label, recipients, onChange,
       abortRef.current = ctrl;
       try {
         const { contacts } = await composeApi.contacts(query, { limit: 8, signal: ctrl.signal });
-        remember(query.toLowerCase(), contacts || []);
+        rememberContacts(query.toLowerCase(), contacts || []);
         if (latest.current.text.trim() === query) show(contacts);
       } catch (_) {
         /* suggestions are optional: no toast */

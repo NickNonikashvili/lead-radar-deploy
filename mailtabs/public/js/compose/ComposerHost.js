@@ -8,7 +8,17 @@ import { Spinner } from '../icons.js';
 import { useMediaQuery, useNow } from '../hooks.js';
 import { CIcon } from './compose-icons.js';
 import { ComposerWindow } from './ComposerWindow.js';
-import { dismissSnack, fitComposers, maximizeComposer, resetComposers, retrySend, syncSheetHistory, undoSend, useComposerStore } from './compose.js';
+import {
+  composerOwner,
+  dismissSnack,
+  ensureComposerOwner,
+  fitComposers,
+  maximizeComposer,
+  retrySend,
+  syncSheetHistory,
+  undoSend,
+  useComposerStore,
+} from './compose.js';
 
 let hosts = 0;
 
@@ -17,11 +27,12 @@ function Snackbar({ snack }) {
   if (!snack) return null;
   const left = snack.sendAt ? Math.max(0, Math.ceil((snack.sendAt - now) / 1000)) : 0;
   const canUndo = (snack.kind === 'sending' && left > 0) || snack.kind === 'scheduled';
+  const alert = snack.kind === 'failed' || snack.kind === 'retrying';
   let text = snack.text;
   if (snack.kind === 'sending') text = left > 0 ? `Sending in ${left} s…` : 'Sending…';
   const icon =
-    snack.kind === 'sending' ? html`<${Spinner} size=${14} />` : html`<${CIcon} name=${snack.kind === 'failed' ? 'alert' : snack.kind === 'scheduled' ? 'clock' : 'check'} size=${16} />`;
-  return html`<div class=${`cmp-snack is-${snack.kind}`} role=${snack.kind === 'failed' ? 'alert' : undefined}>
+    snack.kind === 'sending' ? html`<${Spinner} size=${14} />` : html`<${CIcon} name=${alert ? 'alert' : snack.kind === 'scheduled' ? 'clock' : 'check'} size=${16} />`;
+  return html`<div class=${`cmp-snack is-${snack.kind}`} role=${alert ? 'alert' : undefined}>
     <span class="cmp-snack-icon" aria-hidden="true">${icon}</span>
     <span class="cmp-snack-text">
       <span aria-hidden=${snack.kind === 'sending' ? 'true' : undefined}>${text}</span>
@@ -51,18 +62,18 @@ export function ComposerHost() {
     },
     []
   );
-  const composers = useComposerStore((s) => s.composers);
-  const snack = useComposerStore((s) => s.snack);
+  const allComposers = useComposerStore((s) => s.composers);
+  const ownSnack = useComposerStore((s) => s.snack);
   const userId = useStore((s) => (s.user ? s.user.id : null));
   const mobile = useMediaQuery(MOBILE_QUERY);
-  const [lastUser, setLastUser] = useState(userId);
 
-  // Signing out (or in as somebody else) drops every composer.
+  // Composers belong to the user who opened them: whoever is signed in now never sees anybody
+  // else's (e.g. after a session expired and another person signed in); those are dropped.
+  const owned = userId != null && composerOwner() === userId;
+  const composers = owned ? allComposers : [];
+  const snack = owned ? ownSnack : null;
   useEffect(() => {
-    if (userId !== lastUser) {
-      if (lastUser != null) resetComposers();
-      setLastUser(userId);
-    }
+    ensureComposerOwner(userId);
   }, [userId]);
 
   useEffect(() => {

@@ -431,12 +431,13 @@ function newMessageId(email) {
 /**
  * Build the raw RFC 5322 message.
  * @param {{ account, payload, attachments?: Array<{filename, contentType, content: Buffer, cid?}>,
- *   date?: Date, draft?: boolean, fromName?: string, messageId?: string }} args payload must be
- *   validatePayload() output; internal (/api/...) images must already be resolved (left-overs are dropped).
- * @returns {Promise<{ raw: Buffer, messageId: string, envelope: { from: string, to: string[] } }>}
+ *   date?: Date, draft?: boolean, keepBcc?: boolean, fromName?: string, messageId?: string }} args payload
+ *   must be validatePayload() output; internal (/api/...) images must already be resolved (left-overs are dropped).
+ *   keepBcc: keep the Bcc header in a message to send (Microsoft Graph reads the recipients from it).
+ * @returns {Promise<{ raw: Buffer, messageId: string, date: Date, envelope: { from: string, to: string[] } }>}
  *   drafts keep the Bcc header (so reopening keeps it) but leave Bcc out of the envelope.
  */
-async function buildMime({ account, payload, attachments = [], date, draft = false, fromName, messageId }) {
+async function buildMime({ account, payload, attachments = [], date, draft = false, keepBcc = false, fromName, messageId }) {
   if (!account || !account.email) throw new TypeError('buildMime: account.email is required');
   const p = payload || {};
   const embedded = embedDataImages(replaceInternalImages(p.html || ''));
@@ -458,6 +459,7 @@ async function buildMime({ account, payload, attachments = [], date, draft = fal
   }
 
   const id = normalizeMessageId(messageId) || newMessageId(account.email);
+  const sentDate = date || new Date();
   const name = headerText(fromName !== undefined && fromName !== null ? fromName : account.sender_name || '').slice(0, MAX_NAME);
   const text = htmlToPlainText(html);
   const mail = {
@@ -467,7 +469,7 @@ async function buildMime({ account, payload, attachments = [], date, draft = fal
     bcc: p.bcc || [],
     subject: headerText(p.subject),
     messageId: id,
-    date: date || new Date(),
+    date: sentDate,
     text: text || '',
     attachments: parts,
     newline: 'win',
@@ -482,11 +484,11 @@ async function buildMime({ account, payload, attachments = [], date, draft = fal
   if (!mail.to.length && !mail.cc.length && !mail.bcc.length) delete mail.to;
 
   const node = new MailComposer(mail).compile();
-  node.keepBcc = !!draft;
+  node.keepBcc = !!(draft || keepBcc);
   const raw = await node.build();
 
   const envelopeTo = [...(p.to || []), ...(p.cc || []), ...(draft ? [] : p.bcc || [])].map((r) => r.address);
-  return { raw, messageId: id, envelope: { from: account.email, to: [...new Set(envelopeTo)] } };
+  return { raw, messageId: id, date: sentDate, envelope: { from: account.email, to: [...new Set(envelopeTo)] } };
 }
 
 // ---------------------------------------------------------------------------------------------

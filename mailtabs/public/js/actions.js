@@ -5,7 +5,7 @@ import { getState, setState, resetState, EMPTY_LIST } from './store.js';
 import { MOBILE_QUERY, UNIFIED_VIEWS, providerLabel } from './constants.js';
 import { plural, senderLabel } from './format.js';
 import { SPECIAL, folderLabel, isInboxFolder, nextSelection } from './components/navModel.js';
-import { openComposer, resetComposers } from './compose/compose.js';
+import { ensureComposerOwner, openComposer, resetComposers } from './compose/compose.js';
 
 const PAGE_SIZE = 50;
 const DETAIL_CACHE_MAX = 40;
@@ -236,6 +236,9 @@ function persistView(view, folderId) {
 }
 
 async function enterApp({ connectedId } = {}) {
+  // Composers left open by somebody else (their session expired here) are dropped unseen.
+  const { user } = getState();
+  ensureComposerOwner(user ? user.id : null);
   const saved = storageGet('localStorage', 'mt.activeTab');
   const activeTabId = saved && saved !== 'all' && Number.isFinite(Number(saved)) ? Number(saved) : 'all';
   setState({ activeTabId, ...savedView() });
@@ -1037,11 +1040,45 @@ function onOutboxChanged() {
   restartBackgroundRefresh(BUSY_REFRESH_MS);
 }
 
+let draftsTimer = null;
+
+/**
+ * The composer saved, discarded or sent a draft. Rows of drafts that no longer exist leave the
+ * list now; Drafts lists and counts are brought up to date shortly after (the server re-reads
+ * its Drafts folder in the background).
+ */
+function onDraftsChanged(event) {
+  const detail = (event && event.detail) || {};
+  const gone = new Set((detail.removedMessageIds || []).filter((id) => id != null));
+  if (gone.size) {
+    mutationSeq += 1;
+    hideIds([...gone]);
+    setState((st) => ({
+      list: { ...st.list, messages: st.list.messages.filter((m) => !gone.has(m.id)) },
+      selectedIds: st.selectedIds.filter((id) => !gone.has(id)),
+      cursorId: gone.has(st.cursorId) ? null : st.cursorId,
+    }));
+    mutationSeq += 1;
+  }
+  if (!detail.refresh) return;
+  clearTimeout(draftsTimer);
+  draftsTimer = setTimeout(() => {
+    const s = getState();
+    if (!s.user) return;
+    const folder = s.view === 'folder' ? folderById(s.folderId) : null;
+    if (s.view === 'drafts') syncUnifiedView('drafts');
+    else if (folder && folder.specialUse === SPECIAL.drafts) syncOpenedFolder(folder.id);
+    else refreshFolders({ quiet: true }); // the Drafts counts in the sidebar
+  }, 1200);
+}
+
 export function startBackgroundRefresh() {
   stopBackgroundRefresh();
   document.addEventListener('visibilitychange', onVisibility);
-  // The composer can announce sends/schedules so the Outbox count updates at once.
+  // The composer can announce sends/schedules so the Outbox count updates at once, and
+  // saved/discarded/sent drafts so the Drafts list follows.
   window.addEventListener('mailtabs:outbox-changed', onOutboxChanged);
+  window.addEventListener('mailtabs:drafts-changed', onDraftsChanged);
   lastBgRefresh = Date.now();
   scheduleBackground();
 }
@@ -1051,6 +1088,8 @@ export function stopBackgroundRefresh() {
   bgTimer = null;
   document.removeEventListener('visibilitychange', onVisibility);
   window.removeEventListener('mailtabs:outbox-changed', onOutboxChanged);
+  window.removeEventListener('mailtabs:drafts-changed', onDraftsChanged);
+  clearTimeout(draftsTimer);
 }
 
 function restartBackgroundRefresh(delay) {
@@ -1504,24 +1543,26 @@ export function undoLast() {
   return true;
 }
 
-async function undoMoves(tokens, restored, listKeyAtRemoval) {
+async function undoMoves(tokens, restored) {
   mutationSeq += 1;
+  // Moving back and re-reading the folder can take a few seconds on a slow server.
+  const progress = toast(restored.length === 1 ? 'Putting the message back…' : 'Putting the messages back…', { type: 'info', timeout: 0 });
   try {
     const results = await Promise.all(tokens.map((t) => api.undo(t)));
     const count = results.reduce((n, r) => n + (Number(r.count) || 0), 0);
+    // Moved back, the messages have new ids on the server (it re-read their folder before
+    // answering): show the server's rows. Putting the old local rows back would offer actions
+    // on ids that no longer exist, which the server would silently ignore.
     unhideIds(restored.map((m) => m.id));
-    restoreMessages(restored, listKeyAtRemoval);
     for (const m of restored) adjustCountsFor(m, { total: 1, unread: m.isRead ? 0 : 1 });
     toast(count === 1 || restored.length === 1 ? 'Undone' : `Undone — ${plural(count || restored.length, 'message')} put back`, { type: 'success' });
   } catch (err) {
     toastError(err, "Couldn't undo that.");
   } finally {
+    dismissToast(progress);
     mutationSeq += 1;
     scheduleCountsRefresh();
-    // The server moves them back and re-syncs both folders: pick up the final rows (and ids).
-    setTimeout(() => {
-      if (getState().view !== 'outbox') loadList({ keepMessages: true });
-    }, 1500);
+    if (getState().view !== 'outbox') await loadList({ keepMessages: true });
   }
 }
 
@@ -1608,7 +1649,7 @@ export async function moveMessages(ids, action, { folderId = null } = {}) {
       const where = action === 'move' && destination ? ` to ${folderLabel(destination)}` : '';
       const message = `${n === 1 ? 'Message' : `${n} messages`} ${done}${where}${skipped ? ` (${plural(skipped, 'message')} from other accounts left as they were)` : ''}`;
       if (tokens.length) {
-        const run = () => undoMoves(tokens, moved.filter((m) => leavingIds.has(m.id)), s.list.key);
+        const run = () => undoMoves(tokens, moved.filter((m) => leavingIds.has(m.id)));
         const toastId = toast(message, { type: 'success', action: { label: 'Undo', run } });
         lastUndo = { run, toastId, until: Date.now() + UNDO_MS };
       } else {
@@ -1672,32 +1713,34 @@ export function openMoveDialog(ids) {
   openDialog('move', { ids: list.map((m) => m.id) });
 }
 
+/**
+ * "Mark all as read" for whatever the list shows — a tab, a folder or a unified view — done by
+ * the server over everything there (not only the pages loaded here), narrowed by the search
+ * and the Starred filter like the list.
+ */
 export async function markAllRead() {
   const s = getState();
-  if (s.view !== 'inbox') {
-    // Folders and unified views: mark what's loaded (bulk), which is what the user sees.
-    const unread = s.list.messages.filter((m) => !m.isRead).map((m) => m.id);
-    if (!unread.length) return toast('Everything here is already read', { type: 'success' });
-    await setFlagsBulk(unread, 'read');
-    toast(`Marked ${plural(unread.length, 'message')} as read`, { type: 'success' });
-    return;
-  }
+  if (s.view === 'outbox') return;
+  const params = listParams(s);
+  const source = s.view === 'folder' ? { folder: params.folder } : s.view === 'inbox' ? { tab: params.tab } : { view: params.view };
   const unreadIds = new Set(s.list.messages.filter((m) => !m.isRead).map((m) => m.id));
+  const listKeyAtStart = s.list.key;
   mutationSeq += 1;
   setState((st) => ({ list: { ...st.list, messages: st.list.messages.map((m) => (m.isRead ? m : { ...m, isRead: true })) } }));
   try {
-    const params = listParams(s);
-    const { count = 0, failed = [] } = await api.markAllRead(s.activeTabId, { q: params.q, starred: params.starred });
+    const { count = 0, failed = [] } = await api.markAllRead(source, { q: params.q, starred: params.starred });
     if (failed.length) {
       // Some accounts refused: reload so the rows that are still unread show as unread.
       const names = failed.map((f) => accountLabel(getState().accounts.find((a) => a.id === f.accountId)) || 'one account');
       toast(`Couldn't mark everything as read in ${names.join(', ')}: ${failed[0].error}`, { type: 'error' });
-      loadList();
+      loadList({ keepMessages: true });
     } else {
       toast(count ? `Marked ${plural(count, 'message')} as read` : 'Everything here is already read', { type: 'success' });
     }
   } catch (err) {
-    setState((st) => ({ list: { ...st.list, messages: st.list.messages.map((m) => (unreadIds.has(m.id) ? { ...m, isRead: false } : m)) } }));
+    if (getState().list.key === listKeyAtStart) {
+      setState((st) => ({ list: { ...st.list, messages: st.list.messages.map((m) => (unreadIds.has(m.id) ? { ...m, isRead: false } : m)) } }));
+    }
     toastError(err, "Couldn't mark messages as read.");
   } finally {
     mutationSeq += 1;

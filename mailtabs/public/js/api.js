@@ -127,8 +127,8 @@ export const api = {
   bulk: (ids, action, extra = {}) => post('/api/messages/bulk', { ids, action, ...extra }),
   undo: (token) => post('/api/messages/undo', { token }),
   thread: (messageId, opts) => get(`/api/messages/${id(messageId)}/thread`, opts),
-  // `filters` narrows it to what the list shows: { q, starred }.
-  markAllRead: (tab, filters = {}) => post('/api/messages/mark-all-read', { tab, ...filters }),
+  // `source` is what the list shows ({ tab } | { folder } | { view }); `filters` narrows it: { q, starred }.
+  markAllRead: (source, filters = {}) => post('/api/messages/mark-all-read', { ...source, ...filters }),
   oauthResult: () => get('/api/oauth/result'),
 
   // folders
@@ -159,6 +159,19 @@ export const api = {
   deleteUpload: (uploadId) => del(`/api/uploads/${id(uploadId)}`),
 };
 
+/**
+ * The browser's IANA time zone (e.g. "Europe/Berlin"). The server writes dates into text
+ * (reply quotes, printed headers) and would otherwise have to use UTC.
+ */
+export function browserTimeZone() {
+  try {
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    return typeof tz === 'string' && tz && tz.length <= 64 ? tz : undefined;
+  } catch (_) {
+    return undefined;
+  }
+}
+
 /** URL for the sandboxed iframe that renders a message body. */
 export function bodyUrl(messageId, showImages) {
   return `/api/messages/${id(messageId)}/body${showImages ? '?images=1' : ''}`;
@@ -173,9 +186,9 @@ export function rawUrl(messageId) {
   return `/api/messages/${id(messageId)}/raw`;
 }
 
-/** Printable page for a message (remote images only when the user allowed them). */
+/** Printable page for a message (remote images only when the user allowed them), dated in the browser's time zone. */
 export function printUrl(messageId, showImages) {
-  return `/api/messages/${id(messageId)}/print${showImages ? '?images=1' : ''}`;
+  return `/api/messages/${id(messageId)}/print${query({ images: !!showImages, tz: browserTimeZone() })}`;
 }
 
 /** Full-page navigation target that starts Google/Microsoft sign-in. */

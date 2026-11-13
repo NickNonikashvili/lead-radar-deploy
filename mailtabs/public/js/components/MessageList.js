@@ -6,6 +6,7 @@ import { accountLabel, compose, loadMore, markAllRead, openMessage, retryWorkspa
 import { Icon, Spinner } from '../icons.js';
 import { formatListDate, senderLabel, shortAddressList } from '../format.js';
 import { useNow } from '../hooks.js';
+import { UNIFIED_VIEWS } from '../constants.js';
 import { EmptyTab, NoMessages } from './EmptyStates.js';
 import { SelectAllBox } from './BulkBar.js';
 import { LoadOlder } from './FolderView.js';
@@ -24,8 +25,13 @@ export function FilterBar() {
       const tab = s.activeTabId === 'all' ? null : s.tabs.find((t) => t.id === s.activeTabId);
       count = tab ? tab.unreadCount : s.allCounts.unreadCount;
     } else {
-      // Outside the inbox "mark all read" covers what's loaded.
-      count = s.list.messages.filter((m) => !m.isRead).length;
+      // The server marks the whole folder / view, so count what the server knows is unread
+      // there (Starred has no folder of its own: what's loaded is the best guess).
+      const loaded = s.list.messages.filter((m) => !m.isRead).length;
+      const def = UNIFIED_VIEWS.find((v) => v.id === s.view);
+      const folders = s.view === 'folder' ? s.folders.filter((f) => f.id === s.folderId) : def && def.specialUse ? s.folders.filter((f) => f.specialUse === def.specialUse) : [];
+      const known = folders.reduce((n, f) => n + (f.unreadCount || 0), 0);
+      count = Math.max(known, loaded);
     }
     return { filter: s.filter, unread: count, view: s.view, total: s.list.messages.length };
   });
@@ -57,8 +63,9 @@ export function FilterBar() {
 function MessageRow({ m, account, folder, presets, isCursor, isOpen, isSelected, showFolder, now }) {
   const isDraft = m.isDraft || (folder && folder.specialUse === SPECIAL.drafts);
   const outgoing = folder && (folder.specialUse === SPECIAL.sent || folder.specialUse === SPECIAL.drafts);
-  // Sent/Drafts rows name the recipients when the server includes them.
-  const who = outgoing && Array.isArray(m.to) && m.to.length ? `To: ${shortAddressList(m.to, 2)}` : senderLabel(m);
+  // Sent/Drafts rows name the recipients (a draft may not have any yet).
+  let who = senderLabel(m);
+  if (outgoing && Array.isArray(m.to)) who = m.to.length ? `To: ${shortAddressList(m.to, 2, m.toCount)}` : '(no recipients)';
   const cls = ['msg', m.isRead ? 'is-read' : 'is-unread', isCursor ? 'is-cursor' : '', isOpen ? 'is-open' : '', isSelected ? 'is-selected' : ''].join(' ');
   const acctName = account ? `${accountLabel(account, presets)} (${account.email})` : '';
   const folderName = showFolder && folder && !isInboxFolder(folder) ? folderLabel(folder) : '';

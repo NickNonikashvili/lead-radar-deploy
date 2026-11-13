@@ -86,6 +86,10 @@ function isCommandRefusal(err, client) {
   return !!(err && client && client.usable && (err.responseStatus === 'NO' || err.responseStatus === 'BAD'));
 }
 
+function hasCapability(client, name) {
+  return !!(client && client.capabilities && typeof client.capabilities.has === 'function' && client.capabilities.has(name));
+}
+
 /** A problem with one folder (not the connection or the account): other folders can go on. */
 function isFolderProblem(err, client) {
   return !!(err && (err.folderProblem || isCommandRefusal(err, client)));
@@ -612,15 +616,20 @@ class SyncManager {
   /** Account run, steps 1-3 of the module doc. */
   async _syncAllFolders(client, account, stats, startedAt) {
     const db = this.db;
+    const gmail = imap.isGmail(account, client);
+    const exchange = imap.isExchange(account, client);
+    // Without LIST-STATUS, imapflow sends one STATUS per folder. Exchange has no LIST-STATUS and
+    // lists many folders that hold no mail (calendars, contacts, …): ask only about mail folders.
+    const statusPerMailFolder = exchange && !hasCapability(client, 'LIST-STATUS');
     let entries = null;
     try {
-      entries = await client.list({ statusQuery: STATUS_QUERY });
+      entries = await client.list(statusPerMailFolder ? {} : { statusQuery: STATUS_QUERY });
+      if (entries && statusPerMailFolder) await this._statusOfMailFolders(client, entries, { isGmail: gmail, isExchange: exchange });
     } catch (err) {
       if (!isCommandRefusal(err, client)) throw err;
       // A server that refuses to list its folders still has an INBOX: keep that one working.
       this.logger.warn(`[sync] ${account.email}: the server refused to list folders, checking only the inbox: ${imap.friendlyImapError(err)}`);
     }
-    const gmail = imap.isGmail(account, client);
     const statusByPath = new Map();
     for (const entry of entries || []) {
       if (entry && typeof entry.path === 'string') {
@@ -629,7 +638,7 @@ class SyncManager {
     }
     this._accountTx(account, () => {
       if (entries) {
-        const changes = folders.upsertFolders(db, account.id, entries, { isGmail: gmail });
+        const changes = folders.upsertFolders(db, account.id, entries, { isGmail: gmail, isExchange: exchange });
         db.prepare('UPDATE accounts SET folders_synced_at = ? WHERE id = ?').run(Date.now(), account.id);
         stats.foldersAdded = changes.added;
         stats.foldersRemoved = changes.removed;
@@ -658,9 +667,24 @@ class SyncManager {
     }
   }
 
+  /** STATUS of every folder that may hold mail (selectable, not hidden), like imapflow's list() does. */
+  async _statusOfMailFolders(client, entries, options) {
+    for (const entry of entries) {
+      if (!entry || typeof entry.path !== 'string') continue;
+      const c = folders.classifyFolder(entry, options);
+      if (!c.selectable || c.syncMode === folders.HIDDEN_SYNC_MODE) continue;
+      try {
+        entry.status = (await client.status(entry.path, STATUS_QUERY)) || { error: true };
+      } catch (err) {
+        if (!isCommandRefusal(err, client)) throw err;
+        entry.status = { error: err };
+      }
+    }
+  }
+
   /** Should an account run open this folder? */
   _wantsSync(row, status, now) {
-    if (!row.selectable) return false;
+    if (!row.selectable || folders.isHiddenFolder(row)) return false;
     if (row.special_use === '\\Inbox') return true;
     if (row.sync_mode === 'on_demand' && !(row.last_opened_at && now - row.last_opened_at < ON_DEMAND_WINDOW_MS)) return false;
     return folderChanged(parseState(row.sync_state), status, row.last_synced_at, now);
@@ -686,7 +710,7 @@ class SyncManager {
   async _syncOneFolder(client, account, folderId, stats) {
     const folder = this._safe(() => folders.getFolder(this.db, folderId), undefined);
     if (!folder || folder.account_id !== account.id) throw new FolderGoneError();
-    if (!folder.selectable) return;
+    if (!folder.selectable || folders.isHiddenFolder(folder)) return;
     let status = null;
     try {
       status = await client.status(folder.path, STATUS_QUERY);
@@ -1081,7 +1105,7 @@ class SyncManager {
     const account = this._getAccount(accountId);
     const folder = this._safe(() => folders.getFolder(this.db, folderId), undefined);
     if (!account || !folder || folder.account_id !== account.id) throw new HttpError(404, 'Folder not found', 'NOT_FOUND');
-    if (!folder.selectable) return { added: 0, hasOlder: false };
+    if (!folder.selectable || folders.isHiddenFolder(folder)) return { added: 0, hasOlder: false };
     try {
       return await this._withDeadline(account, (client) => this._backfillMailbox(client, account, folder, count));
     } catch (err) {

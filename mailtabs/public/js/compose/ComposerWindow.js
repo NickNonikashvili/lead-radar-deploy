@@ -27,6 +27,8 @@ import {
   retryLoad,
   saveDraft,
   sendBlockReason,
+  sendBlockedHint,
+  sendBlockedText,
   sendComposer,
   setFrom,
   sheetBack,
@@ -67,9 +69,9 @@ function FromRow({ model, accounts, user, disabled }) {
     >
       ${model.accountId == null ? html`<option value="" disabled>Choose an account</option>` : null}
       ${accounts.map((a) => {
-        const reason = sendBlockReason(a);
-        return html`<option key=${a.id} value=${String(a.id)} disabled=${!!reason && a.id !== model.accountId}>
-          ${senderLabel(a, user)}${reason ? ` — ${reason}` : ''}
+        const hint = sendBlockedHint(a);
+        return html`<option key=${a.id} value=${String(a.id)} disabled=${!!hint && a.id !== model.accountId} title=${sendBlockedText(a) || undefined}>
+          ${senderLabel(a, user)}${hint ? ` — ${hint}` : ''}
         </option>`;
       })}
     </select>
@@ -77,12 +79,12 @@ function FromRow({ model, accounts, user, disabled }) {
 }
 
 function SendBlockedBanner({ account }) {
-  const reason = sendBlockReason(account);
-  if (!reason) return null;
+  const action = sendBlockReason(account);
+  if (!action) return null;
   return html`<div class="cmp-banner is-warning" role="status">
     <${CIcon} name="alert" size=${16} />
-    <span>Sending isn't set up for <strong>${account.email}</strong> yet. You can still save this as a draft.</span>
-    <button type="button" class="btn btn-sm" onClick=${() => reconnectAccount(account)}>${reason}</button>
+    <span><strong>${account.email}</strong> can't send yet: ${sendBlockedText(account)} You can still save this as a draft.</span>
+    <button type="button" class="btn btn-sm" onClick=${() => reconnectAccount(account)}>${action}</button>
   </div>`;
 }
 

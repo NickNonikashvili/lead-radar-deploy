@@ -13,10 +13,11 @@ const { ImapFlow } = require('imapflow');
 const { HttpError } = require('./errors');
 const netguard = require('./netguard');
 const { getFreshAccessToken, OAuthError } = require('./oauth');
-const { presetKeyForHost, authFailureHintForHost } = require('./providers');
+const { presetKeyForHost, authFailureHintForHost, isMicrosoftImapHost } = require('./providers');
 
 const SECURITY_VALUES = ['tls', 'starttls', 'none'];
 const LOGOUT_TIMEOUT_MS = 5000;
+const IMAP_TOKEN_MIN_VALIDITY_MS = 15 * 60 * 1000;
 
 // Upper bound on any single literal (one message source) a server may send us. Without it
 // imapflow accepts up to 1 GB, so a hostile "Other IMAP" server could exhaust memory.
@@ -103,7 +104,9 @@ async function buildImapOptions(deps, accountRow, limits = {}) {
   const { config, crypto } = deps;
   const base = { host: accountRow.imap_host, port: accountRow.imap_port, security: accountRow.imap_security, user: accountRow.imap_user };
   if (accountRow.auth_type === 'oauth') {
-    const accessToken = await getFreshAccessToken(deps, accountRow);
+    // Gmail ends an OAuth IMAP session when its token expires: a connection (a sync runs up to
+    // 10 minutes) starts with a token that outlives it.
+    const accessToken = await getFreshAccessToken(deps, accountRow, { minValidityMs: IMAP_TOKEN_MIN_VALIDITY_MS });
     return buildConnectionOptions(config, { ...base, accessToken }, limits);
   }
   const secret = decryptSecret(crypto, accountRow);
@@ -269,6 +272,24 @@ function isGmail(accountRow, client) {
   return !!(client && client.capabilities && typeof client.capabilities.has === 'function' && client.capabilities.has('X-GM-EXT-1'));
 }
 
+// Capabilities only Exchange Online / Outlook.com announce.
+const EXCHANGE_CAPABILITIES = ['CLIENTACCESSRULES', 'CLIENTNETWORKPRESENCELOCATION', 'BACKENDAUTHENTICATE'];
+
+/**
+ * Is this account on Microsoft Exchange (Outlook.com, Microsoft 365, or an on-premises Exchange
+ * server), which lists calendars, contacts, tasks, … as mailboxes? Decided by the preset / server
+ * name, else by a connected client's capabilities or greeting.
+ */
+function isExchange(accountRow, client) {
+  if (accountRow && (accountRow.provider === 'outlook' || isMicrosoftImapHost(accountRow.imap_host))) return true;
+  if (!client) return false;
+  const caps = client.capabilities;
+  if (caps && typeof caps.has === 'function' && EXCHANGE_CAPABILITIES.some((c) => caps.has(c))) return true;
+  const greeting = typeof client.greeting === 'string' ? client.greeting : '';
+  const serverName = client.serverInfo && typeof client.serverInfo.name === 'string' ? client.serverInfo.name : '';
+  return /microsoft exchange/i.test(greeting) || /microsoft exchange/i.test(serverName);
+}
+
 /** Compress UIDs into an IMAP sequence set: [1,2,3,7,9,10] -> "1:3,7,9:10". */
 function toUidSet(uids) {
   const sorted = [...new Set(uids.map(Number).filter((n) => Number.isInteger(n) && n > 0))].sort((a, b) => a - b);
@@ -403,6 +424,7 @@ module.exports = {
   findSpecialMailbox,
   pickSpecialMailbox,
   isGmail,
+  isExchange,
   friendlyImapError,
   isAuthFailure,
   isTransientLoginRefusal,
