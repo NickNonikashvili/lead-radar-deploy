@@ -34,7 +34,7 @@ Allow about an hour in total. Most of it is waiting for installs.
 7. *(Optional)* To make the chat use AI, put your Anthropic API key in `evosoft-config.php` one folder above `public_html`.
    `site-builder/README.md`, "Settings", has the details.
 
-## Part 2: The Ubuntu server (Evo and Mailtabs demos)
+## Part 2: The Ubuntu server (Evo, Mailtabs and StudyCat demos)
 
 ### 2.1 Point the demo addresses at the server
 
@@ -111,7 +111,7 @@ keeps the demos' data (StudyCat's database too), settings and certificates.
 1. Add the third DNS record from 2.1 (`studycat-demo` → your server's IP).
 2. Copy the new `evosoft-demo-server.tar.gz` to the server as in 2.2, then unpack it over the old folder:
    `cd /root && tar xzf evosoft-demo-server.tar.gz` (it replaces the setup files; the demos' data isn't in that folder).
-3. Make sure `calc1-deploy-….zip` is in `/root/evosoft-demo-server/apps/` (2.2 shows how to copy it).
+3. Check that `calc1-deploy-….zip` is in `/root/evosoft-demo-server/apps/` (the new bundle already includes it).
 4. Run the same command again: `cd /root/evosoft-demo-server && bash demos/one-server/setup-server.sh --email contact@evosoft.solutions`.
    It also reinstalls Evo and Mailtabs as they are, which resets both demos once; that is harmless.
 
