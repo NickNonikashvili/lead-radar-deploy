@@ -1,0 +1,42 @@
+# /etc/systemd/system/evo-demo.service: the public Evo demo (from DEPLOY.md "Option B", minus NODE_ENV=production).
+[Unit]
+Description=Evo public demo (Bluefield Market Co.)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=evo-demo
+Group=evo-demo
+WorkingDirectory=/opt/evo-demo/current
+# PORT, DATA_DIR, SEED_DEMO, DEMO_PASSWORD, DEMO_PIN, SEED_TZ ... (see demo.env). No NODE_ENV=production here:
+# Evo ignores SEED_DEMO and refuses the demo reset on production.
+EnvironmentFile=/etc/evo/evo-demo.env
+ExecStart=/usr/bin/node app.js
+Restart=always
+RestartSec=2
+TimeoutStopSec=20
+UMask=0077
+NoNewPrivileges=yes
+ProtectSystem=strict
+ReadWritePaths=/var/lib/evo-demo
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+RestrictSUIDSGID=yes
+RestrictRealtime=yes
+RestrictNamespaces=yes
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+LockPersonality=yes
+CapabilityBoundingSet=
+AmbientCapabilities=
+SystemCallArchitectures=native
+
+[Install]
+WantedBy=multi-user.target

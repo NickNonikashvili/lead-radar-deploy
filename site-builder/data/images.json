@@ -1,0 +1,267 @@
+{
+  "evo/00-hero.jpg": {
+    "w": 1200,
+    "h": 630,
+    "webp": [
+      800
+    ]
+  },
+  "evo/01-owner-home.jpg": {
+    "w": 2880,
+    "h": 1800,
+    "webp": [
+      800,
+      1600
+    ]
+  },
+  "evo/02-hr-live-attendance.jpg": {
+    "w": 2880,
+    "h": 1800,
+    "webp": [
+      800,
+      1600
+    ]
+  },
+  "evo/03-hr-scheduler.jpg": {
+    "w": 2880,
+    "h": 1800,
+    "webp": [
+      800,
+      1600
+    ]
+  },
+  "evo/04-hr-approvals.jpg": {
+    "w": 2880,
+    "h": 1800,
+    "webp": [
+      800,
+      1600
+    ]
+  },
+  "evo/05-payroll-period-review.jpg": {
+    "w": 2880,
+    "h": 1800,
+    "webp": [
+      800,
+      1600
+    ]
+  },
+  "evo/06-employee-clock-in-phone.jpg": {
+    "w": 1170,
+    "h": 1992,
+    "webp": [
+      800
+    ]
+  },
+  "evo/07-store-overview.jpg": {
+    "w": 2880,
+    "h": 1800,
+    "webp": [
+      800,
+      1600
+    ]
+  },
+  "evo/08-store-reports.jpg": {
+    "w": 2880,
+    "h": 1800,
+    "webp": [
+      800,
+      1600
+    ]
+  },
+  "evo/09-register-pay-screen.jpg": {
+    "w": 2880,
+    "h": 1800,
+    "webp": [
+      800,
+      1600
+    ]
+  },
+  "evo/10-store-items.jpg": {
+    "w": 2880,
+    "h": 1800,
+    "webp": [
+      800,
+      1600
+    ]
+  },
+  "evo/11-stock-handheld-phone.jpg": {
+    "w": 1170,
+    "h": 1992,
+    "webp": [
+      800
+    ]
+  },
+  "mailtabs/00-hero.jpg": {
+    "w": 1200,
+    "h": 630,
+    "webp": [
+      800
+    ]
+  },
+  "mailtabs/01-unified-inbox.jpg": {
+    "w": 2880,
+    "h": 1800,
+    "webp": [
+      800,
+      1600
+    ]
+  },
+  "mailtabs/02-receipts-tab.jpg": {
+    "w": 2880,
+    "h": 1800,
+    "webp": [
+      800,
+      1600
+    ]
+  },
+  "mailtabs/03-conversation.jpg": {
+    "w": 2880,
+    "h": 1800,
+    "webp": [
+      800,
+      1600
+    ]
+  },
+  "mailtabs/04-composer.jpg": {
+    "w": 2880,
+    "h": 1800,
+    "webp": [
+      800,
+      1600
+    ]
+  },
+  "mailtabs/05-tab-editor.jpg": {
+    "w": 2880,
+    "h": 1800,
+    "webp": [
+      800,
+      1600
+    ]
+  },
+  "mailtabs/06-add-account.jpg": {
+    "w": 2880,
+    "h": 1800,
+    "webp": [
+      800,
+      1600
+    ]
+  },
+  "mailtabs/07-settings.jpg": {
+    "w": 2880,
+    "h": 1800,
+    "webp": [
+      800,
+      1600
+    ]
+  },
+  "mailtabs/08-bulk-select.jpg": {
+    "w": 2880,
+    "h": 1800,
+    "webp": [
+      800,
+      1600
+    ]
+  },
+  "mailtabs/09-phone.jpg": {
+    "w": 1170,
+    "h": 1992,
+    "webp": [
+      800
+    ]
+  },
+  "studycat/00-hero.jpg": {
+    "w": 1200,
+    "h": 630,
+    "webp": [
+      800
+    ]
+  },
+  "studycat/01-start-page.jpg": {
+    "w": 2880,
+    "h": 1800,
+    "webp": [
+      800,
+      1600
+    ]
+  },
+  "studycat/02-class-dashboard.jpg": {
+    "w": 2880,
+    "h": 1800,
+    "webp": [
+      800,
+      1600
+    ]
+  },
+  "studycat/03-notes.jpg": {
+    "w": 2880,
+    "h": 1800,
+    "webp": [
+      800,
+      1600
+    ]
+  },
+  "studycat/04-quizzer.jpg": {
+    "w": 2880,
+    "h": 1800,
+    "webp": [
+      800,
+      1600
+    ]
+  },
+  "studycat/05-flashcards.jpg": {
+    "w": 2880,
+    "h": 1800,
+    "webp": [
+      800,
+      1600
+    ]
+  },
+  "studycat/06-projectile-tool.jpg": {
+    "w": 2880,
+    "h": 1800,
+    "webp": [
+      800,
+      1600
+    ]
+  },
+  "studycat/07-discussion-thread.jpg": {
+    "w": 2880,
+    "h": 1800,
+    "webp": [
+      800,
+      1600
+    ]
+  },
+  "studycat/08-moderator-queue.jpg": {
+    "w": 2880,
+    "h": 1800,
+    "webp": [
+      800,
+      1600
+    ]
+  },
+  "studycat/09-faculty-class.jpg": {
+    "w": 2880,
+    "h": 1800,
+    "webp": [
+      800,
+      1600
+    ]
+  },
+  "studycat/10-admin-members.jpg": {
+    "w": 2880,
+    "h": 1800,
+    "webp": [
+      800,
+      1600
+    ]
+  },
+  "studycat/11-phone-dashboard.jpg": {
+    "w": 1170,
+    "h": 1992,
+    "webp": [
+      800
+    ]
+  }
+}

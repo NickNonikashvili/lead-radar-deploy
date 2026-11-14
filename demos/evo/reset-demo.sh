@@ -76,14 +76,15 @@ POS_DB="${POS_DB_PATH:-$DATA_DIR/pos.db}"
 as_evo() {  # run a command as the service user, keeping this environment
   if [[ -n "$EVO_USER" && "$(id -un)" != "$EVO_USER" ]]; then runuser -u "$EVO_USER" -- "$@"; else "$@"; fi
 }
-stop_evo()  { if [[ -n "${EVO_STOP_CMD:-}" ]];  then bash -c "$EVO_STOP_CMD";  else systemctl stop "$EVO_SERVICE"; fi; }
-start_evo() { if [[ -n "${EVO_START_CMD:-}" ]]; then bash -c "$EVO_START_CMD"; else systemctl start "$EVO_SERVICE"; fi; }
+# 9>&-: Evo must not inherit the lock (a command that starts it in the background would hold it forever).
+stop_evo()  { if [[ -n "${EVO_STOP_CMD:-}" ]];  then bash -c "$EVO_STOP_CMD" 9>&-;  else systemctl stop "$EVO_SERVICE"; fi; }
+start_evo() { if [[ -n "${EVO_START_CMD:-}" ]]; then bash -c "$EVO_START_CMD" 9>&-; else systemctl start "$EVO_SERVICE"; fi; }
 
 running_pids() {  # Evo writes DATA_DIR/evo-running-<pid>.json while it runs (the seed tool checks the same)
   local f pid
   for f in "$DATA_DIR"/evo-running*.json; do
     [[ -e "$f" ]] || continue
-    pid="$(sed -n 's/.*"pid":[[:space:]]*\([0-9][0-9]*\).*/\1/p' "$f" | head -n1)"
+    pid="$(sed -n 's/.*"pid":[[:space:]]*\([0-9][0-9]*\).*/\1/p' "$f" 2>/dev/null | head -n1)"
     [[ -n "$pid" ]] && kill -0 "$pid" 2>/dev/null && echo "$pid"
   done
   return 0

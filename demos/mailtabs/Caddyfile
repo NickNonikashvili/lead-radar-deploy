@@ -1,0 +1,77 @@
+# Reverse proxy for the public Mailtabs demo. Caddy is the ONLY container on both networks:
+# it takes HTTPS from the internet ("edge") and talks to Mailtabs on the internal "demo" network.
+#
+# Env (set in docker-compose.yml / .env):
+#   DEMO_HOSTNAME      e.g. mail-demo.evosoft.solutions   (Caddy gets a Let's Encrypt cert for it)
+#   ACME_EMAIL         contact address for Let's Encrypt
+#   MAILTABS_UPSTREAM  default mailtabs:3301
+#   MAINTENANCE_DIR    default /srv/maintenance (reset-demo.sh creates "on" in it while resetting)
+
+{
+	email {$ACME_EMAIL:admin@example.invalid}
+	admin {$CADDY_ADMIN:localhost:2019}
+}
+
+{$DEMO_HOSTNAME:mail-demo.evosoft.solutions} {
+	encode zstd gzip
+
+	# Attachments: the demo SMTP sink accepts at most 10 MB per message anyway.
+	request_body /api/uploads* {
+		max_size 12MB
+	}
+
+	header {
+		X-Robots-Tag "noindex"
+		-Server
+	}
+
+	# 1. While reset-demo.sh runs, nobody reaches Mailtabs (so nobody can sign up as the first
+	#    user of the fresh database before the seeder does).
+	@resetting file {
+		root {$MAINTENANCE_DIR:/srv/maintenance}
+		try_files /on
+	}
+	handle @resetting {
+		header Retry-After 60
+		header Content-Type "text/plain; charset=utf-8"
+		respond "The Mailtabs demo is being reset with fresh sample mail. Please try again in a minute." 503
+	}
+
+	# 2. Everyone shares one demo login. Keep a visitor from locking the others out or removing
+	#    the showcase for everyone until the next reset. (Mailtabs shows the "error" text.)
+	@password path /api/auth/password
+	handle @password {
+		header Content-Type application/json
+		respond `{"error":"Changing the password is turned off in this shared demo.","code":"DEMO_LOCKED"}` 403
+	}
+	@seededAccountDelete {
+		method DELETE
+		path_regexp ^/api/accounts/[123]$
+	}
+	handle @seededAccountDelete {
+		header Content-Type application/json
+		respond `{"error":"The demo's own accounts can't be removed in this shared demo (accounts you add yourself can).","code":"DEMO_LOCKED"}` 403
+	}
+	@seededTabDelete {
+		method DELETE
+		path_regexp ^/api/tabs/[1-5]$
+	}
+	handle @seededTabDelete {
+		header Content-Type application/json
+		respond `{"error":"The demo's own tabs can't be deleted in this shared demo (tabs you create yourself can).","code":"DEMO_LOCKED"}` 403
+	}
+	# Google/Microsoft sign-in is not configured in the demo; never forward these.
+	handle /api/oauth/* {
+		header Content-Type application/json
+		respond `{"error":"Google and Microsoft sign-in are not available in the demo.","code":"DEMO_LOCKED"}` 403
+	}
+
+	handle {
+		reverse_proxy {$MAILTABS_UPSTREAM:mailtabs:3301}
+	}
+
+	log {
+		output stdout
+		format console
+	}
+}

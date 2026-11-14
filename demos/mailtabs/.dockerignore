@@ -1,0 +1,7 @@
+# Only docker/ and mailtabs-src/ are needed in the Mailtabs build context.
+*
+!docker/
+!mailtabs-src/
+mailtabs-src/node_modules
+mailtabs-src/data
+mailtabs-src/.env

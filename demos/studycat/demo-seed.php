@@ -7,7 +7,8 @@
 
        php api/demo-seed.php            wipe the demo database, then create the demo accounts and demo content
        php api/demo-seed.php --repair   keep everything, only put the demo accounts back (exist, verified, demo
-                                        password, roles, not banned): cheap enough to run every hour
+                                        password, roles, not banned) and clear their shared sign-in rate limit:
+                                        cheap enough to run every 10 minutes
        php api/demo-seed.php --check    print what is there and whether the lockdown is in place; changes nothing
 
    It uses StudyCat's own schema and helpers (api/lib.php, teach.php, packs.php), the same password hashing
@@ -125,7 +126,10 @@ if (isset($opts['repair'])) {
   demo_lockdown($dataDir, $apiData);
   $ids = []; foreach ($ACCOUNTS as $k => $a) $ids[$k] = demo_account($a, time() - 30 * 86400);
   demo_instructor_role($INSTRUCTOR_EMAIL, $ids['instructor'], $ACCOUNTS['instructor']['name']);
-  say('Demo accounts repaired (' . count($ids) . ').');
+  // StudyCat allows 12 sign-ins per address per 15 minutes (api/index.php, login). Many visitors share these accounts,
+  // so the shared counters are cleared here; run --repair every few minutes to keep the demo accounts usable.
+  $n = mh_db()->exec("DELETE FROM rate WHERE key LIKE 'login:email:%@" . DEMO_DOMAIN . "'");
+  say('Demo accounts repaired (' . count($ids) . '); sign-in limits cleared (' . (int)$n . ').');
   $GLOBALS['demo_done'] = true; exit(0);
 }
 
@@ -143,6 +147,7 @@ if (is_file($dbPath)) {
 }
 foreach (['canvas.json'] as $f) @unlink("$dataDir/$f");
 foreach (['backups', 'syllabi', 'students', 'ai-img', 'offsite-tmp'] as $d) { demo_rmtree("$dataDir/$d"); if ($apiData !== $dataDir) demo_rmtree("$apiData/$d"); }
+if (!is_dir($apiData)) @mkdir($apiData, 0750, true);   // where api/mailer.php writes mail.log in 'log' mode (blocked from the web)
 if (is_file("$apiData/mail.log")) @file_put_contents("$apiData/mail.log", '');
 demo_lockdown($dataDir, $apiData);
 
@@ -293,6 +298,7 @@ $tdb->prepare('UPDATE teach_classes SET pack_id = ?, status = \'published\', pub
 // students and the TA
 foreach (['student' => 14, 'max' => 13, 'classmate' => 12] as $k => $ago) { $tdb->prepare('INSERT OR IGNORE INTO teach_members (class_id, user_id, role, joined) VALUES (?, ?, \'student\', ?)')->execute([$classId, $ids[$k], $now - $ago * $DAY]); mh_teach_add_course($ids[$k], $pid); }
 $tdb->prepare('INSERT OR IGNORE INTO teach_members (class_id, user_id, role, joined) VALUES (?, ?, \'ta\', ?)')->execute([$classId, $ids['moderator'], $now - 15 * $DAY]);
+$tdb->prepare('INSERT OR IGNORE INTO roles (email, role, updated, scope) VALUES (?, \'TA\', ?, \'teach\')')->execute([strtolower($ACCOUNTS['moderator']['email']), $now]);   // as teach_staff_add does
 // announcements
 $tp = $tdb->prepare('INSERT INTO teach_posts (class_id, user_id, title, body, pinned, created, publish_at, sent) VALUES (?, ?, ?, ?, ?, ?, ?, 1)');
 $tp->execute([$classId, $ids['instructor'], 'Welcome to Calculus I (demo section)', "Hi everyone! The syllabus, schedule and exam dates are on the class page. Practice for each topic is in StudyCat's Calc I class, and I will post practice sets here before each exam.", 0, $now - 14 * $DAY, $now - 14 * $DAY]);
@@ -303,7 +309,7 @@ $tdb->prepare('INSERT INTO teach_assignments (class_id, title, course, topics, c
     ->execute([$classId, 'Exam 3 warm-up: extrema, optimization and related rates', 'calc', json_encode(['extrema', 'related-rates', 'chain-rule']), 10, 0, $due, 'Retakes are fine; your best score counts.', 424242, $ids['instructor'], $now - 1 * $DAY]);
 $aid = (int)$tdb->lastInsertId();
 $tdb->prepare('INSERT INTO teach_assignments (class_id, title, course, topics, count, minutes, due, note, seed, created_by, created, picks) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, \'\')')
-    ->execute([$classId, 'Derivative rules check-in', 'calc', json_encode(['basic-rules', 'product-quotient', 'chain-rule']), 8, 15, $now - 20 * $DAY, '', 171717, $ids['instructor'], $now - 27 * $DAY]);
+    ->execute([$classId, 'Derivative rules check-in', 'calc', json_encode(['basic-rules', 'product-quotient', 'chain-rule']), 8, 15, (new DateTime('now', $tz))->modify('-20 days')->setTime(23, 59)->getTimestamp(), '', 171717, $ids['instructor'], $now - 27 * $DAY]);
 $aid0 = (int)$tdb->lastInsertId();
 $sub = $tdb->prepare('INSERT INTO teach_submissions (assignment_id, user_id, score, total, best, seconds, attempts, topics, created, updated) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
 $sub->execute([$aid0, $ids['student'], 7, 8, 7, 610, 2, json_encode(['basic-rules' => [3, 3], 'product-quotient' => [2, 3], 'chain-rule' => [2, 2]]), $now - 22 * $DAY, $now - 21 * $DAY]);
@@ -323,14 +329,43 @@ foreach (['next monday', 'next wednesday'] as $when) { $d0 = (new DateTime($when
 $tdb->prepare('INSERT OR IGNORE INTO teach_slot_claims (slot_id, user_id, created) VALUES (?, ?, ?)')->execute([$firstSlot + 1, $ids['student'], $now - 3600]);
 say("  Faculty: class 'M 171 Calculus I (demo section)', join code MATH26, pack $pid, 3 students, 2 announcements, 2 assignments");
 
-/* ---------- 7) a little activity so dashboards are not empty ---------- */
+/* ---------- 7) some Calc I practice history, so dashboards, streaks and weakest topics are not empty ----------
+   The same shape the page saves through the data route (assets/app.js): per-topic counts, a history of answers by
+   local date, active days, XP per day and flashcard boxes. Dates are relative to today, so streaks stay current. */
 $day = fn(int $ago) => (new DateTime('now', $tz))->modify("-$ago days")->format('Y-m-d');
+$cards = []; if (preg_match_all('/id:"(fc-[a-z0-9-]+)"/', (string)@file_get_contents(dirname($apiDir) . '/assets/calc-data.js'), $m)) $cards = array_values(array_unique($m[1]));
+// topic => how often this student gets it right
+$skill = [
+  'student'   => ['velocity' => .9, 'aroc' => .9, 'limit-algebra' => .8, 'limit-def' => .85, 'derivative-function' => .8, 'second-derivative' => .75, 'basic-rules' => .95, 'trig' => .85, 'product-quotient' => .8, 'chain-rule' => .75, 'implicit' => .7, 'lhopital' => .65, 'extrema' => .7, 'related-rates' => .55, 'optimization' => .45, 'distance' => .7, 'riemann' => .6, 'definite-integral' => .65, 'ftc' => .6, 'antiderivatives' => .7, 'ftc2' => .55],
+  'max'       => ['aroc' => .8, 'limit-algebra' => .7, 'deriv-point' => .8, 'basic-rules' => .9, 'product-quotient' => .75, 'chain-rule' => .8, 'implicit' => .65, 'extrema' => .75, 'related-rates' => .7, 'optimization' => .6],
+  'classmate' => ['basic-rules' => .95, 'chain-rule' => .9, 'implicit' => .85, 'related-rates' => .8, 'optimization' => .75, 'riemann' => .7],
+];
+$plan = ['student' => [0 => 14, 1 => 12, 2 => 10, 3 => 13, 4 => 11, 6 => 9, 7 => 12, 8 => 8, 11 => 10, 13 => 8, 15 => 9, 18 => 10], 'max' => [0 => 8, 1 => 10, 3 => 9, 4 => 7, 5 => 6, 9 => 8], 'classmate' => [0 => 10, 1 => 6, 2 => 9, 5 => 8, 6 => 7]];
+mt_srand(2026);
 $ud = $db->prepare('INSERT OR IGNORE INTO user_days (user_id, day) VALUES (?, ?)');
-foreach (['student' => [0, 1, 2, 3, 4, 6, 7, 8], 'max' => [0, 1, 3, 4, 5], 'classmate' => [0, 1, 2, 5, 6, 9]] as $k => $days) foreach ($days as $ago) $ud->execute([$ids[$k], $day($ago)]);
-$week = mh_iso_week();
-$ws = $db->prepare('INSERT OR REPLACE INTO weekly_stats (user_id, course, week, answered, correct, cards, focus) VALUES (?, ?, ?, ?, ?, ?, ?)');
-$ws->execute([$ids['student'], 'calc', $week, 46, 37, 60, 95]); $ws->execute([$ids['student'], 'physics', $week, 18, 13, 20, 30]);
-$ws->execute([$ids['max'], 'calc', $week, 52, 44, 40, 80]); $ws->execute([$ids['classmate'], 'physics', $week, 33, 27, 25, 50]);
+foreach ($plan as $k => $days) {
+  $topics = array_keys($skill[$k]); $hist = []; $prog = []; $act = []; $xp = []; $ti = 0;
+  krsort($days);
+  foreach ($days as $ago => $n) {
+    $d = $day($ago); $act[$d] = true; $ok = 0;
+    for ($q = 0; $q < $n; $q++) {
+      $t = $topics[$ti++ % count($topics)]; $right = mt_rand(0, 999) < $skill[$k][$t] * 1000;
+      $hist[] = ['t' => $t, 'ok' => $right, 'd' => $d, 'k' => base_convert((string)mt_rand(), 10, 36) . base_convert((string)mt_rand(), 10, 36)];
+      $prog[$t] = ['a' => ($prog[$t]['a'] ?? 0) + 1, 'c' => ($prog[$t]['c'] ?? 0) + ($right ? 1 : 0)]; $ok += $right ? 1 : 0;
+    }
+    $xp[] = ['d' => $d, 'n' => $n * 5 + $ok * 2 + 10];
+    $ud->execute([$ids[$k], $d]);
+  }
+  $data = ['progress' => $prog, 'history' => array_slice($hist, -400), 'activity' => $act, 'xp' => $xp];
+  if ($cards && $k === 'student') {   // flashcard boxes (0-4) and when each was last reviewed (ms)
+    $fc = []; $at = []; foreach (array_slice($cards, 0, 28) as $j => $cid) { $fc[$cid] = [3, 2, 4, 1, 2, 3, 0][$j % 7]; $at[$cid] = (int)(($now - (($j % 6) * $DAY) - $j * 300) * 1000); }
+    $data['flashcards'] = $fc; $data['fcAt'] = $at;
+  }
+  $json = json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+  $db->prepare('INSERT OR REPLACE INTO progress (user_id, course, json, updated) VALUES (?, ?, ?, ?)')->execute([$ids[$k], 'calc', $json, $now * 1000]);
+  mh_weekly_stats_update($ids[$k], 'calc', $data);   // this week's totals for class goals, as the data route does
+}
+say('  practice history: Calc I for student, max and classmate');
 
 $GLOBALS['demo_done'] = true;
 say('Done. Demo password for every account: ' . DEMO_PASSWORD);

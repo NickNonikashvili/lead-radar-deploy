@@ -1,0 +1,10 @@
+# /etc/caddy/Caddyfile: HTTPS for the demo. Caddy gets the certificate, sends X-Forwarded-Proto and keeps Host,
+# and runs on the same machine, so Evo's default TRUST_PROXY (loopback) is right: nothing to set.
+evo-demo.evosoft.solutions {
+	encode zstd gzip
+	reverse_proxy 127.0.0.1:3101
+	# Shown for the ~5 seconds Evo is down during a reset (and if it ever crashes).
+	handle_errors 502 503 {
+		respond "The Evo demo is being reset to fresh demo data. Try again in a few seconds." 503
+	}
+}

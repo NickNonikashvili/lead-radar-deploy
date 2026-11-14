@@ -1,0 +1,3 @@
+# StudyCat public demo: keep it out of search results (the real site is studycat.org)
+User-agent: *
+Disallow: /

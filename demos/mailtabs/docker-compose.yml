@@ -1,0 +1,149 @@
+# Public Mailtabs demo: Mailtabs + a sandboxed demo mail server, behind Caddy.
+#
+#   internet ──443──> caddy ──(demo network, internal: no internet)──> mailtabs ──> dovecot (IMAP)
+#                                                                              └──> smtp-sink (SMTP)
+#
+# Only Caddy is attached to a network with internet access. Mailtabs, Dovecot and the SMTP sink
+# sit on an `internal: true` network, so Mailtabs cannot reach any real mail server: a visitor
+# can't connect a real mailbox and can't send real mail. See README.md.
+#
+# Usage:  cp .env.example .env  (edit)  →  ./reset-demo.sh  (first start and every reset)
+
+name: mailtabs-demo
+
+services:
+  caddy:
+    image: caddy:2.9.1
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      DEMO_HOSTNAME: ${DEMO_HOSTNAME:?set DEMO_HOSTNAME in .env}
+      ACME_EMAIL: ${ACME_EMAIL:?set ACME_EMAIL in .env}
+      MAILTABS_UPSTREAM: mailtabs:3301
+      MAINTENANCE_DIR: /srv/maintenance
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./state/maintenance:/srv/maintenance:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      - edge   # internet (inbound HTTPS, Let's Encrypt)
+      - demo   # reaches mailtabs:3301
+
+  mailtabs:
+    build:
+      context: .
+      dockerfile: docker/mailtabs.Dockerfile
+    image: mailtabs-demo/mailtabs:local
+    restart: unless-stopped
+    environment:
+      PORT: "3301"
+      APP_URL: https://${DEMO_HOSTNAME}
+      DATA_DIR: /data
+      SECRET_KEY: ${SECRET_KEY:?set SECRET_KEY in .env (openssl rand -hex 32)}
+      # The shared demo login is created by the seeder as the FIRST user (always allowed);
+      # nobody else can sign up.
+      ALLOW_SIGNUPS: "false"
+      # Needed for the plaintext demo mail server on the internal network. It also lifts
+      # Mailtabs' own SSRF guard, which is why the network isolation below is essential.
+      ALLOW_PRIVATE_IMAP_HOSTS: "true"
+      TRUST_PROXY: "1"
+      SYNC_INTERVAL_MINUTES: "1"
+      INITIAL_SYNC_LIMIT: "200"
+      MAX_BODY_BYTES: "5000000"
+      # Never configure Google/Microsoft sign-in on the demo.
+      GOOGLE_CLIENT_ID: ""
+      GOOGLE_CLIENT_SECRET: ""
+      MICROSOFT_CLIENT_ID: ""
+      MICROSOFT_CLIENT_SECRET: ""
+    volumes:
+      - mailtabs_data:/data
+    networks:
+      - demo   # internal only: no route to the internet
+    depends_on:
+      - dovecot
+      - smtp-sink
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3301/api/config').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    mem_limit: 512m
+    pids_limit: 200
+
+  dovecot:
+    build: ./dovecot
+    image: mailtabs-demo/dovecot:local
+    restart: unless-stopped
+    volumes:
+      - maildirs:/srv/mail
+    networks:
+      demo:
+        aliases:
+          - imap.demo.test   # what visitors type into "Add account"
+    healthcheck:
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/3343"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    mem_limit: 256m
+
+  smtp-sink:
+    build: ./tools
+    image: mailtabs-demo/tools:local
+    restart: unless-stopped
+    command: ["node", "smtp-sink.js"]
+    environment:
+      DEMO_IMAP_HOST: dovecot
+      DEMO_IMAP_PORT: "3343"
+      DEMO_SMTP_LISTEN: 0.0.0.0
+      DEMO_SMTP_PORT: "3325"
+      DEMO_USERS_FILE: /config/demo-users
+    volumes:
+      - ./dovecot/demo-users:/config/demo-users:ro
+    networks:
+      demo:
+        aliases:
+          - smtp.demo.test   # what visitors type into "Add account"
+    depends_on:
+      - dovecot
+    mem_limit: 256m
+
+  # One-shot seeders, run by reset-demo.sh:  docker compose run --rm seed node seed-mail.js
+  seed:
+    image: mailtabs-demo/tools:local
+    profiles: ["tools"]
+    environment:
+      DEMO_IMAP_HOST: dovecot
+      DEMO_IMAP_PORT: "3343"
+      DEMO_SMTP_PORT: "3325"
+      DEMO_PUBLIC_IMAP_HOST: imap.demo.test
+      DEMO_PUBLIC_SMTP_HOST: smtp.demo.test
+      DEMO_USERS_FILE: /config/demo-users
+      MAILTABS_URL: http://mailtabs:3301
+      DEMO_LOGIN_EMAIL: ${DEMO_LOGIN_EMAIL:-demo@mailtabs.demo.test}
+      DEMO_LOGIN_PASSWORD: ${DEMO_LOGIN_PASSWORD:-mailtabs-demo}
+    volumes:
+      - ./dovecot/demo-users:/config/demo-users:ro
+    networks:
+      - demo
+
+networks:
+  demo:
+    # No gateway to the outside world: containers only on this network have no internet.
+    internal: true
+    # A fixed subnet so the host firewall can refuse traffic from it to the host itself
+    # (see README, "Hardening"). Change it if it collides with something on your VPS.
+    ipam:
+      config:
+        - subnet: 172.31.250.0/24
+  edge: {}
+
+volumes:
+  mailtabs_data:
+  maildirs:
+  caddy_data:
+  caddy_config:

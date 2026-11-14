@@ -211,7 +211,7 @@ function accountCard(p, a) {
   const signin = p.demo.signinUrl || p.demo.url;
   const loginLabel = a.loginLabel || p.demo.loginLabel || 'Email';
   const passLabel = a.passwordLabel || p.demo.passwordLabel || 'Password';
-  const go = signin
+  const go = signin && a.signin !== false
     ? `<a class="btn btn-soft btn-sm acct-go" href="${attr(signin)}" target="_blank" rel="noopener" data-login="${attr(a.login)}" data-pass="${attr(a.password)}">${icon('login')} Sign in as ${esc(first(a.name || a.role))}</a>`
     : '';
   return `<article class="acct" data-reveal>
@@ -248,7 +248,9 @@ function demoBlock(root, p, { headingLevel = 'h3', withHeader = true } = {}) {
     ? `<div class="demo-extras" data-reveal><${H}>${esc(d.extrasTitle || 'Handy test data')}</${H}><ul>${join(d.extras, ([k, v]) => `<li><span>${esc(k)}</span><code>${esc(v)}</code></li>`)}</ul></div>`
     : '';
   const side = stepsHtml || extras || tables ? `<div class="demo-more">${stepsHtml}${extras}</div>${tables}` : '';
-  const head = withHeader
+  const head = withHeader === 'compact'
+    ? `<div class="demo-bar"><p class="demo-url">${statusPill(p)}<span>${esc(d.label || '')}</span></p>${demoButton(p)}</div>`
+    : withHeader
     ? `<div class="demo-head">
         <div class="demo-id"><img src="${root}${p.icon}" alt="" width="44" height="44"><div><${H} class="demo-title">${esc(p.name)} <span>${esc(p.kind)}</span></${H}><p class="demo-url">${statusPill(p)}<span>${esc(d.label || '')}</span></p></div></div>
         <div class="demo-actions">${demoButton(p)}<a class="btn btn-ghost" href="${root}work/${p.slug}.html">Case study ${icon('arrowRight')}</a></div>
@@ -316,6 +318,11 @@ function customCard(c) {
   <a class="btn btn-primary btn-block" href="contact.html?plan=${encodeURIComponent('Custom project')}">Tell us about it</a>
 </article>`;
 }
+
+const shotButton = (root, s) => `<button class="shot${s.phone ? ' is-phone' : ''}${s.wide ? ' is-wide' : ''}" type="button" data-lightbox="${attr(root + 'assets/shots/' + s.file)}" data-caption="${attr(s.caption)}"${s.phone ? '' : ' data-reveal'}>
+      ${shotPicture(root, s.file, { alt: s.caption, sizes: s.phone ? '280px' : '(min-width: 1100px) 560px, 100vw' })}
+      <span class="shot-cap"><strong>${esc(s.caption)}</strong>${s.as ? `<small>Signed in as ${esc(s.as)}</small>` : ''}</span>
+    </button>`;
 
 const faqList = (items) =>
   `<div class="faq">${join(items, (f) => `<details data-reveal><summary>${esc(f.q)}<span class="plus" aria-hidden="true"></span></summary><p>${esc(f.a)}</p></details>`)}</div>`;
@@ -486,7 +493,7 @@ for (const [idx, p] of products.entries()) {
     active: 'portfolio',
     title: `${p.name}: ${p.tagline.replace(/\.$/, '')} · EvoSoft`,
     description: `${p.summary} Try the live demo with ready-made test accounts.`,
-    ogImage: hero ? `${site.url}/assets/shots/${hero.file}` : undefined,
+    ogImage: p.og || hero ? `${site.url}/assets/shots/${p.og || hero.file}` : undefined,
     bodyClass: 'product',
     body: (root) => `
 <section class="p-hero" style="--pa:${p.accent}">
@@ -518,10 +525,11 @@ for (const [idx, p] of products.entries()) {
 ${gallery.length ? `<section class="section alt">
   <div class="wrap">
     ${sectionHead('Screens', 'A look inside', 'Real screenshots from the demo install. Click any of them to enlarge.')}
-    <div class="gallery">${join(gallery, (s, i) => `<button class="shot${s.phone ? ' is-phone' : ''}${s.wide ? ' is-wide' : ''}" type="button" data-lightbox="${attr(root + 'assets/shots/' + s.file)}" data-caption="${attr(s.caption)}" data-reveal>
-      ${shotPicture(root, s.file, { alt: s.caption, sizes: s.phone ? '300px' : '(min-width: 1100px) 560px, 100vw' })}
-      <span class="shot-cap"><strong>${esc(s.caption)}</strong>${s.as ? `<small>Signed in as ${esc(s.as)}</small>` : ''}</span>
-    </button>`)}</div>
+    <div class="gallery">${join(gallery.filter((s) => !s.phone), (s) => shotButton(root, s))}</div>
+    ${gallery.some((s) => s.phone) ? `<div class="phone-row" data-reveal>
+      <div class="phone-row-text"><span class="svc-icon">${icon('smartphone')}</span><h3>${esc(p.phoneTitle || 'On a phone, too')}</h3><p>${esc(p.phoneText || 'The same app, laid out for a small screen.')}</p></div>
+      <div class="phone-row-shots">${join(gallery.filter((s) => s.phone), (s) => shotButton(root, s))}</div>
+    </div>` : ''}
   </div>
 </section>` : ''}
 
@@ -534,8 +542,8 @@ ${gallery.length ? `<section class="section alt">
 
 <section class="section alt demo-section" id="demo" style="--pa:${p.accent}">
   <div class="wrap">
-    ${sectionHead('Try it yourself', `Sign in to the ${esc(p.name)} demo`, `Pick a role below. Every account works on the live demo at <strong>${esc(p.demo.label)}</strong>.`)}
-    ${demoBlock(root, p, { headingLevel: 'h3' })}
+    ${sectionHead('Try it yourself', `Sign in to the ${esc(p.name)} demo`, `Use the accounts below on the live demo at <strong>${esc(p.demo.label)}</strong>. Tap a value to copy it.`)}
+    ${demoBlock(root, p, { headingLevel: 'h3', withHeader: 'compact' })}
   </div>
 </section>
 

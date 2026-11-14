@@ -599,10 +599,13 @@ function buildDemoMail(now = new Date()) {
     from: P.dad,
     to: [me('personal'), P.sam],
     subject: 'Photos from the lake',
-    date: c.at(3, '19:45'),
+    date: c.at(0, '10:40'),
     flags: ['\\Seen', '\\Flagged'],
     text: para('Hi both,', 'The sunsets here have been unreal this week. Here is my favourite one. The cabin is cosy, the fish are not biting.', 'Love,\nDad'),
-    attachments: [{ filename: 'lake-sunset.png', contentType: 'image/png', content: lakePhotoPng() }],
+    html:
+      '<p>Hi both,</p><p>The sunsets here have been unreal this week. Here is my favourite one. The cabin is cosy, the fish are not biting.</p>' +
+      '<p><img src="cid:lake-sunset@demo" alt="Sunset over the lake" width="560" style="max-width:100%;border-radius:8px"></p><p>Love,<br>Dad</p>',
+    attachments: [{ filename: 'lake-sunset.png', contentType: 'image/png', content: lakePhotoPng(), cid: 'lake-sunset@demo' }],
   });
   add({
     key: 'p-book',

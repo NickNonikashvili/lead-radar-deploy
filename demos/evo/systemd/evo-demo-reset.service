@@ -1,0 +1,11 @@
+# /etc/systemd/system/evo-demo-reset.service: one demo reset (started by evo-demo-reset.timer).
+[Unit]
+Description=Reset the Evo public demo to fresh demo data
+After=evo-demo.service
+
+[Service]
+Type=oneshot
+# Runs as root: it stops/starts evo-demo.service and runs the seed as the evo-demo user.
+Environment=EVO_DIR=/opt/evo-demo/current EVO_ENV_FILE=/etc/evo/evo-demo.env EVO_SERVICE=evo-demo EVO_USER=evo-demo
+ExecStart=/opt/evo-demo/reset-demo.sh
+TimeoutStartSec=300
