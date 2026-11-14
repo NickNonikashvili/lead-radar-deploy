@@ -1,8 +1,87 @@
+# © 2026 EvoSoft Solutions
 # /etc/caddy/Caddyfile: HTTPS for the demo. Caddy gets the certificate, sends X-Forwarded-Proto and keeps Host,
 # and runs on the same machine, so Evo's default TRUST_PROXY (loopback) is right: nothing to set.
-evo-demo.evosoft.solutions {
+#
+# It also adds the EvoSoft copyright notice to every page (README "Copyright notice") without touching Evo's
+# files: brand-evo.sh writes copies of Evo's four HTML entry pages with the notice tags to EVO_BRAND_DIR, and
+# for those pages Caddy sends the copy instead of Evo's body, with every header Evo sent (its CSP, HSTS,
+# cookies, Cache-Control...) except the ones that describe the body. Everything else is proxied unchanged.
+# If a copy is missing, Evo's own page goes out as it is (no notice, nothing broken).
+#
+# Env (all optional): EVO_DEMO_HOST (site address), EVO_UPSTREAM (127.0.0.1:3101), EVO_BRAND_DIR (/opt/evo-demo/brand).
+
+(evo_with_notice) {
+	reverse_proxy {$EVO_UPSTREAM:127.0.0.1:3101} {
+		# Always ask Evo for the full page: a browser that cached Evo's own page before the notice was added
+		# would otherwise get Evo's 304 and keep it. (Caddy's file_server below still answers 304 for its copy.)
+		header_up -If-None-Match
+		header_up -If-Modified-Since
+		# Only a full 200 HTML answer is swapped (redirects, errors and ranges pass through as Evo sent them).
+		@evo_html {
+			status 200
+			header Content-Type text/html*
+		}
+		handle_response @evo_html {
+			@evo_copy file {
+				root {$EVO_BRAND_DIR:/opt/evo-demo/brand}
+				try_files {vars.evo_page}
+			}
+			handle @evo_copy {
+				# Evo's headers, minus those about Evo's body: length, encoding, validators, and Repr-Digest
+				# (the release file's SHA-256, which the copy no longer has). file_server sets its own
+				# Content-Type, Content-Length, ETag and Last-Modified for the copy and answers 304s itself.
+				copy_response_headers {
+					exclude Content-Length Content-Encoding Content-Range Content-Type Transfer-Encoding Accept-Ranges ETag Last-Modified Repr-Digest Content-Digest Digest Date Connection Keep-Alive
+				}
+				root * {$EVO_BRAND_DIR:/opt/evo-demo/brand}
+				rewrite * {vars.evo_page}
+				file_server
+			}
+			handle {
+				copy_response
+			}
+		}
+	}
+}
+
+{$EVO_DEMO_HOST:evo-demo.evosoft.solutions} {
 	encode zstd gzip
-	reverse_proxy 127.0.0.1:3101
+
+	# The notice's stylesheet and script (copied there by brand-evo.sh).
+	handle_path /__evosoft/* {
+		root * {$EVO_BRAND_DIR:/opt/evo-demo/brand}/__evosoft
+		header {
+			X-Content-Type-Options nosniff
+			Cross-Origin-Resource-Policy same-origin
+			Cache-Control "public, max-age=3600"
+		}
+		file_server
+	}
+
+	# The store apps' pages: /pos/register/, /pos/stock/, /pos/display/ (and .../index.html).
+	@evo_store_page {
+		method GET HEAD
+		path_regexp evostore ^/pos/(register|stock|display)/(index\.html)?$
+	}
+	handle @evo_store_page {
+		vars evo_page /pos/{re.evostore.1}/index.html
+		import evo_with_notice
+	}
+
+	# The web app: every route outside /api, /pos, /shared and the hashed build files is its index.html.
+	@evo_web_page {
+		method GET HEAD
+		not path /api /api/* /pos /pos/* /shared /shared/* /assets/* /__evosoft/*
+	}
+	handle @evo_web_page {
+		vars evo_page /client/dist/index.html
+		import evo_with_notice
+	}
+
+	handle {
+		reverse_proxy {$EVO_UPSTREAM:127.0.0.1:3101}
+	}
+
 	# Shown for the ~5 seconds Evo is down during a reset (and if it ever crashes).
 	handle_errors 502 503 {
 		respond "The Evo demo is being reset to fresh demo data. Try again in a few seconds." 503

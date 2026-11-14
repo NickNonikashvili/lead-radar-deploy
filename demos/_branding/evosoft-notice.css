@@ -1,0 +1,233 @@
+/*! © 2026 EvoSoft Solutions. All rights reserved. https://evosoft.solutions
+ *
+ * EvoSoft demo notice: styles for the card evosoft-notice.js adds to each public product demo.
+ * Everything is scoped to #evosoft-notice and reset first, so the app's own styles can't leak in and
+ * these can't leak out. Placement is set per product (data-product) and screen (data-surface) at the
+ * end of this file, chosen so the card never covers that app's own controls.
+ */
+
+#evosoft-notice,
+#evosoft-notice * {
+  all: unset;
+  box-sizing: border-box;
+}
+
+#evosoft-notice {
+  --esn-bg: rgba(255, 255, 255, 0.97);
+  --esn-ink: #1d1f23;
+  --esn-muted: #565c64;
+  --esn-line: rgba(17, 24, 39, 0.14);
+  --esn-shadow: 0 6px 20px rgba(17, 24, 39, 0.10), 0 1px 3px rgba(17, 24, 39, 0.08);
+  --esn-hover: rgba(17, 24, 39, 0.07);
+  --esn-brand: #ff6700;
+  --esn-on-brand: #1a0e05;
+
+  position: fixed;
+  z-index: var(--esn-z, 2147483000);
+  top: var(--esn-top, auto);
+  right: var(--esn-right, auto);
+  bottom: var(--esn-bottom, 12px);
+  left: var(--esn-left, 12px);
+  transform: var(--esn-transform, none);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: max-content;
+  max-width: min(var(--esn-max, 380px), calc(100vw - 16px));
+  padding: 6px 4px 6px 7px;
+  color: var(--esn-ink);
+  background: var(--esn-bg);
+  border: 1px solid var(--esn-line);
+  border-radius: 10px;
+  box-shadow: var(--esn-shadow);
+  font: 500 11.5px/1.35 system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  letter-spacing: 0;
+  text-align: left;
+  text-transform: none;
+  white-space: normal;
+  -webkit-font-smoothing: antialiased;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  cursor: default;
+  user-select: text;
+  -webkit-user-select: text;
+  pointer-events: auto;
+  visibility: visible;
+  opacity: 1;
+}
+
+#evosoft-notice .evosoft-notice__mark {
+  display: block;
+  flex: none;
+  align-self: stretch;
+  width: 4px;
+  min-height: 26px;
+  border-radius: 4px;
+  background: var(--esn-brand);
+}
+
+#evosoft-notice .evosoft-notice__text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+#evosoft-notice .evosoft-notice__line {
+  display: block;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+#evosoft-notice .evosoft-notice__line--sub {
+  font-weight: 500;
+  color: var(--esn-muted);
+}
+
+#evosoft-notice .evosoft-notice__link {
+  display: inline;
+  color: var(--esn-ink);
+  font-weight: 600;
+  text-decoration: underline;
+  text-decoration-color: var(--esn-brand);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 2px;
+  cursor: pointer;
+  border-radius: 3px;
+}
+
+#evosoft-notice .evosoft-notice__link:hover {
+  color: var(--esn-link-hover, #a84300);
+}
+
+#evosoft-notice .evosoft-notice__close {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 24px;
+  height: 24px;
+  margin: 0;
+  padding: 0;
+  border-radius: 6px;
+  color: var(--esn-muted);
+  background: transparent;
+  font: 400 17px/1 system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  cursor: pointer;
+}
+
+#evosoft-notice .evosoft-notice__close:hover {
+  color: var(--esn-ink);
+  background: var(--esn-hover);
+}
+
+#evosoft-notice .evosoft-notice__link:focus-visible,
+#evosoft-notice .evosoft-notice__close:focus-visible {
+  outline: 2px solid var(--esn-brand);
+  outline-offset: 2px;
+}
+
+/* Dark: follow the system, and the app's own theme switch where it has one (html.dark / data-theme). */
+@media (prefers-color-scheme: dark) {
+  html:not(.light):not([data-theme="light"]) #evosoft-notice {
+    --esn-bg: rgba(24, 25, 28, 0.96);
+    --esn-ink: #f2f3f5;
+    --esn-muted: #b3b8c0;
+    --esn-line: rgba(255, 255, 255, 0.16);
+    --esn-shadow: 0 6px 20px rgba(0, 0, 0, 0.45), 0 1px 3px rgba(0, 0, 0, 0.4);
+    --esn-hover: rgba(255, 255, 255, 0.10);
+    --esn-link-hover: #ff9a52;
+  }
+}
+html.dark #evosoft-notice,
+html[data-theme="dark"] #evosoft-notice {
+  --esn-bg: rgba(24, 25, 28, 0.96);
+  --esn-ink: #f2f3f5;
+  --esn-muted: #b3b8c0;
+  --esn-line: rgba(255, 255, 255, 0.16);
+  --esn-shadow: 0 6px 20px rgba(0, 0, 0, 0.45), 0 1px 3px rgba(0, 0, 0, 0.4);
+  --esn-hover: rgba(255, 255, 255, 0.10);
+  --esn-link-hover: #ff9a52;
+}
+
+@media (pointer: coarse) {
+  #evosoft-notice .evosoft-notice__close { width: 30px; height: 30px; }
+}
+
+@media (max-width: 480px) {
+  #evosoft-notice { font-size: 11px; gap: 6px; }
+}
+
+/* Out of the way while the app shows a modal dialog, and never on paper. */
+html:has(dialog[open], [aria-modal="true"]) #evosoft-notice { display: none; }
+@media print { #evosoft-notice { display: none; } }
+
+/* ---------------------------------------------------------------------------------------------------
+   Placement per product and screen
+   --------------------------------------------------------------------------------------------------- */
+
+/* Evo (web app, register, stock handheld, customer display). Evo stacks its sidebar, header and tab bar at
+   z-index 20-30, its menus and dialogs at 50+, toasts at 60 / 2000: the card sits between them. */
+#evosoft-notice[data-product="evo"] { --esn-z: 40; }
+
+/* Web app, phones and tablets: bottom left; on app pages just above the bottom tab bar, in the space Evo
+   leaves free under the page (its own padding), so at the end of a page nothing is under the card. */
+#evosoft-notice[data-product="evo"][data-surface="web"] {
+  --esn-left: 12px;
+  --esn-bottom: 8px;
+}
+@media (max-width: 1023.98px) {
+  html:has(#root .fixed.inset-x-0.bottom-0) #evosoft-notice[data-product="evo"][data-surface="web"] {
+    --esn-bottom: calc(64px + env(safe-area-inset-bottom, 0px));
+  }
+}
+/* Desktop (1024px+): app pages have a sidebar and a sticky top bar; the card sits in the empty left part of
+   the top bar. Sign-in and other pages without the sidebar: bottom right, under the form column. */
+@media (min-width: 1024px) {
+  #evosoft-notice[data-product="evo"][data-surface="web"] {
+    --esn-left: auto;
+    --esn-right: 16px;
+    --esn-bottom: 12px;
+  }
+  html:has(#root aside.fixed) #evosoft-notice[data-product="evo"][data-surface="web"] {
+    --esn-top: 10px;
+    --esn-bottom: auto;
+    --esn-right: auto;
+    --esn-left: calc(16rem + 2rem);
+    --esn-max: 320px;
+  }
+}
+
+/* Register: a slim card in the empty middle of the top bar, right of the store / register / cashier names and
+   left of "Till open · time" (sized in the register's own rem, so it follows its screen-size scaling). */
+#evosoft-notice[data-product="evo"][data-surface="register"] {
+  --esn-z: 45;
+  --esn-top: calc(1.5rem - 19px);
+  --esn-bottom: auto;
+  --esn-left: auto;
+  --esn-right: calc(var(--gut, 1.25rem) + 12rem);
+  padding: 4px 3px 4px 6px;
+  font-size: 11px;
+  line-height: 1.25;
+}
+html:has(.pos-head [data-offline-pill]) #evosoft-notice[data-product="evo"][data-surface="register"] {
+  --esn-right: calc(var(--gut, 1.25rem) + 17.5rem);
+}
+/* Training mode turns the top bar into a full-width band with its own controls. */
+html:has(.pos-head.training) #evosoft-notice[data-product="evo"][data-surface="register"] { display: none; }
+
+/* Customer display: centred in its header (store name left, customer name right); below it on small screens. */
+#evosoft-notice[data-product="evo"][data-surface="display"] {
+  --esn-z: 45;
+  --esn-top: 14px;
+  --esn-bottom: auto;
+  --esn-left: 50%;
+  --esn-transform: translateX(-50%);
+}
+@media (max-width: 999px) {
+  #evosoft-notice[data-product="evo"][data-surface="display"] { --esn-top: 84px; }
+}
+
+/* Stock handheld: above its bottom tab bar. */
+#evosoft-notice[data-product="evo"][data-surface="stock"] {
+  --esn-z: 45;
+  --esn-bottom: calc(52px + env(safe-area-inset-bottom, 0px) + 10px);
+}
