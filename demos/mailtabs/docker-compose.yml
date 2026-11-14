@@ -16,13 +16,17 @@ services:
   caddy:
     image: caddy:2.9.1
     restart: unless-stopped
+    # On a server of its own Caddy takes ports 80/443 itself. On a server shared with the Evo demo
+    # (demos/one-server), the host's Caddy owns 80/443 and forwards to 127.0.0.1:8081 instead (.env).
     ports:
-      - "80:80"
-      - "443:443"
-      - "443:443/udp"
+      - "${CADDY_HTTP_PORT:-80}:80"
+      - "${CADDY_HTTPS_PORT:-443}:443"
+      - "${CADDY_HTTPS_PORT:-443}:443/udp"
     environment:
       DEMO_HOSTNAME: ${DEMO_HOSTNAME:?set DEMO_HOSTNAME in .env}
       ACME_EMAIL: ${ACME_EMAIL:?set ACME_EMAIL in .env}
+      SITE_SCHEME: ${SITE_SCHEME:-}
+      TRUSTED_PROXIES: ${TRUSTED_PROXIES:-127.0.0.1/32}
       MAILTABS_UPSTREAM: mailtabs:3301
       MAINTENANCE_DIR: /srv/maintenance
     volumes:
@@ -54,7 +58,8 @@ services:
       # Needed for the plaintext demo mail server on the internal network. It also lifts
       # Mailtabs' own SSRF guard, which is why the network isolation below is essential.
       ALLOW_PRIVATE_IMAP_HOSTS: "true"
-      TRUST_PROXY: "1"
+      # Proxies in front of Mailtabs: 1 (this Caddy), or 2 when the host's Caddy is in front too.
+      TRUST_PROXY: "${MAILTABS_TRUST_PROXY:-1}"
       SYNC_INTERVAL_MINUTES: "1"
       INITIAL_SYNC_LIMIT: "200"
       MAX_BODY_BYTES: "5000000"

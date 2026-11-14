@@ -9,8 +9,10 @@ One folder per product. Each sets up a public, self-resetting demo with the exac
 | Mailtabs | `mail-demo.evosoft.solutions` | Linux VPS with Docker Compose | every hour | [`mailtabs/`](mailtabs/README.md) |
 | StudyCat | `studycat-demo.evosoft.solutions` | Hostinger (PHP 8.1+), a separate subdomain from studycat.org | nightly, repair every 10 min | [`studycat/`](studycat/README.md) |
 
-Both the Evo and Mailtabs kits put Caddy on ports 80/443. To run both on one server, give them a single shared
-reverse proxy instead (route `evo-demo.` to Evo on 127.0.0.1:3101 and `mail-demo.` to the Mailtabs stack).
+**One server for both:** `one-server/` installs Evo and Mailtabs on a single Ubuntu 24.04 server with one command
+(`one-server/setup-server.sh`). The server's own Caddy takes HTTPS for both, and the Mailtabs stack's Caddy listens
+only on `127.0.0.1:8081` behind it. `one-server/README.md` is the full step-by-step guide, including the website
+and the StudyCat demo on Hostinger.
 
 ## Accounts at a glance
 

@@ -1,0 +1,13 @@
+# © 2026 EvoSoft Solutions. All rights reserved.
+# One-server setup: the host's Caddy takes HTTPS for mail-demo and passes it to the Mailtabs
+# demo's own Caddy (Docker), which listens only on 127.0.0.1:8081 and keeps all the demo rules
+# (maintenance page during resets, locked password/OAuth/account deletion, upload limit).
+
+{$MAIL_DEMO_HOST:mail-demo.evosoft.solutions} {
+	reverse_proxy 127.0.0.1:8081
+
+	handle_errors 502 503 504 {
+		header Retry-After 60
+		respond "The Mailtabs demo is starting or being reset. Please try again in a minute." 503
+	}
+}

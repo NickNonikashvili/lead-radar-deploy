@@ -11,9 +11,15 @@
 {
 	email {$ACME_EMAIL:admin@example.invalid}
 	admin {$CADDY_ADMIN:localhost:2019}
+	# Keep visitors' real address and https scheme when another proxy sits in front
+	# (one-server setup: TRUSTED_PROXIES=private_ranges). Default: trust nothing outside.
+	servers {
+		trusted_proxies static {$TRUSTED_PROXIES:127.0.0.1/32}
+	}
 }
 
-{$DEMO_HOSTNAME:mail-demo.evosoft.solutions} {
+# SITE_SCHEME is empty on a server of its own (automatic HTTPS), or "http://" behind the host's Caddy.
+{$SITE_SCHEME}{$DEMO_HOSTNAME:mail-demo.evosoft.solutions} {
 	encode zstd gzip
 
 	# Attachments: the demo SMTP sink accepts at most 10 MB per message anyway.
