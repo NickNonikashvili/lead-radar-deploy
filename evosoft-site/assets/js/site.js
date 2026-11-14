@@ -103,6 +103,29 @@
     if (label) label.textContent = up ? 'Live' : 'Offline right now';
   }));
 
+  /* tabs (the live-demo card on the home page) */
+  $$('[data-tabs]').forEach((box) => {
+    const tabs = $$('[role="tab"]', box);
+    const select = (tab, focus) => {
+      tabs.forEach((t) => {
+        const on = t === tab;
+        t.setAttribute('aria-selected', String(on));
+        t.tabIndex = on ? 0 : -1;
+        const panel = document.getElementById(t.getAttribute('aria-controls'));
+        if (panel) panel.hidden = !on;
+      });
+      if (focus) tab.focus();
+    };
+    tabs.forEach((t, i) => {
+      t.addEventListener('click', () => select(t));
+      t.addEventListener('keydown', (e) => {
+        if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+        e.preventDefault();
+        select(tabs[(i + (e.key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length], true);
+      });
+    });
+  });
+
   /* work index: preview image follows the pointer */
   const preview = $('.ix-preview');
   if (preview && window.matchMedia('(hover: hover)').matches) {
