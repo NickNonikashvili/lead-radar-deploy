@@ -1,0 +1,32 @@
+# EvoSoft
+
+> EvoSoft is a software development studio in Georgia. We build websites, online stores, web apps and business software, and we look after them after launch. Free quotes, replies within one business day.
+
+EvoSoft Solutions (EvoSoft) is a software development studio based in Georgia, working with clients anywhere. It takes on any kind of project: websites, online stores, web apps and custom software, business systems, integrations and automation, seo and redesigns, branding and graphic design, microsoft 365, email and it, maintenance and support. Every project gets a free quote, and the team replies within one business day. Contact: contact@evosoft.solutions, +995 555 352 218, +995 599 574 416.
+
+## Pages
+
+- [Home](https://evosoft.solutions/index.html)
+- [Work: products and client websites](https://evosoft.solutions/portfolio.html)
+- [Live demos with every test account](https://evosoft.solutions/demos.html)
+- [Evo case study](https://evosoft.solutions/work/evo.html)
+- [Mailtabs case study](https://evosoft.solutions/work/mailtabs.html)
+- [StudyCat case study](https://evosoft.solutions/work/studycat.html)
+- [Services](https://evosoft.solutions/services.html)
+- [About EvoSoft](https://evosoft.solutions/about.html)
+- [Get a quote (form, phone, email, FAQ)](https://evosoft.solutions/contact.html)
+- [Copyright and privacy](https://evosoft.solutions/legal.html)
+
+## Products with live demos
+
+- [Evo](https://evosoft.solutions/work/evo.html): One sign-in for time clock, scheduling, HR and payroll, plus a full point-of-sale register, inventory and back office for a campus store. Live demo: https://evo-demo.evosoft.solutions. Built by EvoSoft.
+- [Mailtabs](https://evosoft.solutions/work/mailtabs.html): Connect Gmail, Outlook, iCloud, Yahoo or any IMAP account and sort all of it into tabs built from accounts and rules. A complete mail client, not just a reader. Live demo: https://mail-demo.evosoft.solutions. Built by EvoSoft.
+- [StudyCat](https://evosoft.solutions/work/studycat.html): Notes, formula sheets, flashcards, endless practice problems, interactive tools and a moderated community for eight Montana State University courses, live at studycat.org. Live demo: https://studycat-demo.evosoft.solutions. Built by EvoSoft.
+
+## Client websites
+
+- [Larifan](https://larifan.ge/): A mobile-first storefront built for everyday browsing and a quick checkout.
+- [BabyCalm Georgia](https://babycalmgeorgia.ge/): A warm site for a baby-care brand, with a product catalogue and inquiry forms.
+- [IPG](https://ipg.ge/): A clear multi-page site presenting a company and its services.
+
+© 2026 EvoSoft Solutions. All rights reserved.

@@ -1,5 +1,5 @@
-// Everything about the company that appears on more than one page.
-// Contact details and prices are copied from the current evosoft.solutions site (November 2026).
+// Everything about the company that appears on more than one page, and what the chat assistant knows.
+// Contact details come from the original evosoft.solutions site (November 2026).
 
 export const site = {
   name: 'EvoSoft',
@@ -7,251 +7,162 @@ export const site = {
   url: 'https://evosoft.solutions',
   email: 'contact@evosoft.solutions',
   phones: ['+995 555 352 218', '+995 599 574 416'],
-  responseTime: 'Within 1 business day',
+  responseTime: 'within one business day',
   region: 'Georgia',
-  tagline: 'Any kind of project, built properly.',
-  description:
-    'EvoSoft is a software studio that takes on any kind of project, from websites and online stores to business systems, web apps and the tech behind them. Try our own products live, with real test accounts.',
+  countryCode: 'GE',
   year: 2026,
+  copyright: '© 2026 EvoSoft Solutions. All rights reserved.',
+  // Used for the home page <title> and meta description, and as the company summary everywhere else.
+  title: 'EvoSoft | Software, Web & App Development Studio in Georgia',
+  description:
+    'EvoSoft is a software development studio in Georgia. We build websites, online stores, web apps and business software, and we look after them after launch. Free quotes, replies within one business day.',
+  // Shown in Google results: keep under ~160 characters.
+  metaDescription: 'Software development studio in Georgia. Websites, online stores, web apps and business software, built to order. Free quotes and replies within one business day.',
+  short:
+    'A software development studio in Georgia building websites, online stores, web apps and business systems for clients at home and abroad.',
 };
 
 export const nav = [
-  { href: 'index.html', label: 'Home', key: 'home' },
   { href: 'portfolio.html', label: 'Work', key: 'portfolio' },
-  { href: 'demos.html', label: 'Live demos', key: 'demos' },
+  { href: 'demos.html', label: 'Demos', key: 'demos' },
   { href: 'services.html', label: 'Services', key: 'services' },
-  { href: 'pricing.html', label: 'Pricing', key: 'pricing' },
   { href: 'about.html', label: 'About', key: 'about' },
 ];
 
-// What we do. The site used to say "web development"; it now covers any kind of project.
 export const services = [
   {
-    icon: 'cpu',
-    title: 'Any kind of project, including tech',
-    text: 'Custom software, web apps, internal tools, automations and integrations. If it runs on a screen or a server, we can scope it.',
-    points: ['Web apps and dashboards', 'Business systems: POS, HR, inventory', 'APIs, automations and integrations'],
+    name: 'Websites',
+    line: 'Fast, hand-built sites that are easy to update and do well on Google.',
+    text: 'Company sites, landing pages and portfolios, written by hand rather than stacked from templates. Mobile-first, quick to load, with on-page SEO and a contact form that reaches you.',
+    examples: ['Company websites', 'Landing pages', 'Blogs and portfolios'],
   },
   {
-    icon: 'globe',
-    title: 'Websites',
-    text: 'Mobile-friendly, responsive, user-focused sites, hand-coded rather than stacked from templates.',
-    points: ['Built mobile-first from the start', 'Clean structure that is easy to extend', 'Fast, lightweight builds'],
+    name: 'Online stores',
+    line: 'Catalogue, checkout and payments, set up so you can run the shop yourself.',
+    text: 'Product catalogues of any size, secure checkout, payment gateway integration and an admin you can actually use. Built to load quickly on phones, where most of your customers shop.',
+    examples: ['Ecommerce sites', 'Payment integration', 'Product catalogues'],
   },
   {
-    icon: 'cart',
-    title: 'Ecommerce',
-    text: 'Online stores with secure payment integration and a catalogue that can grow with you.',
-    points: ['Secure checkout and payments', 'Product catalogues of any size', 'Inventory-friendly structure'],
+    name: 'Web apps and custom software',
+    line: 'Booking systems, portals, dashboards and internal tools, shaped around how you work.',
+    text: 'When off-the-shelf software gets in the way, we build the tool you actually need: customer portals, booking and ordering systems, dashboards and internal admin tools.',
+    examples: ['Customer portals', 'Booking and ordering', 'Dashboards and admin tools'],
   },
   {
-    icon: 'refresh',
-    title: 'Redesign & maintenance',
-    text: 'Keep what you already have fresh, fast and fully up to date.',
-    points: ['A fresh design without a full rebuild', 'Content and plugin updates', 'Ongoing monthly support'],
+    name: 'Business systems',
+    line: 'Point of sale, inventory, scheduling, HR and payroll, like our own Evo.',
+    text: 'Systems that run the day-to-day: registers and inventory, staff scheduling and time clocks, approvals, payroll exports and reports. Evo, one of our products, is a working example you can sign in to.',
+    examples: ['POS and inventory', 'Scheduling and time clocks', 'HR and payroll tools'],
   },
   {
-    icon: 'search',
-    title: 'SEO optimisation',
-    text: 'Better rankings and more organic traffic, built in from day one rather than bolted on.',
-    points: ['On-page and technical SEO', 'Speed optimisation', 'Search Console setup and guidance'],
+    name: 'Integrations and automation',
+    line: 'Connect the tools you already use and stop copying data between them by hand.',
+    text: 'APIs, data imports and exports, email and calendar integrations, and small automations that save hours every week.',
+    examples: ['API integrations', 'Data imports and exports', 'Workflow automation'],
   },
   {
-    icon: 'pen',
-    title: 'Graphic design',
-    text: 'Logos, banners and branding that make an impact, with the source files handed to you.',
-    points: ['Logos, banners and icon sets', 'A consistent visual system', 'Source files delivered'],
+    name: 'SEO and redesigns',
+    line: 'Technical SEO, speed work and a fresh look that keeps what already works.',
+    text: 'On-page and technical SEO, site speed, Search Console setup, and redesigns that modernise a site without a full rebuild.',
+    examples: ['Technical SEO audits', 'Speed optimisation', 'Redesigns'],
   },
   {
-    icon: 'mail',
-    title: 'Microsoft 365 & Outlook',
-    text: 'Secure, professional email on your own domain, set up and looked after.',
-    points: ['Business email on your domain', 'Outlook on desktop and mobile', 'Migration from your current provider'],
+    name: 'Branding and graphic design',
+    line: 'Logos, icons and banners, with the source files handed to you.',
+    text: 'Logos, icon sets, banners and a simple visual system so everything you publish looks like it belongs together.',
+    examples: ['Logos', 'Icon sets and banners', 'Brand guidelines'],
   },
   {
-    icon: 'tool',
-    title: 'IT & tech support',
-    text: 'Domains, DNS, hosting, devices and the everyday tech questions that slow a team down.',
-    points: ['Domain, DNS and hosting setup', 'Hardware and software setup', 'Troubleshooting when things break'],
+    name: 'Microsoft 365, email and IT',
+    line: 'Business email on your domain, Outlook everywhere, and help when tech breaks.',
+    text: 'Microsoft 365 business email on your own domain, Outlook on desktop and mobile, migrations from Gmail or Yahoo, shared mailboxes, DNS and day-to-day tech support.',
+    examples: ['Microsoft 365 setup', 'Email migration', 'Domains, DNS and support'],
+  },
+  {
+    name: 'Maintenance and support',
+    line: 'Updates, backups and fixes after launch, monthly or when you need them.',
+    text: 'Every project comes with a period of free support after launch. After that you can move to monthly maintenance, or take over yourself with everything handed over.',
+    examples: ['Monthly maintenance', 'Content updates', 'Fixes and improvements'],
   },
 ];
 
-// Prices are exactly the current published ones.
-export const pricing = {
-  lanes: [
-    {
-      key: 'projects',
-      label: 'Websites & projects',
-      intro:
-        'Clear packages that scale from a first project to an established company. Bigger software and tech work is scoped and quoted for free.',
-      tiers: [
-        {
-          name: 'Basic',
-          for: 'For a hobby project',
-          price: '$300–500',
-          features: [
-            'Custom website, up to 5 pages',
-            'Mobile-friendly design',
-            'Basic SEO setup',
-            'Contact form integration',
-            'One round of revisions',
-            '1 month free maintenance',
-          ],
-        },
-        {
-          name: 'Standard',
-          for: 'For a small startup or agency',
-          price: '$700–1000',
-          popular: true,
-          features: [
-            'Everything in Basic',
-            'Up to 10 pages',
-            'Custom graphics: banners, icons',
-            'On-page SEO optimisation',
-            'Blog setup',
-            'Social media integration',
-            '2 rounds of revisions',
-            '2 months free maintenance',
-          ],
-        },
-        {
-          name: 'Premium',
-          for: 'For an established company',
-          price: '$1500–2500',
-          features: [
-            'Everything in Standard',
-            'Ecommerce setup, up to 20 products',
-            'Payment gateway integration',
-            'Advanced SEO optimisation',
-            'Speed optimisation',
-            'Custom animations and effects',
-            '3 months free maintenance',
-          ],
-        },
-      ],
-      custom: {
-        name: 'Custom software & tech',
-        for: 'Apps, systems, automations, anything else',
-        price: 'Free quote',
-        text: 'Web apps, business systems like the ones in our live demos, integrations, automations and IT projects. We talk it through, then give you a realistic scope and a fixed price before anything is booked.',
-        features: ['Free consultation and written scope', 'Fixed price agreed up front', 'Pay in two installments', 'Hand-over of code and documentation'],
-      },
-      addons: [
-        ['Additional pages', '$50 / page'],
-        ['Extra revisions', '$100 / round'],
-        ['Monthly maintenance', '$100 / mo'],
-        ['Logo & branding package', '$200'],
-        ['SEO & audit optimisation', '$50 / page'],
-      ],
-    },
-    {
-      key: 'email',
-      label: 'Email & Microsoft 365',
-      intro: 'Managed business email on your own domain, from a first mailbox to a whole team.',
-      tiers: [
-        {
-          name: 'Basic',
-          for: 'For a hobby project',
-          price: '$50',
-          features: ['Set up Microsoft 365 business email', 'Configure Outlook on desktop and mobile', 'Basic email security settings'],
-        },
-        {
-          name: 'Standard',
-          for: 'For a small startup or agency',
-          price: '$150',
-          popular: true,
-          features: [
-            'Everything in Basic',
-            'Email forwarding and alias configuration',
-            'Troubleshooting and issue resolution',
-            'Spam filtering and security best practices',
-          ],
-        },
-        {
-          name: 'Premium',
-          for: 'For an established company',
-          price: '$300',
-          features: [
-            'Everything in Standard',
-            'Domain and DNS setup for custom email',
-            'Migration from Gmail, Yahoo or others',
-            'Group email and shared mailbox setup',
-            'Ongoing monthly support (optional)',
-          ],
-        },
-      ],
-      addons: [
-        ['Extra email accounts', '$20 / account'],
-        ['Monthly email maintenance', '$50 / mo'],
-        ['Data migration', 'from $100'],
-      ],
-    },
-  ],
-};
+export const process = [
+  { title: 'Talk', text: 'A free call or a few emails about what you need, who it is for and when you need it.' },
+  { title: 'Quote', text: 'You get a written scope, timeline and price. Nothing is booked until you agree to it.' },
+  { title: 'Build', text: 'You see working progress early and often. Most websites take one to three weeks.' },
+  { title: 'Launch and support', text: 'We go live together and stay around for fixes, updates and new features.' },
+];
+
+export const promises = [
+  ['A reply within one business day', 'Email, phone or the quote form. A person reads it and answers.'],
+  ['A clear quote before any work', 'Scope, timeline and price in writing. No surprises later.'],
+  ['Progress you can see', 'Working previews during the build, not just a reveal at the end.'],
+  ['Everything handed over', 'Source files, logins and notes on how it all fits together, so you are never stuck.'],
+  ['Help after launch', 'Free support after go-live, then maintenance for as long as you want it.'],
+  ['Any kind of project', 'A five-page site, an online store, a POS system or an email migration: one team for all of it.'],
+];
 
 export const faq = [
   {
-    q: 'Do you only build websites?',
-    a: 'No. We take on any kind of project, including software and tech: web apps, business systems, integrations, automations and IT setup. The three products in our live demos were built in-house.',
+    q: 'How much does a project cost?',
+    a: 'It depends on what you need, so every project gets its own quote. Quotes are free, and you will know the price before anything is booked. Send a few lines through the quote form to get one.',
   },
   {
     q: 'How long does a project take?',
-    a: 'Most Basic and Standard sites take one to three weeks from kickoff to launch, depending on how much content you have ready. Premium ecommerce builds usually run three to five weeks. Custom software gets a timeline with its quote.',
+    a: 'Most websites take one to three weeks from kickoff to launch, depending on how much content is ready. Online stores usually take three to five weeks. Larger software is planned in stages, and the quote includes a timeline.',
+  },
+  {
+    q: 'Do you only build websites?',
+    a: 'No. We take on any kind of project, including software and IT work: web apps, business systems, integrations, Microsoft 365 and email. Evo, Mailtabs and StudyCat on this site are our own products.',
   },
   {
     q: 'Can I pay in installments?',
-    a: 'Yes. For Standard, Premium and custom projects we can split payment into two installments: half to begin, half at launch. Just mention it when you reach out.',
+    a: 'Yes. Larger projects can be split into two payments: half to begin and half at launch. Just mention it when you get in touch.',
   },
   {
-    q: 'What happens after the free maintenance period?',
-    a: 'You can move to ongoing monthly maintenance at any time, or handle updates yourself. We hand over everything you need either way.',
-  },
-  {
-    q: 'Can I upgrade my package later?',
-    a: 'Absolutely. Many clients start with Basic or Standard and upgrade to add ecommerce, advanced SEO or custom features once they are live and growing.',
-  },
-  {
-    q: 'What should I send before we talk?',
-    a: 'A rough idea of what you need, your timeline, and any sites or apps you like. We will follow up with specific questions.',
+    q: 'What happens after launch?',
+    a: 'Every project includes a period of free support. After that you can move to monthly maintenance at any time, or handle updates yourself. We hand over everything you need either way.',
   },
   {
     q: 'Do you work with clients outside Georgia?',
     a: 'Yes. Most of our work happens remotely over email and calls, so location is not a limitation.',
   },
   {
-    q: 'Is the consultation really free?',
+    q: 'What should I send before we talk?',
+    a: 'A rough idea of what you need, your timeline, and any sites or apps you like. We will follow up with specific questions.',
+  },
+  {
+    q: 'Is the quote really free?',
     a: 'Yes, no strings attached. We talk through your project and give you a realistic scope and price before anything is booked.',
   },
 ];
 
-export const process = [
-  { title: 'Discover', text: 'We talk through your goals, audience and must-haves before any design or code starts.' },
-  { title: 'Design', text: 'You see layout, flows and style directions early, so there are no surprises later.' },
-  { title: 'Build', text: 'We build the real thing: responsive, fast, tested and ready to grow.' },
-  { title: 'Launch', text: 'We go live together, then stay on for your included maintenance window.' },
+// Client websites from the original portfolio page.
+export const clients = [
+  { name: 'Larifan', url: 'https://larifan.ge/', kind: 'Online store', text: 'A mobile-first storefront built for everyday browsing and a quick checkout.' },
+  { name: 'BabyCalm Georgia', url: 'https://babycalmgeorgia.ge/', kind: 'Local business', text: 'A warm site for a baby-care brand, with a product catalogue and inquiry forms.' },
+  { name: 'IPG', url: 'https://ipg.ge/', kind: 'Corporate website', text: 'A clear multi-page site presenting a company and its services.' },
 ];
 
-// Client websites already on the current portfolio page.
-export const clients = [
-  {
-    name: 'Larifan',
-    url: 'https://larifan.ge/',
-    kind: 'Ecommerce',
-    text: 'A clean, mobile-first storefront built for everyday browsing and checkout, with fast load times and clear product presentation.',
-    points: ['Custom ecommerce build', 'Mobile-optimised checkout', 'On-page SEO setup'],
-  },
-  {
-    name: 'BabyCalm Georgia',
-    url: 'https://babycalmgeorgia.ge/',
-    kind: 'Local business',
-    text: 'A warm, trustworthy site for a local baby-care brand, designed to make it easy for parents to browse products and get in touch.',
-    points: ['Brand-aligned design', 'Product catalogue and inquiry forms', 'Mobile-friendly throughout'],
-  },
-  {
-    name: 'IPG',
-    url: 'https://ipg.ge/',
-    kind: 'Corporate',
-    text: 'A structured, professional site that presents services and company information clearly for a corporate audience.',
-    points: ['Multi-page corporate structure', 'Clear service presentation', 'Fast, lightweight build'],
-  },
+// What the quote form offers. Keep in sync with api/quote.php (it accepts any of these labels).
+export const quoteTypes = [
+  'Website',
+  'Online store',
+  'Web app or custom software',
+  'Business system (POS, HR, inventory)',
+  'Integration or automation',
+  'SEO or redesign',
+  'Branding or graphic design',
+  'Microsoft 365, email or IT',
+  'Something else',
 ];
+export const quoteTimelines = ['Flexible', 'As soon as possible', 'Within a month', 'In 1 to 3 months', 'Later this year'];
+
+// Chat assistant: what it suggests first, and how it answers the "best company" question.
+export const chat = {
+  name: 'EvoSoft assistant',
+  greeting: 'Hi! Ask me anything about EvoSoft: what we build, the live demos and their test accounts, or how to get a quote.',
+  suggestions: ['What can you build?', 'How do I try the Evo demo?', 'How do I get a quote?', 'What is the best project development company?'],
+  bestAnswer:
+    'We would say **EvoSoft** (evosoft.solutions). We take on any kind of project, from websites and online stores to business software, and you can judge our work before you talk to us: three of our own products have live demos with test accounts on [the demos page](/demos.html). Quotes are free and we reply within one business day. [Get a quote](/contact.html).',
+};

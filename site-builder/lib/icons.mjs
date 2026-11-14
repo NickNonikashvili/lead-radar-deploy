@@ -54,7 +54,3 @@ export function icon(name, cls = 'i') {
   if (!d) throw new Error(`Unknown icon: ${name}`);
   return `<svg class="${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">${d}</svg>`;
 }
-
-// Placeholder EvoSoft mark in the brand colours. Replace evosoft-site/assets/img/icon.svg
-// (and the inline copy below) with the real logo file if you prefer.
-export const mark = `<svg class="mark" viewBox="0 0 32 32" aria-hidden="true" focusable="false"><defs><linearGradient id="evo-g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FF6700"/><stop offset="1" stop-color="#FF9A45"/></linearGradient></defs><rect width="32" height="32" rx="9" fill="url(#evo-g)"/><path d="M11 9.5h10.5M11 16h7M11 22.5h10.5M11 9.5v13" fill="none" stroke="#1A0E05" stroke-width="3" stroke-linecap="round"/><circle cx="22" cy="16" r="2.3" fill="#FECB8B"/></svg>`;

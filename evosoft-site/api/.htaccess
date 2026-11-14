@@ -1,0 +1,15 @@
+# EvoSoft website API: only the two endpoints are reachable. Config, knowledge, vendor and data stay private.
+<IfModule mod_authz_core.c>
+  Require all denied
+  <FilesMatch "^(chat|quote)\.php$">
+    Require all granted
+  </FilesMatch>
+</IfModule>
+<IfModule !mod_authz_core.c>
+  Order allow,deny
+  Deny from all
+  <FilesMatch "^(chat|quote)\.php$">
+    Order deny,allow
+    Allow from all
+  </FilesMatch>
+</IfModule>

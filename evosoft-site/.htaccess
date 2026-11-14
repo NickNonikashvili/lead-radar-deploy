@@ -1,7 +1,12 @@
-# EvoSoft site — Apache / Hostinger settings. Safe to delete if your host isn't Apache.
+# EvoSoft website: Apache / Hostinger / LiteSpeed settings. © 2026 EvoSoft Solutions.
 ErrorDocument 404 /404.html
+
+# Prices were replaced by free quotes.
+Redirect 301 /pricing.html /contact.html
 AddType font/woff2 .woff2
 AddType image/webp .webp
+AddType application/manifest+json .webmanifest
+AddType text/plain .txt .md
 
 <IfModule mod_expires.c>
   ExpiresActive On
@@ -15,6 +20,7 @@ AddType image/webp .webp
   ExpiresByType image/jpeg "access plus 1 month"
   ExpiresByType image/png "access plus 1 month"
   ExpiresByType image/svg+xml "access plus 1 month"
+  ExpiresByType application/json "access plus 1 day"
 </IfModule>
 
 <IfModule mod_headers.c>

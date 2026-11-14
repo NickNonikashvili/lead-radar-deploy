@@ -6,6 +6,7 @@
 export const products = [
   {
     slug: 'evo',
+    metaDescription: 'Evo is a workforce and point-of-sale system by EvoSoft: time clock, scheduling, HR, payroll, register and inventory. Try the live demo with test accounts.',
     name: 'Evo',
     accent: '#4F46E5',
     icon: 'assets/img/products/evo.svg',
@@ -142,6 +143,7 @@ export const products = [
   },
   {
     slug: 'mailtabs',
+    metaDescription: 'Mailtabs by EvoSoft puts Gmail, Outlook, iCloud and any IMAP inbox in one place, sorted into tabs you design. Try the live demo with a test account.',
     name: 'Mailtabs',
     accent: '#5B5CF0',
     icon: 'assets/img/products/mailtabs.svg',
@@ -260,6 +262,7 @@ export const products = [
   },
   {
     slug: 'studycat',
+    metaDescription: 'StudyCat by EvoSoft is a study platform with notes, flashcards, endless practice and discussions for university courses. Try the demo with test accounts.',
     name: 'StudyCat',
     accent: '#1F5EFF',
     icon: 'assets/img/products/studycat.svg',
