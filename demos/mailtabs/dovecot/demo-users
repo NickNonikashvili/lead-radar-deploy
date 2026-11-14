@@ -1,0 +1,6 @@
+# Dovecot passwd-file: the ONLY mailboxes on the demo mail server. Shared, public demo password.
+# Format: user:{PLAIN}password::::::  (the SMTP sink and the seed scripts read this file too)
+alex@work.demo.test:{PLAIN}mailtabs-demo::::::
+alex.personal@demo.test:{PLAIN}mailtabs-demo::::::
+alex@sideproject.demo.test:{PLAIN}mailtabs-demo::::::
+alex@runclub.demo.test:{PLAIN}mailtabs-demo::::::
