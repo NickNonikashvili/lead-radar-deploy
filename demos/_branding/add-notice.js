@@ -7,9 +7,11 @@
 //   node add-notice.js --check <file.html>          exit 0 when the page has exactly one notice block
 //
 // Inserts, on its own line just before </head>:
-//   <!-- evosoft-notice --><link rel="stylesheet" href="/__evosoft/evosoft-notice.css"><script
-//   src="/__evosoft/evosoft-notice.js" data-product="Evo" defer></script><!-- /evosoft-notice -->
-// An existing block (from an earlier run) is removed first, so running it again changes nothing.
+//   <!-- evosoft-notice --><link rel="stylesheet" href="/__evosoft/evosoft-notice.css?v=…"><script
+//   src="/__evosoft/evosoft-notice.js?v=…" data-product="Evo" defer></script><!-- /evosoft-notice -->
+// ?v= is a short hash of the two notice files next to this script (--version to set it, --version "" for none),
+// so browsers fetch them again when they change. An existing block (from an earlier run) is removed first, so
+// running it again changes nothing.
 // Without out.html the file is changed in place (written to a temporary file, then renamed).
 //
 // Safety checks before anything is written: the page has a </head>; with the block taken out again the
@@ -27,12 +29,12 @@ const BLOCK_RE = /[ \t]*<!-- evosoft-notice -->[\s\S]*?<!-- \/evosoft-notice -->
 function fail(msg) { process.stderr.write(`add-notice: ${msg}\n`); process.exit(1); }
 
 const args = process.argv.slice(2);
-const opt = { product: '', surface: '', base: '/__evosoft/', check: false, files: [] };
+const opt = { product: '', surface: '', base: '/__evosoft/', version: null, check: false, files: [] };
 for (let i = 0; i < args.length; i++) {
   const a = args[i];
   if (a === '--check') opt.check = true;
-  else if (a === '--product' || a === '--surface' || a === '--base') opt[a.slice(2)] = args[++i] ?? '';
-  else if (/^--(product|surface|base)=/.test(a)) { const [k, ...v] = a.slice(2).split('='); opt[k] = v.join('='); }
+  else if (a === '--product' || a === '--surface' || a === '--base' || a === '--version') opt[a.slice(2)] = args[++i] ?? '';
+  else if (/^--(product|surface|base|version)=/.test(a)) { const [k, ...v] = a.slice(2).split('='); opt[k] = v.join('='); }
   else if (a === '-h' || a === '--help') { process.stdout.write(fs.readFileSync(__filename, 'utf8').split('\n').slice(2, 18).map((l) => l.replace(/^\/\/ ?/, '')).join('\n') + '\n'); process.exit(0); }
   else if (a.startsWith('--')) fail(`unknown option ${a}`);
   else opt.files.push(a);
@@ -55,6 +57,15 @@ if (opt.files.length < 1 || opt.files.length > 2) fail('usage: add-notice.js --p
 if (!/^[A-Za-z0-9][\w .+&-]{0,39}$/.test(opt.product)) fail('--product must be a short plain name (letters, digits, spaces, . + & - _)');
 if (opt.surface && !/^[a-z0-9-]{1,30}$/.test(opt.surface)) fail('--surface must be lowercase letters, digits or -');
 if (!/^\/[\w./-]*\/$/.test(opt.base) || opt.base.includes('..')) fail('--base must be an absolute path ending in / (default /__evosoft/)');
+if (opt.version === null) {   // default: a hash of the notice files that sit next to this script
+  try {
+    const h = require('crypto').createHash('sha256');
+    for (const f of ['evosoft-notice.css', 'evosoft-notice.js']) h.update(fs.readFileSync(path.join(__dirname, f)));
+    opt.version = h.digest('hex').slice(0, 10);
+  } catch { opt.version = ''; }
+}
+if (!/^[\w.-]{0,40}$/.test(opt.version)) fail('--version must be letters, digits, . _ or -');
+const q = opt.version ? `?v=${opt.version}` : '';
 
 const [inFile, outFile = inFile] = opt.files;
 const original = fs.readFileSync(inFile, 'utf8');
@@ -62,8 +73,8 @@ const clean = original.replace(BLOCK_RE, '');
 if (countBlocks(clean)) fail(`${inFile}: a broken notice block (start without end); fix the file by hand`);
 
 const surfaceAttr = opt.surface ? ` data-surface="${opt.surface}"` : '';
-const block = `${START}<link rel="stylesheet" href="${opt.base}evosoft-notice.css">`
-  + `<script src="${opt.base}evosoft-notice.js" data-product="${opt.product}"${surfaceAttr} defer></script>${END}`;
+const block = `${START}<link rel="stylesheet" href="${opt.base}evosoft-notice.css${q}">`
+  + `<script src="${opt.base}evosoft-notice.js${q}" data-product="${opt.product}"${surfaceAttr} defer></script>${END}`;
 
 const head = /^([ \t]*)<\/head>/im.exec(clean) || /<\/head>/i.exec(clean);
 if (!head) fail(`${inFile}: no </head> found`);

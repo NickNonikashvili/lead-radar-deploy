@@ -95,6 +95,11 @@
   border-radius: 3px;
 }
 
+#evosoft-notice .evosoft-notice__sep {
+  display: inline;
+  white-space: pre;
+}
+
 #evosoft-notice .evosoft-notice__link:hover {
   color: var(--esn-link-hover, #a84300);
 }
@@ -231,3 +236,49 @@ html:has(.pos-head.training) #evosoft-notice[data-product="evo"][data-surface="r
   --esn-z: 45;
   --esn-bottom: calc(52px + env(safe-area-inset-bottom, 0px) + 10px);
 }
+
+/* Mailtabs. Its app stays at z-index 40 or below; compose windows (65), menus (70), the undo-send bar (90) and
+   toasts (100) go over the card. Tablet and desktop: bottom right, under the reading pane, where a message ends
+   with its Reply buttons well above (compose windows dock there too, and cover the card while open). */
+#evosoft-notice[data-product="mailtabs"] {
+  --esn-z: 60;
+  --esn-left: auto;
+  --esn-right: 12px;
+}
+/* Phones: one pane at a time. Message list: bottom left, three short lines so it stays clear of the round
+   Compose button, inside the room Mailtabs leaves under the list for that button. Reading a message: hidden,
+   because the Reply bar sits at the very bottom there. */
+@media (max-width: 767px) {
+  #evosoft-notice[data-product="mailtabs"] {
+    --esn-right: auto;
+    --esn-left: 8px;
+    --esn-bottom: calc(8px + env(safe-area-inset-bottom, 0px));
+  }
+  #evosoft-notice[data-product="mailtabs"] .evosoft-notice__sep { display: none; }
+  #evosoft-notice[data-product="mailtabs"] .evosoft-notice__link { display: block; width: max-content; }
+  html:has(.workspace.reader-open) #evosoft-notice[data-product="mailtabs"] { display: none; }
+}
+
+/* StudyCat. Under all of its floating parts (lesson feedback bar 25, install banner 44, menus, Bo 58, dialogs 60,
+   toasts 70): they cover the card while they are open. App, from 481px: bottom right, left of Bo's round button
+   (64px at 18px from the corner); the focus timer and the account card are at the bottom of the left sidebar. */
+#evosoft-notice[data-product="studycat"] { --esn-z: 20; }
+#evosoft-notice[data-product="studycat"][data-surface="app"] {
+  --esn-left: auto;
+  --esn-right: 94px;
+  --esn-bottom: 18px;
+}
+/* App on phones: bottom left in the room StudyCat keeps free for Bo at the end of each page; three short lines,
+   so it stays clear of Bo's button. */
+@media (max-width: 480px) {
+  #evosoft-notice[data-product="studycat"][data-surface="app"] {
+    --esn-right: auto;
+    --esn-left: 8px;
+    --esn-bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+    --esn-max: calc(100vw - 90px);
+    font-size: 10.5px;
+  }
+  #evosoft-notice[data-product="studycat"][data-surface="app"] .evosoft-notice__sep { display: none; }
+  #evosoft-notice[data-product="studycat"][data-surface="app"] .evosoft-notice__link { display: block; width: max-content; }
+}
+/* Study guides (learn/): plain article pages, bottom left. */

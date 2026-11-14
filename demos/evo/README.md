@@ -15,10 +15,13 @@ put back to fresh demo data every 3 hours.
 | `systemd/evo-demo.service` | The Evo service |
 | `systemd/evo-demo-reset.service`, `systemd/evo-demo-reset.timer` | Runs the reset every 3 hours |
 | `evo-demo-reset.cron` | The same schedule as a cron file, if you prefer cron (use one or the other) |
-| `Caddyfile` | HTTPS in front of Evo, plus a "being reset" message during the reset |
+| `Caddyfile` | HTTPS in front of Evo, the EvoSoft copyright notice on every page, and a "being reset" message during the reset |
+| `brand-evo.sh` | Writes the copies of Evo's four HTML entry pages that carry the copyright notice (outside the release); see "Copyright notice" |
+| `../_branding/` | The shared notice files (`evosoft-notice.css`, `evosoft-notice.js`, `add-notice.js`) |
 
-Everything here uses supported settings and Evo's own tools. No Evo file is changed, so Evo's code check still
-reports "All 343 release files match the signed manifest".
+Everything here uses supported settings and Evo's own tools. No Evo file is changed (the copyright notice is added by
+Caddy from copies outside the release), so Evo's code check still reports "All 343 release files match the signed
+manifest".
 
 ---
 
@@ -86,7 +89,11 @@ sudo ln -sfn releases/2.1.0 /opt/evo-demo/current
 sudo install -d -m 0755 /etc/evo
 sudo install -m 0640 -o root -g evo-demo demo.env /etc/evo/evo-demo.env
 sudo install -m 0644 systemd/evo-demo.service systemd/evo-demo-reset.service systemd/evo-demo-reset.timer /etc/systemd/system/
-sudo install -m 0755 reset-demo.sh /opt/evo-demo/reset-demo.sh
+sudo install -m 0755 reset-demo.sh brand-evo.sh /opt/evo-demo/
+# The copyright notice: the shared files next to brand-evo.sh, then the page copies Caddy serves
+sudo install -d -m 0755 /opt/evo-demo/_branding
+sudo install -m 0644 ../_branding/evosoft-notice.css ../_branding/evosoft-notice.js ../_branding/add-notice.js /opt/evo-demo/_branding/
+sudo /opt/evo-demo/brand-evo.sh          # writes /opt/evo-demo/brand/ (Evo's release stays untouched)
 sudo cp Caddyfile /etc/caddy/Caddyfile && sudo systemctl reload caddy
 sudo systemctl daemon-reload
 sudo systemctl enable --now evo-demo            # the first start loads the demo company (SEED_DEMO=true)
@@ -103,6 +110,10 @@ systemctl list-timers evo-demo-reset.timer
 ```
 
 Then sign in at `https://evo-demo.evosoft.solutions/login` as `hr@evo.test` / `demo1234`.
+
+**Updating to a new Evo release:** install it as above into `releases/<version>`, switch the `current` link and
+`sudo systemctl restart evo-demo`. The service runs `brand-evo.sh` before every start, so the notice copies always
+match the release that is running (`sudo /opt/evo-demo/brand-evo.sh --check` says so).
 
 ### HTTPS and the proxy (from DEPLOY.md)
 
@@ -145,14 +156,15 @@ backups off (`BACKUP_SCHEDULE=off`) because the data is thrown away every 3 hour
    one from the database and passes `--confirm`, so a renamed company can't stall it;
 4. if the reset tool refuses or fails anyway, moves `evo.db*` and `pos.db*` to `DATA_DIR/reset-fallback-<time>/`
    (newest 2 kept) and lets Evo load a fresh demo at start (`SEED_DEMO=true`);
-5. starts Evo, waits for `/api/health/ready`, and starts it again on any failure, so the demo is never left down;
+5. refreshes the copyright notice copies (`brand-evo.sh`, next to the script; a failure is only a warning), then
+   starts Evo, waits for `/api/health/ready`, and starts it again on any failure, so the demo is never left down;
 6. with `DEMO_GEOFENCE_MODE=flag` (the default in `demo.env`), sets the *Downtown Store* geofence to
    "flag" through Evo's own API (signed in as the demo owner). The seed sets it to "block", which means only
    someone standing in downtown Chicago could clock in as the employee; with "flag", visitors anywhere can clock
    in and the punch shows up as "outside geofence" for HR and Payroll to review.
 
 Overrides for other layouts: `EVO_DIR`, `EVO_ENV_FILE`, `EVO_SERVICE`, `EVO_USER`, `EVO_STOP_CMD`,
-`EVO_START_CMD`, `EVO_HEALTH_URL`, `NODE_BIN`, `LOCK_FILE` (see the header of the script). Runs never overlap
+`EVO_START_CMD`, `EVO_HEALTH_URL`, `NODE_BIN`, `LOCK_FILE`, `EVO_BRAND_SCRIPT` (see the header of the script). Runs never overlap
 (`flock`).
 
 The demo data is relative to "now": the seed builds 8 weeks of history up to the moment it runs, gives the
@@ -169,7 +181,9 @@ Against a local copy of the 2.1.0 release (Node 22.23, `PORT=3101`, its own `DAT
   "Vandalised Inc.", an authenticator app enrolled on `hr@evo.test`, a register enrolled and a till opened):
   all gone after the reset, the company name back, `hr@evo.test` signs in with the password alone again, no
   enrolled devices left;
-- the fallback (reset tool forced to fail): databases moved aside, fresh demo loaded at start, exit 0.
+- the fallback (reset tool forced to fail): databases moved aside, fresh demo loaded at start, exit 0;
+- with the copyright notice step (run from the kit folder, `EVO_STOP_CMD` / `EVO_START_CMD` for a local process):
+  copies refreshed before the start, exit 0. The ExecStartPre line itself was not run (no systemd in the test box).
 
 ### Docker / PaaS instead of a VPS
 
@@ -192,7 +206,8 @@ docker start evo-demo      # SEED_DEMO=true loads a fresh demo company (a few se
 ```
 
 (Keys in `/app/data/secrets` stay; they're fine to keep. This Docker variant was not tested here: the test
-environment had no Docker.) On Render / Railway / Fly.io: one instance only, a
+environment had no Docker.) The copyright notice works the same way in front of the container: keep the unzipped
+release on the host, run `EVO_DIR=/path/to/release brand-evo.sh` after each image build, and use the Caddyfile here. On Render / Railway / Fly.io: one instance only, a
 persistent disk at `/app/data`, `TRUST_PROXY=1`, `NODE_ENV=demo`, and a scheduled job doing the same three steps
 through the platform's CLI. The geofence tweak (step 6 above) is optional; without it the employee clock-in is
 refused for visitors outside Chicago unless they first move the site (HR → Locations → Downtown Store →
@@ -200,7 +215,51 @@ refused for visitors outside Chicago unless they first move the site (HR → Loc
 
 ---
 
-## 4. Risks of a shared public demo, and what the reset covers
+## 4. Copyright notice
+
+Every page of the demo shows a small card, **"© 2026 EvoSoft Solutions. All rights reserved. · Evo demo · fictional
+data · evosoft.solutions"**, with a close button that hides it for the browser session. It is on the sign-in page,
+the web app, the register, the stock handheld and the customer display.
+
+**How, without changing Evo.** Evo checks its own files against its signed release manifest and reports a changed
+or extra file (Security → Checklist, `npm run doctor`, owner alert), so nothing is added to or changed in the release:
+
+1. `brand-evo.sh` reads Evo's four HTML entry pages (`client/dist/index.html`, `pos/register|stock|display/index.html`)
+   and writes copies to `/opt/evo-demo/brand/` with one extra line before `</head>`: a `<link>` and a
+   `<script src … defer>` for `/__evosoft/evosoft-notice.css|js` (also copied there). It refuses to write if anything
+   else in a page would change; running it again changes nothing. It runs at install, before every Evo start
+   (`ExecStartPre` in `evo-demo.service`) and in every reset, so the copies always match the running release.
+2. Caddy serves `/__evosoft/*` from that folder. For those four pages it still asks Evo (so every header Evo sends
+   stays: its per-screen CSP, Trusted Types on the store apps, HSTS, `X-Frame-Options`, cookies, `Cache-Control`), and
+   when Evo answers `200 text/html` it sends the copy as the body (`reverse_proxy` → `handle_response` →
+   `copy_response_headers` → `file_server`). It leaves out the headers that describe Evo's own body:
+   `Content-Length`, `ETag`, `Last-Modified`, `Repr-Digest` (Evo's SHA-256 of the release file, which the copy no
+   longer matches) and the like; `file_server` sets its own and answers 304s for the copy. Redirects, errors, API
+   calls and every other file pass through untouched. If a copy is missing, Caddy sends Evo's page unchanged.
+3. The notice script is same-origin and builds the card with `createElement`/`textContent` only, so the web app's
+   `script-src 'self' 'sha256-…'` (the inline theme script is byte-for-byte the same, so its hash still matches) and
+   the store apps' `require-trusted-types-for 'script'` allow it with no CSP change.
+
+Where it sits: web app on a computer, in the empty left part of the top bar; on the sign-in page, bottom right; on
+phones, just above the bottom tab bar in the space Evo leaves under each page; register, in the middle of its top bar
+(hidden in training mode); customer display, centred in its header; stock handheld, above its tab bar. It stays under
+Evo's menus, dialogs and toasts and is hidden while a dialog is open.
+
+To turn it off: `sudo /opt/evo-demo/brand-evo.sh --remove` (Caddy then sends Evo's pages as they are).
+
+**Tested** (Caddy 2.6.2 from Ubuntu, Evo 2.1.0, Node 22, HTTPS on `localhost`; the kit's Caddyfile unchanged except
+`handle_errors 502 503` → `handle_errors`, as 2.6 has no status filter there): the notice on the sign-in page, the web
+app (desktop, tablet, phone, dark), the register (enrolled, signed on, sale rung), the stock handheld (desktop and the
+phone "blocked" screen) and the customer display; `curl -i` shows Evo's CSP (with the inline-script hash, which matches
+the served page), HSTS, `X-Frame-Options`, COOP/CORP, `Reporting-Endpoints` and `Cache-Control` on every branded page;
+no CSP or Trusted Types errors in the browser console; conditional requests get 304 from Caddy; a missing copy falls
+back to Evo's own page; and the release folder was byte-for-byte unchanged afterwards (`npm run doctor` and Security →
+Checklist: "All 343 release files match the signed manifest"). `copy_response_headers` exists since Caddy 2.5;
+Caddy 2.9.1 was not run here.
+
+---
+
+## 5. Risks of a shared public demo, and what the reset covers
 
 Everyone signs in to the **same** company with the **same** accounts, and the owner account can change
 anything an owner can. Between resets, one visitor's changes are visible to (or can block) the next.
@@ -223,7 +282,7 @@ shorter reset interval (e.g. every hour: `OnCalendar=hourly`) is the only lever 
 
 ---
 
-## 5. Caveats worth saying on the portfolio page
+## 6. Caveats worth saying on the portfolio page
 
 - **The demo resets every 3 hours.** Visitors are signed out and their changes disappear; register enrollments
   have to be done again.

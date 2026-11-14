@@ -52,11 +52,13 @@
 
   var text = make('span', 'evosoft-notice__text');
   var line1 = make('span', 'evosoft-notice__line', '\u00a9 2026 EvoSoft Solutions. All rights reserved.');
-  var line2 = make('span', 'evosoft-notice__line evosoft-notice__line--sub', (product ? product + ' demo' : 'Demo') + ' \u00b7 fictional data \u00b7 ');
+  var line2 = make('span', 'evosoft-notice__line evosoft-notice__line--sub', (product ? product + ' demo' : 'Demo') + ' \u00b7 fictional data');
+  var sep = make('span', 'evosoft-notice__sep', ' \u00b7 '); // hidden where the link gets its own line
   var link = make('a', 'evosoft-notice__link', 'evosoft.solutions');
   link.href = SITE;
   link.target = '_blank';
   link.rel = 'noopener';
+  line2.appendChild(sep);
   line2.appendChild(link);
   text.appendChild(line1);
   text.appendChild(line2);

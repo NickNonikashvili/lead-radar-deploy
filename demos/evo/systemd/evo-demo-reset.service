@@ -1,3 +1,4 @@
+# © 2026 EvoSoft Solutions
 # /etc/systemd/system/evo-demo-reset.service: one demo reset (started by evo-demo-reset.timer).
 [Unit]
 Description=Reset the Evo public demo to fresh demo data

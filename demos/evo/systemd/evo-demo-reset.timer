@@ -1,3 +1,4 @@
+# © 2026 EvoSoft Solutions
 # /etc/systemd/system/evo-demo-reset.timer: reset the demo every 3 hours (at :17, off the busy :00).
 #   systemctl enable --now evo-demo-reset.timer      systemctl list-timers evo-demo-reset.timer
 [Unit]

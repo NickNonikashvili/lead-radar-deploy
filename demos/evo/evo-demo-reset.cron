@@ -1,3 +1,4 @@
+# © 2026 EvoSoft Solutions
 # /etc/cron.d/evo-demo-reset: the cron alternative to systemd/evo-demo-reset.timer (use one, not both).
 # Every 3 hours at :17. Runs as root (stops/starts the service; the seed itself runs as evo-demo).
 SHELL=/bin/bash

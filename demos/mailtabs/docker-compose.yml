@@ -1,3 +1,4 @@
+# © 2026 EvoSoft Solutions
 # Public Mailtabs demo: Mailtabs + a sandboxed demo mail server, behind Caddy.
 #
 #   internet ──443──> caddy ──(demo network, internal: no internet)──> mailtabs ──> dovecot (IMAP)
@@ -37,6 +38,9 @@ services:
     build:
       context: .
       dockerfile: docker/mailtabs.Dockerfile
+      # The shared EvoSoft copyright notice files (README "Copyright notice"); needs Compose 2.17+ / BuildKit.
+      additional_contexts:
+        branding: ${EVOSOFT_BRANDING_DIR:-../_branding}
     image: mailtabs-demo/mailtabs:local
     restart: unless-stopped
     environment:

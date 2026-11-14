@@ -1,3 +1,4 @@
+# © 2026 EvoSoft Solutions
 # Demo IMAP server: Ubuntu 24.04's Dovecot 2.3.21, the exact package the local test run used.
 FROM ubuntu:24.04
 RUN apt-get update \

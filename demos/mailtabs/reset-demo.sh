@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# © 2026 EvoSoft Solutions
 # Wipe the public Mailtabs demo and reseed it: fresh mailboxes, fresh Mailtabs database,
 # the shared demo login, three connected accounts, tabs and signatures.
 #
@@ -15,6 +16,8 @@ DC=(docker compose --env-file .env)
 
 [ -f .env ] || { echo "Missing .env (cp .env.example .env and fill it in)." >&2; exit 1; }
 [ -f mailtabs-src/package.json ] || { echo "Missing mailtabs-src/ (copy the Mailtabs source there)." >&2; exit 1; }
+BRANDING_DIR="$(sed -n 's/^EVOSOFT_BRANDING_DIR=//p' .env | tail -n1)"; BRANDING_DIR="${BRANDING_DIR:-../_branding}"
+[ -f "$BRANDING_DIR/evosoft-notice.js" ] || { echo "Missing the copyright notice files in $BRANDING_DIR (copy demos/_branding there, or set EVOSOFT_BRANDING_DIR in .env)." >&2; exit 1; }
 
 echo "== $(date -u +%FT%TZ) resetting the Mailtabs demo"
 mkdir -p state/maintenance

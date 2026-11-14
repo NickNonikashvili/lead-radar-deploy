@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// © 2026 EvoSoft Solutions
 'use strict';
 
 /**

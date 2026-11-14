@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# © 2026 EvoSoft Solutions
 # reset-demo.sh: put the public Evo demo back to a fresh "Bluefield Market Co." demo company.
 #
 # What it does, in order:
@@ -9,7 +10,8 @@
 #      DATA_DIR/backups/pre-seed-*.db first and keeps the newest 5 per database);
 #      if that is refused (for example a visitor renamed the company), it falls back to moving the
 #      databases aside and letting Evo load a fresh demo at start (SEED_DEMO=true);
-#   4. starts Evo and waits for /api/health/ready;
+#   4. refreshes the copyright notice copies Caddy serves (brand-evo.sh, next to this script; README
+#      "Copyright notice"), then starts Evo and waits for /api/health/ready;
 #   5. optionally (DEMO_GEOFENCE_MODE=flag|off) relaxes the Downtown Store geofence so visitors
 #      anywhere in the world can try the employee clock-in (the punch is flagged for review
 #      instead of refused). Done through Evo's own API, signed in as the demo owner.
@@ -27,10 +29,12 @@
 #   NODE_BIN           node binary              default node
 #   DEMO_GEOFENCE_MODE flag | off | "" (keep the seed's "block")           default "" (set it in the env file)
 #   LOCK_FILE          lock against overlapping runs                       default /run/lock/evo-demo-reset.lock
+#   EVO_BRAND_SCRIPT   copyright notice script ("" = skip)                 default brand-evo.sh next to this script
 #
 # Exit codes: 0 reset done; 1 refused or failed (Evo is started again in every case it was running).
 set -Eeuo pipefail
 
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"   # before any cd: brand-evo.sh sits next to this script
 EVO_DIR="${EVO_DIR:-/opt/evo-demo/current}"
 EVO_ENV_FILE="${EVO_ENV_FILE:-/etc/evo/evo-demo.env}"
 EVO_SERVICE="${EVO_SERVICE:-evo-demo}"
@@ -142,7 +146,16 @@ else
   log "old databases moved to $aside; Evo will load a fresh demo at start"
 fi
 
-# ---------- 4. start ----------
+# ---------- 4. copyright notice, then start ----------
+# brand-evo.sh reads the release (never changes it) and refreshes the page copies Caddy sends with the notice.
+# Not fatal: without current copies Caddy sends Evo's own pages, so the demo works either way.
+EVO_BRAND_SCRIPT="${EVO_BRAND_SCRIPT-$HERE/brand-evo.sh}"
+if [[ -n "$EVO_BRAND_SCRIPT" && -x "$EVO_BRAND_SCRIPT" ]]; then
+  EVO_DIR="$EVO_DIR" NODE_BIN="$NODE_BIN" "$EVO_BRAND_SCRIPT" 9>&- || log "WARNING: the copyright notice could not be refreshed (the demo runs without it)"
+elif [[ -n "$EVO_BRAND_SCRIPT" ]]; then
+  log "WARNING: $EVO_BRAND_SCRIPT not found: no copyright notice on the demo (README \"Copyright notice\")"
+fi
+
 log "starting Evo"
 start_evo
 STARTED_AGAIN=1

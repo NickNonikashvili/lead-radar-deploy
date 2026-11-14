@@ -1,5 +1,6 @@
 <?php
 /* ============================================================
+   © 2026 EvoSoft Solutions
    StudyCat PUBLIC DEMO settings (studycat-demo.evosoft.solutions)
    Goes in api/config.local.php of the DEMO copy only. Never use it on studycat.org.
    It is merged over api/config.php (api/lib.php, mh_config). The admin panel's

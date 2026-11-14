@@ -1,3 +1,4 @@
+# © 2026 EvoSoft Solutions
 # Only docker/ and mailtabs-src/ are needed in the Mailtabs build context.
 *
 !docker/

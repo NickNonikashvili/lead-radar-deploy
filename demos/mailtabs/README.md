@@ -44,7 +44,9 @@ other visitors' changes show up until the next reset.
 1. A small VPS (1 vCPU / 1 GB RAM is plenty) with Docker Engine + the Compose plugin. Point the DNS
    record `mail-demo.evosoft.solutions` at it and open ports 80 and 443.
 2. Copy this folder to the server, e.g. `/opt/mailtabs-demo`, and copy the Mailtabs source (the folder
-   with `package.json`, `server.js`, `src/`, `public/`) into `/opt/mailtabs-demo/mailtabs-src/`.
+   with `package.json`, `server.js`, `src/`, `public/`) into `/opt/mailtabs-demo/mailtabs-src/`. Copy
+   `demos/_branding/` next to it as `/opt/_branding` (the copyright notice files; or set `EVOSOFT_BRANDING_DIR`
+   in `.env`).
 3. `cp .env.example .env` and fill in `DEMO_HOSTNAME`, `ACME_EMAIL` and `SECRET_KEY` (`openssl rand -hex 32`).
 4. `./reset-demo.sh` builds the images, starts everything and seeds the demo (first start and every reset are the same).
 5. Reset hourly from the host's crontab: `7 * * * * cd /opt/mailtabs-demo && ./reset-demo.sh >> reset.log 2>&1`
@@ -59,7 +61,8 @@ and sign up as its first user before the seeder does.
 |---|---|
 | `docker-compose.yml` | caddy (edge + demo networks), mailtabs / dovecot / smtp-sink (demo network only, `internal: true`), one-shot `seed` service |
 | `Caddyfile` | TLS, maintenance switch, shared-login protections, upload size cap, reverse proxy |
-| `docker/mailtabs.Dockerfile` | Builds Mailtabs from `mailtabs-src/` (Node 22, `npm ci --omit=dev`, runs as `node`) |
+| `docker/mailtabs.Dockerfile` | Builds Mailtabs from `mailtabs-src/` (Node 22, `npm ci --omit=dev`, runs as `node`) and adds the copyright notice to the image's copy |
+| `docker/brand-mailtabs.sh` | The copyright notice step the Dockerfile runs: notice files into `public/__evosoft/`, one line in `public/index.html` (see "Copyright notice") |
 | `dovecot/dovecot.conf`, `dovecot/demo-users`, `dovecot/Dockerfile` | Demo IMAP server: Dovecot 2.3 (Ubuntu 24.04 package), the four mailboxes, 100 MB quota each |
 | `tools/smtp-sink.js` | Outgoing server that never relays: AUTH required, sender must be the signed-in mailbox, non-`demo.test` recipients refused (550), demo mailboxes get the mail via IMAP APPEND, fictional `*.demo.test` people accepted and discarded, 10 MB / 20 recipients / 30 messages per minute caps |
 | `tools/seed-mail.js`, `tools/lib/mail-content.js`, `tools/lib/attachments.js` | Seeds 58 messages: a 5-message work thread with a Sent reply, a calendar invite (.ics), receipts with HTML layouts, newsletters (one with a blocked tracking pixel), PDF and PNG attachments generated in code, starred/unread mail, Sent, Drafts, Archive, Junk and custom folders (`Clients/Saltmarsh`, `Feedback`). `--wipe` empties existing mailboxes first; `DEMO_NOW=…` pins the clock (used for the marketing screenshots) |
@@ -68,6 +71,31 @@ and sign up as its first user before the seeder does.
 
 All people, companies and domains in the seed mail are invented and use the reserved `.test` TLD;
 no real brands or logos.
+
+## Copyright notice
+
+Every Mailtabs page shows a small card, **"© 2026 EvoSoft Solutions. All rights reserved. · Mailtabs demo ·
+fictional data · evosoft.solutions"**, with a close button that hides it for the browser session.
+
+**How.** The image build copies the shared files from `../_branding` (a named build context:
+`additional_contexts: branding` in `docker-compose.yml`, Compose 2.17+ with BuildKit) and runs
+`docker/brand-mailtabs.sh /app …` on the image's copy of the source: `evosoft-notice.css` / `.js` go to
+`public/__evosoft/` (Mailtabs' own static server serves them) and `public/index.html` gets one line before `</head>`
+that loads them (`_branding/add-notice.js`: idempotent, refuses to change anything else). `mailtabs-src/` on the
+server is never touched. Both files are same-origin, so Mailtabs' CSP (`default-src 'self'; script-src 'self'`…) is
+unchanged and allows them; the card is built without `innerHTML` or inline styles.
+
+Where it sits: computers and tablets, bottom right under the reading pane (a message ends with its Reply buttons well
+above it; compose windows, menus, the undo-send bar and toasts go over it). Phones, in the message list: bottom left
+in the room Mailtabs keeps for its round Compose button, on three short lines so it stays clear of that button; while
+reading a message it is hidden, because the Reply bar is at the very bottom there.
+
+**Tested locally** with the exact script the Dockerfile runs (`sh docker/brand-mailtabs.sh <copy of the source>
+<_branding>`, twice: the second run changes nothing) and that copy run against the local Dovecot + SMTP sink with the
+seeders, as below: the notice on the sign-in page, the inbox, a conversation, with one and three compose windows open
+(they cover it), dark mode, tablet and phone; Mailtabs' CSP header unchanged and no CSP errors in the console; the
+close button hides it until the browser session ends. The image build itself was not run (no Docker daemon here);
+`docker compose config` accepts the `additional_contexts` entry.
 
 ## Safety design (one shared login, open to the public)
 
@@ -129,6 +157,7 @@ Node 22:
 | `Caddyfile` | `caddy validate` + running it with Ubuntu's Caddy 2.6.2 in front of Mailtabs: maintenance 503, password change / seeded account / seeded tab / OAuth refused (and the UI shows the message), other requests pass, 13 MB upload refused (2.6.2 answers 502) |
 | Reset sequence | Same steps as `reset-demo.sh` without Docker: about 6 s for wipe + seed |
 | Images' `npm ci --omit=dev` | Both lockfiles install cleanly; Mailtabs loads without its devDependencies |
+| Copyright notice | `docker/brand-mailtabs.sh` on a copy of the source, then that copy in the browser (see "Copyright notice") |
 
 **Not tested:** building and running the Docker images, the compose networks (that `internal: true`
 really blocks egress on your Docker version, the `imap.demo.test` / `smtp.demo.test` aliases), named

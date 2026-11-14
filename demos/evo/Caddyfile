@@ -68,10 +68,11 @@
 		import evo_with_notice
 	}
 
-	# The web app: every route outside /api, /pos, /shared and the hashed build files is its index.html.
+	# The web app: every route outside /api, /pos, /shared and the build files is its index.html.
 	@evo_web_page {
 		method GET HEAD
 		not path /api /api/* /pos /pos/* /shared /shared/* /assets/* /__evosoft/*
+		not path *.js *.css *.map *.svg *.png *.ico *.webp *.woff2 *.webmanifest *.json *.txt
 	}
 	handle @evo_web_page {
 		vars evo_page /client/dist/index.html

@@ -31,6 +31,24 @@ reverse proxy instead (route `evo-demo.` to Evo on 127.0.0.1:3101 and `mail-demo
   seed/reset ran twice in a row with identical results, and mail, AI and payment settings can't be switched on from
   inside the demo.
 
+## Copyright notice
+
+Every demo shows a small card on every page: **"© 2026 EvoSoft Solutions. All rights reserved."** and
+**"{Product} demo · fictional data · evosoft.solutions"**, with a close button that hides it until the visitor's next
+browser session. The shared files are in [`_branding/`](_branding/README.md) (one stylesheet, one script, and a helper
+that adds the two tags to a page); each kit puts them on its pages without changing the product's code:
+
+| Product | How | Re-applied |
+|---|---|---|
+| Evo | `evo/brand-evo.sh` writes copies of Evo's 4 HTML entry pages with the tags, outside the release; Caddy sends the copy as the body of those pages and keeps all of Evo's headers (CSP, Trusted Types, HSTS…). The release stays byte-for-byte as signed, so Evo's code check still passes. | before every Evo start and in every reset |
+| Mailtabs | `mailtabs/docker/brand-mailtabs.sh` runs in the image build on the image's copy of the source (`public/__evosoft/` + one line in `public/index.html`). | every reset (it rebuilds the image) |
+| StudyCat | `php api/demo-seed.php --brand`: `__evosoft/` + one line in `index.html` and every study guide; the site banner also ends with the copyright line. | every nightly reset |
+
+The files are served from each demo's own address, so no Content-Security-Policy had to change. Placement is chosen per
+app and screen size so the card doesn't cover the app's own controls (Evo's top bar / above its phone tab bar, the
+register's top bar; Mailtabs bottom right, left of the Compose button on phones; StudyCat next to Bo's button). Details
+and test notes in each kit's README, section "Copyright notice".
+
 ## Things to know before going public
 
 - All demo logins are shared. Visitors see each other's changes until the next reset.

@@ -1,5 +1,6 @@
 <?php
 /* ============================================================
+   © 2026 EvoSoft Solutions
    StudyCat PUBLIC DEMO: seed and nightly reset (command line only)
 
    Put this file in the DEMO copy's api/ folder (next to lib.php), with the demo
@@ -10,6 +11,12 @@
                                         password, roles, not banned) and clear their shared sign-in rate limit:
                                         cheap enough to run every 10 minutes
        php api/demo-seed.php --check    print what is there and whether the lockdown is in place; changes nothing
+       php api/demo-seed.php --brand    only (re)add the EvoSoft copyright notice to the demo's pages (also part of
+                                        every full reset, so a new StudyCat build gets it back by the next night)
+
+   The copyright notice: evosoft-notice.css and evosoft-notice.js (the kit's _branding folder; upload them into api/
+   next to this file, or give --assets=DIR) are copied to <site>/__evosoft/, and index.html and every study guide
+   (learn/) get one line before </head> that loads them. Same-origin files, so the page's own CSP allows them.
 
    It uses StudyCat's own schema and helpers (api/lib.php, teach.php, packs.php), the same password hashing
    (password_hash, PASSWORD_DEFAULT) and the same rows the API writes. It refuses to run:
@@ -24,8 +31,8 @@ if (PHP_SAPI !== 'cli') { http_response_code(404); exit; }
 const DEMO_PASSWORD = 'demo-study-2026';
 const DEMO_DOMAIN = 'studycat.test';
 
-$opts = getopt('', ['api:', 'repair', 'check', 'quiet', 'help']);
-if (isset($opts['help'])) { fwrite(STDOUT, "php demo-seed.php [--repair|--check] [--quiet] [--api=/path/to/public_html/api]\n"); exit(0); }
+$opts = getopt('', ['api:', 'assets:', 'repair', 'check', 'brand', 'quiet', 'help']);
+if (isset($opts['help'])) { fwrite(STDOUT, "php demo-seed.php [--repair|--check|--brand] [--quiet] [--api=/path/to/public_html/api] [--assets=/path/to/_branding]\n"); exit(0); }
 $apiDir = rtrim((string)($opts['api'] ?? (is_file(__DIR__ . '/lib.php') ? __DIR__ : __DIR__ . '/api')), '/');
 if (!is_file("$apiDir/lib.php") || !is_file("$apiDir/config.php")) { fwrite(STDERR, "demo-seed: StudyCat's api/ folder not found at $apiDir (use --api=...)\n"); exit(2); }
 if (!is_file("$apiDir/config.local.php")) { fwrite(STDERR, "demo-seed: $apiDir/config.local.php is missing. Copy the demo config.local.php there first.\n"); exit(2); }
@@ -83,6 +90,82 @@ function demo_rmtree(string $dir): void {
 }
 function demo_lockdown_ok(string $dataDir): bool { return is_dir("$dataDir/site-config.json") && !is_file("$dataDir/site-config.json"); }
 
+/* ---------- the EvoSoft copyright notice (demo README, "Copyright notice") ---------- */
+// The same block as the kit's _branding/add-notice.js writes for Evo and Mailtabs: one line before </head>, removed and
+// written again on every run (so running it twice changes nothing), never touching anything else in the page.
+const NOTICE_START = '<!-- evosoft-notice -->';
+const NOTICE_RE = '/[ \t]*<!-- evosoft-notice -->.*?<!-- \/evosoft-notice -->[ \t]*\r?\n?/s';
+$siteDir = dirname($apiDir);
+function demo_notice_assets(array $opts): ?string {
+  $dirs = isset($opts['assets']) ? [(string)$opts['assets']] : [__DIR__, __DIR__ . '/../_branding', $GLOBALS['apiDir']];
+  foreach ($dirs as $d) { $d = rtrim($d, '/'); if (is_file("$d/evosoft-notice.css") && is_file("$d/evosoft-notice.js")) return $d; }
+  return null;
+}
+/** page (relative to the site) => data-surface: the app, and the study guides */
+function demo_notice_pages(string $site): array {
+  $pages = is_file("$site/index.html") ? ['index.html' => 'app'] : [];
+  foreach (array_merge(glob("$site/learn/*.html") ?: [], glob("$site/learn/*/*.html") ?: []) as $f) $pages[substr($f, strlen($site) + 1)] = 'guide';
+  return $pages;
+}
+function demo_notice_inline(string $html): array {
+  preg_match_all('/<script\b([^>]*)>(.*?)<\/script>/is', $html, $m, PREG_SET_ORDER);
+  return array_values(array_map(fn($x) => $x[2], array_filter($m, fn($x) => !preg_match('/\bsrc\s*=/i', $x[1]) && $x[2] !== '')));
+}
+/** The page with exactly one current notice block, or null (no </head>, or the result would change anything else). */
+function demo_notice_html(string $html, string $surface, string $v): ?string {
+  $clean = preg_replace(NOTICE_RE, '', $html);
+  if (!is_string($clean) || str_contains($clean, NOTICE_START)) return null;
+  $block = NOTICE_START . '<link rel="stylesheet" href="/__evosoft/evosoft-notice.css?v=' . $v . '"><script src="/__evosoft/evosoft-notice.js?v=' . $v
+    . '" data-product="StudyCat" data-surface="' . $surface . '" defer></script><!-- /evosoft-notice -->';
+  if (preg_match('/^([ \t]*)<\/head>/mi', $clean, $m, PREG_OFFSET_CAPTURE)) { $at = $m[0][1]; $ins = $m[1][0] . '  ' . $block . (str_contains($clean, "\r\n") ? "\r\n" : "\n"); }
+  elseif (preg_match('/<\/head>/i', $clean, $m, PREG_OFFSET_CAPTURE)) { $at = $m[0][1]; $ins = $block; }
+  else return null;
+  $out = substr($clean, 0, $at) . $ins . substr($clean, $at);
+  if (preg_replace(NOTICE_RE, '', $out) !== $clean || demo_notice_inline($out) !== demo_notice_inline($html) || substr_count($out, NOTICE_START) !== 1) return null;
+  return $out;
+}
+function demo_write(string $file, string $data, int $mode): bool {   // a temporary file, then a rename: never a half-written page
+  $tmp = dirname($file) . '/.' . basename($file) . '.' . getmypid() . '.tmp';
+  if (@file_put_contents($tmp, $data) !== strlen($data)) { @unlink($tmp); return false; }
+  @chmod($tmp, $mode);
+  if (!@rename($tmp, $file)) { @unlink($tmp); return false; }
+  return true;
+}
+/** Copy the notice files to <site>/__evosoft/ and put the notice in every page. ['version', 'changed', 'pages', 'failed' => [...]] */
+function demo_notice_apply(string $site, string $assets): array {
+  $css = (string)file_get_contents("$assets/evosoft-notice.css"); $js = (string)file_get_contents("$assets/evosoft-notice.js");
+  $v = substr(hash('sha256', $css . $js), 0, 10);   // ?v= changes when the files do (the site caches .css/.js for 7 days)
+  $dir = "$site/__evosoft"; $failed = [];
+  if (!is_dir($dir) && !@mkdir($dir, 0755)) return ['version' => $v, 'changed' => 0, 'pages' => 0, 'failed' => ["cannot create $dir"]];
+  foreach (['evosoft-notice.css' => $css, 'evosoft-notice.js' => $js] as $name => $data)
+    if (@file_get_contents("$dir/$name") !== $data && !demo_write("$dir/$name", $data, 0644)) $failed[] = "__evosoft/$name";
+  $changed = 0; $pages = demo_notice_pages($site);
+  foreach ($pages as $rel => $surface) {
+    $file = "$site/$rel"; $html = (string)file_get_contents($file);
+    $out = demo_notice_html($html, $surface, $v);
+    if ($out === null) { $failed[] = $rel; continue; }
+    if ($out === $html) continue;
+    if (demo_write($file, $out, fileperms($file) & 0777)) $changed++; else $failed[] = $rel;
+  }
+  return ['version' => $v, 'changed' => $changed, 'pages' => count($pages), 'failed' => $failed];
+}
+/** [pages with the notice, all pages, notice files in place] */
+function demo_notice_status(string $site): array {
+  $pages = demo_notice_pages($site); $n = 0;
+  foreach ($pages as $rel => $s) if (substr_count((string)file_get_contents("$site/$rel"), NOTICE_START) === 1) $n++;
+  return [$n, count($pages), is_file("$site/__evosoft/evosoft-notice.css") && is_file("$site/__evosoft/evosoft-notice.js")];
+}
+function demo_brand(array $opts, string $site, bool $required): bool {
+  $assets = demo_notice_assets($opts);
+  if ($assets === null) {
+    fwrite(STDERR, "demo-seed: copyright notice " . ($required ? 'NOT added' : 'skipped') . ": evosoft-notice.css / evosoft-notice.js not found (upload them into api/ next to demo-seed.php, or use --assets=DIR)\n");
+    return false;
+  }
+  $r = demo_notice_apply($site, $assets);
+  say("  copyright notice: {$r['pages']} pages, {$r['changed']} changed, notice files ?v={$r['version']}" . ($r['failed'] ? '; FAILED: ' . implode(', ', array_slice($r['failed'], 0, 5)) : ''));
+  return !$r['failed'];
+}
+
 /** Creates or repairs one account: verified, demo password, welcomed, rules accepted, every email switched off. */
 function demo_account(array $a, int $created): int {
   $db = mh_db(); $email = strtolower($a['email']); $now = time();
@@ -116,9 +199,17 @@ if (isset($opts['check'])) {
   say('Demo database: ' . $dbPath);
   say('Lockdown (site-config.json is a folder): ' . (demo_lockdown_ok($dataDir) ? 'yes' : 'NO, run the seed'));
   say('Mail: ' . ($cfg['mail_mode'] ?? '?') . ' | AI key: ' . (($cfg['anthropic_key'] ?? '') === '' ? 'none' : 'SET') . ' | RevenueCat: ' . (($cfg['revenuecat_secret'] ?? '') === '' ? 'none' : 'SET'));
+  [$withNotice, $allPages, $noticeFiles] = demo_notice_status($siteDir);
+  say("Copyright notice: $withNotice of $allPages pages" . ($noticeFiles ? '' : ', notice files MISSING') . ($withNotice === $allPages && $noticeFiles ? '' : ' (run with --brand)'));
   foreach ($ACCOUNTS as $k => $a) { $u = mh_user_by_email($a['email']); say(sprintf('  %-10s %-26s %s', $k, $a['email'], $u ? (((int)$u['verified'] === 1 && password_verify(DEMO_PASSWORD, $u['pass_hash'])) ? 'ok' : 'NEEDS REPAIR') : 'MISSING')); }
   foreach (['users', 'posts', 'comments', 'reports', 'progress'] as $t) say("  $t: " . (int)$db->query("SELECT COUNT(*) FROM $t")->fetchColumn());
   $GLOBALS['demo_done'] = true; exit(0);
+}
+
+/* ---------- --brand: the copyright notice only ---------- */
+if (isset($opts['brand'])) {
+  $ok = demo_brand($opts, $siteDir, true);
+  $GLOBALS['demo_done'] = true; exit($ok ? 0 : 1);
 }
 
 /* ---------- --repair: accounts only ---------- */
@@ -165,7 +256,7 @@ demo_instructor_role($INSTRUCTOR_EMAIL, $ids['instructor'], $ACCOUNTS['instructo
 say('  accounts: ' . implode(', ', array_map(fn($a) => $a['email'], $ACCOUNTS)));
 
 // 4) the site banner (Admin -> Site settings -> Announcement), so visitors know what they are looking at
-mh_setting_set('announcement', 'This is a demo of StudyCat with sample accounts. Sign-up and email are switched off, Bo (the AI tutor) is not connected, and everything resets every night.');
+mh_setting_set('announcement', "This is a demo of StudyCat with sample accounts. Sign-up and email are switched off, Bo (the AI tutor) is not connected, and everything resets every night. \u{00A9} 2026 EvoSoft Solutions. All rights reserved.");
 
 /* ---------- 5) discussions ---------- */
 $U = fn(string $k) => $ids[$k];
@@ -366,6 +457,9 @@ foreach ($plan as $k => $days) {
   mh_weekly_stats_update($ids[$k], 'calc', $data);   // this week's totals for class goals, as the data route does
 }
 say('  practice history: Calc I for student, max and classmate');
+
+// 7) the copyright notice on the demo's pages (again after a new StudyCat build replaced them); a problem here is reported, not fatal
+demo_brand($opts, $siteDir, false);
 
 $GLOBALS['demo_done'] = true;
 say('Done. Demo password for every account: ' . DEMO_PASSWORD);

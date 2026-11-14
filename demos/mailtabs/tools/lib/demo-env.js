@@ -1,3 +1,4 @@
+// © 2026 EvoSoft Solutions
 'use strict';
 
 /**

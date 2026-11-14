@@ -1,3 +1,4 @@
+# © 2026 EvoSoft Solutions
 # Demo helpers: SMTP sink (long-running) and the two one-shot seeders.
 FROM node:22-bookworm-slim
 WORKDIR /app

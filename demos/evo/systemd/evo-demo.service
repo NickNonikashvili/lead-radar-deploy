@@ -1,3 +1,4 @@
+# © 2026 EvoSoft Solutions
 # /etc/systemd/system/evo-demo.service: the public Evo demo (from DEPLOY.md "Option B", minus NODE_ENV=production).
 [Unit]
 Description=Evo public demo (Bluefield Market Co.)
@@ -12,6 +13,10 @@ WorkingDirectory=/opt/evo-demo/current
 # PORT, DATA_DIR, SEED_DEMO, DEMO_PASSWORD, DEMO_PIN, SEED_TZ ... (see demo.env). No NODE_ENV=production here:
 # Evo ignores SEED_DEMO and refuses the demo reset on production.
 EnvironmentFile=/etc/evo/evo-demo.env
+# The copyright notice: refresh the page copies Caddy serves from the release that is about to start (README
+# "Copyright notice"), so a release update never leaves copies of the old one. As root ("+": it writes
+# /opt/evo-demo/brand, which Evo itself can't); "-": Evo starts even if it fails (Caddy then sends Evo's own pages).
+ExecStartPre=-+/opt/evo-demo/brand-evo.sh
 ExecStart=/usr/bin/node app.js
 Restart=always
 RestartSec=2
