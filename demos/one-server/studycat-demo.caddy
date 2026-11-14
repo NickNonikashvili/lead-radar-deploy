@@ -1,0 +1,200 @@
+# © 2026 EvoSoft Solutions. All rights reserved.
+# One-server setup: the StudyCat demo, a PHP + SQLite site built for Apache/Hostinger, served by the host's Caddy
+# with PHP-FPM (setup-server.sh installs both). Caddy gets the certificate, so the site is HTTPS only, and it passes
+# HTTPS=on and X-Forwarded-Proto: https to PHP, so StudyCat's sign-in cookie is Secure.
+#
+# Caddy ignores .htaccess files. Everything StudyCat's three .htaccess files do on Apache is written out below; the
+# list at the end of this file maps each rule to its line here. On top of them, for the demo: noindex, no PHP version
+# banner, and PHP source is never sent as a file (Apache would run a stray .php file; Caddy would hand out its text).
+#
+# Env (all optional): STUDYCAT_DEMO_HOST (site address), STUDYCAT_DEMO_ROOT (/var/www/studycat-demo),
+# STUDYCAT_DEMO_PHP (the demo's PHP-FPM pool socket, unix//run/php/studycat-demo.sock).
+
+{$STUDYCAT_DEMO_HOST:studycat-demo.evosoft.solutions} {
+	root * {$STUDYCAT_DEMO_ROOT:/var/www/studycat-demo}
+
+	# Literal order from here on: the refusals come before the caching headers, as on Apache (an error answer gets
+	# the "always" headers only), and before the two handlers at the end (PHP for api/index.php, files for the rest).
+	route {
+		# api/.user.ini lets PHP take uploads up to 14 MB (class packs); nothing bigger gets to PHP.
+		request_body {
+			max_size 16MB
+		}
+
+		# [D1] compression for the types the root .htaccess deflates. Bo's streamed answers (application/x-ndjson)
+		# are not in the list, so they are never held back to be compressed [L1].
+		encode zstd gzip {
+			match {
+				header Content-Type text/*
+				header Content-Type application/javascript*
+				header Content-Type application/json*
+				header Content-Type application/xml*
+				header Content-Type application/manifest+json*
+				header Content-Type application/wasm*
+				header Content-Type image/svg+xml*
+			}
+		}
+
+		# [H1] on every answer, errors included ("Header always set" in the root .htaccess), plus noindex for the demo.
+		header {
+			X-Content-Type-Options "nosniff"
+			Referrer-Policy "strict-origin-when-cross-origin"
+			Strict-Transport-Security "max-age=31536000"
+			X-Frame-Options "SAMEORIGIN"
+			Permissions-Policy "camera=(), microphone=(self), geolocation=(), payment=(), usb=()"
+			Cross-Origin-Opener-Policy "same-origin"
+			X-Robots-Tag "noindex, nofollow"
+		}
+		header {
+			defer
+			-X-Powered-By
+		}
+
+		# [G1] files earlier StudyCat releases used: 410 Gone.
+		@gone path_regexp gone ^/(assets/office(-chart|-docs|-formula|-ooxml|-pptx|-sheets|-slides|-xlsx)?\.(js|css)$|assets/(blitz|calls|cheatsheet|requests)\.js$|assets/fonts/barlow-[a-z0-9-]+\.woff2$|phonetics/)
+		respond @gone 410
+
+		# [F1] build tools and folders that never belong on the server.
+		@tools path /scripts /scripts/* /docs /docs/* /tests /tests/* /app /app/* /node_modules /node_modules/* /i18n /i18n/*
+		respond @tools "Forbidden" 403
+
+		# [F2] hidden files and folders (.htaccess, .user.ini, .git, .env, the seed's temporary files...), except
+		# /.well-known/ (security.txt), and nothing hidden inside that either.
+		@hidden {
+			path_regexp hidden /\.
+			not path_regexp wellknown ^/\.well-known(/[^./][^/]*)*/?$
+		}
+		respond @hidden "Forbidden" 403
+
+		# [F3] notes, archives, databases, logs, backups (path matching here ignores case, like [NC]); also the
+		# SQLite side files, keys and editor copies.
+		@private path *.md *.zip *.tar *.gz *.tgz *.7z *.sql *.sqlite *.sqlite3 *.db *.bak *.log *.tsv *.sqlite-wal *.sqlite-shm *.sqlite-journal *.sqlite3-wal *.sqlite3-shm *.sqlite3-journal *.db-wal *.db-shm *.db-journal *.key *.pem *.ini *.env *.orig *.old *.swp *~
+		respond @private "Forbidden" 403
+
+		# [A1] api/: only api/index.php is reachable. Everything else in it (lib.php, config.php,
+		# config.local.php, demo-seed.php, demo-data-path.php, the classdata/ files, data/ with mail.log...) is refused.
+		@api_other {
+			path /api /api/*
+			not path /api/index.php
+		}
+		respond @api_other "Forbidden" 403
+
+		# [P1] PHP is only ever run, never sent as text: any other PHP file anywhere is refused.
+		@php_other {
+			path *.php *.phtml *.phar *.inc
+			not path /api/index.php
+		}
+		respond @php_other "Forbidden" 403
+
+		# [A2] the account server. try_files {path}: this file only, never a fallback to another index.php.
+		handle /api/index.php {
+			header {
+				defer
+				Cache-Control "no-store"
+				X-Frame-Options "DENY"
+				Content-Security-Policy "default-src 'none'; frame-ancestors 'none'"
+				Referrer-Policy "no-referrer"
+			}
+			php_fastcgi {$STUDYCAT_DEMO_PHP:unix//run/php/studycat-demo.sock} {
+				try_files {path}
+			}
+		}
+
+		# The site's own files.
+		handle {
+			# [C1-C5] caching. "Pages" are .html files and folder addresses (/, /learn/...), which serve index.html.
+			@page path / */ *.html *.htm
+			header @page {
+				Content-Security-Policy "frame-ancestors 'self'; base-uri 'self'; object-src 'none'"
+				Speculation-Rules "\"/assets/speculationrules.json\""
+			}
+			@page_learn path_regexp page_learn ^/learn/(.*/)?([^/]+\.html)?$
+			header @page_learn Cache-Control "public, max-age=3600, must-revalidate"
+			@page_other {
+				path / */ *.html *.htm
+				not path_regexp ^/learn/(.*/)?([^/]+\.html)?$
+			}
+			header @page_other Cache-Control "no-cache"
+			@js_css path *.js *.css
+			header @js_css Cache-Control "public, max-age=604800"
+			@media path *.svg *.png *.ico *.webmanifest *.woff *.woff2
+			header @media Cache-Control "public, max-age=2592000"
+			@pdf path *.pdf
+			header @pdf Cache-Control "public, max-age=86400"
+
+			# [M1] the types StudyCat names that Caddy might not know or names differently.
+			@manifest path *.webmanifest
+			header @manifest {
+				defer
+				Content-Type "application/manifest+json"
+			}
+			@woff2 path *.woff2
+			header @woff2 {
+				defer
+				Content-Type "font/woff2"
+			}
+			@specrules path */speculationrules.json
+			header @specrules {
+				defer
+				Content-Type "application/speculationrules+json"
+			}
+
+			# [O1] no folder listings ("Options -Indexes"): file_server without browse. hide: a second lock, so the
+			# file server would never send PHP source or an .htaccess even if a rule above were missed.
+			file_server {
+				index index.html
+				hide *.php *.phtml *.phar *.inc .htaccess .user.ini
+			}
+		}
+	}
+}
+
+# How StudyCat's .htaccess rules (build 2026.11.05.1) map to the lines above:
+#
+# Root .htaccess
+#   Options -Indexes ........................................ [O1] file_server without browse (a folder without
+#                                                               index.html answers 404 instead of a listing)
+#   LiteSpeed noabort/noconntimeout/no-gzip for ai_class and
+#   ai_tutor ................................................ [L1] LiteSpeed only. Under PHP-FPM a slow answer is not
+#                                                               cut off by the server; the streamed answers are not
+#                                                               compressed (encode list); Bo has no key in the demo.
+#   Cache-Control: *.html/*.htm no-cache; *.js/*.css 7 days;
+#   svg/png/ico/webmanifest/woff/woff2 30 days; pdf 1 day ... [C1-C5] (folder addresses count as their index.html)
+#   Speculation-Rules on *.html ............................. [C1] header @page
+#   ForceType speculationrules.json, AddType webmanifest,
+#   woff2 .................................................... [M1]
+#   AddType svg, wasm, txt, xml ............................. Caddy's own types (image/svg+xml, application/wasm,
+#                                                               text/plain; charset=utf-8, text/xml; charset=utf-8)
+#   Header always set X-Content-Type-Options, Referrer-Policy,
+#   Strict-Transport-Security, X-Frame-Options SAMEORIGIN,
+#   Permissions-Policy, Cross-Origin-Opener-Policy .......... [H1]
+#   Content-Security-Policy "frame-ancestors 'self'; base-uri
+#   'self'; object-src 'none'" on *.html .................... [C1]. The page's own CSP is a <meta> tag in each page
+#                                                               and is sent untouched (Caddy doesn't rewrite pages).
+#   mathub.space -> studycat.org (301, api/ 308) ............ not needed: this site answers only for the demo
+#                                                               address, so a mathub.space request never gets here.
+#   410 Gone: assets/office*.js|css, blitz|calls|cheatsheet|
+#   requests.js, fonts/barlow-*.woff2, phonetics/ ........... [G1]
+#   403: scripts|docs|tests|app|node_modules|i18n folders ... [F1] (assets/i18n/ stays open, as on Apache)
+#   403: *.md ............................................... [F3]
+#   403: hidden files except .well-known/ ................... [F2]
+#   403: *.zip|tar|gz|tgz|7z|sql|sqlite|sqlite3|db|bak|log|tsv [F3], plus SQLite -wal/-shm/-journal, *.key, *.pem,
+#                                                               *.ini, *.env and editor copies
+#   HTTPS redirect (unless HTTPS or X-Forwarded-Proto https) . Caddy's automatic HTTPS: http:// answers with a
+#                                                               redirect to https:// and PHP gets HTTPS=on, so nothing
+#                                                               can loop (StudyCat's PHP never redirects by scheme).
+#   DEFLATE for html, css, txt, xml, js, json, manifest, svg,
+#   wasm ..................................................... [D1]
+# api/.htaccess
+#   Options -Indexes; deny every file, allow index.php ...... [A1] + [A2]; [P1] for PHP files anywhere else
+#   Cache-Control no-store, X-Content-Type-Options nosniff,
+#   X-Frame-Options DENY, CSP "default-src 'none';
+#   frame-ancestors 'none'", Referrer-Policy no-referrer .... [A2] (deferred, so they replace what PHP sends, as
+#                                                               "Header set" does on Apache)
+# api/.user.ini (upload_max_filesize 12M, post_max_size 14M)  read by PHP-FPM itself; request_body caps at 16 MB
+# learn/.htaccess
+#   *.html Cache-Control "public, max-age=3600,
+#   must-revalidate" ......................................... [C2] header @page_learn (the rest of the root rules
+#                                                               apply there too, as on Apache)
+# Written by StudyCat itself: api/data/.htaccess and data-folder .htaccess files (deny all): api/data/ is refused by
+# [A1], and the demo keeps its database outside this folder anyway (setup-server.sh: /var/lib/studycat-demo).

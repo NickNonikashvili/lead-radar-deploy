@@ -32,7 +32,20 @@ real person can be emailed or impersonated.
 Signed out, a visitor gets StudyCat's own preview: every class page and dashboard, the first three topics of notes,
 3 questions per quiz set, 5 flashcards per deck, discussion titles only; the class tools ask for an account.
 
-## Put it on Hostinger
+## Put it on the EvoSoft demo server (recommended)
+
+`../one-server/setup-server.sh` does all of the Hostinger steps below by itself when StudyCat's deploy zip (`calc1-deploy-<build>.zip`)
+is in the bundle's `apps/` folder (`../one-server/README.md`, Parts 2 and 3). It installs PHP 8.3 (FPM, with SQLite,
+mbstring, curl, gd, zip, xml), unpacks the site into `/var/www/studycat-demo` (owned by root, read-only for PHP), adds
+the files above plus `api/demo-data-path.php`, so the database lives in `/var/lib/studycat-demo` outside the web root
+(`api/data`, where StudyCat keeps `mail.log` and Bo's files, is a link into that folder too), adds the copyright
+notice, runs the seed once as the PHP user `studycat-demo`, and installs both cron jobs below as that user
+(`/etc/cron.d/studycat-demo`). Caddy serves it with `../one-server/studycat-demo.caddy`: Caddy doesn't read `.htaccess`
+files, so that file writes out every rule StudyCat's `.htaccess` files give on Apache (only `api/index.php` runs;
+config, database, logs, hidden and build files are refused; the same security and caching headers), plus
+`X-Robots-Tag: noindex`. Running the setup again replaces the program files and keeps the database.
+
+## Put it on Hostinger (the alternative)
 
 1. **Subdomain.** hPanel → Websites → evosoft.solutions → Domains → Subdomains: create `studycat-demo`. Note its folder
    (for example `/home/u123456789/domains/evosoft.solutions/public_html/studycat-demo`). Turn on its SSL certificate
@@ -67,7 +80,8 @@ hPanel → Advanced → Cron Jobs → Custom. Use the full paths of your account
 | Every night, e.g. 03:17 | `/usr/bin/php /home/u123456789/domains/evosoft.solutions/public_html/studycat-demo/api/demo-seed.php --quiet` | Full reset: wipes everything visitors did and rebuilds the demo with fresh dates (streaks, "2 days ago", due dates stay current), and puts the copyright notice back on the pages if a new build replaced them. |
 | Every 10 minutes (`*/10 * * * *`) | `/usr/bin/php /home/u123456789/domains/evosoft.solutions/public_html/studycat-demo/api/demo-seed.php --repair --quiet` | Cheap. StudyCat allows only 12 sign-ins per address per 15 minutes, and every visitor shares the same six addresses: this clears those counters. It also brings back a demo account a visitor deleted, banned or locked (the demo password and roles), within minutes. Content stays until the nightly reset. |
 
-Cron's clock is the server's (usually UTC); 03:17 UTC is the middle of the night in Montana. StudyCat's own
+Cron's clock is the server's (usually UTC). 03:17 UTC is 8:17 pm in Montana; for the middle of the night there, pick
+about 09:17 UTC (2:17 am MST), which is what the demo server uses. StudyCat's own
 `php api/index.php cron` housekeeping job is not needed for the demo (its emails would only go to the log anyway).
 The seed exits non-zero on failure, so Hostinger's cron email (if you turn it on) tells you when a reset failed.
 
@@ -137,7 +151,10 @@ on desktop, at 1024 px and on a phone, no CSP errors in the console.
 
 ## Updating the demo to a new StudyCat build
 
-Extract the new deploy zip over the subdomain folder (replace files; `api/config.local.php`, `api/demo-seed.php`, the
+On the demo server: put the new `calc1-deploy-<build>.zip` in `apps/` and run the setup again (the newest zip there is
+used; the database is kept and the notice is added to the new pages).
+
+On Hostinger: extract the new deploy zip over the subdomain folder (replace files; `api/config.local.php`, `api/demo-seed.php`, the
 notice files in `api/` and `__evosoft/`, and the data folder are not in the zip, so they survive), put the demo
 `robots.txt` back, then run `php api/demo-seed.php` once (it also puts the copyright notice back on the new pages).
 

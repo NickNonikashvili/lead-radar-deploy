@@ -7,12 +7,14 @@ One folder per product. Each sets up a public, self-resetting demo with the exac
 |---|---|---|---|---|
 | Evo | `evo-demo.evosoft.solutions` | Linux VPS with Node.js 24 LTS (22.13+ works) + Caddy | every 3 hours | [`evo/`](evo/README.md) |
 | Mailtabs | `mail-demo.evosoft.solutions` | Linux VPS with Docker Compose | every hour | [`mailtabs/`](mailtabs/README.md) |
-| StudyCat | `studycat-demo.evosoft.solutions` | Hostinger (PHP 8.1+), a separate subdomain from studycat.org | nightly, repair every 10 min | [`studycat/`](studycat/README.md) |
+| StudyCat | `studycat-demo.evosoft.solutions` | The same Linux VPS with PHP 8.3-FPM + Caddy (recommended), or Hostinger (PHP 8.1+) as a separate subdomain from studycat.org | nightly, repair every 10 min | [`studycat/`](studycat/README.md) |
 
-**One server for both:** `one-server/` installs Evo and Mailtabs on a single Ubuntu 24.04 server with one command
-(`one-server/setup-server.sh`). The server's own Caddy takes HTTPS for both, and the Mailtabs stack's Caddy listens
-only on `127.0.0.1:8081` behind it. `one-server/README.md` is the full step-by-step guide, including the website
-and the StudyCat demo on Hostinger.
+**One server for all three:** `one-server/` installs Evo, Mailtabs and StudyCat on a single Ubuntu 24.04 server with
+one command (`one-server/setup-server.sh`; StudyCat when its `calc1-deploy-….zip` is in `apps/`). The server's own
+Caddy takes HTTPS for all of them; the Mailtabs stack's Caddy listens only on `127.0.0.1:8081` behind it, and StudyCat
+runs on its own PHP-FPM pool, with its `.htaccess` rules written out for Caddy in `one-server/studycat-demo.caddy`.
+`one-server/README.md` is the full step-by-step guide, including the website and, as the alternative, the StudyCat
+demo on Hostinger.
 
 ## Accounts at a glance
 
@@ -31,7 +33,8 @@ and the StudyCat demo on Hostinger.
   README says what to check after the first deploy.
 - **StudyCat:** ran under PHP 8.3 with the demo config. All 6 accounts were checked through the real login form. The
   seed/reset ran twice in a row with identical results, and mail, AI and payment settings can't be switched on from
-  inside the demo.
+  inside the demo. On the one-server setup, the script's StudyCat step and `studycat-demo.caddy` ran with Caddy 2.6.2
+  and PHP-FPM 8.3 (details in `one-server/README.md`, "What's been tested").
 
 ## Copyright notice
 
