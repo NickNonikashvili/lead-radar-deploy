@@ -207,6 +207,8 @@
       });
     });
     if (!motion || !box.hasAttribute('data-autoplay') || tabs.length < 2) return;
+    // decode every page's picture up front, so a page never turns to an empty frame
+    $$('img', box).forEach((im) => { if (im.decode) im.decode().catch(() => {}); });
     box.classList.add('autoplay');
     box.addEventListener('animationend', (e) => {
       if (!e.target.classList.contains('dc-progress') || !box.classList.contains('autoplay')) return;

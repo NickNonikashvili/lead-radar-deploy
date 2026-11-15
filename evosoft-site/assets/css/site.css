@@ -209,6 +209,11 @@ a:hover > .arr { transform: translateX(3px); }
 .trust a { color: var(--ink-2); font-weight: 700; text-decoration: none; }
 .trust a:hover { color: var(--accent); }
 .demo-card { background: var(--surface); border: 2px solid var(--border); border-radius: 24px; padding: 12px; box-shadow: var(--shadow); }
+/* all pages of the card share one grid cell, so the card keeps the height of its tallest page and nothing around it
+   moves when it turns a page; the inactive pages stay laid out but invisible */
+.demo-card { display: grid; grid-template-columns: minmax(0, 1fr); }
+.demo-card > .dc-panel { grid-row: 2; grid-column: 1; }
+.demo-card > .dc-panel[hidden] { display: block; visibility: hidden; pointer-events: none; }
 .dc-tabs { display: flex; gap: 4px; padding: 4px; border-radius: 14px; background: var(--surface-2); }
 .dc-tab { position: relative; flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 9px 8px; border: 0; border-radius: 11px; background: transparent; color: var(--ink-2); font: 700 14px/1.2 var(--body); cursor: pointer; overflow: hidden; transition: background 0.2s, color 0.2s; }
 .dc-tab i { width: 9px; height: 9px; border-radius: 3px; background: var(--c); }
