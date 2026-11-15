@@ -213,6 +213,7 @@ const CLIPS = {
     await h.wait(250);
     await h.click('input[value="Online store"] + span', 500);
     await h.wait(250);
+    await h.scrollTo('textarea[name=message]', 900, 330);
     await h.click('textarea[name=message]', 600);
     h.mark('msg');
     await h.type('textarea[name=message]', 'We need a new website with an online store for our bakery.', 26);

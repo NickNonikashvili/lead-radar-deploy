@@ -66,7 +66,7 @@
     img.style.transform = `translate(${tx.toFixed(2)}px, ${ty.toFixed(2)}px) scale(${cam.s.toFixed(4)})`;
   }
 
-  const subHtml = (s) => s.split(' · ').map((x, i) => `<span style="white-space:nowrap">${i ? '· ' : ''}${esc(x)}</span>`).join(' ');
+  const subHtml = (s) => s.split(' · ').map((x, i, a) => `<span style="white-space:nowrap">${esc(x)}${i < a.length - 1 ? ' ·' : ''}</span>`).join(' ');
   function copyHtml(sc) {
     return `<div class="copy">${sc.chip ? `<span class="chip" style="--c:${sc.color || '#22A447'}"><i></i>${esc(sc.chip)}</span>` : ''}<div class="bar"></div>${sc.onscreen ? `<h1>${esc(sc.onscreen)}</h1>` : ''}${sc.sub ? `<p>${subHtml(sc.sub)}</p>` : ''}</div>`;
   }
@@ -127,10 +127,10 @@
     const kin = sc.first ? 1 : easeOut(local / 0.3);
     const kout = clamp((local - sc.dur) / XF, 0, 1);
     const isWindow = windowKinds.has(sc.kind);
-    el.style.opacity = isWindow && copyIn ? '1' : (kin * (contOut ? 1 : 1 - Math.pow(kout, 1.6))).toFixed(4);
+    el.style.opacity = (((isWindow && copyIn) ? 1 : kin) * (contOut ? 1 : 1 - Math.pow(kout, 1.6))).toFixed(4);
     el.style.transform = isWindow || sc.kind === 'phone' ? 'none' : `translateY(${((1 - kin) * 26).toFixed(2)}px)`;
     const outCopy = copyOut ? 1 : 1 - easeOut(kout / 0.5);
-    const delay = sc.first ? 0 : 0.22;
+    const delay = sc.first ? 0 : 0.08;
     el.style.zIndex = String(10 + sc.index);
     const pending = [];
 
@@ -143,7 +143,7 @@
       word.style.opacity = kw;
       word.style.transform = `translateX(${((1 - kw) * -40).toFixed(2)}px)`;
       rise(h1, local, 1.0, 34, 0.8);
-      rise(p, local, 1.35, 24, 0.8);
+      rise(p, local, sc.subAt != null ? sc.subAt : 1.35, 24, 0.8);
     } else if (sc.kind === 'end') {
       const items = el.querySelectorAll('.logo-big, .url-big, .cta, .contacts, .langs, .copyright');
       items.forEach((it, i) => rise(it, local, 0.1 + i * 0.22, 30, 0.75));
@@ -155,7 +155,7 @@
       if (copy && copyIn) {
         copy.querySelectorAll('.chip, h1, p').forEach((x) => { x.style.opacity = 1; x.style.transform = 'none'; });
         copy.querySelector('.bar').style.transform = 'none';
-        copy.style.opacity = '1';
+        copy.style.opacity = outCopy.toFixed(4);
       } else if (copy) {
         rise(copy.querySelector('.chip'), local, 0.15 + delay);
         const bar = copy.querySelector('.bar');
@@ -206,7 +206,11 @@
           im.style.zIndex = String(i + 1);
           const k = clamp((local - a) / Math.max(0.1, b - a), 0, 1);
           const kk = easeIO(k);
-          placeImg(im, W, H, { x: lerp(s.kb[0], s.kb[3], kk), y: lerp(s.kb[1], s.kb[4], kk), s: lerp(s.kb[2], s.kb[5], kk) }, 1.6);
+          const zs = lerp(s.kb[2], s.kb[5], kk), iw = W * zs, ih = (W / 1.6) * zs;
+          const fx = lerp(s.kb[0], s.kb[3], kk), fy = lerp(s.kb[1], s.kb[4], kk);
+          im.style.width = `${W}px`;
+          im.style.height = `${W / 1.6}px`;
+          im.style.transform = `translate(${(-fx * Math.max(0, iw - W)).toFixed(2)}px, ${(-fy * Math.max(0, ih - H)).toFixed(2)}px) scale(${zs.toFixed(4)})`;
           if (s.url && local >= a) { const span = el.querySelector('.url span'); if (span.textContent !== s.url) span.textContent = s.url; }
         });
       }

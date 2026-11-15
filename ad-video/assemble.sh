@@ -12,7 +12,7 @@ PRE="[0:a]aformat=sample_rates=48000:channel_layouts=stereo,adeclick,highpass=f=
 M=$(ffmpeg -hide_banner -i narration.wav -i "$MUSIC" -filter_complex "$PRE,loudnorm=I=-14:TP=-2:LRA=11:print_format=json" -f null - 2>&1 | sed -n '/^{/,/^}/p')
 mi=$(echo "$M" | python3 -c "import json,sys;d=json.load(sys.stdin);print(d['input_i'])"); mtp=$(echo "$M" | python3 -c "import json,sys;d=json.load(sys.stdin);print(d['input_tp'])")
 mlra=$(echo "$M" | python3 -c "import json,sys;d=json.load(sys.stdin);print(d['input_lra'])"); mth=$(echo "$M" | python3 -c "import json,sys;d=json.load(sys.stdin);print(d['input_thresh'])")
-ffmpeg -v error -y -i narration.wav -i "$MUSIC" -filter_complex "$PRE,loudnorm=I=-14:TP=-2:LRA=11:measured_I=$mi:measured_TP=$mtp:measured_LRA=$mlra:measured_thresh=$mth:linear=true,alimiter=limit=0.8:attack=5:release=200:level=disabled[out]" \
+ffmpeg -v error -y -i narration.wav -i "$MUSIC" -filter_complex "$PRE,loudnorm=I=-14:TP=-2:LRA=11:measured_I=$mi:measured_TP=$mtp:measured_LRA=$mlra:measured_thresh=$mth:linear=true,alimiter=limit=0.8:attack=5:release=200:level=disabled,volume=0.6dB[out]" \
   -map "[out]" -ar 48000 mix.wav
 true || ffmpeg -v error -y -i narration.wav -i "$MUSIC" -filter_complex "
   [0:a]aformat=sample_rates=48000:channel_layouts=stereo,adeclick,highpass=f=90,equalizer=f=3200:width_type=o:width=1.2:g=1.5,acompressor=threshold=-20dB:ratio=2.5:attack=8:release=120:makeup=2,asplit=2[voice][key];

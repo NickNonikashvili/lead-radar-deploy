@@ -1,13 +1,13 @@
 1
-00:00:01,120 --> 00:00:03,360
+00:00:01,420 --> 00:00:03,360
 Don’t take our word for it.
 
 2
-00:00:03,360 --> 00:00:04,920
+00:00:03,360 --> 00:00:05,694
 Try our software yourself.
 
 3
-00:00:05,694 --> 00:00:08,794
+00:00:05,694 --> 00:00:09,214
 EvoSoft is a software studio in Georgia.
 
 4
@@ -19,11 +19,11 @@ We build websites,
 apps and business software to order,
 
 6
-00:00:12,494 --> 00:00:14,014
+00:00:12,494 --> 00:00:14,729
 and run three of our own.
 
 7
-00:00:14,729 --> 00:00:17,229
+00:00:14,729 --> 00:00:17,749
 Any kind of project, including tech.
 
 8
@@ -35,7 +35,7 @@ Online stores, booking systems,
 dashboards, even Microsoft 365.
 
 10
-00:00:22,349 --> 00:00:24,049
+00:00:22,349 --> 00:00:24,739
 One team for all of it.
 
 11
@@ -47,126 +47,126 @@ Our own products: Evo,
 Mailtabs and StudyCat, each with a live demo.
 
 13
-00:00:30,679 --> 00:00:32,599
+00:00:30,679 --> 00:00:33,369
 And the next one? Yours.
 
 14
-00:00:33,369 --> 00:00:37,229
+00:00:33,369 --> 00:00:37,369
 Evo runs a team and a store from one sign-in.
 
 15
-00:00:37,229 --> 00:00:39,489
-Plan the week, lock payroll,
+00:00:37,369 --> 00:00:39,549
+Plan the week, export payroll,
 
 16
-00:00:39,489 --> 00:00:41,909
+00:00:39,549 --> 00:00:42,860
 sell even offline, and check the reports.
 
 17
-00:00:42,718 --> 00:00:46,638
+00:00:42,860 --> 00:00:46,780
 Mailtabs puts every inbox in one list.
 
 18
-00:00:46,638 --> 00:00:48,898
+00:00:46,780 --> 00:00:49,460
 A rule fills the Receipts tab.
 
 19
-00:00:49,318 --> 00:00:50,878
+00:00:49,460 --> 00:00:51,020
 Reply without switching apps.
 
 20
-00:00:51,616 --> 00:00:53,876
+00:00:51,998 --> 00:00:54,478
 Real students use StudyCat.
 
 21
-00:00:54,336 --> 00:00:57,236
+00:00:54,478 --> 00:00:57,378
 Exam countdowns, a quizzer that never runs out,
 
 22
-00:00:57,236 --> 00:00:59,236
+00:00:57,378 --> 00:00:59,378
 flashcards, and tools for instructors.
 
 23
-00:01:00,089 --> 00:01:02,209
+00:01:00,231 --> 00:01:02,351
 Judge the work before you talk to us.
 
 24
-00:01:02,209 --> 00:01:05,829
+00:01:02,351 --> 00:01:06,471
 Fifteen ready-made test accounts cover every role.
 
 25
-00:01:06,329 --> 00:01:09,869
+00:01:06,471 --> 00:01:10,749
 Copy a login, sign in, and you’re Hannah, the owner.
 
 26
-00:01:10,607 --> 00:01:12,587
+00:01:10,749 --> 00:01:12,729
 First, we talk.
 
 27
-00:01:12,587 --> 00:01:15,407
+00:01:12,729 --> 00:01:15,549
 You get a written quote before anything is booked.
 
 28
-00:01:15,407 --> 00:01:18,607
+00:01:15,549 --> 00:01:19,534
 Then we build, launch together, and stay around.
 
 29
-00:01:19,392 --> 00:01:21,192
+00:01:19,534 --> 00:01:21,694
 The site speaks English,
 
 30
-00:01:21,552 --> 00:01:23,792
+00:01:21,694 --> 00:01:24,414
 Georgian, Russian and Spanish.
 
 31
-00:01:24,272 --> 00:01:26,732
+00:01:24,414 --> 00:01:27,634
 Pick one from the menu and every page follows.
 
 32
-00:01:27,492 --> 00:01:29,152
+00:01:27,634 --> 00:01:29,974
 Not sure where to start?
 
 33
-00:01:29,832 --> 00:01:30,992
+00:01:29,974 --> 00:01:31,694
 Ask the chat assistant.
 
 34
-00:01:31,552 --> 00:01:33,632
+00:01:31,694 --> 00:01:33,774
 Ask it who’s best, too.
 
 35
-00:01:33,632 --> 00:01:35,932
+00:01:33,774 --> 00:01:36,809
 Fair warning: it’s a little biased.
 
 36
-00:01:36,667 --> 00:01:40,107
+00:01:36,809 --> 00:01:40,909
 Pick what you need, write a few lines, press Send.
 
 37
-00:01:40,767 --> 00:01:41,547
+00:01:40,909 --> 00:01:42,009
 The quote is free,
 
 38
-00:01:41,547 --> 00:01:44,527
+00:01:42,009 --> 00:01:45,357
 and a person replies within one business day.
 
 39
-00:01:45,215 --> 00:01:49,295
+00:01:45,357 --> 00:01:49,917
 evosoft.solutions works just as well on your phone.
 
 40
-00:01:49,775 --> 00:01:51,155
+00:01:49,917 --> 00:01:51,297
 Dark mode included.
 
 41
-00:01:52,398 --> 00:01:54,038
+00:01:52,540 --> 00:01:54,180
 That’s EvoSoft.
 
 42
-00:01:54,038 --> 00:01:55,338
+00:01:54,180 --> 00:01:55,480
 Whatever you need built,
 
 43
-00:01:55,338 --> 00:01:58,538
+00:01:55,480 --> 00:01:58,680
 get a free quote at evosoft.solutions.
 

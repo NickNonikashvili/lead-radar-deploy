@@ -73,7 +73,7 @@ VISUALS = {
     'B5': [{'kind': 'browser', 'layout': 'split', 'clip': 'evopage', 'until': ('w', 'Plan', -0.35), 'chip': 'Evo · workforce + point of sale', 'color': '#4F46E5',
             'url': 'evosoft.solutions/work/evo.html', 'map': [('at', ('t', 0), ('c', 0.5)), ('at', ('end',), ('c', 5.6))]},
            {'kind': 'shots', 'layout': 'split', 'chip': 'Evo · workforce + point of sale', 'color': '#4F46E5', 'url': 'evo-demo.evosoft.solutions',
-            'shots': [SHOT('evo/03-hr-scheduler.jpg', PAN_R), SHOT('evo/05-payroll-period-review.jpg', [0.5, 0.0, 1.0, 0.5, 0.15, 1.04], 'lock'),
+            'shots': [SHOT('evo/03-hr-scheduler.jpg', PAN_R), SHOT('evo/05-payroll-period-review.jpg', [0.5, 0.0, 1.0, 0.5, 0.15, 1.04], 'export'),
                       SHOT('evo/09-register-pay-screen.jpg', GENTLE, 'sell'), SHOT('evo/08-store-reports.jpg', ZOOM_IN, 'reports')]}],
     'B6': [{'kind': 'shots', 'layout': 'split', 'chip': 'Mailtabs · unified email', 'color': '#0F766E', 'url': 'mail-demo.evosoft.solutions',
             'shots': [SHOT('mailtabs/01-unified-inbox.jpg', [0.5, 0.0, 1.0, 0.6, 0.1, 1.06]), SHOT('mailtabs/02-receipts-tab.jpg', PAN_R, 'rule'), SHOT('mailtabs/04-composer.jpg', GENTLE, 'Reply')]}],
@@ -87,23 +87,22 @@ VISUALS = {
            {'kind': 'shots', 'layout': 'full', 'url': 'evo-demo.evosoft.solutions', 'shots': [SHOT('evo/01-owner-home.jpg', [0.3, 0.0, 1.1, 0.28, 0.02, 1.22])]}],
     'B9': [{'kind': 'browser', 'layout': 'split', 'clip': 'process', 'chip': 'How a project works', 'url': 'evosoft.solutions',
             'map': [('at', ('t', 0), ('c', 1.35)), ('at', ('end',), ('c', 4.7))],
-            'cam': [(('t', 0), 0.5, 0.3, 1.0), (('w', 'First', 0), 0.2, 0.42, 1.45), (('w', 'quote', -0.2), 0.4, 0.42, 1.45),
-                    (('w', 'build', -0.2), 0.6, 0.42, 1.45), (('w', 'launch', -0.2), 0.8, 0.42, 1.45), (('w', 'launch', 1.3), 0.5, 0.25, 1.1), (('end',), 0.5, 0.25, 1.1)]}],
+            'cam': [(('t', 0), 0.5, 0.3, 1.0), (('end',), 0.5, 0.36, 1.12)]}],
     'B10': [{'kind': 'browser', 'layout': 'full', 'clip': 'languages', 'url': 'evosoft.solutions',
              'map': [('at', ('t', 0), ('c', 0.8)), ('cut', ('w', 'Georgian', -0.1), ('m', 'ka', 2.45)), ('cut', ('w', 'Russian', -0.1), ('m', 'ru', 2.45)),
-                     ('run', ('end',))],
+                     ('cutc', ('m', 'es', 0.14), ('m', 'es', 1.11)), ('run', ('end',))],
              'langs': [('English', 'evosoft.solutions', None), ('ქართული', 'evosoft.solutions/ka/', ('w', 'Georgian', -0.1)),
-                       ('Русский', 'evosoft.solutions/ru/', ('w', 'Russian', -0.1)), ('Español', 'evosoft.solutions/es/', ('clip', 'es', 0.25))],
+                       ('Русский', 'evosoft.solutions/ru/', ('w', 'Russian', -0.1)), ('Español', 'evosoft.solutions/es/', ('clip', 'es', 1.11))],
              'cam': [(('t', 0), 0.5, 0.0, 1.0), (('end',), 0.55, 0.05, 1.05)]}],
     'B11': [{'kind': 'browser', 'layout': 'full', 'clip': 'assistant', 'url': 'evosoft.solutions',
              'map': [('at', ('t', 0), ('c', 0.3)), ('at', ('w', 'Ask', 0), ('m', 'open', 0.1)), ('at', ('w', 'best', 0.0), ('m', 'pick', 0)),
                      ('at', ('w', 'best', 0.45), ('m', 'sent', 0)), ('run', ('end',))],
-             'cam': [(('t', 0), 0.5, 0.0, 1.0), (('w', 'Ask', 0.2), 0.5, 0.0, 1.0), (('w', 'Ask', 1.0), 1.0, 0.595, 1.58)]}],
+             'cam': [(('t', 0), 0.5, 0.0, 1.0), (('w', 'Ask', 0.2), 0.5, 0.0, 1.0), (('w', 'Ask', 1.0), 1.0, 0.56, 1.9)]}],
     'B12': [{'kind': 'browser', 'layout': 'split', 'clip': 'quote', 'chip': 'Get a free quote', 'url': 'evosoft.solutions/contact.html',
              'map': [('at', ('t', 0), ('m', 'chip', -0.7)), ('at', ('w', 'Pick', 0.05), ('m', 'chip', 0.05)), ('at', ('w', 'write', 0), ('m', 'msg', 0.1)),
                      ('at', ('w', 'Send', 0.05), ('m', 'sent', 0.12)), ('run', ('end',))],
              'cam': [(('t', 0), 0.3, 0.38, 1.62), (('w', 'write', 0), 0.3, 0.55, 1.62), (('w', 'Send', -0.2), 0.3, 0.7, 1.62), (('w', 'free', 0), 0.32, 0.86, 1.62)]}],
-    'B13': [{'kind': 'phone', 'clip': 'mobile', 'chip': 'Phone, tablet or desktop',
+    'B13': [{'kind': 'phone', 'clip': 'mobile', 'chip': 'Mobile-friendly',
              'map': [('at', ('t', 0), ('c', 0.3)), ('at', ('w', 'Dark', -0.2), ('m', 'dark', 0.0)), ('run', ('end',))]}],
     'B14': [{'kind': 'end'}],
 }
@@ -166,6 +165,12 @@ for bid in ids:
                     pl, pc = pts[-1]
                     pts.append([lt, pc + (lt - pl)])
                     pts.append([lt, C(step[2])])
+                elif step[0] == 'cutc':
+                    pl, pc = pts[-1]
+                    c1, c2 = C(step[1]), C(step[2])
+                    lt = pl + (c1 - pc)
+                    pts.append([lt, c1])
+                    pts.append([lt, c2])
                 elif step[0] == 'run':
                     lt = T(step[1])
                     pl, pc = pts[-1]
@@ -202,6 +207,8 @@ for bid in ids:
             sents = re.findall(r'[^.!?]+[.!?]', beat.get('narration', ''))
             sc['onscreen'] = beat.get('onscreen') or (sents[0].strip() if sents else 'Any kind of project, including tech')
             sc['sub'] = beat.get('sub') if beat.get('onscreen') else (sents[1].strip() if len(sents) > 1 else beat.get('sub', ''))
+            if len(sents) > 1:
+                sc['subAt'] = round(bt['narr_at'] + word_time(bid, sents[1].split()[0]) - s0 - 0.2, 3)
         if sc['kind'] in ('browser', 'shots', 'phone') and sc.get('layout', 'split') == 'split' and not sc.get('onscreen'):
             sc['onscreen'] = {'B13': 'Made for phones, too'}.get(bid, sc.get('chip', ''))
             sc['sub'] = sc.get('sub') or {'B13': 'Light or dark, the same site everywhere'}.get(bid, '')
@@ -240,7 +247,8 @@ captions = []
 for bid in ids:
     if not WORDS[bid]['words']:
         continue
-    heard = WORDS[bid]['words']
+    # the transcription sometimes stretches a short word back into the pause before it; start it near its end
+    heard = [dict(w, s=max(w['s'], w['e'] - 0.2) if len(key(w['w'])) <= 4 and w['e'] - w['s'] > 0.4 else w['s']) for w in WORDS[bid]['words']]
     shown = WORDS[bid]['text'].split()
     a = [key(w) for w in shown]
     b = [key(w['w']) for w in heard]
@@ -298,7 +306,7 @@ captions.sort(key=lambda c: c['start'])
 for i, c in enumerate(captions):
     nxt = captions[i + 1]['start'] - 0.05 if i + 1 < len(captions) else total
     c['end'] = round(min(max(c['end'], c['start'] + MIN_CUE), nxt), 3)
-    if i + 1 < len(captions) and captions[i + 1]['start'] - c['end'] < 0.35:
+    if i + 1 < len(captions) and captions[i + 1]['start'] - c['end'] < 0.8:
         c['end'] = captions[i + 1]['start']
         c['joinNext'] = True
         captions[i + 1]['joinPrev'] = True
