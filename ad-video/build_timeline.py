@@ -31,8 +31,13 @@ def clip(name):
     return json.load(open(os.path.join(HERE, 'clips', name, 'index.json')))
 
 
+NUMBER_WORDS = {'1': 'one', '2': 'two', '3': 'three', '4': 'four', '5': 'five', '6': 'six', '7': 'seven', '8': 'eight', '9': 'nine',
+                '10': 'ten', '15': 'fifteen'}
+
+
 def key(w):
-    return re.sub(r"[^a-z0-9]", '', w.lower().replace('’', "'"))
+    k = re.sub(r"[^a-z0-9]", '', w.lower().replace('’', "'"))
+    return NUMBER_WORDS.get(k, k)
 
 
 WORDS = {}
@@ -337,6 +342,20 @@ for bid in ids:
             captions.append({'start': round(base + st - 0.08, 3), 'end': round(base + en + 0.3, 3),
                              'text': ' '.join(shown[i] for i in part).replace("'", '’'), 'beat': bid, **({'srtOnly': True} if bid in NO_CAPTIONS else {})})
 captions.sort(key=lambda c: c['start'])
+# Snap each caption's start to the first sound after a pause in the narration track (within -0.5..+0.3 s of the
+# transcribed time), so a new line appears as it is spoken, not 0.2-0.4 s after.
+FR = int(0.01 * SR)
+rms = np.sqrt(np.convolve(track ** 2, np.ones(FR) / FR, mode='same'))[::FR]
+loud = 20 * np.log10(rms + 1e-9) > -40
+for c in captions:
+    t0 = c['start'] + 0.08
+    best = None
+    for k in range(max(15, int((t0 - 0.5) * 100)), min(len(loud), int((t0 + 0.3) * 100))):
+        if loud[k] and not loud[k - 15:k].any():          # sound after at least 150 ms of quiet
+            if best is None or abs(k / 100 - t0) < abs(best - t0):
+                best = k / 100
+    if best is not None:
+        c['start'] = round(best - 0.08, 3)
 for i, c in enumerate(captions):
     nxt = captions[i + 1]['start'] - 0.05 if i + 1 < len(captions) else total
     beat_end = beat_times[c['beat']]['start'] + beat_times[c['beat']]['dur'] + 0.05

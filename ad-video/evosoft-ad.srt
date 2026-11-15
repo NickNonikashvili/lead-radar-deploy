@@ -1,176 +1,176 @@
 1
-00:00:01,420 --> 00:00:03,360
+00:00:01,160 --> 00:00:03,090
 Don’t take our word for it.
 
 2
-00:00:03,360 --> 00:00:04,920
+00:00:03,090 --> 00:00:04,920
 Try our software yourself.
 
 3
-00:00:05,694 --> 00:00:09,214
+00:00:05,750 --> 00:00:09,130
 EvoSoft is a software studio in Georgia.
 
 4
-00:00:09,214 --> 00:00:10,674
+00:00:09,130 --> 00:00:10,380
 We build websites,
 
 5
-00:00:10,674 --> 00:00:12,494
+00:00:10,380 --> 00:00:12,570
 apps and business software to order,
 
 6
-00:00:12,494 --> 00:00:14,014
+00:00:12,570 --> 00:00:14,014
 and run three of our own.
 
 7
-00:00:14,729 --> 00:00:17,749
+00:00:14,780 --> 00:00:17,360
 Any kind of project, including tech.
 
 8
-00:00:17,749 --> 00:00:19,489
+00:00:17,360 --> 00:00:19,489
 Online stores, booking systems,
 
 9
-00:00:19,489 --> 00:00:22,349
+00:00:19,489 --> 00:00:22,310
 dashboards, even Microsoft 365.
 
 10
-00:00:22,349 --> 00:00:24,049
+00:00:22,310 --> 00:00:24,049
 One team for all of it.
 
 11
-00:00:24,739 --> 00:00:26,719
+00:00:24,760 --> 00:00:26,400
 Our own products:
 
 12
-00:00:26,719 --> 00:00:30,679
+00:00:26,400 --> 00:00:30,690
 Evo, Mailtabs and StudyCat, each with a live demo.
 
 13
-00:00:30,679 --> 00:00:32,219
+00:00:30,690 --> 00:00:31,860
 And the next one?
 
 14
-00:00:32,219 --> 00:00:33,049
+00:00:31,860 --> 00:00:32,860
 Yours.
 
 15
-00:00:33,369 --> 00:00:37,369
+00:00:33,420 --> 00:00:37,200
 Evo runs a team and a store from one sign-in.
 
 16
-00:00:37,369 --> 00:00:39,549
+00:00:37,200 --> 00:00:39,300
 Plan the week, export payroll,
 
 17
-00:00:39,549 --> 00:00:42,069
+00:00:39,300 --> 00:00:42,069
 sell even offline and check the reports.
 
 18
-00:00:42,860 --> 00:00:46,780
+00:00:42,880 --> 00:00:46,690
 Mailtabs puts every inbox in one list.
 
 19
-00:00:46,780 --> 00:00:49,460
+00:00:46,690 --> 00:00:49,220
 A rule fills the Receipts tab.
 
 20
-00:00:49,460 --> 00:00:51,020
+00:00:49,220 --> 00:00:51,020
 Reply without switching apps.
 
 21
-00:00:51,998 --> 00:00:54,478
+00:00:51,790 --> 00:00:54,170
 Real students use StudyCat.
 
 22
-00:00:54,478 --> 00:00:57,378
+00:00:54,170 --> 00:00:57,190
 Exam countdowns, a quizzer that never runs out,
 
 23
-00:00:57,378 --> 00:00:59,378
+00:00:57,190 --> 00:00:59,378
 flashcards and tools for instructors.
 
 24
-00:01:00,231 --> 00:01:02,351
+00:01:00,260 --> 00:01:02,980
 Judge the work before you talk to us.
 
 25
-00:01:02,351 --> 00:01:06,471
+00:01:02,980 --> 00:01:06,190
 Fifteen ready-made test accounts cover every role.
 
 26
-00:01:06,471 --> 00:01:10,011
+00:01:06,190 --> 00:01:10,011
 Copy a login, sign in and you’re Hannah, the owner.
 
 27
-00:01:10,749 --> 00:01:12,729
+00:01:10,830 --> 00:01:12,680
 First, we talk.
 
 28
-00:01:12,729 --> 00:01:15,549
+00:01:12,680 --> 00:01:15,500
 You get a written quote before anything is booked.
 
 29
-00:01:15,549 --> 00:01:18,749
+00:01:15,500 --> 00:01:18,749
 Then we build, launch together and stay around.
 
 30
-00:01:19,534 --> 00:01:21,264
+00:01:19,580 --> 00:01:21,270
 The site speaks English,
 
 31
-00:01:21,264 --> 00:01:24,414
+00:01:21,270 --> 00:01:24,260
 Georgian, Russian and Spanish.
 
 32
-00:01:24,414 --> 00:01:26,874
+00:01:24,260 --> 00:01:26,874
 Pick one from the menu and every page follows.
 
 33
-00:01:27,634 --> 00:01:29,974
+00:01:27,660 --> 00:01:29,700
 Not sure where to start?
 
 34
-00:01:29,974 --> 00:01:31,694
+00:01:29,700 --> 00:01:31,450
 Ask the chat assistant.
 
 35
-00:01:31,694 --> 00:01:33,774
+00:01:31,450 --> 00:01:33,730
 Ask it who’s best, too.
 
 36
-00:01:33,774 --> 00:01:36,074
+00:01:33,730 --> 00:01:36,074
 Fair warning: it’s a little biased.
 
 37
-00:01:36,809 --> 00:01:40,909
+00:01:36,870 --> 00:01:40,880
 Pick what you need, write a few lines, press Send.
 
 38
-00:01:40,909 --> 00:01:42,009
+00:01:40,880 --> 00:01:42,130
 The quote is free,
 
 39
-00:01:42,009 --> 00:01:44,669
+00:01:42,130 --> 00:01:44,669
 and a person replies within one business day.
 
 40
-00:01:45,357 --> 00:01:49,917
+00:01:45,410 --> 00:01:49,670
 evosoft.solutions works just as well on your phone.
 
 41
-00:01:49,917 --> 00:01:51,297
+00:01:49,670 --> 00:01:51,297
 Dark mode included.
 
 42
-00:01:52,540 --> 00:01:54,180
+00:01:52,570 --> 00:01:54,110
 That’s EvoSoft.
 
 43
-00:01:54,180 --> 00:01:55,480
+00:01:54,110 --> 00:01:55,400
 Whatever you need built,
 
 44
-00:01:55,480 --> 00:01:58,680
+00:01:55,400 --> 00:01:58,680
 get a free quote at evosoft.solutions.
 

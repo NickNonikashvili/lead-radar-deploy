@@ -163,8 +163,11 @@ const CLIPS = {
     // only the four steps: the next section's content is hidden; the steps wait in grey and light up one at a time
     await page.addStyleTag({ content: `.sec:has(.trail) + .sec .wrap, .more { visibility: hidden }
       html .trail li .trail-n { filter: grayscale(1) brightness(1.35); }
+      html .trail li:last-child .trail-n { filter: grayscale(1) brightness(0.97); }
       html .trail li.lit .trail-n { filter: none; animation: __lit .55s cubic-bezier(.3, 1.6, .5, 1) !important; }
-      @keyframes __lit { from { transform: scale(.55); filter: grayscale(1) brightness(1.35); } }` });
+      @keyframes __lit { from { transform: scale(.55); filter: grayscale(1) brightness(1.35); } }
+      html .trail li.lit:last-child .trail-n { animation-name: __lit4 !important; }
+      @keyframes __lit4 { from { transform: scale(.55); filter: grayscale(1) brightness(0.97); } }` });
     // the section sits centred under the header, with even margins above and below ("All services" above it is hidden)
     await page.evaluate(() => { const t = document.querySelector('.trail'); window.scrollTo(0, t.getBoundingClientRect().top + window.scrollY - 400); });
     await page.waitForFunction(() => document.querySelector('.trail').classList.contains('drawn'), null, { timeout: 20000 });

@@ -131,7 +131,7 @@ def build(duration, groove_from, outro_from, break_from=None, break_bars=2):
             f = midi(note)
             tone = (np.sin(2 * np.pi * f * tt) + 0.25 * np.sin(2 * np.pi * 2 * f * tt) + 0.08 * np.sin(2 * np.pi * 3 * f * tt)) * np.exp(-tt / 0.22)
             tone *= adsr(len(tt), 0.004, 0.05)
-            vel = (0.155 if k % 2 == 0 else 0.11) * (0.5 if lead_in else 1.0)
+            vel = (0.19 if k % 2 == 0 else 0.135) * (0.5 if lead_in else 1.0)
             pan = 0.35 if k % 2 == 0 else 0.65
             place(arp[0], tone * vel * (1 - pan) * 1.4, nt)
             place(arp[1], tone * vel * pan * 1.4, nt)
@@ -193,7 +193,7 @@ def build(duration, groove_from, outro_from, break_from=None, break_bars=2):
         tone = (np.sin(2 * np.pi * f * tt) + 0.25 * np.sin(2 * np.pi * 2 * f * tt)) * np.exp(-tt / 0.6)
         place(arp[k % 2], tone * 0.09, outro_from + 0.15 + k * BEAT / 2)
 
-    pad = np.stack([fft_filter(c, lo=90, hi=1700) for c in pad])
+    pad = np.stack([fft_filter(c, lo=90, hi=2600) for c in pad])
     arp = np.stack([fft_filter(c, lo=180, hi=5200) for c in arp])
     bass = fft_filter(bass, hi=900)
     # simple stereo delay on the arpeggio (dotted eighth)
