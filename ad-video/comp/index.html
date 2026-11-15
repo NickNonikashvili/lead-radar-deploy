@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>EvoSoft ad compositor</title>
+<style>
+@font-face { font-family: 'Gabarito'; src: url(fonts/gabarito.woff2) format('woff2'); font-weight: 400 900; unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02C6, U+02DA, U+02DC, U+2000-206F, U+20AC, U+2122, U+2190-2193, U+2212, U+FEFF; }
+@font-face { font-family: 'Figtree'; src: url(fonts/figtree.woff2) format('woff2'); font-weight: 300 900; unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02C6, U+02DA, U+02DC, U+2000-206F, U+20AC, U+2122, U+2190-2193, U+2212, U+FEFF; }
+@font-face { font-family: 'Figtree'; src: url(fonts/onest-cyrillic.woff2) format('woff2'); font-weight: 300 900; unicode-range: U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116; }
+@font-face { font-family: 'Figtree'; src: url(fonts/noto-georgian.woff2) format('woff2'); font-weight: 300 900; unicode-range: U+10A0-10FF, U+1C90-1CBF, U+2D00-2D2F; }
+@font-face { font-family: 'Gabarito'; src: url(fonts/onest-cyrillic.woff2) format('woff2'); font-weight: 400 900; unicode-range: U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116; }
+@font-face { font-family: 'Gabarito'; src: url(fonts/noto-georgian.woff2) format('woff2'); font-weight: 400 900; unicode-range: U+10A0-10FF, U+1C90-1CBF, U+2D00-2D2F; }
+@font-face { font-family: 'Mono'; src: url(fonts/mono.woff2) format('woff2'); }
+:root { --ink: #14213D; --ink2: #3B4A66; --muted: #536279; --accent: #1A64D6; --deep: #1450B0; --border: #E1E7EF; --lip: #D5DDE8; --bg: #F4F7FB; --sky: #EEF6FF; }
+* { box-sizing: border-box; }
+html, body { margin: 0; width: 1920px; height: 1080px; overflow: hidden; background: var(--bg); }
+body { font-family: 'Figtree', 'Noto Sans', sans-serif; color: var(--ink); -webkit-font-smoothing: antialiased; }
+#stage { position: absolute; inset: 0; overflow: hidden; }
+
+/* background: soft sky, drifting light, a dot grid */
+#bg { position: absolute; inset: 0; background: linear-gradient(180deg, #EAF3FF 0%, #F4F7FB 70%); }
+#bg i { position: absolute; width: 1100px; height: 1100px; border-radius: 50%; filter: blur(90px); opacity: 0.6; }
+#bg i:nth-child(1) { background: radial-gradient(circle, #9CCBFF 0%, rgba(156,203,255,0) 68%); left: -300px; top: -420px; }
+#bg i:nth-child(2) { background: radial-gradient(circle, #C6B8FF 0%, rgba(198,184,255,0) 68%); right: -360px; top: -200px; }
+#bg i:nth-child(3) { background: radial-gradient(circle, #9DEBD9 0%, rgba(157,235,217,0) 68%); left: 600px; bottom: -700px; }
+#grid { position: absolute; inset: -60px; background-image: radial-gradient(rgba(20,33,61,0.13) 1.4px, transparent 1.8px); background-size: 30px 30px; -webkit-mask-image: radial-gradient(ellipse 70% 65% at 60% 40%, #000 15%, transparent 78%); }
+
+.scene { position: absolute; inset: 0; visibility: hidden; will-change: opacity, transform; }
+
+/* copy column */
+.copy { position: absolute; left: 120px; top: 0; bottom: 0; width: 520px; display: flex; flex-direction: column; justify-content: center; }
+.chip { align-self: flex-start; display: inline-flex; align-items: center; gap: 10px; padding: 9px 18px; border-radius: 999px; background: #fff; border: 2px solid var(--border); box-shadow: 0 3px 0 var(--lip); font: 700 21px/1.2 'Figtree'; color: var(--ink2); margin-bottom: 26px; }
+.chip i { width: 11px; height: 11px; border-radius: 50%; background: var(--c, #22A447); }
+.copy h1 { margin: 0 0 22px; font: 800 68px/1.04 'Gabarito'; letter-spacing: -0.02em; color: var(--ink); text-wrap: balance; }
+.copy p { margin: 0; font: 500 28px/1.4 'Figtree'; color: var(--muted); text-wrap: pretty; }
+.copy .bar { width: 72px; height: 7px; border-radius: 4px; background: linear-gradient(90deg, var(--accent), #7B61FF); margin: 0 0 24px; transform-origin: left; }
+
+/* browser window */
+.browser { position: absolute; border-radius: 22px; background: #fff; border: 2px solid var(--border); box-shadow: 0 40px 90px -30px rgba(20,33,61,0.45), 0 8px 20px -8px rgba(20,33,61,0.15); overflow: hidden; }
+.browser .top { height: 46px; display: flex; align-items: center; gap: 9px; padding: 0 18px; background: #F7F9FC; border-bottom: 2px solid var(--border); }
+.browser .top b { width: 13px; height: 13px; border-radius: 50%; background: #E3E8EF; }
+.browser .top b:nth-child(1) { background: #FF6159; } .browser .top b:nth-child(2) { background: #FFBD2E; } .browser .top b:nth-child(3) { background: #28C941; }
+.browser .url { margin-left: 18px; flex: 0 1 560px; height: 30px; display: flex; align-items: center; gap: 9px; padding: 0 14px; border-radius: 9px; background: #fff; border: 2px solid var(--border); font: 600 16px/1 'Figtree'; color: var(--ink2); white-space: nowrap; overflow: hidden; }
+.browser .url svg { width: 14px; height: 14px; flex: none; }
+.browser .vp { position: absolute; left: 0; right: 0; top: 46px; bottom: 0; overflow: hidden; background: #F4F7FB; }
+.browser .vp img { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
+/* inner viewport: full 1440×900 (the recordings at 1:1), split 1120×700 (16:10) */
+.layout-full .browser { left: 238px; top: 30px; width: 1444px; height: 950px; }
+.layout-split .browser { left: 690px; top: 142px; width: 1124px; height: 750px; }
+
+/* phone */
+.phonebox { position: absolute; left: 1080px; top: 70px; width: 440px; height: 900px; border-radius: 64px; background: #0D1626; padding: 16px; box-shadow: 0 40px 90px -30px rgba(20,33,61,0.55); }
+.phonebox .vp { position: relative; width: 100%; height: 100%; border-radius: 50px; overflow: hidden; background: #0D1626; }
+.phonebox .vp img { position: absolute; left: 0; top: 52px; width: 100%; }
+.phonebox .vp::before { content: '9:41'; position: absolute; left: 34px; top: 15px; font: 700 15px 'Figtree'; color: #fff; }
+.phonebox::after { content: ''; position: absolute; left: 50%; top: 30px; width: 110px; height: 30px; margin-left: -55px; border-radius: 20px; background: #0D1626; }
+
+/* title & end cards */
+.center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+.logo-big { display: flex; align-items: center; gap: 26px; }
+.logo-big .mark { width: 150px; height: 150px; }
+.logo-big .word { font: 700 132px/1 'Figtree'; letter-spacing: -0.03em; color: var(--ink); }
+.center h1 { margin: 54px 0 0; font: 800 76px/1.08 'Gabarito'; letter-spacing: -0.02em; max-width: 1500px; }
+.center h1 em { font-style: normal; color: var(--accent); }
+.center p { margin: 24px 0 0; font: 500 34px/1.35 'Figtree'; color: var(--muted); max-width: 1300px; }
+.kind-end .url-big { margin-top: 46px; font: 800 96px/1 'Gabarito'; letter-spacing: -0.02em; color: var(--accent); }
+.kind-end .cta { margin-top: 44px; display: inline-flex; align-items: center; gap: 14px; padding: 22px 40px; border-radius: 22px; background: var(--accent); border: 3px solid var(--deep); box-shadow: 0 6px 0 var(--deep); color: #fff; font: 800 38px/1 'Figtree'; }
+.kind-end .contacts { margin-top: 46px; font: 600 30px/1.5 'Figtree'; color: var(--ink2); }
+.kind-end .copyright { position: absolute; bottom: 120px; left: 0; right: 0; font: 500 20px 'Figtree'; color: var(--muted); }
+.kind-end .langs { margin-top: 18px; font: 600 22px 'Figtree'; color: var(--muted); letter-spacing: 0.02em; }
+
+/* language pills (languages scene) */
+.pills { margin-left: auto; display: flex; gap: 6px; }
+.pills span { padding: 6px 13px; border-radius: 999px; background: #fff; border: 2px solid var(--border); font: 700 16px/1 'Figtree'; color: var(--ink2); }
+.pills span.on { background: var(--accent); border-color: var(--deep); color: #fff; box-shadow: 0 3px 0 var(--deep); }
+
+/* captions */
+#cap { position: absolute; left: 0; right: 0; bottom: 34px; display: flex; justify-content: center; pointer-events: none; z-index: 20; }
+#cap span { max-width: 1500px; padding: 12px 26px; border-radius: 16px; background: rgba(13, 22, 38, 0.84); color: #fff; font: 600 34px/1.3 'Figtree'; text-align: center; box-shadow: 0 10px 30px -10px rgba(0,0,0,0.4); }
+#cap[hidden] { display: none; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="bg"><i></i><i></i><i></i><div id="grid"></div></div>
+  <div id="scenes"></div>
+  <div id="cap" hidden><span></span></div>
+</div>
+<script src="comp.js"></script>
+</body>
+</html>

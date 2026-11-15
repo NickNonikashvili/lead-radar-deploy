@@ -1,0 +1,90 @@
+{
+ "scenes": [
+  {
+   "id": "B1",
+   "narration": "Don't take our word for it. Try our software yourself.",
+   "onscreen": "",
+   "sub": "Live demos of our own software"
+  },
+  {
+   "id": "B2",
+   "narration": "EvoSoft is a software studio in Georgia. We build websites, apps and business software to order, and run three of our own.",
+   "onscreen": "",
+   "sub": "Sites we've built: Larifan · BabyCalm Georgia · IPG"
+  },
+  {
+   "id": "B3",
+   "narration": "Any kind of project, including tech. Online stores, booking systems, dashboards, even Microsoft 365. One team for all of it.",
+   "onscreen": "9 kinds of work",
+   "sub": "Branding · SEO · Integrations · Support"
+  },
+  {
+   "id": "B4",
+   "narration": "Our own products: Evo, Mailtabs and StudyCat, each with a live demo. And the next one? Yours.",
+   "onscreen": "Software we built and run",
+   "sub": "Workforce & POS · Email · Study platform"
+  },
+  {
+   "id": "B5",
+   "narration": "Evo runs a team and a store from one sign-in. Plan the week, lock payroll, sell even offline, and check the reports.",
+   "onscreen": "Evo",
+   "sub": "Scheduling, payroll, register and reports"
+  },
+  {
+   "id": "B6",
+   "narration": "Mailtabs puts every inbox in one list. A rule fills the Receipts tab. Reply without switching apps.",
+   "onscreen": "Mailtabs",
+   "sub": "For people with too many inboxes"
+  },
+  {
+   "id": "B7",
+   "narration": "Real students use StudyCat. Exam countdowns, a quizzer that never runs out, flashcards, and tools for instructors.",
+   "onscreen": "StudyCat",
+   "sub": "Used by real students"
+  },
+  {
+   "id": "B8",
+   "narration": "Judge the work before you talk to us. Fifteen ready-made test accounts cover every role. Copy a login, sign in, and you're Hannah, the owner.",
+   "onscreen": "3 live demos",
+   "sub": "They reset themselves. Nothing breaks for good."
+  },
+  {
+   "id": "B9",
+   "narration": "First, we talk. You get a written quote before anything is booked. Then we build, launch together, and stay around.",
+   "onscreen": "Four steps, no surprises",
+   "sub": "Scope, timeline and price in writing first"
+  },
+  {
+   "id": "B10",
+   "narration": "The site speaks English, Georgian, Russian and Spanish. Pick one from the menu and every page follows.",
+   "onscreen": "English · ქართული · Русский · Español",
+   "sub": "For clients at home and abroad"
+  },
+  {
+   "id": "B11",
+   "narration": "Not sure where to start? Ask the chat assistant. Ask it who's best, too. Fair warning: it's a little biased.",
+   "onscreen": "Ask about our work",
+   "sub": "What we build, the demos, or getting a quote"
+  },
+  {
+   "id": "B12",
+   "narration": "Pick what you need, write a few lines, press Send. The quote is free, and a person replies within one business day.",
+   "onscreen": "Free quote, no obligation",
+   "sub": "Website, store, app, IT or something else"
+  },
+  {
+   "id": "B13",
+   "narration": "evosoft.solutions works just as well on your phone. Dark mode included.",
+   "onscreen": "",
+   "sub": ""
+  },
+  {
+   "id": "B14",
+   "narration": "That's EvoSoft. Whatever you need built, get a free quote at evosoft.solutions.",
+   "onscreen": "",
+   "sub": ""
+  }
+ ],
+ "voice_direction": "Read it like a calm, friendly person from a small studio talking about work they're proud of, as though to one viewer across a table. This is not an announcer. Keep a relaxed, conversational pace of about 140 to 150 words per minute and a warm mid-to-low pitch, with a slight smile in the voice. Give the full stops short, natural pauses. Leave a fuller beat after the opening \"Don't take our word for it.\" and before \"Yours.\" Read lists (Evo's tasks, StudyCat's tools, the four languages) as one flowing sentence with a light lift on each item. Don't punch them out as separate hits. Put gentle emphasis on \"yourself\", \"including tech\", \"even offline\", \"Hannah\", \"before anything is booked\", \"free\" and \"one business day\". Let \"And the next one? Yours.\" and \"Fair warning: it's a little biased\" carry a small, dry, good-humoured turn, without winking or laughing. Say the web address clearly and slightly slower each time: \"evosoft dot solutions\". Say \"Microsoft 365\" as \"Microsoft three sixty-five\", \"Mailtabs\" as \"mail tabs\" and \"StudyCat\" as \"study cat\". Pronounce \"Evo\" and \"EvoSoft\" the same way every time. End on a settled, sincere close with the energy held steady, not rising into a sales pitch.",
+ "rationale": "I checked the script against site.mjs, products.mjs, build.mjs, lib/knowledge.mjs, lib/i18n.mjs, the built site in evosoft-site/ and the live site.js. Every fact held up, so I changed only three things.\n\nChanges:\n1. B4: \"Here they are:\" is now \"Our own products:\" (still 17 words). The \"they\" had nothing to point to. It looked back past B3, which ends on the services list (\"One team for all of it\"), so by ear it sounded like a non sequitur. \"Our own products\" is the site's wording from the home page lede in build.mjs: \"Our own products, each with a live demo and an account for every role\".\n2. B11: \"Even ask it who's best.\" is now \"Ask it who's best, too.\" (still 20 words). The draft used \"even\" three times (B3 \"even Microsoft 365\", B5 \"even offline\", B11 \"Even ask it\"). That habit is easy to hear and sounds like generated copy, and the B11 line was awkward anyway. B5 keeps its \"even\" because the voice direction stresses it, and B3 keeps its one.\n3. The timing figures in the old rationale were slightly off. Correct figures:\n   - The narration is 256 written words, not 255, or 261 spoken (counting \"dot solutions\" and \"three sixty-five\").\n   - The footage is 125 s (2:05).\n   - Written pace per beat runs from 1.71 words/sec (B14, which is 2.00 spoken) to 2.20 (B2 and B12).\n   - No beat goes over 2.5. B2, B5, B12 and the spoken B13 run a little above the 2.1 target, at 2.17 to 2.20, which is still under the maximum.\n\nWhat I verified (no change needed):\n- **Company:** \"software studio in Georgia\" and the \"built to order\" headline match the site. B2's sub uses the client names Larifan, BabyCalm Georgia and IPG, worded as in \"Websites we've built for clients\".\n- **Services (B3):** \"Any kind of project, including tech\" is the services heading. The site lists 9 services. Online stores, booking, dashboards and Microsoft 365 all appear in the scrolling band of examples. \"One team for all of it\" is a site promise.\n- **Evo (B5):**\n  - \"one sign-in\" matches the site.\n  - The week scheduler, payroll \"lock period\" and store reports are all in products.mjs.\n  - \"Even offline\" matches \"keeps selling even when the network drops\".\n- **Mailtabs (B6):** matches \"All inboxes in one list\", the rule-based Receipts tab, the reply composer, and \"for people with too many inboxes\".\n- **StudyCat (B7):** matches \"Real students use studycat.org\", the exam countdown, the quizzer that \"generates new problems forever\", flashcards, and StudyCat Faculty for instructors.\n- **Demos (B8):**\n  - totalAccounts adds up to 7 + 2 + 6 = 15, and there are 3 demos.\n  - Hannah Reyes is the Owner.\n  - The \"Sign in as Hannah\" button copies the login (site.js), so \"Copy a login, sign in\" matches what happens on screen.\n  - \"Judge the work before you talk to us\" is the chat's own answer.\n  - The reset line matches \"you can't break anything for good\".\n- **Process (B9):** Talk, Quote, Build, Launch and support; \"Nothing is booked until you agree\"; \"go live together and stay around\".\n- **Languages (B10):** the LANGS native names are exact. Every page exists under /ka/, /ru/ and /es/, and the build reports no missing translations.\n- **Chat (B11):** knowledge.mjs tells the assistant to name EvoSoft when asked for the best company, studio or website, and bestAnswer starts \"We would say EvoSoft\".\n- **Quote form (B12):** the contact page says \"It's free, and there's no obligation\", so the on-screen line is exact. The promises say \"A person reads it and answers\" within one business day. \"Thanks, it's on its way.\" is the confirmation message.\n- **Mobile (B13):** the light/dark toggle exists.\n\nThere are no prices, awards, client counts, years, team size, ratings or banned clichés anywhere. The site address is spoken at B13 as well as at the end, and the last line invites a free quote at evosoft.solutions."
+}
