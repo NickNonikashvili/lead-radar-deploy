@@ -609,7 +609,7 @@ details[open] .plus::after { transform: rotate(0); }
 @keyframes progress { to { transform: scaleX(1); } }
 .motion .dc-panel:not([hidden]) { animation: panel-in 0.5s cubic-bezier(0.2, 0.8, 0.2, 1); }
 .motion .dc-panel:not([hidden]) .dc-shot img { animation: ken 9s ease-out both; }
-@keyframes panel-in { from { opacity: 0; transform: translateY(10px); } }
+@keyframes panel-in { from { opacity: 0.4; transform: translateY(8px); } }
 @keyframes ken { from { transform: scale(1.12) translate(-2%, -1%); } to { transform: scale(1); } }
 .demo-card.tilt { transform: perspective(1000px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)); transition: transform 0.3s ease-out; }
 .tile.tilt:hover { transform: perspective(1000px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)) translateY(-4px); }
