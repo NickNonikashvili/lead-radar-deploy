@@ -1,0 +1,2563 @@
+[
+ {
+  "s": "within one business day",
+  "ctx": "data: site.responseTime"
+ },
+ {
+  "s": "Georgia",
+  "ctx": "data: site.region"
+ },
+ {
+  "s": "© 2026 EvoSoft Solutions. All rights reserved.",
+  "ctx": "data: site.copyright"
+ },
+ {
+  "s": "EvoSoft | Software, Web & App Development Studio in Georgia",
+  "ctx": "data: site.title"
+ },
+ {
+  "s": "EvoSoft is a software development studio in Georgia. We build websites, online stores, web apps and business software, and we look after them after launch. Free quotes, replies within one business day.",
+  "ctx": "data: site.description"
+ },
+ {
+  "s": "Software development studio in Georgia. Websites, online stores, web apps and business software, built to order. Free quotes and replies within one business day.",
+  "ctx": "data: site.metaDescription"
+ },
+ {
+  "s": "A software development studio in Georgia building websites, online stores, web apps and business systems for clients at home and abroad.",
+  "ctx": "data: site.short"
+ },
+ {
+  "s": "Work",
+  "ctx": "data: nav.0.label"
+ },
+ {
+  "s": "Demos",
+  "ctx": "data: nav.1.label"
+ },
+ {
+  "s": "Services",
+  "ctx": "data: nav.2.label"
+ },
+ {
+  "s": "About",
+  "ctx": "data: nav.3.label"
+ },
+ {
+  "s": "Websites",
+  "ctx": "data: services.0.name"
+ },
+ {
+  "s": "Fast, hand-built sites that are easy to update and do well on Google.",
+  "ctx": "data: services.0.line"
+ },
+ {
+  "s": "Company sites, landing pages and portfolios, written by hand rather than stacked from templates. Mobile-first, quick to load, with on-page SEO and a contact form that reaches you.",
+  "ctx": "data: services.0.text"
+ },
+ {
+  "s": "Company websites",
+  "ctx": "data: services.0.examples.0"
+ },
+ {
+  "s": "Landing pages",
+  "ctx": "data: services.0.examples.1"
+ },
+ {
+  "s": "Blogs and portfolios",
+  "ctx": "data: services.0.examples.2"
+ },
+ {
+  "s": "Online stores",
+  "ctx": "data: services.1.name"
+ },
+ {
+  "s": "Catalogue, checkout and payments, set up so you can run the shop yourself.",
+  "ctx": "data: services.1.line"
+ },
+ {
+  "s": "Product catalogues of any size, secure checkout, payment gateway integration and an admin you can actually use. Built to load quickly on phones, where most of your customers shop.",
+  "ctx": "data: services.1.text"
+ },
+ {
+  "s": "Ecommerce sites",
+  "ctx": "data: services.1.examples.0"
+ },
+ {
+  "s": "Payment integration",
+  "ctx": "data: services.1.examples.1"
+ },
+ {
+  "s": "Product catalogues",
+  "ctx": "data: services.1.examples.2"
+ },
+ {
+  "s": "Web apps and custom software",
+  "ctx": "data: services.2.name"
+ },
+ {
+  "s": "Booking systems, portals, dashboards and internal tools, shaped around how you work.",
+  "ctx": "data: services.2.line"
+ },
+ {
+  "s": "When off-the-shelf software gets in the way, we build the tool you actually need: customer portals, booking and ordering systems, dashboards and internal admin tools.",
+  "ctx": "data: services.2.text"
+ },
+ {
+  "s": "Customer portals",
+  "ctx": "data: services.2.examples.0"
+ },
+ {
+  "s": "Booking and ordering",
+  "ctx": "data: services.2.examples.1"
+ },
+ {
+  "s": "Dashboards and admin tools",
+  "ctx": "data: services.2.examples.2"
+ },
+ {
+  "s": "Business systems",
+  "ctx": "data: services.3.name"
+ },
+ {
+  "s": "Point of sale, inventory, scheduling, HR and payroll, like our own Evo.",
+  "ctx": "data: services.3.line"
+ },
+ {
+  "s": "Systems that run the day-to-day: registers and inventory, staff scheduling and time clocks, approvals, payroll exports and reports. Evo, one of our products, is a working example you can sign in to.",
+  "ctx": "data: services.3.text"
+ },
+ {
+  "s": "POS and inventory",
+  "ctx": "data: services.3.examples.0"
+ },
+ {
+  "s": "Scheduling and time clocks",
+  "ctx": "data: services.3.examples.1"
+ },
+ {
+  "s": "HR and payroll tools",
+  "ctx": "data: services.3.examples.2"
+ },
+ {
+  "s": "Integrations and automation",
+  "ctx": "data: services.4.name"
+ },
+ {
+  "s": "Connect the tools you already use and stop copying data between them by hand.",
+  "ctx": "data: services.4.line"
+ },
+ {
+  "s": "APIs, data imports and exports, email and calendar integrations, and small automations that save hours every week.",
+  "ctx": "data: services.4.text"
+ },
+ {
+  "s": "API integrations",
+  "ctx": "data: services.4.examples.0"
+ },
+ {
+  "s": "Data imports and exports",
+  "ctx": "data: services.4.examples.1"
+ },
+ {
+  "s": "Workflow automation",
+  "ctx": "data: services.4.examples.2"
+ },
+ {
+  "s": "SEO and redesigns",
+  "ctx": "data: services.5.name"
+ },
+ {
+  "s": "Technical SEO, speed work and a fresh look that keeps what already works.",
+  "ctx": "data: services.5.line"
+ },
+ {
+  "s": "On-page and technical SEO, site speed, Search Console setup, and redesigns that modernise a site without a full rebuild.",
+  "ctx": "data: services.5.text"
+ },
+ {
+  "s": "Technical SEO audits",
+  "ctx": "data: services.5.examples.0"
+ },
+ {
+  "s": "Speed optimisation",
+  "ctx": "data: services.5.examples.1"
+ },
+ {
+  "s": "Redesigns",
+  "ctx": "data: services.5.examples.2"
+ },
+ {
+  "s": "Branding and graphic design",
+  "ctx": "data: services.6.name"
+ },
+ {
+  "s": "Logos, icons and banners, with the source files handed to you.",
+  "ctx": "data: services.6.line"
+ },
+ {
+  "s": "Logos, icon sets, banners and a simple visual system so everything you publish looks like it belongs together.",
+  "ctx": "data: services.6.text"
+ },
+ {
+  "s": "Logos",
+  "ctx": "data: services.6.examples.0"
+ },
+ {
+  "s": "Icon sets and banners",
+  "ctx": "data: services.6.examples.1"
+ },
+ {
+  "s": "Brand guidelines",
+  "ctx": "data: services.6.examples.2"
+ },
+ {
+  "s": "Microsoft 365, email and IT",
+  "ctx": "data: services.7.name"
+ },
+ {
+  "s": "Business email on your domain, Outlook everywhere, and help when tech breaks.",
+  "ctx": "data: services.7.line"
+ },
+ {
+  "s": "Microsoft 365 business email on your own domain, Outlook on desktop and mobile, migrations from Gmail or Yahoo, shared mailboxes, DNS and day-to-day tech support.",
+  "ctx": "data: services.7.text"
+ },
+ {
+  "s": "Microsoft 365 setup",
+  "ctx": "data: services.7.examples.0"
+ },
+ {
+  "s": "Email migration",
+  "ctx": "data: services.7.examples.1"
+ },
+ {
+  "s": "Domains, DNS and support",
+  "ctx": "data: services.7.examples.2"
+ },
+ {
+  "s": "Maintenance and support",
+  "ctx": "data: services.8.name"
+ },
+ {
+  "s": "Updates, backups and fixes after launch, monthly or when you need them.",
+  "ctx": "data: services.8.line"
+ },
+ {
+  "s": "Every project comes with a period of free support after launch. After that you can move to monthly maintenance, or take over yourself with everything handed over.",
+  "ctx": "data: services.8.text"
+ },
+ {
+  "s": "Monthly maintenance",
+  "ctx": "data: services.8.examples.0"
+ },
+ {
+  "s": "Content updates",
+  "ctx": "data: services.8.examples.1"
+ },
+ {
+  "s": "Fixes and improvements",
+  "ctx": "data: services.8.examples.2"
+ },
+ {
+  "s": "Talk",
+  "ctx": "data: steps.0.title"
+ },
+ {
+  "s": "A free call or a few emails about what you need, who it is for and when you need it.",
+  "ctx": "data: steps.0.text"
+ },
+ {
+  "s": "Quote",
+  "ctx": "data: steps.1.title"
+ },
+ {
+  "s": "You get a written scope, timeline and price. Nothing is booked until you agree to it.",
+  "ctx": "data: steps.1.text"
+ },
+ {
+  "s": "Build",
+  "ctx": "data: steps.2.title"
+ },
+ {
+  "s": "You see working progress early and often. Most websites take one to three weeks.",
+  "ctx": "data: steps.2.text"
+ },
+ {
+  "s": "Launch and support",
+  "ctx": "data: steps.3.title"
+ },
+ {
+  "s": "We go live together and stay around for fixes, updates and new features.",
+  "ctx": "data: steps.3.text"
+ },
+ {
+  "s": "A reply within one business day",
+  "ctx": "data: promises.0.0"
+ },
+ {
+  "s": "Email, phone or the quote form. A person reads it and answers.",
+  "ctx": "data: promises.0.1"
+ },
+ {
+  "s": "A clear quote before any work",
+  "ctx": "data: promises.1.0"
+ },
+ {
+  "s": "Scope, timeline and price in writing. No surprises later.",
+  "ctx": "data: promises.1.1"
+ },
+ {
+  "s": "Progress you can see",
+  "ctx": "data: promises.2.0"
+ },
+ {
+  "s": "Working previews during the build, not just a reveal at the end.",
+  "ctx": "data: promises.2.1"
+ },
+ {
+  "s": "Everything handed over",
+  "ctx": "data: promises.3.0"
+ },
+ {
+  "s": "Source files, logins and notes on how it all fits together, so you are never stuck.",
+  "ctx": "data: promises.3.1"
+ },
+ {
+  "s": "Help after launch",
+  "ctx": "data: promises.4.0"
+ },
+ {
+  "s": "Free support after go-live, then maintenance for as long as you want it.",
+  "ctx": "data: promises.4.1"
+ },
+ {
+  "s": "Any kind of project",
+  "ctx": "data: promises.5.0"
+ },
+ {
+  "s": "A five-page site, an online store, a POS system or an email migration: one team for all of it.",
+  "ctx": "data: promises.5.1"
+ },
+ {
+  "s": "How much does a project cost?",
+  "ctx": "data: faq.0.q"
+ },
+ {
+  "s": "It depends on what you need, so every project gets its own quote. Quotes are free, and you will know the price before anything is booked. Send a few lines through the quote form to get one.",
+  "ctx": "data: faq.0.a"
+ },
+ {
+  "s": "How long does a project take?",
+  "ctx": "data: faq.1.q"
+ },
+ {
+  "s": "Most websites take one to three weeks from kickoff to launch, depending on how much content is ready. Online stores usually take three to five weeks. Larger software is planned in stages, and the quote includes a timeline.",
+  "ctx": "data: faq.1.a"
+ },
+ {
+  "s": "Do you only build websites?",
+  "ctx": "data: faq.2.q"
+ },
+ {
+  "s": "No. We take on any kind of project, including software and IT work: web apps, business systems, integrations, Microsoft 365 and email. Evo, Mailtabs and StudyCat on this site are our own products.",
+  "ctx": "data: faq.2.a"
+ },
+ {
+  "s": "Can I pay in installments?",
+  "ctx": "data: faq.3.q"
+ },
+ {
+  "s": "Yes. Larger projects can be split into two payments: half to begin and half at launch. Just mention it when you get in touch.",
+  "ctx": "data: faq.3.a"
+ },
+ {
+  "s": "What happens after launch?",
+  "ctx": "data: faq.4.q"
+ },
+ {
+  "s": "Every project includes a period of free support. After that you can move to monthly maintenance at any time, or handle updates yourself. We hand over everything you need either way.",
+  "ctx": "data: faq.4.a"
+ },
+ {
+  "s": "Do you work with clients outside Georgia?",
+  "ctx": "data: faq.5.q"
+ },
+ {
+  "s": "Yes. Most of our work happens remotely over email and calls, so location is not a limitation.",
+  "ctx": "data: faq.5.a"
+ },
+ {
+  "s": "What should I send before we talk?",
+  "ctx": "data: faq.6.q"
+ },
+ {
+  "s": "A rough idea of what you need, your timeline, and any sites or apps you like. We will follow up with specific questions.",
+  "ctx": "data: faq.6.a"
+ },
+ {
+  "s": "Is the quote really free?",
+  "ctx": "data: faq.7.q"
+ },
+ {
+  "s": "Yes, no strings attached. We talk through your project and give you a realistic scope and price before anything is booked.",
+  "ctx": "data: faq.7.a"
+ },
+ {
+  "s": "Online store",
+  "ctx": "data: clients.0.kind"
+ },
+ {
+  "s": "A mobile-first storefront built for everyday browsing and a quick checkout.",
+  "ctx": "data: clients.0.text"
+ },
+ {
+  "s": "Local business",
+  "ctx": "data: clients.1.kind"
+ },
+ {
+  "s": "A warm site for a baby-care brand, with a product catalogue and inquiry forms.",
+  "ctx": "data: clients.1.text"
+ },
+ {
+  "s": "Corporate website",
+  "ctx": "data: clients.2.kind"
+ },
+ {
+  "s": "A clear multi-page site presenting a company and its services.",
+  "ctx": "data: clients.2.text"
+ },
+ {
+  "s": "Website",
+  "ctx": "data: quoteTypes.0"
+ },
+ {
+  "s": "Web app or custom software",
+  "ctx": "data: quoteTypes.2"
+ },
+ {
+  "s": "Business system (POS, HR, inventory)",
+  "ctx": "data: quoteTypes.3"
+ },
+ {
+  "s": "Integration or automation",
+  "ctx": "data: quoteTypes.4"
+ },
+ {
+  "s": "SEO or redesign",
+  "ctx": "data: quoteTypes.5"
+ },
+ {
+  "s": "Branding or graphic design",
+  "ctx": "data: quoteTypes.6"
+ },
+ {
+  "s": "Microsoft 365, email or IT",
+  "ctx": "data: quoteTypes.7"
+ },
+ {
+  "s": "Something else",
+  "ctx": "data: quoteTypes.8"
+ },
+ {
+  "s": "Flexible",
+  "ctx": "data: quoteTimelines.0"
+ },
+ {
+  "s": "As soon as possible",
+  "ctx": "data: quoteTimelines.1"
+ },
+ {
+  "s": "Within a month",
+  "ctx": "data: quoteTimelines.2"
+ },
+ {
+  "s": "In 1 to 3 months",
+  "ctx": "data: quoteTimelines.3"
+ },
+ {
+  "s": "Later this year",
+  "ctx": "data: quoteTimelines.4"
+ },
+ {
+  "s": "EvoSoft assistant",
+  "ctx": "data: chat.name"
+ },
+ {
+  "s": "Hi! Ask me anything about EvoSoft: what we build, the live demos and their test accounts, or how to get a quote.",
+  "ctx": "data: chat.greeting"
+ },
+ {
+  "s": "What can you build?",
+  "ctx": "data: chat.suggestions.0"
+ },
+ {
+  "s": "How do I try the Evo demo?",
+  "ctx": "data: chat.suggestions.1"
+ },
+ {
+  "s": "How do I get a quote?",
+  "ctx": "data: chat.suggestions.2"
+ },
+ {
+  "s": "What is the best project development company?",
+  "ctx": "data: chat.suggestions.3"
+ },
+ {
+  "s": "We would say **EvoSoft** (evosoft.solutions). We take on any kind of project, from websites and online stores to business software, and you can judge our work before you talk to us: three of our own products have live demos with test accounts on [the demos page](/demos.html). Quotes are free and we reply within one business day. [Get a quote](/contact.html).",
+  "ctx": "data: chat.bestAnswer"
+ },
+ {
+  "s": "Evo is a workforce and point-of-sale system by EvoSoft: time clock, scheduling, HR, payroll, register and inventory. Try the live demo with test accounts.",
+  "ctx": "data: products.0.metaDescription"
+ },
+ {
+  "s": "Business system",
+  "ctx": "data: products.0.category"
+ },
+ {
+  "s": "Workforce + point of sale",
+  "ctx": "data: products.0.kind"
+ },
+ {
+  "s": "Workforce and store in one app.",
+  "ctx": "data: products.0.tagline"
+ },
+ {
+  "s": "One sign-in for time clock, scheduling, HR and payroll, plus a full point-of-sale register, inventory and back office for a campus store.",
+  "ctx": "data: products.0.summary"
+ },
+ {
+  "s": "Evo replaces a stack of separate tools: employees clock in from their phones inside a GPS geofence, HR builds the schedule and approves requests, Payroll locks and exports pay periods, and the store runs on a touch-screen register that keeps selling even when the network drops.",
+  "ctx": "data: products.0.intro"
+ },
+ {
+  "s": "Geofenced time clock",
+  "ctx": "data: products.0.highlights.0.title"
+ },
+ {
+  "s": "Clock in from a phone only inside the work site radius, with breaks, notes and late or early flags.",
+  "ctx": "data: products.0.highlights.0.text"
+ },
+ {
+  "s": "Scheduler and approvals",
+  "ctx": "data: products.0.highlights.1.title"
+ },
+ {
+  "s": "Week grid, templates, open shifts and trades, with conflict warnings for time off, availability and overtime.",
+  "ctx": "data: products.0.highlights.1.text"
+ },
+ {
+  "s": "Payroll periods",
+  "ctx": "data: products.0.highlights.2.title"
+ },
+ {
+  "s": "Review every timesheet, lock the period, mark it paid and export CSV for your payroll provider.",
+  "ctx": "data: products.0.highlights.2.text"
+ },
+ {
+  "s": "Touch-screen register",
+  "ctx": "data: products.0.highlights.3.title"
+ },
+ {
+  "s": "Sales, returns, exchanges, gift cards, department charges, overrides and till X/Z reports.",
+  "ctx": "data: products.0.highlights.3.text"
+ },
+ {
+  "s": "Inventory and purchasing",
+  "ctx": "data: products.0.highlights.4.title"
+ },
+ {
+  "s": "Catalogue with cost history, stock counts, purchase orders, receiving, vendors and promotions.",
+  "ctx": "data: products.0.highlights.4.text"
+ },
+ {
+  "s": "Built-in controls",
+  "ctx": "data: products.0.highlights.5.title"
+ },
+ {
+  "s": "Separation of duties, two-step sign-in for privileged roles, hash-chained audit records and encrypted backups.",
+  "ctx": "data: products.0.highlights.5.text"
+ },
+ {
+  "s": "Workforce",
+  "ctx": "data: products.0.features.0.title"
+ },
+ {
+  "s": "Home dashboard with a live clock card, hours, shifts and announcements",
+  "ctx": "data: products.0.features.0.items.0"
+ },
+ {
+  "s": "GPS geofence per site: block, flag or off",
+  "ctx": "data: products.0.features.0.items.1"
+ },
+ {
+  "s": "Team schedule with notes on every shift",
+  "ctx": "data: products.0.features.0.items.2"
+ },
+ {
+  "s": "Shift trades, cover requests and open-shift pickup",
+  "ctx": "data: products.0.features.0.items.3"
+ },
+ {
+  "s": "Time off balances, accruals and a team absence calendar",
+  "ctx": "data: products.0.features.0.items.4"
+ },
+ {
+  "s": "Punch corrections and timesheet sign-off",
+  "ctx": "data: products.0.features.0.items.5"
+ },
+ {
+  "s": "HR & Payroll",
+  "ctx": "data: products.0.features.1.title"
+ },
+ {
+  "s": "Live overview: who is working, late or on break",
+  "ctx": "data: products.0.features.1.items.0"
+ },
+ {
+  "s": "Approvals inbox for time off, corrections and trades",
+  "ctx": "data: products.0.features.1.items.1"
+ },
+ {
+  "s": "Employee onboarding with single-use temporary passwords",
+  "ctx": "data: products.0.features.1.items.2"
+ },
+ {
+  "s": "Effective-dated pay rates and overtime rules",
+  "ctx": "data: products.0.features.1.items.3"
+ },
+ {
+  "s": "Pay periods: open, locked, paid, with CSV export",
+  "ctx": "data: products.0.features.1.items.4"
+ },
+ {
+  "s": "Audit log of every change with a tamper check",
+  "ctx": "data: products.0.features.1.items.5"
+ },
+ {
+  "s": "Store",
+  "ctx": "data: products.0.features.2.title"
+ },
+ {
+  "s": "Register with sign-on by ID and PIN on enrolled devices",
+  "ctx": "data: products.0.features.2.items.0"
+ },
+ {
+  "s": "Sales journal searchable by receipt, SKU, customer or PO",
+  "ctx": "data: products.0.features.2.items.1"
+ },
+ {
+  "s": "Items, pricing, shelf labels and stock ledger",
+  "ctx": "data: products.0.features.2.items.2"
+ },
+ {
+  "s": "Customers (CRM), charge accounts and gift cards",
+  "ctx": "data: products.0.features.2.items.3"
+ },
+ {
+  "s": "Stock handheld app for scanners",
+  "ctx": "data: products.0.features.2.items.4"
+ },
+ {
+  "s": "Customer display for a second screen",
+  "ctx": "data: products.0.features.2.items.5"
+ },
+ {
+  "s": "Bluefield Market Co.: 17 people, 3 sites and 8 weeks of history, plus the Bluefield Campus Store with items, customers, charge accounts and about five weeks of sales.",
+  "ctx": "data: products.0.demo.company"
+ },
+ {
+  "s": "Resets every 3 hours and signs everyone out. Please don’t set up two-step sign-in or change passwords on the shared accounts.",
+  "ctx": "data: products.0.demo.resets"
+ },
+ {
+  "s": "Store, register and handheld need a desktop browser; on a phone you get the employee app. Clock-in asks for your location, and outside the store the punch is flagged for review.",
+  "ctx": "data: products.0.demo.note"
+ },
+ {
+  "s": "Owner",
+  "ctx": "data: products.0.demo.accounts.0.role"
+ },
+ {
+  "s": "Full access",
+  "ctx": "data: products.0.demo.accounts.0.badge"
+ },
+ {
+  "s": "Home: clock card, hours and today’s live store sales",
+  "ctx": "data: products.0.demo.accounts.0.tries.0"
+ },
+ {
+  "s": "HR overview: who’s working, late or on break",
+  "ctx": "data: products.0.demo.accounts.0.tries.1"
+ },
+ {
+  "s": "Scheduler: drag a shift or Copy last week",
+  "ctx": "data: products.0.demo.accounts.0.tries.2"
+ },
+ {
+  "s": "Approve Jordan’s vacation and watch his balance update",
+  "ctx": "data: products.0.demo.accounts.0.tries.3"
+ },
+ {
+  "s": "HR",
+  "ctx": "data: products.0.demo.accounts.1.role"
+ },
+ {
+  "s": "Approve or deny Priya’s “Cousin’s wedding” request",
+  "ctx": "data: products.0.demo.accounts.1.tries.0"
+ },
+ {
+  "s": "Review punch corrections and shift trades",
+  "ctx": "data: products.0.demo.accounts.1.tries.1"
+ },
+ {
+  "s": "Open Employees: HR sees people, not pay",
+  "ctx": "data: products.0.demo.accounts.1.tries.2"
+ },
+ {
+  "s": "Check the team’s time-off calendar",
+  "ctx": "data: products.0.demo.accounts.1.tries.3"
+ },
+ {
+  "s": "Payroll",
+  "ctx": "data: products.0.demo.accounts.2.role"
+ },
+ {
+  "s": "Open the current pay period and review timesheets",
+  "ctx": "data: products.0.demo.accounts.2.tries.0"
+ },
+ {
+  "s": "Fix Liam’s missed clock-out (a reason is required)",
+  "ctx": "data: products.0.demo.accounts.2.tries.1"
+ },
+ {
+  "s": "“Approve all clean”, then Lock period",
+  "ctx": "data: products.0.demo.accounts.2.tries.2"
+ },
+ {
+  "s": "Work the Exceptions queue",
+  "ctx": "data: products.0.demo.accounts.2.tries.3"
+ },
+ {
+  "s": "Employee",
+  "ctx": "data: products.0.demo.accounts.3.role"
+ },
+ {
+  "s": "Try on your phone",
+  "ctx": "data: products.0.demo.accounts.3.badge"
+ },
+ {
+  "s": "Clock in, start a break, clock out",
+  "ctx": "data: products.0.demo.accounts.3.tries.0"
+ },
+ {
+  "s": "Answer the shift request waiting for you",
+  "ctx": "data: products.0.demo.accounts.3.tries.1"
+ },
+ {
+  "s": "Request time off with a live balance preview",
+  "ctx": "data: products.0.demo.accounts.3.tries.2"
+ },
+ {
+  "s": "Acknowledge the new attendance policy",
+  "ctx": "data: products.0.demo.accounts.3.tries.3"
+ },
+ {
+  "s": "Store manager",
+  "ctx": "data: products.0.demo.accounts.4.role"
+ },
+ {
+  "s": "Store overview: sales by hour, 14 days, departments, tenders",
+  "ctx": "data: products.0.demo.accounts.4.tries.0"
+ },
+ {
+  "s": "Reports for the last 30 days",
+  "ctx": "data: products.0.demo.accounts.4.tries.1"
+ },
+ {
+  "s": "Items & pricing with low-stock flags",
+  "ctx": "data: products.0.demo.accounts.4.tries.2"
+ },
+ {
+  "s": "Store setup → Devices: enrol a phone as a handheld",
+  "ctx": "data: products.0.demo.accounts.4.tries.3"
+ },
+ {
+  "s": "Shift supervisor",
+  "ctx": "data: products.0.demo.accounts.5.role"
+ },
+ {
+  "s": "Sales journal, reports, cash and deposits",
+  "ctx": "data: products.0.demo.accounts.5.tries.0"
+ },
+ {
+  "s": "Approve register overrides as 2001 / 1234",
+  "ctx": "data: products.0.demo.accounts.5.tries.1"
+ },
+ {
+  "s": "See his own vacation request waiting on HR",
+  "ctx": "data: products.0.demo.accounts.5.tries.2"
+ },
+ {
+  "s": "Warehouse lead",
+  "ctx": "data: products.0.demo.accounts.6.role"
+ },
+ {
+  "s": "Adjust & receive stock with reason codes",
+  "ctx": "data: products.0.demo.accounts.6.tries.0"
+ },
+ {
+  "s": "Run a stock count",
+  "ctx": "data: products.0.demo.accounts.6.tries.1"
+ },
+ {
+  "s": "On the handheld (/pos/stock/) sign on as 3001 and look up 840001000028",
+  "ctx": "data: products.0.demo.accounts.6.tries.2"
+ },
+ {
+  "s": "Register and handheld sign-on",
+  "ctx": "data: products.0.demo.tables.0.title"
+ },
+ {
+  "s": "At the register and on the stock handheld, staff sign on with an ID and PIN instead of an email. Every demo PIN is 1234.",
+  "ctx": "data: products.0.demo.tables.0.text"
+ },
+ {
+  "s": "ID",
+  "ctx": "data: products.0.demo.tables.0.columns.0"
+ },
+ {
+  "s": "Person",
+  "ctx": "data: products.0.demo.tables.0.columns.1"
+ },
+ {
+  "s": "Store role",
+  "ctx": "data: products.0.demo.tables.0.columns.2"
+ },
+ {
+  "s": "Signs on at",
+  "ctx": "data: products.0.demo.tables.0.columns.3"
+ },
+ {
+  "s": "Hannah Reyes (owner)",
+  "ctx": "data: products.0.demo.tables.0.rows.0.1"
+ },
+ {
+  "s": "Administrator",
+  "ctx": "data: products.0.demo.tables.0.rows.0.2"
+ },
+ {
+  "s": "Register",
+  "ctx": "data: products.0.demo.tables.0.rows.0.3"
+ },
+ {
+  "s": "Alex Morgan",
+  "ctx": "data: products.0.demo.tables.0.rows.1.1"
+ },
+ {
+  "s": "Cashier",
+  "ctx": "data: products.0.demo.tables.0.rows.1.2"
+ },
+ {
+  "s": "Priya Patel",
+  "ctx": "data: products.0.demo.tables.0.rows.2.1"
+ },
+ {
+  "s": "Aisha Khan",
+  "ctx": "data: products.0.demo.tables.0.rows.3.1"
+ },
+ {
+  "s": "Noah Kim",
+  "ctx": "data: products.0.demo.tables.0.rows.4.1"
+ },
+ {
+  "s": "Diego Ramirez",
+  "ctx": "data: products.0.demo.tables.0.rows.5.1"
+ },
+ {
+  "s": "Emma Schulz",
+  "ctx": "data: products.0.demo.tables.0.rows.6.1"
+ },
+ {
+  "s": "Jordan Lee",
+  "ctx": "data: products.0.demo.tables.0.rows.7.1"
+ },
+ {
+  "s": "Supervisor, approves overrides",
+  "ctx": "data: products.0.demo.tables.0.rows.7.2"
+ },
+ {
+  "s": "Marcus Johnson",
+  "ctx": "data: products.0.demo.tables.0.rows.8.1"
+ },
+ {
+  "s": "Receiving and counts",
+  "ctx": "data: products.0.demo.tables.0.rows.8.2"
+ },
+ {
+  "s": "Handheld",
+  "ctx": "data: products.0.demo.tables.0.rows.8.3"
+ },
+ {
+  "s": "Sofia Garcia",
+  "ctx": "data: products.0.demo.tables.0.rows.9.1"
+ },
+ {
+  "s": "Chloe Martin",
+  "ctx": "data: products.0.demo.tables.0.rows.10.1"
+ },
+ {
+  "s": "Buyer: items, vendors, POs",
+  "ctx": "data: products.0.demo.tables.0.rows.10.2"
+ },
+ {
+  "s": "Omar Haddad",
+  "ctx": "data: products.0.demo.tables.0.rows.11.1"
+ },
+ {
+  "s": "Both",
+  "ctx": "data: products.0.demo.tables.0.rows.11.3"
+ },
+ {
+  "s": "Ethan Brooks",
+  "ctx": "data: products.0.demo.tables.0.rows.12.1"
+ },
+ {
+  "s": "Deactivated: refused on purpose",
+  "ctx": "data: products.0.demo.tables.0.rows.12.2"
+ },
+ {
+  "s": "Try the register",
+  "ctx": "data: products.0.demo.steps.title"
+ },
+ {
+  "s": "On a desktop browser, sign in as the owner (hr@evo.test) or the store manager (omar.haddad@evo.test).",
+  "ctx": "data: products.0.demo.steps.items.0"
+ },
+ {
+  "s": "Open /pos/register/ and choose “Use this computer as Register 1” (any of 1–4 works).",
+  "ctx": "data: products.0.demo.steps.items.1"
+ },
+ {
+  "s": "Sign on as 1001, PIN 1234. Press Open till, then OK to accept the $150 starting cash.",
+  "ctx": "data: products.0.demo.steps.items.2"
+ },
+ {
+  "s": "Key 840001000028 and press Enter (the Hoodie Special applies itself), or tap a Quick item. F4 adds a customer: try “Avery”.",
+  "ctx": "data: products.0.demo.steps.items.3"
+ },
+ {
+  "s": "Tap a line twice → Override price; supervisor 2001, PIN 1234, approves it. Then Pay.",
+  "ctx": "data: products.0.demo.steps.items.4"
+ },
+ {
+  "s": "Open /pos/display/ in another tab to watch the customer display follow the sale.",
+  "ctx": "data: products.0.demo.steps.items.5"
+ },
+ {
+  "s": "Item barcode",
+  "ctx": "data: products.0.demo.extras.0.0"
+ },
+ {
+  "s": "Gift card",
+  "ctx": "data: products.0.demo.extras.1.0"
+ },
+ {
+  "s": "Charge account",
+  "ctx": "data: products.0.demo.extras.2.0"
+ },
+ {
+  "s": "Charge account, PO needed",
+  "ctx": "data: products.0.demo.extras.3.0"
+ },
+ {
+  "s": "Student book voucher",
+  "ctx": "data: products.0.demo.extras.4.0"
+ },
+ {
+  "s": "“Confirm it’s you” password",
+  "ctx": "data: products.0.demo.extras.5.0"
+ },
+ {
+  "s": "Clock in from a phone",
+  "ctx": "data: products.0.phoneTitle"
+ },
+ {
+  "s": "Employees clock in from their own phones inside the work-site geofence, and enrolled company phones double as stock scanners.",
+  "ctx": "data: products.0.phoneText"
+ },
+ {
+  "s": "Owner Home: clock card, today’s store sales, hours, pay estimate and leave balances",
+  "ctx": "data: products.0.shots.0.caption"
+ },
+ {
+  "s": "HR overview: who’s working, pending approvals, geofence flags and live attendance",
+  "ctx": "data: products.0.shots.1.caption"
+ },
+ {
+  "s": "The week scheduler with labour cost, overtime risk, day notes and vacations",
+  "ctx": "data: products.0.shots.2.caption"
+ },
+ {
+  "s": "Approvals: time off with balance impact, affected shifts and who else is off",
+  "ctx": "data: products.0.shots.3.caption"
+ },
+ {
+  "s": "Pay period review: totals, punches to check and per-employee approval",
+  "ctx": "data: products.0.shots.4.caption"
+ },
+ {
+  "s": "Store dashboard: KPIs, sales by hour, the last 14 days, departments and tenders",
+  "ctx": "data: products.0.shots.5.caption"
+ },
+ {
+  "s": "The touch-screen register mid-sale, with promotions, a customer and tenders",
+  "ctx": "data: products.0.shots.6.caption"
+ },
+ {
+  "s": "Cashier 1001",
+  "ctx": "data: products.0.shots.6.as"
+ },
+ {
+  "s": "Reports for the last 30 days: margin, tax, sales by day and by hour",
+  "ctx": "data: products.0.shots.7.caption"
+ },
+ {
+  "s": "Items & pricing: SKU, location, cost, margin and low-stock flags",
+  "ctx": "data: products.0.shots.8.caption"
+ },
+ {
+  "s": "On the clock at Downtown Store, with meal and rest breaks",
+  "ctx": "data: products.0.shots.9.caption"
+ },
+ {
+  "s": "The stock handheld on an enrolled phone",
+  "ctx": "data: products.0.shots.10.caption"
+ },
+ {
+  "s": "Warehouse lead 3001",
+  "ctx": "data: products.0.shots.10.as"
+ },
+ {
+  "s": "Mailtabs by EvoSoft puts Gmail, Outlook, iCloud and any IMAP inbox in one place, sorted into tabs you design. Try the live demo with a test account.",
+  "ctx": "data: products.1.metaDescription"
+ },
+ {
+  "s": "Web app",
+  "ctx": "data: products.1.category"
+ },
+ {
+  "s": "Unified email client",
+  "ctx": "data: products.1.kind"
+ },
+ {
+  "s": "Every inbox in one place, in tabs you design.",
+  "ctx": "data: products.1.tagline"
+ },
+ {
+  "s": "Connect Gmail, Outlook, iCloud, Yahoo or any IMAP account and sort all of it into tabs built from accounts and rules. A complete mail client, not just a reader.",
+  "ctx": "data: products.1.summary"
+ },
+ {
+  "s": "Mailtabs is a self-hosted mail client for people with too many inboxes. A tab is a set of accounts plus optional rules, so Work shows only work mail and Receipts collects every order confirmation across every account. Everything you do goes back to the real mailbox, so your phone stays in sync.",
+  "ctx": "data: products.1.intro"
+ },
+ {
+  "s": "Tabs you design",
+  "ctx": "data: products.1.highlights.0.title"
+ },
+ {
+  "s": "Combine accounts and rules like “from contains @company.com” or “subject contains receipt”.",
+  "ctx": "data: products.1.highlights.0.text"
+ },
+ {
+  "s": "A full mail client",
+  "ctx": "data: products.1.highlights.1.title"
+ },
+ {
+  "s": "Write, reply, forward, Cc/Bcc, attachments, formatting, a From picker and address suggestions.",
+  "ctx": "data: products.1.highlights.1.text"
+ },
+ {
+  "s": "Undo and schedule send",
+  "ctx": "data: products.1.highlights.2.title"
+ },
+ {
+  "s": "A grace period after Send, “tomorrow 8 AM” scheduling and an Outbox with retry.",
+  "ctx": "data: products.1.highlights.2.text"
+ },
+ {
+  "s": "Every folder",
+  "ctx": "data: products.1.highlights.3.title"
+ },
+ {
+  "s": "Sent, Drafts, Spam, Trash, Archive, your own folders and Gmail labels, with unified views.",
+  "ctx": "data: products.1.highlights.3.text"
+ },
+ {
+  "s": "Sign in with Google or Microsoft",
+  "ctx": "data: products.1.highlights.4.title"
+ },
+ {
+  "s": "OAuth for Gmail and Outlook, or app passwords that are checked before they are saved.",
+  "ctx": "data: products.1.highlights.4.text"
+ },
+ {
+  "s": "Encrypted at rest",
+  "ctx": "data: products.1.highlights.5.title"
+ },
+ {
+  "s": "Connected passwords and tokens are encrypted with a server key that never leaves your host.",
+  "ctx": "data: products.1.highlights.5.text"
+ },
+ {
+  "s": "Reading",
+  "ctx": "data: products.1.features.0.title"
+ },
+ {
+  "s": "Unified Inbox, Starred, Sent, Drafts, Outbox, Spam and Trash",
+  "ctx": "data: products.1.features.0.items.0"
+ },
+ {
+  "s": "Conversation view",
+  "ctx": "data: products.1.features.0.items.1"
+ },
+ {
+  "s": "Search and load older mail",
+  "ctx": "data: products.1.features.0.items.2"
+ },
+ {
+  "s": "Desktop notifications",
+  "ctx": "data: products.1.features.0.items.3"
+ },
+ {
+  "s": "Print or download the original .eml",
+  "ctx": "data: products.1.features.0.items.4"
+ },
+ {
+  "s": "Writing",
+  "ctx": "data: products.1.features.1.title"
+ },
+ {
+  "s": "Rich text with formatting and links",
+  "ctx": "data: products.1.features.1.items.0"
+ },
+ {
+  "s": "Per-account signature and sender name",
+  "ctx": "data: products.1.features.1.items.1"
+ },
+ {
+  "s": "Drafts saved to the provider’s real Drafts folder",
+  "ctx": "data: products.1.features.1.items.2"
+ },
+ {
+  "s": "Attachments up to 25 MB",
+  "ctx": "data: products.1.features.1.items.3"
+ },
+ {
+  "s": "Undo send and scheduled send",
+  "ctx": "data: products.1.features.1.items.4"
+ },
+ {
+  "s": "Organising",
+  "ctx": "data: products.1.features.2.title"
+ },
+ {
+  "s": "Select many with Shift-click ranges",
+  "ctx": "data: products.1.features.2.items.0"
+ },
+ {
+  "s": "Archive, move, spam, star and mark read in bulk",
+  "ctx": "data: products.1.features.2.items.1"
+ },
+ {
+  "s": "Undo for 10 seconds (or press z)",
+  "ctx": "data: products.1.features.2.items.2"
+ },
+ {
+  "s": "Create, rename and delete folders",
+  "ctx": "data: products.1.features.2.items.3"
+ },
+ {
+  "s": "Keyboard shortcuts for everything",
+  "ctx": "data: products.1.features.2.items.4"
+ },
+ {
+  "s": "One shared login with three fictional mailboxes (Work, Personal and a side project) on a private demo mail server, holding about 60 sample emails. Every person and company in them is made up.",
+  "ctx": "data: products.1.demo.company"
+ },
+ {
+  "s": "The login is shared, so you may see other visitors’ changes. Everything resets every hour.",
+  "ctx": "data: products.1.demo.resets"
+ },
+ {
+  "s": "Mail only travels between the demo mailboxes. Real addresses are refused, and real Gmail or Outlook accounts can’t be connected.",
+  "ctx": "data: products.1.demo.note"
+ },
+ {
+  "s": "Demo user",
+  "ctx": "data: products.1.demo.accounts.0.role"
+ },
+ {
+  "s": "Shared login",
+  "ctx": "data: products.1.demo.accounts.0.badge"
+ },
+ {
+  "s": "Open the Receipts tab: one rule collects receipts from three mailboxes (⋯ → Edit tab shows how)",
+  "ctx": "data: products.1.demo.accounts.0.tries.0"
+ },
+ {
+  "s": "Open “Re: Homepage refresh: Q4 launch plan” to see a 5-message conversation",
+  "ctx": "data: products.1.demo.accounts.0.tries.1"
+ },
+ {
+  "s": "Write from the Tidepool account to alex.personal@demo.test and watch it arrive under Personal",
+  "ctx": "data: products.1.demo.accounts.0.tries.2"
+ },
+ {
+  "s": "Select a few messages, archive them, then press Undo (or z)",
+  "ctx": "data: products.1.demo.accounts.0.tries.3"
+ },
+ {
+  "s": "Connect it yourself",
+  "ctx": "data: products.1.demo.accounts.1.role"
+ },
+ {
+  "s": "For “Add account”",
+  "ctx": "data: products.1.demo.accounts.1.badge"
+ },
+ {
+  "s": "Signed in as the demo user, click Add account and type this address",
+  "ctx": "data: products.1.demo.accounts.1.tries.0"
+ },
+ {
+  "s": "Choose Other (IMAP) and enter the server settings below",
+  "ctx": "data: products.1.demo.accounts.1.tries.1"
+ },
+ {
+  "s": "Pick a colour and put it in a tab",
+  "ctx": "data: products.1.demo.accounts.1.tries.2"
+ },
+ {
+  "s": "Mailboxes already connected",
+  "ctx": "data: products.1.demo.tables.0.title"
+ },
+ {
+  "s": "All three use the password mailtabs-demo, like the run club mailbox.",
+  "ctx": "data: products.1.demo.tables.0.text"
+ },
+ {
+  "s": "Address",
+  "ctx": "data: products.1.demo.tables.0.columns.0"
+ },
+ {
+  "s": "Name in Mailtabs",
+  "ctx": "data: products.1.demo.tables.0.columns.1"
+ },
+ {
+  "s": "Colour",
+  "ctx": "data: products.1.demo.tables.0.columns.2"
+ },
+ {
+  "s": "Blue",
+  "ctx": "data: products.1.demo.tables.0.rows.0.2"
+ },
+ {
+  "s": "Personal",
+  "ctx": "data: products.1.demo.tables.0.rows.1.1"
+ },
+ {
+  "s": "Green",
+  "ctx": "data: products.1.demo.tables.0.rows.1.2"
+ },
+ {
+  "s": "Tidepool (side project)",
+  "ctx": "data: products.1.demo.tables.0.rows.2.1"
+ },
+ {
+  "s": "Amber",
+  "ctx": "data: products.1.demo.tables.0.rows.2.2"
+ },
+ {
+  "s": "Try adding an account",
+  "ctx": "data: products.1.demo.steps.title"
+ },
+ {
+  "s": "Click Add account and type alex@runclub.demo.test.",
+  "ctx": "data: products.1.demo.steps.items.0"
+ },
+ {
+  "s": "Choose Other (IMAP) and open Advanced settings.",
+  "ctx": "data: products.1.demo.steps.items.1"
+ },
+ {
+  "s": "Enter the servers listed here, with the full address as the username and the password mailtabs-demo.",
+  "ctx": "data: products.1.demo.steps.items.2"
+ },
+ {
+  "s": "These servers only exist inside the demo, so they won’t work from your own mail app.",
+  "ctx": "data: products.1.demo.steps.items.3"
+ },
+ {
+  "s": "Server settings for “Add account”",
+  "ctx": "data: products.1.demo.extrasTitle"
+ },
+ {
+  "s": "IMAP server",
+  "ctx": "data: products.1.demo.extras.0.0"
+ },
+ {
+  "s": "IMAP port · security",
+  "ctx": "data: products.1.demo.extras.1.0"
+ },
+ {
+  "s": "SMTP server",
+  "ctx": "data: products.1.demo.extras.2.0"
+ },
+ {
+  "s": "SMTP port · security",
+  "ctx": "data: products.1.demo.extras.3.0"
+ },
+ {
+  "s": "Your inbox, on a phone",
+  "ctx": "data: products.1.phoneTitle"
+ },
+ {
+  "s": "The same tabs and accounts in a layout made for small screens.",
+  "ctx": "data: products.1.phoneText"
+ },
+ {
+  "s": "All inboxes in one list, with coloured accounts and tabs across the top",
+  "ctx": "data: products.1.shots.0.caption"
+ },
+ {
+  "s": "Replying from the side-project account, with formatting and a signature",
+  "ctx": "data: products.1.shots.1.caption"
+ },
+ {
+  "s": "A rule-based Receipts tab gathering orders from three accounts",
+  "ctx": "data: products.1.shots.2.caption"
+ },
+ {
+  "s": "A five-message work thread in conversation view, with an attachment",
+  "ctx": "data: products.1.shots.3.caption"
+ },
+ {
+  "s": "The tab editor: pick accounts, add rules, read them back in plain English",
+  "ctx": "data: products.1.shots.4.caption"
+ },
+ {
+  "s": "Adding an account: Gmail, Outlook, iCloud, Yahoo or any IMAP server",
+  "ctx": "data: products.1.shots.5.caption"
+ },
+ {
+  "s": "Undo-send delay, sender name and signature for each account",
+  "ctx": "data: products.1.shots.6.caption"
+ },
+ {
+  "s": "Selecting several messages; remote images stay hidden for privacy",
+  "ctx": "data: products.1.shots.7.caption"
+ },
+ {
+  "s": "The same inbox and tabs on a phone",
+  "ctx": "data: products.1.shots.8.caption"
+ },
+ {
+  "s": "StudyCat by EvoSoft is a study platform with notes, flashcards, endless practice and discussions for university courses. Try the demo with test accounts.",
+  "ctx": "data: products.2.metaDescription"
+ },
+ {
+  "s": "Learning platform",
+  "ctx": "data: products.2.category"
+ },
+ {
+  "s": "Study hub and community",
+  "ctx": "data: products.2.kind"
+ },
+ {
+  "s": "A free study hub for university courses.",
+  "ctx": "data: products.2.tagline"
+ },
+ {
+  "s": "Notes, formula sheets, flashcards, endless practice problems, interactive tools and a moderated community for eight Montana State University courses, live at studycat.org.",
+  "ctx": "data: products.2.summary"
+ },
+ {
+  "s": "StudyCat gives every class the same complete toolkit: a dashboard with the next exam, notes with worked examples, spaced-repetition flashcards, a quizzer that generates new problems forever, and exam prep. Students sign in to sync progress across devices, join discussions and use it offline as an installed app.",
+  "ctx": "data: products.2.intro"
+ },
+ {
+  "s": "Every class, complete",
+  "ctx": "data: products.2.highlights.0.title"
+ },
+ {
+  "s": "Dashboard, calendar, notes, formula sheet, flashcards, quizzer, exam prep and the syllabus rules.",
+  "ctx": "data: products.2.highlights.0.text"
+ },
+ {
+  "s": "Endless practice",
+  "ctx": "data: products.2.highlights.1.title"
+ },
+ {
+  "s": "Procedurally generated problems with typed or multiple-choice answers, practice or timed-exam mode.",
+  "ctx": "data: products.2.highlights.1.text"
+ },
+ {
+  "s": "Interactive tools",
+  "ctx": "data: products.2.highlights.2.title"
+ },
+ {
+  "s": "Function explorer, unit circle, grapher, Riemann sums, projectile simulator and a Python playground.",
+  "ctx": "data: products.2.highlights.2.text"
+ },
+ {
+  "s": "Moderated discussions",
+  "ctx": "data: products.2.highlights.3.title"
+ },
+ {
+  "s": "Threaded posts with votes, anonymous posting, reports, blocking, a language filter and a mod queue.",
+  "ctx": "data: products.2.highlights.3.text"
+ },
+ {
+  "s": "Canvas sync and planner",
+  "ctx": "data: products.2.highlights.4.title"
+ },
+ {
+  "s": "Real due dates from the Canvas calendar feed and a study planner that spreads work across days.",
+  "ctx": "data: products.2.highlights.4.text"
+ },
+ {
+  "s": "Works offline",
+  "ctx": "data: products.2.highlights.5.title"
+ },
+ {
+  "s": "Installs to a phone’s home screen; notes, flashcards and tools open without a connection.",
+  "ctx": "data: products.2.highlights.5.text"
+ },
+ {
+  "s": "For students",
+  "ctx": "data: products.2.features.0.title"
+ },
+ {
+  "s": "Spaced review flashcards",
+  "ctx": "data: products.2.features.0.items.0"
+ },
+ {
+  "s": "Smart review weighted to weak topics",
+  "ctx": "data: products.2.features.0.items.1"
+ },
+ {
+  "s": "Study planner per exam",
+  "ctx": "data: products.2.features.0.items.2"
+ },
+ {
+  "s": "Streaks, XP and daily goals",
+  "ctx": "data: products.2.features.0.items.3"
+ },
+ {
+  "s": "GPA calculator and focus room",
+  "ctx": "data: products.2.features.0.items.4"
+ },
+ {
+  "s": "Community",
+  "ctx": "data: products.2.features.1.title"
+ },
+ {
+  "s": "Reddit-style boards per class",
+  "ctx": "data: products.2.features.1.items.0"
+ },
+ {
+  "s": "Anonymous posts (moderators still see the author)",
+  "ctx": "data: products.2.features.1.items.1"
+ },
+ {
+  "s": "Reports, blocking and a language filter",
+  "ctx": "data: products.2.features.1.items.2"
+ },
+ {
+  "s": "Reply notifications and a weekly digest",
+  "ctx": "data: products.2.features.1.items.3"
+ },
+ {
+  "s": "Math rendering in posts",
+  "ctx": "data: products.2.features.1.items.4"
+ },
+ {
+  "s": "Running the site",
+  "ctx": "data: products.2.features.2.title"
+ },
+ {
+  "s": "Admin panel: members, bans, site settings",
+  "ctx": "data: products.2.features.2.items.0"
+ },
+ {
+  "s": "Class packs: add a course from one file",
+  "ctx": "data: products.2.features.2.items.1"
+ },
+ {
+  "s": "StudyCat Faculty for instructors",
+  "ctx": "data: products.2.features.2.items.2"
+ },
+ {
+  "s": "Static SEO study guides for every topic",
+  "ctx": "data: products.2.features.2.items.3"
+ },
+ {
+  "s": "Backups, cost alerts and a weekly report",
+  "ctx": "data: products.2.features.2.items.4"
+ },
+ {
+  "s": "A separate copy of StudyCat with sample students, a moderator, an admin and an instructor running a demo class. Real students use studycat.org, which the demo never touches.",
+  "ctx": "data: products.2.demo.company"
+ },
+ {
+  "s": "Resets every night. Several visitors may be signed in to the same account at once.",
+  "ctx": "data: products.2.demo.resets"
+ },
+ {
+  "s": "Sign-up and email are switched off, and Bo, the AI tutor, isn’t connected in the demo. No account? Guests can preview every class.",
+  "ctx": "data: products.2.demo.note"
+ },
+ {
+  "s": "Email",
+  "ctx": "data: products.2.demo.loginLabel"
+ },
+ {
+  "s": "Student",
+  "ctx": "data: products.2.demo.accounts.0.role"
+ },
+ {
+  "s": "Free plan",
+  "ctx": "data: products.2.demo.accounts.0.badge"
+ },
+ {
+  "s": "Calc I dashboard: exam countdown, readiness and the learning path",
+  "ctx": "data: products.2.demo.accounts.0.tries.0"
+ },
+ {
+  "s": "Quizzer: answer a question and read the worked solution",
+  "ctx": "data: products.2.demo.accounts.0.tries.1"
+ },
+ {
+  "s": "Flashcards and notes with rendered maths",
+  "ctx": "data: products.2.demo.accounts.0.tries.2"
+ },
+ {
+  "s": "Physics → projectile simulator",
+  "ctx": "data: products.2.demo.accounts.0.tries.3"
+ },
+ {
+  "s": "Student with Max",
+  "ctx": "data: products.2.demo.accounts.1.role"
+ },
+ {
+  "s": "Max plan",
+  "ctx": "data: products.2.demo.accounts.1.badge"
+ },
+ {
+  "s": "See what the paid Max plan unlocks, like the class maker",
+  "ctx": "data: products.2.demo.accounts.1.tries.0"
+ },
+ {
+  "s": "Bo, the AI tutor, shows as switched off in the demo",
+  "ctx": "data: products.2.demo.accounts.1.tries.1"
+ },
+ {
+  "s": "Join a discussion",
+  "ctx": "data: products.2.demo.accounts.1.tries.2"
+ },
+ {
+  "s": "A second student to try discussions from both sides",
+  "ctx": "data: products.2.demo.accounts.2.tries.0"
+ },
+ {
+  "s": "Wrote the posts now waiting in the report queue",
+  "ctx": "data: products.2.demo.accounts.2.tries.1"
+ },
+ {
+  "s": "Moderator",
+  "ctx": "data: products.2.demo.accounts.3.role"
+ },
+ {
+  "s": "Also a TA",
+  "ctx": "data: products.2.demo.accounts.3.badge"
+ },
+ {
+  "s": "Work the report queue: Remove, Ban or Dismiss, each with Undo",
+  "ctx": "data: products.2.demo.accounts.3.tries.0"
+ },
+ {
+  "s": "Pin or lock a post",
+  "ctx": "data: products.2.demo.accounts.3.tries.1"
+ },
+ {
+  "s": "See who wrote an anonymous post",
+  "ctx": "data: products.2.demo.accounts.3.tries.2"
+ },
+ {
+  "s": "Admin panel: members, plans and bans",
+  "ctx": "data: products.2.demo.accounts.4.tries.0"
+ },
+ {
+  "s": "Instructors, problem reports and backups",
+  "ctx": "data: products.2.demo.accounts.4.tries.1"
+ },
+ {
+  "s": "Keys & settings are read-only in the demo",
+  "ctx": "data: products.2.demo.accounts.4.tries.2"
+ },
+ {
+  "s": "Instructor",
+  "ctx": "data: products.2.demo.accounts.5.role"
+ },
+ {
+  "s": "StudyCat Faculty",
+  "ctx": "data: products.2.demo.accounts.5.badge"
+ },
+ {
+  "s": "Open the published “M 171 Calculus I (demo section)”",
+  "ctx": "data: products.2.demo.accounts.5.tries.0"
+ },
+ {
+  "s": "Roster, announcements, assignments and results",
+  "ctx": "data: products.2.demo.accounts.5.tries.1"
+ },
+ {
+  "s": "Take attendance and set office hours",
+  "ctx": "data: products.2.demo.accounts.5.tries.2"
+ },
+ {
+  "s": "Without an account",
+  "ctx": "data: products.2.demo.steps.title"
+ },
+ {
+  "s": "Every class page and dashboard is open to guests.",
+  "ctx": "data: products.2.demo.steps.items.0"
+ },
+ {
+  "s": "Notes show the first topics, quizzes three questions and flashcards five cards per deck.",
+  "ctx": "data: products.2.demo.steps.items.1"
+ },
+ {
+  "s": "Discussions show titles only, and class tools ask you to sign in.",
+  "ctx": "data: products.2.demo.steps.items.2"
+ },
+ {
+  "s": "Sign in with any account here to unlock everything.",
+  "ctx": "data: products.2.demo.steps.items.3"
+ },
+ {
+  "s": "Instructor class join code",
+  "ctx": "data: products.2.demo.extras.0.0"
+ },
+ {
+  "s": "Shared password",
+  "ctx": "data: products.2.demo.extras.1.0"
+ },
+ {
+  "s": "Installs like an app",
+  "ctx": "data: products.2.phoneTitle"
+ },
+ {
+  "s": "StudyCat installs to a phone’s home screen and keeps notes, flashcards and tools available offline.",
+  "ctx": "data: products.2.phoneText"
+ },
+ {
+  "s": "Calc I dashboard: exam countdown, readiness and the learning path to the next exam",
+  "ctx": "data: products.2.shots.0.caption"
+ },
+ {
+  "s": "Notes for every topic: key points, formulas and a worked example",
+  "ctx": "data: products.2.shots.1.caption"
+ },
+ {
+  "s": "The quizzer generates new problems forever, with worked solutions",
+  "ctx": "data: products.2.shots.2.caption"
+ },
+ {
+  "s": "Spaced-review flashcards that come back just before you’d forget",
+  "ctx": "data: products.2.shots.3.caption"
+ },
+ {
+  "s": "Physics projectile simulator comparing two launch angles",
+  "ctx": "data: products.2.shots.4.caption"
+ },
+ {
+  "s": "A discussion with maths, an accepted answer and instructor and TA badges",
+  "ctx": "data: products.2.shots.5.caption"
+ },
+ {
+  "s": "The moderators’ report queue with Remove, Ban and Dismiss",
+  "ctx": "data: products.2.shots.6.caption"
+ },
+ {
+  "s": "StudyCat Faculty: an instructor’s class with a live syllabus preview",
+  "ctx": "data: products.2.shots.7.caption"
+ },
+ {
+  "s": "Admin panel: members with roles, plans and moderation tools",
+  "ctx": "data: products.2.shots.8.caption"
+ },
+ {
+  "s": "The Calc I dashboard on a phone",
+  "ctx": "data: products.2.shots.9.caption"
+ },
+ {
+  "s": "websites",
+  "ctx": "index.html"
+ },
+ {
+  "s": "online stores",
+  "ctx": "index.html"
+ },
+ {
+  "s": "web apps",
+  "ctx": "index.html"
+ },
+ {
+  "s": "POS systems",
+  "ctx": "index.html"
+ },
+ {
+  "s": "booking systems",
+  "ctx": "index.html"
+ },
+ {
+  "s": "dashboards",
+  "ctx": "index.html"
+ },
+ {
+  "s": "integrations",
+  "ctx": "index.html"
+ },
+ {
+  "s": "business software",
+  "ctx": "index.html"
+ },
+ {
+  "s": "Skip to content",
+  "ctx": "index.html"
+ },
+ {
+  "s": "EvoSoft, home",
+  "ctx": "index.html"
+ },
+ {
+  "s": "Main",
+  "ctx": "index.html"
+ },
+ {
+  "s": "Get a quote",
+  "ctx": "index.html"
+ },
+ {
+  "s": "Language",
+  "ctx": "index.html"
+ },
+ {
+  "s": "Language: {name}",
+  "ctx": "index.html"
+ },
+ {
+  "s": "Switch between light and dark",
+  "ctx": "index.html"
+ },
+ {
+  "s": "Light / dark",
+  "ctx": "index.html"
+ },
+ {
+  "s": "Open menu",
+  "ctx": "index.html"
+ },
+ {
+  "s": "Software studio in {region} · Free quotes",
+  "ctx": "index.html"
+ },
+ {
+  "s": "Websites, apps and business software,",
+  "ctx": "index.html"
+ },
+ {
+  "s": "built to order.",
+  "ctx": "index.html"
+ },
+ {
+  "s": "We build",
+  "ctx": "index.html"
+ },
+ {
+  "s": "We take on projects of any size, from a five-page website to a point-of-sale system, and look after them once they’re live. Don’t take our word for it: sign in to the software we’ve built.",
+  "ctx": "index.html"
+ },
+ {
+  "s": "Get a free quote",
+  "ctx": "index.html"
+ },
+ {
+  "s": "Try a live demo",
+  "ctx": "index.html"
+ },
+ {
+  "s": "Trusted by {clients}",
+  "ctx": "index.html"
+ },
+ {
+  "s": "Live demos",
+  "ctx": "index.html"
+ },
+ {
+  "s": "Live demo",
+  "ctx": "index.html"
+ },
+ {
+  "s": "Copy {value}",
+  "ctx": "index.html"
+ },
+ {
+  "s": "Copy the password",
+  "ctx": "index.html"
+ },
+ {
+  "s": "Open demo",
+  "ctx": "index.html"
+ },
+ {
+  "s": "live demos you can sign in to",
+  "ctx": "index.html"
+ },
+ {
+  "s": "ready-made test accounts",
+  "ctx": "index.html"
+ },
+ {
+  "s": "kinds of work under one roof",
+  "ctx": "index.html"
+ },
+ {
+  "s": "1 day",
+  "ctx": "index.html"
+ },
+ {
+  "s": "to hear back about your project",
+  "ctx": "index.html"
+ },
+ {
+  "s": "Software we built and run",
+  "ctx": "index.html"
+ },
+ {
+  "s": "Our own products, each with a live demo and an account for every role. Open one and click around.",
+  "ctx": "index.html"
+ },
+ {
+  "s": "Checking",
+  "ctx": "index.html"
+ },
+ {
+  "s": "{n} demo accounts",
+  "plural": true,
+  "ctx": "index.html"
+ },
+ {
+  "s": "Case study",
+  "ctx": "index.html"
+ },
+ {
+  "s": "Your project",
+  "ctx": "index.html"
+ },
+ {
+  "s": "Website, store, app or system. Tell us about it and get a free quote.",
+  "ctx": "index.html"
+ },
+ {
+  "s": "Any kind of project, including tech",
+  "ctx": "index.html"
+ },
+ {
+  "s": "Most clients start with a website or an online store. Plenty stay for the software, the email setup and the support afterwards.",
+  "ctx": "index.html"
+ },
+ {
+  "s": "All services",
+  "ctx": "index.html"
+ },
+ {
+  "s": "How a project works",
+  "ctx": "index.html"
+ },
+ {
+  "s": "Four steps, and you always know which one you’re on.",
+  "ctx": "index.html"
+ },
+ {
+  "s": "Websites we’ve built for clients",
+  "ctx": "index.html"
+ },
+ {
+  "s": "Questions people ask",
+  "ctx": "index.html"
+ },
+ {
+  "s": "Have a project in mind?",
+  "ctx": "index.html"
+ },
+ {
+  "s": "Tell us what you need. Quotes are free, and we reply {when}.",
+  "ctx": "index.html"
+ },
+ {
+  "s": "Products",
+  "ctx": "index.html"
+ },
+ {
+  "s": "All live demos",
+  "ctx": "index.html"
+ },
+ {
+  "s": "Company",
+  "ctx": "index.html"
+ },
+ {
+  "s": "Copyright & privacy",
+  "ctx": "index.html"
+ },
+ {
+  "s": "Contact",
+  "ctx": "index.html"
+ },
+ {
+  "s": "Replies {when}",
+  "ctx": "index.html"
+ },
+ {
+  "s": "Evo, Mailtabs and StudyCat are products of {company}. Demo data is fictional.",
+  "ctx": "index.html"
+ },
+ {
+  "s": "Close",
+  "ctx": "index.html"
+ },
+ {
+  "s": "Ask EvoSoft",
+  "ctx": "index.html"
+ },
+ {
+  "s": "Questions about our work, demos or a project",
+  "ctx": "index.html"
+ },
+ {
+  "s": "Close the assistant",
+  "ctx": "index.html"
+ },
+ {
+  "s": "Suggested questions",
+  "ctx": "index.html"
+ },
+ {
+  "s": "Your question",
+  "ctx": "index.html"
+ },
+ {
+  "s": "Ask a question",
+  "ctx": "index.html"
+ },
+ {
+  "s": "Send",
+  "ctx": "index.html"
+ },
+ {
+  "s": "An AI assistant answers here, and it can make mistakes. Please don’t share sensitive information.",
+  "ctx": "index.html"
+ },
+ {
+  "s": "Privacy",
+  "ctx": "index.html"
+ },
+ {
+  "s": "Screenshot",
+  "ctx": "index.html"
+ },
+ {
+  "s": "Previous",
+  "ctx": "index.html"
+ },
+ {
+  "s": "Next",
+  "ctx": "index.html"
+ },
+ {
+  "s": "copy",
+  "ctx": "index.html"
+ },
+ {
+  "s": "copied",
+  "ctx": "index.html"
+ },
+ {
+  "s": "Couldn’t copy automatically. Select the text and copy it instead.",
+  "ctx": "index.html"
+ },
+ {
+  "s": "Copied {login}. Password: {password}",
+  "ctx": "index.html"
+ },
+ {
+  "s": "Sign in with {login}. Password: {password}",
+  "ctx": "index.html"
+ },
+ {
+  "s": "Live",
+  "ctx": "index.html"
+ },
+ {
+  "s": "Offline right now",
+  "ctx": "index.html"
+ },
+ {
+  "s": "Please add your name, your email and a few words about the project.",
+  "ctx": "index.html"
+ },
+ {
+  "s": "Please check your email address.",
+  "ctx": "index.html"
+ },
+ {
+  "s": "That’s a lot of requests in a short time. Please try again in a few minutes, or email us.",
+  "ctx": "index.html"
+ },
+ {
+  "s": "Sorry, your request couldn’t be sent just now. Please try again in a minute, or email us at {email}.",
+  "ctx": "index.html"
+ },
+ {
+  "s": "Sending…",
+  "ctx": "index.html"
+ },
+ {
+  "s": "The assistant is typing",
+  "ctx": "index.html"
+ },
+ {
+  "s": "You’re sending messages quickly, so I’ll take a short break. Meanwhile, here’s what I can tell you:",
+  "ctx": "index.html"
+ },
+ {
+  "s": "Automatic answers from this website. For anything else, contact us directly.",
+  "ctx": "index.html"
+ },
+ {
+  "s": "Sorry, I can’t answer right now. Please email {email}.",
+  "ctx": "index.html"
+ },
+ {
+  "s": "Questions? Ask me about our work, the demos or your project.",
+  "ctx": "index.html"
+ },
+ {
+  "s": "Read this site in English",
+  "ctx": "language suggestion (shown in the visitor’s language: means “read this site in YOUR language”)"
+ },
+ {
+  "s": "Switch language",
+  "ctx": "index.html"
+ },
+ {
+  "s": "No thanks",
+  "ctx": "index.html"
+ },
+ {
+  "s": "Our Work: Software Products and Client Websites | EvoSoft",
+  "ctx": "index.html"
+ },
+ {
+  "s": "Software and websites by EvoSoft: Evo (workforce and POS), Mailtabs (email client), StudyCat (study platform) and client sites such as Larifan and IPG.",
+  "ctx": "index.html"
+ },
+ {
+  "s": "Home",
+  "ctx": "portfolio.html"
+ },
+ {
+  "s": "Our work",
+  "ctx": "portfolio.html"
+ },
+ {
+  "s": "Software we built, sites we shipped",
+  "ctx": "portfolio.html"
+ },
+ {
+  "s": "Three products we designed, built and run ourselves, each with a live demo, and websites we’ve made for clients.",
+  "ctx": "portfolio.html"
+ },
+ {
+  "s": "Client websites",
+  "ctx": "portfolio.html"
+ },
+ {
+  "s": "Sites we’ve designed and built for clients in different industries.",
+  "ctx": "portfolio.html"
+ },
+ {
+  "s": "Want to be next?",
+  "ctx": "portfolio.html"
+ },
+ {
+  "s": "Live Software Demos with Test Accounts | EvoSoft",
+  "ctx": "portfolio.html"
+ },
+ {
+  "s": "Sign in to live demos of Evo (workforce and POS), Mailtabs (email client) and StudyCat (study platform) with a ready-made test account for every role.",
+  "ctx": "portfolio.html"
+ },
+ {
+  "s": "Try our software before you talk to us",
+  "ctx": "demos.html"
+ },
+ {
+  "s": "Each demo is a real copy of the product with made-up data. Pick a role, copy its login and open the demo. The demos reset themselves, so you can’t break anything for good.",
+  "ctx": "demos.html"
+ },
+ {
+  "s": "Jump to a demo",
+  "ctx": "demos.html"
+ },
+ {
+  "s": "Open the demo",
+  "ctx": "demos.html"
+ },
+ {
+  "s": "Password",
+  "ctx": "demos.html"
+ },
+ {
+  "s": "Sign in as {name}",
+  "ctx": "demos.html"
+ },
+ {
+  "s": "Test data",
+  "ctx": "demos.html"
+ },
+ {
+  "s": "{product} © {year} {company}. All rights reserved. Demo data is fictional.",
+  "ctx": "demos.html"
+ },
+ {
+  "s": "Use it in Mailtabs’ “Add account”.",
+  "ctx": "demos.html"
+ },
+ {
+  "s": "Like what you see?",
+  "ctx": "demos.html"
+ },
+ {
+  "s": "We can build something like this for your business, or something completely different. Quotes are free.",
+  "ctx": "demos.html"
+ },
+ {
+  "s": "Evo: Workforce Management and Point of Sale System | EvoSoft",
+  "ctx": "demos.html"
+ },
+ {
+  "s": "Mailtabs: Unified Inbox for All Your Email Accounts | EvoSoft",
+  "ctx": "demos.html"
+ },
+ {
+  "s": "StudyCat: Study Platform for University Courses | EvoSoft",
+  "ctx": "demos.html"
+ },
+ {
+  "s": "Breadcrumb",
+  "ctx": "work/evo.html"
+ },
+ {
+  "s": "Open the live demo",
+  "ctx": "work/evo.html"
+ },
+ {
+  "s": "Demo accounts",
+  "ctx": "work/evo.html"
+ },
+ {
+  "s": "demo accounts, one per role",
+  "ctx": "work/evo.html"
+ },
+ {
+  "s": "Built with",
+  "ctx": "work/evo.html"
+ },
+ {
+  "s": "What it does",
+  "ctx": "work/evo.html"
+ },
+ {
+  "s": "A look inside",
+  "ctx": "work/evo.html"
+ },
+ {
+  "s": "Real screenshots from the demo. Select one to see it full size.",
+  "ctx": "work/evo.html"
+ },
+ {
+  "s": "In detail",
+  "ctx": "work/evo.html"
+ },
+ {
+  "s": "Sign in to the {name} demo",
+  "ctx": "work/evo.html"
+ },
+ {
+  "s": "Every account below works on the live demo. Select a login or password to copy it.",
+  "ctx": "work/evo.html"
+ },
+ {
+  "s": "Need something like {name}?",
+  "ctx": "work/evo.html"
+ },
+ {
+  "s": "We build business systems, web apps and websites to fit how you actually work. Tell us about your project for a free quote.",
+  "ctx": "work/evo.html"
+ },
+ {
+  "s": "Next product",
+  "ctx": "work/evo.html"
+ },
+ {
+  "s": "Web Development, Custom Software and IT Services | EvoSoft Georgia",
+  "ctx": "work/studycat.html"
+ },
+ {
+  "s": "Websites, online stores, web apps, business systems, integrations, SEO, branding, Microsoft 365 and IT support from EvoSoft, a development studio in Georgia. Free quotes.",
+  "ctx": "work/studycat.html"
+ },
+ {
+  "s": "Websites are where many clients start, but we don’t stop there. If your business needs something built, connected, set up or fixed, one team handles it, and every project starts with a free quote.",
+  "ctx": "services.html"
+ },
+ {
+  "s": "Judge the work, not the pitch",
+  "ctx": "services.html"
+ },
+ {
+  "s": "These are our own products. Each has a live demo with an account for every role.",
+  "ctx": "services.html"
+ },
+ {
+  "s": "About EvoSoft: Software Development Studio in Georgia",
+  "ctx": "services.html"
+ },
+ {
+  "s": "EvoSoft Solutions is a software development studio in Georgia building websites, online stores, web apps and business systems, and running its own products.",
+  "ctx": "services.html"
+ },
+ {
+  "s": "About us",
+  "ctx": "about.html"
+ },
+ {
+  "s": "A small studio that builds and runs software",
+  "ctx": "about.html"
+ },
+ {
+  "s": "EvoSoft Solutions is a software development studio based in Georgia. We design and build websites, online stores, web apps and business systems, and we look after them once they’re live.",
+  "ctx": "about.html"
+ },
+ {
+  "s": "We work with small and medium-sized businesses, startups, shops, schools and independent founders. Most of our work happens remotely over email and calls, so clients don’t need to be nearby.",
+  "ctx": "about.html"
+ },
+ {
+  "s": "try all three",
+  "ctx": "about.html"
+ },
+ {
+  "s": "We also build our own products. {evo} runs time clocks, schedules, payroll and a campus store’s registers. {mailtabs} puts every inbox in one place. {studycat} is a study platform for university courses, live at studycat.org. Running real software keeps us honest about what good software takes, and you can {try}.",
+  "ctx": "about.html"
+ },
+ {
+  "s": "Get in touch",
+  "ctx": "about.html"
+ },
+ {
+  "s": "Replies {when}.",
+  "ctx": "about.html"
+ },
+ {
+  "s": "What you can expect",
+  "ctx": "about.html"
+ },
+ {
+  "s": "Get a Free Quote for Your Website or Software Project | EvoSoft",
+  "ctx": "about.html"
+ },
+ {
+  "s": "Get a free quote for your website, online store, app or IT project. Call {phone} or email {email}. Replies within one business day.",
+  "ctx": "about.html"
+ },
+ {
+  "s": "Tell us about your project",
+  "ctx": "contact.html"
+ },
+ {
+  "s": "Send a few lines and we’ll reply {when} with questions or a quote. It’s free, and there’s no obligation.",
+  "ctx": "contact.html"
+ },
+ {
+  "s": "Your name",
+  "ctx": "contact.html"
+ },
+ {
+  "s": "Phone",
+  "ctx": "contact.html"
+ },
+ {
+  "s": "optional",
+  "ctx": "contact.html"
+ },
+ {
+  "s": "What do you need?",
+  "ctx": "contact.html"
+ },
+ {
+  "s": "pick any",
+  "ctx": "contact.html"
+ },
+ {
+  "s": "Timeline",
+  "ctx": "contact.html"
+ },
+ {
+  "s": "About the project",
+  "ctx": "contact.html"
+ },
+ {
+  "s": "What you need, who it’s for, and any sites or apps you like.",
+  "ctx": "contact.html"
+ },
+ {
+  "s": "Leave this empty",
+  "ctx": "contact.html"
+ },
+ {
+  "s": "Send request",
+  "ctx": "contact.html"
+ },
+ {
+  "s": "We use your details only to answer you.",
+  "ctx": "contact.html"
+ },
+ {
+  "s": "Thanks, it’s on its way.",
+  "ctx": "contact.html"
+ },
+ {
+  "s": "We’ll reply {when}. If it’s urgent, call {phone}.",
+  "ctx": "contact.html"
+ },
+ {
+  "s": "What happens next",
+  "ctx": "contact.html"
+ },
+ {
+  "s": "We read your message and reply {when}.",
+  "ctx": "contact.html"
+ },
+ {
+  "s": "A short call or a few emails to fill in the gaps.",
+  "ctx": "contact.html"
+ },
+ {
+  "s": "A written quote with the scope, timeline and price.",
+  "ctx": "contact.html"
+ },
+ {
+  "s": "Copyright, Terms of Use and Privacy | EvoSoft",
+  "ctx": "contact.html"
+ },
+ {
+  "s": "Copyright notice, terms of use and privacy information for the EvoSoft website, its chat assistant, the quote form and the live software demos.",
+  "ctx": "contact.html"
+ },
+ {
+  "s": "Legal",
+  "ctx": "legal.html"
+ },
+ {
+  "s": "Copyright and privacy",
+  "ctx": "legal.html"
+ },
+ {
+  "s": "Last updated {date}.",
+  "ctx": "legal.html"
+ },
+ {
+  "s": "Copyright",
+  "ctx": "legal.html"
+ },
+ {
+  "s": "This website and everything on it, including its text, design, logos, graphics, screenshots and code, belongs to {company} unless stated otherwise. Evo, Mailtabs and StudyCat, their names, logos, screenshots and live demos are products of {company}.",
+  "ctx": "legal.html"
+ },
+ {
+  "s": "You’re welcome to link to any page. You may not copy, republish, sell or reuse the content, the screenshots or the software shown here, in whole or in part, without our written permission. To ask, email {email}.",
+  "ctx": "legal.html"
+ },
+ {
+  "s": "Client websites shown in our portfolio belong to their owners and appear here as examples of our work. Other product and company names may be trademarks of their respective owners.",
+  "ctx": "legal.html"
+ },
+ {
+  "s": "Translations of this website are provided for convenience. If a translation differs from the English text, the English text applies.",
+  "ctx": "legal.html"
+ },
+ {
+  "s": "The demos are provided so you can evaluate our software. All people, companies, emails and sales in them are fictional. The demo accounts are shared and the demos reset automatically, so don’t enter real personal information, passwords or payment details. Demos are provided as they are, may be unavailable at times, and may change without notice.",
+  "ctx": "legal.html"
+ },
+ {
+  "s": "Quote form.",
+  "ctx": "legal.html"
+ },
+ {
+  "s": "When you send a quote request we receive your name, email, optional phone and company, and your message. We use them only to reply about your project and keep them as long as needed for that.",
+  "ctx": "legal.html"
+ },
+ {
+  "s": "Chat assistant.",
+  "ctx": "legal.html"
+ },
+ {
+  "s": "Questions you type into the assistant are sent to our AI provider (Anthropic) to generate an answer and are not used to identify you. Please don’t share sensitive personal information in the chat.",
+  "ctx": "legal.html"
+ },
+ {
+  "s": "Cookies.",
+  "ctx": "legal.html"
+ },
+ {
+  "s": "This site sets no tracking or advertising cookies. It remembers your light or dark preference and your language in your own browser, and the chat keeps the current conversation in your browser tab until you close it.",
+  "ctx": "legal.html"
+ },
+ {
+  "s": "Your rights.",
+  "ctx": "legal.html"
+ },
+ {
+  "s": "To see, correct or delete anything you’ve sent us, email {email}.",
+  "ctx": "legal.html"
+ },
+ {
+  "s": "Page not found | EvoSoft",
+  "ctx": "legal.html"
+ },
+ {
+  "s": "This page does not exist.",
+  "ctx": "legal.html"
+ },
+ {
+  "s": "This page wandered off",
+  "ctx": "404.html"
+ },
+ {
+  "s": "The link may be old, or the page has moved.",
+  "ctx": "404.html"
+ },
+ {
+  "s": "Go home",
+  "ctx": "404.html"
+ },
+ {
+  "s": " or ",
+  "ctx": "chat assistant: built-in answers (Markdown; keep [text](/path) links and **bold**)"
+ },
+ {
+  "s": "Email {email} or call {phones}. We reply {when}.",
+  "ctx": "chat assistant: built-in answers (Markdown; keep [text](/path) links and **bold**)"
+ },
+ {
+  "s": "get a free quote",
+  "ctx": "chat assistant: built-in answers (Markdown; keep [text](/path) links and **bold**)"
+ },
+ {
+  "s": "You’re welcome! Anything else you’d like to know? You can also {link}.",
+  "ctx": "chat assistant: built-in answers (Markdown; keep [text](/path) links and **bold**)"
+ },
+ {
+  "s": "quote form",
+  "ctx": "chat assistant: built-in answers (Markdown; keep [text](/path) links and **bold**)"
+ },
+ {
+  "s": "The quickest way to start is the {link}: a few lines about what you need and your timeline.",
+  "ctx": "chat assistant: built-in answers (Markdown; keep [text](/path) links and **bold**)"
+ },
+ {
+  "s": "We take on any kind of project, including tech:",
+  "ctx": "chat assistant: built-in answers (Markdown; keep [text](/path) links and **bold**)"
+ },
+ {
+  "s": "the services page",
+  "ctx": "chat assistant: built-in answers (Markdown; keep [text](/path) links and **bold**)"
+ },
+ {
+  "s": "More on {link}.",
+  "ctx": "chat assistant: built-in answers (Markdown; keep [text](/path) links and **bold**)"
+ },
+ {
+  "s": "{company} is based in {region}, and we work with clients anywhere. Most of our work happens remotely over email and calls, so location is not a limitation.",
+  "ctx": "chat assistant: built-in answers (Markdown; keep [text](/path) links and **bold**)"
+ },
+ {
+  "s": "the demos page",
+  "ctx": "chat assistant: built-in answers (Markdown; keep [text](/path) links and **bold**)"
+ },
+ {
+  "s": "We also build our own products (Evo, Mailtabs and StudyCat), and you can try all three on {link}.",
+  "ctx": "chat assistant: built-in answers (Markdown; keep [text](/path) links and **bold**)"
+ },
+ {
+  "s": "Our own products:",
+  "ctx": "chat assistant: built-in answers (Markdown; keep [text](/path) links and **bold**)"
+ },
+ {
+  "s": "Client websites:",
+  "ctx": "chat assistant: built-in answers (Markdown; keep [text](/path) links and **bold**)"
+ },
+ {
+  "s": "See all our work",
+  "ctx": "chat assistant: built-in answers (Markdown; keep [text](/path) links and **bold**)"
+ },
+ {
+  "s": "Each product has a live demo with fictional data:",
+  "ctx": "chat assistant: built-in answers (Markdown; keep [text](/path) links and **bold**)"
+ },
+ {
+  "s": "Every account and password is on {link}. Ask me about a specific one, like “Evo demo accounts”.",
+  "ctx": "chat assistant: built-in answers (Markdown; keep [text](/path) links and **bold**)"
+ },
+ {
+  "s": "Built with {stack}.",
+  "ctx": "chat assistant: built-in answers (Markdown; keep [text](/path) links and **bold**)"
+ },
+ {
+  "s": "Read the case study",
+  "ctx": "chat assistant: built-in answers (Markdown; keep [text](/path) links and **bold**)"
+ },
+ {
+  "s": "{name} demo:",
+  "ctx": "chat assistant: built-in answers (Markdown; keep [text](/path) links and **bold**)"
+ },
+ {
+  "s": "All the details on the demos page",
+  "ctx": "chat assistant: built-in answers (Markdown; keep [text](/path) links and **bold**)"
+ },
+ {
+  "s": "I’m not sure about that one, and I don’t want to guess.",
+  "ctx": "chat assistant: built-in answers (Markdown; keep [text](/path) links and **bold**)"
+ },
+ {
+  "s": "Send a quote request",
+  "ctx": "chat assistant: built-in answers (Markdown; keep [text](/path) links and **bold**)"
+ }
+]

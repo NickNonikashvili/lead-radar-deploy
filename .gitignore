@@ -4,3 +4,5 @@ evosoft-site/api/vendor/
 evosoft-site/api/data/
 evosoft-site/api/config.php
 dist/
+/evosoft-data/
+/evosoft-config.php

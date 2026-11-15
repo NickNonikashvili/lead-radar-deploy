@@ -1,5 +1,5 @@
 /* EvoSoft website behaviour. © 2026 EvoSoft Solutions. All rights reserved.
-   No dependencies. Without JavaScript every link still works. */
+   No dependencies. Without JavaScript every link still works and nothing is hidden. */
 (() => {
   'use strict';
   const doc = document.documentElement;
@@ -10,6 +10,24 @@
     set(k, v) { try { localStorage.setItem(k, v); } catch (e) { /* private mode */ } },
   };
   const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+  const fill = (s, vars) => String(s).replace(/\{(\w+)\}/g, (m, k) => (k in vars ? vars[k] : m));
+
+  // Words in the page's language (written by the site builder).
+  const S = Object.assign({
+    lang: 'en', copy: 'copy', copied: 'copied',
+    copyFail: 'Couldn’t copy automatically. Select the text and copy it instead.',
+    copiedLogin: 'Copied {login}. Password: {password}', signInWith: 'Sign in with {login}. Password: {password}',
+    live: 'Live', offline: 'Offline right now',
+    formMissing: 'Please add your name, your email and a few words about the project.',
+    formEmail: 'Please check your email address.',
+    formRate: 'That’s a lot of requests in a short time. Please try again in a few minutes, or email us.',
+    formFail: 'Sorry, your request couldn’t be sent just now. Please try again in a minute, or email us at {email}.',
+    sending: 'Sending…',
+  }, (() => { try { return JSON.parse($('#evo-i18n').textContent); } catch (e) { return {}; } })());
+  window.EVO_I18N = S;
+
+  const motion = doc.classList.contains('motion') && !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const finePointer = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
 
   /* theme */
   const media = window.matchMedia('(prefers-color-scheme: dark)');
@@ -20,23 +38,87 @@
     store.set('evo-theme', next);
   }));
 
-  /* header + menu */
-  const header = $('.site-header');
-  const onScroll = () => header && header.classList.toggle('scrolled', window.scrollY > 4);
-  window.addEventListener('scroll', onScroll, { passive: true });
-  onScroll();
+  /* header: shadow and reading progress */
+  const header = $('.topbar');
+  const bar = $('.progress');
+  let scrollRaf = 0;
+  const onScroll = () => {
+    scrollRaf = 0;
+    const y = window.scrollY;
+    if (header) header.classList.toggle('scrolled', y > 4);
+    if (bar) {
+      const max = document.documentElement.scrollHeight - window.innerHeight;
+      bar.style.setProperty('--p', max > 0 ? Math.min(1, y / max).toFixed(4) : 0);
+    }
+    if (motion) tiltShots();
+  };
+  window.addEventListener('scroll', () => { if (!scrollRaf) scrollRaf = requestAnimationFrame(onScroll); }, { passive: true });
+  window.addEventListener('resize', () => { if (!scrollRaf) scrollRaf = requestAnimationFrame(onScroll); });
+
+  /* mobile menu */
   const menuBtn = $('.menu-toggle');
   const setMenu = (open) => {
     document.body.classList.toggle('nav-open', open);
     if (menuBtn) {
       menuBtn.setAttribute('aria-expanded', String(open));
-      menuBtn.setAttribute('aria-label', open ? 'Close menu' : 'Open menu');
+      menuBtn.setAttribute('aria-label', open ? (S.close || 'Close menu') : (menuBtn.dataset.open || menuBtn.getAttribute('aria-label')));
     }
   };
   if (menuBtn) {
+    menuBtn.dataset.open = menuBtn.getAttribute('aria-label');
     menuBtn.addEventListener('click', () => setMenu(!document.body.classList.contains('nav-open')));
     $$('#site-nav a').forEach((a) => a.addEventListener('click', () => setMenu(false)));
-    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') setMenu(false); });
+  }
+
+  /* language menu */
+  const langBtn = $('.lang-btn');
+  const langMenu = $('#lang-menu');
+  const setLang = (open) => {
+    if (!langBtn || !langMenu) return;
+    langMenu.hidden = !open;
+    langBtn.setAttribute('aria-expanded', String(open));
+    if (open) { const cur = $('[aria-current]', langMenu) || $('a', langMenu); if (cur) cur.focus(); }
+  };
+  if (langBtn && langMenu) {
+    langBtn.addEventListener('click', (e) => { e.stopPropagation(); setLang(langMenu.hidden); });
+    document.addEventListener('click', (e) => { if (!langMenu.hidden && !e.target.closest('.lang')) setLang(false); });
+    langMenu.addEventListener('keydown', (e) => {
+      const items = $$('a', langMenu);
+      const i = items.indexOf(document.activeElement);
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); items[(i + (e.key === 'ArrowDown' ? 1 : -1) + items.length) % items.length].focus(); }
+    });
+  }
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape') return;
+    setMenu(false);
+    if (langMenu && !langMenu.hidden) { setLang(false); langBtn.focus(); }
+  });
+  // Remember a language someone picks, so we never suggest another one.
+  document.addEventListener('click', (e) => { const a = e.target.closest('a[data-lang]'); if (a) store.set('evo-lang', a.dataset.lang); });
+
+  /* English pages: offer the visitor's own language once, in that language */
+  const hint = $('.lang-hint');
+  if (hint && S.suggest && !store.get('evo-lang')) {
+    let pick = null;
+    for (const l of navigator.languages || [navigator.language || '']) {
+      const code = String(l).slice(0, 2).toLowerCase();
+      if (code === 'en') break;
+      if (S.suggest[code]) { pick = code; break; }
+    }
+    const alt = pick && $(`link[rel="alternate"][hreflang="${pick}"]`);
+    if (alt) {
+      const s = S.suggest[pick];
+      $('p', hint).textContent = s.text;
+      hint.setAttribute('lang', pick);
+      const go = $('a', hint);
+      go.textContent = s.go;
+      go.href = alt.href;
+      go.addEventListener('click', () => store.set('evo-lang', pick));
+      const no = $('button', hint);
+      no.textContent = s.no;
+      no.addEventListener('click', () => { store.set('evo-lang', 'en'); hint.hidden = true; });
+      setTimeout(() => { hint.hidden = false; }, 1200);
+    }
   }
 
   /* toast */
@@ -71,16 +153,16 @@
     const tag = $('.copy-tag', btn);
     if (ok) {
       btn.classList.add('done');
-      if (tag) tag.textContent = 'copied';
-      setTimeout(() => { btn.classList.remove('done'); if (tag) tag.textContent = 'copy'; }, 1600);
+      if (tag) tag.textContent = S.copied;
+      setTimeout(() => { btn.classList.remove('done'); if (tag) tag.textContent = S.copy; }, 1600);
     } else {
-      toast('Couldn’t copy automatically. Select the text and copy it instead.');
+      toast(esc(S.copyFail));
     }
   });
   document.addEventListener('click', (e) => {
     const a = e.target.closest('.acc-go');
     if (!a) return;
-    copyText(a.dataset.login).then((ok) => toast(`${ok ? 'Copied' : 'Sign in with'} <code>${esc(a.dataset.login)}</code>. Password: <code>${esc(a.dataset.pass)}</code>`, 6000));
+    copyText(a.dataset.login).then((ok) => toast(fill(esc(ok ? S.copiedLogin : S.signInWith), { login: `<code>${esc(a.dataset.login)}</code>`, password: `<code>${esc(a.dataset.pass)}</code>` }), 6000));
   });
 
   /* live demo status */
@@ -100,10 +182,10 @@
   $$('[data-status-url]').forEach((el) => ping(el.dataset.statusUrl).then((up) => {
     el.dataset.state = up ? 'online' : 'offline';
     const label = $('span', el);
-    if (label) label.textContent = up ? 'Live' : 'Offline right now';
+    if (label) label.textContent = up ? S.live : S.offline;
   }));
 
-  /* tabs (the live-demo card on the home page) */
+  /* tabs (the live-demo card on the home page); it turns its own pages until someone takes over */
   $$('[data-tabs]').forEach((box) => {
     const tabs = $$('[role="tab"]', box);
     const select = (tab, focus) => {
@@ -116,28 +198,34 @@
       });
       if (focus) tab.focus();
     };
+    const stop = () => box.classList.remove('autoplay', 'paused');
     tabs.forEach((t, i) => {
-      t.addEventListener('click', () => select(t));
+      t.addEventListener('click', (e) => { if (e.isTrusted) stop(); select(t); });
       t.addEventListener('keydown', (e) => {
         if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
         e.preventDefault();
+        stop();
         select(tabs[(i + (e.key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length], true);
       });
     });
-  });
-
-  /* work index: preview image follows the pointer */
-  const preview = $('.ix-preview');
-  if (preview && window.matchMedia('(hover: hover)').matches) {
-    const img = $('img', preview);
-    let x = 0, y = 0, raf = 0;
-    const place = () => { raf = 0; preview.style.transform = `translate(${x + 24}px, ${y - 110}px)`; };
-    $$('.index a[data-preview]').forEach((a) => {
-      a.addEventListener('mouseenter', () => { if (a.dataset.preview) { img.src = a.dataset.preview; preview.classList.add('on'); } });
-      a.addEventListener('mouseleave', () => preview.classList.remove('on'));
-      a.addEventListener('mousemove', (e) => { x = e.clientX; y = e.clientY; if (!raf) raf = requestAnimationFrame(place); });
+    if (!motion || !box.hasAttribute('data-autoplay') || tabs.length < 2) return;
+    box.classList.add('autoplay');
+    box.addEventListener('animationend', (e) => {
+      if (!e.target.classList.contains('dc-progress') || !box.classList.contains('autoplay')) return;
+      const i = tabs.findIndex((t) => t.getAttribute('aria-selected') === 'true');
+      select(tabs[(i + 1) % tabs.length]);
     });
-  }
+    const hold = new Set();
+    const sync = () => box.classList.toggle('paused', hold.size > 0);
+    box.addEventListener('pointerenter', () => { hold.add('hover'); sync(); });
+    box.addEventListener('pointerleave', () => { hold.delete('hover'); sync(); });
+    box.addEventListener('focusin', () => { hold.add('focus'); sync(); });
+    box.addEventListener('focusout', () => { hold.delete('focus'); sync(); });
+    document.addEventListener('visibilitychange', () => { if (document.hidden) hold.add('hidden'); else hold.delete('hidden'); sync(); });
+    if ('IntersectionObserver' in window) {
+      new IntersectionObserver(([en]) => { if (en.isIntersecting) hold.delete('away'); else hold.add('away'); sync(); }).observe(box);
+    }
+  });
 
   /* lightbox */
   const lb = $('.lightbox');
@@ -167,11 +255,15 @@
     if (im.complete && im.naturalWidth === 0) hide();
   });
 
-  /* quote form: send to api/quote.php; if that isn't available, open the visitor's email app instead */
+  /* quote form: sends to api/quote.php, which emails the team. It never opens the visitor's email app. */
   const form = $('#quote');
   if (form) {
     const err = $('.form-error', form);
     const done = $('.form-done', form);
+    const btn = $('button[type="submit"]', form);
+    const label = $('.btn-label', btn) || btn;
+    const idle = label.textContent;
+    const email = form.dataset.email;
     const pre = new URLSearchParams(location.search).get('need');
     if (pre) $$('input[name="types"]', form).forEach((c) => { if (c.value === pre) c.checked = true; });
     const values = () => {
@@ -179,14 +271,11 @@
       return {
         name: f.name.value.trim(), email: f.email.value.trim(), phone: f.phone.value.trim(), company: f.company.value.trim(),
         types: $$('input[name="types"]:checked', form).map((c) => c.value), timeline: f.timeline.value,
-        message: f.message.value.trim(), website: f.website.value,
+        message: f.message.value.trim(), website: f.website.value, lang: S.lang,
       };
     };
-    const mailto = (v) => {
-      const body = [`Name: ${v.name}`, `Email: ${v.email}`, v.phone ? `Phone: ${v.phone}` : null, v.company ? `Company: ${v.company}` : null,
-        `Needs: ${v.types.join(', ') || 'Not specified'}`, `Timeline: ${v.timeline}`, '', v.message].filter((l) => typeof l === 'string').join('\n');
-      location.href = `mailto:${form.dataset.email}?subject=${encodeURIComponent(`Quote request: ${v.types[0] || 'New project'} (${v.name})`)}&body=${encodeURIComponent(body)}`;
-    };
+    const showError = (html) => { err.innerHTML = html; err.hidden = false; };
+    const busy = (on) => { btn.disabled = on; label.textContent = on ? S.sending : idle; form.classList.toggle('sending', on); };
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
       const v = values();
@@ -196,42 +285,148 @@
       if (v.message.length < 10) bad.push('message');
       ['name', 'email', 'message'].forEach((n) => form.elements[n].setAttribute('aria-invalid', String(bad.includes(n))));
       if (bad.length) {
-        err.hidden = false;
-        err.textContent = bad.includes('email') && v.email ? 'Please check your email address.' : 'Please add your name, your email and a few words about the project.';
+        showError(esc(bad.includes('email') && v.email ? S.formEmail : S.formMissing));
         form.elements[bad[0]].focus();
         return;
       }
       err.hidden = true;
-      const btn = $('button[type="submit"]', form);
-      btn.disabled = true;
+      busy(true);
+      let res = null, data = {};
       try {
-        const res = await fetch(form.getAttribute('action'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(v) });
-        const data = await res.json().catch(() => ({}));
-        if (res.ok && data.ok) {
-          $$('.row2, .field, .form-foot, .hp', form).forEach((el) => (el.hidden = true));
-          done.hidden = false;
-          done.setAttribute('tabindex', '-1');
-          done.focus();
-          return;
-        }
-        if (res.status === 422 && data.fields) {
-          err.hidden = false;
-          err.textContent = Object.values(data.fields).join(' ');
-          btn.disabled = false;
-          return;
-        }
-        if (res.status === 429) {
-          err.hidden = false;
-          err.textContent = 'That’s a lot of requests in a short time. Please email us instead.';
-          btn.disabled = false;
-          return;
-        }
-        throw new Error('unavailable');
-      } catch (ex) {
-        btn.disabled = false;
-        toast(`Opening your email app with the details filled in. If nothing happens, email <code>${esc(form.dataset.email)}</code>.`, 7000);
-        mailto(v);
+        res = await fetch(form.getAttribute('action'), { method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' }, body: JSON.stringify(v) });
+        data = await res.json().catch(() => ({}));
+      } catch (ex) { res = null; }
+      busy(false);
+      if (res && res.ok && data.ok) {
+        $$('.row2, .field, .form-foot, .hp', form).forEach((el) => (el.hidden = true));
+        done.hidden = false;
+        done.setAttribute('tabindex', '-1');
+        done.focus();
+        return;
       }
+      if (res && res.status === 422 && data.fields) {
+        Object.keys(data.fields).forEach((n) => { if (form.elements[n]) form.elements[n].setAttribute('aria-invalid', 'true'); });
+        showError(esc(data.fields.email ? S.formEmail : S.formMissing));
+        return;
+      }
+      if (res && res.status === 429) { showError(esc(S.formRate)); return; }
+      showError(fill(esc(S.formFail), { email: `<a href="mailto:${esc(email)}">${esc(email)}</a>` }));
     });
   }
+
+  if (!motion) { onScroll(); return; }
+
+  /* ===================== motion (skipped entirely when the visitor prefers less motion) ===================== */
+
+  /* reveal on scroll: only things below the fold, so nothing on screen blinks */
+  const REVEAL = ['.sec-head', '.tiles > *', '.svc-grid > *', '.svc-detail > *', '.trail > li', '.clients > *', '.faq > details', '.cta-card', '.work-list > *', '.feat-grid > *', '.gallery > *', '.phones-card', '.next-card', '.about-grid > *', '.legal > *', '.quote-grid > *', '.stats > *', '.marquee', '.accts > *', '.notes > *', '.db-facts > *', '.db-head', '.more'];
+  const ZOOM = new Set(['.gallery > *', '.cta-card', '.phones-card']);
+  if ('IntersectionObserver' in window) {
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach((en) => {
+        if (!en.isIntersecting) return;
+        const el = en.target;
+        io.unobserve(el);
+        el.classList.add('in');
+        const clean = (ev) => { if (ev.target !== el || ev.propertyName !== 'opacity') return; el.classList.remove('rv', 'in', 'rv-zoom'); el.style.removeProperty('--i'); el.removeEventListener('transitionend', clean); };
+        el.addEventListener('transitionend', clean);
+      });
+    }, { rootMargin: '0px 0px -8% 0px', threshold: 0.08 });
+    const fold = window.innerHeight * 0.95;
+    REVEAL.forEach((sel) => {
+      $$(sel).forEach((el) => {
+        if (el.classList.contains('rv') || el.getBoundingClientRect().top < fold) return;
+        const sibs = el.parentElement ? Array.from(el.parentElement.children) : [el];
+        el.style.setProperty('--i', String(Math.min(sibs.indexOf(el), 8) % 9));
+        el.classList.add('rv');
+        if (ZOOM.has(sel)) el.classList.add('rv-zoom');
+        io.observe(el);
+      });
+    });
+
+    /* numbers count up when they come into view */
+    const countIo = new IntersectionObserver((entries) => {
+      entries.forEach((en) => {
+        if (!en.isIntersecting) return;
+        countIo.unobserve(en.target);
+        const el = en.target;
+        const end = Number(el.dataset.count);
+        const t0 = performance.now();
+        const dur = 900 + Math.min(end, 20) * 40;
+        const step = (now) => {
+          const k = Math.min(1, (now - t0) / dur);
+          el.textContent = String(Math.round(end * (1 - Math.pow(1 - k, 3))));
+          if (k < 1) requestAnimationFrame(step);
+        };
+        el.textContent = '0';
+        requestAnimationFrame(step);
+      });
+    }, { threshold: 0.6 });
+    $$('[data-count]').forEach((el) => countIo.observe(el));
+
+    /* the process line draws itself */
+    const trailIo = new IntersectionObserver((entries) => entries.forEach((en) => { if (en.isIntersecting) { en.target.classList.add('drawn'); trailIo.unobserve(en.target); } }), { threshold: 0.35 });
+    $$('.trail').forEach((el) => trailIo.observe(el));
+  }
+
+  /* "We build …" types out what we build */
+  const word = $('.typer-word');
+  if (word) {
+    let words = [];
+    try { words = JSON.parse(word.dataset.words || '[]'); } catch (e) { words = []; }
+    if (words.length > 1) {
+      let wi = 0, ci = Array.from(words[0]).length, deleting = false;
+      const tick = () => {
+        const chars = Array.from(words[wi]);
+        if (document.hidden) { setTimeout(tick, 500); return; }
+        if (!deleting && ci >= chars.length) { deleting = true; setTimeout(tick, 1700); return; }
+        if (deleting && ci <= 0) { deleting = false; wi = (wi + 1) % words.length; setTimeout(tick, 260); return; }
+        ci += deleting ? -1 : 1;
+        word.textContent = Array.from(words[wi]).slice(0, ci).join('');
+        setTimeout(tick, deleting ? 32 : 62 + Math.random() * 40);
+      };
+      setTimeout(tick, 2200);
+    }
+  }
+
+  /* cards: a soft light follows the pointer; product tiles and the demo card tilt a little */
+  if (finePointer) {
+    $$('.svc, .feat, .acct, .stat, .trail li, .note, .tile, .client, .p-side, .quote-side .card, .faq details').forEach((el) => el.classList.add('spot'));
+    let spotRaf = 0, last = null;
+    document.addEventListener('pointermove', (e) => {
+      last = e;
+      if (spotRaf) return;
+      spotRaf = requestAnimationFrame(() => {
+        spotRaf = 0;
+        const el = last.target.closest && last.target.closest('.spot');
+        if (!el) return;
+        const r = el.getBoundingClientRect();
+        el.style.setProperty('--mx', `${last.clientX - r.left}px`);
+        el.style.setProperty('--my', `${last.clientY - r.top}px`);
+      });
+    }, { passive: true });
+    $$('.tile:not(.tile-new), .hero .demo-card').forEach((el) => {
+      const max = el.classList.contains('demo-card') ? 4 : 7;
+      el.addEventListener('pointermove', (e) => {
+        const r = el.getBoundingClientRect();
+        const x = (e.clientX - r.left) / r.width - 0.5, y = (e.clientY - r.top) / r.height - 0.5;
+        el.classList.add('tilt');
+        el.style.setProperty('--ry', `${(x * max).toFixed(2)}deg`);
+        el.style.setProperty('--rx', `${(-y * max).toFixed(2)}deg`);
+      });
+      el.addEventListener('pointerleave', () => { el.style.setProperty('--rx', '0deg'); el.style.setProperty('--ry', '0deg'); });
+    });
+  }
+
+  /* product pages: the big screenshot starts tilted back and lies flat as you scroll */
+  const heroShots = $$('.hero-shot');
+  function tiltShots() {
+    const vh = window.innerHeight;
+    heroShots.forEach((el) => {
+      const top = el.getBoundingClientRect().top;
+      const rx = Math.max(0, Math.min(12, ((top - vh * 0.18) / vh) * 22));
+      el.style.setProperty('--rx', `${rx.toFixed(2)}deg`);
+    });
+  }
+  onScroll();
 })();

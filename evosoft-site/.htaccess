@@ -11,7 +11,7 @@ AddType text/plain .txt .md
 <IfModule mod_expires.c>
   ExpiresActive On
   ExpiresByType text/html "access plus 0 seconds"
-  # CSS and JS are linked with ?v=<build>, so they can be cached for a long time.
+  # CSS, JS and fonts are linked with ?v=<content hash>, so they can be cached for a long time.
   ExpiresByType text/css "access plus 1 year"
   ExpiresByType application/javascript "access plus 1 year"
   ExpiresByType text/javascript "access plus 1 year"
@@ -21,9 +21,21 @@ AddType text/plain .txt .md
   ExpiresByType image/png "access plus 1 month"
   ExpiresByType image/svg+xml "access plus 1 month"
   ExpiresByType application/json "access plus 1 day"
+  ExpiresByType application/xml "access plus 0 seconds"
 </IfModule>
 
 <IfModule mod_headers.c>
+  # Pages are always checked for a newer version. Every file a page uses is linked with ?v=<hash of its contents>,
+  # so a changed stylesheet or script gets a new address and can't be served stale from a browser's cache.
+  <FilesMatch "\.(html|htm)$">
+    Header set Cache-Control "no-cache, must-revalidate"
+  </FilesMatch>
+  <FilesMatch "\.(css|js|woff2)$">
+    Header set Cache-Control "public, max-age=31536000, immutable"
+  </FilesMatch>
+  <FilesMatch "^(sitemap\.xml|robots\.txt|llms\.txt|site\.webmanifest)$">
+    Header set Cache-Control "no-cache"
+  </FilesMatch>
   Header always set X-Content-Type-Options "nosniff"
   Header always set Referrer-Policy "strict-origin-when-cross-origin"
   Header always set X-Frame-Options "SAMEORIGIN"

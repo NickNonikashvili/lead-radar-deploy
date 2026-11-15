@@ -4,6 +4,8 @@
 
 EvoSoft Solutions (EvoSoft) is a software development studio based in Georgia, working with clients anywhere. It takes on any kind of project: websites, online stores, web apps and custom software, business systems, integrations and automation, seo and redesigns, branding and graphic design, microsoft 365, email and it, maintenance and support. Every project gets a free quote, and the team replies within one business day. Contact: contact@evosoft.solutions, +995 555 352 218, +995 599 574 416.
 
+The site is in English, with Georgian (https://evosoft.solutions/ka/), Russian (https://evosoft.solutions/ru/) and Spanish (https://evosoft.solutions/es/) versions of every page.
+
 ## Pages
 
 - [Home](https://evosoft.solutions/index.html)

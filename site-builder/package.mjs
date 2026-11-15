@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Makes an upload-ready zip of the website, including the PHP libraries the chat assistant needs:
+// Makes an upload-ready zip of the website, including the PHP libraries for the chat assistant and for sending email:
 //   node site-builder/package.mjs        ->  dist/evosoft-site-YYYYMMDD.zip
 // Upload the zip to Hostinger's File Manager inside public_html and extract it there.
 // Needs Node 18+, `zip`, and Composer (or an existing evosoft-site/api/vendor folder).
@@ -37,13 +37,13 @@ fs.cpSync(SRC, STAGE, {
 
 const api = path.join(STAGE, 'api');
 if (has('composer')) {
-  console.log('Installing the PHP libraries for the chat assistant…');
+  console.log('Installing the PHP libraries for the chat assistant and email…');
   execFileSync('composer', ['install', '--no-dev', '--prefer-dist', '--optimize-autoloader', '--no-interaction', '--no-progress'], { cwd: api, stdio: 'inherit' });
 } else if (fs.existsSync(path.join(SRC, 'api/vendor/autoload.php'))) {
   console.log('Composer not found: copying the existing api/vendor folder.');
   fs.cpSync(path.join(SRC, 'api/vendor'), path.join(api, 'vendor'), { recursive: true });
 } else {
-  console.warn('WARNING: no Composer and no api/vendor. The site works, but the chat assistant will use its built-in answers until you run `composer install` in api/.');
+  console.warn('WARNING: no Composer and no api/vendor. The site works, but until you run `composer install` in api/ the chat assistant uses its built-in answers and the quote form can only send with PHP mail().');
 }
 // Version-control folders don't belong on the server.
 const prune = (dir) => {
@@ -61,4 +61,4 @@ if (!has('zip')) {
 execFileSync('zip', ['-qr', ZIP, '.'], { cwd: STAGE });
 const mb = (fs.statSync(ZIP).size / 1048576).toFixed(1);
 console.log(`\nReady: ${path.relative(REPO, ZIP)} (${mb} MB)`);
-console.log('Upload it into public_html, extract, then add your settings file (see site-builder/README.md, "Chat assistant").');
+console.log('Upload it into public_html, extract, then add your settings file (see site-builder/README.md, "Settings").');

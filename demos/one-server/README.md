@@ -25,13 +25,33 @@ Allow about an hour in total. Most of it is waiting for installs.
 
 1. hPanel → **Websites** → evosoft.solutions → **File Manager** → open `public_html`.
 2. **Back up first.** Select everything, choose **Compress** (zip) and download the zip. That's your way back.
-3. Delete the old site's files from `public_html`, but keep `.well-known` if it's there.
+3. Delete the old site's files from `public_html`, but keep `.well-known` and `api/data` if they're there.
+   `api/data` holds quote requests the old site saved; the new one moves them to `evosoft-data` by itself.
 4. Upload `evosoft-site-YYYYMMDD.zip`. Right-click it, choose **Extract** into the current folder, then delete the zip.
    Turn on "Show hidden files" and check that `.htaccess` and `api/.htaccess` are there.
-5. **Advanced → PHP Configuration**: choose PHP **8.1 or newer**.
+5. **Advanced → PHP Configuration**: choose PHP **8.2 or newer** (8.3 is a good choice).
 6. Open https://evosoft.solutions. Then open https://evosoft.solutions/api/chat.php?health=1: `"ok":true` means the
    chat's server side works.
-7. *(Optional)* To make the chat use AI, put your Anthropic API key in `evosoft-config.php` one folder above `public_html`.
+7. **Let the quote form send email.** In File Manager, go up one folder from `public_html` (to the folder that holds
+   it), create a new file named `evosoft-config.php` and paste this in:
+
+   ```php
+   <?php
+   return [
+       'smtp_user' => 'contact@evosoft.solutions',
+       'smtp_pass' => 'PUT THE MAILBOX PASSWORD HERE',
+       'anthropic_api_key' => '',   // optional, see step 9
+   ];
+   ```
+
+   Replace `PUT THE MAILBOX PASSWORD HERE` with the password of the contact@evosoft.solutions mailbox, the one you use
+   for webmail, and save. If the password has a `'` or a `\` in it, put a `\` in front of each one. Forgot it?
+   hPanel → **Emails** → **Email accounts** lets you set a new one (then use the new one in your phone's mail app too).
+8. Send yourself a test through the quote form. It should arrive in webmail within a minute. Then open
+   https://evosoft.solutions/api/quote.php?health=1: `"mail":"smtp","last_send":"ok"` means it works.
+   `"last_send":"failed"` usually means a wrong password; `evosoft-data/mail-status.json` (next to `public_html`) says
+   why. Either way no request is lost: they're all saved in `evosoft-data/quotes.jsonl`.
+9. *(Optional)* To make the chat use AI, put your Anthropic API key in `anthropic_api_key` in the same file.
    `site-builder/README.md`, "Settings", has the details.
 
 ## Part 2: The Ubuntu server (Evo, Mailtabs and StudyCat demos)

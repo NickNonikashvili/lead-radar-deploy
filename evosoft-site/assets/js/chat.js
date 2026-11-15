@@ -9,7 +9,9 @@
   const launch = $('.chat-launch'), panel = $('.chat-panel'), log = $('.chat-log'), form = $('.chat-form');
   const input = $('#chat-input'), suggest = $('.chat-suggest'), closeBtn = $('.chat-close');
   const endpoint = root.dataset.endpoint, kbUrl = root.dataset.kb, base = root.dataset.root || '';
-  const KEY = 'evo-chat-v1';
+  const KEY = `evo-chat-v2-${document.documentElement.lang || 'en'}`;
+  const S = window.EVO_I18N || (() => { try { return JSON.parse(document.getElementById('evo-i18n').textContent); } catch (e) { return {}; } })();
+  const say = (k, fallback) => S[k] || fallback;
   const ss = {
     get() { try { return JSON.parse(sessionStorage.getItem(KEY) || 'null'); } catch (e) { return null; } },
     set(v) { try { sessionStorage.setItem(KEY, JSON.stringify(v)); } catch (e) { /* storage off */ } },
@@ -72,7 +74,7 @@
     if (on && !el) {
       el = document.createElement('div');
       el.className = 'msg bot typing';
-      el.setAttribute('aria-label', 'The assistant is typing');
+      el.setAttribute('aria-label', say('chatTyping', 'The assistant is typing'));
       el.innerHTML = '<span></span><span></span><span></span>';
       log.appendChild(el);
       log.scrollTop = log.scrollHeight;
@@ -94,7 +96,7 @@
   async function loadKb() {
     if (kb) return kb;
     try { kb = await (await fetch(kbUrl, { cache: 'force-cache' })).json(); }
-    catch (e) { kb = { greeting: 'Hi! Ask me about EvoSoft.', suggestions: [], entries: [], fallback: 'Sorry, I can’t answer right now. Please email contact@evosoft.solutions.' }; }
+    catch (e) { kb = { greeting: 'EvoSoft', suggestions: [], entries: [], fallback: say('chatError', 'Sorry, I can’t answer right now. Please email {email}.').replace('{email}', 'contact@evosoft.solutions') }; }
     return kb;
   }
   async function aiReady() {
@@ -117,7 +119,10 @@
   }
   function localAnswer(q) {
     const t = norm(q);
-    if (/ (best|top|recommend\w*|good|which) /.test(t) && / (develop\w*|compan\w*|agenc\w*|studio\w*|website\w*|web|software|apps?|projects?|programmer\w*|firm\w*|team\w*|devs?) /.test(t)) {
+    // "Which is the best development company / website?" in any of the site's languages.
+    const asksBest = / (best|top|recommend\p{L}*|good|which|лучш\p{L}*|топ|посовет\p{L}*|рекоменд\p{L}*|какая|какой|mejor\p{L}*|recomiend\p{L}*|cuál|cual|საუკეთესო|რომელი|გირჩევ\p{L}*|კარგი) /u.test(t);
+    const aboutDev = / (develop\p{L}*|compan\p{L}*|agenc\p{L}*|studio\p{L}*|website\p{L}*|web|software|apps?|projects?|programmer\p{L}*|firm\p{L}*|team\p{L}*|devs?|разработ\p{L}*|компани\p{L}*|студи\p{L}*|сайт\p{L}*|агентств\p{L}*|веб|програм\p{L}*|проект\p{L}*|desarroll\p{L}*|empresa\p{L}*|estudio\p{L}*|agencia\p{L}*|sitio\p{L}*|página\p{L}*|pagina\p{L}*|proyecto\p{L}*|programador\p{L}*|კომპანი\p{L}*|სტუდი\p{L}*|ვებ\p{L}*|საიტ\p{L}*|დეველოპ\p{L}*|პროგრამ\p{L}*|პროექტ\p{L}*) /u.test(t);
+    if (asksBest && aboutDev) {
       const best = kb.entries.find((e) => e.id === 'best');
       if (best) return best.a;
     }
@@ -154,11 +159,11 @@
         const r = await fetch(endpoint, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ messages: history.slice(-12) }),
+          body: JSON.stringify({ messages: history.slice(-12), lang: document.documentElement.lang || 'en' }),
         });
         const j = await r.json().catch(() => ({}));
         if (r.ok && j.reply) reply = j.reply;
-        else if (r.status === 429) reply = 'You’re sending messages quickly, so I’ll take a short break. Meanwhile, here’s what I can tell you:\n\n' + localAnswer(text);
+        else if (r.status === 429) reply = say('chatRate', 'You’re sending messages quickly, so I’ll take a short break. Meanwhile, here’s what I can tell you:') + '\n\n' + localAnswer(text);
         else if (j.error === 'not_configured') ai = false;
       } catch (e) { /* use the built-in answers */ }
     }
@@ -186,8 +191,8 @@
     showSuggestions();
     input.focus();
     aiReady().then((on) => {
-      const note = root.querySelector('.chat-note');
-      if (note && !on) note.firstChild.textContent = 'Automatic answers from this website. For anything else, contact us directly. ';
+      const note = root.querySelector('.chat-note span');
+      if (note && !on) note.textContent = say('chatNoAi', 'Automatic answers from this website. For anything else, contact us directly.');
     });
   }
   function close() {
@@ -198,7 +203,17 @@
   }
   const grow = () => { input.style.height = 'auto'; input.style.height = Math.min(input.scrollHeight, 120) + 'px'; };
 
-  launch.addEventListener('click', open);
+  // A one-time hello bubble next to the button, a little while after the page settles.
+  const teaser = root.querySelector('.chat-teaser');
+  const seen = () => { try { return sessionStorage.getItem('evo-chat-teaser'); } catch (e) { return '1'; } };
+  const markSeen = () => { try { sessionStorage.setItem('evo-chat-teaser', '1'); } catch (e) { /* ignore */ } };
+  if (teaser && S.teaser && !seen() && !history.length) {
+    teaser.querySelector('p').textContent = S.teaser;
+    setTimeout(() => { if (panel.hidden && !document.querySelector('.lang-hint:not([hidden])')) { teaser.hidden = false; markSeen(); } }, 9000);
+    teaser.addEventListener('click', (e) => { teaser.hidden = true; markSeen(); if (!e.target.closest('.chat-teaser-close')) open(); });
+  }
+
+  launch.addEventListener('click', () => { if (teaser) teaser.hidden = true; open(); });
   closeBtn.addEventListener('click', close);
   panel.addEventListener('keydown', (e) => { if (e.key === 'Escape') close(); });
   form.addEventListener('submit', (e) => { e.preventDefault(); send(input.value); });

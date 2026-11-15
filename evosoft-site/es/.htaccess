@@ -1,0 +1,2 @@
+# Español: this folder's own "page not found" page. © 2026 EvoSoft Solutions.
+ErrorDocument 404 /es/404.html

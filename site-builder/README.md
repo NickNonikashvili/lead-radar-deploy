@@ -5,7 +5,7 @@ chat assistant that knows the whole site. © 2026 EvoSoft Solutions. All rights 
 
 ```
 evosoft-site/     the finished website (what goes on the server)
-  api/            chat assistant (chat.php) and quote form (quote.php), PHP 8.1+
+  api/            chat assistant (chat.php) and quote form (quote.php), PHP 8.2+
 site-builder/     where you edit it: data files, page templates, build scripts (not uploaded)
 demos/            how to host each live demo (one folder per product)
 ```
@@ -17,11 +17,14 @@ node site-builder/package.mjs        # builds and makes dist/evosoft-site-YYYYMM
 ```
 
 1. In hPanel → File Manager, open `public_html`, upload the zip and **Extract** it there (replace the old files).
-   The zip includes the hidden `.htaccess` files and the PHP libraries for the chat.
-2. Add your settings file (next section). Without it the site still works: the chat answers from the built-in
-   answers, and the quote form emails `contact@evosoft.solutions`.
+   The zip includes the hidden `.htaccess` files and the PHP libraries for the chat and for sending email.
+2. Add your settings file (next section) with the password of the `contact@evosoft.solutions` mailbox, so the quote
+   form can send email. Without it the site still works: the chat uses its built-in answers, and quote requests are
+   saved on the server, but their emails may never arrive.
 3. Open `https://evosoft.solutions/api/chat.php?health=1`. `{"ok":true,"ai":true}` means the assistant is using Claude.
-4. In Google Search Console, add the site and submit `https://evosoft.solutions/sitemap.xml`.
+4. Send yourself a test through the quote form, then open `https://evosoft.solutions/api/quote.php?health=1`.
+   `"mail":"smtp","last_send":"ok"` means email works.
+5. In Google Search Console, add the site and submit `https://evosoft.solutions/sitemap.xml`.
 
 Old links keep working: `/pricing.html` redirects to the quote page, and every other old page name is unchanged.
 
@@ -29,7 +32,15 @@ Old links keep working: `/pricing.html` redirects to the quote page, and every o
 
 Copy `evosoft-site/api/config.example.php` to **`evosoft-config.php` next to `public_html`** (on Hostinger:
 `/home/<user>/domains/evosoft.solutions/evosoft-config.php`), so it can never be downloaded. `api/config.php` also
-works; `api/.htaccess` blocks it from the web. Then fill in:
+works; `api/.htaccess` blocks it from the web. You only need the lines you change. For the quote form, this is enough:
+
+```php
+<?php
+return [
+    'smtp_user' => 'contact@evosoft.solutions',
+    'smtp_pass' => 'the password of that mailbox',
+];
+```
 
 | Setting | What it does |
 |---|---|
@@ -37,9 +48,12 @@ works; `api/.htaccess` blocks it from the web. Then fill in:
 | `chat_model` | `claude-opus-5-5` by default (Anthropic's current default). `claude-haiku-5-5` costs far less per message, if you want to save. |
 | `chat_per_ip_10min`, `chat_per_ip_day`, `chat_global_day` | Limits per visitor and a daily ceiling for the whole site, so spending can't run away. |
 | `quote_to` | Where quote requests are emailed (default contact@evosoft.solutions). |
-| `mail_from` | The sender address. Use a mailbox or alias on your domain (for example no-reply@evosoft.solutions) so mail isn't marked as spam. |
+| `smtp_user`, `smtp_pass` | The mailbox the quote form signs in to and sends from, and its password. With Hostinger email: the full address and the password you use for webmail (hPanel → Emails → Email accounts can change it). |
+| `smtp_host`, `smtp_port` | `smtp.hostinger.com` and `465` by default. With another email provider, change them to theirs. |
+| `mail_from` | Only used without `smtp_pass`, when the form falls back to PHP's `mail()`: the sender, which must be a real mailbox on your domain (default: `quote_to`). |
 
-Environment variables (`ANTHROPIC_API_KEY`, `EVOSOFT_CHAT_MODEL`, `EVOSOFT_QUOTE_TO`, `EVOSOFT_MAIL_FROM`) override the file.
+Environment variables (`ANTHROPIC_API_KEY`, `EVOSOFT_CHAT_MODEL`, `EVOSOFT_QUOTE_TO`, `EVOSOFT_MAIL_FROM`,
+`EVOSOFT_SMTP_HOST`, `EVOSOFT_SMTP_PORT`, `EVOSOFT_SMTP_USER`, `EVOSOFT_SMTP_PASS`) override the file.
 
 ### How the assistant works
 
@@ -56,9 +70,21 @@ Environment variables (`ANTHROPIC_API_KEY`, `EVOSOFT_CHAT_MODEL`, `EVOSOFT_QUOTE
 
 ### Quote form
 
-`api/quote.php` validates the request, emails it to `quote_to` with the visitor as Reply-To, and saves a copy in
-`api/data/quotes.jsonl` (blocked from the web) so a request is never lost if mail fails. Bots that fill the hidden
-field are ignored. If PHP isn't available, the form opens the visitor's email app with everything filled in.
+`api/quote.php` checks the request, saves it, then emails it to `quote_to` with the visitor as Reply-To, so pressing
+Reply answers them. The email also says which language the visitor used the site in, so you know how to reply.
+Bots that fill the hidden field are ignored.
+
+- **Saved first.** Every request goes into `evosoft-data/quotes.jsonl` next to `public_html`, one per line. Uploading
+  a new version of the site never touches that folder. If it can't be created there, `api/data/quotes.jsonl` is used
+  instead (blocked from the web). Requests the old version saved in `api/data` are moved over by themselves; the old
+  file stays as `quotes.jsonl.moved`.
+- **Sent over SMTP.** With `smtp_pass` set, the form signs in to the mailbox and sends from it, which is what
+  Hostinger wants. Without it, the form uses PHP's `mail()`, which hosts often refuse.
+- **The visitor is never turned away.** Once a request is saved they see it as sent, even if the email fails. The
+  reason goes to the PHP error log and to `evosoft-data/mail-status.json`.
+- **Check it** at `https://evosoft.solutions/api/quote.php?health=1`: `"mail"` is `"smtp"` (or `"mail"` without a
+  password) and `"last_send"` is `"ok"`, `"failed"` or `"never"`. On `"failed"`, `mail-status.json` says why (most
+  often a wrong password).
 
 ## Editing
 
@@ -67,6 +93,7 @@ field are ignored. If PHP isn't available, the form opens the visitor's email ap
 | Phone numbers, email, services, process, FAQ, client sites, quote form options, chat suggestions | `site-builder/data/site.mjs` |
 | Products, demo URLs, demo accounts, screenshots and captions | `site-builder/data/products.mjs` |
 | Page layouts and wording | `site-builder/build.mjs` |
+| Translations | `site-builder/i18n/<lang>/*.json` (see Languages below) |
 | Colours, fonts, spacing | `evosoft-site/assets/css/site.css` (colour tokens at the top, light and dark) |
 
 Then rebuild (Node 18+, no `npm install`):
@@ -78,6 +105,20 @@ node site-builder/build.mjs
 
 Preview with the API working: `cd evosoft-site && php -S 127.0.0.1:8000` and open http://127.0.0.1:8000.
 For local testing only, an `api/config.php` with `'mail_mode' => 'log'` saves quotes instead of emailing them.
+
+### Languages
+
+The site is built in English (at the root), Georgian (`/ka/`), Russian (`/ru/`) and Spanish (`/es/`). The header has a
+language menu, every page links to its other versions for Google (`hreflang`), and the sitemap lists them all. English
+pages offer visitors whose browser prefers Georgian, Russian or Spanish their language once; nothing redirects on its own.
+
+- Write content in English, in `site.mjs`, `products.mjs` or `build.mjs`, then rebuild. The build lists every string in
+  `site-builder/i18n/source.json` and prints how many each language has, e.g. `Русский: 640/640 strings translated`.
+- Translations are in `site-builder/i18n/<ka|ru|es>/*.json`: the English text on the left, the translation on the right.
+  Keep `{placeholders}` as they are. A changed English sentence needs its translation updated too; until then the
+  page shows the English, and `dist/i18n-missing-<lang>.json` lists what's missing.
+- The demos themselves stay in English, so instructions keep the demo's button names in English.
+- Georgian uses Noto Sans Georgian and Russian uses Onest (in `assets/fonts/`); the CSS picks them by character.
 
 ### Demo links
 
