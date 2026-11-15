@@ -716,10 +716,10 @@ html .sec-head.rv:not(.in) h2::after { transform: scaleX(0); }
 .quote.sending .btn.primary::after { animation: shine 1.1s ease-in-out infinite; }
 
 /* ---------- per language ---------- */
-:lang(ka) h1, :lang(ka) .p-intro h1 { font-size: clamp(1.95rem, 4.1vw, 3.05rem); line-height: 1.18; letter-spacing: 0; }
-:lang(ka) h2 { font-size: clamp(1.45rem, 2.5vw, 1.95rem); line-height: 1.22; letter-spacing: 0; }
+:where(:lang(ka)) h1 { font-size: clamp(1.95rem, 4.1vw, 3.05rem); line-height: 1.18; letter-spacing: 0; }
+:where(:lang(ka)) h2 { font-size: clamp(1.45rem, 2.5vw, 1.95rem); line-height: 1.22; letter-spacing: 0; }
 :lang(ka) .tile-tag, :lang(ka) .side-title, :lang(ka) .footer h2, :lang(ka) .role, :lang(ka) .table th { text-transform: none; letter-spacing: 0; }
-:lang(ru) h1, :lang(es) h1 { font-size: clamp(2.1rem, 4.6vw, 3.4rem); }
+:where(:lang(ru), :lang(es)) h1 { font-size: clamp(2.1rem, 4.6vw, 3.4rem); }
 h1, h2, h3, .lede { overflow-wrap: break-word; }
 :lang(ka) .btn, :lang(ru) .btn, :lang(es) .btn { white-space: normal; text-align: center; }
 
