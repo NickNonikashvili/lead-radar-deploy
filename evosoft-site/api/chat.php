@@ -64,6 +64,9 @@ require __DIR__ . '/vendor/autoload.php';
 
 
 $system = file_get_contents(__DIR__ . '/knowledge.md');
+$langs = ['en' => 'English', 'ka' => 'Georgian', 'ru' => 'Russian', 'es' => 'Spanish'];
+$lang = is_string($req['lang'] ?? null) && isset($langs[$req['lang']]) ? $req['lang'] : 'en';
+$pageLanguage = "The visitor is reading the {$langs[$lang]} version of the site. Answer in {$langs[$lang]} unless they write in another language; then answer in theirs.";
 $model = (string)$cfg['chat_model'];
 // Server-side refusal fallbacks exist for these model families; other models get no fallbacks parameter.
 $withFallbacks = (bool)preg_match('/^claude-(opus-5|fable-5|sonnet-5-5)/', $model);
@@ -79,7 +82,11 @@ try {
         'messages' => $messages,
         'model' => $model,
         // The knowledge base is the same on every request, so it is cached between visitors.
-        'system' => [['type' => 'text', 'text' => $system, 'cacheControl' => ['type' => 'ephemeral']]],
+        // The page's language comes after the cached part, so it doesn't break the cache.
+        'system' => [
+            ['type' => 'text', 'text' => $system, 'cacheControl' => ['type' => 'ephemeral']],
+            ['type' => 'text', 'text' => $pageLanguage],
+        ],
         'outputConfig' => ['effort' => (string)$cfg['chat_effort']],
     ];
     if ($withFallbacks) {
