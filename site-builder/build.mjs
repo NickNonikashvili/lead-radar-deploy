@@ -365,8 +365,10 @@ const yourTile = (root) => `<a class="tile tile-new" href="${root}contact.html">
   <span class="tile-new-text">${h('Website, store, app or system. Tell us about it and get a free quote.')}</span>
 </a>`;
 
+// Logins may wrap after the @ rather than in the middle of a word.
+const breakable = (v) => esc(v).replace(/@/g, '@<wbr>');
 function copyBtn(value, label) {
-  return `<button class="copy" type="button" data-copy="${attr(value)}" aria-label="${attr(label)}"><code>${esc(value)}</code></button>`;
+  return `<button class="copy" type="button" data-copy="${attr(value)}" aria-label="${attr(label)}"><code>${breakable(value)}</code></button>`;
 }
 
 function heroDemoCard(root) {
@@ -395,7 +397,7 @@ function accountCards(p) {
   const d = p.demo;
   const signin = d.signinUrl || d.url;
   const loginLabel = d.loginLabel || t('Email');
-  const copy = (v, label) => `<button class="copy" type="button" data-copy="${attr(v)}" aria-label="${attr(label)}"><code>${esc(v)}</code><span class="copy-tag" aria-hidden="true">${icon('copy', 'i i-copy')}${icon('check', 'i i-done')}</span></button>`;
+  const copy = (v, label) => `<button class="copy" type="button" data-copy="${attr(v)}" aria-label="${attr(label)}"><code>${breakable(v)}</code><span class="copy-tag" aria-hidden="true">${icon('copy', 'i i-copy')}${icon('check', 'i i-done')}</span></button>`;
   return `<div class="accts">${join(d.accounts, (a) => `<article class="acct">
     <div class="acct-top"><span class="role">${esc(a.role)}</span>${a.badge ? `<span class="badge">${esc(a.badge)}</span>` : ''}</div>
     ${a.name ? `<h4>${esc(a.name)}</h4>` : ''}
