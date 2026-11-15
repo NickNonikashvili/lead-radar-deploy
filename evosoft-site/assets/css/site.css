@@ -403,9 +403,14 @@ details[open] .plus::after { transform: rotate(0); }
 .copy code { font-size: 0.82rem; overflow-wrap: anywhere; color: var(--ink); }
 .copy:hover { border-color: var(--accent); }
 .copy:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
-.copy-tag { font: 700 0.66rem var(--body); color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+.copy-tag { display: inline-grid; flex: none; color: var(--muted); }
+.copy-tag .i { width: 15px; height: 15px; grid-area: 1 / 1; transition: opacity 0.15s, transform 0.2s; }
+.copy-tag .i-done { opacity: 0; transform: scale(0.5); }
+.copy:hover .copy-tag { color: var(--accent); }
 .copy.done { border-color: var(--pine); }
 .copy.done .copy-tag { color: var(--good); }
+.copy.done .i-copy { opacity: 0; transform: scale(0.5); }
+.copy.done .i-done { opacity: 1; transform: none; }
 .tries { margin: 0 0 14px; padding-left: 18px; color: var(--ink-2); font-size: 0.88rem; display: grid; gap: 4px; }
 .tries li::marker { color: var(--c); }
 .acc-go { align-self: flex-start; margin-top: auto; }
@@ -713,7 +718,7 @@ html .sec-head.rv:not(.in) h2::after { transform: scaleX(0); }
 /* ---------- per language ---------- */
 :lang(ka) h1, :lang(ka) .p-intro h1 { font-size: clamp(1.95rem, 4.1vw, 3.05rem); line-height: 1.18; letter-spacing: 0; }
 :lang(ka) h2 { font-size: clamp(1.45rem, 2.5vw, 1.95rem); line-height: 1.22; letter-spacing: 0; }
-:lang(ka) .tile-tag, :lang(ka) .side-title, :lang(ka) .footer h2, :lang(ka) .role, :lang(ka) .table th, :lang(ka) .copy-tag { text-transform: none; letter-spacing: 0; }
+:lang(ka) .tile-tag, :lang(ka) .side-title, :lang(ka) .footer h2, :lang(ka) .role, :lang(ka) .table th { text-transform: none; letter-spacing: 0; }
 :lang(ru) h1, :lang(es) h1 { font-size: clamp(2.1rem, 4.6vw, 3.4rem); }
 :lang(ru) h1, :lang(ru) h2, :lang(ru) h3, :lang(es) h1, :lang(es) h2 { -webkit-hyphens: auto; hyphens: auto; }
 h1, h2, h3, .lede { overflow-wrap: break-word; }

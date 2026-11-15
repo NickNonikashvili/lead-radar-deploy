@@ -85,8 +85,18 @@ export function isText(at, value) {
   return true;
 }
 
+// In the data, a table can list `rawColumns` (column numbers shown exactly as written, e.g. names inside an English
+// demo), and an account whose `name` is a label rather than a person's name sets `translateName: true`.
 export function translateData(value, t, at = []) {
   if (Array.isArray(value)) return value.map((v, i) => translateData(v, t, [...at, i]));
-  if (value && typeof value === 'object') return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, translateData(v, t, [...at, k])]));
+  if (value && typeof value === 'object') {
+    const out = {};
+    for (const [k, v] of Object.entries(value)) {
+      if (k === 'rows' && Array.isArray(value.rawColumns) && Array.isArray(v)) out[k] = v.map((row, ri) => row.map((c, ci) => (value.rawColumns.includes(ci) ? c : translateData(c, t, [...at, k, ri, ci]))));
+      else if (k === 'name' && value.translateName && typeof v === 'string') out[k] = t(v, undefined, `data: ${[...at, k].join('.')}`);
+      else out[k] = translateData(v, t, [...at, k]);
+    }
+    return out;
+  }
   return isText(at, value) ? t(value, undefined, `data: ${at.join('.')}`) : value;
 }

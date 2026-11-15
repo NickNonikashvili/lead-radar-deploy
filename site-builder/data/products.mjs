@@ -205,6 +205,7 @@ export const products = [
         {
           role: 'Connect it yourself',
           name: 'Run club mailbox',
+          translateName: true,
           login: 'alex@runclub.demo.test',
           password: 'mailtabs-demo',
           badge: 'For “Add account”',
@@ -220,6 +221,7 @@ export const products = [
         {
           title: 'Mailboxes already connected',
           text: 'All three use the password mailtabs-demo, like the run club mailbox.',
+          rawColumns: [1],
           columns: ['Address', 'Name in Mailtabs', 'Colour'],
           rows: [
             ['alex@work.demo.test', 'Work', 'Blue'],

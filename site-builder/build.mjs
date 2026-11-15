@@ -395,7 +395,7 @@ function accountCards(p) {
   const d = p.demo;
   const signin = d.signinUrl || d.url;
   const loginLabel = d.loginLabel || t('Email');
-  const copy = (v, label) => `<button class="copy" type="button" data-copy="${attr(v)}" aria-label="${attr(label)}"><code>${esc(v)}</code><span class="copy-tag" aria-hidden="true">${h('copy')}</span></button>`;
+  const copy = (v, label) => `<button class="copy" type="button" data-copy="${attr(v)}" aria-label="${attr(label)}"><code>${esc(v)}</code><span class="copy-tag" aria-hidden="true">${icon('copy', 'i i-copy')}${icon('check', 'i i-done')}</span></button>`;
   return `<div class="accts">${join(d.accounts, (a) => `<article class="acct">
     <div class="acct-top"><span class="role">${esc(a.role)}</span>${a.badge ? `<span class="badge">${esc(a.badge)}</span>` : ''}</div>
     ${a.name ? `<h4>${esc(a.name)}</h4>` : ''}
@@ -489,9 +489,9 @@ function buildPages() {
 
 <section class="stats-band">
   <div class="wrap stats">
-    <div class="stat"><span class="stat-n tone-blue" data-count="${products.length}">${products.length}</span><span class="stat-l">${h('live demos you can sign in to')}</span></div>
-    <div class="stat"><span class="stat-n tone-green" data-count="${totalAccounts}">${totalAccounts}</span><span class="stat-l">${h('ready-made test accounts')}</span></div>
-    <div class="stat"><span class="stat-n tone-gold" data-count="${services.length}">${services.length}</span><span class="stat-l">${h('kinds of work under one roof')}</span></div>
+    <div class="stat"><span class="stat-n tone-blue" data-count="${products.length}">${products.length}</span><span class="stat-l">${esc(t.n(products.length, 'live demo you can sign in to', 'live demos you can sign in to'))}</span></div>
+    <div class="stat"><span class="stat-n tone-green" data-count="${totalAccounts}">${totalAccounts}</span><span class="stat-l">${esc(t.n(totalAccounts, 'ready-made test account', 'ready-made test accounts'))}</span></div>
+    <div class="stat"><span class="stat-n tone-gold" data-count="${services.length}">${services.length}</span><span class="stat-l">${esc(t.n(services.length, 'kind of work under one roof', 'kinds of work under one roof'))}</span></div>
     <div class="stat"><span class="stat-n tone-coral">${h('1 day')}</span><span class="stat-l">${h('to hear back about your project')}</span></div>
   </div>
 </section>
@@ -645,7 +645,7 @@ ${ctaCard(root, h('Like what you see?'), h('We can build something like this for
         <p class="side-title">${h('Live demo')}</p>
         <p class="side-status">${statusPill(p)}</p>
         ${p.demo.url ? `<p class="side-url"><a href="${attr(p.demo.url)}" target="_blank" rel="noopener">${esc(p.demo.label)}</a></p>` : ''}
-        <div class="side-stat"><span class="stat-n" data-count="${p.demo.accounts.length}">${p.demo.accounts.length}</span><span>${h('demo accounts, one per role')}</span></div>
+        <div class="side-stat"><span class="stat-n" data-count="${p.demo.accounts.length}">${p.demo.accounts.length}</span><span>${esc(t.n(p.demo.accounts.length, 'demo account, one per role', 'demo accounts, one per role'))}</span></div>
         ${a0 ? `<p class="side-cred"><span class="muted">${esc(a0.role)}</span>${copyBtn(a0.login, t('Copy {value}', { value: a0.login }))}${copyBtn(a0.password, t('Copy the password'))}</p>` : ''}
         <p class="side-title">${h('Built with')}</p>
         <p class="stack">${join(p.stack, (s) => `<span>${esc(s)}</span>`)}</p>

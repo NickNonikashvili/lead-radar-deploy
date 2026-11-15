@@ -150,11 +150,9 @@
     const btn = e.target.closest('.copy');
     if (!btn) return;
     const ok = await copyText(btn.dataset.copy);
-    const tag = $('.copy-tag', btn);
     if (ok) {
       btn.classList.add('done');
-      if (tag) tag.textContent = S.copied;
-      setTimeout(() => { btn.classList.remove('done'); if (tag) tag.textContent = S.copy; }, 1600);
+      setTimeout(() => btn.classList.remove('done'), 1600);
     } else {
       toast(esc(S.copyFail));
     }

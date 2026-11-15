@@ -1224,6 +1224,10 @@
   "ctx": "data: products.1.demo.accounts.1.role"
  },
  {
+  "s": "Run club mailbox",
+  "ctx": "data: products.1.demo.accounts.1.name"
+ },
+ {
   "s": "For “Add account”",
   "ctx": "data: products.1.demo.accounts.1.badge"
  },
@@ -1264,16 +1268,8 @@
   "ctx": "data: products.1.demo.tables.0.rows.0.2"
  },
  {
-  "s": "Personal",
-  "ctx": "data: products.1.demo.tables.0.rows.1.1"
- },
- {
   "s": "Green",
   "ctx": "data: products.1.demo.tables.0.rows.1.2"
- },
- {
-  "s": "Tidepool (side project)",
-  "ctx": "data: products.1.demo.tables.0.rows.2.1"
  },
  {
   "s": "Amber",
@@ -1825,14 +1821,17 @@
  },
  {
   "s": "live demos you can sign in to",
+  "plural": true,
   "ctx": "index.html"
  },
  {
   "s": "ready-made test accounts",
+  "plural": true,
   "ctx": "index.html"
  },
  {
   "s": "kinds of work under one roof",
+  "plural": true,
   "ctx": "index.html"
  },
  {
@@ -2182,6 +2181,7 @@
  },
  {
   "s": "demo accounts, one per role",
+  "plural": true,
   "ctx": "work/evo.html"
  },
  {
