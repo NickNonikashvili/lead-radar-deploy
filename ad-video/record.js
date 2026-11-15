@@ -31,7 +31,7 @@ const TIME_SCALE = `(() => {
 })();`;
 
 // ---------- helpers, in video time ----------
-function helpers(page) {
+function helpers(page, start = [720, 450]) {
   const wait = (ms) => page.waitForTimeout(ms / RATE);
   const ease = (x) => (x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2);
   async function scrollTo(y, ms = 1200, offset = 90) {
@@ -43,7 +43,7 @@ function helpers(page) {
       await wait(ms / steps);
     }
   }
-  let mouse = { x: 720, y: 450 };
+  let mouse = { x: start[0], y: start[1] };
   async function moveTo(x, y, ms = 600) {
     const steps = Math.max(2, Math.round(ms / 16));
     const sx = mouse.x, sy = mouse.y;
@@ -118,13 +118,20 @@ const CLIPS = {
   } },
   products: { ctx: DESKTOP, url: '/index.html', settle: 2500, async run(page, h) {
     await h.scrollTo('.tiles', 1400, 260);
-    await h.wait(600);
+    await h.wait(300);
     await h.moveToEl('.tiles .tile:nth-child(1)', 700, 0.6, 0.35);
-    await h.moveToEl('.tiles .tile:nth-child(1)', 700, 0.3, 0.6);
-    await h.moveToEl('.tiles .tile:nth-child(2)', 700, 0.6, 0.4);
-    await h.moveToEl('.tiles .tile:nth-child(3)', 800, 0.5, 0.35);
-    await h.moveToEl('.tiles .tile:nth-child(4)', 800);
-    await h.wait(1200);
+    h.mark('evo');
+    await h.wait(150);
+    await h.moveToEl('.tiles .tile:nth-child(2)', 550, 0.6, 0.4);
+    h.mark('mailtabs');
+    await h.wait(250);
+    await h.moveToEl('.tiles .tile:nth-child(3)', 550, 0.5, 0.35);
+    h.mark('studycat');
+    await h.wait(1900);
+    // the empty lower part of the "Your project" card, so the pointer covers no text
+    await h.moveToEl('.tiles .tile:nth-child(4)', 800, 0.5, 0.88);
+    h.mark('yours');
+    await h.wait(2600);
   } },
   evopage: { ctx: DESKTOP, url: '/work/evo.html', cursor: false, staticCounts: true, async run(page, h) {
     await h.wait(1600);
@@ -137,11 +144,12 @@ const CLIPS = {
     await h.wait(300);
     for (const n of [1, 2, 3, 5, 6]) { await h.moveToEl(`#evo .acct:nth-child(${n}) .role`, 650); await h.wait(250); }
     h.mark('tour');
-    await h.moveToEl('#evo .acct:nth-child(1) .cred div:nth-child(1) .copy', 800);
+    await h.moveToEl('#evo .acct:nth-child(1) .cred div:nth-child(1) .copy', 800, 0.87);
     await page.mouse.down(); await h.wait(90); await page.mouse.up();
     h.mark('copied');
     await h.wait(450);
-    await h.click('#evo .acct:nth-child(1) .cred div:nth-child(2) .copy', 450);
+    await h.moveToEl('#evo .acct:nth-child(1) .cred div:nth-child(2) .copy', 450, 0.87);
+    await page.mouse.down(); await h.wait(90); await page.mouse.up();
     await h.wait(350);
     await page.evaluate(() => document.querySelector('#evo .acct:nth-child(1) .acc-go').addEventListener('click', (e) => e.preventDefault(), true));
     await h.moveToEl('#evo .acct:nth-child(1) .acc-go', 650);
@@ -152,7 +160,7 @@ const CLIPS = {
   process: { ctx: DESKTOP, url: '/index.html', settle: 2500, cursor: false, async run(page, h) {
     // only the four steps: hide the next section's heading that would sit under them
     await page.addStyleTag({ content: '.sec:has(.trail) + .sec .sec-head { visibility: hidden }' });
-    await h.scrollTo('.trail', 1700, 330);
+    await h.scrollTo('.trail', 1700, 450);
     await page.waitForFunction(() => document.querySelector('.trail').classList.contains('drawn'), null, { timeout: 20000 });
     h.mark('drawn');
     await h.wait(3000);
@@ -180,19 +188,18 @@ const CLIPS = {
     await pick('ru');
     await pick('es');
     await h.wait(1200);
-    h.mark('esmenu');
+    h.mark('enmenu');
     await h.click('.lang-btn', 600);
-    await h.wait(400);
-    await h.moveToEl('.lang-menu a[data-lang="ka"]', 500);
-    await h.wait(300);
-    await h.moveToEl('.lang-menu a[data-lang="ru"]', 400);
-    await h.wait(300);
-    await h.moveToEl('.lang-menu a[data-lang="es"]', 400);
-    await h.wait(900);
-    await page.keyboard.press('Escape');
-    await h.wait(1500);
+    await h.wait(450);
+    await h.moveToEl('.lang-menu a[data-lang="en"]', 500);
+    await h.wait(200);
+    h.mark('en');
+    await Promise.all([page.waitForNavigation({ waitUntil: 'domcontentloaded' }), page.mouse.down().then(() => page.mouse.up())]);
+    await page.evaluate(() => { const c = document.querySelector('.demo-card'); if (c) c.style.setProperty('--dur', '3400ms'); });
+    await h.wait(2600);
   } },
-  assistant: { ctx: DESKTOP, url: '/index.html', settle: 2000, chatButton: true, staticCounts: true, setup: async (page) => { await page.evaluate(() => sessionStorage.setItem('evo-chat-teaser', '1')); }, async run(page, h) {
+  assistant: { ctx: DESKTOP, url: '/index.html', settle: 2000, chatButton: true, staticCounts: true, mouseStart: [1400, 640], setup: async (page) => { await page.evaluate(() => sessionStorage.setItem('evo-chat-teaser', '1')); }, async run(page, h) {
+    await h.wait(1000);
     await h.click('.chat-launch', 900);
     h.mark('open');
     await h.wait(900);
@@ -223,7 +230,11 @@ const CLIPS = {
     await h.moveToEl('.form-foot .btn', 700);
     h.mark('sent');
     await page.mouse.down(); await h.wait(90); await page.mouse.up();
-    await h.wait(2800);
+    await h.wait(300);
+    // into the empty space under the right-hand cards: off the button and clear of the thank-you text below it
+    const side = await page.locator('.quote-side').first().boundingBox();
+    await h.moveTo(side ? side.x + side.width * 0.6 : 1100, 620, 700);
+    await h.wait(5200);
   } },
   mobile: { ctx: PHONE, url: '/index.html', cursor: false, staticCounts: true, chatButton: true, async run(page, h) {
     await h.wait(2200);
@@ -231,8 +242,18 @@ const CLIPS = {
     await h.wait(700);
     await page.addStyleTag({ content: '*{transition:none!important}' });
     const tb = await page.locator('.theme-toggle').boundingBox();
+    const tx = tb.x + tb.width / 2, ty = tb.y + tb.height / 2;
+    await page.evaluate(([x, y]) => {
+      const st = document.createElement('style');
+      st.textContent = '@keyframes __tap{0%{transform:scale(.35);opacity:0}25%{opacity:.85}100%{transform:scale(1.5);opacity:0}}';
+      document.head.appendChild(st);
+      const r = document.createElement('div');
+      r.style.cssText = `position:fixed;left:${x - 26}px;top:${y - 26}px;width:52px;height:52px;border-radius:50%;background:rgba(26,100,214,.35);border:2px solid rgba(26,100,214,.7);pointer-events:none;z-index:2147483647;animation:__tap .7s ease-out forwards`;
+      document.documentElement.appendChild(r);
+    }, [tx, ty]);
+    await h.wait(220);
     h.mark('dark');
-    await page.touchscreen.tap(tb.x + tb.width / 2, tb.y + tb.height / 2);
+    await page.touchscreen.tap(tx, ty);
     await h.wait(1000);
     await h.scrollTo(1500, 1600);
     await h.wait(900);
@@ -265,7 +286,7 @@ async function record(name) {
   const cdp = await ctx.newCDPSession(page);
   await cdp.send('Animation.enable');
   await cdp.send('Animation.setPlaybackRate', { playbackRate: RATE });
-  const h = helpers(page);
+  const h = helpers(page, clip.mouseStart);
   // Clips that start further down the page load it first, without recording.
   if (clip.settle) {
     await page.goto(BASE + clip.url, { waitUntil: 'networkidle' });
@@ -289,7 +310,7 @@ async function record(name) {
     await page.goto(BASE + clip.url, { waitUntil: 'commit' });
     if (clip.setup) await clip.setup(page);
   } else {
-    await page.mouse.move(720, 450);
+    await page.mouse.move(...(clip.mouseStart || [720, 450]));
   }
   await clip.run(page, h);
   await cdp.send('Page.stopScreencast');

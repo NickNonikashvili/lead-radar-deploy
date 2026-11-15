@@ -75,6 +75,8 @@
   // left-hand text, the text stays put.
   const sameWindow = (a, b) => a && b && windowKinds.has(a.kind) && windowKinds.has(b.kind) && (a.layout || 'split') === (b.layout || 'split');
   const sameCopy = (a, b) => sameWindow(a, b) && a.beat === b.beat && a.chip === b.chip && a.onscreen === b.onscreen && a.sub === b.sub;
+  // the address a window shows when it leaves the screen
+  const lastUrl = (sc) => (sc.urls ? sc.urls[sc.urls.length - 1].url : sc.shots ? [...sc.shots].reverse().map((s) => s.url).find(Boolean) || sc.url : sc.url) || 'evosoft.solutions';
   function browserHtml(sc, inner) {
     return `<div class="browser"><div class="top"><b></b><b></b><b></b><div class="url">${lock}<span>${esc(sc.url || 'evosoft.solutions')}</span></div></div><div class="vp">${inner}</div></div>`;
   }
@@ -88,7 +90,8 @@
       el.innerHTML = `<div class="center"><div class="logo-big"><div class="mark">${MARK}</div><div class="word">evosoft</div></div><div class="url-big">evosoft.solutions</div><div class="cta">${esc(sc.cta || 'Get a free quote')} <span>→</span></div><div class="contacts">${esc(sc.contacts || '')}</div><div class="langs">${esc(sc.langs || '')}</div><div class="copyright">${esc(sc.copyright || '')}</div></div>`;
     } else if (sc.kind === 'browser') {
       el.innerHTML = (sc.layout === 'split' ? copyHtml(sc) : '') + browserHtml(sc, '<img alt="">' + (sc.mask ? '<div class="vmask"></div>' : ''));
-      if (sc.pills) el.querySelector('.browser .top').insertAdjacentHTML('beforeend', `<div class="pills">${sc.pills.map((p) => `<span>${esc(p.label)}</span>`).join('')}</div>`);
+      // one pill per language, even when the menu comes back to one (English → … → English)
+      if (sc.pills) el.querySelector('.browser .top').insertAdjacentHTML('beforeend', `<div class="pills">${[...new Set(sc.pills.map((p) => p.label))].map((l) => `<span data-l="${esc(l)}">${esc(l)}</span>`).join('')}</div>`);
     } else if (sc.kind === 'shots') {
       el.innerHTML = (sc.layout === 'split' ? copyHtml(sc) : '') + browserHtml(sc, sc.shots.map((s) => `<img alt="" src="${esc(s.src)}">`).join(''));
     } else if (sc.kind === 'phone') {
@@ -194,9 +197,9 @@
           if (span.textContent !== u) span.textContent = u;
         }
         if (sc.pills) {
-          let on = 0;
-          sc.pills.forEach((p, i) => { if (local >= p.t) on = i; });
-          el.querySelectorAll('.pills span').forEach((s, i) => s.classList.toggle('on', i === on));
+          let on = sc.pills[0].label;
+          sc.pills.forEach((p) => { if (local >= p.t) on = p.label; });
+          el.querySelectorAll('.pills span').forEach((s) => s.classList.toggle('on', s.dataset.l === on));
           const pills = el.querySelector('.pills');
           pills.style.opacity = easeOut((local - 0.4) / 0.6);
         }
@@ -220,6 +223,12 @@
           if (s.url && local >= a) { const span = el.querySelector('.url span'); if (span.textContent !== s.url) span.textContent = s.url; }
         });
       }
+    }
+    // A window that changes page: the new address replaces the old one at the middle of the dissolve, instead of
+    // the two printing over each other.
+    if (contIn && isWindow) {
+      const span = el.querySelector('.url span');
+      span.style.opacity = span.textContent !== lastUrl(prev) ? clamp((local - 0.2) / 0.1, 0, 1).toFixed(3) : '1';
     }
     await Promise.all(pending);
   }

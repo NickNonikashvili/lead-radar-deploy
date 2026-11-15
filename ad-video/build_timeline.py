@@ -21,7 +21,9 @@ script = json.load(open(os.path.join(HERE, os.environ.get('AD_SCRIPT', 'script.j
 report = json.load(open(os.path.join(HERE, NARR, 'report.json')))
 beats = {s['id']: s for s in script['scenes']}
 ids = [s['id'] for s in script['scenes']]
-NO_CAPTIONS = {'B1'}   # the title card already shows the words (they're still in the .srt file)
+NO_CAPTIONS = {'B1', 'B14'}   # the title and end cards already show the words (they're still in the .srt file)
+# caption punctuation that differs from the narration script (no serial comma, as in the on-screen text)
+CAPTION_EDITS = [('offline, and', 'offline and'), ('flashcards, and', 'flashcards and'), ('together, and', 'together and')]
 
 
 def clip(name):
@@ -55,6 +57,7 @@ ZOOM_IN = [0.5, 0.2, 1.0, 0.5, 0.5, 1.03]
 PAN_R = [0.5, 0.0, 1.03, 0.5, 0.8, 1.03]
 PAN_DOWN = [0.5, 0.0, 1.025, 0.5, 1.0, 1.025]
 GENTLE = [0.5, 0.6, 1.03, 0.5, 0.2, 1.0]
+STILL = [0.5, 0.5, 1.0, 0.5, 0.5, 1.0]
 
 # Time references: ('t', s) scene-local seconds, ('w', word, offset) a spoken word, ('end',) scene end incl. crossfade.
 # Clip references: ('c', s) clip seconds, ('m', mark, offset) a mark in the recording.
@@ -62,20 +65,22 @@ GENTLE = [0.5, 0.6, 1.03, 0.5, 0.2, 1.0]
 VISUALS = {
     'B1': [{'kind': 'title'}],
     'B2': [{'kind': 'browser', 'layout': 'full', 'clip': 'hero', 'url': 'evosoft.solutions',
-            'map': [('at', ('t', 0), ('c', 0.1)), ('at', ('end',), ('c', 12.3))],
+            # the hero's typewriter shows "websites" from 0.5 to 3.85 s of the recording: hold it under the spoken word
+            'map': [('at', ('t', 0), ('c', 0.1)), ('at', ('w', 'websites', 0.45), ('c', 3.75)), ('at', ('end',), ('c', 10.2))],
             'cam': [(('t', 0), 0.5, 0.0, 1.0), (('end',), 0.62, 0.25, 1.06)]}],
     'B3': [{'kind': 'browser', 'layout': 'split', 'clip': 'services', 'chip': 'Services', 'url': 'evosoft.solutions',
             'map': [('at', ('t', 0), ('c', 4.9)), ('at', ('w', 'Online', -0.15), ('m', 'stores', 0)), ('at', ('w', 'booking', -0.15), ('m', 'booking', 0)),
                     ('at', ('w', 'Microsoft', -0.25), ('m', 'm365', 0)), ('run', ('end',))],
             'cam': [(('t', 0), 0.5, 0.0, 1.0), (('end',), 0.5, 0.3, 1.08)]}],
     'B4': [{'kind': 'browser', 'layout': 'split', 'clip': 'products', 'chip': 'Our own products', 'url': 'evosoft.solutions',
-            'map': [('at', ('t', 0), ('c', 1.9)), ('at', ('end',), ('c', 8.45))],
-            'cam': [(('t', 0), 0.5, 0.2, 1.0), (('end',), 0.5, 0.35, 1.12)]}],
-    'B5': [{'kind': 'browser', 'layout': 'split', 'clip': 'evopage', 'until': ('w', 'Plan', -0.35), 'chip': 'Evo · workforce + point of sale', 'color': '#4F46E5',
+            'map': [('at', ('t', 0), ('m', 'evo', -2.4)), ('at', ('w', 'Evo', -0.1), ('m', 'evo', 0)), ('at', ('w', 'Mailtabs', -0.1), ('m', 'mailtabs', 0)),
+                    ('at', ('w', 'StudyCat', -0.1), ('m', 'studycat', 0)), ('at', ('w', 'next', 0), ('m', 'yours', 0)), ('run', ('end',))],
+            'cam': [(('t', 0), 0.5, 0.0, 1.16), (('end',), 0.5, 0.0, 1.18)]}],
+    'B5': [{'kind': 'browser', 'layout': 'split', 'clip': 'evopage', 'until': ('w', 'Plan', -0.35), 'chip': 'Evo · workforce + POS', 'color': '#4F46E5',
             'url': 'evosoft.solutions/work/evo.html', 'map': [('at', ('t', 0), ('c', 0.5)), ('at', ('end',), ('c', 5.6))]},
-           {'kind': 'shots', 'layout': 'split', 'chip': 'Evo · workforce + point of sale', 'color': '#4F46E5', 'url': 'evo-demo.evosoft.solutions',
+           {'kind': 'shots', 'layout': 'split', 'chip': 'Evo · workforce + POS', 'color': '#4F46E5', 'url': 'evo-demo.evosoft.solutions',
             'shots': [SHOT('evo/03-hr-scheduler.jpg', PAN_R), SHOT('evo/05-payroll-period-review.jpg', GENTLE, 'export'),
-                      SHOT('evo/09-register-pay-screen.jpg', GENTLE, 'sell'), SHOT('evo/08-store-reports.jpg', ZOOM_IN, 'reports')]}],
+                      SHOT('evo/09-register-pay-screen.jpg', STILL, 'sell'), SHOT('evo/08-store-reports.jpg', ZOOM_IN, 'reports')]}],
     'B6': [{'kind': 'shots', 'layout': 'split', 'chip': 'Mailtabs · unified email', 'color': '#0F766E', 'url': 'mail-demo.evosoft.solutions',
             'shots': [SHOT('mailtabs/01-unified-inbox.jpg', ZOOM_IN), SHOT('mailtabs/02-receipts-tab.jpg', PAN_R, 'rule'), SHOT('mailtabs/04-composer.jpg', GENTLE, 'Reply')]}],
     'B7': [{'kind': 'shots', 'layout': 'split', 'chip': 'StudyCat · study platform', 'color': '#1A64D6', 'url': 'studycat-demo.evosoft.solutions',
@@ -84,19 +89,24 @@ VISUALS = {
     'B8': [{'kind': 'browser', 'layout': 'full', 'clip': 'demos', 'until': ('w', 'Hannah', -0.3), 'url': 'evosoft.solutions/demos.html',
             'map': [('at', ('t', 0), ('c', 0.0)), ('at', ('t', 1.8), ('c', 0.0)), ('at', ('w', '15', -0.2), ('m', 'cards', 0.2)), ('at', ('w', 'Copy', -0.55), ('m', 'tour', 0)),
                     ('at', ('w', 'Copy', 0.1), ('m', 'copied', 0)), ('at', ('w', 'sign', 0.15), ('m', 'toast', 0)), ('run', ('end',))],
-            'cam': [(('t', 0), 0.5, 0.0, 1.0), (('w', 'Copy', -0.9), 0.5, 0.15, 1.0), (('w', 'Copy', -0.3), 0.24, 0.27, 1.55), (('end',), 0.24, 0.27, 1.58)]},
+            'cam': [(('t', 0), 0.5, 0.0, 1.0), (('w', 'Copy', -0.9), 0.5, 0.15, 1.0), (('w', 'Copy', -0.3), 0.24, 0.40, 1.55), (('w', 'sign', 0.25), 0.24, 0.40, 1.58),
+                    (('w', 'Hannah', -0.3), 0.5, 0.0, 1.0)]},
            {'kind': 'shots', 'layout': 'full', 'url': 'evo-demo.evosoft.solutions', 'shots': [SHOT('evo/01-owner-home.jpg', [0.5, 0.0, 1.0, 0.5, 0.4, 1.03])]}],
-    'B9': [{'kind': 'browser', 'layout': 'split', 'clip': 'process', 'chip': 'How a project works', 'url': 'evosoft.solutions',
-            # badge pops measured in the recording: Talk 1.30, Quote 1.58, Build 1.78, Launch 2.13 (clip s)
-            'map': [('at', ('t', 0), ('c', 1.30)), ('at', ('w', 'First', 0.25), ('c', 1.50)), ('at', ('w', 'quote', -0.15), ('c', 1.53)),
-                    ('at', ('w', 'quote', 0.3), ('c', 1.70)), ('at', ('w', 'build', -0.15), ('c', 1.74)), ('at', ('w', 'build', 0.3), ('c', 1.90)),
-                    ('at', ('w', 'launch', -0.15), ('c', 2.08)), ('at', ('w', 'launch', 0.35), ('c', 2.26)), ('at', ('end',), ('m', 'faq', -0.1))],
-            'cam': [(('t', 0), 0.5, 0.48, 1.04), (('t', 1.2), 0.5, 0.48, 1.15), (('end',), 0.5, 0.48, 1.16)]}],
+    'B9': [{'kind': 'browser', 'layout': 'split', 'clip': 'process', 'chip': 'Talk · Quote · Build · Launch', 'url': 'evosoft.solutions',
+            # each step's badge pops on its word; pops measured in the recording (clip s, appear to peak):
+            # Talk 1.33-1.52, Quote 1.68-1.87, Build 2.03-2.22, Launch 2.37-2.58
+            'map': [('at', ('t', 0), ('c', 1.0)), ('at', ('w', 'talk', -0.1), ('c', 1.33)), ('at', ('w', 'talk', 0.35), ('c', 1.55)),
+                    ('at', ('w', 'quote', -0.1), ('c', 1.68)), ('at', ('w', 'quote', 0.3), ('c', 1.88)), ('at', ('w', 'build', -0.1), ('c', 2.03)),
+                    ('at', ('w', 'build', 0.3), ('c', 2.23)), ('at', ('w', 'launch', -0.1), ('c', 2.37)), ('at', ('w', 'launch', 0.35), ('c', 2.6)),
+                    ('at', ('end',), ('m', 'faq', -0.1))],
+            'cam': [(('t', 0), 0.5, 0.40, 1.04), (('t', 1.2), 0.5, 0.40, 1.15), (('end',), 0.5, 0.40, 1.16)]}],
     'B10': [{'kind': 'browser', 'layout': 'full', 'clip': 'languages', 'url': 'evosoft.solutions',
              'map': [('at', ('t', 0), ('c', 0.8)), ('cut', ('w', 'Georgian', -0.05), ('m', 'ka', 2.45)), ('cut', ('w', 'Russian', -0.05), ('m', 'ru', 2.45)),
+                     ('cut', ('w', 'Spanish', -0.05), ('m', 'es', 2.45)), ('at', ('w', 'Pick', -0.35), ('m', 'enmenu', 0)), ('at', ('w', 'page', 0.1), ('m', 'en', 0.3)),
                      ('run', ('end',))],
              'langs': [('English', 'evosoft.solutions', None), ('ქართული', 'evosoft.solutions/ka/', ('w', 'Georgian', -0.05)),
-                       ('Русский', 'evosoft.solutions/ru/', ('w', 'Russian', -0.05)), ('Español', 'evosoft.solutions/es/', ('clip', 'es', 0.3))],
+                       ('Русский', 'evosoft.solutions/ru/', ('w', 'Russian', -0.05)), ('Español', 'evosoft.solutions/es/', ('w', 'Spanish', -0.05)),
+                       ('English', 'evosoft.solutions', ('clip', 'en', 0.3))],
              'cam': [(('t', 0), 0.5, 0.0, 1.0), (('end',), 0.5, 0.0, 1.0)]}],
     'B11': [{'kind': 'browser', 'layout': 'full', 'clip': 'assistant', 'url': 'evosoft.solutions',
              'map': [('at', ('t', 0), ('c', 0.3)), ('at', ('w', 'Ask', 0), ('m', 'open', 0.1)), ('at', ('w', 'best', 0.0), ('m', 'pick', 0)),
@@ -104,9 +114,10 @@ VISUALS = {
              'cam': [(('t', 0), 0.5, 0.0, 1.0), (('w', 'Ask', 0.2), 0.5, 0.0, 1.0), (('w', 'Ask', 1.0), 1.0, 0.61, 1.6)],
              'mask': (('w', 'Ask', 0.2), ('w', 'Ask', 1.0), 262, 290)}],
     'B12': [{'kind': 'browser', 'layout': 'split', 'clip': 'quote', 'chip': 'Get a free quote', 'url': 'evosoft.solutions/contact.html',
-             'map': [('at', ('t', 0), ('m', 'chip', -0.8)), ('at', ('w', 'Pick', 0.0), ('m', 'chip', 0.05)), ('at', ('w', 'write', -0.1), ('c', 5.6)),
-                     ('at', ('w', 'Send', 0.05), ('m', 'sent', 0.12)), ('run', ('end',))],
-             'cam': [(('t', 0), 0.3, 0.60, 1.62), (('w', 'write', 0), 0.3, 0.60, 1.62), (('w', 'Send', -0.2), 0.3, 0.7, 1.62), (('w', 'free', 0), 0.32, 0.86, 1.62)]}],
+             'map': [('at', ('t', 0), ('m', 'chip', -0.8)), ('at', ('w', 'Pick', 0.0), ('m', 'chip', 0.05)), ('at', ('w', 'write', -0.1), ('m', 'chip', 1.2)),
+                     ('at', ('w', 'Send', 0.05), ('m', 'sent', 0.12)), ('at', ('end',), ('m', 'sent', 4.6))],
+             'cam': [(('t', 0), 0.3, 0.60, 1.62), (('w', 'write', 0), 0.3, 0.60, 1.62), (('w', 'write', 0.25), 0.31, 0.53, 1.62), (('w', 'Send', 0.38), 0.31, 0.53, 1.62),
+                     (('w', 'Send', 1.03), 0.31, 0.69, 1.62)]}],
     'B13': [{'kind': 'phone', 'clip': 'mobile', 'chip': 'Mobile-friendly',
              'map': [('at', ('t', 0), ('c', 0.3)), ('at', ('w', 'Dark', -0.2), ('m', 'dark', 0.0)), ('run', ('end',))]}],
     'B14': [{'kind': 'end'}],
@@ -180,9 +191,8 @@ for bid in ids:
                     lt = T(step[1])
                     pl, pc = pts[-1]
                     pts.append([lt, pc + (lt - pl)])
-            end_t = idx['frames'][-1]['t']
-            for p in pts:
-                p[1] = min(p[1], end_t)
+            # past the last frame the page was still (the screencast only sends a frame when something changes), so
+            # the compositor simply holds that frame; the map is not squeezed to fit
             sc['clip'] = {'name': v['clip'], 'map': [[round(a, 3), round(b, 3)] for a, b in pts]}
             cam = [{'t': round(max(0, T(r)), 3), 'x': x, 'y': y, 's': s} for r, x, y, s in v.get('cam', [])]
             if cam:
@@ -257,7 +267,10 @@ for bid in ids:
         continue
     # the transcription sometimes stretches a short word back into the pause before it; start it near its end
     heard = [dict(w, s=max(w['s'], w['e'] - 0.2) if len(key(w['w'])) <= 4 and w['e'] - w['s'] > 0.4 else w['s']) for w in WORDS[bid]['words']]
-    shown = WORDS[bid]['text'].split()
+    text = WORDS[bid]['text']
+    for a_, b_ in CAPTION_EDITS:
+        text = text.replace(a_, b_)
+    shown = text.split()
     a = [key(w) for w in shown]
     b = [key(w['w']) for w in heard]
     sm = difflib.SequenceMatcher(a=a, b=b, autojunk=False)
@@ -298,7 +311,7 @@ for bid in ids:
             left = ' '.join(shown[i] for i in ix[:c])
             right = ' '.join(shown[i] for i in ix[c:])
             last = left.split()[-1].lower().strip(',:;')
-            sc_ = abs(len(left) - len(right)) - (25 if left.endswith(':') else 22 if left.endswith(',') else 0) \
+            sc_ = abs(len(left) - len(right)) - (60 if left.endswith(':') else 22 if left.endswith(',') else 0) \
                 + (40 if last in ('and', 'or', 'a', 'an', 'the', 'of', 'to', 'in', 'at', 'for', 'with', 'your', 'our') else 0) \
                 + (0 if left.endswith((',', ':', ';')) else 12) + (30 if len(left) > MAX_CHARS + 8 else 0)
             if sc_ < score:

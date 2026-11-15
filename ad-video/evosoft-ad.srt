@@ -39,12 +39,12 @@ dashboards, even Microsoft 365.
 One team for all of it.
 
 11
-00:00:24,739 --> 00:00:27,419
-Our own products: Evo,
+00:00:24,739 --> 00:00:26,719
+Our own products:
 
 12
-00:00:27,419 --> 00:00:30,679
-Mailtabs and StudyCat, each with a live demo.
+00:00:26,719 --> 00:00:30,679
+Evo, Mailtabs and StudyCat, each with a live demo.
 
 13
 00:00:30,679 --> 00:00:32,599
@@ -60,7 +60,7 @@ Plan the week, export payroll,
 
 16
 00:00:39,549 --> 00:00:42,069
-sell even offline, and check the reports.
+sell even offline and check the reports.
 
 17
 00:00:42,860 --> 00:00:46,780
@@ -84,7 +84,7 @@ Exam countdowns, a quizzer that never runs out,
 
 22
 00:00:57,378 --> 00:00:59,378
-flashcards, and tools for instructors.
+flashcards and tools for instructors.
 
 23
 00:01:00,231 --> 00:01:02,351
@@ -108,7 +108,7 @@ You get a written quote before anything is booked.
 
 28
 00:01:15,549 --> 00:01:18,749
-Then we build, launch together, and stay around.
+Then we build, launch together and stay around.
 
 29
 00:01:19,534 --> 00:01:21,264

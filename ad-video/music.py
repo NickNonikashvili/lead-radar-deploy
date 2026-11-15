@@ -2,8 +2,9 @@
 """A calm, modern background track for the EvoSoft ad, synthesized from scratch (no samples, no licences).
 
 Warm pad chords, a soft plucked arpeggio, a round bass and light drums at 100 bpm, in C major
-(Fmaj7 - G6 - Em7 - Am7). An intro with the pad only, the full groove under the narration, and a held
-chord under the end card.
+(Fmaj7 - G6 - Em7 - Am7). An intro with the pad (the arpeggio joins a bar before the beat), the full groove under the
+narration, and a cadence (G to C) into a held chord under the end card. The pad and arpeggio carry the
+tune and the kick and bass stay light, so the music still reads on phone and laptop speakers.
 
     python3 music.py --duration 126 --groove 5.2 --outro 118.5 --out music.wav
 """
@@ -101,7 +102,7 @@ def build(duration, groove_from, outro_from, break_from=None, break_bars=2):
         start = OFFSET + b * BAR
         if start >= outro_from:
             break
-        ch = CHORDS[b % 4]
+        ch = CHORDS[1] if start + BAR > outro_from - 0.01 else CHORDS[b % 4]
         loop = b // 4 if b >= 0 else 0
         # pad: each note = detuned saws per channel, slow swell
         length = BAR + 0.6
@@ -112,8 +113,9 @@ def build(duration, groove_from, outro_from, break_from=None, break_bars=2):
             for note in ch["pad"]:
                 f = midi(note)
                 s += saw(f * 2 ** (det / 12), t) + 0.6 * saw(f * 2 ** (-det / 12), t + 0.013)
-            place(pad[ci], s * env * 0.05, start)
-        if start + 0.01 < groove_from:
+            place(pad[ci], s * env * 0.07, start)
+        lead_in = groove_from - BAR - 0.01 <= start < groove_from - 0.01   # the bar before the beat: arpeggio only, softly
+        if start + 0.01 < groove_from and not lead_in:
             continue
         # a two-bar breather in the middle (from any beat): pad and arpeggio only
         in_break = lambda tt: break_from is not None and break_from - 0.01 <= tt < break_from + break_bars * BAR - 0.01
@@ -129,10 +131,12 @@ def build(duration, groove_from, outro_from, break_from=None, break_bars=2):
             f = midi(note)
             tone = (np.sin(2 * np.pi * f * tt) + 0.25 * np.sin(2 * np.pi * 2 * f * tt) + 0.08 * np.sin(2 * np.pi * 3 * f * tt)) * np.exp(-tt / 0.22)
             tone *= adsr(len(tt), 0.004, 0.05)
-            vel = 0.11 if k % 2 == 0 else 0.08
+            vel = (0.155 if k % 2 == 0 else 0.11) * (0.5 if lead_in else 1.0)
             pan = 0.35 if k % 2 == 0 else 0.65
             place(arp[0], tone * vel * (1 - pan) * 1.4, nt)
             place(arp[1], tone * vel * pan * 1.4, nt)
+        if lead_in:
+            continue
         # bass: root on 1 and the "and" of 2, round and short
         for pos, ln in ((0, 1.4), (1.5 * BEAT, 0.9), (2.5 * BEAT, 1.2)):
             if in_break(start + pos):
@@ -141,7 +145,7 @@ def build(duration, groove_from, outro_from, break_from=None, break_bars=2):
             f = midi(ch["bass"])
             tone = np.sin(2 * np.pi * f * tt) + 0.18 * np.sin(2 * np.pi * 2 * f * tt)
             tone = np.tanh(tone * 1.4) * adsr(len(tt), 0.01, 0.25)
-            place(bass, tone * 0.16, start + pos)
+            place(bass, tone * 0.115, start + pos)
         # drums: soft kick on 1 and 3, a snap on 2 and 4, a shaker on sixteenths
         for beat in range(4):
             bt = start + beat * BEAT
@@ -157,8 +161,8 @@ def build(duration, groove_from, outro_from, break_from=None, break_bars=2):
                 tt = np.arange(int(0.35 * SR)) / SR
                 f = 48 + 70 * np.exp(-tt * 35)
                 kick = np.sin(2 * np.pi * np.cumsum(f) / SR) * np.exp(-tt * 9)
-                place(drums[0], kick * 0.30, bt)
-                place(drums[1], kick * 0.30, bt)
+                place(drums[0], kick * 0.19, bt)
+                place(drums[1], kick * 0.19, bt)
             else:
                 tt = np.arange(int(0.18 * SR)) / SR
                 snap = fft_filter(RNG.standard_normal(len(tt)), lo=1200, hi=7000) * np.exp(-tt * 28)
@@ -171,16 +175,16 @@ def build(duration, groove_from, outro_from, break_from=None, break_bars=2):
                 acc = 0.035 if s16 == 2 else 0.018
                 place(drums[s16 % 2], hat * acc, st)
 
-    # outro: one long Fmaj9 chord that rings under the end card
+    # outro: the G bar resolves to one long Cmaj9 chord that rings under the end card
     t = np.arange(int((duration - outro_from + 3) * SR)) / SR
     env = adsr(len(t), 0.4, 2.5)
     for ci, det in enumerate((-0.07, 0.07)):
         s = np.zeros_like(t)
-        for note in [41, 53, 57, 60, 64, 67]:
+        for note in [36, 48, 55, 59, 62, 64]:
             s += saw(midi(note) * 2 ** (det / 12), t, maxf=3500)
-        place(pad[ci], s * env * 0.05, outro_from)
+        place(pad[ci], s * env * 0.085, outro_from)
     tt = np.arange(int(3.0 * SR)) / SR
-    for k, note in enumerate([65, 69, 72, 76, 79]):
+    for k, note in enumerate([64, 67, 71, 72, 76]):
         f = midi(note)
         tone = (np.sin(2 * np.pi * f * tt) + 0.25 * np.sin(2 * np.pi * 2 * f * tt)) * np.exp(-tt / 0.6)
         place(arp[k % 2], tone * 0.09, outro_from + 0.15 + k * BEAT / 2)
@@ -201,7 +205,7 @@ def build(duration, groove_from, outro_from, break_from=None, break_bars=2):
     mix = np.tanh(mix * 1.3) / 1.3
     fade_in = int(1.2 * SR)
     mix[:, :fade_in] *= np.linspace(0, 1, fade_in)
-    fade_out = int(1.2 * SR)
+    fade_out = int(2.0 * SR)
     mix[:, -fade_out:] *= np.linspace(1, 0, fade_out) ** 1.5
     peak = np.max(np.abs(mix))
     return mix / peak * 0.89
