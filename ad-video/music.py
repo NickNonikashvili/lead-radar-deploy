@@ -69,6 +69,8 @@ def adsr(n, a, r, sustain=1.0):
 
 def place(buf, sig, start):
     i = int(start * SR)
+    if i < 0:
+        sig, i = sig[-i:], 0
     if i >= len(buf):
         return
     j = min(len(buf), i + len(sig))
@@ -95,11 +97,12 @@ def build(duration, groove_from, outro_from, break_from=None, break_bars=2):
     drums = np.zeros((2, n))
     bars = int(np.ceil((duration + 3) / BAR))
 
-    for b in range(bars):
+    for b in range(-1, bars):
         start = OFFSET + b * BAR
         if start >= outro_from:
             break
         ch = CHORDS[b % 4]
+        loop = b // 4 if b >= 0 else 0
         # pad: each note = detuned saws per channel, slow swell
         length = BAR + 0.6
         t = np.arange(int(length * SR)) / SR

@@ -1,6 +1,7 @@
 # Everything these scripts generate (large): recordings, narration audio, frames, mixes and videos.
 clips/
 narration/
+!narration-fixes/
 frames/
 testframes/
 qa*/

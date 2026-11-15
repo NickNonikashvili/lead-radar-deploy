@@ -1,0 +1,91 @@
+{
+ "text": "The site speaks English, Georgian, Russian and Spanish. Pick one from the menu and every page follows.",
+ "heard": "The site speaks English, Georgian, Russian, and Spanish. Pick one from the menu, and every page follows.",
+ "words": [
+  {
+   "w": "The",
+   "s": 0.0,
+   "e": 0.24
+  },
+  {
+   "w": "site",
+   "s": 0.24,
+   "e": 0.52
+  },
+  {
+   "w": "speaks",
+   "s": 0.52,
+   "e": 0.84
+  },
+  {
+   "w": "English",
+   "s": 0.84,
+   "e": 1.42
+  },
+  {
+   "w": "Georgian",
+   "s": 1.73,
+   "e": 2.48
+  },
+  {
+   "w": "Russian",
+   "s": 2.61,
+   "e": 3.0
+  },
+  {
+   "w": "and",
+   "s": 3.4,
+   "e": 3.7
+  },
+  {
+   "w": "Spanish",
+   "s": 3.68,
+   "e": 4.03
+  },
+  {
+   "w": "Pick",
+   "s": 4.88,
+   "e": 4.88
+  },
+  {
+   "w": "one",
+   "s": 4.88,
+   "e": 5.08
+  },
+  {
+   "w": "from",
+   "s": 5.08,
+   "e": 5.2
+  },
+  {
+   "w": "the",
+   "s": 5.2,
+   "e": 5.46
+  },
+  {
+   "w": "menu",
+   "s": 5.46,
+   "e": 5.58
+  },
+  {
+   "w": "and",
+   "s": 5.94,
+   "e": 6.12
+  },
+  {
+   "w": "every",
+   "s": 6.12,
+   "e": 6.38
+  },
+  {
+   "w": "page",
+   "s": 6.38,
+   "e": 6.62
+  },
+  {
+   "w": "follows",
+   "s": 6.62,
+   "e": 6.96
+  }
+ ]
+}

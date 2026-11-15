@@ -50,10 +50,11 @@ def word_time(bid, word, nth=1):
 
 
 SHOT = lambda f, kb, cue=None: {'src': f'shots-src/{f}', 'kb': kb, 'cue': cue}
-ZOOM_IN = [0.5, 0.0, 1.0, 0.55, 0.25, 1.18]
-PAN_R = [0.2, 0.2, 1.22, 0.8, 0.3, 1.22]
-PAN_DOWN = [0.5, 0.0, 1.15, 0.5, 0.9, 1.15]
-GENTLE = [0.5, 0.3, 1.0, 0.5, 0.6, 1.03]
+# Screenshot moves: x/y are fractions of the overflow; zoom stays within 3% so no sidebar or edge is cut.
+ZOOM_IN = [0.5, 0.2, 1.0, 0.5, 0.5, 1.03]
+PAN_R = [0.5, 0.0, 1.03, 0.5, 0.8, 1.03]
+PAN_DOWN = [0.5, 0.0, 1.025, 0.5, 1.0, 1.025]
+GENTLE = [0.5, 0.6, 1.03, 0.5, 0.2, 1.0]
 
 # Time references: ('t', s) scene-local seconds, ('w', word, offset) a spoken word, ('end',) scene end incl. crossfade.
 # Clip references: ('c', s) clip seconds, ('m', mark, offset) a mark in the recording.
@@ -73,10 +74,10 @@ VISUALS = {
     'B5': [{'kind': 'browser', 'layout': 'split', 'clip': 'evopage', 'until': ('w', 'Plan', -0.35), 'chip': 'Evo · workforce + point of sale', 'color': '#4F46E5',
             'url': 'evosoft.solutions/work/evo.html', 'map': [('at', ('t', 0), ('c', 0.5)), ('at', ('end',), ('c', 5.6))]},
            {'kind': 'shots', 'layout': 'split', 'chip': 'Evo · workforce + point of sale', 'color': '#4F46E5', 'url': 'evo-demo.evosoft.solutions',
-            'shots': [SHOT('evo/03-hr-scheduler.jpg', PAN_R), SHOT('evo/05-payroll-period-review.jpg', [0.5, 0.0, 1.0, 0.5, 0.15, 1.04], 'export'),
+            'shots': [SHOT('evo/03-hr-scheduler.jpg', PAN_R), SHOT('evo/05-payroll-period-review.jpg', GENTLE, 'export'),
                       SHOT('evo/09-register-pay-screen.jpg', GENTLE, 'sell'), SHOT('evo/08-store-reports.jpg', ZOOM_IN, 'reports')]}],
     'B6': [{'kind': 'shots', 'layout': 'split', 'chip': 'Mailtabs · unified email', 'color': '#0F766E', 'url': 'mail-demo.evosoft.solutions',
-            'shots': [SHOT('mailtabs/01-unified-inbox.jpg', [0.5, 0.0, 1.0, 0.6, 0.1, 1.06]), SHOT('mailtabs/02-receipts-tab.jpg', PAN_R, 'rule'), SHOT('mailtabs/04-composer.jpg', GENTLE, 'Reply')]}],
+            'shots': [SHOT('mailtabs/01-unified-inbox.jpg', ZOOM_IN), SHOT('mailtabs/02-receipts-tab.jpg', PAN_R, 'rule'), SHOT('mailtabs/04-composer.jpg', GENTLE, 'Reply')]}],
     'B7': [{'kind': 'shots', 'layout': 'split', 'chip': 'StudyCat · study platform', 'color': '#1A64D6', 'url': 'studycat-demo.evosoft.solutions',
             'shots': [SHOT('studycat/02-class-dashboard.jpg', ZOOM_IN), SHOT('studycat/04-quizzer.jpg', PAN_R, 'quizzer'),
                       SHOT('studycat/05-flashcards.jpg', GENTLE, 'flashcards'), SHOT('studycat/09-faculty-class.jpg', PAN_DOWN, 'instructors')]}],
@@ -84,24 +85,28 @@ VISUALS = {
             'map': [('at', ('t', 0), ('c', 0.0)), ('at', ('t', 1.8), ('c', 0.0)), ('at', ('w', '15', -0.2), ('m', 'cards', 0.2)), ('at', ('w', 'Copy', -0.55), ('m', 'tour', 0)),
                     ('at', ('w', 'Copy', 0.1), ('m', 'copied', 0)), ('at', ('w', 'sign', 0.15), ('m', 'toast', 0)), ('run', ('end',))],
             'cam': [(('t', 0), 0.5, 0.0, 1.0), (('w', 'Copy', -0.9), 0.5, 0.15, 1.0), (('w', 'Copy', -0.3), 0.24, 0.27, 1.55), (('end',), 0.24, 0.27, 1.58)]},
-           {'kind': 'shots', 'layout': 'full', 'url': 'evo-demo.evosoft.solutions', 'shots': [SHOT('evo/01-owner-home.jpg', [0.3, 0.0, 1.1, 0.28, 0.02, 1.22])]}],
+           {'kind': 'shots', 'layout': 'full', 'url': 'evo-demo.evosoft.solutions', 'shots': [SHOT('evo/01-owner-home.jpg', [0.5, 0.0, 1.0, 0.5, 0.4, 1.03])]}],
     'B9': [{'kind': 'browser', 'layout': 'split', 'clip': 'process', 'chip': 'How a project works', 'url': 'evosoft.solutions',
-            'map': [('at', ('t', 0), ('c', 1.35)), ('at', ('end',), ('c', 4.7))],
-            'cam': [(('t', 0), 0.5, 0.3, 1.0), (('end',), 0.5, 0.36, 1.12)]}],
+            # badge pops measured in the recording: Talk 1.30, Quote 1.58, Build 1.78, Launch 2.13 (clip s)
+            'map': [('at', ('t', 0), ('c', 1.30)), ('at', ('w', 'First', 0.25), ('c', 1.50)), ('at', ('w', 'quote', -0.15), ('c', 1.53)),
+                    ('at', ('w', 'quote', 0.3), ('c', 1.70)), ('at', ('w', 'build', -0.15), ('c', 1.74)), ('at', ('w', 'build', 0.3), ('c', 1.90)),
+                    ('at', ('w', 'launch', -0.15), ('c', 2.08)), ('at', ('w', 'launch', 0.35), ('c', 2.26)), ('at', ('end',), ('m', 'faq', -0.1))],
+            'cam': [(('t', 0), 0.5, 0.48, 1.04), (('t', 1.2), 0.5, 0.48, 1.15), (('end',), 0.5, 0.48, 1.16)]}],
     'B10': [{'kind': 'browser', 'layout': 'full', 'clip': 'languages', 'url': 'evosoft.solutions',
-             'map': [('at', ('t', 0), ('c', 0.8)), ('cut', ('w', 'Georgian', -0.1), ('m', 'ka', 2.45)), ('cut', ('w', 'Russian', -0.1), ('m', 'ru', 2.45)),
-                     ('cutc', ('m', 'es', 0.14), ('m', 'es', 1.11)), ('run', ('end',))],
-             'langs': [('English', 'evosoft.solutions', None), ('ქართული', 'evosoft.solutions/ka/', ('w', 'Georgian', -0.1)),
-                       ('Русский', 'evosoft.solutions/ru/', ('w', 'Russian', -0.1)), ('Español', 'evosoft.solutions/es/', ('clip', 'es', 1.11))],
-             'cam': [(('t', 0), 0.5, 0.0, 1.0), (('end',), 0.55, 0.05, 1.05)]}],
+             'map': [('at', ('t', 0), ('c', 0.8)), ('cut', ('w', 'Georgian', -0.05), ('m', 'ka', 2.45)), ('cut', ('w', 'Russian', -0.05), ('m', 'ru', 2.45)),
+                     ('run', ('end',))],
+             'langs': [('English', 'evosoft.solutions', None), ('ქართული', 'evosoft.solutions/ka/', ('w', 'Georgian', -0.05)),
+                       ('Русский', 'evosoft.solutions/ru/', ('w', 'Russian', -0.05)), ('Español', 'evosoft.solutions/es/', ('clip', 'es', 0.3))],
+             'cam': [(('t', 0), 0.5, 0.0, 1.0), (('end',), 0.5, 0.0, 1.0)]}],
     'B11': [{'kind': 'browser', 'layout': 'full', 'clip': 'assistant', 'url': 'evosoft.solutions',
              'map': [('at', ('t', 0), ('c', 0.3)), ('at', ('w', 'Ask', 0), ('m', 'open', 0.1)), ('at', ('w', 'best', 0.0), ('m', 'pick', 0)),
                      ('at', ('w', 'best', 0.45), ('m', 'sent', 0)), ('run', ('end',))],
-             'cam': [(('t', 0), 0.5, 0.0, 1.0), (('w', 'Ask', 0.2), 0.5, 0.0, 1.0), (('w', 'Ask', 1.0), 1.0, 0.56, 1.9)]}],
+             'cam': [(('t', 0), 0.5, 0.0, 1.0), (('w', 'Ask', 0.2), 0.5, 0.0, 1.0), (('w', 'Ask', 1.0), 1.0, 0.61, 1.6)],
+             'mask': (('w', 'Ask', 0.2), ('w', 'Ask', 1.0), 262, 290)}],
     'B12': [{'kind': 'browser', 'layout': 'split', 'clip': 'quote', 'chip': 'Get a free quote', 'url': 'evosoft.solutions/contact.html',
-             'map': [('at', ('t', 0), ('m', 'chip', -0.7)), ('at', ('w', 'Pick', 0.05), ('m', 'chip', 0.05)), ('at', ('w', 'write', 0), ('m', 'msg', 0.1)),
+             'map': [('at', ('t', 0), ('m', 'chip', -0.8)), ('at', ('w', 'Pick', 0.0), ('m', 'chip', 0.05)), ('at', ('w', 'write', -0.1), ('c', 5.6)),
                      ('at', ('w', 'Send', 0.05), ('m', 'sent', 0.12)), ('run', ('end',))],
-             'cam': [(('t', 0), 0.3, 0.38, 1.62), (('w', 'write', 0), 0.3, 0.55, 1.62), (('w', 'Send', -0.2), 0.3, 0.7, 1.62), (('w', 'free', 0), 0.32, 0.86, 1.62)]}],
+             'cam': [(('t', 0), 0.3, 0.60, 1.62), (('w', 'write', 0), 0.3, 0.60, 1.62), (('w', 'Send', -0.2), 0.3, 0.7, 1.62), (('w', 'free', 0), 0.32, 0.86, 1.62)]}],
     'B13': [{'kind': 'phone', 'clip': 'mobile', 'chip': 'Mobile-friendly',
              'map': [('at', ('t', 0), ('c', 0.3)), ('at', ('w', 'Dark', -0.2), ('m', 'dark', 0.0)), ('run', ('end',))]}],
     'B14': [{'kind': 'end'}],
@@ -146,7 +151,7 @@ for bid in ids:
                 return dur + (0 if last_in_video else XF)
             return bt['narr_at'] + word_time(bid, ref[1]) + ref[2] - s0
 
-        sc = {k: val for k, val in v.items() if k not in ('cam', 'clip', 'map', 'langs', 'until', 'shots')}
+        sc = {k: val for k, val in v.items() if k not in ('cam', 'clip', 'map', 'langs', 'until', 'shots', 'mask')}
         sc.update({'id': f'{bid}{"abcdef"[j] if len(vis) > 1 else ""}', 'beat': bid, 'start': round(s0, 3), 'dur': round(dur, 3),
                    'onscreen': beat.get('onscreen', ''), 'sub': beat.get('sub', '')})
         if 'clip' in v:
@@ -192,6 +197,9 @@ for bid in ids:
                     if l1 > l0 and min(c0, c1) <= ct <= max(c0, c1):
                         return l0 + (ct - c0) / (c1 - c0) * (l1 - l0)
                 return T(('end',))
+            if 'mask' in v:
+                a_, b_, solid, fade = v['mask']
+                sc['mask'] = {'t0': round(T(a_), 3), 't1': round(T(b_), 3), 'solid': solid, 'fade': fade}
             if 'langs' in v:
                 sc['pills'] = [{'label': lab, 't': round(TL_(r), 3)} for lab, url, r in v['langs']]
                 sc['urls'] = [{'t': round(TL_(r), 3), 'url': url} for lab, url, r in v['langs']]
@@ -301,12 +309,13 @@ for bid in ids:
         for part in split(s):
             st, en = times[part[0]][0], times[part[-1]][1]
             captions.append({'start': round(base + st - 0.08, 3), 'end': round(base + en + 0.3, 3),
-                             'text': ' '.join(shown[i] for i in part).replace("'", '’'), **({'srtOnly': True} if bid in NO_CAPTIONS else {})})
+                             'text': ' '.join(shown[i] for i in part).replace("'", '’'), 'beat': bid, **({'srtOnly': True} if bid in NO_CAPTIONS else {})})
 captions.sort(key=lambda c: c['start'])
 for i, c in enumerate(captions):
     nxt = captions[i + 1]['start'] - 0.05 if i + 1 < len(captions) else total
-    c['end'] = round(min(max(c['end'], c['start'] + MIN_CUE), nxt), 3)
-    if i + 1 < len(captions) and captions[i + 1]['start'] - c['end'] < 0.8:
+    beat_end = beat_times[c['beat']]['start'] + beat_times[c['beat']]['dur'] + 0.05
+    c['end'] = round(min(max(c['end'], c['start'] + MIN_CUE), nxt, beat_end), 3)
+    if i + 1 < len(captions) and captions[i + 1]['start'] - c['end'] < 0.8 and captions[i + 1].get('beat') == c.get('beat'):
         c['end'] = captions[i + 1]['start']
         c['joinNext'] = True
         captions[i + 1]['joinPrev'] = True

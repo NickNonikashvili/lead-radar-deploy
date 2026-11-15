@@ -149,8 +149,12 @@ const CLIPS = {
     h.mark('toast');
     await h.wait(2400);
   } },
-  process: { ctx: DESKTOP, url: '/index.html', settle: 2500, async run(page, h) {
+  process: { ctx: DESKTOP, url: '/index.html', settle: 2500, cursor: false, async run(page, h) {
+    // only the four steps: hide the next section's heading that would sit under them
+    await page.addStyleTag({ content: '.sec:has(.trail) + .sec .sec-head { visibility: hidden }' });
     await h.scrollTo('.trail', 1700, 330);
+    await page.waitForFunction(() => document.querySelector('.trail').classList.contains('drawn'), null, { timeout: 20000 });
+    h.mark('drawn');
     await h.wait(3000);
     h.mark('faq');
     await h.scrollTo('.faq', 1200, 240);
@@ -160,7 +164,7 @@ const CLIPS = {
     await h.click('.faq details:nth-child(2) summary', 600);
     await h.wait(1500);
   } },
-  languages: { ctx: DESKTOP, url: '/index.html', settle: 3200, async run(page, h) {
+  languages: { ctx: DESKTOP, url: '/index.html', settle: 3200, staticCounts: true, async run(page, h) {
     const pick = async (code) => {
       await h.click('.lang-btn', 600);
       await h.wait(500);
@@ -188,14 +192,12 @@ const CLIPS = {
     await page.keyboard.press('Escape');
     await h.wait(1500);
   } },
-  assistant: { ctx: DESKTOP, url: '/index.html', settle: 2000, setup: async (page) => { await page.evaluate(() => sessionStorage.setItem('evo-chat-teaser', '1')); }, async run(page, h) {
+  assistant: { ctx: DESKTOP, url: '/index.html', settle: 2000, chatButton: true, staticCounts: true, setup: async (page) => { await page.evaluate(() => sessionStorage.setItem('evo-chat-teaser', '1')); }, async run(page, h) {
     await h.click('.chat-launch', 900);
     h.mark('open');
     await h.wait(900);
-    await h.moveToEl('.chat-suggest button:nth-child(2)', 700);
-    await h.wait(300);
-    await h.moveToEl('.chat-suggest button:last-child', 600);
-    await h.wait(700);
+    await h.moveToEl('.chat-suggest button:last-child', 900);
+    await h.wait(900);
     h.mark('pick');
     await h.click('.chat-suggest button:last-child', 250);
     h.mark('sent');
@@ -223,7 +225,7 @@ const CLIPS = {
     await page.mouse.down(); await h.wait(90); await page.mouse.up();
     await h.wait(2800);
   } },
-  mobile: { ctx: PHONE, url: '/index.html', cursor: false, staticCounts: true, async run(page, h) {
+  mobile: { ctx: PHONE, url: '/index.html', cursor: false, staticCounts: true, chatButton: true, async run(page, h) {
     await h.wait(2200);
     await h.scrollTo(700, 1500);
     await h.wait(700);
@@ -251,6 +253,8 @@ async function record(name) {
   const ctx = await browser.newContext({ ...clip.ctx, colorScheme: 'light', locale: 'en-US', reducedMotion: 'no-preference' });
   await ctx.addInitScript(TIME_SCALE);
   if (clip.cursor !== false) await ctx.addInitScript(CURSOR);
+  // The floating "Ask EvoSoft" button only belongs in the chat scene; elsewhere a zoom would clip it.
+  if (!clip.chatButton) await ctx.addInitScript(() => { document.addEventListener('DOMContentLoaded', () => { const st = document.createElement('style'); st.textContent = '.chat-launch{display:none!important}'; document.head.appendChild(st); }); });
   if (clip.staticCounts) await ctx.addInitScript(() => { const o = IntersectionObserver.prototype.observe; IntersectionObserver.prototype.observe = function (el) { if (el && el.hasAttribute && el.hasAttribute('data-count')) return; return o.call(this, el); }; });
   // The demos are live on the real server but unreachable from this sandbox: answer their status checks as the
   // live site would, so the cards show "Live" instead of "Offline right now".

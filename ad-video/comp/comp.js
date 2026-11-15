@@ -87,7 +87,7 @@
     } else if (sc.kind === 'end') {
       el.innerHTML = `<div class="center"><div class="logo-big"><div class="mark">${MARK}</div><div class="word">evosoft</div></div><div class="url-big">evosoft.solutions</div><div class="cta">${esc(sc.cta || 'Get a free quote')} <span>→</span></div><div class="contacts">${esc(sc.contacts || '')}</div><div class="langs">${esc(sc.langs || '')}</div><div class="copyright">${esc(sc.copyright || '')}</div></div>`;
     } else if (sc.kind === 'browser') {
-      el.innerHTML = (sc.layout === 'split' ? copyHtml(sc) : '') + browserHtml(sc, '<img alt="">');
+      el.innerHTML = (sc.layout === 'split' ? copyHtml(sc) : '') + browserHtml(sc, '<img alt="">' + (sc.mask ? '<div class="vmask"></div>' : ''));
       if (sc.pills) el.querySelector('.browser .top').insertAdjacentHTML('beforeend', `<div class="pills">${sc.pills.map((p) => `<span>${esc(p.label)}</span>`).join('')}</div>`);
     } else if (sc.kind === 'shots') {
       el.innerHTML = (sc.layout === 'split' ? copyHtml(sc) : '') + browserHtml(sc, sc.shots.map((s) => `<img alt="" src="${esc(s.src)}">`).join(''));
@@ -124,8 +124,9 @@
     el.style.visibility = 'visible';
     // enter: fade + rise; exit: the next scene fades in on top, this one settles back slightly
     // a quick crossfade, no movement: windows that share a layout sit on the same pixels
-    const kin = sc.first ? 1 : easeOut(local / 0.3);
-    const kout = clamp((local - sc.dur) / XF, 0, 1);
+    const dipIn = !sc.first && !contIn, dipOut = !contOut && !sc.last;
+    const kin = sc.first ? 1 : dipIn ? easeOut((local - 0.15) / 0.3) : easeOut(local / 0.3);
+    const kout = dipOut ? clamp((local - sc.dur) / 0.2, 0, 1) : clamp((local - sc.dur) / XF, 0, 1);
     const isWindow = windowKinds.has(sc.kind);
     el.style.opacity = (((isWindow && copyIn) ? 1 : kin) * (contOut ? 1 : 1 - Math.pow(kout, 1.6))).toFixed(4);
     el.style.transform = isWindow || sc.kind === 'phone' ? 'none' : `translateY(${((1 - kin) * 26).toFixed(2)}px)`;
@@ -180,6 +181,11 @@
         const src = `../clips/${sc.clip.name}/${fr.f}`;
         if (img.dataset.src !== src) { img.dataset.src = src; img.src = src; pending.push(img.decode().catch(() => {})); }
         if (sc.kind === 'browser') placeImg(img, W, H, camAt(sc.cam, local), 1.6);
+        if (sc.mask) {
+          const m = vp.querySelector('.vmask');
+          m.style.background = `linear-gradient(90deg, rgba(238,245,252,1) 0px, rgba(238,245,252,1) ${sc.mask.solid}px, rgba(238,245,252,0) ${sc.mask.fade}px)`;
+          m.style.opacity = easeIO(clamp((local - sc.mask.t0) / Math.max(0.01, sc.mask.t1 - sc.mask.t0), 0, 1)).toFixed(4);
+        }
         else { img.style.width = '100%'; img.style.height = 'auto'; }
         if (sc.urls) {
           let u = sc.url;
