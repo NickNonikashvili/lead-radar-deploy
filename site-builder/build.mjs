@@ -54,11 +54,13 @@ const A = (p) => cur.up + p;
 const abs = (file) => urlFor(L, file);
 const webp = (file, w = 800) => A(images[file]?.webp?.includes(w) ? `assets/shots/${file.replace(/\.(jpe?g|png)$/i, '')}-${w}.webp` : `assets/shots/${file}`);
 
-function picture(file, { alt = '', sizes = '100vw', eager = false, cls = '' } = {}) {
+// eager: load first, at high priority. lazy: false loads it with the page without lazy-loading (for images that
+// appear without scrolling, like the demo card's other tabs).
+function picture(file, { alt = '', sizes = '100vw', eager = false, lazy = true, cls = '' } = {}) {
   const meta = images[file];
   const src = A(`assets/shots/${file}`);
   const dims = meta ? ` width="${meta.w}" height="${meta.h}"` : '';
-  const load = eager ? ' fetchpriority="high"' : ' loading="lazy"';
+  const load = eager ? ' fetchpriority="high"' : lazy ? ' loading="lazy"' : ' fetchpriority="low"';
   const img = `<img src="${attr(src)}" alt="${attr(alt)}"${dims}${load} decoding="async"${cls ? ` class="${cls}"` : ''}>`;
   if (!meta?.webp?.length) return img;
   const base = file.replace(/\.(jpe?g|png)$/i, '');
@@ -380,7 +382,7 @@ function heroDemoCard(root) {
     const shot = heroShot(p);
     const a = p.demo.accounts[0];
     return `<div class="dc-panel" role="tabpanel" id="dcp-${p.slug}" aria-labelledby="dct-${p.slug}"${i ? ' hidden' : ''}>
-    <a class="dc-shot" href="${root}work/${p.slug}.html" tabindex="-1" aria-hidden="true">${shot ? picture(shot.file, { alt: '', sizes: '(min-width: 1100px) 560px, 92vw', eager: i === 0 }) : ''}<span class="dc-live" aria-hidden="true"><i></i>${h('Live demo')}</span></a>
+    <a class="dc-shot" href="${root}work/${p.slug}.html" tabindex="-1" aria-hidden="true">${shot ? picture(shot.file, { alt: '', sizes: '(min-width: 1100px) 560px, 92vw', eager: i === 0, lazy: false }) : ''}<span class="dc-live" aria-hidden="true"><i></i>${h('Live demo')}</span></a>
     <div class="dc-foot">
       <div class="dc-info">
         <p class="dc-title">${esc(p.name)} <span>${esc(p.kind)}</span></p>

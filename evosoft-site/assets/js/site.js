@@ -352,7 +352,7 @@
         const t0 = performance.now();
         const dur = 900 + Math.min(end, 20) * 40;
         const step = (now) => {
-          const k = Math.min(1, (now - t0) / dur);
+          const k = Math.max(0, Math.min(1, (now - t0) / dur));
           el.textContent = String(Math.round(end * (1 - Math.pow(1 - k, 3))));
           if (k < 1) requestAnimationFrame(step);
         };
