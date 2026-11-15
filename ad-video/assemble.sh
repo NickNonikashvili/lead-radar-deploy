@@ -8,7 +8,7 @@ FR="$1"; OUT="$2"; MUSIC="${3:-music.wav}"
 # the music dips under the voice on a curve built from the narration's word timings (see duck.py)
 python3 duck.py "$MUSIC" music-ducked.wav
 PRE="[0:a]aformat=sample_rates=48000:channel_layouts=stereo,adeclick,highpass=f=90,equalizer=f=3200:width_type=o:width=1.2:g=1.5,acompressor=threshold=-20dB:ratio=2.5:attack=8:release=120:makeup=2[voice];
-  [1:a]aformat=sample_rates=48000:channel_layouts=stereo,equalizer=f=4000:width_type=o:width=1:g=-3,bass=g=-2:f=110,volume=${MUSIC_DB:--12}dB[m];
+  [1:a]aformat=sample_rates=48000:channel_layouts=stereo,equalizer=f=4000:width_type=o:width=1:g=-3,bass=g=-2:f=110,volume=${MUSIC_DB:--11}dB[m];
   [voice][m]amix=inputs=2:normalize=0:duration=longest"
 M=$(ffmpeg -hide_banner -i narration.wav -i music-ducked.wav -filter_complex "$PRE,loudnorm=I=-14:TP=-2:LRA=11:print_format=json" -f null - 2>&1 | sed -n '/^{/,/^}/p')
 mi=$(echo "$M" | python3 -c "import json,sys;d=json.load(sys.stdin);print(d['input_i'])"); mtp=$(echo "$M" | python3 -c "import json,sys;d=json.load(sys.stdin);print(d['input_tp'])")

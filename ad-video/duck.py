@@ -43,7 +43,9 @@ def curve(regs):
             pts.append((s, -d))          # a short pause: glide from the last depth to this one
         nxt = regs[i + 1] if i + 1 < len(regs) else None
         pts.append((e, -d))
-        if not nxt or nxt[0] - e >= MERGE:
+        if not nxt:                      # after the last word the end-card chord comes up quickly
+            pts += [(e + 0.05, -d), (e + 0.4, 0.0)]
+        elif nxt[0] - e >= MERGE:
             pts += [(e + HOLD, -d), (e + HOLD + RELEASE, 0.0)]
     return pts
 

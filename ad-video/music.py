@@ -160,19 +160,23 @@ def build(duration, groove_from, outro_from, break_from=None, break_bars=2):
             if beat in (0, 2):
                 tt = np.arange(int(0.35 * SR)) / SR
                 f = 48 + 70 * np.exp(-tt * 35)
-                kick = np.sin(2 * np.pi * np.cumsum(f) / SR) * np.exp(-tt * 9)
+                ph = 2 * np.pi * np.cumsum(f) / SR
+                kick = (np.sin(ph) + 0.3 * np.sin(2 * ph)) * np.exp(-tt * 9)
+                # a short click on top, so the beat is still heard on speakers with no low end
+                click = fft_filter(RNG.standard_normal(len(tt)), lo=2000, hi=8000) * np.exp(-tt * 900)
+                kick = kick + click * 0.5
                 place(drums[0], kick * 0.19, bt)
                 place(drums[1], kick * 0.19, bt)
             else:
                 tt = np.arange(int(0.18 * SR)) / SR
                 snap = fft_filter(RNG.standard_normal(len(tt)), lo=1200, hi=7000) * np.exp(-tt * 28)
-                place(drums[0], snap * 0.07, bt)
-                place(drums[1], snap * 0.07, bt + 0.006)
+                place(drums[0], snap * 0.11, bt)
+                place(drums[1], snap * 0.11, bt + 0.006)
             for s16 in range(4):
                 st = bt + s16 * BEAT / 4
                 tt = np.arange(int(0.06 * SR)) / SR
                 hat = fft_filter(RNG.standard_normal(len(tt)), lo=7000) * np.exp(-tt * 70)
-                acc = 0.035 if s16 == 2 else 0.018
+                acc = 0.045 if s16 == 2 else 0.024
                 place(drums[s16 % 2], hat * acc, st)
 
     # outro: the G bar resolves to one long Cmaj9 chord that rings under the end card
@@ -182,7 +186,7 @@ def build(duration, groove_from, outro_from, break_from=None, break_bars=2):
         s = np.zeros_like(t)
         for note in [36, 48, 55, 59, 62, 64]:
             s += saw(midi(note) * 2 ** (det / 12), t, maxf=3500)
-        place(pad[ci], s * env * 0.085, outro_from)
+        place(pad[ci], s * env * 0.12, outro_from)
     tt = np.arange(int(3.0 * SR)) / SR
     for k, note in enumerate([64, 67, 71, 72, 76]):
         f = midi(note)
@@ -205,7 +209,7 @@ def build(duration, groove_from, outro_from, break_from=None, break_bars=2):
     mix = np.tanh(mix * 1.3) / 1.3
     fade_in = int(1.2 * SR)
     mix[:, :fade_in] *= np.linspace(0, 1, fade_in)
-    fade_out = int(2.0 * SR)
+    fade_out = int(1.0 * SR)
     mix[:, -fade_out:] *= np.linspace(1, 0, fade_out) ** 1.5
     peak = np.max(np.abs(mix))
     return mix / peak * 0.89

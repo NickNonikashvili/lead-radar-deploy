@@ -116,7 +116,7 @@ const CLIPS = {
     await h.moveTo(720, 860, 900);
     await h.wait(900);
   } },
-  products: { ctx: DESKTOP, url: '/index.html', settle: 2500, async run(page, h) {
+  products: { ctx: DESKTOP, url: '/index.html', settle: 2500, mouseStart: [40, 700], async run(page, h) {
     await h.scrollTo('.tiles', 1400, 260);
     await h.wait(300);
     await h.moveToEl('.tiles .tile:nth-child(1)', 700, 0.6, 0.35);
@@ -155,14 +155,20 @@ const CLIPS = {
     await h.moveToEl('#evo .acct:nth-child(1) .acc-go', 650);
     await page.mouse.down(); await h.wait(90); await page.mouse.up();
     h.mark('toast');
-    await h.wait(2400);
+    await h.wait(200);
+    await h.moveTo(1395, 520, 650);
+    await h.wait(1600);
   } },
-  process: { ctx: DESKTOP, url: '/index.html', settle: 2500, cursor: false, async run(page, h) {
-    // only the four steps: hide the next section's heading that would sit under them
-    await page.addStyleTag({ content: '.sec:has(.trail) + .sec .sec-head { visibility: hidden }' });
-    await h.scrollTo('.trail', 1700, 450);
+  process: { ctx: DESKTOP, url: '/index.html', settle: 3000, cursor: false, setup: async (page) => {
+    // only the four steps: hide the next section's heading that would sit under them; badges wait for the redraw
+    await page.addStyleTag({ content: '.sec:has(.trail) + .sec .sec-head { visibility: hidden } .trail:not(.drawn) .trail-n { opacity: 0 }' });
+    await page.evaluate(() => { const t = document.querySelector('.trail'); window.scrollTo(0, t.getBoundingClientRect().top + window.scrollY - 450); });
     await page.waitForFunction(() => document.querySelector('.trail').classList.contains('drawn'), null, { timeout: 20000 });
+    await page.evaluate(() => document.querySelector('.trail').classList.remove('drawn'));
+  }, async run(page, h) {
+    await h.wait(700);
     h.mark('drawn');
+    await page.evaluate(() => document.querySelector('.trail').classList.add('drawn'));
     await h.wait(3000);
     h.mark('faq');
     await h.scrollTo('.faq', 1200, 240);
@@ -237,6 +243,8 @@ const CLIPS = {
     await h.wait(5200);
   } },
   mobile: { ctx: PHONE, url: '/index.html', cursor: false, staticCounts: true, chatButton: true, async run(page, h) {
+    await page.waitForLoadState('domcontentloaded');
+    await page.addStyleTag({ content: 'html .rv { opacity: 1 !important; transform: none !important; }' });
     await h.wait(2200);
     await h.scrollTo(700, 1500);
     await h.wait(700);
