@@ -23,6 +23,7 @@ beats = {s['id']: s for s in script['scenes']}
 ids = [s['id'] for s in script['scenes']]
 NO_CAPTIONS = {'B1', 'B14'}   # the title and end cards already show the words (they're still in the .srt file)
 # caption punctuation that differs from the narration script (no serial comma, as in the on-screen text)
+KEEP_ALONE = {'Yours.'}   # a punchline keeps its own caption, so it isn't read before it is heard
 CAPTION_EDITS = [('offline, and', 'offline and'), ('flashcards, and', 'flashcards and'), ('together, and', 'together and'), ('sign in, and', 'sign in and')]
 
 
@@ -51,13 +52,14 @@ def word_time(bid, word, nth=1):
     raise KeyError(f'{bid}: word {word!r} not found in {[x["w"] for x in WORDS[bid]["words"]]}')
 
 
-SHOT = lambda f, kb, cue=None: {'src': f'shots-src/{f}', 'kb': kb, 'cue': cue}
-# Screenshot moves: x/y are fractions of the overflow; zoom stays within 3% so no sidebar or edge is cut.
+# Screenshots fill the window exactly, so any zoom would cut the app's own edges: they hold still, and change on cue words.
+SHOT = lambda f, kb, cue=None: {'src': f'shots-src/{f}', 'kb': STILL, 'cue': cue}
+STILL = [0.5, 0.5, 1.0, 0.5, 0.5, 1.0]
+# Screenshot moves (kept for reference): x/y are fractions of the overflow, zoom within 3%.
 ZOOM_IN = [0.5, 0.2, 1.0, 0.5, 0.5, 1.03]
 PAN_R = [0.5, 0.0, 1.03, 0.5, 0.8, 1.03]
 PAN_DOWN = [0.5, 0.0, 1.025, 0.5, 1.0, 1.025]
 GENTLE = [0.5, 0.6, 1.03, 0.5, 0.2, 1.0]
-STILL = [0.5, 0.5, 1.0, 0.5, 0.5, 1.0]
 
 # Time references: ('t', s) scene-local seconds, ('w', word, offset) a spoken word, ('end',) scene end incl. crossfade.
 # Clip references: ('c', s) clip seconds, ('m', mark, offset) a mark in the recording.
@@ -71,19 +73,19 @@ VISUALS = {
     'B3': [{'kind': 'browser', 'layout': 'split', 'clip': 'services', 'chip': 'Services', 'url': 'evosoft.solutions',
             'map': [('at', ('t', 0), ('c', 4.9)), ('at', ('w', 'Online', -0.15), ('m', 'stores', 0)), ('at', ('w', 'booking', -0.15), ('m', 'booking', 0)),
                     ('at', ('w', 'Microsoft', -0.25), ('m', 'm365', 0)), ('run', ('end',))],
-            'cam': [(('t', 0), 0.5, 0.0, 1.0), (('end',), 0.5, 0.3, 1.08)]}],
+            'cam': [(('t', 0), 0.5, 0.0, 1.0), (('end',), 0.5, 0.3, 1.04)]}],
     'B4': [{'kind': 'browser', 'layout': 'split', 'clip': 'products', 'chip': 'Our own products', 'url': 'evosoft.solutions',
             'map': [('at', ('t', 0), ('m', 'evo', -1.7)), ('at', ('w', 'Evo', -0.1), ('m', 'evo', 0)), ('at', ('w', 'Mailtabs', -0.1), ('m', 'mailtabs', 0)),
                     ('at', ('w', 'StudyCat', -0.1), ('m', 'studycat', 0)), ('at', ('w', 'next', 0), ('m', 'yours', 0)), ('run', ('end',))],
-            'cam': [(('t', 0), 0.5, 0.0, 1.08), (('w', 'Evo', -0.1), 0.5, 0.0, 1.16), (('end',), 0.5, 0.0, 1.18)]}],
-    'B5': [{'kind': 'browser', 'layout': 'split', 'clip': 'evopage', 'until': ('w', 'Plan', -0.35), 'chip': 'Evo · workforce + POS', 'color': '#4F46E5',
+            'cam': [(('t', 0), 0.5, 0.0, 1.04), (('w', 'Evo', -0.1), 0.5, 0.0, 1.16), (('end',), 0.5, 0.0, 1.18)]}],
+    'B5': [{'kind': 'browser', 'layout': 'split', 'clip': 'evopage', 'until': ('w', 'Plan', -0.35), 'chip': 'Evo · Workforce + POS', 'color': '#4F46E5',
             'url': 'evosoft.solutions/work/evo.html', 'map': [('at', ('t', 0), ('c', 0.5)), ('at', ('end',), ('c', 5.6))]},
-           {'kind': 'shots', 'layout': 'split', 'chip': 'Evo · workforce + POS', 'color': '#4F46E5', 'url': 'evo-demo.evosoft.solutions',
+           {'kind': 'shots', 'layout': 'split', 'chip': 'Evo · Workforce + POS', 'color': '#4F46E5', 'url': 'evo-demo.evosoft.solutions',
             'shots': [SHOT('evo/03-hr-scheduler.jpg', PAN_R), SHOT('evo/05-payroll-period-review.jpg', GENTLE, 'export'),
                       SHOT('evo/09-register-pay-screen.jpg', STILL, 'sell'), SHOT('evo/08-store-reports.jpg', ZOOM_IN, 'reports')]}],
-    'B6': [{'kind': 'shots', 'layout': 'split', 'chip': 'Mailtabs · unified email', 'color': '#0F766E', 'url': 'mail-demo.evosoft.solutions',
+    'B6': [{'kind': 'shots', 'layout': 'split', 'chip': 'Mailtabs · Unified email', 'color': '#0F766E', 'url': 'mail-demo.evosoft.solutions',
             'shots': [SHOT('mailtabs/01-unified-inbox.jpg', ZOOM_IN), SHOT('mailtabs/02-receipts-tab.jpg', PAN_R, 'rule'), SHOT('mailtabs/04-composer.jpg', GENTLE, 'Reply')]}],
-    'B7': [{'kind': 'shots', 'layout': 'split', 'chip': 'StudyCat · study platform', 'color': '#1A64D6', 'url': 'studycat-demo.evosoft.solutions',
+    'B7': [{'kind': 'shots', 'layout': 'split', 'chip': 'StudyCat · Study platform', 'color': '#1A64D6', 'url': 'studycat-demo.evosoft.solutions',
             'shots': [SHOT('studycat/02-class-dashboard.jpg', ZOOM_IN), SHOT('studycat/04-quizzer.jpg', PAN_R, 'quizzer'),
                       SHOT('studycat/05-flashcards.jpg', GENTLE, 'flashcards'), SHOT('studycat/09-faculty-class.jpg', PAN_DOWN, 'instructors')]}],
     'B8': [{'kind': 'browser', 'layout': 'full', 'clip': 'demos', 'until': ('w', 'Hannah', -0.3), 'url': 'evosoft.solutions/demos.html',
@@ -93,12 +95,11 @@ VISUALS = {
                     (('w', 'Hannah', -0.3), 0.5, 0.0, 1.0)]},
            {'kind': 'shots', 'layout': 'full', 'url': 'evo-demo.evosoft.solutions', 'shots': [SHOT('evo/01-owner-home.jpg', [0.5, 0.0, 1.0, 0.5, 0.4, 1.03])]}],
     'B9': [{'kind': 'browser', 'layout': 'split', 'clip': 'process', 'chip': 'Talk · Quote · Build · Launch', 'url': 'evosoft.solutions',
-            # the section is fully drawn from the first frame; each step's badge pops on its word. Badge animations start
-            # 0.003 / 0.352 / 0.702 / 1.051 s after the 'drawn' mark (first changed pixel) and peak about 0.28 s later
-            'map': [('at', ('t', 0), ('m', 'drawn', -0.7)), ('at', ('w', 'talk', -0.12), ('m', 'drawn', -0.02)), ('at', ('w', 'talk', 0.33), ('m', 'drawn', 0.30)),
-                    ('at', ('w', 'quote', -0.12), ('m', 'drawn', 0.33)), ('at', ('w', 'quote', 0.33), ('m', 'drawn', 0.65)),
-                    ('at', ('w', 'build', -0.12), ('m', 'drawn', 0.68)), ('at', ('w', 'build', 0.33), ('m', 'drawn', 1.00)),
-                    ('at', ('w', 'launch', -0.12), ('m', 'drawn', 1.03)), ('at', ('w', 'launch', 0.35), ('m', 'drawn', 1.33)),
+            # the four steps wait in grey; each lights up on its spoken word (marks lit1..lit4 in the recording)
+            'map': [('at', ('t', 0), ('m', 'lit1', -0.7)), ('at', ('w', 'talk', -0.05), ('m', 'lit1', 0)), ('at', ('w', 'talk', 0.45), ('m', 'lit1', 0.45)),
+                    ('at', ('w', 'quote', -0.05), ('m', 'lit2', 0)), ('at', ('w', 'quote', 0.45), ('m', 'lit2', 0.45)),
+                    ('at', ('w', 'build', -0.05), ('m', 'lit3', 0)), ('at', ('w', 'build', 0.45), ('m', 'lit3', 0.45)),
+                    ('at', ('w', 'launch', -0.05), ('m', 'lit4', 0)), ('at', ('w', 'launch', 0.45), ('m', 'lit4', 0.45)),
                     ('at', ('end',), ('m', 'faq', -0.1))],
             'cam': [(('t', 0), 0.5, 0.40, 1.04), (('t', 1.2), 0.5, 0.40, 1.15), (('end',), 0.5, 0.40, 1.16)]}],
     'B10': [{'kind': 'browser', 'layout': 'full', 'clip': 'languages', 'url': 'evosoft.solutions',
@@ -114,11 +115,11 @@ VISUALS = {
                      ('at', ('w', 'best', 0.45), ('m', 'sent', 0)), ('run', ('end',))],
              'cam': [(('t', 0), 0.5, 0.0, 1.0), (('w', 'Ask', 0.2), 0.5, 0.0, 1.0), (('w', 'Ask', 1.0), 1.0, 0.61, 1.6)],
              'mask': (('w', 'Ask', 0.2), ('w', 'Ask', 1.0), 262, 290)}],
-    'B12': [{'kind': 'browser', 'layout': 'split', 'clip': 'quote', 'chip': 'Get a free quote', 'url': 'evosoft.solutions/contact.html',
+    'B12': [{'kind': 'browser', 'layout': 'split', 'clip': 'quote', 'chip': 'Quote form', 'url': 'evosoft.solutions/contact.html',
              'map': [('at', ('t', 0), ('m', 'chip', -0.8)), ('at', ('w', 'Pick', 0.0), ('m', 'chip', 0.05)), ('at', ('w', 'write', -0.1), ('m', 'chip', 1.2)),
                      ('at', ('w', 'Send', 0.05), ('m', 'sent', 0.12)), ('at', ('end',), ('m', 'sent', 4.6))],
              'cam': [(('t', 0), 0.3, 0.60, 1.62), (('w', 'write', 0), 0.3, 0.60, 1.62), (('w', 'write', 0.25), 0.31, 0.53, 1.62), (('w', 'Send', 0.38), 0.31, 0.53, 1.62),
-                     (('w', 'Send', 1.03), 0.31, 0.69, 1.62)]}],
+                     (('w', 'Send', 1.03), 0.31, 0.69, 1.62), (('end',), 0.31, 0.72, 1.72)]}],
     'B13': [{'kind': 'phone', 'clip': 'mobile', 'chip': 'Mobile-friendly',
              'map': [('at', ('t', 0), ('c', 0.3)), ('at', ('w', 'Dark', -0.2), ('m', 'dark', 0.0)), ('run', ('end',))]}],
     'B14': [{'kind': 'end'}],
@@ -245,6 +246,16 @@ for i, sc in enumerate(scenes):
     sc['last'] = i == len(scenes) - 1
 
 # ---------- narration track ----------
+import subprocess, statistics
+
+
+def lufs(path):
+    out = subprocess.run(['ffmpeg', '-hide_banner', '-i', path, '-af', 'ebur128', '-f', 'null', '-'], capture_output=True, text=True).stderr
+    return float(re.findall(r'I:\s+(-?[\d.]+) LUFS', out)[-1])
+
+
+levels = {bid: lufs(os.path.join(HERE, NARR, f'{bid}.wav')) for bid in ids if os.path.exists(os.path.join(HERE, NARR, f'{bid}.wav'))}
+TARGET = statistics.median(levels.values())
 track = np.zeros(int((total + 1) * SR), dtype=np.float32)
 for bid in ids:
     p = os.path.join(HERE, NARR, f'{bid}.wav')
@@ -253,6 +264,7 @@ for bid in ids:
     with wave.open(p) as w:
         assert w.getframerate() == SR and w.getnchannels() == 1
         a = np.frombuffer(w.readframes(w.getnframes()), dtype='<i2').astype(np.float32) / 32768
+    a = a * 10 ** (max(-3.0, min(3.0, TARGET - levels[bid])) / 20)   # level-match the scenes
     i = int(beat_times[bid]['narr_at'] * SR)
     track[i:i + len(a)] += a[: len(track) - i]
 track = track[: int(total * SR)]
@@ -299,7 +311,7 @@ for bid in ids:
     merged = []
     for s in sents:
         text = ' '.join(shown[i] for i in s)
-        if merged and len(text) <= 12 and len(' '.join(shown[i] for i in merged[-1] + s)) <= MAX_CHARS:
+        if merged and len(text) <= 12 and text not in KEEP_ALONE and len(' '.join(shown[i] for i in merged[-1] + s)) <= MAX_CHARS:
             merged[-1] = merged[-1] + s
         else:
             merged.append(s)

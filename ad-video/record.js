@@ -160,16 +160,21 @@ const CLIPS = {
     await h.wait(1600);
   } },
   process: { ctx: DESKTOP, url: '/index.html', settle: 3000, cursor: false, setup: async (page) => {
-    // only the four steps: hide the next section's heading that would sit under them; badges wait for the redraw
-    await page.addStyleTag({ content: '.sec:has(.trail) + .sec .sec-head { visibility: hidden } .trail:not(.drawn) .trail-n { opacity: 0 }' });
-    await page.evaluate(() => { const t = document.querySelector('.trail'); window.scrollTo(0, t.getBoundingClientRect().top + window.scrollY - 450); });
+    // only the four steps: the next section's content is hidden; the steps wait in grey and light up one at a time
+    await page.addStyleTag({ content: `.sec:has(.trail) + .sec .wrap, .more { visibility: hidden }
+      html .trail li .trail-n { filter: grayscale(1) brightness(1.35); }
+      html .trail li.lit .trail-n { filter: none; animation: __lit .55s cubic-bezier(.3, 1.6, .5, 1) !important; }
+      @keyframes __lit { from { transform: scale(.55); filter: grayscale(1) brightness(1.35); } }` });
+    // the section sits centred under the header, with even margins above and below ("All services" above it is hidden)
+    await page.evaluate(() => { const t = document.querySelector('.trail'); window.scrollTo(0, t.getBoundingClientRect().top + window.scrollY - 400); });
     await page.waitForFunction(() => document.querySelector('.trail').classList.contains('drawn'), null, { timeout: 20000 });
-    await page.evaluate(() => document.querySelector('.trail').classList.remove('drawn'));
   }, async run(page, h) {
-    await h.wait(700);
-    h.mark('drawn');
-    await page.evaluate(() => document.querySelector('.trail').classList.add('drawn'));
-    await h.wait(3000);
+    await h.wait(800);
+    for (let n = 1; n <= 4; n++) {
+      h.mark('lit' + n);
+      await page.evaluate((i) => document.querySelector(`.trail li:nth-child(${i})`).classList.add('lit'), n);
+      await h.wait(1000);
+    }
     h.mark('faq');
     await h.scrollTo('.faq', 1200, 240);
     await h.wait(300);
