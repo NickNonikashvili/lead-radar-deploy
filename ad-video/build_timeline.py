@@ -94,11 +94,11 @@ VISUALS = {
            {'kind': 'shots', 'layout': 'full', 'url': 'evo-demo.evosoft.solutions', 'shots': [SHOT('evo/01-owner-home.jpg', [0.5, 0.0, 1.0, 0.5, 0.4, 1.03])]}],
     'B9': [{'kind': 'browser', 'layout': 'split', 'clip': 'process', 'chip': 'Talk · Quote · Build · Launch', 'url': 'evosoft.solutions',
             # the section is fully drawn from the first frame; each step's badge pops on its word. Badge animations start
-            # 0.115 / 0.465 / 0.814 / 1.152 s after the 'drawn' mark and peak 0.17 s later (measured in the recording)
-            'map': [('at', ('t', 0), ('m', 'drawn', -0.7)), ('at', ('w', 'talk', -0.12), ('m', 'drawn', 0.10)), ('at', ('w', 'talk', 0.33), ('m', 'drawn', 0.33)),
-                    ('at', ('w', 'quote', -0.12), ('m', 'drawn', 0.45)), ('at', ('w', 'quote', 0.33), ('m', 'drawn', 0.68)),
-                    ('at', ('w', 'build', -0.12), ('m', 'drawn', 0.80)), ('at', ('w', 'build', 0.33), ('m', 'drawn', 1.03)),
-                    ('at', ('w', 'launch', -0.12), ('m', 'drawn', 1.14)), ('at', ('w', 'launch', 0.35), ('m', 'drawn', 1.40)),
+            # 0.003 / 0.352 / 0.702 / 1.051 s after the 'drawn' mark (first changed pixel) and peak about 0.28 s later
+            'map': [('at', ('t', 0), ('m', 'drawn', -0.7)), ('at', ('w', 'talk', -0.12), ('m', 'drawn', -0.02)), ('at', ('w', 'talk', 0.33), ('m', 'drawn', 0.30)),
+                    ('at', ('w', 'quote', -0.12), ('m', 'drawn', 0.33)), ('at', ('w', 'quote', 0.33), ('m', 'drawn', 0.65)),
+                    ('at', ('w', 'build', -0.12), ('m', 'drawn', 0.68)), ('at', ('w', 'build', 0.33), ('m', 'drawn', 1.00)),
+                    ('at', ('w', 'launch', -0.12), ('m', 'drawn', 1.03)), ('at', ('w', 'launch', 0.35), ('m', 'drawn', 1.33)),
                     ('at', ('end',), ('m', 'faq', -0.1))],
             'cam': [(('t', 0), 0.5, 0.40, 1.04), (('t', 1.2), 0.5, 0.40, 1.15), (('end',), 0.5, 0.40, 1.16)]}],
     'B10': [{'kind': 'browser', 'layout': 'full', 'clip': 'languages', 'url': 'evosoft.solutions',
