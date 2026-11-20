@@ -1,8 +1,8 @@
 # Luxhouse
 
 Website for a real-estate agency that works only with high-end homes: listings in
-English, Georgian and Russian, enquiry handling, and a free-movement 3D tour of each
-residence that is reconstructed from its photographs.
+English, Georgian and Russian, enquiry handling, and a 3D tour of each residence built
+from its photographs, with Street View style controls.
 
 It is a small Node/Express app with no database and no build step on the server.
 It lives in its own folder and does not touch the Lead Radar app in the repository root.
@@ -34,6 +34,24 @@ Open http://localhost:3100. The site picks the visitor's language from the brows
 Also built in: USD ⇄ GEL price toggle, share menu, print-friendly residence page,
 `sitemap.xml`, `robots.txt`, structured data for search engines, per-language
 social previews.
+
+## Design
+
+The look is one system ("Nocturne"): a near-black ground, full-bleed photography graded like
+film stills, one light grotesque set large, hairlines instead of boxes, and a single accent
+(ember) reserved for the 3D tour, focus rings and the saved heart.
+
+- `public/css/site.css` holds the system: tokens, type scale, grid, buttons, forms, header and
+  footer, residence strips and cards, the lit 3D stage, lightbox, map.
+- A page may bring its own files without touching the layout: `public/css/pages/<page>.css`
+  and `public/js/pages/<page>.js` are picked up automatically, where `<page>` is the template
+  name (`home`, `residences`, `residence`, `services`, `sell`, `about`, `contact`, `saved`,
+  `legal`, `404`).
+- Fonts are Inter Tight, Inter and Noto Sans Georgian, served by the site itself
+  (`npm run vendor` copies them from the `@fontsource` packages). Georgian has its own rules:
+  no capitals, no letter-spacing, slightly narrower and smaller display sizes.
+- The tour page is standalone (`views/pages/tour.ejs`, `public/css/tour.css`,
+  `client/tour/main.js`) and uses the same tokens.
 
 ## Settings
 
