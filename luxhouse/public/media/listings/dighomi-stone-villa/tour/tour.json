@@ -1,0 +1,566 @@
+{
+ "version": 1,
+ "generator": "luxhouse-tour/1 (moge-2-vitl-normal)",
+ "scenes": [
+  {
+   "id": "01",
+   "photo": "01",
+   "room": "exterior",
+   "base": "01/",
+   "width": 1600,
+   "height": 1200,
+   "fx": 0.670736,
+   "fy": 0.894315,
+   "grid": [
+    768,
+    576
+   ],
+   "up": [
+    -0.00195,
+    -0.99895,
+    0.0458
+   ],
+   "eyeHeight": 1.76,
+   "depth": {
+    "depthMin": 2.7103,
+    "depthMedian": 8.4327,
+    "depthMax": 45.1757
+   },
+   "bytes": {
+    "geo": 288445
+   },
+   "stats": {
+    "valid": 1.0
+   },
+   "texture": [
+    1600,
+    1200
+   ]
+  },
+  {
+   "id": "05",
+   "photo": "05",
+   "room": "exterior",
+   "base": "05/",
+   "width": 1600,
+   "height": 1200,
+   "fx": 0.714675,
+   "fy": 0.952899,
+   "grid": [
+    768,
+    576
+   ],
+   "up": [
+    -0.03401,
+    -0.9954,
+    0.08952
+   ],
+   "eyeHeight": 2.169,
+   "depth": {
+    "depthMin": 4.4602,
+    "depthMedian": 12.1832,
+    "depthMax": 61.0463
+   },
+   "bytes": {
+    "geo": 291182
+   },
+   "stats": {
+    "valid": 1.0
+   },
+   "texture": [
+    1600,
+    1200
+   ]
+  },
+  {
+   "id": "04",
+   "photo": "04",
+   "room": "garden",
+   "base": "04/",
+   "width": 1600,
+   "height": 1200,
+   "fx": 0.650164,
+   "fy": 0.866885,
+   "grid": [
+    768,
+    576
+   ],
+   "up": [
+    -0.00121,
+    -0.99999,
+    0.00329
+   ],
+   "eyeHeight": 1.615,
+   "depth": {
+    "depthMin": 2.2744,
+    "depthMedian": 9.1618,
+    "depthMax": 34.492
+   },
+   "bytes": {
+    "geo": 302717
+   },
+   "stats": {
+    "valid": 0.9999
+   },
+   "texture": [
+    1600,
+    1200
+   ]
+  },
+  {
+   "id": "07",
+   "photo": "07",
+   "room": "pool",
+   "base": "07/",
+   "width": 1600,
+   "height": 1200,
+   "fx": 0.66201,
+   "fy": 0.882681,
+   "grid": [
+    768,
+    576
+   ],
+   "up": [
+    0.00834,
+    -0.98947,
+    -0.14448
+   ],
+   "eyeHeight": 1.26,
+   "depth": {
+    "depthMin": 1.4628,
+    "depthMedian": 6.2324,
+    "depthMax": 35.0701
+   },
+   "bytes": {
+    "geo": 324430
+   },
+   "stats": {
+    "valid": 1.0
+   },
+   "texture": [
+    1600,
+    1200
+   ]
+  },
+  {
+   "id": "02",
+   "photo": "02",
+   "room": "pergola",
+   "base": "02/",
+   "width": 1600,
+   "height": 1200,
+   "fx": 0.66046,
+   "fy": 0.880613,
+   "grid": [
+    768,
+    576
+   ],
+   "up": [
+    -0.00285,
+    -0.99974,
+    0.02261
+   ],
+   "eyeHeight": 1.615,
+   "depth": {
+    "depthMin": 2.9026,
+    "depthMedian": 8.3484,
+    "depthMax": 64.3598
+   },
+   "bytes": {
+    "geo": 321455
+   },
+   "stats": {
+    "valid": 1.0
+   },
+   "texture": [
+    1600,
+    1200
+   ]
+  },
+  {
+   "id": "03",
+   "photo": "03",
+   "room": "terrace",
+   "base": "03/",
+   "width": 1600,
+   "height": 1200,
+   "fx": 0.714146,
+   "fy": 0.952194,
+   "grid": [
+    768,
+    576
+   ],
+   "up": [
+    0.00196,
+    -0.99994,
+    0.01065
+   ],
+   "eyeHeight": 1.231,
+   "depth": {
+    "depthMin": 2.24,
+    "depthMedian": 3.877,
+    "depthMax": 6.3313
+   },
+   "bytes": {
+    "geo": 336713
+   },
+   "stats": {
+    "valid": 1.0
+   },
+   "texture": [
+    1600,
+    1200
+   ]
+  },
+  {
+   "id": "06",
+   "photo": "06",
+   "room": "terrace",
+   "base": "06/",
+   "width": 1600,
+   "height": 1200,
+   "fx": 0.742546,
+   "fy": 0.990061,
+   "grid": [
+    768,
+    576
+   ],
+   "up": [
+    -0.02318,
+    -0.99906,
+    0.03666
+   ],
+   "eyeHeight": 1.136,
+   "depth": {
+    "depthMin": 2.0144,
+    "depthMedian": 4.4482,
+    "depthMax": 15.4963
+   },
+   "bytes": {
+    "geo": 306884
+   },
+   "stats": {
+    "valid": 1.0
+   },
+   "texture": [
+    1600,
+    1200
+   ]
+  },
+  {
+   "id": "08",
+   "photo": "08",
+   "room": "garden",
+   "base": "08/",
+   "width": 1600,
+   "height": 1200,
+   "fx": 0.725427,
+   "fy": 0.967236,
+   "grid": [
+    768,
+    576
+   ],
+   "up": [
+    -0.0022,
+    -0.97339,
+    -0.22914
+   ],
+   "eyeHeight": 2.27,
+   "depth": {
+    "depthMin": 1.7359,
+    "depthMedian": 3.9124,
+    "depthMax": 27.2566
+   },
+   "bytes": {
+    "geo": 344345
+   },
+   "stats": {
+    "valid": 0.9911
+   },
+   "texture": [
+    1600,
+    1200
+   ]
+  },
+  {
+   "id": "16",
+   "photo": "16",
+   "room": "winterGarden",
+   "base": "16/",
+   "width": 1200,
+   "height": 1600,
+   "fx": 0.998122,
+   "fy": 0.748591,
+   "grid": [
+    576,
+    768
+   ],
+   "up": [
+    -0.0073,
+    -0.99949,
+    -0.03116
+   ],
+   "eyeHeight": 1.581,
+   "depth": {
+    "depthMin": 2.1522,
+    "depthMedian": 3.2566,
+    "depthMax": 4.8318
+   },
+   "bytes": {
+    "geo": 341300
+   },
+   "stats": {
+    "valid": 1.0
+   },
+   "texture": [
+    1200,
+    1600
+   ]
+  },
+  {
+   "id": "14",
+   "photo": "14",
+   "room": "living",
+   "base": "14/",
+   "width": 1496,
+   "height": 1496,
+   "fx": 0.865012,
+   "fy": 0.865012,
+   "grid": [
+    768,
+    768
+   ],
+   "up": [
+    0.00773,
+    -0.98424,
+    -0.17668
+   ],
+   "eyeHeight": 1.535,
+   "depth": {
+    "depthMin": 1.9416,
+    "depthMedian": 4.0099,
+    "depthMax": 6.2826
+   },
+   "bytes": {
+    "geo": 375637
+   },
+   "stats": {
+    "valid": 1.0
+   },
+   "texture": [
+    1496,
+    1496
+   ]
+  },
+  {
+   "id": "11",
+   "photo": "11",
+   "room": "entrance",
+   "base": "11/",
+   "width": 1200,
+   "height": 1600,
+   "fx": 0.962162,
+   "fy": 0.721621,
+   "grid": [
+    576,
+    768
+   ],
+   "up": [
+    0.01717,
+    -0.99984,
+    -0.00585
+   ],
+   "eyeHeight": 1.516,
+   "depth": {
+    "depthMin": 1.9454,
+    "depthMedian": 2.7775,
+    "depthMax": 5.3237
+   },
+   "bytes": {
+    "geo": 232880
+   },
+   "stats": {
+    "valid": 1.0
+   },
+   "texture": [
+    1200,
+    1600
+   ]
+  },
+  {
+   "id": "10",
+   "photo": "10",
+   "room": "staircase",
+   "base": "10/",
+   "width": 1200,
+   "height": 1600,
+   "fx": 1.018333,
+   "fy": 0.76375,
+   "grid": [
+    576,
+    768
+   ],
+   "up": [
+    0.00696,
+    -0.99948,
+    -0.03142
+   ],
+   "eyeHeight": 1.354,
+   "depth": {
+    "depthMin": 1.4429,
+    "depthMedian": 2.5358,
+    "depthMax": 6.2217
+   },
+   "bytes": {
+    "geo": 267816
+   },
+   "stats": {
+    "valid": 1.0
+   },
+   "texture": [
+    1200,
+    1600
+   ]
+  },
+  {
+   "id": "15",
+   "photo": "15",
+   "room": "corridor",
+   "base": "15/",
+   "width": 1496,
+   "height": 1496,
+   "fx": 0.837817,
+   "fy": 0.837817,
+   "grid": [
+    768,
+    768
+   ],
+   "up": [
+    -0.00404,
+    -0.98244,
+    -0.18652
+   ],
+   "eyeHeight": 1.275,
+   "depth": {
+    "depthMin": 1.0626,
+    "depthMedian": 2.0121,
+    "depthMax": 5.6853
+   },
+   "bytes": {
+    "geo": 260570
+   },
+   "stats": {
+    "valid": 1.0
+   },
+   "texture": [
+    1496,
+    1496
+   ]
+  },
+  {
+   "id": "12",
+   "photo": "12",
+   "room": "bedroom",
+   "base": "12/",
+   "width": 1496,
+   "height": 1496,
+   "fx": 0.860257,
+   "fy": 0.860257,
+   "grid": [
+    768,
+    768
+   ],
+   "up": [
+    -0.05486,
+    -0.94986,
+    -0.30781
+   ],
+   "eyeHeight": 1.029,
+   "depth": {
+    "depthMin": 0.4178,
+    "depthMedian": 2.7831,
+    "depthMax": 4.3622
+   },
+   "bytes": {
+    "geo": 321200
+   },
+   "stats": {
+    "valid": 1.0
+   },
+   "texture": [
+    1496,
+    1496
+   ]
+  },
+  {
+   "id": "13",
+   "photo": "13",
+   "room": "bedroom",
+   "base": "13/",
+   "width": 1496,
+   "height": 1496,
+   "fx": 0.829368,
+   "fy": 0.829368,
+   "grid": [
+    768,
+    768
+   ],
+   "up": [
+    -0.03494,
+    -0.99576,
+    -0.08514
+   ],
+   "eyeHeight": 1.453,
+   "depth": {
+    "depthMin": 1.3288,
+    "depthMedian": 3.1892,
+    "depthMax": 4.7917
+   },
+   "bytes": {
+    "geo": 382892
+   },
+   "stats": {
+    "valid": 1.0
+   },
+   "texture": [
+    1496,
+    1496
+   ]
+  },
+  {
+   "id": "09",
+   "photo": "09",
+   "room": "bathroom",
+   "base": "09/",
+   "width": 1600,
+   "height": 1200,
+   "fx": 0.714422,
+   "fy": 0.952563,
+   "grid": [
+    768,
+    576
+   ],
+   "up": [
+    -0.01549,
+    -0.99079,
+    -0.13453
+   ],
+   "eyeHeight": 1.36,
+   "depth": {
+    "depthMin": 1.4754,
+    "depthMedian": 2.3499,
+    "depthMax": 3.9545
+   },
+   "bytes": {
+    "geo": 257642
+   },
+   "stats": {
+    "valid": 1.0
+   },
+   "texture": [
+    1600,
+    1200
+   ]
+  }
+ ]
+}

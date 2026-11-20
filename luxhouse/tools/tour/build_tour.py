@@ -8,7 +8,7 @@
 For every photo of the listing (in gallery order) this estimates depth with
 the chosen provider, packs the result (see pack.py) and writes
 
-    public/media/listings/<slug>/tour/<photo>/{color.webp,bg.webp,geo.bin,thumb.webp}
+    public/media/listings/<slug>/tour/<photo>/{color.webp,geo.bin,thumb.webp}
     public/media/listings/<slug>/tour/tour.json
 
 A photo is skipped when the listing marks it with "tour": false.

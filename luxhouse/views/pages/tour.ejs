@@ -23,6 +23,7 @@
 <%- include('../partials/icons') %>
 <div class="tour" data-tour data-state="loading">
   <canvas class="tour-canvas" tabindex="0" aria-label="<%= t('tour.title', { title: r.title }) %>"></canvas>
+  <canvas class="tour-veil" data-veil hidden aria-hidden="true"></canvas>
   <div class="tour-fade" data-fade aria-hidden="true"></div>
 
   <header class="tour-top">

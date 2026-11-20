@@ -71,7 +71,7 @@ function start() {
   let edgeTimer = 0;
   const viewer = new TourViewer(
     canvas,
-    { base: data.base, scenes: data.scenes, detail: chooseDetail() },
+    { base: data.base, scenes: data.scenes, detail: chooseDetail(), veil: $("[data-veil]", stage) },
     {
       onStatus(state, error) {
         loader.hidden = state !== "loading";

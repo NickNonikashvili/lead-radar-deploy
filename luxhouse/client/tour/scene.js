@@ -1,7 +1,16 @@
 /**
- * One explorable space: the meshes rebuilt from a photograph, textured by
- * projecting that photograph back onto them, plus the rules for where a
- * visitor may stand.
+ * One explorable space: a mesh rebuilt from a photograph and textured by
+ * projecting that photograph back onto it, plus the rules that keep the
+ * visitor where the picture still looks like the real room.
+ *
+ * Realism rules (learned on real rooms):
+ *  - The mesh is continuous. Cutting it at furniture edges tears the picture
+ *    as soon as the visitor moves; letting it stretch reads as a soft edge.
+ *  - The visitor never sees outside what the photograph shows: the view
+ *    direction and the standing position are limited so the picture always
+ *    fills the screen.
+ *  - Movement is limited to the range in which that stretching stays modest.
+ *    The range is measured per photograph.
  */
 
 import {
@@ -20,6 +29,7 @@ import {
 import { buildGeometry, decodeGeo } from "./geo.js";
 
 const DEG = Math.PI / 180;
+const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 
 // The photograph is the texture: every fragment looks up the pixel the original
 // camera saw along the same ray, so from the original viewpoint the render is
@@ -36,18 +46,31 @@ const PROJECT_FRAGMENT = /* glsl */ `
   precision highp float;
   uniform sampler2D map;
   uniform vec2 focal;
-  uniform float opacity;
+  uniform vec2 texel; // picture size in pixels
   varying vec3 vCam;
   void main() {
     float z = max(-vCam.z, 1e-4);
     vec2 uv = vec2(focal.x * vCam.x / z + 0.5, 0.5 + focal.y * vCam.y / z);
-    gl_FragColor = vec4(texture2D(map, clamp(uv, 0.0, 1.0)).rgb, opacity);
+    // Where the surface is stretched across a gap (behind the edge of a nearer object) one
+    // column of the picture would be pulled into streaks. Reading a softer copy of the picture
+    // there turns the streaks into a quiet blur.
+    vec2 dx = dFdx(uv) * texel;
+    vec2 dy = dFdy(uv) * texel;
+    float a = dot(dx, dx);
+    float b = dot(dx, dy);
+    float c = dot(dy, dy);
+    float mid = 0.5 * (a + c);
+    float spread = sqrt(max(mid * mid - (a * c - b * b), 0.0));
+    float longest = mid + spread;
+    float shortest = max(mid - spread, 1e-8);
+    float stretch = 0.5 * log2(longest / shortest); // 0 where the picture is shown undistorted
+    float soften = clamp(stretch - 1.2, 0.0, 6.0);
+    gl_FragColor = vec4(texture2D(map, clamp(uv, 0.0, 1.0), soften).rgb, 1.0);
   }
 `;
 
-// Everything the photograph never saw: a soft, darkened continuation of its
-// edges so the surroundings read as "out of frame" rather than as a hole.
-const DOME_FRAGMENT = /* glsl */ `
+// Safety net behind the mesh (normally never on screen): a soft copy of the picture.
+const BACKDROP_FRAGMENT = /* glsl */ `
   precision highp float;
   uniform sampler2D map;
   uniform vec2 halfFov;
@@ -58,15 +81,9 @@ const DOME_FRAGMENT = /* glsl */ `
     float yaw = atan(d.x, -d.z);
     float pitch = asin(clamp(d.y, -1.0, 1.0));
     vec2 uv = vec2(0.5 + 0.5 * yaw / halfFov.x, 0.5 + 0.5 * pitch / halfFov.y);
-    vec2 outside = max(abs(uv - 0.5) - 0.5, 0.0);
-    float away = length(outside);
-    // Inside the frame this only shows through gaps: a soft copy of the picture is the kindest filler.
-    // Outside the frame it darkens, so the edge of the photographed area reads as an edge.
-    float edge = max(abs(uv.x - 0.5), abs(uv.y - 0.5));
+    float away = length(max(abs(uv - 0.5) - 0.5, 0.0));
     vec3 colour = texture2D(map, vec2(mirror(uv.x), mirror(uv.y)), 6.0).rgb;
-    float fade = mix(0.82, 0.40, smoothstep(0.44, 0.56, edge));
-    fade = mix(fade, 0.10, smoothstep(0.0, 1.2, away));
-    gl_FragColor = vec4(colour * fade, 1.0);
+    gl_FragColor = vec4(colour * mix(0.9, 0.25, smoothstep(0.0, 0.8, away)), 1.0);
   }
 `;
 
@@ -89,6 +106,12 @@ function loadTexture(loader, url, anisotropy) {
   });
 }
 
+function percentile(values, count, p) {
+  if (!count) return 0;
+  const sorted = Float32Array.prototype.slice.call(values, 0, count).sort();
+  return sorted[Math.min(count - 1, Math.max(0, Math.floor(p * (count - 1))))];
+}
+
 export class TourScene {
   /**
    * @param meta   scene entry from tour.json
@@ -103,8 +126,10 @@ export class TourScene {
 
     this.fx = meta.fx;
     this.fy = meta.fy;
-    this.hfov = 2 * Math.atan(0.5 / meta.fx);
-    this.vfov = 2 * Math.atan(0.5 / meta.fy);
+    this.tanH = 0.5 / meta.fx; // tangent of half the photograph's horizontal field of view
+    this.tanV = 0.5 / meta.fy;
+    this.hfov = 2 * Math.atan(this.tanH);
+    this.vfov = 2 * Math.atan(this.tanV);
     this.depthMedian = meta.depth.depthMedian;
     this.eyeHeight = typeof meta.eyeHeight === "number" && meta.eyeHeight > 0.6 && meta.eyeHeight < 4 ? meta.eyeHeight : null;
 
@@ -117,81 +142,70 @@ export class TourScene {
     // Orientation of the original photograph in world space.
     const forward = new Vector3(0, 0, -1).applyQuaternion(this.toWorld);
     this.baseYaw = Math.atan2(-forward.x, -forward.z);
-    this.basePitch = Math.asin(Math.max(-1, Math.min(1, forward.y)));
+    this.basePitch = Math.asin(clamp(forward.y, -1, 1));
 
-    // How far a visitor may wander from the camera position (metres).
-    const d = this.depthMedian;
-    this.limits = {
-      radius: Math.min(4, Math.max(0.6, 0.45 * d)),
-      back: Math.min(1, Math.max(0.3, 0.2 * d)),
-      side: Math.min(1.2, Math.max(0.4, 0.25 * d)),
-      speed: Math.min(2.4, Math.max(0.8, 0.45 * d)),
-    };
+    // Half-angles of the visitor's view; the viewer keeps these current.
+    this.viewHalfH = 0.6;
+    this.viewHalfV = 0.4;
+    // Provisional until the depth grid is loaded and measured.
+    this.limits = { side: 0.15, forward: 0.5, back: 0.1, lift: 0.08, speed: 0.5 };
     this._tmp = new Vector3();
   }
 
   async load(renderer, detail) {
     const loader = new TextureLoader();
     const anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
-    const [geoBuffer, colour, hiddenColour] = await Promise.all([
+    const [geoBuffer, colour] = await Promise.all([
       fetch(this.url + "geo.bin").then((res) => {
         if (!res.ok) throw new Error("Could not load geometry (" + res.status + ")");
         return res.arrayBuffer();
       }),
       loadTexture(loader, this.url + "color.webp", anisotropy),
-      loadTexture(loader, this.url + "bg.webp", anisotropy),
     ]);
     if (this.disposed) {
       colour.dispose();
-      hiddenColour.dispose();
       return this;
     }
 
     const geo = decodeGeo(geoBuffer);
     this.geo = geo;
-    const step = detail === "low" ? 2 : 1;
+    this._measure();
 
-    const focal = { value: { x: this.fx, y: this.fy } };
-    const material = (map) =>
+    const step = detail === "low" ? 2 : 1;
+    const front = buildGeometry(geo.front, geo.gw, geo.gh, this.fx, this.fy, step);
+    this.frontMesh = new Mesh(
+      front.geometry,
       new ShaderMaterial({
-        uniforms: { map: { value: map }, focal, opacity: { value: 1 } },
+        uniforms: {
+          map: { value: colour },
+          focal: { value: { x: this.fx, y: this.fy } },
+          texel: { value: { x: colour.image.width, y: colour.image.height } },
+        },
         vertexShader: PROJECT_VERTEX,
         fragmentShader: PROJECT_FRAGMENT,
-      });
+      })
+    );
+    this.frontMesh.frustumCulled = false;
+    this.frontMesh.renderOrder = 1;
 
-    const front = buildGeometry(geo.front, geo.gw, geo.gh, this.fx, this.fy, step, geo.cut, geo.hidden);
-    const hidden = buildGeometry(geo.hidden, geo.gw, geo.gh, this.fx, this.fy, step, geo.cut * 2.5);
-
-    const frontMaterial = material(colour);
-    this.frontMesh = new Mesh(front.geometry, frontMaterial);
-    this.seamMesh = new Mesh(front.seams.geometry, frontMaterial);
-    this.hiddenMesh = new Mesh(hidden.geometry, material(hiddenColour));
-    // The meshes are bounded by the photograph's own frustum, which is always in view.
-    this.frontMesh.frustumCulled = this.seamMesh.frustumCulled = this.hiddenMesh.frustumCulled = false;
-    // Draw order: surroundings, then the hidden layer, then the photograph's own surfaces.
-    this.hiddenMesh.renderOrder = 1;
-    this.seamMesh.renderOrder = 2;
-    this.frontMesh.renderOrder = 3;
-
-    const dome = new Mesh(
+    this.backdrop = new Mesh(
       new SphereGeometry(geo.skyDistance * 1.5, 48, 32),
       new ShaderMaterial({
         uniforms: { map: { value: colour }, halfFov: { value: { x: this.hfov / 2, y: this.vfov / 2 } } },
         vertexShader: PROJECT_VERTEX,
-        fragmentShader: DOME_FRAGMENT,
+        fragmentShader: BACKDROP_FRAGMENT,
         side: BackSide,
         depthWrite: false,
       })
     );
-    dome.renderOrder = 0;
-    dome.frustumCulled = false;
-    this.dome = dome;
+    this.backdrop.renderOrder = 0;
+    this.backdrop.frustumCulled = false;
 
-    this.group.add(dome, this.hiddenMesh, this.seamMesh, this.frontMesh);
+    this.group.add(this.backdrop, this.frontMesh);
     this.far = geo.skyDistance * 1.6;
-    this.near = Math.max(0.03, Math.min(0.1, geo.near * 0.2));
-    this.stats = { triangles: front.triangles + front.seams.triangles + hidden.triangles, seams: front.seams.triangles, step };
-    this.textures = [colour, hiddenColour];
+    this.near = clamp(geo.near * 0.2, 0.02, 0.1);
+    this.stats = { triangles: front.triangles, step };
+    this.textures = [colour];
     this.ready = true;
     return this;
   }
@@ -199,13 +213,75 @@ export class TourScene {
   dispose() {
     this.disposed = true;
     if (!this.ready) return;
-    for (const mesh of [this.frontMesh, this.seamMesh, this.hiddenMesh, this.dome]) {
+    for (const mesh of [this.frontMesh, this.backdrop]) {
       mesh.geometry.dispose();
       mesh.material.dispose();
     }
     for (const texture of this.textures) texture.dispose();
     this.group.clear();
     this.ready = false;
+  }
+
+  /**
+   * Measure the photograph: how near its content comes at each edge of the frame, and how
+   * far the visitor can move before the stretching at depth edges becomes noticeable.
+   */
+  _measure() {
+    const { gw, gh, front: d } = this.geo;
+    const buf = new Float32Array(gw * gh);
+    const band = (x0, x1, y0, y1) => {
+      let n = 0;
+      for (let y = y0; y < y1; y += 2) for (let x = x0; x < x1; x += 2) buf[n++] = d[y * gw + x];
+      return Math.max(0.2, percentile(buf, n, 0.06));
+    };
+    const bw = Math.max(4, Math.round(gw * 0.06));
+    const bh = Math.max(4, Math.round(gh * 0.06));
+    this.edgeNear = {
+      left: band(0, bw, 0, gh),
+      right: band(gw - bw, gw, 0, gh),
+      top: band(0, gw, 0, bh),
+      bottom: band(0, gw, gh - bh, gh),
+    };
+
+    // Depth edges: (1/near − 1/far) is how fast the two sides of an edge separate per metre of
+    // sideways movement; weighted by the distance from the picture's centre it is the same for
+    // a step forward. The gap that opens is filled by the background next to it, stretched.
+    let n = 0;
+    const lateral = new Float32Array(Math.ceil((gw * gh) / 4) + 8);
+    const forward = new Float32Array(lateral.length);
+    for (let y = 1; y < gh - 1; y += 2) {
+      const yn = (y / (gh - 1) - 0.5) / this.fy;
+      for (let x = 1; x < gw - 1; x += 2) {
+        const a = d[y * gw + x];
+        const b = d[y * gw + x + 1];
+        const c = d[(y + 1) * gw + x];
+        const rel = Math.max(Math.abs(a - b), Math.abs(a - c)) / Math.min(a, b, c);
+        if (rel < 0.1) continue;
+        const jump = Math.max(Math.abs(1 / a - 1 / b), Math.abs(1 / a - 1 / c));
+        const xn = (x / (gw - 1) - 0.5) / this.fx;
+        lateral[n] = jump;
+        forward[n] = jump * Math.hypot(xn, yn);
+        n++;
+      }
+    }
+    // Widest gap allowed at the worst few edges, as a share of the picture's width. A step
+    // forward may open a little more: its gaps lie towards the rim of the view.
+    const GAP = 0.03;
+    const edgeShare = n / ((gw * gh) / 4);
+    const gLat = edgeShare > 0.0015 ? percentile(lateral, n, 0.93) : 0;
+    const gFwd = edgeShare > 0.0015 ? percentile(forward, n, 0.93) : 0;
+    const side = gLat > 0 ? GAP / (this.fx * gLat) : 1;
+    const fwd = gFwd > 0 ? (GAP * 1.6) / (this.fx * gFwd) : 2;
+    const nearest = Math.min(this.edgeNear.left, this.edgeNear.right, this.edgeNear.bottom);
+    this.limits = {
+      side: clamp(side, 0.05, Math.min(0.6, 0.3 * nearest)),
+      forward: clamp(fwd, 0.2, Math.min(2.5, 0.4 * this.depthMedian)),
+      back: clamp(side * 0.6, 0.03, 0.25),
+      lift: clamp(side * 0.5, 0.03, 0.15),
+      speed: 0,
+    };
+    this.limits.speed = clamp(this.limits.forward * 0.9, 0.3, 1.2);
+    this.measured = { gLat, gFwd, edgeShare };
   }
 
   // ---------------------------------------------------------------- where may the visitor stand?
@@ -228,26 +304,28 @@ export class TourScene {
     const p = this._tmp.copy(world).applyQuaternion(this.toCamera);
     const surface = this.surfaceDepthAt(p.x, p.y, p.z);
     if (surface < 0) return true; // outside the frame: unknown, handled by the outer limits
-    const depth = -p.z;
-    return depth < surface - (0.05 + 0.02 * surface);
+    return -p.z < surface - (0.05 + 0.02 * surface);
   }
 
   /**
    * Can the visitor's eyes be at `world`?
-   * Returns "ok", "edge" (outside the captured area) or "blocked" (furniture, a wall).
+   * Returns "ok", "edge" (the picture would no longer fill the view) or "blocked" (furniture, a wall).
    */
   canStandAt(world) {
     const p = this._tmp.copy(world).applyQuaternion(this.toCamera);
     const forward = -p.z;
     const L = this.limits;
-    if (forward < -L.back) return "edge";
-    if (Math.hypot(p.x, forward, p.y) > L.radius) return "edge";
-    const reach = L.side + Math.max(0, forward) * Math.tan(this.hfov / 2) * 0.75;
-    if (Math.abs(p.x) > reach) return "edge";
+    if (forward < -L.back - 1e-6 || forward > L.forward + 1e-6) return "edge";
+    // A little more room to the sides once the visitor has stepped into the picture.
+    const widen = 1 + (2 * Math.max(0, forward)) / Math.max(0.3, this.depthMedian);
+    if (Math.abs(p.x) > L.side * widen + 1e-6) return "edge";
+    if (Math.abs(p.y) > L.lift + 1e-6) return "edge";
+    const range = this._range(p.x, p.y, p.z);
+    if (range.yawMax < range.yawMin || range.pitchMax < range.pitchMin) return "edge";
 
     // The body is a column from the eyes down towards the floor; all of it must be in visibly empty space.
     const heights = this.eyeHeight ? [0, -0.4 * this.eyeHeight, -0.75 * this.eyeHeight] : [0];
-    const r = 0.28;
+    const r = 0.25;
     const probe = TourScene._probe;
     for (const h of heights) {
       for (let i = 0; i < 9; i++) {
@@ -261,18 +339,16 @@ export class TourScene {
   }
 
   /**
-   * Move from `from` by `delta` (world space, horizontal), sliding along obstacles.
+   * Move from `from` by `delta` (world space), sliding along limits and obstacles.
    * Returns the status of the attempted move.
    */
   move(from, delta, out) {
     const target = TourScene._target.copy(from).add(delta);
-    let status = this.canStandAt(target);
-    if (status === "ok") {
+    const first = this.canStandAt(target);
+    if (first === "ok") {
       out.copy(target);
       return "ok";
     }
-    // Slide: try each horizontal axis on its own.
-    const first = status;
     target.set(from.x + delta.x, from.y, from.z);
     if (delta.x !== 0 && this.canStandAt(target) === "ok") {
       out.copy(target);
@@ -288,68 +364,138 @@ export class TourScene {
   }
 
   /**
-   * Range of view directions (relative to the photograph's own direction) that keep
-   * the picture on screen, for an eye at `world` and a view of the given half-angles.
+   * View directions, relative to the photograph's own, for which the picture fills the whole
+   * view from the camera-space eye position (px, py, pz). An empty range means it cannot.
+   *
+   * Each edge of the frame is a plane through the original camera. Content at depth D on the
+   * left edge sits at x = −tanH·D; seen from a moved eye its direction changes, most for the
+   * nearest content. The view's own edge has to stay inside both that and the far limit.
    */
-  lookRange(world, halfH, halfV, slack) {
-    const p = this._tmp.copy(world).applyQuaternion(this.toCamera);
-    const ref = Math.max(this.depthMedian, 0.5);
-    const dz = Math.max(0.3, ref + p.z); // distance from the eye to the reference depth
-    const halfX = (0.5 / this.fx) * ref;
-    const halfY = (0.5 / this.fy) * ref;
-    const left = Math.atan2(-halfX - p.x, dz);
-    const right = Math.atan2(halfX - p.x, dz);
-    const down = Math.atan2(-halfY - p.y, dz);
-    const top = Math.atan2(halfY - p.y, dz);
-    const span = (lo, hi, half) => {
-      let a = lo + half - slack;
-      let b = hi - half + slack;
-      if (a > b) {
-        const mid = (lo + hi) / 2;
-        a = mid - slack * 0.5;
-        b = mid + slack * 0.5;
-      }
-      return [a, b];
+  _range(px, py, pz) {
+    const E = this.edgeNear;
+    const fwd = -pz;
+    const dir = (offset, depth) => Math.atan2(offset, Math.max(0.05, depth - fwd));
+    const left = Math.max(dir(-this.tanH * E.left - px, E.left), -Math.atan(this.tanH));
+    const right = Math.min(dir(this.tanH * E.right - px, E.right), Math.atan(this.tanH));
+    const down = Math.max(dir(-this.tanV * E.bottom - py, E.bottom), -Math.atan(this.tanV));
+    const top = Math.min(dir(this.tanV * E.top - py, E.top), Math.atan(this.tanV));
+    // Yaw grows to the left in three.js; the picture's x grows to the right.
+    return {
+      yawMin: -(right - this.viewHalfH),
+      yawMax: -(left + this.viewHalfH),
+      pitchMin: down + this.viewHalfV,
+      pitchMax: top - this.viewHalfV,
     };
-    const [yawMin, yawMax] = span(left, right, halfH);
-    const [pitchMin, pitchMax] = span(down, top, halfV);
-    // Yaw grows to the left in three.js, the picture's x grows to the right.
-    return { yawMin: -yawMax, yawMax: -yawMin, pitchMin, pitchMax };
+  }
+
+  /**
+   * As _range, for a world-space eye position and the current view direction (offsets from the
+   * photograph's own direction). A turned view is wider at its corners, so each axis is
+   * tightened by how far the other one is turned.
+   */
+  lookRange(world, yawOffset, pitchOffset) {
+    const p = this._tmp.copy(world).applyQuaternion(this.toCamera);
+    const h = this.viewHalfH;
+    const v = this.viewHalfV;
+    const limit = 1.45; // radians: keeps the cosines below well away from zero
+    const kH = Math.cos(v) / Math.cos(Math.min(limit, v + Math.abs(pitchOffset || 0)));
+    const kV = Math.cos(h) / Math.cos(Math.min(limit, h + Math.abs(yawOffset || 0)));
+    this.viewHalfH = Math.atan(Math.tan(h) * kH);
+    this.viewHalfV = Math.atan(Math.tan(v) * kV);
+    const range = this._range(p.x, p.y, p.z);
+    this.viewHalfH = h;
+    this.viewHalfV = v;
+    if (range.yawMax < range.yawMin) range.yawMin = range.yawMax = (range.yawMin + range.yawMax) / 2;
+    if (range.pitchMax < range.pitchMin) range.pitchMin = range.pitchMax = (range.pitchMin + range.pitchMax) / 2;
+    return range;
   }
 
   /**
    * First surface hit by a world-space ray from `origin` along unit `dir`
-   * (marching through the depth grid). Returns the hit point or null.
+   * (marching through the depth grid, then closing in on the crossing).
+   * Returns the hit point or null.
    */
   raycast(origin, dir, out) {
     const o = TourScene._target.copy(origin).applyQuaternion(this.toCamera);
     const d = TourScene._probe.copy(dir).applyQuaternion(this.toCamera);
     const max = this.geo.skyDistance * 0.9;
+    const behind = (t) => {
+      const z = o.z + d.z * t;
+      const surface = this.surfaceDepthAt(o.x + d.x * t, o.y + d.y * t, z);
+      return surface > 0 && -z >= surface ? surface : 0;
+    };
+    let before = 0;
     let t = 0.1;
     for (let i = 0; i < 260 && t < max; i++) {
-      const x = o.x + d.x * t;
-      const y = o.y + d.y * t;
-      const z = o.z + d.z * t;
-      const surface = this.surfaceDepthAt(x, y, z);
-      if (surface > 0 && -z >= surface) {
+      const surface = behind(t);
+      if (surface) {
         if (surface >= this.geo.skyDistance * 0.99) return null; // the sky is not a place
-        out.set(x, y, z).applyQuaternion(this.toWorld);
+        let lo = before;
+        let hi = t;
+        for (let k = 0; k < 6; k++) {
+          const mid = (lo + hi) / 2;
+          if (behind(mid)) hi = mid;
+          else lo = mid;
+        }
+        out.set(o.x + d.x * hi, o.y + d.y * hi, o.z + d.z * hi).applyQuaternion(this.toWorld);
         return out;
       }
+      before = t;
       t += Math.max(0.03, t * 0.03);
     }
     return null;
   }
 
-  /** Vertical field of view (radians) that suits this photograph on a screen of the given aspect ratio. */
+  /**
+   * As raycast, and also gives the direction the surface faces (unit vector towards the
+   * visitor), measured from the depth grid around the hit.
+   */
+  surfaceAt(origin, dir, outPoint, outNormal) {
+    if (!this.raycast(origin, dir, outPoint)) return null;
+    const { gw, gh, front } = this.geo;
+    const p = this._tmp.copy(outPoint).applyQuaternion(this.toCamera);
+    const depth = Math.max(1e-3, -p.z);
+    const k = Math.max(3, Math.round(gw / 110));
+    const gx = clamp(Math.round(((this.fx * p.x) / depth + 0.5) * (gw - 1)), k, gw - 1 - k);
+    const gy = clamp(Math.round((0.5 - (this.fy * p.y) / depth) * (gh - 1)), k, gh - 1 - k);
+    const at = (x, y, v) => {
+      const dd = front[y * gw + x];
+      return v.set(((x / (gw - 1) - 0.5) / this.fx) * dd, (-(y / (gh - 1) - 0.5) / this.fy) * dd, -dd);
+    };
+    const a = at(gx + k, gy, TourScene._a).sub(at(gx - k, gy, TourScene._b));
+    const b = at(gx, gy - k, TourScene._b).sub(at(gx, gy + k, TourScene._c));
+    const n = outNormal.copy(a).cross(b);
+    const eye = TourScene._target.copy(origin).applyQuaternion(this.toCamera).sub(p).normalize();
+    if (n.lengthSq() < 1e-12) n.copy(eye);
+    else n.normalize();
+    if (n.dot(eye) < 0) n.negate();
+    // At the rim of furniture the grid spans two surfaces and the measured direction is
+    // meaningless: there, face the visitor instead.
+    if (n.dot(eye) < 0.12) n.copy(eye);
+    n.applyQuaternion(this.toWorld);
+    return outPoint;
+  }
+
+  /**
+   * Widest vertical field of view (radians) for a screen of the given aspect ratio: the view
+   * shows as much of the photograph as fits, with a margin so the visitor can lean without
+   * reaching its edge. Zooming in from here gives room to look around.
+   */
   viewFov(aspect) {
-    let vfov = (aspect >= 1 ? 52 : 72) * DEG;
-    vfov = Math.min(vfov, this.vfov * 0.96);
-    const hfov = 2 * Math.atan(Math.tan(vfov / 2) * aspect);
-    if (hfov > this.hfov * 0.96) vfov = 2 * Math.atan(Math.tan((this.hfov * 0.96) / 2) / aspect);
-    return vfov;
+    const ROOM = 0.88; // share of the photograph's width or height the widest view may span
+    const cap = (aspect >= 1 ? 64 : 76) * DEG;
+    const tanHalf = Math.min(Math.tan(cap / 2), this.tanV * ROOM, (this.tanH * ROOM) / aspect);
+    return 2 * Math.atan(tanHalf);
+  }
+
+  setView(halfH, halfV) {
+    this.viewHalfH = halfH;
+    this.viewHalfV = halfV;
   }
 }
 
 TourScene._probe = new Vector3();
 TourScene._target = new Vector3();
+TourScene._a = new Vector3();
+TourScene._b = new Vector3();
+TourScene._c = new Vector3();

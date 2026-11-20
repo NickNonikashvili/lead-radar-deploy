@@ -11,13 +11,16 @@ coordinates (x right, y down, z forward), same size as the photo:
 
 Output per scene, written next to each other:
 
-    color.webp   the photograph (projective texture of the front layer)
-    bg.webp      inpainted colours for the surfaces hidden behind foreground objects
-    geo.bin      gzip of two depth grids (front layer + hidden layer), see encode_geo()
+    color.webp   the photograph (projected back onto the mesh as its texture)
+    geo.bin      gzip of the depth grid, see encode_geo()
     thumb.webp   small preview for the scene strip
 
-The viewer rebuilds the 3D mesh from the grids, so nothing here depends on
-a mesh format and the level of detail can be chosen per device.
+The viewer rebuilds the 3D mesh from the grid, so nothing here depends on a
+mesh format and the level of detail can be chosen per device. The mesh is one
+continuous surface: on real rooms, cutting it at furniture edges and filling
+the gaps looked torn as soon as the visitor moved, while a surface that simply
+stretches a little reads as a soft edge. tame_depth() prepares the depth for
+that.
 """
 
 from __future__ import annotations
@@ -30,10 +33,10 @@ import cv2
 import numpy as np
 
 GRID_LONG_SIDE = 768        # grid vertices along the longer image side
-EDGE_RTOL = 0.04            # relative depth jump (per ~2 px) that separates two surfaces
-BAND_FRACTION = 0.11        # width of the hidden-layer band behind silhouettes, as a share of the long side
 SKY_CODE = 65535
 MAGIC = b"LHT1"
+GEO_VERSION = 2
+HEADER = "<4sHHffffHH"
 
 
 def grid_size(width: int, height: int, long_side: int = GRID_LONG_SIDE) -> tuple[int, int]:
@@ -50,142 +53,72 @@ def sample_vertices(arr: np.ndarray, gw: int, gh: int) -> np.ndarray:
     return arr[ys[:, None], xs[None, :]]
 
 
-def _jumps(d: np.ndarray, rtol: float):
-    """Depth discontinuities between 4-neighbours.
+THIN_SHARE = 0.10           # "thin" = narrower than this share of the grid's longer side
+THIN_EXCESS = 0.06          # how far (1/m) a thin object may stand in front of what is behind it
+EDGE_GROW = 2               # grid cells by which objects in front are widened
 
-    Returns (link_h, link_v, near, far): link_* is True where two neighbours
-    belong to the same surface; near/far mark the closer and the farther
-    pixel of every jump.
+
+def tame_depth(d: np.ndarray) -> np.ndarray:
+    """Make the depth grid kind to a viewer that moves.
+
+    The viewer shows one continuous surface, so wherever something stands in front of something
+    far away the surface stretches between them as the visitor moves. Two corrections keep that
+    from showing:
+
+      * Thin things in front of a distant background (leaves at the edge of the frame, pendant
+        lamps, taps, chair legs) would smear right across it. They are moved back to just in
+        front of what is behind them. They stay sharp and merely show less depth.
+      * Objects in front are widened by a couple of cells, so the stretching happens in the
+        background next to an object and its own outline stays rigid.
+
+    Edges are deliberately left as steps. Sloping the background up to an object spreads the
+    stretch but bends every straight line that passes behind it, which is worse in a building.
     """
-    a, b = d[:, :-1], d[:, 1:]
-    jump_h = np.abs(a - b) > rtol * np.minimum(a, b)
-    c, e = d[:-1, :], d[1:, :]
-    jump_v = np.abs(c - e) > rtol * np.minimum(c, e)
+    disp = (1.0 / d).astype(np.float32)
+    border = cv2.BORDER_REPLICATE
 
-    near = np.zeros(d.shape, bool)
-    far = np.zeros(d.shape, bool)
-    near[:, :-1] |= jump_h & (a < b)
-    far[:, 1:] |= jump_h & (a < b)
-    near[:, 1:] |= jump_h & (b < a)
-    far[:, :-1] |= jump_h & (b < a)
-    near[:-1, :] |= jump_v & (c < e)
-    far[1:, :] |= jump_v & (c < e)
-    near[1:, :] |= jump_v & (e < c)
-    far[:-1, :] |= jump_v & (e < c)
-    return ~jump_h, ~jump_v, near, far
+    def disc(size: int):
+        return cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (size, size))
+
+    # Opening removes everything nearer than its surroundings that is narrower than the kernel:
+    # what is left is the scene without its thin foreground.
+    k = max(3, int(round(max(d.shape) * THIN_SHARE))) | 1
+    behind = cv2.morphologyEx(disp, cv2.MORPH_OPEN, disc(k), borderType=border)
+    disp = np.minimum(disp, behind + THIN_EXCESS)
+    disp = cv2.dilate(disp, disc(2 * EDGE_GROW + 1), borderType=border)
+    return (1.0 / disp).astype(np.float32)
 
 
-def _geodesic_band(seed: np.ndarray, link_h: np.ndarray, link_v: np.ndarray, steps: int) -> np.ndarray:
-    """Grow `seed` by up to `steps` pixels without ever crossing a depth jump."""
-    region = seed.copy()
-    frontier = seed.copy()
-    for _ in range(steps):
-        grow = np.zeros_like(region)
-        grow[:, 1:] |= frontier[:, :-1] & link_h
-        grow[:, :-1] |= frontier[:, 1:] & link_h
-        grow[1:, :] |= frontier[:-1, :] & link_v
-        grow[:-1, :] |= frontier[1:, :] & link_v
-        frontier = grow & ~region
-        if not frontier.any():
-            break
-        region |= frontier
-    return region
-
-
-def build_layers(image: np.ndarray, depth: np.ndarray, mask: np.ndarray, gw: int, gh: int):
-    """Front-layer and hidden-layer depth grids plus the hidden layer's colours.
-
-    The hidden layer continues the *far* surface behind every silhouette, so
-    that stepping sideways reveals plausible wall/floor/sky instead of a hole.
-    """
+def build_grid(depth: np.ndarray, mask: np.ndarray, gw: int, gh: int, tame: bool = True):
+    """Depth grid for the viewer: metres at every vertex, with the sky marked as such."""
     d = sample_vertices(depth.astype(np.float32), gw, gh).copy()
     valid = sample_vertices(mask, gw, gh) & np.isfinite(d) & (d > 0)
     if not valid.any():
         raise ValueError("depth map has no valid pixels")
 
+    # Clamp the extreme 0.1 % at both ends: single wild pixels would otherwise set the range.
     d_min = float(np.percentile(d[valid], 0.1))
     d_max = float(np.percentile(d[valid], 99.9))
-    d = np.clip(d, d_min, d_max)
-    sky_dist = d_max * 3.0
+    d = np.clip(np.where(valid, d, d_max), d_min, d_max)
+    # The sky is drawn just behind the farthest real surface: far enough to sit behind
+    # everything, near enough that roof lines do not smear across it when the visitor moves.
+    sky_dist = d_max * 1.5
     d_full = np.where(valid, d, sky_dist).astype(np.float32)
-
-    cell_px = max(image.shape[1] / gw, image.shape[0] / gh)
-    rtol = float(np.clip(EDGE_RTOL * max(1.0, cell_px / 2.0), EDGE_RTOL, 0.09))
-
-    link_h, link_v, near, far = _jumps(d_full, rtol)
-
-    band = max(6, round(BAND_FRACTION * max(gw, gh)))
-    region = _geodesic_band(near, link_h, link_v, band)   # where the hidden layer may exist
-    # Openings onto the sky (windows, the edge of a roof) reveal far more when the visitor moves,
-    # and sky is the one thing that can be continued safely: give those edges a wider band.
-    # The band is measured straight across the picture, not along surfaces, so it covers the
-    # frame of the opening and not whatever happens to touch it.
-    sky_band = np.zeros(d_full.shape, bool)
-    if (far & ~valid).any():
-        to_sky = cv2.distanceTransform(valid.astype(np.uint8) * 255, cv2.DIST_L2, 5)
-        sky_band = valid & (to_sky <= band * 1.5)
-        region |= sky_band
-
-    bg_depth = np.zeros_like(d_full)
-    bg_valid = np.zeros(d_full.shape, bool)
-    bg_sky = np.zeros(d_full.shape, bool)
-    bg_color = cv2.resize(image, (gw, gh), interpolation=cv2.INTER_AREA)
-
-    if far.any() and region.any():
-        # Depth: copy the nearest far-side pixel (the surface continues behind the object).
-        src = np.where(far, 0, 255).astype(np.uint8)
-        _, labels = cv2.distanceTransformWithLabels(src, cv2.DIST_L2, 5, labelType=cv2.DIST_LABEL_PIXEL)
-        lut = np.zeros(int(labels.max()) + 1, np.int64)
-        flat_far = np.flatnonzero(far)
-        lut[labels.ravel()[flat_far]] = flat_far
-        nearest = lut[labels]
-        cand = d_full.ravel()[nearest]
-        cand_sky = (~valid).ravel()[nearest]
-        # A light blur removes the streaks of the nearest-pixel copy; sky stays sky.
-        smooth = cv2.GaussianBlur(np.where(cand_sky, 0, cand).astype(np.float32), (0, 0), 2.0)
-        weight = cv2.GaussianBlur((~cand_sky).astype(np.float32), (0, 0), 2.0)
-        cand = np.where(cand_sky, sky_dist, smooth / np.maximum(weight, 1e-6))
-
-        # Keep it only where it really lies behind the front surface.
-        keep = region & (cand > d_full * (1.0 + rtol * 0.5))
-        # Beside an opening onto the sky, whatever is not explained by a nearer surface is sky.
-        sky_fill = sky_band & ~keep
-        cand = np.where(sky_fill, sky_dist, cand)
-        keep = keep | sky_fill
-        bg_depth = np.where(keep, cand, 0).astype(np.float32)
-        bg_valid = keep
-        bg_sky = keep & (cand_sky | sky_fill)
-
-        # Colour: the same far-side pixel that supplied the depth, softened. Depth and colour then
-        # agree, and nothing bleeds in from unrelated parts of the picture.
-        original = bg_color
-        far_colour = cv2.GaussianBlur(original.reshape(-1, 3)[nearest], (0, 0), 3.0)
-        bg_color = np.where(keep[..., None], far_colour, original)
-
-        if bg_sky.any() and (~valid).any():
-            # Sky continues as sky: take each pixel's colour from the nearest piece of real sky,
-            # softened. (Diffusing it with the inpainting above would tint walls and floors.)
-            sky_src = np.where(~valid, 0, 255).astype(np.uint8)
-            _, sky_labels = cv2.distanceTransformWithLabels(sky_src, cv2.DIST_L2, 5, labelType=cv2.DIST_LABEL_PIXEL)
-            sky_lut = np.zeros(int(sky_labels.max()) + 1, np.int64)
-            flat_sky = np.flatnonzero(~valid)
-            sky_lut[sky_labels.ravel()[flat_sky]] = flat_sky
-            nearest_sky = original.reshape(-1, 3)[sky_lut[sky_labels]]
-            nearest_sky = cv2.GaussianBlur(nearest_sky, (0, 0), 5.0)
-            bg_color = np.where(bg_sky[..., None], nearest_sky, bg_color)
+    if tame:
+        d_full = np.clip(tame_depth(d_full), d_min, sky_dist).astype(np.float32)
+    # Sky that an object was widened over belongs to that object now.
+    surface = valid | (d_full < sky_dist * 0.999)
 
     info = {
         "near": d_min * 0.98,
-        "far": d_max * 1.02,
+        "far": sky_dist,
         "skyDistance": sky_dist,
-        "cut": rtol,
-        "depthMin": d_min,
-        "depthMedian": float(np.median(d[valid])),
+        "depthMin": float(d_full[surface].min()),
+        "depthMedian": float(np.median(d_full[valid])),
         "depthMax": d_max,
         "validShare": float(valid.mean()),
-        "hiddenShare": float(bg_valid.mean()),
     }
-    return {"depth": d_full, "valid": valid}, {"depth": bg_depth, "valid": bg_valid, "sky": bg_sky, "color": bg_color}, info
+    return {"depth": d_full, "valid": surface}, info
 
 
 def _encode_codes(depth: np.ndarray, valid: np.ndarray, sky: np.ndarray, near: float, far: float) -> np.ndarray:
@@ -210,47 +143,42 @@ def _predict(codes: np.ndarray) -> bytes:
     return (res & 0xFF).astype(np.uint8).tobytes() + (res >> 8).astype(np.uint8).tobytes()
 
 
-def encode_geo(fg: dict, bg: dict, info: dict) -> bytes:
+def encode_geo(grid: dict, info: dict) -> bytes:
     """Binary container read by client/tour/geo.js.
 
-    gzip( "LHT1" | u16 gw | u16 gh | f32 near | f32 far | f32 skyDistance | f32 cut | u16 version | u16 flags
-          | front codes (predicted) | hidden codes (predicted) )
+    gzip( "LHT1" | u16 gw | u16 gh | f32 near | f32 far | f32 skyDistance | f32 reserved | u16 version | u16 flags
+          | depth codes (predicted; low bytes, then high bytes) )
     """
-    gh, gw = fg["depth"].shape
+    gh, gw = grid["depth"].shape
     near, far = info["near"], info["far"]
-    fg_codes = _encode_codes(fg["depth"], np.ones_like(fg["valid"]), ~fg["valid"], near, far)
-    bg_codes = _encode_codes(bg["depth"], bg["valid"], bg["sky"], near, far)
-    header = struct.pack("<4sHHffffHH", MAGIC, gw, gh, near, far, info["skyDistance"], info["cut"], 1, 1)
-    return gzip.compress(header + _predict(fg_codes) + _predict(bg_codes), compresslevel=9, mtime=0)
+    codes = _encode_codes(grid["depth"], np.ones_like(grid["valid"]), ~grid["valid"], near, far)
+    header = struct.pack(HEADER, MAGIC, gw, gh, near, far, info["skyDistance"], 0.0, GEO_VERSION, 0)
+    return gzip.compress(header + _predict(codes), compresslevel=9, mtime=0)
 
 
 def decode_geo(blob: bytes):
     """Inverse of encode_geo (used by the self-test)."""
     raw = gzip.decompress(blob)
-    magic, gw, gh, near, far, sky, cut, version, flags = struct.unpack_from("<4sHHffffHH", raw, 0)
-    assert magic == MAGIC and version == 1
-    off = struct.calcsize("<4sHHffffHH")
+    magic, gw, gh, near, far, sky, _reserved, version, _flags = struct.unpack_from(HEADER, raw, 0)
+    assert magic == MAGIC and version == GEO_VERSION
+    off = struct.calcsize(HEADER)
     n = gw * gh
-    layers = []
-    for _ in range(2):
-        lo = np.frombuffer(raw, np.uint8, n, off).astype(np.int64)
-        hi = np.frombuffer(raw, np.uint8, n, off + n).astype(np.int64)
-        off += 2 * n
-        res = (lo | (hi << 8)).reshape(gh, gw)
-        out = np.zeros((gh, gw), np.int64)
-        for y in range(gh):
-            up = out[y - 1] if y else np.zeros(gw, np.int64)
-            left = 0
-            upleft = 0
-            row = out[y]
-            r = res[y]
-            for x in range(gw):
-                v = (r[x] + left + up[x] - upleft) & 0xFFFF
-                row[x] = v
-                left = v
-                upleft = up[x]
-        layers.append(out.astype(np.uint16))
-    return {"gw": gw, "gh": gh, "near": near, "far": far, "skyDistance": sky, "cut": cut, "front": layers[0], "hidden": layers[1]}
+    lo = np.frombuffer(raw, np.uint8, n, off).astype(np.int64)
+    hi = np.frombuffer(raw, np.uint8, n, off + n).astype(np.int64)
+    res = (lo | (hi << 8)).reshape(gh, gw)
+    out = np.zeros((gh, gw), np.int64)
+    for y in range(gh):
+        up = out[y - 1] if y else np.zeros(gw, np.int64)
+        left = 0
+        upleft = 0
+        row = out[y]
+        r = res[y]
+        for x in range(gw):
+            v = (r[x] + left + up[x] - upleft) & 0xFFFF
+            row[x] = v
+            left = v
+            upleft = up[x]
+    return {"gw": gw, "gh": gh, "near": near, "far": far, "skyDistance": sky, "front": out.astype(np.uint16)}
 
 
 def estimate_up(points: np.ndarray | None, normal: np.ndarray | None, mask: np.ndarray):
@@ -270,11 +198,12 @@ def estimate_up(points: np.ndarray | None, normal: np.ndarray | None, mask: np.n
     if len(n) < 500:
         return cam_up, None
     length = np.linalg.norm(n, axis=1)
-    ok = length > 0.5
+    ok = (length > 0.5) & np.isfinite(p).all(axis=1) & np.isfinite(n).all(axis=1)
     n, p = n[ok] / length[ok, None], p[ok]
 
     def refine(sign: float):
         up = cam_up.copy()
+        sel = None
         for limit in (30.0, 15.0, 8.0):
             sel = (n @ up) * sign > math.cos(math.radians(limit))
             if sel.sum() < 0.004 * len(n):
@@ -314,21 +243,22 @@ def pack_scene(out_dir, image, depth, mask, normal, fx, fy, points=None):
     out_dir.mkdir(parents=True, exist_ok=True)
     h, w = image.shape[:2]
     gw, gh = grid_size(w, h)
-    fg, bg, info = build_layers(image, depth, mask, gw, gh)
+    grid, info = build_grid(depth, mask, gw, gh)
 
+    finite = mask & np.isfinite(depth)
     if points is None:
         # Rebuild camera-space points from depth and intrinsics for the floor estimate.
+        safe = np.where(finite, depth, 0).astype(np.float32)
         u = (np.arange(w, dtype=np.float32) + 0.5) / w
         v = (np.arange(h, dtype=np.float32) + 0.5) / h
-        x = (u[None, :] - 0.5) / fx * depth
-        y = (v[:, None] - 0.5) / fy * depth
-        points = np.stack([x, y, depth], axis=-1)
-    up, eye = estimate_up(points, normal, mask & np.isfinite(depth))
+        points = np.stack([(u[None, :] - 0.5) / fx * safe, (v[:, None] - 0.5) / fy * safe, safe], axis=-1)
+    up, eye = estimate_up(points, normal, finite)
 
-    blob = encode_geo(fg, bg, info)
+    blob = encode_geo(grid, info)
     (out_dir / "geo.bin").write_bytes(blob)
-    tw, th = write_webp(out_dir / "color.webp", image, max_side=2048, quality=90)
-    write_webp(out_dir / "bg.webp", bg["color"], quality=82)
+    for stale in ("bg.webp",):   # written by earlier versions of this tool
+        (out_dir / stale).unlink(missing_ok=True)
+    tw, th = write_webp(out_dir / "color.webp", image, max_side=2048, quality=92)
     write_webp(out_dir / "thumb.webp", image, max_side=360, quality=78)
 
     return {
@@ -341,6 +271,6 @@ def pack_scene(out_dir, image, depth, mask, normal, fx, fy, points=None):
         "eyeHeight": None if eye is None else round(eye, 3),
         "depth": {k: round(float(info[k]), 4) for k in ("depthMin", "depthMedian", "depthMax")},
         "bytes": {"geo": len(blob)},
-        "stats": {"valid": round(info["validShare"], 4), "hidden": round(info["hiddenShare"], 4), "cut": round(info["cut"], 4)},
+        "stats": {"valid": round(info["validShare"], 4)},
         "texture": [tw, th],
     }

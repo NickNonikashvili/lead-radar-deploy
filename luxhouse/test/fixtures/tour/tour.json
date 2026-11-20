@@ -24,16 +24,14 @@
    "eyeHeight": 1.45,
    "depth": {
     "depthMin": 1.9136,
-    "depthMedian": 3.1031,
+    "depthMedian": 3.0679,
     "depthMax": 5.287
    },
    "bytes": {
-    "geo": 44894
+    "geo": 12329
    },
    "stats": {
-    "valid": 0.9704,
-    "hidden": 0.4019,
-    "cut": 0.04
+    "valid": 0.9704
    },
    "texture": [
     1500,
@@ -60,17 +58,15 @@
    ],
    "eyeHeight": 1.45,
    "depth": {
-    "depthMin": 1.8729,
-    "depthMedian": 3.1018,
+    "depthMin": 1.8796,
+    "depthMedian": 3.0715,
     "depthMax": 5.3035
    },
    "bytes": {
-    "geo": 45928
+    "geo": 12486
    },
    "stats": {
-    "valid": 0.9703,
-    "hidden": 0.4016,
-    "cut": 0.04
+    "valid": 0.9703
    },
    "texture": [
     1500,

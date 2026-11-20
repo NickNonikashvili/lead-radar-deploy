@@ -59,7 +59,8 @@ class MoGeProvider:
         image = load_photo(photo)
         tensor = torch.from_numpy(image).permute(2, 0, 1).float() / 255.0
         with torch.inference_mode():
-            out = self.model.infer(tensor, resolution_level=9)
+            # Full precision: half-precision convolutions are not available on CPU.
+            out = self.model.infer(tensor, resolution_level=9, use_fp16=self.torch.cuda.is_available() and next(self.model.parameters()).is_cuda)
         depth = out["depth"].cpu().numpy().astype(np.float32)
         mask = out["mask"].cpu().numpy().astype(bool)
         k = out["intrinsics"].cpu().numpy()

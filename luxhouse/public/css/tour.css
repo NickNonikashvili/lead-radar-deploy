@@ -29,6 +29,8 @@ a { color: inherit; }
 .tour-canvas:active { cursor: grabbing; }
 .tour-canvas:focus-visible { outline: none; box-shadow: inset 0 0 0 2px rgba(207, 174, 126, 0.6); }
 
+.tour-veil { position: absolute; inset: 0; width: 100%; height: 100%; display: block; pointer-events: none; transform-origin: 50% 50%; will-change: transform, opacity; }
+.tour-veil[hidden] { display: none; }
 .tour-fade { position: absolute; inset: 0; background: var(--ink); opacity: 0; pointer-events: none; transition: opacity 260ms ease; }
 .tour-fade.is-on { opacity: 1; }
 
