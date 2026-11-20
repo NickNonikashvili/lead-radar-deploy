@@ -112,7 +112,8 @@ function st_contact_clean(string $key, string $raw, ?string &$why): ?string
         $why = t('Please start with the country code (995 for Georgia) instead of 0.');
         return null;
       }
-      return '+' . $digits;
+      // Kept as typed (spaces help people read it); the website's link uses the digits only.
+      return '+' . ltrim(trim($s), '+');
 
     case 'telegram':
       $s = (string) preg_replace('~^(?:https?://)?(?:www\.)?(?:t\.me|telegram\.me)/~i', '', $v);
@@ -196,14 +197,6 @@ function st_would_remove(int $months, int $spamDays): array
       AND NOT EXISTS (SELECT 1 FROM bookings b WHERE b.request_id = requests.id)", [gmdate('Y-m-d H:i:s', time() - $spamDays * 86400)]);
   }
   return $out;
-}
-
-/** A file size for people: "1.4 MB". */
-function st_size(int $bytes): string
-{
-  if ($bytes < 1024) return t('{n} bytes', ['n' => $bytes]);
-  if ($bytes < 1048576) return t('{n} KB', ['n' => number_format($bytes / 1024, 0)]);
-  return t('{n} MB', ['n' => number_format($bytes / 1048576, 1)]);
 }
 
 /**
@@ -501,6 +494,11 @@ $live = mg_live_json_info();
 $dbFile = mfs_data_dir() . '/mfs.sqlite';
 $dbSize = (int) @filesize($dbFile) + (int) @filesize($dbFile . '-wal');
 $lastBackup = db_row("SELECT at, user_id FROM audit_log WHERE action = 'settings.backup' ORDER BY id DESC LIMIT 1");
+$csvCounts = [
+  'requests' => (int) db_value("SELECT COUNT(*) FROM requests WHERE status <> 'spam'"),
+  'bookings' => (int) db_value('SELECT COUNT(*) FROM bookings'),
+  'payments' => (int) db_value('SELECT COUNT(*) FROM payments'),
+];
 // "Other languages" starts open when any of them has text (saved, or just typed into a form that needs fixing).
 $noticeOther = false;
 foreach ($langs as $code => $name) {
@@ -522,7 +520,8 @@ ob_start(); ?>
     <p class="st-nav__title"><?= h(t('On this page')) ?></p>
     <ul class="st-nav__list">
       <?php foreach ($sections as $id => $label) { ?><li><a class="st-nav__link" href="#<?= h($id) ?>"><?= h($label) ?></a></li><?php } ?>
-      <li><a class="st-nav__link" href="<?= h(url('activity')) ?>"><?= icon('history') ?><?= h(t('Activity log')) ?></a></li>
+      <li class="st-nav__sep"><a class="st-nav__link" href="<?= h(url('activity')) ?>"><?= icon('history') ?><?= h(t('Activity log')) ?></a></li>
+      <li><a class="st-nav__link" href="<?= h(url('export')) ?>"><?= icon('download') ?><?= h(t('Export')) ?></a></li>
     </ul>
   </nav>
 
@@ -560,10 +559,10 @@ ob_start(); ?>
                     <?php if ($hiddenNow) { ?><span class="pill pill--muted pill--plain st-state"><?= h(t('Hidden')) ?></span>
                     <?php } elseif ($ownNow) { ?><span class="pill pill--gold pill--plain st-state"><?= h(t('Changed')) ?></span><?php } ?>
                   </div>
-                  <input class="input" type="<?= $type ?>" id="<?= h($fid) ?>" name="c[<?= h($k) ?>]" value="<?= h($value) ?>" placeholder="<?= h($placeholder) ?>"
+                  <input class="input" type="<?= $type ?>" id="<?= h($fid) ?>" name="c[<?= h($k) ?>]" value="<?= h($value) ?>" placeholder="<?= h($hideChecked ? t('Not shown on the website') : $placeholder) ?>"
                     autocomplete="off" spellcheck="false"<?= $type === 'email' ? ' inputmode="email" autocapitalize="none"' : '' ?><?= in_array($k, ['signal', 'instagram', 'facebook', 'telegram'], true) ? ' autocapitalize="none"' : '' ?>
                     maxlength="<?= (int) (ST_CONTACT_MAX[$k] ?? 300) ?>" data-builtin="<?= h($built) ?>"<?= $hideChecked ? ' disabled' : '' ?>
-                    aria-describedby="help-<?= h($fid) ?>"<?= mg_inv($errors, $key) ?>>
+                    data-placeholder="<?= h($placeholder) ?>" data-hidden-placeholder="<?= h(t('Not shown on the website')) ?>"<?= mg_inv($errors, $key, 'help-' . $fid) ?>>
                   <p class="field__help" id="help-<?= h($fid) ?>">
                     <?= h(st_contact_hint($k)) ?>
                     <span class="st-built"><?= h($built !== ''
@@ -619,7 +618,7 @@ ob_start(); ?>
         <div class="field<?= mg_cls($errors, 'recipients') ?>">
           <label class="field__label" for="recipients"><?= h(t('Send the website’s forms to')) ?></label>
           <input class="input" type="text" id="recipients" name="recipients" value="<?= h($recipients) ?>" placeholder="<?= h($builtRecipients !== '' ? $builtRecipients : t('e.g. {example}', ['example' => 'hello@example.ge'])) ?>"
-            autocomplete="off" inputmode="email" autocapitalize="none" spellcheck="false" maxlength="1000" aria-describedby="recipients-help"<?= mg_inv($errors, 'recipients') ?>>
+            autocomplete="off" inputmode="email" autocapitalize="none" spellcheck="false" maxlength="1000"<?= mg_inv($errors, 'recipients', 'recipients-help') ?>>
           <p class="field__help" id="recipients-help"><?= h($builtRecipients !== ''
             ? t('Several addresses: separate them with commas. Empty = the built-in address, {email}.', ['email' => $builtRecipients])
             : t('Several addresses: separate them with commas.')) ?></p>
@@ -663,7 +662,7 @@ ob_start(); ?>
         <div class="field<?= mg_cls($errors, $enKey) ?>">
           <label class="field__label" for="notice-en"><?= h(t('Notice in English')) ?> <span class="field__opt"><?= h(t('needed when the notice is on')) ?></span></label>
           <input class="input" type="text" id="notice-en" name="notice[en]" lang="en" value="<?= h($sent(['notice', 'notice', 'en'], (string) ($noticeText['en'] ?? ''))) ?>"
-            placeholder="<?= h(t('e.g. {example}', ['example' => 'We’re on holiday 1–10 January; replies may be a little slower.'])) ?>" maxlength="<?= ST_NOTICE_MAX + 40 ?>" data-notice-text="en" aria-describedby="notice-en-help"<?= mg_inv($errors, $enKey) ?>>
+            placeholder="<?= h(t('e.g. {example}', ['example' => 'We’re on holiday 1–10 January; replies may be a little slower.'])) ?>" maxlength="<?= ST_NOTICE_MAX + 40 ?>" data-maxchars="<?= ST_NOTICE_MAX ?>" data-notice-text="en"<?= mg_inv($errors, $enKey, 'notice-en-help') ?>>
           <p class="field__help" id="notice-en-help"><?= h(t('One or two short sentences, at most {n} characters.', ['n' => ST_NOTICE_MAX])) ?></p>
           <?= mg_err($errors, $enKey) ?>
         </div>
@@ -674,7 +673,7 @@ ob_start(); ?>
               <?php foreach ($langs as $code => $name) { if ($code === 'en') continue; $key = 'notice.' . $code; ?>
                 <div class="field<?= mg_cls($errors, $key) ?>">
                   <label class="field__label" for="notice-<?= h($code) ?>"><span lang="<?= h($code) ?>"><?= h($name) ?></span></label>
-                  <input class="input" type="text" id="notice-<?= h($code) ?>" name="notice[<?= h($code) ?>]" lang="<?= h($code) ?>" maxlength="<?= ST_NOTICE_MAX + 40 ?>"
+                  <input class="input" type="text" id="notice-<?= h($code) ?>" name="notice[<?= h($code) ?>]" lang="<?= h($code) ?>" maxlength="<?= ST_NOTICE_MAX + 40 ?>" data-maxchars="<?= ST_NOTICE_MAX ?>"
                     value="<?= h($sent(['notice', 'notice', $code], (string) ($noticeText[$code] ?? ''))) ?>"<?= mg_inv($errors, $key) ?>>
                   <?= mg_err($errors, $key) ?>
                 </div>
@@ -720,7 +719,7 @@ ob_start(); ?>
           <div class="field<?= mg_cls($errors, 'retention_months') ?>">
             <label class="field__label" for="retention_months"><?= h(t('Keep requests without a booking for')) ?></label>
             <div class="input-group st-num">
-              <input class="input" type="number" id="retention_months" name="retention_months" value="<?= h($months) ?>" min="0" max="<?= ST_RETENTION_MONTHS[1] ?>" step="1" inputmode="numeric" aria-describedby="rm-help"<?= mg_inv($errors, 'retention_months') ?>>
+              <input class="input" type="number" id="retention_months" name="retention_months" value="<?= h($months) ?>" min="0" max="<?= ST_RETENTION_MONTHS[1] ?>" step="1" inputmode="numeric"<?= mg_inv($errors, 'retention_months', 'rm-help') ?>>
               <span class="input-group__addon"><?= h(t('months')) ?></span>
             </div>
             <p class="field__help" id="rm-help"><?= h(t('Counted from the last change. Requests that became a booking are always kept. 0 = keep for ever.')) ?></p>
@@ -729,7 +728,7 @@ ob_start(); ?>
           <div class="field<?= mg_cls($errors, 'spam_days') ?>">
             <label class="field__label" for="spam_days"><?= h(t('Keep spam for')) ?></label>
             <div class="input-group st-num">
-              <input class="input" type="number" id="spam_days" name="spam_days" value="<?= h($spamDays) ?>" min="0" max="<?= ST_SPAM_DAYS[1] ?>" step="1" inputmode="numeric" aria-describedby="sd-help"<?= mg_inv($errors, 'spam_days') ?>>
+              <input class="input" type="number" id="spam_days" name="spam_days" value="<?= h($spamDays) ?>" min="0" max="<?= ST_SPAM_DAYS[1] ?>" step="1" inputmode="numeric"<?= mg_inv($errors, 'spam_days', 'sd-help') ?>>
               <span class="input-group__addon"><?= h(t('days')) ?></span>
             </div>
             <p class="field__help" id="sd-help"><?= h(t('Messages marked as spam are deleted after this. 0 = keep for ever.')) ?></p>
@@ -752,7 +751,7 @@ ob_start(); ?>
       <div class="danger-zone__row">
         <div class="st-dz__text">
           <p class="strong"><?= h(t('Database backup')) ?></p>
-          <p class="small muted"><?= h(t('Everything in the team area — requests, bookings, payments, notes, the team and settings — in one file ({size}).', ['size' => st_size($dbSize)])) ?>
+          <p class="small muted"><?= h(t('Everything in the team area — requests, bookings, payments, notes, the team and settings — in one file ({size}).', ['size' => mg_size($dbSize)])) ?>
             <?= $lastBackup ? h(t('Last downloaded {when} by {who}.', ['when' => fmt_ago($lastBackup['at']), 'who' => mg_user_name($lastBackup['user_id']) ?: t('a former team member')])) : h(t('Not downloaded yet.')) ?></p>
         </div>
         <form method="post" action="<?= h(url('settings')) ?>" class="st-dz__action">
@@ -760,16 +759,19 @@ ob_start(); ?>
           <button type="submit" class="btn btn--secondary btn--sm"><?= icon('download') ?><?= h(t('Download backup')) ?></button>
         </form>
       </div>
-      <?php foreach ([
-        'requests' => [t('Requests'), t('Everything sent from the website’s forms, as a spreadsheet (CSV).')],
-        'bookings' => [t('Bookings'), t('Every booking with client, tour, dates, price and what’s been paid (CSV).')],
-        'payments' => [t('Payments'), t('Every payment received, with its booking and client (CSV).')],
-      ] as $type => $info) { ?>
-        <div class="danger-zone__row">
-          <div class="st-dz__text"><p class="strong"><?= h($info[0]) ?></p><p class="small muted"><?= h($info[1]) ?></p></div>
-          <a class="btn btn--secondary btn--sm st-dz__action" href="<?= h(url('export', ['type' => $type])) ?>"><?= icon('download') ?><?= h(t('Download CSV')) ?></a>
+      <div class="danger-zone__row">
+        <div class="st-dz__text">
+          <p class="strong"><?= h(t('Spreadsheets (CSV)')) ?></p>
+          <p class="small muted"><?= h(t('Requests, bookings and payments as files for Excel, Numbers or Google Sheets.')) ?></p>
+          <p class="st-dz__quick small">
+            <?php foreach (['requests' => [t('Requests'), $csvCounts['requests']], 'bookings' => [t('Bookings'), $csvCounts['bookings']], 'payments' => [t('Payments'), $csvCounts['payments']]] as $type => $info) { ?>
+              <?php if ($info[1] > 0) { ?><a href="<?= h(url('export', ['type' => $type])) ?>"><?= icon('download') ?><?= h($info[0]) ?> <span class="muted">(<?= h(number_format($info[1])) ?>)</span></a>
+              <?php } else { ?><span class="muted"><?= h($info[0]) ?> (0)</span><?php } ?>
+            <?php } ?>
+          </p>
         </div>
-      <?php } ?>
+        <a class="btn btn--secondary btn--sm st-dz__action" href="<?= h(url('export')) ?>"><?= icon('download') ?><?= h(t('Open the export page')) ?></a>
+      </div>
     </div>
 
     <div class="card card--muted st-maint">
@@ -802,5 +804,7 @@ render(t('Settings'), ob_get_clean(), [
   'css' => ['manage.css'],
   'js' => ['manage.js'],
   'lead' => t('Contact details, form emails, the website notice, statistics and backups.'),
-  'actions' => '<a class="btn btn--secondary" href="' . h(url('activity')) . '">' . icon('history') . h(t('Activity log')) . '</a>',
+  'actions' => '<a class="btn btn--secondary" href="' . h(url('activity')) . '">' . icon('history') . h(t('Activity log')) . '</a>'
+    . '<a class="btn btn--secondary" href="' . h(url('export')) . '">' . icon('download') . h(t('Export')) . '</a>',
+  'status' => $errors ? 422 : 200,
 ]);

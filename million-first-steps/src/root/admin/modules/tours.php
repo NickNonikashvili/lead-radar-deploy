@@ -282,7 +282,7 @@ echo mg_error_summary($errors);
       <span data-clean-text><?= icon('check') ?><?= h(t('Changes appear on the website within a minute.')) ?></span>
       <span data-dirty-text hidden><?= icon('alert') ?><?= h(t('You have unsaved changes.')) ?></span>
     </p>
-    <button type="submit" class="btn btn--primary"><?= icon('check') ?><?= h(t('Save prices and tours')) ?></button>
+    <button type="submit" class="btn btn--primary"><?= icon('check') ?><span class="tp-save-long"><?= h(t('Save prices and tours')) ?></span><span class="tp-save-short" aria-hidden="true"><?= h(t('Save')) ?></span></button>
   </div>
 </form>
 

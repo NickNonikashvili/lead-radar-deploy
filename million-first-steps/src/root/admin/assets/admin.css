@@ -118,8 +118,9 @@ a { color: var(--wine); text-decoration-thickness: 1px; text-underline-offset: 3
 a:hover { color: var(--wine-2); }
 h1, h2, h3, h4 { margin: 0; font-family: var(--font-serif); font-weight: 500; line-height: 1.2; color: var(--ink); letter-spacing: -.005em; }
 html[lang="ka"] h1, html[lang="ka"] h2, html[lang="ka"] h3 { letter-spacing: 0; }
-/* Capitals would turn Georgian into Mtavruli: Georgian labels stay as written. */
-html[lang="ka"] :not(.input--key) { text-transform: none !important; }
+/* Capitals would turn Georgian into Mtavruli, and the wide letter-spacing of small capital labels looks
+   spaced out in Georgian: Georgian labels stay as written. */
+html[lang="ka"] :not(.input--key) { text-transform: none !important; letter-spacing: normal !important; }
 p { margin: 0; }
 ul, ol { margin: 0; padding: 0; }
 button, input, select, textarea { font: inherit; color: inherit; }
@@ -692,6 +693,7 @@ a.cal__bar:hover { filter: brightness(.97); text-decoration: underline; }
   .page-head__actions .btn { flex: 1 1 auto; }
   .grid--2, .grid--3, .grid--4, .form-row, .form-row--3 { grid-template-columns: minmax(0, 1fr); }
   .card { padding: 18px 16px; border-radius: var(--radius); }
+  .card--flush { padding: 0; }
   .card__head { padding: 16px 16px 0; }
   .card__head:last-child { padding-bottom: 16px; }
   .card__body { padding: 14px 16px 18px; }

@@ -11,6 +11,7 @@
  *   mg_parse_euros($raw, &$why)            whole-euro price typed by a person → int | null (empty) | false
  *   mg_parse_factor($raw, &$why)           party-size factor ("0.93", "0,93") → float | null | false
  *   mg_num($f)                             a factor for people: 0.9 → "0.9", 1.0 → "1"
+ *   mg_size($bytes)                        a file size for people: "1.4 MB"
  *   mg_publish()                           write_live_json(); on failure flashes a calm explanation
  *   mg_live_json_info()                    ['exists' => bool, 'updated' => UTC time|'', 'path' => …]
  *   mg_suggest_password()                  a readable random temporary password (14 characters)
@@ -142,6 +143,14 @@ function mg_parse_factor(string $raw, ?string &$why = null, float $min = 0.3, fl
 function mg_num(float $f): string
 {
   return rtrim(rtrim(number_format($f, 2, '.', ''), '0'), '.');
+}
+
+/** A file size for people: "830 bytes", "84 KB", "1.4 MB". */
+function mg_size(int $bytes): string
+{
+  if ($bytes < 1024) return t('{n} bytes', ['n' => $bytes]);
+  if ($bytes < 1048576) return t('{n} KB', ['n' => number_format($bytes / 1024, 0)]);
+  return t('{n} MB', ['n' => number_format($bytes / 1048576, 1)]);
 }
 
 /** Rewrites api/live.json. When that fails, says so in a calm flash message. */
@@ -280,13 +289,15 @@ function mg_action_details(string $action, string $details): string
   $d = trim($details);
   if ($d === '') return '';
   if ($action === 'request.status' || $action === 'request.update') {
-    $d = (string) preg_replace_callback('/\b(new|contacted|quoted|booked|lost|spam)\b/', function ($m) {
-      return t(REQUEST_STATUSES[$m[1]]);
-    }, $d);
+    $d = mg_arrow_labels($d, REQUEST_STATUSES);
+    if ($action === 'request.update') {
+      $d = (string) preg_replace_callback('/\bassigned user:(\d+)/', function ($m) {
+        $n = mg_user_name($m[1]);
+        return t('assigned to {name}', ['name' => $n !== '' ? $n : t('a former team member')]);
+      }, $d);
+    }
   } elseif ($action === 'booking.status') {
-    $d = (string) preg_replace_callback('/\b(quote|confirmed|completed|cancelled)\b/', function ($m) {
-      return t(BOOKING_STATUSES[$m[1]]);
-    }, $d);
+    $d = mg_arrow_labels($d, BOOKING_STATUSES);
   } elseif ($action === 'tours.prices') {
     $tiers = tiers();
     $d = (string) preg_replace_callback('~([a-z0-9-]+)/([a-z0-9-]+): (\d+) → (\d+)( \(built-in\))?~', function ($m) use ($tiers) {
@@ -309,12 +320,34 @@ function mg_action_details(string $action, string $details): string
       return isset(CONTACT_FIELDS[$m[1]]) ? t(CONTACT_FIELDS[$m[1]]) . ': ' : $m[0];
     }, $d);
     $d = strtr($d, ['(built-in)' => '(' . t('built-in') . ')', '(hidden)' => '(' . t('hidden') . ')']);
-  } elseif ($action === 'user.role' || $action === 'user.create') {
-    $d = (string) preg_replace_callback('/\b(owner|staff)\b/', function ($m) {
-      return t(USER_ROLES[$m[1]]);
+  } elseif ($action === 'settings.backup') {
+    $d = (string) preg_replace_callback('/\((\d+) bytes\)/', function ($m) {
+      return '(' . mg_size((int) $m[1]) . ')';
+    }, $d);
+    $d = strtr($d, ['Database backup downloaded' => t('Database backup downloaded')]);
+  } elseif ($action === 'user.role') {
+    $d = mg_arrow_labels($d, USER_ROLES);
+  } elseif ($action === 'user.create' || $action === 'user.delete') {
+    // "Name <email> as staff; …" / "Name <email> (owner)": only the role word, never inside an address.
+    $d = (string) preg_replace_callback('/(?<=> as )(owner|staff)\b|(?<=\()(owner|staff)(?=\)$)/', function ($m) {
+      $k = $m[1] !== '' ? $m[1] : $m[2];
+      return t(USER_ROLES[$k]);
     }, $d);
   }
   return $d;
+}
+
+/** Status/role keys written around arrows ("new → contacted", "→ lost: …") as their translated labels. */
+function mg_arrow_labels(string $d, array $labels): string
+{
+  $keys = implode('|', array_map(function ($k) { return preg_quote((string) $k, '/'); }, array_keys($labels)));
+  $label = function ($k) use ($labels) { return t($labels[$k]); };
+  $d = (string) preg_replace_callback('/\b(' . $keys . ')( → )(' . $keys . ')\b/', function ($m) use ($label) {
+    return $label($m[1]) . $m[2] . $label($m[3]);
+  }, $d);
+  return (string) preg_replace_callback('/(^|[^\p{L}])(→ )(' . $keys . ')\b/u', function ($m) use ($label) {
+    return $m[1] . $m[2] . $label($m[3]);
+  }, $d);
 }
 
 /** Who did it: their name, or what kind of entry it is when no one was signed in. */

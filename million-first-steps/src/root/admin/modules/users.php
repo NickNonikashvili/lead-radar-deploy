@@ -91,6 +91,7 @@ if (is_post()) {
       }
     }
   } elseif ($target && $form === 'update') {
+    if ((int) $target['id'] === $meId) redirect(url('account'));
     $name = team_name(post('name'));
     $email = valid_email(post('email'));
     $role = post('role', (string) $target['role']);
@@ -136,7 +137,7 @@ if (is_post()) {
   } elseif ($target && $form === 'password') {
     if ((int) $target['id'] === $meId) redirect(url('account'));
     $pw = post_password('new');
-    $pp = password_problem($pw, post_password('new2'));
+    $pp = password_problem($pw);
     if ($pp !== '') $errors['new'] = $pp;
     if (!$errors) {
       db_exec('UPDATE users SET password_hash = ? WHERE id = ?', [mfs_hash_password($pw), $id]);
@@ -216,8 +217,26 @@ if ($target) {
   $val = function ($k, $fallback) use ($failed) { return $failed ? post($k) : (string) $fallback; };
   $open = (int) db_value("SELECT COUNT(*) FROM requests WHERE assigned_to = ? AND status IN ('new','contacted','quoted')", [(int) $u['id']]);
   $bookingsMade = (int) db_value('SELECT COUNT(*) FROM bookings WHERE created_by = ?', [(int) $u['id']]);
-  $recent = db_all('SELECT action, target, details, at FROM audit_log WHERE user_id = ? ORDER BY id DESC LIMIT 6', [(int) $u['id']]);
-  $suggest = mg_suggest_password();
+  $recent = db_all('SELECT action, target, details, at FROM audit_log WHERE user_id = ? ORDER BY at DESC, id DESC LIMIT 6', [(int) $u['id']]);
+  $pwFailed = $errors && $form === 'password';
+  $suggest = $pwFailed ? post_password('new') : mg_suggest_password();
+
+  ob_start(); ?>
+      <section class="card">
+        <div class="card__head"><div><h2 class="card__title"><?= h(t('Recent activity')) ?></h2></div>
+          <div class="card__actions"><a class="btn btn--sm btn--ghost" href="<?= h(url('activity', ['who' => $u['id']])) ?>"><?= h(t('See all')) ?></a></div></div>
+        <?php if ($recent) { ?>
+          <ul class="list tm-recent">
+            <?php foreach ($recent as $a) { ?>
+              <li class="list__item tm-recent__item"><span class="list__main"><span class="tm-recent__title"><?= h(mg_action_title((string) $a['action'], (string) $a['target'], (string) $a['details'])) ?></span><span class="tm-recent__meta"><?= h(fmt_ago($a['at'])) ?><?php $dd = mg_action_details((string) $a['action'], (string) $a['details']); echo $dd !== '' ? ' · ' . h(excerpt($dd, 90)) : ''; ?></span></span></li>
+            <?php } ?>
+          </ul>
+        <?php } else { ?>
+          <div class="card__body"><p class="muted small"><?= h(t('Nothing yet.')) ?></p></div>
+        <?php } ?>
+      </section>
+  <?php
+  $recentCard = ob_get_clean();
 
   ob_start(); ?>
   <div class="tm-member-head">
@@ -235,7 +254,10 @@ if ($target) {
   <?php if ($self) { ?>
     <div class="callout callout--info">
       <?= icon('user') ?>
-      <p><?= h(t('This is you. Your own name, email, language and password are changed under My account.')) ?> <a href="<?= h(url('account')) ?>"><?= h(t('Open My account')) ?></a></p>
+      <div>
+        <p><?= h(t('This is you. Your own name, email, language and password are changed under My account.')) ?> <a href="<?= h(url('account')) ?>"><?= h(t('Open My account')) ?></a></p>
+        <p><?= h(t('Nobody can change their own role or switch off their own access — another owner can do that for you.')) ?></p>
+      </div>
     </div>
   <?php } ?>
 
@@ -287,29 +309,24 @@ if ($target) {
       <form method="post" action="<?= h(url('users', ['id' => $u['id']])) ?>" class="card form" data-once novalidate>
         <div class="card__head"><div><h2 class="card__title"><?= h(t('Set a new password')) ?></h2><p class="card__sub"><?= h(t('For when they’ve forgotten theirs. They’re signed out on every device and need the new password next time.')) ?></p></div></div>
         <div class="card__body">
-          <?= $errors && $form === 'password' ? mg_error_summary($errors) : '' ?>
+          <?= $pwFailed ? mg_error_summary($errors) : '' ?>
           <?= csrf_field() ?><input type="hidden" name="action" value="password">
-          <input type="text" name="username" value="<?= h($u['email']) ?>" autocomplete="off" hidden>
-          <div class="form-row">
-            <div class="field<?= mg_cls($errors, 'new') ?>">
-              <label class="field__label" for="new"><?= h(t('New password')) ?></label>
-              <div class="input-group">
-                <input class="input mono" type="text" id="new" name="new" value="<?= h($errors && $form === 'password' ? '' : $suggest) ?>" autocomplete="new-password" minlength="<?= MFS_PASSWORD_MIN ?>" spellcheck="false" autocapitalize="none" required data-copy-source<?= mg_inv($errors, 'new') ?>>
-                <button type="button" class="input-group__btn" data-copy="<?= h($suggest) ?>" data-copy-from="#new" data-copied="<?= h(t('Copied')) ?>" aria-label="<?= h(t('Copy the password')) ?>"><?= icon('copy') ?></button>
-              </div>
-              <?= mg_err($errors, 'new') ?>
+          <input type="text" name="username" value="<?= h($u['email']) ?>" autocomplete="username" hidden>
+          <div class="field<?= mg_cls($errors, 'new') ?>">
+            <label class="field__label" for="new"><?= h(t('New password')) ?></label>
+            <div class="input-group tm-pw">
+              <input class="input mono" type="text" id="new" name="new" value="<?= h($suggest) ?>" autocomplete="new-password" minlength="<?= MFS_PASSWORD_MIN ?>" maxlength="<?= MFS_PASSWORD_MAX ?>" spellcheck="false" autocapitalize="none" autocorrect="off" required<?= mg_inv($errors, 'new', 'new-help') ?>>
+              <button type="button" class="input-group__btn" data-copy="<?= h($suggest) ?>" data-copy-from="#new" data-copied="<?= h(t('Copied')) ?>" aria-label="<?= h(t('Copy the password')) ?>"><?= icon('copy') ?></button>
             </div>
-            <div class="field">
-              <label class="field__label" for="new2"><?= h(t('The same password again')) ?></label>
-              <input class="input mono" type="text" id="new2" name="new2" value="" autocomplete="new-password" spellcheck="false" autocapitalize="none" required>
-            </div>
+            <p class="field__help" id="new-help"><?= h(t('We suggest one; you can type your own (at least {n} characters). Give it to them in person or by phone, not in the same email as their address.', ['n' => MFS_PASSWORD_MIN])) ?></p>
+            <?= mg_err($errors, 'new') ?>
           </div>
-          <p class="field__help"><?= h(t('We suggest one; you can type your own (at least {n} characters). Give it to them in person or by phone, not in the same email as their address.', ['n' => MFS_PASSWORD_MIN])) ?></p>
         </div>
         <div class="card__foot"><button type="submit" class="btn btn--primary"><?= icon('key') ?><?= h(t('Save new password')) ?></button></div>
       </form>
       <?php } ?>
 
+      <?php if ($self) echo $recentCard; else { ?>
       <section class="danger-zone" aria-labelledby="access-h">
         <h2 class="danger-zone__title" id="access-h"><?= icon('lock') ?><?= h(t('Access')) ?></h2>
         <?php if ($active) { ?>
@@ -344,6 +361,7 @@ if ($target) {
           </div>
         <?php } ?>
       </section>
+      <?php } ?>
     </div>
 
     <aside class="stack">
@@ -352,24 +370,12 @@ if ($target) {
           <dl class="kv kv--compact tm-facts">
             <div class="kv__row"><dt class="kv__key"><?= h(t('In the team since')) ?></dt><dd class="kv__val"><?= h(fmt_date($u['created_at'])) ?></dd></div>
             <div class="kv__row"><dt class="kv__key"><?= h(t('Last signed in')) ?></dt><dd class="kv__val"><?= h((string) $u['last_login_at'] !== '' ? fmt_ago($u['last_login_at']) : t('Never')) ?></dd></div>
-            <div class="kv__row"><dt class="kv__key"><?= h(t('Open requests assigned')) ?></dt><dd class="kv__val"><?php if ($open > 0) { ?><a href="<?= h(url('requests')) ?>"><?= (int) $open ?></a><?php } else { ?>0<?php } ?></dd></div>
+            <div class="kv__row"><dt class="kv__key"><?= h(t('Open requests assigned')) ?></dt><dd class="kv__val"><?php if ($open > 0 && $self) { ?><a href="<?= h(url('requests', ['mine' => 1])) ?>"><?= (int) $open ?></a><?php } else { echo (int) $open; } ?></dd></div>
             <div class="kv__row"><dt class="kv__key"><?= h(t('Bookings created')) ?></dt><dd class="kv__val"><?= (int) $bookingsMade ?></dd></div>
           </dl>
         </div>
       </section>
-      <section class="card">
-        <div class="card__head"><div><h2 class="card__title"><?= h(t('Recent activity')) ?></h2></div>
-          <div class="card__actions"><a class="btn btn--sm btn--ghost" href="<?= h(url('activity', ['who' => $u['id']])) ?>"><?= h(t('See all')) ?></a></div></div>
-        <?php if ($recent) { ?>
-          <ul class="list tm-recent">
-            <?php foreach ($recent as $a) { ?>
-              <li class="list__item"><span class="list__main"><span class="list__title"><?= h($a['action']) ?></span><span class="list__meta"><?= h(fmt_ago($a['at'])) ?><?= $a['details'] !== '' ? ' · ' . h(excerpt($a['details'], 70)) : '' ?></span></span></li>
-            <?php } ?>
-          </ul>
-        <?php } else { ?>
-          <div class="card__body"><p class="muted small"><?= h(t('Nothing yet.')) ?></p></div>
-        <?php } ?>
-      </section>
+      <?php if (!$self) echo $recentCard; ?>
     </aside>
   </div>
   <?php
@@ -378,6 +384,7 @@ if ($target) {
     'css' => ['manage.css'],
     'js' => ['manage.js'],
     'crumbs' => [[t('Team'), url('users')], [$u['name'], '']],
+    'status' => $errors ? 422 : 200,
   ]);
 }
 
@@ -400,7 +407,6 @@ ob_start(); ?>
           <thead><tr>
             <th scope="col"><?= h(t('Member')) ?></th>
             <th scope="col"><?= h(t('Role')) ?></th>
-            <th scope="col"><?= h(t('Signed in')) ?></th>
             <th scope="col" class="num"><?= h(t('Open requests')) ?></th>
             <th scope="col"><span class="sr-only"><?= h(t('Actions')) ?></span></th>
           </tr></thead>
@@ -415,6 +421,7 @@ ob_start(); ?>
                   <span class="tm-who__text">
                     <a class="cell-main" href="<?= h($href) ?>"><?= h($p['name']) ?><?= (int) $p['id'] === $meId ? ' <span class="pill pill--gold pill--plain tm-you">' . h(t('You')) . '</span>' : '' ?></a>
                     <span class="cell-sub truncate"><?= h($p['email']) ?></span>
+                    <span class="cell-sub tm-seen"><?= h($lastSeen($p)) ?></span>
                   </span>
                 </span>
               </td>
@@ -422,9 +429,8 @@ ob_start(); ?>
                 <span class="pill pill--<?= h($p['role']) ?>"><?= h(t(USER_ROLES[$p['role']] ?? $p['role'])) ?></span>
                 <?php if (!$on) { ?><span class="pill pill--muted pill--plain"><?= h(t('Access off')) ?></span><?php } ?>
               </td>
-              <td data-label="<?= h(t('Signed in')) ?>"><span class="small"><?= h((string) $p['last_login_at'] !== '' ? fmt_ago($p['last_login_at']) : t('Never')) ?></span></td>
               <td class="num" data-label="<?= h(t('Open requests')) ?>"><?= (int) $p['open_requests'] ?></td>
-              <td class="actions"><a class="btn btn--sm btn--secondary" href="<?= h($href) ?>"><?= icon('edit') ?><?= h(t('Manage')) ?><span class="sr-only"> <?= h($p['name']) ?></span></a></td>
+              <td class="actions tm-actions"><a class="btn btn--sm btn--secondary tm-manage" href="<?= h($href) ?>"><?= icon('edit') ?><span class="tm-manage__label"><?= h(t('Manage')) ?></span><span class="sr-only"> <?= h($p['name']) ?></span></a></td>
             </tr>
           <?php } ?>
           </tbody>
@@ -510,4 +516,5 @@ render(t('Team'), ob_get_clean(), [
   'js' => ['manage.js'],
   'lead' => tp($activeCount, '{n} person can sign in to the team area.', '{n} people can sign in to the team area.'),
   'actions' => '<a class="btn btn--primary" href="#add">' . icon('plus') . h(t('Add a team member')) . '</a>',
+  'status' => $errors ? 422 : 200,
 ]);
