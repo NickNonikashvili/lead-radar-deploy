@@ -97,9 +97,13 @@
 }
 
 /* The collection ------------------------------------------------------------------- */
-.collection { padding-top: var(--section); }
+/* "View residences" lands on the section's opening line, not on the space above it */
+.collection { padding-top: var(--section); scroll-margin-top: calc(40px - var(--section)); }
 .collection__list { margin-top: clamp(40px, 5.4vw, 80px); }
 .collection__all { margin-top: clamp(40px, 5vw, 72px); display: flex; justify-content: flex-end; }
+
+/* "Enter a 3D tour" lands with the lit room filling the window */
+.tour { scroll-margin-top: calc(var(--section) * -1 - 16px); }
 
 /* Doors: one line per residence that can be walked through ------------------------- */
 .doors { margin-top: clamp(44px, 5.4vw, 80px); border-top: 1px solid var(--line); display: grid; grid-template-columns: repeat(var(--doors, 3), minmax(0, 1fr)); }
@@ -146,6 +150,8 @@
 /* Georgian and Cyrillic ---------------------------------------------------------------- */
 :lang(ka) .hero__text { font-size: 14.5px; line-height: 1.6; }
 :lang(ka) .door__name, :lang(ka) .slate__title { font-stretch: 92%; }
+/* each line of the Russian title must stay one line beside the aside */
+:lang(ru) .hero__title { font-size: clamp(2.5rem, 6.5vw, 6.6rem); line-height: .96; }
 @media (max-width: 899px) {
   :lang(ka) .hero__title { font-size: min(8.1vw, 2.5rem); }
   :lang(ru) .hero__title { font-size: min(8.4vw, 2.75rem); }

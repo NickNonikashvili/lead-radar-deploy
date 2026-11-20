@@ -10,7 +10,7 @@
   <div class="card__media">
     <a class="card__frames card__frames--<%= cardReel.form %>" href="<%= c.url %>" tabindex="-1" aria-hidden="true">
       <% cardReel.frames.forEach(function (f) { %>
-        <span class="still"><img src="<%= f.photo.src(640) %>" srcset="<%= f.photo.srcset %>" sizes="<%= f.sizes %>" width="<%= f.photo.w %>" height="<%= f.photo.h %>" alt="<%= f.photo.alt %>" loading="lazy" decoding="async" style="object-position:<%= f.focus %>;background-color:<%= f.photo.color %>"></span>
+        <span class="still"><img src="<%= f.photo.src(640) %>" srcset="<%= f.photo.srcset %>" sizes="<%= f.sizes %>" width="<%= f.photo.w %>" height="<%= f.photo.h %>" alt="<%= f.photo.alt %>" loading="lazy" decoding="async" style="object-position:<%= f.focus %>"></span>
       <% }) %>
     </a>
     <% if (c.hasTour || c.status !== 'for-sale') { %>

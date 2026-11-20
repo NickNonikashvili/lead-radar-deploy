@@ -20,7 +20,7 @@
     </div>
 
     <div class="site-footer__cols<%= hasContact ? ' site-footer__cols--4' : '' %>">
-      <nav class="site-footer__col" aria-label="<%= t('footer.explore') %>">
+      <nav class="site-footer__col site-footer__col--explore" aria-label="<%= t('footer.explore') %>">
         <p class="label"><%= t('footer.explore') %></p>
         <ul>
           <li><a href="<%= url('/residences') %>"><%= t('nav.residences') %></a></li>
@@ -32,7 +32,7 @@
       </nav>
 
       <% if (hasContact) { %>
-        <div class="site-footer__col">
+        <div class="site-footer__col site-footer__col--contact">
           <p class="label"><%= t('footer.contact') %></p>
           <ul>
             <% if (c.phone) { %><li><a class="num" href="<%= c.phoneHref %>"><%= c.phone %></a></li><% } %>
@@ -45,7 +45,7 @@
         </div>
       <% } %>
 
-      <nav class="site-footer__col" aria-label="<%= t('footer.legal') %>">
+      <nav class="site-footer__col site-footer__col--legal" aria-label="<%= t('footer.legal') %>">
         <p class="label"><%= t('footer.legal') %></p>
         <ul>
           <li><a href="<%= url('/privacy') %>"><%= t('footer.privacy') %></a></li>

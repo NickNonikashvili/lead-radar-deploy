@@ -1,6 +1,7 @@
 <%
   // Params: heading (required); eyebrow?, lead?, count? (a figure set at the end of the hairline),
-  //         size? ('d1' for a short word such as a section name; default 'd2'), tall? (fills the screen: 404).
+  //         size? ('d1' for a short word such as a section name; default 'd2'), tall? (fills the screen: 404),
+  //         actions? (buttons under the title: [{ href, label, solid? }]).
   var headSize = locals.size || 'd2';
 %>
 <header class="page-head<%= locals.tall ? ' page-head--tall' : '' %>">
@@ -8,5 +9,8 @@
     <% if (locals.eyebrow) { %><p class="page-head__label label"><%= eyebrow %><% if (locals.count !== undefined && locals.count !== null && locals.count !== '') { %><b class="num"><%= count %></b><% } %></p><% } %>
     <h1 class="page-head__title <%= headSize %>"><%= heading %></h1>
     <% if (locals.lead) { %><p class="page-head__lead lead"><%= lead %></p><% } %>
+    <% if (locals.actions && actions.length) { %>
+      <p class="page-head__actions"><% actions.forEach(function (a) { %><a class="btn<%= a.solid ? ' btn--solid' : '' %>" href="<%= a.href %>"><%= a.label %></a><% }) %></p>
+    <% } %>
   </div>
 </header>

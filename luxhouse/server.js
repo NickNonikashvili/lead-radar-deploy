@@ -380,20 +380,16 @@ function languageRouter(lang) {
     // The collection opens with the residence on the title card; the others follow by price.
     const shown = featured.length ? featured : all.slice().sort(listings.SORTS["price-desc"]);
     const collection = hero ? [hero].concat(shown.filter((l) => l !== hero)) : shown;
-    // The 3D section links to a real tour when one exists; until then it only shows a photograph.
+    // The 3D section opens on a real tour when one exists; until then it only says they are coming.
     const preferred = all.find((l) => l.slug === config.home.tourShowcase);
     const tourListing = (preferred && preferred.hasTour ? preferred : all.find((l) => l.hasTour)) || null;
-    const showcase = tourListing || preferred || hero;
     render(req, res, next, "home", {
       title: `${config.brand} — ${t("meta.tagline")}`,
       headerOverlay: true,
       hero: hero ? listings.view(hero, lang, t) : null,
       collection: cardViews(collection, lang, t),
       residenceCount: all.length,
-      featured: cardViews(featured.length ? featured : all, lang, t),
       tourListing: tourListing ? listings.view(tourListing, lang, t) : null,
-      showcase: showcase ? listings.view(showcase, lang, t) : null,
-      locations: listings.locations(lang),
       ogImage: hero ? hero.ogImage : "",
     });
   });

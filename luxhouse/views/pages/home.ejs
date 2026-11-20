@@ -22,7 +22,7 @@
   </div>
   <% if (hero) { %>
     <figure class="hero__still still" style="--focus:<%= heroArt.focus %>;--focus-narrow:<%= heroArt.focusNarrow %>">
-      <img src="<%= heroArt.photo.src(1280) %>" srcset="<%= heroArt.photo.srcset %>" sizes="100vw" width="<%= heroArt.photo.w %>" height="<%= heroArt.photo.h %>" alt="<%= heroArt.photo.alt %>" fetchpriority="high" decoding="async" style="background-color:<%= heroArt.photo.color %>">
+      <img src="<%= heroArt.photo.src(1280) %>" srcset="<%= heroArt.photo.srcset %>" sizes="100vw" width="<%= heroArt.photo.w %>" height="<%= heroArt.photo.h %>" alt="<%= heroArt.photo.alt %>" fetchpriority="high" decoding="async">
     </figure>
     <div class="hero__slate wrap">
       <a class="slate" href="<%= hero.url %>">
@@ -116,7 +116,7 @@
 <section class="band" id="sell" aria-labelledby="sell-title">
   <% if (sellArt) { %>
     <figure class="band__media still drift" style="--focus:<%= sellArt.focus %>">
-      <img src="<%= sellArt.photo.src(1280) %>" srcset="<%= sellArt.photo.srcset %>" sizes="(min-width: 900px) 58vw, 100vw" width="<%= sellArt.photo.w %>" height="<%= sellArt.photo.h %>" alt="<%= sellArt.photo.alt %>" loading="lazy" decoding="async" style="background-color:<%= sellArt.photo.color %>">
+      <img src="<%= sellArt.photo.src(1280) %>" srcset="<%= sellArt.photo.srcset %>" sizes="(min-width: 900px) 58vw, 100vw" width="<%= sellArt.photo.w %>" height="<%= sellArt.photo.h %>" alt="<%= sellArt.photo.alt %>" loading="lazy" decoding="async">
     </figure>
   <% } %>
   <div class="band__body wrap grid">

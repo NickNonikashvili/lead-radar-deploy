@@ -46,6 +46,9 @@ social previews.
 - `currency.usdToGel` and `currency.rateDate`: the rate used for the lari conversion
 - `home.heroListing`, `home.tourShowcase`: which residence fronts the home page
 - `mortgage`: defaults of the financing calculator
+- `art` (optional): hand-picked photographs and focal points per residence — which frames make up
+  its strip of stills, where the cover is held when cropped, the room that leads into its 3D tour.
+  Without an entry the site chooses from the photographs' proportions. Format: top of `src/art.js`.
 
 **`.env`** (copy `.env.example`) — per-server values and secrets:
 

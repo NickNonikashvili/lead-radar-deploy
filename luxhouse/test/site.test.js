@@ -103,6 +103,10 @@ test("plural forms and number formatting", () => {
   assert.equal(ru.n("residences.count", 11), "11 резиденций");
   assert.equal(ru.n("residences.count", 21), "21 резиденция");
   assert.equal(ka.n("residences.count", 3), "3 რეზიდენცია");
+  assert.equal(en.n("residence.bedroomsCount", 1), "1 bedroom");
+  assert.equal(ru.n("residence.bedroomsCount", 4), "4 спальни");
+  assert.equal(ru.n("residence.bedroomsCount", 5), "5 спален");
+  assert.equal(ka.n("home.tourViewpoints", 15), "15 ხედვის წერტილი");
   assert.equal(en.money(2200000, "USD"), "$2,200,000");
   assert.equal(ru.money(2200000, "USD"), "$2 200 000");
   assert.equal(ka.money(2204305, "GEL"), "₾2 204 305");
@@ -184,6 +188,44 @@ test("search filters and sorting", () => {
   assert.deepEqual(slugs({ pool: "1", sort: "price-desc" }), ["dighomi-stone-villa", "tabakhmela-residence"]);
   assert.deepEqual(slugs({ sort: "area" }), ["dighomi-stone-villa", "tabakhmela-residence", "dighomi-garden-house"]);
   assert.deepEqual(slugs({ maxPrice: "<script>" }).length, 3, "garbage is ignored");
+});
+
+test("stills are arranged from the shape of each residence's photographs", async () => {
+  const art = require("../src/art");
+  const t = i18n.translator("en");
+  const views = listings.all().map((l) => listings.view(l, "en", t));
+  const picked = config.art;
+  // With the hand-picked frames of site.config.json, and without them.
+  for (const source of [picked, {}]) {
+    config.art = source;
+    try {
+      const forms = Object.fromEntries(views.map((v) => [v.slug, art.reel(v).form]));
+      assert.equal(forms["dighomi-garden-house"], 1, "landscape professional frames run alone");
+      assert.equal(forms["dighomi-stone-villa"], 2, "4:3 frames run as a pair");
+      assert.equal(forms["tabakhmela-residence"], 3, "portrait frames run as three");
+      for (const v of views) {
+        const frames = art.reel(v).frames;
+        assert.equal(new Set(frames.map((f) => f.photo.file)).size, frames.length, `${v.slug}: no frame twice`);
+        for (const f of frames) assert.match(f.focus, /^\d+(\.\d+)?% \d+(\.\d+)?%$/, `${v.slug}: focal point`);
+        assert.ok(art.reel(v, { compact: true }).form <= 2, `${v.slug}: card frames`);
+        assert.ok(art.hero(v).photo && art.band(v).photo, `${v.slug}: hero and band photographs`);
+        const stage = art.stage(v);
+        assert.equal(Boolean(stage), v.hasTour, `${v.slug}: a stage only with a tour`);
+        if (stage) {
+          assert.ok(stage.url.startsWith(v.tourUrl) && stage.spaces.length >= 1 && stage.spaces.some((s) => s.current));
+          assert.match(stage.style, /^(--[a-z-]+:\d+(\.\d+)?%;?)+$/);
+        }
+      }
+    } finally {
+      config.art = picked;
+    }
+  }
+  // The home page shows one reel per residence and brings its own stylesheet.
+  const html = await (await get("/en/")).text();
+  assert.equal((html.match(/<article class="reel /g) || []).length, 3);
+  assert.match(html, /<link rel="stylesheet" href="\/css\/pages\/home\.css\?v=/);
+  assert.ok(html.includes('<body class="page page--home is-overlay">'));
+  for (const v of views.filter((x) => x.hasTour)) assert.ok(html.includes(`href="${v.tourUrl}"`), `${v.slug}: tour link`);
 });
 
 // ------------------------------------------------------------------ validation

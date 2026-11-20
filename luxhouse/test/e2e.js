@@ -86,48 +86,55 @@ async function step(name, fn) {
   const page = await desktop.newPage();
   watch(page);
 
-  await step("home: hero, three cards, tour links only when a tour exists", async () => {
+  await step("home: title card, one reel per residence, tour links only when a tour exists", async () => {
     await page.goto(`${base}/en/`, { waitUntil: "networkidle" });
     assert.equal(await page.locator("h1").count(), 1);
-    assert.equal(await page.locator(".card").count(), 3);
-    const anyTour = listings.all().some((l) => l.hasTour);
-    assert.equal(await page.locator('a[href$="/tour"]').count() > 0, anyTour);
-    assert.equal(await page.locator(".badge--tour").count(), listings.all().filter((l) => l.hasTour).length);
-    const img = page.locator(".hero__img");
+    assert.equal(await page.locator(".reel").count(), 3);
+    const tours = listings.all().filter((l) => l.hasTour);
+    assert.equal(await page.locator('a[href$="/tour"]').count() > 0, tours.length > 0);
+    assert.equal(await page.locator(".reel .chip .dot").count(), tours.length);
+    assert.equal(await page.locator(".door").count(), tours.length);
+    const img = page.locator(".hero__still img");
     assert.ok(await img.evaluate((el) => el.complete && el.naturalWidth > 0), "hero image loaded");
+    // The header turns into a bar once the page moves.
+    await page.evaluate(() => window.scrollTo(0, 600));
+    await page.waitForFunction(() => document.querySelector("[data-header]").classList.contains("is-stuck"));
+    await page.evaluate(() => window.scrollTo(0, 0));
   });
 
-  await step("currency toggle converts prices and persists", async () => {
-    const price = page.locator(".card__price [data-money]").first();
+  await step("currency switch converts prices and persists", async () => {
+    const price = page.locator(".reel__price [data-money]").first();
     const usd = await price.textContent();
     assert.match(usd, /^\$[\d,]+$/);
-    await page.locator(".header-tools [data-currency-toggle]").click();
+    await page.locator('.site-tools [data-currency-set="GEL"]').click();
+    assert.equal(await page.locator('.site-tools [data-currency-set="GEL"]').getAttribute("aria-pressed"), "true");
     const gel = await price.textContent();
     assert.match(gel, /^≈ ₾[\d,]+$/);
     const usdValue = Number(usd.replace(/\D/g, ""));
     const gelValue = Number(gel.replace(/\D/g, ""));
     assert.ok(Math.abs(gelValue - usdValue * config.currency.usdToGel) <= 1, "conversion uses the configured rate");
     await page.reload({ waitUntil: "networkidle" });
-    assert.match(await page.locator(".card__price [data-money]").first().textContent(), /^≈ ₾/);
-    await page.locator(".header-tools [data-currency-toggle]").click();
-    assert.match(await page.locator(".card__price [data-money]").first().textContent(), /^\$/);
+    assert.match(await page.locator(".reel__price [data-money]").first().textContent(), /^≈ ₾/);
+    await page.locator('.site-tools [data-currency-set="USD"]').click();
+    assert.match(await page.locator(".reel__price [data-money]").first().textContent(), /^\$/);
   });
 
   await step("language switch keeps the current page", async () => {
     await page.goto(`${base}/en/residences/dighomi-stone-villa`, { waitUntil: "networkidle" });
-    await page.locator('.header-tools [data-lang-link="ka"]').click();
+    await page.locator('.site-tools [data-lang-link="ka"]').click();
     await page.waitForURL(`${base}/ka/residences/dighomi-stone-villa`);
     assert.equal(await page.locator("html").getAttribute("lang"), "ka");
     assert.ok((await page.locator("h1").textContent()).includes("ქვის ვილა"));
   });
 
-  await step("home search leads to filtered results", async () => {
+  await step("home: the collection and the lit room lead to a residence and its tour", async () => {
     await page.goto(`${base}/en/`, { waitUntil: "networkidle" });
-    await page.selectOption("#hs-price", "1000000");
-    await page.locator(".search-strip button[type=submit]").click();
-    await page.waitForURL(/maxPrice=1000000/);
-    assert.equal(await page.locator(".card").count(), 2);
-    assert.equal((await page.locator(".results-count").textContent()).trim(), "2 residences");
+    if (listings.all().some((l) => l.hasTour)) assert.match(await page.locator(".stage .enter").getAttribute("href"), /^\/en\/residences\/[a-z0-9-]+\/tour(#scene=.+)?$/);
+    const first = page.locator(".reel").first();
+    const title = (await first.locator(".reel__title").textContent()).trim();
+    await first.locator(".reel__end .link").click();
+    await page.waitForURL(new RegExp(`^${base}/en/residences/[a-z0-9-]+$`));
+    assert.ok((await page.locator("h1").textContent()).includes(title));
   });
 
   await step("residences: filters auto-apply, empty state, reset", async () => {
@@ -218,12 +225,12 @@ async function step(name, fn) {
     assert.equal(await save.getAttribute("aria-pressed"), "false");
     await save.click();
     assert.equal(await save.getAttribute("aria-pressed"), "true");
-    assert.equal((await page.locator(".header-tools [data-saved-count]").textContent()).trim(), "1");
+    assert.equal((await page.locator(".site-tools [data-saved-count]").textContent()).trim(), "1");
     await page.goto(`${base}/ka/saved`, { waitUntil: "networkidle" });
     await page.waitForSelector("[data-saved-grid] .card");
     assert.equal(await page.locator("[data-saved-grid] .card").count(), 1);
     assert.ok((await page.locator("[data-saved-grid] .card__title").textContent()).includes("ქვის ვილა"));
-    await page.locator("[data-saved-grid] .save-btn").click();
+    await page.locator("[data-saved-grid] [data-save]").click();
     await page.waitForSelector("[data-saved-empty]:not([hidden])");
     assert.equal(await page.locator("[data-saved-grid] .card").count(), 0);
   });
@@ -482,12 +489,19 @@ async function step(name, fn) {
   await step("mobile: menu opens, navigates and closes", async () => {
     await m.goto(`${base}/en/`, { waitUntil: "networkidle" });
     assert.ok(await m.locator(".site-nav").isHidden());
-    await m.locator("[data-menu-open]").tap();
-    await m.locator("#mobile-menu").waitFor({ state: "visible" });
-    await m.locator("#mobile-menu [data-menu-close]").tap();
-    await m.locator("#mobile-menu").waitFor({ state: "hidden" });
-    await m.locator("[data-menu-open]").tap();
-    await m.locator('#mobile-menu nav a[href="/en/residences"]').tap();
+    const menuBtn = m.locator("[data-menu-btn]");
+    await menuBtn.tap();
+    await m.locator("#menu").waitFor({ state: "visible" });
+    assert.equal(await menuBtn.getAttribute("aria-expanded"), "true");
+    assert.equal((await menuBtn.textContent()).trim(), "Close");
+    await menuBtn.tap();
+    await m.locator("#menu").waitFor({ state: "hidden" });
+    assert.equal(await menuBtn.getAttribute("aria-expanded"), "false");
+    await menuBtn.tap();
+    await m.keyboard.press("Escape");
+    await m.locator("#menu").waitFor({ state: "hidden" });
+    await menuBtn.tap();
+    await m.locator('#menu nav a[href="/en/residences"]').tap();
     await m.waitForURL(`${base}/en/residences`);
   });
 

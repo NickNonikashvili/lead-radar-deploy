@@ -263,6 +263,13 @@ button { background: none; border: 0; border-radius: 0; padding: 0; cursor: poin
 .switch a:hover, .switch button:hover { color: var(--bone); }
 .switch [aria-current="true"], .switch [aria-pressed="true"] { color: var(--bone); }
 
+/* A small list of actions that opens beside its button (share). The script toggles [hidden]. */
+.pop-wrap { position: relative; display: inline-block; }
+.pop { position: absolute; left: 0; bottom: calc(100% + 6px); z-index: 40; display: grid; min-width: 220px; padding: 6px; background: var(--soot); border: 1px solid var(--line-2); }
+.pop--below { bottom: auto; top: calc(100% + 6px); }
+.pop a, .pop button { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 44px; padding: 0 12px; font: 400 15px/1 var(--f-display); color: var(--bone); text-align: left; white-space: nowrap; }
+.pop a:hover, .pop button:hover { background: var(--char); }
+
 .crumbs { display: flex; flex-wrap: wrap; align-items: center; gap: 0 10px; color: var(--bone); }
 .crumbs a { display: inline-flex; align-items: center; min-height: 44px; }
 .crumbs a:hover { text-decoration: underline; text-underline-offset: 4px; }
@@ -280,8 +287,8 @@ kbd {
 .form > * { grid-column: 1 / -1; min-width: 0; }
 .field { display: grid; gap: 2px; position: relative; align-content: start; }
 .form > .field--half { grid-column: span 1; }
-.field > label, .field__label { font: 500 12px/1.3 var(--f-display); letter-spacing: .14em; text-transform: uppercase; color: var(--ash); }
-.field > label small, .field__opt { font: inherit; letter-spacing: .06em; text-transform: none; color: var(--smoke); margin-left: 6px; }
+.field > label:not(.check), .field__label { font: 500 12px/1.3 var(--f-display); letter-spacing: .14em; text-transform: uppercase; color: var(--ash); }
+.field > label:not(.check) small, .field__opt { font: inherit; letter-spacing: .06em; text-transform: none; color: var(--smoke); margin-left: 6px; }
 .field output { float: right; letter-spacing: .04em; text-transform: none; color: var(--bone); }
 .field input, .field textarea, .field select {
   display: block; width: 100%; min-height: 52px; padding: 10px 0 12px;
@@ -576,8 +583,8 @@ kbd {
   font-size: 13px; line-height: 1.5; color: var(--smoke);
 }
 .site-footer__base p:last-child { max-width: 78ch; }
-/* room for the residence page's fixed lower third */
-.has-third { padding-bottom: var(--third); }
+/* room for a fixed bar at the foot of the window (the residence page's "lower third", class .third) */
+body:has(.third) { padding-bottom: var(--third); }
 
 @media (max-width: 1099px) {
   .site-footer__cols--4 { grid-column: 1 / -1; }
@@ -586,9 +593,10 @@ kbd {
   .site-footer__brand, .site-footer__cols, .site-footer__cols--4 { grid-column: 1 / -1; }
   .site-footer__cols, .site-footer__cols--4 { grid-template-columns: repeat(12, minmax(0, 1fr)); }
   .site-footer__col { grid-column: span 5; }
-  .site-footer__col:nth-child(even) { grid-column: span 7; }
-  .site-footer__col--lang { grid-column: 1 / -1 !important; }
-  .site-footer__col a, .site-footer__social a { min-height: 44px; }
+  .site-footer__col--contact, .site-footer__col--legal { grid-column: span 7; }
+  .site-footer__col--lang { grid-column: 1 / -1; }
+  .site-footer__cols--4 .site-footer__col--lang { grid-column: span 5; }
+  .site-footer__col a, .site-footer__social a { min-height: 44px; padding-block: 8px; }
   .site-footer__col .switch a { min-width: 44px; min-height: 44px; }
 }
 
@@ -698,7 +706,7 @@ kbd {
   height: min(90svh, 60vw); min-height: 600px;
   background: #050505;
 }
-.has-third .stage { height: min(calc(100svh - var(--header) - var(--third) - 8px), 60vw); }
+body:has(.third) .stage { height: min(calc(100svh - var(--header) - var(--third) - 8px), 60vw); }
 .stage__scene {
   position: absolute; left: var(--ox); top: 50%;
   width: max(105cqw, 157.5cqh); aspect-ratio: 3 / 2;
@@ -791,7 +799,7 @@ kbd {
   .stage__keys { display: none; }
 }
 @media (max-width: 899px) {
-  .stage, .has-third .stage { height: min(660px, calc(100svh - var(--header) - var(--third) - 8px)); min-height: 520px; }
+  .stage, body:has(.third) .stage { height: min(660px, calc(100svh - var(--header) - var(--third) - 8px)); min-height: 520px; }
   .stage { --sr: 36% 44%; --sx: var(--sx-m, 60%); --sy: var(--sy-m, 50%); --ox: var(--ox-m, 60%); }
   .stage__where { display: none; }
   .stage__head { top: 58px; }
@@ -879,8 +887,15 @@ kbd {
   font: 500 14px/1.3 var(--f-display); text-align: center;
   animation: toast-in .4s var(--ease) both;
 }
-.has-third .toast { bottom: calc(var(--third) + 16px); }
+body:has(.third) .toast { bottom: calc(var(--third) + 16px); }
 @keyframes toast-in { from { opacity: 0; transform: translate(-50%, 8px); } to { opacity: 1; transform: translate(-50%, 0); } }
+
+/* Fingers need more room than a pointer: every control is at least 44px on touch screens. */
+@media (pointer: coarse) {
+  .switch a, .switch button { min-width: 44px; }
+  .site-footer__col a, .site-footer__social a, .site-footer__col .switch a { min-height: 44px; }
+  .tags li { min-height: 44px; }
+}
 
 /* 20 — Motion ----------------------------------------------------------------------
    Load: title lines rise out of a mask. Scroll: blocks below the fold lift 18px
@@ -917,7 +932,7 @@ kbd {
    Mkhedruli has no capitals and needs air: labels drop the caps and the tracking and
    lean on weight and colour instead; display sizes come down a step, line-height opens
    up, and the Noto Sans Georgian width axis is drawn in to sit with Inter Tight.     */
-:lang(ka) .label, :lang(ka) .chip, :lang(ka) .field > label, :lang(ka) .field__label {
+:lang(ka) .label, :lang(ka) .chip, :lang(ka) .field > label:not(.check), :lang(ka) .field__label {
   text-transform: none; letter-spacing: 0; font-size: 13.5px; font-weight: 500;
 }
 :lang(ka) .d1, :lang(ka) .d2, :lang(ka) .d3, :lang(ka) .d4,
@@ -944,5 +959,5 @@ kbd {
 :lang(ru) .d1 { font-size: clamp(2.5rem, 7.3vw, 7.4rem); line-height: .95; }
 :lang(ru) .d2 { font-size: clamp(2.125rem, 5.2vw, 4.9rem); line-height: 1; }
 :lang(ru) .d3 { font-size: clamp(1.625rem, 2.9vw, 2.625rem); line-height: 1.08; }
-:lang(ru) .label, :lang(ru) .chip, :lang(ru) .field > label, :lang(ru) .field__label { letter-spacing: .12em; }
+:lang(ru) .label, :lang(ru) .chip, :lang(ru) .field > label:not(.check), :lang(ru) .field__label { letter-spacing: .12em; }
 :lang(ru) .menu__nav a { font-size: clamp(1.85rem, 8.6vw, 2.8rem); }
