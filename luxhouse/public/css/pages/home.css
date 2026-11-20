@@ -1,0 +1,152 @@
+/* ==========================================================================
+   LUXHOUSE — home
+   Title card, the collection, the doors into the tours, services.
+   Everything shared (reels, stage, how-we-work, band, forms) is in site.css.
+   ========================================================================== */
+
+/* Title card ---------------------------------------------------------------------
+   The title lives in the dark; the house rises out of it. The top of the still
+   is graded to night so the sky and the black ground are one surface.          */
+.hero {
+  position: relative; isolation: isolate;
+  min-height: max(100svh, calc(var(--header) + 112px + 48.6vw));
+  padding-top: var(--header);
+  display: flex; flex-direction: column;
+}
+.hero__head {
+  padding-top: clamp(14px, 2.7svh, 24px);
+  row-gap: 24px;
+  align-items: start;
+}
+.hero__title { grid-column: 1 / span 9; }
+.hero__title span { display: block; }
+.hero__aside {
+  grid-column: 10 / -1;
+  display: flex; flex-direction: column; gap: 18px;
+  padding-top: 10px;
+}
+.hero__text { font-size: 15px; line-height: 1.55; color: var(--bone); text-wrap: pretty; }
+.hero__actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.hero__actions .btn { flex: 1 1 auto; min-height: 48px; padding-inline: 14px; font-size: 14px; }
+
+.hero__still {
+  position: absolute; z-index: -1;
+  inset: calc(var(--header) + clamp(84px, 12.4svh, 112px)) 0 0 0;
+  margin: 0;
+}
+.hero__still > img { object-position: var(--focus, 50% 20%); filter: saturate(.8) contrast(1.05) brightness(.93); }
+.hero__still::before {
+  content: ""; position: absolute; inset: 0; z-index: 1; pointer-events: none;
+  background:
+    linear-gradient(to bottom, var(--ink) 0%, rgba(11, 10, 9, .9) 9%, rgba(11, 10, 9, .52) 21%, rgba(11, 10, 9, .12) 36%, rgba(11, 10, 9, 0) 48%),
+    radial-gradient(46% 36% at 0% 100%, rgba(11, 10, 9, .82) 0%, rgba(11, 10, 9, 0) 100%),
+    linear-gradient(to top, rgba(11, 10, 9, .7) 0%, rgba(11, 10, 9, 0) 22%);
+}
+
+.hero__slate {
+  margin-top: auto;
+  display: flex; justify-content: space-between; align-items: flex-end; gap: 24px;
+  padding-bottom: clamp(18px, 3svh, 28px);
+}
+.slate { display: grid; gap: 6px; }
+.slate .label, .hero__next .label { color: var(--bone); }
+.slate__title { font: 400 17px/1.3 var(--f-display); letter-spacing: -.005em; }
+.slate__meta { font-size: 14px; color: var(--bone); opacity: .82; }
+.slate:hover .slate__title { text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 4px; }
+.hero__next { display: inline-flex; align-items: center; justify-content: flex-end; gap: 12px; min-width: 44px; min-height: 44px; }
+.hero__next .icon { transition: transform .45s var(--ease); }
+.hero__next:hover .icon { transform: translateY(4px); }
+
+/* the letterbox opens, the still settles and then sinks a little slower than the page */
+.hero__still { animation: open 1.1s var(--ease) both; }
+.hero__still > img { animation: settle 1.8s var(--ease) both; }
+@keyframes open { from { clip-path: inset(30% 0 26% 0); } to { clip-path: inset(0); } }
+@keyframes sink { to { translate: 0 5%; } }
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .hero__still > img { animation: settle 1.8s var(--ease) both, sink linear both; animation-timeline: auto, scroll(root); animation-range: normal, 0 100svh; }
+  }
+}
+
+@media (max-width: 1099px) {
+  .hero__title { grid-column: 1 / -1; }
+  .hero__aside { grid-column: 1 / span 8; flex-direction: row; align-items: flex-end; gap: 28px; padding-top: 0; }
+  .hero__aside > * { flex: 1; }
+  .hero__label { display: none; }
+  .hero__still { top: calc(var(--header) + 300px); }
+}
+@media (max-width: 899px) {
+  .hero { min-height: 100svh; }
+  .hero__title { font-size: min(9.7vw, 3rem); }
+  .hero__head { padding-top: 22px; row-gap: 20px; }
+  .hero__aside { grid-column: 1 / -1; flex-direction: column; align-items: stretch; gap: 18px; }
+  .hero__text { font-size: 15.5px; max-width: 40ch; }
+  .hero__actions .btn { min-height: 50px; }
+  .hero__still {
+    position: relative; inset: auto; z-index: 0;
+    flex: 1 1 auto; min-height: 360px; margin-top: 4px;
+  }
+  .hero__still > img { position: absolute; inset: 0; object-position: var(--focus-narrow, 80% 50%); }
+  .hero__still::before {
+    background:
+      linear-gradient(to bottom, var(--ink) 0%, rgba(11, 10, 9, .6) 12%, rgba(11, 10, 9, 0) 34%),
+      linear-gradient(to top, rgba(11, 10, 9, .86) 0%, rgba(11, 10, 9, 0) 34%);
+  }
+  .hero__slate { position: absolute; inset: auto 0 0 0; z-index: 2; padding-bottom: 18px; }
+  .hero__next span { display: none; }
+}
+
+/* The collection ------------------------------------------------------------------- */
+.collection { padding-top: var(--section); }
+.collection__list { margin-top: clamp(40px, 5.4vw, 80px); }
+.collection__all { margin-top: clamp(40px, 5vw, 72px); display: flex; justify-content: flex-end; }
+
+/* Doors: one line per residence that can be walked through ------------------------- */
+.doors { margin-top: clamp(44px, 5.4vw, 80px); border-top: 1px solid var(--line); display: grid; grid-template-columns: repeat(var(--doors, 3), minmax(0, 1fr)); }
+.door {
+  display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 16px;
+  min-height: 88px; padding: 12px var(--m);
+  border-bottom: 1px solid var(--line);
+  transition: background-color .4s var(--ease);
+}
+.door + .door { border-left: 1px solid var(--line); padding-left: var(--g); }
+.door:hover { background: var(--soot); }
+.door__name { font: 400 17px/1.25 var(--f-display); }
+.door__go { display: inline-flex; align-items: center; gap: 10px; font: 500 13px/1 var(--f-display); color: var(--ash); white-space: nowrap; }
+.door__go .icon { color: var(--bone); transition: transform .45s var(--ease); }
+.door:hover .door__go .icon { transform: translateX(4px); }
+
+@media (max-width: 1099px) {
+  .door__go > span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .door__go { gap: 8px; }
+}
+@media (max-width: 899px) {
+  .doors { grid-template-columns: 1fr; }
+  .door + .door { border-left: 0; padding-left: var(--m); }
+  .door { min-height: 72px; }
+  .door__go > span { position: static; width: auto; height: auto; overflow: visible; clip: auto; }
+}
+
+/* Services: the credits under "How we work" ------------------------------------------ */
+.services { margin-top: var(--section); }
+.services__head { row-gap: 20px; align-items: end; }
+.services__head .label { grid-column: 1 / -1; display: flex; align-items: center; gap: 14px; }
+.services__head .label::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+.services__head h3 { grid-column: 1 / span 7; }
+.services__head .link { grid-column: 10 / -1; justify-self: end; margin-bottom: -8px; }
+.services .credits { margin-top: clamp(32px, 4.4vw, 64px); }
+@media (max-width: 899px) {
+  .services__head h3 { grid-column: 1 / -1; }
+  .services__head .link { grid-column: 1 / -1; justify-self: start; margin-bottom: 0; }
+}
+
+/* Contact: direct lines under the invitation, when the agency has published them ------ */
+.contact__direct { display: grid; justify-items: start; }
+
+/* Georgian and Cyrillic ---------------------------------------------------------------- */
+:lang(ka) .hero__text { font-size: 14.5px; line-height: 1.6; }
+:lang(ka) .door__name, :lang(ka) .slate__title { font-stretch: 92%; }
+@media (max-width: 899px) {
+  :lang(ka) .hero__title { font-size: min(8.1vw, 2.5rem); }
+  :lang(ru) .hero__title { font-size: min(8.4vw, 2.75rem); }
+}

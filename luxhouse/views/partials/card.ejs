@@ -1,25 +1,31 @@
-<article class="card" data-card="<%= c.slug %>">
-  <a class="card__media" href="<%= c.url %>" tabindex="-1" aria-hidden="true">
-    <img src="<%= c.cover.src(640) %>" srcset="<%= c.cover.srcset %>" sizes="(min-width: 1100px) 400px, (min-width: 700px) 50vw, 100vw"
-         width="<%= c.cover.w %>" height="<%= c.cover.h %>" alt="" loading="lazy" decoding="async" style="background-color:<%= c.cover.color %>">
-  </a>
-  <div class="card__badges">
-    <% if (c.status !== 'for-sale') { %><span class="badge badge--status"><%= c.statusLabel %></span><% } %>
-    <% if (c.hasTour) { %><span class="badge badge--tour"><svg class="icon" aria-hidden="true"><use href="#i-cube"/></svg><%= t('common.tour3d') %></span><% } %>
+<%
+  // The compact residence card. Params: c (a listing view). Put cards inside <div class="cards">.
+  var cardReel = art.reel(c, { compact: true });
+  var cardFacts = [t.area(c.facts.areaM2)];
+  if (c.facts.bedrooms) cardFacts.push(t.n('residence.bedroomsCount', c.facts.bedrooms));
+  if (c.facts.landM2) cardFacts.push(t('residence.plotArea', { v: t.area(c.facts.landM2) }));
+  else if (c.hasPool) cardFacts.push(t('features.pool'));
+%>
+<article class="card lights rv" data-card="<%= c.slug %>">
+  <div class="card__media">
+    <a class="card__frames card__frames--<%= cardReel.form %>" href="<%= c.url %>" tabindex="-1" aria-hidden="true">
+      <% cardReel.frames.forEach(function (f) { %>
+        <span class="still"><img src="<%= f.photo.src(640) %>" srcset="<%= f.photo.srcset %>" sizes="<%= f.sizes %>" width="<%= f.photo.w %>" height="<%= f.photo.h %>" alt="<%= f.photo.alt %>" loading="lazy" decoding="async" style="object-position:<%= f.focus %>;background-color:<%= f.photo.color %>"></span>
+      <% }) %>
+    </a>
+    <% if (c.hasTour || c.status !== 'for-sale') { %>
+      <p class="card__chips">
+        <% if (c.status !== 'for-sale') { %><span class="chip"><%= c.statusLabel %></span><% } %>
+        <% if (c.hasTour) { %><span class="chip"><i class="dot"></i><%= t('common.tour3d') %></span><% } %>
+      </p>
+    <% } %>
+    <button type="button" class="card__save icon-btn icon-btn--glass" data-save="<%= c.slug %>" aria-pressed="false" aria-label="<%= t('common.save') %>: <%= c.title %>" title="<%= t('common.save') %>">
+      <svg class="icon" aria-hidden="true"><use href="#i-heart"/></svg>
+    </button>
   </div>
-  <button type="button" class="save-btn" data-save="<%= c.slug %>" aria-pressed="false" aria-label="<%= t('common.save') %>: <%= c.title %>" title="<%= t('common.save') %>">
-    <svg class="icon" aria-hidden="true"><use href="#i-heart"/></svg>
-  </button>
-  <div class="card__body">
-    <p class="card__place"><%= c.place %></p>
-    <h3 class="card__title"><a href="<%= c.url %>"><%= c.title %></a></h3>
-    <p class="card__price">
-      <% if (c.price) { %><span data-money="<%= c.price.amount %>" data-currency="<%= c.price.currency %>"><%= c.priceLabel %></span><% } else { %><%= c.priceLabel %><% } %>
-    </p>
-    <ul class="card__facts">
-      <li><svg class="icon" aria-hidden="true"><use href="#i-area"/></svg><%= t.area(c.facts.areaM2) %></li>
-      <% if (c.facts.bedrooms) { %><li><svg class="icon" aria-hidden="true"><use href="#i-bed"/></svg><%= c.facts.bedrooms %> <span class="card__unit"><%= t('residence.short.beds') %></span></li><% } %>
-      <% if (c.facts.landM2) { %><li><svg class="icon" aria-hidden="true"><use href="#i-land"/></svg><%= t.area(c.facts.landM2) %></li><% } %>
-    </ul>
+  <div class="card__cap">
+    <h3 class="card__title d4"><a href="<%= c.url %>"><%= c.title %></a></h3>
+    <p class="card__price num"><% if (c.price) { %><span data-money="<%= c.price.amount %>" data-currency="<%= c.price.currency %>"><%= c.priceLabel %></span><% } else { %><%= c.priceLabel %><% } %></p>
+    <ul class="card__facts"><li><%= c.place %></li><% cardFacts.forEach(function (f) { %><li><%= f %></li><% }) %></ul>
   </div>
 </article>

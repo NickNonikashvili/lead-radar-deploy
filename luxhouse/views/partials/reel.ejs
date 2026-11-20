@@ -1,0 +1,44 @@
+<%
+  // One residence as a full-width strip of stills with a caption row.
+  // Params: c (a listing view), no? (its number in the list, e.g. 1), save? (true adds the heart),
+  //         level? (heading level of the title, default 3). Put reels inside <div class="reels">.
+  var reelData = art.reel(c);
+  var reelFacts = [t.area(c.facts.areaM2)];
+  if (c.facts.bedrooms) reelFacts.push(t.n('residence.bedroomsCount', c.facts.bedrooms));
+  if (c.facts.landM2) reelFacts.push(t('residence.plotArea', { v: t.area(c.facts.landM2) }));
+  else if (c.hasPool) reelFacts.push(t('features.pool'));
+  var reelH = 'h' + (locals.level || 3);
+  var reelNo = locals.no ? (locals.no < 10 ? '0' : '') + locals.no : '';
+%>
+<article class="reel lights rv" data-card="<%= c.slug %>">
+  <div class="reel__band">
+    <a class="reel__frames reel__frames--<%= reelData.form %>" href="<%= c.url %>" tabindex="-1" aria-hidden="true">
+      <% reelData.frames.forEach(function (f) { %>
+        <span class="still<%= reelData.form === 1 ? ' drift' : '' %>"><img src="<%= f.photo.src(1280) %>" srcset="<%= f.photo.srcset %>" sizes="<%= f.sizes %>" width="<%= f.photo.w %>" height="<%= f.photo.h %>" alt="<%= f.photo.alt %>" loading="lazy" decoding="async" style="object-position:<%= f.focus %>;background-color:<%= f.photo.color %>"></span>
+      <% }) %>
+    </a>
+    <% if (c.hasTour || c.status !== 'for-sale' || locals.save) { %>
+      <div class="reel__tools">
+        <% if (c.status !== 'for-sale') { %><span class="chip"><%= c.statusLabel %></span><% } %>
+        <% if (c.hasTour) { %><span class="chip"><i class="dot"></i><%= t('common.tour3d') %></span><% } %>
+        <% if (locals.save) { %>
+          <button type="button" class="icon-btn icon-btn--glass" data-save="<%= c.slug %>" aria-pressed="false" aria-label="<%= t('common.save') %>: <%= c.title %>" title="<%= t('common.save') %>">
+            <svg class="icon" aria-hidden="true"><use href="#i-heart"/></svg>
+          </button>
+        <% } %>
+      </div>
+    <% } %>
+  </div>
+  <div class="reel__caption wrap grid">
+    <p class="reel__no label label--dim num"><%= reelNo %></p>
+    <<%= reelH %> class="reel__title d3"><a href="<%= c.url %>"><%= c.title %></a></<%= reelH %>>
+    <div class="reel__meta">
+      <p class="reel__place"><%= c.place %></p>
+      <ul class="reel__facts"><% reelFacts.forEach(function (f) { %><li><%= f %></li><% }) %></ul>
+    </div>
+    <div class="reel__end">
+      <p class="reel__price num"><% if (c.price) { %><span data-money="<%= c.price.amount %>" data-currency="<%= c.price.currency %>"><%= c.priceLabel %></span><% } else { %><%= c.priceLabel %><% } %></p>
+      <a class="link" href="<%= c.url %>" aria-label="<%= t('common.viewResidence') %>: <%= c.title %>"><span><%= t('common.viewResidence') %></span><svg class="icon" aria-hidden="true"><use href="#i-arrow-right"/></svg></a>
+    </div>
+  </div>
+</article>

@@ -1,7 +1,12 @@
-<section class="page-head">
-  <div class="container">
-    <% if (locals.eyebrow) { %><p class="eyebrow"><%= eyebrow %></p><% } %>
-    <h1><%= heading %></h1>
-    <% if (locals.lead) { %><p class="lead"><%= lead %></p><% } %>
+<%
+  // Params: heading (required); eyebrow?, lead?, count? (a figure set at the end of the hairline),
+  //         size? ('d1' for a short word such as a section name; default 'd2'), tall? (fills the screen: 404).
+  var headSize = locals.size || 'd2';
+%>
+<header class="page-head<%= locals.tall ? ' page-head--tall' : '' %>">
+  <div class="page-head__in wrap grid">
+    <% if (locals.eyebrow) { %><p class="page-head__label label"><%= eyebrow %><% if (locals.count !== undefined && locals.count !== null && locals.count !== '') { %><b class="num"><%= count %></b><% } %></p><% } %>
+    <h1 class="page-head__title <%= headSize %>"><%= heading %></h1>
+    <% if (locals.lead) { %><p class="page-head__lead lead"><%= lead %></p><% } %>
   </div>
-</section>
+</header>

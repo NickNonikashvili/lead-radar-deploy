@@ -68,6 +68,8 @@ module.exports = {
   home: {
     heroEyebrow: "Tbilisi · Private residences",
     heroTitle: "A private collection of exceptional homes",
+    heroTitleLines: ["A private collection", "of exceptional homes"],
+    nowShowing: "Now showing",
     heroText:
       "We represent a small number of high-end residences in and around Tbilisi — and let you walk through each one in 3D before you ever arrive.",
     heroCta: "View residences",
@@ -80,6 +82,8 @@ module.exports = {
     featuredText: "A deliberately small selection, each presented in full.",
     tourEyebrow: "Spatial tours",
     tourTitle: "Walk through before you visit",
+    tourTitleLines: ["Walk through", "before you visit"],
+    tourViewpoints: ["{n} viewpoint", "{n} viewpoints"],
     tourText:
       "Each residence is reconstructed in three dimensions from its photography. Move freely through every space — on a phone, a laptop or a VR headset — and arrive at your viewing already knowing the house.",
     tourPoint1: "Free movement: walk, look around, step closer",
@@ -96,6 +100,7 @@ module.exports = {
     approach2Text: "Exact addresses and owners' details are shared only with confirmed, serious buyers.",
     approach3Title: "Facts before adjectives",
     approach3Text: "Every residence is described plainly: areas, layout, condition and price.",
+    sellEyebrow: "For owners",
     sellTitle: "Selling a home of this calibre?",
     sellText: "We prepare, present and negotiate — discreetly. Start with a confidential valuation.",
     sellCta: "Request a valuation",
@@ -203,6 +208,8 @@ module.exports = {
       pricePerM2: "Price per m²",
     },
     short: { beds: "bedrooms", baths: "bathrooms", rooms: "rooms", plot: "plot" },
+    bedroomsCount: ["{n} bedroom", "{n} bedrooms"],
+    plotArea: "Plot {v}",
     values: {
       new: "New build",
       newlyRenovated: "Newly renovated",

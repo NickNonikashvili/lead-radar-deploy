@@ -2,6 +2,7 @@
 
 require("dotenv").config({ quiet: true });
 
+const fs = require("fs");
 const path = require("path");
 const crypto = require("crypto");
 const express = require("express");
@@ -12,6 +13,7 @@ const { rateLimit } = require("express-rate-limit");
 const config = require("./src/config");
 const i18n = require("./src/i18n");
 const listings = require("./src/listings");
+const art = require("./src/art");
 const leads = require("./src/leads");
 const validate = require("./src/validate");
 const { notify } = require("./src/notify");
@@ -102,6 +104,36 @@ function organizationLd(req, lang, t) {
   return o;
 }
 
+/**
+ * Per-page assets. A page may bring its own stylesheet and script without touching the layout:
+ *   public/css/pages/<page>.css   linked after site.css
+ *   public/js/pages/<page>.js     loaded (defer) after site.js
+ * where <page> is the view name given to render(): home, residences, residence, services, sell,
+ * about, contact, saved, legal, 404. The two folders are listed once at start-up; outside
+ * production they are listed again on every request, so a new file needs no restart.
+ * public/css/legacy.css, while it exists, carries the pre-Nocturne pages that are still to be rebuilt.
+ */
+const PUBLIC_DIR = path.join(__dirname, "public");
+function listPageAssets() {
+  const names = (dir, ext) => {
+    try {
+      return new Set(fs.readdirSync(path.join(PUBLIC_DIR, dir, "pages")).filter((f) => f.endsWith(ext)).map((f) => f.slice(0, -ext.length)));
+    } catch (_) {
+      return new Set();
+    }
+  };
+  return { css: names("css", ".css"), js: names("js", ".js"), legacy: fs.existsSync(path.join(PUBLIC_DIR, "css", "legacy.css")) };
+}
+let pageAssetIndex = listPageAssets();
+function pageAssets(page) {
+  if (!config.isProduction) pageAssetIndex = listPageAssets();
+  return {
+    css: pageAssetIndex.css.has(page) ? `/css/pages/${page}.css` : "",
+    js: pageAssetIndex.js.has(page) ? `/js/pages/${page}.js` : "",
+    legacy: pageAssetIndex.legacy ? "/css/legacy.css" : "",
+  };
+}
+
 /** Build the locals shared by every page of one language. */
 function baseLocals(req, lang) {
   const t = i18n.translator(lang);
@@ -115,6 +147,7 @@ function baseLocals(req, lang) {
     t,
     pick: (f) => i18n.pick(f, lang),
     config,
+    art,
     languages: config.languages.map((l) => ({ code: l, short: i18n.dicts[l].lang.short, name: i18n.dicts[l].lang.name, url: alternates[l], current: l === lang })),
     alternates,
     origin: base,
@@ -133,6 +166,8 @@ function baseLocals(req, lang) {
     noindex: false,
     scripts: [],
     styles: [],
+    page: "",
+    pageAssets: { css: "", js: "", legacy: "" },
     anyTour: listings.all().some((l) => l.hasTour),
     savedCardsUrl: `/api/cards?lang=${lang}`,
     legalUpdated: LEGAL_UPDATED,
@@ -141,6 +176,8 @@ function baseLocals(req, lang) {
 
 function render(req, res, next, page, locals, status = 200) {
   const data = Object.assign({}, res.locals.base, locals);
+  data.page = page;
+  data.pageAssets = pageAssets(page);
   data.ld = [organizationLd(req, data.lang, data.t)].concat(data.ld || []);
   app.render(`pages/${page}`, data, (err, body) => {
     if (err) return next(err);
@@ -340,6 +377,9 @@ function languageRouter(lang) {
     const all = listings.all();
     const featured = all.filter((l) => l.featured).sort(listings.SORTS["price-desc"]);
     const hero = all.find((l) => l.slug === config.home.heroListing) || featured[0] || all[0];
+    // The collection opens with the residence on the title card; the others follow by price.
+    const shown = featured.length ? featured : all.slice().sort(listings.SORTS["price-desc"]);
+    const collection = hero ? [hero].concat(shown.filter((l) => l !== hero)) : shown;
     // The 3D section links to a real tour when one exists; until then it only shows a photograph.
     const preferred = all.find((l) => l.slug === config.home.tourShowcase);
     const tourListing = (preferred && preferred.hasTour ? preferred : all.find((l) => l.hasTour)) || null;
@@ -348,6 +388,8 @@ function languageRouter(lang) {
       title: `${config.brand} — ${t("meta.tagline")}`,
       headerOverlay: true,
       hero: hero ? listings.view(hero, lang, t) : null,
+      collection: cardViews(collection, lang, t),
+      residenceCount: all.length,
       featured: cardViews(featured.length ? featured : all, lang, t),
       tourListing: tourListing ? listings.view(tourListing, lang, t) : null,
       showcase: showcase ? listings.view(showcase, lang, t) : null,
@@ -515,7 +557,7 @@ app.use((err, req, res, next) => {
   res
     .status(500)
     .type("html")
-    .send(`<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${t("errors.serverTitle")}</title><body style="font-family:system-ui;padding:12vh 8vw;background:#f6f3ee;color:#101214"><h1 style="font-weight:500">${t("errors.serverTitle")}</h1><p>${t("errors.serverText")}</p><p><a href="/" style="color:inherit">${config.brand}</a></p>`);
+    .send(`<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${t("errors.serverTitle")}</title><body style="font-family:system-ui;padding:12vh 8vw;background:#0b0a09;color:#ede8e0"><h1 style="font-weight:300">${t("errors.serverTitle")}</h1><p>${t("errors.serverText")}</p><p><a href="/" style="color:inherit">${config.brand}</a></p>`);
 });
 
 // ------------------------------------------------------------------ start

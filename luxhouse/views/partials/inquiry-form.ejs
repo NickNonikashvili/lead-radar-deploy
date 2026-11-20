@@ -1,10 +1,13 @@
 <%
-  // Params: type ('viewing' | 'contact' | 'valuation'), id (unique prefix), slug?, message?, compact?
-  var fid = id || type;
+  // Params: type ('viewing' | 'contact' | 'valuation'), id (unique prefix for field ids),
+  //         slug? (the residence a viewing is for), message? (prefilled text), rows? (height of the message field),
+  //         subject? (false leaves the subject list out of a contact form).
+  var fid = locals.id || type;
   var submitLabel = type === 'viewing' ? t('form.submitViewing') : type === 'valuation' ? t('form.submitValuation') : t('form.submitContact');
   var consentHtml = t('form.consent').replace('{link}', '<a href="' + url('/privacy') + '" target="_blank" rel="noopener">' + t('form.consentLink') + '</a>');
+  var optional = '<small>(' + t('common.optional') + ')</small>';
 %>
-<form class="form<%= locals.compact ? ' form--compact' : '' %>" data-inquiry-form novalidate>
+<form class="form" data-inquiry-form novalidate>
   <input type="hidden" name="type" value="<%= type %>">
   <input type="hidden" name="lang" value="<%= lang %>">
   <% if (locals.slug) { %><input type="hidden" name="slug" value="<%= slug %>"><% } %>
@@ -15,32 +18,30 @@
 
   <div class="field" data-field="name">
     <label for="<%= fid %>-name"><%= t('form.name') %></label>
-    <input type="text" id="<%= fid %>-name" name="name" autocomplete="name" maxlength="120" required>
-    <p class="field__error" data-error hidden></p>
+    <input type="text" id="<%= fid %>-name" name="name" autocomplete="name" maxlength="120" required aria-describedby="<%= fid %>-name-error">
+    <p class="field__error" id="<%= fid %>-name-error" data-error hidden></p>
   </div>
 
-  <div class="form__row">
-    <div class="field" data-field="phone">
-      <label for="<%= fid %>-phone"><%= t('form.phone') %></label>
-      <input type="tel" id="<%= fid %>-phone" name="phone" autocomplete="tel" inputmode="tel" maxlength="40" placeholder="+995">
-      <p class="field__error" data-error hidden></p>
-    </div>
-    <div class="field" data-field="email">
-      <label for="<%= fid %>-email"><%= t('form.email') %></label>
-      <input type="email" id="<%= fid %>-email" name="email" autocomplete="email" maxlength="160">
-      <p class="field__error" data-error hidden></p>
-    </div>
+  <div class="field field--half" data-field="phone">
+    <label for="<%= fid %>-phone"><%= t('form.phone') %></label>
+    <input type="tel" id="<%= fid %>-phone" name="phone" autocomplete="tel" inputmode="tel" maxlength="40" aria-describedby="<%= fid %>-phone-error <%= fid %>-contact-error">
+    <p class="field__error" id="<%= fid %>-phone-error" data-error hidden></p>
   </div>
-  <p class="field__error field__error--block" data-error-for="contact" hidden></p>
+  <div class="field field--half" data-field="email">
+    <label for="<%= fid %>-email"><%= t('form.email') %></label>
+    <input type="email" id="<%= fid %>-email" name="email" autocomplete="email" maxlength="160" aria-describedby="<%= fid %>-email-error <%= fid %>-contact-error">
+    <p class="field__error" id="<%= fid %>-email-error" data-error hidden></p>
+  </div>
+  <p class="field__error field__error--row" id="<%= fid %>-contact-error" data-error-for="contact" hidden></p>
 
   <% if (type === 'viewing') { %>
     <div class="field" data-field="date">
-      <label for="<%= fid %>-date"><%= t('form.date') %> <span class="field__opt">(<%= t('common.optional') %>)</span></label>
+      <label for="<%= fid %>-date"><%= t('form.date') %> <%- optional %></label>
       <input type="date" id="<%= fid %>-date" name="date" data-min-today>
     </div>
   <% } %>
 
-  <% if (type === 'contact') { %>
+  <% if (type === 'contact' && locals.subject !== false) { %>
     <div class="field" data-field="subject">
       <label for="<%= fid %>-subject"><%= t('form.subject') %></label>
       <div class="select">
@@ -59,44 +60,42 @@
       <label for="<%= fid %>-ploc"><%= t('form.propertyLocation') %></label>
       <input type="text" id="<%= fid %>-ploc" name="propertyLocation" maxlength="200">
     </div>
-    <div class="form__row">
-      <div class="field" data-field="propertyType">
-        <label for="<%= fid %>-ptype"><%= t('form.propertyType') %></label>
-        <div class="select">
-          <select id="<%= fid %>-ptype" name="propertyType">
-            <% Object.keys(t('form.propertyTypes')).forEach(function (key) { %>
-              <option value="<%= key %>"><%= t('form.propertyTypes.' + key) %></option>
-            <% }) %>
-          </select>
-          <svg class="icon" aria-hidden="true"><use href="#i-chevron-down"/></svg>
-        </div>
-      </div>
-      <div class="field" data-field="propertyArea">
-        <label for="<%= fid %>-parea"><%= t('form.propertyArea') %></label>
-        <input type="text" id="<%= fid %>-parea" name="propertyArea" inputmode="numeric" maxlength="20">
+    <div class="field field--half" data-field="propertyType">
+      <label for="<%= fid %>-ptype"><%= t('form.propertyType') %></label>
+      <div class="select">
+        <select id="<%= fid %>-ptype" name="propertyType">
+          <% Object.keys(t('form.propertyTypes')).forEach(function (key) { %>
+            <option value="<%= key %>"><%= t('form.propertyTypes.' + key) %></option>
+          <% }) %>
+        </select>
+        <svg class="icon" aria-hidden="true"><use href="#i-chevron-down"/></svg>
       </div>
     </div>
+    <div class="field field--half" data-field="propertyArea">
+      <label for="<%= fid %>-parea"><%= t('form.propertyArea') %></label>
+      <input type="text" id="<%= fid %>-parea" name="propertyArea" inputmode="numeric" maxlength="20">
+    </div>
     <div class="field" data-field="expectedPrice">
-      <label for="<%= fid %>-pprice"><%= t('form.expectedPrice') %> <span class="field__opt">(<%= t('common.optional') %>)</span></label>
+      <label for="<%= fid %>-pprice"><%= t('form.expectedPrice') %> <%- optional %></label>
       <input type="text" id="<%= fid %>-pprice" name="expectedPrice" inputmode="numeric" maxlength="30">
     </div>
   <% } %>
 
   <div class="field" data-field="message">
-    <label for="<%= fid %>-message"><%= t('form.message') %><% if (type !== 'contact') { %> <span class="field__opt">(<%= t('common.optional') %>)</span><% } %></label>
-    <textarea id="<%= fid %>-message" name="message" rows="<%= locals.compact ? 3 : 5 %>" maxlength="3000"><%= locals.message || '' %></textarea>
+    <label for="<%= fid %>-message"><%= t('form.message') %><% if (type !== 'contact') { %> <%- optional %><% } %></label>
+    <textarea id="<%= fid %>-message" name="message" rows="<%= locals.rows || 3 %>" maxlength="3000"><%= locals.message || '' %></textarea>
   </div>
 
   <div class="field field--check" data-field="consent">
     <label class="check">
-      <input type="checkbox" name="consent" required>
+      <input type="checkbox" name="consent" required aria-describedby="<%= fid %>-consent-error">
       <span class="check__box" aria-hidden="true"><svg class="icon"><use href="#i-check"/></svg></span>
       <span class="check__label"><%- consentHtml %></span>
     </label>
-    <p class="field__error" data-error hidden></p>
+    <p class="field__error" id="<%= fid %>-consent-error" data-error hidden></p>
   </div>
 
-  <button type="submit" class="btn btn--primary btn--block" data-submit><%= submitLabel %></button>
+  <button type="submit" class="btn btn--solid btn--wide" data-submit><span data-submit-label><%= submitLabel %></span><svg class="icon" aria-hidden="true"><use href="#i-arrow-right"/></svg></button>
   <p class="form__status" data-form-status role="status" aria-live="polite" hidden></p>
-  <noscript><p class="form__status form__status--error"><%= t('contact.noDetails') %></p></noscript>
+  <noscript><p class="form__note"><%= t('contact.noDetails') %></p></noscript>
 </form>

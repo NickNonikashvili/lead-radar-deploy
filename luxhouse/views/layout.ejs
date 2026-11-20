@@ -1,4 +1,11 @@
-<!doctype html>
+<%
+  // The faces every first screen needs, per language (file names come from tools/vendor.mjs).
+  var fontPreloads = lang === 'ka'
+    ? ['noto-sans-georgian-georgian-standard-normal', 'inter-tight-latin-wght-normal']
+    : lang === 'ru'
+      ? ['inter-tight-cyrillic-wght-normal', 'inter-cyrillic-wght-normal']
+      : ['inter-tight-latin-wght-normal', 'inter-latin-wght-normal'];
+%><!doctype html>
 <html lang="<%= lang %>" data-rate="<%= config.currency.usdToGel %>">
 <head>
 <meta charset="utf-8">
@@ -20,20 +27,23 @@
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
 <% } else { %><meta name="twitter:card" content="summary">
-<% } %><meta name="theme-color" content="#0f1113">
+<% } %><meta name="theme-color" content="#0b0a09">
+<meta name="color-scheme" content="dark">
 <meta name="format-detection" content="telephone=no">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-<link rel="preload" as="font" type="font/woff2" crossorigin href="/vendor/fonts/<%= lang === 'ka' ? 'noto-sans-georgian-georgian-wght-normal' : lang === 'ru' ? 'manrope-cyrillic-wght-normal' : 'manrope-latin-wght-normal' %>.woff2">
-<link rel="stylesheet" href="<%= asset('/vendor/fonts/fonts.css') %>">
+<% fontPreloads.forEach(function (name) { %><link rel="preload" as="font" type="font/woff2" crossorigin href="/vendor/fonts/<%= name %>.woff2">
+<% }) %><link rel="stylesheet" href="<%= asset('/vendor/fonts/fonts.css') %>">
 <% styles.forEach(function (href) { %><link rel="stylesheet" href="<%= asset(href) %>">
 <% }) %><link rel="stylesheet" href="<%= asset('/css/site.css') %>">
-<script type="application/ld+json"><%- jsonLd({ "@context": "https://schema.org", "@graph": ld }) %></script>
+<% if (pageAssets.legacy) { %><link rel="stylesheet" href="<%= asset(pageAssets.legacy) %>">
+<% } %><% if (pageAssets.css) { %><link rel="stylesheet" href="<%= asset(pageAssets.css) %>">
+<% } %><script type="application/ld+json"><%- jsonLd({ "@context": "https://schema.org", "@graph": ld }) %></script>
 </head>
-<body class="<%= bodyClass %><%= headerOverlay ? ' has-overlay-header' : '' %>">
-<a class="skip-link" href="#main"><%= t('nav.skip') %></a>
+<body class="page page--<%= page %><%= headerOverlay ? ' is-overlay' : '' %><%= bodyClass ? ' ' + bodyClass : '' %>">
+<a class="skip" href="#main"><%= t('nav.skip') %></a>
 <%- include('partials/icons') %>
 <%- include('partials/header') %>
-<main id="main">
+<main id="main" tabindex="-1">
 <%- body %>
 </main>
 <%- include('partials/footer') %>
@@ -50,6 +60,7 @@
     close: t('common.close'),
     previous: t('common.previous'),
     next: t('common.next'),
+    gallery: t('residence.gallery'),
     photoOf: t('residence.photoOf'),
     yearsUnit: t('residence.mortgageYearsUnit'),
     form: {
@@ -66,5 +77,6 @@
 }) %></script>
 <% scripts.forEach(function (src) { %><script src="<%= asset(src) %>" defer></script>
 <% }) %><script src="<%= asset('/js/site.js') %>" defer></script>
-</body>
+<% if (pageAssets.js) { %><script src="<%= asset(pageAssets.js) %>" defer></script>
+<% } %></body>
 </html>

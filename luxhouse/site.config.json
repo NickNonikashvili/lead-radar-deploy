@@ -1,5 +1,5 @@
 {
-  "brand": "Luxhouse",
+  "brand": "LUXHOUSE",
   "legalName": "",
   "baseUrl": "",
   "languages": [
@@ -46,5 +46,19 @@
     "defaultDownPaymentPct": 30,
     "defaultRatePct": 9.5,
     "defaultYears": 15
+  },
+  "art": {
+    "dighomi-garden-house": {
+      "hero": { "focus": "50% 20%", "focusNarrow": "80% 50%" },
+      "reel": [{ "photo": "04", "focus": "50% 59%" }],
+      "stage": { "photo": "06", "light": "70% 52%", "enter": "73% 46%", "floor": "74.5% 73%", "lightNarrow": "60% 50%", "originNarrow": "66%" },
+      "band": { "photo": "02", "focus": "50% 30%" }
+    },
+    "dighomi-stone-villa": {
+      "reel": [{ "photo": "01", "focus": "74% 50%" }, { "photo": "03", "focus": "50% 60%" }]
+    },
+    "tabakhmela-residence": {
+      "reel": [{ "photo": "16", "focus": "50% 40%" }, { "photo": "04", "focus": "50% 62%" }, { "photo": "13", "focus": "50% 70%" }]
+    }
   }
 }

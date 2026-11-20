@@ -55,6 +55,8 @@ const config = {
       : null,
   },
   social: Object.fromEntries(Object.entries(file.social || {}).filter(([, v]) => clean(v))),
+  // Optional hand-picked frames and focal points per listing: see src/art.js.
+  art: file.art && typeof file.art === "object" ? file.art : {},
   currency: {
     usdToGel: Number(file.currency && file.currency.usdToGel) || 2.7,
     rateDate: (file.currency && file.currency.rateDate) || "",

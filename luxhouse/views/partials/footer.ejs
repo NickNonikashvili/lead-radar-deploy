@@ -2,61 +2,72 @@
   var c = config.contact;
   var addr = pick(c.address);
   var hours = pick(c.hours);
-  var hasContact = c.phone || c.email || c.whatsapp || c.telegram || addr;
+  var hasContact = c.phone || c.email || c.whatsapp || c.telegram || addr || hours;
   var socials = Object.keys(config.social);
 %>
 <footer class="site-footer">
-  <div class="container site-footer__grid">
+  <div class="site-footer__top wrap grid">
     <div class="site-footer__brand">
-      <a class="brand brand--footer" href="<%= url('/') %>">
-        <span class="brand__mark" aria-hidden="true"></span>
-        <span class="brand__name"><%= config.brand %></span>
-      </a>
+      <a class="wordmark" href="<%= url('/') %>" lang="en"><%= config.brand %></a>
       <p><%= t('footer.about') %></p>
       <% if (socials.length) { %>
         <ul class="site-footer__social">
           <% socials.forEach(function (name) { %>
-            <li><a href="<%= config.social[name] %>" target="_blank" rel="noopener noreferrer"><%= name.charAt(0).toUpperCase() + name.slice(1) %></a></li>
+            <li><a href="<%= config.social[name] %>" target="_blank" rel="noopener noreferrer" lang="en"><%= name.charAt(0).toUpperCase() + name.slice(1) %></a></li>
           <% }) %>
         </ul>
       <% } %>
     </div>
 
-    <nav class="site-footer__col" aria-label="<%= t('footer.explore') %>">
-      <h2 class="eyebrow"><%= t('footer.explore') %></h2>
-      <ul>
-        <li><a href="<%= url('/residences') %>"><%= t('nav.residences') %></a></li>
-        <li><a href="<%= url('/services') %>"><%= t('nav.services') %></a></li>
-        <li><a href="<%= url('/sell') %>"><%= t('nav.sell') %></a></li>
-        <li><a href="<%= url('/about') %>"><%= t('nav.about') %></a></li>
-        <li><a href="<%= url('/contact') %>"><%= t('nav.contact') %></a></li>
-      </ul>
-    </nav>
+    <div class="site-footer__cols<%= hasContact ? ' site-footer__cols--4' : '' %>">
+      <nav class="site-footer__col" aria-label="<%= t('footer.explore') %>">
+        <p class="label"><%= t('footer.explore') %></p>
+        <ul>
+          <li><a href="<%= url('/residences') %>"><%= t('nav.residences') %></a></li>
+          <li><a href="<%= url('/services') %>"><%= t('nav.services') %></a></li>
+          <li><a href="<%= url('/sell') %>"><%= t('nav.sell') %></a></li>
+          <li><a href="<%= url('/about') %>"><%= t('nav.about') %></a></li>
+          <li><a href="<%= url('/contact') %>"><%= t('nav.contact') %></a></li>
+        </ul>
+      </nav>
 
-    <div class="site-footer__col">
-      <h2 class="eyebrow"><%= t('footer.contact') %></h2>
-      <ul>
-        <% if (c.phone) { %><li><a href="<%= c.phoneHref %>"><%= c.phone %></a></li><% } %>
-        <% if (c.email) { %><li><a href="mailto:<%= c.email %>"><%= c.email %></a></li><% } %>
-        <% if (c.whatsapp) { %><li><a href="<%= c.whatsappHref %>" target="_blank" rel="noopener noreferrer">WhatsApp</a></li><% } %>
-        <% if (c.telegram) { %><li><a href="<%= c.telegramHref %>" target="_blank" rel="noopener noreferrer">Telegram</a></li><% } %>
-        <% if (addr) { %><li><%= addr %></li><% } %>
-        <% if (hours) { %><li><%= hours %></li><% } %>
-        <% if (!hasContact) { %><li><a href="<%= url('/contact') %>"><%= t('common.contactUs') %></a></li><% } %>
-      </ul>
+      <% if (hasContact) { %>
+        <div class="site-footer__col">
+          <p class="label"><%= t('footer.contact') %></p>
+          <ul>
+            <% if (c.phone) { %><li><a class="num" href="<%= c.phoneHref %>"><%= c.phone %></a></li><% } %>
+            <% if (c.email) { %><li><a href="mailto:<%= c.email %>"><%= c.email %></a></li><% } %>
+            <% if (c.whatsapp) { %><li><a href="<%= c.whatsappHref %>" target="_blank" rel="noopener noreferrer" lang="en">WhatsApp</a></li><% } %>
+            <% if (c.telegram) { %><li><a href="<%= c.telegramHref %>" target="_blank" rel="noopener noreferrer" lang="en">Telegram</a></li><% } %>
+            <% if (addr) { %><li><%= addr %></li><% } %>
+            <% if (hours) { %><li><%= hours %></li><% } %>
+          </ul>
+        </div>
+      <% } %>
+
+      <nav class="site-footer__col" aria-label="<%= t('footer.legal') %>">
+        <p class="label"><%= t('footer.legal') %></p>
+        <ul>
+          <li><a href="<%= url('/privacy') %>"><%= t('footer.privacy') %></a></li>
+          <li><a href="<%= url('/terms') %>"><%= t('footer.terms') %></a></li>
+        </ul>
+      </nav>
+
+      <div class="site-footer__col site-footer__col--lang">
+        <p class="label"><%= t('nav.language') %></p>
+        <ul class="switch" aria-label="<%= t('nav.language') %>">
+          <% languages.forEach(function (l) { %>
+            <li><a href="<%= l.url %>" hreflang="<%= l.code %>" lang="<%= l.code %>" title="<%= l.name %>"<%- l.current ? ' aria-current="true"' : '' %>><%= l.short %></a></li>
+          <% }) %>
+        </ul>
+      </div>
     </div>
-
-    <nav class="site-footer__col" aria-label="<%= t('footer.legal') %>">
-      <h2 class="eyebrow"><%= t('footer.legal') %></h2>
-      <ul>
-        <li><a href="<%= url('/privacy') %>"><%= t('footer.privacy') %></a></li>
-        <li><a href="<%= url('/terms') %>"><%= t('footer.terms') %></a></li>
-      </ul>
-    </nav>
   </div>
 
-  <div class="container site-footer__bottom">
+  <p class="site-footer__mark" aria-hidden="true" lang="en"><%= config.brand %></p>
+
+  <div class="site-footer__base wrap">
     <p>© <%= year %> <%= config.legalName %>. <%= t('footer.rights') %></p>
-    <p class="site-footer__disclaimer"><%= t('footer.disclaimer') %></p>
+    <p><%= t('footer.disclaimer') %></p>
   </div>
 </footer>

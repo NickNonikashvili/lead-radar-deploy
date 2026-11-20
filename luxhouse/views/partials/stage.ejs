@@ -1,0 +1,49 @@
+<%
+  // The lit room that leads into a residence's 3D tour.
+  // Params: r (a listing view that has a tour), eyebrow (the label, top left), lines (the title, one
+  //         string per line), titleId (id of the heading, for aria-labelledby on the section),
+  //         level? (heading level, default 2).
+  // Renders nothing when the residence has no tour.
+  var st = art.stage(r);
+  var stH = 'h' + (locals.level || 2);
+%>
+<% if (st) { %>
+<div class="stage" data-stage style="<%= st.style %>">
+  <div class="stage__scene" data-scene>
+    <img class="stage__img stage__img--dim" src="<%= st.photo.src(1280) %>" srcset="<%= st.photo.srcset %>" sizes="100vw" width="<%= st.photo.w %>" height="<%= st.photo.h %>" alt="" aria-hidden="true" loading="lazy" decoding="async">
+    <img class="stage__img stage__img--lit" src="<%= st.photo.src(1280) %>" srcset="<%= st.photo.srcset %>" sizes="100vw" width="<%= st.photo.w %>" height="<%= st.photo.h %>" alt="<%= st.photo.alt %>" loading="lazy" decoding="async">
+    <svg class="stage__floor" viewBox="0 0 1500 1000" preserveAspectRatio="none" aria-hidden="true">
+      <g transform="translate(<%= st.floor.x %> <%= st.floor.y %>)">
+        <ellipse rx="104" ry="29" stroke-opacity=".95" stroke-width="1.4"/>
+        <ellipse rx="64" ry="18" stroke-opacity=".5" stroke-width="1"/>
+        <path d="M-20 -52 0 -64 20 -52M-13 -76 0 -84 13 -76" stroke-opacity=".9" stroke-width="1.4"/>
+      </g>
+    </svg>
+  </div>
+  <div class="stage__veil"></div>
+  <div class="stage__top wrap">
+    <p class="label"><i class="dot"></i><%= eyebrow %></p>
+    <p class="stage__where"><b><%= r.title %></b><% if (st.roomLabel) { %> — <%= st.roomLabel %><% } %></p>
+  </div>
+  <div class="stage__head wrap">
+    <<%= stH %> class="stage__title d2" id="<%= titleId %>"><% lines.forEach(function (line, i) { %><%= i ? ' ' : '' %><span><%= line %></span><% }) %></<%= stH %>>
+  </div>
+  <a class="enter" href="<%= st.url %>" aria-label="<%= t('common.enterTour') %> — <%= r.title %>">
+    <i class="dot" aria-hidden="true"></i><span class="enter__text"><%= t('common.enterTour') %></span>
+  </a>
+  <div class="stage__bottom wrap">
+    <div class="stage__strip">
+      <p class="strip__label label"><span><%= t('tour.spaces') %></span><span class="num"><%= t.n('home.tourViewpoints', st.count) %></span></p>
+      <ol class="strip">
+        <% st.spaces.forEach(function (s) { %>
+          <li><a href="<%= s.url %>"<%- s.current ? ' aria-current="true"' : '' %>><span class="still"><img src="<%= s.photo.src(640) %>" width="<%= s.photo.w %>" height="<%= s.photo.h %>" alt="" loading="lazy" decoding="async"></span><span><%= s.label %></span></a></li>
+        <% }) %>
+      </ol>
+    </div>
+    <ul class="stage__keys" aria-label="<%= t('tour.help') %>">
+      <li><span class="keys" aria-hidden="true"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></span><%= t('tour.helpKeys') %></li>
+      <li><span class="keys" aria-hidden="true"><svg class="icon"><use href="#i-drag"/></svg></span><%= t('tour.helpDrag') %></li>
+    </ul>
+  </div>
+</div>
+<% } %>
