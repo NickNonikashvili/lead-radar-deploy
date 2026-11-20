@@ -9,7 +9,8 @@ import crypto from "node:crypto";
 import config from "../src/config.mjs";
 import { TOURS } from "../src/data/tours.mjs";
 import { TIERS } from "../src/data/tiers.mjs";
-import { LANGS } from "../src/lib/i18n.mjs";
+import { fileURLToPath } from "node:url";
+import { LANGS, DEFAULT_LANG, loadDict, lookup } from "../src/lib/i18n.mjs";
 
 // No 0/O, 1/I/L: easy to read out over the phone.
 const KEY_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
@@ -25,15 +26,29 @@ function setupKey() {
   return key;
 }
 
+// A name as the website shows it in each other language: {ru: "…", ka: "…"} (only translated ones). The admin
+// uses these to recognise a tour or travel style a visitor picked on a page in their own language.
+const i18nDir = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "src", "i18n");
+const looks = LANGS.filter((l) => l.code !== DEFAULT_LANG).map((l) => [l.code, lookup(loadDict(i18nDir, l.code))]);
+function namesIn(name) {
+  const out = {};
+  for (const [code, look] of looks) {
+    const v = look(name);
+    if (v && v !== name) out[code] = v;
+  }
+  return out;
+}
+
 export function writeAdminFiles(out) {
   const dir = path.join(out, "admin", "lib");
   fs.mkdirSync(dir, { recursive: true });
   const catalog = {
     builtAt: new Date().toISOString(),
     brand: config.brand,
+    siteUrl: config.siteUrl || "",
     languages: LANGS.map((l) => ({ code: l.code, name: l.name })),
-    tiers: TIERS.map((t) => ({ id: t.id, name: t.name })),
-    tours: TOURS.map((t) => ({ id: t.id, name: t.name, days: t.days, styles: t.styles, prices: t.prices })),
+    tiers: TIERS.map((t) => ({ id: t.id, name: t.name, names: namesIn(t.name) })),
+    tours: TOURS.map((t) => ({ id: t.id, name: t.name, names: namesIn(t.name), days: t.days, styles: t.styles, prices: t.prices })),
     partyFactors: config.partyFactors,
     contact: {
       email: config.email, phone: config.phone, whatsapp: config.whatsapp, telegram: config.telegram, signal: config.signal,

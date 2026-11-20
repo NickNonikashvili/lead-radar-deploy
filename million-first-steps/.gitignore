@@ -5,3 +5,9 @@ src/assets/photos/*.jpeg
 src/assets/photos/*.png
 photo-previews/
 src/i18n/parts/
+# The admin panel's private data folder (database, sessions) when the site runs locally
+# (php -S … scripts/router.php puts it next to the build folder).
+mfs-data/
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm

@@ -1,4 +1,5 @@
 <?php
+if (!defined('MFS_BOOTED')) { http_response_code(404); exit; }
 // My account: name, email, language and password. Everyone (owners and team members) can open it.
 $me = require_login();
 $errors = [];
@@ -25,7 +26,10 @@ if (is_post()) {
     }
     if (!$errors) {
       db_exec('UPDATE users SET name = ?, email = ?, lang = ? WHERE id = ?', [$name, $email, $lang, $me['id']]);
+      // A new sign-in address: reset links sent to the old one stop working.
+      if ($emailChanged) db_exec('DELETE FROM password_resets WHERE user_id = ?', [$me['id']]);
       $_SESSION['lang'] = $lang;
+      mfs_remember_lang($lang);
       $changes = [];
       if ($name !== $me['name']) $changes[] = 'name';
       if ($emailChanged) $changes[] = 'email ' . $me['email'] . ' → ' . $email;

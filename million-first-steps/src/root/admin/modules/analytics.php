@@ -1,4 +1,5 @@
 <?php
+if (!defined('MFS_BOOTED')) { http_response_code(404); exit; }
 /*
  * Statistics (?p=analytics): the website's own cookieless visit counts (api/hit.php → stats_* tables) and the
  * requests that came in over the same days.
@@ -103,9 +104,15 @@ $pages = array_values($pages);
 // ── Languages, referrers, devices ───────────────────────────────────────────
 
 $dims = ['lang' => [], 'ref' => [], 'device' => []];
-foreach (db_all('SELECT dim, value, SUM(views) AS v FROM stats_dims WHERE day >= ? AND day <= ? GROUP BY dim, value', [$first, $last]) as $r) {
-  if (isset($dims[$r['dim']])) $dims[$r['dim']][(string) $r['value']] = (int) $r['v'];
+foreach (db_all("SELECT dim, value, SUM(views) AS v FROM stats_dims WHERE day >= ? AND day <= ? AND dim IN ('lang', 'device') GROUP BY dim, value", [$first, $last]) as $r) {
+  $dims[$r['dim']][(string) $r['value']] = (int) $r['v'];
 }
+// Referrers: only the busiest hosts come into PHP; the rest are added up as "Other websites".
+foreach (db_all("SELECT value, SUM(views) AS v FROM stats_dims WHERE day >= ? AND day <= ? AND dim = 'ref' GROUP BY value ORDER BY v DESC, value LIMIT 60", [$first, $last]) as $r) {
+  $dims['ref'][(string) $r['value']] = (int) $r['v'];
+}
+$refRest = (int) db_value("SELECT COALESCE(SUM(views), 0) FROM stats_dims WHERE day >= ? AND day <= ? AND dim = 'ref'", [$first, $last]) - array_sum($dims['ref']);
+if ($refRest > 0) $dims['ref']['(other)'] = ($dims['ref']['(other)'] ?? 0) + $refRest;
 arsort($dims['lang']);
 $langRows = [];
 foreach ($dims['lang'] as $code => $v) if ($v > 0) $langRows[] = ['label' => ins_lang_name($code), 'value' => $v];
@@ -117,7 +124,7 @@ foreach ($dims['ref'] as $host => $v) {
   $ri = ins_ref_info($host);
   if (!isset($refs[$ri['key']])) $refs[$ri['key']] = ['label' => $ri['name'], 'value' => 0, 'hosts' => [], 'direct' => $ri['direct']];
   $refs[$ri['key']]['value'] += $v;
-  if (!$ri['direct']) $refs[$ri['key']]['hosts'][$host] = $v;
+  if (!$ri['direct'] && $ri['key'] !== '(other)') $refs[$ri['key']]['hosts'][$host] = $v;
 }
 foreach ($refs as $k => $r) {
   arsort($r['hosts']);
@@ -208,7 +215,7 @@ ob_start();
         'per_visit', $perVisit !== null ? round($perVisit, 1) : '') ?>
       <?= $kpi('wine', 'inbox', t('Requests'), ins_num($requests), ($requests || $requestsPrev) ? ins_trend($requests, $requestsPrev, $vs) : '<span>' . h(t('None in this period')) . '</span>', 'requests', $requests, url('requests')) ?>
       <?= $kpi('wine', 'star', t('Request rate'), $rate !== null ? $rate : '—',
-        '<span>' . h($rate !== null ? t('{requests} requests from {visitors} visitors', ['requests' => ins_num($requests), 'visitors' => ins_num($visitors)]) : t('Needs visitor numbers')) . '</span>', 'rate', $rate !== null ? $rate : '') ?>
+        '<span>' . h(ins_rate_note($requests, $visitors)) . '</span>', 'rate', $rate !== null ? $rate : '') ?>
       <?= $kpi('green', 'calendar', t('Busiest day'), $busiest ? ins_weekday_day_label($busiest[0]) : '—',
         '<span>' . h($busiest ? tp($busiest[1], '{n} visitor', '{n} visitors') : t('No visits yet')) . '</span>', 'busiest', $busiest ? $busiest[0] : '') ?>
     </div>
@@ -231,7 +238,7 @@ ob_start();
       ],
       'partial' => $todayIdx,
       'partial_label' => t('Today so far'),
-      'table_head' => t('Day (UTC)'),
+      'table_head' => t('Day'),
       'tip' => function ($i) use ($labels, $visVals, $viewVals, $todayIdx) {
         return ($i === $todayIdx ? t('Today so far') : $labels[$i]) . ' — ' . tp($visVals[$i], '{n} visitor', '{n} visitors') . ', ' . tp($viewVals[$i], '{n} page view', '{n} page views');
       },

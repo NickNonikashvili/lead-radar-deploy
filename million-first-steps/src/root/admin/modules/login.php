@@ -1,4 +1,5 @@
 <?php
+if (!defined('MFS_BOOTED')) { http_response_code(404); exit; }
 // Sign in. Throttled per IP hash and per email; the same answer for an unknown email and a wrong password.
 if (current_user()) redirect(mfs_safe_next(get('next')));
 

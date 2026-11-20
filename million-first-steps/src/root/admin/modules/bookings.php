@@ -1,4 +1,5 @@
 <?php
+if (!defined('MFS_BOOTED')) { http_response_code(404); exit; }
 /*
  * Bookings (?p=bookings): every booking with its payments. Filters travel in the query string:
  *   status = quote|confirmed|completed|cancelled (tabs) · when = upcoming (default) | past | nodate | all
@@ -90,8 +91,8 @@ if (!$anyBooking) { ?>
       </select>
       <label class="sr-only" for="bk-sort"><?= h(t('Order')) ?></label>
       <select class="select" id="bk-sort" name="sort" data-autosubmit>
-        <option value=""<?= $f['sort'] === '' ? ' selected' : '' ?>><?= h(t('By trip date')) ?></option>
-        <option value="new"<?= $f['sort'] === 'new' ? ' selected' : '' ?>><?= h(t('Newest first')) ?></option>
+        <option value=""<?= $f['sort'] === '' ? ' selected' : '' ?>><?= h(t('Sort: by trip date')) ?></option>
+        <option value="new"<?= $f['sort'] === 'new' ? ' selected' : '' ?>><?= h(t('Sort: newest first')) ?></option>
       </select>
     </div>
     <span class="toolbar__spacer"></span>

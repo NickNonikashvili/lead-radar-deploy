@@ -1,4 +1,5 @@
 <?php
+if (!defined('MFS_BOOTED')) { http_response_code(404); exit; }
 /*
  * Dashboard (?p=dashboard, the team area's home page): greeting, key figures, "Needs attention" (new requests,
  * follow-ups due, payments due or overdue, trips starting within 7 days — each item links to its request or
@@ -97,6 +98,10 @@ $follow = db_all("SELECT r.*, u.name AS assignee FROM requests r LEFT JOIN users
 $newOnlyN = (int) db_value("SELECT COUNT(*) FROM requests r WHERE r.status = 'new' AND NOT ($dueSql)", [$today]);
 $newList = db_all("SELECT r.*, u.name AS assignee FROM requests r LEFT JOIN users u ON u.id = r.assigned_to
   WHERE r.status = 'new' AND NOT ($dueSql) ORDER BY r.created_at ASC, r.id ASC LIMIT 5", [$today]);
+// Open requests handed to the person looking (a personal view: not added to the total, which counts each item once).
+$mineN = (int) db_value("SELECT COUNT(*) FROM requests r WHERE r.status IN ($openIn) AND r.assigned_to = ?", [(int) $me['id']]);
+$mineList = $mineN > 0 ? db_all("SELECT r.*, u.name AS assignee FROM requests r LEFT JOIN users u ON u.id = r.assigned_to
+  WHERE r.status IN ($openIn) AND r.assigned_to = ? ORDER BY r.updated_at DESC, r.id DESC LIMIT 5", [(int) $me['id']]) : [];
 $tripsSoon = db_all("SELECT b.*, COALESCE(pp.paid, 0) AS paid FROM bookings b " . BK_PAID_JOIN . "
   WHERE b.status IN ('quote','confirmed') AND b.start_date >= ? AND b.start_date <= ? ORDER BY b.start_date, b.id", [$today, ins_local_add_days($today, 7)]);
 $payN = count($payItems);
@@ -301,9 +306,7 @@ if ($vis30 > 0 || $visPrev > 0) $visMeta = ins_trend($vis30, $visPrev, t('vs pre
 else $visMeta = '<span>' . h($statsOn ? t('No visits counted yet') : t('Visitor counting is switched off')) . '</span>';
 echo $kpi('blue', 'users', t('Visitors, last 30 days'), ins_num($vis30), $visMeta, url('analytics', ['d' => 30]), 'visitors', $vis30);
 
-$rateMeta = $rate30 !== null
-  ? '<span>' . h(t('{requests} requests from {visitors} visitors', ['requests' => ins_num($req30), 'visitors' => ins_num($vis30)])) . '</span>'
-  : '<span>' . h(t('Needs visitor numbers')) . '</span>';
+$rateMeta = '<span>' . h(ins_rate_note($req30, $vis30)) . '</span>';
 echo $kpi('blue', 'star', t('Request rate'), $rate30 !== null ? $rate30 : '—', $rateMeta, url('analytics', ['d' => 30]), 'rate', $rate30 !== null ? $rate30 : '');
 ?>
     </div>
@@ -316,7 +319,7 @@ echo $kpi('blue', 'star', t('Request rate'), $rate30 !== null ? $rate30 : '—',
       <div><h2 class="card__title" id="dash-attn-t"><?= h(t('Needs attention')) ?><?php if ($attnTotal > 0): ?> <span class="badge"><?= ins_num($attnTotal) ?></span><?php endif; ?></h2>
       <p class="card__sub"><?= h($attnTotal > 0 ? t('Open an item to deal with it.') : t('Everything that needs someone to act shows up here.')) ?></p></div>
     </div>
-<?php if ($attnTotal === 0): ?>
+<?php if ($attnTotal === 0 && $mineN === 0): ?>
     <div class="card__body"><?= ins_empty('check', t('You’re all caught up'), $anyRequest || $anyBooking
       ? t('No new requests, follow-ups, payments or departures need you right now.')
       : t('New requests from the website, follow-ups you set, payments falling due and trips about to start will appear here.')) ?></div>
@@ -324,6 +327,7 @@ echo $kpi('blue', 'star', t('Request rate'), $rate30 !== null ? $rate30 : '—',
     <nav class="chips dash-attn__chips" aria-label="<?= h(t('Jump to')) ?>">
       <?php if ($newOnlyN): ?><a class="chip" href="#attn-new"><?= h(tp($newOnlyN, '{n} new request', '{n} new requests')) ?></a><?php endif; ?>
       <?php if ($followN): ?><a class="chip" href="#attn-follow"><?= h(tp($followN, '{n} follow-up', '{n} follow-ups')) ?></a><?php endif; ?>
+      <?php if ($mineN): ?><a class="chip" href="#attn-mine"><?= h(tp($mineN, '{n} assigned to you', '{n} assigned to you')) ?></a><?php endif; ?>
       <?php if ($payN): ?><a class="chip" href="#attn-pay"><?= h(tp($payN, '{n} payment', '{n} payments')) ?></a><?php endif; ?>
       <?php if ($tripsN): ?><a class="chip" href="#attn-trips"><?= h(tp($tripsN, '{n} trip this week', '{n} trips this week')) ?></a><?php endif; ?>
     </nav>
@@ -364,6 +368,23 @@ echo $kpi('blue', 'star', t('Request rate'), $rate30 !== null ? $rate30 : '—',
     }
     echo $group('follow', 'clock', t('Follow-ups due'), $followN, '', $rows, count($follow),
       tp($followN - count($follow), 'Show {n} more follow-up', 'Show {n} more follow-ups'), url('requests', ['due' => 1]));
+  }
+
+  // Requests someone handed to this person.
+  if ($mineN > 0) {
+    $rows = '';
+    foreach ($mineList as $r) {
+      $due = trim((string) $r['follow_up_on']) !== '' ? days_until($r['follow_up_on']) : null;
+      $rows .= $item([
+        'href' => url('request', ['id' => $r['id'], 'mine' => 1]), 'icon' => 'user', 'tone' => $due !== null && $due < 0 ? 'late' : '',
+        'title' => req_display_name($r),
+        'facts' => array_values(array_filter([['html' => status_badge($r['status'])],
+          trim((string) $r['follow_up_on']) !== '' ? [req_follow_label((string) $r['follow_up_on']), $due !== null && $due < 0 ? 'late' : ''] : null])),
+        'note' => req_summary($r),
+      ]);
+    }
+    echo $group('mine', 'user', t('Assigned to you'), $mineN, '', $rows, count($mineList),
+      tp($mineN - count($mineList), 'Show {n} more', 'Show {n} more'), url('requests', ['mine' => 1]));
   }
 
   // Payments: overdue, or due within 14 days (confirmed and completed trips).
@@ -477,7 +498,7 @@ $cat = tours();
 foreach ($cat as $id => $tr) {
   $n = $tourReq[$id] ?? 0;
   $bkd = $tourBooked[$id] ?? 0;
-  $tourRows[] = ['label' => $tr['name'], 'value' => $n, 'note' => $bkd > 0 ? tp($bkd, '{n} booked', '{n} booked') : '',
+  $tourRows[] = ['label' => tour_name($id), 'value' => $n, 'note' => $bkd > 0 ? tp($bkd, '{n} booked', '{n} booked') : '',
     'sub' => $tr['hidden'] ? t('Hidden on the website') : '', 'muted' => $n === 0, 'href' => url('requests', ['q' => $tr['name']])];
 }
 foreach ($tourReq as $id => $n) {

@@ -63,7 +63,7 @@
  *                                            tours_hidden, party_factors or notice
  *    audit($action, $target = '', $details = ''): void   e.g. audit('booking.create', 'booking:12', 'MFS-B-0012')
  *                                            convention: action "<area>.<verb>", target "<table>:<id>"
- *    send_mail($to, $subject, $body, $replyTo = ''): bool  plain-text email from no-reply@<domain>
+ *    send_mail($to, $subject, $body, $replyTo = ''): bool  plain-text email (sender: mfs_mail_from())
  *    fmt_money($n): string ('€1,250', '€1,250.50')         money_value($input): float (parses "1,250.50", "€90")
  *    fmt_date($utcOrYmd, $withTime = false): string        "20 Nov 2026" / "20 Nov 2026, 14:05" (Tbilisi time);
  *                                            a plain 'Y-m-d' (trip/due dates) is shown without time-zone shift
@@ -96,7 +96,12 @@
  *    ref (referrer host without www, or '(direct)'; own-site navigation is not counted), device (phone|tablet|
  *    desktop|unknown). stats_pages.path is normalised: '/', '/about', '/tours/', '/ru/tours/cradle-of-wine',
  *    '(not found)' for addresses that don't exist.
- *  SETTINGS beyond the spec: housekeeping_day (internal), daily_salt (internal — never show).
+ *  SETTINGS beyond the spec (internal — never show): housekeeping_day, daily_salt, cookie_secret (signs the small
+ *    cookies of people who aren't signed in), dummy_hash, id_floor (db_next_id), site_url (the address the owners
+ *    sign in at — links in emails use it, see mfs_site_origin()); mail_from (Settings › Form emails).
+ *    Backups leave out daily_salt, housekeeping_day, cookie_secret and dummy_hash.
+ *  SESSIONS only exist for people who are signed in; before that, the form token (mfs_pre), messages
+ *    (mfs_flash), the language (mfs_lang) and "this device signed in before" (mfs_dev) are small cookies.
  *
  *  A MODULE (admin/modules/example.php)
  *    <?php
@@ -224,6 +229,6 @@ function mfs_web_start(): void
   db();
   mfs_bounce_cross_site();
   mfs_session_start();
-  if (!current_user() && isset($_GET['lang']) && is_string($_GET['lang']) && isset(UI_LANGS[$_GET['lang']])) $_SESSION['lang'] = $_GET['lang'];
+  if (!current_user() && isset($_GET['lang']) && is_string($_GET['lang']) && isset(UI_LANGS[$_GET['lang']])) mfs_remember_lang($_GET['lang']);
   mfs_housekeeping();
 }

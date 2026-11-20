@@ -36,18 +36,43 @@ const USER_ROLES = [
   'staff' => 'Team member',
 ];
 
+/** Text-direction override and isolate characters: a visitor could use them to disguise a name or flip the text around it. */
+const MFS_BIDI_CONTROLS = ["\u{202A}", "\u{202B}", "\u{202C}", "\u{202D}", "\u{202E}", "\u{2066}", "\u{2067}", "\u{2068}", "\u{2069}"];
+
 /** Escape for HTML text and attributes. Use on EVERY value you print. */
 function h($s): string
 {
-  return htmlspecialchars((string) $s, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+  return htmlspecialchars(str_replace(MFS_BIDI_CONTROLS, '', (string) $s), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 }
 
-/** The interface language of this request: the signed-in user's, else the one picked on the login page. */
+/**
+ * The interface language of this request: the signed-in user's, else the session's, else the one picked on the
+ * sign-in pages (remembered on this device in the mfs_lang cookie). mfs_with_lang() can switch it for a moment.
+ */
 function mfs_lang(): string
 {
-  $u = isset($GLOBALS['mfs_user']) && is_array($GLOBALS['mfs_user']) ? $GLOBALS['mfs_user'] : null;
-  $l = $u ? (string) $u['lang'] : (session_status() === PHP_SESSION_ACTIVE ? (string) ($_SESSION['lang'] ?? 'en') : 'en');
+  if (!empty($GLOBALS['mfs_lang_force'])) {
+    $l = (string) $GLOBALS['mfs_lang_force'];
+  } else {
+    $u = isset($GLOBALS['mfs_user']) && is_array($GLOBALS['mfs_user']) ? $GLOBALS['mfs_user'] : null;
+    if ($u) $l = (string) $u['lang'];
+    elseif (session_status() === PHP_SESSION_ACTIVE && isset($_SESSION['lang'])) $l = (string) $_SESSION['lang'];
+    elseif (isset($GLOBALS['mfs_lang_pick'])) $l = (string) $GLOBALS['mfs_lang_pick'];
+    else $l = isset($_COOKIE['mfs_lang']) && is_string($_COOKIE['mfs_lang']) ? $_COOKIE['mfs_lang'] : 'en';
+  }
   return isset(UI_LANGS[$l]) ? $l : 'en';
+}
+
+/** Runs $fn with the interface language set to $lang (e.g. to write an email in its recipient's language). */
+function mfs_with_lang(string $lang, callable $fn)
+{
+  $prev = $GLOBALS['mfs_lang_force'] ?? null;
+  $GLOBALS['mfs_lang_force'] = isset(UI_LANGS[$lang]) ? $lang : 'en';
+  try {
+    return $fn();
+  } finally {
+    $GLOBALS['mfs_lang_force'] = $prev;
+  }
 }
 
 /**
@@ -115,6 +140,7 @@ function mfs_clean_text($s, bool $multiline = true): string
   $s = str_replace(["\r\n", "\r"], "\n", $s);
   if (!$multiline) $s = str_replace(["\n", "\t"], ' ', $s);
   $s = (string) preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/u', '', $s);
+  $s = str_replace(MFS_BIDI_CONTROLS, '', $s);
   return trim($s);
 }
 
@@ -149,21 +175,50 @@ function post_ids($key = 'ids'): array
   return array_values($out);
 }
 
-/** A message shown once on the next rendered page. $type: 'ok' | 'error' | 'info'. */
+/**
+ * A message shown once on the next rendered page. $type: 'ok' | 'error' | 'info'.
+ * Signed in: kept in the session. Otherwise: in a small signed cookie (mfs_flash), so no session is needed.
+ */
 function flash($type, $message): void
 {
-  if (session_status() !== PHP_SESSION_ACTIVE) return;
   $type = in_array($type, ['ok', 'error', 'info'], true) ? $type : 'info';
-  $_SESSION['flash'][] = [$type, (string) $message];
+  if (session_status() === PHP_SESSION_ACTIVE) {
+    $_SESSION['flash'][] = [$type, (string) $message];
+    return;
+  }
+  $q = &mfs_cookie_flashes();
+  $q[] = [$type, (string) $message];
+  $q = array_slice($q, -4);
+  mfs_signed_cookie_set('mfs_flash', $q);
+}
+
+/** The messages waiting in the mfs_flash cookie (plus the ones added during this request). */
+function &mfs_cookie_flashes(): array
+{
+  if (!isset($GLOBALS['mfs_flash_queue'])) {
+    $q = [];
+    $d = isset($_COOKIE['mfs_flash']) ? mfs_signed_cookie_get('mfs_flash') : null;
+    if (is_array($d)) foreach ($d as $f) if (is_array($f) && isset($f[0], $f[1]) && is_string($f[0]) && is_string($f[1])) $q[] = [$f[0], $f[1]];
+    $GLOBALS['mfs_flash_queue'] = $q;
+  }
+  return $GLOBALS['mfs_flash_queue'];
 }
 
 /** Takes the waiting flash messages (render() does this for you). */
 function mfs_take_flashes(): array
 {
-  if (session_status() !== PHP_SESSION_ACTIVE || empty($_SESSION['flash'])) return [];
-  $f = $_SESSION['flash'];
-  unset($_SESSION['flash']);
-  return is_array($f) ? $f : [];
+  $out = [];
+  if (session_status() === PHP_SESSION_ACTIVE && !empty($_SESSION['flash'])) {
+    $out = is_array($_SESSION['flash']) ? $_SESSION['flash'] : [];
+    unset($_SESSION['flash']);
+  }
+  if (isset($_COOKIE['mfs_flash']) || !empty($GLOBALS['mfs_flash_queue'])) {
+    $q = &mfs_cookie_flashes();
+    $out = array_merge($q, $out);
+    $q = [];
+    mfs_set_cookie('mfs_flash', '', time() - 86400);
+  }
+  return $out;
 }
 
 // ── Time ────────────────────────────────────────────────────────────────────
@@ -413,10 +468,65 @@ function mfs_admin_url_path(): string
   return mfs_site_url_path() . '/' . basename(MFS_ADMIN_DIR) . '/';
 }
 
-/** Absolute URL of the admin folder: 'https://example.com/admin/'. */
+/** 'https://example.com' (scheme, host and port only) from a configured address, or '' if it isn't one. */
+function mfs_origin_of($url): string
+{
+  $p = is_string($url) && $url !== '' ? parse_url(trim($url)) : false;
+  if (!is_array($p) || !in_array(strtolower((string) ($p['scheme'] ?? '')), ['http', 'https'], true) || empty($p['host'])) return '';
+  $host = strtolower((string) $p['host']);
+  if (!preg_match('/^[a-z0-9.-]{1,253}$/', $host)) return '';
+  return strtolower((string) $p['scheme']) . '://' . $host . (isset($p['port']) ? ':' . (int) $p['port'] : '');
+}
+
+/**
+ * The website's own address for links in emails and the sender's domain — never just whatever Host header a
+ * request carried. In order: MFS_SITE_URL in admin/config.local.php, the build's siteUrl (catalog.json), the
+ * address the owners last signed in at (setting site_url), and only then this request's host.
+ */
+function mfs_site_origin(): string
+{
+  if (defined('MFS_SITE_URL') && ($o = mfs_origin_of((string) MFS_SITE_URL)) !== '') return $o;
+  try {
+    $o = mfs_origin_of((string) (catalog()['siteUrl'] ?? ''));
+    if ($o === '') $o = mfs_origin_of((string) setting('site_url', ''));
+    if ($o !== '') return $o;
+  } catch (Throwable $e) {
+    // No database: fall back to this request's host.
+  }
+  return (mfs_is_https() ? 'https' : 'http') . '://' . mfs_host();
+}
+
+/** Remembers the address someone has just signed in (or set up the panel) at, for links in emails. */
+function mfs_remember_site_url(): void
+{
+  $o = (mfs_is_https() ? 'https' : 'http') . '://' . mfs_host();
+  if (mfs_host() !== 'localhost' && setting('site_url', '') !== $o) set_setting('site_url', $o);
+}
+
+/** Absolute URL of the admin folder for emails: 'https://example.com/admin/'. */
 function mfs_admin_base_url(): string
 {
-  return (mfs_is_https() ? 'https' : 'http') . '://' . mfs_host() . mfs_admin_url_path();
+  return mfs_site_origin() . mfs_admin_url_path();
+}
+
+/**
+ * Sends a 303 to $url and closes the connection, then lets the script carry on (e.g. to send an email): the
+ * person doesn't wait for the mail server, and the response time doesn't tell what happened afterwards.
+ */
+function mfs_redirect_and_continue(string $url): void
+{
+  $url = str_replace(["\r", "\n", "\0"], '', $url);
+  ignore_user_abort(true);
+  if (session_status() === PHP_SESSION_ACTIVE) session_write_close();
+  if (!headers_sent()) {
+    header('Location: ' . $url, true, 303);
+    header('Content-Length: 0');
+    header('Connection: close');
+  }
+  while (ob_get_level() > 0) @ob_end_flush();
+  @flush();
+  if (function_exists('fastcgi_finish_request')) fastcgi_finish_request();
+  elseif (function_exists('litespeed_finish_request')) litespeed_finish_request();
 }
 
 /** The visitor's IP address (only ever stored hashed). */

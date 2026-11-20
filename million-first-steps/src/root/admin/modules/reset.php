@@ -1,7 +1,10 @@
 <?php
+if (!defined('MFS_BOOTED')) { http_response_code(404); exit; }
 // Choose a new password from an emailed link. The token is single-use and expires after an hour.
 $token = is_post() ? post('token') : get('token');
 $reset = $token !== '' ? mfs_find_reset($token) : null;
+// The page (and the sign-in page after it) in the account's own language, unless one was picked here.
+if ($reset && !isset($_GET['lang'])) mfs_remember_lang((string) $reset['lang']);
 
 if (!$reset) {
   ob_start(); ?>
@@ -26,9 +29,11 @@ if (is_post()) {
       return true;
     });
     if ($ok) {
-      $GLOBALS['mfs_user'] = ['id' => (int) $reset['id'], 'lang' => mfs_lang()] + $reset;
+      $lang = mfs_lang();
+      $GLOBALS['mfs_user'] = ['id' => (int) $reset['id'], 'lang' => $lang] + $reset;
       audit('auth.password_reset', 'user:' . $reset['id'], 'New password chosen from an emailed link');
       mfs_forget_session();
+      mfs_remember_lang($lang);
       flash('ok', t('Your new password is saved. Please sign in with it. Any other devices have been signed out.'));
       redirect(url('login'));
     }

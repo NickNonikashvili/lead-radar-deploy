@@ -181,8 +181,10 @@ function bk_party_label($adults, $children): string
 /** "The Cradle of Wine" (+ " · Explorer" when $withTier) — or "Custom trip" / "No tour chosen yet". */
 function bk_tour_label(array $b, bool $withTier = true): string
 {
-  $name = trim((string) ($b['tour_name'] ?? ''));
-  if ($name === '' && trim((string) ($b['tour_id'] ?? '')) !== '') $name = tour_name($b['tour_id']);
+  // A catalogue tour by its name in the interface language; a custom trip by the name it was given.
+  $tid = trim((string) ($b['tour_id'] ?? ''));
+  $name = $tid !== '' && isset(tours()[$tid]) ? tour_name($tid) : trim((string) ($b['tour_name'] ?? ''));
+  if ($name === '' && $tid !== '') $name = tour_name($tid);
   if ($name === '') $name = t('No tour chosen yet');
   $tier = trim((string) ($b['tier'] ?? ''));
   return ($withTier && $tier !== '') ? $name . ' · ' . tier_name($tier) : $name;
@@ -282,17 +284,20 @@ function bk_money(array $b): array
     $m['pill'] = 'quoted';
   }
 
-  // What's due next: the deposit until it's in, then the balance.
+  // What's due next: the deposit until it's in (when it has its own due date, or nothing else has one), then
+  // the balance. Once the balance date has passed — or, without one, the trip is over — everything still unpaid
+  // is overdue, whether or not the deposit ever came in.
   if ($balance > BK_EPS) {
     $today = local_today();
-    if ($deposit > BK_EPS && $paid + BK_EPS < $deposit) {
-      $date = bk_valid_date($b['deposit_due'] ?? '');
-      $m['due'] = ['what' => 'deposit', 'amount' => round(min($deposit, $total) - $paid, 2), 'date' => $date];
+    $balDate = bk_valid_date($b['balance_due'] ?? '');
+    $depDate = bk_valid_date($b['deposit_due'] ?? '');
+    $tripOver = $balDate === '' && bk_end($b) !== '' && bk_end($b) < $today;
+    $balLate = ($balDate !== '' && $balDate < $today) || $tripOver;
+    $depPending = $deposit > BK_EPS && $paid + BK_EPS < $deposit;
+    if ($depPending && !$balLate && ($depDate !== '' || $balDate === '')) {
+      $m['due'] = ['what' => 'deposit', 'amount' => round(min($deposit, $total) - $paid, 2), 'date' => $depDate];
     } else {
-      $date = bk_valid_date($b['balance_due'] ?? '');
-      // No balance date: the balance is late once the trip is over.
-      $late = $date === '' && bk_end($b) !== '' && bk_end($b) < $today;
-      $m['due'] = ['what' => 'balance', 'amount' => $balance, 'date' => $date, 'late_by_trip' => $late];
+      $m['due'] = ['what' => 'balance', 'amount' => $balance, 'date' => $balDate, 'late_by_trip' => $tripOver];
     }
     $days = $m['due']['date'] !== '' ? days_until($m['due']['date']) : null;
     $m['due']['days'] = $days;
@@ -486,6 +491,11 @@ function bk_parse_dates(string $text, string $refYmd = ''): array
   if ($s === '' || strlen($s) > 200) return $none;
   if (bk_valid_date($refYmd) === '') $refYmd = local_today();
   $s = (string) preg_replace('/\(\s*±\s*\d+\s*\)/u', ' ', $s);
+  // A browser without month names for the page's language writes "M12 12 – M12 18" (month 12, day 12).
+  $s = (string) preg_replace_callback('/(?<!\p{L})m(\d{1,2})(?![\d\p{L}])/u', function ($m) {
+    $n = (int) $m[1];
+    return $n >= 1 && $n <= 12 ? ' ' . ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'][$n - 1] . ' ' : $m[0];
+  }, $s);
   $s = str_replace(['–', '—', '−', '‒', '~', '～', '至'], '-', $s);
   if (!preg_match_all('/(\d{4})-(\d{1,2})-(\d{1,2})|(?:(\d{4})年)?(\d{1,2})月(\d{1,2})日?|(\d{1,2})[.\/](\d{1,2})(?:[.\/](\d{2,4}))?(?![\d])|(\d+)|(\p{L}+)|(-)/u', $s, $tok, PREG_SET_ORDER)) return $none;
 
@@ -608,25 +618,11 @@ function bk_parse_party(string $text): array
   return [min(99, $adults), min(99, $children)];
 }
 
-/** A catalogue tour (and travel style) named in free text: ['tourId', 'tierId'] ('' when none). */
+/** A catalogue tour (and travel style) named in free text, in any of the website's languages: ['tourId', 'tierId'] ('' when none). */
 function bk_match_tour(string $text): array
 {
-  $hay = bk_lc($text);
-  if (trim($hay) === '') return ['', ''];
-  $tourId = '';
-  foreach (catalog()['tours'] as $t) {
-    $name = bk_lc((string) $t['name']);
-    $short = (string) preg_replace('/^the\s+/u', '', $name);
-    if ($name !== '' && (strpos($hay, $name) !== false || ($short !== '' && strpos($hay, $short) !== false))) {
-      $tourId = (string) $t['id'];
-      break;
-    }
-  }
-  $tier = '';
-  foreach (tiers() as $id => $tn) {
-    if (strpos($hay, bk_lc($tn)) !== false) { $tier = $id; break; }
-  }
-  return [$tourId, $tier];
+  if (trim($text) === '') return ['', ''];
+  return [mfs_find_tour($text), mfs_find_tier($text)];
 }
 
 /** A request's fields_json as [['l', 'n', 'v'], …]. */
@@ -776,11 +772,12 @@ function bk_where(array $f, bool $withStatus = true): array
   } elseif ($f['pay'] === 'paid') {
     $w[] = "b.status <> 'cancelled' AND b.total_price > " . BK_EPS . " AND ABS(b.total_price - $paid) <= " . BK_EPS;
   } elseif ($f['pay'] === 'overdue') {
+    // The same rule as bk_money(): a deposit past its own date, or anything unpaid after the balance date (or,
+    // without one, after the trip), deposit paid or not.
     $w[] = "b.status <> 'cancelled' AND b.total_price - $paid > " . BK_EPS . " AND ("
       . "(b.deposit_amount > " . BK_EPS . " AND $paid < b.deposit_amount - " . BK_EPS . " AND b.deposit_due IS NOT NULL AND b.deposit_due <> '' AND b.deposit_due < ?)"
-      . " OR (NOT (b.deposit_amount > " . BK_EPS . " AND $paid < b.deposit_amount - " . BK_EPS . ") AND ("
-      . "(b.balance_due IS NOT NULL AND b.balance_due <> '' AND b.balance_due < ?)"
-      . " OR ((b.balance_due IS NULL OR b.balance_due = '') AND NOT $noDate AND " . BK_END_SQL . ' < ?))))';
+      . " OR (b.balance_due IS NOT NULL AND b.balance_due <> '' AND b.balance_due < ?)"
+      . " OR ((b.balance_due IS NULL OR b.balance_due = '') AND NOT $noDate AND " . BK_END_SQL . ' < ?))';
     array_push($a, $today, $today, $today);
   }
   if ($f['q'] !== '') {

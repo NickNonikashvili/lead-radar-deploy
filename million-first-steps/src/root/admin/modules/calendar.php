@@ -1,4 +1,5 @@
 <?php
+if (!defined('MFS_BOOTED')) { http_response_code(404); exit; }
 /*
  * Calendar (?p=calendar[&m=YYYY-MM][&cancelled=1]): the month's trips as bars across their days (Monday
  * first), coloured by status; on phones an agenda list of the month instead. Below: the next departures

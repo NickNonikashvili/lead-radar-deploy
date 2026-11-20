@@ -429,7 +429,10 @@
     cards.forEach(function(el,i){ var o=i===0?1:c((len-(stops[i]-gap*.55))/(gap*.45)); el.style.setProperty('--o',o.toFixed(3)); if(pins[i]) pins[i].classList.toggle('on',len>=stops[i]-2); });
   }
   function setup(){
-    var live=!rm.matches && mq.matches; sec.classList.toggle('is-live',live);
+    // the road needs two cards or more; with fewer tours on show than built, the scene is shorter (460vh for 4)
+    var n=all.filter(function(el){ return !el.hidden }).length;
+    var live=!rm.matches && mq.matches && n>1; sec.classList.toggle('is-live',live);
+    scene.style.height=live && n<4 ? (100+120*(n-1))+'vh' : '';
     if(!live){ move.style.transform=''; all.forEach(function(el){ el.style.removeProperty('--o') }); return }
     layout(); frame();
   }

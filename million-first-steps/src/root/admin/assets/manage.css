@@ -15,7 +15,7 @@
 .tp-tour__title { flex: 1 1 260px; min-width: 0; }
 .tp-tour__title .card__sub { display: block; margin-top: 4px; }
 .tp-tour__title .card__sub > span { display: inline; }
-.tp-link { display: inline-flex; align-items: center; gap: 5px; min-height: 32px; margin-top: 2px; font-size: 13.5px; font-weight: 700; text-decoration: none; }
+.tp-link { display: inline-flex; align-items: center; gap: 5px; min-height: var(--tap); margin-top: 2px; font-size: 13.5px; font-weight: 700; text-decoration: none; }
 .tp-link:hover { text-decoration: underline; }
 .tp-link .icon { width: 14px; height: 14px; }
 .tp-switch { padding: 0 4px; }
@@ -77,11 +77,11 @@
 .st-state { flex: none; font-size: 12px; padding: 2px 10px; }
 .st-built { display: block; margin-top: 3px; color: var(--text-2); font-weight: 600; overflow-wrap: anywhere; }
 .st-cfield__tools { display: flex; flex-wrap: wrap; align-items: center; gap: 0 20px; margin-top: -4px; }
-.st-hide { min-height: 40px; align-items: center; padding: 2px 0; }
+.st-hide { min-height: var(--tap); align-items: center; padding: 2px 0; }
 .st-hide input { margin-top: 0; top: 50%; transform: translateY(-50%); }
 .st-hide .check__box { margin-top: 0; }
 .st-hide .check__label { font-size: 14px; font-weight: 600; color: var(--text-2); }
-.st-reset { display: inline-flex; align-items: center; gap: 6px; min-height: 40px; font-size: 14px; }
+.st-reset { display: inline-flex; align-items: center; gap: 6px; min-height: var(--tap); font-size: 14px; }
 .st-reset .icon { width: 16px; height: 16px; }
 .st-reset-note { color: var(--gold-ink); font-size: 13.5px; font-weight: 700; }
 .st-dirty { display: inline-flex; align-items: center; gap: 6px; margin-right: auto; color: var(--gold-ink); font-size: 14px; font-weight: 700; }
@@ -157,12 +157,18 @@
 .tm-who { display: flex; align-items: center; gap: 12px; min-width: 0; }
 .tm-who__text { display: flex; flex-direction: column; min-width: 0; }
 .tm-who .cell-main { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; overflow-wrap: anywhere; }
-.tm-who .cell-sub { max-width: 320px; }
+.tm-who .cell-sub { max-width: 320px; overflow-wrap: anywhere; }
 .tm-you { font-size: 11.5px; padding: 1px 9px; }
 .tm-table td { vertical-align: middle; }
 @media (min-width: 721px) {
-  .tm-table th:nth-child(2) { width: 170px; }
-  .tm-table th:nth-child(3) { width: 140px; }
+  .tm-table th:nth-child(2) { width: 128px; }
+  .tm-table th:nth-child(3) { width: 104px; }
+  .tm-table th { white-space: normal; }
+}
+/* Next to the "Add a team member" form the list is too narrow for its columns (and the edit buttons) on
+   laptop screens: below 1440px the form goes underneath instead. */
+@media (max-width: 1440px) {
+  .tm-split { grid-template-columns: minmax(0, 1fr); }
 }
 .tm-table td .pill + .pill { margin-left: 4px; }
 .tm-row--off td { color: var(--muted); }
@@ -223,7 +229,7 @@ a.act-item__who:hover { color: var(--wine); text-decoration: underline; }
   .st-nav::-webkit-scrollbar { display: none; }
   .st-nav__title { display: none; }
   .st-nav__list { flex-direction: row; gap: 6px; width: max-content; }
-  .st-nav__link { min-height: 38px; padding: 6px 14px; border: 1px solid var(--line); border-radius: var(--radius-pill); background: var(--paper); font-size: 14px; white-space: nowrap; }
+  .st-nav__link { min-height: var(--tap); padding: 6px 14px; border: 1px solid var(--line); border-radius: var(--radius-pill); background: var(--paper); font-size: 14px; white-space: nowrap; }
   .st-nav__link.is-active { background: var(--ink); border-color: var(--ink); color: #FBF6EE; box-shadow: none; }
   .st-nav__link.is-active .icon { color: #FBF6EE; }
   .st-nav__sep { margin: 0 0 0 6px; padding: 0 0 0 12px; border-top: 0; border-left: 1px solid var(--line); }
@@ -301,3 +307,5 @@ html[lang="ka"] .st-nav__title, html[lang="ka"] .st-preview__label { letter-spac
 @media print {
   .tp-savebar, .st-nav, .act-toolbar { display: none !important; }
 }
+/* An empty price or factor shows the built-in value in grey italics, so it can't be taken for a typed one. */
+.tp-price .input::placeholder, .tp-factor .input::placeholder { color: #A1948A; font-style: italic; opacity: 1; }

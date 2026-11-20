@@ -1,4 +1,5 @@
 <?php
+if (!defined('MFS_BOOTED')) { http_response_code(404); exit; }
 /*
  * CSV downloads (owners only): ?p=export&type=requests|bookings|payments. Without a type: a small page that
  * offers the three files.
@@ -9,14 +10,19 @@
  *                   Tbilisi date) · q = search in ref, client, email, phone, tour
  *   type=payments   from / to = Y-m-d (paid on, inclusive) · booking = a booking id
  *
- * Files are UTF-8 with a BOM (Excel opens them correctly), comma-separated, every cell quoted. Text cells that
- * start with = + - @ tab or CR get a leading ' so spreadsheet programs never run them as formulas.
- * Each export writes one audit line (export.<type>).
+ * Files are UTF-8 with a BOM (Excel opens them correctly), every cell quoted. Separator: sep=comma|semicolon;
+ * by default a semicolon (with decimal commas) in the Georgian interface — Excel on a PC set to Georgian or
+ * Russian formats splits files on ";" — else a comma. Text cells that start with = + - @ tab or CR get a leading '
+ * so spreadsheet programs never run them as formulas; a phone number ("+995 …") gets an invisible word joiner
+ * instead, so it reads cleanly. Each export writes one audit line (export.<type>).
+ * The file is only sent for a click inside the team area (same-origin), or after the confirm page's POST: a link
+ * on another website can't make a signed-in owner download every client's details.
  *
  * To add an export: write export_<type>(array $me): void (send the file with export_send()) and add the type
  * to EXPORT_TYPES.
  */
 require_once __DIR__ . '/requests-lib.php';
+require_once __DIR__ . '/bookings-lib.php';
 $me = require_owner();
 
 /** type => [title, description] (English; shown through t()). */
@@ -26,19 +32,35 @@ const EXPORT_TYPES = [
   'payments' => ['Payments', 'Every payment received, with its booking and client — handy for the accountant.'],
 ];
 
+/** The separator for this download: ',' or ';' (see the top of this file). */
+function export_sep(): string
+{
+  $sep = get('sep');
+  if ($sep === 'semicolon') return ';';
+  if ($sep === 'comma') return ',';
+  return mfs_lang() === 'ka' ? ';' : ',';
+}
+
 /** One CSV cell: quoted, inner quotes doubled; text starting with a formula character is made harmless. */
 function export_cell($v): string
 {
   if ($v === null) return '""';
-  if (is_int($v) || is_float($v)) return '"' . (is_float($v) ? rtrim(rtrim(number_format($v, 2, '.', ''), '0'), '.') : (string) $v) . '"';
+  if (is_int($v) || is_float($v)) {
+    $n = is_float($v) ? rtrim(rtrim(number_format($v, 2, '.', ''), '0'), '.') : (string) $v;
+    // With ";" files (comma-decimal formats) the decimal mark is a comma too, or 12.5 would turn into a date.
+    return '"' . (export_sep() === ';' ? str_replace('.', ',', $n) : $n) . '"';
+  }
   $s = (string) $v;
-  if ($s !== '' && strpos("=+-@\t\r", $s[0]) !== false) $s = "'" . $s;
+  if ($s !== '' && strpos("=+-@\t\r", $s[0]) !== false) {
+    // A phone number can't hold a formula: a word joiner (U+2060, invisible) keeps it text without a visible '.
+    $s = preg_match('~^\+[\d\s().\/-]{4,40}$~', $s) ? "\u{2060}" . $s : "'" . $s;
+  }
   return '"' . str_replace('"', '""', $s) . '"';
 }
 
 function export_line(array $cells): string
 {
-  return implode(',', array_map('export_cell', $cells)) . "\r\n";
+  return implode(export_sep(), array_map('export_cell', $cells)) . "\r\n";
 }
 
 /** Sends a CSV download: headers + BOM + header row, then each row from $rows (any iterable) through $map. */
@@ -67,6 +89,15 @@ function export_rows(string $sql, array $args): Generator
   $st = db()->prepare($sql);
   $st->execute($args);
   while (($r = $st->fetch(PDO::FETCH_ASSOC)) !== false) yield $r;
+}
+
+/** A booking's tour: a catalogue tour by its name in the interface language, a custom trip by its own name. */
+function export_tour(array $b): string
+{
+  static $known = null;
+  if ($known === null) $known = tours();
+  $tid = trim((string) ($b['tour_id'] ?? ''));
+  return $tid !== '' && isset($known[$tid]) ? tour_name($tid) : trim((string) ($b['tour_name'] ?? ''));
 }
 
 /** Tbilisi local time for a UTC timestamp, 'Y-m-d H:i' ('' if empty). */
@@ -144,12 +175,14 @@ function export_bookings(array $me): void
   export_send('bookings', $header, export_rows($sql, $a), function ($b) {
     $total = round((float) $b['total_price'], 2);
     $paid = round((float) $b['paid'], 2);
+    // Still to pay as the panel shows it: nothing for cancelled bookings, never below zero.
+    $money = bk_money($b);
     $lang = (string) $b['client_lang'];
     return [
       $b['ref'], t(BOOKING_STATUSES[$b['status']] ?? $b['status']), $b['client_name'], $b['client_email'], $b['client_phone'], $b['client_country'],
-      $lang !== '' ? req_lang_name($lang, false) : '', trim((string) $b['tour_name']) !== '' ? $b['tour_name'] : tour_name($b['tour_id']),
+      $lang !== '' ? req_lang_name($lang, false) : '', export_tour($b),
       $b['tier'] ? tier_name($b['tier']) : '', $b['start_date'], $b['end_date'], (int) $b['adults'], (int) $b['children'],
-      $total, round((float) $b['deposit_amount'], 2), $b['deposit_due'], $b['balance_due'], $paid, round($total - $paid, 2),
+      $total, round((float) $b['deposit_amount'], 2), $b['deposit_due'], $b['balance_due'], $paid, round((float) $money['balance'], 2),
       $b['guide'], $b['driver'], $b['vehicle'], $b['accommodation'], $b['notes'], $b['request_ref'], $b['creator'],
       export_local($b['created_at']), export_local($b['updated_at']),
     ];
@@ -176,17 +209,47 @@ function export_payments(array $me): void
   export_send('payments', $header, export_rows($sql, $a), function ($p) {
     return [
       $p['paid_on'], round((float) $p['amount'], 2), $p['method'], $p['note'], $p['booking_ref'], t(BOOKING_STATUSES[$p['booking_status']] ?? $p['booking_status']),
-      $p['client_name'], trim((string) $p['tour_name']) !== '' ? $p['tour_name'] : tour_name($p['tour_id']), $p['start_date'], $p['recorder'],
+      $p['client_name'], export_tour($p), $p['start_date'], $p['recorder'],
       export_local($p['created_at']),
     ];
   }, $details);
 }
 
 // ── Dispatch ─────────────────────────────────────────────────────────────────────────────────────────────────
+/** True when this GET is a click inside the team area (not a link on another website, nor a bounced one). */
+function export_same_origin_click(): bool
+{
+  if (isset($_GET['_b'])) return false;
+  $site = strtolower((string) ($_SERVER['HTTP_SEC_FETCH_SITE'] ?? ''));
+  // same-origin: a link in the team area; none: typed into the address bar or a bookmark (no other site involved).
+  if ($site !== '') return $site === 'same-origin' || $site === 'none';
+  // Older browsers: the Referer (sent for same-origin pages, see Referrer-Policy) must be ours.
+  return (string) ($_SERVER['HTTP_REFERER'] ?? '') !== '' && mfs_same_origin();
+}
+
 $type = get('type');
 if (isset(EXPORT_TYPES[$type])) {
-  $fn = 'export_' . $type;
-  $fn($me);
+  if (is_post()) csrf_check();
+  if (is_post() || export_same_origin_click()) {
+    $fn = 'export_' . $type;
+    $fn($me);
+  }
+  // Opened from somewhere else: ask first, with a button that sends the form.
+  $q = $_GET;
+  unset($q['_b'], $q['p']);
+  ob_start(); ?>
+  <section class="card">
+    <div class="card__body stack">
+      <p><?= h(t('Download the {file} spreadsheet? It holds clients’ personal details — keep it somewhere private.', ['file' => t(EXPORT_TYPES[$type][0])])) ?></p>
+      <form method="post" action="<?= h(url('export', $q)) ?>" class="btn-row">
+        <?= csrf_field() ?>
+        <button type="submit" class="btn btn--primary"><?= icon('download') ?><?= h(t('Download CSV')) ?></button>
+        <a class="btn btn--secondary" href="<?= h(url('export')) ?>"><?= h(t('Not now')) ?></a>
+      </form>
+    </div>
+  </section>
+  <?php
+  render(t('Export'), ob_get_clean(), ['nav' => 'settings', 'crumbs' => [[t('Settings'), url('settings')], [t('Export'), url('export')], [t(EXPORT_TYPES[$type][0]), '']]]);
 }
 
 // No (or an unknown) type: the choice of files.
@@ -222,6 +285,12 @@ ob_start(); ?>
     <?php endforeach; ?>
   </div>
   <div class="callout callout--info"><?= icon('info') ?><p><?= h(t('The files open in Excel, Numbers or Google Sheets. They contain clients’ personal details — keep them somewhere safe and delete them when you no longer need them.')) ?></p></div>
+  <?php $other = export_sep() === ';' ? 'comma' : 'semicolon'; ?>
+  <p class="muted small"><?= h(export_sep() === ';'
+    ? t('These files use semicolons between columns, as Excel expects on computers set to Georgian or Russian formats. Everything in one column? Download with commas:')
+    : t('Excel shows everything in one column? Your computer probably expects semicolons — download with semicolons:')) ?>
+    <?php foreach (EXPORT_TYPES as $k => $meta) if ($counts[$k] > 0) { ?><a href="<?= h(url('export', ['type' => $k, 'sep' => $other])) ?>"><?= h(t($meta[0])) ?></a> <?php } ?>
+  </p>
 </div>
 <?php
 render(t('Export'), ob_get_clean(), [

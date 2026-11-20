@@ -1,4 +1,5 @@
 <?php
+if (!defined('MFS_BOOTED')) { http_response_code(404); exit; }
 /*
  * One request (?p=request&id=…): quick replies (email / WhatsApp / call), what they asked for, every field as
  * sent, status + assignment + follow-up date, the notes timeline, bookings made from it, previous/next within
@@ -6,6 +7,7 @@
  * (owners). Opening it marks it as read.
  */
 require_once __DIR__ . '/requests-lib.php';
+require_once __DIR__ . '/bookings-lib.php';
 $me = require_login();
 $meId = (int) $me['id'];
 $owner = is_owner();
@@ -92,6 +94,8 @@ if (is_post()) {
       $pdo->prepare('UPDATE requests SET updated_at = ? WHERE id = ?')->execute([$now, $id]);
       if ($alsoContacted) req_set_status([$id], 'contacted', $meId);
     });
+    audit($kind === 'email' ? 'request.email_note' : 'request.note', 'request:' . $id, $row['ref'] . ': ' . excerpt($body, 80));
+    if ($alsoContacted) audit('request.status', 'request:' . $id, $row['ref'] . ': new → contacted');
     flash('ok', $alsoContacted ? t('Saved, and marked as contacted.') : t('Note added.'));
     redirect($self);
   }
@@ -124,6 +128,7 @@ if (is_post()) {
 
   if ($act === 'unread') {
     db_exec('UPDATE requests SET read_at = NULL WHERE id = ?', [$id]);
+    audit('request.unread', 'request:' . $id, $row['ref']);
     flash('ok', t('{ref} marked as unread.', ['ref' => $row['ref']]));
     redirect($listUrl);
   }
@@ -191,7 +196,10 @@ if ($tourId !== '') {
 $interests = trim((string) $row['interests']);
 if ($interests !== '' && $tourId !== '') {
   // Only repeat the interests when they say more than the tour's name and style.
-  $rest = str_ireplace([tour_name($tourId), preg_replace('/^the\s+/i', '', tour_name($tourId)), tier_name($tier)], '', $interests);
+  $strip = [];
+  foreach (catalog()['tours'] as $ct) if ((string) $ct['id'] === $tourId) foreach (mfs_all_names($ct) as $nm) array_push($strip, $nm, preg_replace('/^the\s+/i', '', $nm));
+  foreach (catalog()['tiers'] as $ct) if ((string) $ct['id'] === $tier) $strip = array_merge($strip, mfs_all_names($ct));
+  $rest = str_ireplace(array_filter($strip, 'strlen'), '', str_replace('’', "'", $interests));
   if (!preg_match('/[\p{L}\p{N}]/u', (string) $rest)) $interests = '';
 }
 if ($interests !== '') $facts[] = ['star', t('Would like to see'), $interests, ''];
@@ -210,7 +218,7 @@ if ($knownTour && $party > 0) {
   foreach (tiers() as $tid => $tname) {
     if ($tier !== '' && $tid !== $tier) continue;
     $p = suggest_price($tourId, $tid, $party);
-    if ($p > 0) $bits[] = '<span class="req-price__item"><span class="req-price__tier">' . h($tname) . '</span> <span class="req-price__sum">' . h(fmt_money($p)) . '</span></span>';
+    if ($p > 0) $bits[] = '<span class="req-price__item"><span class="req-price__tier">' . h(tier_name($tid)) . '</span> <span class="req-price__sum">' . h(fmt_money($p)) . '</span></span>';
   }
   if ($bits) {
     $priceHint = '<div class="req-price">' . icon('euro') . '<div><p class="req-price__title">' . h(tp($party, 'Website price for {n} traveller', 'Website price for {n} travellers')) . '</p>'
@@ -367,7 +375,7 @@ ob_start(); ?>
     <div class="card__body">
       <dl class="kv">
         <?php foreach ($fields as $fi): ?>
-        <div class="kv__row"><dt class="kv__key"><?= h(t($fi['l'])) ?></dt><dd class="kv__val"><?= h($fi['v']) ?></dd></div>
+        <div class="kv__row"><dt class="kv__key"><?= h(t($fi['l'])) ?></dt><dd class="kv__val"><?= h(in_array($fi['v'], ['Yes', 'No'], true) ? t($fi['v']) : $fi['v']) ?></dd></div>
         <?php endforeach; ?>
         <?php if (!$fields): ?><div class="kv__row"><dt class="kv__key"><?= h(t('Form fields')) ?></dt><dd class="kv__val muted"><?= h(t('None were stored.')) ?></dd></div><?php endif; ?>
       </dl>
@@ -432,7 +440,7 @@ ob_start(); ?>
         $dates = $b['start_date'] ? fmt_date($b['start_date']) . ($b['end_date'] && $b['end_date'] !== $b['start_date'] ? ' – ' . fmt_date($b['end_date']) : '') : t('No dates yet'); ?>
       <li><a class="list__item" href="<?= h(url('booking', ['id' => (int) $b['id']])) ?>">
         <span class="list__icon"><?= icon('suitcase') ?></span>
-        <span class="list__main"><span class="list__title"><?= h($b['ref']) ?> · <?= h(trim((string) $b['tour_name']) !== '' ? $b['tour_name'] : tour_name($b['tour_id'])) ?></span>
+        <span class="list__main"><span class="list__title"><?= h($b['ref']) ?> · <?= h(bk_tour_label($b, false)) ?></span>
           <span class="list__meta"><?= h($dates) ?> · <?= h(fmt_money($b['total_price'])) ?></span></span>
         <span class="list__aside"><?= status_badge($b['status'], 'booking') ?></span></a></li>
       <?php endforeach; ?>

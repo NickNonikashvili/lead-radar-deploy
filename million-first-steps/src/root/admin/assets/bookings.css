@@ -40,11 +40,17 @@
 .bk-table td { vertical-align: top; }
 .bk-cell-tour { display: block; color: var(--ink); font-weight: 600; }
 .bk-total { font-weight: 600; color: var(--ink); }
-.bk-table td.num .cell-sub { white-space: nowrap; }
+.bk-table td.num .cell-sub { white-space: normal; overflow-wrap: anywhere; }
 .bk-table .bk-when.cell-sub { display: block; }
 .bk-table .bk-ref { white-space: nowrap; }
 .bk-table .cell-sub .bk-ref { font-size: 12px; }
 .bk-table td:last-child { width: 1%; white-space: nowrap; }
+.bk-table .pill { white-space: normal; }
+/* Georgian labels are longer: the status moves under the client's name below 1440px (as below 1180px in English). */
+@media (min-width: 1181px) and (max-width: 1440px) {
+  html[lang="ka"] .bk-table .bk-col-status { display: none; }
+  html[lang="ka"] .bk-status-inline { display: block; margin-top: 6px; }
+}
 .bk-status-inline { display: none; }
 .bk-row--cancelled td { color: var(--muted); }
 .bk-row--cancelled .cell-main { color: var(--text-2); text-decoration: line-through; text-decoration-color: rgba(119, 112, 106, .5); }
@@ -104,6 +110,7 @@
 .bk-pay-add .disclosure__body { padding-top: 6px; }
 .bk-fills { margin-top: 2px; }
 .bk-fills .chip { min-height: 34px; padding: 5px 12px; font-size: 13.5px; cursor: pointer; }
+@media (max-width: 720px) { .bk-fills .chip { min-height: var(--tap); } }
 
 /* Notes */
 .bk-note-form { gap: 10px; margin-bottom: 22px; }

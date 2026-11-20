@@ -6,6 +6,8 @@
  * the current day. Bots, "Do Not Track" and "Global Privacy Control" are not counted. Always answers 204.
  */
 ignore_user_abort(true);
+ini_set('display_errors', '0');
+ini_set('log_errors', '1');
 header('Cache-Control: no-store');
 header('X-Content-Type-Options: nosniff');
 header('X-Robots-Tag: noindex');

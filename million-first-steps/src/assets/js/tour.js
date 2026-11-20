@@ -13,6 +13,7 @@
       var tier = document.documentElement.getAttribute('data-tier') || 'explorer';
       var f = factors[Math.min(party, 8)] || 1, per = Math.round(prices[tier] * f / 10) * 10;
       out.textContent = party; pp.textContent = money(per); total.textContent = money(per * party);
+      calc.removeAttribute('data-live-wait'); // site.js waits for this after new prices (api/live.json)
       calc.querySelector('[data-party="-1"]').disabled = party <= 1; calc.querySelector('[data-party="1"]').disabled = party >= 16;
       var u = new URL(link.getAttribute('href'), location.href);
       u.searchParams.set('tier', names[tier] || tier); u.searchParams.set('party', party);

@@ -15,9 +15,9 @@
 .ins-key--green { background: var(--green); }
 .ins-key--wine { background: var(--wine); }
 .ins-key--blue { background: #5E8FC0; }
-.ins-key--muted { background: #E6D8C3; }
+.ins-key--muted { background: #A88B62; }
 .ins-key--line { width: 16px; height: 4px; border-radius: 2px; }
-.ins-key--partial { opacity: .45; }
+.ins-key--partial { opacity: .55; box-shadow: inset 0 0 0 1.5px #6F5636; }
 
 .ins-chart__frame { display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: 10px; margin-top: 18px; }
 .ins-chart__y { position: relative; height: 190px; }
@@ -31,8 +31,9 @@
 .ins-bar--green { fill: var(--green); }
 .ins-bar--wine { fill: var(--wine); }
 .ins-bar--blue { fill: #5E8FC0; }
-.ins-bar--muted { fill: #E6D8C3; }
-.ins-bar--partial { opacity: .45; }
+.ins-bar--muted { fill: #A88B62; }
+/* Today so far: lighter, with a dark outline so it stays visible. */
+.ins-bar--partial { fill-opacity: .5; stroke: #6F5636; stroke-width: 1.5px; vector-effect: non-scaling-stroke; }
 .ins-line { fill: none; stroke-width: 2.5; stroke-linejoin: round; stroke-linecap: round; }
 .ins-line--wine { stroke: var(--wine); }
 .ins-line--gold { stroke: var(--gold-2); }

@@ -2,6 +2,7 @@
    without this file (no inline scripts are allowed: CSP).
 
    form[data-dirty-form]       tracks unsaved changes: shows [data-dirty-text] / hides [data-clean-text] inside it,
+                               disables [data-clean-only] buttons (e.g. "Send a test email" works on what's saved),
                                adds .is-dirty, and asks before leaving the page with unsaved changes
    [data-tour-show]            "On the website" switch: dims its [data-tour-row] card, shows its [data-off-note]
    [data-price-input]          price field: marks .tp-price.is-own while it differs from data-builtin
@@ -188,6 +189,7 @@
     f.classList.toggle('is-dirty', dirty);
     all('[data-dirty-text]', f).forEach(function (el) { el.hidden = !dirty; });
     all('[data-clean-text]', f).forEach(function (el) { el.hidden = dirty; });
+    all('[data-clean-only]', f).forEach(function (el) { el.disabled = dirty; });
   }
   forms.forEach(function (f) {
     f.mgStart = snapshot(f);

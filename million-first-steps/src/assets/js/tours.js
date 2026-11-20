@@ -17,6 +17,7 @@
     items.slice().sort(function (a, b) { return s === 'short' ? a.dataset.days - b.dataset.days : s === 'long' ? b.dataset.days - a.dataset.days : a.dataset.order - b.dataset.order; }).forEach(function (li) { grid.appendChild(li); });
     document.getElementById('tc-n').textContent = n.toLocaleString(MFS.locale);
     document.getElementById('tc-w').textContent = P('tours', n, 'tour').replace(/^\s*\d+\s*/, '');
+    ['tc-n', 'tc-w'].forEach(function (id) { document.getElementById(id).removeAttribute('data-live-wait'); }); // see site.js
     document.getElementById('tc-empty').hidden = n > 0; grid.hidden = n === 0;
     document.getElementById('tc-reset').hidden = !(st.dur !== 'all' || st.type !== 'all' || st.season !== 'all');
     var p = new URLSearchParams(); Object.keys(st).forEach(function (k) { if (st[k] !== 'all') p.set(k, st[k]); }); if (s !== 'featured') p.set('sort', s);

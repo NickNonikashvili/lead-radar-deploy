@@ -185,7 +185,10 @@ export function translatePage(html, { lang, dict, missing, js = [] }) {
   out = out.replace(/(["'\s,(])((?:\.\.\/)*)assets\//g, "$1../$2assets/");
   // Language links point at sibling languages, also one level up.
   out = out.replace(/(<a class="lang-link" href=")/g, "$1../");
-  if (config.siteUrl) out = out.replace(`<link rel="canonical" href="${config.siteUrl}/`, `<link rel="canonical" href="${config.siteUrl}/${lang}/`);
+  if (config.siteUrl) {
+    out = out.replace(`<link rel="canonical" href="${config.siteUrl}/`, `<link rel="canonical" href="${config.siteUrl}/${lang}/`);
+    out = out.replace(`<meta property="og:url" content="${config.siteUrl}/`, `<meta property="og:url" content="${config.siteUrl}/${lang}/`);
+  }
   // Strings for the scripts on this page
   const t = {};
   for (const k of js) {

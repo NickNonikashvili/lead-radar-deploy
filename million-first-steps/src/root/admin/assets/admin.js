@@ -14,6 +14,8 @@
    data-toggle="#id"          button showing/hiding another element (sets aria-expanded)
    data-once                  on a <form>: disables its submit buttons after it was sent (no double posts)
    data-autofocus-end         on an input/textarea: focus it with the caret at the end
+   .tabs                      a strip wider than the screen scrolls the chosen tab into view and fades the
+                              edge(s) with more tabs (.has-more-l / .has-more-r)
    Also: sets localStorage 'mfs-nostat' = '1' so the website doesn't count the team's own visits. */
 (function () {
   'use strict';
@@ -170,6 +172,23 @@
       tg.setAttribute('aria-expanded', target.hidden ? 'false' : 'true');
       if (!target.hidden) { var f = target.querySelector('input, select, textarea, button'); if (f) f.focus(); }
     }
+  });
+
+  // ── Tab strips that scroll sideways (phones): show the chosen tab, fade the edge that has more ──
+  Array.prototype.forEach.call(d.querySelectorAll('.tabs'), function (strip) {
+    function edges() {
+      var more = strip.scrollWidth - strip.clientWidth > 2;
+      strip.classList.toggle('has-more-l', more && strip.scrollLeft > 2);
+      strip.classList.toggle('has-more-r', more && strip.scrollLeft < strip.scrollWidth - strip.clientWidth - 2);
+    }
+    var cur = strip.querySelector('.is-active, [aria-current]');
+    if (cur && strip.scrollWidth > strip.clientWidth) {
+      var left = cur.getBoundingClientRect().left - strip.getBoundingClientRect().left + strip.scrollLeft - (strip.clientWidth - cur.offsetWidth) / 2;
+      strip.scrollLeft = Math.max(0, left);
+    }
+    edges();
+    strip.addEventListener('scroll', edges, { passive: true });
+    window.addEventListener('resize', edges);
   });
 
   // ── Focus with the caret at the end ────────────────────────────────────────────────────────────

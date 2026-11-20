@@ -1,4 +1,5 @@
 <?php
+if (!defined('MFS_BOOTED')) { http_response_code(404); exit; }
 /*
  * Requests (?p=requests): the inbox of everything sent from the website's forms — newest first, status tabs
  * with counts, kind / search / "assigned to me" / "follow-up due" filters, bulk actions, 25 per page.
@@ -135,8 +136,11 @@ if ($everything): // Day one (nothing received yet): just the welcome card, no e
 
 <?php endif; ?>
 
-<?php if ($f['status'] === 'spam' && $total > 0): ?>
-  <div class="callout callout--info req-callout"><?= icon('info') ?><p><?= h(tp((int) setting('spam_retention_days'), 'Spam is deleted automatically {n} day after it last changed.', 'Spam is deleted automatically {n} days after it last changed.')) ?></p></div>
+<?php $spamDays = (int) setting('spam_retention_days');
+if ($f['status'] === 'spam' && $total > 0): ?>
+  <div class="callout callout--info req-callout"><?= icon('info') ?><p><?= h($spamDays > 0
+    ? tp($spamDays, 'Spam is deleted automatically {n} day after it last changed.', 'Spam is deleted automatically {n} days after it last changed.')
+    : t('Spam is kept until you delete it.')) ?></p></div>
 <?php endif; ?>
 
 <?php if (!$rows):
@@ -153,7 +157,11 @@ if ($everything): // Day one (nothing received yet): just the welcome card, no e
     <h2 class="empty__title"><?= h(t('Nothing matches')) ?></h2>
     <p class="empty__text"><?php
       $elsewhere = $f['status'] === '' ? $counts['spam'] : ($allCount + $counts['spam'] - $counts[$f['status']]);
-      echo h($elsewhere > 0 ? tp($elsewhere, 'No requests here match, but {n} under another tab does — see the counts above.', 'No requests here match, but {n} under other tabs do — see the counts above.') : t('Try a different word or part of a phone number, or clear the filters.')); ?></p>
+      // Say what the active filter is about: only a search gets the "try other words" hint.
+      $why = $f['q'] !== '' ? t('Try a different word or part of a phone number, or clear the filters.')
+        : ($f['mine'] ? t('Nothing is assigned to you here right now.')
+        : ($f['due'] ? t('No follow-ups are due here.') : t('There are no requests of this kind here.')));
+      echo h($elsewhere > 0 ? tp($elsewhere, 'No requests here match, but {n} under another tab does — see the counts above.', 'No requests here match, but {n} under other tabs do — see the counts above.') : $why); ?></p>
     <div class="btn-row btn-row--center"><a class="btn btn--secondary" href="<?= h(url('requests', ['status' => $f['status']])) ?>"><?= icon('close') ?><?= h(t('Clear filters')) ?></a></div>
   </section>
   <?php else:
@@ -163,7 +171,7 @@ if ($everything): // Day one (nothing received yet): just the welcome card, no e
       'quoted' => ['None at the moment', 'Requests you’ve sent a price to appear here.'],
       'booked' => ['No bookings from requests yet', 'When a request turns into a booking, it appears here.'],
       'lost' => ['Nothing lost', 'Requests that didn’t turn into a trip appear here.'],
-      'spam' => ['No spam', 'Messages you mark as spam appear here and are deleted automatically.'],
+      'spam' => ['No spam', $spamDays > 0 ? 'Messages you mark as spam appear here and are deleted automatically.' : 'Messages you mark as spam appear here. They are kept until you delete them.'],
     ][$f['status']] ?? ['Nothing here', 'There are no requests with this status.']; ?>
   <section class="card empty">
     <div class="empty__mark" aria-hidden="true"><?= icon($f['status'] === 'new' ? 'check' : 'inbox') ?></div>

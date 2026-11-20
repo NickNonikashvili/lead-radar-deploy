@@ -1,4 +1,5 @@
 <?php
+if (!defined('MFS_BOOTED')) { http_response_code(404); exit; }
 /*
  * Tours & prices (?p=tours) — owners only.
  *
@@ -202,7 +203,7 @@ echo mg_error_summary($errors);
       <section class="card tp-tour<?= $show ? '' : ' is-off' ?>" id="tour-<?= h($tid) ?>" data-tour-row aria-labelledby="tt-<?= h($tid) ?>">
         <div class="card__head tp-tour__head">
           <div class="tp-tour__title">
-            <h2 class="card__title" id="tt-<?= h($tid) ?>"><?= h($t['name']) ?></h2>
+            <h2 class="card__title" id="tt-<?= h($tid) ?>"><?= h(tour_name($id)) ?></h2>
             <p class="meta card__sub">
               <span><?= h(tp($t['days'], '{n} day', '{n} days')) ?></span>
               <?php if ($styles) { ?><span><?= h(implode(' · ', $styles)) ?></span><?php } ?>
@@ -227,7 +228,7 @@ echo mg_error_summary($errors);
               $ownNow = is_array($over) && isset($over[$id][$tier]) && is_numeric($over[$id][$tier]) && (int) round((float) $over[$id][$tier]) !== $built;
               $value = $typed ? $typed['price'][$id][$tier] : ($ownNow ? (string) (int) round((float) $over[$id][$tier]) : ''); ?>
               <div class="field tp-price<?= mg_cls($errors, $key) ?><?= $ownNow ? ' is-own' : '' ?>">
-                <label class="field__label" for="<?= h($fid) ?>"><?= h(t($tierName)) ?></label>
+                <label class="field__label" for="<?= h($fid) ?>"><?= h(tier_name($tier)) ?></label>
                 <div class="input-group">
                   <span class="input-group__addon" aria-hidden="true">€</span>
                   <input class="input" type="text" inputmode="numeric" id="<?= h($fid) ?>" name="price[<?= h($id) ?>][<?= h($tier) ?>]"
@@ -267,7 +268,7 @@ echo mg_error_summary($errors);
           $exPrice = (float) $exTour['prices'][$exTier];
           $exN = 4;
           $exPer = round($exPrice * $factors[(string) $exN] / 10) * 10;
-          $tpl = t('Example — {tour}, {tier}, for {n} travellers: {per} per person, {total} in total.', ['tour' => $exTour['name'], 'tier' => t(tier_name($exTier))]); ?>
+          $tpl = t('Example — {tour}, {tier}, for {n} travellers: {per} per person, {total} in total.', ['tour' => tour_name($exTour['id']), 'tier' => tier_name($exTier)]); ?>
           <p class="tp-example" data-example data-price="<?= h((string) $exPrice) ?>" data-n="<?= $exN ?>"
             data-price-from="#<?= h(mg_id('price-' . $exTour['id'] . '-' . $exTier)) ?>" data-tpl="<?= h($tpl) ?>" aria-live="polite">
             <?= icon('info') ?><span data-example-text><?= h(strtr($tpl, ['{n}' => $exN, '{per}' => fmt_money($exPer), '{total}' => fmt_money($exPer * $exN)])) ?></span>

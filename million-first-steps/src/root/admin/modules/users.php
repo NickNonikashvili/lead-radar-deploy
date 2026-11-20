@@ -1,4 +1,5 @@
 <?php
+if (!defined('MFS_BOOTED')) { http_response_code(404); exit; }
 /*
  * Team (?p=users) — owners only.
  *   ?p=users           everyone in the team (owners first, switched-off accounts last) + "Add a team member"
@@ -66,8 +67,12 @@ if (is_post()) {
     if ($pp !== '') $errors['password'] = $pp;
     if (!$errors) {
       try {
-        db_exec('INSERT INTO users (email, name, password_hash, role, lang, active, created_at) VALUES (?, ?, ?, ?, ?, 1, ?)', [$email, $name, mfs_hash_password($pw), $role, $lang, now_utc()]);
-        $newId = (int) db()->lastInsertId();
+        // A new id that no removed member ever had, so the activity log never credits someone else.
+        $newId = db_tx(function () use ($email, $name, $pw, $role, $lang) {
+          $nid = db_next_id('users');
+          db_exec('INSERT INTO users (id, email, name, password_hash, role, lang, active, created_at) VALUES (?, ?, ?, ?, ?, ?, 1, ?)', [$nid, $email, $name, mfs_hash_password($pw), $role, $lang, now_utc()]);
+          return $nid;
+        });
       } catch (PDOException $e) {
         $newId = 0;
         $errors['email'] = t('Someone in the team already uses this address.');
@@ -75,13 +80,17 @@ if (is_post()) {
       if ($newId) {
         $mailed = '';
         if (post('invite') !== '') {
-          $body = t('Hello {name},', ['name' => $name]) . "\n\n"
-            . t('{owner} has added you to the Million First Steps team area, where we look after requests and bookings from the website.', ['owner' => $me['name']]) . "\n\n"
-            . t('Sign in here: {url}', ['url' => mfs_admin_base_url()]) . "\n"
-            . t('Your email: {email}', ['email' => $email]) . "\n\n"
-            . t('{owner} will give you your temporary password. After signing in, please choose your own under “My account”.', ['owner' => $me['name']]) . "\n\n"
-            . t('If you weren’t expecting this email, you can ignore it.') . "\n";
-          $mailed = send_mail($email, t('You’ve been added to the Million First Steps team area'), $body, (string) $me['email']) ? 'sent' : 'failed';
+          // Written in the new member's language, with a link that opens the sign-in page in it.
+          $signIn = mfs_admin_base_url() . ($lang !== 'en' ? 'index.php?p=login&lang=' . $lang : '');
+          list($subject, $body) = mfs_with_lang($lang, function () use ($name, $me, $email, $signIn) {
+            return [t('You’ve been added to the Million First Steps team area'), t('Hello {name},', ['name' => $name]) . "\n\n"
+              . t('{owner} has added you to the Million First Steps team area, where we look after requests and bookings from the website.', ['owner' => $me['name']]) . "\n\n"
+              . t('Sign in here: {url}', ['url' => $signIn]) . "\n"
+              . t('Your email: {email}', ['email' => $email]) . "\n\n"
+              . t('{owner} will give you your temporary password. After signing in, please choose your own under “My account”.', ['owner' => $me['name']]) . "\n\n"
+              . t('If you weren’t expecting this email, you can ignore it.') . "\n"];
+          });
+          $mailed = send_mail($email, $subject, $body, (string) $me['email']) ? 'sent' : 'failed';
         }
         audit('user.create', 'user:' . $newId, $name . ' <' . $email . '> as ' . $role . ($mailed === 'sent' ? '; sign-in address emailed' : ($mailed === 'failed' ? '; email could not be sent' : '')));
         flash('ok', t('{name} is in the team. They sign in with {email} and the temporary password you chose — please give it to them yourself, and ask them to choose their own under My account.', ['name' => $name, 'email' => $email]));
@@ -112,6 +121,8 @@ if (is_post()) {
           return ['role', t('You can’t change your own role. Another owner can do it for you.')];
         }
         db_exec('UPDATE users SET name = ?, email = ?, role = ?, lang = ? WHERE id = ?', [$name, $email, $role, $lang, $id]);
+        // A new sign-in address: reset links sent to the old one stop working.
+        if (strcasecmp((string) $fresh['email'], $email) !== 0) db_exec('DELETE FROM password_resets WHERE user_id = ?', [$id]);
         return ['ok', $fresh];
       });
       if ($result[0] === 'gone') {
@@ -160,6 +171,8 @@ if (is_post()) {
       if ($form === 'deactivate') {
         db_exec('UPDATE users SET active = 0 WHERE id = ?', [$id]);
         db_exec('DELETE FROM password_resets WHERE user_id = ?', [$id]);
+        // Signed out for good: switching access back on later doesn't bring old sessions (a lost phone) back.
+        mfs_end_all_sessions($id);
         return ['ok', $fresh];
       }
       if ((int) $fresh['active'] === 1) return ['blocked', t('Switch off their access first; then they can be removed.')];
@@ -398,7 +411,7 @@ $av = function ($k, $fallback = '') use ($addFailed) { return $addFailed ? post(
 $suggest = $addFailed ? post_password('password') : mg_suggest_password();
 
 ob_start(); ?>
-<div class="split">
+<div class="split tm-split">
   <div class="stack">
     <section class="card card--flush">
       <div class="table-wrap">

@@ -20,6 +20,7 @@ import contactPage from "./src/pages/contact.mjs";
 import partnersPage from "./src/pages/partners.mjs";
 import { privacyPage, termsPage, cookiesPage, creditsPage, notFoundPage } from "./src/pages/legal.mjs";
 import { writeAdminFiles } from "./scripts/admin-files.mjs";
+import { channelSprite } from "./src/lib/layout.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 // Output folder: dist/ (MFS_OUT=/some/dir builds elsewhere, e.g. for tests running side by side).
@@ -54,6 +55,9 @@ const pages = [
   ["credits.html", creditsPage()],
   ["404.html", notFoundPage()],
 ];
+// Icons of the messaging channels that are built hidden: one shared file instead of a copy in every page.
+const sprite = channelSprite();
+fs.writeFileSync(path.join(out, "assets", "img", "channels.svg"), sprite.svg);
 for (const [file, html] of pages) write(file, html);
 
 // ── Languages ──────────────────────────────────────────────────────────────
@@ -78,13 +82,15 @@ for (const { code } of LANGS.filter((l) => l.code !== "en")) {
   const dict = loadDict(i18nDir, code);
   const missing = new Set();
   for (const [file, html] of pages) {
-    if (file === "404.html") continue;
-    write(path.join(code, file), translatePage(html, { lang: code, dict, missing, js: scriptKeys(html) }));
+    const page = translatePage(html, { lang: code, dict, missing, js: scriptKeys(html) });
+    write(path.join(code, file), file === "404.html" ? notFoundIn(code, page) : page);
   }
   report.push(`${code} ${Math.round((100 * (strings.size - missing.size)) / strings.size)}%`);
 }
 console.log(`${strings.size} strings · translated: ${report.join(", ")}`);
 if (markWarnings.length) console.log(`! ${markWarnings.length} live price(s) not found in a translation (those stay as built): ${[...new Set(markWarnings)].join(", ")}`);
+
+if (!config.siteUrl) console.log("! siteUrl is empty in src/config.mjs: no canonical links, hreflang, sitemap.xml or share image (og:image). Set it before building for the live site.");
 
 // The admin panel isn't for search engines (it also says so in its own headers).
 const robots = "User-agent: *\nAllow: /\nDisallow: /admin/\n";
@@ -106,7 +112,15 @@ console.log(`Built ${pages.length} pages × ${LANGS.length} languages into ${pat
 function write(file, html) {
   const dest = path.join(out, file);
   fs.mkdirSync(path.dirname(dest), { recursive: true });
-  fs.writeFileSync(dest, cleanLinks(html, file.split(path.sep).join("/")));
+  fs.writeFileSync(dest, cleanLinks(html.replaceAll("__CHANNELS_V__", sprite.version), file.split(path.sep).join("/")));
+}
+
+// The 404 page of one language (ru/404.html, served by the .htaccess for unknown addresses under /ru/): its
+// links go to that language's pages, from the site root like the English one, and the site root stays "/".
+function notFoundIn(code, html) {
+  return html
+    .replace('data-site-root="..//"', 'data-site-root="/"')
+    .replace(/(\s(?:href|action)=")\/(?!\/|assets\/|api\/|admin\/|send\.php)/g, `$1/${code}/`);
 }
 
 // The footprint logo from the header, as the favicon.

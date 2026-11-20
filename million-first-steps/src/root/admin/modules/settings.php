@@ -1,4 +1,5 @@
 <?php
+if (!defined('MFS_BOOTED')) { http_response_code(404); exit; }
 /*
  * Settings (?p=settings) — owners only. One page, separate forms (each saves on its own):
  *
@@ -251,6 +252,13 @@ function st_send_backup(): void
     // One self-contained file (no -wal beside it), checked before anyone relies on it.
     $chk = new PDO('sqlite:' . $tmp, null, null, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
     $chk->query('PRAGMA journal_mode = DELETE')->fetchAll();
+    // The copy leaves out the panel's secrets and today's IP-hashing salt with the hashes it protects (visitor
+    // hashes, sign-in attempts): they are short-lived, of no use in a backup, and could re-identify today's
+    // visitors. VACUUM then rewrites the file so nothing deleted stays readable in it.
+    $chk->exec("DELETE FROM settings WHERE key IN ('daily_salt', 'housekeeping_day', 'cookie_secret', 'dummy_hash')");
+    $chk->exec('DELETE FROM stats_seen');
+    $chk->exec('DELETE FROM login_attempts');
+    $chk->exec('VACUUM');
     $ok = $chk->query('PRAGMA quick_check')->fetchColumn() === 'ok' && (int) $chk->query('SELECT COUNT(*) FROM users')->fetchColumn() > 0;
     $chk = null;
   } catch (Throwable $e) {
@@ -369,15 +377,21 @@ if (is_post()) {
     }
     if (!$errors && count($list) > 10) $errors['recipients'] = t('Please use at most 10 addresses.');
     $notify = post('notify') !== '';
+    $fromRaw = post('mail_from');
+    $from = $fromRaw === '' ? '' : valid_email($fromRaw);
+    if ($fromRaw !== '' && $from === '') $errors['mail_from'] = t('“{value}” isn’t a valid email address.', ['value' => excerpt($fromRaw, 60)]);
     if (!$errors) {
       $value = implode(', ', array_values($list));
       $oldValue = (string) setting('form_recipients', '');
       $oldNotify = (bool) setting('notify_new_request');
+      $oldFrom = (string) setting('mail_from', '');
       set_setting('form_recipients', $value);
       set_setting('notify_new_request', $notify);
+      set_setting('mail_from', $from);
       $lines = [];
       if ($oldValue !== $value) $lines[] = 'recipients: ' . ($oldValue !== '' ? $oldValue : '(built-in)') . ' → ' . ($value !== '' ? $value : '(built-in)');
       if ($oldNotify !== $notify) $lines[] = 'email on new requests: ' . ($notify ? 'on' : 'off');
+      if ($oldFrom !== $from) $lines[] = 'sender: ' . ($oldFrom !== '' ? $oldFrom : '(automatic)') . ' → ' . ($from !== '' ? $from : '(automatic)');
       if ($lines) audit('settings.emails', 'settings:form_recipients', implode('; ', $lines));
       flash($lines ? 'ok' : 'info', $lines ? ($notify
         ? t('Saved. New requests are emailed to {to}.', ['to' => implode(', ', form_recipients())])
@@ -402,7 +416,7 @@ if (is_post()) {
       $ok = send_mail($to, t('Test email from your website'), $body, (string) $me['email']);
       audit('settings.test_email', '', ($ok ? 'Sent to ' : 'Could not send to ') . implode(', ', $to));
       if ($ok) flash('ok', t('Test email sent to {to}. If it hasn’t arrived within a few minutes, look in the spam folder.', ['to' => implode(', ', $to)]));
-      else flash('error', t('The server could not send the email. On Hostinger, check that an email account exists for your domain (for example no-reply@…), then try again.'));
+      else flash('error', t('The server could not send the email. On Hostinger, check that the address under “Send emails from” ({from}) is an email account that exists for your domain, then try again.', ['from' => mfs_mail_from()]));
     }
     redirect(url('settings') . '#emails');
   } elseif ($form === 'notice') {
@@ -486,6 +500,7 @@ $sent = function ($path, $current) use ($form, $errors) {
 $contactFailed = $errors && $form === 'contact';
 $recipients = $errors && $form === 'emails' ? post('recipients') : (string) setting('form_recipients', '');
 $notify = $errors && $form === 'emails' ? post('notify') !== '' : (bool) setting('notify_new_request');
+$mailFrom = $errors && $form === 'emails' ? post('mail_from') : (string) setting('mail_from', '');
 $noticeOn = $errors && $form === 'notice' ? post('notice_on') !== '' : (bool) $notice['enabled'];
 $analytics = $errors && $form === 'data' ? post('analytics') !== '' : (bool) setting('analytics_enabled');
 $months = $errors && $form === 'data' ? post('retention_months') : (string) (int) setting('retention_months');
@@ -630,10 +645,19 @@ ob_start(); ?>
           <span class="switch__label"><?= h(t('Email us about every new request')) ?></span>
         </label>
         <p class="field__help st-switch-help"><?= h(t('When this is off, nothing is emailed — new requests wait for you under Requests (with a count in the menu).')) ?></p>
+        <div class="field<?= mg_cls($errors, 'mail_from') ?>">
+          <label class="field__label" for="mail_from"><?= h(t('Send emails from')) ?> <span class="field__opt"><?= h(t('optional')) ?></span></label>
+          <?php $autoFrom = mfs_mail_from_auto(); ?>
+          <input class="input" type="email" id="mail_from" name="mail_from" value="<?= h($mailFrom) ?>" placeholder="<?= h($autoFrom) ?>"
+            autocomplete="off" inputmode="email" autocapitalize="none" spellcheck="false" maxlength="200"<?= mg_inv($errors, 'mail_from', 'mail_from-help') ?>>
+          <p class="field__help" id="mail_from-help"><?= h(t('The sender of the website’s emails. Use an email account that exists for your domain — many hosts, Hostinger among them, won’t send from an address that doesn’t exist. Empty = {email}.', ['email' => $autoFrom])) ?></p>
+          <?= mg_err($errors, 'mail_from') ?>
+        </div>
         <p class="st-testnote small muted"><?= icon('send') ?><span><?= h(t('“Send a test email” writes to the saved addresses: {to}.', ['to' => implode(', ', form_recipients()) ?: t('none yet')])) ?></span></p>
+        <p class="st-testnote small" data-dirty-text hidden><?= icon('alert') ?><span><?= h(t('Save first: the test email goes to the saved addresses, not to what you’ve just typed.')) ?></span></p>
       </div>
       <div class="card__foot card__foot--between">
-        <button type="submit" class="btn btn--secondary" form="test-email-form"><?= icon('send') ?><?= h(t('Send a test email')) ?></button>
+        <button type="submit" class="btn btn--secondary" form="test-email-form" data-clean-only><?= icon('send') ?><?= h(t('Send a test email')) ?></button>
         <span class="st-foot-end">
           <span class="st-dirty" data-dirty-text hidden><?= icon('alert') ?><?= h(t('Unsaved changes')) ?></span>
           <button type="submit" class="btn btn--primary"><?= icon('check') ?><?= h(t('Save')) ?></button>
@@ -777,14 +801,14 @@ ob_start(); ?>
     <div class="card card--muted st-maint">
       <div class="st-maint__row">
         <div class="st-dz__text">
-          <p class="strong"><?= h(t('Website settings file')) ?></p>
+          <p class="strong"><?= h(t('Website update')) ?></p>
           <p class="small muted"><?= h($live['exists']
-            ? t('The website reads prices, contact details and the notice from this file. Last written {when}.', ['when' => fmt_ago($live['updated'])])
-            : t('Not written yet — the website shows everything as it was built. It is written the first time you save a change here.')) ?></p>
+            ? t('The website shows the prices, contact details and notice you set here. Last sent to the website {when}.', ['when' => fmt_ago($live['updated'])])
+            : t('Nothing sent yet — the website shows everything as it was built. Your changes go to the website the first time you save one here.')) ?></p>
         </div>
         <form method="post" action="<?= h(url('settings')) ?>" class="st-dz__action" data-once>
           <?= csrf_field() ?><input type="hidden" name="action" value="publish">
-          <button type="submit" class="btn btn--secondary btn--sm"><?= icon('refresh') ?><?= h(t('Update the website again')) ?></button>
+          <button type="submit" class="btn btn--secondary btn--sm"><?= icon('refresh') ?><?= h(t('Send the latest changes to the website again')) ?></button>
         </form>
       </div>
       <div class="st-maint__row">

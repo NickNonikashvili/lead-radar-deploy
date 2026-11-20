@@ -1,4 +1,5 @@
 <?php
+if (!defined('MFS_BOOTED')) { http_response_code(404); exit; }
 // Forgot password: emails a single-use link (1 hour). Always the same answer, whether or not the address has an account.
 if (current_user()) redirect(url('account'));
 
@@ -8,26 +9,26 @@ if (is_post()) {
   csrf_check();
   $email = mfs_cut(post('email'), 200);
   $addr = valid_email($email);
-  if ($addr !== '' && !mfs_login_throttled($addr)) {
-    $u = db_row('SELECT * FROM users WHERE email = ? AND active = 1', [$addr]);
-    // At most 3 waiting links per person, so nobody can flood an inbox.
-    if ($u && (int) db_value('SELECT COUNT(*) FROM password_resets WHERE user_id = ? AND used_at IS NULL AND expires_at > ?', [(int) $u['id'], time()]) < 3) {
-      $link = mfs_create_reset_link((int) $u['id']);
-      $prev = $GLOBALS['mfs_user'] ?? null;
-      $GLOBALS['mfs_user'] = $u;           // write the email in their language
-      $body = t('Hello {name},', ['name' => $u['name']]) . "\n\n"
+  // The answer goes out first — the same, at the same speed, whether or not the address has an account — and
+  // the email is written afterwards. Strangers' failed sign-ins don't hold reset links back (at most 3 wait).
+  flash('info', t('If this address has an account, we’ve sent it a link to choose a new password. It works for one hour. Check the spam folder if it doesn’t arrive in a few minutes.'));
+  $u = $addr !== '' && !mfs_ip_throttled() ? db_row('SELECT * FROM users WHERE email = ? AND active = 1', [$addr]) : null;
+  mfs_redirect_and_continue(url('forgot', ['sent' => 1]));
+  // At most 3 waiting links per person, so nobody can flood an inbox.
+  if ($u && (int) db_value('SELECT COUNT(*) FROM password_resets WHERE user_id = ? AND used_at IS NULL AND expires_at > ?', [(int) $u['id'], time()]) < 3) {
+    $lang = (string) $u['lang'];
+    $link = mfs_create_reset_link((int) $u['id'], $lang);
+    list($subject, $body) = mfs_with_lang($lang, function () use ($u, $link) {   // in their language
+      return [t('Reset your password — Million First Steps'), t('Hello {name},', ['name' => $u['name']]) . "\n\n"
         . t('Someone (hopefully you) asked to reset the password for the Million First Steps team area.') . "\n\n"
         . t('Choose a new password here — the link works once, for one hour:') . "\n" . $link . "\n\n"
         . t('If you didn’t ask for this, you can ignore this email; your password stays the same.') . "\n\n"
-        . "— Million First Steps\n";
-      $subject = t('Reset your password — Million First Steps');
-      $GLOBALS['mfs_user'] = $prev;
-      if (!send_mail($u['email'], $subject, $body)) error_log('[mfs-admin] password reset email could not be sent to user ' . $u['id']);
-      audit('auth.reset_requested', 'user:' . $u['id']);
-    }
+        . "— Million First Steps\n"];
+    });
+    if (!send_mail($u['email'], $subject, $body)) error_log('[mfs-admin] password reset email could not be sent to user ' . $u['id']);
+    audit('auth.reset_requested', 'user:' . $u['id']);
   }
-  flash('info', t('If this address has an account, we’ve sent it a link to choose a new password. It works for one hour. Check the spam folder if it doesn’t arrive in a few minutes.'));
-  redirect(url('forgot', ['sent' => 1]));
+  exit;
 }
 $sent = get('sent') === '1';
 

@@ -1,4 +1,5 @@
 <?php
+if (!defined('MFS_BOOTED')) { http_response_code(404); exit; }
 /*
  * Activity (?p=activity) — owners only. The audit log, newest first, 50 per page, grouped by day (Tbilisi time).
  * Linked from Settings (not in the sidebar). Read-only: lines are never edited or deleted here (bookings derive

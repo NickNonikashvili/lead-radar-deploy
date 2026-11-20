@@ -82,22 +82,13 @@ function mfs_store_request(array $data): ?int
     $col['name'] = mfs_cut(str_replace("\n", ' ', $col['name']), 200);
     $col['phone'] = mfs_cut(str_replace("\n", ' ', $col['phone']), 60);
 
-    // A tour named in the interests (e.g. "The Cradle of Wine (Explorer)" from a tour page's link).
+    // A tour named in the interests (e.g. "The Cradle of Wine (Explorer)" from a tour page's link — the travel
+    // style comes in the page's language: "(ოქროს საწმისი)", "(Золотое руно)").
     $tourId = '';
     $tier = '';
     if ($col['interests'] !== '') {
-      $hay = function_exists('mb_strtolower') ? mb_strtolower($col['interests']) : strtolower($col['interests']);
-      foreach (catalog()['tours'] as $t) {
-        $name = function_exists('mb_strtolower') ? mb_strtolower((string) $t['name']) : strtolower((string) $t['name']);
-        $short = preg_replace('/^the\s+/u', '', $name);
-        if ($name !== '' && (strpos($hay, $name) !== false || ($short !== '' && strpos($hay, $short) !== false))) {
-          $tourId = (string) $t['id'];
-          break;
-        }
-      }
-      if ($tourId !== '') {
-        foreach (tiers() as $id => $tn) if (stripos($col['interests'], $tn) !== false) { $tier = $id; break; }
-      }
+      $tourId = mfs_find_tour($col['interests']);
+      if ($tourId !== '') $tier = mfs_find_tier($col['interests']);
     }
 
     $label = mfs_cut(mfs_clean_text($data['kind'] ?? '', false), 80);
@@ -119,14 +110,17 @@ function mfs_store_request(array $data): ?int
         $final = $ref . '-' . $i;
         if ($i > 500) { $final = $ref . '-' . bin2hex(random_bytes(3)); break; }
       }
-      $st = $pdo->prepare('INSERT INTO requests (ref, kind, kind_label, status, name, email, phone, country, company, travel_dates,
+      // A new id, never one a deleted request had: an old email's "Open in the admin panel" link can't open
+      // somebody else's request.
+      $newId = db_next_id('requests');
+      $st = $pdo->prepare('INSERT INTO requests (id, ref, kind, kind_label, status, name, email, phone, country, company, travel_dates,
         travellers, interests, tour_id, tier, message, fields_json, lang, page, created_at, updated_at)
-        VALUES (?, ?, ?, \'new\', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+        VALUES (?, ?, ?, ?, \'new\', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
       $nz = function ($v) { return $v === '' ? null : $v; };
-      $st->execute([$final, $kind, $label, $nz($col['name']), $nz($col['email']), $nz($col['phone']), $nz($col['country']),
+      $st->execute([$newId, $final, $kind, $label, $nz($col['name']), $nz($col['email']), $nz($col['phone']), $nz($col['country']),
         $nz($col['company']), $nz($col['travel_dates']), $nz($col['travellers']), $nz($col['interests']), $nz($tourId), $nz($tier),
         $nz($col['message']), $json, $nz($lang), $nz($page), $now, $now]);
-      return (int) $pdo->lastInsertId();
+      return $newId;
     });
     mfs_housekeeping();
     return $id > 0 ? $id : null;

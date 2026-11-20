@@ -1,4 +1,5 @@
 <?php
+if (!defined('MFS_BOOTED')) { http_response_code(404); exit; }
 // First run: create the first owner with the setup key from the build. Closed for good once anyone has an account.
 if (mfs_user_count() > 0) {
   if (current_user()) redirect(url('dashboard'));
@@ -18,7 +19,9 @@ if (is_post() && $key !== '') {
   $password = post_password('password');
   $confirm = post_password('password2');
 
-  if (mfs_login_throttled('(setup)')) {
+  // Wrong keys are limited per visitor (IP hash), plus a high limit for everyone together: a stranger can't
+  // keep the owners from finishing the setup, and a 12-character key can't be guessed either way.
+  if (mfs_login_throttled('(setup)', 50)) {
     $errors['key'] = t('Too many attempts. For your safety, please wait 15 minutes and then try again.');
   } elseif ($given === '' || !hash_equals($key, $given)) {
     mfs_record_attempt('(setup)', false);
@@ -33,9 +36,10 @@ if (is_post() && $key !== '') {
     $user = db_tx(function () use ($v, $password) {
       if ((int) db_value('SELECT COUNT(*) FROM users') > 0) return null;
       $lang = mfs_lang();
-      db_exec("INSERT INTO users (email, name, password_hash, role, lang, active, created_at) VALUES (?, ?, ?, 'owner', ?, 1, ?)",
-        [valid_email($v['email']), $v['name'], mfs_hash_password($password), $lang, now_utc()]);
-      return db_row('SELECT * FROM users WHERE id = ?', [(int) db()->lastInsertId()]);
+      $id = db_next_id('users');
+      db_exec("INSERT INTO users (id, email, name, password_hash, role, lang, active, created_at) VALUES (?, ?, ?, ?, 'owner', ?, 1, ?)",
+        [$id, valid_email($v['email']), $v['name'], mfs_hash_password($password), $lang, now_utc()]);
+      return db_row('SELECT * FROM users WHERE id = ?', [$id]);
     });
     if (!$user) {
       flash('info', t('The team area is already set up. Please sign in.'));

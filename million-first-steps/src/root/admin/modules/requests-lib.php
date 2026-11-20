@@ -270,15 +270,15 @@ function req_set_status(array $ids, string $to, ?int $userId): array
   });
 }
 
-/** "Follow up today" / "Follow up tomorrow" / "Follow-up 3 days overdue" / "Follow up on 25 Nov 2026". */
+/** "Follow-up today" / "Follow-up tomorrow" / "Follow-up 3 days overdue" / "Follow-up on 25 Nov 2026". */
 function req_follow_label(string $ymd): string
 {
   $d = days_until($ymd);
   if ($d === null) return '';
-  if ($d === 0) return t('Follow up today');
-  if ($d === 1) return t('Follow up tomorrow');
+  if ($d === 0) return t('Follow-up today');
+  if ($d === 1) return t('Follow-up tomorrow');
   if ($d < 0) return tp(-$d, 'Follow-up {n} day overdue', 'Follow-up {n} days overdue');
-  return t('Follow up on {date}', ['date' => fmt_date($ymd)]);
+  return t('Follow-up on {date}', ['date' => fmt_date($ymd)]);
 }
 
 /** A small follow-up marker (only for open requests). */

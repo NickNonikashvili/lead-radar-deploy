@@ -30,15 +30,19 @@ export default function home() {
   rev.querySelector(".tr-tx").set_content(`<b>Three ways to travel</b><small>From family guesthouses to five-star hotels</small>`);
   rev.querySelector(".tr-tx").removeAttribute("aria-label");
 
-  // Journeys: our three featured tours, then the card to all tours.
+  // Journeys: our three featured tours, then the card to all tours. The other tours follow as spares (built
+  // hidden): when the owners take a featured tour off the website, site.js shows the next one in its place.
   const grid = root.querySelector(".jr-grid");
   const all = grid.querySelector(".jr-all").toString();
   const featured = TOURS.filter((t) => CARDS[t.id]?.featured);
+  const spares = TOURS.filter((t) => CARDS[t.id] && !CARDS[t.id].featured);
   const plus = grid.querySelector(".jr-plus").toString();
+  grid.setAttribute("data-tour-more", String(featured.length));
   grid.set_content(
-    join(featured, (t) => {
+    join([...featured, ...spares], (t) => {
       const c = CARDS[t.id];
-      return `<div class="jr" data-like="${esc(t.name)}" data-tour-card="${t.id}">
+      const spare = featured.includes(t) ? "" : " data-spare hidden";
+      return `<div class="jr" data-like="${esc(t.name)}" data-tour-card="${t.id}"${spare}>
           <a class="ph" href="tours/${t.id}.html" tabindex="-1" aria-hidden="true"><img src="${c.img}" alt="" loading="lazy"><span class="days">${t.days} days</span></a>
           <div class="body">
             <span class="tag">${esc(STYLES[t.styles[0]])}</span>
@@ -93,6 +97,8 @@ export default function home() {
   wa.insertAdjacentHTML("afterend", `<a href="contact.html" class="btn-wa" data-ch-alt="whatsapp"${channels().whatsapp ? " hidden" : ""}>${svg}Ask us a question</a>`);
   markChannel(wa, wa, "whatsapp");
 
+  // Spam trap like on the contact and partner forms (send.php drops requests that fill it in).
+  root.querySelector("#req-form").insertAdjacentHTML("afterbegin", `<div class="hp" aria-hidden="true"><label>Leave this field empty<input type="text" name="website2" tabindex="-1" autocomplete="off"></label></div>`);
   prepareForms(root);
 
   return layout({

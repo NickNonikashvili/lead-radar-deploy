@@ -36,9 +36,10 @@
 .req-cell__sub { color: var(--muted); font-size: 13px; font-weight: 400; overflow-wrap: anywhere; }
 .req-cell__sub .mono { font-size: 12.5px; white-space: nowrap; }
 .table tr.is-unread .req-cell__sub { font-weight: 500; }
-.req-status { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; }
+.req-status { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; min-width: 0; }
 .req-assignee { cursor: default; }
-.req-follow { display: inline-flex; align-items: center; gap: 4px; font-size: 12.5px; font-weight: 700; line-height: 1.3; color: var(--text-2); white-space: nowrap; }
+.req-follow { display: inline-flex; align-items: center; gap: 4px; min-width: 0; max-width: 100%; font-size: 12.5px; font-weight: 700; line-height: 1.3; color: var(--text-2); overflow-wrap: anywhere; }
+.req-follow .icon { flex: none; }
 .req-follow .icon { width: 14px; height: 14px; }
 .req-follow--today { color: var(--gold-ink); }
 .req-follow--late { color: var(--red-ink); }
@@ -55,7 +56,7 @@
 .req-layout { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: var(--gap); align-items: start; }
 .req-main, .req-aside { display: flex; flex-direction: column; gap: var(--gap); min-width: 0; }
 
-.req-pn { display: flex; align-items: center; gap: 8px; }
+.req-pn { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .req-pn__pos { margin-right: 6px; color: var(--muted); font-size: 14px; font-weight: 600; white-space: nowrap; font-variant-numeric: tabular-nums; }
 
 .req-hero { display: flex; flex-direction: column; gap: 16px; }

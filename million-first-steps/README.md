@@ -17,7 +17,7 @@ php -S localhost:8080 -t dist scripts/router.php   # alternative that also runs 
 Build options (environment variables):
 
 - `MFS_OUT=<folder>` builds somewhere other than `dist/` (`node scripts/serve.mjs <folder>` serves it).
-- `MFS_HTML_LINKS=1` writes links as `about.html` instead of `/about`, for a preview opened without a server.
+- `MFS_HTML_LINKS=1` writes links as `about.html` instead of `/about`, for a preview opened without a server (it also leaves out loading the admin's settings and the visit counter, which need the server).
 - `MFS_SETUP_KEY=<key>` chooses the admin setup key instead of a random one.
 
 Node 18 or newer.
@@ -43,13 +43,13 @@ The design came as finished HTML pages. Their page bodies live in **`src/design/
 | `src/lib/urls.mjs` | The clean addresses (`/about`, `/tours/`, `/tours/<id>`, `/guide/<slug>`) |
 | `src/i18n/<lang>.json` | Translations (English text → translation) |
 
-Pages: home, tours, seven tour pages, Discover Georgia (history), travel guide with ten articles, about, contact, travel partners, privacy, booking terms, cookies, credits and 404 — each in every language under `/<lang>/`.
+Pages: home, tours, seven tour pages, Discover Georgia (history), travel guide with ten articles, about, contact, travel partners, privacy, booking terms, cookies, credits and 404 — each in every language under `/<lang>/` (an unknown address under `/ru/` gets the Russian 404 page).
 
 Addresses have no `.html`: `/`, `/about`, `/tours/`, `/tours/cradle-of-wine`, `/guide/`, `/guide/<article>`, `/ru/about` and so on. The files are still `about.html`, `tours/index.html` etc.; `.htaccess` serves them at the clean address and permanently redirects old links (`/index.html`, `/about.html`, `/tours.html`, `/travel-guide.html`, the first version's pages) to the new ones.
 
 ## Languages
 
-The site is written in English; the build translates the finished pages with `src/i18n/<lang>.json`. Visitors land on their browser's language automatically, and their choice from the language menu is remembered.
+The site is written in English; the build translates the finished pages with `src/i18n/<lang>.json`. Visitors who open an English address are taken to their browser's language (or the one they picked before), and their choice from the language menu is remembered. An address in another language (`/ru/about`, from a link or a search result) always stays in that language, and search engines are never redirected, so each language is found at its own address.
 
 After changing any text, run `npm run build` (it lists every string in `src/i18n/_strings.json` and reports how much of each language is translated), then `npm run i18n:check` to see what's missing or broken. Text inside scripts is marked as `T("…")` (or `P("{n} …")` for plurals) and is translated the same way.
 
@@ -84,7 +84,7 @@ For testing, `php scripts/admin-seed.php <data folder> --users` fills a database
 
 ## Before you launch — checklist
 
-1. **`src/config.mjs`** — real email, phone and messengers, legal company name and identification code, and `siteUrl` once you have a domain (turns on canonical links, hreflang and `sitemap.xml`).
+1. **`src/config.mjs`** — real email, phone and messengers, legal company name and identification code, and `siteUrl` once you have a domain (turns on canonical links, hreflang, `sitemap.xml` and the share image for WhatsApp and Facebook link previews; the build warns while it's empty).
 2. **Photos** — the design's photos are temporary. Those from Pexels are fine; the others came from Wikimedia Commons and need their authors credited on the Credits page (`/credits`) (see `CONTENT-SOURCES.md`) or replacing with your own. The hero video's source should be confirmed too.
 3. **About** — team names come from the design; add roles and photos (the illustrated faces are placeholders).
 4. **Prices** — check the per-tour prices in `src/data/tours.mjs`.

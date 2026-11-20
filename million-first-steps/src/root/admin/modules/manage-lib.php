@@ -159,7 +159,7 @@ function mg_publish(): bool
   $ok = write_live_json();
   if (!$ok) {
     error_log('[mfs-admin] api/live.json could not be written');
-    flash('error', t('Your changes are saved here, but the website could not be updated: the server did not let us write the file api/live.json. Please make sure the “api” folder on the server can be written to, then press “Update the website again” under Settings.'));
+    flash('error', t('Your changes are saved here, but the website could not be updated: the server did not let us write the file api/live.json. Please make sure the “api” folder on the server can be written to, then press “Send the latest changes to the website again” under Settings.'));
   }
   return $ok;
 }
@@ -223,6 +223,9 @@ const MG_ACTIONS = [
   'account.password' => 'Changed their own password',
   'request.status' => 'Changed the status of a request',
   'request.update' => 'Updated a request',
+  'request.note' => 'Added a note to a request',
+  'request.email_note' => 'Noted an email reply to a request',
+  'request.unread' => 'Marked a request as unread',
   'request.note_delete' => 'Deleted a note from a request',
   'request.delete' => 'Deleted a request',
   'booking.create' => 'Created a booking',
@@ -301,12 +304,12 @@ function mg_action_details(string $action, string $details): string
   } elseif ($action === 'tours.prices') {
     $tiers = tiers();
     $d = (string) preg_replace_callback('~([a-z0-9-]+)/([a-z0-9-]+): (\d+) → (\d+)( \(built-in\))?~', function ($m) use ($tiers) {
-      return tour_name($m[1]) . ', ' . t($tiers[$m[2]] ?? $m[2]) . ': ' . fmt_money((int) $m[3]) . ' → ' . fmt_money((int) $m[4])
+      return tour_name($m[1]) . ', ' . (isset($tiers[$m[2]]) ? tier_name($m[2]) : $m[2]) . ': ' . fmt_money((int) $m[3]) . ' → ' . fmt_money((int) $m[4])
         . (isset($m[5]) && $m[5] !== '' ? ' (' . t('built-in') . ')' : '');
     }, $d);
   } elseif ($action === 'tours.visibility') {
     $names = [];
-    foreach (catalog()['tours'] as $t) $names[(string) $t['id']] = (string) $t['name'];
+    foreach (catalog()['tours'] as $t) $names[(string) $t['id']] = mfs_local_name($t);
     $d = strtr($d, ['Taken off the website:' => t('Taken off the website:'), 'Back on the website:' => t('Back on the website:')]);
     $d = (string) preg_replace_callback('/\b[a-z0-9]+(?:-[a-z0-9]+)+\b/', function ($m) use ($names) {
       return $names[$m[0]] ?? $m[0];
@@ -333,6 +336,77 @@ function mg_action_details(string $action, string $details): string
       $k = $m[1] !== '' ? $m[1] : $m[2];
       return t(USER_ROLES[$k]);
     }, $d);
+    $d = strtr($d, ['> as ' => '> — ', '; sign-in address emailed' => '; ' . t('sign-in address emailed'), '; email could not be sent' => '; ' . t('the email could not be sent')]);
+  }
+  return mg_detail_words($action, $d);
+}
+
+/** The English words the log lines were written with (see each audit() call), in the reader's language. */
+function mg_detail_words(string $action, string $d): string
+{
+  if (mfs_lang() === 'en') return $d;
+  $date = function ($m) { return fmt_date($m[1]); };
+  switch ($action) {
+    case 'auth.setup': case 'auth.login': case 'auth.password_reset': case 'account.password': case 'settings.publish':
+      return t($d);
+    case 'auth.locked':
+      return (string) preg_replace_callback('/^Sign-in paused for 15 minutes after (\d+) failed attempts \(last email tried: (.*)\)$/s', function ($m) {
+        return t('Sign-in paused for 15 minutes after {n} failed attempts (last address tried: {email})', ['n' => $m[1], 'email' => $m[2]]);
+      }, $d);
+    case 'system.cleanup':
+      return (string) preg_replace_callback('/^Removed (\d+) old requests, (\d+) spam, (\d+) login attempts, (\d+) reset links \(keeping requests (forever|\d+ months), spam (forever|\d+ days)\)$/', function ($m) {
+        $keep = function ($v, $one, $many) { return $v === 'forever' ? t('for ever') : tp((int) $v, $one, $many); };
+        return t('Removed {r} old requests, {s} spam, {l} sign-in attempts and {p} reset links (requests kept: {rk}; spam kept: {sk})', [
+          'r' => $m[1], 's' => $m[2], 'l' => $m[3], 'p' => $m[4],
+          'rk' => $keep($m[5], '{n} month', '{n} months'), 'sk' => $keep($m[6], '{n} day', '{n} days')]);
+      }, $d);
+    case 'request.update':
+      $d = (string) preg_replace_callback('/\bfollow-up (\d{4}-\d{2}-\d{2})\b/', function ($m) { return t('follow-up {date}', ['date' => fmt_date($m[1])]); }, $d);
+      return strtr($d, ['follow-up cleared' => t('follow-up date removed'), 'assigned nobody' => t('no longer assigned to anyone'), 'status ' => t('status') . ' ']);
+    case 'booking.create':
+      return str_replace(' from request ', ' — ' . t('from request') . ' ', $d);
+    case 'booking.update':
+      return (string) preg_replace_callback('/^([^:]+): (.+)$/s', function ($m) {
+        $labels = ['status' => 'Status', 'client_name' => 'Client', 'client_email' => 'Email', 'client_phone' => 'Phone', 'client_country' => 'Country',
+          'client_lang' => 'Language', 'tour_id' => 'Tour', 'tour_name' => 'Name of the custom trip', 'tier' => 'Travel style', 'start_date' => 'First day',
+          'end_date' => 'Last day', 'adults' => 'Adults', 'children' => 'Children', 'total_price' => 'Total price', 'deposit_amount' => 'Deposit',
+          'deposit_due' => 'Deposit due by', 'balance_due' => 'Balance due by', 'guide' => 'Guide', 'driver' => 'Driver', 'vehicle' => 'Vehicle',
+          'accommodation' => 'Accommodation', 'notes' => 'Notes for the trip'];
+        $f = array_map(function ($c) use ($labels) { $c = trim($c); return isset($labels[$c]) ? t($labels[$c]) : $c; }, explode(',', $m[2]));
+        return $m[1] . ': ' . implode(', ', $f);
+      }, $d);
+    case 'payment.add': case 'payment.delete':
+      return (string) preg_replace_callback('/ on (\d{4}-\d{2}-\d{2})$/', function ($m) use ($date) { return ', ' . $date($m); }, $d);
+    case 'export.requests': case 'export.bookings': case 'export.payments':
+      return (string) preg_replace_callback('/^(\d+) rows\b/', function ($m) { return tp((int) $m[1], '{n} row', '{n} rows'); }, $d);
+    case 'tours.reset':
+      return (string) preg_replace_callback('/^All tour prices back to the built-in ones \((\d+) tours had their own prices\)$/', function ($m) {
+        return t('All tour prices back to the built-in ones ({n} tours had their own prices)', ['n' => $m[1]]);
+      }, $d);
+    case 'settings.emails':
+      return strtr($d, ['recipients: ' => t('recipients') . ': ', 'email on new requests: on' => t('email on new requests: on'),
+        'email on new requests: off' => t('email on new requests: off'), 'sender: ' => t('sender') . ': ', '(built-in)' => '(' . t('built-in') . ')',
+        '(automatic)' => '(' . t('automatic') . ')']);
+    case 'settings.test_email':
+      return strtr($d, ['Sent to ' => t('Sent to') . ' ', 'Could not send to ' => t('Could not send to') . ' ']);
+    case 'settings.notice':
+      $d = (string) preg_replace_callback('/text changed \(([^)]*)\)/', function ($m) { return t('text changed ({langs})', ['langs' => $m[1] === 'none' ? t('none') : $m[1]]); }, $d);
+      return strtr($d, ['switched on' => t('switched on'), 'switched off' => t('switched off')]);
+    case 'settings.data':
+      $d = (string) preg_replace_callback('/keep (requests|spam): (for ever|\d+) → (for ever|\d+)( months| days)?/', function ($m) {
+        $unit = $m[1] === 'requests' ? ['{n} month', '{n} months'] : ['{n} day', '{n} days'];
+        $v = function ($x) use ($unit) { return $x === 'for ever' ? t('for ever') : tp((int) $x, $unit[0], $unit[1]); };
+        return t($m[1] === 'requests' ? 'keep requests' : 'keep spam') . ': ' . $v($m[2]) . ' → ' . $v($m[3]);
+      }, $d);
+      return strtr($d, ['visit statistics: on' => t('visit statistics: on'), 'visit statistics: off' => t('visit statistics: off')]);
+    case 'user.password':
+      return (string) preg_replace_callback('/^(.*): new password set by (.*); signed out everywhere$/s', function ($m) {
+        return t('{name}: new password set by {owner}; signed out everywhere', ['name' => $m[1], 'owner' => $m[2]]);
+      }, $d);
+    case 'account.update': case 'user.update':
+      $d = (string) preg_replace('/(^|; |: )name(?=$|;|: )/', '$1' . t('name'), $d);
+      $d = (string) preg_replace('/(^|; |: )email(:? )/', '$1' . t('email') . '$2', $d);
+      return (string) preg_replace('/(^|; |: )language(:? )/', '$1' . t('language') . '$2', $d);
   }
   return $d;
 }

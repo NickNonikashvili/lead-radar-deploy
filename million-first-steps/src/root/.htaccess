@@ -1,6 +1,7 @@
 # Settings for Apache / LiteSpeed hosting (e.g. Hostinger). Other hosts ignore this file.
 # Pages are files such as about.html and tours/index.html; visitors see clean addresses: /about, /tours/.
 DirectoryIndex index.html index.php
+# Unknown addresses get the 404 page, in the visitor's language under /ru/, /ka/… (see the rewrite below).
 ErrorDocument 404 /404.html
 Options -Indexes -MultiViews
 
@@ -14,6 +15,15 @@ Options -Indexes -MultiViews
 
   # Hidden folders too (.git/…), except .well-known (used for SSL certificates).
   RewriteRule (?:^|/)\.(?!well-known(?:/|$)) - [F]
+
+  # The 404 page in the visitor's language: an unknown address under /ru/ gets ru/404.html (THE_REQUEST
+  # is still the address the visitor asked for while the error page is fetched; the status stays 404).
+  RewriteCond %{THE_REQUEST} ^[A-Z]+\s/(ru|ka|es|fr|it|pt|de|zh)/
+  RewriteRule ^404\.html$ %1/404.html [L]
+
+  # Doubled slashes (/tours//cradle-of-wine) go to the single-slash address, so relative links keep working.
+  RewriteCond %{THE_REQUEST} ^(?:GET|HEAD)\s((?:/[^/?\s]+)*)//+([^?\s]*)
+  RewriteRule ^ %1/%2 [R=301,NE,L]
 
   # Until the owners first save settings in the admin panel there's no api/live.json: answer "no changes"
   # instead of a 404 (which browsers would log on every page).
@@ -38,11 +48,17 @@ Options -Indexes -MultiViews
   # Asked for a file name? Send visitors to the clean address: /index.html → /, /ru/index.html → /ru/,
   # /tours/index.html → /tours/, /about.html → /about. THE_REQUEST is what the browser asked for, so the
   # rewrites below (about → about.html) never loop. The query string is kept.
+  # /about/index.html → /about in one step (there's no about/ folder, only the page).
+  RewriteCond %{REQUEST_FILENAME} !-d
+  RewriteCond %{REQUEST_FILENAME}::$1 ^(?:.*/)?([^/]+)::\1$
+  RewriteCond %{REQUEST_FILENAME}.html -f
+  RewriteCond %{THE_REQUEST} ^[A-Z]+\s([^?\s]*[^/?\s])/+index(?:\.html)?/?[?\s]
+  RewriteRule (?:^|/)([^/]+)/+index(?:\.html)?/?$ %1 [R=301,NE,L]
   RewriteCond %{THE_REQUEST} ^[A-Z]+\s([^?\s]*/)index(?:\.html)?/?[?\s]
   RewriteRule (?:^|/)index(?:\.html)?/?$ %1 [R=301,NE,L]
   RewriteCond %{THE_REQUEST} ^[A-Z]+\s([^?\s]*?)\.html[?\s]
   RewriteCond %{REQUEST_FILENAME} -f
-  RewriteRule ^(?!404\.html$).+\.html$ %1 [R=301,NE,L]
+  RewriteRule ^(?!(?:[a-z]{2}/)?404\.html$).+\.html$ %1 [R=301,NE,L]
 
   # /about/ → /about (when about.html exists and there's no folder of that name). The "::" test makes sure
   # the address names that page itself, not something below it (/about/x stays a 404).
@@ -80,6 +96,13 @@ Options -Indexes -MultiViews
   SetEnvIf Request_URI "/admin(/|$)" MFS_ADMIN
   Header always set X-Content-Type-Options "nosniff"
   Header always set Referrer-Policy "strict-origin-when-cross-origin" env=!MFS_ADMIN
+  # Other websites can't show these pages in a frame (the forms included). The admin panel has its own,
+  # stricter policy.
+  Header always set X-Frame-Options "SAMEORIGIN" env=!MFS_ADMIN
+  Header always set Content-Security-Policy "frame-ancestors 'self'; base-uri 'self'; object-src 'none'; form-action 'self'" env=!MFS_ADMIN
+  # Compressed answers carry the file's ETag plus "-gzip", which never matched when the browser sent it back,
+  # so every view downloaded the page again. Without the suffix it's compared with the file: "304 Not Modified".
+  RequestHeader edit "If-None-Match" "^\"(.*)-gzip\"$" "\"$1\""
   <FilesMatch "\.(css|js|webp|png|jpg|svg|woff2|mp4)$">
     Header set Cache-Control "public, max-age=604800"
   </FilesMatch>

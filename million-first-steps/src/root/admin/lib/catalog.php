@@ -81,21 +81,83 @@ function tours(): array
   return $out;
 }
 
-/** A tour's name from the catalogue ('' for empty, the id itself for an unknown/removed tour). */
+/** A catalogue tour's or travel style's name as the website shows it in the interface language (else English). */
+function mfs_local_name(array $item): string
+{
+  $lang = mfs_lang();
+  $names = is_array($item['names'] ?? null) ? $item['names'] : [];
+  if ($lang !== 'en' && isset($names[$lang]) && is_string($names[$lang]) && $names[$lang] !== '') return $names[$lang];
+  return (string) ($item['name'] ?? '');
+}
+
+/** Every name of a catalogue tour or travel style: English first, then the website's other languages. */
+function mfs_all_names(array $item): array
+{
+  $out = [(string) ($item['name'] ?? '')];
+  foreach ((array) ($item['names'] ?? []) as $n) if (is_string($n) && $n !== '') $out[] = $n;
+  return array_values(array_unique(array_filter($out, 'strlen')));
+}
+
+/** A tour's name from the catalogue, in the interface language ('' for empty, the id itself for an unknown/removed tour). */
 function tour_name($id): string
 {
   $id = (string) $id;
   if ($id === '') return '';
-  foreach (catalog()['tours'] as $t) if ((string) $t['id'] === $id) return (string) $t['name'];
+  foreach (catalog()['tours'] as $t) if ((string) $t['id'] === $id) return mfs_local_name($t);
   return $id;
 }
 
-/** A travel style's name ('Explorer'); unknown ids come back as given. */
+/** A travel style's name in the interface language ('Explorer', 'მკვლევარი'); unknown ids come back as given. */
 function tier_name($id): string
 {
   $id = (string) $id;
-  $t = tiers();
-  return $t[$id] ?? $id;
+  foreach (catalog()['tiers'] as $t) if ((string) $t['id'] === $id) return mfs_local_name($t);
+  return $id;
+}
+
+/** Lower case, straight apostrophes, single spaces — for finding names in what visitors sent. */
+function mfs_name_key(string $s): string
+{
+  $s = str_replace(['’', '‘', 'ʼ', "\u{00A0}"], ["'", "'", "'", ' '], $s);
+  $s = (string) preg_replace('/\s+/u', ' ', trim($s));
+  return function_exists('mb_strtolower') ? mb_strtolower($s, 'UTF-8') : strtolower($s);
+}
+
+/**
+ * The catalogue tour named in free text (e.g. "The Cradle of Wine (Explorer)" from a tour page's link, in any of
+ * the website's languages); '' when none.
+ */
+function mfs_find_tour(string $text): string
+{
+  $hay = mfs_name_key($text);
+  if ($hay === '') return '';
+  foreach (catalog()['tours'] as $t) {
+    foreach (mfs_all_names($t) as $name) {
+      $name = mfs_name_key($name);
+      $short = (string) preg_replace('/^the\s+/u', '', $name);
+      if ($name !== '' && (strpos($hay, $name) !== false || ($short !== '' && strpos($hay, $short) !== false))) return (string) $t['id'];
+    }
+  }
+  return '';
+}
+
+/** The travel style named in free text, in any of the website's languages ('' when none). A name in brackets wins. */
+function mfs_find_tier(string $text): string
+{
+  $hay = mfs_name_key($text);
+  if ($hay === '') return '';
+  if (preg_match_all('/\(([^()]{2,60})\)/u', $hay, $m)) {
+    foreach ($m[1] as $inner) {
+      foreach (catalog()['tiers'] as $t) foreach (mfs_all_names($t) as $name) if (mfs_name_key($name) === trim($inner)) return (string) $t['id'];
+    }
+  }
+  foreach (catalog()['tiers'] as $t) {
+    foreach (mfs_all_names($t) as $name) {
+      $name = mfs_name_key($name);
+      if ($name !== '' && strpos($hay, $name) !== false) return (string) $t['id'];
+    }
+  }
+  return '';
 }
 
 /** Party-size price factors {"1".."8": factor}: the owners' overrides on top of the built-in ones. */

@@ -29,13 +29,15 @@ export function byText(root, sel, text) {
  * English label in data-en, so the email we receive reads the same whatever language the visitor used.
  */
 export function prepareForms(root) {
+  // A label's text without its "(optional)" hint (the contact message is only optional for custom trips).
+  const labelText = (el) => (el ? el.querySelectorAll(".opt").reduce((s, o) => s.replace(o.text, ""), el.text) : "");
   root.querySelectorAll("form").forEach((form) => {
     form.querySelectorAll("input, select, textarea").forEach((el) => {
       const id = el.getAttribute("id");
       if (!el.getAttribute("name") && id) el.setAttribute("name", id);
       if (el.getAttribute("type") === "hidden" && !id) return;
       let label = "";
-      if (id) label = form.querySelector(`label[for="${id}"]`)?.text || "";
+      if (id) label = labelText(form.querySelector(`label[for="${id}"]`));
       if (!label) {
         const by = (el.getAttribute("aria-labelledby") || el.getAttribute("aria-describedby") || "").split(" ")[0];
         if (by) label = root.querySelector(`#${by}`)?.text || "";

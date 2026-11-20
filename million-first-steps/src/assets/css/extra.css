@@ -247,9 +247,14 @@ html.sh-narrow .sh-menu .sh-lang-list button { flex-direction: column; align-ite
 
 /* ---------- Settings from the admin panel (site.js applies api/live.json) ----------
    Contact rows, messaging channels and tours the owners switch off are in the page but hidden; the
-   design gives many of them a display of their own, so [hidden] has to win everywhere. */
-[data-ch][hidden], [data-ch-alt][hidden], [data-ch-list][hidden], [data-live][hidden], [data-live-wrap][hidden],
-[data-tour-card][hidden], [data-tour-unavailable][hidden], .tr-more[hidden], .site-notice[hidden] { display: none !important; }
+   design gives many elements a display of their own (also the home map's tooltip), so [hidden] has to
+   win everywhere. */
+[hidden] { display: none !important; }
+/* Until site.js has applied the owners' settings (html.mfs-pending, set by the head script for three seconds
+   at most), the values they can change keep their place but aren't shown, so built ones never flash. The
+   tour calculator and the tours count also wait for their page script to work them out again (data-live-wait). */
+html.mfs-pending :is([data-price], [data-from], [data-perday], [data-tour-count], [data-live], [data-ch], [data-ch-alt], [data-calc-pp], [data-calc-total], #tc-n, #tc-w),
+[data-live-wait] :is([data-calc-pp], [data-calc-total]), [data-live-wait]:is(#tc-n, #tc-w) { visibility: hidden; }
 
 /* Site notice: a slim wine bar above the header. */
 .site-notice { background: #6E1530; color: #FBF6EE; font-family: Manrope, system-ui, sans-serif; position: relative; z-index: 56; }

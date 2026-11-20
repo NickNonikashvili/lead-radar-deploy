@@ -18,6 +18,7 @@
 .stats-card .card__head { row-gap: 12px; }
 .stats-chips { gap: 6px; }
 .stats-chips .chip { min-height: 34px; padding: 5px 12px; font-size: 13px; }
+@media (max-width: 720px) { .stats-chips .chip { min-height: var(--tap); } }
 .stats-more { margin-top: 14px; }
 .stats-more > summary { display: inline-flex; align-items: center; min-height: var(--tap); color: var(--wine); font-size: 14.5px; font-weight: 700; cursor: pointer; }
 .stats-more[open] > summary { margin-bottom: 10px; }

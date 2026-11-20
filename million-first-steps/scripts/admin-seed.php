@@ -219,7 +219,9 @@ for ($d = $days; $d >= 0; $d--) {
     $lang = weighted($langW);
     $person = pick($people[$lang]);
     list($name, $country, $dial, $phonePart) = $person;
-    $first = strtolower(preg_replace('/[^a-z]/i', '', explode(' ', (string) @iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $name))[0])) ?: 'guest';
+    // (iconv is optional: without it, accented letters are simply dropped.)
+    $ascii = function_exists('iconv') ? (string) @iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $name) : $name;
+    $first = strtolower(preg_replace('/[^a-z]/i', '', explode(' ', $ascii)[0])) ?: 'guest';
     $email = $first . mt_rand(1, 99) . '@' . pick(['gmail.com', 'outlook.com', 'yahoo.com', 'icloud.com', 'gmx.de', 'mail.ru', 'proton.me']);
     $phone = $dial . ' ' . $phonePart . ' ' . str_pad((string) mt_rand(0, 9999), 4, '0', STR_PAD_LEFT);
     $pfx = $lang === 'en' ? '' : '/' . $lang;

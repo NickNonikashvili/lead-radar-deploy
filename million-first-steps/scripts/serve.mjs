@@ -37,7 +37,14 @@ const LEGACY = [
   [/^((?:\/[a-z]{2})?\/)history(?:\.html)?\/?$/, "$1discover-georgia"],
   [/^((?:\/[a-z]{2})?\/)destinations(?:\.html)?\/?$/, "$1"],
 ];
-const DENIED = [/\/\.(?!well-known(\/|$))/, /\.(sqlite3?|sqlite-wal|sqlite-shm|db|log|ini|lock)$/i, /(^|\/)(error_log|php_errorlog)$/, /^\/admin\/(lib|data)(\/|$)/];
+const DENIED = [
+  /\/\.(?!well-known(\/|$))/,
+  /\.(sqlite[^/]*|db|log|ini|lock)$/i,
+  /(^|\/)(error_log|php_errorlog)$/i,
+  /^\/admin\/(lib|data|modules)(\/|$)/i,
+  /^\/admin\/(.*\/)?([^/]+\.(bak|md|sh|inc)|config\.local\.php)$/i,
+];
+const LANG_404 = /^\/(ru|ka|es|fr|it|pt|de|zh)\//;
 
 const isFile = (p) => fs.existsSync(p) && fs.statSync(p).isFile();
 const isDir = (p) => fs.existsSync(p) && fs.statSync(p).isDirectory();
@@ -49,20 +56,35 @@ function send(res, status, file, extra = {}) {
   res.writeHead(status, { "Content-Type": type, "X-Content-Type-Options": "nosniff", ...(type.startsWith("text/html") ? { "Cache-Control": "no-cache" } : {}), ...extra });
   fs.createReadStream(file).pipe(res);
 }
-const notFound = (res) => send(res, 404, path.join(root, "404.html"));
+// The 404 page, in the language of the address (/ru/… gets ru/404.html) when there is one.
+const notFound = (res, p = "") => {
+  const lang = p.match(LANG_404);
+  const page = lang && isFile(path.join(root, lang[1], "404.html")) ? path.join(root, lang[1], "404.html") : path.join(root, "404.html");
+  send(res, 404, page);
+};
 const deny = (res) => { res.writeHead(403, { "Content-Type": "text/plain; charset=utf-8" }); res.end("Forbidden\n"); };
 
 http
   .createServer((req, res) => {
     let url;
     let p;
+    // Doubled slashes and "/./" go to the plain address (like the .htaccess), before anything else looks at it.
+    const raw = String(req.url || "/");
+    const cut = raw.search(/[?#]/);
+    const rawPath = cut < 0 ? raw : raw.slice(0, cut);
+    if (/\/\/|\/\.(\/|$)/.test(rawPath)) {
+      if (req.method !== "GET" && req.method !== "HEAD") return notFound(res);
+      res.writeHead(301, { Location: rawPath.replace(/\/+/g, "/").replace(/\/(\.\/)+/g, "/").replace(/\/\.$/, "/") + (cut < 0 ? "" : raw.slice(cut)) });
+      return res.end();
+    }
     try {
       url = new URL(req.url, "http://localhost");
       p = decodeURIComponent(url.pathname);
     } catch {
       return notFound(res);
     }
-    if (p.includes("\0") || p.split("/").includes("..")) return notFound(res);
+    // An encoded slash or dot segment (/admin/%2flib/…) is a 404, as on Apache.
+    if (p.includes("\0") || p.split("/").includes("..") || /\/\/|\/\.(\/|$)/.test(p)) return notFound(res, p);
     const go = (to) => {
       res.writeHead(301, { Location: encode(to) + url.search });
       res.end();
@@ -73,6 +95,8 @@ http
     // Asked for a file name: redirect to the clean address (/index.html → /, /about.html → /about).
     const index = p.match(/^(.*\/)index(?:\.html)?\/?$/);
     if (index && isFile(local(index[1] + "index.html"))) return go(index[1]);
+    // /about/index.html → /about in one step
+    if (index && index[1].length > 1 && !isDir(local(index[1])) && isFile(local(index[1].slice(0, -1) + ".html"))) return go(index[1].slice(0, -1));
     if (p.endsWith(".html") && !p.endsWith("/404.html") && isFile(local(p))) return go(p.slice(0, -5));
     // /about/ → /about
     if (p.length > 1 && p.endsWith("/") && !isDir(local(p)) && isFile(local(p.slice(0, -1) + ".html"))) return go(p.slice(0, -1));
@@ -83,8 +107,10 @@ http
     if (isDir(file)) {
       if (!p.endsWith("/")) return go(p + "/");
       if (isFile(path.join(file, "index.html"))) return send(res, 200, path.join(file, "index.html"));
-      return notFound(res); // no folder listings; index.php needs PHP
+      return notFound(res, p); // no folder listings; index.php needs PHP
     }
+    // A file name with a slash after it (/about.html/) isn't a folder: 404, as on Apache.
+    if (p.endsWith("/")) return notFound(res, p);
     if (isFile(file)) {
       if (file.endsWith(".php")) {
         res.writeHead(501, { "Content-Type": "text/plain; charset=utf-8" });
@@ -92,7 +118,7 @@ http
       }
       return send(res, 200, file);
     }
-    if (!p.endsWith("/") && !p.endsWith("/404") && isFile(file + ".html")) return send(res, 200, file + ".html");
-    return notFound(res);
+    if (!p.endsWith("/404") && isFile(file + ".html")) return send(res, 200, file + ".html");
+    return notFound(res, p);
   })
   .listen(port, () => console.log(`Preview of ${path.relative(process.cwd(), root) || "."}: http://localhost:${port}`));

@@ -35,12 +35,13 @@
 .dash .list__item > .list__aside { align-self: center; }
 .dash .list__aside { gap: 8px; }
 .dash .list__title { line-height: 1.35; }
-.dash-item__sub { display: block; margin-top: 1px; overflow: hidden; color: var(--text-2); font-size: 14px; text-overflow: ellipsis; white-space: nowrap; }
+.dash-item__sub { display: block; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; margin-top: 1px; overflow: hidden; overflow-wrap: anywhere; color: var(--text-2); font-size: 14px; }
 /* Facts separated by dots. The dots sit in each fact's left padding and the row is shifted left inside a clipping
    box, so a fact that wraps to the start of a line never shows a stray dot. */
 .dash-item__meta { display: block; overflow: hidden; margin-top: 4px; }
 .dash-item__facts { display: flex; flex-wrap: wrap; align-items: center; row-gap: 3px; margin-left: -15px; color: var(--muted); font-size: 13.5px; line-height: 1.4; }
-.dash-fact { position: relative; padding-left: 15px; white-space: nowrap; }
+/* A long fact (e.g. in Georgian) wraps onto the next line instead of being cut off. */
+.dash-fact { position: relative; min-width: 0; max-width: 100%; padding-left: 15px; overflow-wrap: anywhere; }
 .dash-fact::before { content: ""; position: absolute; left: 5px; top: 50%; width: 3px; height: 3px; margin-top: -1px; border-radius: 50%; background: #C9B9A3; }
 .dash-fact--html .pill { padding-top: 1px; padding-bottom: 1px; font-size: 12px; }
 .dash-fact--late { color: var(--red-ink); font-weight: 700; }
@@ -60,6 +61,7 @@ a.list__item:hover .dash-item__go { color: var(--wine); }
 .dash-attn .card__title .badge { margin-left: 4px; vertical-align: 3px; }
 .dash-attn__chips { padding: 0 24px 4px; }
 .dash-attn__chips .chip { min-height: 34px; padding: 5px 12px; font-size: 13.5px; }
+@media (max-width: 720px) { .dash-attn__chips .chip { min-height: var(--tap); } }
 .dash-group { margin-top: 14px; border-top: 1px solid var(--line-2); }
 .dash-group__title { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; padding: 16px 24px 4px; color: var(--text-2); font: 700 12.5px/1.3 var(--font); letter-spacing: .1em; text-transform: uppercase; }
 .dash-group__title .icon { width: 16px; height: 16px; color: var(--gold-ink); }

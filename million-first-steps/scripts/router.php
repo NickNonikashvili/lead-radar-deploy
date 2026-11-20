@@ -21,12 +21,18 @@ function mfs_redirect($to, $query)
     exit;
 }
 
+// The 404 page, in the language of the address (/ru/… gets ru/404.html) when there is one.
 function mfs_not_found($root)
 {
+    global $path;
+    $page = $root . '/404.html';
+    if (preg_match('#^/(ru|ka|es|fr|it|pt|de|zh)/#', (string) $path, $m) && is_file($root . '/' . $m[1] . '/404.html')) {
+        $page = $root . '/' . $m[1] . '/404.html';
+    }
     http_response_code(404);
     header('Content-Type: text/html; charset=utf-8');
     header('Cache-Control: no-cache');
-    readfile($root . '/404.html');
+    readfile($page);
     exit;
 }
 
@@ -43,11 +49,24 @@ if (strpos($path, "\0") !== false || preg_match('#(^|/)\.\.(/|$)#', $path)) {
     mfs_not_found($root);
 }
 
-// Never served: hidden files (except .well-known), databases, logs, settings, the admin panel's code and data.
+// Doubled slashes and "/./" go to the plain address (like the .htaccess), so the checks below always see
+// the address as it really is (/admin//lib/… is /admin/lib/…).
+if (preg_match('#//|/\.(/|$)#', $path)) {
+    $clean = preg_replace('#/(\./)+#', '/', preg_replace('#/+#', '/', $path));
+    $clean = preg_replace('#/\.$#', '/', $clean);
+    if (in_array($_SERVER['REQUEST_METHOD'] ?? 'GET', array('GET', 'HEAD'), true)) {
+        mfs_redirect($clean, $query);
+    }
+    mfs_not_found($root);
+}
+
+// Never served: hidden files (except .well-known), databases, logs, settings, the admin panel's code and data
+// (the same files the .htaccess files close).
 if (preg_match('#/\.(?!well-known(/|$))#', $path)
-    || preg_match('#\.(sqlite3?|sqlite-wal|sqlite-shm|db|log|ini|lock)$#i', $path)
-    || preg_match('#(^|/)(error_log|php_errorlog)$#', $path)
-    || preg_match('#^/admin/(lib|data)(/|$)#', $path)) {
+    || preg_match('#\.(sqlite[^/]*|db|log|ini|lock)$#i', $path)
+    || preg_match('#(^|/)(error_log|php_errorlog)$#i', $path)
+    || preg_match('#^/admin/(lib|data|modules)(/|$)#i', $path)
+    || preg_match('#^/admin/(.*/)?([^/]+\.(bak|md|sh|inc)|config\.local\.php)$#i', $path)) {
     http_response_code(403);
     header('Content-Type: text/plain; charset=utf-8');
     echo "Forbidden\n";
@@ -92,8 +111,14 @@ foreach ($legacy as $re => $to) {
 }
 
 // Asked for a file name: redirect to the clean address (/index.html → /, /about.html → /about).
-if (preg_match('#^(.*/)index(?:\.html)?/?$#', $path, $m) && is_file($root . $m[1] . 'index.html')) {
-    mfs_redirect($m[1], $query);
+if (preg_match('#^(.*/)index(?:\.html)?/?$#', $path, $m)) {
+    if (is_file($root . $m[1] . 'index.html')) {
+        mfs_redirect($m[1], $query);
+    }
+    // /about/index.html → /about in one step
+    if (strlen($m[1]) > 1 && !is_dir($root . $m[1]) && is_file($root . rtrim($m[1], '/') . '.html')) {
+        mfs_redirect(rtrim($m[1], '/'), $query);
+    }
 }
 if (substr($path, -5) === '.html' && basename($path) !== '404.html' && is_file($file)) {
     mfs_redirect(substr($path, 0, -5), $query);

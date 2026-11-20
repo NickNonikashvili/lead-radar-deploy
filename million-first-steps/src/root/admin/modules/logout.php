@@ -1,4 +1,5 @@
 <?php
+if (!defined('MFS_BOOTED')) { http_response_code(404); exit; }
 // Sign out (POST only, with the CSRF token). A plain visit just goes back to the right page.
 if (!is_post()) redirect(current_user() ? url('dashboard') : url('login'));
 csrf_check();

@@ -267,7 +267,41 @@ function mfs_migrations(): array
       "CREATE INDEX idx_resets_user ON password_resets(user_id)",
       "CREATE INDEX idx_audit_at ON audit_log(at)",
     ],
+    // Sessions end for good when access is switched off (a generation number in the session fingerprint);
+    // a per-visitor view counter, so one visitor can't inflate the statistics.
+    2 => [
+      "ALTER TABLE users ADD COLUMN session_gen INTEGER NOT NULL DEFAULT 0",
+      "ALTER TABLE stats_seen ADD COLUMN n INTEGER NOT NULL DEFAULT 0",
+      // Ids handed out so far: db_next_id() never goes below them, even after the newest rows are deleted.
+      "INSERT OR REPLACE INTO settings (key, value, updated_at) SELECT 'id_floor', '{\"users\":' || MAX(COALESCE((SELECT MAX(id) FROM users), 0),
+         COALESCE((SELECT MAX(user_id) FROM audit_log), 0)) || ',\"requests\":' || COALESCE((SELECT MAX(id) FROM requests), 0)
+         || ',\"bookings\":' || COALESCE((SELECT MAX(id) FROM bookings), 0) || '}', datetime('now')",
+    ],
   ];
+}
+
+/**
+ * The id for a new row in users, requests or bookings — never one a deleted row had (SQLite would hand the
+ * highest id out again, so the activity log or an emailed link would point at someone or something else).
+ * Call inside db_tx() and insert with that id. Keeps a high-water mark per table in the setting id_floor.
+ */
+function db_next_id(string $table): int
+{
+  if (!in_array($table, ['users', 'requests', 'bookings'], true)) throw new InvalidArgumentException('db_next_id: ' . $table);
+  $floor = mfs_setting_fresh('id_floor');
+  $floor = is_array($floor) ? $floor : [];
+  $n = max((int) ($floor[$table] ?? 0), (int) db_value('SELECT COALESCE(MAX(id), 0) FROM ' . $table));
+  if ($table === 'users') {
+    // Ids an older copy of the panel may already have handed out and taken back.
+    $n = max($n, (int) db_value('SELECT COALESCE(MAX(user_id), 0) FROM audit_log'), (int) db_value('SELECT COALESCE(MAX(updated_by), 0) FROM settings'));
+  }
+  $n++;
+  $floor[$table] = $n;
+  db_exec('INSERT OR REPLACE INTO settings (key, value, updated_at, updated_by) VALUES (?, ?, ?, NULL)',
+    ['id_floor', json_encode($floor), now_utc()]);
+  $all = &mfs_settings_cache();
+  $all['id_floor'] = $floor;
+  return $n;
 }
 
 function mfs_schema_version(): int

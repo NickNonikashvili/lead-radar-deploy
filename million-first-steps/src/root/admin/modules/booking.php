@@ -1,4 +1,5 @@
 <?php
+if (!defined('MFS_BOOTED')) { http_response_code(404); exit; }
 /*
  * One booking (?p=booking&id=N) — details form, payments, notes and history, the request it came from.
  * New booking: ?p=booking&new=1 [&from=<request id>] [&start=Y-m-d]. Creating it from a request copies the
@@ -138,7 +139,7 @@ $validate = function (array $in) use ($tours, $tiers, $money) {
 $in = null;          // the form's values (posted ones when the form is shown again with errors)
 $errors = [];
 $conflict = false;
-$payIn = ['paid_on' => $today, 'amount' => '', 'method' => '', 'note' => ''];
+$payIn = ['paid_on' => $today, 'amount' => '', 'method' => '', 'note' => '', 'kind' => 'payment'];
 $payErrors = [];
 $noteIn = '';
 $noteError = '';
@@ -161,15 +162,15 @@ if (is_post()) {
       $result = db_tx(function (PDO $pdo) use ($d, $request, $uid) {
         $now = now_utc();
         $ref = bk_new_ref($pdo);
-        $pdo->prepare('INSERT INTO bookings (ref, request_id, status, client_name, client_email, client_phone, client_country, client_lang,
+        $bid = db_next_id('bookings');   // never the id of a deleted booking
+        $pdo->prepare('INSERT INTO bookings (id, ref, request_id, status, client_name, client_email, client_phone, client_country, client_lang,
             tour_id, tour_name, tier, start_date, end_date, adults, children, total_price, deposit_amount, deposit_due, balance_due,
             guide, driver, vehicle, accommodation, notes, created_by, created_at, updated_at)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')->execute([
-          $ref, $request ? (int) $request['id'] : null, $d['status'], $d['client_name'], $d['client_email'], $d['client_phone'], $d['client_country'], $d['client_lang'],
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')->execute([
+          $bid, $ref, $request ? (int) $request['id'] : null, $d['status'], $d['client_name'], $d['client_email'], $d['client_phone'], $d['client_country'], $d['client_lang'],
           $d['tour_id'], $d['tour_name'], $d['tier'], $d['start_date'], $d['end_date'], $d['adults'], $d['children'], $d['total_price'], $d['deposit_amount'],
           $d['deposit_due'], $d['balance_due'], $d['guide'], $d['driver'], $d['vehicle'], $d['accommodation'], $d['notes'], $uid, $now, $now,
         ]);
-        $bid = (int) $pdo->lastInsertId();
         $reqChange = null;
         if ($request) {
           bk_add_note($bid, 'Booking created from request ' . $request['ref'], 'system', $uid);
@@ -239,7 +240,7 @@ if (is_post()) {
   } elseif ($isNew) {
     redirect($self);
   } elseif ($action === 'pay_add') {
-    $payIn = ['paid_on' => post('paid_on'), 'amount' => post('amount'), 'method' => post('method'), 'note' => post('note')];
+    $payIn = ['paid_on' => post('paid_on'), 'amount' => post('amount'), 'method' => post('method'), 'note' => post('note'), 'kind' => post('kind') === 'refund' ? 'refund' : 'payment'];
     $date = bk_valid_date($payIn['paid_on']);
     if ($date === '') $payErrors['paid_on'] = t('Please enter the date it was paid.');
     elseif ($date > bk_add_days($today, 366)) $payErrors['paid_on'] = t('That date is more than a year away — please check it.');
@@ -252,6 +253,8 @@ if (is_post()) {
     if (bk_len($note) > 200) $payErrors['note'] = t('This is too long (at most {n} characters).', ['n' => 200]);
     if (!$payErrors) {
       $amount = round((float) $amount, 2);
+      // "Refund" chosen: money going back (stored negative). A typed minus sign works as well, either way.
+      if ($payIn['kind'] === 'refund') $amount = -abs($amount);
       $pid = db_tx(function (PDO $pdo) use ($id, $date, $amount, $method, $note, $uid) {
         $pdo->prepare('INSERT INTO payments (booking_id, paid_on, amount, method, note, created_by, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)')
           ->execute([$id, $date, $amount, $method !== '' ? $method : null, $note !== '' ? $note : null, $uid, now_utc()]);
@@ -489,7 +492,7 @@ ob_start(); ?>
           <select class="select" id="bk-tour" name="tour" data-bk-tour<?= $aria('tour', 'bk-days') ?>>
             <option value=""><?= h(t('Not chosen yet')) ?></option>
             <?php foreach ($tours as $tid => $tr) { ?>
-              <option value="<?= h($tid) ?>"<?= $in['tour'] === $tid ? ' selected' : '' ?>><?= h($tr['name'] . ($tr['hidden'] ? ' (' . t('hidden on the website') . ')' : '')) ?></option>
+              <option value="<?= h($tid) ?>"<?= $in['tour'] === $tid ? ' selected' : '' ?>><?= h(tour_name($tid) . ($tr['hidden'] ? ' (' . t('hidden on the website') . ')' : '')) ?></option>
             <?php } ?>
             <option value="_custom"<?= $in['tour'] === '_custom' ? ' selected' : '' ?>><?= h(t('Custom trip…')) ?></option>
           </select>
@@ -501,7 +504,7 @@ ob_start(); ?>
           <select class="select" id="bk-tier" name="tier" data-bk-tier>
             <option value=""><?= h(t('Not chosen yet')) ?></option>
             <?php foreach ($tiers as $tk => $tn) { ?>
-              <option value="<?= h($tk) ?>"<?= $in['tier'] === $tk ? ' selected' : '' ?>><?= h($tn) ?></option>
+              <option value="<?= h($tk) ?>"<?= $in['tier'] === $tk ? ' selected' : '' ?>><?= h(tier_name($tk)) ?></option>
             <?php } ?>
           </select>
         </div>
@@ -677,6 +680,13 @@ if (!$isNew) {
           <form method="post" action="<?= h(url('booking', ['id' => $id])) ?>#payments" class="form" data-once>
             <?= csrf_field() ?><input type="hidden" name="action" value="pay_add">
             <?php if ($payErrors) { ?><div class="callout callout--danger" role="alert"><?= icon('alert') ?><p><?= h(t('The payment wasn’t saved — please check it.')) ?></p></div><?php } ?>
+            <fieldset class="fieldset bk-pay-kind">
+              <legend class="sr-only"><?= h(t('Money in or out')) ?></legend>
+              <div class="choice-row">
+                <label class="choice"><input type="radio" name="kind" value="payment"<?= $payIn['kind'] !== 'refund' ? ' checked' : '' ?>><span class="choice__box"><?= icon('euro') ?><?= h(t('Payment received')) ?></span></label>
+                <label class="choice"><input type="radio" name="kind" value="refund"<?= $payIn['kind'] === 'refund' ? ' checked' : '' ?>><span class="choice__box"><?= icon('refresh') ?><?= h(t('Refund paid back')) ?></span></label>
+              </div>
+            </fieldset>
             <div class="field<?= isset($payErrors['amount']) ? ' has-error' : '' ?>">
               <label class="field__label" for="pay-amount"><?= h(t('Amount')) ?></label>
               <div class="input-group"><span class="input-group__addon">€</span><input class="input" id="pay-amount" name="amount" value="<?= h($payIn['amount']) ?>" inputmode="decimal" autocomplete="off" required<?= isset($payErrors['amount']) ? ' aria-invalid="true" aria-describedby="pay-err-amount"' : ' aria-describedby="pay-amount-h"' ?>></div>
@@ -685,7 +695,7 @@ if (!$isNew) {
                   <?php foreach ($fills as $fl) { ?><button type="button" class="chip" data-fill-amount="<?= h(bk_money_input($fl[1], true)) ?>"><?= h($fl[0]) ?></button><?php } ?>
                 </div>
               <?php } ?>
-              <p class="field__help" id="pay-amount-h"><?= h(t('For a refund, put a minus sign in front, e.g. −200.')) ?></p>
+              <p class="field__help" id="pay-amount-h"><?= h(t('For money you paid back, choose “Refund paid back” above and enter the amount as it is, e.g. 200.')) ?></p>
               <?= $pe('amount') ?>
             </div>
             <div class="form-row">

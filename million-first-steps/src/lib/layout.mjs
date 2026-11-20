@@ -7,7 +7,7 @@ import { fileURLToPath } from "node:url";
 import { parse } from "node-html-parser";
 import config from "../config.mjs";
 import { LANGS } from "./i18n.mjs";
-import { publicPath } from "./urls.mjs";
+import { publicPath, HTML_LINKS } from "./urls.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const DESIGN = path.join(here, "..", "design");
@@ -49,7 +49,26 @@ export function markChannel(item, link, key) {
   else {
     link.removeAttribute("href");
     item.setAttribute("hidden", "");
+    spriteIcons(item);
   }
+}
+
+// Icons of channels that are built hidden live once in assets/img/channels.svg (written by the build), not in
+// every page: the hidden item keeps an <svg> that points into that file, which is only drawn if the admin
+// panel switches the channel on. Ids are made unique per icon, since one file holds them all.
+const SPRITE = new Map();
+function spriteIcons(item) {
+  item.querySelectorAll("svg").forEach((svg) => {
+    const inner = svg.innerHTML;
+    const id = "ch-" + crypto.createHash("sha256").update(inner).digest("hex").slice(0, 10);
+    SPRITE.set(id, inner.replace(/\sid="([^"]+)"/g, ` id="$1-${id}"`).replace(/(url\(#|href="#)([^)"]+)/g, `$1$2-${id}`));
+    svg.set_content(`<use href="assets/img/channels.svg?v=__CHANNELS_V__#${id}"></use>`);
+  });
+}
+/** The shared icon file and its version (for ?v=, so browsers fetch it again when the icons change). */
+export function channelSprite() {
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg"><defs>${[...SPRITE].map(([id, g]) => `<g id="${id}">${g}</g>`).join("")}</defs></svg>\n`;
+  return { svg, version: crypto.createHash("sha256").update(svg).digest("hex").slice(0, 10) };
 }
 
 /** A list of channels that hides as a whole when none of them is shown. */
@@ -154,12 +173,14 @@ export function layout({ page, title, description, main, scripts = [], rootClass
   const alternates = config.siteUrl && !notFound
     ? LANGS.map((l) => `<link rel="alternate" hreflang="${l.code}" href="${url(l.code)}">`).join("\n") + `\n<link rel="alternate" hreflang="x-default" href="${url("en")}">\n<link rel="canonical" href="${url("en")}">`
     : "";
-  const og = config.siteUrl ? `<meta property="og:image" content="${config.siteUrl}/${ogImage}">` : "";
-  const cfg = { email: config.email, brand: config.brand, c: BUILT_CONTACT(), ...data };
+  const og = config.siteUrl ? `<meta property="og:image" content="${config.siteUrl}/${ogImage}">${notFound ? "" : `\n<meta property="og:url" content="${url("en")}">`}` : "";
+  // MFS_HTML_LINKS builds are for static previews: no server to load settings from or count visits.
+  const cfg = { email: config.email, brand: config.brand, c: BUILT_CONTACT(), ...(HTML_LINKS ? { noServer: true } : {}), ...data };
 
   const body = `<div id="root"${rootClass ? ` class="${rootClass}"` : ""} style="font-family: Manrope, system-ui, sans-serif; color: #2B2320; background: #FBF6EE;">
 <a class="skip" href="#main">Skip to content</a>
 <div class="site-notice" role="status" hidden><div class="site-notice-in"><p class="site-notice-t" translate="no"></p><button type="button" class="site-notice-x" aria-label="Close"><span aria-hidden="true">✕</span></button></div></div>
+${HTML_LINKS ? "" : `<script>(function(n,b){if(n&&b){b.querySelector(".site-notice-t").textContent=n[0];b.setAttribute("data-id",n[1]);b.hidden=false}})(window.MFS_NOTICE,document.querySelector(".site-notice"))</script>`}
 ${header(page)}
 <script>(function(h,i){if(!i)return;function o(){return i.scrollWidth>i.clientWidth+1}function f(){var c=h.classList;c.remove("sh-tight","sh-narrow");if(innerWidth<=1140||!o())return;c.add("sh-tight");if(o()){c.remove("sh-tight");c.add("sh-narrow")}}f();addEventListener("resize",f);if(document.fonts)document.fonts.ready.then(f)})(document.documentElement,document.querySelector(".sh-in"))</script>
 ${main}
@@ -189,12 +210,23 @@ ${alternates}
 <link rel="stylesheet" href="${asset("css/site.css")}">
 <link rel="stylesheet" href="${asset("css/extra.css")}">
 <script>
-// Language: a visitor's saved choice wins, otherwise the first browser language the site speaks.
-// Then the settings the owners changed in the admin panel start loading (api/live.json, applied by site.js).
+// Language: a visitor's saved choice wins, otherwise the first browser language the site speaks. Only the
+// English addresses move to it: an address in another language (/ru/…, from a link or a search result) was
+// asked for and stays, so search engines see each language at its own address. Not for search engines.
 (function(d){var h=d.documentElement,r=h.getAttribute("data-site-root")||"";try{var L=${JSON.stringify(LANGS.map((l) => l.code))},want=localStorage.getItem("mfs-lang"),page=h.getAttribute("data-page");
 if(!want){var n=navigator.languages||[navigator.language||""];for(var i=0;i<n.length&&!want;i++){var c=String(n[i]).slice(0,2).toLowerCase();if(L.indexOf(c)>-1)want=c}want=want||"en";localStorage.setItem("mfs-lang",want)}
-if(page!=null&&want!==h.lang&&L.indexOf(want)>-1){location.replace(r+(want==="en"?"":want+"/")+page+location.search+location.hash);return}}catch(e){}
-try{if(window.fetch&&location.protocol!=="file:")window.MFS_LIVE=fetch(r+"api/live.json",{cache:"no-cache",credentials:"omit"}).then(function(x){return x.ok?x.json():null}).catch(function(){return null})}catch(e){}})(document);
+if(page!=null&&h.lang==="en"&&want!=="en"&&L.indexOf(want)>-1&&!/bot|crawl|spider|slurp|preview|lighthouse/i.test(navigator.userAgent||"")){location.replace(r+want+"/"+page+location.search+location.hash);return}}catch(e){}
+${HTML_LINKS ? "" : `// Then the settings the owners changed in the admin panel start loading (api/live.json, applied by site.js).
+// The copy kept for this visit is used before the first paint: its hidden tours and its notice are there at
+// once, and prices, contact details and channels wait for site.js (html.mfs-pending), so the values the page
+// was built with never flash. On the first page of a visit they wait for the file, two seconds at most.
+var w=0,c=null;try{c=JSON.parse(sessionStorage.getItem("mfs-live")||"null");if(c&&typeof c==="object"){w=3000;var css="";(Array.isArray(c.hidden)?c.hidden:[]).forEach(function(x){if(/^[a-z0-9-]+$/.test(x))css+='[data-tour-card="'+x+'"]{display:none!important}[data-tour-unavailable="'+x+'"][hidden]{display:block!important}'});
+if(css){var s=d.createElement("style");s.id="mfs-live-pre";s.textContent=css;d.head.appendChild(s)}
+var o=c.notice&&typeof c.notice==="object"?c.notice:{},p=function(l){return typeof o[l]==="string"?o[l].trim():""},m=p(h.lang)||p("en");
+if(m){for(var k=5381,i=0,j=JSON.stringify(o);i<j.length;i++)k=((k<<5)+k+j.charCodeAt(i))|0;k=(k>>>0).toString(36);var x=null;try{x=localStorage.getItem("mfs-notice")}catch(e){}if(x!==k)window.MFS_NOTICE=[m,k]}}else c=null}catch(e){c=null}
+try{if(window.fetch&&location.protocol!=="file:"){window.MFS_LIVE=fetch(r+"api/live.json",{cache:"no-cache",credentials:"omit"}).then(function(x){return x.ok?x.json():null}).catch(function(){return null});
+if(!c){w=2000;window.MFS_LIVE.then(function(j){if(!j||typeof j!=="object"||!Object.keys(j).some(function(k){return k!=="rev"}))h.classList.remove("mfs-pending")})}}}catch(e){}
+if(w){h.classList.add("mfs-pending");setTimeout(function(){h.classList.remove("mfs-pending")},w)}`}})(document);
 window.MFS=${JSON.stringify(cfg)};
 window.MFS.t={};
 </script>

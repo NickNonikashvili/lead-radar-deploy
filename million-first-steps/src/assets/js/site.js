@@ -125,6 +125,8 @@
     var data = new FormData();
     data.append('kind', kind); data.append('ref', id); data.append('lang', MFS.lang); data.append('page', location.pathname);
     data.append('started', form.dataset.started || ''); data.append('website2', (form.querySelector('[name="website2"]') || {}).value || '');
+    // Seconds the form was open, by this device's own clock (a wrong clock can't make a person look like a bot).
+    if (form.dataset.started) data.append('elapsed', String(Math.max(0, Math.floor(Date.now() / 1000) - +form.dataset.started)));
     // Each field: English label (l), value (v) and the form field's name (n), which the admin panel files it by.
     lines.forEach(function (l, i) { data.append('f[' + i + '][l]', l[0]); data.append('f[' + i + '][v]', l[1]); data.append('f[' + i + '][n]', l[2]); });
     var email = (form.querySelector('input[type="email"]') || {}).value || '';
@@ -255,7 +257,7 @@
       Object.keys(live.partyFactors).forEach(function (k) { var f = +live.partyFactors[k]; if (/^[1-8]$/.test(k) && f > 0 && f < 10) factors[k] = f; });
     }
     each('[data-calc][data-tour]', function (el) {
-      var id = el.getAttribute('data-tour');
+      var id = el.getAttribute('data-tour'), was = [el.getAttribute('data-prices'), el.getAttribute('data-factors')];
       var bp = built(el, 'prices', el.getAttribute('data-prices')), bf = built(el, 'factors', el.getAttribute('data-factors'));
       var p = JSON.parse(bp), f = JSON.parse(bf), same = true;
       TIER_IDS.forEach(function (t) { var n = price(id, t); if (n && n !== p[t]) { p[t] = n; same = false; } });
@@ -263,17 +265,23 @@
       same = true;
       if (factors) Object.keys(factors).forEach(function (k) { if (factors[k] !== f[k]) { f[k] = factors[k]; same = false; } });
       setAttr(el, 'data-factors', same ? bf : JSON.stringify(f));
+      // Its totals stay out of sight until tour.js has worked them out again (it removes data-live-wait).
+      if (el.getAttribute('data-prices') !== was[0] || el.getAttribute('data-factors') !== was[1]) el.setAttribute('data-live-wait', '');
     });
 
     // Tours taken off the website: their cards hide (tours.js repaints the tours page and its count), the
     // "You might also love" lists move up a spare, and the tour's own page says it isn't on offer.
+    var recount = false;
     each('[data-tour-card]', function (el) {
       var off = hidden.indexOf(el.getAttribute('data-tour-card')) > -1;
+      if (el.hasAttribute('data-live-off') !== off && el.closest('#tc-grid')) recount = true;
       setAttr(el, 'data-live-off', off ? '' : null);
       if (el.closest('[data-tour-more]')) return;
       if (el.closest('#tc-grid')) { if (off) setHidden(el, true); return; }
       setHidden(el, off);
     });
+    // The tours page count waits for tours.js to count again (it removes data-live-wait).
+    if (recount) each('#tc-n, #tc-w', function (el) { el.setAttribute('data-live-wait', ''); });
     each('[data-tour-more]', function (list) {
       var max = +list.getAttribute('data-tour-more') || 3, n = 0;
       [].forEach.call(list.querySelectorAll('[data-tour-card]'), function (li) {
@@ -286,6 +294,8 @@
       var ids = el.getAttribute('data-tour-count').split(' ');
       setNum(el, ids.filter(function (id) { return hidden.indexOf(id) < 0; }).length || null);
     });
+    // The head script's stand-in for the cards above (the visit's copy, before the page was there).
+    var pre = document.getElementById('mfs-live-pre'); if (pre) pre.parentNode.removeChild(pre);
 
     // The site notice, in the page's language (else English), until the visitor closes it.
     var bar = document.querySelector('.site-notice');
@@ -305,34 +315,40 @@
     try { localStorage.setItem('mfs-notice', bar.getAttribute('data-id') || ''); } catch (err) {}
     var a = document.querySelector('.sh .brand'); if (a) a.focus({ preventScroll: true });
   });
-  // After DOMContentLoaded, i.e. after the page scripts (deferred like this one) have set themselves up.
+  // As soon as this (deferred) script runs, i.e. once the page is parsed: the visit's copy straight away, then
+  // the fresh file when it differs. Page scripts load after this one and start from what's on the page, and
+  // they recalculate on mfs:live for whatever arrives later. Until then the head script keeps the values that
+  // may change out of sight (html.mfs-pending).
   function onReady(fn) {
-    var done = false, go = function () { if (!done) { done = true; fn(); } };
-    if (document.readyState === 'complete') go();
-    else { document.addEventListener('DOMContentLoaded', go); window.addEventListener('load', go); }
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', fn); else fn();
   }
+  function settled() { html.classList.remove('mfs-pending'); }
   onReady(function () {
     var cached = null, applied = '';
     try { cached = sessionStorage.getItem('mfs-live'); } catch (e) {}
     if (cached) { try { applyLive(JSON.parse(cached)); applied = cached; } catch (e) { applied = ''; } }
     var p = window.MFS_LIVE;
+    if (applied || !p || typeof p.then !== 'function') settled();
     if (!p || typeof p.then !== 'function') return;
     p.then(function (live) {
-      var raw = isObj(live) && Object.keys(live).some(function (k) { return k !== 'rev'; }) ? JSON.stringify(live) : '';
-      try { if (raw) sessionStorage.setItem('mfs-live', raw); else sessionStorage.removeItem('mfs-live'); } catch (e) {}
-      if (raw !== applied) applyLive(raw ? live : null);
+      try {
+        var raw = isObj(live) && Object.keys(live).some(function (k) { return k !== 'rev'; }) ? JSON.stringify(live) : '';
+        try { if (raw) sessionStorage.setItem('mfs-live', raw); else sessionStorage.removeItem('mfs-live'); } catch (e) {}
+        if (raw !== applied) applyLive(raw ? live : null);
+      } finally { settled(); }
     });
   });
 
   /* ---------- Visit counter: one anonymous count per page view, no cookies ----------
      Sent after the page has loaded (or when the visitor leaves first), never in the way of the page.
      Not sent when the browser asks not to be tracked (Do Not Track, Global Privacy Control), from the
-     owners' own browsers (the admin panel sets mfs-nostat), from automated browsers or for the 404 page. */
+     owners' own browsers (the admin panel sets mfs-nostat), from automated browsers, for the 404 page or in
+     static previews (MFS_HTML_LINKS builds). */
   var counted = false;
   function countView() {
     if (counted) return; counted = true;
     try {
-      if (location.protocol === 'file:' || !html.hasAttribute('data-page')) return;
+      if (location.protocol === 'file:' || MFS.noServer || !html.hasAttribute('data-page')) return;
       if (navigator.doNotTrack === '1' || window.doNotTrack === '1' || navigator.globalPrivacyControl === true || navigator.webdriver) return;
       try { if (localStorage.getItem('mfs-nostat') === '1') return; } catch (e) {}
       var url = MFS.root + 'api/hit.php';

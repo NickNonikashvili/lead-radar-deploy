@@ -232,13 +232,23 @@ function ins_share($part, $whole): string
 }
 
 /** Request rate: requests ÷ visitors as '1.8%' (null when there were no visitors). */
+const INS_RATE_MIN_VISITORS = 50;
+
 function ins_rate($requests, $visitors): ?string
 {
   $v = (float) $visitors;
-  if ($v <= 0) return null;
+  // Too few visitors (e.g. the first days, while the owners test the forms themselves) give silly figures.
+  if ($v < INS_RATE_MIN_VISITORS || (float) $requests > $v) return null;
   $p = (float) $requests / $v * 100;
   if ($p > 0 && $p < 0.05) return '<0.1%';
   return number_format($p, $p >= 10 ? 0 : 1, '.', ',') . '%';
+}
+
+/** The line under the request rate: what it is based on, or why there is no figure yet. */
+function ins_rate_note($requests, $visitors): string
+{
+  if (ins_rate($requests, $visitors) !== null) return t('{requests} requests from {visitors} visitors', ['requests' => ins_num($requests), 'visitors' => ins_num($visitors)]);
+  return (float) $visitors > 0 ? t('Not enough visits yet to say') : t('Needs visitor numbers');
 }
 
 /**
@@ -322,7 +332,7 @@ function ins_page_info(string $path): array
   static $tours = null;
   if ($tours === null) {
     $tours = [];
-    foreach ((array) (catalog()['tours'] ?? []) as $t) if (is_array($t) && isset($t['id'])) $tours[(string) $t['id']] = (string) $t['name'];
+    foreach ((array) (catalog()['tours'] ?? []) as $t) if (is_array($t) && isset($t['id'])) $tours[(string) $t['id']] = mfs_local_name($t);
   }
   if ($path === '(not found)') {
     return ['name' => t('Addresses that don’t exist'), 'lang' => '', 'label' => t('Addresses that don’t exist'), 'base' => $path, 'href' => '', 'known' => false, 'notfound' => true];
@@ -356,6 +366,7 @@ function ins_ref_info(string $host): array
 {
   $host = strtolower(trim($host));
   if ($host === '' || $host === '(direct)') return ['key' => '(direct)', 'name' => t('Direct, bookmarks and apps'), 'direct' => true];
+  if ($host === '(other)') return ['key' => '(other)', 'name' => t('Other websites'), 'direct' => false];
   foreach (INS_REF_NAMES as $r) {
     if (preg_match($r[0], $host)) return ['key' => $r[1], 'name' => $r[1], 'direct' => false];
   }
