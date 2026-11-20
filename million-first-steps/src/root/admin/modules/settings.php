@@ -206,7 +206,36 @@ function st_size(int $bytes): string
   return t('{n} MB', ['n' => number_format($bytes / 1048576, 1)]);
 }
 
-/** Makes a consistent copy of the database (VACUUM INTO a temp file), streams it, deletes it. Exits. */
+/**
+ * A consistent copy of the database in $tmp. VACUUM INTO (SQLite 3.27+) makes a compact snapshot while others keep
+ * working; on an older SQLite the files are copied while writers wait (BEGIN IMMEDIATE), and the copy's WAL is
+ * folded into it. Returns '' or what went wrong.
+ */
+function st_snapshot(string $tmp): string
+{
+  try {
+    db()->exec('VACUUM INTO ' . db()->quote($tmp));
+    return '';
+  } catch (Throwable $e) {
+    $why = $e->getMessage();
+  }
+  foreach (['', '-wal', '-shm', '-journal'] as $sfx) if (@is_file($tmp . $sfx)) @unlink($tmp . $sfx);
+  $src = mfs_data_dir() . '/mfs.sqlite';
+  try {
+    db_tx(function () use ($src, $tmp) {
+      if (!@copy($src, $tmp)) throw new RuntimeException('copy failed');
+      if (@is_file($src . '-wal') && !@copy($src . '-wal', $tmp . '-wal')) throw new RuntimeException('copy of the WAL failed');
+    });
+    $c = new PDO('sqlite:' . $tmp, null, null, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
+    $c->query('PRAGMA wal_checkpoint(TRUNCATE)')->fetchAll();
+    $c = null;
+    return '';
+  } catch (Throwable $e) {
+    return 'VACUUM INTO: ' . $why . '; copy: ' . $e->getMessage();
+  }
+}
+
+/** Makes a consistent copy of the database (VACUUM INTO a temp file), checks it, streams it, deletes it. Exits. */
 function st_send_backup(): void
 {
   @set_time_limit(300);
@@ -222,22 +251,24 @@ function st_send_backup(): void
     flash('error', t('The backup could not be made just now. Please try again in a minute; if it keeps failing, tell whoever looks after the website (the details are in the server’s error log).'));
     redirect(url('settings') . '#backup');
   };
-  try {
-    db()->exec('VACUUM INTO ' . db()->quote($tmp));
-  } catch (Throwable $e) {
-    $fail($e->getMessage());
-  }
+  $why = st_snapshot($tmp);
+  if ($why !== '') $fail($why);
   $ok = false;
   try {
+    // One self-contained file (no -wal beside it), checked before anyone relies on it.
     $chk = new PDO('sqlite:' . $tmp, null, null, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
+    $chk->query('PRAGMA journal_mode = DELETE')->fetchAll();
     $ok = $chk->query('PRAGMA quick_check')->fetchColumn() === 'ok' && (int) $chk->query('SELECT COUNT(*) FROM users')->fetchColumn() > 0;
     $chk = null;
   } catch (Throwable $e) {
     $ok = false;
   }
+  clearstatcache(true, $tmp);
   $size = (int) @filesize($tmp);
   if (!$ok || $size <= 0) $fail('the copy did not pass its check');
   audit('settings.backup', '', 'Database backup downloaded (' . $size . ' bytes)');
+  // The download can take a while on a phone: don't keep this person's other pages waiting for the session.
+  if (session_status() === PHP_SESSION_ACTIVE) session_write_close();
   while (ob_get_level() > 0) ob_end_clean();
   $name = 'million-first-steps-backup-' . (new DateTime('now', mfs_tz()))->format('Y-m-d-Hi') . '.sqlite';
   header('Content-Type: application/vnd.sqlite3');
@@ -249,6 +280,7 @@ function st_send_backup(): void
   if ($fh) {
     while (!feof($fh)) {
       echo fread($fh, 65536);
+      flush();
       if (connection_aborted()) break;
     }
     fclose($fh);
