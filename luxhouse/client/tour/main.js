@@ -57,11 +57,16 @@ function start() {
     return;
   }
 
+  // When the viewer is embedded in another page (data.embedded), that page owns the address bar.
+  const useHash = !data.embedded;
   const sceneFromHash = () => {
-    const m = /scene=([\w-]+)/.exec(location.hash);
+    const m = useHash ? /scene=([\w-]+)/.exec(location.hash) : null;
     const i = m ? data.scenes.findIndex((s) => s.id === m[1]) : -1;
     return i < 0 ? 0 : i;
   };
+  // Page-level listeners are removed again by destroy().
+  const page = new AbortController();
+  const on = (target, type, handler) => target.addEventListener(type, handler, { signal: page.signal });
 
   let edgeTimer = 0;
   const viewer = new TourViewer(
@@ -89,7 +94,7 @@ function start() {
         });
         const active = thumbs[index];
         if (active && active.scrollIntoView) active.scrollIntoView({ block: "nearest", inline: "center", behavior: "smooth" });
-        history.replaceState(null, "", "#scene=" + scene.id);
+        if (useHash) history.replaceState(null, "", "#scene=" + scene.id);
       },
       onFade(out, ms) {
         fade.style.transitionDuration = ms + "ms";
@@ -116,6 +121,11 @@ function start() {
     }
   );
   window.luxhouseTour = viewer; // handy for debugging and used by the automated test
+  window.luxhouseTourDestroy = () => {
+    page.abort();
+    viewer.dispose();
+    if (window.luxhouseTour === viewer) window.luxhouseTour = null;
+  };
 
   // ------------------------------------------------------------ controls
   $("[data-prev]", stage).addEventListener("click", () => { viewer.stopAuto(); viewer.previous(); });
@@ -142,7 +152,7 @@ function start() {
     if (document.fullscreenElement) document.exitFullscreen();
     else fsTarget.requestFullscreen().catch(() => {});
   });
-  document.addEventListener("fullscreenchange", () => {
+  on(document, "fullscreenchange", () => {
     const on = Boolean(document.fullscreenElement);
     fullBtn.setAttribute("aria-pressed", String(on));
     fullBtn.setAttribute("aria-label", on ? S.exitFullscreen : S.fullscreen);
@@ -157,7 +167,7 @@ function start() {
   });
 
   // Keyboard shortcuts (movement keys are handled by the viewer)
-  window.addEventListener("keydown", (e) => {
+  on(window, "keydown", (e) => {
     const tag = e.target && e.target.tagName;
     if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || e.metaKey || e.ctrlKey || e.altKey) return;
     if (e.key === "Escape" && !intro.hidden) closeIntro();
@@ -200,11 +210,13 @@ function start() {
     joystick.addEventListener("pointercancel", end);
   }
 
-  document.addEventListener("visibilitychange", () => { if (document.hidden) viewer.stopAuto(); });
-  window.addEventListener("hashchange", () => viewer.goTo(sceneFromHash()));
+  on(document, "visibilitychange", () => { if (document.hidden) viewer.stopAuto(); });
+  if (useHash) on(window, "hashchange", () => viewer.goTo(sceneFromHash()));
 
   viewer.goTo(sceneFromHash(), { instant: true });
 }
 
+// A page that embeds the viewer can start it again after putting a new tour on the page.
+window.luxhouseTourStart = start;
 if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", start);
-else start();
+else if (document.getElementById("tour-data")) start();
