@@ -16,28 +16,21 @@ export const LANGS = [
   { code: "it", name: "Italiano", og: "it_IT" },
   { code: "pt", name: "Português", og: "pt_PT" },
   { code: "de", name: "Deutsch", og: "de_DE" },
+  { code: "zh", name: "中文", og: "zh_CN" },
 ];
 export const DEFAULT_LANG = "en";
 
-// Strings used by main.js rather than in the HTML.
-export const JS_STRINGS = {
-  day: "Day",
-  fill: "Please fill in the highlighted fields.",
-  sending: "Sending…",
-  sent: "Gmadlobt — thank you! We'll reply within a day.",
-  failed: "Sorry, that didn't send. Please email us at",
-  mailto: "Your email app should open with everything filled in — just press send.",
-  thanks: "Thank you!",
-  bc: "{n} BC",
-  ad: "AD {n}",
-  wanderer: "Wanderer",
-  explorer: "Explorer",
-  "golden-fleece": "Golden Fleece",
-};
+// Scripts mark their visible text as T("English text") or P("{n} things", n); the build
+// collects those keys from each script so every language gets its own strings.
+export function jsKeys(source) {
+  const keys = new Set();
+  for (const m of source.matchAll(/\b[TP]\(\s*(["'])((?:(?!\1)[^\\]|\\.)*)\1/g)) keys.add(m[2].replace(/\\(.)/g, "$1"));
+  return keys;
+}
 
 const INLINE = new Set(["a", "em", "strong", "b", "i", "small", "span", "br", "abbr", "q", "mark", "time", "s", "u", "sup", "sub", "cite"]);
 const SKIP = new Set(["script", "style", "noscript", "code", "pre"]);
-const ATTRS = ["alt", "title", "placeholder", "aria-label", "data-unit", "data-label"];
+const ATTRS = ["alt", "title", "placeholder", "aria-label", "data-unit", "data-label", "data-like"];
 const hasLetters = (s) => /\p{L}/u.test(s);
 const norm = (s) => s.replace(/\s+/g, " ").trim();
 const opaque = (el) => /(^|\s)(price|tp)(\s|$)/.test(el.getAttribute?.("class") || "");
@@ -135,17 +128,21 @@ export function loadDict(dir, lang) {
  * Translate one built English page.
  * page: path of the page inside the site, e.g. "tours/cradle-of-wine.html".
  */
-export function translatePage(html, { lang, dict, missing }) {
+export function translatePage(html, { lang, dict, missing, js = [] }) {
   const [doctype, body] = splitDoctype(html);
   const root = parse(body, PARSE_OPTS);
+  const look = lookup(dict);
   walk(root, (key, apply) => {
-    const t = dict[key];
+    const t = look(key);
     if (t) apply(t);
     else missing?.add(key);
   });
   const htmlEl = root.querySelector("html");
   htmlEl.setAttribute("lang", lang);
   htmlEl.setAttribute("data-site-root", "../" + (htmlEl.getAttribute("data-site-root") || ""));
+  root.querySelectorAll(".sh-lang-list button[lang]").forEach((b) => b.setAttribute("aria-pressed", String(b.getAttribute("lang") === lang)));
+  const code = root.querySelector(".sh-lang-btn span");
+  if (code) code.set_content(lang.toUpperCase());
   const og = root.querySelector('meta[property="og:locale"]');
   if (og) og.setAttribute("content", LANGS.find((l) => l.code === lang).og);
   let out = doctype + root.toString();
@@ -154,11 +151,27 @@ export function translatePage(html, { lang, dict, missing }) {
   // Language links point at sibling languages, also one level up.
   out = out.replace(/(<a class="lang-link" href=")/g, "$1../");
   if (config.siteUrl) out = out.replace(`<link rel="canonical" href="${config.siteUrl}/`, `<link rel="canonical" href="${config.siteUrl}/${lang}/`);
-  // Strings for main.js
-  const js = Object.fromEntries(Object.entries(JS_STRINGS).map(([k, v]) => [k, dict[v] || v]));
-  out = out.replace("window.MFS.t=null;", `window.MFS.t=${JSON.stringify(js)};`);
-  out = out.replace(/(<select data-lang-switch[^>]*>[\s\S]*?)<\/select>/, (m) => m.replace(/ selected/g, "").replace(`value="${lang}"`, `value="${lang}" selected`));
+  // Strings for the scripts on this page
+  const t = {};
+  for (const k of js) {
+    const v = look(k);
+    if (v) t[k] = v;
+    else missing?.add(k);
+  }
+  out = out.replace("window.MFS.t={};", `window.MFS.t=${JSON.stringify(t).replace(/</g, "\\u003c")};`);
   return out;
+}
+
+// Same text with typographic or straight quotes, or a non-breaking space, is the same string.
+const loose = (s) => s.replace(/[\u2018\u2019\u02bc]/g, "'").replace(/[\u201c\u201d]/g, '"').replace(/\u00a0/g, " ").replace(/\s+/g, " ").trim();
+const LOOKUPS = new WeakMap();
+export function lookup(dict) {
+  if (LOOKUPS.has(dict)) return LOOKUPS.get(dict);
+  const byLoose = new Map();
+  for (const [k, v] of Object.entries(dict)) if (v) byLoose.set(loose(k), v);
+  const fn = (key) => dict[key] || byLoose.get(loose(key)) || "";
+  LOOKUPS.set(dict, fn);
+  return fn;
 }
 
 // Tag names plus the attributes that must never change (class, href, lang).

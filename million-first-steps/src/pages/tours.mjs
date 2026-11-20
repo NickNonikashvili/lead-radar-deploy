@@ -1,93 +1,61 @@
 import { layout } from "../lib/layout.mjs";
-import { icon } from "../lib/icons.mjs";
-import { join } from "../lib/html.mjs";
-import { pageHero, sectionHead, tierSwitch, tourCard } from "../lib/components.mjs";
-import { TIERS, ALWAYS_INCLUDED } from "../data/tiers.mjs";
+import { designPage, finish, esc, join, tierPrices, tierSelect, ARROW } from "../lib/site.mjs";
 import { TOURS, STYLES } from "../data/tours.mjs";
+import { TIERS, ALWAYS_INCLUDED } from "../data/tiers.mjs";
+import { CARDS, durationBucket } from "../data/tour-cards.mjs";
 
-const ROWS = [
-  ["car", "Vehicle", "vehicle"],
-  ["bed", "Where you sleep", "stay"],
-  ["dining", "How you eat", "dining"],
-  ["guide", "Who travels with you", "guide"],
-];
-
-export default function toursPage() {
-  const body = `
-${pageHero({
-  sceneName: "kazbegi",
-  ka: "ტურები",
-  kicker: "Private journeys",
-  title: "Choose your<br><em>first step.</em>",
-  lead: "Seven journeys through Georgia, each offered three ways — from family guesthouses to five-star design hotels. Every trip is private and can be tailored day by day.",
-  crumbs: [{ label: "Tours" }],
-})}
-
-<section class="section tiers-compare" aria-label="Compare travel styles">
-  <div class="container">
-    ${sectionHead({ kicker: "Three ways to travel", title: "What changes<br><em>from tier to tier.</em>", lead: "The itinerary, the guide's passion and the views are identical. What you pay for is comfort: the car, the bed and the table." })}
-    <div class="compare__switch">${tierSwitch()}</div>
-    <div class="compare" data-reveal>
-      <div class="compare__corner"><p>Same route.<br>Different comfort.</p></div>
-      ${join(
-        TIERS,
-        (t, i) => `<div class="compare__head compare__head--${t.id}" style="--col:${i + 2}" data-col="${t.id}">
-        <h3>${t.name}</h3><p>${t.tagline}</p>
-      </div>`
-      )}
-      ${join(
-        ROWS,
-        ([ico, label, key], r) => `<div class="compare__label" style="--row:${r + 2}">${icon(ico)}<span>${label}</span></div>
-        ${join(TIERS, (t, i) => `<div class="compare__cell" style="--col:${i + 2};--row:${r + 2}" data-col="${t.id}" data-label="${label}"><strong>${t[key].title}</strong><span>${t[key].text}</span></div>`)}`
-      )}
-      <div class="compare__label" style="--row:6">${icon("sun")}<span>Extras</span></div>
-      ${join(TIERS, (t, i) => `<div class="compare__cell compare__cell--extras" style="--col:${i + 2};--row:6" data-col="${t.id}" data-label="Extras"><ul>${join(t.extras, (e) => `<li>${e}</li>`)}</ul></div>`)}
-    </div>
-    <div class="included" data-reveal>
-      <h3 class="h4">${icon("check")} Always included, whichever tier you choose</h3>
-      <ul>${join(ALWAYS_INCLUDED, (x) => `<li>${x}</li>`)}</ul>
-    </div>
-  </div>
-</section>
-
-<section class="section section--paper tours-list" aria-label="All tours">
-  <div class="container">
-    <div class="tours-list__bar">
-      <div>
-        <p class="eyebrow">All journeys</p>
-        <h2 class="h2">Pick a story to walk through.</h2>
-      </div>
-      <div class="tours-list__controls">
-        <p class="tours-list__label">Show prices for</p>
-        ${tierSwitch()}
-      </div>
-    </div>
-    <div class="chips" role="group" aria-label="Filter by interest" data-filter>
-      <button type="button" class="chip is-active" data-filter-value="all" aria-pressed="true">All journeys</button>
-      ${join(Object.entries(STYLES), ([k, v]) => `<button type="button" class="chip" data-filter-value="${k}" aria-pressed="false">${v}</button>`)}
-    </div>
-    <div class="tour-grid" data-filter-grid>${join(TOURS, (t) => tourCard(t))}</div>
-    <p class="fineprint">Prices are per person, from, based on two travellers sharing, in euros. Larger parties pay less per person; solo travellers pay more. Use the calculator on each tour page for an estimate, and we'll confirm an exact quote for your dates.</p>
-  </div>
-</section>
-
-<section class="section custom-trip" aria-label="Tailor-made">
-  <div class="container custom-trip__inner" data-reveal>
-    <span class="custom-trip__icon">${icon("compass")}</span>
-    <div>
-      <h2 class="h3">Don't see your journey?</h2>
-      <p>Honeymoon in the vineyards, a family trip with grandparents, a photography week in Tusheti, a ski week in Gudauri — tell us and we'll draw the route.</p>
-    </div>
-    <a class="btn btn--gold" href="contact.html"><span class="btn__label">Design my own trip</span><span class="btn__icon">${icon("arrow")}</span></a>
+/** The three tiers side by side, used on the tours page. */
+export function tiersSection() {
+  const rows = [
+    ["vehicle", "Vehicle"],
+    ["stay", "Where you sleep"],
+    ["dining", "How you eat"],
+    ["guide", "Who travels with you"],
+  ];
+  return `<section class="pg-sec tint tiers-sec" id="tiers" aria-labelledby="tiers-h">
+  <div class="wrap">
+    <div class="pg-head"><p class="eyebrow">Three ways to travel</p><h2 id="tiers-h" class="h2">Same Georgia. Your kind of comfort.</h2><p class="lede">Every journey comes in three levels. The route stays the same — the car, the beds and the tables change. All are private: just you, your people, and us.</p></div>
+    <ul class="tiers3">${join(
+      TIERS,
+      (t) => `<li class="tier3 tier3--${t.id}">
+        <h3>${esc(t.name)}</h3><p class="tier3-tag">${esc(t.tagline)}</p><p class="tier3-sum">${esc(t.summary)}</p>
+        <dl>${join(rows, ([k, label]) => `<div><dt>${label}</dt><dd><b>${esc(t[k].title)}</b>${esc(t[k].text)}</dd></div>`)}</dl>
+        <button type="button" class="tier3-go" data-set-tier="${t.id}" aria-checked="${t.id === "explorer"}">Show ${esc(t.name)} prices</button>
+      </li>`
+    )}</ul>
+    <p class="tiers-incl"><b>Always included, whichever tier you choose:</b> ${ALWAYS_INCLUDED.map(esc).join(" · ")}.</p>
   </div>
 </section>`;
+}
+
+export default function toursPage() {
+  const root = designPage("tours");
+
+  // Filters: our styles and the lengths our tours come in; prices follow the chosen travel style.
+  root.querySelector("#tc-type").set_content(`<option value="all">All styles</option>` + join(Object.entries(STYLES), ([k, v]) => `<option value="${k}">${esc(v)}</option>`));
+  root.querySelector("#tc-dur").set_content(`<option value="all">Any length</option><option value="2-4">2–4 days</option><option value="5-7">5–7 days</option><option value="8+">8+ days</option>`);
+  root.querySelector("#tc-reset").insertAdjacentHTML("beforebegin", `<span class="tp-tier"><span class="tp-tier-l">Prices for</span>${tierSelect("tc-tier")}</span>`);
+  root.querySelector("#tc-n").set_content(String(TOURS.length));
+
+  // Cards from our tours, reusing the design's icons.
+  const first = root.querySelector("#tc-grid li");
+  const seasonIcon = first.querySelector(".tc-season svg").toString();
+  const grid = root.querySelector("#tc-grid");
+  grid.set_content(
+    join(TOURS, (t, i) => {
+      const c = CARDS[t.id];
+      return `<li data-dur="${durationBucket(t.days)}" data-days="${t.days}" data-type="${t.styles.join(" ")}" data-season="${c.seasons.join(" ")}" data-order="${i}"><article class="tc"><div class="tc-ph"><img src="${c.img}" alt="${esc(c.alt)}" loading="lazy"><span class="tc-days">${t.days} days</span>${i === 0 ? `<span class="tc-feat">${esc(t.kicker)}</span>` : ""}</div><div class="tc-body"><div class="tc-tags">${join(t.styles, (s) => `<span${s === "wine" ? ' class="w"' : ""}>${esc(STYLES[s])}</span>`)}</div><h2><a href="tours/${t.id}.html">${esc(t.name)}</a></h2><p class="tc-route">${c.stops.map(esc).join(" · ")}</p><p class="tc-season" style="margin:0">${seasonIcon}<span>Best: ${esc(t.season.split(" · ")[0])}</span></p><div class="tc-foot"><span class="tc-price"><span>From</span> ${tierPrices(t.prices)}<small>per person, private tour</small></span><span class="tc-go" aria-hidden="true">View tour ${ARROW}</span></div></div></article></li>`;
+    })
+  );
+
+  // The three tiers, between the tours and the closing call to action.
+  root.querySelector(".pg-end").insertAdjacentHTML("beforebegin", tiersSection());
 
   return layout({
-    title: "Tours of Georgia",
-    description: "Private tours of Georgia in three comfort levels: Wanderer, Explorer and Golden Fleece. Wine, mountains, history and the Black Sea coast.",
-    path: "tours.html",
-    body,
-    bodyClass: "page-tours",
-    headerTheme: "ink",
+    page: "tours.html",
+    title: "Private tours across Georgia",
+    description: "Seven private journeys through Georgia, each in three travel styles — from family guesthouses to five-star hotels. Filter by season, length and style.",
+    main: finish(root),
+    scripts: ["tours.js"],
   });
 }

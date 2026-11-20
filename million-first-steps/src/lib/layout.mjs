@@ -1,195 +1,149 @@
+// Page shell around the designer's page bodies: <head>, header, footer and scripts.
+// The header and footer markup come from src/design/_header.html and _footer.html.
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import { parse } from "node-html-parser";
 import config from "../config.mjs";
-import { esc, join } from "./html.mjs";
-import { logoMark, wordmark } from "./logo.mjs";
-import { icon } from "./icons.mjs";
-import { TOURS } from "../data/tours.mjs";
 import { LANGS } from "./i18n.mjs";
 
-export const NAV = [
-  { href: "tours.html", label: "Tours", ka: "ტურები" },
-  { href: "destinations.html", label: "Destinations", ka: "მიმართულებები" },
-  { href: "history.html", label: "History", ka: "ისტორია" },
-  { href: "about.html", label: "About us", ka: "ჩვენ შესახებ" },
-  { href: "plan.html", label: "Plan your trip", ka: "დაგეგმე" },
-];
+const here = path.dirname(fileURLToPath(import.meta.url));
+const DESIGN = path.join(here, "..", "design");
+const read = (f) => fs.readFileSync(path.join(DESIGN, f), "utf8");
+export const PARSE = { comment: false, blockTextElements: { script: true, style: true, pre: true, textarea: true } };
 
-const year = new Date().getFullYear();
+/** The designer's "reveal on click" encoding: base64 of the reversed text, so plain scrapers miss it. */
+export const seal = (v) => Buffer.from([...String(v)].reverse().join(""), "latin1").toString("base64");
 
-// Links to this page in every language. The build adds "../" to them on translated pages.
-const langLinks = (root, path) =>
-  join(
-    LANGS,
-    (l) =>
-      `<li><a class="lang-link" href="${root}${l.code === "en" ? "" : l.code + "/"}${path === "404.html" ? "index.html" : path}" data-set-lang="${l.code}" hreflang="${l.code}" lang="${l.code}">${l.name}</a></li>`
+export const ICONS = {
+  instagram: `<svg width="17" height="17" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="4.2" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="17.4" cy="6.6" r="1.3" fill="currentColor"/></svg>`,
+};
+export const icons = (html) => html.replace(/\{\{icon:(\w+)\}\}/g, (m, k) => ICONS[k] || "");
+
+// Messaging channels in the order the design shows them; empty ones are left out everywhere.
+export function channels() {
+  const c = config;
+  return {
+    whatsapp: c.whatsapp ? `https://wa.me/${c.whatsapp.replace(/\D/g, "")}` : "",
+    telegram: c.telegram ? (c.telegram.startsWith("http") ? c.telegram : `https://t.me/${c.telegram.replace(/^@/, "")}`) : "",
+    signal: c.signal || "",
+    email: c.email ? `mailto:${c.email}` : "",
+    instagram: c.instagram || "",
+    facebook: c.facebook || "",
+  };
+}
+
+const NAV = ["tours.html", "discover-georgia.html", "travel-guide.html", "about.html", "contact.html", "partners.html"];
+const SECTION = (page) => (page.startsWith("tours/") ? "tours.html" : page.startsWith("guide/") ? "travel-guide.html" : page);
+
+function header(page) {
+  const root = parse(read("_header.html"), PARSE);
+  root.querySelectorAll("[aria-current]").forEach((a) => a.removeAttribute("aria-current"));
+  const cur = SECTION(page);
+  if (NAV.includes(cur)) root.querySelectorAll(`a[href="${cur}"]`).forEach((a) => a.setAttribute("aria-current", "page"));
+  // One button per language the site has, in its own script.
+  const list = root.querySelector(".sh-lang-list");
+  list.set_content(
+    LANGS.map((l) => `<li><button type="button" lang="${l.code}" data-lang="${l.code}" aria-pressed="${l.code === "en"}" translate="no">${l.name}<small>${l.code.toUpperCase()}</small></button></li>`).join("")
   );
-
-function header(root, current) {
-  return `<a class="skip-link" href="#main">Skip to content</a>
-<header class="site-header" data-header>
-  <div class="site-header__inner">
-    <a class="brand" href="${root}index.html" aria-label="${config.brand} — home">${logoMark({ className: "brand__mark" })}${wordmark(true)}</a>
-    <nav class="nav" aria-label="Main">
-      <ul>${join(
-        NAV,
-        (n) => `<li><a href="${root}${n.href}"${n.href === current ? ' aria-current="page"' : ""}><span>${n.label}</span></a></li>`
-      )}</ul>
-    </nav>
-    <div class="header-tools">
-      <label class="currency lang-select"><span class="sr-only">Language</span>
-        <select data-lang-switch translate="no">${join(LANGS, (l) => `<option value="${l.code}"${l.code === "en" ? " selected" : ""}>${l.code.toUpperCase()}</option>`)}</select>
-        ${icon("arrow-down", "icon currency__chev")}
-      </label>
-      <label class="currency"><span class="sr-only">Currency</span>
-        <select data-currency translate="no">${join(Object.keys(config.currencies), (c) => `<option value="${c}">${c}</option>`)}</select>
-        ${icon("arrow-down", "icon currency__chev")}
-      </label>
-      <a class="btn btn--gold btn--sm header-cta" href="${root}contact.html"><span class="btn__label">Plan my journey</span></a>
-      <button class="burger" type="button" aria-expanded="false" aria-controls="menu" data-menu-toggle>
-        <span class="sr-only">Menu</span><span class="burger__line"></span><span class="burger__line"></span>
-      </button>
-    </div>
-  </div>
-</header>
-<div class="menu" id="menu" data-menu data-lenis-prevent hidden>
-  <div class="menu__inner">
-    <nav aria-label="Mobile">
-      <ol class="menu__list">
-        <li><a href="${root}index.html"><span class="menu__ka">მთავარი</span>Home</a></li>
-        ${join(NAV, (n) => `<li><a href="${root}${n.href}"><span class="menu__ka">${n.ka}</span>${n.label}</a></li>`)}
-        <li><a href="${root}contact.html"><span class="menu__ka">კონტაქტი</span>Contact</a></li>
-      </ol>
-    </nav>
-    <ul class="lang-links lang-links--menu" translate="no">${langLinks(root, current)}</ul>
-    <div class="menu__prefs">
-      <label class="currency"><span class="menu__prefs-label">Currency</span>
-        <select data-currency translate="no">${join(Object.keys(config.currencies), (c) => `<option value="${c}">${c}</option>`)}</select>
-        ${icon("arrow-down", "icon currency__chev")}
-      </label>
-    </div>
-    <div class="menu__foot">
-      ${config.email ? `<a href="mailto:${config.email}">${icon("mail")} ${config.email}</a>` : ""}
-      ${config.whatsapp ? `<a href="https://wa.me/${config.whatsapp}">${icon("chat")} WhatsApp</a>` : ""}
-    </div>
-  </div>
-</div>`;
+  const btn = root.querySelector(".sh-lang-btn");
+  btn.setAttribute("aria-label", "Language");
+  btn.setAttribute("translate", "no");
+  root.querySelector(".brand").setAttribute("translate", "no");
+  return root.toString();
 }
 
-function footer(root, { cta = true, path = "index.html" } = {}) {
-  return `<footer class="site-footer">
-  ${
-    cta
-      ? `<section class="footer-cta" data-footer-cta>
-    <div class="container footer-cta__inner">
-      <p class="eyebrow">გზა მშვიდობისა · Have a safe journey</p>
-      <h2 class="footer-cta__title" data-split>Take your first step.</h2>
-      <p class="footer-cta__text">Tell us when you'd like to come and how you like to travel. We reply personally — usually within a day — with a plan built around you.</p>
-      <div class="footer-cta__actions">
-        <a class="btn btn--gold btn--lg" href="${root}contact.html"><span class="btn__label">Plan my journey</span><span class="btn__icon">${icon("arrow")}</span></a>
-        <a class="btn btn--ghost btn--lg" href="${root}tours.html"><span class="btn__label">Browse tours</span></a>
-      </div>
-    </div>
-  </section>`
-      : ""
-  }
-  <div class="footer-main">
-    <div class="container footer-grid">
-      <div class="footer-brand">
-        <a class="brand brand--footer" href="${root}index.html">${logoMark({ className: "brand__mark" })}${wordmark()}</a>
-        <p>Private journeys through 1.8 million years of Georgia — planned by a father and son who can't stop showing it off.</p>
-        <p class="footer-ka" lang="ka">გამარჯობა!</p>
-      </div>
-      <div>
-        <h3 class="footer-h">Explore</h3>
-        <ul class="footer-links">
-          ${join(NAV, (n) => `<li><a href="${root}${n.href}">${n.label}</a></li>`)}
-          <li><a href="${root}contact.html">Contact</a></li>
-        </ul>
-      </div>
-      <div>
-        <h3 class="footer-h">Journeys</h3>
-        <ul class="footer-links">${join(TOURS, (t) => `<li><a href="${root}tours/${t.id}.html">${t.name}</a></li>`)}</ul>
-      </div>
-      <div>
-        <h3 class="footer-h">Say hello</h3>
-        <ul class="footer-links footer-contact">
-          ${config.email ? `<li><a href="mailto:${config.email}">${icon("mail")}<span>${config.email}</span></a></li>` : ""}
-          ${config.phone ? `<li><a href="tel:${config.phone.replace(/\s/g, "")}">${icon("phone")}<span>${config.phone}</span></a></li>` : ""}
-          ${config.whatsapp ? `<li><a href="https://wa.me/${config.whatsapp}">${icon("chat")}<span>WhatsApp</span></a></li>` : ""}
-          ${config.instagram ? `<li><a href="${config.instagram}">${icon("instagram")}<span>Instagram</span></a></li>` : ""}
-          ${config.facebook ? `<li><a href="${config.facebook}">${icon("facebook")}<span>Facebook</span></a></li>` : ""}
-          ${config.address ? `<li>${icon("pin")}<span>${config.address}</span></li>` : ""}
-        </ul>
-      </div>
-    </div>
-    <div class="container footer-langs"><ul class="lang-links" translate="no">${langLinks(root, path)}</ul></div>
-    <div class="container footer-bottom">
-      <p>© ${year} ${esc(config.legalName)}${config.registrationNumber ? ` · Reg. no. ${esc(config.registrationNumber)}` : ""}</p>
-      <ul>
-        <li><a href="${root}privacy.html">Privacy</a></li>
-        <li><a href="${root}terms.html">Booking terms</a></li>
-        <li><a href="${root}credits.html">Credits & licences</a></li>
-      </ul>
-    </div>
-  </div>
-</footer>`;
+function footer() {
+  const root = parse(icons(read("_footer.html")), PARSE);
+  root.querySelector(".brand").setAttribute("translate", "no");
+  // Social icons: only the channels that are set up.
+  const ch = channels();
+  root.querySelectorAll(".sf-social li").forEach((li) => {
+    const a = li.querySelector("a");
+    const key = (a.getAttribute("aria-label") || "").toLowerCase();
+    if (ch[key]) a.setAttribute("href", ch[key]);
+    else li.remove();
+  });
+  if (!root.querySelector(".sf-social li")) root.querySelector(".sf-social")?.remove();
+  // Contact column
+  const cis = root.querySelectorAll(".sf-contact .sf-ci");
+  const [addr, mail, tel, hours] = cis;
+  addr.querySelector("span:last-child").set_content(config.address);
+  if (config.email) mail.querySelector(".rv").setAttribute("data-v", seal(config.email));
+  else mail.remove();
+  if (config.phone) tel.querySelector(".rv").setAttribute("data-v", seal(config.phone));
+  else tel.remove();
+  if (config.officeHours) hours.querySelector("span:last-child").set_content(config.officeHours);
+  else hours.remove();
+  // Company line and legal links
+  const reg = config.registrationNumber ? ` · <span>Identification code</span> <span translate="no">${config.registrationNumber}</span>` : "";
+  root.querySelector(".sf-bottom p").set_content(`© ${new Date().getFullYear()} <span translate="no">${config.legalName}</span>${reg} · ${config.address}`);
+  root.querySelector(".sf-legal").set_content(
+    `<a href="privacy.html">Privacy</a><a href="terms.html">Booking terms</a><a href="cookies.html">Cookies</a><a href="credits.html">Credits</a>`
+  );
+  return root.toString();
 }
 
-/**
- * Wraps page content in the full document.
- * root: relative path back to the site root ("" or "../"), so the site works from any folder or host.
- */
-export function layout({ title, description, root = "", path = "index.html", body, bodyClass = "", headerTheme = "light", cta = true, jsonld, ogImage }) {
-  const fullTitle = title ? `${title} · ${config.brand}` : `${config.brand} — ${config.tagline}`;
-  const canonical = config.siteUrl ? `${config.siteUrl}/${path === "index.html" ? "" : path}` : "";
-  const og = ogImage || "assets/img/og.jpg";
-  return `<!doctype html>
-<html lang="en" data-tier="explorer" data-currency="EUR" data-page="${path === "404.html" ? "" : path}" data-site-root="${root}">
+/** Makes the page's relative links work from a subfolder (tours/…, guide/…). */
+function rebase(html, root) {
+  if (!root) return html;
+  return html.replace(/(\s(?:href|src|poster|action|data-src)=")(?![a-z][a-z0-9+.-]*:|#|\/|\.\.\/)([^"]+)"/gi, `$1${root}$2"`);
+}
+
+export function layout({ page, title, description, main, scripts = [], rootClass = "", head = "", ogImage = "assets/img/og.jpg", noindex = false }) {
+  const depth = page.split("/").length - 1;
+  const root = "../".repeat(depth);
+  const fullTitle = page === "index.html" ? `${config.brand} · ${title}` : `${title} · ${config.brand}`;
+  const url = (lang) => `${config.siteUrl}/${lang === "en" ? "" : lang + "/"}${page === "index.html" ? "" : page}`;
+  const alternates = config.siteUrl && page !== "404.html"
+    ? LANGS.map((l) => `<link rel="alternate" hreflang="${l.code}" href="${url(l.code)}">`).join("\n") + `\n<link rel="alternate" hreflang="x-default" href="${url("en")}">\n<link rel="canonical" href="${url("en")}">`
+    : "";
+  const og = config.siteUrl ? `<meta property="og:image" content="${config.siteUrl}/${ogImage}">` : "";
+  const cfg = { email: config.email, brand: config.brand };
+
+  const body = `<div id="root"${rootClass ? ` class="${rootClass}"` : ""} style="font-family: Manrope, system-ui, sans-serif; color: #2B2320; background: #FBF6EE;">
+<a class="skip" href="#main">Skip to content</a>
+${header(page)}
+${main}
+${footer()}
+</div>
+${["site.js", ...scripts].map((s) => `<script src="assets/js/${s}" defer></script>`).join("\n")}`;
+
+  const doc = `<!doctype html>
+<html lang="en" data-page="${page === "404.html" ? "" : page}" data-site-root="${root}">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>${esc(fullTitle)}</title>
-<meta name="description" content="${esc(description)}">
-<meta name="theme-color" content="#1b130c">
-${canonical ? `<link rel="canonical" href="${canonical}">` : ""}
-<meta property="og:type" content="website">
-<meta property="og:locale" content="en_GB">
-${config.siteUrl && path !== "404.html" ? LANGS.map((l) => `<link rel="alternate" hreflang="${l.code}" href="${config.siteUrl}/${l.code === "en" ? "" : l.code + "/"}${path === "index.html" ? "" : path}">`).join("\n") + `\n<link rel="alternate" hreflang="x-default" href="${config.siteUrl}/${path === "index.html" ? "" : path}">` : ""}
+<title>${fullTitle}</title>
+<meta name="description" content="${description}">
+<meta name="theme-color" content="#FBF6EE">
+${noindex ? '<meta name="robots" content="noindex">\n' : ""}<meta property="og:type" content="website">
 <meta property="og:site_name" content="${config.brand}">
-<meta property="og:title" content="${esc(fullTitle)}">
-<meta property="og:description" content="${esc(description)}">
-${config.siteUrl ? `<meta property="og:image" content="${config.siteUrl}/${og}">` : ""}
-<meta name="twitter:card" content="summary_large_image">
-<link rel="icon" href="${root}assets/img/favicon.svg" type="image/svg+xml">
-<link rel="apple-touch-icon" href="${root}assets/img/apple-touch-icon.png">
-<link rel="preload" href="${root}assets/fonts/cinzel-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="preload" href="${root}assets/fonts/manrope-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="${root}assets/css/main.css">
+<meta property="og:locale" content="en_GB">
+<meta property="og:title" content="${fullTitle}">
+<meta property="og:description" content="${description}">
+${og}
+${alternates}
+<link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="assets/img/apple-touch-icon.png">
+<link rel="preload" href="assets/fonts/fraunces-latin-standard-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="assets/fonts/manrope-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="assets/css/site.css">
+<link rel="stylesheet" href="assets/css/extra.css">
 <script>
-(function(d){var h=d.documentElement;h.classList.add("js");
-try{if(!matchMedia("(prefers-reduced-motion: reduce)").matches)h.classList.add("motion");
-var t=localStorage.getItem("mfs-tier"),c=localStorage.getItem("mfs-currency");if(t)h.dataset.tier=t;if(c)h.dataset.currency=c;}catch(e){}
-setTimeout(function(){if(!window.__mfsReady)h.classList.remove("motion")},3000);
 // Language: a visitor's saved choice wins, otherwise the first browser language the site speaks.
-try{var L=${JSON.stringify(LANGS.map((l) => l.code))},want=localStorage.getItem("mfs-lang"),page=h.getAttribute("data-page");
+(function(d){var h=d.documentElement;try{var L=${JSON.stringify(LANGS.map((l) => l.code))},want=localStorage.getItem("mfs-lang"),page=h.getAttribute("data-page");
 if(!want){var n=navigator.languages||[navigator.language||""];for(var i=0;i<n.length&&!want;i++){var c=String(n[i]).slice(0,2).toLowerCase();if(L.indexOf(c)>-1)want=c}want=want||"en";localStorage.setItem("mfs-lang",want)}
-if(page&&want!==h.lang&&L.indexOf(want)>-1)location.replace(h.getAttribute("data-site-root")+(want==="en"?"":want+"/")+page+location.hash);}catch(e){}
-})(document);
-window.MFS=${JSON.stringify({ currencies: config.currencies, partyFactors: config.partyFactors, formEndpoint: config.formEndpoint, email: config.email, brand: config.brand })};
-window.MFS.t=null;
+if(page&&want!==h.lang&&L.indexOf(want)>-1)location.replace(h.getAttribute("data-site-root")+(want==="en"?"":want+"/")+page+location.search+location.hash);}catch(e){}})(document);
+window.MFS=${JSON.stringify(cfg)};
+window.MFS.t={};
 </script>
-${jsonld ? `<script type="application/ld+json">${JSON.stringify(jsonld)}</script>` : ""}
+${head}
 </head>
-<body class="${bodyClass}" data-header-theme="${headerTheme}">
-${header(root, path)}
-<main id="main">
+<body>
 ${body}
-</main>
-${footer(root, { cta, path })}
-<script src="${root}assets/vendor/gsap.min.js" defer></script>
-<script src="${root}assets/vendor/ScrollTrigger.min.js" defer></script>
-<script src="${root}assets/vendor/SplitText.min.js" defer></script>
-<script src="${root}assets/vendor/lenis.min.js" defer></script>
-<script src="${root}assets/js/main.js" defer></script>
 </body>
-</html>`;
+</html>
+`.replace(/\n{2,}/g, "\n");
+  return rebase(doc, root);
 }

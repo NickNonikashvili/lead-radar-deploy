@@ -1,21 +1,22 @@
-// Builds the static site into dist/. No dependencies: `node build.mjs`.
+// Builds the static site into dist/: `npm run build`.
+// Pages are the designer's page bodies (src/design) filled with our content (src/data), wrapped in the
+// shared layout, then translated into every language in src/lib/i18n.mjs.
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import config from "./src/config.mjs";
-import { SCENES, sceneFile } from "./src/lib/scenes.mjs";
-import { footprintMaskSVG, faviconSVG } from "./src/lib/logo.mjs";
+import { LANGS, extract, loadDict, translatePage, jsKeys } from "./src/lib/i18n.mjs";
 import { TOURS } from "./src/data/tours.mjs";
+import { ARTICLES } from "./src/data/guide.mjs";
 import home from "./src/pages/home.mjs";
 import toursPage from "./src/pages/tours.mjs";
 import tourPage from "./src/pages/tour.mjs";
-import historyPage from "./src/pages/history.mjs";
-import destinationsPage from "./src/pages/destinations.mjs";
+import discoverPage from "./src/pages/discover.mjs";
+import { guidePage, articlePage } from "./src/pages/guide.mjs";
 import aboutPage from "./src/pages/about.mjs";
-import planPage from "./src/pages/plan.mjs";
 import contactPage from "./src/pages/contact.mjs";
-import { creditsPage, privacyPage, termsPage, notFoundPage } from "./src/pages/legal.mjs";
-import { LANGS, JS_STRINGS, extract, loadDict, translatePage } from "./src/lib/i18n.mjs";
+import partnersPage from "./src/pages/partners.mjs";
+import { privacyPage, termsPage, cookiesPage, creditsPage, notFoundPage } from "./src/pages/legal.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const out = path.join(here, "dist");
@@ -27,42 +28,42 @@ fs.cpSync(path.join(here, "src", "assets"), path.join(out, "assets"), {
   recursive: true,
   filter: (src) => !/photos[\\/].+\.(jpe?g|png|tiff?)$/i.test(src) && !src.endsWith("README.md"),
 });
-// Files served from the site root as they are (e.g. .htaccess for Apache/LiteSpeed hosts).
-fs.cpSync(path.join(here, "src", "root"), out, { recursive: true });
-
-// Generated assets: illustrated scenes as cacheable SVG files, the favicon and the footprint mask.
-fs.mkdirSync(path.join(out, "assets", "scenes"), { recursive: true });
-for (const name of SCENES) fs.writeFileSync(path.join(out, "assets", "scenes", `${name}.svg`), sceneFile(name));
-fs.writeFileSync(path.join(out, "assets", "img", "favicon.svg"), faviconSVG());
-fs.writeFileSync(path.join(out, "assets", "img", "footprint.svg"), footprintMaskSVG());
-fs.writeFileSync(path.join(out, "assets", "img", "topo.svg"), topo());
+writeFavicon();
+writeServerFiles();
 
 const pages = [
   ["index.html", home()],
   ["tours.html", toursPage()],
   ...TOURS.map((t) => [`tours/${t.id}.html`, tourPage(t)]),
-  ["history.html", historyPage()],
-  ["destinations.html", destinationsPage()],
+  ["discover-georgia.html", discoverPage()],
+  ["travel-guide.html", guidePage()],
+  ...ARTICLES.map((a) => [`guide/${a.slug}.html`, articlePage(a)]),
   ["about.html", aboutPage()],
-  ["plan.html", planPage()],
   ["contact.html", contactPage()],
-  ["credits.html", creditsPage()],
+  ["partners.html", partnersPage()],
   ["privacy.html", privacyPage()],
   ["terms.html", termsPage()],
+  ["cookies.html", cookiesPage()],
+  ["credits.html", creditsPage()],
   ["404.html", notFoundPage()],
 ];
-for (const [file, html] of pages) {
-  const dest = path.join(out, file);
-  fs.mkdirSync(path.dirname(dest), { recursive: true });
-  fs.writeFileSync(dest, html);
-}
+for (const [file, html] of pages) write(file, html);
 
 // ── Languages ──────────────────────────────────────────────────────────────
-// Every page is rebuilt in each language from src/i18n/<lang>*.json; untranslated strings stay English.
+// Every page is rebuilt in each language from src/i18n/<lang>*.json; untranslated text stays English.
 const i18nDir = path.join(here, "src", "i18n");
+const scriptKeys = (html) => {
+  const keys = new Set();
+  for (const m of html.matchAll(/<script src="(?:\.\.\/)*assets\/js\/([\w-]+\.js)"/g)) {
+    for (const k of jsKeys(fs.readFileSync(path.join(here, "src", "assets", "js", m[1]), "utf8"))) keys.add(k);
+  }
+  return [...keys];
+};
 const strings = new Set();
-for (const [file, html] of pages) if (file !== "404.html") extract(html, strings);
-Object.values(JS_STRINGS).forEach((t) => strings.add(t));
+for (const [, html] of pages) {
+  extract(html, strings);
+  scriptKeys(html).forEach((k) => strings.add(k));
+}
 fs.mkdirSync(i18nDir, { recursive: true });
 fs.writeFileSync(path.join(i18nDir, "_strings.json"), JSON.stringify([...strings], null, 1) + "\n");
 const report = [];
@@ -71,9 +72,7 @@ for (const { code } of LANGS.filter((l) => l.code !== "en")) {
   const missing = new Set();
   for (const [file, html] of pages) {
     if (file === "404.html") continue;
-    const dest = path.join(out, code, file);
-    fs.mkdirSync(path.dirname(dest), { recursive: true });
-    fs.writeFileSync(dest, translatePage(html, { lang: code, dict, missing }));
+    write(path.join(code, file), translatePage(html, { lang: code, dict, missing, js: scriptKeys(html) }));
   }
   report.push(`${code} ${Math.round((100 * (strings.size - missing.size)) / strings.size)}%`);
 }
@@ -93,20 +92,27 @@ const size = (dir) =>
   fs.readdirSync(dir, { withFileTypes: true }).reduce((n, e) => n + (e.isDirectory() ? size(path.join(dir, e.name)) : fs.statSync(path.join(dir, e.name)).size), 0);
 console.log(`Built ${pages.length} pages × ${LANGS.length} languages into dist/ (${(size(out) / 1024).toFixed(0)} KB) in ${Date.now() - t0} ms`);
 
-// Topographic contour lines, used as a quiet texture on dark sections.
-function topo() {
-  let paths = "";
-  const centres = [[180, 220], [620, 140], [470, 560], [860, 470]];
-  for (const [cx, cy] of centres) {
-    for (let r = 26; r < 260; r += 22) {
-      let d = "";
-      for (let a = 0; a <= 64; a++) {
-        const t = (a / 64) * Math.PI * 2;
-        const k = r * (1 + 0.16 * Math.sin(3 * t + r * 0.05) + 0.08 * Math.cos(5 * t + cx));
-        d += `${a ? "L" : "M"}${(cx + Math.cos(t) * k * 1.25).toFixed(1)},${(cy + Math.sin(t) * k).toFixed(1)}`;
-      }
-      paths += `<path d="${d}Z"/>`;
-    }
-  }
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 700"><g fill="none" stroke="#e3b25a" stroke-width="1.2">${paths}</g></svg>`;
+function write(file, html) {
+  const dest = path.join(out, file);
+  fs.mkdirSync(path.dirname(dest), { recursive: true });
+  fs.writeFileSync(dest, html);
+}
+
+// The footprint logo from the header, as the favicon.
+function writeFavicon() {
+  const header = fs.readFileSync(path.join(here, "src", "design", "_header.html"), "utf8");
+  const svg = header.match(/<svg[^>]*class="brand__mark"[\s\S]*?<\/svg>/)[0]
+    .replace(/ aria-hidden="true"| class="brand__mark"| focusable="false"/g, "")
+    .replace(/ width="\d+" height="\d+"/, ' width="64" height="103"');
+  fs.writeFileSync(path.join(out, "assets", "img", "favicon.svg"), svg);
+}
+
+// .htaccess and send.php for Apache/LiteSpeed hosting with PHP (e.g. Hostinger).
+function writeServerFiles() {
+  const root = path.join(here, "src", "root");
+  fs.cpSync(root, out, { recursive: true, filter: (f) => !f.endsWith("send.php") });
+  const php = fs.readFileSync(path.join(root, "send.php"), "utf8")
+    .replace("__TO__", (config.formTo || config.email || "").replace(/'/g, ""))
+    .replace("__BRAND__", config.brand.replace(/'/g, ""));
+  fs.writeFileSync(path.join(out, "send.php"), php);
 }

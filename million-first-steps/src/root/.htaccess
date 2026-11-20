@@ -2,10 +2,19 @@
 DirectoryIndex index.html
 ErrorDocument 404 /404.html
 
+# Pages from the first version of the site moved.
+RedirectMatch 301 ^/history\.html$ /discover-georgia.html
+RedirectMatch 301 ^/([a-z]{2})/history\.html$ /$1/discover-georgia.html
+RedirectMatch 301 ^/plan\.html$ /travel-guide.html
+RedirectMatch 301 ^/([a-z]{2})/plan\.html$ /$1/travel-guide.html
+RedirectMatch 301 ^/destinations\.html$ /index.html
+RedirectMatch 301 ^/([a-z]{2})/destinations\.html$ /$1/index.html
+
 <IfModule mod_mime.c>
   AddType image/webp .webp
   AddType font/woff2 .woff2
   AddType image/svg+xml .svg
+  AddType video/mp4 .mp4
 </IfModule>
 
 <IfModule mod_deflate.c>
@@ -13,7 +22,9 @@ ErrorDocument 404 /404.html
 </IfModule>
 
 <IfModule mod_headers.c>
-  <FilesMatch "\.(css|js|webp|png|jpg|svg|woff2)$">
+  Header always set X-Content-Type-Options "nosniff"
+  Header always set Referrer-Policy "strict-origin-when-cross-origin"
+  <FilesMatch "\.(css|js|webp|png|jpg|svg|woff2|mp4)$">
     Header set Cache-Control "public, max-age=604800"
   </FilesMatch>
   <FilesMatch "\.html$">

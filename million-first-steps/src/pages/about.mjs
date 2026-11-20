@@ -1,77 +1,60 @@
-import { layout } from "../lib/layout.mjs";
-import { icon } from "../lib/icons.mjs";
-import { join, words } from "../lib/html.mjs";
-import { pageHero, sectionHead, btn, footprints } from "../lib/components.mjs";
-
-const VALUES = [
-  ["people", "Private, always", "No coaches, no strangers. Every journey is just you and the people you came with — and us."],
-  ["heart", "Hosts, not handlers", "We travel the way Georgians host: generously, personally, and with far too much food."],
-  ["leaf", "Fair to the places we visit", "We work with family guesthouses, local winemakers and village cooks, and pay them properly."],
-  ["shield", "Honest from the start", "Clear prices, no hidden extras, and no invented reviews. We'd rather earn our first ones."],
-  ["compass", "Real journeys", "Routes we've driven ourselves, in every season, with time to stop when something is beautiful."],
-  ["mountains", "Leave no trace", "Mountains, monasteries and villages should look the same after we've gone. Better, if we can help."],
-];
+import { layout, seal } from "../lib/layout.mjs";
+import { designPage, finish, esc } from "../lib/site.mjs";
+import { TOURS } from "../data/tours.mjs";
+import config from "../config.mjs";
 
 export default function aboutPage() {
-  const body = `
-${pageHero({
-  sceneName: "kakheti",
-  ka: "ჩვენ შესახებ",
-  kicker: "About us",
-  title: "A father and a son.<br><em>One country to share.</em>",
-  lead: "Million First Steps is a small, family-run Georgian travel company. We plan every journey ourselves, and we treat every traveller as a guest at our own table.",
-  crumbs: [{ label: "About us" }],
-})}
+  const root = designPage("about");
 
-<section class="section name-story" aria-label="Our name">
-  <div class="container name-story__grid">
-    <div class="name-story__num" aria-hidden="true" data-reveal>1,000,001</div>
-    <div>
-      <p class="eyebrow">Why "Million First Steps"?</p>
-      <h2 class="h2" data-split>Because the first steps<br><em>were taken here.</em></h2>
-      <p class="lead" data-reveal>About 1.8 million years ago, early humans walked out of Africa and into the hills of what is now Georgia. Their bones, found at Dmanisi, are the oldest human fossils ever discovered outside Africa.</p>
-      <p data-reveal>Since then, Georgia has been crossed by traders on the Silk Road, Greek sailors chasing a golden fleece, saints, poets and armies — a million footsteps, give or take. We think yours should be the next one. The million-and-first.</p>
-    </div>
-  </div>
-  ${footprints(12, "name-story__trail")}
-</section>
+  // Our story: a father and a son.
+  root.querySelector(".ab-story-tx").set_content(`<p class="eyebrow">About us · Our story</p>
+      <h1 id="story-h" class="h2 ab-h1">A father, a son, and a country we can’t stop showing off</h1>
+      <p class="pg-p">Million First Steps is a small, family-run Georgian travel company. We plan every journey ourselves, and we treat every traveller as a guest at our own table.</p>
+      <p class="pg-p">One of us has spent a lifetime on Georgia's roads and knows which village bakery is still warm at dawn. The other grew up being dragged along — and now can't stop showing the country off to anyone who will listen.</p>
+      <blockquote class="ab-quote">“We think your steps should be the next ones. The million-and-first.”</blockquote>
+      <p class="pg-p">About 1.8 million years ago, early humans walked out of Africa and into the hills of what is now Georgia. Their bones, found at Dmanisi, are the oldest human fossils ever discovered outside Africa. Since then, Georgia has been crossed by traders on the Silk Road, Greek sailors chasing a golden fleece, saints, poets and armies — a million footsteps, give or take.</p>`);
 
-<section class="section section--dark story" aria-label="Our story">
-  <div class="container">
-    <p class="scrub-text scrub-text--xl" data-scrub-words>${words(
-      "One of us has spent a lifetime on Georgia's roads and knows which village bakery is still warm at dawn. The other grew up being dragged along — and now can't stop showing the country off to anyone who will listen."
-    )}</p>
-    <div class="story__grid">
-      <article data-reveal><h3 class="h4">The father</h3><p>Knows the roads, the winemakers and the stories behind every church. Has an opinion about the best khinkali in every valley — and he's usually right.</p></article>
-      <article data-reveal><h3 class="h4">The son</h3><p>Plans the journeys, answers your messages, and makes sure the details — from dietary needs to an extra day in the mountains — are exactly right.</p></article>
-    </div>
-  </div>
-</section>
+  // Numbers we can stand behind.
+  const nums = root.querySelectorAll(".ab-nums li");
+  const facts = [
+    ["2026", "Founded in Tbilisi"],
+    [String(TOURS.length), "Journeys, each in three travel styles"],
+    ["9", "Regions of Georgia we know by heart"],
+  ];
+  nums.forEach((li, i) => {
+    li.querySelector("b").set_content(facts[i][0]);
+    li.querySelectorAll("span").at(-1).set_content(facts[i][1]);
+  });
 
-<section class="section values" aria-label="What we believe">
-  <div class="container">
-    ${sectionHead({ kicker: "What we believe", title: "How we travel<br><em>— and how we don't.</em>" })}
-    <div class="values__grid">
-      ${join(VALUES, ([ico, t, d], i) => `<article class="value" data-reveal style="--d:${(i % 3) * 0.08}s"><span class="value__icon">${icon(ico)}</span><h3>${t}</h3><p>${d}</p></article>`)}
-    </div>
-  </div>
-</section>
+  // The team: names as the designer was given them; roles and photos follow.
+  root.querySelectorAll(".ab-team li").forEach((li) => {
+    li.querySelector(".ab-pic small")?.remove();
+    const role = li.querySelector(".role");
+    if (role && /\[/.test(role.text)) role.remove();
+    const b = li.querySelector("b");
+    b.set_content(esc(b.text.replace(/\s*\[[^\]]*\]/g, "")));
+    b.setAttribute("translate", "no");
+  });
+  const teamLede = root.querySelector('section[aria-labelledby="team-h"] .lede');
+  if (teamLede) teamLede.set_content("A few of the faces behind your trip. Everyone here was born or has lived most of their life in Georgia.");
 
-<section class="section section--paper promise" aria-label="Our promise">
-  <div class="container promise__inner" data-reveal>
-    <p class="eyebrow">A promise from a new company</p>
-    <h2 class="h2">We're new. We won't pretend otherwise.</h2>
-    <p class="lead">You won't find five hundred glowing reviews on this page — we haven't earned them yet, and we would never invent them. What we can promise: a reply from a real person within a day, honest advice even when it means a smaller booking, and a journey we'd be proud to take our own family on.</p>
-    ${btn("contact.html", "Be one of our first travellers")}
-  </div>
-</section>`;
+  // Company details from the settings.
+  const dl = root.querySelector(".ab-co dl");
+  const rows = [
+    ["Legal name", `<span translate="no">${esc(config.legalName)}</span>`],
+    config.registrationNumber && ["Identification code", `<span translate="no">${esc(config.registrationNumber)}</span>`],
+    ["Registered address", esc(config.address)],
+    config.email && ["Email", `<span class="rv " data-k="mail" data-v="${seal(config.email)}"><button type="button" class="reveal">Show email</button></span>`],
+    config.officeHours && ["Office hours", esc(config.officeHours)],
+  ].filter(Boolean);
+  dl.set_content(rows.map(([t, d]) => `<div><dt>${t}</dt><dd>${d}</dd></div>`).join(""));
+  const co = root.querySelector('section[aria-labelledby="co-h"] .lede');
+  if (co) co.set_content(config.registrationNumber ? "Million First Steps is a registered Georgian company. You’ll find the same details on your written offer and invoice." : "You’ll find our company details on your written offer and invoice.");
 
   return layout({
+    page: "about.html",
     title: "About us",
     description: "Million First Steps is a family-run Georgian travel company — a father and son planning private journeys through Georgia.",
-    path: "about.html",
-    body,
-    bodyClass: "page-about",
-    headerTheme: "ink",
+    main: finish(root),
   });
 }
