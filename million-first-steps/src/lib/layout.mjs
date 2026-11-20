@@ -104,6 +104,7 @@ export function layout({ page, title, description, main, scripts = [], rootClass
   const body = `<div id="root"${rootClass ? ` class="${rootClass}"` : ""} style="font-family: Manrope, system-ui, sans-serif; color: #2B2320; background: #FBF6EE;">
 <a class="skip" href="#main">Skip to content</a>
 ${header(page)}
+<script>(function(h,i){if(!i)return;function o(){return i.scrollWidth>i.clientWidth+1}function f(){var c=h.classList;c.remove("sh-tight","sh-narrow");if(innerWidth<=1140||!o())return;c.add("sh-tight");if(o()){c.remove("sh-tight");c.add("sh-narrow")}}f();addEventListener("resize",f);if(document.fonts)document.fonts.ready.then(f)})(document.documentElement,document.querySelector(".sh-in"))</script>
 ${main}
 ${footer()}
 </div>

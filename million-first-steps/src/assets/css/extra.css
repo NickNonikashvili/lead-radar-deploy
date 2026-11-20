@@ -216,3 +216,28 @@ html:not([data-tier]) .tp[data-tier="explorer"] { display: inline; }
   .sh-menu .sh-lang-list button { flex-direction: column; align-items: flex-start; gap: 2px; padding: 8px 10px; }
 }
 @media (max-width: 380px) { .sh-menu .sh-lang-list { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+/* ---------- Header that doesn't fit (long translations on laptops) ----------
+   A small script in the layout first tightens the spacing (html.sh-tight) and, if the row still overflows,
+   switches to the same burger menu as on phones (html.sh-narrow). */
+html.sh-tight .sh-in { gap: 12px 20px; }
+html.sh-tight .sh-nav { gap: 18px; font-size: 14px; }
+html.sh-tight .sh-side { gap: 12px; font-size: 13px; }
+html.sh-tight .sh-cta { padding: 12px 16px; }
+html.sh-narrow .sh-in { flex-wrap: wrap; gap: 0 16px; }
+html.sh-narrow .sh-burger { display: inline-flex; flex-direction: column; justify-content: center; gap: 5px; margin-left: auto; width: 46px; height: 46px; padding: 0 12px; box-sizing: border-box; background: transparent; border: 1px solid #5E4F46; border-radius: 12px; cursor: pointer; }
+html.sh-narrow .sh-burger span { display: block; height: 2px; border-radius: 2px; background: #FBF6EE; transition: transform .2s, opacity .2s; }
+html.sh-narrow .sh-burger[aria-expanded="true"] span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+html.sh-narrow .sh-burger[aria-expanded="true"] span:nth-child(2) { opacity: 0; }
+html.sh-narrow .sh-burger[aria-expanded="true"] span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+html.sh-narrow .sh-menu { display: none; flex-basis: 100%; flex-direction: column; align-items: stretch; gap: 0; padding: 28px 0 24px; }
+html.sh-narrow .sh-menu.open { display: flex; max-height: calc(100vh - 76px); overflow-y: auto; }
+html.sh-narrow .sh-nav { flex-direction: column; gap: 0; font-size: 18px; }
+html.sh-narrow .sh-nav a { padding: 15px 0; border-bottom: 1px solid #2F3D42; }
+html.sh-narrow .sh-nav a[aria-current="page"]::after { display: none; }
+html.sh-narrow .sh-side { flex-wrap: wrap; gap: 14px 18px; padding-top: 18px; }
+html.sh-narrow .sh-cta { order: -1; flex-basis: 100%; justify-content: center; font-size: 16px; }
+html.sh-narrow .sh-menu .sh-lang { display: contents; }
+html.sh-narrow .sh-menu .sh-lang-list { position: static; flex-basis: 100%; order: 10; margin: 12px 0 0; min-width: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; padding: 8px; box-sizing: border-box; box-shadow: none; }
+html.sh-narrow .sh-menu .sh-lang-list[hidden] { display: none; }
+html.sh-narrow .sh-menu .sh-lang-list button { flex-direction: column; align-items: flex-start; gap: 2px; padding: 8px 10px; }

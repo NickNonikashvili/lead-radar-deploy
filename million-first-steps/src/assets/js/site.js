@@ -7,13 +7,13 @@
   MFS.lang = html.lang || 'en';
   MFS.locale = { en: 'en-GB', ru: 'ru-RU', ka: 'ka-GE', es: 'es-ES', fr: 'fr-FR', it: 'it-IT', pt: 'pt-PT', de: 'de-DE', zh: 'zh-CN' }[MFS.lang] || 'en-GB';
 
-  // T("English") → this page's translation. P("{n} things", n, "{n} thing") picks the plural form;
-  // a translation may hold forms as "one: … | few: … | other: …".
+  // T(english) → this page's translation. P(key, n, oneForm) picks the plural form for n;
+  // a translation may hold forms as "one: … | few: … | other: …" (or just "other: …").
   window.T = function (s) { return (MFS.t && MFS.t[s]) || s; };
   var rules; try { rules = new Intl.PluralRules(MFS.locale); } catch (e) { rules = null; }
   window.P = function (key, n, one) {
     var cat = rules ? rules.select(n) : (n === 1 ? 'one' : 'other'), t = MFS.t && MFS.t[key];
-    if (t && t.indexOf('|') > -1 && t.indexOf(':') > -1) {
+    if (t && /^\s*(zero|one|two|few|many|other)\s*:/.test(t)) {
       var forms = {};
       t.split('|').forEach(function (f) { var i = f.indexOf(':'); forms[f.slice(0, i).trim()] = f.slice(i + 1).trim(); });
       t = forms[cat] || forms.other || key;
