@@ -6,38 +6,38 @@
 %>
 <%- include('../partials/page-head', { heading: t('contact.title'), lead: t('contact.lead'), eyebrow: config.brand }) %>
 
-<section class="section section--flush-top">
-  <div class="container split split--even">
-    <div class="split__main">
-      <h2><%= t('contact.detailsTitle') %></h2>
+<section class="section section--flush" aria-labelledby="contact-form-title">
+  <div class="wrap grid">
+    <div class="contact__intro">
+      <p class="label"><%= t('contact.detailsTitle') %></p>
       <% if (hasDetails) { %>
-        <dl class="contact-list">
-          <% if (c.phone) { %><div><dt><svg class="icon" aria-hidden="true"><use href="#i-phone"/></svg><%= t('contact.phone') %></dt><dd><a href="<%= c.phoneHref %>"><%= c.phone %></a></dd></div><% } %>
-          <% if (c.email) { %><div><dt><svg class="icon" aria-hidden="true"><use href="#i-mail"/></svg><%= t('contact.email') %></dt><dd><a href="mailto:<%= c.email %>"><%= c.email %></a></dd></div><% } %>
-          <% if (c.whatsapp || c.telegram) { %>
-            <div>
-              <dt><svg class="icon" aria-hidden="true"><use href="#i-chat"/></svg><%= t('contact.messengers') %></dt>
-              <dd class="contact-list__links">
-                <% if (c.whatsapp) { %><a href="<%= c.whatsappHref %>" target="_blank" rel="noopener noreferrer">WhatsApp</a><% } %>
-                <% if (c.telegram) { %><a href="<%= c.telegramHref %>" target="_blank" rel="noopener noreferrer">Telegram</a><% } %>
-              </dd>
-            </div>
-          <% } %>
-          <% if (addr) { %><div><dt><svg class="icon" aria-hidden="true"><use href="#i-pin"/></svg><%= t('contact.address') %></dt><dd><%= addr %></dd></div><% } %>
-          <% if (hours) { %><div><dt><svg class="icon" aria-hidden="true"><use href="#i-clock"/></svg><%= t('contact.hours') %></dt><dd><%= hours %></dd></div><% } %>
-        </dl>
+        <div class="dl contact__details">
+          <dl>
+            <% if (c.phone) { %><div><dt><%= t('contact.phone') %></dt><dd class="num"><a class="text-link" href="<%= c.phoneHref %>"><%= c.phone %></a></dd></div><% } %>
+            <% if (c.email) { %><div><dt><%= t('contact.email') %></dt><dd><a class="text-link" href="mailto:<%= c.email %>"><%= c.email %></a></dd></div><% } %>
+            <% if (c.whatsapp || c.telegram) { %>
+              <div>
+                <dt><%= t('contact.messengers') %></dt>
+                <dd class="contact__links">
+                  <% if (c.whatsapp) { %><a class="text-link" href="<%= c.whatsappHref %>" target="_blank" rel="noopener noreferrer">WhatsApp</a><% } %>
+                  <% if (c.telegram) { %><a class="text-link" href="<%= c.telegramHref %>" target="_blank" rel="noopener noreferrer">Telegram</a><% } %>
+                </dd>
+              </div>
+            <% } %>
+            <% if (addr) { %><div><dt><%= t('contact.address') %></dt><dd><%= addr %></dd></div><% } %>
+            <% if (hours) { %><div><dt><%= t('contact.hours') %></dt><dd><%= hours %></dd></div><% } %>
+          </dl>
+        </div>
       <% } else { %>
-        <p class="lead lead--small"><%= t('contact.noDetails') %></p>
+        <p class="lead"><%= t('contact.noDetails') %></p>
       <% } %>
       <% if (c.office) { %>
-        <div class="map" data-map="office" data-lat="<%= c.office.lat %>" data-lng="<%= c.office.lng %>" role="region" aria-label="<%= t('contact.address') %>"></div>
+        <div class="contact__map map" data-map="office" data-lat="<%= c.office.lat %>" data-lng="<%= c.office.lng %>" role="region" aria-label="<%= t('contact.address') %>"></div>
       <% } %>
     </div>
-    <aside class="split__aside">
-      <div class="panel">
-        <h2 class="panel__title"><%= t('contact.formTitle') %></h2>
-        <%- include('../partials/inquiry-form', { type: 'contact', id: 'contact' }) %>
-      </div>
-    </aside>
+    <div class="contact__form" id="inquiry">
+      <h2 class="d3 contact__form-title" id="contact-form-title"><%= t('contact.formTitle') %></h2>
+      <%- include('../partials/inquiry-form', { type: 'contact', id: 'contact' }) %>
+    </div>
   </div>
 </section>

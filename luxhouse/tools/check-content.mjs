@@ -83,7 +83,7 @@ for (const file of fs.readdirSync(dir).filter((f) => f.endsWith(".json")).sort()
     const t = JSON.parse(fs.readFileSync(tour, "utf8"));
     if (t.fixture) err("the 3D tour is a test fixture, not built from this residence's photographs");
     for (const s of t.scenes || []) {
-      for (const f of ["geo.bin", "color.webp", "bg.webp", "thumb.webp"]) {
+      for (const f of ["geo.bin", "color.webp", "thumb.webp"]) {
         if (!fs.existsSync(path.join(path.dirname(tour), s.base, f))) err(`tour scene ${s.id}: ${f} is missing`);
       }
       if (!seen.has(s.photo)) warn(`tour scene ${s.id} uses a photo that is no longer in the gallery`);

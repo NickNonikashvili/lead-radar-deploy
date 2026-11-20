@@ -1,0 +1,197 @@
+/* ==========================================================================
+   LUXHOUSE — residences (the catalogue)
+   Page head, the filter bar, the results line with its three views
+   (list of reels / grid of cards / map with an index), the closing band.
+   Reels, cards, the map and the band themselves are in site.css.
+   ========================================================================== */
+
+/* The title is one word: let the first strip of stills into the first screen. */
+.page--residences .page-head { padding-bottom: clamp(32px, 4.2vw, 60px); }
+
+/* Filters and sorting -----------------------------------------------------------
+   One hairline bar across the page. A cell is a label over a value; the whole
+   cell is the control. Six cells in a row, three by two on a tablet, and on a
+   phone a single rail that scrolls sideways like the reels do.                  */
+.refine { display: block; }
+.refine__bar {
+  display: grid; grid-template-columns: 1fr 1.05fr .8fr .95fr auto 1.3fr;
+  border-block: 1px solid var(--line);
+}
+.refine__cell {
+  --pl: var(--g); --pr: var(--g);
+  position: relative; min-width: 0; min-height: 78px;
+  transition: background-color .35s var(--ease);
+}
+.refine__cell + .refine__cell { border-left: 1px solid var(--line); }
+.refine__cell:first-child { --pl: var(--m); }
+.refine__cell:last-child { --pr: var(--m); }
+.refine__cell:not(.refine__cell--checks):hover { background: var(--soot); }
+
+.refine__cell > label:not(.check) {
+  position: absolute; left: var(--pl); right: var(--pr); top: 16px; z-index: 1;
+  overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
+  font: 500 12px/1.3 var(--f-display); letter-spacing: .14em; text-transform: uppercase;
+  color: var(--smoke); pointer-events: none;
+  transition: color .3s var(--ease);
+}
+.refine__cell select {
+  position: absolute; inset: 0; display: block; width: 100%; height: 100%;
+  margin: 0; padding: 35px calc(var(--pr) + 26px) 13px var(--pl);
+  background: transparent; border: 0; border-radius: 0;
+  -webkit-appearance: none; appearance: none;
+  font: 400 17px/1.3 var(--f-display); letter-spacing: -.005em; color: var(--ash);
+  text-overflow: ellipsis; cursor: pointer;
+  transition: color .3s var(--ease);
+}
+.refine__cell select option { background: var(--soot); color: var(--bone); font-size: 16px; }
+.refine__cell select:focus-visible { outline: 2px solid var(--ember); outline-offset: -2px; }
+.refine__cell > .icon { position: absolute; right: var(--pr); top: 41px; color: var(--smoke); pointer-events: none; transition: color .3s var(--ease); }
+.refine__cell:hover select, .refine__cell:hover > .icon { color: var(--bone); }
+/* a filter that is doing something is set in bone and marked */
+.refine__cell.is-set > label:not(.check), .refine__cell.is-set select, .refine__cell.is-set > .icon { color: var(--bone); }
+.refine__cell.is-set > label:not(.check)::after { content: ""; display: inline-block; width: 5px; height: 5px; margin-left: 9px; vertical-align: 1px; background: var(--bone); }
+
+.refine__cell--checks { display: flex; flex-direction: column; justify-content: center; padding: 1px var(--pr) 1px var(--pl); }
+.refine .check {
+  grid-template-columns: 18px auto; gap: 12px; align-items: center; justify-content: start;
+  min-height: 38px;
+  font: 400 15px/1.2 var(--f-display); color: var(--ash); white-space: nowrap;
+  transition: color .3s var(--ease);
+}
+.refine .check input { width: 100%; height: 100%; }
+.refine .check__box { width: 18px; height: 18px; }
+.refine .check__box .icon { width: 12px; height: 12px; }
+.refine .check__label { padding-top: 0; }
+.refine .check:hover, .refine .check:has(input:checked) { color: var(--bone); }
+
+.refine__apply { padding-top: 12px; }
+
+@media (pointer: coarse) {
+  .refine .check { min-height: 44px; }
+}
+
+@media (max-width: 1179px) {
+  .refine__bar { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .refine__cell:nth-child(n+4) { border-top: 1px solid var(--line); }
+  .refine__cell:nth-child(3n+1) { --pl: var(--m); border-left: 0; }
+  .refine__cell:nth-child(3n) { --pr: var(--m); }
+}
+
+@media (max-width: 899px) {
+  .refine__bar {
+    display: flex; overflow-x: auto; overscroll-behavior-x: contain;
+    scroll-snap-type: x proximity; scroll-padding-inline: var(--m);
+    scrollbar-width: none;
+  }
+  .refine__bar::-webkit-scrollbar { display: none; }
+  .refine__cell, .refine__cell:nth-child(n) { --pl: 14px; --pr: 14px; flex: 0 0 auto; width: max(41vw, 148px); min-height: 68px; border-top: 0; scroll-snap-align: start; }
+  .refine__cell:nth-child(n+2) { border-left: 1px solid var(--line); }
+  .refine__cell:first-child { --pl: var(--m); width: calc(max(41vw, 148px) + var(--m) - 14px); }
+  .refine__cell:last-child { --pr: var(--m); width: calc(max(52vw, 190px) + var(--m) - 14px); }
+  .refine__cell > label:not(.check) { top: 12px; }
+  .refine__cell select { padding-top: 30px; padding-bottom: 10px; }
+  .refine__cell > .icon { top: 35px; }
+  .refine__cell.refine__cell--checks { flex-direction: row; align-items: center; justify-content: flex-start; gap: 22px; width: auto; }
+}
+
+/* The results line: how many, clear, and the three views ------------------------- */
+.results__bar { display: flex; align-items: center; gap: 0 22px; min-height: 68px; }
+.results__count { font: 400 15px/1.3 var(--f-display); letter-spacing: .005em; color: var(--ash); }
+.results__reset { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; font: 500 14px/1.2 var(--f-display); color: var(--bone); white-space: nowrap; }
+.results__reset span { text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 5px; }
+.results__reset:hover span { text-decoration-color: var(--line-2); }
+.results__reset .icon { width: 14px; height: 14px; color: var(--ash); }
+.results__views { margin-left: auto; margin-right: -10px; }
+.results__views button { padding-inline: 10px; text-transform: uppercase; }
+.results__views button[aria-pressed="true"] { text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 7px; }
+/* the views are switched by script: until it runs there is only the list, and no dead buttons */
+html:not(.js) .results__views { visibility: hidden; }
+
+.results__body { padding-bottom: var(--section); transition: opacity .35s var(--ease); }
+.results__body[aria-busy="true"] { opacity: .38; pointer-events: none; }
+.results__body > .wrap > .empty { margin-top: 4px; }
+/* nothing found: the block below says so and carries the way out */
+.results:has(.empty) .results__reset { display: none; }
+
+/* Grid view: three across, so each caption is set as title | price, the place, then the facts. */
+.page--residences .cards--3 .card__title a { display: inline; }
+.page--residences .cards--3 .card__facts li:first-child { display: block; }
+.page--residences .cards--3 .card__facts li:first-child::after { content: none; }
+
+@media (max-width: 899px) {
+  .results__bar { flex-wrap: wrap; min-height: 60px; padding-block: 4px; }
+  .results__count { order: 1; }
+  .results__views { order: 2; }
+  .results__reset { order: 3; flex-basis: 100%; margin-top: -6px; }
+}
+
+/* List view: under each reel's caption, the residence in one sentence and the door to its tour.
+   The columns are the caption's own (site.css .reel__title / .reel__end).                    */
+.lot { min-width: 0; }
+.lot__note { align-items: start; row-gap: 4px; margin-top: 6px; }
+.lot__text { grid-column: 2 / span 5; max-width: 54ch; font-size: 16px; line-height: 1.6; color: var(--ash); text-wrap: pretty; }
+.lot__tour { grid-column: 11 / -1; justify-self: end; margin-top: -8px; white-space: nowrap; }
+.lot__tour .dot { margin-right: 2px; }
+@media (max-width: 1179px) {
+  .lot__tour { grid-column: 10 / -1; }
+}
+@media (max-width: 899px) {
+  .lot__note { display: block; margin-top: 14px; }
+  .lot__text { font-size: 15.5px; max-width: 46ch; }
+  .lot__tour { margin-top: 6px; }
+}
+
+/* Map view: an index of the residences beside the map of their approximate areas --- */
+.atlas { row-gap: 20px; align-items: start; }
+.atlas__list { grid-column: 1 / span 5; border-top: 1px solid var(--line-2); }
+.atlas__side { grid-column: 6 / -1; grid-row: 1; position: sticky; top: calc(var(--header) + 20px); }
+.atlas__map.map { aspect-ratio: auto; height: min(calc(100svh - var(--header) - 96px), 720px); min-height: 420px; }
+.atlas__note { margin-top: 12px; font-size: 13px; line-height: 1.5; color: var(--smoke); }
+
+.atlas__row {
+  position: relative;
+  display: grid; grid-template-columns: 30px 120px minmax(0, 1fr) 44px; column-gap: 16px; align-items: start;
+  padding-block: 18px; border-bottom: 1px solid var(--line);
+}
+.atlas__no { padding-top: 5px; }
+.atlas__thumb { aspect-ratio: 3 / 2; }
+.atlas__text { display: grid; gap: 4px; padding-top: 1px; }
+.atlas__title { font: 400 clamp(1.125rem, 1.46vw, 1.3125rem)/1.22 var(--f-display); letter-spacing: -.012em; text-wrap: balance; }
+/* the whole row opens the residence; the heart stays its own control */
+.atlas__title a::after { content: ""; position: absolute; inset: 0; }
+.atlas__title a:focus-visible { outline: 0; }
+.atlas__title a:focus-visible::after { outline: 2px solid var(--ember); outline-offset: 3px; }
+.atlas__row:hover .atlas__title a, .atlas__row.is-hot .atlas__title a { text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 5px; }
+.atlas__row.is-hot .still > img { transform: scale(1.025); filter: saturate(.92) contrast(1.03) brightness(1); }
+.atlas__place { font: 400 15px/1.35 var(--f-display); color: var(--bone); }
+.atlas__facts { font-size: 14px; }
+.atlas__price { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 16px; margin-top: 4px; font: 400 17px/1.3 var(--f-display); letter-spacing: -.01em; }
+.atlas__tour { display: inline-flex; align-items: center; gap: 8px; font: 500 12px/1 var(--f-display); letter-spacing: .12em; text-transform: uppercase; color: var(--ash); }
+.atlas__save { z-index: 1; margin: -8px -12px 0 0; justify-self: end; }
+
+/* the pin of the row under the pointer steps forward */
+.map-pin-wrap.is-hot { z-index: 10000 !important; }
+.map-pin-wrap.is-hot .map-pin { background: #fff; outline: 1px solid var(--bone); outline-offset: 3px; }
+
+@media (max-width: 1099px) {
+  .atlas__list { grid-column: 1 / span 6; }
+  .atlas__side { grid-column: 7 / -1; }
+  .atlas__row { grid-template-columns: 26px 88px minmax(0, 1fr) 44px; column-gap: 12px; }
+}
+@media (max-width: 899px) {
+  .atlas__list, .atlas__side { grid-column: 1 / -1; grid-row: auto; }
+  .atlas__side { position: static; order: -1; }
+  .atlas__map.map { height: min(62svh, 520px); min-height: 340px; }
+  /* the number steps aside: the photograph and the words need the width */
+  .atlas__row { grid-template-columns: 96px minmax(0, 1fr) 44px; column-gap: 14px; }
+  .atlas__no { display: none; }
+  .atlas__save { margin-right: -10px; }
+}
+
+/* Georgian and Cyrillic -------------------------------------------------------------- */
+:lang(ka) .refine__cell > label:not(.check), :lang(ka) .atlas__tour { text-transform: none; letter-spacing: 0; font-size: 13.5px; }
+:lang(ka) .refine__cell select, :lang(ka) .refine .check, :lang(ka) .results__count, :lang(ka) .results__reset, :lang(ka) .atlas__facts, :lang(ka) .atlas__place { font-stretch: 92%; letter-spacing: 0; }
+:lang(ka) .results__views button { text-transform: none; letter-spacing: 0; font-size: 13.5px; }
+:lang(ka) .lot__text { font-size: 15.5px; line-height: 1.65; }
+:lang(ka) .atlas__title { font-stretch: 86%; letter-spacing: -.012em; line-height: 1.3; }
+:lang(ru) .refine__cell > label:not(.check) { letter-spacing: .1em; }

@@ -1,35 +1,67 @@
+<%
+  var paragraphs = t('about.paragraphs').map(function (p) { return p.replace(/\{brand\}/g, config.brand); });
+  var values = t('about.values');
+  var pad = function (n) { return n < 10 ? '0' + n : String(n); };
+  var homes = typeof showcase !== 'undefined' ? showcase : [];
+  var ph = homes.length ? art.hero(homes[0]) : null;
+  var closing = homes.length ? art.band(homes[homes.length - 1]) : null;
+%>
 <%- include('../partials/page-head', { heading: t('about.title', { brand: config.brand }), lead: t('about.lead'), eyebrow: t('nav.about') }) %>
 
-<section class="section section--flush-top">
-  <div class="container narrow">
-    <div class="prose prose--large">
-      <% t('about.paragraphs').forEach(function (p) { %><p><%= p.replace(/\{brand\}/g, config.brand) %></p><% }) %>
+<% if (ph) { %>
+<figure class="plate still drift">
+  <img src="<%= ph.photo.src(1280) %>" srcset="<%= ph.photo.srcset %>" sizes="100vw" width="<%= ph.photo.w %>" height="<%= ph.photo.h %>" alt="<%= ph.photo.alt %>" loading="lazy" decoding="async" style="object-position:<%= ph.focus %>">
+</figure>
+<% } %>
+
+<section class="section" aria-labelledby="about-story">
+  <div class="wrap grid">
+    <h2 class="about__statement d3 g-left rv" id="about-story"><%= paragraphs[0] %></h2>
+    <div class="about__text g-right prose rv">
+      <% paragraphs.slice(1).forEach(function (p) { %><p><%= p %></p><% }) %>
     </div>
   </div>
 </section>
 
-<section class="section section--tint">
-  <div class="container">
-    <header class="section-head section-head--center">
-      <div><h2><%= t('about.valuesTitle') %></h2></div>
-    </header>
-    <div class="trio">
-      <% t('about.values').forEach(function (v) { %>
-        <div class="trio__item">
-          <h3><%= v.title %></h3>
-          <p><%= v.text %></p>
-        </div>
+<section class="section section--soot" aria-labelledby="about-values">
+  <header class="sec-head wrap grid">
+    <p class="sec-head__label label"><%= t('home.approachEyebrow') %><b class="num"><%= pad(values.length) %></b></p>
+    <h2 class="sec-head__title d2" id="about-values"><%= t('about.valuesTitle') %></h2>
+  </header>
+  <div class="wrap">
+    <dl class="credits credits--3">
+      <% values.forEach(function (v, i) { %>
+        <div class="rv"><dt><small class="num"><%= pad(i + 1) %></small><%= v.title %></dt><dd><%= v.text %></dd></div>
       <% }) %>
-    </div>
+    </dl>
   </div>
 </section>
 
-<section class="cta-band">
-  <div class="container cta-band__inner">
-    <div>
-      <h2><%= t('home.contactTitle') %></h2>
-      <p><%= t('home.contactText') %></p>
+<% if (homes.length) { %>
+<section class="section" aria-labelledby="about-homes">
+  <header class="sec-head wrap grid">
+    <p class="sec-head__label label"><%= t('home.featuredEyebrow') %><b class="num"><%= pad(homes.length) %></b></p>
+    <h2 class="sec-head__title d2" id="about-homes"><%= t('home.featuredTitle') %></h2>
+    <p class="sec-head__aside"><a class="link" href="<%= url('/residences') %>"><span><%= t('common.viewAll') %></span><svg class="icon" aria-hidden="true"><use href="#i-arrow-right"/></svg></a></p>
+  </header>
+  <div class="wrap">
+    <div class="cards<%= homes.length > 2 ? ' cards--3' : '' %>">
+      <% homes.forEach(function (c) { %><%- include('../partials/card', { c: c }) %><% }) %>
     </div>
-    <a class="btn btn--paper" href="<%= url('/contact') %>"><%= t('common.contactUs') %></a>
+  </div>
+</section>
+<% } %>
+
+<section class="band" aria-labelledby="about-cta">
+  <% if (closing) { %>
+    <figure class="band__media still drift" style="--focus:<%= closing.focus %>">
+      <img src="<%= closing.photo.src(1280) %>" srcset="<%= closing.photo.srcset %>" sizes="(min-width: 900px) 58vw, 100vw" width="<%= closing.photo.w %>" height="<%= closing.photo.h %>" alt="<%= closing.photo.alt %>" loading="lazy" decoding="async">
+    </figure>
+  <% } %>
+  <div class="band__body wrap grid">
+    <p class="label"><%= t('nav.consult') %></p>
+    <h2 class="d2" id="about-cta"><%= t('home.contactTitle') %></h2>
+    <p class="lead"><%= t('home.contactText') %></p>
+    <a class="btn btn--solid" href="<%= url('/contact') %>"><%= t('common.contactUs') %><svg class="icon" aria-hidden="true"><use href="#i-arrow-right"/></svg></a>
   </div>
 </section>

@@ -1,0 +1,6 @@
+/* Contact: a quiet page built around the form. */
+.contact__details { margin-top: -6px; }
+.contact__links { display: flex; flex-wrap: wrap; gap: 6px 20px; }
+.contact__map { height: clamp(240px, 26vw, 360px); margin-top: 8px; }
+.contact__form-title { margin-bottom: clamp(24px, 3vw, 40px); }
+.page--contact .contact__intro .lead { max-width: 24ch; color: var(--ash); }

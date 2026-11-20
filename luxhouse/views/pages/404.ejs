@@ -1,11 +1,20 @@
-<section class="page-head page-head--center page-head--tall">
-  <div class="container">
-    <p class="eyebrow">404</p>
-    <h1><%= t('errors.notFoundTitle') %></h1>
+<%
+  var homes = typeof showcase !== 'undefined' ? showcase : [];
+  var ph = homes.length ? art.hero(homes[0]) : null;
+%>
+<section class="lost">
+  <% if (ph) { %>
+    <figure class="lost__media still">
+      <img src="<%= ph.photo.src(1280) %>" srcset="<%= ph.photo.srcset %>" sizes="100vw" width="<%= ph.photo.w %>" height="<%= ph.photo.h %>" alt="" style="object-position:<%= ph.focus %>" decoding="async">
+    </figure>
+  <% } %>
+  <div class="lost__body wrap">
+    <p class="label num">404</p>
+    <h1 class="d1"><%= t('errors.notFoundTitle') %></h1>
     <p class="lead"><%= t('errors.notFoundText') %></p>
-    <div class="page-head__actions">
-      <a class="btn btn--primary" href="<%= url('/') %>"><%= t('common.backHome') %></a>
-      <a class="btn btn--outline" href="<%= url('/residences') %>"><%= t('common.viewAll') %></a>
-    </div>
+    <p class="lost__actions">
+      <a class="btn btn--solid" href="<%= url('/') %>"><%= t('common.backHome') %><svg class="icon" aria-hidden="true"><use href="#i-arrow-right"/></svg></a>
+      <a class="btn btn--glass" href="<%= url('/residences') %>"><%= t('common.viewAll') %></a>
+    </p>
   </div>
 </section>

@@ -1,0 +1,44 @@
+/* ==========================================================================
+   LUXHOUSE — saved residences
+   The grid of saved homes (the shared cards, two across), the open place
+   beside an odd number of them, and the empty state.
+   ========================================================================== */
+
+.page--saved .page-head { padding-bottom: clamp(32px, 4.2vw, 60px); }
+
+/* room is kept while the cards are on their way, so the page does not jump */
+.saved__in { min-height: min(56svh, 560px); padding-bottom: var(--section); }
+
+/* The open place: a frame without a photograph that leads back to the collection.
+   It only shows where it completes a row.                                        */
+.saved__slot.link {
+  display: flex; align-items: center; justify-content: center; align-self: start;
+  aspect-ratio: 3 / 2; padding: 16px;
+  border: 1px solid var(--line);
+  transition: border-color .4s var(--ease), background-color .4s var(--ease);
+}
+.saved__slot.link:hover { border-color: var(--line-2); background: var(--soot); }
+.saved__grid > .saved__slot:nth-child(odd) { display: none; }
+
+/* Nothing saved yet: the sentence, how it is done, the way back; beside it an unexposed frame. */
+.saved-empty { row-gap: 40px; align-items: center; padding-top: clamp(8px, 1.4vw, 20px); }
+.saved-empty__text { grid-column: 1 / span 6; display: grid; justify-items: start; gap: clamp(18px, 2vw, 26px); }
+.saved-empty__title { max-width: 13em; }
+.saved-empty__hint { max-width: 40ch; }
+.saved-empty__text .btn { margin-top: 10px; }
+.saved-empty__frame {
+  grid-column: 8 / -1; position: relative; aspect-ratio: 3 / 2;
+  background: var(--soot); border: 1px solid var(--line);
+}
+.saved-empty__heart { position: absolute; right: 6px; top: 6px; }
+
+@media (max-width: 1099px) {
+  .saved-empty__text { grid-column: 1 / span 7; }
+  .saved-empty__frame { grid-column: 9 / -1; }
+}
+@media (max-width: 899px) {
+  .saved__in { min-height: 0; }
+  .saved-empty__text, .saved-empty__frame { grid-column: 1 / -1; }
+  .saved-empty__frame { aspect-ratio: 16 / 9; }
+  .saved__grid > .saved__slot.link, .saved__grid > .saved__slot.link:nth-child(odd) { display: flex; aspect-ratio: auto; min-height: 96px; justify-content: space-between; padding-inline: 20px; }
+}

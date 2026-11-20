@@ -1,12 +1,27 @@
-<%- include('../partials/page-head', { heading: legalTitle, eyebrow: t('footer.legal') }) %>
+<%
+  var pad = function (n) { return n < 10 ? '0' + n : String(n); };
+  var slug = function (i) { return 's' + (i + 1); };
+%>
+<%- include('../partials/page-head', { heading: legalTitle, eyebrow: t('footer.legal'), lead: t('legal.updated', { date: t.date(legalUpdated) }) }) %>
 
-<section class="section section--flush-top">
-  <div class="container narrow">
-    <p class="note"><%= t('legal.updated', { date: t.date(legalUpdated) }) %></p>
-    <div class="prose legal">
-      <% sections.forEach(function (s) { %>
-        <h2><%= s.h %></h2>
-        <% s.p.forEach(function (p) { %><p><%= p.replace(/\{legalName\}/g, config.legalName) %></p><% }) %>
+<section class="section section--flush legal">
+  <div class="wrap grid">
+    <nav class="legal__index" aria-label="<%= legalTitle %>">
+      <ol>
+        <% sections.forEach(function (s, i) { %>
+          <li><a href="#<%= slug(i) %>"><span class="num"><%= pad(i + 1) %></span><span><%= s.h %></span></a></li>
+        <% }) %>
+      </ol>
+    </nav>
+    <div class="legal__text">
+      <% sections.forEach(function (s, i) { %>
+        <section class="legal__section" id="<%= slug(i) %>" aria-labelledby="<%= slug(i) %>-h">
+          <p class="label label--dim num"><%= pad(i + 1) %></p>
+          <div class="prose">
+            <h2 id="<%= slug(i) %>-h"><%= s.h %></h2>
+            <% s.p.forEach(function (p) { %><p><%= p.replace(/\{legalName\}/g, config.legalName) %></p><% }) %>
+          </div>
+        </section>
       <% }) %>
     </div>
   </div>

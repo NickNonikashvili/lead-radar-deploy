@@ -1,232 +1,364 @@
 <%
+  var pad = function (n) { return (n < 10 ? '0' : '') + n; };
   var photos = r.photos;
-  var mosaic = photos.slice(0, 5);
-  var c = config.contact;
-  var viewingMessage = t('form.viewingMessage', { title: r.title, ref: r.ref });
+  var total = photos.length;
+  var cc = config.contact;
+  var money = function (amount) { return r.price ? '<span data-money="' + amount + '" data-currency="' + r.price.currency + '">' + t.money(amount, r.price.currency) + '</span>' : ''; };
+  var perM2 = t('residence.perM2', { v: '|' }).split('|');
+  var photoLabel = function (p, i) { return t('residence.photoOf', { i: i + 1, n: total }) + (p.roomLabel ? ': ' + p.roomLabel : ''); };
+  var flat = function (kind) { return kind === 'scope' || kind === 'landscape'; };
+
+  // ---------------------------------------------------------------- the opening frame
+  // A landscape professional cover fills the screen alone. Phone covers (4:3, portrait) would have
+  // to be enlarged and cut down to do that, so they share the screen the way the collection reels do.
+  var heroArt = art.hero(r);
+  var reel = art.reel(r);
+  var heroFrames = art.shape(heroArt.photo) === 'scope' || reel.form === 1
+    ? [{ photo: heroArt.photo, focus: heroArt.focus, narrow: heroArt.focusNarrow }]
+    : reel.frames.map(function (f) { return { photo: f.photo, focus: f.focus, narrow: f.focus }; });
+  var heroPhoto = heroFrames[0].photo;
+  var heroIndex = Math.max(0, photos.indexOf(heroPhoto));
+  // the counter at the foot names the frame it stands on: the last one
+  var countPhoto = heroFrames[heroFrames.length - 1].photo;
+  var countIndex = Math.max(0, photos.indexOf(countPhoto));
+  // A frame is cut to the screen, so the browser needs the width the photograph is drawn at, not the
+  // width of its frame: on a phone the still is about 3:4, on a desktop about 16:10 shared between the frames.
+  var heroSizes = function (p) {
+    var ar = p.w / p.h;
+    return '(min-width: 900px) ' + Math.min(100, Math.max(Math.round(100 / heroFrames.length), Math.round(ar * 62.5))) + 'vw, ' + Math.max(100, Math.round(ar * 134)) + 'vw';
+  };
+
+  // ---------------------------------------------------------------- key facts (always six where the listing allows)
+  var f = r.facts;
+  var spec = [{ label: t('residence.facts.area'), value: t.num(f.areaM2), unit: t('units.m2') }];
+  if (f.landM2) spec.push({ label: t('residence.facts.land'), value: t.num(f.landM2), unit: t('units.m2') });
+  if (f.bedrooms) spec.push({ label: t('residence.facts.bedrooms'), value: f.bedrooms });
+  if (f.bathrooms) spec.push({ label: t('residence.facts.bathrooms'), value: f.bathrooms });
+  if (f.rooms) spec.push({ label: t('residence.facts.rooms'), value: f.rooms });
+  if (f.floors) spec.push({ label: t('residence.facts.floors'), value: f.floors });
+  var specKeys = ['area', 'land', 'bedrooms', 'bathrooms', 'rooms', 'floors'];
+  if (spec.length < 6 && f.livingM2) { spec.push({ label: t('residence.facts.living'), value: t.num(f.livingM2), unit: t('units.m2') }); specKeys.push('living'); }
+  if (spec.length < 6 && f.balconyM2) { spec.push({ label: t('features.balcony'), value: t.num(f.balconyM2), unit: t('units.m2') }); }
+  spec = spec.slice(0, 6);
+  // the table beside the highlights carries everything the strip does not
+  var detailRows = r.factRows.filter(function (row) { return specKeys.indexOf(row.key) === -1 && row.key !== 'pricePerM2'; });
+
+  // ---------------------------------------------------------------- the gallery
+  // An editorial sequence planned from what the photographs are: pairs of unequal size, a full-width
+  // frame for the large spaces, threes for the small rooms, and rows of three or four for upright
+  // phone frames. Nothing is left alone at the end.
+  var WIDE_ROOMS = ['exterior', 'aerial', 'garden', 'pool', 'terrace', 'pergola', 'patio', 'winterGarden', 'living', 'dining', 'view'];
+  var SMALL_ROOMS = ['bedroom', 'bathroom', 'corridor', 'staircase', 'entrance', 'hall'];
+  var RATIO = { scope: '3 / 2', landscape: '4 / 3', square: '1 / 1', portrait: '3 / 4' };
+  var STRIP_VW = { scope: 84, landscape: 76, square: 58, portrait: 44 };
+  var shots = [];
+  photos.forEach(function (p, i) { if (i !== heroIndex) shots.push({ p: p, i: i, kind: art.shape(p) }); });
+  var uprightOnly = shots.length > 0 && shots.every(function (s) { return s.kind === 'portrait'; });
+
+  var memo = {};
+  var plan = function (i, prev) {
+    if (i >= shots.length) return { cost: 0, rows: [] };
+    var key = i + prev;
+    if (memo[key]) return memo[key];
+    var a = shots[i], left = shots.length - i, options = [];
+    var run = function (n, test) { return left >= n && shots.slice(i, i + n).every(test); };
+    var isFlat = function (s) { return flat(s.kind); };
+    var isUpright = function (s) { return !flat(s.kind); };
+    if (isFlat(a) && WIDE_ROOMS.indexOf(a.p.room) > -1) {
+      options.push({ type: 'wide', n: 1, cost: (prev === 'wide' ? 4 : prev === 'start' ? 1.5 : 0) + (a.kind === 'landscape' ? 0.2 : 0) });
+    }
+    if (left >= 2) {
+      var b = shots[i + 1];
+      var flats = (isFlat(a) ? 1 : 0) + (isFlat(b) ? 1 : 0);
+      options.push({ type: 'pair', n: 2, cost: (flats === 2 ? 0 : flats === 1 ? 0.2 : 2) + (prev === 'pair' ? 1 : 0) });
+    }
+    if (run(3, isFlat)) options.push({ type: 'trio', n: 3, cost: run(3, function (s) { return SMALL_ROOMS.indexOf(s.p.room) > -1; }) ? 0 : 2.5 });
+    if (run(3, isUpright)) options.push({ type: 'trio', n: 3, cost: 0.5 + (prev === 'trio' ? 0.4 : 0) });
+    if (run(4, isUpright)) options.push({ type: 'quad', n: 4, cost: 0.6 + (prev === 'quad' ? 0.4 : prev === 'start' ? 0.5 : 0) });
+    options.push({ type: 'solo', n: 1, cost: 6 });
+    var best = null;
+    options.forEach(function (o) {
+      var rest = plan(i + o.n, o.type);
+      if (!best || o.cost + rest.cost < best.cost) best = { cost: o.cost + rest.cost, rows: [{ type: o.type, n: o.n }].concat(rest.rows) };
+    });
+    memo[key] = best;
+    return best;
+  };
+
+  // where each frame of a row sits on the twelve columns: [first column, columns taken]
+  var PAIRS = [[[1, 8], [9, 4]], [[1, 5], [6, 7]], [[1, 7], [8, 5]]];
+  var pairSlots = function (a, b, turn) {
+    if (flat(a) && flat(b)) return PAIRS[turn % 3];
+    if (flat(a)) return b === 'portrait' ? [[1, 8], [9, 4]] : [[1, 7], [8, 5]];
+    if (flat(b)) return a === 'portrait' ? [[1, 4], [5, 8]] : [[1, 5], [6, 7]];
+    if (a === 'portrait' && b === 'portrait') return turn % 2 ? [[2, 4], [7, 5]] : [[1, 5], [8, 4]];
+    if (a === 'square' && b === 'square') return turn % 2 ? [[1, 5], [7, 6]] : [[1, 6], [8, 5]];
+    return a === 'portrait' ? [[1, 5], [7, 6]] : [[1, 6], [8, 5]];
+  };
+  var TRIOS = [[[1, 5], [6, 4], [10, 3]], [[1, 4], [5, 4], [9, 4]], [[1, 3], [4, 4], [8, 5]]];
+  var QUAD = [[1, 3], [4, 3], [7, 3], [10, 3]];
+  var SOLO = { scope: [3, 8], landscape: [3, 8], square: [4, 6], portrait: [5, 4] };
+
+  var turns = { pair: 0, trio: 0 };
+  var cursor = 0;
+  plan(0, 'start').rows.forEach(function (row) {
+    var group = shots.slice(cursor, cursor + row.n);
+    cursor += row.n;
+    var slots;
+    if (row.type === 'wide') slots = [[1, 12]];
+    else if (row.type === 'pair') slots = pairSlots(group[0].kind, group[1].kind, turns.pair++);
+    else if (row.type === 'trio') slots = group.every(function (s) { return s.kind === 'portrait'; }) ? TRIOS[turns.trio++ % 3] : TRIOS[1];
+    else if (row.type === 'quad') slots = QUAD;
+    else slots = [SOLO[group[0].kind]];
+    group.forEach(function (s, k) {
+      s.wide = row.type === 'wide';
+      s.col = slots[k][0] + ' / span ' + slots[k][1];
+      s.ratio = s.wide ? (s.kind === 'scope' ? '2.39 / 1' : '2.1 / 1') : RATIO[s.kind];
+      s.sizes = '(min-width: 900px) ' + Math.round(slots[k][1] / 12 * 100) + 'vw, ' + (uprightOnly ? 66 : STRIP_VW[s.kind]) + 'vw';
+    });
+  });
+
+  // ---------------------------------------------------------------- location, sharing, the request
+  var loc = r.location;
+  var hasMap = Boolean(loc && loc.lat && loc.lng);
+  var contextShort = r.context && r.context.length <= 12;
   var shareText = encodeURIComponent(r.title + ' — ' + r.place + ' — ' + r.priceLabel);
   var shareUrl = encodeURIComponent(canonical);
+  var viewingMessage = t('form.viewingMessage', { title: r.title, ref: r.ref });
   var lightboxData = photos.map(function (p) { return { src: p.full, srcset: p.srcset, w: p.w, h: p.h, alt: p.alt, label: p.roomLabel }; });
-  var tourPoster = r.hasTour ? (photos.find(function (p) { return p.file === r.tour.scenes[0].photo; }) || r.cover) : null;
 %>
-<section class="res-hero" aria-label="<%= t('residence.gallery') %>">
-  <div class="res-mosaic res-mosaic--<%= mosaic.length %>">
-    <% mosaic.forEach(function (p, i) { %>
-      <button type="button" class="res-mosaic__item" data-lightbox-open="<%= i %>" aria-label="<%= t('residence.photoOf', { i: i + 1, n: photos.length }) %><%= p.roomLabel ? ': ' + p.roomLabel : '' %>">
-        <img src="<%= p.src(i === 0 ? 1280 : 640) %>" srcset="<%= p.srcset %>"
-             sizes="<%= i === 0 ? (mosaic.length > 1 ? '(min-width: 900px) 60vw, 100vw' : '100vw') : '(min-width: 900px) 20vw, 50vw' %>"
-             width="<%= p.w %>" height="<%= p.h %>" alt="<%= p.alt %>"
-             <%- i === 0 ? 'fetchpriority="high"' : 'loading="lazy"' %> decoding="async" style="background-color:<%= p.color %>">
-      </button>
+<!-- Title card -->
+<section class="r-hero r-hero--<%= heroFrames.length %>" aria-labelledby="r-title">
+  <div class="r-hero__stills">
+    <% heroFrames.forEach(function (fr, i) { %>
+      <figure class="r-hero__still still" style="--focus:<%= fr.focus %>;--focus-narrow:<%= fr.narrow %>">
+        <img src="<%= fr.photo.src(1280) %>" srcset="<%= fr.photo.srcset %>" sizes="<%= heroSizes(fr.photo) %>" width="<%= fr.photo.w %>" height="<%= fr.photo.h %>" alt="<%= fr.photo.alt %>" <%- i === 0 ? 'fetchpriority="high"' : 'loading="lazy"' %> decoding="async">
+      </figure>
     <% }) %>
   </div>
-  <div class="res-hero__bar">
-    <div class="container res-hero__bar-inner">
-      <button type="button" class="btn btn--paper btn--sm" data-lightbox-open="0"><svg class="icon" aria-hidden="true"><use href="#i-photos"/></svg><%= t('residence.allPhotos', { n: photos.length }) %></button>
-      <% if (r.hasTour) { %>
-        <a class="btn btn--accent btn--sm" href="<%= r.tourUrl %>"><svg class="icon" aria-hidden="true"><use href="#i-cube"/></svg><%= t('common.enterTour') %></a>
-      <% } %>
+  <div class="r-hero__head wrap">
+    <nav class="crumbs label" aria-label="<%= t('residence.breadcrumb') %>">
+      <a href="<%= url('/residences') %>"><%= t('nav.residences') %></a><i aria-hidden="true"></i><span class="num" lang="en"><%= r.ref %></span>
+    </nav>
+    <h1 class="r-hero__title d2" id="r-title"><%= r.title %></h1>
+    <p class="r-hero__place"><span><%= r.place %></span><span class="label"><%= r.statusLabel %></span></p>
+  </div>
+  <div class="r-hero__foot wrap">
+    <a class="btn btn--glass r-hero__all" href="#gallery" data-lightbox-open="0"><svg class="icon" aria-hidden="true"><use href="#i-photos"/></svg><%= t('residence.allPhotos', { n: total }) %></a>
+    <button class="btn btn--glass btn--toggle r-hero__tool" type="button" data-save="<%= r.slug %>" aria-pressed="false">
+      <svg class="icon" aria-hidden="true"><use href="#i-heart"/></svg><span data-save-label><%= t('common.save') %></span>
+    </button>
+    <div class="pop-wrap" data-share>
+      <button class="btn btn--glass btn--toggle r-hero__tool" type="button" data-share-toggle aria-expanded="false" aria-controls="share-menu">
+        <svg class="icon" aria-hidden="true"><use href="#i-share"/></svg><span><%= t('common.share') %></span>
+      </button>
+      <div class="pop" id="share-menu" data-share-menu hidden>
+        <button type="button" data-copy-link="<%= canonical %>"><svg class="icon" aria-hidden="true"><use href="#i-link"/></svg><%= t('common.copyLink') %></button>
+        <a href="https://wa.me/?text=<%= shareText %>%20<%= shareUrl %>" target="_blank" rel="noopener noreferrer"><svg class="icon" aria-hidden="true"><use href="#i-chat"/></svg><span lang="en"><%= t('common.whatsapp') %></span></a>
+        <a href="https://t.me/share/url?url=<%= shareUrl %>&amp;text=<%= shareText %>" target="_blank" rel="noopener noreferrer"><svg class="icon" aria-hidden="true"><use href="#i-send"/></svg><span lang="en"><%= t('common.telegram') %></span></a>
+        <a href="mailto:?subject=<%= shareText %>&amp;body=<%= shareUrl %>"><svg class="icon" aria-hidden="true"><use href="#i-mail"/></svg><%= t('common.email') %></a>
+      </div>
     </div>
+    <button class="r-hero__count" type="button" data-lightbox-open="<%= countIndex %>" aria-label="<%= photoLabel(countPhoto, countIndex) %>">
+      <b class="num"><%= pad(countIndex + 1) %> <small>/ <%= pad(total) %></small></b>
+      <% if (countPhoto.roomLabel) { %><span class="label"><%= countPhoto.roomLabel %></span><% } %>
+    </button>
   </div>
 </section>
 
-<section class="container res-intro">
-  <nav class="breadcrumbs" aria-label="Breadcrumb">
-    <a href="<%= url('/') %>"><%= t('nav.home') %></a>
-    <span aria-hidden="true">/</span>
-    <a href="<%= url('/residences') %>"><%= t('nav.residences') %></a>
-    <span aria-hidden="true">/</span>
-    <span aria-current="page"><%= r.title %></span>
-  </nav>
+<!-- Key facts -->
+<dl class="spec spec--<%= spec.length %>" aria-label="<%= t('residence.details') %>">
+  <% spec.forEach(function (s) { %>
+    <div><dt class="label"><%= s.label %></dt><dd class="num"><%= s.value %><% if (s.unit) { %><small><%= s.unit %></small><% } %></dd></div>
+  <% }) %>
+</dl>
 
-  <div class="res-intro__grid">
-    <div class="res-intro__main">
-      <p class="eyebrow res-intro__place">
-        <svg class="icon" aria-hidden="true"><use href="#i-pin"/></svg><%= r.place %>
-        <% if (r.status !== 'for-sale') { %><span class="badge badge--status"><%= r.statusLabel %></span><% } %>
-      </p>
-      <h1><%= r.title %></h1>
-      <p class="lead"><%= r.tagline %></p>
+<!-- Overview -->
+<section class="section" id="overview" aria-labelledby="overview-title">
+  <div class="overview wrap grid">
+    <h2 class="overview__label label" id="overview-title"><%= t('residence.overview') %></h2>
+    <p class="overview__lead d3"><%= r.tagline %></p>
+    <div class="overview__text">
+      <% r.description.forEach(function (p) { %><p><%= p %></p><% }) %>
     </div>
-    <div class="res-price">
-      <p class="eyebrow"><%= t('residence.askingPrice') %></p>
-      <p class="res-price__value">
-        <% if (r.price) { %><span data-money="<%= r.price.amount %>" data-currency="<%= r.price.currency %>"><%= r.priceLabel %></span><% } else { %><%= r.priceLabel %><% } %>
-      </p>
-      <% if (r.pricePerM2) { %>
-        <p class="res-price__sub"><span data-money="<%= r.pricePerM2 %>" data-currency="<%= r.price.currency %>"><%= t.money(r.pricePerM2, r.price.currency) %></span> <%= t('units.perM2') %></p>
-      <% } %>
-      <% if (gel) { %>
-        <p class="res-price__note"><%= t('residence.gelApprox', { gel: t.money(gel, 'GEL'), rate: t.num(config.currency.usdToGel, 4), date: t.date(config.currency.rateDate) }) %></p>
-      <% } %>
-      <div class="res-actions">
-        <button type="button" class="chip-btn" data-save="<%= r.slug %>" aria-pressed="false">
-          <svg class="icon" aria-hidden="true"><use href="#i-heart"/></svg><span data-save-label><%= t('common.save') %></span>
-        </button>
-        <div class="share" data-share>
-          <button type="button" class="chip-btn" data-share-toggle aria-expanded="false" aria-controls="share-menu">
-            <svg class="icon" aria-hidden="true"><use href="#i-share"/></svg><%= t('common.share') %>
-          </button>
-          <div class="share__menu" id="share-menu" hidden>
-            <button type="button" data-copy-link="<%= canonical %>"><svg class="icon" aria-hidden="true"><use href="#i-link"/></svg><%= t('common.copyLink') %></button>
-            <a href="https://wa.me/?text=<%= shareText %>%20<%= shareUrl %>" target="_blank" rel="noopener noreferrer"><svg class="icon" aria-hidden="true"><use href="#i-chat"/></svg>WhatsApp</a>
-            <a href="https://t.me/share/url?url=<%= shareUrl %>&amp;text=<%= shareText %>" target="_blank" rel="noopener noreferrer"><svg class="icon" aria-hidden="true"><use href="#i-send"/></svg>Telegram</a>
-            <a href="https://www.facebook.com/sharer/sharer.php?u=<%= shareUrl %>" target="_blank" rel="noopener noreferrer"><svg class="icon" aria-hidden="true"><use href="#i-share"/></svg>Facebook</a>
-            <a href="mailto:?subject=<%= shareText %>&amp;body=<%= shareUrl %>"><svg class="icon" aria-hidden="true"><use href="#i-mail"/></svg><%= t('common.email') %></a>
-          </div>
+  </div>
+  <div class="sheet wrap grid">
+    <div class="sheet__main">
+      <% if (r.highlights.length) { %>
+        <div class="hl rv">
+          <h3 class="label"><%= t('residence.highlights') %></h3>
+          <ol>
+            <% r.highlights.forEach(function (h, i) { %><li><span class="label num"><%= pad(i + 1) %></span><span><%= h %></span></li><% }) %>
+          </ol>
         </div>
-      </div>
+      <% } %>
+      <% if (r.features.length) { %>
+        <div class="sheet__features rv">
+          <h3 class="label"><%= t('residence.features') %></h3>
+          <ul class="tags"><% r.features.forEach(function (x) { %><li><%= x.label %></li><% }) %></ul>
+        </div>
+      <% } %>
     </div>
-  </div>
-
-  <ul class="key-facts">
-    <li><svg class="icon" aria-hidden="true"><use href="#i-area"/></svg><span class="key-facts__value"><%= t.area(r.facts.areaM2) %></span><span class="key-facts__label"><%= t('residence.facts.area') %></span></li>
-    <% if (r.facts.bedrooms) { %><li><svg class="icon" aria-hidden="true"><use href="#i-bed"/></svg><span class="key-facts__value"><%= r.facts.bedrooms %></span><span class="key-facts__label"><%= t('residence.facts.bedrooms') %></span></li><% } %>
-    <% if (r.facts.bathrooms) { %><li><svg class="icon" aria-hidden="true"><use href="#i-bath"/></svg><span class="key-facts__value"><%= r.facts.bathrooms %></span><span class="key-facts__label"><%= t('residence.facts.bathrooms') %></span></li><% } %>
-    <% if (r.facts.rooms) { %><li><svg class="icon" aria-hidden="true"><use href="#i-rooms"/></svg><span class="key-facts__value"><%= r.facts.rooms %></span><span class="key-facts__label"><%= t('residence.facts.rooms') %></span></li><% } %>
-    <% if (r.facts.landM2) { %><li><svg class="icon" aria-hidden="true"><use href="#i-land"/></svg><span class="key-facts__value"><%= t.area(r.facts.landM2) %></span><span class="key-facts__label"><%= t('residence.facts.land') %></span></li><% } %>
-    <% if (r.facts.floors) { %><li><svg class="icon" aria-hidden="true"><use href="#i-floors"/></svg><span class="key-facts__value"><%= r.facts.floors %></span><span class="key-facts__label"><%= t('residence.facts.floors') %></span></li><% } %>
-  </ul>
-</section>
-
-<div class="container res-layout">
-  <div class="res-main">
-    <section class="res-section" id="overview">
-      <h2><%= t('residence.overview') %></h2>
-      <div class="prose">
-        <% r.description.forEach(function (p) { %><p><%= p %></p><% }) %>
-      </div>
-    </section>
-
-    <% if (r.highlights.length) { %>
-      <section class="res-section">
-        <h2><%= t('residence.highlights') %></h2>
-        <ul class="tick-list tick-list--cols">
-          <% r.highlights.forEach(function (h) { %><li><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg><%= h %></li><% }) %>
-        </ul>
-      </section>
-    <% } %>
-
-    <% if (r.hasTour) { %>
-      <section class="res-section">
-        <a class="tour-banner" href="<%= r.tourUrl %>">
-          <img src="<%= tourPoster.src(1280) %>" srcset="<%= tourPoster.srcset %>" sizes="(min-width: 1100px) 760px, 100vw" width="<%= tourPoster.w %>" height="<%= tourPoster.h %>" alt="" loading="lazy" decoding="async" style="background-color:<%= tourPoster.color %>">
-          <span class="tour-banner__shade" aria-hidden="true"></span>
-          <span class="tour-banner__content">
-            <span class="eyebrow eyebrow--accent"><%= t('common.tour3d') %> · <%= t('residence.tourSpaces', { n: r.tour.scenes.length }) %></span>
-            <span class="tour-banner__title"><%= t('residence.tourTitle') %></span>
-            <span class="tour-banner__text"><%= t('residence.tourText') %></span>
-            <span class="btn btn--accent"><svg class="icon" aria-hidden="true"><use href="#i-cube"/></svg><%= t('common.enterTour') %></span>
-          </span>
-        </a>
-      </section>
-    <% } %>
-
-    <section class="res-section" id="details">
-      <h2><%= t('residence.details') %></h2>
-      <dl class="facts-table">
-        <% r.factRows.forEach(function (f) { %>
-          <div><dt><%= f.label %></dt><dd><%= f.value %></dd></div>
+    <div class="sheet__side dl rv" id="details">
+      <h3 class="label"><%= t('residence.details') %></h3>
+      <dl>
+        <div><dt><%= t('residence.ref') %></dt><dd class="num" lang="en"><%= r.ref %></dd></div>
+        <div><dt><%= t('residence.askingPrice') %></dt><dd class="num"><% if (r.price) { %><%- money(r.price.amount) %><% } else { %><%= r.priceLabel %><% } %></dd></div>
+        <% if (r.pricePerM2) { %><div><dt><%= t('residence.facts.pricePerM2') %></dt><dd class="num"><%- money(r.pricePerM2) %></dd></div><% } %>
+        <% detailRows.forEach(function (row) { %>
+          <div><dt><%= row.label %></dt><dd class="num"><%= row.value %></dd></div>
         <% }) %>
-        <div><dt><%= t('residence.ref') %></dt><dd><%= r.ref %></dd></div>
       </dl>
-    </section>
-
-    <% if (r.features.length) { %>
-      <section class="res-section">
-        <h2><%= t('residence.features') %></h2>
-        <ul class="chips">
-          <% r.features.forEach(function (f) { %><li><%= f.label %></li><% }) %>
-        </ul>
-      </section>
-    <% } %>
-
-    <section class="res-section" id="gallery">
-      <h2><%= t('residence.gallery') %></h2>
-      <div class="thumb-grid">
-        <% photos.forEach(function (p, i) { %>
-          <button type="button" class="thumb-grid__item" data-lightbox-open="<%= i %>" aria-label="<%= t('residence.photoOf', { i: i + 1, n: photos.length }) %><%= p.roomLabel ? ': ' + p.roomLabel : '' %>">
-            <img src="<%= p.src(640) %>" width="<%= p.w %>" height="<%= p.h %>" alt="<%= p.alt %>" loading="lazy" decoding="async" style="background-color:<%= p.color %>">
-            <% if (p.roomLabel) { %><span class="thumb-grid__label"><%= p.roomLabel %></span><% } %>
-          </button>
-        <% }) %>
-      </div>
-    </section>
-
-    <% if (r.location.lat && r.location.lng) { %>
-      <section class="res-section" id="location">
-        <h2><%= t('residence.location') %></h2>
-        <p class="res-section__sub"><svg class="icon" aria-hidden="true"><use href="#i-pin"/></svg><%= r.place %></p>
-        <div class="map" data-map="area" data-lat="<%= r.location.lat %>" data-lng="<%= r.location.lng %>" data-radius="<%= r.location.radiusM || 1000 %>" role="region" aria-label="<%= t('residence.location') %>: <%= r.place %>"></div>
-        <p class="note"><%= t('residence.locationNote') %></p>
-      </section>
-    <% } %>
-
-    <% if (r.price) { %>
-      <section class="res-section" id="financing">
-        <h2><%= t('residence.mortgageTitle') %></h2>
-        <div class="calc panel" data-calc data-price="<%= r.price.amount %>" data-currency="<%= r.price.currency %>">
-          <div class="calc__inputs">
-            <div class="field">
-              <label for="calc-down"><%= t('residence.mortgageDown') %> <output data-calc-down-out></output></label>
-              <input type="range" id="calc-down" data-calc-down min="10" max="90" step="5" value="<%= config.mortgage.defaultDownPaymentPct %>">
-            </div>
-            <div class="field">
-              <label for="calc-years"><%= t('residence.mortgageYears') %> <output data-calc-years-out></output></label>
-              <input type="range" id="calc-years" data-calc-years min="1" max="30" step="1" value="<%= config.mortgage.defaultYears %>">
-            </div>
-            <div class="field">
-              <label for="calc-rate"><%= t('residence.mortgageRate') %>, %</label>
-              <input type="number" id="calc-rate" data-calc-rate min="0" max="30" step="0.1" value="<%= config.mortgage.defaultRatePct %>" inputmode="decimal">
-            </div>
-          </div>
-          <div class="calc__result">
-            <p class="eyebrow"><%= t('residence.mortgageMonthly') %></p>
-            <p class="calc__monthly" data-calc-monthly>—</p>
-            <p class="calc__loan"><%= t('residence.mortgageLoan') %>: <strong data-calc-loan>—</strong></p>
-          </div>
-          <p class="note calc__note"><%= t('residence.mortgageNote') %></p>
-        </div>
-      </section>
-    <% } %>
+      <% if (gel) { %><p class="sheet__note small"><%= t('residence.gelApprox', { gel: t.money(gel, 'GEL'), rate: t.num(config.currency.usdToGel, 4), date: t.date(config.currency.rateDate) }) %></p><% } %>
+    </div>
   </div>
+</section>
 
-  <aside class="res-aside">
-    <div class="inquiry-card panel" id="inquiry">
-      <h2><%= t('residence.inquiryTitle') %></h2>
-      <p class="inquiry-card__text"><%= t('residence.inquiryText') %></p>
-      <%- include('../partials/inquiry-form', { type: 'viewing', id: 'viewing', slug: r.slug, message: viewingMessage, compact: true }) %>
-      <% if (c.phone || c.whatsapp || c.telegram) { %>
-        <div class="inquiry-card__direct">
-          <% if (c.phone) { %><a class="chip-btn" href="<%= c.phoneHref %>"><svg class="icon" aria-hidden="true"><use href="#i-phone"/></svg><%= c.phone %></a><% } %>
-          <% if (c.whatsapp) { %><a class="chip-btn" href="<%= c.whatsappHref %>?text=<%= encodeURIComponent(viewingMessage) %>" target="_blank" rel="noopener noreferrer"><svg class="icon" aria-hidden="true"><use href="#i-chat"/></svg>WhatsApp</a><% } %>
-          <% if (c.telegram) { %><a class="chip-btn" href="<%= c.telegramHref %>" target="_blank" rel="noopener noreferrer"><svg class="icon" aria-hidden="true"><use href="#i-send"/></svg>Telegram</a><% } %>
-        </div>
-      <% } %>
-      <p class="inquiry-card__ref"><%= t('residence.ref') %>: <%= r.ref %></p>
-    </div>
-  </aside>
-</div>
-
-<% if (others.length) { %>
-  <section class="section section--tint">
-    <div class="container">
-      <header class="section-head">
-        <div><h2><%= t('residence.similar') %></h2></div>
-        <a class="link-arrow" href="<%= url('/residences') %>"><%= t('common.viewAll') %><svg class="icon" aria-hidden="true"><use href="#i-arrow-right"/></svg></a>
-      </header>
-      <div class="card-grid">
-        <% others.forEach(function (o) { %><%- include('../partials/card', { c: o }) %><% }) %>
-      </div>
-    </div>
-  </section>
+<% if (r.hasTour) { %>
+<!-- The 3D tour -->
+<section class="tour tour--flush" id="tour" aria-labelledby="tour-title">
+  <%- include('../partials/stage', { r: r, eyebrow: t('common.tour3d'), lines: [t('residence.tourTitle')], titleId: 'tour-title' }) %>
+  <div class="tour__notes wrap grid">
+    <p class="tour__text lead rv"><%= t('residence.tourText') %></p>
+    <ul class="tour__points rv">
+      <li><b class="num">01</b><%= t('home.tourPoint1') %></li>
+      <li><b class="num">02</b><%= t('home.tourPoint2') %></li>
+      <li><b class="num">03</b><%= t('tour.note') %></li>
+    </ul>
+  </div>
+</section>
 <% } %>
 
-<div class="mobile-cta" data-mobile-cta>
-  <div class="mobile-cta__price">
-    <span class="mobile-cta__label"><%= r.district %></span>
-    <% if (r.price) { %><strong data-money="<%= r.price.amount %>" data-currency="<%= r.price.currency %>"><%= r.priceLabel %></strong><% } else { %><strong><%= r.priceLabel %></strong><% } %>
+<!-- Photographs -->
+<section class="section<%= r.hasTour ? '' : ' section--flush' %> stills<%= uprightOnly ? ' stills--upright' : '' %>" id="gallery" aria-labelledby="gallery-title">
+  <header class="sec-head wrap grid">
+    <p class="sec-head__label label"><%= t('residence.gallery') %><b class="num"><%= pad(total) %></b></p>
+    <h2 class="sec-head__title d2" id="gallery-title"><%= t.n('residence.photosCount', total) %></h2>
+    <p class="sec-head__aside"><%= t('residence.galleryHint') %></p>
+  </header>
+  <div class="stills__grid wrap" data-strip>
+    <% shots.forEach(function (s) { %>
+      <figure class="shot<%= s.wide ? ' shot--wide' : '' %> lights rv" style="--col:<%= s.col %>;--ar:<%= s.ratio %>;--nat:<%= RATIO[s.kind] %>">
+        <button type="button" data-lightbox-open="<%= s.i %>" aria-label="<%= photoLabel(s.p, s.i) %>">
+          <span class="still<%= s.wide ? ' drift' : '' %>"><img src="<%= s.p.src(s.wide ? 1280 : 640) %>" srcset="<%= s.p.srcset %>" sizes="<%= s.wide ? '100vw' : s.sizes %>" width="<%= s.p.w %>" height="<%= s.p.h %>" alt="<%= s.p.alt %>" loading="lazy" decoding="async"></span>
+        </button>
+        <figcaption><b class="num"><%= pad(s.i + 1) %></b><%= s.p.roomLabel %></figcaption>
+      </figure>
+    <% }) %>
   </div>
-  <a class="btn btn--primary btn--sm" href="#inquiry"><%= t('common.requestViewing') %></a>
-</div>
+  <div class="stills__foot wrap">
+    <p class="stills__bar" aria-hidden="true"><i data-strip-bar></i></p>
+    <a class="btn" href="#gallery" data-lightbox-open="0"><svg class="icon" aria-hidden="true"><use href="#i-photos"/></svg><%= t('residence.allPhotos', { n: total }) %></a>
+  </div>
+</section>
+
+<% if (hasMap) { %>
+<!-- Approximate location -->
+<section class="section section--flush" id="location" aria-labelledby="where-title">
+  <div class="where wrap grid">
+    <div class="where__copy">
+      <div>
+        <p class="label"><%= t('residence.location') %></p>
+        <h2 class="where__title<%= contextShort ? '' : ' where__title--long' %>" id="where-title"><span class="d2"><%= r.district %><%= r.context ? ',' : '' %></span><% if (r.context) { %> <span class="<%= contextShort ? 'd2' : 'd3' %>"><%= r.context %></span><% } %></h2>
+      </div>
+      <div>
+        <p class="where__coords num"><span><%= t('residence.lat', { v: t.num(loc.lat, 3) }) %></span> <span><%= t('residence.lng', { v: t.num(loc.lng, 3) }) %></span></p>
+        <p class="small"><%= t('residence.locationNote') %></p>
+      </div>
+    </div>
+    <div class="where__map map" data-map="area" data-lat="<%= loc.lat %>" data-lng="<%= loc.lng %>" data-radius="<%= loc.radiusM || 1000 %>" role="region" aria-label="<%= t('residence.location') %>: <%= r.place %>">
+      <p class="map__tag chip"><%= t('residence.approxArea') %></p>
+    </div>
+  </div>
+</section>
+<% } %>
+
+<% if (r.price) { %>
+<!-- Financing estimate -->
+<section class="section section--flush" id="financing" aria-labelledby="finance-title">
+  <div class="finance wrap grid" data-calc data-price="<%= r.price.amount %>" data-currency="<%= r.price.currency %>">
+    <h2 class="finance__label label" id="finance-title"><%= t('residence.mortgageTitle') %></h2>
+    <div class="finance__result">
+      <p class="label label--dim" id="finance-monthly"><%= t('residence.mortgageMonthly') %></p>
+      <p class="finance__monthly num" data-calc-monthly aria-live="polite" aria-labelledby="finance-monthly">—</p>
+      <dl class="dl finance__sums">
+        <div><dt><%= t('residence.mortgageLoan') %></dt><dd class="num" data-calc-loan>—</dd></div>
+        <div><dt><%= t('residence.mortgagePrice') %></dt><dd class="num"><%- money(r.price.amount) %></dd></div>
+      </dl>
+    </div>
+    <div class="finance__controls">
+      <div class="field">
+        <label for="calc-down"><%= t('residence.mortgageDown') %> <output for="calc-down" data-calc-down-out></output></label>
+        <input type="range" id="calc-down" data-calc-down min="10" max="90" step="5" value="<%= config.mortgage.defaultDownPaymentPct %>">
+      </div>
+      <div class="field">
+        <label for="calc-years"><%= t('residence.mortgageYears') %> <output for="calc-years" data-calc-years-out></output></label>
+        <input type="range" id="calc-years" data-calc-years min="1" max="30" step="1" value="<%= config.mortgage.defaultYears %>">
+      </div>
+      <div class="field finance__rate">
+        <label for="calc-rate"><%= t('residence.mortgageRate') %>, %</label>
+        <input type="number" id="calc-rate" data-calc-rate min="0" max="30" step="0.1" value="<%= config.mortgage.defaultRatePct %>" inputmode="decimal">
+      </div>
+      <p class="finance__note small"><%= t('residence.mortgageNote') %></p>
+    </div>
+  </div>
+</section>
+<% } %>
+
+<!-- Request a viewing -->
+<section class="section section--soot viewing" id="inquiry" aria-labelledby="viewing-title">
+  <div class="wrap grid">
+    <div class="contact__intro">
+      <p class="label"><%= t('common.requestViewing') %></p>
+      <h2 class="d2" id="viewing-title"><%= t('residence.inquiryTitle') %></h2>
+      <p class="lead"><%= t('residence.inquiryText') %></p>
+      <div class="viewing__card">
+        <span class="still"><img src="<%= heroPhoto.src(640) %>" width="<%= heroPhoto.w %>" height="<%= heroPhoto.h %>" alt="" loading="lazy" decoding="async"></span>
+        <p><b><%= r.title %></b><span class="num"><span lang="en"><%= r.ref %></span> · <% if (r.price) { %><%- money(r.price.amount) %><% } else { %><%= r.priceLabel %><% } %></span></p>
+      </div>
+      <% if (cc.phone || cc.whatsapp || cc.telegram) { %>
+        <ul class="viewing__direct">
+          <% if (cc.phone) { %><li><a class="link num" href="<%= cc.phoneHref %>"><span><%= cc.phone %></span></a></li><% } %>
+          <% if (cc.whatsapp) { %><li><a class="link" href="<%= cc.whatsappHref %>?text=<%= encodeURIComponent(viewingMessage) %>" target="_blank" rel="noopener noreferrer"><span lang="en"><%= t('common.whatsapp') %></span></a></li><% } %>
+          <% if (cc.telegram) { %><li><a class="link" href="<%= cc.telegramHref %>" target="_blank" rel="noopener noreferrer"><span lang="en"><%= t('common.telegram') %></span></a></li><% } %>
+        </ul>
+      <% } %>
+    </div>
+    <div class="contact__form">
+      <%- include('../partials/inquiry-form', { type: 'viewing', id: 'viewing', slug: r.slug, message: viewingMessage, rows: 2 }) %>
+    </div>
+  </div>
+</section>
+
+<% if (others.length) { %>
+<!-- Other residences -->
+<section class="section" aria-labelledby="others-title">
+  <header class="sec-head wrap grid">
+    <p class="sec-head__label label"><%= t('home.featuredEyebrow') %><b class="num"><%= pad(others.length) %></b></p>
+    <h2 class="sec-head__title d2" id="others-title"><%= t('residence.similar') %></h2>
+    <p class="sec-head__aside"><a class="link" href="<%= url('/residences') %>"><span><%= t('common.viewAll') %></span><svg class="icon" aria-hidden="true"><use href="#i-arrow-right"/></svg></a></p>
+  </header>
+  <div class="others wrap">
+    <div class="cards<%= others.length > 2 ? ' cards--3' : '' %>">
+      <% others.forEach(function (o) { %><%- include('../partials/card', { c: o }) %><% }) %>
+    </div>
+  </div>
+</section>
+<% } %>
+
+<!-- The lower third: the price and the two ways forward, always within reach -->
+<aside class="third" aria-label="<%= r.title %>" data-mobile-cta data-third>
+  <div class="third__in wrap">
+    <p class="third__id"><b><%= r.title %></b><span><%= r.place %> · <span class="num" lang="en"><%= r.ref %></span></span></p>
+    <p class="third__price">
+      <b class="num"><% if (r.price) { %><%- money(r.price.amount) %><% } else { %><%= r.priceLabel %><% } %></b>
+      <% if (r.pricePerM2) { %><span class="num"><%= perM2[0] %><%- money(r.pricePerM2) %><%= perM2[1] %></span><% } %>
+    </p>
+    <div class="third__actions">
+      <% if (r.hasTour) { %><a class="btn btn--tour third__tour" href="<%= r.tourUrl %>" aria-label="<%= t('common.enterTour') %>"><i class="dot"></i><span class="third__long"><%= t('common.enterTour') %></span><span class="third__short"><%= t('common.tour3d') %></span><span class="third__tiny"><%= t('residence.tourShort') %></span></a><% } %>
+      <a class="btn btn--solid third__cta" href="#inquiry"><span class="third__long"><%= t('common.requestViewing') %></span><span class="third__short"><%= t('residence.viewingShort') %></span><svg class="icon" aria-hidden="true"><use href="#i-arrow-right"/></svg></a>
+    </div>
+  </div>
+</aside>
 
 <script type="application/json" id="lightbox-data"><%- jsonLd(lightboxData) %></script>

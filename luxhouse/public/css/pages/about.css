@@ -1,0 +1,10 @@
+/* About: the agency in its own words. */
+.about__statement { color: var(--bone); max-width: 20em; text-wrap: pretty; }
+.about__text { align-self: end; }
+.about__text p { font-size: 17px; line-height: 1.6; }
+.page--about .credits { margin-top: clamp(8px, 1.2vw, 16px); }
+.page--about .cards { margin-top: clamp(8px, 1.2vw, 16px); }
+
+@media (max-width: 899px) {
+  .about__text { margin-top: 28px; }
+}

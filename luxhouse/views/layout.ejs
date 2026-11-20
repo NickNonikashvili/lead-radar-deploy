@@ -35,8 +35,7 @@
 <% }) %><link rel="stylesheet" href="<%= asset('/vendor/fonts/fonts.css') %>">
 <% styles.forEach(function (href) { %><link rel="stylesheet" href="<%= asset(href) %>">
 <% }) %><link rel="stylesheet" href="<%= asset('/css/site.css') %>">
-<% if (pageAssets.legacy) { %><link rel="stylesheet" href="<%= asset(pageAssets.legacy) %>">
-<% } %><% if (pageAssets.css) { %><link rel="stylesheet" href="<%= asset(pageAssets.css) %>">
+<% if (pageAssets.css) { %><link rel="stylesheet" href="<%= asset(pageAssets.css) %>">
 <% } %><script type="application/ld+json"><%- jsonLd({ "@context": "https://schema.org", "@graph": ld }) %></script>
 </head>
 <body class="page page--<%= page %><%= headerOverlay ? ' is-overlay' : '' %><%= bodyClass ? ' ' + bodyClass : '' %>">

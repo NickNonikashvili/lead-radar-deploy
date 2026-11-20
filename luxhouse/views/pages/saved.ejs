@@ -1,14 +1,42 @@
-<%- include('../partials/page-head', { heading: t('saved.title'), lead: t('saved.lead'), eyebrow: t('nav.saved') }) %>
+<%- include('../partials/page-head', { heading: t('saved.title'), lead: t('saved.lead'), eyebrow: t('nav.saved'), count: '00' }) %>
 
-<section class="section section--flush-top">
-  <div class="container" data-saved-page>
-    <div class="card-grid" data-saved-grid aria-live="polite"></div>
-    <div class="empty" data-saved-empty hidden>
-      <p><%= t('saved.empty') %></p>
-      <a class="btn btn--outline" href="<%= url('/residences') %>"><%= t('saved.browse') %></a>
+<!-- The saved list lives in the visitor's browser: site.js asks the server for the cards and fills the grid. -->
+<section class="saved" aria-label="<%= t('saved.title') %>">
+  <div class="saved__in wrap" data-saved-page>
+    <div class="saved__grid cards" data-saved-grid aria-live="polite"></div>
+
+    <div class="saved-empty grid" data-saved-empty hidden>
+      <div class="saved-empty__text">
+        <p class="saved-empty__title d3"><%= t('saved.empty') %></p>
+        <p class="saved-empty__hint body"><%= t('saved.hint') %></p>
+        <a class="btn btn--solid" href="<%= url('/residences') %>"><%= t('saved.browse') %><svg class="icon" aria-hidden="true"><use href="#i-arrow-right"/></svg></a>
+      </div>
+      <!-- an unexposed frame: where a saved home will appear, with the heart where it is found on every photograph -->
+      <div class="saved-empty__frame" aria-hidden="true">
+        <span class="saved-empty__heart icon-btn icon-btn--glass"><svg class="icon"><use href="#i-heart"/></svg></span>
+      </div>
     </div>
+
     <noscript>
-      <div class="empty"><a class="btn btn--outline" href="<%= url('/residences') %>"><%= t('saved.browse') %></a></div>
+      <div class="saved-empty grid">
+        <div class="saved-empty__text">
+          <a class="btn btn--solid" href="<%= url('/residences') %>"><%= t('saved.browse') %><svg class="icon" aria-hidden="true"><use href="#i-arrow-right"/></svg></a>
+        </div>
+      </div>
     </noscript>
+  </div>
+
+  <!-- the open place beside an odd number of saved homes (added to the grid by pages/saved.js) -->
+  <template id="saved-slot">
+    <a class="saved__slot link" href="<%= url('/residences') %>" data-saved-slot><span><%= t('saved.browse') %></span><svg class="icon" aria-hidden="true"><use href="#i-arrow-right"/></svg></a>
+  </template>
+</section>
+
+<section class="band" aria-labelledby="ask-title">
+  <div class="band__body wrap grid">
+    <p class="label"><%= t('nav.contact') %></p>
+    <h2 class="d2" id="ask-title"><%= t('home.contactTitle') %></h2>
+    <p class="lead"><%= t('home.contactText') %></p>
+    <a class="btn btn--solid" href="<%= url('/contact') %>"><%= t('common.contactUs') %><svg class="icon" aria-hidden="true"><use href="#i-arrow-right"/></svg></a>
   </div>
 </section>

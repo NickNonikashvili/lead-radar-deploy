@@ -14,96 +14,122 @@
 <meta property="og:url" content="<%= canonical %>">
 <meta property="og:image" content="<%= origin + ogImage %>">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="theme-color" content="#0b0c0d">
+<meta name="theme-color" content="#0b0a09">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="<%= asset('/vendor/fonts/fonts.css') %>">
 <link rel="stylesheet" href="<%= asset('/css/tour.css') %>">
 </head>
 <body>
 <%- include('../partials/icons') %>
+<%
+  var S = tourData.strings;
+  var n = tourData.scenes.length;
+  var pad = function (i) { return i < 10 ? '0' + i : String(i); };
+%>
 <div class="tour" data-tour data-state="loading">
   <canvas class="tour-canvas" tabindex="0" aria-label="<%= t('tour.title', { title: r.title }) %>"></canvas>
   <canvas class="tour-veil" data-veil hidden aria-hidden="true"></canvas>
-  <div class="tour-fade" data-fade aria-hidden="true"></div>
+  <div class="tour-fade is-on" data-fade aria-hidden="true"></div>
 
-  <header class="tour-top">
-    <a class="tour-btn tour-btn--text" href="<%= r.url %>" aria-label="<%= t('tour.back') %>">
-      <svg class="icon" aria-hidden="true"><use href="#i-arrow-left"/></svg><span><%= t('tour.back') %></span>
-    </a>
-    <div class="tour-title">
-      <span class="tour-title__brand"><%= config.brand %></span>
-      <strong class="tour-title__name"><%= r.title %></strong>
-    </div>
-    <div class="tour-actions">
-      <button type="button" class="tour-btn" data-auto aria-pressed="false" aria-label="<%= t('tour.auto') %>" title="<%= t('tour.auto') %>"><svg class="icon" aria-hidden="true"><use href="#i-play"/></svg></button>
-      <button type="button" class="tour-btn" data-reset aria-label="<%= t('tour.reset') %>" title="<%= t('tour.reset') %>"><svg class="icon" aria-hidden="true"><use href="#i-reset"/></svg></button>
-      <button type="button" class="tour-btn" data-vr hidden aria-label="<%= t('tour.vr') %>" title="<%= t('tour.vr') %>"><svg class="icon" aria-hidden="true"><use href="#i-vr"/></svg></button>
-      <button type="button" class="tour-btn" data-fullscreen aria-pressed="false" aria-label="<%= t('tour.fullscreen') %>" title="<%= t('tour.fullscreen') %>"><svg class="icon" aria-hidden="true"><use href="#i-expand"/></svg></button>
-      <button type="button" class="tour-btn" data-help aria-label="<%= t('tour.help') %>" title="<%= t('tour.help') %>"><svg class="icon" aria-hidden="true"><use href="#i-help"/></svg></button>
-    </div>
-  </header>
+  <div class="tour-ui" data-ui>
+    <header class="tour-top">
+      <a class="tour-back" href="<%= r.url %>" aria-label="<%= S.back %>">
+        <svg class="icon" aria-hidden="true"><use href="#i-arrow-left"/></svg>
+        <span class="tour-back__text">
+          <span class="tour-label"><i class="tour-dot" aria-hidden="true"></i><%= t('common.tour3d') %></span>
+          <strong class="tour-back__title"><%= r.title %></strong>
+        </span>
+      </a>
+      <div class="tour-actions">
+        <button type="button" class="tour-btn" data-auto aria-pressed="false" aria-label="<%= S.auto %>" title="<%= S.auto %>"><svg class="icon" aria-hidden="true"><use href="#i-play"/></svg></button>
+        <button type="button" class="tour-btn" data-vr hidden aria-label="<%= S.vr %>" title="<%= S.vr %>"><svg class="icon" aria-hidden="true"><use href="#i-vr"/></svg></button>
+        <button type="button" class="tour-btn" data-fullscreen aria-pressed="false" aria-label="<%= S.fullscreen %>" title="<%= S.fullscreen %>"><svg class="icon" aria-hidden="true"><use href="#i-expand"/></svg></button>
+        <button type="button" class="tour-btn" data-help aria-expanded="false" aria-controls="tour-help" aria-label="<%= S.help %>" title="<%= S.help %>"><svg class="icon" aria-hidden="true"><use href="#i-help"/></svg></button>
+      </div>
+    </header>
 
-  <button type="button" class="tour-nav tour-nav--prev" data-prev aria-label="<%= t('tour.prev') %>" title="<%= t('tour.prev') %>"><svg class="icon" aria-hidden="true"><use href="#i-arrow-left"/></svg></button>
-  <button type="button" class="tour-nav tour-nav--next" data-next aria-label="<%= t('tour.next') %>" title="<%= t('tour.next') %>"><svg class="icon" aria-hidden="true"><use href="#i-arrow-right"/></svg></button>
+    <p class="tour-hint" data-hint hidden>
+      <span class="tour-hint__mouse"><%= S.hintMouse %></span>
+      <span class="tour-hint__touch"><%= S.hintTouch %></span>
+    </p>
 
-  <div class="tour-joystick" data-joystick hidden aria-hidden="true"><span class="tour-joystick__knob"></span></div>
-  <p class="tour-hint" data-edge-hint hidden role="status"><%= t('tour.edge') %></p>
-
-  <footer class="tour-bottom">
-    <div class="tour-scene">
-      <span class="tour-scene__count" data-scene-count></span>
-      <strong class="tour-scene__name" data-scene-name aria-live="polite"></strong>
-    </div>
-    <ol class="tour-strip" data-strip aria-label="<%= t('tour.spaces') %>">
+    <ol class="tour-strip" id="tour-strip" data-strip hidden aria-label="<%= S.spaces %>">
       <% tourData.scenes.forEach(function (s, i) { %>
         <li>
-          <button type="button" class="tour-thumb" data-scene="<%= i %>" title="<%= s.label %>">
-            <img src="<%= tourData.base + s.base %>thumb.webp" alt="" width="96" height="64" loading="lazy" decoding="async">
-            <span><%= s.label || (i + 1) %></span>
+          <button type="button" class="tour-thumb" data-scene="<%= i %>">
+            <img src="<%= tourData.base + s.base %>thumb.webp" alt="" width="120" height="80" loading="lazy" decoding="async">
+            <span class="tour-thumb__no"><%= pad(i + 1) %></span>
+            <span class="tour-thumb__name"><%= s.label || pad(i + 1) %></span>
           </button>
         </li>
       <% }) %>
     </ol>
-    <a class="tour-cta" href="<%= r.url %>#inquiry"><%= t('common.requestViewing') %></a>
-  </footer>
+
+    <footer class="tour-bottom">
+      <div class="tour-where" aria-live="polite">
+        <span class="tour-where__count" data-scene-count></span>
+        <strong class="tour-where__name" data-scene-name></strong>
+      </div>
+
+      <nav class="tour-pad" aria-label="<%= S.spaces %>">
+        <button type="button" class="tour-pad__next" data-next aria-label="<%= S.next %>">
+          <span class="tour-pad__label"><span class="tour-pad__name" data-next-name></span></span>
+        </button>
+        <button type="button" class="tour-pad__prev" data-prev aria-label="<%= S.prev %>"></button>
+        <svg class="tour-pad__floor" viewBox="0 0 240 104" aria-hidden="true" focusable="false">
+          <ellipse class="tour-pad__ring" cx="120" cy="56" rx="112" ry="40"/>
+          <ellipse class="tour-pad__glow" cx="120" cy="56" rx="112" ry="40"/>
+          <path class="tour-pad__far" d="M100 31 L120 19 L140 31"/>
+          <path class="tour-pad__fwd" d="M92 55 L120 36 L148 55"/>
+          <path class="tour-pad__back" d="M106 76 L120 86 L134 76"/>
+        </svg>
+      </nav>
+
+      <div class="tour-tools">
+        <button type="button" class="tour-chip" data-strip-toggle aria-expanded="false" aria-controls="tour-strip">
+          <svg class="icon" aria-hidden="true"><use href="#i-grid"/></svg><span><%= S.spaces %></span><span class="tour-chip__n"><%= pad(n) %></span>
+        </button>
+        <a class="tour-chip tour-chip--solid" href="<%= r.url %>#inquiry" aria-label="<%= t('common.requestViewing') %>"><svg class="icon tour-chip__phone" aria-hidden="true"><use href="#i-chat"/></svg><span><%= t('common.requestViewing') %></span><svg class="icon tour-chip__arrow" aria-hidden="true"><use href="#i-arrow-right"/></svg></a>
+      </div>
+    </footer>
+  </div>
+
+  <aside class="tour-help" id="tour-help" data-help-panel hidden role="dialog" aria-modal="false" aria-labelledby="tour-help-title">
+    <header class="tour-help__head">
+      <h2 class="tour-help__title" id="tour-help-title"><%= S.help %></h2>
+      <button type="button" class="tour-btn" data-help-close aria-label="<%= S.close %>"><svg class="icon" aria-hidden="true"><use href="#i-close"/></svg></button>
+    </header>
+    <ol class="tour-help__list tour-help__list--mouse">
+      <li><%= S.helpDrag %></li>
+      <li><%= S.helpStep %></li>
+      <li><%= S.helpDeeper %></li>
+      <li><%= S.helpWalkOn %> <span class="tour-keys" aria-hidden="true"><kbd>W</kbd><kbd>↑</kbd></span></li>
+      <li><%= S.helpArrows %></li>
+    </ol>
+    <ol class="tour-help__list tour-help__list--touch">
+      <li><%= S.helpTouchLook %></li>
+      <li><%= S.helpTouchStep %></li>
+      <li><%= S.helpArrows %></li>
+    </ol>
+    <p class="tour-help__note"><%= S.note %></p>
+  </aside>
 
   <div class="tour-loader" data-loader role="status">
-    <span class="tour-spinner" aria-hidden="true"></span>
-    <p><%= t('tour.loading') %></p>
+    <p class="tour-label"><i class="tour-dot" aria-hidden="true"></i><%= t('common.tour3d') %></p>
+    <p class="tour-loader__title"><%= r.title %></p>
+    <span class="tour-loader__bar" aria-hidden="true"></span>
+    <p class="tour-loader__text"><%= S.loading %></p>
   </div>
 
-  <div class="tour-overlay" data-error hidden role="alert">
-    <div class="tour-card">
-      <p data-error-text><%= t('tour.loadError') %></p>
-      <div class="tour-card__actions">
-        <button type="button" class="tour-cta" data-retry><%= t('tour.retry') %></button>
-        <a class="tour-link" href="<%= r.url %>#gallery"><%= t('tour.openGallery') %></a>
-      </div>
-    </div>
+  <div class="tour-error" data-error hidden role="alert">
+    <p class="tour-error__text" data-error-text><%= S.loadError %></p>
+    <p class="tour-error__actions">
+      <button type="button" class="tour-chip tour-chip--solid" data-retry><%= S.retry %></button>
+      <a class="tour-chip" href="<%= r.url %>#gallery"><%= S.openGallery %></a>
+    </p>
   </div>
 
-  <div class="tour-overlay" data-intro role="dialog" aria-modal="true" aria-labelledby="tour-intro-title">
-    <div class="tour-card">
-      <p class="tour-card__eyebrow"><%= t('common.tour3d') %> · <%= t('residence.tourSpaces', { n: tourData.scenes.length }) %></p>
-      <h1 class="tour-card__title" id="tour-intro-title"><%= r.title %></h1>
-      <p class="tour-card__place"><%= r.place %></p>
-      <ul class="tour-card__help tour-card__help--mouse">
-        <li><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg><%= t('tour.helpDrag') %></li>
-        <li><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg><%= t('tour.helpKeys') %></li>
-        <li><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg><%= t('tour.helpWheel') %></li>
-        <li><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg><%= t('tour.helpSpaces') %></li>
-      </ul>
-      <ul class="tour-card__help tour-card__help--touch">
-        <li><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg><%= t('tour.helpTouchLook') %></li>
-        <li><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg><%= t('tour.helpTouchMove') %></li>
-        <li><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg><%= t('tour.helpSpaces') %></li>
-      </ul>
-      <button type="button" class="tour-cta tour-cta--large" data-start><%= t('tour.start') %></button>
-      <p class="tour-card__note"><%= t('tour.note') %></p>
-    </div>
-  </div>
-
-  <noscript><div class="tour-overlay"><div class="tour-card"><p><%= t('tour.noWebgl') %></p><a class="tour-link" href="<%= r.url %>#gallery"><%= t('tour.openGallery') %></a></div></div></noscript>
+  <noscript><div class="tour-error"><p class="tour-error__text"><%= S.noWebgl %></p><p class="tour-error__actions"><a class="tour-chip" href="<%= r.url %>#gallery"><%= S.openGallery %></a></p></div></noscript>
 </div>
 <script type="application/json" id="tour-data"><%- jsonLd(tourData) %></script>
 <script type="module" src="<%= asset('/js/tour.bundle.js') %>"></script>

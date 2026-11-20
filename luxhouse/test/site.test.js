@@ -288,8 +288,10 @@ test("every public page renders in every language", async () => {
 test("residence pages carry the published facts", async () => {
   const html = await (await get("/en/residences/dighomi-stone-villa")).text();
   assert.ok(html.includes("$2,200,000"));
-  assert.ok(html.includes("675 m²"));
-  assert.ok(html.includes("888 m²"));
+  // Figures and their units may sit in separate elements: compare the text, not the markup.
+  const text = html.replace(/<[^>]+>/g, "").replace(/\u00a0/g, " ");
+  assert.match(text, /675 ?m²/);
+  assert.match(text, /888 ?m²/);
   assert.ok(html.includes("LH-1003"));
   const ld = JSON.parse(html.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/)[1]);
   const listing = ld["@graph"].find((n) => n["@type"] === "RealEstateListing");

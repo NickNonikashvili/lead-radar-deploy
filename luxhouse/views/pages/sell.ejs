@@ -1,27 +1,46 @@
-<%- include('../partials/page-head', { heading: t('sell.title', { brand: config.brand }), lead: t('sell.lead'), eyebrow: t('nav.sell') }) %>
+<%
+  var steps = t('sell.steps');
+  var pad = function (n) { return n < 10 ? '0' + n : String(n); };
+  var homes = typeof showcase !== 'undefined' ? showcase : [];
+  var top = homes.length ? homes[homes.length > 2 ? 1 : 0] : null;
+  var ph = top ? art.hero(top) : null;
+%>
+<%- include('../partials/page-head', { heading: t('sell.title', { brand: config.brand }), lead: t('sell.lead'), eyebrow: t('home.sellEyebrow'), actions: [{ href: '#valuation', label: t('home.sellCta'), solid: true }] }) %>
 
-<section class="section section--flush-top">
-  <div class="container split">
-    <div class="split__main">
-      <h2><%= t('sell.stepsTitle') %></h2>
-      <ol class="steps">
-        <% t('sell.steps').forEach(function (s, i) { %>
-          <li class="steps__item">
-            <span class="steps__num"><%= i + 1 %></span>
-            <div>
-              <h3><%= s.title %></h3>
-              <p><%= s.text %></p>
-            </div>
-          </li>
-        <% }) %>
-      </ol>
+<% if (ph) { %>
+<figure class="plate still drift">
+  <img src="<%= ph.photo.src(1280) %>" srcset="<%= ph.photo.srcset %>" sizes="100vw" width="<%= ph.photo.w %>" height="<%= ph.photo.h %>" alt="<%= ph.photo.alt %>" loading="lazy" decoding="async" style="object-position:<%= ph.focus %>">
+</figure>
+<% } %>
+
+<section class="section" aria-labelledby="sell-steps">
+  <div class="wrap grid">
+    <header class="how__head">
+      <p class="label"><%= t('home.approachEyebrow') %></p>
+      <h2 class="d2" id="sell-steps"><%= t('sell.stepsTitle') %></h2>
+      <p class="body"><%= t('home.sellText') %></p>
+    </header>
+    <ol class="how__list">
+      <% steps.forEach(function (s, i) { %>
+        <li class="how__item rv">
+          <span class="label label--dim num"><%= pad(i + 1) %></span>
+          <h3 class="d3"><%= s.title %></h3>
+          <p class="body"><%= s.text %></p>
+        </li>
+      <% }) %>
+    </ol>
+  </div>
+</section>
+
+<section class="section section--soot" id="valuation" aria-labelledby="valuation-title">
+  <div class="wrap grid">
+    <div class="contact__intro">
+      <p class="label"><%= t('home.sellCta') %></p>
+      <h2 class="d2" id="valuation-title"><%= t('sell.formTitle') %></h2>
+      <p class="lead"><%= t('sell.formText') %></p>
     </div>
-    <aside class="split__aside">
-      <div class="panel" id="valuation">
-        <h2 class="panel__title"><%= t('sell.formTitle') %></h2>
-        <p class="panel__text"><%= t('sell.formText') %></p>
-        <%- include('../partials/inquiry-form', { type: 'valuation', id: 'valuation', compact: true }) %>
-      </div>
-    </aside>
+    <div class="contact__form" id="inquiry">
+      <%- include('../partials/inquiry-form', { type: 'valuation', id: 'valuation' }) %>
+    </div>
   </div>
 </section>

@@ -170,7 +170,7 @@ async function step(name, fn) {
   await step("residence: gallery lightbox (open, next, keyboard, close)", async () => {
     await page.goto(`${base}/en/residences/dighomi-garden-house`, { waitUntil: "networkidle" });
     const total = listings.bySlug("dighomi-garden-house").photos.length;
-    await page.locator(".res-mosaic__item").nth(1).click();
+    await page.locator('#gallery button[data-lightbox-open="1"]').click();
     const lb = page.locator(".lightbox");
     await lb.waitFor({ state: "visible" });
     assert.equal((await lb.locator("[data-lb-counter]").textContent()).trim(), `Photo 2 of ${total}`);
@@ -186,7 +186,7 @@ async function step(name, fn) {
     });
     await page.keyboard.press("Escape");
     await lb.waitFor({ state: "hidden" });
-    await page.locator(".thumb-grid__item").nth(4).click();
+    await page.locator('#gallery button[data-lightbox-open="4"]').click();
     assert.equal((await lb.locator("[data-lb-counter]").textContent()).trim(), `Photo 5 of ${total}`);
     await lb.locator("[data-lb-close]").click();
     await lb.waitFor({ state: "hidden" });
@@ -201,7 +201,9 @@ async function step(name, fn) {
       });
       const broken = await page.evaluate(() => [...document.images].filter((img) => !img.naturalWidth).map((img) => img.currentSrc || img.src));
       assert.deepEqual(broken, [], `${l.slug}: broken images`);
-      assert.equal(await page.locator(".thumb-grid__item").count(), l.photos.length);
+      // The cover opens the page above; every other photograph is in the gallery, and all of them in the viewer.
+      assert.equal(await page.locator("#gallery button[data-lightbox-open]").count(), l.photos.length - 1, `${l.slug}: gallery`);
+      assert.equal(await page.evaluate(() => JSON.parse(document.getElementById("lightbox-data").textContent).length), l.photos.length, `${l.slug}: viewer`);
     }
   });
 
@@ -221,11 +223,11 @@ async function step(name, fn) {
 
   await step("residence: save, saved page, remove", async () => {
     await page.goto(`${base}/en/residences/dighomi-stone-villa`, { waitUntil: "networkidle" });
-    const save = page.locator(".res-actions [data-save]");
+    const save = page.locator(".r-hero [data-save]");
     assert.equal(await save.getAttribute("aria-pressed"), "false");
     await save.click();
     assert.equal(await save.getAttribute("aria-pressed"), "true");
-    assert.equal((await page.locator(".site-tools [data-saved-count]").textContent()).trim(), "1");
+    assert.equal((await page.locator("[data-saved-count]").first().textContent()).trim(), "1");
     await page.goto(`${base}/ka/saved`, { waitUntil: "networkidle" });
     await page.waitForSelector("[data-saved-grid] .card");
     assert.equal(await page.locator("[data-saved-grid] .card").count(), 1);
@@ -331,123 +333,102 @@ async function step(name, fn) {
   // Movement runs on rendered frames; software rendering is slow, so wait on the outcome, not on time.
   const until = (fn, arg) => page.waitForFunction(fn, arg, { timeout: 30000, polling: 100 });
 
-  await step("tour: residence page links to it; page loads and draws the first space", async () => {
+  const tourValue = (fn) => page.evaluate(fn);
+
+  await step("tour: residence page leads into it; the first space loads and is drawn edge to edge", async () => {
     await page.goto(`${base}/en/residences/${tourListing.slug}`, { waitUntil: "networkidle" });
-    assert.ok(await page.locator(".tour-banner").isVisible());
-    assert.equal(await page.locator('.res-hero__bar a[href$="/tour"]').count(), 1);
-    await page.locator(".tour-banner").click();
+    assert.ok((await page.locator(`a[href*="/residences/${tourListing.slug}/tour"]`).count()) >= 2, "the bar and the lit room both lead to the tour");
+    await page.locator(".stage .enter").first().click();
     await page.waitForURL(tourUrl + "*");
     await ready();
-    assert.ok(await page.locator("[data-intro]").isVisible());
     assert.equal(await page.locator(".tour-thumb").count(), sceneCount);
-    const info = await page.evaluate(() => ({ stats: window.luxhouseTour.scene.stats, eye: window.luxhouseTour.scene.eyeHeight }));
-    assert.ok(info.stats.triangles > 50000, "mesh was built");
-    await page.locator("[data-start]").click();
-    assert.ok(await page.locator("[data-intro]").isHidden());
+    assert.ok(await page.locator("[data-hint]").isVisible(), "the hint is shown once, without blocking the picture");
+    assert.equal(await page.locator("[role=dialog]:visible").count(), 0, "nothing stands between the visitor and the space");
+    const info = await tourValue(() => ({ triangles: window.luxhouseTour.scene.stats.triangles, limits: window.luxhouseTour.scene.limits }));
+    assert.ok(info.triangles > 50000, "mesh was built");
+    assert.ok(info.limits.forward > 0.1 && info.limits.side > 0.03, "the photograph's own range of movement was measured");
     await until(() => (window.luxhouseTour.frames || 0) > 0);
-    assert.equal((await page.locator("[data-scene-count]").textContent()).trim(), `1 / ${sceneCount}`);
+    assert.match((await page.locator("[data-scene-count]").textContent()).trim(), new RegExp(`^\\d\\d / ${String(sceneCount).padStart(2, "0")}$`));
     // The picture really is on screen: the canvas is not a flat colour.
     const shot = await page.locator(".tour-canvas").screenshot();
     assert.ok(shot.length > 20000, "canvas shows an image");
   });
 
-  await step("tour: keyboard walking, turning and the wheel move the visitor", async () => {
-    let before = await state();
-    await page.keyboard.down("KeyW");
-    await until((z) => window.luxhouseTour.pos.z < z - 0.05, before.z);
-    await page.keyboard.up("KeyW");
-    before = await state();
-    await page.keyboard.down("KeyD");
-    await until((x) => window.luxhouseTour.pos.x > x + 0.05, before.x);
-    await page.keyboard.up("KeyD");
-    before = await state();
-    await page.keyboard.down("ArrowLeft");
-    await until((yaw) => window.luxhouseTour.yaw > yaw + 0.02, before.yaw);
-    await page.keyboard.up("ArrowLeft");
-    before = await state();
-    await page.mouse.move(640, 360);
-    await page.mouse.wheel(0, 300);
-    await until((z) => window.luxhouseTour.pos.z > z + 0.02, before.z);
-  });
-
-  await step("tour: dragging looks around but never beyond the photographed area", async () => {
-    await page.locator("[data-reset]").click();
-    await until(() => Math.hypot(window.luxhouseTour.pos.x, window.luxhouseTour.pos.z) < 0.01);
+  await step("tour: looking stays inside the photograph; steps, zoom and reset work", async () => {
+    await openTour();
+    const box = await page.locator(".tour-canvas").boundingBox();
+    const cx = box.x + box.width / 2;
+    const cy = box.y + box.height / 2;
+    await until(() => !window.luxhouseTour.arrive);
     const before = await state();
-    await page.mouse.move(640, 360);
+    // Drag far to the side: the view turns, but never past what the photograph shows.
+    await page.mouse.move(cx, cy);
     await page.mouse.down();
-    await page.mouse.move(700, 380, { steps: 5 });
+    await page.mouse.move(cx - 900, cy + 40, { steps: 12 });
     await page.mouse.up();
-    await until((yaw) => Math.abs(window.luxhouseTour.yaw - yaw) > 0.01, before.yaw);
-    // A huge drag is clamped.
-    await page.mouse.move(200, 360);
-    await page.mouse.down();
-    await page.mouse.move(1200, 360, { steps: 8 });
-    await page.mouse.move(200, 360, { steps: 2 });
-    await page.mouse.move(1200, 360, { steps: 8 });
-    await page.mouse.up();
-    await page.waitForTimeout(1500);
-    const after = await state();
-    const scene = await page.evaluate(() => ({ base: window.luxhouseTour.scene.baseYaw, hfov: window.luxhouseTour.scene.hfov }));
-    assert.ok(Math.abs(after.yaw - scene.base) < scene.hfov / 2 + 0.3, "view stays near the picture");
-  });
-
-  await step("tour: walking is confined to the captured space and blocked by furniture", async () => {
-    const res = await page.evaluate(() => {
+    await until((yaw) => Math.abs(window.luxhouseTour.yaw - yaw) > 0.002, before.yaw);
+    const turned = await tourValue(() => {
       const v = window.luxhouseTour;
-      const V = v.pos.constructor;
-      v.resetView(true);
-      const far = {};
-      for (const [name, dx, dz] of [["forward", 0, -0.03], ["back", 0, 0.03], ["left", -0.03, 0], ["right", 0.03, 0]]) {
-        v.pos.set(0, 0, 0);
-        let status = "ok";
-        for (let i = 0; i < 1000 && status === "ok"; i++) status = v.scene.move(v.pos, new V(dx, 0, dz), v.pos);
-        far[name] = { d: Math.hypot(v.pos.x, v.pos.z), status };
-      }
-      const L = v.scene.limits;
-      // A point inside the sofa of the test room (or simply far away in a real tour) is not standable.
-      const blocked = v.scene.canStandAt(new V(0, 0, -(v.scene.depthMedian * 5)));
-      v.resetView(true);
-      return { far, L, blocked, start: v.scene.canStandAt(new V(0, 0, 0)) };
+      return { off: Math.abs(v.targetYaw - v.scene.baseYaw), half: v.scene.hfov / 2, view: v.scene.viewHalfH };
     });
-    assert.equal(res.start, "ok", "the camera position itself is always free");
-    for (const dir of Object.keys(res.far)) {
-      assert.ok(res.far[dir].d > 0.2, `${dir}: can actually walk`);
-      assert.ok(res.far[dir].d <= res.L.radius + 0.05, `${dir}: stays inside the radius`);
-      assert.notEqual(res.far[dir].status, "ok", `${dir}: stops at a limit`);
-    }
-    assert.ok(res.far.back.d <= res.L.back + 0.05);
-    assert.notEqual(res.blocked, "ok");
+    assert.ok(turned.off <= turned.half - turned.view + 0.02, "the edge of the view stays inside the picture");
+    assert.ok(await page.locator("[data-hint]").isHidden() || (await page.locator("[data-hint]").getAttribute("class")).includes("is-leaving"), "the hint leaves on the first gesture");
+    // Step forward with the keyboard, within the measured range.
+    await page.keyboard.press("KeyR");
+    await page.keyboard.down("KeyW");
+    await until(() => Math.hypot(window.luxhouseTour.pos.x, window.luxhouseTour.pos.z) > 0.03);
+    await page.keyboard.up("KeyW");
+    const stepped = await tourValue(() => ({ d: Math.hypot(window.luxhouseTour.pos.x, window.luxhouseTour.pos.z), max: window.luxhouseTour.scene.limits.forward }));
+    assert.ok(stepped.d <= stepped.max + 0.02);
+    // Scrolling goes deeper: real steps first, then zoom.
+    await page.mouse.move(cx, cy);
+    for (let i = 0; i < 14; i++) await page.mouse.wheel(0, -600);
+    await until(() => window.luxhouseTour.zoom > 1.05);
+    await page.keyboard.press("KeyR");
+    await until(() => window.luxhouseTour.zoom < 1.02 && Math.hypot(window.luxhouseTour.pos.x, window.luxhouseTour.pos.z) < 0.02);
   });
 
-  await step("tour: clicking a point on the floor walks towards it", async () => {
-    await page.evaluate(() => window.luxhouseTour.resetView(true));
-    const before = await state();
-    await page.mouse.click(640, 560);
-    await until((z) => window.luxhouseTour.pos.z < z - 0.05, before.z);
+  await step("tour: clicking the picture goes towards that point", async () => {
+    await openTour();
+    await until(() => !window.luxhouseTour.arrive);
+    const box = await page.locator(".tour-canvas").boundingBox();
+    await page.mouse.click(box.x + box.width * 0.5, box.y + box.height * 0.62);
+    await until(() => Math.hypot(window.luxhouseTour.pos.x, window.luxhouseTour.pos.z) > 0.02 || window.luxhouseTour.targetZoom > 1.05);
   });
 
-  await step("tour: switching spaces (arrows, thumbnails, keyboard, link)", async () => {
-    if (sceneCount < 2) return;
+  await step("tour: moving between spaces (floor arrows, strip, keys, walking on, address)", async () => {
+    await openTour();
+    const ids = tourListing.tour.scenes.map((sc) => sc.id);
     await page.locator("[data-next]").click();
     await until(() => window.luxhouseTour.index === 1 && window.luxhouseTour.status === "ready");
-    assert.equal((await page.locator("[data-scene-count]").textContent()).trim(), `2 / ${sceneCount}`);
-    assert.match(page.url(), /#scene=/);
-    assert.equal(await page.locator(".tour-thumb.is-active").count(), 1);
-    await page.locator(".tour-thumb").first().click();
-    await until(() => window.luxhouseTour.index === 0 && window.luxhouseTour.status === "ready");
+    await until(() => document.querySelector("[data-veil]").hidden, undefined);
+    assert.equal(await page.evaluate(() => location.hash), `#scene=${ids[1]}`);
     await page.locator("[data-prev]").click();
+    await until(() => window.luxhouseTour.index === 0 && window.luxhouseTour.status === "ready");
+    // The strip of spaces
+    assert.ok(await page.locator("[data-strip]").isHidden());
+    await page.locator("[data-strip-toggle]").click();
+    assert.ok(await page.locator("[data-strip]").isVisible());
+    assert.equal(await page.locator(".tour-thumb.is-active").count(), 1);
+    await page.locator(".tour-thumb").nth(sceneCount - 1).click();
     await until((n) => window.luxhouseTour.index === n - 1 && window.luxhouseTour.status === "ready", sceneCount);
+    await page.keyboard.press("Escape");
+    assert.ok(await page.locator("[data-strip]").isHidden());
     await page.keyboard.press("BracketRight");
     await until(() => window.luxhouseTour.index === 0 && window.luxhouseTour.status === "ready");
-    const second = tourListing.tour.scenes[1].id;
-    await openTour(`#scene=${second}`);
-    assert.equal((await state()).index, 1, "deep link opens the requested space");
+    // Keep walking forward where the space ends: on to the next one.
+    await page.locator(".tour-canvas").focus();
+    await page.keyboard.down("ArrowUp");
+    await until(() => window.luxhouseTour.index === 1);
+    await page.keyboard.up("ArrowUp");
+    await until(() => window.luxhouseTour.status === "ready");
+    // A link to one space
+    await page.goto(`${tourUrl}#scene=${ids[0]}`);
+    await until(() => window.luxhouseTour.index === 0 && window.luxhouseTour.status === "ready");
   });
 
   await step("tour: automatic tour starts, moves and stops on input", async () => {
     await openTour();
-    await page.locator("[data-start]").click();
     await page.locator("[data-auto]").click();
     assert.equal(await page.locator("[data-auto]").getAttribute("aria-pressed"), "true");
     await until(() => Math.hypot(window.luxhouseTour.pos.x, window.luxhouseTour.pos.z) > 0.03);
@@ -456,11 +437,18 @@ async function step(name, fn) {
     assert.equal(await page.locator("[data-auto]").getAttribute("aria-pressed"), "false");
   });
 
-  await step("tour: help card reopens and closes with Escape; missing space shows an error with retry", async () => {
+  await step("tour: help, a resting interface, and an error with retry", async () => {
+    await openTour();
     await page.locator("[data-help]").click();
-    assert.ok(await page.locator("[data-intro]").isVisible());
+    assert.ok(await page.locator("[data-help-panel]").isVisible());
     await page.keyboard.press("Escape");
-    assert.ok(await page.locator("[data-intro]").isHidden());
+    assert.ok(await page.locator("[data-help-panel]").isHidden());
+    // Left alone, the interface fades; any movement brings it back.
+    await page.locator(".tour-canvas").click({ position: { x: 300, y: 300 } });
+    await page.mouse.move(700, 380);
+    await page.waitForFunction(() => document.querySelector("[data-tour]").classList.contains("is-idle"), null, { timeout: 20000 });
+    await page.mouse.move(720, 400);
+    await page.waitForFunction(() => !document.querySelector("[data-tour]").classList.contains("is-idle"));
     // Simulate a network failure on the next space.
     expectingFailure = true;
     await page.route("**/geo.bin", (route) => route.abort());
@@ -474,10 +462,11 @@ async function step(name, fn) {
   });
 
   await step("tour: translated in every language", async () => {
-    for (const [lang, word] of [["ka", "დათვალიერების დაწყება"], ["ru", "Начать осмотр"]]) {
+    for (const [lang, word] of [["ka", "სივრცეები"], ["ru", "Пространства"]]) {
       await page.goto(`${base}/${lang}/residences/${tourListing.slug}/tour`, { waitUntil: "load" });
       await ready();
-      assert.equal((await page.locator("[data-start]").textContent()).trim(), word);
+      assert.ok((await page.locator("[data-strip-toggle]").textContent()).includes(word));
+      assert.equal(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth), 0);
     }
   });
 
@@ -509,31 +498,20 @@ async function step(name, fn) {
     await m.goto(`${base}/en/residences/dighomi-stone-villa`, { waitUntil: "networkidle" });
     const cta = m.locator("[data-mobile-cta]");
     assert.ok(await cta.isVisible());
-    await cta.locator("a").tap();
+    await cta.locator('a[href="#inquiry"]').tap();
     await m.waitForFunction(() => document.querySelector("[data-mobile-cta]").classList.contains("is-hidden"));
   });
 
-  await step("tour on a phone: joystick walks, coarser mesh is used", async () => {
+  await step("tour on a phone: tap to step, floor arrows, coarser mesh", async () => {
     await m.goto(tourUrl, { waitUntil: "load" });
     await m.waitForFunction(() => document.querySelector("[data-tour]").getAttribute("data-state") === "ready", null, { timeout: 60000 });
-    await m.locator("[data-start]").tap();
-    assert.ok(await m.locator("[data-joystick]").isVisible());
     assert.equal(await m.evaluate(() => window.luxhouseTour.detail), "low");
-    const box = await m.locator("[data-joystick]").boundingBox();
-    const cx = box.x + box.width / 2;
-    const cy = box.y + box.height / 2;
-    const z0 = await m.evaluate(() => window.luxhouseTour.pos.z);
-    // Push the stick forward and hold it.
-    await m.evaluate(([x, y]) => {
-      const el = document.querySelector("[data-joystick]");
-      const fire = (type, px, py) => el.dispatchEvent(new PointerEvent(type, { pointerId: 7, pointerType: "touch", clientX: px, clientY: py, bubbles: true, cancelable: true }));
-      fire("pointerdown", x, y);
-      fire("pointermove", x, y - 40);
-    }, [cx, cy]);
-    await m.waitForFunction((z) => window.luxhouseTour.pos.z < z - 0.05, z0, { timeout: 30000, polling: 100 });
-    await m.evaluate(([x, y]) => {
-      document.querySelector("[data-joystick]").dispatchEvent(new PointerEvent("pointerup", { pointerId: 7, pointerType: "touch", clientX: x, clientY: y, bubbles: true }));
-    }, [cx, cy]);
+    assert.ok(await m.locator(".tour-pad").isVisible());
+    await m.waitForFunction(() => !window.luxhouseTour.arrive, null, { timeout: 30000 });
+    await m.touchscreen.tap(195, 430);
+    await m.waitForFunction(() => Math.hypot(window.luxhouseTour.pos.x, window.luxhouseTour.pos.z) > 0.02 || window.luxhouseTour.targetZoom > 1.05, null, { timeout: 30000, polling: 100 });
+    await m.locator("[data-next]").tap();
+    await m.waitForFunction(() => window.luxhouseTour.index === 1 && window.luxhouseTour.status === "ready", null, { timeout: 60000, polling: 100 });
     const overflow = await m.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
     assert.equal(overflow, 0);
   });

@@ -1,60 +1,58 @@
-<%- include('../partials/page-head', { heading: t('residences.title'), lead: t('residences.lead'), eyebrow: t('home.featuredEyebrow') }) %>
+<%
+  var pad = function (n) { return (n < 10 ? '0' : '') + n; };
+  // Few homes are shown one strip of stills at a time; a long list opens as the grid.
+  var view = cards.length > 6 ? 'grid' : 'list';
+  var views = [
+    { key: 'list', label: t('residences.viewList') },
+    { key: 'grid', label: t('residences.viewGrid') },
+    { key: 'map', label: t('residences.viewMap') }
+  ];
+  var factsOf = function (c) {
+    var out = [t.area(c.facts.areaM2)];
+    if (c.facts.bedrooms) out.push(t.n('residence.bedroomsCount', c.facts.bedrooms));
+    if (c.facts.landM2) out.push(t('residence.plotArea', { v: t.area(c.facts.landM2) }));
+    else if (c.hasPool) out.push(t('features.pool'));
+    return out;
+  };
+%>
+<%- include('../partials/page-head', { heading: t('residences.title'), lead: t('residences.lead'), eyebrow: t('home.featuredEyebrow'), size: 'd1' }) %>
 
-<section class="container listing-tools">
-  <form class="filters" method="get" action="<%= url('/residences') %>" data-filters aria-label="<%= t('residences.filters') %>">
-    <div class="field field--inline">
+<!-- Filters and sorting: one hairline bar. Every control applies at once; without JavaScript the form is sent with the button. -->
+<form class="refine" method="get" action="<%= url('/residences') %>" data-filters aria-label="<%= t('residences.filters') %>">
+  <div class="refine__bar">
+    <div class="refine__cell<%= filters.location ? ' is-set' : '' %>">
       <label for="f-location"><%= t('residences.location') %></label>
-      <div class="select">
-        <select id="f-location" name="location">
-          <option value=""><%= t('common.any') %></option>
-          <% locations.forEach(function (l) { %><option value="<%= l.key %>"<%= filters.location === l.key ? ' selected' : '' %>><%= l.label %></option><% }) %>
-        </select>
-        <svg class="icon" aria-hidden="true"><use href="#i-chevron-down"/></svg>
-      </div>
+      <select id="f-location" name="location">
+        <option value=""><%= t('common.any') %></option>
+        <% locations.forEach(function (l) { %><option value="<%= l.key %>"<%= filters.location === l.key ? ' selected' : '' %>><%= l.label %></option><% }) %>
+      </select>
+      <svg class="icon" aria-hidden="true"><use href="#i-chevron-down"/></svg>
     </div>
-    <div class="field field--inline">
+    <div class="refine__cell<%= filters.maxPrice ? ' is-set' : '' %>">
       <label for="f-price"><%= t('residences.maxPrice') %></label>
-      <div class="select">
-        <select id="f-price" name="maxPrice">
-          <option value=""><%= t('common.any') %></option>
-          <% [1000000, 1500000, 2500000, 5000000].forEach(function (v) { %><option value="<%= v %>"<%= filters.maxPrice === v ? ' selected' : '' %>><%= t('common.upTo', { v: t.money(v, 'USD') }) %></option><% }) %>
-        </select>
-        <svg class="icon" aria-hidden="true"><use href="#i-chevron-down"/></svg>
-      </div>
+      <select id="f-price" name="maxPrice">
+        <option value=""><%= t('common.any') %></option>
+        <% [1000000, 1500000, 2500000, 5000000].forEach(function (v) { %><option value="<%= v %>"<%= filters.maxPrice === v ? ' selected' : '' %>><%= t('common.upTo', { v: t.money(v, 'USD') }) %></option><% }) %>
+      </select>
+      <svg class="icon" aria-hidden="true"><use href="#i-chevron-down"/></svg>
     </div>
-    <div class="field field--inline">
+    <div class="refine__cell<%= filters.minBedrooms ? ' is-set' : '' %>">
       <label for="f-beds"><%= t('residences.minBedrooms') %></label>
-      <div class="select">
-        <select id="f-beds" name="minBedrooms">
-          <option value=""><%= t('common.any') %></option>
-          <% [3, 4, 5].forEach(function (v) { %><option value="<%= v %>"<%= filters.minBedrooms === v ? ' selected' : '' %>><%= v %>+</option><% }) %>
-        </select>
-        <svg class="icon" aria-hidden="true"><use href="#i-chevron-down"/></svg>
-      </div>
+      <select id="f-beds" name="minBedrooms">
+        <option value=""><%= t('common.any') %></option>
+        <% [3, 4, 5].forEach(function (v) { %><option value="<%= v %>"<%= filters.minBedrooms === v ? ' selected' : '' %>><%= v %>+</option><% }) %>
+      </select>
+      <svg class="icon" aria-hidden="true"><use href="#i-chevron-down"/></svg>
     </div>
-    <div class="field field--inline">
+    <div class="refine__cell<%= filters.minArea ? ' is-set' : '' %>">
       <label for="f-area"><%= t('residences.minArea') %></label>
-      <div class="select">
-        <select id="f-area" name="minArea">
-          <option value=""><%= t('common.any') %></option>
-          <% [300, 400, 500, 600].forEach(function (v) { %><option value="<%= v %>"<%= filters.minArea === v ? ' selected' : '' %>><%= t('common.from', { v: t.area(v) }) %></option><% }) %>
-        </select>
-        <svg class="icon" aria-hidden="true"><use href="#i-chevron-down"/></svg>
-      </div>
+      <select id="f-area" name="minArea">
+        <option value=""><%= t('common.any') %></option>
+        <% [300, 400, 500, 600].forEach(function (v) { %><option value="<%= v %>"<%= filters.minArea === v ? ' selected' : '' %>><%= t('common.from', { v: t.area(v) }) %></option><% }) %>
+      </select>
+      <svg class="icon" aria-hidden="true"><use href="#i-chevron-down"/></svg>
     </div>
-    <div class="field field--inline">
-      <label for="f-sort"><%= t('residences.sort') %></label>
-      <div class="select">
-        <select id="f-sort" name="sort">
-          <option value="newest"<%= filters.sort === 'newest' ? ' selected' : '' %>><%= t('residences.sortNewest') %></option>
-          <option value="price-desc"<%= filters.sort === 'price-desc' ? ' selected' : '' %>><%= t('residences.sortPriceDesc') %></option>
-          <option value="price-asc"<%= filters.sort === 'price-asc' ? ' selected' : '' %>><%= t('residences.sortPriceAsc') %></option>
-          <option value="area"<%= filters.sort === 'area' ? ' selected' : '' %>><%= t('residences.sortArea') %></option>
-        </select>
-        <svg class="icon" aria-hidden="true"><use href="#i-chevron-down"/></svg>
-      </div>
-    </div>
-    <div class="filters__checks">
+    <div class="refine__cell refine__cell--checks">
       <label class="check">
         <input type="checkbox" name="pool" value="1"<%= filters.pool ? ' checked' : '' %>>
         <span class="check__box" aria-hidden="true"><svg class="icon"><use href="#i-check"/></svg></span>
@@ -68,36 +66,95 @@
         </label>
       <% } %>
     </div>
-    <div class="filters__actions">
-      <button type="submit" class="btn btn--primary"><%= t('common.apply') %></button>
-      <% if (filtersActive) { %><a class="link-plain" href="<%= url('/residences') %>"><%= t('common.reset') %></a><% } %>
+    <div class="refine__cell refine__cell--sort<%= filters.sort !== 'newest' ? ' is-set' : '' %>">
+      <label for="f-sort"><%= t('residences.sort') %></label>
+      <select id="f-sort" name="sort">
+        <option value="newest"<%= filters.sort === 'newest' ? ' selected' : '' %>><%= t('residences.sortNewest') %></option>
+        <option value="price-desc"<%= filters.sort === 'price-desc' ? ' selected' : '' %>><%= t('residences.sortPriceDesc') %></option>
+        <option value="price-asc"<%= filters.sort === 'price-asc' ? ' selected' : '' %>><%= t('residences.sortPriceAsc') %></option>
+        <option value="area"<%= filters.sort === 'area' ? ' selected' : '' %>><%= t('residences.sortArea') %></option>
+      </select>
+      <svg class="icon" aria-hidden="true"><use href="#i-chevron-down"/></svg>
     </div>
-  </form>
+  </div>
+  <noscript><p class="refine__apply wrap"><button type="submit" class="btn btn--sm"><%= t('common.apply') %></button></p></noscript>
+</form>
 
-  <div class="results-bar">
-    <p class="results-count" aria-live="polite"><%= t.n('residences.count', cards.length) %></p>
+<section class="results" aria-labelledby="results-title">
+  <h2 class="vh" id="results-title"><%= t('home.featuredTitle') %></h2>
+  <div class="results__bar wrap">
+    <p class="results__count num" data-results-count role="status"><%= t.n('residences.count', cards.length) %></p>
+    <a class="results__reset" href="<%= url('/residences') %>" data-filters-reset<%= filtersActive ? '' : ' hidden' %>><span><%= t('common.reset') %></span><svg class="icon" aria-hidden="true"><use href="#i-close"/></svg></a>
+    <div class="results__views switch" role="group" aria-label="<%= t('residences.view') %>" data-view-switch<%= cards.length ? '' : ' hidden' %>>
+      <% views.forEach(function (v) { %><button type="button" data-view-btn="<%= v.key %>" aria-pressed="<%= v.key === view %>"<%- v.key === view ? ' class="is-active"' : '' %>><%= v.label %></button><% }) %>
+    </div>
+  </div>
+
+  <div class="results__body" data-results data-view="<%= view %>">
     <% if (cards.length) { %>
-      <div class="view-toggle" role="group" aria-label="<%= t('residences.viewGrid') %> / <%= t('residences.viewMap') %>">
-        <button type="button" class="view-toggle__btn is-active" data-view-btn="grid" aria-pressed="true"><svg class="icon" aria-hidden="true"><use href="#i-grid"/></svg><%= t('residences.viewGrid') %></button>
-        <button type="button" class="view-toggle__btn" data-view-btn="map" aria-pressed="false"><svg class="icon" aria-hidden="true"><use href="#i-map"/></svg><%= t('residences.viewMap') %></button>
+      <!-- List: one strip of stills, one caption row and a line of description per residence -->
+      <div class="results__panel reels" data-view-panel="list"<%= view === 'list' ? '' : ' hidden' %>>
+        <% cards.forEach(function (c, i) { %>
+          <div class="lot">
+            <%- include('../partials/reel', { c: c, no: i + 1, save: true, level: 3 }) %>
+            <% if (c.tagline || c.hasTour) { %>
+              <div class="lot__note wrap grid rv">
+                <% if (c.tagline) { %><p class="lot__text"><%= c.tagline %></p><% } %>
+                <% if (c.hasTour) { %><a class="lot__tour link" href="<%= c.tourUrl %>" aria-label="<%= t('common.enterTour') %>: <%= c.title %>"><i class="dot"></i><span><%= t('common.enterTour') %></span><svg class="icon" aria-hidden="true"><use href="#i-arrow-right"/></svg></a><% } %>
+              </div>
+            <% } %>
+          </div>
+        <% }) %>
+      </div>
+
+      <!-- Grid: the compact cards, three across -->
+      <div class="results__panel wrap" data-view-panel="grid"<%= view === 'grid' ? '' : ' hidden' %>>
+        <div class="cards cards--3">
+          <% cards.forEach(function (c) { %><%- include('../partials/card', { c: c }) %><% }) %>
+        </div>
+      </div>
+
+      <!-- Map: approximate areas beside an index of the same residences -->
+      <div class="results__panel atlas wrap grid" data-view-panel="map" hidden>
+        <ol class="atlas__list">
+          <% cards.forEach(function (c, i) { var frame = art.reel(c, { compact: true }).frames[0]; %>
+            <li class="atlas__row lights" data-pin="<%= c.title %>">
+              <span class="atlas__no label label--dim num"><%= pad(i + 1) %></span>
+              <a class="atlas__thumb still" href="<%= c.url %>" tabindex="-1" aria-hidden="true"><img src="<%= frame.photo.src(640) %>" width="<%= frame.photo.w %>" height="<%= frame.photo.h %>" alt="" loading="lazy" decoding="async"<% if (frame.focus) { %> style="object-position:<%= frame.focus %>"<% } %>></a>
+              <div class="atlas__text">
+                <h3 class="atlas__title"><a href="<%= c.url %>"><%= c.title %></a></h3>
+                <p class="atlas__place"><%= c.place %></p>
+                <ul class="atlas__facts card__facts"><% factsOf(c).forEach(function (f) { %><li><%= f %></li><% }) %></ul>
+                <p class="atlas__price num"><% if (c.price) { %><span data-money="<%= c.price.amount %>" data-currency="<%= c.price.currency %>"><%= c.priceLabel %></span><% } else { %><%= c.priceLabel %><% } %><% if (c.hasTour) { %><span class="atlas__tour"><i class="dot"></i><%= t('common.tour3d') %></span><% } %></p>
+              </div>
+              <button type="button" class="atlas__save icon-btn" data-save="<%= c.slug %>" aria-pressed="false" aria-label="<%= t('common.save') %>: <%= c.title %>" title="<%= t('common.save') %>">
+                <svg class="icon" aria-hidden="true"><use href="#i-heart"/></svg>
+              </button>
+            </li>
+          <% }) %>
+        </ol>
+        <div class="atlas__side">
+          <div class="map atlas__map" data-map="residences" data-points="<%= JSON.stringify(mapPoints) %>" role="region" aria-label="<%= t('residences.viewMap') %>"></div>
+          <p class="atlas__note"><%= t('residences.mapNote') %></p>
+        </div>
+      </div>
+    <% } else { %>
+      <div class="wrap">
+        <div class="empty">
+          <p><%= t('residences.empty') %></p>
+          <a class="btn" href="<%= url('/residences') %>" data-filters-reset><%= t('common.reset') %></a>
+        </div>
       </div>
     <% } %>
   </div>
 </section>
 
-<section class="container listing-results">
-  <% if (cards.length) { %>
-    <div class="card-grid" data-view-panel="grid">
-      <% cards.forEach(function (c) { %><%- include('../partials/card', { c: c }) %><% }) %>
-    </div>
-    <div class="map-view" data-view-panel="map" hidden>
-      <div class="map map--tall" data-map="residences" data-points="<%= JSON.stringify(mapPoints) %>" role="region" aria-label="<%= t('residences.viewMap') %>"></div>
-      <p class="note"><%= t('residences.mapNote') %></p>
-    </div>
-  <% } else { %>
-    <div class="empty">
-      <p><%= t('residences.empty') %></p>
-      <a class="btn btn--outline" href="<%= url('/residences') %>"><%= t('common.reset') %></a>
-    </div>
-  <% } %>
+<!-- Closing: not sure, or nothing fits? Ask. -->
+<section class="band" aria-labelledby="ask-title">
+  <div class="band__body wrap grid">
+    <p class="label"><%= t('nav.contact') %></p>
+    <h2 class="d2" id="ask-title"><%= t('home.contactTitle') %></h2>
+    <p class="lead"><%= t('home.contactText') %></p>
+    <a class="btn btn--solid" href="<%= url('/contact') %>"><%= t('common.contactUs') %><svg class="icon" aria-hidden="true"><use href="#i-arrow-right"/></svg></a>
+  </div>
 </section>

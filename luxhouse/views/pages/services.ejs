@@ -1,25 +1,46 @@
-<%- include('../partials/page-head', { heading: t('services.title'), lead: t('services.lead'), eyebrow: config.brand }) %>
+<%
+  var items = t('services.items');
+  var pad = function (n) { return n < 10 ? '0' + n : String(n); };
+  var homes = typeof showcase !== 'undefined' ? showcase : [];
+  var ph = homes.length ? art.band(homes[0]) : null;
+  var closing = homes.length > 1 ? art.band(homes[1]) : null;
+%>
+<%- include('../partials/page-head', { heading: t('services.title'), lead: t('services.lead'), eyebrow: config.brand, count: pad(items.length) }) %>
 
-<section class="section section--flush-top">
-  <div class="container">
-    <ol class="service-rows">
-      <% t('services.items').forEach(function (s, i) { %>
-        <li class="service-rows__item" id="<%= s.key %>">
-          <span class="service-rows__num">0<%= i + 1 %></span>
-          <h2><%= s.title %></h2>
-          <p><%= s.text %></p>
+<% if (ph) { %>
+<figure class="plate still drift">
+  <img src="<%= ph.photo.src(1280) %>" srcset="<%= ph.photo.srcset %>" sizes="100vw" width="<%= ph.photo.w %>" height="<%= ph.photo.h %>" alt="<%= ph.photo.alt %>" loading="lazy" decoding="async" style="object-position:<%= ph.focus %>">
+</figure>
+<% } %>
+
+<section class="section" aria-labelledby="svc-title">
+  <div class="wrap grid">
+    <header class="how__head">
+      <p class="label"><%= t('home.servicesEyebrow') %></p>
+      <h2 class="d2" id="svc-title"><%= t('home.servicesTitle') %></h2>
+    </header>
+    <ol class="how__list">
+      <% items.forEach(function (s, i) { %>
+        <li class="how__item rv" id="<%= s.key %>">
+          <span class="label label--dim num"><%= pad(i + 1) %></span>
+          <h3 class="d3"><%= s.title %></h3>
+          <p class="body"><%= s.text %></p>
         </li>
       <% }) %>
     </ol>
   </div>
 </section>
 
-<section class="cta-band">
-  <div class="container cta-band__inner">
-    <div>
-      <h2><%= t('services.ctaTitle') %></h2>
-      <p><%= t('services.ctaText') %></p>
-    </div>
-    <a class="btn btn--paper" href="<%= url('/contact') %>"><%= t('common.contactUs') %></a>
+<section class="band" aria-labelledby="svc-cta">
+  <% if (closing) { %>
+    <figure class="band__media still drift" style="--focus:<%= closing.focus %>">
+      <img src="<%= closing.photo.src(1280) %>" srcset="<%= closing.photo.srcset %>" sizes="(min-width: 900px) 58vw, 100vw" width="<%= closing.photo.w %>" height="<%= closing.photo.h %>" alt="<%= closing.photo.alt %>" loading="lazy" decoding="async">
+    </figure>
+  <% } %>
+  <div class="band__body wrap grid">
+    <p class="label"><%= t('nav.consult') %></p>
+    <h2 class="d2" id="svc-cta"><%= t('services.ctaTitle') %></h2>
+    <p class="lead"><%= t('services.ctaText') %></p>
+    <a class="btn btn--solid" href="<%= url('/contact') %>"><%= t('common.contactUs') %><svg class="icon" aria-hidden="true"><use href="#i-arrow-right"/></svg></a>
   </div>
 </section>

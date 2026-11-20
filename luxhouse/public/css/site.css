@@ -815,6 +815,10 @@ body:has(.third) .stage { height: min(calc(100svh - var(--header) - var(--third)
   .tour__points b { margin: 5px 0 0; }
 }
 
+/* Plate: one photograph across the full width, between a page's opening and its text. */
+.plate { height: clamp(260px, 44vw, 76svh); }
+.plate > img { object-position: 50% 45%; }
+
 /* 16 — Band: a closing invitation, with or without a photograph ------------------ */
 .band { position: relative; isolation: isolate; border-block: 1px solid var(--line); overflow: hidden; }
 .band + .site-footer, .band + .band { border-top: 0; }

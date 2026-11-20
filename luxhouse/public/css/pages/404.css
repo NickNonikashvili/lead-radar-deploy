@@ -1,0 +1,12 @@
+/* Not found: one composed screen and a way back. */
+.lost { position: relative; isolation: isolate; min-height: 100svh; display: grid; align-items: end; }
+.lost__media { position: absolute; inset: 0; z-index: -1; }
+.lost__media > img { filter: saturate(.6) contrast(1.05) brightness(.5); }
+.lost__media::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(11, 10, 9, .82) 0%, rgba(11, 10, 9, .2) 38%, rgba(11, 10, 9, .86) 100%); }
+.lost__body { display: grid; justify-items: start; gap: clamp(18px, 2.2vw, 30px); padding-block: calc(var(--header) + 48px) clamp(48px, 7vw, 104px); }
+.lost__body .lead { max-width: 30ch; }
+.lost__actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.lost__body .d1 { overflow-wrap: anywhere; }
+@media (max-width: 420px) {
+  .lost__body .d1 { font-size: 2.125rem; line-height: 1.06; }
+}

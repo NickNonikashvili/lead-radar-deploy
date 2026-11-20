@@ -1,0 +1,266 @@
+/* ==========================================================================
+   LUXHOUSE — residence
+   Title card, the lower third, overview and sheet, the gallery, the approximate
+   location, the financing estimate, the viewing request.
+   Everything shared (spec strip, highlights, tables, stage, cards, forms, map,
+   lightbox) is in site.css.
+   ========================================================================== */
+
+/* Title card ---------------------------------------------------------------------
+   The photograph fills the first screen; the title sits in a pool of dark at the
+   top left, the tools and the frame counter along the foot, above the lower third.
+   A landscape cover runs alone. Phone covers (4:3, upright) run as two or three
+   frames, as they do in the collection reels.                                   */
+.r-hero {
+  position: relative; isolation: isolate;
+  height: 100svh; min-height: 620px;
+  padding: calc(var(--header) + clamp(16px, 3.4svh, 30px)) 0 var(--third);
+  display: flex; flex-direction: column;
+}
+.r-hero__stills {
+  position: absolute; inset: 0; z-index: -1;
+  display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 4px;
+}
+.r-hero__still { margin: 0; min-width: 0; min-height: 0; }
+.r-hero__still > img {
+  object-position: var(--focus, 50% 40%);
+  filter: saturate(.8) contrast(1.05) brightness(.93);
+  animation: settle 1.8s var(--ease) both;
+}
+.r-hero__stills::before {
+  content: ""; position: absolute; inset: 0; z-index: 1; pointer-events: none;
+  background:
+    radial-gradient(74% 86% at 0% 0%, rgba(11, 10, 9, .96) 0%, rgba(11, 10, 9, .8) 34%, rgba(11, 10, 9, .3) 62%, rgba(11, 10, 9, 0) 82%),
+    linear-gradient(to bottom, rgba(11, 10, 9, .9) 0%, rgba(11, 10, 9, .35) 14%, rgba(11, 10, 9, 0) 32%),
+    linear-gradient(to top, rgba(11, 10, 9, .82) 0%, rgba(11, 10, 9, 0) 30%);
+}
+
+.r-hero__head { animation: lift .8s var(--ease) both; }
+.r-hero__title {
+  margin-top: 4px; max-width: 9.5em;
+  font-size: clamp(2.5rem, 5.3vw, 4.875rem); line-height: .96; letter-spacing: -.034em;
+}
+/* with two or three frames the title card keeps to the first one */
+.r-hero--2 .r-hero__head { max-width: 50%; }
+.r-hero--3 .r-hero__head { max-width: 33.333%; }
+.r-hero--3 .r-hero__title { font-size: clamp(2.25rem, 4.3vw, 4rem); }
+.r-hero__place { margin-top: 16px; display: flex; flex-wrap: wrap; gap: 8px 18px; align-items: center; font: 400 17px/1.3 var(--f-display); }
+.r-hero__place .label { color: var(--bone); }
+
+.r-hero__foot { margin-top: auto; padding-bottom: clamp(16px, 2.6svh, 26px); display: flex; align-items: flex-end; gap: 8px; }
+.r-hero__foot .btn:hover .icon { transform: none; }
+.r-hero__count { margin-left: auto; display: grid; gap: 4px; justify-items: end; min-height: 44px; text-align: right; color: var(--bone); }
+.r-hero__count b { font: 300 28px/1 var(--f-display); letter-spacing: -.02em; }
+.r-hero__count b small { font-size: 15px; letter-spacing: 0; color: var(--ash); }
+.r-hero__count .label { color: var(--bone); }
+.r-hero__count:hover b small { color: var(--bone); }
+
+@media (max-width: 899px) {
+  .r-hero { height: 100svh; min-height: 640px; padding-top: 0; }
+  .r-hero__stills { position: relative; inset: auto; z-index: 0; flex: 1 1 0; min-height: 0; display: block; }
+  .r-hero__still { position: absolute; inset: 0; }
+  .r-hero__still + .r-hero__still { display: none; }
+  .r-hero__still > img { object-position: var(--focus-narrow, 50% 50%); }
+  .r-hero__stills::before {
+    background:
+      linear-gradient(to bottom, rgba(11, 10, 9, .78) 0%, rgba(11, 10, 9, 0) 30%),
+      linear-gradient(to top, var(--ink) 0%, rgba(11, 10, 9, 0) 30%);
+  }
+  .r-hero .r-hero__head { margin-top: -34px; position: relative; z-index: 2; max-width: none; }
+  .r-hero .r-hero__title { font-size: clamp(2.25rem, 10.2vw, 2.5rem); }
+  .r-hero__foot { margin-top: 18px; padding-bottom: 18px; }
+  .r-hero__count { display: none; }
+  .r-hero__all { flex: 1 1 auto; padding-inline: 12px; }
+  .r-hero__tool { padding-inline: 16px; }
+}
+/* where the foot is narrow (three frames, small phones) Save and Share are their icons;
+   the names stay for screen readers */
+.r-hero--3 .r-hero__tool { width: 52px; padding: 0; gap: 0; }
+.r-hero--3 .r-hero__tool span { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+@media (max-width: 479px) {
+  .r-hero__tool { width: 52px; padding: 0; gap: 0; }
+  .r-hero__tool span { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+}
+@media (min-width: 480px) and (max-width: 899px) {
+  .r-hero--3 .r-hero__tool { width: auto; padding-inline: 16px; gap: 12px; }
+  .r-hero--3 .r-hero__tool span { position: static; width: auto; height: auto; margin: 0; overflow: visible; clip: auto; }
+}
+
+/* The lower third ------------------------------------------------------------------
+   The price and the two ways forward, always within reach. It steps aside while
+   the viewing form itself is on screen (site.js: data-mobile-cta).               */
+.third {
+  position: fixed; inset: auto 0 0 0; z-index: 50; height: var(--third);
+  background: rgba(11, 10, 9, .8);
+  -webkit-backdrop-filter: blur(20px) saturate(1.25); backdrop-filter: blur(20px) saturate(1.25);
+  border-top: 1px solid var(--line);
+  transition: transform .5s var(--ease), visibility 0s;
+}
+.third.is-hidden { transform: translateY(100%); visibility: hidden; transition: transform .5s var(--ease), visibility 0s .5s; }
+.third__in { height: 100%; display: flex; align-items: center; gap: clamp(16px, 2.8vw, 40px); }
+.third__id { display: grid; gap: 3px; min-width: 0; }
+.third__id b { font: 500 15px/1.2 var(--f-display); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.third__id > span { font-size: 13px; line-height: 1.2; color: var(--ash); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.third__price { margin-left: auto; display: grid; gap: 3px; text-align: right; flex: none; }
+.third__price b { font: 300 26px/1 var(--f-display); letter-spacing: -.02em; white-space: nowrap; }
+.third__price > span { font-size: 13px; line-height: 1.2; color: var(--ash); white-space: nowrap; }
+.third__actions { display: flex; gap: 8px; flex: none; }
+.third__actions .btn { min-height: 48px; }
+.third__short, .third__tiny { display: none; }
+@media (max-width: 899px) {
+  .third__id, .third__price > span { display: none; }
+  .third__in { gap: 10px; }
+  .third__price { margin: 0 auto 0 0; text-align: left; }
+  .third__price b { font-size: 21px; }
+  .third__actions .btn { padding-inline: 14px; font-size: 14px; gap: 9px; }
+  .third__actions .btn .icon { display: none; }
+}
+/* phones: the short names, then "3D" alone, then everything a size down */
+@media (max-width: 599px) {
+  .third__long { display: none; }
+  .third__short { display: inline; }
+}
+@media (max-width: 429px) {
+  .third__tour .third__short { display: none; }
+  .third__tour .third__tiny { display: inline; }
+}
+@media (max-width: 379px) {
+  .third__in { gap: 8px; }
+  .third__price b { font-size: 18px; }
+  .third__actions { gap: 6px; }
+  .third__actions .btn { padding-inline: 10px; font-size: 13px; gap: 7px; }
+}
+/* a price longer than the bar was drawn for (residence.js measures it) */
+.third.is-tight .third__in { gap: 8px; }
+.third.is-tight .third__price b { font-size: 17px; letter-spacing: -.03em; }
+.third.is-tight .third__actions { gap: 6px; }
+.third.is-tight .third__actions .btn { padding-inline: 9px; font-size: 13px; gap: 7px; }
+
+/* Key facts: the strip takes as many columns as the listing has figures --------------- */
+.spec--5 { grid-template-columns: repeat(5, 1fr); }
+.spec--4 { grid-template-columns: repeat(4, 1fr); }
+.spec--3 { grid-template-columns: repeat(3, 1fr); }
+@media (max-width: 899px) {
+  .spec--5, .spec--4, .spec--3 { grid-template-columns: repeat(2, 1fr); }
+  .spec--5 > div:last-child, .spec--3 > div:last-child { grid-column: 1 / -1; }
+}
+
+/* Overview and sheet ------------------------------------------------------------------ */
+.overview { row-gap: 40px; }
+.overview__label { grid-column: 1 / -1; display: flex; align-items: center; gap: 14px; margin-bottom: clamp(0px, 1vw, 16px); }
+.overview__label::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+.overview__lead { grid-column: 1 / span 7; }
+.overview__text { grid-column: 8 / -1; max-width: 60ch; justify-self: end; display: grid; gap: 1.05em; align-content: start; color: var(--ash); font-size: 16.5px; line-height: 1.65; text-wrap: pretty; }
+.overview__text p:first-child { color: var(--bone); }
+
+.sheet { margin-top: clamp(56px, 7vw, 104px); row-gap: 48px; align-items: start; }
+.sheet__main { grid-column: 1 / span 7; display: grid; row-gap: clamp(36px, 4vw, 56px); min-width: 0; }
+.sheet__side { grid-column: 9 / -1; min-width: 0; }
+.sheet__features .label { margin-bottom: 18px; }
+.sheet__note { margin-top: 16px; color: var(--smoke); }
+.sheet .dl dd { white-space: nowrap; }
+
+@media (max-width: 1099px) {
+  .sheet__side { grid-column: 8 / -1; }
+  .sheet__main { grid-column: 1 / span 6; }
+}
+@media (max-width: 899px) {
+  .overview__lead, .overview__text, .sheet__main, .sheet__side { grid-column: 1 / -1; }
+  .overview__text { justify-self: start; }
+}
+
+/* The gallery --------------------------------------------------------------------------
+   Desktop: an editorial sequence on the twelve columns. Each frame keeps the
+   proportions of its photograph (--ar) and stands on the baseline of its row; the
+   template decides which frames pair up and which one runs the full width.
+   Phone: the same frames become one strip that is pulled sideways, so sixteen
+   photographs cost one screen, not ten.                                          */
+.stills { scroll-margin-top: calc(40px - var(--section)); }
+.stills__grid { margin-top: clamp(36px, 4.4vw, 64px); display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: clamp(36px, 4.4vw, 64px) var(--g); align-items: end; }
+.shot { display: grid; gap: 10px; min-width: 0; grid-column: var(--col); }
+.shot button { display: block; width: 100%; cursor: zoom-in; }
+.shot .still { aspect-ratio: var(--ar, 3 / 2); }
+.shot figcaption { display: flex; gap: 14px; align-items: baseline; font: 400 14px/1.3 var(--f-display); color: var(--ash); }
+.shot figcaption b { font-weight: 500; font-size: 12px; letter-spacing: .08em; color: var(--smoke); }
+.shot--wide { margin-inline: calc(var(--m) * -1); }
+.shot--wide figcaption { padding-inline: var(--m); }
+.stills__foot { display: none; }
+
+@media (max-width: 899px) {
+  .stills { --strip: 58vw; }
+  .stills--upright { --strip: 88vw; }
+  .stills__grid {
+    display: flex; align-items: flex-start; gap: 8px;
+    overflow-x: auto; overscroll-behavior-x: contain;
+    scroll-snap-type: x mandatory; scroll-padding-inline: var(--m);
+    scrollbar-width: none; margin-top: 28px;
+  }
+  .stills__grid::-webkit-scrollbar { display: none; }
+  .shot, .shot--wide { flex: none; margin: 0; scroll-snap-align: start; }
+  .shot .still { height: min(var(--strip), 420px); width: auto; max-width: 84vw; aspect-ratio: var(--nat, 3 / 2); }
+  .shot--wide figcaption { padding-inline: 0; }
+  .shot .still.drift > img { animation: none; scale: 1; }
+  .stills__foot { display: grid; gap: 22px; margin-top: 22px; }
+  .stills__bar { position: relative; height: 1px; background: var(--line); }
+  /* the lit part of the line is the part of the strip on screen (--w, --p: residence.js) */
+  .stills__bar i { position: absolute; left: 0; top: 0; width: calc(var(--w, .25) * 100%); height: 1px; background: var(--bone); transform: translateX(calc(var(--p, 0) * (1 / var(--w, .25) - 1) * 100%)); }
+  .stills__foot .btn { justify-content: space-between; }
+  .stills__foot .btn .icon { order: 2; }
+}
+
+/* Approximate location --------------------------------------------------------------------- */
+.where { row-gap: 32px; align-items: start; }
+.where__copy { grid-column: 1 / span 4; align-self: stretch; display: grid; gap: 32px; align-content: space-between; min-width: 0; }
+.where__copy > div { display: grid; gap: clamp(16px, 2vw, 28px); }
+.where__title span { display: block; }
+.where__title .d3 { margin-top: .3em; color: var(--ash); }
+.where__coords { font: 300 clamp(1.5rem, 2.4vw, 2.125rem)/1.15 var(--f-display); letter-spacing: -.02em; }
+.where__coords span { display: block; white-space: nowrap; }
+.where__map { grid-column: 6 / -1; min-width: 0; }
+/* the tag has the top left corner; the zoom buttons take the bottom one */
+.where__map .leaflet-top.leaflet-left { top: auto; bottom: 0; }
+@media (max-width: 899px) {
+  .where__copy, .where__map { grid-column: 1 / -1; }
+  .where__map { aspect-ratio: 4 / 3; }
+}
+
+/* Financing estimate --------------------------------------------------------------------------
+   One large figure that answers the question; the three things it depends on beside it. */
+.finance { row-gap: clamp(32px, 4vw, 56px); align-items: start; }
+.finance__label { grid-column: 1 / -1; display: flex; align-items: center; gap: 14px; }
+.finance__label::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+.finance__result { grid-column: 1 / span 5; display: grid; gap: 14px; min-width: 0; }
+.finance__monthly { font: 300 clamp(2.5rem, 5.3vw, 4.875rem)/1 var(--f-display); letter-spacing: -.035em; white-space: nowrap; }
+.finance__sums { margin-top: clamp(14px, 2vw, 28px); }
+.finance__controls { grid-column: 7 / -1; display: grid; grid-template-columns: 1fr 1fr; gap: 30px var(--g); min-width: 0; }
+.finance__controls .field { grid-column: 1 / -1; }
+.finance__controls .field output { font-variant-numeric: tabular-nums; }
+.finance__controls .finance__rate { grid-column: 1; }
+.finance__note { grid-column: 1 / -1; max-width: 62ch; color: var(--smoke); }
+@media (max-width: 899px) {
+  .finance__result, .finance__controls { grid-column: 1 / -1; }
+  .finance__controls { grid-template-columns: 1fr; }
+}
+
+/* The viewing request ------------------------------------------------------------------------------ */
+.viewing { scroll-margin-top: calc(40px - var(--section)); }
+.viewing__card { margin-top: 8px; display: grid; grid-template-columns: 112px minmax(0, 1fr); gap: 16px; align-items: center; padding-top: 22px; border-top: 1px solid var(--line); }
+.viewing__card .still { aspect-ratio: 3 / 2; }
+.viewing__card b { display: block; font: 400 17px/1.25 var(--f-display); }
+.viewing__card p > span { font-size: 14px; color: var(--ash); }
+.viewing__direct { display: flex; flex-wrap: wrap; gap: 0 28px; }
+
+/* Other residences ------------------------------------------------------------------------------------ */
+.others { margin-top: clamp(36px, 4.4vw, 64px); }
+
+/* Georgian and Cyrillic ------------------------------------------------------------------------------- */
+:lang(ka) .r-hero__title, :lang(ka) .r-hero--3 .r-hero__title { font-size: clamp(2rem, 4.4vw, 4.1rem); line-height: 1.1; letter-spacing: -.012em; }
+:lang(ka) .r-hero--3 .r-hero__title { font-size: clamp(1.75rem, 3.5vw, 3.25rem); }
+:lang(ka) .r-hero__place, :lang(ka) .third__id b, :lang(ka) .viewing__card b, :lang(ka) .shot figcaption { font-stretch: 92%; letter-spacing: 0; }
+:lang(ka) .where__title .d2 { line-height: 1.1; }
+:lang(ru) .r-hero__title { font-size: clamp(2.25rem, 4.8vw, 4.4rem); line-height: .99; }
+:lang(ru) .r-hero--3 .r-hero__title { font-size: clamp(2rem, 3.9vw, 3.6rem); }
+@media (max-width: 899px) {
+  :lang(ka) .r-hero .r-hero__title { font-size: clamp(1.9rem, 8.6vw, 2.125rem); }
+  :lang(ru) .r-hero .r-hero__title { font-size: clamp(2rem, 9.2vw, 2.25rem); }
+}

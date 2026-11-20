@@ -1,17 +1,20 @@
 /**
  * Tour page wiring: reads the tour data embedded by the server, starts the
- * viewer and connects the on-screen controls to it.
+ * viewer and connects the interface to it. The interface is deliberately thin
+ * (the picture is the page): where the visitor is, the way on, and a few tools
+ * that fade away while they are just looking.
  */
 
 import { TourViewer } from "./viewer.js";
 
 const $ = (sel, ctx) => (ctx || document).querySelector(sel);
 const $$ = (sel, ctx) => Array.from((ctx || document).querySelectorAll(sel));
+const pad = (n) => (n < 10 ? "0" + n : String(n));
 
 function hasWebGL() {
   try {
     const c = document.createElement("canvas");
-    return Boolean(c.getContext("webgl2") || c.getContext("webgl"));
+    return Boolean(c.getContext("webgl2"));
   } catch (e) {
     return false;
   }
@@ -28,29 +31,36 @@ function chooseDetail() {
 
 function start() {
   const stage = $("[data-tour]");
-  const data = JSON.parse(document.getElementById("tour-data").textContent);
+  const dataEl = document.getElementById("tour-data");
+  if (!stage || !dataEl) return;
+  const data = JSON.parse(dataEl.textContent);
   const S = data.strings;
+  const scenes = data.scenes;
   const canvas = $(".tour-canvas", stage);
+  const ui = $("[data-ui]", stage);
   const loader = $("[data-loader]", stage);
   const errorBox = $("[data-error]", stage);
-  const intro = $("[data-intro]", stage);
   const fade = $("[data-fade]", stage);
-  const edgeHint = $("[data-edge-hint]", stage);
+  const hint = $("[data-hint]", stage);
   const strip = $("[data-strip]", stage);
+  const stripBtn = $("[data-strip-toggle]", stage);
   const thumbs = $$("[data-scene]", strip);
   const sceneName = $("[data-scene-name]", stage);
   const sceneCount = $("[data-scene-count]", stage);
+  const nextBtn = $("[data-next]", stage);
+  const prevBtn = $("[data-prev]", stage);
+  const nextName = $("[data-next-name]", stage);
   const autoBtn = $("[data-auto]", stage);
   const vrBtn = $("[data-vr]", stage);
   const fullBtn = $("[data-fullscreen]", stage);
-  const joystick = $("[data-joystick]", stage);
-  const touch = window.matchMedia("(pointer: coarse)").matches;
+  const helpBtn = $("[data-help]", stage);
+  const helpPanel = $("[data-help-panel]", stage);
 
-  stage.classList.toggle("is-touch", touch);
+  stage.setAttribute("data-first", ""); // the designed loader is for the first space only
 
   if (!hasWebGL()) {
     loader.hidden = true;
-    intro.hidden = true;
+    stage.setAttribute("data-state", "error");
     $("[data-error-text]", errorBox).textContent = S.noWebgl;
     $("[data-retry]", errorBox).hidden = true;
     errorBox.hidden = false;
@@ -61,39 +71,80 @@ function start() {
   const useHash = !data.embedded;
   const sceneFromHash = () => {
     const m = useHash ? /scene=([\w-]+)/.exec(location.hash) : null;
-    const i = m ? data.scenes.findIndex((s) => s.id === m[1]) : -1;
+    const i = m ? scenes.findIndex((s) => s.id === m[1]) : -1;
     return i < 0 ? 0 : i;
   };
   // Page-level listeners are removed again by destroy().
   const page = new AbortController();
-  const on = (target, type, handler) => target.addEventListener(type, handler, { signal: page.signal });
+  const on = (target, type, handler, options) => target.addEventListener(type, handler, Object.assign({ signal: page.signal }, options));
 
-  let edgeTimer = 0;
+  // ------------------------------------------------------------ hint, shown once
+  let hintTimer = 0;
+  let hintShown = false;
+  const dropHint = () => {
+    if (hint.hidden) return;
+    clearTimeout(hintTimer);
+    hint.classList.add("is-leaving");
+    setTimeout(() => { hint.hidden = true; }, 650);
+  };
+  const showHint = () => {
+    if (hintShown) return;
+    hintShown = true;
+    hint.hidden = false;
+    hintTimer = setTimeout(dropHint, 9000);
+  };
+
+  // ------------------------------------------------------------ the interface rests while the visitor looks
+  let idleTimer = 0;
+  const busy = () => !strip.hidden || !helpPanel.hidden || !hint.hidden || ui.matches(":hover") || (ui.contains(document.activeElement) && document.activeElement.matches(":focus-visible"));
+  const wake = () => {
+    stage.classList.remove("is-idle");
+    clearTimeout(idleTimer);
+    idleTimer = setTimeout(() => {
+      if (busy()) wake();
+      else stage.classList.add("is-idle");
+    }, 4500);
+  };
+
   const viewer = new TourViewer(
     canvas,
-    { base: data.base, scenes: data.scenes, detail: chooseDetail(), veil: $("[data-veil]", stage) },
+    { base: data.base, scenes, detail: chooseDetail(), veil: $("[data-veil]", stage) },
     {
       onStatus(state, error) {
+        stage.setAttribute("data-state", state);
         loader.hidden = state !== "loading";
         errorBox.hidden = state !== "error";
-        stage.setAttribute("data-state", state);
+        if (state === "ready") {
+          if (stage.hasAttribute("data-first")) {
+            stage.removeAttribute("data-first");
+            showHint();
+          }
+          wake();
+        }
         if (state === "error") {
           $("[data-error-text]", errorBox).textContent = S.loadError;
           if (error) console.error(error);
         }
       },
       onScene(index) {
-        const scene = data.scenes[index];
+        const n = scenes.length;
+        const scene = scenes[index];
         sceneName.textContent = scene.label || "";
-        sceneCount.textContent = index + 1 + " / " + data.scenes.length;
+        sceneCount.textContent = pad(index + 1) + " / " + pad(n);
+        const next = scenes[(index + 1) % n];
+        const prev = scenes[(index - 1 + n) % n];
+        nextName.textContent = next.label || pad(((index + 1) % n) + 1);
+        nextBtn.setAttribute("aria-label", S.nextTo.replace("{name}", next.label || S.next));
+        prevBtn.setAttribute("aria-label", S.prevTo.replace("{name}", prev.label || S.prev));
+        prevBtn.title = prev.label || S.prev;
         thumbs.forEach((b, i) => {
-          const on = i === index;
-          b.classList.toggle("is-active", on);
-          if (on) b.setAttribute("aria-current", "true");
+          const current = i === index;
+          b.classList.toggle("is-active", current);
+          if (current) b.setAttribute("aria-current", "true");
           else b.removeAttribute("aria-current");
         });
         const active = thumbs[index];
-        if (active && active.scrollIntoView) active.scrollIntoView({ block: "nearest", inline: "center", behavior: "smooth" });
+        if (active && !strip.hidden) active.scrollIntoView({ block: "nearest", inline: "center", behavior: "smooth" });
         if (useHash) history.replaceState(null, "", "#scene=" + scene.id);
       },
       onFade(out, ms) {
@@ -101,62 +152,83 @@ function start() {
         fade.classList.toggle("is-on", out);
         return new Promise((resolve) => setTimeout(resolve, ms));
       },
-      onEdge() {
-        edgeHint.hidden = false;
-        edgeHint.classList.add("is-on");
-        clearTimeout(edgeTimer);
-        edgeTimer = setTimeout(() => {
-          edgeHint.classList.remove("is-on");
-        }, 1400);
+      onAuto(playing) {
+        autoBtn.setAttribute("aria-pressed", String(playing));
+        autoBtn.querySelector("use").setAttribute("href", playing ? "#i-pause" : "#i-play");
+        autoBtn.setAttribute("aria-label", playing ? S.pause : S.auto);
+        autoBtn.title = playing ? S.pause : S.auto;
       },
-      onAuto(on) {
-        autoBtn.setAttribute("aria-pressed", String(on));
-        autoBtn.querySelector("use").setAttribute("href", on ? "#i-pause" : "#i-play");
-        autoBtn.setAttribute("aria-label", on ? S.pause : S.auto);
-        autoBtn.title = on ? S.pause : S.auto;
-      },
-      onXr(on) {
-        stage.classList.toggle("is-xr", on);
+      onXr(inside) {
+        stage.classList.toggle("is-xr", inside);
       },
     }
   );
   window.luxhouseTour = viewer; // handy for debugging and used by the automated test
   window.luxhouseTourDestroy = () => {
     page.abort();
+    clearTimeout(idleTimer);
+    clearTimeout(hintTimer);
     viewer.dispose();
     if (window.luxhouseTour === viewer) window.luxhouseTour = null;
   };
 
-  // ------------------------------------------------------------ controls
-  $("[data-prev]", stage).addEventListener("click", () => { viewer.stopAuto(); viewer.previous(); });
-  $("[data-next]", stage).addEventListener("click", () => { viewer.stopAuto(); viewer.next(); });
-  thumbs.forEach((b) => b.addEventListener("click", () => { viewer.stopAuto(); viewer.goTo(Number(b.getAttribute("data-scene"))); }));
-  $("[data-reset]", stage).addEventListener("click", () => { viewer.stopAuto(); viewer.resetView(false); });
+  // ------------------------------------------------------------ moving between spaces
+  const go = (fn) => {
+    viewer.stopAuto();
+    dropHint();
+    fn();
+  };
+  if (scenes.length < 2) $(".tour-pad", stage).hidden = true;
+  nextBtn.addEventListener("click", () => go(() => viewer.next()));
+  prevBtn.addEventListener("click", () => go(() => viewer.previous()));
+  thumbs.forEach((b) => b.addEventListener("click", () => go(() => viewer.goTo(Number(b.getAttribute("data-scene"))))));
   $("[data-retry]", errorBox).addEventListener("click", () => viewer.goTo(Math.max(0, viewer.index), { force: true, instant: true }));
 
-  if (viewer.reducedMotion) autoBtn.hidden = true;
-  autoBtn.addEventListener("click", () => viewer.toggleAuto());
+  const setStrip = (open) => {
+    strip.hidden = !open;
+    stripBtn.setAttribute("aria-expanded", String(open));
+    if (open) {
+      dropHint();
+      const active = thumbs[Math.max(0, viewer.index)];
+      if (active) active.scrollIntoView({ block: "nearest", inline: "center" });
+    }
+    wake();
+  };
+  stripBtn.addEventListener("click", () => setStrip(strip.hidden));
 
-  // Intro / help card
-  const openIntro = () => { viewer.stopAuto(); intro.hidden = false; $("[data-start]", intro).focus(); };
-  const closeIntro = () => { intro.hidden = true; canvas.focus({ preventScroll: true }); };
-  $("[data-start]", intro).addEventListener("click", closeIntro);
-  $("[data-help]", stage).addEventListener("click", openIntro);
-  intro.addEventListener("click", (e) => { if (e.target === intro) closeIntro(); });
+  // ------------------------------------------------------------ tools
+  if (viewer.reducedMotion) autoBtn.hidden = true;
+  autoBtn.addEventListener("click", () => { dropHint(); viewer.toggleAuto(); });
+
+  const setHelp = (open) => {
+    helpPanel.hidden = !open;
+    helpBtn.setAttribute("aria-expanded", String(open));
+    if (open) {
+      viewer.stopAuto();
+      dropHint();
+      $("[data-help-close]", helpPanel).focus();
+    } else if (helpPanel.contains(document.activeElement)) {
+      helpBtn.focus();
+    }
+    wake();
+  };
+  helpBtn.addEventListener("click", () => setHelp(helpPanel.hidden));
+  $("[data-help-close]", helpPanel).addEventListener("click", () => setHelp(false));
 
   // Fullscreen (not available on iPhone Safari: the button is hidden there)
-  const fsTarget = stage;
-  const fsEnabled = Boolean(fsTarget.requestFullscreen && document.fullscreenEnabled);
+  const fsEnabled = Boolean(stage.requestFullscreen && document.fullscreenEnabled);
   fullBtn.hidden = !fsEnabled;
-  fullBtn.addEventListener("click", () => {
+  const toggleFullscreen = () => {
+    if (!fsEnabled) return;
     if (document.fullscreenElement) document.exitFullscreen();
-    else fsTarget.requestFullscreen().catch(() => {});
-  });
+    else stage.requestFullscreen().catch(() => {});
+  };
+  fullBtn.addEventListener("click", toggleFullscreen);
   on(document, "fullscreenchange", () => {
-    const on = Boolean(document.fullscreenElement);
-    fullBtn.setAttribute("aria-pressed", String(on));
-    fullBtn.setAttribute("aria-label", on ? S.exitFullscreen : S.fullscreen);
-    fullBtn.title = on ? S.exitFullscreen : S.fullscreen;
+    const full = Boolean(document.fullscreenElement);
+    fullBtn.setAttribute("aria-pressed", String(full));
+    fullBtn.setAttribute("aria-label", full ? S.exitFullscreen : S.fullscreen);
+    fullBtn.title = full ? S.exitFullscreen : S.fullscreen;
     viewer.resize();
   });
 
@@ -166,49 +238,28 @@ function start() {
     if (ok) vrBtn.addEventListener("click", () => viewer.enterVR().catch((err) => console.error(err)));
   });
 
-  // Keyboard shortcuts (movement keys are handled by the viewer)
+  // ------------------------------------------------------------ keyboard (movement keys are handled by the viewer)
   on(window, "keydown", (e) => {
     const tag = e.target && e.target.tagName;
     if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || e.metaKey || e.ctrlKey || e.altKey) return;
-    if (e.key === "Escape" && !intro.hidden) closeIntro();
-    else if (!intro.hidden) return;
-    else if (e.code === "BracketRight" || e.code === "PageDown") viewer.next();
-    else if (e.code === "BracketLeft" || e.code === "PageUp") viewer.previous();
+    wake();
+    if (e.key === "Escape") {
+      if (!helpPanel.hidden) setHelp(false);
+      else if (!strip.hidden) setStrip(false);
+      return;
+    }
+    if (e.code === "BracketRight" || e.code === "PageDown") go(() => viewer.next());
+    else if (e.code === "BracketLeft" || e.code === "PageUp") go(() => viewer.previous());
     else if (e.code === "KeyR") viewer.resetView(false);
-    else if (e.code === "KeyH") openIntro();
+    else if (e.code === "KeyH") setHelp(helpPanel.hidden);
+    else if (e.code === "KeyF") toggleFullscreen();
+    else if (TourViewer.MOVE_KEYS.has(e.code)) dropHint();
   });
 
-  // Touch joystick
-  if (touch) {
-    joystick.hidden = false;
-    const knob = $(".tour-joystick__knob", joystick);
-    let active = null;
-    const update = (e) => {
-      const rect = joystick.getBoundingClientRect();
-      const radius = rect.width / 2;
-      let x = (e.clientX - (rect.left + radius)) / radius;
-      let y = (e.clientY - (rect.top + radius)) / radius;
-      const len = Math.hypot(x, y);
-      if (len > 1) { x /= len; y /= len; }
-      knob.style.transform = "translate(" + x * radius * 0.6 + "px," + y * radius * 0.6 + "px)";
-      viewer.setJoystick(x, -y);
-    };
-    const end = (e) => {
-      if (active !== e.pointerId) return;
-      active = null;
-      knob.style.transform = "";
-      viewer.setJoystick(0, 0);
-    };
-    joystick.addEventListener("pointerdown", (e) => {
-      active = e.pointerId;
-      try { joystick.setPointerCapture(e.pointerId); } catch (err) { /* pointer already released */ }
-      update(e);
-      e.preventDefault();
-    });
-    joystick.addEventListener("pointermove", (e) => { if (active === e.pointerId) update(e); });
-    joystick.addEventListener("pointerup", end);
-    joystick.addEventListener("pointercancel", end);
-  }
+  // The first real gesture on the picture puts the hint away; any movement brings the interface back.
+  on(canvas, "pointerdown", () => { dropHint(); if (!strip.hidden && window.matchMedia("(max-width: 760px)").matches) setStrip(false); });
+  on(canvas, "wheel", dropHint, { passive: true });
+  ["pointermove", "pointerdown", "touchstart", "wheel", "focusin"].forEach((type) => on(stage, type, wake, { passive: true }));
 
   on(document, "visibilitychange", () => { if (document.hidden) viewer.stopAuto(); });
   if (useHash) on(window, "hashchange", () => viewer.goTo(sceneFromHash()));
@@ -219,4 +270,4 @@ function start() {
 // A page that embeds the viewer can start it again after putting a new tour on the page.
 window.luxhouseTourStart = start;
 if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", start);
-else if (document.getElementById("tour-data")) start();
+else start();

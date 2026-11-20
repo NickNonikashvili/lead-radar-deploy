@@ -111,7 +111,6 @@ function organizationLd(req, lang, t) {
  * where <page> is the view name given to render(): home, residences, residence, services, sell,
  * about, contact, saved, legal, 404. The two folders are listed once at start-up; outside
  * production they are listed again on every request, so a new file needs no restart.
- * public/css/legacy.css, while it exists, carries the pre-Nocturne pages that are still to be rebuilt.
  */
 const PUBLIC_DIR = path.join(__dirname, "public");
 function listPageAssets() {
@@ -122,7 +121,7 @@ function listPageAssets() {
       return new Set();
     }
   };
-  return { css: names("css", ".css"), js: names("js", ".js"), legacy: fs.existsSync(path.join(PUBLIC_DIR, "css", "legacy.css")) };
+  return { css: names("css", ".css"), js: names("js", ".js") };
 }
 let pageAssetIndex = listPageAssets();
 function pageAssets(page) {
@@ -130,7 +129,6 @@ function pageAssets(page) {
   return {
     css: pageAssetIndex.css.has(page) ? `/css/pages/${page}.css` : "",
     js: pageAssetIndex.js.has(page) ? `/js/pages/${page}.js` : "",
-    legacy: pageAssetIndex.legacy ? "/css/legacy.css" : "",
   };
 }
 
@@ -167,7 +165,7 @@ function baseLocals(req, lang) {
     scripts: [],
     styles: [],
     page: "",
-    pageAssets: { css: "", js: "", legacy: "" },
+    pageAssets: { css: "", js: "" },
     anyTour: listings.all().some((l) => l.hasTour),
     savedCardsUrl: `/api/cards?lang=${lang}`,
     legalUpdated: LEGAL_UPDATED,
@@ -502,8 +500,11 @@ function languageRouter(lang) {
     );
   });
 
+  // Pages without data of their own still show the homes: `showcase` is every residence, for photography.
   const simple = (route, page, locals) =>
-    router.get(route, (req, res, next) => render(req, res, next, page, typeof locals === "function" ? locals(req, res) : locals));
+    router.get(route, (req, res, next) =>
+      render(req, res, next, page, Object.assign({ showcase: cardViews(listings.all(), lang, t) }, typeof locals === "function" ? locals(req, res) : locals))
+    );
 
   simple("/services", "services", { title: `${t("services.title")} — ${config.brand}`, description: t("services.lead") });
   simple("/sell", "sell", { title: `${t("sell.title", { brand: config.brand })}`, description: t("sell.lead") });
@@ -539,7 +540,7 @@ app.use((req, res, next) => {
     alternates: {},
     canonical: "",
   });
-  render(req, res, next, "404", { title: `${t("errors.notFoundTitle")} — ${config.brand}`, noindex: true }, 404);
+  render(req, res, next, "404", { title: `${t("errors.notFoundTitle")} — ${config.brand}`, noindex: true, headerOverlay: true, showcase: cardViews(listings.all(), lang, t) }, 404);
 });
 
 // eslint-disable-next-line no-unused-vars
