@@ -16,6 +16,9 @@ function perDay(tierId) {
 export default function home() {
   const root = designPage("index");
 
+  // Headline as one translatable sentence (the footprints under "first steps" are hidden in this design).
+  root.querySelector(".h1-line").set_content(`Your million <span class="tilt">first steps</span> in Georgia.`);
+
   // Hero form: no copy is emailed to the visitor, so don't promise one.
   const sub = root.querySelector("#req-done .req-sub");
   sub.set_content(`Your request number is <strong id="rq-id">MFS-0000</strong>. We’ll write back within 24 hours on weekdays.`);

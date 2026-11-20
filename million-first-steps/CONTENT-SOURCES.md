@@ -4,6 +4,18 @@ Research notes for **Million First Steps**, October 2026. This is practical guid
 
 ---
 
+## To do before launch: photos that came with the new design (November 2026)
+
+The new design brought its own photos in `src/assets/img/`. The designer's notes say they are temporary:
+
+- **Pexels (free licence, no credit needed):** `poti`, `zugdidi`, `gori`, `bakhmaro`, `rustavi`, `ozurgeti`, `ambrolauri`, `tskaltubo` — already listed on the Credits page.
+- **Wikimedia Commons (CC BY / CC BY-SA — the author must be credited):** `abudelauri`, `ananuri`, `batumi`, `borjomi`, `disc-kakheti-vines`, `easy-borjomi`, `gomismta`, `gudauri`, `kakheti`, `kazbegi-gergeti`, `kobuleti`, `kutaisi`, `martvili`, `mestia`, `mtskheta`, `offmap-ushguli`, `sighnaghi`, `tbilisi`, `tbilisi-night`, `tbilisi-trinity`, `telavi`, `thrills-ski`, `uplistsikhe`, `ushguli`, `vardzia`. Ask the designer for each file's Commons page (author + licence), add them to the Credits page, or replace them with your own photos.
+- **Hero video** (`src/assets/video/`): confirm where the clips come from and that you may use them commercially.
+
+The tours' own photos for Kakheti, Svaneti, Tusheti and Tbilisi are the credited Commons photos from the first version (`src/data/photo-credits.json`).
+
+---
+
 ## The short version
 
 | ✅ Safe | ⚠️ Safe with care | ❌ Never |

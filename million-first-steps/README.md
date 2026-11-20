@@ -1,74 +1,70 @@
 # Million First Steps — website
 
-The website for **Million First Steps · Georgia Travel Experiences**: a multi-page, scroll-animated static site with seven tours in three price tiers, a full history of Georgia, destinations, travel advice and a booking-request form.
+The website for **Million First Steps · Georgia Travel Experiences**: private and custom trips in Georgia, in nine languages (English, Russian, Georgian, Spanish, French, Italian, Portuguese, German and Chinese), with seven tours in three travel styles, a history of Georgia, a travel guide and request forms that email you.
 
-It builds to plain HTML/CSS/JS with **no framework and no runtime dependencies**, so it can be hosted anywhere (Netlify, Cloudflare Pages, GitHub Pages, any web host) and even opened straight from a folder.
+It builds to plain HTML/CSS/JS with **no framework**, so it can be hosted anywhere. The forms need PHP (Hostinger has it); without PHP they open the visitor's email app instead.
 
 ## Run it
 
 ```bash
 cd million-first-steps
-npm run dev        # builds into dist/ and serves it at http://localhost:8080
-npm run build      # just build dist/
+npm install        # once
+npm run build      # builds dist/
+npm run dev        # builds and serves dist/ at http://localhost:8080 (forms fall back to email there)
+php -S localhost:8080 -t dist   # alternative that also runs send.php, if PHP is installed
 ```
 
-Node 18 or newer. `npm install` is only needed for the photo tools (it installs `sharp`).
+Node 18 or newer.
 
-## Pages
+## How it's put together
 
-| Page | What's on it |
+The design came as finished HTML pages. Their page bodies live in **`src/design/`** and stay as the designer made them; the build fills them with our content and wraps them in the shared header, footer and `<head>`:
+
+| Where | What |
 |---|---|
-| `index.html` | Illustrated hero you fly into, footprint-shaped reveal, the "deep time" counter (1.8 million years → today), a horizontal journey through 9 regions, a qvevri that fills with wine as you scroll, legends, hospitality, the tier switcher, an animated route map, the founders |
-| `tours.html` | Tier comparison (Wanderer / Explorer / Golden Fleece), filterable tour list |
-| `tours/<tour>.html` × 7 | Day-by-day itinerary synced to a map that draws the route as you read, tier picker, price calculator, inclusions |
-| `history.html` | Scroll timeline from Dmanisi to today, "write your name in Georgian", legends, UNESCO heritage |
-| `destinations.html` | Clickable region map and nine regions |
-| `about.html`, `plan.html`, `contact.html` | Your story; visas, money, seasons chart, etiquette, FAQ; booking request form |
-| `credits.html`, `privacy.html`, `terms.html`, `404.html` | Licences and photo credits (generated), privacy policy, booking-terms draft |
+| `src/config.mjs` | **Edit first:** email, phone, WhatsApp/Telegram/Signal/Instagram/Facebook, address, office hours, company name and code, form recipient, domain |
+| `src/data/tours.mjs`, `tiers.mjs` | Tours, itineraries, prices per travel style, what each style includes |
+| `src/data/tour-cards.mjs` | Each tour's photo, route line and seasons on the cards |
+| `src/data/history.mjs` | Which tour each history era links to |
+| `src/data/guide.mjs` | Travel guide articles |
+| `src/pages/*.mjs` | How each page fills the design (e.g. `home.mjs` swaps in our tours and FAQ answers) |
+| `src/design/*.html` | The designer's page bodies; `_header.html`, `_footer.html` |
+| `src/assets/css/site.css` | The design's styles (unchanged); `extra.css` adds tour pages, articles, legal pages, fonts |
+| `src/assets/js/*.js` | The design's scripts, one file per page plus `site.js` (menu, languages, sending forms) and `request.js` (dates, travellers, phone codes) |
+| `src/root/send.php`, `.htaccess` | Form emailer and server settings, copied to the site root |
+| `src/i18n/<lang>.json` | Translations (English text → translation) |
+
+Pages: home, tours, seven tour pages, Discover Georgia (history), travel guide with ten articles, about, contact, travel partners, privacy, booking terms, cookies, credits and 404 — each in every language under `/<lang>/`.
+
+## Languages
+
+The site is written in English; the build translates the finished pages with `src/i18n/<lang>.json`. Visitors land on their browser's language automatically, and their choice from the language menu is remembered.
+
+After changing any text, run `npm run build` (it lists every string in `src/i18n/_strings.json` and reports how much of each language is translated), then `npm run i18n:check` to see what's missing or broken. Text inside scripts is marked as `T("…")` (or `P("{n} …")` for plurals) and is translated the same way.
+
+## Forms (Hostinger)
+
+All forms — the trip request on the home page, the contact form and the partner inquiry — post to `send.php`, which emails them to `formTo` in `src/config.mjs` (or `email` if that's empty), with the visitor's address as *Reply-To*.
+
+- Spam protection: a hidden field bots fill in, a minimum time on the page, at most six messages per visitor per hour, and same-site requests only. For heavy spam, add Cloudflare Turnstile later.
+- Emails are sent from `no-reply@<your domain>`. On Hostinger, create that mailbox (or an email account on the domain) so messages aren't marked as spam, and check the spam folder after your first test.
+- If PHP or mail isn't available, the visitor's email app opens with the request filled in, so nothing is lost.
 
 ## Before you launch — checklist
 
-1. **`src/config.mjs`** — real email, phone/WhatsApp, Instagram, legal company name, registration number, and `siteUrl` once you have a domain (turns on canonical links and `sitemap.xml`).
-2. **Booking form** — create a free form at [Formspree](https://formspree.io) (or similar) and paste its URL into `formEndpoint`. Until then the form opens the visitor's email app with everything filled in.
-3. **Your story** — `src/pages/about.mjs` has a warm placeholder for "the father" and "the son". Replace it with your real story and names, and add a photo of the two of you as `src/assets/photos/about-founders.jpg`.
-4. **Prices** — adjust the per-tour prices in `src/data/tours.mjs` and the party-size factors and exchange rates in `src/config.mjs`.
-5. **Photos** — see below.
-6. **Legal** — read `CONTENT-SOURCES.md`, register with the Georgian National Tourism Administration, and have a lawyer finalise `terms.html`.
-
-## Adding photos
-
-The site is fully illustrated, so it looks finished without photos. Every place a photo can go is a **slot** listed in `src/data/photos.mjs`; when a slot gets a photo, the illustration there is swapped for it automatically.
-
-- **Your own photo:** save it as `src/assets/photos/<slot-id>.jpg` (e.g. `region-kazbegi.jpg`), run `npm install` once, then `npm run photos:optimize` and `npm run build`.
-- **Wikimedia Commons:** `npm run photos:commons` finds freely licensed photos for every empty slot, downloads and optimises them and records the credits (shown on `credits.html` and on the photo). Review each one.
-  - See the alternatives for a slot: `node scripts/fetch-photos.mjs --list=region-kazbegi --previews` (small previews go to `photo-previews/`).
-  - Use a specific one: `node scripts/fetch-photos.mjs --only=region-kazbegi --file="File:<name on Commons>" --force` — it is still licence-checked. To keep that choice, add `file: "File:…"` to the slot in `src/data/photos.mjs`.
-  - Needs access to `commons.wikimedia.org` and `upload.wikimedia.org`; behind a proxy the script picks up `HTTPS_PROXY` automatically.
-
-## Editing content
-
-Everything you'd want to change is data, not layout:
-
-- `src/data/tours.mjs` — tours, itineraries, prices, highlights
-- `src/data/tiers.mjs` — what each tier includes (cars, hotels, dining, guides)
-- `src/data/regions.mjs` — destinations
-- `src/data/history.mjs` — timeline, legends, UNESCO lists
-- `src/data/places.mjs` — map coordinates for every stop
-- `src/pages/*.mjs` — page text and structure
-- `src/assets/css/main.css`, `src/assets/js/main.js` — styles and animations
-
-The illustrations are generated in `src/lib/scenes.mjs` and the logo in `src/lib/logo.mjs`.
+1. **`src/config.mjs`** — real email, phone and messengers, legal company name and identification code, and `siteUrl` once you have a domain (turns on canonical links, hreflang and `sitemap.xml`).
+2. **Photos** — the design's photos are temporary. Those from Pexels are fine; the others came from Wikimedia Commons and need their authors credited on `credits.html` (see `CONTENT-SOURCES.md`) or replacing with your own. The hero video's source should be confirmed too.
+3. **About** — team names come from the design; add roles and photos (the illustrated faces are placeholders).
+4. **Prices** — check the per-tour prices in `src/data/tours.mjs`.
+5. **Translations** — have a native speaker read each language, especially the legal pages.
+6. **Legal** — have a lawyer finalise the booking terms; register with the Georgian National Tourism Administration.
 
 ## Deploying
 
-- **Netlify:** new site from this repo, *Base directory* `million-first-steps`; `netlify.toml` sets the build command and publish folder.
-- **Cloudflare Pages / Vercel:** root directory `million-first-steps`, build command `npm run build`, output `dist`.
-- **Hostinger (or any Apache/LiteSpeed host):** run `npm run build`, zip the *contents* of `dist/` and upload the zip to `public_html` in hPanel's File Manager, then extract it there. The included `.htaccess` sets up the 404 page, compression and caching. Turn on *Force HTTPS* in hPanel.
-- **Anywhere else:** run `npm run build` and upload the contents of `dist/`.
+- **Hostinger (or any Apache/LiteSpeed host with PHP):** run `npm run build`, zip the *contents* of `dist/`, upload the zip to `public_html` in hPanel's File Manager and extract it there. The included `.htaccess` sets up the 404 page, redirects from the first version's pages, compression and caching. Turn on *Force HTTPS* in hPanel.
+- **Netlify / Cloudflare Pages / Vercel:** root directory `million-first-steps`, build command `npm run build`, output `dist`. These don't run PHP, so forms open the visitor's email app.
 
-## Accessibility & performance
+## Privacy & performance
 
-- Respects *reduced motion*: animations and smooth scrolling switch off, and all content is still there.
-- Works without JavaScript (minus animations and the calculator).
-- No cookies, no trackers, no third-party requests — fonts and scripts are self-hosted.
-- Illustrations are vector and tiny; the whole site is about 2 MB including fonts.
+- No cookies, no analytics, no third-party requests: fonts and scripts are self-hosted, and the contact page's map is drawn, not loaded from a map service.
+- Visitors who ask for reduced motion get still images instead of the video and scroll effects.

@@ -4,7 +4,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { LANGS, loadDict, problems } from "../src/lib/i18n.mjs";
+import { LANGS, loadDict, lookup, problems } from "../src/lib/i18n.mjs";
 
 const dir = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "src", "i18n");
 const strings = JSON.parse(fs.readFileSync(path.join(dir, "_strings.json"), "utf8"));
@@ -12,9 +12,10 @@ const only = process.argv[2];
 let failed = false;
 for (const { code } of LANGS.filter((l) => l.code !== "en" && (!only || l.code === only))) {
   const dict = loadDict(dir, code);
+  const look = lookup(dict);
   const errors = [], warnings = [];
   for (const s of strings) {
-    const [err, warn] = problems(s, dict[s]);
+    const [err, warn] = problems(s, look(s));
     if (err) errors.push(`  ✗ ${err}: ${JSON.stringify(s).slice(0, 110)}`);
     else if (warn) warnings.push(`  ! ${warn}: ${JSON.stringify(s).slice(0, 90)}`);
   }

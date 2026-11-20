@@ -4,7 +4,7 @@
   if (calc) {
     var prices = JSON.parse(calc.dataset.prices), factors = JSON.parse(calc.dataset.factors);
     var out = calc.querySelector('[data-party-out]'), pp = calc.querySelector('[data-calc-pp]'), total = calc.querySelector('[data-calc-total]'), link = calc.querySelector('[data-calc-link]');
-    var party = 2, names = {};
+    var party = 2, names = {}, base = link.getAttribute('href').split('?')[0];
     calc.querySelectorAll('[data-set-tier]').forEach(function (b) { names[b.dataset.setTier] = b.querySelector('b').textContent; });
     var money = function (n) { return '€' + Math.round(n).toLocaleString(MFS.locale); };
     var update = function () {
@@ -14,7 +14,7 @@
       calc.querySelector('[data-party="-1"]').disabled = party <= 1; calc.querySelector('[data-party="1"]').disabled = party >= 16;
       var u = new URL(link.getAttribute('href'), location.href);
       u.searchParams.set('tier', names[tier] || tier); u.searchParams.set('party', party);
-      link.setAttribute('href', u.pathname.split('/').pop() + u.search + u.hash);
+      link.setAttribute('href', base + u.search + u.hash);
     };
     calc.addEventListener('click', function (e) { var b = e.target.closest('[data-party]'); if (!b) return; party = Math.max(1, Math.min(16, party + +b.dataset.party)); update(); });
     document.addEventListener('mfs:tier', update);
