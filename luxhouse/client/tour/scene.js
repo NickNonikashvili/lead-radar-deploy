@@ -273,9 +273,14 @@ export class TourScene {
     const side = gLat > 0 ? GAP / (this.fx * gLat) : 1;
     const fwd = gFwd > 0 ? (GAP * 1.6) / (this.fx * gFwd) : 2;
     const nearest = Math.min(this.edgeNear.left, this.edgeNear.right, this.edgeNear.bottom);
+    // Walking up to something enlarges it beyond what the photograph can show sharply, and
+    // walking past what stands at the rim of the frame leaves the picture: stop well short of both.
+    let m = 0;
+    for (let y = Math.round(gh * 0.2); y < gh * 0.8; y += 2) for (let x = Math.round(gw * 0.2); x < gw * 0.8; x += 2) buf[m++] = d[y * gw + x];
+    const nearCentre = Math.max(0.3, percentile(buf, m, 0.08));
     this.limits = {
       side: clamp(side, 0.05, Math.min(0.6, 0.3 * nearest)),
-      forward: clamp(fwd, 0.2, Math.min(2.5, 0.4 * this.depthMedian)),
+      forward: clamp(fwd, 0.15, Math.min(2.5, 0.4 * this.depthMedian, 0.3 * nearCentre, 0.5 * nearest)),
       back: clamp(side * 0.6, 0.03, 0.25),
       lift: clamp(side * 0.5, 0.03, 0.15),
       speed: 0,
@@ -316,9 +321,7 @@ export class TourScene {
     const forward = -p.z;
     const L = this.limits;
     if (forward < -L.back - 1e-6 || forward > L.forward + 1e-6) return "edge";
-    // A little more room to the sides once the visitor has stepped into the picture.
-    const widen = 1 + (2 * Math.max(0, forward)) / Math.max(0.3, this.depthMedian);
-    if (Math.abs(p.x) > L.side * widen + 1e-6) return "edge";
+    if (Math.abs(p.x) > L.side + 1e-6) return "edge";
     if (Math.abs(p.y) > L.lift + 1e-6) return "edge";
     const range = this._range(p.x, p.y, p.z);
     if (range.yawMax < range.yawMin || range.pitchMax < range.pitchMin) return "edge";

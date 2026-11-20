@@ -190,7 +190,12 @@ export class TourViewer {
         if (next.canStandAt(this.pos) === "ok") break;
         offset *= 0.5;
       }
-      this.arrive = { start: performance.now(), offset, duration: 1500 };
+      // A tall photograph shows only part of its height at once: arrive looking a little
+      // down and rise to the middle, so the visitor sees there is more above and below.
+      const range = next.lookRange(this.pos, 0, 0);
+      const tilt = range.pitchMax - range.pitchMin > 24 * DEG ? range.pitchMin * 0.45 : 0;
+      if (tilt) this.pitch = this.targetPitch = next.basePitch + tilt;
+      this.arrive = { start: performance.now(), offset, tilt, duration: 1500 };
     }
     this._status("ready");
     if (this.hooks.onScene) this.hooks.onScene(target, next);
@@ -622,6 +627,7 @@ export class TourViewer {
     if (this.arrive) {
       const t = Math.min(1, (now - this.arrive.start) / this.arrive.duration);
       this._place(this.arrive.offset * (1 - easeOut(t)));
+      if (this.arrive.tilt) this.targetPitch = scene.basePitch + this.arrive.tilt * (1 - ease(Math.min(1, t * 1.15)));
       this.dirty = true;
       if (t >= 1) this.arrive = null;
     } else if (this.auto) {
