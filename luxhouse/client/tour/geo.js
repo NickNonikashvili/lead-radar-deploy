@@ -190,9 +190,10 @@ function buildSeams(open, sampled, hidden, xs, ys, gw, gh, fx, fy, tolerance) {
     let top = 0;
     for (let j = 0; j < 4; j++) {
       if (hi - d[j] > tolerance * d[j]) {
-        // A corner on the nearer object: use the surface recorded behind it, or the far side of this cell.
+        // A corner on the nearer object: push it back to the far side of this cell. The surface
+        // recorded behind it is used when it agrees with that far side (it follows slopes better).
         const behind = hidden[ys[corner[j][0]] * gw + xs[corner[j][1]]];
-        d[j] = behind > d[j] ? behind : hi;
+        d[j] = behind > d[j] && Math.abs(behind - hi) <= 3 * tolerance * hi ? behind : hi;
       }
       if (d[j] < lo) lo = d[j];
       if (d[j] > top) top = d[j];

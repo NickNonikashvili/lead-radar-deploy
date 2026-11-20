@@ -28,11 +28,11 @@
     "depthMax": 5.287
    },
    "bytes": {
-    "geo": 45436
+    "geo": 44894
    },
    "stats": {
     "valid": 0.9704,
-    "hidden": 0.4733,
+    "hidden": 0.4019,
     "cut": 0.04
    },
    "texture": [
@@ -65,11 +65,11 @@
     "depthMax": 5.3035
    },
    "bytes": {
-    "geo": 46125
+    "geo": 45928
    },
    "stats": {
     "valid": 0.9703,
-    "hidden": 0.4652,
+    "hidden": 0.4016,
     "cut": 0.04
    },
    "texture": [

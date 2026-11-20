@@ -115,17 +115,16 @@ def build_layers(image: np.ndarray, depth: np.ndarray, mask: np.ndarray, gw: int
     link_h, link_v, near, far = _jumps(d_full, rtol)
 
     band = max(6, round(BAND_FRACTION * max(gw, gh)))
-    region = _geodesic_band(near, link_h, link_v, band)                     # where the hidden layer exists
-    region_wide = _geodesic_band(near, link_h, link_v, round(band * 1.6))   # inpainting source kept away from the object
+    region = _geodesic_band(near, link_h, link_v, band)   # where the hidden layer may exist
     # Openings onto the sky (windows, the edge of a roof) reveal far more when the visitor moves,
     # and sky is the one thing that can be continued safely: give those edges a wider band.
-    sky_far = far & ~valid
+    # The band is measured straight across the picture, not along surfaces, so it covers the
+    # frame of the opening and not whatever happens to touch it.
     sky_band = np.zeros(d_full.shape, bool)
-    if sky_far.any():
-        beside_sky = near & (cv2.dilate(sky_far.astype(np.uint8), np.ones((3, 3), np.uint8)) > 0)
-        sky_band = _geodesic_band(beside_sky, link_h, link_v, round(band * 2.5))
+    if (far & ~valid).any():
+        to_sky = cv2.distanceTransform(valid.astype(np.uint8) * 255, cv2.DIST_L2, 5)
+        sky_band = valid & (to_sky <= band * 1.5)
         region |= sky_band
-        region_wide |= _geodesic_band(beside_sky, link_h, link_v, round(band * 3.2))
 
     bg_depth = np.zeros_like(d_full)
     bg_valid = np.zeros(d_full.shape, bool)
@@ -146,20 +145,34 @@ def build_layers(image: np.ndarray, depth: np.ndarray, mask: np.ndarray, gw: int
         smooth = cv2.GaussianBlur(np.where(cand_sky, 0, cand).astype(np.float32), (0, 0), 2.0)
         weight = cv2.GaussianBlur((~cand_sky).astype(np.float32), (0, 0), 2.0)
         cand = np.where(cand_sky, sky_dist, smooth / np.maximum(weight, 1e-6))
-        # Only keep it where it really lies behind the front surface.
+
+        # Keep it only where it really lies behind the front surface.
         keep = region & (cand > d_full * (1.0 + rtol * 0.5))
         # Beside an opening onto the sky, whatever is not explained by a nearer surface is sky.
-        sky_fill = sky_band & valid & ~keep
+        sky_fill = sky_band & ~keep
         cand = np.where(sky_fill, sky_dist, cand)
         keep = keep | sky_fill
         bg_depth = np.where(keep, cand, 0).astype(np.float32)
         bg_valid = keep
         bg_sky = keep & (cand_sky | sky_fill)
 
-        inpaint_mask = (region_wide.astype(np.uint8)) * 255
-        bgr = cv2.cvtColor(bg_color, cv2.COLOR_RGB2BGR)
-        bgr = cv2.inpaint(bgr, inpaint_mask, 4, cv2.INPAINT_TELEA)
-        bg_color = cv2.cvtColor(bgr, cv2.COLOR_BGR2RGB)
+        # Colour: the same far-side pixel that supplied the depth, softened. Depth and colour then
+        # agree, and nothing bleeds in from unrelated parts of the picture.
+        original = bg_color
+        far_colour = cv2.GaussianBlur(original.reshape(-1, 3)[nearest], (0, 0), 3.0)
+        bg_color = np.where(keep[..., None], far_colour, original)
+
+        if bg_sky.any() and (~valid).any():
+            # Sky continues as sky: take each pixel's colour from the nearest piece of real sky,
+            # softened. (Diffusing it with the inpainting above would tint walls and floors.)
+            sky_src = np.where(~valid, 0, 255).astype(np.uint8)
+            _, sky_labels = cv2.distanceTransformWithLabels(sky_src, cv2.DIST_L2, 5, labelType=cv2.DIST_LABEL_PIXEL)
+            sky_lut = np.zeros(int(sky_labels.max()) + 1, np.int64)
+            flat_sky = np.flatnonzero(~valid)
+            sky_lut[sky_labels.ravel()[flat_sky]] = flat_sky
+            nearest_sky = original.reshape(-1, 3)[sky_lut[sky_labels]]
+            nearest_sky = cv2.GaussianBlur(nearest_sky, (0, 0), 5.0)
+            bg_color = np.where(bg_sky[..., None], nearest_sky, bg_color)
 
     info = {
         "near": d_min * 0.98,
