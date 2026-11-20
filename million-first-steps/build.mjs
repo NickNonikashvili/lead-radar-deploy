@@ -17,9 +17,11 @@ import aboutPage from "./src/pages/about.mjs";
 import contactPage from "./src/pages/contact.mjs";
 import partnersPage from "./src/pages/partners.mjs";
 import { privacyPage, termsPage, cookiesPage, creditsPage, notFoundPage } from "./src/pages/legal.mjs";
+import { writeAdminFiles } from "./scripts/admin-files.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-const out = path.join(here, "dist");
+// Output folder: dist/ (MFS_OUT=/some/dir builds elsewhere, e.g. for tests running side by side).
+const out = process.env.MFS_OUT ? path.resolve(process.env.MFS_OUT) : path.join(here, "dist");
 const t0 = Date.now();
 
 fs.rmSync(out, { recursive: true, force: true });
@@ -30,6 +32,7 @@ fs.cpSync(path.join(here, "src", "assets"), path.join(out, "assets"), {
 });
 writeFavicon();
 writeServerFiles();
+writeAdminFiles(out);
 
 const pages = [
   ["index.html", home()],
@@ -90,7 +93,7 @@ if (config.siteUrl) {
 
 const size = (dir) =>
   fs.readdirSync(dir, { withFileTypes: true }).reduce((n, e) => n + (e.isDirectory() ? size(path.join(dir, e.name)) : fs.statSync(path.join(dir, e.name)).size), 0);
-console.log(`Built ${pages.length} pages × ${LANGS.length} languages into dist/ (${(size(out) / 1024).toFixed(0)} KB) in ${Date.now() - t0} ms`);
+console.log(`Built ${pages.length} pages × ${LANGS.length} languages into ${path.relative(here, out) || "."}/ (${(size(out) / 1024).toFixed(0)} KB) in ${Date.now() - t0} ms`);
 
 function write(file, html) {
   const dest = path.join(out, file);
