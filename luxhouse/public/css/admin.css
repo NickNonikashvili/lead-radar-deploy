@@ -1,0 +1,78 @@
+/* Luxhouse — enquiry inbox (admin) */
+:root {
+  --ink: #0f1113;
+  --paper: #f7f4ee;
+  --surface: #fffdf9;
+  --muted: #60646b;
+  --line: rgba(15, 17, 19, 0.14);
+  --accent: #7a5a31;
+  --danger: #a3271f;
+  --ok: #2c6a45;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font: 15px/1.55 "Manrope Variable", "Noto Sans Georgian Variable", system-ui, sans-serif;
+}
+a { color: var(--accent); }
+.adm-header {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 28px;
+  padding: 14px clamp(16px, 4vw, 40px);
+  background: var(--ink);
+  color: var(--paper);
+}
+.adm-header__brand { font-family: "Cormorant Garamond", Georgia, serif; font-size: 1.4rem; letter-spacing: 0.16em; text-transform: uppercase; }
+.adm-header__brand span { margin-left: 12px; font: 600 0.72rem/1 "Manrope Variable", system-ui, sans-serif; letter-spacing: 0.14em; opacity: 0.7; }
+.adm-tabs { display: flex; flex-wrap: wrap; gap: 4px; margin-right: auto; }
+.adm-tabs a { padding: 8px 14px; color: var(--paper); text-decoration: none; opacity: 0.7; border: 1px solid transparent; }
+.adm-tabs a.is-active { opacity: 1; border-color: rgba(255, 255, 255, 0.4); }
+.adm-tabs span { margin-left: 6px; font-variant-numeric: tabular-nums; opacity: 0.8; }
+.adm-btn {
+  display: inline-flex;
+  align-items: center;
+  min-height: 38px;
+  padding: 8px 16px;
+  border: 1px solid currentColor;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+}
+.adm-btn:hover { background: rgba(125, 125, 125, 0.14); }
+.adm-btn--danger { color: var(--danger); }
+.adm-main { display: grid; gap: 16px; max-width: 1040px; margin: 0 auto; padding: 28px clamp(16px, 4vw, 40px) 80px; }
+.adm-empty { padding: 64px 0; text-align: center; color: var(--muted); }
+.adm-card { padding: 20px 22px; background: var(--surface); border: 1px solid var(--line); border-left: 4px solid var(--accent); }
+.adm-card[data-status="contacted"] { border-left-color: #8a8d92; }
+.adm-card[data-status="closed"] { border-left-color: var(--line); opacity: 0.8; }
+.adm-card__head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 14px; }
+.adm-card__name { font-size: 1.15rem; }
+.adm-card__head time { margin-left: auto; color: var(--muted); font-size: 0.85rem; font-variant-numeric: tabular-nums; }
+.adm-tag { padding: 3px 9px; background: var(--ink); color: var(--paper); font-size: 0.7rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; }
+.adm-tag--valuation { background: var(--accent); }
+.adm-tag--contact { background: #54585e; }
+.adm-card__fields { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 8px 24px; margin: 14px 0 0; }
+.adm-card__fields div { min-width: 0; }
+.adm-card__fields dt { font-size: 0.72rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.adm-card__fields dd { margin: 0; overflow-wrap: anywhere; }
+.adm-card__message { margin: 14px 0 0; padding: 12px 14px; background: var(--paper); white-space: pre-wrap; overflow-wrap: anywhere; }
+.adm-card__foot { display: grid; grid-template-columns: 170px 1fr auto; gap: 14px; align-items: end; margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--line); }
+.adm-card__foot label { display: grid; gap: 5px; font-size: 0.72rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.adm-card__foot select,
+.adm-card__foot textarea { width: 100%; padding: 8px 10px; border: 1px solid var(--line); background: #fff; color: var(--ink); font: inherit; font-weight: 400; letter-spacing: 0; text-transform: none; }
+.adm-card__actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.adm-card__state { min-width: 70px; font-size: 0.85rem; color: var(--ok); }
+.adm-card__state.is-error { color: var(--danger); }
+@media (max-width: 760px) {
+  .adm-card__foot { grid-template-columns: 1fr; }
+}

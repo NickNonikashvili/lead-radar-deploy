@@ -78,7 +78,7 @@
     menuOpenBtn.addEventListener("click", function () { setMenu(true); });
     $$("[data-menu-close]", menu).forEach(function (b) { b.addEventListener("click", function () { setMenu(false); }); });
     menu.addEventListener("keydown", function (e) { if (e.key === "Escape") setMenu(false); });
-    window.addEventListener("resize", function () { if (!menu.hidden && window.innerWidth > 1020) setMenu(false); });
+    window.addEventListener("resize", function () { if (!menu.hidden && window.innerWidth > 1180) setMenu(false); });
   }
 
   // ------------------------------------------------------------ currency
@@ -463,6 +463,7 @@
       try { points = JSON.parse(el.getAttribute("data-points")); } catch (e) { points = []; }
       var map = baseMap(el).setView([41.7151, 44.8271], 11);
       var bounds = [];
+      var markers = [];
       points.forEach(function (p) {
         if (!isFinite(p.lat) || !isFinite(p.lng)) return;
         L.circle([p.lat, p.lng], { radius: p.radius || 1000, color: "#7a5a31", weight: 1, fillColor: "#a5814f", fillOpacity: 0.14, interactive: false }).addTo(map);
@@ -476,10 +477,41 @@
           "<span><strong>" + escapeHtml(p.title) + "</strong><span>" + escapeHtml(p.place) + " · " + escapeHtml(p.price) + "</span></span></a>",
           { closeButton: false, offset: [0, -8] }
         );
+        markers.push(marker);
         bounds.push([p.lat, p.lng]);
       });
+      // Price labels of neighbouring homes would cover each other: stack them vertically instead.
+      var declutter = function () {
+        var placed = [];
+        markers
+          .map(function (mk) { return { mk: mk, pt: map.latLngToContainerPoint(mk.getLatLng()) }; })
+          .sort(function (a, b) { return a.pt.y - b.pt.y || a.pt.x - b.pt.x; })
+          .forEach(function (item) {
+            var el = item.mk.getElement();
+            var pin = el && el.querySelector(".map-pin");
+            if (!pin) return;
+            var w = pin.offsetWidth || 90;
+            var h = pin.offsetHeight || 26;
+            var y = item.pt.y;
+            var moved = true;
+            while (moved) {
+              moved = false;
+              for (var i = 0; i < placed.length; i++) {
+                var o = placed[i];
+                if (Math.abs(o.x - item.pt.x) < (o.w + w) / 2 + 4 && Math.abs(o.y - y) < (o.h + h) / 2 + 4) {
+                  y = o.y + (o.h + h) / 2 + 4;
+                  moved = true;
+                }
+              }
+            }
+            pin.style.setProperty("--dy", Math.round(y - item.pt.y) + "px");
+            placed.push({ x: item.pt.x, y: y, w: w, h: h });
+          });
+      };
+      map.on("zoomend moveend resize", declutter);
       if (bounds.length === 1) map.setView(bounds[0], 13);
       else if (bounds.length) map.fitBounds(bounds, { padding: [70, 70], maxZoom: 13 });
+      declutter();
       return map;
     }
   };

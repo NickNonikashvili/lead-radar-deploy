@@ -1,0 +1,77 @@
+<%
+  var typeLabel = { viewing: 'Viewing request', contact: 'Contact message', valuation: 'Valuation request' };
+  var statusLabel = { new: 'New', contacted: 'Contacted', closed: 'Closed' };
+  function fmt(iso) {
+    var d = new Date(iso);
+    return isNaN(d) ? iso : d.toISOString().slice(0, 16).replace('T', ' ') + ' UTC';
+  }
+%><!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Enquiries — <%= config.brand %> admin</title>
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="<%= asset('/vendor/fonts/fonts.css') %>">
+<link rel="stylesheet" href="<%= asset('/css/admin.css') %>">
+</head>
+<body>
+<header class="adm-header">
+  <div class="adm-header__brand"><%= config.brand %> <span>Enquiries</span></div>
+  <nav class="adm-tabs" aria-label="Filter by status">
+    <a href="/admin"<%- !status ? ' class="is-active" aria-current="page"' : '' %>>All <span><%= total %></span></a>
+    <% statuses.forEach(function (s) { %>
+      <a href="/admin?status=<%= s %>"<%- status === s ? ' class="is-active" aria-current="page"' : '' %>><%= statusLabel[s] %> <span><%= counts[s] %></span></a>
+    <% }) %>
+  </nav>
+  <a class="adm-btn" href="/admin/export.csv">Export CSV</a>
+</header>
+
+<main class="adm-main">
+  <% if (!items.length) { %>
+    <p class="adm-empty">No enquiries<%= status ? ' with this status' : ' yet' %>.</p>
+  <% } %>
+  <% items.forEach(function (x) { %>
+    <article class="adm-card" data-lead="<%= x.id %>" data-status="<%= x.status %>">
+      <header class="adm-card__head">
+        <span class="adm-tag adm-tag--<%= x.type %>"><%= typeLabel[x.type] || x.type %></span>
+        <strong class="adm-card__name"><%= x.name %></strong>
+        <time datetime="<%= x.createdAt %>"><%= fmt(x.createdAt) %></time>
+      </header>
+      <dl class="adm-card__fields">
+        <% if (x.phone) { %><div><dt>Phone</dt><dd><a href="tel:<%= x.phone.replace(/[^\d+]/g, '') %>"><%= x.phone %></a></dd></div><% } %>
+        <% if (x.email) { %><div><dt>Email</dt><dd><a href="mailto:<%= x.email %>"><%= x.email %></a></dd></div><% } %>
+        <% if (x.listing) { %><div><dt>Residence</dt><dd><a href="/en/residences/<%= x.listing.slug %>" target="_blank" rel="noopener"><%= x.listing.ref %> — <%= x.listing.title %></a></dd></div><% } %>
+        <% if (x.date) { %><div><dt>Preferred date</dt><dd><%= x.date %></dd></div><% } %>
+        <% if (x.subject) { %><div><dt>Subject</dt><dd><%= x.subject %></dd></div><% } %>
+        <% if (x.property) { %>
+          <% if (x.property.location) { %><div><dt>Property location</dt><dd><%= x.property.location %></dd></div><% } %>
+          <% if (x.property.type) { %><div><dt>Property type</dt><dd><%= x.property.type %></dd></div><% } %>
+          <% if (x.property.area) { %><div><dt>Approx. area</dt><dd><%= x.property.area %> m²</dd></div><% } %>
+          <% if (x.property.expectedPrice) { %><div><dt>Expected price</dt><dd>$<%= x.property.expectedPrice %></dd></div><% } %>
+        <% } %>
+        <div><dt>Language</dt><dd><%= (x.lang || '').toUpperCase() %></dd></div>
+      </dl>
+      <% if (x.message) { %><p class="adm-card__message"><%= x.message %></p><% } %>
+      <footer class="adm-card__foot">
+        <label>Status
+          <select data-status-select>
+            <% statuses.forEach(function (s) { %><option value="<%= s %>"<%= x.status === s ? ' selected' : '' %>><%= statusLabel[s] %></option><% }) %>
+          </select>
+        </label>
+        <label class="adm-card__notes">Notes
+          <textarea data-notes rows="2" maxlength="4000" placeholder="Internal notes (not visible to the client)"><%= x.notes || '' %></textarea>
+        </label>
+        <div class="adm-card__actions">
+          <button type="button" class="adm-btn" data-save-lead>Save</button>
+          <button type="button" class="adm-btn adm-btn--danger" data-delete-lead>Delete</button>
+          <span class="adm-card__state" data-state role="status" aria-live="polite"></span>
+        </div>
+      </footer>
+    </article>
+  <% }) %>
+</main>
+<script src="<%= asset('/js/admin.js') %>" defer></script>
+</body>
+</html>
