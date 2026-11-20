@@ -40,13 +40,15 @@ export function privacyPage() {
   <p>${esc(config.legalName)}${config.registrationNumber ? ` (identification code ${esc(config.registrationNumber)})` : ""}, ${esc(config.address)} — “we”, “us”. Contact: ${mail}.</p>
   <h2>What this website collects</h2>
   <ul>
-    <li><b>No cookies, no analytics, no advertising trackers.</b> We don’t use Google Analytics, Facebook pixels or similar tools.</li>
+    <li><b>No cookies for visitors and no advertising trackers.</b> We don’t use Google Analytics, Facebook pixels or similar tools.</li>
+    <li><b>Anonymous visit counts.</b> Our own server counts page views — which page, the website you came from, your language and the kind of device — without cookies and without storing your IP address. If your browser sends a “Do Not Track” or “Global Privacy Control” signal, you aren’t counted.</li>
     <li><b>Fonts and scripts are hosted on this website.</b> Your browser does not contact Google Fonts, map services or any other third party when you visit. The “Open in Google Maps” link only takes you to Google if you click it.</li>
-    <li><b>Your preferences stay on your device.</b> Your language and travel style are remembered in your browser’s local storage. They never leave your device and you can clear them at any time.</li>
+    <li><b>Your preferences stay on your device.</b> Your language, your travel style and whether you closed a notice are remembered in your browser’s local storage. They never leave your device and you can clear them at any time.</li>
     <li><b>Our web host</b> keeps standard server logs (such as IP address and pages requested) for security and to keep the site running.</li>
   </ul>
   <h2>When you send us a request</h2>
   <p>If you use one of our forms or write to us, we receive what you give us: typically your name, email address, phone number, travel dates, party size, the places you’d like to see and any notes (such as dietary or mobility needs). Forms are sent to our inbox by our website host’s mail server; if that isn’t available, the form opens your own email program instead.</p>
+  <p>Each request is emailed to us and kept in our booking system on our web host’s servers, which only our team can sign in to.</p>
   <p>We use these details only to reply to you, to plan and operate your journey, and — once you book — to meet our legal and accounting obligations. To run your trip we share only what’s needed with the hotels, drivers and guides who host you. We never sell your data or use it for advertising.</p>
   <h2>How long we keep it</h2>
   <p>Requests that don’t lead to a booking are deleted within 24 months. Booking records are kept for as long as tax and accounting law requires.</p>
@@ -57,13 +59,14 @@ export function privacyPage() {
 }
 
 export function cookiesPage() {
-  const main = page(`${hero("Cookies", "Your data", "This website doesn’t use cookies.")}
+  const main = page(`${hero("Cookies", "Your data", "This website doesn’t use cookies for visitors.")}
 <section class="wrap pg-sec lg-prose">
   <p class="lg-meta">Last updated ${updated}</p>
   <h2>No cookies, no banner</h2>
-  <p>We don’t set cookies and we don’t load analytics, advertising or social media trackers — which is also why you didn’t see a cookie banner.</p>
+  <p>We don’t set cookies for visitors and we don’t load anyone else’s analytics, advertising or social media trackers — which is also why you didn’t see a cookie banner.</p>
+  <p>The only cookie on this site is a sign-in cookie for our own team on the staff area; visitors never get it.</p>
   <h2>What your browser remembers</h2>
-  <p>To save you choosing again on every page, your browser keeps two small settings in its local storage: the language you picked and the travel style you last looked at. They stay on your device, are never sent to us, and you can clear them in your browser’s settings at any time.</p>
+  <p>To save you choosing again on every page, your browser keeps a few small settings in its local storage: the language you picked, the travel style you last looked at and whether you closed a notice. While you browse, it also keeps a copy of our current prices and contact details so that pages show them straight away. They stay on your device, are never sent to us, and you can clear them in your browser’s settings at any time.</p>
   <h2>Links to other websites</h2>
   <p>Links to Google Maps, WhatsApp, Telegram or social networks take you to those services, which have their own cookie and privacy policies.</p>
   <p>Questions? Write to us at ${mail}. More in our <a href="privacy.html">privacy policy</a>.</p>
@@ -97,5 +100,6 @@ export function termsPage() {
 
 export function notFoundPage() {
   const main = page(`<section class="pg-hero lg-hero nf" aria-labelledby="pg-h"><div class="wrap pg-hero-in"><p class="eyebrow">404</p><h1 id="pg-h">These footprints lead nowhere.</h1><p class="lede">The page you were looking for has wandered off into the mountains. Let's get you back on the trail.</p><div class="pg-acts"><a class="btn-sun" href="/index.html">Back to the start ${ARROW}</a><a class="btn-out" href="/tours.html">Browse tours</a></div></div></section>`);
-  return layout({ page: "404.html", title: "Page not found", description: "Page not found.", main, noindex: true }).replace(/(href|src)="(?!https?:|\/|#|mailto:|tel:|data:)(assets\/|[a-z-]+\.html)/g, '$1="/$2');
+  // Served at any address, so the layout makes its links absolute from the site root.
+  return layout({ page: "404.html", title: "Page not found", description: "Page not found.", main, noindex: true });
 }

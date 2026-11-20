@@ -1,0 +1,30 @@
+# Team area (admin panel). Private folders are closed, nothing is listed or indexed.
+Options -Indexes
+DirectoryIndex index.php
+
+# Never serve the database, logs, local config or notes, wherever they are.
+<FilesMatch "(^\.|\.(sqlite|sqlite-wal|sqlite-shm|db|log|bak|ini|md|sh|inc)$|^config\.local\.php$)">
+  <IfModule mod_authz_core.c>
+    Require all denied
+  </IfModule>
+  <IfModule !mod_authz_core.c>
+    Order allow,deny
+    Deny from all
+  </IfModule>
+</FilesMatch>
+
+# lib/, data/ and modules/ also carry their own deny-all .htaccess; this catches them even if those go missing.
+<IfModule mod_alias.c>
+  RedirectMatch 404 /(lib|data|modules)(/.*)?$
+</IfModule>
+
+# The PHP pages send these (and a Content-Security-Policy) themselves; "set" replaces rather than repeats them,
+# and also covers the static files here.
+<IfModule mod_headers.c>
+  Header always unset X-Content-Type-Options
+  Header always unset Referrer-Policy
+  Header set X-Content-Type-Options "nosniff"
+  Header set X-Robots-Tag "noindex, nofollow"
+  Header set X-Frame-Options "DENY"
+  Header set Referrer-Policy "same-origin"
+</IfModule>

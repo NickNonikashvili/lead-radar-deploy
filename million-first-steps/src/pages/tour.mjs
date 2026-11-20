@@ -1,7 +1,7 @@
 // Tour pages. The design has no tour page yet, so this one is built from its parts:
 // the page hero, section heads, tinted bands, tour cards and the closing call to action.
 import { layout } from "../lib/layout.mjs";
-import { esc, join, tierPrices, ARROW } from "../lib/site.mjs";
+import { esc, join, tierPrices, livePrice, eur, ARROW } from "../lib/site.mjs";
 import { icon } from "../lib/icons.mjs";
 import { georgiaMap } from "../lib/map.mjs";
 import { TIERS, ALWAYS_INCLUDED, NOT_INCLUDED } from "../data/tiers.mjs";
@@ -10,21 +10,21 @@ import { PLACES } from "../data/places.mjs";
 import { CARDS } from "../data/tour-cards.mjs";
 import config from "../config.mjs";
 
-const eur = (n) => `€${Math.round(n).toLocaleString("en-US")}`;
 const season = (s) => s.replace(/\s*\(.*\)$/, "");
 
-export function tourCards(list) {
-  return `<ul class="tc-grid tc-grid--more">${join(list, (t) => {
+// "You might also love": the first `show` tours are visible, the rest wait hidden (data-spare) and step in
+// when the owners take one of the first off the website (site.js).
+export function tourCards(list, show = list.length) {
+  return `<ul class="tc-grid tc-grid--more" data-tour-more="${show}">${join(list, (t, i) => {
     const c = CARDS[t.id];
-    return `<li><article class="tc"><div class="tc-ph"><img src="${c.img}" alt="${esc(c.alt)}" loading="lazy"><span class="tc-days">${t.days} days</span></div><div class="tc-body"><div class="tc-tags">${join(t.styles, (s) => `<span${s === "wine" ? ' class="w"' : ""}>${esc(STYLES[s])}</span>`)}</div><h3><a href="tours/${t.id}.html">${esc(t.name)}</a></h3><p class="tc-route">${c.stops.map(esc).join(" · ")}</p><div class="tc-foot"><span class="tc-price"><span>From</span> ${tierPrices(t.prices)}<small>per person, private tour</small></span><span class="tc-go" aria-hidden="true">View tour ${ARROW}</span></div></div></article></li>`;
+    return `<li data-tour-card="${t.id}"${i < show ? "" : " data-spare hidden"}><article class="tc"><div class="tc-ph"><img src="${c.img}" alt="${esc(c.alt)}" loading="lazy"><span class="tc-days">${t.days} days</span></div><div class="tc-body"><div class="tc-tags">${join(t.styles, (s) => `<span${s === "wine" ? ' class="w"' : ""}>${esc(STYLES[s])}</span>`)}</div><h3><a href="tours/${t.id}.html">${esc(t.name)}</a></h3><p class="tc-route">${c.stops.map(esc).join(" · ")}</p><div class="tc-foot"><span class="tc-price"><span>From</span> ${tierPrices(t)}<small>per person, private tour</small></span><span class="tc-go" aria-hidden="true">View tour ${ARROW}</span></div></div></article></li>`;
   })}</ul>`;
 }
 
 export default function tourPage(tour) {
   const c = CARDS[tour.id];
   const others = TOURS.filter((t) => t.id !== tour.id)
-    .sort((a, b) => b.styles.filter((s) => tour.styles.includes(s)).length - a.styles.filter((s) => tour.styles.includes(s)).length)
-    .slice(0, 3);
+    .sort((a, b) => b.styles.filter((s) => tour.styles.includes(s)).length - a.styles.filter((s) => tour.styles.includes(s)).length);
   const ask = `contact.html?topic=custom&tour=${encodeURIComponent(tour.name)}#cf-h`;
 
   const main = `<main id="main" class="tour-pg">
@@ -32,6 +32,7 @@ export default function tourPage(tour) {
   <div class="tr-hero-ph"><img src="${c.img}" alt="${esc(c.alt)}"></div>
   <div class="wrap tr-hero-in">
     <nav class="tr-crumbs" aria-label="Breadcrumb"><a href="tours.html">Tours</a><span aria-hidden="true">/</span><span>${esc(tour.name)}</span></nav>
+    <p class="tr-off" data-tour-unavailable="${tour.id}" role="status" hidden>This journey isn’t on offer at the moment. Ask us and we’ll suggest something similar.</p>
     <p class="eyebrow">${esc(tour.kicker)}</p>
     <h1 id="pg-h">${esc(tour.name)}</h1>
     <p class="lede">${esc(tour.summary)}</p>
@@ -39,7 +40,7 @@ export default function tourPage(tour) {
       <li>${icon("calendar")}<span><small>Duration</small><b>${tour.days} days · ${tour.days - 1} nights</b></span></li>
       <li>${icon("sun")}<span><small>Best season</small><b>${esc(season(tour.season))}</b></span></li>
       <li>${icon("mountains")}<span><small>Pace</small><b>${esc(tour.level)}</b></span></li>
-      <li>${icon("coin")}<span><small>From, per person</small><b>${tierPrices(tour.prices)}</b></span></li>
+      <li>${icon("coin")}<span><small>From, per person</small><b>${tierPrices(tour)}</b></span></li>
     </ul>
     <div class="pg-acts"><a class="btn-sun" href="#price">See prices</a><a class="btn-out" href="${ask}">Plan this trip</a></div>
   </div>
@@ -63,13 +64,13 @@ export default function tourPage(tour) {
   </div>
 </section>
 
-<section class="wrap pg-sec tr-price" id="price" aria-labelledby="price-h" data-calc data-prices='${JSON.stringify(tour.prices)}' data-factors='${JSON.stringify(config.partyFactors)}'>
+<section class="wrap pg-sec tr-price" id="price" aria-labelledby="price-h" data-calc data-tour="${tour.id}" data-prices='${JSON.stringify(tour.prices)}' data-factors='${JSON.stringify(config.partyFactors)}'>
   <div class="pg-head"><p class="eyebrow">Choose your comfort</p><h2 id="price-h" class="h2">One route, three ways to travel it</h2></div>
   <div class="tr-tiers" role="radiogroup" aria-label="Travel style">${join(
     TIERS,
     (t) => `<button type="button" class="tr-tier tr-tier--${t.id}" role="radio" aria-checked="${t.id === "explorer"}" data-set-tier="${t.id}">
       <span class="tr-tier-top"><b>${esc(t.name)}</b><span class="tr-check" aria-hidden="true">${icon("check")}</span></span>
-      <span class="tr-tier-price"><small>From</small> ${eur(tour.prices[t.id])} <small>per person</small></span>
+      <span class="tr-tier-price"><small>From</small> ${livePrice(tour, t.id)} <small>per person</small></span>
       <span class="tr-tier-tag">${esc(t.tagline)}</span>
       <span class="tr-tier-list"><span>${icon("car")}${esc(t.vehicle.title)}</span><span>${icon("bed")}${esc(t.stay.title)}</span><span>${icon("dining")}${esc(t.dining.title)}</span><span>${icon("guide")}${esc(t.guide.title)}</span></span>
       ${tour.tierNotes?.[t.id] ? `<span class="tr-tier-note">${esc(tour.tierNotes[t.id])}</span>` : ""}
@@ -94,7 +95,7 @@ export default function tourPage(tour) {
 <section class="pg-sec tint tr-more" aria-labelledby="more-h">
   <div class="wrap">
     <div class="pg-head"><p class="eyebrow">More journeys</p><h2 id="more-h" class="h2">You might also love</h2></div>
-    ${tourCards(others)}
+    ${tourCards(others, 3)}
   </div>
 </section>
 

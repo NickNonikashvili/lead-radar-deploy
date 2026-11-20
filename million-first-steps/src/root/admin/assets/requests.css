@@ -1,0 +1,183 @@
+/* Requests module — the inbox (?p=requests), one request (?p=request) and the export page (?p=export).
+   Builds on admin.css; only what those pages need beyond the shared components. */
+
+/* ── Inbox ─────────────────────────────────────────────────────────────────────────────────────── */
+.req-toolbar .check { min-height: 42px; padding: 4px 2px; align-items: center; }
+.req-toolbar .check__box { margin-top: 0; }
+.req-toolbar .check input { margin-top: 0; top: 50%; transform: translateY(-50%); }
+.req-toolbar .check__label { font-size: 14.5px; white-space: nowrap; }
+.req-callout { margin-bottom: 16px; }
+
+.req-bulkbar { margin: 10px 10px 2px; }
+.req-bulkbar__all { display: inline-flex; align-items: center; gap: 10px; min-height: 36px; padding-right: 6px; font-size: 14px; font-weight: 600; cursor: pointer; }
+.req-bulkbar__btns { display: flex; flex-wrap: wrap; gap: 8px; margin-left: auto; }
+
+.req-table td { vertical-align: top; }
+/* admin.css's .check (the custom checkbox label) also matches td.check: keep these real table cells with
+   plain, visible checkboxes. */
+.req-table th.check, .req-table td.check { display: table-cell; position: static; width: 54px; min-height: 0; padding: 15px 0 14px 24px; cursor: default; }
+.req-table .check input.box, .req-bulkbar input.box { position: static; opacity: 1; width: 20px; height: 20px; margin: 0; transform: none; }
+.req-table th.check { padding-top: 11px; padding-bottom: 11px; vertical-align: middle; }
+@media (min-width: 721px) {
+  .req-table { table-layout: fixed; }
+  .req-table th:nth-child(2) { width: 23%; }
+  .req-table th:nth-child(3) { width: 29%; }
+  .req-table th.req-wide { width: 14%; }
+  .req-table th:nth-child(5) { width: 21%; }
+  .req-table th:last-child { width: 168px; }
+  .req-table .req-contact { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+}
+.req-sm { display: none; }
+.req-table .cell-main { overflow-wrap: anywhere; }
+.req-contact { overflow-wrap: anywhere; }
+.req-cell { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.req-cell__main { font-weight: 600; color: var(--ink); overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.req-cell__main--plain { font-weight: 500; }
+.req-cell__sub { color: var(--muted); font-size: 13px; font-weight: 400; overflow-wrap: anywhere; }
+.req-cell__sub .mono { font-size: 12.5px; white-space: nowrap; }
+.table tr.is-unread .req-cell__sub { font-weight: 500; }
+.req-status { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; }
+.req-assignee { cursor: default; }
+.req-follow { display: inline-flex; align-items: center; gap: 4px; font-size: 12.5px; font-weight: 700; line-height: 1.3; color: var(--text-2); white-space: nowrap; }
+.req-follow .icon { width: 14px; height: 14px; }
+.req-follow--today { color: var(--gold-ink); }
+.req-follow--late { color: var(--red-ink); }
+.req-status .req-follow { flex-basis: 100%; }
+
+/* Between phone and wide desktop the Travel column folds into the Request column. */
+.req-mid { display: none; }
+@media (min-width: 721px) and (max-width: 1240px) {
+  .req-table .req-wide { display: none; }
+  .req-mid { display: inline; }
+}
+
+/* ── One request ───────────────────────────────────────────────────────────────────────────────── */
+.req-layout { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: var(--gap); align-items: start; }
+.req-main, .req-aside { display: flex; flex-direction: column; gap: var(--gap); min-width: 0; }
+
+.req-pn { display: flex; align-items: center; gap: 8px; }
+.req-pn__pos { margin-right: 6px; color: var(--muted); font-size: 14px; font-weight: 600; white-space: nowrap; font-variant-numeric: tabular-nums; }
+
+.req-hero { display: flex; flex-direction: column; gap: 16px; }
+.req-hero__tags { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; }
+.req-hero__fact { display: inline-flex; align-items: center; gap: 6px; color: var(--text-2); font-size: 14px; font-weight: 600; }
+.req-hero__fact .icon { width: 16px; height: 16px; color: var(--muted); }
+.req-reply { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+.req-reply__btn { width: 100%; }
+.req-reply__btn .icon { width: 20px; height: 20px; }
+.req-reply__btn--wa .icon { color: #1C9A4E; }
+.req-hero__contact { display: flex; flex-direction: column; margin: 0; }
+.req-contact-row dd { display: flex; align-items: center; gap: 10px; min-height: var(--tap); margin: 0; }
+.req-contact-row + .req-contact-row dd { border-top: 1px solid var(--line-2); }
+.req-contact-row__icon { display: inline-flex; color: var(--muted); }
+.req-contact-row__icon .icon { width: 18px; height: 18px; }
+.req-contact-row__val { flex: 0 1 auto; min-width: 0; font-size: 16px; font-weight: 600; color: var(--ink); overflow-wrap: anywhere; }
+.req-copy { margin-left: -4px; }
+.req-hero__hint { display: flex; align-items: flex-start; gap: 8px; color: var(--text-2); font-size: 14px; line-height: 1.45; }
+.req-hero__hint .icon { width: 17px; height: 17px; margin-top: 1px; color: var(--muted); }
+.req-hero__done { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 16px; padding-top: 16px; border-top: 1px solid var(--line-2); }
+.req-hero__done-text { color: var(--text-2); font-weight: 600; }
+
+.req-ask .card__body > * + * { margin-top: 16px; }
+.req-facts { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 12px; margin: 0; padding: 0; list-style: none; }
+.req-fact { display: flex; align-items: flex-start; gap: 12px; min-width: 0; padding: 14px; border: 1px solid var(--line-2); border-radius: var(--radius); background: var(--cream); }
+.req-fact__icon { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 10px; background: var(--gold-soft); color: var(--gold-ink); }
+.req-fact__icon .icon { width: 18px; height: 18px; }
+.req-fact__text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.req-fact__label { color: var(--muted); font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+.req-fact__value { color: var(--ink); font-size: 16px; font-weight: 700; line-height: 1.35; overflow-wrap: anywhere; white-space: pre-line; }
+.req-fact__link { display: inline-flex; align-items: center; gap: 4px; margin-top: 4px; font-size: 13.5px; font-weight: 600; text-decoration: none; }
+.req-fact__link:hover { text-decoration: underline; }
+.req-fact__link .icon { width: 14px; height: 14px; }
+
+.req-price { display: flex; align-items: flex-start; gap: 12px; padding: 14px 16px; border: 1px solid #CFE0CB; border-radius: var(--radius); background: #F3F8F1; color: var(--green-ink); }
+.req-price > .icon { margin-top: 1px; color: var(--green); }
+.req-price__title { font-weight: 700; }
+.req-price__list { display: flex; flex-wrap: wrap; gap: 2px 18px; margin-top: 2px; color: var(--text); }
+.req-price__sum { font-weight: 800; font-variant-numeric: tabular-nums; }
+
+.req-message { margin: 0; }
+.req-message__label { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; color: var(--muted); font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+.req-message__label .icon { width: 15px; height: 15px; }
+.req-message__text { margin: 0; padding: 16px 18px; border-left: 4px solid var(--gold); border-radius: 4px var(--radius) var(--radius) 4px; background: #FFFBF2; color: var(--ink); font-size: 16px; line-height: 1.6; white-space: pre-wrap; overflow-wrap: anywhere; }
+html[lang="ka"] .req-fact__label, html[lang="ka"] .req-message__label { letter-spacing: 0; text-transform: none; }
+
+.req-note-form { gap: 10px; margin-bottom: 24px; padding-bottom: 22px; border-bottom: 1px solid var(--line-2); }
+.req-note-form .textarea { min-height: 96px; }
+.req-note-form__foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
+.req-note-form .choice-row { gap: 8px; }
+.req-note-form .choice__box { padding: 8px 15px; font-size: 14.5px; }
+.req-note-form .choice__box .icon { width: 16px; height: 16px; }
+.req-timeline .tl-item__head { align-items: center; }
+.req-tl-tag { padding: 1px 9px; font-size: 11.5px; }
+.req-tl-del { margin: -6px -8px -6px auto; }
+.req-tl-del .btn { width: var(--tap); min-height: var(--tap); color: var(--muted); }
+.req-tl-del .btn:hover { color: var(--red-ink); background: var(--red-soft); }
+
+.req-sent__meta { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--line); }
+.req-sent__meta .kv__row:first-child { padding-top: 0; }
+.req-sent .kv__val { white-space: pre-wrap; }
+
+.req-manage .card__body { gap: 16px; }
+.req-quick { gap: 6px; margin-top: 2px; }
+.req-quick .chip { min-height: 38px; padding: 6px 13px; font: inherit; font-size: 13.5px; font-weight: 700; cursor: pointer; }
+.req-quick .chip.is-active { background: var(--ink); border-color: var(--ink); color: #FBF6EE; }
+.req-more .card__body { display: flex; flex-direction: column; gap: 10px; }
+.req-booking .list__title { white-space: normal; }
+.req-booking .card__head + .card__foot { margin-top: 16px; }
+.req-note-form .field__help { margin-top: -2px; }
+
+/* ── Export page ───────────────────────────────────────────────────────────────────────────────── */
+.req-export { display: flex; flex-direction: column; }
+.req-export .card__body { flex: 1; color: var(--text-2); }
+.req-export__head { display: flex; align-items: center; gap: 12px; }
+.req-export__count { margin-top: 10px; }
+
+/* ── Smaller screens ───────────────────────────────────────────────────────────────────────────── */
+@media (max-width: 1100px) {
+  /* One column; the cards go in the order you need them on a phone. */
+  .req-layout { display: flex; flex-direction: column; align-items: stretch; }
+  .req-main, .req-aside { display: contents; }
+  .req-hero { order: 1; } .req-ask { order: 2; } .req-manage { order: 3; } .req-notes { order: 4; }
+  .req-booking { order: 5; } .req-sent { order: 6; } .req-more { order: 7; }
+}
+@media (max-width: 720px) {
+  .req-tabs { max-width: none; }
+  .req-toolbar .select { flex: 1 1 100%; }
+  .req-toolbar .check { flex: 1 1 140px; }
+  .req-bulkbar { margin: 8px 8px 2px; }
+  .req-bulkbar__btns { margin-left: 0; width: 100%; }
+  .req-bulkbar__btns .btn { flex: 1 1 auto; }
+
+  /* Stacked rows: label and value side by side, values left-aligned. */
+  .req-table td[data-label]:not(.cell-primary) { display: grid; grid-template-columns: 92px minmax(0, 1fr); align-items: baseline; gap: 10px; text-align: left; }
+  .req-table td[data-label]::before { max-width: none; }
+  .req-table td[data-label]:empty { display: none; }
+  .req-table td.check { display: block; position: absolute; top: 6px; right: 6px; width: auto; padding: 0; }
+  .req-table td.check .box { width: 24px; height: 24px; margin: 10px; }
+  .req-table td.req-received[data-label] { display: none; }
+  .req-sm { display: inline; }
+  .req-table td.cell-primary { padding-right: 48px; }
+  .req-table .cell-main { font-size: 16.5px; }
+  .req-cell__main { -webkit-line-clamp: 3; }
+  .req-status .req-follow { flex-basis: auto; }
+
+  .page-head__actions .req-pn { flex: 1 1 auto; }
+  .req-pn .btn { flex: 1 1 0; }
+  .req-hero { gap: 14px; }
+  .req-reply { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .req-reply__btn:first-child:nth-last-child(odd) { grid-column: 1 / -1; }
+  .req-reply__btn { padding-left: 12px; padding-right: 12px; }
+  .req-facts { grid-template-columns: minmax(0, 1fr); gap: 10px; }
+  .req-fact { padding: 12px; }
+  .req-message__text { padding: 14px; font-size: 15.5px; }
+  .req-note-form__foot .btn { flex: 1 1 auto; }
+  .req-note-form .choice-row { width: 100%; }
+  .req-note-form .choice { flex: 1 1 auto; }
+  .req-note-form .choice__box { width: 100%; justify-content: center; }
+  .req-quick .chip { min-height: var(--tap); flex: 1 1 auto; justify-content: center; }
+}
+@media print {
+  .req-aside, .req-note-form, .req-reply, .req-hero__done, .req-tl-del, .req-copy { display: none !important; }
+  .req-layout { display: block; }
+}

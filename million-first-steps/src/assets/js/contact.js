@@ -5,10 +5,11 @@
   function dec(v) { try { return atob(v).split('').reverse().join(''); } catch (e) { return ''; } }
   document.querySelectorAll('.rv2').forEach(function (r) {
     r.querySelector('.reveal').addEventListener('click', function () {
-      var v = dec(r.dataset.v), href = r.dataset.k === 'mail' ? 'mailto:' + v : 'tel:' + v.replace(/[^+\d]/g, '');
-      r.innerHTML = '<span class="revealed"><a href="' + href + '">' + v + '</a><button type="button" class="copy">' + T('Copy') + '</button></span>';
+      var v = dec(r.dataset.v), shown = MFS.revealed(r.dataset.k, v), copy = document.createElement('button');
+      copy.type = 'button'; copy.className = 'copy'; copy.textContent = T('Copy'); shown.appendChild(copy);
+      r.textContent = ''; r.appendChild(shown);
       r.querySelector('a').focus();
-      r.querySelector('.copy').addEventListener('click', function () { var b = this; try { navigator.clipboard.writeText(v).then(function () { b.textContent = T('Copied'); }); } catch (e) {} });
+      r.querySelector('.copy').addEventListener('click', function () { var b = this; try { navigator.clipboard.writeText(r.querySelector('.revealed a').textContent).then(function () { b.textContent = T('Copied'); }); } catch (e) {} });
     });
   });
 

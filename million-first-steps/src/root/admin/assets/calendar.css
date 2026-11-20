@@ -1,0 +1,101 @@
+/* Calendar (?p=calendar). Loaded after admin.css and bookings.css.
+   .bk-month > .bk-month__dows + .bk-month__week (7-column grid per week: day cells fill every row, trips are
+   .cal__bar links placed with inline grid-column/grid-row, one lane per row) — hidden on phones, where
+   .cal__list > .bk-agenda (the month as a list) shows instead. */
+
+.bk-cal-card { padding: 22px 24px 24px; }
+.bk-cal__nav { align-items: flex-end; margin-bottom: 16px; }
+.bk-cal__heading { min-width: 0; }
+.bk-cal__count { margin-top: 4px; color: var(--muted); font-size: 14px; font-weight: 600; }
+.bk-cal__steps .btn.is-current { border-color: var(--ink); }
+
+.bk-cal__tools { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 22px; margin: 0 0 16px; padding: 10px 14px; border-radius: var(--radius); background: var(--cream-2); border: 1px solid var(--line-2); }
+.bk-cal__jump { display: flex; align-items: center; gap: 10px; }
+.bk-cal__jump .field__label { font-size: 13.5px; white-space: nowrap; }
+.bk-cal__jump .input { width: auto; min-width: 170px; }
+.bk-cal__check { min-height: 36px; padding: 0; align-items: center; }
+.bk-cal__check .check__box { margin-top: 0; }
+.bk-cal__check .check__label { flex-direction: row; align-items: baseline; gap: 8px; font-size: 14px; }
+.bk-cal__legend { display: flex; flex-wrap: wrap; gap: 6px 16px; margin-left: auto; list-style: none; color: var(--text-2); font-size: 13px; font-weight: 600; }
+.bk-cal__legend li { display: inline-flex; align-items: center; gap: 6px; }
+.bk-key { display: inline-block; width: 14px; height: 10px; border-radius: 3px; border-left: 3px solid var(--grey); background: var(--grey-soft); }
+.bk-key--quote { background: var(--violet-soft); border-color: var(--violet); }
+.bk-key--confirmed { background: var(--green); border-color: var(--green-dark); }
+.bk-key--completed { background: var(--green-dark-soft); border-color: var(--green-dark); }
+.bk-key--cancelled { background: var(--grey-soft); border-color: #A29A93; }
+
+/* Month grid */
+.bk-month { border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; background: var(--paper); }
+.bk-month__dows { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); border-bottom: 1px solid var(--line); }
+.bk-month__dows .cal__dow.is-weekend { background: #FFF9F0; }
+.bk-month__week { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); min-height: 118px; border-top: 1px solid var(--line-2); }
+.bk-month__week:first-of-type { border-top: 0; }
+.bk-month__day { grid-row: 1 / -1; min-width: 0; padding: 4px 6px; border-left: 1px solid var(--line-2); background: var(--paper); }
+.bk-month__day:first-child { border-left: 0; }
+.bk-month__day.is-weekend { background: #FFFCF7; }
+.bk-month__day.is-other { background: repeating-linear-gradient(135deg, #FCF9F4 0 6px, #FAF5EE 6px 12px); }
+.bk-month__day.is-other .cal__num { color: #B9AA98; }
+.bk-month__num { text-decoration: none; transition: background .15s, color .15s; }
+.bk-month__num:hover { background: var(--cream-2); color: var(--ink); text-decoration: none; }
+.bk-month__day.is-today { background: #FFFBF0; box-shadow: inset 0 0 0 2px rgba(242, 179, 61, .45); }
+.bk-month__day.is-today .bk-month__num:hover { background: var(--gold-2); }
+
+.bk-bar { position: relative; z-index: 1; display: flex; align-items: center; gap: 2px; align-self: center; height: 24px; margin: 0 5px; padding: 0 8px; }
+.bk-bar:not(.is-start) { margin-left: 0; padding-left: 4px; }
+.bk-bar:not(.is-end) { margin-right: 0; }
+.bk-bar:hover, .bk-bar:focus-visible { z-index: 2; box-shadow: 0 2px 8px rgba(43, 35, 32, .16); text-decoration: none; filter: none; }
+.bk-bar:focus-visible { outline-offset: 1px; }
+.bk-bar__text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bk-bar__cont { display: inline-flex; flex: none; opacity: .6; }
+.bk-bar__cont .icon { width: 13px; height: 13px; }
+.bk-bar.cal__bar--cancelled .bk-bar__text { text-decoration: line-through; }
+/* Confirmed trips are the ones to prepare for: solid green, so they stand out from quotes and past trips. */
+.bk-bar.cal__bar--confirmed { background: var(--green); border-left-color: var(--green-dark); color: #FBF6EE; }
+.bk-bar.cal__bar--completed { background: var(--green-dark-soft); color: var(--green-dark); border-left-color: var(--green-dark); opacity: .85; }
+
+/* Phone agenda */
+.bk-agenda { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.bk-agenda__item { display: flex; align-items: center; gap: 14px; padding: 12px 12px 12px 12px; border: 1px solid var(--line-2); border-left: 4px solid var(--grey); border-radius: var(--radius); background: var(--paper); color: inherit; text-decoration: none; }
+.bk-agenda__item:hover { background: #FFFBF3; color: inherit; }
+.bk-agenda__item--quote { border-left-color: var(--violet); }
+.bk-agenda__item--confirmed { border-left-color: var(--green); }
+.bk-agenda__item--completed { border-left-color: var(--green-dark); }
+.bk-agenda__item--cancelled { border-left-color: #A29A93; opacity: .8; }
+.bk-agenda__main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.bk-agenda__title { font-weight: 800; color: var(--ink); overflow-wrap: anywhere; }
+.bk-agenda__item--cancelled .bk-agenda__title { text-decoration: line-through; }
+.bk-agenda__meta { color: var(--text-2); font-size: 13.5px; overflow-wrap: anywhere; }
+.bk-agenda__pills { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin-top: 6px; }
+.bk-agenda__go { flex: none; display: inline-flex; color: var(--muted); }
+
+.bk-cal__tip { display: flex; align-items: center; gap: 6px; margin-top: 10px; color: var(--muted); font-size: 13px; }
+.bk-cal__tip .icon { width: 15px; height: 15px; }
+.bk-cal__nodates { margin-top: var(--gap); }
+.bk-cal__below { margin-top: var(--gap); }
+.bk-next__aside { flex-direction: column; align-items: flex-end; gap: 4px; }
+
+@media (max-width: 1180px) {
+  .bk-cal__legend { margin-left: 0; width: 100%; }
+}
+@media (max-width: 960px) {
+  .bk-month__week { min-height: 100px; }
+  .bk-bar { font-size: 11.5px; padding: 0 6px; }
+}
+@media (max-width: 720px) {
+  .bk-month, .bk-cal__tip { display: none; }
+  .bk-cal-card { padding: 16px; }
+  .bk-cal__nav { flex-wrap: nowrap; align-items: center; gap: 8px; }
+  .bk-cal__steps { flex: none; flex-wrap: nowrap; gap: 6px; }
+  .bk-cal__steps .btn { min-height: 40px; }
+  .bk-cal__steps .btn--icon { width: 40px; }
+  .bk-cal__steps .btn:not(.btn--icon) { padding: 6px 12px; font-size: 14px; }
+  .bk-cal__tools { gap: 6px 14px; padding: 10px 12px; }
+  .bk-cal__jump { width: 100%; }
+  .bk-cal__jump .input { flex: 1; min-width: 0; }
+  .bk-cal .cal__title { font-size: 19px; white-space: nowrap; }
+  .bk-next__aside .pill { display: none; }
+}
+@media (max-width: 380px) {
+  .bk-agenda__item { gap: 10px; padding: 10px; }
+  .bk-datebadge { width: 46px; }
+}

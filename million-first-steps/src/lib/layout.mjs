@@ -2,10 +2,12 @@
 // The header and footer markup come from src/design/_header.html and _footer.html.
 import fs from "node:fs";
 import path from "node:path";
+import crypto from "node:crypto";
 import { fileURLToPath } from "node:url";
 import { parse } from "node-html-parser";
 import config from "../config.mjs";
 import { LANGS } from "./i18n.mjs";
+import { publicPath } from "./urls.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const DESIGN = path.join(here, "..", "design");
@@ -20,7 +22,8 @@ export const ICONS = {
 };
 export const icons = (html) => html.replace(/\{\{icon:(\w+)\}\}/g, (m, k) => ICONS[k] || "");
 
-// Messaging channels in the order the design shows them; empty ones are left out everywhere.
+// Messaging channels in the order the design shows them. The admin panel can switch them on and off without
+// a rebuild (api/live.json, applied by site.js), so channels that aren't set up are built hidden, not left out.
 export function channels() {
   const c = config;
   return {
@@ -31,6 +34,40 @@ export function channels() {
     instagram: c.instagram || "",
     facebook: c.facebook || "",
   };
+}
+
+/**
+ * Marks one messaging channel for site.js: `item` is what hides (a list item or the link itself), `link` the <a>.
+ * Unconfigured channels are rendered hidden, without a link.
+ */
+export function markChannel(item, link, key) {
+  const href = channels()[key];
+  item.setAttribute("data-ch", key);
+  const text = link.text.trim().toLowerCase();
+  if (key !== "email" && (!text || text === key)) link.setAttribute("translate", "no"); // just the brand name
+  if (href) link.setAttribute("href", href);
+  else {
+    link.removeAttribute("href");
+    item.setAttribute("hidden", "");
+  }
+}
+
+/** A list of channels that hides as a whole when none of them is shown. */
+export function markChannelList(list) {
+  if (!list) return;
+  list.setAttribute("data-ch-list", "");
+  if (!list.querySelectorAll("[data-ch]").some((el) => !el.hasAttribute("hidden"))) list.setAttribute("hidden", "");
+}
+
+/** Contact detail texts as built, so site.js can tell an admin change from the built value (see api/live.json). */
+const BUILT_CONTACT = () => ({ address: config.address, officeHours: config.officeHours, legalName: config.legalName, registrationNumber: config.registrationNumber });
+
+// Stylesheets and scripts get ?v=<content hash> so browsers fetch them again after an update.
+const ASSETS = path.join(here, "..", "assets");
+const versions = new Map();
+export function asset(rel) {
+  if (!versions.has(rel)) versions.set(rel, crypto.createHash("sha256").update(fs.readFileSync(path.join(ASSETS, rel))).digest("hex").slice(0, 10));
+  return `assets/${rel}?v=${versions.get(rel)}`;
 }
 
 const NAV = ["tours.html", "discover-georgia.html", "travel-guide.html", "about.html", "contact.html", "partners.html"];
@@ -56,32 +93,49 @@ function header(page) {
 function footer() {
   const root = parse(icons(read("_footer.html")), PARSE);
   root.querySelector(".brand").setAttribute("translate", "no");
-  // Social icons: only the channels that are set up.
-  const ch = channels();
+  // Social icons: one per channel, hidden when it isn't set up.
   root.querySelectorAll(".sf-social li").forEach((li) => {
     const a = li.querySelector("a");
-    const key = (a.getAttribute("aria-label") || "").toLowerCase();
-    if (ch[key]) a.setAttribute("href", ch[key]);
-    else li.remove();
+    markChannel(li, a, (a.getAttribute("aria-label") || "").toLowerCase());
   });
-  if (!root.querySelector(".sf-social li")) root.querySelector(".sf-social")?.remove();
-  // Contact column
-  const cis = root.querySelectorAll(".sf-contact .sf-ci");
-  const [addr, mail, tel, hours] = cis;
-  addr.querySelector("span:last-child").set_content(config.address);
-  if (config.email) mail.querySelector(".rv").setAttribute("data-v", seal(config.email));
-  else mail.remove();
-  if (config.phone) tel.querySelector(".rv").setAttribute("data-v", seal(config.phone));
-  else tel.remove();
-  if (config.officeHours) hours.querySelector("span:last-child").set_content(config.officeHours);
-  else hours.remove();
+  markChannelList(root.querySelector(".sf-social"));
+  // Contact column: every row is built, empty ones hidden, so the admin panel can fill them in later.
+  const [addr, mail, tel, hours] = root.querySelectorAll(".sf-contact .sf-ci");
+  liveText(addr, addr.querySelector("span:last-child"), "address", config.address);
+  liveReveal(mail, mail.querySelector(".rv"), "email", config.email);
+  liveReveal(tel, tel.querySelector(".rv"), "phone", config.phone);
+  liveText(hours, hours.querySelector("span:last-child"), "officeHours", config.officeHours);
   // Company line and legal links
-  const reg = config.registrationNumber ? ` · <span>Identification code</span> <span translate="no">${config.registrationNumber}</span>` : "";
-  root.querySelector(".sf-bottom p").set_content(`© ${new Date().getFullYear()} <span translate="no">${config.legalName}</span>${reg} · ${config.address}`);
+  const wrap = (v, html) => `<span data-live-wrap${v ? "" : " hidden"}>${html}</span>`;
+  root.querySelector(".sf-bottom p").set_content(
+    `© ${new Date().getFullYear()} <span translate="no" data-live="legalName">${esc(config.legalName)}</span>` +
+      wrap(config.registrationNumber, ` · <span>Identification code</span> <span translate="no" data-live="registrationNumber">${esc(config.registrationNumber)}</span>`) +
+      wrap(config.address, ` · <span data-live="address">${esc(config.address)}</span>`)
+  );
   root.querySelector(".sf-legal").set_content(
     `<a href="privacy.html">Privacy</a><a href="terms.html">Booking terms</a><a href="cookies.html">Cookies</a><a href="credits.html">Credits</a>`
   );
   return root.toString();
+}
+
+const esc = (s) => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+
+/** A contact text the admin panel can change: `el` shows it, `wrap` is the row that hides when it's empty. */
+export function liveText(wrap, el, key, value) {
+  el.setAttribute("data-live", key);
+  el.set_content(esc(value));
+  if (wrap !== el) wrap.setAttribute("data-live-wrap", "");
+  else el.setAttribute("data-live-wrap", "");
+  if (!value) wrap.setAttribute("hidden", "");
+}
+
+/** The email or phone "Show …" reveal (sealed in data-v), with the row that hides when it's empty. */
+export function liveReveal(wrap, rv, key, value) {
+  rv.setAttribute("data-live", key);
+  rv.setAttribute("data-v", value ? seal(value) : "");
+  if (wrap !== rv) wrap.setAttribute("data-live-wrap", "");
+  else rv.setAttribute("data-live-wrap", "");
+  if (!value) wrap.setAttribute("hidden", "");
 }
 
 /** Makes the page's relative links work from a subfolder (tours/…, guide/…). */
@@ -90,28 +144,31 @@ function rebase(html, root) {
   return html.replace(/(\s(?:href|src|poster|action|data-src)=")(?![a-z][a-z0-9+.-]*:|#|\/|\.\.\/)([^"]+)"/gi, `$1${root}$2"`);
 }
 
-export function layout({ page, title, description, main, scripts = [], rootClass = "", head = "", ogImage = "assets/img/og.jpg", noindex = false }) {
+export function layout({ page, title, description, main, scripts = [], rootClass = "", head = "", ogImage = "assets/img/og.jpg", noindex = false, data = {} }) {
   const depth = page.split("/").length - 1;
-  const root = "../".repeat(depth);
+  // The 404 page is served at any address, so its links start at the site root.
+  const notFound = page === "404.html";
+  const root = notFound ? "/" : "../".repeat(depth);
   const fullTitle = page === "index.html" ? `${config.brand} · ${title}` : `${title} · ${config.brand}`;
-  const url = (lang) => `${config.siteUrl}/${lang === "en" ? "" : lang + "/"}${page === "index.html" ? "" : page}`;
-  const alternates = config.siteUrl && page !== "404.html"
+  const url = (lang) => `${config.siteUrl}/${lang === "en" ? "" : lang + "/"}${publicPath(page)}`;
+  const alternates = config.siteUrl && !notFound
     ? LANGS.map((l) => `<link rel="alternate" hreflang="${l.code}" href="${url(l.code)}">`).join("\n") + `\n<link rel="alternate" hreflang="x-default" href="${url("en")}">\n<link rel="canonical" href="${url("en")}">`
     : "";
   const og = config.siteUrl ? `<meta property="og:image" content="${config.siteUrl}/${ogImage}">` : "";
-  const cfg = { email: config.email, brand: config.brand };
+  const cfg = { email: config.email, brand: config.brand, c: BUILT_CONTACT(), ...data };
 
   const body = `<div id="root"${rootClass ? ` class="${rootClass}"` : ""} style="font-family: Manrope, system-ui, sans-serif; color: #2B2320; background: #FBF6EE;">
 <a class="skip" href="#main">Skip to content</a>
+<div class="site-notice" role="status" hidden><div class="site-notice-in"><p class="site-notice-t" translate="no"></p><button type="button" class="site-notice-x" aria-label="Close"><span aria-hidden="true">✕</span></button></div></div>
 ${header(page)}
 <script>(function(h,i){if(!i)return;function o(){return i.scrollWidth>i.clientWidth+1}function f(){var c=h.classList;c.remove("sh-tight","sh-narrow");if(innerWidth<=1140||!o())return;c.add("sh-tight");if(o()){c.remove("sh-tight");c.add("sh-narrow")}}f();addEventListener("resize",f);if(document.fonts)document.fonts.ready.then(f)})(document.documentElement,document.querySelector(".sh-in"))</script>
 ${main}
 ${footer()}
 </div>
-${["site.js", ...scripts].map((s) => `<script src="assets/js/${s}" defer></script>`).join("\n")}`;
+${["site.js", ...scripts].map((s) => `<script src="${asset("js/" + s)}" defer></script>`).join("\n")}`;
 
   const doc = `<!doctype html>
-<html lang="en" data-page="${page === "404.html" ? "" : page}" data-site-root="${root}">
+<html lang="en"${notFound ? "" : ` data-page="${publicPath(page)}"`} data-site-root="${root}">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -129,13 +186,15 @@ ${alternates}
 <link rel="apple-touch-icon" href="assets/img/apple-touch-icon.png">
 <link rel="preload" href="assets/fonts/fraunces-latin-standard-normal.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="assets/fonts/manrope-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="assets/css/site.css">
-<link rel="stylesheet" href="assets/css/extra.css">
+<link rel="stylesheet" href="${asset("css/site.css")}">
+<link rel="stylesheet" href="${asset("css/extra.css")}">
 <script>
 // Language: a visitor's saved choice wins, otherwise the first browser language the site speaks.
-(function(d){var h=d.documentElement;try{var L=${JSON.stringify(LANGS.map((l) => l.code))},want=localStorage.getItem("mfs-lang"),page=h.getAttribute("data-page");
+// Then the settings the owners changed in the admin panel start loading (api/live.json, applied by site.js).
+(function(d){var h=d.documentElement,r=h.getAttribute("data-site-root")||"";try{var L=${JSON.stringify(LANGS.map((l) => l.code))},want=localStorage.getItem("mfs-lang"),page=h.getAttribute("data-page");
 if(!want){var n=navigator.languages||[navigator.language||""];for(var i=0;i<n.length&&!want;i++){var c=String(n[i]).slice(0,2).toLowerCase();if(L.indexOf(c)>-1)want=c}want=want||"en";localStorage.setItem("mfs-lang",want)}
-if(page&&want!==h.lang&&L.indexOf(want)>-1)location.replace(h.getAttribute("data-site-root")+(want==="en"?"":want+"/")+page+location.search+location.hash);}catch(e){}})(document);
+if(page!=null&&want!==h.lang&&L.indexOf(want)>-1){location.replace(r+(want==="en"?"":want+"/")+page+location.search+location.hash);return}}catch(e){}
+try{if(window.fetch&&location.protocol!=="file:")window.MFS_LIVE=fetch(r+"api/live.json",{cache:"no-cache",credentials:"omit"}).then(function(x){return x.ok?x.json():null}).catch(function(){return null})}catch(e){}})(document);
 window.MFS=${JSON.stringify(cfg)};
 window.MFS.t={};
 </script>

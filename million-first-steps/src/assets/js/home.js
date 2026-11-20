@@ -393,12 +393,14 @@
 /* ---- Sample journeys: the road and the van ---- */
 (function(){
   var sec=document.querySelector('.journeys'); if(!sec) return;
-  var scene=sec.querySelector('.jr-scene'), pin=sec.querySelector('.jr-pin'), move=sec.querySelector('.jr-move'), grid=sec.querySelector('.jr-grid'), cards=[].slice.call(sec.querySelectorAll('.jr')), road=sec.querySelector('.jr-road');
+  // Tours the owners take off the website are hidden (site.js, mfs:live): the road only visits the cards on show.
+  var scene=sec.querySelector('.jr-scene'), pin=sec.querySelector('.jr-pin'), move=sec.querySelector('.jr-move'), grid=sec.querySelector('.jr-grid'), all=[].slice.call(sec.querySelectorAll('.jr')), cards=all, road=sec.querySelector('.jr-road');
   var track=sec.querySelector('.jr-track'), fill=sec.querySelector('.jr-fill'), pinsG=sec.querySelector('.jr-pins'), van=sec.querySelector('.jr-van');
   var rm=window.matchMedia('(prefers-reduced-motion: reduce)'), mq=window.matchMedia('(min-width: 1001px)');
   var xs=[], midX=0, L=0, ticking=false, pins=[], stops=[], viewW=0, endX=0, maxShift=0, lastLen=null;
   function c(v){ return v<0?0:v>1?1:v }
   function layout(){
+    cards=all.filter(function(el){ return !el.hidden });
     move.style.transform=''; cards.forEach(function(el){ el.style.setProperty('--o',1) });
     viewW=grid.parentNode.clientWidth;
     xs=cards.map(function(el){ return el.offsetLeft+el.offsetWidth/2 });
@@ -428,11 +430,12 @@
   }
   function setup(){
     var live=!rm.matches && mq.matches; sec.classList.toggle('is-live',live);
-    if(!live){ move.style.transform=''; cards.forEach(function(el){ el.style.removeProperty('--o') }); return }
+    if(!live){ move.style.transform=''; all.forEach(function(el){ el.style.removeProperty('--o') }); return }
     layout(); frame();
   }
   window.addEventListener('scroll',function(){ if(!ticking){ ticking=true; requestAnimationFrame(frame) } },{passive:true});
   window.addEventListener('resize',setup);
+  document.addEventListener('mfs:live',setup);
   [rm,mq].forEach(function(m){ if(m.addEventListener) m.addEventListener('change',setup) });
   if(document.fonts && document.fonts.ready) document.fonts.ready.then(setup);
   setup();

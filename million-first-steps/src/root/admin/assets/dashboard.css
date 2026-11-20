@@ -1,0 +1,111 @@
+/* Dashboard (?p=dashboard). Charts and bar lists: charts.css. */
+
+/* Greeting */
+.dash-head { align-items: flex-end; }
+.dash-head__date { display: inline-flex; align-items: center; gap: 8px; margin-bottom: 8px; color: var(--muted); font-size: 12.5px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
+.dash-head__date .icon { width: 16px; height: 16px; color: var(--gold-ink); }
+.dash-head__jump { display: inline-flex; align-items: center; gap: 4px; color: var(--wine); font-weight: 700; text-decoration: none; }
+.dash-head__jump:hover { text-decoration: underline; }
+.dash-head__jump .icon { width: 18px; height: 18px; }
+
+/* Layout: key figures, then two independent columns, then the charts */
+.dash { display: flex; flex-direction: column; gap: var(--gap); }
+.dash__cols { display: grid; gap: var(--gap); grid-template-columns: minmax(0, 1fr) minmax(0, 380px); align-items: start; }
+.dash__main, .dash__side { display: flex; flex-direction: column; gap: var(--gap); min-width: 0; }
+@media (max-width: 1180px) { .dash__cols { grid-template-columns: minmax(0, 1fr) minmax(0, 330px); } }
+@media (max-width: 960px) { .dash__cols { grid-template-columns: minmax(0, 1fr); } }
+
+/* Key figures: 4 per row on wide screens, 2 on phones */
+.dash__kpis { container-type: inline-size; }
+@container (min-width: 760px) { .dash-kpis { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+@container (max-width: 759px) { .dash-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; } }
+@container (max-width: 320px) { .dash-kpis { grid-template-columns: minmax(0, 1fr); } }
+.dash-kpi .kpi__meta .trend + span { min-width: 0; }
+.dash-kpi__value--long { font-size: 27px; }
+@media (max-width: 720px) {
+  .dash-kpi__value--long { font-size: 21px; }
+  .dash-kpi .kpi__meta { font-size: 12.5px; }
+}
+
+/* Lists inside cards: dividers between items (the items are links inside <li>) */
+.dash .list > li + li > .list__item { border-top: 1px solid var(--line-2); }
+.dash .card__head + .list, .dash .card__head + .dash-attn__chips { margin-top: 12px; }
+.dash .list__item { min-height: 64px; align-items: flex-start; }
+.dash .list__item > .list__icon { margin-top: 1px; }
+.dash .list__item > .list__aside { align-self: center; }
+.dash .list__aside { gap: 8px; }
+.dash .list__title { line-height: 1.35; }
+.dash-item__sub { display: block; margin-top: 1px; overflow: hidden; color: var(--text-2); font-size: 14px; text-overflow: ellipsis; white-space: nowrap; }
+/* Facts separated by dots. The dots sit in each fact's left padding and the row is shifted left inside a clipping
+   box, so a fact that wraps to the start of a line never shows a stray dot. */
+.dash-item__meta { display: block; overflow: hidden; margin-top: 4px; }
+.dash-item__facts { display: flex; flex-wrap: wrap; align-items: center; row-gap: 3px; margin-left: -15px; color: var(--muted); font-size: 13.5px; line-height: 1.4; }
+.dash-fact { position: relative; padding-left: 15px; white-space: nowrap; }
+.dash-fact::before { content: ""; position: absolute; left: 5px; top: 50%; width: 3px; height: 3px; margin-top: -1px; border-radius: 50%; background: #C9B9A3; }
+.dash-fact--html .pill { padding-top: 1px; padding-bottom: 1px; font-size: 12px; }
+.dash-fact--late { color: var(--red-ink); font-weight: 700; }
+.dash-fact--today { color: var(--gold-ink); font-weight: 700; }
+.dash-fact--warn { color: #8A5A00; font-weight: 600; }
+.dash-fact--now { color: var(--green-ink); font-weight: 700; }
+.dash-item__note { display: -webkit-box; margin-top: 4px; overflow: hidden; color: var(--text-2); font-size: 13.5px; line-height: 1.45; overflow-wrap: anywhere; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.dash-item__go { display: inline-flex; color: var(--line-strong); }
+.dash-item__go .icon { width: 18px; height: 18px; }
+a.list__item:hover .dash-item__go { color: var(--wine); }
+.dash-item--late .dash-item__icon { background: var(--red-soft); color: var(--red); }
+.dash-item--today .dash-item__icon { background: var(--gold-soft); color: var(--gold-ink); }
+.dash-item--soon .dash-item__icon { background: var(--blue-soft); color: var(--blue); }
+.dash-amount { color: var(--ink); font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+/* Needs attention */
+.dash-attn .card__title .badge { margin-left: 4px; vertical-align: 3px; }
+.dash-attn__chips { padding: 0 24px 4px; }
+.dash-attn__chips .chip { min-height: 34px; padding: 5px 12px; font-size: 13.5px; }
+.dash-group { margin-top: 14px; border-top: 1px solid var(--line-2); }
+.dash-group__title { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; padding: 16px 24px 4px; color: var(--text-2); font: 700 12.5px/1.3 var(--font); letter-spacing: .1em; text-transform: uppercase; }
+.dash-group__title .icon { width: 16px; height: 16px; color: var(--gold-ink); }
+.dash-group__count { min-width: 22px; padding: 1px 7px; border-radius: var(--radius-pill); background: var(--cream-2); color: var(--ink); font-size: 12px; letter-spacing: 0; text-align: center; }
+.dash-group__hint { margin-left: auto; color: var(--muted); font-size: 12.5px; font-weight: 600; letter-spacing: 0; text-transform: none; }
+.dash-group__more { display: flex; align-items: center; gap: 6px; min-height: var(--tap); padding: 4px 24px 12px; font-size: 14.5px; font-weight: 700; text-decoration: none; }
+.dash-group__more:hover { text-decoration: underline; }
+.dash-group__more .icon { width: 17px; height: 17px; }
+.dash-attn > .card__body:last-child .ins-empty { padding: 26px 12px; }
+.dash-attn .list { padding-bottom: 6px; }
+
+/* Latest requests */
+.dash-req .list__title { font-weight: 600; }
+.dash-req.is-unread .list__title { font-weight: 800; }
+.dash-unread { display: inline-block; width: 8px; height: 8px; margin: 0 8px 2px 0; border-radius: 50%; background: var(--gold-2); vertical-align: middle; }
+
+/* Upcoming trips: a date badge in front of each */
+.dash-date { flex: none; align-self: flex-start; display: inline-flex; flex-direction: column; align-items: center; justify-content: center; width: 46px; height: 50px; border: 1px solid var(--line); border-radius: 12px; background: #FFFCF7; line-height: 1; }
+.dash-date__d { font: 600 19px/1 var(--font-serif); color: var(--ink); font-variant-numeric: tabular-nums; }
+.dash-date__m { margin-top: 4px; color: var(--wine); font-size: 10.5px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
+.dash-date--now { border-color: #C6DCC2; background: var(--green-soft); }
+.dash-date--now .dash-date__m { color: var(--green-ink); }
+.dash-trip .list__title { font-weight: 700; }
+.dash__side .list__item { padding-left: 20px; padding-right: 20px; }
+.dash__side .card__foot .btn--link { display: inline-flex; align-items: center; gap: 6px; }
+
+/* Charts */
+.dash-chart__foot { margin-top: 14px; font-size: 14px; }
+.dash-chart__foot a { display: inline-flex; align-items: center; gap: 6px; font-weight: 700; text-decoration: none; }
+.dash-chart__foot a:hover { text-decoration: underline; }
+.dash-chart__foot .icon { width: 16px; height: 16px; }
+
+/* Day one */
+.dash-steps { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 12px; list-style: none; }
+.dash-steps a { display: flex; align-items: flex-start; gap: 12px; height: 100%; padding: 14px 16px; border: 1px solid var(--line); border-radius: var(--radius); background: #FFFDF9; color: inherit; text-decoration: none; transition: border-color .15s, box-shadow .15s; }
+.dash-steps a:hover { border-color: var(--gold); box-shadow: var(--shadow); color: inherit; }
+.dash-steps strong { display: block; color: var(--ink); font-weight: 700; }
+.dash-steps .muted { display: block; margin-top: 3px; line-height: 1.45; }
+.dash-steps__icon { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 38px; height: 38px; border-radius: 12px; background: var(--gold-soft); color: var(--gold-ink); }
+
+@media (max-width: 720px) {
+  .dash-attn__chips { padding: 0 16px 4px; }
+  .dash-group__title { padding: 14px 16px 4px; }
+  .dash-group__more { padding: 4px 16px 12px; }
+  .dash__side .list__item { padding-left: 16px; padding-right: 16px; }
+  .dash .list__item { gap: 12px; }
+  .dash-item__go { display: none; }
+  .dash-head__date { margin-bottom: 6px; }
+}

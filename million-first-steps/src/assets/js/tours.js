@@ -1,4 +1,5 @@
-/* Tours page: season, length and style filters, sorting, and the result count. */
+/* Tours page: season, length and style filters, sorting, and the result count. Tours the owners take off
+   the website (site.js marks them data-live-off and fires mfs:live) never show. */
 (function () {
   var grid = document.getElementById('tc-grid'); if (!grid) return;
   var items = [].slice.call(grid.children), st = { dur: 'all', type: 'all', season: 'all' };
@@ -9,7 +10,7 @@
     sd.value = st.dur; ss.value = st.type;
     var n = 0;
     items.forEach(function (li) {
-      var ok = (st.dur === 'all' || li.dataset.dur === st.dur) && (st.type === 'all' || li.dataset.type.split(' ').indexOf(st.type) > -1) && (st.season === 'all' || li.dataset.season.split(' ').indexOf(st.season) > -1);
+      var ok = !li.hasAttribute('data-live-off') && (st.dur === 'all' || li.dataset.dur === st.dur) && (st.type === 'all' || li.dataset.type.split(' ').indexOf(st.type) > -1) && (st.season === 'all' || li.dataset.season.split(' ').indexOf(st.season) > -1);
       li.hidden = !ok; if (ok) n++;
     });
     var s = sort.value;
@@ -27,6 +28,7 @@
   sort.addEventListener('change', paint);
   function reset() { st = { dur: 'all', type: 'all', season: 'all' }; paint(); }
   document.getElementById('tc-reset').addEventListener('click', reset);
-  document.getElementById('tc-all').addEventListener('click', function () { reset(); grid.querySelector('a').focus(); });
+  document.getElementById('tc-all').addEventListener('click', function () { reset(); var a = grid.querySelector('li:not([hidden]) a'); if (a) a.focus(); });
+  document.addEventListener('mfs:live', paint);
   paint();
 })();

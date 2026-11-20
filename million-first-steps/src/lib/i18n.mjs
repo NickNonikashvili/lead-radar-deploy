@@ -33,7 +33,9 @@ const SKIP = new Set(["script", "style", "noscript", "code", "pre"]);
 const ATTRS = ["alt", "title", "placeholder", "aria-label", "data-unit", "data-label", "data-like"];
 const hasLetters = (s) => /\p{L}/u.test(s);
 const norm = (s) => s.replace(/\s+/g, " ").trim();
-const opaque = (el) => /(^|\s)(price|tp)(\s|$)/.test(el.getAttribute?.("class") || "");
+// Opaque elements never join the sentence around them: prices per tier, and the contact details the admin
+// panel can change (data-live, data-live-wrap) — those are translated on their own, or not at all.
+const opaque = (el) => /(^|\s)(price|tp)(\s|$)/.test(el.getAttribute?.("class") || "") || !!el.hasAttribute?.("data-live") || !!el.hasAttribute?.("data-live-wrap");
 const skipped = (el) => el.getAttribute?.("translate") === "no" || el.getAttribute?.("lang") === "ka" || SKIP.has(el.rawTagName?.toLowerCase());
 
 // A "leaf" holds text and only inline formatting, so it can be translated as one sentence.
@@ -83,10 +85,12 @@ function walk(root, visit) {
       return;
     }
     if (el.rawTagName && isLeaf(el)) {
-      // Attributes on inline children (a title on an <abbr>) travel with the sentence.
-      const html = el.innerHTML;
+      // Attributes on inline children (a title on an <abbr>) travel with the sentence. Price markers don't:
+      // the sentence is looked up without them and they are put back around the same number afterwards.
+      const marks = [];
+      const html = el.innerHTML.replace(PRICE_MARK, (m, attr, text) => (marks.push({ attr, text }), text));
       const lead = html.match(/^\s*/)[0], tail = html.match(/\s*$/)[0];
-      visit(norm(html), (t) => el.set_content(lead + t + tail));
+      visit(norm(html), (t) => el.set_content(lead + (marks.length ? remark(t, marks) : t) + tail));
       return;
     }
     for (const c of [...el.childNodes]) {
@@ -101,6 +105,36 @@ function walk(root, visit) {
   };
   go(root);
 }
+
+// Live prices: <span data-price="tour:tier">€1,690</span>, data-from, data-perday (see site.js). Translations
+// keep their own number format ("1 690 €", "€1.690"), so the marker is put back around the same number.
+const PRICE_MARK = /<span (data-(?:price|from|perday)="[^"]*")>([^<]*)<\/span>/g;
+export const markWarnings = [];
+function remark(t, marks) {
+  let out = "", pos = 0;
+  for (const { attr, text } of marks) {
+    const digits = text.replace(/\D/g, "");
+    if (!digits) {
+      markWarnings.push(text);
+      continue;
+    }
+    const groups = digits.replace(/\B(?=(\d{3})+(?!\d))/g, " ").split(" ");
+    const euro = text.includes("€");
+    const num = groups.join("[,.\\s\\u00a0\\u202f'’]?");
+    const re = new RegExp(`${euro ? "(?:€[\\s\\u00a0\\u202f]?)?" : ""}(?<![\\d,.])${num}(?![\\d]|[,.]\\d)${euro ? "(?:[\\s\\u00a0\\u202f]?€)?" : ""}`, "g");
+    re.lastIndex = pos;
+    let m;
+    while ((m = re.exec(t)) && insideTag(t, m.index));
+    if (!m) {
+      markWarnings.push(text);
+      continue;
+    }
+    out += t.slice(pos, m.index) + `<span ${attr}>${m[0]}</span>`;
+    pos = m.index + m[0].length;
+  }
+  return out + t.slice(pos);
+}
+const insideTag = (s, i) => s.lastIndexOf("<", i) > s.lastIndexOf(">", i);
 
 const PARSE_OPTS = { comment: true, blockTextElements: { script: true, style: true, pre: true, textarea: true } };
 const splitDoctype = (html) => {
@@ -145,7 +179,8 @@ export function translatePage(html, { lang, dict, missing, js = [] }) {
   if (code) code.set_content(lang.toUpperCase());
   const og = root.querySelector('meta[property="og:locale"]');
   if (og) og.setAttribute("content", LANGS.find((l) => l.code === lang).og);
-  let out = doctype + root.toString();
+  // (The parser writes an empty attribute without its ="", e.g. data-page on a home page.)
+  let out = doctype + root.toString().replace(/^(<html[^>]*?) data-page(?=[\s>])/, '$1 data-page=""');
   // Pages move one folder down, so shared assets are one more level up.
   out = out.replace(/(["'\s,(])((?:\.\.\/)*)assets\//g, "$1../$2assets/");
   // Language links point at sibling languages, also one level up.
@@ -164,12 +199,31 @@ export function translatePage(html, { lang, dict, missing, js = [] }) {
 
 // Same text with typographic or straight quotes, or a non-breaking space, is the same string.
 const loose = (s) => s.replace(/[\u2018\u2019\u02bc]/g, "'").replace(/[\u201c\u201d]/g, '"').replace(/\u00a0/g, " ").replace(/\s+/g, " ").trim();
+// A sentence with a link is the same sentence on a page one folder deeper ("../contact.html"): the
+// translation is found without the "../" and gets this page's links back.
+const HREF = /(\shref=")([^"]*)"/g;
+const unrooted = (h) => h.replace(/^(?:\.\.\/)+/, "");
+const hrefFree = (s) => s.replace(HREF, (m, a, h) => `${a}${unrooted(h)}"`);
+function withHrefsOf(key, t) {
+  const map = new Map();
+  for (const [, , h] of key.matchAll(HREF)) map.set(unrooted(h), h);
+  return t.replace(HREF, (m, a, h) => `${a}${map.get(unrooted(h)) ?? h}"`);
+}
 const LOOKUPS = new WeakMap();
 export function lookup(dict) {
   if (LOOKUPS.has(dict)) return LOOKUPS.get(dict);
-  const byLoose = new Map();
-  for (const [k, v] of Object.entries(dict)) if (v) byLoose.set(loose(k), v);
-  const fn = (key) => dict[key] || byLoose.get(loose(key)) || "";
+  const byLoose = new Map(), byPlace = new Map();
+  for (const [k, v] of Object.entries(dict)) {
+    if (!v) continue;
+    byLoose.set(loose(k), v);
+    if (k.includes('href="')) byPlace.set(hrefFree(loose(k)), v);
+  }
+  const moved = (key) => {
+    if (!key.includes('href="')) return "";
+    const t = byPlace.get(hrefFree(loose(key)));
+    return t ? withHrefsOf(key, t) : "";
+  };
+  const fn = (key) => dict[key] || byLoose.get(loose(key)) || moved(key) || "";
   LOOKUPS.set(dict, fn);
   return fn;
 }

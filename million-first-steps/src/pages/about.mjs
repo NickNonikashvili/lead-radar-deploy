@@ -25,6 +25,8 @@ export default function aboutPage() {
     li.querySelector("b").set_content(facts[i][0]);
     li.querySelectorAll("span").at(-1).set_content(facts[i][1]);
   });
+  // The number of journeys follows the tours the owners show on the website (site.js).
+  nums[1]?.querySelector("b").setAttribute("data-tour-count", TOURS.map((t) => t.id).join(" "));
 
   // The team: names as the designer was given them; roles and photos follow.
   root.querySelectorAll(".ab-team li").forEach((li) => {
@@ -38,16 +40,17 @@ export default function aboutPage() {
   const teamLede = root.querySelector('section[aria-labelledby="team-h"] .lede');
   if (teamLede) teamLede.set_content("A few of the faces behind your trip. Everyone here was born or has lived most of their life in Georgia.");
 
-  // Company details from the settings.
+  // Company details from the settings. Every row is built (empty ones hidden) so the admin panel can change them.
   const dl = root.querySelector(".ab-co dl");
   const rows = [
-    ["Legal name", `<span translate="no">${esc(config.legalName)}</span>`],
-    config.registrationNumber && ["Identification code", `<span translate="no">${esc(config.registrationNumber)}</span>`],
-    ["Registered address", esc(config.address)],
-    config.email && ["Email", `<span class="rv " data-k="mail" data-v="${seal(config.email)}"><button type="button" class="reveal">Show email</button></span>`],
-    config.officeHours && ["Office hours", esc(config.officeHours)],
-  ].filter(Boolean);
-  dl.set_content(rows.map(([t, d]) => `<div><dt>${t}</dt><dd>${d}</dd></div>`).join(""));
+    ["Legal name", "legalName", `<span translate="no" data-live="legalName">${esc(config.legalName)}</span>`],
+    ["Identification code", "registrationNumber", `<span translate="no" data-live="registrationNumber">${esc(config.registrationNumber)}</span>`],
+    ["Registered address", "address", `<span data-live="address">${esc(config.address)}</span>`],
+    ["Email", "email", `<span class="rv " data-k="mail" data-live="email" data-v="${config.email ? seal(config.email) : ""}"><button type="button" class="reveal">Show email</button></span>`],
+    ["Office hours", "officeHours", `<span data-live="officeHours">${esc(config.officeHours)}</span>`],
+  ];
+  const value = { legalName: config.legalName, registrationNumber: config.registrationNumber, address: config.address, email: config.email, officeHours: config.officeHours };
+  dl.set_content(rows.map(([t, k, d]) => `<div data-live-wrap${value[k] ? "" : " hidden"}><dt>${t}</dt><dd>${d}</dd></div>`).join(""));
   const co = root.querySelector('section[aria-labelledby="co-h"] .lede');
   if (co) co.set_content(config.registrationNumber ? "Million First Steps is a registered Georgian company. You’ll find the same details on your written offer and invoice." : "You’ll find our company details on your written offer and invoice.");
 

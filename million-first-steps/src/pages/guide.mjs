@@ -22,7 +22,7 @@ export function guidePage() {
   });
   root.querySelector("#tg-n").set_content(String(root.querySelectorAll(".tg-card").length));
   return layout({
-    page: "travel-guide.html",
+    page: "guide/index.html",
     title: "Travel guide: before you fly",
     description: "Visas, airports, seasons, money, SIM cards, safety and how a Georgian supra works — practical answers before your trip to Georgia.",
     main: finish(root),

@@ -241,3 +241,24 @@ html.sh-narrow .sh-menu .sh-lang { display: contents; }
 html.sh-narrow .sh-menu .sh-lang-list { position: static; flex-basis: 100%; order: 10; margin: 12px 0 0; min-width: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; padding: 8px; box-sizing: border-box; box-shadow: none; }
 html.sh-narrow .sh-menu .sh-lang-list[hidden] { display: none; }
 html.sh-narrow .sh-menu .sh-lang-list button { flex-direction: column; align-items: flex-start; gap: 2px; padding: 8px 10px; }
+
+/* Footer legal links wrap on narrow phones (long words in Georgian, German…). */
+.sf-legal { flex-wrap: wrap; column-gap: 20px; row-gap: 0; min-width: 0; }
+
+/* ---------- Settings from the admin panel (site.js applies api/live.json) ----------
+   Contact rows, messaging channels and tours the owners switch off are in the page but hidden; the
+   design gives many of them a display of their own, so [hidden] has to win everywhere. */
+[data-ch][hidden], [data-ch-alt][hidden], [data-ch-list][hidden], [data-live][hidden], [data-live-wrap][hidden],
+[data-tour-card][hidden], [data-tour-unavailable][hidden], .tr-more[hidden], .site-notice[hidden] { display: none !important; }
+
+/* Site notice: a slim wine bar above the header. */
+.site-notice { background: #6E1530; color: #FBF6EE; font-family: Manrope, system-ui, sans-serif; position: relative; z-index: 56; }
+.site-notice-in { max-width: 1240px; margin: 0 auto; padding: 6px 8px 6px 20px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; gap: 12px; }
+#root .site-notice-t { margin: 0; flex: 0 1 auto; min-width: 0; font-size: 14px; font-weight: 600; line-height: 1.45; text-align: center; overflow-wrap: anywhere; text-wrap: balance; }
+.site-notice-x { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; margin: -4px 0; border: 0; border-radius: 50%; background: transparent; color: #FBF6EE; font: inherit; font-size: 16px; line-height: 1; cursor: pointer; }
+.site-notice-x:hover { background: rgba(251, 246, 238, .14); }
+.site-notice-x:focus-visible { outline: 3px solid #F2B33D; outline-offset: -3px; }
+@media (max-width: 640px) { .site-notice-in { padding-left: 16px; justify-content: space-between; } #root .site-notice-t { text-align: left; font-size: 13.5px; } }
+
+/* Tour page: a journey the owners have taken off the website. */
+.tr-off { margin: 0; align-self: flex-start; max-width: 40em; padding: 12px 16px; border-radius: 14px; background: #FBF6EE; color: #6E1530; font-size: 15px; font-weight: 700; line-height: 1.45; box-shadow: 0 10px 24px rgba(28, 22, 19, .25); }

@@ -1,4 +1,6 @@
-/* Tour page: price calculator (travellers × travel style) and the map following the days. */
+/* Tour page: price calculator (travellers × travel style) and the map following the days.
+   Prices and party factors can change from the admin panel: site.js updates data-prices / data-factors
+   and fires mfs:live, and the calculator works it out again. */
 (function () {
   var calc = document.querySelector('[data-calc]');
   if (calc) {
@@ -18,6 +20,10 @@
     };
     calc.addEventListener('click', function (e) { var b = e.target.closest('[data-party]'); if (!b) return; party = Math.max(1, Math.min(16, party + +b.dataset.party)); update(); });
     document.addEventListener('mfs:tier', update);
+    document.addEventListener('mfs:live', function () {
+      try { prices = JSON.parse(calc.dataset.prices); factors = JSON.parse(calc.dataset.factors); } catch (e) {}
+      update();
+    });
     update();
   }
 

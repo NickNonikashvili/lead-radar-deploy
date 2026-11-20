@@ -3,7 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { parse } from "node-html-parser";
-import { PARSE, icons, channels } from "./layout.mjs";
+import { PARSE, icons, channels, markChannel, markChannelList } from "./layout.mjs";
 import { TIERS } from "../data/tiers.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -52,10 +52,15 @@ export function prepareForms(root) {
   });
 }
 
-/** Price spans for every tier; CSS shows the one matching html[data-tier]. */
-export function tierPrices(prices) {
-  return TIERS.map((t) => `<span class="tp" data-tier="${t.id}">€${prices[t.id].toLocaleString("en-US")}</span>`).join("");
+export const eur = (n) => `€${Math.round(n).toLocaleString("en-US")}`;
+
+/** Price spans for every tier; CSS shows the one matching html[data-tier]. data-price lets site.js update them. */
+export function tierPrices(tour) {
+  return TIERS.map((t) => `<span class="tp" data-tier="${t.id}" data-price="${tour.id}:${t.id}">${eur(tour.prices[t.id])}</span>`).join("");
 }
+
+/** One price the admin panel can change: <span data-price="tour:tier">€1,690</span> (kept out of translations). */
+export const livePrice = (tour, tier) => `<span data-price="${tour.id}:${tier}">${eur(tour.prices[tier])}</span>`;
 
 /** The tier switch used on the tours page and tour pages. */
 export function tierSelect(id = "tier") {
@@ -65,15 +70,14 @@ export function tierSelect(id = "tier") {
   )}</select><svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 4.5 6 8l3.5-3.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></label>`;
 }
 
-/** Keep only the messaging chips/links whose channel is configured. */
-export function pruneChannels(root, sel) {
+/** Messaging chips/links: each marked with its channel (data-ch); those not set up are built hidden. */
+export function markChannels(root, sel, listSel) {
   const ch = channels();
   root.querySelectorAll(sel).forEach((a) => {
     const key = (a.getAttribute("aria-label") || a.text).trim().toLowerCase();
-    if (!(key in ch)) return;
-    if (ch[key]) a.setAttribute("href", ch[key]);
-    else (a.closest("li") || a).remove();
+    if (key in ch) markChannel(a.closest("li") || a, a, key);
   });
+  if (listSel) root.querySelectorAll(listSel).forEach(markChannelList);
 }
 
 export const ARROW = `<svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>`;

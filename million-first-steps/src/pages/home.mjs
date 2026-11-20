@@ -1,17 +1,19 @@
 import { layout } from "../lib/layout.mjs";
-import { designPage, finish, byText, prepareForms, pruneChannels, esc, join } from "../lib/site.mjs";
+import { designPage, finish, byText, prepareForms, markChannels, esc, join, eur } from "../lib/site.mjs";
 import { TOURS, STYLES } from "../data/tours.mjs";
 import { TIERS } from "../data/tiers.mjs";
 import { CARDS } from "../data/tour-cards.mjs";
 import config from "../config.mjs";
-import { channels } from "../lib/layout.mjs";
+import { channels, markChannel } from "../lib/layout.mjs";
 
 // Price per person per day across all tours, per tier: "from about €100 to €140".
+// site.js repeats this with the prices and hidden tours from the admin panel (data-perday).
 function perDay(tierId) {
   const v = TOURS.map((t) => t.prices[tierId] / t.days);
   const r = (x, f) => f(x / 10) * 10;
   return [r(Math.min(...v), Math.floor), r(Math.max(...v), Math.ceil)];
 }
+const perDayRange = (tierId, [lo, hi]) => `<span data-perday="${tierId}:min">€${lo}</span>–<span data-perday="${tierId}:max">${hi}</span>`;
 
 export default function home() {
   const root = designPage("index");
@@ -36,13 +38,13 @@ export default function home() {
   grid.set_content(
     join(featured, (t) => {
       const c = CARDS[t.id];
-      return `<div class="jr" data-like="${esc(t.name)}">
+      return `<div class="jr" data-like="${esc(t.name)}" data-tour-card="${t.id}">
           <a class="ph" href="tours/${t.id}.html" tabindex="-1" aria-hidden="true"><img src="${c.img}" alt="" loading="lazy"><span class="days">${t.days} days</span></a>
           <div class="body">
             <span class="tag">${esc(STYLES[t.styles[0]])}</span>
             <a class="t" href="tours/${t.id}.html">${esc(t.name)}</a>
             <span class="route">${c.stops.map(esc).join(" <i></i> ")}</span>
-            <span class="foot"><b>From €${Math.min(...Object.values(t.prices)).toLocaleString("en-US")}</b><button type="button" class="jr-add" aria-pressed="false">${plus}<span class="a">Would like to see</span><span class="o">In your request</span></button></span>
+            <span class="foot"><b>From <span data-from="${t.id}">${eur(Math.min(...Object.values(t.prices)))}</span></b><button type="button" class="jr-add" aria-pressed="false">${plus}<span class="a">Would like to see</span><span class="o">In your request</span></button></span>
           </div>
         </div>`;
     }) + all
@@ -72,7 +74,7 @@ export default function home() {
   const [w, e] = [perDay("wanderer"), perDay("explorer")];
   const g = perDay("golden-fleece");
   const answers = {
-    "How much does a private trip cost?": `It depends on the days, the number of travellers and where you stay. As a guide, for two travellers sharing: about €${w[0]}–${w[1]} per person per day as a Wanderer, €${e[0]}–${e[1]} as an Explorer and €${g[0]}–${g[1]} in the Golden Fleece style. You get one final price in writing before you pay anything.`,
+    "How much does a private trip cost?": `It depends on the days, the number of travellers and where you stay. As a guide, for two travellers sharing: about ${perDayRange("wanderer", w)} per person per day as a Wanderer, ${perDayRange("explorer", e)} as an Explorer and ${perDayRange("golden-fleece", g)} in the Golden Fleece style. You get one final price in writing before you pay anything.`,
     "How and when do I pay?": `A deposit confirms your trip once you accept the written quote; the balance is due by the date in your quote, usually a few weeks before you arrive. Nothing is paid online through this site.`,
     "What if I need to change or cancel?": `Tell us as early as possible. Changes are usually easy; cancellation charges depend on how close to the trip you cancel and are set out in your quote and our <a href="terms.html">booking terms</a>. Plans change, and we’d rather adjust the trip than lose you.`,
     "Is Georgia safe for travellers?": `Georgia is widely regarded as a safe, welcoming country, and violent crime against visitors is rare. Check your own government’s travel advice before you go. Your guide is with you on the road, and you can reach us any time.`,
@@ -83,15 +85,13 @@ export default function home() {
     if (answers[q]) d.querySelector(".fq-a").set_content(`<p>${answers[q]}</p>`);
   });
 
-  // Messaging channels that exist; WhatsApp button falls back to the contact page.
-  pruneChannels(root, ".dusk-chips a");
+  // Messaging channels (hidden when not set up). The WhatsApp button has a twin that asks on the contact
+  // page instead; site.js shows whichever fits when the admin panel adds or removes the number.
+  markChannels(root, ".dusk-chips a", ".dusk-contact");
   const wa = root.querySelector(".btn-wa");
-  if (channels().whatsapp) wa.setAttribute("href", channels().whatsapp);
-  else {
-    wa.setAttribute("href", "contact.html");
-    const svg = wa.querySelector("svg")?.toString() || "";
-    wa.set_content(`${svg}Ask us a question`);
-  }
+  const svg = wa.querySelector("svg")?.toString() || "";
+  wa.insertAdjacentHTML("afterend", `<a href="contact.html" class="btn-wa" data-ch-alt="whatsapp"${channels().whatsapp ? " hidden" : ""}>${svg}Ask us a question</a>`);
+  markChannel(wa, wa, "whatsapp");
 
   prepareForms(root);
 
@@ -102,5 +102,7 @@ export default function home() {
     rootClass: "fx-on",
     main: finish(root),
     scripts: ["request.js", "home.js"],
+    // Days and prices of every tour, so site.js can work out the per-day prices again (data-perday).
+    data: { tours: Object.fromEntries(TOURS.map((t) => [t.id, [t.days, t.prices]])) },
   });
 }
