@@ -268,8 +268,8 @@ export class TourScene {
     // forward may open a little more: its gaps lie towards the rim of the view.
     const GAP = 0.03;
     const edgeShare = n / ((gw * gh) / 4);
-    const gLat = edgeShare > 0.0015 ? percentile(lateral, n, 0.93) : 0;
-    const gFwd = edgeShare > 0.0015 ? percentile(forward, n, 0.93) : 0;
+    const gLat = edgeShare > 0.0015 ? percentile(lateral, n, 0.96) : 0;
+    const gFwd = edgeShare > 0.0015 ? percentile(forward, n, 0.96) : 0;
     const side = gLat > 0 ? GAP / (this.fx * gLat) : 1;
     const fwd = gFwd > 0 ? (GAP * 1.6) / (this.fx * gFwd) : 2;
     const nearest = Math.min(this.edgeNear.left, this.edgeNear.right, this.edgeNear.bottom);
@@ -279,7 +279,7 @@ export class TourScene {
     for (let y = Math.round(gh * 0.2); y < gh * 0.8; y += 2) for (let x = Math.round(gw * 0.2); x < gw * 0.8; x += 2) buf[m++] = d[y * gw + x];
     const nearCentre = Math.max(0.3, percentile(buf, m, 0.08));
     this.limits = {
-      side: clamp(side, 0.05, Math.min(0.6, 0.3 * nearest)),
+      side: clamp(side, 0.05, Math.min(0.45, 0.25 * nearest)),
       forward: clamp(fwd, 0.15, Math.min(2.5, 0.4 * this.depthMedian, 0.3 * nearCentre, 0.5 * nearest)),
       back: clamp(side * 0.6, 0.03, 0.25),
       lift: clamp(side * 0.5, 0.03, 0.15),
@@ -321,8 +321,11 @@ export class TourScene {
     const forward = -p.z;
     const L = this.limits;
     if (forward < -L.back - 1e-6 || forward > L.forward + 1e-6) return "edge";
-    if (Math.abs(p.x) > L.side + 1e-6) return "edge";
     if (Math.abs(p.y) > L.lift + 1e-6) return "edge";
+    // Sideways and forward movement add up: the range is an ellipse, not a box.
+    const sx = p.x / L.side;
+    const sf = forward / (forward >= 0 ? L.forward : L.back);
+    if (sx * sx + sf * sf > 1 + 1e-6) return "edge";
     const range = this._range(p.x, p.y, p.z);
     if (range.yawMax < range.yawMin || range.pitchMax < range.pitchMin) return "edge";
 
