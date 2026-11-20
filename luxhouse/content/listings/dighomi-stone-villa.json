@@ -1,0 +1,175 @@
+{
+  "ref": "LH-1003",
+  "slug": "dighomi-stone-villa",
+  "published": true,
+  "featured": true,
+  "status": "for-sale",
+  "listedAt": "2026-11-15",
+  "source": {
+    "portal": "myhome.ge",
+    "id": "26684993",
+    "url": "https://www.myhome.ge/udzravi-qoneba/iyideba-7-otaxiani-axali-ashenebuli-kerdzo-saxli-dighomi-1-9-shi-26684993/"
+  },
+  "price": {
+    "amount": 2200000,
+    "currency": "USD"
+  },
+  "location": {
+    "key": "dighomi",
+    "district": {
+      "en": "Dighomi",
+      "ka": "დიღომი",
+      "ru": "Дигоми"
+    },
+    "context": {
+      "en": "Tbilisi",
+      "ka": "თბილისი",
+      "ru": "Тбилиси"
+    },
+    "lat": 41.781,
+    "lng": 44.75,
+    "radiusM": 1600
+  },
+  "facts": {
+    "areaM2": 675,
+    "landM2": 888,
+    "rooms": 7,
+    "bedrooms": 4,
+    "bathrooms": "3+",
+    "floors": 2,
+    "balconies": 3,
+    "balconyM2": 50,
+    "build": "new",
+    "condition": "newlyRenovated"
+  },
+  "features": [
+    "pool",
+    "garden",
+    "terrace",
+    "pergola",
+    "winterGarden",
+    "balcony",
+    "panoramicGlazing",
+    "newBuild"
+  ],
+  "title": {
+    "en": "Stone Villa with Pool & Gardens",
+    "ka": "ქვის ვილა აუზითა და ბაღით",
+    "ru": "Каменная вилла с бассейном и садом"
+  },
+  "tagline": {
+    "en": "675 m² of new-build living space behind a stone-clad façade, with a pool, a pergola lounge and 888 m² of landscaped grounds.",
+    "ka": "675 მ² ახალაშენებული საცხოვრებელი ფართი ქვით მოპირკეთებული ფასადის მიღმა — აუზით, პერგოლით და 888 მ² გამწვანებული ეზოთი.",
+    "ru": "675 м² нового жилого пространства за фасадом из камня — с бассейном, перголой и 888 м² ландшафтного участка."
+  },
+  "description": {
+    "en": [
+      "A newly built two-storey villa in Dighomi, with 675 m² of interior space on an 888 m² landscaped plot. The stone-clad façade is opened up by double-height glazing that faces the lawn.",
+      "The grounds are arranged as a sequence of outdoor rooms: a swimming pool with a sun terrace, a pergola lounge on a stone patio, a covered terrace with a planted wall and a swing, and garden paths through dense planting.",
+      "Inside there are seven rooms, including four bedrooms, an open living, dining and kitchen space, a stone staircase, a winter garden under a glass roof and a bathroom finished in black tile with a patterned floor. Three balconies add a further 50 m²."
+    ],
+    "ka": [
+      "ახალაშენებული ორსართულიანი ვილა დიღომში: 675 მ² შიდა ფართი 888 მ² გამწვანებულ ნაკვეთზე. ქვით მოპირკეთებულ ფასადს ხსნის ორი სართულის სიმაღლის ვიტრაჟები, რომლებიც გაზონს გადაჰყურებს.",
+      "ეზო რამდენიმე სივრცედ არის მოწყობილი: საცურაო აუზი დასასვენებელი ტერასით, პერგოლა ქვის მოედანზე, გადახურული ტერასა მწვანე კედლითა და საქანელით და ბილიკები ხშირ ნარგავებს შორის.",
+      "სახლში შვიდი ოთახია, მათ შორის ოთხი საძინებელი, გაერთიანებული მისაღები, სასადილო და სამზარეულო, ქვის კიბე, მინის სახურავიანი ზამთრის ბაღი და შავი ფილით მოპირკეთებული სააბაზანო ორნამენტული იატაკით. სამი აივნის საერთო ფართი 50 მ²-ია."
+    ],
+    "ru": [
+      "Новая двухэтажная вилла в Дигоми: 675 м² внутренней площади на ландшафтном участке 888 м². Фасад, облицованный камнем, раскрыт остеклением в два этажа, обращённым к газону.",
+      "Участок организован как череда пространств: бассейн с террасой для отдыха, пергола на каменной площадке, крытая терраса с зелёной стеной и качелями и дорожки среди густых посадок.",
+      "Внутри — семь комнат, включая четыре спальни, объединённая гостиная, столовая и кухня, каменная лестница, зимний сад со стеклянной крышей и ванная в чёрной плитке с орнаментальным полом. Три балкона добавляют ещё 50 м²."
+    ]
+  },
+  "highlights": {
+    "en": [
+      "Swimming pool with sun terrace",
+      "888 m² landscaped grounds with established planting",
+      "Pergola lounge and covered terrace",
+      "Winter garden under a glass roof",
+      "Double-height glazing facing the lawn",
+      "Three balconies totalling 50 m²"
+    ],
+    "ka": [
+      "საცურაო აუზი დასასვენებელი ტერასით",
+      "888 მ² გამწვანებული ეზო ხშირი ნარგავებით",
+      "პერგოლა და გადახურული ტერასა",
+      "ზამთრის ბაღი მინის სახურავით",
+      "ორი სართულის სიმაღლის ვიტრაჟები გაზონის ხედით",
+      "სამი აივანი, საერთო ფართით 50 მ²"
+    ],
+    "ru": [
+      "Бассейн с террасой для отдыха",
+      "Ландшафтный участок 888 м² с густыми посадками",
+      "Пергола и крытая терраса",
+      "Зимний сад со стеклянной крышей",
+      "Остекление в два этажа с видом на газон",
+      "Три балкона общей площадью 50 м²"
+    ]
+  },
+  "cover": "01",
+  "photos": [
+    {
+      "file": "01",
+      "room": "exterior"
+    },
+    {
+      "file": "05",
+      "room": "exterior"
+    },
+    {
+      "file": "04",
+      "room": "garden"
+    },
+    {
+      "file": "07",
+      "room": "pool"
+    },
+    {
+      "file": "02",
+      "room": "pergola"
+    },
+    {
+      "file": "03",
+      "room": "terrace"
+    },
+    {
+      "file": "06",
+      "room": "terrace"
+    },
+    {
+      "file": "08",
+      "room": "garden"
+    },
+    {
+      "file": "16",
+      "room": "winterGarden"
+    },
+    {
+      "file": "14",
+      "room": "living"
+    },
+    {
+      "file": "11",
+      "room": "entrance"
+    },
+    {
+      "file": "10",
+      "room": "staircase"
+    },
+    {
+      "file": "15",
+      "room": "corridor"
+    },
+    {
+      "file": "12",
+      "room": "bedroom"
+    },
+    {
+      "file": "13",
+      "room": "bedroom"
+    },
+    {
+      "file": "09",
+      "room": "bathroom"
+    }
+  ]
+}

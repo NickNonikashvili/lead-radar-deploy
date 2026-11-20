@@ -1,0 +1,232 @@
+<%
+  var photos = r.photos;
+  var mosaic = photos.slice(0, 5);
+  var c = config.contact;
+  var viewingMessage = t('form.viewingMessage', { title: r.title, ref: r.ref });
+  var shareText = encodeURIComponent(r.title + ' — ' + r.place + ' — ' + r.priceLabel);
+  var shareUrl = encodeURIComponent(canonical);
+  var lightboxData = photos.map(function (p) { return { src: p.full, srcset: p.srcset, w: p.w, h: p.h, alt: p.alt, label: p.roomLabel }; });
+  var tourPoster = r.hasTour ? (photos.find(function (p) { return p.file === r.tour.scenes[0].photo; }) || r.cover) : null;
+%>
+<section class="res-hero" aria-label="<%= t('residence.gallery') %>">
+  <div class="res-mosaic res-mosaic--<%= mosaic.length %>">
+    <% mosaic.forEach(function (p, i) { %>
+      <button type="button" class="res-mosaic__item" data-lightbox-open="<%= i %>" aria-label="<%= t('residence.photoOf', { i: i + 1, n: photos.length }) %><%= p.roomLabel ? ': ' + p.roomLabel : '' %>">
+        <img src="<%= p.src(i === 0 ? 1280 : 640) %>" srcset="<%= p.srcset %>"
+             sizes="<%= i === 0 ? (mosaic.length > 1 ? '(min-width: 900px) 60vw, 100vw' : '100vw') : '(min-width: 900px) 20vw, 50vw' %>"
+             width="<%= p.w %>" height="<%= p.h %>" alt="<%= p.alt %>"
+             <%- i === 0 ? 'fetchpriority="high"' : 'loading="lazy"' %> decoding="async" style="background-color:<%= p.color %>">
+      </button>
+    <% }) %>
+  </div>
+  <div class="res-hero__bar">
+    <div class="container res-hero__bar-inner">
+      <button type="button" class="btn btn--paper btn--sm" data-lightbox-open="0"><svg class="icon" aria-hidden="true"><use href="#i-photos"/></svg><%= t('residence.allPhotos', { n: photos.length }) %></button>
+      <% if (r.hasTour) { %>
+        <a class="btn btn--accent btn--sm" href="<%= r.tourUrl %>"><svg class="icon" aria-hidden="true"><use href="#i-cube"/></svg><%= t('common.enterTour') %></a>
+      <% } %>
+    </div>
+  </div>
+</section>
+
+<section class="container res-intro">
+  <nav class="breadcrumbs" aria-label="Breadcrumb">
+    <a href="<%= url('/') %>"><%= t('nav.home') %></a>
+    <span aria-hidden="true">/</span>
+    <a href="<%= url('/residences') %>"><%= t('nav.residences') %></a>
+    <span aria-hidden="true">/</span>
+    <span aria-current="page"><%= r.title %></span>
+  </nav>
+
+  <div class="res-intro__grid">
+    <div class="res-intro__main">
+      <p class="eyebrow res-intro__place">
+        <svg class="icon" aria-hidden="true"><use href="#i-pin"/></svg><%= r.place %>
+        <% if (r.status !== 'for-sale') { %><span class="badge badge--status"><%= r.statusLabel %></span><% } %>
+      </p>
+      <h1><%= r.title %></h1>
+      <p class="lead"><%= r.tagline %></p>
+    </div>
+    <div class="res-price">
+      <p class="eyebrow"><%= t('residence.askingPrice') %></p>
+      <p class="res-price__value">
+        <% if (r.price) { %><span data-money="<%= r.price.amount %>" data-currency="<%= r.price.currency %>"><%= r.priceLabel %></span><% } else { %><%= r.priceLabel %><% } %>
+      </p>
+      <% if (r.pricePerM2) { %>
+        <p class="res-price__sub"><span data-money="<%= r.pricePerM2 %>" data-currency="<%= r.price.currency %>"><%= t.money(r.pricePerM2, r.price.currency) %></span> <%= t('units.perM2') %></p>
+      <% } %>
+      <% if (gel) { %>
+        <p class="res-price__note"><%= t('residence.gelApprox', { gel: t.money(gel, 'GEL'), rate: t.num(config.currency.usdToGel, 4), date: t.date(config.currency.rateDate) }) %></p>
+      <% } %>
+      <div class="res-actions">
+        <button type="button" class="chip-btn" data-save="<%= r.slug %>" aria-pressed="false">
+          <svg class="icon" aria-hidden="true"><use href="#i-heart"/></svg><span data-save-label><%= t('common.save') %></span>
+        </button>
+        <div class="share" data-share>
+          <button type="button" class="chip-btn" data-share-toggle aria-expanded="false" aria-controls="share-menu">
+            <svg class="icon" aria-hidden="true"><use href="#i-share"/></svg><%= t('common.share') %>
+          </button>
+          <div class="share__menu" id="share-menu" hidden>
+            <button type="button" data-copy-link="<%= canonical %>"><svg class="icon" aria-hidden="true"><use href="#i-link"/></svg><%= t('common.copyLink') %></button>
+            <a href="https://wa.me/?text=<%= shareText %>%20<%= shareUrl %>" target="_blank" rel="noopener noreferrer"><svg class="icon" aria-hidden="true"><use href="#i-chat"/></svg>WhatsApp</a>
+            <a href="https://t.me/share/url?url=<%= shareUrl %>&amp;text=<%= shareText %>" target="_blank" rel="noopener noreferrer"><svg class="icon" aria-hidden="true"><use href="#i-send"/></svg>Telegram</a>
+            <a href="https://www.facebook.com/sharer/sharer.php?u=<%= shareUrl %>" target="_blank" rel="noopener noreferrer"><svg class="icon" aria-hidden="true"><use href="#i-share"/></svg>Facebook</a>
+            <a href="mailto:?subject=<%= shareText %>&amp;body=<%= shareUrl %>"><svg class="icon" aria-hidden="true"><use href="#i-mail"/></svg><%= t('common.email') %></a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <ul class="key-facts">
+    <li><svg class="icon" aria-hidden="true"><use href="#i-area"/></svg><span class="key-facts__value"><%= t.area(r.facts.areaM2) %></span><span class="key-facts__label"><%= t('residence.facts.area') %></span></li>
+    <% if (r.facts.bedrooms) { %><li><svg class="icon" aria-hidden="true"><use href="#i-bed"/></svg><span class="key-facts__value"><%= r.facts.bedrooms %></span><span class="key-facts__label"><%= t('residence.facts.bedrooms') %></span></li><% } %>
+    <% if (r.facts.bathrooms) { %><li><svg class="icon" aria-hidden="true"><use href="#i-bath"/></svg><span class="key-facts__value"><%= r.facts.bathrooms %></span><span class="key-facts__label"><%= t('residence.facts.bathrooms') %></span></li><% } %>
+    <% if (r.facts.rooms) { %><li><svg class="icon" aria-hidden="true"><use href="#i-rooms"/></svg><span class="key-facts__value"><%= r.facts.rooms %></span><span class="key-facts__label"><%= t('residence.facts.rooms') %></span></li><% } %>
+    <% if (r.facts.landM2) { %><li><svg class="icon" aria-hidden="true"><use href="#i-land"/></svg><span class="key-facts__value"><%= t.area(r.facts.landM2) %></span><span class="key-facts__label"><%= t('residence.facts.land') %></span></li><% } %>
+    <% if (r.facts.floors) { %><li><svg class="icon" aria-hidden="true"><use href="#i-floors"/></svg><span class="key-facts__value"><%= r.facts.floors %></span><span class="key-facts__label"><%= t('residence.facts.floors') %></span></li><% } %>
+  </ul>
+</section>
+
+<div class="container res-layout">
+  <div class="res-main">
+    <section class="res-section" id="overview">
+      <h2><%= t('residence.overview') %></h2>
+      <div class="prose">
+        <% r.description.forEach(function (p) { %><p><%= p %></p><% }) %>
+      </div>
+    </section>
+
+    <% if (r.highlights.length) { %>
+      <section class="res-section">
+        <h2><%= t('residence.highlights') %></h2>
+        <ul class="tick-list tick-list--cols">
+          <% r.highlights.forEach(function (h) { %><li><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg><%= h %></li><% }) %>
+        </ul>
+      </section>
+    <% } %>
+
+    <% if (r.hasTour) { %>
+      <section class="res-section">
+        <a class="tour-banner" href="<%= r.tourUrl %>">
+          <img src="<%= tourPoster.src(1280) %>" srcset="<%= tourPoster.srcset %>" sizes="(min-width: 1100px) 760px, 100vw" width="<%= tourPoster.w %>" height="<%= tourPoster.h %>" alt="" loading="lazy" decoding="async" style="background-color:<%= tourPoster.color %>">
+          <span class="tour-banner__shade" aria-hidden="true"></span>
+          <span class="tour-banner__content">
+            <span class="eyebrow eyebrow--accent"><%= t('common.tour3d') %> · <%= t('residence.tourSpaces', { n: r.tour.scenes.length }) %></span>
+            <span class="tour-banner__title"><%= t('residence.tourTitle') %></span>
+            <span class="tour-banner__text"><%= t('residence.tourText') %></span>
+            <span class="btn btn--accent"><svg class="icon" aria-hidden="true"><use href="#i-cube"/></svg><%= t('common.enterTour') %></span>
+          </span>
+        </a>
+      </section>
+    <% } %>
+
+    <section class="res-section" id="details">
+      <h2><%= t('residence.details') %></h2>
+      <dl class="facts-table">
+        <% r.factRows.forEach(function (f) { %>
+          <div><dt><%= f.label %></dt><dd><%= f.value %></dd></div>
+        <% }) %>
+        <div><dt><%= t('residence.ref') %></dt><dd><%= r.ref %></dd></div>
+      </dl>
+    </section>
+
+    <% if (r.features.length) { %>
+      <section class="res-section">
+        <h2><%= t('residence.features') %></h2>
+        <ul class="chips">
+          <% r.features.forEach(function (f) { %><li><%= f.label %></li><% }) %>
+        </ul>
+      </section>
+    <% } %>
+
+    <section class="res-section" id="gallery">
+      <h2><%= t('residence.gallery') %></h2>
+      <div class="thumb-grid">
+        <% photos.forEach(function (p, i) { %>
+          <button type="button" class="thumb-grid__item" data-lightbox-open="<%= i %>" aria-label="<%= t('residence.photoOf', { i: i + 1, n: photos.length }) %><%= p.roomLabel ? ': ' + p.roomLabel : '' %>">
+            <img src="<%= p.src(640) %>" width="<%= p.w %>" height="<%= p.h %>" alt="<%= p.alt %>" loading="lazy" decoding="async" style="background-color:<%= p.color %>">
+            <% if (p.roomLabel) { %><span class="thumb-grid__label"><%= p.roomLabel %></span><% } %>
+          </button>
+        <% }) %>
+      </div>
+    </section>
+
+    <% if (r.location.lat && r.location.lng) { %>
+      <section class="res-section" id="location">
+        <h2><%= t('residence.location') %></h2>
+        <p class="res-section__sub"><svg class="icon" aria-hidden="true"><use href="#i-pin"/></svg><%= r.place %></p>
+        <div class="map" data-map="area" data-lat="<%= r.location.lat %>" data-lng="<%= r.location.lng %>" data-radius="<%= r.location.radiusM || 1000 %>" role="region" aria-label="<%= t('residence.location') %>: <%= r.place %>"></div>
+        <p class="note"><%= t('residence.locationNote') %></p>
+      </section>
+    <% } %>
+
+    <% if (r.price) { %>
+      <section class="res-section" id="financing">
+        <h2><%= t('residence.mortgageTitle') %></h2>
+        <div class="calc panel" data-calc data-price="<%= r.price.amount %>" data-currency="<%= r.price.currency %>">
+          <div class="calc__inputs">
+            <div class="field">
+              <label for="calc-down"><%= t('residence.mortgageDown') %> <output data-calc-down-out></output></label>
+              <input type="range" id="calc-down" data-calc-down min="10" max="90" step="5" value="<%= config.mortgage.defaultDownPaymentPct %>">
+            </div>
+            <div class="field">
+              <label for="calc-years"><%= t('residence.mortgageYears') %> <output data-calc-years-out></output></label>
+              <input type="range" id="calc-years" data-calc-years min="1" max="30" step="1" value="<%= config.mortgage.defaultYears %>">
+            </div>
+            <div class="field">
+              <label for="calc-rate"><%= t('residence.mortgageRate') %>, %</label>
+              <input type="number" id="calc-rate" data-calc-rate min="0" max="30" step="0.1" value="<%= config.mortgage.defaultRatePct %>" inputmode="decimal">
+            </div>
+          </div>
+          <div class="calc__result">
+            <p class="eyebrow"><%= t('residence.mortgageMonthly') %></p>
+            <p class="calc__monthly" data-calc-monthly>—</p>
+            <p class="calc__loan"><%= t('residence.mortgageLoan') %>: <strong data-calc-loan>—</strong></p>
+          </div>
+          <p class="note calc__note"><%= t('residence.mortgageNote') %></p>
+        </div>
+      </section>
+    <% } %>
+  </div>
+
+  <aside class="res-aside">
+    <div class="inquiry-card panel" id="inquiry">
+      <h2><%= t('residence.inquiryTitle') %></h2>
+      <p class="inquiry-card__text"><%= t('residence.inquiryText') %></p>
+      <%- include('../partials/inquiry-form', { type: 'viewing', id: 'viewing', slug: r.slug, message: viewingMessage, compact: true }) %>
+      <% if (c.phone || c.whatsapp || c.telegram) { %>
+        <div class="inquiry-card__direct">
+          <% if (c.phone) { %><a class="chip-btn" href="<%= c.phoneHref %>"><svg class="icon" aria-hidden="true"><use href="#i-phone"/></svg><%= c.phone %></a><% } %>
+          <% if (c.whatsapp) { %><a class="chip-btn" href="<%= c.whatsappHref %>?text=<%= encodeURIComponent(viewingMessage) %>" target="_blank" rel="noopener noreferrer"><svg class="icon" aria-hidden="true"><use href="#i-chat"/></svg>WhatsApp</a><% } %>
+          <% if (c.telegram) { %><a class="chip-btn" href="<%= c.telegramHref %>" target="_blank" rel="noopener noreferrer"><svg class="icon" aria-hidden="true"><use href="#i-send"/></svg>Telegram</a><% } %>
+        </div>
+      <% } %>
+      <p class="inquiry-card__ref"><%= t('residence.ref') %>: <%= r.ref %></p>
+    </div>
+  </aside>
+</div>
+
+<% if (others.length) { %>
+  <section class="section section--tint">
+    <div class="container">
+      <header class="section-head">
+        <div><h2><%= t('residence.similar') %></h2></div>
+        <a class="link-arrow" href="<%= url('/residences') %>"><%= t('common.viewAll') %><svg class="icon" aria-hidden="true"><use href="#i-arrow-right"/></svg></a>
+      </header>
+      <div class="card-grid">
+        <% others.forEach(function (o) { %><%- include('../partials/card', { c: o }) %><% }) %>
+      </div>
+    </div>
+  </section>
+<% } %>
+
+<div class="mobile-cta" data-mobile-cta>
+  <div class="mobile-cta__price">
+    <span class="mobile-cta__label"><%= r.district %></span>
+    <% if (r.price) { %><strong data-money="<%= r.price.amount %>" data-currency="<%= r.price.currency %>"><%= r.priceLabel %></strong><% } else { %><strong><%= r.priceLabel %></strong><% } %>
+  </div>
+  <a class="btn btn--primary btn--sm" href="#inquiry"><%= t('common.requestViewing') %></a>
+</div>
+
+<script type="application/json" id="lightbox-data"><%- jsonLd(lightboxData) %></script>

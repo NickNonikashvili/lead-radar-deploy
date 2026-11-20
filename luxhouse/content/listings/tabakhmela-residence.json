@@ -1,0 +1,174 @@
+{
+  "ref": "LH-1001",
+  "slug": "tabakhmela-residence",
+  "published": true,
+  "featured": true,
+  "status": "for-sale",
+  "listedAt": "2026-11-14",
+  "source": {
+    "portal": "myhome.ge",
+    "id": "26678510",
+    "url": "https://www.myhome.ge/udzravi-qoneba/iyideba-7-otaxiani-axali-ashenebuli-kerdzo-saxli-tabaxmelashi-26678510/"
+  },
+  "price": {
+    "amount": 850000,
+    "currency": "USD"
+  },
+  "location": {
+    "key": "tabakhmela",
+    "district": {
+      "en": "Tabakhmela",
+      "ka": "ტაბახმელა",
+      "ru": "Табахмела"
+    },
+    "context": {
+      "en": "15 km from Tbilisi",
+      "ka": "თბილისიდან 15 კმ",
+      "ru": "15 км от Тбилиси"
+    },
+    "lat": 41.655,
+    "lng": 44.758,
+    "radiusM": 1700
+  },
+  "facts": {
+    "areaM2": 560,
+    "landM2": null,
+    "rooms": 7,
+    "bedrooms": 5,
+    "bathrooms": "3+",
+    "floors": 2,
+    "balconies": 1,
+    "balconyM2": 75,
+    "build": "new",
+    "condition": "newlyRenovated",
+    "furnished": true
+  },
+  "features": [
+    "pool",
+    "ensuiteAll",
+    "fireplace",
+    "terrace",
+    "balcony",
+    "furnished",
+    "airConditioning",
+    "walledGrounds",
+    "newBuild"
+  ],
+  "title": {
+    "en": "New-Build Residence with Pool",
+    "ka": "ახალაშენებული რეზიდენცია აუზით",
+    "ru": "Новая резиденция с бассейном"
+  },
+  "tagline": {
+    "en": "Five bedrooms with their own bathrooms, a private pool and 560 m² of finished, furnished living space — 15 km from Tbilisi.",
+    "ka": "ხუთი საძინებელი საკუთარი სააბაზანოებით, კერძო აუზი და 560 მ² სრულად მოწყობილი საცხოვრებელი ფართი — თბილისიდან 15 კილომეტრში.",
+    "ru": "Пять спален с собственными ванными, частный бассейн и 560 м² готового меблированного пространства — в 15 км от Тбилиси."
+  },
+  "description": {
+    "en": [
+      "A newly built two-storey residence in Tabakhmela, 15 kilometres from Tbilisi. The house offers 560 m² across seven rooms, including five bedrooms, each with its own bathroom.",
+      "The living spaces include a long living and dining room, a fireplace lounge with a marble surround, and a kitchen with deep-blue cabinetry. Sliding glass doors open onto a stone terrace, a paved courtyard and the swimming pool; the plot is enclosed by a perimeter wall.",
+      "A timber staircase connects the two floors and opens onto an upper hall. A 75 m² balcony overlooks the courtyard and the pool. The house is sold furnished."
+    ],
+    "ka": [
+      "ახალაშენებული ორსართულიანი რეზიდენცია ტაბახმელაში, თბილისიდან 15 კილომეტრში. სახლის ფართია 560 მ²: შვიდი ოთახი, მათ შორის ხუთი საძინებელი, და თითოეულს საკუთარი სააბაზანო აქვს.",
+      "საცხოვრებელ სივრცეს ქმნის ვრცელი მისაღები და სასადილო ოთახი, მარმარილოს ბუხრიანი დასასვენებელი ზონა და სამზარეულო მუქი ლურჯი ავეჯით. გასაწევი მინის კარები გადის ქვის ტერასაზე, მოკირწყლულ ეზოსა და საცურაო აუზზე; ნაკვეთი გალავნით არის შემოსაზღვრული.",
+      "ხის კიბე ორ სართულს აკავშირებს და მეორე სართულის ჰოლში ადის. 75 მ² აივანი ეზოსა და აუზს გადაჰყურებს. სახლი იყიდება ავეჯით."
+    ],
+    "ru": [
+      "Новый двухэтажный дом в Табахмеле, в 15 километрах от Тбилиси. Площадь — 560 м²: семь комнат, включая пять спален, каждая с собственной ванной комнатой.",
+      "Жилая зона включает просторную гостиную-столовую, каминный зал с мраморным порталом и кухню с тёмно-синими фасадами. Раздвижные стеклянные двери выходят на каменную террасу, мощёный двор и бассейн; участок огорожен.",
+      "Деревянная лестница соединяет два этажа и ведёт в верхний холл. Балкон площадью 75 м² выходит на двор и бассейн. Дом продаётся с мебелью."
+    ]
+  },
+  "highlights": {
+    "en": [
+      "Every bedroom has its own bathroom",
+      "Private swimming pool in a walled courtyard",
+      "Fireplace lounge with marble surround",
+      "75 m² balcony overlooking the pool",
+      "Sold furnished"
+    ],
+    "ka": [
+      "ყველა საძინებელს საკუთარი სააბაზანო აქვს",
+      "კერძო საცურაო აუზი გალავნიან ეზოში",
+      "მარმარილოს ბუხარი დასასვენებელ ზონაში",
+      "75 მ² აივანი აუზის ხედით",
+      "იყიდება ავეჯით"
+    ],
+    "ru": [
+      "У каждой спальни своя ванная комната",
+      "Частный бассейн в огороженном дворе",
+      "Каминный зал с мраморным порталом",
+      "Балкон 75 м² с видом на бассейн",
+      "Продаётся с мебелью"
+    ]
+  },
+  "cover": "16",
+  "photos": [
+    {
+      "file": "16",
+      "room": "exterior"
+    },
+    {
+      "file": "02",
+      "room": "pool"
+    },
+    {
+      "file": "01",
+      "room": "living"
+    },
+    {
+      "file": "06",
+      "room": "living"
+    },
+    {
+      "file": "08",
+      "room": "dining"
+    },
+    {
+      "file": "04",
+      "room": "fireplace"
+    },
+    {
+      "file": "03",
+      "room": "kitchen"
+    },
+    {
+      "file": "07",
+      "room": "kitchen"
+    },
+    {
+      "file": "13",
+      "room": "staircase"
+    },
+    {
+      "file": "14",
+      "room": "hall"
+    },
+    {
+      "file": "10",
+      "room": "bedroom"
+    },
+    {
+      "file": "11",
+      "room": "bedroom"
+    },
+    {
+      "file": "09",
+      "room": "bedroom"
+    },
+    {
+      "file": "05",
+      "room": "bathroom"
+    },
+    {
+      "file": "12",
+      "room": "bathroom"
+    },
+    {
+      "file": "15",
+      "room": "view"
+    }
+  ]
+}

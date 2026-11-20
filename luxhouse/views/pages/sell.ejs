@@ -1,0 +1,27 @@
+<%- include('../partials/page-head', { heading: t('sell.title', { brand: config.brand }), lead: t('sell.lead'), eyebrow: t('nav.sell') }) %>
+
+<section class="section section--flush-top">
+  <div class="container split">
+    <div class="split__main">
+      <h2><%= t('sell.stepsTitle') %></h2>
+      <ol class="steps">
+        <% t('sell.steps').forEach(function (s, i) { %>
+          <li class="steps__item">
+            <span class="steps__num"><%= i + 1 %></span>
+            <div>
+              <h3><%= s.title %></h3>
+              <p><%= s.text %></p>
+            </div>
+          </li>
+        <% }) %>
+      </ol>
+    </div>
+    <aside class="split__aside">
+      <div class="panel" id="valuation">
+        <h2 class="panel__title"><%= t('sell.formTitle') %></h2>
+        <p class="panel__text"><%= t('sell.formText') %></p>
+        <%- include('../partials/inquiry-form', { type: 'valuation', id: 'valuation', compact: true }) %>
+      </div>
+    </aside>
+  </div>
+</section>

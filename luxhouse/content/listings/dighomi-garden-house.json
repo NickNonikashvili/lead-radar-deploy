@@ -1,0 +1,177 @@
+{
+  "ref": "LH-1002",
+  "slug": "dighomi-garden-house",
+  "published": true,
+  "featured": true,
+  "status": "for-sale",
+  "listedAt": "2026-06-29",
+  "source": {
+    "portal": "myhome.ge",
+    "id": "25291459",
+    "url": "https://www.myhome.ge/udzravi-qoneba/iyideba-7-otaxiani-kerdzo-saxli-did-dighomshi-25291459/"
+  },
+  "price": {
+    "amount": 1000000,
+    "currency": "USD"
+  },
+  "location": {
+    "key": "dighomi",
+    "district": {
+      "en": "Dighomi",
+      "ka": "დიღომი",
+      "ru": "Дигоми"
+    },
+    "context": {
+      "en": "Tbilisi",
+      "ka": "თბილისი",
+      "ru": "Тбилиси"
+    },
+    "lat": 41.78,
+    "lng": 44.757,
+    "radiusM": 700
+  },
+  "facts": {
+    "areaM2": 322,
+    "livingM2": 257,
+    "landM2": 1497,
+    "landUse": "agricultural",
+    "rooms": 7,
+    "bedrooms": 4,
+    "bathrooms": "3",
+    "floors": 2,
+    "build": "new",
+    "condition": "newlyRenovated",
+    "furnished": true
+  },
+  "features": [
+    "garden",
+    "patioGlass",
+    "fireplaces2",
+    "masterSuite",
+    "panoramicGlazing",
+    "thermalInsulation",
+    "storage",
+    "pergola",
+    "furnishedEquipped"
+  ],
+  "title": {
+    "en": "Brick & Concrete Garden House",
+    "ka": "აგურისა და ბეტონის სახლი ბაღით",
+    "ru": "Дом из кирпича и бетона с садом"
+  },
+  "tagline": {
+    "en": "A 322 m² contemporary home set in 1,497 m² of mature landscaped garden — sold fully furnished and equipped.",
+    "ka": "322 მ² თანამედროვე სახლი 1 497 მ² გამწვანებულ ნაკვეთზე — იყიდება სრულად მოწყობილი, ავეჯითა და ტექნიკით.",
+    "ru": "Современный дом 322 м² на участке 1 497 м² со взрослым садом — продаётся полностью меблированным и оснащённым."
+  },
+  "description": {
+    "en": [
+      "A two-storey contemporary house in brick and exposed concrete, set on a 1,497 m² plot in Dighomi. The garden is fully landscaped, with mature ornamental and fruit trees.",
+      "The house totals 322 m²: 257 m² of registered living area, a 40 m² inner patio under a glass roof and a 25 m² external utility store. There are four bedrooms, including a master bedroom with its own bathroom, three bathrooms in total and two storage rooms.",
+      "The living room has a coffered ceiling, a library wall and panoramic glazing in German aluminium systems that opens to the garden. There are two fireplaces, one indoors and one outdoors. The kitchen is fitted with Franke appliances; the bathrooms are finished in porcelain stoneware with Villeroy & Boch sanitary ware. The building is fully thermally insulated.",
+      "Sold fully fitted, with furniture and appliances."
+    ],
+    "ka": [
+      "ორსართულიანი თანამედროვე სახლი აგურისა და ღია ბეტონის ფასადით, დიღომში, 1 497 მ² ნაკვეთზე. ეზო სრულად გამწვანებულია ზრდასრული დეკორატიული მცენარეებითა და ხეხილით.",
+      "სახლის საერთო ფართობია 322 მ²: 257 მ² რეგისტრირებული საცხოვრებელი ფართი, 40 მ² შიდა პატიო მინის გადახურვით და 25 მ² გარე დამხმარე სათავსო. სახლში ოთხი საძინებელია, მათ შორის მასტერ-საძინებელი საკუთარი სააბაზანოთი, სულ სამი სველი წერტილი და ორი სათავსო.",
+      "მისაღებ ოთახს აქვს კესონური ჭერი, ბიბლიოთეკის კედელი და პანორამული ვიტრაჟები გერმანული ალუმინის სისტემებით, რომლებიც ბაღში გადის. სახლში ორი ბუხარია — შიდა და გარე. სამზარეულო აღჭურვილია Franke-ს ტექნიკით; სააბაზანოები მოპირკეთებულია კერამოგრანიტით, სანტექნიკა — Villeroy & Boch. შენობა სრულად თბოიზოლირებულია.",
+      "იყიდება სრულად მოწყობილი, ავეჯითა და ტექნიკით."
+    ],
+    "ru": [
+      "Двухэтажный современный дом с фасадом из кирпича и открытого бетона в Дигоми, на участке 1 497 м². Сад полностью озеленён: взрослые декоративные и плодовые деревья.",
+      "Общая площадь дома — 322 м²: 257 м² зарегистрированной жилой площади, внутренний патио 40 м² со стеклянной кровлей и внешнее подсобное помещение 25 м². В доме четыре спальни, включая мастер-спальню с собственной ванной, всего три санузла и две кладовые.",
+      "В гостиной — кессонный потолок, библиотечная стена и панорамное остекление на немецких алюминиевых системах с выходом в сад. В доме два камина — внутренний и уличный. Кухня оснащена техникой Franke; ванные отделаны керамогранитом, сантехника Villeroy & Boch. Здание полностью теплоизолировано.",
+      "Продаётся полностью готовым, с мебелью и техникой."
+    ]
+  },
+  "highlights": {
+    "en": [
+      "1,497 m² landscaped garden with mature trees",
+      "40 m² inner patio under a glass roof",
+      "Two fireplaces — indoor and outdoor",
+      "Franke kitchen appliances, Villeroy & Boch sanitary ware",
+      "Panoramic glazing in German aluminium systems",
+      "Fully thermally insulated; sold furnished and equipped"
+    ],
+    "ka": [
+      "1 497 მ² გამწვანებული ეზო ზრდასრული ხეებით",
+      "40 მ² შიდა პატიო მინის გადახურვით",
+      "ორი ბუხარი — შიდა და გარე",
+      "Franke-ს სამზარეულოს ტექნიკა, Villeroy & Boch-ის სანტექნიკა",
+      "პანორამული ვიტრაჟები გერმანული ალუმინის სისტემებით",
+      "სრულად თბოიზოლირებული; იყიდება ავეჯითა და ტექნიკით"
+    ],
+    "ru": [
+      "Ландшафтный сад 1 497 м² со взрослыми деревьями",
+      "Внутренний патио 40 м² со стеклянной кровлей",
+      "Два камина — внутренний и уличный",
+      "Кухонная техника Franke, сантехника Villeroy & Boch",
+      "Панорамное остекление на немецких алюминиевых системах",
+      "Полная теплоизоляция; продаётся с мебелью и техникой"
+    ]
+  },
+  "cover": "01",
+  "showcasePhoto": "07",
+  "photos": [
+    {
+      "file": "01",
+      "room": "exterior"
+    },
+    {
+      "file": "02",
+      "room": "exterior"
+    },
+    {
+      "file": "04",
+      "room": "exterior"
+    },
+    {
+      "file": "03",
+      "room": "garden"
+    },
+    {
+      "file": "15",
+      "room": "aerial"
+    },
+    {
+      "file": "05",
+      "room": "patio"
+    },
+    {
+      "file": "06",
+      "room": "living"
+    },
+    {
+      "file": "07",
+      "room": "living"
+    },
+    {
+      "file": "08",
+      "room": "kitchen"
+    },
+    {
+      "file": "09",
+      "room": "bedroom"
+    },
+    {
+      "file": "12",
+      "room": "bedroom"
+    },
+    {
+      "file": "14",
+      "room": "bedroom"
+    },
+    {
+      "file": "11",
+      "room": "bathroom"
+    },
+    {
+      "file": "13",
+      "room": "bathroom"
+    },
+    {
+      "file": "10",
+      "room": "bathroom"
+    }
+  ]
+}

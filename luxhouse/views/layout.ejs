@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="<%= lang %>" data-rate="<%= config.currency.usdToGel %>">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title><%= title %></title>
+<meta name="description" content="<%= description %>">
+<% if (noindex) { %><meta name="robots" content="noindex, follow">
+<% } %><% if (canonical) { %><link rel="canonical" href="<%= canonical %>">
+<% } %><% Object.entries(alternates).forEach(function (entry) { %><link rel="alternate" hreflang="<%= entry[0] %>" href="<%= origin + entry[1] %>">
+<% }) %><% if (alternates[config.fallbackLanguage]) { %><link rel="alternate" hreflang="x-default" href="<%= origin + alternates[config.fallbackLanguage] %>">
+<% } %><meta property="og:type" content="website">
+<meta property="og:site_name" content="<%= config.brand %>">
+<meta property="og:title" content="<%= title %>">
+<meta property="og:description" content="<%= description %>">
+<meta property="og:locale" content="<%= t('lang.og') %>">
+<% if (canonical) { %><meta property="og:url" content="<%= canonical %>">
+<% } %><% if (ogImage) { %><meta property="og:image" content="<%= origin + ogImage %>">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<% } else { %><meta name="twitter:card" content="summary">
+<% } %><meta name="theme-color" content="#0f1113">
+<meta name="format-detection" content="telephone=no">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="preload" as="font" type="font/woff2" crossorigin href="/vendor/fonts/<%= lang === 'ka' ? 'noto-sans-georgian-georgian-wght-normal' : lang === 'ru' ? 'manrope-cyrillic-wght-normal' : 'manrope-latin-wght-normal' %>.woff2">
+<link rel="stylesheet" href="<%= asset('/vendor/fonts/fonts.css') %>">
+<% styles.forEach(function (href) { %><link rel="stylesheet" href="<%= asset(href) %>">
+<% }) %><link rel="stylesheet" href="<%= asset('/css/site.css') %>">
+<script type="application/ld+json"><%- jsonLd({ "@context": "https://schema.org", "@graph": ld }) %></script>
+</head>
+<body class="<%= bodyClass %><%= headerOverlay ? ' has-overlay-header' : '' %>">
+<a class="skip-link" href="#main"><%= t('nav.skip') %></a>
+<%- include('partials/icons') %>
+<%- include('partials/header') %>
+<main id="main">
+<%- body %>
+</main>
+<%- include('partials/footer') %>
+<div class="toast" role="status" aria-live="polite" data-toast hidden></div>
+<script type="application/json" id="site-data"><%- jsonLd({
+  lang: lang,
+  rate: config.currency.usdToGel,
+  savedCardsUrl: savedCardsUrl,
+  strings: {
+    save: t('common.save'),
+    saved: t('common.saved'),
+    copied: t('common.copied'),
+    sending: t('common.sending'),
+    close: t('common.close'),
+    previous: t('common.previous'),
+    next: t('common.next'),
+    photoOf: t('residence.photoOf'),
+    yearsUnit: t('residence.mortgageYearsUnit'),
+    form: {
+      success: t('form.success'),
+      error: t('form.error'),
+      tooMany: t('form.tooMany'),
+      errName: t('form.errName'),
+      errContact: t('form.errContact'),
+      errEmail: t('form.errEmail'),
+      errPhone: t('form.errPhone'),
+      errConsent: t('form.errConsent')
+    }
+  }
+}) %></script>
+<% scripts.forEach(function (src) { %><script src="<%= asset(src) %>" defer></script>
+<% }) %><script src="<%= asset('/js/site.js') %>" defer></script>
+</body>
+</html>

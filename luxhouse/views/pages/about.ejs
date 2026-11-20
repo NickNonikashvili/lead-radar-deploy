@@ -1,0 +1,35 @@
+<%- include('../partials/page-head', { heading: t('about.title', { brand: config.brand }), lead: t('about.lead'), eyebrow: t('nav.about') }) %>
+
+<section class="section section--flush-top">
+  <div class="container narrow">
+    <div class="prose prose--large">
+      <% t('about.paragraphs').forEach(function (p) { %><p><%= p.replace(/\{brand\}/g, config.brand) %></p><% }) %>
+    </div>
+  </div>
+</section>
+
+<section class="section section--tint">
+  <div class="container">
+    <header class="section-head section-head--center">
+      <div><h2><%= t('about.valuesTitle') %></h2></div>
+    </header>
+    <div class="trio">
+      <% t('about.values').forEach(function (v) { %>
+        <div class="trio__item">
+          <h3><%= v.title %></h3>
+          <p><%= v.text %></p>
+        </div>
+      <% }) %>
+    </div>
+  </div>
+</section>
+
+<section class="cta-band">
+  <div class="container cta-band__inner">
+    <div>
+      <h2><%= t('home.contactTitle') %></h2>
+      <p><%= t('home.contactText') %></p>
+    </div>
+    <a class="btn btn--paper" href="<%= url('/contact') %>"><%= t('common.contactUs') %></a>
+  </div>
+</section>

@@ -1,0 +1,50 @@
+{
+  "brand": "Luxhouse",
+  "legalName": "",
+  "baseUrl": "",
+  "languages": [
+    "en",
+    "ka",
+    "ru"
+  ],
+  "fallbackLanguage": "en",
+  "home": {
+    "heroListing": "dighomi-garden-house",
+    "tourShowcase": "dighomi-garden-house"
+  },
+  "contact": {
+    "phone": "",
+    "whatsapp": "",
+    "telegram": "",
+    "email": "",
+    "address": {
+      "en": "",
+      "ka": "",
+      "ru": ""
+    },
+    "hours": {
+      "en": "",
+      "ka": "",
+      "ru": ""
+    },
+    "office": {
+      "lat": null,
+      "lng": null
+    }
+  },
+  "social": {
+    "instagram": "",
+    "facebook": "",
+    "youtube": "",
+    "linkedin": ""
+  },
+  "currency": {
+    "usdToGel": 2.5933,
+    "rateDate": "2026-11-20"
+  },
+  "mortgage": {
+    "defaultDownPaymentPct": 30,
+    "defaultRatePct": 9.5,
+    "defaultYears": 15
+  }
+}

@@ -1,0 +1,73 @@
+<%
+  var navItems = [
+    { href: url('/residences'), label: t('nav.residences'), active: path.indexOf('/residences') === 0 },
+    { href: url('/services'), label: t('nav.services'), active: path === '/services' },
+    { href: url('/sell'), label: t('nav.sell'), active: path === '/sell' },
+    { href: url('/about'), label: t('nav.about'), active: path === '/about' },
+    { href: url('/contact'), label: t('nav.contact'), active: path === '/contact' }
+  ];
+%>
+<header class="site-header<%= headerOverlay ? ' site-header--overlay' : '' %>" data-header>
+  <div class="site-header__inner">
+    <a class="brand" href="<%= url('/') %>" aria-label="<%= config.brand %> — <%= t('nav.home') %>">
+      <span class="brand__mark" aria-hidden="true"></span>
+      <span class="brand__name"><%= config.brand %></span>
+    </a>
+
+    <nav class="site-nav" aria-label="<%= t('nav.menu') %>">
+      <% navItems.forEach(function (item) { %>
+        <a href="<%= item.href %>"<%- item.active ? ' class="is-active" aria-current="page"' : '' %>><%= item.label %></a>
+      <% }) %>
+    </nav>
+
+    <div class="header-tools">
+      <button type="button" class="tool-btn currency-toggle" data-currency-toggle aria-label="<%= t('nav.currency') %>" title="<%= t('nav.currency') %>">
+        <span data-currency-label>USD</span>
+      </button>
+      <div class="lang-switch" role="group" aria-label="<%= t('nav.language') %>">
+        <% languages.forEach(function (l) { %>
+          <a href="<%= l.url %>" hreflang="<%= l.code %>" lang="<%= l.code %>" title="<%= l.name %>"<%- l.current ? ' class="is-active" aria-current="true"' : '' %> data-lang-link="<%= l.code %>"><%= l.short %></a>
+        <% }) %>
+      </div>
+      <a class="tool-btn saved-link" href="<%= url('/saved') %>" aria-label="<%= t('nav.saved') %>" title="<%= t('nav.saved') %>">
+        <svg class="icon" aria-hidden="true"><use href="#i-heart"/></svg>
+        <span class="saved-link__count" data-saved-count hidden>0</span>
+      </a>
+      <button type="button" class="tool-btn menu-button" data-menu-open aria-expanded="false" aria-controls="mobile-menu" aria-label="<%= t('nav.menu') %>">
+        <svg class="icon" aria-hidden="true"><use href="#i-menu"/></svg>
+      </button>
+    </div>
+  </div>
+</header>
+
+<div class="mobile-menu" id="mobile-menu" data-menu hidden>
+  <div class="mobile-menu__top">
+    <a class="brand" href="<%= url('/') %>">
+      <span class="brand__mark" aria-hidden="true"></span>
+      <span class="brand__name"><%= config.brand %></span>
+    </a>
+    <button type="button" class="tool-btn" data-menu-close aria-label="<%= t('nav.close') %>">
+      <svg class="icon" aria-hidden="true"><use href="#i-close"/></svg>
+    </button>
+  </div>
+  <nav class="mobile-menu__nav" aria-label="<%= t('nav.menu') %>">
+    <a href="<%= url('/') %>"><%= t('nav.home') %></a>
+    <% navItems.forEach(function (item) { %>
+      <a href="<%= item.href %>"<%- item.active ? ' aria-current="page"' : '' %>><%= item.label %></a>
+    <% }) %>
+    <a href="<%= url('/saved') %>"><%= t('nav.saved') %></a>
+  </nav>
+  <div class="mobile-menu__tools">
+    <div class="lang-switch" role="group" aria-label="<%= t('nav.language') %>">
+      <% languages.forEach(function (l) { %>
+        <a href="<%= l.url %>" hreflang="<%= l.code %>" lang="<%= l.code %>"<%- l.current ? ' class="is-active" aria-current="true"' : '' %> data-lang-link="<%= l.code %>"><%= l.name %></a>
+      <% }) %>
+    </div>
+    <button type="button" class="tool-btn currency-toggle" data-currency-toggle aria-label="<%= t('nav.currency') %>">
+      <%= t('nav.currency') %>: <span data-currency-label>USD</span>
+    </button>
+    <% if (config.contact.phone) { %>
+      <a class="btn btn--light" href="<%= config.contact.phoneHref %>"><%= config.contact.phone %></a>
+    <% } %>
+  </div>
+</div>

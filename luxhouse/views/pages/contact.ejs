@@ -1,0 +1,43 @@
+<%
+  var c = config.contact;
+  var addr = pick(c.address);
+  var hours = pick(c.hours);
+  var hasDetails = c.phone || c.email || c.whatsapp || c.telegram || addr || hours;
+%>
+<%- include('../partials/page-head', { heading: t('contact.title'), lead: t('contact.lead'), eyebrow: config.brand }) %>
+
+<section class="section section--flush-top">
+  <div class="container split split--even">
+    <div class="split__main">
+      <h2><%= t('contact.detailsTitle') %></h2>
+      <% if (hasDetails) { %>
+        <dl class="contact-list">
+          <% if (c.phone) { %><div><dt><svg class="icon" aria-hidden="true"><use href="#i-phone"/></svg><%= t('contact.phone') %></dt><dd><a href="<%= c.phoneHref %>"><%= c.phone %></a></dd></div><% } %>
+          <% if (c.email) { %><div><dt><svg class="icon" aria-hidden="true"><use href="#i-mail"/></svg><%= t('contact.email') %></dt><dd><a href="mailto:<%= c.email %>"><%= c.email %></a></dd></div><% } %>
+          <% if (c.whatsapp || c.telegram) { %>
+            <div>
+              <dt><svg class="icon" aria-hidden="true"><use href="#i-chat"/></svg><%= t('contact.messengers') %></dt>
+              <dd class="contact-list__links">
+                <% if (c.whatsapp) { %><a href="<%= c.whatsappHref %>" target="_blank" rel="noopener noreferrer">WhatsApp</a><% } %>
+                <% if (c.telegram) { %><a href="<%= c.telegramHref %>" target="_blank" rel="noopener noreferrer">Telegram</a><% } %>
+              </dd>
+            </div>
+          <% } %>
+          <% if (addr) { %><div><dt><svg class="icon" aria-hidden="true"><use href="#i-pin"/></svg><%= t('contact.address') %></dt><dd><%= addr %></dd></div><% } %>
+          <% if (hours) { %><div><dt><svg class="icon" aria-hidden="true"><use href="#i-clock"/></svg><%= t('contact.hours') %></dt><dd><%= hours %></dd></div><% } %>
+        </dl>
+      <% } else { %>
+        <p class="lead lead--small"><%= t('contact.noDetails') %></p>
+      <% } %>
+      <% if (c.office) { %>
+        <div class="map" data-map="office" data-lat="<%= c.office.lat %>" data-lng="<%= c.office.lng %>" role="region" aria-label="<%= t('contact.address') %>"></div>
+      <% } %>
+    </div>
+    <aside class="split__aside">
+      <div class="panel">
+        <h2 class="panel__title"><%= t('contact.formTitle') %></h2>
+        <%- include('../partials/inquiry-form', { type: 'contact', id: 'contact' }) %>
+      </div>
+    </aside>
+  </div>
+</section>

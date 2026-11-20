@@ -1,0 +1,13 @@
+<%- include('../partials/page-head', { heading: legalTitle, eyebrow: t('footer.legal') }) %>
+
+<section class="section section--flush-top">
+  <div class="container narrow">
+    <p class="note"><%= t('legal.updated', { date: t.date(legalUpdated) }) %></p>
+    <div class="prose legal">
+      <% sections.forEach(function (s) { %>
+        <h2><%= s.h %></h2>
+        <% s.p.forEach(function (p) { %><p><%= p.replace(/\{legalName\}/g, config.legalName) %></p><% }) %>
+      <% }) %>
+    </div>
+  </div>
+</section>

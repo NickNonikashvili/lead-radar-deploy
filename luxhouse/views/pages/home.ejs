@@ -1,0 +1,180 @@
+<section class="hero">
+  <% if (hero) { %>
+    <img class="hero__img" src="<%= hero.cover.src(1280) %>" srcset="<%= hero.cover.srcset %>" sizes="100vw"
+         width="<%= hero.cover.w %>" height="<%= hero.cover.h %>" alt="<%= hero.cover.alt %>" fetchpriority="high" decoding="async"
+         style="background-color:<%= hero.cover.color %>">
+  <% } %>
+  <div class="hero__shade" aria-hidden="true"></div>
+  <div class="container hero__content">
+    <p class="eyebrow eyebrow--light"><%= t('home.heroEyebrow') %></p>
+    <h1 class="hero__title"><%= t('home.heroTitle') %></h1>
+    <p class="hero__text"><%= t('home.heroText') %></p>
+    <div class="hero__actions">
+      <a class="btn btn--paper" href="<%= url('/residences') %>"><%= t('home.heroCta') %></a>
+      <% if (tourListing) { %>
+        <a class="btn btn--outline-light" href="<%= tourListing.tourUrl %>"><svg class="icon" aria-hidden="true"><use href="#i-cube"/></svg><%= t('home.heroCta3d') %></a>
+      <% } %>
+    </div>
+  </div>
+  <% if (hero) { %>
+    <a class="hero__caption" href="<%= hero.url %>">
+      <span class="hero__caption-title"><%= hero.title %></span>
+      <span class="hero__caption-meta"><%= hero.place %> · <% if (hero.price) { %><span data-money="<%= hero.price.amount %>" data-currency="<%= hero.price.currency %>"><%= hero.priceLabel %></span><% } else { %><%= hero.priceLabel %><% } %></span>
+      <svg class="icon" aria-hidden="true"><use href="#i-arrow-right"/></svg>
+    </a>
+  <% } %>
+</section>
+
+<section class="search-strip" aria-label="<%= t('common.search') %>">
+  <form class="container search-strip__form" method="get" action="<%= url('/residences') %>">
+    <div class="field field--inline">
+      <label for="hs-location"><%= t('home.searchLocation') %></label>
+      <div class="select">
+        <select id="hs-location" name="location">
+          <option value=""><%= t('common.any') %></option>
+          <% locations.forEach(function (l) { %><option value="<%= l.key %>"><%= l.label %></option><% }) %>
+        </select>
+        <svg class="icon" aria-hidden="true"><use href="#i-chevron-down"/></svg>
+      </div>
+    </div>
+    <div class="field field--inline">
+      <label for="hs-price"><%= t('home.searchPrice') %></label>
+      <div class="select">
+        <select id="hs-price" name="maxPrice">
+          <option value=""><%= t('common.any') %></option>
+          <% [1000000, 1500000, 2500000, 5000000].forEach(function (v) { %><option value="<%= v %>"><%= t('common.upTo', { v: t.money(v, 'USD') }) %></option><% }) %>
+        </select>
+        <svg class="icon" aria-hidden="true"><use href="#i-chevron-down"/></svg>
+      </div>
+    </div>
+    <div class="field field--inline">
+      <label for="hs-beds"><%= t('home.searchBedrooms') %></label>
+      <div class="select">
+        <select id="hs-beds" name="minBedrooms">
+          <option value=""><%= t('common.any') %></option>
+          <% [3, 4, 5].forEach(function (v) { %><option value="<%= v %>"><%= v %>+</option><% }) %>
+        </select>
+        <svg class="icon" aria-hidden="true"><use href="#i-chevron-down"/></svg>
+      </div>
+    </div>
+    <button type="submit" class="btn btn--primary"><%= t('common.search') %></button>
+  </form>
+</section>
+
+<section class="section">
+  <div class="container">
+    <header class="section-head">
+      <div>
+        <p class="eyebrow"><%= t('home.featuredEyebrow') %></p>
+        <h2><%= t('home.featuredTitle') %></h2>
+        <p class="section-head__text"><%= t('home.featuredText') %></p>
+      </div>
+      <a class="link-arrow" href="<%= url('/residences') %>"><%= t('common.viewAll') %><svg class="icon" aria-hidden="true"><use href="#i-arrow-right"/></svg></a>
+    </header>
+    <div class="card-grid">
+      <% featured.forEach(function (c) { %><%- include('../partials/card', { c: c }) %><% }) %>
+    </div>
+  </div>
+</section>
+
+<%
+  var tf = showcase;
+  var tfPhoto = tf ? (tf.photos.find(function (p) { return p.file === tf.raw.showcasePhoto; }) || tf.photos.find(function (p) { return p.room === 'living'; }) || tf.cover) : null;
+%>
+<section class="section section--dark tour-feature">
+  <div class="container tour-feature__grid">
+    <div class="tour-feature__copy">
+      <p class="eyebrow eyebrow--accent"><%= t('home.tourEyebrow') %></p>
+      <h2><%= t('home.tourTitle') %></h2>
+      <p><%= t('home.tourText') %></p>
+      <ul class="tick-list tick-list--light">
+        <li><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg><%= t('home.tourPoint1') %></li>
+        <li><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg><%= t('home.tourPoint2') %></li>
+        <li><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg><%= t('home.tourPoint3') %></li>
+      </ul>
+      <% if (tourListing) { %>
+        <a class="btn btn--accent" href="<%= tourListing.tourUrl %>"><svg class="icon" aria-hidden="true"><use href="#i-cube"/></svg><%= t('common.enterTour') %></a>
+      <% } else { %>
+        <p class="tour-feature__soon"><%= t('home.tourSoon') %></p>
+      <% } %>
+    </div>
+    <% if (tfPhoto) { %>
+      <<%- tourListing ? 'a href="' + tourListing.tourUrl + '"' : 'div' %> class="tour-feature__media">
+        <img src="<%= tfPhoto.src(1280) %>" srcset="<%= tfPhoto.srcset %>" sizes="(min-width: 900px) 55vw, 100vw" width="<%= tfPhoto.w %>" height="<%= tfPhoto.h %>" alt="<%= tfPhoto.alt %>" loading="lazy" decoding="async" style="background-color:<%= tfPhoto.color %>">
+        <% if (tourListing) { %>
+          <span class="tour-feature__play" aria-hidden="true"><svg class="icon"><use href="#i-cube"/></svg></span>
+          <span class="tour-feature__label"><%= tourListing.title %> · <%= t('common.tour3d') %></span>
+        <% } %>
+      </<%- tourListing ? 'a' : 'div' %>>
+    <% } %>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container">
+    <header class="section-head">
+      <div>
+        <p class="eyebrow"><%= t('home.servicesEyebrow') %></p>
+        <h2><%= t('home.servicesTitle') %></h2>
+      </div>
+      <a class="link-arrow" href="<%= url('/services') %>"><%= t('common.learnMore') %><svg class="icon" aria-hidden="true"><use href="#i-arrow-right"/></svg></a>
+    </header>
+    <ol class="service-list">
+      <% t('services.items').slice(0, 4).forEach(function (s, i) { %>
+        <li class="service-list__item">
+          <span class="service-list__num">0<%= i + 1 %></span>
+          <h3><%= s.title %></h3>
+          <p><%= s.text %></p>
+        </li>
+      <% }) %>
+    </ol>
+  </div>
+</section>
+
+<section class="section section--tint">
+  <div class="container">
+    <header class="section-head section-head--center">
+      <div>
+        <p class="eyebrow"><%= t('home.approachEyebrow') %></p>
+        <h2><%= t('home.approachTitle') %></h2>
+      </div>
+    </header>
+    <div class="trio">
+      <% [1, 2, 3].forEach(function (n) { %>
+        <div class="trio__item">
+          <h3><%= t('home.approach' + n + 'Title') %></h3>
+          <p><%= t('home.approach' + n + 'Text') %></p>
+        </div>
+      <% }) %>
+    </div>
+  </div>
+</section>
+
+<section class="cta-band">
+  <div class="container cta-band__inner">
+    <div>
+      <h2><%= t('home.sellTitle') %></h2>
+      <p><%= t('home.sellText') %></p>
+    </div>
+    <a class="btn btn--paper" href="<%= url('/sell') %>"><%= t('home.sellCta') %></a>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container consult">
+    <div class="consult__copy">
+      <p class="eyebrow"><%= t('nav.consult') %></p>
+      <h2><%= t('home.contactTitle') %></h2>
+      <p><%= t('home.contactText') %></p>
+      <% if (config.contact.phone || config.contact.email) { %>
+        <ul class="contact-lines">
+          <% if (config.contact.phone) { %><li><svg class="icon" aria-hidden="true"><use href="#i-phone"/></svg><a href="<%= config.contact.phoneHref %>"><%= config.contact.phone %></a></li><% } %>
+          <% if (config.contact.email) { %><li><svg class="icon" aria-hidden="true"><use href="#i-mail"/></svg><a href="mailto:<%= config.contact.email %>"><%= config.contact.email %></a></li><% } %>
+        </ul>
+      <% } %>
+    </div>
+    <div class="consult__form panel">
+      <%- include('../partials/inquiry-form', { type: 'contact', id: 'home', compact: true }) %>
+    </div>
+  </div>
+</section>

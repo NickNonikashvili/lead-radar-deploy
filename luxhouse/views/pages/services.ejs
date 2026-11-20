@@ -1,0 +1,25 @@
+<%- include('../partials/page-head', { heading: t('services.title'), lead: t('services.lead'), eyebrow: config.brand }) %>
+
+<section class="section section--flush-top">
+  <div class="container">
+    <ol class="service-rows">
+      <% t('services.items').forEach(function (s, i) { %>
+        <li class="service-rows__item" id="<%= s.key %>">
+          <span class="service-rows__num">0<%= i + 1 %></span>
+          <h2><%= s.title %></h2>
+          <p><%= s.text %></p>
+        </li>
+      <% }) %>
+    </ol>
+  </div>
+</section>
+
+<section class="cta-band">
+  <div class="container cta-band__inner">
+    <div>
+      <h2><%= t('services.ctaTitle') %></h2>
+      <p><%= t('services.ctaText') %></p>
+    </div>
+    <a class="btn btn--paper" href="<%= url('/contact') %>"><%= t('common.contactUs') %></a>
+  </div>
+</section>

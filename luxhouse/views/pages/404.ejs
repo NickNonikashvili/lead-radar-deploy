@@ -1,0 +1,11 @@
+<section class="page-head page-head--center page-head--tall">
+  <div class="container">
+    <p class="eyebrow">404</p>
+    <h1><%= t('errors.notFoundTitle') %></h1>
+    <p class="lead"><%= t('errors.notFoundText') %></p>
+    <div class="page-head__actions">
+      <a class="btn btn--primary" href="<%= url('/') %>"><%= t('common.backHome') %></a>
+      <a class="btn btn--outline" href="<%= url('/residences') %>"><%= t('common.viewAll') %></a>
+    </div>
+  </div>
+</section>

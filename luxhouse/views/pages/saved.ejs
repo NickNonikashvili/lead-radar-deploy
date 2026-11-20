@@ -1,0 +1,14 @@
+<%- include('../partials/page-head', { heading: t('saved.title'), lead: t('saved.lead'), eyebrow: t('nav.saved') }) %>
+
+<section class="section section--flush-top">
+  <div class="container" data-saved-page>
+    <div class="card-grid" data-saved-grid aria-live="polite"></div>
+    <div class="empty" data-saved-empty hidden>
+      <p><%= t('saved.empty') %></p>
+      <a class="btn btn--outline" href="<%= url('/residences') %>"><%= t('saved.browse') %></a>
+    </div>
+    <noscript>
+      <div class="empty"><a class="btn btn--outline" href="<%= url('/residences') %>"><%= t('saved.browse') %></a></div>
+    </noscript>
+  </div>
+</section>

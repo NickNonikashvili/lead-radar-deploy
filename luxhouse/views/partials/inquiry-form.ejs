@@ -1,0 +1,102 @@
+<%
+  // Params: type ('viewing' | 'contact' | 'valuation'), id (unique prefix), slug?, message?, compact?
+  var fid = id || type;
+  var submitLabel = type === 'viewing' ? t('form.submitViewing') : type === 'valuation' ? t('form.submitValuation') : t('form.submitContact');
+  var consentHtml = t('form.consent').replace('{link}', '<a href="' + url('/privacy') + '" target="_blank" rel="noopener">' + t('form.consentLink') + '</a>');
+%>
+<form class="form<%= locals.compact ? ' form--compact' : '' %>" data-inquiry-form novalidate>
+  <input type="hidden" name="type" value="<%= type %>">
+  <input type="hidden" name="lang" value="<%= lang %>">
+  <% if (locals.slug) { %><input type="hidden" name="slug" value="<%= slug %>"><% } %>
+  <div class="form__hp" aria-hidden="true">
+    <label for="<%= fid %>-website">Website</label>
+    <input type="text" id="<%= fid %>-website" name="website" tabindex="-1" autocomplete="off">
+  </div>
+
+  <div class="field" data-field="name">
+    <label for="<%= fid %>-name"><%= t('form.name') %></label>
+    <input type="text" id="<%= fid %>-name" name="name" autocomplete="name" maxlength="120" required>
+    <p class="field__error" data-error hidden></p>
+  </div>
+
+  <div class="form__row">
+    <div class="field" data-field="phone">
+      <label for="<%= fid %>-phone"><%= t('form.phone') %></label>
+      <input type="tel" id="<%= fid %>-phone" name="phone" autocomplete="tel" inputmode="tel" maxlength="40" placeholder="+995">
+      <p class="field__error" data-error hidden></p>
+    </div>
+    <div class="field" data-field="email">
+      <label for="<%= fid %>-email"><%= t('form.email') %></label>
+      <input type="email" id="<%= fid %>-email" name="email" autocomplete="email" maxlength="160">
+      <p class="field__error" data-error hidden></p>
+    </div>
+  </div>
+  <p class="field__error field__error--block" data-error-for="contact" hidden></p>
+
+  <% if (type === 'viewing') { %>
+    <div class="field" data-field="date">
+      <label for="<%= fid %>-date"><%= t('form.date') %> <span class="field__opt">(<%= t('common.optional') %>)</span></label>
+      <input type="date" id="<%= fid %>-date" name="date" data-min-today>
+    </div>
+  <% } %>
+
+  <% if (type === 'contact') { %>
+    <div class="field" data-field="subject">
+      <label for="<%= fid %>-subject"><%= t('form.subject') %></label>
+      <div class="select">
+        <select id="<%= fid %>-subject" name="subject">
+          <% Object.keys(t('form.subjects')).forEach(function (key) { %>
+            <option value="<%= key %>"><%= t('form.subjects.' + key) %></option>
+          <% }) %>
+        </select>
+        <svg class="icon" aria-hidden="true"><use href="#i-chevron-down"/></svg>
+      </div>
+    </div>
+  <% } %>
+
+  <% if (type === 'valuation') { %>
+    <div class="field" data-field="propertyLocation">
+      <label for="<%= fid %>-ploc"><%= t('form.propertyLocation') %></label>
+      <input type="text" id="<%= fid %>-ploc" name="propertyLocation" maxlength="200">
+    </div>
+    <div class="form__row">
+      <div class="field" data-field="propertyType">
+        <label for="<%= fid %>-ptype"><%= t('form.propertyType') %></label>
+        <div class="select">
+          <select id="<%= fid %>-ptype" name="propertyType">
+            <% Object.keys(t('form.propertyTypes')).forEach(function (key) { %>
+              <option value="<%= key %>"><%= t('form.propertyTypes.' + key) %></option>
+            <% }) %>
+          </select>
+          <svg class="icon" aria-hidden="true"><use href="#i-chevron-down"/></svg>
+        </div>
+      </div>
+      <div class="field" data-field="propertyArea">
+        <label for="<%= fid %>-parea"><%= t('form.propertyArea') %></label>
+        <input type="text" id="<%= fid %>-parea" name="propertyArea" inputmode="numeric" maxlength="20">
+      </div>
+    </div>
+    <div class="field" data-field="expectedPrice">
+      <label for="<%= fid %>-pprice"><%= t('form.expectedPrice') %> <span class="field__opt">(<%= t('common.optional') %>)</span></label>
+      <input type="text" id="<%= fid %>-pprice" name="expectedPrice" inputmode="numeric" maxlength="30">
+    </div>
+  <% } %>
+
+  <div class="field" data-field="message">
+    <label for="<%= fid %>-message"><%= t('form.message') %><% if (type !== 'contact') { %> <span class="field__opt">(<%= t('common.optional') %>)</span><% } %></label>
+    <textarea id="<%= fid %>-message" name="message" rows="<%= locals.compact ? 3 : 5 %>" maxlength="3000"><%= locals.message || '' %></textarea>
+  </div>
+
+  <div class="field field--check" data-field="consent">
+    <label class="check">
+      <input type="checkbox" name="consent" required>
+      <span class="check__box" aria-hidden="true"><svg class="icon"><use href="#i-check"/></svg></span>
+      <span class="check__label"><%- consentHtml %></span>
+    </label>
+    <p class="field__error" data-error hidden></p>
+  </div>
+
+  <button type="submit" class="btn btn--primary btn--block" data-submit><%= submitLabel %></button>
+  <p class="form__status" data-form-status role="status" aria-live="polite" hidden></p>
+  <noscript><p class="form__status form__status--error"><%= t('contact.noDetails') %></p></noscript>
+</form>

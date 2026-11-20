@@ -1,0 +1,25 @@
+<article class="card" data-card="<%= c.slug %>">
+  <a class="card__media" href="<%= c.url %>" tabindex="-1" aria-hidden="true">
+    <img src="<%= c.cover.src(640) %>" srcset="<%= c.cover.srcset %>" sizes="(min-width: 1100px) 400px, (min-width: 700px) 50vw, 100vw"
+         width="<%= c.cover.w %>" height="<%= c.cover.h %>" alt="" loading="lazy" decoding="async" style="background-color:<%= c.cover.color %>">
+  </a>
+  <div class="card__badges">
+    <% if (c.status !== 'for-sale') { %><span class="badge badge--status"><%= c.statusLabel %></span><% } %>
+    <% if (c.hasTour) { %><span class="badge badge--tour"><svg class="icon" aria-hidden="true"><use href="#i-cube"/></svg><%= t('common.tour3d') %></span><% } %>
+  </div>
+  <button type="button" class="save-btn" data-save="<%= c.slug %>" aria-pressed="false" aria-label="<%= t('common.save') %>: <%= c.title %>" title="<%= t('common.save') %>">
+    <svg class="icon" aria-hidden="true"><use href="#i-heart"/></svg>
+  </button>
+  <div class="card__body">
+    <p class="card__place"><%= c.place %></p>
+    <h3 class="card__title"><a href="<%= c.url %>"><%= c.title %></a></h3>
+    <p class="card__price">
+      <% if (c.price) { %><span data-money="<%= c.price.amount %>" data-currency="<%= c.price.currency %>"><%= c.priceLabel %></span><% } else { %><%= c.priceLabel %><% } %>
+    </p>
+    <ul class="card__facts">
+      <li><svg class="icon" aria-hidden="true"><use href="#i-area"/></svg><%= t.area(c.facts.areaM2) %></li>
+      <% if (c.facts.bedrooms) { %><li><svg class="icon" aria-hidden="true"><use href="#i-bed"/></svg><%= c.facts.bedrooms %> <span class="card__unit"><%= t('residence.short.beds') %></span></li><% } %>
+      <% if (c.facts.landM2) { %><li><svg class="icon" aria-hidden="true"><use href="#i-land"/></svg><%= t.area(c.facts.landM2) %></li><% } %>
+    </ul>
+  </div>
+</article>
