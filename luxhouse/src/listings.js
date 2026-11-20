@@ -18,6 +18,7 @@ const MEDIA_ROOT = path.join(config.root, "public", "media", "listings");
 const STATUSES = ["for-sale", "reserved", "sold"];
 let cache = null;
 let cacheStamp = "";
+let problems = [];
 
 function readJson(file, fallback) {
   try {
@@ -53,7 +54,7 @@ function validate(l, file) {
   if (!l.ref) fail("`ref` is required");
   if (!STATUSES.includes(l.status)) fail("`status` must be one of " + STATUSES.join(", "));
   if (!l.title || !l.title.en) fail("`title.en` is required");
-  if (l.price && l.price.amount != null && !(Number(l.price.amount) > 0)) fail("`price.amount` must be a positive number");
+  if (l.price && l.price.amount != null && !(Number(l.price.amount) >= 0)) fail("`price.amount` must be a number (0 or none shows “price on request”)");
   if (!l.location || !l.location.key || !l.location.district) fail("`location.key` and `location.district` are required");
   if (!Array.isArray(l.photos) || !l.photos.length) fail("at least one photo is required");
   if (!l.facts || !(Number(l.facts.areaM2) > 0)) fail("`facts.areaM2` is required");
@@ -65,10 +66,21 @@ function load() {
 
   const media = readJson(MEDIA_MANIFEST, {});
   const list = [];
+  problems = [];
   for (const file of fs.readdirSync(LISTINGS_DIR).sort()) {
     if (!file.endsWith(".json")) continue;
-    const l = readJson(path.join(LISTINGS_DIR, file));
-    validate(l, file);
+    // One broken or unfinished file must never take the whole site down:
+    // it is reported (see `npm run check`) and left out.
+    let l;
+    try {
+      l = readJson(path.join(LISTINGS_DIR, file));
+      if (l.published === false) continue; // a draft
+      validate(l, file);
+    } catch (err) {
+      problems.push(err.message);
+      console.error("[listings] skipped:", err.message);
+      continue;
+    }
     const m = media[l.slug] || {};
 
     l.photos = l.photos
@@ -93,7 +105,8 @@ function load() {
 
     l.coverPhoto = l.photos.find((p) => p.file === l.cover) || l.photos[0];
     l.ogImage = `/media/listings/${l.slug}/og.jpg`;
-    l.pricePerM2 = l.price && l.price.amount ? Math.round(l.price.amount / l.facts.areaM2) : null;
+    if (l.price && !(Number(l.price.amount) > 0)) l.price = null;
+    l.pricePerM2 = l.price ? Math.round(l.price.amount / l.facts.areaM2) : null;
     l.hasPool = (l.features || []).includes("pool");
 
     const tourFile = path.join(MEDIA_ROOT, l.slug, "tour", "tour.json");
@@ -112,7 +125,13 @@ function load() {
 }
 
 function all() {
-  return load().filter((l) => l.published !== false);
+  return load();
+}
+
+/** Messages for listing files that could not be used (shown at start-up). */
+function loadProblems() {
+  load();
+  return problems.slice();
 }
 
 function bySlug(slug) {
@@ -231,4 +250,4 @@ function viewWithCover(l, lang, t) {
   return v;
 }
 
-module.exports = { all, bySlug, locations, parseFilters, search, view: viewWithCover, SORTS, STATUSES };
+module.exports = { all, bySlug, locations, parseFilters, search, view: viewWithCover, loadProblems, SORTS, STATUSES };

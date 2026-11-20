@@ -71,3 +71,11 @@ Steps are similar across most Node hosts (Render, Railway, a VPS, cPanel with No
 - There's no login on this app as built. If it's reachable on the public internet, anyone with the
   URL could run agent calls on your API budget. For a single-user internal tool, consider putting
   it behind your host's basic auth, a VPN, or ask me to add a simple password gate.
+
+---
+
+## Also in this repository: Luxhouse
+
+`luxhouse/` is a separate app: the website for the Luxhouse real-estate agency
+(listings in three languages, enquiries, 3D tours). It has its own `package.json`
+and README and shares nothing with Lead Radar. See [luxhouse/README.md](luxhouse/README.md).

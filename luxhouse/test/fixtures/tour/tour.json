@@ -1,0 +1,81 @@
+{
+ "version": 1,
+ "generator": "luxhouse-tour/1 (synthetic)",
+ "fixture": true,
+ "scenes": [
+  {
+   "id": "01",
+   "photo": "01",
+   "room": "living",
+   "base": "01/",
+   "width": 1500,
+   "height": 1000,
+   "fx": 0.482844,
+   "fy": 0.724267,
+   "grid": [
+    768,
+    512
+   ],
+   "up": [
+    0.0,
+    -0.99756,
+    -0.06976
+   ],
+   "eyeHeight": 1.45,
+   "depth": {
+    "depthMin": 1.9136,
+    "depthMedian": 3.1031,
+    "depthMax": 5.287
+   },
+   "bytes": {
+    "geo": 45436
+   },
+   "stats": {
+    "valid": 0.9704,
+    "hidden": 0.4733,
+    "cut": 0.04
+   },
+   "texture": [
+    1500,
+    1000
+   ]
+  },
+  {
+   "id": "02",
+   "photo": "02",
+   "room": "bedroom",
+   "base": "02/",
+   "width": 1500,
+   "height": 1000,
+   "fx": 0.482844,
+   "fy": 0.724267,
+   "grid": [
+    768,
+    512
+   ],
+   "up": [
+    0.0,
+    -0.99619,
+    -0.08716
+   ],
+   "eyeHeight": 1.45,
+   "depth": {
+    "depthMin": 1.8729,
+    "depthMedian": 3.1018,
+    "depthMax": 5.3035
+   },
+   "bytes": {
+    "geo": 46125
+   },
+   "stats": {
+    "valid": 0.9703,
+    "hidden": 0.4652,
+    "cut": 0.04
+   },
+   "texture": [
+    1500,
+    1000
+   ]
+  }
+ ]
+}

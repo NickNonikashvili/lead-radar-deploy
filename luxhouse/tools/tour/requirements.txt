@@ -1,0 +1,16 @@
+# Python packages for building 3D tours (tools/tour/build_tour.py).
+# MoGe itself is used from a clone on PYTHONPATH (see README), which avoids
+# installing its demo and GPU-only extras.
+numpy>=2
+opencv-python-headless
+pillow
+scipy
+click
+tqdm
+trimesh
+matplotlib
+huggingface-hub
+torch>=2.4
+torchvision>=0.19
+utils3d_moge @ git+https://github.com/EasternJournalist/utils3d-moge.git@62f09d58509485564e24d5d9f6aac9ee9ebc0c37
+pipeline @ git+https://github.com/EasternJournalist/pipeline.git@1c511390d90226c00c101f34b84df26a0f8789b4

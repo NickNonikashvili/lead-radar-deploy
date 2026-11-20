@@ -521,9 +521,11 @@ app.use((err, req, res, next) => {
 // ------------------------------------------------------------------ start
 if (require.main === module) {
   leads.selfCheck();
-  const count = listings.all().length; // fail fast on a broken listing file
+  const count = listings.all().length;
+  const skipped = listings.loadProblems();
   app.listen(config.port, () => {
     console.log(`${config.brand} running at http://localhost:${config.port}  (${count} residences, languages: ${config.languages.join(", ")})`);
+    if (skipped.length) console.log(`WARNING: ${skipped.length} listing file(s) were skipped. Run "npm run check" for details.`);
     if (!config.admin.password) console.log("Admin inbox is disabled: set ADMIN_PASSWORD in .env to enable /admin");
     if (!config.baseUrl) console.log("Tip: set BASE_URL (or baseUrl in site.config.json) to your public address for correct canonical links.");
   });

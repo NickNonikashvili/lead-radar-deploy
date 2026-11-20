@@ -152,6 +152,27 @@ test("listings load with complete, consistent data", () => {
   assert.equal(bySlug["dighomi-stone-villa"].facts.landM2, 888);
 });
 
+test("drafts and broken listing files are skipped without affecting the site", () => {
+  const dir = path.join(config.root, "content", "listings");
+  const draft = path.join(dir, "zz-test-draft.json");
+  const broken = path.join(dir, "zz-test-broken.json");
+  const noPrice = path.join(dir, "zz-test-noprice.json");
+  const base = JSON.parse(fs.readFileSync(path.join(dir, "dighomi-stone-villa.json"), "utf8"));
+  try {
+    fs.writeFileSync(draft, JSON.stringify({ ...base, slug: "zz-test-draft", ref: "LH-9001", published: false, price: { amount: 0, currency: "USD" } }));
+    fs.writeFileSync(broken, "{ this is not json");
+    // Published, but its photos have not been built: it must not appear either.
+    fs.writeFileSync(noPrice, JSON.stringify({ ...base, slug: "zz-test-noprice", ref: "LH-9002", price: { amount: 0, currency: "USD" } }));
+    const slugs = listings.all().map((l) => l.slug);
+    assert.deepEqual(slugs.sort(), ["dighomi-garden-house", "dighomi-stone-villa", "tabakhmela-residence"]);
+    assert.equal(listings.loadProblems().length, 1, "the unreadable file is reported");
+  } finally {
+    for (const f of [draft, broken, noPrice]) fs.rmSync(f, { force: true });
+  }
+  assert.equal(listings.all().length, 3);
+  assert.equal(listings.loadProblems().length, 0);
+});
+
 test("search filters and sorting", () => {
   const slugs = (q) => listings.search(listings.parseFilters(q)).map((l) => l.slug);
   assert.equal(slugs({}).length, 3);
