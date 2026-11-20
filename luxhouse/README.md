@@ -91,26 +91,31 @@ keep the same keys; the tests enforce this.
 
 ### What a tour is
 
-Every photograph becomes one explorable *space*. An AI depth model estimates how far
+Every photograph becomes one explorable *space*. An AI depth model measures how far
 each pixel is from the camera and the lens angle; from that the viewer rebuilds the
-room as a 3D mesh and projects the photograph back onto it. The visitor can walk
-(keyboard, joystick, click-to-walk), look around and step closer, with collision
-against the furniture and walls the photo shows. Spaces are linked by the strip at
-the bottom, the arrows, or the automatic tour. On a VR headset the page offers an
-"Enter VR" button.
+room as a 3D surface and projects the photograph back onto it. From where the
+photographer stood the visitor sees exactly the real photograph, and from there they
+can look around inside it, lean, step in and zoom, and travel from space to space.
+The controls follow Google Street View: drag to look, a ring that lies on whatever
+surface is under the pointer, click to step towards it, scroll or pinch to go deeper,
+and keep walking forward (W or the up arrow) to move on to the next space. On a VR
+headset the page offers an "Enter VR" button.
 
-What it is not: a measured scan. Movement is free *inside each photographed space*,
-within roughly half the room's depth of where the photographer stood; there is no
-continuous walk from room to room, because still photographs taken from different
-spots do not contain that information. Surfaces the camera never saw are filled with a
-soft continuation of what is next to them. Proportions are approximate.
+What it is not: a scan, and not a 360° panorama. Each space shows what its photograph
+shows, so the visitor cannot turn around to see what was behind the camera, and the
+range of movement is measured per photograph (typically a lean of 10–60 cm and a step
+of 0.3–2 m) so that the picture never tears or shows anything the camera did not see.
+There is no continuous walk from room to room, because still photographs taken from
+different spots do not contain that information. Proportions are approximate.
 
-A continuous, whole-house walk-through needs a capture made for it (a 360° camera or
-3D scanner walk, or a video for Gaussian-splat reconstruction). The tour data format
-is one folder per space, so such captures can be added later without changing the site.
+To get the full Street View experience (turn all the way around, walk the whole
+house) the house has to be captured for it: a 360° camera on a tripod in each room
+(about an hour per house), or a Matterport-style scan. The tour data is one folder
+per space, so such captures can be added later without changing the site.
 
 Better photographs give better tours: original files from the owner or photographer
-(not portal downloads), wide but not fisheye, level, several per room.
+(not portal downloads, which are small and watermarked), wide but not fisheye, level,
+several per room, with nothing close to the lens at the edge of the frame.
 
 ### Building tours
 
@@ -146,7 +151,8 @@ whose true geometry is known.
 ### Files
 
 - `tools/tour/providers.py` — depth providers (MoGe, and the synthetic test room)
-- `tools/tour/pack.py` — depth → the two depth layers, hidden-surface filling, gravity
+- `tools/tour/pack.py` — depth → one depth grid prepared for a moving viewer (thin
+  foreground flattened, object edges widened), gravity and eye height, the packed files
 - `tools/tour/build_tour.py` — command line
 - `client/tour/` — the viewer source (three.js); `npm run vendor` bundles it into
   `public/js/tour.bundle.js`

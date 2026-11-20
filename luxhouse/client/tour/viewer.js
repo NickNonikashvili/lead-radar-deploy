@@ -780,18 +780,14 @@ export class TourViewer {
 
   async enterVR() {
     if (!this.scene || this.renderer.xr.isPresenting) return;
-    const session = await navigator.xr.requestSession("immersive-vr", { optionalFeatures: ["local-floor"] });
-    let space = "local-floor";
-    try {
-      await session.requestReferenceSpace("local-floor");
-    } catch (e) {
-      space = "local";
-    }
-    this.xrFloor = space === "local-floor";
-    this.renderer.xr.setReferenceSpaceType(space);
+    const session = await navigator.xr.requestSession("immersive-vr");
+    // "local": the headset starts exactly where the photograph was taken, whatever the wearer's
+    // height. Small real head movements then show the room's real depth.
+    this.renderer.xr.setReferenceSpaceType("local");
     await this.renderer.xr.setSession(session);
     this._userActed();
     this.pos.set(0, 0, 0);
+    this.cursor.visible = false;
     this.xrYaw = this.scene.baseYaw;
     session.addEventListener("select", () => this.next());
     session.addEventListener("squeeze", () => this.previous());
@@ -806,11 +802,9 @@ export class TourViewer {
   }
 
   _xrStep(dt, frame) {
-    const scene = this.scene;
     const rig = this.rig;
-    // The real floor is placed at the photographed floor; the real head moves freely above it.
-    rig.position.set(this.pos.x, this.xrFloor ? -(scene.eyeHeight || 1.5) : 0, this.pos.z);
-    rig.rotation.set(0, this.xrYaw, 0);
+    rig.position.set(0, 0, 0);
+    rig.rotation.set(0, this.xrYaw - this.scene.baseYaw, 0);
 
     const session = frame && frame.session;
     if (!session) return;
