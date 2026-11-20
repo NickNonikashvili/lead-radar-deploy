@@ -12,9 +12,10 @@
 @font-face { font-family: "Cinzel"; font-style: normal; font-display: swap; font-weight: 400; src: url(../fonts/cinzel-latin-400-normal.woff2) format("woff2"); }
 @font-face { font-family: "Cinzel"; font-style: normal; font-display: swap; font-weight: 700; src: url(../fonts/cinzel-latin-700-normal.woff2) format("woff2"); }
 
-/* Georgian text in the design's serif headings: Fraunces has no Georgian letters. */
-:lang(ka) { font-family: "Noto Serif Georgian", Georgia, serif; }
-html[lang="ka"] #root, html[lang="ka"] #root input, html[lang="ka"] #root select, html[lang="ka"] #root button, html[lang="ka"] #root textarea { font-family: Manrope, "Noto Serif Georgian", system-ui, sans-serif !important; }
+/* Georgian: Fraunces has no Georgian letters, so serif headings use Noto Serif Georgian; body text keeps
+   the design's sans-serif and the system's Georgian font. */
+#root [lang="ka"]:not(html) { font-family: "Noto Serif Georgian", Georgia, serif; }
+html[lang="ka"] #root :is(h1, h2, h3, .h2, .h3, .t, .map-h, .dusk-h, .req-h, .pp-name, .tr-tier-price, .tier3-tag, .tr-tier-tag, .rev-promise p, blockquote) { font-family: "Noto Serif Georgian", Georgia, serif; letter-spacing: 0; }
 /* Chinese: the system's CJK fonts, a touch more line height. */
 html[lang="zh"] #root { font-family: Manrope, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC", "Noto Sans SC", system-ui, sans-serif !important; }
 html[lang="zh"] .h2, html[lang="zh"] h1, html[lang="zh"] h2, html[lang="zh"] h3 { letter-spacing: 0; }
@@ -205,3 +206,13 @@ html:not([data-tier]) .tp[data-tier="explorer"] { display: inline; }
 .lg-meta { color: #6A5A50 !important; font-size: 14px !important; }
 .lg-note { padding: 16px 18px; border-radius: 14px; background: #FBEFD6; }
 .nf .pg-hero-in { min-height: 60svh; justify-content: center; }
+
+/* ---------- Phone menu: the language list opens inside the menu as a grid, not as a dropdown ---------- */
+@media (max-width: 1140px) {
+  .sh-menu .sh-side { flex-wrap: wrap; }
+  .sh-menu .sh-lang { display: contents; }
+  .sh-menu .sh-lang-list { position: static; flex-basis: 100%; order: 10; margin: 12px 0 0; min-width: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; padding: 8px; box-sizing: border-box; box-shadow: none; }
+  .sh-menu .sh-lang-list[hidden] { display: none; }
+  .sh-menu .sh-lang-list button { flex-direction: column; align-items: flex-start; gap: 2px; padding: 8px 10px; }
+}
+@media (max-width: 380px) { .sh-menu .sh-lang-list { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
