@@ -62,7 +62,10 @@ if ($elapsed >= 0 ? $elapsed < 3 : (time() - $started >= 0 && time() - $started 
 // can't all read the same old number.
 $dir = sys_get_temp_dir() . '/mfs-forms';
 if (!is_dir($dir)) @mkdir($dir, 0700, true);
-$bucket = $dir . '/' . hash('sha256', ($_SERVER['REMOTE_ADDR'] ?? '') . '|' . gmdate('YmdH'));
+$ip = (string) ($_SERVER['REMOTE_ADDR'] ?? '');
+// IPv6: count the whole /64 network, which one connection usually holds, so rotating addresses doesn't help.
+if (strpos($ip, ':') !== false && function_exists('inet_pton') && ($bin = @inet_pton($ip)) !== false && strlen($bin) === 16) $ip = inet_ntop(substr($bin, 0, 8) . str_repeat("\0", 8)) . '/64';
+$bucket = $dir . '/' . hash('sha256', $ip . '|' . gmdate('YmdH'));
 $fh = @fopen($bucket, 'c+');
 if ($fh && @flock($fh, LOCK_EX)) {
   $count = (int) stream_get_contents($fh);

@@ -2,10 +2,10 @@
    Builds on admin.css; only what those pages need beyond the shared components. */
 
 /* ── Inbox ─────────────────────────────────────────────────────────────────────────────────────── */
-.req-toolbar .check { min-height: 42px; padding: 4px 2px; align-items: center; }
+.req-toolbar .check { min-width: 0; min-height: 42px; padding: 4px 2px; align-items: center; }
 .req-toolbar .check__box { margin-top: 0; }
 .req-toolbar .check input { margin-top: 0; top: 50%; transform: translateY(-50%); }
-.req-toolbar .check__label { font-size: 14.5px; white-space: nowrap; }
+.req-toolbar .check__label { font-size: 14.5px; min-width: 0; overflow-wrap: anywhere; }
 .req-callout { margin-bottom: 16px; }
 
 .req-bulkbar { margin: 10px 10px 2px; }

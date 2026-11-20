@@ -219,13 +219,14 @@ if(page!=null&&h.lang==="en"&&want!=="en"&&L.indexOf(want)>-1&&!/bot|crawl|spide
 ${HTML_LINKS ? "" : `// Then the settings the owners changed in the admin panel start loading (api/live.json, applied by site.js).
 // The copy kept for this visit is used before the first paint: its hidden tours and its notice are there at
 // once, and prices, contact details and channels wait for site.js (html.mfs-pending), so the values the page
-// was built with never flash. On the first page of a visit they wait for the file, two seconds at most.
+// was built with never flash. On the first page of a visit they, and the tour cards (one may be hidden), wait
+// for the file, two seconds at most.
 var w=0,c=null;try{c=JSON.parse(sessionStorage.getItem("mfs-live")||"null");if(c&&typeof c==="object"){w=3000;var css="";(Array.isArray(c.hidden)?c.hidden:[]).forEach(function(x){if(/^[a-z0-9-]+$/.test(x))css+='[data-tour-card="'+x+'"]{display:none!important}[data-tour-unavailable="'+x+'"][hidden]{display:block!important}'});
 if(css){var s=d.createElement("style");s.id="mfs-live-pre";s.textContent=css;d.head.appendChild(s)}
 var o=c.notice&&typeof c.notice==="object"?c.notice:{},p=function(l){return typeof o[l]==="string"?o[l].trim():""},m=p(h.lang)||p("en");
 if(m){for(var k=5381,i=0,j=JSON.stringify(o);i<j.length;i++)k=((k<<5)+k+j.charCodeAt(i))|0;k=(k>>>0).toString(36);var x=null;try{x=localStorage.getItem("mfs-notice")}catch(e){}if(x!==k)window.MFS_NOTICE=[m,k]}}else c=null}catch(e){c=null}
 try{if(window.fetch&&location.protocol!=="file:"){window.MFS_LIVE=fetch(r+"api/live.json",{cache:"no-cache",credentials:"omit"}).then(function(x){return x.ok?x.json():null}).catch(function(){return null});
-if(!c){w=2000;window.MFS_LIVE.then(function(j){if(!j||typeof j!=="object"||!Object.keys(j).some(function(k){return k!=="rev"}))h.classList.remove("mfs-pending")})}}}catch(e){}
+if(!c){w=2000;h.classList.add("mfs-first");window.MFS_LIVE.then(function(j){if(!j||typeof j!=="object"||!Object.keys(j).some(function(k){return k!=="rev"}))h.classList.remove("mfs-pending")})}}}catch(e){}
 if(w){h.classList.add("mfs-pending");setTimeout(function(){h.classList.remove("mfs-pending")},w)}`}})(document);
 window.MFS=${JSON.stringify(cfg)};
 window.MFS.t={};

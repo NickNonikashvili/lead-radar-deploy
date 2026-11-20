@@ -64,7 +64,7 @@ export function cookiesPage() {
   <p class="lg-meta">Last updated ${updated}</p>
   <h2>No cookies, no banner</h2>
   <p>We don’t set cookies for visitors and we don’t load anyone else’s analytics, advertising or social media trackers — which is also why you didn’t see a cookie banner.</p>
-  <p>The only cookie on this site is a sign-in cookie for our own team on the staff area; visitors never get it.</p>
+  <p>The only cookies on this site are a few for our own team on the staff area (to sign in and remember their language); visitors never get them.</p>
   <h2>What your browser remembers</h2>
   <p>To save you choosing again on every page, your browser keeps a few small settings in its local storage: the language you picked, the travel style you last looked at and whether you closed a notice. While you browse, it also keeps a copy of our current prices and contact details so that pages show them straight away. They stay on your device, are never sent to us, and you can clear them in your browser’s settings at any time.</p>
   <h2>Links to other websites</h2>

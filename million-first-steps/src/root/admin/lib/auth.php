@@ -311,7 +311,7 @@ function mfs_login_user(array $user, bool $remember): void
   mfs_set_session_cookie($remember);
   mfs_remember_lang($lang);
   mfs_remember_device((int) $user['id']);
-  mfs_remember_site_url();
+  mfs_remember_site_url($user);
   db_exec('UPDATE users SET last_login_at = ? WHERE id = ?', [now_utc(), (int) $user['id']]);
   unset($GLOBALS['mfs_user']);
   current_user();

@@ -268,6 +268,9 @@ a.act-item__who:hover { color: var(--wine); text-decoration: underline; }
   .card__foot .st-dirty { flex-basis: 100%; justify-content: center; margin-right: 0; }
   .st-foot-end .st-dirty { order: -1; }
   .st-dz__action, .st-dz__action .btn, a.st-dz__action { width: 100%; }
+  /* Long labels ('Send the latest changes to the website again') wrap instead of pushing the page sideways. */
+  .st-dz__action .btn, a.st-dz__action { white-space: normal; }
+  .st-dz__action .btn .icon, a.st-dz__action .icon { flex: none; }
   .st-maint { padding: 2px 16px; }
   .st-preview__bar { justify-content: flex-start; text-align: left; font-size: 13.5px; padding-left: 14px; }
 

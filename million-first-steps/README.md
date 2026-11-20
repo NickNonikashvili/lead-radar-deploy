@@ -76,6 +76,8 @@ All forms — the trip request on the home page, the contact form and the partne
 
 **First sign-in.** `npm run build` prints `Admin setup key: XXXXXXXXXXXX` (it is also in `dist/admin/lib/setup-key.php`). After uploading, open `/admin/`, enter the key and create the first owner account. Setup closes for good once an account exists. Forgotten passwords are reset by email.
 
+**Links in emails** (password resets, *Open in the admin panel*) and the sender's domain use `siteUrl` from `src/config.mjs`. While that's empty, they use the address the first owner signed in at, which then stays fixed, so set `siteUrl` before building for the live site, or do the first sign-in at the real domain rather than Hostinger's temporary address. `admin/config.local.php` can override it on the server with `define('MFS_SITE_URL', 'https://…');`.
+
 **Where the data lives.** The database (`mfs.sqlite`) goes in a `mfs-data` folder *next to* `public_html`, outside the website, so it can't be downloaded. Only if that folder can't be created does it fall back to `public_html/admin/data/`, which `.htaccess` blocks. Re-uploading the website never touches the data. Download a backup now and then from *Settings*.
 
 Needs PHP 7.4+ with the `pdo_sqlite` extension (Hostinger has it).
@@ -93,11 +95,11 @@ For testing, `php scripts/admin-seed.php <data folder> --users` fills a database
 
 ## Deploying
 
-- **Hostinger (or any Apache/LiteSpeed host with PHP):** run `npm run build`, zip the *contents* of `dist/` (including the hidden `.htaccess` files), upload the zip to `public_html` in hPanel's File Manager and extract it there. The included `.htaccess` sets up clean addresses, the 404 page, redirects from old addresses, compression, caching, and blocks the admin's private files. Turn on *Force HTTPS* in hPanel. When you upload a new version later, keep `api/live.json`: it holds the prices and settings changed in the admin. The build never includes that file, so extracting over the old site leaves it alone.
+- **Hostinger (or any Apache/LiteSpeed host with PHP):** run `npm run build`, zip the *contents* of `dist/` (including the hidden `.htaccess` files), upload the zip to `public_html` in hPanel's File Manager and extract it there. The included `.htaccess` sets up clean addresses, the 404 page, redirects from old addresses, compression, caching, and blocks the admin's private files. Turn on *Force HTTPS* in hPanel. When you upload a new version later, keep `api/live.json`: it holds the prices and settings changed in the admin. The build never includes that file, so extracting over the old site leaves it alone. If an admin page shows an error right after an upload, reload it after a few seconds: the server may still be serving a few old files from its cache.
 - **Netlify / Cloudflare Pages / Vercel:** root directory `million-first-steps`, build command `npm run build`, output `dist`. These don't run PHP, so there is no admin panel or statistics, and forms open the visitor's email app.
 
 ## Privacy & performance
 
-- No cookies for visitors, no third-party analytics, no third-party requests: fonts and scripts are self-hosted, and the contact page's map is drawn, not loaded from a map service. The only cookie is the team's sign-in cookie, and only under `/admin/`.
+- No cookies for visitors, no third-party analytics, no third-party requests: fonts and scripts are self-hosted, and the contact page's map is drawn, not loaded from a map service. The only cookies are the team's (signing in, the chosen language), and only under `/admin/`.
 - The admin statistics come from our own counter (`api/hit.php`). It counts pages, referring sites, languages and device types without cookies. It never stores IP addresses: unique visitors are counted with a hash salted afresh each day. It skips visitors whose browser sends Do Not Track or Global Privacy Control, and anyone who has used the admin panel on that browser.
 - Visitors who ask for reduced motion get still images instead of the video and scroll effects.

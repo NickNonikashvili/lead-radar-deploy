@@ -496,11 +496,14 @@ function mfs_site_origin(): string
   return (mfs_is_https() ? 'https' : 'http') . '://' . mfs_host();
 }
 
-/** Remembers the address someone has just signed in (or set up the panel) at, for links in emails. */
-function mfs_remember_site_url(): void
+/**
+ * Remembers the address the first owner signed in (or set up the panel) at, for links in emails. Kept once set:
+ * a later sign-in through another hostname (or a crafted Host header) can't re-point reset links or the sender.
+ */
+function mfs_remember_site_url(array $user): void
 {
-  $o = (mfs_is_https() ? 'https' : 'http') . '://' . mfs_host();
-  if (mfs_host() !== 'localhost' && setting('site_url', '') !== $o) set_setting('site_url', $o);
+  if (($user['role'] ?? '') !== 'owner' || mfs_host() === 'localhost' || setting('site_url', '') !== '') return;
+  set_setting('site_url', (mfs_is_https() ? 'https' : 'http') . '://' . mfs_host());
 }
 
 /** Absolute URL of the admin folder for emails: 'https://example.com/admin/'. */
@@ -532,5 +535,17 @@ function mfs_redirect_and_continue(string $url): void
 /** The visitor's IP address (only ever stored hashed). */
 function mfs_client_ip(): string
 {
-  return (string) ($_SERVER['REMOTE_ADDR'] ?? '');
+  return mfs_ip_key((string) ($_SERVER['REMOTE_ADDR'] ?? ''));
+}
+
+/**
+ * The address to count limits by: IPv4 as is, IPv6 cut to its /64 network (one connection usually holds a whole
+ * /64, so counting single IPv6 addresses would let one visitor rotate past every per-IP limit).
+ */
+function mfs_ip_key(string $ip): string
+{
+  if (strpos($ip, ':') === false || !function_exists('inet_pton')) return $ip;
+  $bin = @inet_pton($ip);
+  if ($bin === false || strlen($bin) !== 16) return $ip;
+  return (string) inet_ntop(substr($bin, 0, 8) . str_repeat("\0", 8)) . '/64';
 }
