@@ -10,7 +10,8 @@
  * Outputs (all committed to the repository):
  *   public/vendor/fonts/*.woff2 + fonts.css
  *   public/vendor/leaflet/{leaflet.js,leaflet.css,images/*}
- *   public/js/tour.bundle.js   (three.js + viewer, minified)
+ *   public/js/tour.bundle.js   (the viewer) and the tour.*-<hash>.js chunks it imports
+ *                              (three.js; the generated-room code and its splat renderer)
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -81,20 +82,29 @@ function buildLeaflet() {
 }
 
 // ---------------------------------------------------------------- tour viewer bundle
+// The viewer is one entry file (tour.bundle.js) and the chunks it imports: three.js, shared by
+// everything, and the generated-room code with its splat renderer, which is large and is only
+// downloaded by a tour that has such a room. Chunk names carry a hash of their content.
 async function buildTour() {
   const entry = path.join(ROOT, "client", "tour", "main.js");
   if (!fs.existsSync(entry)) return false;
+  const outdir = path.join(ROOT, "public", "js");
+  for (const f of fs.readdirSync(outdir)) {
+    if (/^tour\.[\w-]+\.js(\.LEGAL\.txt)?$/.test(f)) fs.unlinkSync(path.join(outdir, f));
+  }
   await build({
-    entryPoints: [entry],
+    entryPoints: { "tour.bundle": entry },
     bundle: true,
+    splitting: true,
     format: "esm",
     minify: true,
     target: ["es2020"],
     legalComments: "linked",
-    outfile: path.join(ROOT, "public", "js", "tour.bundle.js"),
+    outdir,
+    chunkNames: "tour.[name]-[hash]",
     logLevel: "warning",
   });
-  return true;
+  return fs.readdirSync(outdir).filter((f) => /^tour\.[\w-]+\.js$/.test(f)).length;
 }
 
 const STEPS = ["fonts", "leaflet", "tour"];
@@ -112,5 +122,8 @@ if (run("leaflet")) {
   buildLeaflet();
   done.push("leaflet copied");
 }
-if (run("tour")) done.push(`tour bundle ${(await buildTour()) ? "built" : "skipped (client/tour/main.js missing)"}`);
+if (run("tour")) {
+  const files = await buildTour();
+  done.push(files ? `tour viewer built (${files} files)` : "tour viewer skipped (client/tour/main.js missing)");
+}
 console.log(`vendor: ${done.join(", ")}`);

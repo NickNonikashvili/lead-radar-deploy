@@ -32,6 +32,9 @@ ol { padding: 0; list-style: none; }
 .tour-veil { pointer-events: none; transform-origin: 50% 50%; will-change: transform, opacity; }
 .tour-fade { position: absolute; inset: 0; background: var(--ink); opacity: 0; pointer-events: none; transition: opacity 320ms ease; }
 .tour-fade.is-on { opacity: 1; }
+/* how much of a generated room has arrived: a hairline along the top edge */
+.tour-progress { position: absolute; z-index: 5; top: 0; left: 0; right: 0; height: 2px; background: rgba(237, 232, 224, .14); pointer-events: none; }
+.tour-progress i { display: block; height: 100%; background: var(--ember); transform-origin: 0 50%; transform: scaleX(var(--p, 0)); transition: transform .25s linear; }
 
 /* ---- interface layer: fades away when the visitor is just looking ---- */
 .tour-ui { position: absolute; inset: 0; pointer-events: none; transition: opacity .5s var(--ease); }
@@ -100,6 +103,19 @@ ol { padding: 0; list-style: none; }
 .tour-hint__touch { display: none; }
 @keyframes tour-rise { from { opacity: 0; transform: translate(-50%, 10px); } }
 
+/* photographs and generated rooms are moved through differently: each has its own words */
+.tour:not([data-mode="world"]) .is-room, .tour[data-mode="world"] .is-photo { display: none !important; }
+
+/* the walking pad: touch screens, generated rooms only */
+.tour-stick { position: absolute; z-index: 3; left: max(var(--m), env(safe-area-inset-left)); bottom: calc(max(18px, env(safe-area-inset-bottom)) + 132px); width: 104px; height: 104px; border-radius: 50%; border: 1px solid var(--line-2); background: rgba(11, 10, 9, .38); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); touch-action: none; display: none; transition: opacity .5s var(--ease); }
+.tour-stick__knob { position: absolute; left: 50%; top: 50%; width: 44px; height: 44px; margin: -22px 0 0 -22px; border-radius: 50%; background: var(--bone); opacity: .9; transform: translate(var(--x, 0px), var(--y, 0px)); transition: transform .18s var(--ease); }
+.tour-stick.is-held .tour-stick__knob { transition: none; }
+.tour.is-idle .tour-stick:not(.is-held) { opacity: .4; }
+.tour[data-state="loading"] .tour-stick, .tour[data-state="error"] .tour-stick, .tour.is-xr .tour-stick { opacity: 0; pointer-events: none; }
+@media (any-pointer: coarse) {
+  .tour[data-mode="world"] .tour-stick { display: block; }
+}
+
 /* the spaces strip */
 .tour-strip { position: absolute; z-index: 2; left: 0; right: 0; bottom: calc(clamp(196px, 21vw, 260px) * .433 + 62px); display: flex; gap: 6px; padding: 14px max(var(--m), env(safe-area-inset-right)) 14px max(var(--m), env(safe-area-inset-left)); overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: none; background: rgba(11, 10, 9, .66); -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px); border-block: 1px solid var(--line); animation: tour-rise-flat .35s var(--ease) both; }
 .tour-strip::-webkit-scrollbar { display: none; }
@@ -131,6 +147,7 @@ kbd { display: inline-grid; place-items: center; min-width: 22px; height: 22px; 
 .tour-loader__title { font: 300 clamp(1.75rem, 4.4vw, 3.25rem)/1.02 var(--f); letter-spacing: -.03em; max-width: 16em; text-wrap: balance; }
 .tour-loader__bar { position: relative; width: min(220px, 50vw); height: 1px; margin-top: 12px; background: var(--line-2); overflow: hidden; }
 .tour-loader__bar::after { content: ""; position: absolute; inset: 0; background: var(--bone); transform: translateX(-100%); animation: tour-load 1.5s var(--ease) infinite; }
+.tour[data-loading-share] .tour-loader__bar::after { animation: none; transform: translateX(calc(-100% + var(--p, 0) * 100%)); transition: transform .25s linear; }
 .tour-loader__text { font-size: 13px; color: var(--smoke); }
 @keyframes tour-load { to { transform: translateX(100%); } }
 .tour:not([data-first]) .tour-loader { display: none; }
@@ -161,12 +178,14 @@ kbd { display: inline-grid; place-items: center; min-width: 22px; height: 22px; 
   .tour-chip--solid { width: 44px; justify-content: center; padding: 0; }
   .tour-strip { bottom: calc(200px * .433 + 128px); }
   .tour-hint { bottom: calc(200px * .433 + 136px); width: max-content; }
+  .tour-stick { bottom: calc(max(18px, env(safe-area-inset-bottom)) + 200px * .433 + 150px); width: 96px; height: 96px; }
   .tour-back__title { font-size: 15px; max-width: 46vw; }
   .tour-thumb, .tour-thumb img { width: 108px; }
   .tour-thumb img { height: 72px; }
   .tour-thumb.is-active::after { top: 70px; }
 }
 @media (max-height: 520px) {
+  .tour-stick { bottom: calc(max(18px, env(safe-area-inset-bottom)) + 96px); width: 84px; height: 84px; }
   .tour-pad { width: 168px; }
   .tour-pad__next { top: -30px; }
   .tour-strip { bottom: calc(168px * .433 + 56px); }
@@ -174,6 +193,6 @@ kbd { display: inline-grid; place-items: center; min-width: 22px; height: 22px; 
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .tour-fade, .tour-ui { transition: none; }
+  .tour-fade, .tour-ui, .tour-progress i, .tour-stick { transition: none; }
   .tour-pad__glow, .tour-loader__bar::after, .tour-hint, .tour-strip, .tour-help { animation: none; }
 }

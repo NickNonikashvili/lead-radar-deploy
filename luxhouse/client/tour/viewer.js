@@ -2,9 +2,12 @@
  * The tour viewer: renderer, first-person camera, movement, scene switching,
  * the automatic tour and the WebXR (VR headset) session.
  *
- * The visitor stands where the photograph was taken. They can look around
- * inside the picture, lean and step a little (real depth, kept within the
- * range where the room still looks real), and travel from space to space.
+ * A space is one of two things:
+ *  - a photograph with depth (scene.js): the visitor stands where it was taken, looks around
+ *    inside the picture, leans and steps a little, within the range where it still looks real;
+ *  - a generated 3D room (world.js, loaded on demand): the visitor walks through it freely,
+ *    like a person, around the furniture, stopped by walls.
+ * A room that cannot be shown (no WebGL2, a file missing) falls back to its photograph.
  */
 
 import {
@@ -28,6 +31,48 @@ const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 const ease = (t) => t * t * (3 - 2 * t);
 const easeOut = (t) => 1 - Math.pow(1 - t, 3);
 
+// Walking through a generated room (metres per second).
+const WALK = 1.4;
+const RUN = 2.6;
+const STROLL = 1.7; // on the way to a clicked spot
+const MAX_PITCH = 80 * DEG;
+const RISE = 1.2; // metres walked while the view moves from the photograph's camera to the visitor's own eyes
+
+/**
+ * Generated rooms are drawn with the help of background workers running WebAssembly. Some
+ * pages forbid one or the other; asked once, this resolves to null where rooms can run, or to
+ * the reason they cannot (their photographs are shown instead).
+ */
+let roomsProbe = null;
+function whyNoRooms() {
+  if (roomsProbe) return roomsProbe;
+  roomsProbe = new Promise((resolve) => {
+    let worker = null;
+    let url = null;
+    let timer = 0;
+    const done = (why) => {
+      clearTimeout(timer);
+      if (worker) worker.terminate();
+      if (url) URL.revokeObjectURL(url);
+      resolve(why);
+    };
+    try {
+      if (typeof Worker === "undefined" || typeof WebAssembly === "undefined" || typeof Blob === "undefined") return done("Workers or WebAssembly are not available");
+      timer = setTimeout(() => done("Workers do not start on this page"), 10000);
+      // The smallest valid WebAssembly module, compiled inside a worker made the way the splat renderer makes its own.
+      const code = "WebAssembly.compile(new Uint8Array([0,97,115,109,1,0,0,0])).then(function(){postMessage(1)},function(){postMessage(0)})";
+      url = URL.createObjectURL(new Blob([code], { type: "text/javascript" }));
+      worker = new Worker(url);
+      worker.onmessage = (e) => done(e.data === 1 ? null : "WebAssembly is blocked on this page");
+      worker.onerror = () => done("Workers are blocked on this page");
+    } catch (err) {
+      done("Workers are blocked on this page");
+    }
+    return undefined;
+  });
+  return roomsProbe;
+}
+
 export class TourViewer {
   /**
    * @param canvas   <canvas> to draw into
@@ -42,8 +87,12 @@ export class TourViewer {
     this.detail = tour.detail || "high";
     this.reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-    this.renderer = new WebGLRenderer({ canvas, antialias: true, alpha: false, powerPreference: "high-performance" });
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    // Generated rooms are drawn as splats, which gain nothing from multisampling and lose speed to it.
+    const hasRooms = tour.scenes.some((s) => s.world);
+    this.renderer = new WebGLRenderer({ canvas, antialias: !hasRooms, alpha: false, powerPreference: "high-performance" });
+    this.photoRatio = Math.min(window.devicePixelRatio || 1, 2);
+    this.roomRatio = Math.min(window.devicePixelRatio || 1, this.detail === "low" ? 1.25 : 1.5);
+    this.renderer.setPixelRatio(this.photoRatio);
     this.renderer.setClearColor(0x0b0c0d, 1);
     this.renderer.xr.enabled = true;
 
@@ -57,6 +106,22 @@ export class TourViewer {
     this.scene = null;
     this.index = -1;
     this.loadToken = 0;
+    // Generated rooms: the code for them (loaded when first needed), the splat renderer they
+    // share, and why a room fell back to its photograph, if one did.
+    this.mode = "photo";
+    this.roomCode = null;
+    this.spark = null;
+    this.roomsOff = false;
+    this.worldError = null;
+    this.velocity = new Vector2(); // walking speed in a room, world x and z
+    this.route = null; // the way to a clicked spot
+    // A room opens exactly where its photograph was taken; `lead` is what is left of the way
+    // from the visitor's own eyes to that camera, and shrinks to nothing over the first steps.
+    this.lead = new Vector3();
+    this.walked = 0;
+    this.floorY = 0;
+    this.fast = false;
+    this.slowFrames = 0;
     this.veil = tour.veil || null;
     this.veilAnim = null;
 
@@ -145,7 +210,6 @@ export class TourViewer {
     this.glide = null;
     this._status("loading");
 
-    const next = new TourScene(this.tour.scenes[target], this.tour.base);
     const leaving = !opts.instant && this.scene && this.scene.ready;
     // Which way the visitor travels: on to the next space, or back to the one before.
     const forwardTrip = opts.direction ? opts.direction > 0 : target === (this.index + 1) % n || target > this.index;
@@ -154,10 +218,12 @@ export class TourViewer {
     // Travelling: the picture freezes on a layer above the scene, drifts the way the visitor
     // is going and dissolves into the next space. Without that layer, a plain fade.
     const veiled = leaving && !this.reducedMotion && this._freeze(forwardTrip);
+    this.route = null;
+    this.velocity.set(0, 0);
+    let next = null;
     try {
-      await Promise.all([next.load(this.renderer, this.detail), leaving && !veiled ? this._fade(true) : null]);
+      [next] = await Promise.all([this._open(this.tour.scenes[target], token), leaving && !veiled ? this._fade(true) : null]);
     } catch (err) {
-      next.dispose();
       this._thaw(0);
       if (token === this.loadToken) {
         this._fade(false);
@@ -177,12 +243,19 @@ export class TourViewer {
     this.scene = next;
     this.index = target;
     this.world.add(next.group);
+    if (next.enter) next.enter();
+    this._setMode(next.isWorld ? "world" : "photo");
     this.camera.near = next.near;
     this.camera.far = next.far;
     this.resize();
     this.resetView(true);
+    if (next.isWorld) {
+      // The splats are sorted for the viewpoint off the main thread: wait until they are on screen.
+      await this._settle(token);
+      if (token !== this.loadToken) return;
+    }
     // Arrive still moving: the first thing the visitor sees in a space is its depth.
-    if (!this.reducedMotion && !this.renderer.xr.isPresenting) {
+    if (!next.isWorld && !this.reducedMotion && !this.renderer.xr.isPresenting) {
       // Start a little behind (or ahead of) the camera position, as far as the picture allows.
       let offset = forwardTrip ? -next.limits.back * 0.9 : next.limits.forward * 0.3;
       for (let i = 0; i < 5; i++) {
@@ -208,6 +281,78 @@ export class TourViewer {
       this._fade(false);
     }
     this._warm((target + 1) % n);
+  }
+
+  /**
+   * Load a space. One that has a generated room opens as that room; if the room cannot be
+   * shown here, its photograph is shown instead and `worldError` says why.
+   */
+  async _open(meta, token) {
+    if (meta.world && !this.roomsOff) {
+      let room = null;
+      try {
+        if (typeof WebGL2RenderingContext === "undefined" || !(this.renderer.getContext() instanceof WebGL2RenderingContext)) throw new Error("WebGL2 is not available");
+        const why = await whyNoRooms();
+        if (why) throw new Error(why);
+        if (!this.roomCode) this.roomCode = await import("./world.js");
+        room = new this.roomCode.WorldScene(meta, this.tour.base);
+        await room.load(this.renderer, this.detail, (share) => {
+          if (token === this.loadToken && this.hooks.onProgress) this.hooks.onProgress(share);
+        });
+        if (!this.spark) this.spark = this.roomCode.createSplatRenderer(this.renderer, () => { this.dirty = true; });
+        return room;
+      } catch (err) {
+        if (room) room.dispose();
+        this.worldError = String((err && err.message) || err);
+        // Without the machinery itself no room will open: do not try the others.
+        if (!this.roomCode || /WebGL2|WebAssembly|Worker/i.test(this.worldError)) this.roomsOff = true;
+        if (typeof console !== "undefined") console.warn("3D room not shown, using the photograph: " + this.worldError);
+      }
+    }
+    const scene = new TourScene(meta, this.tour.base);
+    try {
+      await scene.load(this.renderer, this.detail);
+    } catch (err) {
+      scene.dispose();
+      throw err;
+    }
+    return scene;
+  }
+
+  /** Photographs and rooms are drawn differently: switch what the renderer is set up for. */
+  _setMode(mode) {
+    this.mode = mode;
+    const room = mode === "world";
+    if (this.spark) {
+      if (room && !this.spark.parent) this.world.add(this.spark);
+      if (!room && this.spark.parent) this.world.remove(this.spark);
+    }
+    const ratio = room ? this.roomRatio : this.photoRatio;
+    if (this.renderer.getPixelRatio() !== ratio) this.renderer.setPixelRatio(ratio);
+    if (room && this.spark) this.spark.lodSplatCount = this.scene.budget || undefined;
+    this.slowFrames = 0;
+    if (room) {
+      this.targetZoom = 1;
+      this.zoom = 1;
+      this.arrive = null;
+    }
+  }
+
+  /** Draw a generated room until its splats are in place (or a few seconds have passed). */
+  _settle(token) {
+    const spark = this.spark;
+    const started = performance.now();
+    return new Promise((resolve) => {
+      const check = () => {
+        if (token !== this.loadToken || !spark) return resolve();
+        const waited = performance.now() - started;
+        if ((spark.activeSplats > 0 && !spark.sorting && !spark.sortDirty && waited > 60) || waited > 6000) return resolve();
+        this.dirty = true;
+        if (!this.renderer.xr.isPresenting) this._render();
+        setTimeout(check, 50);
+      };
+      check();
+    });
   }
 
   /** Stand `offset` metres along the photograph's own direction (negative: behind the camera position). */
@@ -296,6 +441,32 @@ export class TourViewer {
     this.targetYaw = this.scene.baseYaw;
     this.targetPitch = this.scene.basePitch;
     this.xrYaw = this.scene.baseYaw;
+    if (this.scene.isWorld) {
+      // Back to where the photograph was taken: at once, or on foot.
+      const room = this.scene;
+      this.velocity.set(0, 0);
+      this.route = null;
+      if (immediate) {
+        // The first view is the photograph's own: from its camera, the way it looked.
+        this.pos.copy(room.start);
+        this.lead.copy(room.lead);
+        this.walked = 0;
+        this.floorY = this.pos.y;
+        this.eye.set(this.pos.x + this.lead.x, this.pos.y + room.eyeHeight + this.lead.y, this.pos.z + this.lead.z);
+        this.yaw = this.targetYaw;
+        this.pitch = this.targetPitch;
+      } else if (this.reducedMotion) {
+        this.pos.copy(room.start);
+        this.floorY = this.pos.y;
+      } else {
+        // Keep the turn short: the visitor may have turned round several times.
+        this.yaw = Math.atan2(Math.sin(this.yaw), Math.cos(this.yaw));
+        const points = room.route(this.pos, room.start, null);
+        if (points) this.route = { points, i: 0, stalled: 0 };
+      }
+      this.dirty = true;
+      return;
+    }
     if (immediate) {
       this.pos.set(0, 0, 0);
       this.eye.set(0, 0, 0);
@@ -310,9 +481,16 @@ export class TourViewer {
   /** Download the next scene's files in the background so the switch is instant. */
   _warm(index) {
     if (index === this.index) return;
-    const url = this.tour.base + this.tour.scenes[index].base;
+    const meta = this.tour.scenes[index];
+    const url = this.tour.base + meta.base;
     const idle = window.requestIdleCallback || ((fn) => setTimeout(fn, 600));
     idle(() => {
+      if (meta.world && !this.roomsOff) {
+        // A room is many megabytes: fetch ahead only its small part, and its code.
+        fetch(url + meta.world.collider).catch(() => {});
+        if (!this.roomCode) import("./world.js").then((code) => { this.roomCode = this.roomCode || code; }).catch(() => {});
+        return;
+      }
       fetch(url + "geo.bin").catch(() => {});
       new Image().src = url + "color.webp";
     });
@@ -427,6 +605,7 @@ export class TourViewer {
     this._onKeyDown = (e) => {
       const tag = e.target && e.target.tagName;
       if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || e.metaKey || e.ctrlKey || e.altKey) return;
+      this.fast = e.shiftKey;
       if (TourViewer.MOVE_KEYS.has(e.code)) {
         this.keys.add(e.code);
         this._userActed();
@@ -434,8 +613,14 @@ export class TourViewer {
         e.preventDefault();
       }
     };
-    this._onKeyUp = (e) => this.keys.delete(e.code);
-    this._onBlur = () => this.keys.clear();
+    this._onKeyUp = (e) => {
+      this.keys.delete(e.code);
+      this.fast = e.shiftKey;
+    };
+    this._onBlur = () => {
+      this.keys.clear();
+      this.fast = false;
+    };
     window.addEventListener("keydown", this._onKeyDown);
     window.addEventListener("keyup", this._onKeyUp);
     window.addEventListener("blur", this._onBlur);
@@ -458,6 +643,11 @@ export class TourViewer {
     if (Math.abs(ndcX) > 1 || Math.abs(ndcY) > 1) return null;
     this.camera.updateMatrixWorld();
     const dir = this._dir.set(ndcX, ndcY, 0.5).unproject(this.camera).sub(this.eye).normalize();
+    if (this.scene.isWorld) {
+      // In a room the pointer means a place on the floor, or something to walk up to.
+      this.aimed = this.scene.aim(this.eye, dir, this.pos.y, point, normal);
+      return this.aimed ? point : null;
+    }
     return this.scene.surfaceAt(this.eye, dir, point, normal);
   }
 
@@ -466,6 +656,13 @@ export class TourViewer {
     if (!this.scene || !this.scene.ready || this.renderer.xr.isPresenting) return;
     const hit = this._surfaceUnder(clientX, clientY, this._hit, this._normal);
     if (!hit) return;
+    if (this.scene.isWorld) {
+      // The ripple marks a place on the floor; furniture and walls are walked up to without one.
+      if (this.aimed === "floor") this.pulse = { start: performance.now(), point: hit.clone(), normal: this._normal.clone() };
+      this._userActed();
+      this._walkTo(hit, this._normal);
+      return;
+    }
     this.pulse = { start: performance.now(), point: hit.clone(), normal: this._normal.clone() };
     const dx = hit.x - this.pos.x;
     const dz = hit.z - this.pos.z;
@@ -500,6 +697,27 @@ export class TourViewer {
     }
   }
 
+  /** In a room: walk to a point on its surface, around whatever stands in between. */
+  _walkTo(point, normal) {
+    const room = this.scene;
+    const points = room.route(this.pos, point, normal);
+    this.velocity.set(0, 0);
+    if (!points) {
+      this.route = null;
+      return false;
+    }
+    if (this.reducedMotion) {
+      // No travelling shot for those who asked for less motion: be there.
+      for (const p of points) this.walked += room.walk(this.pos, p.x - this.pos.x, p.z - this.pos.z);
+      this.floorY = this.pos.y;
+      this.route = null;
+      this.dirty = true;
+      return true;
+    }
+    this.route = { points, i: 0, stalled: 0 };
+    return true;
+  }
+
   /** Apply a zoom factor: narrows the camera and tells the scene how much of the picture is in view. */
   _setZoom(zoom) {
     this.zoom = zoom;
@@ -528,7 +746,8 @@ export class TourViewer {
       }
     }
     if (!this.pulse && this.hoverActive && !this.pressing && !this.auto && !this.arrive && this.status === "ready") {
-      if (this._surfaceUnder(this.pointerX, this.pointerY, this._point, this._normal)) show = 1;
+      // In a room the ring lies only where the visitor can walk to.
+      if (this._surfaceUnder(this.pointerX, this.pointerY, this._point, this._normal) && (!this.scene.isWorld || this.aimed === "floor")) show = 1;
     }
     const target = show > 0 ? 1 : 0;
     const before = this.cursorOn;
@@ -564,7 +783,7 @@ export class TourViewer {
 
   startAuto() {
     if (this.auto || this.reducedMotion) return;
-    this.resetView(false);
+    if (!this.scene || !this.scene.isWorld) this.resetView(false);
     this.auto = { start: performance.now(), duration: 8000 };
     if (this.hooks.onAuto) this.hooks.onAuto(true);
   }
@@ -617,6 +836,11 @@ export class TourViewer {
     if (this.renderer.xr.isPresenting) {
       this._xrStep(dt, xrFrame);
       this.renderer.render(this.world, this.camera);
+      return;
+    }
+
+    if (scene.isWorld) {
+      this._walkFrame(now, dt);
       return;
     }
 
@@ -764,6 +988,174 @@ export class TourViewer {
     this._render();
   }
 
+  /**
+   * One frame in a generated room: the visitor walks where the keys, the stick, the wheel or
+   * the clicked spot take them, as far as the room lets them, and looks wherever they like.
+   */
+  _walkFrame(now, dt) {
+    const room = this.scene;
+    const K = this.keys;
+
+    if (this.auto) {
+      // The automatic tour stands still and looks slowly round the room, then moves on.
+      const t = (now - this.auto.start) / 16000;
+      if (t >= 1) {
+        this.auto.start = now + 1e9;
+        this.goTo(this.index + 1);
+      } else if (t >= 0) {
+        this.targetYaw -= ((2 * Math.PI) / 16) * dt;
+        this.targetPitch += (0 - this.targetPitch) * Math.min(1, dt * 2);
+        this.route = null;
+        this.dirty = true;
+      }
+    }
+
+    // --- looking
+    const turn = (K.has("ArrowLeft") ? 1 : 0) - (K.has("ArrowRight") ? 1 : 0);
+    if (turn) this.targetYaw += turn * 1.6 * dt;
+    this.targetPitch = clamp(this.targetPitch, -MAX_PITCH, MAX_PITCH);
+    const blend = 1 - Math.exp(-dt * 14);
+    const dy = this.targetYaw - this.yaw;
+    const dp = this.targetPitch - this.pitch;
+    if (Math.abs(dy) > 1e-5 || Math.abs(dp) > 1e-5) {
+      this.yaw += dy * blend;
+      this.pitch += dp * blend;
+      this.dirty = true;
+    }
+
+    // --- where the visitor wants to go
+    let forward = (K.has("KeyW") || K.has("ArrowUp") ? 1 : 0) - (K.has("KeyS") || K.has("ArrowDown") ? 1 : 0) + this.joystick.y;
+    let strafe = (K.has("KeyD") ? 1 : 0) - (K.has("KeyA") ? 1 : 0) + this.joystick.x;
+    const steering = Boolean(forward || strafe);
+    const sin = Math.sin(this.yaw);
+    const cos = Math.cos(this.yaw);
+    let wx = 0;
+    let wz = 0;
+    if (steering) {
+      const len = Math.hypot(forward, strafe);
+      if (len > 1) {
+        forward /= len;
+        strafe /= len;
+      }
+      const speed = this.fast ? RUN : WALK;
+      wx = (-sin * forward + cos * strafe) * speed;
+      wz = (-cos * forward - sin * strafe) * speed;
+      this.route = null;
+    } else if (this.route) {
+      // On the way to a clicked spot: towards the next corner of the way, slowing at the end.
+      const route = this.route;
+      let target = route.points[route.i];
+      let gx = target.x - this.pos.x;
+      let gz = target.z - this.pos.z;
+      let dist = Math.hypot(gx, gz);
+      while (dist < 0.1 && route.i < route.points.length - 1) {
+        target = route.points[++route.i];
+        gx = target.x - this.pos.x;
+        gz = target.z - this.pos.z;
+        dist = Math.hypot(gx, gz);
+      }
+      if (dist < 0.03) {
+        this.route = null;
+      } else {
+        let left = dist;
+        for (let i = route.i; i < route.points.length - 1; i++) left += Math.hypot(route.points[i + 1].x - route.points[i].x, route.points[i + 1].z - route.points[i].z);
+        const speed = Math.min(STROLL, 0.35 + left * 2.4);
+        wx = (gx / dist) * speed;
+        wz = (gz / dist) * speed;
+      }
+    }
+    // Speed is gathered and lost over a moment, as a person does.
+    const gather = 1 - Math.exp(-dt * (steering || this.route ? 9 : 12));
+    this.velocity.x += (wx - this.velocity.x) * gather;
+    this.velocity.y += (wz - this.velocity.y) * gather;
+    if (!steering && !this.route && this.velocity.lengthSq() < 1e-4) this.velocity.set(0, 0);
+    let dx = this.velocity.x * dt;
+    let dz = this.velocity.y * dt;
+    if (this.route) {
+      // Never past the corner being walked to.
+      const target = this.route.points[this.route.i];
+      const dist = Math.hypot(target.x - this.pos.x, target.z - this.pos.z);
+      const step = Math.hypot(dx, dz);
+      if (step > dist && step > 0) {
+        dx *= dist / step;
+        dz *= dist / step;
+      }
+    }
+    // The wheel (or a pinch) walks forward and back.
+    if (Math.abs(this.wheelImpulse) > 0.002) {
+      const push = this.wheelImpulse * Math.min(1, dt * 9);
+      this.wheelImpulse -= push;
+      dx += -sin * push * 1.3;
+      dz += -cos * push * 1.3;
+      this.route = null;
+    } else {
+      this.wheelImpulse = 0;
+    }
+
+    const wanted = Math.hypot(dx, dz);
+    if (wanted > 1e-6) {
+      const moved = room.walk(this.pos, dx, dz);
+      this.walked += moved;
+      if (moved < wanted * 0.3) {
+        // Stopped by something: do not keep pressing into it.
+        this.velocity.multiplyScalar(Math.exp(-dt * 10));
+        if (this.route && (this.route.stalled += dt) > 0.5) this.route = null;
+      } else if (this.route) {
+        this.route.stalled = 0;
+      }
+    }
+
+    // --- the eyes: a fixed height above the floor, following it gently over steps and uneven
+    // ground; over the first steps they come from the photograph's camera to that height
+    const gap = this.pos.y - this.floorY;
+    this.floorY = Math.abs(gap) < 0.002 || Math.abs(gap) > 1 ? this.pos.y : this.floorY + gap * (1 - Math.exp(-dt * 8));
+    const left = this.walked >= RISE ? 0 : 1 - ease(this.walked / RISE);
+    const ex = this.pos.x + this.lead.x * left;
+    const ey = this.floorY + room.eyeHeight + this.lead.y * left;
+    const ez = this.pos.z + this.lead.z * left;
+    if (this.eye.x !== ex || this.eye.y !== ey || this.eye.z !== ez) {
+      this.eye.set(ex, ey, ez);
+      this.dirty = true;
+    }
+
+    this._updateCursor(now, dt);
+    this._pace(dt);
+
+    if (!this.dirty) return;
+    this.dirty = false;
+    this._render();
+  }
+
+  /**
+   * A machine that cannot keep up with a room is given less to draw, in steps: first fewer of
+   * a large room's splats (the far ones merge), then fewer pixels.
+   */
+  _pace(dt) {
+    if (!this.dirty) return;
+    if (dt > 0.045) this.slowFrames++;
+    else this.slowFrames = Math.max(0, this.slowFrames - 2);
+    if (this.slowFrames <= 45) return;
+    this.slowFrames = 0;
+    const room = this.scene;
+    if (room.large && (!room.budget || room.budget > 750000)) {
+      if (this.thinningRoom) return;
+      const count = room.budget ? 700000 : 1200000;
+      this.thinningRoom = room;
+      room.thin(count).then((ok) => {
+        this.thinningRoom = null;
+        if (!ok || this.scene !== room || !this.spark) return;
+        this.spark.lodSplatCount = count;
+        this.dirty = true;
+      });
+      return;
+    }
+    if (this.roomRatio > 0.8) {
+      this.roomRatio = Math.max(0.75, this.roomRatio - 0.25);
+      this.renderer.setPixelRatio(this.roomRatio);
+      this.resize();
+    }
+  }
+
   resize() {
     if (this.renderer.xr.isPresenting) return;
     const w = Math.max(1, this.canvas.clientWidth);
@@ -786,13 +1178,28 @@ export class TourViewer {
 
   async enterVR() {
     if (!this.scene || this.renderer.xr.isPresenting) return;
-    const session = await navigator.xr.requestSession("immersive-vr");
-    // "local": the headset starts exactly where the photograph was taken, whatever the wearer's
-    // height. Small real head movements then show the room's real depth.
-    this.renderer.xr.setReferenceSpaceType("local");
+    const session = await navigator.xr.requestSession("immersive-vr", { optionalFeatures: ["local-floor"] });
+    // A photograph: "local", the headset starts exactly where it was taken, whatever the wearer's
+    // height, and small real head movements show the room's real depth.
+    // A generated room: "local-floor" where the headset offers it, so the wearer stands on its
+    // floor at their own height and walks with the left stick.
+    let floor = false;
+    if (this.scene.isWorld) {
+      try {
+        await session.requestReferenceSpace("local-floor");
+        floor = true;
+      } catch (err) {
+        floor = false;
+      }
+    }
+    this.xrFloor = floor;
+    this.xrHead = null;
+    this.renderer.xr.setReferenceSpaceType(floor ? "local-floor" : "local");
     await this.renderer.xr.setSession(session);
     this._userActed();
-    this.pos.set(0, 0, 0);
+    if (!this.scene.isWorld) this.pos.set(0, 0, 0);
+    this.route = null;
+    this.velocity.set(0, 0);
     this.cursor.visible = false;
     this.xrYaw = this.scene.baseYaw;
     session.addEventListener("select", () => this.next());
@@ -809,17 +1216,41 @@ export class TourViewer {
 
   _xrStep(dt, frame) {
     const rig = this.rig;
-    rig.position.set(0, 0, 0);
-    rig.rotation.set(0, this.xrYaw - this.scene.baseYaw, 0);
-
+    const scene = this.scene;
+    const room = scene.isWorld;
     const session = frame && frame.session;
-    if (!session) return;
     let turn = 0;
-    for (const source of session.inputSources) {
-      const pad = source.gamepad;
-      if (!pad || pad.axes.length < 4) continue;
-      if (Math.abs(pad.axes[2]) > 0.15) turn += pad.axes[2];
+    if (session) {
+      for (const source of session.inputSources) {
+        const pad = source.gamepad;
+        if (!pad || pad.axes.length < 4) continue;
+        if (room && source.handedness === "left") {
+          // Walk the way the wearer faces.
+          const ahead = Math.abs(pad.axes[3]) > 0.15 ? -pad.axes[3] : 0;
+          const aside = Math.abs(pad.axes[2]) > 0.15 ? pad.axes[2] : 0;
+          if (ahead || aside) {
+            const facing = this.camera.getWorldDirection(this._dir);
+            facing.y = 0;
+            if (facing.lengthSq() > 1e-6) {
+              facing.normalize();
+              this.walked += scene.walk(this.pos, (facing.x * ahead - facing.z * aside) * WALK * dt, (facing.z * ahead + facing.x * aside) * WALK * dt);
+            }
+          }
+          continue;
+        }
+        if (Math.abs(pad.axes[2]) > 0.15) turn += pad.axes[2];
+      }
     }
+    if (room) {
+      rig.position.set(this.pos.x, this.pos.y + (this.xrFloor ? 0 : scene.eyeHeight), this.pos.z);
+      rig.rotation.set(0, this.xrYaw, 0);
+    } else {
+      // In a floor-level session a photograph is still seen from where it was taken.
+      if (this.xrFloor && this.xrHead === null && this.camera.position.y > 0.3) this.xrHead = this.camera.position.y;
+      rig.position.set(0, this.xrFloor ? -(this.xrHead || 1.6) : 0, 0);
+      rig.rotation.set(0, this.xrYaw - scene.baseYaw, 0);
+    }
+    if (!session) return;
     // Snap turns are far more comfortable in a headset than smooth rotation.
     if (Math.abs(turn) > 0.7 && this.xrSnapReady) {
       this.xrYaw -= Math.sign(turn) * 30 * DEG;
@@ -838,6 +1269,12 @@ export class TourViewer {
     if (this.veilAnim) this.veilAnim.cancel();
     if (this.veil) this.veil.hidden = true;
     if (this.scene) this.scene.dispose();
+    if (this.roomCode) this.roomCode.closeRooms();
+    if (this.spark) {
+      this.world.remove(this.spark);
+      this.spark.dispose();
+      this.spark = null;
+    }
     this.cursor.children.forEach((m) => {
       m.geometry.dispose();
       m.material.dispose();

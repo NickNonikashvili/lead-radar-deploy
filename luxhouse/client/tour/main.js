@@ -3,6 +3,10 @@
  * viewer and connects the interface to it. The interface is deliberately thin
  * (the picture is the page): where the visitor is, the way on, and a few tools
  * that fade away while they are just looking.
+ *
+ * A space is a photograph with depth or a generated 3D room the visitor walks
+ * through (the stage carries data-mode="photo" | "world"); the hints, the help
+ * and the walking pad follow the kind of space on screen.
  */
 
 import { TourViewer } from "./viewer.js";
@@ -56,6 +60,10 @@ function start() {
   const fullBtn = $("[data-fullscreen]", stage);
   const helpBtn = $("[data-help]", stage);
   const helpPanel = $("[data-help-panel]", stage);
+  const progress = $("[data-progress]", stage);
+  const stick = $("[data-stick]", stage);
+  const noteWorld = $("[data-note-world]", stage);
+  if (noteWorld && scenes.some((s) => s.world)) noteWorld.hidden = false;
 
   stage.setAttribute("data-first", ""); // the designed loader is for the first space only
 
@@ -79,20 +87,34 @@ function start() {
   const page = new AbortController();
   const on = (target, type, handler, options) => target.addEventListener(type, handler, Object.assign({ signal: page.signal }, options));
 
-  // ------------------------------------------------------------ hint, shown once
+  // ------------------------------------------------------------ hint, shown once for each kind of space
   let hintTimer = 0;
-  let hintShown = false;
+  let hintLeaving = 0;
+  const hintShown = { photo: false, world: false };
   const dropHint = () => {
-    if (hint.hidden) return;
+    if (hint.hidden || hint.classList.contains("is-leaving")) return;
     clearTimeout(hintTimer);
     hint.classList.add("is-leaving");
-    setTimeout(() => { hint.hidden = true; }, 650);
+    hintLeaving = setTimeout(() => { hint.hidden = true; }, 650);
   };
-  const showHint = () => {
-    if (hintShown) return;
-    hintShown = true;
+  const showHint = (mode) => {
+    if (hintShown[mode]) return;
+    hintShown[mode] = true;
+    clearTimeout(hintTimer);
+    clearTimeout(hintLeaving);
+    hint.classList.remove("is-leaving");
     hint.hidden = false;
     hintTimer = setTimeout(dropHint, 9000);
+  };
+
+  // ------------------------------------------------------------ how much of a generated room has arrived
+  let progressTimer = 0;
+  const endProgress = () => {
+    clearTimeout(progressTimer);
+    progressTimer = 0;
+    progress.hidden = true;
+    stage.removeAttribute("data-loading-share");
+    stage.style.removeProperty("--p");
   };
 
   // ------------------------------------------------------------ the interface rests while the visitor looks
@@ -115,11 +137,14 @@ function start() {
         stage.setAttribute("data-state", state);
         loader.hidden = state !== "loading";
         errorBox.hidden = state !== "error";
+        endProgress();
         if (state === "ready") {
-          if (stage.hasAttribute("data-first")) {
-            stage.removeAttribute("data-first");
-            showHint();
-          }
+          const mode = viewer.mode === "world" ? "world" : "photo";
+          stage.setAttribute("data-mode", mode);
+          const first = stage.hasAttribute("data-first");
+          stage.removeAttribute("data-first");
+          // The first space explains itself; so does the first room that is walked, if it comes later.
+          if (first || mode === "world") showHint(mode);
           wake();
         }
         if (state === "error") {
@@ -127,12 +152,24 @@ function start() {
           if (error) console.error(error);
         }
       },
-      onScene(index) {
+      onProgress(share) {
+        stage.style.setProperty("--p", share.toFixed(3));
+        stage.setAttribute("data-loading-share", "");
+        // Arriving from another space, the hairline appears only when the room takes a moment.
+        if (!stage.hasAttribute("data-first") && progress.hidden && !progressTimer && share < 0.9) {
+          progressTimer = setTimeout(() => { progress.hidden = false; }, 350);
+        }
+      },
+      onScene(index, shown) {
         const n = scenes.length;
         const scene = scenes[index];
+        const room = Boolean(shown && shown.isWorld);
+        stage.setAttribute("data-mode", room ? "world" : "photo");
         sceneName.textContent = scene.label || "";
         sceneCount.textContent = pad(index + 1) + " / " + pad(n);
-        generatedMark.hidden = !scene.generated; // an imagined standpoint is always marked as such
+        // What is generated is always marked as such: a whole room, or an imagined standpoint.
+        generatedMark.textContent = room ? S.world : S.generated;
+        generatedMark.hidden = !(room || scene.generated);
         const next = scenes[(index + 1) % n];
         const prev = scenes[(index - 1 + n) % n];
         nextName.textContent = next.label || pad(((index + 1) % n) + 1);
@@ -170,6 +207,8 @@ function start() {
     page.abort();
     clearTimeout(idleTimer);
     clearTimeout(hintTimer);
+    clearTimeout(hintLeaving);
+    clearTimeout(progressTimer);
     viewer.dispose();
     if (window.luxhouseTour === viewer) window.luxhouseTour = null;
   };
@@ -197,6 +236,49 @@ function start() {
     wake();
   };
   stripBtn.addEventListener("click", () => setStrip(strip.hidden));
+
+  // ------------------------------------------------------------ the walking pad (touch screens, generated rooms)
+  if (stick) {
+    stick.hidden = false; // the stylesheet shows it where it belongs
+    const REACH = 34;
+    let held = null;
+    const steer = (e) => {
+      const box = stick.getBoundingClientRect();
+      let x = e.clientX - (box.left + box.width / 2);
+      let y = e.clientY - (box.top + box.height / 2);
+      const length = Math.hypot(x, y);
+      if (length > REACH) {
+        x *= REACH / length;
+        y *= REACH / length;
+      }
+      stick.style.setProperty("--x", x.toFixed(1) + "px");
+      stick.style.setProperty("--y", y.toFixed(1) + "px");
+      viewer.setJoystick(x / REACH, -y / REACH);
+    };
+    const letGo = () => {
+      held = null;
+      stick.classList.remove("is-held");
+      stick.style.setProperty("--x", "0px");
+      stick.style.setProperty("--y", "0px");
+      viewer.setJoystick(0, 0);
+    };
+    stick.addEventListener("pointerdown", (e) => {
+      if (held !== null) return;
+      held = e.pointerId;
+      try {
+        stick.setPointerCapture(e.pointerId);
+      } catch (err) {
+        /* pointer already released */
+      }
+      stick.classList.add("is-held");
+      dropHint();
+      steer(e);
+      e.preventDefault();
+    });
+    stick.addEventListener("pointermove", (e) => { if (e.pointerId === held) steer(e); });
+    ["pointerup", "pointercancel", "lostpointercapture"].forEach((type) => stick.addEventListener(type, (e) => { if (e.pointerId === held) letGo(); }));
+    on(window, "blur", () => { if (held !== null) letGo(); });
+  }
 
   // ------------------------------------------------------------ tools
   if (viewer.reducedMotion) autoBtn.hidden = true;
