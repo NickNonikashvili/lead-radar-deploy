@@ -47,6 +47,7 @@ function start() {
   const thumbs = $$("[data-scene]", strip);
   const sceneName = $("[data-scene-name]", stage);
   const sceneCount = $("[data-scene-count]", stage);
+  const generatedMark = $("[data-generated]", stage);
   const nextBtn = $("[data-next]", stage);
   const prevBtn = $("[data-prev]", stage);
   const nextName = $("[data-next-name]", stage);
@@ -131,6 +132,7 @@ function start() {
         const scene = scenes[index];
         sceneName.textContent = scene.label || "";
         sceneCount.textContent = pad(index + 1) + " / " + pad(n);
+        generatedMark.hidden = !scene.generated; // an imagined standpoint is always marked as such
         const next = scenes[(index + 1) % n];
         const prev = scenes[(index - 1 + n) % n];
         nextName.textContent = next.label || pad(((index + 1) % n) + 1);

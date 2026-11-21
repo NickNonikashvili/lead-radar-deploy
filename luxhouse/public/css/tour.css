@@ -64,6 +64,9 @@ ol { padding: 0; list-style: none; }
 .tour-where { display: grid; gap: 6px; min-width: 0; padding-bottom: 4px; }
 .tour-where__count { font: 500 12px/1 var(--f); letter-spacing: .14em; color: var(--ash); font-variant-numeric: tabular-nums; }
 .tour-where__name { font: 300 clamp(1.375rem, 2.3vw, 2rem)/1.08 var(--f); letter-spacing: -.024em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tour-where__ai { justify-self: start; margin-top: 2px; padding: 4px 8px; border: 1px solid var(--line-2); font: 500 11px/1.2 var(--f); letter-spacing: .1em; text-transform: uppercase; color: var(--ash); background: var(--glass); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); }
+:lang(ka) .tour-where__ai { text-transform: none; letter-spacing: 0; font-size: 12px; }
+.tour-thumb__ai { position: absolute; right: 6px; top: 6px; padding: 2px 5px; background: rgba(11, 10, 9, .7); font: 500 10px/1.2 var(--f); letter-spacing: .08em; color: var(--bone); }
 .tour-tools { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 6px; }
 .tour-chip { display: inline-flex; align-items: center; gap: 10px; min-height: 44px; padding: 0 16px; background: var(--glass); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); font: 500 14px/1 var(--f); letter-spacing: -.005em; white-space: nowrap; transition: background-color .25s var(--ease), color .25s var(--ease); }
 .tour-chip:hover { background: rgba(237, 232, 224, .16); }

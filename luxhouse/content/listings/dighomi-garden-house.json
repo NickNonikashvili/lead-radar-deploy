@@ -139,11 +139,13 @@
     },
     {
       "file": "06",
-      "room": "living"
+      "room": "living",
+      "sameSpaceAs": ["07"]
     },
     {
       "file": "07",
-      "room": "living"
+      "room": "living",
+      "sameSpaceAs": ["06"]
     },
     {
       "file": "08",

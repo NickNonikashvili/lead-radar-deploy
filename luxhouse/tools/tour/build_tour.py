@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import shutil
 import sys
 import time
 from pathlib import Path
@@ -34,13 +35,15 @@ LISTINGS = ROOT / "content" / "listings"
 PHOTOS = ROOT / "content" / "source-photos"
 MEDIA = ROOT / "public" / "media" / "listings"
 CACHE = ROOT / ".cache" / "tour"
+VIEWS = ROOT / "content" / "tour-views"
+VIEW_ORDER = ("left", "back", "right")   # the order of the walk around a room
 EXTS = (".webp", ".jpg", ".jpeg", ".png")
 VERSION = 1
 
 
-def find_photo(slug: str, name: str) -> Path | None:
+def find_photo(slug: str, name: str, folder: Path | None = None) -> Path | None:
     for ext in EXTS:
-        p = PHOTOS / slug / (name + ext)
+        p = (folder or PHOTOS) / slug / (name + ext)
         if p.exists():
             return p
     return None
@@ -69,6 +72,19 @@ def cached(provider, slug: str, name: str, photo: Path, refresh: bool) -> dict:
     return out
 
 
+def build_scene(slug: str, out_root: Path, provider, name: str, src: Path, room: str, refresh: bool, t0: float) -> dict:
+    """Depth for one picture (cached), packed into the viewer's files. Returns its tour.json entry."""
+    est = cached(provider, slug, name, src, refresh)
+    entry = pack.pack_scene(out_root / name, est["image"], est["depth"], est["mask"], est.get("normal"), est["fx"], est["fy"], est.get("points"))
+    scene = {"id": name, "photo": name, "room": room, "base": f"{name}/"}
+    scene.update(entry)
+    hfov = np.degrees(2 * np.arctan(0.5 / est["fx"]))
+    eye = "-" if entry["eyeHeight"] is None else f'{entry["eyeHeight"]:.2f} m'
+    print(f"  {slug}/{name}: hfov {hfov:5.1f}°  depth {entry['depth']['depthMin']:.2f}–{entry['depth']['depthMax']:.2f} m  eye {eye}  "
+          f"geo {entry['bytes']['geo'] / 1024:.0f} kB  {time.time() - t0:.1f}s", flush=True)
+    return scene
+
+
 def build_listing(slug: str, provider, only: set[str] | None, refresh: bool) -> int:
     listing_file = LISTINGS / f"{slug}.json"
     if not listing_file.exists():
@@ -87,26 +103,33 @@ def build_listing(slug: str, provider, only: set[str] | None, refresh: bool) -> 
         if photo.get("tour") is False:
             continue
         if only and name not in only:
-            if name in previous:
-                scenes.append(previous[name])   # keep scenes we were not asked to rebuild
+            for kept in [name] + [f"{name}-{view}" for view in VIEW_ORDER]:
+                if kept in previous:
+                    scenes.append(previous[kept])   # keep scenes we were not asked to rebuild
             continue
         src = find_photo(slug, name)
         if src is None:
             print(f"  ! {slug}/{name}: source photo missing, skipped", file=sys.stderr)
             continue
         t0 = time.time()
-        est = cached(provider, slug, name, src, refresh)
-        entry = pack.pack_scene(out_root / name, est["image"], est["depth"], est["mask"], est.get("normal"), est["fx"], est["fy"], est.get("points"))
-        scene = {"id": name, "photo": name, "room": photo.get("room", ""), "base": f"{name}/"}
-        scene.update(entry)
-        scenes.append(scene)
-        hfov = np.degrees(2 * np.arctan(0.5 / est["fx"]))
-        eye = "-" if entry["eyeHeight"] is None else f'{entry["eyeHeight"]:.2f} m'
-        print(f"  {slug}/{name}: hfov {hfov:5.1f}°  depth {entry['depth']['depthMin']:.2f}–{entry['depth']['depthMax']:.2f} m  eye {eye}  "
-              f"geo {entry['bytes']['geo'] / 1024:.0f} kB  {time.time() - t0:.1f}s")
+        scenes.append(build_scene(slug, out_root, provider, name, src, photo.get("room", ""), refresh, t0))
+        # The same room imagined from other standpoints (tools/tour/imagine.py), in walking order.
+        for view in VIEW_ORDER:
+            vid = f"{name}-{view}"
+            vsrc = find_photo(slug, vid, VIEWS)
+            if vsrc is None:
+                continue
+            scene = build_scene(slug, out_root, provider, vid, vsrc, photo.get("room", ""), refresh, time.time())
+            scene.update({"generated": True, "view": view, "of": name})
+            scenes.append(scene)
 
     if not scenes:
         raise SystemExit(f"{slug}: no scenes were built")
+    # A view that was deleted from content/tour-views leaves no files behind.
+    keep = {s["id"] for s in scenes}
+    for folder in out_root.iterdir():
+        if folder.is_dir() and folder.name not in keep:
+            shutil.rmtree(folder)
     manifest = {"version": VERSION, "generator": f"luxhouse-tour/{VERSION} ({provider.name})", "scenes": scenes}
     manifest_file.write_text(json.dumps(manifest, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
     print(f"  -> {manifest_file.relative_to(ROOT)} ({len(scenes)} scenes)")

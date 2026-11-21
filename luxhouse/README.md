@@ -138,6 +138,37 @@ Better photographs give better tours: original files from the owner or photograp
 (not portal downloads, which are small and watermarked), wide but not fisheye, level,
 several per room, with nothing close to the lens at the edge of the frame.
 
+### Walking around a room: imagined views
+
+A photograph cannot show what was behind the camera or the back of a sofa. To let a visitor
+walk around a room all the same, an image model is asked for new photographs of the *same*
+room from other standpoints: turned to the left, turned to the right, and from the far end
+looking back. Each becomes one more space in the tour, right after the photograph it was made
+from, so stepping forward walks the visitor around the room: photograph → to the left → far
+end → to the right → next room.
+
+```bash
+export OPENAI_API_KEY=...                       # OpenAI Images API
+python tools/tour/imagine.py --listing dighomi-garden-house     # or --all
+python tools/tour/imagine.py --all --dry-run    # what would be made, and one prompt
+python tools/tour/build_tour.py --all           # then build the tours as usual
+```
+
+- Main rooms (living, kitchen, dining, bedrooms) get three views; small rooms and outdoor
+  spaces get the far-end view only; façades and aerial shots get none. A photo entry in the
+  listing file may set `"views": ["back"]` or `"views": false`, and `"sameSpaceAs": ["07"]`
+  to name other photos of the same room (they are shown to the model too, so the views agree
+  with them).
+- Pictures are saved in `content/tour-views/<slug>/<photo>-<view>.webp`. **Look at every one
+  before publishing.** The model keeps what the photographs show and invents the rest (a
+  wall, a door, a dining table). Delete any picture that misrepresents the home; the next
+  build drops it from the tour. Existing pictures are never redone unless `--redo` is given.
+- The site always says what they are: the tour marks each one "AI-completed view", the help
+  panel explains it, and they never appear in the photo gallery.
+- Cost: one image per view at the model's "high" quality (roughly a quarter of a US dollar
+  each at the time of writing), about a minute each. The tool stops cleanly when the account
+  runs out of credit and continues where it stopped on the next run.
+
 ### Building tours
 
 The builder is Python. One-time setup:
@@ -167,7 +198,8 @@ under the MIT licence. Depth estimates are cached in `.cache/tour/`, so re-packi
 after a code change does not re-run the model.
 
 `python tools/tour/test_pack.py` checks the packing code against a synthetic room
-whose true geometry is known.
+whose true geometry is known; `python tools/tour/test_imagine.py` checks the view tool
+without calling the image service.
 
 ### Files
 
@@ -175,6 +207,7 @@ whose true geometry is known.
 - `tools/tour/pack.py` — depth → one depth grid prepared for a moving viewer (thin
   foreground flattened, object edges widened), gravity and eye height, the packed files
 - `tools/tour/build_tour.py` — command line
+- `tools/tour/imagine.py` — imagined views of a room from other standpoints (optional, needs an API key)
 - `client/tour/` — the viewer source (three.js); `npm run vendor` bundles it into
   `public/js/tour.bundle.js`
 

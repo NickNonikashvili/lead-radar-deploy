@@ -322,6 +322,31 @@ test("unknown pages return a localized 404", async () => {
   }
 });
 
+test("tour pages mark every imagined view and never show it as a photograph", async () => {
+  for (const l of listings.all().filter((x) => x.hasTour)) {
+    const imagined = l.tour.scenes.filter((s) => s.generated);
+    for (const s of imagined) {
+      assert.ok(["left", "back", "right"].includes(s.view), `${l.slug}/${s.id}: a known standpoint`);
+      assert.ok(l.tour.scenes.some((o) => o.id === s.of && !o.generated), `${l.slug}/${s.id}: made from a real photograph of this home`);
+      assert.ok(!l.photos.some((p) => p.file === s.id), `${l.slug}/${s.id}: not in the photo gallery`);
+    }
+    for (const lang of config.languages) {
+      const html = await (await get(`/${lang}/residences/${l.slug}/tour`)).text();
+      const data = JSON.parse(html.match(/<script type="application\/json" id="tour-data">([\s\S]*?)<\/script>/)[1]);
+      const t = i18n.translator(lang);
+      assert.equal(data.scenes.length, l.tour.scenes.length);
+      for (const s of data.scenes.filter((x) => x.generated)) {
+        assert.ok(s.label.endsWith(t(`tour.views.${s.view}`)), `${lang} ${s.id}: says where it is seen from`);
+      }
+      assert.equal((html.match(/class="tour-help__note"/g) || []).length, imagined.length ? 2 : 1, `${lang} ${l.slug}: the help explains imagined views`);
+      assert.equal((html.match(/class="tour-thumb__ai"/g) || []).length, imagined.length, `${lang} ${l.slug}: marked in the strip`);
+      assert.ok(html.includes("data-generated"), "the current-space marker is on the page");
+    }
+    const page = await (await get(`/en/residences/${l.slug}`)).text();
+    for (const s of imagined) assert.ok(!page.includes(`/tour-views/`) && !page.includes(`${s.id}-640.webp`), "imagined views stay inside the tour");
+  }
+});
+
 test("sitemap, robots and health", async () => {
   const xml = await (await get("/sitemap.xml")).text();
   for (const lang of config.languages) {
