@@ -138,10 +138,52 @@ Better photographs give better tours: original files from the owner or photograp
 (not portal downloads, which are small and watermarked), wide but not fisheye, level,
 several per room, with nothing close to the lens at the edge of the frame.
 
-### Walking around a room: imagined views
+### Walking around a room: generated 3D rooms
 
 A photograph cannot show what was behind the camera or the back of a sofa. To let a visitor
-walk around a room all the same, an image model is asked for new photographs of the *same*
+really walk around a room (a lap around the sofa, up to the window, back to the door) the
+room is generated as one 3D scene by a world model, World Labs **Marble**, from its
+photograph. What the photograph shows is kept; what it does not show is invented to fit. The
+tour then opens that space where the photographer stood, looking the way the photograph
+looks, and from there the visitor walks freely: W A S D or the arrow keys, drag to look
+around, click or tap a spot on the floor to walk there. Walls and furniture are solid.
+
+```bash
+export WORLDLABS_API_KEY=...                    # platform.worldlabs.ai, with API credits
+python tools/tour/worlds.py --balance
+python tools/tour/worlds.py --all --dry-run     # which rooms, and the most it can cost
+python tools/tour/worlds.py --listing dighomi-garden-house --only 06
+python tools/tour/worlds.py --all
+python tools/tour/build_tour.py --all           # then build the tours: worlds are attached
+```
+
+- Rooms and outdoor spaces get a world; façades, aerial pictures and views do not. A photo
+  entry in the listing file may set `"world": true` or `"world": false`, a `"worldPrompt"`
+  (one sentence about what the photograph does not show, to steer the invention) and
+  `"sameSpaceAs": ["07"]` (other photographs of the same room: only the first gets a world).
+- Each world is two files in the scene folder, `world.spz` (Gaussian splats, about 8 MB,
+  with a lighter `world-low.spz` for phones) and `collider.glb` (the solid shapes). Which
+  world belongs to which photograph, and what it cost, is recorded in
+  `content/tour-worlds/<slug>.json`; the panorama the model imagined is saved beside it as
+  `content/tour-worlds/<slug>/<photo>.webp` for a quick look at what was invented.
+- **Walk through every world before publishing.** A generated room is plausible, not true:
+  the wall behind the camera, a door, the far side of a kitchen island are guesses. To drop
+  a world, delete its `world.spz` and build the tours again; the space falls back to the
+  photograph. To try again, `--redo` (optionally `--seed 7`, or `--model marble-1.1-plus`
+  for large spaces). The site always says what these are: the tour marks them as generated
+  and the help panel explains it.
+- Cost and safety: one world is 1,580 credits (about 1.3 US dollars) with `marble-1.1`, up
+  to 3,080 with `marble-1.1-plus`, and takes about five minutes. The tool reads the balance
+  before each world and starts nothing the balance does not cover, writes a started world
+  down at once so that an interrupted run is picked up instead of paid for twice, and never
+  remakes a finished world unless told to. The worlds also stay in the World Labs account;
+  if the files are lost, the next run downloads them again at no cost.
+- `python tools/tour/test_worlds.py` checks all of this without calling the service.
+
+### Stepping around a room: imagined views
+
+Where a room has no generated world, a lighter alternative lets the visitor at least step
+around it. An image model is asked for new photographs of the *same*
 room from other standpoints: turned to the left, turned to the right, and from the far end
 looking back. Each becomes one more space in the tour, right after the photograph it was made
 from, so stepping forward walks the visitor around the room: photograph → to the left → far
@@ -207,6 +249,7 @@ without calling the image service.
 - `tools/tour/pack.py` — depth → one depth grid prepared for a moving viewer (thin
   foreground flattened, object edges widened), gravity and eye height, the packed files
 - `tools/tour/build_tour.py` — command line
+- `tools/tour/worlds.py` — rooms generated as walkable 3D worlds (optional, needs an API key)
 - `tools/tour/imagine.py` — imagined views of a room from other standpoints (optional, needs an API key)
 - `client/tour/` — the viewer source (three.js); `npm run vendor` bundles it into
   `public/js/tour.bundle.js`

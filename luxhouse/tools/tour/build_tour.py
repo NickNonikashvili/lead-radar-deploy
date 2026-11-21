@@ -11,7 +11,8 @@ the chosen provider, packs the result (see pack.py) and writes
     public/media/listings/<slug>/tour/<photo>/{color.webp,geo.bin,thumb.webp}
     public/media/listings/<slug>/tour/tour.json
 
-A photo is skipped when the listing marks it with "tour": false.
+A photo is skipped when the listing marks it with "tour": false. A photo whose room was generated
+as a 3D world (tools/tour/worlds.py) gets that world in its scene: the visitor walks around in it.
 Depth estimates are cached in .cache/tour/ so re-packing does not re-run the model.
 """
 
@@ -29,6 +30,7 @@ import numpy as np
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import pack  # noqa: E402
 import providers  # noqa: E402
+import worlds  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[2]
 LISTINGS = ROOT / "content" / "listings"
@@ -112,7 +114,14 @@ def build_listing(slug: str, provider, only: set[str] | None, refresh: bool) -> 
             print(f"  ! {slug}/{name}: source photo missing, skipped", file=sys.stderr)
             continue
         t0 = time.time()
-        scenes.append(build_scene(slug, out_root, provider, name, src, photo.get("room", ""), refresh, t0))
+        scene = build_scene(slug, out_root, provider, name, src, photo.get("room", ""), refresh, t0)
+        scenes.append(scene)
+        # A room generated as a 3D world is walked around in; the photograph stays as its opening view.
+        world = worlds.scene_entry(slug, name)
+        if world:
+            scene["world"] = world
+            print(f"  {slug}/{name}: walkable world attached", flush=True)
+            continue
         # The same room imagined from other standpoints (tools/tour/imagine.py), in walking order.
         for view in VIEW_ORDER:
             vid = f"{name}-{view}"
