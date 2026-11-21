@@ -179,6 +179,8 @@ kbd { display: inline-grid; place-items: center; min-width: 22px; height: 22px; 
   .tour-strip { bottom: calc(200px * .433 + 128px); }
   .tour-hint { bottom: calc(200px * .433 + 136px); width: max-content; }
   .tour-stick { bottom: calc(max(18px, env(safe-area-inset-bottom)) + 200px * .433 + 150px); width: 96px; height: 96px; }
+  /* in a room the hint sits above the walking pad, not on it */
+  .tour[data-mode="world"] .tour-hint { bottom: calc(max(18px, env(safe-area-inset-bottom)) + 200px * .433 + 150px + 96px + 14px); }
   .tour-back__title { font-size: 15px; max-width: 46vw; }
   .tour-thumb, .tour-thumb img { width: 108px; }
   .tour-thumb img { height: 72px; }

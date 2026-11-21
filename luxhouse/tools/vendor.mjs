@@ -11,7 +11,8 @@
  *   public/vendor/fonts/*.woff2 + fonts.css
  *   public/vendor/leaflet/{leaflet.js,leaflet.css,images/*}
  *   public/js/tour.bundle.js   (the viewer) and the tour.*-<hash>.js chunks it imports
- *                              (three.js; the generated-room code and its splat renderer)
+ *                              (three.js; the generated-room code and its splat renderer),
+ *                              with tour.licenses.txt
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -104,6 +105,13 @@ async function buildTour() {
     chunkNames: "tour.[name]-[hash]",
     logLevel: "warning",
   });
+  // The licences of what the chunks contain travel with them.
+  const notices = ["three", "@sparkjsdev/spark", "three-mesh-bvh"].map((name) => {
+    const dir = path.join(NM, name);
+    const { version } = JSON.parse(fs.readFileSync(path.join(dir, "package.json"), "utf8"));
+    return `${name} ${version}\n${"-".repeat(name.length + version.length + 1)}\n${fs.readFileSync(path.join(dir, "LICENSE"), "utf8").trim()}\n`;
+  });
+  fs.writeFileSync(path.join(outdir, "tour.licenses.txt"), `Third-party software in the tour viewer (tour.*.js)\n\n${notices.join("\n\n")}`);
   return fs.readdirSync(outdir).filter((f) => /^tour\.[\w-]+\.js$/.test(f)).length;
 }
 

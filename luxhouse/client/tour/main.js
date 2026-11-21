@@ -81,7 +81,7 @@ function start() {
   const sceneFromHash = () => {
     const m = useHash ? /scene=([\w-]+)/.exec(location.hash) : null;
     const i = m ? scenes.findIndex((s) => s.id === m[1]) : -1;
-    return i < 0 ? 0 : i;
+    return i >= 0 ? i : data.start > 0 && data.start < scenes.length ? data.start : 0;
   };
   // Page-level listeners are removed again by destroy().
   const page = new AbortController();
@@ -167,9 +167,7 @@ function start() {
         stage.setAttribute("data-mode", room ? "world" : "photo");
         sceneName.textContent = scene.label || "";
         sceneCount.textContent = pad(index + 1) + " / " + pad(n);
-        // What is generated is always marked as such: a whole room, or an imagined standpoint.
-        generatedMark.textContent = room ? S.world : S.generated;
-        generatedMark.hidden = !(room || scene.generated);
+        generatedMark.hidden = !room; // a room built by a model is always marked as such
         const next = scenes[(index + 1) % n];
         const prev = scenes[(index - 1 + n) % n];
         nextName.textContent = next.label || pad(((index + 1) % n) + 1);

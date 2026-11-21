@@ -322,29 +322,44 @@ test("unknown pages return a localized 404", async () => {
   }
 });
 
-test("tour pages mark every imagined view and never show it as a photograph", async () => {
+test("a room built in 3D has its files, opens where its photograph was taken, and is marked as generated", async () => {
+  let rooms = 0;
   for (const l of listings.all().filter((x) => x.hasTour)) {
-    const imagined = l.tour.scenes.filter((s) => s.generated);
-    for (const s of imagined) {
-      assert.ok(["left", "back", "right"].includes(s.view), `${l.slug}/${s.id}: a known standpoint`);
-      assert.ok(l.tour.scenes.some((o) => o.id === s.of && !o.generated), `${l.slug}/${s.id}: made from a real photograph of this home`);
-      assert.ok(!l.photos.some((p) => p.file === s.id), `${l.slug}/${s.id}: not in the photo gallery`);
+    const built = l.tour.scenes.filter((s) => s.world);
+    rooms += built.length;
+    for (const s of l.tour.scenes) assert.ok(l.photos.some((p) => p.file === s.id), `${l.slug}/${s.id}: every space is a photograph of this home`);
+    for (const s of built) {
+      const w = s.world;
+      const dir = path.join(config.root, "public", "media", "listings", l.slug, "tour", s.id);
+      for (const f of [w.splat, w.collider]) assert.ok(fs.statSync(path.join(dir, f)).size > 1000, `${l.slug}/${s.id}: ${f} is there`);
+      assert.equal(w.convention, "three");
+      assert.equal(w.start.position.length, 3);
+      assert.ok(Math.abs(Math.hypot(...w.start.quaternion) - 1) < 1e-3, `${l.slug}/${s.id}: the photograph's orientation is a rotation`);
+      const [x, y, z] = w.start.position;
+      assert.ok(x >= w.bounds.min[0] && x <= w.bounds.max[0] && z >= w.bounds.min[2] && z <= w.bounds.max[2], `${l.slug}/${s.id}: the photograph was taken inside the room`);
+      assert.ok(y > 0.6 && y < 2.2, `${l.slug}/${s.id}: from a height a camera stands at`);
+      assert.ok(w.eye >= 1.4 && w.eye <= 1.7 && w.radius > 0 && w.radius <= 0.3);
+      // The record says what the room is made of and what in it is invented.
+      const room = path.dirname(path.join(dir, w.splat)).split(path.sep).pop();
+      const record = JSON.parse(fs.readFileSync(path.join(config.root, "content", "tour-worlds", l.slug, room, "room.json"), "utf8"));
+      assert.ok(record.photos.includes(s.id), `${l.slug}/${s.id}: one of the room's photographs`);
+      assert.ok(record.frames.some((f) => f.photo === s.id) && record.frames.some((f) => f.generated), "photographs and generated views are told apart");
+      assert.ok(record.notes && record.notes.length, "the record notes what is invented");
     }
     for (const lang of config.languages) {
       const html = await (await get(`/${lang}/residences/${l.slug}/tour`)).text();
       const data = JSON.parse(html.match(/<script type="application\/json" id="tour-data">([\s\S]*?)<\/script>/)[1]);
       const t = i18n.translator(lang);
       assert.equal(data.scenes.length, l.tour.scenes.length);
-      for (const s of data.scenes.filter((x) => x.generated)) {
-        assert.ok(s.label.endsWith(t(`tour.views.${s.view}`)), `${lang} ${s.id}: says where it is seen from`);
-      }
-      assert.equal((html.match(/class="tour-help__note"/g) || []).length, imagined.length ? 2 : 1, `${lang} ${l.slug}: the help explains imagined views`);
-      assert.equal((html.match(/class="tour-thumb__ai"/g) || []).length, imagined.length, `${lang} ${l.slug}: marked in the strip`);
-      assert.ok(html.includes("data-generated"), "the current-space marker is on the page");
+      assert.deepEqual(data.scenes.map((s) => s.world || null), l.tour.scenes.map((s) => s.world || null), `${lang} ${l.slug}: rooms reach the page unchanged`);
+      assert.equal(data.start, built.length ? l.tour.scenes.findIndex((s) => s.world) : 0, `${lang} ${l.slug}: the tour opens in its first room`);
+      assert.equal((html.match(/class="tour-thumb__ai"/g) || []).length, built.length, `${lang} ${l.slug}: rooms are marked in the strip`);
+      assert.ok(html.includes(`data-generated hidden>${t("tour.world")}<`), `${lang} ${l.slug}: the marker of the space on screen`);
+      assert.equal(/data-note-world hidden/.test(html), built.length === 0, `${lang} ${l.slug}: the help explains generated rooms where there are any`);
+      assert.equal((html.match(/class="tour-help__note"/g) || []).length, 2);
     }
-    const page = await (await get(`/en/residences/${l.slug}`)).text();
-    for (const s of imagined) assert.ok(!page.includes(`/tour-views/`) && !page.includes(`${s.id}-640.webp`), "imagined views stay inside the tour");
   }
+  assert.ok(rooms >= 2, "the Garden House living room is built and opens from both of its photographs");
 });
 
 test("sitemap, robots and health", async () => {

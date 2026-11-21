@@ -324,6 +324,24 @@ async function step(name, fn) {
   const tourListing = listings.all().find((l) => l.hasTour);
   const tourUrl = `${base}/en/residences/${tourListing.slug}/tour`;
   const sceneCount = tourListing.tour.scenes.length;
+  // A residence's own rooms built in 3D are tens of megabytes and are drawn here without a
+  // graphics card, so the pages under test get the tour without them: every space is then a
+  // photograph, and the tour opens on the first. Walking is tested further down in a small room
+  // of known shape (`change` puts it in). What the server sends for real rooms is checked in
+  // test/site.test.js.
+  const withoutOwnRooms = (context, change) =>
+    context.route(`**/residences/${tourListing.slug}/tour`, async (route) => {
+      const res = await route.fetch();
+      const html = (await res.text()).replace(/(<script type="application\/json" id="tour-data">)([\s\S]*?)(<\/script>)/, (all, open, json, close) => {
+        const data = JSON.parse(json);
+        data.scenes.forEach((sc) => delete sc.world);
+        data.start = 0;
+        if (change) change(data);
+        return open + JSON.stringify(data).replace(/</g, "\\u003c") + close;
+      });
+      await route.fulfill({ response: res, body: html });
+    });
+  await withoutOwnRooms(desktop);
   const state = () => page.evaluate(() => {
     const v = window.luxhouseTour;
     return { x: v.pos.x, z: v.pos.z, yaw: v.yaw, pitch: v.pitch, index: v.index, auto: Boolean(v.auto), frames: v.frames || 0, status: v.status };
@@ -484,15 +502,9 @@ async function step(name, fn) {
   const roomRequests = [];
   let roomBroken = false;
   const asRoom = async (context) => {
-    await context.route(`**/residences/${tourListing.slug}/tour`, async (route) => {
-      const res = await route.fetch();
-      const html = (await res.text()).replace(/(<script type="application\/json" id="tour-data">)([\s\S]*?)(<\/script>)/, (all, open, json, close) => {
-        const data = JSON.parse(json);
-        data.scenes[0].world = roomData.world;
-        data.scenes[1].world = Object.assign({}, roomData.world, { splat: `../${roomIds[0]}/world.ply`, collider: `../${roomIds[0]}/collider.glb`, start: secondStart });
-        return open + JSON.stringify(data).replace(/</g, "\\u003c") + close;
-      });
-      await route.fulfill({ response: res, body: html });
+    await withoutOwnRooms(context, (data) => {
+      data.scenes[0].world = roomData.world;
+      data.scenes[1].world = Object.assign({}, roomData.world, { splat: `../${roomIds[0]}/world.ply`, collider: `../${roomIds[0]}/collider.glb`, start: secondStart });
     });
     for (const name of ["world.ply", "collider.glb"]) {
       await context.route(`**/tour/${roomIds[0]}/${name}`, (route) => {
@@ -756,6 +768,7 @@ async function step(name, fn) {
 
   // ---------------------------------------------------------------- mobile
   const mobile = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, deviceScaleFactor: 2 });
+  await withoutOwnRooms(mobile);
   const m = await mobile.newPage();
   watch(m);
 
@@ -806,6 +819,7 @@ async function step(name, fn) {
     const failures = [];
     for (const width of [320, 360, 390, 768, 1024, 1181, 1280, 1440, 1920]) {
       const ctx = await browser.newContext({ viewport: { width, height: 900 } });
+      await withoutOwnRooms(ctx);
       const p = await ctx.newPage();
       for (const lang of config.languages) {
         for (const route of pages) {

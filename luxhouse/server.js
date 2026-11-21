@@ -480,12 +480,9 @@ function languageRouter(lang) {
     const tourData = {
       base: mediaBase,
       version: l.tour.version || 1,
-      scenes: l.tour.scenes.map((s) => {
-        const room = s.room ? t(`rooms.${s.room}`) : "";
-        // A view imagined from another standpoint says which one: "Living room · far end".
-        const label = s.generated ? [room, t(`tour.views.${s.view}`)].filter(Boolean).join(" · ") : room;
-        return { ...s, label };
-      }),
+      scenes: l.tour.scenes.map((s) => ({ ...s, label: s.room ? t(`rooms.${s.room}`) : "" })),
+      // A tour with a room built in 3D opens in it: walking is what the visitor came for.
+      start: Math.max(0, l.tour.scenes.findIndex((s) => s.world)),
       strings: t("tour"),
       listingUrl: v.url,
       galleryUrl: v.url + "#gallery",

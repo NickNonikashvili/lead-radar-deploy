@@ -63,7 +63,7 @@
           <button type="button" class="tour-thumb" data-scene="<%= i %>">
             <img src="<%= tourData.base + s.base %>thumb.webp" alt="" width="120" height="80" loading="lazy" decoding="async">
             <span class="tour-thumb__no"><%= pad(i + 1) %></span>
-            <% if (s.world) { %><span class="tour-thumb__ai" title="<%= S.world %>">3D</span><% } else if (s.generated) { %><span class="tour-thumb__ai" title="<%= S.generated %>">AI</span><% } %>
+            <% if (s.world) { %><span class="tour-thumb__ai" title="<%= S.world %>">3D</span><% } %>
             <span class="tour-thumb__name"><%= s.label || pad(i + 1) %></span>
           </button>
         </li>
@@ -74,7 +74,7 @@
       <div class="tour-where" aria-live="polite">
         <span class="tour-where__count" data-scene-count></span>
         <strong class="tour-where__name" data-scene-name></strong>
-        <span class="tour-where__ai" data-generated hidden><%= S.generated %></span>
+        <span class="tour-where__ai" data-generated hidden><%= S.world %></span>
       </div>
 
       <nav class="tour-pad" aria-label="<%= S.spaces %>">
@@ -132,7 +132,6 @@
     </ol>
     <p class="tour-help__note"><%= S.note %></p>
     <p class="tour-help__note" data-note-world<%- hasRooms ? '' : ' hidden' %>><%= S.noteWorld %></p>
-    <% if (tourData.scenes.some(function (s) { return s.generated && !s.world; })) { %><p class="tour-help__note"><%= S.noteGenerated %></p><% } %>
   </aside>
 
   <div class="tour-stick" data-stick hidden aria-hidden="true"><i class="tour-stick__knob"></i></div>

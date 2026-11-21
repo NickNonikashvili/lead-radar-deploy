@@ -133,9 +133,12 @@ not been built in 3D, or that the visitor's device cannot draw.
 
 The controls follow Google Street View: drag to look, a ring that lies on whatever surface
 is under the pointer, click to go there, scroll or pinch to go deeper, and the pad at the
-bottom (or `[` and `]`) to move from space to space. In a room built in 3D the W A S D and
-arrow keys walk; phones get a thumb stick. On a VR headset the page offers an "Enter VR"
-button.
+bottom (or `[` and `]`) to move from space to space. In a room built in 3D, W and S (or the
+up and down arrows) walk, A and D step sideways, the left and right arrows turn, Shift
+walks faster, the wheel walks forward and back, a click on the floor walks there around
+whatever stands in between, and R walks back to where the photograph was taken. On a touch
+screen a drag looks, a tap walks to the spot and a thumb stick walks. On a VR headset the
+page offers an "Enter VR" button.
 
 What a tour is not: a scan. Proportions are approximate, there is no continuous walk from
 room to room, and a room built in 3D is plausible rather than true wherever the
@@ -223,8 +226,15 @@ What to know before publishing a room:
   for stops with a clear message and loses nothing. Nothing that was started is ever started
   twice: each piece of work carries a key derived from its content, a started reconstruction
   is written down before waiting, and the next run picks it up.
-- **Weight.** A room is about 32 MB, downloaded when the visitor enters it (the photograph
-  shows meanwhile). A device that cannot draw it stays on the photograph.
+- **Weight.** A room is about 32 MB, downloaded when the visitor enters it, with a progress
+  line. A computer draws all of it; if frames come slowly the viewer draws fewer splats far
+  from the visitor, and a phone does so from the start (this takes it some seconds to
+  prepare). A device that cannot draw a room at all (no WebGL 2, no WebAssembly) shows the
+  photograph instead, and says why in the console and in `luxhouseTour.worldError`.
+  A lighter copy made by merging splats was tried for phones and rejected: at half the
+  splats, fabric and floor grain already blur.
+- **A tour opens in its first room.** Walking is what the visitor came for, so a tour that
+  has a room built in 3D starts in it (the strip and the pad lead to every other space).
 
 `python tools/tour/test_rooms.py` checks the camera arithmetic, the collider, the camera
 planner and the money guards against a synthetic room, without calling the service.
@@ -269,8 +279,10 @@ whose true geometry is known.
 - `tools/tour/rooms.py` — rooms built as walkable 3D spaces, stage by stage (optional, needs an API key)
 - `tools/tour/atlas.py` — the World Labs Atlas calls and the camera and depth arithmetic
 - `tools/tour/collider.py` — where a visitor can stand in a room, and the solid shapes
-- `client/tour/` — the viewer source (three.js); `npm run vendor` bundles it into
-  `public/js/tour.bundle.js`
+- `client/tour/` — the viewer source (three.js); `world.js` is the room built in 3D: its
+  splats (drawn with Spark), collisions, and finding a way around furniture. `npm run vendor`
+  bundles the viewer into `public/js/tour.bundle.js` and the `tour.*-<hash>.js` chunks it
+  loads (the room code only when a tour has a room)
 
 ## Enquiries
 
@@ -297,14 +309,20 @@ itself; the only external requests are OpenStreetMap map tiles.
 ## Tests
 
 ```bash
-npm test             # translations, validation, every page in every language, enquiries, admin
-npm run test:e2e     # real browser: forms, gallery, maps, saved homes, the 3D viewer, phone layout
+npm test             # translations, validation, every page in every language, enquiries, admin, rooms
+npm run test:e2e     # real browser: forms, gallery, maps, saved homes, the 3D viewer, walking a room, phone layout
 npm run check        # content check
+python tools/tour/test_pack.py     # packing a photograph with depth, against a room of known geometry
+python tools/tour/test_rooms.py    # rooms built in 3D: cameras, collider, camera planner, money guards
 ```
 
 `test:e2e` needs Playwright (`npm i -D playwright && npx playwright install chromium`).
 When no residence has a tour yet, it tests the 3D viewer with a small synthetic tour
-and removes it afterwards.
+and removes it afterwards. Walking is tested in a small room of known shape
+(`test/fixtures/world/`, written by `node tools/tour/make-world-fixture.mjs`): it opens where
+its photograph was taken, the sofa and the walls stop the visitor, a lap around the sofa
+works on the keyboard and by clicking, and a room that cannot be shown falls back to its
+photograph.
 
 ## Before going live
 
@@ -312,6 +330,9 @@ and removes it afterwards.
   taken from the owners' public adverts, and the photos carry the portal's watermark.
   Publish them only with each owner's agreement, and replace the photos with the
   original files.
+- **Rooms built in 3D.** Walk through each one and read its `room.json` notes: parts of it
+  are invented. Rebuild them from the owner's original photographs so that no watermark is
+  reproduced in them.
 - Fill in `site.config.json` (phone, email, address, legal name).
 - Have the privacy policy and terms (`src/i18n/*.js`, `legal`) reviewed by a lawyer.
 - Update `currency.usdToGel`.
