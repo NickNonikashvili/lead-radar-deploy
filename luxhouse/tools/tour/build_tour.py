@@ -12,7 +12,7 @@ the chosen provider, packs the result (see pack.py) and writes
     public/media/listings/<slug>/tour/tour.json
 
 A photo is skipped when the listing marks it with "tour": false. A photo whose room was generated
-as a 3D world (tools/tour/worlds.py) gets that world in its scene: the visitor walks around in it.
+as a 3D space (tools/tour/rooms.py) gets that space in its scene: the visitor walks around in it.
 Depth estimates are cached in .cache/tour/ so re-packing does not re-run the model.
 """
 
@@ -30,22 +30,20 @@ import numpy as np
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import pack  # noqa: E402
 import providers  # noqa: E402
-import worlds  # noqa: E402
+import rooms  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[2]
 LISTINGS = ROOT / "content" / "listings"
 PHOTOS = ROOT / "content" / "source-photos"
 MEDIA = ROOT / "public" / "media" / "listings"
 CACHE = ROOT / ".cache" / "tour"
-VIEWS = ROOT / "content" / "tour-views"
-VIEW_ORDER = ("left", "back", "right")   # the order of the walk around a room
 EXTS = (".webp", ".jpg", ".jpeg", ".png")
 VERSION = 1
 
 
-def find_photo(slug: str, name: str, folder: Path | None = None) -> Path | None:
+def find_photo(slug: str, name: str) -> Path | None:
     for ext in EXTS:
-        p = (folder or PHOTOS) / slug / (name + ext)
+        p = PHOTOS / slug / (name + ext)
         if p.exists():
             return p
     return None
@@ -105,9 +103,13 @@ def build_listing(slug: str, provider, only: set[str] | None, refresh: bool) -> 
         if photo.get("tour") is False:
             continue
         if only and name not in only:
-            for kept in [name] + [f"{name}-{view}" for view in VIEW_ORDER]:
-                if kept in previous:
-                    scenes.append(previous[kept])   # keep scenes we were not asked to rebuild
+            if name in previous:
+                kept = previous[name]               # keep scenes we were not asked to rebuild
+                world = rooms.scene_entry(slug, name)
+                kept.pop("world", None)
+                if world:
+                    kept["world"] = world
+                scenes.append(kept)
             continue
         src = find_photo(slug, name)
         if src is None:
@@ -116,25 +118,15 @@ def build_listing(slug: str, provider, only: set[str] | None, refresh: bool) -> 
         t0 = time.time()
         scene = build_scene(slug, out_root, provider, name, src, photo.get("room", ""), refresh, t0)
         scenes.append(scene)
-        # A room generated as a 3D world is walked around in; the photograph stays as its opening view.
-        world = worlds.scene_entry(slug, name)
+        # A room built as a 3D space is walked around in; it opens where this photograph was taken.
+        world = rooms.scene_entry(slug, name)
         if world:
             scene["world"] = world
-            print(f"  {slug}/{name}: walkable world attached", flush=True)
-            continue
-        # The same room imagined from other standpoints (tools/tour/imagine.py), in walking order.
-        for view in VIEW_ORDER:
-            vid = f"{name}-{view}"
-            vsrc = find_photo(slug, vid, VIEWS)
-            if vsrc is None:
-                continue
-            scene = build_scene(slug, out_root, provider, vid, vsrc, photo.get("room", ""), refresh, time.time())
-            scene.update({"generated": True, "view": view, "of": name})
-            scenes.append(scene)
+            print(f"  {slug}/{name}: walkable room attached", flush=True)
 
     if not scenes:
         raise SystemExit(f"{slug}: no scenes were built")
-    # A view that was deleted from content/tour-views leaves no files behind.
+    # A photograph that left the listing leaves no files behind.
     keep = {s["id"] for s in scenes}
     for folder in out_root.iterdir():
         if folder.is_dir() and folder.name not in keep:

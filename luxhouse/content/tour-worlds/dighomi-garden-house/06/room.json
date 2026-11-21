@@ -1,0 +1,967 @@
+{
+ "room": "06",
+ "photos": [
+  "06",
+  "07"
+ ],
+ "type": "living",
+ "grid": [
+  1280,
+  720
+ ],
+ "intrinsics": {
+  "width": 1280,
+  "height": 720,
+  "fx": 565.0,
+  "fy": 565.0,
+  "cx": 640.0,
+  "cy": 360.0
+ },
+ "frames": [
+  {
+   "name": "p00",
+   "camera": {
+    "extrinsics": {
+     "coordinateSystem": "rub",
+     "position": [
+      2.6856653690338135,
+      1.1019392013549805,
+      -1.3616865873336792
+     ],
+     "quaternion": [
+      0.004511273044973178,
+      0.8751614512572423,
+      0.000820098757074277,
+      0.48380927036060384
+     ]
+    },
+    "intrinsics": {
+     "cx": 640.0,
+     "cy": 360.0000305175781,
+     "fx": 573.7212524414062,
+     "fy": 573.9686279296875,
+     "height": 720,
+     "width": 1280
+    }
+   },
+   "imageAsset": {
+    "assetId": "asset_f7b0f69ae4c4f5bf6bb0f840a26b8f1c"
+   },
+   "depth": {
+    "depthAsset": {
+     "assetId": "asset_21d9e2d1b9bfa55842724806876ec89f"
+    },
+    "confidenceAsset": {
+     "assetId": "asset_f07c102fec44b82d04008aa7538fbca0"
+    }
+   },
+   "photo": "06",
+   "centroidWorld": [
+    -1.571650743484497,
+    0.0,
+    0.14867818355560303
+   ]
+  },
+  {
+   "name": "p01",
+   "camera": {
+    "extrinsics": {
+     "coordinateSystem": "rub",
+     "position": [
+      0.7096032500267029,
+      1.1666585206985474,
+      2.6303024291992188
+     ],
+     "quaternion": [
+      -0.0045054092875398055,
+      0.3225440962335597,
+      0.010154025216546087,
+      0.9464892514148958
+     ]
+    },
+    "intrinsics": {
+     "cx": 640.0,
+     "cy": 360.0000305175781,
+     "fx": 554.8599853515625,
+     "fy": 555.09912109375,
+     "height": 720,
+     "width": 1280
+    }
+   },
+   "imageAsset": {
+    "assetId": "asset_90b4a8a0dbf39ca08aa33678e5c3438c"
+   },
+   "depth": {
+    "depthAsset": {
+     "assetId": "asset_91e44c6e76c1023698333852563b3ae8"
+    },
+    "confidenceAsset": {
+     "assetId": "asset_84d93492b3776079d65e2287ef121b9c"
+    }
+   },
+   "photo": "07",
+   "centroidWorld": [
+    -1.899510145187378,
+    0.0,
+    -0.7562181949615479
+   ]
+  },
+  {
+   "name": "r1v00",
+   "camera": {
+    "extrinsics": {
+     "coordinateSystem": "rub",
+     "position": [
+      -3.0,
+      1.35,
+      -1.5
+     ],
+     "quaternion": [
+      0.011415,
+      0.981938,
+      0.06295,
+      -0.178059
+     ]
+    },
+    "intrinsics": {
+     "cx": 640.0,
+     "cy": 360.0,
+     "fx": 565.0,
+     "fy": 565.0,
+     "height": 720,
+     "width": 1280
+    }
+   },
+   "imageAsset": {
+    "assetId": "asset_8543928ee7b54992f79990d661d32005"
+   },
+   "depth": {
+    "depthAsset": {
+     "assetId": "asset_c3686147188302834c36faff3b0df540"
+    },
+    "confidenceAsset": {
+     "assetId": "asset_90831a7ec5f398926c8cc4f0fe34384e"
+    }
+   },
+   "generated": true,
+   "round": "r1"
+  },
+  {
+   "name": "r1v01",
+   "camera": {
+    "extrinsics": {
+     "coordinateSystem": "rub",
+     "position": [
+      -4.7,
+      1.35,
+      -0.1
+     ],
+     "quaternion": [
+      -0.024721,
+      -0.729038,
+      -0.026368,
+      0.683519
+     ]
+    },
+    "intrinsics": {
+     "cx": 640.0,
+     "cy": 360.0,
+     "fx": 565.0,
+     "fy": 565.0,
+     "height": 720,
+     "width": 1280
+    }
+   },
+   "imageAsset": {
+    "assetId": "asset_09273a862931ca99b4f30a1b899c1f4e"
+   },
+   "depth": {
+    "depthAsset": {
+     "assetId": "asset_ad14ac2c92e7f849f9c9c1d7ad35cf38"
+    },
+    "confidenceAsset": {
+     "assetId": "asset_2c1f9322b35fd3c4caa1474a7899a071"
+    }
+   },
+   "generated": true,
+   "round": "r1"
+  },
+  {
+   "name": "r1v02",
+   "camera": {
+    "extrinsics": {
+     "coordinateSystem": "rub",
+     "position": [
+      1.2,
+      1.35,
+      -1.3
+     ],
+     "quaternion": [
+      -0.005012,
+      0.994468,
+      0.05629,
+      0.08854
+     ]
+    },
+    "intrinsics": {
+     "cx": 640.0,
+     "cy": 360.0,
+     "fx": 565.0,
+     "fy": 565.0,
+     "height": 720,
+     "width": 1280
+    }
+   },
+   "imageAsset": {
+    "assetId": "asset_fb02a6f9626bf6ed8af738e4b288f647"
+   },
+   "depth": {
+    "depthAsset": {
+     "assetId": "asset_26cbf1f430061837303d478630cec2ed"
+    },
+    "confidenceAsset": {
+     "assetId": "asset_6e98d44c37bf68057ec6b1c6384cc752"
+    }
+   },
+   "generated": true,
+   "round": "r1"
+  },
+  {
+   "name": "r1v03",
+   "camera": {
+    "extrinsics": {
+     "coordinateSystem": "rub",
+     "position": [
+      -3.6,
+      1.35,
+      1.7
+     ],
+     "quaternion": [
+      -0.03319,
+      -0.642131,
+      -0.027846,
+      0.76537
+     ]
+    },
+    "intrinsics": {
+     "cx": 640.0,
+     "cy": 360.0,
+     "fx": 565.0,
+     "fy": 565.0,
+     "height": 720,
+     "width": 1280
+    }
+   },
+   "imageAsset": {
+    "assetId": "asset_2feca2f7fc19d750149343444019c692"
+   },
+   "depth": {
+    "depthAsset": {
+     "assetId": "asset_e62d221f5832ffb864f418d79d42db48"
+    },
+    "confidenceAsset": {
+     "assetId": "asset_a926bc36cc446dbd3b7b5cff4d52ef1e"
+    }
+   },
+   "generated": true,
+   "round": "r1"
+  },
+  {
+   "name": "r2v00",
+   "camera": {
+    "extrinsics": {
+     "coordinateSystem": "rub",
+     "position": [
+      1.4,
+      1.35,
+      0.9
+     ],
+     "quaternion": [
+      -0.030642,
+      0.746806,
+      0.034493,
+      0.66344
+     ]
+    },
+    "intrinsics": {
+     "cx": 640.0,
+     "cy": 360.0,
+     "fx": 565.0,
+     "fy": 565.0,
+     "height": 720,
+     "width": 1280
+    }
+   },
+   "imageAsset": {
+    "assetId": "asset_453b2f914db9d32cedf1e01f6603d60c"
+   },
+   "depth": {
+    "depthAsset": {
+     "assetId": "asset_6e0ec9c7334265774e186828dcf6eafb"
+    },
+    "confidenceAsset": {
+     "assetId": "asset_2e27871876ea43707a66a0108fc80c5a"
+    }
+   },
+   "generated": true,
+   "round": "r2"
+  },
+  {
+   "name": "r2v01",
+   "camera": {
+    "extrinsics": {
+     "coordinateSystem": "rub",
+     "position": [
+      -0.2,
+      1.35,
+      1.9
+     ],
+     "quaternion": [
+      -0.037806,
+      -0.421018,
+      -0.017567,
+      0.906094
+     ]
+    },
+    "intrinsics": {
+     "cx": 640.0,
+     "cy": 360.0,
+     "fx": 565.0,
+     "fy": 565.0,
+     "height": 720,
+     "width": 1280
+    }
+   },
+   "imageAsset": {
+    "assetId": "asset_1993eb481e5522285db2e7e3c1117ffa"
+   },
+   "depth": {
+    "depthAsset": {
+     "assetId": "asset_6f081b4a1fec58d2ab79fffc44a98a52"
+    },
+    "confidenceAsset": {
+     "assetId": "asset_8afb4af6c9bbfeb1235e7209527a4edf"
+    }
+   },
+   "generated": true,
+   "round": "r2"
+  },
+  {
+   "name": "r2v02",
+   "camera": {
+    "extrinsics": {
+     "coordinateSystem": "rub",
+     "position": [
+      -4.9,
+      1.35,
+      -1.5
+     ],
+     "quaternion": [
+      0.004011,
+      0.995974,
+      0.06602,
+      -0.060506
+     ]
+    },
+    "intrinsics": {
+     "cx": 640.0,
+     "cy": 360.0,
+     "fx": 565.0,
+     "fy": 565.0,
+     "height": 720,
+     "width": 1280
+    }
+   },
+   "imageAsset": {
+    "assetId": "asset_551a05003d33689b683bf1a0cc17e198"
+   },
+   "depth": {
+    "depthAsset": {
+     "assetId": "asset_edce92343b149a31c05d5b759479018f"
+    },
+    "confidenceAsset": {
+     "assetId": "asset_6ba269566e4bf5d86bb9b73d2269e8fc"
+    }
+   },
+   "generated": true,
+   "round": "r2"
+  },
+  {
+   "name": "r2v03",
+   "camera": {
+    "extrinsics": {
+     "coordinateSystem": "rub",
+     "position": [
+      -3.3,
+      1.35,
+      2.2
+     ],
+     "quaternion": [
+      -0.034455,
+      0.265073,
+      0.009479,
+      0.963566
+     ]
+    },
+    "intrinsics": {
+     "cx": 640.0,
+     "cy": 360.0,
+     "fx": 565.0,
+     "fy": 565.0,
+     "height": 720,
+     "width": 1280
+    }
+   },
+   "imageAsset": {
+    "assetId": "asset_8a92967a189a396c57d9468e905d097a"
+   },
+   "depth": {
+    "depthAsset": {
+     "assetId": "asset_05105cda89cf3e8565a9c06ec02abcfe"
+    },
+    "confidenceAsset": {
+     "assetId": "asset_8dc76d7ddec7e147c032f5289492bc23"
+    }
+   },
+   "generated": true,
+   "round": "r2"
+  },
+  {
+   "name": "r2v04",
+   "camera": {
+    "extrinsics": {
+     "coordinateSystem": "rub",
+     "position": [
+      1.3,
+      1.35,
+      -1.0
+     ],
+     "quaternion": [
+      -0.021017,
+      -0.706794,
+      -0.021017,
+      0.706794
+     ]
+    },
+    "intrinsics": {
+     "cx": 640.0,
+     "cy": 360.0,
+     "fx": 565.0,
+     "fy": 565.0,
+     "height": 720,
+     "width": 1280
+    }
+   },
+   "imageAsset": {
+    "assetId": "asset_dd2415f5594a6b8b443d2db3a8820ebb"
+   },
+   "depth": {
+    "depthAsset": {
+     "assetId": "asset_4e965c0ce3f64304fa10ead5b1b270eb"
+    },
+    "confidenceAsset": {
+     "assetId": "asset_c315c4090707c670384039ff12f745ea"
+    }
+   },
+   "generated": true,
+   "round": "r2"
+  },
+  {
+   "name": "r3v00",
+   "camera": {
+    "extrinsics": {
+     "coordinateSystem": "rub",
+     "position": [
+      -1.4,
+      1.6,
+      -1.6
+     ],
+     "quaternion": [
+      -0.011159,
+      0.968211,
+      0.245997,
+      0.043919
+     ]
+    },
+    "intrinsics": {
+     "cx": 640.0,
+     "cy": 360.0,
+     "fx": 565.0,
+     "fy": 565.0,
+     "height": 720,
+     "width": 1280
+    }
+   },
+   "imageAsset": {
+    "assetId": "asset_49454db16da8b7c0a1aebf627e4315fa"
+   },
+   "depth": {
+    "depthAsset": {
+     "assetId": "asset_b9d37d98917bb94baf87fa11e3b9f843"
+    },
+    "confidenceAsset": {
+     "assetId": "asset_265791ed9647afee33e074a5bc087dd8"
+    }
+   },
+   "generated": true,
+   "round": "r3"
+  },
+  {
+   "name": "r3v01",
+   "camera": {
+    "extrinsics": {
+     "coordinateSystem": "rub",
+     "position": [
+      1.2,
+      1.6,
+      0.6
+     ],
+     "quaternion": [
+      -0.129811,
+      0.67375,
+      0.121951,
+      0.717174
+     ]
+    },
+    "intrinsics": {
+     "cx": 640.0,
+     "cy": 360.0,
+     "fx": 565.0,
+     "fy": 565.0,
+     "height": 720,
+     "width": 1280
+    }
+   },
+   "imageAsset": {
+    "assetId": "asset_6f74815bac415d3e61a1e30678befca1"
+   },
+   "depth": {
+    "depthAsset": {
+     "assetId": "asset_d35c941d8907bb639d3f7ccd052b9a5e"
+    },
+    "confidenceAsset": {
+     "assetId": "asset_af7ff5bb2af207ff311d4793fa2ea710"
+    }
+   },
+   "generated": true,
+   "round": "r3"
+  },
+  {
+   "name": "r3v02",
+   "camera": {
+    "extrinsics": {
+     "coordinateSystem": "rub",
+     "position": [
+      -1.2,
+      1.6,
+      2.0
+     ],
+     "quaternion": [
+      -0.242804,
+      0.087096,
+      0.021894,
+      0.96591
+     ]
+    },
+    "intrinsics": {
+     "cx": 640.0,
+     "cy": 360.0,
+     "fx": 565.0,
+     "fy": 565.0,
+     "height": 720,
+     "width": 1280
+    }
+   },
+   "imageAsset": {
+    "assetId": "asset_3cca1e845ded3afe930f2f6448fb9153"
+   },
+   "depth": {
+    "depthAsset": {
+     "assetId": "asset_d1c892e7c462ce29eee7c2b845c57015"
+    },
+    "confidenceAsset": {
+     "assetId": "asset_41dd9773781224d89ab0ad2d0b4fa2a3"
+    }
+   },
+   "generated": true,
+   "round": "r3"
+  },
+  {
+   "name": "r3v03",
+   "camera": {
+    "extrinsics": {
+     "coordinateSystem": "rub",
+     "position": [
+      -4.3,
+      1.6,
+      0.5
+     ],
+     "quaternion": [
+      -0.148805,
+      -0.65487,
+      -0.133713,
+      0.728782
+     ]
+    },
+    "intrinsics": {
+     "cx": 640.0,
+     "cy": 360.0,
+     "fx": 565.0,
+     "fy": 565.0,
+     "height": 720,
+     "width": 1280
+    }
+   },
+   "imageAsset": {
+    "assetId": "asset_d8520f12935ec5bbcf77d85078aadd5e"
+   },
+   "depth": {
+    "depthAsset": {
+     "assetId": "asset_fe5af20cbd1210ae2fc600ea63b626a7"
+    },
+    "confidenceAsset": {
+     "assetId": "asset_8f72fb5ffeaea3c1282bc6d3811d95ff"
+    }
+   },
+   "generated": true,
+   "round": "r3"
+  }
+ ],
+ "prompt": "{\"tags\":[\"modern living room\",\"open floor plan\",\"coffered ceiling\",\"floor to ceiling windows\",\"built-in shelving\",\"hardwood floors\",\"contemporary interior design\"],\"short_caption\":\"This bright, contemporary living room features large windows overlooking a lush garden, expansive built-in wooden bookshelves, and neutral-toned furniture.\",\"long_caption\":\"A bright and airy living room is characterized by its white coffered ceiling and rich hardwood floors. Floor-to-ceiling windows wrap around two sides of the space, offering a view of a green garden and a distant brick building. Along one wall, a large wooden shelving unit houses books, wine bottles, and decorative vases, with a mirrored section positioned between the shelves. Two beige, tufted sofas and a matching armchair are arranged around a small glass coffee table. Potted plants are scattered throughout, including a large one near the glass sliding doors that lead out to a patio. The space is flooded with natural light, casting distinct shadows of window frames across the floor.\",\"style_and_atmosphere\":\"The style is a clean, modern real-estate photograph. The atmosphere is serene, orderly, and spacious, emphasizing a connection between the indoor and outdoor environments.\",\"lighting\":\"Abundant natural light enters from large windows on two sides, creating high-contrast shadows on the wooden floor. The overall color temperature is neutral to slightly warm, reflecting off the white walls and ceiling.\",\"key_subjects_and_objects\":\"A set of light beige sofas and an armchair feature tufted detailing and rolled arms, providing seating in the middle of the room. A large, built-in wooden bookshelf system spans one wall, filled with numerous books, decorative items, and a wine rack. A minimalist glass-topped coffee table with metal legs sits between the seating elements. Several potted indoor plants, including a variety with large green leaves in a white pot, are placed near the windows. A modern black fireplace is built into a white wall column adjacent to one of the large windows. The windows provide a clear view of a green lawn and mature trees outside.\",\"environment_and_layout\":\"The living room is an open-plan space with a high, white coffered ceiling featuring recessed lighting. The flooring is made of wide, dark-stained wooden planks. Large, floor-to-ceiling glass windows and sliding doors occupy two of the walls, looking out onto a manicured garden and patio area. One wall is dominated by custom wooden cabinetry and shelving, while a white pillar with an integrated fireplace and recessed shelving stands between two window sections. The overall layout is organized for social gathering, with furniture positioned to face both the interior shelving and the exterior views.\",\"visible_progression\":\"no clear progression is visible across the set.\",\"text_and_ocr\":{\"verbatim_strings\":[\"myhome.ge\"],\"notes\":\"A watermark logo is visible in the center of both images.\"},\"artifacts_and_overlays\":\"A translucent watermark with a house icon and the text 'myhome.ge' is positioned in the center of the scene.\"}",
+ "plan": [
+  [
+   {
+    "at": [
+     -3.0,
+     1.35,
+     -1.5
+    ],
+    "look": [
+     -1.5,
+     0.8,
+     2.5
+    ],
+    "why": "behind the sofas, across them to the window wall"
+   },
+   {
+    "at": [
+     -4.7,
+     1.35,
+     -0.1
+    ],
+    "look": [
+     1.5,
+     0.9,
+     0.3
+    ],
+    "why": "bookshelf end, back along the room"
+   },
+   {
+    "at": [
+     1.2,
+     1.35,
+     -1.3
+    ],
+    "look": [
+     0.5,
+     0.9,
+     2.6
+    ],
+    "why": "right end, to the corner of the window wall"
+   },
+   {
+    "at": [
+     -3.6,
+     1.35,
+     1.7
+    ],
+    "look": [
+     1.5,
+     0.9,
+     0.8
+    ],
+    "why": "front of the sofas, to the right end"
+   }
+  ],
+  [
+   {
+    "at": [
+     1.4,
+     1.35,
+     0.9
+    ],
+    "look": [
+     -4.5,
+     0.8,
+     1.6
+    ],
+    "why": "right end, back toward the bookshelf"
+   },
+   {
+    "at": [
+     -0.2,
+     1.35,
+     1.9
+    ],
+    "look": [
+     3.0,
+     1.0,
+     -0.8
+    ],
+    "why": "by the fireplace, to the far wall and the hallway"
+   },
+   {
+    "at": [
+     -4.9,
+     1.35,
+     -1.5
+    ],
+    "look": [
+     -4.4,
+     0.8,
+     2.6
+    ],
+    "why": "corner by the bookshelf, to the left window and armchair"
+   },
+   {
+    "at": [
+     -3.3,
+     1.35,
+     2.2
+    ],
+    "look": [
+     -5.8,
+     1.0,
+     -2.0
+    ],
+    "why": "window side, to the bookshelf and the doors"
+   },
+   {
+    "at": [
+     1.3,
+     1.35,
+     -1.0
+    ],
+    "look": [
+     5.5,
+     1.1,
+     -1.0
+    ],
+    "why": "into the hallway"
+   }
+  ],
+  [
+   {
+    "at": [
+     -1.4,
+     1.6,
+     -1.6
+    ],
+    "look": [
+     -1.6,
+     0.4,
+     0.6
+    ],
+    "why": "standing behind the sofas, looking down at them"
+   },
+   {
+    "at": [
+     1.2,
+     1.6,
+     0.6
+    ],
+    "look": [
+     -2.0,
+     0.4,
+     0.4
+    ],
+    "why": "standing at the east end, along the sofas"
+   },
+   {
+    "at": [
+     -1.2,
+     1.6,
+     2.0
+    ],
+    "look": [
+     -1.6,
+     0.4,
+     -0.2
+    ],
+    "why": "standing by the fireplace, at the sofa fronts"
+   },
+   {
+    "at": [
+     -4.3,
+     1.6,
+     0.5
+    ],
+    "look": [
+     -1.5,
+     0.4,
+     0.2
+    ],
+    "why": "standing at the west end, along the sofas"
+   }
+  ]
+ ],
+ "regionOfInterest": {
+  "frame": {
+   "position": [
+    -1.8,
+    1.5,
+    0.3
+   ],
+   "quaternion": [
+    0,
+    0,
+    0,
+    1
+   ],
+   "coordinateSystem": "rub"
+  },
+  "halfExtents": [
+   4.7,
+   1.6,
+   3.1
+  ]
+ },
+ "operations": [
+  {
+   "task": "images2PosedRGBD",
+   "id": "0d5b5229556641f8be8cee137df39db9",
+   "seconds": 11
+  },
+  {
+   "task": "atlasGenerate",
+   "id": "8df8dd757f9b445a93373d10608f69b4",
+   "round": "r1",
+   "views": 4,
+   "context": [
+    "p00",
+    "p01"
+   ],
+   "seconds": 22
+  },
+  {
+   "task": "atlasGenerate",
+   "id": "bece0f00cd834c8ca428a008fc613bd5",
+   "round": "r2",
+   "views": 5,
+   "context": [
+    "p00",
+    "p01",
+    "r1v00",
+    "r1v01",
+    "r1v02",
+    "r1v03"
+   ],
+   "seconds": 23
+  },
+  {
+   "task": "atlasGenerate",
+   "id": "1747e239520049048779efb5e296f45a",
+   "round": "r3",
+   "views": 4,
+   "context": [
+    "p00",
+    "p01",
+    "r1v00",
+    "r1v01",
+    "r1v02",
+    "r1v03",
+    "r2v00",
+    "r2v01",
+    "r2v02",
+    "r2v04"
+   ],
+   "seconds": 23
+  },
+  {
+   "task": "posedImages2Splats",
+   "id": "ea0777115511484ab4b3a626fc6dba83",
+   "kind": "refined",
+   "credits": 5000
+  },
+  {
+   "task": "posedImages2Splats",
+   "id": "fd83bdb7c62a4e78a8c123229c8f10b6",
+   "kind": "draft",
+   "credits": 500
+  }
+ ],
+ "splats": {
+  "refined": {
+   "operation": "ea0777115511484ab4b3a626fc6dba83",
+   "frames": [
+    "p00",
+    "p01",
+    "r1v00",
+    "r1v01",
+    "r1v02",
+    "r1v03",
+    "r2v00",
+    "r2v01",
+    "r2v02",
+    "r2v03",
+    "r2v04",
+    "r3v00",
+    "r3v01",
+    "r3v02",
+    "r3v03"
+   ],
+   "assetId": "asset_e207fc8c4b1dbd7b7f7edf2800d1cb28",
+   "splats": 2000000,
+   "bytes": 31722159,
+   "made": "2026-11-21"
+  },
+  "draft": {
+   "operation": "fd83bdb7c62a4e78a8c123229c8f10b6",
+   "frames": [
+    "p00",
+    "p01",
+    "r1v00",
+    "r1v01",
+    "r1v02",
+    "r1v03",
+    "r2v00",
+    "r2v01",
+    "r2v02",
+    "r2v03",
+    "r2v04",
+    "r3v00",
+    "r3v01",
+    "r3v02",
+    "r3v03"
+   ],
+   "assetId": "asset_18ae14472d25f7c7699d6edb14760573",
+   "splats": 524288,
+   "bytes": 8395323,
+   "made": "2026-11-21"
+  },
+  "shown": "refined"
+ },
+ "notes": [
+  "The cameras of the three rounds were placed by hand from a plan view of the posed photographs (see plan).",
+  "The doorway beside the bookshelf (to the kitchen) is real: photograph 07 shows it at full size. What is beyond it, the hallway, the television wall and the wall behind photograph 06's standpoint are invented.",
+  "The source photographs carry the portal's watermark, and the room reproduces it on the fireplace wall. Original photographs from the owner remove it."
+ ],
+ "made": "2026-11-21",
+ "collider": {
+  "bytes": 36936,
+  "triangles": 1812,
+  "floorArea": 19.4,
+  "bounds": {
+   "min": [
+    -5.2,
+    0.0,
+    -1.83
+   ],
+   "max": [
+    6.86,
+    2.3,
+    2.91
+   ]
+  }
+ }
+}
