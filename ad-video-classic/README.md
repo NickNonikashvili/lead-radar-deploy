@@ -38,3 +38,11 @@ From WikiArt (Hugging Face dataset `huggan/wikiart`, picked by eye with `wikiart
 *The Cardsharps* · Ivan Aivazovsky, a sunset over the sea · Vincent van Gogh, a wheat field.
 Records for each file are in `art-licences/`. The parchment, gilt frame, wood and the pencil line-art are generated
 (`prep.py`). Wikimedia rate-limits shared IPs at times; `direct.py` fetches standard-size thumbnails slowly.
+
+## Music version (no voice)
+
+`comp/scenes2.js` + `timeline2.json`: the same paintings cut to a song instead of the narration — every cut on the
+song's beat grid (first strong beat 2.36 s, 0.4731 s per beat), with bloom, warm light leaks, drifting dust and
+flashes on the music's hits. The song itself is not in the repo (it is a third-party track and needs a licence for
+commercial use); put it at `../artad2/song.wav` (or edit the path) and render with
+`PAGE=index2.html node render.js frames2 30 3`, then mux the song with ffmpeg (loudnorm to -14 LUFS).

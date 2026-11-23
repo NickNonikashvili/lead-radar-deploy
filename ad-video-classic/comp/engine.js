@@ -139,8 +139,9 @@
   void main() { v_uv = a_uv; gl_Position = vec4(a_uv * 2.0 - 1.0, 0.0, 1.0); }`;
   const PFS = `#version 300 es
   precision highp float;
-  in vec2 v_uv; uniform sampler2D u_a, u_b;
+  in vec2 v_uv; uniform sampler2D u_a, u_b, u_bloom;
   uniform float u_mixAB, u_vig, u_grain, u_seed, u_ca, u_fadeAmt, u_lift, u_warm, u_contrast, u_blurDir;
+  uniform float u_bloomAmt, u_leak, u_time, u_flash;
   uniform vec3 u_fade;
   out vec4 o;
   float h(vec2 p) { return fract(sin(dot(p, vec2(12.9898, 78.233)) + u_seed) * 43758.5453); }
@@ -152,6 +153,16 @@
     vec2 uv = v_uv;
     vec3 a = samp(u_a, uv), b = samp(u_b, uv);
     vec3 c = mix(a, b, u_mixAB);
+    // bloom with a warm halation tint
+    vec3 bl = texture(u_bloom, uv).rgb;
+    c += bl * u_bloomAmt * vec3(1.0, 0.82, 0.62);
+    // drifting light leaks from the edges (warm), slow
+    vec2 p1 = vec2(0.1 + 0.25 * sin(u_time * 0.21), 0.85 + 0.1 * cos(u_time * 0.17));
+    vec2 p2 = vec2(0.95 - 0.2 * cos(u_time * 0.13), 0.15 + 0.2 * sin(u_time * 0.19));
+    float l1 = exp(-pow(length((uv - p1) * vec2(1.6, 1.0)) / 0.45, 2.0));
+    float l2 = exp(-pow(length((uv - p2) * vec2(1.6, 1.0)) / 0.38, 2.0));
+    c += u_leak * (l1 * vec3(1.0, 0.45, 0.18) + l2 * vec3(1.0, 0.7, 0.35)) * (0.75 + 0.25 * sin(u_time * 1.3));
+    c *= 1.0 + u_flash;
     // grade: gentle contrast, warm highlights, lifted blacks
     c = (c - 0.5) * u_contrast + 0.5;
     c = mix(c, c * vec3(1.06, 1.0, 0.9), u_warm);
@@ -357,6 +368,39 @@
     return [p[0] + m[8] * d, p[1] + m[9] * d, p[2] + m[10] * d];
   }
 
+  // bloom: bright pass into a quarter-size buffer, then a wide separable blur (twice)
+  const BPFS = `#version 300 es
+  precision highp float; in vec2 v_uv; uniform sampler2D u_a; uniform vec2 u_px; uniform float u_th; out vec4 o;
+  void main() {
+    vec3 c = (texture(u_a, v_uv + u_px * vec2(-1, -1)).rgb + texture(u_a, v_uv + u_px * vec2(1, -1)).rgb + texture(u_a, v_uv + u_px * vec2(-1, 1)).rgb + texture(u_a, v_uv + u_px * vec2(1, 1)).rgb) * 0.25;
+    float l = max(c.r, max(c.g, c.b));
+    o = vec4(c * smoothstep(u_th, u_th + 0.25, l), 1.0);
+  }`;
+  const BLFS = `#version 300 es
+  precision highp float; in vec2 v_uv; uniform sampler2D u_a; uniform vec2 u_dir; out vec4 o;
+  void main() {
+    vec3 s = vec3(0.0); float wsum = 0.0;
+    for (int i = -8; i <= 8; i++) { float w = exp(-float(i * i) / 24.0); s += texture(u_a, v_uv + u_dir * float(i)).rgb * w; wsum += w; }
+    o = vec4(s / wsum, 1.0);
+  }`;
+  const bpP = program(PVS, BPFS), blP = program(PVS, BLFS);
+  function pass(p, src, dst, set) {
+    gl.bindFramebuffer(gl.FRAMEBUFFER, dst.f); gl.viewport(0, 0, dst.w, dst.h);
+    gl.disable(gl.DEPTH_TEST); gl.disable(gl.BLEND);
+    gl.useProgram(p.p); bindTex(0, src.tex, p.u.u_a); set(p.u);
+    gl.bindVertexArray(QUAD.vao); gl.drawElements(gl.TRIANGLES, QUAD.count, gl.UNSIGNED_INT, 0);
+    gl.enable(gl.BLEND); gl.enable(gl.DEPTH_TEST);
+  }
+  function bloom(src, th = 0.72) {
+    const a = fbo('bloomA', 480, 270), b = fbo('bloomB', 480, 270);
+    pass(bpP, src, a, (u) => { gl.uniform2f(u.u_px, 1 / W, 1 / H); gl.uniform1f(u.u_th, th); });
+    for (let k = 0; k < 2; k++) {
+      pass(blP, a, b, (u) => gl.uniform2f(u.u_dir, (1.6 + k) / 480, 0));
+      pass(blP, b, a, (u) => gl.uniform2f(u.u_dir, 0, (1.6 + k) / 270));
+    }
+    return a;
+  }
+
   // copy a framebuffer onto another with a weight (additive), for averaging motion-blur samples
   const BFS = `#version 300 es
   precision highp float; in vec2 v_uv; uniform sampler2D u_a; uniform float u_w; out vec4 o;
@@ -391,7 +435,8 @@
   }
 
   // final composite: scene a (and b, mixed), film finish
-  function finish(a, b, { mixAB = 0, vig = 0.55, grain = 0.045, ca = 0.0016, fade = [0, 0, 0], fadeAmt = 0, lift = 0.02, warm = 0.35, contrast = 1.06, seed = 0 } = {}) {
+  function finish(a, b, { mixAB = 0, vig = 0.55, grain = 0.045, ca = 0.0016, fade = [0, 0, 0], fadeAmt = 0, lift = 0.02, warm = 0.35, contrast = 1.06, seed = 0, bloomAmt = 0, bloomTh = 0.72, leak = 0, time = 0, flash = 0 } = {}) {
+    const bl = bloomAmt > 0 ? bloom(b && mixAB > 0.5 ? b : a, bloomTh) : null;
     gl.bindFramebuffer(gl.FRAMEBUFFER, null); gl.viewport(0, 0, W, H);
     gl.disable(gl.DEPTH_TEST); gl.disable(gl.BLEND);
     const { u } = post; gl.useProgram(post.p);
@@ -399,9 +444,12 @@
     gl.uniform1f(u.u_mixAB, b ? mixAB : 0); gl.uniform1f(u.u_vig, vig); gl.uniform1f(u.u_grain, grain); gl.uniform1f(u.u_seed, seed);
     gl.uniform1f(u.u_ca, ca); gl.uniform3fv(u.u_fade, fade); gl.uniform1f(u.u_fadeAmt, fadeAmt); gl.uniform1f(u.u_lift, lift);
     gl.uniform1f(u.u_warm, warm); gl.uniform1f(u.u_contrast, contrast);
+    bindTex(2, bl ? bl.tex : textures.grey, u.u_bloom); gl.uniform1f(u.u_bloomAmt, bl ? bloomAmt : 0);
+    gl.uniform1f(u.u_leak, leak); gl.uniform1f(u.u_time, time); gl.uniform1f(u.u_flash, flash);
     gl.bindVertexArray(QUAD.vao); gl.drawElements(gl.TRIANGLES, QUAD.count, gl.UNSIGNED_INT, 0);
     gl.enable(gl.BLEND); gl.enable(gl.DEPTH_TEST);
   }
 
-  window.E = { gl, W, H, M, D0, ease, track, clamp, lerp, hash, textures, loadTex, loadSvgTex, texFromSource, textTex, measure, fbo, camera, begin, draw, painting, text3d, finish, blit, gradTex, offsetAlong };
+  const clearDepth = () => gl.clear(gl.DEPTH_BUFFER_BIT);
+  window.E = { clearDepth, gl, W, H, M, D0, ease, track, clamp, lerp, hash, textures, loadTex, loadSvgTex, texFromSource, textTex, measure, fbo, camera, begin, draw, painting, text3d, finish, blit, gradTex, offsetAlong };
 })();

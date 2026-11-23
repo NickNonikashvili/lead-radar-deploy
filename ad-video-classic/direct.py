@@ -43,9 +43,13 @@ def url_for(name, key):
 def fetch_one(key, name, lic, side):
     out = os.path.join(ART, key + '.jpg')
     url = url_for(name, key)
-    r = subprocess.run(['curl', '-s', '-L', '-A', UA, '-o', out, '-w', '%{http_code}', '--max-time', '300', url], capture_output=True, text=True)
+    tmp = out + '.part'          # never overwrite a good file with an error page
+    r = subprocess.run(['curl', '-s', '-L', '-A', UA, '-o', tmp, '-w', '%{http_code}', '--max-time', '300', url], capture_output=True, text=True)
     if r.stdout != '200':
+        if os.path.exists(tmp):
+            os.remove(tmp)
         return r.stdout
+    os.replace(tmp, out)
     subprocess.run(['convert', out, '-resize', f'{side}x{side}>', '-quality', '93', out], check=True)
     dims = subprocess.run(['identify', '-format', '%wx%h', out], capture_output=True, text=True).stdout
     json.dump({'key': key, 'title': 'File:' + name, 'licence': lic, 'commons_page': 'https://commons.wikimedia.org/wiki/File:' + urllib.parse.quote(name.replace(' ', '_')),

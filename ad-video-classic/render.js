@@ -7,7 +7,7 @@ const path = require('path');
 
 const ARGS = ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--font-render-hinting=none'];
 const PORT = process.env.PORT || 8600;
-const URL = `http://127.0.0.1:${PORT}/comp/index.html`;
+const URL = `http://127.0.0.1:${PORT}/comp/${process.env.PAGE || "index.html"}`;
 
 async function page(browser) {
   const p = await browser.newPage({ viewport: { width: 1920, height: 1080 }, deviceScaleFactor: 1 });
