@@ -62,3 +62,23 @@ It uses real screenshots of the site and apps: run the site locally (`php -S 127
 (`evo`, `mailtabs`, `studycat`, `register`, `reports`, `store`) come from the demo screenshots. `python3 -I prep.py
 ui_sketch` makes the pencil version of the homepage and its reveal map. Then
 `PAGE=index3.html node render.js frames3 30 3` and mux with the song as above.
+
+## Version with the logo-reveal outro
+
+`comp/scenes4.js` + `timeline4.json` + `comp/index4.html`: the story version up to the signature, now stamped with a
+red wax seal carrying the new X mark on the song's beat (32.17 s); the camera then dives into the seal and fades to
+black at 34.0 s, where the client's 7.5 s 3D logo reveal takes over (not in the repo), held for a second on the final
+lockup and faded out. The site screenshots were captured again so they show the new logo.
+
+Music: the song continues under the outro through a beat-aligned jump (`outro-music.py`): at 25.59 s it jumps back
+32 beats (15.153 s, refined by lining up the drum pattern), so the song's stop-and-drop at 23.18 s lands 5 ms after
+the X locks (outro frame 130). `outro-splice.py` scores the possible jump points by spectral similarity. Then:
+
+```bash
+PAGE=index4.html node render.js frames4 30 3
+python3 -I outro-music.py 34.0          # reads the reel's audio (rec.wav), writes music_raw.wav
+ffmpeg -i music_raw.wav -af loudnorm=I=-14:TP=-1.5:LRA=11 music_mix.wav
+ffmpeg -framerate 30 -i frames4/%05d.jpg -i logo-reveal.mp4 -i music_mix.wav -filter_complex \
+  "[0:v]format=yuv420p,setsar=1[a];[1:v]fps=30,scale=1920:1080,setsar=1,format=yuv420p,tpad=stop_mode=clone:stop_duration=1,fade=t=out:st=7.7:d=0.8[b];[a][b]concat=n=2:v=1:a=0[v]" \
+  -map "[v]" -map 2:a -c:v libx264 -crf 21 -c:a aac -b:a 192k -shortest evosoft-ad-logo-outro.mp4
+```
