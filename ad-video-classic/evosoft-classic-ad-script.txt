@@ -1,0 +1,25 @@
+EvoSoft — classical-art ad (16:9, 0:39)
+Voice: Kokoro "af_heart" (open-source, made locally). Music: original, synthesized for this ad.
+
+0:00  A pencil line draws Michelangelo's hands; the painting fills in; a spark where the fingers meet.
+      VO: "Every masterpiece begins with a single line."
+0:04  A Baroque flower still life blooms out of the dark.  ·  0:06  Vermeer's eye through a slit of light.
+0:07  Friedrich's Wanderer above the sea of fog; WEBSITE rises out of the fog behind him.
+      VO: "Yours might be a website,"
+0:10  Into Grimshaw's moonlit lane and its lit windows, then out: it is a painting in a gilt frame. Whip pan.
+      VO: "a store that never sleeps,"
+0:13  A red room: SOFTWARE in giant letters behind Caravaggio's card players, EvoSoft app screens tumbling;
+      it is a framed picture lying on a wooden table.
+      VO: "or the software your business runs on."
+0:16  Pirosmani's Georgia; a parchment flies in and writes "Built to order, by hand, in Georgia".
+      VO: "We build it to order, by hand, in Georgia,"
+0:20  Panini's picture gallery: Evo, StudyCat and Mailtabs hang in gilt frames; the middle frame holds the world.
+      VO: "and hang it where the whole world can see."
+0:23  Through the frame into Aivazovsky's sunset sea; the sun blooms to white.
+0:26  Rushing over Van Gogh's wheat field.  ·  0:28  The Isle of the Dead; the camera glides into the dark.
+0:29  A parchment on a table writes "EvoSoft" and "Your idea, made into a masterpiece."
+      VO: "EvoSoft. Your idea, made into a masterpiece."
+0:34  Pink flash; end card: EvoSoft · evosoft.solutions · Websites · Online stores · Business software —
+      built to order · GET A FREE QUOTE.
+
+All artworks are public-domain old-master paintings (sources: Wikimedia Commons and WikiArt via Hugging Face). Textures, frame and wood are generated.

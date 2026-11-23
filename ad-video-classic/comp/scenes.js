@@ -4,8 +4,21 @@
   'use strict';
   const { track, ease, textures: T, clamp, lerp, D0 } = E;
   let TL, WD, SC;
+  // what each shot frames at its start camera: [u0, v0, u1, v1] of the painting (16:9, or 1.74 for framed pictures)
   const CROP = {
     hands: [0.219, 0.25, 0.539, 0.647],          // must match prep.py CROP_HANDS
+    flowers: [0.05, 0.2, 0.95, 0.56],
+    eye: [0.295, 0.3125, 0.535, 0.4275],
+    wanderer: [0, 0.22, 1, 0.6585],
+    night: [0, 0.19, 1, 0.937],                  // framed (1.74)
+    cards: [0, 0.04, 1, 0.812],
+    cardsMask: [0.055, 0.085],                   // depth band that separates the three players (>=0.09) from the wall (<=0.04)
+    feast: [0, 0.006, 1, 0.994],
+    gallery: [0, 0.09, 1, 0.9045],
+    sunrise: [0, 0.1, 1, 0.884],
+    wheat: [0, 0.22, 1, 0.9],
+    isle: [0, 0.1, 1, 0.889],
+    isleGap: [0.07, -0.2],
   };
   // a spoken word's time in the video: line, word prefix (lowercase), nth occurrence
   function word(line, w, nth = 1) {
@@ -17,7 +30,7 @@
   }
   const k01 = (t, a, b, e = ease.io) => e((t - a) / Math.max(1e-6, b - a));
 
-  const PAINT = ['creation_adam', 'flowers', 'pearl', 'wanderer', 'starry_night', 'syndics', 'pirosmani_feast', 'gallery', 'wheatfield', 'isle'];
+  const PAINT = ['creation_adam', 'flowers', 'pearl', 'wanderer', 'night', 'cards', 'pirosmani_feast', 'gallery', 'wheatfield', 'isle', 'sunrise'];
   window.ready = (async () => {
     TL = await (await fetch('../timeline.json', { cache: 'no-store' })).json();
     WD = await (await fetch('../vo/words.json', { cache: 'no-store' })).json();
@@ -28,13 +41,14 @@
     const jobs = [];
     const safe = (key, url, o) => E.loadTex(key, url, o).catch(() => { console.warn('missing ' + url); T[key] = T.grey; window.MISSING = (window.MISSING || []).concat(key); });
     for (const k of PAINT) { jobs.push(safe(k, `../art/${k}.jpg`)); jobs.push(safe(k + '_d', `../art/${k}.depth.png`, { mip: false })); }
-    for (const k of ['earth', 'parchment', 'parchment2', 'wood', 'stars']) jobs.push(safe(k, `../art/${k}.jpg`));
+    for (const k of ['parchment_p', 'wood', 'stars']) jobs.push(safe(k, `../art/${k}.jpg`));
     for (const k of ['lines', 'glow', 'giltframe']) jobs.push(E.loadTex(k, `../art/${k}.png`));
     jobs.push(E.loadTex('lines_reveal', '../art/lines_reveal.png', { mip: false }));
     for (const k of ['evo', 'mailtabs', 'studycat']) jobs.push(E.loadTex('shot_' + k, `../shots/${k}.jpg`));
     jobs.push(E.loadSvgTex('mark', '../art/mark.svg', 1024));
     await Promise.all(jobs);
     E.gradTex('vband', 'vband'); E.gradTex('hfade', 'hfade'); E.gradTex('radial', 'radial');
+    T.parchment = T.parchment2 = T.parchment_p;
   })();
 
   // ---------- helpers ----------
@@ -108,19 +122,20 @@
   SHOT.D = (t, out) => {
     E.begin(out, [0.8, 0.82, 0.84]);
     const k = t / 3;
-    E.camera({ pos: [lerp(-0.22, 0.2, ease.sine(k)), lerp(0.02, 0.06, k), lerp(D0 * 1.0, D0 * 0.86, ease.out(k))], target: [0, 0.02, -0.2] });
+    // the painting is portrait, so there is no spare width: a gentle sweep that never shows its edges
+    E.camera({ pos: [lerp(-0.12, 0.24, ease.sine(k)), lerp(0.02, 0.06, k), lerp(D0 * 0.9, D0 * 0.78, ease.out(k))], target: [lerp(-0.12, 0.24, ease.sine(k)) * 0.4, 0.04, -0.2] });
     E.painting(T.wanderer, T.wanderer_d, { crop: CROP.wanderer, depthAmt: 0.9, margin: 1.2 });
     const w0 = word('L2', 'website') - SC.D[0] - 0.12;
     E.text3d(t, {
-      str: 'WEBSITE', font: 'Anton', sizePx: 300, color: '#e9a33c', height: 0.62, depth: 0.16, layers: 20,
-      pos: [0, -0.16, -0.18], side: [0.55, 0.27, 0.07],
-      perLetter: (i, n) => { const q = ease.back((t - w0 - i * 0.06) / 0.75); return { dy: (1 - q) * -0.85, rx: (1 - q) * 40, o: t > w0 + i * 0.06 ? 1 : 0 }; },
+      str: 'WEBSITE', font: 'Anton', sizePx: 300, color: '#e9a33c', height: 0.62, depth: 0.16, layers: 20, letter: 34,
+      pos: [0, 0.5, -0.35], side: [0.55, 0.27, 0.07],
+      perLetter: (i, n) => { const q = ease.back((t - w0 - i * 0.06) / 0.8); return { dy: (1 - q) * -1.25, rx: (1 - q) * 40, o: t > w0 + i * 0.06 ? 1 : 0 }; },
     });
     // fog in front of the letters' feet
-    E.draw({ tex: T.vband, size: [5, 0.55], pos: [0, -0.5, -0.12], tint: [0.86, 0.88, 0.9], opacity: 0.92, depthWrite: false });
+    E.draw({ tex: T.vband, size: [6, 0.7], pos: [0, -0.05, -0.3], tint: [0.86, 0.88, 0.9], opacity: 0.9, depthWrite: false });
   };
 
-  // E — inside the Starry Night, then out: it is a painting in a gilt frame on a green wall; a whip pan away
+  // E — inside Grimshaw's moonlit lane (lit windows: a store that never sleeps), then out: it is a painting in a gilt frame on a green wall; a whip pan away
   SHOT.E = (t, out) => {
     E.begin(out, [0.05, 0.1, 0.08]);
     const pw = 3.48, ph = 2;                                          // the framed picture (opening aspect 1.74)
@@ -128,17 +143,17 @@
     const pull = k01(t, 1.85, 2.75, ease.io);
     const whip = k01(t, 2.6, 3.0, ease.in);
     const cz = lerp(lerp(D0 * 0.5, D0 * 0.44, inside), D0 * 2.05, pull);
-    const cx = lerp(lerp(-0.55, 0.35, inside), 0, pull) - whip * 4.5;
-    const cy = lerp(lerp(0.42, -0.05, inside), 0, pull);
+    const cx = lerp(lerp(-0.85, 0.62, inside), 0, pull) - whip * 4.5;
+    const cy = lerp(lerp(-0.08, -0.16, inside), 0, pull);
     E.camera({ pos: [cx, cy, cz], target: [cx + whip * 0.8, cy, 0] });
     // wall
-    E.draw({ tex: T.parchment, size: [30, 18], pos: [0, 0, -0.06], tint: [0.22, 0.42, 0.3], sat: 0.6, bright: 0.55 });
+    E.draw({ tex: T.parchment, size: [40, 24], pos: [0, 0, -0.6], tint: [0.22, 0.42, 0.3], sat: 0.6, bright: 0.55 });   // wall, well behind the relief
     const rot = [0, lerp(0, 18, k01(t, 2.3, 3.0)), 0];
-    E.painting(T.starry_night, T.starry_night_d, { crop: CROP.starry, margin: 1.0, depthAmt: lerp(0.3, 0.05, pull), rot });
-    E.draw({ tex: T.giltframe, size: [pw * 2400 / 1880, ph * 1600 / 1080], pos: [0, 0, 0.02], rot, alphaCut: 0.5 });
+    E.painting(T.night, T.night_d, { crop: CROP.night, margin: 1.0, depthAmt: lerp(0.16, 0.05, pull), rot });
+    E.draw({ tex: T.giltframe, size: [pw * 2400 / 1880, ph * 1600 / 1080], pos: [0, 0, 0.04], rot, alphaCut: 0.5 });
   };
 
-  // F — the red room: SOFTWARE in giant letters behind Rembrandt's syndics, app screens tumbling;
+  // F — the red room: SOFTWARE in giant letters behind Caravaggio's card players, app screens tumbling;
   //     then it is a framed picture lying on a wooden table
   SHOT.Fpop = (t, out) => {
     E.begin(out, [0.55, 0.04, 0.05]);
@@ -146,7 +161,7 @@
     E.draw({ tex: T.parchment, size: [9, 5.2], pos: [0, 0, -1.6], tint: [1.0, 0.16, 0.13], sat: 0.5, bright: 0.85 });
     const s0 = word('L4', 'software') - SC.F[0] - 0.08;
     E.text3d(t, {
-      str: 'SOFTWARE', font: 'Anton', sizePx: 300, color: '#f4efe6', height: 0.95, depth: 0.2, layers: 22, pos: [0, 0.22, -0.75], side: [0.62, 0.58, 0.52],
+      str: 'SOFTWARE', font: 'Anton', sizePx: 300, color: '#f4efe6', height: 0.9, depth: 0.2, layers: 22, pos: [0, 0.5, -0.75], side: [0.62, 0.58, 0.52],
       perLetter: (i, n) => { const q = ease.back((t - s0 - i * 0.04) / 0.5); return { dy: (1 - q) * 1.4, dz: (1 - q) * 0.6, rz: (1 - q) * (i % 2 ? 12 : -12), o: t > s0 + i * 0.04 ? 1 : 0 }; },
     });
     // tumbling app screens, some behind the men, some in front
@@ -162,7 +177,7 @@
       E.draw({ tex: T.white, size: [0.56, 0.37], pos: E.offsetAlong(pos, rot, -0.002), rot, tint: [0.95, 0.95, 0.95] });
       E.draw({ tex: shots[i % 3], size: [0.52, 0.325], pos, rot });
     }
-    E.painting(T.syndics, T.syndics_d, { crop: CROP.syndics, depthAmt: 0.35, mask: CROP.syndicsMask, margin: 1.1 });
+    E.painting(T.cards, T.cards_d, { crop: CROP.cards, depthAmt: 0.35, mask: CROP.cardsMask, margin: 1.1, pos: [0, -0.62] });
   };
   SHOT.F = (t, out) => {
     const pop = E.fbo('pop');
@@ -228,18 +243,17 @@
     }
   };
 
-  // I — the Earth in space; the sun rises over its edge
+  // I — through the frame into the world: Aivazovsky's sea at sunset; the sun blooms until it whites out
   SHOT.I = (t, out) => {
-    E.begin(out, [0, 0, 0]);
+    E.begin(out, [0.9, 0.6, 0.35]);
     const k = t / 3;
-    E.camera({ pos: [lerp(0, 0.18, ease.sine(k)), lerp(0, 0.05, k), lerp(D0, D0 * 0.86, ease.sine(k))], target: [0, 0, -1] });
-    E.draw({ tex: T.stars, size: [14, 7.9], pos: [0, 0, -5], bright: 1.2 });
-    E.draw({ tex: T.earth, size: [2.25, 2.25], pos: [0.35, -0.05, -0.9], rot: [0, 0, lerp(-8, -2, k)], add: true, bright: 1.05 });
-    const sun = k01(t, 0.6, 2.4, ease.sine);
-    glow([1.05, 0.74, -0.85], lerp(0.2, 1.9, sun), 0.95 * sun, [1, 0.88, 0.7]);
-    glow([1.05, 0.74, -0.84], 0.25, sun, [1, 1, 0.95]);
-    const flash = k01(t, 2.6, 3.0, ease.in);
-    glow([0.9, 0.55, -0.6], lerp(0.5, 6, flash), flash, [1, 0.95, 0.85]);
+    E.camera({ pos: [lerp(0, 0.35, ease.sine(k)), lerp(0, -0.02, k), lerp(D0, D0 * 0.7, ease.sine(k))], target: [lerp(0, 0.4, ease.sine(k)), -0.03, -1] });
+    E.painting(T.sunrise, T.sunrise_d, { crop: CROP.sunrise, depthAmt: 0.6, margin: 1.2 });
+    const sun = k01(t, 0.3, 2.4, ease.sine);
+    glow([0.78, -0.07, 0.15], lerp(0.5, 2.4, sun), 0.55 * sun + 0.25, [1, 0.85, 0.6]);
+    glow([0.78, -0.07, 0.16], 0.3, 0.6 + 0.4 * sun, [1, 0.97, 0.88]);
+    const flash = k01(t, 2.55, 3.0, ease.in);
+    glow([0.7, -0.05, 0.4], lerp(0.5, 7, flash), flash, [1, 0.95, 0.85]);
   };
 
   // J — rushing over Van Gogh's wheat field

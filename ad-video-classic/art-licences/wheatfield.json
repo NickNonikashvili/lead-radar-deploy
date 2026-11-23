@@ -1,0 +1,8 @@
+{
+ "key": "wheatfield",
+ "source": "WikiArt via Hugging Face dataset huggan/wikiart",
+ "ref": "s11:855",
+ "style": "Post_Impressionism",
+ "licence": "Public domain (old-master work; artist died more than 100 years ago)",
+ "size": "1719x1382"
+}

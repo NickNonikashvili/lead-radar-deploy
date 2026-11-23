@@ -1,0 +1,8 @@
+{
+ "key": "eye",
+ "source": "WikiArt via Hugging Face dataset huggan/wikiart",
+ "ref": "s03:408",
+ "style": "Baroque",
+ "licence": "Public domain (old-master work; artist died more than 100 years ago)",
+ "size": "1382x1782"
+}

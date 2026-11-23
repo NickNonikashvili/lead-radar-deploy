@@ -1,0 +1,8 @@
+{
+ "key": "abbey",
+ "source": "WikiArt via Hugging Face dataset huggan/wikiart",
+ "ref": "s19:368",
+ "style": "Romanticism",
+ "licence": "Public domain (old-master work; artist died more than 100 years ago)",
+ "size": "1918x1382"
+}

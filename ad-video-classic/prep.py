@@ -141,6 +141,27 @@ def giltframe():
     Image.fromarray(rgba, 'RGBA').save(os.path.join(ART, 'giltframe.png'))
 
 
+def parchment():
+    """Aged parchment: warm base, mottled tone, fibres, darker burnt edges (2400x1600)."""
+    W, H = 2400, 1600
+    yy, xx = np.mgrid[0:H, 0:W].astype(np.float32)
+    big = blur(rng.random((H, W)).astype(np.float32), 90)
+    mid = blur(rng.random((H, W)).astype(np.float32), 18)
+    fine = blur(rng.random((H, W)).astype(np.float32), 1.2)
+    fib = blur(rng.random((H, W)).astype(np.float32), (0.8, 14))
+    norm = lambda a: (a - a.mean()) / (a.std() + 1e-6)
+    tone = 1 + 0.06 * norm(big) + 0.035 * norm(mid) + 0.02 * norm(fine) + 0.025 * norm(fib)
+    # edges darker and browner
+    d = np.minimum.reduce([xx, W - 1 - xx, yy, H - 1 - yy]) / 160
+    edge = np.clip(d, 0, 1) ** 0.6
+    stains = np.clip(norm(blur(rng.random((H, W)).astype(np.float32), 40)) - 1.6, 0, None) * 0.12
+    base = np.array([0.93, 0.83, 0.64])
+    c = base[None, None, :] * tone[..., None]
+    c *= (0.62 + 0.38 * edge)[..., None]
+    c -= stains[..., None] * np.array([0.3, 0.38, 0.5])
+    Image.fromarray(np.clip(c * 255, 0, 255).astype(np.uint8)).save(os.path.join(ART, 'parchment_p.jpg'), quality=92)
+
+
 if __name__ == '__main__':
     import sys
     for f in (sys.argv[1:] or ['lines', 'wood', 'stars', 'glow', 'giltframe']):

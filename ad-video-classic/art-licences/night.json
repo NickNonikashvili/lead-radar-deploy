@@ -1,0 +1,8 @@
+{
+ "key": "night",
+ "source": "WikiArt via Hugging Face dataset huggan/wikiart",
+ "ref": "s51:451",
+ "style": "Romanticism",
+ "licence": "Public domain (old-master work; artist died more than 100 years ago)",
+ "size": "1797x1382"
+}
