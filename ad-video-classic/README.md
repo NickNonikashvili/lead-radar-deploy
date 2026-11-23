@@ -46,3 +46,19 @@ song's beat grid (first strong beat 2.36 s, 0.4731 s per beat), with bloom, warm
 flashes on the music's hits. The song itself is not in the repo (it is a third-party track and needs a licence for
 commercial use); put it at `../artad2/song.wav` (or edit the path) and render with
 `PAGE=index2.html node render.js frames2 30 3`, then mux the song with ffmpeg (loudnorm to -14 LUFS).
+
+## Story version (no voice, no captions)
+
+`comp/scenes3.js` + `timeline3.json` + `comp/index3.html`: the same song, but the pictures tell what EvoSoft does.
+A pencil sketches the real homepage on parchment, it fills in and hangs in Panini's gallery; EVOSOFT; a phone rises
+between Michelangelo's hands and the touch wakes it; code written in ink becomes the Evo app; SOFTWARE with
+Caravaggio's players; the store dashboard glowing in Grimshaw's night lane while orders stack up through the night;
+gold bars rise out of the fog in front of Friedrich's wanderer; the apps hang in gilt frames and one opens onto Van
+Gogh's wheat field; Adam reaches for Aivazovsky's sun; the Georgian site on a phone over Pirosmani; "EvoSoft" signed
+and sealed in red wax; an end card with services, Tbilisi, the address and "Get a free quote".
+
+It uses real screenshots of the site and apps: run the site locally (`php -S 127.0.0.1:8400` in the site root) and
+`node capture.js` for `shots/home|home_ka|mobile|mobile_ka|services.png` (convert to jpg); the app screens
+(`evo`, `mailtabs`, `studycat`, `register`, `reports`, `store`) come from the demo screenshots. `python3 -I prep.py
+ui_sketch` makes the pencil version of the homepage and its reveal map. Then
+`PAGE=index3.html node render.js frames3 30 3` and mux with the song as above.

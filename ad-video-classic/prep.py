@@ -162,6 +162,50 @@ def parchment():
     Image.fromarray(np.clip(c * 255, 0, 255).astype(np.uint8)).save(os.path.join(ART, 'parchment_p.jpg'), quality=92)
 
 
+def ui_sketch():
+    """The EvoSoft homepage as a pencil sketch inside a hand-drawn browser window, plus the same layout in colour
+    (ui_color.jpg) so the drawing can turn into the real site. 2400x1600; content area 2160x1350 at (120, 190)."""
+    from PIL import ImageDraw
+    W, H = 2400, 1600
+    X0, Y0, CW, CH = 120, 190, 2160, 1350
+    shot = Image.open(os.path.join(HERE, 'shots', 'home.png')).convert('RGB').resize((CW, CH), Image.LANCZOS)
+    # colour version: a light browser window around the real page
+    col = Image.new('RGB', (W, H), (243, 236, 222))
+    d = ImageDraw.Draw(col)
+    d.rounded_rectangle([X0 - 18, Y0 - 120, X0 + CW + 18, Y0 + CH + 18], 36, fill=(250, 250, 252), outline=(205, 210, 220), width=4)
+    for i, c in enumerate([(255, 97, 89), (255, 189, 46), (40, 201, 65)]):
+        d.ellipse([X0 + 30 + i * 52, Y0 - 78, X0 + 66 + i * 52, Y0 - 42], fill=c)
+    d.rounded_rectangle([X0 + 230, Y0 - 86, X0 + 1200, Y0 - 34], 16, fill=(255, 255, 255), outline=(215, 220, 228), width=3)
+    col.paste(shot, (X0, Y0))
+    col.save(os.path.join(ART, 'ui_color.jpg'), quality=94)
+    # pencil version of the same thing
+    g = np.asarray(col.convert('L'), dtype=np.float32) / 255
+    s, k, p, eps, phi = 1.1, 1.6, 30.0, 0.0, 12.0
+    g1, g2 = blur(g, s), blur(g, s * k)
+    dd = (1 + p) * g1 - p * g2
+    e = np.where(dd >= eps, 1.0, 1.0 + np.tanh(phi * (dd - eps)))
+    ink = np.clip((1 - e - 0.06) / 0.55, 0, 1) ** 0.85
+    ink *= 0.75 + 0.5 * blur(rng.random(ink.shape).astype(np.float32), 0.7)
+    # the window outline, drawn twice with a wobble like a pencil
+    canvas = Image.new('L', (W, H), 0)
+    cd = ImageDraw.Draw(canvas)
+    for j in range(2):
+        o = (j * 3, j * -2)
+        cd.rounded_rectangle([X0 - 18 + o[0], Y0 - 120 + o[1], X0 + CW + 18 + o[0], Y0 + CH + 18 + o[1]], 36, outline=170, width=5)
+        cd.line([X0 - 18, Y0 - 20 + o[1], X0 + CW + 18, Y0 - 20 - o[1]], fill=150, width=4)
+    ink = np.maximum(ink, np.asarray(canvas, dtype=np.float32) / 255)
+    rgba = np.zeros((H, W, 4), np.uint8)
+    rgba[..., 0], rgba[..., 1], rgba[..., 2] = 48, 46, 44
+    rgba[..., 3] = (np.clip(ink, 0, 1) * 235).astype(np.uint8)
+    Image.fromarray(rgba, 'RGBA').save(os.path.join(ART, 'ui_lines.png'))
+    # drawing order: the window first, then the page from the top down (a little diagonal), with wobble
+    yy, xx = np.mgrid[0:H, 0:W].astype(np.float32)
+    inside = (xx > X0) & (xx < X0 + CW) & (yy > Y0) & (yy < Y0 + CH)
+    r = np.where(inside, 0.22 + 0.78 * ((yy - Y0) / CH * 0.8 + (xx - X0) / CW * 0.2), (np.arctan2(yy - H / 2, xx - W / 2) + np.pi) / (2 * np.pi) * 0.2)
+    r = np.clip(r + blur(rng.random((H, W)).astype(np.float32), 25) * 0.06, 0, 1)
+    Image.fromarray((r * 250 + 2).astype(np.uint8), 'L').save(os.path.join(ART, 'ui_reveal.png'))
+
+
 if __name__ == '__main__':
     import sys
     for f in (sys.argv[1:] or ['lines', 'wood', 'stars', 'glow', 'giltframe']):
