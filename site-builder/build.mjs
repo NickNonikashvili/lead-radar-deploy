@@ -978,7 +978,7 @@ fs.writeFileSync(path.join(OUT, 'llms.txt'), llms);
 
 fs.writeFileSync(
   path.join(OUT, 'site.webmanifest'),
-  JSON.stringify({ name: 'EvoSoft', short_name: 'EvoSoft', start_url: '/', display: 'browser', background_color: '#F4F7FB', theme_color: '#14213D', icons: [{ src: '/assets/img/icon-180.png', sizes: '180x180', type: 'image/png' }, { src: '/assets/img/icon-512.png', sizes: '512x512', type: 'image/png' }, { src: '/assets/img/icon.svg', sizes: 'any', type: 'image/svg+xml' }] }, null, 2) + '\n',
+  JSON.stringify({ name: 'EvoSoft', short_name: 'EvoSoft', start_url: '/', display: 'browser', background_color: '#F4F7FB', theme_color: '#111318', icons: [{ src: '/assets/img/icon-180.png', sizes: '180x180', type: 'image/png' }, { src: '/assets/img/icon-512.png', sizes: '512x512', type: 'image/png' }, { src: '/assets/img/icon.svg', sizes: 'any', type: 'image/svg+xml' }] }, null, 2) + '\n',
 );
 
 // ---------- translation bookkeeping ----------
