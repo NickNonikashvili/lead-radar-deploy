@@ -82,3 +82,53 @@ ffmpeg -framerate 30 -i frames4/%05d.jpg -i logo-reveal.mp4 -i music_mix.wav -fi
   "[0:v]format=yuv420p,setsar=1[a];[1:v]fps=30,scale=1920:1080,setsar=1,format=yuv420p,tpad=stop_mode=clone:stop_duration=1,fade=t=out:st=7.7:d=0.8[b];[a][b]concat=n=2:v=1:a=0[v]" \
   -map "[v]" -map 2:a -c:v libx264 -crf 21 -c:a aac -b:a 192k -shortest evosoft-ad-logo-outro.mp4
 ```
+
+## Studio version with sound design (about 43 s)
+
+`evosoft-ad-studio.mp4`. It is set in a dark studio matching the 3D logo reveal: a glossy floor, blue and white spheres, and the
+real EvoSoft site and apps on floating screens. It has no voice and no captions. It ends with the client's logo reveal,
+which now has sound effects, and a startup chime as the X locks into place.
+
+| File | What it does |
+|---|---|
+| `comp/scenes5.js`, `comp/index5.html`, `timeline5.json` | the eight shots, timed to the song's beats |
+| `studio-sound/chime.py` | the startup chime: a D-major chord spread over three octaves, with a slow bloom and a hall tail. It is an original sound, not Apple's (theirs is a registered trademark). |
+| `studio-sound/bounces.py` | finds every sphere bounce in the logo reveal, from its frames |
+| `studio-sound/outro_sfx.py`, `sfx_choice.json` | the logo-reveal sound effects, placed on the detected frames: bounces, a shimmer when the spheres become shards, whooshes, the lock and the chime, and ticks as the letters land |
+| `studio-sound/mix5.py` | the song (from 28.2 s), faded under the reveal, plus the effects |
+
+```bash
+PAGE=index5.html node render.js frames5 30 4      # with an http server on :8600 in this folder
+python3 -I studio-sound/chime.py                  # writes studio-sound/chime.wav
+# bounces: in a folder of the reveal's frames (ffmpeg -i reveal.mp4 -vf scale=480:270 f%03d.png), run bounces.py,
+# then copy its bounces.json into studio-sound/. sfx_choice.json lists the effect files (paths to your downloads).
+python3 -I studio-sound/outro_sfx.py studio-sound/sfx_choice.json
+python3 -I studio-sound/mix5.py song.wav outro_sfx.wav mix5.wav
+```
+
+Timing:
+
+- The song's first bass hit (2.0 s) lands as the white sphere hits the floor.
+- Its dead stop dims the lights (16.3 s), and its explosion cuts to the store shot (17.15 s).
+- The store orders pop one per beat, and the screens burst into spheres on a downbeat (32.27 s).
+- The song fades under the falling spheres of the reveal, so the effects and the chime are heard on their own.
+
+### Credits (put these in the video description)
+
+Music: "Furious Freak" by Kevin MacLeod (incompetech.com). Licensed under Creative Commons: By Attribution 3.0 License,
+http://creativecommons.org/licenses/by/3.0/
+
+Sound effects (freesound.org, CC BY 3.0, http://creativecommons.org/licenses/by/3.0/):
+- "md02.aif", "md06.aif", "md08.aif", "md09.aif" and "losnb01.aif" by lsprice
+- "Bounce-SeaglassOnWood.WAV" by francisjanderson
+- "Bamboo Swing, C5.wav" by InspectorJ
+- "Ropeswoosh 1.wav" by Benboncan
+
+These are also used, under CC0, so no credit is needed:
+- "glass_shard_bounce.ogg" by C_Rogers
+- "windy movement 29" by qubodup
+- "Windchimes" by Samulis
+- "Boom_01.wav" by Faulkin
+- "glass clicks" by arseniiv
+
+The song and the effects are not in this repository. Download them from their pages.

@@ -1,0 +1,86 @@
+{
+ "bounce": [
+  {
+   "path": "../search/sfx/picks/cuts/marble_click_md02_main.wav"
+  },
+  {
+   "path": "../search/sfx/picks/cuts/shard_bounce_single_0.20s.wav"
+  },
+  {
+   "path": "../search/sfx/picks/cuts/marble_click_md06_main.wav"
+  },
+  {
+   "path": "../search/sfx/picks/cuts/bounce_seaglass_A_1.618s.wav"
+  },
+  {
+   "path": "../search/sfx/picks/cuts/marble_click_md08_main.wav"
+  },
+  {
+   "path": "../search/sfx/picks/cuts/shard_bounce_single_0.30s.wav"
+  },
+  {
+   "path": "../search/sfx/picks/cuts/marble_click_md09_main.wav"
+  },
+  {
+   "path": "../search/sfx/picks/cuts/bounce_seaglass_B_4.748s.wav"
+  },
+  {
+   "path": "../search/sfx/picks/cuts/bounce_seaglass_D_8.348s.wav"
+  }
+ ],
+ "whoosh": [
+  {
+   "path": "../search/sfx/picks/2_whooshes/bamboo_swing_C5__InspectorJ_394456.wav",
+   "start": 0.25,
+   "end": 1.04
+  },
+  {
+   "path": "../search/sfx/picks/2_whooshes/rope_swoosh_soft_slow__Benboncan_77936.wav",
+   "start": 0.35,
+   "end": 1.3
+  },
+  {
+   "path": "../search/sfx/picks/2_whooshes/bamboo_windy_movement29__qubodup_60016.wav",
+   "start": 0.05,
+   "end": 0.72
+  }
+ ],
+ "shimmer": [
+  {
+   "path": "../search/sfx/picks/4_boom_shimmer/windchimes_mark_tree_ascending__Samulis_VSCO2_375626.wav",
+   "start": 0.7,
+   "end": 3.2
+  }
+ ],
+ "lock": [
+  {
+   "path": "../search/sfx/picks/3_glass_clicks/large_glass_ornament_hit_unbroken_losnb01__lsprice_88951.wav",
+   "start": 0,
+   "end": 0.62
+  }
+ ],
+ "boom": [
+  {
+   "path": "../search/sfx/picks/4_boom_shimmer/soft_hollow_boom_thud__Faulkin_336487.wav",
+   "start": 0.0,
+   "end": 0.97
+  }
+ ],
+ "tick": [
+  {
+   "path": "../search/sfx/picks/cuts/glass_nail_click_0.100s.wav"
+  },
+  {
+   "path": "../search/sfx/picks/cuts/glass_nail_click_1.184s.wav"
+  },
+  {
+   "path": "../search/sfx/picks/cuts/glass_nail_click_2.216s.wav"
+  },
+  {
+   "path": "../search/sfx/picks/cuts/glass_nail_click_4.060s.wav"
+  },
+  {
+   "path": "../search/sfx/picks/cuts/glass_nail_click_5.736s.wav"
+  }
+ ]
+}
