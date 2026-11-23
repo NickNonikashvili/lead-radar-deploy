@@ -4,6 +4,7 @@
 export const site = {
   name: 'EvoSoft',
   legalName: 'EvoSoft Solutions',
+  legalUpdated: '2026-11-15', // date shown on the copyright & privacy page; change it only when that text changes
   url: 'https://evosoft.solutions',
   email: 'contact@evosoft.solutions',
   phones: ['+995 555 352 218', '+995 599 574 416'],

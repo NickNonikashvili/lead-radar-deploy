@@ -827,7 +827,7 @@ ${pageHead(h('Get a quote'), h('Tell us about your project'), h('Send a few line
     description: t('Copyright notice, terms of use and privacy information for the EvoSoft website, its chat assistant, the quote form and the live software demos.'),
     crumbs: [[t('Copyright & privacy'), 'legal.html']],
     body: () => `
-${pageHead(h('Legal'), h('Copyright and privacy'), h('Last updated {date}.', { date: new Intl.DateTimeFormat(L.dateLocale, { day: 'numeric', month: 'long', year: 'numeric' }).format(new Date()) }))}
+${pageHead(h('Legal'), h('Copyright and privacy'), h('Last updated {date}.', { date: new Intl.DateTimeFormat(L.dateLocale, { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' }).format(new Date(SRC.site.legalUpdated)) }))}
 <section class="sec tight">
   <div class="wrap narrow legal">
     <div class="card prose">
@@ -901,6 +901,14 @@ const versioned = (html) => html.replace(ASSET, (m, pre, rel) => {
   const v = hashOf(rel);
   return v ? `${pre}${rel}?v=${v}` : m;
 });
+
+// The manifest is written before the pages so they link the current version; its icons carry their own hashes,
+// so a changed icon is fetched again instead of being served from a month-long cache.
+const manifestIcon = (rel, sizes, type) => ({ src: `/${rel}?v=${hashOf(rel)}`, sizes, type });
+fs.writeFileSync(
+  path.join(OUT, 'site.webmanifest'),
+  JSON.stringify({ name: 'EvoSoft', short_name: 'EvoSoft', start_url: '/', display: 'browser', background_color: '#F4F7FB', theme_color: '#111318', icons: [manifestIcon('assets/img/icon-180.png', '180x180', 'image/png'), manifestIcon('assets/img/icon-512.png', '512x512', 'image/png'), manifestIcon('assets/img/icon.svg', 'any', 'image/svg+xml')] }, null, 2) + '\n',
+);
 
 for (const p of built) {
   const outFile = path.join(OUT, p.outFile);
@@ -976,10 +984,6 @@ ${SRC.site.copyright}
 `;
 fs.writeFileSync(path.join(OUT, 'llms.txt'), llms);
 
-fs.writeFileSync(
-  path.join(OUT, 'site.webmanifest'),
-  JSON.stringify({ name: 'EvoSoft', short_name: 'EvoSoft', start_url: '/', display: 'browser', background_color: '#F4F7FB', theme_color: '#111318', icons: [{ src: '/assets/img/icon-180.png', sizes: '180x180', type: 'image/png' }, { src: '/assets/img/icon-512.png', sizes: '512x512', type: 'image/png' }, { src: '/assets/img/icon.svg', sizes: 'any', type: 'image/svg+xml' }] }, null, 2) + '\n',
-);
 
 // ---------- translation bookkeeping ----------
 fs.mkdirSync(I18N, { recursive: true });

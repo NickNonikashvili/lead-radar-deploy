@@ -40,13 +40,12 @@
   --lab-soft: #EFE7F8;
   --calm: #0F766E;
   --calm-soft: #DDF3F0;
-  --orange: #FF6700;
   --navy: #14213D;
   --card: var(--surface);
   --shadow: 0 18px 40px -18px rgba(20, 33, 61, 0.28), 0 3px 8px -3px rgba(20, 33, 61, 0.08);
-  --logo-tile: #111318;
   --logo-x: #111318;
   --logo-word: #111318;
+  --launch-tile: #FFFFFF; --launch-x: #111318; --head-tile: #111318; --head-x: #FFFFFF;
 
   --display: 'Gabarito', 'Figtree', 'Helvetica Neue', Arial, sans-serif;
   --body: 'Figtree', 'Helvetica Neue', Arial, system-ui, sans-serif;
@@ -64,7 +63,8 @@
     --pine: #34B85B; --good: #4ADE80; --good-soft: #10301E; --gold: #F2C14E; --gold-soft: #3A2F10;
     --coral-ink: #FFB3AA; --bad-soft: #3D1F22; --lab: #BDA0F2; --lab-soft: #2A2142; --calm: #4FD1C5; --calm-soft: #10353A;
     --navy: #142036; --shadow: 0 18px 40px -18px rgba(0, 0, 0, 0.75), 0 3px 8px -3px rgba(0, 0, 0, 0.5);
-    --logo-tile: #EEF3FA; --logo-x: #EEF3FA; --logo-word: #EEF3FA; color-scheme: dark;
+    --logo-x: #EEF3FA; --logo-word: #EEF3FA; color-scheme: dark;
+    --launch-tile: #0D1626; --launch-x: #FFFFFF; --head-tile: #EEF3FA; --head-x: #111318;
   }
 }
 :root[data-theme="dark"] {
@@ -74,7 +74,8 @@
   --pine: #34B85B; --good: #4ADE80; --good-soft: #10301E; --gold: #F2C14E; --gold-soft: #3A2F10;
   --coral-ink: #FFB3AA; --bad-soft: #3D1F22; --lab: #BDA0F2; --lab-soft: #2A2142; --calm: #4FD1C5; --calm-soft: #10353A;
   --navy: #142036; --shadow: 0 18px 40px -18px rgba(0, 0, 0, 0.75), 0 3px 8px -3px rgba(0, 0, 0, 0.5);
-  --logo-tile: #EEF3FA; --logo-x: #EEF3FA; --logo-word: #EEF3FA; color-scheme: dark;
+  --logo-x: #EEF3FA; --logo-word: #EEF3FA; color-scheme: dark;
+    --launch-tile: #0D1626; --launch-x: #FFFFFF; --head-tile: #EEF3FA; --head-x: #111318;
 }
 
 /* ---------- base ---------- */
@@ -150,14 +151,15 @@ a:hover > .arr { transform: translateX(3px); }
 
 /* ---------- logo ---------- */
 .logo { height: 30px; width: auto; }
-.logo-tile { fill: var(--logo-tile); }
 .logo-x { fill: var(--logo-x); }
 .logo-word { fill: var(--logo-word); }
+@media (forced-colors: active) { .brand .logo-x, .brand .logo-word { fill: CanvasText; } }
+@media print { .brand .logo-x, .brand .logo-word { fill: #111318; } }
 
 /* ---------- top bar ---------- */
 .topbar { position: sticky; top: 0; z-index: 50; background: var(--surface); border-bottom: 2px solid var(--border); }
 .bar { display: flex; align-items: center; gap: 12px; height: var(--bar); }
-.brand { display: inline-flex; margin-right: auto; text-decoration: none; }
+.brand { display: inline-flex; flex: none; margin-right: auto; text-decoration: none; }
 .nav { display: flex; align-items: center; gap: 4px; }
 .nav > a:not(.btn) { padding: 8px 13px; border-radius: 10px; font: 600 15px/1.2 var(--body); color: var(--ink-2); text-decoration: none; }
 .nav > a:not(.btn):hover { background: var(--surface-2); color: var(--ink); }
@@ -490,10 +492,10 @@ details[open] .plus::after { transform: rotate(0); }
 .chat-launch { position: fixed; right: 20px; bottom: 20px; z-index: 60; display: inline-flex; align-items: center; gap: 10px; padding: 7px 16px 7px 7px; border-radius: 16px; border: 2px solid var(--accent-deep); background: var(--accent); color: var(--accent-ink); font: 700 15px/1 var(--body); cursor: pointer; box-shadow: 0 3px 0 var(--accent-deep), var(--shadow); transition: transform 0.1s; }
 .chat-launch:active { transform: translateY(3px); box-shadow: 0 0 0 var(--accent-deep), var(--shadow); }
 .chat-launch .logo-mark { width: 30px; height: 30px; }
-.chat-launch .logo-tile { fill: #FFFFFF; }
-.chat-launch .logo-x { fill: #111318; }
-.chat-head .logo-tile { fill: #111318; }
-.chat-head .logo-x { fill: #FFFFFF; }
+.chat-launch .logo-tile { fill: var(--launch-tile); }
+.chat-launch .logo-x { fill: var(--launch-x); }
+.chat-head .logo-tile { fill: var(--head-tile); }
+.chat-head .logo-x { fill: var(--head-x); }
 .chat-open .chat-launch { display: none; }
 .chat-panel { position: fixed; right: 20px; bottom: 20px; z-index: 61; display: flex; flex-direction: column; width: min(400px, calc(100vw - 24px)); height: min(620px, calc(100vh - 40px)); height: min(620px, calc(100dvh - 40px)); background: var(--surface); border: 2px solid var(--border); border-radius: 22px; box-shadow: var(--shadow); overflow: hidden; }
 .chat-panel[hidden] { display: none; }

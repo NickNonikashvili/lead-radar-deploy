@@ -7,17 +7,17 @@
   "theme_color": "#111318",
   "icons": [
     {
-      "src": "/assets/img/icon-180.png",
+      "src": "/assets/img/icon-180.png?v=89f0a22731",
       "sizes": "180x180",
       "type": "image/png"
     },
     {
-      "src": "/assets/img/icon-512.png",
+      "src": "/assets/img/icon-512.png?v=4327cf7278",
       "sizes": "512x512",
       "type": "image/png"
     },
     {
-      "src": "/assets/img/icon.svg",
+      "src": "/assets/img/icon.svg?v=438a7ca922",
       "sizes": "any",
       "type": "image/svg+xml"
     }
