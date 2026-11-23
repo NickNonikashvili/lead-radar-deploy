@@ -1,0 +1,14 @@
+# generated or downloaded (large): art, models, fonts, voice audio, frames, mixes, videos
+art/
+models/
+fonts/
+shots/
+npmtmp/
+vo/*.wav
+frames/
+test/
+*.wav
+*.mp3
+*.mp4
+*.pid
+*.log
