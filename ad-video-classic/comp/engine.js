@@ -103,11 +103,13 @@
   uniform mat4 u_proj, u_view, u_model;
   uniform sampler2D u_depth;
   uniform vec4 u_uvRect;     // part of the texture shown (u0, v0, u1, v1)
+  uniform vec4 u_uvRect2;    // part of tex2 mixed in (defaults to u_uvRect)
   uniform vec2 u_size;       // plane size in world units
   uniform float u_depthAmt, u_depthMid, u_useDepth, u_curl;
-  out vec2 v_uv; out vec2 v_q; out float v_d;
+  out vec2 v_uv; out vec2 v_q; out float v_d; out vec2 v_uv2;
   void main() {
     vec2 uv = mix(u_uvRect.xy, u_uvRect.zw, a_uv);
+    v_uv2 = mix(u_uvRect2.xy, u_uvRect2.zw, a_uv);
     float d = u_useDepth > 0.5 ? texture(u_depth, uv).r : 0.5;
     vec3 p = vec3((a_uv.x - 0.5) * u_size.x, (0.5 - a_uv.y) * u_size.y, (d - u_depthMid) * u_depthAmt * u_useDepth);
     p.z += u_curl * (a_uv.x - 0.5) * (a_uv.x - 0.5) * u_size.x;   // a page that bends a little
@@ -116,14 +118,14 @@
   }`;
   const FS = `#version 300 es
   precision highp float;
-  in vec2 v_uv; in vec2 v_q; in float v_d;
+  in vec2 v_uv; in vec2 v_q; in float v_d; in vec2 v_uv2;
   uniform sampler2D u_tex, u_tex2, u_reveal;
   uniform float u_opacity, u_mix, u_bright, u_sat, u_maskLo, u_maskHi, u_alphaCut, u_revealT, u_useReveal, u_solid, u_edge;
   uniform vec3 u_color, u_tint;
   out vec4 o;
   void main() {
     vec4 c = texture(u_tex, v_uv);
-    if (u_mix > 0.0) c = mix(c, texture(u_tex2, v_uv), u_mix);
+    if (u_mix > 0.0) c = mix(c, texture(u_tex2, v_uv2), u_mix);
     float a = c.a * u_opacity;
     if (u_maskHi > u_maskLo) a *= smoothstep(u_maskLo, u_maskHi, v_d);
     if (u_useReveal > 0.5) { float r = texture(u_reveal, v_q).r; a *= smoothstep(r - 0.004, r + 0.004, u_revealT); }
@@ -293,7 +295,7 @@
     const mesh = o.depth ? MESH : o.curl ? PAGE : QUAD;
     gl.uniformMatrix4fv(u.u_proj, false, cam.proj); gl.uniformMatrix4fv(u.u_view, false, cam.view);
     gl.uniformMatrix4fv(u.u_model, false, M.model(o.pos, o.rot, o.scale));
-    gl.uniform4fv(u.u_uvRect, o.uv || [0, 0, 1, 1]);
+    gl.uniform4fv(u.u_uvRect, o.uv || [0, 0, 1, 1]); gl.uniform4fv(u.u_uvRect2, o.uv2 || o.uv || [0, 0, 1, 1]);
     gl.uniform2fv(u.u_size, o.size);
     gl.uniform1f(u.u_depthAmt, o.depthAmt ?? 0); gl.uniform1f(u.u_depthMid, o.depthMid ?? 0.5);
     gl.uniform1f(u.u_useDepth, o.depth ? 1 : 0); gl.uniform1f(u.u_curl, o.curl || 0);

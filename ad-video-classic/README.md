@@ -163,5 +163,28 @@ python3 -I studio-sound/chime_dark.py && python3 -I studio-sound/outro_dark.py s
 python3 -I studio-sound/mix6.py song.wav studio-sound/sfx_choice_dark.json studio-sound/outro_dark.wav mix6.wav
 ```
 
+### 3D spheres rendered in Blender
+
+The spheres in the one-take version are rendered in Blender (Cycles) as real 3D balls under one studio light rig:
+- a large softbox above;
+- a cool rim light from behind;
+- a few screen-shaped lights around;
+- a dark glossy floor that shows in their lower half.
+
+There are five materials: glossy blue with a clear coat, soft white, chrome, the chrome hero, and the black glossy orb.
+Each is rendered from 144 viewing angles: every 20 degrees around, and from 70 degrees below to 70 degrees above.
+
+For every sphere on every frame, the film picks the four Blender views around the angle the camera sees it from and
+blends them. Highlights, reflections and the floor horizon therefore stay fixed in the world and slide across the ball as
+the camera moves, as on a real 3D sphere. Reflections in the floor use the view from below, flipped.
+
+```bash
+python3 -m venv bl && bl/bin/pip install bpy==5.3.0 pillow       # Blender as a Python module
+bl/bin/python blender/sphere_atlas.py spheres blue white chrome hero orb   # writes spheres/atlas_*.png and atlas.json
+```
+
+Rendering every frame in Blender instead would take about 21 s per frame on a 4-core machine (over 5 hours). The atlases
+take about 15 minutes.
+
 Credits are the same as for the studio version above, plus "Gong (gong_hit_p.wav)", "Timpani - A#2" (both by
 Samulis, CC0) and "Booms.wav" by studiomandragore (CC0).

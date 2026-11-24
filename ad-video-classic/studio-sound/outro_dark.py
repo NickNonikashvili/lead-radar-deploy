@@ -42,7 +42,7 @@ for i, e in enumerate(ev):
 # ---- a low drone that builds under everything and dies at the lock ----
 drone = (np.sin(2 * np.pi * 36.71 * tt) + 0.7 * np.sin(2 * np.pi * 37.3 * tt + 1) + 0.35 * np.sin(2 * np.pi * 55.0 * tt)) * 0.5
 drone += lp(rng.standard_normal(len(tt)), 140, 4) * 1.4
-env = np.clip((tt - 0.2) / 4.0, 0, 1) ** 2 * np.clip((LOCK + 0.05 - tt) / 0.05, 0, 1)
+env = (0.35 + 0.65 * np.clip(tt / 4.2, 0, 1) ** 1.5) * np.clip(tt / 0.25, 0, 1) * np.clip((LOCK + 0.05 - tt) / 0.05, 0, 1)
 out += (drone * env * 0.22)[:, None]
 # ---- the spheres turn into shards: a deep metallic hit ----
 place(lp(samp('metal'), 2500), 2.93, 0.42, 0.0, 0.5)

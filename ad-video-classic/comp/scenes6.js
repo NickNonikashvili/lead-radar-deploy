@@ -6,7 +6,7 @@
 (() => {
   'use strict';
   const { ease, textures: T, clamp, lerp, D0 } = E;
-  let TL;
+  let TL, ATLAS;
   const FY = -0.75, G = 6.5;
   const BEAT = 0.4724, H0 = 2.005, DROP = 17.16, FREEZE = 16.27;
   const beat = (k) => H0 + BEAT * k;
@@ -31,6 +31,8 @@
     const img = {};
     await Promise.all(['home', 'home_ka', 'services', 'mobile', 'mobile_ka', 'evo', 'mailtabs', 'studycat', 'store', 'reports', 'register'].map(async (k) => { const i = new Image(); i.src = `../shots/${k}.jpg`; await i.decode(); img[k] = i; }));
     await E.loadTex('glow', '../art/glow.png');
+    ATLAS = await (await fetch('../spheres/atlas.json', { cache: 'no-store' })).json();
+    for (const k of ['blue', 'white', 'chrome', 'hero', 'orb']) await E.loadTex('at_' + k, `../spheres/atlas_${k}.png`);
     for (const k of ['home', 'home_ka', 'services', 'evo', 'mailtabs', 'studycat', 'store', 'reports', 'register']) T['p_' + k] = panelTex(img[k]);
     T.ph_en = phoneTex(img.mobile); T.ph_ka = phoneTex(img.mobile_ka);
     T.s_blue = sphereTex('blue'); T.s_white = sphereTex('white'); T.s_chrome = sphereTex('chrome');
@@ -229,13 +231,13 @@
     { t: 5.784, pos: [-0.04, 0.16, 0.0], target: [-0.02, 0.05, -2.0], fov: 46, roll: -4 },
     { t: 6.73, pos: [0.20, -0.35, -1.95], target: [0, 0.30, -7.0], fov: 50, roll: 4 },
     { t: 7.674, pos: [-0.05, -0.25, -3.70], target: [0, 1.30, -7.0], fov: 48, roll: 0 },
-    { t: 8.62, pos: [0, 0.75, -5.05], target: [0, 1.20, -7.0], fov: 42, roll: 60 },
-    { t: 9.09, pos: [0, 1.05, -6.05], target: [0, 1.20, -8.0], fov: 40, roll: 90 },
-    { t: 9.563, pos: [0, 1.20, -7.00], target: [0, 1.00, -9.0], fov: 42, roll: 90 },
-    { t: 10.50, pos: [0, 0.75, -9.90], target: [0, 0.45, -14.0], fov: 44, roll: 45 },
+    { t: 8.62, pos: [0, 0.75, -5.05], target: [0, 1.20, -7.0], fov: 42, roll: 25 },
+    { t: 9.09, pos: [0, 1.05, -6.05], target: [0, 1.20, -8.0], fov: 40, roll: 38 },
+    { t: 9.563, pos: [0, 1.20, -7.00], target: [0, 1.00, -9.0], fov: 42, roll: 35 },
+    { t: 10.50, pos: [0, 0.75, -9.90], target: [0, 0.45, -14.0], fov: 44, roll: 12 },
     { t: 11.453, pos: [0, 0.40, -12.6], target: [-0.3, 0.35, -17.0], fov: 44, roll: 0 },
-    { t: 12.398, pos: [-0.25, 0.35, -16.6], target: [-0.6, 0.40, -21.0], fov: 44, roll: -12 },
-    { t: 13.343, pos: [0.15, 0.30, -20.9], target: [0.3, 0.30, -26.0], fov: 44, roll: 10 },
+    { t: 12.398, pos: [-0.45, 0.35, -16.6], target: [-0.8, 0.40, -21.0], fov: 44, roll: -16 },
+    { t: 13.343, pos: [0.4, 0.30, -20.9], target: [0.6, 0.30, -26.0], fov: 44, roll: 14 },
     { t: 14.288, pos: [0, 0.15, -25.8], target: [0, 0.10, -31.0], fov: 56, roll: 4 },
     { t: 15.232, pos: [0, -0.45, -31.0], target: [0, -0.55, -36.0], fov: 68, roll: 0 },
     { t: 15.705, pos: [0, -0.60, -33.6], target: [0, -0.70, -37.5], fov: 62, roll: 0 },
@@ -267,14 +269,14 @@
     { t: 30.387, pos: [S[0], S[1] + 0.25, S[2] + 8.08], target: S, fov: 22, roll: 360 },
   ];
   const ORB_IN = 30.387, BLACK = 32.277;
+  const orbPulse = (t) => { let p = 1; for (let n = 0; n < 4; n++) { const t0 = ORB_IN + n * BEAT; if (t >= t0) p = Math.max(p, 1 + 0.08 * Math.exp(-(t - t0) / 0.12)); } return p; };
   function camAt(t) {
     if (t < H0) {                                     // the opening: a slow dolly-zoom on the dead site
       const z = 10.15 - 6.70 * ease.sine(t / H0);
       return { pos: [0, -0.45, z], target: [0, 0.05, 0], fov: 2 * Math.atan(1.607 / z) * 180 / Math.PI, roll: 0 };
     }
     if (t >= ORB_IN) {                                // the orb: dolly-zoom in, then fall into it
-      let d = lerp(8.08, 2.05, kk(t, ORB_IN, 31.805, ease.sine)), fov = 2 * Math.atan(1.571 / d) * 180 / Math.PI;
-      if (t > 31.805) { const k = kk(t, 31.805, BLACK, ease.in); d = 2.05 * (1 - k) + 0.02; fov = lerp(fov, 82, k); }
+      const d = lerp(8.08, 0.25, kk(t, ORB_IN, 32.15, (x) => x * x * x)), fov = lerp(22, 62, kk(t, ORB_IN, 32.15, ease.io));
       return { pos: [S[0], S[1] + 0.25 * d / 8.08, S[2] + d], target: S, fov, roll: 0 };
     }
     const c = camPath(KEYS, t);
@@ -304,7 +306,7 @@
   const texUV = (u, v) => [(14 + u * 1572) / 1600, (14 + v * 972) / 1000];
   // the hall of phones and the giant Georgian phone
   const PHONES = [];
-  [-1.4, -2.9, -4.4].forEach((z, k) => { PHONES.push({ x: -1.25, z, tex: k % 2 ? 'ph_ka' : 'ph_en', on: 5.784 + 0.118 * k }); PHONES.push({ x: 1.25, z, tex: k % 2 ? 'ph_en' : 'ph_ka', on: 5.784 + 0.118 * k + 0.06 }); });
+  [-1.4, -2.9, -4.4].forEach((z, k) => { PHONES.push({ x: -1.25, z, tex: k % 2 ? 'ph_ka' : 'ph_en', on: 5.311 + 0.118 * k }); PHONES.push({ x: 1.25, z, tex: k % 2 ? 'ph_en' : 'ph_ka', on: 5.311 + 0.118 * k + 0.06 }); });
   const GP = { pos: [0, 1.02, -6.93], size: [1.74, 3.54], on: 7.674 };
   // the canyon: 16 columns x 3 rows on each side
   const CANYON = [];
@@ -312,8 +314,12 @@
     const i = CANYON.length;
     let tex = APPS[Math.floor(H(i, 3) * APPS.length)];
     if (i > 0 && CANYON[i - 1].tex === tex) tex = APPS[(APPS.indexOf(tex) + 1) % APPS.length];
-    CANYON.push({ c, r, side, z: -8.6 - 2.0 * c, y: -0.10 + 1.27 * r, tex, on: 9.563 + c * 0.118 + r * 0.03 + (side > 0 ? 0.059 : 0) });
+    CANYON.push({ c, r, side, z: -8.6 - 2.0 * c, y: -0.10 + 1.27 * r, tex, on: 9.12 + c * 0.118 + r * 0.03 + (side > 0 ? 0.059 : 0) });
   }
+  const FLY = {};
+  { const find = (c, r, side) => CANYON.findIndex((p) => p.c === c && p.r === r && p.side === side);
+    FLY[find(5, 0, 1)] = { t0: 11.95, t1: 13.0, tex: 'p_mailtabs' }; FLY[find(9, 0, -1)] = { t0: 13.6, t1: 14.6, tex: 'p_studycat' };
+    for (const i in FLY) CANYON[i].tex = FLY[i].tex; }
   function wallX(t, r) {
     const base = [1.55, 1.73, 1.95][r];
     let k = 0; for (let s = 0; s < 4; s++) k += ease.back(kk(t, 13.343 + s * BEAT, 13.343 + s * BEAT + 0.22, ease.lin));
@@ -338,7 +344,7 @@
   const STORE_SLOT = 12;
   { const ci = SLOT_OF.indexOf(STORE_SLOT); CANYON[ci].tex = 'p_store'; }
   // the towers of orders (spheres stacked in columns), the camera flies through the gap between x -0.25 and 0.25
-  const TOWER_X = [-1.25, -0.75, -0.25, 0.25, 0.75, 1.25], TOWER_N = [19, 7, 12, 9, 15, 6], TOWER_Z = -34.3, TR = 0.075;
+  const TOWER_X = [-1.25, -0.8, -0.35, 0.35, 0.8, 1.25], TOWER_N = [12, 5, 8, 6, 10, 4], TOWER_Z = -34.3, TR = 0.075;
   const TOWER = [];
   TOWER_X.forEach((x, ti) => { for (let n = 0; n < TOWER_N[ti]; n++) TOWER.push({ x, n, ti, t0: 19.05 + ti * BEAT * 0.25 + n * 1.7 / TOWER_N[ti] + H(ti * 40 + n, 4) * 0.03 }); });
 
@@ -351,7 +357,7 @@
   }
   function canyonHero(t, c) {                         // ahead of the camera, ricocheting between the walls
     const fov = c.fov, d = t > 14.288 && t < 15.6 ? 1.495 / Math.tan(fov * Math.PI / 360) : 2.2;
-    const per = t < 13.343 ? 2 * BEAT : BEAT;
+    const per = 2 * BEAT;
     const A = wallX(t, 0) - 0.42;
     const x = A * tri((t - 9.563) / per + 0.25) * kk(t, 9.563, 10.2);
     const y = HY0 + 0.55 * Math.abs(Math.sin(Math.PI * (t - 9.563) / BEAT));
@@ -372,7 +378,7 @@
       return [lerp(a[0], PI_[0], k), lerp(a[1], HY0, k * k), lerp(a[2], PI_[2], smooth(k))];
     }
     // after the drop: bounce up, float to a hover over the tallest tower, crown it, then sink to the orb point
-    const hover = [TOWER_X[0], 3.4, TOWER_Z];
+    const hover = [TOWER_X[0], 2.4, TOWER_Z];
     if (t < 20.639) {
       const b = [PI_[0], bounceY(t - DROP, HY0, 4.2, HR, 0.3), PI_[2]];
       const f = hover.map((v, i) => v + (i === 1 ? 0.05 * Math.sin(t * 3) : 0));
@@ -387,7 +393,7 @@
   // ---------- the swarm in the canyon (1 -> 100 spheres) ----------
   const SPAWN = [[11.453, 3], [12.398, 9], [13.343, 27], [14.288, 54], [15.232, 90], [15.705, 100]];
   const SWARM = [];
-  { let prev = 0; for (const [ts, n] of SPAWN) { for (let i = prev; i < n; i++) SWARM.push({ i, t0: ts + (i - prev) / Math.max(1, n - prev) * 0.3, r: 0.035 + 0.045 * H(i, 5), k: H(i, 6) < 0.62 ? 'blue' : H(i, 6) < 0.85 ? 'white' : 'chrome', d: 1.0 + 4.2 * H(i, 7), per: H(i, 8) < 0.5 ? BEAT / 2 : BEAT, ph: H(i, 9), hh: 0.15 + 1.1 * H(i, 10), ofs: (H(i, 11) - 0.5) * 0.6 }); prev = n; } }
+  { let prev = 0; for (const [ts, n] of SPAWN) { for (let i = prev; i < n; i++) SWARM.push({ i, t0: ts + (i - prev) / Math.max(1, n - prev) * 0.3, r: 0.05 + 0.06 * H(i, 5), k: H(i, 6) < 0.62 ? 'blue' : H(i, 6) < 0.85 ? 'white' : 'chrome', d: 0.9 + 2.6 * H(i, 7), per: H(i, 8) < 0.5 ? BEAT * 2 : BEAT * 4, ph: H(i, 9), hh: 0.15 + 1.1 * H(i, 10), ofs: (H(i, 11) - 0.5) * 0.6 }); prev = n; } }
   function swarmPos(s, t) {
     const u = Math.min(tau(t), TAU_DROP);
     if (u < s.t0) return null;
@@ -427,8 +433,8 @@
   // every object gets an orbit slot in the vortex and a time it is swallowed by the orb
   function orbitOf(id, kind) {
     const h1 = H(id, 30), h2 = H(id, 31), h3 = H(id, 32);
-    if (kind === 'panel') return { rho0: 7.5, rho: 3.4 + 0.6 * h1, y: -0.1 + 9.0 * h2, a0: 2 * Math.PI * h3, absorb: 27.3 + 2.85 * Math.pow(h2, 0.7), peel: VSTART + 0.9 * h1 };
-    return { rho: 0.9 + 1.7 * h1, y: 0.0 + 9.0 * h2 * h2, a0: 2 * Math.PI * h3, absorb: 27.0 + 1.9 * Math.pow(h2, 0.8), peel: VSTART + 1.2 * h1 };
+    if (kind === 'panel') return { rho0: 7.5, rho: 3.4 + 0.6 * h1, y: -0.1 + 9.0 * h2, a0: 2 * Math.PI * h3, absorb: 27.6 + 2.6 * Math.pow(h2, 0.7), peel: VSTART + 0.9 * h1 };
+    return { rho: 0.9 + 1.7 * h1, y: 0.0 + 9.0 * h2 * h2, a0: 2 * Math.PI * h3, absorb: 27.4 + 2.6 * Math.pow(h2, 0.8), peel: VSTART + 1.2 * h1 };
   }
   // where an object is in the vortex/drain (given its position when it was peeled off), plus its scale and light
   function vortexPos(o, start, t, speed = 1.5) {
@@ -454,12 +460,27 @@
 
   // ---------- drawing ----------
   let LIGHT = 1;              // global light level for everything but the hero
+  // a sphere rendered in Blender: pick the four atlas views around the direction it is seen from and blend them,
+  // so its highlights and reflections stay fixed in the world as the camera moves (flip: seen in the floor mirror)
+  function atlasSphere(kind, pos, r, dir, flip, opacity, bright) {
+    const NP = ATLAS.phi.length, NT = ATLAS.theta.length, TP = ATLAS.tiles[kind];
+    const l = Math.hypot(...dir) || 1, d = dir.map((v) => v / l);
+    let ph = Math.atan2(d[0], d[2]) * 180 / Math.PI; if (ph < 0) ph += 360;
+    const th = Math.asin(clamp(d[1], -1, 1)) * 180 / Math.PI;
+    const fp = ph / (360 / NP), i0 = Math.floor(fp) % NP, i1 = (i0 + 1) % NP, wp = fp - Math.floor(fp);
+    const ft = clamp((th - ATLAS.theta[0]) / (ATLAS.theta[1] - ATLAS.theta[0]), 0, NT - 1), j0 = Math.min(NT - 2, Math.floor(ft)), wt = ft - j0;
+    const eu = 0.5 / (TP * NP), ev = 0.5 / (TP * NT);
+    const tile = (i, j) => { const u0 = i / NP + eu, u1 = (i + 1) / NP - eu, v0 = j / NT + ev, v1 = (j + 1) / NT - ev; return flip ? [u0, v1, u1, v0] : [u0, v0, u1, v1]; };
+    const base = { tex: T['at_' + kind], tex2: T['at_' + kind], size: [2.04 * r, 2.04 * r], pos, rot: billboardRot(pos), alphaCut: 0.01, bright };
+    E.draw({ ...base, uv: tile(i0, j0), uv2: tile(i1, j0), mix: wp, opacity });
+    if (wt > 0.01) E.draw({ ...base, uv: tile(i0, j0 + 1), uv2: tile(i1, j0 + 1), mix: wp, opacity: opacity * wt, depthWrite: false });
+  }
   function sphere(list, p, r, k, o = 1, light = 1) {
     if (!p) return;
     const dc = dist3(p, CAM);
     const near = clamp((dc - 0.12) / 0.3, 0, 1);
     if (near <= 0.01 || o <= 0.01) return;
-    list.push({ p, r, k, o: o * near, light });
+    list.push({ p, r, k, o: o * near, light, orbMix: 0 });
   }
   function drawWorld(t, out, { panels, spheres, glows, rings, pools, hero }) {
     panels = panels.filter((p) => {
@@ -472,9 +493,18 @@
       return front || p.back === true;
     });
     E.begin(out, [0.008, 0.01, 0.016]);
+    { const solid = panels.filter((p) => (p.opacity ?? 1) >= 0.999 && p.depthWrite !== false);
+      const clear = panels.filter((p) => !((p.opacity ?? 1) >= 0.999 && p.depthWrite !== false)).sort((a, b) => dist3(b.pos, CAM) - dist3(a.pos, CAM));
+      clear.forEach((p) => { p.depthWrite = false; });
+      panels = [...solid, ...clear]; }
     // reflections under the glossy floor
     for (const p of panels) if ((p.opacity ?? 1) > 0.02 && p.pos[1] - p.size[1] / 2 > FY - 0.5) E.draw(mirrored({ ...p, bright: (p.bright ?? 0.9) * LIGHT }));
-    for (const s of spheres) { const m = [s.p[0], 2 * FY - s.p[1], s.p[2]]; E.draw({ tex: s.tex || T['s_' + s.k], size: [2 * s.r, 2 * s.r], pos: m, rot: billboardRot(m), uv: [0, 1, 1, 0], alphaCut: 0.35, bright: 0.5 * s.light * (s.hero ? 1 : LIGHT), opacity: s.o * 0.8 }); }
+    spheres.sort((a, b) => dist3(b.p, CAM) - dist3(a.p, CAM));
+    for (const s of spheres) {
+      const m = [s.p[0], 2 * FY - s.p[1], s.p[2]], dir = [CAM[0] - m[0], -(CAM[1] - m[1]), CAM[2] - m[2]], b = 0.55 * s.light * (s.hero ? 1 : LIGHT);
+      atlasSphere(s.hero ? 'hero' : s.k, m, s.r, dir, true, s.o * 0.8, b);
+      if (s.orbMix > 0) atlasSphere('orb', m, s.r, dir, true, s.o * 0.8 * s.orbMix, b);
+    }
     // the floor: dark glass, lit in pools
     E.draw({ color: [0.03, 0.035, 0.045], tex: T.white, size: [140, 140], pos: [CAM[0], FY, CAM[2] - 20], rot: [-90, 0, 0], opacity: 0.86 });
     for (const q of pools) if (q.o > 0.003) E.draw({ tex: T.pool, size: [q.s, q.s], pos: [q.p[0], FY + 0.001, q.p[2]], rot: [-90, 0, 0], opacity: q.o * LIGHT, tint: q.c || [0.35, 0.45, 0.7], add: true, depthWrite: false });
@@ -485,7 +515,11 @@
     }
     // the real things
     for (const p of panels) if ((p.opacity ?? 1) > 0.01) E.draw({ ...p, bright: (p.bright ?? 0.9) * LIGHT });
-    for (const s of spheres) E.draw({ tex: s.tex || T['s_' + s.k], tex2: s.tex2, mix: s.mix || 0, size: [2 * s.r, 2 * s.r], pos: s.p, rot: billboardRot(s.p), alphaCut: 0.35, opacity: s.o, bright: s.light * (s.hero ? 1 : lerp(1, LIGHT, 0.85)) });
+    for (const s of spheres) {
+      const dir = [CAM[0] - s.p[0], CAM[1] - s.p[1], CAM[2] - s.p[2]], b = s.light * (s.hero ? 1 : lerp(1, LIGHT, 0.85));
+      if (s.orbMix < 1) atlasSphere(s.hero ? 'hero' : s.k, s.p, s.r, dir, false, s.o, b);
+      if (s.orbMix > 0) atlasSphere('orb', s.p, s.r, dir, false, s.o * (s.orbMix < 1 ? s.orbMix : 1), b);
+    }
     for (const g of glows) if (g.o > 0.002 && !(g.near && dist3(g.p, CAM) < 0.6 * g.s)) E.draw({ tex: T.glow, size: [g.s, g.s], pos: g.p, rot: billboardRot(g.p), opacity: g.o * (g.hero ? 1 : LIGHT) * (g.near ? clamp((dist3(g.p, CAM) - 0.6 * g.s) / (0.4 * g.s), 0, 1) : 1), tint: g.c || [0.6, 0.75, 1], add: true, depthWrite: false });
   }
 
@@ -496,7 +530,7 @@
     // light level: dim in the frozen silence, drained at the end
     LIGHT = 1;
     if (t >= FREEZE && t < DROP) LIGHT = lerp(1, 0.22, kk(t, FREEZE, FREEZE + 0.06, ease.lin));
-    if (t >= 28.4) LIGHT = lerp(1, 0.15, kk(t, 28.4, ORB_IN, ease.io));
+    if (t >= 29.0) LIGHT = lerp(1, 0.3, kk(t, 29.0, 30.6, ease.io));
     const beatPulse = (t0) => { const b = (t - t0) / BEAT; return b < 0 ? 0 : Math.exp(-(b - Math.floor(b)) * 6); };
     const camPool = { p: [CAMT[0] * 0.5 + CAM[0] * 0.5, FY, CAMT[2] * 0.5 + CAM[2] * 0.5], s: 12, o: 0.22 };
     pools.push(camPool);
@@ -508,15 +542,17 @@
         panels.push({ color: [0.012, 0.016, 0.024], tex: T.white, size: [BW, BH], pos: BPOS });
         panels.push({ tex: T.outline, size: [BW, BH], pos: [BPOS[0], BPOS[1], BPOS[2] + 0.002], opacity: 0.3, bright: 0.6, depthWrite: false });
       } else {
-        panels.push({ tex: T.p_home, size: [BW, BH], pos: BPOS, bright: 0.9 * on, opacity: fB });
+        panels.push({ tex: T.p_home, size: [BW, BH], pos: BPOS, bright: 0.9 * on * lerp(1, 0.38, kk(u, 3.894, 5.0)), opacity: fB });
         for (const [u0, v0, u1, v1, tl, off] of PIECES) {
           const q = ease.back(kk(u, tl, tl + 0.35, ease.lin));
           if (q <= 0) continue;
           const cx = (u0 + u1) / 2 - 0.5, cy = 0.5 - (v0 + v1) / 2, w = (u1 - u0) * BW, h = (v1 - v0) * BH;
           const base = [BPOS[0] + cx * BW, BPOS[1] + cy * BH, BPOS[2]];
           const [tu0, tv0] = texUV(u0, v0), [tu1, tv1] = texUV(u1, v1);
-          panels.push({ tex: T.p_home, uv: [tu0, tv0, tu1, tv1], size: [w, h], pos: [base[0], base[1], base[2] + 0.004], bright: lerp(0.9, 0.22, clamp(q * 2, 0, 1)), sat: 0.3, back: true, opacity: fB });
-          panels.push({ tex: T.p_home, uv: [tu0, tv0, tu1, tv1], size: [w, h], pos: add3(base, off.map((v) => v * q)).map((v, i) => (i === 2 ? v + 0.008 : v)), rot: [off[1] * 30 * q, -off[0] * 40 * q, 0], bright: 1.0, opacity: fB });
+          const pi = PIECES.findIndex((x) => x[4] === tl), tum = [(H(pi, 50) - 0.5) * 50, (H(pi, 51) - 0.5) * 60, (H(pi, 52) - 0.5) * 30];
+          const pp = add3(base, off.map((v, i) => v * q * (i === 2 ? 1.7 : 1.3))).map((v, i) => (i === 2 ? v + 0.008 : v));
+          const nearF = clamp((dist3(pp, CAM) - 0.3) / 0.35, 0, 1);
+          panels.push({ tex: T.p_home, uv: [tu0, tv0, tu1, tv1], size: [w, h], pos: pp, rot: tum.map((v) => v * q), bright: 1.0, opacity: fB * nearF, back: true });
         }
       }
       if (u >= H0) rings.push({ p: [0, 0.05, 0.01], rot: [0, 0, 0], r: lerp(0.05, 2.2, kk(u, H0, H0 + 0.9, ease.out)), o: 0.9 * (1 - kk(u, H0, H0 + 0.9, ease.lin)) });
@@ -536,7 +572,7 @@
       const gon = powerOn(u, GP.on);
       if (CAM[2] > GP.pos[2] - 0.05) {
         const fG = clamp((CAM[2] - GP.pos[2]) / 0.6, 0, 1);
-        panels.push({ tex: T.ph_ka, size: GP.size, pos: GP.pos, bright: 0.08 + 0.85 * gon, opacity: fG });
+        panels.push({ tex: T.ph_ka, size: GP.size, pos: GP.pos, bright: 0.025 + 0.875 * gon, opacity: fG });
         glows.push({ p: [0, 1.0, -7.3], s: 5, o: 0.35 * gon, near: true });
         if (u > 9.091) rings.push({ p: [0, 1.20, -6.92], rot: [0, 0, 0], r: lerp(0.05, 1.4, kk(u, 9.091, 9.8, ease.out)), o: 0.9 * (1 - kk(u, 9.091, 9.8, ease.lin)) });
       }
@@ -546,6 +582,11 @@
     if (t > 7.5 && t < 30.4) {
       CANYON.forEach((p, i) => {
         let pose = canyonPose(p, Math.min(u, TAU_DROP));
+        const fl = FLY[i]; let flyOut = 0;
+        if (fl && t < DROP) {
+          flyOut = kk(u, fl.t0, fl.t0 + 0.45, ease.out) * (1 - kk(u, fl.t1 - 0.35, fl.t1, ease.io));
+          pose = { pos: [lerp(pose.pos[0], p.side * 0.62, flyOut), pose.pos[1] + 0.15 * flyOut, pose.pos[2] + 0.2 * flyOut], rot: [0, lerp(pose.rot[1], p.side < 0 ? 26 : -26, flyOut), lerp(pose.rot[2], 0, flyOut)] };
+        }
         const slot = SLOT_OF[i];
         let on = powerOn(u, p.on), opacity = 1, scale = 1, light = 1;
         if (t > DROP) {
@@ -571,6 +612,7 @@
         const pulse = 1 + 0.12 * beatPulse(9.563) * (t < FREEZE ? 1 : 0);
         const flying = t > DROP && t < DROP + 1.7;
         opacity *= clamp((scale - 0.14) / 0.3, 0, 1);
+        if (flyOut > 0) { scale *= 1 + 0.15 * flyOut; on = Math.max(on, 1) * (1 + 0.12 * flyOut); }
         panels.push({ tex: T[p.tex], size: [PANEL_W * scale, PANEL_H * scale], pos: pose.pos, rot: pose.rot, bright: (0.07 + 0.78 * on * pulse) * (p.r === 2 ? 0.8 : 1) * light, opacity, back: flying, flip: flying });
       });
       if (t > 9.3 && t < DROP) pools.push({ p: [0, FY, CAM[2] - 4], s: 7, o: 0.3 });
@@ -580,7 +622,7 @@
     let hr = HR, hmix = 0;
     if (t > 26.5) { const f = absorbedFrac(t); hr = lerp(HR, 0.55, Math.cbrt(f)); hmix = clamp(f * 1.4, 0, 1); }
     const heroP = t > 26.5 ? [S[0], S[1] + (hr - HR) * 0.0, S[2]] : hp;
-    spheres.push({ p: heroP, r: hr, tex: T.hero, tex2: T.orb, mix: hmix, o: t > ORB_IN ? 1 : clamp((dist3(heroP, CAM) - 0.03) / 0.1, 0, 1), light: 1, hero: true, k: 'chrome' });
+    spheres.push({ p: heroP, r: hr * (t > ORB_IN - 0.5 ? orbPulse(t) : 1), orbMix: hmix, o: t > ORB_IN ? 1 : clamp((dist3(heroP, CAM) - 0.03) / 0.1, 0, 1), light: 1, hero: true, k: 'chrome' });
     glows.push({ p: heroP, s: lerp(0.4, 0.2, hmix) * (t >= FREEZE && t < DROP ? 1.6 : 1), o: lerp(0.35, 0.0, hmix), c: [0.75, 0.85, 1], hero: true });
     // --- the swarm, the splash, the towers; all of them join the vortex and drain into the orb ---
     for (const x of SPHERE_IDS) {
@@ -604,8 +646,10 @@
         for (let n = 0; n < 8; n++) {
           const t0 = 19.05 + n * BEAT; if (t < t0) continue;
           const pop = ease.back(kk(t, t0, t0 + 0.25, ease.lin));
-          let p = [-2.15, 0.55 + 0.25 * n, -32.25], sc = lerp(0.85, 1, pop), lt = 1;
-          if (t > VSTART) { const o = orbitOf(1600 + n, 'panel'); o.peel = VSTART + 0.1 * n; o.absorb = 27.5 + 0.15 * n; const v = vortexPos(o, p, t, 1.0); if (v.gone) continue; p = v.p; sc *= v.scale; lt = v.light; }
+          let slot = 0; for (let m = n + 1; m < 8; m++) slot += ease.io(kk(t, 19.05 + m * BEAT, 19.05 + m * BEAT + 0.2, ease.lin));
+          if (slot > 3.6) continue;
+          let p = [-1.0, 0.55 + 0.36 * slot, -32.42], sc = lerp(0.7, 1, pop) * 1.5 * clamp(3.6 - slot, 0, 1), lt = 1;
+          if (t > VSTART) { const o = orbitOf(1600 + n, 'panel'); o.peel = VSTART + 0.1 * n; o.absorb = 28.2 + 0.2 * n; const v = vortexPos(o, p, t, 1.0); if (v.gone) continue; p = v.p; sc *= v.scale; lt = v.light; }
           panels.push({ tex: T.toast[n % 5], size: [0.85 * sc, 0.85 * sc * 200 / 820], pos: p, rot: [0, 180, 0], opacity: clamp(pop * 1.5, 0, 1), bright: lt, depthWrite: false });
         }
       }
@@ -627,7 +671,7 @@
   // ---------- frame: three sub-frames averaged (motion blur), then the film finish ----------
   window.renderFrame = async (t) => {
     await window.ready;
-    const N = 3, SH = 0.5 / 30;           // 180-degree shutter
+    const N = 8, SH = 0.4 / 30;           // 144-degree shutter, 8 samples
     const acc = E.fbo('ACC'), one = E.fbo('ONE');
     for (let i = 0; i < N; i++) {
       const ts = Math.max(0, t + (i / (N - 1) - 0.5) * SH);
@@ -636,12 +680,12 @@
     }
     cam(camAt(t));
     let flash = 0, ca = 0.0012, bloomAmt = 0.45, vig = 0.75, fadeAmt = 0;
-    for (const [h, a] of [[H0, 0.18], [DROP, 0.3]]) if (t >= h) { flash = Math.max(flash, a * Math.exp(-(t - h) / 0.2)); ca = Math.max(ca, 0.0012 + 0.003 * Math.exp(-(t - h) / 0.25)); }
+    for (const [h, a] of [[H0, 0.18], [DROP, 0.16]]) if (t >= h) { flash = Math.max(flash, a * Math.exp(-(t - h) / (h === DROP ? 0.1 : 0.2))); ca = Math.max(ca, 0.0012 + 0.003 * Math.exp(-(t - h) / 0.25)); }
     if (t >= DROP) bloomAmt = lerp(0.9, 0.5, kk(t, DROP, DROP + 0.6));
     if (t >= FREEZE && t < DROP) vig = 0.95;
     if (t >= 28.5) { bloomAmt = lerp(0.5, 0.3, kk(t, 28.5, ORB_IN)); vig = lerp(0.75, 0.95, kk(t, 28.5, ORB_IN)); }
     if (t < 0.3) fadeAmt = 1 - t / 0.3;
-    if (t > 32.2) fadeAmt = kk(t, 32.2, BLACK, ease.lin);
+    if (t > 32.1) fadeAmt = kk(t, 32.1, BLACK, ease.lin);
     E.finish(acc, null, { seed: Math.floor(t * 30) * 0.618, fade: [0, 0, 0], fadeAmt, warm: 0, vig, grain: 0.03, ca, contrast: 1.1, lift: 0, bloomAmt, bloomTh: 0.85, leak: 0, time: t, flash });
   };
 })();

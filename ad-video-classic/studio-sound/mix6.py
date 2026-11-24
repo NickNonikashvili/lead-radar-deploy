@@ -24,8 +24,8 @@ u1 = np.clip((t - F0) / (F1 - F0), 0, 1); u2 = np.clip((t - F1) / (F2 - F1), 0, 
 db = np.where(t < F1, -6 * u1 ** 1.5, -6 - 54 * u2 ** 2.0)
 g *= 10 ** (np.maximum(db, -80) / 20); g[t >= F2] = 0
 s *= g[:, None]
-fc = np.where(t < 30.4, 18000.0, 18000.0 * (1100 / 18000) ** np.clip((t - 30.4) / (LOCK - 30.4), 0, 1))
-a1 = np.exp(-2 * np.pi * fc / SR)                         # two one-pole low-passes, cutoff sweeping 18 kHz -> 1.1 kHz
+fc = np.where(t < 30.4, 18000.0, 18000.0 * (280 / 18000) ** (np.clip((t - 30.4) / (LOCK - 30.4), 0, 1) ** 0.6))
+a1 = np.exp(-2 * np.pi * fc / SR)                         # two one-pole low-passes, cutoff sweeping 18 kHz -> 280 Hz
 for ch in range(2):
     x = s[:, ch]; i0 = int(30.3 * SR); y1 = x[i0]; y2 = x[i0]
     for i in range(i0, len(x)):
@@ -48,11 +48,22 @@ x = lp(wh[2], 2500); place(x, 16.20, 0.4, 0.0, 0.45)
 n = int(0.12 * SR); tt = np.arange(n) / SR
 thump = np.sin(2 * np.pi * np.cumsum(48 + 30 * np.exp(-tt * 40)) / SR) * np.exp(-tt * 28)
 for t0 in (16.45, 16.92): place(thump, t0, 0.35)
+# the orb's heartbeat (lub-dub on each pulse) as the song sinks away
+for k in range(4):
+    t0 = 30.387 + k * 0.4724; place(thump, t0, 0.55); place(thump, t0 + 0.17, 0.38)
+# passing the Mailtabs and StudyCat screens, and flying through the towers of orders
+for t0, k, pan in ((12.85, 0, 0.5), (14.45, 1, -0.5), (21.88, 2, 0.0)):
+    x = lp(wh[k], 3000); pk = np.argmax(np.abs(x)) / SR; place(x, t0 - pk / 0.9, 0.28, pan, 0.9)
+# the store screen lands
+place(thump, 19.05, 0.4)
+# a low swell under the drain
+x = lp(load(C['metal'][0])[:int(2.0 * SR)], 900); x = sg.resample(x, int(len(x) / 0.5))[::-1]
+x = x[-int(2.2 * SR):] * np.linspace(0, 1, int(2.2 * SR)) ** 2; place(x / np.abs(x).max(), 27.0, 0.22)
 # the drop (17.16): a deep boom under the music's explosion
 boom = lp(load(C['boom'][0]), 900); place(boom, 17.15, 0.45, 0.0, 0.85)
 # falling into the orb (31.8-32.28): a dark swallowing swell
 x = lp(load(C['metal'][0])[:int(2.2 * SR)], 1500); x = sg.resample(x, int(len(x) / 0.55))[::-1]
-x *= np.linspace(0, 1, len(x)) ** 2; place(x / np.abs(x).max(), 32.277 - len(x) / SR, 0.4)
+x *= np.linspace(0, 1, len(x)) ** 2; place(x / np.abs(x).max(), 32.15 - len(x) / SR, 0.6)
 # the logo reveal
 sr2, o = w.read(outro_p); o = o.astype(float) / 32768
 i = int(round(STORY * SR)); j = min(len(s), i + len(o))
