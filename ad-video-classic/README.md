@@ -186,5 +186,16 @@ bl/bin/python blender/sphere_atlas.py spheres blue white chrome hero orb   # wri
 Rendering every frame in Blender instead would take about 21 s per frame on a 4-core machine (over 5 hours). The atlases
 take about 15 minutes.
 
+### End line
+
+The end screen says "Your digital evolution starts here", centred above the EVOSOFT lockup in Inter Medium, with
+"evolution" in the brand blue. The words rise in one at a time out of a soft blur once the letters have landed, under a
+low swell. The end screen holds 2 s, so the ad runs about 42 s. `studio-sound/tagline.py` draws the frames, and
+`studio-sound/assemble6.sh` lays them over the logo reveal before the final fade.
+
+```bash
+python3 studio-sound/tagline.py tagline /usr/share/fonts/opentype/inter/Inter-Medium.otf
+```
+
 Credits are the same as for the studio version above, plus "Gong (gong_hit_p.wav)", "Timpani - A#2" (both by
 Samulis, CC0) and "Booms.wav" by studiomandragore (CC0).

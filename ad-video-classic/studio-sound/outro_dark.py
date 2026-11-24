@@ -3,7 +3,7 @@
 # into the lock, then a deep impact and the dark startup chord as the X locks; low stamps as the letters land.
 #   python3 -I outro_dark.py sfx_choice_dark.json   (recorded samples; run chime_dark.py first)
 import json, sys, os, subprocess, numpy as np, scipy.io.wavfile as w, scipy.signal as sg
-SR = 48000; LEN = 8.5; FPS = 30
+SR = 48000; LEN = 9.5; FPS = 30
 HERE = os.path.dirname(os.path.abspath(__file__))
 C = json.load(open(sys.argv[1]))
 rng = np.random.default_rng(5)
@@ -70,6 +70,10 @@ i = int(LOCK * SR); j = min(len(out), i + len(ch)); out[i:j] += ch[:j - i] * 0.9
 for k, f in enumerate((150, 152, 155, 157, 159, 161, 164)):
     place(thump(95, 50, 35, 0.18), f / FPS, 0.16, -0.3 + k * 0.1)
     place(lp(samp('bounce', k + 3), 1800), f / FPS, 0.06, -0.3 + k * 0.1, 0.6)
+# the end line appears (5.85 s): a soft, low swell under it
+n = int(1.6 * SR); sw = lp(rng.standard_normal(n), 220, 4) * np.sin(np.pi * np.arange(n) / n) ** 2
+sw += 0.6 * np.sin(2 * np.pi * 55.0 * np.arange(n) / SR) * np.sin(np.pi * np.arange(n) / n) ** 3
+place(sw / np.abs(sw).max(), 5.55, 0.22, 0.0)
 out *= np.clip((LEN - 0.05 - tt) / 1.3, 0, 1)[:, None] ** 1.3
 out = np.tanh(out / np.abs(out).max() * 1.3); out *= 0.9 / np.abs(out).max()
 w.write(os.path.join(HERE, 'outro_dark.wav'), SR, (out * 32767).astype(np.int16))

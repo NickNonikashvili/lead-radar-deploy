@@ -3,7 +3,7 @@
 #   python3 -I mix6.py song.wav sfx_choice_dark.json outro_dark.wav out.wav
 import sys, json, subprocess, numpy as np, scipy.io.wavfile as w, scipy.signal as sg
 song_p, choice_p, outro_p, out_p = sys.argv[1:5]
-SR = 48000; START = 28.2; STORY = 969 / 30; TOTAL = STORY + 8.5
+SR = 48000; START = 28.2; STORY = 969 / 30; TOTAL = STORY + 9.5
 C = json.load(open(choice_p)); rng = np.random.default_rng(9)
 def load(c):
     raw = subprocess.run(['ffmpeg', '-v', 'error', '-i', c['path'], '-ac', '1', '-ar', str(SR), '-f', 'f32le', '-'], capture_output=True, check=True).stdout
