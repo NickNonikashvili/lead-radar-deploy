@@ -307,7 +307,7 @@
   // the hall of phones and the giant Georgian phone
   const PHONES = [];
   [-1.4, -2.9, -4.4].forEach((z, k) => { PHONES.push({ x: -1.25, z, tex: k % 2 ? 'ph_ka' : 'ph_en', on: 5.311 + 0.118 * k }); PHONES.push({ x: 1.25, z, tex: k % 2 ? 'ph_en' : 'ph_ka', on: 5.311 + 0.118 * k + 0.06 }); });
-  const GP = { pos: [0, 1.02, -6.93], size: [1.74, 3.54], on: 7.674 };
+  const GP = { pos: [0, 1.02, -6.93], size: [1.74, 3.54], on: 7.44 };
   // the canyon: 16 columns x 3 rows on each side
   const CANYON = [];
   for (let c = 0; c < 16; c++) for (let r = 0; r < 3; r++) for (const side of [-1, 1]) {
@@ -471,7 +471,7 @@
     const ft = clamp((th - ATLAS.theta[0]) / (ATLAS.theta[1] - ATLAS.theta[0]), 0, NT - 1), j0 = Math.min(NT - 2, Math.floor(ft)), wt = ft - j0;
     const eu = 0.5 / (TP * NP), ev = 0.5 / (TP * NT);
     const tile = (i, j) => { const u0 = i / NP + eu, u1 = (i + 1) / NP - eu, v0 = j / NT + ev, v1 = (j + 1) / NT - ev; return flip ? [u0, v1, u1, v0] : [u0, v0, u1, v1]; };
-    const base = { tex: T['at_' + kind], tex2: T['at_' + kind], size: [2.04 * r, 2.04 * r], pos, rot: billboardRot(pos), alphaCut: 0.01, bright };
+    const base = { tex: T['at_' + kind], tex2: T['at_' + kind], size: [2.04 * r, 2.04 * r], pos, rot: billboardRot(pos), alphaCut: 0.01, bright: bright * (kind === 'white' ? 1.4 : 1) };
     E.draw({ ...base, uv: tile(i0, j0), uv2: tile(i1, j0), mix: wp, opacity });
     if (wt > 0.01) E.draw({ ...base, uv: tile(i0, j0 + 1), uv2: tile(i1, j0 + 1), mix: wp, opacity: opacity * wt, depthWrite: false });
   }
@@ -488,7 +488,10 @@
       const r = (p.rot || [0, 0, 0]).map((v) => v * Math.PI / 180);
       let n = [Math.cos(r[0]) * Math.sin(r[1]), -Math.sin(r[0]), Math.cos(r[0]) * Math.cos(r[1])];
       n = [n[0] * Math.cos(r[2]) - n[1] * Math.sin(r[2]), n[0] * Math.sin(r[2]) + n[1] * Math.cos(r[2]), n[2]];
-      const front = n[0] * (CAM[0] - p.pos[0]) + n[1] * (CAM[1] - p.pos[1]) + n[2] * (CAM[2] - p.pos[2]) > 0;
+      const dp = n[0] * (CAM[0] - p.pos[0]) + n[1] * (CAM[1] - p.pos[1]) + n[2] * (CAM[2] - p.pos[2]), front = dp > 0;
+      if (Math.abs(dp) < 0.35 && dist3(CAM, p.pos) < Math.hypot(p.size[0], p.size[1]) * 0.6) {
+        const f = clamp((Math.abs(dp) - 0.08) / 0.27, 0, 1); if (f <= 0.01) return false; p.opacity = (p.opacity ?? 1) * f;
+      }
       if (!front && p.back === true && p.flip) { p.color = [0.045, 0.055, 0.075]; p.tex = T.white; delete p.uv; }
       return front || p.back === true;
     });
@@ -551,7 +554,7 @@
           const [tu0, tv0] = texUV(u0, v0), [tu1, tv1] = texUV(u1, v1);
           const pi = PIECES.findIndex((x) => x[4] === tl), tum = [(H(pi, 50) - 0.5) * 50, (H(pi, 51) - 0.5) * 60, (H(pi, 52) - 0.5) * 30];
           const pp = add3(base, off.map((v, i) => v * q * (i === 2 ? 1.7 : 1.3))).map((v, i) => (i === 2 ? v + 0.008 : v));
-          const nearF = clamp((dist3(pp, CAM) - 0.3) / 0.35, 0, 1);
+          const nearF = clamp((dist3(pp, CAM) - 0.55) / 0.5, 0, 1);
           panels.push({ tex: T.p_home, uv: [tu0, tv0, tu1, tv1], size: [w, h], pos: pp, rot: tum.map((v) => v * q), bright: 1.0, opacity: fB * nearF, back: true });
         }
       }
@@ -635,7 +638,7 @@
     // --- after the drop: shockwaves, the store and its orders ---
     if (t >= DROP) {
       for (const [k, t0] of [[0, DROP], [1, DROP + BEAT], [2, DROP + 2 * BEAT]]) { const q = kk(t, t0, t0 + 1.3, ease.out); if (q > 0 && q < 1) rings.push({ p: [PI_[0], FY + 0.003, PI_[2]], r: 0.2 + 9 * q, o: (1 - q) * (k ? 0.5 : 1) }); }
-      glows.push({ p: [PI_[0], FY + 0.3, PI_[2]], s: 6, o: 0.9 * Math.exp(-(t - DROP) * 3.5) });
+      glows.push({ p: [PI_[0], FY + 0.3, PI_[2]], s: 6, o: 0.42 * Math.exp(-(t - DROP) * 5) });
       if (t < 28.5) pools.push({ p: PI_, s: 16, o: 0.35 });
       if (t > 19.05 && t < 30.4) {
         const from = haloSlot(STORE_SLOT, 19.05), q = ease.back(kk(t, 19.05, 19.05 + BEAT, ease.lin));
@@ -681,7 +684,7 @@
     cam(camAt(t));
     let flash = 0, ca = 0.0012, bloomAmt = 0.45, vig = 0.75, fadeAmt = 0;
     for (const [h, a] of [[H0, 0.18], [DROP, 0.16]]) if (t >= h) { flash = Math.max(flash, a * Math.exp(-(t - h) / (h === DROP ? 0.1 : 0.2))); ca = Math.max(ca, 0.0012 + 0.003 * Math.exp(-(t - h) / 0.25)); }
-    if (t >= DROP) bloomAmt = lerp(0.9, 0.5, kk(t, DROP, DROP + 0.6));
+    if (t >= DROP) bloomAmt = lerp(0.65, 0.5, kk(t, DROP, DROP + 0.6));
     if (t >= FREEZE && t < DROP) vig = 0.95;
     if (t >= 28.5) { bloomAmt = lerp(0.5, 0.3, kk(t, 28.5, ORB_IN)); vig = lerp(0.75, 0.95, kk(t, 28.5, ORB_IN)); }
     if (t < 0.3) fadeAmt = 1 - t / 0.3;
