@@ -1,5 +1,6 @@
 import { layout } from "../lib/layout.mjs";
-import { designPage, finish, esc, join, tierPrices, tierSelect, ARROW } from "../lib/site.mjs";
+import { designPage, finish, esc, join, tierPrices, ARROW } from "../lib/site.mjs";
+import { TIER_ICON, HELP_ICON } from "../lib/tour-art.mjs";
 import { TOURS, STYLES } from "../data/tours.mjs";
 import { TIERS, ALWAYS_INCLUDED } from "../data/tiers.mjs";
 import { CARDS, durationBucket } from "../data/tour-cards.mjs";
@@ -34,7 +35,15 @@ export default function toursPage() {
   // Filters: our styles and the lengths our tours come in; prices follow the chosen travel style.
   root.querySelector("#tc-type").set_content(`<option value="all">All styles</option>` + join(Object.entries(STYLES), ([k, v]) => `<option value="${k}">${esc(v)}</option>`));
   root.querySelector("#tc-dur").set_content(`<option value="all">Any length</option><option value="2-4">2–4 days</option><option value="5-7">5–7 days</option><option value="8+">8+ days</option>`);
-  root.querySelector("#tc-reset").insertAdjacentHTML("beforebegin", `<span class="tp-tier"><span class="tp-tier-l">Prices for</span>${tierSelect("tc-tier")}</span>`);
+  // Travel style: the designer's switch under the page title (site.js sets the tier, tours.js slides the highlight),
+  // with a "?" down to the comparison of the three styles.
+  root.querySelector("#pg-h").insertAdjacentHTML(
+    "afterend",
+    `<div class="tier-switch"><div class="ts-seg" role="radiogroup" aria-label="Show prices for travel style"><span class="ts-thumb" aria-hidden="true"></span>${join(
+      TIERS,
+      (t) => `<button type="button" class="ts-opt" role="radio" aria-checked="${t.id === "explorer"}" data-set-tier="${t.id}">${TIER_ICON[t.id]("ts-ic")}<span>${esc(t.name)}</span></button>`
+    )}</div><a class="ts-help" href="#tiers-h" aria-label="What's the difference between the travel styles?" title="What's the difference?">${HELP_ICON}</a></div>`
+  );
   root.querySelector("#tc-n").set_content(String(TOURS.length));
 
   // Cards from our tours, reusing the design's icons.

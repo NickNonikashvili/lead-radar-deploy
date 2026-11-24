@@ -33,3 +33,13 @@
   document.addEventListener('mfs:live', paint);
   paint();
 })();
+
+/* Travel-style switch under the title: the highlight slides to the chosen style (site.js sets the style). */
+(function () {
+  var seg = document.querySelector('.ts-seg'); if (!seg) return;
+  var th = seg.querySelector('.ts-thumb');
+  function place() { var b = seg.querySelector('.ts-opt[aria-checked="true"]'); if (!b) return; th.style.width = b.offsetWidth + 'px'; th.style.setProperty('--tx', b.offsetLeft + 'px'); }
+  place(); requestAnimationFrame(function () { seg.classList.add('ts-ready'); });
+  document.addEventListener('mfs:tier', function () { requestAnimationFrame(place); });
+  addEventListener('resize', place); if (document.fonts) document.fonts.ready.then(place);
+})();

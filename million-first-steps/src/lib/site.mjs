@@ -64,14 +64,6 @@ export function tierPrices(tour) {
 /** One price the admin panel can change: <span data-price="tour:tier">€1,690</span> (kept out of translations). */
 export const livePrice = (tour, tier) => `<span data-price="${tour.id}:${tier}">${eur(tour.prices[tier])}</span>`;
 
-/** The tier switch used on the tours page and tour pages. */
-export function tierSelect(id = "tier") {
-  return `<label class="dd tier-dd" for="${id}"><span class="sr-only">Travel style</span><select id="${id}" data-tier-select aria-label="Travel style">${join(
-    TIERS,
-    (t) => `<option value="${t.id}"${t.id === "explorer" ? " selected" : ""}>${esc(t.name)}</option>`
-  )}</select><svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 4.5 6 8l3.5-3.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></label>`;
-}
-
 /** Messaging chips/links: each marked with its channel (data-ch); those not set up are built hidden. */
 export function markChannels(root, sel, listSel) {
   const ch = channels();

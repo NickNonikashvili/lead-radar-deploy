@@ -13,7 +13,8 @@ DirectoryIndex index.php
   </IfModule>
 </FilesMatch>
 
-# lib/, data/ and modules/ also carry their own deny-all .htaccess; this catches them even if those go missing.
+# lib/ and modules/ also carry their own deny-all .htaccess (data/, when the database has to live there, gets one
+# when it is created); this catches them even if those go missing.
 <IfModule mod_alias.c>
   RedirectMatch 404 /(lib|data|modules)(/.*)?$
 </IfModule>

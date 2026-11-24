@@ -41,3 +41,56 @@
   days.forEach(function (d) { io.observe(d); });
   light(0);
 })();
+
+/* Route map: the solid line is drawn only up to the stop of the day in view, the rest of the route stays
+   dotted, and every stop the line has passed is coloured (stops with no day of their own too). */
+(function () {
+  var svg = document.querySelector('.tour-pg .tr-map svg'); if (!svg) return;
+  var line = svg.querySelector('.gmap__route'); if (!line) return;
+  var stops = [].slice.call(svg.querySelectorAll('.gmap__stop'));
+  function upd() {
+    var a = svg.querySelector('.gmap__stop.is-active'), p = a ? parseFloat(a.getAttribute('data-at')) || 0 : 0;
+    line.style.strokeDashoffset = String(1 - p);
+    stops.forEach(function (st) { st.classList.toggle('is-passed', (parseFloat(st.getAttribute('data-at')) || 0) <= p + 1e-4); });
+  }
+  new MutationObserver(upd).observe(svg, { subtree: true, attributes: true, attributeFilter: ['class'] });
+  upd();
+})();
+
+/* "Why this journey" photos: every few seconds the top photo slides out and is tucked back under the stack.
+   Click the stack or the arrows to go on; the slideshow waits while the pointer or focus is on it, and stays
+   still for visitors who ask for reduced motion. */
+(function () {
+  var box = document.querySelector('.tour-pg .hl-photos'); if (!box) return;
+  var cards = [].slice.call(box.querySelectorAll('.hl-card')); if (cards.length < 2) return;
+  var order = cards.map(function (_, i) { return i; }), busy = false, timer = null,
+    count = box.querySelector('.hl-count b'), play = box.querySelector('[data-hl="pause"]'),
+    still = !!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches), paused = still, hover = false;
+  function paint() {
+    order.forEach(function (c, p) { cards[c].setAttribute('data-pos', p); cards[c].setAttribute('aria-hidden', p ? 'true' : 'false'); });
+    count.textContent = (order[0] + 1).toLocaleString(MFS.locale);
+  }
+  function move(out, turn) {
+    if (busy) return; busy = true;
+    var c = cards[out === 'is-out' ? order[0] : order[order.length - 1]]; c.classList.add(out);
+    setTimeout(function () { turn(); paint(); c.classList.remove(out); setTimeout(function () { busy = false; }, still ? 0 : 450); }, still ? 0 : 420);
+  }
+  function next() { move('is-out', function () { order.push(order.shift()); }); }
+  function prev() { move('is-outb', function () { order.unshift(order.pop()); }); }
+  function arm() { clearInterval(timer); if (!paused && !hover) timer = setInterval(next, 4200); }
+  function label() { play.setAttribute('aria-pressed', String(paused)); play.setAttribute('aria-label', paused ? T("Play slideshow") : T("Pause slideshow")); }
+  box.addEventListener('click', function (e) {
+    var b = e.target.closest('[data-hl]');
+    if (!b) { if (e.target.closest('.hl-stack')) { next(); arm(); } return; }
+    var k = b.getAttribute('data-hl');
+    if (k === 'next') next(); else if (k === 'prev') prev(); else { paused = !paused; label(); }
+    arm();
+  });
+  box.addEventListener('mouseenter', function () { hover = true; arm(); });
+  box.addEventListener('mouseleave', function () { hover = false; arm(); });
+  box.addEventListener('focusin', function () { hover = true; arm(); });
+  box.addEventListener('focusout', function () { hover = false; arm(); });
+  box.addEventListener('keydown', function (e) { if (e.key === 'ArrowRight') { next(); arm(); } else if (e.key === 'ArrowLeft') { prev(); arm(); } });
+  if (still) label();
+  paint(); arm();
+})();

@@ -38,10 +38,6 @@ html:not([data-tier]) .tp[data-tier="explorer"] { display: inline; }
 .rev-promise .who { color: #6E1530; font-weight: 700; font-size: 14px; }
 
 /* ---------- Tours page ---------- */
-.tp-tier { display: inline-flex; align-items: center; gap: 8px; }
-.tp-tier-l { font-size: 14px; font-weight: 700; color: #6A5A50; }
-.tier-dd select { appearance: none; -webkit-appearance: none; border: 0; background: transparent; font: inherit; font-weight: 700; font-size: 14px; color: #2B2320; padding: 10px 18px 10px 0; cursor: pointer; }
-.tier-dd svg { position: absolute; right: 14px; pointer-events: none; }
 .tc-price .tp { font-size: inherit; }
 .tiers-sec .pg-head { margin-bottom: 36px; }
 .tiers3 { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; }
@@ -269,3 +265,140 @@ html.mfs-pending.mfs-first [data-tour-card] { visibility: hidden; }
 
 /* Tour page: a journey the owners have taken off the website. */
 .tr-off { margin: 0; align-self: flex-start; max-width: 40em; padding: 12px 16px; border-radius: 14px; background: #FBF6EE; color: #6E1530; font-size: 15px; font-weight: 700; line-height: 1.45; box-shadow: 0 10px 24px rgba(28, 22, 19, .25); }
+
+/* ---------- Tour page, the designer's second version (2026-11): photo stack, landscape art, tier icons ---------- */
+.tour-pg .tr-tier-name{display:inline-flex;align-items:center;gap:12px;min-width:0}
+/* tier card header: cream band across the top */
+.tour-pg .tr-tier-top{gap:10px;min-height:68px;box-sizing:border-box;margin:-22px -22px 0;padding:14px 18px;background:#F7EDE0;border-radius:20px 20px 0 0}
+.tour-pg .tr-tier-ic{flex:none;width:30px;height:30px}
+.tour-pg .tr-tier-name{margin-right:auto}
+/* only the chosen card shows the tick */
+.tour-pg .tr-check{width:18px;height:18px;flex:none;border-width:0}
+.tour-pg .tr-check .icon{width:10px;height:10px;stroke-width:2.4}
+.tour-pg .tr-tier[aria-checked="false"] .tr-check{display:none}
+/* unchosen cards: outline + shadow on hover */
+.tour-pg .tr-tier{transition:border-color .25s,box-shadow .25s}
+.tour-pg .tr-tier[aria-checked="false"]:hover{border-color:rgba(110,21,48,.35);box-shadow:0 12px 28px rgba(43,35,32,.09)}
+.tour-pg .tr-tier:focus-visible{outline:3px solid #F2B33D;outline-offset:3px}
+/* "Most popular": on the card's top edge, centred; beige when its card isn't chosen, wine when it is */
+.tour-pg .tr-tier{position:relative}
+.tour-pg .tr-badge{position:absolute;top:0;left:50%;transform:translate(-50%,-50%);z-index:1;padding:3px 10px;border:1px solid #C4A27F;border-radius:8px;background:#F7EDE0;color:#7A5638;font:700 10px/1.3 Manrope,system-ui,sans-serif;letter-spacing:.02em;white-space:nowrap;transition:border-color .25s,background .25s,color .25s}
+.tour-pg .tr-tier[aria-checked="true"] .tr-badge{border-color:#6E1530;background:#F8EAEC;color:#6E1530}
+/* "The route": the site's landscape — mountains, hills and a road with the van — along the bottom of the section */
+.tour-pg .tr-days{position:relative;isolation:isolate;overflow:clip;padding-bottom:250px}
+.tour-pg .tr-days > .wrap{position:relative;z-index:1}
+.tour-pg .tr-days-art{position:absolute;inset:0;z-index:0;pointer-events:none}
+.tour-pg .tr-days-land{position:absolute;left:0;right:0;bottom:0;width:100%;height:240px}
+.tour-pg .tr-days-clouds{position:absolute;top:40px;right:max(24px,calc((100% - 1240px)/2 + 24px));width:320px;height:auto}
+@media (max-width:760px){
+  .tour-pg .tr-days{padding-bottom:170px}
+  .tour-pg .tr-days-land{height:160px}
+  .tour-pg .tr-days-clouds{width:180px;top:40px;right:12px}
+}
+/* heading + map stay together while the days scroll */
+.tour-pg .tr-days-side{position:sticky;top:calc(var(--mfs-head,76px) + 44px)}
+.tour-pg .tr-days-side .pg-head{margin-bottom:24px}
+.tour-pg .tr-days-side .tr-map{position:static;top:auto}
+.tour-pg .tr-dlist{padding-top:8px}
+@media (max-width:1000px){.tour-pg .tr-days-side{position:static}}
+/* Included = green, Not included = calm grey (not red: it isn't a prohibition) */
+.tour-pg .tr-incl > div{overflow:hidden}
+.tour-pg .tr-incl h3{margin:-22px -24px 16px;padding:14px 24px;font-size:20px}
+.tour-pg .tr-incl > div:first-child h3{background:#E7EEDD;color:#2F4A24}
+.tour-pg .tr-incl > div:first-child h3 .icon{color:#3D5A2E}
+.tour-pg .tr-incl > div:first-child li::marker{color:#5E7F2E}
+.tour-pg .tr-incl > div:last-child h3{background:#EEEAE5;color:#5E5650}
+.tour-pg .tr-incl > div:last-child h3 .icon{color:#8A817A}
+.tour-pg .tr-incl > div:last-child li{color:#6A5F58}
+.tour-pg .tr-incl > div:last-child li::marker{color:#A39A92}
+/* "Make it yours": evening lights, a setting sun and vineyard hills */
+.pg-end .pg-art .end-lights{left:0;right:0;top:0;width:100%;height:120px}
+.pg-end .pg-art .end-sun{right:14%;bottom:110px;width:200px;height:200px}
+.pg-end .pg-art .end-birds{right:calc(14% + 30px);bottom:330px;width:100px;height:auto}
+@media (max-width:760px){
+  .pg-end .pg-art .end-lights{height:80px}
+  .pg-end .pg-art .end-sun{right:-30px;bottom:70px;width:140px;height:140px}
+  .pg-end .pg-art .end-birds{right:110px;bottom:200px;width:80px}
+}
+/* tighter gap between "Included" and "More journeys" */
+.tour-pg .tr-price{padding-bottom:64px}
+.tour-pg .tr-more{padding-top:72px}
+@media (max-width:760px){.tour-pg .tr-price{padding-bottom:48px}.tour-pg .tr-more{padding-top:48px}}
+/* hero buttons: breathing room */
+.tour-pg .tr-hero .pg-acts{display:flex;flex-wrap:wrap;gap:12px}
+/* "Why this journey": highlights beside a stack of travel snapshots that deals itself (independent of the list) */
+.tour-pg .hl-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:64px;align-items:center}
+.tour-pg .tr-high .tr-hi{grid-template-columns:minmax(0,1fr);gap:0;margin-top:28px}
+.tour-pg .tr-high .tr-hi li{padding:16px 0}
+.tour-pg .tr-high .tr-hi p{font-size:20px}
+.tour-pg .hl-photos{display:flex;flex-direction:column;align-items:center;gap:26px}
+.tour-pg .hl-stack{position:relative;width:min(100%,430px);aspect-ratio:1/1.06;margin-top:14px;cursor:pointer}
+.tour-pg .hl-card{position:absolute;inset:0;margin:0;padding:14px 14px 0;background:#fff;border-radius:6px;box-shadow:0 1px 0 rgba(43,35,32,.06),0 18px 40px rgba(43,35,32,.16);display:flex;flex-direction:column;transform:translate(var(--x,0),var(--y,0)) rotate(var(--r,0deg));transition:transform .6s cubic-bezier(.2,.8,.2,1);z-index:var(--z,1)}
+.tour-pg .hl-card img{display:block;width:100%;flex:1 1 auto;min-height:0;object-fit:cover;border-radius:2px;background:#E8DCCB}
+.tour-pg .hl-card figcaption{padding:14px 4px 18px;text-align:center;font:italic 400 21px/1.2 Fraunces,Georgia,serif;color:#6E1530}
+.tour-pg .hl-card[data-pos="0"]{--r:-2deg;--z:5}
+.tour-pg .hl-card[data-pos="1"]{--r:4deg;--x:18px;--y:6px;--z:4}
+.tour-pg .hl-card[data-pos="2"]{--r:-7deg;--x:-16px;--y:10px;--z:3}
+.tour-pg .hl-card[data-pos="3"],.tour-pg .hl-card[data-pos="4"],.tour-pg .hl-card[data-pos="5"],.tour-pg .hl-card[data-pos="6"]{--r:-7deg;--x:-16px;--y:10px;--z:1}
+.tour-pg .hl-card.is-out{--x:-54%;--y:-14px;--r:-11deg;--z:6;transition:transform .42s cubic-bezier(.3,0,.3,1)}
+.tour-pg .hl-card.is-outb{--x:-54%;--y:-14px;--r:-11deg;--z:0;transition:transform .42s cubic-bezier(.3,0,.3,1)}
+.tour-pg .hl-ctrl{display:flex;align-items:center;gap:10px}
+.tour-pg .hl-btn{display:grid;place-items:center;width:44px;height:44px;border-radius:50%;border:1.5px solid #DCC9B2;background:#fff;color:#2B2320;cursor:pointer;transition:border-color .2s,color .2s}
+.tour-pg .hl-btn:hover{border-color:#6E1530;color:#6E1530}
+.tour-pg .hl-btn:focus-visible{outline:3px solid #F2B33D;outline-offset:2px}
+.tour-pg .hl-count{min-width:56px;text-align:center;font-size:14px;font-weight:600;color:#6A5A50}
+.tour-pg .hl-count b{color:#2B2320}
+.tour-pg .hl-play{margin-left:6px}
+.tour-pg .hl-play .i-play,.tour-pg .hl-play[aria-pressed="true"] .i-pause{display:none}
+.tour-pg .hl-play[aria-pressed="true"] .i-play{display:block}
+@media (prefers-reduced-motion:reduce){.tour-pg .hl-card,.tour-pg .hl-card.is-out,.tour-pg .hl-card.is-outb{transition:none}}
+@media (max-width:900px){
+  .tour-pg .hl-grid{grid-template-columns:minmax(0,1fr);gap:40px}
+  .tour-pg .hl-stack{width:min(86%,400px)}
+}
+/* route map without the white card: the land sits on the page, the Black Sea runs out to the edge (as on the homepage) */
+.tour-pg .tr-map-in{padding:0;background:none;box-shadow:none;border-radius:0}
+.tour-pg .tr-map .gmap{overflow:visible}
+.tour-pg .gmap__land{fill:#FCF8F2}
+.tour-pg .gmap__stop text{stroke:#FCF8F2}
+.tour-pg .gmap__sea{fill:#7FA3B3}
+/* "Why this journey": a quiet circle behind the photos, a couple of clouds and birds */
+.tour-pg .tr-high{position:relative;isolation:isolate}
+.tour-pg .tr-high > .hl-grid{position:relative;z-index:1}
+.tour-pg .hl-deco{position:absolute;top:0;bottom:0;left:calc(50% - 50vw);width:100vw;z-index:0;pointer-events:none;overflow:hidden}
+.tour-pg .hl-rays{position:absolute;width:600px;height:600px;left:calc(50% + min(1240px,100vw)/4 + 8px);top:50%;transform:translate(-50%,-50%)}
+.tour-pg .hl-clouds{position:absolute;width:360px;height:auto;top:4px;left:calc(50% - min(1240px,100vw)/2 - 120px)}
+@media (max-width:900px){
+  .tour-pg .hl-rays{width:460px;height:460px;left:50%;top:auto;bottom:-20px;transform:translateX(-50%)}
+  .tour-pg .hl-clouds{width:200px;top:8px;left:auto;right:-50px}
+}
+/* route: the part not travelled yet is dotted, the travelled part fills in solid as the days scroll */
+.tour-pg .gmap__route-bg{stroke:#6E1530;stroke-opacity:.55;stroke-width:3;stroke-dasharray:0 9;stroke-linecap:round}
+.tour-pg .gmap__route{stroke-dasharray:1 1;stroke-dashoffset:1;transition:stroke-dashoffset .7s ease}
+@media (prefers-reduced-motion:reduce){.tour-pg .gmap__route{transition:none}}
+.tour-pg .gmap__stop.is-passed .gmap__dot{fill:#6E1530}
+
+/* ---------- Tours page, the designer's second version (2026-11) ---------- */
+/* "Prices for": out of the filters; a travel-style switch under the page title, left-aligned, with a "?" to the tier explainer */
+.tier-switch{display:flex;align-items:center;justify-content:flex-start;gap:2px;margin:0}
+.ts-seg{position:relative;display:inline-flex;padding:4px;gap:4px;border-radius:999px;background:#ECDCC6;box-shadow:inset 0 1px 2px rgba(43,35,32,.06)}
+.ts-opt{display:inline-flex;align-items:center;gap:8px;min-height:40px;padding:6px 16px 6px 10px;border:0;border-radius:999px;background:transparent;font:600 14px/1 Manrope,system-ui,sans-serif;color:#6A5A50;cursor:pointer;transition:background .2s,color .2s}
+.ts-opt:hover{background:#FBF6EE;color:#2B2320}
+.ts-opt[aria-checked="true"]{color:#2B2320}
+.ts-opt{position:relative;z-index:1}
+.ts-opt:hover{background:transparent}
+.ts-opt[aria-checked="false"]:hover{color:#2B2320}
+.ts-thumb{position:absolute;top:4px;bottom:4px;left:0;width:0;border-radius:999px;background:#FFFDF9;box-shadow:0 2px 6px rgba(43,35,32,.1);transform:translateX(var(--tx,0));transition:transform .35s cubic-bezier(.3,.7,.3,1),width .35s cubic-bezier(.3,.7,.3,1)}
+.ts-seg:not(.ts-ready) .ts-thumb{transition:none}
+@media (prefers-reduced-motion:reduce){.ts-thumb{transition:none}}
+.ts-opt:focus-visible,.ts-help:focus-visible{outline:3px solid #F2B33D;outline-offset:2px}
+.ts-ic{width:24px;height:24px;flex:none}
+.ts-help{display:grid;place-items:center;width:28px;height:32px;border-radius:50%;color:#B5A493;transition:color .2s}
+.ts-help:hover{color:#6A5A50}
+.ts-help svg{width:15px;height:15px}
+@media (max-width:640px){
+  .tier-switch{width:100%}
+  .ts-seg{flex:1 1 auto;justify-content:space-between;border-radius:22px}
+  .ts-opt{flex:1 1 0;justify-content:center;flex-direction:column;gap:4px;padding:8px 4px;border-radius:18px;font-size:12px;min-height:56px}
+  .ts-thumb{border-radius:18px}
+}

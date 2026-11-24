@@ -15,7 +15,7 @@ export const PLACES = {
   kutaisi: { name: "Kutaisi", lat: 42.2679, lon: 42.6946, label: "b", major: true },
   gelati: { name: "Gelati", lat: 42.2947, lon: 42.7681, label: "r" },
   sataplia: { name: "Sataplia", lat: 42.3125, lon: 42.6744, label: "l" },
-  prometheus: { name: "Prometheus Cave", lat: 42.3767, lon: 42.6006, label: "t" },
+  prometheus: { name: "Prometheus Cave", lat: 42.3767, lon: 42.6006, label: "rt" },
   martvili: { name: "Martvili Canyon", lat: 42.4578, lon: 42.3778, label: "l" },
   vani: { name: "Vani", lat: 42.0833, lon: 42.5167, label: "l" },
   mestia: { name: "Mestia", lat: 43.0458, lon: 42.7266, label: "t", major: true },

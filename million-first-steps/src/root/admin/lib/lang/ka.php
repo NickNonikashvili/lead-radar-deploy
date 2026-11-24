@@ -1260,7 +1260,6 @@ return [
   'Switched a team member’s access back on' => 'გუნდის წევრის წვდომა ისევ ჩართო',
   'Removed a team member' => 'გუნდის წევრი წაშალა',
   'Daily clean-up removed old records' => 'ყოველდღიურმა გასუფთავებამ ძველი ჩანაწერები წაშალა',
-  // Fixes after the review (sign-in, refunds, exports, statistics, activity log, form emails)
   'You have been signed out. If you can’t sign in, please ask the owners.' => 'თქვენ გამოხვედით სისტემიდან. თუ შესვლა ვერ მოახერხეთ, მიმართეთ მფლობელებს.',
   'Money in or out' => 'შემოსული თუ დაბრუნებული თანხა',
   'Payment received' => 'მიღებული გადახდა',
@@ -1331,4 +1330,6 @@ return [
   'Sort: newest first' => 'დალაგება: ჯერ უახლესი',
   'The website shows the prices, contact details and notice you set here. Last sent to the website {when}.' => 'საიტი აჩვენებს აქ დაყენებულ ფასებს, საკონტაქტო მონაცემებსა და შეტყობინებას. ბოლოს საიტზე გაიგზავნა {when}.',
   'Nothing sent yet — the website shows everything as it was built. Your changes go to the website the first time you save one here.' => 'ჯერ არაფერი გაგზავნილა — საიტი ყველაფერს ისე აჩვენებს, როგორც შეიქმნა. ცვლილებები საიტზე პირველივე შენახვისას გადავა.',
+  'It is kept inside the website, in public_html/admin/data. When you upload a new version of the website, extract it over the old files — never delete public_html or admin/data first, or the team’s accounts and every request go with them. Download a backup before each upload.' => 'ის ინახება საიტის შიგნით, public_html/admin/data-ში. როცა საიტის ახალ ვერსიას ტვირთავთ, ფაილები ძველების თავზე ამოარქივეთ — არასოდეს წაშალოთ წინასწარ public_html ან admin/data, თორემ გუნდის ანგარიშები და ყველა მოთხოვნა მათთან ერთად დაიკარგება. ყოველი ატვირთვის წინ გადმოწერეთ სარეზერვო ასლი.',
+  'It is kept in the “{folder}” folder next to public_html, outside the website, so uploading a new version of the website never touches it.' => 'ის ინახება public_html-ის გვერდით მდებარე „{folder}“ საქაღალდეში, საიტის გარეთ, ამიტომ საიტის ახალი ვერსიის ატვირთვა მას არ ეხება.',
 ];

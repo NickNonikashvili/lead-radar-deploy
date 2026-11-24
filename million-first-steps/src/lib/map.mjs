@@ -1,6 +1,7 @@
 // Inline SVG map of Georgia (Natural Earth outline, see scripts/make-geo.mjs) with tour routes.
 import fs from "node:fs";
 import { PLACES } from "../data/places.mjs";
+import { MAP_WATER } from "./tour-art.mjs";
 
 const geo = JSON.parse(fs.readFileSync(new URL("../data/geo.json", import.meta.url), "utf8"));
 const { lon0, lat0, k, cos, pad } = geo.projection;
@@ -32,6 +33,7 @@ const LABEL = {
   l: (x, y) => ({ x: x - 13, y: y + 6, a: "end" }),
   t: (x, y) => ({ x, y: y - 14, a: "middle" }),
   b: (x, y) => ({ x, y: y + 25, a: "middle" }),
+  rt: (x, y) => ({ x: x + 13, y: y - 3.6, a: "start" }), // right, a little raised (Prometheus Cave, clear of Kutaisi)
 };
 
 /** Cumulative share (0–1) of the route's length at each point of `route`. */
@@ -82,6 +84,7 @@ export function georgiaMap({ route = [], stops = [], className = "", label = "Ma
   }
 
   return `<svg class="gmap ${className}" viewBox="${geo.viewBox}"${crop} xmlns="http://www.w3.org/2000/svg" role="img" aria-label="${label}">
+  ${className.includes("gmap--tour") ? MAP_WATER : ""}
   <path class="gmap__land" d="${geo.outline}"/>
   ${regions ? `<g class="gmap__regions">${geo.regions.map((r) => `<path d="${r.d}" data-region="${r.name}"><title>${r.name}</title></path>`).join("")}</g>` : ""}
   ${geo.rivers.map((d) => `<path class="gmap__river" d="${d}"/>`).join("")}

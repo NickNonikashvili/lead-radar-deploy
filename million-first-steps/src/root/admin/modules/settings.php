@@ -507,6 +507,9 @@ $months = $errors && $form === 'data' ? post('retention_months') : (string) (int
 $spamDays = $errors && $form === 'data' ? post('spam_days') : (string) (int) setting('spam_retention_days');
 $live = mg_live_json_info();
 $dbFile = mfs_data_dir() . '/mfs.sqlite';
+// Where the database sits: outside the website (safe from uploads) or, as a fallback, inside it.
+$dataDir = mfs_data_dir();
+$dataInside = strpos(str_replace('\\', '/', (string) @realpath($dataDir)) . '/', str_replace('\\', '/', (string) @realpath(MFS_SITE_ROOT)) . '/') === 0;
 $dbSize = (int) @filesize($dbFile) + (int) @filesize($dbFile . '-wal');
 $lastBackup = db_row("SELECT at, user_id FROM audit_log WHERE action = 'settings.backup' ORDER BY id DESC LIMIT 1");
 $csvCounts = [
@@ -777,6 +780,9 @@ ob_start(); ?>
           <p class="strong"><?= h(t('Database backup')) ?></p>
           <p class="small muted"><?= h(t('Everything in the team area — requests, bookings, payments, notes, the team and settings — in one file ({size}).', ['size' => mg_size($dbSize)])) ?>
             <?= $lastBackup ? h(t('Last downloaded {when} by {who}.', ['when' => fmt_ago($lastBackup['at']), 'who' => mg_user_name($lastBackup['user_id']) ?: t('a former team member')])) : h(t('Not downloaded yet.')) ?></p>
+          <p class="small<?= $dataInside ? ' strong' : ' muted' ?>"><?= h($dataInside
+            ? t('It is kept inside the website, in public_html/admin/data. When you upload a new version of the website, extract it over the old files — never delete public_html or admin/data first, or the team’s accounts and every request go with them. Download a backup before each upload.')
+            : t('It is kept in the “{folder}” folder next to public_html, outside the website, so uploading a new version of the website never touches it.', ['folder' => basename($dataDir)])) ?></p>
         </div>
         <form method="post" action="<?= h(url('settings')) ?>" class="st-dz__action">
           <?= csrf_field() ?><input type="hidden" name="action" value="backup">

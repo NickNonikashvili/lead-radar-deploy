@@ -78,7 +78,7 @@ All forms — the trip request on the home page, the contact form and the partne
 
 **Links in emails** (password resets, *Open in the admin panel*) and the sender's domain use `siteUrl` from `src/config.mjs`. While that's empty, they use the address the first owner signed in at, which then stays fixed, so set `siteUrl` before building for the live site, or do the first sign-in at the real domain rather than Hostinger's temporary address. `admin/config.local.php` can override it on the server with `define('MFS_SITE_URL', 'https://…');`.
 
-**Where the data lives.** The database (`mfs.sqlite`) goes in a `mfs-data` folder *next to* `public_html`, outside the website, so it can't be downloaded. Only if that folder can't be created does it fall back to `public_html/admin/data/`, which `.htaccess` blocks. Re-uploading the website never touches the data. Download a backup now and then from *Settings*.
+**Where the data lives.** The database (`mfs.sqlite`) goes in a `mfs-data` folder *next to* `public_html`, outside the website, so it can't be downloaded. Only if that folder can't be created does it fall back to `public_html/admin/data/`, which it then creates and closes off with its own `.htaccess`. The website files never include a data folder, so uploading a new version can't overwrite the database. *Settings › Backups & downloads* says where yours is kept. If it is inside `public_html`, always extract new versions over the old files, never delete `public_html` first. Download a backup now and then from *Settings*, and before every upload.
 
 Needs PHP 7.4+ with the `pdo_sqlite` extension (Hostinger has it).
 

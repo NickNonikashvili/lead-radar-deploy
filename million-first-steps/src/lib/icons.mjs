@@ -1,5 +1,8 @@
 // Line icons drawn for this site (24×24, stroke = currentColor).
 const P = {
+  // From the designer's tour page (2026-11): a plane for the last day, a sedan for the Wanderer car.
+  plane: '<path d="M3 20.5h18"/><path d="M3.2 14.6l2.6 2.2c.5.4 1.2.5 1.8.2l11.6-6.2c1-.5 1.4-1.7.9-2.6s-1.7-1.2-2.7-.7l-3.6 1.9-6.4-3.1-2 1 4.3 4.2-3.4 1.8-2.3-1.2-1.5.8z"/>',
+  sedan: '<path d="M4.8 16.5H3a1 1 0 0 1-1-1v-2.2a1.5 1.5 0 0 1 1.2-1.5l3.6-.8 2.7-2.9a2 2 0 0 1 1.5-.6h4.4a2 2 0 0 1 1.5.7l2.5 2.9 2.4.5a1.5 1.5 0 0 1 1.2 1.5v2.4a1 1 0 0 1-1 1h-2.6M8.8 16.5h6.6M7.3 11h11.9M12.9 7.6V11"/><circle cx="6.8" cy="16.5" r="2"/><circle cx="17.4" cy="16.5" r="2"/>',
   mountains: '<path d="M2 20 9 7l4 6 2-3 7 10Z"/><path d="m7.5 9.8 1.5 1.4 1.4-1.6"/>',
   wine: '<circle cx="9" cy="10" r="2.2"/><circle cx="13.4" cy="10" r="2.2"/><circle cx="11.2" cy="13.8" r="2.2"/><circle cx="7" cy="13.8" r="2.2"/><circle cx="15.4" cy="13.8" r="2.2"/><circle cx="9" cy="17.6" r="2.2"/><circle cx="13.4" cy="17.6" r="2.2"/><path d="M11.2 7.8V4.5c1.6-1.6 3.8-1.8 5.5-.8"/>',
   grapes: '<circle cx="9" cy="10" r="2.2"/><circle cx="13.4" cy="10" r="2.2"/><circle cx="11.2" cy="13.8" r="2.2"/><circle cx="7" cy="13.8" r="2.2"/><circle cx="15.4" cy="13.8" r="2.2"/><circle cx="11.2" cy="17.6" r="2.2"/><path d="M11.2 7.8V4.5c1.6-1.6 3.8-1.8 5.5-.8"/>',

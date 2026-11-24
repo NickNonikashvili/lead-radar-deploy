@@ -30,7 +30,7 @@ export const CARDS = {
   },
   "tusheti-the-last-road": {
     img: "photos/tour-tusheti-800.webp",
-    alt: "Stone towers of a Tusheti village above a mountain valley",
+    alt: "The dirt road winding along a mountain valley towards Tusheti",
     stops: ["Telavi", "Abano Pass", "Omalo", "Dartlo"],
     seasons: ["summer"],
   },
