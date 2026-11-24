@@ -174,22 +174,21 @@ Ideas that would help further:
 
 ## Look
 
-The site is set in the world of the EvoSoft film: a black studio, a glossy floor and 3D spheres, lit by two lights.
-Electric blue (`--accent`) does most of the work; neon pink (`--pink`) is the second light. "evolution" in the slogan runs
-from blue to pink (`--duo`), and pink also marks section numbers, labels, the cursor, the last process step and the
-reading line.
+Flat and dark, in three colours: black (with off-white type), neon yellow `#EEFF00` and burgundy `#7A0019`. There are
+no gradients, glows or spheres: every coloured thing is one solid colour.
 
-- **Dark by default.** A visitor who picks light with the toggle keeps it; everyone else gets dark.
+- **Yellow** is for action and emphasis: buttons, the word "evolution" in the slogan, the typing cursor, the process
+  line, the reading line, focus outlines, small square markers.
+- **Burgundy** is for solid blocks: the stats band, the section numbers, the last process step, the call-to-action
+  panel, chosen options in the quote form. A huge burgundy copy of the (upside-down) mark stands behind the home page
+  slogan and the top of inner pages.
+- **Dark by default.** A visitor who picks light with the toggle keeps it; there, yellow becomes a highlighter behind
+  black text and burgundy takes over the small accents.
 - **Type.** Inter, the logo's typeface, for everything. JetBrains Mono for small labels. Noto Sans Georgian for Georgian.
-- **The slogan.** "Your digital evolution starts here" is the home page headline, with its words rising in out of a blur
-  and "evolution" lit blue. It is also written huge in every footer, on the share image (`og.jpg`) and in the structured
-  data.
-- **The spheres** are the Blender renders from the film (`ad-video-classic/blender/sphere_atlas.py`):
-  - `assets/js/orbs.js` draws them in the home page hero, on the floor with their reflections. Each one shows the view
-    matching where the camera sees it from, and the camera drifts with the pointer.
-  - `site-builder/orbs.py` cuts the sprite strips, the cluster behind inner page heads (`orbs/head.webp`) and `og.jpg`.
-  - Reduced motion draws one still frame.
+- **The slogan.** "Your digital evolution starts here" is the home page headline, with its words rising in. It is also
+  written huge in every footer, on the share image and in the structured data.
+- **The share image** (`assets/img/og.jpg`) is drawn by `site-builder/og.py`:
 
-```bash
-python3 site-builder/orbs.py path/to/spheres      # the folder sphere_atlas.py wrote
-```
+  ```bash
+  python3 site-builder/og.py
+  ```
