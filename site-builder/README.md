@@ -174,8 +174,9 @@ Ideas that would help further:
 
 ## Look
 
-Dark, in three colours: black (with off-white type), neon yellow `#EEFF00` and burgundy `#7A0019`. There are no colour
-gradients and no spheres; depth comes from light instead:
+Dark, in three colours: black (with off-white type), neon yellow `#EEFF00` and burgundy `#7A0019`. Depth comes from light,
+and the few gradients stay inside those three colours (a burgundy glow behind the hero mark, a sheen on cards and
+buttons, light across the burgundy blocks, the footer slogan dissolving into black):
 
 - **The 3D mark.** The (upside-down) EvoSoft mark, modelled in Blender as a slab of lacquered burgundy lit by a
   neon-yellow edge light (`assets/img/mark-3d.webp`). It floats beside the home page slogan and stands behind the
