@@ -5,7 +5,7 @@
   python3 site-builder/orbs.py <atlas dir> [Inter-SemiBold.otf]
 
 Writes into evosoft-site/assets/img/:
-  orbs/blue.webp, white.webp, chrome.webp   sprite strips for the home page hero (orbs.js): 7 views around the front
+  orbs/blue.webp, pink.webp, white.webp, chrome.webp   sprite strips for the home page hero (orbs.js): 7 views around the front
                                             (every 20 degrees), seen from 10 degrees above (row 1) and below (row 2,
                                             for reflections in the floor), 128 px each
   orbs/head.webp                            a cluster of spheres on the glossy floor, behind the top of inner pages
@@ -33,7 +33,7 @@ def tile(kind, i, j, size):
 
 def strips():
     os.makedirs(os.path.join(IMG, 'orbs'), exist_ok=True)
-    for kind in ('blue', 'white', 'chrome'):
+    for kind in ('blue', 'pink', 'white', 'chrome'):
         S = 128
         out = Image.new('RGBA', (S * len(FRONT), S * 2), (0, 0, 0, 0))
         for k, i in enumerate(FRONT):
@@ -61,8 +61,8 @@ def cluster(w, h, floor, spheres, refl=0.32):
     return im
 
 def head():
-    sp = [('blue', 1180, 120, 0, 3), ('chrome', 1420, 70, 0, 2), ('white', 980, 46, 0, 4), ('blue', 1560, 34, 140, 1),
-          ('blue', 1310, 26, 0, 5), ('white', 1640, 52, 0, 2), ('chrome', 1080, 22, 210, 3), ('blue', 860, 18, 0, 4)]
+    sp = [('blue', 1180, 120, 0, 3), ('chrome', 1420, 70, 0, 2), ('pink', 980, 46, 0, 4), ('blue', 1560, 34, 140, 1),
+          ('pink', 1310, 26, 0, 5), ('white', 1640, 52, 0, 2), ('chrome', 1080, 22, 210, 3), ('blue', 860, 18, 0, 4)]
     cluster(1800, 640, 470, sp).save(os.path.join(IMG, 'orbs', 'head.webp'), quality=84, method=6)
 
 def og():
@@ -73,17 +73,22 @@ def og():
     glow = Image.new('L', (W, H), 0); ImageDraw.Draw(glow).ellipse((380, 300, 1300, 560), fill=255)
     glow = glow.filter(ImageFilter.GaussianBlur(90))
     bg = Image.composite(Image.new('RGB', (W, H), (22, 34, 66)), bg, glow.point(lambda p: int(p * 0.7)))
+    pk = Image.new('L', (W, H), 0); ImageDraw.Draw(pk).ellipse((-200, 380, 520, 640), fill=255); pk = pk.filter(ImageFilter.GaussianBlur(110))
+    bg = Image.composite(Image.new('RGB', (W, H), (70, 10, 48)), bg, pk.point(lambda p: int(p * 0.55)))
     im = bg.convert('RGBA')
-    im.alpha_composite(cluster(W, H, 470, [('blue', 905, 108, 0, 3), ('chrome', 1085, 62, 0, 2), ('white', 760, 40, 0, 4), ('blue', 1150, 30, 120, 1), ('white', 1010, 24, 0, 5), ('blue', 690, 18, 0, 4)]))
+    im.alpha_composite(cluster(W, H, 470, [('blue', 905, 108, 0, 3), ('chrome', 1085, 62, 0, 2), ('pink', 760, 40, 0, 4), ('blue', 1150, 30, 120, 1), ('white', 1010, 24, 0, 5), ('pink', 690, 18, 0, 4)]))
     # the slogan
     f1 = ImageFont.truetype(FONT, 64); dd = ImageDraw.Draw(im)
-    lines = [[('Your digital', (238, 242, 248))], [('evolution', (110, 155, 255)), (' starts here', (238, 242, 248))]]
-    y = 180
-    for ln in lines:
-        x = 72
-        for txt, col in ln:
-            dd.text((x, y), txt, font=f1, fill=col + (255,)); x += dd.textlength(txt, font=f1)
-        y += 78
+    dd.text((72, 180), 'Your digital', font=f1, fill=(238, 242, 248, 255))
+    ew = int(dd.textlength('evolution', font=f1)); mask = Image.new('L', (ew + 10, 90), 0)
+    ImageDraw.Draw(mask).text((0, 0), 'evolution', font=f1, fill=255)
+    grad = Image.new('RGBA', mask.size)
+    for x in range(mask.width):                  # electric blue -> violet -> neon pink, as on the website
+        k = x / mask.width; c = [(110, 155, 255), (183, 132, 255), (255, 61, 154)]
+        a, b, f = (c[0], c[1], k / 0.55) if k < 0.55 else (c[1], c[2], (k - 0.55) / 0.45)
+        ImageDraw.Draw(grad).line([(x, 0), (x, 89)], fill=tuple(int(a[i] + (b[i] - a[i]) * f) for i in range(3)) + (255,))
+    grad.putalpha(mask); im.alpha_composite(grad, (72, 258))
+    dd.text((72 + ew, 258), ' starts here', font=f1, fill=(238, 242, 248, 255))
     fs = ImageFont.truetype(FONT.replace('SemiBold', 'Medium'), 24)
     dd.text((74, 360), 'Websites, apps and business software, built to order.', font=fs, fill=(150, 160, 178, 255))
     # the logo (white), top left

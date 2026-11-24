@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """The EvoSoft logo, generated from one source of truth.
 
-The mark is the X/A star (traced from the master artwork and made exactly symmetric); the wordmark is EVOSOFT in
+The mark is the X/A star (traced from the master artwork and made exactly symmetric), shown upside down; the wordmark is EVOSOFT in
 Inter ExtraBold, slightly tracked, converted to outlines, matched to the 3D logo reveal. Writes:
 
   site-builder/lib/logo.mjs                 inline SVGs the build puts in every page (colours come from CSS)
@@ -46,8 +46,11 @@ def num(v, nd=2):
     s = s.rstrip('0').rstrip('.') if '.' in s else s
     return '0' if s in ('-0', '') else s
 
+FLIP = True           # the mark is shown upside down (the client's choice): mirrored top to bottom inside its box
+
 def mark_d(scale, ox=0.0, oy=0.0):
-    return ''.join('M' + 'L'.join(num(ox + x * scale) + ' ' + num(oy + y * scale) for x, y in p) + 'Z' for p in MARK)
+    fy = (lambda y: MH - y) if FLIP else (lambda y: y)
+    return ''.join('M' + 'L'.join(num(ox + x * scale) + ' ' + num(oy + fy(y) * scale) for x, y in p) + 'Z' for p in MARK)
 
 # ---- the wordmark ----
 WORD = 'EVOSOFT'

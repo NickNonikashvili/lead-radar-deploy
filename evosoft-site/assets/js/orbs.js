@@ -1,5 +1,5 @@
 /* The home page hero: 3D spheres on a black glossy floor, as in the EvoSoft film.
-   The spheres are rendered in Blender (glossy blue, white, chrome) from 7 angles around the front, seen from above and
+   The spheres are rendered in Blender (glossy blue, neon pink, white, chrome) from 7 angles around the front, seen from above and
    from below (the view below is their reflection in the floor). Each sphere shows the view that matches where the camera
    sees it from, so its highlights stay put in the world while the camera drifts with the pointer and the scroll.
    Now and then a sphere drops out of the dark and bounces. © 2026 EvoSoft Solutions. All rights reserved. */
@@ -13,7 +13,7 @@
   const small = window.matchMedia('(max-width: 700px)').matches;
   const TILE = 128, VIEWS = 7, STEP = 20;            // the sprite strips: 7 views, every 20 degrees, from -60 to +60
   const G = 9.8, HORIZON = 0.73;                       // the floor's horizon sits where the CSS draws its line of light
-  const KINDS = ['blue', 'white', 'chrome'];
+  const KINDS = ['blue', 'pink', 'white', 'chrome'];
   const img = {};
   let W = 0, H = 0, DPR = 1, F = 1, ready = 0, raf = 0, visible = true, t0 = performance.now();
 
@@ -30,7 +30,7 @@
     const z = big ? 6.5 + rnd() * 5 : 5 + rnd() * 22;
     const side = i % 2 ? -1 : 1, x = side * z * (cone[0] + rnd() * (cone[1] - cone[0]));
     const float = !big && !small && rnd() < 0.3;
-    const k = rnd(), kind = k < 0.56 ? 'blue' : k < 0.8 ? 'white' : 'chrome';
+    const k = rnd(), kind = i === 1 ? 'pink' : k < 0.48 ? 'blue' : k < 0.64 ? 'pink' : k < 0.82 ? 'white' : 'chrome';
     spheres.push({ x, z, r, kind, y0: float ? r + 0.6 + rnd() * 2.6 : r, float, ph: rnd() * 6.28, sp: 0.25 + rnd() * 0.4, drift: (rnd() - 0.5) * 0.05 });
   }
   // the occasional drop: a sphere falls out of the dark, bounces and comes to rest; a ring spreads on the floor
@@ -38,7 +38,7 @@
   let nextDrop = 2.6;
   function spawnDrop(t) {
     const side = rnd() < 0.5 ? -1 : 1, z = 7 + rnd() * 9, r = 0.16 + rnd() * 0.22;
-    drops.push({ x: side * z * (cone[0] + rnd() * (cone[1] - cone[0]) * 0.6), z, r, kind: rnd() < 0.7 ? 'blue' : rnd() < 0.5 ? 'white' : 'chrome', t, h: 7 + rnd() * 3 });
+    drops.push({ x: side * z * (cone[0] + rnd() * (cone[1] - cone[0]) * 0.6), z, r, kind: rnd() < 0.5 ? 'blue' : rnd() < 0.6 ? 'pink' : 'chrome', t, h: 7 + rnd() * 3 });
     if (drops.length > 6) drops.shift();
     nextDrop = t + 5 + rnd() * 5;
   }
@@ -130,9 +130,12 @@
   function loop(now) { raf = 0; draw(now); if (visible && !reduce) raf = requestAnimationFrame(loop); }
   function start() { if (!raf && visible && !reduce) raf = requestAnimationFrame(loop); }
 
+  // a strip that fails to load is replaced by the blue one, so the scene still draws
+  const done = () => { if (++ready === KINDS.length) { KINDS.forEach((k) => { if (!img[k]) img[k] = img.blue || Object.values(img)[0]; }); if (Object.values(img)[0]) { resize(); canvas.classList.add('on'); start(); } } };
   KINDS.forEach((k) => {
     const im = new Image(); im.decoding = 'async';
-    im.onload = () => { img[k] = im; if (++ready === KINDS.length) { resize(); canvas.classList.add('on'); start(); } };
+    im.onload = () => { img[k] = im; done(); };
+    im.onerror = done;
     im.src = canvas.dataset.src + k + '.webp';
   });
   if ('ResizeObserver' in window) new ResizeObserver(resize).observe(canvas); else window.addEventListener('resize', resize);
