@@ -6,3 +6,5 @@ evosoft-site/api/config.php
 dist/
 /evosoft-data/
 /evosoft-config.php
+__pycache__/
+*.pyc
