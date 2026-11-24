@@ -16,9 +16,20 @@ sr, s = w.read(song_p); assert sr == SR; s = s.astype(float) / 32768
 NT = int(round(TOTAL * SR)); s = s[int(START * SR):int(START * SR) + NT]; s = np.pad(s, ((0, NT - len(s)), (0, 0)))
 t = np.arange(len(s)) / SR
 g = np.clip(t / 0.05, 0, 1)
-a, b = 31.80, STORY + 1.6                               # the song falls away into the orb
-m = (t >= a) & (t < b); g[m] *= 0.5 * (1 + np.cos(np.pi * (t[m] - a) / (b - a))); g[t >= b] = 0
+# the hand-over: a long, even fade (in dB) that starts as the lights drain, sinks under the start of the logo reveal
+# and is gone just before the X locks; the song also turns muffled, as if it were falling into the orb with the camera
+LOCK = STORY + 128 / 30
+F0, F1, F2 = 29.4, STORY, LOCK - 0.35                    # 0 dB -> -6 dB at the hand-over -> silence before the lock
+u1 = np.clip((t - F0) / (F1 - F0), 0, 1); u2 = np.clip((t - F1) / (F2 - F1), 0, 1)
+db = np.where(t < F1, -6 * u1 ** 1.5, -6 - 54 * u2 ** 2.0)
+g *= 10 ** (np.maximum(db, -80) / 20); g[t >= F2] = 0
 s *= g[:, None]
+fc = np.where(t < 30.4, 18000.0, 18000.0 * (1100 / 18000) ** np.clip((t - 30.4) / (LOCK - 30.4), 0, 1))
+a1 = np.exp(-2 * np.pi * fc / SR)                         # two one-pole low-passes, cutoff sweeping 18 kHz -> 1.1 kHz
+for ch in range(2):
+    x = s[:, ch]; i0 = int(30.3 * SR); y1 = x[i0]; y2 = x[i0]
+    for i in range(i0, len(x)):
+        y1 = (1 - a1[i]) * x[i] + a1[i] * y1; y2 = (1 - a1[i]) * y1 + a1[i] * y2; x[i] = y2
 loud = s[int(18 * SR):int(30 * SR)]
 s *= 10 ** ((-15.5 - 20 * np.log10(np.sqrt((loud ** 2).mean()))) / 20)
 fx = np.zeros_like(s)
