@@ -19,6 +19,8 @@ Each entry in CARDS is one card (the same front, its own back). For each, busine
   <slug>-front.png, -back.png   previews at the finished size (no bleed)
   <slug>-proof.png        both sides with the cut line (coral) and the safe area (dashed)
   <slug>-mockup.jpg       both sides on a table, for showing people
+  <slug>-A4-10up.pdf      ten cards on an A4 sheet with crop marks (page 1 fronts, page 2 backs, lined up for
+                          double-sided printing, flip on the long edge); print at 100 % / actual size, then cut
 The build stops if any text, logo or the QR code strays outside the safe area, or if the QR code doesn't read back.
 © 2026 EvoSoft Solutions. All rights reserved.
 """
@@ -30,6 +32,7 @@ from fontTools.pens.svgPathPen import SVGPathPen
 from fontTools.pens.transformPen import TransformPen
 from PIL import Image, ImageDraw, ImageFilter
 from pypdf import PdfReader, PdfWriter
+from pypdf import PageObject, Transformation
 from pypdf.generic import RectangleObject
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -342,8 +345,41 @@ def build(card):
         fin = im.crop((px(BLEED), px(BLEED), px(BLEED + TRIM_W), px(BLEED + TRIM_H)))
         fin.resize((1800, round(1800 * TRIM_H / TRIM_W)), Image.LANCZOS).save(os.path.join(out, f'{slug}-{s}.png'), optimize=True)
     proof(full, os.path.join(out, f'{slug}-proof.png'))
+    impose(rgb, os.path.join(out, f'{slug}-A4-10up.pdf'))
     mockup(os.path.join(out, f'{slug}-front.png'), os.path.join(out, f'{slug}-back.png'), os.path.join(out, f'{slug}-mockup.jpg'))
     print(f'{slug}: ok ({", ".join(sorted(os.listdir(out)))})')
+
+# A4 sheet: 2 x 5 cards, each with its own 3 mm bleed, crop marks in the margins. The layout is symmetric about the
+# sheet's centre line, so page 2 (backs) lands behind page 1 (fronts) when printed double-sided, flipped on the long edge.
+A4_W, A4_H, COLS, ROWS = 210.0, 297.0, 2, 5
+
+def impose(card_pdf, path):
+    src = PdfReader(card_pdf)
+    ox, oy = (A4_W - COLS * W) / 2, (A4_H - ROWS * H) / 2
+    marks = []
+    L, gap = 4.5, 1.0                                         # mark length, and its distance from the bleed edge
+    xs = sorted({ox + c * W + BLEED for c in range(COLS)} | {ox + c * W + BLEED + TRIM_W for c in range(COLS)})
+    ys = sorted({oy + r * H + BLEED for r in range(ROWS)} | {oy + r * H + BLEED + TRIM_H for r in range(ROWS)})
+    for x in xs:
+        marks.append(f'M{x:.3f} {oy - gap:.3f}V{oy - gap - L:.3f}M{x:.3f} {oy + ROWS * H + gap:.3f}V{oy + ROWS * H + gap + L:.3f}')
+    for y in ys:
+        marks.append(f'M{ox - gap:.3f} {y:.3f}H{ox - gap - L:.3f}M{ox + COLS * W + gap:.3f} {y:.3f}H{ox + COLS * W + gap + L:.3f}')
+    marks_svg = (f'<svg xmlns="http://www.w3.org/2000/svg" width="{A4_W}mm" height="{A4_H}mm" viewBox="0 0 {A4_W} {A4_H}">'
+                 f'<path d="{"".join(marks)}" stroke="#000" stroke-width="0.12" fill="none"/></svg>')
+    marks_page = PdfReader(io.BytesIO(cairosvg.svg2pdf(bytestring=marks_svg.encode()))).pages[0]
+    w = PdfWriter()
+    for side in (0, 1):
+        sheet = PageObject.create_blank_page(width=mm2pt(A4_W), height=mm2pt(A4_H))
+        for r in range(ROWS):
+            for c in range(COLS):
+                x, y = ox + c * W, A4_H - (oy + (r + 1) * H)  # PDF origin is bottom left
+                sheet.merge_transformed_page(src.pages[side], Transformation().translate(mm2pt(x), mm2pt(y)))
+        sheet.merge_page(marks_page)
+        w.add_page(sheet)
+    w.add_metadata({'/Title': 'EvoSoft business cards, 10 on A4 (page 1 fronts, page 2 backs; print at 100 %, flip on long edge)',
+                    '/Author': 'EvoSoft Solutions'})
+    w.compress_identical_objects()
+    with open(path, 'wb') as fh: w.write(fh)
 
 def proof(full, path):
     ims = []

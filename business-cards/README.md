@@ -26,10 +26,15 @@ All rights reserved.
 | Ink | highest total coverage in the CMYK files 288% (under the usual 300% limit) |
 | Paper | matte or soft-touch, 350–400 g/m², suits the soft light on the front |
 
-Send `<card>-print.pdf` (page 1 front, page 2 back). `<card>-print-CMYK.pdf` is the same in CMYK, for a shop that
+**At a print shop:** send `<card>-print.pdf` (page 1 front, page 2 back). `<card>-print-CMYK.pdf` is the same in CMYK, for a shop that
 asks for it. Bright coral and the light inside the big mark can come out a little softer on paper than on screen; ask
 for a proof if colour matters. Each folder also has previews (`-front.png`, `-back.png`), a proof with the cut line
 (coral) and safe area (dashed), and a mockup for showing people.
+
+**On your own printer:** `<card>-A4-10up.pdf` has ten cards on an A4 sheet with crop marks: page 1 the fronts,
+page 2 the backs. Print at 100 % ("actual size", not "fit to page"), double-sided, flip on the long edge, on the
+heaviest card your printer takes (250–350 g/m²), then cut on the marks. Each card has its own 3 mm bleed, so a
+printer that shifts the back by a millimetre still leaves no white edge.
 
 The QR code uses the site's clean address `/contact`, which works once the new website (with its `.htaccess` files)
 is on the server.
