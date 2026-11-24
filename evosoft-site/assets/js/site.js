@@ -29,15 +29,6 @@
   const motion = doc.classList.contains('motion') && !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const finePointer = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
 
-  /* theme */
-  const media = window.matchMedia('(prefers-color-scheme: dark)');
-  $$('.theme-toggle').forEach((b) => b.addEventListener('click', () => {
-    const now = doc.getAttribute('data-theme') || (media.matches ? 'dark' : 'light');
-    const next = now === 'dark' ? 'light' : 'dark';
-    doc.setAttribute('data-theme', next);
-    store.set('evo-theme', next);
-  }));
-
   /* header: shadow and reading progress */
   const header = $('.topbar');
   const bar = $('.progress');
@@ -389,12 +380,12 @@
     }
   }
 
-  /* the home page: the burgundy mark behind the slogan drifts a little against the pointer */
-  const mono = $('.monolith');
-  if (mono && finePointer) {
+  /* the home page: the light behind the slogan drifts a little against the pointer */
+  const mesh = $('.hero .mesh');
+  if (mesh && finePointer && motion) {
     window.addEventListener('pointermove', (e) => {
-      mono.style.setProperty('--px', `${((e.clientX / innerWidth) - 0.5) * -28}px`);
-      mono.style.setProperty('--py', `${((e.clientY / innerHeight) - 0.5) * -18}px`);
+      mesh.style.setProperty('--px', `${((e.clientX / innerWidth) - 0.5) * -40}px`);
+      mesh.style.setProperty('--py', `${((e.clientY / innerHeight) - 0.5) * -26}px`);
     }, { passive: true });
   }
 

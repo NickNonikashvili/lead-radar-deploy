@@ -156,13 +156,13 @@ ${join(LANGS.filter((x) => x !== L), (x) => `<meta property="og:locale:alternate
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="theme-color" content="#040507">
+<meta name="theme-color" content="#14213D">
 <link rel="icon" href="${A('favicon.ico')}" sizes="32x32">
 <link rel="icon" href="${A('assets/img/icon.svg')}" type="image/svg+xml">
 <link rel="apple-touch-icon" href="${A('assets/img/icon-180.png')}">
 <link rel="manifest" href="${A('site.webmanifest')}">
 ${join(FONTS[L.code] || FONTS.en, (f) => `<link rel="preload" href="${A(`assets/fonts/${f}.woff2`)}" as="font" type="font/woff2" crossorigin>\n`)}${typeof preload === 'function' ? preload() : preload}<link rel="stylesheet" href="${A('assets/css/site.css')}">
-<script>(function(d){d.className+=' js';try{if(!matchMedia('(prefers-reduced-motion: reduce)').matches)d.className+=' motion';var t=localStorage.getItem('evo-theme')}catch(e){}d.setAttribute('data-theme',t==='light'?'light':'dark')})(document.documentElement)</script>
+<script>(function(d){d.className+=' js';try{if(!matchMedia('(prefers-reduced-motion: reduce)').matches)d.className+=' motion';}catch(e){}})(document.documentElement)</script>
 <script type="application/ld+json">${ldFor({ file, title, description, crumbs, extra: ld })}</script>
 </head>`;
 }
@@ -186,7 +186,6 @@ function header(root, file, active) {
       <button class="icon-btn lang-btn" type="button" aria-expanded="false" aria-controls="lang-menu" aria-label="${attr(t('Language: {name}', { name: L.native }))}" title="${attr(t('Language'))}">${icon('globe')}<span>${L.short}</span></button>
       <div class="lang-menu" id="lang-menu" hidden>${langLinks(file, 'lang-item')}</div>
     </div>
-    <button class="icon-btn theme-toggle" type="button" aria-label="${attr(t('Switch between light and dark'))}" title="${attr(t('Light / dark'))}">${icon('sun', 'i i-sun')}${icon('moon', 'i i-moon')}</button>
     <button class="icon-btn menu-toggle" type="button" aria-controls="site-nav" aria-expanded="false" aria-label="${attr(t('Open menu'))}">${icon('menu', 'i i-menu')}${icon('x', 'i i-close')}</button>
   </div>
   <div class="progress" aria-hidden="true"></div>
@@ -308,9 +307,11 @@ ${footer(root)}`;
 const arrow = '<span class="arr" aria-hidden="true">→</span>';
 const ext = '<span class="arr" aria-hidden="true">↗</span>';
 // Each product gets its own colour, like StudyCat's classes.
-// Product colours: burgundy, neon yellow and off-white, each with the text colour that reads on it.
-const TILE = { evo: '#7A0019', mailtabs: '#EEFF00', studycat: '#F2F2EE' };
-const TILE_INK = { evo: '#F2F2EE', mailtabs: '#050505', studycat: '#050505' };
+// Product colours: coral, cream and a light navy, each with the text colour that reads on it (navy, at 4.9:1 or more).
+const TILE = { evo: '#FF6B5B', mailtabs: '#F4EDE0', studycat: '#7B8FBF' };
+const TILE_INK = { evo: '#14213D', mailtabs: '#14213D', studycat: '#14213D' };
+// The light behind the heroes: three soft blobs (navy, slate, coral) under a pane of fluted glass.
+const FIELD = '<div class="mesh" aria-hidden="true"><i></i><i></i><i></i></div><div class="flutes" aria-hidden="true"></div>';
 const tileColor = (p) => p.tile || TILE[p.slug] || p.accent;
 const SVC_ICON = ['globe', 'cart', 'code', 'register', 'layers', 'search', 'pen', 'mail', 'tool'];
 const SVC_TONE = ['blue', 'green', 'purple', 'gold', 'teal', 'blue', 'coral', 'purple', 'green'];
@@ -318,6 +319,7 @@ const accountsWord = (n) => t.n(n, '{n} demo account', '{n} demo accounts');
 
 const pageHead = (kicker, title, lede, extra = '') => `
 <section class="page-head">
+  ${FIELD}
   <div class="wrap">
     <p class="chip">${kicker}</p>
     <h1 class="split">${title}</h1>
@@ -335,9 +337,10 @@ function statusPill(p) {
 }
 
 const ctaCard = (root, title = h('Have a project in mind?'), text = h('Tell us what you need. Quotes are free, and we reply {when}.', { when: esc(site.responseTime) })) => `
-<section class="sec">
+<section class="sec on-cream cta-sec">
   <div class="wrap">
     <div class="cta-card">
+      ${FIELD}
       <div>
         <h2>${title}</h2>
         <p>${text}</p>
@@ -354,7 +357,7 @@ const steps = () => `<ol class="trail">${join(steps_, (s, i) => `<li><span class
 
 function productTile(root, p) {
   const shot = heroShot(p);
-  return `<article class="tile" style="--c:${tileColor(p)};--c-ink:${TILE_INK[p.slug] || '#050505'}">
+  return `<article class="tile" style="--c:${tileColor(p)};--c-ink:${TILE_INK[p.slug] || '#14213D'}">
   <a class="tile-cover" href="${root}work/${p.slug}.html" tabindex="-1" aria-hidden="true">
     <span class="tile-tag">${esc(p.category)}</span>
     ${shot ? `<span class="tile-shot">${picture(shot.file, { alt: '', sizes: '(min-width: 1100px) 380px, 90vw' })}</span>` : ''}
@@ -387,7 +390,7 @@ function copyBtn(value, label) {
 function heroDemoCard(root) {
   return `<div class="demo-card" data-tabs data-autoplay>
   <div class="dc-tabs" role="tablist" aria-label="${attr(t('Live demos'))}">
-    ${join(products, (p, i) => `<button class="dc-tab" type="button" role="tab" id="dct-${p.slug}" aria-controls="dcp-${p.slug}" aria-selected="${i === 0}" tabindex="${i === 0 ? 0 : -1}" style="--c:${tileColor(p)};--c-ink:${TILE_INK[p.slug] || '#050505'}"><i aria-hidden="true"></i>${esc(p.name)}<b class="dc-progress" aria-hidden="true"></b></button>`)}
+    ${join(products, (p, i) => `<button class="dc-tab" type="button" role="tab" id="dct-${p.slug}" aria-controls="dcp-${p.slug}" aria-selected="${i === 0}" tabindex="${i === 0 ? 0 : -1}" style="--c:${tileColor(p)};--c-ink:${TILE_INK[p.slug] || '#14213D'}"><i aria-hidden="true"></i>${esc(p.name)}<b class="dc-progress" aria-hidden="true"></b></button>`)}
   </div>
   ${join(products, (p, i) => {
     const shot = heroShot(p);
@@ -434,7 +437,7 @@ function demoNotes(p) {
 
 function demoBlock(root, p, { withTitle = true } = {}) {
   const d = p.demo;
-  return `<div class="demo-block" style="--c:${tileColor(p)};--c-ink:${TILE_INK[p.slug] || '#050505'}">
+  return `<div class="demo-block" style="--c:${tileColor(p)};--c-ink:${TILE_INK[p.slug] || '#14213D'}">
     <div class="db-head">
       ${withTitle ? `<div class="db-id"><span class="db-dot" aria-hidden="true"></span><div><h3><a href="${root}work/${p.slug}.html">${esc(p.name)}</a></h3><p>${esc(p.kind)}</p></div></div>` : ''}
       <p class="db-where">${statusPill(p)}${d.url ? `<a href="${attr(d.url)}" target="_blank" rel="noopener">${esc(d.label)}</a>` : ''}</p>
@@ -485,19 +488,32 @@ function buildPages() {
     preload: () => `<link rel="preload" as="image" type="image/webp" href="${webp(heroShot(products[0]).file)}">\n`,
     body: (root) => `
 <section class="hero">
-  <img class="monolith" src="${A('assets/img/mark-3d.webp')}" alt="" width="1250" height="1229" fetchpriority="high" decoding="async">
-  <div class="wrap hero-center">
-    <p class="kicker">${h('Software studio in {region} · Free quotes', { region: esc(site.region) })}</p>
-    <h1 class="slogan">${sloganHtml()}</h1>
-    <p class="hero-sub">${h('Websites, apps and business software,')} ${h('built to order.')}</p>
-    <p class="typer" aria-hidden="true"><span class="typer-pre">${h('We build')}</span> <span class="typer-word" data-words="${attr(JSON.stringify(typerWords))}">${esc(typerWords[0])}</span><span class="caret"></span></p>
-    <div class="actions">
-      <a class="btn primary lg" href="${root}contact.html">${h('Get a free quote')} ${arrow}</a>
-      <a class="btn lg" href="${root}demos.html">${h('Try a live demo')}</a>
+  ${FIELD}
+  <div class="wrap hero-grid">
+    <div class="hero-copy">
+      <p class="kicker">${h('Software studio in {region} · Free quotes', { region: esc(site.region) })}</p>
+      <h1 class="slogan">${sloganHtml()}</h1>
+      <p class="hero-sub">${h('Websites, apps and business software,')} ${h('built to order.')}</p>
+      <p class="typer" aria-hidden="true"><span class="typer-pre">${h('We build')}</span> <span class="typer-word" data-words="${attr(JSON.stringify(typerWords))}">${esc(typerWords[0])}</span><span class="caret"></span></p>
     </div>
-    <p class="trust">${h('Trusted by {clients}', { clients: join(clients, (c) => `<a href="${attr(c.url)}" target="_blank" rel="noopener">${esc(c.name)}</a>`, ' · ') })}</p>
+    <div class="hero-side">
+      <div class="glass hero-glass">
+        <p class="glass-head">${icon('play')}${h('Live demos')}</p>
+        ${join(products, (p) => `<a class="glass-row" href="${root}work/${p.slug}.html"><b>${esc(p.name)}</b><small>${esc(accountsWord(p.demo.accounts.length))}</small><span>${esc(p.kind)}</span>${statusPill(p)}</a>`)}
+        <a class="glass-tag" href="${root}contact.html">${h('Free quotes')}</a>
+      </div>
+      <div class="hero-cta">
+        <a class="btn primary lg" href="${root}contact.html">${h('Get a free quote')} ${ext}</a>
+        <a class="btn link lg" href="${root}demos.html">${h('Try a live demo')} ${ext}</a>
+      </div>
+    </div>
+    <div class="hero-feats">
+      <p class="feat-i" style="--i:0">${icon('layers')}<span><b>${products.length}</b> ${esc(t.n(products.length, 'live demo you can sign in to', 'live demos you can sign in to'))}</span></p>
+      <p class="feat-i" style="--i:1">${icon('users')}<span><b>${totalAccounts}</b> ${esc(t.n(totalAccounts, 'ready-made test account', 'ready-made test accounts'))}</span></p>
+      <p class="feat-i" style="--i:2">${icon('tool')}<span><b>${services.length}</b> ${esc(t.n(services.length, 'kind of work under one roof', 'kinds of work under one roof'))}</span></p>
+      <p class="feat-i" style="--i:3">${icon('clock')}<span><b>${h('1 day')}</b> ${h('to hear back about your project')}</span></p>
+    </div>
   </div>
-  <div class="scroll-cue" aria-hidden="true"></div>
 </section>
 
 <section class="stage">
@@ -508,14 +524,6 @@ function buildPages() {
   </div>
 </section>
 
-<section class="stats-band">
-  <div class="wrap stats">
-    <div class="stat"><span class="stat-n tone-blue" data-count="${products.length}">${products.length}</span><span class="stat-l">${esc(t.n(products.length, 'live demo you can sign in to', 'live demos you can sign in to'))}</span></div>
-    <div class="stat"><span class="stat-n tone-green" data-count="${totalAccounts}">${totalAccounts}</span><span class="stat-l">${esc(t.n(totalAccounts, 'ready-made test account', 'ready-made test accounts'))}</span></div>
-    <div class="stat"><span class="stat-n tone-gold" data-count="${services.length}">${services.length}</span><span class="stat-l">${esc(t.n(services.length, 'kind of work under one roof', 'kinds of work under one roof'))}</span></div>
-    <div class="stat"><span class="stat-n tone-coral">${h('1 day')}</span><span class="stat-l">${h('to hear back about your project')}</span></div>
-  </div>
-</section>
 ${marquee()}
 
 <section class="sec">
@@ -570,7 +578,7 @@ ${pageHead(h('Our work'), h('Software we built, sites we shipped'), h('Three pro
   <div class="wrap">
     <div class="work-list">${join(products, (p) => {
       const shot = heroShot(p);
-      return `<article class="work-row" style="--c:${tileColor(p)};--c-ink:${TILE_INK[p.slug] || '#050505'}">
+      return `<article class="work-row" style="--c:${tileColor(p)};--c-ink:${TILE_INK[p.slug] || '#14213D'}">
         <a class="work-shot" href="${root}work/${p.slug}.html" tabindex="-1" aria-hidden="true">${shot ? picture(shot.file, { alt: '', sizes: '(min-width: 1100px) 640px, 100vw' }) : ''}</a>
         <div class="work-info">
           <p class="chip tone"><span class="dot" aria-hidden="true"></span>${esc(p.category)}</p>
@@ -603,7 +611,7 @@ ${ctaCard(root, h('Want to be next?'))}
     crumbs: [[t('Live demos'), 'demos.html']],
     body: (root) => `
 ${pageHead(h('Live demos'), h('Try our software before you talk to us'), h('Each demo is a real copy of the product with made-up data. Pick a role, copy its login and open the demo. The demos reset themselves, so you can’t break anything for good.'),
-  `<nav class="jump" aria-label="${attr(t('Jump to a demo'))}">${join(products, (p) => `<a href="#${p.slug}" style="--c:${tileColor(p)};--c-ink:${TILE_INK[p.slug] || '#050505'}"><i aria-hidden="true"></i>${esc(p.name)}</a>`)}</nav>`)}
+  `<nav class="jump" aria-label="${attr(t('Jump to a demo'))}">${join(products, (p) => `<a href="#${p.slug}" style="--c:${tileColor(p)};--c-ink:${TILE_INK[p.slug] || '#14213D'}"><i aria-hidden="true"></i>${esc(p.name)}</a>`)}</nav>`)}
 ${join(products, (p, i) => `
 <section class="sec${i % 2 ? ' alt' : ''} tight" id="${p.slug}">
   <div class="wrap">${demoBlock(root, p)}</div>
@@ -650,7 +658,8 @@ ${ctaCard(root, h('Like what you see?'), h('We can build something like this for
       }],
       bodyClass: 'product',
       body: (root) => `
-<section class="p-head" style="--c:${tileColor(p)};--c-ink:${TILE_INK[p.slug] || '#050505'}">
+<section class="p-head" style="--c:${tileColor(p)};--c-ink:${TILE_INK[p.slug] || '#14213D'}">
+  ${FIELD}
   <div class="wrap">
     <nav class="crumbs" aria-label="${attr(t('Breadcrumb'))}"><a href="${root}portfolio.html">${h('Work')}</a><span aria-hidden="true">›</span><span aria-current="page">${esc(p.name)}</span></nav>
     <div class="p-grid">
@@ -707,7 +716,7 @@ ${desktop.length ? `<section class="sec alt">
 ${ctaCard(root, h('Need something like {name}?', { name: esc(p.name) }), h('We build business systems, web apps and websites to fit how you actually work. Tell us about your project for a free quote.'))}
 
 <section class="sec tight">
-  <div class="wrap"><a class="next-card" href="${root}work/${next.slug}.html" style="--c:${tileColor(next)};--c-ink:${TILE_INK[next.slug] || '#050505'}"><span class="muted">${h('Next product')}</span><span class="next-name">${esc(next.name)}</span><span class="next-tag">${esc(next.tagline)}</span>${arrow}</a></div>
+  <div class="wrap"><a class="next-card" href="${root}work/${next.slug}.html" style="--c:${tileColor(next)};--c-ink:${TILE_INK[next.slug] || '#14213D'}"><span class="muted">${h('Next product')}</span><span class="next-name">${esc(next.name)}</span><span class="next-tag">${esc(next.tagline)}</span>${arrow}</a></div>
 </section>
 `,
     });
@@ -923,7 +932,7 @@ const versioned = (html) => html.replace(ASSET, (m, pre, rel) => {
 const manifestIcon = (rel, sizes, type) => ({ src: `/${rel}?v=${hashOf(rel)}`, sizes, type });
 fs.writeFileSync(
   path.join(OUT, 'site.webmanifest'),
-  JSON.stringify({ name: 'EvoSoft', short_name: 'EvoSoft', start_url: '/', display: 'browser', background_color: '#040507', theme_color: '#040507', icons: [manifestIcon('assets/img/icon-180.png', '180x180', 'image/png'), manifestIcon('assets/img/icon-512.png', '512x512', 'image/png'), manifestIcon('assets/img/icon.svg', 'any', 'image/svg+xml')] }, null, 2) + '\n',
+  JSON.stringify({ name: 'EvoSoft', short_name: 'EvoSoft', start_url: '/', display: 'browser', background_color: '#14213D', theme_color: '#14213D', icons: [manifestIcon('assets/img/icon-180.png', '180x180', 'image/png'), manifestIcon('assets/img/icon-512.png', '512x512', 'image/png'), manifestIcon('assets/img/icon.svg', 'any', 'image/svg+xml')] }, null, 2) + '\n',
 );
 
 for (const p of built) {

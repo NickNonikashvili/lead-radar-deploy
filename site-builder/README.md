@@ -94,7 +94,7 @@ Bots that fill the hidden field are ignored.
 | Products, demo URLs, demo accounts, screenshots and captions | `site-builder/data/products.mjs` |
 | Page layouts and wording | `site-builder/build.mjs` |
 | Translations | `site-builder/i18n/<lang>/*.json` (see Languages below) |
-| Colours, fonts, spacing | `evosoft-site/assets/css/site.css` (colour tokens at the top: dark by default, light behind the toggle) |
+| Colours, fonts, spacing | `evosoft-site/assets/css/site.css` (colour tokens at the top: navy by default, redefined for cream blocks) |
 | The slogan | `slogan` in `site-builder/data/site.mjs`; the hero headline uses the translations of `Your digital {evolution} starts here` |
 
 Then rebuild (Node 18+, no `npm install`):
@@ -174,27 +174,30 @@ Ideas that would help further:
 
 ## Look
 
-Dark, in three colours: black (with off-white type), neon yellow `#EEFF00` and burgundy `#7A0019`. Depth comes from light,
-and the few gradients stay inside those three colours (a burgundy glow behind the hero mark, a sheen on cards and
-buttons, light across the burgundy blocks, the footer slogan dissolving into black):
+Three colours, by the 60/30/10 rule: **navy** `#14213D` (about 60%: the heroes, most sections, the footer), **cream**
+`#F4EDE0` (about 30%: type on navy, and every other section), **coral** `#FF6B5B` (about 10%: the buttons we want
+pressed, the word "evolution", and a few small markers). Text on coral is navy, never white (navy on coral reads at
+5.7:1; white would be 2.8:1).
 
-- **The 3D mark.** The (upside-down) EvoSoft mark, modelled in Blender as a slab of lacquered burgundy lit by a
-  neon-yellow edge light (`assets/img/mark-3d.webp`). It floats beside the home page slogan and stands behind the
-  call to action and the top of inner pages. Render it again with
-  `bl/bin/python ad-video-classic/blender/mark3d.py ad-video-classic/blender/mark.json mark3d.png 2000 -18 6`, then crop it
-  to its edges and save it as WebP.
-- **Neon.** The yellow glows like a neon tube: "evolution", the main buttons, the process line and the reading line.
-- **Elevation.** Cards and panels sit on deep shadows with a fine top highlight. The live-demo screen tilts with the
-  pointer over a burgundy shadow, and the header is frosted glass.
-
-- **Yellow** is for action and emphasis: buttons, the word "evolution" in the slogan, the typing cursor, the process
-  line, the reading line, focus outlines, small square markers.
-- **Burgundy** is for solid blocks: the stats band, the section numbers, the last process step, the call-to-action
-  panel, chosen options in the quote form. A huge burgundy copy of the (upside-down) mark stands behind the home page
-  slogan and the top of inner pages.
-- **Dark by default.** A visitor who picks light with the toggle keeps it; there, yellow becomes a highlighter behind
-  black text and burgundy takes over the small accents.
-- **Type.** Inter, the logo's typeface, for everything. JetBrains Mono for small labels. Noto Sans Georgian for Georgian.
+- **The field.** Every hero (the home page, page heads, product heads, the call-to-action panel) sits on a soft field of
+  light: three blurred blobs (slate top left, a coral glow, deep navy bottom right) drifting slowly behind a pane of
+  fluted glass (thin vertical ribs, `.flutes`). On the home page the field leans a little against the pointer. Page
+  heads fade into the navy section below them, so there is no seam.
+- **The home hero.** The slogan sits low on the left in cream, "evolution" in coral. Top right, a frosted glass card
+  lists the three live demos (with their status and number of accounts) and a coral "Free quotes" pill; below it, the
+  coral "Get a free quote" pill and a "Try a live demo" link. Along the bottom, four facts; a coral underline walks
+  across them, lighting each in turn.
+- **Navigation.** The links sit in a frosted pill; the current page has a small coral dot. The language and menu
+  buttons are round and cream.
+- **Sections** alternate navy and cream (`.sec` and `.sec.alt`; `.on-cream` makes any block cream). The tokens at the
+  top of `site.css` (`--bg`, `--ink`, `--border`, `--card`, ...) are redefined for cream blocks, so components work on
+  either.
+- **Coral** is for action and emphasis only: primary buttons, "evolution", the typing cursor, the reading line,
+  focus outlines, the active nav dot, the last process step, the open FAQ marker.
+- **Products** each have a colour for small markers (tab dots, role badges, the glow on their tile): Evo coral,
+  Mailtabs cream, StudyCat a light navy.
+- **Type.** Inter, the logo's typeface, for everything, set large and tight. JetBrains Mono for the typing line. Noto
+  Sans Georgian for Georgian.
 - **The slogan.** "Your digital evolution starts here" is the home page headline, with its words rising in. It is also
   written huge in every footer, on the share image and in the structured data.
 - **The share image** (`assets/img/og.jpg`) is drawn by `site-builder/og.py`:
