@@ -11,8 +11,6 @@
  "Get a quote": "Pedir presupuesto",
  "Language": "Idioma",
  "Language: {name}": "Idioma: {name}",
- "Switch between light and dark": "Cambiar entre modo claro y oscuro",
- "Light / dark": "Claro / oscuro",
  "Open menu": "Abrir menú",
  "Software studio in {region} · Free quotes": "Estudio en {region} · Presupuestos gratis",
  "Websites, apps and business software,": "Sitios web, apps y software para tu negocio,",
@@ -21,21 +19,36 @@
  "We take on projects of any size, from a five-page website to a point-of-sale system, and look after them once they’re live. Don’t take our word for it: sign in to the software we’ve built.": "Aceptamos proyectos de cualquier tamaño, desde un sitio web de cinco páginas hasta un sistema de punto de venta, y los cuidamos una vez en marcha. No hace falta que nos creas: inicia sesión en el software que hemos creado.",
  "Get a free quote": "Pedir presupuesto gratis",
  "Try a live demo": "Probar una demo en vivo",
- "Trusted by {clients}": "Confían en nosotros: {clients}",
  "Live demos": "Demos en vivo",
  "Live demo": "Demo en vivo",
  "Copy {value}": "Copiar {value}",
  "Copy the password": "Copiar la contraseña",
  "Open demo": "Abrir demo",
- "live demos you can sign in to": {"one": "demo en vivo para probar", "many": "demos en vivo para probar", "other": "demos en vivo para probar"},
- "ready-made test accounts": {"one": "cuenta de prueba lista", "many": "cuentas de prueba listas", "other": "cuentas de prueba listas"},
- "kinds of work under one roof": {"one": "servicio bajo un mismo techo", "many": "servicios bajo un mismo techo", "other": "servicios bajo un mismo techo"},
+ "live demos you can sign in to": {
+  "one": "demo en vivo para probar",
+  "many": "demos en vivo para probar",
+  "other": "demos en vivo para probar"
+ },
+ "ready-made test accounts": {
+  "one": "cuenta de prueba lista",
+  "many": "cuentas de prueba listas",
+  "other": "cuentas de prueba listas"
+ },
+ "kinds of work under one roof": {
+  "one": "servicio bajo un mismo techo",
+  "many": "servicios bajo un mismo techo",
+  "other": "servicios bajo un mismo techo"
+ },
  "1 day": "1 día",
  "to hear back about your project": "para responder a tu consulta",
  "Software we built and run": "Software que creamos y gestionamos",
  "Our own products, each with a live demo and an account for every role. Open one and click around.": "Nuestros propios productos, cada uno con una demo en vivo y una cuenta para cada rol. Abre uno y explóralo.",
  "Checking": "Comprobando",
- "{n} demo accounts": { "one": "{n} cuenta de demo", "many": "{n} cuentas de demo", "other": "{n} cuentas de demo" },
+ "{n} demo accounts": {
+  "one": "{n} cuenta de demo",
+  "many": "{n} cuentas de demo",
+  "other": "{n} cuentas de demo"
+ },
  "Case study": "Ver detalles",
  "Your project": "Tu proyecto",
  "Website, store, app or system. Tell us about it and get a free quote.": "Sitio web, tienda, app o sistema. Cuéntanos tu idea y recibe un presupuesto gratis.",

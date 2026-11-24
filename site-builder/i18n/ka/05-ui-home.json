@@ -13,8 +13,6 @@
  "Get a quote": "შეფასების მოთხოვნა",
  "Language": "ენა",
  "Language: {name}": "ენა: {name}",
- "Switch between light and dark": "ღია და მუქი თემის გადართვა",
- "Light / dark": "ღია / მუქი",
  "Open menu": "მენიუს გახსნა",
  "Software studio in {region} · Free quotes": "IT სტუდია {region}ში · უფასო შეფასება",
  "Websites, apps and business software,": "ვებსაიტები, აპლიკაციები და ბიზნეს პროგრამები,",
@@ -23,21 +21,32 @@
  "We take on projects of any size, from a five-page website to a point-of-sale system, and look after them once they’re live. Don’t take our word for it: sign in to the software we’ve built.": "ვიღებთ ნებისმიერი მასშტაბის პროექტს, ხუთგვერდიანი საიტიდან POS სისტემამდე, და გაშვების შემდეგაც ვზრუნავთ მათზე. ნუ დაგვიჯერებთ სიტყვაზე: შედით ჩვენ მიერ შექმნილ პროგრამებში და თავად ნახეთ.",
  "Get a free quote": "მიიღეთ უფასო შეფასება",
  "Try a live demo": "სცადეთ ონლაინ დემო",
- "Trusted by {clients}": "ჩვენ გვენდობიან: {clients}",
  "Live demos": "ონლაინ დემოები",
  "Live demo": "ონლაინ დემო",
  "Copy {value}": "კოპირება: {value}",
  "Copy the password": "პაროლის კოპირება",
  "Open demo": "დემოს ნახვა",
- "live demos you can sign in to": { "one": "ონლაინ დემო, სადაც შეხვალთ", "other": "ონლაინ დემო, სადაც შეხვალთ" },
- "ready-made test accounts": { "one": "მზა სატესტო ანგარიში", "other": "მზა სატესტო ანგარიში" },
- "kinds of work under one roof": { "one": "სახის მომსახურება ერთ ჭერქვეშ", "other": "სახის მომსახურება ერთ ჭერქვეშ" },
+ "live demos you can sign in to": {
+  "one": "ონლაინ დემო, სადაც შეხვალთ",
+  "other": "ონლაინ დემო, სადაც შეხვალთ"
+ },
+ "ready-made test accounts": {
+  "one": "მზა სატესტო ანგარიში",
+  "other": "მზა სატესტო ანგარიში"
+ },
+ "kinds of work under one roof": {
+  "one": "სახის მომსახურება ერთ ჭერქვეშ",
+  "other": "სახის მომსახურება ერთ ჭერქვეშ"
+ },
  "1 day": "1 დღეში",
  "to hear back about your project": "მიიღებთ პასუხს თქვენს პროექტზე",
  "Software we built and run": "პროგრამები, რომლებიც შევქმენით და ვმართავთ",
  "Our own products, each with a live demo and an account for every role. Open one and click around.": "ჩვენი საკუთარი პროდუქტები, თითოეული ონლაინ დემოთი და ანგარიშით ყველა როლისთვის. გახსენით ნებისმიერი და თავად დაათვალიერეთ.",
  "Checking": "მოწმდება",
- "{n} demo accounts": { "one": "{n} დემო ანგარიში", "other": "{n} დემო ანგარიში" },
+ "{n} demo accounts": {
+  "one": "{n} დემო ანგარიში",
+  "other": "{n} დემო ანგარიში"
+ },
  "Case study": "მიმოხილვა",
  "Your project": "თქვენი პროექტი",
  "Website, store, app or system. Tell us about it and get a free quote.": "საიტი, მაღაზია, აპლიკაცია თუ სისტემა. მოგვიყევით და მიიღეთ უფასო შეფასება.",

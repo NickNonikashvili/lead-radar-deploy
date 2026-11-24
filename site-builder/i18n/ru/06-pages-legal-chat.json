@@ -76,7 +76,7 @@
  "Chat assistant.": "Чат-ассистент.",
  "Questions you type into the assistant are sent to our AI provider (Anthropic) to generate an answer and are not used to identify you. Please don’t share sensitive personal information in the chat.": "Вопросы, которые вы вводите в чат, передаются нашему поставщику ИИ (Anthropic) для формирования ответа и не используются для вашей идентификации. Пожалуйста, не сообщайте в чате конфиденциальные персональные данные.",
  "Cookies.": "Файлы cookie.",
- "This site sets no tracking or advertising cookies. It remembers your light or dark preference and your language in your own browser, and the chat keeps the current conversation in your browser tab until you close it.": "Сайт не устанавливает отслеживающие или рекламные файлы cookie. Выбранные вами светлая или тёмная тема и язык сохраняются в вашем собственном браузере, а чат хранит текущую переписку во вкладке браузера, пока вы её не закроете.",
+ "This site sets no tracking or advertising cookies. It remembers your language in your own browser, and the chat keeps the current conversation in your browser tab until you close it.": "Сайт не устанавливает отслеживающие или рекламные файлы cookie. Выбранный вами язык сохраняется в вашем собственном браузере, а чат хранит текущую переписку во вкладке браузера, пока вы её не закроете.",
  "Your rights.": "Ваши права.",
  "To see, correct or delete anything you’ve sent us, email {email}.": "Чтобы ознакомиться с данными, которые вы нам отправили, исправить или удалить их, напишите на {email}.",
  "Page not found | EvoSoft": "Страница не найдена | EvoSoft",

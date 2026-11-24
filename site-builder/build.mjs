@@ -311,8 +311,9 @@ ${footer(root)}`;
 const arrow = '<span class="arr" aria-hidden="true">→</span>';
 const ext = '<span class="arr" aria-hidden="true">↗</span>';
 // Each product gets its own colour, like StudyCat's classes.
-// Product colours: coral, cream and a light navy, each with the text colour that reads on it (navy, at 4.9:1 or more).
-const TILE = { evo: '#FF6B5B', mailtabs: '#F4EDE0', studycat: '#7B8FBF' };
+// Product colours: coral, sand (a deeper cream, so it shows on cream too) and a light navy, each with the text colour
+// that reads on it (navy, at 4.9:1 or more).
+const TILE = { evo: '#FF6B5B', mailtabs: '#B8A27E', studycat: '#7B8FBF' };
 const TILE_INK = { evo: '#14213D', mailtabs: '#14213D', studycat: '#14213D' };
 // The light behind the heroes: three soft blobs (navy, slate, coral) under a pane of fluted glass.
 const FIELD = '<div class="mesh" aria-hidden="true"><i></i><i></i><i></i></div><div class="flutes" aria-hidden="true"></div>';
@@ -473,7 +474,8 @@ function marquee() {
     const items = join(list, (w) => `<span>${esc(w)}</span>`);
     return `<div class="mq-row${rev ? ' rev' : ''}"><div class="mq-track">${items}${items}</div></div>`;
   };
-  return `<section class="marquee" aria-hidden="true">${row(words.slice(0, half))}${row(words.slice(half), true)}</section>`;
+  // the moving rows are decoration; the button stops every looping animation on the page (WCAG 2.2.2)
+  return `<section class="marquee-wrap"><div class="marquee" aria-hidden="true">${row(words.slice(0, half))}${row(words.slice(half), true)}</div><button class="still-toggle" type="button" aria-pressed="false">${h('Pause animation')}</button></section>`;
 }
 
 // ---------- pages ----------
@@ -500,16 +502,14 @@ function buildPages() {
       <p class="hero-sub">${h('Websites, apps and business software,')} ${h('built to order.')}</p>
       <p class="typer" aria-hidden="true"><span class="typer-pre">${h('We build')}</span> <span class="typer-word" data-words="${attr(JSON.stringify(typerWords))}">${esc(typerWords[0])}</span><span class="caret"></span></p>
     </div>
-    <div class="hero-side">
-      <div class="glass hero-glass">
-        <p class="glass-head">${icon('play')}${h('Live demos')}</p>
-        ${join(products, (p) => `<a class="glass-row" href="${root}work/${p.slug}"><b>${esc(p.name)}</b><small>${esc(accountsWord(p.demo.accounts.length))}</small><span>${esc(p.kind)}</span>${statusPill(p)}</a>`)}
-        <a class="glass-tag" href="${root}contact">${h('Free quotes')}</a>
-      </div>
-      <div class="hero-cta">
-        <a class="btn primary lg" href="${root}contact">${h('Get a free quote')} ${ext}</a>
-        <a class="btn link lg" href="${root}demos">${h('Try a live demo')} ${ext}</a>
-      </div>
+    <div class="hero-cta">
+      <a class="btn primary lg" href="${root}contact">${h('Get a free quote')} ${arrow}</a>
+      <a class="btn link lg" href="${root}demos">${h('Try a live demo')} ${arrow}</a>
+    </div>
+    <div class="glass hero-glass">
+      <p class="glass-head">${icon('play')}${h('Live demos')}</p>
+      ${join(products, (p) => `<a class="glass-row" href="${root}work/${p.slug}"><b>${esc(p.name)}</b><small>${esc(accountsWord(p.demo.accounts.length))}</small><span>${esc(p.kind)}</span>${statusPill(p)}</a>`)}
+      <a class="glass-tag" href="${root}contact">${h('Free quotes')}</a>
     </div>
     <div class="hero-feats">
       <p class="feat-i" style="--i:0">${icon('layers')}<span><b>${products.length}</b> ${esc(t.n(products.length, 'live demo you can sign in to', 'live demos you can sign in to'))}</span></p>
@@ -617,7 +617,7 @@ ${ctaCard(root, h('Want to be next?'))}
 ${pageHead(h('Live demos'), h('Try our software before you talk to us'), h('Each demo is a real copy of the product with made-up data. Pick a role, copy its login and open the demo. The demos reset themselves, so you can’t break anything for good.'),
   `<nav class="jump" aria-label="${attr(t('Jump to a demo'))}">${join(products, (p) => `<a href="#${p.slug}" style="--c:${tileColor(p)};--c-ink:${TILE_INK[p.slug] || '#14213D'}"><i aria-hidden="true"></i>${esc(p.name)}</a>`)}</nav>`)}
 ${join(products, (p, i) => `
-<section class="sec${i % 2 ? ' alt' : ''} tight" id="${p.slug}">
+<section class="sec${i % 2 ? ' alt' : ''}${i === 0 ? ' tight' : ''}" id="${p.slug}">
   <div class="wrap">${demoBlock(root, p)}</div>
 </section>`)}
 ${ctaCard(root, h('Like what you see?'), h('We can build something like this for your business, or something completely different. Quotes are free.'))}
@@ -719,7 +719,7 @@ ${desktop.length ? `<section class="sec alt">
 
 ${ctaCard(root, h('Need something like {name}?', { name: esc(p.name) }), h('We build business systems, web apps and websites to fit how you actually work. Tell us about your project for a free quote.'))}
 
-<section class="sec tight">
+<section class="sec">
   <div class="wrap"><a class="next-card" href="${root}work/${next.slug}" style="--c:${tileColor(next)};--c-ink:${TILE_INK[next.slug] || '#14213D'}"><span class="muted">${h('Next product')}</span><span class="next-name">${esc(next.name)}</span><span class="next-tag">${esc(next.tagline)}</span>${arrow}</a></div>
 </section>
 `,
@@ -875,7 +875,7 @@ ${pageHead(h('Legal'), h('Copyright and privacy'), h('Last updated {date}.', { d
       <h2>${h('Privacy')}</h2>
       <p><strong>${h('Quote form.')}</strong> ${h('When you send a quote request we receive your name, email, optional phone and company, and your message. We use them only to reply about your project and keep them as long as needed for that.')}</p>
       <p><strong>${h('Chat assistant.')}</strong> ${h('Questions you type into the assistant are sent to our AI provider (Anthropic) to generate an answer and are not used to identify you. Please don’t share sensitive personal information in the chat.')}</p>
-      <p><strong>${h('Cookies.')}</strong> ${h('This site sets no tracking or advertising cookies. It remembers your light or dark preference and your language in your own browser, and the chat keeps the current conversation in your browser tab until you close it.')}</p>
+      <p><strong>${h('Cookies.')}</strong> ${h('This site sets no tracking or advertising cookies. It remembers your language in your own browser, and the chat keeps the current conversation in your browser tab until you close it.')}</p>
       <p><strong>${h('Your rights.')}</strong> ${h('To see, correct or delete anything you’ve sent us, email {email}.', { email: mail })}</p>
     </div>
   </div>

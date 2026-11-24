@@ -214,7 +214,14 @@
   const markSeen = () => { try { sessionStorage.setItem('evo-chat-teaser', '1'); } catch (e) { /* ignore */ } };
   if (teaser && S.teaser && !seen() && !history.length) {
     teaser.querySelector('p').textContent = S.teaser;
-    setTimeout(() => { if (panel.hidden && !document.querySelector('.lang-hint:not([hidden])')) { teaser.hidden = false; markSeen(); } }, 9000);
+    // never on top of the home hero's buttons: while the hero is on screen, wait until it scrolls away
+    const show = () => { if (panel.hidden && !document.querySelector('.lang-hint:not([hidden])')) { teaser.hidden = false; markSeen(); } };
+    setTimeout(() => {
+      const hero = document.querySelector('.hero');
+      if (!hero || !('IntersectionObserver' in window) || hero.getBoundingClientRect().bottom <= 0) return show();
+      const io = new IntersectionObserver(([e]) => { if (!e.isIntersecting) { io.disconnect(); show(); } });
+      io.observe(hero);
+    }, 9000);
     teaser.addEventListener('click', (e) => { teaser.hidden = true; markSeen(); if (!e.target.closest('.chat-teaser-close')) open(); });
   }
 

@@ -9,7 +9,11 @@
  "Breadcrumb": "Ruta de navegación",
  "Open the live demo": "Abrir la demo en vivo",
  "Demo accounts": "Cuentas de demo",
- "demo accounts, one per role": {"one": "cuenta de demo, una por rol", "many": "cuentas de demo, una por rol", "other": "cuentas de demo, una por rol"},
+ "demo accounts, one per role": {
+  "one": "cuenta de demo, una por rol",
+  "many": "cuentas de demo, una por rol",
+  "other": "cuentas de demo, una por rol"
+ },
  "Built with": "Hecho con",
  "What it does": "Qué hace",
  "A look inside": "Un vistazo por dentro",
@@ -73,7 +77,7 @@
  "Chat assistant.": "Asistente de chat.",
  "Questions you type into the assistant are sent to our AI provider (Anthropic) to generate an answer and are not used to identify you. Please don’t share sensitive personal information in the chat.": "Las preguntas que escribes en el asistente se envían a nuestro proveedor de IA (Anthropic) para generar una respuesta y no se utilizan para identificarte. Por favor, no compartas datos personales sensibles en el chat.",
  "Cookies.": "Cookies.",
- "This site sets no tracking or advertising cookies. It remembers your light or dark preference and your language in your own browser, and the chat keeps the current conversation in your browser tab until you close it.": "Este sitio no utiliza cookies de seguimiento ni de publicidad. Guarda en tu propio navegador tu preferencia de modo claro u oscuro y tu idioma, y el chat conserva la conversación actual en la pestaña del navegador hasta que la cierres.",
+ "This site sets no tracking or advertising cookies. It remembers your language in your own browser, and the chat keeps the current conversation in your browser tab until you close it.": "Este sitio no utiliza cookies de seguimiento ni de publicidad. Guarda tu idioma en tu propio navegador, y el chat conserva la conversación actual en la pestaña del navegador hasta que la cierres.",
  "Your rights.": "Tus derechos.",
  "To see, correct or delete anything you’ve sent us, email {email}.": "Para consultar, corregir o eliminar cualquier dato que nos hayas enviado, escribe a {email}.",
  "Page not found | EvoSoft": "Página no encontrada | EvoSoft",

@@ -1788,6 +1788,14 @@
   "ctx": "index.html"
  },
  {
+  "s": "Get a free quote",
+  "ctx": "index.html"
+ },
+ {
+  "s": "Try a live demo",
+  "ctx": "index.html"
+ },
+ {
   "s": "Live demos",
   "ctx": "index.html"
  },
@@ -1802,14 +1810,6 @@
  },
  {
   "s": "Free quotes",
-  "ctx": "index.html"
- },
- {
-  "s": "Get a free quote",
-  "ctx": "index.html"
- },
- {
-  "s": "Try a live demo",
   "ctx": "index.html"
  },
  {
@@ -1853,6 +1853,10 @@
  },
  {
   "s": "Open demo",
+  "ctx": "index.html"
+ },
+ {
+  "s": "Pause animation",
   "ctx": "index.html"
  },
  {
@@ -2441,7 +2445,7 @@
   "ctx": "legal.html"
  },
  {
-  "s": "This site sets no tracking or advertising cookies. It remembers your light or dark preference and your language in your own browser, and the chat keeps the current conversation in your browser tab until you close it.",
+  "s": "This site sets no tracking or advertising cookies. It remembers your language in your own browser, and the chat keeps the current conversation in your browser tab until you close it.",
   "ctx": "legal.html"
  },
  {

@@ -8,7 +8,10 @@
  "Breadcrumb": "ნავიგაციის ჯაჭვი",
  "Open the live demo": "ონლაინ დემოს გახსნა",
  "Demo accounts": "დემო ანგარიშები",
- "demo accounts, one per role": { "one": "დემო ანგარიში, თითო ყველა როლისთვის", "other": "დემო ანგარიში, თითო ყველა როლისთვის" },
+ "demo accounts, one per role": {
+  "one": "დემო ანგარიში, თითო ყველა როლისთვის",
+  "other": "დემო ანგარიში, თითო ყველა როლისთვის"
+ },
  "Built with": "ტექნოლოგიები",
  "What it does": "რას აკეთებს",
  "A look inside": "შიგნიდან",
@@ -72,7 +75,7 @@
  "Chat assistant.": "ჩატ-ასისტენტი.",
  "Questions you type into the assistant are sent to our AI provider (Anthropic) to generate an answer and are not used to identify you. Please don’t share sensitive personal information in the chat.": "ასისტენტში აკრეფილი კითხვები პასუხის გენერირებისთვის ეგზავნება ჩვენს AI პროვაიდერს (Anthropic) და არ გამოიყენება თქვენი იდენტიფიკაციისთვის. გთხოვთ, ჩატში ნუ გააზიარებთ მგრძნობიარე პერსონალურ ინფორმაციას.",
  "Cookies.": "ქუქი-ფაილები.",
- "This site sets no tracking or advertising cookies. It remembers your light or dark preference and your language in your own browser, and the chat keeps the current conversation in your browser tab until you close it.": "ეს საიტი არ იყენებს თვალთვალის ან სარეკლამო ქუქი-ფაილებს. ის თქვენსავე ბრაუზერში იმახსოვრებს თქვენ მიერ არჩეულ ღია ან მუქ თემას და ენას, ჩატი კი მიმდინარე საუბარს ბრაუზერის ჩანართში ინახავს, სანამ მას არ დახურავთ.",
+ "This site sets no tracking or advertising cookies. It remembers your language in your own browser, and the chat keeps the current conversation in your browser tab until you close it.": "ეს საიტი არ იყენებს თვალთვალის ან სარეკლამო ქუქი-ფაილებს. ის თქვენსავე ბრაუზერში იმახსოვრებს თქვენ მიერ არჩეულ ენას, ჩატი კი მიმდინარე საუბარს ბრაუზერის ჩანართში ინახავს, სანამ მას არ დახურავთ.",
  "Your rights.": "თქვენი უფლებები.",
  "To see, correct or delete anything you’ve sent us, email {email}.": "თუ გსურთ ნახოთ, შეასწოროთ ან წაშალოთ ნებისმიერი ინფორმაცია, რაც გამოგვიგზავნეთ, მოგვწერეთ მისამართზე {email}.",
  "Page not found | EvoSoft": "გვერდი ვერ მოიძებნა | EvoSoft",

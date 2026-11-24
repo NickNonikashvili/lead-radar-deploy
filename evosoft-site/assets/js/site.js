@@ -29,6 +29,13 @@
   const motion = doc.classList.contains('motion') && !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const finePointer = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
 
+  /* a button that stops every looping animation (the moving words, the hero's light and facts) */
+  $$('.still-toggle').forEach((b) => b.addEventListener('click', () => {
+    const on = !doc.classList.contains('still');
+    doc.classList.toggle('still', on);
+    $$('.still-toggle').forEach((x) => x.setAttribute('aria-pressed', String(on)));
+  }));
+
   /* header: shadow and reading progress */
   const header = $('.topbar');
   const bar = $('.progress');
@@ -310,7 +317,7 @@
   /* ===================== motion (skipped entirely when the visitor prefers less motion) ===================== */
 
   /* reveal on scroll: only things below the fold, so nothing on screen blinks */
-  const REVEAL = ['.sec-head', '.tiles > *', '.svc-grid > *', '.svc-detail > *', '.trail > li', '.clients > *', '.faq > details', '.cta-card', '.work-list > *', '.feat-grid > *', '.gallery > *', '.phones-card', '.next-card', '.about-grid > *', '.legal > *', '.quote-grid > *', '.stats > *', '.marquee', '.accts > *', '.notes > *', '.db-facts > *', '.db-head', '.more'];
+  const REVEAL = ['.sec-head', '.tiles > *', '.svc-grid > *', '.svc-detail > *', '.trail > li', '.clients > *', '.faq > details', '.cta-card', '.work-list > *', '.feat-grid > *', '.gallery > *', '.phones-card', '.next-card', '.about-grid > *', '.legal > *', '.quote-grid > *', '.marquee', '.accts > *', '.notes > *', '.db-facts > *', '.db-head', '.more'];
   const ZOOM = new Set(['.gallery > *', '.cta-card', '.phones-card']);
   if ('IntersectionObserver' in window) {
     const io = new IntersectionObserver((entries) => {
@@ -391,7 +398,7 @@
 
   /* cards: a soft light follows the pointer; product tiles and the demo card tilt a little */
   if (finePointer) {
-    $$('.svc, .feat, .acct, .stat, .trail li, .note, .tile, .client, .p-side, .quote-side .card, .faq details').forEach((el) => el.classList.add('spot'));
+    $$('.svc, .feat, .acct, .trail li, .note, .tile, .client, .p-side, .quote-side .card, .faq details').forEach((el) => el.classList.add('spot'));
     let spotRaf = 0, last = null;
     document.addEventListener('pointermove', (e) => {
       last = e;
