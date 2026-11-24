@@ -6,7 +6,7 @@ import bpy, math, sys, os, json, time
 OUT = sys.argv[1]; KINDS = sys.argv[2:] or ['blue', 'white', 'chrome', 'hero', 'orb']
 PHI = list(range(0, 360, 20)); TH = list(range(-70, 71, 20))
 if os.environ.get('TEST'): PHI = [0, 90, 180, 270]; TH = [-45, 0, 30, 60]
-TILE = {'blue': 160, 'white': 160, 'chrome': 160, 'hero': 256, 'orb': 256}
+TILE = {'blue': 160, 'white': 160, 'chrome': 160, 'pink': 160, 'hero': 256, 'orb': 256}
 os.makedirs(OUT, exist_ok=True)
 s = bpy.context.scene
 for o in list(bpy.data.objects): bpy.data.objects.remove(o)
@@ -44,11 +44,14 @@ def mat(kind):
     if kind == 'blue': P['Base Color'].default_value = (0.012, 0.11, 0.75, 1); P['Roughness'].default_value = 0.22; P['Coat Weight'].default_value = 1.0; P['Coat Roughness'].default_value = 0.03
     if kind == 'white': P['Base Color'].default_value = (0.36, 0.37, 0.4, 1); P['Roughness'].default_value = 0.35; P['Coat Weight'].default_value = 0.7; P['Coat Roughness'].default_value = 0.05
     if kind in ('chrome', 'hero'): P['Base Color'].default_value = (0.95, 0.96, 0.98, 1); P['Metallic'].default_value = 1.0; P['Roughness'].default_value = 0.05
+    if kind == 'pink': P['Base Color'].default_value = (1.0, 0.02, 0.32, 1); P['Roughness'].default_value = 0.2; P['Coat Weight'].default_value = 1.0; P['Coat Roughness'].default_value = 0.03; P['Emission Color'].default_value = (1.0, 0.05, 0.4, 1); P['Emission Strength'].default_value = 0.08
     if kind == 'orb': P['Base Color'].default_value = (0.004, 0.005, 0.008, 1); P['Roughness'].default_value = 0.08; P['Coat Weight'].default_value = 1.0; P['Coat Roughness'].default_value = 0.02
     return m
 cam = bpy.data.cameras.new('c'); cam.type = 'ORTHO'; cam.ortho_scale = 2.04; co = bpy.data.objects.new('cam', cam); s.collection.objects.link(co); s.camera = co
 import mathutils
 meta = {'phi': PHI, 'theta': TH, 'tiles': {}}
+_old = os.path.join(OUT, 'atlas.json')
+if os.path.exists(_old): meta['tiles'].update(json.load(open(_old)).get('tiles', {}))
 for kind in KINDS:
     ball.data.materials.clear(); ball.data.materials.append(mat(kind))
     T = TILE[kind]; s.render.resolution_x = s.render.resolution_y = T
