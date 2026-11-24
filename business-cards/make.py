@@ -10,8 +10,8 @@ printer needs no fonts. The look follows the website: navy, cream and coral (60/
 
   front  navy: the mark, huge, lit from within and cut by the card's edges, behind fluted glass with a coral glow at
          its heart; the full logo top left; the slogan "Your digital evolution starts here" bottom left
-  back   cream with a navy panel off the right edge that holds a QR code to the quote page; on the cream, who it is
-         (the studio, or a person and their role) and how to reach them
+  back   cream that blends softly into a navy panel on the right, which holds a QR code to the quote page; on the
+         cream, who it is (the studio, or a person and their role) and how to reach them
 
 Each entry in CARDS is one card (the same front, its own back). For each, business-cards/out/<slug>/ gets:
   <slug>-print.pdf        2 pages (front, back), RGB, with bleed; TrimBox/BleedBox set. Send this to the printer.
@@ -197,8 +197,8 @@ def front(card):
                             CORAL if line == 'evolution' else CREAM, tracking=-0.02)[0])
     return deco, content
 
-# ================= BACK: cream, with a navy panel holding the QR code =================
-PANEL_X = 61.0                                                # the panel runs from here off the top, right, bottom
+# ================= BACK: cream blending into a navy panel that holds the QR code =================
+PANEL_X = 61.0                                                # where the navy panel's light is centred from
 PANEL_CX = (PANEL_X + BLEED + TRIM_W) / 2                     # centre of the part of the panel left after trimming
 QR_SIZE, QUIET = 18.0, 3                                      # the code in mm; cream modules around it
 TAG_Y, TAG_SIZE = Y0 + 9.4, 2.15                              # the line under the logo (the QR tile lines up with it)
@@ -210,29 +210,44 @@ def qr_parts():
     tile = QR_SIZE + 2 * QUIET * mod
     return qr, n, mod, PANEL_CX - tile / 2, TAG_Y - 0.727 * TAG_SIZE, tile
 
-_panel_field = None
-def panel_field():
-    """The panel carries the front's light: fluted glass, and a coral glow from behind the code."""
-    global _panel_field
-    if _panel_field: return _panel_field
+BLEND0, BLEND1 = 52.5, 68.0                                   # cream turns into navy between these (page mm)
+
+_back_field = None
+def back_field():
+    """Cream on the left blending into the navy panel on the right. The panel carries the front's light: fluted
+    glass, a slate glow, and a coral glow behind the code that warms the middle of the blend."""
+    global _back_field
+    if _back_field: return _back_field
     qr, n, mod, tx, ty, tile = qr_parts()
-    w, h = px(W - PANEL_X), px(H)
-    base = Image.new('RGB', (w, h), NAVY)
+    w, h = px(W), px(H)
+    panel = Image.new('RGB', (w, h), NAVY)
     blobs = Image.new('RGBA', (w, h), (0, 0, 0, 0))
     d = ImageDraw.Draw(blobs)
-    def ell(cx, cy, rx, ry, rgba):
-        cx -= PANEL_X
-        d.ellipse((px(cx - rx), px(cy - ry), px(cx + rx), px(cy + ry)), fill=rgba)
+    def ell(cx, cy, rx, ry, rgba): d.ellipse((px(cx - rx), px(cy - ry), px(cx + rx), px(cy + ry)), fill=rgba)
     ell(PANEL_X + 34, -4, 22, 16, (52, 68, 104, 210))                 # slate, top right
     ell(PANEL_CX, ty + tile / 2, 12.5, 12.5, (255, 107, 91, 215))     # coral, behind the code
-    base.paste(blobs.filter(ImageFilter.GaussianBlur(px(7))), (0, 0), blobs.filter(ImageFilter.GaussianBlur(px(7))))
-    _panel_field = b64png(fluted(base))
-    return _panel_field
+    blobs = blobs.filter(ImageFilter.GaussianBlur(px(7)))
+    panel.paste(blobs, (0, 0), blobs)
+    panel = np.asarray(fluted(panel), dtype=np.float32)
+    # how much navy at each x: an eased ramp, so there is no line where the blend starts or ends
+    x = (np.arange(w) + 0.5) / px(1)
+    u = np.clip((x - BLEND0) / (BLEND1 - BLEND0), 0, 1)
+    t = (u * u * (3 - 2 * u))[None, :, None]
+    cream = np.array([int(CREAM[i:i + 2], 16) for i in (1, 3, 5)], dtype=np.float32)
+    # mixed as light (linear), so the middle stays luminous instead of a muddy grey, with a little of the coral
+    # glow's warmth where the two meet
+    lin = lambda c: ((c / 255) ** 2.2)
+    out = (lin(cream) * (1 - t) + lin(panel) * t) ** (1 / 2.2) * 255
+    coral = np.array([255, 107, 91], dtype=np.float32)
+    warm = (4 * t * (1 - t)) * 0.10
+    out = out * (1 - warm) + coral * warm
+    out += (np.random.default_rng(7).random(out.shape[:2])[..., None] - 0.5) * 1.2   # a whisper of grain against banding
+    _back_field = b64png(Image.fromarray(np.clip(out + 0.5, 0, 255).astype(np.uint8)))
+    return _back_field
 
 def back(card):
-    deco = [f'<rect x="{PANEL_X}" y="0" width="{W - PANEL_X:.3f}" height="{H}" fill="{NAVY}"/>',
-            f'<image x="{PANEL_X}" y="0" width="{W - PANEL_X:.3f}" height="{H}" preserveAspectRatio="none" '
-            f'xlink:href="data:image/png;base64,{panel_field()}"/>']
+    deco = [f'<image x="0" y="0" width="{W}" height="{H}" preserveAspectRatio="none" '
+            f'xlink:href="data:image/png;base64,{back_field()}"/>']
     content = []
     # the QR code: navy modules on a cream tile, its quiet zone inside the tile, and what it does under it
     qr, n, mod, tx, ty, tile = qr_parts()

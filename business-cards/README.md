@@ -5,7 +5,7 @@ All rights reserved.
 
 - **Front (navy):** the upside-down EvoSoft mark, huge and lit from within, cut by the card's edges, behind fluted
   glass with a coral glow at its heart; the full logo top left; "Your digital **evolution** starts here" bottom left.
-- **Back (cream):** a navy panel off the right edge holds a QR code to the quote page
+- **Back (cream):** the cream blends softly (through a little coral warmth) into a navy panel on the right, which holds a QR code to the quote page
   (https://evosoft.solutions/contact, "Scan for a free quote"). On the cream: the logo, who it is (the studio and its
   services, or a name and role), a short coral rule, then the contacts with small labels (PHONE, EMAIL, WEB).
 
