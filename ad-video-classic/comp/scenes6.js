@@ -484,13 +484,18 @@
   }
   function drawWorld(t, out, { panels, spheres, glows, rings, pools, hero }) {
     panels = panels.filter((p) => {
-      if (p.back) return true;
+      if (p.back && !p.flip) return true;
       const r = (p.rot || [0, 0, 0]).map((v) => v * Math.PI / 180);
       let n = [Math.cos(r[0]) * Math.sin(r[1]), -Math.sin(r[0]), Math.cos(r[0]) * Math.cos(r[1])];
       n = [n[0] * Math.cos(r[2]) - n[1] * Math.sin(r[2]), n[0] * Math.sin(r[2]) + n[1] * Math.cos(r[2]), n[2]];
       const dp = n[0] * (CAM[0] - p.pos[0]) + n[1] * (CAM[1] - p.pos[1]) + n[2] * (CAM[2] - p.pos[2]), front = dp > 0;
-      if (Math.abs(dp) < 0.35 && dist3(CAM, p.pos) < Math.hypot(p.size[0], p.size[1]) * 0.6) {
-        const f = clamp((Math.abs(dp) - 0.08) / 0.27, 0, 1); if (f <= 0.01) return false; p.opacity = (p.opacity ?? 1) * f;
+      if (Math.abs(dp) < 1.0) {           // the camera is close to this screen's plane: is it in front of the screen itself?
+        const ax = (v) => { let [x, y, z] = v; [y, z] = [y * Math.cos(r[0]) - z * Math.sin(r[0]), y * Math.sin(r[0]) + z * Math.cos(r[0])]; [x, z] = [x * Math.cos(r[1]) + z * Math.sin(r[1]), -x * Math.sin(r[1]) + z * Math.cos(r[1])]; [x, y] = [x * Math.cos(r[2]) - y * Math.sin(r[2]), x * Math.sin(r[2]) + y * Math.cos(r[2])]; return [x, y, z]; };
+        const X = ax([1, 0, 0]), Y = ax([0, 1, 0]), d = [CAM[0] - p.pos[0], CAM[1] - p.pos[1], CAM[2] - p.pos[2]];
+        const lx = d[0] * X[0] + d[1] * X[1] + d[2] * X[2], ly = d[0] * Y[0] + d[1] * Y[1] + d[2] * Y[2];
+        if (Math.abs(lx) < p.size[0] / 2 + 0.4 && Math.abs(ly) < p.size[1] / 2 + 0.4) {
+          const f = clamp((Math.abs(dp) - 0.2) / 0.8, 0, 1); if (f <= 0.01) return false; p.opacity = (p.opacity ?? 1) * f;
+        }
       }
       if (!front && p.back === true && p.flip) { p.color = [0.045, 0.055, 0.075]; p.tex = T.white; delete p.uv; }
       return front || p.back === true;
