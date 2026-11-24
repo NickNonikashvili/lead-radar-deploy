@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-"""The share image (evosoft-site/assets/img/og.jpg), flat like the site: black, the EvoSoft mark huge in burgundy,
-the slogan with "evolution" in neon yellow, the logo in the corner. No gradients.
+"""The share image (evosoft-site/assets/img/og.jpg): black, the EvoSoft mark in 3D (assets/img/mark-3d.webp, rendered
+in Blender), the slogan with "evolution" in neon yellow, the logo in the corner.
 
   python3 site-builder/og.py [Inter-SemiBold.otf]          (needs: pip install cairosvg pillow)
 """
@@ -18,10 +18,10 @@ def svg_png(svg, height=None, width=None):
     return Image.open(io.BytesIO(cairosvg.svg2png(bytestring=svg.encode(), output_height=height, output_width=width))).convert('RGBA')
 
 im = Image.new('RGBA', (W, H), BLACK + (255,))
-# the mark, huge, in deep burgundy, standing at the right edge (the same mark as the site's logo, upside down)
-mark = open(os.path.join(IMG, 'brand', 'mark.svg')).read().replace('fill="#111318"', 'fill="#%02x%02x%02x"' % DEEP)
-m = svg_png(mark, height=820)
-im.alpha_composite(m, (W - m.width + 230, (H - m.height) // 2))
+# the mark in 3D (rendered in Blender: lacquered burgundy, neon-yellow edge light), large at the right
+m = Image.open(os.path.join(IMG, 'mark-3d.webp')).convert('RGBA')
+m = m.resize((int(m.width * 640 / m.height), 640), Image.LANCZOS)
+im.alpha_composite(m, (W - m.width + 120, (H - m.height) // 2 - 6))
 # a burgundy bar and a yellow square: the site's two colours, flat
 d = ImageDraw.Draw(im)
 d.rectangle((0, H - 14, W, H), fill=BURGUNDY + (255,))

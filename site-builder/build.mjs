@@ -14,7 +14,7 @@ import { fileURLToPath } from 'node:url';
 import * as SRC from './data/site.mjs';
 import { products as SRC_PRODUCTS } from './data/products.mjs';
 import { icon } from './lib/icons.mjs';
-import { logoInline, markInline, markPath, markBox } from './lib/logo.mjs';
+import { logoInline, markInline } from './lib/logo.mjs';
 import { knowledgeMarkdown, localKb } from './lib/knowledge.mjs';
 import { LANGS, loadDict, makeT, translateData } from './lib/i18n.mjs';
 
@@ -485,7 +485,7 @@ function buildPages() {
     preload: () => `<link rel="preload" as="image" type="image/webp" href="${webp(heroShot(products[0]).file)}">\n`,
     body: (root) => `
 <section class="hero">
-  <svg class="monolith" viewBox="0 0 ${markBox[0]} ${markBox[1]}" aria-hidden="true" focusable="false"><path d="${markPath}"/></svg>
+  <img class="monolith" src="${A('assets/img/mark-3d.webp')}" alt="" width="1250" height="1229" fetchpriority="high" decoding="async">
   <div class="wrap hero-center">
     <p class="kicker">${h('Software studio in {region} · Free quotes', { region: esc(site.region) })}</p>
     <h1 class="slogan">${sloganHtml()}</h1>

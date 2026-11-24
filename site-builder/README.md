@@ -174,8 +174,17 @@ Ideas that would help further:
 
 ## Look
 
-Flat and dark, in three colours: black (with off-white type), neon yellow `#EEFF00` and burgundy `#7A0019`. There are
-no gradients, glows or spheres: every coloured thing is one solid colour.
+Dark, in three colours: black (with off-white type), neon yellow `#EEFF00` and burgundy `#7A0019`. There are no colour
+gradients and no spheres; depth comes from light instead:
+
+- **The 3D mark.** The (upside-down) EvoSoft mark, modelled in Blender as a slab of lacquered burgundy lit by a
+  neon-yellow edge light (`assets/img/mark-3d.webp`). It floats beside the home page slogan and stands behind the
+  call to action and the top of inner pages. Render it again with
+  `bl/bin/python ad-video-classic/blender/mark3d.py ad-video-classic/blender/mark.json mark3d.png 2000 -18 6`, then crop it
+  to its edges and save it as WebP.
+- **Neon.** The yellow glows like a neon tube: "evolution", the main buttons, the process line and the reading line.
+- **Elevation.** Cards and panels sit on deep shadows with a fine top highlight. The live-demo screen tilts with the
+  pointer over a burgundy shadow, and the header is frosted glass.
 
 - **Yellow** is for action and emphasis: buttons, the word "evolution" in the slogan, the typing cursor, the process
   line, the reading line, focus outlines, small square markers.
