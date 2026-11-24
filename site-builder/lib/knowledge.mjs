@@ -48,6 +48,7 @@ ${extras}`.replace(/\n{2,}/g, '\n');
 
 # Company
 - ${site.legalName}, a software development studio based in ${site.region}. ${site.short}
+- Slogan: "${site.slogan}".
 - Works remotely with clients anywhere, over email and calls.
 - Email: ${site.email}. Phone: ${site.phones.join(' or ')}. Replies ${site.responseTime}.
 - Website: ${site.url}. ${site.copyright} Evo, Mailtabs and StudyCat are products of EvoSoft Solutions.

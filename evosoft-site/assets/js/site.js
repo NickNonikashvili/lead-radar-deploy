@@ -405,7 +405,7 @@
         el.style.setProperty('--my', `${last.clientY - r.top}px`);
       });
     }, { passive: true });
-    $$('.tile:not(.tile-new), .hero .demo-card').forEach((el) => {
+    $$('.tile:not(.tile-new), .stage .demo-card').forEach((el) => {
       const max = el.classList.contains('demo-card') ? 4 : 7;
       el.addEventListener('pointermove', (e) => {
         const r = el.getBoundingClientRect();

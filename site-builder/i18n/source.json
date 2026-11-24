@@ -12,6 +12,10 @@
   "ctx": "data: site.copyright"
  },
  {
+  "s": "Your digital evolution starts here",
+  "ctx": "data: site.slogan"
+ },
+ {
   "s": "EvoSoft | Software, Web & App Development Studio in Georgia",
   "ctx": "data: site.title"
  },
@@ -1772,6 +1776,14 @@
   "ctx": "index.html"
  },
  {
+  "s": "Your digital {evolution} starts here",
+  "ctx": "the slogan; {evolution} is the word “evolution”, lit up in blue"
+ },
+ {
+  "s": "evolution",
+  "ctx": "the word in the slogan “Your digital evolution starts here”"
+ },
+ {
   "s": "Websites, apps and business software,",
   "ctx": "index.html"
  },
@@ -1781,10 +1793,6 @@
  },
  {
   "s": "We build",
-  "ctx": "index.html"
- },
- {
-  "s": "We take on projects of any size, from a five-page website to a point-of-sale system, and look after them once they’re live. Don’t take our word for it: sign in to the software we’ve built.",
   "ctx": "index.html"
  },
  {
@@ -1801,6 +1809,10 @@
  },
  {
   "s": "Live demos",
+  "ctx": "index.html"
+ },
+ {
+  "s": "We take on projects of any size, from a five-page website to a point-of-sale system, and look after them once they’re live. Don’t take our word for it: sign in to the software we’ve built.",
   "ctx": "index.html"
  },
  {

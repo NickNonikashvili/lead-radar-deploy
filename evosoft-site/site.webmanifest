@@ -3,8 +3,8 @@
   "short_name": "EvoSoft",
   "start_url": "/",
   "display": "browser",
-  "background_color": "#F4F7FB",
-  "theme_color": "#111318",
+  "background_color": "#040507",
+  "theme_color": "#040507",
   "icons": [
     {
       "src": "/assets/img/icon-180.png?v=89f0a22731",

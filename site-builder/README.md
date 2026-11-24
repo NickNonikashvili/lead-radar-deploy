@@ -94,7 +94,8 @@ Bots that fill the hidden field are ignored.
 | Products, demo URLs, demo accounts, screenshots and captions | `site-builder/data/products.mjs` |
 | Page layouts and wording | `site-builder/build.mjs` |
 | Translations | `site-builder/i18n/<lang>/*.json` (see Languages below) |
-| Colours, fonts, spacing | `evosoft-site/assets/css/site.css` (colour tokens at the top, light and dark) |
+| Colours, fonts, spacing | `evosoft-site/assets/css/site.css` (colour tokens at the top: dark by default, light behind the toggle) |
+| The slogan | `slogan` in `site-builder/data/site.mjs`; the hero headline uses the translations of `Your digital {evolution} starts here` |
 
 Then rebuild (Node 18+, no `npm install`):
 
@@ -170,3 +171,22 @@ Ideas that would help further:
 - **Metadata:** pages carry `copyright` meta tags and `copyrightHolder` in their structured data.
 - **Demos:** every demo section on the site carries its own copyright line. The live demos themselves show a notice;
   see each kit in `demos/`.
+
+## Look
+
+The site is set in the world of the EvoSoft film: a black studio, a glossy floor, one electric-blue light, 3D spheres.
+
+- **Dark by default.** A visitor who picks light with the toggle keeps it; everyone else gets dark.
+- **Type.** Inter, the logo's typeface, for everything. JetBrains Mono for small labels. Noto Sans Georgian for Georgian.
+- **The slogan.** "Your digital evolution starts here" is the home page headline, with its words rising in out of a blur
+  and "evolution" lit blue. It is also written huge in every footer, on the share image (`og.jpg`) and in the structured
+  data.
+- **The spheres** are the Blender renders from the film (`ad-video-classic/blender/sphere_atlas.py`):
+  - `assets/js/orbs.js` draws them in the home page hero, on the floor with their reflections. Each one shows the view
+    matching where the camera sees it from, and the camera drifts with the pointer.
+  - `site-builder/orbs.py` cuts the sprite strips, the cluster behind inner page heads (`orbs/head.webp`) and `og.jpg`.
+  - Reduced motion draws one still frame.
+
+```bash
+python3 site-builder/orbs.py path/to/spheres      # the folder sphere_atlas.py wrote
+```

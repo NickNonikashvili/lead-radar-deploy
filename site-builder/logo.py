@@ -11,7 +11,6 @@ Inter ExtraBold, slightly tracked, converted to outlines, matched to the 3D logo
   evosoft-site/assets/img/brand/icon.svg    app icon: white mark on a black tile (also assets/img/icon.svg)
   evosoft-site/assets/img/brand/logo-1200.png
   evosoft-site/assets/img/{icon-180,icon-512,favicon-32}.png and evosoft-site/favicon.ico
-  evosoft-site/assets/img/og.jpg            the share image: its top-left logo is cleared and redrawn (the rest is kept)
 
 Needs: pip install fonttools brotli cairosvg pillow; ImageMagick (`convert`) for favicon.ico; Inter ExtraBold from
 @fontsource/inter 5.3.0 (pinned, so the wordmark never changes by itself):
@@ -138,8 +137,8 @@ def main(font_path):
     subprocess.run(['convert', *tmp, os.path.join(SITE, 'favicon.ico')], check=True)
     for p in tmp:
         if not p.endswith('favicon-32.png'): os.remove(p)
-    og_logo(light)
-    print(f'logo {W} x 64; wrote logo.mjs, brand SVGs, PNG icons, favicon.ico and the logo on og.jpg')
+    # the share image (og.jpg) is drawn by orbs.py, with the slogan and the spheres; og_logo() is kept for a light one
+    print(f'logo {W} x 64; wrote logo.mjs, brand SVGs, PNG icons and favicon.ico (og.jpg: run orbs.py)')
 
 def og_logo(light_svg, height=44, left=64, centre_y=72.5):
     """Redraw the logo in the top-left of the share image: clear that strip with each row's own background, then paste."""

@@ -33,6 +33,15 @@ try {
 }
 
 // ---------- helpers ----------
+// The slogan, in the page's language. sloganHtml() splits it into words (each rises in on its own) and lights up
+// "evolution" wherever the language puts it.
+const slogan = () => site.slogan;
+function sloganHtml() {
+  const words = t('Your digital {evolution} starts here', undefined, 'the slogan; {evolution} is the word “evolution”, lit up in blue').split(/\s+/);
+  return words.map((w, i) => (w.includes('{evolution}')
+    ? `<span class="w hl" style="--i:${i}">${esc(w.replace('{evolution}', t('evolution', undefined, 'the word in the slogan “Your digital evolution starts here”')))}</span>`
+    : `<span class="w" style="--i:${i}">${esc(w)}</span>`)).join(' ');
+}
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const attr = esc;
 const join = (arr, fn, sep = '') => (arr || []).map(fn).join(sep);
@@ -80,6 +89,7 @@ function organization() {
     url: SITE_URL,
     logo: { '@type': 'ImageObject', url: `${SITE_URL}/assets/img/icon-512.png`, width: 512, height: 512 },
     image: `${SITE_URL}/assets/img/og.jpg`,
+    slogan: slogan(),
     description: site.description,
     email: site.email,
     telephone: site.phones[0],
@@ -119,7 +129,7 @@ function ldFor({ file, title, description, crumbs = [], extra = [] }) {
 }
 
 // ---------- layout ----------
-const FONTS = { en: ['gabarito', 'figtree'], es: ['gabarito', 'figtree'], ka: ['noto-georgian', 'gabarito'], ru: ['onest-cyrillic', 'gabarito'] };
+const FONTS = { en: ['inter'], es: ['inter'], ka: ['noto-georgian', 'inter'], ru: ['inter-cyrillic', 'inter'] };
 
 function head({ file, title, description, ogImage, crumbs, ld = [], noindex = false, preload = '' }) {
   const canonical = abs(file);
@@ -146,14 +156,13 @@ ${join(LANGS.filter((x) => x !== L), (x) => `<meta property="og:locale:alternate
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="theme-color" content="#F4F7FB" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#0D1626" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#040507">
 <link rel="icon" href="${A('favicon.ico')}" sizes="32x32">
 <link rel="icon" href="${A('assets/img/icon.svg')}" type="image/svg+xml">
 <link rel="apple-touch-icon" href="${A('assets/img/icon-180.png')}">
 <link rel="manifest" href="${A('site.webmanifest')}">
 ${join(FONTS[L.code] || FONTS.en, (f) => `<link rel="preload" href="${A(`assets/fonts/${f}.woff2`)}" as="font" type="font/woff2" crossorigin>\n`)}${typeof preload === 'function' ? preload() : preload}<link rel="stylesheet" href="${A('assets/css/site.css')}">
-<script>(function(d){d.className+=' js';try{if(!matchMedia('(prefers-reduced-motion: reduce)').matches)d.className+=' motion';var t=localStorage.getItem('evo-theme');if(t==='light'||t==='dark')d.setAttribute('data-theme',t)}catch(e){}})(document.documentElement)</script>
+<script>(function(d){d.className+=' js';try{if(!matchMedia('(prefers-reduced-motion: reduce)').matches)d.className+=' motion';var t=localStorage.getItem('evo-theme')}catch(e){}d.setAttribute('data-theme',t==='light'?'light':'dark')})(document.documentElement)</script>
 <script type="application/ld+json">${ldFor({ file, title, description, crumbs, extra: ld })}</script>
 </head>`;
 }
@@ -226,6 +235,7 @@ function jsStrings() {
 function footer(root) {
   return `<footer class="footer">
   <div class="wrap">
+    <p class="foot-slogan">${sloganHtml()}</p>
     <div class="foot-grid">
       <div class="foot-brand">
         <a class="brand" href="${root}index.html" aria-label="${attr(t('EvoSoft, home'))}">${logoInline}</a>
@@ -298,7 +308,7 @@ ${footer(root)}`;
 const arrow = '<span class="arr" aria-hidden="true">→</span>';
 const ext = '<span class="arr" aria-hidden="true">↗</span>';
 // Each product gets its own colour, like StudyCat's classes.
-const TILE = { evo: '#4F46E5', mailtabs: '#0F766E', studycat: '#1A64D6' };
+const TILE = { evo: '#8A7CFF', mailtabs: '#4FC3E0', studycat: '#6E9BFF' };
 const tileColor = (p) => p.tile || TILE[p.slug] || p.accent;
 const SVC_ICON = ['globe', 'cart', 'code', 'register', 'layers', 'search', 'pen', 'mail', 'tool'];
 const SVC_TONE = ['blue', 'green', 'purple', 'gold', 'teal', 'blue', 'coral', 'purple', 'green'];
@@ -306,7 +316,6 @@ const accountsWord = (n) => t.n(n, '{n} demo account', '{n} demo accounts');
 
 const pageHead = (kicker, title, lede, extra = '') => `
 <section class="page-head">
-  <div class="hero-bg" aria-hidden="true"><i></i><i></i></div>
   <div class="wrap">
     <p class="chip">${kicker}</p>
     <h1 class="split">${title}</h1>
@@ -474,20 +483,28 @@ function buildPages() {
     preload: () => `<link rel="preload" as="image" type="image/webp" href="${webp(heroShot(products[0]).file)}">\n`,
     body: (root) => `
 <section class="hero">
-  <div class="hero-bg" aria-hidden="true"><i></i><i></i><i></i></div>
-  <div class="wrap hero-grid">
-    <div class="hero-copy">
-      <p class="chip"><span class="dot" aria-hidden="true"></span>${h('Software studio in {region} · Free quotes', { region: esc(site.region) })}</p>
-      <h1 class="split">${h('Websites, apps and business software,')} <span class="hl">${h('built to order.')}</span></h1>
-      <p class="typer" aria-hidden="true"><span class="typer-pre">${h('We build')}</span> <span class="typer-word" data-words="${attr(JSON.stringify(typerWords))}">${esc(typerWords[0])}</span><span class="caret"></span></p>
-      <p class="lede">${h('We take on projects of any size, from a five-page website to a point-of-sale system, and look after them once they’re live. Don’t take our word for it: sign in to the software we’ve built.')}</p>
-      <div class="actions">
-        <a class="btn primary lg" href="${root}contact.html">${h('Get a free quote')} ${arrow}</a>
-        <a class="btn lg" href="${root}demos.html">${h('Try a live demo')}</a>
-      </div>
-      <p class="trust">${h('Trusted by {clients}', { clients: join(clients, (c) => `<a href="${attr(c.url)}" target="_blank" rel="noopener">${esc(c.name)}</a>`, ' · ') })}</p>
+  <canvas class="orbs" aria-hidden="true" data-src="${A('assets/img/orbs/')}"></canvas>
+  <div class="hero-shade" aria-hidden="true"></div>
+  <div class="wrap hero-center">
+    <p class="kicker">${h('Software studio in {region} · Free quotes', { region: esc(site.region) })}</p>
+    <h1 class="slogan">${sloganHtml()}</h1>
+    <p class="hero-sub">${h('Websites, apps and business software,')} ${h('built to order.')}</p>
+    <p class="typer" aria-hidden="true"><span class="typer-pre">${h('We build')}</span> <span class="typer-word" data-words="${attr(JSON.stringify(typerWords))}">${esc(typerWords[0])}</span><span class="caret"></span></p>
+    <div class="actions">
+      <a class="btn primary lg" href="${root}contact.html">${h('Get a free quote')} ${arrow}</a>
+      <a class="btn lg" href="${root}demos.html">${h('Try a live demo')}</a>
     </div>
-    ${heroDemoCard(root)}
+    <p class="trust">${h('Trusted by {clients}', { clients: join(clients, (c) => `<a href="${attr(c.url)}" target="_blank" rel="noopener">${esc(c.name)}</a>`, ' · ') })}</p>
+  </div>
+  <div class="scroll-cue" aria-hidden="true"></div>
+  <script src="${A('assets/js/orbs.js')}" defer></script>
+</section>
+
+<section class="stage">
+  <div class="wrap">
+    <p class="kicker">${h('Live demos')}</p>
+    <p class="stage-lede">${h('We take on projects of any size, from a five-page website to a point-of-sale system, and look after them once they’re live. Don’t take our word for it: sign in to the software we’ve built.')}</p>
+    <div class="stage-frame">${heroDemoCard(root)}</div>
   </div>
 </section>
 
@@ -634,7 +651,6 @@ ${ctaCard(root, h('Like what you see?'), h('We can build something like this for
       bodyClass: 'product',
       body: (root) => `
 <section class="p-head" style="--c:${tileColor(p)}">
-  <div class="hero-bg" aria-hidden="true"><i></i><i></i></div>
   <div class="wrap">
     <nav class="crumbs" aria-label="${attr(t('Breadcrumb'))}"><a href="${root}portfolio.html">${h('Work')}</a><span aria-hidden="true">›</span><span aria-current="page">${esc(p.name)}</span></nav>
     <div class="p-grid">
@@ -907,7 +923,7 @@ const versioned = (html) => html.replace(ASSET, (m, pre, rel) => {
 const manifestIcon = (rel, sizes, type) => ({ src: `/${rel}?v=${hashOf(rel)}`, sizes, type });
 fs.writeFileSync(
   path.join(OUT, 'site.webmanifest'),
-  JSON.stringify({ name: 'EvoSoft', short_name: 'EvoSoft', start_url: '/', display: 'browser', background_color: '#F4F7FB', theme_color: '#111318', icons: [manifestIcon('assets/img/icon-180.png', '180x180', 'image/png'), manifestIcon('assets/img/icon-512.png', '512x512', 'image/png'), manifestIcon('assets/img/icon.svg', 'any', 'image/svg+xml')] }, null, 2) + '\n',
+  JSON.stringify({ name: 'EvoSoft', short_name: 'EvoSoft', start_url: '/', display: 'browser', background_color: '#040507', theme_color: '#040507', icons: [manifestIcon('assets/img/icon-180.png', '180x180', 'image/png'), manifestIcon('assets/img/icon-512.png', '512x512', 'image/png'), manifestIcon('assets/img/icon.svg', 'any', 'image/svg+xml')] }, null, 2) + '\n',
 );
 
 for (const p of built) {

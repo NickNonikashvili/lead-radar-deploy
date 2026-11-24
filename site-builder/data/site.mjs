@@ -13,6 +13,8 @@ export const site = {
   countryCode: 'GE',
   year: 2026,
   copyright: '© 2026 EvoSoft Solutions. All rights reserved.',
+  // The company's slogan: the home page headline, the footer, the share image and the structured data.
+  slogan: 'Your digital evolution starts here',
   // Used for the home page <title> and meta description, and as the company summary everywhere else.
   title: 'EvoSoft | Software, Web & App Development Studio in Georgia',
   description:
