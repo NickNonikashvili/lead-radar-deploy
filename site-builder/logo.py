@@ -115,7 +115,9 @@ def main(font_path):
           '// Colours come from CSS: .logo-x, .logo-word, .logo-tile.\n'
           f'export const logoInline = {repr_js(logo_inline)};\n'
           f'export const markInline = {repr_js(mark_inline)};\n'
-          f'export const logoWidth = {num(W)};\n')
+          f'export const logoWidth = {num(W)};\n'
+          f'export const markPath = {repr_js(mark_d(1))};\n'
+          f'export const markBox = [{num(MW)}, {num(MH)}];\n')
     # files
     light = svg(W, 64, f'<path fill="{INK}" d="{md}"/><path fill="{INK}" d="{wd}"/>')
     dark = svg(W, 64, f'<path fill="{PAPER}" d="{md}"/><path fill="{PAPER}" d="{wd}"/>')
@@ -140,8 +142,8 @@ def main(font_path):
     subprocess.run(['convert', *tmp, os.path.join(SITE, 'favicon.ico')], check=True)
     for p in tmp:
         if not p.endswith('favicon-32.png'): os.remove(p)
-    # the share image (og.jpg) is drawn by orbs.py, with the slogan and the spheres; og_logo() is kept for a light one
-    print(f'logo {W} x 64; wrote logo.mjs, brand SVGs, PNG icons and favicon.ico (og.jpg: run orbs.py)')
+    # the share image (og.jpg) is drawn by og.py, with the slogan and the mark; og_logo() is kept for a light one
+    print(f'logo {W} x 64; wrote logo.mjs, brand SVGs, PNG icons and favicon.ico (og.jpg: run og.py)')
 
 def og_logo(light_svg, height=44, left=64, centre_y=72.5):
     """Redraw the logo in the top-left of the share image: clear that strip with each row's own background, then paste."""

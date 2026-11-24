@@ -14,7 +14,7 @@ import { fileURLToPath } from 'node:url';
 import * as SRC from './data/site.mjs';
 import { products as SRC_PRODUCTS } from './data/products.mjs';
 import { icon } from './lib/icons.mjs';
-import { logoInline, markInline } from './lib/logo.mjs';
+import { logoInline, markInline, markPath, markBox } from './lib/logo.mjs';
 import { knowledgeMarkdown, localKb } from './lib/knowledge.mjs';
 import { LANGS, loadDict, makeT, translateData } from './lib/i18n.mjs';
 
@@ -308,7 +308,9 @@ ${footer(root)}`;
 const arrow = '<span class="arr" aria-hidden="true">→</span>';
 const ext = '<span class="arr" aria-hidden="true">↗</span>';
 // Each product gets its own colour, like StudyCat's classes.
-const TILE = { evo: '#8A7CFF', mailtabs: '#4FC3E0', studycat: '#6E9BFF' };
+// Product colours: burgundy, neon yellow and off-white, each with the text colour that reads on it.
+const TILE = { evo: '#7A0019', mailtabs: '#EEFF00', studycat: '#F2F2EE' };
+const TILE_INK = { evo: '#F2F2EE', mailtabs: '#050505', studycat: '#050505' };
 const tileColor = (p) => p.tile || TILE[p.slug] || p.accent;
 const SVC_ICON = ['globe', 'cart', 'code', 'register', 'layers', 'search', 'pen', 'mail', 'tool'];
 const SVC_TONE = ['blue', 'green', 'purple', 'gold', 'teal', 'blue', 'coral', 'purple', 'green'];
@@ -352,7 +354,7 @@ const steps = () => `<ol class="trail">${join(steps_, (s, i) => `<li><span class
 
 function productTile(root, p) {
   const shot = heroShot(p);
-  return `<article class="tile" style="--c:${tileColor(p)}">
+  return `<article class="tile" style="--c:${tileColor(p)};--c-ink:${TILE_INK[p.slug] || '#050505'}">
   <a class="tile-cover" href="${root}work/${p.slug}.html" tabindex="-1" aria-hidden="true">
     <span class="tile-tag">${esc(p.category)}</span>
     ${shot ? `<span class="tile-shot">${picture(shot.file, { alt: '', sizes: '(min-width: 1100px) 380px, 90vw' })}</span>` : ''}
@@ -385,7 +387,7 @@ function copyBtn(value, label) {
 function heroDemoCard(root) {
   return `<div class="demo-card" data-tabs data-autoplay>
   <div class="dc-tabs" role="tablist" aria-label="${attr(t('Live demos'))}">
-    ${join(products, (p, i) => `<button class="dc-tab" type="button" role="tab" id="dct-${p.slug}" aria-controls="dcp-${p.slug}" aria-selected="${i === 0}" tabindex="${i === 0 ? 0 : -1}" style="--c:${tileColor(p)}"><i aria-hidden="true"></i>${esc(p.name)}<b class="dc-progress" aria-hidden="true"></b></button>`)}
+    ${join(products, (p, i) => `<button class="dc-tab" type="button" role="tab" id="dct-${p.slug}" aria-controls="dcp-${p.slug}" aria-selected="${i === 0}" tabindex="${i === 0 ? 0 : -1}" style="--c:${tileColor(p)};--c-ink:${TILE_INK[p.slug] || '#050505'}"><i aria-hidden="true"></i>${esc(p.name)}<b class="dc-progress" aria-hidden="true"></b></button>`)}
   </div>
   ${join(products, (p, i) => {
     const shot = heroShot(p);
@@ -432,7 +434,7 @@ function demoNotes(p) {
 
 function demoBlock(root, p, { withTitle = true } = {}) {
   const d = p.demo;
-  return `<div class="demo-block" style="--c:${tileColor(p)}">
+  return `<div class="demo-block" style="--c:${tileColor(p)};--c-ink:${TILE_INK[p.slug] || '#050505'}">
     <div class="db-head">
       ${withTitle ? `<div class="db-id"><span class="db-dot" aria-hidden="true"></span><div><h3><a href="${root}work/${p.slug}.html">${esc(p.name)}</a></h3><p>${esc(p.kind)}</p></div></div>` : ''}
       <p class="db-where">${statusPill(p)}${d.url ? `<a href="${attr(d.url)}" target="_blank" rel="noopener">${esc(d.label)}</a>` : ''}</p>
@@ -483,8 +485,7 @@ function buildPages() {
     preload: () => `<link rel="preload" as="image" type="image/webp" href="${webp(heroShot(products[0]).file)}">\n`,
     body: (root) => `
 <section class="hero">
-  <canvas class="orbs" aria-hidden="true" data-src="${A('assets/img/orbs/')}"></canvas>
-  <div class="hero-shade" aria-hidden="true"></div>
+  <svg class="monolith" viewBox="0 0 ${markBox[0]} ${markBox[1]}" aria-hidden="true" focusable="false"><path d="${markPath}"/></svg>
   <div class="wrap hero-center">
     <p class="kicker">${h('Software studio in {region} · Free quotes', { region: esc(site.region) })}</p>
     <h1 class="slogan">${sloganHtml()}</h1>
@@ -497,7 +498,6 @@ function buildPages() {
     <p class="trust">${h('Trusted by {clients}', { clients: join(clients, (c) => `<a href="${attr(c.url)}" target="_blank" rel="noopener">${esc(c.name)}</a>`, ' · ') })}</p>
   </div>
   <div class="scroll-cue" aria-hidden="true"></div>
-  <script src="${A('assets/js/orbs.js')}" defer></script>
 </section>
 
 <section class="stage">
@@ -570,7 +570,7 @@ ${pageHead(h('Our work'), h('Software we built, sites we shipped'), h('Three pro
   <div class="wrap">
     <div class="work-list">${join(products, (p) => {
       const shot = heroShot(p);
-      return `<article class="work-row" style="--c:${tileColor(p)}">
+      return `<article class="work-row" style="--c:${tileColor(p)};--c-ink:${TILE_INK[p.slug] || '#050505'}">
         <a class="work-shot" href="${root}work/${p.slug}.html" tabindex="-1" aria-hidden="true">${shot ? picture(shot.file, { alt: '', sizes: '(min-width: 1100px) 640px, 100vw' }) : ''}</a>
         <div class="work-info">
           <p class="chip tone"><span class="dot" aria-hidden="true"></span>${esc(p.category)}</p>
@@ -603,7 +603,7 @@ ${ctaCard(root, h('Want to be next?'))}
     crumbs: [[t('Live demos'), 'demos.html']],
     body: (root) => `
 ${pageHead(h('Live demos'), h('Try our software before you talk to us'), h('Each demo is a real copy of the product with made-up data. Pick a role, copy its login and open the demo. The demos reset themselves, so you can’t break anything for good.'),
-  `<nav class="jump" aria-label="${attr(t('Jump to a demo'))}">${join(products, (p) => `<a href="#${p.slug}" style="--c:${tileColor(p)}"><i aria-hidden="true"></i>${esc(p.name)}</a>`)}</nav>`)}
+  `<nav class="jump" aria-label="${attr(t('Jump to a demo'))}">${join(products, (p) => `<a href="#${p.slug}" style="--c:${tileColor(p)};--c-ink:${TILE_INK[p.slug] || '#050505'}"><i aria-hidden="true"></i>${esc(p.name)}</a>`)}</nav>`)}
 ${join(products, (p, i) => `
 <section class="sec${i % 2 ? ' alt' : ''} tight" id="${p.slug}">
   <div class="wrap">${demoBlock(root, p)}</div>
@@ -650,7 +650,7 @@ ${ctaCard(root, h('Like what you see?'), h('We can build something like this for
       }],
       bodyClass: 'product',
       body: (root) => `
-<section class="p-head" style="--c:${tileColor(p)}">
+<section class="p-head" style="--c:${tileColor(p)};--c-ink:${TILE_INK[p.slug] || '#050505'}">
   <div class="wrap">
     <nav class="crumbs" aria-label="${attr(t('Breadcrumb'))}"><a href="${root}portfolio.html">${h('Work')}</a><span aria-hidden="true">›</span><span aria-current="page">${esc(p.name)}</span></nav>
     <div class="p-grid">
@@ -707,7 +707,7 @@ ${desktop.length ? `<section class="sec alt">
 ${ctaCard(root, h('Need something like {name}?', { name: esc(p.name) }), h('We build business systems, web apps and websites to fit how you actually work. Tell us about your project for a free quote.'))}
 
 <section class="sec tight">
-  <div class="wrap"><a class="next-card" href="${root}work/${next.slug}.html" style="--c:${tileColor(next)}"><span class="muted">${h('Next product')}</span><span class="next-name">${esc(next.name)}</span><span class="next-tag">${esc(next.tagline)}</span>${arrow}</a></div>
+  <div class="wrap"><a class="next-card" href="${root}work/${next.slug}.html" style="--c:${tileColor(next)};--c-ink:${TILE_INK[next.slug] || '#050505'}"><span class="muted">${h('Next product')}</span><span class="next-name">${esc(next.name)}</span><span class="next-tag">${esc(next.tagline)}</span>${arrow}</a></div>
 </section>
 `,
     });

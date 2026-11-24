@@ -389,6 +389,15 @@
     }
   }
 
+  /* the home page: the burgundy mark behind the slogan drifts a little against the pointer */
+  const mono = $('.monolith');
+  if (mono && finePointer) {
+    window.addEventListener('pointermove', (e) => {
+      mono.style.setProperty('--px', `${((e.clientX / innerWidth) - 0.5) * -28}px`);
+      mono.style.setProperty('--py', `${((e.clientY / innerHeight) - 0.5) * -18}px`);
+    }, { passive: true });
+  }
+
   /* cards: a soft light follows the pointer; product tiles and the demo card tilt a little */
   if (finePointer) {
     $$('.svc, .feat, .acct, .stat, .trail li, .note, .tile, .client, .p-side, .quote-side .card, .faq details').forEach((el) => el.classList.add('spot'));
