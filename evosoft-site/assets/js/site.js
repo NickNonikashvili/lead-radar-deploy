@@ -33,6 +33,7 @@
   $$('.still-toggle').forEach((b) => b.addEventListener('click', () => {
     const on = !doc.classList.contains('still');
     doc.classList.toggle('still', on);
+    document.dispatchEvent(new CustomEvent('evo-still', { detail: on }));
     $$('.still-toggle').forEach((x) => x.setAttribute('aria-pressed', String(on)));
   }));
 
@@ -220,6 +221,7 @@
     box.addEventListener('focusin', () => { hold.add('focus'); sync(); });
     box.addEventListener('focusout', () => { hold.delete('focus'); sync(); });
     document.addEventListener('visibilitychange', () => { if (document.hidden) hold.add('hidden'); else hold.delete('hidden'); sync(); });
+    document.addEventListener('evo-still', (e) => { if (e.detail) hold.add('still'); else hold.delete('still'); sync(); });
     if ('IntersectionObserver' in window) {
       new IntersectionObserver(([en]) => { if (en.isIntersecting) hold.delete('away'); else hold.add('away'); sync(); }).observe(box);
     }
@@ -376,7 +378,7 @@
       let wi = 0, ci = Array.from(words[0]).length, deleting = false;
       const tick = () => {
         const chars = Array.from(words[wi]);
-        if (document.hidden) { setTimeout(tick, 500); return; }
+        if (document.hidden || doc.classList.contains('still')) { setTimeout(tick, 500); return; }
         if (!deleting && ci >= chars.length) { deleting = true; setTimeout(tick, 1700); return; }
         if (deleting && ci <= 0) { deleting = false; wi = (wi + 1) % words.length; setTimeout(tick, 260); return; }
         ci += deleting ? -1 : 1;

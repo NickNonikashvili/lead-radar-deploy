@@ -401,7 +401,7 @@ function heroDemoCard(root) {
     const shot = heroShot(p);
     const a = p.demo.accounts[0];
     return `<div class="dc-panel" role="tabpanel" id="dcp-${p.slug}" aria-labelledby="dct-${p.slug}"${i ? ' hidden' : ''}>
-    <a class="dc-shot" href="${root}work/${p.slug}" tabindex="-1" aria-hidden="true">${shot ? picture(shot.file, { alt: '', sizes: '(min-width: 1100px) 560px, 92vw', eager: i === 0, lazy: false }) : ''}<span class="dc-live" aria-hidden="true"><i></i>${h('Live demo')}</span></a>
+    <a class="dc-shot" href="${root}work/${p.slug}" tabindex="-1" aria-hidden="true">${shot ? picture(shot.file, { alt: '', sizes: '(min-width: 1100px) 980px, 92vw', lazy: false }) : ''}<span class="dc-live" aria-hidden="true"><i></i>${h('Live demo')}</span></a>
     <div class="dc-foot">
       <div class="dc-info">
         <p class="dc-title">${esc(p.name)} <span>${esc(p.kind)}</span></p>
@@ -491,7 +491,6 @@ function buildPages() {
     description: site.metaDescription,
     bodyClass: 'home',
     sitemapImages: products.map((p) => heroShot(p) && `${SITE_URL}/assets/shots/${heroShot(p).file}`).filter(Boolean),
-    preload: () => `<link rel="preload" as="image" type="image/webp" href="${webp(heroShot(products[0]).file)}">\n`,
     body: (root) => `
 <section class="hero">
   ${FIELD}
@@ -501,14 +500,14 @@ function buildPages() {
       <h1 class="slogan">${sloganHtml()}</h1>
       <p class="hero-sub">${h('Websites, apps and business software,')} ${h('built to order.')}</p>
       <p class="typer" aria-hidden="true"><span class="typer-pre">${h('We build')}</span> <span class="typer-word" data-words="${attr(JSON.stringify(typerWords))}">${esc(typerWords[0])}</span><span class="caret"></span></p>
-    </div>
-    <div class="hero-cta">
-      <a class="btn primary lg" href="${root}contact">${h('Get a free quote')} ${arrow}</a>
-      <a class="btn link lg" href="${root}demos">${h('Try a live demo')} ${arrow}</a>
+      <div class="hero-cta">
+        <a class="btn primary lg" href="${root}contact">${h('Get a free quote')} ${arrow}</a>
+        <a class="btn link lg" href="${root}demos">${h('Try a live demo')} ${arrow}</a>
+      </div>
     </div>
     <div class="glass hero-glass">
       <p class="glass-head">${icon('play')}${h('Live demos')}</p>
-      ${join(products, (p) => `<a class="glass-row" href="${root}work/${p.slug}"><b>${esc(p.name)}</b><small>${esc(accountsWord(p.demo.accounts.length))}</small><span>${esc(p.kind)}</span>${statusPill(p)}</a>`)}
+      ${join(products, (p) => `<a class="glass-row" href="${root}work/${p.slug}"><b>${esc(p.name)}</b>${statusPill(p)}<span>${esc(p.kind)}</span><small>${esc(accountsWord(p.demo.accounts.length))}</small></a>`)}
       <a class="glass-tag" href="${root}contact">${h('Free quotes')}</a>
     </div>
     <div class="hero-feats">
@@ -930,6 +929,17 @@ const versioned = (html) => html.replace(ASSET, (m, pre, rel) => {
   const v = hashOf(rel);
   return v ? `${pre}${rel}?v=${v}` : m;
 });
+
+// The stylesheet's own font links get the same ?v=<hash> as the pages' preload links, so each font downloads once.
+{
+  const cssFile = path.join(OUT, 'assets/css/site.css');
+  const css = fs.readFileSync(cssFile, 'utf8');
+  const next = css.replace(/url\(\.\.\/fonts\/([\w.-]+\.woff2)(?:\?v=\w+)?\)/g, (m, f) => {
+    const v = hashOf(`assets/fonts/${f}`);
+    return v ? `url(../fonts/${f}?v=${v})` : m;
+  });
+  if (next !== css) fs.writeFileSync(cssFile, next);
+}
 
 // The manifest is written before the pages so they link the current version; its icons carry their own hashes,
 // so a changed icon is fetched again instead of being served from a month-long cache.

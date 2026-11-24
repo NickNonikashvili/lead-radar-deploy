@@ -214,15 +214,19 @@
   const markSeen = () => { try { sessionStorage.setItem('evo-chat-teaser', '1'); } catch (e) { /* ignore */ } };
   if (teaser && S.teaser && !seen() && !history.length) {
     teaser.querySelector('p').textContent = S.teaser;
-    // never on top of the home hero's buttons: while the hero is on screen, wait until it scrolls away
-    const show = () => { if (panel.hidden && !document.querySelector('.lang-hint:not([hidden])')) { teaser.hidden = false; markSeen(); } };
-    setTimeout(() => {
-      const hero = document.querySelector('.hero');
-      if (!hero || !('IntersectionObserver' in window) || hero.getBoundingClientRect().bottom <= 0) return show();
-      const io = new IntersectionObserver(([e]) => { if (!e.isIntersecting) { io.disconnect(); show(); } });
-      io.observe(hero);
-    }, 9000);
-    teaser.addEventListener('click', (e) => { teaser.hidden = true; markSeen(); if (!e.target.closest('.chat-teaser-close')) open(); });
+    // never on top of the home hero's buttons: it shows only while the hero is off screen, and steps away again
+    // whenever the visitor scrolls back up to it, until it is closed or the chat is opened
+    let done = false, due = false, heroIn = false;
+    const sync = () => {
+      const want = due && !done && !heroIn && panel.hidden && !document.querySelector('.lang-hint:not([hidden])');
+      if (want && teaser.hidden) markSeen();
+      teaser.hidden = !want;
+    };
+    const hero = document.querySelector('.hero');
+    if (hero && 'IntersectionObserver' in window) new IntersectionObserver(([e]) => { heroIn = e.isIntersecting; sync(); }).observe(hero);
+    setTimeout(() => { due = true; sync(); }, 9000);
+    teaser.addEventListener('click', (e) => { done = true; teaser.hidden = true; markSeen(); if (!e.target.closest('.chat-teaser-close')) open(); });
+    launch.addEventListener('click', () => { done = true; });
   }
 
   launch.addEventListener('click', () => { if (teaser) teaser.hidden = true; open(); });

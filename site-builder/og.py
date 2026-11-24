@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """The share image (evosoft-site/assets/img/og.jpg), drawn like the site's heroes: a navy field of soft light (slate
-top left, a coral glow, deep navy bottom right) behind fluted glass, the slogan in cream with "evolution" in coral,
+top left, a coral glow, a lighter navy bottom right, as on the site) behind fluted glass, the slogan in cream with "evolution" in coral,
 the logo in cream, and a coral pill.
 
   python3 site-builder/og.py [Inter-Medium.otf]          (needs: pip install cairosvg pillow)
@@ -24,7 +24,7 @@ blobs = Image.new('RGBA', (W, H), (0, 0, 0, 0))
 b = ImageDraw.Draw(blobs)
 b.ellipse((-260, -320, 560, 420), fill=(59, 76, 112, 215))     # slate, top left
 b.ellipse((560, 60, 900, 560), fill=CORAL + (175,))             # the coral glow
-b.ellipse((760, 330, 1500, 1000), fill=(13, 23, 44, 230))       # deep navy, bottom right
+b.ellipse((760, 330, 1500, 1000), fill=(44, 61, 98, 230))       # a lighter navy, bottom right (#2C3D62)
 im.alpha_composite(blobs.filter(ImageFilter.GaussianBlur(110)))
 # a little darker toward the bottom
 shade = Image.new('RGBA', (W, H), (0, 0, 0, 0))

@@ -30,6 +30,7 @@ function handle(req, res) {
   let p;
   try { p = decodeURIComponent(rawPath); } catch { p = rawPath; }
   p = ('/' + p).replace(/[\\/]+/g, '/'); // one slash at a time, so a redirect can never point at another host
+  p = p.replace(/\/(?:\.\/)+/g, '/').replace(/\/\.$/, '/'); // and no '.' segments, so /./api/ is /api/
   if (p.includes('\0') || p.split('/').includes('..')) return send(404);
   const lang = LANGS.find((l) => p === `/${l}` || p.startsWith(`/${l}/`));
   const pre = lang ? `/${lang}/` : '/';

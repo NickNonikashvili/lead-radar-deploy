@@ -1800,12 +1800,12 @@
   "ctx": "index.html"
  },
  {
-  "s": "{n} demo accounts",
-  "plural": true,
+  "s": "Checking",
   "ctx": "index.html"
  },
  {
-  "s": "Checking",
+  "s": "{n} demo accounts",
+  "plural": true,
   "ctx": "index.html"
  },
  {

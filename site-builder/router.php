@@ -9,6 +9,7 @@ $root = realpath(__DIR__ . '/../evosoft-site');
 [$rawPath, $q] = array_pad(explode('?', explode('#', $_SERVER['REQUEST_URI'], 2)[0], 2), 2, '');
 $qs = $q !== '' ? '?' . $q : '';
 $p = preg_replace('#[/\\\\]+#', '/', '/' . rawurldecode($rawPath)); // one slash at a time: no redirect to another host
+$p = preg_replace(['#/(?:\./)+#', '#/\.$#'], '/', $p);                 // and no '.' segments, so /./api/ is /api/
 if (str_contains($p, "\0") || in_array('..', explode('/', $p), true)) { $p = '/404'; }
 $lang = null;
 foreach (['ka', 'ru', 'es'] as $l) if ($p === "/$l" || str_starts_with($p, "/$l/")) $lang = $l;

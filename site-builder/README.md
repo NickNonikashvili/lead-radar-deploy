@@ -201,11 +201,12 @@ pressed, the word "evolution", and a few small markers). Text on coral is navy, 
   light: three blurred blobs (slate top left, a coral glow, a lighter navy bottom right) drifting slowly behind a pane of
   fluted glass (thin vertical ribs, `.flutes`). On the home page the field leans a little against the pointer. Page
   heads fade into the navy section below them, so there is no seam.
-- **The home hero.** The slogan sits low on the left in cream, "evolution" in coral. Top right, a frosted glass card
-  lists the three live demos (with their status and number of accounts) and a coral "Free quotes" pill; below it, the
-  coral "Get a free quote" pill and a "Try a live demo" link. Along the bottom, four facts; a coral underline walks
-  across them, lighting each in turn. The chat's hello bubble waits until the hero has scrolled away, so it never
-  covers the buttons. A small "Pause animation" button under the moving words stops every looping animation.
+- **The home hero.** The slogan sits low on the left in cream, "evolution" in coral, with the coral "Get a free
+  quote" pill and a "Try a live demo" link under it. Top right, a frosted glass card lists the three live demos (with
+  their status and number of accounts) and a coral "Free quotes" pill. Along the bottom, four facts; a coral underline walks
+  across them, lighting each in turn. The chat's hello bubble only shows while the hero is scrolled away, so it never
+  covers the buttons. A small "Pause animation" button under the moving words stops every looping animation (the
+  moving words, the light, the facts, the typing line and the demo card's turning pages).
 - **Navigation.** The links sit in a frosted pill; the current page has a small coral dot. The language and menu
   buttons are round and cream.
 - **Sections** alternate navy and cream (`.sec` and `.sec.alt`; `.on-cream` makes any block cream). The call to
