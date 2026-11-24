@@ -48,7 +48,11 @@ const join = (arr, fn, sep = '') => (arr || []).map(fn).join(sep);
 const tel = (p) => 'tel:' + p.replace(/[^+\d]/g, '');
 const first = (name) => String(name).split(' ')[0];
 const heroShot = (p) => p.shots.find((s) => s.hero) || p.shots.find((s) => !s.phone) || null;
-const urlFor = (lang, file) => `${SITE_URL}/${lang.prefix}${file === 'index.html' ? '' : file}`;
+// Clean addresses: pages are written as .html files, but every link, canonical and sitemap entry leaves the .html off,
+// and the home page is /home (/ka/home, ...). The .htaccess files map the clean addresses back to the files and send
+// old .html addresses there with a permanent redirect.
+const clean = (file) => file.replace(/(^|\/)index\.html$/, '$1home').replace(/\.html$/, '');
+const urlFor = (lang, file) => `${SITE_URL}/${lang.prefix}${clean(file)}`;
 
 // ---------- the language being built ----------
 // t(): plain text; h(): HTML-escaped text (placeholders may carry markup). Both translate English into L.
@@ -169,17 +173,17 @@ ${join(FONTS[L.code] || FONTS.en, (f) => `<link rel="preload" href="${A(`assets/
 
 function langLinks(file, cls) {
   const target = file === '404.html' ? 'index.html' : file;
-  return join(LANGS, (x) => `<a class="${cls}" href="${attr(A(x.prefix + target))}" hreflang="${x.code}" lang="${x.code}" data-lang="${x.code}"${x === L ? ' aria-current="true"' : ''}><span class="lang-code">${x.short}</span><span class="lang-name">${esc(x.native)}</span></a>`);
+  return join(LANGS, (x) => `<a class="${cls}" href="${attr(A(x.prefix + clean(target)))}" hreflang="${x.code}" lang="${x.code}" data-lang="${x.code}"${x === L ? ' aria-current="true"' : ''}><span class="lang-code">${x.short}</span><span class="lang-name">${esc(x.native)}</span></a>`);
 }
 
 function header(root, file, active) {
   return `<a class="skip" href="#main">${h('Skip to content')}</a>
 <header class="topbar">
   <div class="wrap bar">
-    <a class="brand" href="${root}index.html" aria-label="${attr(t('EvoSoft, home'))}">${logoInline}</a>
+    <a class="brand" href="${root}home" aria-label="${attr(t('EvoSoft, home'))}">${logoInline}</a>
     <nav class="nav" id="site-nav" aria-label="${attr(t('Main'))}">
       ${join(nav, (n) => `<a href="${root}${n.href}"${n.key === active ? ' aria-current="page"' : ''}>${esc(n.label)}</a>`)}
-      <a class="btn primary nav-quote" href="${root}contact.html"${active === 'contact' ? ' aria-current="page"' : ''}>${h('Get a quote')}</a>
+      <a class="btn primary nav-quote" href="${root}contact"${active === 'contact' ? ' aria-current="page"' : ''}>${h('Get a quote')}</a>
       <div class="nav-langs" aria-label="${attr(t('Language'))}">${langLinks(file, 'nav-lang')}</div>
     </nav>
     <div class="lang">
@@ -237,12 +241,12 @@ function footer(root) {
     <p class="foot-slogan">${sloganHtml()}</p>
     <div class="foot-grid">
       <div class="foot-brand">
-        <a class="brand" href="${root}index.html" aria-label="${attr(t('EvoSoft, home'))}">${logoInline}</a>
+        <a class="brand" href="${root}home" aria-label="${attr(t('EvoSoft, home'))}">${logoInline}</a>
         <p>${esc(site.short)}</p>
-        <a class="btn primary sm" href="${root}contact.html">${h('Get a free quote')}</a>
+        <a class="btn primary sm" href="${root}contact">${h('Get a free quote')}</a>
       </div>
-      <div><h2>${h('Products')}</h2><ul>${join(products, (p) => `<li><a href="${root}work/${p.slug}.html">${esc(p.name)}</a></li>`)}<li><a href="${root}demos.html">${h('All live demos')}</a></li></ul></div>
-      <div><h2>${h('Company')}</h2><ul><li><a href="${root}portfolio.html">${h('Work')}</a></li><li><a href="${root}services.html">${h('Services')}</a></li><li><a href="${root}about.html">${h('About')}</a></li><li><a href="${root}legal.html">${h('Copyright & privacy')}</a></li></ul></div>
+      <div><h2>${h('Products')}</h2><ul>${join(products, (p) => `<li><a href="${root}work/${p.slug}">${esc(p.name)}</a></li>`)}<li><a href="${root}demos">${h('All live demos')}</a></li></ul></div>
+      <div><h2>${h('Company')}</h2><ul><li><a href="${root}portfolio">${h('Work')}</a></li><li><a href="${root}services">${h('Services')}</a></li><li><a href="${root}about">${h('About')}</a></li><li><a href="${root}legal">${h('Copyright & privacy')}</a></li></ul></div>
       <div><h2>${h('Contact')}</h2><ul>${join(site.phones, (p) => `<li><a href="${tel(p)}">${esc(p)}</a></li>`)}<li><a href="mailto:${site.email}">${esc(site.email)}</a></li><li class="muted">${h('Replies {when}', { when: esc(site.responseTime) })}</li></ul></div>
     </div>
     <div class="foot-base">
@@ -268,7 +272,7 @@ function footer(root) {
       <textarea id="chat-input" rows="1" maxlength="1000" placeholder="${attr(t('Ask a question'))}" autocomplete="off"></textarea>
       <button type="submit" aria-label="${attr(t('Send'))}">${icon('send')}</button>
     </form>
-    <p class="chat-note"><span>${h('An AI assistant answers here, and it can make mistakes. Please don’t share sensitive information.')}</span> <a href="${root}legal.html#privacy">${h('Privacy')}</a></p>
+    <p class="chat-note"><span>${h('An AI assistant answers here, and it can make mistakes. Please don’t share sensitive information.')}</span> <a href="${root}legal#privacy">${h('Privacy')}</a></p>
   </section>
 </div>
 <div class="toast" role="status" aria-live="polite"></div>
@@ -346,7 +350,7 @@ const ctaCard = (root, title = h('Have a project in mind?'), text = h('Tell us w
         <p>${text}</p>
       </div>
       <div class="cta-actions">
-        <a class="btn primary lg" href="${root}contact.html">${h('Get a free quote')} ${arrow}</a>
+        <a class="btn primary lg" href="${root}contact">${h('Get a free quote')} ${arrow}</a>
         <p class="cta-contacts">${join(site.phones, (p) => `<a href="${tel(p)}">${esc(p)}</a>`, ' · ')}<br><a href="mailto:${site.email}">${esc(site.email)}</a></p>
       </div>
     </div>
@@ -358,24 +362,24 @@ const steps = () => `<ol class="trail">${join(steps_, (s, i) => `<li><span class
 function productTile(root, p) {
   const shot = heroShot(p);
   return `<article class="tile" style="--c:${tileColor(p)};--c-ink:${TILE_INK[p.slug] || '#14213D'}">
-  <a class="tile-cover" href="${root}work/${p.slug}.html" tabindex="-1" aria-hidden="true">
+  <a class="tile-cover" href="${root}work/${p.slug}" tabindex="-1" aria-hidden="true">
     <span class="tile-tag">${esc(p.category)}</span>
     ${shot ? `<span class="tile-shot">${picture(shot.file, { alt: '', sizes: '(min-width: 1100px) 380px, 90vw' })}</span>` : ''}
   </a>
   <div class="tile-body">
-    <h3><a href="${root}work/${p.slug}.html">${esc(p.name)}</a></h3>
+    <h3><a href="${root}work/${p.slug}">${esc(p.name)}</a></h3>
     <p class="tile-kind">${esc(p.kind)}</p>
     <p class="tile-text">${esc(p.tagline)}</p>
     <p class="tile-meta">${statusPill(p)}<span>${esc(accountsWord(p.demo.accounts.length))}</span></p>
     <div class="tile-actions">
       ${p.demo.url ? `<a class="btn primary sm" href="${attr(p.demo.url)}" target="_blank" rel="noopener">${h('Open demo')} ${ext}</a>` : ''}
-      <a class="btn sm" href="${root}work/${p.slug}.html">${h('Case study')}</a>
+      <a class="btn sm" href="${root}work/${p.slug}">${h('Case study')}</a>
     </div>
   </div>
 </article>`;
 }
 
-const yourTile = (root) => `<a class="tile tile-new" href="${root}contact.html">
+const yourTile = (root) => `<a class="tile tile-new" href="${root}contact">
   <span class="tile-plus" aria-hidden="true">+</span>
   <span class="tile-new-title">${h('Your project')}</span>
   <span class="tile-new-text">${h('Website, store, app or system. Tell us about it and get a free quote.')}</span>
@@ -396,7 +400,7 @@ function heroDemoCard(root) {
     const shot = heroShot(p);
     const a = p.demo.accounts[0];
     return `<div class="dc-panel" role="tabpanel" id="dcp-${p.slug}" aria-labelledby="dct-${p.slug}"${i ? ' hidden' : ''}>
-    <a class="dc-shot" href="${root}work/${p.slug}.html" tabindex="-1" aria-hidden="true">${shot ? picture(shot.file, { alt: '', sizes: '(min-width: 1100px) 560px, 92vw', eager: i === 0, lazy: false }) : ''}<span class="dc-live" aria-hidden="true"><i></i>${h('Live demo')}</span></a>
+    <a class="dc-shot" href="${root}work/${p.slug}" tabindex="-1" aria-hidden="true">${shot ? picture(shot.file, { alt: '', sizes: '(min-width: 1100px) 560px, 92vw', eager: i === 0, lazy: false }) : ''}<span class="dc-live" aria-hidden="true"><i></i>${h('Live demo')}</span></a>
     <div class="dc-foot">
       <div class="dc-info">
         <p class="dc-title">${esc(p.name)} <span>${esc(p.kind)}</span></p>
@@ -439,7 +443,7 @@ function demoBlock(root, p, { withTitle = true } = {}) {
   const d = p.demo;
   return `<div class="demo-block" style="--c:${tileColor(p)};--c-ink:${TILE_INK[p.slug] || '#14213D'}">
     <div class="db-head">
-      ${withTitle ? `<div class="db-id"><span class="db-dot" aria-hidden="true"></span><div><h3><a href="${root}work/${p.slug}.html">${esc(p.name)}</a></h3><p>${esc(p.kind)}</p></div></div>` : ''}
+      ${withTitle ? `<div class="db-id"><span class="db-dot" aria-hidden="true"></span><div><h3><a href="${root}work/${p.slug}">${esc(p.name)}</a></h3><p>${esc(p.kind)}</p></div></div>` : ''}
       <p class="db-where">${statusPill(p)}${d.url ? `<a href="${attr(d.url)}" target="_blank" rel="noopener">${esc(d.label)}</a>` : ''}</p>
       ${d.url ? `<a class="btn primary" href="${attr(d.url)}" target="_blank" rel="noopener">${h('Open the demo')} ${ext}</a>` : ''}
     </div>
@@ -499,12 +503,12 @@ function buildPages() {
     <div class="hero-side">
       <div class="glass hero-glass">
         <p class="glass-head">${icon('play')}${h('Live demos')}</p>
-        ${join(products, (p) => `<a class="glass-row" href="${root}work/${p.slug}.html"><b>${esc(p.name)}</b><small>${esc(accountsWord(p.demo.accounts.length))}</small><span>${esc(p.kind)}</span>${statusPill(p)}</a>`)}
-        <a class="glass-tag" href="${root}contact.html">${h('Free quotes')}</a>
+        ${join(products, (p) => `<a class="glass-row" href="${root}work/${p.slug}"><b>${esc(p.name)}</b><small>${esc(accountsWord(p.demo.accounts.length))}</small><span>${esc(p.kind)}</span>${statusPill(p)}</a>`)}
+        <a class="glass-tag" href="${root}contact">${h('Free quotes')}</a>
       </div>
       <div class="hero-cta">
-        <a class="btn primary lg" href="${root}contact.html">${h('Get a free quote')} ${ext}</a>
-        <a class="btn link lg" href="${root}demos.html">${h('Try a live demo')} ${ext}</a>
+        <a class="btn primary lg" href="${root}contact">${h('Get a free quote')} ${ext}</a>
+        <a class="btn link lg" href="${root}demos">${h('Try a live demo')} ${ext}</a>
       </div>
     </div>
     <div class="hero-feats">
@@ -537,7 +541,7 @@ ${marquee()}
   <div class="wrap">
     ${secHead(h('Any kind of project, including tech'), h('Most clients start with a website or an online store. Plenty stay for the software, the email setup and the support afterwards.'))}
     <div class="svc-grid">${join(services, (s, i) => `<article class="svc"><span class="ico tone-${SVC_TONE[i % SVC_TONE.length]}">${icon(SVC_ICON[i % SVC_ICON.length])}</span><h3>${esc(s.name)}</h3><p>${esc(s.line)}</p></article>`)}</div>
-    <p class="more"><a class="btn" href="${root}services.html">${h('All services')} ${arrow}</a></p>
+    <p class="more"><a class="btn" href="${root}services">${h('All services')} ${arrow}</a></p>
   </div>
 </section>
 
@@ -579,15 +583,15 @@ ${pageHead(h('Our work'), h('Software we built, sites we shipped'), h('Three pro
     <div class="work-list">${join(products, (p) => {
       const shot = heroShot(p);
       return `<article class="work-row" style="--c:${tileColor(p)};--c-ink:${TILE_INK[p.slug] || '#14213D'}">
-        <a class="work-shot" href="${root}work/${p.slug}.html" tabindex="-1" aria-hidden="true">${shot ? picture(shot.file, { alt: '', sizes: '(min-width: 1100px) 640px, 100vw' }) : ''}</a>
+        <a class="work-shot" href="${root}work/${p.slug}" tabindex="-1" aria-hidden="true">${shot ? picture(shot.file, { alt: '', sizes: '(min-width: 1100px) 640px, 100vw' }) : ''}</a>
         <div class="work-info">
           <p class="chip tone"><span class="dot" aria-hidden="true"></span>${esc(p.category)}</p>
-          <h2><a href="${root}work/${p.slug}.html">${esc(p.name)}</a></h2>
+          <h2><a href="${root}work/${p.slug}">${esc(p.name)}</a></h2>
           <p class="work-tag">${esc(p.tagline)}</p>
           <p>${esc(p.summary)}</p>
           <ul class="checks">${join(p.highlights.slice(0, 3), (x) => `<li>${icon('check')}<span>${esc(x.title)}</span></li>`)}</ul>
           <p class="tile-meta">${statusPill(p)}<span>${esc(accountsWord(p.demo.accounts.length))}</span></p>
-          <div class="tile-actions">${p.demo.url ? `<a class="btn primary" href="${attr(p.demo.url)}" target="_blank" rel="noopener">${h('Open demo')} ${ext}</a>` : ''}<a class="btn" href="${root}work/${p.slug}.html">${h('Case study')} ${arrow}</a></div>
+          <div class="tile-actions">${p.demo.url ? `<a class="btn primary" href="${attr(p.demo.url)}" target="_blank" rel="noopener">${h('Open demo')} ${ext}</a>` : ''}<a class="btn" href="${root}work/${p.slug}">${h('Case study')} ${arrow}</a></div>
         </div>
       </article>`;
     })}</div>
@@ -661,7 +665,7 @@ ${ctaCard(root, h('Like what you see?'), h('We can build something like this for
 <section class="p-head" style="--c:${tileColor(p)};--c-ink:${TILE_INK[p.slug] || '#14213D'}">
   ${FIELD}
   <div class="wrap">
-    <nav class="crumbs" aria-label="${attr(t('Breadcrumb'))}"><a href="${root}portfolio.html">${h('Work')}</a><span aria-hidden="true">›</span><span aria-current="page">${esc(p.name)}</span></nav>
+    <nav class="crumbs" aria-label="${attr(t('Breadcrumb'))}"><a href="${root}portfolio">${h('Work')}</a><span aria-hidden="true">›</span><span aria-current="page">${esc(p.name)}</span></nav>
     <div class="p-grid">
       <div class="p-intro">
         <p class="chip tone"><span class="dot" aria-hidden="true"></span>${esc(p.category)} · ${esc(p.kind)}</p>
@@ -716,7 +720,7 @@ ${desktop.length ? `<section class="sec alt">
 ${ctaCard(root, h('Need something like {name}?', { name: esc(p.name) }), h('We build business systems, web apps and websites to fit how you actually work. Tell us about your project for a free quote.'))}
 
 <section class="sec tight">
-  <div class="wrap"><a class="next-card" href="${root}work/${next.slug}.html" style="--c:${tileColor(next)};--c-ink:${TILE_INK[next.slug] || '#14213D'}"><span class="muted">${h('Next product')}</span><span class="next-name">${esc(next.name)}</span><span class="next-tag">${esc(next.tagline)}</span>${arrow}</a></div>
+  <div class="wrap"><a class="next-card" href="${root}work/${next.slug}" style="--c:${tileColor(next)};--c-ink:${TILE_INK[next.slug] || '#14213D'}"><span class="muted">${h('Next product')}</span><span class="next-name">${esc(next.name)}</span><span class="next-tag">${esc(next.tagline)}</span>${arrow}</a></div>
 </section>
 `,
     });
@@ -733,7 +737,7 @@ ${ctaCard(root, h('Need something like {name}?', { name: esc(p.name) }), h('We b
 ${pageHead(h('Services'), h('Any kind of project, including tech'), h('Websites are where many clients start, but we don’t stop there. If your business needs something built, connected, set up or fixed, one team handles it, and every project starts with a free quote.'))}
 <section class="sec tight">
   <div class="wrap">
-    <div class="svc-detail">${join(services, (s, i) => `<article class="svc wide"><span class="ico tone-${SVC_TONE[i % SVC_TONE.length]}">${icon(SVC_ICON[i % SVC_ICON.length])}</span><div><h2>${esc(s.name)}</h2><p>${esc(s.text)}</p><p class="tags">${join(s.examples, (e) => `<span>${esc(e)}</span>`)}</p></div><a class="btn sm" href="${root}contact.html?need=${encodeURIComponent(SRC.quoteTypes[i] || SRC.quoteTypes[SRC.quoteTypes.length - 1])}">${h('Get a quote')}</a></article>`)}</div>
+    <div class="svc-detail">${join(services, (s, i) => `<article class="svc wide"><span class="ico tone-${SVC_TONE[i % SVC_TONE.length]}">${icon(SVC_ICON[i % SVC_ICON.length])}</span><div><h2>${esc(s.name)}</h2><p>${esc(s.text)}</p><p class="tags">${join(s.examples, (e) => `<span>${esc(e)}</span>`)}</p></div><a class="btn sm" href="${root}contact?need=${encodeURIComponent(SRC.quoteTypes[i] || SRC.quoteTypes[SRC.quoteTypes.length - 1])}">${h('Get a quote')}</a></article>`)}</div>
   </div>
 </section>
 <section class="sec alt">
@@ -766,10 +770,10 @@ ${pageHead(h('About us'), h('A small studio that builds and runs software'), '')
       <p class="big">${h('EvoSoft Solutions is a software development studio based in Georgia. We design and build websites, online stores, web apps and business systems, and we look after them once they’re live.')}</p>
       <p>${h('We work with small and medium-sized businesses, startups, shops, schools and independent founders. Most of our work happens remotely over email and calls, so clients don’t need to be nearby.')}</p>
       <p>${h('We also build our own products. {evo} runs time clocks, schedules, payroll and a campus store’s registers. {mailtabs} puts every inbox in one place. {studycat} is a study platform for university courses, live at studycat.org. Running real software keeps us honest about what good software takes, and you can {try}.', {
-        evo: `<a href="${root}work/evo.html">Evo</a>`,
-        mailtabs: `<a href="${root}work/mailtabs.html">Mailtabs</a>`,
-        studycat: `<a href="${root}work/studycat.html">StudyCat</a>`,
-        try: `<a href="${root}demos.html">${h('try all three')}</a>`,
+        evo: `<a href="${root}work/evo">Evo</a>`,
+        mailtabs: `<a href="${root}work/mailtabs">Mailtabs</a>`,
+        studycat: `<a href="${root}work/studycat">StudyCat</a>`,
+        try: `<a href="${root}demos">${h('try all three')}</a>`,
       })}</p>
     </div>
     <aside class="card about-side">
@@ -777,7 +781,7 @@ ${pageHead(h('About us'), h('A small studio that builds and runs software'), '')
       ${join(site.phones, (p) => `<p class="big-line"><a href="${tel(p)}">${esc(p)}</a></p>`)}
       <p class="big-line"><a href="mailto:${site.email}">${esc(site.email)}</a></p>
       <p class="muted">${h('Replies {when}.', { when: esc(site.responseTime) })}</p>
-      <a class="btn primary" href="${root}contact.html">${h('Get a free quote')}</a>
+      <a class="btn primary" href="${root}contact">${h('Get a free quote')}</a>
     </aside>
   </div>
 </section>
@@ -825,7 +829,7 @@ ${pageHead(h('Get a quote'), h('Tell us about your project'), h('Send a few line
       <label class="field"><span>${h('About the project')}</span><textarea name="message" rows="6" required maxlength="5000" placeholder="${attr(t('What you need, who it’s for, and any sites or apps you like.'))}"></textarea></label>
       <label class="hp" aria-hidden="true">${h('Leave this empty')} <input name="website" tabindex="-1" autocomplete="off"></label>
       <p class="form-error" role="alert" hidden></p>
-      <div class="form-foot"><button class="btn primary lg" type="submit"><span class="btn-label">${h('Send request')}</span> ${arrow}</button><p class="muted small">${h('We use your details only to answer you.')} <a href="${root}legal.html#privacy">${h('Privacy')}</a></p></div>
+      <div class="form-foot"><button class="btn primary lg" type="submit"><span class="btn-label">${h('Send request')}</span> ${arrow}</button><p class="muted small">${h('We use your details only to answer you.')} <a href="${root}legal#privacy">${h('Privacy')}</a></p></div>
       <div class="form-done" hidden><span class="ico tone-green">${icon('check')}</span><h2>${h('Thanks, it’s on its way.')}</h2><p>${h('We’ll reply {when}. If it’s urgent, call {phone}.', { when: esc(site.responseTime), phone: `<a href="${tel(site.phones[0])}">${esc(site.phones[0])}</a>` })}</p></div>
     </form>
     <aside class="quote-side">
@@ -887,7 +891,7 @@ ${pageHead(h('Legal'), h('Copyright and privacy'), h('Last updated {date}.', { d
     root: '/',
     noindex: true,
     body: (root) => `
-${pageHead('404', h('This page wandered off'), h('The link may be old, or the page has moved.'), `<div class="actions"><a class="btn primary" href="${root}index.html">${h('Go home')}</a><a class="btn" href="${root}demos.html">${h('Live demos')}</a><a class="btn" href="${root}contact.html">${h('Get a quote')}</a></div>`)}`,
+${pageHead('404', h('This page wandered off'), h('The link may be old, or the page has moved.'), `<div class="actions"><a class="btn primary" href="${root}home">${h('Go home')}</a><a class="btn" href="${root}demos">${h('Live demos')}</a><a class="btn" href="${root}contact">${h('Get a quote')}</a></div>`)}`,
   });
 }
 
@@ -932,7 +936,7 @@ const versioned = (html) => html.replace(ASSET, (m, pre, rel) => {
 const manifestIcon = (rel, sizes, type) => ({ src: `/${rel}?v=${hashOf(rel)}`, sizes, type });
 fs.writeFileSync(
   path.join(OUT, 'site.webmanifest'),
-  JSON.stringify({ name: 'EvoSoft', short_name: 'EvoSoft', start_url: '/', display: 'browser', background_color: '#14213D', theme_color: '#14213D', icons: [manifestIcon('assets/img/icon-180.png', '180x180', 'image/png'), manifestIcon('assets/img/icon-512.png', '512x512', 'image/png'), manifestIcon('assets/img/icon.svg', 'any', 'image/svg+xml')] }, null, 2) + '\n',
+  JSON.stringify({ name: 'EvoSoft', short_name: 'EvoSoft', start_url: '/home', display: 'browser', background_color: '#14213D', theme_color: '#14213D', icons: [manifestIcon('assets/img/icon-180.png', '180x180', 'image/png'), manifestIcon('assets/img/icon-512.png', '512x512', 'image/png'), manifestIcon('assets/img/icon.svg', 'any', 'image/svg+xml')] }, null, 2) + '\n',
 );
 
 for (const p of built) {
@@ -941,25 +945,59 @@ for (const p of built) {
   fs.writeFileSync(outFile, versioned(p.html));
 }
 for (const x of LANGS.filter((x) => x.prefix)) {
-  fs.writeFileSync(path.join(OUT, x.prefix, '.htaccess'), `# ${x.native}: this folder's own "page not found" page. © ${SRC.site.year} EvoSoft Solutions.\nErrorDocument 404 /${x.prefix}404.html\n`);
+  fs.writeFileSync(path.join(OUT, x.prefix, '.htaccess'), langHtaccess(x));
+}
+
+// A language folder's .htaccess: its own "page not found" page, and the same clean addresses as the main .htaccess
+// (written out in full here, so the folder works the same whether or not the server lets it inherit the main rules).
+function langHtaccess(x) {
+  const d = x.prefix; // 'ka/'
+  return `# ${x.native} (/${d}): this folder's own "page not found" page and its clean addresses, like the main .htaccess.
+# Generated by site-builder/build.mjs. © ${SRC.site.year} EvoSoft Solutions.
+ErrorDocument 404 /${d}404.html
+
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /${d}
+  # old addresses: /${d}index.html -> /${d}home, /${d}services.html -> /${d}services (the query string is kept)
+  RewriteCond %{ENV:REDIRECT_STATUS} ^$
+  RewriteCond %{THE_REQUEST} \\s/+${d}((?:[^?\\s]*/)?)index\\.html[?\\s]
+  RewriteRule ^ /${d}%1home [R=301,L,NE]
+  RewriteRule ^pricing(\\.html|/)?$ /${d}contact [R=301,L]
+  RewriteCond %{ENV:REDIRECT_STATUS} ^$
+  RewriteCond %{REQUEST_FILENAME} -f
+  RewriteCond %{THE_REQUEST} \\s/+${d}([^?\\s]+?)\\.html[?\\s]
+  RewriteRule ^ /${d}%1 [R=301,L,NE]
+  RewriteRule ^$ /${d}home [R=301,L]
+  RewriteRule ^work/?$ /${d}portfolio [R=301,L]
+  RewriteCond %{REQUEST_FILENAME} !-d
+  RewriteRule ^(.+)/$ /${d}$1 [R=301,L]
+  RewriteRule ^404$ - [R=404,L]
+  # clean addresses -> the files
+  RewriteRule ^home$ index.html [L]
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{REQUEST_FILENAME}.html -f
+  RewriteRule ^(.+)$ $1.html [L]
+</IfModule>
+`;
 }
 
 // Old address: prices are gone, quotes replaced them.
 fs.writeFileSync(
   path.join(OUT, 'pricing.html'),
-  `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Get a quote | EvoSoft</title><meta name="robots" content="noindex"><link rel="canonical" href="${SITE_URL}/contact.html"><meta http-equiv="refresh" content="0; url=contact.html"></head><body><p>Every project now gets its own free quote: <a href="contact.html">get a quote</a>.</p></body></html>\n`,
+  `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Get a quote | EvoSoft</title><meta name="robots" content="noindex"><link rel="canonical" href="${SITE_URL}/contact"><meta http-equiv="refresh" content="0; url=contact"></head><body><p>Every project now gets its own free quote: <a href="contact">get a quote</a>.</p></body></html>\n`,
 );
 
 // ---------- generated files: chat knowledge, sitemap, robots, llms.txt, manifest ----------
 const pageList = [
-  ['/index.html', 'Home'],
-  ['/portfolio.html', 'Work: products and client websites'],
-  ['/demos.html', 'Live demos with every test account'],
-  ...SRC_PRODUCTS.map((p) => [`/work/${p.slug}.html`, `${p.name} case study`]),
-  ['/services.html', 'Services'],
-  ['/about.html', 'About EvoSoft'],
-  ['/contact.html', 'Get a quote (form, phone, email, FAQ)'],
-  ['/legal.html', 'Copyright and privacy'],
+  ['/home', 'Home'],
+  ['/portfolio', 'Work: products and client websites'],
+  ['/demos', 'Live demos with every test account'],
+  ...SRC_PRODUCTS.map((p) => [`/work/${p.slug}`, `${p.name} case study`]),
+  ['/services', 'Services'],
+  ['/about', 'About EvoSoft'],
+  ['/contact', 'Get a quote (form, phone, email, FAQ)'],
+  ['/legal', 'Copyright and privacy'],
 ];
 fs.mkdirSync(path.join(OUT, 'api'), { recursive: true });
 fs.writeFileSync(path.join(OUT, 'api/knowledge.md'), knowledgeMarkdown({ site: SRC.site, services: SRC.services, process: SRC.process, promises: SRC.promises, faq: SRC.faq, clients: SRC.clients, products: SRC_PRODUCTS, chat: SRC.chat, pages: pageList }));
@@ -991,7 +1029,7 @@ const llms = `# EvoSoft
 
 ${SRC.site.legalName} (EvoSoft) is a software development studio based in ${SRC.site.region}, working with clients anywhere. It takes on any kind of project: ${SRC.services.map((s) => s.name.toLowerCase()).join(', ')}. Every project gets a free quote, and the team replies ${SRC.site.responseTime}. Contact: ${SRC.site.email}, ${SRC.site.phones.join(', ')}.
 
-The site is in English, with Georgian (${SITE_URL}/ka/), Russian (${SITE_URL}/ru/) and Spanish (${SITE_URL}/es/) versions of every page.
+The site is in English, with Georgian (${SITE_URL}/ka/home), Russian (${SITE_URL}/ru/home) and Spanish (${SITE_URL}/es/home) versions of every page.
 
 ## Pages
 
@@ -999,7 +1037,7 @@ ${pageList.map(([p, what]) => `- [${what}](${SITE_URL}${p})`).join('\n')}
 
 ## Products with live demos
 
-${SRC_PRODUCTS.map((p) => `- [${p.name}](${SITE_URL}/work/${p.slug}.html): ${p.summary} Live demo: ${p.demo.url || 'coming soon'}. Built by EvoSoft.`).join('\n')}
+${SRC_PRODUCTS.map((p) => `- [${p.name}](${SITE_URL}/work/${p.slug}): ${p.summary} Live demo: ${p.demo.url || 'coming soon'}. Built by EvoSoft.`).join('\n')}
 
 ## Client websites
 

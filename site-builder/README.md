@@ -26,7 +26,21 @@ node site-builder/package.mjs        # builds and makes dist/evosoft-site-YYYYMM
    `"mail":"smtp","last_send":"ok"` means email works.
 5. In Google Search Console, add the site and submit `https://evosoft.solutions/sitemap.xml`.
 
-Old links keep working: `/pricing.html` redirects to the quote page, and every other old page name is unchanged.
+**Addresses.** Pages have clean addresses: the home page is `/home`, the others `/services`, `/contact`,
+`/work/evo`, and each language has its own (`/ka/home`, `/ru/services`, `/es/work/evo`). The files on the server keep
+their `.html` names; the `.htaccess` files (the main one, and one in each language folder, written by the build) serve
+the files at the clean addresses. Every old address still works, with a permanent redirect to the new one, keeping
+any `?…` on the end:
+
+| Old | New |
+| --- | --- |
+| `/` and `/index.html` | `/home` (and `/ka/` → `/ka/home`) |
+| `/services.html`, `/work/evo.html` | `/services`, `/work/evo` |
+| `/services/` | `/services` |
+| `/pricing.html`, `/pricing` | `/contact` |
+| `/work` | `/portfolio` |
+
+This needs the host's rewrite module (`mod_rewrite`), which Hostinger has.
 
 ## Settings: chat assistant and quote form
 
@@ -104,7 +118,10 @@ node site-builder/images.mjs   # only when screenshots changed (needs ImageMagic
 node site-builder/build.mjs
 ```
 
-Preview with the API working: `cd evosoft-site && php -S 127.0.0.1:8000` and open http://127.0.0.1:8000.
+Preview it with the clean addresses: `node site-builder/serve.mjs` and open http://localhost:8080/home. With the chat
+and quote form working too: `cd evosoft-site && php -S 127.0.0.1:8000 ../site-builder/router.php` and open
+http://127.0.0.1:8000/home. (Opening the `.html` files straight from disk doesn't work any more: the links leave the
+`.html` off.)
 For local testing only, an `api/config.php` with `'mail_mode' => 'log'` saves quotes instead of emailing them.
 
 ### Languages

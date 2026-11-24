@@ -142,7 +142,7 @@ keeps the demos' data (StudyCat's database too), settings and certificates.
 - https://studycat-demo.evosoft.solutions: sign in as `student@studycat.test` / `demo-study-2026`.
   https://studycat-demo.evosoft.solutions/api/index.php?r=health must say `"mail":"log"`.
 
-On evosoft.solutions/demos.html they now show **Live**. Each demo shows a small "© 2026 EvoSoft Solutions" notice.
+On evosoft.solutions/demos they now show **Live**. Each demo shows a small "© 2026 EvoSoft Solutions" notice.
 
 ## Part 3: StudyCat demo
 

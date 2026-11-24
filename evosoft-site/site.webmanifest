@@ -1,7 +1,7 @@
 {
   "name": "EvoSoft",
   "short_name": "EvoSoft",
-  "start_url": "/",
+  "start_url": "/home",
   "display": "browser",
   "background_color": "#14213D",
   "theme_color": "#14213D",

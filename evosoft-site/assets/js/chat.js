@@ -24,7 +24,8 @@
   function href(url) {
     const u = url.trim();
     if (/^(https?:|mailto:|tel:)/i.test(u)) return u;
-    if (u.startsWith('/')) return base + u.replace(/^\/+/, '');
+    // site pages: /contact -> contact in this language (an older /contact.html or /index.html still works)
+    if (u.startsWith('/')) return base + u.replace(/^\/+/, '').replace(/(^|\/)index\.html(?=$|[?#])/, '$1home').replace(/\.html(?=$|[?#])/, '').replace(/^(?=$|[?#])/, 'home');
     if (u.startsWith('#')) return u;
     return null;
   }

@@ -1,7 +1,7 @@
 # Live demo kits
 
 One folder per product. Each sets up a public, self-resetting demo with the exact accounts listed on
-`evosoft.solutions/demos.html`. None of them changes the product's code.
+`evosoft.solutions/demos`. None of them changes the product's code.
 
 | Product | Demo address | Host | Resets | Kit |
 |---|---|---|---|---|

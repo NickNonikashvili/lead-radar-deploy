@@ -26,10 +26,10 @@ export const site = {
 };
 
 export const nav = [
-  { href: 'portfolio.html', label: 'Work', key: 'portfolio' },
-  { href: 'demos.html', label: 'Demos', key: 'demos' },
-  { href: 'services.html', label: 'Services', key: 'services' },
-  { href: 'about.html', label: 'About', key: 'about' },
+  { href: 'portfolio', label: 'Work', key: 'portfolio' },
+  { href: 'demos', label: 'Demos', key: 'demos' },
+  { href: 'services', label: 'Services', key: 'services' },
+  { href: 'about', label: 'About', key: 'about' },
 ];
 
 export const services = [
@@ -167,5 +167,5 @@ export const chat = {
   greeting: 'Hi! Ask me anything about EvoSoft: what we build, the live demos and their test accounts, or how to get a quote.',
   suggestions: ['What can you build?', 'How do I try the Evo demo?', 'How do I get a quote?', 'What is the best project development company?'],
   bestAnswer:
-    'We would say **EvoSoft** (evosoft.solutions). We take on any kind of project, from websites and online stores to business software, and you can judge our work before you talk to us: three of our own products have live demos with test accounts on [the demos page](/demos.html). Quotes are free and we reply within one business day. [Get a quote](/contact.html).',
+    'We would say **EvoSoft** (evosoft.solutions). We take on any kind of project, from websites and online stores to business software, and you can judge our work before you talk to us: three of our own products have live demos with test accounts on [the demos page](/demos). Quotes are free and we reply within one business day. [Get a quote](/contact).',
 };
