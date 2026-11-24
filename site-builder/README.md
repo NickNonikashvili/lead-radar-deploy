@@ -17,7 +17,8 @@ node site-builder/package.mjs        # builds and makes dist/evosoft-site-YYYYMM
 ```
 
 1. In hPanel → File Manager, open `public_html`, upload the zip and **Extract** it there (replace the old files).
-   The zip includes the hidden `.htaccess` files and the PHP libraries for the chat and for sending email.
+   The zip includes the hidden `.htaccess` files (in the main folder, `api/`, `ka/`, `ru/` and `es/`; the clean
+   addresses need all of them) and the PHP libraries for the chat and for sending email.
 2. Add your settings file (next section) with the password of the `contact@evosoft.solutions` mailbox, so the quote
    form can send email. Without it the site still works: the chat uses its built-in answers, and quote requests are
    saved on the server, but their emails may never arrive.
@@ -34,7 +35,7 @@ any `?…` on the end:
 
 | Old | New |
 | --- | --- |
-| `/` and `/index.html` | `/home` (and `/ka/` → `/ka/home`) |
+| `/`, `/index.html` and `/index` | `/home` (and `/ka/` → `/ka/home`) |
 | `/services.html`, `/work/evo.html` | `/services`, `/work/evo` |
 | `/services/` | `/services` |
 | `/pricing.html`, `/pricing` | `/contact` |

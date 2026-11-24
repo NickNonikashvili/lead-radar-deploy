@@ -90,7 +90,7 @@ function organization() {
     name: site.name,
     legalName: site.legalName,
     alternateName: ['EvoSoft Solutions', 'EVOSOFT'],
-    url: SITE_URL,
+    url: `${SITE_URL}/home`,
     logo: { '@type': 'ImageObject', url: `${SITE_URL}/assets/img/icon-512.png`, width: 512, height: 512 },
     image: `${SITE_URL}/assets/img/og.jpg`,
     slogan: slogan(),
@@ -109,7 +109,7 @@ function ldFor({ file, title, description, crumbs = [], extra = [] }) {
   const url = abs(file);
   const graph = [
     organization(),
-    { '@type': 'WebSite', '@id': SITE_ID, url: SITE_URL, name: site.name, inLanguage: LANGS.map((x) => x.code), publisher: { '@id': ORG_ID }, copyrightHolder: { '@id': ORG_ID }, copyrightYear: site.year },
+    { '@type': 'WebSite', '@id': SITE_ID, url: `${SITE_URL}/home`, name: site.name, inLanguage: LANGS.map((x) => x.code), publisher: { '@id': ORG_ID }, copyrightHolder: { '@id': ORG_ID }, copyrightYear: site.year },
     {
       '@type': 'WebPage',
       '@id': `${url}#webpage`,
@@ -973,11 +973,13 @@ ErrorDocument 404 /${d}404.html
   RewriteCond %{REQUEST_FILENAME} !-d
   RewriteRule ^(.+)/$ /${d}$1 [R=301,L]
   RewriteRule ^404$ - [R=404,L]
-  # clean addresses -> the files
+  RewriteRule ^index$ /${d}home [R=301,L]
+  # clean addresses -> the files (only a whole address: /${d}services/extra must not borrow services.html, or it loops)
   RewriteRule ^home$ index.html [L]
   RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{PATH_INFO} ^$
   RewriteCond %{REQUEST_FILENAME}.html -f
-  RewriteRule ^(.+)$ $1.html [L]
+  RewriteRule ^([^.]+)$ $1.html [L]
 </IfModule>
 `;
 }

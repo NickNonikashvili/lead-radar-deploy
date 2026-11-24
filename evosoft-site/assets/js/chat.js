@@ -22,8 +22,12 @@
   // ---------- safe Markdown (escape first, then a small allow-list) ----------
   const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
   function href(url) {
-    const u = url.trim();
+    let u = url.trim();
+    // a full link to this site counts as a site page, so it opens in the visitor's language like the short ones
+    const own = u.match(/^https?:\/\/(?:www\.)?evosoft\.solutions(\/[^\s]*)?$/i);
+    if (own) u = own[1] || '/';
     if (/^(https?:|mailto:|tel:)/i.test(u)) return u;
+    if (u.startsWith('/')) u = '/' + u.replace(/^\/(?:ka|ru|es)(?=\/|$|[?#])/, '').replace(/^\/+/, '');
     // site pages: /contact -> contact in this language (an older /contact.html or /index.html still works)
     if (u.startsWith('/')) return base + u.replace(/^\/+/, '').replace(/(^|\/)index\.html(?=$|[?#])/, '$1home').replace(/\.html(?=$|[?#])/, '').replace(/^(?=$|[?#])/, 'home');
     if (u.startsWith('#')) return u;

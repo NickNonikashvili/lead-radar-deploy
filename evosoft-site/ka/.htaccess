@@ -19,9 +19,11 @@ ErrorDocument 404 /ka/404.html
   RewriteCond %{REQUEST_FILENAME} !-d
   RewriteRule ^(.+)/$ /ka/$1 [R=301,L]
   RewriteRule ^404$ - [R=404,L]
-  # clean addresses -> the files
+  RewriteRule ^index$ /ka/home [R=301,L]
+  # clean addresses -> the files (only a whole address: /ka/services/extra must not borrow services.html, or it loops)
   RewriteRule ^home$ index.html [L]
   RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{PATH_INFO} ^$
   RewriteCond %{REQUEST_FILENAME}.html -f
-  RewriteRule ^(.+)$ $1.html [L]
+  RewriteRule ^([^.]+)$ $1.html [L]
 </IfModule>

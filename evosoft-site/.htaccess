@@ -1,6 +1,13 @@
 # EvoSoft website: Apache / Hostinger / LiteSpeed settings. © 2026 EvoSoft Solutions.
 ErrorDocument 404 /404.html
 
+# Server settings files are never served (hosts usually block them already).
+<IfModule mod_authz_core.c>
+  <FilesMatch "^\.ht">
+    Require all denied
+  </FilesMatch>
+</IfModule>
+
 # Clean addresses. The pages are files like services.html and work/evo.html, but the site links to /services and
 # /work/evo, and the home page is /home. These rules serve the files at the clean addresses and send every old address
 # (/, /index.html, /services.html, /services/) to the clean one with a permanent redirect, keeping any query string.
@@ -26,11 +33,13 @@ ErrorDocument 404 /404.html
   RewriteCond %{REQUEST_FILENAME} !-d
   RewriteRule ^(.+)/$ /$1 [R=301,L]
   RewriteRule ^404$ - [R=404,L]
-  # clean addresses -> the files
+  RewriteRule ^index$ /home [R=301,L]
+  # clean addresses -> the files (only a whole address: /services/extra must not borrow services.html, or it loops)
   RewriteRule ^home$ index.html [L]
   RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{PATH_INFO} ^$
   RewriteCond %{REQUEST_FILENAME}.html -f
-  RewriteRule ^(.+)$ $1.html [L]
+  RewriteRule ^([^.]+)$ $1.html [L]
 </IfModule>
 AddType font/woff2 .woff2
 AddType image/webp .webp

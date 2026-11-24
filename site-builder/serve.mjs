@@ -2,8 +2,9 @@
 // Preview the built site with its clean addresses, the way the .htaccess rules serve it on the host:
 //   node site-builder/serve.mjs [port]        then open http://localhost:8080/home
 // /home, /services, /ka/work/evo serve the .html files; /, /index.html, /services.html and /services/ redirect to the
-// clean address; unknown addresses get the language's "page not found" page with a 404. The PHP endpoints (chat,
-// quote form) don't run here: the chat falls back to its built-in answers.
+// clean address; unknown addresses get the language's "page not found" page with a 404. Like on the host, only
+// api/chat.php and api/quote.php are public, but the PHP itself doesn't run here: the chat falls back to its built-in
+// answers (for a preview with PHP, see site-builder/router.php). It listens on this computer only.
 // © 2026 EvoSoft Solutions. All rights reserved.
 import http from 'node:http';
 import fs from 'node:fs';
@@ -22,16 +23,18 @@ const TYPES = {
 const isFile = (rel) => { try { return fs.statSync(path.join(ROOT, rel)).isFile(); } catch { return false; } };
 const isDir = (rel) => { try { return fs.statSync(path.join(ROOT, rel)).isDirectory(); } catch { return false; } };
 
-http.createServer((req, res) => {
-  const u = new URL(req.url, 'http://x');
-  const qs = u.search;
+function handle(req, res) {
+  // the path and query as sent: '//services.html' is a path here, never a host
+  const [rawPath, ...q] = req.url.split('#')[0].split('?');
+  const qs = q.length && q.join('?') !== '' ? '?' + q.join('?') : '';
   let p;
-  try { p = decodeURIComponent(u.pathname); } catch { p = u.pathname; }
+  try { p = decodeURIComponent(rawPath); } catch { p = rawPath; }
+  p = ('/' + p).replace(/[\\/]+/g, '/'); // one slash at a time, so a redirect can never point at another host
   if (p.includes('\0') || p.split('/').includes('..')) return send(404);
   const lang = LANGS.find((l) => p === `/${l}` || p.startsWith(`/${l}/`));
   const pre = lang ? `/${lang}/` : '/';
   const rest = p.slice(pre.length); // the address inside the language: '', 'services', 'work/evo.html', ...
-  const go = (to) => { res.writeHead(301, { Location: to + qs }); res.end(); };
+  const go = (to) => { res.writeHead(301, { Location: encodeURI(to) + qs }); res.end(); };
 
   if (p === `/${lang}`) return go(`/${lang}/home`);
   if (/(^|\/)index\.html$/.test(rest)) return go(pre + rest.replace(/index\.html$/, 'home'));
@@ -41,10 +44,12 @@ http.createServer((req, res) => {
   if (/^work\/?$/.test(rest)) return go(pre + 'portfolio');
   if (rest.endsWith('/') && !isDir(pre + rest)) return go(pre + rest.replace(/\/+$/, ''));
   if (rest === '404') return send(404);
+  if (rest === 'index') return go(pre + 'home');
   if (rest === 'home') return send(200, pre + 'index.html');
-  if (rest.startsWith('api/')) return send(404);
+  if (path.basename(rest).startsWith('.ht')) return send(404);
+  if (p.startsWith('/api/')) return send(404); // chat.php and quote.php need PHP: use router.php for those
   if (isFile(pre + rest)) return send(200, pre + rest);
-  if (isFile(pre + rest + '.html')) return send(200, pre + rest + '.html');
+  if (!rest.includes('.') && isFile(pre + rest + '.html')) return send(200, pre + rest + '.html');
   return send(404);
 
   function send(code, rel) {
@@ -53,4 +58,8 @@ http.createServer((req, res) => {
     res.writeHead(code, { 'Content-Type': TYPES[path.extname(file).toLowerCase()] || 'application/octet-stream', 'Cache-Control': 'no-cache' });
     fs.createReadStream(file).pipe(res);
   }
-}).listen(PORT, () => console.log(`EvoSoft site: http://localhost:${PORT}/home`));
+}
+
+http.createServer((req, res) => {
+  try { handle(req, res); } catch { if (!res.headersSent) res.writeHead(400); res.end(); }
+}).listen(PORT, '127.0.0.1', () => console.log(`EvoSoft site: http://localhost:${PORT}/home`));
