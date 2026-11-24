@@ -23,11 +23,12 @@ All rights reserved.
 | Safe area | all text, logos and the QR code are at least 4 mm inside the cut (the build checks it) |
 | Text | converted to outlines: no fonts needed |
 | Images | the soft-light backgrounds are 600 dpi |
-| Ink | highest total coverage in the CMYK files 288% (under the usual 300% limit) |
+| CMYK | separated for ISO Coated v2 300% (FOGRA39), the usual European condition for coated card, with the OutputIntent embedded; highest total ink 267% |
+| Small type | contact labels and the QR caption 6 pt or more |
 | Paper | matte or soft-touch, 350–400 g/m², suits the soft light on the front |
 
-**At a print shop:** send `<card>-print.pdf` (page 1 front, page 2 back). `<card>-print-CMYK.pdf` is the same in CMYK, for a shop that
-asks for it. Bright coral and the light inside the big mark can come out a little softer on paper than on screen; ask
+**At a print shop:** send `<card>-print.pdf` (page 1 front, page 2 back). `<card>-print-CMYK.pdf` is the same in CMYK (FOGRA39), for a
+shop that asks for CMYK. Bright coral and the light inside the big mark can come out a little softer on paper than on screen; ask
 for a proof if colour matters. Each folder also has previews (`-front.png`, `-back.png`), a proof with the cut line
 (coral) and safe area (dashed), and a mockup for showing people.
 
@@ -49,6 +50,7 @@ pip install cairosvg pillow numpy segno uharfbuzz fonttools pypdf opencv-python-
 python3 business-cards/make.py                     # all cards, or name one: python3 business-cards/make.py evosoft-company
 ```
 
-Ghostscript makes the CMYK copies. It uses Inter and Inter Display from `/usr/share/fonts/opentype/inter` (set
+Ghostscript makes the CMYK copies with the ECI profile `ISOcoated_v2_300_eci.icc` (from eci.org, or
+`apt install icc-profiles`; set `CMYK_PROFILE` to use a print shop's own). It uses Inter and Inter Display from `/usr/share/fonts/opentype/inter` (set
 `INTER_DIR` for another folder) and the logo from `evosoft-site/assets/img/brand/logo-dark.svg`. The build stops if
 anything important falls outside the safe area or the QR code doesn't read back.

@@ -24,7 +24,7 @@ Each entry in CARDS is one card (the same front, its own back). For each, busine
 The build stops if any text, logo or the QR code strays outside the safe area, or if the QR code doesn't read back.
 © 2026 EvoSoft Solutions. All rights reserved.
 """
-import base64, io, math, os, re, subprocess, sys
+import base64, glob, io, math, os, re, shutil, subprocess, sys, tempfile
 import cairosvg, segno, uharfbuzz as hb
 import numpy as np
 from fontTools.ttLib import TTFont
@@ -33,7 +33,8 @@ from fontTools.pens.transformPen import TransformPen
 from PIL import Image, ImageDraw, ImageFilter
 from pypdf import PdfReader, PdfWriter
 from pypdf import PageObject, Transformation
-from pypdf.generic import RectangleObject
+from pypdf.generic import (ArrayObject, DictionaryObject, NameObject, NumberObject, RectangleObject, StreamObject,
+                           TextStringObject)
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 OUT = os.path.join(HERE, 'out')
@@ -60,6 +61,12 @@ W, H = TRIM_W + 2 * BLEED, TRIM_H + 2 * BLEED                 # the page, bleed 
 X0, Y0 = BLEED + SAFE, BLEED + SAFE                           # top left of the safe area
 X1, Y1 = BLEED + TRIM_W - SAFE, BLEED + TRIM_H - SAFE         # bottom right of the safe area
 DPI = 600
+# The CMYK copy is separated for ISO Coated v2 300% (FOGRA39), the usual condition for coated card in Georgia and
+# Europe, and says so in an embedded OutputIntent. The profile comes from the ECI (eci.org), or on Debian/Ubuntu from
+# the icc-profiles package; set CMYK_PROFILE to use a print shop's own profile instead.
+CMYK_PROFILE = os.environ.get('CMYK_PROFILE', '/usr/share/color/icc/ISOcoated_v2_300_eci.icc')
+CMYK_CONDITION = os.environ.get('CMYK_CONDITION', 'FOGRA39')
+GS_ICC_DIR = (sorted(glob.glob('/usr/share/ghostscript/*/iccprofiles')) or [''])[-1]
 NAVY, CREAM, CORAL = '#14213D', '#F4EDE0', '#FF6B5B'
 MUTED = '#5E6475'                                             # grey on cream (5:1)
 
@@ -259,7 +266,7 @@ def back(card):
                     for r, row in enumerate(qr.matrix) for c, on in enumerate(row) if on)
     content.append(f'<rect x="{tx:.3f}" y="{ty:.3f}" width="{tile:.3f}" height="{tile:.3f}" rx="1.3" fill="{CREAM}"/>')
     content.append(f'<path fill="{NAVY}" d="{cells}"/>')
-    content.append(text('Scan for a free quote', 'Inter-SemiBold.otf', 2.0, PANEL_CX, ty + tile + 3.9, CREAM, anchor='middle')[0])
+    content.append(text('Scan for a free quote', 'Inter-SemiBold.otf', 2.2, PANEL_CX, ty + tile + 3.9, CREAM, anchor='middle')[0])
     # top of the cream side: the logo, then who it is
     content.append(logo(X0, Y0, 4.4, NAVY)[0])
     if card.get('name'):
@@ -269,11 +276,11 @@ def back(card):
         content.append(text('Software studio · Georgia', 'Inter-SemiBold.otf', TAG_SIZE, X0, TAG_Y, NAVY)[0])
         content.append(text('Websites · Online stores · Apps · Business software', 'Inter-Regular.otf', 1.95, X0, Y0 + 12.7, MUTED)[0])
     # a short coral rule on the card's middle line, opening the contacts
-    rule_w = width('PHONE', 'Inter-SemiBold.otf', 1.9, 0.09)
+    rule_w = width('PHONE', 'Inter-SemiBold.otf', 2.12, 0.09)
     content.append(f'<rect x="{X0}" y="{BLEED + TRIM_H / 2 - 0.25:.3f}" width="{rule_w:.3f}" height="0.5" fill="{CORAL}"/>')
     # bottom of the cream side: how to reach them; labels in a narrow column, the last line on the safe line
     LX, VX = X0, X0 + 10.5
-    label = lambda s, y: content.append(text(s.upper(), 'Inter-SemiBold.otf', 1.9, LX, y, MUTED, tracking=0.09)[0])
+    label = lambda s, y: content.append(text(s.upper(), 'Inter-SemiBold.otf', 2.12, LX, y, MUTED, tracking=0.09)[0])   # 6 pt
     phones = card['phones']
     y = Y1 - 0.2 - 4.0 - 1.4 - len(phones) * 4.3              # so the web line sits 0.2 mm above the safe line
     label('Phone', y)
@@ -328,16 +335,28 @@ def build(card):
     with open(rgb, 'wb') as fh: w.write(fh)
     cmyk = os.path.join(out, f'{slug}-print-CMYK.pdf')
     try:
-        tmp = cmyk + '.tmp.pdf'
+        tmp, icc_dir = cmyk + '.tmp.pdf', tempfile.mkdtemp()
+        # Ghostscript's pdfwrite separates with <ICCProfilesDir>/default_cmyk.icc (it ignores -sOutputICCProfile), so
+        # give it a copy of its own profile folder with the press profile in that place
+        for f in glob.glob(os.path.join(GS_ICC_DIR, '*.icc')): shutil.copy(f, icc_dir)
+        shutil.copy(CMYK_PROFILE, os.path.join(icc_dir, 'default_cmyk.icc'))
         subprocess.run(['gs', '-q', '-dSAFER', '-dBATCH', '-dNOPAUSE', '-sDEVICE=pdfwrite', '-dPDFSETTINGS=/prepress',
                         '-sColorConversionStrategy=CMYK', '-dProcessColorModel=/DeviceCMYK', '-dAutoRotatePages=/None',
-                        f'-sOutputFile={tmp}', rgb], check=True)
+                        f'-sICCProfilesDir={icc_dir}/', f'-sOutputFile={tmp}', rgb], check=True)
+        shutil.rmtree(icc_dir)
         w2 = PdfWriter(clone_from=PdfReader(tmp)); set_boxes(w2)
-        w2.add_metadata({'/Title': f'{card["title"]}, CMYK (90 x 50 mm, 3 mm bleed)', '/Author': 'EvoSoft Solutions'})
+        icc = StreamObject(); icc.set_data(open(CMYK_PROFILE, 'rb').read()); icc[NameObject('/N')] = NumberObject(4)
+        w2._root_object[NameObject('/OutputIntents')] = ArrayObject([w2._add_object(DictionaryObject({
+            NameObject('/Type'): NameObject('/OutputIntent'), NameObject('/S'): NameObject('/GTS_PDFX'),
+            NameObject('/OutputConditionIdentifier'): TextStringObject(CMYK_CONDITION),
+            NameObject('/Info'): TextStringObject(os.path.basename(CMYK_PROFILE)),
+            NameObject('/RegistryName'): TextStringObject('http://www.color.org'),
+            NameObject('/DestOutputProfile'): w2._add_object(icc)}))])
+        w2.add_metadata({'/Title': f'{card["title"]}, CMYK {CMYK_CONDITION} (90 x 50 mm, 3 mm bleed)', '/Author': 'EvoSoft Solutions'})
         with open(cmyk, 'wb') as fh: w2.write(fh)
         os.remove(tmp)
     except (OSError, subprocess.CalledProcessError) as e:
-        print('CMYK copy skipped (Ghostscript):', e)
+        print('CMYK copy skipped (Ghostscript or the CMYK profile is missing):', e)
     full = {}
     for s in ('front', 'back'):
         im = render(svgs[s], px(W))
