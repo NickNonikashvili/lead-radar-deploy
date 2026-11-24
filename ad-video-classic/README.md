@@ -132,3 +132,36 @@ These are also used, under CC0, so no credit is needed:
 - "glass clicks" by arseniiv
 
 The song and the effects are not in this repository. Download them from their pages.
+
+## One-take version (about 41 s, no cuts)
+
+`evosoft-ad-oner.mp4`. The whole story is one continuous camera move, then the client's logo reveal. It runs:
+
+1. A chrome sphere wakes a dead EvoSoft site on the song's first bass hit. The site comes apart and the camera flies
+   through it.
+2. A hall of phones turns to watch, then the camera flies through a giant Georgian phone.
+3. A canyon of the apps EvoSoft built powers on and fills with ricocheting spheres.
+4. Time freezes in the song's silence while the camera circles the sphere.
+5. On the drop the canyon explodes into a 360-degree wall of screens. Orders pop in the store and stack into towers.
+6. Everything spins into a vortex and drains into the sphere, which becomes a black orb. The camera falls into it, and
+   the logo reveal starts from that black.
+
+The logo reveal's sound is dark and low: heavy bounces, a drone that builds, a deep metallic hit, a reversed swell into
+the lock, and a deep impact with a low D-minor "startup" chord. There are no sparkle sounds.
+
+| File | What it does |
+|---|---|
+| `comp/scenes6.js`, `comp/index6.html`, `timeline6.json` | the one-take scene: one camera spline (`camPath`), a world clock that freezes in the silence, and three sub-frames per frame for motion blur |
+| `comp/engine.js` | `E.camera` takes an optional `up` vector, so the camera can roll correctly when it looks up or down |
+| `studio-sound/chime_dark.py` | the dark startup chord |
+| `studio-sound/outro_dark.py`, `sfx_choice_dark.json` | the ominous logo-reveal sound design (needs `bounces.json` and `chime_dark.wav` next to it) |
+| `studio-sound/mix6.py` | the song from 28.2 s, accents on the camera's big moments (through the site, through the phone, the freeze, the drop, the fall into the orb), and the outro sound |
+
+```bash
+PAGE=index6.html node render.js frames6 30 4      # with an http server on :8600 in this folder
+python3 -I studio-sound/chime_dark.py && python3 -I studio-sound/outro_dark.py studio-sound/sfx_choice_dark.json
+python3 -I studio-sound/mix6.py song.wav studio-sound/sfx_choice_dark.json studio-sound/outro_dark.wav mix6.wav
+```
+
+Credits are the same as for the studio version above, plus "Gong (gong_hit_p.wav)", "Timpani - A#2" (both by
+Samulis, CC0) and "Booms.wav" by studiomandragore (CC0).

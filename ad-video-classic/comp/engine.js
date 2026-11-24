@@ -272,9 +272,9 @@
   // ---------- drawing ----------
   let cam = { proj: M.persp(40, W / H, 0.01, 200), view: M.lookAt([0, 0, 2.747], [0, 0, 0]) };
   const D0 = 1 / Math.tan((20 * Math.PI) / 180);   // camera distance at which a plane 2 units tall fills the frame (fov 40)
-  function camera({ pos = [0, 0, D0], target = null, fov = 40, roll = 0 } = {}) {
+  function camera({ pos = [0, 0, D0], target = null, fov = 40, roll = 0, up: upIn = null } = {}) {
     const tg = target || [pos[0], pos[1], pos[2] - 1];
-    const up = [Math.sin((roll * Math.PI) / 180), Math.cos((roll * Math.PI) / 180), 0];
+    const up = upIn || [Math.sin((roll * Math.PI) / 180), Math.cos((roll * Math.PI) / 180), 0];
     cam = { proj: M.persp(fov, W / H, 0.01, 200), view: M.lookAt(pos, tg, up) };
   }
   function begin(target, clear = [0, 0, 0]) {
