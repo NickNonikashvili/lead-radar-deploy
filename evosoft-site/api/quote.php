@@ -22,6 +22,7 @@ const QUOTE_TIMELINES = ['Flexible', 'As soon as possible', 'Within a month', 'I
 const QUOTE_LANGS = ['en' => 'English', 'ka' => 'Georgian (ქართული)', 'ru' => 'Russian (Русский)', 'es' => 'Spanish (Español)'];
 
 $cfg = evo_config();
+evo_housekeeping($cfg);
 $req = evo_read_request(20000);
 if (isset($req['__health'])) {
     evo_json(['ok' => true, 'mail' => evo_mail_method($cfg), 'last_send' => evo_mail_last()]);

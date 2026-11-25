@@ -57,6 +57,7 @@
   /* mobile menu */
   const menuBtn = $('.menu-toggle');
   const setMenu = (open) => {
+    if (!open && document.body.classList.contains('nav-open') && menuBtn && $('#site-nav').contains(document.activeElement)) menuBtn.focus();
     document.body.classList.toggle('nav-open', open);
     if (menuBtn) {
       menuBtn.setAttribute('aria-expanded', String(open));
@@ -67,6 +68,10 @@
     menuBtn.dataset.open = menuBtn.getAttribute('aria-label');
     menuBtn.addEventListener('click', () => setMenu(!document.body.classList.contains('nav-open')));
     $$('#site-nav a').forEach((a) => a.addEventListener('click', () => setMenu(false)));
+    // (relatedTarget is empty when a click doesn't move focus, as on Safari's buttons: that must not close it)
+    if (header) header.addEventListener('focusout', (e) => {
+      if (document.body.classList.contains('nav-open') && e.relatedTarget && !header.contains(e.relatedTarget)) setMenu(false);
+    });
   }
 
   /* language menu */
@@ -86,6 +91,7 @@
       const i = items.indexOf(document.activeElement);
       if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); items[(i + (e.key === 'ArrowDown' ? 1 : -1) + items.length) % items.length].focus(); }
     });
+    $('.lang').addEventListener('focusout', (e) => { if (e.relatedTarget && !e.currentTarget.contains(e.relatedTarget)) setLang(false); });
   }
   document.addEventListener('keydown', (e) => {
     if (e.key !== 'Escape') return;
@@ -107,7 +113,6 @@
     const alt = pick && $(`link[rel="alternate"][hreflang="${pick}"]`);
     if (alt) {
       const s = S.suggest[pick];
-      $('p', hint).textContent = s.text;
       hint.setAttribute('lang', pick);
       const go = $('a', hint);
       go.textContent = s.go;
@@ -116,7 +121,7 @@
       const no = $('button', hint);
       no.textContent = s.no;
       no.addEventListener('click', () => { store.set('evo-lang', 'en'); hint.hidden = true; });
-      setTimeout(() => { hint.hidden = false; }, 1200);
+      setTimeout(() => { hint.hidden = false; setTimeout(() => { $('p', hint).textContent = s.text; }, 100); }, 1200);
     }
   }
 
@@ -152,6 +157,7 @@
     if (ok) {
       btn.classList.add('done');
       setTimeout(() => btn.classList.remove('done'), 1600);
+      toast(`${esc(S.copied)}: <code>${esc(btn.dataset.copy)}</code>`, 2000);
     } else {
       toast(esc(S.copyFail));
     }
@@ -248,13 +254,6 @@
     if (shots.length < 2) $$('.lb-prev, .lb-next', lb).forEach((b) => (b.hidden = true));
   }
 
-  /* client thumbnails: show the name if the preview service fails */
-  $$('.client-shot img').forEach((im) => {
-    const hide = () => { im.style.visibility = 'hidden'; };
-    im.addEventListener('error', hide);
-    if (im.complete && im.naturalWidth === 0) hide();
-  });
-
   /* quote form: sends to api/quote.php, which emails the team. It never opens the visitor's email app. */
   const form = $('#quote');
   if (form) {
@@ -275,18 +274,30 @@
       };
     };
     const showError = (html) => { err.innerHTML = html; err.hidden = false; };
-    const busy = (on) => { btn.disabled = on; label.textContent = on ? S.sending : idle; form.classList.toggle('sending', on); };
+    const busy = (on) => { btn.setAttribute('aria-disabled', String(on)); label.textContent = on ? S.sending : idle; form.classList.toggle('sending', on); };
+    const FIELD_MSG = { name: S.errName || 'Please enter your name.', email: S.errEmail || 'Please enter an email address, like name@example.com.', message: S.errMessage || 'Please write at least 10 characters about your project.' };
+    // marks each required field right or wrong, with its own message under it; returns the first one to fix
+    const markFields = (bad) => {
+      ['name', 'email', 'message'].forEach((n) => {
+        const on = bad.includes(n);
+        form.elements[n].setAttribute('aria-invalid', String(on));
+        const note = $(`#err-${n}`, form);
+        if (note) { note.textContent = on ? FIELD_MSG[n] : ''; note.hidden = !on; }
+      });
+      return bad.length ? form.elements[bad[0]] : null;
+    };
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
+      if (form.classList.contains('sending')) return;
       const v = values();
       const bad = [];
       if (!v.name) bad.push('name');
       if (!/^\S+@\S+\.\S+$/.test(v.email)) bad.push('email');
       if (v.message.length < 10) bad.push('message');
-      ['name', 'email', 'message'].forEach((n) => form.elements[n].setAttribute('aria-invalid', String(bad.includes(n))));
-      if (bad.length) {
+      const first = markFields(bad);
+      if (first) {
         showError(esc(bad.includes('email') && v.email ? S.formEmail : S.formMissing));
-        form.elements[bad[0]].focus();
+        first.focus();
         return;
       }
       err.hidden = true;
@@ -305,8 +316,9 @@
         return;
       }
       if (res && res.status === 422 && data.fields) {
-        Object.keys(data.fields).forEach((n) => { if (form.elements[n]) form.elements[n].setAttribute('aria-invalid', 'true'); });
+        const first = markFields(['name', 'email', 'message'].filter((n) => n in data.fields));
         showError(esc(data.fields.email ? S.formEmail : S.formMissing));
+        if (first) first.focus();
         return;
       }
       if (res && res.status === 429) { showError(esc(S.formRate)); return; }

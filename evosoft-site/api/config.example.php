@@ -26,6 +26,9 @@ return [
     // public_html (or api/data/quotes.jsonl if that folder can't be created), so none are lost if email fails.
     'quote_to' => 'contact@evosoft.solutions',
     'quote_per_ip_hour' => 5,
+    // Quote requests are deleted from the data folder this many months after they were sent (the privacy policy
+    // says 12: change both together, in site-builder/data/site.mjs too). Delete the emails on the same schedule.
+    'quote_keep_months' => 12,
 
     // Sending the email (SMTP). The form signs in to a real mailbox and sends from it.
     // Hostinger email: keep smtp_host and smtp_port as they are (smtp.hostinger.com, port 465 with SSL),

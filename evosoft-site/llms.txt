@@ -2,7 +2,7 @@
 
 > EvoSoft is a software development studio in Georgia. We build websites, online stores, web apps and business software, and we look after them after launch. Free quotes, replies within one business day.
 
-EvoSoft Solutions (EvoSoft) is a software development studio based in Georgia, working with clients anywhere. It takes on any kind of project: websites, online stores, web apps and custom software, business systems, integrations and automation, seo and redesigns, branding and graphic design, microsoft 365, email and it, maintenance and support. Every project gets a free quote, and the team replies within one business day. Contact: contact@evosoft.solutions, +995 555 352 218, +995 599 574 416.
+EvoSoft Solutions LLC (EvoSoft), a limited liability company registered in Georgia, is a software development studio working with clients anywhere. It works on websites, online stores, web apps and custom software, business systems, integrations and automation, seo and redesigns, branding and graphic design, microsoft 365, email and it, maintenance and support. Every project gets a free quote, and the team replies within one business day. Contact: contact@evosoft.solutions, +995 555 352 218, +995 599 574 416.
 
 The site is in English, with Georgian (https://evosoft.solutions/ka/home), Russian (https://evosoft.solutions/ru/home) and Spanish (https://evosoft.solutions/es/home) versions of every page.
 
@@ -17,13 +17,13 @@ The site is in English, with Georgian (https://evosoft.solutions/ka/home), Russi
 - [Services](https://evosoft.solutions/services)
 - [About EvoSoft](https://evosoft.solutions/about)
 - [Get a quote (form, phone, email, FAQ)](https://evosoft.solutions/contact)
-- [Copyright and privacy](https://evosoft.solutions/legal)
+- [Terms of use, privacy policy, cookies and company details](https://evosoft.solutions/legal)
 
 ## Products with live demos
 
 - [Evo](https://evosoft.solutions/work/evo): One sign-in for time clock, scheduling, HR and payroll, plus a full point-of-sale register, inventory and back office for a campus store. Live demo: https://evo-demo.evosoft.solutions. Built by EvoSoft.
 - [Mailtabs](https://evosoft.solutions/work/mailtabs): Connect Gmail, Outlook, iCloud, Yahoo or any IMAP account and sort all of it into tabs built from accounts and rules. A complete mail client, not just a reader. Live demo: https://mail-demo.evosoft.solutions. Built by EvoSoft.
-- [StudyCat](https://evosoft.solutions/work/studycat): Notes, formula sheets, flashcards, endless practice problems, interactive tools and a moderated community for eight Montana State University courses, live at studycat.org. Live demo: https://studycat-demo.evosoft.solutions. Built by EvoSoft.
+- [StudyCat](https://evosoft.solutions/work/studycat): Notes, formula sheets, flashcards, unlimited practice problems, interactive tools and a moderated community for eight Montana State University courses, live at studycat.org. Free to use, with an optional paid Max plan. Live demo: https://studycat-demo.evosoft.solutions. Built by EvoSoft.
 
 ## Client websites
 

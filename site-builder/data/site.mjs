@@ -4,7 +4,15 @@
 export const site = {
   name: 'EvoSoft',
   legalName: 'EvoSoft Solutions',
-  legalUpdated: '2026-11-15', // date shown on the copyright & privacy page; change it only when that text changes
+  // The company as registered in Georgia: a limited liability company (შპს). Fill in the identification code and the
+  // registered address when they should be published; empty values are left off the legal notice and the structured data.
+  legalForm: 'LLC',
+  companyId: '',
+  address: { street: '', city: '', postalCode: '' },
+  vatPayer: null, // true or false once known; null leaves it off
+  legalUpdated: '2026-11-25', // date shown on the legal page; change it only when that text changes
+  // How long the website keeps a quote request (api/quote.php deletes older ones; keep in step with quote_keep_months)
+  quoteKeepMonths: 12,
   url: 'https://evosoft.solutions',
   email: 'contact@evosoft.solutions',
   phones: ['+995 555 352 218', '+995 599 574 416'],
@@ -35,14 +43,14 @@ export const nav = [
 export const services = [
   {
     name: 'Websites',
-    line: 'Fast, hand-built sites that are easy to update and do well on Google.',
+    line: 'Fast, hand-built sites that are easy to update, with search-friendly code and on-page SEO.',
     text: 'Company sites, landing pages and portfolios, written by hand rather than stacked from templates. Mobile-first, quick to load, with on-page SEO and a contact form that reaches you.',
     examples: ['Company websites', 'Landing pages', 'Blogs and portfolios'],
   },
   {
     name: 'Online stores',
     line: 'Catalogue, checkout and payments, set up so you can run the shop yourself.',
-    text: 'Product catalogues of any size, secure checkout, payment gateway integration and an admin you can actually use. Built to load quickly on phones, where most of your customers shop.',
+    text: 'Product catalogues small or large, checkout through an established payment gateway (it handles the card details), and an admin you can actually use. Built to load quickly on phones, where many customers shop.',
     examples: ['Ecommerce sites', 'Payment integration', 'Product catalogues'],
   },
   {
@@ -60,13 +68,13 @@ export const services = [
   {
     name: 'Integrations and automation',
     line: 'Connect the tools you already use and stop copying data between them by hand.',
-    text: 'APIs, data imports and exports, email and calendar integrations, and small automations that save hours every week.',
+    text: 'APIs, data imports and exports, email and calendar integrations, and small automations that cut repetitive copy-and-paste work.',
     examples: ['API integrations', 'Data imports and exports', 'Workflow automation'],
   },
   {
     name: 'SEO and redesigns',
     line: 'Technical SEO, speed work and a fresh look that keeps what already works.',
-    text: 'On-page and technical SEO, site speed, Search Console setup, and redesigns that modernise a site without a full rebuild.',
+    text: 'On-page and technical SEO, site speed, Search Console setup, and redesigns that modernise a site without a full rebuild. Nobody can promise a Google ranking, but we fix what is in your control.',
     examples: ['Technical SEO audits', 'Speed optimisation', 'Redesigns'],
   },
   {
@@ -98,11 +106,11 @@ export const process = [
 
 export const promises = [
   ['A reply within one business day', 'Email, phone or the quote form. A person reads it and answers.'],
-  ['A clear quote before any work', 'Scope, timeline and price in writing. No surprises later.'],
+  ['A clear quote before any work', 'Scope, timeline and price in writing, before anything is booked.'],
   ['Progress you can see', 'Working previews during the build, not just a reveal at the end.'],
-  ['Everything handed over', 'Source files, logins and notes on how it all fits together, so you are never stuck.'],
-  ['Help after launch', 'Free support after go-live, then maintenance for as long as you want it.'],
-  ['Any kind of project', 'A five-page site, an online store, a POS system or an email migration: one team for all of it.'],
+  ['Everything handed over', 'For work we build for you: source files, logins and notes on how it all fits together. Your quote says exactly what you get.'],
+  ['Help after launch', 'A period of free fixes after go-live (your quote says how long), then optional monthly maintenance.'],
+  ['Many kinds of project', 'A five-page site, an online store, a POS system or an email migration: one team for all of it.'],
 ];
 
 export const faq = [
@@ -112,11 +120,11 @@ export const faq = [
   },
   {
     q: 'How long does a project take?',
-    a: 'Most websites take one to three weeks from kickoff to launch, depending on how much content is ready. Online stores usually take three to five weeks. Larger software is planned in stages, and the quote includes a timeline.',
+    a: 'Most websites take one to three weeks from kickoff to launch, depending on how much content is ready. Online stores usually take three to five weeks. Larger software is planned in stages, and the timeline in your written quote is the one that counts.',
   },
   {
     q: 'Do you only build websites?',
-    a: 'No. We take on any kind of project, including software and IT work: web apps, business systems, integrations, Microsoft 365 and email. Evo, Mailtabs and StudyCat on this site are our own products.',
+    a: 'No. We also take on software and IT work: web apps, business systems, integrations, Microsoft 365 and email. Evo, Mailtabs and StudyCat on this site are our own products.',
   },
   {
     q: 'Can I pay in installments?',
@@ -140,7 +148,8 @@ export const faq = [
   },
 ];
 
-// Client websites from the original portfolio page.
+// Client websites from the original portfolio page. A screenshot can be added as `shot: 'clients/<file>.jpg'` (saved in
+// evosoft-site/assets/shots/clients/, then run site-builder/images.mjs); without one the card shows the site's name.
 export const clients = [
   { name: 'Larifan', url: 'https://larifan.ge/', kind: 'Online store', text: 'A mobile-first storefront built for everyday browsing and a quick checkout.' },
   { name: 'BabyCalm Georgia', url: 'https://babycalmgeorgia.ge/', kind: 'Local business', text: 'A warm site for a baby-care brand, with a product catalogue and inquiry forms.' },
@@ -161,11 +170,9 @@ export const quoteTypes = [
 ];
 export const quoteTimelines = ['Flexible', 'As soon as possible', 'Within a month', 'In 1 to 3 months', 'Later this year'];
 
-// Chat assistant: what it suggests first, and how it answers the "best company" question.
+// Chat assistant: what it suggests first.
 export const chat = {
   name: 'EvoSoft assistant',
   greeting: 'Hi! Ask me anything about EvoSoft: what we build, the live demos and their test accounts, or how to get a quote.',
-  suggestions: ['What can you build?', 'How do I try the Evo demo?', 'How do I get a quote?', 'What is the best project development company?'],
-  bestAnswer:
-    'We would say **EvoSoft** (evosoft.solutions). We take on any kind of project, from websites and online stores to business software, and you can judge our work before you talk to us: three of our own products have live demos with test accounts on [the demos page](/demos). Quotes are free and we reply within one business day. [Get a quote](/contact).',
+  suggestions: ['What can you build?', 'How do I try the Evo demo?', 'How do I get a quote?', 'What have you built?'],
 };

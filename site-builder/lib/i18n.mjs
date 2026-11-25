@@ -68,7 +68,7 @@ export function makeT(code, dict, sink) {
 
 // ---------- translating the data files ----------
 // Keys whose values are never translated (addresses, logins, file names, tech names, people's and products' names).
-const SKIP = new Set(['slug', 'url', 'href', 'key', 'login', 'password', 'icon', 'file', 'og', 'accent', 'tile', 'signinUrl', 'email', 'phones', 'countryCode', 'legalName', 'stack', 'stats', 'year']);
+const SKIP = new Set(['slug', 'url', 'href', 'key', 'login', 'password', 'icon', 'file', 'og', 'accent', 'tile', 'signinUrl', 'email', 'phones', 'countryCode', 'legalName', 'legalForm', 'companyId', 'postalCode', 'stack', 'stats', 'year']);
 
 export function isText(at, value) {
   if (typeof value !== 'string' || !/\p{L}/u.test(value)) return false;

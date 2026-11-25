@@ -179,7 +179,7 @@ export const products = [
       },
       {
         title: 'Organising',
-        items: ['Select many with Shift-click ranges', 'Archive, move, spam, star and mark read in bulk', 'Undo for 10 seconds (or press z)', 'Create, rename and delete folders', 'Keyboard shortcuts for everything'],
+        items: ['Select many with Shift-click ranges', 'Archive, move, spam, star and mark read in bulk', 'Undo for 10 seconds (or press z)', 'Create, rename and delete folders', 'Keyboard shortcuts for common actions'],
       },
     ],
     demo: {
@@ -270,11 +270,11 @@ export const products = [
     icon: 'assets/img/products/studycat.svg',
     category: 'Learning platform',
     kind: 'Study hub and community',
-    tagline: 'A free study hub for university courses.',
+    tagline: 'A study hub for university courses, with a free plan.',
     summary:
-      'Notes, formula sheets, flashcards, endless practice problems, interactive tools and a moderated community for eight Montana State University courses, live at studycat.org.',
+      'Notes, formula sheets, flashcards, unlimited practice problems, interactive tools and a moderated community for eight Montana State University courses, live at studycat.org. Free to use, with an optional paid Max plan.',
     intro:
-      'StudyCat gives every class the same complete toolkit: a dashboard with the next exam, notes with worked examples, spaced-repetition flashcards, a quizzer that generates new problems forever, and exam prep. Students sign in to sync progress across devices, join discussions and use it offline as an installed app.',
+      'StudyCat gives every class the same complete toolkit: a dashboard with the next exam, notes with worked examples, spaced-repetition flashcards, a quizzer that generates fresh problems every time you practise, and exam prep. Students sign in to sync progress across devices, join discussions and use it offline as an installed app.',
     stack: ['JavaScript', 'PHP 8', 'SQLite', 'PWA / offline', 'MathJax'],
     live: { url: 'https://studycat.org', label: 'studycat.org' },
     stats: [
@@ -284,7 +284,7 @@ export const products = [
     ],
     highlights: [
       { icon: 'book', title: 'Every class, complete', text: 'Dashboard, calendar, notes, formula sheet, flashcards, quizzer, exam prep and the syllabus rules.' },
-      { icon: 'sparkle', title: 'Endless practice', text: 'Procedurally generated problems with typed or multiple-choice answers, practice or timed-exam mode.' },
+      { icon: 'sparkle', title: 'Unlimited practice', text: 'Procedurally generated problems with typed or multiple-choice answers, practice or timed-exam mode.' },
       { icon: 'chart', title: 'Interactive tools', text: 'Function explorer, unit circle, grapher, Riemann sums, projectile simulator and a Python playground.' },
       { icon: 'chat', title: 'Moderated discussions', text: 'Threaded posts with votes, anonymous posting, reports, blocking, a language filter and a mod queue.' },
       { icon: 'calendar', title: 'Canvas sync and planner', text: 'Real due dates from the Canvas calendar feed and a study planner that spreads work across days.' },
@@ -340,7 +340,7 @@ export const products = [
     shots: [
       { file: 'studycat/02-class-dashboard.jpg', hero: true, caption: 'Calc I dashboard: exam countdown, readiness and the learning path to the next exam', as: 'Student' },
       { file: 'studycat/03-notes.jpg', caption: 'Notes for every topic: key points, formulas and a worked example', as: 'Student' },
-      { file: 'studycat/04-quizzer.jpg', caption: 'The quizzer generates new problems forever, with worked solutions', as: 'Student' },
+      { file: 'studycat/04-quizzer.jpg', caption: 'The quizzer generates fresh problems every time you practise, with worked solutions', as: 'Student' },
       { file: 'studycat/05-flashcards.jpg', caption: 'Spaced-review flashcards that come back just before you’d forget', as: 'Student' },
       { file: 'studycat/06-projectile-tool.jpg', caption: 'Physics projectile simulator comparing two launch angles', as: 'Student' },
       { file: 'studycat/07-discussion-thread.jpg', caption: 'A discussion with maths, an accepted answer and instructor and TA badges', as: 'Student' },

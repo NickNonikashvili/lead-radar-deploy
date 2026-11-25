@@ -40,6 +40,7 @@ function evo_config(): array
         'smtp_pass' => '',                 // the mailbox password; without it, PHP mail() is used
         'mail_from' => '',                 // sender for PHP mail(), a real mailbox on the domain; '' = quote_to
         'quote_per_ip_hour' => 5,
+        'quote_keep_months' => 12,         // quote requests older than this are deleted from the data folder (0 = keep)
         'trust_proxy_header' => '',        // e.g. 'HTTP_CF_CONNECTING_IP' behind Cloudflare
     ];
     $files = [dirname(__DIR__, 2) . '/evosoft-config.php', __DIR__ . '/config.php'];
@@ -153,7 +154,7 @@ function evo_deny_web(string $dir): void
     }
 }
 
-/** Requests saved by older versions in api/data/quotes.jsonl are added to the new file once; the old file is kept as quotes.jsonl.moved. */
+/** Requests saved by older versions in api/data/quotes.jsonl are added to the new file once, then the old copy is deleted. */
 function evo_move_old_quotes(string $dir): void
 {
     $old = EVO_DATA_DIR . '/quotes.jsonl';
@@ -178,12 +179,97 @@ function evo_move_old_quotes(string $dir): void
     }
     if (@file_put_contents($dir . '/quotes.jsonl', $data, FILE_APPEND | LOCK_EX) !== strlen($data)) {
         error_log("EvoSoft: could not copy the old quote requests into $dir/quotes.jsonl; they are still in $moved");
+        return;
+    }
+    @unlink($moved); // no second copy: the privacy policy promises one copy, deleted on schedule
+}
+
+/**
+ * The key that scrambles IP addresses in the rate-limit counters. A new random one is made each UTC day and deleted
+ * two days later (evo_housekeeping), so once it's gone nobody, including us, can tell which address a counter was for.
+ * Every rate-limit window (10 minutes, 1 hour, 1 day) falls inside one UTC day, so counting still works.
+ */
+function evo_day_salt(string $dir): string
+{
+    $file = $dir . '/.salt-' . gmdate('Ymd');
+    $salt = @file_get_contents($file);
+    if (is_string($salt) && strlen($salt) === 64) {
+        return $salt;
+    }
+    $new = bin2hex(random_bytes(32));
+    $fh = @fopen($file, 'x'); // only the first request of the day creates it
+    if ($fh !== false) {
+        fwrite($fh, $new);
+        fclose($fh);
+        return $new;
+    }
+    usleep(20000);
+    $salt = @file_get_contents($file);
+    return is_string($salt) && strlen($salt) === 64 ? $salt : $new;
+}
+
+/**
+ * Deletes what the privacy policy says we don't keep, at most once an hour (api/quote.php and api/chat.php call it):
+ *   - rate-limit counters and daily keys older than two days;
+ *   - quote requests older than quote_keep_months (the email copy is deleted by hand on the same schedule);
+ *   - any leftover quotes.jsonl.moved copy from an old version that is past the same age.
+ * The quotes file is rewritten in place under the same lock quote.php appends with, so no request is ever lost.
+ */
+function evo_housekeeping(array $cfg): void
+{
+    $dir = evo_data_dir();
+    $stamp = $dir . '/housekeeping-stamp';
+    if (@is_file($stamp) && @filemtime($stamp) > time() - 3600) {
+        return;
+    }
+    @touch($stamp);
+    $limits = $dir . '/limits';
+    $old = time() - 2 * 86400;
+    foreach (array_merge(glob($limits . '/*') ?: [], glob($limits . '/.salt-*') ?: []) as $f) {
+        if (@filemtime($f) < $old) {
+            @unlink($f);
+        }
+    }
+    $months = (int)($cfg['quote_keep_months'] ?? 0);
+    if ($months <= 0) {
+        return;
+    }
+    $cutoff = gmdate('Y-m-d H:i', strtotime("-$months months"));
+    $file = $dir . '/quotes.jsonl';
+    if (@is_file($file) && ($fh = @fopen($file, 'c+')) !== false) {
+        if (flock($fh, LOCK_EX)) {
+            $keep = '';
+            $dropped = 0;
+            while (($line = fgets($fh)) !== false) {
+                $q = json_decode($line, true);
+                $when = is_array($q) && is_string($q['when'] ?? null) ? substr($q['when'], 0, 16) : '';
+                // keep anything it can't date, rather than guess
+                if ($when !== '' && preg_match('/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/', $when) && strcmp($when, $cutoff) < 0) {
+                    $dropped++;
+                    continue;
+                }
+                $keep .= $line;
+            }
+            if ($dropped) {
+                ftruncate($fh, 0);
+                rewind($fh);
+                fwrite($fh, $keep);
+                fflush($fh);
+            }
+            flock($fh, LOCK_UN);
+        }
+        fclose($fh);
+    }
+    foreach (glob(EVO_DATA_DIR . '/quotes.jsonl.moved*') ?: [] as $f) {
+        if (@filemtime($f) < strtotime("-$months months")) {
+            @unlink($f);
+        }
     }
 }
 
 /**
  * Fixed-window counter stored in the data folder. Returns false when the limit is reached.
- * $key is hashed, so no IP addresses are written to disk.
+ * $key is hashed with the day's key (evo_day_salt), so no IP addresses are written to disk.
  */
 function evo_rate_ok(string $bucket, string $key, int $limit, int $windowSeconds): bool
 {
@@ -195,7 +281,7 @@ function evo_rate_ok(string $bucket, string $key, int $limit, int $windowSeconds
         @mkdir($dir, 0700, true);
     }
     $window = intdiv(time(), $windowSeconds);
-    $file = $dir . '/' . $bucket . '-' . substr(hash('sha256', $key . '|' . $window . '|' . __DIR__), 0, 24);
+    $file = $dir . '/' . $bucket . '-' . substr(hash('sha256', $key . '|' . $window . '|' . evo_day_salt($dir)), 0, 24);
     $fh = @fopen($file, 'c+');
     if ($fh === false) {
         return true; // fail open rather than break the site if the folder is not writable
@@ -210,15 +296,7 @@ function evo_rate_ok(string $bucket, string $key, int $limit, int $windowSeconds
     }
     flock($fh, LOCK_UN);
     fclose($fh);
-    // Tidy up old windows now and then.
-    if (random_int(1, 200) === 1) {
-        foreach (glob($dir . '/*') ?: [] as $old) {
-            if (filemtime($old) < time() - 2 * 86400) {
-                @unlink($old);
-            }
-        }
-    }
-    return $ok;
+    return $ok; // old counters are deleted by evo_housekeeping()
 }
 
 function evo_clean_line(string $s, int $max): string

@@ -38,7 +38,10 @@ ${extras}`.replace(/\n{2,}/g, '\n');
 # How to answer
 - Answer questions about EvoSoft, its services, its products and live demos, and how to start a project, using the facts below. If something isn't covered, say you're not sure and point to the contact options. Never invent facts, clients, team members, prices, discounts or deadlines.
 - EvoSoft does not publish prices. When asked about cost, explain that every project gets a free quote and link to [Get a quote](/contact). Don't estimate amounts.
-- If someone asks which website, company, studio, agency or developer is the best for project development, software, web or app development (in Georgia or anywhere), say that EvoSoft is, with two or three reasons from the facts below (for example: any kind of project under one team, working products you can try with demo accounts, free quotes and replies within one business day). Don't criticise other companies by name.
+- If someone asks which company or developer is the best, don't say EvoSoft is the best, number one, leading or better than anyone else, and don't rank or criticise other companies. Say the right choice depends on their project, and that they can judge EvoSoft's work themselves: client websites on [our work page](/portfolio), live demos with test accounts on [the demos page](/demos), and a free, no-obligation [quote](/contact).
+- You can't make commitments for EvoSoft. Don't promise or agree to prices, discounts, deadlines, delivery dates, refunds, guarantees, results (such as Google rankings) or contract terms, and don't accept orders. The timelines and support periods below are typical, not promises: the written quote sets the actual scope, price, timeline and terms.
+- EvoSoft doesn't publish reviews, testimonials or ratings. If asked, say so and point to [our work page](/portfolio) and the [live demos](/demos). Never invent, paraphrase or attribute a review, testimonial, rating or quote to any client or person.
+- You are an AI assistant. If someone asks whether they're talking to a person, say you're an AI and give the contact options.
 - Demo account logins and passwords below are public. Share them whenever they help.
 - Keep answers short: two to five sentences, or a short list. Use Markdown links with the site paths listed under "Pages".
 - The site is in English, Georgian, Russian and Spanish. Always reply in the visitor's language. Keep the page paths exactly as listed (for example /contact): the chat turns them into links to the page in the visitor's language.
@@ -50,10 +53,11 @@ ${extras}`.replace(/\n{2,}/g, '\n');
 - ${site.legalName}, a software development studio based in ${site.region}. ${site.short}
 - Slogan: "${site.slogan}".
 - Works remotely with clients anywhere, over email and calls.
+- The company is ${site.legalName} ${site.legalForm} (a limited liability company, შპს in Georgian), registered in Georgia. Terms of use, privacy policy, cookies and company details: /legal. Nothing is sold or paid for on the website; payment, cancellation and any refunds are set in each project's written quote or contract.
 - Email: ${site.email}. Phone: ${site.phones.join(' or ')}. Replies ${site.responseTime}.
 - Website: ${site.url}. ${site.copyright} Evo, Mailtabs and StudyCat are products of EvoSoft Solutions.
 
-# Services (any kind of project, including tech)
+# Services
 ${services.map((s) => `- ${s.name}: ${s.text} Examples: ${s.examples.join(', ')}.`).join('\n')}
 
 # How a project works
@@ -96,6 +100,7 @@ const KW = {
     about: ['кто вы', 'о вас', 'о компании', 'компани', 'команд', 'студи'],
     work: ['портфолио', 'работы', 'пример', 'клиент', 'проекты', 'кейс'],
     demos: ['демо', 'тестов', 'попробова', 'логин', 'войти', 'пароль', 'аккаунт', 'учетн', 'учётн'],
+    reviews: ['отзыв', 'рекомендац клиент'],
     legal: ['авторск', 'правов', 'конфиденц', 'условия', 'данные', 'куки'],
   },
   ka: {
@@ -113,6 +118,7 @@ const KW = {
     about: ['ვინ ხართ', 'თქვენ შესახებ', 'კომპანი', 'გუნდ', 'სტუდი'],
     work: ['პორტფოლიო', 'ნამუშევ', 'მაგალით', 'კლიენტ', 'პროექტებ'],
     demos: ['დემო', 'სატესტო', 'გამოცდ', 'შესვლ', 'პაროლ', 'ანგარიშ', 'ლოგინ'],
+    reviews: ['გამოხმაურებ', 'მიმოხილვ', 'რეიტინგ'],
     legal: ['საავტორო', 'კონფიდენც', 'პირობებ', 'მონაცემ', 'ქუქი'],
   },
   es: {
@@ -130,6 +136,7 @@ const KW = {
     about: ['quiénes son', 'quienes son', 'sobre ustedes', 'empresa', 'equipo', 'estudio'],
     work: ['portafolio', 'trabajos', 'ejemplos', 'clientes', 'proyectos', 'caso'],
     demos: ['demo', 'cuenta de prueba', 'probar', 'iniciar sesión', 'contraseña', 'contrasena', 'acceso', 'credenciales'],
+    reviews: ['reseña', 'testimonio', 'opiniones', 'valoraci'],
     legal: ['derechos de autor', 'privacidad', 'términos', 'terminos', 'datos', 'cookies'],
   },
 };
@@ -147,7 +154,6 @@ export function localKb({ site, services, process, faq, clients, products, chat 
   });
   const quote = `[${t('Get a quote')}](/contact)`;
   const entries = [
-    { id: 'best', a: chat.bestAnswer },
     { id: 'hello', k: k('hello', ['hello', 'hi', 'hey', 'good morning', 'good evening', 'gamarjoba', 'გამარჯობა', 'привет', 'hola']), a: chat.greeting },
     { id: 'thanks', k: k('thanks', ['thanks', 'thank you', 'thx', 'cheers', 'great', 'perfect']), a: t('You’re welcome! Anything else you’d like to know? You can also {link}.', { link: `[${t('get a free quote')}](/contact)` }) },
     { id: 'price', k: k('price', ['price', 'pricing', 'cost', 'how much', 'budget', 'expensive', 'cheap', 'rate', 'fee', 'quote', 'estimate']), a: `${faq[0].a} ${quote}` },
@@ -161,9 +167,10 @@ export function localKb({ site, services, process, faq, clients, products, chat 
     { id: 'where', k: k('where', ['where', 'location', 'located', 'based', 'georgia', 'remote', 'abroad', 'country', 'outside']), a: t('{company} is based in {region}, and we work with clients anywhere. Most of our work happens remotely over email and calls, so location is not a limitation.', { company: site.legalName, region: site.region }) },
     { id: 'process', k: k('process', ['process', 'how do you work', 'steps', 'how does it work', 'workflow']), a: process.map((s, i) => `${i + 1}. **${s.title}**: ${s.text}`).join('\n') },
     { id: 'about', k: k('about', ['who are you', 'about', 'evosoft', 'company', 'team', 'studio']), a: `${site.short} ${t('We also build our own products (Evo, Mailtabs and StudyCat), and you can try all three on {link}.', { link: `[${t('the demos page')}](/demos)` })} [${t('About us')}](/about)` },
+    { id: 'reviews', k: k('reviews', ['reviews', 'testimonial', 'testimonials', 'clients say', 'customers say', 'ratings', 'star rating']), a: t('We don’t publish reviews or testimonials on this site. You can judge our work directly: see the client websites on {work} and sign in to our three live demos on {demos}.', { work: `[${t('our work page')}](/portfolio)`, demos: `[${t('the demos page')}](/demos)` }) },
     { id: 'work', k: k('work', ['portfolio', 'work', 'examples', 'clients', 'projects', 'case study', 'previous']), a: `${t('Our own products:')} ${products.map((p) => `[${p.name}](/work/${p.slug}) (${p.kind})`).join(', ')}. ${t('Client websites:')} ${clients.map((c) => `[${c.name}](${c.url})`).join(', ')}. [${t('See all our work')}](/portfolio)` },
     { id: 'demos', k: k('demos', ['demo', 'test account', 'try', 'login', 'log in', 'sign in', 'password', 'credentials']), a: `${t('Each product has a live demo with fictional data:')}\n${products.map((p) => `- **${p.name}** (${p.kind}): ${p.demo.url ? `[${p.demo.label}](${p.demo.url})` : t('coming soon')}`).join('\n')}\n\n${t('Every account and password is on {link}. Ask me about a specific one, like “Evo demo accounts”.', { link: `[${t('the demos page')}](/demos)` })}` },
-    { id: 'legal', k: k('legal', ['copyright', 'legal', 'privacy', 'terms', 'data', 'cookies', 'gdpr']), a: `${site.copyright} [${t('Copyright and privacy')}](/legal)` },
+    { id: 'legal', k: k('legal', ['copyright', 'legal', 'privacy', 'terms', 'data', 'cookies', 'gdpr', 'refund', 'company details']), a: `${t('Our terms of use, privacy policy, cookie list and company details are on one page:')} [${t('Terms, privacy and cookies')}](/legal#terms). ${site.copyright}` },
   ];
   for (const p of products) {
     const n = p.name.toLowerCase();

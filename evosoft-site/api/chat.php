@@ -18,6 +18,7 @@ use Anthropic\Core\Exceptions\RateLimitException;
 require __DIR__ . '/lib.php';
 
 $cfg = evo_config();
+evo_housekeeping($cfg); // the chat checks in whenever it opens, so old counters and requests go on time
 $ready = $cfg['anthropic_api_key'] !== '' && is_file(__DIR__ . '/vendor/autoload.php') && is_file(__DIR__ . '/knowledge.md');
 
 $req = evo_read_request(24000);

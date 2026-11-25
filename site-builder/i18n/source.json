@@ -52,7 +52,7 @@
   "ctx": "data: services.0.name"
  },
  {
-  "s": "Fast, hand-built sites that are easy to update and do well on Google.",
+  "s": "Fast, hand-built sites that are easy to update, with search-friendly code and on-page SEO.",
   "ctx": "data: services.0.line"
  },
  {
@@ -80,7 +80,7 @@
   "ctx": "data: services.1.line"
  },
  {
-  "s": "Product catalogues of any size, secure checkout, payment gateway integration and an admin you can actually use. Built to load quickly on phones, where most of your customers shop.",
+  "s": "Product catalogues small or large, checkout through an established payment gateway (it handles the card details), and an admin you can actually use. Built to load quickly on phones, where many customers shop.",
   "ctx": "data: services.1.text"
  },
  {
@@ -152,7 +152,7 @@
   "ctx": "data: services.4.line"
  },
  {
-  "s": "APIs, data imports and exports, email and calendar integrations, and small automations that save hours every week.",
+  "s": "APIs, data imports and exports, email and calendar integrations, and small automations that cut repetitive copy-and-paste work.",
   "ctx": "data: services.4.text"
  },
  {
@@ -176,7 +176,7 @@
   "ctx": "data: services.5.line"
  },
  {
-  "s": "On-page and technical SEO, site speed, Search Console setup, and redesigns that modernise a site without a full rebuild.",
+  "s": "On-page and technical SEO, site speed, Search Console setup, and redesigns that modernise a site without a full rebuild. Nobody can promise a Google ranking, but we fix what is in your control.",
   "ctx": "data: services.5.text"
  },
  {
@@ -308,7 +308,7 @@
   "ctx": "data: promises.1.0"
  },
  {
-  "s": "Scope, timeline and price in writing. No surprises later.",
+  "s": "Scope, timeline and price in writing, before anything is booked.",
   "ctx": "data: promises.1.1"
  },
  {
@@ -324,7 +324,7 @@
   "ctx": "data: promises.3.0"
  },
  {
-  "s": "Source files, logins and notes on how it all fits together, so you are never stuck.",
+  "s": "For work we build for you: source files, logins and notes on how it all fits together. Your quote says exactly what you get.",
   "ctx": "data: promises.3.1"
  },
  {
@@ -332,11 +332,11 @@
   "ctx": "data: promises.4.0"
  },
  {
-  "s": "Free support after go-live, then maintenance for as long as you want it.",
+  "s": "A period of free fixes after go-live (your quote says how long), then optional monthly maintenance.",
   "ctx": "data: promises.4.1"
  },
  {
-  "s": "Any kind of project",
+  "s": "Many kinds of project",
   "ctx": "data: promises.5.0"
  },
  {
@@ -356,7 +356,7 @@
   "ctx": "data: faq.1.q"
  },
  {
-  "s": "Most websites take one to three weeks from kickoff to launch, depending on how much content is ready. Online stores usually take three to five weeks. Larger software is planned in stages, and the quote includes a timeline.",
+  "s": "Most websites take one to three weeks from kickoff to launch, depending on how much content is ready. Online stores usually take three to five weeks. Larger software is planned in stages, and the timeline in your written quote is the one that counts.",
   "ctx": "data: faq.1.a"
  },
  {
@@ -364,7 +364,7 @@
   "ctx": "data: faq.2.q"
  },
  {
-  "s": "No. We take on any kind of project, including software and IT work: web apps, business systems, integrations, Microsoft 365 and email. Evo, Mailtabs and StudyCat on this site are our own products.",
+  "s": "No. We also take on software and IT work: web apps, business systems, integrations, Microsoft 365 and email. Evo, Mailtabs and StudyCat on this site are our own products.",
   "ctx": "data: faq.2.a"
  },
  {
@@ -504,12 +504,8 @@
   "ctx": "data: chat.suggestions.2"
  },
  {
-  "s": "What is the best project development company?",
+  "s": "What have you built?",
   "ctx": "data: chat.suggestions.3"
- },
- {
-  "s": "We would say **EvoSoft** (evosoft.solutions). We take on any kind of project, from websites and online stores to business software, and you can judge our work before you talk to us: three of our own products have live demos with test accounts on [the demos page](/demos). Quotes are free and we reply within one business day. [Get a quote](/contact).",
-  "ctx": "data: chat.bestAnswer"
  },
  {
   "s": "Evo is a workforce and point-of-sale system by EvoSoft: time clock, scheduling, HR, payroll, register and inventory. Try the live demo with test accounts.",
@@ -1184,7 +1180,7 @@
   "ctx": "data: products.1.features.2.items.3"
  },
  {
-  "s": "Keyboard shortcuts for everything",
+  "s": "Keyboard shortcuts for common actions",
   "ctx": "data: products.1.features.2.items.4"
  },
  {
@@ -1376,15 +1372,15 @@
   "ctx": "data: products.2.kind"
  },
  {
-  "s": "A free study hub for university courses.",
+  "s": "A study hub for university courses, with a free plan.",
   "ctx": "data: products.2.tagline"
  },
  {
-  "s": "Notes, formula sheets, flashcards, endless practice problems, interactive tools and a moderated community for eight Montana State University courses, live at studycat.org.",
+  "s": "Notes, formula sheets, flashcards, unlimited practice problems, interactive tools and a moderated community for eight Montana State University courses, live at studycat.org. Free to use, with an optional paid Max plan.",
   "ctx": "data: products.2.summary"
  },
  {
-  "s": "StudyCat gives every class the same complete toolkit: a dashboard with the next exam, notes with worked examples, spaced-repetition flashcards, a quizzer that generates new problems forever, and exam prep. Students sign in to sync progress across devices, join discussions and use it offline as an installed app.",
+  "s": "StudyCat gives every class the same complete toolkit: a dashboard with the next exam, notes with worked examples, spaced-repetition flashcards, a quizzer that generates fresh problems every time you practise, and exam prep. Students sign in to sync progress across devices, join discussions and use it offline as an installed app.",
   "ctx": "data: products.2.intro"
  },
  {
@@ -1396,7 +1392,7 @@
   "ctx": "data: products.2.highlights.0.text"
  },
  {
-  "s": "Endless practice",
+  "s": "Unlimited practice",
   "ctx": "data: products.2.highlights.1.title"
  },
  {
@@ -1672,7 +1668,7 @@
   "ctx": "data: products.2.shots.1.caption"
  },
  {
-  "s": "The quizzer generates new problems forever, with worked solutions",
+  "s": "The quizzer generates fresh problems every time you practise, with worked solutions",
   "ctx": "data: products.2.shots.2.caption"
  },
  {
@@ -1744,6 +1740,10 @@
   "ctx": "index.html"
  },
  {
+  "s": "Open menu",
+  "ctx": "index.html"
+ },
+ {
   "s": "Main",
   "ctx": "index.html"
  },
@@ -1757,10 +1757,6 @@
  },
  {
   "s": "Language: {name}",
-  "ctx": "index.html"
- },
- {
-  "s": "Open menu",
   "ctx": "index.html"
  },
  {
@@ -1828,7 +1824,7 @@
   "ctx": "index.html"
  },
  {
-  "s": "1 day",
+  "s": "1 business day",
   "ctx": "index.html"
  },
  {
@@ -1836,7 +1832,7 @@
   "ctx": "index.html"
  },
  {
-  "s": "We take on projects of any size, from a five-page website to a point-of-sale system, and look after them once they’re live. Don’t take our word for it: sign in to the software we’ve built.",
+  "s": "We take on projects small and large, from a five-page website to a point-of-sale system, and look after them once they’re live. Don’t take our word for it: sign in to the software we’ve built.",
   "ctx": "index.html"
  },
  {
@@ -1856,6 +1852,10 @@
   "ctx": "index.html"
  },
  {
+  "s": "(opens in a new tab)",
+  "ctx": "index.html"
+ },
+ {
   "s": "Pause animation",
   "ctx": "index.html"
  },
@@ -1864,7 +1864,7 @@
   "ctx": "index.html"
  },
  {
-  "s": "Our own products, each with a live demo and an account for every role. Open one and click around.",
+  "s": "Our own products, each with a live demo and ready-made test accounts. Open one and click around.",
   "ctx": "index.html"
  },
  {
@@ -1880,11 +1880,11 @@
   "ctx": "index.html"
  },
  {
-  "s": "Any kind of project, including tech",
+  "s": "Websites, software and IT, all in one place",
   "ctx": "index.html"
  },
  {
-  "s": "Most clients start with a website or an online store. Plenty stay for the software, the email setup and the support afterwards.",
+  "s": "Many projects start with a website or an online store. We can also take on the software, the email setup and the support afterwards.",
   "ctx": "index.html"
  },
  {
@@ -1928,7 +1928,23 @@
   "ctx": "index.html"
  },
  {
-  "s": "Copyright & privacy",
+  "s": "Legal",
+  "ctx": "index.html"
+ },
+ {
+  "s": "Legal notice",
+  "ctx": "index.html"
+ },
+ {
+  "s": "Terms of use",
+  "ctx": "index.html"
+ },
+ {
+  "s": "Privacy policy",
+  "ctx": "index.html"
+ },
+ {
+  "s": "Cookies",
   "ctx": "index.html"
  },
  {
@@ -1937,6 +1953,14 @@
  },
  {
   "s": "Replies {when}",
+  "ctx": "index.html"
+ },
+ {
+  "s": "{company} LLC",
+  "ctx": "the company name with its legal form (LLC = შპს, ООО)"
+ },
+ {
+  "s": "{company}, registered in {country}.",
   "ctx": "index.html"
  },
  {
@@ -2028,6 +2052,18 @@
   "ctx": "index.html"
  },
  {
+  "s": "Please enter your name.",
+  "ctx": "index.html"
+ },
+ {
+  "s": "Please enter an email address, like name@example.com.",
+  "ctx": "index.html"
+ },
+ {
+  "s": "Please write at least 10 characters about your project.",
+  "ctx": "index.html"
+ },
+ {
   "s": "Please check your email address.",
   "ctx": "index.html"
  },
@@ -2104,7 +2140,7 @@
   "ctx": "portfolio.html"
  },
  {
-  "s": "Sites we’ve designed and built for clients in different industries.",
+  "s": "Websites we’ve built for clients in different industries.",
   "ctx": "portfolio.html"
  },
  {
@@ -2188,12 +2224,16 @@
   "ctx": "work/evo.html"
  },
  {
-  "s": "demo accounts, one per role",
+  "s": "demo accounts",
   "plural": true,
   "ctx": "work/evo.html"
  },
  {
   "s": "Built with",
+  "ctx": "work/evo.html"
+ },
+ {
+  "s": "Enlarge screenshot",
   "ctx": "work/evo.html"
  },
  {
@@ -2249,7 +2289,7 @@
   "ctx": "services.html"
  },
  {
-  "s": "These are our own products. Each has a live demo with an account for every role.",
+  "s": "These are our own products. Each has a live demo with ready-made test accounts.",
   "ctx": "services.html"
  },
  {
@@ -2353,7 +2393,7 @@
   "ctx": "contact.html"
  },
  {
-  "s": "We use your details only to answer you.",
+  "s": "{company} uses these details only to reply and prepare your quote, and deletes them {months} months after you send them if no project follows. Please don’t include sensitive personal information.",
   "ctx": "contact.html"
  },
  {
@@ -2381,43 +2421,99 @@
   "ctx": "contact.html"
  },
  {
-  "s": "Copyright, Terms of Use and Privacy | EvoSoft",
+  "s": "Who we are",
   "ctx": "contact.html"
  },
  {
-  "s": "Copyright notice, terms of use and privacy information for the EvoSoft website, its chat assistant, the quote form and the live software demos.",
+  "s": "Copyright",
   "ctx": "contact.html"
  },
  {
-  "s": "Legal",
-  "ctx": "legal.html"
+  "s": "Credits and licences",
+  "ctx": "contact.html"
  },
  {
-  "s": "Copyright and privacy",
-  "ctx": "legal.html"
+  "s": "Legal form",
+  "ctx": "contact.html"
+ },
+ {
+  "s": "Limited liability company (შპს), registered in {country}",
+  "ctx": "contact.html"
+ },
+ {
+  "s": "Local storage",
+  "ctx": "contact.html"
+ },
+ {
+  "s": "Remembers the language you picked, so we don’t suggest another one. Saved only when you choose a language.",
+  "ctx": "contact.html"
+ },
+ {
+  "s": "Until you clear your browser data",
+  "ctx": "contact.html"
+ },
+ {
+  "s": "Session storage",
+  "ctx": "contact.html"
+ },
+ {
+  "s": "Keeps your current chat conversation (up to 30 messages) while you move between pages.",
+  "ctx": "contact.html"
+ },
+ {
+  "s": "Until you close the tab",
+  "ctx": "contact.html"
+ },
+ {
+  "s": "Remembers whether the AI assistant is available, so the site doesn’t check on every page.",
+  "ctx": "contact.html"
+ },
+ {
+  "s": "Remembers that the chat greeting has been shown, so it isn’t shown again.",
+  "ctx": "contact.html"
+ },
+ {
+  "s": "Terms of Use, Privacy and Cookies | EvoSoft",
+  "ctx": "contact.html"
+ },
+ {
+  "s": "Legal notice, terms of use, privacy policy and cookie information for the EvoSoft website, its chat assistant, the quote form and the live software demos.",
+  "ctx": "contact.html"
+ },
+ {
+  "s": "Terms, privacy and cookies",
+  "ctx": "contact.html"
  },
  {
   "s": "Last updated {date}.",
   "ctx": "legal.html"
  },
  {
-  "s": "Copyright",
+  "s": "On this page",
   "ctx": "legal.html"
  },
  {
-  "s": "This website and everything on it, including its text, design, logos, graphics, screenshots and code, belongs to {company} unless stated otherwise. Evo, Mailtabs and StudyCat, their names, logos, screenshots and live demos are products of {company}.",
+  "s": "This website is run by {company}. We built the software shown on it, and we decide how the personal data described in the privacy policy is used.",
   "ctx": "legal.html"
  },
  {
-  "s": "You’re welcome to link to any page. You may not copy, republish, sell or reuse the content, the screenshots or the software shown here, in whole or in part, without our written permission. To ask, email {email}.",
+  "s": "These terms apply when you use evosoft.solutions, its chat assistant and our live demos ({hosts}).",
   "ctx": "legal.html"
  },
  {
-  "s": "Client websites shown in our portfolio belong to their owners and appear here as examples of our work. Other product and company names may be trademarks of their respective owners.",
+  "s": "Information on this site",
   "ctx": "legal.html"
  },
  {
-  "s": "Translations of this website are provided for convenience. If a translation differs from the English text, the English text applies.",
+  "s": "We work to keep the site accurate, but it is general information about our services, not an offer, a quote or professional advice. The scope, price, timeline and payment of a project are agreed only in a written quote or contract.",
+  "ctx": "legal.html"
+ },
+ {
+  "s": "The chat assistant",
+  "ctx": "legal.html"
+ },
+ {
+  "s": "When it is switched on, the assistant is an AI system; otherwise it gives built-in answers from this website. Its answers are generated automatically, may be wrong or incomplete, and don’t bind us. Check anything important with us directly. Don’t use it to send spam, to try to get around its rules, or to produce unlawful content.",
   "ctx": "legal.html"
  },
  {
@@ -2425,35 +2521,247 @@
   "ctx": "legal.html"
  },
  {
-  "s": "Quote form.",
+  "s": "Don’t use the demos to attack, overload or misuse our servers, or to harm other visitors.",
   "ctx": "legal.html"
  },
  {
-  "s": "When you send a quote request we receive your name, email, optional phone and company, and your message. We use them only to reply about your project and keep them as long as needed for that.",
+  "s": "Links to other sites",
   "ctx": "legal.html"
  },
  {
-  "s": "Chat assistant.",
+  "s": "We link to client websites and other sites we don’t control. We’re not responsible for their content or their privacy practices.",
   "ctx": "legal.html"
  },
  {
-  "s": "Questions you type into the assistant are sent to our AI provider (Anthropic) to generate an answer and are not used to identify you. Please don’t share sensitive personal information in the chat.",
+  "s": "Payments and refunds",
   "ctx": "legal.html"
  },
  {
-  "s": "Cookies.",
+  "s": "We don’t sell anything on this website, and you can’t pay here. Prices, payment stages, cancellation and any refunds are set out in the written quote or contract for your project. If you are a consumer, you also keep any right to cancel that the law gives you, and your quote will explain it.",
   "ctx": "legal.html"
  },
  {
-  "s": "This site sets no tracking or advertising cookies. It remembers your language in your own browser, and the chat keeps the current conversation in your browser tab until you close it.",
+  "s": "Liability",
   "ctx": "legal.html"
  },
  {
-  "s": "Your rights.",
+  "s": "We’re not liable for loss caused by using this website, the chat assistant or the demos, or by their being unavailable, except where the law doesn’t allow liability to be limited, for example for death or personal injury, or for damage caused intentionally or through gross negligence. Nothing in these terms limits your rights as a consumer under the law that applies to you.",
   "ctx": "legal.html"
  },
  {
-  "s": "To see, correct or delete anything you’ve sent us, email {email}.",
+  "s": "Law and courts",
+  "ctx": "legal.html"
+ },
+ {
+  "s": "These terms are governed by the law of Georgia, and disputes go to the courts of Georgia. If you are a consumer living in the EU, you also keep the protection of the mandatory laws of your country and can bring a claim in its courts.",
+  "ctx": "legal.html"
+ },
+ {
+  "s": "Changes and translations",
+  "ctx": "legal.html"
+ },
+ {
+  "s": "We may update these terms; the date at the top shows the latest version. Translations are provided for convenience. If a translation differs from the English text, the English text applies, unless the law requires otherwise.",
+  "ctx": "legal.html"
+ },
+ {
+  "s": "This policy explains what personal data this website collects, why, and what you can do about it. {company} (see Who we are) is responsible for it. For any privacy question, email {email}.",
+  "ctx": "legal.html"
+ },
+ {
+  "s": "Quote requests",
+  "ctx": "legal.html"
+ },
+ {
+  "s": "When you send the quote form we receive your name, email address and message and, if you add them, your phone number, company, the services and timeline you picked, and the language of the page. We need your name, email and message to reply; the rest is optional. We use these details only to answer you and prepare the quote you asked for. The request is emailed to our mailbox, and a backup copy is kept on our web server in case the email fails.",
+  "ctx": "legal.html"
+ },
+ {
+  "s": "Legal basis: steps you ask us to take before a possible contract or, if you write on behalf of a company, our legitimate interest in answering business enquiries (GDPR Art. 6(1)(b) and (f), and the equivalent grounds in the Law of Georgia on Personal Data Protection). Emails and calls to us are handled the same way.",
+  "ctx": "legal.html"
+ },
+ {
+  "s": "Chat assistant",
+  "ctx": "legal.html"
+ },
+ {
+  "s": "When the AI assistant is switched on, our server sends your conversation (your last messages and the assistant’s replies, up to 12 in all) and the page language to our AI provider, Anthropic, PBC, in the United States, which writes the answer. We don’t send your name, IP address or any other identifier, but whatever you type is sent as written, so please don’t include personal or sensitive details. We don’t store conversations on our server; your browser keeps the current one in the tab until you close it. When the AI is switched off, the assistant answers from built-in answers in your browser and nothing you type leaves your device. Legal basis: our legitimate interest in answering visitors’ questions.",
+  "ctx": "legal.html"
+ },
+ {
+  "s": "Abuse protection",
+  "ctx": "legal.html"
+ },
+ {
+  "s": "To stop spam and limit the cost of the assistant, our server counts requests from each IP address. It stores only a one-way hash of the address, made with a key that changes every day and is then deleted, next to a counter, and it deletes counters older than two days automatically. Legal basis: our legitimate interest in keeping the site secure.",
+  "ctx": "legal.html"
+ },
+ {
+  "s": "Server logs",
+  "ctx": "legal.html"
+ },
+ {
+  "s": "Like every website, our hosting provider records technical data about each request (IP address, time, page requested and browser type) to deliver the site and keep it secure, and deletes these logs after a limited period. Legal basis: our legitimate interest in keeping the site secure and working.",
+  "ctx": "legal.html"
+ },
+ {
+  "s": "Demo status checks",
+  "ctx": "legal.html"
+ },
+ {
+  "s": "Pages that list our live demos check whether each demo is online, so your browser contacts our demo servers ({hosts}). Like any web server, they see your IP address and browser type. No cookies are sent with these checks.",
+  "ctx": "legal.html"
+ },
+ {
+  "s": "What we don’t do",
+  "ctx": "legal.html"
+ },
+ {
+  "s": "We don’t use analytics, advertising or social-media tracking of any kind, and our pages load no scripts, fonts, images or embeds from other companies. We don’t sell your data, and we don’t make automated decisions about you that have legal or similarly significant effects.",
+  "ctx": "legal.html"
+ },
+ {
+  "s": "Who receives it",
+  "ctx": "legal.html"
+ },
+ {
+  "s": "Our hosting provider, Hostinger, which runs this website and our mailbox.",
+  "ctx": "legal.html"
+ },
+ {
+  "s": "Anthropic, PBC (USA), for the chat assistant’s answers. Under its commercial terms it doesn’t use them to train its models, and it keeps them only for a limited period.",
+  "ctx": "legal.html"
+ },
+ {
+  "s": "The provider we rent our demo servers from.",
+  "ctx": "legal.html"
+ },
+ {
+  "s": "Public authorities, where the law requires it.",
+  "ctx": "legal.html"
+ },
+ {
+  "s": "Our hosting, email and AI providers process the data only on our instructions, under data processing agreements.",
+  "ctx": "legal.html"
+ },
+ {
+  "s": "Transfers outside Georgia and the EU",
+  "ctx": "legal.html"
+ },
+ {
+  "s": "Anthropic is in the United States. We rely on its data processing addendum, which includes the EU standard contractual clauses, as the safeguard for these transfers. You can ask us for details.",
+  "ctx": "legal.html"
+ },
+ {
+  "s": "How long we keep it",
+  "ctx": "legal.html"
+ },
+ {
+  "s": "Quote requests: the copy on our web server is deleted automatically {months} months after you send it. We delete the email the same way, unless the request leads to a project; then we keep what the contract and Georgian tax and accounting law require.",
+  "ctx": "legal.html"
+ },
+ {
+  "s": "Chat: nothing on our server. Your browser deletes the conversation when you close the tab.",
+  "ctx": "legal.html"
+ },
+ {
+  "s": "Abuse-protection counters: two days.",
+  "ctx": "legal.html"
+ },
+ {
+  "s": "Server logs: the limited period set by our hosting provider.",
+  "ctx": "legal.html"
+ },
+ {
+  "s": "Your rights",
+  "ctx": "legal.html"
+ },
+ {
+  "s": "You can ask us whether we hold data about you and for a copy of it. You can also ask us to correct it, delete it, limit how we use it or send it to you in a portable format, and you can object to any use based on our legitimate interests. Email {email}; we reply within 10 working days.",
+  "ctx": "legal.html"
+ },
+ {
+  "s": "Complaints",
+  "ctx": "legal.html"
+ },
+ {
+  "s": "If you think we’ve handled your data wrongly, please tell us first. You can also complain to the Personal Data Protection Service of Georgia ({pdps}). If you live in the EU or EEA, you can also complain to the data protection authority in your country.",
+  "ctx": "legal.html"
+ },
+ {
+  "s": "Changes",
+  "ctx": "legal.html"
+ },
+ {
+  "s": "We update this policy when what we do with data changes. The date at the top of this page shows the latest version.",
+  "ctx": "legal.html"
+ },
+ {
+  "s": "Cookies and browser storage",
+  "ctx": "legal.html"
+ },
+ {
+  "s": "This website doesn’t use cookies, analytics, advertising or tracking tools. It saves a few small items in your own browser, only for features you use or choose. They stay in your browser (apart from the chat messages you decide to send), so under EU rules they don’t need your consent.",
+  "ctx": "legal.html"
+ },
+ {
+  "s": "What this website saves in your browser",
+  "ctx": "legal.html"
+ },
+ {
+  "s": "Name",
+  "ctx": "legal.html"
+ },
+ {
+  "s": "Kind",
+  "ctx": "legal.html"
+ },
+ {
+  "s": "Purpose",
+  "ctx": "legal.html"
+ },
+ {
+  "s": "Kept for",
+  "ctx": "legal.html"
+ },
+ {
+  "s": "You can delete these items at any time in your browser’s site settings. The site works without them.",
+  "ctx": "legal.html"
+ },
+ {
+  "s": "Our live demos are separate websites. When you sign in to one, it sets a sign-in cookie, and the Evo demo also remembers a device that has signed in before, to slow down password guessing. These cookies are needed for the demos to work.",
+  "ctx": "legal.html"
+ },
+ {
+  "s": "If we ever add anything that needs your consent, such as analytics, we’ll ask first and update this page.",
+  "ctx": "legal.html"
+ },
+ {
+  "s": "This website and everything on it, including its text, design, logos, graphics, screenshots and code, belongs to {company}, except the typefaces and icons listed under Credits and licences. Evo, Mailtabs and StudyCat, their names, logos, screenshots and live demos are products of {company}.",
+  "ctx": "legal.html"
+ },
+ {
+  "s": "You’re welcome to link to any page. You may not copy, republish, sell or reuse the content, the screenshots or the software shown here, in whole or in part, without our written permission. To ask, email {email}.",
+  "ctx": "legal.html"
+ },
+ {
+  "s": "Client websites named in our portfolio belong to their owners and are mentioned as examples of our work. University, course, product and company names are used only to identify them and may be trademarks of their owners.",
+  "ctx": "legal.html"
+ },
+ {
+  "s": "This website uses these typefaces and icons, each under its own licence:",
+  "ctx": "legal.html"
+ },
+ {
+  "s": "licence",
+  "ctx": "legal.html"
+ },
+ {
+  "s": "Lucide icons",
+  "ctx": "legal.html"
+ },
+ {
+  "s": "portions",
   "ctx": "legal.html"
  },
  {
@@ -2525,6 +2833,14 @@
   "ctx": "chat assistant: built-in answers (Markdown; keep [text](/path) links and **bold**)"
  },
  {
+  "s": "our work page",
+  "ctx": "chat assistant: built-in answers (Markdown; keep [text](/path) links and **bold**)"
+ },
+ {
+  "s": "We don’t publish reviews or testimonials on this site. You can judge our work directly: see the client websites on {work} and sign in to our three live demos on {demos}.",
+  "ctx": "chat assistant: built-in answers (Markdown; keep [text](/path) links and **bold**)"
+ },
+ {
   "s": "Our own products:",
   "ctx": "chat assistant: built-in answers (Markdown; keep [text](/path) links and **bold**)"
  },
@@ -2542,6 +2858,10 @@
  },
  {
   "s": "Every account and password is on {link}. Ask me about a specific one, like “Evo demo accounts”.",
+  "ctx": "chat assistant: built-in answers (Markdown; keep [text](/path) links and **bold**)"
+ },
+ {
+  "s": "Our terms of use, privacy policy, cookie list and company details are on one page:",
   "ctx": "chat assistant: built-in answers (Markdown; keep [text](/path) links and **bold**)"
  },
  {

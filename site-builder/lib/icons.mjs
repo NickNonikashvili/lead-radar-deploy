@@ -1,4 +1,5 @@
-// Stroke icons (24×24, currentColor), in the style of Lucide (ISC licence).
+// Stroke icons (24×24, currentColor) from Lucide (https://lucide.dev, ISC licence; portions from Feather, MIT licence).
+// The licence texts ship with the site in evosoft-site/assets/licenses/ and are linked from the legal page (Credits).
 const P = {
   arrowRight: '<path d="M5 12h14"/><path d="m12 5 7 7-7 7"/>',
   arrowUpRight: '<path d="M7 7h10v10"/><path d="M7 17 17 7"/>',

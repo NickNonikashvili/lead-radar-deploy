@@ -79,8 +79,7 @@
     if (on && !el) {
       el = document.createElement('div');
       el.className = 'msg bot typing';
-      el.setAttribute('aria-label', say('chatTyping', 'The assistant is typing'));
-      el.innerHTML = '<span></span><span></span><span></span>';
+      el.innerHTML = '<span class="sr-only">' + esc(say('chatTyping', 'The assistant is typing')) + '</span><span></span><span></span><span></span>';
       log.appendChild(el);
       log.scrollTop = log.scrollHeight;
     } else if (!on && el) el.remove();
@@ -124,13 +123,6 @@
   }
   function localAnswer(q) {
     const t = norm(q);
-    // "Which is the best development company / website?" in any of the site's languages.
-    const asksBest = / (best|top|recommend\p{L}*|good|which|лучш\p{L}*|топ|посовет\p{L}*|рекоменд\p{L}*|какая|какой|mejor\p{L}*|recomiend\p{L}*|cuál|cual|საუკეთესო|რომელი|გირჩევ\p{L}*|კარგი) /u.test(t);
-    const aboutDev = / (develop\p{L}*|compan\p{L}*|agenc\p{L}*|studio\p{L}*|website\p{L}*|web|software|apps?|projects?|programmer\p{L}*|firm\p{L}*|team\p{L}*|devs?|разработ\p{L}*|компани\p{L}*|студи\p{L}*|сайт\p{L}*|агентств\p{L}*|веб|програм\p{L}*|проект\p{L}*|desarroll\p{L}*|empresa\p{L}*|estudio\p{L}*|agencia\p{L}*|sitio\p{L}*|página\p{L}*|pagina\p{L}*|proyecto\p{L}*|programador\p{L}*|კომპანი\p{L}*|სტუდი\p{L}*|ვებ\p{L}*|საიტ\p{L}*|დეველოპ\p{L}*|პროგრამ\p{L}*|პროექტ\p{L}*) /u.test(t);
-    if (asksBest && aboutDev) {
-      const best = kb.entries.find((e) => e.id === 'best');
-      if (best) return best.a;
-    }
     let pick = null, score = 0;
     for (const e of kb.entries) {
       if (!e.k) continue;
@@ -184,7 +176,14 @@
   }
 
   // ---------- open / close ----------
+  // On a phone the panel covers the whole page, so the page behind it is taken out of reach until it closes; on a
+  // wider screen it's a side panel and the page stays usable.
+  const behind = () => document.querySelectorAll('.skip, .topbar, main, .footer');
+  const setInert = (on) => behind().forEach((el) => { el.inert = on; });
   async function open() {
+    const full = window.matchMedia('(max-width: 560px)').matches;
+    panel.setAttribute('aria-modal', String(full));
+    if (full) setInert(true);
     panel.hidden = false;
     document.body.classList.add('chat-open');
     launch.setAttribute('aria-expanded', 'true');
@@ -201,6 +200,8 @@
     });
   }
   function close() {
+    setInert(false);
+    panel.setAttribute('aria-modal', 'false');
     panel.hidden = true;
     document.body.classList.remove('chat-open');
     launch.setAttribute('aria-expanded', 'false');
@@ -227,11 +228,19 @@
     setTimeout(() => { due = true; sync(); }, 9000);
     teaser.addEventListener('click', (e) => { done = true; teaser.hidden = true; markSeen(); if (!e.target.closest('.chat-teaser-close')) open(); });
     launch.addEventListener('click', () => { done = true; });
+    // keyboard users: once focus moves anywhere else on the page, the bubble goes, so it never covers what has focus
+    document.addEventListener('focusin', (e) => {
+      if (root.contains(e.target) || teaser.hidden) return;
+      let kb = true;
+      try { kb = e.target.matches(':focus-visible'); } catch (x) { /* older browsers: treat as keyboard */ }
+      if (kb) { done = true; teaser.hidden = true; }
+    });
   }
 
   launch.addEventListener('click', () => { if (teaser) teaser.hidden = true; open(); });
   closeBtn.addEventListener('click', close);
-  panel.addEventListener('keydown', (e) => { if (e.key === 'Escape') close(); });
+  // Escape closes the panel wherever focus is (but leaves an open screenshot viewer to close first)
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !panel.hidden && !document.querySelector('dialog[open]')) close(); });
   form.addEventListener('submit', (e) => { e.preventDefault(); send(input.value); });
   input.addEventListener('input', grow);
   input.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); send(input.value); } });

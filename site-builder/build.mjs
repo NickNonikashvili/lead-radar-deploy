@@ -25,6 +25,23 @@ const DIST = path.resolve(HERE, '../dist');
 const TODAY = new Date().toISOString().slice(0, 10);
 const SITE_URL = SRC.site.url;
 
+// The one inline script (marks the page as having JavaScript and motion), and a Content-Security-Policy that allows
+// only this site's own files plus that script by its hash. It keeps any tracker, embed or third-party font from
+// slipping in unnoticed: add a host here only on purpose, and update the privacy and cookie text with it.
+const BOOT = "(function(d){d.className+=' js';try{if(!matchMedia('(prefers-reduced-motion: reduce)').matches)d.className+=' motion';}catch(e){}})(document.documentElement)";
+const DEMO_ORIGINS = [...new Set(SRC_PRODUCTS.map((p) => p.demo.url && new URL(p.demo.url).origin).filter(Boolean))];
+const CSP = [
+  "default-src 'self'",
+  `script-src 'self' 'sha256-${crypto.createHash('sha256').update(BOOT).digest('base64')}'`,
+  "style-src 'self' 'unsafe-inline'",
+  "img-src 'self' data:",
+  "font-src 'self'",
+  `connect-src 'self' ${DEMO_ORIGINS.join(' ')}`, // the live-demo status checks
+  "object-src 'none'",
+  "base-uri 'self'",
+  "form-action 'self'",
+].join('; ');
+
 let images = {};
 try {
   images = JSON.parse(fs.readFileSync(path.join(HERE, 'data/images.json'), 'utf8'));
@@ -82,13 +99,16 @@ function picture(file, { alt = '', sizes = '100vw', eager = false, lazy = true, 
 
 // ---------- structured data ----------
 const ORG_ID = `${SITE_URL}/#organization`;
+// "EvoSoft Solutions LLC" and the registered details that are filled in (site.mjs leaves unknown ones empty).
+const entity = () => t('{company} LLC', { company: site.legalName }, 'the company name with its legal form (LLC = შპს, ООО)');
+const addressLine = () => [site.address?.street, [site.address?.postalCode, site.address?.city].filter(Boolean).join(' ')].filter(Boolean).join(', ');
 const SITE_ID = `${SITE_URL}/#website`;
 function organization() {
   return {
     '@type': 'Organization',
     '@id': ORG_ID,
     name: site.name,
-    legalName: site.legalName,
+    legalName: `${SRC.site.legalName} ${SRC.site.legalForm}`,
     alternateName: ['EvoSoft Solutions', 'EVOSOFT'],
     url: `${SITE_URL}/home`,
     logo: { '@type': 'ImageObject', url: `${SITE_URL}/assets/img/icon-512.png`, width: 512, height: 512 },
@@ -98,7 +118,14 @@ function organization() {
     email: site.email,
     telephone: site.phones[0],
     contactPoint: site.phones.map((tp) => ({ '@type': 'ContactPoint', telephone: tp, email: site.email, contactType: 'sales', areaServed: 'Worldwide', availableLanguage: ['English', 'Georgian', 'Russian', 'Spanish'] })),
-    address: { '@type': 'PostalAddress', addressCountry: site.countryCode },
+    address: {
+      '@type': 'PostalAddress',
+      ...(SRC.site.address?.street ? { streetAddress: site.address.street } : {}),
+      ...(SRC.site.address?.city ? { addressLocality: site.address.city } : {}),
+      ...(SRC.site.address?.postalCode ? { postalCode: SRC.site.address.postalCode } : {}),
+      addressCountry: site.countryCode,
+    },
+    ...(SRC.site.companyId ? { taxID: SRC.site.companyId } : {}),
     areaServed: 'Worldwide',
     knowsAbout: ['Web development', 'Custom software development', 'Ecommerce development', 'Web application development', 'Point of sale systems', 'Search engine optimisation', 'Graphic design', 'Microsoft 365', 'IT support'],
     makesOffer: services.map((s) => ({ '@type': 'Offer', itemOffered: { '@type': 'Service', name: s.name, description: s.text } })),
@@ -144,6 +171,7 @@ function head({ file, title, description, ogImage, crumbs, ld = [], noindex = fa
 <html lang="${L.code}">
 <head>
 <meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="${attr(CSP)}">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${esc(title)}</title>
 <meta name="description" content="${attr(description)}">
@@ -166,7 +194,7 @@ ${join(LANGS.filter((x) => x !== L), (x) => `<meta property="og:locale:alternate
 <link rel="apple-touch-icon" href="${A('assets/img/icon-180.png')}">
 <link rel="manifest" href="${A('site.webmanifest')}">
 ${join(FONTS[L.code] || FONTS.en, (f) => `<link rel="preload" href="${A(`assets/fonts/${f}.woff2`)}" as="font" type="font/woff2" crossorigin>\n`)}${typeof preload === 'function' ? preload() : preload}<link rel="stylesheet" href="${A('assets/css/site.css')}">
-<script>(function(d){d.className+=' js';try{if(!matchMedia('(prefers-reduced-motion: reduce)').matches)d.className+=' motion';}catch(e){}})(document.documentElement)</script>
+<script>${BOOT}</script>
 <script type="application/ld+json">${ldFor({ file, title, description, crumbs, extra: ld })}</script>
 </head>`;
 }
@@ -181,16 +209,16 @@ function header(root, file, active) {
 <header class="topbar">
   <div class="wrap bar">
     <a class="brand" href="${root}home" aria-label="${attr(t('EvoSoft, home'))}">${logoInline}</a>
+    <button class="icon-btn menu-toggle" type="button" aria-controls="site-nav" aria-expanded="false" aria-label="${attr(t('Open menu'))}">${icon('menu', 'i i-menu')}${icon('x', 'i i-close')}</button>
     <nav class="nav" id="site-nav" aria-label="${attr(t('Main'))}">
       ${join(nav, (n) => `<a href="${root}${n.href}"${n.key === active ? ' aria-current="page"' : ''}>${esc(n.label)}</a>`)}
       <a class="btn primary nav-quote" href="${root}contact"${active === 'contact' ? ' aria-current="page"' : ''}>${h('Get a quote')}</a>
-      <div class="nav-langs" aria-label="${attr(t('Language'))}">${langLinks(file, 'nav-lang')}</div>
+      <div class="nav-langs" role="group" aria-label="${attr(t('Language'))}">${langLinks(file, 'nav-lang')}</div>
     </nav>
     <div class="lang">
-      <button class="icon-btn lang-btn" type="button" aria-expanded="false" aria-controls="lang-menu" aria-label="${attr(t('Language: {name}', { name: L.native }))}" title="${attr(t('Language'))}">${icon('globe')}<span>${L.short}</span></button>
+      <button class="icon-btn lang-btn" type="button" aria-expanded="false" aria-controls="lang-menu" aria-label="${attr(`${L.short} – ${t('Language: {name}', { name: L.native })}`)}" title="${attr(t('Language'))}">${icon('globe')}<span>${L.short}</span></button>
       <div class="lang-menu" id="lang-menu" hidden>${langLinks(file, 'lang-item')}</div>
     </div>
-    <button class="icon-btn menu-toggle" type="button" aria-controls="site-nav" aria-expanded="false" aria-label="${attr(t('Open menu'))}">${icon('menu', 'i i-menu')}${icon('x', 'i i-close')}</button>
   </div>
   <div class="progress" aria-hidden="true"></div>
 </header>`;
@@ -208,6 +236,9 @@ function jsStrings() {
     live: t('Live'),
     offline: t('Offline right now'),
     formMissing: t('Please add your name, your email and a few words about the project.'),
+    errName: t('Please enter your name.'),
+    errEmail: t('Please enter an email address, like name@example.com.'),
+    errMessage: t('Please write at least 10 characters about your project.'),
     formEmail: t('Please check your email address.'),
     formRate: t('That’s a lot of requests in a short time. Please try again in a few minutes, or email us.'),
     formFail: t('Sorry, your request couldn’t be sent just now. Please try again in a minute, or email us at {email}.'),
@@ -246,11 +277,12 @@ function footer(root) {
         <a class="btn primary sm" href="${root}contact">${h('Get a free quote')}</a>
       </div>
       <div><h2>${h('Products')}</h2><ul>${join(products, (p) => `<li><a href="${root}work/${p.slug}">${esc(p.name)}</a></li>`)}<li><a href="${root}demos">${h('All live demos')}</a></li></ul></div>
-      <div><h2>${h('Company')}</h2><ul><li><a href="${root}portfolio">${h('Work')}</a></li><li><a href="${root}services">${h('Services')}</a></li><li><a href="${root}about">${h('About')}</a></li><li><a href="${root}legal">${h('Copyright & privacy')}</a></li></ul></div>
+      <div><h2>${h('Company')}</h2><ul><li><a href="${root}portfolio">${h('Work')}</a></li><li><a href="${root}services">${h('Services')}</a></li><li><a href="${root}about">${h('About')}</a></li></ul></div>
+      <div><h2>${h('Legal')}</h2><ul><li><a href="${root}legal#company">${h('Legal notice')}</a></li><li><a href="${root}legal#terms">${h('Terms of use')}</a></li><li><a href="${root}legal#privacy">${h('Privacy policy')}</a></li><li><a href="${root}legal#cookies">${h('Cookies')}</a></li></ul></div>
       <div><h2>${h('Contact')}</h2><ul>${join(site.phones, (p) => `<li><a href="${tel(p)}">${esc(p)}</a></li>`)}<li><a href="mailto:${site.email}">${esc(site.email)}</a></li><li class="muted">${h('Replies {when}', { when: esc(site.responseTime) })}</li></ul></div>
     </div>
     <div class="foot-base">
-      <p>${esc(site.copyright)}</p>
+      <p>${esc(site.copyright)} ${h('{company}, registered in {country}.', { company: esc(entity()), country: esc(site.region) })}</p>
       <p class="foot-langs">${langLinks(cur.file, 'foot-lang')}</p>
       <p>${h('Evo, Mailtabs and StudyCat are products of {company}. Demo data is fictional.', { company: esc(site.legalName) })}</p>
     </div>
@@ -260,13 +292,13 @@ function footer(root) {
   <div class="chat-teaser" hidden><button class="chat-teaser-close" type="button" aria-label="${attr(t('Close'))}">${icon('x')}</button><p></p></div>
   <button class="chat-launch" type="button" aria-expanded="false" aria-controls="chat-panel">${markInline}<span>${h('Ask EvoSoft')}</span></button>
   <section class="chat-panel" id="chat-panel" role="dialog" aria-modal="false" aria-labelledby="chat-title" hidden>
-    <header class="chat-head">
+    <div class="chat-head">
       ${markInline}
       <div><h2 id="chat-title">${esc(chat.name)}</h2><p>${h('Questions about our work, demos or a project')}</p></div>
       <button class="icon-btn chat-close" type="button" aria-label="${attr(t('Close the assistant'))}">${icon('x')}</button>
-    </header>
+    </div>
     <div class="chat-log" role="log" aria-live="polite" aria-relevant="additions"></div>
-    <div class="chat-suggest" aria-label="${attr(t('Suggested questions'))}"></div>
+    <div class="chat-suggest" role="group" aria-label="${attr(t('Suggested questions'))}"></div>
     <form class="chat-form">
       <label class="sr-only" for="chat-input">${h('Your question')}</label>
       <textarea id="chat-input" rows="1" maxlength="1000" placeholder="${attr(t('Ask a question'))}" autocomplete="off"></textarea>
@@ -276,7 +308,7 @@ function footer(root) {
   </section>
 </div>
 <div class="toast" role="status" aria-live="polite"></div>
-<div class="lang-hint" role="dialog" aria-live="polite" hidden><p></p><div><a class="btn primary sm" href="#"></a><button class="btn sm" type="button"></button></div></div>
+<div class="lang-hint" role="region" aria-labelledby="lang-hint-text" hidden><p id="lang-hint-text" aria-live="polite"></p><div><a class="btn primary sm" href="#"></a><button class="btn sm" type="button"></button></div></div>
 <dialog class="lightbox" aria-label="${attr(t('Screenshot'))}">
   <button class="icon-btn lb-close" type="button" aria-label="${attr(t('Close'))}">${icon('x')}</button>
   <button class="icon-btn lb-prev" type="button" aria-label="${attr(t('Previous'))}">${icon('chevronLeft')}</button>
@@ -309,7 +341,12 @@ ${footer(root)}`;
 
 // ---------- shared blocks ----------
 const arrow = '<span class="arr" aria-hidden="true">→</span>';
-const ext = '<span class="arr" aria-hidden="true">↗</span>';
+// Links that open in a new tab say so to screen readers (built per language, so these turn into text when used).
+const newTab = { toString: () => `<span class="sr-only"> ${h('(opens in a new tab)')}</span>` };
+const ext = { toString: () => `<span class="arr" aria-hidden="true">↗</span>${newTab}` };
+// Extra words for screen readers on links that repeat ("Open demo", "Case study"), naming what they belong to.
+const enlarge = () => `<span class="sr-only">${h('Enlarge screenshot')}: </span>`;
+const sr = (text) => `<span class="sr-only">: ${esc(text)}</span>`;
 // Each product gets its own colour, like StudyCat's classes.
 // Product colours: coral, sand (a deeper cream, so it shows on cream too) and a light navy, each with the text colour
 // that reads on it (navy, at 4.9:1 or more).
@@ -373,8 +410,8 @@ function productTile(root, p) {
     <p class="tile-text">${esc(p.tagline)}</p>
     <p class="tile-meta">${statusPill(p)}<span>${esc(accountsWord(p.demo.accounts.length))}</span></p>
     <div class="tile-actions">
-      ${p.demo.url ? `<a class="btn primary sm" href="${attr(p.demo.url)}" target="_blank" rel="noopener">${h('Open demo')} ${ext}</a>` : ''}
-      <a class="btn sm" href="${root}work/${p.slug}">${h('Case study')}</a>
+      ${p.demo.url ? `<a class="btn primary sm" href="${attr(p.demo.url)}" target="_blank" rel="noopener">${h('Open demo')}${sr(p.name)} ${ext}</a>` : ''}
+      <a class="btn sm" href="${root}work/${p.slug}">${h('Case study')}${sr(p.name)}</a>
     </div>
   </div>
 </article>`;
@@ -405,9 +442,9 @@ function heroDemoCard(root) {
     <div class="dc-foot">
       <div class="dc-info">
         <p class="dc-title">${esc(p.name)} <span>${esc(p.kind)}</span></p>
-        ${a ? `<p class="dc-cred"><span class="muted">${esc(a.role)}:</span> ${copyBtn(a.login, t('Copy {value}', { value: a.login }))} ${copyBtn(a.password, t('Copy the password'))}</p>` : ''}
+        ${a ? `<p class="dc-cred"><span class="muted">${esc(a.role)}:</span> ${copyBtn(a.login, t('Copy {value}', { value: a.login }))} ${copyBtn(a.password, `${t('Copy the password')}: ${a.password}`)}</p>` : ''}
       </div>
-      ${p.demo.url ? `<a class="btn primary sm" href="${attr(p.demo.signinUrl || p.demo.url)}" target="_blank" rel="noopener">${h('Open demo')} ${ext}</a>` : ''}
+      ${p.demo.url ? `<a class="btn primary sm" href="${attr(p.demo.signinUrl || p.demo.url)}" target="_blank" rel="noopener">${h('Open demo')}${sr(p.name)} ${ext}</a>` : ''}
     </div>
   </div>`;
   })}
@@ -421,22 +458,22 @@ function accountCards(p) {
   const copy = (v, label) => `<button class="copy" type="button" data-copy="${attr(v)}" aria-label="${attr(label)}"><code>${breakable(v)}</code><span class="copy-tag" aria-hidden="true">${icon('copy', 'i i-copy')}${icon('check', 'i i-done')}</span></button>`;
   return `<div class="accts">${join(d.accounts, (a) => `<article class="acct">
     <div class="acct-top"><span class="role">${esc(a.role)}</span>${a.badge ? `<span class="badge">${esc(a.badge)}</span>` : ''}</div>
-    ${a.name ? `<h4>${esc(a.name)}</h4>` : ''}
+    ${a.name ? `<h3>${esc(a.name)}</h3>` : ''}
     <dl class="cred">
       <div><dt>${esc(loginLabel)}</dt><dd>${copy(a.login, t('Copy {value}', { value: a.login }))}</dd></div>
-      <div><dt>${h('Password')}</dt><dd>${copy(a.password, t('Copy the password'))}</dd></div>
+      <div><dt>${h('Password')}</dt><dd>${copy(a.password, `${t('Copy the password')}: ${a.password}`)}</dd></div>
     </dl>
     ${a.tries?.length ? `<ul class="tries">${join(a.tries, (x) => `<li>${esc(x)}</li>`)}</ul>` : ''}
-    ${signin && a.signin !== false ? `<a class="btn sm acc-go" href="${attr(signin)}" target="_blank" rel="noopener" data-login="${attr(a.login)}" data-pass="${attr(a.password)}">${h('Sign in as {name}', { name: esc(first(a.name || a.role)) })} ${ext}</a>` : `<p class="muted small">${h('Use it in Mailtabs’ “Add account”.')}</p>`}
+    ${signin && a.signin !== false ? `<a class="btn sm acc-go" href="${attr(signin)}" target="_blank" rel="noopener" data-login="${attr(a.login)}" data-pass="${attr(a.password)}">${h('Sign in as {name}', { name: esc(first(a.name || a.role)) })}<span class="sr-only">, ${esc(p.name)}</span> ${ext}</a>` : `<p class="muted small">${h('Use it in Mailtabs’ “Add account”.')}</p>`}
   </article>`)}</div>`;
 }
 
 function demoNotes(p) {
   const d = p.demo;
   const blocks = [];
-  if (d.steps) blocks.push(`<div class="note"><h4>${esc(d.steps.title)}</h4><ol class="steps-list">${join(d.steps.items, (s) => `<li>${esc(s)}</li>`)}</ol></div>`);
-  if (d.extras?.length) blocks.push(`<div class="note"><h4>${esc(d.extrasTitle || t('Test data'))}</h4><dl class="kv">${join(d.extras, ([k, v]) => `<div><dt>${esc(k)}</dt><dd>${copyBtn(v, t('Copy {value}', { value: v }))}</dd></div>`)}</dl></div>`);
-  const tables = join(d.tables, (tb) => `<div class="note wide"><h4>${esc(tb.title)}</h4>${tb.text ? `<p class="muted">${esc(tb.text)}</p>` : ''}<div class="table-wrap"><table class="table"><thead><tr>${join(tb.columns, (c) => `<th scope="col">${esc(c)}</th>`)}</tr></thead><tbody>${join(tb.rows, (r) => `<tr>${join(r, (c, i) => (i === 0 ? `<td>${copyBtn(c, t('Copy {value}', { value: c }))}</td>` : `<td>${esc(c)}</td>`))}</tr>`)}</tbody></table></div></div>`);
+  if (d.steps) blocks.push(`<div class="note"><h3>${esc(d.steps.title)}</h3><ol class="steps-list">${join(d.steps.items, (s) => `<li>${esc(s)}</li>`)}</ol></div>`);
+  if (d.extras?.length) blocks.push(`<div class="note"><h3>${esc(d.extrasTitle || t('Test data'))}</h3><dl class="kv">${join(d.extras, ([k, v]) => `<div><dt>${esc(k)}</dt><dd>${copyBtn(v, t('Copy {value}', { value: v }))}</dd></div>`)}</dl></div>`);
+  const tables = join(d.tables, (tb) => `<div class="note wide"><h3>${esc(tb.title)}</h3>${tb.text ? `<p class="muted">${esc(tb.text)}</p>` : ''}<div class="table-wrap"><table class="table"><thead><tr>${join(tb.columns, (c) => `<th scope="col">${esc(c)}</th>`)}</tr></thead><tbody>${join(tb.rows, (r) => `<tr>${join(r, (c, i) => (i === 0 ? `<td>${copyBtn(c, t('Copy {value}', { value: c }))}</td>` : `<td>${esc(c)}</td>`))}</tr>`)}</tbody></table></div></div>`);
   return blocks.length || tables ? `<div class="notes">${blocks.join('')}${tables}</div>` : '';
 }
 
@@ -444,9 +481,9 @@ function demoBlock(root, p, { withTitle = true } = {}) {
   const d = p.demo;
   return `<div class="demo-block" style="--c:${tileColor(p)};--c-ink:${TILE_INK[p.slug] || '#14213D'}">
     <div class="db-head">
-      ${withTitle ? `<div class="db-id"><span class="db-dot" aria-hidden="true"></span><div><h3><a href="${root}work/${p.slug}">${esc(p.name)}</a></h3><p>${esc(p.kind)}</p></div></div>` : ''}
-      <p class="db-where">${statusPill(p)}${d.url ? `<a href="${attr(d.url)}" target="_blank" rel="noopener">${esc(d.label)}</a>` : ''}</p>
-      ${d.url ? `<a class="btn primary" href="${attr(d.url)}" target="_blank" rel="noopener">${h('Open the demo')} ${ext}</a>` : ''}
+      ${withTitle ? `<div class="db-id"><span class="db-dot" aria-hidden="true"></span><div><h2><a href="${root}work/${p.slug}">${esc(p.name)}</a></h2><p>${esc(p.kind)}</p></div></div>` : ''}
+      <p class="db-where">${statusPill(p)}${d.url ? `<a href="${attr(d.url)}" target="_blank" rel="noopener">${esc(d.label)}${newTab}</a>` : ''}</p>
+      ${d.url ? `<a class="btn primary" href="${attr(d.url)}" target="_blank" rel="noopener">${h('Open the demo')}${sr(p.name)} ${ext}</a>` : ''}
     </div>
     <ul class="db-facts">
       <li>${icon('users')}<span>${esc(d.company)}</span></li>
@@ -459,9 +496,15 @@ function demoBlock(root, p, { withTitle = true } = {}) {
   </div>`;
 }
 
+// The cover is a screenshot saved with the site (site.mjs `shot`, with the client's permission) or, without one, the
+// site's name and address. Nothing is loaded from other servers, so visitors' data goes nowhere else.
 function clientCard(c) {
+  const host = c.url.replace(/^https?:\/\//, '').replace(/\/$/, '');
+  const cover = c.shot
+    ? picture(c.shot, { alt: '', sizes: '(min-width: 1100px) 380px, 90vw' })
+    : `<span class="client-cover"><b>${esc(c.name)}</b><small>${esc(host)}</small></span>`;
   return `<article class="client">
-    <a class="client-shot" href="${attr(c.url)}" target="_blank" rel="noopener" tabindex="-1" aria-hidden="true"><img src="https://s.wordpress.com/mshots/v1/${encodeURIComponent(c.url)}?w=800&amp;h=500" alt="" width="800" height="500" loading="lazy" decoding="async"><span>${esc(c.name)}</span></a>
+    <a class="client-shot${c.shot ? '' : ' no-shot'}" href="${attr(c.url)}" target="_blank" rel="noopener" tabindex="-1" aria-hidden="true">${cover}</a>
     <div class="client-body"><p class="badge">${esc(c.kind)}</p><h3><a href="${attr(c.url)}" target="_blank" rel="noopener">${esc(c.name)} ${ext}</a></h3><p>${esc(c.text)}</p></div>
   </article>`;
 }
@@ -514,7 +557,7 @@ function buildPages() {
       <p class="feat-i" style="--i:0">${icon('layers')}<span><b>${products.length}</b> ${esc(t.n(products.length, 'live demo you can sign in to', 'live demos you can sign in to'))}</span></p>
       <p class="feat-i" style="--i:1">${icon('users')}<span><b>${totalAccounts}</b> ${esc(t.n(totalAccounts, 'ready-made test account', 'ready-made test accounts'))}</span></p>
       <p class="feat-i" style="--i:2">${icon('tool')}<span><b>${services.length}</b> ${esc(t.n(services.length, 'kind of work under one roof', 'kinds of work under one roof'))}</span></p>
-      <p class="feat-i" style="--i:3">${icon('clock')}<span><b>${h('1 day')}</b> ${h('to hear back about your project')}</span></p>
+      <p class="feat-i" style="--i:3">${icon('clock')}<span><b>${h('1 business day')}</b> ${h('to hear back about your project')}</span></p>
     </div>
   </div>
 </section>
@@ -522,7 +565,7 @@ function buildPages() {
 <section class="stage">
   <div class="wrap">
     <p class="kicker">${h('Live demos')}</p>
-    <p class="stage-lede">${h('We take on projects of any size, from a five-page website to a point-of-sale system, and look after them once they’re live. Don’t take our word for it: sign in to the software we’ve built.')}</p>
+    <p class="stage-lede">${h('We take on projects small and large, from a five-page website to a point-of-sale system, and look after them once they’re live. Don’t take our word for it: sign in to the software we’ve built.')}</p>
     <div class="stage-frame">${heroDemoCard(root)}</div>
   </div>
 </section>
@@ -531,14 +574,14 @@ ${marquee()}
 
 <section class="sec">
   <div class="wrap">
-    ${secHead(h('Software we built and run'), h('Our own products, each with a live demo and an account for every role. Open one and click around.'))}
+    ${secHead(h('Software we built and run'), h('Our own products, each with a live demo and ready-made test accounts. Open one and click around.'))}
     <div class="tiles">${join(products, (p) => productTile(root, p))}${yourTile(root)}</div>
   </div>
 </section>
 
 <section class="sec alt">
   <div class="wrap">
-    ${secHead(h('Any kind of project, including tech'), h('Most clients start with a website or an online store. Plenty stay for the software, the email setup and the support afterwards.'))}
+    ${secHead(h('Websites, software and IT, all in one place'), h('Many projects start with a website or an online store. We can also take on the software, the email setup and the support afterwards.'))}
     <div class="svc-grid">${join(services, (s, i) => `<article class="svc"><span class="ico tone-${SVC_TONE[i % SVC_TONE.length]}">${icon(SVC_ICON[i % SVC_ICON.length])}</span><h3>${esc(s.name)}</h3><p>${esc(s.line)}</p></article>`)}</div>
     <p class="more"><a class="btn" href="${root}services">${h('All services')} ${arrow}</a></p>
   </div>
@@ -590,7 +633,7 @@ ${pageHead(h('Our work'), h('Software we built, sites we shipped'), h('Three pro
           <p>${esc(p.summary)}</p>
           <ul class="checks">${join(p.highlights.slice(0, 3), (x) => `<li>${icon('check')}<span>${esc(x.title)}</span></li>`)}</ul>
           <p class="tile-meta">${statusPill(p)}<span>${esc(accountsWord(p.demo.accounts.length))}</span></p>
-          <div class="tile-actions">${p.demo.url ? `<a class="btn primary" href="${attr(p.demo.url)}" target="_blank" rel="noopener">${h('Open demo')} ${ext}</a>` : ''}<a class="btn" href="${root}work/${p.slug}">${h('Case study')} ${arrow}</a></div>
+          <div class="tile-actions">${p.demo.url ? `<a class="btn primary" href="${attr(p.demo.url)}" target="_blank" rel="noopener">${h('Open demo')}${sr(p.name)} ${ext}</a>` : ''}<a class="btn" href="${root}work/${p.slug}">${h('Case study')}${sr(p.name)} ${arrow}</a></div>
         </div>
       </article>`;
     })}</div>
@@ -598,7 +641,7 @@ ${pageHead(h('Our work'), h('Software we built, sites we shipped'), h('Three pro
 </section>
 <section class="sec alt">
   <div class="wrap">
-    ${secHead(h('Client websites'), h('Sites we’ve designed and built for clients in different industries.'))}
+    ${secHead(h('Client websites'), h('Websites we’ve built for clients in different industries.'))}
     <div class="clients">${join(clients, clientCard)}</div>
   </div>
 </section>
@@ -644,6 +687,7 @@ ${ctaCard(root, h('Like what you see?'), h('We can build something like this for
       ogImage: `${SITE_URL}/assets/shots/${p.og || hero.file}`,
       crumbs: [[t('Work'), 'portfolio.html'], [p.name, file]],
       sitemapImages: allShots(p),
+      // No aggregateRating or review here unless they are real, verifiable customer reviews (EU UCPD Annex I 23b-23c).
       ld: [{
         '@type': 'SoftwareApplication',
         name: p.name,
@@ -676,14 +720,14 @@ ${ctaCard(root, h('Like what you see?'), h('We can build something like this for
       <aside class="p-side">
         <p class="side-title">${h('Live demo')}</p>
         <p class="side-status">${statusPill(p)}</p>
-        ${p.demo.url ? `<p class="side-url"><a href="${attr(p.demo.url)}" target="_blank" rel="noopener">${esc(p.demo.label)}</a></p>` : ''}
-        <div class="side-stat"><span class="stat-n" data-count="${p.demo.accounts.length}">${p.demo.accounts.length}</span><span>${esc(t.n(p.demo.accounts.length, 'demo account, one per role', 'demo accounts, one per role'))}</span></div>
-        ${a0 ? `<p class="side-cred"><span class="muted">${esc(a0.role)}</span>${copyBtn(a0.login, t('Copy {value}', { value: a0.login }))}${copyBtn(a0.password, t('Copy the password'))}</p>` : ''}
+        ${p.demo.url ? `<p class="side-url"><a href="${attr(p.demo.url)}" target="_blank" rel="noopener">${esc(p.demo.label)}${newTab}</a></p>` : ''}
+        <div class="side-stat"><span class="stat-n" data-count="${p.demo.accounts.length}">${p.demo.accounts.length}</span><span>${esc(t.n(p.demo.accounts.length, 'demo account', 'demo accounts'))}</span></div>
+        ${a0 ? `<p class="side-cred"><span class="muted">${esc(a0.role)}</span>${copyBtn(a0.login, t('Copy {value}', { value: a0.login }))}${copyBtn(a0.password, `${t('Copy the password')}: ${a0.password}`)}</p>` : ''}
         <p class="side-title">${h('Built with')}</p>
         <p class="stack">${join(p.stack, (s) => `<span>${esc(s)}</span>`)}</p>
       </aside>
     </div>
-    ${hero ? `<figure class="shot-card hero-shot"><button class="shot" type="button" data-lightbox="${attr(A('assets/shots/' + hero.file))}" data-caption="${attr(hero.caption)}">${picture(hero.file, { alt: hero.caption, sizes: '(min-width: 1240px) 1200px, 100vw', eager: true })}</button><figcaption>${esc(hero.caption)}</figcaption></figure>` : ''}
+    ${hero ? `<figure class="shot-card hero-shot"><button class="shot" type="button" data-lightbox="${attr(A('assets/shots/' + hero.file))}" data-caption="${attr(hero.caption)}">${enlarge()}${picture(hero.file, { alt: hero.caption, sizes: '(min-width: 1240px) 1200px, 100vw', eager: true })}</button><figcaption>${esc(hero.caption)}</figcaption></figure>` : ''}
   </div>
 </section>
 
@@ -697,8 +741,8 @@ ${ctaCard(root, h('Like what you see?'), h('We can build something like this for
 ${desktop.length ? `<section class="sec alt">
   <div class="wrap">
     ${secHead(h('A look inside'), h('Real screenshots from the demo. Select one to see it full size.'))}
-    <div class="gallery">${join(desktop, (s) => `<figure class="shot-card${s.wide ? ' wide' : ''}"><button class="shot" type="button" data-lightbox="${attr(A('assets/shots/' + s.file))}" data-caption="${attr(s.caption)}">${picture(s.file, { alt: s.caption, sizes: s.wide ? '(min-width: 1240px) 1160px, 100vw' : '(min-width: 1100px) 560px, 100vw' })}</button><figcaption>${esc(s.caption)}${s.as ? `<span class="badge">${esc(s.as)}</span>` : ''}</figcaption></figure>`)}</div>
-    ${phones.length ? `<div class="phones-card"><div class="phones-text"><span class="ico tone-blue">${icon('smartphone')}</span><h3>${esc(p.phoneTitle || t('On a phone'))}</h3><p>${esc(p.phoneText || t('The same app, laid out for a small screen.'))}</p></div><div class="phones-shots">${join(phones, (s) => `<figure class="phone"><button class="shot" type="button" data-lightbox="${attr(A('assets/shots/' + s.file))}" data-caption="${attr(s.caption)}">${picture(s.file, { alt: s.caption, sizes: '240px' })}</button><figcaption>${esc(s.caption)}</figcaption></figure>`)}</div></div>` : ''}
+    <div class="gallery">${join(desktop, (s) => `<figure class="shot-card${s.wide ? ' wide' : ''}"><button class="shot" type="button" data-lightbox="${attr(A('assets/shots/' + s.file))}" data-caption="${attr(s.caption)}">${enlarge()}${picture(s.file, { alt: s.caption, sizes: s.wide ? '(min-width: 1240px) 1160px, 100vw' : '(min-width: 1100px) 560px, 100vw' })}</button><figcaption>${esc(s.caption)}${s.as ? `<span class="badge">${esc(s.as)}</span>` : ''}</figcaption></figure>`)}</div>
+    ${phones.length ? `<div class="phones-card"><div class="phones-text"><span class="ico tone-blue">${icon('smartphone')}</span><h3>${esc(p.phoneTitle || t('On a phone'))}</h3><p>${esc(p.phoneText || t('The same app, laid out for a small screen.'))}</p></div><div class="phones-shots">${join(phones, (s) => `<figure class="phone"><button class="shot" type="button" data-lightbox="${attr(A('assets/shots/' + s.file))}" data-caption="${attr(s.caption)}">${enlarge()}${picture(s.file, { alt: s.caption, sizes: '240px' })}</button><figcaption>${esc(s.caption)}</figcaption></figure>`)}</div></div>` : ''}
   </div>
 </section>` : ''}
 
@@ -733,15 +777,15 @@ ${ctaCard(root, h('Need something like {name}?', { name: esc(p.name) }), h('We b
     crumbs: [[t('Services'), 'services.html']],
     ld: services.map((s) => ({ '@type': 'Service', name: s.name, description: s.text, provider: { '@id': ORG_ID }, areaServed: 'Worldwide', serviceType: s.name })),
     body: (root) => `
-${pageHead(h('Services'), h('Any kind of project, including tech'), h('Websites are where many clients start, but we don’t stop there. If your business needs something built, connected, set up or fixed, one team handles it, and every project starts with a free quote.'))}
+${pageHead(h('Services'), h('Websites, software and IT, all in one place'), h('Websites are where many clients start, but we don’t stop there. If your business needs something built, connected, set up or fixed, one team handles it, and every project starts with a free quote.'))}
 <section class="sec tight">
   <div class="wrap">
-    <div class="svc-detail">${join(services, (s, i) => `<article class="svc wide"><span class="ico tone-${SVC_TONE[i % SVC_TONE.length]}">${icon(SVC_ICON[i % SVC_ICON.length])}</span><div><h2>${esc(s.name)}</h2><p>${esc(s.text)}</p><p class="tags">${join(s.examples, (e) => `<span>${esc(e)}</span>`)}</p></div><a class="btn sm" href="${root}contact?need=${encodeURIComponent(SRC.quoteTypes[i] || SRC.quoteTypes[SRC.quoteTypes.length - 1])}">${h('Get a quote')}</a></article>`)}</div>
+    <div class="svc-detail">${join(services, (s, i) => `<article class="svc wide"><span class="ico tone-${SVC_TONE[i % SVC_TONE.length]}">${icon(SVC_ICON[i % SVC_ICON.length])}</span><div><h2>${esc(s.name)}</h2><p>${esc(s.text)}</p><p class="tags">${join(s.examples, (e) => `<span>${esc(e)}</span>`)}</p></div><a class="btn sm" href="${root}contact?need=${encodeURIComponent(SRC.quoteTypes[i] || SRC.quoteTypes[SRC.quoteTypes.length - 1])}">${h('Get a quote')}${sr(s.name)}</a></article>`)}</div>
   </div>
 </section>
 <section class="sec alt">
   <div class="wrap">
-    ${secHead(h('Judge the work, not the pitch'), h('These are our own products. Each has a live demo with an account for every role.'))}
+    ${secHead(h('Judge the work, not the pitch'), h('These are our own products. Each has a live demo with ready-made test accounts.'))}
     <div class="tiles three">${join(products, (p) => productTile(root, p))}</div>
   </div>
 </section>
@@ -813,8 +857,8 @@ ${pageHead(h('Get a quote'), h('Tell us about your project'), h('Send a few line
   <div class="wrap quote-grid">
     <form class="card quote" id="quote" action="${A('api/quote.php')}" method="post" data-email="${attr(site.email)}" novalidate>
       <div class="row2">
-        <label class="field"><span>${h('Your name')}</span><input name="name" autocomplete="name" required maxlength="100"></label>
-        <label class="field"><span>${h('Email')}</span><input name="email" type="email" autocomplete="email" required maxlength="200"></label>
+        <div class="field"><label for="q-name">${h('Your name')}</label><input id="q-name" name="name" autocomplete="name" required maxlength="100" aria-describedby="err-name"><p class="field-error" id="err-name" hidden></p></div>
+        <div class="field"><label for="q-email">${h('Email')}</label><input id="q-email" name="email" type="email" autocomplete="email" required maxlength="200" aria-describedby="err-email"><p class="field-error" id="err-email" hidden></p></div>
       </div>
       <div class="row2">
         <label class="field"><span>${h('Phone')} <em>${h('optional')}</em></span><input name="phone" type="tel" autocomplete="tel" maxlength="40"></label>
@@ -825,15 +869,16 @@ ${pageHead(h('Get a quote'), h('Tell us about your project'), h('Send a few line
         <div class="chips">${join(SRC.quoteTypes, (v, i) => `<label class="pick"><input type="checkbox" name="types" value="${attr(v)}"><span>${esc(quoteTypes[i])}</span></label>`)}</div>
       </fieldset>
       <label class="field"><span>${h('Timeline')}</span><select name="timeline">${join(SRC.quoteTimelines, (v, i) => `<option value="${attr(v)}">${esc(quoteTimelines[i])}</option>`)}</select></label>
-      <label class="field"><span>${h('About the project')}</span><textarea name="message" rows="6" required maxlength="5000" placeholder="${attr(t('What you need, who it’s for, and any sites or apps you like.'))}"></textarea></label>
+      <div class="field"><label for="q-message">${h('About the project')}</label><textarea id="q-message" name="message" rows="6" required maxlength="5000" aria-describedby="err-message" placeholder="${attr(t('What you need, who it’s for, and any sites or apps you like.'))}"></textarea><p class="field-error" id="err-message" hidden></p></div>
       <label class="hp" aria-hidden="true">${h('Leave this empty')} <input name="website" tabindex="-1" autocomplete="off"></label>
       <p class="form-error" role="alert" hidden></p>
-      <div class="form-foot"><button class="btn primary lg" type="submit"><span class="btn-label">${h('Send request')}</span> ${arrow}</button><p class="muted small">${h('We use your details only to answer you.')} <a href="${root}legal#privacy">${h('Privacy')}</a></p></div>
+      <div class="form-foot"><button class="btn primary lg" type="submit"><span class="btn-label">${h('Send request')}</span> ${arrow}</button><p class="muted small">${h('{company} uses these details only to reply and prepare your quote, and deletes them {months} months after you send them if no project follows. Please don’t include sensitive personal information.', { company: esc(site.legalName), months: SRC.site.quoteKeepMonths })} <a href="${root}legal#privacy">${h('Privacy policy')}</a></p></div>
       <div class="form-done" hidden><span class="ico tone-green">${icon('check')}</span><h2>${h('Thanks, it’s on its way.')}</h2><p>${h('We’ll reply {when}. If it’s urgent, call {phone}.', { when: esc(site.responseTime), phone: `<a href="${tel(site.phones[0])}">${esc(site.phones[0])}</a>` })}</p></div>
     </form>
     <aside class="quote-side">
       <div class="card"><span class="ico tone-blue">${icon('phone')}</span><h2>${h('Phone')}</h2>${join(site.phones, (p) => `<p class="big-line"><a href="${tel(p)}">${esc(p)}</a></p>`)}</div>
       <div class="card"><span class="ico tone-purple">${icon('mail')}</span><h2>${h('Email')}</h2><p class="big-line"><a href="mailto:${site.email}">${esc(site.email)}</a></p></div>
+      <p class="muted small quote-legal">${h('{company}, registered in {country}.', { company: esc(entity()), country: esc(site.region) })} <a href="${root}legal#company">${h('Legal notice')}</a></p>
       <div class="card"><span class="ico tone-green">${icon('clock')}</span><h2>${h('What happens next')}</h2><ol class="steps-list"><li>${h('We read your message and reply {when}.', { when: esc(site.responseTime) })}</li><li>${h('A short call or a few emails to fill in the gaps.')}</li><li>${h('A written quote with the scope, timeline and price.')}</li></ol></div>
     </aside>
   </div>
@@ -847,35 +892,141 @@ ${pageHead(h('Get a quote'), h('Tell us about your project'), h('Send a few line
 `,
   });
 
+  // ---------- legal: who we are, terms of use, privacy policy, cookies, copyright, credits ----------
+  // Keep this text true to what the code does: api/quote.php and api/lib.php (what is saved and for how long),
+  // assets/js/chat.js and api/chat.php (what the assistant sends), site.js (browser storage, demo status checks).
+  // Change site.legalUpdated in data/site.mjs whenever the text changes.
   const mail = `<a href="mailto:${site.email}">${esc(site.email)}</a>`;
+  const demoHosts = DEMO_ORIGINS.map((o) => o.replace(/^https?:\/\//, ''));
+  const hostList = esc(demoHosts.join(', '));
+  const updated = new Intl.DateTimeFormat(L.dateLocale, { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' }).format(new Date(SRC.site.legalUpdated));
+  const lic = (file, label) => `<a href="${A(file)}" type="text/plain">${label}</a>`;
+  const legalNav = [['company', t('Who we are')], ['terms', t('Terms of use')], ['privacy', t('Privacy policy')], ['cookies', t('Cookies')], ['copyright', t('Copyright')], ['credits', t('Credits and licences')]];
+  const facts = [
+    [t('Company'), esc(entity())],
+    [t('Legal form'), h('Limited liability company (შპს), registered in {country}', { country: esc(site.region) })],
+    ...(SRC.site.companyId ? [[t('Identification code'), esc(SRC.site.companyId)]] : []),
+    ...(addressLine() ? [[t('Registered address'), `${esc(addressLine())}, ${esc(site.region)}`]] : []),
+    ...(SRC.site.vatPayer === true ? [[t('VAT'), h('Registered for VAT')]] : SRC.site.vatPayer === false ? [[t('VAT'), h('Not registered for VAT')]] : []),
+    [t('Email'), mail],
+    [t('Phone'), join(site.phones, (p) => `<a href="${tel(p)}">${esc(p)}</a>`, ', ')],
+  ];
+  const storage = [
+    ['evo-lang', t('Local storage'), t('Remembers the language you picked, so we don’t suggest another one. Saved only when you choose a language.'), t('Until you clear your browser data')],
+    ['evo-chat-v2-en (-ka, -ru, -es)', t('Session storage'), t('Keeps your current chat conversation (up to 30 messages) while you move between pages.'), t('Until you close the tab')],
+    ['evo-chat-ai', t('Session storage'), t('Remembers whether the AI assistant is available, so the site doesn’t check on every page.'), t('Until you close the tab')],
+    ['evo-chat-teaser', t('Session storage'), t('Remembers that the chat greeting has been shown, so it isn’t shown again.'), t('Until you close the tab')],
+  ];
   page({
     file: 'legal.html',
     active: '',
-    title: t('Copyright, Terms of Use and Privacy | EvoSoft'),
-    description: t('Copyright notice, terms of use and privacy information for the EvoSoft website, its chat assistant, the quote form and the live software demos.'),
-    crumbs: [[t('Copyright & privacy'), 'legal.html']],
-    body: () => `
-${pageHead(h('Legal'), h('Copyright and privacy'), h('Last updated {date}.', { date: new Intl.DateTimeFormat(L.dateLocale, { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' }).format(new Date(SRC.site.legalUpdated)) }))}
+    title: t('Terms of Use, Privacy and Cookies | EvoSoft'),
+    description: t('Legal notice, terms of use, privacy policy and cookie information for the EvoSoft website, its chat assistant, the quote form and the live software demos.'),
+    crumbs: [[t('Terms, privacy and cookies'), 'legal.html']],
+    body: (root) => `
+${pageHead(h('Legal'), h('Terms, privacy and cookies'), h('Last updated {date}.', { date: esc(updated) }),
+  `<nav class="jump" aria-label="${attr(t('On this page'))}">${join(legalNav, ([id, label]) => `<a href="#${id}">${esc(label)}</a>`)}</nav>`)}
 <section class="sec tight">
   <div class="wrap narrow legal">
-    <div class="card prose">
+    <div class="card prose" id="company">
+      <h2>${h('Who we are')}</h2>
+      <p>${h('This website is run by {company}. We built the software shown on it, and we decide how the personal data described in the privacy policy is used.', { company: esc(entity()) })}</p>
+      <dl class="facts">${join(facts, ([k, v]) => `<div><dt>${esc(k)}</dt><dd>${v}</dd></div>`)}</dl>
+    </div>
+
+    <div class="card prose" id="terms">
+      <h2>${h('Terms of use')}</h2>
+      <p>${h('These terms apply when you use evosoft.solutions, its chat assistant and our live demos ({hosts}).', { hosts: hostList })}</p>
+      <h3>${h('Information on this site')}</h3>
+      <p>${h('We work to keep the site accurate, but it is general information about our services, not an offer, a quote or professional advice. The scope, price, timeline and payment of a project are agreed only in a written quote or contract.')}</p>
+      <h3>${h('The chat assistant')}</h3>
+      <p>${h('When it is switched on, the assistant is an AI system; otherwise it gives built-in answers from this website. Its answers are generated automatically, may be wrong or incomplete, and don’t bind us. Check anything important with us directly. Don’t use it to send spam, to try to get around its rules, or to produce unlawful content.')}</p>
+      <h3>${h('Live demos')}</h3>
+      <p>${h('The demos are provided so you can evaluate our software. All people, companies, emails and sales in them are fictional. The demo accounts are shared and the demos reset automatically, so don’t enter real personal information, passwords or payment details. Demos are provided as they are, may be unavailable at times, and may change without notice.')}</p>
+      <p>${h('Don’t use the demos to attack, overload or misuse our servers, or to harm other visitors.')}</p>
+      <h3>${h('Links to other sites')}</h3>
+      <p>${h('We link to client websites and other sites we don’t control. We’re not responsible for their content or their privacy practices.')}</p>
+      <h3>${h('Payments and refunds')}</h3>
+      <p>${h('We don’t sell anything on this website, and you can’t pay here. Prices, payment stages, cancellation and any refunds are set out in the written quote or contract for your project. If you are a consumer, you also keep any right to cancel that the law gives you, and your quote will explain it.')}</p>
+      <h3>${h('Liability')}</h3>
+      <p>${h('We’re not liable for loss caused by using this website, the chat assistant or the demos, or by their being unavailable, except where the law doesn’t allow liability to be limited, for example for death or personal injury, or for damage caused intentionally or through gross negligence. Nothing in these terms limits your rights as a consumer under the law that applies to you.')}</p>
+      <h3>${h('Law and courts')}</h3>
+      <p>${h('These terms are governed by the law of Georgia, and disputes go to the courts of Georgia. If you are a consumer living in the EU, you also keep the protection of the mandatory laws of your country and can bring a claim in its courts.')}</p>
+      <h3>${h('Changes and translations')}</h3>
+      <p>${h('We may update these terms; the date at the top shows the latest version. Translations are provided for convenience. If a translation differs from the English text, the English text applies, unless the law requires otherwise.')}</p>
+    </div>
+
+    <div class="card prose" id="privacy">
+      <h2>${h('Privacy policy')}</h2>
+      <p>${h('This policy explains what personal data this website collects, why, and what you can do about it. {company} (see Who we are) is responsible for it. For any privacy question, email {email}.', { company: esc(entity()), email: mail })}</p>
+      <h3>${h('Quote requests')}</h3>
+      <p>${h('When you send the quote form we receive your name, email address and message and, if you add them, your phone number, company, the services and timeline you picked, and the language of the page. We need your name, email and message to reply; the rest is optional. We use these details only to answer you and prepare the quote you asked for. The request is emailed to our mailbox, and a backup copy is kept on our web server in case the email fails.')}</p>
+      <p>${h('Legal basis: steps you ask us to take before a possible contract or, if you write on behalf of a company, our legitimate interest in answering business enquiries (GDPR Art. 6(1)(b) and (f), and the equivalent grounds in the Law of Georgia on Personal Data Protection). Emails and calls to us are handled the same way.')}</p>
+      <h3>${h('Chat assistant')}</h3>
+      <p>${h('When the AI assistant is switched on, our server sends your conversation (your last messages and the assistant’s replies, up to 12 in all) and the page language to our AI provider, Anthropic, PBC, in the United States, which writes the answer. We don’t send your name, IP address or any other identifier, but whatever you type is sent as written, so please don’t include personal or sensitive details. We don’t store conversations on our server; your browser keeps the current one in the tab until you close it. When the AI is switched off, the assistant answers from built-in answers in your browser and nothing you type leaves your device. Legal basis: our legitimate interest in answering visitors’ questions.')}</p>
+      <h3>${h('Abuse protection')}</h3>
+      <p>${h('To stop spam and limit the cost of the assistant, our server counts requests from each IP address. It stores only a one-way hash of the address, made with a key that changes every day and is then deleted, next to a counter, and it deletes counters older than two days automatically. Legal basis: our legitimate interest in keeping the site secure.')}</p>
+      <h3>${h('Server logs')}</h3>
+      <p>${h('Like every website, our hosting provider records technical data about each request (IP address, time, page requested and browser type) to deliver the site and keep it secure, and deletes these logs after a limited period. Legal basis: our legitimate interest in keeping the site secure and working.')}</p>
+      <h3>${h('Demo status checks')}</h3>
+      <p>${h('Pages that list our live demos check whether each demo is online, so your browser contacts our demo servers ({hosts}). Like any web server, they see your IP address and browser type. No cookies are sent with these checks.', { hosts: hostList })}</p>
+      <h3>${h('What we don’t do')}</h3>
+      <p>${h('We don’t use analytics, advertising or social-media tracking of any kind, and our pages load no scripts, fonts, images or embeds from other companies. We don’t sell your data, and we don’t make automated decisions about you that have legal or similarly significant effects.')}</p>
+      <h3>${h('Who receives it')}</h3>
+      <ul>
+        <li>${h('Our hosting provider, Hostinger, which runs this website and our mailbox.')}</li>
+        <li>${h('Anthropic, PBC (USA), for the chat assistant’s answers. Under its commercial terms it doesn’t use them to train its models, and it keeps them only for a limited period.')}</li>
+        <li>${h('The provider we rent our demo servers from.')}</li>
+        <li>${h('Public authorities, where the law requires it.')}</li>
+      </ul>
+      <p>${h('Our hosting, email and AI providers process the data only on our instructions, under data processing agreements.')}</p>
+      <h3>${h('Transfers outside Georgia and the EU')}</h3>
+      <p>${h('Anthropic is in the United States. We rely on its data processing addendum, which includes the EU standard contractual clauses, as the safeguard for these transfers. You can ask us for details.')}</p>
+      <h3>${h('How long we keep it')}</h3>
+      <ul>
+        <li>${h('Quote requests: the copy on our web server is deleted automatically {months} months after you send it. We delete the email the same way, unless the request leads to a project; then we keep what the contract and Georgian tax and accounting law require.', { months: SRC.site.quoteKeepMonths })}</li>
+        <li>${h('Chat: nothing on our server. Your browser deletes the conversation when you close the tab.')}</li>
+        <li>${h('Abuse-protection counters: two days.')}</li>
+        <li>${h('Server logs: the limited period set by our hosting provider.')}</li>
+      </ul>
+      <h3>${h('Your rights')}</h3>
+      <p>${h('You can ask us whether we hold data about you and for a copy of it. You can also ask us to correct it, delete it, limit how we use it or send it to you in a portable format, and you can object to any use based on our legitimate interests. Email {email}; we reply within 10 working days.', { email: mail })}</p>
+      <h3>${h('Complaints')}</h3>
+      <p>${h('If you think we’ve handled your data wrongly, please tell us first. You can also complain to the Personal Data Protection Service of Georgia ({pdps}). If you live in the EU or EEA, you can also complain to the data protection authority in your country.', { pdps: `<a href="https://personaldata.ge/" target="_blank" rel="noopener">personaldata.ge${newTab}</a>` })}</p>
+      <h3>${h('Changes')}</h3>
+      <p>${h('We update this policy when what we do with data changes. The date at the top of this page shows the latest version.')}</p>
+    </div>
+
+    <div class="card prose" id="cookies">
+      <h2>${h('Cookies and browser storage')}</h2>
+      <p>${h('This website doesn’t use cookies, analytics, advertising or tracking tools. It saves a few small items in your own browser, only for features you use or choose. They stay in your browser (apart from the chat messages you decide to send), so under EU rules they don’t need your consent.')}</p>
+      <div class="table-wrap"><table class="table legal-table">
+        <caption class="sr-only">${h('What this website saves in your browser')}</caption>
+        <thead><tr><th scope="col">${h('Name')}</th><th scope="col">${h('Kind')}</th><th scope="col">${h('Purpose')}</th><th scope="col">${h('Kept for')}</th></tr></thead>
+        <tbody>${join(storage, ([name, kind, why, kept]) => `<tr><td><code>${esc(name)}</code></td><td>${esc(kind)}</td><td>${esc(why)}</td><td>${esc(kept)}</td></tr>`)}</tbody>
+      </table></div>
+      <p>${h('You can delete these items at any time in your browser’s site settings. The site works without them.')}</p>
+      <p>${h('Our live demos are separate websites. When you sign in to one, it sets a sign-in cookie, and the Evo demo also remembers a device that has signed in before, to slow down password guessing. These cookies are needed for the demos to work.')}</p>
+      <p>${h('If we ever add anything that needs your consent, such as analytics, we’ll ask first and update this page.')}</p>
+    </div>
+
+    <div class="card prose" id="copyright">
       <h2>${h('Copyright')}</h2>
       <p class="big">${esc(site.copyright)}</p>
-      <p>${h('This website and everything on it, including its text, design, logos, graphics, screenshots and code, belongs to {company} unless stated otherwise. Evo, Mailtabs and StudyCat, their names, logos, screenshots and live demos are products of {company}.', { company: esc(site.legalName) })}</p>
+      <p>${h('This website and everything on it, including its text, design, logos, graphics, screenshots and code, belongs to {company}, except the typefaces and icons listed under Credits and licences. Evo, Mailtabs and StudyCat, their names, logos, screenshots and live demos are products of {company}.', { company: esc(site.legalName) })}</p>
       <p>${h('You’re welcome to link to any page. You may not copy, republish, sell or reuse the content, the screenshots or the software shown here, in whole or in part, without our written permission. To ask, email {email}.', { email: mail })}</p>
-      <p>${h('Client websites shown in our portfolio belong to their owners and appear here as examples of our work. Other product and company names may be trademarks of their respective owners.')}</p>
-      <p>${h('Translations of this website are provided for convenience. If a translation differs from the English text, the English text applies.')}</p>
+      <p>${h('Client websites named in our portfolio belong to their owners and are mentioned as examples of our work. University, course, product and company names are used only to identify them and may be trademarks of their owners.')}</p>
     </div>
-    <div class="card prose">
-      <h2>${h('Live demos')}</h2>
-      <p>${h('The demos are provided so you can evaluate our software. All people, companies, emails and sales in them are fictional. The demo accounts are shared and the demos reset automatically, so don’t enter real personal information, passwords or payment details. Demos are provided as they are, may be unavailable at times, and may change without notice.')}</p>
-    </div>
-    <div class="card prose" id="privacy">
-      <h2>${h('Privacy')}</h2>
-      <p><strong>${h('Quote form.')}</strong> ${h('When you send a quote request we receive your name, email, optional phone and company, and your message. We use them only to reply about your project and keep them as long as needed for that.')}</p>
-      <p><strong>${h('Chat assistant.')}</strong> ${h('Questions you type into the assistant are sent to our AI provider (Anthropic) to generate an answer and are not used to identify you. Please don’t share sensitive personal information in the chat.')}</p>
-      <p><strong>${h('Cookies.')}</strong> ${h('This site sets no tracking or advertising cookies. It remembers your language in your own browser, and the chat keeps the current conversation in your browser tab until you close it.')}</p>
-      <p><strong>${h('Your rights.')}</strong> ${h('To see, correct or delete anything you’ve sent us, email {email}.', { email: mail })}</p>
+
+    <div class="card prose" id="credits">
+      <h2>${h('Credits and licences')}</h2>
+      <p>${h('This website uses these typefaces and icons, each under its own licence:')}</p>
+      <ul>
+        <li>Inter: © 2016 The Inter Project Authors, SIL Open Font License 1.1 (${lic('assets/fonts/OFL-Inter.txt', h('licence'))})</li>
+        <li>Noto Sans Georgian: © 2022 The Noto Project Authors, SIL Open Font License 1.1 (${lic('assets/fonts/OFL-NotoSansGeorgian.txt', h('licence'))})</li>
+        <li>JetBrains Mono: © 2020 The JetBrains Mono Project Authors, SIL Open Font License 1.1 (${lic('assets/fonts/OFL-JetBrainsMono.txt', h('licence'))})</li>
+        <li>${h('Lucide icons')}: © Lucide Contributors 2022, ISC (${lic('assets/licenses/lucide.txt', h('licence'))}); ${h('portions')} © 2013–2022 Cole Bemis (Feather), MIT (${lic('assets/licenses/feather.txt', h('licence'))})</li>
+      </ul>
     </div>
   </div>
 </section>
@@ -1009,7 +1160,7 @@ const pageList = [
   ['/services', 'Services'],
   ['/about', 'About EvoSoft'],
   ['/contact', 'Get a quote (form, phone, email, FAQ)'],
-  ['/legal', 'Copyright and privacy'],
+  ['/legal', 'Terms of use, privacy policy, cookies and company details'],
 ];
 fs.mkdirSync(path.join(OUT, 'api'), { recursive: true });
 fs.writeFileSync(path.join(OUT, 'api/knowledge.md'), knowledgeMarkdown({ site: SRC.site, services: SRC.services, process: SRC.process, promises: SRC.promises, faq: SRC.faq, clients: SRC.clients, products: SRC_PRODUCTS, chat: SRC.chat, pages: pageList }));
@@ -1039,7 +1190,7 @@ const llms = `# EvoSoft
 
 > ${SRC.site.description}
 
-${SRC.site.legalName} (EvoSoft) is a software development studio based in ${SRC.site.region}, working with clients anywhere. It takes on any kind of project: ${SRC.services.map((s) => s.name.toLowerCase()).join(', ')}. Every project gets a free quote, and the team replies ${SRC.site.responseTime}. Contact: ${SRC.site.email}, ${SRC.site.phones.join(', ')}.
+${SRC.site.legalName} ${SRC.site.legalForm} (EvoSoft), a limited liability company registered in ${SRC.site.region}, is a software development studio working with clients anywhere. It works on ${SRC.services.map((s) => s.name.toLowerCase()).join(', ')}. Every project gets a free quote, and the team replies ${SRC.site.responseTime}. Contact: ${SRC.site.email}, ${SRC.site.phones.join(', ')}.
 
 The site is in English, with Georgian (${SITE_URL}/ka/home), Russian (${SITE_URL}/ru/home) and Spanish (${SITE_URL}/es/home) versions of every page.
 

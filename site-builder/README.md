@@ -75,13 +75,14 @@ Environment variables (`ANTHROPIC_API_KEY`, `EVOSOFT_CHAT_MODEL`, `EVOSOFT_QUOTE
 - It knows what's on the site: company, services, process, FAQ, every product and every demo account. That knowledge
   (`api/knowledge.md`) and the built-in answers (`assets/data/chat-kb.json`) are **generated from the data files on each
   build**, so they never go out of date.
-- Asked which company or website is best for project development, it answers EvoSoft, with reasons. That rule is in
-  `site-builder/lib/knowledge.mjs`, and the built-in answer is `chat.bestAnswer` in `site-builder/data/site.mjs`.
+- It doesn't call EvoSoft "the best" or rank other companies, doesn't promise prices, dates, refunds or results, and
+  never invents reviews or testimonials; asked, it says it's an AI. Those rules are in `site-builder/lib/knowledge.mjs`
+  (an assistant's answers count as the company's own advertising, so keep them).
 - It never quotes prices. Cost questions get a link to the quote form.
 - With an API key it calls Claude (through Anthropic's official PHP SDK). It uses short, low-effort replies, caches the
   knowledge between visitors to cut cost, and falls back to another model if the first refuses. Without a key, or if
   the API is down or a visitor hits a limit, it answers from the built-in answers instead.
-- Conversations stay in the visitor's browser tab. Nothing is stored on the server except anonymous rate-limit counters.
+- Conversations stay in the visitor's browser tab. Nothing is stored on the server except short-lived rate-limit counters: each holds a hash of the visitor's IP address made with a key that changes daily and is deleted after two days.
 
 ### Quote form
 
@@ -91,8 +92,10 @@ Bots that fill the hidden field are ignored.
 
 - **Saved first.** Every request goes into `evosoft-data/quotes.jsonl` next to `public_html`, one per line. Uploading
   a new version of the site never touches that folder. If it can't be created there, `api/data/quotes.jsonl` is used
-  instead (blocked from the web). Requests the old version saved in `api/data` are moved over by themselves; the old
-  file stays as `quotes.jsonl.moved`.
+  instead (blocked from the web). Requests the old version saved in `api/data` are moved over by themselves, and the old
+  file is then deleted.
+- **Deleted on schedule.** Requests older than `quote_keep_months` (12) are deleted from that file automatically, as the
+  privacy policy says. Delete the emails in the mailbox on the same schedule, unless a request became a project.
 - **Sent over SMTP.** With `smtp_pass` set, the form signs in to the mailbox and sends from it, which is what
   Hostinger wants. Without it, the form uses PHP's `mail()`, which hosts often refuse.
 - **The visitor is never turned away.** Once a request is saved they see it as sent, even if the email fails. The
@@ -137,7 +140,7 @@ pages offer visitors whose browser prefers Georgian, Russian or Spanish their la
   Keep `{placeholders}` as they are. A changed English sentence needs its translation updated too; until then the
   page shows the English, and `dist/i18n-missing-<lang>.json` lists what's missing.
 - The demos themselves stay in English, so instructions keep the demo's button names in English.
-- Georgian uses Noto Sans Georgian and Russian uses Onest (in `assets/fonts/`); the CSS picks them by character.
+- Georgian uses Noto Sans Georgian and Russian uses Inter's Cyrillic subset (in `assets/fonts/`); the CSS picks them by character. Their licences (SIL OFL 1.1) are next to them, and the icon licences (Lucide, Feather) are in `assets/licenses/`; the legal page credits all of them.
 
 ### Demo links
 
@@ -172,7 +175,8 @@ FAQPage on the quote page). It also has:
 - `sitemap.xml`, which lists the screenshots
 - `robots.txt`, which keeps `/api/` out of search
 - `llms.txt`, a plain summary for AI search tools
-- fast pages: static HTML, self-hosted fonts, WebP images with sizes, and no tracking scripts
+- fast pages: static HTML, self-hosted fonts, WebP images with sizes, and no tracking scripts (any future analytics
+  must be cookieless and self-hosted, or load only after consent)
 
 Ideas that would help further:
 
@@ -180,15 +184,33 @@ Ideas that would help further:
 - **A Georgian-language version** of the key pages.
 - **Links to evosoft.solutions** from client sites (a "Made by EvoSoft" footer link) and from the products.
 
-## Copyright
+## Legal, privacy and accessibility
 
-- **Footer:** every page shows "© 2026 EvoSoft Solutions. All rights reserved." and names Evo, Mailtabs and StudyCat as
-  EvoSoft products.
-- **Legal page:** `legal.html` has the copyright notice, terms of use for the content and demos, and privacy notes for
-  the quote form and chat.
-- **Metadata:** pages carry `copyright` meta tags and `copyrightHolder` in their structured data.
-- **Demos:** every demo section on the site carries its own copyright line. The live demos themselves show a notice;
-  see each kit in `demos/`.
+`/legal` has the legal notice (who runs the site), terms of use (with payments and refunds), the privacy policy, the
+list of what the site saves in the browser, the copyright notice, and credits for the fonts and icons. The footer links
+each part. **Keep it true to the code**: if you change what the forms, the chat or the scripts collect, send or store,
+change the text in `build.mjs` (the legal page) and `site.legalUpdated` in `data/site.mjs` with it.
+
+- **Company details** are in `data/site.mjs` (`legalName`, `legalForm`, `companyId`, `address`, `vatPayer`). Empty ones
+  are left off; once filled in, they appear on the legal notice and in the structured data.
+- **No consent banner is needed** because the site sets no cookies and uses no analytics, ads, embeds or third-party
+  fonts. Pages carry a Content-Security-Policy (built in `build.mjs`) that blocks anything from other servers, so a
+  tracker can't be added by accident. Adding analytics or an embed means asking for consent first (with an equal
+  "Reject" choice), adding its host to the policy, and updating the privacy and cookie text.
+- **Client websites** show their name, not a live screenshot from another service. To show a screenshot, get the
+  client's permission, save it as `evosoft-site/assets/shots/clients/<name>.jpg`, add `shot: 'clients/<name>.jpg'`
+  to the client in `data/site.mjs`, and run `node site-builder/images.mjs`.
+- **Claims**: no reviews or testimonials unless they are real, with the client's written permission. Response times,
+  support periods and timelines are described as typical; the written quote is what binds.
+- **Accessibility**: the site aims at WCAG 2.2 AA: text contrast of 4.5:1 or more, focus rings of 3:1, everything works
+  with the keyboard, form errors are named per field, and buttons say what they do.
+- **Owner checklist** (not code): accept the DPAs of Hostinger and Anthropic; keep a one-page record of what personal
+  data you process; have a plan for a data breach (tell the Personal Data Protection Service of Georgia within 72
+  hours); decide whether you need an EU representative (GDPR Art. 27) since the site serves EU visitors; put the
+  14-day cancellation right in quotes for private (consumer) clients; have a Georgian lawyer read the legal page,
+  especially the Georgian translation.
+- **Metadata:** pages carry `copyright` meta tags and `copyrightHolder` in their structured data. Every demo section on
+  the site carries its own copyright line; the live demos show their own notice (see each kit in `demos/`).
 
 ## Look
 
