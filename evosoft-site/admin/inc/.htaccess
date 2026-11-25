@@ -1,0 +1,11 @@
+# EvoSoft admin panel: these files are only included by admin/index.php, never fetched. © 2026 EvoSoft Solutions.
+<IfModule mod_authz_core.c>
+  Require all denied
+  <FilesMatch "">
+    Require all denied
+  </FilesMatch>
+</IfModule>
+<IfModule !mod_authz_core.c>
+  Order allow,deny
+  Deny from all
+</IfModule>

@@ -32,6 +32,18 @@ function handle(req, res) {
   p = ('/' + p).replace(/[\\/]+/g, '/'); // one slash at a time, so a redirect can never point at another host
   p = p.replace(/\/(?:\.\/)+/g, '/').replace(/\/\.$/, '/'); // and no '.' segments, so /./api/ is /api/
   if (p.includes('\0') || p.split('/').includes('..')) return send(404);
+  // the admin panel needs PHP (router.php): here, /admin goes to /admin/, which only says so; nothing else in admin/
+  // is ever served (admin/inc holds PHP source)
+  if (p === '/admin') { res.writeHead(301, { Location: '/admin/' + qs }); return res.end(); }
+  if (p.startsWith('/admin/')) {
+    const a = p.slice(7);
+    if (/^assets\/[a-z0-9-]+\.(css|js)$/.test(a) && isFile(p)) return send(200, p);
+    if (a === '' || a === 'index.php') {
+      res.writeHead(503, { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store' });
+      return res.end('The admin panel needs PHP. Preview it with site-builder/router.php (see the comment at the top of that file).\n');
+    }
+    return send(404);
+  }
   // the Georgian and Russian versions were removed: their addresses go to the same page in English
   const gone = p.match(/^\/(?:ka|ru)(?:\/(.*))?$/);
   if (gone) { res.writeHead(301, { Location: encodeURI('/' + (gone[1] || 'home')) + qs }); return res.end(); }

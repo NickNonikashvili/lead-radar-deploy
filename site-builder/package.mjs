@@ -35,6 +35,13 @@ fs.cpSync(SRC, STAGE, {
   },
 });
 
+// The .htaccess files keep the PHP settings, data and the admin panel's include files private: never ship without them.
+for (const f of ['.htaccess', 'api/.htaccess', 'admin/.htaccess', 'admin/inc/.htaccess', 'admin/assets/.htaccess']) {
+  if (fs.existsSync(path.join(SRC, path.dirname(f))) && !fs.existsSync(path.join(STAGE, f))) {
+    throw new Error(`${f} is missing from the package; it must be uploaded with the site.`);
+  }
+}
+
 const api = path.join(STAGE, 'api');
 if (has('composer')) {
   console.log('Installing the PHP libraries for the chat assistant and email…');

@@ -1,6 +1,6 @@
 <?php
 /*
- * EvoSoft website settings for the chat assistant and the quote form.
+ * EvoSoft website settings for the chat assistant, the quote form and the admin panel.
  *
  * Copy this file to ONE of these places and fill it in:
  *   - two folders above api/, i.e. next to public_html, named evosoft-config.php   (recommended: never web-reachable)
@@ -48,4 +48,18 @@ return [
 
     // Behind Cloudflare or another proxy, name the header with the visitor's IP, e.g. 'HTTP_CF_CONNECTING_IP'.
     'trust_proxy_header' => '',
+
+    // Admin panel (https://evosoft.solutions/admin/): every quote request, its status and your notes.
+    // It stays locked until admin_password_hash is set. To make it, open /admin/ once: it asks for a password and shows
+    // the exact line to paste here (it saves nothing itself). The line holds a one-way hash, never the password.
+    // To change the password later, sign in and open Security, or delete this line and open /admin/ again.
+    'admin_password_hash' => '',
+    // Optional second step at sign-in: a 6-digit code from an authenticator app (Google Authenticator, 1Password,
+    // Aegis…). /admin/ (or Security, once signed in) makes a secret for you; paste its line here. Empty = off.
+    'admin_totp_secret' => '',
+    // Signed out after this many minutes without using the panel (5 to 720). Every sign-in ends after 12 hours anyway.
+    'admin_session_minutes' => 30,
+    // The panel only opens over https:// (a password must never travel in the clear). Only set this to false if your
+    // host serves the site over https but PHP can't tell (the panel then says "Open it over https").
+    'admin_require_https' => true,
 ];

@@ -10,6 +10,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
+import vm from 'node:vm';
 import { fileURLToPath } from 'node:url';
 import * as SRC from './data/site.mjs';
 import { products as SRC_PRODUCTS } from './data/products.mjs';
@@ -42,6 +43,18 @@ const CSP = [
   "base-uri 'self'",
   "form-action 'self'",
 ].join('; ');
+
+// The quote builder's own scripts, run here too: the preview's English words (EvoPreview.strings, translated below
+// like everything else) and the estimate, so the page starts with the right price and the build checks the rules.
+function runScript(rel) {
+  const ctx = { window: {}, TextEncoder, TextDecoder, btoa, atob };
+  vm.runInNewContext(fs.readFileSync(path.join(OUT, rel), 'utf8'), ctx, { filename: rel });
+  return ctx.window;
+}
+const { EvoPreview: PREVIEW } = runScript('assets/js/site-preview.js');
+const { EvoEstimate: ESTIMATE } = runScript('assets/js/estimate.js');
+// numbers and dollar amounts in the builder are written the way each language writes them
+const NUM_LOCALE = { en: 'en-US', es: 'es-ES' };
 
 let images = {};
 try {
@@ -167,7 +180,7 @@ function ldFor({ file, title, description, crumbs = [], extra = [] }) {
 // ---------- layout ----------
 const FONTS = { en: ['inter'], es: ['inter'] };
 
-function head({ file, title, description, ogImage, crumbs, ld = [], noindex = false, preload = '' }) {
+function head({ file, title, description, ogImage, crumbs, ld = [], noindex = false, preload = '', styles = [] }) {
   const canonical = abs(file);
   const alternates = noindex
     ? ''
@@ -199,7 +212,7 @@ ${join(LANGS.filter((x) => x !== L), (x) => `<meta property="og:locale:alternate
 <link rel="apple-touch-icon" href="${A('assets/img/icon-180.png')}">
 <link rel="manifest" href="${A('site.webmanifest')}">
 ${join(FONTS[L.code] || FONTS.en, (f) => `<link rel="preload" href="${A(`assets/fonts/${f}.woff2`)}" as="font" type="font/woff2" crossorigin>\n`)}${typeof preload === 'function' ? preload() : preload}<link rel="stylesheet" href="${A('assets/css/site.css')}">
-<script>${BOOT}</script>
+${join(styles, (s) => `<link rel="stylesheet" href="${A(s)}">\n`)}<script>${BOOT}</script>
 <script type="application/ld+json">${ldFor({ file, title, description, crumbs, extra: ld })}</script>
 </head>`;
 }
@@ -221,7 +234,7 @@ function header(root, file, active) {
     <button class="icon-btn menu-toggle" type="button" aria-controls="site-nav" aria-expanded="false" aria-label="${attr(t('Open menu'))}">${icon('menu', 'i i-menu')}${icon('x', 'i i-close')}</button>
     <nav class="nav" id="site-nav" aria-label="${attr(t('Main'))}">
       ${join(nav, (n) => `<a href="${root}${n.href}"${n.key === active ? ' aria-current="page"' : ''}>${esc(n.label)}</a>`)}
-      <a class="btn primary nav-quote" href="${root}contact"${active === 'contact' ? ' aria-current="page"' : ''}>${h('Get a quote')}</a>
+      <a class="btn primary nav-quote" href="${root}estimate"${active === 'estimate' ? ' aria-current="page"' : ''}>${h('Get a quote')}</a>
       <div class="nav-langs" role="group" aria-label="${attr(t('Language'))}">${langLinks(file, 'nav-lang')}</div>
     </nav>
     <div class="lang">
@@ -275,7 +288,7 @@ function jsStrings() {
   return JSON.stringify(s).replace(/</g, '\\u003c');
 }
 
-function footer(root) {
+function footer(root, scripts = []) {
   return `<footer class="footer">
   <div class="wrap">
     <p class="foot-slogan">${sloganHtml()}</p>
@@ -283,12 +296,12 @@ function footer(root) {
       <div class="foot-brand">
         <a class="brand" href="${root}home" aria-label="${attr(t('EvoSoft, home'))}">${logoInline}</a>
         <p>${esc(site.short)}</p>
-        <a class="btn primary sm" href="${root}contact">${h('Get a free quote')}</a>
+        <a class="btn primary sm" href="${root}estimate">${h('Get a free quote')}</a>
       </div>
       <div><h2>${h('Products')}</h2><ul>${join(products, (p) => `<li><a href="${root}work/${p.slug}">${esc(p.name)}</a></li>`)}<li><a href="${root}demos">${h('All live demos')}</a></li></ul></div>
-      <div><h2>${h('Company')}</h2><ul><li><a href="${root}portfolio">${h('Work')}</a></li><li><a href="${root}services">${h('Services')}</a></li><li><a href="${root}about">${h('About')}</a></li></ul></div>
+      <div><h2>${h('Company')}</h2><ul><li><a href="${root}portfolio">${h('Work')}</a></li><li><a href="${root}services">${h('Services')}</a></li><li><a href="${root}about">${h('About')}</a></li><li><a href="${root}estimate">${h('Website price estimate')}</a></li></ul></div>
       <div><h2>${h('Legal')}</h2><ul><li><a href="${root}legal#company">${h('Legal notice')}</a></li><li><a href="${root}legal#terms">${h('Terms of use')}</a></li><li><a href="${root}legal#privacy">${h('Privacy policy')}</a></li><li><a href="${root}legal#cookies">${h('Cookies')}</a></li></ul></div>
-      <div><h2>${h('Contact')}</h2><ul>${join(site.phones, (p) => `<li><a href="${tel(p)}">${esc(p)}</a></li>`)}<li><a href="mailto:${site.email}">${esc(site.email)}</a></li><li class="muted">${h('Replies {when}', { when: esc(site.responseTime) })}</li></ul></div>
+      <div><h2>${h('Contact')}</h2><ul>${join(site.phones, (p) => `<li><a href="${tel(p)}">${esc(p)}</a></li>`)}<li><a href="mailto:${site.email}">${esc(site.email)}</a></li><li><a href="${root}contact">${h('Send us a message')}</a></li><li class="muted">${h('Replies {when}', { when: esc(site.responseTime) })}</li></ul></div>
     </div>
     <div class="foot-base">
       <p>${esc(site.copyright)} ${h('{company}, registered in Georgia.', { company: esc(entity()) })}</p>
@@ -326,7 +339,7 @@ function footer(root) {
 <script type="application/json" id="evo-i18n">${jsStrings()}</script>
 <script src="${A('assets/js/site.js')}" defer></script>
 <script src="${A('assets/js/chat.js')}" defer></script>
-</body>
+${join(scripts, (s) => `<script src="${A(s)}" defer></script>\n`)}</body>
 </html>`;
 }
 
@@ -343,7 +356,7 @@ ${header(root, file, active)}
 <main id="main">
 ${body(root)}
 </main>
-${footer(root)}`;
+${footer(root, opts.scripts)}`;
   built.push({ lang: L.code, file, outFile, html: html.replace(/\n\s*\n/g, '\n'), noindex: !!opts.noindex, images: opts.sitemapImages || [] });
 }
 
@@ -365,6 +378,8 @@ const FIELD = '<div class="mesh" aria-hidden="true"><i></i><i></i><i></i></div><
 const tileColor = (p) => p.tile || TILE[p.slug] || p.accent;
 const SVC_ICON = ['globe', 'cart', 'code', 'register', 'layers', 'search', 'pen', 'mail', 'tool'];
 const SVC_TONE = ['blue', 'green', 'purple', 'gold', 'teal', 'blue', 'coral', 'purple', 'green'];
+// services whose "Get a quote" opens the quote builder with that kind of website picked (the others go to the form)
+const SVC_ESTIMATE = ['business', 'store', 'webapp'];
 const accountsWord = (n) => t.n(n, '{n} demo account', '{n} demo accounts');
 
 const pageHead = (kicker, title, lede, extra = '') => `
@@ -396,7 +411,7 @@ const ctaCard = (root, title = h('Have a project in mind?'), text = h('Tell us w
         <p>${text}</p>
       </div>
       <div class="cta-actions">
-        <a class="btn primary lg" href="${root}contact">${h('Get a free quote')} ${arrow}</a>
+        <a class="btn primary lg" href="${root}estimate">${h('Get a free quote')} ${arrow}</a>
         <p class="cta-contacts">${join(site.phones, (p) => `<a href="${tel(p)}">${esc(p)}</a>`, ' · ')}<br><a href="mailto:${site.email}">${esc(site.email)}</a></p>
       </div>
     </div>
@@ -552,14 +567,14 @@ function buildPages() {
       <p class="hero-sub">${h('Websites, apps and business software,')} ${h('built to order.')}</p>
       <p class="typer" aria-hidden="true"><span class="typer-pre">${h('We build')}</span> <span class="typer-word" data-words="${attr(JSON.stringify(typerWords))}">${esc(typerWords[0])}</span><span class="caret"></span></p>
       <div class="hero-cta">
-        <a class="btn primary lg" href="${root}contact">${h('Get a free quote')} ${arrow}</a>
+        <a class="btn primary lg" href="${root}estimate">${h('Get a free quote')} ${arrow}</a>
         <a class="btn link lg" href="${root}demos">${h('Try a live demo')} ${arrow}</a>
       </div>
     </div>
     <div class="glass hero-glass">
       <p class="glass-head">${icon('play')}${h('Live demos')}</p>
       ${join(products, (p) => `<a class="glass-row" href="${root}work/${p.slug}"><b>${esc(p.name)}</b>${statusPill(p)}<span>${esc(p.kind)}</span><small>${esc(accountsWord(p.demo.accounts.length))}</small></a>`)}
-      <a class="glass-tag" href="${root}contact">${h('Free quotes')}</a>
+      <a class="glass-tag" href="${root}estimate">${h('Free quotes')}</a>
     </div>
     <div class="hero-feats">
       <p class="feat-i" style="--i:0">${icon('layers')}<span><b>${products.length}</b> ${esc(t.n(products.length, 'live demo you can sign in to', 'live demos you can sign in to'))}</span></p>
@@ -788,7 +803,7 @@ ${ctaCard(root, h('Need something like {name}?', { name: esc(p.name) }), h('We b
 ${pageHead(h('Services'), h('Websites, software and IT, all in one place'), h('Websites are where many clients start, but we don’t stop there. If your business needs something built, connected, set up or fixed, one team handles it, and every project starts with a free quote.'))}
 <section class="sec tight">
   <div class="wrap">
-    <div class="svc-detail">${join(services, (s, i) => `<article class="svc wide"><span class="ico tone-${SVC_TONE[i % SVC_TONE.length]}">${icon(SVC_ICON[i % SVC_ICON.length])}</span><div><h2>${esc(s.name)}</h2><p>${esc(s.text)}</p><p class="tags">${join(s.examples, (e) => `<span>${esc(e)}</span>`)}</p></div><a class="btn sm" href="${root}contact?need=${encodeURIComponent(SRC.quoteTypes[i] || SRC.quoteTypes[SRC.quoteTypes.length - 1])}">${h('Get a quote')}${sr(s.name)}</a></article>`)}</div>
+    <div class="svc-detail">${join(services, (s, i) => `<article class="svc wide"><span class="ico tone-${SVC_TONE[i % SVC_TONE.length]}">${icon(SVC_ICON[i % SVC_ICON.length])}</span><div><h2>${esc(s.name)}</h2><p>${esc(s.text)}</p><p class="tags">${join(s.examples, (e) => `<span>${esc(e)}</span>`)}</p></div><a class="btn sm" href="${SVC_ESTIMATE[i] ? `${root}estimate?type=${SVC_ESTIMATE[i]}` : `${root}contact?need=${encodeURIComponent(SRC.quoteTypes[i] || SRC.quoteTypes[SRC.quoteTypes.length - 1])}`}">${h('Get a quote')}${sr(s.name)}</a></article>`)}</div>
   </div>
 </section>
 <section class="sec alt">
@@ -832,7 +847,7 @@ ${pageHead(h('About us'), h('A small studio that builds and runs software'), '')
       ${join(site.phones, (p) => `<p class="big-line"><a href="${tel(p)}">${esc(p)}</a></p>`)}
       <p class="big-line"><a href="mailto:${site.email}">${esc(site.email)}</a></p>
       <p class="muted">${h('Replies {when}.', { when: esc(site.responseTime) })}</p>
-      <a class="btn primary" href="${root}contact">${h('Get a free quote')}</a>
+      <a class="btn primary" href="${root}estimate">${h('Get a free quote')}</a>
     </aside>
   </div>
 </section>
@@ -884,6 +899,7 @@ ${pageHead(h('Get a quote'), h('Tell us about your project'), h('Send a few line
       <div class="form-done" hidden><span class="ico tone-green">${icon('check')}</span><h2>${h('Thanks, it’s on its way.')}</h2><p>${h('We’ll reply {when}. If it’s urgent, call {phone}.', { when: esc(site.responseTime), phone: `<a href="${tel(site.phones[0])}">${esc(site.phones[0])}</a>` })}</p></div>
     </form>
     <aside class="quote-side">
+      <div class="card est-promo"><span class="ico tone-coral">${icon('eye')}</span><h2>${h('Planning a website?')}</h2><p class="muted">${h('Design it in a few clicks, watch a preview take shape and see an estimated price as you go.')}</p><a class="btn primary sm" href="${root}estimate">${h('Design your website')} ${arrow}</a></div>
       <div class="card"><span class="ico tone-blue">${icon('phone')}</span><h2>${h('Phone')}</h2>${join(site.phones, (p) => `<p class="big-line"><a href="${tel(p)}">${esc(p)}</a></p>`)}</div>
       <div class="card"><span class="ico tone-purple">${icon('mail')}</span><h2>${h('Email')}</h2><p class="big-line"><a href="mailto:${site.email}">${esc(site.email)}</a></p></div>
       <p class="muted small quote-legal">${h('{company}, registered in Georgia.', { company: esc(entity()) })} <a href="${root}legal#company">${h('Legal notice')}</a></p>
@@ -1055,7 +1071,7 @@ ${pageHead(h('Legal'), h('Terms, privacy and cookies'), h('Last updated {date}.'
     root: '/',
     noindex: true,
     body: (root) => `
-${pageHead('404', h('This page wandered off'), h('The link may be old, or the page has moved.'), `<div class="actions"><a class="btn primary" href="${root}home">${h('Go home')}</a><a class="btn" href="${root}demos">${h('Live demos')}</a><a class="btn" href="${root}contact">${h('Get a quote')}</a></div>`)}`,
+${pageHead('404', h('This page wandered off'), h('The link may be old, or the page has moved.'), `<div class="actions"><a class="btn primary" href="${root}home">${h('Go home')}</a><a class="btn" href="${root}demos">${h('Live demos')}</a><a class="btn" href="${root}estimate">${h('Get a quote')}</a></div>`)}`,
   });
 }
 

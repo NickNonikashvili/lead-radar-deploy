@@ -1,0 +1,42 @@
+# EvoSoft admin panel: only index.php (the folder's own address) and assets/*.css / assets/*.js can be fetched.
+# Everything else here, inc/ included, is refused, and nothing is listed. © 2026 EvoSoft Solutions.
+DirectoryIndex index.php
+
+<IfModule mod_authz_core.c>
+  Require all denied
+  # "" is the folder itself (/admin/), which DirectoryIndex then serves as index.php; "admin" is /admin without the
+  # slash, which Apache then redirects to /admin/ (inc/ and assets/ refuse these names in their own .htaccess)
+  <FilesMatch "^(index\.php|admin)?$">
+    Require all granted
+  </FilesMatch>
+</IfModule>
+<IfModule !mod_authz_core.c>
+  Order allow,deny
+  Deny from all
+  <FilesMatch "^(index\.php|admin)?$">
+    Order deny,allow
+    Allow from all
+  </FilesMatch>
+</IfModule>
+
+# These rules replace the main .htaccess rules inside this folder (they don't add to them).
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  # /admin/, /admin/index.php and the panel's own stylesheet and script; anything else is "not found"
+  RewriteRule ^$ - [L]
+  RewriteRule ^index\.php$ - [L]
+  RewriteRule ^assets/[a-z0-9-]+\.(css|js)$ - [L]
+  RewriteRule ^ - [R=404,L]
+</IfModule>
+
+# index.php sends its own headers (no cache, no framing, no referrer, not indexed); these keep the main .htaccess's
+# looser ones off the panel's files.
+<IfModule mod_headers.c>
+  Header always set X-Frame-Options "DENY"
+  Header always set Referrer-Policy "no-referrer"
+  Header always set X-Robots-Tag "noindex, nofollow"
+  Header always set X-Content-Type-Options "nosniff"
+</IfModule>
+<IfModule mod_expires.c>
+  ExpiresActive Off
+</IfModule>

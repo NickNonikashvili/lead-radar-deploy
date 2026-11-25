@@ -2,7 +2,8 @@
 // Preview the built site with PHP's own server, clean addresses and a working chat and quote form:
 //   cd evosoft-site && php -S 127.0.0.1:8000 ../site-builder/router.php      then open http://127.0.0.1:8000/home
 // It follows the same rules as the .htaccess files on the host (see site-builder/serve.mjs for the details): only
-// api/chat.php and api/quote.php are public, and .htaccess files are never served.
+// api/chat.php and api/quote.php are public, and .htaccess files are never served. The admin panel works too
+// (/admin/, like admin/.htaccess: only its index.php and assets/*.css|js), with plain http allowed on 127.0.0.1 only.
 // © 2026 EvoSoft Solutions. All rights reserved.
 $root = realpath(__DIR__ . '/../evosoft-site');
 // the path and query as sent: '//services.html' is a path here, never a host
@@ -11,6 +12,21 @@ $qs = $q !== '' ? '?' . $q : '';
 $p = preg_replace('#[/\\\\]+#', '/', '/' . rawurldecode($rawPath)); // one slash at a time: no redirect to another host
 $p = preg_replace(['#/(?:\./)+#', '#/\.$#'], '/', $p);                 // and no '.' segments, so /./api/ is /api/
 if (str_contains($p, "\0") || in_array('..', explode('/', $p), true)) { $p = '/404'; }
+// the admin panel (admin/.htaccess): /admin/ runs admin/index.php; only it and assets/*.css|js can be fetched
+if ($p === '/admin') {
+    header('Location: /admin/' . $qs, true, 301);
+    return true;
+}
+if (str_starts_with($p, '/admin/')) {
+    $a = substr($p, 7);
+    if (($a === '' || $a === 'index.php' || preg_match('#^assets/[a-z0-9-]+\.(css|js)$#', $a)) && file_exists($root . $p)) {
+        return false; // php -S runs admin/index.php for /admin/ itself, and serves the stylesheet and script
+    }
+    http_response_code(404);
+    header('Content-Type: text/html; charset=utf-8');
+    readfile($root . '/404.html');
+    return true;
+}
 $lang = null;
 // the Georgian and Russian versions were removed: their addresses go to the same page in English
 if (preg_match('#^/(?:ka|ru)(?:/(.*))?$#', $p, $m)) {

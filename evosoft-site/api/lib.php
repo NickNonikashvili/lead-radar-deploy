@@ -42,6 +42,10 @@ function evo_config(): array
         'quote_per_ip_hour' => 5,
         'quote_keep_months' => 12,         // quote requests older than this are deleted from the data folder (0 = keep)
         'trust_proxy_header' => '',        // e.g. 'HTTP_CF_CONNECTING_IP' behind Cloudflare
+        'admin_password_hash' => '',       // the admin panel (/admin/) stays locked until this is set; /admin/ shows how
+        'admin_totp_secret' => '',         // optional second factor (base32), for an authenticator app
+        'admin_session_minutes' => 30,     // signed out after this long without using the panel (at most 12 hours in all)
+        'admin_require_https' => true,     // the panel refuses plain http:// (except on this computer, for testing)
     ];
     $files = [dirname(__DIR__, 2) . '/evosoft-config.php', __DIR__ . '/config.php'];
     foreach ($files as $file) {
@@ -213,7 +217,9 @@ function evo_day_salt(string $dir): string
  * and so does api/housekeeping.php, which a daily cron job runs so it happens on quiet days too):
  *   - rate-limit counters and daily keys older than two days;
  *   - quote requests older than quote_keep_months (the email copy is deleted by hand on the same schedule);
- *   - any leftover quotes.jsonl.moved copy from an old version that is past the same age.
+ *   - any leftover quotes.jsonl.moved copy from an old version that is past the same age;
+ *   - the admin panel's status and notes (quote-meta.json) for requests that no longer exist;
+ *   - admin sign-in sessions past their 12-hour limit (PHP's own clean-up is often off on shared hosts).
  * The quotes file is rewritten in place under the same lock quote.php appends with, so no request is ever lost.
  */
 function evo_housekeeping(array $cfg, bool $force = false): void
@@ -238,25 +244,32 @@ function evo_housekeeping(array $cfg, bool $force = false): void
             @unlink($f);
         }
     }
-    $months = (int)($cfg['quote_keep_months'] ?? 0);
-    if ($months <= 0) {
-        return;
+    // admin sessions: idle ones end after admin_session_minutes, and every one after 12 hours
+    foreach (glob($dir . '/sessions/sess_*') ?: [] as $f) {
+        if (@filemtime($f) < time() - 13 * 3600) {
+            @unlink($f);
+        }
     }
-    $cutoff = gmdate('Y-m-d H:i', strtotime("-$months months"));
+    $months = (int)($cfg['quote_keep_months'] ?? 0);
+    $cutoff = $months > 0 ? gmdate('Y-m-d H:i', strtotime("-$months months")) : '';
     $file = $dir . '/quotes.jsonl';
     if (@is_file($file) && ($fh = @fopen($file, 'c+')) !== false) {
         if (flock($fh, LOCK_EX)) {
             $keep = '';
             $dropped = 0;
+            $ids = [];
             while (($line = fgets($fh)) !== false) {
                 $q = json_decode($line, true);
                 $when = is_array($q) && is_string($q['when'] ?? null) ? substr($q['when'], 0, 16) : '';
                 // keep anything it can't date, rather than guess
-                if ($when !== '' && preg_match('/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/', $when) && strcmp($when, $cutoff) < 0) {
+                if ($cutoff !== '' && $when !== '' && preg_match('/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/', $when) && strcmp($when, $cutoff) < 0) {
                     $dropped++;
                     continue;
                 }
                 $keep .= $line;
+                if (is_array($q)) {
+                    $ids[evo_quote_id($q, $line)] = true;
+                }
             }
             if ($dropped) {
                 ftruncate($fh, 0);
@@ -264,13 +277,21 @@ function evo_housekeeping(array $cfg, bool $force = false): void
                 fwrite($fh, $keep);
                 fflush($fh);
             }
+            // still holding the requests' lock, so no request can be added or deleted meanwhile
+            evo_quote_meta_change(static function (array $meta) use ($ids): array {
+                return array_intersect_key($meta, $ids);
+            });
             flock($fh, LOCK_UN);
         }
         fclose($fh);
+    } elseif (!@is_file($file) && @is_file($dir . '/quote-meta.json')) {
+        evo_quote_meta_change(static fn(array $meta): array => []);
     }
-    foreach (glob(EVO_DATA_DIR . '/quotes.jsonl.moved*') ?: [] as $f) {
-        if (@filemtime($f) < strtotime("-$months months")) {
-            @unlink($f);
+    if ($months > 0) {
+        foreach (glob(EVO_DATA_DIR . '/quotes.jsonl.moved*') ?: [] as $f) {
+            if (@filemtime($f) < strtotime("-$months months")) {
+                @unlink($f);
+            }
         }
     }
 }
@@ -526,4 +547,513 @@ function evo_mail_last(): string
     $status = is_string($raw) ? json_decode($raw, true) : null;
     $last = is_array($status) ? ($status['last'] ?? '') : '';
     return $last === 'ok' || $last === 'failed' ? $last : 'never';
+}
+
+// ---- the quote builder (/estimate): prices, the design a visitor builds, and its estimate ----
+// The same rules as evosoft-site/assets/js/estimate.js; both follow site-builder/data/pricing.mjs, which the build
+// writes to api/pricing.json (blocked from the web by api/.htaccess). Change a rule in both places.
+
+const EVO_SITE_URL = 'https://evosoft.solutions';
+
+/** The prices (api/pricing.json, written by the build), or [] when the file is missing or broken. */
+function evo_pricing(): array
+{
+    static $pricing = null;
+    if ($pricing === null) {
+        $raw = @file_get_contents(__DIR__ . '/pricing.json');
+        $data = is_string($raw) ? json_decode($raw, true) : null;
+        $ok = is_array($data) && is_array($data['types'] ?? null) && $data['types'] !== [] && is_array($data['features'] ?? null)
+            && is_array($data['pages'] ?? null) && is_array($data['range'] ?? null);
+        $pricing = $ok ? $data : [];
+    }
+    return $pricing;
+}
+
+/** Rounds halves up, like estimate.js (Math.floor(x + 0.5)); PHP's own round() pre-rounds and can differ by 1. */
+function evo_round_half_up(float $x): int
+{
+    return (int)floor($x + 0.5);
+}
+
+/** A product snapped to 6 decimals, so 1724.9999999999998 counts as the 1725 it really is (snap() in estimate.js). */
+function evo_snap(float $x): float
+{
+    return floor($x * 1e6 + 0.5) / 1e6;
+}
+
+/** Text for a design field, as estimate.js cleans it: control characters and runs of spaces become one space, cut. */
+function evo_design_text($v, int $max): string
+{
+    if (!is_string($v)) {
+        return '';
+    }
+    $v = (string)preg_replace('/[\x00-\x1F\x7F]/u', ' ', $v);
+    $v = (string)preg_replace('/\s+/u', ' ', $v);
+    $v = (string)preg_replace('/^\s+|\s+$/u', '', $v);
+    return (string)preg_replace('/^\s+|\s+$/u', '', mb_substr($v, 0, $max));
+}
+
+/**
+ * The design config the /estimate page builds, made safe: unknown keys and values are dropped, numbers are clamped,
+ * "home" is always a page, lists keep the order of pricing.json. Never rejects: anything unusable becomes the default.
+ * Returns [] only when the prices are missing.
+ */
+function evo_normalise_design(array $d, ?array $pricing = null): array
+{
+    $p = $pricing ?? evo_pricing();
+    if ($p === []) {
+        return [];
+    }
+    $pick = static function ($v, array $allowed, string $default): string {
+        $allowed = array_values(array_map('strval', $allowed));
+        if (is_string($v) && in_array($v, $allowed, true)) {
+            return $v;
+        }
+        return in_array($default, $allowed, true) ? $default : ($allowed[0] ?? '');
+    };
+    $int = static function ($v, int $min, int $max, int $default): int { // clamp first, then drop the fraction
+        $n = is_int($v) || is_float($v) ? (float)$v : (is_string($v) && trim($v) !== '' && is_numeric(trim($v)) ? (float)trim($v) : NAN);
+        return is_finite($n) ? (int)max($min, min($max, $n)) : $default;
+    };
+    $yes = static fn($v): bool => $v === true;
+    $set = static function ($v, array $allowed): array { // the allowed ones, once each, in the order of $allowed
+        $given = is_array($v) ? array_filter($v, 'is_string') : [];
+        return array_values(array_filter($allowed, static fn($a): bool => in_array($a, $given, true)));
+    };
+    $obj = static fn($v): array => is_array($v) ? $v : [];
+
+    $types = array_map('strval', array_keys($p['types']));
+    $type = $pick($d['type'] ?? null, $types, 'business');
+    $business = $obj($d['business'] ?? null);
+    $look = $obj($d['look'] ?? null);
+    $content = $obj($d['content'] ?? null);
+    $accent = is_string($look['accent'] ?? null) && preg_match('/^#[0-9a-fA-F]{6}$/', $look['accent']) ? strtolower($look['accent']) : '#ff6b5b';
+
+    $pages = array_merge(['home'], $set($d['pages'] ?? null, array_values(array_diff(array_map('strval', $p['pages']), ['home']))));
+    $features = $set($d['features'] ?? null, array_map('strval', array_keys($p['features'])));
+    $multi = in_array('multilingual', $features, true);
+    return [
+        'v' => 1,
+        'type' => $type,
+        'business' => [
+            'name' => evo_design_text($business['name'] ?? null, 60),
+            'industry' => $pick($business['industry'] ?? null, (array)($p['industries'] ?? ['other']), 'other'),
+            'tagline' => evo_design_text($business['tagline'] ?? null, 120),
+        ],
+        'look' => [
+            'palette' => $pick($look['palette'] ?? null, (array)($p['palettes'] ?? ['navy']), 'navy'),
+            'accent' => $accent,
+            'font' => $pick($look['font'] ?? null, (array)($p['fonts'] ?? ['modern']), 'modern'),
+            'layout' => $pick($look['layout'] ?? null, (array)($p['layouts'] ?? ['clean']), 'clean'),
+            'mode' => $pick($look['mode'] ?? null, (array)($p['modes'] ?? ['light']), 'light'),
+        ],
+        'pages' => $pages,
+        'extraPages' => $int($d['extraPages'] ?? 0, 0, (int)($p['maxExtraPages'] ?? 0), 0),
+        'features' => $features,
+        'languages' => $multi ? $int($d['languages'] ?? null, 1, max(1, (int)($p['maxLanguages'] ?? 1)), 1) : 1,
+        'products' => $type === 'store' ? $pick($d['products'] ?? null, array_map('strval', array_keys((array)($p['products'] ?? []))), 'small') : 'small',
+        'content' => [
+            'copywriting' => $yes($content['copywriting'] ?? false),
+            'logo' => $yes($content['logo'] ?? false),
+            'photos' => $yes($content['photos'] ?? false),
+        ],
+        'care' => $pick($d['care'] ?? null, array_map('strval', array_keys((array)($p['care'] ?? []))), 'none'),
+        'timeline' => $pick($d['timeline'] ?? null, array_map('strval', array_keys((array)($p['timeline'] ?? []))), 'standard'),
+    ];
+}
+
+/**
+ * The estimate for a design, by the rules in site-builder/data/pricing.mjs (the same as estimate() in
+ * assets/js/estimate.js). Every amount is a whole number of dollars (halves up) before the lines are summed.
+ * Products that feed a rounding (the rush total, the range, rush weeks) are first snapped to 6 decimals (evo_snap).
+ * Returns { currency, total, low, high, monthly, weeks: [min, max], pages, extraPages, lines: [{key, amount, qty?}] },
+ * or [] when the prices are missing.
+ */
+function evo_estimate(array $design, array $pricing): array
+{
+    $d = evo_normalise_design($design, $pricing);
+    if ($d === []) {
+        return [];
+    }
+    $p = $pricing;
+    $type = $d['type'];
+    $t = $p['types'][$type];
+    $lines = [['key' => 'base', 'amount' => evo_round_half_up((float)$t['base'])]];
+
+    // 2. pages: those picked plus extra ones; beyond what the type includes, each costs extraPage
+    $pages = count($d['pages']) + $d['extraPages'];
+    $extra = max(0, $pages - (int)$t['pages']);
+    if ($extra > 0) {
+        $lines[] = ['key' => 'extraPages', 'amount' => evo_round_half_up($extra * (float)$t['extraPage']), 'qty' => $extra];
+    }
+    // 3. features (included ones and multilingual with one language cost nothing and get no line)
+    $paid = 0;
+    foreach ($d['features'] as $f) {
+        $fp = $p['features'][$f];
+        if (in_array($type, (array)($fp['includedIn'] ?? []), true)) {
+            continue;
+        }
+        $qty = $f === 'multilingual' ? $d['languages'] - 1 : null;
+        $raw = (float)$fp['price'] * ($qty ?? 1);
+        if ($raw <= 0) {
+            continue;
+        }
+        $paid++; // counts for the weeks even if it rounds to nothing, as in estimate.js
+        $amount = evo_round_half_up($raw);
+        if ($amount > 0) {
+            $lines[] = $qty === null ? ['key' => "feature:$f", 'amount' => $amount] : ['key' => "feature:$f", 'amount' => $amount, 'qty' => $qty];
+        }
+    }
+    // 4. a store's product count
+    if ($type === 'store') {
+        $amount = evo_round_half_up((float)($p['products'][$d['products']]['price'] ?? 0));
+        if ($amount > 0) {
+            $lines[] = ['key' => 'products', 'amount' => $amount];
+        }
+    }
+    // 5. content help
+    if ($d['content']['copywriting']) {
+        $amount = evo_round_half_up((float)$p['content']['copywriting']['perPage'] * $pages);
+        if ($amount > 0) {
+            $lines[] = ['key' => 'copywriting', 'amount' => $amount, 'qty' => $pages];
+        }
+    }
+    foreach (['logo', 'photos'] as $c) {
+        $amount = $d['content'][$c] ? evo_round_half_up((float)$p['content'][$c]['price']) : 0;
+        if ($amount > 0) {
+            $lines[] = ['key' => $c, 'amount' => $amount];
+        }
+    }
+    // 6. rush: the whole subtotal times the factor; the line is the difference
+    $subtotal = array_sum(array_column($lines, 'amount'));
+    $tl = (array)($p['timeline'][$d['timeline']] ?? []);
+    $factor = (float)($tl['factor'] ?? 1);
+    if ($factor !== 1.0) {
+        $rush = evo_round_half_up(evo_snap($subtotal * $factor)) - $subtotal;
+        if ($rush !== 0) {
+            $lines[] = ['key' => 'rush', 'amount' => $rush];
+        }
+    }
+    $total = array_sum(array_column($lines, 'amount'));
+    // 7. the range, to the nearest 50 (halves up)
+    $low = evo_round_half_up(evo_snap($total * (float)$p['range']['low']) / 50) * 50;
+    $high = evo_round_half_up(evo_snap($total * (float)$p['range']['high']) / 50) * 50;
+    // 9. weeks
+    $add = (int)ceil($extra / 5) + intdiv($paid, 3);
+    $min = (int)$t['weeks'][0] + $add;
+    $max = (int)$t['weeks'][1] + $add;
+    if (isset($tl['weeksFactor'])) {
+        $min = (int)ceil(evo_snap($min * (float)$tl['weeksFactor']));
+        $max = (int)ceil(evo_snap($max * (float)$tl['weeksFactor']));
+    }
+    $min = max(1, $min);
+    $max = max($max, $min + 1);
+    return [
+        'currency' => (string)($p['currency'] ?? 'USD'),
+        'total' => $total,
+        'low' => $low,
+        'high' => $high,
+        'monthly' => (int)($p['care'][$d['care']]['monthly'] ?? 0), // 8. the care plan, per month
+        'weeks' => [$min, $max],
+        'pages' => $pages,
+        'extraPages' => $extra,
+        'lines' => $lines,
+    ];
+}
+
+/** English names for the choices in a design (the email and the admin panel are in English). */
+function evo_design_labels(): array
+{
+    return [
+        'types' => ['landing' => 'Landing page', 'portfolio' => 'Portfolio', 'business' => 'Business website', 'store' => 'Online store', 'webapp' => 'Web app'],
+        'industries' => [
+            'restaurant' => 'Restaurant or café', 'clinic' => 'Clinic or health', 'beauty' => 'Beauty and wellness',
+            'construction' => 'Construction and trades', 'consulting' => 'Consulting and services',
+            'retail' => 'Shop or retail', 'tourism' => 'Travel and tourism', 'education' => 'Education', 'fitness' => 'Fitness and sport',
+            'realestate' => 'Real estate', 'tech' => 'Tech or software', 'other' => 'Something else',
+        ],
+        'palettes' => ['navy' => 'Midnight', 'forest' => 'Forest', 'sunset' => 'Sunset', 'ocean' => 'Ocean', 'mono' => 'Black and white', 'blush' => 'Blush', 'custom' => 'Your own colour'],
+        'fonts' => ['modern' => 'Modern', 'elegant' => 'Elegant', 'friendly' => 'Friendly', 'bold' => 'Bold'],
+        'layouts' => ['clean' => 'Clean', 'bold' => 'Bold', 'classic' => 'Classic'],
+        'modes' => ['light' => 'Light', 'dark' => 'Dark'],
+        'pages' => [
+            'home' => 'Home', 'about' => 'About', 'services' => 'Services', 'gallery' => 'Gallery', 'pricing' => 'Pricing',
+            'team' => 'Team', 'blog' => 'Blog', 'faq' => 'FAQ', 'contact' => 'Contact', 'testimonials' => 'Reviews',
+            'careers' => 'Careers', 'locations' => 'Locations',
+        ],
+        'features' => [
+            'booking' => 'Online booking', 'payments' => 'Online payments', 'cms' => 'Edit it yourself',
+            'multilingual' => 'More languages', 'accounts' => 'Customer accounts', 'search' => 'Site search', 'newsletter' => 'Newsletter sign-up',
+            'livechat' => 'Live chat', 'maps' => 'Map and directions', 'reviews' => 'Reviews section', 'seo' => 'SEO setup',
+            'analytics' => 'Visitor statistics',
+        ],
+        'products' => ['small' => 'Up to 50 products', 'medium' => '50 to 200 products', 'large' => '200 to 1,000 products', 'huge' => 'More than 1,000 products'],
+        'content' => ['copywriting' => 'We write the text', 'logo' => 'A logo', 'photos' => 'Photos'],
+        'care' => ['none' => 'No care plan', 'basic' => 'Basic care', 'standard' => 'Standard care', 'pro' => 'Pro care'],
+        'timeline' => ['flexible' => 'Flexible', 'standard' => 'Standard', 'rush' => 'Rush'],
+    ];
+}
+
+/** A label from evo_design_labels(), or the raw value when it has none. */
+function evo_label(string $group, string $value): string
+{
+    return evo_design_labels()[$group][$value] ?? $value;
+}
+
+/** '$1,250' (US dollars, whole). */
+function evo_money(int $amount): string
+{
+    return ($amount < 0 ? '-$' : '$') . number_format(abs($amount));
+}
+
+/** The English name of one line of an estimate, e.g. 'Extra pages (3)'. */
+function evo_estimate_line_label(array $line, array $design = []): string
+{
+    $key = (string)($line['key'] ?? '');
+    $qty = isset($line['qty']) ? (int)$line['qty'] : null;
+    if (str_starts_with($key, 'feature:')) {
+        $f = substr($key, 8);
+        if ($f === 'multilingual' && $qty !== null) {
+            return 'More languages (' . $qty . ($qty === 1 ? ' extra language)' : ' extra languages)');
+        }
+        return evo_label('features', $f);
+    }
+    return match ($key) {
+        'base' => evo_label('types', (string)($design['type'] ?? '')) . ' (base price)',
+        'extraPages' => 'Extra pages' . ($qty !== null ? " ($qty)" : ''),
+        'products' => evo_label('products', (string)($design['products'] ?? '')),
+        'copywriting' => 'Writing the text' . ($qty !== null ? " ($qty " . ($qty === 1 ? 'page)' : 'pages)') : ''),
+        'logo' => 'Logo design',
+        'photos' => 'Photos',
+        'rush' => 'Rush timeline',
+        default => $key,
+    };
+}
+
+/** A normalised design as [label, value] rows in English, for the email and the admin panel. */
+function evo_design_rows(array $d): array
+{
+    $l = static fn(string $g, string $v): string => evo_label($g, $v);
+    $rows = [['Website', $l('types', $d['type'])]];
+    $business = trim(($d['business']['name'] !== '' ? $d['business']['name'] . ', ' : '') . $l('industries', $d['business']['industry']));
+    $rows[] = ['Business', $business];
+    if ($d['business']['tagline'] !== '') {
+        $rows[] = ['Tagline', $d['business']['tagline']];
+    }
+    $palette = $l('palettes', $d['look']['palette']) . ($d['look']['palette'] === 'custom' ? ' (' . $d['look']['accent'] . ')' : '');
+    $rows[] = ['Look', $palette . ' colours, ' . strtolower($l('fonts', $d['look']['font'])) . ' type, ' . strtolower($l('layouts', $d['look']['layout']))
+        . ' layout, ' . strtolower($l('modes', $d['look']['mode'])) . ' background'];
+    $pages = implode(', ', array_map(static fn($x) => $l('pages', $x), $d['pages']));
+    if ($d['extraPages'] > 0) {
+        $pages .= ', plus ' . $d['extraPages'] . ($d['extraPages'] === 1 ? ' more page' : ' more pages');
+    }
+    $rows[] = ['Pages', $pages];
+    $features = [];
+    foreach ($d['features'] as $f) {
+        $features[] = $f === 'multilingual' ? $l('features', $f) . ' (' . $d['languages'] . ' in all)' : $l('features', $f);
+    }
+    $rows[] = ['Features', $features ? implode(', ', $features) : 'None'];
+    if ($d['type'] === 'store') {
+        $rows[] = ['Products', $l('products', $d['products'])];
+    }
+    $help = array_keys(array_filter($d['content']));
+    $rows[] = ['Content help', $help ? implode(', ', array_map(static fn($x) => $l('content', $x), $help)) : 'None'];
+    $rows[] = ['Timeline', $l('timeline', $d['timeline'])];
+    $rows[] = ['Care plan', $l('care', $d['care'])];
+    return $rows;
+}
+
+// ---- saved quote requests (evosoft-data/quotes.jsonl) and the admin panel's notes on them (quote-meta.json) ----
+
+const EVO_QUOTE_STATUSES = ['new', 'contacted', 'quoted', 'won', 'lost'];
+
+/** 12 hex characters, for a new request. */
+function evo_new_quote_id(): string
+{
+    return bin2hex(random_bytes(6));
+}
+
+/**
+ * A request's id: its own (12 hex characters, saved since the quote builder came), or for older requests the first
+ * 12 characters of the sha1 of its line in quotes.jsonl (without the line break). Lines are never rewritten, only
+ * kept or dropped, so this never changes.
+ */
+function evo_quote_id(array $q, string $rawLine): string
+{
+    $id = $q['id'] ?? null;
+    if (is_string($id) && preg_match('/^[0-9a-f]{12}$/', $id)) {
+        return $id;
+    }
+    return substr(sha1(rtrim($rawLine, "\r\n")), 0, 12);
+}
+
+/** A saved request with every field present and of the right type (old requests lack the newer ones). */
+function evo_quote_shape(array $q, string $id): array
+{
+    $s = static fn($v): string => is_string($v) ? $v : (is_int($v) || is_float($v) ? (string)$v : '');
+    return [
+        'id' => $id,
+        'when' => $s($q['when'] ?? ''),
+        'source' => ($q['source'] ?? '') === 'estimate' ? 'estimate' : 'contact',
+        'name' => $s($q['name'] ?? ''),
+        'email' => $s($q['email'] ?? ''),
+        'phone' => $s($q['phone'] ?? ''),
+        'company' => $s($q['company'] ?? ''),
+        'types' => is_array($q['types'] ?? null) ? array_values(array_filter($q['types'], 'is_string')) : [],
+        'timeline' => $s($q['timeline'] ?? ''),
+        'lang' => $s($q['lang'] ?? ''),
+        'message' => $s($q['message'] ?? ''),
+        'design' => is_array($q['design'] ?? null) ? $q['design'] : null,
+        'estimate' => is_array($q['estimate'] ?? null) ? $q['estimate'] : null,
+    ];
+}
+
+/** Every saved request, in the order they were sent (oldest first), each with its id. */
+function evo_quotes_all(): array
+{
+    $file = evo_data_dir() . '/quotes.jsonl';
+    $out = [];
+    if (!@is_file($file) || ($fh = @fopen($file, 'r')) === false) {
+        return $out;
+    }
+    if (flock($fh, LOCK_SH)) {
+        while (($line = fgets($fh)) !== false) {
+            $q = json_decode($line, true);
+            if (is_array($q)) {
+                $out[] = evo_quote_shape($q, evo_quote_id($q, $line));
+            }
+        }
+        flock($fh, LOCK_UN);
+    }
+    fclose($fh);
+    return $out;
+}
+
+/** One saved request by id, or null. */
+function evo_quote_find(string $id): ?array
+{
+    foreach (evo_quotes_all() as $q) {
+        if ($q['id'] === $id) {
+            return $q;
+        }
+    }
+    return null;
+}
+
+/** The admin panel's data per request: [id => ['status' => ..., 'notes' => ..., 'updated_at' => ...]]. */
+function evo_quote_meta_all(): array
+{
+    $raw = @file_get_contents(evo_data_dir() . '/quote-meta.json');
+    $meta = is_string($raw) ? json_decode($raw, true) : null;
+    return is_array($meta) ? $meta : [];
+}
+
+/** The admin data of one request, with defaults (status "new", no notes). */
+function evo_quote_meta(array $all, string $id): array
+{
+    $m = is_array($all[$id] ?? null) ? $all[$id] : [];
+    $status = is_string($m['status'] ?? null) && in_array($m['status'], EVO_QUOTE_STATUSES, true) ? $m['status'] : 'new';
+    return ['status' => $status, 'notes' => is_string($m['notes'] ?? null) ? $m['notes'] : '', 'updated_at' => is_string($m['updated_at'] ?? null) ? $m['updated_at'] : ''];
+}
+
+/** Changes quote-meta.json under an exclusive lock: $change gets the whole array and returns the new one. */
+function evo_quote_meta_change(callable $change): bool
+{
+    $file = evo_data_dir() . '/quote-meta.json';
+    $fh = @fopen($file, 'c+');
+    if ($fh === false) {
+        return false;
+    }
+    $ok = false;
+    if (flock($fh, LOCK_EX)) {
+        $meta = json_decode((string)stream_get_contents($fh), true);
+        $meta = is_array($meta) ? $meta : [];
+        $new = $change($meta);
+        if (is_array($new) && $new !== $meta) {
+            $json = json_encode((object)$new, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT) . "\n";
+            ftruncate($fh, 0);
+            rewind($fh);
+            $ok = fwrite($fh, $json) === strlen($json);
+            fflush($fh);
+        } else {
+            $ok = true;
+        }
+        flock($fh, LOCK_UN);
+    }
+    fclose($fh);
+    return $ok;
+}
+
+/**
+ * Sets a request's status and/or notes (only the keys given). Returns false when the request doesn't exist (or the
+ * file can't be written). Takes the requests' lock first, like evo_quote_delete(), so the two can't cross.
+ */
+function evo_quote_meta_update(string $id, array $changes): bool
+{
+    $file = evo_data_dir() . '/quotes.jsonl';
+    if (!@is_file($file) || ($fh = @fopen($file, 'r')) === false) {
+        return false;
+    }
+    $ok = false;
+    if (flock($fh, LOCK_SH)) {
+        $found = false;
+        while (!$found && ($line = fgets($fh)) !== false) {
+            $q = json_decode($line, true);
+            $found = is_array($q) && evo_quote_id($q, $line) === $id;
+        }
+        if ($found) {
+            $ok = evo_quote_meta_change(static function (array $meta) use ($id, $changes): array {
+                $m = evo_quote_meta($meta, $id);
+                if (isset($changes['status']) && in_array($changes['status'], EVO_QUOTE_STATUSES, true)) {
+                    $m['status'] = $changes['status'];
+                }
+                if (isset($changes['notes']) && is_string($changes['notes'])) {
+                    $m['notes'] = evo_clean_text($changes['notes'], 5000);
+                }
+                $m['updated_at'] = gmdate('Y-m-d H:i') . ' UTC';
+                $meta[$id] = $m;
+                return $meta;
+            });
+        }
+        flock($fh, LOCK_UN);
+    }
+    fclose($fh);
+    return $ok;
+}
+
+/**
+ * Deletes a request for good (for example when someone asks to be forgotten): its line in quotes.jsonl, rewritten in
+ * place under the same exclusive lock quote.php appends with, and its admin data. Returns false when it wasn't there.
+ */
+function evo_quote_delete(string $id): bool
+{
+    $file = evo_data_dir() . '/quotes.jsonl';
+    if (!@is_file($file) || ($fh = @fopen($file, 'c+')) === false) {
+        return false;
+    }
+    $found = false;
+    if (flock($fh, LOCK_EX)) {
+        $keep = '';
+        while (($line = fgets($fh)) !== false) {
+            $q = json_decode($line, true);
+            if (is_array($q) && evo_quote_id($q, $line) === $id) {
+                $found = true;
+                continue;
+            }
+            $keep .= $line;
+        }
+        if ($found) {
+            ftruncate($fh, 0);
+            rewind($fh);
+            fwrite($fh, $keep);
+            fflush($fh);
+        }
+        evo_quote_meta_change(static function (array $meta) use ($id): array {
+            unset($meta[$id]);
+            return $meta;
+        });
+        flock($fh, LOCK_UN);
+    }
+    fclose($fh);
+    return $found;
 }
