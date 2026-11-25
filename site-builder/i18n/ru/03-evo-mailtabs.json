@@ -79,7 +79,6 @@
  "Archive, move, spam, star and mark read in bulk": "Массовая архивация, перемещение, отправка в спам, звёздочки и отметка «прочитано»",
  "Undo for 10 seconds (or press z)": "Отмена в течение 10 секунд (или клавиша z)",
  "Create, rename and delete folders": "Создание, переименование и удаление папок",
- "Keyboard shortcuts for everything": "Горячие клавиши для всех действий",
  "One shared login with three fictional mailboxes (Work, Personal and a side project) on a private demo mail server, holding about 60 sample emails. Every person and company in them is made up.": "Один общий логин и три вымышленных почтовых ящика (Work, Personal и сторонний проект) на закрытом демо-сервере, около 60 писем-примеров. Все люди и компании в них выдуманы.",
  "The login is shared, so you may see other visitors’ changes. Everything resets every hour.": "Логин общий, поэтому вы можете увидеть изменения других посетителей. Всё сбрасывается каждый час.",
  "Mail only travels between the demo mailboxes. Real addresses are refused, and real Gmail or Outlook accounts can’t be connected.": "Письма ходят только между демо-ящиками. Настоящие адреса отклоняются, а реальные аккаунты Gmail или Outlook подключить нельзя.",

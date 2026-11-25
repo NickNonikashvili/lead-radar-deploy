@@ -78,7 +78,6 @@
  "Archive, move, spam, star and mark read in bulk": "ჯგუფური მოქმედებები: არქივი, გადატანა, სპამი, ვარსკვლავი და წაკითხულად მონიშვნა",
  "Undo for 10 seconds (or press z)": "გაუქმება 10 წამის განმავლობაში (ან დააჭირეთ z-ს)",
  "Create, rename and delete folders": "საქაღალდეების შექმნა, გადარქმევა და წაშლა",
- "Keyboard shortcuts for everything": "კლავიატურის მალსახმობები ყველაფრისთვის",
  "One shared login with three fictional mailboxes (Work, Personal and a side project) on a private demo mail server, holding about 60 sample emails. Every person and company in them is made up.": "ერთი საერთო ანგარიში სამი გამოგონილი საფოსტო ყუთით (Work, Personal და გვერდითი პროექტი) კერძო სადემონსტრაციო საფოსტო სერვერზე, დაახლოებით 60 სანიმუშო წერილით. მათში ყველა ადამიანი და კომპანია გამოგონილია.",
  "The login is shared, so you may see other visitors’ changes. Everything resets every hour.": "ანგარიში საერთოა, ამიტომ შეიძლება სხვა ვიზიტორების ცვლილებები დაინახოთ. ყველაფერი ყოველ საათში ნულდება.",
  "Mail only travels between the demo mailboxes. Real addresses are refused, and real Gmail or Outlook accounts can’t be connected.": "წერილები მხოლოდ სადემონსტრაციო საფოსტო ყუთებს შორის იგზავნება. რეალურ მისამართებზე გაგზავნა შეუძლებელია, რეალური Gmail-ის ან Outlook-ის ანგარიშების დაკავშირებაც ვერ მოხერხდება.",

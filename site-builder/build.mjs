@@ -282,7 +282,7 @@ function footer(root) {
       <div><h2>${h('Contact')}</h2><ul>${join(site.phones, (p) => `<li><a href="${tel(p)}">${esc(p)}</a></li>`)}<li><a href="mailto:${site.email}">${esc(site.email)}</a></li><li class="muted">${h('Replies {when}', { when: esc(site.responseTime) })}</li></ul></div>
     </div>
     <div class="foot-base">
-      <p>${esc(site.copyright)} ${h('{company}, registered in {country}.', { company: esc(entity()), country: esc(site.region) })}</p>
+      <p>${esc(site.copyright)} ${h('{company}, registered in Georgia.', { company: esc(entity()) })}</p>
       <p class="foot-langs">${langLinks(cur.file, 'foot-lang')}</p>
       <p>${h('Evo, Mailtabs and StudyCat are products of {company}. Demo data is fictional.', { company: esc(site.legalName) })}</p>
     </div>
@@ -878,7 +878,7 @@ ${pageHead(h('Get a quote'), h('Tell us about your project'), h('Send a few line
     <aside class="quote-side">
       <div class="card"><span class="ico tone-blue">${icon('phone')}</span><h2>${h('Phone')}</h2>${join(site.phones, (p) => `<p class="big-line"><a href="${tel(p)}">${esc(p)}</a></p>`)}</div>
       <div class="card"><span class="ico tone-purple">${icon('mail')}</span><h2>${h('Email')}</h2><p class="big-line"><a href="mailto:${site.email}">${esc(site.email)}</a></p></div>
-      <p class="muted small quote-legal">${h('{company}, registered in {country}.', { company: esc(entity()), country: esc(site.region) })} <a href="${root}legal#company">${h('Legal notice')}</a></p>
+      <p class="muted small quote-legal">${h('{company}, registered in Georgia.', { company: esc(entity()) })} <a href="${root}legal#company">${h('Legal notice')}</a></p>
       <div class="card"><span class="ico tone-green">${icon('clock')}</span><h2>${h('What happens next')}</h2><ol class="steps-list"><li>${h('We read your message and reply {when}.', { when: esc(site.responseTime) })}</li><li>${h('A short call or a few emails to fill in the gaps.')}</li><li>${h('A written quote with the scope, timeline and price.')}</li></ol></div>
     </aside>
   </div>
@@ -902,11 +902,12 @@ ${pageHead(h('Get a quote'), h('Tell us about your project'), h('Send a few line
   const updated = new Intl.DateTimeFormat(L.dateLocale, { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' }).format(new Date(SRC.site.legalUpdated));
   const lic = (file, label) => `<a href="${A(file)}" type="text/plain">${label}</a>`;
   const legalNav = [['company', t('Who we are')], ['terms', t('Terms of use')], ['privacy', t('Privacy policy')], ['cookies', t('Cookies')], ['copyright', t('Copyright')], ['credits', t('Credits and licences')]];
+  const regAddress = h('{address}, Georgia', { address: esc(addressLine()) }); // looked up even while empty, so it stays translated
   const facts = [
     [t('Company'), esc(entity())],
-    [t('Legal form'), h('Limited liability company (შპს), registered in {country}', { country: esc(site.region) })],
+    [t('Legal form'), h('Limited liability company (შპს), registered in Georgia')],
     ...(SRC.site.companyId ? [[t('Identification code'), esc(SRC.site.companyId)]] : []),
-    ...(addressLine() ? [[t('Registered address'), `${esc(addressLine())}, ${esc(site.region)}`]] : []),
+    ...(addressLine() ? [[t('Registered address'), regAddress]] : []),
     ...(SRC.site.vatPayer === true ? [[t('VAT'), h('Registered for VAT')]] : SRC.site.vatPayer === false ? [[t('VAT'), h('Not registered for VAT')]] : []),
     [t('Email'), mail],
     [t('Phone'), join(site.phones, (p) => `<a href="${tel(p)}">${esc(p)}</a>`, ', ')],

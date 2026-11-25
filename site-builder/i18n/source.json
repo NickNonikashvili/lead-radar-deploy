@@ -1960,7 +1960,7 @@
   "ctx": "the company name with its legal form (LLC = შპს, ООО)"
  },
  {
-  "s": "{company}, registered in {country}.",
+  "s": "{company}, registered in Georgia.",
   "ctx": "index.html"
  },
  {
@@ -2433,11 +2433,15 @@
   "ctx": "contact.html"
  },
  {
+  "s": "{address}, Georgia",
+  "ctx": "contact.html"
+ },
+ {
   "s": "Legal form",
   "ctx": "contact.html"
  },
  {
-  "s": "Limited liability company (შპს), registered in {country}",
+  "s": "Limited liability company (შპს), registered in Georgia",
   "ctx": "contact.html"
  },
  {
@@ -2809,7 +2813,7 @@
   "ctx": "chat assistant: built-in answers (Markdown; keep [text](/path) links and **bold**)"
  },
  {
-  "s": "We take on any kind of project, including tech:",
+  "s": "Here’s what we work on:",
   "ctx": "chat assistant: built-in answers (Markdown; keep [text](/path) links and **bold**)"
  },
  {
