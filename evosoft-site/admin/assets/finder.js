@@ -46,10 +46,16 @@
     a.appendChild(el('span', 'sr-only', ' (opens in a new tab)'));
     return a;
   }
-  function cell(label, cls) {
-    var td = el('td', cls);
+  /** A table cell (with its label for the phone layout) added to tr; returns the box to fill. One box per cell, so
+      the phone layout's two-column grid always has the label on the left and everything else on the right. */
+  function cell(tr, label, cls, head) {
+    var td = el(head ? 'th' : 'td', cls);
+    if (head) td.scope = 'row';
     td.setAttribute('data-label', label);
-    return td;
+    var box = el('div', 'cell');
+    td.appendChild(box);
+    tr.appendChild(td);
+    return box;
   }
 
   // ---- talking to the server ----
@@ -100,11 +106,15 @@
     if (on) {
       btn.setAttribute('aria-disabled', 'true');
       btn.classList.add('is-busy');
-      if (label) { btn.setAttribute('data-label', btn.textContent); btn.textContent = label; }
+      if (label) { btn.finderLabel = Array.prototype.slice.call(btn.childNodes); btn.textContent = label; }
     } else {
       btn.removeAttribute('aria-disabled');
       btn.classList.remove('is-busy');
-      if (btn.hasAttribute('data-label')) { btn.textContent = btn.getAttribute('data-label'); btn.removeAttribute('data-label'); }
+      if (btn.finderLabel) {
+        btn.textContent = '';
+        btn.finderLabel.forEach(function (n) { btn.appendChild(n); }); // keeps any screen-reader-only words
+        btn.finderLabel = null;
+      }
     }
   }
   function isBusy(btn) { return btn && btn.getAttribute('aria-disabled') === 'true'; }
@@ -152,9 +162,31 @@
     var all = document.getElementById(kind + '-all');
     var credit = document.getElementById(kind + '-osm-credit');
     var items = [];
+    var step = 50;
+    var limit = step;
+    // long result lists are shown 50 rows at a time
+    var more = el('button', 'btn results-more');
+    more.type = 'button';
+    more.hidden = true;
+    bodyWrap.insertBefore(more, bodyWrap.querySelector('.table-wrap').nextSibling);
+    var syncMore = function () {
+      var left = items.length - limit;
+      more.hidden = left <= 0;
+      more.textContent = 'Show ' + Math.min(step, left) + ' more (' + left + ' not shown)';
+    };
+    more.addEventListener('click', function () {
+      var first = null;
+      items.slice(limit, limit + step).forEach(function (it) { it.tr.hidden = false; first = first || it.tr; });
+      limit += step;
+      syncMore();
+      var cb = first && first.querySelector('input, a');
+      if (cb) cb.focus();
+    });
 
     function reset() {
       items = [];
+      limit = step;
+      more.hidden = true;
       tbody.textContent = '';
       document.getElementById(kind + '-progress').textContent = '';
       bodyWrap.hidden = true;
@@ -174,7 +206,7 @@
       var idx = items.length;
       items.push({ search: search, key: row.key, row: row });
       var tr = el('tr');
-      var sel = cell('Select', 'sel');
+      var sel = cell(tr, 'Select', 'sel');
       if (row.saved) {
         savedBadge(sel, row.saved);
       } else {
@@ -187,15 +219,16 @@
         sel.appendChild(cb);
         sel.appendChild(lab);
       }
-      tr.appendChild(sel);
       render(tr, row);
+      tr.hidden = idx >= limit;
       tbody.appendChild(tr);
       items[idx].tr = tr;
+      syncMore();
       bodyWrap.hidden = false;
       if (credit && row.source === 'osm') credit.hidden = false;
     }
     all.addEventListener('change', function () {
-      Array.prototype.forEach.call(tbody.querySelectorAll('input[type="checkbox"]'), function (c) { c.checked = all.checked; });
+      Array.prototype.forEach.call(tbody.querySelectorAll('tr:not([hidden]) input[type="checkbox"]'), function (c) { c.checked = all.checked; });
     });
     saveBtn.addEventListener('click', function () {
       if (isBusy(saveBtn)) return;
@@ -213,7 +246,7 @@
         if (!j.ok) return;
         chosen.forEach(function (it) {
           var id = (j.saved && j.saved[it.key]) || (j.duplicates && j.duplicates[it.key]);
-          if (id) savedBadge(it.tr.querySelector('td.sel'), id);
+          if (id) savedBadge(it.tr.querySelector('td.sel .cell'), id);
         });
         all.checked = false;
       });
@@ -243,33 +276,22 @@
     syncNiche();
 
     var renderLocal = function (tr, r) {
-      var th = el('th', 'biz');
-      th.scope = 'row';
-      th.setAttribute('data-label', 'Business');
+      var th = cell(tr, 'Business', 'biz', true);
       th.appendChild(el('span', 'name', r.name));
       th.appendChild(el('span', 'src', r.category));
       if (r.reason) th.appendChild(el('span', 'reason', r.reason));
-      tr.appendChild(th);
-      var a = cell('Address');
-      a.textContent = r.address || '—';
-      tr.appendChild(a);
-      var p = cell('Phone');
-      p.textContent = r.phone || '—';
-      tr.appendChild(p);
-      var o = cell('Online');
+      cell(tr, 'Address').textContent = r.address || '—';
+      cell(tr, 'Phone', 'tel').textContent = r.phone || '—';
+      var o = cell(tr, 'Online');
       var labels = { none: 'No website', social_only: 'Social page only', weak: 'Weak website', ok: 'Has a website', unknown: 'Not checked' };
       o.appendChild(el('span', 'ws ws-' + (r.website_status || 'unknown'), labels[r.website_status] || labels.unknown));
       if (r.website) { o.appendChild(el('br')); o.appendChild(extLink(r.website, host(r.website))); }
       (r.social || []).forEach(function (s) { o.appendChild(el('br')); o.appendChild(extLink(s, host(s))); });
       if (r.email) { o.appendChild(el('br')); o.appendChild(el('span', 'email', r.email)); }
-      tr.appendChild(o);
-      var s = cell('Source');
+      var s = cell(tr, 'Source');
       s.textContent = r.source === 'osm' ? 'OpenStreetMap' : 'AI web search';
       if (r.source === 'web' && !r.verified) s.appendChild(el('span', 'src warn', 'Page not among the search results: check it'));
-      tr.appendChild(s);
-      var l = cell('Link');
-      l.appendChild(extLink(r.link, r.source === 'osm' ? 'Map entry' : (host(r.link) || 'Page')));
-      tr.appendChild(l);
+      cell(tr, 'Link').appendChild(extLink(r.link, r.source === 'osm' ? 'Map entry' : (host(r.link) || 'Page')));
     };
 
     localForm.addEventListener('submit', function (ev) {
@@ -330,26 +352,16 @@
     };
     var renderTed = function (tr, r) {
       var t = r.tender || {};
-      var th = el('th', 'biz');
-      th.scope = 'row';
-      th.setAttribute('data-label', 'Tender');
+      var th = cell(tr, 'Tender', 'biz', true);
       th.appendChild(el('span', 'name', t.title));
       th.appendChild(el('span', 'src', 'Published ' + (r.published || '—') + (r.cpv && r.cpv.length ? ' · CPV ' + r.cpv.join(', ') : '')));
-      tr.appendChild(th);
-      var b = cell('Buyer');
+      var b = cell(tr, 'Buyer');
       b.appendChild(el('span', '', r.name));
-      var where = [r.city, r.country].filter(Boolean).join(', ');
+      var where = [r.city, r.country_name || r.country].filter(Boolean).join(', ');
       if (where) b.appendChild(el('span', 'src', where));
-      tr.appendChild(b);
-      var d = cell('Deadline', 'num');
-      d.textContent = t.deadline || '—';
-      tr.appendChild(d);
-      var v = cell('Estimated value', 'num');
-      v.textContent = money(t.value, t.currency);
-      tr.appendChild(v);
-      var l = cell('Notice');
-      l.appendChild(extLink(r.link, 'Notice on TED'));
-      tr.appendChild(l);
+      cell(tr, 'Deadline', 'num').textContent = t.deadline || '—';
+      cell(tr, 'Estimated value', 'num').textContent = money(t.value, t.currency);
+      cell(tr, 'Notice').appendChild(extLink(r.link, 'Notice on TED'));
     };
     tedForm.addEventListener('submit', function (ev) {
       ev.preventDefault();

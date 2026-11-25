@@ -76,7 +76,9 @@ try {
     $client = new Client(
         apiKey: (string)$cfg['anthropic_api_key'],
         baseUrl: $cfg['anthropic_base_url'] ?: null,
-        requestOptions: ['timeout' => 45, 'maxRetries' => 1],
+        // the SDK leaves timeouts to the HTTP client, so the client gets the limit (otherwise a stuck call would wait
+        // for PHP's own time limit); one retry
+        requestOptions: ['transporter' => new \GuzzleHttp\Client(['timeout' => 45, 'connect_timeout' => 10]), 'maxRetries' => 1],
     );
     $params = [
         'maxTokens' => (int)$cfg['chat_max_tokens'],

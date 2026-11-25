@@ -36,6 +36,42 @@ function finder_clean_id($v): string
     return is_string($v) && preg_match('/^[0-9a-f]{12}$/', $v) ? $v : '';
 }
 
+/** Stored AI research with every field of the right type (as finder_ai_research() writes it), or null. */
+function finder_research_shape($r): ?array
+{
+    if (!is_array($r)) {
+        return null;
+    }
+    $w = is_array($r['website'] ?? null) ? $r['website'] : [];
+    $c = is_array($r['contacts'] ?? null) ? $r['contacts'] : [];
+    $bool = static fn($v): ?bool => is_bool($v) ? $v : null;
+    $urls = static fn($v, int $n): array => is_array($v) ? array_values(array_filter(array_map('finder_url', array_slice($v, 0, $n)))) : [];
+    $sources = [];
+    foreach (is_array($r['sources'] ?? null) ? array_slice($r['sources'], 0, 8) : [] as $s) {
+        $u = is_array($s) ? finder_url($s['url'] ?? '') : '';
+        if ($u !== '') {
+            $sources[] = ['url' => $u, 'seen' => ($s['seen'] ?? false) === true];
+        }
+    }
+    return [
+        'website' => [
+            'url' => finder_url($w['url'] ?? ''),
+            'status' => is_string($w['status'] ?? null) && isset(FINDER_WEB_STATUSES[$w['status']]) ? $w['status'] : 'unknown',
+            'https' => $bool($w['https'] ?? null), 'mobile' => $bool($w['mobile'] ?? null),
+            'speed' => in_array($w['speed'] ?? '', ['fast', 'average', 'slow'], true) ? $w['speed'] : 'unknown',
+            'outdated' => $bool($w['outdated'] ?? null), 'notes' => finder_line($w['notes'] ?? '', 400),
+        ],
+        'contacts' => ['phone' => finder_phone($c['phone'] ?? ''), 'email' => finder_email($c['email'] ?? ''), 'address' => finder_line($c['address'] ?? '', 200),
+            'social' => $urls($c['social'] ?? null, 6)],
+        'score' => is_numeric($r['score'] ?? null) ? max(0, min(100, (int)$r['score'])) : 0,
+        'reasons' => is_array($r['reasons'] ?? null) ? array_values(array_filter(array_map(static fn($x) => finder_line($x, 240), array_slice($r['reasons'], 0, 6)), 'strlen')) : [],
+        'pitch' => finder_text($r['pitch'] ?? '', 700),
+        'sources' => $sources,
+        'partial' => ($r['partial'] ?? false) === true,
+        'at' => preg_match('/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/', (string)(is_string($r['at'] ?? null) ? $r['at'] : '')) ? $r['at'] : '',
+    ];
+}
+
 /** A lead with every field present and of the right type (the file may have been edited by hand). */
 function finder_lead_shape(array $l): array
 {
@@ -72,7 +108,7 @@ function finder_lead_shape(array $l): array
         'tender' => $tender,
         'score' => $score,
         'reasons' => $list($l['reasons'] ?? null, 8, 240),
-        'research' => is_array($l['research'] ?? null) ? $l['research'] : null,
+        'research' => finder_research_shape($l['research'] ?? null),
         'draft' => is_array($l['draft'] ?? null) ? ['subject' => finder_line($l['draft']['subject'] ?? '', 160), 'body' => finder_text($l['draft']['body'] ?? '', 5000),
             'lang' => finder_line($l['draft']['lang'] ?? 'en', 2), 'at' => finder_line($l['draft']['at'] ?? '', 20)] : null,
         'status' => $status,
@@ -171,6 +207,87 @@ function finder_lead_keys(array $lead): array
     return array_values(array_unique($keys));
 }
 
+/** The last 9 digits of a phone number (so +995 32 222 1111 and 032 222 1111 match), or '' when it's too short. */
+function finder_phone_key(string $phone): string
+{
+    $d = (string)preg_replace('/\D+/', '', $phone);
+    return strlen($d) >= 7 ? substr($d, -9) : '';
+}
+
+/** One business's page on a shared site (a social profile, a directory entry) as "host/path", or ''. */
+function finder_profile_key(string $url): string
+{
+    $u = finder_url($url);
+    $host = finder_host($u);
+    if ($u === '' || !finder_shared_host($host)) {
+        return '';
+    }
+    $path = strtolower(trim((string)parse_url($u, PHP_URL_PATH), '/'));
+    if ($path === 'profile.php') { // facebook.com/profile.php?id=123
+        parse_str((string)parse_url($u, PHP_URL_QUERY), $q);
+        $path = is_string($q['id'] ?? null) && ctype_digit($q['id']) ? 'profile.php?id=' . $q['id'] : '';
+    }
+    // pages that list many businesses (groups, searches, hashtags, a map search) say nothing about one of them
+    $first = explode('/', $path)[0];
+    if ($path === '' || in_array($first, ['groups', 'search', 'hashtag', 'explore', 'events', 'watch', 'results', 'share', 'sharer', 'sharer.php', 'l.php', 'tr', 'p'], true)
+        || ($first === 'maps' && !str_starts_with($path, 'maps/place/'))) {
+        return '';
+    }
+    return $host . '/' . $path;
+}
+
+/**
+ * What the do-not-contact list hashes and checks: everything finder_lead_keys() uses for duplicates, plus more ways
+ * the same business can turn up again in another search: each part of a name like "local (English)", the name
+ * without the city on its end, phone numbers, and its own social or directory pages. A business whose city wasn't
+ * known when it opted out is stored by name alone too ($store), and every row is checked against that.
+ * (Wider than duplicate detection on purpose: wrongly hiding a business costs a lead, wrongly showing it again
+ * could mean writing to someone who asked us not to.)
+ */
+function finder_dnc_keys(array $lead, bool $store = false): array
+{
+    $keys = finder_lead_keys($lead);
+    if (in_array($lead['source'] ?? '', ['upwork-track', 'tender', 'ted'], true)) {
+        return $keys;
+    }
+    $city = finder_norm((string)($lead['city'] ?? ''));
+    $name = (string)($lead['name'] ?? '');
+    $names = [$name];
+    if (preg_match('/^(.+?)\s*\((.+)\)$/u', $name, $m)) {
+        $names[] = $m[1];
+        $names[] = $m[2];
+    }
+    foreach ($names as $n) {
+        $n = finder_norm($n);
+        $forms = [$n];
+        if ($city !== '' && str_ends_with($n, ' ' . $city)) {
+            $forms[] = trim(substr($n, 0, -strlen($city) - 1));
+        }
+        foreach ($forms as $f) {
+            if (mb_strlen($f) >= 3) {
+                $keys[] = 'nc:' . $f . '|' . $city;
+                if (!$store || $city === '') {
+                    $keys[] = 'n:' . $f;
+                }
+            }
+        }
+    }
+    $research = is_array($lead['research'] ?? null) ? $lead['research'] : [];
+    foreach ([(string)($lead['phone'] ?? ''), (string)($research['contacts']['phone'] ?? '')] as $p) {
+        if (($k = finder_phone_key($p)) !== '') {
+            $keys[] = 'tel:' . $k;
+        }
+    }
+    $pages = array_merge(is_array($lead['social'] ?? null) ? $lead['social'] : [], is_array($research['contacts']['social'] ?? null) ? $research['contacts']['social'] : [],
+        [(string)($lead['website'] ?? ''), (string)($lead['evidence_url'] ?? ''), (string)($research['website']['url'] ?? '')]);
+    foreach ($pages as $u) {
+        if (is_string($u) && ($k = finder_profile_key($u)) !== '') {
+            $keys[] = 'page:' . $k;
+        }
+    }
+    return array_values(array_unique($keys));
+}
+
 function finder_dnc_hash(string $key): string
 {
     return hash('sha256', 'evosoft-dnc|' . $key);
@@ -187,7 +304,7 @@ function finder_suppressed(): array
 function finder_is_suppressed(array $row, ?array $hashes = null): bool
 {
     $hashes ??= finder_suppressed();
-    foreach (finder_lead_keys($row) as $k) {
+    foreach (finder_dnc_keys($row) as $k) {
         if (isset($hashes[finder_dnc_hash($k)])) {
             return true;
         }
@@ -285,7 +402,7 @@ function finder_lead_dnc(string $id): bool
     if ($lead === null) {
         return false;
     }
-    $keys = finder_lead_keys($lead);
+    $keys = finder_dnc_keys($lead, true);
     $ok = finder_json_change(finder_data_file('leads-suppressed.json'), static function (array $d) use ($keys): array {
         $d['v'] = 1;
         $d['hashes'] = is_array($d['hashes'] ?? null) ? $d['hashes'] : [];
@@ -437,18 +554,21 @@ function finder_leads_view(array $get): string
             $web = $l['website'] !== '' ? finder_link($l['website'], finder_host($l['website'])) . ' <span class="muted">(' . admin_h(FINDER_WEB_STATUSES[$l['website_status']]) . ')</span>'
                 : admin_h(FINDER_WEB_STATUSES[$l['website_status']]);
             $url = admin_url(['view' => 'finder', 'tab' => 'leads', 'lead' => $l['id']]);
+            // one box per cell, so the phone layout keeps each label on the left and the content on the right
             $html .= '<tr data-lead="' . admin_h($l['id']) . '">'
-                . '<th scope="row" data-label="Business"><a href="' . admin_h($url) . '">' . admin_h($l['name'] !== '' ? $l['name'] : '(no name)') . '</a>'
-                . '<span class="src">' . admin_h(implode(' · ', array_filter([$l['category'], $where, FINDER_SOURCES[$l['source']]]))) . '</span></th>'
-                . '<td data-label="Contact">' . ($contact ? implode('<br>', $contact) : '<span class="muted">—</span>') . '</td>'
-                . '<td data-label="Website">' . $web . '</td>'
-                . '<td data-label="Score" class="num" data-score>' . ($l['score'] !== null ? admin_h((string)$l['score']) : '<span class="muted">—</span>') . '</td>'
-                . '<td data-label="Status">' . finder_status_badge($l['status']) . '</td>'
-                . '<td data-label="Found">' . finder_date($l['found_at']) . '</td>'
-                . '<td data-label="Actions"><div class="row-actions">'
+                . '<th scope="row" data-label="Business"><div class="cell"><a class="name" href="' . admin_h($url) . '">' . admin_h($l['name'] !== '' ? $l['name'] : '(no name)') . '</a>'
+                . '<span class="src">' . admin_h(implode(' · ', array_filter([$l['category'], $where, FINDER_SOURCES[$l['source']]]))) . '</span>'
+                . ($l['source'] === 'upwork-track' && $l['notes'] !== '' ? '<span class="reason">' . admin_h(mb_strimwidth($l['notes'], 0, 120, '…')) . '</span>' : '')
+                . ($l['tender'] ? '<span class="reason">' . admin_h(mb_strimwidth($l['tender']['title'], 0, 140, '…')) . ($l['tender']['deadline'] !== '' ? ' · deadline ' . admin_h($l['tender']['deadline']) : '') . '</span>' : '') . '</div></th>'
+                . '<td data-label="Contact"><div class="cell">' . ($contact ? implode('<br>', $contact) : '<span class="muted">—</span>') . '</div></td>'
+                . '<td data-label="Website"><div class="cell">' . $web . '</div></td>'
+                . '<td data-label="Score" class="num"><div class="cell" data-score>' . ($l['score'] !== null ? admin_h((string)$l['score']) : '<span class="muted">—</span>') . '</div></td>'
+                . '<td data-label="Status"><div class="cell">' . finder_status_badge($l['status']) . '</div></td>'
+                . '<td data-label="Found"><div class="cell">' . finder_date($l['found_at']) . '</div></td>'
+                . '<td data-label="Actions"><div class="cell"><div class="row-actions">'
                 . (finder_lead_outreach_ok($l) && finder_ai_ready() ? '<button type="button" class="btn small" data-research="' . admin_h($l['id']) . '" hidden>Research<span class="sr-only"> ' . admin_h($l['name']) . '</span></button>' : '')
                 . '<a class="btn small plain" href="' . admin_h($url) . '">Open<span class="sr-only"> ' . admin_h($l['name']) . '</span></a></div>'
-                . '<p class="row-state small" data-state></p></td></tr>';
+                . '<p class="row-state small" data-state></p></div></td></tr>';
         }
         $html .= '</tbody></table></div>';
         if ($pages > 1) {
@@ -503,7 +623,8 @@ function finder_lead_detail_view(array $l): string
     if ($l['category'] !== '') {
         $rows[] = ['Type', admin_h($l['category'])];
     }
-    $where = trim(implode(', ', array_filter([$l['address'], $l['city'], $l['country'] !== '' ? finder_country_name($l['country']) : ''])));
+    $city = $l['city'] !== '' && mb_stripos($l['address'], $l['city']) === false ? $l['city'] : '';
+    $where = trim(implode(', ', array_filter([$l['address'], $city, $l['country'] !== '' ? finder_country_name($l['country']) : ''])));
     if ($where !== '') {
         $rows[] = ['Where', admin_h($where)];
     }
@@ -535,7 +656,7 @@ function finder_lead_detail_view(array $l): string
         $label = $l['source'] === 'upwork-track' ? 'Open on Upwork' : ($l['source'] === 'tender' ? 'Notice on TED' : finder_host($l['evidence_url']));
         $rows[] = [$l['source'] === 'web' ? 'Found on' : 'Link', finder_link($l['evidence_url'], $label)];
     }
-    if ($l['reasons']) {
+    if ($l['reasons'] && !is_array($l['research'])) { // after research, the Research card lists them
         $rows[] = ['Why it’s a lead', '<ul class="plain-list">' . implode('', array_map(static fn($r) => '<li>' . admin_h($r) . '</li>', $l['reasons'])) . '</ul>'];
     }
     $rows[] = ['Found', finder_date($l['found_at'])];
@@ -568,7 +689,7 @@ function finder_lead_detail_view(array $l): string
 
     // do not contact
     $html .= '<section class="card wide" aria-labelledby="h-dnc"><h2 id="h-dnc">Do not contact</h2>'
-        . '<p>For a business that asked not to be contacted, or that you shouldn’t contact. Its details and your notes are deleted; only scrambled identifiers (hashes of the name and city, web domain, email and map id) are kept, so later searches never bring it back.</p>'
+        . '<p>For a business that asked not to be contacted, or that you shouldn’t contact. Its details and your notes are deleted; only scrambled identifiers (hashes of its name and city, web domain, email, phone, social or directory pages and map id) are kept, so later searches and manual adds skip it.</p>'
         . '<form method="post" action="' . admin_h(admin_url(['action' => 'finder.lead_dnc'])) . '" class="stack">' . admin_csrf_field()
         . '<input type="hidden" name="id" value="' . admin_h($id) . '">'
         . '<div class="check"><input type="checkbox" id="dnc-confirm" name="confirm" value="yes" required><label for="dnc-confirm">Yes, never contact <bdi>' . admin_h($name) . '</bdi></label></div>'
@@ -647,10 +768,12 @@ function finder_draft_html(array $l): string
 {
     $d = is_array($l['draft']) ? $l['draft'] : ['subject' => '', 'body' => '', 'lang' => 'en', 'at' => ''];
     $to = $l['email'] !== '' ? $l['email'] : finder_email($l['research']['contacts']['email'] ?? '');
+    $toFromAi = $l['email'] === '' && $to !== '';
     $mailto = 'mailto:' . str_replace('%40', '@', rawurlencode($to)) . '?subject=' . rawurlencode($d['subject']) . '&body=' . rawurlencode($d['body']);
     $langs = ['en' => 'English', 'ka' => 'Georgian', 'ru' => 'Russian'];
     $html = '<section class="card wide" aria-labelledby="h-draft"><div class="card-head"><h2 id="h-draft">Draft email</h2></div>'
         . '<p class="muted small">Only a draft: nothing is ever sent from here. Read it, fix anything that isn’t right, then copy it or open it in your email app.</p>'
+        . ($to !== '' ? '<p class="small">To: <bdi class="email">' . admin_h($to) . '</bdi>' . ($toFromAi ? ' <span class="muted">(found by the AI research, not in the original listing: check it’s the business’s own address)</span>' : '') . '</p>' : '')
         . '<form method="post" action="' . admin_h(admin_url(['action' => 'finder.draft_save'])) . '" class="stack" id="draft-form" data-to="' . admin_h($to) . '">' . admin_csrf_field()
         . '<input type="hidden" name="id" value="' . admin_h($l['id']) . '">';
     if (finder_ai_ready()) {
@@ -659,7 +782,7 @@ function finder_draft_html(array $l): string
             $opts .= '<option value="' . $k . '"' . ($k === $d['lang'] ? ' selected' : '') . '>' . $label . '</option>';
         }
         $html .= '<div class="draft-ai"><div class="field"><label for="d-lang">Language</label><select id="d-lang" name="lang">' . $opts . '</select></div>'
-            . '<button type="button" class="btn" data-draft="' . admin_h($l['id']) . '" hidden>' . ($d['body'] !== '' ? 'Write a new draft (replaces this one)' : 'Write a draft with AI') . '</button></div>'
+            . '<button type="button" class="btn" data-draft="' . admin_h($l['id']) . '" hidden>' . ($d['body'] !== '' ? 'Write a new draft<span class="sr-only"> (replaces the one below)</span>' : 'Write a draft with AI') . '</button></div>'
             . '<p class="row-state" data-state-for="draft-' . admin_h($l['id']) . '"></p>';
     }
     $html .= '<div class="field"><label for="d-subject">Subject</label><input id="d-subject" name="subject" type="text" maxlength="160" value="' . admin_h($d['subject']) . '"></div>'
@@ -680,7 +803,7 @@ function finder_draft_html(array $l): string
 function finder_done(array $query, string $message, bool $ok = true, array $json = []): never
 {
     if (admin_wants_json()) {
-        admin_json(['ok' => $ok, 'message' => $message] + $json, $ok ? 200 : 400);
+        admin_json(['ok' => $ok, 'message' => $message] + ($ok ? [] : ['error' => $message]) + $json);
     }
     admin_redirect($query, $message, $ok ? 'ok' : 'error');
 }
@@ -788,8 +911,11 @@ function finder_action_lead_add(array $post): never
 function finder_action_save(array $post): never
 {
     $items = json_decode(is_string($post['items'] ?? null) ? $post['items'] : '[]', true);
-    if (!is_array($items) || !$items || count($items) > 200) {
+    if (!is_array($items) || !$items) {
         finder_fail('Select at least one row first.');
+    }
+    if (count($items) > 200) {
+        finder_fail('That’s more than 200 rows at once: save them in smaller groups.');
     }
     $rows = [];
     $missing = 0;

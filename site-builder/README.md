@@ -119,6 +119,62 @@ only advertise it. Status and notes are kept in `evosoft-data/quote-meta.json` a
 | `admin_session_minutes` | Idle time before signing out (default 30). |
 | `admin_require_https` | `true` by default; only set `false` for local testing. |
 
+### Client finder (`/admin/?view=finder`)
+
+Finds businesses that may need a website, keeps them as leads and helps you write a first email. Owner only, inside the
+admin panel. It never sends anything by itself.
+
+- **Local businesses:** pick a niche (dentists, restaurants, hotels, salons, lawyers, …) and a city.
+  - OpenStreetMap lists the businesses there that have no website on the map. It goes through the public Overpass
+    service only (about 80 searches and 10 MB a day, cached for 24 hours, credited "© OpenStreetMap contributors").
+  - AI web search (Claude, with your `anthropic_api_key`) finds ones with no site, only a social page, or a weak site.
+  - Tick the ones you want and save them as leads.
+- **Leads:** status (new, contacted, replied, won, lost, not interested), notes and CSV export, plus three actions:
+  - **Research:** the AI checks the business's website and public contacts, and gives a fit score with a suggested
+    pitch.
+  - **Draft email:** a short personal first email in English, Georgian or Russian. It always ends with where you found
+    their details and an easy opt-out; the panel adds those lines itself if the AI leaves them out. You edit it and send
+    it from your own mail app.
+  - **Do not contact:** deletes the business and keeps only scrambled identifiers (name and city, domain, email, phone,
+    social pages, map id), so later searches never bring it back.
+- **Upwork:** searches new "need a website" job posts through Upwork's official API, only when you press Search.
+  Reply to those clients on Upwork: moving them off Upwork before a contract is against its terms. Upwork content is
+  reused for an hour and deleted within 24 hours by the daily clean-up; "Track" keeps only the job link, your note and
+  the date. Setting it up:
+  - Apply for an API key at https://www.upwork.com/developer/keys/apply with your agency selected. Upwork requires
+    $25,000 in lifetime earnings or spend, a 90%+ Job Success Score and identity verification; approval takes about a
+    week.
+  - Choose key type OAuth 2.0 and the scopes "Common Entities - Read-Only Access" and "Read marketplace Job Postings".
+    The callback URL is `upwork_redirect_uri` exactly (the Upwork tab shows it with a Copy button).
+  - Add `upwork_client_id` and `upwork_client_secret`, then press Connect in the Upwork tab. After about two weeks
+    without a search, connect again.
+- **Tenders:** EU public tenders (TED) for web design, software and IT work, by country and date, saved as leads in one
+  click. Georgia's procurement portal has no feed you may use automatically, so there is a button to its search page.
+- **Daily limits** keep costs down: `finder_ai_daily_limit` AI calls a day (default 40; a search or research is usually
+  one call). The usage line at the bottom shows what's left.
+- **Privacy:** the legal page's "Businesses we may contact" section describes this. Leads are deleted
+  `leads_keep_months` (6) after they were found unless you won them. Contact businesses only; Georgian law may require
+  consent before direct marketing to individuals (sole traders count), so check with a lawyer before any mass outreach.
+- **First check after uploading:** search "Dentists" in Tbilisi with OpenStreetMap only. The map service couldn't be
+  reached from the build machine, so this is its first live test.
+- The daily clean-up cron (`api/housekeeping.php`, see Quote form) also deletes old leads and cached results. Make sure
+  it runs every day: on quiet days it is what keeps Upwork content under 24 hours.
+
+| Setting | What it does |
+|---|---|
+| `finder_model`, `finder_effort` | The AI model and effort for the finder (default `claude-opus-5-5`, `medium`). |
+| `finder_ai_daily_limit` | AI calls a day in all (default 40). |
+| `leads_keep_months` | Leads are deleted this many months after they were found, unless won (default 6). |
+| `overpass_url`, `finder_user_agent` | The OpenStreetMap service and how the finder identifies itself to it. |
+| `upwork_client_id`, `upwork_client_secret`, `upwork_redirect_uri` | Your Upwork API key (see above). |
+
+Data, all private in `evosoft-data/` and saved safely (a crash can't leave a half-written file): `leads.json`,
+`leads-suppressed.json` (hashes only), `finder-usage.json`, `finder-cache/`, and `upwork-token.json` (encrypted with a
+key from `upwork_client_secret`: after changing the secret, connect Upwork again).
+
+The older `Lead Radar` app at the top of this repository (`server.js`, `public/`) is replaced by the client finder.
+Don't put it online: it has no sign-in, so anyone who finds it can use your Anthropic key.
+
 ### How the assistant works
 
 - It knows what's on the site: company, services, process, FAQ, every product and every demo account. That knowledge

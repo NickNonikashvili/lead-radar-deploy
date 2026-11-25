@@ -1,5 +1,9 @@
 # Lead Radar — deployment guide
 
+> **Superseded.** The client finder in the EvoSoft admin panel (`evosoft-site/admin/`, see `site-builder/README.md`,
+> "Client finder") replaces this app. Don't put this app online as it is: it has no sign-in, so anyone who finds its
+> address can read and overwrite the leads and spend your Anthropic API key.
+
 A small Node/Express app: three AI agents (discover, research + score, draft outreach) for
 finding web-design clients. No external CRM, no build step.
 

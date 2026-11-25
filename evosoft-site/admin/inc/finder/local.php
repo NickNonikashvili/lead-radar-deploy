@@ -3,7 +3,8 @@
  * EvoSoft admin panel, client finder: the Local businesses tab. Two sources, each its own request from finder.js:
  *   - OpenStreetMap through the Overpass API (never Nominatim): named businesses of a type, in a city, with no
  *     website tag. The city is found by name with an Overpass area query inside the country's area.
- *     Fair use: about 80 queries and 10 MB a day in all, one query at a time, a 24-hour cache, an honest User-Agent,
+ *     Fair use: about 80 queries and 10 MB a day in all, one query at a time ([out:json][timeout:25], out tags center),
+ *     a 24-hour cache, an honest User-Agent,
  *     a pause after 429 and a day's stop after 406. Attribution "© OpenStreetMap contributors" wherever it's shown.
  *   - AI web search (ai.php).
  * © 2026 EvoSoft Solutions. All rights reserved.
@@ -100,7 +101,7 @@ function finder_ql_str(string $s): string
 function finder_osm_query(string $niche, string $city, string $country): string
 {
     $variants = array_values(array_unique([$city, mb_convert_case($city, MB_CASE_TITLE, 'UTF-8')]));
-    $q = "[out:json][timeout:20][maxsize:134217728];\n";
+    $q = "[out:json][timeout:25][maxsize:134217728];\n";
     $q .= 'area["ISO3166-1"=' . finder_ql_str($country) . '][admin_level="2"]->.country;' . "\n(\n";
     foreach ($variants as $v) {
         foreach (['name', 'name:en'] as $key) {
@@ -126,24 +127,32 @@ function finder_overpass_run(string $ql)
     $u = finder_usage();
     if ($u['overpass_pause_until'] > time()) {
         $wait = $u['overpass_pause_until'] - time();
-        return $u['overpass_pause_why'] . ' Try again ' . ($wait > 3600 ? 'tomorrow' : 'in ' . max(1, (int)ceil($wait / 60)) . ' minutes') . '.';
+        $min = max(1, (int)ceil($wait / 60));
+        return $u['overpass_pause_why'] . ' Try again ' . ($wait > 3600 ? 'tomorrow' : 'in ' . ($min === 1 ? 'a minute' : $min . ' minutes')) . '.';
     }
-    if ($u['overpass_bytes'] >= FINDER_OSM_DAILY_BYTES) {
+    // what's left of today's 10 MB: one search may use it up, but never go past it
+    $bytesLeft = FINDER_OSM_DAILY_BYTES - $u['overpass_bytes'];
+    if ($bytesLeft < 262144) {
         return 'Today’s OpenStreetMap allowance (10 MB) is used up. Searches already made stay available from the cache; new ones work again tomorrow (UTC).';
     }
-    if (!finder_usage_take('overpass')) {
-        return 'Today’s OpenStreetMap allowance (' . FINDER_OSM_DAILY . ' searches) is used up. It resets at midnight UTC.';
-    }
+    // the lock first, so a search refused because another one is running doesn't use up one of the day's searches
     $lock = finder_lock('overpass');
     if ($lock === false) {
         return 'Another OpenStreetMap search is still running. Wait for it to finish, then try again.';
     }
-    $r = finder_http('POST', finder_cfg()['overpass_url'], ['Content-Type: application/x-www-form-urlencoded', 'Accept: application/json',
-        'Referer: https://evosoft.solutions/admin/'], http_build_query(['data' => $ql]), 50, 8 * 1024 * 1024);
-    if (is_resource($lock)) {
-        flock($lock, LOCK_UN);
-        fclose($lock);
+    $release = static function () use ($lock): void {
+        if (is_resource($lock)) {
+            flock($lock, LOCK_UN);
+            fclose($lock);
+        }
+    };
+    if (!finder_usage_take('overpass')) {
+        $release();
+        return 'Today’s OpenStreetMap allowance (' . FINDER_OSM_DAILY . ' searches) is used up. It resets at midnight UTC.';
     }
+    $r = finder_http('POST', finder_cfg()['overpass_url'], ['Content-Type: application/x-www-form-urlencoded', 'Accept: application/json',
+        'Referer: https://evosoft.solutions/admin/'], http_build_query(['data' => $ql]), 60, min(8 * 1024 * 1024, $bytesLeft)); // up to 15 s queue + 15 s admission + 25 s run
+    $release();
     finder_usage_take('overpass_bytes', max(0, $r['bytes'] ?: strlen($r['body'])), true);
     $st = $r['status'];
     if ($st === 406) {
@@ -268,7 +277,7 @@ function finder_action_local_osm(array $post): never
     if ($in['niche'] === 'other') {
         finder_fail('OpenStreetMap needs a type from the list (it searches by map tags). The AI web search can use your own words.', 422);
     }
-    finder_long_request(75);
+    finder_long_request(85);
     $ql = finder_osm_query($in['niche'], $in['city'], $in['country']);
     $cached = finder_cache_get('osm', $ql);
     $fromCache = $cached !== null;
@@ -340,6 +349,7 @@ function finder_rows_for_page(array $rows): array
             }
         }
         $r['saved'] = $lead;
+        $r['country_name'] = finder_country_name((string)($r['country'] ?? ''));
         unset($r['quality'], $r['osm']);
         $out[] = $r;
     }
@@ -389,7 +399,7 @@ function finder_usage_public(): array
 function finder_usage_html(): string
 {
     $u = finder_usage_public();
-    return '<p class="usage small muted" id="finder-usage">Used today (UTC): AI searches <span data-u="ai">' . $u['ai'] . '</span> of ' . $u['aiLimit']
+    return '<p class="usage small muted" id="finder-usage">Used today (UTC): AI calls <span data-u="ai">' . $u['ai'] . '</span> of ' . $u['aiLimit']
         . ' · OpenStreetMap <span data-u="overpass">' . $u['overpass'] . '</span> of ' . $u['overpassLimit'] . ' (<span data-u="overpassMb">' . $u['overpassMb'] . '</span> of 10 MB)'
         . ' · TED <span data-u="ted">' . $u['ted'] . '</span> of ' . $u['tedLimit'] . '</p>';
 }

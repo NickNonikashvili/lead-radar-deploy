@@ -1,0 +1,137 @@
+/* EvoSoft admin panel: the client finder (?view=finder). Built on admin.css (its tokens, cards, buttons, fields,
+   tables and tabs); loaded after it. The panel's CSP allows no inline styles. © 2026 EvoSoft Solutions. */
+
+/* admin.css gives .btn, .field and others a display, which would beat the browser's own [hidden] rule */
+[hidden] { display: none !important; }
+
+.finder-tabs { margin-bottom: 16px; }
+.finder { display: grid; gap: 18px; grid-template-columns: minmax(0, 1fr); }
+.finder .table-wrap { overflow-x: auto; }
+.finder > .card, .finder > section { min-width: 0; }
+.finder h2 { font-size: 1.15rem; }
+.finder h3 { font-size: 1.02rem; margin: 0 0 4px; overflow-wrap: anywhere; }
+.page-head.sub { margin-bottom: 4px; }
+.page-head.sub h2 { font-size: 1.3rem; margin-bottom: 4px; }
+.lead-name { font-size: 1.45rem !important; overflow-wrap: anywhere; }
+.card-head { display: flex; align-items: center; justify-content: space-between; gap: 10px 16px; flex-wrap: wrap; margin-bottom: 8px; }
+.card-head h2 { margin: 0; }
+
+/* the rules box above every finder page */
+.compliance { background: var(--cream-2); border: 1px solid var(--line); border-left: 4px solid var(--coral-deep); border-radius: 12px; padding: 12px 16px; margin: 0 0 18px; }
+.compliance h2 { font-size: 0.95rem; margin: 0 0 6px; }
+.compliance ul { margin: 0; padding-left: 1.2em; display: grid; gap: 2px; font-size: 0.92rem; color: var(--ink-2); }
+
+/* forms */
+.finder-form { display: grid; gap: 16px; }
+.form-grid { display: grid; gap: 14px 16px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 210px), 1fr)); align-items: start; }
+form.form-grid .span2 { grid-column: 1 / -1; }
+.form-grid .align-end { align-self: end; min-height: 44px; align-items: center; }
+input[type="number"], input[type="url"] {
+  width: 100%; min-height: 44px; padding: 10px 12px; border: 1.5px solid var(--line-strong); border-radius: 10px; background: var(--paper);
+  color: var(--ink); font: inherit;
+}
+input[type="number"]:focus-visible, input[type="url"]:focus-visible { outline: 3px solid var(--focus); outline-offset: 1px; border-color: var(--navy); }
+fieldset.checks { border: 1px solid var(--line); border-radius: 12px; padding: 10px 14px 12px; margin: 0; min-width: 0; display: grid; gap: 6px; }
+fieldset.checks legend { font-weight: 650; font-size: 0.93rem; padding: 0 6px; }
+fieldset.checks.cols { grid-template-columns: repeat(auto-fill, minmax(min(100%, 230px), 1fr)); gap: 6px 16px; }
+.finder .check { min-height: 44px; align-items: center; }
+.finder .check input { accent-color: var(--navy); margin-top: 0; }
+.finder .danger .check input { accent-color: var(--danger); }
+.finder .check label { font-weight: 550; }
+.finder .check .muted { font-weight: 450; }
+details.countries { border: 1px solid var(--line); border-radius: 12px; padding: 0 14px; }
+details.countries > summary { cursor: pointer; font-weight: 650; font-size: 0.93rem; padding: 12px 0; }
+details.countries[open] { padding-bottom: 12px; }
+details.countries fieldset.checks { border: 0; padding: 0; }
+
+/* progress of each step, and the per-row state */
+.progress { list-style: none; margin: 0 0 12px; padding: 0; display: grid; gap: 6px; }
+.progress li, .row-state.is-running, .row-state.is-done, .row-state.is-error { position: relative; padding-left: 26px; }
+.progress li::before, .row-state.is-running::before, .row-state.is-done::before, .row-state.is-error::before {
+  content: ''; position: absolute; left: 2px; top: 0.25em; width: 14px; height: 14px; border-radius: 50%; box-sizing: border-box;
+}
+.progress li.is-running::before, .row-state.is-running::before { border: 2.5px solid var(--line-strong); border-top-color: var(--navy); }
+.progress li.is-done::before, .row-state.is-done::before { background: #1E7A3C; }
+.progress li.is-error::before, .row-state.is-error::before { background: var(--danger); }
+.progress li.is-error, .row-state.is-error { color: var(--err-ink); }
+.row-state { margin: 6px 0 0; font-size: 0.9rem; overflow-wrap: anywhere; }
+.row-state:empty { display: none; }
+.btn.is-busy { cursor: progress; opacity: 0.85; }
+.finder .btn { white-space: normal; text-align: center; line-height: 1.2; padding-top: 6px; padding-bottom: 6px; } /* long labels wrap on small phones */
+@media (prefers-reduced-motion: no-preference) {
+  .progress li.is-running::before, .row-state.is-running::before { animation: finder-spin 0.9s linear infinite; }
+}
+@keyframes finder-spin { to { transform: rotate(360deg); } }
+
+/* results tables */
+.results-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; margin: 0 0 12px; }
+.results-tools .check { min-height: 44px; }
+.results-more { margin: 12px 0 0; }
+.results-table td.sel, .results-table th:first-child { width: 48px; }
+.results-table td.sel input { width: 22px; height: 22px; accent-color: var(--navy); margin: 0; }
+.results-table .biz .name, .leads th .name { display: block; font-weight: 650; overflow-wrap: anywhere; }
+.list .reason { display: block; font-weight: 450; font-size: 0.85rem; color: var(--ink-2); margin-top: 2px; }
+.list .src.warn { color: var(--err-ink); }
+.finder .list td, .finder .list th { overflow-wrap: break-word; }
+.finder .list td.tel { white-space: nowrap; }
+.finder .list .cell { min-width: 0; }
+.finder .list .name, .finder .list .reason, .finder .list .src, .finder .list .email { overflow-wrap: anywhere; }
+@media (max-width: 760px) { .finder .list tbody th::before { align-self: start; } }
+.ws { font-weight: 600; }
+.ws-none, .ws-social_only { color: var(--navy); }
+.ws-weak { color: #7A4B00; }
+.ws-ok { color: var(--ink-2); }
+.badge.fst-saved { text-decoration: none; background: #D6EEDC; }
+.osm-credit { margin: 12px 0 0; color: var(--muted); }
+.osm-credit a { color: var(--navy); }
+
+/* lead status badges (text, plus a colour) */
+.fst-new { background: #FFE0DB; }
+.fst-new::before { background: var(--coral-deep); opacity: 1; }
+.fst-contacted { background: #DDE7F8; }
+.fst-replied { background: #FBEBC4; }
+.fst-won { background: #D6EEDC; }
+.fst-won::before { background: #1E7A3C; opacity: 1; }
+.fst-lost, .fst-not-interested { background: #E7E4DE; color: #3B4252; }
+.leads .row-actions { gap: 6px; }
+
+/* one lead */
+.plain-list { margin: 0; padding-left: 1.1em; }
+.plain-list li { margin-bottom: 2px; }
+.pitch { margin: 0; }
+.draft-ai { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px 14px; }
+.draft-ai .field { flex: 0 1 200px; }
+.checklist { background: var(--cream-2); border: 1px solid var(--line); border-radius: 10px; padding: 10px 14px; }
+.checklist p { margin: 0 0 4px; }
+.checklist ul { margin: 0; padding-left: 1.2em; }
+#d-body { min-height: 260px; }
+
+/* Upwork jobs */
+.jobs { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+.job.card { padding: 14px 16px; box-shadow: none; }
+.job .meta-line { margin: 0 0 6px; font-size: 0.9rem; }
+.job p { margin: 0 0 6px; }
+.snippet { overflow-wrap: anywhere; }
+.chips { list-style: none; margin: 0 0 8px; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.chips li { font-size: 0.82rem; font-weight: 600; padding: 2px 10px; border-radius: 999px; background: var(--cream); color: var(--navy); }
+.track { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; margin-top: 10px; }
+.track label { font-weight: 600; font-size: 0.9rem; }
+.track input { flex: 1 1 220px; width: auto; }
+.note { background: #FFF8E6; border: 1px solid #D9B44A; border-radius: 10px; padding: 10px 14px; }
+.steps code, .finder code { background: var(--cream); padding: 1px 6px; border-radius: 6px; }
+
+.usage { margin: 0; }
+
+@media (max-width: 760px) {
+  .finder .list td, .finder .list th { overflow-wrap: anywhere; }
+  .finder .list td.tel { white-space: normal; }
+  .results-table td.sel, .results-table th:first-child { width: auto; }
+  .leads td .row-actions { justify-content: flex-start; }
+  .card-head { align-items: flex-start; }
+}
+@media (pointer: coarse) {
+  .results-table td.sel input { width: 28px; height: 28px; }
+}
+@media print {
+  .compliance, .finder-tabs, .results-tools { display: none !important; }
+}

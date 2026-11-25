@@ -322,48 +322,30 @@ function evo_finder_housekeeping(string $dir, array $cfg): void
     }
     $months = (int)($cfg['leads_keep_months'] ?? 6);
     $file = $dir . '/leads.json';
-    if ($months > 0 && @is_file($file) && ($fh = @fopen($file, 'c+')) !== false) {
+    if ($months > 0 && @is_file($file)) {
         $cutoff = gmdate('Y-m-d\TH:i:s\Z', (int)strtotime("-$months months", $now));
-        if (flock($fh, LOCK_EX)) {
-            $data = json_decode((string)stream_get_contents($fh), true);
-            if (is_array($data) && is_array($data['leads'] ?? null)) {
-                $keep = array_values(array_filter($data['leads'], static function ($l) use ($cutoff): bool {
-                    $found = is_array($l) && is_string($l['found_at'] ?? null) ? $l['found_at'] : '';
-                    // keep a lead that was won, or that can't be dated (rather than guess)
-                    return !preg_match('/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/', $found) || strcmp($found, $cutoff) >= 0 || ($l['status'] ?? '') === 'won';
-                }));
-                if (count($keep) !== count($data['leads'])) {
-                    $data['leads'] = $keep;
-                    $json = json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_INVALID_UTF8_SUBSTITUTE) . "\n";
-                    ftruncate($fh, 0);
-                    rewind($fh);
-                    fwrite($fh, $json);
-                    fflush($fh);
-                }
+        evo_json_change($file, static function (array $data) use ($cutoff): array {
+            if (!is_array($data['leads'] ?? null)) {
+                return [null, null];
             }
-            flock($fh, LOCK_UN);
-        }
-        fclose($fh);
+            $data['leads'] = array_values(array_filter($data['leads'], static function ($l) use ($cutoff): bool {
+                $found = is_array($l) && is_string($l['found_at'] ?? null) ? $l['found_at'] : '';
+                // keep a lead that was won, or that can't be dated (rather than guess)
+                return !preg_match('/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/', $found) || strcmp($found, $cutoff) >= 0 || ($l['status'] ?? '') === 'won';
+            }));
+            return [$data, null];
+        });
     }
     $usage = $dir . '/finder-usage.json';
-    if (@is_file($usage) && ($fh = @fopen($usage, 'c+')) !== false) {
-        if (flock($fh, LOCK_EX)) {
-            $u = json_decode((string)stream_get_contents($fh), true);
-            if (is_array($u) && is_array($u['days'] ?? null)) {
-                $week = gmdate('Y-m-d', $now - 7 * 86400);
-                $days = array_filter($u['days'], static fn($k): bool => is_string($k) && $k >= $week, ARRAY_FILTER_USE_KEY);
-                if (count($days) !== count($u['days'])) {
-                    $u['days'] = $days;
-                    $json = json_encode($u, JSON_UNESCAPED_SLASHES) . "\n";
-                    ftruncate($fh, 0);
-                    rewind($fh);
-                    fwrite($fh, $json);
-                    fflush($fh);
-                }
+    if (@is_file($usage)) {
+        $week = gmdate('Y-m-d', $now - 7 * 86400);
+        evo_json_change($usage, static function (array $u) use ($week): array {
+            if (!is_array($u['days'] ?? null)) {
+                return [null, null];
             }
-            flock($fh, LOCK_UN);
-        }
-        fclose($fh);
+            $u['days'] = array_filter($u['days'], static fn($k): bool => is_string($k) && $k >= $week, ARRAY_FILTER_USE_KEY);
+            return [$u, null];
+        }, JSON_UNESCAPED_SLASHES);
     }
 }
 
@@ -1041,19 +1023,90 @@ function evo_quote_find(string $id): ?array
     return null;
 }
 
+/**
+ * Reads a JSON data file kept by evo_json_change() (the requests' notes, leads, the finder's counters); [] when it is
+ * missing. No lock is needed: evo_json_change() replaces the file whole, so a reader always sees a complete version.
+ */
+function evo_json_read(string $file): array
+{
+    $raw = @file_get_contents($file);
+    $data = is_string($raw) && trim($raw) !== '' ? json_decode($raw, true) : null;
+    return is_array($data) ? $data : [];
+}
+
+/**
+ * Changes a JSON data file safely. Only one change runs at a time (an exclusive lock on "<file>.lock"), and the new
+ * content is written to a temporary file that is then renamed over the old one, so a crash or a timeout in the middle
+ * of a save can never leave the file half-written or empty. A file that can't be read as JSON is first copied to
+ * "<file>.broken-<time>" (and logged) rather than silently replaced.
+ * $change gets the current data and returns [$newData, $result]; when $newData is not an array or is unchanged,
+ * nothing is written. Returns [$ok, $result]; $ok is false when the lock or the write failed (then $result is null).
+ */
+function evo_json_change(string $file, callable $change, int $flags = JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_INVALID_UTF8_SUBSTITUTE): array
+{
+    $old = umask(0077);
+    $lock = @fopen($file . '.lock', 'c');
+    umask($old);
+    if ($lock === false) {
+        error_log('EvoSoft: cannot open the lock for ' . basename($file));
+        return [false, null];
+    }
+    if (!flock($lock, LOCK_EX)) {
+        fclose($lock);
+        return [false, null];
+    }
+    try {
+        clearstatcache(true, $file);
+        $data = [];
+        if (is_file($file)) {
+            $raw = @file_get_contents($file);
+            if ($raw === false) {
+                error_log('EvoSoft: cannot read ' . basename($file));
+                return [false, null];
+            }
+            if (trim($raw) !== '') {
+                $decoded = json_decode($raw, true);
+                if (is_array($decoded)) {
+                    $data = $decoded;
+                } else {
+                    $copy = $file . '.broken-' . gmdate('YmdHis');
+                    @copy($file, $copy);
+                    @chmod($copy, 0600);
+                    error_log('EvoSoft: ' . basename($file) . ' was not valid JSON; a copy is kept as ' . basename($copy));
+                }
+            }
+        }
+        [$new, $result] = $change($data);
+        if (!is_array($new) || $new === $data) {
+            return [true, $result];
+        }
+        $json = json_encode($new, $flags);
+        if (!is_string($json)) {
+            error_log('EvoSoft: could not encode ' . basename($file));
+            return [false, null];
+        }
+        $json .= "\n";
+        $tmp = $file . '.' . bin2hex(random_bytes(6)) . '.tmp';
+        $old = umask(0077);
+        $written = @file_put_contents($tmp, $json) === strlen($json);
+        umask($old);
+        if (!$written || !@rename($tmp, $file)) {
+            @unlink($tmp);
+            error_log('EvoSoft: could not save ' . basename($file));
+            return [false, null];
+        }
+        @chmod($file, 0600);
+        return [true, $result];
+    } finally {
+        flock($lock, LOCK_UN);
+        fclose($lock);
+    }
+}
+
 /** The admin panel's data per request: [id => ['status' => ..., 'notes' => ..., 'updated_at' => ...]]. */
 function evo_quote_meta_all(): array
 {
-    // read under a shared lock: a save in progress empties the file before writing it again
-    $fh = @fopen(evo_data_dir() . '/quote-meta.json', 'r');
-    if ($fh === false) {
-        return [];
-    }
-    $raw = flock($fh, LOCK_SH) ? stream_get_contents($fh) : false;
-    flock($fh, LOCK_UN);
-    fclose($fh);
-    $meta = is_string($raw) ? json_decode($raw, true) : null;
-    return is_array($meta) ? $meta : [];
+    return evo_json_read(evo_data_dir() . '/quote-meta.json');
 }
 
 /** The admin data of one request, with defaults (status "new", no notes). */
@@ -1064,31 +1117,11 @@ function evo_quote_meta(array $all, string $id): array
     return ['status' => $status, 'notes' => is_string($m['notes'] ?? null) ? $m['notes'] : '', 'updated_at' => is_string($m['updated_at'] ?? null) ? $m['updated_at'] : ''];
 }
 
-/** Changes quote-meta.json under an exclusive lock: $change gets the whole array and returns the new one. */
+/** Changes quote-meta.json safely (evo_json_change): $change gets the whole array and returns the new one. */
 function evo_quote_meta_change(callable $change): bool
 {
-    $file = evo_data_dir() . '/quote-meta.json';
-    $fh = @fopen($file, 'c+');
-    if ($fh === false) {
-        return false;
-    }
-    $ok = false;
-    if (flock($fh, LOCK_EX)) {
-        $meta = json_decode((string)stream_get_contents($fh), true);
-        $meta = is_array($meta) ? $meta : [];
-        $new = $change($meta);
-        if (is_array($new) && $new !== $meta) {
-            $json = json_encode((object)$new, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT) . "\n";
-            ftruncate($fh, 0);
-            rewind($fh);
-            $ok = fwrite($fh, $json) === strlen($json);
-            fflush($fh);
-        } else {
-            $ok = true;
-        }
-        flock($fh, LOCK_UN);
-    }
-    fclose($fh);
+    [$ok] = evo_json_change(evo_data_dir() . '/quote-meta.json', static fn(array $meta): array => [$change($meta), null],
+        JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT | JSON_INVALID_UTF8_SUBSTITUTE);
     return $ok;
 }
 

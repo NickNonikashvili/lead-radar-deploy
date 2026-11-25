@@ -87,9 +87,19 @@ function finder_upw_token_unreadable(): bool
     return is_file(finder_upw_token_file()) && finder_upw_token_load() === null;
 }
 
+/** A token as Upwork sends it: printable ASCII, no spaces (it goes into an HTTP header), at most 4 KB. */
+function finder_upw_token_ok($v): bool
+{
+    return is_string($v) && $v !== '' && strlen($v) <= 4096 && preg_match('/^[\x21-\x7E]+$/', $v) === 1;
+}
+
 /** Saves a token response (keeping the old refresh token only if Upwork sent no new one). Returns the token or null. */
 function finder_upw_token_save(array $resp, ?array $prev = null): ?array
 {
+    if (!finder_upw_token_ok($resp['access_token'] ?? null) || (isset($resp['refresh_token']) && !finder_upw_token_ok($resp['refresh_token']))) {
+        error_log('EvoSoft finder: Upwork sent a token in an unexpected format; it was not saved.');
+        return null;
+    }
     $t = [
         'access_token' => (string)$resp['access_token'],
         'refresh_token' => (string)($resp['refresh_token'] ?? ($prev['refresh_token'] ?? '')),
@@ -112,14 +122,25 @@ function finder_upw_forget(): void
     }
 }
 
-/** Runs $fn holding the token lock (so two refreshes never race: the second would use a spent refresh token). */
-function finder_upw_locked(callable $fn)
+/**
+ * Runs $fn holding the token lock (so two refreshes never race: the second would use a spent refresh token).
+ * Waits for the lock until $deadline (microtime) at most, so a slow refresh elsewhere can't stretch this request.
+ */
+function finder_upw_locked(callable $fn, ?float $deadline = null)
 {
+    $deadline ??= microtime(true) + 25;
     $old = umask(0077);
     $fh = @fopen(finder_upw_token_file() . '.lock', 'c');
     umask($old);
-    if ($fh === false || !flock($fh, LOCK_EX)) {
+    if ($fh === false) {
         return 'The Upwork sign-in file couldn’t be locked (is the data folder writable?).';
+    }
+    while (!flock($fh, LOCK_EX | LOCK_NB)) {
+        if (finder_left($deadline) < 1) {
+            fclose($fh);
+            return 'Another Upwork step is still renewing the sign-in. Try again in a minute.';
+        }
+        usleep(100000);
     }
     try {
         return $fn();
@@ -129,12 +150,12 @@ function finder_upw_locked(callable $fn)
     }
 }
 
-/** POSTs to Upwork's token endpoint. */
-function finder_upw_token_post(array $form): array
+/** POSTs to Upwork's token endpoint, within $timeout seconds (20 at most). */
+function finder_upw_token_post(array $form, float $timeout = 20): array
 {
     $c = finder_cfg();
     $r = finder_http('POST', FINDER_UPWORK_TOKEN_URL, ['Content-Type: application/x-www-form-urlencoded', 'Accept: application/json'],
-        http_build_query($form + ['client_id' => $c['upwork_client_id'], 'client_secret' => $c['upwork_client_secret']]), 20, 65536);
+        http_build_query($form + ['client_id' => $c['upwork_client_id'], 'client_secret' => $c['upwork_client_secret']]), max(2, min(20, $timeout)), 65536);
     return [$r['status'], json_decode($r['body'], true), $r['body'], $r['error']];
 }
 
@@ -164,37 +185,44 @@ function finder_upw_token_error(int $status, $j, string $raw, string $err): stri
 function finder_upw_exchange(string $code): bool|string
 {
     [$st, $j, $raw, $err] = finder_upw_token_post(['grant_type' => 'authorization_code', 'code' => $code, 'redirect_uri' => finder_cfg()['upwork_redirect_uri']]);
-    if ($st !== 200 || !is_array($j) || !is_string($j['access_token'] ?? null) || $j['access_token'] === '') {
+    if ($st !== 200 || !is_array($j) || !finder_upw_token_ok($j['access_token'] ?? null)) {
         return finder_upw_token_error($st, $j, $raw, $err);
     }
     $saved = finder_upw_locked(static fn() => finder_upw_token_save($j));
     return is_array($saved) ? true : 'Connected, but the sign-in couldn’t be saved (is the data folder writable?).';
 }
 
-/** A valid access token, refreshed if it's about to expire (or always with $force). Token array or an error. */
-function finder_upw_access(bool $force = false): array|string
+/**
+ * A valid access token, refreshed if it's about to expire, or if it is $stale (the token Upwork just refused).
+ * Everything, waiting for the lock included, stays inside $deadline (microtime). Token array or an error.
+ */
+function finder_upw_access(float $deadline, ?string $stale = null): array|string
 {
     $t = finder_upw_token_load();
     if ($t === null) {
         return 'Upwork isn’t connected. Connect it first.';
     }
-    if (!$force && (int)$t['expires_at'] - time() > 300) {
+    $fresh = static fn(array $t): bool => (int)$t['expires_at'] - time() > 300 && ($stale === null || !hash_equals($stale, (string)$t['access_token']));
+    if ($fresh($t)) {
         return $t;
     }
-    return finder_upw_locked(static function () use ($force) {
+    return finder_upw_locked(static function () use ($fresh, $deadline) {
         $t = finder_upw_token_load(); // read again inside the lock: another request may have refreshed it already
         if ($t === null) {
             return 'Upwork isn’t connected. Connect it first.';
         }
-        if (!$force && (int)$t['expires_at'] - time() > 300) {
+        if ($fresh($t)) {
             return $t;
         }
         if (($t['refresh_token'] ?? '') === '') {
             finder_upw_forget();
             return 'The Upwork sign-in has expired. Connect Upwork again.';
         }
-        [$st, $j, $raw, $err] = finder_upw_token_post(['grant_type' => 'refresh_token', 'refresh_token' => $t['refresh_token']]);
-        if ($st === 200 && is_array($j) && is_string($j['access_token'] ?? null) && $j['access_token'] !== '') {
+        if (finder_left($deadline) < 3) {
+            return 'Upwork didn’t answer in time. Try again in a few minutes.';
+        }
+        [$st, $j, $raw, $err] = finder_upw_token_post(['grant_type' => 'refresh_token', 'refresh_token' => $t['refresh_token']], finder_left($deadline));
+        if ($st === 200 && is_array($j) && finder_upw_token_ok($j['access_token'] ?? null)) {
             return finder_upw_token_save($j, $t) ?? 'The new Upwork sign-in couldn’t be saved (is the data folder writable?).';
         }
         $msg = finder_upw_token_error($st, $j, $raw, $err);
@@ -202,25 +230,31 @@ function finder_upw_access(bool $force = false): array|string
             finder_upw_forget();
         }
         return $msg;
-    });
+    }, $deadline);
 }
 
-/** One GraphQL call. Returns data, or an error message. A 401 refreshes once and tries again. */
-function finder_upw_graphql(string $query, array $vars, float $timeout, bool $retried = false): array|string
+/**
+ * One GraphQL call, finished by $deadline (microtime; each call 20 s at most). Returns data, or an error message.
+ * A 401 refreshes the sign-in once and tries again, if there is time left.
+ */
+function finder_upw_graphql(string $query, array $vars, float $deadline, bool $retried = false): array|string
 {
-    $t = finder_upw_access();
+    $t = finder_upw_access($deadline);
     if (is_string($t)) {
         return $t;
+    }
+    if (finder_left($deadline) < 3) {
+        return 'Upwork didn’t answer in time.';
     }
     if (!finder_usage_take('upwork')) {
         return 'Today’s Upwork allowance (' . FINDER_UPWORK_DAILY . ' calls) is used up. It resets at midnight UTC.';
     }
     $r = finder_http('POST', FINDER_UPWORK_GRAPHQL_URL, ['Authorization: Bearer ' . $t['access_token'], 'Content-Type: application/json', 'Accept: application/json'],
-        json_encode(['query' => $query, 'variables' => (object)$vars], JSON_UNESCAPED_SLASHES), $timeout, 4 * 1024 * 1024);
+        json_encode(['query' => $query, 'variables' => (object)$vars], JSON_UNESCAPED_SLASHES), min(20, finder_left($deadline)), 4 * 1024 * 1024);
     $st = $r['status'];
-    if ($st === 401 && !$retried) {
-        $t = finder_upw_access(true);
-        return is_string($t) ? $t : finder_upw_graphql($query, $vars, max(5, $timeout - 5), true);
+    if ($st === 401 && !$retried && finder_left($deadline) >= 8) {
+        $t = finder_upw_access($deadline, (string)$t['access_token']);
+        return is_string($t) ? $t : finder_upw_graphql($query, $vars, $deadline, true);
     }
     if ($st === 0) {
         return $r['error'] === 'timeout' ? 'Upwork didn’t answer in time.' : 'Couldn’t reach Upwork.';
@@ -357,7 +391,8 @@ function finder_action_upwork_search(array $post): never
             if ($verified) {
                 $filter['verifiedPaymentOnly_eq'] = true;
             }
-            $d = finder_upw_graphql(FINDER_UPWORK_QUERY, ['filter' => $filter, 'searchType' => 'USER_JOBS_SEARCH', 'sort' => [['field' => 'RECENCY']]], min(20, $left));
+            // the deadline covers the whole search, renewing the sign-in included
+            $d = finder_upw_graphql(FINDER_UPWORK_QUERY, ['filter' => $filter, 'searchType' => 'USER_JOBS_SEARCH', 'sort' => [['field' => 'RECENCY']]], $deadline);
             if (is_string($d)) {
                 if (!$jobs) {
                     finder_fail($d, 502);
@@ -402,6 +437,9 @@ function finder_action_upwork_track(array $post): never
     }
     if (isset($r['duplicates']['u'])) {
         admin_json(['ok' => true, 'message' => 'You’re already tracking this job.', 'id' => $r['duplicates']['u']]);
+    }
+    if (!empty($r['suppressed'])) {
+        finder_fail('This job is on your do-not-contact list, so it wasn’t tracked.', 409);
     }
     finder_fail('The job couldn’t be tracked.', 500);
 }
@@ -449,7 +487,14 @@ function finder_action_upwork_finish(array $post): never
 
 function finder_action_upwork_disconnect(): never
 {
-    finder_upw_forget();
+    // under the token lock, so a refresh running at this moment can't write the sign-in back afterwards
+    $r = finder_upw_locked(static function (): bool {
+        finder_upw_forget();
+        return true;
+    });
+    if ($r !== true) {
+        finder_upw_forget(); // couldn't lock: delete anyway (a refresh finishing now could re-create it; disconnect again then)
+    }
     finder_done(['view' => 'finder', 'tab' => 'upwork'], 'Upwork is disconnected here and its cached results are deleted. To withdraw the app’s access completely, remove it in your Upwork settings too.');
 }
 
@@ -459,7 +504,7 @@ function finder_upwork_view(array $get): string
     $c = finder_cfg();
     $html = '';
     $terms = '<p class="note small"><strong>Reply to these clients on Upwork.</strong> Moving them off Upwork (email, phone, other sites) before a contract starts is against Upwork’s terms. '
-        . 'Searches run only when you press the button, for EvoSoft’s own use; results are listed newest first as Upwork returns them and are deleted within an hour.</p>';
+        . 'Searches run only when you press the button, for EvoSoft’s own use; results are listed newest first as Upwork returns them, reused for an hour at most, and deleted within 24 hours.</p>';
     if (!finder_upw_configured()) {
         return $html . '<section class="card" aria-labelledby="h-upw-setup"><h2 id="h-upw-setup">Set up Upwork job search</h2>'
             . '<p>This tab searches Upwork’s job postings through Upwork’s official API. Upwork must first give EvoSoft an API key:</p><ol class="steps">'

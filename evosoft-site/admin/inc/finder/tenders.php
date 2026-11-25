@@ -168,7 +168,7 @@ function finder_ted_row(array $n, string $today, bool $active): ?array
         'key' => 'ted:' . $pub,
         'source' => 'ted',
         'name' => $buyer !== '' ? $buyer : 'Buyer not named',
-        'category' => 'Tender',
+        'category' => '',
         'city' => finder_ted_text($n['buyer-city'] ?? null),
         'country' => preg_match('/^[A-Z]{3}$/', $country) ? $country : '',
         'evidence_url' => $url,

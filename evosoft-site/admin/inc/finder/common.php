@@ -41,7 +41,7 @@ function finder_cfg(): array
     $int = static fn(string $k, int $default, int $min, int $max): int => max($min, min($max, is_numeric($cfg[$k] ?? null) ? (int)$cfg[$k] : $default));
     $url = static function (string $k, string $default) use ($str): string {
         $u = $str($k, $default);
-        return preg_match('#^https?://[^\s/?#]+[^\s]*$#i', $u) ? $u : $default;
+        return preg_match('~^https?://[^\s/?#]+\S*$~i', $u) ? $u : $default;
     };
     $effort = $str('finder_effort', 'medium');
     $c = [
@@ -178,54 +178,21 @@ function finder_data_file(string $name): string
     return evo_data_dir() . '/' . $name;
 }
 
-/** Reads a JSON file under a shared lock; [] when it's missing or broken. */
+/** Reads a JSON data file; [] when it's missing or broken (see evo_json_read in api/lib.php). */
 function finder_json_read(string $file): array
 {
-    $fh = @fopen($file, 'r');
-    if ($fh === false) {
-        return [];
-    }
-    $raw = flock($fh, LOCK_SH) ? stream_get_contents($fh) : false;
-    flock($fh, LOCK_UN);
-    fclose($fh);
-    $data = is_string($raw) && $raw !== '' ? json_decode($raw, true) : null;
-    return is_array($data) ? $data : [];
+    return evo_json_read($file);
 }
 
 /**
- * Changes a JSON file under an exclusive lock: $change gets the data and returns [newData, result].
- * The file is created 0600. Returns $change's result, or null when the file couldn't be opened or written.
+ * Changes a JSON data file safely (evo_json_change in api/lib.php: one writer at a time, written to a temporary file
+ * and renamed, so a crash mid-save can't lose the file): $change gets the data and returns [newData, result].
+ * The file is created 0600. Returns $change's result, or null when the file couldn't be locked or written.
  */
 function finder_json_change(string $file, callable $change)
 {
-    $old = umask(0077);
-    $fh = @fopen($file, 'c+');
-    umask($old);
-    if ($fh === false) {
-        error_log('EvoSoft finder: cannot open ' . basename($file));
-        return null;
-    }
-    @chmod($file, 0600);
-    $result = null;
-    if (flock($fh, LOCK_EX)) {
-        $raw = stream_get_contents($fh);
-        $data = is_string($raw) && $raw !== '' ? json_decode($raw, true) : null;
-        $data = is_array($data) ? $data : [];
-        [$new, $result] = $change($data);
-        if (is_array($new) && $new !== $data) {
-            $json = json_encode($new, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_INVALID_UTF8_SUBSTITUTE) . "\n";
-            ftruncate($fh, 0);
-            rewind($fh);
-            if (fwrite($fh, $json) !== strlen($json)) {
-                error_log('EvoSoft finder: could not write ' . basename($file));
-                $result = null;
-            }
-            fflush($fh);
-        }
-        flock($fh, LOCK_UN);
-    }
-    fclose($fh);
-    return $result;
+    [$ok, $result] = evo_json_change($file, $change);
+    return $ok ? $result : null;
 }
 
 /** Writes a whole file atomically (temp file + rename), created 0600. */
@@ -523,10 +490,14 @@ function finder_long_request(int $seconds): void
     }
 }
 
-/** A JSON error for scripts: ['error' => message] plus extra fields. */
+/**
+ * A JSON answer for a step that couldn't be done (bad input, a source that's busy, over budget…): finder.js shows
+ * $message. It is sent as HTTP 200 with ok:false and the reason's code in "status", so an expected refusal isn't a
+ * failed request (only signing in, CSRF and real server faults use error statuses).
+ */
 function finder_fail(string $message, int $code = 400, array $extra = []): never
 {
-    admin_json(['ok' => false, 'error' => $message] + $extra, $code);
+    admin_json(['ok' => false, 'error' => $message, 'status' => $code] + $extra);
 }
 
 /** "3 minutes ago" style text for a timestamp (UTC). */
