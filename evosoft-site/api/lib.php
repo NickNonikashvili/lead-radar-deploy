@@ -219,6 +219,7 @@ function evo_housekeeping(array $cfg): void
 {
     $dir = evo_data_dir();
     $stamp = $dir . '/housekeeping-stamp';
+    clearstatcache();
     if (@is_file($stamp) && @filemtime($stamp) > time() - 3600) {
         return;
     }

@@ -1003,7 +1003,7 @@ ${pageHead(h('Legal'), h('Terms, privacy and cookies'), h('Last updated {date}.'
       <div class="table-wrap"><table class="table legal-table">
         <caption class="sr-only">${h('What this website saves in your browser')}</caption>
         <thead><tr><th scope="col">${h('Name')}</th><th scope="col">${h('Kind')}</th><th scope="col">${h('Purpose')}</th><th scope="col">${h('Kept for')}</th></tr></thead>
-        <tbody>${join(storage, ([name, kind, why, kept]) => `<tr><td><code>${esc(name)}</code></td><td>${esc(kind)}</td><td>${esc(why)}</td><td>${esc(kept)}</td></tr>`)}</tbody>
+        <tbody>${join(storage, ([name, kind, why, kept]) => `<tr><td data-label="${attr(t('Name'))}"><code>${esc(name)}</code></td><td data-label="${attr(t('Kind'))}">${esc(kind)}</td><td data-label="${attr(t('Purpose'))}">${esc(why)}</td><td data-label="${attr(t('Kept for'))}">${esc(kept)}</td></tr>`)}</tbody>
       </table></div>
       <p>${h('You can delete these items at any time in your browser’s site settings. The site works without them.')}</p>
       <p>${h('Our live demos are separate websites. When you sign in to one, it sets a sign-in cookie, and the Evo demo also remembers a device that has signed in before, to slow down password guessing. These cookies are needed for the demos to work.')}</p>

@@ -555,7 +555,7 @@ details[open] .plus::after { transform: rotate(0); }
 .prose h2 { font-size: 1.5rem; }
 .prose p:last-child { margin-bottom: 0; }
 .about-side .btn { margin-top: 12px; }
-.legal { display: grid; gap: 14px; }
+.legal { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; }
 .legal .card { scroll-margin-top: calc(var(--bar) + 16px); }
 .prose h3 { margin: 1.6em 0 0.5em; font-size: 1.08rem; }
 .prose h2 + p, .prose h2 + h3 { margin-top: 0; }
@@ -566,8 +566,15 @@ details[open] .plus::after { transform: rotate(0); }
 .facts dt { color: var(--muted); font-size: 0.9rem; }
 .facts dd { margin: 0; color: var(--ink); }
 .legal-table td { white-space: normal; vertical-align: top; min-width: 9em; }
-.legal-table td:first-child { min-width: 0; white-space: nowrap; }
+.legal-table td:first-child { min-width: 0; white-space: normal; overflow-wrap: anywhere; }
 .legal-table code { font-size: 0.82rem; }
+/* phones: each stored item becomes a small block with its labels */
+@media (max-width: 640px) {
+  .legal-table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  .legal-table tr { display: block; padding: 12px 0; border-bottom: 1px solid var(--border); }
+  .legal-table td { display: grid; grid-template-columns: 6.5em minmax(0, 1fr); gap: 10px; padding: 3px 0; border: 0; min-width: 0; }
+  .legal-table td::before { content: attr(data-label); color: var(--muted); font-size: 0.82rem; }
+}
 .quote-legal { margin: 0; padding: 0 6px; }
 
 /* ---------- footer: deep navy, the slogan large ---------- */
