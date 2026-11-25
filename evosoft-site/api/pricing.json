@@ -1,0 +1,208 @@
+{
+ "currency": "USD",
+ "version": 1,
+ "range": {
+  "low": 0.9,
+  "high": 1.15
+ },
+ "types": {
+  "landing": {
+   "base": 450,
+   "pages": 1,
+   "extraPage": 90,
+   "weeks": [
+    1,
+    2
+   ]
+  },
+  "portfolio": {
+   "base": 700,
+   "pages": 4,
+   "extraPage": 90,
+   "weeks": [
+    2,
+    3
+   ]
+  },
+  "business": {
+   "base": 900,
+   "pages": 5,
+   "extraPage": 90,
+   "weeks": [
+    3,
+    5
+   ]
+  },
+  "store": {
+   "base": 2200,
+   "pages": 5,
+   "extraPage": 90,
+   "weeks": [
+    5,
+    8
+   ]
+  },
+  "webapp": {
+   "base": 4500,
+   "pages": 5,
+   "extraPage": 250,
+   "weeks": [
+    8,
+    14
+   ]
+  }
+ },
+ "pages": [
+  "home",
+  "about",
+  "services",
+  "gallery",
+  "pricing",
+  "team",
+  "blog",
+  "faq",
+  "contact",
+  "testimonials",
+  "careers",
+  "locations"
+ ],
+ "maxExtraPages": 40,
+ "features": {
+  "booking": {
+   "price": 350
+  },
+  "payments": {
+   "price": 450,
+   "includedIn": [
+    "store"
+   ]
+  },
+  "cms": {
+   "price": 300,
+   "includedIn": [
+    "store",
+    "webapp"
+   ]
+  },
+  "multilingual": {
+   "price": 150
+  },
+  "accounts": {
+   "price": 600,
+   "includedIn": [
+    "webapp"
+   ]
+  },
+  "search": {
+   "price": 150
+  },
+  "newsletter": {
+   "price": 100
+  },
+  "livechat": {
+   "price": 120
+  },
+  "maps": {
+   "price": 60
+  },
+  "reviews": {
+   "price": 120
+  },
+  "seo": {
+   "price": 350
+  },
+  "analytics": {
+   "price": 180
+  }
+ },
+ "maxLanguages": 5,
+ "products": {
+  "small": {
+   "price": 0
+  },
+  "medium": {
+   "price": 300
+  },
+  "large": {
+   "price": 800
+  },
+  "huge": {
+   "price": 1500
+  }
+ },
+ "content": {
+  "copywriting": {
+   "perPage": 60
+  },
+  "logo": {
+   "price": 350
+  },
+  "photos": {
+   "price": 150
+  }
+ },
+ "care": {
+  "none": {
+   "monthly": 0
+  },
+  "basic": {
+   "monthly": 49
+  },
+  "standard": {
+   "monthly": 99
+  },
+  "pro": {
+   "monthly": 199
+  }
+ },
+ "timeline": {
+  "flexible": {
+   "factor": 1
+  },
+  "standard": {
+   "factor": 1
+  },
+  "rush": {
+   "factor": 1.25,
+   "weeksFactor": 0.75
+  }
+ },
+ "industries": [
+  "restaurant",
+  "clinic",
+  "beauty",
+  "construction",
+  "consulting",
+  "retail",
+  "tourism",
+  "education",
+  "fitness",
+  "realestate",
+  "tech",
+  "other"
+ ],
+ "palettes": [
+  "navy",
+  "forest",
+  "sunset",
+  "ocean",
+  "mono",
+  "blush",
+  "custom"
+ ],
+ "fonts": [
+  "modern",
+  "elegant",
+  "friendly",
+  "bold"
+ ],
+ "layouts": [
+  "clean",
+  "bold",
+  "classic"
+ ],
+ "modes": [
+  "light",
+  "dark"
+ ]
+}

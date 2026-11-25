@@ -13,6 +13,7 @@ import crypto from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import * as SRC from './data/site.mjs';
 import { products as SRC_PRODUCTS } from './data/products.mjs';
+import { pricing as PRICING } from './data/pricing.mjs';
 import { icon } from './lib/icons.mjs';
 import { logoInline, markInline } from './lib/logo.mjs';
 import { knowledgeMarkdown, localKb } from './lib/knowledge.mjs';
@@ -1178,6 +1179,8 @@ const pageList = [
 fs.mkdirSync(path.join(OUT, 'api'), { recursive: true });
 fs.writeFileSync(path.join(OUT, 'api/knowledge.md'), knowledgeMarkdown({ site: SRC.site, services: SRC.services, process: SRC.process, promises: SRC.promises, faq: SRC.faq, clients: SRC.clients, products: SRC_PRODUCTS, chat: SRC.chat, pages: pageList }));
 fs.rmSync(path.join(OUT, 'assets/data/chat-kb.json'), { force: true });
+// the quote builder's prices, for api/quote.php to recompute every estimate on the server (api/.htaccess keeps it private)
+fs.writeFileSync(path.join(OUT, 'api/pricing.json'), JSON.stringify(PRICING, null, 1) + '\n');
 
 const byFile = new Map();
 for (const p of built.filter((b) => !b.noindex)) {
