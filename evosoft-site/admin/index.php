@@ -7,7 +7,8 @@
  *   GET  /admin/                       requests (filters: ?status= &source= &q= &page=)
  *   GET  /admin/?r=<id>                one request
  *   GET  /admin/?view=export&...       the filtered requests as CSV
- *   GET  /admin/?view=finder&...       the client finder (inc/finder.php, when it exists)
+ *   GET  /admin/?view=finder&...       the client finder (inc/finder.php, when it exists); also where Upwork sends the
+ *                                      owner back after "Connect Upwork" (&tab=upwork&code=…&state=…)
  *   GET  /admin/?view=security         how sign-in works, and tools to change the password or add a code app
  *   POST /admin/?action=login | logout | save&r=<id> | delete&r=<id> | tool.password | tool.totp | tool.check
  *        | finder.<name>
@@ -92,7 +93,17 @@ if ($state !== 'in') {
     // cookie, so a signed-in owner would see the sign-in form. Reload once from this page itself: that navigation is
     // same-origin, so the browser sends the cookie. GET only, and nothing here changes anything.
     if ($state === 'out' && !isset($_COOKIE[ADMIN_COOKIE]) && admin_cross_site_navigation()) {
-        admin_bounce_page($next !== '' ? ['r' => $next] : []);
+        $keep = $next !== '' ? ['r' => $next] : [];
+        // Upwork's sign-in comes back the same way: ?view=finder&tab=upwork&code=…&state=… (inc/finder/upwork.php)
+        if (($_GET['view'] ?? '') === 'finder') {
+            $keep = ['view' => 'finder'];
+            foreach (['tab', 'code', 'state', 'error'] as $k) {
+                if (is_string($_GET[$k] ?? null) && preg_match('/^[A-Za-z0-9._~\-]{1,512}$/', $_GET[$k])) {
+                    $keep[$k] = $_GET[$k];
+                }
+            }
+        }
+        admin_bounce_page($keep);
     }
     $note = $state === 'expired' ? 'You were signed out after a while without using the panel. Please sign in again.'
         : (isset($_GET['bye']) ? 'You’re signed out.' : '');

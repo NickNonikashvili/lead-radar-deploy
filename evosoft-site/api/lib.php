@@ -219,7 +219,8 @@ function evo_day_salt(string $dir): string
  *   - quote requests older than quote_keep_months (the email copy is deleted by hand on the same schedule);
  *   - any leftover quotes.jsonl.moved copy from an old version that is past the same age;
  *   - the admin panel's status and notes (quote-meta.json) for requests that no longer exist;
- *   - admin sign-in sessions past their 12-hour limit (PHP's own clean-up is often off on shared hosts).
+ *   - admin sign-in sessions past their 12-hour limit (PHP's own clean-up is often off on shared hosts);
+ *   - the client finder's old leads and expired search cache (evo_finder_housekeeping, below).
  * The quotes file is rewritten in place under the same lock quote.php appends with, so no request is ever lost.
  */
 function evo_housekeeping(array $cfg, bool $force = false): void
@@ -293,6 +294,76 @@ function evo_housekeeping(array $cfg, bool $force = false): void
                 @unlink($f);
             }
         }
+    }
+    evo_finder_housekeeping($dir, $cfg);
+}
+
+/**
+ * The admin panel's client finder (admin/inc/finder.php), part of the hourly clean-up above:
+ *   - saved leads found more than leads_keep_months ago (default 6; 0 = keep), unless their status is "won";
+ *   - cached search results past their time: Upwork content after 1 hour (Upwork allows 24 at most, and the daily
+ *     cron makes sure of that on quiet days), everything else after 24 hours; and any left-over temporary files;
+ *   - usage counters older than a week.
+ * The do-not-contact list (leads-suppressed.json) is kept: it holds only hashes, so those businesses never come back.
+ */
+function evo_finder_housekeeping(string $dir, array $cfg): void
+{
+    $now = time();
+    foreach (glob($dir . '/finder-cache/*.json') ?: [] as $f) {
+        $ttl = str_starts_with(basename($f), 'upwork-') ? 3600 : 86400;
+        if (@filemtime($f) < $now - $ttl) {
+            @unlink($f);
+        }
+    }
+    foreach (array_merge(glob($dir . '/finder-cache/*.tmp') ?: [], glob($dir . '/*.json.*.tmp') ?: []) as $f) {
+        if (@filemtime($f) < $now - 3600) {
+            @unlink($f);
+        }
+    }
+    $months = (int)($cfg['leads_keep_months'] ?? 6);
+    $file = $dir . '/leads.json';
+    if ($months > 0 && @is_file($file) && ($fh = @fopen($file, 'c+')) !== false) {
+        $cutoff = gmdate('Y-m-d\TH:i:s\Z', (int)strtotime("-$months months", $now));
+        if (flock($fh, LOCK_EX)) {
+            $data = json_decode((string)stream_get_contents($fh), true);
+            if (is_array($data) && is_array($data['leads'] ?? null)) {
+                $keep = array_values(array_filter($data['leads'], static function ($l) use ($cutoff): bool {
+                    $found = is_array($l) && is_string($l['found_at'] ?? null) ? $l['found_at'] : '';
+                    // keep a lead that was won, or that can't be dated (rather than guess)
+                    return !preg_match('/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/', $found) || strcmp($found, $cutoff) >= 0 || ($l['status'] ?? '') === 'won';
+                }));
+                if (count($keep) !== count($data['leads'])) {
+                    $data['leads'] = $keep;
+                    $json = json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_INVALID_UTF8_SUBSTITUTE) . "\n";
+                    ftruncate($fh, 0);
+                    rewind($fh);
+                    fwrite($fh, $json);
+                    fflush($fh);
+                }
+            }
+            flock($fh, LOCK_UN);
+        }
+        fclose($fh);
+    }
+    $usage = $dir . '/finder-usage.json';
+    if (@is_file($usage) && ($fh = @fopen($usage, 'c+')) !== false) {
+        if (flock($fh, LOCK_EX)) {
+            $u = json_decode((string)stream_get_contents($fh), true);
+            if (is_array($u) && is_array($u['days'] ?? null)) {
+                $week = gmdate('Y-m-d', $now - 7 * 86400);
+                $days = array_filter($u['days'], static fn($k): bool => is_string($k) && $k >= $week, ARRAY_FILTER_USE_KEY);
+                if (count($days) !== count($u['days'])) {
+                    $u['days'] = $days;
+                    $json = json_encode($u, JSON_UNESCAPED_SLASHES) . "\n";
+                    ftruncate($fh, 0);
+                    rewind($fh);
+                    fwrite($fh, $json);
+                    fflush($fh);
+                }
+            }
+            flock($fh, LOCK_UN);
+        }
+        fclose($fh);
     }
 }
 

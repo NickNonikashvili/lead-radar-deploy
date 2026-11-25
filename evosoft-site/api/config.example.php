@@ -62,4 +62,25 @@ return [
     // The panel only opens over https:// (a password must never travel in the clear). Only set this to false if your
     // host serves the site over https but PHP can't tell (the panel then says "Open it over https").
     'admin_require_https' => true,
+
+    // Client finder (/admin/?view=finder): businesses that could use a website, saved leads, Upwork jobs, EU tenders.
+    // Its AI steps (web search, research, draft emails) use anthropic_api_key above.
+    'finder_model' => 'claude-opus-5-5',  // the model for the finder's AI steps
+    'finder_effort' => 'medium',          // low, medium, high, xhigh or max: more effort is slower and costs more
+    'finder_ai_daily_limit' => 40,        // AI calls a day in all (a search or research is usually one, sometimes two or three)
+    // Saved leads are deleted this many months after they were found, unless their status is "won" (0 = keep).
+    // The do-not-contact list keeps only hashes and is never deleted, so those businesses never come back.
+    'leads_keep_months' => 6,
+    // OpenStreetMap search goes through the public Overpass API. The finder keeps to about 80 searches and 10 MB a day
+    // and caches each search for 24 hours. Change the address only to another Overpass server whose rules you've read.
+    'overpass_url' => 'https://overpass-api.de/api/interpreter',
+    // Sent with every request to OpenStreetMap, TED and Upwork, so they know who is asking. Keep it honest and real.
+    'finder_user_agent' => 'EvoSoft-ClientFinder/1.0 (+https://evosoft.solutions/legal)',
+    // Upwork job search (optional): Upwork's official API needs a key from https://www.upwork.com/developer/keys/apply
+    // (the Upwork tab lists the requirements). Key type OAuth 2.0, scopes "Common Entities - Read-Only Access" and
+    // "Read marketplace Job Postings". The callback URL registered with the key must be exactly upwork_redirect_uri.
+    // The secret also encrypts the saved Upwork sign-in: after changing it, connect Upwork again.
+    'upwork_client_id' => '',
+    'upwork_client_secret' => '',
+    'upwork_redirect_uri' => 'https://evosoft.solutions/admin/?view=finder&tab=upwork',
 ];
