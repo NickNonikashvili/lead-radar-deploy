@@ -798,6 +798,13 @@ h1, h2, h3, .lede { overflow-wrap: break-word; }
   :lang(ka) .page-head h1 { font-size: clamp(1.35rem, 7.2vw, 2rem); }
   :lang(ka) .legal .card h2 { font-size: clamp(1.1rem, 5.6vw, 1.5rem); }
 }
+/* the smallest phones: long Russian words in the legal headings, and the Georgian service names, fit on one line */
+@media (max-width: 360px) {
+  :lang(ru) .page-head h1 { font-size: 1.6rem; }
+  :lang(ru) .legal .card h2 { font-size: 1.3rem; }
+  :lang(ka) .svc.wide { grid-template-columns: minmax(0, 1fr); }
+  :lang(ka) .svc.wide > .btn { grid-column: 1; }
+}
 .nav > a, .nav .nav-quote { white-space: nowrap; }
 @media (min-width: 901px) and (max-width: 980px) {
   :lang(ka) .nav > a:not(.btn) { padding: 8px 10px; font-size: 13.5px; }
