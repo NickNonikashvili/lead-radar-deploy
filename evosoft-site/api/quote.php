@@ -19,7 +19,7 @@ const QUOTE_TYPES = [
 ];
 const QUOTE_TIMELINES = ['Flexible', 'As soon as possible', 'Within a month', 'In 1 to 3 months', 'Later this year'];
 // The language the visitor used the site in, so the reply can be in it too.
-const QUOTE_LANGS = ['en' => 'English', 'ka' => 'Georgian (ქართული)', 'ru' => 'Russian (Русский)', 'es' => 'Spanish (Español)'];
+const QUOTE_LANGS = ['en' => 'English', 'es' => 'Spanish (Español)'];
 
 $cfg = evo_config();
 evo_housekeeping($cfg);

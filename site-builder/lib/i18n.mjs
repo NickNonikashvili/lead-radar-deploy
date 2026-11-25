@@ -12,8 +12,6 @@ import path from 'node:path';
 
 export const LANGS = [
   { code: 'en', prefix: '', native: 'English', short: 'EN', locale: 'en_US', dateLocale: 'en-GB' },
-  { code: 'ka', prefix: 'ka/', native: 'ქართული', short: 'KA', locale: 'ka_GE', dateLocale: 'ka-GE' },
-  { code: 'ru', prefix: 'ru/', native: 'Русский', short: 'RU', locale: 'ru_RU', dateLocale: 'ru-RU' },
   { code: 'es', prefix: 'es/', native: 'Español', short: 'ES', locale: 'es_ES', dateLocale: 'es-ES' },
 ];
 

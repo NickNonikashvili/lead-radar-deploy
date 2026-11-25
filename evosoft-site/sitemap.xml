@@ -4,32 +4,6 @@
     <loc>https://evosoft.solutions/home</loc>
     <lastmod>2026-11-25</lastmod>
     <xhtml:link rel="alternate" hreflang="en" href="https://evosoft.solutions/home"/>
-    <xhtml:link rel="alternate" hreflang="ka" href="https://evosoft.solutions/ka/home"/>
-    <xhtml:link rel="alternate" hreflang="ru" href="https://evosoft.solutions/ru/home"/>
-    <xhtml:link rel="alternate" hreflang="es" href="https://evosoft.solutions/es/home"/>
-    <xhtml:link rel="alternate" hreflang="x-default" href="https://evosoft.solutions/home"/>
-    <image:image><image:loc>https://evosoft.solutions/assets/shots/evo/01-owner-home.jpg</image:loc></image:image>
-    <image:image><image:loc>https://evosoft.solutions/assets/shots/mailtabs/01-unified-inbox.jpg</image:loc></image:image>
-    <image:image><image:loc>https://evosoft.solutions/assets/shots/studycat/02-class-dashboard.jpg</image:loc></image:image>
-  </url>
-  <url>
-    <loc>https://evosoft.solutions/ka/home</loc>
-    <lastmod>2026-11-25</lastmod>
-    <xhtml:link rel="alternate" hreflang="en" href="https://evosoft.solutions/home"/>
-    <xhtml:link rel="alternate" hreflang="ka" href="https://evosoft.solutions/ka/home"/>
-    <xhtml:link rel="alternate" hreflang="ru" href="https://evosoft.solutions/ru/home"/>
-    <xhtml:link rel="alternate" hreflang="es" href="https://evosoft.solutions/es/home"/>
-    <xhtml:link rel="alternate" hreflang="x-default" href="https://evosoft.solutions/home"/>
-    <image:image><image:loc>https://evosoft.solutions/assets/shots/evo/01-owner-home.jpg</image:loc></image:image>
-    <image:image><image:loc>https://evosoft.solutions/assets/shots/mailtabs/01-unified-inbox.jpg</image:loc></image:image>
-    <image:image><image:loc>https://evosoft.solutions/assets/shots/studycat/02-class-dashboard.jpg</image:loc></image:image>
-  </url>
-  <url>
-    <loc>https://evosoft.solutions/ru/home</loc>
-    <lastmod>2026-11-25</lastmod>
-    <xhtml:link rel="alternate" hreflang="en" href="https://evosoft.solutions/home"/>
-    <xhtml:link rel="alternate" hreflang="ka" href="https://evosoft.solutions/ka/home"/>
-    <xhtml:link rel="alternate" hreflang="ru" href="https://evosoft.solutions/ru/home"/>
     <xhtml:link rel="alternate" hreflang="es" href="https://evosoft.solutions/es/home"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://evosoft.solutions/home"/>
     <image:image><image:loc>https://evosoft.solutions/assets/shots/evo/01-owner-home.jpg</image:loc></image:image>
@@ -40,8 +14,6 @@
     <loc>https://evosoft.solutions/es/home</loc>
     <lastmod>2026-11-25</lastmod>
     <xhtml:link rel="alternate" hreflang="en" href="https://evosoft.solutions/home"/>
-    <xhtml:link rel="alternate" hreflang="ka" href="https://evosoft.solutions/ka/home"/>
-    <xhtml:link rel="alternate" hreflang="ru" href="https://evosoft.solutions/ru/home"/>
     <xhtml:link rel="alternate" hreflang="es" href="https://evosoft.solutions/es/home"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://evosoft.solutions/home"/>
     <image:image><image:loc>https://evosoft.solutions/assets/shots/evo/01-owner-home.jpg</image:loc></image:image>
@@ -52,50 +24,6 @@
     <loc>https://evosoft.solutions/portfolio</loc>
     <lastmod>2026-11-25</lastmod>
     <xhtml:link rel="alternate" hreflang="en" href="https://evosoft.solutions/portfolio"/>
-    <xhtml:link rel="alternate" hreflang="ka" href="https://evosoft.solutions/ka/portfolio"/>
-    <xhtml:link rel="alternate" hreflang="ru" href="https://evosoft.solutions/ru/portfolio"/>
-    <xhtml:link rel="alternate" hreflang="es" href="https://evosoft.solutions/es/portfolio"/>
-    <xhtml:link rel="alternate" hreflang="x-default" href="https://evosoft.solutions/portfolio"/>
-    <image:image><image:loc>https://evosoft.solutions/assets/shots/evo/01-owner-home.jpg</image:loc></image:image>
-    <image:image><image:loc>https://evosoft.solutions/assets/shots/evo/02-hr-live-attendance.jpg</image:loc></image:image>
-    <image:image><image:loc>https://evosoft.solutions/assets/shots/evo/03-hr-scheduler.jpg</image:loc></image:image>
-    <image:image><image:loc>https://evosoft.solutions/assets/shots/evo/04-hr-approvals.jpg</image:loc></image:image>
-    <image:image><image:loc>https://evosoft.solutions/assets/shots/evo/05-payroll-period-review.jpg</image:loc></image:image>
-    <image:image><image:loc>https://evosoft.solutions/assets/shots/evo/07-store-overview.jpg</image:loc></image:image>
-    <image:image><image:loc>https://evosoft.solutions/assets/shots/evo/09-register-pay-screen.jpg</image:loc></image:image>
-    <image:image><image:loc>https://evosoft.solutions/assets/shots/evo/08-store-reports.jpg</image:loc></image:image>
-    <image:image><image:loc>https://evosoft.solutions/assets/shots/evo/10-store-items.jpg</image:loc></image:image>
-    <image:image><image:loc>https://evosoft.solutions/assets/shots/evo/06-employee-clock-in-phone.jpg</image:loc></image:image>
-    <image:image><image:loc>https://evosoft.solutions/assets/shots/evo/11-stock-handheld-phone.jpg</image:loc></image:image>
-    <image:image><image:loc>https://evosoft.solutions/assets/shots/mailtabs/01-unified-inbox.jpg</image:loc></image:image>
-  </url>
-  <url>
-    <loc>https://evosoft.solutions/ka/portfolio</loc>
-    <lastmod>2026-11-25</lastmod>
-    <xhtml:link rel="alternate" hreflang="en" href="https://evosoft.solutions/portfolio"/>
-    <xhtml:link rel="alternate" hreflang="ka" href="https://evosoft.solutions/ka/portfolio"/>
-    <xhtml:link rel="alternate" hreflang="ru" href="https://evosoft.solutions/ru/portfolio"/>
-    <xhtml:link rel="alternate" hreflang="es" href="https://evosoft.solutions/es/portfolio"/>
-    <xhtml:link rel="alternate" hreflang="x-default" href="https://evosoft.solutions/portfolio"/>
-    <image:image><image:loc>https://evosoft.solutions/assets/shots/evo/01-owner-home.jpg</image:loc></image:image>
-    <image:image><image:loc>https://evosoft.solutions/assets/shots/evo/02-hr-live-attendance.jpg</image:loc></image:image>
-    <image:image><image:loc>https://evosoft.solutions/assets/shots/evo/03-hr-scheduler.jpg</image:loc></image:image>
-    <image:image><image:loc>https://evosoft.solutions/assets/shots/evo/04-hr-approvals.jpg</image:loc></image:image>
-    <image:image><image:loc>https://evosoft.solutions/assets/shots/evo/05-payroll-period-review.jpg</image:loc></image:image>
-    <image:image><image:loc>https://evosoft.solutions/assets/shots/evo/07-store-overview.jpg</image:loc></image:image>
-    <image:image><image:loc>https://evosoft.solutions/assets/shots/evo/09-register-pay-screen.jpg</image:loc></image:image>
-    <image:image><image:loc>https://evosoft.solutions/assets/shots/evo/08-store-reports.jpg</image:loc></image:image>
-    <image:image><image:loc>https://evosoft.solutions/assets/shots/evo/10-store-items.jpg</image:loc></image:image>
-    <image:image><image:loc>https://evosoft.solutions/assets/shots/evo/06-employee-clock-in-phone.jpg</image:loc></image:image>
-    <image:image><image:loc>https://evosoft.solutions/assets/shots/evo/11-stock-handheld-phone.jpg</image:loc></image:image>
-    <image:image><image:loc>https://evosoft.solutions/assets/shots/mailtabs/01-unified-inbox.jpg</image:loc></image:image>
-  </url>
-  <url>
-    <loc>https://evosoft.solutions/ru/portfolio</loc>
-    <lastmod>2026-11-25</lastmod>
-    <xhtml:link rel="alternate" hreflang="en" href="https://evosoft.solutions/portfolio"/>
-    <xhtml:link rel="alternate" hreflang="ka" href="https://evosoft.solutions/ka/portfolio"/>
-    <xhtml:link rel="alternate" hreflang="ru" href="https://evosoft.solutions/ru/portfolio"/>
     <xhtml:link rel="alternate" hreflang="es" href="https://evosoft.solutions/es/portfolio"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://evosoft.solutions/portfolio"/>
     <image:image><image:loc>https://evosoft.solutions/assets/shots/evo/01-owner-home.jpg</image:loc></image:image>
@@ -115,8 +43,6 @@
     <loc>https://evosoft.solutions/es/portfolio</loc>
     <lastmod>2026-11-25</lastmod>
     <xhtml:link rel="alternate" hreflang="en" href="https://evosoft.solutions/portfolio"/>
-    <xhtml:link rel="alternate" hreflang="ka" href="https://evosoft.solutions/ka/portfolio"/>
-    <xhtml:link rel="alternate" hreflang="ru" href="https://evosoft.solutions/ru/portfolio"/>
     <xhtml:link rel="alternate" hreflang="es" href="https://evosoft.solutions/es/portfolio"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://evosoft.solutions/portfolio"/>
     <image:image><image:loc>https://evosoft.solutions/assets/shots/evo/01-owner-home.jpg</image:loc></image:image>
@@ -136,26 +62,6 @@
     <loc>https://evosoft.solutions/demos</loc>
     <lastmod>2026-11-25</lastmod>
     <xhtml:link rel="alternate" hreflang="en" href="https://evosoft.solutions/demos"/>
-    <xhtml:link rel="alternate" hreflang="ka" href="https://evosoft.solutions/ka/demos"/>
-    <xhtml:link rel="alternate" hreflang="ru" href="https://evosoft.solutions/ru/demos"/>
-    <xhtml:link rel="alternate" hreflang="es" href="https://evosoft.solutions/es/demos"/>
-    <xhtml:link rel="alternate" hreflang="x-default" href="https://evosoft.solutions/demos"/>
-  </url>
-  <url>
-    <loc>https://evosoft.solutions/ka/demos</loc>
-    <lastmod>2026-11-25</lastmod>
-    <xhtml:link rel="alternate" hreflang="en" href="https://evosoft.solutions/demos"/>
-    <xhtml:link rel="alternate" hreflang="ka" href="https://evosoft.solutions/ka/demos"/>
-    <xhtml:link rel="alternate" hreflang="ru" href="https://evosoft.solutions/ru/demos"/>
-    <xhtml:link rel="alternate" hreflang="es" href="https://evosoft.solutions/es/demos"/>
-    <xhtml:link rel="alternate" hreflang="x-default" href="https://evosoft.solutions/demos"/>
-  </url>
-  <url>
-    <loc>https://evosoft.solutions/ru/demos</loc>
-    <lastmod>2026-11-25</lastmod>
-    <xhtml:link rel="alternate" hreflang="en" href="https://evosoft.solutions/demos"/>
-    <xhtml:link rel="alternate" hreflang="ka" href="https://evosoft.solutions/ka/demos"/>
-    <xhtml:link rel="alternate" hreflang="ru" href="https://evosoft.solutions/ru/demos"/>
     <xhtml:link rel="alternate" hreflang="es" href="https://evosoft.solutions/es/demos"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://evosoft.solutions/demos"/>
   </url>
@@ -163,8 +69,6 @@
     <loc>https://evosoft.solutions/es/demos</loc>
     <lastmod>2026-11-25</lastmod>
     <xhtml:link rel="alternate" hreflang="en" href="https://evosoft.solutions/demos"/>
-    <xhtml:link rel="alternate" hreflang="ka" href="https://evosoft.solutions/ka/demos"/>
-    <xhtml:link rel="alternate" hreflang="ru" href="https://evosoft.solutions/ru/demos"/>
     <xhtml:link rel="alternate" hreflang="es" href="https://evosoft.solutions/es/demos"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://evosoft.solutions/demos"/>
   </url>
@@ -172,48 +76,6 @@
     <loc>https://evosoft.solutions/work/evo</loc>
     <lastmod>2026-11-25</lastmod>
     <xhtml:link rel="alternate" hreflang="en" href="https://evosoft.solutions/work/evo"/>
-    <xhtml:link rel="alternate" hreflang="ka" href="https://evosoft.solutions/ka/work/evo"/>
-    <xhtml:link rel="alternate" hreflang="ru" href="https://evosoft.solutions/ru/work/evo"/>
-    <xhtml:link rel="alternate" hreflang="es" href="https://evosoft.solutions/es/work/evo"/>
-    <xhtml:link rel="alternate" hreflang="x-default" href="https://evosoft.solutions/work/evo"/>
-    <image:image><image:loc>https://evosoft.solutions/assets/shots/evo/01-owner-home.jpg</image:loc></image:image>
-    <image:image><image:loc>https://evosoft.solutions/assets/shots/evo/02-hr-live-attendance.jpg</image:loc></image:image>
-    <image:image><image:loc>https://evosoft.solutions/assets/shots/evo/03-hr-scheduler.jpg</image:loc></image:image>
-    <image:image><image:loc>https://evosoft.solutions/assets/shots/evo/04-hr-approvals.jpg</image:loc></image:image>
-    <image:image><image:loc>https://evosoft.solutions/assets/shots/evo/05-payroll-period-review.jpg</image:loc></image:image>
-    <image:image><image:loc>https://evosoft.solutions/assets/shots/evo/07-store-overview.jpg</image:loc></image:image>
-    <image:image><image:loc>https://evosoft.solutions/assets/shots/evo/09-register-pay-screen.jpg</image:loc></image:image>
-    <image:image><image:loc>https://evosoft.solutions/assets/shots/evo/08-store-reports.jpg</image:loc></image:image>
-    <image:image><image:loc>https://evosoft.solutions/assets/shots/evo/10-store-items.jpg</image:loc></image:image>
-    <image:image><image:loc>https://evosoft.solutions/assets/shots/evo/06-employee-clock-in-phone.jpg</image:loc></image:image>
-    <image:image><image:loc>https://evosoft.solutions/assets/shots/evo/11-stock-handheld-phone.jpg</image:loc></image:image>
-  </url>
-  <url>
-    <loc>https://evosoft.solutions/ka/work/evo</loc>
-    <lastmod>2026-11-25</lastmod>
-    <xhtml:link rel="alternate" hreflang="en" href="https://evosoft.solutions/work/evo"/>
-    <xhtml:link rel="alternate" hreflang="ka" href="https://evosoft.solutions/ka/work/evo"/>
-    <xhtml:link rel="alternate" hreflang="ru" href="https://evosoft.solutions/ru/work/evo"/>
-    <xhtml:link rel="alternate" hreflang="es" href="https://evosoft.solutions/es/work/evo"/>
-    <xhtml:link rel="alternate" hreflang="x-default" href="https://evosoft.solutions/work/evo"/>
-    <image:image><image:loc>https://evosoft.solutions/assets/shots/evo/01-owner-home.jpg</image:loc></image:image>
-    <image:image><image:loc>https://evosoft.solutions/assets/shots/evo/02-hr-live-attendance.jpg</image:loc></image:image>
-    <image:image><image:loc>https://evosoft.solutions/assets/shots/evo/03-hr-scheduler.jpg</image:loc></image:image>
-    <image:image><image:loc>https://evosoft.solutions/assets/shots/evo/04-hr-approvals.jpg</image:loc></image:image>
-    <image:image><image:loc>https://evosoft.solutions/assets/shots/evo/05-payroll-period-review.jpg</image:loc></image:image>
-    <image:image><image:loc>https://evosoft.solutions/assets/shots/evo/07-store-overview.jpg</image:loc></image:image>
-    <image:image><image:loc>https://evosoft.solutions/assets/shots/evo/09-register-pay-screen.jpg</image:loc></image:image>
-    <image:image><image:loc>https://evosoft.solutions/assets/shots/evo/08-store-reports.jpg</image:loc></image:image>
-    <image:image><image:loc>https://evosoft.solutions/assets/shots/evo/10-store-items.jpg</image:loc></image:image>
-    <image:image><image:loc>https://evosoft.solutions/assets/shots/evo/06-employee-clock-in-phone.jpg</image:loc></image:image>
-    <image:image><image:loc>https://evosoft.solutions/assets/shots/evo/11-stock-handheld-phone.jpg</image:loc></image:image>
-  </url>
-  <url>
-    <loc>https://evosoft.solutions/ru/work/evo</loc>
-    <lastmod>2026-11-25</lastmod>
-    <xhtml:link rel="alternate" hreflang="en" href="https://evosoft.solutions/work/evo"/>
-    <xhtml:link rel="alternate" hreflang="ka" href="https://evosoft.solutions/ka/work/evo"/>
-    <xhtml:link rel="alternate" hreflang="ru" href="https://evosoft.solutions/ru/work/evo"/>
     <xhtml:link rel="alternate" hreflang="es" href="https://evosoft.solutions/es/work/evo"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://evosoft.solutions/work/evo"/>
     <image:image><image:loc>https://evosoft.solutions/assets/shots/evo/01-owner-home.jpg</image:loc></image:image>
@@ -232,8 +94,6 @@
     <loc>https://evosoft.solutions/es/work/evo</loc>
     <lastmod>2026-11-25</lastmod>
     <xhtml:link rel="alternate" hreflang="en" href="https://evosoft.solutions/work/evo"/>
-    <xhtml:link rel="alternate" hreflang="ka" href="https://evosoft.solutions/ka/work/evo"/>
-    <xhtml:link rel="alternate" hreflang="ru" href="https://evosoft.solutions/ru/work/evo"/>
     <xhtml:link rel="alternate" hreflang="es" href="https://evosoft.solutions/es/work/evo"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://evosoft.solutions/work/evo"/>
     <image:image><image:loc>https://evosoft.solutions/assets/shots/evo/01-owner-home.jpg</image:loc></image:image>
@@ -252,44 +112,6 @@
     <loc>https://evosoft.solutions/work/mailtabs</loc>
     <lastmod>2026-11-25</lastmod>
     <xhtml:link rel="alternate" hreflang="en" href="https://evosoft.solutions/work/mailtabs"/>
-    <xhtml:link rel="alternate" hreflang="ka" href="https://evosoft.solutions/ka/work/mailtabs"/>
-    <xhtml:link rel="alternate" hreflang="ru" href="https://evosoft.solutions/ru/work/mailtabs"/>
-    <xhtml:link rel="alternate" hreflang="es" href="https://evosoft.solutions/es/work/mailtabs"/>
-    <xhtml:link rel="alternate" hreflang="x-default" href="https://evosoft.solutions/work/mailtabs"/>
-    <image:image><image:loc>https://evosoft.solutions/assets/shots/mailtabs/01-unified-inbox.jpg</image:loc></image:image>
-    <image:image><image:loc>https://evosoft.solutions/assets/shots/mailtabs/04-composer.jpg</image:loc></image:image>
-    <image:image><image:loc>https://evosoft.solutions/assets/shots/mailtabs/02-receipts-tab.jpg</image:loc></image:image>
-    <image:image><image:loc>https://evosoft.solutions/assets/shots/mailtabs/03-conversation.jpg</image:loc></image:image>
-    <image:image><image:loc>https://evosoft.solutions/assets/shots/mailtabs/05-tab-editor.jpg</image:loc></image:image>
-    <image:image><image:loc>https://evosoft.solutions/assets/shots/mailtabs/06-add-account.jpg</image:loc></image:image>
-    <image:image><image:loc>https://evosoft.solutions/assets/shots/mailtabs/07-settings.jpg</image:loc></image:image>
-    <image:image><image:loc>https://evosoft.solutions/assets/shots/mailtabs/08-bulk-select.jpg</image:loc></image:image>
-    <image:image><image:loc>https://evosoft.solutions/assets/shots/mailtabs/09-phone.jpg</image:loc></image:image>
-  </url>
-  <url>
-    <loc>https://evosoft.solutions/ka/work/mailtabs</loc>
-    <lastmod>2026-11-25</lastmod>
-    <xhtml:link rel="alternate" hreflang="en" href="https://evosoft.solutions/work/mailtabs"/>
-    <xhtml:link rel="alternate" hreflang="ka" href="https://evosoft.solutions/ka/work/mailtabs"/>
-    <xhtml:link rel="alternate" hreflang="ru" href="https://evosoft.solutions/ru/work/mailtabs"/>
-    <xhtml:link rel="alternate" hreflang="es" href="https://evosoft.solutions/es/work/mailtabs"/>
-    <xhtml:link rel="alternate" hreflang="x-default" href="https://evosoft.solutions/work/mailtabs"/>
-    <image:image><image:loc>https://evosoft.solutions/assets/shots/mailtabs/01-unified-inbox.jpg</image:loc></image:image>
-    <image:image><image:loc>https://evosoft.solutions/assets/shots/mailtabs/04-composer.jpg</image:loc></image:image>
-    <image:image><image:loc>https://evosoft.solutions/assets/shots/mailtabs/02-receipts-tab.jpg</image:loc></image:image>
-    <image:image><image:loc>https://evosoft.solutions/assets/shots/mailtabs/03-conversation.jpg</image:loc></image:image>
-    <image:image><image:loc>https://evosoft.solutions/assets/shots/mailtabs/05-tab-editor.jpg</image:loc></image:image>
-    <image:image><image:loc>https://evosoft.solutions/assets/shots/mailtabs/06-add-account.jpg</image:loc></image:image>
-    <image:image><image:loc>https://evosoft.solutions/assets/shots/mailtabs/07-settings.jpg</image:loc></image:image>
-    <image:image><image:loc>https://evosoft.solutions/assets/shots/mailtabs/08-bulk-select.jpg</image:loc></image:image>
-    <image:image><image:loc>https://evosoft.solutions/assets/shots/mailtabs/09-phone.jpg</image:loc></image:image>
-  </url>
-  <url>
-    <loc>https://evosoft.solutions/ru/work/mailtabs</loc>
-    <lastmod>2026-11-25</lastmod>
-    <xhtml:link rel="alternate" hreflang="en" href="https://evosoft.solutions/work/mailtabs"/>
-    <xhtml:link rel="alternate" hreflang="ka" href="https://evosoft.solutions/ka/work/mailtabs"/>
-    <xhtml:link rel="alternate" hreflang="ru" href="https://evosoft.solutions/ru/work/mailtabs"/>
     <xhtml:link rel="alternate" hreflang="es" href="https://evosoft.solutions/es/work/mailtabs"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://evosoft.solutions/work/mailtabs"/>
     <image:image><image:loc>https://evosoft.solutions/assets/shots/mailtabs/01-unified-inbox.jpg</image:loc></image:image>
@@ -306,8 +128,6 @@
     <loc>https://evosoft.solutions/es/work/mailtabs</loc>
     <lastmod>2026-11-25</lastmod>
     <xhtml:link rel="alternate" hreflang="en" href="https://evosoft.solutions/work/mailtabs"/>
-    <xhtml:link rel="alternate" hreflang="ka" href="https://evosoft.solutions/ka/work/mailtabs"/>
-    <xhtml:link rel="alternate" hreflang="ru" href="https://evosoft.solutions/ru/work/mailtabs"/>
     <xhtml:link rel="alternate" hreflang="es" href="https://evosoft.solutions/es/work/mailtabs"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://evosoft.solutions/work/mailtabs"/>
     <image:image><image:loc>https://evosoft.solutions/assets/shots/mailtabs/01-unified-inbox.jpg</image:loc></image:image>
@@ -324,46 +144,6 @@
     <loc>https://evosoft.solutions/work/studycat</loc>
     <lastmod>2026-11-25</lastmod>
     <xhtml:link rel="alternate" hreflang="en" href="https://evosoft.solutions/work/studycat"/>
-    <xhtml:link rel="alternate" hreflang="ka" href="https://evosoft.solutions/ka/work/studycat"/>
-    <xhtml:link rel="alternate" hreflang="ru" href="https://evosoft.solutions/ru/work/studycat"/>
-    <xhtml:link rel="alternate" hreflang="es" href="https://evosoft.solutions/es/work/studycat"/>
-    <xhtml:link rel="alternate" hreflang="x-default" href="https://evosoft.solutions/work/studycat"/>
-    <image:image><image:loc>https://evosoft.solutions/assets/shots/studycat/02-class-dashboard.jpg</image:loc></image:image>
-    <image:image><image:loc>https://evosoft.solutions/assets/shots/studycat/03-notes.jpg</image:loc></image:image>
-    <image:image><image:loc>https://evosoft.solutions/assets/shots/studycat/04-quizzer.jpg</image:loc></image:image>
-    <image:image><image:loc>https://evosoft.solutions/assets/shots/studycat/05-flashcards.jpg</image:loc></image:image>
-    <image:image><image:loc>https://evosoft.solutions/assets/shots/studycat/06-projectile-tool.jpg</image:loc></image:image>
-    <image:image><image:loc>https://evosoft.solutions/assets/shots/studycat/07-discussion-thread.jpg</image:loc></image:image>
-    <image:image><image:loc>https://evosoft.solutions/assets/shots/studycat/08-moderator-queue.jpg</image:loc></image:image>
-    <image:image><image:loc>https://evosoft.solutions/assets/shots/studycat/09-faculty-class.jpg</image:loc></image:image>
-    <image:image><image:loc>https://evosoft.solutions/assets/shots/studycat/10-admin-members.jpg</image:loc></image:image>
-    <image:image><image:loc>https://evosoft.solutions/assets/shots/studycat/11-phone-dashboard.jpg</image:loc></image:image>
-  </url>
-  <url>
-    <loc>https://evosoft.solutions/ka/work/studycat</loc>
-    <lastmod>2026-11-25</lastmod>
-    <xhtml:link rel="alternate" hreflang="en" href="https://evosoft.solutions/work/studycat"/>
-    <xhtml:link rel="alternate" hreflang="ka" href="https://evosoft.solutions/ka/work/studycat"/>
-    <xhtml:link rel="alternate" hreflang="ru" href="https://evosoft.solutions/ru/work/studycat"/>
-    <xhtml:link rel="alternate" hreflang="es" href="https://evosoft.solutions/es/work/studycat"/>
-    <xhtml:link rel="alternate" hreflang="x-default" href="https://evosoft.solutions/work/studycat"/>
-    <image:image><image:loc>https://evosoft.solutions/assets/shots/studycat/02-class-dashboard.jpg</image:loc></image:image>
-    <image:image><image:loc>https://evosoft.solutions/assets/shots/studycat/03-notes.jpg</image:loc></image:image>
-    <image:image><image:loc>https://evosoft.solutions/assets/shots/studycat/04-quizzer.jpg</image:loc></image:image>
-    <image:image><image:loc>https://evosoft.solutions/assets/shots/studycat/05-flashcards.jpg</image:loc></image:image>
-    <image:image><image:loc>https://evosoft.solutions/assets/shots/studycat/06-projectile-tool.jpg</image:loc></image:image>
-    <image:image><image:loc>https://evosoft.solutions/assets/shots/studycat/07-discussion-thread.jpg</image:loc></image:image>
-    <image:image><image:loc>https://evosoft.solutions/assets/shots/studycat/08-moderator-queue.jpg</image:loc></image:image>
-    <image:image><image:loc>https://evosoft.solutions/assets/shots/studycat/09-faculty-class.jpg</image:loc></image:image>
-    <image:image><image:loc>https://evosoft.solutions/assets/shots/studycat/10-admin-members.jpg</image:loc></image:image>
-    <image:image><image:loc>https://evosoft.solutions/assets/shots/studycat/11-phone-dashboard.jpg</image:loc></image:image>
-  </url>
-  <url>
-    <loc>https://evosoft.solutions/ru/work/studycat</loc>
-    <lastmod>2026-11-25</lastmod>
-    <xhtml:link rel="alternate" hreflang="en" href="https://evosoft.solutions/work/studycat"/>
-    <xhtml:link rel="alternate" hreflang="ka" href="https://evosoft.solutions/ka/work/studycat"/>
-    <xhtml:link rel="alternate" hreflang="ru" href="https://evosoft.solutions/ru/work/studycat"/>
     <xhtml:link rel="alternate" hreflang="es" href="https://evosoft.solutions/es/work/studycat"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://evosoft.solutions/work/studycat"/>
     <image:image><image:loc>https://evosoft.solutions/assets/shots/studycat/02-class-dashboard.jpg</image:loc></image:image>
@@ -381,8 +161,6 @@
     <loc>https://evosoft.solutions/es/work/studycat</loc>
     <lastmod>2026-11-25</lastmod>
     <xhtml:link rel="alternate" hreflang="en" href="https://evosoft.solutions/work/studycat"/>
-    <xhtml:link rel="alternate" hreflang="ka" href="https://evosoft.solutions/ka/work/studycat"/>
-    <xhtml:link rel="alternate" hreflang="ru" href="https://evosoft.solutions/ru/work/studycat"/>
     <xhtml:link rel="alternate" hreflang="es" href="https://evosoft.solutions/es/work/studycat"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://evosoft.solutions/work/studycat"/>
     <image:image><image:loc>https://evosoft.solutions/assets/shots/studycat/02-class-dashboard.jpg</image:loc></image:image>
@@ -400,26 +178,6 @@
     <loc>https://evosoft.solutions/services</loc>
     <lastmod>2026-11-25</lastmod>
     <xhtml:link rel="alternate" hreflang="en" href="https://evosoft.solutions/services"/>
-    <xhtml:link rel="alternate" hreflang="ka" href="https://evosoft.solutions/ka/services"/>
-    <xhtml:link rel="alternate" hreflang="ru" href="https://evosoft.solutions/ru/services"/>
-    <xhtml:link rel="alternate" hreflang="es" href="https://evosoft.solutions/es/services"/>
-    <xhtml:link rel="alternate" hreflang="x-default" href="https://evosoft.solutions/services"/>
-  </url>
-  <url>
-    <loc>https://evosoft.solutions/ka/services</loc>
-    <lastmod>2026-11-25</lastmod>
-    <xhtml:link rel="alternate" hreflang="en" href="https://evosoft.solutions/services"/>
-    <xhtml:link rel="alternate" hreflang="ka" href="https://evosoft.solutions/ka/services"/>
-    <xhtml:link rel="alternate" hreflang="ru" href="https://evosoft.solutions/ru/services"/>
-    <xhtml:link rel="alternate" hreflang="es" href="https://evosoft.solutions/es/services"/>
-    <xhtml:link rel="alternate" hreflang="x-default" href="https://evosoft.solutions/services"/>
-  </url>
-  <url>
-    <loc>https://evosoft.solutions/ru/services</loc>
-    <lastmod>2026-11-25</lastmod>
-    <xhtml:link rel="alternate" hreflang="en" href="https://evosoft.solutions/services"/>
-    <xhtml:link rel="alternate" hreflang="ka" href="https://evosoft.solutions/ka/services"/>
-    <xhtml:link rel="alternate" hreflang="ru" href="https://evosoft.solutions/ru/services"/>
     <xhtml:link rel="alternate" hreflang="es" href="https://evosoft.solutions/es/services"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://evosoft.solutions/services"/>
   </url>
@@ -427,8 +185,6 @@
     <loc>https://evosoft.solutions/es/services</loc>
     <lastmod>2026-11-25</lastmod>
     <xhtml:link rel="alternate" hreflang="en" href="https://evosoft.solutions/services"/>
-    <xhtml:link rel="alternate" hreflang="ka" href="https://evosoft.solutions/ka/services"/>
-    <xhtml:link rel="alternate" hreflang="ru" href="https://evosoft.solutions/ru/services"/>
     <xhtml:link rel="alternate" hreflang="es" href="https://evosoft.solutions/es/services"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://evosoft.solutions/services"/>
   </url>
@@ -436,26 +192,6 @@
     <loc>https://evosoft.solutions/about</loc>
     <lastmod>2026-11-25</lastmod>
     <xhtml:link rel="alternate" hreflang="en" href="https://evosoft.solutions/about"/>
-    <xhtml:link rel="alternate" hreflang="ka" href="https://evosoft.solutions/ka/about"/>
-    <xhtml:link rel="alternate" hreflang="ru" href="https://evosoft.solutions/ru/about"/>
-    <xhtml:link rel="alternate" hreflang="es" href="https://evosoft.solutions/es/about"/>
-    <xhtml:link rel="alternate" hreflang="x-default" href="https://evosoft.solutions/about"/>
-  </url>
-  <url>
-    <loc>https://evosoft.solutions/ka/about</loc>
-    <lastmod>2026-11-25</lastmod>
-    <xhtml:link rel="alternate" hreflang="en" href="https://evosoft.solutions/about"/>
-    <xhtml:link rel="alternate" hreflang="ka" href="https://evosoft.solutions/ka/about"/>
-    <xhtml:link rel="alternate" hreflang="ru" href="https://evosoft.solutions/ru/about"/>
-    <xhtml:link rel="alternate" hreflang="es" href="https://evosoft.solutions/es/about"/>
-    <xhtml:link rel="alternate" hreflang="x-default" href="https://evosoft.solutions/about"/>
-  </url>
-  <url>
-    <loc>https://evosoft.solutions/ru/about</loc>
-    <lastmod>2026-11-25</lastmod>
-    <xhtml:link rel="alternate" hreflang="en" href="https://evosoft.solutions/about"/>
-    <xhtml:link rel="alternate" hreflang="ka" href="https://evosoft.solutions/ka/about"/>
-    <xhtml:link rel="alternate" hreflang="ru" href="https://evosoft.solutions/ru/about"/>
     <xhtml:link rel="alternate" hreflang="es" href="https://evosoft.solutions/es/about"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://evosoft.solutions/about"/>
   </url>
@@ -463,8 +199,6 @@
     <loc>https://evosoft.solutions/es/about</loc>
     <lastmod>2026-11-25</lastmod>
     <xhtml:link rel="alternate" hreflang="en" href="https://evosoft.solutions/about"/>
-    <xhtml:link rel="alternate" hreflang="ka" href="https://evosoft.solutions/ka/about"/>
-    <xhtml:link rel="alternate" hreflang="ru" href="https://evosoft.solutions/ru/about"/>
     <xhtml:link rel="alternate" hreflang="es" href="https://evosoft.solutions/es/about"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://evosoft.solutions/about"/>
   </url>
@@ -472,26 +206,6 @@
     <loc>https://evosoft.solutions/contact</loc>
     <lastmod>2026-11-25</lastmod>
     <xhtml:link rel="alternate" hreflang="en" href="https://evosoft.solutions/contact"/>
-    <xhtml:link rel="alternate" hreflang="ka" href="https://evosoft.solutions/ka/contact"/>
-    <xhtml:link rel="alternate" hreflang="ru" href="https://evosoft.solutions/ru/contact"/>
-    <xhtml:link rel="alternate" hreflang="es" href="https://evosoft.solutions/es/contact"/>
-    <xhtml:link rel="alternate" hreflang="x-default" href="https://evosoft.solutions/contact"/>
-  </url>
-  <url>
-    <loc>https://evosoft.solutions/ka/contact</loc>
-    <lastmod>2026-11-25</lastmod>
-    <xhtml:link rel="alternate" hreflang="en" href="https://evosoft.solutions/contact"/>
-    <xhtml:link rel="alternate" hreflang="ka" href="https://evosoft.solutions/ka/contact"/>
-    <xhtml:link rel="alternate" hreflang="ru" href="https://evosoft.solutions/ru/contact"/>
-    <xhtml:link rel="alternate" hreflang="es" href="https://evosoft.solutions/es/contact"/>
-    <xhtml:link rel="alternate" hreflang="x-default" href="https://evosoft.solutions/contact"/>
-  </url>
-  <url>
-    <loc>https://evosoft.solutions/ru/contact</loc>
-    <lastmod>2026-11-25</lastmod>
-    <xhtml:link rel="alternate" hreflang="en" href="https://evosoft.solutions/contact"/>
-    <xhtml:link rel="alternate" hreflang="ka" href="https://evosoft.solutions/ka/contact"/>
-    <xhtml:link rel="alternate" hreflang="ru" href="https://evosoft.solutions/ru/contact"/>
     <xhtml:link rel="alternate" hreflang="es" href="https://evosoft.solutions/es/contact"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://evosoft.solutions/contact"/>
   </url>
@@ -499,8 +213,6 @@
     <loc>https://evosoft.solutions/es/contact</loc>
     <lastmod>2026-11-25</lastmod>
     <xhtml:link rel="alternate" hreflang="en" href="https://evosoft.solutions/contact"/>
-    <xhtml:link rel="alternate" hreflang="ka" href="https://evosoft.solutions/ka/contact"/>
-    <xhtml:link rel="alternate" hreflang="ru" href="https://evosoft.solutions/ru/contact"/>
     <xhtml:link rel="alternate" hreflang="es" href="https://evosoft.solutions/es/contact"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://evosoft.solutions/contact"/>
   </url>
@@ -508,26 +220,6 @@
     <loc>https://evosoft.solutions/legal</loc>
     <lastmod>2026-11-25</lastmod>
     <xhtml:link rel="alternate" hreflang="en" href="https://evosoft.solutions/legal"/>
-    <xhtml:link rel="alternate" hreflang="ka" href="https://evosoft.solutions/ka/legal"/>
-    <xhtml:link rel="alternate" hreflang="ru" href="https://evosoft.solutions/ru/legal"/>
-    <xhtml:link rel="alternate" hreflang="es" href="https://evosoft.solutions/es/legal"/>
-    <xhtml:link rel="alternate" hreflang="x-default" href="https://evosoft.solutions/legal"/>
-  </url>
-  <url>
-    <loc>https://evosoft.solutions/ka/legal</loc>
-    <lastmod>2026-11-25</lastmod>
-    <xhtml:link rel="alternate" hreflang="en" href="https://evosoft.solutions/legal"/>
-    <xhtml:link rel="alternate" hreflang="ka" href="https://evosoft.solutions/ka/legal"/>
-    <xhtml:link rel="alternate" hreflang="ru" href="https://evosoft.solutions/ru/legal"/>
-    <xhtml:link rel="alternate" hreflang="es" href="https://evosoft.solutions/es/legal"/>
-    <xhtml:link rel="alternate" hreflang="x-default" href="https://evosoft.solutions/legal"/>
-  </url>
-  <url>
-    <loc>https://evosoft.solutions/ru/legal</loc>
-    <lastmod>2026-11-25</lastmod>
-    <xhtml:link rel="alternate" hreflang="en" href="https://evosoft.solutions/legal"/>
-    <xhtml:link rel="alternate" hreflang="ka" href="https://evosoft.solutions/ka/legal"/>
-    <xhtml:link rel="alternate" hreflang="ru" href="https://evosoft.solutions/ru/legal"/>
     <xhtml:link rel="alternate" hreflang="es" href="https://evosoft.solutions/es/legal"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://evosoft.solutions/legal"/>
   </url>
@@ -535,8 +227,6 @@
     <loc>https://evosoft.solutions/es/legal</loc>
     <lastmod>2026-11-25</lastmod>
     <xhtml:link rel="alternate" hreflang="en" href="https://evosoft.solutions/legal"/>
-    <xhtml:link rel="alternate" hreflang="ka" href="https://evosoft.solutions/ka/legal"/>
-    <xhtml:link rel="alternate" hreflang="ru" href="https://evosoft.solutions/ru/legal"/>
     <xhtml:link rel="alternate" hreflang="es" href="https://evosoft.solutions/es/legal"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://evosoft.solutions/legal"/>
   </url>

@@ -12,7 +12,12 @@ $p = preg_replace('#[/\\\\]+#', '/', '/' . rawurldecode($rawPath)); // one slash
 $p = preg_replace(['#/(?:\./)+#', '#/\.$#'], '/', $p);                 // and no '.' segments, so /./api/ is /api/
 if (str_contains($p, "\0") || in_array('..', explode('/', $p), true)) { $p = '/404'; }
 $lang = null;
-foreach (['ka', 'ru', 'es'] as $l) if ($p === "/$l" || str_starts_with($p, "/$l/")) $lang = $l;
+// the Georgian and Russian versions were removed: their addresses go to the same page in English
+if (preg_match('#^/(?:ka|ru)(?:/(.*))?$#', $p, $m)) {
+    header('Location: /' . implode('/', array_map('rawurlencode', explode('/', ($m[1] ?? '') !== '' ? $m[1] : 'home'))) . $qs, true, 301);
+    return true;
+}
+foreach (['es'] as $l) if ($p === "/$l" || str_starts_with($p, "/$l/")) $lang = $l;
 $pre = $lang ? "/$lang/" : '/';
 $rest = (string)substr($p, strlen($pre));
 $go = function ($to) use ($qs) {

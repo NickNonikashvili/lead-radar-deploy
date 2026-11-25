@@ -11,13 +11,16 @@ ErrorDocument 404 /404.html
 # Clean addresses. The pages are files like services.html and work/evo.html, but the site links to /services and
 # /work/evo, and the home page is /home. These rules serve the files at the clean addresses and send every old address
 # (/, /index.html, /services.html, /services/) to the clean one with a permanent redirect, keeping any query string.
-# The language folders (ka/, ru/, es/) have the same rules in their own .htaccess (written by site-builder/build.mjs).
+# The Spanish folder (es/) has the same rules in its own .htaccess (written by site-builder/build.mjs).
 <IfModule mod_rewrite.c>
   RewriteEngine On
   RewriteBase /
   # the demo subdomains, if one lives in a folder of this site, are left alone
   RewriteCond %{HTTP_HOST} -demo\. [NC]
   RewriteRule ^ - [L]
+  # the Georgian and Russian versions were removed: /ka/... and /ru/... go to the same page in English
+  RewriteRule ^(?:ka|ru)/?$ /home [R=301,L]
+  RewriteRule ^(?:ka|ru)/(.+)$ /$1 [R=301,L,NE]
   # (only for the visitor's own request, not when the server shows the "page not found" page)
   RewriteCond %{ENV:REDIRECT_STATUS} ^$
   RewriteCond %{THE_REQUEST} \s/+((?:[^?\s]*/)?)index\.html[?\s]

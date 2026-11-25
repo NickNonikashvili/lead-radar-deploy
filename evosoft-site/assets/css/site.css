@@ -6,7 +6,6 @@
    assets/fonts). Each family is stitched together by unicode-range, so Georgian text picks up its own font. */
 
 @font-face { font-family: 'Inter'; src: url(../fonts/inter.woff2?v=3100e775e8) format('woff2'); font-weight: 100 900; font-display: swap; unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
-@font-face { font-family: 'Inter'; src: url(../fonts/inter-cyrillic.woff2?v=71d5ee93cc) format('woff2'); font-weight: 100 900; font-display: swap; unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116; }
 @font-face { font-family: 'Inter'; src: url(../fonts/noto-georgian.woff2?v=b31b7282fd) format('woff2'); font-weight: 100 900; font-display: swap; unicode-range: U+0589, U+10A0-10FF, U+1C90-1CBA, U+1CBD-1CBF, U+205A, U+2D00-2D2F, U+2E31; }
 @font-face { font-family: 'JetBrains Mono'; src: url(../fonts/mono.woff2?v=14425ba9c6) format('woff2'); font-weight: 400; font-display: swap; }
 @font-face { font-family: 'JetBrains Mono'; src: url(../fonts/mono-500.woff2?v=cb182feeed) format('woff2'); font-weight: 500; font-display: swap; }
@@ -574,7 +573,6 @@ details[open] .plus::after { transform: rotate(0); }
   .legal-table tr { display: block; padding: 12px 0; border-bottom: 1px solid var(--border); }
   .legal-table td { display: grid; grid-template-columns: 6.5em minmax(0, 1fr); gap: 10px; padding: 3px 0; border: 0; min-width: 0; }
   .legal-table td::before { content: attr(data-label); color: var(--muted); font-size: 0.82rem; }
-  :lang(ka) .legal-table td { grid-template-columns: minmax(0, 1fr); gap: 2px; }
 }
 .quote-legal { margin: 0; padding: 0 6px; }
 
@@ -782,39 +780,14 @@ html .rv.in { opacity: 1; transform: none; }
 .motion .form-done:not([hidden]) { animation: rise 0.8s var(--ease); }
 
 /* ---------- per language ---------- */
-:where(:lang(ka)) h1 { font-size: clamp(2rem, 4.2vw, 3.2rem); line-height: 1.18; letter-spacing: 0; }
-:where(:lang(ka)) h2 { font-size: clamp(1.5rem, 2.6vw, 2.1rem); line-height: 1.22; letter-spacing: 0; }
-:lang(ka) .slogan { font-size: clamp(2.2rem, 5.6vw, 4.8rem); line-height: 1.14; letter-spacing: -0.01em; max-width: 16ch; }
-:lang(ka) .foot-slogan { font-size: clamp(2rem, 5.6vw, 5.2rem); line-height: 1.14; letter-spacing: -0.01em; }
-:lang(ka) .p-intro h1 { letter-spacing: 0; }
-:lang(ka) .mq-track span { letter-spacing: 0; }
-:where(:lang(ru), :lang(es)) h1 { font-size: clamp(2.3rem, 4.9vw, 4rem); }
-:lang(ru) .slogan, :lang(es) .slogan { font-size: clamp(2.6rem, 6.6vw, 6rem); max-width: 14ch; }
+:where(:lang(es)) h1 { font-size: clamp(2.3rem, 4.9vw, 4rem); }
+:lang(es) .slogan { font-size: clamp(2.6rem, 6.6vw, 6rem); max-width: 14ch; }
 h1, h2, h3, .lede { overflow-wrap: break-word; }
-:lang(ka) .page-head h1 { max-width: 24ch; }
-@media (max-width: 640px) { :where(:lang(ru)) h1 { font-size: clamp(1.9rem, 8.4vw, 4rem); } }
-@media (max-width: 380px) { :where(:lang(ka)) h1 { font-size: 1.8rem; } }
-@media (max-width: 480px) {
-  :lang(ka) .page-head h1 { font-size: clamp(1.35rem, 7.2vw, 2rem); }
-  :lang(ka) .legal .card h2 { font-size: clamp(1.1rem, 5.6vw, 1.5rem); }
-}
-/* the smallest phones: long Russian words in the legal headings, and the Georgian service names, fit on one line */
-@media (max-width: 360px) {
-  :lang(ru) .page-head h1 { font-size: 1.6rem; }
-  :lang(ru) .legal .card h2 { font-size: 1.3rem; }
-  :lang(ka) .svc.wide { grid-template-columns: minmax(0, 1fr); }
-  :lang(ka) .svc.wide > .btn { grid-column: 1; }
-}
 .nav > a, .nav .nav-quote { white-space: nowrap; }
-@media (min-width: 901px) and (max-width: 980px) {
-  :lang(ka) .nav > a:not(.btn) { padding: 8px 10px; font-size: 13.5px; }
-  :lang(ka) .nav .nav-quote { padding: 8px 12px; font-size: 13px; }
-}
 /* a short laptop screen still shows the whole hero, facts included */
 @media (min-width: 901px) and (max-height: 820px) {
   .hero { padding-top: calc(var(--bar) + 12px); }
-  .hero .slogan, :lang(ru) .hero .slogan, :lang(es) .hero .slogan { font-size: clamp(2.6rem, 8.5vh, 5rem); }
-  :lang(ka) .hero .slogan { font-size: clamp(2rem, 6vh, 3.4rem); }
+  .hero .slogan, :lang(es) .hero .slogan { font-size: clamp(2.6rem, 8.5vh, 5rem); }
   .glass-row { padding: 10px 14px; gap: 4px 12px; }
   .glass::before { margin-bottom: 8px; }
   .hero-copy { padding-bottom: 22px; }
@@ -823,7 +796,7 @@ h1, h2, h3, .lede { overflow-wrap: break-word; }
   .hero-feats { padding-top: 18px; padding-bottom: 22px; }
   .feat-i::before { top: -19px; }
 }
-:lang(ka) .btn, :lang(ru) .btn, :lang(es) .btn { white-space: normal; text-align: center; }
+:lang(es) .btn { white-space: normal; text-align: center; }
 
 /* ---------- responsive ---------- */
 @media (max-width: 1080px) {
@@ -858,7 +831,6 @@ h1, h2, h3, .lede { overflow-wrap: break-word; }
   .svc.wide { grid-template-columns: auto minmax(0, 1fr); }
   .svc.wide > .btn { grid-column: 2; justify-self: start; }
   .slogan { font-size: clamp(2.6rem, 12.5vw, 3.8rem); }
-  :lang(ka) .slogan { font-size: clamp(1.9rem, 8.6vw, 2.6rem); }
   .actions .btn, .hero-cta .btn.primary { flex: 1 1 auto; }
   .dc-tab { font-size: 13px; padding: 9px 4px; }
   .accts { grid-template-columns: minmax(0, 1fr); }

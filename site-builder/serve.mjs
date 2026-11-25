@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Preview the built site with its clean addresses, the way the .htaccess rules serve it on the host:
 //   node site-builder/serve.mjs [port]        then open http://localhost:8080/home
-// /home, /services, /ka/work/evo serve the .html files; /, /index.html, /services.html and /services/ redirect to the
+// /home, /services, /es/work/evo serve the .html files; /, /index.html, /services.html and /services/ redirect to the
 // clean address; unknown addresses get the language's "page not found" page with a 404. Like on the host, only
 // api/chat.php and api/quote.php are public, but the PHP itself doesn't run here: the chat falls back to its built-in
 // answers (for a preview with PHP, see site-builder/router.php). It listens on this computer only.
@@ -13,7 +13,7 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', 'evosoft-site');
 const PORT = Number(process.argv[2]) || 8080;
-const LANGS = ['ka', 'ru', 'es'];
+const LANGS = ['es'];
 const TYPES = {
   '.html': 'text/html; charset=utf-8', '.css': 'text/css', '.js': 'text/javascript', '.json': 'application/json',
   '.svg': 'image/svg+xml', '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.webp': 'image/webp',
@@ -32,6 +32,9 @@ function handle(req, res) {
   p = ('/' + p).replace(/[\\/]+/g, '/'); // one slash at a time, so a redirect can never point at another host
   p = p.replace(/\/(?:\.\/)+/g, '/').replace(/\/\.$/, '/'); // and no '.' segments, so /./api/ is /api/
   if (p.includes('\0') || p.split('/').includes('..')) return send(404);
+  // the Georgian and Russian versions were removed: their addresses go to the same page in English
+  const gone = p.match(/^\/(?:ka|ru)(?:\/(.*))?$/);
+  if (gone) { res.writeHead(301, { Location: encodeURI('/' + (gone[1] || 'home')) + qs }); return res.end(); }
   const lang = LANGS.find((l) => p === `/${l}` || p.startsWith(`/${l}/`));
   const pre = lang ? `/${lang}/` : '/';
   const rest = p.slice(pre.length); // the address inside the language: '', 'services', 'work/evo.html', ...

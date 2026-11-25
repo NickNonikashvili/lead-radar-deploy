@@ -65,7 +65,7 @@ require __DIR__ . '/vendor/autoload.php';
 
 
 $system = file_get_contents(__DIR__ . '/knowledge.md');
-$langs = ['en' => 'English', 'ka' => 'Georgian', 'ru' => 'Russian', 'es' => 'Spanish'];
+$langs = ['en' => 'English', 'es' => 'Spanish'];
 $lang = is_string($req['lang'] ?? null) && isset($langs[$req['lang']]) ? $req['lang'] : 'en';
 $pageLanguage = "The visitor is reading the {$langs[$lang]} version of the site. Answer in {$langs[$lang]} unless they write in another language; then answer in theirs.";
 $model = (string)$cfg['chat_model'];

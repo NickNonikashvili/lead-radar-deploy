@@ -17,7 +17,7 @@ node site-builder/package.mjs        # builds and makes dist/evosoft-site-YYYYMM
 ```
 
 1. In hPanel → File Manager, open `public_html`, upload the zip and **Extract** it there (replace the old files).
-   The zip includes the hidden `.htaccess` files (in the main folder, `api/`, `ka/`, `ru/` and `es/`; the clean
+   The zip includes the hidden `.htaccess` files (in the main folder, `api/` and `es/`; the clean
    addresses need all of them) and the PHP libraries for the chat and for sending email.
 2. Add your settings file (next section) with the password of the `contact@evosoft.solutions` mailbox, so the quote
    form can send email. Without it the site still works: the chat uses its built-in answers, and quote requests are
@@ -28,14 +28,15 @@ node site-builder/package.mjs        # builds and makes dist/evosoft-site-YYYYMM
 5. In Google Search Console, add the site and submit `https://evosoft.solutions/sitemap.xml`.
 
 **Addresses.** Pages have clean addresses: the home page is `/home`, the others `/services`, `/contact`,
-`/work/evo`, and each language has its own (`/ka/home`, `/ru/services`, `/es/work/evo`). The files on the server keep
-their `.html` names; the `.htaccess` files (the main one, and one in each language folder, written by the build) serve
+`/work/evo`, and the Spanish version has its own (`/es/home`, `/es/work/evo`). The files on the server keep
+their `.html` names; the `.htaccess` files (the main one, and one in the `es/` folder, written by the build) serve
 the files at the clean addresses. Every old address still works, with a permanent redirect to the new one, keeping
 any `?…` on the end:
 
 | Old | New |
 | --- | --- |
-| `/`, `/index.html` and `/index` | `/home` (and `/ka/` → `/ka/home`) |
+| `/`, `/index.html` and `/index` | `/home` (and `/es/` → `/es/home`) |
+| `/ka/…`, `/ru/…` (the Georgian and Russian versions, now removed) | the same page in English |
 | `/services.html`, `/work/evo.html` | `/services`, `/work/evo` |
 | `/services/` | `/services` |
 | `/pricing.html`, `/pricing` | `/contact` |
@@ -135,17 +136,19 @@ For local testing only, an `api/config.php` with `'mail_mode' => 'log'` saves qu
 
 ### Languages
 
-The site is built in English (at the root), Georgian (`/ka/`), Russian (`/ru/`) and Spanish (`/es/`). The header has a
-language menu, every page links to its other versions for Google (`hreflang`), and the sitemap lists them all. English
-pages offer visitors whose browser prefers Georgian, Russian or Spanish their language once; nothing redirects on its own.
+The site is built in English (at the root) and Spanish (`/es/`). The header has a language menu, every page links to
+its other version for Google (`hreflang`), and the sitemap lists both. English pages offer visitors whose browser
+prefers Spanish the Spanish version once; nothing redirects on its own. (Georgian and Russian versions existed until
+November 2026; their addresses now redirect to the English pages. To bring one back, add it to `LANGS` in
+`lib/i18n.mjs` and restore its dictionary folder from git history.)
 
 - Write content in English, in `site.mjs`, `products.mjs` or `build.mjs`, then rebuild. The build lists every string in
-  `site-builder/i18n/source.json` and prints how many each language has, e.g. `Русский: 640/640 strings translated`.
-- Translations are in `site-builder/i18n/<ka|ru|es>/*.json`: the English text on the left, the translation on the right.
+  `site-builder/i18n/source.json` and prints how many each language has, e.g. `Español: 640/640 strings translated`.
+- Translations are in `site-builder/i18n/es/*.json`: the English text on the left, the translation on the right.
   Keep `{placeholders}` as they are. A changed English sentence needs its translation updated too; until then the
   page shows the English, and `dist/i18n-missing-<lang>.json` lists what's missing.
 - The demos themselves stay in English, so instructions keep the demo's button names in English.
-- Georgian uses Noto Sans Georgian and Russian uses Inter's Cyrillic subset (in `assets/fonts/`); the CSS picks them by character. Their licences (SIL OFL 1.1) are next to them, and the icon licences (Lucide, Feather) are in `assets/licenses/`; the legal page credits all of them.
+- Noto Sans Georgian (in `assets/fonts/`) is kept only for the few Georgian letters on the legal page ("შპს"); the browser downloads it only on pages that have them. Font licences (SIL OFL 1.1) are next to the fonts, and the icon licences (Lucide, Feather) are in `assets/licenses/`; the legal page credits all of them.
 
 ### Demo links
 
@@ -186,7 +189,6 @@ FAQPage on the quote page). It also has:
 Ideas that would help further:
 
 - **Google Business Profile** for EvoSoft, which matters most for "near me" and Georgia searches.
-- **A Georgian-language version** of the key pages.
 - **Links to evosoft.solutions** from client sites (a "Made by EvoSoft" footer link) and from the products.
 
 ## Legal, privacy and accessibility
@@ -213,7 +215,7 @@ change the text in `build.mjs` (the legal page) and `site.legalUpdated` in `data
   data you process; have a plan for a data breach (tell the Personal Data Protection Service of Georgia within 72
   hours); decide whether you need an EU representative (GDPR Art. 27) since the site serves EU visitors; put the
   14-day cancellation right in quotes for private (consumer) clients; have a Georgian lawyer read the legal page,
-  especially the Georgian translation, and name the ground under Georgian law for sending chat messages to Anthropic in
+  and name the ground under Georgian law for sending chat messages to Anthropic in
   the USA (the page only claims the EU clauses for transfers the GDPR covers).
 - **Live demos** are covered by the same privacy policy ("Live demos", and the logs line under "How long we keep it").
   Keep it true to the demo kits in `demos/`: the reset times, Evo's 5 backups, the clock-in location and the
@@ -251,7 +253,7 @@ pressed, the word "evolution", and a few small markers). Text on coral is navy, 
 - **Products** each have a colour for small markers (tab dots, role badges, the glow on their tile): Evo coral,
   Mailtabs sand (a deeper cream, so it shows on cream sections too), StudyCat a light navy.
 - **Type.** Inter, the logo's typeface, for everything, set large and tight. JetBrains Mono for the typing line. Noto
-  Sans Georgian for Georgian.
+  Sans Georgian for the few Georgian letters on the legal page.
 - **The slogan.** "Your digital evolution starts here" is the home page headline, with its words rising in. It is also
   written huge in every footer, on the share image and in the structured data.
 - **The share image** (`assets/img/og.jpg`) is drawn by `site-builder/og.py`:
