@@ -248,7 +248,7 @@
   "ctx": "data: services.8.line"
  },
  {
-  "s": "Every project comes with a period of free support after launch. After that you can move to monthly maintenance, or take over yourself with everything handed over.",
+  "s": "Every project comes with a period of free support after launch. After that you can move to monthly maintenance, or take over yourself with the handover your quote sets out.",
   "ctx": "data: services.8.text"
  },
  {
@@ -380,7 +380,7 @@
   "ctx": "data: faq.4.q"
  },
  {
-  "s": "Every project includes a period of free support. After that you can move to monthly maintenance at any time, or handle updates yourself. We hand over everything you need either way.",
+  "s": "Every project includes a period of free support. After that you can move to monthly maintenance at any time, or handle updates yourself. Your quote says exactly what we hand over.",
   "ctx": "data: faq.4.a"
  },
  {
@@ -2393,7 +2393,7 @@
   "ctx": "contact.html"
  },
  {
-  "s": "{company} uses these details only to reply and prepare your quote, and deletes them {months} months after you send them if no project follows. Please don’t include sensitive personal information.",
+  "s": "{company} uses these details only to reply and prepare your quote, and deletes them {months} months after you send them if no project follows. You can ask us to see or delete them at any time. Please don’t include sensitive personal information.",
   "ctx": "contact.html"
  },
  {
@@ -2569,7 +2569,7 @@
   "ctx": "legal.html"
  },
  {
-  "s": "This policy explains what personal data this website collects, why, and what you can do about it. {company} (see Who we are) is responsible for it. For any privacy question, email {email}.",
+  "s": "This policy explains what personal data this website and our live demos collect, why, and what you can do about it. {company} (see Who we are) is responsible for it. For any privacy question, email {email}.",
   "ctx": "legal.html"
  },
  {
@@ -2613,7 +2613,11 @@
   "ctx": "legal.html"
  },
  {
-  "s": "Pages that list our live demos check whether each demo is online, so your browser contacts our demo servers ({hosts}). Like any web server, they see your IP address and browser type. No cookies are sent with these checks.",
+  "s": "Pages that list our live demos check whether each demo is online, so your browser contacts our demo servers ({hosts}). Like any web server, they see your IP address and browser type. No cookies are sent with these checks. Legal basis: our legitimate interest in showing whether the demos are working and keeping them secure.",
+  "ctx": "legal.html"
+ },
+ {
+  "s": "The demos run on our own servers with shared accounts and made-up data, so other visitors can see what you enter there. In the Evo demo that includes the location your device shares when you clock in, which happens only if you allow it in your browser. The demos delete everything at their automatic reset: Evo every 3 hours, Mailtabs every hour and StudyCat every night. Evo also keeps backups from before its last 5 resets, so its data is normally gone within about 15 hours. Please use only the demo accounts and don’t enter real personal information. Legal basis: our legitimate interest in letting you try our software; your location is used only if you choose to share it.",
   "ctx": "legal.html"
  },
  {
@@ -2641,6 +2645,10 @@
   "ctx": "legal.html"
  },
  {
+  "s": "The OpenStreetMap Foundation (United Kingdom), when the Evo demo shows a map: your browser loads the map images straight from it, so it sees your IP address.",
+  "ctx": "legal.html"
+ },
+ {
   "s": "Public authorities, where the law requires it.",
   "ctx": "legal.html"
  },
@@ -2653,7 +2661,7 @@
   "ctx": "legal.html"
  },
  {
-  "s": "Anthropic is in the United States. We rely on its data processing addendum, which includes the EU standard contractual clauses, as the safeguard for these transfers. You can ask us for details.",
+  "s": "Anthropic is in the United States. For transfers covered by the GDPR, we rely on Anthropic’s data processing addendum, which includes the EU standard contractual clauses. You can ask us for a copy.",
   "ctx": "legal.html"
  },
  {
@@ -2674,6 +2682,14 @@
  },
  {
   "s": "Server logs: the limited period set by our hosting provider.",
+  "ctx": "legal.html"
+ },
+ {
+  "s": "Live demos: until the next automatic reset (Evo’s backups: normally within about 15 hours).",
+  "ctx": "legal.html"
+ },
+ {
+  "s": "Demo servers’ technical logs: only as long as needed to keep the demos running and secure.",
   "ctx": "legal.html"
  },
  {
@@ -2705,7 +2721,7 @@
   "ctx": "legal.html"
  },
  {
-  "s": "This website doesn’t use cookies, analytics, advertising or tracking tools. It saves a few small items in your own browser, only for features you use or choose. They stay in your browser (apart from the chat messages you decide to send), so under EU rules they don’t need your consent.",
+  "s": "This website doesn’t use cookies, analytics, advertising or tracking tools. It saves a few small items in your own browser: the language you pick, your current chat, whether the assistant’s AI is available, and a note that the chat greeting has already been shown. They hold no identifier, are used only for these features and stay in your browser (apart from the chat messages you decide to send), so under EU rules they don’t need your consent.",
   "ctx": "legal.html"
  },
  {

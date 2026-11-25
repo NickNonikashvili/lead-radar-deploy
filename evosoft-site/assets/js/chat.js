@@ -181,6 +181,8 @@
   const behind = () => document.querySelectorAll('.skip, .topbar, main, .footer');
   const setInert = (on) => behind().forEach((el) => { el.inert = on; });
   async function open() {
+    const hint = document.querySelector('.lang-hint');
+    if (hint) hint.hidden = true;
     const full = window.matchMedia('(max-width: 560px)').matches;
     panel.setAttribute('aria-modal', String(full));
     if (full) setInert(true);

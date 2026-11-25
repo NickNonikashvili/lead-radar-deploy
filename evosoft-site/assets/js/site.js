@@ -122,6 +122,11 @@
       no.textContent = s.no;
       no.addEventListener('click', () => { store.set('evo-lang', 'en'); hint.hidden = true; });
       setTimeout(() => { hint.hidden = false; setTimeout(() => { $('p', hint).textContent = s.text; }, 100); }, 1200);
+      // it must never sit over what keyboard focus is on: Escape closes it, and so does tabbing past it
+      document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !hint.hidden) hint.hidden = true; });
+      document.addEventListener('focusin', (e) => {
+        if (!hint.hidden && !hint.contains(e.target) && e.target.matches(':focus-visible')) hint.hidden = true;
+      });
     }
   }
 

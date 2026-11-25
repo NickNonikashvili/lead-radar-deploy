@@ -77,8 +77,5 @@
 		reverse_proxy {$MAILTABS_UPSTREAM:mailtabs:3301}
 	}
 
-	log {
-		output stdout
-		format console
-	}
+	# No access log, so the demo keeps no record of visitors' requests (evosoft.solutions/legal#privacy).
 }

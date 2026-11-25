@@ -63,7 +63,11 @@ const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '
 const attr = esc;
 const join = (arr, fn, sep = '') => (arr || []).map(fn).join(sep);
 const tel = (p) => 'tel:' + p.replace(/[^+\d]/g, '');
-const first = (name) => String(name).split(' ')[0];
+// "Alex Morgan" -> "Alex"; a title keeps the surname ("Dr. Casey Morgan" -> "Dr. Morgan")
+const first = (name) => {
+  const w = String(name).trim().split(/\s+/);
+  return /^(dr|prof|mr|mrs|ms|mx)\.?$/i.test(w[0]) && w.length > 1 ? `${w[0]} ${w[w.length - 1]}` : w[0];
+};
 const heroShot = (p) => p.shots.find((s) => s.hero) || p.shots.find((s) => !s.phone) || null;
 // Clean addresses: pages are written as .html files, but every link, canonical and sitemap entry leaves the .html off,
 // and the home page is /home (/ka/home, ...). The .htaccess files map the clean addresses back to the files and send
@@ -204,8 +208,12 @@ function langLinks(file, cls) {
   return join(LANGS, (x) => `<a class="${cls}" href="${attr(A(x.prefix + clean(target)))}" hreflang="${x.code}" lang="${x.code}" data-lang="${x.code}"${x === L ? ' aria-current="true"' : ''}><span class="lang-code">${x.short}</span><span class="lang-name">${esc(x.native)}</span></a>`);
 }
 
+// English pages only: site.js fills it in and shows it when the browser prefers Georgian, Russian or Spanish. It comes
+// first in the page so that keyboard users reach it before the content it sits over.
+const HINT_BOX = `<div class="lang-hint" role="region" aria-labelledby="lang-hint-text" hidden><p id="lang-hint-text" aria-live="polite"></p><div><a class="btn primary sm" href="#"></a><button class="btn sm" type="button"></button></div></div>\n`;
+
 function header(root, file, active) {
-  return `<a class="skip" href="#main">${h('Skip to content')}</a>
+  return `${HINT_BOX}<a class="skip" href="#main">${h('Skip to content')}</a>
 <header class="topbar">
   <div class="wrap bar">
     <a class="brand" href="${root}home" aria-label="${attr(t('EvoSoft, home'))}">${logoInline}</a>
@@ -308,7 +316,6 @@ function footer(root) {
   </section>
 </div>
 <div class="toast" role="status" aria-live="polite"></div>
-<div class="lang-hint" role="region" aria-labelledby="lang-hint-text" hidden><p id="lang-hint-text" aria-live="polite"></p><div><a class="btn primary sm" href="#"></a><button class="btn sm" type="button"></button></div></div>
 <dialog class="lightbox" aria-label="${attr(t('Screenshot'))}">
   <button class="icon-btn lb-close" type="button" aria-label="${attr(t('Close'))}">${icon('x')}</button>
   <button class="icon-btn lb-prev" type="button" aria-label="${attr(t('Previous'))}">${icon('chevronLeft')}</button>
@@ -872,7 +879,7 @@ ${pageHead(h('Get a quote'), h('Tell us about your project'), h('Send a few line
       <div class="field"><label for="q-message">${h('About the project')}</label><textarea id="q-message" name="message" rows="6" required maxlength="5000" aria-describedby="err-message" placeholder="${attr(t('What you need, who it’s for, and any sites or apps you like.'))}"></textarea><p class="field-error" id="err-message" hidden></p></div>
       <label class="hp" aria-hidden="true">${h('Leave this empty')} <input name="website" tabindex="-1" autocomplete="off"></label>
       <p class="form-error" role="alert" hidden></p>
-      <div class="form-foot"><button class="btn primary lg" type="submit"><span class="btn-label">${h('Send request')}</span> ${arrow}</button><p class="muted small">${h('{company} uses these details only to reply and prepare your quote, and deletes them {months} months after you send them if no project follows. Please don’t include sensitive personal information.', { company: esc(site.legalName), months: SRC.site.quoteKeepMonths })} <a href="${root}legal#privacy">${h('Privacy policy')}</a></p></div>
+      <div class="form-foot"><button class="btn primary lg" type="submit"><span class="btn-label">${h('Send request')}</span> ${arrow}</button><p class="muted small">${h('{company} uses these details only to reply and prepare your quote, and deletes them {months} months after you send them if no project follows. You can ask us to see or delete them at any time. Please don’t include sensitive personal information.', { company: esc(site.legalName), months: SRC.site.quoteKeepMonths })} <a href="${root}legal#privacy">${h('Privacy policy')}</a></p></div>
       <div class="form-done" hidden><span class="ico tone-green">${icon('check')}</span><h2>${h('Thanks, it’s on its way.')}</h2><p>${h('We’ll reply {when}. If it’s urgent, call {phone}.', { when: esc(site.responseTime), phone: `<a href="${tel(site.phones[0])}">${esc(site.phones[0])}</a>` })}</p></div>
     </form>
     <aside class="quote-side">
@@ -959,7 +966,7 @@ ${pageHead(h('Legal'), h('Terms, privacy and cookies'), h('Last updated {date}.'
 
     <div class="card prose" id="privacy">
       <h2>${h('Privacy policy')}</h2>
-      <p>${h('This policy explains what personal data this website collects, why, and what you can do about it. {company} (see Who we are) is responsible for it. For any privacy question, email {email}.', { company: esc(entity()), email: mail })}</p>
+      <p>${h('This policy explains what personal data this website and our live demos collect, why, and what you can do about it. {company} (see Who we are) is responsible for it. For any privacy question, email {email}.', { company: esc(entity()), email: mail })}</p>
       <h3>${h('Quote requests')}</h3>
       <p>${h('When you send the quote form we receive your name, email address and message and, if you add them, your phone number, company, the services and timeline you picked, and the language of the page. We need your name, email and message to reply; the rest is optional. We use these details only to answer you and prepare the quote you asked for. The request is emailed to our mailbox, and a backup copy is kept on our web server in case the email fails.')}</p>
       <p>${h('Legal basis: steps you ask us to take before a possible contract or, if you write on behalf of a company, our legitimate interest in answering business enquiries (GDPR Art. 6(1)(b) and (f), and the equivalent grounds in the Law of Georgia on Personal Data Protection). Emails and calls to us are handled the same way.')}</p>
@@ -970,7 +977,9 @@ ${pageHead(h('Legal'), h('Terms, privacy and cookies'), h('Last updated {date}.'
       <h3>${h('Server logs')}</h3>
       <p>${h('Like every website, our hosting provider records technical data about each request (IP address, time, page requested and browser type) to deliver the site and keep it secure, and deletes these logs after a limited period. Legal basis: our legitimate interest in keeping the site secure and working.')}</p>
       <h3>${h('Demo status checks')}</h3>
-      <p>${h('Pages that list our live demos check whether each demo is online, so your browser contacts our demo servers ({hosts}). Like any web server, they see your IP address and browser type. No cookies are sent with these checks.', { hosts: hostList })}</p>
+      <p>${h('Pages that list our live demos check whether each demo is online, so your browser contacts our demo servers ({hosts}). Like any web server, they see your IP address and browser type. No cookies are sent with these checks. Legal basis: our legitimate interest in showing whether the demos are working and keeping them secure.', { hosts: hostList })}</p>
+      <h3>${h('Live demos')}</h3>
+      <p>${h('The demos run on our own servers with shared accounts and made-up data, so other visitors can see what you enter there. In the Evo demo that includes the location your device shares when you clock in, which happens only if you allow it in your browser. The demos delete everything at their automatic reset: Evo every 3 hours, Mailtabs every hour and StudyCat every night. Evo also keeps backups from before its last 5 resets, so its data is normally gone within about 15 hours. Please use only the demo accounts and don’t enter real personal information. Legal basis: our legitimate interest in letting you try our software; your location is used only if you choose to share it.')}</p>
       <h3>${h('What we don’t do')}</h3>
       <p>${h('We don’t use analytics, advertising or social-media tracking of any kind, and our pages load no scripts, fonts, images or embeds from other companies. We don’t sell your data, and we don’t make automated decisions about you that have legal or similarly significant effects.')}</p>
       <h3>${h('Who receives it')}</h3>
@@ -978,17 +987,20 @@ ${pageHead(h('Legal'), h('Terms, privacy and cookies'), h('Last updated {date}.'
         <li>${h('Our hosting provider, Hostinger, which runs this website and our mailbox.')}</li>
         <li>${h('Anthropic, PBC (USA), for the chat assistant’s answers. Under its commercial terms it doesn’t use them to train its models, and it keeps them only for a limited period.')}</li>
         <li>${h('The provider we rent our demo servers from.')}</li>
+        <li>${h('The OpenStreetMap Foundation (United Kingdom), when the Evo demo shows a map: your browser loads the map images straight from it, so it sees your IP address.')}</li>
         <li>${h('Public authorities, where the law requires it.')}</li>
       </ul>
       <p>${h('Our hosting, email and AI providers process the data only on our instructions, under data processing agreements.')}</p>
       <h3>${h('Transfers outside Georgia and the EU')}</h3>
-      <p>${h('Anthropic is in the United States. We rely on its data processing addendum, which includes the EU standard contractual clauses, as the safeguard for these transfers. You can ask us for details.')}</p>
+      <p>${h('Anthropic is in the United States. For transfers covered by the GDPR, we rely on Anthropic’s data processing addendum, which includes the EU standard contractual clauses. You can ask us for a copy.')}</p>
       <h3>${h('How long we keep it')}</h3>
       <ul>
         <li>${h('Quote requests: the copy on our web server is deleted automatically {months} months after you send it. We delete the email the same way, unless the request leads to a project; then we keep what the contract and Georgian tax and accounting law require.', { months: SRC.site.quoteKeepMonths })}</li>
         <li>${h('Chat: nothing on our server. Your browser deletes the conversation when you close the tab.')}</li>
         <li>${h('Abuse-protection counters: two days.')}</li>
         <li>${h('Server logs: the limited period set by our hosting provider.')}</li>
+        <li>${h('Live demos: until the next automatic reset (Evo’s backups: normally within about 15 hours).')}</li>
+        <li>${h('Demo servers’ technical logs: only as long as needed to keep the demos running and secure.')}</li>
       </ul>
       <h3>${h('Your rights')}</h3>
       <p>${h('You can ask us whether we hold data about you and for a copy of it. You can also ask us to correct it, delete it, limit how we use it or send it to you in a portable format, and you can object to any use based on our legitimate interests. Email {email}; we reply within 10 working days.', { email: mail })}</p>
@@ -1000,7 +1012,7 @@ ${pageHead(h('Legal'), h('Terms, privacy and cookies'), h('Last updated {date}.'
 
     <div class="card prose" id="cookies">
       <h2>${h('Cookies and browser storage')}</h2>
-      <p>${h('This website doesn’t use cookies, analytics, advertising or tracking tools. It saves a few small items in your own browser, only for features you use or choose. They stay in your browser (apart from the chat messages you decide to send), so under EU rules they don’t need your consent.')}</p>
+      <p>${h('This website doesn’t use cookies, analytics, advertising or tracking tools. It saves a few small items in your own browser: the language you pick, your current chat, whether the assistant’s AI is available, and a note that the chat greeting has already been shown. They hold no identifier, are used only for these features and stay in your browser (apart from the chat messages you decide to send), so under EU rules they don’t need your consent.')}</p>
       <div class="table-wrap"><table class="table legal-table">
         <caption class="sr-only">${h('What this website saves in your browser')}</caption>
         <thead><tr><th scope="col">${h('Name')}</th><th scope="col">${h('Kind')}</th><th scope="col">${h('Purpose')}</th><th scope="col">${h('Kept for')}</th></tr></thead>

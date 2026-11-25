@@ -92,7 +92,7 @@ export const services = [
   {
     name: 'Maintenance and support',
     line: 'Updates, backups and fixes after launch, monthly or when you need them.',
-    text: 'Every project comes with a period of free support after launch. After that you can move to monthly maintenance, or take over yourself with everything handed over.',
+    text: 'Every project comes with a period of free support after launch. After that you can move to monthly maintenance, or take over yourself with the handover your quote sets out.',
     examples: ['Monthly maintenance', 'Content updates', 'Fixes and improvements'],
   },
 ];
@@ -132,7 +132,7 @@ export const faq = [
   },
   {
     q: 'What happens after launch?',
-    a: 'Every project includes a period of free support. After that you can move to monthly maintenance at any time, or handle updates yourself. We hand over everything you need either way.',
+    a: 'Every project includes a period of free support. After that you can move to monthly maintenance at any time, or handle updates yourself. Your quote says exactly what we hand over.',
   },
   {
     q: 'Do you work with clients outside Georgia?',

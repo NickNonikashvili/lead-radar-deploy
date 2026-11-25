@@ -96,6 +96,11 @@ Bots that fill the hidden field are ignored.
   file is then deleted.
 - **Deleted on schedule.** Requests older than `quote_keep_months` (12) are deleted from that file automatically, as the
   privacy policy says. Delete the emails in the mailbox on the same schedule, unless a request became a project.
+- **Daily clean-up job (set this up once).** The clean-up runs whenever someone uses the chat or the form, but on a
+  quiet day nobody does, and the privacy policy promises that rate-limit counters are gone within two days. So add a
+  cron job in hPanel (Advanced → Cron Jobs), once a day, with the command
+  `/usr/bin/php /home/<user>/domains/evosoft.solutions/public_html/api/housekeeping.php`.
+  It prints `EvoSoft housekeeping done …`; the web server refuses that file, so only the cron job can run it.
 - **Sent over SMTP.** With `smtp_pass` set, the form signs in to the mailbox and sends from it, which is what
   Hostinger wants. Without it, the form uses PHP's `mail()`, which hosts often refuse.
 - **The visitor is never turned away.** Once a request is saved they see it as sent, even if the email fails. The
@@ -208,7 +213,12 @@ change the text in `build.mjs` (the legal page) and `site.legalUpdated` in `data
   data you process; have a plan for a data breach (tell the Personal Data Protection Service of Georgia within 72
   hours); decide whether you need an EU representative (GDPR Art. 27) since the site serves EU visitors; put the
   14-day cancellation right in quotes for private (consumer) clients; have a Georgian lawyer read the legal page,
-  especially the Georgian translation.
+  especially the Georgian translation, and name the ground under Georgian law for sending chat messages to Anthropic in
+  the USA (the page only claims the EU clauses for transfers the GDPR covers).
+- **Live demos** are covered by the same privacy policy ("Live demos", and the logs line under "How long we keep it").
+  Keep it true to the demo kits in `demos/`: the reset times, Evo's 5 backups, the clock-in location and the
+  OpenStreetMap maps. The Mailtabs demo's Caddy writes no access log; after updating its `Caddyfile` on the server,
+  run `docker compose up -d --force-recreate caddy` there once, so the old log goes with the old container.
 - **Metadata:** pages carry `copyright` meta tags and `copyrightHolder` in their structured data. Every demo section on
   the site carries its own copyright line; the live demos show their own notice (see each kit in `demos/`).
 

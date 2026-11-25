@@ -209,24 +209,31 @@ function evo_day_salt(string $dir): string
 }
 
 /**
- * Deletes what the privacy policy says we don't keep, at most once an hour (api/quote.php and api/chat.php call it):
+ * Deletes what the privacy policy says we don't keep, at most once an hour (api/quote.php and api/chat.php call it,
+ * and so does api/housekeeping.php, which a daily cron job runs so it happens on quiet days too):
  *   - rate-limit counters and daily keys older than two days;
  *   - quote requests older than quote_keep_months (the email copy is deleted by hand on the same schedule);
  *   - any leftover quotes.jsonl.moved copy from an old version that is past the same age.
  * The quotes file is rewritten in place under the same lock quote.php appends with, so no request is ever lost.
  */
-function evo_housekeeping(array $cfg): void
+function evo_housekeeping(array $cfg, bool $force = false): void
 {
     $dir = evo_data_dir();
     $stamp = $dir . '/housekeeping-stamp';
     clearstatcache();
-    if (@is_file($stamp) && @filemtime($stamp) > time() - 3600) {
+    if (!$force && @is_file($stamp) && @filemtime($stamp) > time() - 3600) {
         return;
     }
     @touch($stamp);
     $limits = $dir . '/limits';
-    $old = time() - 2 * 86400;
-    foreach (array_merge(glob($limits . '/*') ?: [], glob($limits . '/.salt-*') ?: []) as $f) {
+    // Every rate-limit window ends with its UTC day and each day has its own key, so anything older than a day is no
+    // longer used. With api/housekeeping.php run daily (README), nothing here lives longer than two days.
+    $old = time() - 86400;
+    $files = array_merge(glob($limits . '/*') ?: [], glob($limits . '/.salt-*') ?: []);
+    if ($dir !== EVO_DATA_DIR) { // DT-2: counters the first version left in api/data/limits
+        $files = array_merge($files, glob(EVO_DATA_DIR . '/limits/*') ?: []);
+    }
+    foreach ($files as $f) {
         if (@filemtime($f) < $old) {
             @unlink($f);
         }
