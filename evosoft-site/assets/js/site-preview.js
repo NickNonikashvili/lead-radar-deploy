@@ -12,7 +12,9 @@
                                                 and anything missing falls back to English (so `{}` works)
 
    The preview is a picture: give its container aria-hidden="true" and put summary() next to it. It holds no links,
-   buttons or form fields, only look-alikes. The markup carries no style attributes, so it also works under a strict
+   buttons or form fields, only look-alikes, and its scrolling box has tabindex="-1" (browsers otherwise put a
+   scrollable box with nothing focusable in it into the tab order, which would land keyboard users inside the hidden
+   picture). The markup carries no style attributes, so it also works under a strict
    Content-Security-Policy (the admin panel's): colours, fonts and the zoom go in as CSS custom properties, set with
    style.setProperty(). Every "photo" is drawn with CSS gradients and inline SVG; nothing is loaded from elsewhere.
    Styles: assets/css/preview.css, all scoped under .pv. Line icons drawn after Lucide (ISC licence; see /legal). */
@@ -44,7 +46,7 @@
       teamKicker: 'Our team', teamTitle: 'The people behind {name}', team: ['Ana Silva', 'Founder', 'Marco Díaz', 'Manager', 'Lea Novak', 'Specialist', 'Sam Okafor', 'Assistant'],
       blogKicker: 'Blog', blogTitle: 'News and stories',
       careersKicker: 'Careers', careersTitle: 'Join our team', careersText: 'We’re growing and looking for people who care about good work.', jobs: ['Full-time role', 'Part-time role', 'Internship'], jobMeta: 'On site · Apply by email',
-      faqKicker: 'FAQ', faqTitle: 'Good questions', faq: ['What are your opening hours?', 'How can I pay?', 'Can I change or cancel?', 'Do you offer gift cards?'], faqAnswer: 'A short, clear answer goes here, written for your customers.',
+      faqKicker: 'FAQ', faqTitle: 'Good questions', faq: ['What are your opening hours?', 'How can I pay?', 'Can I change or cancel?', 'Do you offer gift cards?'], faqShop: ['How long does delivery take?', 'Can I return something?', 'How can I pay?', 'Do you offer gift cards?'], faqApp: ['Is there a free trial?', 'Can I cancel at any time?', 'Is my data safe?', 'Can I invite my team?'], faqAnswer: 'A short, clear answer goes here, written for your customers.',
       payKicker: 'Payments', payTitle: 'Pay online in a few taps', payText: 'Cards and wallets, through a secure payment provider.',
       newsTitle: 'Stay in the loop', newsText: 'News and offers from {name}, once a month.',
       locationsKicker: 'Locations', locationsTitle: 'Come and see us', locations: ['City centre', 'Riverside'],
@@ -55,11 +57,11 @@
       storeKicker: 'New collection', behind: 'Also included, behind the scenes:',
     },
     types: {
-      landing: { label: 'Landing page' },
-      portfolio: { label: 'Portfolio', kicker: 'Portfolio', hero: 'Selected work, made with care', sub: 'A few recent projects, and the story behind each one.' },
-      business: { label: 'Business website' },
-      store: { label: 'Online store' },
-      webapp: { label: 'Web app', kicker: 'Web app', hero: 'Everything your team needs, in one place', sub: 'Sign in from anywhere to see what’s happening and get work done.' },
+      landing: { label: 'Landing page', a: 'a landing page' },
+      portfolio: { label: 'Portfolio', a: 'a portfolio', kicker: 'Portfolio', hero: 'Selected work, made with care', sub: 'A few recent projects, and the story behind each one.' },
+      business: { label: 'Business website', a: 'a business website' },
+      store: { label: 'Online store', a: 'an online store' },
+      webapp: { label: 'Web app', a: 'a web app', kicker: 'Web app', hero: 'Everything your team needs, in one place', sub: 'Sign in from anywhere to see what’s happening and get work done.' },
     },
     palettes: { navy: 'Midnight', forest: 'Forest', sunset: 'Sunset', ocean: 'Ocean', mono: 'Black and white', blush: 'Blush', custom: 'Your own colour' },
     fonts: { modern: 'Modern', elegant: 'Elegant', friendly: 'Friendly', bold: 'Bold' },
@@ -67,8 +69,10 @@
     modes: { light: 'Light', dark: 'Dark' },
     features: { booking: 'Online booking', payments: 'Online payments', cms: 'Edit it yourself', multilingual: 'More languages', accounts: 'Customer accounts', search: 'Site search', newsletter: 'Newsletter sign-up', livechat: 'Live chat', maps: 'Map and directions', reviews: 'Reviews section', seo: 'SEO setup', analytics: 'Visitor statistics' },
     summary: {
-      intro: 'Preview of your website: a {type} for {name}, {industry}.',
+      intro: 'Preview of your website: {type} for {name}, {industry}.',
+      introPlain: 'Preview of your website: {type} for {name}.',
       look: 'It uses the {palette} colours, {font} type and the {layout} layout, in {mode} mode.',
+      lookCustom: 'It uses your own colour, {font} type and the {layout} layout, in {mode} mode.',
       sections: 'The home page shows {list}.',
       head: 'The top bar has {list}.',
       parts: {
@@ -128,7 +132,7 @@
     modern: { head: "'PV Inter', 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif", body: "'PV Inter', 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif", hw: '640', track: '-0.035em', r: '16px', br: '10px', up: 'none' },
     elegant: { head: "'Iowan Old Style', 'Palatino Linotype', Palatino, 'Book Antiqua', 'Noto Serif', Georgia, 'Times New Roman', serif", body: "'PV Inter', 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif", hw: '500', track: '-0.01em', r: '4px', br: '2px', up: 'uppercase' },
     friendly: { head: "ui-rounded, 'SF Pro Rounded', 'Nunito', 'Quicksand', 'Varela Round', 'Arial Rounded MT Bold', 'PV Inter', system-ui, sans-serif", body: "ui-rounded, 'SF Pro Rounded', 'Nunito', 'PV Inter', system-ui, sans-serif", hw: '700', track: '-0.02em', r: '26px', br: '999px', up: 'none' },
-    bold: { head: "'PV Inter', 'Inter', 'Arial Black', system-ui, sans-serif", body: "'PV Inter', 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif", hw: '850', track: '-0.055em', r: '8px', br: '8px', up: 'uppercase' },
+    bold: { head: "'PV Inter', 'Inter', 'Arial Black', system-ui, sans-serif", body: "'PV Inter', 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif", hw: '850', track: '-0.045em', r: '8px', br: '8px', up: 'uppercase' },
   };
   const DEVICES = { desktop: 1280, tablet: 820, phone: 390 };
   const TYPES = ['landing', 'portfolio', 'business', 'store', 'webapp'];
@@ -288,7 +292,7 @@
     const footInk = readable(dark ? ink : mix('#FFFFFF', bg, 0.1), [foot], 7);
     const footMuted = readable(dark ? mix(ink, bg, 0.3) : mix('#FFFFFF', ink, 0.28), [foot], 4.6);
     return {
-      '--pv-a': a, '--pv-a-ink': bestInk(a), '--pv-a-text': aText, '--pv-b': b, '--pv-b-ink': bestInk(b), '--pv-deep': deep,
+      '--pv-a': a, '--pv-a-ink': bestInk(a), '--pv-a-text': aText, '--pv-b': b, '--pv-b-ink': bestInk(b), '--pv-deep': deep, '--pv-deep-ink': bestInk(deep),
       '--pv-bg': bg, '--pv-bg2': bg2, '--pv-surface': surface, '--pv-soft': soft, '--pv-soft-ink': readable(aText, [soft], 4.6),
       '--pv-ink': ink, '--pv-muted': muted, '--pv-line': mix(ink, bg, dark ? 0.84 : 0.88), '--pv-line2': mix(ink, bg, dark ? 0.72 : 0.78),
       '--pv-foot': foot, '--pv-foot-ink': footInk, '--pv-foot-muted': footMuted,
@@ -361,14 +365,19 @@
 
   function navLabels(c) {
     const { S, d, ind } = c;
+    const landing = c.type === 'landing';
     const items = [];
     if (c.type === 'store') items.push(S.nav.shop);
     if (c.type === 'webapp') items.push(S.nav.product);
+    // a landing page is one long page, so its menu jumps to the parts of it (services and contact are always there)
+    if (landing) items.push(ind.servicesNav);
     d.pages.forEach((p) => {
-      if (p === 'home' && (c.type === 'store' || c.type === 'webapp')) return;
+      if (p === 'home' && (c.type === 'store' || c.type === 'webapp' || landing)) return;
+      if (landing && (p === 'services' || p === 'contact')) return;
       items.push(p === 'services' ? ind.servicesNav : S.nav[p]);
     });
     for (let i = 1; i <= d.extraPages; i++) items.push(fill(S.nav.page, { n: d.pages.length + i }));
+    if (landing) items.push(S.nav.contact);
     return items;
   }
 
@@ -391,7 +400,7 @@
     const bar = f.cms ? `<div class="pv-editbar"><span><i></i>${esc(S.ui.editBar)}</span><span class="pv-editbar-r"><b>${svg('pen')}${esc(S.ui.editPage)}</b><span>${esc(S.ui.dashboard)}</span></span></div>` : '';
     return `<div class="pv-head${over ? ' pv-head-over' : ''}" data-k="header">${bar}<div class="pv-in pv-head-in">
       <span class="pv-logo"><span class="pv-mark">${esc(initials(c.name))}</span><span class="pv-logo-name">${esc(c.name)}</span></span>
-      ${max ? `<span class="pv-nav">${shown.map((x, i) => `<span${i === 0 ? ' class="on"' : ''}>${esc(x)}</span>`).join('')}${more ? `<span>${esc(S.nav.more)}${svg('chevron', 'pv-i pv-i-s')}</span>` : ''}</span>` : ''}
+      ${max ? `<span class="pv-nav"${more ? ' data-more="1"' : ''}>${shown.map((x, i) => `<span${i === 0 ? ' class="on"' : ''}>${esc(x)}</span>`).join('')}<span class="pv-more${more ? '' : ' pv-x'}">${esc(S.nav.more)}${svg('chevron', 'pv-i pv-i-s')}</span></span>` : ''}
       <span class="pv-tools">${tools}</span>
     </div></div>`;
   }
@@ -417,7 +426,9 @@
   function hero(c) {
     const x = heroCopy(c);
     const kit = c.kit;
-    const copy = `${kicker(x.k)}<div class="pv-h1">${esc(x.h)}</div><p class="pv-lead">${esc(x.p)}</p><div class="pv-btns">${btn(x.b1)}${btn(x.b2, 'ghost')}</div>`;
+    const len = Array.from(x.h).length;
+    const size = len > 95 ? ' pv-h1-xs' : len > 70 ? ' pv-h1-s' : len > 44 ? ' pv-h1-m' : '';
+    const copy = `${kicker(x.k)}<div class="pv-h1${size}">${esc(x.h)}</div><p class="pv-lead">${esc(x.p)}</p><div class="pv-btns">${btn(x.b1)}${btn(x.b2, 'ghost')}</div>`;
     if (c.layout === 'bold') {
       return `<div class="pv-hero pv-hero-bold" data-k="top">${header(c, true)}
         <div class="pv-photo">${art(kit.art[0], 1, 'pv-art-hero')}<svg class="pv-hills" viewBox="0 0 1200 300" preserveAspectRatio="none" focusable="false"><path class="pv-hill1" d="M0 210 C 220 120 420 250 640 170 S 1020 90 1200 160 L1200 300 L0 300Z"/><path class="pv-hill2" d="M0 250 C 260 190 520 290 800 230 S 1100 200 1200 230 L1200 300 L0 300Z"/></svg><i class="pv-sun"></i></div>
@@ -438,8 +449,9 @@
     </div>`;
   }
 
+  // the three highlights get a strip of their own under the clean hero (the bold and classic heroes show them already)
   function points(c) {
-    if (c.layout === 'bold') return '';
+    if (c.layout !== 'clean') return '';
     const { ind, kit } = c;
     return `<div class="pv-sec pv-points" data-k="points"><div class="pv-in pv-grid3">${ind.points.map((p, i) => `<div class="pv-point"><span class="pv-ico">${svg(kit.pts[i])}</span><b>${esc(p)}</b></div>`).join('')}</div></div>`;
   }
@@ -515,9 +527,8 @@
   function shop(c, alt) {
     const { S, ind, kit, d } = c;
     const many = d.products !== 'small';
-    const names = many ? ind.products.concat(ind.products) : ind.products;
-    const cards = names.map((n, i) => `<div class="pv-prod">${art(kit.art[i % 3], [5, 3, 2, 6, 1, 4, 5, 3][i], 'pv-art-prod')}${i === 1 ? `<span class="pv-badge">${esc(S.sec.filters[1])}</span>` : ''}<b>${esc(n)}</b><span class="pv-price">${esc(c.money(kit.prices[i % 4] + (i > 3 ? 6 : 0)))}</span>${btn(S.ui.addToCart, 'sm')}</div>`).join('');
-    const pagesN = Math.ceil(PRODUCT_COUNT[d.products] / (many ? 8 : 4));
+    const cards = ind.products.map((n, i) => `<div class="pv-prod">${art(kit.art[i % 3], [5, 3, 2, 6][i], 'pv-art-prod')}${i === 1 ? `<span class="pv-badge">${esc(S.sec.filters[1])}</span>` : ''}<b>${esc(n)}</b><span class="pv-price">${esc(c.money(kit.prices[i]))}</span>${btn(S.ui.addToCart, 'sm')}</div>`).join('');
+    const pagesN = Math.ceil(PRODUCT_COUNT[d.products] / 12);
     return `<div class="pv-sec${alt ? ' pv-alt' : ''}" data-k="shop"><div class="pv-in">
       <div class="pv-sec-head pv-sec-row"><div>${kicker(S.sec.shopKicker)}${h2(S.sec.shopTitle)}</div><span class="pv-count">${esc(fill(S.sec.productsCount, { n: c.nf.format(PRODUCT_COUNT[d.products]) }))}</span></div>
       <div class="pv-filters">${S.sec.filters.map((x, i) => `<span${i === 0 ? ' class="on"' : ''}>${esc(x)}</span>`).join('')}${c.f.search ? `<span class="pv-filter-search">${svg('search')}</span>` : ''}</div>
@@ -594,7 +605,7 @@
     const { S } = c;
     return `<div class="pv-sec${alt ? ' pv-alt' : ''}" data-k="faq"><div class="pv-in pv-narrow">
       <div class="pv-sec-head pv-center">${kicker(S.sec.faqKicker)}${h2(S.sec.faqTitle)}</div>
-      <div class="pv-faq">${S.sec.faq.map((q, i) => `<div class="pv-q${i === 0 ? ' on' : ''}"><div><b>${esc(q)}</b>${svg(i === 0 ? 'chevron' : 'plus', 'pv-i')}</div>${i === 0 ? `<p>${esc(S.sec.faqAnswer)}</p>` : ''}</div>`).join('')}</div>
+      <div class="pv-faq">${(c.type === 'webapp' || c.d.business.industry === 'tech' ? S.sec.faqApp : c.type === 'store' ? S.sec.faqShop : S.sec.faq).map((q, i) => `<div class="pv-q${i === 0 ? ' on' : ''}"><div><b>${esc(q)}</b>${svg(i === 0 ? 'chevron' : 'plus', 'pv-i')}</div>${i === 0 ? `<p>${esc(S.sec.faqAnswer)}</p>` : ''}</div>`).join('')}</div>
     </div></div>`;
   }
 
@@ -687,7 +698,7 @@
     const keys = ['top'];
     let alt = true;
     let html = hero(c) + points(c);
-    if (c.layout !== 'bold') keys.push('points');
+    if (c.layout === 'clean') keys.push('points');
     for (const [fn, key] of order) {
       html += fn(c, alt && key !== 'newsletter');
       if (key !== 'newsletter') alt = !alt;
@@ -699,7 +710,7 @@
   }
 
   // ---------- the window around it ----------
-  const SHELL = '<div class="pv-shell"><div class="pv-chrome"><span class="pv-dots"><i></i><i></i><i></i></span><span class="pv-url"><svg class="pv-i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false">' + I.lock + '</svg><span class="pv-url-text"></span></span><span class="pv-chrome-end"></span></div><div class="pv-screen"><div class="pv-viewport"><div class="pv-site"></div></div><div class="pv-chatbox"></div></div></div><div class="pv-extras"></div>';
+  const SHELL = '<div class="pv-shell"><div class="pv-chrome"><span class="pv-dots"><i></i><i></i><i></i></span><span class="pv-url"><svg class="pv-i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false">' + I.lock + '</svg><span class="pv-url-text"></span></span><span class="pv-chrome-end"></span></div><div class="pv-screen"><div class="pv-viewport" tabindex="-1"><div class="pv-site"></div></div><div class="pv-chatbox"></div><div class="pv-extras"></div></div></div>';
 
   function setVars(el, vars) { for (const k of Object.keys(vars)) el.style.setProperty(k, vars[k]); }
 
@@ -712,17 +723,43 @@
     const max = dev === 'phone' ? 300 : dev === 'tablet' ? 560 : w;
     const sw = Math.min(w, max);
     shell.style.setProperty('width', sw + 'px');
-    const inner = shell.querySelector('.pv-screen').clientWidth || sw;
+    // worked out from the new width (the frame may still be animating towards it)
+    const cs = getComputedStyle(shell);
+    const inner = sw - (parseFloat(cs.borderLeftWidth) || 0) - (parseFloat(cs.borderRightWidth) || 0);
     const z = inner / DEVICES[dev];
     root.style.setProperty('--pv-zoom', String(Math.round(z * 10000) / 10000));
     site.style.setProperty('width', DEVICES[dev] + 'px');
+  }
+
+  // The menu shows as many links as fit beside the logo and the tools; the rest fold into "More". Measured, so it
+  // holds for any language, font and business name. (A preview drawn while hidden is measured once it shows.)
+  function fitNav(root) {
+    root.querySelectorAll('.pv-nav').forEach((nav) => {
+      const more = nav.querySelector('.pv-more');
+      const items = Array.from(nav.children).filter((x) => x !== more);
+      items.forEach((x) => x.classList.remove('pv-x'));
+      if (more) more.classList.toggle('pv-x', nav.dataset.more !== '1');
+      if (!nav.clientWidth) return;
+      const over = () => nav.scrollWidth > nav.clientWidth + 1;
+      for (let i = items.length - 1; i >= 0 && over(); i--) {
+        items[i].classList.add('pv-x');
+        if (more) more.classList.remove('pv-x');
+      }
+      if (more && over()) more.classList.add('pv-x');
+    });
   }
 
   function scrollToKey(root, key) {
     const vp = root.querySelector('.pv-viewport');
     if (!key || !vp) return;
     const el = key === 'top' ? null : root.querySelector(`.pv-site [data-k="${key}"]`);
-    const top = el ? el.getBoundingClientRect().top - vp.getBoundingClientRect().top + vp.scrollTop - 8 : 0;
+    let top = 0;
+    if (el) {
+      // where the part sits once its rise-in animation is over (the animation's translateY is still applied now)
+      let shift = 0;
+      try { shift = new DOMMatrixReadOnly(getComputedStyle(el).transform).m42 * (parseFloat(root.style.getPropertyValue('--pv-zoom')) || 1); } catch (e) { shift = 0; }
+      top = el.getBoundingClientRect().top - shift - vp.getBoundingClientRect().top + vp.scrollTop - 8;
+    }
     const smooth = !(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
     try { vp.scrollTo({ top: Math.max(0, top), behavior: smooth ? 'smooth' : 'auto' }); } catch (e) { vp.scrollTop = Math.max(0, top); }
   }
@@ -749,12 +786,14 @@
       root = container.firstElementChild;
       // colours fade from the second drawing on (not from the stylesheet's defaults on the first)
       requestAnimationFrame(() => requestAnimationFrame(() => root.classList.add('pv-ready')));
+      const refit = () => { fit(root); fitNav(root); };
       if ('ResizeObserver' in window) {
-        root._pvRO = new ResizeObserver(() => fit(root));
+        root._pvRO = new ResizeObserver(refit);
         root._pvRO.observe(root);
       } else {
-        window.addEventListener('resize', () => fit(root));
+        window.addEventListener('resize', refit);
       }
+      if (document.fonts && document.fonts.addEventListener) document.fonts.addEventListener('loadingdone', () => fitNav(root));
     }
     const site = root.querySelector('.pv-site');
     const vp = root.querySelector('.pv-viewport');
@@ -783,6 +822,7 @@
       root._pvSig = sig;
       changed = true;
     }
+    fitNav(root);
     // the chat button floats over the screen, like on a real site
     const chat = root.querySelector('.pv-chatbox');
     chat.innerHTML = c.f.livechat ? `<span class="pv-chat-msg">${esc(c.S.ui.chatHello)}</span><span class="pv-chat-btn">${svg('chat')}</span>` : '';
@@ -799,8 +839,8 @@
     const c = context(design, strings, {});
     const { S, d, f } = c;
     const P = S.summary.parts;
-    const intro = fill(S.summary.intro, { type: S.types[d.type].label.toLowerCase(), name: c.name, industry: c.ind.label.toLowerCase() });
-    const look = fill(S.summary.look, { palette: S.palettes[d.look.palette], font: S.fonts[d.look.font].toLowerCase(), layout: S.layouts[d.look.layout].toLowerCase(), mode: S.modes[d.look.mode].toLowerCase() });
+    const intro = fill(d.business.industry === 'other' ? S.summary.introPlain : S.summary.intro, { type: S.types[d.type].a, name: c.name, industry: c.ind.label.toLowerCase() });
+    const look = fill(d.look.palette === 'custom' ? S.summary.lookCustom : S.summary.look, { palette: S.palettes[d.look.palette], font: S.fonts[d.look.font].toLowerCase(), layout: S.layouts[d.look.layout].toLowerCase(), mode: S.modes[d.look.mode].toLowerCase() });
     const head = [];
     const nav = navLabels(c);
     if (nav.length) head.push(fill(P.nav, { list: c.list(nav) }));

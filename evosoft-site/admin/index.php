@@ -63,7 +63,7 @@ if ($hashState !== 'ok') {
         if (!admin_same_origin()) {
             admin_fail(403, 'Not allowed', 'This form didn’t come from the admin panel, so it was ignored.');
         }
-        if (!evo_rate_ok('admin-setup', evo_client_ip(), 20, 900)) {
+        if (!evo_rate_ok('admin-setup', admin_ip_bucket(evo_client_ip()), 20, 900)) {
             admin_fail(429, 'Please wait', 'Too many tries. Please wait 15 minutes, then try again.');
         }
         $result = admin_tool_run($action);
@@ -87,6 +87,12 @@ if ($state !== 'in') {
     if ($method === 'POST') {
         admin_login_page($cfg, $state === 'expired' ? 'You were signed out after a while without using the panel, so that wasn’t saved. Please sign in again.'
             : 'Please sign in first. Nothing was changed.', 401, $next);
+    }
+    // A link from another site (the "Open it in the admin panel" button in webmail) never carries the SameSite=Strict
+    // cookie, so a signed-in owner would see the sign-in form. Reload once from this page itself: that navigation is
+    // same-origin, so the browser sends the cookie. GET only, and nothing here changes anything.
+    if ($state === 'out' && !isset($_COOKIE[ADMIN_COOKIE]) && admin_cross_site_navigation()) {
+        admin_bounce_page($next !== '' ? ['r' => $next] : []);
     }
     $note = $state === 'expired' ? 'You were signed out after a while without using the panel. Please sign in again.'
         : (isset($_GET['bye']) ? 'You’re signed out.' : '');

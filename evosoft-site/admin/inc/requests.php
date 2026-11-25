@@ -269,7 +269,7 @@ function req_detail_view(array $q): string
         . '<p>Deletes the request and your notes from the website for good, for example when the person asks to be forgotten. '
         . 'The email copy stays in the mailbox: delete that by hand too.</p>'
         . '<form method="post" action="' . admin_h(admin_url(['action' => 'delete', 'r' => $id])) . '" class="stack">' . admin_csrf_field()
-        . '<div class="check"><input type="checkbox" id="confirm" name="confirm" value="yes" required><label for="confirm">Yes, delete the request from ' . admin_h($name) . ' for good</label></div>'
+        . '<div class="check"><input type="checkbox" id="confirm" name="confirm" value="yes" required><label for="confirm">Yes, delete the request from <bdi>' . admin_h($name) . '</bdi> for good</label></div>'
         . '<div><button class="btn danger" type="submit">Delete request</button></div></form></section>';
     return $html . '</div>';
 }
@@ -315,8 +315,8 @@ function req_estimate_html(array $est, array $design): string
 /** POST ?action=save&r=<id>: status and notes. */
 function req_save(string $id): never
 {
-    $status = $_POST['status'] ?? '';
-    $notes = $_POST['notes'] ?? '';
+    $status = $_POST['status'] ?? null;
+    $notes = $_POST['notes'] ?? null; // left out = left alone (a form without the notes box must not wipe them)
     $changes = [];
     if (is_string($status) && isset(ADMIN_STATUS_LABELS[$status])) {
         $changes['status'] = $status;

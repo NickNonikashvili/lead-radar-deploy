@@ -28,7 +28,10 @@ function admin_tool_run(string $action): array
         $again = $_POST['new_password2'] ?? '';
         $pw = is_string($pw) ? $pw : '';
         $again = is_string($again) ? $again : '';
-        if (mb_strlen($pw) < 12) {
+        if (preg_match('/[\x00-\x1F\x7F]/', $pw) || !mb_check_encoding($pw, 'UTF-8')) {
+            // (password_hash() can't take a NUL byte, and a password box can't type the others)
+            $r['errors']['new_password'] = 'That password has a hidden control character in it. Please type it again.';
+        } elseif (mb_strlen($pw) < 12) {
             $r['errors']['new_password'] = 'Use at least 12 characters. A few unrelated words work well.';
         } elseif (strlen($pw) > 72) {
             $r['errors']['new_password'] = 'Use at most 72 characters (fewer if it has accents or other letters).';
@@ -41,7 +44,8 @@ function admin_tool_run(string $action): array
     } elseif ($action === 'tool.totp') {
         $r['secret'] = admin_base32_encode(random_bytes(20)); // 160 bits, as RFC 4226 recommends
     } elseif ($action === 'tool.check') {
-        $secret = strtoupper((string)preg_replace('/\s+/', '', (string)($_POST['secret'] ?? '')));
+        $secret = is_string($_POST['secret'] ?? null) ? $_POST['secret'] : '';
+        $secret = strtoupper((string)preg_replace('/\s+/', '', $secret));
         $key = admin_base32_decode($secret);
         if ($key === null || strlen($key) < 10) {
             $r['errors']['secret'] = 'That secret isn’t valid. Make a new one.';
@@ -160,7 +164,7 @@ function admin_security_view(array $cfg, array $result = []): string
         . '<div><dt>Password</dt><dd>Set</dd></div>'
         . '<div><dt>Two-step sign-in</dt><dd>' . ($key !== '' ? 'On (authenticator app)' : 'Off') . '</dd></div>'
         . '<div><dt>Signed out after</dt><dd>' . $minutes . ' minutes without using the panel, and 12 hours after signing in</dd></div>'
-        . '<div><dt>Sign-in attempts</dt><dd>5 per address and 30 in all, per 15 minutes</dd></div>'
+        . '<div><dt>Sign-in attempts</dt><dd>5 per address and 30 in all, per 15 minutes. A browser you have signed in from before has its own 10, so others using up the 30 can’t lock you out.</dd></div>'
         . '</dl></section><div class="grid2">' . admin_tools_html($result, true) . '</div>';
     return $html;
 }

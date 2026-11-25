@@ -6,7 +6,9 @@
  * - One owner, one password: admin_password_hash in the settings file (password_hash / password_verify).
  * - Optional second step: admin_totp_secret (base32), 6-digit codes, 30-second steps, one step either side allowed,
  *   and a code that was used once is refused after that.
- * - 5 sign-in attempts per IP address per 15 minutes, 30 for everyone together (evo_rate_ok, IPs are never stored).
+ * - 5 sign-in attempts per IP address (IPv6: per /64) per 15 minutes, 30 for everyone together (evo_rate_ok, IPs are
+ *   never stored). A browser the owner signed in from before (cookie evo_admin_dev) has its own 10 instead, so others
+ *   using up the 30 can't lock the owner out.
  * - Sessions: cookie "evo_admin" on /admin/ only, HttpOnly, SameSite=Strict, Secure over https, files in
  *   evosoft-data/sessions (0700). A new id at sign-in; signed out after admin_session_minutes idle, and 12 hours
  *   after signing in whatever happens. Changing the password or the TOTP secret signs every session out.
@@ -142,6 +144,51 @@ function admin_cookie_options(int $expires = 0): array
     return ['expires' => $expires, 'path' => admin_base(), 'secure' => admin_is_https(), 'httponly' => true, 'samesite' => 'Strict'];
 }
 
+/** The same flags for session_set_cookie_params(), which takes 'lifetime' (and warns about 'expires'). */
+function admin_session_cookie_params(): array
+{
+    $o = admin_cookie_options();
+    unset($o['expires']);
+    return ['lifetime' => 0] + $o;
+}
+
+/**
+ * The address a sign-in attempt is counted under: the IP itself, or for IPv6 its /64 network (one home or server
+ * usually gets a whole /64, so counting single IPv6 addresses would let one machine try forever).
+ */
+function admin_ip_bucket(string $ip): string
+{
+    $bin = @inet_pton($ip);
+    if (!is_string($bin) || strlen($bin) !== 16 || str_starts_with($bin, str_repeat("\0", 10) . "\xff\xff")) {
+        return $ip; // IPv4 (also when written as ::ffff:1.2.3.4)
+    }
+    return bin2hex(substr($bin, 0, 8)) . '::/64';
+}
+
+/**
+ * A browser the owner has signed in from before: cookie evo_admin_dev = <32 hex>.<HMAC of it with a server key>, set
+ * at every sign-in (path /admin/, HttpOnly, SameSite=Strict, Secure over https, 90 days). It grants nothing by itself:
+ * it only gives that browser its own allowance of sign-in attempts, so strangers who use up the shared 30 can't lock
+ * the owner out. Changing the password or the TOTP secret makes every such cookie worthless (the key changes).
+ * Returns the browser's id, or null.
+ */
+function admin_device_id(array $cfg): ?string
+{
+    $v = $_COOKIE[ADMIN_DEVICE_COOKIE] ?? '';
+    if (!is_string($v) || !preg_match('/^([0-9a-f]{32})\.([0-9a-f]{64})$/', $v, $m)) {
+        return null;
+    }
+    return hash_equals(admin_secret($cfg, 'device|' . $m[1]), $m[2]) ? $m[1] : null;
+}
+
+function admin_device_remember(array $cfg): void
+{
+    if (!headers_sent()) {
+        $id = bin2hex(random_bytes(16));
+        setcookie(ADMIN_DEVICE_COOKIE, $id . '.' . admin_secret($cfg, 'device|' . $id), admin_cookie_options(time() + 86400 * ADMIN_DEVICE_DAYS));
+    }
+}
+
 /** Opens the session, from the cookie (or a new one when $create). False when there is none or it can't be stored. */
 function admin_session_open(bool $create): bool
 {
@@ -173,7 +220,7 @@ function admin_session_open(bool $create): bool
     session_save_path($dir);
     session_name(ADMIN_COOKIE);
     session_cache_limiter('');
-    session_set_cookie_params(admin_cookie_options());
+    session_set_cookie_params(admin_session_cookie_params());
     if (!@session_start()) {
         return false;
     }
@@ -254,8 +301,13 @@ function admin_handle_login(array $cfg): never
             : 'Please allow cookies for this page (the panel needs one to keep you signed in), then try again.';
         admin_login_page($cfg, $why, 403, $next);
     }
-    $ip = evo_client_ip();
-    if (!evo_rate_ok('admin-login', $ip, 5, 900) || !evo_rate_ok('admin-login-all', 'all', 30, 900)) {
+    // A browser that signed in here before has its own 10 tries; anyone else gets 5 per address (IPv6: per /64) and
+    // shares 30 with everybody, so a guesser on many addresses is capped but can't lock the owner's own browser out.
+    $device = admin_device_id($cfg);
+    $limited = $device !== null
+        ? !evo_rate_ok('admin-login-dev', $device, 10, 900)
+        : (!evo_rate_ok('admin-login', admin_ip_bucket(evo_client_ip()), 5, 900) || !evo_rate_ok('admin-login-all', 'all', 30, 900));
+    if ($limited) {
         header('Retry-After: 900');
         admin_login_page($cfg, 'Too many sign-in attempts. Please wait 15 minutes, then try again.', 429, $next);
     }
@@ -287,8 +339,29 @@ function admin_handle_login(array $cfg): never
     if (!headers_sent()) {
         setcookie(ADMIN_PRE_COOKIE, '', admin_cookie_options(time() - 86400));
     }
+    admin_device_remember($cfg);
     $GLOBALS['admin_signed_in'] = true;
     admin_redirect($next !== '' ? ['r' => $next] : []);
+}
+
+/** A top-level GET navigation that came from another site (Sec-Fetch-Site: cross-site). */
+function admin_cross_site_navigation(): bool
+{
+    return in_array(strtoupper((string)($_SERVER['REQUEST_METHOD'] ?? '')), ['GET', 'HEAD'], true)
+        && strtolower((string)($_SERVER['HTTP_SEC_FETCH_SITE'] ?? '')) === 'cross-site'
+        && strtolower((string)($_SERVER['HTTP_SEC_FETCH_MODE'] ?? '')) === 'navigate';
+}
+
+/** A tiny page that reloads admin_url($query) from this origin at once (and offers a link, in case it doesn't). */
+function admin_bounce_page(array $query): never
+{
+    $url = admin_h(admin_url($query));
+    admin_send_headers();
+    header('Content-Type: text/html; charset=utf-8');
+    echo '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="robots" content="noindex, nofollow">'
+        . '<meta http-equiv="refresh" content="0;url=' . $url . '"><title>Opening the admin panel</title></head>'
+        . '<body><p><a href="' . $url . '">Continue to the EvoSoft admin panel</a></p></body></html>';
+    exit;
 }
 
 /** POST ?action=logout (after admin_require_post_csrf). */

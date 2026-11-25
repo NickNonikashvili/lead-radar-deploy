@@ -1928,6 +1928,10 @@
   "ctx": "index.html"
  },
  {
+  "s": "Website price estimate",
+  "ctx": "index.html"
+ },
+ {
   "s": "Legal",
   "ctx": "index.html"
  },
@@ -1949,6 +1953,10 @@
  },
  {
   "s": "Contact",
+  "ctx": "index.html"
+ },
+ {
+  "s": "Send us a message",
   "ctx": "index.html"
  },
  {
@@ -2405,6 +2413,18 @@
   "ctx": "contact.html"
  },
  {
+  "s": "Planning a website?",
+  "ctx": "contact.html"
+ },
+ {
+  "s": "Design it in a few clicks, watch a preview take shape and see an estimated price as you go.",
+  "ctx": "contact.html"
+ },
+ {
+  "s": "Design your website",
+  "ctx": "contact.html"
+ },
+ {
   "s": "What happens next",
   "ctx": "contact.html"
  },
@@ -2421,72 +2441,2878 @@
   "ctx": "contact.html"
  },
  {
-  "s": "Who we are",
+  "s": "${n}",
+  "ctx": "quote builder preview (money)"
+ },
+ {
+  "s": "{price}/month",
+  "ctx": "quote builder preview (perMonth)"
+ },
+ {
+  "s": "{slug}.com",
+  "ctx": "quote builder preview (domain)"
+ },
+ {
+  "s": "Your Business",
+  "ctx": "quote builder preview (yourName)"
+ },
+ {
+  "s": "Gallery",
+  "ctx": "quote builder preview (nav.gallery)"
+ },
+ {
+  "s": "Pricing",
+  "ctx": "quote builder preview (nav.pricing)"
+ },
+ {
+  "s": "Team",
+  "ctx": "quote builder preview (nav.team)"
+ },
+ {
+  "s": "Blog",
+  "ctx": "quote builder preview (nav.blog)"
+ },
+ {
+  "s": "FAQ",
+  "ctx": "quote builder preview (nav.faq)"
+ },
+ {
+  "s": "Reviews",
+  "ctx": "quote builder preview (nav.testimonials)"
+ },
+ {
+  "s": "Careers",
+  "ctx": "quote builder preview (nav.careers)"
+ },
+ {
+  "s": "Locations",
+  "ctx": "quote builder preview (nav.locations)"
+ },
+ {
+  "s": "Shop",
+  "ctx": "quote builder preview (nav.shop)"
+ },
+ {
+  "s": "Product",
+  "ctx": "quote builder preview (nav.product)"
+ },
+ {
+  "s": "More",
+  "ctx": "quote builder preview (nav.more)"
+ },
+ {
+  "s": "Page {n}",
+  "ctx": "quote builder preview (nav.page)"
+ },
+ {
+  "s": "Sign in",
+  "ctx": "quote builder preview (ui.signIn)"
+ },
+ {
+  "s": "Get started",
+  "ctx": "quote builder preview (ui.getStarted)"
+ },
+ {
+  "s": "See how it works",
+  "ctx": "quote builder preview (ui.seeHow)"
+ },
+ {
+  "s": "Shop now",
+  "ctx": "quote builder preview (ui.shopNow)"
+ },
+ {
+  "s": "See the work",
+  "ctx": "quote builder preview (ui.seeWork)"
+ },
+ {
+  "s": "Learn more",
+  "ctx": "quote builder preview (ui.learnMore)"
+ },
+ {
+  "s": "Read more",
+  "ctx": "quote builder preview (ui.readMore)"
+ },
+ {
+  "s": "Our story",
+  "ctx": "quote builder preview (ui.readStory)"
+ },
+ {
+  "s": "View all",
+  "ctx": "quote builder preview (ui.viewAll)"
+ },
+ {
+  "s": "Add to cart",
+  "ctx": "quote builder preview (ui.addToCart)"
+ },
+ {
+  "s": "Search the site",
+  "ctx": "quote builder preview (ui.search)"
+ },
+ {
+  "s": "Signed in as the site owner",
+  "ctx": "quote builder preview (ui.editBar)"
+ },
+ {
+  "s": "Edit this page",
+  "ctx": "quote builder preview (ui.editPage)"
+ },
+ {
+  "s": "Dashboard",
+  "ctx": "quote builder preview (ui.dashboard)"
+ },
+ {
+  "s": "Choose",
+  "ctx": "quote builder preview (ui.choose)"
+ },
+ {
+  "s": "Apply",
+  "ctx": "quote builder preview (ui.apply)"
+ },
+ {
+  "s": "Send message",
+  "ctx": "quote builder preview (ui.send)"
+ },
+ {
+  "s": "Subscribe",
+  "ctx": "quote builder preview (ui.subscribe)"
+ },
+ {
+  "s": "Your email address",
+  "ctx": "quote builder preview (ui.emailField)"
+ },
+ {
+  "s": "How can we help?",
+  "ctx": "quote builder preview (ui.messageField)"
+ },
+ {
+  "s": "Pay now",
+  "ctx": "quote builder preview (ui.payNow)"
+ },
+ {
+  "s": "Confirm booking",
+  "ctx": "quote builder preview (ui.confirm)"
+ },
+ {
+  "s": "Get directions",
+  "ctx": "quote builder preview (ui.directions)"
+ },
+ {
+  "s": "Hi! How can we help today?",
+  "ctx": "quote builder preview (ui.chatHello)"
+ },
+ {
+  "s": "© {year} {name}. All rights reserved.",
+  "ctx": "quote builder preview (ui.rights)"
+ },
+ {
+  "s": "Terms",
+  "ctx": "quote builder preview (ui.terms)"
+ },
+ {
+  "s": "Follow us",
+  "ctx": "quote builder preview (ui.follow)"
+ },
+ {
+  "s": "{n} min read",
+  "ctx": "quote builder preview (ui.minutes)"
+ },
+ {
+  "s": "A little about {name}",
+  "ctx": "quote builder preview (sec.aboutTitle)"
+ },
+ {
+  "s": "Real people, quick replies",
+  "ctx": "quote builder preview (sec.aboutPoints.0)"
+ },
+ {
+  "s": "Proud of every detail",
+  "ctx": "quote builder preview (sec.aboutPoints.1)"
+ },
+ {
+  "s": "Selected work",
+  "ctx": "quote builder preview (sec.portfolioTitle)"
+ },
+ {
+  "s": "Brand refresh",
+  "ctx": "quote builder preview (sec.projects.0)"
+ },
+ {
+  "s": "Summer campaign",
+  "ctx": "quote builder preview (sec.projects.1)"
+ },
+ {
+  "s": "Product launch",
+  "ctx": "quote builder preview (sec.projects.2)"
+ },
+ {
+  "s": "Editorial",
+  "ctx": "quote builder preview (sec.projects.3)"
+ },
+ {
+  "s": "Packaging",
+  "ctx": "quote builder preview (sec.projects.4)"
+ },
+ {
+  "s": "Exhibition",
+  "ctx": "quote builder preview (sec.projects.5)"
+ },
+ {
+  "s": "Booking",
+  "ctx": "quote builder preview (sec.bookingKicker)"
+ },
+ {
+  "s": "Pick a day and a time that suit you. A confirmation arrives by email straight away.",
+  "ctx": "quote builder preview (sec.bookingText)"
+ },
+ {
+  "s": "Pick a day",
+  "ctx": "quote builder preview (sec.pickDay)"
+ },
+ {
+  "s": "Pick a time",
+  "ctx": "quote builder preview (sec.pickTime)"
+ },
+ {
+  "s": "Simple, clear prices",
+  "ctx": "quote builder preview (sec.pricingTitle)"
+ },
+ {
+  "s": "Basic",
+  "ctx": "quote builder preview (sec.plans.0)"
+ },
+ {
+  "s": "Plus",
+  "ctx": "quote builder preview (sec.plans.1)"
+ },
+ {
+  "s": "Premium",
+  "ctx": "quote builder preview (sec.plans.2)"
+ },
+ {
+  "s": "Everything to get started",
+  "ctx": "quote builder preview (sec.planPoints.0)"
+ },
+ {
+  "s": "Help when you need it",
+  "ctx": "quote builder preview (sec.planPoints.1)"
+ },
+ {
+  "s": "Every feature included",
+  "ctx": "quote builder preview (sec.planPoints.2)"
+ },
+ {
+  "s": "Most popular",
+  "ctx": "quote builder preview (sec.popular)"
+ },
+ {
+  "s": "Your customer reviews",
+  "ctx": "quote builder preview (sec.reviewsTitle)"
+ },
+ {
+  "s": "Real reviews from your customers will go here.",
+  "ctx": "quote builder preview (sec.reviewsNote)"
+ },
+ {
+  "s": "Our team",
+  "ctx": "quote builder preview (sec.teamKicker)"
+ },
+ {
+  "s": "The people behind {name}",
+  "ctx": "quote builder preview (sec.teamTitle)"
+ },
+ {
+  "s": "Ana Silva",
+  "ctx": "quote builder preview (sec.team.0)"
+ },
+ {
+  "s": "Founder",
+  "ctx": "quote builder preview (sec.team.1)"
+ },
+ {
+  "s": "Marco Díaz",
+  "ctx": "quote builder preview (sec.team.2)"
+ },
+ {
+  "s": "Manager",
+  "ctx": "quote builder preview (sec.team.3)"
+ },
+ {
+  "s": "Lea Novak",
+  "ctx": "quote builder preview (sec.team.4)"
+ },
+ {
+  "s": "Specialist",
+  "ctx": "quote builder preview (sec.team.5)"
+ },
+ {
+  "s": "Sam Okafor",
+  "ctx": "quote builder preview (sec.team.6)"
+ },
+ {
+  "s": "Assistant",
+  "ctx": "quote builder preview (sec.team.7)"
+ },
+ {
+  "s": "News and stories",
+  "ctx": "quote builder preview (sec.blogTitle)"
+ },
+ {
+  "s": "Join our team",
+  "ctx": "quote builder preview (sec.careersTitle)"
+ },
+ {
+  "s": "We’re growing and looking for people who care about good work.",
+  "ctx": "quote builder preview (sec.careersText)"
+ },
+ {
+  "s": "Full-time role",
+  "ctx": "quote builder preview (sec.jobs.0)"
+ },
+ {
+  "s": "Part-time role",
+  "ctx": "quote builder preview (sec.jobs.1)"
+ },
+ {
+  "s": "Internship",
+  "ctx": "quote builder preview (sec.jobs.2)"
+ },
+ {
+  "s": "On site · Apply by email",
+  "ctx": "quote builder preview (sec.jobMeta)"
+ },
+ {
+  "s": "Good questions",
+  "ctx": "quote builder preview (sec.faqTitle)"
+ },
+ {
+  "s": "What are your opening hours?",
+  "ctx": "quote builder preview (sec.faq.0)"
+ },
+ {
+  "s": "How can I pay?",
+  "ctx": "quote builder preview (sec.faq.1)"
+ },
+ {
+  "s": "Can I change or cancel?",
+  "ctx": "quote builder preview (sec.faq.2)"
+ },
+ {
+  "s": "Do you offer gift cards?",
+  "ctx": "quote builder preview (sec.faq.3)"
+ },
+ {
+  "s": "How long does delivery take?",
+  "ctx": "quote builder preview (sec.faqShop.0)"
+ },
+ {
+  "s": "Can I return something?",
+  "ctx": "quote builder preview (sec.faqShop.1)"
+ },
+ {
+  "s": "Is there a free trial?",
+  "ctx": "quote builder preview (sec.faqApp.0)"
+ },
+ {
+  "s": "Can I cancel at any time?",
+  "ctx": "quote builder preview (sec.faqApp.1)"
+ },
+ {
+  "s": "Is my data safe?",
+  "ctx": "quote builder preview (sec.faqApp.2)"
+ },
+ {
+  "s": "Can I invite my team?",
+  "ctx": "quote builder preview (sec.faqApp.3)"
+ },
+ {
+  "s": "A short, clear answer goes here, written for your customers.",
+  "ctx": "quote builder preview (sec.faqAnswer)"
+ },
+ {
+  "s": "Payments",
+  "ctx": "quote builder preview (sec.payKicker)"
+ },
+ {
+  "s": "Pay online in a few taps",
+  "ctx": "quote builder preview (sec.payTitle)"
+ },
+ {
+  "s": "Cards and wallets, through a secure payment provider.",
+  "ctx": "quote builder preview (sec.payText)"
+ },
+ {
+  "s": "Stay in the loop",
+  "ctx": "quote builder preview (sec.newsTitle)"
+ },
+ {
+  "s": "News and offers from {name}, once a month.",
+  "ctx": "quote builder preview (sec.newsText)"
+ },
+ {
+  "s": "Come and see us",
+  "ctx": "quote builder preview (sec.locationsTitle)"
+ },
+ {
+  "s": "City centre",
+  "ctx": "quote builder preview (sec.locations.0)"
+ },
+ {
+  "s": "Riverside",
+  "ctx": "quote builder preview (sec.locations.1)"
+ },
+ {
+  "s": "Opening hours",
+  "ctx": "quote builder preview (sec.hoursLabel)"
+ },
+ {
+  "s": "Mon–Fri, 9:00–18:00",
+  "ctx": "quote builder preview (sec.hours)"
+ },
+ {
+  "s": "12 Market Street",
+  "ctx": "quote builder preview (sec.address)"
+ },
+ {
+  "s": "+1 555 010 2030",
+  "ctx": "quote builder preview (sec.phone)"
+ },
+ {
+  "s": "Find us",
+  "ctx": "quote builder preview (sec.mapTitle)"
+ },
+ {
+  "s": "Shop the collection",
+  "ctx": "quote builder preview (sec.shopTitle)"
+ },
+ {
+  "s": "All",
+  "ctx": "quote builder preview (sec.filters.0)"
+ },
+ {
+  "s": "New in",
+  "ctx": "quote builder preview (sec.filters.1)"
+ },
+ {
+  "s": "Best sellers",
+  "ctx": "quote builder preview (sec.filters.2)"
+ },
+ {
+  "s": "Gifts",
+  "ctx": "quote builder preview (sec.filters.3)"
+ },
+ {
+  "s": "{n} products",
+  "ctx": "quote builder preview (sec.productsCount)"
+ },
+ {
+  "s": "The app",
+  "ctx": "quote builder preview (sec.appKicker)"
+ },
+ {
+  "s": "Everything in one dashboard",
+  "ctx": "quote builder preview (sec.appTitle)"
+ },
+ {
+  "s": "Overview",
+  "ctx": "quote builder preview (sec.appNav.0)"
+ },
+ {
+  "s": "Customers",
+  "ctx": "quote builder preview (sec.appNav.1)"
+ },
+ {
+  "s": "Orders",
+  "ctx": "quote builder preview (sec.appNav.2)"
+ },
+ {
+  "s": "Reports",
+  "ctx": "quote builder preview (sec.appNav.3)"
+ },
+ {
+  "s": "Settings",
+  "ctx": "quote builder preview (sec.appNav.4)"
+ },
+ {
+  "s": "Active users",
+  "ctx": "quote builder preview (sec.kpis.0)"
+ },
+ {
+  "s": "Revenue this month",
+  "ctx": "quote builder preview (sec.kpis.1)"
+ },
+ {
+  "s": "Tasks done",
+  "ctx": "quote builder preview (sec.kpis.2)"
+ },
+ {
+  "s": "This month",
+  "ctx": "quote builder preview (sec.chartTitle)"
+ },
+ {
+  "s": "Customer",
+  "ctx": "quote builder preview (sec.tableHead.0)"
+ },
+ {
+  "s": "Status",
+  "ctx": "quote builder preview (sec.tableHead.1)"
+ },
+ {
+  "s": "Updated",
+  "ctx": "quote builder preview (sec.tableHead.2)"
+ },
+ {
+  "s": "Active",
+  "ctx": "quote builder preview (sec.statuses.0)"
+ },
+ {
+  "s": "Pending",
+  "ctx": "quote builder preview (sec.statuses.1)"
+ },
+ {
+  "s": "Done",
+  "ctx": "quote builder preview (sec.statuses.2)"
+ },
+ {
+  "s": "Northwind",
+  "ctx": "quote builder preview (sec.tableNames.0)"
+ },
+ {
+  "s": "Blue Harbor",
+  "ctx": "quote builder preview (sec.tableNames.1)"
+ },
+ {
+  "s": "Oak and Pine",
+  "ctx": "quote builder preview (sec.tableNames.2)"
+ },
+ {
+  "s": "Lumen",
+  "ctx": "quote builder preview (sec.tableNames.3)"
+ },
+ {
+  "s": "New collection",
+  "ctx": "quote builder preview (sec.storeKicker)"
+ },
+ {
+  "s": "Also included, behind the scenes:",
+  "ctx": "quote builder preview (sec.behind)"
+ },
+ {
+  "s": "Landing page",
+  "ctx": "quote builder preview (types.landing.label)"
+ },
+ {
+  "s": "a landing page",
+  "ctx": "quote builder preview (types.landing.a)"
+ },
+ {
+  "s": "Portfolio",
+  "ctx": "quote builder preview (types.portfolio.label)"
+ },
+ {
+  "s": "a portfolio",
+  "ctx": "quote builder preview (types.portfolio.a)"
+ },
+ {
+  "s": "Selected work, made with care",
+  "ctx": "quote builder preview (types.portfolio.hero)"
+ },
+ {
+  "s": "A few recent projects, and the story behind each one.",
+  "ctx": "quote builder preview (types.portfolio.sub)"
+ },
+ {
+  "s": "Business website",
+  "ctx": "quote builder preview (types.business.label)"
+ },
+ {
+  "s": "a business website",
+  "ctx": "quote builder preview (types.business.a)"
+ },
+ {
+  "s": "an online store",
+  "ctx": "quote builder preview (types.store.a)"
+ },
+ {
+  "s": "a web app",
+  "ctx": "quote builder preview (types.webapp.a)"
+ },
+ {
+  "s": "Everything your team needs, in one place",
+  "ctx": "quote builder preview (types.webapp.hero)"
+ },
+ {
+  "s": "Sign in from anywhere to see what’s happening and get work done.",
+  "ctx": "quote builder preview (types.webapp.sub)"
+ },
+ {
+  "s": "Midnight",
+  "ctx": "quote builder preview (palettes.navy)"
+ },
+ {
+  "s": "Forest",
+  "ctx": "quote builder preview (palettes.forest)"
+ },
+ {
+  "s": "Sunset",
+  "ctx": "quote builder preview (palettes.sunset)"
+ },
+ {
+  "s": "Ocean",
+  "ctx": "quote builder preview (palettes.ocean)"
+ },
+ {
+  "s": "Black and white",
+  "ctx": "quote builder preview (palettes.mono)"
+ },
+ {
+  "s": "Blush",
+  "ctx": "quote builder preview (palettes.blush)"
+ },
+ {
+  "s": "Your own colour",
+  "ctx": "quote builder preview (palettes.custom)"
+ },
+ {
+  "s": "Modern",
+  "ctx": "quote builder preview (fonts.modern)"
+ },
+ {
+  "s": "Elegant",
+  "ctx": "quote builder preview (fonts.elegant)"
+ },
+ {
+  "s": "Friendly",
+  "ctx": "quote builder preview (fonts.friendly)"
+ },
+ {
+  "s": "Bold",
+  "ctx": "quote builder preview (fonts.bold)"
+ },
+ {
+  "s": "Clean",
+  "ctx": "quote builder preview (layouts.clean)"
+ },
+ {
+  "s": "Classic",
+  "ctx": "quote builder preview (layouts.classic)"
+ },
+ {
+  "s": "Light",
+  "ctx": "quote builder preview (modes.light)"
+ },
+ {
+  "s": "Dark",
+  "ctx": "quote builder preview (modes.dark)"
+ },
+ {
+  "s": "Online booking",
+  "ctx": "quote builder preview (features.booking)"
+ },
+ {
+  "s": "Online payments",
+  "ctx": "quote builder preview (features.payments)"
+ },
+ {
+  "s": "Edit it yourself",
+  "ctx": "quote builder preview (features.cms)"
+ },
+ {
+  "s": "More languages",
+  "ctx": "quote builder preview (features.multilingual)"
+ },
+ {
+  "s": "Customer accounts",
+  "ctx": "quote builder preview (features.accounts)"
+ },
+ {
+  "s": "Site search",
+  "ctx": "quote builder preview (features.search)"
+ },
+ {
+  "s": "Newsletter sign-up",
+  "ctx": "quote builder preview (features.newsletter)"
+ },
+ {
+  "s": "Live chat",
+  "ctx": "quote builder preview (features.livechat)"
+ },
+ {
+  "s": "Map and directions",
+  "ctx": "quote builder preview (features.maps)"
+ },
+ {
+  "s": "Reviews section",
+  "ctx": "quote builder preview (features.reviews)"
+ },
+ {
+  "s": "SEO setup",
+  "ctx": "quote builder preview (features.seo)"
+ },
+ {
+  "s": "Visitor statistics",
+  "ctx": "quote builder preview (features.analytics)"
+ },
+ {
+  "s": "Preview of your website: {type} for {name}, {industry}.",
+  "ctx": "quote builder preview (summary.intro)"
+ },
+ {
+  "s": "Preview of your website: {type} for {name}.",
+  "ctx": "quote builder preview (summary.introPlain)"
+ },
+ {
+  "s": "It uses the {palette} colours, {font} type and the {layout} layout, in {mode} mode.",
+  "ctx": "quote builder preview (summary.look)"
+ },
+ {
+  "s": "It uses your own colour, {font} type and the {layout} layout, in {mode} mode.",
+  "ctx": "quote builder preview (summary.lookCustom)"
+ },
+ {
+  "s": "The home page shows {list}.",
+  "ctx": "quote builder preview (summary.sections)"
+ },
+ {
+  "s": "The top bar has {list}.",
+  "ctx": "quote builder preview (summary.head)"
+ },
+ {
+  "s": "links to {list}",
+  "ctx": "quote builder preview (summary.parts.nav)"
+ },
+ {
+  "s": "a search box",
+  "ctx": "quote builder preview (summary.parts.search)"
+ },
+ {
+  "s": "a language switch for {n} languages",
+  "ctx": "quote builder preview (summary.parts.langs)"
+ },
+ {
+  "s": "a sign-in button",
+  "ctx": "quote builder preview (summary.parts.signIn)"
+ },
+ {
+  "s": "a cart",
+  "ctx": "quote builder preview (summary.parts.cart)"
+ },
+ {
+  "s": "an editing bar for you",
+  "ctx": "quote builder preview (summary.parts.edit)"
+ },
+ {
+  "s": "a chat button",
+  "ctx": "quote builder preview (summary.parts.chat)"
+ },
+ {
+  "s": "a large welcome banner",
+  "ctx": "quote builder preview (summary.parts.hero)"
+ },
+ {
+  "s": "three highlights",
+  "ctx": "quote builder preview (summary.parts.points)"
+ },
+ {
+  "s": "a product grid with prices",
+  "ctx": "quote builder preview (summary.parts.shop)"
+ },
+ {
+  "s": "an app dashboard",
+  "ctx": "quote builder preview (summary.parts.app)"
+ },
+ {
+  "s": "your services",
+  "ctx": "quote builder preview (summary.parts.services)"
+ },
+ {
+  "s": "an about section",
+  "ctx": "quote builder preview (summary.parts.about)"
+ },
+ {
+  "s": "a booking calendar with times",
+  "ctx": "quote builder preview (summary.parts.booking)"
+ },
+ {
+  "s": "a gallery",
+  "ctx": "quote builder preview (summary.parts.gallery)"
+ },
+ {
+  "s": "price plans",
+  "ctx": "quote builder preview (summary.parts.pricing)"
+ },
+ {
+  "s": "a space for customer reviews",
+  "ctx": "quote builder preview (summary.parts.reviews)"
+ },
+ {
+  "s": "the team",
+  "ctx": "quote builder preview (summary.parts.team)"
+ },
+ {
+  "s": "the latest posts",
+  "ctx": "quote builder preview (summary.parts.blog)"
+ },
+ {
+  "s": "job openings",
+  "ctx": "quote builder preview (summary.parts.careers)"
+ },
+ {
+  "s": "questions and answers",
+  "ctx": "quote builder preview (summary.parts.faq)"
+ },
+ {
+  "s": "online payment",
+  "ctx": "quote builder preview (summary.parts.payments)"
+ },
+ {
+  "s": "a newsletter sign-up",
+  "ctx": "quote builder preview (summary.parts.newsletter)"
+ },
+ {
+  "s": "locations with a map",
+  "ctx": "quote builder preview (summary.parts.locations)"
+ },
+ {
+  "s": "a contact form",
+  "ctx": "quote builder preview (summary.parts.contact)"
+ },
+ {
+  "s": "a map",
+  "ctx": "quote builder preview (summary.parts.map)"
+ },
+ {
+  "s": "a footer",
+  "ctx": "quote builder preview (summary.parts.footer)"
+ },
+ {
+  "s": "Restaurant or café",
+  "ctx": "quote builder preview (industries.restaurant.label)"
+ },
+ {
+  "s": "Luna Bistro",
+  "ctx": "quote builder preview (industries.restaurant.name)"
+ },
+ {
+  "s": "A table for every good evening",
+  "ctx": "quote builder preview (industries.restaurant.hero)"
+ },
+ {
+  "s": "Seasonal plates, good wine and a warm room in the heart of town.",
+  "ctx": "quote builder preview (industries.restaurant.sub)"
+ },
+ {
+  "s": "Open tonight from 18:00",
+  "ctx": "quote builder preview (industries.restaurant.kicker)"
+ },
+ {
+  "s": "Book a table",
+  "ctx": "quote builder preview (industries.restaurant.cta)"
+ },
+ {
+  "s": "See the menu",
+  "ctx": "quote builder preview (industries.restaurant.cta2)"
+ },
+ {
+  "s": "Menu",
+  "ctx": "quote builder preview (industries.restaurant.servicesNav)"
+ },
+ {
+  "s": "From our kitchen",
+  "ctx": "quote builder preview (industries.restaurant.servicesTitle)"
+ },
+ {
+  "s": "Small plates",
+  "ctx": "quote builder preview (industries.restaurant.services.0)"
+ },
+ {
+  "s": "To share, made fresh every day.",
+  "ctx": "quote builder preview (industries.restaurant.services.1)"
+ },
+ {
+  "s": "Mains",
+  "ctx": "quote builder preview (industries.restaurant.services.2)"
+ },
+ {
+  "s": "Seasonal dishes from local farms.",
+  "ctx": "quote builder preview (industries.restaurant.services.3)"
+ },
+ {
+  "s": "Desserts",
+  "ctx": "quote builder preview (industries.restaurant.services.4)"
+ },
+ {
+  "s": "Baked in house every morning.",
+  "ctx": "quote builder preview (industries.restaurant.services.5)"
+ },
+ {
+  "s": "We cook what the season brings, with produce from farms we know by name, and serve it in a room made for long dinners.",
+  "ctx": "quote builder preview (industries.restaurant.about)"
+ },
+ {
+  "s": "Fresh every day",
+  "ctx": "quote builder preview (industries.restaurant.points.0)"
+ },
+ {
+  "s": "Book in seconds",
+  "ctx": "quote builder preview (industries.restaurant.points.1)"
+ },
+ {
+  "s": "Private dining",
+  "ctx": "quote builder preview (industries.restaurant.points.2)"
+ },
+ {
+  "s": "House olive oil",
+  "ctx": "quote builder preview (industries.restaurant.products.1)"
+ },
+ {
+  "s": "Our cookbook",
+  "ctx": "quote builder preview (industries.restaurant.products.2)"
+ },
+ {
+  "s": "Tasting box",
+  "ctx": "quote builder preview (industries.restaurant.products.3)"
+ },
+ {
+  "s": "Our new autumn menu",
+  "ctx": "quote builder preview (industries.restaurant.blog.0)"
+ },
+ {
+  "s": "Meet the farmers we cook with",
+  "ctx": "quote builder preview (industries.restaurant.blog.1)"
+ },
+ {
+  "s": "Wine evenings are back",
+  "ctx": "quote builder preview (industries.restaurant.blog.2)"
+ },
+ {
+  "s": "2 guests",
+  "ctx": "quote builder preview (industries.restaurant.bookUnit)"
+ },
+ {
+  "s": "Take a taste of Luna home",
+  "ctx": "quote builder preview (industries.restaurant.shopHero)"
+ },
+ {
+  "s": "Clinic or health",
+  "ctx": "quote builder preview (industries.clinic.label)"
+ },
+ {
+  "s": "Harbor Clinic",
+  "ctx": "quote builder preview (industries.clinic.name)"
+ },
+ {
+  "s": "Care that fits around your life",
+  "ctx": "quote builder preview (industries.clinic.hero)"
+ },
+ {
+  "s": "Friendly doctors, short waits and appointments you can book online.",
+  "ctx": "quote builder preview (industries.clinic.sub)"
+ },
+ {
+  "s": "New patients welcome",
+  "ctx": "quote builder preview (industries.clinic.kicker)"
+ },
+ {
+  "s": "Book an appointment",
+  "ctx": "quote builder preview (industries.clinic.cta)"
+ },
+ {
+  "s": "Our services",
+  "ctx": "quote builder preview (industries.clinic.cta2)"
+ },
+ {
+  "s": "How we can help",
+  "ctx": "quote builder preview (industries.clinic.servicesTitle)"
+ },
+ {
+  "s": "Check-ups",
+  "ctx": "quote builder preview (industries.clinic.services.0)"
+ },
+ {
+  "s": "Routine care for the whole family.",
+  "ctx": "quote builder preview (industries.clinic.services.1)"
+ },
+ {
+  "s": "Specialist care",
+  "ctx": "quote builder preview (industries.clinic.services.2)"
+ },
+ {
+  "s": "Referrals and follow-ups in one place.",
+  "ctx": "quote builder preview (industries.clinic.services.3)"
+ },
+ {
+  "s": "Tests and results",
+  "ctx": "quote builder preview (industries.clinic.services.4)"
+ },
+ {
+  "s": "Quick tests, with results online.",
+  "ctx": "quote builder preview (industries.clinic.services.5)"
+ },
+ {
+  "s": "Our team has looked after families in the area for years, with time to listen and clear advice.",
+  "ctx": "quote builder preview (industries.clinic.about)"
+ },
+ {
+  "s": "Our clinic",
+  "ctx": "quote builder preview (industries.clinic.galleryTitle)"
+ },
+ {
+  "s": "Appointments this week",
+  "ctx": "quote builder preview (industries.clinic.points.0)"
+ },
+ {
+  "s": "Book online",
+  "ctx": "quote builder preview (industries.clinic.points.1)"
+ },
+ {
+  "s": "Calm, bright rooms",
+  "ctx": "quote builder preview (industries.clinic.points.2)"
+ },
+ {
+  "s": "First aid kit",
+  "ctx": "quote builder preview (industries.clinic.products.0)"
+ },
+ {
+  "s": "Vitamin pack",
+  "ctx": "quote builder preview (industries.clinic.products.1)"
+ },
+ {
+  "s": "Gift voucher",
+  "ctx": "quote builder preview (industries.clinic.products.2)"
+ },
+ {
+  "s": "Travel kit",
+  "ctx": "quote builder preview (industries.clinic.products.3)"
+ },
+ {
+  "s": "Getting ready for flu season",
+  "ctx": "quote builder preview (industries.clinic.blog.0)"
+ },
+ {
+  "s": "Five habits for better sleep",
+  "ctx": "quote builder preview (industries.clinic.blog.1)"
+ },
+ {
+  "s": "Meet our new doctor",
+  "ctx": "quote builder preview (industries.clinic.blog.2)"
+ },
+ {
+  "s": "30 minutes",
+  "ctx": "quote builder preview (industries.clinic.bookUnit)"
+ },
+ {
+  "s": "Health essentials, delivered",
+  "ctx": "quote builder preview (industries.clinic.shopHero)"
+ },
+ {
+  "s": "Beauty and wellness",
+  "ctx": "quote builder preview (industries.beauty.label)"
+ },
+ {
+  "s": "Bloom Studio",
+  "ctx": "quote builder preview (industries.beauty.name)"
+ },
+ {
+  "s": "Feel like yourself, only brighter",
+  "ctx": "quote builder preview (industries.beauty.hero)"
+ },
+ {
+  "s": "Hair, skin and nails by people who love what they do.",
+  "ctx": "quote builder preview (industries.beauty.sub)"
+ },
+ {
+  "s": "Open six days a week",
+  "ctx": "quote builder preview (industries.beauty.kicker)"
+ },
+ {
+  "s": "Book a visit",
+  "ctx": "quote builder preview (industries.beauty.cta)"
+ },
+ {
+  "s": "Treatments",
+  "ctx": "quote builder preview (industries.beauty.cta2)"
+ },
+ {
+  "s": "Hair",
+  "ctx": "quote builder preview (industries.beauty.services.0)"
+ },
+ {
+  "s": "Cuts, colour and styling.",
+  "ctx": "quote builder preview (industries.beauty.services.1)"
+ },
+ {
+  "s": "Skin",
+  "ctx": "quote builder preview (industries.beauty.services.2)"
+ },
+ {
+  "s": "Facials for every skin type.",
+  "ctx": "quote builder preview (industries.beauty.services.3)"
+ },
+ {
+  "s": "Nails",
+  "ctx": "quote builder preview (industries.beauty.services.4)"
+ },
+ {
+  "s": "Manicures and pedicures.",
+  "ctx": "quote builder preview (industries.beauty.services.5)"
+ },
+ {
+  "s": "Bloom is a small, bright studio where every appointment starts with a conversation about what you want.",
+  "ctx": "quote builder preview (industries.beauty.about)"
+ },
+ {
+  "s": "Recent looks",
+  "ctx": "quote builder preview (industries.beauty.galleryTitle)"
+ },
+ {
+  "s": "Gentle products",
+  "ctx": "quote builder preview (industries.beauty.points.0)"
+ },
+ {
+  "s": "Gift cards",
+  "ctx": "quote builder preview (industries.beauty.points.2)"
+ },
+ {
+  "s": "Hair oil",
+  "ctx": "quote builder preview (industries.beauty.products.0)"
+ },
+ {
+  "s": "Face serum",
+  "ctx": "quote builder preview (industries.beauty.products.1)"
+ },
+ {
+  "s": "Care set",
+  "ctx": "quote builder preview (industries.beauty.products.3)"
+ },
+ {
+  "s": "How to keep colour fresh",
+  "ctx": "quote builder preview (industries.beauty.blog.0)"
+ },
+ {
+  "s": "A simple routine for winter skin",
+  "ctx": "quote builder preview (industries.beauty.blog.1)"
+ },
+ {
+  "s": "This season’s nail trends",
+  "ctx": "quote builder preview (industries.beauty.blog.2)"
+ },
+ {
+  "s": "45 minutes",
+  "ctx": "quote builder preview (industries.beauty.bookUnit)"
+ },
+ {
+  "s": "Studio care, at home",
+  "ctx": "quote builder preview (industries.beauty.shopHero)"
+ },
+ {
+  "s": "Construction and trades",
+  "ctx": "quote builder preview (industries.construction.label)"
+ },
+ {
+  "s": "Stonefield Builders",
+  "ctx": "quote builder preview (industries.construction.name)"
+ },
+ {
+  "s": "Built right, built to last",
+  "ctx": "quote builder preview (industries.construction.hero)"
+ },
+ {
+  "s": "Homes, extensions and renovations, planned clearly from the first visit.",
+  "ctx": "quote builder preview (industries.construction.sub)"
+ },
+ {
+  "s": "Homes · Renovations · Extensions",
+  "ctx": "quote builder preview (industries.construction.kicker)"
+ },
+ {
+  "s": "Request a quote",
+  "ctx": "quote builder preview (industries.construction.cta)"
+ },
+ {
+  "s": "Our projects",
+  "ctx": "quote builder preview (industries.construction.cta2)"
+ },
+ {
+  "s": "What we build",
+  "ctx": "quote builder preview (industries.construction.servicesTitle)"
+ },
+ {
+  "s": "New homes",
+  "ctx": "quote builder preview (industries.construction.services.0)"
+ },
+ {
+  "s": "From the foundations to the finishing touches.",
+  "ctx": "quote builder preview (industries.construction.services.1)"
+ },
+ {
+  "s": "Renovations",
+  "ctx": "quote builder preview (industries.construction.services.2)"
+ },
+ {
+  "s": "Kitchens, bathrooms and whole floors.",
+  "ctx": "quote builder preview (industries.construction.services.3)"
+ },
+ {
+  "s": "Extensions",
+  "ctx": "quote builder preview (industries.construction.services.4)"
+ },
+ {
+  "s": "More room, without moving house.",
+  "ctx": "quote builder preview (industries.construction.services.5)"
+ },
+ {
+  "s": "A local team of builders, carpenters and project managers who keep you informed at every step.",
+  "ctx": "quote builder preview (industries.construction.about)"
+ },
+ {
+  "s": "Recent projects",
+  "ctx": "quote builder preview (industries.construction.galleryTitle)"
+ },
+ {
+  "s": "Clear written quotes",
+  "ctx": "quote builder preview (industries.construction.points.0)"
+ },
+ {
+  "s": "One project manager",
+  "ctx": "quote builder preview (industries.construction.points.1)"
+ },
+ {
+  "s": "Tidy sites",
+  "ctx": "quote builder preview (industries.construction.points.2)"
+ },
+ {
+  "s": "Site visit",
+  "ctx": "quote builder preview (industries.construction.products.0)"
+ },
+ {
+  "s": "Design session",
+  "ctx": "quote builder preview (industries.construction.products.1)"
+ },
+ {
+  "s": "Paint set",
+  "ctx": "quote builder preview (industries.construction.products.2)"
+ },
+ {
+  "s": "Tool hire",
+  "ctx": "quote builder preview (industries.construction.products.3)"
+ },
+ {
+  "s": "Planning an extension",
+  "ctx": "quote builder preview (industries.construction.blog.0)"
+ },
+ {
+  "s": "What a renovation really involves",
+  "ctx": "quote builder preview (industries.construction.blog.1)"
+ },
+ {
+  "s": "Choosing the right materials",
+  "ctx": "quote builder preview (industries.construction.blog.2)"
+ },
+ {
+  "s": "Book a site visit",
+  "ctx": "quote builder preview (industries.construction.book)"
+ },
+ {
+  "s": "1 hour",
+  "ctx": "quote builder preview (industries.construction.bookUnit)"
+ },
+ {
+  "s": "Materials and services, online",
+  "ctx": "quote builder preview (industries.construction.shopHero)"
+ },
+ {
+  "s": "Consulting and services",
+  "ctx": "quote builder preview (industries.consulting.label)"
+ },
+ {
+  "s": "Northbridge Advisory",
+  "ctx": "quote builder preview (industries.consulting.name)"
+ },
+ {
+  "s": "Clear advice for growing businesses",
+  "ctx": "quote builder preview (industries.consulting.hero)"
+ },
+ {
+  "s": "Strategy, finance and operations, from people who have run businesses themselves.",
+  "ctx": "quote builder preview (industries.consulting.sub)"
+ },
+ {
+  "s": "Strategy · Finance · Operations",
+  "ctx": "quote builder preview (industries.consulting.kicker)"
+ },
+ {
+  "s": "Book a call",
+  "ctx": "quote builder preview (industries.consulting.cta)"
+ },
+ {
+  "s": "How we help",
+  "ctx": "quote builder preview (industries.consulting.cta2)"
+ },
+ {
+  "s": "Strategy",
+  "ctx": "quote builder preview (industries.consulting.services.0)"
+ },
+ {
+  "s": "A plan your whole team understands.",
+  "ctx": "quote builder preview (industries.consulting.services.1)"
+ },
+ {
+  "s": "Finance",
+  "ctx": "quote builder preview (industries.consulting.services.2)"
+ },
+ {
+  "s": "Budgets, forecasts and funding.",
+  "ctx": "quote builder preview (industries.consulting.services.3)"
+ },
+ {
+  "s": "Operations",
+  "ctx": "quote builder preview (industries.consulting.services.4)"
+ },
+ {
+  "s": "Simpler processes that save time.",
+  "ctx": "quote builder preview (industries.consulting.services.5)"
+ },
+ {
+  "s": "We work alongside owners and leadership teams, turning big goals into steps you can act on.",
+  "ctx": "quote builder preview (industries.consulting.about)"
+ },
+ {
+  "s": "Our work in pictures",
+  "ctx": "quote builder preview (industries.consulting.galleryTitle)"
+ },
+ {
+  "s": "Practical plans",
+  "ctx": "quote builder preview (industries.consulting.points.0)"
+ },
+ {
+  "s": "Senior advisers",
+  "ctx": "quote builder preview (industries.consulting.points.1)"
+ },
+ {
+  "s": "Clear fees",
+  "ctx": "quote builder preview (industries.consulting.points.2)"
+ },
+ {
+  "s": "Strategy session",
+  "ctx": "quote builder preview (industries.consulting.products.0)"
+ },
+ {
+  "s": "Business review",
+  "ctx": "quote builder preview (industries.consulting.products.1)"
+ },
+ {
+  "s": "Team workshop",
+  "ctx": "quote builder preview (industries.consulting.products.2)"
+ },
+ {
+  "s": "Planning template",
+  "ctx": "quote builder preview (industries.consulting.products.3)"
+ },
+ {
+  "s": "Three numbers every owner should know",
+  "ctx": "quote builder preview (industries.consulting.blog.0)"
+ },
+ {
+  "s": "Planning the next twelve months",
+  "ctx": "quote builder preview (industries.consulting.blog.1)"
+ },
+ {
+  "s": "When to hire your first manager",
+  "ctx": "quote builder preview (industries.consulting.blog.2)"
+ },
+ {
+  "s": "Sessions and tools, ready to book",
+  "ctx": "quote builder preview (industries.consulting.shopHero)"
+ },
+ {
+  "s": "Shop or retail",
+  "ctx": "quote builder preview (industries.retail.label)"
+ },
+ {
+  "s": "Maple & Co.",
+  "ctx": "quote builder preview (industries.retail.name)"
+ },
+ {
+  "s": "Everyday things, beautifully made",
+  "ctx": "quote builder preview (industries.retail.hero)"
+ },
+ {
+  "s": "Homeware, gifts and small treats, chosen with care.",
+  "ctx": "quote builder preview (industries.retail.sub)"
+ },
+ {
+  "s": "New arrivals every week",
+  "ctx": "quote builder preview (industries.retail.kicker)"
+ },
+ {
+  "s": "Visit the shop",
+  "ctx": "quote builder preview (industries.retail.cta2)"
+ },
+ {
+  "s": "Shop by category",
+  "ctx": "quote builder preview (industries.retail.servicesTitle)"
+ },
+ {
+  "s": "Linen, ceramics and candles.",
+  "ctx": "quote builder preview (industries.retail.services.1)"
+ },
+ {
+  "s": "Something for everyone.",
+  "ctx": "quote builder preview (industries.retail.services.3)"
+ },
+ {
+  "s": "Kitchen",
+  "ctx": "quote builder preview (industries.retail.services.4)"
+ },
+ {
+  "s": "Tools you’ll use every day.",
+  "ctx": "quote builder preview (industries.retail.services.5)"
+ },
+ {
+  "s": "Maple & Co. started as a corner shop and still picks every product by hand.",
+  "ctx": "quote builder preview (industries.retail.about)"
+ },
+ {
+  "s": "In the shop",
+  "ctx": "quote builder preview (industries.retail.galleryTitle)"
+ },
+ {
+  "s": "Hand-picked products",
+  "ctx": "quote builder preview (industries.retail.points.0)"
+ },
+ {
+  "s": "Gift wrapping",
+  "ctx": "quote builder preview (industries.retail.points.1)"
+ },
+ {
+  "s": "Easy returns",
+  "ctx": "quote builder preview (industries.retail.points.2)"
+ },
+ {
+  "s": "Linen tote",
+  "ctx": "quote builder preview (industries.retail.products.0)"
+ },
+ {
+  "s": "Ceramic mug",
+  "ctx": "quote builder preview (industries.retail.products.1)"
+ },
+ {
+  "s": "Scented candle",
+  "ctx": "quote builder preview (industries.retail.products.2)"
+ },
+ {
+  "s": "Wool throw",
+  "ctx": "quote builder preview (industries.retail.products.3)"
+ },
+ {
+  "s": "Gift ideas for the season",
+  "ctx": "quote builder preview (industries.retail.blog.0)"
+ },
+ {
+  "s": "How we choose our makers",
+  "ctx": "quote builder preview (industries.retail.blog.1)"
+ },
+ {
+  "s": "Caring for linen",
+  "ctx": "quote builder preview (industries.retail.blog.2)"
+ },
+ {
+  "s": "Book a shopping visit",
+  "ctx": "quote builder preview (industries.retail.book)"
+ },
+ {
+  "s": "New season, new favourites",
+  "ctx": "quote builder preview (industries.retail.shopHero)"
+ },
+ {
+  "s": "Travel and tourism",
+  "ctx": "quote builder preview (industries.tourism.label)"
+ },
+ {
+  "s": "Wayfarer Tours",
+  "ctx": "quote builder preview (industries.tourism.name)"
+ },
+ {
+  "s": "Small groups, big adventures",
+  "ctx": "quote builder preview (industries.tourism.hero)"
+ },
+ {
+  "s": "Guided tours through mountains, old towns and wine country.",
+  "ctx": "quote builder preview (industries.tourism.sub)"
+ },
+ {
+  "s": "Tours all year round",
+  "ctx": "quote builder preview (industries.tourism.kicker)"
+ },
+ {
+  "s": "Book a tour",
+  "ctx": "quote builder preview (industries.tourism.cta)"
+ },
+ {
+  "s": "Explore tours",
+  "ctx": "quote builder preview (industries.tourism.cta2)"
+ },
+ {
+  "s": "Tours",
+  "ctx": "quote builder preview (industries.tourism.servicesNav)"
+ },
+ {
+  "s": "Popular tours",
+  "ctx": "quote builder preview (industries.tourism.servicesTitle)"
+ },
+ {
+  "s": "Mountain trails",
+  "ctx": "quote builder preview (industries.tourism.services.0)"
+ },
+ {
+  "s": "Day hikes with local guides.",
+  "ctx": "quote builder preview (industries.tourism.services.1)"
+ },
+ {
+  "s": "Old town walks",
+  "ctx": "quote builder preview (industries.tourism.services.2)"
+ },
+ {
+  "s": "History, food and hidden corners.",
+  "ctx": "quote builder preview (industries.tourism.services.3)"
+ },
+ {
+  "s": "Wine country",
+  "ctx": "quote builder preview (industries.tourism.services.4)"
+ },
+ {
+  "s": "Tastings at family vineyards.",
+  "ctx": "quote builder preview (industries.tourism.services.5)"
+ },
+ {
+  "s": "Our guides grew up here and love showing visitors the places they know best.",
+  "ctx": "quote builder preview (industries.tourism.about)"
+ },
+ {
+  "s": "From our trips",
+  "ctx": "quote builder preview (industries.tourism.galleryTitle)"
+ },
+ {
+  "s": "Local guides",
+  "ctx": "quote builder preview (industries.tourism.points.0)"
+ },
+ {
+  "s": "Small groups",
+  "ctx": "quote builder preview (industries.tourism.points.1)"
+ },
+ {
+  "s": "Flexible dates",
+  "ctx": "quote builder preview (industries.tourism.points.2)"
+ },
+ {
+  "s": "Day tour",
+  "ctx": "quote builder preview (industries.tourism.products.0)"
+ },
+ {
+  "s": "Weekend trip",
+  "ctx": "quote builder preview (industries.tourism.products.1)"
+ },
+ {
+  "s": "Guidebook",
+  "ctx": "quote builder preview (industries.tourism.products.3)"
+ },
+ {
+  "s": "What to pack for the mountains",
+  "ctx": "quote builder preview (industries.tourism.blog.0)"
+ },
+ {
+  "s": "The best season to visit",
+  "ctx": "quote builder preview (industries.tourism.blog.1)"
+ },
+ {
+  "s": "A day in the old town",
+  "ctx": "quote builder preview (industries.tourism.blog.2)"
+ },
+ {
+  "s": "2 people",
+  "ctx": "quote builder preview (industries.tourism.bookUnit)"
+ },
+ {
+  "s": "Book your next trip",
+  "ctx": "quote builder preview (industries.tourism.shopHero)"
+ },
+ {
+  "s": "Education",
+  "ctx": "quote builder preview (industries.education.label)"
+ },
+ {
+  "s": "Brightpath Academy",
+  "ctx": "quote builder preview (industries.education.name)"
+ },
+ {
+  "s": "Learn something new this season",
+  "ctx": "quote builder preview (industries.education.hero)"
+ },
+ {
+  "s": "Courses and tutoring for every age, in small classes or online.",
+  "ctx": "quote builder preview (industries.education.sub)"
+ },
+ {
+  "s": "Enrolment is open",
+  "ctx": "quote builder preview (industries.education.kicker)"
+ },
+ {
+  "s": "Enrol now",
+  "ctx": "quote builder preview (industries.education.cta)"
+ },
+ {
+  "s": "See courses",
+  "ctx": "quote builder preview (industries.education.cta2)"
+ },
+ {
+  "s": "Courses",
+  "ctx": "quote builder preview (industries.education.servicesNav)"
+ },
+ {
+  "s": "Our courses",
+  "ctx": "quote builder preview (industries.education.servicesTitle)"
+ },
+ {
+  "s": "Languages",
+  "ctx": "quote builder preview (industries.education.services.0)"
+ },
+ {
+  "s": "From first words to fluent.",
+  "ctx": "quote builder preview (industries.education.services.1)"
+ },
+ {
+  "s": "Tutoring",
+  "ctx": "quote builder preview (industries.education.services.2)"
+ },
+ {
+  "s": "One-to-one help with school subjects.",
+  "ctx": "quote builder preview (industries.education.services.3)"
+ },
+ {
+  "s": "Workshops",
+  "ctx": "quote builder preview (industries.education.services.4)"
+ },
+ {
+  "s": "Short courses for adults.",
+  "ctx": "quote builder preview (industries.education.services.5)"
+ },
+ {
+  "s": "Brightpath is a small team of teachers who believe learning should feel encouraging, not stressful.",
+  "ctx": "quote builder preview (industries.education.about)"
+ },
+ {
+  "s": "Life at Brightpath",
+  "ctx": "quote builder preview (industries.education.galleryTitle)"
+ },
+ {
+  "s": "Small classes",
+  "ctx": "quote builder preview (industries.education.points.0)"
+ },
+ {
+  "s": "Qualified teachers",
+  "ctx": "quote builder preview (industries.education.points.1)"
+ },
+ {
+  "s": "Online or in person",
+  "ctx": "quote builder preview (industries.education.points.2)"
+ },
+ {
+  "s": "Course book",
+  "ctx": "quote builder preview (industries.education.products.0)"
+ },
+ {
+  "s": "Trial lesson",
+  "ctx": "quote builder preview (industries.education.products.1)"
+ },
+ {
+  "s": "Term pass",
+  "ctx": "quote builder preview (industries.education.products.2)"
+ },
+ {
+  "s": "Helping with homework",
+  "ctx": "quote builder preview (industries.education.blog.0)"
+ },
+ {
+  "s": "Learning a language as an adult",
+  "ctx": "quote builder preview (industries.education.blog.1)"
+ },
+ {
+  "s": "Our new evening classes",
+  "ctx": "quote builder preview (industries.education.blog.2)"
+ },
+ {
+  "s": "Book a trial lesson",
+  "ctx": "quote builder preview (industries.education.book)"
+ },
+ {
+  "s": "Courses and books, online",
+  "ctx": "quote builder preview (industries.education.shopHero)"
+ },
+ {
+  "s": "Fitness and sport",
+  "ctx": "quote builder preview (industries.fitness.label)"
+ },
+ {
+  "s": "Pulse Fitness",
+  "ctx": "quote builder preview (industries.fitness.name)"
+ },
+ {
+  "s": "Stronger every week",
+  "ctx": "quote builder preview (industries.fitness.hero)"
+ },
+ {
+  "s": "Classes, coaching and an open gym for every level.",
+  "ctx": "quote builder preview (industries.fitness.sub)"
+ },
+ {
+  "s": "Open early, close late",
+  "ctx": "quote builder preview (industries.fitness.kicker)"
+ },
+ {
+  "s": "Book a class",
+  "ctx": "quote builder preview (industries.fitness.cta)"
+ },
+ {
+  "s": "Class times",
+  "ctx": "quote builder preview (industries.fitness.cta2)"
+ },
+ {
+  "s": "Classes",
+  "ctx": "quote builder preview (industries.fitness.servicesNav)"
+ },
+ {
+  "s": "Strength",
+  "ctx": "quote builder preview (industries.fitness.services.0)"
+ },
+ {
+  "s": "Build strength with a coach.",
+  "ctx": "quote builder preview (industries.fitness.services.1)"
+ },
+ {
+  "s": "Cardio",
+  "ctx": "quote builder preview (industries.fitness.services.2)"
+ },
+ {
+  "s": "Fast, fun group sessions.",
+  "ctx": "quote builder preview (industries.fitness.services.3)"
+ },
+ {
+  "s": "Yoga",
+  "ctx": "quote builder preview (industries.fitness.services.4)"
+ },
+ {
+  "s": "Stretch, breathe and reset.",
+  "ctx": "quote builder preview (industries.fitness.services.5)"
+ },
+ {
+  "s": "Pulse is a friendly gym where beginners and regulars train side by side.",
+  "ctx": "quote builder preview (industries.fitness.about)"
+ },
+ {
+  "s": "At the gym",
+  "ctx": "quote builder preview (industries.fitness.galleryTitle)"
+ },
+ {
+  "s": "Expert coaches",
+  "ctx": "quote builder preview (industries.fitness.points.0)"
+ },
+ {
+  "s": "Classes every day",
+  "ctx": "quote builder preview (industries.fitness.points.1)"
+ },
+ {
+  "s": "Flexible plans",
+  "ctx": "quote builder preview (industries.fitness.points.2)"
+ },
+ {
+  "s": "Day pass",
+  "ctx": "quote builder preview (industries.fitness.products.0)"
+ },
+ {
+  "s": "Ten-class pack",
+  "ctx": "quote builder preview (industries.fitness.products.1)"
+ },
+ {
+  "s": "Water bottle",
+  "ctx": "quote builder preview (industries.fitness.products.2)"
+ },
+ {
+  "s": "Training tee",
+  "ctx": "quote builder preview (industries.fitness.products.3)"
+ },
+ {
+  "s": "Your first week at the gym",
+  "ctx": "quote builder preview (industries.fitness.blog.0)"
+ },
+ {
+  "s": "Five stretches for desk days",
+  "ctx": "quote builder preview (industries.fitness.blog.1)"
+ },
+ {
+  "s": "Meet our coaches",
+  "ctx": "quote builder preview (industries.fitness.blog.2)"
+ },
+ {
+  "s": "Passes and gear, online",
+  "ctx": "quote builder preview (industries.fitness.shopHero)"
+ },
+ {
+  "s": "Real estate",
+  "ctx": "quote builder preview (industries.realestate.label)"
+ },
+ {
+  "s": "Keystone Homes",
+  "ctx": "quote builder preview (industries.realestate.name)"
+ },
+ {
+  "s": "Find the place you’ll call home",
+  "ctx": "quote builder preview (industries.realestate.hero)"
+ },
+ {
+  "s": "Homes to buy and rent, with agents who know every street.",
+  "ctx": "quote builder preview (industries.realestate.sub)"
+ },
+ {
+  "s": "New homes every week",
+  "ctx": "quote builder preview (industries.realestate.kicker)"
+ },
+ {
+  "s": "Book a viewing",
+  "ctx": "quote builder preview (industries.realestate.cta)"
+ },
+ {
+  "s": "See properties",
+  "ctx": "quote builder preview (industries.realestate.cta2)"
+ },
+ {
+  "s": "Properties",
+  "ctx": "quote builder preview (industries.realestate.servicesNav)"
+ },
+ {
+  "s": "Buying",
+  "ctx": "quote builder preview (industries.realestate.services.0)"
+ },
+ {
+  "s": "Find a home that fits your life.",
+  "ctx": "quote builder preview (industries.realestate.services.1)"
+ },
+ {
+  "s": "Selling",
+  "ctx": "quote builder preview (industries.realestate.services.2)"
+ },
+ {
+  "s": "A fair price and a smooth sale.",
+  "ctx": "quote builder preview (industries.realestate.services.3)"
+ },
+ {
+  "s": "Renting",
+  "ctx": "quote builder preview (industries.realestate.services.4)"
+ },
+ {
+  "s": "Homes and tenants, well looked after.",
+  "ctx": "quote builder preview (industries.realestate.services.5)"
+ },
+ {
+  "s": "We are a local agency with honest advice, clear fees and time for every client.",
+  "ctx": "quote builder preview (industries.realestate.about)"
+ },
+ {
+  "s": "Featured homes",
+  "ctx": "quote builder preview (industries.realestate.galleryTitle)"
+ },
+ {
+  "s": "Local experts",
+  "ctx": "quote builder preview (industries.realestate.points.0)"
+ },
+ {
+  "s": "Viewings any day",
+  "ctx": "quote builder preview (industries.realestate.points.2)"
+ },
+ {
+  "s": "Home valuation",
+  "ctx": "quote builder preview (industries.realestate.products.0)"
+ },
+ {
+  "s": "Photo package",
+  "ctx": "quote builder preview (industries.realestate.products.1)"
+ },
+ {
+  "s": "Moving checklist",
+  "ctx": "quote builder preview (industries.realestate.products.2)"
+ },
+ {
+  "s": "Buyer’s guide",
+  "ctx": "quote builder preview (industries.realestate.products.3)"
+ },
+ {
+  "s": "Is now a good time to buy?",
+  "ctx": "quote builder preview (industries.realestate.blog.0)"
+ },
+ {
+  "s": "Getting your home ready to sell",
+  "ctx": "quote builder preview (industries.realestate.blog.1)"
+ },
+ {
+  "s": "A guide to renting",
+  "ctx": "quote builder preview (industries.realestate.blog.2)"
+ },
+ {
+  "s": "Services for buyers and sellers",
+  "ctx": "quote builder preview (industries.realestate.shopHero)"
+ },
+ {
+  "s": "Tech or software",
+  "ctx": "quote builder preview (industries.tech.label)"
+ },
+ {
+  "s": "Nimbus Labs",
+  "ctx": "quote builder preview (industries.tech.name)"
+ },
+ {
+  "s": "Software that gets out of your way",
+  "ctx": "quote builder preview (industries.tech.hero)"
+ },
+ {
+  "s": "Simple tools for busy teams, ready in minutes.",
+  "ctx": "quote builder preview (industries.tech.sub)"
+ },
+ {
+  "s": "Now in public beta",
+  "ctx": "quote builder preview (industries.tech.kicker)"
+ },
+ {
+  "s": "See features",
+  "ctx": "quote builder preview (industries.tech.cta2)"
+ },
+ {
+  "s": "Built for busy teams",
+  "ctx": "quote builder preview (industries.tech.servicesTitle)"
+ },
+ {
+  "s": "Automations",
+  "ctx": "quote builder preview (industries.tech.services.0)"
+ },
+ {
+  "s": "Let the busywork run itself.",
+  "ctx": "quote builder preview (industries.tech.services.1)"
+ },
+ {
+  "s": "Integrations",
+  "ctx": "quote builder preview (industries.tech.services.2)"
+ },
+ {
+  "s": "Connect the tools you already use.",
+  "ctx": "quote builder preview (industries.tech.services.3)"
+ },
+ {
+  "s": "Security",
+  "ctx": "quote builder preview (industries.tech.services.4)"
+ },
+ {
+  "s": "Your data, carefully protected.",
+  "ctx": "quote builder preview (industries.tech.services.5)"
+ },
+ {
+  "s": "Nimbus is a small product team building the tools we always wanted for ourselves.",
+  "ctx": "quote builder preview (industries.tech.about)"
+ },
+ {
+  "s": "Inside the product",
+  "ctx": "quote builder preview (industries.tech.galleryTitle)"
+ },
+ {
+  "s": "Set up in minutes",
+  "ctx": "quote builder preview (industries.tech.points.0)"
+ },
+ {
+  "s": "Works with your tools",
+  "ctx": "quote builder preview (industries.tech.points.1)"
+ },
+ {
+  "s": "Starter plan",
+  "ctx": "quote builder preview (industries.tech.products.0)"
+ },
+ {
+  "s": "Team plan",
+  "ctx": "quote builder preview (industries.tech.products.1)"
+ },
+ {
+  "s": "Add-on",
+  "ctx": "quote builder preview (industries.tech.products.2)"
+ },
+ {
+  "s": "Setup session",
+  "ctx": "quote builder preview (industries.tech.products.3)"
+ },
+ {
+  "s": "What’s new this month",
+  "ctx": "quote builder preview (industries.tech.blog.0)"
+ },
+ {
+  "s": "How teams use Nimbus",
+  "ctx": "quote builder preview (industries.tech.blog.1)"
+ },
+ {
+  "s": "Our approach to security",
+  "ctx": "quote builder preview (industries.tech.blog.2)"
+ },
+ {
+  "s": "Book a demo",
+  "ctx": "quote builder preview (industries.tech.book)"
+ },
+ {
+  "s": "Plans and add-ons",
+  "ctx": "quote builder preview (industries.tech.shopHero)"
+ },
+ {
+  "s": "Your business, beautifully online",
+  "ctx": "quote builder preview (industries.other.hero)"
+ },
+ {
+  "s": "Tell people what you do, show your best work and make it easy to get in touch.",
+  "ctx": "quote builder preview (industries.other.sub)"
+ },
+ {
+  "s": "Welcome",
+  "ctx": "quote builder preview (industries.other.kicker)"
+ },
+ {
+  "s": "What we do",
+  "ctx": "quote builder preview (industries.other.servicesTitle)"
+ },
+ {
+  "s": "Your first service",
+  "ctx": "quote builder preview (industries.other.services.0)"
+ },
+ {
+  "s": "A short line about what you offer.",
+  "ctx": "quote builder preview (industries.other.services.1)"
+ },
+ {
+  "s": "Your second service",
+  "ctx": "quote builder preview (industries.other.services.2)"
+ },
+ {
+  "s": "Another reason people choose you.",
+  "ctx": "quote builder preview (industries.other.services.3)"
+ },
+ {
+  "s": "Your third service",
+  "ctx": "quote builder preview (industries.other.services.4)"
+ },
+ {
+  "s": "And one more thing you do well.",
+  "ctx": "quote builder preview (industries.other.services.5)"
+ },
+ {
+  "s": "A short story about who you are, what you care about and why people choose you.",
+  "ctx": "quote builder preview (industries.other.about)"
+ },
+ {
+  "s": "Friendly service",
+  "ctx": "quote builder preview (industries.other.points.0)"
+ },
+ {
+  "s": "Quality work",
+  "ctx": "quote builder preview (industries.other.points.1)"
+ },
+ {
+  "s": "Easy to reach",
+  "ctx": "quote builder preview (industries.other.points.2)"
+ },
+ {
+  "s": "First product",
+  "ctx": "quote builder preview (industries.other.products.0)"
+ },
+ {
+  "s": "Second product",
+  "ctx": "quote builder preview (industries.other.products.1)"
+ },
+ {
+  "s": "Third product",
+  "ctx": "quote builder preview (industries.other.products.2)"
+ },
+ {
+  "s": "A first post with your news",
+  "ctx": "quote builder preview (industries.other.blog.0)"
+ },
+ {
+  "s": "Tips your customers will love",
+  "ctx": "quote builder preview (industries.other.blog.1)"
+ },
+ {
+  "s": "Behind the scenes",
+  "ctx": "quote builder preview (industries.other.blog.2)"
+ },
+ {
+  "s": "Shop online",
+  "ctx": "quote builder preview (industries.other.shopHero)"
+ },
+ {
+  "s": "{low} – {high}",
+  "ctx": "quote builder: a price range, like “$800 – $1,050”"
+ },
+ {
+  "s": "About {min}–{max} weeks to build",
   "ctx": "contact.html"
+ },
+ {
+  "s": "Plus {price} a month for care",
+  "ctx": "contact.html"
+ },
+ {
+  "s": "{price} a month",
+  "ctx": "contact.html"
+ },
+ {
+  "s": "Estimate updated: {low} to {high}.",
+  "ctx": "contact.html"
+ },
+ {
+  "s": "{label}: {n}.",
+  "ctx": "quote builder, read out after a plus or minus button: the field name and its new number, like \"More pages: 3.\""
+ },
+ {
+  "s": "Included",
+  "ctx": "contact.html"
+ },
+ {
+  "s": "+{price}",
+  "ctx": "quote builder: what an option adds to the price"
+ },
+ {
+  "s": "+{price} per extra language",
+  "ctx": "contact.html"
+ },
+ {
+  "s": "+{price} for your 1 page",
+  "ctx": "contact.html"
+ },
+ {
+  "s": "+{price} for your {n} pages",
+  "ctx": "contact.html"
+ },
+ {
+  "s": "Included in the price: {n} · Your pages: {m} · Each extra page: {price}",
+  "ctx": "contact.html"
+ },
+ {
+  "s": "Screens included in the price: {n} · Your screens: {m} · Each extra screen: {price}",
+  "ctx": "contact.html"
+ },
+ {
+  "s": "For example, {name}",
+  "ctx": "contact.html"
+ },
+ {
+  "s": "None",
+  "ctx": "contact.html"
+ },
+ {
+  "s": "Please add your name and your email, so we can reply.",
+  "ctx": "contact.html"
+ },
+ {
+  "s": "Link copied. Open it any time to come back to this design.",
+  "ctx": "contact.html"
+ },
+ {
+  "s": "Couldn’t copy the link. You can copy it from the address bar instead.",
+  "ctx": "contact.html"
+ },
+ {
+  "s": "Copywriting",
+  "ctx": "contact.html"
+ },
+ {
+  "s": "Logo design",
+  "ctx": "contact.html"
+ },
+ {
+  "s": "Photos",
+  "ctx": "contact.html"
+ },
+ {
+  "s": "Standard",
+  "ctx": "contact.html"
+ },
+ {
+  "s": "Rush",
+  "ctx": "contact.html"
+ },
+ {
+  "s": "No care plan",
+  "ctx": "contact.html"
+ },
+ {
+  "s": "Basic care",
+  "ctx": "contact.html"
+ },
+ {
+  "s": "Standard care",
+  "ctx": "contact.html"
+ },
+ {
+  "s": "Pro care",
+  "ctx": "contact.html"
+ },
+ {
+  "s": "Up to 50 products",
+  "ctx": "contact.html"
+ },
+ {
+  "s": "50 to 200 products",
+  "ctx": "contact.html"
+ },
+ {
+  "s": "200 to 1,000 products",
+  "ctx": "contact.html"
+ },
+ {
+  "s": "More than 1,000 products",
+  "ctx": "contact.html"
+ },
+ {
+  "s": "Extra pages",
+  "ctx": "contact.html"
+ },
+ {
+  "s": "Product catalogue",
+  "ctx": "contact.html"
+ },
+ {
+  "s": "Rush timeline",
+  "ctx": "contact.html"
+ },
+ {
+  "s": "+{p}%",
+  "ctx": "contact.html"
+ },
+ {
+  "s": "includes 1 page",
+  "ctx": "contact.html"
+ },
+ {
+  "s": "includes {n} pages",
+  "ctx": "contact.html"
+ },
+ {
+  "s": "includes 1 screen",
+  "ctx": "contact.html"
+ },
+ {
+  "s": "includes {n} screens",
+  "ctx": "contact.html"
+ },
+ {
+  "s": "1 extra page",
+  "ctx": "contact.html"
+ },
+ {
+  "s": "{n} extra pages",
+  "ctx": "contact.html"
+ },
+ {
+  "s": "1 extra screen",
+  "ctx": "contact.html"
+ },
+ {
+  "s": "{n} extra screens",
+  "ctx": "contact.html"
+ },
+ {
+  "s": "1 extra language",
+  "ctx": "contact.html"
+ },
+ {
+  "s": "{n} extra languages",
+  "ctx": "contact.html"
+ },
+ {
+  "s": "1 language in all",
+  "ctx": "contact.html"
+ },
+ {
+  "s": "{n} languages in all",
+  "ctx": "contact.html"
+ },
+ {
+  "s": "1 page",
+  "ctx": "contact.html"
+ },
+ {
+  "s": "{n} pages",
+  "ctx": "contact.html"
+ },
+ {
+  "s": "Business",
+  "ctx": "contact.html"
+ },
+ {
+  "s": "Look",
+  "ctx": "contact.html"
+ },
+ {
+  "s": "Pages",
+  "ctx": "contact.html"
+ },
+ {
+  "s": "Features",
+  "ctx": "contact.html"
+ },
+ {
+  "s": "Content help",
+  "ctx": "contact.html"
+ },
+ {
+  "s": "Care plan",
+  "ctx": "contact.html"
+ },
+ {
+  "s": "One page that sells one thing: a launch, an offer or an event.",
+  "ctx": "contact.html"
+ },
+ {
+  "s": "Show your work: for photographers, designers, artists and freelancers.",
+  "ctx": "contact.html"
+ },
+ {
+  "s": "A few pages that say who you are, what you do and how to reach you.",
+  "ctx": "contact.html"
+ },
+ {
+  "s": "Sell online, with a catalogue, a cart, checkout and payments.",
+  "ctx": "contact.html"
+ },
+ {
+  "s": "Accounts, dashboards and your own logic: a portal, a booking system or a tool.",
+  "ctx": "contact.html"
+ },
+ {
+  "s": "Customers pick a day and a time and book it themselves.",
+  "ctx": "contact.html"
+ },
+ {
+  "s": "Take card payments through a secure payment provider.",
+  "ctx": "contact.html"
+ },
+ {
+  "s": "Change text, photos and posts yourself, without code.",
+  "ctx": "contact.html"
+ },
+ {
+  "s": "Your site in more than one language, with a language switch.",
+  "ctx": "contact.html"
+ },
+ {
+  "s": "Sign-up and sign-in, with a personal area for each customer.",
+  "ctx": "contact.html"
+ },
+ {
+  "s": "A search box that finds pages, posts or products.",
+  "ctx": "contact.html"
+ },
+ {
+  "s": "Collect email addresses for your news and offers.",
+  "ctx": "contact.html"
+ },
+ {
+  "s": "A chat button, so visitors can message you.",
+  "ctx": "contact.html"
+ },
+ {
+  "s": "A map with your location and directions.",
+  "ctx": "contact.html"
+ },
+ {
+  "s": "A section for reviews from your real customers.",
+  "ctx": "contact.html"
+ },
+ {
+  "s": "Search-friendly pages, titles and descriptions, with Google Search Console set up.",
+  "ctx": "contact.html"
+ },
+ {
+  "s": "See how many people visit and which pages they read.",
+  "ctx": "contact.html"
+ },
+ {
+  "s": "Clean and sharp",
+  "ctx": "contact.html"
+ },
+ {
+  "s": "Classic, with serifs",
+  "ctx": "contact.html"
+ },
+ {
+  "s": "Soft and rounded",
+  "ctx": "contact.html"
+ },
+ {
+  "s": "Big and strong",
+  "ctx": "contact.html"
+ },
+ {
+  "s": "Centred and airy",
+  "ctx": "contact.html"
+ },
+ {
+  "s": "A full-width picture with big type",
+  "ctx": "contact.html"
+ },
+ {
+  "s": "Words beside a picture",
+  "ctx": "contact.html"
+ },
+ {
+  "s": "A light background with dark text",
+  "ctx": "contact.html"
+ },
+ {
+  "s": "A dark background with light text",
+  "ctx": "contact.html"
+ },
+ {
+  "s": "No fixed date. We fit it in at a good moment.",
+  "ctx": "contact.html"
+ },
+ {
+  "s": "Standard price",
+  "ctx": "contact.html"
+ },
+ {
+  "s": "We start soon and work at a steady pace.",
+  "ctx": "contact.html"
+ },
+ {
+  "s": "We put it first, so it’s ready sooner.",
+  "ctx": "contact.html"
+ },
+ {
+  "s": "+{p}% on the price",
+  "ctx": "contact.html"
+ },
+ {
+  "s": "Ask us whenever you need something.",
+  "ctx": "contact.html"
+ },
+ {
+  "s": "No monthly cost",
+  "ctx": "contact.html"
+ },
+ {
+  "s": "Updates, backups and a monthly check-up.",
+  "ctx": "contact.html"
+ },
+ {
+  "s": "Everything in Basic, plus small text and photo changes.",
+  "ctx": "contact.html"
+ },
+ {
+  "s": "Everything in Standard, plus priority help and regular improvements.",
+  "ctx": "contact.html"
+ },
+ {
+  "s": "This is an estimate, not an offer. Your written quote is what counts. Prices in US dollars, before any taxes.",
+  "ctx": "contact.html"
+ },
+ {
+  "s": "Is this the final price?",
+  "ctx": "contact.html"
+ },
+ {
+  "s": "No. It’s an estimate worked out from what you picked. After a short talk we send a written quote with the exact scope, timeline and price, and that’s the one that counts.",
+  "ctx": "contact.html"
+ },
+ {
+  "s": "What happens after I send my design?",
+  "ctx": "contact.html"
+ },
+ {
+  "s": "We read it and reply {when} with questions or a written quote. Nothing is booked until you agree to the quote.",
+  "ctx": "contact.html"
+ },
+ {
+  "s": "Why is it a range?",
+  "ctx": "contact.html"
+ },
+ {
+  "s": "Details change once we talk: how much content is ready, special requests, the number of products. The range allows for that, and your written quote gives one price.",
+  "ctx": "contact.html"
+ },
+ {
+  "s": "Is anything saved while I design?",
+  "ctx": "contact.html"
+ },
+ {
+  "s": "No. Your design is kept only in the address of this page, so you can copy the link and come back to it. Nothing is sent until you press “Request this website”.",
+  "ctx": "contact.html"
+ },
+ {
+  "s": "Website Cost Estimate: Design Your Site and See the Price | EvoSoft",
+  "ctx": "contact.html"
+ },
+ {
+  "s": "Design your website in a few clicks: watch a live preview take shape, see an estimated price in US dollars and request a free written quote from EvoSoft.",
+  "ctx": "contact.html"
+ },
+ {
+  "s": "Design your website and see the price as you go",
+  "ctx": "estimate.html"
+ },
+ {
+  "s": "Answer a few questions and watch a preview of your site take shape, with an estimate that updates with every choice. When it looks right, send it to us for a free written quote.",
+  "ctx": "estimate.html"
+ },
+ {
+  "s": "A live preview",
+  "ctx": "estimate.html"
+ },
+ {
+  "s": "About three minutes",
+  "ctx": "estimate.html"
+ },
+ {
+  "s": "Free written quote",
+  "ctx": "estimate.html"
+ },
+ {
+  "s": "Not a website?",
+  "ctx": "estimate.html"
+ },
+ {
+  "s": "tell us about your project",
+  "ctx": "estimate.html"
+ },
+ {
+  "s": "The website designer needs JavaScript. You can still {link} or email {email}.",
+  "ctx": "estimate.html"
+ },
+ {
+  "s": "Preview",
+  "ctx": "estimate.html"
+ },
+ {
+  "s": "Preview size",
+  "ctx": "estimate.html"
+ },
+ {
+  "s": "Desktop",
+  "ctx": "estimate.html"
+ },
+ {
+  "s": "Tablet",
+  "ctx": "estimate.html"
+ },
+ {
+  "s": "Show the preview",
+  "ctx": "estimate.html"
+ },
+ {
+  "s": "Hide the preview",
+  "ctx": "estimate.html"
+ },
+ {
+  "s": "Your website",
+  "ctx": "estimate.html"
+ },
+ {
+  "s": "What are we building?",
+  "ctx": "estimate.html"
+ },
+ {
+  "s": "Pick the closest one. You can change anything later.",
+  "ctx": "estimate.html"
+ },
+ {
+  "s": "From {price}",
+  "ctx": "estimate.html"
+ },
+ {
+  "s": "{n} pages included",
+  "plural": true,
+  "ctx": "estimate.html"
+ },
+ {
+  "s": "{n} screens included",
+  "plural": true,
+  "ctx": "estimate.html"
+ },
+ {
+  "s": "Your business",
+  "ctx": "estimate.html"
+ },
+ {
+  "s": "All optional. The preview uses them, and they’re sent with your request.",
+  "ctx": "estimate.html"
+ },
+ {
+  "s": "Business name",
+  "ctx": "estimate.html"
+ },
+ {
+  "s": "Industry",
+  "ctx": "estimate.html"
+ },
+ {
+  "s": "Tagline or headline",
+  "ctx": "estimate.html"
+ },
+ {
+  "s": "For example, Fresh bread every morning",
+  "ctx": "estimate.html"
+ },
+ {
+  "s": "Look and feel",
+  "ctx": "estimate.html"
+ },
+ {
+  "s": "Try a few. The preview changes as you click.",
+  "ctx": "estimate.html"
+ },
+ {
+  "s": "Colours",
+  "ctx": "estimate.html"
+ },
+ {
+  "s": "Pick your own colour",
+  "ctx": "estimate.html"
+ },
+ {
+  "s": "Lettering",
+  "ctx": "estimate.html"
+ },
+ {
+  "s": "Layout",
+  "ctx": "estimate.html"
+ },
+ {
+  "s": "Background",
+  "ctx": "estimate.html"
+ },
+ {
+  "s": "Which pages should the site have? Each one also shows up on the home page.",
+  "ctx": "estimate.html"
+ },
+ {
+  "s": "always included",
+  "ctx": "estimate.html"
+ },
+ {
+  "s": "More pages",
+  "ctx": "estimate.html"
+ },
+ {
+  "s": "For pages that aren’t in the list, like one page for each service or product line.",
+  "ctx": "estimate.html"
+ },
+ {
+  "s": "One page fewer",
+  "ctx": "estimate.html"
+ },
+ {
+  "s": "One more page",
+  "ctx": "estimate.html"
+ },
+ {
+  "s": "Add what your visitors should be able to do. Some come with the kind of site you picked.",
+  "ctx": "estimate.html"
+ },
+ {
+  "s": "How many products will you sell?",
+  "ctx": "estimate.html"
+ },
+ {
+  "s": "Languages in all",
+  "ctx": "estimate.html"
+ },
+ {
+  "s": "Counting your main language. Each extra language adds {price}.",
+  "ctx": "estimate.html"
+ },
+ {
+  "s": "One language fewer",
+  "ctx": "estimate.html"
+ },
+ {
+  "s": "One more language",
+  "ctx": "estimate.html"
+ },
+ {
+  "s": "Help with content",
+  "ctx": "estimate.html"
+ },
+ {
+  "s": "Already have your words, logo and photos? Skip this. If not, we can help.",
+  "ctx": "estimate.html"
+ },
+ {
+  "s": "We write the text",
+  "ctx": "estimate.html"
+ },
+ {
+  "s": "Clear, friendly words for every page.",
+  "ctx": "estimate.html"
+ },
+ {
+  "s": "A logo",
+  "ctx": "estimate.html"
+ },
+ {
+  "s": "An original logo, with the files to use it anywhere.",
+  "ctx": "estimate.html"
+ },
+ {
+  "s": "We choose and prepare licensed stock photos.",
+  "ctx": "estimate.html"
+ },
+ {
+  "s": "Timeline and care",
+  "ctx": "estimate.html"
+ },
+ {
+  "s": "When do you need it?",
+  "ctx": "estimate.html"
+ },
+ {
+  "s": "Looking after it once it’s live",
+  "ctx": "estimate.html"
+ },
+ {
+  "s": "Every project includes a period of free fixes after launch (your quote says how long). A care plan keeps things up to date after that.",
+  "ctx": "estimate.html"
+ },
+ {
+  "s": "Estimated price",
+  "ctx": "estimate.html"
+ },
+ {
+  "s": "Request this website",
+  "ctx": "estimate.html"
+ },
+ {
+  "s": "Show the breakdown",
+  "ctx": "estimate.html"
+ },
+ {
+  "s": "Hide the breakdown",
+  "ctx": "estimate.html"
+ },
+ {
+  "s": "Copy a link to this design",
+  "ctx": "estimate.html"
+ },
+ {
+  "s": "Price breakdown",
+  "ctx": "estimate.html"
+ },
+ {
+  "s": "Total",
+  "ctx": "estimate.html"
+ },
+ {
+  "s": "Send your request",
+  "ctx": "estimate.html"
+ },
+ {
+  "s": "We’ll look at your design and reply {when} with questions or a written quote. It’s free, and there’s no obligation.",
+  "ctx": "estimate.html"
+ },
+ {
+  "s": "Anything else we should know?",
+  "ctx": "estimate.html"
+ },
+ {
+  "s": "Sites you like, a deadline, what you already have…",
+  "ctx": "estimate.html"
+ },
+ {
+  "s": "Thanks, your design is on its way.",
+  "ctx": "estimate.html"
+ },
+ {
+  "s": "We’ll reply {when} with questions or a written quote. If it’s urgent, call {phone}.",
+  "ctx": "estimate.html"
+ },
+ {
+  "s": "Request",
+  "ctx": "estimate.html"
+ },
+ {
+  "s": "Close the preview",
+  "ctx": "estimate.html"
+ },
+ {
+  "s": "About the estimate",
+  "ctx": "estimate.html"
+ },
+ {
+  "s": "Who we are",
+  "ctx": "estimate.html"
  },
  {
   "s": "Copyright",
-  "ctx": "contact.html"
+  "ctx": "estimate.html"
  },
  {
   "s": "Credits and licences",
-  "ctx": "contact.html"
+  "ctx": "estimate.html"
  },
  {
   "s": "{address}, Georgia",
-  "ctx": "contact.html"
+  "ctx": "estimate.html"
  },
  {
   "s": "Legal form",
-  "ctx": "contact.html"
+  "ctx": "estimate.html"
  },
  {
   "s": "Limited liability company (შპს), registered in Georgia",
-  "ctx": "contact.html"
+  "ctx": "estimate.html"
  },
  {
   "s": "Local storage",
-  "ctx": "contact.html"
+  "ctx": "estimate.html"
  },
  {
   "s": "Remembers the language you picked, so we don’t suggest another one. Saved only when you choose a language.",
-  "ctx": "contact.html"
+  "ctx": "estimate.html"
  },
  {
   "s": "Until you clear your browser data",
-  "ctx": "contact.html"
+  "ctx": "estimate.html"
  },
  {
   "s": "Session storage",
-  "ctx": "contact.html"
+  "ctx": "estimate.html"
  },
  {
   "s": "Keeps your current chat conversation (up to 30 messages) while you move between pages.",
-  "ctx": "contact.html"
+  "ctx": "estimate.html"
  },
  {
   "s": "Until you close the tab",
-  "ctx": "contact.html"
+  "ctx": "estimate.html"
  },
  {
   "s": "Remembers whether the AI assistant is available, so the site doesn’t check on every page.",
-  "ctx": "contact.html"
+  "ctx": "estimate.html"
  },
  {
   "s": "Remembers that the chat greeting has been shown, so it isn’t shown again.",
-  "ctx": "contact.html"
+  "ctx": "estimate.html"
  },
  {
   "s": "Terms of Use, Privacy and Cookies | EvoSoft",
-  "ctx": "contact.html"
+  "ctx": "estimate.html"
  },
  {
   "s": "Legal notice, terms of use, privacy policy and cookie information for the EvoSoft website, its chat assistant, the quote form and the live software demos.",
-  "ctx": "contact.html"
+  "ctx": "estimate.html"
  },
  {
   "s": "Terms, privacy and cookies",
-  "ctx": "contact.html"
+  "ctx": "estimate.html"
  },
  {
   "s": "Last updated {date}.",
@@ -2813,11 +5639,19 @@
   "ctx": "chat assistant: built-in answers (Markdown; keep [text](/path) links and **bold**)"
  },
  {
+  "s": "website price estimate",
+  "ctx": "chat assistant: built-in answers (Markdown; keep [text](/path) links and **bold**)"
+ },
+ {
   "s": "get a free quote",
   "ctx": "chat assistant: built-in answers (Markdown; keep [text](/path) links and **bold**)"
  },
  {
   "s": "You’re welcome! Anything else you’d like to know? You can also {link}.",
+  "ctx": "chat assistant: built-in answers (Markdown; keep [text](/path) links and **bold**)"
+ },
+ {
+  "s": "For a website, try our {link}: design it in a few clicks, watch a preview take shape and see an estimated price. It’s an estimate; the free written quote you get from us is what counts. For other projects, {quote}.",
   "ctx": "chat assistant: built-in answers (Markdown; keep [text](/path) links and **bold**)"
  },
  {

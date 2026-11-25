@@ -84,7 +84,7 @@ const first = (name) => {
 };
 const heroShot = (p) => p.shots.find((s) => s.hero) || p.shots.find((s) => !s.phone) || null;
 // Clean addresses: pages are written as .html files, but every link, canonical and sitemap entry leaves the .html off,
-// and the home page is /home (/ka/home, ...). The .htaccess files map the clean addresses back to the files and send
+// and the home page is /home (/es/home). The .htaccess files map the clean addresses back to the files and send
 // old .html addresses there with a permanent redirect.
 const clean = (file) => file.replace(/(^|\/)index\.html$/, '$1home').replace(/\.html$/, '');
 const urlFor = (lang, file) => `${SITE_URL}/${lang.prefix}${clean(file)}`;
@@ -222,13 +222,13 @@ function langLinks(file, cls) {
   return join(LANGS, (x) => `<a class="${cls}" href="${attr(A(x.prefix + clean(target)))}" hreflang="${x.code}" lang="${x.code}" data-lang="${x.code}"${x === L ? ' aria-current="true"' : ''}><span class="lang-code">${x.short}</span><span class="lang-name">${esc(x.native)}</span></a>`);
 }
 
-// English pages only: site.js fills it in and shows it when the browser prefers Georgian, Russian or Spanish. It comes
+// English pages only: site.js fills it in and shows it when the browser prefers Spanish. It comes
 // first in the page so that keyboard users reach it before the content it sits over.
 const HINT_BOX = `<div class="lang-hint" role="region" aria-labelledby="lang-hint-text" hidden><p id="lang-hint-text" aria-live="polite"></p><div><a class="btn primary sm" href="#"></a><button class="btn sm" type="button"></button></div></div>\n`;
 
 function header(root, file, active) {
-  return `${HINT_BOX}<a class="skip" href="#main">${h('Skip to content')}</a>
-<header class="topbar">
+  return `${HINT_BOX}<header class="topbar">
+  <a class="skip" href="#main">${h('Skip to content')}</a>
   <div class="wrap bar">
     <a class="brand" href="${root}home" aria-label="${attr(t('EvoSoft, home'))}">${logoInline}</a>
     <button class="icon-btn menu-toggle" type="button" aria-controls="site-nav" aria-expanded="false" aria-label="${attr(t('Open menu'))}">${icon('menu', 'i i-menu')}${icon('x', 'i i-close')}</button>
@@ -542,6 +542,301 @@ function marquee() {
   };
   // the moving rows are decoration; the button stops every looping animation on the page (WCAG 2.2.2)
   return `<section class="marquee-wrap"><div class="marquee" aria-hidden="true">${row(words.slice(0, half))}${row(words.slice(half), true)}</div><button class="still-toggle" type="button" aria-pressed="false">${h('Pause animation')}</button></section>`;
+}
+
+// ---------- the quote builder (/estimate) ----------
+// Questions on the left, a live preview of the visitor's website and the estimate on the right (on phones: the preview
+// on top and the price in a bar along the bottom). assets/js/estimate.js runs it, assets/js/site-preview.js draws the
+// preview. Its words go through t()/h() like every other page: the preview's own words (EvoPreview.strings) included.
+const PRESETS = { landing: ['home'], portfolio: ['home', 'about', 'gallery', 'contact'], business: ['home', 'about', 'services', 'gallery', 'contact'], store: ['home', 'about', 'faq', 'contact'], webapp: ['home', 'pricing', 'faq', 'contact'] };
+const DEFAULT_DESIGN = { v: 1, type: 'business', business: { name: '', industry: 'other', tagline: '' }, look: { palette: 'navy', accent: '#ff6b5b', font: 'modern', layout: 'clean', mode: 'light' }, pages: PRESETS.business, extraPages: 0, features: [], languages: 1, products: 'small', content: { copywriting: false, logo: false, photos: false }, care: 'none', timeline: 'standard' };
+const TABLET_ICON = '<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect width="16" height="20" x="4" y="2" rx="2"/><path d="M12 18h.01"/></svg>';
+
+// the preview's words, in this language (every text leaf goes through t())
+function translateTree(v, at) {
+  if (typeof v === 'string') return t(v, undefined, `quote builder preview (${at})`);
+  if (Array.isArray(v)) return v.map((x, i) => translateTree(x, `${at}.${i}`));
+  if (v && typeof v === 'object') return Object.fromEntries(Object.entries(v).filter(([k]) => k !== 'locale').map(([k, x]) => [k, translateTree(x, at ? `${at}.${k}` : k)]));
+  return v;
+}
+
+function estimatePage() {
+  const P = PRICING;
+  const loc = NUM_LOCALE[L.code] || 'en-US';
+  const pv = { ...translateTree(PREVIEW.strings, ''), locale: loc };
+  const money = new Intl.NumberFormat(loc, { style: 'currency', currency: 'USD', maximumFractionDigits: 0, minimumFractionDigits: 0 });
+  const usd = (n) => money.format(n);
+  const num = (n) => new Intl.NumberFormat(loc).format(n);
+  const est0 = ESTIMATE.estimate(DEFAULT_DESIGN, P);
+  const inc = (f, type) => (P.features[f].includedIn || []).includes(type);
+  const keys = Object.keys;
+  const pick = (obj, f) => Object.fromEntries(keys(obj).map((k) => [k, f(k)]));
+
+  // what the page's script needs to say, in this language
+  const T = {
+    locale: loc,
+    range: t('{low} – {high}', undefined, 'quote builder: a price range, like “$800 – $1,050”'),
+    weeks: t('About {min}–{max} weeks to build'),
+    monthly: t('Plus {price} a month for care'),
+    perMonth: t('{price} a month'),
+    announce: t('Estimate updated: {low} to {high}.'),
+    stepNote: t('{label}: {n}.', undefined, 'quote builder, read out after a plus or minus button: the field name and its new number, like "More pages: 3."'),
+    included: t('Included'),
+    plus: t('+{price}', undefined, 'quote builder: what an option adds to the price'),
+    perLanguage: t('+{price} per extra language'),
+    copyFor: [t('+{price} for your 1 page'), t('+{price} for your {n} pages')],
+    pageStat: t('Included in the price: {n} · Your pages: {m} · Each extra page: {price}'),
+    pageStatApp: t('Screens included in the price: {n} · Your screens: {m} · Each extra screen: {price}'),
+    namePlaceholder: t('For example, {name}'),
+    none: t('None'),
+    formMissing: t('Please add your name and your email, so we can reply.'),
+    linkCopied: t('Link copied. Open it any time to come back to this design.'),
+    linkFail: t('Couldn’t copy the link. You can copy it from the address bar instead.'),
+    typeNames: pick(P.types, (k) => pv.types[k].label),
+    featureNames: pv.features,
+    pageNames: pv.nav,
+    industryNames: Object.fromEntries(P.industries.map((k) => [k, pv.industries[k].label])),
+    paletteNames: pv.palettes,
+    fontNames: pv.fonts,
+    layoutNames: pv.layouts,
+    modeNames: pv.modes,
+    contentNames: { copywriting: t('Copywriting'), logo: t('Logo design'), photos: t('Photos') },
+    timelineNames: { flexible: t('Flexible'), standard: t('Standard'), rush: t('Rush') },
+    careNames: { none: t('No care plan'), basic: t('Basic care'), standard: t('Standard care'), pro: t('Pro care') },
+    productSizes: { small: t('Up to 50 products'), medium: t('50 to 200 products'), large: t('200 to 1,000 products'), huge: t('More than 1,000 products') },
+    lines: { extraPages: t('Extra pages'), products: t('Product catalogue'), copywriting: t('Copywriting'), logo: t('Logo design'), photos: t('Photos'), rush: t('Rush timeline'), rushPct: t('+{p}%') },
+    count: {
+      pages: [t('includes 1 page'), t('includes {n} pages')], screens: [t('includes 1 screen'), t('includes {n} screens')],
+      extraPages: [t('1 extra page'), t('{n} extra pages')], extraScreens: [t('1 extra screen'), t('{n} extra screens')],
+      langs: [t('1 extra language'), t('{n} extra languages')], langsTotal: [t('1 language in all'), t('{n} languages in all')], copyPages: [t('1 page'), t('{n} pages')],
+    },
+    sum: { type: t('Website'), business: t('Business'), look: t('Look'), pages: t('Pages'), features: t('Features'), content: t('Content help'), timeline: t('Timeline'), care: t('Care plan') },
+  };
+
+  const TYPE_INFO = {
+    landing: [t('One page that sells one thing: a launch, an offer or an event.'), 'sparkle'],
+    portfolio: [t('Show your work: for photographers, designers, artists and freelancers.'), 'eye'],
+    business: [t('A few pages that say who you are, what you do and how to reach you.'), 'globe'],
+    store: [t('Sell online, with a catalogue, a cart, checkout and payments.'), 'cart'],
+    webapp: [t('Accounts, dashboards and your own logic: a portal, a booking system or a tool.'), 'code'],
+  };
+  const FEATURE_INFO = {
+    booking: [t('Customers pick a day and a time and book it themselves.'), 'calendar'],
+    payments: [t('Take card payments through a secure payment provider.'), 'wallet'],
+    cms: [t('Change text, photos and posts yourself, without code.'), 'pen'],
+    multilingual: [t('Your site in more than one language, with a language switch.'), 'globe'],
+    accounts: [t('Sign-up and sign-in, with a personal area for each customer.'), 'login'],
+    search: [t('A search box that finds pages, posts or products.'), 'search'],
+    newsletter: [t('Collect email addresses for your news and offers.'), 'mail'],
+    livechat: [t('A chat button, so visitors can message you.'), 'chat'],
+    maps: [t('A map with your location and directions.'), 'pin'],
+    reviews: [t('A section for reviews from your real customers.'), 'users'],
+    seo: [t('Search-friendly pages, titles and descriptions, with Google Search Console set up.'), 'eye'],
+    analytics: [t('See how many people visit and which pages they read.'), 'chart'],
+  };
+  const FONT_DESC = { modern: t('Clean and sharp'), elegant: t('Classic, with serifs'), friendly: t('Soft and rounded'), bold: t('Big and strong') };
+  const LAYOUT_DESC = { clean: t('Centred and airy'), bold: t('A full-width picture with big type'), classic: t('Words beside a picture') };
+  const MODE_DESC = { light: t('A light background with dark text'), dark: t('A dark background with light text') };
+  const rushPct = Math.round(((P.timeline.rush || { factor: 1 }).factor - 1) * 100);
+  const TIMELINE_INFO = {
+    flexible: [t('No fixed date. We fit it in at a good moment.'), t('Standard price')],
+    standard: [t('We start soon and work at a steady pace.'), t('Standard price')],
+    rush: [t('We put it first, so it’s ready sooner.'), t('+{p}% on the price', { p: num(rushPct) })],
+  };
+  const CARE_INFO = {
+    none: [t('Ask us whenever you need something.'), t('No monthly cost')],
+    basic: [t('Updates, backups and a monthly check-up.')],
+    standard: [t('Everything in Basic, plus small text and photo changes.')],
+    pro: [t('Everything in Standard, plus priority help and regular improvements.')],
+  };
+
+  // a choice drawn as a card: the input is real (and focusable); its name is the title, its description the rest
+  const opt = ({ type = 'radio', name, value, checked = false, title, desc = '', meta = '', ic = '', id, priceFor = '', cls = '', pic = '' }) => {
+    const described = desc || meta;
+    return `<label class="opt${ic ? ' has-ico' : ''}${cls ? ` ${cls}` : ''}"><input class="opt-in" type="${type}" name="${name}" value="${attr(value)}" id="${id}"${checked ? ' checked' : ''} aria-labelledby="${id}-t"${described ? ` aria-describedby="${id}-d"` : ''}><span class="opt-box">${pic}${ic ? `<span class="opt-ico">${icon(ic)}</span>` : ''}<span class="opt-title" id="${id}-t">${title}</span>${described ? `<span class="opt-desc" id="${id}-d">${desc}${meta ? `<span class="opt-meta"${priceFor ? ` data-price-for="${priceFor}"` : ''}>${meta}</span>` : ''}</span>` : ''}<span class="opt-tick" aria-hidden="true">${icon('check')}</span></span></label>`;
+  };
+  const legend = (n, title) => `<legend class="est-legend"><h2><span class="est-n">${num(n)}</span> ${title}</h2></legend>`;
+  const stepper = ({ id, name, value, min, max, label, help, less, more }) => `<div class="est-step-row"><div><label for="${id}">${label}</label><p id="${id}-help">${help}</p></div><div class="stepper"><button type="button" class="step-btn" data-step="-1" data-for="${id}" aria-label="${attr(less)}"${value <= min ? ' aria-disabled="true"' : ''}><span aria-hidden="true">−</span></button><input id="${id}" name="${name}" type="number" inputmode="numeric" min="${min}" max="${max}" step="1" value="${value}" aria-describedby="${id}-help"><button type="button" class="step-btn" data-step="1" data-for="${id}" aria-label="${attr(more)}"><span aria-hidden="true">+</span></button></div></div>`;
+  const devices = () => `<div class="est-devices" role="group" aria-label="${attr(t('Preview size'))}"><button type="button" data-device="desktop" aria-pressed="true">${icon('register')}<span>${h('Desktop')}</span></button><button type="button" data-device="tablet" aria-pressed="false">${TABLET_ICON}<span>${h('Tablet')}</span></button><button type="button" data-device="phone" aria-pressed="false">${icon('smartphone')}<span>${h('Phone')}</span></button></div>`;
+  const note = `<p class="est-note">${h('This is an estimate, not an offer. Your written quote is what counts. Prices in US dollars, before any taxes.')}</p>`;
+  const table = (id = '') => `<table class="est-table"${id ? ` id="${id}"` : ''}><caption class="sr-only">${h('Price breakdown')}</caption><tbody data-est="lines">${join(est0.lines, (x) => `<tr><th scope="row">${esc(T.typeNames[DEFAULT_DESIGN.type])} <span>${esc(t('includes {n} pages', { n: num(P.types[DEFAULT_DESIGN.type].pages) }))}</span></th><td>${esc(usd(x.amount))}</td></tr>`)}</tbody><tfoot><tr><th scope="row">${h('Total')}</th><td data-est="total">${esc(usd(est0.total))}</td></tr></tfoot></table>`;
+  const range = esc(t('{low} – {high}', { low: usd(est0.low), high: usd(est0.high) }));
+  const weeks = esc(t('About {min}–{max} weeks to build', { min: num(est0.weeks[0]), max: num(est0.weeks[1]) }));
+  const pagesStat = esc(t('Included in the price: {n} · Your pages: {m} · Each extra page: {price}', { n: num(P.types.business.pages), m: num(est0.pages), price: usd(P.types.business.extraPage) }));
+  const swatch = (k) => (k === 'custom' ? { a: '#FF6B5B', b: '#FFB3A8', bg: '#FFF4F2' } : PREVIEW.palettes[k].light);
+  const data = JSON.stringify({ pricing: P, presets: PRESETS, strings: T, preview: pv }).replace(/</g, '\\u003c');
+  const EST_FAQ = [
+    [t('Is this the final price?'), t('No. It’s an estimate worked out from what you picked. After a short talk we send a written quote with the exact scope, timeline and price, and that’s the one that counts.')],
+    [t('What happens after I send my design?'), t('We read it and reply {when} with questions or a written quote. Nothing is booked until you agree to the quote.', { when: site.responseTime })],
+    [t('Why is it a range?'), t('Details change once we talk: how much content is ready, special requests, the number of products. The range allows for that, and your written quote gives one price.')],
+    [t('Is anything saved while I design?'), t('No. Your design is kept only in the address of this page, so you can copy the link and come back to it. Nothing is sent until you press “Request this website”.')],
+  ];
+
+  page({
+    file: 'estimate.html',
+    active: 'estimate',
+    title: t('Website Cost Estimate: Design Your Site and See the Price | EvoSoft'),
+    description: t('Design your website in a few clicks: watch a live preview take shape, see an estimated price in US dollars and request a free written quote from EvoSoft.'),
+    crumbs: [[t('Website price estimate'), 'estimate.html']],
+    bodyClass: 'estimate-page',
+    styles: ['assets/css/preview.css'],
+    scripts: ['assets/js/site-preview.js', 'assets/js/estimate.js'],
+    body: (root) => `
+${pageHead(h('Get a quote'), h('Design your website and see the price as you go'), h('Answer a few questions and watch a preview of your site take shape, with an estimate that updates with every choice. When it looks right, send it to us for a free written quote.'),
+  `<ul class="est-facts"><li>${icon('eye')}${h('A live preview')}</li><li>${icon('clock')}${h('About three minutes')}</li><li>${icon('check')}${h('Free written quote')}</li></ul><p class="est-head-alt">${h('Not a website?')} <a href="${root}contact">${h('Send us a message')}</a></p>`)}
+<section class="sec tight est-sec">
+  <div class="wrap">
+    <div class="card est-nojs"><p>${h('The website designer needs JavaScript. You can still {link} or email {email}.', { link: `<a href="${root}contact">${h('tell us about your project')}</a>`, email: `<a href="mailto:${site.email}">${esc(site.email)}</a>` })}</p></div>
+    <div class="est" id="est" data-endpoint="${A('api/quote.php')}" data-email="${attr(site.email)}">
+      <p class="sr-only" id="est-pv-sum" data-pv-sum></p>
+      <section class="est-mpv" aria-labelledby="est-mpv-title">
+        <div class="est-pv-bar"><h2 id="est-mpv-title">${h('Preview')}</h2>${devices()}<button type="button" class="est-pv-toggle" data-toggle aria-expanded="true" aria-controls="est-mpv-body" data-show="${attr(t('Show the preview'))}" data-hide="${attr(t('Hide the preview'))}"><span class="btn-label">${h('Hide the preview')}</span></button></div>
+        <div id="est-mpv-body"><div class="est-pv" aria-hidden="true"></div></div>
+      </section>
+      <div class="est-grid">
+        <form class="est-qs" id="est-design" novalidate aria-label="${attr(t('Your website'))}">
+          <fieldset class="est-q on-cream" id="q-type">
+            ${legend(1, h('What are we building?'))}
+            <p class="est-help">${h('Pick the closest one. You can change anything later.')}</p>
+            <div class="opt-grid">${join(keys(P.types), (k) => opt({ name: 'type', value: k, checked: k === DEFAULT_DESIGN.type, id: `est-type-${k}`, ic: TYPE_INFO[k][1], title: esc(pv.types[k].label), desc: esc(TYPE_INFO[k][0]), meta: `${h('From {price}', { price: esc(usd(P.types[k].base)) })} · ${esc(k === 'webapp' ? t.n(P.types[k].pages, '{n} screen included', '{n} screens included') : t.n(P.types[k].pages, '{n} page included', '{n} pages included'))}` }))}</div>
+          </fieldset>
+
+          <fieldset class="est-q on-cream" id="q-business">
+            ${legend(2, h('Your business'))}
+            <p class="est-help">${h('All optional. The preview uses them, and they’re sent with your request.')}</p>
+            <div class="row2">
+              <div class="field"><label for="est-bname">${h('Business name')} <em>${h('optional')}</em></label><input id="est-bname" name="bname" maxlength="60" autocomplete="organization" placeholder="${attr(t('For example, {name}', { name: pv.industries.other.name }))}"></div>
+              <div class="field"><label for="est-industry">${h('Industry')}</label><select id="est-industry" name="industry">${join(P.industries, (k) => `<option value="${k}"${k === DEFAULT_DESIGN.business.industry ? ' selected' : ''}>${esc(pv.industries[k].label)}</option>`)}</select></div>
+            </div>
+            <div class="field est-gap"><label for="est-tagline">${h('Tagline or headline')} <em>${h('optional')}</em></label><input id="est-tagline" name="tagline" maxlength="120" placeholder="${attr(t('For example, Fresh bread every morning'))}"></div>
+          </fieldset>
+
+          <fieldset class="est-q on-cream" id="q-look">
+            ${legend(3, h('Look and feel'))}
+            <p class="est-help">${h('Try a few. The preview changes as you click.')}</p>
+            <fieldset class="est-sub"><legend>${h('Colours')}</legend>
+              <div class="opt-grid sw-grid">${join(P.palettes, (k) => { const c = swatch(k); return `<label class="opt opt-sw${k === 'custom' ? ' sw-custom' : ''}"><input class="opt-in" type="radio" name="palette" value="${k}"${k === DEFAULT_DESIGN.look.palette ? ' checked' : ''}><span class="opt-box"><span class="sw-dots" style="--s1:${c.a};--s2:${c.b};--s3:${c.bg}" aria-hidden="true"><i></i><i></i><i></i></span><span class="opt-title">${esc(pv.palettes[k])}</span><span class="opt-tick" aria-hidden="true">${icon('check')}</span></span></label>`; })}</div>
+              <div class="sw-pick"><label for="est-accent">${h('Pick your own colour')}</label><input type="color" id="est-accent" name="accent" value="${DEFAULT_DESIGN.look.accent}"></div>
+            </fieldset>
+            <fieldset class="est-sub"><legend>${h('Lettering')}</legend>
+              <div class="opt-grid ft-grid">${join(P.fonts, (k) => opt({ name: 'font', value: k, checked: k === DEFAULT_DESIGN.look.font, id: `est-font-${k}`, cls: 'opt-ft', title: esc(pv.fonts[k]), desc: esc(FONT_DESC[k]), pic: `<span class="ft-aa" style="font-family:${attr(PREVIEW.fonts[k].head)};font-weight:${PREVIEW.fonts[k].hw}" aria-hidden="true">Aa</span>` }))}</div>
+            </fieldset>
+            <fieldset class="est-sub"><legend>${h('Layout')}</legend>
+              <div class="opt-grid lo-grid">${join(P.layouts, (k) => opt({ name: 'layout', value: k, checked: k === DEFAULT_DESIGN.look.layout, id: `est-layout-${k}`, cls: 'opt-lo', title: esc(pv.layouts[k]), desc: esc(LAYOUT_DESC[k]), pic: `<span class="lo-pic lo-${k}" aria-hidden="true"><i></i><i></i><i></i></span>` }))}</div>
+            </fieldset>
+            <fieldset class="est-sub"><legend>${h('Background')}</legend>
+              <div class="opt-grid">${join(P.modes, (k) => opt({ name: 'mode', value: k, checked: k === DEFAULT_DESIGN.look.mode, id: `est-mode-${k}`, cls: 'opt-mode', title: esc(pv.modes[k]), desc: esc(MODE_DESC[k]), pic: `<span class="mo-pic mo-${k}" aria-hidden="true"></span>` }))}</div>
+            </fieldset>
+          </fieldset>
+
+          <fieldset class="est-q on-cream" id="q-pages">
+            ${legend(4, h('Pages'))}
+            <p class="est-help">${h('Which pages should the site have? Each one also shows up on the home page.')}</p>
+            <div class="chips est-pages">${join(P.pages, (p) => (p === 'home'
+              ? `<label class="pick pick-lock"><input type="checkbox" name="page" value="home" checked disabled><span>${esc(pv.nav.home)} <em>${h('always included')}</em></span></label>`
+              : `<label class="pick"><input type="checkbox" name="page" value="${p}"${DEFAULT_DESIGN.pages.includes(p) ? ' checked' : ''}><span>${esc(pv.nav[p])}</span></label>`))}</div>
+            <p class="est-stat" data-est="pagestat">${pagesStat}</p>
+            ${stepper({ id: 'est-extra', name: 'extraPages', value: 0, min: 0, max: P.maxExtraPages, label: h('More pages'), help: h('For pages that aren’t in the list, like one page for each service or product line.'), less: t('One page fewer'), more: t('One more page') })}
+          </fieldset>
+
+          <fieldset class="est-q on-cream" id="q-features">
+            ${legend(5, h('Features'))}
+            <p class="est-help">${h('Add what your visitors should be able to do. Some come with the kind of site you picked.')}</p>
+            <fieldset class="est-sub est-sub-first" id="est-products" hidden><legend>${h('How many products will you sell?')}</legend>
+              <div class="opt-grid">${join(keys(P.products), (k) => opt({ name: 'products', value: k, checked: k === 'small', id: `est-prod-${k}`, title: esc(T.productSizes[k]), meta: esc(P.products[k].price ? t('+{price}', { price: usd(P.products[k].price) }) : T.included) }))}</div>
+            </fieldset>
+            <div class="opt-grid est-features">${join(keys(P.features), (f) => opt({ type: 'checkbox', name: 'feature', value: f, id: `est-f-${f}`, ic: FEATURE_INFO[f][1], title: esc(pv.features[f]), desc: esc(FEATURE_INFO[f][0]), priceFor: f, meta: esc(inc(f, DEFAULT_DESIGN.type) ? T.included : f === 'multilingual' ? t('+{price} per extra language', { price: usd(P.features[f].price) }) : t('+{price}', { price: usd(P.features[f].price) })) }))}</div>
+            <div id="est-langs" hidden>${stepper({ id: 'est-languages', name: 'languages', value: 2, min: 2, max: P.maxLanguages, label: h('Languages in all'), help: h('Counting your main language. Each extra language adds {price}.', { price: esc(usd(P.features.multilingual.price)) }), less: t('One language fewer'), more: t('One more language') })}</div>
+          </fieldset>
+
+          <fieldset class="est-q on-cream" id="q-content">
+            ${legend(6, h('Help with content'))}
+            <p class="est-help">${h('Already have your words, logo and photos? Skip this. If not, we can help.')}</p>
+            <div class="opt-grid">
+              ${opt({ type: 'checkbox', name: 'copywriting', value: '1', id: 'est-c-copy', ic: 'pen', title: h('We write the text'), desc: h('Clear, friendly words for every page.'), priceFor: 'copywriting', meta: esc(t('+{price} for your {n} pages', { price: usd(P.content.copywriting.perPage * est0.pages), n: num(est0.pages) })) })}
+              ${opt({ type: 'checkbox', name: 'logo', value: '1', id: 'est-c-logo', ic: 'sparkle', title: h('A logo'), desc: h('An original logo, with the files to use it anywhere.'), meta: esc(t('+{price}', { price: usd(P.content.logo.price) })) })}
+              ${opt({ type: 'checkbox', name: 'photos', value: '1', id: 'est-c-photos', ic: 'layers', title: h('Photos'), desc: h('We choose and prepare licensed stock photos.'), meta: esc(t('+{price}', { price: usd(P.content.photos.price) })) })}
+            </div>
+          </fieldset>
+
+          <fieldset class="est-q on-cream" id="q-timeline">
+            ${legend(7, h('Timeline and care'))}
+            <fieldset class="est-sub est-sub-first"><legend>${h('When do you need it?')}</legend>
+              <div class="opt-grid three">${join(keys(P.timeline), (k) => opt({ name: 'timeline', value: k, checked: k === DEFAULT_DESIGN.timeline, id: `est-time-${k}`, title: esc(T.timelineNames[k]), desc: esc(TIMELINE_INFO[k][0]), meta: esc(TIMELINE_INFO[k][1]) }))}</div>
+            </fieldset>
+            <fieldset class="est-sub"><legend>${h('Looking after it once it’s live')}</legend>
+              <p class="est-help est-help-sub">${h('Every project includes a period of free fixes after launch (your quote says how long). A care plan keeps things up to date after that.')}</p>
+              <div class="opt-grid">${join(keys(P.care), (k) => opt({ name: 'care', value: k, checked: k === DEFAULT_DESIGN.care, id: `est-care-${k}`, title: esc(T.careNames[k]), desc: esc(CARE_INFO[k][0]), meta: esc(P.care[k].monthly ? t('{price} a month', { price: usd(P.care[k].monthly) }) : CARE_INFO[k][1]) }))}</div>
+            </fieldset>
+          </fieldset>
+        </form>
+
+        <aside class="est-side" aria-labelledby="est-side-title">
+          <div class="est-pv-bar"><h2 id="est-side-title">${h('Your website')}</h2>${devices()}</div>
+          <div class="est-pv" aria-hidden="true"></div>
+          <div class="est-price">
+            <div class="est-price-top"><p class="est-price-label">${h('Estimated price')}</p><p class="est-meta"><span data-est="weeks">${weeks}</span></p></div>
+            <div class="est-price-row"><div><p class="est-range" data-est="range">${range}</p><p class="est-monthly" data-est="monthly" hidden></p></div><a class="btn primary est-go" href="#est-request" data-go-request>${h('Request this website')} ${arrow}</a></div>
+            <div class="est-links"><button type="button" class="est-linkbtn" data-toggle aria-expanded="false" aria-controls="est-bd" data-show="${attr(t('Show the breakdown'))}" data-hide="${attr(t('Hide the breakdown'))}"><span class="btn-label">${h('Show the breakdown')}</span></button><button type="button" class="est-linkbtn" data-copy-link>${icon('copy')}${h('Copy a link to this design')}</button></div>
+            <div class="est-bd" id="est-bd" hidden>${table()}</div>
+            ${note}
+          </div>
+        </aside>
+
+        <form class="est-q est-req on-cream" id="est-request" novalidate>
+          <fieldset class="est-req-set">
+            ${legend(8, h('Send your request'))}
+            <p class="est-help">${h('We’ll look at your design and reply {when} with questions or a written quote. It’s free, and there’s no obligation.', { when: esc(site.responseTime) })}</p>
+            <div class="est-review">
+              <div class="est-review-top"><div><p class="est-price-label">${h('Estimated price')}</p><p class="est-range" data-est="range">${range}</p></div><p class="est-meta"><span data-est="weeks">${weeks}</span><span data-est="monthly" hidden></span></p></div>
+              <dl class="est-sum" data-est="summary"></dl>
+              <div class="est-table-wrap">${table()}</div>
+              ${note}
+              <p class="est-review-link"><button type="button" class="est-linkbtn" data-copy-link>${icon('copy')}${h('Copy a link to this design')}</button></p>
+            </div>
+            <div class="est-fields">
+              <div class="row2">
+                <div class="field"><label for="est-name">${h('Your name')}</label><input id="est-name" name="name" autocomplete="name" required maxlength="100" aria-describedby="est-err-name"><p class="field-error" id="est-err-name" hidden></p></div>
+                <div class="field"><label for="est-email">${h('Email')}</label><input id="est-email" name="email" type="email" autocomplete="email" required maxlength="200" aria-describedby="est-err-email"><p class="field-error" id="est-err-email" hidden></p></div>
+              </div>
+              <div class="row2">
+                <label class="field"><span>${h('Phone')} <em>${h('optional')}</em></span><input name="phone" type="tel" autocomplete="tel" maxlength="40"></label>
+                <label class="field"><span>${h('Company')} <em>${h('optional')}</em></span><input name="company" autocomplete="organization" maxlength="120"></label>
+              </div>
+              <div class="field"><label for="est-message">${h('Anything else we should know?')} <em>${h('optional')}</em></label><textarea id="est-message" name="message" rows="4" maxlength="5000" placeholder="${attr(t('Sites you like, a deadline, what you already have…'))}"></textarea></div>
+            </div>
+            <label class="hp" aria-hidden="true">${h('Leave this empty')} <input name="website" tabindex="-1" autocomplete="off"></label>
+            <p class="form-error" role="alert" hidden></p>
+            <div class="form-foot"><button class="btn primary lg" type="submit"><span class="btn-label">${h('Request this website')}</span> ${arrow}</button><p class="muted small">${h('{company} uses these details only to reply and prepare your quote, and deletes them {months} months after you send them if no project follows. You can ask us to see or delete them at any time. Please don’t include sensitive personal information.', { company: esc(site.legalName), months: SRC.site.quoteKeepMonths })} <a href="${root}legal#privacy">${h('Privacy policy')}</a></p></div>
+            <div class="form-done" hidden><span class="ico tone-green">${icon('check')}</span><h3>${h('Thanks, your design is on its way.')}</h3><p>${h('We’ll reply {when} with questions or a written quote. If it’s urgent, call {phone}.', { when: esc(site.responseTime), phone: `<a href="${tel(site.phones[0])}">${esc(site.phones[0])}</a>` })}</p></div>
+            <p class="est-alt">${h('Not a website?')} <a href="${root}contact">${h('Send us a message')}</a></p>
+          </fieldset>
+        </form>
+      </div>
+      <div class="est-bar">
+        <p class="est-bar-price"><span>${h('Estimated price')}</span><b data-est="range">${range}</b></p>
+        <button type="button" class="est-bar-pv" data-open-preview aria-haspopup="dialog">${icon('eye')}<span>${h('Preview')}</span></button>
+        <a class="btn primary" href="#est-request" data-go-request><span class="long">${h('Request this website')}</span><span class="short">${h('Request')}</span></a>
+      </div>
+      <dialog class="est-dlg" id="est-dlg" aria-labelledby="est-dlg-title">
+        <div class="est-dlg-head"><h2 id="est-dlg-title">${h('Preview')}</h2>${devices()}<button type="button" class="icon-btn" data-close aria-label="${attr(t('Close the preview'))}">${icon('x')}</button></div>
+        <p class="sr-only" data-pv-sum></p>
+        <div class="est-pv" aria-hidden="true"></div>
+        <p class="est-dlg-price"><span data-est="range">${range}</span></p>
+      </dialog>
+      <p class="sr-only" id="est-live" aria-live="polite"></p>
+      <script type="application/json" id="est-data">${data}</script>
+    </div>
+  </div>
+</section>
+<section class="sec alt">
+  <div class="wrap narrow">
+    ${secHead(h('About the estimate'), '', true)}
+    <div class="faq">${join(EST_FAQ, ([q, a]) => `<details><summary>${esc(q)}<span class="plus" aria-hidden="true"></span></summary><p>${esc(a)}</p></details>`)}</div>
+  </div>
+</section>
+`,
+  });
 }
 
 // ---------- pages ----------
@@ -916,6 +1211,8 @@ ${pageHead(h('Get a quote'), h('Tell us about your project'), h('Send a few line
 `,
   });
 
+  estimatePage();
+
   // ---------- legal: who we are, terms of use, privacy policy, cookies, copyright, credits ----------
   // Keep this text true to what the code does: api/quote.php and api/lib.php (what is saved and for how long),
   // assets/js/chat.js and api/chat.php (what the assistant sends), site.js (browser storage, demo status checks).
@@ -1111,9 +1408,10 @@ const versioned = (html) => html.replace(ASSET, (m, pre, rel) => {
   return v ? `${pre}${rel}?v=${v}` : m;
 });
 
-// The stylesheet's own font links get the same ?v=<hash> as the pages' preload links, so each font downloads once.
-{
-  const cssFile = path.join(OUT, 'assets/css/site.css');
+// The stylesheets' own font links get the same ?v=<hash> as the pages' preload links, so each font downloads once
+// (the quote builder's preview.css asks for the same Inter file as site.css).
+for (const rel of ['assets/css/site.css', 'assets/css/preview.css']) {
+  const cssFile = path.join(OUT, rel);
   const css = fs.readFileSync(cssFile, 'utf8');
   const next = css.replace(/url\(\.\.\/fonts\/([\w.-]+\.woff2)(?:\?v=\w+)?\)/g, (m, f) => {
     const v = hashOf(`assets/fonts/${f}`);
@@ -1189,7 +1487,8 @@ const pageList = [
   ...SRC_PRODUCTS.map((p) => [`/work/${p.slug}`, `${p.name} case study`]),
   ['/services', 'Services'],
   ['/about', 'About EvoSoft'],
-  ['/contact', 'Get a quote (form, phone, email, FAQ)'],
+  ['/estimate', 'Website price estimate: design a site, see a live preview and an estimated price in US dollars, then request a written quote'],
+  ['/contact', 'Contact form for any other project (phone, email, FAQ)'],
   ['/legal', 'Terms of use, privacy policy, cookies and company details'],
 ];
 fs.mkdirSync(path.join(OUT, 'api'), { recursive: true });

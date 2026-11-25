@@ -4,7 +4,7 @@
    come in as custom properties. The colours are registered with @property, so changing the palette fades smoothly.
    © 2026 EvoSoft Solutions. All rights reserved. */
 
-@font-face { font-family: 'PV Inter'; src: url(../fonts/inter.woff2) format('woff2'); font-weight: 100 900; font-display: swap; unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: 'PV Inter'; src: url(../fonts/inter.woff2?v=3100e775e8) format('woff2'); font-weight: 100 900; font-display: swap; unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
 
 @property --pv-a { syntax: '<color>'; inherits: true; initial-value: #1D3B8B; }
 @property --pv-a-ink { syntax: '<color>'; inherits: true; initial-value: #FFFFFF; }
@@ -12,6 +12,7 @@
 @property --pv-b { syntax: '<color>'; inherits: true; initial-value: #F0B429; }
 @property --pv-b-ink { syntax: '<color>'; inherits: true; initial-value: #0B0F19; }
 @property --pv-deep { syntax: '<color>'; inherits: true; initial-value: #122556; }
+@property --pv-deep-ink { syntax: '<color>'; inherits: true; initial-value: #FFFFFF; }
 @property --pv-bg { syntax: '<color>'; inherits: true; initial-value: #F7F8FB; }
 @property --pv-bg2 { syntax: '<color>'; inherits: true; initial-value: #ECEFF7; }
 @property --pv-surface { syntax: '<color>'; inherits: true; initial-value: #FDFDFE; }
@@ -25,13 +26,14 @@
 @property --pv-foot-ink { syntax: '<color>'; inherits: true; initial-value: #F4F5F8; }
 @property --pv-foot-muted { syntax: '<color>'; inherits: true; initial-value: #C3C7D0; }
 
-.pv { --pv-zoom: 0.4; --pv-h: 540px; position: relative; display: block; width: 100%; font-size: 16px; line-height: 1.5; text-align: left; letter-spacing: 0; }
-.pv.pv-ready { transition: --pv-a 0.6s ease, --pv-a-ink 0.6s ease, --pv-a-text 0.6s ease, --pv-b 0.6s ease, --pv-b-ink 0.6s ease, --pv-deep 0.6s ease, --pv-bg 0.6s ease, --pv-bg2 0.6s ease, --pv-surface 0.6s ease, --pv-soft 0.6s ease, --pv-soft-ink 0.6s ease, --pv-ink 0.6s ease, --pv-muted 0.6s ease, --pv-line 0.6s ease, --pv-line2 0.6s ease, --pv-foot 0.6s ease, --pv-foot-ink 0.6s ease, --pv-foot-muted 0.6s ease; }
+.pv { position: relative; display: block; width: 100%; font-size: 16px; line-height: 1.5; text-align: left; letter-spacing: 0; }
+.pv.pv-ready { transition: --pv-a 0.6s ease, --pv-a-ink 0.6s ease, --pv-a-text 0.6s ease, --pv-b 0.6s ease, --pv-b-ink 0.6s ease, --pv-deep 0.6s ease, --pv-deep-ink 0.6s ease, --pv-bg 0.6s ease, --pv-bg2 0.6s ease, --pv-surface 0.6s ease, --pv-soft 0.6s ease, --pv-soft-ink 0.6s ease, --pv-ink 0.6s ease, --pv-muted 0.6s ease, --pv-line 0.6s ease, --pv-line2 0.6s ease, --pv-foot 0.6s ease, --pv-foot-ink 0.6s ease, --pv-foot-muted 0.6s ease; }
 .pv *, .pv *::before, .pv *::after { box-sizing: border-box; }
-.pv svg { display: block; flex: none; overflow: visible; max-width: none; }
-.pv p { margin: 0; }
-.pv b { font-weight: 650; }
-.pv i, .pv em { font-style: normal; }
+/* resets carry no weight (:where), so every component's own rules win */
+:where(.pv) svg { display: block; flex: none; overflow: visible; max-width: none; }
+:where(.pv) p { margin: 0; }
+:where(.pv) b { font-weight: 650; }
+:where(.pv) i, :where(.pv) em { font-style: normal; }
 .pv .pv-i { width: 1.15em; height: 1.15em; }
 .pv .pv-i-s { width: 0.95em; height: 0.95em; }
 
@@ -46,7 +48,7 @@
 .pv-url .pv-i { width: 11px; height: 11px; color: #4B5263; }
 .pv-url-text { overflow: hidden; text-overflow: ellipsis; }
 .pv-chrome-end { width: 42px; flex: none; }
-.pv-screen { position: relative; height: var(--pv-h); background: var(--pv-bg); overflow: hidden; }
+.pv-screen { position: relative; height: var(--pv-h, 540px); background: var(--pv-bg); overflow: hidden; }
 .pv-viewport { position: absolute; inset: 0; overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: var(--pv-line2) transparent; }
 .pv[data-device="tablet"] .pv-shell { border-radius: 26px; border: 9px solid #12161E; background: #12161E; }
 .pv[data-device="phone"] .pv-shell { border-radius: 38px; border: 9px solid #12161E; background: #12161E; }
@@ -58,12 +60,13 @@
 .pv[data-device="phone"] .pv-chrome { position: relative; }
 .pv[data-device="phone"] .pv-chrome::before { content: ''; position: absolute; left: 50%; top: 4px; width: 76px; height: 8px; margin-left: -38px; border-radius: 6px; background: #12161E; }
 .pv[data-device="phone"] .pv-screen { border-radius: 0 0 29px 29px; }
-.pv-extras { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 6px 8px; margin-top: 12px; font: 500 12.5px/1.3 system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif; }
+/* features that work behind the scenes: a small label floating over the bottom left of the screen */
+.pv-extras { position: absolute; z-index: 5; left: 10px; bottom: 10px; max-width: calc(100% - 90px); display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; padding: 6px 10px; border-radius: 12px; background: rgba(13, 17, 26, 0.86); color: #F5F6F8; font: 500 11.5px/1.3 system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif; box-shadow: 0 10px 24px -12px rgba(0, 0, 0, 0.6); }
 .pv-extras:empty { display: none; }
-.pv-extras b { display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px; border-radius: 999px; border: 1px solid color-mix(in srgb, currentColor 34%, transparent); font-weight: 600; }
+.pv-extras b { display: inline-flex; align-items: center; gap: 4px; font-weight: 650; }
 
 /* ---------- the little website ---------- */
-.pv-site { zoom: var(--pv-zoom); width: 1280px; min-height: 100%; background: var(--pv-bg); color: var(--pv-ink); font: 400 17px/1.55 var(--pv-body); font-feature-settings: 'cv11'; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; overflow: hidden; }
+.pv-site { zoom: var(--pv-zoom, 0.4); width: 1280px; min-height: 100%; background: var(--pv-bg); color: var(--pv-ink); font: 400 17px/1.55 var(--pv-body); font-feature-settings: 'cv11'; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; overflow: hidden; }
 .pv-in { width: 100%; max-width: 1172px; margin: 0 auto; padding: 0 56px; }
 .pv-sec { position: relative; padding: 96px 0; background: var(--pv-bg); }
 .pv-sec.pv-alt { background: var(--pv-bg2); }
@@ -78,14 +81,19 @@
 .pv-kicker::before { content: ''; width: 22px; height: 2px; border-radius: 2px; background: currentColor; }
 .pv-center > .pv-kicker::after { content: ''; width: 22px; height: 2px; border-radius: 2px; background: currentColor; }
 .pv-h1, .pv-h2, .pv-h3, .pv-logo, .pv-plan-price, .pv-face, .pv-kpis b { font-family: var(--pv-head); font-weight: var(--pv-hw); letter-spacing: var(--pv-track); }
-.pv-h1 { margin: 0 0 22px; font-size: 76px; line-height: 1.02; text-wrap: balance; }
+.pv-h1 { margin: 0 0 22px; font-size: calc(76px * var(--pv-k, 1)); line-height: 1.02; text-wrap: balance; }
 .pv-h2 { margin: 0; font-size: 46px; line-height: 1.08; text-wrap: balance; }
+.pv-h1, .pv-h2 { overflow-wrap: break-word; }
+/* a long tagline as the heading gets smaller type (the class is picked from its length) */
+.pv-h1-m { --pv-k: 0.84; }
+.pv-h1-s { --pv-k: 0.7; }
+.pv-h1-xs { --pv-k: 0.58; }
 .pv-h3 { display: block; font-size: 21px; line-height: 1.25; }
 .pv-lead { max-width: 580px; margin: 0 0 34px; font-size: 20px; line-height: 1.55; color: var(--pv-muted); }
 .pv-p { max-width: 540px; margin: 18px 0 26px; font-size: 18px; color: var(--pv-muted); }
-.pv-f-elegant .pv-h1 { font-size: 80px; line-height: 1.04; }
+.pv-f-elegant .pv-h1 { font-size: calc(80px * var(--pv-k, 1)); line-height: 1.04; }
 .pv-f-elegant .pv-kicker { letter-spacing: 0.18em; font-weight: 600; }
-.pv-f-bold .pv-h1 { text-transform: uppercase; font-size: 82px; line-height: 0.94; }
+.pv-f-bold .pv-h1 { text-transform: uppercase; font-size: calc(82px * var(--pv-k, 1)); line-height: 0.94; }
 .pv-f-bold .pv-h2 { text-transform: uppercase; font-size: 48px; line-height: 0.98; }
 .pv-f-friendly .pv-h1 { letter-spacing: -0.025em; }
 
@@ -137,9 +145,11 @@
 /* ---------- top bar ---------- */
 .pv-head { position: relative; z-index: 3; background: var(--pv-bg); border-bottom: 1px solid var(--pv-line); }
 .pv-head-in { display: flex; align-items: center; gap: 30px; height: 80px; }
-.pv-logo { display: inline-flex; align-items: center; gap: 11px; font-size: 20px; white-space: nowrap; flex: none; }
+.pv-logo { display: inline-flex; align-items: center; gap: 11px; min-width: 0; font-size: 20px; white-space: nowrap; flex: none; }
+.pv-logo-name { min-width: 0; max-width: 300px; overflow: hidden; text-overflow: ellipsis; }
 .pv-mark { display: grid; place-items: center; width: 40px; height: 40px; border-radius: calc(var(--pv-r) * 0.62); background: var(--pv-a); color: var(--pv-a-ink); font-size: 15px; font-weight: 750; letter-spacing: 0; }
-.pv-nav { display: flex; align-items: center; gap: 28px; min-width: 0; font-size: 15px; color: var(--pv-muted); white-space: nowrap; }
+.pv-nav { display: flex; align-items: center; gap: 28px; min-width: 0; overflow: hidden; font-size: 15px; color: var(--pv-muted); white-space: nowrap; }
+.pv-nav .pv-x { display: none; }
 .pv-nav span { display: inline-flex; align-items: center; gap: 4px; }
 .pv-nav .on { color: var(--pv-ink); font-weight: 650; }
 .pv-tools { margin-left: auto; display: flex; align-items: center; gap: 12px; flex: none; font-size: 14.5px; }
@@ -166,7 +176,7 @@
 .pv-g1 { width: 620px; height: 620px; left: -160px; top: -260px; background: var(--pv-soft); opacity: 0.9; }
 .pv-g2 { width: 520px; height: 520px; right: -140px; top: 40px; background: var(--pv-b); opacity: 0.22; }
 .pv-hero-clean .pv-hero-copy { position: relative; max-width: 940px; }
-.pv-hero-clean .pv-h1 { font-size: 80px; }
+.pv-hero-clean .pv-h1 { font-size: calc(80px * var(--pv-k, 1)); }
 .pv-hero-clean .pv-hero-media { position: relative; margin-top: 64px; }
 .pv-art-wide { height: 420px; border-radius: calc(var(--pv-r) * 1.5) calc(var(--pv-r) * 1.5) 0 0; }
 .pv-art-wide .pv-glyph { width: 22%; }
@@ -184,8 +194,8 @@
 .pv-scrim { position: absolute; inset: 0; z-index: 1; background: linear-gradient(90deg, rgba(0, 0, 0, 0.66), rgba(0, 0, 0, 0.28) 62%, rgba(0, 0, 0, 0.08)), linear-gradient(0deg, rgba(0, 0, 0, 0.5), transparent 55%); }
 .pv-hero-bold .pv-in { position: relative; z-index: 2; }
 .pv-hero-bold .pv-hero-copy { padding-top: 160px; }
-.pv-hero-bold .pv-h1 { max-width: 920px; font-size: 100px; line-height: 0.97; color: #FFFFFF; }
-.pv-f-bold .pv-hero-bold .pv-h1 { font-size: 104px; line-height: 0.92; }
+.pv-hero-bold .pv-h1 { max-width: 920px; font-size: calc(100px * var(--pv-k, 1)); line-height: 0.97; color: #FFFFFF; }
+.pv-f-bold .pv-hero-bold .pv-h1 { font-size: calc(104px * var(--pv-k, 1)); line-height: 0.92; }
 .pv-hero-bold .pv-lead { color: rgba(255, 255, 255, 0.9); }
 .pv-hero-bold .pv-kicker { color: #FFFFFF; }
 .pv-hero-bold .pv-btn-ghost { color: #FFFFFF; border-color: rgba(255, 255, 255, 0.55); }
@@ -195,8 +205,8 @@
 
 /* ---------- hero: classic (words beside a picture) ---------- */
 .pv-hero-classic { padding: 84px 0 100px; background: var(--pv-bg); }
-.pv-hero-classic .pv-h1 { font-size: 66px; }
-.pv-f-bold .pv-hero-classic .pv-h1 { font-size: 70px; }
+.pv-hero-classic .pv-h1 { font-size: calc(66px * var(--pv-k, 1)); }
+.pv-f-bold .pv-hero-classic .pv-h1 { font-size: calc(70px * var(--pv-k, 1)); }
 .pv-hero-pts { display: flex; flex-wrap: wrap; gap: 12px 24px; margin-top: 38px; padding-top: 24px; border-top: 1px solid var(--pv-line); font-size: 15px; font-weight: 550; }
 .pv-hero-pts .pv-i { color: var(--pv-a-text); width: 19px; height: 19px; }
 .pv-hero-classic .pv-hero-media { position: relative; height: 540px; }
@@ -241,16 +251,17 @@
 .pv-times span { display: grid; place-items: center; height: 40px; border: 1px solid var(--pv-line2); border-radius: var(--pv-br); font-size: 14px; font-weight: 550; }
 .pv-times .on { background: var(--pv-a); border-color: var(--pv-a); color: var(--pv-a-ink); }
 .pv-cal-foot { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 20px; padding-top: 18px; border-top: 1px solid var(--pv-line); font-size: 15px; font-weight: 600; }
-.pv-gallery { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-auto-rows: 170px; grid-auto-flow: dense; gap: 16px; }
+.pv-gallery { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-auto-rows: 180px; grid-auto-flow: dense; gap: 16px; }
 .pv-tile { position: relative; overflow: hidden; border-radius: var(--pv-r); }
 .pv-tile > .pv-art { position: absolute; inset: 0; border-radius: inherit; }
-.pv-tile-1, .pv-tile-5 { grid-row: span 2; }
+.pv-tile-1 { grid-row: span 2; grid-column: span 2; }
 .pv-tile .pv-glyph { width: 30%; }
+.pv-tile-1 .pv-glyph { width: 20%; }
 .pv-gallery-port { grid-auto-rows: 190px; }
 .pv-cap { position: absolute; z-index: 3; left: 14px; right: 14px; bottom: 14px; display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 10px 14px; border-radius: calc(var(--pv-r) * 0.7); background: #FFFFFF; color: #111318; font-size: 14px; }
 .pv-cap span { color: #4A4F5C; }
 .pv-filters { display: flex; flex-wrap: wrap; gap: 10px; margin: -14px 0 30px; }
-.pv-filters span { display: inline-flex; align-items: center; height: 40px; padding: 0 17px; border-radius: var(--pv-br); border: 1px solid var(--pv-line2); font-size: 14px; font-weight: 550; }
+.pv-filters span { flex: none; display: inline-flex; align-items: center; height: 40px; padding: 0 17px; white-space: nowrap; border-radius: var(--pv-br); border: 1px solid var(--pv-line2); font-size: 14px; font-weight: 550; }
 .pv-filters .on { background: var(--pv-ink); border-color: var(--pv-ink); color: var(--pv-bg); }
 .pv-filter-search { margin-left: auto; width: 40px; justify-content: center; padding: 0 !important; }
 .pv-count { color: var(--pv-muted); font-size: 15px; white-space: nowrap; }
@@ -316,10 +327,10 @@
 .pv-person { display: flex; flex-direction: column; gap: 3px; font-size: 17px; }
 .pv-person > span:last-child { color: var(--pv-muted); font-size: 15px; }
 .pv-face { display: grid; place-items: center; width: 100%; aspect-ratio: 1; margin-bottom: 14px; border-radius: var(--pv-r); font-size: 46px; }
-.pv-face-1 { background: var(--pv-soft); color: var(--pv-soft-ink); }
-.pv-face-2 { background: var(--pv-a); color: var(--pv-a-ink); }
-.pv-face-3 { background: var(--pv-ink); color: var(--pv-bg); }
-.pv-face-4 { background: var(--pv-b); color: var(--pv-b-ink); }
+.pv-face-1 { background: var(--pv-a); color: var(--pv-a-ink); }
+.pv-face-2 { background: var(--pv-ink); color: var(--pv-bg); }
+.pv-face-3 { background: var(--pv-b); color: var(--pv-b-ink); }
+.pv-face-4 { background: var(--pv-deep); color: var(--pv-deep-ink); }
 .pv-post { display: flex; flex-direction: column; gap: 8px; }
 .pv-art-post { aspect-ratio: 16 / 10; margin-bottom: 8px; }
 .pv-art-post .pv-glyph { width: 26%; }
@@ -328,7 +339,7 @@
 .pv-jobs { display: grid; gap: 12px; }
 .pv-job { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 20px 22px; border: 1px solid var(--pv-line); border-radius: var(--pv-r); background: var(--pv-surface); }
 .pv-job > div { display: grid; gap: 2px; }
-.pv-job span { color: var(--pv-muted); font-size: 14.5px; }
+.pv-job > div span { color: var(--pv-muted); font-size: 14.5px; }
 .pv-narrow { max-width: 880px; }
 .pv-faq { border-top: 1px solid var(--pv-line); }
 .pv-q { padding: 22px 4px; border-bottom: 1px solid var(--pv-line); }
@@ -354,7 +365,7 @@
 .pv-input .pv-i { width: 18px; height: 18px; }
 .pv-news-form .pv-input { flex: 1; border-color: transparent; }
 .pv-map { position: relative; overflow: hidden; aspect-ratio: 16 / 9; border-radius: calc(var(--pv-r) * 0.8); background: var(--pv-bg2); }
-.pv-map svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.pv-map > svg { position: absolute; inset: 0; width: 100%; height: 100%; }
 .pv-m-bg { fill: var(--pv-bg2); }
 .pv-m-water { fill: var(--pv-soft); }
 .pv-m-park { fill: var(--pv-b); opacity: 0.32; }
@@ -362,7 +373,7 @@
 .pv-m-road2 { fill: none; stroke: var(--pv-surface); stroke-width: 5; }
 .pv-pin { position: absolute; left: 47%; top: 34%; display: grid; place-items: center; width: 48px; height: 48px; border-radius: 50%; background: var(--pv-a); color: var(--pv-a-ink); box-shadow: 0 0 0 10px color-mix(in srgb, var(--pv-a) 22%, transparent), 0 14px 24px -10px rgba(0, 0, 0, 0.5); }
 .pv-pin .pv-i { width: 22px; height: 22px; }
-.pv-map-2 svg { transform: scaleX(-1); }
+.pv-map-2 > svg { transform: scaleX(-1); }
 .pv-map-2 .pv-pin { left: 60%; top: 46%; }
 .pv-map-wide { aspect-ratio: 21 / 7; }
 .pv-map-contact { margin-top: 28px; aspect-ratio: 16 / 8; }
@@ -381,6 +392,8 @@
 /* ---------- footer ---------- */
 .pv-foot { padding: 76px 0 34px; background: var(--pv-foot); color: var(--pv-foot-ink); }
 .pv-foot .pv-mark { background: var(--pv-a); color: var(--pv-a-ink); }
+.pv-foot .pv-logo { white-space: normal; }
+.pv-foot .pv-logo-name { max-width: none; overflow-wrap: break-word; }
 .pv-foot-grid { display: grid; grid-template-columns: minmax(0, 1.5fr) repeat(3, minmax(0, 1fr)); gap: 40px; }
 .pv-foot-grid p { max-width: 330px; margin-top: 18px; color: var(--pv-foot-muted); font-size: 15px; }
 .pv-foot-col { display: grid; align-content: start; gap: 11px; color: var(--pv-foot-muted); font-size: 15px; }
@@ -412,9 +425,9 @@
 .pv-d-tablet .pv-in { padding: 0 40px; }
 .pv-d-tablet .pv-sec { padding: 72px 0; }
 .pv-d-tablet .pv-sec-s { padding: 48px 0; }
-.pv-d-tablet .pv-h1, .pv-d-tablet .pv-hero-clean .pv-h1 { font-size: 58px; }
-.pv-d-tablet .pv-hero-bold .pv-h1 { font-size: 72px; }
-.pv-d-tablet .pv-hero-classic .pv-h1 { font-size: 48px; }
+.pv-d-tablet .pv-h1, .pv-d-tablet .pv-hero-clean .pv-h1 { font-size: calc(58px * var(--pv-k, 1)); }
+.pv-d-tablet .pv-hero-bold .pv-h1 { font-size: calc(72px * var(--pv-k, 1)); }
+.pv-d-tablet .pv-hero-classic .pv-h1 { font-size: calc(48px * var(--pv-k, 1)); }
 .pv-d-tablet .pv-h2 { font-size: 38px; }
 .pv-d-tablet .pv-nav { gap: 22px; }
 .pv-d-tablet .pv-split { gap: 36px; }
@@ -427,8 +440,8 @@
 .pv-d-tablet .pv-grid4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .pv-d-tablet .pv-grid3 { gap: 16px; }
 .pv-d-tablet .pv-card { padding: 22px; }
-.pv-d-tablet .pv-prods { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-.pv-d-tablet .pv-prod:nth-child(n + 7) { display: none; }
+.pv-d-tablet .pv-prods { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 24px 16px; }
+.pv-d-tablet .pv-logo-name { max-width: 210px; }
 .pv-d-tablet .pv-appwin { grid-template-columns: 74px minmax(0, 1fr); }
 .pv-d-tablet .pv-app-side em, .pv-d-tablet .pv-app-side .pv-logo-name { display: none; }
 .pv-d-tablet .pv-app-side .pv-logo { margin-left: 3px; }
@@ -445,16 +458,17 @@
 .pv-d-phone .pv-sec { padding: 60px 0; }
 .pv-d-phone .pv-sec-s { padding: 36px 0; }
 .pv-d-phone .pv-head-in { height: 66px; gap: 12px; }
-.pv-d-phone .pv-logo { font-size: 17px; min-width: 0; }
+.pv-d-phone .pv-logo { font-size: 17px; min-width: 0; flex: 0 1 auto; }
+.pv-d-phone .pv-logo-name { max-width: none; }
 .pv-d-phone .pv-logo-name { overflow: hidden; text-overflow: ellipsis; }
 .pv-d-phone .pv-tools { gap: 8px; }
 .pv-d-phone .pv-tool { width: 38px; height: 38px; }
 .pv-d-phone .pv-lang { font-size: 13px; }
 .pv-d-phone .pv-editbar { padding: 0 14px; font-size: 11.5px; }
 .pv-d-phone .pv-editbar-r span { display: none; }
-.pv-d-phone .pv-h1, .pv-d-phone .pv-hero-clean .pv-h1, .pv-d-phone .pv-hero-classic .pv-h1 { font-size: 42px; line-height: 1.04; }
-.pv-d-phone .pv-hero-bold .pv-h1, .pv-d-phone.pv-f-bold .pv-hero-bold .pv-h1 { font-size: 50px; }
-.pv-d-phone.pv-f-bold .pv-h1 { font-size: 44px; }
+.pv-d-phone .pv-h1, .pv-d-phone .pv-hero-clean .pv-h1, .pv-d-phone .pv-hero-classic .pv-h1 { font-size: calc(42px * var(--pv-k, 1)); line-height: 1.04; }
+.pv-d-phone .pv-hero-bold .pv-h1, .pv-d-phone.pv-f-bold .pv-hero-bold .pv-h1 { font-size: calc(50px * var(--pv-k, 1)); }
+.pv-d-phone.pv-f-bold .pv-h1 { font-size: calc(44px * var(--pv-k, 1)); }
 .pv-d-phone .pv-h2, .pv-d-phone.pv-f-bold .pv-h2 { font-size: 31px; }
 .pv-d-phone .pv-lead { font-size: 17px; margin-bottom: 26px; }
 .pv-d-phone .pv-p { font-size: 16px; }
@@ -484,6 +498,7 @@
 .pv-d-phone .pv-sec-head { margin-bottom: 30px; }
 .pv-d-phone .pv-sec-row { flex-direction: column; align-items: flex-start; gap: 10px; }
 .pv-d-phone .pv-gallery { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-auto-rows: 120px; gap: 10px; }
+.pv-d-phone .pv-tile-6 { display: none; }
 .pv-d-phone .pv-cap { left: 8px; right: 8px; bottom: 8px; padding: 7px 9px; font-size: 12px; }
 .pv-d-phone .pv-cap span { display: none; }
 .pv-d-phone .pv-prods { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px 14px; }

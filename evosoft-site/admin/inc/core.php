@@ -55,6 +55,8 @@ if (!defined('EVO_ADMIN')) {
 
 const ADMIN_COOKIE = 'evo_admin';           // the session cookie (path /admin/, HttpOnly, SameSite=Strict)
 const ADMIN_PRE_COOKIE = 'evo_admin_pre';   // binds the sign-in form to the browser before there is a session
+const ADMIN_DEVICE_COOKIE = 'evo_admin_dev'; // a browser the owner signed in from: its own sign-in allowance (auth.php)
+const ADMIN_DEVICE_DAYS = 90;
 const ADMIN_MAX_SECONDS = 43200;            // every session ends 12 hours after sign-in
 
 function admin_h(string $s): string

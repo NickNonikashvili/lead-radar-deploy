@@ -25,9 +25,10 @@
     const l = isObj(d.look) ? d.look : {};
     const c = isObj(d.content) ? d.content : {};
     const pick = (v, list, def) => (typeof v === 'string' && list.includes(v) ? v : def);
+    // a number, or a plain decimal number written as text (as PHP's is_numeric() reads it: no hex)
     const int = (v, lo, hi, def) => {
-      const n = typeof v === 'number' ? v : typeof v === 'string' && v.trim() !== '' ? Number(v) : NaN;
-      return Number.isFinite(n) ? Math.max(lo, Math.min(hi, Math.trunc(n))) : def;
+      const n = typeof v === 'number' ? v : typeof v === 'string' && /^[+-]?(\d+\.?\d*|\.\d+)([eE][+-]?\d+)?$/.test(v.trim()) ? Number(v.trim()) : NaN;
+      return Number.isFinite(n) ? Math.trunc(Math.max(lo, Math.min(hi, n))) : def;
     };
     const text = (v, max) => (typeof v === 'string' ? Array.from(v.replace(/[\u0000-\u001f\u007f]/g, ' ').replace(/\s+/g, ' ').trim()).slice(0, max).join('').trim() : '');
     const list = (v) => (Array.isArray(v) ? v : []);
@@ -237,7 +238,7 @@
     if (langs) langs.hidden = !raw.features.includes('multilingual');
     const T0 = P.types[raw.type];
     const stat = $('[data-est="pagestat"]');
-    if (stat) stat.textContent = fill(T.pageStat, { n: num(T0.pages), m: num(est.pages), price: usd(T0.extraPage) });
+    if (stat) stat.textContent = fill(raw.type === 'webapp' ? T.pageStatApp : T.pageStat, { n: num(T0.pages), m: num(est.pages), price: usd(T0.extraPage) });
     const cw = $('[data-price-for="copywriting"]');
     if (cw) cw.textContent = plural(T.copyFor, est.pages, { price: usd(P.content.copywriting.perPage * est.pages) });
     const ind = PVS.industries && PVS.industries[raw.business.industry];
@@ -285,7 +286,7 @@
       [T.sum.type, T.typeNames[d.type]],
       [T.sum.business, biz],
       [T.sum.look, look],
-      [T.sum.pages, `${num(est.pages)}: ${pageNames.join(', ')}`],
+      [T.sum.pages, `${pageNames.join(', ')} (${num(est.pages)})`],
       [T.sum.features, feats.length ? feats.join(', ') : T.none],
       [T.sum.content, content.length ? content.join(', ') : T.none],
       [T.sum.timeline, T.timelineNames[d.timeline]],
@@ -310,19 +311,23 @@
     }
   }
   // the new price is read out once the visitor pauses, not on every click or key
+  // (after a stepper button, the new number comes first: focus stays on the button, so nothing else would say it,
+  // and more pages don't always change the price)
   const live = $('#est-live');
   let announced = '';
   let announceTimer = 0;
+  let stepNote = '';
   function announce(est) {
     clearTimeout(announceTimer);
     announceTimer = setTimeout(() => {
-      const text = fill(T.announce, { low: usd(est.low), high: usd(est.high) }) + (est.monthly ? ' ' + fill(T.monthly, { price: usd(est.monthly) }) + '.' : '');
+      const text = (stepNote ? stepNote + ' ' : '') + fill(T.announce, { low: usd(est.low), high: usd(est.high) }) + (est.monthly ? ' ' + fill(T.monthly, { price: usd(est.monthly) }) + '.' : '');
+      stepNote = '';
       if (text !== announced && live) { live.textContent = text; announced = text; }
     }, 1200);
   }
 
   // ---------- the preview ----------
-  let device = wide.matches ? 'desktop' : 'phone';
+  let device = wide.matches ? 'desktop' : window.innerWidth >= 700 ? 'tablet' : 'phone';
   let pvTimer = 0;
   let pvFocus = null;
   // only the previews that can be seen are drawn (the desktop panel, the phone panel or the full-screen one)
@@ -333,9 +338,29 @@
     const focus = pvFocus;
     pvFocus = null;
     targets().forEach((el) => window.EvoPreview.render(el, current, PVS, { device, focus }));
-    const sum = $('#est-pv-sum');
-    if (sum) sum.textContent = window.EvoPreview.summary(current, PVS);
+    sizeSide();
+    const text = window.EvoPreview.summary(current, PVS);
+    $$('[data-pv-sum]', root).forEach((el) => { el.textContent = text; });
   }
+  // On desktops the preview takes the height the price panel leaves free in the sticky column, so the price, its
+  // note and the button always show without scrolling the column (a care plan or a long price adds a line). The
+  // open breakdown doesn't count: the column scrolls for that.
+  function sizeSide() {
+    const side = $('.est-side', root);
+    const pv = side && $('.est-pv', side);
+    const screen = pv && $('.pv-screen', pv);
+    if (!screen || !side.getClientRects().length) return;
+    const max = parseFloat(getComputedStyle(side).maxHeight);
+    if (!Number.isFinite(max)) return;
+    const bd = $('#est-bd', side);
+    const other = side.scrollHeight - screen.offsetHeight - (bd && !bd.hidden ? bd.offsetHeight : 0);
+    const h = Math.round(Math.max(220, Math.min(680, max - other - 1)));
+    if (Math.abs(screen.offsetHeight - h) > 1) pv.style.setProperty('--pv-h', h + 'px');
+  }
+  let sizeFrame = 0;
+  const sizeSoon = () => { cancelAnimationFrame(sizeFrame); sizeFrame = requestAnimationFrame(sizeSide); };
+  window.addEventListener('resize', sizeSoon);
+
   function schedulePreview(focus) {
     if (focus) pvFocus = focus;
     clearTimeout(pvTimer);
@@ -345,6 +370,10 @@
   // ---------- the address ----------
   let hashTimer = 0;
   let written = location.hash;
+  // the language switch takes the design along, so switching language mid-way doesn't start over
+  function langLinks(h) {
+    $$('a[data-lang]').forEach((a) => { a.setAttribute('href', a.getAttribute('href').split('#')[0] + h); });
+  }
   function writeHash() {
     clearTimeout(hashTimer);
     hashTimer = 0;
@@ -354,6 +383,7 @@
       try { history.replaceState(history.state, '', h); } catch (e) { /* a sandboxed frame */ }
     }
     written = h;
+    langLinks(h);
   }
 
   // ---------- one change ----------
@@ -366,6 +396,7 @@
     current = d;
     syncPicks(raw2, est);
     showPrice(d, est);
+    sizeSoon();
     schedulePreview(focus);
     if (!opts || !opts.quiet) {
       announce(est);
@@ -407,6 +438,8 @@
     if (!input || bt.getAttribute('aria-disabled') === 'true') return;
     const v = Math.max(Number(input.min), Math.min(Number(input.max), (Number(input.value) || 0) + Number(bt.dataset.step)));
     input.value = String(v);
+    const lab = input.labels && input.labels[0];
+    stepNote = fill(T.stepNote, { label: lab ? lab.textContent.trim() : '', n: num(v) });
     input.dispatchEvent(new Event('input', { bubbles: true }));
   });
 
@@ -431,6 +464,7 @@
     const label = $('.btn-label', bt) || bt;
     label.textContent = open ? bt.dataset.hide : bt.dataset.show;
     if (open) schedulePreview();
+    sizeSoon();
   });
 
   // the full-screen preview on phones
@@ -448,7 +482,7 @@
   // "Request this website" goes to the form and puts the cursor in the first field
   $$('[data-go-request]', root).forEach((a) => a.addEventListener('click', (e) => {
     e.preventDefault();
-    const sec = $('#q-request');
+    const sec = reqForm;
     if (sec) sec.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' });
     const first = reqForm && reqForm.elements.name;
     if (first && !reqForm.classList.contains('done')) first.focus({ preventScroll: true });
@@ -480,6 +514,7 @@
     if (!d) return;
     written = location.hash;
     writeForm(d);
+    langLinks(location.hash);
     update('top', { quiet: true });
   });
   // moving between the phone and desktop layouts draws the preview in the other place
@@ -557,6 +592,7 @@
   const qType = new URLSearchParams(location.search).get('type');
   if (fromHash) {
     writeForm(fromHash);
+    langLinks(location.hash);
   } else {
     if (qType && P.types[qType]) {
       setRadio('type', qType);

@@ -581,6 +581,18 @@ function evo_snap(float $x): float
     return floor($x * 1e6 + 0.5) / 1e6;
 }
 
+/**
+ * The characters JavaScript's \s and String.prototype.trim() treat as white space, spelled out: PCRE's own \s differs
+ * (it takes U+0085 and, depending on its version, not U+FEFF), and estimate.js must clean text exactly as this file does.
+ */
+const EVO_JS_SPACE = '\x{0009}-\x{000D}\x{0020}\x{00A0}\x{1680}\x{2000}-\x{200A}\x{2028}\x{2029}\x{202F}\x{205F}\x{3000}\x{FEFF}';
+
+/** trim() as JavaScript does it (see EVO_JS_SPACE). */
+function evo_js_trim(string $s): string
+{
+    return (string)preg_replace('/^[' . EVO_JS_SPACE . ']+|[' . EVO_JS_SPACE . ']+$/u', '', $s);
+}
+
 /** Text for a design field, as estimate.js cleans it: control characters and runs of spaces become one space, cut. */
 function evo_design_text($v, int $max): string
 {
@@ -588,9 +600,26 @@ function evo_design_text($v, int $max): string
         return '';
     }
     $v = (string)preg_replace('/[\x00-\x1F\x7F]/u', ' ', $v);
-    $v = (string)preg_replace('/\s+/u', ' ', $v);
-    $v = (string)preg_replace('/^\s+|\s+$/u', '', $v);
-    return (string)preg_replace('/^\s+|\s+$/u', '', mb_substr($v, 0, $max));
+    $v = (string)preg_replace('/[' . EVO_JS_SPACE . ']+/u', ' ', $v);
+    return evo_js_trim(mb_substr(evo_js_trim($v), 0, $max));
+}
+
+/**
+ * A number from a design: a JSON number, or a plain decimal number written as text (estimate.js uses the same pattern
+ * on the same trimmed text: no hex, no "Infinity", ASCII digits only). NAN when it is neither.
+ */
+function evo_design_number($v): float
+{
+    if (is_int($v) || is_float($v)) {
+        return (float)$v;
+    }
+    if (is_string($v)) {
+        $t = evo_js_trim($v);
+        if (preg_match('/^[+-]?([0-9]+\.?[0-9]*|\.[0-9]+)([eE][+-]?[0-9]+)?$/', $t)) {
+            return (float)$t;
+        }
+    }
+    return NAN;
 }
 
 /**
@@ -612,7 +641,7 @@ function evo_normalise_design(array $d, ?array $pricing = null): array
         return in_array($default, $allowed, true) ? $default : ($allowed[0] ?? '');
     };
     $int = static function ($v, int $min, int $max, int $default): int { // clamp first, then drop the fraction
-        $n = is_int($v) || is_float($v) ? (float)$v : (is_string($v) && trim($v) !== '' && is_numeric(trim($v)) ? (float)trim($v) : NAN);
+        $n = evo_design_number($v);
         return is_finite($n) ? (int)max($min, min($max, $n)) : $default;
     };
     $yes = static fn($v): bool => $v === true;
@@ -683,8 +712,9 @@ function evo_estimate(array $design, array $pricing): array
     // 2. pages: those picked plus extra ones; beyond what the type includes, each costs extraPage
     $pages = count($d['pages']) + $d['extraPages'];
     $extra = max(0, $pages - (int)$t['pages']);
-    if ($extra > 0) {
-        $lines[] = ['key' => 'extraPages', 'amount' => evo_round_half_up($extra * (float)$t['extraPage']), 'qty' => $extra];
+    $amount = evo_round_half_up($extra * (float)$t['extraPage']);
+    if ($extra > 0 && $amount > 0) { // no row when extra pages cost nothing, as in estimate.js
+        $lines[] = ['key' => 'extraPages', 'amount' => $amount, 'qty' => $extra];
     }
     // 3. features (included ones and multilingual with one language cost nothing and get no line)
     $paid = 0;
@@ -943,7 +973,14 @@ function evo_quote_find(string $id): ?array
 /** The admin panel's data per request: [id => ['status' => ..., 'notes' => ..., 'updated_at' => ...]]. */
 function evo_quote_meta_all(): array
 {
-    $raw = @file_get_contents(evo_data_dir() . '/quote-meta.json');
+    // read under a shared lock: a save in progress empties the file before writing it again
+    $fh = @fopen(evo_data_dir() . '/quote-meta.json', 'r');
+    if ($fh === false) {
+        return [];
+    }
+    $raw = flock($fh, LOCK_SH) ? stream_get_contents($fh) : false;
+    flock($fh, LOCK_UN);
+    fclose($fh);
     $meta = is_string($raw) ? json_decode($raw, true) : null;
     return is_array($meta) ? $meta : [];
 }

@@ -36,15 +36,17 @@ if (trim((string)($req['website'] ?? '')) !== '') {
     evo_json(['ok' => true]);
 }
 
-$name = evo_clean_line((string)($req['name'] ?? ''), 100);
-$email = evo_clean_line((string)($req['email'] ?? ''), 200);
-$phone = evo_clean_line((string)($req['phone'] ?? ''), 40);
-$company = evo_clean_line((string)($req['company'] ?? ''), 120);
+// a field sent as a list or an object counts as empty (rather than becoming the word "Array")
+$str = static fn($v): string => is_string($v) ? $v : (is_int($v) || is_float($v) ? (string)$v : '');
+$name = evo_clean_line($str($req['name'] ?? ''), 100);
+$email = evo_clean_line($str($req['email'] ?? ''), 200);
+$phone = evo_clean_line($str($req['phone'] ?? ''), 40);
+$company = evo_clean_line($str($req['company'] ?? ''), 120);
 $timeline = in_array($req['timeline'] ?? '', QUOTE_TIMELINES, true) ? $req['timeline'] : 'Flexible';
 $types = array_values(array_intersect(QUOTE_TYPES, array_filter(is_array($req['types'] ?? null) ? $req['types'] : [], 'is_string')));
 $lang = is_string($req['lang'] ?? null) ? strtolower(trim($req['lang'])) : '';
 $lang = isset(QUOTE_LANGS[$lang]) ? $lang : 'en';
-$message = evo_clean_text((string)($req['message'] ?? ''), 5000);
+$message = evo_clean_text($str($req['message'] ?? ''), 5000);
 $source = ($req['source'] ?? '') === 'estimate' ? 'estimate' : 'contact';
 // the website designed on /estimate: made safe and priced again here (anything the browser sent as a price is ignored)
 $pricing = evo_pricing();
@@ -58,7 +60,9 @@ $errors = [];
 if ($name === '') {
     $errors['name'] = 'Please tell us your name.';
 }
-if ($email === '' || filter_var($email, FILTER_VALIDATE_EMAIL) === false) {
+// A plain address only: FILTER_VALIDATE_EMAIL also takes quoted forms such as "boss@other.example,"@x.example, which
+// a mail app can split into two recipients when the owner replies (Reply-To, and "Reply by email" in the admin panel).
+if ($email === '' || filter_var($email, FILTER_VALIDATE_EMAIL) === false || preg_match('/["\s(),:;<>\[\\\\\]]/', $email)) {
     $errors['email'] = 'Please check your email address.';
 }
 if ($source !== 'estimate' && mb_strlen($message) < 10) { // on /estimate the design says it, so a message is optional

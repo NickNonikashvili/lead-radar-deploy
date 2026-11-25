@@ -32,6 +32,13 @@ function handle(req, res) {
   p = ('/' + p).replace(/[\\/]+/g, '/'); // one slash at a time, so a redirect can never point at another host
   p = p.replace(/\/(?:\.\/)+/g, '/').replace(/\/\.$/, '/'); // and no '.' segments, so /./api/ is /api/
   if (p.includes('\0') || p.split('/').includes('..')) return send(404);
+  // the Georgian and Russian versions were removed: their addresses go to the same page in English
+  const gone = p.match(/^\/(?:ka|ru)(?:\/(.*))?$/);
+  if (gone) { res.writeHead(301, { Location: encodeURI('/' + (gone[1] || 'home')) + qs }); return res.end(); }
+  const lang = LANGS.find((l) => p === `/${l}` || p.startsWith(`/${l}/`));
+  const pre = lang ? `/${lang}/` : '/';
+  const rest = p.slice(pre.length); // the address inside the language: '', 'services', 'work/evo.html', ...
+  const go = (to) => { res.writeHead(301, { Location: encodeURI(to) + qs }); res.end(); };
   // the admin panel needs PHP (router.php): here, /admin goes to /admin/, which only says so; nothing else in admin/
   // is ever served (admin/inc holds PHP source)
   if (p === '/admin') { res.writeHead(301, { Location: '/admin/' + qs }); return res.end(); }
@@ -44,13 +51,6 @@ function handle(req, res) {
     }
     return send(404);
   }
-  // the Georgian and Russian versions were removed: their addresses go to the same page in English
-  const gone = p.match(/^\/(?:ka|ru)(?:\/(.*))?$/);
-  if (gone) { res.writeHead(301, { Location: encodeURI('/' + (gone[1] || 'home')) + qs }); return res.end(); }
-  const lang = LANGS.find((l) => p === `/${l}` || p.startsWith(`/${l}/`));
-  const pre = lang ? `/${lang}/` : '/';
-  const rest = p.slice(pre.length); // the address inside the language: '', 'services', 'work/evo.html', ...
-  const go = (to) => { res.writeHead(301, { Location: encodeURI(to) + qs }); res.end(); };
 
   if (p === `/${lang}`) return go(`/${lang}/home`);
   if (/(^|\/)index\.html$/.test(rest)) return go(pre + rest.replace(/index\.html$/, 'home'));

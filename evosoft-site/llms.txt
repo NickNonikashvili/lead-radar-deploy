@@ -16,7 +16,8 @@ The site is in English, with a Spanish version of every page (https://evosoft.so
 - [StudyCat case study](https://evosoft.solutions/work/studycat)
 - [Services](https://evosoft.solutions/services)
 - [About EvoSoft](https://evosoft.solutions/about)
-- [Get a quote (form, phone, email, FAQ)](https://evosoft.solutions/contact)
+- [Website price estimate: design a site, see a live preview and an estimated price in US dollars, then request a written quote](https://evosoft.solutions/estimate)
+- [Contact form for any other project (phone, email, FAQ)](https://evosoft.solutions/contact)
 - [Terms of use, privacy policy, cookies and company details](https://evosoft.solutions/legal)
 
 ## Products with live demos
