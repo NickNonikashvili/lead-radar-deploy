@@ -54,7 +54,7 @@ function handle(req, res) {
 
   if (p === `/${lang}`) return go(`/${lang}/home`);
   if (/(^|\/)index\.html$/.test(rest)) return go(pre + rest.replace(/index\.html$/, 'home'));
-  if (/^pricing(\.html|\/)?$/.test(rest)) return go(pre + 'contact');
+  if (/^pricing(\.html|\/)?$/.test(rest)) return go(pre + 'estimate');
   if (rest.endsWith('.html') && isFile(pre + rest)) return go(pre + rest.slice(0, -5));
   if (rest === '') return go(pre + 'home');
   if (/^work\/?$/.test(rest)) return go(pre + 'portfolio');

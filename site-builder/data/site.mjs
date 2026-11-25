@@ -116,7 +116,7 @@ export const promises = [
 export const faq = [
   {
     q: 'How much does a project cost?',
-    a: 'It depends on what you need, so every project gets its own quote. Quotes are free, and you will know the price before anything is booked. Send a few lines through the quote form to get one.',
+    a: 'It depends on what you need. For a website, the price estimate on our Get a quote page gives you a range in a couple of minutes. Every project then gets its own free written quote, and you will know the price before anything is booked.',
   },
   {
     q: 'How long does a project take?',

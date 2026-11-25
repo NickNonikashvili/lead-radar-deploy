@@ -9,7 +9,7 @@ ErrorDocument 404 /es/404.html
   RewriteCond %{ENV:REDIRECT_STATUS} ^$
   RewriteCond %{THE_REQUEST} \s/+es/((?:[^?\s]*/)?)index\.html[?\s]
   RewriteRule ^ /es/%1home [R=301,L,NE]
-  RewriteRule ^pricing(\.html|/)?$ /es/contact [R=301,L]
+  RewriteRule ^pricing(\.html|/)?$ /es/estimate [R=301,L]
   RewriteCond %{ENV:REDIRECT_STATUS} ^$
   RewriteCond %{REQUEST_FILENAME} -f
   RewriteCond %{THE_REQUEST} \s/+es/([^?\s]+?)\.html[?\s]

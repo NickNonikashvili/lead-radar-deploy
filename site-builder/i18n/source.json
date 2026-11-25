@@ -348,7 +348,7 @@
   "ctx": "data: faq.0.q"
  },
  {
-  "s": "It depends on what you need, so every project gets its own quote. Quotes are free, and you will know the price before anything is booked. Send a few lines through the quote form to get one.",
+  "s": "It depends on what you need. For a website, the price estimate on our Get a quote page gives you a range in a couple of minutes. Every project then gets its own free written quote, and you will know the price before anything is booked.",
   "ctx": "data: faq.0.a"
  },
  {
@@ -5407,6 +5407,10 @@
   "ctx": "legal.html"
  },
  {
+  "s": "If you use the website price estimate, we also receive the design you chose (the kind of site, your business name, industry and tagline, the look, pages, features, content help, timeline and care plan), and our server works out the estimate from it. To keep track of each request we add a status and our own notes; they are deleted with the request.",
+  "ctx": "legal.html"
+ },
+ {
   "s": "Legal basis: steps you ask us to take before a possible contract or, if you write on behalf of a company, our legitimate interest in answering business enquiries (GDPR Art. 6(1)(b) and (f), and the equivalent grounds in the Law of Georgia on Personal Data Protection). Emails and calls to us are handled the same way.",
   "ctx": "legal.html"
  },
@@ -5447,6 +5451,14 @@
   "ctx": "legal.html"
  },
  {
+  "s": "Businesses we may contact",
+  "ctx": "legal.html"
+ },
+ {
+  "s": "To find businesses that may need a website, we look at public sources: OpenStreetMap, business pages and listings found through web search, and published public tenders. We keep business contact details (name, address, phone, email, website), what we noticed about the business’s website and our own notes in a private list, and use an AI provider (Anthropic) to research public information and help draft a first message. We use them only to decide whether to contact the business once with an offer. Every first message says where we found the details and how to opt out. If you ask us not to contact you, we delete your details and keep only a scrambled marker, so we never add you again. Details we haven’t used are deleted after 6 months. Legal basis: our legitimate interest in offering our services to businesses.",
+  "ctx": "legal.html"
+ },
+ {
   "s": "What we don’t do",
   "ctx": "legal.html"
  },
@@ -5463,7 +5475,7 @@
   "ctx": "legal.html"
  },
  {
-  "s": "Anthropic, PBC (USA), for the chat assistant’s answers. Under its commercial terms it doesn’t use them to train its models, and it keeps them only for a limited period.",
+  "s": "Anthropic, PBC (USA), for the chat assistant’s answers and for researching businesses we may contact. Under its commercial terms it doesn’t use them to train its models, and it keeps them only for a limited period.",
   "ctx": "legal.html"
  },
  {
@@ -5572,6 +5584,14 @@
  },
  {
   "s": "You can delete these items at any time in your browser’s site settings. The site works without them.",
+  "ctx": "legal.html"
+ },
+ {
+  "s": "The website price estimate keeps your choices only in the page address (after the # sign), never in your browser’s storage. They reach us only when you press “Request this website”.",
+  "ctx": "legal.html"
+ },
+ {
+  "s": "Our private admin area, used only by our own staff, sets its own sign-in cookies. Visitors to the website never get them.",
   "ctx": "legal.html"
  },
  {

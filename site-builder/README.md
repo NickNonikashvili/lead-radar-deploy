@@ -17,8 +17,9 @@ node site-builder/package.mjs        # builds and makes dist/evosoft-site-YYYYMM
 ```
 
 1. In hPanel → File Manager, open `public_html`, upload the zip and **Extract** it there (replace the old files).
-   The zip includes the hidden `.htaccess` files (in the main folder, `api/` and `es/`; the clean
-   addresses need all of them) and the PHP libraries for the chat and for sending email.
+   The zip includes the hidden `.htaccess` files (in the main folder, `api/`, `es/`, `admin/`, `admin/inc/` and
+   `admin/assets/`; the clean addresses and the admin panel's protection need all of them) and the PHP libraries for
+   the chat and for sending email. `package.mjs` stops if one of them is missing.
 2. Add your settings file (next section) with the password of the `contact@evosoft.solutions` mailbox, so the quote
    form can send email. Without it the site still works: the chat uses its built-in answers, and quote requests are
    saved on the server, but their emails may never arrive.
@@ -39,7 +40,8 @@ any `?…` on the end:
 | `/ka/…`, `/ru/…` (the Georgian and Russian versions, now removed) | the same page in English |
 | `/services.html`, `/work/evo.html` | `/services`, `/work/evo` |
 | `/services/` | `/services` |
-| `/pricing.html`, `/pricing` | `/contact` |
+| `/pricing.html`, `/pricing` | `/estimate` (the website price estimate) |
+| `/admin` | `/admin/` (the private admin panel, see below) |
 | `/work` | `/portfolio` |
 
 This needs the host's rewrite module (`mod_rewrite`), which Hostinger has.
@@ -70,6 +72,52 @@ return [
 
 Environment variables (`ANTHROPIC_API_KEY`, `EVOSOFT_CHAT_MODEL`, `EVOSOFT_QUOTE_TO`, `EVOSOFT_MAIL_FROM`,
 `EVOSOFT_SMTP_HOST`, `EVOSOFT_SMTP_PORT`, `EVOSOFT_SMTP_USER`, `EVOSOFT_SMTP_PASS`) override the file.
+
+### Website price estimate (`/estimate`)
+
+Visitors pick what they need (kind of site, business, look, pages, features, content help, timeline, care plan), see a
+live preview of their site and a price range in US dollars, and can send it as a request. The main "Get a quote"
+buttons open it; `/contact` stays for anything that isn't a website.
+
+- **Prices** are all in `site-builder/data/pricing.mjs`, with the rules written out at the top. They are starter
+  prices: change them to yours and rebuild. The page shows a range (90% to 115% of the total), the monthly care plan and
+  a rough number of weeks, and says it is an estimate, not an offer.
+- **The server recomputes every estimate** from `api/pricing.json` (written by the build; the web can't read it), so
+  the email and the admin panel never trust the visitor's browser. The rules exist twice, in
+  `assets/js/estimate.js` (`estimate()`) and `api/lib.php` (`evo_estimate()`); if you change a rule, change both.
+- **The preview** is `assets/js/site-preview.js` + `assets/css/preview.css`: 12 industries, 3 layouts, 7 colour schemes,
+  light and dark, desktop/tablet/phone. Its sample text is translated like the rest of the site. It never shows invented
+  reviews or ratings.
+- **Nothing is stored in the browser**: the design lives in the page address after `#`, so "Copy a link to this design"
+  shares it.
+- Some descriptions are promises about what you deliver (the care plans: "Updates, backups and a monthly check-up"…;
+  the logo and stock photos). They are in `build.mjs` (`estimatePage()`, `CARE_INFO`): make sure they match what you sell.
+
+### Admin panel (`/admin/`)
+
+Every quote request, from the estimate and the contact form, with its design, the live preview, the server's
+estimate, a status (new, contacted, quoted, won, lost) and your own notes. You can reply by email, delete a request
+(for example when someone asks you to) and export the list as CSV. The client finder is there too (below).
+
+1. Open `https://evosoft.solutions/admin/`. The first time, it asks you to choose a password and shows a line like
+   `'admin_password_hash' => '$2y$…',`. Paste it into `evosoft-config.php` (see Settings) and reload: the panel then asks
+   for that password. The page never saves anything itself, so nobody else can set it up before you.
+2. Strongly recommended: once signed in, open **Security** and add an authenticator app (Google Authenticator,
+   1Password, …). It shows a secret to add to the app and the `'admin_totp_secret' => '…'` line for the settings file.
+3. The panel only opens over https. Sessions end after 30 idle minutes (`admin_session_minutes`) and 12 hours at most.
+   Sign-in attempts are limited (5 per 15 minutes per address, 30 overall); a browser you've signed in from before keeps
+   its own 10 attempts, so a flood of wrong passwords from elsewhere can't lock you out. Changing the password or the
+   authenticator secret forgets every remembered browser.
+
+The panel's pages are never indexed (`X-Robots-Tag: noindex`); it is deliberately not listed in `robots.txt`, which would
+only advertise it. Status and notes are kept in `evosoft-data/quote-meta.json` and deleted with the request.
+
+| Setting | What it does |
+|---|---|
+| `admin_password_hash` | Your admin password, as the hash the setup page shows. Empty = panel locked (setup page only). |
+| `admin_totp_secret` | Optional authenticator app secret (base32). Set = a 6-digit code is needed at sign-in too. |
+| `admin_session_minutes` | Idle time before signing out (default 30). |
+| `admin_require_https` | `true` by default; only set `false` for local testing. |
 
 ### How the assistant works
 
@@ -115,6 +163,7 @@ Bots that fill the hidden field are ignored.
 | What | Where |
 |---|---|
 | Phone numbers, email, services, process, FAQ, client sites, quote form options, chat suggestions | `site-builder/data/site.mjs` |
+| Prices and rules of the website price estimate (`/estimate`) | `site-builder/data/pricing.mjs` (see Website price estimate below) |
 | Products, demo URLs, demo accounts, screenshots and captions | `site-builder/data/products.mjs` |
 | Page layouts and wording | `site-builder/build.mjs` |
 | Translations | `site-builder/i18n/<lang>/*.json` (see Languages below) |

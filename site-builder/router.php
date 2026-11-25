@@ -51,7 +51,7 @@ $send = function ($code, $rel = null) use ($root, $pre) {
 
 if ($lang && $p === "/$lang") return $go("/$lang/home");
 if (preg_match('#(^|/)index\.html$#', $rest)) return $go($pre . preg_replace('#index\.html$#', 'home', $rest));
-if (preg_match('#^pricing(\.html|/)?$#', $rest)) return $go($pre . 'contact');
+if (preg_match('#^pricing(\.html|/)?$#', $rest)) return $go($pre . 'estimate');
 if (str_ends_with($rest, '.html') && $isFile($pre . $rest)) return $go($pre . substr($rest, 0, -5));
 if ($rest === '') return $go($pre . 'home');
 if (preg_match('#^work/?$#', $rest)) return $go($pre . 'portfolio');

@@ -25,8 +25,8 @@ ErrorDocument 404 /404.html
   RewriteCond %{ENV:REDIRECT_STATUS} ^$
   RewriteCond %{THE_REQUEST} \s/+((?:[^?\s]*/)?)index\.html[?\s]
   RewriteRule ^ /%1home [R=301,L,NE]
-  # prices were replaced by free quotes; /work on its own is the work page
-  RewriteRule ^pricing(\.html|/)?$ /contact [R=301,L]
+  # the old prices page is now the website price estimate; /work on its own is the work page
+  RewriteRule ^pricing(\.html|/)?$ /estimate [R=301,L]
   RewriteCond %{ENV:REDIRECT_STATUS} ^$
   RewriteCond %{REQUEST_FILENAME} -f
   RewriteCond %{THE_REQUEST} \s/+([^?\s]+?)\.html[?\s]

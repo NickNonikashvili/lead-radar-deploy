@@ -1283,6 +1283,7 @@ ${pageHead(h('Legal'), h('Terms, privacy and cookies'), h('Last updated {date}.'
       <p>${h('This policy explains what personal data this website and our live demos collect, why, and what you can do about it. {company} (see Who we are) is responsible for it. For any privacy question, email {email}.', { company: esc(entity()), email: mail })}</p>
       <h3>${h('Quote requests')}</h3>
       <p>${h('When you send the quote form we receive your name, email address and message and, if you add them, your phone number, company, the services and timeline you picked, and the language of the page. We need your name, email and message to reply; the rest is optional. We use these details only to answer you and prepare the quote you asked for. The request is emailed to our mailbox, and a backup copy is kept on our web server in case the email fails.')}</p>
+      <p>${h('If you use the website price estimate, we also receive the design you chose (the kind of site, your business name, industry and tagline, the look, pages, features, content help, timeline and care plan), and our server works out the estimate from it. To keep track of each request we add a status and our own notes; they are deleted with the request.')}</p>
       <p>${h('Legal basis: steps you ask us to take before a possible contract or, if you write on behalf of a company, our legitimate interest in answering business enquiries (GDPR Art. 6(1)(b) and (f), and the equivalent grounds in the Law of Georgia on Personal Data Protection). Emails and calls to us are handled the same way.')}</p>
       <h3>${h('Chat assistant')}</h3>
       <p>${h('When the AI assistant is switched on, our server sends your conversation (your last messages and the assistant’s replies, up to 12 in all) and the page language to our AI provider, Anthropic, PBC, in the United States, which writes the answer. We don’t send your name, IP address or any other identifier, but whatever you type is sent as written, so please don’t include personal or sensitive details. We don’t store conversations on our server; your browser keeps the current one in the tab until you close it. When the AI is switched off, the assistant answers from built-in answers in your browser and nothing you type leaves your device. Legal basis: our legitimate interest in answering visitors’ questions.')}</p>
@@ -1294,12 +1295,14 @@ ${pageHead(h('Legal'), h('Terms, privacy and cookies'), h('Last updated {date}.'
       <p>${h('Pages that list our live demos check whether each demo is online, so your browser contacts our demo servers ({hosts}). Like any web server, they see your IP address and browser type. No cookies are sent with these checks. Legal basis: our legitimate interest in showing whether the demos are working and keeping them secure.', { hosts: hostList })}</p>
       <h3>${h('Live demos')}</h3>
       <p>${h('The demos run on our own servers with shared accounts and made-up data, so other visitors can see what you enter there. In the Evo demo that includes the location your device shares when you clock in, which happens only if you allow it in your browser. The demos delete everything at their automatic reset: Evo every 3 hours, Mailtabs every hour and StudyCat every night. Evo also keeps backups from before its last 5 resets, so its data is normally gone within about 15 hours. Please use only the demo accounts and don’t enter real personal information. Legal basis: our legitimate interest in letting you try our software; your location is used only if you choose to share it.')}</p>
+      <h3>${h('Businesses we may contact')}</h3>
+      <p>${h('To find businesses that may need a website, we look at public sources: OpenStreetMap, business pages and listings found through web search, and published public tenders. We keep business contact details (name, address, phone, email, website), what we noticed about the business’s website and our own notes in a private list, and use an AI provider (Anthropic) to research public information and help draft a first message. We use them only to decide whether to contact the business once with an offer. Every first message says where we found the details and how to opt out. If you ask us not to contact you, we delete your details and keep only a scrambled marker, so we never add you again. Details we haven’t used are deleted after 6 months. Legal basis: our legitimate interest in offering our services to businesses.')}</p>
       <h3>${h('What we don’t do')}</h3>
       <p>${h('We don’t use analytics, advertising or social-media tracking of any kind, and our pages load no scripts, fonts, images or embeds from other companies. We don’t sell your data, and we don’t make automated decisions about you that have legal or similarly significant effects.')}</p>
       <h3>${h('Who receives it')}</h3>
       <ul>
         <li>${h('Our hosting provider, Hostinger, which runs this website and our mailbox.')}</li>
-        <li>${h('Anthropic, PBC (USA), for the chat assistant’s answers. Under its commercial terms it doesn’t use them to train its models, and it keeps them only for a limited period.')}</li>
+        <li>${h('Anthropic, PBC (USA), for the chat assistant’s answers and for researching businesses we may contact. Under its commercial terms it doesn’t use them to train its models, and it keeps them only for a limited period.')}</li>
         <li>${h('The provider we rent our demo servers from.')}</li>
         <li>${h('The OpenStreetMap Foundation (United Kingdom), when the Evo demo shows a map: your browser loads the map images straight from it, so it sees your IP address.')}</li>
         <li>${h('Public authorities, where the law requires it.')}</li>
@@ -1333,6 +1336,8 @@ ${pageHead(h('Legal'), h('Terms, privacy and cookies'), h('Last updated {date}.'
         <tbody>${join(storage, ([name, kind, why, kept]) => `<tr><td data-label="${attr(t('Name'))}"><code>${esc(name)}</code></td><td data-label="${attr(t('Kind'))}">${esc(kind)}</td><td data-label="${attr(t('Purpose'))}">${esc(why)}</td><td data-label="${attr(t('Kept for'))}">${esc(kept)}</td></tr>`)}</tbody>
       </table></div>
       <p>${h('You can delete these items at any time in your browser’s site settings. The site works without them.')}</p>
+      <p>${h('The website price estimate keeps your choices only in the page address (after the # sign), never in your browser’s storage. They reach us only when you press “Request this website”.')}</p>
+      <p>${h('Our private admin area, used only by our own staff, sets its own sign-in cookies. Visitors to the website never get them.')}</p>
       <p>${h('Our live demos are separate websites. When you sign in to one, it sets a sign-in cookie, and the Evo demo also remembers a device that has signed in before, to slow down password guessing. These cookies are needed for the demos to work.')}</p>
       <p>${h('If we ever add anything that needs your consent, such as analytics, we’ll ask first and update this page.')}</p>
     </div>
@@ -1452,7 +1457,7 @@ ErrorDocument 404 /${d}404.html
   RewriteCond %{ENV:REDIRECT_STATUS} ^$
   RewriteCond %{THE_REQUEST} \\s/+${d}((?:[^?\\s]*/)?)index\\.html[?\\s]
   RewriteRule ^ /${d}%1home [R=301,L,NE]
-  RewriteRule ^pricing(\\.html|/)?$ /${d}contact [R=301,L]
+  RewriteRule ^pricing(\\.html|/)?$ /${d}estimate [R=301,L]
   RewriteCond %{ENV:REDIRECT_STATUS} ^$
   RewriteCond %{REQUEST_FILENAME} -f
   RewriteCond %{THE_REQUEST} \\s/+${d}([^?\\s]+?)\\.html[?\\s]
@@ -1473,10 +1478,10 @@ ErrorDocument 404 /${d}404.html
 `;
 }
 
-// Old address: prices are gone, quotes replaced them.
+// Old address: the prices page is now the website price estimate (the .htaccess redirects it; this covers hosts without it).
 fs.writeFileSync(
   path.join(OUT, 'pricing.html'),
-  `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Get a quote | EvoSoft</title><meta name="robots" content="noindex"><link rel="canonical" href="${SITE_URL}/contact"><meta http-equiv="refresh" content="0; url=contact"></head><body><p>Every project now gets its own free quote: <a href="contact">get a quote</a>.</p></body></html>\n`,
+  `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Website price estimate | EvoSoft</title><meta name="robots" content="noindex"><link rel="canonical" href="${SITE_URL}/estimate"><meta http-equiv="refresh" content="0; url=estimate"></head><body><p>See what your website would cost: <a href="estimate">website price estimate</a>.</p></body></html>\n`,
 );
 
 // ---------- generated files: chat knowledge, sitemap, robots, llms.txt, manifest ----------

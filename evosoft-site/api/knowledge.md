@@ -49,7 +49,7 @@ You are the EvoSoft assistant, the chat assistant on https://evosoft.solutions, 
 
 # FAQ
 - Q: How much does a project cost?
-  A: It depends on what you need, so every project gets its own quote. Quotes are free, and you will know the price before anything is booked. Send a few lines through the quote form to get one.
+  A: It depends on what you need. For a website, the price estimate on our Get a quote page gives you a range in a couple of minutes. Every project then gets its own free written quote, and you will know the price before anything is booked.
 - Q: How long does a project take?
   A: Most websites take one to three weeks from kickoff to launch, depending on how much content is ready. Online stores usually take three to five weeks. Larger software is planned in stages, and the timeline in your written quote is the one that counts.
 - Q: Do you only build websites?
