@@ -75,6 +75,9 @@ function loadConfig(env = process.env) {
     cookieSecure: bool(env.COOKIE_SECURE, production),
     sessionDays: num(env.SESSION_DAYS, 30),
     adminEmails: list(env.ADMIN_EMAILS).map((e) => e.toLowerCase()),
+    // "First account becomes admin" bootstrap. Only used when ADMIN_EMAILS is empty; off in
+    // production unless explicitly enabled (use `node scripts/make-admin.js <email>` instead).
+    firstUserAdmin: bool(env.FIRST_USER_ADMIN, !production),
 
     gateways: {
       openrouter: {
@@ -84,6 +87,9 @@ function loadConfig(env = process.env) {
       openai: {
         apiKey: keys.openai,
         baseUrl: str(env.OPENAI_BASE_URL, "https://api.openai.com/v1").replace(/\/+$/, ""),
+        // Set only when OpenAI has approved zero data retention for this API key/project. Without
+        // it, no direct-OpenAI model may be flagged zdr in the catalog.
+        zdrApproved: bool(env.OPENAI_ZDR_APPROVED, false),
       },
       fal: {
         apiKey: keys.fal,
@@ -94,6 +100,14 @@ function loadConfig(env = process.env) {
       selfhosted: {
         apiKey: keys.selfhosted,
         baseUrl: selfhostedBaseUrl.replace(/\/+$/, ""),
+        // After a connection failure, treat the self-hosted server as down for this long so private
+        // requests use the PRIVATE_FALLBACK policy instead of failing one after another.
+        retryMs: num(env.SELFHOSTED_RETRY_MS, 30_000),
+      },
+      // Text streams: give up when the first byte, or the next byte mid-stream, takes longer than this.
+      timeouts: {
+        firstByteMs: num(env.TEXT_FIRST_BYTE_TIMEOUT_MS, 120_000),
+        idleMs: num(env.TEXT_IDLE_TIMEOUT_MS, 90_000),
       },
     },
 
@@ -119,6 +133,14 @@ function loadConfig(env = process.env) {
       presidioEntities: entityList(env.PRESIDIO_ENTITIES),
       // Redact prompts going to the self-hosted tier too? They never leave your servers, so off by default.
       redactSelfHosted: bool(env.REDACT_SELF_HOSTED, false),
+      // When PRESIDIO_ANALYZER_URL is set and the analyzer is unreachable:
+      //   "closed" -> refuse to send the request (default: redaction is a promise, not best effort)
+      //   "open"   -> continue with the built-in recognizers only
+      presidioFailMode: str(env.PRESIDIO_FAIL_MODE, "closed") === "open" ? "open" : "closed",
+      // Serve generated media through Gode (/api/media/...) so media hosts never see users' IPs.
+      mediaProxy: bool(env.MEDIA_PROXY, true),
+      // Hosts (and their subdomains) the media proxy may fetch from.
+      mediaProxyHosts: list(env.MEDIA_PROXY_HOSTS || "fal.media").map((h) => h.toLowerCase()),
     },
 
     billing: {
@@ -130,11 +152,21 @@ function loadConfig(env = process.env) {
       stripeWebhookSecret: keys.stripeWebhook,
       stripeApiBase: str(env.STRIPE_API_BASE, "https://api.stripe.com").replace(/\/+$/, ""),
       allowDevTopup: bool(env.ALLOW_DEV_TOPUP, false) && !production,
+      // Max signup bonuses granted per UTC day across all accounts (0 = no cap).
+      signupBonusDailyCap: num(env.SIGNUP_BONUS_DAILY_CAP, 200),
+      // A text request is refused when the balance can't pay for at least this many output tokens.
+      minAffordableOutputTokens: num(env.MIN_AFFORDABLE_OUTPUT_TOKENS, 256),
+      // Holds older than this are released by the periodic sweep (must outlast the longest request).
+      staleHoldMinutes: Math.max(num(env.STALE_HOLD_MINUTES, 30), Math.ceil(num(env.FAL_TIMEOUT_MS, 600_000) / 60_000) + 5),
     },
 
     learn: {
       minSamples: num(env.LEARN_MIN_SAMPLES, 20),
       windowDays: num(env.LEARN_WINDOW_DAYS, 28),
+      // In-process weekly learner run: "off" | "weekly". Proposals are stored for the admin page and
+      // applied automatically only when LEARN_AUTO_APPLY is on.
+      schedule: str(env.LEARN_SCHEDULE, "off") === "weekly" ? "weekly" : "off",
+      autoApply: bool(env.LEARN_AUTO_APPLY, false),
     },
   };
 

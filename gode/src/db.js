@@ -171,6 +171,32 @@ const MIGRATIONS = [
     created_at INTEGER NOT NULL
   );
   `,
+
+  // 2: sticky conversation privacy, signup-bonus claims, stored learner runs
+  `
+  -- Set (never cleared) as soon as any turn of the conversation is classified private, at the moment
+  -- its question is stored, whether or not the answer succeeds. Later text turns re-send that
+  -- question as history, so they must stay private too.
+  ALTER TABLE conversations ADD COLUMN private INTEGER NOT NULL DEFAULT 0;
+
+  -- One row per email address that has received the signup bonus. Keyed by an HMAC of the
+  -- normalized address (keyed with a value derived from the master key), so the address itself is
+  -- not kept after "delete everything", but re-registering the same address gets no second bonus.
+  CREATE TABLE bonus_claims (
+    email_hmac TEXT PRIMARY KEY,
+    created_at INTEGER NOT NULL
+  );
+
+  -- Learner runs (admin page, CLI or the weekly schedule): proposals JSON and whether they were applied.
+  CREATE TABLE learn_runs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    source TEXT NOT NULL,                   -- admin | cli | schedule
+    days INTEGER NOT NULL,
+    proposals TEXT NOT NULL DEFAULT '[]',
+    applied INTEGER NOT NULL DEFAULT 0,
+    created_at INTEGER NOT NULL
+  );
+  `,
 ];
 
 /**
