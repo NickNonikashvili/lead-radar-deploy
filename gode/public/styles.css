@@ -2084,6 +2084,12 @@ td > .tag + .tag {
   color: var(--accent-text);
 }
 
+.tag-warn {
+  border-color: var(--warn-border);
+  background: var(--warn-soft);
+  color: var(--warn);
+}
+
 .tag-error {
   border-color: var(--danger-border);
   background: var(--danger-soft);
@@ -2226,6 +2232,11 @@ td > .tag + .tag {
 .table-compact th,
 .table-compact td {
   padding: 8px 10px;
+}
+
+/* Transparency log: two-word headers may wrap so all seven columns fit a desktop card. */
+.table-log thead th {
+  white-space: normal;
 }
 
 .table-empty {

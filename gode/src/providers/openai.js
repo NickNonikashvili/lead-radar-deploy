@@ -59,6 +59,8 @@ function createOpenAIProvider(config) {
       signal,
       maxBytes: IMAGE_RESPONSE_MAX_BYTES,
     });
+    // The data URL's type follows the format of the bytes: what the response reports first (gpt-image
+    // echoes output_format), else what we asked for (the catalog sets webp), else the PNG default.
     const format = String(json.output_format || body.output_format || "png").toLowerCase();
     const mime = IMAGE_MIME[format] || "image/png";
     const media = (Array.isArray(json.data) ? json.data : [])

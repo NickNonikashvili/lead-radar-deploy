@@ -716,7 +716,22 @@ test("requireSameOrigin works as a plain middleware and as a factory", async () 
 // ---------------------------------------------------------------------------------------------
 
 const EXPECTED_CSP =
-  "default-src 'self'; script-src 'self' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; media-src 'self' data: blob: https:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self' https://checkout.stripe.com";
+  "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; media-src 'self' data: blob: https:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self' https://checkout.stripe.com";
+
+test("CSP allows only same-origin scripts: no eval, no inline script", async () => {
+  const app = express();
+  app.use(securityHeaders({ production: false }));
+  app.get("/", (req, res) => res.send("ok"));
+  const srv = await listen(app);
+  try {
+    const csp = (await request(srv.port, "GET", "/")).headers["content-security-policy"];
+    assert.equal(csp.split("; ").find((d) => d.startsWith("script-src ")), "script-src 'self'");
+    assert.doesNotMatch(csp, /unsafe-eval/);
+    assert.doesNotMatch(csp.split("; ").find((d) => d.startsWith("script-src ")), /unsafe-inline/);
+  } finally {
+    await srv.close();
+  }
+});
 
 test("security headers on every response; HSTS only in production", async () => {
   const dev = setup();

@@ -204,6 +204,109 @@ describe("detectBuiltin: PHONE", () => {
   });
 });
 
+// Regression: numbers side by side in logs and tables were redacted as phone numbers (bench p021:
+// an access-log line's '200 5123', HTTP status + byte count, became [PHONE_1]).
+describe("detectBuiltin: PHONE false positives in log-like and number-heavy text", () => {
+  test("bench prompt p021 (an access-log line) keeps its status code and byte count", () => {
+    const fs = require("node:fs");
+    const path = require("node:path");
+    const rows = fs.readFileSync(path.join(__dirname, "..", "bench", "prompts.jsonl"), "utf8").split("\n").filter(Boolean).map(JSON.parse);
+    const p021 = rows.find((r) => r.id === "p021");
+    assert.ok(p021 && p021.prompt.includes("200 5123"), "fixture: p021 is the access-log prompt");
+    assert.deepEqual(found(p021.prompt), [["IP", "203.0.113.9"]]);
+    // The bench prompts that really contain phone numbers still have them found.
+    for (const [id, phone] of [["p067", "555-0187"], ["p127", "+1 555-0142"]]) {
+      assert.deepEqual(ofType(rows.find((r) => r.id === id).prompt, "PHONE"), [phone], id);
+    }
+  });
+
+  const negatives = [
+    // access logs
+    ["Apache combined log", '127.0.0.1 - frank [10/Oct/2000:13:55:36 -0700] "GET /apache_pb.gif HTTP/1.0" 200 2326'],
+    ["log with referer and timing", '10.0.0.1 - - [26/Nov/2026:08:01:02 +0100] "POST /api/chat HTTP/2.0" 502 18734 "-" "curl/8.4.0" 0.532'],
+    ["zero-byte response", '"GET / HTTP/1.1" 304 0 1234567'],
+    ["status, bytes and seconds", "GET /health 200 5123 0.004"],
+    ["ls -l line", "drwxr-xr-x 2 user staff 640 1024 2048"],
+    // timestamps
+    ["date + time", "2026-11-26 10:15:32,123 INFO pid=4242 took 1234 ms"],
+    ["ISO timestamp", "2026-11-26T10:15:32.123Z worker 3 processed 15000 rows"],
+    ["syslog", "Nov 26 10:15:32 host sshd[12345]: Accepted publickey from 10.1.2.3 port 52144 ssh2"],
+    ["kernel uptime", "Nov 26 10:15:32 host kernel: [ 1234.567890] eth0: link up"],
+    ["epoch seconds", "1764115200 1764115260 1764115320"],
+    ["epoch milliseconds", "ts=1764115200123 level=info"],
+    // version numbers
+    ["dated build", "build 2026.11.26.1234"],
+    ["tool versions", "Node 22.5.1 and npm 10.8.2, python 3.12.7"],
+    ["version list", "versions 1.21.3 1.22.0 2.0.0-rc.1"],
+    ["Windows builds", "upgrade from 10.0.19041 to 10.0.22631"],
+    // ports
+    ["port list", "ports 8080 8443 9000 are open"],
+    ["Dockerfile EXPOSE", "EXPOSE 80 443 8080 8443"],
+    ["host:port then ports", "localhost:8080 3000 5432"],
+    // order ids and other identifiers
+    ["spaced order id", "Order 4521 7789 3310 shipped"],
+    ["hashed order id", "order #123-4567 is late"],
+    ["order no.", "order no. 12345678 was refunded"],
+    ["order number with dashes", "Your order number 555-123-4567 has shipped"],
+    ["invoice", "invoice INV-2026-004512 for 1200 5000"],
+    ["ticket", "ticket 12345 678 is open"],
+    ["issue reference", "fixed in #555-1234"],
+    ["SKU", "SKU 100 2000 3000"],
+    // numbers side by side
+    ["scores", "scores 12 34 56 78 90"],
+    ["matrix", "matrix [[1024 2048] [4096 8192]]"],
+    ["numbers in prose", "between 100 and 2000 and 300 4000 users"],
+    ["room and floor", "room 204 5512"],
+    ["coordinates", "coordinates 512 1024 768"],
+    ["zero padding", "offset 0000 0000 0000"],
+  ];
+  for (const [name, text] of negatives) {
+    test(`does not match ${name}`, () => {
+      assert.deepEqual(ofType(text, "PHONE"), [], text);
+    });
+  }
+
+  test("real phone formats are still found without a phone keyword", () => {
+    for (const p of [
+      "555-0187",
+      "555-123-4567",
+      "(555) 123-4567",
+      "555.123.4567",
+      "212 555 1234",
+      "1 212 555 1234",
+      "020 7946 0958",
+      "07911 123456",
+      "030 12345678",
+      "06 12 34 56 78",
+      "0049 151 12345678",
+      "98765 43210",
+      "138 0013 8000",
+      "+33 6 12 34 56 78",
+      "+1 555-0142",
+    ]) {
+      assert.deepEqual(ofType(`The office is ${p}, ask for Ann.`, "PHONE"), [p], p);
+    }
+  });
+
+  test("other spaced numbers count as phones when a phone keyword says so", () => {
+    for (const [text, phone] of [
+      ["call me on 6123 4567", "6123 4567"],
+      ["my number is 612 34 56 78", "612 34 56 78"],
+      ["fax 1234 5678", "1234 5678"],
+      ["Tel. 555 1234", "555 1234"],
+      ["phone: 200 5123", "200 5123"],
+      ["Phone #555-123-4567", "555-123-4567"],
+      ["phone no. 555-1234", "555-1234"],
+    ]) {
+      assert.deepEqual(ofType(text, "PHONE"), [phone], text);
+    }
+  });
+
+  test("an identifier label never hides an international number", () => {
+    assert.deepEqual(ofType("ref +44 20 7946 0958", "PHONE"), ["+44 20 7946 0958"]);
+  });
+});
+
 describe("detectBuiltin: CARD", () => {
   for (const c of ["4111 1111 1111 1111", "4111-1111-1111-1111", "4111111111111111", "3782 822463 10005", "5555555555554444", "6011 1111 1111 1117"]) {
     test(`matches ${c}`, () => {
@@ -897,6 +1000,27 @@ describe("Presidio client", () => {
   test("validates options", () => {
     assert.throws(() => createPresidioClient({}), TypeError);
     assert.throws(() => createPresidioClient({ url: "localhost:5002" }), TypeError);
+    assert.throws(() => createPresidioClient({ url: stub.url, entities: "PERSON,EMAIL_ADDRESS" }), TypeError);
+    assert.throws(() => createPresidioClient({ url: stub.url, entities: ["PERSON", "phone number"] }), TypeError);
+    assert.throws(() => createPresidioClient({ url: stub.url, entities: [42] }), TypeError);
+  });
+
+  test("sends `entities` only when a selection is configured", async () => {
+    mode = "ok";
+    const n0 = stub.requests.length;
+    const picked = createPresidioClient({ url: stub.url, cacheSize: 0, entities: ["PHONE_NUMBER", "EMAIL_ADDRESS", "PHONE_NUMBER"] });
+    await picked.analyze("Maria Garcia, maria@x.io");
+    assert.deepEqual(JSON.parse(stub.requests[n0].raw), {
+      text: "Maria Garcia, maria@x.io",
+      language: "en",
+      score_threshold: 0.5,
+      entities: ["PHONE_NUMBER", "EMAIL_ADDRESS"], // deduplicated
+    });
+    for (const entities of [undefined, null, []]) {
+      const dflt = createPresidioClient({ url: stub.url, cacheSize: 0, entities });
+      await dflt.analyze("Maria Garcia");
+      assert.deepEqual(Object.keys(JSON.parse(stub.requests.at(-1).raw)).sort(), ["language", "score_threshold", "text"], String(entities));
+    }
   });
 
   test("label table", () => {
@@ -922,10 +1046,12 @@ describe("redactor with Presidio", () => {
     stub = await startStub((body) => {
       if (mode === "error") return { status: 503, json: { error: "down" } };
       const text = body.text;
-      const hits = [];
-      for (const name of ["Maria Garcia", "Thanks", "Ada Lovelace"]) if (text.includes(name)) hits.push(presidioHit(text, name, "PERSON"));
-      if (text.includes("Berlin")) hits.push(presidioHit(text, "Berlin", "LOCATION"));
+      let hits = [];
+      for (const name of ["Maria Garcia", "Thanks", "Ada Lovelace", "Napoleon"]) if (text.includes(name)) hits.push(presidioHit(text, name, "PERSON"));
+      for (const place of ["Berlin", "Waterloo"]) if (text.includes(place)) hits.push(presidioHit(text, place, "LOCATION"));
       if (text.includes("2026-11-26")) hits.push(presidioHit(text, "2026-11-26", "PHONE_NUMBER", 0.6));
+      // Like the real analyzer: `entities` limits which recognizers run.
+      if (Array.isArray(body.entities)) hits = hits.filter((h) => body.entities.includes(h.entity_type));
       return { json: hits };
     });
   });
@@ -945,6 +1071,31 @@ describe("redactor with Presidio", () => {
     assert.deepEqual(ents.map((e) => [e.type, e.value]), [["PERSON", "Ada Lovelace"]], "overlapping same-type spans merge");
     const lastBody = JSON.parse(stub.requests.at(-1).raw);
     assert.deepEqual(Object.keys(lastBody).sort(), ["language", "score_threshold", "text"]);
+  });
+
+  test("PRESIDIO_ENTITIES: parsed by loadConfig, sent as `entities`, and dropping PERSON/LOCATION keeps public figures and places", async () => {
+    const { loadConfig } = require("../src/config");
+    assert.deepEqual(loadConfig({ GODE_MOCK: "1" }).privacy.presidioEntities, [], "empty = the analyzer's default set");
+    assert.deepEqual(
+      loadConfig({ GODE_MOCK: "1", PRESIDIO_ENTITIES: " person, PHONE_NUMBER,,EMAIL_ADDRESS, not valid!, PERSON " }).privacy.presidioEntities,
+      ["PERSON", "PHONE_NUMBER", "EMAIL_ADDRESS"]
+    );
+
+    mode = "ok";
+    const question = "Why did Napoleon lose at Waterloo? Ask Maria Garcia.";
+    const everything = createRedactor(config(stub.url), { logger: quietLogger() });
+    const all = await everything.redactMessages([{ role: "user", content: question }], null);
+    assert.equal(all.messages[0].content, "Why did [PERSON_1] lose at [LOCATION_1]? Ask [PERSON_2].");
+
+    const env = { GODE_MOCK: "1", PRESIDIO_ANALYZER_URL: stub.url, PRESIDIO_ENTITIES: "PHONE_NUMBER,EMAIL_ADDRESS,IBAN_CODE,CREDIT_CARD,US_SSN,IP_ADDRESS" };
+    const noNer = createRedactor(loadConfig(env), { logger: quietLogger() });
+    const n0 = stub.requests.length;
+    const kept = await noNer.redactMessages([{ role: "user", content: question }], null);
+    assert.equal(kept.messages[0].content, question, "names and places pass through when PERSON/LOCATION are not requested");
+    assert.deepEqual(JSON.parse(stub.requests[n0].raw).entities, ["PHONE_NUMBER", "EMAIL_ADDRESS", "IBAN_CODE", "CREDIT_CARD", "US_SSN", "IP_ADDRESS"]);
+    // The built-in recognizers still run whatever Presidio is asked for.
+    const builtins = await noNer.redactMessages([{ role: "user", content: "my name is Ada Lovelace, ada@x.io" }], null);
+    assert.equal(builtins.messages[0].content, "my name is [PERSON_1], [EMAIL_1]");
   });
 
   test("Presidio down: built-ins still redact, one warning without text, recovery noticed", async () => {

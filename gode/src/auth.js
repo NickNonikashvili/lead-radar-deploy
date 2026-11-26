@@ -27,8 +27,9 @@ const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
 
 const CSP = [
   "default-src 'self'",
-  // 'unsafe-eval': the frontend is compiled in the browser by Babel standalone (no build step).
-  "script-src 'self' 'unsafe-eval'",
+  // Only our own files: public/app.js is plain JavaScript on the vendored React UMD build, so
+  // nothing is compiled or eval'd in the browser. Never add 'unsafe-eval' or 'unsafe-inline' here.
+  "script-src 'self'",
   "style-src 'self' 'unsafe-inline'",
   // Generated media comes back as data:/blob: URLs (mock, OpenAI images) or fal's https CDN.
   "img-src 'self' data: blob: https:",

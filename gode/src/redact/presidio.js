@@ -111,14 +111,19 @@ async function requestJson(fetchImpl, url, init, timeoutMs) {
  * @param {string} [opts.language]       ISO-639-1 code sent as `language`
  * @param {number} [opts.scoreThreshold] sent as `score_threshold` and re-applied locally
  * @param {number} [opts.timeoutMs]      per request
+ * @param {string[]} [opts.entities]     Presidio entity names to ask for (sent as `entities`), e.g.
+ *   ["PERSON", "PHONE_NUMBER", "EMAIL_ADDRESS"]. Empty or omitted = the analyzer's default set.
+ *   Leaving out PERSON/LOCATION stops NER from hiding public figures and places ("Napoleon",
+ *   "Waterloo"), at the cost of missing private names the built-in heuristics don't catch.
  * @param {Function} [opts.fetch]        injectable for tests
  * @param {number} [opts.cacheSize]      LRU of recent analyses keyed by SHA-256 of the text. The
  *   chat pipeline re-redacts the whole history on every turn; without this every turn would resend
  *   every earlier message. Only offsets/types/scores are cached, never the text.
  */
-function createPresidioClient({ url, language = "en", scoreThreshold = 0.5, timeoutMs = 1500, fetch: fetchImpl = globalThis.fetch, cacheSize = 256 } = {}) {
+function createPresidioClient({ url, language = "en", scoreThreshold = 0.5, timeoutMs = 1500, entities, fetch: fetchImpl = globalThis.fetch, cacheSize = 256 } = {}) {
   if (typeof url !== "string" || !/^https?:\/\//i.test(url)) throw new TypeError("presidio: url must be an http(s) URL");
   if (typeof fetchImpl !== "function") throw new TypeError("presidio: fetch is not available");
+  const entityNames = normalizeEntities(entities);
   const base = url.replace(/\/+$/, "");
   const threshold = Number.isFinite(Number(scoreThreshold)) ? Number(scoreThreshold) : 0.5;
   const timeout = Number.isFinite(Number(timeoutMs)) && Number(timeoutMs) > 0 ? Number(timeoutMs) : 1500;
@@ -154,7 +159,7 @@ function createPresidioClient({ url, language = "en", scoreThreshold = 0.5, time
         {
           method: "POST",
           headers: { "content-type": "application/json", accept: "application/json" },
-          body: JSON.stringify({ text, language, score_threshold: threshold }),
+          body: JSON.stringify(entityNames ? { text, language, score_threshold: threshold, entities: entityNames } : { text, language, score_threshold: threshold }),
         },
         timeoutFor(text)
       );
@@ -176,6 +181,19 @@ function createPresidioClient({ url, language = "en", scoreThreshold = 0.5, time
   }
 
   return { analyze, health, url: base };
+}
+
+/**
+ * Validate the `entities` option: null when the analyzer default should apply (omitted or empty),
+ * else a frozen copy. Names are Presidio's (PERSON, PHONE_NUMBER, ...), not Gode's short labels.
+ */
+function normalizeEntities(entities) {
+  if (entities === undefined || entities === null) return null;
+  if (!Array.isArray(entities)) throw new TypeError("presidio: entities must be an array of entity names");
+  for (const e of entities) {
+    if (typeof e !== "string" || !/^[A-Z][A-Z0-9_]{0,63}$/.test(e)) throw new TypeError("presidio: entity names look like PERSON or PHONE_NUMBER");
+  }
+  return entities.length ? Object.freeze([...new Set(entities)]) : null;
 }
 
 module.exports = { createPresidioClient, labelForPresidioType, PRESIDIO_LABELS, PresidioError };

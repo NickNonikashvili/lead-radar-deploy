@@ -9,6 +9,7 @@
     "start": "node server.js",
     "dev": "GODE_MOCK=1 ALLOW_DEV_TOPUP=1 node server.js",
     "test": "node --test --test-concurrency=1 \"test/*.test.js\"",
+    "e2e": "node e2e/smoke.js",
     "learn": "node scripts/learn.js",
     "bench": "node bench/run.js",
     "export-bench-prompts": "node scripts/export-bench-prompts.js",

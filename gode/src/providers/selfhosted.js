@@ -2,14 +2,17 @@
 // Prompts sent here never leave infrastructure Gode controls, so there are no ZDR/routing fields.
 const { createChatProvider } = require("./openaiCompatible");
 
-/** Reasoning fields that the common open-weight servers understand. */
+/**
+ * Reasoning fields that the common open-weight servers understand.
+ * - 'none': thinking off through the chat-template flag that Qwen-style templates read
+ *   (vLLM/SGLang); servers that don't know it ignore it. reasoning_effort is left out, because
+ *   vLLM validates it against low|medium|high and may reject 'none' with a 400.
+ * - any other effort: reasoning_effort as resolved for the model.
+ */
 function reasoningFields(effort) {
   if (!effort) return {};
-  const fields = { reasoning_effort: effort };
-  // Qwen-style chat templates only switch thinking off through this template flag (vLLM/SGLang);
-  // servers that don't know it ignore it.
-  if (effort === "none") fields.chat_template_kwargs = { enable_thinking: false };
-  return fields;
+  if (effort === "none") return { chat_template_kwargs: { enable_thinking: false } };
+  return { reasoning_effort: effort };
 }
 
 function createSelfhostedProvider(config) {

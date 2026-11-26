@@ -1,7 +1,9 @@
 // Seed model catalog + routing table, and helpers to read/write it.
 // The routing table is DATA: admins edit it in /#/admin and the weekly learner rewrites picks.
 // These seeds only fill an empty database (or `npm run seed -- --force`).
-const { now, safeJsonParse } = require("../util");
+const { now, safeJsonParse, AppError } = require("../util");
+const { providerPreferences } = require("../providers/openrouter");
+const { EFFORT_RANK } = require("../providers/effort-map");
 
 const JOBS = ["chat", "code", "image", "video", "music", "voice", "action"];
 const TEXT_JOBS = ["chat", "code", "action"];
@@ -29,8 +31,13 @@ const TIERS = ["quality", "balanced", "budget", "private"];
 // - retention_note is published verbatim on the public /privacy page: keep it factual.
 // - params.reasoning = { mandatory, efforts } mirrors OpenRouter's per-model reasoning object
 //   (src/providers/effort-map.js maps our effort onto it). Media params are the upstream request
-//   inputs merged into every call, so they may only contain valid upstream fields, plus
-//   `prompt_field` for fal models whose text input is not called "prompt".
+//   inputs merged into every call, so they may only contain valid upstream fields, plus these
+//   catalog-only keys, which the adapters read and never send as-is:
+//     prompt_field         fal models whose text input is not called "prompt" (TTS: "text")
+//     max_chars            fal TTS: longest text the model accepts; longer text is refused with
+//                          400 bad_request before any upstream call (fal would answer 422)
+//     openrouter_provider  OpenRouter text models: merged into the request's `provider` routing
+//                          object (with the ZDR fields), e.g. pinning an EU model to its EU host
 /** @type {Array<object>} */
 const MODELS = (() => {
   const zdrVia = (hosts) =>
@@ -127,8 +134,12 @@ const MODELS = (() => {
       price_in: 0.7, price_out: 2.1, price_unit: null, price_per_unit: null,
       zdr: true, retention_note: MISTRAL_NOTE, open_weights: false, self_hosted: false,
       supports_reasoning: true, context_length: 1048576,
-      // Only on/off: every effort above 'none' runs as 'high'.
-      params: { reasoning: { mandatory: false, efforts: ["high", "none"] } },
+      // Only on/off: every effort above 'none' runs as 'high'. Pinned to Mistral's own (EU, ZDR)
+      // endpoint with no fallback, so region 'eu' holds for every request, not only ZDR ones.
+      params: {
+        reasoning: { mandatory: false, efforts: ["high", "none"] },
+        openrouter_provider: { only: ["mistral"], allow_fallbacks: false },
+      },
     },
     {
       // Alternate: the doc's cheap Europe-hosted pick. Too small for code.
@@ -137,7 +148,8 @@ const MODELS = (() => {
       price_in: 0.1, price_out: 0.1, price_unit: null, price_per_unit: null,
       zdr: true, retention_note: MISTRAL_NOTE, open_weights: true, self_hosted: false,
       supports_reasoning: false, context_length: 131072,
-      params: {},
+      // Pinned to Mistral's own EU endpoint (its ZDR endpoint), as for Mistral Large 4.
+      params: { openrouter_provider: { only: ["mistral"], allow_fallbacks: false } },
     },
     {
       // Alternate: newest Gemini Flash-family model (target of ~google/gemini-flash-latest).
@@ -235,7 +247,8 @@ const MODELS = (() => {
       zdr: false,
       retention_note: OPENAI_DIRECT + " GPT-Image-2.6 is not on OpenAI's list of zero-retention-compatible image models.",
       open_weights: false, self_hosted: false, supports_reasoning: false, context_length: null,
-      params: { size: "1024x1024", quality: "high" },
+      // WebP at 85: a fraction of the default PNG's size in the stored (encrypted) message.
+      params: { size: "1024x1024", quality: "high", output_format: "webp", output_compression: 85 },
     },
     {
       // Alternate: same token rates as Sunburst but ~5x faster. "medium" at 1024x1024 = ~$0.043.
@@ -245,7 +258,7 @@ const MODELS = (() => {
       zdr: false,
       retention_note: OPENAI_DIRECT + " GPT-Image-2.6 is not on OpenAI's list of zero-retention-compatible image models.",
       open_weights: false, self_hosted: false, supports_reasoning: false, context_length: null,
-      params: { size: "1024x1024", quality: "medium" },
+      params: { size: "1024x1024", quality: "medium", output_format: "webp", output_compression: 85 },
     },
     {
       // Alternate: cheapest direct-OpenAI image model (official $0.011 per 1024x1024 "medium" image).
@@ -255,7 +268,7 @@ const MODELS = (() => {
       price_in: null, price_out: null, price_unit: "image", price_per_unit: 0.011,
       zdr: false, retention_note: OPENAI_DIRECT, open_weights: false, self_hosted: false,
       supports_reasoning: false, context_length: null,
-      params: { size: "1024x1024", quality: "medium" },
+      params: { size: "1024x1024", quality: "medium", output_format: "webp", output_compression: 85 },
     },
     {
       // Image balanced pick: the doc's cheaper pick (Qwen-Image scores 86% of the top model); fal has
@@ -383,7 +396,7 @@ const MODELS = (() => {
       price_in: null, price_out: null, price_unit: "1k_chars", price_per_unit: 0.08,
       zdr: false, retention_note: falPartner("ElevenLabs", true), open_weights: false, self_hosted: false,
       supports_reasoning: false, context_length: null,
-      params: { prompt_field: "text" },
+      params: { prompt_field: "text", max_chars: 5000 },
     },
     {
       // Voice balanced pick: Qwen TTS is #2 on the Artificial Analysis speech arena (1227, two points
@@ -393,34 +406,37 @@ const MODELS = (() => {
       price_in: null, price_out: null, price_unit: "1k_chars", price_per_unit: 0.05,
       zdr: false, retention_note: falPartner("Alibaba", false), open_weights: false, self_hosted: false,
       supports_reasoning: false, context_length: null,
-      params: { prompt_field: "text", language: "Auto" },
+      params: { prompt_field: "text", language: "Auto", max_chars: 2000 },
     },
     {
       // Voice budget pick (and private fallback): low-latency ElevenLabs, $0.04 per 1,000 characters.
+      // Max 5,000 characters per request.
       id: "fal:elevenlabs/tts/eleven-v4-turbo", label: "ElevenLabs v4 Turbo", vendor: "ElevenLabs", region: "us",
       gateway: "fal", slug: "elevenlabs/tts/eleven-v4-turbo", jobs: ["voice"],
       price_in: null, price_out: null, price_unit: "1k_chars", price_per_unit: 0.04,
       zdr: false, retention_note: falPartner("ElevenLabs", true), open_weights: false, self_hosted: false,
       supports_reasoning: false, context_length: null,
-      params: { prompt_field: "text" },
+      params: { prompt_field: "text", max_chars: 5000 },
     },
     {
-      // Alternate: previous ElevenLabs generation.
+      // Alternate: previous ElevenLabs generation. The research found no documented text limit
+      // for this endpoint, so 3,000 characters is a conservative cap.
       id: "fal:fal-ai/elevenlabs/tts/eleven-v3", label: "ElevenLabs v3", vendor: "ElevenLabs", region: "us",
       gateway: "fal", slug: "fal-ai/elevenlabs/tts/eleven-v3", jobs: ["voice"],
       price_in: null, price_out: null, price_unit: "1k_chars", price_per_unit: 0.1,
       zdr: false, retention_note: falPartner("ElevenLabs", true), open_weights: false, self_hosted: false,
       supports_reasoning: false, context_length: null,
-      params: { prompt_field: "text" },
+      params: { prompt_field: "text", max_chars: 3000 },
     },
     {
       // Alternate: expressive TTS with inline tags. Its text input is called "prompt" (the default).
+      // The research found no documented text limit; 5,000 characters is a safe cap.
       id: "fal:fal-ai/minimax/speech-2.8-hd", label: "MiniMax Speech 2.8 HD", vendor: "MiniMax", region: "cn",
       gateway: "fal", slug: "fal-ai/minimax/speech-2.8-hd", jobs: ["voice"],
       price_in: null, price_out: null, price_unit: "1k_chars", price_per_unit: 0.1,
       zdr: false, retention_note: falPartner("MiniMax", true), open_weights: false, self_hosted: false,
       supports_reasoning: false, context_length: null,
-      params: {},
+      params: { max_chars: 5000 },
     },
   ];
 })();
@@ -451,6 +467,11 @@ const ROUTES = (() => {
     video: [
       "fal:alibaba/wan-3.0/text-to-video",
       "fal:fal-ai/veo3.1/lite",
+      // MAINTENANCE, due before 2027-01-04: fal retires the whole Wan 2.2 family on that date, and
+      // both cells below (budget + private) then fail. Re-route them in the admin routing grid (and
+      // here, for new installs) to a live budget video model. The nearest seeded alternate is
+      // LTX-2.3 Fast, at a much higher price per clip, so re-check fal's catalog first. Not
+      // re-routed yet: as of 2026-11-26 Wan 2.2 Fast is still served and is the cheapest clip.
       "fal:fal-ai/wan/v2.2-5b/text-to-video/fast-wan",
       "fal:fal-ai/wan/v2.2-5b/text-to-video/fast-wan",
     ],
@@ -538,6 +559,43 @@ function modelToParams(m) {
   };
 }
 
+// Same rule as the fal adapter's prompt_field check (an input field name).
+const PROMPT_FIELD_RE = /^[A-Za-z_][A-Za-z0-9_]{0,63}$/;
+
+/**
+ * Problems with the catalog-only keys in params (see docs/ARCHITECTURE.md "Seed catalog"). Adapters
+ * read these on every request, so a bad value saved from the admin page would otherwise make every
+ * call to that model fail with an internal error.
+ */
+function validateParams(params) {
+  if (params === undefined || params === null) return [];
+  const p = typeof params === "string" ? safeJsonParse(params, null) : params;
+  if (!p || typeof p !== "object" || Array.isArray(p)) return ["params must be an object"];
+  const errors = [];
+  try {
+    providerPreferences({ params: p }); // throws TypeError with a safe message
+  } catch (err) {
+    errors.push(err instanceof TypeError ? err.message : "params.openrouter_provider is invalid");
+  }
+  if (p.max_chars !== undefined && p.max_chars !== null && !(Number.isInteger(p.max_chars) && p.max_chars > 0)) {
+    errors.push("params.max_chars must be a positive whole number");
+  }
+  if (p.prompt_field !== undefined && !(typeof p.prompt_field === "string" && PROMPT_FIELD_RE.test(p.prompt_field))) {
+    errors.push("params.prompt_field must be an input field name");
+  }
+  if (p.reasoning !== undefined && p.reasoning !== null) {
+    const r = p.reasoning;
+    if (typeof r !== "object" || Array.isArray(r)) errors.push("params.reasoning must be an object");
+    else {
+      if (r.mandatory !== undefined && typeof r.mandatory !== "boolean") errors.push("params.reasoning.mandatory must be true or false");
+      if (r.efforts !== undefined && !(Array.isArray(r.efforts) && r.efforts.every((e) => EFFORT_RANK.includes(e)))) {
+        errors.push(`params.reasoning.efforts must list levels from: ${EFFORT_RANK.join(", ")}`);
+      }
+    }
+  }
+  return errors;
+}
+
 function validateModel(m) {
   const errors = [];
   if (!m || typeof m !== "object") return ["model must be an object"];
@@ -547,6 +605,7 @@ function validateModel(m) {
   if (m.id && m.gateway && m.slug && m.id !== `${m.gateway}:${m.slug}`) errors.push(`id must be "${m.gateway}:${m.slug}"`);
   const jobs = Array.isArray(m.jobs) ? m.jobs : safeJsonParse(m.jobs, null);
   if (!Array.isArray(jobs) || !jobs.length || jobs.some((j) => !JOBS.includes(j))) errors.push("jobs must be a non-empty array of known jobs");
+  errors.push(...validateParams(m.params));
   return errors;
 }
 
@@ -563,12 +622,14 @@ function upsertModel(db, m) {
 }
 
 /** Set one routing cell, recording history. */
+// Bad input is a 400 (AppError), so any caller (admin routes, scripts) gets a clear message.
 function setRoute(db, { job, tier, model_id, effort_override = null }, { source = "admin", reason = null } = {}) {
-  if (!JOBS.includes(job)) throw new Error(`unknown job ${job}`);
-  if (!TIERS.includes(tier)) throw new Error(`unknown tier ${tier}`);
-  if (effort_override && !["none", "low", "medium", "high"].includes(effort_override)) throw new Error("bad effort_override");
+  const bad = (msg) => new AppError(400, "bad_request", msg);
+  if (!JOBS.includes(job)) throw bad(`unknown job ${String(job).slice(0, 40)}`);
+  if (!TIERS.includes(tier)) throw bad(`unknown tier ${String(tier).slice(0, 40)}`);
+  if (effort_override && !["none", "low", "medium", "high"].includes(effort_override)) throw bad("bad effort_override");
   const model = db.prepare("SELECT id FROM models WHERE id = ?").get(model_id);
-  if (!model) throw new Error(`unknown model ${model_id}`);
+  if (!model) throw bad(`unknown model ${String(model_id).slice(0, 200)}`);
   const old = db.prepare("SELECT model_id FROM routes WHERE job = ? AND tier = ?").get(job, tier);
   db.prepare(
     `INSERT INTO routes (job, tier, model_id, effort_override, source, updated_at) VALUES (?, ?, ?, ?, ?, ?)
@@ -607,7 +668,7 @@ function exportCatalog(db) {
 function importCatalog(db, { models = [], routes = [] } = {}, { source = "admin" } = {}) {
   const errors = [];
   models.forEach((m, i) => validateModel(m).forEach((e) => errors.push(`models[${i}]: ${e}`)));
-  if (errors.length) throw Object.assign(new Error(errors.join("; ")), { status: 400, code: "bad_request" });
+  if (errors.length) throw new AppError(400, "bad_request", errors.join("; "));
   db.tx(() => {
     for (const m of models) upsertModel(db, m);
     for (const r of routes) setRoute(db, r, { source, reason: "import" });
@@ -642,6 +703,7 @@ module.exports = {
   rowToModel,
   modelToParams,
   validateModel,
+  validateParams,
   upsertModel,
   setRoute,
   seedCatalog,

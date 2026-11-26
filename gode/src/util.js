@@ -49,18 +49,28 @@ function safeJsonParse(s, fallback = null) {
   }
 }
 
+/** The error an aborted signal stands for: its reason, or a standard AbortError. */
+function abortReason(signal) {
+  return signal.reason !== undefined ? signal.reason : new DOMException("This operation was aborted", "AbortError");
+}
+
+/**
+ * Abortable delay. Resolves after `ms`; rejects with the signal's reason when `signal` aborts first.
+ * The abort listener is removed as soon as the timer fires, so a long poll loop that sleeps on one
+ * signal many times never piles up listeners (MaxListenersExceededWarning).
+ */
 function sleep(ms, signal) {
   return new Promise((resolve, reject) => {
-    if (signal?.aborted) return reject(signal.reason || new Error("aborted"));
-    const t = setTimeout(resolve, ms);
-    signal?.addEventListener?.(
-      "abort",
-      () => {
-        clearTimeout(t);
-        reject(signal.reason || new Error("aborted"));
-      },
-      { once: true }
-    );
+    if (signal?.aborted) return reject(abortReason(signal));
+    const onAbort = () => {
+      clearTimeout(timer);
+      reject(abortReason(signal));
+    };
+    const timer = setTimeout(() => {
+      signal?.removeEventListener?.("abort", onAbort);
+      resolve();
+    }, ms);
+    signal?.addEventListener?.("abort", onAbort, { once: true });
   });
 }
 

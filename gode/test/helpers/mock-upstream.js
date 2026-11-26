@@ -5,7 +5,8 @@
 //   const up = await startMockUpstream();
 //   const config = loadConfig({ ...up.env, OPENROUTER_API_KEY: "sk-or-test", GODE_MOCK: "0" });
 //   ...
-//   up.requests            // every request: { method, path, query, url, headers, body, rawBody, at }
+//   up.requests            // every request: { method, path, query, url, headers, body, rawBody, at,
+//                          //   closedEarly /* the client hung up before the answer ended */ }
 //   up.find("/chat/completions")  // requests whose path contains the fragment; up.last(fragment)
 //   up.setScenario("chat_midstream_error")            // a preset, or
 //   up.setScenario({ chat: { mode: "error", status: 429 } })  // overrides merged over "ok"
@@ -28,7 +29,7 @@
 //        (usage.cost + completion_tokens_details.reasoning_tokens, top-level "provider"), [DONE].
 //        stream:false -> chat.completion JSON; content defaults to a valid classification when the
 //        system prompt contains GODE_CLASSIFIER_V1, else '{"ok":true}'.
-//   POST /v1/images/generations -> { data: [{ b64_json: <1x1 PNG> }], output_format: "png" }
+//   POST /v1/images/generations -> { data: [{ b64_json: <1x1 PNG> }], output_format: <requested, else "png"> }
 //   POST /fal/<owner>/<app>/<path...> -> queue submit { request_id, status_url, response_url,
 //        cancel_url, queue_position } (URLs on this server, owner/app only like real fal).
 //   GET  /fal/<owner>/<app>/requests/<id>/status -> 202 IN_QUEUE (position 0), 202 IN_PROGRESS,
@@ -303,12 +304,13 @@ async function handleChat(req, res, body, sc) {
   res.end();
 }
 
-function handleImages(res, sc) {
+function handleImages(res, sc, body) {
   if (sc.images.mode === "error") return sendJSON(res, sc.images.status, { error: sc.images.error });
   return sendJSON(res, 200, {
     created: Math.floor(Date.now() / 1000),
     data: [{ b64_json: sc.images.b64Bytes > PNG_1X1.length ? PNG_1X1 + "A".repeat(sc.images.b64Bytes - PNG_1X1.length) : PNG_1X1 }],
-    output_format: "png",
+    // gpt-image echoes the requested format (the bytes stay a PNG here; only the label matters).
+    output_format: (body && typeof body.output_format === "string" && body.output_format) || "png",
     usage: { input_tokens: 10, output_tokens: 272, total_tokens: 282 },
   });
 }
@@ -476,7 +478,7 @@ async function startMockUpstream({ scenario } = {}) {
       const u = new URL(req.url, "http://localhost");
       const rawBody = await readBody(req);
       const body = parseBody(rawBody, req.headers["content-type"]);
-      requests.push({
+      const record = {
         method: req.method,
         path: u.pathname,
         query: Object.fromEntries(u.searchParams),
@@ -485,11 +487,16 @@ async function startMockUpstream({ scenario } = {}) {
         body,
         rawBody,
         at: Date.now(),
+        closedEarly: false, // set when the client hung up before the answer was complete
+      };
+      requests.push(record);
+      res.on("close", () => {
+        if (!res.writableFinished) record.closedEarly = true;
       });
       const sc = state.scenario;
       const p = u.pathname;
       if (req.method === "POST" && p === "/v1/chat/completions") return await handleChat(req, res, body, sc);
-      if (req.method === "POST" && p === "/v1/images/generations") return handleImages(res, sc);
+      if (req.method === "POST" && p === "/v1/images/generations") return handleImages(res, sc, body);
       if (p.startsWith("/fal/")) return handleFal(req, res, p, body, sc, state, baseUrl);
       if ((req.method === "POST" && p === "/analyze") || (req.method === "GET" && p === "/health")) {
         return await handlePresidio(req, res, p, body, sc);

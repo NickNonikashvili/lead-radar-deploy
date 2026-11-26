@@ -2,9 +2,10 @@
  * window.ReactDOM). No build step.
  *
  * Why React.createElement (aliased `h`) instead of JSX: Babel standalone runs compiled JSX by
- * injecting an inline <script>, which the server's CSP (script-src 'self' 'unsafe-eval', no
- * 'unsafe-inline') refuses, so a text/babel page never boots. It would also cost a 3 MB download
- * plus a compile on every page load and print a console warning. Plain JS avoids all three.
+ * injecting an inline <script> and calling eval, which the server's CSP (script-src 'self' only:
+ * no 'unsafe-eval', no 'unsafe-inline') refuses, so a text/babel page never boots. It would also
+ * cost a 3 MB download plus a compile on every page load and print a console warning. Plain JS
+ * avoids all three.
  *
  * Rendering rule: every piece of server or model text is rendered as React text nodes (escaped).
  * There is no dangerouslySetInnerHTML anywhere in this file.
@@ -1946,8 +1947,9 @@
             { className: 'table-wrap' },
             h(
               'table',
-              { className: 'table' },
-              h('thead', null, h('tr', null, ['Time', 'Job', 'Model', 'Gateway / provider', 'Zero retention', 'Hidden details', 'Cost'].map((c) => h('th', { key: c, scope: 'col' }, c)))),
+              { className: 'table table-compact table-log' },
+              // Cost sits next to the model so it stays in view when a narrow card scrolls the table.
+              h('thead', null, h('tr', null, ['Time', 'Job', 'Model', 'Cost', 'Hidden details', 'Zero retention', 'Gateway / provider'].map((c) => h('th', { key: c, scope: 'col', className: c === 'Cost' ? 'num' : undefined }, c)))),
               h(
                 'tbody',
                 null,
@@ -1961,10 +1963,10 @@
                     h('td', { className: 'nowrap' }, formatDateTime(r.created_at)),
                     h('td', null, JOB_LABEL[r.job] || r.job || '—', r.private ? h('span', { className: 'tag tag-private' }, 'private') : null),
                     h('td', { className: 'nowrap' }, r.model_label || '—', r.status === 'error' ? h('span', { className: 'tag tag-error' }, 'failed') : null),
-                    h('td', { className: 'nowrap' }, [r.gateway, r.upstream_provider].filter(Boolean).join(' → ') || '—'),
-                    h('td', null, r.zdr ? h('span', { className: 'yes' }, h(Icon, { name: 'lock', size: 13 }), 'Yes') : h('span', { className: 'muted' }, 'No')),
+                    h('td', { className: 'num' }, formatPrecise(r.cost_usd)),
                     h('td', null, hidden ? String(hidden) : h('span', { className: 'muted' }, '0')),
-                    h('td', { className: 'num' }, formatPrecise(r.cost_usd))
+                    h('td', null, r.zdr ? h('span', { className: 'yes' }, h(Icon, { name: 'lock', size: 13 }), 'Yes') : h('span', { className: 'muted' }, 'No')),
+                    h('td', null, [r.gateway, r.upstream_provider].filter(Boolean).join(' → ') || '—')
                   );
                 })
               )
@@ -2181,8 +2183,9 @@
     const devTopup = async (e) => {
       e.preventDefault();
       const usd = Number(topup);
-      if (!Number.isFinite(usd) || usd <= 0 || usd > 1000) {
-        setTopupState({ busy: false, error: 'Enter an amount between $0.01 and $1,000.' });
+      // Same bounds as the server (POST /api/billing/dev-topup accepts up to $100).
+      if (!Number.isFinite(usd) || usd <= 0 || usd > 100) {
+        setTopupState({ busy: false, error: 'Enter an amount between $0.01 and $100.' });
         return;
       }
       setTopupState({ busy: true, error: null });
@@ -2281,7 +2284,7 @@
               'form',
               { className: 'inline-form', onSubmit: devTopup, noValidate: true },
               h('label', { htmlFor: 'topup', className: 'sr-only' }, 'Amount in US dollars'),
-              h('span', { className: 'input-prefix' }, '$', h('input', { id: 'topup', className: 'input', type: 'number', min: '0.01', step: '0.01', inputMode: 'decimal', value: topup, onChange: (e) => setTopup(e.target.value), 'aria-invalid': Boolean(topupState.error) })),
+              h('span', { className: 'input-prefix' }, '$', h('input', { id: 'topup', className: 'input', type: 'number', min: '0.01', max: '100', step: '0.01', inputMode: 'decimal', value: topup, onChange: (e) => setTopup(e.target.value), 'aria-invalid': Boolean(topupState.error) })),
               h('button', { type: 'submit', className: 'btn btn-secondary', disabled: topupState.busy }, topupState.busy ? 'Adding…' : 'Add test credit')
             ),
             topupState.error && h('p', { className: 'field-error', role: 'alert' }, topupState.error)
@@ -2632,6 +2635,8 @@
 
     const priceInput = (k, label) =>
       h('input', { className: 'input input-sm input-num', type: 'number', min: '0', step: 'any', inputMode: 'decimal', value: form[k], onChange: set(k), 'aria-label': model.label + ' ' + label });
+    // The server bills a missing price as $0, so an enabled model without one gives answers away.
+    const unpriced = initial.enabled && (media ? initial.price_per_unit === '' : initial.price_in === '' || initial.price_out === '');
 
     return h(
       'tr',
@@ -2644,7 +2649,8 @@
         { className: 'price-cell' },
         media
           ? h('span', { className: 'price-edit' }, '$', priceInput('price_per_unit', 'price per ' + model.price_unit), h('span', { className: 'muted' }, '/ ' + (UNIT_LABEL[model.price_unit] || model.price_unit)))
-          : h('span', { className: 'price-edit' }, '$', priceInput('price_in', 'input price'), '/', priceInput('price_out', 'output price'), h('span', { className: 'muted' }, 'per 1M'))
+          : h('span', { className: 'price-edit' }, '$', priceInput('price_in', 'input price'), '/', priceInput('price_out', 'output price'), h('span', { className: 'muted' }, 'per 1M')),
+        unpriced && h('span', { className: 'tag tag-warn', title: 'Enabled with no price: its usage is billed as $0.' }, 'No price')
       ),
       h('td', { className: 'center' }, h('input', { type: 'checkbox', className: 'checkbox', checked: form.zdr, onChange: set('zdr'), 'aria-label': model.label + ' zero data retention' })),
       h('td', { className: 'center' }, h('input', { type: 'checkbox', className: 'checkbox', checked: form.enabled, onChange: set('enabled'), 'aria-label': model.label + ' enabled' })),

@@ -24,6 +24,14 @@ function list(v) {
     .filter(Boolean);
 }
 
+/** Presidio entity names ("PERSON", "PHONE_NUMBER"): upper-cased, deduplicated, junk dropped. */
+function entityList(v) {
+  const names = list(v)
+    .map((s) => s.toUpperCase())
+    .filter((s) => /^[A-Z][A-Z0-9_]{0,63}$/.test(s));
+  return [...new Set(names)];
+}
+
 /**
  * Build a config object from an env-like map. Tests pass their own map so nothing leaks between them.
  * @param {Record<string,string|undefined>} env
@@ -57,7 +65,9 @@ function loadConfig(env = process.env) {
     port: num(env.PORT, 3000),
     rootDir,
     dataDir,
-    databasePath: path.resolve(rootDir, str(env.DATABASE_PATH, path.join(dataDir, "gode.db"))),
+    // ":memory:" is SQLite's in-memory database, not a file name: keep it as is.
+    databasePath:
+      str(env.DATABASE_PATH) === ":memory:" ? ":memory:" : path.resolve(rootDir, str(env.DATABASE_PATH, path.join(dataDir, "gode.db"))),
     publicUrl: str(env.PUBLIC_URL, `http://localhost:${num(env.PORT, 3000)}`).replace(/\/+$/, ""),
     masterKey: str(env.GODE_MASTER_KEY), // base64, 32 bytes. Auto-generated into dataDir in dev if empty.
     mock,
@@ -104,6 +114,9 @@ function loadConfig(env = process.env) {
       presidioUrl: str(env.PRESIDIO_ANALYZER_URL).replace(/\/+$/, ""),
       presidioScoreThreshold: num(env.PRESIDIO_SCORE_THRESHOLD, 0.5),
       presidioLanguage: str(env.PRESIDIO_LANGUAGE, "en"),
+      // Which Presidio recognizers to ask for (sent as `entities` to /analyze). Empty = the
+      // analyzer's default set. Built-in recognizers run either way.
+      presidioEntities: entityList(env.PRESIDIO_ENTITIES),
       // Redact prompts going to the self-hosted tier too? They never leave your servers, so off by default.
       redactSelfHosted: bool(env.REDACT_SELF_HOSTED, false),
     },

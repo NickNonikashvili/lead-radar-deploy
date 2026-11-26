@@ -244,6 +244,51 @@ test("media defaults bound the cost the unit price assumes", () => {
   }
 });
 
+test("voice models declare the longest text they accept (params.max_chars)", () => {
+  const expected = {
+    "fal:alibaba/qwen-audio-3-tts": 2000,
+    "fal:elevenlabs/tts/eleven-v4": 5000,
+    "fal:elevenlabs/tts/eleven-v4-turbo": 5000,
+    "fal:fal-ai/elevenlabs/tts/eleven-v3": 3000, // no documented limit found: conservative
+    "fal:fal-ai/minimax/speech-2.8-hd": 5000, // no documented limit found: safe cap
+  };
+  for (const [id, n] of Object.entries(expected)) assert.equal(byId.get(id).params.max_chars, n, id);
+  for (const m of MODELS.filter((x) => x.jobs.includes("voice"))) {
+    assert.ok(Number.isInteger(m.params.max_chars) && m.params.max_chars > 0, `${m.id} has no max_chars`);
+  }
+  for (const m of MODELS.filter((x) => !x.jobs.includes("voice"))) assert.equal(m.params.max_chars, undefined, m.id);
+});
+
+test("EU-region OpenRouter models are pinned to their EU host with no fallback", () => {
+  const { providerPreferences } = require("../src/providers/openrouter");
+  const eu = MODELS.filter((m) => m.gateway === "openrouter" && m.region === "eu");
+  assert.deepEqual(eu.map((m) => m.id).sort(), ["openrouter:mistralai/ministral-3b-2512", "openrouter:mistralai/mistral-large-4-0"]);
+  for (const m of eu) {
+    assert.deepEqual(m.params.openrouter_provider, { only: ["mistral"], allow_fallbacks: false }, m.id);
+    assert.equal(m.zdr, true, `${m.id}: the pinned host is also its zero-retention endpoint`);
+  }
+  // Every pin in the catalog passes the adapter's validation (a bad one would fail every request).
+  for (const m of MODELS) {
+    if (m.params.openrouter_provider !== undefined) assert.equal(m.gateway, "openrouter", `${m.id}: openrouter_provider on another gateway`);
+    assert.doesNotThrow(() => providerPreferences(m), m.id);
+  }
+});
+
+test("text model params hold only adapter inputs, never upstream body fields", () => {
+  for (const m of MODELS.filter(isText)) {
+    for (const k of Object.keys(m.params)) assert.ok(["reasoning", "openrouter_provider"].includes(k), `${m.id} params.${k}`);
+  }
+});
+
+test("direct-OpenAI image models store WebP, not multi-megabyte PNG data URLs", () => {
+  const images = MODELS.filter((m) => m.gateway === "openai" && m.jobs.includes("image"));
+  assert.equal(images.length, 3);
+  for (const m of images) {
+    assert.equal(m.params.output_format, "webp", m.id);
+    assert.equal(m.params.output_compression, 85, m.id);
+  }
+});
+
 test("Google, direct-OpenAI and fal models are not marked zero-retention", () => {
   for (const m of MODELS) {
     if (m.vendor === "Google" || m.gateway === "openai" || m.gateway === "fal") assert.equal(m.zdr, false, m.id);
@@ -334,6 +379,32 @@ test("import rejects an invalid model without writing anything", () => {
   const bad = { ...good, id: "openai:wrong", slug: "gpt-6-luna" };
   assert.throws(() => importCatalog(db, { models: [good, bad], routes: [] }), (e) => e.status === 400);
   assert.equal(db.prepare("SELECT COUNT(*) AS n FROM models").get().n, 0);
+});
+
+test("validateModel checks the catalog-only params keys adapters read on every request", () => {
+  const luna = byId.get("openai:gpt-6-luna");
+  const withParams = (params) => catalog.validateModel({ ...luna, params });
+  assert.deepEqual(withParams({}), []);
+  assert.deepEqual(withParams({ openrouter_provider: { only: ["mistral"], allow_fallbacks: false }, max_chars: 2000 }), []);
+  assert.match(withParams({ openrouter_provider: { onyl: ["mistral"] } }).join(), /openrouter_provider\.onyl is not a supported provider setting/);
+  assert.match(withParams({ openrouter_provider: { allow_fallbacks: "no" } }).join(), /allow_fallbacks has the wrong type/);
+  for (const bad of [0, -5, 2.5, "2000"]) assert.match(withParams({ max_chars: bad }).join(), /max_chars must be a positive whole number/, String(bad));
+  assert.match(withParams({ prompt_field: "te xt" }).join(), /prompt_field/);
+  assert.match(withParams({ reasoning: { efforts: ["ultra"] } }).join(), /reasoning\.efforts/);
+  assert.match(withParams({ reasoning: { mandatory: "yes" } }).join(), /reasoning\.mandatory/);
+  assert.match(withParams([]).join(), /params must be an object/);
+});
+
+test("setRoute and importCatalog report bad input as AppError 400", () => {
+  const { AppError } = require("../src/util");
+  const db = openDb(":memory:");
+  seedCatalog(db);
+  const is400 = (e) => e instanceof AppError && e.status === 400 && e.code === "bad_request";
+  assert.throws(() => setRoute(db, { job: "chat", tier: "budget", model_id: "openai:nope" }), (e) => is400(e) && /unknown model/.test(e.message));
+  assert.throws(() => setRoute(db, { job: "dance", tier: "budget", model_id: "openai:gpt-6-luna" }), (e) => is400(e) && /unknown job/.test(e.message));
+  assert.throws(() => setRoute(db, { job: "chat", tier: "budget", model_id: "openai:gpt-6-luna", effort_override: "max" }), is400);
+  const bad = { ...byId.get("openai:gpt-6-luna"), params: { max_chars: -1 } };
+  assert.throws(() => importCatalog(db, { models: [bad], routes: [] }), (e) => is400(e) && /models\[0\]: params\.max_chars/.test(e.message));
 });
 
 // ---------- scripts/seed.js ----------

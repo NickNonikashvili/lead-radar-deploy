@@ -5,8 +5,9 @@
 // Test hooks: a last user message containing GODE_MOCK_FAIL makes streamChat throw upstream_error
 // before any text; GODE_MOCK_FAIL_MIDSTREAM throws after the first word. Same words in a media
 // prompt make generateMedia fail. Lets pipeline tests exercise refund/error paths offline.
-const { AppError, estimateTokens, safeJsonParse } = require("../util");
+const { AppError, estimateTokens, safeJsonParse, sleep } = require("../util");
 const { abortReason } = require("./openaiCompatible");
+const { checkMaxChars } = require("./fal");
 
 // The router's CLASSIFIER_SYSTEM_PROMPT contains this marker; matching on it (instead of importing
 // the router) avoids a providers <-> router dependency cycle.
@@ -129,22 +130,6 @@ function wavDataUrl() {
 
 // ---- helpers ----
 
-/** Abortable delay that cleans up its listener (util.sleep keeps it attached). */
-function pause(ms, signal) {
-  return new Promise((resolve, reject) => {
-    if (signal?.aborted) return reject(abortReason(signal));
-    const onAbort = () => {
-      clearTimeout(timer);
-      reject(abortReason(signal));
-    };
-    const timer = setTimeout(() => {
-      signal?.removeEventListener("abort", onAbort);
-      resolve();
-    }, ms);
-    signal?.addEventListener("abort", onAbort, { once: true });
-  });
-}
-
 function lastUserText(messages) {
   const list = Array.isArray(messages) ? messages : [];
   for (let i = list.length - 1; i >= 0; i--) if (list[i]?.role === "user") return String(list[i].content ?? "");
@@ -168,7 +153,7 @@ function createMockProvider(config) {
     const answer = `${label} (mock) here. You said: "${echo}". This is an offline demo answer, no AI was called.`;
     const words = answer.match(/\S+\s*/g) || [];
     for (let i = 0; i < words.length; i++) {
-      await pause(WORD_DELAY_MS, signal);
+      await sleep(WORD_DELAY_MS, signal);
       yield { type: "delta", text: words[i] };
       if (i === 0 && said.includes(FAIL_MIDSTREAM_WORD)) throw mockFailure("mid-stream");
     }
@@ -200,11 +185,13 @@ function createMockProvider(config) {
   async function generateMedia({ model, job, prompt, signal, onProgress } = {}) {
     if (signal?.aborted) throw abortReason(signal);
     const text = String(prompt || "");
+    // Same text limit as fal's TTS models (params.max_chars), so mock mode refuses what fal would.
+    checkMaxChars(model || {}, text);
     const report = typeof onProgress === "function" ? onProgress : () => {};
     report({ status: "queued", position: 0 });
-    await pause(MEDIA_STEP_MS, signal);
+    await sleep(MEDIA_STEP_MS, signal);
     report({ status: "running" });
-    await pause(MEDIA_STEP_MS, signal);
+    await sleep(MEDIA_STEP_MS, signal);
     if (text.includes(FAIL_WORD)) throw mockFailure("media");
     const label = model?.label || "mock";
     const audio = job === "voice" || job === "music";

@@ -4,3 +4,4 @@ data/*
 !data/.gitkeep
 bench/results/
 bench/prompts.real.jsonl
+e2e/shots/

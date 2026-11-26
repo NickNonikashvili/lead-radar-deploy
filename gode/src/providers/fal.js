@@ -1,7 +1,7 @@
 // fal media gateway (image, video, music, voice) via the queue API:
 // submit -> poll status_url -> GET response_url. fal reports no per-request cost, so we return the
 // billable units for model.price_unit and the pipeline prices them (costUsd stays null).
-const { AppError } = require("../util");
+const { AppError, sleep } = require("../util");
 const { requestJSON, upstreamError, notConfigured, abortReason } = require("./openaiCompatible");
 
 const ENDPOINT_RE = /^[A-Za-z0-9][A-Za-z0-9._-]*(?:\/[A-Za-z0-9][A-Za-z0-9._-]*)+$/;
@@ -11,8 +11,9 @@ const CANCEL_TIMEOUT_MS = 5000;
 const DEFAULT_SECONDS = 5; // fal's usual clip length when neither input nor output says otherwise
 const DEFAULT_TIMEOUT_MS = 10 * 60 * 1000;
 const MIN_POLL_MS = 50;
-// Catalog-only keys and generic hints that must never reach a model's input schema.
-const META_KEYS = new Set(["prompt_field", "aspect", "duration_s", "reasoning"]);
+// Catalog-only keys and generic hints that must never reach a model's input schema: fal answers
+// 422 to unknown fields on strict endpoints, and the rest are ours (see src/seed/catalog.js).
+const META_KEYS = new Set(["prompt_field", "max_chars", "openrouter_provider", "aspect", "duration_s", "reasoning"]);
 // fal image_size presets -> pixels, for megapixel billing when the result omits dimensions.
 const PRESET_PIXELS = {
   square_hd: [1024, 1024],
@@ -58,6 +59,20 @@ function applyAspect(input, aspect) {
   if (typeof input.image_size === "string" && PRESET_PIXELS[input.image_size]) {
     input.image_size = o === "landscape" ? "landscape_16_9" : "portrait_16_9";
   }
+}
+
+/**
+ * Refuse text longer than the model's params.max_chars (TTS models) before anything is sent: fal
+ * would answer 422 after the request was queued. Characters are counted as Unicode code points,
+ * the way fal's (Python) validation counts them, so an emoji is one character.
+ */
+function checkMaxChars(model, prompt) {
+  const max = Number(model?.params?.max_chars);
+  if (!Number.isInteger(max) || max <= 0) return;
+  if (prompt.length <= max) return; // UTF-16 length >= code points: nothing to count
+  if ([...prompt].length <= max) return;
+  const what = Array.isArray(model.jobs) && model.jobs.includes("voice") ? "voice model" : "model";
+  throw new AppError(400, "bad_request", `This ${what} accepts at most ${max} characters; shorten the text.`, { maxChars: max });
 }
 
 /** body = { ...model.params, ...params, [prompt_field]: prompt }, minus catalog-only keys. */
@@ -189,7 +204,8 @@ function createFalProvider(config) {
       if (status === "COMPLETED") return json;
       if (status !== "IN_QUEUE" && status !== "IN_PROGRESS") throw upstreamError("fal", { message: "unexpected queue status" });
       report(status, json.queue_position);
-      await pause(Math.max(MIN_POLL_MS, Number(gw.pollIntervalMs) || 0), signal);
+      // util.sleep detaches its abort listener after each wait, so a long poll on one signal is fine.
+      await sleep(Math.max(MIN_POLL_MS, Number(gw.pollIntervalMs) || 0), signal);
     }
   }
 
@@ -211,6 +227,7 @@ function createFalProvider(config) {
       throw new TypeError("model.slug must be a fal endpoint id (owner/app[/path])");
     }
     if (typeof prompt !== "string" || !prompt.trim()) throw new AppError(400, "bad_request", "A prompt is required");
+    checkMaxChars(model, prompt);
     if (signal?.aborted) throw abortReason(signal);
 
     const input = buildInput(model, params, prompt);
@@ -280,25 +297,6 @@ function resultError(result) {
   return upstreamError("fal", { message: detail || "no media in result", type: result?.error_type });
 }
 
-/**
- * Abortable delay. util.sleep leaves its abort listener attached after resolving, which would pile
- * up hundreds of listeners on one signal over a long poll.
- */
-function pause(ms, signal) {
-  return new Promise((resolve, reject) => {
-    if (signal?.aborted) return reject(abortReason(signal));
-    const onAbort = () => {
-      clearTimeout(timer);
-      reject(abortReason(signal));
-    };
-    const timer = setTimeout(() => {
-      signal?.removeEventListener("abort", onAbort);
-      resolve();
-    }, ms);
-    signal?.addEventListener("abort", onAbort, { once: true });
-  });
-}
-
 /** Our own deadline firing is an upstream failure; the caller's abort stays an abort. */
 function mapTimeout(err, callerSignal, timeout) {
   if (callerSignal?.aborted) return abortReason(callerSignal);
@@ -306,4 +304,4 @@ function mapTimeout(err, callerSignal, timeout) {
   return err;
 }
 
-module.exports = { createFalProvider, buildInput, extractMedia, computeUnits };
+module.exports = { createFalProvider, buildInput, extractMedia, computeUnits, checkMaxChars };

@@ -389,13 +389,51 @@ function detectIps(text, out) {
 // PHONE — the noisiest type. A permissive candidate regex, then validation that rejects dates,
 // years, prices, versions, IPs, card-shaped and thousands-separated numbers. Unformatted digit runs
 // only count with a phone keyword nearby or a valid North American / national-trunk shape.
+//
+// Numbers separated only by spaces are the weakest signal of all: logs, tables and lists put
+// numbers side by side all the time ('"GET / HTTP/1.1" 200 5123' is a status code and a byte
+// count, "ports 8080 8443 9000" are ports). Without a phone keyword or a "+" they count only in a
+// few unmistakable national shapes (see spaceGroupedPhone). Dashes, dots and parentheses are how
+// people actually write phone numbers, so those keep the general rules.
 // ---------------------------------------------------------------------------------------------
 const PHONE_RE = /(?<![\w+$€£¥₹./-])\+?(?:\(\d{1,4}\)[ .-]?|\d)[\d .()-]{4,24}\d(?![\w]|[.,]\d)/gu;
 const PHONE_CONTEXT = /\b(?:phone|tel|telephone|mobile|mob|cell|cellphone|call|text|sms|whatsapp|signal|telegram|fax|contact|number|no\.|nr\.|ring|reach|dial)\b[^\n]{0,25}$/i;
+// An identifier label right before the number ("order #", "invoice no.", "build", "port", "PID"):
+// the number names a thing, not a person. It wins over PHONE_CONTEXT, which also matches
+// "no."/"number" ("order number 555-123-4567" is an order). Personal identifiers such as account
+// numbers are deliberately absent: redacting one of those as a phone is the safe mistake.
+const ID_BEFORE = new RegExp(
+  String.raw`\b(?:order|invoice|receipt|ticket|issue|bug|pr|ref|reference|sku|item|product|part|serial|tracking|shipment|parcel|` +
+    String.raw`transaction|txn|build|version|ver|release|rev|revision|commit|pid|uid|gid|id|port|job|batch|lot|row|error|status)s?` +
+    String.raw`[ \t]*(?:(?:#|no\.?|nr\.?|num(?:ber)?\.?|id)[ \t]*)?[:=#]?[ \t]*$`,
+  "i"
+);
+// "#1234 5678" right before the number: an issue/ticket reference unless a phone keyword says otherwise.
+const HASH_BEFORE = /#[ \t]*$/;
+// A phone number never starts with a calendar date ("2026.11.26.1234" is a build, "2026-11-26 10" a timestamp).
+const ISO_DATE_PREFIX = /^(?:19|20)\d{2}([-./])(?:0?[1-9]|1[0-2])\1(?:0?[1-9]|[12]\d|3[01])(?!\d)/;
 const CURRENCY_BEFORE = /(?:[$€£¥₹]|\b(?:usd|eur|gbp|chf|jpy|cad|aud|sek|nok|dkk|inr|rs\.?))[ \t]*$/i;
 const CURRENCY_AFTER = /^[ \t]*(?:[$€£¥₹%]|(?:usd|eur|gbp|chf|jpy|cad|aud|sek|nok|dkk|inr|dollars?|euros?|pounds?|bucks|kr|ms|kb|mb|gb|px)\b)/i;
 
 const isYear = (g) => /^(?:19|20)\d{2}$/.test(g);
+
+/**
+ * Space-separated digit groups (no "+", no keyword nearby) that are phone numbers on their own.
+ * Anything else written this way needs a keyword ("call me on 6123 4567"): local numbers without an
+ * area code and other countries' spaced formats are given up here on purpose, because the same
+ * shapes fill every log line and table ("200 5123", "1024 2048", "12 34 56 78 90").
+ */
+function spaceGroupedPhone(body) {
+  const groups = body.split(" ");
+  const digits = groups.join("");
+  if (/^(\d)\1+$/.test(digits)) return false; // "0000 0000 0000": padding, hex-dump offsets
+  // National trunk prefix ("020 7946 0958", "07911 123456", "06 12 34 56 78") or 00 + country code.
+  if (/^0(?:[1-9]\d{0,3}|0[1-9]\d{0,2})$/.test(groups[0]) && digits.length >= 9) return true;
+  if (/^(?:1 )?[2-9]\d{2} [2-9]\d{2} \d{4}$/.test(body)) return true; // North America: "212 555 1234"
+  if (/^[6-9]\d{4} \d{5}$/.test(body)) return true; // India mobile: "98765 43210"
+  if (/^1[3-9]\d \d{4} \d{4}$/.test(body)) return true; // China mobile: "138 0013 8000"
+  return false;
+}
 
 function isDateLike(s) {
   let m = /^(\d{4})[-./ ](\d{1,2})[-./ ](\d{1,2})$/.exec(s);
@@ -420,6 +458,17 @@ function cardShaped(raw) {
 
 /** Score a phone candidate string, 0 = not a phone. `before` is the text preceding it. */
 function phoneScore(s, before) {
+  let context; // computed at most once (after phoneShapeScore's cheap checks)
+  const hasContext = () => (context ??= PHONE_CONTEXT.test(before));
+  const score = phoneShapeScore(s, hasContext);
+  if (!score || s.startsWith("+")) return score;
+  // Identifier labels are checked last: the costliest test, and most candidates fail earlier.
+  if (ID_BEFORE.test(before) || (HASH_BEFORE.test(before) && !hasContext())) return 0;
+  return score;
+}
+
+/** The shape rules of phoneScore. `hasContext()` says whether a phone keyword precedes the candidate. */
+function phoneShapeScore(s, hasContext) {
   const intl = s.startsWith("+");
   const body = (intl ? s.slice(1) : s).replace(/\(0\)/g, " ");
   const digits = body.replace(/\D/g, "");
@@ -431,8 +480,10 @@ function phoneScore(s, before) {
   if (opens !== closes || opens > 1) return 0;
   if (opens && !/^\(\d{1,4}\)|[ .-]\(\d{1,4}\)/.test(body)) return 0;
 
-  const context = PHONE_CONTEXT.test(before);
+  const context = hasContext();
   const formatted = /[ .()-]/.test(body);
+  // Space-only grouping first: it rejects most of what logs and tables produce, cheaply.
+  if (formatted && !intl && !context && /^[\d ]+$/.test(body) && !spaceGroupedPhone(body)) return 0;
   if (!formatted) {
     if (intl) return 0.8;
     if (luhnValid(digits) && digits.length >= 13) return 0; // a bare card number
@@ -446,6 +497,8 @@ function phoneScore(s, before) {
   // "1 2 3 4 5 6 7" and ISBNs have single-digit groups; "+33 6 12 34 56 78" may after the country code.
   if (groups.some((g, i) => g.length < 2 && i > (intl ? 1 : 0))) return 0;
   if (isDateLike(body) || (groups.length >= 2 && groups.every(isYear))) return 0;
+  // A date glued to more digits: "2026-11-26 10" (then ":15:32"), "2026.11.26.1234" (a build).
+  if (ISO_DATE_PREFIX.test(body) || body.split(" ").some(isDateLike)) return 0;
   if (/^\d{3}[- ]\d{2}[- ]\d{4}$/.test(body)) return 0; // SSN shape
   if (body.includes(".")) {
     // Dots: only "555.123.4567" / "01.23.45.67.89" styles; never versions, decimals or IPv4.

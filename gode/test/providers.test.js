@@ -410,6 +410,69 @@ describe("gateway adapters against mock upstream", () => {
       up.setScenario("chat_rate_limited");
       await rejectsUpstream(or.completeJSON({ model: M.deepseek, system: "json", user: "x" }), /rate limited/);
     });
+
+    describe("catalog provider pin (params.openrouter_provider)", () => {
+      const EU_PIN = { only: ["mistral"], allow_fallbacks: false };
+      const mistralEu = { ...M.mistral, region: "eu", zdr: true, params: { ...M.mistral.params, openrouter_provider: EU_PIN } };
+
+      it("EU model: the pin is the request's provider object, merged with the ZDR fields", async () => {
+        const or = createOpenRouterProvider(realConfig(up));
+        await collect(or.streamChat({ model: mistralEu, messages: USER_MSG, effort: "high", maxTokens: 64, zdr: true, sessionId: "s1" }));
+        assert.deepEqual(up.last("/chat/completions").body, {
+          model: "mistralai/mistral-large-4-0",
+          messages: USER_MSG,
+          stream: true,
+          max_completion_tokens: 64,
+          reasoning: { effort: "high" },
+          provider: { only: ["mistral"], allow_fallbacks: false, zdr: true, data_collection: "deny" },
+          session_id: "s1",
+        });
+      });
+
+      it("the pin applies without zdr too: EU-only must stay in the EU on every request", async () => {
+        const or = createOpenRouterProvider(realConfig(up));
+        await collect(or.streamChat({ model: mistralEu, messages: USER_MSG, effort: "none" }));
+        const body = up.last("/chat/completions").body;
+        assert.deepEqual(body.provider, { only: ["mistral"], allow_fallbacks: false });
+        assert.deepEqual(Object.keys(body).sort(), ["messages", "model", "provider", "reasoning", "stream"]);
+      });
+
+      it("completeJSON (classifier/judge) honours the pin as well", async () => {
+        const or = createOpenRouterProvider(realConfig(up));
+        await or.completeJSON({ model: mistralEu, system: "json", user: "x", zdr: true });
+        assert.deepEqual(up.last("/chat/completions").body.provider, { only: ["mistral"], allow_fallbacks: false, zdr: true, data_collection: "deny" });
+        await or.completeJSON({ model: mistralEu, system: "json", user: "x" });
+        assert.deepEqual(up.last("/chat/completions").body.provider, EU_PIN);
+      });
+
+      it("a pin can never weaken the ZDR restriction", async () => {
+        const or = createOpenRouterProvider(realConfig(up));
+        const weak = { ...mistralEu, params: { openrouter_provider: { only: ["mistral"], zdr: false, data_collection: "allow" } } };
+        await collect(or.streamChat({ model: weak, messages: USER_MSG, zdr: true }));
+        assert.deepEqual(up.last("/chat/completions").body.provider, { only: ["mistral"], zdr: true, data_collection: "deny" });
+      });
+
+      it("catalog params are never spread into the body: only the provider object carries the pin", async () => {
+        const or = createOpenRouterProvider(realConfig(up));
+        const noisy = { ...mistralEu, params: { ...mistralEu.params, max_chars: 10, prompt_field: "text", temperature: 2 } };
+        await collect(or.streamChat({ model: noisy, messages: USER_MSG, effort: "high" }));
+        const body = up.last("/chat/completions").body;
+        for (const k of ["openrouter_provider", "max_chars", "prompt_field", "temperature", "only", "allow_fallbacks", "params"]) {
+          assert.ok(!(k in body), `body.${k} must not be sent`);
+        }
+        assert.deepEqual(body.provider, EU_PIN);
+      });
+
+      it("a malformed pin fails closed before any request (it would otherwise leave the EU silently)", async () => {
+        const or = createOpenRouterProvider(realConfig(up));
+        for (const pin of [{ onyl: ["mistral"] }, { only: "mistral" }, { only: [] }, { allow_fallbacks: "no" }, ["mistral"], "mistral"]) {
+          const bad = { ...mistralEu, params: { openrouter_provider: pin } };
+          await assert.rejects(collect(or.streamChat({ model: bad, messages: USER_MSG })), TypeError, JSON.stringify(pin));
+          await assert.rejects(or.completeJSON({ model: bad, system: "json", user: "x" }), TypeError, JSON.stringify(pin));
+        }
+        assert.equal(up.find("/chat/completions").length, 0);
+      });
+    });
   });
 
   describe("openai", () => {
@@ -504,6 +567,58 @@ describe("gateway adapters against mock upstream", () => {
       assert.ok(out.media[0].url.length > 6 * 1024 * 1024);
     });
 
+    it("images: the catalog's WebP format is requested and the data URL's mime follows output_format", async () => {
+      // Local stub: like api.openai.com, it echoes the requested output_format (the shared mock
+      // always answers "png"). `omitFormat` leaves it out of the response.
+      const http = require("node:http");
+      const seen = [];
+      let omitFormat = false;
+      const server = http.createServer((req, res) => {
+        let raw = "";
+        req.on("data", (c) => (raw += c));
+        req.on("end", () => {
+          const body = JSON.parse(raw);
+          seen.push(body);
+          const out = { created: 1, data: [{ b64_json: "UklGRg==" }] };
+          if (!omitFormat) out.output_format = body.output_format || "png";
+          res.writeHead(200, { "content-type": "application/json" });
+          res.end(JSON.stringify(out));
+        });
+      });
+      await new Promise((r) => server.listen(0, "127.0.0.1", r));
+      try {
+        const oa = createOpenAIProvider(
+          loadConfig({ GODE_MOCK: "0", OPENAI_API_KEY: "sk-test-openai", OPENAI_BASE_URL: `http://127.0.0.1:${server.address().port}/v1` })
+        );
+        const { MODELS } = require("../src/seed/catalog");
+        const sunburst = MODELS.find((m) => m.id === "openai:gpt-image-2.6-sunburst");
+        const out = await oa.generateMedia({ model: sunburst, job: "image", prompt: "a lighthouse" });
+        assert.deepEqual(seen.at(-1), {
+          model: "gpt-image-2.6-sunburst",
+          prompt: "a lighthouse",
+          n: 1,
+          size: "1024x1024",
+          quality: "high",
+          output_format: "webp",
+          output_compression: 85,
+        });
+        assert.equal(out.media[0].mime, "image/webp");
+        assert.equal(out.media[0].url, "data:image/webp;base64,UklGRg==");
+
+        // No output_format in the response: the requested format decides.
+        omitFormat = true;
+        const jpeg = await oa.generateMedia({ model: { ...M.gptImage, params: { ...M.gptImage.params, output_format: "jpeg" } }, job: "image", prompt: "x" });
+        assert.equal(jpeg.media[0].mime, "image/jpeg");
+        assert.match(jpeg.media[0].url, /^data:image\/jpeg;base64,/);
+        // Nothing asked, nothing reported: PNG, OpenAI's default.
+        const png = await oa.generateMedia({ model: M.gptImage, job: "image", prompt: "x" });
+        assert.equal(png.media[0].mime, "image/png");
+        assert.ok(!("output_format" in seen.at(-1)));
+      } finally {
+        await new Promise((r) => server.close(r));
+      }
+    });
+
     it("images: errors map to upstream_error; non-image jobs are refused", async () => {
       const oa = createOpenAIProvider(realConfig(up));
       up.setScenario("images_error");
@@ -523,13 +638,14 @@ describe("gateway adapters against mock upstream", () => {
       assert.equal(events.at(-1).upstreamProvider, "self-hosted");
       const req = up.last("/chat/completions");
       assert.equal(req.headers.authorization, undefined);
+      // Effort 'none' turns Qwen thinking off via the chat template; no reasoning_effort, which vLLM
+      // may reject as 'none'. No zdr/session fields: nothing leaves our servers.
       assert.deepEqual(req.body, {
         model: "qwen3.8-27b",
         messages: USER_MSG,
         stream: true,
         max_tokens: 100,
         stream_options: { include_usage: true },
-        reasoning_effort: "none",
         chat_template_kwargs: { enable_thinking: false },
       });
     });
@@ -541,6 +657,37 @@ describe("gateway adapters against mock upstream", () => {
       assert.equal(req.headers.authorization, "Bearer local-key");
       assert.equal(req.body.reasoning_effort, "high");
       assert.ok(!("chat_template_kwargs" in req.body));
+    });
+
+    it("thinking efforts send reasoning_effort only; 'none' sends only the template flag", async () => {
+      const sh = createSelfhostedProvider(realConfig(up, { SELFHOSTED_BASE_URL: up.urls.selfhosted }));
+      for (const effort of ["low", "medium", "high"]) {
+        await collect(sh.streamChat({ model: M.qwenSelf, messages: USER_MSG, effort }));
+        const body = up.last("/chat/completions").body;
+        assert.equal(body.reasoning_effort, effort, effort);
+        assert.ok(!("chat_template_kwargs" in body), effort);
+      }
+      // A model without reasoning support gets neither field.
+      await collect(sh.streamChat({ model: { ...M.qwenSelf, supports_reasoning: false, params: {} }, messages: USER_MSG, effort: "none" }));
+      const plain = up.last("/chat/completions").body;
+      assert.ok(!("reasoning_effort" in plain) && !("chat_template_kwargs" in plain));
+      // Mandatory reasoning maps 'none' to the lowest level, which is sent as reasoning_effort.
+      const mandatory = { ...M.qwenSelf, params: { reasoning: { mandatory: true, efforts: ["high", "medium", "low"] } } };
+      await collect(sh.streamChat({ model: mandatory, messages: USER_MSG, effort: "none" }));
+      const forced = up.last("/chat/completions").body;
+      assert.equal(forced.reasoning_effort, "low");
+      assert.ok(!("chat_template_kwargs" in forced));
+    });
+
+    it("completeJSON (classifier/judge) runs with thinking off via the template flag", async () => {
+      const sh = createSelfhostedProvider(realConfig(up, { SELFHOSTED_BASE_URL: up.urls.selfhosted }));
+      const out = await sh.completeJSON({ model: M.qwenSelf, system: "Return JSON.", user: "hi" });
+      assert.deepEqual(out.json, { ok: true });
+      const body = up.last("/chat/completions").body;
+      assert.deepEqual(body.chat_template_kwargs, { enable_thinking: false });
+      assert.ok(!("reasoning_effort" in body));
+      assert.equal(body.max_tokens, 300);
+      assert.equal(body.stream, false);
     });
   });
 
@@ -589,6 +736,69 @@ describe("gateway adapters against mock upstream", () => {
       assert.equal(out.media[0].type, "audio");
       assert.equal(out.units, Math.round((prompt.length / 1000) * 10000) / 10000);
       assert.deepEqual(up.find("/fal/")[0].body, { text: prompt });
+    });
+
+    describe("TTS text limit (params.max_chars)", () => {
+      const qwenTts = {
+        id: "fal:alibaba/qwen-audio-3-tts", label: "Qwen Audio 3 TTS", gateway: "fal", slug: "alibaba/qwen-audio-3-tts", jobs: ["voice"],
+        enabled: true, price_unit: "1k_chars", price_per_unit: 0.05, params: { prompt_field: "text", language: "Auto", max_chars: 2000 },
+      };
+
+      it("refuses longer text with 400 bad_request before any network call", async () => {
+        const fal = createFalProvider(realConfig(up));
+        await assert.rejects(fal.generateMedia({ model: qwenTts, job: "voice", prompt: "a".repeat(2001) }), (err) => {
+          assert.ok(err instanceof AppError);
+          assert.equal(err.status, 400);
+          assert.equal(err.code, "bad_request");
+          assert.equal(err.message, "This voice model accepts at most 2000 characters; shorten the text.");
+          assert.deepEqual(err.extra, { maxChars: 2000 });
+          return true;
+        });
+        const v4 = { ...M.tts, params: { prompt_field: "text", max_chars: 5000 } };
+        await assert.rejects(fal.generateMedia({ model: v4, job: "voice", prompt: "b".repeat(5001) }), /at most 5000 characters/);
+        assert.equal(up.requests.length, 0, "nothing may reach fal");
+      });
+
+      it("accepts text at the limit and strips catalog-only keys from the upstream body", async () => {
+        const fal = createFalProvider(realConfig(up));
+        const prompt = "c".repeat(2000);
+        const out = await fal.generateMedia({ model: qwenTts, job: "voice", prompt, params: { max_chars: 1, openrouter_provider: { only: ["x"] } } });
+        assert.equal(out.media[0].type, "audio");
+        assert.equal(out.units, 2);
+        assert.deepEqual(up.find("/fal/")[0].body, { language: "Auto", text: prompt });
+      });
+
+      it("counts Unicode characters, not UTF-16 units (an emoji is one character)", async () => {
+        const fal = createFalProvider(realConfig(up));
+        const small = { ...qwenTts, params: { prompt_field: "text", max_chars: 5 } };
+        await fal.generateMedia({ model: small, job: "voice", prompt: "🎉🎉🎉🎉🎉" }); // 10 UTF-16 units, 5 characters
+        await assert.rejects(fal.generateMedia({ model: small, job: "voice", prompt: "🎉🎉🎉🎉🎉🎉" }), { code: "bad_request" });
+      });
+
+      it("models without a limit, or with a malformed one, are not limited", async () => {
+        const fal = createFalProvider(realConfig(up));
+        // A numeric string (e.g. typed into an admin JSON edit) still counts: fal would refuse anyway.
+        const numericString = { ...qwenTts, params: { prompt_field: "text", max_chars: "5" } };
+        await assert.rejects(fal.generateMedia({ model: numericString, job: "voice", prompt: "d".repeat(6) }), { code: "bad_request" });
+        for (const max_chars of [undefined, 0, -1, "lots", 2.5, null]) {
+          const m = { ...qwenTts, params: { prompt_field: "text", max_chars } };
+          await fal.generateMedia({ model: m, job: "voice", prompt: "d".repeat(50) });
+          const submit = up.find("/fal/").filter((r) => r.method === "POST").at(-1);
+          assert.deepEqual(submit.body, { text: "d".repeat(50) }, String(max_chars));
+        }
+      });
+
+      it("every catalog-only key is stripped from every fal model's body (seed catalog)", async () => {
+        const { MODELS } = require("../src/seed/catalog");
+        const { buildInput } = require("../src/providers/fal");
+        for (const m of MODELS.filter((x) => x.gateway === "fal")) {
+          const body = buildInput(m, { aspect: "16:9", duration_s: 9 }, "hello");
+          for (const k of ["prompt_field", "max_chars", "openrouter_provider", "aspect", "duration_s", "reasoning"]) {
+            assert.ok(!(k in body), `${m.id}: ${k} leaked`);
+          }
+          assert.equal(body[m.params.prompt_field || "prompt"], "hello", m.id);
+        }
+      });
     });
 
     it("computes units per price_unit", async () => {
@@ -679,6 +889,17 @@ describe("gateway adapters against mock upstream", () => {
 
 describe("mock provider", () => {
   const mock = createMockProvider(loadConfig({ GODE_MOCK: "1" }));
+
+  it("applies a voice model's max_chars like fal does", async () => {
+    const tts = { id: "fal:x/tts", label: "TTS", jobs: ["voice"], params: { max_chars: 10 } };
+    await assert.rejects(mock.generateMedia({ model: tts, job: "voice", prompt: "x".repeat(11) }), {
+      status: 400,
+      code: "bad_request",
+      message: "This voice model accepts at most 10 characters; shorten the text.",
+    });
+    const ok = await mock.generateMedia({ model: tts, job: "voice", prompt: "x".repeat(10) });
+    assert.equal(ok.media[0].type, "audio");
+  });
 
   it("streams word by word, names the model, echoes the user text, ends with one usage event", async () => {
     const events = await collect(mock.streamChat({ model: M.opus, messages: USER_MSG, effort: "high" }));
@@ -831,6 +1052,34 @@ describe("mock-upstream helper (shared by other test files)", () => {
     await up.close();
   });
   beforeEach(() => up.reset());
+
+  it("images echo the requested output_format (png when none is asked)", async () => {
+    const post = (body) =>
+      fetch(`${up.urls.v1}/images/generations`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) }).then((r) => r.json());
+    assert.equal((await post({ model: "gpt-image-1-mini", prompt: "x", output_format: "webp" })).output_format, "webp");
+    assert.equal((await post({ model: "gpt-image-1-mini", prompt: "x" })).output_format, "png");
+  });
+
+  it("records closedEarly when the client hangs up mid-stream", async () => {
+    up.setScenario("chat_slow");
+    const ac = new AbortController();
+    const res = await fetch(`${up.urls.v1}/chat/completions`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ model: "m", stream: true, messages: [{ role: "user", content: "hi" }] }),
+      signal: ac.signal,
+    });
+    const reader = res.body.getReader();
+    await reader.read();
+    ac.abort();
+    await reader.read().catch(() => {});
+    const until = Date.now() + 2000;
+    while (!up.last("/chat/completions").closedEarly && Date.now() < until) await new Promise((r) => setTimeout(r, 10));
+    assert.equal(up.last("/chat/completions").closedEarly, true);
+    up.setScenario("ok");
+    await fetch(`${up.urls.v1}/chat/completions`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ model: "m", messages: [] }) }).then((r) => r.text());
+    assert.equal(up.last("/chat/completions").closedEarly, false, "a completed answer is not flagged");
+  });
 
   it("Presidio /analyze finds emails; /health is up; presidio_down answers 500", async () => {
     const text = "Mail ada@example.com or bob@test.org";

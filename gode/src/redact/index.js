@@ -443,6 +443,8 @@ function createRedactor(config, opts = {}) {
         language: privacy.presidioLanguage || "en",
         scoreThreshold: Number.isFinite(privacy.presidioScoreThreshold) ? privacy.presidioScoreThreshold : 0.5,
         timeoutMs: Number.isFinite(opts.presidioTimeoutMs) ? opts.presidioTimeoutMs : 1500,
+        // config.privacy.presidioEntities (PRESIDIO_ENTITIES); empty = the analyzer's default set.
+        entities: Array.isArray(privacy.presidioEntities) && privacy.presidioEntities.length ? privacy.presidioEntities : undefined,
         fetch: opts.fetch,
       })
     : null;
