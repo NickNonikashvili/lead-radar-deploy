@@ -1,0 +1,23 @@
+{
+  "name": "gode",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Gode phase 1: an AI router website that picks the best model per request, strips personal data, and bills credits.",
+  "main": "server.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "GODE_MOCK=1 ALLOW_DEV_TOPUP=1 node server.js",
+    "test": "node --test --test-concurrency=1 test/",
+    "learn": "node scripts/learn.js",
+    "bench": "node bench/run.js",
+    "export-bench-prompts": "node scripts/export-bench-prompts.js"
+  },
+  "engines": {
+    "node": ">=22.5"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2"
+  }
+}
