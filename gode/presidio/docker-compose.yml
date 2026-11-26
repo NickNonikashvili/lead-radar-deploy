@@ -1,0 +1,20 @@
+# Presidio Analyzer for Gode's redaction layer.
+#
+#   docker compose -f presidio/docker-compose.yml up -d
+#   PRESIDIO_ANALYZER_URL=http://localhost:5002   (in Gode's .env)
+#
+# Presidio moved from Microsoft to the Data Privacy Stack project; the images are now published on
+# GHCR. The old mcr.microsoft.com/presidio-* images are frozen and no longer updated, do not use them.
+# The image listens on 3000 inside the container and bundles spaCy en_core_web_lg (~1.5 GB RAM).
+services:
+  presidio-analyzer:
+    image: ghcr.io/data-privacy-stack/presidio-analyzer:2.2.366
+    restart: unless-stopped
+    ports:
+      # Prompts are personal data: publish on loopback only. If Gode runs on another host or in
+      # another container, put both on a private network instead of exposing this port publicly.
+      - "127.0.0.1:5002:3000"
+    environment:
+      WORKERS: "1"
+      LOG_LEVEL: "WARNING"
+    # The image ships its own HEALTHCHECK (GET http://localhost:3000/health).

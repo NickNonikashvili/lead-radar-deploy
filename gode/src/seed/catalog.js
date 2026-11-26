@@ -9,13 +9,476 @@ const MEDIA_JOBS = ["image", "video", "music", "voice"];
 const TIERS = ["quality", "balanced", "budget", "private"];
 
 // ---- filled from the Nov 2026 research (see docs/ARCHITECTURE.md "Seed catalog") ----
+// Sources, checked 2026-11-26: OpenRouter /api/v1/models + /endpoints/zdr (text prices, reasoning
+// objects, ZDR endpoints), OpenAI model pages + data-controls guide (direct OpenAI prices/retention),
+// fal model pages + queue OpenAPI schemas (media prices, input fields, defaults), Anthropic's
+// API-and-data-retention page. Prices are what WE pay; the margin is applied at billing time.
+//
+// Column conventions:
+// - price_in / price_out: USD per 1M tokens at the short-context rate (long-prompt surcharges, e.g.
+//   OpenAI's 2x above 272K input tokens, are not modelled; the provider-reported cost wins anyway).
+// - Media price_per_unit is the price AT THE DEFAULT params below (resolution, quality, length);
+//   changing a default param means changing the price too.
+// - region: where a request may be processed in the worst case across the hosts the gateway can
+//   pick ("cn" if OpenRouter may route to a Chinese vendor's own API). "self" = our GPUs. The
+//   EU-only setting trusts "eu", so only mark a model "eu" when every host is in the EU.
+// - zdr: true only when the research found zero-retention endpoints the gateway can be forced onto.
+//   Google models are false: OpenRouter's ZDR filter accepts Safety Retention endpoints and Vertex
+//   requires Safety Retention for Google models since 2026-10-18. OpenAI direct is false: ZDR needs
+//   OpenAI's prior approval. fal is false: it keeps queue payloads and serves public result URLs.
+// - retention_note is published verbatim on the public /privacy page: keep it factual.
+// - params.reasoning = { mandatory, efforts } mirrors OpenRouter's per-model reasoning object
+//   (src/providers/effort-map.js maps our effort onto it). Media params are the upstream request
+//   inputs merged into every call, so they may only contain valid upstream fields, plus
+//   `prompt_field` for fal models whose text input is not called "prompt".
 /** @type {Array<object>} */
-const MODELS = [];
+const MODELS = (() => {
+  const zdrVia = (hosts) =>
+    `OpenRouter lists zero-retention endpoints for this model (${hosts}); requests that need zero retention are restricted to them.`;
+  const GOOGLE_NOTE =
+    "Not zero-retention. Since 18 Oct 2026 Google requires Safety Retention for its models on Vertex AI " +
+    "(content flagged by safety systems can be kept for review), and Google's paid Gemini API keeps data for 55 days " +
+    "by default. Never used for private or strict-privacy requests.";
+  const CLAUDE_NOTE =
+    zdrVia("Amazon Bedrock, Google Vertex AI") +
+    " Anthropic's own API keeps no prompts by default for this model (only Claude Fable and Mythos models require " +
+    "30-day retention). Content flagged by safety systems may be kept.";
+  const QWEN_TAIL = " Other requests may be served by any OpenRouter provider for this model, possibly Alibaba Cloud.";
+  const MISTRAL_NOTE = zdrVia("Mistral AI, France") + " Mistral AI serves this model from the EU.";
+  const OPENAI_DIRECT =
+    "Sent directly to OpenAI. OpenAI does not train on API data but keeps prompts and outputs in abuse-monitoring " +
+    "logs for up to 30 days; zero retention is offered only to customers OpenAI approves.";
+  const FAL_TAIL =
+    "fal keeps the request and result in its queue for about 1 hour after completion (about 6 minutes for results " +
+    "of 10 KB or more) and serves the output from a public fal.media link until it expires. No zero-retention option is confirmed.";
+  const falOwn = () => `Runs on fal's own GPUs. ${FAL_TAIL}`;
+  // Partner endpoints (vendor namespace on fal) are served by, or forwarded to, the model maker.
+  const falPartner = (vendor, forwarded) =>
+    `fal ${forwarded ? "passes" : "may pass"} the prompt to ${vendor}, whose own retention policy also applies. ${FAL_TAIL}`;
+  const text = ["chat", "code", "action"];
+
+  return [
+    // ===== Text and code: OpenRouter =====
+    {
+      // Chat quality pick: #1 on Arena text (1526, preliminary).
+      id: "openrouter:google/gemini-4-carbon", label: "Gemini 4 Carbon", vendor: "Google", region: "us",
+      gateway: "openrouter", slug: "google/gemini-4-carbon", jobs: text,
+      price_in: 2, price_out: 10, price_unit: null, price_per_unit: null,
+      zdr: false, retention_note: GOOGLE_NOTE, open_weights: false, self_hosted: false,
+      supports_reasoning: true, context_length: 1048576,
+      params: { reasoning: { mandatory: true, efforts: ["high", "medium", "low"] } },
+    },
+    {
+      // Code quality pick: #1 on Arena WebDev (1810); #2 on Arena text (1507).
+      id: "openrouter:anthropic/claude-opus-5.5", label: "Claude Opus 5.5", vendor: "Anthropic", region: "us",
+      gateway: "openrouter", slug: "anthropic/claude-opus-5.5", jobs: text,
+      price_in: 4, price_out: 20, price_unit: null, price_per_unit: null,
+      zdr: true, retention_note: CLAUDE_NOTE, open_weights: false, self_hosted: false,
+      supports_reasoning: true, context_length: 1000000,
+      // Effort 'none' is a 400 on this endpoint, so it is mandatory with no 'none' level.
+      params: { reasoning: { mandatory: true, efforts: ["max", "xhigh", "high", "medium", "low"] } },
+    },
+    {
+      // Code balanced pick: half Opus' price.
+      id: "openrouter:anthropic/claude-sonnet-5.5", label: "Claude Sonnet 5.5", vendor: "Anthropic", region: "us",
+      gateway: "openrouter", slug: "anthropic/claude-sonnet-5.5", jobs: text,
+      price_in: 2, price_out: 10, price_unit: null, price_per_unit: null,
+      zdr: true, retention_note: CLAUDE_NOTE, open_weights: false, self_hosted: false,
+      supports_reasoning: true, context_length: 1000000,
+      params: { reasoning: { mandatory: true, efforts: ["max", "xhigh", "high", "medium", "low"] } },
+    },
+    {
+      // Alternate: cheap Anthropic option. Below 100K prompt tokens; longer prompts cost $0.50/$2.50.
+      id: "openrouter:anthropic/claude-haiku-5.5", label: "Claude Haiku 5.5", vendor: "Anthropic", region: "us",
+      gateway: "openrouter", slug: "anthropic/claude-haiku-5.5", jobs: text,
+      price_in: 0.1, price_out: 0.5, price_unit: null, price_per_unit: null,
+      zdr: true, retention_note: CLAUDE_NOTE, open_weights: false, self_hosted: false,
+      supports_reasoning: true, context_length: 1000000,
+      params: { reasoning: { mandatory: false, efforts: ["max", "xhigh", "high", "medium", "low", "none"] } },
+    },
+    {
+      // Chat budget pick and default classifier: cheapest mainstream model with json_schema output,
+      // reasoning that can be switched off, and many ZDR hosts. The stable slug is used on purpose:
+      // the newer -1017 snapshot costs 3x and has time-of-day pricing.
+      id: "openrouter:deepseek/deepseek-v4.1-flash", label: "DeepSeek V4.1 Flash", vendor: "DeepSeek", region: "cn",
+      gateway: "openrouter", slug: "deepseek/deepseek-v4.1-flash", jobs: text,
+      price_in: 0.0507, price_out: 0.2028, price_unit: null, price_per_unit: null,
+      zdr: true,
+      retention_note:
+        zdrVia("Together, Fireworks, DeepInfra, Nebius, Parasail, BaseTen and others") +
+        " Other requests may be served by any OpenRouter provider for this model, possibly DeepSeek's own platform in China.",
+      open_weights: true, self_hosted: false, supports_reasoning: true, context_length: 1048576,
+      params: { reasoning: { mandatory: false, efforts: ["max", "high", "low", "none"] } },
+    },
+    {
+      // Code budget pick: open-weight MoE (80B total / 3B active). No reasoning parameter.
+      id: "openrouter:qwen/qwen3-coder-next", label: "Qwen3-Coder-Next", vendor: "Alibaba", region: "cn",
+      gateway: "openrouter", slug: "qwen/qwen3-coder-next", jobs: ["code"],
+      price_in: 0.12, price_out: 0.8, price_unit: null, price_per_unit: null,
+      zdr: true, retention_note: zdrVia("Parasail only") + QWEN_TAIL,
+      open_weights: true, self_hosted: false, supports_reasoning: false, context_length: 262144,
+      params: {},
+    },
+    {
+      // Chat balanced pick: the doc's Europe-hosted model. Being ZDR + EU means strict-privacy and
+      // EU-only users fall back to a mid-tier model rather than the budget one.
+      id: "openrouter:mistralai/mistral-large-4-0", label: "Mistral Large 4", vendor: "Mistral AI", region: "eu",
+      gateway: "openrouter", slug: "mistralai/mistral-large-4-0", jobs: text,
+      price_in: 0.7, price_out: 2.1, price_unit: null, price_per_unit: null,
+      zdr: true, retention_note: MISTRAL_NOTE, open_weights: false, self_hosted: false,
+      supports_reasoning: true, context_length: 1048576,
+      // Only on/off: every effort above 'none' runs as 'high'.
+      params: { reasoning: { mandatory: false, efforts: ["high", "none"] } },
+    },
+    {
+      // Alternate: the doc's cheap Europe-hosted pick. Too small for code.
+      id: "openrouter:mistralai/ministral-3b-2512", label: "Ministral 3 3B", vendor: "Mistral AI", region: "eu",
+      gateway: "openrouter", slug: "mistralai/ministral-3b-2512", jobs: ["chat", "action"],
+      price_in: 0.1, price_out: 0.1, price_unit: null, price_per_unit: null,
+      zdr: true, retention_note: MISTRAL_NOTE, open_weights: true, self_hosted: false,
+      supports_reasoning: false, context_length: 131072,
+      params: {},
+    },
+    {
+      // Alternate: newest Gemini Flash-family model (target of ~google/gemini-flash-latest).
+      id: "openrouter:google/gemini-4-hydrogen", label: "Gemini 4 Hydrogen", vendor: "Google", region: "us",
+      gateway: "openrouter", slug: "google/gemini-4-hydrogen", jobs: text,
+      price_in: 1.5, price_out: 7.5, price_unit: null, price_per_unit: null,
+      zdr: false, retention_note: GOOGLE_NOTE, open_weights: false, self_hosted: false,
+      supports_reasoning: true, context_length: 1048576,
+      params: { reasoning: { mandatory: true, efforts: ["xhigh", "high", "medium", "low"] } },
+    },
+    {
+      // Alternate: Apache-2.0 open weights served by many independent hosts.
+      id: "openrouter:openai/gpt-oss-120b", label: "gpt-oss-120b", vendor: "OpenAI", region: "us",
+      gateway: "openrouter", slug: "openai/gpt-oss-120b", jobs: text,
+      price_in: 0.05, price_out: 0.25, price_unit: null, price_per_unit: null,
+      zdr: true,
+      retention_note:
+        zdrVia("Groq, Cerebras, Amazon Bedrock, Together, Fireworks, DeepInfra and others") +
+        " Open-weight model: OpenAI itself does not serve it.",
+      open_weights: true, self_hosted: false, supports_reasoning: true, context_length: 131072,
+      params: { reasoning: { mandatory: true, efforts: ["high", "medium", "low"] } },
+    },
+    {
+      // Alternate: the same open weights as our self-hosted model, for comparison by the learner.
+      // The catalog lists 1,024,000 tokens but the top provider serves 262,144, so use that.
+      id: "openrouter:qwen/qwen3.8-27b", label: "Qwen3.8 27B", vendor: "Alibaba", region: "cn",
+      gateway: "openrouter", slug: "qwen/qwen3.8-27b", jobs: text,
+      price_in: 0.06, price_out: 1.96, price_unit: null, price_per_unit: null,
+      zdr: true, retention_note: zdrVia("Cerebras, DeepInfra, Nebius, Parasail, CoreWeave and others") + QWEN_TAIL,
+      open_weights: true, self_hosted: false, supports_reasoning: true, context_length: 262144,
+      params: { reasoning: { mandatory: false, efforts: ["xhigh", "medium", "low", "none"] } },
+    },
+
+    // ===== Text and code: direct OpenAI (lets an OpenAI-only deployment work) =====
+    {
+      // Alternate: #2 on Arena WebDev (GPT-6 Astra, 1773); 6.2 is the newer, cheaper point release.
+      id: "openai:gpt-6.2-astra", label: "GPT-6.2 Astra", vendor: "OpenAI", region: "us",
+      gateway: "openai", slug: "gpt-6.2-astra", jobs: text,
+      price_in: 8, price_out: 40, price_unit: null, price_per_unit: null,
+      zdr: false, retention_note: OPENAI_DIRECT, open_weights: false, self_hosted: false,
+      supports_reasoning: true, context_length: 1050000,
+      params: { reasoning: { mandatory: true, efforts: ["max", "xhigh", "high", "medium", "low"] } },
+    },
+    {
+      // Alternate: OpenAI's everyday model. Rejects effort 'none'.
+      id: "openai:gpt-6.2-sol", label: "GPT-6.2 Sol", vendor: "OpenAI", region: "us",
+      gateway: "openai", slug: "gpt-6.2-sol", jobs: text,
+      price_in: 2, price_out: 10, price_unit: null, price_per_unit: null,
+      zdr: false, retention_note: OPENAI_DIRECT, open_weights: false, self_hosted: false,
+      supports_reasoning: true, context_length: 1050000,
+      params: { reasoning: { mandatory: true, efforts: ["max", "xhigh", "high", "medium", "low"] } },
+    },
+    {
+      // Alternate: OpenAI mid tier; 'none' disables reasoning.
+      id: "openai:gpt-6.1-terra", label: "GPT-6.1 Terra", vendor: "OpenAI", region: "us",
+      gateway: "openai", slug: "gpt-6.1-terra", jobs: text,
+      price_in: 1, price_out: 5, price_unit: null, price_per_unit: null,
+      zdr: false, retention_note: OPENAI_DIRECT, open_weights: false, self_hosted: false,
+      supports_reasoning: true, context_length: 1050000,
+      params: { reasoning: { mandatory: false, efforts: ["max", "xhigh", "high", "medium", "low", "none"] } },
+    },
+    {
+      // Alternate and classifier fallback: OpenAI's cheapest current model with structured outputs.
+      // Preferred over gpt-5.4-nano, which OpenAI lists as deprecated and which costs more.
+      id: "openai:gpt-6-luna", label: "GPT-6 Luna", vendor: "OpenAI", region: "us",
+      gateway: "openai", slug: "gpt-6-luna", jobs: text,
+      price_in: 0.1, price_out: 0.5, price_unit: null, price_per_unit: null,
+      zdr: false, retention_note: OPENAI_DIRECT, open_weights: false, self_hosted: false,
+      supports_reasoning: true, context_length: 1050000,
+      params: { reasoning: { mandatory: false, efforts: ["max", "xhigh", "high", "medium", "low", "none"] } },
+    },
+
+    // ===== Private tier: self-hosted open weights =====
+    {
+      // Text private pick. The slug is the vLLM --served-model-name. Prices are our GPU cost, not a
+      // list price: one rented H100 (~$2.50/h) running the 27B dense model in FP8 decodes roughly
+      // 4M output tokens/h at moderate batching (~$0.60/1M); prefill is ~10x cheaper but idle time
+      // is billed too, hence $0.20 in. Revisit once real utilisation is known.
+      id: "selfhosted:qwen3.8-27b", label: "Qwen3.8 27B (self-hosted)", vendor: "Alibaba", region: "self",
+      gateway: "selfhosted", slug: "qwen3.8-27b", jobs: text,
+      price_in: 0.2, price_out: 0.6, price_unit: null, price_per_unit: null,
+      zdr: true,
+      retention_note: "Runs on GPUs Gode controls. Prompts and answers never leave Gode's infrastructure, so no AI company sees them.",
+      open_weights: true, self_hosted: true, supports_reasoning: true, context_length: 131072,
+      params: { reasoning: { mandatory: false, efforts: ["high", "medium", "low", "none"] } },
+    },
+
+    // ===== Image =====
+    {
+      // Image quality pick: #1 on Arena text-to-image (1414). Billed per token: ~1,756 output
+      // tokens x $30/1M for a 1024x1024 image at quality "high" = ~$0.053.
+      id: "openai:gpt-image-2.6-sunburst", label: "GPT-Image-2.6 Sunburst", vendor: "OpenAI", region: "us",
+      gateway: "openai", slug: "gpt-image-2.6-sunburst", jobs: ["image"],
+      price_in: null, price_out: null, price_unit: "image", price_per_unit: 0.053,
+      zdr: false,
+      retention_note: OPENAI_DIRECT + " GPT-Image-2.6 is not on OpenAI's list of zero-retention-compatible image models.",
+      open_weights: false, self_hosted: false, supports_reasoning: false, context_length: null,
+      params: { size: "1024x1024", quality: "high" },
+    },
+    {
+      // Alternate: same token rates as Sunburst but ~5x faster. "medium" at 1024x1024 = ~$0.043.
+      id: "openai:gpt-image-2.6-flare", label: "GPT-Image-2.6 Flare", vendor: "OpenAI", region: "us",
+      gateway: "openai", slug: "gpt-image-2.6-flare", jobs: ["image"],
+      price_in: null, price_out: null, price_unit: "image", price_per_unit: 0.043,
+      zdr: false,
+      retention_note: OPENAI_DIRECT + " GPT-Image-2.6 is not on OpenAI's list of zero-retention-compatible image models.",
+      open_weights: false, self_hosted: false, supports_reasoning: false, context_length: null,
+      params: { size: "1024x1024", quality: "medium" },
+    },
+    {
+      // Alternate: cheapest direct-OpenAI image model (official $0.011 per 1024x1024 "medium" image).
+      // OpenAI marks it deprecated; kept so an OpenAI-only deployment has a budget image option.
+      id: "openai:gpt-image-1-mini", label: "GPT Image 1 mini", vendor: "OpenAI", region: "us",
+      gateway: "openai", slug: "gpt-image-1-mini", jobs: ["image"],
+      price_in: null, price_out: null, price_unit: "image", price_per_unit: 0.011,
+      zdr: false, retention_note: OPENAI_DIRECT, open_weights: false, self_hosted: false,
+      supports_reasoning: false, context_length: null,
+      params: { size: "1024x1024", quality: "medium" },
+    },
+    {
+      // Image balanced pick: the doc's cheaper pick (Qwen-Image scores 86% of the top model); fal has
+      // no Qwen-Image-2.1, Qwen Image 3 is the newest. $0.04 at 1K (square_hd), $0.075 at 2K.
+      id: "fal:alibaba/qwen-image-3/text-to-image", label: "Qwen Image 3", vendor: "Alibaba", region: "cn",
+      gateway: "fal", slug: "alibaba/qwen-image-3/text-to-image", jobs: ["image"],
+      price_in: null, price_out: null, price_unit: "image", price_per_unit: 0.04,
+      zdr: false, retention_note: falPartner("Alibaba", false), open_weights: false, self_hosted: false,
+      supports_reasoning: false, context_length: null,
+      params: { image_size: "square_hd", num_images: 1 },
+    },
+    {
+      // Image budget pick (and private fallback): newest FLUX small model, $0.009 per 1K image.
+      id: "fal:blackforestlabs/flux-3/klein/text-to-image", label: "FLUX.3 Klein", vendor: "Black Forest Labs", region: "us",
+      gateway: "fal", slug: "blackforestlabs/flux-3/klein/text-to-image", jobs: ["image"],
+      price_in: null, price_out: null, price_unit: "image", price_per_unit: 0.009,
+      zdr: false, retention_note: falPartner("Black Forest Labs", false), open_weights: false, self_hosted: false,
+      supports_reasoning: false, context_length: null,
+      params: { image_size: "square_hd", num_images: 1 },
+    },
+    {
+      // Alternate: cheapest fast option, billed per megapixel (square_hd = 1024x1024 = ~1.05 MP).
+      id: "fal:fal-ai/flux/schnell", label: "FLUX.1 schnell", vendor: "Black Forest Labs", region: "us",
+      gateway: "fal", slug: "fal-ai/flux/schnell", jobs: ["image"],
+      price_in: null, price_out: null, price_unit: "megapixel", price_per_unit: 0.003,
+      zdr: false, retention_note: falOwn(), open_weights: true, self_hosted: false,
+      supports_reasoning: false, context_length: null,
+      params: { image_size: "square_hd", num_images: 1 },
+    },
+
+    // ===== Video (5 s / 4 s at 720p by default so a clip's cost is bounded) =====
+    {
+      // Video quality pick: #1 on Artificial Analysis text-to-video. $0.10/s at 720p (1080p is $0.20/s
+      // and is fal's default, so resolution must stay explicit).
+      id: "fal:alibaba/wan-3.0/text-to-video", label: "Wan 3.0", vendor: "Alibaba", region: "cn",
+      gateway: "fal", slug: "alibaba/wan-3.0/text-to-video", jobs: ["video"],
+      price_in: null, price_out: null, price_unit: "second", price_per_unit: 0.1,
+      zdr: false, retention_note: falPartner("Alibaba", false), open_weights: false, self_hosted: false,
+      supports_reasoning: false, context_length: null,
+      params: { resolution: "720p", duration: 5, aspect_ratio: "16:9", audio: true },
+    },
+    {
+      // Video balanced pick: $0.05/s at 720p with audio. Veo takes duration as "4s" | "6s" | "8s".
+      id: "fal:fal-ai/veo3.1/lite", label: "Veo 3.1 Lite", vendor: "Google", region: "us",
+      gateway: "fal", slug: "fal-ai/veo3.1/lite", jobs: ["video"],
+      price_in: null, price_out: null, price_unit: "second", price_per_unit: 0.05,
+      zdr: false, retention_note: falPartner("Google", true), open_weights: false, self_hosted: false,
+      supports_reasoning: false, context_length: null,
+      params: { resolution: "720p", duration: "4s", aspect_ratio: "16:9", generate_audio: true },
+    },
+    {
+      // Alternate: the doc's premium video option, $0.40/s at 720p with audio.
+      id: "fal:fal-ai/veo3.1", label: "Veo 3.1", vendor: "Google", region: "us",
+      gateway: "fal", slug: "fal-ai/veo3.1", jobs: ["video"],
+      price_in: null, price_out: null, price_unit: "second", price_per_unit: 0.4,
+      zdr: false, retention_note: falPartner("Google", true), open_weights: false, self_hosted: false,
+      supports_reasoning: false, context_length: null,
+      params: { resolution: "720p", duration: "4s", aspect_ratio: "16:9", generate_audio: true },
+    },
+    {
+      // Video budget pick (and private fallback): $0.025 per ~3 s clip at 720p. fal lists the whole
+      // Wan 2.2 family as retiring on 2027-01-04: re-route this cell before then.
+      id: "fal:fal-ai/wan/v2.2-5b/text-to-video/fast-wan", label: "Wan 2.2 Fast", vendor: "Alibaba", region: "us",
+      gateway: "fal", slug: "fal-ai/wan/v2.2-5b/text-to-video/fast-wan", jobs: ["video"],
+      price_in: null, price_out: null, price_unit: "request", price_per_unit: 0.025,
+      zdr: false, retention_note: falOwn(), open_weights: true, self_hosted: false,
+      supports_reasoning: false, context_length: null,
+      params: { resolution: "720p", aspect_ratio: "16:9" },
+    },
+    {
+      // Alternate: longer-lived low-cost option, $0.06/s at 1080p (its lowest resolution).
+      id: "fal:fal-ai/ltx-2.3/text-to-video/fast", label: "LTX-2.3 Fast", vendor: "Lightricks", region: "us",
+      gateway: "fal", slug: "fal-ai/ltx-2.3/text-to-video/fast", jobs: ["video"],
+      price_in: null, price_out: null, price_unit: "second", price_per_unit: 0.06,
+      zdr: false, retention_note: falOwn(), open_weights: false, self_hosted: false,
+      supports_reasoning: false, context_length: null,
+      params: { resolution: "1080p", duration: 6, aspect_ratio: "16:9" },
+    },
+
+    // ===== Music =====
+    {
+      // Music quality pick: official API and licensed training data (Suno, the top pick, is only
+      // reachable via resellers and faces label lawsuits). $0.60 per started minute; 30 s = 1 minute.
+      id: "fal:elevenlabs/music/v2.5", label: "ElevenLabs Music v2.5", vendor: "ElevenLabs", region: "us",
+      gateway: "fal", slug: "elevenlabs/music/v2.5", jobs: ["music"],
+      price_in: null, price_out: null, price_unit: "minute", price_per_unit: 0.6,
+      zdr: false, retention_note: falPartner("ElevenLabs", true), open_weights: false, self_hosted: false,
+      supports_reasoning: false, context_length: null,
+      params: { music_length_ms: 30000 },
+    },
+    {
+      // Music balanced pick: full songs with vocals, $0.10 per generation whatever the length.
+      id: "fal:google/lyria-3.5", label: "Lyria 3.5", vendor: "Google", region: "us",
+      gateway: "fal", slug: "google/lyria-3.5", jobs: ["music"],
+      price_in: null, price_out: null, price_unit: "request", price_per_unit: 0.1,
+      zdr: false, retention_note: falPartner("Google", true), open_weights: false, self_hosted: false,
+      supports_reasoning: false, context_length: null,
+      params: {},
+    },
+    {
+      // Music budget pick (and private fallback): instrumental only, $0.0217 per clip.
+      id: "fal:fal-ai/stable-audio-3/small/music/text-to-audio", label: "Stable Audio 3 Small", vendor: "Stability AI",
+      region: "us", gateway: "fal", slug: "fal-ai/stable-audio-3/small/music/text-to-audio", jobs: ["music"],
+      price_in: null, price_out: null, price_unit: "request", price_per_unit: 0.0217,
+      zdr: false, retention_note: falOwn(), open_weights: false, self_hosted: false,
+      supports_reasoning: false, context_length: null,
+      params: { duration: 30 },
+    },
+    {
+      // Alternate: songs with vocals, $0.15 per generation.
+      id: "fal:fal-ai/minimax-music/v2.6", label: "MiniMax Music 2.6", vendor: "MiniMax", region: "cn",
+      gateway: "fal", slug: "fal-ai/minimax-music/v2.6", jobs: ["music"],
+      price_in: null, price_out: null, price_unit: "request", price_per_unit: 0.15,
+      zdr: false, retention_note: falPartner("MiniMax", false), open_weights: false, self_hosted: false,
+      supports_reasoning: false, context_length: null,
+      params: {},
+    },
+
+    // ===== Voice (text to speech; prices per 1,000 input characters) =====
+    {
+      // Voice quality pick: ElevenLabs tops Voice Arena's non-English boards; v4 is newer and cheaper
+      // than v3. Simba 3.2 (#1 overall) is not on fal. Max 5,000 characters per request.
+      id: "fal:elevenlabs/tts/eleven-v4", label: "ElevenLabs v4", vendor: "ElevenLabs", region: "us",
+      gateway: "fal", slug: "elevenlabs/tts/eleven-v4", jobs: ["voice"],
+      price_in: null, price_out: null, price_unit: "1k_chars", price_per_unit: 0.08,
+      zdr: false, retention_note: falPartner("ElevenLabs", true), open_weights: false, self_hosted: false,
+      supports_reasoning: false, context_length: null,
+      params: { prompt_field: "text" },
+    },
+    {
+      // Voice balanced pick: Qwen TTS is #2 on the Artificial Analysis speech arena (1227, two points
+      // behind Simba). Max 2,000 characters per request.
+      id: "fal:alibaba/qwen-audio-3-tts", label: "Qwen Audio 3 TTS", vendor: "Alibaba", region: "cn",
+      gateway: "fal", slug: "alibaba/qwen-audio-3-tts", jobs: ["voice"],
+      price_in: null, price_out: null, price_unit: "1k_chars", price_per_unit: 0.05,
+      zdr: false, retention_note: falPartner("Alibaba", false), open_weights: false, self_hosted: false,
+      supports_reasoning: false, context_length: null,
+      params: { prompt_field: "text", language: "Auto" },
+    },
+    {
+      // Voice budget pick (and private fallback): low-latency ElevenLabs, $0.04 per 1,000 characters.
+      id: "fal:elevenlabs/tts/eleven-v4-turbo", label: "ElevenLabs v4 Turbo", vendor: "ElevenLabs", region: "us",
+      gateway: "fal", slug: "elevenlabs/tts/eleven-v4-turbo", jobs: ["voice"],
+      price_in: null, price_out: null, price_unit: "1k_chars", price_per_unit: 0.04,
+      zdr: false, retention_note: falPartner("ElevenLabs", true), open_weights: false, self_hosted: false,
+      supports_reasoning: false, context_length: null,
+      params: { prompt_field: "text" },
+    },
+    {
+      // Alternate: previous ElevenLabs generation.
+      id: "fal:fal-ai/elevenlabs/tts/eleven-v3", label: "ElevenLabs v3", vendor: "ElevenLabs", region: "us",
+      gateway: "fal", slug: "fal-ai/elevenlabs/tts/eleven-v3", jobs: ["voice"],
+      price_in: null, price_out: null, price_unit: "1k_chars", price_per_unit: 0.1,
+      zdr: false, retention_note: falPartner("ElevenLabs", true), open_weights: false, self_hosted: false,
+      supports_reasoning: false, context_length: null,
+      params: { prompt_field: "text" },
+    },
+    {
+      // Alternate: expressive TTS with inline tags. Its text input is called "prompt" (the default).
+      id: "fal:fal-ai/minimax/speech-2.8-hd", label: "MiniMax Speech 2.8 HD", vendor: "MiniMax", region: "cn",
+      gateway: "fal", slug: "fal-ai/minimax/speech-2.8-hd", jobs: ["voice"],
+      price_in: null, price_out: null, price_unit: "1k_chars", price_per_unit: 0.1,
+      zdr: false, retention_note: falPartner("MiniMax", true), open_weights: false, self_hosted: false,
+      supports_reasoning: false, context_length: null,
+      params: {},
+    },
+  ];
+})();
+
 /** @type {Array<{job:string,tier:string,model_id:string,effort_override?:string|null}>} */
-const ROUTES = [];
-const CLASSIFIER_MODEL_ID = "";
+const ROUTES = (() => {
+  // job -> [quality, balanced, budget, private]. No media model is honestly zero-retention, so each
+  // media job's private cell repeats its budget pick (the pipeline sends media prompts redacted).
+  const picks = {
+    chat: [
+      "openrouter:google/gemini-4-carbon",
+      "openrouter:mistralai/mistral-large-4-0",
+      "openrouter:deepseek/deepseek-v4.1-flash",
+      "selfhosted:qwen3.8-27b",
+    ],
+    code: [
+      "openrouter:anthropic/claude-opus-5.5",
+      "openrouter:anthropic/claude-sonnet-5.5",
+      "openrouter:qwen/qwen3-coder-next",
+      "selfhosted:qwen3.8-27b",
+    ],
+    image: [
+      "openai:gpt-image-2.6-sunburst",
+      "fal:alibaba/qwen-image-3/text-to-image",
+      "fal:blackforestlabs/flux-3/klein/text-to-image",
+      "fal:blackforestlabs/flux-3/klein/text-to-image",
+    ],
+    video: [
+      "fal:alibaba/wan-3.0/text-to-video",
+      "fal:fal-ai/veo3.1/lite",
+      "fal:fal-ai/wan/v2.2-5b/text-to-video/fast-wan",
+      "fal:fal-ai/wan/v2.2-5b/text-to-video/fast-wan",
+    ],
+    music: [
+      "fal:elevenlabs/music/v2.5",
+      "fal:google/lyria-3.5",
+      "fal:fal-ai/stable-audio-3/small/music/text-to-audio",
+      "fal:fal-ai/stable-audio-3/small/music/text-to-audio",
+    ],
+    voice: [
+      "fal:elevenlabs/tts/eleven-v4",
+      "fal:alibaba/qwen-audio-3-tts",
+      "fal:elevenlabs/tts/eleven-v4-turbo",
+      "fal:elevenlabs/tts/eleven-v4-turbo",
+    ],
+  };
+  // Phase 1 answers `action` with the chat route (see "Core vocabulary").
+  picks.action = picks.chat;
+  return JOBS.flatMap((job) =>
+    TIERS.map((tier, i) => ({ job, tier, model_id: picks[job][i], effort_override: null }))
+  );
+})();
+
+// Cheapest model with json_schema output whose reasoning can be switched off.
+const CLASSIFIER_MODEL_ID = "openrouter:deepseek/deepseek-v4.1-flash";
 /** Ordered classifier fallbacks; the classifier uses the first enabled + available one. */
-const CLASSIFIER_MODEL_CANDIDATES = [];
+// The direct-OpenAI fallback keeps classification working on a deployment with only an OpenAI key.
+const CLASSIFIER_MODEL_CANDIDATES = [CLASSIFIER_MODEL_ID, "openai:gpt-6-luna"];
 
 /** Convert a `models` DB row into the JS Model shape used everywhere. */
 function rowToModel(row) {

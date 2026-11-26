@@ -8,10 +8,11 @@
   "scripts": {
     "start": "node server.js",
     "dev": "GODE_MOCK=1 ALLOW_DEV_TOPUP=1 node server.js",
-    "test": "node --test --test-concurrency=1 test/",
+    "test": "node --test --test-concurrency=1 \"test/*.test.js\"",
     "learn": "node scripts/learn.js",
     "bench": "node bench/run.js",
-    "export-bench-prompts": "node scripts/export-bench-prompts.js"
+    "export-bench-prompts": "node scripts/export-bench-prompts.js",
+    "seed": "node scripts/seed.js"
   },
   "engines": {
     "node": ">=22.5"

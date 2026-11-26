@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Privacy · Gode</title>
+    <meta name="description" content="What Gode can honestly promise about your data: providers never learn who you are, personal details are removed before anything leaves, zero retention where offered, and the one thing we can't promise." />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="theme-color" content="#f7f7f4" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0f1110" media="(prefers-color-scheme: dark)" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/styles.css" />
+    <script src="/vendor/react.production.min.js" defer></script>
+    <script src="/vendor/react-dom.production.min.js" defer></script>
+    <script src="/app.js" defer></script>
+  </head>
+  <body data-page="privacy">
+    <!-- app.js renders the same page (PrivacyContent) over this and adds the live provider table.
+         This static copy keeps the promise readable without JavaScript: keep it in sync with
+         PROMISES in app.js. -->
+    <div id="root">
+      <div class="public-page">
+        <header class="public-bar">
+          <a href="/" class="brand-link" aria-label="Gode home">
+            <span class="brand">
+              <svg class="brand-mark" width="28" height="28" viewBox="0 0 32 32" aria-hidden="true" focusable="false">
+                <rect class="brand-mark-bg" width="32" height="32" rx="9" />
+                <path class="brand-mark-fg" d="M21.4 11.4A7 7 0 1 0 23 16h-6.2" fill="none" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+              <span class="brand-name">Gode</span>
+            </span>
+          </a>
+          <a href="/" class="btn btn-primary btn-sm">Open Gode</a>
+        </header>
+        <main class="public-main">
+          <div class="privacy">
+            <header class="page-head privacy-head">
+              <h1>What we can honestly promise</h1>
+              <p>Gode sends your requests to the best AI model for each job. Here is exactly what happens to your data on the way, and the one thing we can’t promise.</p>
+            </header>
+            <ul class="promise-grid">
+              <li class="promise">
+                <h2>AI companies never learn who you are</h2>
+                <p>Every request goes out under Gode’s own account. We never send your name, email or account details to a model provider, so they see “Gode”, not you.</p>
+              </li>
+              <li class="promise">
+                <h2>Personal details are removed before anything leaves</h2>
+                <p>Names, email addresses, phone numbers, card and bank numbers, ID numbers and passwords are swapped for placeholders like [PERSON_1] before a request is sent. The real values are put back into the answer on our side, and answers are checked so a model can’t echo sensitive data back.</p>
+              </li>
+              <li class="promise">
+                <h2>Zero data retention where it’s offered</h2>
+                <p>Some providers promise not to keep your request at all. Each model below is marked. Turn on Strict privacy in Settings and Gode only uses zero-retention or self-hosted models.</p>
+              </li>
+              <li class="promise">
+                <h2>Sensitive requests stay on our servers</h2>
+                <p>When a request looks private, such as money, health, passwords or legal matters, Gode sends it to an open-weight model on servers we control, so it never leaves. If that model is unavailable, we only fall back to a zero-retention model, after removing your personal details.</p>
+              </li>
+              <li class="promise">
+                <h2>Your chats are encrypted</h2>
+                <p>Conversations are stored encrypted with a key that belongs to your account. Our logs never contain the text of your requests, only which model answered, what it cost and how many details were hidden.</p>
+              </li>
+              <li class="promise">
+                <h2>Delete everything, any time</h2>
+                <p>One button in Settings permanently deletes your account, every chat and your request history.</p>
+              </li>
+              <li class="promise">
+                <h2>See where every request went</h2>
+                <p>Your transparency log in Settings lists the model, provider, retention and cost of every request you have made.</p>
+              </li>
+            </ul>
+            <div class="notice notice-warn">
+              <div class="notice-body">
+                <strong class="notice-title">What we can’t promise</strong>
+                <div class="notice-text">Unless a request runs on a model we host ourselves, the AI company that runs the model still sees the text of that request, with your personal details removed. Zero retention means they don’t keep it, not that they never see it.</div>
+              </div>
+            </div>
+            <noscript>
+              <p class="muted small">The live list of providers, their regions and what they keep needs JavaScript.</p>
+            </noscript>
+          </div>
+        </main>
+      </div>
+    </div>
+  </body>
+</html>

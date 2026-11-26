@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Gode</title>
+    <meta name="description" content="Gode picks the best AI model for every job (chat, code, images, video, music and voice), hides your personal details before anything leaves, and shows what every answer cost." />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="theme-color" content="#f7f7f4" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0f1110" media="(prefers-color-scheme: dark)" />
+    <meta name="referrer" content="strict-origin-when-cross-origin" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/styles.css" />
+    <!-- React 18 UMD, vendored (no CDN). app.js is plain JS on React.createElement: see its header
+         for why it is not run through Babel standalone under the server's CSP. -->
+    <script src="/vendor/react.production.min.js" defer></script>
+    <script src="/vendor/react-dom.production.min.js" defer></script>
+    <script src="/app.js" defer></script>
+  </head>
+  <body>
+    <div id="root">
+      <div class="boot" aria-busy="true">
+        <svg class="brand-mark" width="40" height="40" viewBox="0 0 32 32" aria-hidden="true" focusable="false">
+          <rect class="brand-mark-bg" width="32" height="32" rx="9" />
+          <path class="brand-mark-fg" d="M21.4 11.4A7 7 0 1 0 23 16h-6.2" fill="none" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+        <span class="spinner" style="width: 18px; height: 18px" role="status" aria-label="Loading Gode"></span>
+      </div>
+    </div>
+    <noscript>
+      <p style="max-width: 32rem; margin: 2rem auto; padding: 0 1rem; text-align: center">
+        Gode needs JavaScript to run. Our privacy promise is readable without it at <a href="/privacy.html">/privacy.html</a>.
+      </p>
+    </noscript>
+  </body>
+</html>
