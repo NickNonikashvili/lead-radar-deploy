@@ -73,6 +73,8 @@ use it.
 MODELS: ModelSeed[]          // same shape as above (jobs/params as JS values)
 ROUTES: { job, tier, model_id, effort_override?: string|null }[]  // every job x tier filled
 CLASSIFIER_MODEL_ID: string  // default classifier model id (cheap, fast, JSON-capable)
+CLASSIFIER_MODEL_CANDIDATES: string[]  // ordered fallbacks (e.g. OpenRouter DeepSeek Flash, then
+                                       // direct-OpenAI GPT-6 Luna); classifier uses the first available
 seedCatalog(db, { force = false } = {})  // inserts models/routes if the models table is empty
                                           // (force: upsert models, overwrite routes with source='seed')
 rowToModel(row) -> Model
@@ -163,7 +165,8 @@ Provider = {
   //   { type: 'delta', text }
   //   { type: 'usage', inputTokens, outputTokens, reasoningTokens, costUsd /* number|null: provider-reported */,
   //     upstreamProvider /* string|null */, modelReported /* string|null */ }   (exactly once, last)
-  streamChat({ model, messages, effort, maxTokens, zdr /* bool: require ZDR endpoints */, signal }),
+  streamChat({ model, messages, effort, maxTokens, zdr /* bool: require ZDR endpoints */,
+               sessionId /* opaque per-conversation id or undefined */, signal }),
 
   // JSON completion used by the classifier and the benchmark judge.
   completeJSON({ model, system, user, maxTokens = 300, signal })
@@ -177,18 +180,30 @@ Provider = {
 ```
 - `openaiCompatible.js`: shared OpenAI-style `/chat/completions` streaming client
   (SSE parse, `[DONE]`, keepalive comments, usage chunk) used by openrouter, openai, selfhosted.
-- `openrouter.js`: base `config.gateways.openrouter.baseUrl`; headers `Authorization: Bearer`,
-  `HTTP-Referer: config.publicUrl`, `X-Title: Gode`; body adds `reasoning` (effort mapping per
-  OpenRouter docs, none → disabled/minimal), `usage: { include: true }`, and when `zdr`:
-  `provider: { zdr: true, data_collection: 'deny' }`. Never send end-user identifiers (pooled
-  identity): no `user` field.
+- `openrouter.js`: base `config.gateways.openrouter.baseUrl`; headers `Authorization: Bearer <key>`,
+  `HTTP-Referer: config.publicUrl`, `X-OpenRouter-Title: Gode` (and legacy `X-Title: Gode`). Body:
+  `model: model.slug`, `messages`, `stream: true`, `max_completion_tokens`, `reasoning: { effort }`
+  (only when `model.supports_reasoning`; see "Reasoning effort mapping"), `session_id` when given
+  (opaque per-conversation id, keeps OpenRouter sticky to one provider for prompt caching), and when
+  `zdr`: `provider: { zdr: true, data_collection: 'deny' }`. Usage (incl. `usage.cost` in USD and
+  `completion_tokens_details.reasoning_tokens`) always arrives in a final chunk before `[DONE]`.
+  Skip SSE comment lines (`: OPENROUTER PROCESSING`). A 200 stream whose chunk carries a top-level
+  `error` is a failure → throw upstream_error. `upstreamProvider` = chunk.provider if present.
+  Never send end-user identifiers (pooled identity): no `user` field.
 - `openai.js`: direct OpenAI. Chat via chat completions (`max_completion_tokens`,
   `reasoning_effort`, `stream_options: { include_usage: true }`). Image generation via
   `POST /images/generations` (gpt-image models; returns b64 → data URL). Never send `user`.
 - `selfhosted.js`: OpenAI-compatible server (vLLM/Ollama/TGI) at `config.gateways.selfhosted.baseUrl`.
   Configured only when the base URL is set.
-- `fal.js`: queue API: `POST {queueBaseUrl}/{endpoint_id}` (`Authorization: Key <FAL_KEY>`) →
-  poll status URL until COMPLETED (emit onProgress) → GET response URL → extract media URL(s).
+- `fal.js`: queue API: `POST {queueBaseUrl}/{endpoint_id}` (`Authorization: Key <FAL_KEY>`), body =
+  `{ ...model.params, ...params, prompt }` (TTS models take `text` instead of `prompt`: use
+  `model.params.prompt_field || 'prompt'`) → use the returned `status_url` / `response_url` (they
+  contain only owner/app, not the sub-path) → poll status (202 while IN_QUEUE/IN_PROGRESS, 200
+  COMPLETED; emit onProgress with queue_position) → GET response_url → extract media URL(s) from
+  `images[].url`, `image.url`, `video.url`, `audio.url`, `audio_file.url` (whichever exists). Errors
+  can appear in the result body (`detail`/`error`) → upstream_error. No per-request cost is
+  returned: compute from `price_unit` (image count, video seconds = params.duration, 1k_chars of
+  the text, request = 1, minute = ceil(seconds/60)).
   Units for cost: images count, video seconds, audio seconds/songs, depending on `price_unit`.
 - `mock.js`: deterministic, offline. streamChat streams a short answer word-by-word (~15 ms per
   word) that names the model label and echoes the first part of the last user message (so
@@ -197,6 +212,16 @@ Provider = {
   system prompt) and returns `{}` otherwise. generateMedia returns an SVG data URL for image and
   video (`type: 'image'`), a short WAV data URL for voice/music (`type: 'audio'`), units = 1.
   Honours `signal`.
+
+Reasoning effort mapping (`src/providers/effort-map.js`, owned by the providers module, exported
+`resolveEffort(model, effort) -> string|null`): `model.params.reasoning` may hold
+`{ mandatory: bool, efforts: string[] /* supported, e.g. ["high","medium","low"] */ }`.
+- model doesn't support reasoning → `null` (send nothing).
+- effort `'none'`: if `mandatory` → the lowest supported effort (prefer `minimal`, then `low`);
+  else `'none'`.
+- effort not in `efforts` (when the list is given) → nearest supported level by rank
+  `none < minimal < low < medium < high < xhigh < max`, ties → lower.
+OpenAI direct uses the same function and sends the result as `reasoning_effort`.
 
 Errors from upstream: throw `AppError(502, 'upstream_error', '<gateway>: <short message>')`. Never
 include API keys or full upstream bodies in messages.
@@ -227,8 +252,8 @@ createClassifier({ config, db, providers, redactor? })
 heuristicClassify(text, redactionCounts) -> same shape (no usage cost)
 CLASSIFIER_SYSTEM_PROMPT   // exported; the mock provider detects it
 ```
-The LLM classifier uses `providers.get(model.gateway).completeJSON`, model =
-`config.router.classifierModelId || CLASSIFIER_MODEL_ID` (falls back to heuristic if unavailable,
+The LLM classifier uses `providers.get(model.gateway).completeJSON`, model = the first enabled +
+available of `[config.router.classifierModelId, ...CLASSIFIER_MODEL_CANDIDATES]` (falls back to heuristic if unavailable,
 on timeout (4 s), or on invalid JSON). Output is validated and clamped. `private` is true if the
 LLM says so OR `redactor.isSensitive(redactionCounts)` OR heuristic keywords (password, diagnosis,
 salary, bank statement, tax return, lawsuit, medical, …). Cost of the call is computed from the
@@ -361,7 +386,8 @@ Steps (auto/manual):
 4. Pick. `manual` mode passes `modelId` as `overrideModelId`.
 5. For self-hosted models with `redactSelfHosted` off, send the unredacted messages.
 6. Estimate cost → `credits.reserve`. Persist the user message (encrypted). Emit `route`.
-7. TEXT: stream via provider; feed deltas through `createStreamRestorer(map)`; emit `delta` per
+7. TEXT: stream via provider (pass `sessionId` = first 32 hex chars of
+   sha256(`gode-session:` + conversation id) — opaque, never identifies the user); feed deltas through `createStreamRestorer(map)`; emit `delta` per
    safe chunk. At the end, `filterResponse`; if anything was masked emit `replace { text }`.
    MEDIA: build the media prompt with `redactMessages(..., { mode: 'generic' })` on the latest
    text only; `generateMedia` with onProgress → emit `progress`; then emit `media` per item.

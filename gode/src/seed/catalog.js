@@ -14,6 +14,8 @@ const MODELS = [];
 /** @type {Array<{job:string,tier:string,model_id:string,effort_override?:string|null}>} */
 const ROUTES = [];
 const CLASSIFIER_MODEL_ID = "";
+/** Ordered classifier fallbacks; the classifier uses the first enabled + available one. */
+const CLASSIFIER_MODEL_CANDIDATES = [];
 
 /** Convert a `models` DB row into the JS Model shape used everywhere. */
 function rowToModel(row) {
@@ -173,6 +175,7 @@ module.exports = {
   MODELS,
   ROUTES,
   CLASSIFIER_MODEL_ID,
+  CLASSIFIER_MODEL_CANDIDATES,
   rowToModel,
   modelToParams,
   validateModel,
